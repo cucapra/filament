@@ -21,8 +21,7 @@ file = {
 }
 
 component = {
-  "component" ~ identifier ~ abstract_var? ~ io
-    ~ "{" ~ "}"
+  "component" ~ identifier ~ abstract_var? ~ io ~ "{" ~ "}"
 }
 
 // ====== Component signature ======
