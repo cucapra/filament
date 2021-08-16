@@ -13,6 +13,10 @@ pub enum TimeOp {
 pub enum IntervalTime {
     Abstract(Id),
     Concrete(u64),
+    Port {
+        cell: Id,
+        name: Id,
+    },
     BinOp {
         op: TimeOp,
         left: Box<IntervalTime>,

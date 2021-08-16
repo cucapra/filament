@@ -79,10 +79,19 @@ impl FilamentParser {
     }
 
     // ================ Intervals =====================
+    fn time_port(input: Node) -> ParseResult<core::IntervalTime> {
+        Ok(match_nodes!(
+            input.into_children();
+            [identifier(cell), identifier(name)] => core::IntervalTime::Port {
+                cell, name
+            }
+        ))
+    }
 
     fn time_base(input: Node) -> ParseResult<core::IntervalTime> {
         Ok(match_nodes!(
             input.into_children();
+            [time_port(port)] => port,
             [identifier(var)] => core::IntervalTime::Abstract(var),
             [bitwidth(time)] => core::IntervalTime::Concrete(time),
         ))
@@ -144,11 +153,11 @@ impl FilamentParser {
 
     // ================ Signature =====================
 
-    fn port_def(input: Node) -> ParseResult<core::Port> {
+    fn port_def(input: Node) -> ParseResult<core::PortDef> {
         Ok(match_nodes!(
             input.into_children();
             [interval(liveness), identifier(name), bitwidth(bitwidth)] => {
-                core::Port {
+                core::PortDef {
                     liveness, name, bitwidth
                 }
             }
@@ -162,7 +171,7 @@ impl FilamentParser {
         ))
     }
 
-    fn ports(input: Node) -> ParseResult<Vec<core::Port>> {
+    fn ports(input: Node) -> ParseResult<Vec<core::PortDef>> {
         Ok(match_nodes!(
             input.into_children();
             [port_def(ins)..] => ins.collect()
@@ -173,7 +182,7 @@ impl FilamentParser {
         Ok(())
     }
 
-    fn io(input: Node) -> ParseResult<(Vec<core::Port>, Vec<core::Port>)> {
+    fn io(input: Node) -> ParseResult<(Vec<core::PortDef>, Vec<core::PortDef>)> {
         Ok(match_nodes!(
             input.into_children();
             [arrow(_)] => (vec![], vec![]),
@@ -183,6 +192,76 @@ impl FilamentParser {
         ))
     }
 
+    // ================ Cells =====================
+    fn cell_def(input: Node) -> ParseResult<core::Cell> {
+        Ok(match_nodes!(
+            input.into_children();
+            [identifier(name), identifier(component)] => core::Cell {
+                name, component
+            }
+        ))
+    }
+
+    fn cells(input: Node) -> ParseResult<Vec<core::Cell>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [cell_def(cells)..] => cells.collect()
+        ))
+    }
+
+    // ================ Assignments =====================
+    fn port(input: Node) -> ParseResult<core::Port> {
+        Ok(match_nodes!(
+            input.into_children();
+            [bitwidth(constant)] => core::Port::Constant(constant),
+            [identifier(name)] => core::Port::ThisPort(name),
+            [identifier(comp), identifier(name)] => core::Port::CompPort {
+                comp, name
+            }
+        ))
+    }
+
+    fn arguments(input: Node) -> ParseResult<Vec<core::Port>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [] => vec![],
+            [port(ports)..] => ports.collect(),
+        ))
+    }
+
+    fn time_args(input: Node) -> ParseResult<Vec<core::IntervalTime>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [time(args)..] => args.collect(),
+        ))
+    }
+
+    fn invocation(input: Node) -> ParseResult<core::Invocation> {
+        Ok(match_nodes!(
+            input.into_children();
+            [
+                identifier(comp),
+                time_args(abstract_vars),
+                arguments(ports)
+            ] => core::Invocation {
+                comp, abstract_vars, ports
+            }
+        ))
+    }
+
+    fn assignment(input: Node) -> ParseResult<core::Assignment> {
+        Ok(match_nodes!(
+            input.into_children();
+            [
+                identifier(bind),
+                invocation(rhs)
+            ] => core::Assignment {
+                bind, rhs
+            }
+        ))
+    }
+
+    // ================ Component =====================
     fn component(input: Node) -> ParseResult<core::Component> {
         Ok(match_nodes!(
             input.into_children();
@@ -190,6 +269,8 @@ impl FilamentParser {
                 identifier(name),
                 abstract_var(abstract_vars),
                 io(io),
+                cells(cells),
+                assignment(assignments)..
             ] => {
                 let (inputs, outputs) = io;
                 let sig = core::Signature {
@@ -200,13 +281,15 @@ impl FilamentParser {
                 core::Component {
                     name,
                     sig,
-                    cells: vec![],
-                    body: core::Body,
+                    cells,
+                    assignments: assignments.collect(),
                 }
             },
             [
                 identifier(name),
                 io(io),
+                cells(cells),
+                assignment(assignments)..
             ] => {
                 let (inputs, outputs) = io;
                 let sig = core::Signature {
@@ -216,9 +299,9 @@ impl FilamentParser {
                 };
                 core::Component {
                     name,
-                    cells: vec![],
+                    cells,
                     sig,
-                    body: core::Body,
+                    assignments: assignments.collect(),
                 }
             }
         ))

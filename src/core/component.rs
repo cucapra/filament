@@ -1,6 +1,6 @@
-use super::{Id, Interval};
+use super::{Assignment, Id, Interval};
 
-pub struct Port {
+pub struct PortDef {
     /// Name of the port
     pub name: Id,
 
@@ -11,7 +11,12 @@ pub struct Port {
     pub bitwidth: u64,
 }
 
-pub struct Body;
+pub struct Cell {
+    /// Name of the instance.
+    pub name: Id,
+    /// Name of the component
+    pub component: Id,
+}
 
 /// The signature of a component definition
 pub struct Signature {
@@ -19,10 +24,10 @@ pub struct Signature {
     pub abstract_vars: Vec<Id>,
 
     /// Input ports
-    pub inputs: Vec<Port>,
+    pub inputs: Vec<PortDef>,
 
     /// Output ports
-    pub outputs: Vec<Port>,
+    pub outputs: Vec<PortDef>,
 }
 
 /// A component in Filament
@@ -34,10 +39,10 @@ pub struct Component {
     pub sig: Signature,
 
     /// Names of sub-circuits used in constructing this component
-    pub cells: Vec<Id>,
+    pub cells: Vec<Cell>,
 
     /// Model for this component
-    pub body: Body,
+    pub assignments: Vec<Assignment>,
 }
 
 pub struct Namespace {

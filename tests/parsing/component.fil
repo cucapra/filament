@@ -7,18 +7,13 @@ component Mac<G, L>(
   @within(G, G+L+1) out: 32,
   @exact(G, G+L+1) valid: 1
 ) {
-  /*
+
   // Required cells for constructing this component.
   cells {
     M: Mult;
     A: Add;
   }
 
-  control {
-    m0 = M<G>(a, b);
-    a0 = A<m0.done>(m0.out, c);
-  }
-  */
+  m0 = M<G>(a, b);
+  a0 = A<m0.done>(m0.out, c);
 }
-
-

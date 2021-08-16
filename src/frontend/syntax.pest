@@ -21,7 +21,7 @@ file = {
 }
 
 component = {
-  "component" ~ identifier ~ abstract_var? ~ io ~ "{" ~ "}"
+  "component" ~ identifier ~ abstract_var? ~ io ~ "{" ~ cells ~ assignment* ~ "}"
 }
 
 // ====== Component signature ======
@@ -37,8 +37,10 @@ interval = {
   interval_type ~ "(" ~ time ~ "," ~ time ~ ")"
 }
 
+time_port = { identifier ~ "." ~ identifier }
 time_base = {
-  identifier
+  time_port
+  | identifier
   | bitwidth
 }
 binop_add = { "+" }
@@ -60,163 +62,35 @@ ports = {
   port_def ~ ("," ~ port_def)*
 }
 
-// // ====== cells ======
-//
-// args = {
-//   "(" ~ (bitwidth ~ ("," ~ bitwidth)*)? ~ ")"
-// }
-//
-// cell_without_semi = {
-//   at_attributes ~ identifier ~ "=" ~ identifier ~ args
-// }
-//
-// cell = {
-//   cell_without_semi ~ semi?
-// }
-//
-// cells = {
-//   "cells"
-//     ~ "{" ~ cell* ~ "}"
-// }
-//
-// // ====== wires ======
-//
-// port = {
-//   (identifier ~ "." ~ identifier)
-//     | identifier
-// }
-//
-// LHS = { hole | port }
-// expr = {
-//   LHS
-//     | num_lit
-//     | bad_num // throws an error
-// }
-//
-// guard_eq = { "==" }
-// guard_neq = { "!=" }
-// guard_leq = { "<=" }
-// guard_geq = { ">=" }
-// guard_lt = { "<" }
-// guard_gt = { ">" }
-// cmp_expr = {
-//   expr ~ guard_eq ~ expr
-//     | expr ~ guard_neq ~ expr
-//     | expr ~ guard_geq ~ expr
-//     | expr ~ guard_leq ~ expr
-//     | expr ~ guard_gt ~ expr
-//     | expr ~ guard_lt ~ expr
-// }
-//
-// guard_or = { "|" }
-// guard_and = { "&" }
-// guard_not = { "!" }
-// operator = _{
-//   guard_or | guard_and
-// }
-//
-// guard_expr = {
-//   term ~ (operator ~ term)*
-// }
-//
-// term = {
-//   guard_not ~ expr
-//     | guard_not ~ "(" ~ cmp_expr ~ ")"
-//     | guard_not ~ "(" ~ guard_expr ~ ")"
-//     | "(" ~ guard_expr ~ ")"
-//     | cmp_expr
-//     | expr
-// }
-//
-// switch_stmt = {
-//   guard_expr ~ "?" ~ expr
-// }
-//
-// wire = {
-//   LHS ~ "=" ~ (switch_stmt | expr) ~ ";"
-// }
-//
-// // =========== Attribute parsing ===============
-//
-// // <"static" = 1> style annotation
-// attribute = {
-//   string_lit ~ "=" ~ bitwidth
-// }
-// attributes = {
-//   "<" ~ (attribute ~ ("," ~ attribute)*) ~ ">"
-// }
-//
-// // @static(1) style annotation
-// attr_val = {
-//   "(" ~ bitwidth ~ ")"
-// }
-// at_attribute = {
-//   "@" ~ identifier ~ attr_val?
-// }
-// at_attributes = {
-//   at_attribute*
-// }
-//
-// group = {
-//   "group" ~ identifier ~ attributes? ~ "{"
-//     ~ wire*
-//     ~ "}"
-// }
-//
-// connections = {
-//   "wires"
-//     ~ "{"
-//     ~ (wire | group)*
-//     ~ "}"
-// }
-//
-// // ====== control ======
-//
-// enable = { at_attributes ~ identifier ~ ";" }
-//
-// invoke_arg = { identifier ~ "=" ~ (port | num_lit) }
-// invoke_args = { (invoke_arg ~ ("," ~ invoke_arg)*)? }
-// invoke = { at_attributes ~ "invoke" ~ identifier ~ "(" ~ invoke_args ~ ")" ~ "(" ~ invoke_args ~ ")" ~ ";" }
-//
-// seq = {
-//   at_attributes ~ "seq" ~ "{"
-//     ~ stmt*
-//     ~ "}"
-// }
-//
-// par = {
-//   at_attributes ~ "par" ~ "{"
-//     ~ stmt*
-//     ~ "}"
-// }
-//
-// // Error reporting rule: these statements should be inside a `stmt`.
-// stmts_without_block = {
-//   "{" ~ stmt* ~ "}"
-// }
-//
-// block = {
-//   "{" ~ stmt ~ "}"
-//     | stmts_without_block
-// }
-//
-// if_stmt = {
-//   at_attributes ~ "if" ~ port ~ "with" ~ identifier ~ block ~ ("else" ~ (if_stmt | block))?
-// }
-//
-// while_stmt = {
-//   at_attributes ~ "while" ~ port ~ "with" ~ identifier ~ block
-// }
-//
-// stmt = {
-//   enable
-//     | invoke
-//     | seq
-//     | par
-//     | if_stmt
-//     | while_stmt
-// }
-//
-// control = {
-//   "control" ~ (("{" ~ "}") | block)
-// }
+// ====== cells ======
+cell_def = {
+  identifier ~ ":" ~ identifier ~ ";"
+}
+
+cells = {
+  "cells" ~ "{" ~ cell_def* ~ "}"
+}
+
+// ====== Assignments ==========
+
+port = {
+  bitwidth
+  | identifier ~ "." ~ identifier
+  | identifier
+}
+
+arguments = {
+  "(" ~ ")"
+  | "(" ~ port ~ ("," ~ port)* ~ ")"
+}
+
+time_args = {
+  "<" ~ time ~ ("," ~ time)* ~ ">"
+}
+invocation = {
+  identifier ~ time_args? ~ arguments
+}
+
+assignment = {
+  identifier ~ "=" ~ invocation ~ ";"
+}
