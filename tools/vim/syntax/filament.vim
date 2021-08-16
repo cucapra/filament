@@ -9,23 +9,30 @@ syn match filamentConstant "\v<[0-9]+('d[0-9]+)?>"
 syn match filamentOperator "\v\@within|\@exact" nextgroup=filamentInterval skipwhite
 syn region filamentInterval start="\v\(" end="\v\)" contained contains=filamentType,filamentConstant
 
-" Control statements
-syn keyword filamentControl cells
-
-" Other keywords
-syn keyword filamentKeyword import cells wires control group prim extern
-
 " Components
 syn keyword filamentKeyword component nextgroup=filamentCompName skipwhite
 syn match filamentCompName '\v[_a-zA-Z]((\-+)?[_a-zA-Z0-9]+)*' contained nextgroup=filamentAbsVar skipwhite
 
-syn region filamentAbsVar start="\v\<" end="\v\>" contained contains=filamentType
+syn region filamentAbsVar start="\v\<" end="\v\>" contains=filamentType
 syn match filamentType '\v[_a-zA-Z]((\-+)?[_a-zA-Z0-9]+)*' contained
 
 " Comments
-syntax match filamentComment "\v//.*$"
+syn match filamentComment "\v//.*$"
 syn region filamentComment start=/\v\/\*/ skip=/\v\\./ end=/\v\*\//
 
+" Cells
+syn keyword filamentKeyword cells nextgroup=filamentCells skipwhite
+syn region filamentCells start="\v\{" end="\v\}" contained skipwhite skipnl contains=filamentCellName
+
+syn match filamentCellName '\v[_a-zA-Z]((\-+)?[_a-zA-Z0-9]+)*' contained nextgroup=filamentColon skipwhite
+syn match filamentColon ':' contained nextgroup=filamentType contained skipwhite
+hi link filamentCellName filamentCompName
+
+" Ports
+syn match filamentDot '\.' nextgroup=filamentPort
+syn match filamentPort '\v[_a-zA-Z]((\-+)?[_a-zA-Z0-9]+)*' contained
+
+hi link filamentPort Directory
 hi link filamentKeyword Keyword
 hi link filamentControl Special
 hi link filamentCompName Include
