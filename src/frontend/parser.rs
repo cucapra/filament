@@ -192,12 +192,15 @@ impl FilamentParser {
                 io(io),
             ] => {
                 let (inputs, outputs) = io;
-                core::Component {
-                    name,
-                    cells: vec![],
+                let sig = core::Signature {
                     abstract_vars,
                     inputs,
                     outputs,
+                };
+                core::Component {
+                    name,
+                    sig,
+                    cells: vec![],
                     body: core::Body,
                 }
             },
@@ -206,12 +209,15 @@ impl FilamentParser {
                 io(io),
             ] => {
                 let (inputs, outputs) = io;
-                core::Component {
-                    name,
-                    cells: vec![],
+                let sig = core::Signature {
                     abstract_vars: vec![],
                     inputs,
                     outputs,
+                };
+                core::Component {
+                    name,
+                    cells: vec![],
+                    sig,
                     body: core::Body,
                 }
             }

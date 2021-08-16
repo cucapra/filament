@@ -13,13 +13,8 @@ pub struct Port {
 
 pub struct Body;
 
-pub struct Component {
-    /// Name of the component
-    pub name: Id,
-
-    /// Names of sub-circuits used in constructing this component
-    pub cells: Vec<Id>,
-
+/// The signature of a component definition
+pub struct Signature {
     /// Names of abstract variables bound by the component
     pub abstract_vars: Vec<Id>,
 
@@ -28,6 +23,18 @@ pub struct Component {
 
     /// Output ports
     pub outputs: Vec<Port>,
+}
+
+/// A component in Filament
+pub struct Component {
+    /// Name of the component
+    pub name: Id,
+
+    // Signature of this component
+    pub sig: Signature,
+
+    /// Names of sub-circuits used in constructing this component
+    pub cells: Vec<Id>,
 
     /// Model for this component
     pub body: Body,
