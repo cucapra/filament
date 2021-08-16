@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 argh = "0.1.5"
+lazy_static = "1.4.0"
 pest = "2"
 pest_consume = "1"
 pest_derive = "2"

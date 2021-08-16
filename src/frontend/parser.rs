@@ -4,6 +4,7 @@
 use crate::errors::{self, FilamentResult};
 
 use crate::core::{self, Id};
+use pest::prec_climber::{Assoc, Operator, PrecClimber};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
 use std::path::Path;
@@ -16,6 +17,18 @@ type Node<'i> = pest_consume::Node<'i, Rule, Rc<str>>;
 
 // include the grammar file so that Cargo knows to rebuild this file on grammar changes
 const _GRAMMAR: &str = include_str!("syntax.pest");
+
+// Define the precedence of binary operations. We use `lazy_static` so that
+// this is only ever constructed once.
+lazy_static::lazy_static! {
+    static ref PRECCLIMBER: PrecClimber<Rule> = PrecClimber::new(
+        vec![
+            // loosest binding
+            Operator::new(Rule::binop_add, Assoc::Left) | Operator::new(Rule::binop_sub, Assoc::Left),
+            // tighest binding
+        ]
+    );
+}
 
 #[derive(Parser)]
 #[grammar = "frontend/syntax.pest"]
@@ -75,10 +88,29 @@ impl FilamentParser {
         ))
     }
 
+    #[prec_climb(time_base, PRECCLIMBER)]
+    fn time_expr(
+        l: core::IntervalTime,
+        op: Node,
+        r: core::IntervalTime,
+    ) -> ParseResult<core::IntervalTime> {
+        let op = match op.as_rule() {
+            Rule::binop_add => core::TimeOp::Add,
+            Rule::binop_sub => core::TimeOp::Sub,
+            _ => unreachable!(),
+        };
+        Ok(core::IntervalTime::BinOp {
+            left: Box::new(l),
+            right: Box::new(r),
+            op,
+        })
+    }
+
     fn time(input: Node) -> ParseResult<core::IntervalTime> {
         Ok(match_nodes!(
             input.into_children();
-            [time_base(time)] => time,
+            [time_expr(time)] => time,
+            [time_base(time)] => time
         ))
     }
 
@@ -130,26 +162,24 @@ impl FilamentParser {
         ))
     }
 
-    fn inputs(input: Node) -> ParseResult<Vec<core::Port>> {
-        Ok(match_nodes!(
-            input.into_children();
-            [port_def(ins)..] => ins.collect()
-        ))
-    }
-    fn outputs(input: Node) -> ParseResult<Vec<core::Port>> {
+    fn ports(input: Node) -> ParseResult<Vec<core::Port>> {
         Ok(match_nodes!(
             input.into_children();
             [port_def(ins)..] => ins.collect()
         ))
     }
 
+    fn arrow(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+
     fn io(input: Node) -> ParseResult<(Vec<core::Port>, Vec<core::Port>)> {
         Ok(match_nodes!(
             input.into_children();
-            [] => (vec![], vec![]),
-            [inputs(ins)] =>  (ins, vec![]),
-            [outputs(outs)] =>  (vec![], outs),
-            [inputs(ins), outputs(outs)] => (ins, outs),
+            [arrow(_)] => (vec![], vec![]),
+            [ports(ins), arrow(_)] =>  (ins, vec![]),
+            [arrow(_), ports(outs)] =>  (vec![], outs),
+            [ports(ins), arrow(_), ports(outs)] => (ins, outs),
         ))
     }
 

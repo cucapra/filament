@@ -1,5 +1,7 @@
 mod ast;
 mod id;
+mod interval;
 
-pub use ast::{Body, Component, IntervalTime, IntervalType, Interval, Namespace, Port};
+pub use ast::{Body, Component, Namespace, Port};
 pub use id::Id;
+pub use interval::{Interval, IntervalTime, IntervalType, TimeOp};

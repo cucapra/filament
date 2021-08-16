@@ -1,30 +1,4 @@
-use super::Id;
-
-pub enum TimeOp {
-    Add,
-    Sub,
-}
-
-pub enum IntervalTime {
-    Abstract(Id),
-    Concrete(u64),
-    BinOp {
-        op: TimeOp,
-        left: Box<IntervalTime>,
-        right: Box<IntervalTime>,
-    },
-}
-
-pub enum IntervalType {
-    Exact,
-    Within,
-}
-
-pub struct Interval {
-    pub tag: IntervalType,
-    pub start: IntervalTime,
-    pub end: IntervalTime,
-}
+use super::{Id, Interval};
 
 pub struct Port {
     /// Name of the port

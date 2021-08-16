@@ -41,19 +41,22 @@ time_base = {
   identifier
   | bitwidth
 }
-time = { time_base }
+binop_add = { "+" }
+binop_sub = { "-" }
+binop = _{ binop_add | binop_sub }
+time_expr = { time_base ~ (binop ~ time_base)* }
+time = { time_expr | time_base }
 
 port_def = {
   interval ~ identifier ~ ":" ~ (bitwidth | identifier)
 }
 
+arrow = { "->" }
+
 io = {
-  "(" ~ inputs? ~ ")" ~ "->" ~ "(" ~ outputs? ~ ")"
+  "(" ~ ports? ~ ")" ~ arrow ~ "(" ~ ports? ~ ")"
 }
-inputs = {
-  port_def ~ ("," ~ port_def)*
-}
-outputs = {
+ports = {
   port_def ~ ("," ~ port_def)*
 }
 
