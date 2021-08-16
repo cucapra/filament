@@ -16,12 +16,24 @@ bitwidth = @{ ASCII_DIGIT+ }
 
 file = {
   SOI
-    ~ component*
+    ~ comp_or_ext*
     ~ EOI
 }
 
+
+
+signature = {
+  identifier ~ abstract_var? ~ io
+}
 component = {
-  "component" ~ identifier ~ abstract_var? ~ io ~ "{" ~ cells ~ assignment* ~ "}"
+  "component" ~ signature ~ "{" ~ cells ~ assignment* ~ "}"
+}
+external = {
+  "extern" ~ "component" ~ signature ~ ";"
+}
+
+comp_or_ext = {
+  component | external
 }
 
 // ====== Component signature ======

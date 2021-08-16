@@ -32,6 +32,10 @@ hi link filamentCellName filamentCompName
 syn match filamentDot '\.' nextgroup=filamentPort
 syn match filamentPort '\v[_a-zA-Z]((\-+)?[_a-zA-Z0-9]+)*' contained
 
+" Other keywords
+syn keyword filamentSpecialKeywords extern
+
+hi link filamentSpecialKeywords Directory
 hi link filamentPort Directory
 hi link filamentKeyword Keyword
 hi link filamentControl Special

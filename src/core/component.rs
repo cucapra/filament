@@ -20,6 +20,9 @@ pub struct Cell {
 
 /// The signature of a component definition
 pub struct Signature {
+    /// Name of the component
+    pub name: Id,
+
     /// Names of abstract variables bound by the component
     pub abstract_vars: Vec<Id>,
 
@@ -32,9 +35,6 @@ pub struct Signature {
 
 /// A component in Filament
 pub struct Component {
-    /// Name of the component
-    pub name: Id,
-
     // Signature of this component
     pub sig: Signature,
 
@@ -46,6 +46,9 @@ pub struct Component {
 }
 
 pub struct Namespace {
+    /// External definitions without a body.
+    pub signatures: Vec<Signature>,
+
     /// Components defined in this file
     pub components: Vec<Component>,
 }

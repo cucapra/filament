@@ -30,6 +30,11 @@ lazy_static::lazy_static! {
     );
 }
 
+pub enum ExtOrComp {
+    Ext(core::Signature),
+    Comp(core::Component),
+}
+
 #[derive(Parser)]
 #[grammar = "frontend/syntax.pest"]
 pub struct FilamentParser;
@@ -262,58 +267,84 @@ impl FilamentParser {
     }
 
     // ================ Component =====================
-    fn component(input: Node) -> ParseResult<core::Component> {
+    fn signature(input: Node) -> ParseResult<core::Signature> {
         Ok(match_nodes!(
             input.into_children();
             [
                 identifier(name),
                 abstract_var(abstract_vars),
                 io(io),
-                cells(cells),
-                assignment(assignments)..
             ] => {
                 let (inputs, outputs) = io;
-                let sig = core::Signature {
+                core::Signature {
+                    name,
                     abstract_vars,
                     inputs,
                     outputs,
-                };
-                core::Component {
-                    name,
-                    sig,
-                    cells,
-                    assignments: assignments.collect(),
                 }
             },
             [
                 identifier(name),
                 io(io),
-                cells(cells),
-                assignment(assignments)..
             ] => {
                 let (inputs, outputs) = io;
-                let sig = core::Signature {
+                core::Signature {
+                    name,
                     abstract_vars: vec![],
                     inputs,
                     outputs,
-                };
+                }
+            }
+        ))
+    }
+
+    fn component(input: Node) -> ParseResult<core::Component> {
+        Ok(match_nodes!(
+            input.into_children();
+            [
+                signature(sig),
+                cells(cells),
+                assignment(assignments)..
+            ] => {
                 core::Component {
-                    name,
-                    cells,
                     sig,
+                    cells,
                     assignments: assignments.collect(),
                 }
             }
         ))
     }
 
+    fn external(input: Node) -> ParseResult<core::Signature> {
+        Ok(match_nodes!(
+            input.into_children();
+            [signature(sig)] => sig,
+        ))
+    }
+
+    fn comp_or_ext(input: Node) -> ParseResult<ExtOrComp> {
+        Ok(match_nodes!(
+            input.into_children();
+            [external(sig)] => ExtOrComp::Ext(sig),
+            [component(comp)] => ExtOrComp::Comp(comp),
+        ))
+    }
+
     fn file(input: Node) -> ParseResult<core::Namespace> {
         Ok(match_nodes!(
             input.into_children();
-            [component(components).., _EOI] => {
-                core::Namespace {
-                    components: components.collect()
+            [comp_or_ext(mixed).., _EOI] => {
+                let mut namespace = core::Namespace {
+                    signatures: vec![],
+                    components: vec![],
+                };
+                for m in mixed {
+                    match m {
+                        ExtOrComp::Ext(sig) => namespace.signatures.push(sig),
+                        ExtOrComp::Comp(comp) => namespace.components.push(comp),
+                    }
                 }
+                namespace
             }
         ))
     }

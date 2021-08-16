@@ -1,0 +1,27 @@
+extern component Mult<G, L>(
+  @within(G, G+1) left: 32,
+  @within(G, G+1) right: 32,
+  @exact(G, G+1) go: 1
+) -> (
+  @within(G+L, G+L+1) out: 32,
+  @exact(G+L, G+L+1) valid: 1
+);
+
+extern component Add<G, L>(
+  @within(G, G+1) left: 32,
+  @within(G, G+1) right: 32,
+  @exact(G, G+1) go: 1
+) -> (
+  @within(G+L, G+L+1) out: 32,
+  @exact(G+L, G+L+1) valid: 1
+);
+
+component main<G>() -> () {
+  cells {
+    A: Add;
+    M: Mult;
+  }
+
+  a0 = A<G>(10, 20);
+  m0 = M<a0.done>(a0.out, a0.out);
+}
