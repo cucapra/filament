@@ -1,3 +1,4 @@
+#[derive(Clone, Eq, Hash)]
 pub struct Id {
     pub id: String,
 }
