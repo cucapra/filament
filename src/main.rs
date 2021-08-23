@@ -1,8 +1,8 @@
-use filament::{checking::check, cmdline::Opts, errors::FilamentResult, frontend::FilamentParser};
+use filament::{checking, cmdline, errors, frontend};
 
-fn main() -> FilamentResult<()> {
-    let opts: Opts = argh::from_env();
-    let namespace = FilamentParser::parse_file(&opts.input)?;
-    check(namespace)?;
+fn main() -> errors::FilamentResult<()> {
+    let opts: cmdline::Opts = argh::from_env();
+    let namespace = frontend::FilamentParser::parse_file(&opts.input)?;
+    checking::check(namespace)?;
     Ok(())
 }

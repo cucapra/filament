@@ -1,14 +1,28 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    rc::Rc,
+};
 
 use crate::{
     core,
     errors::{Error, FilamentResult},
 };
 
-/// Set of known interval facts and equalities.
-#[derive(Default)]
-pub struct Facts;
+const THIS: &str = "_this";
 
+pub enum FactType {
+    Equality,
+    Subset,
+}
+
+/// Set of known interval facts and equalities.
+pub struct Fact {
+    tag: FactType,
+    left: core::Interval,
+    right: core::Interval,
+}
+
+#[derive(Debug)]
 pub struct Instance {
     /// Bindings for abstract variables
     pub binding: HashMap<core::Id, core::IntervalTime>,
@@ -46,10 +60,37 @@ impl Instance {
                     .map(|v| core::IntervalTime::Abstract(v.clone())),
             )
             .collect();
+
         Instance {
             binding,
             sig: Rc::clone(&sig),
         }
+    }
+
+    /// Resolve a port for this instance and return the requirement or guarantee
+    /// based on whether it is an input or an input port.
+    ///
+    #[inline]
+    fn resolve_port(&self, port: &core::Id, is_input: bool) -> FilamentResult<core::Interval> {
+        let maybe_pd = if is_input {
+            self.sig.inputs.iter().find(|pd| pd.name == port)
+        } else {
+            self.sig.outputs.iter().find(|pd| pd.name == port)
+        };
+        Ok(maybe_pd
+            .ok_or_else(|| Error::Undefined(port.clone(), "port".to_string()))?
+            .liveness
+            .resolve(&self.binding))
+    }
+
+    /// Returns the requirements of an input port
+    pub fn port_requirements(&self, port: &core::Id) -> FilamentResult<core::Interval> {
+        self.resolve_port(port, true)
+    }
+
+    /// Returns the guarantees provided by an output port
+    pub fn port_guarantees(&self, port: &core::Id) -> FilamentResult<core::Interval> {
+        self.resolve_port(port, false)
     }
 }
 
@@ -62,7 +103,7 @@ pub struct Context {
     pub instances: HashMap<core::Id, Instance>,
 
     /// Set of currently known facts.
-    pub facts: Facts,
+    pub facts: Vec<Fact>,
 }
 
 impl Context {
@@ -77,20 +118,20 @@ impl Context {
     }
 
     pub fn add_sig(&mut self, name: core::Id, sig: Rc<core::Signature>) -> FilamentResult<()> {
-        if self.sigs.contains_key(&name) {
-            Err(Error::AlreadyBound(name.clone(), "instance".to_string()))
-        } else {
-            self.sigs.insert(name, sig);
+        if let Entry::Vacant(e) = self.sigs.entry(name.clone()) {
+            e.insert(sig);
             Ok(())
+        } else {
+            Err(Error::AlreadyBound(name, "instance".to_string()))
         }
     }
 
     pub fn add_instance(&mut self, name: core::Id, instance: Instance) -> FilamentResult<()> {
-        if self.instances.contains_key(&name) {
-            Err(Error::AlreadyBound(name.clone(), "instance".to_string()))
-        } else {
-            self.instances.insert(name, instance);
+        if let Entry::Vacant(e) = self.instances.entry(name.clone()) {
+            e.insert(instance);
             Ok(())
+        } else {
+            Err(Error::AlreadyBound(name, "instance".to_string()))
         }
     }
 
@@ -100,22 +141,44 @@ impl Context {
             .map(|sig| Rc::clone(sig))
             .ok_or_else(|| Error::Undefined(comp.clone(), "component".to_string()))
     }
+
+    pub fn get_instance(&self, instance: &core::Id) -> FilamentResult<&Instance> {
+        self.instances
+            .get(instance)
+            .ok_or_else(|| Error::Undefined(instance.clone(), "instance".to_string()))
+    }
 }
 
-/// Return the port requirements of a instance.
-fn get_port_requirements(invoke: core::Invocation, ctx: Context) -> FilamentResult<()> {
-    todo!()
+/// Check invocation and add new [Fact] representing the proof obligations for checking this
+/// invocation.
+fn check_invocation(invoke: core::Invocation, ctx: &mut Context) -> FilamentResult<Instance> {
+    // Construct an instance for this invocation
+    let sig = ctx.get_sig(&invoke.comp)?;
+    let instance = Instance::from_signature(sig, invoke.abstract_vars);
+    for port in invoke.ports {
+        // Get guarantee for this port
+        let guarantee = match port {
+            core::Port::Constant(_) => {
+                /* Constants do not generate a proof obligation */
+                None
+            }
+            core::Port::ThisPort(port) => {
+                Some(ctx.get_instance(&THIS.into())?.port_guarantees(&port)?)
+            }
+            core::Port::CompPort { comp, name } => {
+                Some(ctx.get_instance(&comp)?.port_guarantees(&name)?)
+            }
+        };
+        // Get requirements for this port
+    }
+    Ok(instance)
 }
 
 /// Given a [core::Assignment], checks whether the current set of known
 /// facts can be used to prove that the ports are available for the stated
 /// requirements.
 fn check_assign(assign: core::Assignment, ctx: &mut Context) -> FilamentResult<()> {
-    // TODO: Check of the invocation is correct.
-
-    // Construct an instance for this invocation.
-    let sig = ctx.get_sig(&assign.rhs.comp)?;
-    let instance = Instance::from_signature(sig, assign.rhs.abstract_vars);
+    let instance = check_invocation(assign.rhs, ctx)?;
     ctx.add_instance(assign.bind, instance)?;
     Ok(())
 }
@@ -126,7 +189,7 @@ fn check_component(comp: core::Component, ctx: &mut Context) -> FilamentResult<(
     // Add instance for this component. Whenever a bare port is used, it refers
     // to the port on this instance.
     let this_instance = Instance::this_instance(Rc::clone(&sig));
-    ctx.instances.insert("_this".into(), this_instance);
+    ctx.instances.insert(THIS.into(), this_instance);
 
     // Add aliases to components for all cells.
     for cell in comp.cells {
@@ -158,6 +221,8 @@ pub fn check(mut namespace: core::Namespace) -> FilamentResult<()> {
         .components
         .drain(..)
         .try_for_each(|comp| check_component(comp, &mut ctx))?;
+
+    println!("{:#?}", ctx.instances);
 
     Ok(())
 }

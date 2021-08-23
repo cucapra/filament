@@ -8,6 +8,12 @@ impl std::fmt::Display for Id {
     }
 }
 
+impl std::fmt::Debug for Id {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.id)
+    }
+}
+
 impl AsRef<str> for Id {
     fn as_ref(&self) -> &str {
         &self.id

@@ -10,6 +10,12 @@ pub struct PortDef {
     /// Bitwidth of the port
     pub bitwidth: u64,
 }
+impl std::fmt::Debug for PortDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.liveness.fmt(f)?;
+        write!(f, " {}: {}", self.name, self.bitwidth)
+    }
+}
 
 pub struct Cell {
     /// Name of the instance.
@@ -19,6 +25,7 @@ pub struct Cell {
 }
 
 /// The signature of a component definition
+#[derive(Debug)]
 pub struct Signature {
     /// Name of the component
     pub name: Id,
