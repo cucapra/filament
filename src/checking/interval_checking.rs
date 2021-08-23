@@ -1,7 +1,4 @@
-use std::{
-    collections::{hash_map::Entry, HashMap},
-    rc::Rc,
-};
+use std::{collections::{HashMap, HashSet, hash_map::Entry}, rc::Rc};
 
 use crate::{
     core,
@@ -10,16 +7,40 @@ use crate::{
 
 const THIS: &str = "_this";
 
+/// Type of the fact
+#[derive(Debug, Hash, Eq, PartialEq)]
 pub enum FactType {
+    /// Represents set equality
     Equality,
+    /// Represents subset
     Subset,
 }
 
 /// Set of known interval facts and equalities.
+#[derive(Debug, Hash, Eq, PartialEq)]
 pub struct Fact {
-    tag: FactType,
-    left: core::Interval,
-    right: core::Interval,
+    pub tag: FactType,
+    pub left: core::Interval,
+    pub right: core::Interval,
+}
+impl Fact {
+    /// Construct a [Fact] with `tag` set to [FactType::Equality].
+    pub fn equality(left: core::Interval, right: core::Interval) -> Self {
+        Fact {
+            tag: FactType::Equality,
+            left,
+            right,
+        }
+    }
+
+    /// Construct a [Fact] with `tag` set to [FactType::Subset].
+    pub fn subset(left: core::Interval, right: core::Interval) -> Self {
+        Fact {
+            tag: FactType::Subset,
+            left,
+            right,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -84,9 +105,9 @@ impl Instance {
     }
 
     /// Returns the requirements of an input port
-    pub fn port_requirements(&self, port: &core::Id) -> FilamentResult<core::Interval> {
+    /* pub fn port_requirements(&self, port: &core::Id) -> FilamentResult<core::Interval> {
         self.resolve_port(port, true)
-    }
+    } */
 
     /// Returns the guarantees provided by an output port
     pub fn port_guarantees(&self, port: &core::Id) -> FilamentResult<core::Interval> {
@@ -103,7 +124,7 @@ pub struct Context {
     pub instances: HashMap<core::Id, Instance>,
 
     /// Set of currently known facts.
-    pub facts: Vec<Fact>,
+    pub facts: HashSet<Fact>,
 }
 
 impl Context {
@@ -154,22 +175,38 @@ impl Context {
 fn check_invocation(invoke: core::Invocation, ctx: &mut Context) -> FilamentResult<Instance> {
     // Construct an instance for this invocation
     let sig = ctx.get_sig(&invoke.comp)?;
-    let instance = Instance::from_signature(sig, invoke.abstract_vars);
-    for port in invoke.ports {
+    let instance = Instance::from_signature(sig, invoke.abstract_vars.clone());
+    let req_sig = &ctx.get_sig(&invoke.comp)?;
+    let req_binding = req_sig
+        .abstract_vars
+        .iter()
+        .cloned()
+        .zip(invoke.abstract_vars.into_iter())
+        .collect();
+    for (actual, formal) in invoke.ports.iter().zip(req_sig.inputs.iter()) {
+        // Get requirements for this port
+        let requirement = formal.liveness.resolve(&req_binding);
         // Get guarantee for this port
-        let guarantee = match port {
+        let maybe_guarantee = match actual {
             core::Port::Constant(_) => {
-                /* Constants do not generate a proof obligation */
+                /* Constants do not generate a proof obligation because they are
+                 * always avaiable. */
                 None
             }
             core::Port::ThisPort(port) => {
-                Some(ctx.get_instance(&THIS.into())?.port_guarantees(&port)?)
+                Some(ctx.get_instance(&THIS.into())?.port_guarantees(port)?)
             }
             core::Port::CompPort { comp, name } => {
-                Some(ctx.get_instance(&comp)?.port_guarantees(&name)?)
+                Some(ctx.get_instance(comp)?.port_guarantees(name)?)
             }
         };
-        // Get requirements for this port
+        if let Some(guarantee) = maybe_guarantee {
+            let fact = match requirement.tag {
+                core::IntervalType::Exact => Fact::equality(requirement, guarantee),
+                core::IntervalType::Within => Fact::subset(requirement, guarantee),
+            };
+            ctx.facts.insert(fact);
+        }
     }
     Ok(instance)
 }
@@ -178,8 +215,10 @@ fn check_invocation(invoke: core::Invocation, ctx: &mut Context) -> FilamentResu
 /// facts can be used to prove that the ports are available for the stated
 /// requirements.
 fn check_assign(assign: core::Assignment, ctx: &mut Context) -> FilamentResult<()> {
+    println!("{}", assign.bind);
     let instance = check_invocation(assign.rhs, ctx)?;
     ctx.add_instance(assign.bind, instance)?;
+    println!("===========");
     Ok(())
 }
 
@@ -222,7 +261,7 @@ pub fn check(mut namespace: core::Namespace) -> FilamentResult<()> {
         .drain(..)
         .try_for_each(|comp| check_component(comp, &mut ctx))?;
 
-    println!("{:#?}", ctx.instances);
+    println!("{:#?}", ctx.facts);
 
     Ok(())
 }

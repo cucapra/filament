@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::Id;
 
 /// Possible operations over time variables.
-#[derive(Clone)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub enum TimeOp {
     Add,
     Sub,
@@ -13,7 +13,7 @@ pub enum TimeOp {
 ///   1. An abstract variable like `G`.
 ///   2. A concrete time such as 1.
 ///   3. A binary operation of two other interval times.
-#[derive(Clone)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub enum IntervalTime {
     Abstract(Id),
     Concrete(u64),
@@ -37,6 +37,7 @@ impl IntervalTime {
     /// Resolve the IntervalTime using the given bindings from abstract variables to exact
     /// bindings.
     pub fn resolve(&self, bindings: &HashMap<Id, IntervalTime>) -> Self {
+        println!("{:#?}: {:?}", self, bindings);
         match self {
             IntervalTime::Concrete(_) | IntervalTime::Port { .. } => self.clone(),
             IntervalTime::Abstract(name) => bindings[name].clone(),
@@ -71,13 +72,14 @@ impl std::fmt::Debug for IntervalTime {
 /// Type of the interval which can either be:
 ///   1. Exact, implying set equality
 ///   2. Within, implying set containment.
-#[derive(Clone)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub enum IntervalType {
     Exact,
     Within,
 }
 
 /// An interval consists of a type tag, a start time, and a end time.
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub struct Interval {
     pub tag: IntervalType,
     pub start: IntervalTime,

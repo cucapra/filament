@@ -1,19 +1,19 @@
-extern component Mult<G, L>(
+extern component Mult<G>(
   @within(G, G+1) left: 32,
   @within(G, G+1) right: 32,
   @exact(G, G+1) go: 1
 ) -> (
-  @within(G+L, G+L+1) out: 32,
-  @exact(G+L, G+L+1) valid: 1
+  @within(G+3, G+4) out: 32,
+  @exact(G+3, G+4) valid: 1
 );
 
-extern component Add<G, L>(
+extern component Add<G>(
   @within(G, G+1) left: 32,
   @within(G, G+1) right: 32,
   @exact(G, G+1) go: 1
 ) -> (
-  @within(G+L, G+L+1) out: 32,
-  @exact(G+L, G+L+1) valid: 1
+  @within(G+2, G+4) out: 32,
+  @exact(G+2, G+4) valid: 1
 );
 
 component main<G>() -> () {
