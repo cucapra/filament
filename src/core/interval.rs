@@ -28,10 +28,29 @@ pub enum IntervalTime {
     },
 }
 impl IntervalTime {
+    /// Construct an [IntervalTime::Abstract].
+    #[inline]
+    pub fn abs(time_var: Id) -> Self {
+        IntervalTime::Abstract(time_var)
+    }
     /// Construct an [IntervalTime::Port].
     #[inline]
     pub fn port(cell: Id, name: Id) -> Self {
         IntervalTime::Port { cell, name }
+    }
+
+    #[inline]
+    pub fn binop_add(left: IntervalTime, right: IntervalTime) -> Self {
+        IntervalTime::BinOp {
+            op: TimeOp::Add,
+            left: Box::new(left),
+            right: Box::new(right),
+        }
+    }
+
+    #[inline]
+    pub fn concrete(num: u64) -> Self {
+        IntervalTime::Concrete(num)
     }
 
     /// Resolve the IntervalTime using the given bindings from abstract variables to exact
@@ -75,6 +94,13 @@ pub enum IntervalType {
     Within,
 }
 
+impl IntervalType {
+    /// Returns `true` if the interval_type is [`Exact`].
+    pub fn is_exact(&self) -> bool {
+        matches!(self, Self::Exact)
+    }
+}
+
 /// An interval consists of a type tag, a start time, and a end time.
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub struct Interval {
@@ -83,6 +109,15 @@ pub struct Interval {
     pub end: IntervalTime,
 }
 impl Interval {
+    /// Construct a [Interval] with `tag` set to [IntervalTime::Exact].
+    pub fn exact(start: IntervalTime, end: IntervalTime) -> Self {
+        Interval {
+            tag: IntervalType::Exact,
+            start,
+            end,
+        }
+    }
+
     pub fn resolve(&self, bindings: &HashMap<Id, IntervalTime>) -> Self {
         Interval {
             tag: self.tag.clone(),

@@ -89,6 +89,9 @@ pub struct Context {
     /// Mapping from name of instance to its information.
     pub instances: HashMap<core::Id, Instance>,
 
+    /// Set of facts that need to be proven.
+    pub obligations: HashSet<Fact>,
+
     /// Set of currently known facts.
     pub facts: HashSet<Fact>,
 }

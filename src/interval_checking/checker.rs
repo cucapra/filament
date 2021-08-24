@@ -41,7 +41,7 @@ fn check_invocation(invoke: core::Invocation, ctx: &mut Context) -> FilamentResu
                 core::IntervalType::Exact => Fact::equality(requirement, guarantee),
                 core::IntervalType::Within => Fact::subset(requirement, guarantee),
             };
-            ctx.facts.insert(fact);
+            ctx.obligations.insert(fact);
         }
     }
     Ok(instance)
@@ -54,6 +54,28 @@ fn check_assign(assign: core::Assignment, ctx: &mut Context) -> FilamentResult<(
     let instance = check_invocation(assign.rhs, ctx)?;
     ctx.add_instance(assign.bind, instance)?;
     Ok(())
+}
+
+fn check_when(when: core::When, ctx: &mut Context) -> FilamentResult<()> {
+    // Add a fact representing the equality between when port's pulse
+    // time and the time variable.
+    if let core::Port::CompPort { comp, name } = &when.port {
+        let interval = ctx.get_instance(comp)?.port_guarantees(name)?;
+        if interval.tag.is_exact() {
+            let time_var = core::IntervalTime::abs(when.time_var);
+            let time_var_next =
+                core::IntervalTime::binop_add(time_var.clone(), core::IntervalTime::concrete(1));
+            let time_var_interval = core::Interval::exact(time_var, time_var_next);
+            let fact = Fact::equality(time_var_interval, interval);
+            ctx.facts.insert(fact);
+        }
+    }
+
+    // Check the body of the when statement
+    when.body.into_iter().try_for_each(|control| match control {
+        core::Control::Assign(assign) => check_assign(assign, ctx),
+        core::Control::When(_) => todo!("when statements"),
+    })
 }
 
 fn check_component(comp: core::Component, ctx: &mut Context) -> FilamentResult<()> {
@@ -73,7 +95,7 @@ fn check_component(comp: core::Component, ctx: &mut Context) -> FilamentResult<(
         .into_iter()
         .try_for_each(|control| match control {
             core::Control::Assign(assign) => check_assign(assign, ctx),
-            core::Control::When(_) => todo!("when statements"),
+            core::Control::When(wh) => check_when(wh, ctx),
         })?;
 
     Ok(())
@@ -102,7 +124,8 @@ pub fn check(mut namespace: core::Namespace) -> FilamentResult<()> {
         .drain(..)
         .try_for_each(|comp| check_component(comp, &mut ctx))?;
 
-    println!("Proof Obligations:\n{:#?}", ctx.facts);
+    println!("Known Facts:\n{:#?}", ctx.facts);
+    println!("Proof Obligations:\n{:#?}", ctx.obligations);
 
     Ok(())
 }
