@@ -37,7 +37,6 @@ impl IntervalTime {
     /// Resolve the IntervalTime using the given bindings from abstract variables to exact
     /// bindings.
     pub fn resolve(&self, bindings: &HashMap<Id, IntervalTime>) -> Self {
-        println!("{:#?}: {:?}", self, bindings);
         match self {
             IntervalTime::Concrete(_) | IntervalTime::Port { .. } => self.clone(),
             IntervalTime::Abstract(name) => bindings[name].clone(),
