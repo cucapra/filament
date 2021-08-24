@@ -37,7 +37,9 @@ impl std::fmt::Debug for Error {
                 write!(f, "Undefined {} name: {}", typ, name.to_string())
             }
             ParseError(err) => write!(f, "Filament Parser: {}", err),
-            InvalidFile(msg) | Misc(msg) | WriteError(msg) => write!(f, "{}", msg),
+            InvalidFile(msg) | Misc(msg) | WriteError(msg) => {
+                write!(f, "{}", msg)
+            }
         }
     }
 }

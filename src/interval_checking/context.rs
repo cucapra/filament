@@ -20,7 +20,10 @@ pub struct Instance {
 
 impl Instance {
     /// Construct an instance from a Signature and bindings for abstract variables.
-    pub fn from_signature(sig: Rc<core::Signature>, abs: Vec<core::IntervalTime>) -> Self {
+    pub fn from_signature(
+        sig: Rc<core::Signature>,
+        abs: Vec<core::IntervalTime>,
+    ) -> Self {
         let binding = sig
             .abstract_vars
             .iter()
@@ -58,7 +61,11 @@ impl Instance {
     /// based on whether it is an input or an input port.
     ///
     #[inline]
-    fn resolve_port(&self, port: &core::Id, is_input: bool) -> FilamentResult<core::Interval> {
+    fn resolve_port(
+        &self,
+        port: &core::Id,
+        is_input: bool,
+    ) -> FilamentResult<core::Interval> {
         let maybe_pd = if is_input {
             self.sig.inputs.iter().find(|pd| pd.name == port)
         } else {
@@ -76,7 +83,10 @@ impl Instance {
     } */
 
     /// Returns the guarantees provided by an output port
-    pub fn port_guarantees(&self, port: &core::Id) -> FilamentResult<core::Interval> {
+    pub fn port_guarantees(
+        &self,
+        port: &core::Id,
+    ) -> FilamentResult<core::Interval> {
         self.resolve_port(port, false)
     }
 }
@@ -97,17 +107,27 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn add_sig_alias(&mut self, name: core::Id, comp: &core::Id) -> FilamentResult<()> {
+    pub fn add_sig_alias(
+        &mut self,
+        name: core::Id,
+        comp: &core::Id,
+    ) -> FilamentResult<()> {
         match self.sigs.get(comp).map(|sig| Rc::clone(sig)) {
             Some(sig) => {
                 self.sigs.insert(name, sig);
                 Ok(())
             }
-            None => Err(Error::Undefined(comp.clone(), "component".to_string())),
+            None => {
+                Err(Error::Undefined(comp.clone(), "component".to_string()))
+            }
         }
     }
 
-    pub fn add_sig(&mut self, name: core::Id, sig: Rc<core::Signature>) -> FilamentResult<()> {
+    pub fn add_sig(
+        &mut self,
+        name: core::Id,
+        sig: Rc<core::Signature>,
+    ) -> FilamentResult<()> {
         if let Entry::Vacant(e) = self.sigs.entry(name.clone()) {
             e.insert(sig);
             Ok(())
@@ -116,7 +136,11 @@ impl Context {
         }
     }
 
-    pub fn add_instance(&mut self, name: core::Id, instance: Instance) -> FilamentResult<()> {
+    pub fn add_instance(
+        &mut self,
+        name: core::Id,
+        instance: Instance,
+    ) -> FilamentResult<()> {
         if let Entry::Vacant(e) = self.instances.entry(name.clone()) {
             e.insert(instance);
             Ok(())
@@ -125,16 +149,24 @@ impl Context {
         }
     }
 
-    pub fn get_sig(&self, comp: &core::Id) -> FilamentResult<Rc<core::Signature>> {
+    pub fn get_sig(
+        &self,
+        comp: &core::Id,
+    ) -> FilamentResult<Rc<core::Signature>> {
         self.sigs
             .get(comp)
             .map(|sig| Rc::clone(sig))
-            .ok_or_else(|| Error::Undefined(comp.clone(), "component".to_string()))
+            .ok_or_else(|| {
+                Error::Undefined(comp.clone(), "component".to_string())
+            })
     }
 
-    pub fn get_instance(&self, instance: &core::Id) -> FilamentResult<&Instance> {
-        self.instances
-            .get(instance)
-            .ok_or_else(|| Error::Undefined(instance.clone(), "instance".to_string()))
+    pub fn get_instance(
+        &self,
+        instance: &core::Id,
+    ) -> FilamentResult<&Instance> {
+        self.instances.get(instance).ok_or_else(|| {
+            Error::Undefined(instance.clone(), "instance".to_string())
+        })
     }
 }

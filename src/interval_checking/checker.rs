@@ -8,7 +8,10 @@ const THIS: &str = "_this";
 
 /// Check invocation and add new [super::Fact] representing the proof obligations for checking this
 /// invocation.
-fn check_invocation(invoke: core::Invocation, ctx: &mut Context) -> FilamentResult<Instance> {
+fn check_invocation(
+    invoke: core::Invocation,
+    ctx: &mut Context,
+) -> FilamentResult<Instance> {
     // Construct an instance for this invocation
     let sig = ctx.get_sig(&invoke.comp)?;
     let instance = Instance::from_signature(sig, invoke.abstract_vars.clone());
@@ -38,8 +41,12 @@ fn check_invocation(invoke: core::Invocation, ctx: &mut Context) -> FilamentResu
         };
         if let Some(guarantee) = maybe_guarantee {
             let fact = match requirement.tag {
-                core::IntervalType::Exact => Fact::equality(requirement, guarantee),
-                core::IntervalType::Within => Fact::subset(requirement, guarantee),
+                core::IntervalType::Exact => {
+                    Fact::equality(requirement, guarantee)
+                }
+                core::IntervalType::Within => {
+                    Fact::subset(requirement, guarantee)
+                }
             };
             ctx.obligations.insert(fact);
         }
@@ -50,7 +57,10 @@ fn check_invocation(invoke: core::Invocation, ctx: &mut Context) -> FilamentResu
 /// Given a [core::Assignment], checks whether the current set of known
 /// facts can be used to prove that the ports are available for the stated
 /// requirements.
-fn check_assign(assign: core::Assignment, ctx: &mut Context) -> FilamentResult<()> {
+fn check_assign(
+    assign: core::Assignment,
+    ctx: &mut Context,
+) -> FilamentResult<()> {
     let instance = check_invocation(assign.rhs, ctx)?;
     ctx.add_instance(assign.bind, instance)?;
     Ok(())
@@ -63,9 +73,12 @@ fn check_when(when: core::When, ctx: &mut Context) -> FilamentResult<()> {
         let interval = ctx.get_instance(comp)?.port_guarantees(name)?;
         if interval.tag.is_exact() {
             let time_var = core::IntervalTime::abs(when.time_var);
-            let time_var_next =
-                core::IntervalTime::binop_add(time_var.clone(), core::IntervalTime::concrete(1));
-            let time_var_interval = core::Interval::exact(time_var, time_var_next);
+            let time_var_next = core::IntervalTime::binop_add(
+                time_var.clone(),
+                core::IntervalTime::concrete(1),
+            );
+            let time_var_interval =
+                core::Interval::exact(time_var, time_var_next);
             let fact = Fact::equality(time_var_interval, interval);
             ctx.facts.insert(fact);
         }
@@ -78,7 +91,10 @@ fn check_when(when: core::When, ctx: &mut Context) -> FilamentResult<()> {
     })
 }
 
-fn check_component(comp: core::Component, ctx: &mut Context) -> FilamentResult<()> {
+fn check_component(
+    comp: core::Component,
+    ctx: &mut Context,
+) -> FilamentResult<()> {
     let sig = Rc::new(comp.sig);
 
     // Add instance for this component. Whenever a bare port is used, it refers

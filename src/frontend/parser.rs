@@ -187,7 +187,9 @@ impl FilamentParser {
         Ok(())
     }
 
-    fn io(input: Node) -> ParseResult<(Vec<core::PortDef>, Vec<core::PortDef>)> {
+    fn io(
+        input: Node,
+    ) -> ParseResult<(Vec<core::PortDef>, Vec<core::PortDef>)> {
         Ok(match_nodes!(
             input.into_children();
             [arrow(_)] => (vec![], vec![]),

@@ -57,7 +57,9 @@ impl IntervalTime {
     /// bindings.
     pub fn resolve(&self, bindings: &HashMap<Id, IntervalTime>) -> Self {
         match self {
-            IntervalTime::Concrete(_) | IntervalTime::Port { .. } => self.clone(),
+            IntervalTime::Concrete(_) | IntervalTime::Port { .. } => {
+                self.clone()
+            }
             IntervalTime::Abstract(name) => bindings[name].clone(),
             IntervalTime::BinOp { op, left, right } => IntervalTime::BinOp {
                 op: op.clone(),
