@@ -1,4 +1,4 @@
-use super::{Assignment, Id, Interval};
+use super::{Control, Id, Interval};
 
 pub struct PortDef {
     /// Name of the port
@@ -49,7 +49,7 @@ pub struct Component {
     pub cells: Vec<Cell>,
 
     /// Model for this component
-    pub assignments: Vec<Assignment>,
+    pub body: Vec<Control>,
 }
 
 pub struct Namespace {

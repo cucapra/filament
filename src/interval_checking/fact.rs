@@ -37,12 +37,21 @@ impl Fact {
 }
 impl std::fmt::Debug for Fact {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.left.fmt(f)?;
+        let core::Interval { start, end, .. } = &self.left;
+        write!(f, "[")?;
+        start.fmt(f)?;
+        write!(f, ", ")?;
+        end.fmt(f)?;
+        write!(f, "]")?;
         match self.tag {
             FactType::Equality => write!(f, " == ")?,
-            FactType::Subset => write!(f, " ⊆ ")?
+            FactType::Subset => write!(f, " ⊆ ")?,
         }
-        self.right.fmt(f)
+        let core::Interval { start, end, .. } = &self.right;
+        write!(f, "[")?;
+        start.fmt(f)?;
+        write!(f, ", ")?;
+        end.fmt(f)?;
+        write!(f, "]")
     }
 }
-

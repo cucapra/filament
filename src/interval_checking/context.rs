@@ -1,7 +1,13 @@
-use std::{collections::{HashMap, HashSet, hash_map::Entry}, rc::Rc};
+use std::{
+    collections::{hash_map::Entry, HashMap, HashSet},
+    rc::Rc,
+};
 
 use super::Fact;
-use crate::{core, errors::{Error, FilamentResult}};
+use crate::{
+    core,
+    errors::{Error, FilamentResult},
+};
 
 #[derive(Debug)]
 pub struct Instance {
@@ -129,4 +135,3 @@ impl Context {
             .ok_or_else(|| Error::Undefined(instance.clone(), "instance".to_string()))
     }
 }
-

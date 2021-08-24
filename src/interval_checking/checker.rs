@@ -6,7 +6,7 @@ use crate::{core, errors::FilamentResult};
 
 const THIS: &str = "_this";
 
-/// Check invocation and add new [Fact] representing the proof obligations for checking this
+/// Check invocation and add new [super::Fact] representing the proof obligations for checking this
 /// invocation.
 fn check_invocation(invoke: core::Invocation, ctx: &mut Context) -> FilamentResult<Instance> {
     // Construct an instance for this invocation
@@ -69,13 +69,20 @@ fn check_component(comp: core::Component, ctx: &mut Context) -> FilamentResult<(
         ctx.add_sig_alias(cell.name, &cell.component)?;
     }
 
-    comp.assignments
+    comp.body
         .into_iter()
-        .try_for_each(|assign| check_assign(assign, ctx))?;
+        .try_for_each(|control| match control {
+            core::Control::Assign(assign) => check_assign(assign, ctx),
+            core::Control::When(_) => todo!("when statements"),
+        })?;
 
     Ok(())
 }
 
+/// Check a [core::Namespace] to prove that the interval requirements of all the ports can be
+/// satisfied.
+/// Internally generates [super::Fact] which represent proof obligations that need to be proven for
+/// the interval requirements to be proven.
 pub fn check(mut namespace: core::Namespace) -> FilamentResult<()> {
     let mut ctx = Context::default();
     // Add signatures to the context

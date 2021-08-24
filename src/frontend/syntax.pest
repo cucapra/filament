@@ -26,7 +26,7 @@ signature = {
   identifier ~ abstract_var? ~ io
 }
 component = {
-  "component" ~ signature ~ "{" ~ cells ~ assignment* ~ "}"
+  "component" ~ signature ~ "{" ~ cells ~ control* ~ "}"
 }
 external = {
   "extern" ~ "component" ~ signature ~ ";"
@@ -105,4 +105,16 @@ invocation = {
 
 assignment = {
   identifier ~ "=" ~ invocation ~ ";"
+}
+
+// =========== When ============
+when = {
+  "when" ~ "@rises" ~ "(" ~ port ~ ")" ~ "at" ~ identifier ~ "{" ~
+    control* ~
+  "}"
+}
+
+// ========== Control ==========
+control = {
+  assignment | when
 }

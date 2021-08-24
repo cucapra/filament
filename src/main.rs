@@ -1,4 +1,4 @@
-use filament::{interval_checking, cmdline, errors, frontend};
+use filament::{cmdline, errors, frontend, interval_checking};
 
 fn main() -> errors::FilamentResult<()> {
     let opts: cmdline::Opts = argh::from_env();

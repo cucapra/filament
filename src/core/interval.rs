@@ -40,13 +40,11 @@ impl IntervalTime {
         match self {
             IntervalTime::Concrete(_) | IntervalTime::Port { .. } => self.clone(),
             IntervalTime::Abstract(name) => bindings[name].clone(),
-            IntervalTime::BinOp { op, left, right } => {
-                IntervalTime::BinOp {
-                    op: op.clone(),
-                    left: Box::new(left.resolve(bindings)),
-                    right: Box::new(right.resolve(bindings)),
-                }
-            }
+            IntervalTime::BinOp { op, left, right } => IntervalTime::BinOp {
+                op: op.clone(),
+                left: Box::new(left.resolve(bindings)),
+                right: Box::new(right.resolve(bindings)),
+            },
         }
     }
 }

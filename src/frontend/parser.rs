@@ -298,18 +298,35 @@ impl FilamentParser {
         ))
     }
 
+    fn when(input: Node) -> ParseResult<core::When> {
+        Ok(match_nodes!(
+            input.into_children();
+            [port(port), identifier(time_var), control(body)..] => core::When {
+                port, time_var, body: body.collect()
+            }
+        ))
+    }
+
+    fn control(input: Node) -> ParseResult<core::Control> {
+        Ok(match_nodes!(
+            input.into_children();
+            [assignment(assign)] => core::Control::Assign(assign),
+            [when(wh)] => core::Control::When(wh),
+        ))
+    }
+
     fn component(input: Node) -> ParseResult<core::Component> {
         Ok(match_nodes!(
             input.into_children();
             [
                 signature(sig),
                 cells(cells),
-                assignment(assignments)..
+                control(body)..
             ] => {
                 core::Component {
                     sig,
                     cells,
-                    assignments: assignments.collect(),
+                    body: body.collect(),
                 }
             }
         ))

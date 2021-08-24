@@ -1,6 +1,6 @@
 mod checker;
-mod fact;
 mod context;
+mod fact;
 
 pub use context::{Context, Instance};
 

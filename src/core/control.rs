@@ -6,6 +6,11 @@ pub enum Port {
     Constant(u64),
 }
 
+pub enum Control {
+    Assign(Assignment),
+    When(When),
+}
+
 pub struct Assignment {
     /// Name of the variable being assigned
     pub bind: Id,
@@ -23,4 +28,12 @@ pub struct Invocation {
 
     /// Assignment for the ports
     pub ports: Vec<Port>,
+}
+
+/// A when statement executes its body when the provided `port` rises.
+/// It also binds the `time_var` in the body to the time when the `port` rose.
+pub struct When {
+    pub port: Port,
+    pub time_var: Id,
+    pub body: Vec<Control>,
 }
