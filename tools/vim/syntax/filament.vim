@@ -28,6 +28,11 @@ syn match filamentCellName '\v[_a-zA-Z]((\-+)?[_a-zA-Z0-9]+)*' contained nextgro
 syn match filamentColon ':' contained nextgroup=filamentType contained skipwhite
 hi link filamentCellName filamentCompName
 
+" When statements
+syn match filamentKeyword 'when'
+syn match filamentOperator '@rises'
+syn match filamentKeyword 'at' nextgroup=filamentType skipwhite
+
 " Ports
 syn match filamentDot '\.' nextgroup=filamentPort
 syn match filamentPort '\v[_a-zA-Z]((\-+)?[_a-zA-Z0-9]+)*' contained
@@ -35,6 +40,7 @@ syn match filamentPort '\v[_a-zA-Z]((\-+)?[_a-zA-Z0-9]+)*' contained
 " Other keywords
 syn keyword filamentSpecialKeywords extern
 
+hi link filamentRises filamentOperator
 hi link filamentSpecialKeywords Directory
 hi link filamentPort Directory
 hi link filamentKeyword Keyword
