@@ -32,6 +32,7 @@ hi link filamentCellName filamentCompName
 syn match filamentKeyword 'when'
 syn match filamentOperator '@rises'
 syn match filamentKeyword 'at' nextgroup=filamentType skipwhite
+syn match filamentKeyword 'time' nextgroup=filamentType skipwhite
 
 " Ports
 syn match filamentDot '\.' nextgroup=filamentPort

@@ -67,10 +67,6 @@ impl FilamentParser {
         Ok(())
     }
 
-    fn semi(_input: Node) -> ParseResult<()> {
-        Ok(())
-    }
-
     // ================ Literals =====================
     fn identifier(input: Node) -> ParseResult<Id> {
         Ok(Id::from(input.as_str()))
@@ -303,8 +299,8 @@ impl FilamentParser {
     fn when(input: Node) -> ParseResult<core::When> {
         Ok(match_nodes!(
             input.into_children();
-            [port(port), identifier(time_var), control(body)..] => core::When {
-                port, time_var, body: body.collect()
+            [identifier(time_var), port(port)] => core::When {
+                port, time_var
             }
         ))
     }

@@ -84,11 +84,7 @@ fn check_when(when: core::When, ctx: &mut Context) -> FilamentResult<()> {
         }
     }
 
-    // Check the body of the when statement
-    when.body.into_iter().try_for_each(|control| match control {
-        core::Control::Assign(assign) => check_assign(assign, ctx),
-        core::Control::When(_) => todo!("when statements"),
-    })
+    Ok(())
 }
 
 fn check_component(

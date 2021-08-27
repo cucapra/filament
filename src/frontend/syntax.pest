@@ -3,9 +3,6 @@ WHITESPACE = _{ " " | "\t" | NEWLINE }
 // C-style comments
 COMMENT = _{ ("//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE) | "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
 
-// Semicolon
-semi = { ";" }
-
 // Identifiers may begin with `_` or an ASCII character.
 identifier = @{ ("_" | ASCII_ALPHA)+ ~ ("_" | ASCII_ALPHA | ASCII_DIGIT)* }
 
@@ -109,9 +106,7 @@ assignment = {
 
 // =========== When ============
 when = {
-  "when" ~ "@rises" ~ "(" ~ port ~ ")" ~ "at" ~ identifier ~ "{" ~
-    control* ~
-  "}"
+  "time" ~ identifier ~ "=" ~ "when" ~ "@rises" ~ "(" ~ port ~ ")" ~ ";"
 }
 
 // ========== Control ==========

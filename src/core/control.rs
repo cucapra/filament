@@ -35,5 +35,4 @@ pub struct Invocation {
 pub struct When {
     pub port: Port,
     pub time_var: Id,
-    pub body: Vec<Control>,
 }

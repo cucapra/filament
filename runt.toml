@@ -1,0 +1,10 @@
+ver = "0.3.2"
+
+[[tests]]
+name = "tests"
+paths = [
+  "tests/*.fil"
+]
+cmd = """
+./target/debug/filament {}
+"""

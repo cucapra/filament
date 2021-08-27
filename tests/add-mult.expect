@@ -1,0 +1,6 @@
+Known Facts:
+{}
+Proof Obligations:
+{
+    [G+2, G+2+1] ⊆ [G+2, G+3],
+}

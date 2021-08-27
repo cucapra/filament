@@ -1,0 +1,8 @@
+Known Facts:
+{
+    [T, T+1] == [G+3, G+4],
+}
+Proof Obligations:
+{
+    [T, T+1] ⊆ [G+3, G+4],
+}
