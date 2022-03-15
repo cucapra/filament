@@ -44,19 +44,58 @@
 \email{rnigam@cs.cornell.edu}
 
 %% Abstract
-%% Note: \begin{abstract}...\end{abstract} environment must come
-%% before \maketitle command
 \begin{abstract}
 Write an abstract \ldots
 \end{abstract}
 
 \maketitle
 
-\section{Semantics}
+\section{Introduction}
 
-\nonterms{T,lf,res,c,typ,sto,G}
+This paper describes a type system that statically proves that a circuit does not attempt to use a shared resource using multiple parallel threads of computation.
+The absence of such bugs is a key requirement in proving the correctness of hardware circuits that utilize fine-grained resource sharing and reason about mutual exclusivity by reasoning about clock cycles or hardware signals.
+
+The key idea is to use a separation logic inspired type system enriched with a notion of abstract time to enable reasoning about \emph{when} a resource is used.
+
+\section{The Filament Language}
+
+Filament is a core calculus for describing hardware designs that perform fine-grained resource sharing.
+Filament programs consist of \emph{components} each of which can construct and schedule the execution of other components.
+Computations are scheduled using \emph{time variables} which can either be concrete or abstract.
+%
+\nonterms{T}
+%
+Scheduling using concrete time variables corresponds to defining a \emph{latency-sensitive} finite state machine that controls the execution of the hardware design using the clock signal.
+On the other hand, using abstract time variables is similar to designing circuits that operate using \emph{latency-insensitive} handshake signals.
+The grammar of time variables forms an algebraic \emph{ring} equipped with a top element ($\infty$).
+\xxx[R]{Explain why this is a ring}
+
+Time variables are used to define intervals.
+Intervals can be used to index the type of a resource, describing when it is available.
+\nonterms{lf}
+\nonterms{res}
+
+\nonterms{c}
+
+\subsection{Type Checking}
+\nonterms{typ}
+
+\paragraph{The time store}
+\nonterms{sto}
+
+\paragraph{The type store}
+\nonterms{G}
 
 \ottdefncheck
+
+\section{Pipeline Initiation Intervals}
+Pipeline parallelism is pervasive in hardware design.
+Each \emph{stage} of a pipeline can execute in parallel.
+In presence of fine-grained sharing of resources, the pipeline defines an \emph{initiation interval}
+which is the minimum amount of time needed before a new input can be safely processed by the pipeline.
+In this section, we demonstrate how Filament can be used to prove the correctness of the initiation interval of a pipeline.
+
+The key idea is to prove that for a pipeline $M$ with initiation interval $i$, we can execute $M$ at both time steps $t$ and $t+i$.
 
 
 %% Acknowledgments
