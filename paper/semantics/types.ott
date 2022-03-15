@@ -18,17 +18,17 @@ indexvar index, i, j, k, l ::=
 
 grammar
 
-T :: T_ ::= {{ com time }}       {{ tex \textcolor{red}{[[T]]} }}
+T :: T_ ::= {{ com time }}       {{ tex \textcolor{teal}{[[T]]} }}
   | n :: :: TimeNat                {{ com constant }}
   | inf :: :: TimeEnd              {{ com end of time }} {{ tex \infty }}
   | t  :: :: TimeVar               {{ com abstract time }}
   | n t :: :: TimeScalar           {{ com scalar time }} {{ tex [[n]]\times[[t]] }}
   | T1 + T2 :: :: TimeSum          {{ com sum }}
-  {{ tex \textcolor{red}{ [[T1]] + [[T2]] } }}
+  {{ tex \textcolor{teal}{ [[T1]] + [[T2]] } }}
   | max ( T1 , T2 ) :: :: TimeMax  {{ com max }}
 
 % Lifetimes
-lf {{ tex \textcolor{red}{\pi} }} :: lf_ ::= {{ com time range }}
+lf {{ tex \textcolor{teal}{\pi} }} :: lf_ ::= {{ com time range }}
   | [ T1 , T2 ]  :: :: LFRange  {{ com range }}
   | lf1 \/ lf2   :: :: LFUnion  {{ com union }}
 
