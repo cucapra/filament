@@ -12,7 +12,6 @@ embed
 
 metavar x ::= {{ com variables}}
 metavar M ::= {{ com components }}
-metavar Mr {{ tex \&M }} ::= {{ com component ref }}
 metavar t ::= {{ com time variables }}
 metavar n ::= {{ com naturals }}
 indexvar index, i, j, k, l ::=
@@ -25,42 +24,52 @@ T :: T_ ::= {{ com time }}       {{ tex \textcolor{red}{[[T]]} }}
   | t  :: :: TimeVar               {{ com abstract time }}
   | n t :: :: TimeScalar           {{ com scalar time }} {{ tex [[n]]\times[[t]] }}
   | T1 + T2 :: :: TimeSum          {{ com sum }}
+  {{ tex \textcolor{red}{ [[T1]] + [[T2]] } }}
   | max ( T1 , T2 ) :: :: TimeMax  {{ com max }}
 
+% Lifetimes
+lf {{ tex \textcolor{red}{\pi} }} :: lf_ ::= {{ com time range }}
+  | [ T1 , T2 ]  :: :: LFRange  {{ com range }}
+  | lf1 \/ lf2   :: :: LFUnion  {{ com union }}
+
+% Resources
+res {{ tex \rho }} :: res_ ::=
+  | M ( lf )  :: :: Resource {{ com resource with lifetime }}
+  {{ tex [[M]]_{ [[lf]] } }}
+
 c :: c_ ::= {{ com  commands }}
-  | def M < t > [ Mi , .. , Mj ] ( Mrk , .. , Mrl ) { c } :: :: CDef {{ com definition}}
+  | def M < t > [ x1 : res1 , .. , xk : resk ] { c } :: :: CDef  {{ com definition}}
   | time t = T :: :: CTimeDef                                    {{ com time definition }}
-  | x = M [ M1 , .. , Mj ] :: :: CInst                           {{ com instantiaion }}
-  | invoke M ( & x1 , .. , & xj ) :: :: CInvoke                  {{ com invoke }}
+  | x = M  :: :: CInst                                           {{ com instantiaion }}
+  | invoke x ( x1 , .. , xj ) :: :: CInvoke                      {{ com invoke }}
   | when T { c } :: :: CWhen                                     {{ com timed execution }}
   {{ tex \textbf{when} \,\, [[T]] \,\, \{ [[c]] \} }}
   | c @ t :: :: CEnd                                             {{ com bind end time }}
   | c1 ; c2 :: :: CSeq                                           {{ com sequence }}
   | c1 || c2 :: :: CPar                                          {{ com parallel }}
 
-% time store
-sto {{ tex \Theta }} :: sto_ ::=  {{ com time store }}
-  | semp :: :: SEmp               {{ com empty }} {{ tex \cdot }}
-  | t : T ; sto :: :: SExt        {{ com extend }}
-  | t1 >= t2 ; sto :: :: SCons    {{ com constraint }}
-  | sto >= T  :: :: SOrderAll     {{ com order all }}
-  | sto1 \/ sto2 :: :: SUnion     {{ com store union }}
-
 % Types
 typ {{ tex \tau }} :: typ_ ::=    {{ com types }}
-  | M [ T1 , T2 ]  :: :: TLife  {{ com resource with lifetime }}
-  {{ tex [[M]]_{ [ [[T1]] , [[T2]] ] } }}
-  | f             :: :: TComp {{ com component type }}
-  {{ tex \textbf{\textcolor{blue}{todo} } }}
+  | res  :: :: Resource {{ com resource with lifetime }}
+  | res [ t \ T ] :: :: TSubst  {{ com substitute }}
+  | forall t . ( res1 , .. , resk ) -> ( M , tl ) :: :: TComp  {{ com component type }}
 
 % Type store
 G {{ tex \Gamma }} ::  G_  ::=            {{ com type store }}
-  | gemp :: :: GEmp                     {{ com empty }} {{ tex \cdot }}
-  | x : typ ; G :: :: GExt    {{ com extend }}
-  | ( G [ T1 , T2 ] ) :: :: GShrink     {{ com shrink }}
+  | { x1 : typ1 , .. , xi : typi } :: :: Gconc  {{ com concrete }}
+  | { M  : typ } :: :: GDef                    {{ com component definition }}
+  | ( G [ T1 , T2 ] ) :: :: GShrink             {{ com shrink }}
   {{ tex {[[G]]}_{ [ [[T1]] , [[T2]] ] } }}
-  | G1 \/ G2  :: :: GUnion              {{ com union }}
-  | G1 * G2   :: :: GSepSplit           {{ com separating split }}
+  | G1 \/ G2  :: :: GUnion                      {{ com union }}
+  | G1 * G2   :: :: GSepSplit                   {{ com separating split }}
+
+% time store
+sto {{ tex \Theta }} :: sto_ ::=  {{ com time store }}
+  | { t1 : T1 , .. , ti : Ti } :: :: Sconc  {{ com concrete }}
+  | t1 >= t2 ; sto :: :: SCons              {{ com constraint }}
+  | sto >= T  :: :: SOrderAll               {{ com order all }}
+  | sto1 \/ sto2 :: :: SUnion               {{ com union }}
+
 
 % Styling for terminals
 terminals :: 'terminals_' ::=
@@ -69,11 +78,15 @@ terminals :: 'terminals_' ::=
   | \/                  ::   :: setunion   {{ tex \cup }}
   | >=                  ::   :: geq        {{ tex \geq }}
   | <=                  ::   :: leq        {{ tex \leq }}
+  | ->                  ::   :: rarrow     {{ tex \rightarrow }}
+  | forall              ::   :: forall     {{ tex \forall }}
 
 % Formulas that can appear in judgements
 formula :: 'formula_' ::=
   | judgement ::  :: judgement  {{ com judgements }}
   | G1 = G2 :: ::  typestoreeq      {{ com type store equality }}
+  | M in G  :: ::  defined          {{ com defined in type store }} {{ tex [[M]] \in [[G]] }}
+  | G ( x ) = typ  :: ::  access      {{ com type store access }}
   | sto1 = sto2 :: ::  timestoreeq  {{ com time store equality }}
   | T1 >= T2 :: :: timegeq      {{ com time ordering }}
   | todo     :: :: todo         {{ com todo }} {{ tex \textbf{\textcolor{blue}{todo} } }}
@@ -85,13 +98,19 @@ defn
 sto1 , G1 |- @ T1 c : @ T2 sto2 , G2 :: :: check :: ''
 {{ tex [[sto1]] , [[G1]] \vdash_{[[T1]]} [[c]] \dashv_{[[T2]]} [[sto2]] , [[G2]] }} by
 
-todo
+sto, G \/ {xi:resi,..,xj:resj} |-@T c :@ T + tl sto', G \/ G'
+G'' = G \/ { M : forall t. (resi,..,resj) -> (M, tl) }
 ----------------------------- :: CheckDef
-sto, G |-@T  def M<t>[Mi,..,Mj](Mrk,..,Mrl) { c } :@T sto, G
+sto, G |-@T  def M<t>[xi:resi,..,xj:resj] { c } :@ T sto, G''
 
-todo
+M in G
 ----------------------------- :: CheckInst
-sto, G |- @ T  x = M[M1,.., Mj] :@T sto, G
+sto, G |- @ T  x = M :@T sto, G \/ { x : M ([T, inf]) }
+
+G(x) = forall t. (res1, .., resj) -> (M, tl)
+G = G' * { x1: res1[t\T], .., xj: resj[t\T] }
+-------------------------------------------------- :: CheckInvoke
+sto, G |- @ T invoke x(x1,..,xj) :@ T + tl sto, G'
 
 sto, G |- @ T c1 : @ T1 sto1, G1
 sto1, G1 |- @ T1 c1 : @ T2 sto2, G2
@@ -121,4 +140,9 @@ sto, G |- @ T c : @ T1 sto', G'
 
 
 ---------------------------- :: CheckTimeDef
-sto, G |- @ T time t = T' : @ T1 t : T'; sto , G
+sto, G |- @ T time t = T' : @ T sto \/ {t: T'} , G
+
+
+sto, G |-@T c :@T' sto', G'
+---------------------------- :: CheckTimeBind
+sto, G |- @ T c@t : @ T' sto \/ {t: T'} , G'
