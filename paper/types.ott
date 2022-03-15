@@ -12,95 +12,113 @@ embed
 
 metavar x ::= {{ com variables}}
 metavar M ::= {{ com components }}
+metavar Mr {{ tex \&M }} ::= {{ com component ref }}
 metavar t ::= {{ com time variables }}
-metavar sto ::= {{ com time store }} {{ tex \Theta }}
 metavar n ::= {{ com naturals }}
-indexvar index, j, k, l ::=
+indexvar index, i, j, k, l ::=
 
 grammar
 
 T :: T_ ::= {{ com time }}       {{ tex \textcolor{red}{[[T]]} }}
   | n :: :: TimeNat                {{ com constant }}
+  | inf :: :: TimeEnd              {{ com end of time }} {{ tex \infty }}
   | t  :: :: TimeVar               {{ com abstract time }}
   | n t :: :: TimeScalar           {{ com scalar time }} {{ tex [[n]]\times[[t]] }}
   | T1 + T2 :: :: TimeSum          {{ com sum }}
   | max ( T1 , T2 ) :: :: TimeMax  {{ com max }}
 
 c :: c_ ::= {{ com  commands }}
-  | def M < t > [ M1 , .. , Mj ] ( & Mk , .. , & Ml ) :: :: CDef      {{ com definition}}
-  | x = M [ M1 , .. , Mj ] :: :: CInst           {{ com instantiaion }}
-  | invoke M ( & x1 , .. , & xj ) :: :: CInvoke  {{ com invoke }}
-  | when T { c } :: :: CWhen
-  {{ com timed execution }}
+  | def M < t > [ Mi , .. , Mj ] ( Mrk , .. , Mrl ) { c } :: :: CDef {{ com definition}}
+  | time t = T :: :: CTimeDef                                    {{ com time definition }}
+  | x = M [ M1 , .. , Mj ] :: :: CInst                           {{ com instantiaion }}
+  | invoke M ( & x1 , .. , & xj ) :: :: CInvoke                  {{ com invoke }}
+  | when T { c } :: :: CWhen                                     {{ com timed execution }}
   {{ tex \textbf{when} \,\, [[T]] \,\, \{ [[c]] \} }}
-  | c @ t :: :: CEnd            {{ com bind end time }}
-  | c1 ; c2 :: :: CSeq  {{ com sequence }}
-  | c1 || c2 :: :: CPar {{ com parallel }}
+  | c @ t :: :: CEnd                                             {{ com bind end time }}
+  | c1 ; c2 :: :: CSeq                                           {{ com sequence }}
+  | c1 || c2 :: :: CPar                                          {{ com parallel }}
 
-G {{ tex \Gamma }} ::  G_  ::=  {{ com type store }}
-    | empty :: :: GEmp  {{ com empty }} {{ tex \cdot }}
-    | x : M [ T1 , T2 ] ; G :: :: GExt
-    {{ com extend }}
-    {{ tex [[x]] : [[M]]_{ [ [[T1]] , [[T2]] ] } ; [[G]] }}
-    | ( G [ T1 , T2 ] ) :: :: GShrink
-    {{ com shrink }}
-    {{ tex [[G]]_{ [ [[T1]] , [[T2]] ] } }}
-    | G1 \/ G2  :: :: GUnion  {{ com union }}
-    | G1 * G2   :: :: GSepSplit {{ com separating split }}
+% time store
+sto {{ tex \Theta }} :: sto_ ::=  {{ com time store }}
+  | semp :: :: SEmp               {{ com empty }} {{ tex \cdot }}
+  | t : T ; sto :: :: SExt        {{ com extend }}
+  | t1 >= t2 ; sto :: :: SCons    {{ com constraint }}
+  | sto >= T  :: :: SOrderAll     {{ com order all }}
+  | sto1 \/ sto2 :: :: SUnion     {{ com store union }}
 
+% Types
+typ {{ tex \tau }} :: typ_ ::=    {{ com types }}
+  | M [ T1 , T2 ]  :: :: TLife  {{ com resource with lifetime }}
+  {{ tex [[M]]_{ [ [[T1]] , [[T2]] ] } }}
+  | f             :: :: TComp {{ com component type }}
+  {{ tex \textbf{\textcolor{blue}{todo} } }}
+
+% Type store
+G {{ tex \Gamma }} ::  G_  ::=            {{ com type store }}
+  | gemp :: :: GEmp                     {{ com empty }} {{ tex \cdot }}
+  | x : typ ; G :: :: GExt    {{ com extend }}
+  | ( G [ T1 , T2 ] ) :: :: GShrink     {{ com shrink }}
+  {{ tex {[[G]]}_{ [ [[T1]] , [[T2]] ] } }}
+  | G1 \/ G2  :: :: GUnion              {{ com union }}
+  | G1 * G2   :: :: GSepSplit           {{ com separating split }}
+
+% Styling for terminals
 terminals :: 'terminals_' ::=
   | <                   ::   :: langle     {{ tex \langle }}
   | >                   ::   :: rangle     {{ tex \rangle }}
   | \/                  ::   :: setunion   {{ tex \cup }}
+  | >=                  ::   :: geq        {{ tex \geq }}
+  | <=                  ::   :: leq        {{ tex \leq }}
 
+% Formulas that can appear in judgements
 formula :: 'formula_' ::=
-  | judgement ::  :: judgement
-  | G1 = G2 :: ::  storeeq
-  | T1 > T2 :: :: timegeq  {{ tex [[T1]] \, $>$ \, [[T2]] }}
+  | judgement ::  :: judgement  {{ com judgements }}
+  | G1 = G2 :: ::  typestoreeq      {{ com type store equality }}
+  | sto1 = sto2 :: ::  timestoreeq  {{ com time store equality }}
+  | T1 >= T2 :: :: timegeq      {{ com time ordering }}
+  | todo     :: :: todo         {{ com todo }} {{ tex \textbf{\textcolor{blue}{todo} } }}
 
 defns
 Jop :: '' ::=
 
 defn
-sto , G1 @ T1 |- c : @ T2 G2 :: :: check :: ''
-{{ tex [[sto]] , [[G1]] \vdash_{[[T1]]} [[c]] \dashv_{[[T2]]} [[G2]] }} by
+sto1 , G1 |- @ T1 c : @ T2 sto2 , G2 :: :: check :: ''
+{{ tex [[sto1]] , [[G1]] \vdash_{[[T1]]} [[c]] \dashv_{[[T2]]} [[sto2]] , [[G2]] }} by
 
-sto, G @ T |- c1 : @ T1 G1
-sto, G1 @ T1 |- c1 : @ T2 G2
------------------------------------------------- :: check_seq
-sto, G @ T |- c1 ; c2 : @ T2 G2
+todo
+----------------------------- :: CheckDef
+sto, G |-@T  def M<t>[Mi,..,Mj](Mrk,..,Mrl) { c } :@T sto, G
+
+todo
+----------------------------- :: CheckInst
+sto, G |- @ T  x = M[M1,.., Mj] :@T sto, G
+
+sto, G |- @ T c1 : @ T1 sto1, G1
+sto1, G1 |- @ T1 c1 : @ T2 sto2, G2
+------------------------------------------------ :: CheckSeq
+sto, G |- @ T c1 ; c2 : @ T2 sto2, G2
 
 G = G1 * G2
-sto, G1 @ T |- c1 : @ T1 G1'
-sto, G2 @ T |- c1 : @ T2 G2'
------------------------------------------------- :: check_par
-sto, G @ T |- c1 || c2 : @ max(T1, T2) G1' \/ G2'
+sto, G1 |- @ T c1 : @ T1 sto1, G1'
+sto, G2 |- @ T c1 : @ T2 sto2, G2'
+------------------------------------------------ :: CheckPar
+sto, G |- @ T c1 || c2 : @ max(T1, T2) sto, G1' \/ G2'
 
 G1 = (G[T,T1])
 G2 = (G[T1,T2])
 G = G1 * G2
-sto, G2 @ T1 |- c : @ T2 G2'
------------------------------------------------- :: check_when
-sto, G @ T |- when T1 { c } : @ T2 G1 \/ G2'
+sto, G2 |- @ T1 c : @ T2 sto \/ sto1, G2'
+G3 = (G2'[T1, inf])
+sto' = sto1 >= T
+------------------------------------------------ :: CheckWhen
+sto, G |- @ T when T1 { c } : @ T2 sto \/ sto', G1 \/ G3
 
 
-T1 > T2
-sto, G @ T |- c : @ T2 G'
----------------------------------- :: check_weaken
-sto, G @ T |- c : @ T1 G'
+T1 >= T2
+sto, G |- @ T c : @ T2 sto', G'
+---------------------------------- :: Weaken
+sto, G |- @ T c : @ T1 sto', G'
 
 
- % defn
- % e1 --> e2 :: ::reduce:: ''  {{ tex [[e1]] \longrightarrow [[e2]] }} by
-
-
- %    --------------------------  :: ax_app
- %    (\x.e1) v2 -->  {v2/x}e1
-
- %    e1 --> e1'
- %    -------------- :: ctx_app_fun
- %    e1 e --> e1' e
-
- %    e1 --> e1'
- %    -------------- :: ctx_app_arg
- %    v e1 --> v e1'
+---------------------------- :: CheckTimeDef
+sto, G |- @ T time t = T' : @ T1 t : T'; sto , G
