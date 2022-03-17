@@ -129,6 +129,20 @@ does not lead to generation of hardware that has structural harzards.
 Therefore Filament enforces the following high-level type safety theorem:
 \emph{Well-typed programs do not have structural hazards}.
 
+\paragraph{Instantiation and invocation}
+Filament programs distinguish between the construction of hardware modules
+(instantiation) and their use (invocation).
+Instantiation simply makes a resource available for use in the program while
+an invocation actually executes the logic defined by the module.
+An invocation takes \emph{component references} which allows Filament to
+represent sharing of hardware resources.
+
+\paragraph{When statements}
+When statements allow Filament to schedule the execution of logic at a particular
+time.
+They generalize sequential and parallel composition operators and allow
+arbitrary overlap of execution schedules between components.
+
 \section{Type Checking}
 
 The Filament type system uses a separation-logic inspired reasoning system
