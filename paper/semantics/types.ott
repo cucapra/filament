@@ -13,7 +13,7 @@ embed
 
 metavar x ::= {{ com variables}}
 metavar M ::= {{ com components }}
-metavar t ::= {{ com time variables }}
+metavar t ::= {{ com time variables }} {{ tex \textcolor{teal}{[[t]]} }}
 metavar n ::= {{ com naturals }}
 indexvar index, i, j, k, l ::=
 
@@ -49,8 +49,8 @@ c :: c_ ::= {{ com  commands }}
 % Types
 typ {{ tex \tau }} :: typ_ ::=    {{ com types }}
   | res  :: :: Resource {{ com resource with lifetime }}
+  | forall t . ( res1 , .. , resk ) -> () :: :: TComp  {{ com component type }}
   | res [ t \ T ] :: :: TSubst  {{ com substitute }}
-  | forall t . ( res1 , .. , resk ) -> M :: :: TComp  {{ com component type }}
 
 % Type store
 G {{ tex \Gamma }} ::  G_  ::=            {{ com type store }}
@@ -95,8 +95,8 @@ defn
 sto1 , G1 |- @ T c : sto2 , G2 :: :: check :: ''
 {{ tex [[sto1]] , [[G1]] \vdash_{[[T]]} [[c]] \dashv [[sto2]] , [[G2]] }} by
 
-{}, G * {xi:resi,..,xj:resj} |-@T c : sto', G * G'
-G'' = G * { M : forall t. (resi,..,resj) -> M }
+{}, G * {xi:resi,..,xj:resj} |-@t c : sto', G * G'
+G'' = G * { M : forall t. (resi,..,resj) -> () }
 ----------------------------- :: CheckDef
 sto, G |-@T  def M<t>[xi:resi,..,xj:resj] { c } : sto, G''
 
@@ -104,19 +104,16 @@ M in G
 ----------------------------- :: CheckInst
 sto, G |- @ T  x = M : sto, G * { x : M ([T, inf]) }
 
-G(x) = forall t. (res1, .., resj) -> M
+G(x) = forall t. (res1, .., resj) -> ()
 G = G' * { x1: res1[t\T], .., xj: resj[t\T] }
 -------------------------------------------------- :: CheckInvoke
 sto, G |- @ T invoke x(x1,..,xj) : sto, G'
 
-G1 = (G[T,T1])
-G2 = (G[T1,T2])
-G = G1 * G2
-sto, G2 |- @ T1 c : sto \/ sto1, G2'
-G3 = (G2'[T1, inf])
+G = (G[T,T1]) * (G[T1,inf])
+sto, (G[T1,inf]) |- @ T1 c : sto \/ sto1, G'
 sto' = sto1 >= T
 ------------------------------------------------ :: CheckWhen
-sto, G |- @ T when T1 { c } : sto \/ sto', G1 * G3
+sto, G |- @ T when T1 { c } : sto \/ sto', (G[T,T1]) * G'
 
 
 T1 >= T2

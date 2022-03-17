@@ -34,6 +34,12 @@
 }
 \email{rnigam@cs.cornell.edu}
 
+\author{Pedro Henrique Azevedo de Amorim}
+\affiliation{
+  \institution{Cornell University}
+  \country{USA}
+}
+
 %% Abstract
 \begin{abstract}
 Write an abstract \ldots
@@ -51,6 +57,9 @@ The key idea is to use a separation logic inspired type system enriched with a n
 \section{The Filament Language}
 
 Filament is a core calculus for describing hardware designs that perform fine-grained resource sharing.
+
+\subsection{Time}
+
 Filament programs consist of \emph{components} each of which can construct and schedule the execution of other components.
 Computations are scheduled using \emph{time variables} which can either be concrete or abstract.
 %
@@ -125,13 +134,70 @@ Therefore Filament enforces the following high-level type safety theorem:
 The Filament type system uses a separation-logic inspired reasoning system
 extended to reasoning about the timing properties of resources.
 
+\subsection{Types}
 \nonterms{typ}
 
-\paragraph{The type store}
+Filament programs have two concrete types: resources with lifetimes and component
+types.
+The substitute form is only used within the type checking rules to substitute
+values for free time variables within a type.
+A resource with lifetime directly corresponds to the specifications provided
+in a component's definition.
+A component type quantifies over the start time $t$ of the component and requires
+resources with the correct lifetimes to be provided.
+Since Filament reasons about the execution schedules of components, a component
+type returns a unit value.
+
+
+\subsection{The type store}
 \nonterms{G}
 
-\paragraph{The time store}
+A type store contains bindings for resources in the current context.
+Each variable maps to a concrete type which can either be a lifetime or a
+component type.
+There are two operations defined on time stores.
+The \emph{shrink} operation intuitively limits the availability of all
+resources within it to the time interval $[T_1, T_2]$ which allows the Filament
+to reason about limited availability of resources.
+The separating split operation corresponds to its namesake in separation logic
+and splits the type store into two disjoint stores.
+Two stores are disjoint if and only if there is no overlap in the lifetimes of the
+resources they talk about.
+Crucially, two disjoint stores can talk about the same resource as long as the
+corresponding lifetimes does not overlap.
+
+\subsection{The time store}
 \nonterms{sto}
+
+The time store contains bindings from abstract time variables to time
+expressions as well as ordering constraints imposed on them.
+There are two operations defines on time stores.
+The union operation simply merges the bindings in two stores and the constraints
+defined by them.
+\xxx{what should happen if the constraints are inconsistent?}
+The ``order all'' operation is used to impose an ordering constraint on all
+defined time variables in a store.
+
+\subsection{Inference Rules}
+
+The inference rules for type checking have the form:
+%
+\[
+\Theta_1, \Gamma_1 \vdash_{\textcolor{teal}{T}} c \dashv \Theta_2, \Gamma_2
+\]
+%
+The rules reasons about the command $c$ at time $\textcolor{teal}{T}$ using the
+time and type stores $\Theta_1$ and $\Gamma_1$ and generates the stores
+$\Theta_2$ and $\Gamma_2$.
+
+The definition rule checks the body of a component and adds a corresponding
+component type to the environment.
+The type store binds the lifetimes of the component references when checking
+the body and discards any instantiations defined by the body after checking.
+Changes to the time store are similarly discarded.
+\[
+\drule{CheckDef}
+\]
 
 \ottdefncheck
 
