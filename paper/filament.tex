@@ -199,7 +199,42 @@ Changes to the time store are similarly discarded.
 \drule{CheckDef}
 \]
 
-\ottdefncheck
+The instantiation rule is straightforward---it simply checks if the component
+being defined is bound in the context and makes it available starting at
+time $\textcolor{teal}{T}$.
+\[
+\drule{CheckInst}
+\]
+
+The invoke rule schedules the execution of a component at time
+$\textcolor{teal}{T}$.
+It ensures that the context provides the concrete instances of component
+references for as long as the component definition requires.
+The abstract start time of the component is instantiated with the current time.
+\[
+\drule{CheckInvoke}
+\]
+
+The when command provides a way for programs to schedule execution of commands
+at different times.
+The when rule separates the context into two parts: one that contains all the
+resources available before the when block executes and the remaining resources.
+The command is checked starting at the specified time $\textcolor{teal}{T_1}$
+under the restricted environment.
+The when block may additionally instantiate abstract time variables.
+The final premise ensures that variables are ordered after the start time for
+the when command.
+\xxx{The rule current orders things using $T$, not $T_1$. Is this correct?}
+\[
+\drule{CheckWhen}
+\]
+
+The remaining rules are straightforward.
+\[
+\drule{Weaken}
+\and
+\drule{CheckTimeDef}
+\]
 
 \section{Pipeline Initiation Intervals}
 Pipeline parallelism is pervasive in hardware design.
@@ -216,6 +251,9 @@ The key idea is to prove that for a pipeline $M$ with initiation interval $i$, w
 - Interface for module that can take an abort signal and return an approximate value
 - Interface for module that merges and interleaves data
 \end{verbatim}
+
+\section{Rules}
+\ottdefncheck
 
 
 %% Acknowledgments

@@ -116,10 +116,10 @@ sto' = sto1 >= T
 sto, G |- @ T when T1 { c } : sto \/ sto', (G[T,T1]) * G'
 
 
-T1 >= T2
-sto, G |- @ T c : sto', G'
+T2 >= T1
+sto, (G[T,T1]) |- @ T c : sto', G'
 ---------------------------------- :: Weaken
-sto, G |- @ T c : sto', G'
+sto, (G[T,T2]) |- @ T c : sto', G'
 
 
 ---------------------------- :: CheckTimeDef
