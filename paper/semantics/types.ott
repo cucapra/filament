@@ -92,10 +92,10 @@ defns
 Jop :: '' ::=
 
 defn
-sto1 , G1 |- @ T1 c : sto2 , G2 :: :: check :: ''
-{{ tex [[sto1]] , [[G1]] \vdash_{[[T1]]} [[c]] \dashv [[sto2]] , [[G2]] }} by
+sto1 , G1 |- @ T c : sto2 , G2 :: :: check :: ''
+{{ tex [[sto1]] , [[G1]] \vdash_{[[T]]} [[c]] \dashv [[sto2]] , [[G2]] }} by
 
-sto, G * {xi:resi,..,xj:resj} |-@T c : sto', G * G'
+{}, G * {xi:resi,..,xj:resj} |-@T c : sto', G * G'
 G'' = G * { M : forall t. (resi,..,resj) -> M }
 ----------------------------- :: CheckDef
 sto, G |-@T  def M<t>[xi:resi,..,xj:resj] { c } : sto, G''

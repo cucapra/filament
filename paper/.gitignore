@@ -313,3 +313,4 @@ TSWLatexianTemp*
 revision.tex
 types.pdf
 filament.pdf
+semantics/*.tex
