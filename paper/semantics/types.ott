@@ -1,5 +1,6 @@
 embed
  {{ tex-preamble
+\usepackage{xcolor}
 \renewcommand{\[[TEX_NAME_PREFIX]]grammartabular}[1]
   {\begin{minipage}{\columnwidth}\begin{tabular}{ll}#1\end{tabular}\end{minipage} }
 \renewcommand{\[[TEX_NAME_PREFIX]]rulehead}[3]
@@ -44,15 +45,12 @@ c :: c_ ::= {{ com  commands }}
   | invoke x ( x1 , .. , xj ) :: :: CInvoke                      {{ com invoke }}
   | when T { c } :: :: CWhen                                     {{ com timed execution }}
   {{ tex \textbf{when} \,\, [[T]] \,\, \{ [[c]] \} }}
-  | c @ t :: :: CEnd                                             {{ com bind end time }}
-  | c1 ; c2 :: :: CSeq                                           {{ com sequence }}
-  | c1 || c2 :: :: CPar                                          {{ com parallel }}
 
 % Types
 typ {{ tex \tau }} :: typ_ ::=    {{ com types }}
   | res  :: :: Resource {{ com resource with lifetime }}
   | res [ t \ T ] :: :: TSubst  {{ com substitute }}
-  | forall t . ( res1 , .. , resk ) -> ( M , tl ) :: :: TComp  {{ com component type }}
+  | forall t . ( res1 , .. , resk ) -> M :: :: TComp  {{ com component type }}
 
 % Type store
 G {{ tex \Gamma }} ::  G_  ::=            {{ com type store }}
@@ -60,7 +58,6 @@ G {{ tex \Gamma }} ::  G_  ::=            {{ com type store }}
   | { M  : typ } :: :: GDef                    {{ com component definition }}
   | ( G [ T1 , T2 ] ) :: :: GShrink             {{ com shrink }}
   {{ tex {[[G]]}_{ [ [[T1]] , [[T2]] ] } }}
-  | G1 \/ G2  :: :: GUnion                      {{ com union }}
   | G1 * G2   :: :: GSepSplit                   {{ com separating split }}
 
 % time store
@@ -95,54 +92,38 @@ defns
 Jop :: '' ::=
 
 defn
-sto1 , G1 |- @ T1 c : @ T2 sto2 , G2 :: :: check :: ''
-{{ tex [[sto1]] , [[G1]] \vdash_{[[T1]]} [[c]] \dashv_{[[T2]]} [[sto2]] , [[G2]] }} by
+sto1 , G1 |- @ T1 c : sto2 , G2 :: :: check :: ''
+{{ tex [[sto1]] , [[G1]] \vdash_{[[T1]]} [[c]] \dashv [[sto2]] , [[G2]] }} by
 
-sto, G \/ {xi:resi,..,xj:resj} |-@T c :@ T + tl sto', G \/ G'
-G'' = G \/ { M : forall t. (resi,..,resj) -> (M, tl) }
+sto, G * {xi:resi,..,xj:resj} |-@T c : sto', G * G'
+G'' = G * { M : forall t. (resi,..,resj) -> M }
 ----------------------------- :: CheckDef
-sto, G |-@T  def M<t>[xi:resi,..,xj:resj] { c } :@ T sto, G''
+sto, G |-@T  def M<t>[xi:resi,..,xj:resj] { c } : sto, G''
 
 M in G
 ----------------------------- :: CheckInst
-sto, G |- @ T  x = M :@T sto, G \/ { x : M ([T, inf]) }
+sto, G |- @ T  x = M : sto, G * { x : M ([T, inf]) }
 
-G(x) = forall t. (res1, .., resj) -> (M, tl)
+G(x) = forall t. (res1, .., resj) -> M
 G = G' * { x1: res1[t\T], .., xj: resj[t\T] }
 -------------------------------------------------- :: CheckInvoke
-sto, G |- @ T invoke x(x1,..,xj) :@ T + tl sto, G'
-
-sto, G |- @ T c1 : @ T1 sto1, G1
-sto1, G1 |- @ T1 c1 : @ T2 sto2, G2
------------------------------------------------- :: CheckSeq
-sto, G |- @ T c1 ; c2 : @ T2 sto2, G2
-
-G = G1 * G2
-sto, G1 |- @ T c1 : @ T1 sto1, G1'
-sto, G2 |- @ T c1 : @ T2 sto2, G2'
------------------------------------------------- :: CheckPar
-sto, G |- @ T c1 || c2 : @ max(T1, T2) sto, G1' \/ G2'
+sto, G |- @ T invoke x(x1,..,xj) : sto, G'
 
 G1 = (G[T,T1])
 G2 = (G[T1,T2])
 G = G1 * G2
-sto, G2 |- @ T1 c : @ T2 sto \/ sto1, G2'
+sto, G2 |- @ T1 c : sto \/ sto1, G2'
 G3 = (G2'[T1, inf])
 sto' = sto1 >= T
 ------------------------------------------------ :: CheckWhen
-sto, G |- @ T when T1 { c } : @ T2 sto \/ sto', G1 \/ G3
+sto, G |- @ T when T1 { c } : sto \/ sto', G1 * G3
 
 
 T1 >= T2
-sto, G |- @ T c : @ T2 sto', G'
+sto, G |- @ T c : sto', G'
 ---------------------------------- :: Weaken
-sto, G |- @ T c : @ T1 sto', G'
+sto, G |- @ T c : sto', G'
 
 
 ---------------------------- :: CheckTimeDef
-sto, G |- @ T time t = T' : @ T sto \/ {t: T'} , G
-
-
-sto, G |-@T c :@T' sto', G'
----------------------------- :: CheckTimeBind
-sto, G |- @ T c@t : @ T' sto \/ {t: T'} , G'
+sto, G |- @ T time t = T' : sto \/ {t: T'} , G
