@@ -42,7 +42,7 @@ c :: c_ ::= {{ com  commands }}
   | def M < t > [ x1 : res1 , .. , xk : resk ] { c } :: :: CDef  {{ com definition}}
   | time t = T :: :: CTimeDef                                    {{ com time definition }}
   | x = M  :: :: CInst                                           {{ com instantiaion }}
-  | wrap xi , .. , xj as xl :: :: CWrap                          {{ com wrap }}
+  | wrap xi : lfi , .. , xj : lfj as xl :: :: CWrap                          {{ com wrap }}
   | invoke x ( x1 , .. , xj ) :: :: CInvoke                      {{ com invoke }}
   | when T { c } :: :: CWhen                                     {{ com timed execution }}
   {{ tex \textbf{when} \,\, [[T]] \,\, \{ [[c]] \} }}
@@ -78,6 +78,7 @@ terminals :: 'terminals_' ::=
   | <=                  ::   :: leq        {{ tex \leq }}
   | ->                  ::   :: rarrow     {{ tex \rightarrow }}
   | forall              ::   :: forall     {{ tex \forall }}
+  | disj                ::   :: disj       {{ tex \sqcup }}
 
 % Formulas that can appear in judgements
 formula :: 'formula_' ::=
@@ -85,6 +86,7 @@ formula :: 'formula_' ::=
   | judgement ::  :: judgement  {{ com judgements }}
   | G1 = G2 :: ::  typestoreeq      {{ com type store equality }}
   | M in G  :: ::  defined          {{ com defined in type store }} {{ tex [[M]] \in [[G]] }}
+  | lfi disj .. disj lfj :: :: lfdisj     {{ com disjoint lifetimes }}
   | G ( x ) = typ  :: ::  access    {{ com type store access }}
   | sto1 = sto2 :: ::  timestoreeq  {{ com time store equality }}
   | T1 >= T2 :: :: timegeq      {{ com time ordering }}
@@ -119,8 +121,9 @@ sto, G |- @ T when T1 { c } : sto \/ sto', (G[T,T1]) * G'
 
 
 G = { xi:M(lfi), .., xj: M(lfj) } * G'
+lfi disj .. disj lfj
 ------------------------------------------ :: CheckWrap
-sto, G |- @ T wrap xi,..,xj as xl : sto, G' * { xl : M(lfi \/ .. \/ lfj)}
+sto, G |- @ T wrap xi:lfi,..,xj:lfj as xl : sto, G' * { xl : M(lfi \/ .. \/ lfj)}
 
 T2 >= T1
 sto, (G[T,T1]) |- @ T c : sto', G'

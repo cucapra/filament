@@ -243,10 +243,25 @@ the when command.
 \drule{CheckWhen}
 \]
 
-The remaining rules are straightforward.
+Wrap allows programs to combine multiple resources of the same type and pretend
+that they are the same resource.
+A wrap command takes several resources along with a lifetime specification
+which need to be pairwise disjoint.
+It then defines a new resource variable that is available for the union of the
+specified lifetimes.
+\[
+\drule{CheckWrap}
+\]
+
+The weaken rule allows us to prove statements correct when the type store that
+access to resources for longer.
 \[
 \drule{Weaken}
-\and
+\]
+
+The time definition rule defines abstract time variables using a given time
+expression.
+\[
 \drule{CheckTimeDef}
 \]
 
