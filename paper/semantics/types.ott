@@ -31,7 +31,7 @@ T :: T_ ::= {{ com time }}       {{ tex \textcolor{teal}{[[T]]} }}
 % Lifetimes
 lf {{ tex \textcolor{teal}{\pi} }} :: lf_ ::= {{ com time range }}
   | [ T1 , T2 ]  :: :: LFRange  {{ com range }}
-  | lf1 \/ lf2   :: :: LFUnion  {{ com union }}
+  | lf1 \/ .. \/ lf2   :: :: LFUnion  {{ com union }}
 
 % Resources
 res {{ tex \rho }} :: res_ ::=
@@ -42,6 +42,7 @@ c :: c_ ::= {{ com  commands }}
   | def M < t > [ x1 : res1 , .. , xk : resk ] { c } :: :: CDef  {{ com definition}}
   | time t = T :: :: CTimeDef                                    {{ com time definition }}
   | x = M  :: :: CInst                                           {{ com instantiaion }}
+  | wrap xi , .. , xj as xl :: :: CWrap                          {{ com wrap }}
   | invoke x ( x1 , .. , xj ) :: :: CInvoke                      {{ com invoke }}
   | when T { c } :: :: CWhen                                     {{ com timed execution }}
   {{ tex \textbf{when} \,\, [[T]] \,\, \{ [[c]] \} }}
@@ -55,8 +56,8 @@ typ {{ tex \tau }} :: typ_ ::=    {{ com types }}
 % Type store
 G {{ tex \Gamma }} ::  G_  ::=            {{ com type store }}
   | { x1 : typ1 , .. , xi : typi } :: :: Gconc  {{ com concrete }}
-  | { M  : typ } :: :: GDef                    {{ com component definition }}
-  | ( G [ T1 , T2 ] ) :: :: GShrink             {{ com shrink }}
+  | { M  : typ } :: :: GDef                     {{ com component definition }}
+  | ( G [ T1 , T2 ] ) :: :: GProj               {{ com project }}
   {{ tex {[[G]]}_{ [ [[T1]] , [[T2]] ] } }}
   | G1 * G2   :: :: GSepSplit                   {{ com separating split }}
 
@@ -80,10 +81,11 @@ terminals :: 'terminals_' ::=
 
 % Formulas that can appear in judgements
 formula :: 'formula_' ::=
+  | formulai , .. , formulaj  :: :: formulas
   | judgement ::  :: judgement  {{ com judgements }}
   | G1 = G2 :: ::  typestoreeq      {{ com type store equality }}
   | M in G  :: ::  defined          {{ com defined in type store }} {{ tex [[M]] \in [[G]] }}
-  | G ( x ) = typ  :: ::  access      {{ com type store access }}
+  | G ( x ) = typ  :: ::  access    {{ com type store access }}
   | sto1 = sto2 :: ::  timestoreeq  {{ com time store equality }}
   | T1 >= T2 :: :: timegeq      {{ com time ordering }}
   | todo     :: :: todo         {{ com todo }} {{ tex \textbf{\textcolor{blue}{todo} } }}
@@ -115,6 +117,10 @@ sto' = sto1 >= T
 ------------------------------------------------ :: CheckWhen
 sto, G |- @ T when T1 { c } : sto \/ sto', (G[T,T1]) * G'
 
+
+G = { xi:M(lfi), .., xj: M(lfj) } * G'
+------------------------------------------ :: CheckWrap
+sto, G |- @ T wrap xi,..,xj as xl : sto, G' * { xl : M(lfi \/ .. \/ lfj)}
 
 T2 >= T1
 sto, (G[T,T1]) |- @ T c : sto', G'
