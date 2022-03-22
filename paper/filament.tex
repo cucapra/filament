@@ -142,8 +142,18 @@ When statements allow Filament to schedule the execution of logic at a particula
 time.
 They generalize sequential and parallel composition operators and allow
 arbitrary overlap of execution schedules between components.
+\xxx[R]{Show how to encode sequence and parallel using when}
 
 \section{Type Checking}
+
+\xxx{The current system cannot support reasoning about resources that can have
+multiple, finite uses active at the \emph{same} time. For example, multi-ported
+memories can allow multiple uses in the same cycle. Much like Dahlia actually
+implements its reasoning through bounded linear logic instead of traditional
+linear logic, we probably need to extend Filament to have some way of tracking
+multiple uses of the same resource.}
+
+\xxx[R]{Pedro says, "this might be possible to encode using a product semiring"}
 
 The Filament type system uses a separation-logic inspired reasoning system
 extended to reasoning about the timing properties of resources.
@@ -239,6 +249,8 @@ The when block may additionally instantiate abstract time variables.
 The final premise ensures that variables are ordered after the start time for
 the when command.
 \xxx{The rule current orders things using $T$, not $T_1$. Is this correct?}
+\xxx[R]{Adrian asks if it is necessary to use the projection in the suffix here. Wouldn't extracting the prefix of resources be enough?}
+
 \[
 \drule{CheckWhen}
 \]
@@ -252,6 +264,8 @@ specified lifetimes.
 \[
 \drule{CheckWrap}
 \]
+
+\xxx[R]{We can probably remove the requirement to specify the lifetimes but that would turn this into an inference problem because it is possible resources to be available in overlapping intervals causing the inference problem to take the whole program into scope of consideration for valid lifetime inference.}
 
 The weaken rule allows us to prove statements correct when the type store that
 access to resources for longer.
