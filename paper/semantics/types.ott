@@ -42,7 +42,8 @@ c :: c_ ::= {{ com  commands }}
   | def M < t > [ x1 : res1 , .. , xk : resk ] { c } :: :: CDef  {{ com definition}}
   | time t = T :: :: CTimeDef                                    {{ com time definition }}
   | x = M  :: :: CInst                                           {{ com instantiaion }}
-  | wrap xi : lfi , .. , xj : lfj as xl :: :: CWrap                          {{ com wrap }}
+  | wrap xi : lfi , .. , xj : lfj as xl :: :: CWrap              {{ com wrap }}
+  | split xl as xi : lfi , .. , xj : lfj :: :: CSplit            {{ com split }}
   | invoke x ( x1 , .. , xj ) :: :: CInvoke                      {{ com invoke }}
   | when T { c } :: :: CWhen                                     {{ com timed execution }}
   {{ tex \textbf{when} \,\, [[T]] \,\, \{ [[c]] \} }}
@@ -124,6 +125,11 @@ G = { xi:M(lfi), .., xj: M(lfj) } * G'
 lfi disj .. disj lfj
 ------------------------------------------ :: CheckWrap
 sto, G |- @ T wrap xi:lfi,..,xj:lfj as xl : sto, G' * { xl : M(lfi \/ .. \/ lfj)}
+
+G = { xl:M(lfi \/ .. \/ lfj) } * G'
+lfi disj .. disj lfj
+------------------------------------------ :: CheckSplit
+sto, G |- @ T split xl as xi:lfi,..,xj:lfj : sto, G' * { xi:M(lfi), .., xj:M(lfj)}
 
 T2 >= T1
 sto, (G[T,T1]) |- @ T c : sto', G'

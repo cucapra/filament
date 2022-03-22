@@ -267,6 +267,14 @@ specified lifetimes.
 
 \xxx[R]{We can probably remove the requirement to specify the lifetimes but that would turn this into an inference problem because it is possible resources to be available in overlapping intervals causing the inference problem to take the whole program into scope of consideration for valid lifetime inference.}
 
+Split statements are the duals of wrap statements---they allow programs to break a
+resource into multiple parts which are available during disjoint time intervals.
+\xxx[R]{I'm not convinced we need to have this. Shouldn't parallel when blocks automatically
+deal with this?}
+\[
+\drule{CheckSplit}
+\]
+
 The weaken rule allows us to prove statements correct when the type store that
 access to resources for longer.
 \[
