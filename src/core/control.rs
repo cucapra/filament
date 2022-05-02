@@ -1,4 +1,4 @@
-use super::{Id, IntervalTime};
+use super::{Id, IntervalTime, Cell};
 
 pub enum Port {
     ThisPort(Id),
@@ -6,17 +6,31 @@ pub enum Port {
     Constant(u64),
 }
 
-pub enum Control {
-    Assign(Assignment),
+/// Command in a component
+pub enum Command {
+    Invoke(Invoke),
     When(When),
+    Instance(Cell),
+    Connect(Connect),
 }
 
-pub struct Assignment {
+
+/// An Invocation
+pub struct Invoke {
     /// Name of the variable being assigned
     pub bind: Id,
 
     /// Invocation assigning to this variable
     pub rhs: Invocation,
+}
+
+/// A Connection between ports
+pub struct Connect {
+    /// Destination port
+    pub dst: Port,
+
+    /// Source port
+    pub src: Port,
 }
 
 pub struct Invocation {
@@ -33,6 +47,6 @@ pub struct Invocation {
 /// A when statement executes its body when the provided `port` rises.
 /// It also binds the `time_var` in the body to the time when the `port` rose.
 pub struct When {
-    pub port: Port,
-    pub time_var: Id,
+    pub time: IntervalTime,
+    pub commands: Vec<Command>,
 }

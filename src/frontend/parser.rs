@@ -4,7 +4,6 @@
 use crate::errors::{self, FilamentResult};
 
 use crate::core::{self, Id};
-use pest::prec_climber::{Assoc, Operator, PrecClimber};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
 use std::path::Path;
@@ -17,18 +16,6 @@ type Node<'i> = pest_consume::Node<'i, Rule, Rc<str>>;
 
 // include the grammar file so that Cargo knows to rebuild this file on grammar changes
 const _GRAMMAR: &str = include_str!("syntax.pest");
-
-// Define the precedence of binary operations. We use `lazy_static` so that
-// this is only ever constructed once.
-lazy_static::lazy_static! {
-    static ref PRECCLIMBER: PrecClimber<Rule> = PrecClimber::new(
-        vec![
-            // loosest binding
-            Operator::new(Rule::binop_add, Assoc::Left) | Operator::new(Rule::binop_sub, Assoc::Left),
-            // tighest binding
-        ]
-    );
-}
 
 pub enum ExtOrComp {
     Ext(core::Signature),
@@ -46,7 +33,7 @@ impl FilamentParser {
             errors::Error::InvalidFile(format!(
                 "Failed to read {}: {}",
                 path.to_string_lossy(),
-                err.to_string()
+                err
             ))
         })?;
         let string_content = std::str::from_utf8(content)?;
@@ -80,40 +67,35 @@ impl FilamentParser {
     }
 
     // ================ Intervals =====================
-    fn time_port(input: Node) -> ParseResult<core::IntervalTime> {
-        Ok(match_nodes!(
-            input.into_children();
-            [identifier(cell), identifier(name)] => core::IntervalTime::Port {
-                cell, name
-            }
-        ))
+    fn plus(input: Node) -> ParseResult<()> {
+        Ok(())
     }
-
+    fn max(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
     fn time_base(input: Node) -> ParseResult<core::IntervalTime> {
         Ok(match_nodes!(
             input.into_children();
-            [time_port(port)] => port,
             [identifier(var)] => core::IntervalTime::Abstract(var),
             [bitwidth(time)] => core::IntervalTime::Concrete(time),
         ))
     }
-
-    #[prec_climb(time_base, PRECCLIMBER)]
     fn time_expr(
-        l: core::IntervalTime,
-        op: Node,
-        r: core::IntervalTime,
+        input: Node
     ) -> ParseResult<core::IntervalTime> {
-        let op = match op.as_rule() {
-            Rule::binop_add => core::TimeOp::Add,
-            Rule::binop_sub => core::TimeOp::Sub,
-            _ => unreachable!(),
-        };
-        Ok(core::IntervalTime::BinOp {
-            left: Box::new(l),
-            right: Box::new(r),
-            op,
-        })
+        Ok(match_nodes!(
+            input.into_children();
+            [time_base(l), plus(_), time(r)] => core::IntervalTime::BinOp {
+                left: Box::new(l),
+                right: Box::new(r),
+                op: core::TimeOp::Add,
+            },
+            [max(_), time(l), time(r)] => core::IntervalTime::BinOp {
+                left: Box::new(l),
+                right: Box::new(r),
+                op: core::TimeOp::Max,
+            },
+        ))
     }
 
     fn time(input: Node) -> ParseResult<core::IntervalTime> {
@@ -124,27 +106,11 @@ impl FilamentParser {
         ))
     }
 
-    fn exact(_input: Node) -> ParseResult<()> {
-        Ok(())
-    }
-    fn within(_input: Node) -> ParseResult<()> {
-        Ok(())
-    }
-
-    fn interval_type(input: Node) -> ParseResult<core::IntervalType> {
-        Ok(match_nodes!(
-            input.into_children();
-            [within(_)] => core::IntervalType::Within,
-            [exact(_)] => core::IntervalType::Exact,
-        ))
-    }
-
     fn interval(input: Node) -> ParseResult<core::Interval> {
         Ok(match_nodes!(
             input.into_children();
-            [interval_type(tag), time(start), time(end)] => {
+            [time(start), time(end)] => {
                 core::Interval {
-                    tag,
                     start,
                     end,
                 }
@@ -196,19 +162,12 @@ impl FilamentParser {
     }
 
     // ================ Cells =====================
-    fn cell_def(input: Node) -> ParseResult<core::Cell> {
+    fn instance(input: Node) -> ParseResult<core::Cell> {
         Ok(match_nodes!(
             input.into_children();
             [identifier(name), identifier(component)] => core::Cell {
                 name, component
             }
-        ))
-    }
-
-    fn cells(input: Node) -> ParseResult<Vec<core::Cell>> {
-        Ok(match_nodes!(
-            input.into_children();
-            [cell_def(cells)..] => cells.collect()
         ))
     }
 
@@ -239,7 +198,7 @@ impl FilamentParser {
         ))
     }
 
-    fn invocation(input: Node) -> ParseResult<core::Invocation> {
+    fn invocation_expr(input: Node) -> ParseResult<core::Invocation> {
         Ok(match_nodes!(
             input.into_children();
             [
@@ -252,13 +211,13 @@ impl FilamentParser {
         ))
     }
 
-    fn assignment(input: Node) -> ParseResult<core::Assignment> {
+    fn invocation(input: Node) -> ParseResult<core::Invoke> {
         Ok(match_nodes!(
             input.into_children();
             [
                 identifier(bind),
-                invocation(rhs)
-            ] => core::Assignment {
+                invocation_expr(rhs)
+            ] => core::Invoke {
                 bind, rhs
             }
         ))
@@ -299,17 +258,28 @@ impl FilamentParser {
     fn when(input: Node) -> ParseResult<core::When> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(time_var), port(port)] => core::When {
-                port, time_var
+            [time(time), command(body)..] => core::When {
+                time, commands: body.collect()
             }
         ))
     }
 
-    fn control(input: Node) -> ParseResult<core::Control> {
+    fn connect(input: Node) -> ParseResult<core::Connect> {
         Ok(match_nodes!(
             input.into_children();
-            [assignment(assign)] => core::Control::Assign(assign),
-            [when(wh)] => core::Control::When(wh),
+            [port(dst), port(src)] => core::Connect {
+                src, dst
+            }
+        ))
+    }
+
+    fn command(input: Node) -> ParseResult<core::Command> {
+        Ok(match_nodes!(
+            input.into_children();
+            [invocation(assign)] => core::Command::Invoke(assign),
+            [instance(cell)] => core::Command::Instance(cell),
+            [when(wh)] => core::Command::When(wh),
+            [connect(con)] => core::Command::Connect(con),
         ))
     }
 
@@ -318,12 +288,10 @@ impl FilamentParser {
             input.into_children();
             [
                 signature(sig),
-                cells(cells),
-                control(body)..
+                command(body)..
             ] => {
                 core::Component {
                     sig,
-                    cells,
                     body: body.collect(),
                 }
             }

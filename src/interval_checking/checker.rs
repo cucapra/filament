@@ -40,15 +40,7 @@ fn check_invocation(
             }
         };
         if let Some(guarantee) = maybe_guarantee {
-            let fact = match requirement.tag {
-                core::IntervalType::Exact => {
-                    Fact::equality(requirement, guarantee)
-                }
-                core::IntervalType::Within => {
-                    Fact::subset(requirement, guarantee)
-                }
-            };
-            ctx.obligations.insert(fact);
+            ctx.obligations.insert(Fact::subset(requirement, guarantee));
         }
     }
     Ok(instance)
@@ -57,10 +49,7 @@ fn check_invocation(
 /// Given a [core::Assignment], checks whether the current set of known
 /// facts can be used to prove that the ports are available for the stated
 /// requirements.
-fn check_assign(
-    assign: core::Assignment,
-    ctx: &mut Context,
-) -> FilamentResult<()> {
+fn check_assign(assign: core::Invoke, ctx: &mut Context) -> FilamentResult<()> {
     let instance = check_invocation(assign.rhs, ctx)?;
     ctx.add_instance(assign.bind, instance)?;
     Ok(())
@@ -69,7 +58,7 @@ fn check_assign(
 fn check_when(when: core::When, ctx: &mut Context) -> FilamentResult<()> {
     // Add a fact representing the equality between when port's pulse
     // time and the time variable.
-    if let core::Port::CompPort { comp, name } = &when.port {
+    /* if let core::Port::CompPort { comp, name } = &when.port {
         let interval = ctx.get_instance(comp)?.port_guarantees(name)?;
         if interval.tag.is_exact() {
             let time_var = core::IntervalTime::abs(when.time_var);
@@ -82,9 +71,11 @@ fn check_when(when: core::When, ctx: &mut Context) -> FilamentResult<()> {
             let fact = Fact::equality(time_var_interval, interval);
             ctx.facts.insert(fact);
         }
-    }
+    } */
 
-    Ok(())
+    todo!("check_when")
+
+    // Ok(())
 }
 
 fn check_component(
@@ -99,15 +90,21 @@ fn check_component(
     ctx.instances.insert(THIS.into(), this_instance);
 
     // Add aliases to components for all cells.
-    for cell in comp.cells {
+    /* for cell in comp.cells {
         ctx.add_sig_alias(cell.name, &cell.component)?;
-    }
+    } */
 
     comp.body
         .into_iter()
         .try_for_each(|control| match control {
-            core::Control::Assign(assign) => check_assign(assign, ctx),
-            core::Control::When(wh) => check_when(wh, ctx),
+            core::Command::Invoke(invoke) => check_assign(invoke, ctx),
+            core::Command::Instance(core::Cell { name, component }) => {
+                ctx.add_sig_alias(name, &component)
+            }
+            core::Command::When(wh) => check_when(wh, ctx),
+            core::Command::Connect(_) => {
+                todo!("connect statements not supported")
+            }
         })?;
 
     Ok(())
