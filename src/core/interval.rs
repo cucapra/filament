@@ -6,7 +6,7 @@ use super::Id;
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub enum TimeOp {
     Add,
-    Sub,
+    Max,
 }
 
 /// Represents a time variable which can either be:
@@ -17,10 +17,6 @@ pub enum TimeOp {
 pub enum IntervalTime {
     Abstract(Id),
     Concrete(u64),
-    Port {
-        cell: Id,
-        name: Id,
-    },
     BinOp {
         op: TimeOp,
         left: Box<IntervalTime>,
@@ -32,11 +28,6 @@ impl IntervalTime {
     #[inline]
     pub fn abs(time_var: Id) -> Self {
         IntervalTime::Abstract(time_var)
-    }
-    /// Construct an [IntervalTime::Port].
-    #[inline]
-    pub fn port(cell: Id, name: Id) -> Self {
-        IntervalTime::Port { cell, name }
     }
 
     #[inline]
@@ -57,9 +48,7 @@ impl IntervalTime {
     /// bindings.
     pub fn resolve(&self, bindings: &HashMap<Id, IntervalTime>) -> Self {
         match self {
-            IntervalTime::Concrete(_) | IntervalTime::Port { .. } => {
-                self.clone()
-            }
+            IntervalTime::Concrete(_) => self.clone(),
             IntervalTime::Abstract(name) => bindings[name].clone(),
             IntervalTime::BinOp { op, left, right } => IntervalTime::BinOp {
                 op: op.clone(),
@@ -74,39 +63,27 @@ impl std::fmt::Debug for IntervalTime {
         match self {
             IntervalTime::Abstract(id) => write!(f, "{}", id),
             IntervalTime::Concrete(n) => write!(f, "{}", n),
-            IntervalTime::Port { cell, name } => write!(f, "{}.{}", cell, name),
-            IntervalTime::BinOp { op, left, right } => {
-                left.fmt(f)?;
-                match op {
-                    TimeOp::Add => write!(f, "+"),
-                    TimeOp::Sub => write!(f, "-"),
-                }?;
-                right.fmt(f)
-            }
+            IntervalTime::BinOp { op, left, right } => match op {
+                TimeOp::Add => {
+                    left.fmt(f)?;
+                    write!(f, "+")?;
+                    right.fmt(f)
+                }
+                TimeOp::Max => {
+                    write!(f, "max(")?;
+                    left.fmt(f)?;
+                    write!(f, ",")?;
+                    right.fmt(f)?;
+                    write!(f, ")")
+                }
+            },
         }
-    }
-}
-
-/// Type of the interval which can either be:
-///   1. Exact, implying set equality
-///   2. Within, implying set containment.
-#[derive(Clone, Hash, PartialEq, Eq)]
-pub enum IntervalType {
-    Exact,
-    Within,
-}
-
-impl IntervalType {
-    /// Returns `true` if the interval_type is [`Exact`].
-    pub fn is_exact(&self) -> bool {
-        matches!(self, Self::Exact)
     }
 }
 
 /// An interval consists of a type tag, a start time, and a end time.
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub struct Interval {
-    pub tag: IntervalType,
     pub start: IntervalTime,
     pub end: IntervalTime,
 }
@@ -114,7 +91,6 @@ impl Interval {
     /// Construct a [Interval] with `tag` set to [IntervalTime::Exact].
     pub fn exact(start: IntervalTime, end: IntervalTime) -> Self {
         Interval {
-            tag: IntervalType::Exact,
             start,
             end,
         }
@@ -122,7 +98,6 @@ impl Interval {
 
     pub fn resolve(&self, bindings: &HashMap<Id, IntervalTime>) -> Self {
         Interval {
-            tag: self.tag.clone(),
             start: self.start.resolve(bindings),
             end: self.end.resolve(bindings),
         }
@@ -130,14 +105,10 @@ impl Interval {
 }
 impl std::fmt::Debug for Interval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.tag {
-            IntervalType::Exact => write!(f, "@exact")?,
-            IntervalType::Within => write!(f, "@within")?,
-        }
-        write!(f, "(")?;
+        write!(f, "@[")?;
         self.start.fmt(f)?;
         write!(f, ", ")?;
         self.end.fmt(f)?;
-        write!(f, ")")
+        write!(f, "]")
     }
 }

@@ -34,7 +34,7 @@ impl std::fmt::Debug for Error {
                 write!(f, "Name `{}' is already bound by {}", name, bound_by)
             }
             Undefined(name, typ) => {
-                write!(f, "Undefined {} name: {}", typ, name.to_string())
+                write!(f, "Undefined {} name: {}", typ, name)
             }
             ParseError(err) => write!(f, "Filament Parser: {}", err),
             InvalidFile(msg) | Misc(msg) | WriteError(msg) => {

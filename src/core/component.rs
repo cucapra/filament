@@ -1,4 +1,4 @@
-use super::{Control, Id, Interval};
+use super::{Command, Id, Interval};
 
 pub struct PortDef {
     /// Name of the port
@@ -45,11 +45,8 @@ pub struct Component {
     // Signature of this component
     pub sig: Signature,
 
-    /// Names of sub-circuits used in constructing this component
-    pub cells: Vec<Cell>,
-
     /// Model for this component
-    pub body: Vec<Control>,
+    pub body: Vec<Command>,
 }
 
 pub struct Namespace {

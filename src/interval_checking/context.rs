@@ -112,7 +112,7 @@ impl Context {
         name: core::Id,
         comp: &core::Id,
     ) -> FilamentResult<()> {
-        match self.sigs.get(comp).map(|sig| Rc::clone(sig)) {
+        match self.sigs.get(comp).map(Rc::clone) {
             Some(sig) => {
                 self.sigs.insert(name, sig);
                 Ok(())
@@ -155,7 +155,7 @@ impl Context {
     ) -> FilamentResult<Rc<core::Signature>> {
         self.sigs
             .get(comp)
-            .map(|sig| Rc::clone(sig))
+            .map(Rc::clone)
             .ok_or_else(|| {
                 Error::Undefined(comp.clone(), "component".to_string())
             })

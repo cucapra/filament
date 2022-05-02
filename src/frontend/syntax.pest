@@ -23,7 +23,7 @@ signature = {
   identifier ~ abstract_var? ~ io
 }
 component = {
-  "component" ~ signature ~ "{" ~ cells ~ control* ~ "}"
+  "component" ~ signature ~ "{" ~ command* ~ "}"
 }
 external = {
   "extern" ~ "component" ~ signature ~ ";"
@@ -39,23 +39,20 @@ abstract_var = {
   "<" ~ identifier ~ ("," ~ identifier)* ~ ">"
 }
 
-within = { "@within" }
-exact = { "@exact" }
-interval_type = { within | exact }
 interval = {
-  interval_type ~ "(" ~ time ~ "," ~ time ~ ")"
+  "@" ~ "[" ~ time ~ "," ~ time ~ "]"
 }
 
-time_port = { identifier ~ "." ~ identifier }
 time_base = {
-  time_port
+  bitwidth
   | identifier
-  | bitwidth
 }
-binop_add = { "+" }
-binop_sub = { "-" }
-binop = _{ binop_add | binop_sub }
-time_expr = { time_base ~ (binop ~ time_base)* }
+plus = { "+" }
+max = { "max" }
+time_expr = {
+  (time_base ~ plus ~ time)
+  | (max ~ "(" ~ time ~ "," ~ time ~ ")")
+}
 time = { time_expr | time_base }
 
 port_def = {
@@ -68,23 +65,24 @@ io = {
   "(" ~ ports? ~ ")" ~ arrow ~ "(" ~ ports? ~ ")"
 }
 ports = {
-  port_def ~ ("," ~ port_def)*
+  port_def ~ ("," ~ port_def)* ~ ","?
 }
 
-// ====== cells ======
-cell_def = {
-  identifier ~ ":" ~ identifier ~ ";"
+// ====== Cell instance ======
+instance = {
+  identifier ~ ":=" ~ "new" ~ identifier ~ ";"
 }
 
-cells = {
-  "cells" ~ "{" ~ cell_def* ~ "}"
+// Connections
+
+connect = {
+  port ~ "=" ~ port ~ ";"
 }
 
-// ====== Assignments ==========
+// ====== Invocations ==========
 
 port = {
-  bitwidth
-  | identifier ~ "." ~ identifier
+  identifier ~ "." ~ identifier
   | identifier
 }
 
@@ -96,20 +94,20 @@ arguments = {
 time_args = {
   "<" ~ time ~ ("," ~ time)* ~ ">"
 }
-invocation = {
-  identifier ~ time_args? ~ arguments
+invocation_expr = {
+  identifier ~ time_args ~ arguments
 }
 
-assignment = {
-  identifier ~ "=" ~ invocation ~ ";"
+invocation = {
+  identifier ~ ":=" ~ invocation_expr ~ ";"
 }
 
 // =========== When ============
 when = {
-  "time" ~ identifier ~ "=" ~ "when" ~ "@rises" ~ "(" ~ port ~ ")" ~ ";"
+  "when" ~ time ~ "{" ~ command* ~ "}"
 }
 
-// ========== Control ==========
-control = {
-  assignment | when
+// ========== Commands ==========
+command = {
+  instance | invocation | when | connect
 }
