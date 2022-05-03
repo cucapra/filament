@@ -2,7 +2,7 @@ mod checker;
 mod context;
 mod fact;
 
-pub use context::{Context, Instance};
+pub use context::{ConcreteInvoke, Context};
 
 pub use checker::check;
 pub use fact::{Fact, FactType};

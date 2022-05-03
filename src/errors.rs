@@ -12,7 +12,7 @@ pub enum Error {
     /// Failed to write the output
     WriteError(String),
 
-    /// The name has not been bound
+    // The name has not been bound
     Undefined(Id, String),
     /// The name has already been bound.
     AlreadyBound(Id, String),

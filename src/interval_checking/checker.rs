@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use super::{Context, Fact, Instance};
+use super::{ConcreteInvoke, Context, Fact};
 
 use crate::{core, errors::FilamentResult};
 
@@ -13,10 +13,10 @@ fn check_connect(con: &core::Connect, ctx: &mut Context) -> FilamentResult<()> {
     let core::Connect { dst, src } = con;
     let requirement = match dst {
         core::Port::ThisPort(name) => {
-            ctx.get_instance(&THIS.into())?.port_requirements(name)?
+            ctx.get_invoke(&THIS.into())?.port_requirements(name)?
         }
         core::Port::CompPort { comp, name } => {
-            ctx.get_instance(comp)?.port_requirements(name)?
+            ctx.get_invoke(comp)?.port_requirements(name)?
         }
         core::Port::Constant(_) => {
             todo!("destination port cannot be a constant")
@@ -30,14 +30,14 @@ fn check_connect(con: &core::Connect, ctx: &mut Context) -> FilamentResult<()> {
             None
         }
         core::Port::ThisPort(port) => {
-            Some(ctx.get_instance(&THIS.into())?.port_guarantees(port)?)
+            Some(ctx.get_invoke(&THIS.into())?.port_guarantees(port)?)
         }
         core::Port::CompPort { comp, name } => {
-            Some(ctx.get_instance(comp)?.port_guarantees(name)?)
+            Some(ctx.get_invoke(comp)?.port_guarantees(name)?)
         }
     };
     if let Some(guarantee) = maybe_guarantee {
-        ctx.obligations.insert(Fact::subset(requirement, guarantee));
+        ctx.add_obligation(Fact::subset(requirement, guarantee));
     }
     Ok(())
 }
@@ -47,11 +47,11 @@ fn check_connect(con: &core::Connect, ctx: &mut Context) -> FilamentResult<()> {
 fn check_invocation(
     invoke: &core::Invocation,
     ctx: &mut Context,
-) -> FilamentResult<Instance> {
-    // Construct an instance for this invocation
-    let sig = ctx.get_sig(&invoke.comp)?;
-    let instance = Instance::from_signature(sig, invoke.abstract_vars.clone());
-    let req_sig = &ctx.get_sig(&invoke.comp)?;
+) -> FilamentResult<ConcreteInvoke> {
+    let sig = ctx.get_instance(&invoke.comp)?;
+    let instance =
+        ConcreteInvoke::from_signature(sig, invoke.abstract_vars.clone());
+    let req_sig = &ctx.get_instance(&invoke.comp)?;
     let req_binding = req_sig
         .abstract_vars
         .iter()
@@ -70,14 +70,14 @@ fn check_invocation(
                 None
             }
             core::Port::ThisPort(port) => {
-                Some(ctx.get_instance(&THIS.into())?.port_guarantees(port)?)
+                Some(ctx.get_invoke(&THIS.into())?.port_guarantees(port)?)
             }
             core::Port::CompPort { comp, name } => {
-                Some(ctx.get_instance(comp)?.port_guarantees(name)?)
+                Some(ctx.get_invoke(comp)?.port_guarantees(name)?)
             }
         };
         if let Some(guarantee) = maybe_guarantee {
-            ctx.obligations.insert(Fact::subset(requirement, guarantee));
+            ctx.add_obligation(Fact::subset(requirement, guarantee));
         }
     }
     Ok(instance)
@@ -86,12 +86,12 @@ fn check_invocation(
 /// Given a [core::Assignment], checks whether the current set of known
 /// facts can be used to prove that the ports are available for the stated
 /// requirements.
-fn check_assign(
+fn check_invoke(
     assign: &core::Invoke,
     ctx: &mut Context,
 ) -> FilamentResult<()> {
     let instance = check_invocation(&assign.rhs, ctx)?;
-    ctx.add_instance(assign.bind.clone(), instance)?;
+    ctx.add_invocation(assign.bind.clone(), instance)?;
     Ok(())
 }
 
@@ -107,10 +107,11 @@ fn check_commands(
 where
 {
     for cmd in cmds {
+        log::info!("checking {}", cmd);
         match cmd {
-            core::Command::Invoke(invoke) => check_assign(invoke, ctx)?,
-            core::Command::Instance(core::Cell { name, component }) => {
-                ctx.add_sig_alias(name.clone(), component)?
+            core::Command::Invoke(invoke) => check_invoke(invoke, ctx)?,
+            core::Command::Instance(core::Instance { name, component }) => {
+                ctx.add_instance(name.clone(), component)?
             }
             core::Command::When(wh) => check_when(wh, ctx)?,
             core::Command::Connect(con) => check_connect(con, ctx)?,
@@ -127,9 +128,8 @@ fn check_component(
 
     // Add instance for this component. Whenever a bare port is used, it refers
     // to the port on this instance.
-    let this_instance = Instance::this_instance(Rc::clone(&sig));
-    ctx.instances.insert(THIS.into(), this_instance);
-
+    let this_instance = ConcreteInvoke::this_instance(Rc::clone(&sig));
+    ctx.add_invocation(THIS.into(), this_instance)?;
     check_commands(&comp.body, ctx)?;
 
     Ok(())
@@ -145,7 +145,7 @@ pub fn check(mut namespace: core::Namespace) -> FilamentResult<()> {
     namespace.signatures.drain(..).try_for_each(|sig| {
         let name = sig.name.clone();
         let sig_ref = Rc::new(sig);
-        ctx.add_sig(name, sig_ref)
+        ctx.add_definition(name, sig_ref)
     })?;
 
     assert!(
@@ -153,13 +153,14 @@ pub fn check(mut namespace: core::Namespace) -> FilamentResult<()> {
         "NYI: Cannot check multiple components"
     );
 
-    namespace
-        .components
-        .drain(..)
-        .try_for_each(|comp| check_component(comp, &mut ctx))?;
+    namespace.components.drain(..).try_for_each(|comp| {
+        log::info!("checking {}", comp.sig.name);
+        check_component(comp, &mut ctx)
+    })?;
 
-    println!("Known Facts:\n{:#?}", ctx.facts);
-    println!("Proof Obligations:\n{:#?}", ctx.obligations);
+    let (obligations, facts) = ctx.into();
+    println!("Known Facts:\n{:#?}", facts);
+    println!("Proof Obligations:\n{:#?}", obligations);
 
     Ok(())
 }
