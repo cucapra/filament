@@ -57,6 +57,9 @@ pub struct Component {
 }
 
 pub struct Namespace {
+    /// Imported files
+    pub imports: Vec<String>,
+
     /// External definitions without a body.
     pub signatures: Vec<Signature>,
 

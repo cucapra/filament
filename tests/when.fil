@@ -1,16 +1,4 @@
-extern component Mult<G>(
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32,
-) -> (
-  @[G+3, G+4] out: 32,
-);
-
-extern component Add<G>(
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32,
-) -> (
-  @[G+2, G+3] out: 32,
-);
+import "primitives/core.fil";
 
 component main<G>(
   @[G, G+1] a: 32,
@@ -23,7 +11,9 @@ component main<G>(
   A := new Add;
   M := new Mult;
 
-  when G { m0 := M<G>(a, b); }
+  when G {
+    m0 := M<G>(a, b);
+  }
   when G+3 { a0 := A<G+3>(m0.out, c); }
 
   out = a0.out;

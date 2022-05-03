@@ -9,10 +9,18 @@ identifier = @{ ("_" | ASCII_ALPHA)+ ~ ("_" | ASCII_ALPHA | ASCII_DIGIT)* }
 // Positive numbers
 bitwidth = @{ ASCII_DIGIT+ }
 
+char = { !"\"" ~ ANY }
+string_lit = ${ "\"" ~ char* ~ "\"" }
+import = _{
+      "import" ~ string_lit ~ ";"
+}
+imports = { import* }
+
 // ====== toplevel ======
 
 file = {
   SOI
+    ~ imports
     ~ comp_or_ext*
     ~ EOI
 }

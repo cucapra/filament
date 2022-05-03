@@ -59,6 +59,17 @@ impl FilamentParser {
         Ok(Id::from(input.as_str()))
     }
 
+    fn char(input: Node) -> ParseResult<&str> {
+        Ok(input.as_str())
+    }
+
+    fn string_lit(input: Node) -> ParseResult<String> {
+        Ok(match_nodes!(
+            input.into_children();
+            [char(c)..] => c.collect::<Vec<_>>().join("")
+        ))
+    }
+
     fn bitwidth(input: Node) -> ParseResult<u64> {
         input
             .as_str()
@@ -303,11 +314,19 @@ impl FilamentParser {
         ))
     }
 
+    fn imports(input: Node) -> ParseResult<Vec<String>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [string_lit(path)..] => path.collect()
+        ))
+    }
+
     fn file(input: Node) -> ParseResult<core::Namespace> {
         Ok(match_nodes!(
             input.into_children();
-            [comp_or_ext(mixed).., _EOI] => {
+            [imports(imps), comp_or_ext(mixed).., _EOI] => {
                 let mut namespace = core::Namespace {
+                    imports: imps,
                     signatures: vec![],
                     components: vec![],
                 };

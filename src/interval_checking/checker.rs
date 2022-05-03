@@ -107,7 +107,7 @@ fn check_commands(
 where
 {
     for cmd in cmds {
-        log::info!("checking {}", cmd);
+        log::info!("{}", cmd);
         match cmd {
             core::Command::Invoke(invoke) => check_invoke(invoke, ctx)?,
             core::Command::Instance(core::Instance { name, component }) => {
@@ -154,7 +154,7 @@ pub fn check(mut namespace: core::Namespace) -> FilamentResult<()> {
     );
 
     namespace.components.drain(..).try_for_each(|comp| {
-        log::info!("checking {}", comp.sig.name);
+        log::info!("component {}", comp.sig.name);
         check_component(comp, &mut ctx)
     })?;
 

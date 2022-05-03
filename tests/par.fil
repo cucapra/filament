@@ -1,0 +1,55 @@
+extern component FastMult<G>(
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32,
+) -> (
+  @[G+1, G+2] out: 32,
+);
+
+extern component SlowMult<G>(
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32,
+) -> (
+  @[G+3, G+4] out: 32,
+);
+
+extern component Add<G>(
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32,
+) -> (
+  @[G+2, G+3] out: 32,
+);
+
+extern component Latch<G, L>(
+  @[G, G+1] in: 32
+) -> (
+  @[G+1, L] out: 32
+);
+
+component main<G>(
+  @[G, G+1] a: 32,
+  @[G, G+1] b: 32,
+) -> (
+  @[G+5, G+6] out: 32
+) {
+
+  // Execute the Fast and Slow mutlipliers in parallel and add their results
+  FM := new FastMult;
+  SM := new SlowMult;
+  A := new Add;
+
+  // Latches to save the value of the input signals
+  L1 := new Latch;
+  L2 := new Latch;
+
+  when G {
+    sm0 := SM<G>(a, b);
+    la := L1<G, G+3>(a);
+    lb := L2<G, G+3>(a);
+  }
+  when G+2 {
+    fm0 := FM<G+2>(la.out, lb.out);
+  }
+  when G+3 { a0 := A<G+3>(sm0.out, fm0.out); }
+
+  out = a0.out;
+}

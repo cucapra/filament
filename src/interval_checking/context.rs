@@ -1,7 +1,9 @@
 use std::{
-    collections::{hash_map::Entry, HashMap, HashSet},
+    collections::{hash_map::Entry, HashMap},
     rc::Rc,
 };
+
+use linked_hash_set::LinkedHashSet;
 
 use super::Fact;
 use crate::{
@@ -114,14 +116,14 @@ pub struct Context {
     invocations: HashMap<core::Id, ConcreteInvoke>,
 
     /// Set of facts that need to be proven.
-    obligations: HashSet<Fact>,
+    obligations: LinkedHashSet<Fact>,
 
     /// Set of currently known facts.
-    facts: HashSet<Fact>,
+    facts: LinkedHashSet<Fact>,
 }
 
 /// Decompose Context into obligations and facts
-impl From<Context> for (HashSet<Fact>, HashSet<Fact>) {
+impl From<Context> for (LinkedHashSet<Fact>, LinkedHashSet<Fact>) {
     fn from(val: Context) -> Self {
         (val.obligations, val.facts)
     }

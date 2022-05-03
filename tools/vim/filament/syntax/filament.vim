@@ -29,15 +29,15 @@ syn match filamentColon ':' contained nextgroup=filamentType contained skipwhite
 hi link filamentCellName filamentCompName
 
 " When statements
-syn match filamentKeyword 'when'
-syn match filamentKeyword 'new'
-syn match filamentOperator '@rises'
-syn match filamentKeyword 'at' nextgroup=filamentType skipwhite
-syn match filamentKeyword 'time' nextgroup=filamentType skipwhite
+syn keyword filamentKeyword when new import
 
 " Ports
 syn match filamentDot '\.' nextgroup=filamentPort
 syn match filamentPort '\v[_a-zA-Z]((\-+)?[_a-zA-Z0-9]+)*' contained
+
+" Strings
+syn region filamentString start=/\v"/ skip=/\v\\./ end=/\v("|$)/
+hi link filamentString String
 
 " Other keywords
 syn keyword filamentSpecialKeywords extern

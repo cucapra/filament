@@ -2,7 +2,7 @@ Known Facts:
 {}
 Proof Obligations:
 {
-    [G+5, G+6] ⊆ [5+G, 6+G],
     [G, G+1] ⊆ [G, G+1],
     [G+3, 4+G] ⊆ [G+3, G+4],
+    [G+5, G+6] ⊆ [5+G, 6+G],
 }

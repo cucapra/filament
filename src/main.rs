@@ -12,7 +12,15 @@ fn main() -> errors::FilamentResult<()> {
         .target(env_logger::Target::Stderr)
         .init();
 
-    let namespace = frontend::FilamentParser::parse_file(&opts.input)?;
-    interval_checking::check(namespace)?;
+    let mut ns = frontend::FilamentParser::parse_file(&opts.input)?;
+    let mut imports: Vec<String> = ns.imports.drain(..).collect();
+    while let Some(file) = imports.pop() {
+        let path: std::path::PathBuf = file.into();
+        let imp = frontend::FilamentParser::parse_file(&path)?;
+        ns.components.extend(imp.components.into_iter());
+        ns.signatures.extend(imp.signatures.into_iter());
+        imports.extend(imp.imports.into_iter());
+    }
+    interval_checking::check(ns)?;
     Ok(())
 }

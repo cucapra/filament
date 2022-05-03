@@ -1,9 +1,4 @@
-extern component Mult<G>(
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32,
-) -> (
-  @[G+3, G+4] out: 32,
-);
+import "primitives/core.fil";
 
 component main<G>() -> () {
   M := new Mult;
