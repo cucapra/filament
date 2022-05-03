@@ -15,13 +15,13 @@ extern component Add<G>(
 component main<G>(
   @[G, G+1] a: 32,
   @[G, G+1] b: 32,
-  @[G, G+3] c: 32
+  @[G+3, G+4] c: 32
 ) -> (
-  @[G+3, G+4] out: 32
+  @[G+5, G+6] out: 32
 ) {
 
-  A := new Mult;
-  M := new Add;
+  A := new Add;
+  M := new Mult;
 
   when G { m0 := M<G>(a, b); }
   when G+3 { a0 := A<G+3>(m0.out, c); }

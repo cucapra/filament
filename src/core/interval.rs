@@ -30,12 +30,74 @@ impl IntervalTime {
         IntervalTime::Abstract(time_var)
     }
 
-    #[inline]
+    pub fn binop_max(left: IntervalTime, right: IntervalTime) -> Self {
+        match (left, right) {
+            (IntervalTime::Concrete(n1), IntervalTime::Concrete(n2)) => {
+                if n1 > n2 {
+                    Self::concrete(n1)
+                } else {
+                    Self::concrete(n2)
+                }
+            }
+            (l, r) => IntervalTime::BinOp {
+                op: TimeOp::Max,
+                left: Box::new(l),
+                right: Box::new(r),
+            },
+        }
+    }
+
+    /// Construct a binop add instance and try to peephole optimize the construction
     pub fn binop_add(left: IntervalTime, right: IntervalTime) -> Self {
-        IntervalTime::BinOp {
-            op: TimeOp::Add,
-            left: Box::new(left),
-            right: Box::new(right),
+        match (left, right) {
+            (IntervalTime::Concrete(n1), IntervalTime::Concrete(n2)) => {
+                IntervalTime::Concrete(n1 + n2)
+            }
+            (
+                IntervalTime::Concrete(n1),
+                IntervalTime::BinOp {
+                    op: TimeOp::Add,
+                    left: l,
+                    right: r,
+                },
+            )
+            | (
+                IntervalTime::BinOp {
+                    op: TimeOp::Add,
+                    left: l,
+                    right: r,
+                },
+                IntervalTime::Concrete(n1),
+            ) => {
+                if let IntervalTime::Concrete(n2) = &*l {
+                    return IntervalTime::binop_add(
+                        IntervalTime::Concrete(n1 + n2),
+                        *r,
+                    );
+                }
+                if let IntervalTime::Concrete(n2) = &*r {
+                    return IntervalTime::binop_add(
+                        IntervalTime::Concrete(n1 + n2),
+                        *l,
+                    );
+                }
+                let con = IntervalTime::Concrete(n1);
+                let bin = IntervalTime::BinOp {
+                    op: TimeOp::Add,
+                    left: l,
+                    right: r,
+                };
+                IntervalTime::BinOp {
+                    op: TimeOp::Add,
+                    left: Box::new(con),
+                    right: Box::new(bin),
+                }
+            }
+            (l, r) => IntervalTime::BinOp {
+                op: TimeOp::Add,
+                left: Box::new(l),
+                right: Box::new(r),
+            },
         }
     }
 
@@ -50,10 +112,15 @@ impl IntervalTime {
         match self {
             IntervalTime::Concrete(_) => self.clone(),
             IntervalTime::Abstract(name) => bindings[name].clone(),
-            IntervalTime::BinOp { op, left, right } => IntervalTime::BinOp {
-                op: op.clone(),
-                left: Box::new(left.resolve(bindings)),
-                right: Box::new(right.resolve(bindings)),
+            IntervalTime::BinOp { op, left, right } => match op {
+                TimeOp::Add => IntervalTime::binop_add(
+                    left.resolve(bindings),
+                    right.resolve(bindings),
+                ),
+                TimeOp::Max => IntervalTime::binop_max(
+                    left.resolve(bindings),
+                    right.resolve(bindings),
+                ),
             },
         }
     }

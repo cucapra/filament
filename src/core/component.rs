@@ -18,13 +18,6 @@ impl std::fmt::Debug for PortDef {
     }
 }
 
-pub struct Cell {
-    /// Name of the instance.
-    pub name: Id,
-    /// Name of the component
-    pub component: Id,
-}
-
 /// The signature of a component definition
 #[derive(Debug)]
 pub struct Signature {

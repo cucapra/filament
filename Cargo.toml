@@ -5,7 +5,9 @@ edition = "2018"
 
 [dependencies]
 argh = "0.1.5"
+env_logger = { version = "0.9.0", features = ["termcolor"] }
 lazy_static = "1.4.0"
+log = "0.4.16"
 pest = "2"
 pest_consume = "1"
 pest_derive = "2"

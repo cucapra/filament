@@ -9,8 +9,9 @@ use crate::{
     errors::{Error, FilamentResult},
 };
 
+/// Representation of a concrete invocation in the context
 #[derive(Debug)]
-pub struct Instance {
+pub struct ConcreteInvoke {
     /// Bindings for abstract variables
     pub binding: HashMap<core::Id, core::IntervalTime>,
 
@@ -18,7 +19,7 @@ pub struct Instance {
     pub sig: Rc<core::Signature>,
 }
 
-impl Instance {
+impl ConcreteInvoke {
     /// Construct an instance from a Signature and bindings for abstract variables.
     pub fn from_signature(
         sig: Rc<core::Signature>,
@@ -31,7 +32,7 @@ impl Instance {
             .zip(abs.into_iter())
             .collect();
 
-        Instance {
+        ConcreteInvoke {
             binding,
             sig: Rc::clone(&sig),
         }
@@ -51,7 +52,7 @@ impl Instance {
             )
             .collect();
 
-        Instance {
+        ConcreteInvoke {
             binding,
             sig: Rc::new(sig.reversed()),
         }
@@ -101,39 +102,34 @@ impl Instance {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Context {
     /// Mapping from names to signatures for components and externals.
-    pub sigs: HashMap<core::Id, Rc<core::Signature>>,
+    sigs: HashMap<core::Id, Rc<core::Signature>>,
 
-    /// Mapping from name of instance to its information.
-    pub instances: HashMap<core::Id, Instance>,
+    /// Mapping for the names of active instances
+    instances: HashMap<core::Id, Rc<core::Signature>>,
+
+    /// Mapping from name of invocations to their information
+    invocations: HashMap<core::Id, ConcreteInvoke>,
 
     /// Set of facts that need to be proven.
-    pub obligations: HashSet<Fact>,
+    obligations: HashSet<Fact>,
 
     /// Set of currently known facts.
-    pub facts: HashSet<Fact>,
+    facts: HashSet<Fact>,
+}
+
+/// Decompose Context into obligations and facts
+impl From<Context> for (HashSet<Fact>, HashSet<Fact>) {
+    fn from(val: Context) -> Self {
+        (val.obligations, val.facts)
+    }
 }
 
 impl Context {
-    pub fn add_sig_alias(
-        &mut self,
-        name: core::Id,
-        comp: &core::Id,
-    ) -> FilamentResult<()> {
-        match self.sigs.get(comp).map(Rc::clone) {
-            Some(sig) => {
-                self.sigs.insert(name, sig);
-                Ok(())
-            }
-            None => {
-                Err(Error::Undefined(comp.clone(), "component".to_string()))
-            }
-        }
-    }
-
-    pub fn add_sig(
+    /// Add a new definition to the context
+    pub fn add_definition(
         &mut self,
         name: core::Id,
         sig: Rc<core::Signature>,
@@ -142,21 +138,45 @@ impl Context {
             e.insert(sig);
             Ok(())
         } else {
-            Err(Error::AlreadyBound(name, "instance".to_string()))
+            Err(Error::AlreadyBound(name, "definition".to_string()))
         }
     }
 
+    /// Add a new instance to the context with the signatuer from `comp`
     pub fn add_instance(
         &mut self,
         name: core::Id,
-        instance: Instance,
+        comp: &core::Id,
     ) -> FilamentResult<()> {
-        if let Entry::Vacant(e) = self.instances.entry(name.clone()) {
+        match self.sigs.get(comp).map(Rc::clone) {
+            Some(sig) => {
+                self.instances.insert(name, sig);
+                Ok(())
+            }
+            None => {
+                Err(Error::Undefined(comp.clone(), "component".to_string()))
+            }
+        }
+    }
+
+    /// Add a new invocation to the context
+    pub fn add_invocation(
+        &mut self,
+        name: core::Id,
+        instance: ConcreteInvoke,
+    ) -> FilamentResult<()> {
+        if let Entry::Vacant(e) = self.invocations.entry(name.clone()) {
             e.insert(instance);
             Ok(())
         } else {
-            Err(Error::AlreadyBound(name, "instance".to_string()))
+            Err(Error::AlreadyBound(name, "invocation".to_string()))
         }
+    }
+
+    /// Add a new obligation that needs to be proved
+    pub fn add_obligation(&mut self, fact: Fact) {
+        log::info!("adding obligation {:?}", fact);
+        self.obligations.insert(fact);
     }
 
     /// Get the signature of the component associated with `comp`.
@@ -169,13 +189,23 @@ impl Context {
         })
     }
 
-    /// Get the instance asscoiated with `instance`
+    /// Get the signature of the instance associated with `inst`
     pub fn get_instance(
         &self,
+        inst: &core::Id,
+    ) -> FilamentResult<Rc<core::Signature>> {
+        self.instances.get(inst).map(Rc::clone).ok_or_else(|| {
+            Error::Undefined(inst.clone(), "instance".to_string())
+        })
+    }
+
+    /// Get the instance associated with `instance`
+    pub fn get_invoke(
+        &self,
         instance: &core::Id,
-    ) -> FilamentResult<&Instance> {
-        self.instances.get(instance).ok_or_else(|| {
-            Error::Undefined(instance.clone(), "instance".to_string())
+    ) -> FilamentResult<&ConcreteInvoke> {
+        self.invocations.get(instance).ok_or_else(|| {
+            Error::Undefined(instance.clone(), "invocation".to_string())
         })
     }
 }
