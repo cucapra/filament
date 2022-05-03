@@ -30,6 +30,7 @@ hi link filamentCellName filamentCompName
 
 " When statements
 syn match filamentKeyword 'when'
+syn match filamentKeyword 'new'
 syn match filamentOperator '@rises'
 syn match filamentKeyword 'at' nextgroup=filamentType skipwhite
 syn match filamentKeyword 'time' nextgroup=filamentType skipwhite
