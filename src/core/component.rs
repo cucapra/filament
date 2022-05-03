@@ -1,5 +1,6 @@
 use super::{Command, Id, Interval};
 
+#[derive(Clone)]
 pub struct PortDef {
     /// Name of the port
     pub name: Id,
@@ -38,6 +39,19 @@ pub struct Signature {
 
     /// Output ports
     pub outputs: Vec<PortDef>,
+}
+
+impl Signature {
+    // Generate a new signature that has been reversed: inputs are outputs
+    // with outputs.
+    pub fn reversed(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            abstract_vars: self.abstract_vars.clone(),
+            inputs: self.outputs.clone(),
+            outputs: self.inputs.clone(),
+        }
+    }
 }
 
 /// A component in Filament

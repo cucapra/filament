@@ -90,10 +90,7 @@ pub struct Interval {
 impl Interval {
     /// Construct a [Interval] with `tag` set to [IntervalTime::Exact].
     pub fn exact(start: IntervalTime, end: IntervalTime) -> Self {
-        Interval {
-            start,
-            end,
-        }
+        Interval { start, end }
     }
 
     pub fn resolve(&self, bindings: &HashMap<Id, IntervalTime>) -> Self {

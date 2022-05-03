@@ -80,9 +80,7 @@ impl FilamentParser {
             [bitwidth(time)] => core::IntervalTime::Concrete(time),
         ))
     }
-    fn time_expr(
-        input: Node
-    ) -> ParseResult<core::IntervalTime> {
+    fn time_expr(input: Node) -> ParseResult<core::IntervalTime> {
         Ok(match_nodes!(
             input.into_children();
             [time_base(l), plus(_), time(r)] => core::IntervalTime::BinOp {
