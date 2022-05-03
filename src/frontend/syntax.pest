@@ -84,6 +84,7 @@ connect = {
 port = {
   identifier ~ "." ~ identifier
   | identifier
+  | bitwidth
 }
 
 arguments = {

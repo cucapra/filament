@@ -1,4 +1,4 @@
-ver = "0.3.2"
+ver = "0.4.0"
 
 [[tests]]
 name = "tests"
