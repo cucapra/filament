@@ -53,7 +53,7 @@ impl Instance {
 
         Instance {
             binding,
-            sig: Rc::clone(&sig),
+            sig: Rc::new(sig.reversed()),
         }
     }
 
@@ -72,15 +72,25 @@ impl Instance {
             self.sig.outputs.iter().find(|pd| pd.name == port)
         };
         Ok(maybe_pd
-            .ok_or_else(|| Error::Undefined(port.clone(), "port".to_string()))?
+            .ok_or_else(|| {
+                let kind = if is_input {
+                    "input port"
+                } else {
+                    "output port"
+                };
+                Error::Undefined(port.clone(), kind.to_string())
+            })?
             .liveness
             .resolve(&self.binding))
     }
 
-    /// Returns the requirements of an input port
-    /* pub fn port_requirements(&self, port: &core::Id) -> FilamentResult<core::Interval> {
+    /// Returns the requirements of an input port.
+    pub fn port_requirements(
+        &self,
+        port: &core::Id,
+    ) -> FilamentResult<core::Interval> {
         self.resolve_port(port, true)
-    } */
+    }
 
     /// Returns the guarantees provided by an output port
     pub fn port_guarantees(
@@ -149,18 +159,17 @@ impl Context {
         }
     }
 
+    /// Get the signature of the component associated with `comp`.
     pub fn get_sig(
         &self,
         comp: &core::Id,
     ) -> FilamentResult<Rc<core::Signature>> {
-        self.sigs
-            .get(comp)
-            .map(Rc::clone)
-            .ok_or_else(|| {
-                Error::Undefined(comp.clone(), "component".to_string())
-            })
+        self.sigs.get(comp).map(Rc::clone).ok_or_else(|| {
+            Error::Undefined(comp.clone(), "component".to_string())
+        })
     }
 
+    /// Get the instance asscoiated with `instance`
     pub fn get_instance(
         &self,
         instance: &core::Id,

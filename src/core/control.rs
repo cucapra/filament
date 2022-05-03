@@ -1,4 +1,4 @@
-use super::{Id, IntervalTime, Cell};
+use super::{Cell, Id, IntervalTime};
 
 pub enum Port {
     ThisPort(Id),
@@ -13,7 +13,6 @@ pub enum Command {
     Instance(Cell),
     Connect(Connect),
 }
-
 
 /// An Invocation
 pub struct Invoke {

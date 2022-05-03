@@ -4,6 +4,6 @@ mod id;
 mod interval;
 
 pub use component::{Cell, Component, Namespace, PortDef, Signature};
-pub use control::{Invoke, Command, Invocation, Port, When, Connect};
+pub use control::{Command, Connect, Invocation, Invoke, Port, When};
 pub use id::Id;
 pub use interval::{Interval, IntervalTime, TimeOp};
