@@ -13,9 +13,9 @@ impl std::fmt::Display for SExp {
 pub fn prove<'a, I, AV>(
     abstract_vars: AV,
     facts: I,
-) -> FilamentResult<Option<super::Fact>>
+) -> FilamentResult<Option<&'a super::Fact>>
 where
-    I: Iterator<Item = super::Fact>,
+    I: Iterator<Item = &'a super::Fact>,
     AV: Iterator<Item = &'a core::Id>,
 {
     let parser = ();

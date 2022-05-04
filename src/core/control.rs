@@ -1,3 +1,5 @@
+use crate::errors;
+
 use super::{Id, IntervalTime};
 
 pub enum Port {
@@ -83,7 +85,38 @@ pub struct Invocation {
 
     /// Assignment for the ports
     pub ports: Vec<Port>,
+
+    /// Source location of the invocation
+    pos: Option<errors::Span>,
 }
+
+impl errors::WithPos for Invocation {
+    fn copy_span(&self) -> Option<errors::Span> {
+        self.pos.clone()
+    }
+}
+
+impl Invocation {
+    pub fn new(
+        comp: Id,
+        abstract_vars: Vec<IntervalTime>,
+        ports: Vec<Port>,
+    ) -> Self {
+        Self {
+            comp,
+            abstract_vars,
+            ports,
+            pos: None,
+        }
+    }
+
+    /// Attach a position to this node
+    pub fn with_span(mut self, sp: errors::Span) -> Self {
+        self.pos = Some(sp);
+        self
+    }
+}
+
 impl std::fmt::Display for Invocation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(

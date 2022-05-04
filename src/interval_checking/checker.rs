@@ -1,10 +1,12 @@
 use std::{collections::HashMap, rc::Rc};
 
+use linked_hash_map::LinkedHashMap;
+
 use super::{ConcreteInvoke, Context, Fact};
 
 use crate::{
     core,
-    errors::{self, FilamentResult},
+    errors::{self, FilamentResult, WithPos},
 };
 
 const THIS: &str = "_this";
@@ -40,7 +42,7 @@ fn check_connect(con: &core::Connect, ctx: &mut Context) -> FilamentResult<()> {
         }
     };
     if let Some(guarantee) = maybe_guarantee {
-        ctx.add_obligation(Fact::subset(requirement, guarantee));
+        ctx.add_obligation(Fact::subset(requirement, guarantee), None);
     }
     Ok(())
 }
@@ -80,7 +82,10 @@ fn check_invocation(
             }
         };
         if let Some(guarantee) = maybe_guarantee {
-            ctx.add_obligation(Fact::subset(requirement, guarantee));
+            ctx.add_obligation(
+                Fact::subset(requirement, guarantee),
+                invoke.copy_span(),
+            );
         }
     }
     Ok(instance)
@@ -136,12 +141,18 @@ fn check_component(
     ctx.add_invocation(THIS.into(), this_instance)?;
     check_commands(&comp.body, &mut ctx)?;
 
-    let (obligations, _) = ctx.into();
+    let obligations_with_pos: LinkedHashMap<_, _> = ctx.into();
+    let obligations = obligations_with_pos
+        .iter()
+        .map(|(f, _)| f)
+        .collect::<Vec<&_>>();
     println!("Proof Obligations:\n{:#?}", obligations);
+
     if let Some(fact) =
         super::prove(sig.abstract_vars.iter(), obligations.into_iter())?
     {
-        Err(errors::Error::CannotProve(fact))
+        let pos = &obligations_with_pos[fact];
+        Err(errors::Error::cannot_prove(fact.clone()).with_pos(pos[0].clone()))
     } else {
         println!("All proof obligations satisfied");
         Ok(())

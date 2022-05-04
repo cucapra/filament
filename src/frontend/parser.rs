@@ -9,10 +9,19 @@ use std::fs;
 use std::path::Path;
 use std::rc::Rc;
 
+/// Data associated with parsing the file.
+#[derive(Clone)]
+struct UserData {
+    /// Input to the parser
+    pub input: Rc<str>,
+    /// Path of the file
+    pub file: Rc<str>,
+}
+
 type ParseResult<T> = Result<T, Error<Rule>>;
 // user data is the input program so that we can create ir::Id's
 // that have a reference to the input string
-type Node<'i> = pest_consume::Node<'i, Rule, Rc<str>>;
+type Node<'i> = pest_consume::Node<'i, Rule, UserData>;
 
 // include the grammar file so that Cargo knows to rebuild this file on grammar changes
 const _GRAMMAR: &str = include_str!("syntax.pest");
@@ -30,21 +39,35 @@ impl FilamentParser {
     /// Parse a Calyx program into an AST representation.
     pub fn parse_file(path: &Path) -> FilamentResult<core::Namespace> {
         let content = &fs::read(path).map_err(|err| {
-            errors::Error::InvalidFile(format!(
+            errors::Error::invalid_file(format!(
                 "Failed to read {}: {}",
                 path.to_string_lossy(),
                 err
             ))
         })?;
         let string_content = std::str::from_utf8(content)?;
+
+        let user_data = UserData {
+            input: Rc::from(string_content),
+            file: Rc::from(path.to_string_lossy()),
+        };
         let inputs = FilamentParser::parse_with_userdata(
             Rule::file,
             string_content,
-            Rc::from(string_content),
+            user_data,
         )
         .map_err(|e| e.with_path(&path.to_string_lossy()))?;
         let input = inputs.single()?;
         Ok(FilamentParser::file(input)?)
+    }
+
+    fn get_span(node: &Node) -> errors::Span {
+        let ud = node.user_data();
+        errors::Span::new(
+            node.as_span(),
+            Rc::clone(&ud.file),
+            Rc::clone(&ud.input),
+        )
     }
 }
 
@@ -200,14 +223,15 @@ impl FilamentParser {
     }
 
     fn invocation_expr(input: Node) -> ParseResult<core::Invocation> {
+        let span = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
             [
                 identifier(comp),
                 time_args(abstract_vars),
                 arguments(ports)
-            ] => core::Invocation {
-                comp, abstract_vars, ports
+            ] => {
+                core::Invocation::new(comp, abstract_vars, ports).with_span(span)
             }
         ))
     }

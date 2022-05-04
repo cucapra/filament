@@ -1,7 +1,7 @@
 use crate::core;
 
 /// Type of the fact
-#[derive(Debug, Hash, Eq, PartialEq)]
+#[derive(Debug, Hash, Eq, PartialEq, Clone)]
 pub enum FactType {
     /// Represents set equality
     Equality,
@@ -10,7 +10,7 @@ pub enum FactType {
 }
 
 /// Set of known interval facts and equalities.
-#[derive(Hash, Eq, PartialEq)]
+#[derive(Hash, Eq, PartialEq, Clone)]
 pub struct Fact {
     pub tag: FactType,
     pub left: core::Interval,

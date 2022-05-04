@@ -3,12 +3,12 @@ use std::{
     rc::Rc,
 };
 
-use linked_hash_set::LinkedHashSet;
+use linked_hash_map::LinkedHashMap;
 
 use super::Fact;
 use crate::{
     core,
-    errors::{Error, FilamentResult},
+    errors::{self, Error, FilamentResult},
 };
 
 /// Representation of a concrete invocation in the context
@@ -81,7 +81,7 @@ impl ConcreteInvoke {
                 } else {
                     "output port"
                 };
-                Error::Undefined(port.clone(), kind.to_string())
+                Error::undefined(port.clone(), kind.to_string())
             })?
             .liveness
             .resolve(&self.binding))
@@ -116,10 +116,8 @@ pub struct Context<'a> {
     invocations: HashMap<core::Id, ConcreteInvoke>,
 
     /// Set of facts that need to be proven.
-    obligations: LinkedHashSet<Fact>,
-
-    /// Set of currently known facts.
-    facts: LinkedHashSet<Fact>,
+    /// Mapping from facts to the locations that generated it.
+    obligations: LinkedHashMap<Fact, Vec<errors::Span>>,
 }
 
 impl<'a> From<&'a HashMap<core::Id, Rc<core::Signature>>> for Context<'a> {
@@ -128,16 +126,15 @@ impl<'a> From<&'a HashMap<core::Id, Rc<core::Signature>>> for Context<'a> {
             sigs,
             instances: HashMap::default(),
             invocations: HashMap::default(),
-            obligations: LinkedHashSet::default(),
-            facts: LinkedHashSet::default(),
+            obligations: LinkedHashMap::default(),
         }
     }
 }
 
 /// Decompose Context into obligations and facts
-impl From<Context<'_>> for (LinkedHashSet<Fact>, LinkedHashSet<Fact>) {
+impl From<Context<'_>> for LinkedHashMap<Fact, Vec<errors::Span>> {
     fn from(val: Context) -> Self {
-        (val.obligations, val.facts)
+        val.obligations
     }
 }
 
@@ -154,7 +151,7 @@ impl Context<'_> {
                 Ok(())
             }
             None => {
-                Err(Error::Undefined(comp.clone(), "component".to_string()))
+                Err(Error::undefined(comp.clone(), "component".to_string()))
             }
         }
     }
@@ -169,14 +166,17 @@ impl Context<'_> {
             e.insert(instance);
             Ok(())
         } else {
-            Err(Error::AlreadyBound(name, "invocation".to_string()))
+            Err(Error::already_bound(name, "invocation".to_string()))
         }
     }
 
     /// Add a new obligation that needs to be proved
-    pub fn add_obligation(&mut self, fact: Fact) {
+    pub fn add_obligation(&mut self, fact: Fact, span: Option<errors::Span>) {
         log::info!("adding obligation {:?}", fact);
-        self.obligations.insert(fact);
+        let locs = self.obligations.entry(fact).or_insert(vec![]);
+        if let Some(sp) = span {
+            locs.push(sp)
+        }
     }
 
     /// Get the signature of the component associated with `comp`.
@@ -185,7 +185,7 @@ impl Context<'_> {
         comp: &core::Id,
     ) -> FilamentResult<Rc<core::Signature>> {
         self.sigs.get(comp).map(Rc::clone).ok_or_else(|| {
-            Error::Undefined(comp.clone(), "component".to_string())
+            Error::undefined(comp.clone(), "component".to_string())
         })
     }
 
@@ -195,7 +195,7 @@ impl Context<'_> {
         inst: &core::Id,
     ) -> FilamentResult<Rc<core::Signature>> {
         self.instances.get(inst).map(Rc::clone).ok_or_else(|| {
-            Error::Undefined(inst.clone(), "instance".to_string())
+            Error::undefined(inst.clone(), "instance".to_string())
         })
     }
 
@@ -205,7 +205,7 @@ impl Context<'_> {
         instance: &core::Id,
     ) -> FilamentResult<&ConcreteInvoke> {
         self.invocations.get(instance).ok_or_else(|| {
-            Error::Undefined(instance.clone(), "invocation".to_string())
+            Error::undefined(instance.clone(), "invocation".to_string())
         })
     }
 }
