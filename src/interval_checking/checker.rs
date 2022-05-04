@@ -1,8 +1,11 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 use super::{ConcreteInvoke, Context, Fact};
 
-use crate::{core, errors::FilamentResult};
+use crate::{
+    core,
+    errors::{self, FilamentResult},
+};
 
 const THIS: &str = "_this";
 
@@ -122,17 +125,27 @@ where
 
 fn check_component(
     comp: core::Component,
-    ctx: &mut Context,
+    sigs: &HashMap<core::Id, Rc<core::Signature>>,
 ) -> FilamentResult<()> {
+    let mut ctx = Context::from(sigs);
     let sig = Rc::new(comp.sig);
 
     // Add instance for this component. Whenever a bare port is used, it refers
     // to the port on this instance.
     let this_instance = ConcreteInvoke::this_instance(Rc::clone(&sig));
     ctx.add_invocation(THIS.into(), this_instance)?;
-    check_commands(&comp.body, ctx)?;
+    check_commands(&comp.body, &mut ctx)?;
 
-    Ok(())
+    let (obligations, _) = ctx.into();
+    println!("Proof Obligations:\n{:#?}", obligations);
+    if let Some(fact) =
+        super::prove(sig.abstract_vars.iter(), obligations.into_iter())?
+    {
+        Err(errors::Error::CannotProve(fact))
+    } else {
+        println!("All proof obligations satisfied");
+        Ok(())
+    }
 }
 
 /// Check a [core::Namespace] to prove that the interval requirements of all the ports can be
@@ -140,13 +153,12 @@ fn check_component(
 /// Internally generates [super::Fact] which represent proof obligations that need to be proven for
 /// the interval requirements to be proven.
 pub fn check(mut namespace: core::Namespace) -> FilamentResult<()> {
-    let mut ctx = Context::default();
     // Add signatures to the context
-    namespace.signatures.drain(..).try_for_each(|sig| {
-        let name = sig.name.clone();
-        let sig_ref = Rc::new(sig);
-        ctx.add_definition(name, sig_ref)
-    })?;
+    let sigs: HashMap<_, _> = namespace
+        .signatures
+        .drain(..)
+        .map(|sig| (sig.name.clone(), Rc::new(sig)))
+        .collect();
 
     assert!(
         namespace.components.len() <= 1,
@@ -155,12 +167,8 @@ pub fn check(mut namespace: core::Namespace) -> FilamentResult<()> {
 
     namespace.components.drain(..).try_for_each(|comp| {
         log::info!("component {}", comp.sig.name);
-        check_component(comp, &mut ctx)
+        check_component(comp, &sigs)
     })?;
-
-    let (obligations, facts) = ctx.into();
-    println!("Known Facts:\n{:#?}", facts);
-    println!("Proof Obligations:\n{:#?}", obligations);
 
     Ok(())
 }

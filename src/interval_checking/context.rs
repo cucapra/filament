@@ -104,10 +104,10 @@ impl ConcreteInvoke {
     }
 }
 
-#[derive(Default, Debug)]
-pub struct Context {
+#[derive(Debug)]
+pub struct Context<'a> {
     /// Mapping from names to signatures for components and externals.
-    sigs: HashMap<core::Id, Rc<core::Signature>>,
+    sigs: &'a HashMap<core::Id, Rc<core::Signature>>,
 
     /// Mapping for the names of active instances
     instances: HashMap<core::Id, Rc<core::Signature>>,
@@ -122,28 +122,26 @@ pub struct Context {
     facts: LinkedHashSet<Fact>,
 }
 
+impl<'a> From<&'a HashMap<core::Id, Rc<core::Signature>>> for Context<'a> {
+    fn from(sigs: &'a HashMap<core::Id, Rc<core::Signature>>) -> Self {
+        Context {
+            sigs,
+            instances: HashMap::default(),
+            invocations: HashMap::default(),
+            obligations: LinkedHashSet::default(),
+            facts: LinkedHashSet::default(),
+        }
+    }
+}
+
 /// Decompose Context into obligations and facts
-impl From<Context> for (LinkedHashSet<Fact>, LinkedHashSet<Fact>) {
+impl From<Context<'_>> for (LinkedHashSet<Fact>, LinkedHashSet<Fact>) {
     fn from(val: Context) -> Self {
         (val.obligations, val.facts)
     }
 }
 
-impl Context {
-    /// Add a new definition to the context
-    pub fn add_definition(
-        &mut self,
-        name: core::Id,
-        sig: Rc<core::Signature>,
-    ) -> FilamentResult<()> {
-        if let Entry::Vacant(e) = self.sigs.entry(name.clone()) {
-            e.insert(sig);
-            Ok(())
-        } else {
-            Err(Error::AlreadyBound(name, "definition".to_string()))
-        }
-    }
-
+impl Context<'_> {
     /// Add a new instance to the context with the signatuer from `comp`
     pub fn add_instance(
         &mut self,

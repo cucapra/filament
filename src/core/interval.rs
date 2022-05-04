@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::interval_checking::SExp;
+
 use super::Id;
 
 /// Possible operations over time variables.
@@ -174,5 +176,21 @@ impl std::fmt::Debug for Interval {
         write!(f, ", ")?;
         self.end.fmt(f)?;
         write!(f, "]")
+    }
+}
+impl From<&IntervalTime> for SExp {
+    fn from(it: &IntervalTime) -> Self {
+        match it {
+            IntervalTime::Abstract(x) => SExp(x.to_string()),
+            IntervalTime::Concrete(x) => SExp(x.to_string()),
+            IntervalTime::BinOp { op, left, right } => match op {
+                TimeOp::Add => SExp(format!(
+                    "(+ {} {})",
+                    SExp::from(&**left),
+                    SExp::from(&**right),
+                )),
+                TimeOp::Max => todo!("Converting max operations to SExp"),
+            },
+        }
     }
 }

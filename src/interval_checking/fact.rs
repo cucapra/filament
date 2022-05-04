@@ -55,3 +55,24 @@ impl std::fmt::Debug for Fact {
         write!(f, "]")
     }
 }
+
+impl From<&Fact> for super::SExp {
+    fn from(f: &Fact) -> Self {
+        match f.tag {
+            FactType::Equality => {
+                todo!("Converting equality facts into z3 asserts")
+            }
+            FactType::Subset => {
+                let core::Interval { start: ls, end: le } = &f.left;
+                let core::Interval { start: rs, end: re } = &f.right;
+                super::SExp(format!(
+                    "(and (<= {} {}) (>= {} {}))",
+                    super::SExp::from(rs),
+                    super::SExp::from(ls),
+                    super::SExp::from(re),
+                    super::SExp::from(le)
+                ))
+            }
+        }
+    }
+}

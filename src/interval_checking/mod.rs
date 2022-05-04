@@ -1,8 +1,10 @@
 mod checker;
 mod context;
 mod fact;
+mod solver;
 
-pub use context::{ConcreteInvoke, Context};
+pub(super) use context::{ConcreteInvoke, Context};
+pub(super) use fact::Fact;
+pub use solver::{prove, SExp};
 
 pub use checker::check;
-pub use fact::{Fact, FactType};
