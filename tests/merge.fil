@@ -1,0 +1,22 @@
+import "primitives/core.fil";
+
+// The component produces an output signal that lives for three cycles immediately
+// starting the cycle that `in` is given.
+// We use a merge unit to forward the input signal in the first cycle and
+// latch the output to make it available for the remaining cycles.
+component main<G>(
+  @[G, G+1] in: 32
+) -> (
+  @[G, G+3] out: 32
+) {
+  L := new Latch;
+  M := new Merge;
+
+  when G {
+    // Intentially make the latch exist longer than needed.
+    l0 := L<G, G+4>(in);
+    m0 := M<G, G+1, G+3>(in, l0.out);
+  }
+
+  out = m0.out;
+}
