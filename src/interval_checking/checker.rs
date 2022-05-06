@@ -4,6 +4,7 @@ use crate::{
     errors::{self, FilamentResult, WithPos},
 };
 use linked_hash_map::LinkedHashMap;
+use std::collections::HashMap;
 
 const THIS: &str = "_this";
 
@@ -126,7 +127,7 @@ where
 
 fn check_component(
     comp: &core::Component,
-    sigs: &Vec<core::Signature>,
+    sigs: &HashMap<core::Id, &core::Signature>,
 ) -> FilamentResult<()> {
     let mut ctx = Context::from(sigs);
 
@@ -166,10 +167,18 @@ pub fn check(namespace: &core::Namespace) -> FilamentResult<()> {
         "NYI: Cannot check multiple components"
     );
 
-    namespace.components.iter().try_for_each(|comp| {
+    let mut sigs = namespace
+        .signatures
+        .iter()
+        .map(|s| (s.name.clone(), s))
+        .collect::<HashMap<_, _>>();
+
+    for comp in &namespace.components {
         log::info!("component {}", comp.sig.name);
-        check_component(comp, &namespace.signatures)
-    })?;
+        check_component(comp, &sigs)?;
+        // Add the signature of this component to the context.
+        sigs.insert(comp.sig.name.clone(), &comp.sig);
+    }
 
     Ok(())
 }

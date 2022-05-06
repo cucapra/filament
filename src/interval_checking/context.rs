@@ -98,7 +98,7 @@ impl<'a> ConcreteInvoke<'a> {
 #[derive(Debug)]
 pub struct Context<'a> {
     /// Mapping from names to signatures for components and externals.
-    sigs: HashMap<core::Id, &'a core::Signature>,
+    sigs: &'a HashMap<core::Id, &'a core::Signature>,
 
     /// Mapping for the names of active instances
     instances: HashMap<core::Id, &'a core::Signature>,
@@ -111,9 +111,8 @@ pub struct Context<'a> {
     obligations: LinkedHashMap<Fact, Vec<errors::Span>>,
 }
 
-impl<'a> From<&'a Vec<core::Signature>> for Context<'a> {
-    fn from(signatures: &'a Vec<core::Signature>) -> Self {
-        let sigs = signatures.iter().map(|s| (s.name.clone(), s)).collect();
+impl<'a> From<&'a HashMap<core::Id, &'a core::Signature>> for Context<'a> {
+    fn from(sigs: &'a HashMap<core::Id, &'a core::Signature>) -> Self {
         Context {
             sigs,
             instances: HashMap::default(),
