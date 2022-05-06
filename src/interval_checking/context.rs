@@ -1,7 +1,4 @@
-use std::{
-    collections::{hash_map::Entry, HashMap},
-    rc::Rc,
-};
+use std::collections::{hash_map::Entry, HashMap};
 
 use linked_hash_map::LinkedHashMap;
 
@@ -13,18 +10,18 @@ use crate::{
 
 /// Representation of a concrete invocation in the context
 #[derive(Debug)]
-pub struct ConcreteInvoke {
+pub struct ConcreteInvoke<'a> {
     /// Bindings for abstract variables
     pub binding: HashMap<core::Id, core::IntervalTime>,
 
     /// Input ports
-    pub sig: Rc<core::Signature>,
+    pub sig: &'a core::Signature,
 }
 
-impl ConcreteInvoke {
+impl<'a> ConcreteInvoke<'a> {
     /// Construct an instance from a Signature and bindings for abstract variables.
     pub fn from_signature(
-        sig: Rc<core::Signature>,
+        sig: &'a core::Signature,
         abs: Vec<core::IntervalTime>,
     ) -> Self {
         let binding = sig
@@ -34,14 +31,11 @@ impl ConcreteInvoke {
             .zip(abs.into_iter())
             .collect();
 
-        ConcreteInvoke {
-            binding,
-            sig: Rc::clone(&sig),
-        }
+        ConcreteInvoke { binding, sig }
     }
 
     /// Construct an instance for "this" component.
-    pub fn this_instance(sig: Rc<core::Signature>) -> Self {
+    pub fn this_instance(sig: &'a core::Signature) -> Self {
         // Binding for this instance is just identity.
         let binding = sig
             .abstract_vars
@@ -54,10 +48,7 @@ impl ConcreteInvoke {
             )
             .collect();
 
-        ConcreteInvoke {
-            binding,
-            sig: Rc::new(sig.reversed()),
-        }
+        ConcreteInvoke { binding, sig }
     }
 
     /// Resolve a port for this instance and return the requirement or guarantee
@@ -107,21 +98,22 @@ impl ConcreteInvoke {
 #[derive(Debug)]
 pub struct Context<'a> {
     /// Mapping from names to signatures for components and externals.
-    sigs: &'a HashMap<core::Id, Rc<core::Signature>>,
+    sigs: HashMap<core::Id, &'a core::Signature>,
 
     /// Mapping for the names of active instances
-    instances: HashMap<core::Id, Rc<core::Signature>>,
+    instances: HashMap<core::Id, &'a core::Signature>,
 
     /// Mapping from name of invocations to their information
-    invocations: HashMap<core::Id, ConcreteInvoke>,
+    invocations: HashMap<core::Id, ConcreteInvoke<'a>>,
 
     /// Set of facts that need to be proven.
     /// Mapping from facts to the locations that generated it.
     obligations: LinkedHashMap<Fact, Vec<errors::Span>>,
 }
 
-impl<'a> From<&'a HashMap<core::Id, Rc<core::Signature>>> for Context<'a> {
-    fn from(sigs: &'a HashMap<core::Id, Rc<core::Signature>>) -> Self {
+impl<'a> From<&'a Vec<core::Signature>> for Context<'a> {
+    fn from(signatures: &'a Vec<core::Signature>) -> Self {
+        let sigs = signatures.iter().map(|s| (s.name.clone(), s)).collect();
         Context {
             sigs,
             instances: HashMap::default(),
@@ -138,14 +130,14 @@ impl From<Context<'_>> for LinkedHashMap<Fact, Vec<errors::Span>> {
     }
 }
 
-impl Context<'_> {
+impl<'a> Context<'a> {
     /// Add a new instance to the context with the signatuer from `comp`
     pub fn add_instance(
         &mut self,
         name: core::Id,
         comp: &core::Id,
     ) -> FilamentResult<()> {
-        match self.sigs.get(comp).map(Rc::clone) {
+        match self.sigs.get(comp) {
             Some(sig) => {
                 self.instances.insert(name, sig);
                 Ok(())
@@ -160,7 +152,7 @@ impl Context<'_> {
     pub fn add_invocation(
         &mut self,
         name: core::Id,
-        instance: ConcreteInvoke,
+        instance: ConcreteInvoke<'a>,
     ) -> FilamentResult<()> {
         if let Entry::Vacant(e) = self.invocations.entry(name.clone()) {
             e.insert(instance);
@@ -183,8 +175,8 @@ impl Context<'_> {
     pub fn get_sig(
         &self,
         comp: &core::Id,
-    ) -> FilamentResult<Rc<core::Signature>> {
-        self.sigs.get(comp).map(Rc::clone).ok_or_else(|| {
+    ) -> FilamentResult<&'a core::Signature> {
+        self.sigs.get(comp).copied().ok_or_else(|| {
             Error::undefined(comp.clone(), "component".to_string())
         })
     }
@@ -193,8 +185,8 @@ impl Context<'_> {
     pub fn get_instance(
         &self,
         inst: &core::Id,
-    ) -> FilamentResult<Rc<core::Signature>> {
-        self.instances.get(inst).map(Rc::clone).ok_or_else(|| {
+    ) -> FilamentResult<&'a core::Signature> {
+        self.instances.get(inst).copied().ok_or_else(|| {
             Error::undefined(inst.clone(), "instance".to_string())
         })
     }

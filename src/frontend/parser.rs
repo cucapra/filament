@@ -316,7 +316,7 @@ impl FilamentParser {
                 command(body)..
             ] => {
                 core::Component {
-                    sig,
+                    sig: Rc::new(sig),
                     body: body.collect(),
                 }
             }

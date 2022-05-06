@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use super::{Command, Id, Interval};
 
 #[derive(Clone)]
@@ -50,7 +52,7 @@ impl Signature {
 /// A component in Filament
 pub struct Component {
     // Signature of this component
-    pub sig: Signature,
+    pub sig: Rc<Signature>,
 
     /// Model for this component
     pub body: Vec<Command>,

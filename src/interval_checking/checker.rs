@@ -1,13 +1,9 @@
-use std::{collections::HashMap, rc::Rc};
-
-use linked_hash_map::LinkedHashMap;
-
 use super::{ConcreteInvoke, Context, Fact};
-
 use crate::{
     core,
     errors::{self, FilamentResult, WithPos},
 };
+use linked_hash_map::LinkedHashMap;
 
 const THIS: &str = "_this";
 
@@ -49,10 +45,10 @@ fn check_connect(con: &core::Connect, ctx: &mut Context) -> FilamentResult<()> {
 
 /// Check invocation and add new [super::Fact] representing the proof obligations for checking this
 /// invocation.
-fn check_invocation(
+fn check_invocation<'a>(
     invoke: &core::Invocation,
-    ctx: &mut Context,
-) -> FilamentResult<ConcreteInvoke> {
+    ctx: &mut Context<'a>,
+) -> FilamentResult<ConcreteInvoke<'a>> {
     let sig = ctx.get_instance(&invoke.comp)?;
     let instance =
         ConcreteInvoke::from_signature(sig, invoke.abstract_vars.clone());
@@ -129,15 +125,15 @@ where
 }
 
 fn check_component(
-    comp: core::Component,
-    sigs: &HashMap<core::Id, Rc<core::Signature>>,
+    comp: &core::Component,
+    sigs: &Vec<core::Signature>,
 ) -> FilamentResult<()> {
     let mut ctx = Context::from(sigs);
-    let sig = Rc::new(comp.sig);
 
     // Add instance for this component. Whenever a bare port is used, it refers
     // to the port on this instance.
-    let this_instance = ConcreteInvoke::this_instance(Rc::clone(&sig));
+    let rev_sig = comp.sig.reversed();
+    let this_instance = ConcreteInvoke::this_instance(&rev_sig);
     ctx.add_invocation(THIS.into(), this_instance)?;
     check_commands(&comp.body, &mut ctx)?;
 
@@ -149,7 +145,7 @@ fn check_component(
     println!("Proof Obligations:\n{:#?}", obligations);
 
     if let Some(fact) =
-        super::prove(sig.abstract_vars.iter(), obligations.into_iter())?
+        super::prove(comp.sig.abstract_vars.iter(), obligations.into_iter())?
     {
         let pos = &obligations_with_pos[fact];
         Err(errors::Error::cannot_prove(fact.clone()).with_pos(pos[0].clone()))
@@ -163,22 +159,16 @@ fn check_component(
 /// satisfied.
 /// Internally generates [super::Fact] which represent proof obligations that need to be proven for
 /// the interval requirements to be proven.
-pub fn check(mut namespace: core::Namespace) -> FilamentResult<()> {
+pub fn check(namespace: &core::Namespace) -> FilamentResult<()> {
     // Add signatures to the context
-    let sigs: HashMap<_, _> = namespace
-        .signatures
-        .drain(..)
-        .map(|sig| (sig.name.clone(), Rc::new(sig)))
-        .collect();
-
     assert!(
         namespace.components.len() <= 1,
         "NYI: Cannot check multiple components"
     );
 
-    namespace.components.drain(..).try_for_each(|comp| {
+    namespace.components.iter().try_for_each(|comp| {
         log::info!("component {}", comp.sig.name);
-        check_component(comp, &sigs)
+        check_component(comp, &namespace.signatures)
     })?;
 
     Ok(())

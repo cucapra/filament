@@ -21,6 +21,6 @@ fn main() -> errors::FilamentResult<()> {
         ns.signatures.extend(imp.signatures.into_iter());
         imports.extend(imp.imports.into_iter());
     }
-    interval_checking::check(ns)?;
+    interval_checking::check(&ns)?;
     Ok(())
 }
