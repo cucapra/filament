@@ -26,7 +26,7 @@ where
 
     let mut solver = conf.spawn(parser)?;
 
-    // solver.path_tee(PathBuf::from("./model.smt"))?;
+    solver.path_tee(std::path::PathBuf::from("./model.smt"))?;
 
     // Define all the constants
     for var in abstract_vars {
@@ -35,7 +35,7 @@ where
     }
 
     for fact in facts {
-        if !check_fact(&mut solver, &fact)? {
+        if !check_fact(&mut solver, fact)? {
             return Ok(Some(fact));
         }
     }
@@ -48,7 +48,11 @@ fn check_fact<P>(
     fact: &super::Fact,
 ) -> FilamentResult<bool> {
     let sexp = SExp::from(fact);
-    log::info!("Assering {}", sexp);
-    solver.assert(format!("{}", sexp))?;
-    Ok(solver.check_sat()?)
+    log::info!("Assert (not {})", sexp);
+    solver.push(1)?;
+    solver.assert(format!("(not {})", sexp))?;
+    // Check that the assertion was unsatisfiable
+    let unsat = !solver.check_sat()?;
+    solver.pop(1)?;
+    Ok(unsat)
 }
