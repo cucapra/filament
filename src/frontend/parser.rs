@@ -111,6 +111,7 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.into_children();
             [identifier(var)] => core::IntervalTime::Abstract(var),
+            [max(_), time(l), time(r)] => core::IntervalTime::binop_max(l, r),
             [bitwidth(time)] => core::IntervalTime::Concrete(time),
         ))
     }
@@ -118,7 +119,6 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.into_children();
             [time_base(l), plus(_), time(r)] => core::IntervalTime::binop_add(l, r),
-            [max(_), time(l), time(r)] => core::IntervalTime::binop_max(l, r),
         ))
     }
 
@@ -248,6 +248,43 @@ impl FilamentParser {
         ))
     }
 
+    fn gt(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+    fn lt(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+    fn eq(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+    fn order_op(input: Node) -> ParseResult<core::OrderOp> {
+        Ok(match_nodes!(
+            input.into_children();
+            [gt(_)] => core::OrderOp::Gt,
+            [lt(_)] => core::OrderOp::Lt,
+            [eq(_)] => core::OrderOp::Eq,
+        ))
+    }
+    fn constraint(input: Node) -> ParseResult<core::Constraint> {
+        Ok(match_nodes!(
+            input.into_children();
+            [
+                time(left),
+                order_op(op),
+                time(right)
+            ] => core::Constraint {
+                left, right, op
+            }
+        ))
+    }
+    fn constraints(input: Node) -> ParseResult<Vec<core::Constraint>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [] => Vec::default(),
+            [constraint(cons)..] => cons.collect()
+        ))
+    }
+
     // ================ Component =====================
     fn signature(input: Node) -> ParseResult<core::Signature> {
         Ok(match_nodes!(
@@ -256,6 +293,7 @@ impl FilamentParser {
                 identifier(name),
                 abstract_var(abstract_vars),
                 io(io),
+                constraints(constraints)
             ] => {
                 let (inputs, outputs) = io;
                 core::Signature {
@@ -263,11 +301,13 @@ impl FilamentParser {
                     abstract_vars,
                     inputs,
                     outputs,
+                    constraints,
                 }
             },
             [
                 identifier(name),
                 io(io),
+                constraints(constraints)
             ] => {
                 let (inputs, outputs) = io;
                 core::Signature {
@@ -275,6 +315,7 @@ impl FilamentParser {
                     abstract_vars: vec![],
                     inputs,
                     outputs,
+                    constraints
                 }
             }
         ))
@@ -290,11 +331,10 @@ impl FilamentParser {
     }
 
     fn connect(input: Node) -> ParseResult<core::Connect> {
+        let span = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [port(dst), port(src)] => core::Connect {
-                src, dst
-            }
+            [port(dst), port(src)] => core::Connect::new(dst, src).with_span(span)
         ))
     }
 

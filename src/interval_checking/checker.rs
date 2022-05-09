@@ -3,6 +3,7 @@ use crate::{
     core,
     errors::{self, FilamentResult, WithPos},
 };
+use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
 
@@ -12,7 +13,7 @@ const THIS: &str = "_this";
 // dst = src
 // The generated proof obligation requires that req(dst) \subsetof guarantees(src)
 fn check_connect(con: &core::Connect, ctx: &mut Context) -> FilamentResult<()> {
-    let core::Connect { dst, src } = con;
+    let core::Connect { dst, src, .. } = con;
     let requirement = match dst {
         core::Port::ThisPort(name) => {
             ctx.get_invoke(&THIS.into())?.port_requirements(name)?
@@ -39,7 +40,10 @@ fn check_connect(con: &core::Connect, ctx: &mut Context) -> FilamentResult<()> {
         }
     };
     if let Some(guarantee) = maybe_guarantee {
-        ctx.add_obligation(Fact::subset(requirement, guarantee), None);
+        ctx.add_obligation(
+            Fact::subset(requirement, guarantee),
+            con.copy_span(),
+        );
     }
     Ok(())
 }
@@ -54,13 +58,22 @@ fn check_invocation<'a>(
     let instance =
         ConcreteInvoke::from_signature(sig, invoke.abstract_vars.clone());
     let req_sig = &ctx.get_instance(&invoke.comp)?;
-    let req_binding = req_sig
+    let req_binding: HashMap<_, _> = req_sig
         .abstract_vars
         .iter()
         .cloned()
         .zip(invoke.abstract_vars.iter().cloned())
         .collect();
 
+    // Add requirements on abstract variables
+    req_sig.constraints.iter().for_each(|con| {
+        ctx.add_obligation(
+            Fact::Constraint(con.resolve(&req_binding)),
+            invoke.copy_span(),
+        )
+    });
+
+    // Add requirements on input ports
     for (actual, formal) in invoke.ports.iter().zip(req_sig.inputs.iter()) {
         // Get requirements for this port
         let requirement = formal.liveness.resolve(&req_binding);
@@ -114,12 +127,14 @@ where
     for cmd in cmds {
         log::info!("{}", cmd);
         match cmd {
-            core::Command::Invoke(invoke) => check_invoke(invoke, ctx)?,
+            core::Command::Invoke(invoke) => check_invoke(invoke, ctx)
+                .map_err(|err| err.with_pos(invoke.copy_span()))?,
             core::Command::Instance(core::Instance { name, component }) => {
                 ctx.add_instance(name.clone(), component)?
             }
             core::Command::When(wh) => check_when(wh, ctx)?,
-            core::Command::Connect(con) => check_connect(con, ctx)?,
+            core::Command::Connect(con) => check_connect(con, ctx)
+                .map_err(|err| err.with_pos(con.copy_span()))?,
         };
     }
     Ok(())
@@ -136,20 +151,39 @@ fn check_component(
     let rev_sig = comp.sig.reversed();
     let this_instance = ConcreteInvoke::this_instance(&rev_sig);
     ctx.add_invocation(THIS.into(), this_instance)?;
+
+    // Add constraints on the interface as assumptions
+    rev_sig
+        .constraints
+        .iter()
+        .for_each(|con| ctx.add_fact(Fact::Constraint(con.clone()), None));
+
     check_commands(&comp.body, &mut ctx)?;
 
-    let obligations_with_pos: LinkedHashMap<_, _> = ctx.into();
+    let (obligations_with_pos, facts) = ctx.into();
+    let facts = facts.iter().map(|(f, _)| f).collect_vec();
+    if !facts.is_empty() {
+        println!("Known Facts:\n{:#?}", facts);
+    }
+
     let obligations = obligations_with_pos
         .iter()
         .map(|(f, _)| f)
         .collect::<Vec<&_>>();
     println!("Proof Obligations:\n{:#?}", obligations);
 
-    if let Some(fact) =
-        super::prove(comp.sig.abstract_vars.iter(), obligations.into_iter())?
-    {
+    if let Some(fact) = super::prove(
+        comp.sig.abstract_vars.iter(),
+        facts.into_iter(),
+        obligations.into_iter(),
+    )? {
         let pos = &obligations_with_pos[fact];
-        Err(errors::Error::cannot_prove(fact.clone()).with_pos(pos[0].clone()))
+        let err = Err(errors::Error::cannot_prove(fact.clone()));
+        if let Some(pos) = pos.get(0) {
+            err.map_err(|err| err.with_pos(Some(pos.clone())))
+        } else {
+            err
+        }
     } else {
         println!("All proof obligations satisfied");
         Ok(())

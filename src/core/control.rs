@@ -61,6 +61,11 @@ impl std::fmt::Display for Invoke {
         write!(f, "{} := {}", self.bind, self.rhs)
     }
 }
+impl errors::WithPos for Invoke {
+    fn copy_span(&self) -> Option<errors::Span> {
+        self.rhs.copy_span()
+    }
+}
 
 /// A Connection between ports
 pub struct Connect {
@@ -69,10 +74,34 @@ pub struct Connect {
 
     /// Source port
     pub src: Port,
+
+    /// Source location of the invocation
+    pos: Option<errors::Span>,
+}
+
+impl Connect {
+    pub fn new(dst: Port, src: Port) -> Self {
+        Self {
+            dst,
+            src,
+            pos: None,
+        }
+    }
+
+    /// Attach a position to this node
+    pub fn with_span(mut self, sp: errors::Span) -> Self {
+        self.pos = Some(sp);
+        self
+    }
 }
 impl std::fmt::Display for Connect {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} = {}", self.dst, self.src)
+    }
+}
+impl errors::WithPos for Connect {
+    fn copy_span(&self) -> Option<errors::Span> {
+        self.pos.clone()
     }
 }
 

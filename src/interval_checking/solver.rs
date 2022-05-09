@@ -10,12 +10,24 @@ impl std::fmt::Display for SExp {
     }
 }
 
-pub fn prove<'a, I, AV>(
+fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
+    solver.define_fun(
+        "max",
+        &[("x", "Int"), ("y", "Int")],
+        "Int",
+        "(ite (< x y) y x)",
+    )?;
+    Ok(())
+}
+
+pub fn prove<'a, I, A, AV>(
     abstract_vars: AV,
-    facts: I,
+    assumes: A,
+    asserts: I,
 ) -> FilamentResult<Option<&'a super::Fact>>
 where
     I: Iterator<Item = &'a super::Fact>,
+    A: Iterator<Item = &'a super::Fact>,
     AV: Iterator<Item = &'a core::Id>,
 {
     let parser = ();
@@ -25,8 +37,9 @@ where
     conf.check_success();
 
     let mut solver = conf.spawn(parser)?;
-
     solver.path_tee(std::path::PathBuf::from("./model.smt"))?;
+
+    define_prelude(&mut solver)?;
 
     // Define all the constants
     for var in abstract_vars {
@@ -34,7 +47,13 @@ where
         solver.declare_const(var.to_string(), "Int")?;
     }
 
-    for fact in facts {
+    // Define assumptions on constraints
+    for assume in assumes {
+        let sexp = SExp::from(assume);
+        solver.assert(format!("{}", sexp));
+    }
+
+    for fact in asserts {
         if !check_fact(&mut solver, fact)? {
             return Ok(Some(fact));
         }

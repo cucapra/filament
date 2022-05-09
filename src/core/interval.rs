@@ -113,7 +113,10 @@ impl IntervalTime {
     pub fn resolve(&self, bindings: &HashMap<Id, IntervalTime>) -> Self {
         match self {
             IntervalTime::Concrete(_) => self.clone(),
-            IntervalTime::Abstract(name) => bindings[name].clone(),
+            IntervalTime::Abstract(name) => bindings
+                .get(name)
+                .unwrap_or_else(|| panic!("No binding for {}", name))
+                .clone(),
             IntervalTime::BinOp { op, left, right } => match op {
                 TimeOp::Add => IntervalTime::binop_add(
                     left.resolve(bindings),
@@ -147,6 +150,61 @@ impl std::fmt::Debug for IntervalTime {
                 }
             },
         }
+    }
+}
+
+/// Ordering operator for constraints
+#[derive(Hash, Eq, PartialEq, Clone)]
+pub enum OrderOp {
+    Gt,
+    Lt,
+    Eq,
+}
+
+/// A constraint on time expressions
+#[derive(Hash, Eq, PartialEq, Clone)]
+pub struct Constraint {
+    pub left: IntervalTime,
+    pub right: IntervalTime,
+    pub op: OrderOp,
+}
+impl Constraint {
+    pub fn resolve(&self, binding: &HashMap<Id, IntervalTime>) -> Constraint {
+        Constraint {
+            left: self.left.resolve(binding),
+            right: self.right.resolve(binding),
+            op: self.op.clone(),
+        }
+    }
+}
+impl std::fmt::Debug for Constraint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.left)?;
+        write!(
+            f,
+            "{}",
+            match self.op {
+                OrderOp::Gt => ">",
+                OrderOp::Lt => "<",
+                OrderOp::Eq => "=",
+            }
+        )?;
+        write!(f, "{:?}", self.right)
+    }
+}
+impl From<&Constraint> for SExp {
+    fn from(con: &Constraint) -> Self {
+        let op_str = match con.op {
+            OrderOp::Gt => ">",
+            OrderOp::Lt => "<",
+            OrderOp::Eq => "=",
+        };
+        SExp(format!(
+            "({} {} {})",
+            op_str,
+            SExp::from(&con.left),
+            SExp::from(&con.right)
+        ))
     }
 }
 
@@ -189,7 +247,11 @@ impl From<&IntervalTime> for SExp {
                     SExp::from(&**left),
                     SExp::from(&**right),
                 )),
-                TimeOp::Max => todo!("Converting max operations to SExp"),
+                TimeOp::Max => SExp(format!(
+                    "(max {} {})",
+                    SExp::from(&**left),
+                    SExp::from(&**right)
+                )),
             },
         }
     }

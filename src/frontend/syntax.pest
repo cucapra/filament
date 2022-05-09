@@ -25,10 +25,20 @@ file = {
     ~ EOI
 }
 
+gt = { ">" }
+lt = { "<" }
+eq = { "=" }
+order_op = { gt | lt | eq }
 
+constraint = {
+  time ~ order_op ~ time
+}
+constraints = {
+  ("where" ~ (constraint ~ ("," ~ constraint)*))?
+}
 
 signature = {
-  identifier ~ abstract_var? ~ io
+  identifier ~ abstract_var? ~ io ~ constraints
 }
 component = {
   "component" ~ signature ~ "{" ~ command* ~ "}"
@@ -53,14 +63,12 @@ interval = {
 
 time_base = {
   bitwidth
+  | (max ~ "(" ~ time ~ "," ~ time ~ ")")
   | identifier
 }
 plus = { "+" }
 max = { "max" }
-time_expr = {
-  (time_base ~ plus ~ time)
-  | (max ~ "(" ~ time ~ "," ~ time ~ ")")
-}
+time_expr = { (time_base ~ plus ~ time) }
 time = { time_expr | time_base }
 
 port_def = {

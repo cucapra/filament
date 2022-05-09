@@ -95,6 +95,8 @@ impl<'a> ConcreteInvoke<'a> {
     }
 }
 
+type FactMap = LinkedHashMap<Fact, Vec<errors::Span>>;
+
 #[derive(Debug)]
 pub struct Context<'a> {
     /// Mapping from names to signatures for components and externals.
@@ -108,7 +110,10 @@ pub struct Context<'a> {
 
     /// Set of facts that need to be proven.
     /// Mapping from facts to the locations that generated it.
-    obligations: LinkedHashMap<Fact, Vec<errors::Span>>,
+    obligations: FactMap,
+
+    /// Set of assumed facts
+    facts: FactMap,
 }
 
 impl<'a> From<&'a HashMap<core::Id, &'a core::Signature>> for Context<'a> {
@@ -118,14 +123,15 @@ impl<'a> From<&'a HashMap<core::Id, &'a core::Signature>> for Context<'a> {
             instances: HashMap::default(),
             invocations: HashMap::default(),
             obligations: LinkedHashMap::default(),
+            facts: LinkedHashMap::default(),
         }
     }
 }
 
 /// Decompose Context into obligations and facts
-impl From<Context<'_>> for LinkedHashMap<Fact, Vec<errors::Span>> {
+impl From<Context<'_>> for (FactMap, FactMap) {
     fn from(val: Context) -> Self {
-        val.obligations
+        (val.obligations, val.facts)
     }
 }
 
@@ -165,6 +171,15 @@ impl<'a> Context<'a> {
     pub fn add_obligation(&mut self, fact: Fact, span: Option<errors::Span>) {
         log::info!("adding obligation {:?}", fact);
         let locs = self.obligations.entry(fact).or_insert(vec![]);
+        if let Some(sp) = span {
+            locs.push(sp)
+        }
+    }
+
+    /// Add a new obligation that needs to be proved
+    pub fn add_fact(&mut self, fact: Fact, span: Option<errors::Span>) {
+        log::info!("adding known fact {:?}", fact);
+        let locs = self.facts.entry(fact).or_insert(vec![]);
         if let Some(sp) = span {
             locs.push(sp)
         }

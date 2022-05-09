@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use super::{Command, Id, Interval};
+use super::{interval, Command, Id, Interval};
 
 #[derive(Clone)]
 pub struct PortDef {
@@ -34,6 +34,9 @@ pub struct Signature {
 
     /// Output ports
     pub outputs: Vec<PortDef>,
+
+    /// Constraints on the abstract variables in the signature
+    pub constraints: Vec<interval::Constraint>,
 }
 
 impl Signature {
@@ -45,6 +48,7 @@ impl Signature {
             abstract_vars: self.abstract_vars.clone(),
             inputs: self.outputs.clone(),
             outputs: self.inputs.clone(),
+            constraints: self.constraints.clone(),
         }
     }
 }

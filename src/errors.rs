@@ -113,8 +113,8 @@ impl std::fmt::Debug for Error {
 }
 
 impl Error {
-    pub fn with_pos(mut self, pos: Span) -> Self {
-        self.pos = Some(pos);
+    pub fn with_pos(mut self, pos: Option<Span>) -> Self {
+        self.pos = pos;
         self
     }
 

@@ -100,6 +100,7 @@ pub fn compile(ns: core::Namespace) -> FilamentResult<()> {
         abstract_vars,
         inputs,
         outputs,
+        constraints,
     } in ns.signatures
     {
         let mut csig = CompiledSig::default();
