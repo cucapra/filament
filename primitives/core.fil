@@ -32,4 +32,4 @@ extern component Merge<G, L, E>(
   @[L, E] in2: 32,
 ) -> (
   @[G, E] out: 32,
-);
+) where L > G, E > L;
