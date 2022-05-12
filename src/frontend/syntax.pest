@@ -63,13 +63,13 @@ interval = {
 
 time_base = {
   bitwidth
-  | (max ~ "(" ~ time ~ "," ~ time ~ ")")
+  | identifier ~ "+" ~ bitwidth
   | identifier
 }
-plus = { "+" }
-max = { "max" }
-time_expr = { (time_base ~ plus ~ time) }
-time = { time_expr | time_base }
+time = {
+  time_base
+  | ("max" ~ "(" ~ time ~ "," ~ time ~ ")")
+}
 
 port_def = {
   interval ~ identifier ~ ":" ~ (bitwidth | identifier)

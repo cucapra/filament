@@ -1,0 +1,7 @@
+// Idea: Duplicate the entire body and replace all instances of T with I.
+// Now, the generated disjointness conditions will tell you what I needs to be
+// in terms of T.
+// This will require the structural checker has well.
+component pipe<T, I>(@[T, T+1] in: 32) -> (@[T+1, T+2] out: 32) {
+
+}
