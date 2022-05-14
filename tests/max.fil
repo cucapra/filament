@@ -1,0 +1,25 @@
+import "primitives/core.fil";
+
+component Max_mult_add<G, L>(
+  @[G, G+1] a: 32,
+  @[G, G+1] b: 32,
+  @[L, L+1] c: 32,
+  @[L, L+1] d: 32,
+) -> (
+  @[max(G+4, L+4)+2, max(G+4, L+4)+3] out: 32
+) {
+
+  M0 := new Mult;
+  M1 := new Mult;
+  L0 := new Latch;
+  L1 := new Latch;
+  A := new Add;
+
+  m0 := M0<G>(a, b);
+  m1 := M1<L>(c, d);
+  m0_l := L1<G+3, max(G+4, L+4) + 1>(m0.out);
+  m1_l := L0<L+3, max(G+4, L+4) + 1>(m1.out);
+  a0 := A<max(G+4, L+4)>(m0_l.out, m1_l.out);
+
+  out = a0.out;
+}
