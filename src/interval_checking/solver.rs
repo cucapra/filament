@@ -50,8 +50,7 @@ where
     // Define assumptions on constraints
     for assume in assumes {
         let sexp = SExp::from(assume);
-        log::info!("Assume {}", sexp);
-        solver.assert(format!("{}", sexp))?;
+        solver.assert(format!("{}", sexp));
     }
 
     for fact in asserts {

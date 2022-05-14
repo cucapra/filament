@@ -3,5 +3,5 @@ extern component Mac<G, L>(
   @[G, G+1] b: 32,
   @[G+2, G+3] c: 32,
 ) -> (
-  @[G, L+1] out: 32,
+  @[G, G+L+1] out: 32,
 );

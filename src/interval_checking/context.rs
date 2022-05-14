@@ -44,7 +44,7 @@ impl<'a> ConcreteInvoke<'a> {
             .zip(
                 sig.abstract_vars
                     .iter()
-                    .map(|v| core::IntervalTime::abs(v.clone())),
+                    .map(|v| core::IntervalTime::Abstract(v.clone())),
             )
             .collect();
 
