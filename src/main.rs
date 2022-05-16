@@ -1,4 +1,6 @@
-use filament::{backend, cmdline, errors, frontend, interval_checking};
+use filament::{
+    backend, cmdline, errors, event_checker, frontend, interval_checking,
+};
 
 fn main() -> errors::FilamentResult<()> {
     let opts: cmdline::Opts = argh::from_env();
@@ -21,6 +23,7 @@ fn main() -> errors::FilamentResult<()> {
         ns.signatures.extend(imp.signatures.into_iter());
         imports.extend(imp.imports.into_iter());
     }
+    event_checker::check(&ns)?;
     interval_checking::check(&ns)?;
     // backend::compile(ns)?;
     Ok(())
