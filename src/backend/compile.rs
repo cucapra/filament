@@ -91,6 +91,51 @@ fn compile_component(comp: core::Component) -> FilamentResult<()> {
     Ok(())
 }
 
+/// Reduces an IntervalTime expression into a max of sums representation.
+/// The returned vector represents all the non-max IntervalTime expressions of
+/// which the max is being computed.
+fn max_of_sums(event: core::IntervalTime) -> Vec<core::IntervalTime> {
+    use self::core::{IntervalTime::*, TimeOp::*};
+    match event {
+        Abstract(_) => vec![event],
+        Concrete(_) => {
+            panic!("Concrete interval time reached while computing max of sums")
+        }
+        BinOp {
+            op: Max,
+            left,
+            right,
+        } => {
+            let mut lf = max_of_sums(*left);
+            lf.append(&mut max_of_sums(*right));
+            lf
+        }
+        BinOp {
+            op: Add,
+            left,
+            right,
+        } => {
+            match (*left, *right) {
+                (n@Concrete(_), e) | (e, n@Concrete(_)) => {
+                    match e {
+                        Abstract(_) => vec![BinOp { op: Add, left: Box::new(e), right: Box::new(n) }],
+                        BinOp { op: Max, left, right } => {
+                            let left_sum = core::IntervalTime::binop_add(*left, n.clone());
+                            let mut lf = max_of_sums(left_sum);
+                            let right_sum = core::IntervalTime::binop_add(*right, n);
+                            lf.append(&mut max_of_sums(right_sum));
+                            lf
+                        }
+                        BinOp { op: Add, .. } => panic!("Add expressions are nested, should've been reduced"),
+                        Concrete(_) => panic!("Event add expression is sum of two values, should've been reduced already")
+                    }
+                }
+                _ => panic!("Event add expression does not have a nat")
+            }
+        }
+    }
+}
+
 pub fn compile(ns: core::Namespace) -> FilamentResult<()> {
     let mut ctx = Context::default();
 
@@ -100,7 +145,7 @@ pub fn compile(ns: core::Namespace) -> FilamentResult<()> {
         abstract_vars,
         inputs,
         outputs,
-        constraints,
+        ..
     } in ns.signatures
     {
         let mut csig = CompiledSig::default();
