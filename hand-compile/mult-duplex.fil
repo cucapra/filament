@@ -1,0 +1,23 @@
+extern component Mult<T>(
+  @[T, T+2] l: 32,
+  @[T, T+1] r: 32
+) -> (
+  @[T+2, T+3] out: 32,
+);
+
+component main<T>(
+  @[T, T+2]   l0: 32,
+  @[T+2, T+4] l1: 32,
+  @[T, T+1]   r0: 32,
+  @[T+2, T+3] r1: 32,
+) -> (
+  @[T+2, T+3] out0: 32,
+  @[T+4, T+5] out1: 32,
+) {
+  M := new Mult;
+  m0 := M<T>(l0, r0);
+  m1 := M<T+2>(l1, r1);
+
+  out0 = m0.out;
+  out1 = m1.out;
+}
