@@ -143,7 +143,7 @@ impl FilamentParser {
     ) -> ParseResult<core::Interval<core::IntervalTime>> {
         Ok(match_nodes!(
             input.into_children();
-            [time(start), exact(_), time(end)] => core::Interval::exact(start, end),
+            [exact(_), time(start), time(end)] => core::Interval::exact(start, end),
             [time(start), time(end)] => core::Interval::within(start, end)
         ))
     }
