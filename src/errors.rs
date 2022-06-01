@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use itertools::Itertools;
 
-use crate::{core::Id, frontend, interval_checking};
+use crate::{core, core::Id, frontend};
 
 /// A span of the input program.
 /// Used for reporting location-based errors.
@@ -160,7 +160,7 @@ impl Error {
         }
     }
 
-    pub fn cannot_prove(fact: interval_checking::Fact) -> Self {
+    pub fn cannot_prove(fact: core::Constraint<core::FsmIdxs>) -> Self {
         Self {
             kind: ErrorKind::CannotProve(fact),
             pos: None,
@@ -194,7 +194,7 @@ enum ErrorKind {
     AlreadyBound(Id, String),
 
     /// Failed to prove a fact
-    CannotProve(interval_checking::Fact),
+    CannotProve(core::Constraint<core::FsmIdxs>),
 
     /// A miscellaneous error. Should be replaced with a more precise error.
     #[allow(unused)]

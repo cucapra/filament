@@ -1,6 +1,6 @@
 Proof Obligations:
 [
-    [G+3, G+5] ⊆ [G, G+6],
-    [G+3, G+5] == [G+3, G+5],
+    G+3 >= G,
+    G+5 <= G+6,
 ]
 All proof obligations satisfied
