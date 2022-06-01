@@ -4,7 +4,6 @@
 use crate::errors::{self, FilamentResult};
 
 use crate::core::{self, Id};
-use linked_hash_map::LinkedHashMap;
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
 use std::path::Path;
@@ -32,6 +31,11 @@ const _GRAMMAR: &str = include_str!("syntax.pest");
 pub enum ExtOrComp {
     Ext(core::Signature<core::IntervalTime>),
     Comp(core::Component<core::IntervalTime>),
+}
+
+pub enum PdOrInt {
+    Pd(core::PortDef<core::IntervalTime>),
+    Int((core::Id, core::Id)),
 }
 
 #[derive(Parser)]
@@ -140,14 +144,24 @@ impl FilamentParser {
 
     // ================ Signature =====================
 
-    fn port_def(input: Node) -> ParseResult<core::PortDef<core::IntervalTime>> {
+    fn interface(input: Node) -> ParseResult<core::Id> {
+        Ok(match_nodes!(
+            input.into_children();
+            [identifier(tvar)] => tvar,
+        ))
+    }
+
+    fn port_def(input: Node) -> ParseResult<PdOrInt> {
         let pd = match_nodes!(
             input.clone().into_children();
+            [interface(time_var), identifier(name), bitwidth(_)] => {
+                Ok(PdOrInt::Int((name, time_var)))
+            },
             [interval_range(range), identifier(name), bitwidth(bitwidth)] => {
-                core::PortDef::new(name, core::Interval::new(range), bitwidth)
+                core::PortDef::new(name, core::Interval::new(range), bitwidth).map(|pd| PdOrInt::Pd(pd))
             },
             [interval_range(range), interval_range(exact), identifier(name), bitwidth(bitwidth)] => {
-                core::PortDef::new(name, core::Interval::new(range).with_exact(exact), bitwidth)
+                core::PortDef::new(name, core::Interval::new(range).with_exact(exact), bitwidth).map(|pd| PdOrInt::Pd(pd))
             }
         );
         pd.map_err(|err| input.error(format!("{err:?}")))
@@ -162,10 +176,23 @@ impl FilamentParser {
 
     fn ports(
         input: Node,
-    ) -> ParseResult<Vec<core::PortDef<core::IntervalTime>>> {
+    ) -> ParseResult<(
+        Vec<core::PortDef<core::IntervalTime>>,
+        Vec<(core::Id, core::Id)>,
+    )> {
         Ok(match_nodes!(
             input.into_children();
-            [port_def(ins)..] => ins.collect()
+            [port_def(ins)..] => {
+                let mut interface_signals = vec![];
+                let mut ports = vec![];
+                for m in ins {
+                    match m {
+                        PdOrInt::Pd(port) => ports.push(port),
+                        PdOrInt::Int(int) => interface_signals.push(int),
+                    }
+                }
+                (ports, interface_signals)
+            }
         ))
     }
 
@@ -173,14 +200,28 @@ impl FilamentParser {
         Ok(())
     }
 
-    fn io(input: Node) -> ParseResult<(Ports, Ports)> {
-        Ok(match_nodes!(
-            input.into_children();
-            [arrow(_)] => (vec![], vec![]),
-            [ports(ins), arrow(_)] =>  (ins, vec![]),
-            [arrow(_), ports(outs)] =>  (vec![], outs),
-            [ports(ins), arrow(_), ports(outs)] => (ins, outs),
-        ))
+    fn io(
+        input: Node,
+    ) -> ParseResult<(Ports, Ports, Vec<(core::Id, core::Id)>)> {
+        match_nodes!(
+            input.clone().into_children();
+            [arrow(_)] => Ok((vec![], vec![], vec![])),
+            [ports((ins, interface)), arrow(_)] =>  Ok((ins, vec![], interface)),
+            [arrow(_), ports((outs, out_interface))] =>  {
+                if !out_interface.is_empty() {
+                    Err(input.error("Output interface ports not supported"))
+                } else {
+                    Ok((vec![], outs, vec![]))
+                }
+            },
+            [ports((ins, interface)), arrow(_), ports((outs, out_interface))] => {
+                if !out_interface.is_empty() {
+                    Err(input.error("Output interface ports not supported"))
+                } else {
+                    Ok((ins, outs, interface))
+                }
+            }
+        )
     }
 
     // ================ Cells =====================
@@ -311,11 +352,11 @@ impl FilamentParser {
                 io(io),
                 constraints(constraints)
             ] => {
-                let (inputs, outputs) = io;
+                let (inputs, outputs, interface_signals) = io;
                 core::Signature {
                     name,
                     abstract_vars,
-                    interface_signals: LinkedHashMap::default(),
+                    interface_signals: interface_signals.into_iter().collect(),
                     inputs,
                     outputs,
                     constraints,
@@ -326,11 +367,11 @@ impl FilamentParser {
                 io(io),
                 constraints(constraints)
             ] => {
-                let (inputs, outputs) = io;
+                let (inputs, outputs, interface_signals) = io;
                 core::Signature {
                     name,
                     abstract_vars: vec![],
-                    interface_signals: LinkedHashMap::default(),
+                    interface_signals: interface_signals.into_iter().collect(),
                     inputs,
                     outputs,
                     constraints
