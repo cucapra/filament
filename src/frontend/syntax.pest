@@ -57,12 +57,7 @@ abstract_var = {
   "<" ~ identifier ~ ("," ~ identifier)* ~ ">"
 }
 
-exact = { "exact" }
-
-interval = {
-  "@" ~ exact? ~ "[" ~ time ~ "," ~ time ~ "]"
-}
-
+// Time
 time_base = {
   bitwidth
   | ("max" ~ "(" ~ time ~ "," ~ time ~ ")")
@@ -71,6 +66,16 @@ time_base = {
 time_expr = { (time_base ~ "+" ~ time) }
 time = { time_expr | time_base }
 
+// Intervals
+exact = { "exact" }
+interval_range = {
+ "@" ~ exact? ~ "[" ~ time ~ "," ~ time ~ "]"
+}
+interval = _{
+  interval_range ~ ("+" ~ interval_range)?
+}
+
+// Ports
 port_def = {
   interval ~ identifier ~ ":" ~ (bitwidth | identifier)
 }

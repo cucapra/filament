@@ -34,10 +34,11 @@ fn guard_availability(
                     ))
                 }
             };
-            if interval.typ != core::ITag::Exact {
+
+            if interval.exact.is_none() {
                 return Err(Error::malformed(
                     format!(
-                        "Port does not have an exact guarantee `{}`. Guards can only have exact guarantees",
+                        "Port does not have an exact guarantee `{}`. Ports used in guards must have exact guarantees",
                         p
                     ),
                 ));
@@ -56,10 +57,20 @@ fn merge_availability(intervals: Intervals) -> core::Interval<super::TimeRep> {
         "Cannot compute availablity with empty intervals"
     );
 
+    // Check that all within intervals are the same.
+    if !intervals
+        .iter()
+        .map(|interval| &interval.within)
+        .all_equal()
+    {
+        panic!("Intervals used in guards must be available for the same time")
+    }
+    let within = intervals[0].within.clone();
+
     let (event, start, end) = intervals
         .iter()
         .map(|iv| {
-            iv.as_offset().unwrap_or_else(|| {
+            iv.as_exact_offset().unwrap_or_else(|| {
                 panic!("Cannot convert interval into offset: {:?}", iv)
             })
         })
@@ -74,10 +85,10 @@ fn merge_availability(intervals: Intervals) -> core::Interval<super::TimeRep> {
         })
         .unwrap();
 
-    core::Interval::exact(
-        core::FsmIdxs::unit(event.clone(), start),
-        core::FsmIdxs::unit(event.clone(), end),
-    )
+    core::Interval::new(within).with_exact(core::Range {
+        start: core::FsmIdxs::unit(event.clone(), start),
+        end: core::FsmIdxs::unit(event.clone(), end),
+    })
 }
 
 pub fn total_interval(

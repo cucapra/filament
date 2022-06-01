@@ -11,8 +11,8 @@ pub enum Fact {
 impl Fact {
     /// Construct a [IntervalFact] with `tag` set to [FactType::Equality].
     pub fn equality(
-        left: core::Interval<super::TimeRep>,
-        right: core::Interval<super::TimeRep>,
+        left: core::Range<super::TimeRep>,
+        right: core::Range<super::TimeRep>,
     ) -> Self {
         Self::Interval(IntervalFact {
             tag: FactType::Equality,
@@ -23,8 +23,8 @@ impl Fact {
 
     /// Construct a [IntervalFact] with `tag` set to [FactType::Subset].
     pub fn subset(
-        left: core::Interval<super::TimeRep>,
-        right: core::Interval<super::TimeRep>,
+        left: core::Range<super::TimeRep>,
+        right: core::Range<super::TimeRep>,
     ) -> Self {
         Self::Interval(IntervalFact {
             tag: FactType::Subset,
@@ -63,12 +63,12 @@ pub enum FactType {
 #[derive(Hash, Eq, PartialEq, Clone)]
 pub struct IntervalFact {
     pub tag: FactType,
-    pub left: core::Interval<super::TimeRep>,
-    pub right: core::Interval<super::TimeRep>,
+    pub left: core::Range<super::TimeRep>,
+    pub right: core::Range<super::TimeRep>,
 }
 impl std::fmt::Debug for IntervalFact {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let core::Interval { start, end, .. } = &self.left;
+        let core::Range { start, end } = &self.left;
         write!(f, "[")?;
         start.fmt(f)?;
         write!(f, ", ")?;
@@ -78,7 +78,7 @@ impl std::fmt::Debug for IntervalFact {
             FactType::Equality => write!(f, " == ")?,
             FactType::Subset => write!(f, " ⊆ ")?,
         }
-        let core::Interval { start, end, .. } = &self.right;
+        let core::Range { start, end } = &self.right;
         write!(f, "[")?;
         start.fmt(f)?;
         write!(f, ", ")?;
@@ -89,12 +89,8 @@ impl std::fmt::Debug for IntervalFact {
 
 impl From<&IntervalFact> for super::SExp {
     fn from(f: &IntervalFact) -> Self {
-        let core::Interval {
-            start: ls, end: le, ..
-        } = &f.left;
-        let core::Interval {
-            start: rs, end: re, ..
-        } = &f.right;
+        let core::Range { start: ls, end: le } = &f.left;
+        let core::Range { start: rs, end: re } = &f.right;
         let rs_sexp: SExp = rs.into();
         let ls_sexp: SExp = ls.into();
         let re_sexp: SExp = re.into();

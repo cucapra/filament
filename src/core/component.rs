@@ -1,6 +1,8 @@
 use std::rc::Rc;
 
-use super::{interval, Command, Id, Interval, TimeRep};
+use crate::errors::FilamentResult;
+
+use super::{Command, Id, Interval, TimeRep};
 
 #[derive(Clone)]
 pub struct PortDef<T>
@@ -16,13 +18,29 @@ where
     /// Bitwidth of the port
     pub bitwidth: u64,
 }
+
+impl<T> PortDef<T>
+where
+    T: Clone + TimeRep,
+{
+    pub fn new(
+        name: Id,
+        liveness: Interval<T>,
+        bitwidth: u64,
+    ) -> FilamentResult<Self> {
+        Ok(Self {
+            name,
+            liveness,
+            bitwidth,
+        })
+    }
+}
 impl<T> std::fmt::Debug for PortDef<T>
 where
     T: std::fmt::Debug + Clone + TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.liveness.fmt(f)?;
-        write!(f, " {}: {}", self.name, self.bitwidth)
+        write!(f, "{:?} {}: {}", self.liveness, self.name, self.bitwidth)
     }
 }
 
@@ -45,7 +63,7 @@ where
     pub outputs: Vec<PortDef<T>>,
 
     /// Constraints on the abstract variables in the signature
-    pub constraints: Vec<interval::Constraint<T>>,
+    pub constraints: Vec<super::Constraint<T>>,
 }
 
 impl<T> Signature<T>

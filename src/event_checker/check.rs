@@ -44,13 +44,21 @@ fn transform_time(it: core::IntervalTime) -> core::FsmIdxs {
     it.into()
 }
 
+fn transform_range(
+    range: core::Range<core::IntervalTime>,
+) -> core::Range<core::FsmIdxs> {
+    core::Range {
+        start: range.start.into(),
+        end: range.end.into(),
+    }
+}
+
 fn transform_interval(
     interval: core::Interval<core::IntervalTime>,
 ) -> core::Interval<core::FsmIdxs> {
     core::Interval {
-        start: interval.start.into(),
-        end: interval.end.into(),
-        typ: interval.typ,
+        within: transform_range(interval.within),
+        exact: interval.exact.map(transform_range),
     }
 }
 

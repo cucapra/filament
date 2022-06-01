@@ -128,31 +128,32 @@ impl FilamentParser {
         ))
     }
 
-    fn exact(_input: Node) -> ParseResult<()> {
+    fn exact(input: Node) -> ParseResult<()> {
         Ok(())
     }
 
-    fn interval(
+    fn interval_range(
         input: Node,
-    ) -> ParseResult<core::Interval<core::IntervalTime>> {
+    ) -> ParseResult<core::Range<core::IntervalTime>> {
         Ok(match_nodes!(
             input.into_children();
-            [exact(_), time(start), time(end)] => core::Interval::exact(start, end),
-            [time(start), time(end)] => core::Interval::within(start, end)
+            [time(start), time(end)] => core::Range { start, end }
         ))
     }
 
     // ================ Signature =====================
 
     fn port_def(input: Node) -> ParseResult<core::PortDef<core::IntervalTime>> {
-        Ok(match_nodes!(
-            input.into_children();
-            [interval(liveness), identifier(name), bitwidth(bitwidth)] => {
-                core::PortDef {
-                    liveness, name, bitwidth
-                }
+        let pd = match_nodes!(
+            input.clone().into_children();
+            [interval_range(range), identifier(name), bitwidth(bitwidth)] => {
+                core::PortDef::new(name, core::Interval::new(range), bitwidth)
+            },
+            [interval_range(range), interval_range(exact), identifier(name), bitwidth(bitwidth)] => {
+                core::PortDef::new(name, core::Interval::new(range).with_exact(exact), bitwidth)
             }
-        ))
+        );
+        pd.map_err(|err| input.error(format!("{err:?}")))
     }
 
     fn abstract_var(input: Node) -> ParseResult<Vec<Id>> {

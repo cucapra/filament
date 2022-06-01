@@ -65,17 +65,15 @@ impl<'a> ConcreteInvoke<'a> {
         } else {
             self.sig.outputs.iter().find(|pd| pd.name == port)
         };
-        Ok(maybe_pd
-            .ok_or_else(|| {
-                let kind = if is_input {
-                    "input port"
-                } else {
-                    "output port"
-                };
-                Error::undefined(port.clone(), kind.to_string())
-            })?
-            .liveness
-            .resolve(&self.binding))
+        let pd = maybe_pd.ok_or_else(|| {
+            let kind = if is_input {
+                "input port"
+            } else {
+                "output port"
+            };
+            Error::undefined(port.clone(), kind.to_string())
+        })?;
+        Ok(pd.liveness.resolve(&self.binding))
     }
 
     /// Returns the requirements of an input port.

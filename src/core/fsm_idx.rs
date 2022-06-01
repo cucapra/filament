@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::interval_checking::SExp;
+use crate::{core, interval_checking::SExp};
 
 use super::{Id, Interval};
 
@@ -21,7 +21,7 @@ impl std::fmt::Debug for FsmIdx {
 }
 
 impl FsmIdx {
-    fn new(name: Id, state: u64) -> Self {
+    pub fn new(name: Id, state: u64) -> Self {
         Self { name, state }
     }
 }
@@ -111,18 +111,19 @@ impl From<&FsmIdxs> for SExp {
 impl Interval<FsmIdxs> {
     /// Attempts to convert interval into (event, start, end). Only possible
     /// when the interval uses exactly the one event for both start and end.
-    pub fn as_offset(&self) -> Option<(&Id, u64, u64)> {
-        if self.start.fsms.len() != 1
-            || self.end.fsms.len() != 1
-            || self.start.fsms[0].name != self.end.fsms[0].name
-        {
-            None
-        } else {
-            Some((
-                &self.start.fsms[0].name,
-                self.start.fsms[0].state,
-                self.end.fsms[0].state,
-            ))
+    pub fn as_exact_offset(&self) -> Option<(&Id, u64, u64)> {
+        if let Some(core::Range { start, end }) = &self.exact {
+            if start.fsms.len() == 1
+                && end.fsms.len() == 1
+                && start.fsms[0].name == end.fsms[0].name
+            {
+                return Some((
+                    &start.fsms[0].name,
+                    start.fsms[0].state,
+                    end.fsms[0].state,
+                ));
+            }
         }
+        None
     }
 }
