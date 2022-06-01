@@ -57,8 +57,10 @@ abstract_var = {
   "<" ~ identifier ~ ("," ~ identifier)* ~ ">"
 }
 
+exact = { "exact" }
+
 interval = {
-  "@" ~ "[" ~ time ~ "," ~ time ~ "]"
+  "@" ~ exact? ~ "[" ~ time ~ "," ~ time ~ "]"
 }
 
 time_base = {
@@ -91,8 +93,13 @@ instance = {
 
 // Connections
 
+guard = {
+  port
+  | port ~ "|" ~ guard
+}
+
 connect = {
-  port ~ "=" ~ port ~ ";"
+  port ~ "=" ~ (guard ~ "?")? ~ port ~ ";"
 }
 
 // ====== Invocations ==========

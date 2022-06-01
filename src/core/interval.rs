@@ -2,156 +2,7 @@ use std::collections::HashMap;
 
 use crate::interval_checking::SExp;
 
-use super::Id;
-
-/// Possible operations over time variables.
-#[derive(Clone, Hash, PartialEq, Eq)]
-pub enum TimeOp {
-    Add,
-    Max,
-}
-
-/// Represents a time variable which can either be:
-///   1. An abstract variable like `G`.
-///   2. A concrete time such as 1.
-///   3. A binary operation of two other interval times.
-#[derive(Clone, Hash, PartialEq, Eq)]
-pub enum IntervalTime {
-    Abstract(Id),
-    Concrete(u64),
-    BinOp {
-        op: TimeOp,
-        left: Box<IntervalTime>,
-        right: Box<IntervalTime>,
-    },
-}
-impl IntervalTime {
-    /// Construct an [IntervalTime::Abstract].
-    #[inline]
-    pub fn abs(time_var: Id) -> Self {
-        IntervalTime::Abstract(time_var)
-    }
-
-    pub fn binop_max(left: IntervalTime, right: IntervalTime) -> Self {
-        match (left, right) {
-            (IntervalTime::Concrete(n1), IntervalTime::Concrete(n2)) => {
-                if n1 > n2 {
-                    Self::concrete(n1)
-                } else {
-                    Self::concrete(n2)
-                }
-            }
-            (l, r) => IntervalTime::BinOp {
-                op: TimeOp::Max,
-                left: Box::new(l),
-                right: Box::new(r),
-            },
-        }
-    }
-
-    /// Construct a binop add instance and try to peephole optimize the construction
-    pub fn binop_add(left: IntervalTime, right: IntervalTime) -> Self {
-        match (left, right) {
-            (IntervalTime::Concrete(n1), IntervalTime::Concrete(n2)) => {
-                IntervalTime::Concrete(n1 + n2)
-            }
-            (
-                IntervalTime::Concrete(n1),
-                IntervalTime::BinOp {
-                    op: TimeOp::Add,
-                    left: l,
-                    right: r,
-                },
-            )
-            | (
-                IntervalTime::BinOp {
-                    op: TimeOp::Add,
-                    left: l,
-                    right: r,
-                },
-                IntervalTime::Concrete(n1),
-            ) => {
-                if let IntervalTime::Concrete(n2) = &*l {
-                    return IntervalTime::binop_add(
-                        IntervalTime::Concrete(n1 + n2),
-                        *r,
-                    );
-                }
-                if let IntervalTime::Concrete(n2) = &*r {
-                    return IntervalTime::binop_add(
-                        IntervalTime::Concrete(n1 + n2),
-                        *l,
-                    );
-                }
-                let con = IntervalTime::Concrete(n1);
-                let bin = IntervalTime::BinOp {
-                    op: TimeOp::Add,
-                    left: l,
-                    right: r,
-                };
-                IntervalTime::BinOp {
-                    op: TimeOp::Add,
-                    left: Box::new(con),
-                    right: Box::new(bin),
-                }
-            }
-            (l, r) => IntervalTime::BinOp {
-                op: TimeOp::Add,
-                left: Box::new(l),
-                right: Box::new(r),
-            },
-        }
-    }
-
-    #[inline]
-    pub fn concrete(num: u64) -> Self {
-        IntervalTime::Concrete(num)
-    }
-
-    /// Resolve the IntervalTime using the given bindings from abstract variables to exact
-    /// bindings.
-    pub fn resolve(&self, bindings: &HashMap<Id, IntervalTime>) -> Self {
-        match self {
-            IntervalTime::Concrete(_) => self.clone(),
-            IntervalTime::Abstract(name) => bindings
-                .get(name)
-                .unwrap_or_else(|| panic!("No binding for {}", name))
-                .clone(),
-            IntervalTime::BinOp { op, left, right } => match op {
-                TimeOp::Add => IntervalTime::binop_add(
-                    left.resolve(bindings),
-                    right.resolve(bindings),
-                ),
-                TimeOp::Max => IntervalTime::binop_max(
-                    left.resolve(bindings),
-                    right.resolve(bindings),
-                ),
-            },
-        }
-    }
-}
-impl std::fmt::Debug for IntervalTime {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            IntervalTime::Abstract(id) => write!(f, "{}", id),
-            IntervalTime::Concrete(n) => write!(f, "{}", n),
-            IntervalTime::BinOp { op, left, right } => match op {
-                TimeOp::Add => {
-                    left.fmt(f)?;
-                    write!(f, "+")?;
-                    right.fmt(f)
-                }
-                TimeOp::Max => {
-                    write!(f, "max(")?;
-                    left.fmt(f)?;
-                    write!(f, ",")?;
-                    right.fmt(f)?;
-                    write!(f, ")")
-                }
-            },
-        }
-    }
-}
+use super::{FsmIdxs, Id, IntervalTime, TimeRep};
 
 /// Ordering operator for constraints
 #[derive(Hash, Eq, PartialEq, Clone)]
@@ -163,13 +14,19 @@ pub enum OrderOp {
 
 /// A constraint on time expressions
 #[derive(Hash, Eq, PartialEq, Clone)]
-pub struct Constraint {
-    pub left: IntervalTime,
-    pub right: IntervalTime,
+pub struct Constraint<T>
+where
+    T: TimeRep,
+{
+    pub left: T,
+    pub right: T,
     pub op: OrderOp,
 }
-impl Constraint {
-    pub fn resolve(&self, binding: &HashMap<Id, IntervalTime>) -> Constraint {
+impl<T> Constraint<T>
+where
+    T: TimeRep,
+{
+    pub fn resolve(&self, binding: &HashMap<Id, T>) -> Constraint<T> {
         Constraint {
             left: self.left.resolve(binding),
             right: self.right.resolve(binding),
@@ -177,7 +34,10 @@ impl Constraint {
         }
     }
 }
-impl std::fmt::Debug for Constraint {
+impl<T> std::fmt::Debug for Constraint<T>
+where
+    T: std::fmt::Debug + TimeRep,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.left)?;
         write!(
@@ -192,8 +52,9 @@ impl std::fmt::Debug for Constraint {
         write!(f, "{:?}", self.right)
     }
 }
-impl From<&Constraint> for SExp {
-    fn from(con: &Constraint) -> Self {
+
+impl From<&Constraint<FsmIdxs>> for SExp {
+    fn from(con: &Constraint<FsmIdxs>) -> Self {
         let op_str = match con.op {
             OrderOp::Gt => ">",
             OrderOp::Lt => "<",
@@ -208,26 +69,58 @@ impl From<&Constraint> for SExp {
     }
 }
 
+/// Tag describing the kind of interval constraint
+#[derive(Clone, Hash, PartialEq, Eq)]
+pub enum ITag {
+    /// The pulse is guaranteed/required to last for the exact duration.
+    Exact,
+    /// The pulse will last at least as long as the given duration.
+    Within,
+}
+
 /// An interval consists of a type tag, a start time, and a end time.
 #[derive(Clone, Hash, PartialEq, Eq)]
-pub struct Interval {
-    pub start: IntervalTime,
-    pub end: IntervalTime,
+pub struct Interval<T>
+where
+    T: super::TimeRep + Clone,
+{
+    pub start: T,
+    pub end: T,
+    pub typ: ITag,
 }
-impl Interval {
+impl<T> Interval<T>
+where
+    T: super::TimeRep + Clone,
+{
     /// Construct a [Interval] with `tag` set to [IntervalTime::Exact].
-    pub fn exact(start: IntervalTime, end: IntervalTime) -> Self {
-        Interval { start, end }
+    pub fn exact(start: T, end: T) -> Self {
+        Interval {
+            start,
+            end,
+            typ: ITag::Exact,
+        }
     }
 
-    pub fn resolve(&self, bindings: &HashMap<Id, IntervalTime>) -> Self {
+    pub fn within(start: T, end: T) -> Self {
+        Interval {
+            start,
+            end,
+            typ: ITag::Within,
+        }
+    }
+
+    pub fn resolve(&self, bindings: &HashMap<Id, T>) -> Self {
         Interval {
             start: self.start.resolve(bindings),
             end: self.end.resolve(bindings),
+            typ: self.typ.clone(),
         }
     }
 }
-impl std::fmt::Debug for Interval {
+impl<T> std::fmt::Debug for Interval<T>
+where
+    T: std::fmt::Debug + Clone + super::TimeRep,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "@[")?;
         self.start.fmt(f)?;
@@ -241,18 +134,16 @@ impl From<&IntervalTime> for SExp {
         match it {
             IntervalTime::Abstract(x) => SExp(x.to_string()),
             IntervalTime::Concrete(x) => SExp(x.to_string()),
-            IntervalTime::BinOp { op, left, right } => match op {
-                TimeOp::Add => SExp(format!(
-                    "(+ {} {})",
-                    SExp::from(&**left),
-                    SExp::from(&**right),
-                )),
-                TimeOp::Max => SExp(format!(
-                    "(max {} {})",
-                    SExp::from(&**left),
-                    SExp::from(&**right)
-                )),
-            },
+            IntervalTime::Add { left, right } => SExp(format!(
+                "(+ {} {})",
+                SExp::from(&**left),
+                SExp::from(&**right),
+            )),
+            IntervalTime::Max { left, right } => SExp(format!(
+                "(max {} {})",
+                SExp::from(&**left),
+                SExp::from(&**right)
+            )),
         }
     }
 }

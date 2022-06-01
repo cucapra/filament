@@ -2,7 +2,7 @@ use std::collections::{hash_map::Entry, HashMap};
 
 use linked_hash_map::LinkedHashMap;
 
-use super::Fact;
+use super::{Fact, TimeRep};
 use crate::{
     core,
     errors::{self, Error, FilamentResult},
@@ -12,17 +12,17 @@ use crate::{
 #[derive(Debug)]
 pub struct ConcreteInvoke<'a> {
     /// Bindings for abstract variables
-    pub binding: HashMap<core::Id, core::IntervalTime>,
+    pub binding: HashMap<core::Id, super::TimeRep>,
 
     /// Input ports
-    pub sig: &'a core::Signature,
+    pub sig: &'a core::Signature<TimeRep>,
 }
 
 impl<'a> ConcreteInvoke<'a> {
     /// Construct an instance from a Signature and bindings for abstract variables.
     pub fn from_signature(
-        sig: &'a core::Signature,
-        abs: Vec<core::IntervalTime>,
+        sig: &'a core::Signature<TimeRep>,
+        abs: Vec<super::TimeRep>,
     ) -> Self {
         let binding = sig
             .abstract_vars
@@ -35,7 +35,7 @@ impl<'a> ConcreteInvoke<'a> {
     }
 
     /// Construct an instance for "this" component.
-    pub fn this_instance(sig: &'a core::Signature) -> Self {
+    pub fn this_instance(sig: &'a core::Signature<TimeRep>) -> Self {
         // Binding for this instance is just identity.
         let binding = sig
             .abstract_vars
@@ -44,7 +44,7 @@ impl<'a> ConcreteInvoke<'a> {
             .zip(
                 sig.abstract_vars
                     .iter()
-                    .map(|v| core::IntervalTime::Abstract(v.clone())),
+                    .map(|v| core::FsmIdxs::unit(v.clone(), 0)),
             )
             .collect();
 
@@ -59,7 +59,7 @@ impl<'a> ConcreteInvoke<'a> {
         &self,
         port: &core::Id,
         is_input: bool,
-    ) -> FilamentResult<core::Interval> {
+    ) -> FilamentResult<core::Interval<TimeRep>> {
         let maybe_pd = if is_input {
             self.sig.inputs.iter().find(|pd| pd.name == port)
         } else {
@@ -82,7 +82,7 @@ impl<'a> ConcreteInvoke<'a> {
     pub fn port_requirements(
         &self,
         port: &core::Id,
-    ) -> FilamentResult<core::Interval> {
+    ) -> FilamentResult<core::Interval<TimeRep>> {
         self.resolve_port(port, true)
     }
 
@@ -90,7 +90,7 @@ impl<'a> ConcreteInvoke<'a> {
     pub fn port_guarantees(
         &self,
         port: &core::Id,
-    ) -> FilamentResult<core::Interval> {
+    ) -> FilamentResult<core::Interval<TimeRep>> {
         self.resolve_port(port, false)
     }
 }
@@ -100,10 +100,10 @@ type FactMap = LinkedHashMap<Fact, Vec<errors::Span>>;
 #[derive(Debug)]
 pub struct Context<'a> {
     /// Mapping from names to signatures for components and externals.
-    sigs: &'a HashMap<core::Id, &'a core::Signature>,
+    sigs: &'a HashMap<core::Id, &'a core::Signature<TimeRep>>,
 
     /// Mapping for the names of active instances
-    instances: HashMap<core::Id, &'a core::Signature>,
+    instances: HashMap<core::Id, &'a core::Signature<TimeRep>>,
 
     /// Mapping from name of invocations to their information
     invocations: HashMap<core::Id, ConcreteInvoke<'a>>,
@@ -116,8 +116,10 @@ pub struct Context<'a> {
     facts: FactMap,
 }
 
-impl<'a> From<&'a HashMap<core::Id, &'a core::Signature>> for Context<'a> {
-    fn from(sigs: &'a HashMap<core::Id, &'a core::Signature>) -> Self {
+impl<'a> From<&'a HashMap<core::Id, &'a core::Signature<TimeRep>>>
+    for Context<'a>
+{
+    fn from(sigs: &'a HashMap<core::Id, &'a core::Signature<TimeRep>>) -> Self {
         Context {
             sigs,
             instances: HashMap::default(),
@@ -189,7 +191,7 @@ impl<'a> Context<'a> {
     pub fn get_sig(
         &self,
         comp: &core::Id,
-    ) -> FilamentResult<&'a core::Signature> {
+    ) -> FilamentResult<&'a core::Signature<TimeRep>> {
         self.sigs.get(comp).copied().ok_or_else(|| {
             Error::undefined(comp.clone(), "component".to_string())
         })
@@ -199,7 +201,7 @@ impl<'a> Context<'a> {
     pub fn get_instance(
         &self,
         inst: &core::Id,
-    ) -> FilamentResult<&'a core::Signature> {
+    ) -> FilamentResult<&'a core::Signature<TimeRep>> {
         self.instances.get(inst).copied().ok_or_else(|| {
             Error::undefined(inst.clone(), "instance".to_string())
         })
