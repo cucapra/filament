@@ -128,6 +128,7 @@ fn transform_signature(
             .collect(),
         name: sig.name,
         abstract_vars: sig.abstract_vars,
+        interface_signals: sig.interface_signals,
     }
 }
 

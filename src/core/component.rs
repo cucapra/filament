@@ -1,5 +1,7 @@
 use std::rc::Rc;
 
+use linked_hash_map::LinkedHashMap;
+
 use crate::errors::FilamentResult;
 
 use super::{Command, Id, Interval, TimeRep};
@@ -56,6 +58,10 @@ where
     /// Names of abstract variables bound by the component
     pub abstract_vars: Vec<Id>,
 
+    /// Mapping from name of signals to the abstract variable they provide
+    /// evidence for.
+    pub interface_signals: LinkedHashMap<Id, Id>,
+
     /// Input ports
     pub inputs: Vec<PortDef<T>>,
 
@@ -76,6 +82,7 @@ where
         Self {
             name: self.name.clone(),
             abstract_vars: self.abstract_vars.clone(),
+            interface_signals: self.interface_signals.clone(),
             inputs: self.outputs.clone(),
             outputs: self.inputs.clone(),
             constraints: self.constraints.clone(),

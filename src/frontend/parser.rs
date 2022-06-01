@@ -4,6 +4,7 @@
 use crate::errors::{self, FilamentResult};
 
 use crate::core::{self, Id};
+use linked_hash_map::LinkedHashMap;
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
 use std::path::Path;
@@ -314,6 +315,7 @@ impl FilamentParser {
                 core::Signature {
                     name,
                     abstract_vars,
+                    interface_signals: LinkedHashMap::default(),
                     inputs,
                     outputs,
                     constraints,
@@ -328,6 +330,7 @@ impl FilamentParser {
                 core::Signature {
                     name,
                     abstract_vars: vec![],
+                    interface_signals: LinkedHashMap::default(),
                     inputs,
                     outputs,
                     constraints
