@@ -65,12 +65,10 @@ interval = {
 
 time_base = {
   bitwidth
-  | (max ~ "(" ~ time ~ "," ~ time ~ ")")
+  | ("max" ~ "(" ~ time ~ "," ~ time ~ ")")
   | identifier
 }
-plus = { "+" }
-max = { "max" }
-time_expr = { (time_base ~ plus ~ time) }
+time_expr = { (time_base ~ "+" ~ time) }
 time = { time_expr | time_base }
 
 port_def = {
@@ -94,8 +92,7 @@ instance = {
 // Connections
 
 guard = {
-  port ~ "|" ~ guard
-  | port
+  port ~ ("|" ~ guard)?
 }
 
 connect = {
