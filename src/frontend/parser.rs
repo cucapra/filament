@@ -105,24 +105,18 @@ impl FilamentParser {
     }
 
     // ================ Intervals =====================
-    fn plus(input: Node) -> ParseResult<()> {
-        Ok(())
-    }
-    fn max(input: Node) -> ParseResult<()> {
-        Ok(())
-    }
     fn time_base(input: Node) -> ParseResult<core::IntervalTime> {
         Ok(match_nodes!(
             input.into_children();
             [identifier(var)] => core::IntervalTime::Abstract(var),
-            [max(_), time(l), time(r)] => core::IntervalTime::binop_max(l, r),
+            [time(l), time(r)] => core::IntervalTime::binop_max(l, r),
             [bitwidth(time)] => core::IntervalTime::Concrete(time),
         ))
     }
     fn time_expr(input: Node) -> ParseResult<core::IntervalTime> {
         Ok(match_nodes!(
             input.into_children();
-            [time_base(l), plus(_), time(r)] => core::IntervalTime::binop_add(l, r),
+            [time_base(l), time(r)] => core::IntervalTime::binop_add(l, r),
         ))
     }
 
