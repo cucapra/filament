@@ -7,6 +7,6 @@ pub enum PortDir {
 
 pub struct PortDef {
     pub name: core::Id,
-    pub size: u64,
+    pub width: u64,
     pub direction: PortDir,
 }

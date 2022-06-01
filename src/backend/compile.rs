@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use super::verilog;
 use crate::{core, errors::FilamentResult};
+use vast::v17::ast as v;
 
 /// Representation of a Verilog module signature
 #[derive(Default)]
@@ -29,10 +30,16 @@ impl CompiledSig {
             abs.clone(),
             verilog::PortDef {
                 name: self.gen_name(abs),
-                size: 1,
+                width: 1,
                 direction: verilog::PortDir::Input,
             },
         );
+    }
+
+    fn all_ports(
+        &self,
+    ) -> impl Iterator<Item = (&core::Id, &verilog::PortDef)> {
+        self.abs_vars.iter().chain(self.ports.iter())
     }
 }
 
@@ -48,31 +55,56 @@ impl Fsm {
 }
 
 /// Compilation context
-#[derive(Default)]
-struct Context {
-    pub sigs: HashMap<core::Id, CompiledSig>,
-}
-
-struct CompileContext {
-    // Mapping for FSMs instantiated with the component's abstract parameters
+struct Context<'a> {
+    pub sigs: &'a HashMap<core::Id, CompiledSig>,
+    /// Mapping for FSMs instantiated with the component's abstract parameters
     pub fsms: HashMap<core::Id, Fsm>,
-    // Mapping from invokes to instances
+    /// Mapping from invokes to instances
     pub invokes: HashMap<core::Id, core::Id>,
+    /// Mapping from name of an instance to all triggering events
+    pub triggers: HashMap<core::Id, FsmIdxs>,
 }
 
-fn compile_command(command: core::Command, ctx: &mut CompileContext) {
+fn compile_command(
+    command: core::Command,
+    module: &mut v::Module,
+    ctx: &mut Context,
+) {
     match command {
-        core::Command::Instance(core::Instance { name, component }) => {}
-        core::Command::Invoke(core::Invoke { bind, rhs }) => {
-            let instance = &ctx.invokes[&bind];
-            todo!();
+        core::Command::Instance(core::Instance { name, component }) => {
+            // Construct a verilog instance using the component's interface.
+            let mut instance =
+                v::Instance::new(name.as_ref(), component.as_ref());
+            // Construct wires and connect to each port of the instance
+            let sig = &ctx.sigs[&component];
+            for (port_name, pd) in sig.all_ports() {
+                let wire_name = format!("{}_{}", name, port_name);
+                module
+                    .add_decl(v::Decl::new_logic(wire_name.clone(), pd.width));
+                instance.connect(name.as_ref(), v::Expr::Ref(wire_name))
+            }
+        }
+        core::Command::Invoke(core::Invoke {
+            bind,
+            rhs:
+                core::Invocation {
+                    comp,
+                    abstract_vars,
+                    ports,
+                    ..
+                },
+        }) => {
+            ctx.invokes.insert(bind, comp);
         }
         core::Command::When(_) => todo!(),
         core::Command::Connect(_) => todo!(),
     }
 }
 
-fn compile_component(comp: core::Component) -> FilamentResult<()> {
+fn compile_component(
+    comp: core::Component,
+    sigs: &HashMap<core::Id, CompiledSig>,
+) -> v::Module {
     let fsms = comp
         .sig
         .abstract_vars
@@ -80,24 +112,42 @@ fn compile_component(comp: core::Component) -> FilamentResult<()> {
         .map(|abs| (abs.clone(), Fsm::new(abs.clone())))
         .collect();
 
-    let mut ctx = CompileContext {
+    let mut ctx = Context {
+        sigs,
         fsms,
         invokes: HashMap::default(),
+        triggers: HashMap::default(),
     };
 
+    let mut module = v::Module::new(comp.sig.name.as_ref());
     for command in comp.body {
-        compile_command(command, &mut ctx);
+        compile_command(command, &mut module, &mut ctx);
     }
-    Ok(())
+    module
 }
+
+/// Represents a state in an FSM.
+struct FsmIdx {
+    pub name: core::Id,
+    pub state: u64,
+}
+
+impl FsmIdx {
+    fn new(name: core::Id, state: u64) -> Self {
+        Self { name, state }
+    }
+}
+
+/// An interval time expression that denotes a max of sums expression.
+type FsmIdxs = Vec<FsmIdx>;
 
 /// Reduces an IntervalTime expression into a max of sums representation.
 /// The returned vector represents all the non-max IntervalTime expressions of
 /// which the max is being computed.
-fn max_of_sums(event: core::IntervalTime) -> Vec<core::IntervalTime> {
+fn max_of_sums(event: core::IntervalTime, acc: &mut FsmIdxs) {
     use self::core::{IntervalTime::*, TimeOp::*};
     match event {
-        Abstract(_) => vec![event],
+        Abstract(name) => acc.push(FsmIdx::new(name, 0)),
         Concrete(_) => {
             panic!("Concrete interval time reached while computing max of sums")
         }
@@ -106,9 +156,8 @@ fn max_of_sums(event: core::IntervalTime) -> Vec<core::IntervalTime> {
             left,
             right,
         } => {
-            let mut lf = max_of_sums(*left);
-            lf.append(&mut max_of_sums(*right));
-            lf
+            max_of_sums(*left, acc);
+            max_of_sums(*right, acc);
         }
         BinOp {
             op: Add,
@@ -116,15 +165,14 @@ fn max_of_sums(event: core::IntervalTime) -> Vec<core::IntervalTime> {
             right,
         } => {
             match (*left, *right) {
-                (n@Concrete(_), e) | (e, n@Concrete(_)) => {
+                (Concrete(n), e) | (e, Concrete(n)) => {
                     match e {
-                        Abstract(_) => vec![BinOp { op: Add, left: Box::new(e), right: Box::new(n) }],
+                        Abstract(name) => acc.push(FsmIdx::new(name, n)),
                         BinOp { op: Max, left, right } => {
-                            let left_sum = core::IntervalTime::binop_add(*left, n.clone());
-                            let mut lf = max_of_sums(left_sum);
-                            let right_sum = core::IntervalTime::binop_add(*right, n);
-                            lf.append(&mut max_of_sums(right_sum));
-                            lf
+                            let left_sum = core::IntervalTime::binop_add(*left, core::IntervalTime::concrete(n));
+                            max_of_sums(left_sum, acc);
+                            let right_sum = core::IntervalTime::binop_add(*right, core::IntervalTime::concrete(n));
+                            max_of_sums(right_sum, acc);
                         }
                         BinOp { op: Add, .. } => panic!("Add expressions are nested, should've been reduced"),
                         Concrete(_) => panic!("Event add expression is sum of two values, should've been reduced already")
@@ -137,7 +185,7 @@ fn max_of_sums(event: core::IntervalTime) -> Vec<core::IntervalTime> {
 }
 
 pub fn compile(ns: core::Namespace) -> FilamentResult<()> {
-    let mut ctx = Context::default();
+    let mut sigs = HashMap::new();
 
     // first compile each signature to the equivalent Verilog module signature
     for core::Signature {
@@ -154,7 +202,7 @@ pub fn compile(ns: core::Namespace) -> FilamentResult<()> {
                 pd.name.clone(),
                 verilog::PortDef {
                     name: pd.name,
-                    size: pd.bitwidth,
+                    width: pd.bitwidth,
                     direction: verilog::PortDir::Input,
                 },
             )
@@ -164,7 +212,7 @@ pub fn compile(ns: core::Namespace) -> FilamentResult<()> {
                 pd.name.clone(),
                 verilog::PortDef {
                     name: pd.name,
-                    size: pd.bitwidth,
+                    width: pd.bitwidth,
                     direction: verilog::PortDir::Output,
                 },
             )
@@ -172,9 +220,12 @@ pub fn compile(ns: core::Namespace) -> FilamentResult<()> {
         abstract_vars
             .into_iter()
             .for_each(|abs| csig.add_abs_var(abs));
-        ctx.sigs.insert(name, csig);
+        sigs.insert(name, csig);
     }
 
     // compile the body of each component
+    for comp in ns.components {
+        compile_component(comp, &sigs);
+    }
     todo!()
 }

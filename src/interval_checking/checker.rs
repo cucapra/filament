@@ -1,19 +1,19 @@
-use super::{ConcreteInvoke, Context, Fact};
+use super::{ConcreteInvoke, Context, Fact, THIS};
 use crate::{
     core,
     errors::{self, FilamentResult, WithPos},
 };
 use itertools::Itertools;
-use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
-
-const THIS: &str = "_this";
 
 // For connect statements of the form:
 // dst = src
 // The generated proof obligation requires that req(dst) \subsetof guarantees(src)
 fn check_connect(con: &core::Connect, ctx: &mut Context) -> FilamentResult<()> {
-    let core::Connect { dst, src, .. } = con;
+    let core::Connect {
+        dst, src, guard, ..
+    } = con;
+
     let requirement = match dst {
         core::Port::ThisPort(name) => {
             ctx.get_invoke(&THIS.into())?.port_requirements(name)?
@@ -22,7 +22,7 @@ fn check_connect(con: &core::Connect, ctx: &mut Context) -> FilamentResult<()> {
             ctx.get_invoke(comp)?.port_requirements(name)?
         }
         core::Port::Constant(_) => {
-            todo!("destination port cannot be a constant")
+            unreachable!("destination port cannot be a constant")
         }
     };
     // Get guarantee for this port
@@ -39,19 +39,37 @@ fn check_connect(con: &core::Connect, ctx: &mut Context) -> FilamentResult<()> {
             Some(ctx.get_invoke(comp)?.port_guarantees(name)?)
         }
     };
-    if let Some(guarantee) = maybe_guarantee {
+
+    // If a guard is present, use its availablity instead.
+    if let Some(g) = &guard {
+        let guard_interval = super::total_interval(g, ctx)?;
+        // Require that the guarded value is available for longer that the
+        // guard
+        if let Some(guarantee) = maybe_guarantee {
+            ctx.add_obligation(
+                Fact::subset(guard_interval.clone(), guarantee),
+                con.copy_span(),
+            );
+        }
+        // Require that the guard availablity satisfies the requirement
+        ctx.add_obligation(
+            Fact::subset(requirement, guard_interval),
+            con.copy_span(),
+        );
+    } else if let Some(guarantee) = maybe_guarantee {
         ctx.add_obligation(
             Fact::subset(requirement, guarantee),
             con.copy_span(),
         );
     }
+
     Ok(())
 }
 
 /// Check invocation and add new [super::Fact] representing the proof obligations for checking this
 /// invocation.
 fn check_invocation<'a>(
-    invoke: &core::Invocation,
+    invoke: &core::Invocation<super::TimeRep>,
     ctx: &mut Context<'a>,
 ) -> FilamentResult<ConcreteInvoke<'a>> {
     let sig = ctx.get_instance(&invoke.comp)?;
@@ -92,10 +110,11 @@ fn check_invocation<'a>(
             }
         };
         if let Some(guarantee) = maybe_guarantee {
-            ctx.add_obligation(
-                Fact::subset(requirement, guarantee),
-                invoke.copy_span(),
-            );
+            let fact = match requirement.typ {
+                core::ITag::Exact => Fact::equality(requirement, guarantee),
+                core::ITag::Within => Fact::subset(requirement, guarantee),
+            };
+            ctx.add_obligation(fact, invoke.copy_span());
         }
     }
     Ok(instance)
@@ -105,7 +124,7 @@ fn check_invocation<'a>(
 /// facts can be used to prove that the ports are available for the stated
 /// requirements.
 fn check_invoke(
-    assign: &core::Invoke,
+    assign: &core::Invoke<super::TimeRep>,
     ctx: &mut Context,
 ) -> FilamentResult<()> {
     let instance = check_invocation(&assign.rhs, ctx)?;
@@ -113,13 +132,16 @@ fn check_invoke(
     Ok(())
 }
 
-fn check_when(when: &core::When, ctx: &mut Context) -> FilamentResult<()> {
+fn check_when(
+    when: &core::When<super::TimeRep>,
+    ctx: &mut Context,
+) -> FilamentResult<()> {
     // TODO: Do something with the time variable for the when block
     check_commands(&when.commands, ctx)
 }
 
 fn check_commands(
-    cmds: &[core::Command],
+    cmds: &[core::Command<super::TimeRep>],
     ctx: &mut Context,
 ) -> FilamentResult<()>
 where
@@ -141,8 +163,8 @@ where
 }
 
 fn check_component(
-    comp: &core::Component,
-    sigs: &HashMap<core::Id, &core::Signature>,
+    comp: &core::Component<super::TimeRep>,
+    sigs: &HashMap<core::Id, &core::Signature<super::TimeRep>>,
 ) -> FilamentResult<()> {
     let mut ctx = Context::from(sigs);
 
@@ -194,7 +216,9 @@ fn check_component(
 /// satisfied.
 /// Internally generates [super::Fact] which represent proof obligations that need to be proven for
 /// the interval requirements to be proven.
-pub fn check(namespace: &core::Namespace) -> FilamentResult<()> {
+pub fn check(
+    namespace: &core::Namespace<super::TimeRep>,
+) -> FilamentResult<()> {
     // Add signatures to the context
     assert!(
         namespace.components.len() <= 1,
