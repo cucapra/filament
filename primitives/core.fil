@@ -28,7 +28,7 @@ extern component Latch<G, L>(
 // in this function's signature but that is okay because inputs only require
 // signals to be active for at least as long as the requirement
 extern component Merge<G, L, E>(
-  /* inteface<L> switch: 1 */
+  @interface<L> switch: 1,
   @[G, L] in1: 32,
   @[L, E] in2: 32,
 ) -> (
