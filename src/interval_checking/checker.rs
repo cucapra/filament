@@ -9,11 +9,13 @@ use std::collections::HashMap;
 // For connect statements of the form:
 // dst = src
 // The generated proof obligation requires that req(dst) \subsetof guarantees(src)
-fn check_connect(con: &core::Connect, ctx: &mut Context) -> FilamentResult<()> {
-    let core::Connect {
-        dst, src, guard, ..
-    } = con;
-
+fn check_connect(
+    dst: &core::Port,
+    src: &core::Port,
+    guard: &Option<core::Guard>,
+    pos: Option<errors::Span>,
+    ctx: &mut Context,
+) -> FilamentResult<()> {
     let requirement = match dst {
         core::Port::ThisPort(name) => {
             ctx.get_invoke(&THIS.into())?.port_requirements(name)?
@@ -25,6 +27,7 @@ fn check_connect(con: &core::Connect, ctx: &mut Context) -> FilamentResult<()> {
             unreachable!("destination port cannot be a constant")
         }
     };
+
     // Get guarantee for this port
     let maybe_guarantee = match src {
         core::Port::Constant(_) => {
@@ -41,26 +44,29 @@ fn check_connect(con: &core::Connect, ctx: &mut Context) -> FilamentResult<()> {
     };
 
     // If a guard is present, use its availablity instead.
-    if let Some(g) = &guard {
+    let maybe_guarantee = if let Some(g) = &guard {
         let guard_interval = super::total_interval(g, ctx)?;
+        log::info!("Guard availablity is: {guard_interval:?}");
         // Require that the guarded value is available for longer that the
         // guard
         if let Some(guarantee) = maybe_guarantee {
             ctx.add_obligation(
                 Fact::subset(guard_interval.clone(), guarantee),
-                con.copy_span(),
+                pos.clone(),
             );
         }
-        // Require that the guard availablity satisfies the requirement
-        ctx.add_obligation(
-            Fact::subset(requirement, guard_interval),
-            con.copy_span(),
-        );
-    } else if let Some(guarantee) = maybe_guarantee {
-        ctx.add_obligation(
-            Fact::subset(requirement, guarantee),
-            con.copy_span(),
-        );
+
+        Some(guard_interval)
+    } else {
+        maybe_guarantee
+    };
+
+    if let Some(guarantee) = maybe_guarantee {
+        let fact = match requirement.typ {
+            core::ITag::Within => Fact::subset(requirement, guarantee),
+            core::ITag::Exact => Fact::equality(requirement, guarantee),
+        };
+        ctx.add_obligation(fact, pos);
     }
 
     Ok(())
@@ -68,13 +74,17 @@ fn check_connect(con: &core::Connect, ctx: &mut Context) -> FilamentResult<()> {
 
 /// Check invocation and add new [super::Fact] representing the proof obligations for checking this
 /// invocation.
-fn check_invocation<'a>(
-    invoke: &core::Invocation<super::TimeRep>,
+fn check_invoke<'a>(
+    assign: &core::Invoke<super::TimeRep>,
     ctx: &mut Context<'a>,
-) -> FilamentResult<ConcreteInvoke<'a>> {
+) -> FilamentResult<()> {
+    let invoke = &assign.rhs;
     let sig = ctx.get_instance(&invoke.comp)?;
     let instance =
         ConcreteInvoke::from_signature(sig, invoke.abstract_vars.clone());
+    // Add this invocation to the context
+    ctx.add_invocation(assign.bind.clone(), instance)?;
+
     let req_sig = &ctx.get_instance(&invoke.comp)?;
     let req_binding: HashMap<_, _> = req_sig
         .abstract_vars
@@ -91,44 +101,15 @@ fn check_invocation<'a>(
         )
     });
 
-    // Add requirements on input ports
+    // Check connections implied by the invocation
     for (actual, formal) in invoke.ports.iter().zip(req_sig.inputs.iter()) {
-        // Get requirements for this port
-        let requirement = formal.liveness.resolve(&req_binding);
-        // Get guarantee for this port
-        let maybe_guarantee = match actual {
-            core::Port::Constant(_) => {
-                /* Constants do not generate a proof obligation because they are
-                 * always available. */
-                None
-            }
-            core::Port::ThisPort(port) => {
-                Some(ctx.get_invoke(&THIS.into())?.port_guarantees(port)?)
-            }
-            core::Port::CompPort { comp, name } => {
-                Some(ctx.get_invoke(comp)?.port_guarantees(name)?)
-            }
+        let dst = core::Port::CompPort {
+            comp: assign.bind.clone(),
+            name: formal.name.clone(),
         };
-        if let Some(guarantee) = maybe_guarantee {
-            let fact = match requirement.typ {
-                core::ITag::Exact => Fact::equality(requirement, guarantee),
-                core::ITag::Within => Fact::subset(requirement, guarantee),
-            };
-            ctx.add_obligation(fact, invoke.copy_span());
-        }
+        check_connect(&dst, actual, &None, invoke.copy_span(), ctx)?;
     }
-    Ok(instance)
-}
 
-/// Given a [core::Assignment], checks whether the current set of known
-/// facts can be used to prove that the ports are available for the stated
-/// requirements.
-fn check_invoke(
-    assign: &core::Invoke<super::TimeRep>,
-    ctx: &mut Context,
-) -> FilamentResult<()> {
-    let instance = check_invocation(&assign.rhs, ctx)?;
-    ctx.add_invocation(assign.bind.clone(), instance)?;
     Ok(())
 }
 
@@ -147,7 +128,7 @@ fn check_commands(
 where
 {
     for cmd in cmds {
-        log::info!("{}", cmd);
+        log::info!("{cmd}");
         match cmd {
             core::Command::Invoke(invoke) => check_invoke(invoke, ctx)
                 .map_err(|err| err.with_pos(invoke.copy_span()))?,
@@ -155,7 +136,11 @@ where
                 ctx.add_instance(name.clone(), component)?
             }
             core::Command::When(wh) => check_when(wh, ctx)?,
-            core::Command::Connect(con) => check_connect(con, ctx)
+            core::Command::Connect(
+                con @ core::Connect {
+                    dst, src, guard, ..
+                },
+            ) => check_connect(dst, src, guard, con.copy_span(), ctx)
                 .map_err(|err| err.with_pos(con.copy_span()))?,
         };
     }

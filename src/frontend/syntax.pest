@@ -94,8 +94,8 @@ instance = {
 // Connections
 
 guard = {
-  port
-  | port ~ "|" ~ guard
+  port ~ "|" ~ guard
+  | port
 }
 
 connect = {
