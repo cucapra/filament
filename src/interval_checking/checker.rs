@@ -64,13 +64,13 @@ fn check_connect(
                     panic!("Guard signal must have exact specification")
                 })
                 .clone();
-            ctx.add_obligation(
+            ctx.add_obligations(
                 Fact::subset(exact, guarantee.within.clone()),
                 pos.clone(),
             );
 
             // Require that the guard's availability is at least as long as the signal.
-            ctx.add_obligation(
+            ctx.add_obligations(
                 Fact::subset(guarantee.within, guard_interval.within.clone()),
                 pos.clone(),
             );
@@ -87,7 +87,7 @@ fn check_connect(
     if let Some(guarantee) = &maybe_guarantee {
         let within_fact =
             Fact::subset(requirement.within, guarantee.within.clone());
-        ctx.add_obligation(within_fact, pos.clone());
+        ctx.add_obligations(within_fact, pos.clone());
     }
 
     if let Some(exact_requirement) = requirement.exact {
@@ -98,7 +98,7 @@ fn check_connect(
         })?;
 
         if let Some(exact_guarantee) = guarantee.exact {
-            ctx.add_obligation(
+            ctx.add_obligations(
                 Fact::equality(exact_requirement, exact_guarantee),
                 pos,
             );
@@ -135,8 +135,8 @@ fn check_invoke<'a>(
 
     // Add requirements on abstract variables
     req_sig.constraints.iter().for_each(|con| {
-        ctx.add_obligation(
-            Fact::Constraint(con.resolve(&req_binding)),
+        ctx.add_obligations(
+            Fact::constraint(con.resolve(&req_binding)),
             invoke.copy_span(),
         )
     });

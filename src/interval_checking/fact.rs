@@ -1,3 +1,5 @@
+use std::iter;
+
 use crate::core;
 
 use super::SExp;
@@ -9,28 +11,34 @@ pub enum Fact {
     Interval(IntervalFact),
 }
 impl Fact {
+    pub fn constraint(
+        cons: core::Constraint<core::FsmIdxs>,
+    ) -> impl Iterator<Item = Fact> {
+        iter::once(Fact::Constraint(cons))
+    }
+
     /// Construct a [IntervalFact] with `tag` set to [FactType::Equality].
     pub fn equality(
         left: core::Range<super::TimeRep>,
         right: core::Range<super::TimeRep>,
-    ) -> Self {
-        Self::Interval(IntervalFact {
+    ) -> impl Iterator<Item = Fact> {
+        iter::once(Self::Interval(IntervalFact {
             tag: FactType::Equality,
             left,
             right,
-        })
+        }))
     }
 
     /// Construct a [IntervalFact] with `tag` set to [FactType::Subset].
     pub fn subset(
         left: core::Range<super::TimeRep>,
         right: core::Range<super::TimeRep>,
-    ) -> Self {
-        Self::Interval(IntervalFact {
+    ) -> impl Iterator<Item = Fact> {
+        iter::once(Self::Interval(IntervalFact {
             tag: FactType::Subset,
             left,
             right,
-        })
+        }))
     }
 }
 impl std::fmt::Debug for Fact {
