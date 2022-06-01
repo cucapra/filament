@@ -128,10 +128,6 @@ impl FilamentParser {
         ))
     }
 
-    fn exact(input: Node) -> ParseResult<()> {
-        Ok(())
-    }
-
     fn interval_range(
         input: Node,
     ) -> ParseResult<core::Range<core::IntervalTime>> {
@@ -252,6 +248,12 @@ impl FilamentParser {
             }
         ))
     }
+    fn gte(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+    fn lte(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
 
     fn gt(input: Node) -> ParseResult<()> {
         Ok(())
@@ -265,6 +267,8 @@ impl FilamentParser {
     fn order_op(input: Node) -> ParseResult<core::OrderOp> {
         Ok(match_nodes!(
             input.into_children();
+            [gte(_)] => core::OrderOp::Gte,
+            [lte(_)] => core::OrderOp::Lte,
             [gt(_)] => core::OrderOp::Gt,
             [lt(_)] => core::OrderOp::Lt,
             [eq(_)] => core::OrderOp::Eq,
