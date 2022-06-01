@@ -31,7 +31,7 @@ where
     T: TimeRep + Clone + std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "@[{:?}, {:?}]", self.start, self.end)
+        write!(f, "[{:?}, {:?}]", self.start, self.end)
     }
 }
 
@@ -74,7 +74,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "@{:?}", self.within)?;
         if let Some(interval) = &self.exact {
-            write!(f, "@exact{:?}", interval)?;
+            write!(f, " + @exact{:?}", interval)?;
         }
         Ok(())
     }

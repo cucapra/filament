@@ -24,10 +24,10 @@ pub fn prove<'a, I, A, AV>(
     abstract_vars: AV,
     assumes: A,
     asserts: I,
-) -> FilamentResult<Option<&'a super::Fact>>
+) -> FilamentResult<Option<&'a core::Constraint<super::TimeRep>>>
 where
-    I: Iterator<Item = &'a super::Fact>,
-    A: Iterator<Item = &'a super::Fact>,
+    I: Iterator<Item = &'a core::Constraint<super::TimeRep>>,
+    A: Iterator<Item = &'a core::Constraint<super::TimeRep>>,
     AV: Iterator<Item = &'a core::Id>,
 {
     let parser = ();
@@ -64,7 +64,7 @@ where
 
 fn check_fact<P>(
     solver: &mut Solver<P>,
-    fact: &super::Fact,
+    fact: &core::Constraint<super::TimeRep>,
 ) -> FilamentResult<bool> {
     let sexp = SExp::from(fact);
     log::info!("Assert (not {})", sexp);

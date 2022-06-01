@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, iter};
 
 use crate::interval_checking::SExp;
 
-use super::{FsmIdxs, Id, TimeRep};
+use super::{FsmIdxs, Id, Range, TimeRep};
 
 /// Ordering operator for constraints
 #[derive(Hash, Eq, PartialEq, Clone)]
@@ -38,8 +38,29 @@ where
 }
 impl<T> Constraint<T>
 where
-    T: TimeRep,
+    T: TimeRep + Clone + PartialEq,
 {
+    #[inline]
+    fn construct_if_not_eq(left: T, right: T, op: OrderOp) -> Option<Self> {
+        if left != right {
+            Some(Constraint { left, right, op })
+        } else {
+            None
+        }
+    }
+
+    pub fn eq(left: T, right: T) -> Option<Self> {
+        Self::construct_if_not_eq(left, right, OrderOp::Eq)
+    }
+
+    pub fn lte(left: T, right: T) -> Option<Self> {
+        Self::construct_if_not_eq(left, right, OrderOp::Lte)
+    }
+
+    pub fn gte(left: T, right: T) -> Option<Self> {
+        Self::construct_if_not_eq(left, right, OrderOp::Gte)
+    }
+
     pub fn resolve(&self, binding: &HashMap<Id, T>) -> Constraint<T> {
         Constraint {
             left: self.left.resolve(binding),
@@ -47,7 +68,39 @@ where
             op: self.op.clone(),
         }
     }
+
+    pub fn constraint(cons: Self) -> impl Iterator<Item = Self> {
+        iter::once(cons)
+    }
+
+    /// Construct a [IntervalFact] with `tag` set to [FactType::Equality].
+    pub fn equality(
+        left: Range<T>,
+        right: Range<T>,
+    ) -> impl Iterator<Item = Self> {
+        vec![
+            Constraint::eq(left.start, right.start),
+            Constraint::eq(left.end, right.end),
+        ]
+        .into_iter()
+        .flatten()
+    }
+
+    /// Construct a [IntervalFact] with `tag` set to [FactType::Subset].
+    /// [ls, le] \subsetof [rs, re] <=> ls >= rs && le <= re
+    pub fn subset(
+        left: Range<T>,
+        right: Range<T>,
+    ) -> impl Iterator<Item = Self> {
+        vec![
+            Constraint::gte(left.start, right.start),
+            Constraint::lte(left.end, right.end),
+        ]
+        .into_iter()
+        .flatten()
+    }
 }
+
 impl<T> std::fmt::Debug for Constraint<T>
 where
     T: std::fmt::Debug + TimeRep,

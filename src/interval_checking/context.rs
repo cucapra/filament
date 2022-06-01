@@ -2,7 +2,7 @@ use std::collections::{hash_map::Entry, HashMap};
 
 use linked_hash_map::LinkedHashMap;
 
-use super::{Fact, TimeRep};
+use super::TimeRep;
 use crate::{
     core,
     errors::{self, Error, FilamentResult},
@@ -93,7 +93,7 @@ impl<'a> ConcreteInvoke<'a> {
     }
 }
 
-type FactMap = LinkedHashMap<Fact, Vec<errors::Span>>;
+type FactMap = LinkedHashMap<core::Constraint<TimeRep>, Vec<errors::Span>>;
 
 #[derive(Debug)]
 pub struct Context<'a> {
@@ -170,7 +170,7 @@ impl<'a> Context<'a> {
     /// Add a new obligation that needs to be proved
     pub fn add_obligations<F>(&mut self, facts: F, span: Option<errors::Span>)
     where
-        F: Iterator<Item = Fact>,
+        F: Iterator<Item = core::Constraint<TimeRep>>,
     {
         for fact in facts {
             log::info!("adding obligation {:?}", fact);
@@ -182,11 +182,16 @@ impl<'a> Context<'a> {
     }
 
     /// Add a new known fact
-    pub fn add_fact(&mut self, fact: Fact, span: Option<errors::Span>) {
-        log::info!("adding known fact {:?}", fact);
-        let locs = self.facts.entry(fact).or_insert(vec![]);
-        if let Some(sp) = span {
-            locs.push(sp)
+    pub fn add_fact<F>(&mut self, facts: F, span: Option<errors::Span>)
+    where
+        F: Iterator<Item = core::Constraint<TimeRep>>,
+    {
+        for fact in facts {
+            log::info!("adding known fact {:?}", fact);
+            let locs = self.facts.entry(fact).or_insert(vec![]);
+            if let Some(sp) = &span {
+                locs.push(sp.clone())
+            }
         }
     }
 

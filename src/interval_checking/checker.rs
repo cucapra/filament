@@ -1,6 +1,6 @@
-use super::{ConcreteInvoke, Context, Fact, THIS};
+use super::{ConcreteInvoke, Context, THIS};
 use crate::{
-    core,
+    core::{self, Constraint},
     errors::{self, FilamentResult, WithPos},
 };
 use itertools::Itertools;
@@ -65,13 +65,16 @@ fn check_connect(
                 })
                 .clone();
             ctx.add_obligations(
-                Fact::subset(exact, guarantee.within.clone()),
+                Constraint::subset(exact, guarantee.within.clone()),
                 pos.clone(),
             );
 
             // Require that the guard's availability is at least as long as the signal.
             ctx.add_obligations(
-                Fact::subset(guarantee.within, guard_interval.within.clone()),
+                Constraint::subset(
+                    guarantee.within,
+                    guard_interval.within.clone(),
+                ),
                 pos.clone(),
             );
         }
@@ -86,7 +89,7 @@ fn check_connect(
     // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
     if let Some(guarantee) = &maybe_guarantee {
         let within_fact =
-            Fact::subset(requirement.within, guarantee.within.clone());
+            Constraint::subset(requirement.within, guarantee.within.clone());
         ctx.add_obligations(within_fact, pos.clone());
     }
 
@@ -99,7 +102,7 @@ fn check_connect(
 
         if let Some(exact_guarantee) = guarantee.exact {
             ctx.add_obligations(
-                Fact::equality(exact_requirement, exact_guarantee),
+                Constraint::equality(exact_requirement, exact_guarantee),
                 pos,
             );
         } else {
@@ -136,7 +139,7 @@ fn check_invoke<'a>(
     // Add requirements on abstract variables
     req_sig.constraints.iter().for_each(|con| {
         ctx.add_obligations(
-            Fact::constraint(con.resolve(&req_binding)),
+            Constraint::constraint(con.resolve(&req_binding)),
             invoke.copy_span(),
         )
     });
@@ -200,10 +203,9 @@ fn check_component(
     ctx.add_invocation(THIS.into(), this_instance)?;
 
     // Add constraints on the interface as assumptions
-    rev_sig
-        .constraints
-        .iter()
-        .for_each(|con| ctx.add_fact(Fact::Constraint(con.clone()), None));
+    rev_sig.constraints.iter().for_each(|con| {
+        ctx.add_fact(Constraint::constraint(con.clone()), None)
+    });
 
     check_commands(&comp.body, &mut ctx)?;
 
