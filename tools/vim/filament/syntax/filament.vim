@@ -6,14 +6,14 @@ endif
 syn match filamentConstant "\v<[0-9]+('d[0-9]+)?>"
 
 " Type binding and interval annotations
-syn match filamentOperator "\v\@within|\@exact" nextgroup=filamentInterval skipwhite
+syn match filamentOperator "\v\@(exact)?" nextgroup=filamentInterval skipwhite
 syn region filamentInterval start="\v\(" end="\v\)" contained contains=filamentType,filamentConstant
 
 " Components
 syn keyword filamentKeyword component nextgroup=filamentCompName skipwhite
 syn match filamentCompName '\v[_a-zA-Z]((\-+)?[_a-zA-Z0-9]+)*' contained nextgroup=filamentAbsVar skipwhite
 
-syn region filamentAbsVar start="\v\<" end="\v\>" contains=filamentType
+syn region filamentAbsVar start="\v\<" end="\v\>" contains=filamentType contained
 syn match filamentType '\v[_a-zA-Z]((\-+)?[_a-zA-Z0-9]+)*' contained
 
 " Comments
