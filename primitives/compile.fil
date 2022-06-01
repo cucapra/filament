@@ -1,0 +1,26 @@
+/**
+ * Primitives defined for compilation
+ */
+
+// Compiled representation for `|` (or) syntax.
+// A component like merge but does not require a mux to switch between signals
+// because they are guaranteed to be disjoint because of the exact specification.
+extern component Or<T0, T, L, E, E0>(
+  // Exact requires that the input be a precisely the same interval instead of
+  // being a subset.
+  @[T0,E0] + @exact[T, L] first: 1,
+  @[T0,E0] + @exact[L, E] second: 1
+) -> (
+  @[T0, E0] + @exact[T, E] out: 1,
+) where T0 <= T, E0 >= E, L > T;
+
+
+// Compiled representation for `?` (guard) syntax.
+// The primitive allows a signal to pass through during the interval [T, L]
+// while disabling it during the remainder of its provided lifetime.
+extern component PassThrough<T0, T, L, L0>(
+  @[T0, L0] in: 32,
+  @[T0, L0] + @exact[T, L] sel: 1
+) -> (
+  @[T0, L0] + @exact[T, L] out: 32,
+);
