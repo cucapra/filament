@@ -2,12 +2,12 @@ Proof Obligations:
 [
     [G, G+1] ⊆ [G, G+1],
     [L, L+1] ⊆ [L, L+1],
-    max(G+4,L+4)+1>4+G,
-    [G+3, 4+G] ⊆ [G+3, G+4],
-    max(G+4,L+4)+1>4+L,
-    [L+3, 4+L] ⊆ [L+3, L+4],
-    [max(G+4,L+4), max(G+4,L+4)+1] ⊆ [4+G, max(G+4,L+4)+1],
-    [max(G+4,L+4), max(G+4,L+4)+1] ⊆ [4+L, max(G+4,L+4)+1],
-    [max(G+4,L+4)+2, max(G+4,L+4)+3] ⊆ [max(G+4,L+4)+2, max(G+4,L+4)+3],
+    max(G+5,L+5) > G+4,
+    [G+3, G+4] ⊆ [G+3, G+4],
+    max(G+5,L+5) > L+4,
+    [L+3, L+4] ⊆ [L+3, L+4],
+    [max(G+4,L+4), max(G+5,L+5)] ⊆ [G+4, max(G+5,L+5)],
+    [max(G+4,L+4), max(G+5,L+5)] ⊆ [L+4, max(G+5,L+5)],
+    [max(G+6,L+6), max(G+7,L+7)] ⊆ [max(G+6,L+6), max(G+7,L+7)],
 ]
 All proof obligations satisfied

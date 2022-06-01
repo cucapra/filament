@@ -39,17 +39,12 @@ where
     T: std::fmt::Debug + TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.left)?;
-        write!(
-            f,
-            "{}",
-            match self.op {
-                OrderOp::Gt => ">",
-                OrderOp::Lt => "<",
-                OrderOp::Eq => "=",
-            }
-        )?;
-        write!(f, "{:?}", self.right)
+        let op = match self.op {
+            OrderOp::Gt => ">",
+            OrderOp::Lt => "<",
+            OrderOp::Eq => "=",
+        };
+        write!(f, "{:?} {op} {:?}", self.left, self.right)
     }
 }
 
@@ -61,8 +56,7 @@ impl From<&Constraint<FsmIdxs>> for SExp {
             OrderOp::Eq => "=",
         };
         SExp(format!(
-            "({} {} {})",
-            op_str,
+            "({op_str} {} {})",
             SExp::from(&con.left),
             SExp::from(&con.right)
         ))
