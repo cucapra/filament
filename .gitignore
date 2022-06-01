@@ -13,3 +13,7 @@ Cargo.lock
 # Added by cargo
 
 /target
+
+*.vcd
+out.sv
+a.out
