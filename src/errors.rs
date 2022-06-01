@@ -139,6 +139,13 @@ impl Error {
         }
     }
 
+    pub fn malformed<S: ToString>(msg: S) -> Self {
+        Self {
+            kind: ErrorKind::Malformed(msg.to_string()),
+            pos: None,
+        }
+    }
+
     pub fn undefined(name: Id, kind: String) -> Self {
         Self {
             kind: ErrorKind::Undefined(name, kind),
@@ -178,7 +185,10 @@ enum ErrorKind {
     /// Failed to write the output
     WriteError(String),
 
-    // The name has not been bound
+    /// The program is malformed
+    Malformed(String),
+
+    /// The name has not been bound
     Undefined(Id, String),
     /// The name has already been bound.
     AlreadyBound(Id, String),
@@ -212,6 +222,7 @@ impl std::fmt::Display for ErrorKind {
             CannotProve(fact) => {
                 write!(f, "Cannot prove fact {:?}", fact)
             }
+            Malformed(msg) => write!(f, "{msg}"),
         }
     }
 }
