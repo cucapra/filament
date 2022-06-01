@@ -47,11 +47,31 @@ fn check_connect(
     let maybe_guarantee = if let Some(g) = &guard {
         let guard_interval = super::total_interval(g, ctx)?;
         log::info!("Guard availablity is: {guard_interval:?}");
-        // Require that the guarded value is available for longer that the
-        // guard
+
+        // When we have: dst = g ? ...
+        // We need to show that:
+        // 1. @exact(g) \subsetof @within(dst): To ensure that the guarded signal is keeping a
+        //    meaningful value high.
+        // 2. @within(dst) \subsetof @within(g): To ensure that the guard is disabling the signal
+        //    for long enough.
         if let Some(guarantee) = maybe_guarantee {
+            // Require that the guarded value is available for longer that the
+            // guard
+            let exact = guard_interval
+                .exact
+                .as_ref()
+                .unwrap_or_else(|| {
+                    panic!("Guard signal must have exact specification")
+                })
+                .clone();
             ctx.add_obligation(
-                Fact::subset(guard_interval.clone(), guarantee),
+                Fact::subset(exact, guarantee.within.clone()),
+                pos.clone(),
+            );
+
+            // Require that the guard's availability is at least as long as the signal.
+            ctx.add_obligation(
+                Fact::subset(guarantee.within, guard_interval.within.clone()),
                 pos.clone(),
             );
         }
@@ -61,12 +81,32 @@ fn check_connect(
         maybe_guarantee
     };
 
-    if let Some(guarantee) = maybe_guarantee {
-        let fact = match requirement.typ {
-            core::ITag::Within => Fact::subset(requirement, guarantee),
-            core::ITag::Exact => Fact::equality(requirement, guarantee),
-        };
-        ctx.add_obligation(fact, pos);
+    // If we have: dst = src. We need:
+    // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
+    // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
+    if let Some(guarantee) = &maybe_guarantee {
+        let within_fact =
+            Fact::subset(requirement.within, guarantee.within.clone());
+        ctx.add_obligation(within_fact, pos.clone());
+    }
+
+    if let Some(exact_requirement) = requirement.exact {
+        let guarantee = maybe_guarantee.ok_or_else(|| {
+            errors::Error::malformed(
+                "Constant port cannot provide @exact guarantee",
+            )
+        })?;
+
+        if let Some(exact_guarantee) = guarantee.exact {
+            ctx.add_obligation(
+                Fact::equality(exact_requirement, exact_guarantee),
+                pos,
+            );
+        } else {
+            return Err(errors::Error::malformed(
+                "Souce port does not provide an exact guarantee while destination port requires it.",
+            ));
+        }
     }
 
     Ok(())
