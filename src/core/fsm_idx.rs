@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::interval_checking::SExp;
 
-use super::Id;
+use super::{Id, Interval};
 
 /// Represents a state in an FSM. Corresponds to expressions like T+n
 #[derive(Clone, Hash, PartialEq, Eq)]
@@ -105,5 +105,24 @@ impl From<&FsmIdxs> for SExp {
             })
             .reduce(|acc, fsm| SExp(format!("(max {} {})", acc, fsm)))
             .unwrap()
+    }
+}
+
+impl Interval<FsmIdxs> {
+    /// Attempts to convert interval into (event, start, end). Only possible
+    /// when the interval uses exactly the one event for both start and end.
+    pub fn as_offset(&self) -> Option<(&Id, u64, u64)> {
+        if self.start.fsms.len() != 1
+            || self.end.fsms.len() != 1
+            || self.start.fsms[0].name != self.end.fsms[0].name
+        {
+            None
+        } else {
+            Some((
+                &self.start.fsms[0].name,
+                self.start.fsms[0].state,
+                self.end.fsms[0].state,
+            ))
+        }
     }
 }
