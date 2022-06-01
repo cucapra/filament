@@ -25,10 +25,12 @@ file = {
     ~ EOI
 }
 
-gt = { ">" }
-lt = { "<" }
-eq = { "=" }
-order_op = { gt | lt | eq }
+gt =  { ">" }
+gte = { ">=" }
+lt =  { "<" }
+lte = { "<=" }
+eq =  { "=" }
+order_op = { gte | gt | lte | lt | eq }
 
 constraint = {
   time ~ order_op ~ time
@@ -67,9 +69,8 @@ time_expr = { (time_base ~ "+" ~ time) }
 time = { time_expr | time_base }
 
 // Intervals
-exact = { "exact" }
 interval_range = {
- "@" ~ exact? ~ "[" ~ time ~ "," ~ time ~ "]"
+ "@" ~ "exact"? ~ "[" ~ time ~ "," ~ time ~ "]"
 }
 interval = _{
   interval_range ~ ("+" ~ interval_range)?
