@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use itertools::Itertools;
 
-use crate::{core, errors::FilamentResult};
+use crate::{core, errors::FilamentResult, frontend};
 
 /// The type ascribed to an interval time expression
 #[derive(PartialEq)]
@@ -15,11 +15,11 @@ enum EvType {
 /// event   :: T
 /// +       :: event -> nat -> event
 /// max     :: event -> event -> event
-fn type_check(it: &core::IntervalTime) -> EvType {
+fn type_check(it: &frontend::IntervalTime) -> EvType {
     match it {
-        core::IntervalTime::Abstract(_) => EvType::Event,
-        core::IntervalTime::Concrete(_) => EvType::Nat,
-        core::IntervalTime::Add { left, right } => {
+        frontend::IntervalTime::Abstract(_) => EvType::Event,
+        frontend::IntervalTime::Concrete(_) => EvType::Nat,
+        frontend::IntervalTime::Add { left, right } => {
             match (type_check(left), type_check(right)) {
                 (EvType::Event, EvType::Nat) | (EvType::Nat, EvType::Event) => {
                     EvType::Event
@@ -27,7 +27,7 @@ fn type_check(it: &core::IntervalTime) -> EvType {
                 _ => panic!("Unexpected type for add expression"),
             }
         }
-        core::IntervalTime::Max { left, right } => {
+        frontend::IntervalTime::Max { left, right } => {
             match (type_check(left), type_check(right)) {
                 (EvType::Event, EvType::Event) => EvType::Event,
                 _ => panic!("Unexpected type for max expression"),
@@ -36,7 +36,7 @@ fn type_check(it: &core::IntervalTime) -> EvType {
     }
 }
 
-fn transform_time(it: core::IntervalTime) -> core::FsmIdxs {
+fn transform_time(it: frontend::IntervalTime) -> core::FsmIdxs {
     assert!(
         type_check(&it) == EvType::Event,
         "interval time does not represent a valid event"
@@ -45,7 +45,7 @@ fn transform_time(it: core::IntervalTime) -> core::FsmIdxs {
 }
 
 fn transform_range(
-    range: core::Range<core::IntervalTime>,
+    range: core::Range<frontend::IntervalTime>,
 ) -> core::Range<core::FsmIdxs> {
     core::Range {
         start: range.start.into(),
@@ -54,7 +54,7 @@ fn transform_range(
 }
 
 fn transform_interval(
-    interval: core::Interval<core::IntervalTime>,
+    interval: core::Interval<frontend::IntervalTime>,
 ) -> core::Interval<core::FsmIdxs> {
     core::Interval {
         within: transform_range(interval.within),
@@ -63,7 +63,7 @@ fn transform_interval(
 }
 
 fn transform_control(
-    con: core::Command<core::IntervalTime>,
+    con: core::Command<frontend::IntervalTime>,
 ) -> FilamentResult<core::Command<core::FsmIdxs>> {
     match con {
         core::Command::Invoke(core::Invoke {
@@ -96,7 +96,7 @@ fn transform_control(
 }
 
 fn transform_port_def(
-    pd: core::PortDef<core::IntervalTime>,
+    pd: core::PortDef<frontend::IntervalTime>,
 ) -> core::PortDef<core::FsmIdxs> {
     core::PortDef {
         liveness: transform_interval(pd.liveness),
@@ -106,7 +106,7 @@ fn transform_port_def(
 }
 
 fn transform_constraints(
-    con: core::Constraint<core::IntervalTime>,
+    con: core::Constraint<frontend::IntervalTime>,
 ) -> core::Constraint<core::FsmIdxs> {
     core::Constraint {
         left: transform_time(con.left),
@@ -116,7 +116,7 @@ fn transform_constraints(
 }
 
 fn transform_signature(
-    sig: core::Signature<core::IntervalTime>,
+    sig: core::Signature<frontend::IntervalTime>,
 ) -> core::Signature<core::FsmIdxs> {
     core::Signature {
         inputs: sig.inputs.into_iter().map(transform_port_def).collect(),
@@ -133,7 +133,7 @@ fn transform_signature(
 }
 
 pub fn check_and_transform(
-    ns: core::Namespace<core::IntervalTime>,
+    ns: core::Namespace<frontend::IntervalTime>,
 ) -> FilamentResult<core::Namespace<core::FsmIdxs>> {
     let components = ns
         .components

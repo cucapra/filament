@@ -1,10 +1,10 @@
-use crate::core;
+use crate::{core, frontend};
 
 /// Reduces an IntervalTime expression into a max of sums representation.
 /// The returned vector represents all the non-max IntervalTime expressions of
 /// which the max is being computed.
-pub fn max_of_sums(event: core::IntervalTime, acc: &mut core::FsmIdxs) {
-    use self::core::IntervalTime::*;
+pub fn max_of_sums(event: frontend::IntervalTime, acc: &mut core::FsmIdxs) {
+    use frontend::IntervalTime::*;
     match event {
         Abstract(name) => acc.insert(name, 0),
         Concrete(_) => {
@@ -21,9 +21,9 @@ pub fn max_of_sums(event: core::IntervalTime, acc: &mut core::FsmIdxs) {
                         Abstract(name) => acc.insert(name, n),
                         Max { left, right } => {
                             // XXX(rachit): This can probably use the add method on FsmIdxs
-                            let left_sum = core::IntervalTime::binop_add(*left, core::IntervalTime::concrete(n));
+                            let left_sum = frontend::IntervalTime::binop_add(*left, frontend::IntervalTime::concrete(n));
                             max_of_sums(left_sum, acc);
-                            let right_sum = core::IntervalTime::binop_add(*right, core::IntervalTime::concrete(n));
+                            let right_sum = frontend::IntervalTime::binop_add(*right, frontend::IntervalTime::concrete(n));
                             max_of_sums(right_sum, acc);
                         }
                         Add {  .. } => panic!("Add expressions are nested, should've been reduced"),
@@ -36,8 +36,8 @@ pub fn max_of_sums(event: core::IntervalTime, acc: &mut core::FsmIdxs) {
     }
 }
 
-impl From<core::IntervalTime> for core::FsmIdxs {
-    fn from(time: core::IntervalTime) -> Self {
+impl From<frontend::IntervalTime> for core::FsmIdxs {
+    fn from(time: frontend::IntervalTime) -> Self {
         let mut out = core::FsmIdxs::default();
         max_of_sums(time, &mut out);
         out

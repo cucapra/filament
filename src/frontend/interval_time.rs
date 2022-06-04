@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::Id;
+use crate::core::Id;
 
 /// Represents a time variable which can either be:
 ///   1. An abstract variable like `G`.
@@ -88,7 +88,7 @@ impl IntervalTime {
     }
 }
 
-impl super::TimeRep for IntervalTime {
+impl crate::core::TimeRep for IntervalTime {
     /// Resolve the IntervalTime using the given bindings from abstract variables to exact
     /// bindings.
     fn resolve(&self, bindings: &HashMap<Id, IntervalTime>) -> Self {

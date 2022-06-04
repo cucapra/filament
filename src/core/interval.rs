@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use crate::interval_checking::SExp;
-
-use super::{Id, IntervalTime, TimeRep};
+use super::{Id, TimeRep};
 
 /// A range over time representation
 #[derive(Clone, Hash, PartialEq, Eq)]
@@ -77,23 +75,5 @@ where
             write!(f, " + @exact{:?}", interval)?;
         }
         Ok(())
-    }
-}
-impl From<&IntervalTime> for SExp {
-    fn from(it: &IntervalTime) -> Self {
-        match it {
-            IntervalTime::Abstract(x) => SExp(x.to_string()),
-            IntervalTime::Concrete(x) => SExp(x.to_string()),
-            IntervalTime::Add { left, right } => SExp(format!(
-                "(+ {} {})",
-                SExp::from(&**left),
-                SExp::from(&**right),
-            )),
-            IntervalTime::Max { left, right } => SExp(format!(
-                "(max {} {})",
-                SExp::from(&**left),
-                SExp::from(&**right)
-            )),
-        }
     }
 }
