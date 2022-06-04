@@ -25,6 +25,30 @@ pub enum Command<T> {
     Connect(Connect),
 }
 
+impl<T> From<Connect> for Command<T> {
+    fn from(v: Connect) -> Self {
+        Self::Connect(v)
+    }
+}
+
+impl<T> From<Instance> for Command<T> {
+    fn from(v: Instance) -> Self {
+        Self::Instance(v)
+    }
+}
+
+impl<T> From<When<T>> for Command<T> {
+    fn from(v: When<T>) -> Self {
+        Self::When(v)
+    }
+}
+
+impl<T> From<Invoke<T>> for Command<T> {
+    fn from(v: Invoke<T>) -> Self {
+        Self::Invoke(v)
+    }
+}
+
 impl<T> Command<T> {
     pub fn when(time: T, body: Vec<Command<T>>) -> Self {
         Command::When(When {
@@ -63,17 +87,63 @@ pub struct Invoke<T> {
     /// Name of the variable being assigned
     pub bind: Id,
 
-    /// Invocation assigning to this variable
-    pub rhs: Invocation<T>,
+    /// Name of the component being invoked
+    pub comp: Id,
+
+    /// Abstract variables used for this invocation
+    pub abstract_vars: Vec<T>,
+
+    /// Assignment for the ports
+    pub ports: Vec<Port>,
+
+    /// Source location of the invocation
+    pos: Option<errors::Span>,
+}
+impl<T> Invoke<T> {
+    pub fn new(
+        bind: Id,
+        comp: Id,
+        abstract_vars: Vec<T>,
+        ports: Vec<Port>,
+    ) -> Self {
+        Self {
+            bind,
+            comp,
+            abstract_vars,
+            ports,
+            pos: None,
+        }
+    }
+
+    /// Attach a position to this node
+    pub fn with_span(mut self, sp: Option<errors::Span>) -> Self {
+        self.pos = sp;
+        self
+    }
 }
 impl<T: std::fmt::Debug> std::fmt::Display for Invoke<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} := {}", self.bind, self.rhs)
+        write!(
+            f,
+            "{} := {}<{}>({});",
+            self.bind,
+            self.comp,
+            self.abstract_vars
+                .iter()
+                .map(|it| format!("{:?}", it))
+                .collect::<Vec<String>>()
+                .join(","),
+            self.ports
+                .iter()
+                .map(|port| port.to_string())
+                .collect::<Vec<String>>()
+                .join(",")
+        )
     }
 }
 impl<T> errors::WithPos for Invoke<T> {
     fn copy_span(&self) -> Option<errors::Span> {
-        self.rhs.copy_span()
+        self.pos.clone()
     }
 }
 
@@ -134,63 +204,6 @@ impl std::fmt::Display for Connect {
 impl errors::WithPos for Connect {
     fn copy_span(&self) -> Option<errors::Span> {
         self.pos.clone()
-    }
-}
-
-pub struct Invocation<T> {
-    /// Name of the component being invoked
-    pub comp: Id,
-
-    /// Abstract variables used for this invocation
-    pub abstract_vars: Vec<T>,
-
-    /// Assignment for the ports
-    pub ports: Vec<Port>,
-
-    /// Source location of the invocation
-    pos: Option<errors::Span>,
-}
-
-impl<T> errors::WithPos for Invocation<T> {
-    fn copy_span(&self) -> Option<errors::Span> {
-        self.pos.clone()
-    }
-}
-
-impl<T> Invocation<T> {
-    pub fn new(comp: Id, abstract_vars: Vec<T>, ports: Vec<Port>) -> Self {
-        Self {
-            comp,
-            abstract_vars,
-            ports,
-            pos: None,
-        }
-    }
-
-    /// Attach a position to this node
-    pub fn with_span(mut self, sp: errors::Span) -> Self {
-        self.pos = Some(sp);
-        self
-    }
-}
-
-impl<T: std::fmt::Debug> std::fmt::Display for Invocation<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}<{}>({})",
-            self.comp,
-            self.abstract_vars
-                .iter()
-                .map(|it| format!("{:?}", it))
-                .collect::<Vec<String>>()
-                .join(","),
-            self.ports
-                .iter()
-                .map(|port| port.to_string())
-                .collect::<Vec<String>>()
-                .join(",")
-        )
     }
 }
 

@@ -2,7 +2,11 @@ use std::rc::Rc;
 
 use itertools::Itertools;
 
-use crate::{core, errors::FilamentResult, frontend};
+use crate::{
+    core,
+    errors::{FilamentResult, WithPos},
+    frontend,
+};
 
 /// The type ascribed to an interval time expression
 #[derive(PartialEq)]
@@ -66,20 +70,13 @@ fn transform_control(
     con: core::Command<frontend::IntervalTime>,
 ) -> FilamentResult<core::Command<core::FsmIdxs>> {
     match con {
-        core::Command::Invoke(core::Invoke {
-            bind,
-            rhs:
-                core::Invocation {
-                    comp,
-                    abstract_vars,
-                    ports,
-                    ..
-                },
-        }) => {
+        core::Command::Invoke(inv) => {
+            let pos = inv.copy_span();
             let abs: Vec<core::FsmIdxs> =
-                abstract_vars.into_iter().map(transform_time).collect();
-            let rhs = core::Invocation::new(comp, abs, ports);
-            Ok(core::Command::Invoke(core::Invoke { bind, rhs }))
+                inv.abstract_vars.into_iter().map(transform_time).collect();
+            Ok(core::Invoke::new(inv.bind, inv.comp, abs, inv.ports)
+                .with_span(pos)
+                .into())
         }
         core::Command::When(core::When { commands, time }) => {
             Ok(core::Command::when(

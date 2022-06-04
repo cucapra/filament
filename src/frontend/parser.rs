@@ -259,31 +259,16 @@ impl FilamentParser {
         ))
     }
 
-    fn invocation_expr(
-        input: Node,
-    ) -> ParseResult<core::Invocation<IntervalTime>> {
+    fn invocation(input: Node) -> ParseResult<core::Invoke<IntervalTime>> {
         let span = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
             [
+                identifier(bind),
                 identifier(comp),
                 time_args(abstract_vars),
                 arguments(ports)
-            ] => {
-                core::Invocation::new(comp, abstract_vars, ports).with_span(span)
-            }
-        ))
-    }
-
-    fn invocation(input: Node) -> ParseResult<core::Invoke<IntervalTime>> {
-        Ok(match_nodes!(
-            input.into_children();
-            [
-                identifier(bind),
-                invocation_expr(rhs)
-            ] => core::Invoke {
-                bind, rhs
-            }
+            ] => core::Invoke::new(bind, comp, abstract_vars, ports).with_span(Some(span))
         ))
     }
     fn gte(input: Node) -> ParseResult<()> {

@@ -118,15 +118,14 @@ fn check_connect(
 /// Check invocation and add new [super::Fact] representing the proof obligations for checking this
 /// invocation.
 fn check_invoke<'a>(
-    assign: &core::Invoke<super::TimeRep>,
+    invoke: &core::Invoke<super::TimeRep>,
     ctx: &mut Context<'a>,
 ) -> FilamentResult<()> {
-    let invoke = &assign.rhs;
     let sig = ctx.get_instance(&invoke.comp)?;
     let instance =
         ConcreteInvoke::from_signature(sig, invoke.abstract_vars.clone());
     // Add this invocation to the context
-    ctx.add_invocation(assign.bind.clone(), instance)?;
+    ctx.add_invocation(invoke.bind.clone(), instance)?;
 
     let req_sig = &ctx.get_instance(&invoke.comp)?;
     let req_binding: HashMap<_, _> = req_sig
@@ -147,7 +146,7 @@ fn check_invoke<'a>(
     // Check connections implied by the invocation
     for (actual, formal) in invoke.ports.iter().zip(req_sig.inputs.iter()) {
         let dst = core::Port::CompPort {
-            comp: assign.bind.clone(),
+            comp: invoke.bind.clone(),
             name: formal.name.clone(),
         };
         check_connect(&dst, actual, &None, invoke.copy_span(), ctx)?;

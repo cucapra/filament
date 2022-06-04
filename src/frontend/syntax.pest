@@ -124,12 +124,9 @@ arguments = {
 time_args = {
   "<" ~ time ~ ("," ~ time)* ~ ">"
 }
-invocation_expr = {
-  identifier ~ time_args ~ arguments
-}
 
 invocation = {
-  identifier ~ ":=" ~ invocation_expr ~ ";"
+  identifier ~ ":=" ~ identifier ~ time_args ~ arguments ~ ";"
 }
 
 // =========== When ============
