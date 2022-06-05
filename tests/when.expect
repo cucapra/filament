@@ -1,7 +1,3 @@
 Proof Obligations:
-[
-    G+1 > G,
-    G+4 > G+3,
-    G+6 > G+5,
-]
+[]
 All proof obligations satisfied

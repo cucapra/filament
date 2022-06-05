@@ -35,48 +35,86 @@ where
 
 impl<T> Constraint<T>
 where
-    T: TimeRep + Clone,
+    T: TimeRep + Clone + PartialOrd,
 {
-    pub fn gt(l: T, r: T) -> Self {
-        Self {
-            left: l,
-            right: r,
-            op: OrderOp::Gt,
+    pub fn gt(l: T, r: T) -> Option<Self> {
+        if l > r {
+            None
+        } else {
+            Some(Self {
+                left: l,
+                right: r,
+                op: OrderOp::Gt,
+            })
         }
     }
 
-    pub fn lt(l: T, r: T) -> Self {
-        Self {
-            left: r,
-            right: l,
-            op: OrderOp::Gt,
+    pub fn lt(l: T, r: T) -> Option<Self> {
+        if l < r {
+            None
+        } else {
+            Some(Self {
+                left: r,
+                right: l,
+                op: OrderOp::Gt,
+            })
         }
     }
 }
 
 impl<T> Constraint<T>
 where
-    T: TimeRep + Clone + PartialEq,
+    T: TimeRep + Clone + PartialEq + PartialOrd,
 {
-    #[inline]
-    fn construct_if_not_eq(left: T, right: T, op: OrderOp) -> Option<Self> {
-        if left != right {
-            Some(Constraint { left, right, op })
-        } else {
-            None
+    /// Check if the constraint can be statically reduced to true.
+    pub fn simplify(&self) -> Option<&Self> {
+        match self.op {
+            OrderOp::Gt => {
+                if self.left > self.right {
+                    None
+                } else {
+                    Some(self)
+                }
+            }
+            OrderOp::Gte => {
+                if self.left >= self.right {
+                    None
+                } else {
+                    Some(self)
+                }
+            }
+            OrderOp::Eq => {
+                if self.left == self.right {
+                    None
+                } else {
+                    Some(self)
+                }
+            }
         }
     }
 
-    pub fn eq(left: T, right: T) -> Option<Self> {
-        Self::construct_if_not_eq(left, right, OrderOp::Eq)
+    pub fn eq(left: T, right: T) -> Self {
+        Constraint {
+            left,
+            right,
+            op: OrderOp::Eq,
+        }
     }
 
-    pub fn lte(left: T, right: T) -> Option<Self> {
-        Self::construct_if_not_eq(right, left, OrderOp::Gte)
+    pub fn lte(left: T, right: T) -> Self {
+        Constraint {
+            left: right,
+            right: left,
+            op: OrderOp::Gte,
+        }
     }
 
-    pub fn gte(left: T, right: T) -> Option<Self> {
-        Self::construct_if_not_eq(left, right, OrderOp::Gte)
+    pub fn gte(left: T, right: T) -> Self {
+        Constraint {
+            left,
+            right,
+            op: OrderOp::Gte,
+        }
     }
 
     pub fn resolve(&self, binding: &HashMap<Id, &T>) -> Constraint<T> {
@@ -101,7 +139,6 @@ where
             Constraint::eq(left.end, right.end),
         ]
         .into_iter()
-        .flatten()
     }
 
     /// Construct a [IntervalFact] with `tag` set to [FactType::Subset].
@@ -115,7 +152,6 @@ where
             Constraint::lte(left.end, right.end),
         ]
         .into_iter()
-        .flatten()
     }
 }
 

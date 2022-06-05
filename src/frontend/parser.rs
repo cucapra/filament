@@ -289,35 +289,34 @@ impl FilamentParser {
         Ok(())
     }
     fn constraint(input: Node) -> ParseResult<core::Constraint<IntervalTime>> {
-        match_nodes!(
+        Ok(match_nodes!(
             input.clone().into_children();
             [
-                time(left),
+                time(l),
                 eq(_),
-                time(right)
-            ] => core::Constraint::eq(left, right),
+                time(r)
+            ] => core::Constraint {left: l, right: r, op: core::OrderOp::Eq},
             [
-                time(left),
+                time(l),
                 gt(_),
-                time(right)
-            ] => Some(core::Constraint::gt(left, right)),
+                time(r)
+            ] => core::Constraint {left: l, right: r, op: core::OrderOp::Gt},
             [
-                time(left),
+                time(l),
                 lt(_),
-                time(right)
-            ] => Some(core::Constraint::lt(left, right)),
+                time(r)
+            ] => core::Constraint {left: r, right: l, op: core::OrderOp::Gt},
             [
-                time(left),
+                time(l),
                 lte(_),
-                time(right)
-            ] => core::Constraint::lte(left, right),
+                time(r)
+            ] => core::Constraint {left: r, right: l, op: core::OrderOp::Gte},
             [
-                time(left),
+                time(l),
                 gte(_),
-                time(right)
-            ] => core::Constraint::gte(left, right),
-        )
-        .ok_or_else(|| input.error("Trivially false constraint"))
+                time(r)
+            ] => core::Constraint {left: l, right: r, op: core::OrderOp::Gte},
+        ))
     }
     fn constraints(
         input: Node,

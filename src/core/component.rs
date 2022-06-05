@@ -92,7 +92,7 @@ where
 
 impl<T> Signature<T>
 where
-    T: Clone + TimeRep + PartialEq,
+    T: Clone + TimeRep,
 {
     // Generate a new signature that has been reversed: inputs are outputs
     // with outputs.
@@ -105,15 +105,6 @@ where
             outputs: self.inputs.clone(),
             constraints: self.constraints.clone(),
         }
-    }
-
-    /// Constraints for well formed under a binding
-    pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> + '_ {
-        self.inputs
-            .iter()
-            .chain(self.outputs.iter())
-            .chain(self.interface_signals.iter())
-            .flat_map(|pd| pd.liveness.well_formed())
     }
 
     /// Returns a port associated with the signature
@@ -142,6 +133,19 @@ where
             };
             Error::undefined(port.clone(), kind.to_string())
         })
+    }
+}
+impl<T> Signature<T>
+where
+    T: Clone + TimeRep + PartialEq + PartialOrd,
+{
+    /// Constraints for well formed under a binding
+    pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> + '_ {
+        self.inputs
+            .iter()
+            .chain(self.outputs.iter())
+            .chain(self.interface_signals.iter())
+            .flat_map(|pd| pd.liveness.well_formed())
     }
 }
 

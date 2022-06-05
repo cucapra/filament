@@ -257,14 +257,14 @@ fn check_component(
 
     let obligations = obligations_with_pos
         .iter()
-        .map(|(f, _)| f)
+        .flat_map(|(f, _)| f.simplify())
         .collect::<Vec<&_>>();
     println!("Proof Obligations:\n{:#?}", obligations);
 
     if let Some(fact) = super::prove(
         comp.sig.abstract_vars.iter(),
         facts.into_iter(),
-        obligations.into_iter(),
+        obligations,
     )? {
         let pos = &obligations_with_pos[fact];
         let err = Err(errors::Error::cannot_prove(fact.clone()));

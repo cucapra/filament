@@ -20,16 +20,19 @@ fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
     Ok(())
 }
 
-pub fn prove<'a, I, A, AV>(
+pub fn prove<'a, A, AV>(
     abstract_vars: AV,
     assumes: A,
-    asserts: I,
+    asserts: Vec<&'a core::Constraint<super::TimeRep>>,
 ) -> FilamentResult<Option<&'a core::Constraint<super::TimeRep>>>
 where
-    I: Iterator<Item = &'a core::Constraint<super::TimeRep>>,
     A: Iterator<Item = &'a core::Constraint<super::TimeRep>>,
     AV: Iterator<Item = &'a core::Id>,
 {
+    if asserts.is_empty() {
+        return Ok(None);
+    }
+
     let parser = ();
     let mut conf = SmtConf::default_z3();
 

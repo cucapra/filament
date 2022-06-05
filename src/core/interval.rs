@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter};
+use std::collections::HashMap;
 
 use super::{Constraint, Id, TimeRep};
 
@@ -14,6 +14,15 @@ where
 
 impl<T> Range<T>
 where
+    T: TimeRep + Clone + PartialOrd,
+{
+    /// Generate constraints for well formedness of this range.
+    pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> {
+        Constraint::lt(self.start.clone(), self.end.clone()).into_iter()
+    }
+}
+impl<T> Range<T>
+where
     T: TimeRep + Clone,
 {
     pub fn new(start: T, end: T) -> Self {
@@ -25,11 +34,6 @@ where
             start: self.start.resolve(bindings),
             end: self.end.resolve(bindings),
         }
-    }
-
-    /// Generate constraints for well formedness of this range.
-    pub fn well_formed(&self) -> Constraint<T> {
-        Constraint::lt(self.start.clone(), self.end.clone())
     }
 }
 
@@ -53,7 +57,7 @@ where
 }
 impl<T> Interval<T>
 where
-    T: super::TimeRep + Clone + PartialEq,
+    T: super::TimeRep + Clone,
 {
     pub fn with_exact(mut self, exact: Range<T>) -> Self {
         self.exact = Some(exact);
@@ -66,16 +70,20 @@ where
             exact: self.exact.as_ref().map(|range| range.resolve(bindings)),
         }
     }
-
+}
+impl<T> Interval<T>
+where
+    T: super::TimeRep + Clone + PartialOrd + PartialEq,
+{
     /// Generate well formedness constraints for this interval
     pub fn well_formed(&self) -> Vec<Constraint<T>> {
         self.exact
             .iter()
             .flat_map(|ex| {
                 Constraint::subset(ex.clone(), self.within.clone())
-                    .chain(iter::once(ex.well_formed()))
+                    .chain(ex.well_formed())
             })
-            .chain(iter::once(self.within.well_formed()))
+            .chain(self.within.well_formed())
             .collect()
     }
 }
