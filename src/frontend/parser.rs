@@ -268,7 +268,12 @@ impl FilamentParser {
                 identifier(comp),
                 time_args(abstract_vars),
                 arguments(ports)
-            ] => core::Invoke::new(bind, comp, abstract_vars, ports).with_span(Some(span))
+            ] => core::Invoke::new(bind, comp, abstract_vars, Some(ports)).with_span(Some(span)),
+            [
+                identifier(bind),
+                identifier(comp),
+                time_args(abstract_vars),
+            ] => core::Invoke::new(bind, comp, abstract_vars, None).with_span(Some(span))
         ))
     }
     fn gte(input: Node) -> ParseResult<()> {

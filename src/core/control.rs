@@ -94,7 +94,7 @@ pub struct Invoke<T> {
     pub abstract_vars: Vec<T>,
 
     /// Assignment for the ports
-    pub ports: Vec<Port>,
+    pub ports: Option<Vec<Port>>,
 
     /// Source location of the invocation
     pos: Option<errors::Span>,
@@ -104,7 +104,7 @@ impl<T> Invoke<T> {
         bind: Id,
         comp: Id,
         abstract_vars: Vec<T>,
-        ports: Vec<Port>,
+        ports: Option<Vec<Port>>,
     ) -> Self {
         Self {
             bind,
@@ -123,22 +123,28 @@ impl<T> Invoke<T> {
 }
 impl<T: std::fmt::Debug> std::fmt::Display for Invoke<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} := {}<{}>({});",
-            self.bind,
-            self.comp,
-            self.abstract_vars
-                .iter()
-                .map(|it| format!("{:?}", it))
-                .collect::<Vec<String>>()
-                .join(","),
-            self.ports
-                .iter()
-                .map(|port| port.to_string())
-                .collect::<Vec<String>>()
-                .join(",")
-        )
+        let abs = self
+            .abstract_vars
+            .iter()
+            .map(|it| format!("{:?}", it))
+            .collect::<Vec<String>>()
+            .join(",");
+        if let Some(ports) = &self.ports {
+            write!(
+                f,
+                "{} := {}<{}>({});",
+                self.bind,
+                self.comp,
+                abs,
+                ports
+                    .iter()
+                    .map(|port| port.to_string())
+                    .collect::<Vec<String>>()
+                    .join(",")
+            )
+        } else {
+            write!(f, "{} := invoke {}<{}>;", self.bind, self.comp, abs)
+        }
     }
 }
 impl<T> errors::WithPos for Invoke<T> {

@@ -127,6 +127,7 @@ time_args = {
 
 invocation = {
   identifier ~ ":=" ~ identifier ~ time_args ~ arguments ~ ";"
+  | identifier ~ ":=" ~ "invoke" ~ identifier ~ time_args ~ ";"
 }
 
 // =========== When ============

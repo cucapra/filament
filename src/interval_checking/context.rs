@@ -1,4 +1,4 @@
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 use linked_hash_map::LinkedHashMap;
 
@@ -106,6 +106,9 @@ pub struct Context<'a> {
     /// Mapping from name of invocations to their information
     invocations: HashMap<core::Id, ConcreteInvoke<'a>>,
 
+    /// Remaining assigmments for a given invoke.
+    remaining_assigns: HashMap<core::Id, HashSet<core::Id>>,
+
     /// Set of facts that need to be proven.
     /// Mapping from facts to the locations that generated it.
     obligations: FactMap,
@@ -120,6 +123,7 @@ impl<'a> From<&'a HashMap<core::Id, &'a core::Signature<TimeRep>>>
     fn from(sigs: &'a HashMap<core::Id, &'a core::Signature<TimeRep>>) -> Self {
         Context {
             sigs,
+            remaining_assigns: HashMap::default(),
             instances: HashMap::default(),
             invocations: HashMap::default(),
             obligations: LinkedHashMap::default(),
@@ -167,6 +171,43 @@ impl<'a> Context<'a> {
         }
     }
 
+    pub fn add_remaning_assigns(
+        &mut self,
+        bind: core::Id,
+        comp: &core::Id,
+    ) -> FilamentResult<()> {
+        let sig = self.get_instance(comp)?;
+        let ports = sig
+            .inputs
+            .iter()
+            .map(|pd| &pd.name)
+            .chain(sig.interface_signals.iter().map(|(port, _)| port))
+            .cloned()
+            .collect();
+        self.remaining_assigns.insert(bind, ports);
+        Ok(())
+    }
+
+    pub fn remove_remaning_assign(
+        &mut self,
+        port: &core::Port,
+    ) -> FilamentResult<()> {
+        match port {
+            core::Port::CompPort { comp, name } => {
+                if let Some(ports) = self.remaining_assigns.get_mut(comp) {
+                    if !ports.remove(name) {
+                        return Err(Error::malformed(format!(
+                            "Multiple assignments to port: {}.{}",
+                            name, port
+                        )));
+                    }
+                }
+                Ok(())
+            }
+            core::Port::ThisPort(_) | core::Port::Constant(_) => Ok(()),
+        }
+    }
+
     /// Add a new obligation that needs to be proved
     pub fn add_obligations<F>(&mut self, facts: F, span: Option<errors::Span>)
     where
@@ -195,16 +236,6 @@ impl<'a> Context<'a> {
         }
     }
 
-    /// Get the signature of the component associated with `comp`.
-    pub fn get_sig(
-        &self,
-        comp: &core::Id,
-    ) -> FilamentResult<&'a core::Signature<TimeRep>> {
-        self.sigs.get(comp).copied().ok_or_else(|| {
-            Error::undefined(comp.clone(), "component".to_string())
-        })
-    }
-
     /// Get the signature of the instance associated with `inst`
     pub fn get_instance(
         &self,
@@ -223,5 +254,14 @@ impl<'a> Context<'a> {
         self.invocations.get(instance).ok_or_else(|| {
             Error::undefined(instance.clone(), "invocation".to_string())
         })
+    }
+
+    /// Return the remaining assignments in this context
+    pub fn get_remaining_assigns(
+        &self,
+    ) -> impl Iterator<Item = (&core::Id, &HashSet<core::Id>)> {
+        self.remaining_assigns
+            .iter()
+            .filter(|(_, ports)| !ports.is_empty())
     }
 }

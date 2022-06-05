@@ -1,7 +1,7 @@
 use super::{ConcreteInvoke, Context, THIS};
 use crate::{
     core::{self, Constraint},
-    errors::{self, FilamentResult, WithPos},
+    errors::{self, Error, FilamentResult, WithPos},
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -16,6 +16,7 @@ fn check_connect(
     pos: Option<errors::Span>,
     ctx: &mut Context,
 ) -> FilamentResult<()> {
+    ctx.remove_remaning_assign(dst)?;
     let requirement = match dst {
         core::Port::ThisPort(name) => {
             ctx.get_invoke(&THIS.into())?.port_requirements(name)?
@@ -124,11 +125,11 @@ fn check_invoke<'a>(
     let sig = ctx.get_instance(&invoke.comp)?;
     let instance =
         ConcreteInvoke::from_signature(sig, invoke.abstract_vars.clone());
+
     // Add this invocation to the context
     ctx.add_invocation(invoke.bind.clone(), instance)?;
 
-    let req_sig = &ctx.get_instance(&invoke.comp)?;
-    let req_binding: HashMap<_, _> = req_sig
+    let req_binding: HashMap<_, _> = sig
         .abstract_vars
         .iter()
         .cloned()
@@ -136,20 +137,24 @@ fn check_invoke<'a>(
         .collect();
 
     // Add requirements on abstract variables
-    req_sig.constraints.iter().for_each(|con| {
+    sig.constraints.iter().for_each(|con| {
         ctx.add_obligations(
             Constraint::constraint(con.resolve(&req_binding)),
             invoke.copy_span(),
         )
     });
 
-    // Check connections implied by the invocation
-    for (actual, formal) in invoke.ports.iter().zip(req_sig.inputs.iter()) {
-        let dst = core::Port::CompPort {
-            comp: invoke.bind.clone(),
-            name: formal.name.clone(),
-        };
-        check_connect(&dst, actual, &None, invoke.copy_span(), ctx)?;
+    if let Some(actuals) = &invoke.ports {
+        // Check connections implied by the invocation
+        for (actual, formal) in actuals.iter().zip(sig.inputs.iter()) {
+            let dst = core::Port::CompPort {
+                comp: invoke.bind.clone(),
+                name: formal.name.clone(),
+            };
+            check_connect(&dst, actual, &None, invoke.copy_span(), ctx)?;
+        }
+    } else {
+        ctx.add_remaning_assigns(invoke.bind.clone(), &invoke.comp)?;
     }
 
     Ok(())
@@ -208,6 +213,14 @@ fn check_component(
 
     check_commands(&comp.body, &mut ctx)?;
 
+    // There should be no remaining assignments after checking a component
+    if let Some((comp, ports)) = ctx.get_remaining_assigns().next() {
+        return Err(Error::malformed(format!(
+            "Assignment for invoke missing: {}.{}",
+            comp, ports.iter().next().unwrap()
+        )));
+    }
+
     let (obligations_with_pos, facts) = ctx.into();
     let facts = facts.iter().map(|(f, _)| f).collect_vec();
     if !facts.is_empty() {
@@ -228,14 +241,15 @@ fn check_component(
         let pos = &obligations_with_pos[fact];
         let err = Err(errors::Error::cannot_prove(fact.clone()));
         if let Some(pos) = pos.get(0) {
-            err.map_err(|err| err.with_pos(Some(pos.clone())))
+            return err.map_err(|err| err.with_pos(Some(pos.clone())));
         } else {
-            err
+            return err;
         }
     } else {
         println!("All proof obligations satisfied");
-        Ok(())
     }
+
+    Ok(())
 }
 
 /// Check a [core::Namespace] to prove that the interval requirements of all the ports can be
