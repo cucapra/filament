@@ -126,7 +126,11 @@ fn transform_signature(
             .collect(),
         name: sig.name,
         abstract_vars: sig.abstract_vars,
-        interface_signals: sig.interface_signals,
+        interface_signals: sig
+            .interface_signals
+            .into_iter()
+            .map(transform_port_def)
+            .collect(),
     }
 }
 
