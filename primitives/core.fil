@@ -14,7 +14,6 @@ extern component Mult<G>(
 
 // A register that can extend the lifetime of a signal to any required length.
 extern component Latch<G, L>(
-  @interface<G> write_en: 1,
   @[G, G+1] in: 32
 ) -> (
   @[G+1, L] out: 32
@@ -28,7 +27,6 @@ extern component Latch<G, L>(
 // in this function's signature but that is okay because inputs only require
 // signals to be active for at least as long as the requirement
 extern component Merge<G, L, E>(
-  @interface<L> switch: 1,
   @[G, L] in1: 32,
   @[L, E] in2: 32,
 ) -> (

@@ -8,12 +8,11 @@
 extern component Or<T0, T, L, E, E0>(
   // Exact requires that the input be a precisely the same interval instead of
   // being a subset.
-  @[T0,E0] + @exact[T, L] first: 1,
-  @[T0,E0] + @exact[L, E] second: 1
+  @[T0,E0] + @exact[T, L] first: 32,
+  @[T0,E0] + @exact[L, E] second: 32
 ) -> (
-  @[T0, E0] + @exact[T, E] out: 1,
+  @[T0, E0] + @exact[T, E] out: 32,
 ) where T0 <= T, E0 >= E, L > T;
-
 
 // Compiled representation for `?` (guard) syntax.
 // The primitive allows a signal to pass through during the interval [T, L]
@@ -24,3 +23,20 @@ extern component PassThrough<T0, T, L, L0>(
 ) -> (
   @[T0, L0] + @exact[T, L] out: 32,
 );
+
+
+extern component Not(
+  @[T0, E0] + @exact[T, E] in: 1
+) -> (
+  // Represent disjoint union when signals are non-zero.
+  @[T0, E0] + @exact[T0, T] + @exact[E, E0] out: 1
+);
+
+extern component And<T0, T, L, E, E0>(
+  // Exact requires that the input be a precisely the same interval instead of
+  // being a subset.
+  @[T0,E0] + @exact[T, L] first: 32,
+  @[T0,E0] + @exact[T, E] second: 32
+) -> (
+  @[T0, E0] + @exact[T, L] out: 32,
+) where L < E;
