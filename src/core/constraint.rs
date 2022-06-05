@@ -101,14 +101,6 @@ where
         }
     }
 
-    pub fn lte(left: T, right: T) -> Self {
-        Constraint {
-            left: right,
-            right: left,
-            op: OrderOp::Gte,
-        }
-    }
-
     pub fn gte(left: T, right: T) -> Self {
         Constraint {
             left,
@@ -149,7 +141,7 @@ where
     ) -> impl Iterator<Item = Self> {
         vec![
             Constraint::gte(left.start, right.start),
-            Constraint::lte(left.end, right.end),
+            Constraint::gte(right.end, left.end),
         ]
         .into_iter()
     }
