@@ -135,7 +135,11 @@ when = {
   "when" ~ time ~ "{" ~ command* ~ "}"
 }
 
+fsm = {
+  "fsm" ~ identifier ~ "[" ~ bitwidth ~ "]" ~ "(" ~ port ~ ")" ~ ";"
+}
+
 // ========== Commands ==========
 command = {
-  instance | invocation | when | connect
+  instance | invocation | when | connect | fsm
 }

@@ -89,6 +89,7 @@ fn transform_control(
         }
         core::Command::Instance(ins) => Ok(core::Command::Instance(ins)),
         core::Command::Connect(con) => Ok(core::Command::Connect(con)),
+        core::Command::Fsm(fsm) => Ok(core::Command::Fsm(fsm)),
     }
 }
 

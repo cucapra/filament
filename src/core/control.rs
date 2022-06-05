@@ -1,4 +1,6 @@
-use crate::errors;
+use itertools::Itertools;
+
+use crate::errors::{self, Error, FilamentResult};
 
 use super::Id;
 
@@ -23,6 +25,7 @@ pub enum Command<T> {
     When(When<T>),
     Instance(Instance),
     Connect(Connect),
+    Fsm(Fsm),
 }
 
 impl<T> From<Connect> for Command<T> {
@@ -65,6 +68,7 @@ impl<T: std::fmt::Debug> std::fmt::Display for Command<T> {
             Command::When(wh) => write!(f, "{}", wh),
             Command::Instance(ins) => write!(f, "{}", ins),
             Command::Connect(con) => write!(f, "{}", con),
+            Command::Fsm(fsm) => write!(f, "{}", fsm),
         }
     }
 }
@@ -226,5 +230,40 @@ impl<T: std::fmt::Debug> std::fmt::Display for When<T> {
             write!(f, "{}; ", cmd)?;
         }
         write!(f, "}}")
+    }
+}
+
+/// Representation of a finite state machine
+pub struct Fsm {
+    /// Name of the FSM
+    pub bind: Id,
+
+    /// Number of states in the FSM
+    pub states: u64,
+
+    /// Signal that triggers the FSM
+    pub trigger: Port,
+}
+
+impl Fsm {
+    /// Returns the state associated with the FSM port
+    pub fn state(&self, port: &Id) -> FilamentResult<u64> {
+        let split = port.id.split('_').collect_vec();
+        if split.len() == 1 {
+            let mb_idx = split[0].parse::<u64>();
+            if let Ok(idx) = mb_idx {
+                return Ok(idx);
+            }
+        }
+        Err(Error::malformed(format!(
+            "Unknown port: {}.{}",
+            self.bind, port
+        )))
+    }
+}
+
+impl std::fmt::Display for Fsm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "fsm {}[{}]({})", self.bind, self.states, self.trigger)
     }
 }

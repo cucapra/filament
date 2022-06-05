@@ -31,7 +31,7 @@ syn match filamentColon ':' contained nextgroup=filamentType contained skipwhite
 hi link filamentCellName filamentCompName
 
 " When statements
-syn keyword filamentKeyword when new import where
+syn keyword filamentKeyword when new import where fsm invoke
 
 " Ports
 syn match filamentDot '\.' nextgroup=filamentPort

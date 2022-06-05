@@ -8,14 +8,20 @@ use crate::{
     errors::{self, Error, FilamentResult},
 };
 
-/// Representation of a concrete invocation in the context
-#[derive(Debug)]
-pub struct ConcreteInvoke<'a> {
-    /// Bindings for abstract variables
-    pub binding: HashMap<core::Id, super::TimeRep>,
+pub enum ConcreteInvoke<'a> {
+    CI {
+        /// Bindings for abstract variables
+        binding: HashMap<core::Id, super::TimeRep>,
 
-    /// Input ports
-    pub sig: &'a core::Signature<TimeRep>,
+        /// Input ports
+        sig: &'a core::Signature<TimeRep>,
+    },
+    Fsm {
+        /// Start time of this FSM
+        start_time: super::TimeRep,
+        /// Internal FSM
+        fsm: &'a core::Fsm,
+    },
 }
 
 impl<'a> ConcreteInvoke<'a> {
@@ -31,7 +37,7 @@ impl<'a> ConcreteInvoke<'a> {
             .zip(abs.into_iter())
             .collect();
 
-        ConcreteInvoke { binding, sig }
+        Self::CI { binding, sig }
     }
 
     /// Construct an instance for "this" component.
@@ -48,7 +54,15 @@ impl<'a> ConcreteInvoke<'a> {
             )
             .collect();
 
-        ConcreteInvoke { binding, sig }
+        Self::CI { binding, sig }
+    }
+
+    /// Construct an FSM instance
+    pub fn fsm_instance(
+        start_time: super::TimeRep,
+        fsm: &'a core::Fsm,
+    ) -> Self {
+        Self::Fsm { start_time, fsm }
     }
 
     /// Resolve a port for this instance and return the requirement or guarantee
@@ -60,20 +74,37 @@ impl<'a> ConcreteInvoke<'a> {
         port: &core::Id,
         is_input: bool,
     ) -> FilamentResult<core::Interval<TimeRep>> {
-        let maybe_pd = if is_input {
-            self.sig.inputs.iter().find(|pd| pd.name == port)
-        } else {
-            self.sig.outputs.iter().find(|pd| pd.name == port)
-        };
-        let pd = maybe_pd.ok_or_else(|| {
-            let kind = if is_input {
-                "input port"
-            } else {
-                "output port"
-            };
-            Error::undefined(port.clone(), kind.to_string())
-        })?;
-        Ok(pd.liveness.resolve(&self.binding))
+        match self {
+            ConcreteInvoke::CI { binding, sig } => {
+                let maybe_pd = if is_input {
+                    sig.inputs.iter().find(|pd| pd.name == port)
+                } else {
+                    sig.outputs.iter().find(|pd| pd.name == port)
+                };
+                let pd = maybe_pd.ok_or_else(|| {
+                    let kind = if is_input {
+                        "input port"
+                    } else {
+                        "output port"
+                    };
+                    Error::undefined(port.clone(), kind.to_string())
+                })?;
+                Ok(pd.liveness.resolve(binding))
+            }
+            ConcreteInvoke::Fsm { start_time, fsm } => {
+                // XXX(rachit): This is constructed everytime this method is called.
+                let idx = fsm.state(port)?;
+                let within: core::Range<super::TimeRep> = core::Range::new(
+                    start_time.clone(),
+                    start_time.clone().increment(fsm.states),
+                );
+                let exact = core::Range::new(
+                    start_time.clone().increment(idx),
+                    start_time.clone().increment(idx + 1),
+                );
+                Ok(core::Interval::from(within).with_exact(exact))
+            }
+        }
     }
 
     /// Returns the requirements of an input port.
@@ -95,7 +126,6 @@ impl<'a> ConcreteInvoke<'a> {
 
 type FactMap = LinkedHashMap<core::Constraint<TimeRep>, Vec<errors::Span>>;
 
-#[derive(Debug)]
 pub struct Context<'a> {
     /// Mapping from names to signatures for components and externals.
     sigs: &'a HashMap<core::Id, &'a core::Signature<TimeRep>>,
@@ -263,5 +293,44 @@ impl<'a> Context<'a> {
         self.remaining_assigns
             .iter()
             .filter(|(_, ports)| !ports.is_empty())
+    }
+
+    pub fn port_guarantees(
+        &self,
+        port: &core::Port,
+    ) -> FilamentResult<Option<core::Interval<super::TimeRep>>> {
+        match port {
+            core::Port::Constant(_) => {
+                /* Constants do not generate a proof obligation because they are
+                 * always available. */
+                Ok(None)
+            }
+            core::Port::ThisPort(port) => Ok(Some(
+                self.get_invoke(&super::THIS.into())?
+                    .port_guarantees(port)?,
+            )),
+            core::Port::CompPort { comp, name } => {
+                Ok(Some(self.get_invoke(comp)?.port_guarantees(name)?))
+            }
+        }
+    }
+
+    pub fn port_requirements(
+        &self,
+        port: &core::Port,
+    ) -> FilamentResult<core::Interval<super::TimeRep>> {
+        match port {
+            core::Port::Constant(_) => {
+                /* Constants do not generate a proof obligation because they are
+                 * always available. */
+                unreachable!("destination port cannot be a constant")
+            }
+            core::Port::ThisPort(port) => Ok(self
+                .get_invoke(&super::THIS.into())?
+                .port_requirements(port)?),
+            core::Port::CompPort { comp, name } => {
+                Ok(self.get_invoke(comp)?.port_requirements(name)?)
+            }
+        }
     }
 }

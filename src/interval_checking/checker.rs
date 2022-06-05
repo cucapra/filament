@@ -17,32 +17,7 @@ fn check_connect(
     ctx: &mut Context,
 ) -> FilamentResult<()> {
     ctx.remove_remaning_assign(dst)?;
-    let requirement = match dst {
-        core::Port::ThisPort(name) => {
-            ctx.get_invoke(&THIS.into())?.port_requirements(name)?
-        }
-        core::Port::CompPort { comp, name } => {
-            ctx.get_invoke(comp)?.port_requirements(name)?
-        }
-        core::Port::Constant(_) => {
-            unreachable!("destination port cannot be a constant")
-        }
-    };
-
-    // Get guarantee for this port
-    let maybe_guarantee = match src {
-        core::Port::Constant(_) => {
-            /* Constants do not generate a proof obligation because they are
-             * always available. */
-            None
-        }
-        core::Port::ThisPort(port) => {
-            Some(ctx.get_invoke(&THIS.into())?.port_guarantees(port)?)
-        }
-        core::Port::CompPort { comp, name } => {
-            Some(ctx.get_invoke(comp)?.port_guarantees(name)?)
-        }
-    };
+    let maybe_guarantee = ctx.port_guarantees(src)?;
 
     // If a guard is present, use its availablity instead.
     let maybe_guarantee = if let Some(g) = &guard {
@@ -85,6 +60,7 @@ fn check_connect(
         maybe_guarantee
     };
 
+    let requirement = ctx.port_requirements(dst)?;
     // If we have: dst = src. We need:
     // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
     // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
@@ -151,6 +127,7 @@ fn check_invoke<'a>(
                 comp: invoke.bind.clone(),
                 name: formal.name.clone(),
             };
+            log::info!("checking: {} = {}", dst, actual);
             check_connect(&dst, actual, &None, invoke.copy_span(), ctx)?;
         }
     } else {
@@ -160,17 +137,62 @@ fn check_invoke<'a>(
     Ok(())
 }
 
-fn check_when(
-    when: &core::When<super::TimeRep>,
-    ctx: &mut Context,
+fn check_fsm<'a>(
+    fsm: &'a core::Fsm,
+    ctx: &mut Context<'a>,
+) -> FilamentResult<()> {
+    let core::Fsm {
+        bind,
+        states,
+        trigger,
+    } = fsm;
+    let guarantee = ctx.port_guarantees(trigger).map(|opt| {
+        opt.ok_or_else(|| {
+            Error::malformed(
+                "Port does not provide required guarantee".to_string(),
+            )
+        })
+    })??;
+
+    let mb_offset = guarantee.as_exact_offset();
+    let (ev, start, end) = if let Some(offset) = mb_offset {
+        offset
+    } else {
+        return Err(Error::malformed(
+            "Port does not provide an exact guarantee",
+        ));
+    };
+    if end != start + 1 {
+        return Err(Error::malformed("Signal is high for too long"));
+    }
+
+    // Prove that the signal is zero during the execution of the FSM
+    let start_time = core::FsmIdxs::unit(ev.clone(), start);
+    let end_time = start_time.clone().increment(*states);
+    let within = core::Range::new(start_time.clone(), end_time);
+    ctx.add_obligations(
+        core::Constraint::subset(within, guarantee.within),
+        None,
+    );
+
+    // Add the FSM instance to the context
+    ctx.add_invocation(
+        bind.clone(),
+        ConcreteInvoke::fsm_instance(start_time, fsm),
+    )
+}
+
+fn check_when<'a>(
+    when: &'a core::When<super::TimeRep>,
+    ctx: &mut Context<'a>,
 ) -> FilamentResult<()> {
     // TODO: Do something with the time variable for the when block
     check_commands(&when.commands, ctx)
 }
 
-fn check_commands(
-    cmds: &[core::Command<super::TimeRep>],
-    ctx: &mut Context,
+fn check_commands<'a>(
+    cmds: &'a [core::Command<super::TimeRep>],
+    ctx: &mut Context<'a>,
 ) -> FilamentResult<()>
 where
 {
@@ -182,6 +204,7 @@ where
             core::Command::Instance(core::Instance { name, component }) => {
                 ctx.add_instance(name.clone(), component)?
             }
+            core::Command::Fsm(fsm) => check_fsm(fsm, ctx)?,
             core::Command::When(wh) => check_when(wh, ctx)?,
             core::Command::Connect(
                 con @ core::Connect {
@@ -217,7 +240,8 @@ fn check_component(
     if let Some((comp, ports)) = ctx.get_remaining_assigns().next() {
         return Err(Error::malformed(format!(
             "Assignment for invoke missing: {}.{}",
-            comp, ports.iter().next().unwrap()
+            comp,
+            ports.iter().next().unwrap()
         )));
     }
 
@@ -259,12 +283,6 @@ fn check_component(
 pub fn check(
     namespace: &core::Namespace<super::TimeRep>,
 ) -> FilamentResult<()> {
-    // Add signatures to the context
-    assert!(
-        namespace.components.len() <= 1,
-        "NYI: Cannot check multiple components"
-    );
-
     let mut sigs = namespace
         .signatures
         .iter()

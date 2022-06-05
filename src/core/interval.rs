@@ -16,6 +16,10 @@ impl<T> Range<T>
 where
     T: TimeRep + Clone,
 {
+    pub fn new(start: T, end: T) -> Self {
+        Self { start, end }
+    }
+
     pub fn resolve(&self, bindings: &HashMap<Id, T>) -> Self {
         Range {
             start: self.start.resolve(bindings),
@@ -46,13 +50,6 @@ impl<T> Interval<T>
 where
     T: super::TimeRep + Clone,
 {
-    pub fn new(within: Range<T>) -> Self {
-        Interval {
-            within,
-            exact: None,
-        }
-    }
-
     pub fn with_exact(mut self, exact: Range<T>) -> Self {
         self.exact = Some(exact);
         self
@@ -65,6 +62,19 @@ where
         }
     }
 }
+
+impl<T> From<Range<T>> for Interval<T>
+where
+    T: super::TimeRep + Clone,
+{
+    fn from(within: Range<T>) -> Self {
+        Interval {
+            within,
+            exact: None,
+        }
+    }
+}
+
 impl<T> std::fmt::Debug for Interval<T>
 where
     T: std::fmt::Debug + Clone + super::TimeRep,
