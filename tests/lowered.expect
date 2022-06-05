@@ -1,0 +1,9 @@
+Proof Obligations:
+[
+    T+2 <= T+5,
+    T+1 <= T+5,
+    T+2 >= T,
+    T+4 <= T+5,
+    T+3 <= T+5,
+]
+All proof obligations satisfied
