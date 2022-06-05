@@ -14,6 +14,7 @@ extern component Mult<G>(
 
 // A register that can extend the lifetime of a signal to any required length.
 extern component Latch<G, L>(
+  @interface<G, 1> write_en: 1,
   @[G, G+1] in: 32
 ) -> (
   @[G+1, L] out: 32

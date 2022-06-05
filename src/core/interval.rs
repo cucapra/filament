@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, iter};
 
-use super::{Id, TimeRep};
+use super::{Constraint, Id, TimeRep};
 
 /// A range over time representation
 #[derive(Clone, Hash, PartialEq, Eq)]
@@ -20,11 +20,16 @@ where
         Self { start, end }
     }
 
-    pub fn resolve(&self, bindings: &HashMap<Id, T>) -> Self {
+    pub fn resolve(&self, bindings: &HashMap<Id, &T>) -> Self {
         Range {
             start: self.start.resolve(bindings),
             end: self.end.resolve(bindings),
         }
+    }
+
+    /// Generate constraints for well formedness of this range.
+    pub fn well_formed(&self) -> Constraint<T> {
+        Constraint::lt(self.start.clone(), self.end.clone())
     }
 }
 
@@ -48,18 +53,30 @@ where
 }
 impl<T> Interval<T>
 where
-    T: super::TimeRep + Clone,
+    T: super::TimeRep + Clone + PartialEq,
 {
     pub fn with_exact(mut self, exact: Range<T>) -> Self {
         self.exact = Some(exact);
         self
     }
 
-    pub fn resolve(&self, bindings: &HashMap<Id, T>) -> Self {
+    pub fn resolve(&self, bindings: &HashMap<Id, &T>) -> Self {
         Interval {
             within: self.within.resolve(bindings),
             exact: self.exact.as_ref().map(|range| range.resolve(bindings)),
         }
+    }
+
+    /// Generate well formedness constraints for this interval
+    pub fn well_formed(&self) -> Vec<Constraint<T>> {
+        self.exact
+            .iter()
+            .flat_map(|ex| {
+                Constraint::subset(ex.clone(), self.within.clone())
+                    .chain(iter::once(ex.well_formed()))
+            })
+            .chain(iter::once(self.within.well_formed()))
+            .collect()
     }
 }
 

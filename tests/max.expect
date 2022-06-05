@@ -1,7 +1,13 @@
 Proof Obligations:
 [
+    G+1 > G,
+    G+4 > G+3,
+    L+1 > L,
+    L+4 > L+3,
     max(G+5,L+5) > G+4,
     max(G+5,L+5) > L+4,
+    max(G+5,L+5) > max(G+4,L+4),
+    max(G+7,L+7) > max(G+6,L+6),
     max(G+4,L+4) >= G+4,
     max(G+4,L+4) >= L+4,
 ]

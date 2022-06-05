@@ -30,7 +30,7 @@ gte = { ">=" }
 lt =  { "<" }
 lte = { "<=" }
 eq =  { "=" }
-order_op = { gte | gt | lte | lt | eq }
+order_op = _{ gte | gt | lte | lt | eq }
 
 constraint = {
   time ~ order_op ~ time

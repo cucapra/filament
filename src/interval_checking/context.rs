@@ -9,11 +9,11 @@ use crate::{
 };
 
 pub enum ConcreteInvoke<'a> {
-    CI {
+    Concrete {
         /// Bindings for abstract variables
-        binding: HashMap<core::Id, super::TimeRep>,
+        binding: HashMap<core::Id, &'a super::TimeRep>,
 
-        /// Input ports
+        /// Signature
         sig: &'a core::Signature<TimeRep>,
     },
     Fsm {
@@ -22,39 +22,24 @@ pub enum ConcreteInvoke<'a> {
         /// Internal FSM
         fsm: &'a core::Fsm,
     },
+    This {
+        /// Signature
+        sig: &'a core::Signature<TimeRep>,
+    },
 }
 
 impl<'a> ConcreteInvoke<'a> {
     /// Construct an instance from a Signature and bindings for abstract variables.
-    pub fn from_signature(
+    pub fn concrete(
+        binding: HashMap<core::Id, &'a super::TimeRep>,
         sig: &'a core::Signature<TimeRep>,
-        abs: Vec<super::TimeRep>,
     ) -> Self {
-        let binding = sig
-            .abstract_vars
-            .iter()
-            .cloned()
-            .zip(abs.into_iter())
-            .collect();
-
-        Self::CI { binding, sig }
+        Self::Concrete { binding, sig }
     }
 
     /// Construct an instance for "this" component.
     pub fn this_instance(sig: &'a core::Signature<TimeRep>) -> Self {
-        // Binding for this instance is just identity.
-        let binding = sig
-            .abstract_vars
-            .iter()
-            .cloned()
-            .zip(
-                sig.abstract_vars
-                    .iter()
-                    .map(|v| core::FsmIdxs::unit(v.clone(), 0)),
-            )
-            .collect();
-
-        Self::CI { binding, sig }
+        Self::This { sig }
     }
 
     /// Construct an FSM instance
@@ -74,7 +59,7 @@ impl<'a> ConcreteInvoke<'a> {
         is_input: bool,
     ) -> FilamentResult<core::Interval<TimeRep>> {
         match self {
-            ConcreteInvoke::CI { binding, sig } => {
+            ConcreteInvoke::Concrete { binding, sig } => {
                 let pd = sig.get_port(port, is_input)?;
                 Ok(pd.liveness.resolve(binding))
             }
@@ -90,6 +75,9 @@ impl<'a> ConcreteInvoke<'a> {
                     start_time.clone().increment(idx + 1),
                 );
                 Ok(core::Interval::from(within).with_exact(exact))
+            }
+            ConcreteInvoke::This { sig } => {
+                Ok(sig.get_port(port, is_input)?.liveness.clone())
             }
         }
     }

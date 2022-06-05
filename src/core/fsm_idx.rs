@@ -78,14 +78,14 @@ impl FsmIdxs {
 }
 
 impl super::TimeRep for FsmIdxs {
-    fn resolve(&self, bindings: &std::collections::HashMap<Id, Self>) -> Self {
+    fn resolve(&self, bindings: &std::collections::HashMap<Id, &Self>) -> Self {
         let mut out = FsmIdxs::default();
         for FsmIdx { name, state } in &self.fsms {
-            let mut idxs = bindings
+            let mut idxs = (*bindings
                 .get(name)
-                .unwrap_or_else(|| panic!("No binding for {}", name))
-                .clone()
-                .increment(*state);
+                .unwrap_or_else(|| panic!("No binding for {}", name)))
+            .clone()
+            .increment(*state);
             out.fsms.append(&mut idxs.fsms);
         }
         out

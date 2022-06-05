@@ -5,5 +5,5 @@ pub trait TimeRep
 where
     Self: Sized,
 {
-    fn resolve(&self, bindings: &HashMap<super::Id, Self>) -> Self;
+    fn resolve(&self, bindings: &HashMap<super::Id, &Self>) -> Self;
 }

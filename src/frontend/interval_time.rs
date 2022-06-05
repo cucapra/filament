@@ -91,13 +91,13 @@ impl From<Id> for IntervalTime {
 impl crate::core::TimeRep for IntervalTime {
     /// Resolve the IntervalTime using the given bindings from abstract variables to exact
     /// bindings.
-    fn resolve(&self, bindings: &HashMap<Id, IntervalTime>) -> Self {
+    fn resolve(&self, bindings: &HashMap<Id, &IntervalTime>) -> Self {
         match self {
             IntervalTime::Concrete(_) => self.clone(),
-            IntervalTime::Abstract(name) => bindings
+            IntervalTime::Abstract(name) => (*bindings
                 .get(name)
-                .unwrap_or_else(|| panic!("No binding for {}", name))
-                .clone(),
+                .unwrap_or_else(|| panic!("No binding for {}", name)))
+            .clone(),
             IntervalTime::Max { left, right } => IntervalTime::binop_max(
                 left.resolve(bindings),
                 right.resolve(bindings),

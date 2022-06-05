@@ -9,18 +9,14 @@ use super::{FsmIdxs, Id, Range, TimeRep};
 pub enum OrderOp {
     Gt,
     Gte,
-    Lt,
-    Lte,
     Eq,
 }
 impl std::fmt::Display for OrderOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let op = match self {
             OrderOp::Gt => ">",
-            OrderOp::Lt => "<",
             OrderOp::Eq => "=",
             OrderOp::Gte => ">=",
-            OrderOp::Lte => "<=",
         };
         write!(f, "{op}")
     }
@@ -36,6 +32,28 @@ where
     pub right: T,
     pub op: OrderOp,
 }
+
+impl<T> Constraint<T>
+where
+    T: TimeRep + Clone,
+{
+    pub fn gt(l: T, r: T) -> Self {
+        Self {
+            left: l,
+            right: r,
+            op: OrderOp::Gt,
+        }
+    }
+
+    pub fn lt(l: T, r: T) -> Self {
+        Self {
+            left: r,
+            right: l,
+            op: OrderOp::Gt,
+        }
+    }
+}
+
 impl<T> Constraint<T>
 where
     T: TimeRep + Clone + PartialEq,
@@ -54,14 +72,14 @@ where
     }
 
     pub fn lte(left: T, right: T) -> Option<Self> {
-        Self::construct_if_not_eq(left, right, OrderOp::Lte)
+        Self::construct_if_not_eq(right, left, OrderOp::Gte)
     }
 
     pub fn gte(left: T, right: T) -> Option<Self> {
         Self::construct_if_not_eq(left, right, OrderOp::Gte)
     }
 
-    pub fn resolve(&self, binding: &HashMap<Id, T>) -> Constraint<T> {
+    pub fn resolve(&self, binding: &HashMap<Id, &T>) -> Constraint<T> {
         Constraint {
             left: self.left.resolve(binding),
             right: self.right.resolve(binding),

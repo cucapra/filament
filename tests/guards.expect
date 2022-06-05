@@ -1,6 +1,6 @@
 Proof Obligations:
 [
     G+3 >= G,
-    G+5 <= G+6,
+    G+6 >= G+5,
 ]
 All proof obligations satisfied

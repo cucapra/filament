@@ -95,31 +95,35 @@ fn check_connect(
 /// Check invocation and add new [super::Fact] representing the proof obligations for checking this
 /// invocation.
 fn check_invoke<'a>(
-    invoke: &core::Invoke<super::TimeRep>,
+    invoke: &'a core::Invoke<super::TimeRep>,
     ctx: &mut Context<'a>,
 ) -> FilamentResult<()> {
     let sig = ctx.get_instance(&invoke.comp)?;
-    let instance =
-        ConcreteInvoke::from_signature(sig, invoke.abstract_vars.clone());
-
-    // Add this invocation to the context
-    ctx.add_invocation(invoke.bind.clone(), instance)?;
-
-    let req_binding: HashMap<_, _> = sig
+    let binding: HashMap<_, _> = sig
         .abstract_vars
         .iter()
         .cloned()
-        .zip(invoke.abstract_vars.iter().cloned())
+        .zip(invoke.abstract_vars.iter())
         .collect();
 
-    // Add requirements on abstract variables
-    sig.constraints.iter().for_each(|con| {
-        ctx.add_obligations(
-            Constraint::constraint(con.resolve(&req_binding)),
-            invoke.copy_span(),
-        )
-    });
+    // Handle `where` clause constraints and well formedness constraints on intervals.
+    sig.well_formed()
+        // XXX(rachit): This cloned call is stupid
+        .chain(sig.constraints.iter().cloned())
+        .for_each(|con| {
+            ctx.add_obligations(
+                Constraint::constraint(con.resolve(&binding)),
+                invoke.copy_span(),
+            )
+        });
 
+    // Add this invocation to the context
+    ctx.add_invocation(
+        invoke.bind.clone(),
+        ConcreteInvoke::concrete(binding, sig),
+    )?;
+
+    // If this is a high-level invoke, check all port requirements
     if let Some(actuals) = &invoke.ports {
         // Check connections implied by the invocation
         for (actual, formal) in actuals.iter().zip(sig.inputs.iter()) {

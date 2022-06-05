@@ -1,4 +1,4 @@
-use super::{Command, Id, Interval, Range, TimeRep};
+use super::{Command, Constraint, Id, Interval, Range, TimeRep};
 use crate::{
     errors::{Error, FilamentResult},
     frontend,
@@ -92,7 +92,7 @@ where
 
 impl<T> Signature<T>
 where
-    T: Clone + TimeRep,
+    T: Clone + TimeRep + PartialEq,
 {
     // Generate a new signature that has been reversed: inputs are outputs
     // with outputs.
@@ -105,6 +105,15 @@ where
             outputs: self.inputs.clone(),
             constraints: self.constraints.clone(),
         }
+    }
+
+    /// Constraints for well formed under a binding
+    pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> + '_ {
+        self.inputs
+            .iter()
+            .chain(self.outputs.iter())
+            .chain(self.interface_signals.iter())
+            .flat_map(|pd| pd.liveness.well_formed())
     }
 
     /// Returns a port associated with the signature
