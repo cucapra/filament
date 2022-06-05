@@ -249,8 +249,8 @@ impl Fsm {
     /// Returns the state associated with the FSM port
     pub fn state(&self, port: &Id) -> FilamentResult<u64> {
         let split = port.id.split('_').collect_vec();
-        if split.len() == 1 {
-            let mb_idx = split[0].parse::<u64>();
+        if split.len() == 2 {
+            let mb_idx = split[1].parse::<u64>();
             if let Ok(idx) = mb_idx {
                 return Ok(idx);
             }

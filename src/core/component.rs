@@ -1,10 +1,9 @@
+use super::{Command, Id, Interval, Range, TimeRep};
+use crate::{
+    errors::{Error, FilamentResult},
+    frontend,
+};
 use std::rc::Rc;
-
-use linked_hash_map::LinkedHashMap;
-
-use crate::errors::FilamentResult;
-
-use super::{Command, Id, Interval, TimeRep};
 
 #[derive(Clone)]
 pub struct PortDef<T>
@@ -46,6 +45,25 @@ where
     }
 }
 
+impl PortDef<frontend::IntervalTime> {
+    pub fn from_interface_signal(name: Id, event: Id, len: u64) -> Self {
+        let ev: frontend::IntervalTime = event.into();
+        let liveness = Interval::from(Range::new(
+            ev.clone(),
+            frontend::IntervalTime::binop_add(ev.clone(), len.into()),
+        ))
+        .with_exact(Range::new(
+            ev.clone(),
+            frontend::IntervalTime::binop_add(ev, 1.into()),
+        ));
+        PortDef {
+            name,
+            bitwidth: 1,
+            liveness,
+        }
+    }
+}
+
 /// The signature of a component definition
 #[derive(Debug)]
 pub struct Signature<T>
@@ -60,7 +78,7 @@ where
 
     /// Mapping from name of signals to the abstract variable they provide
     /// evidence for.
-    pub interface_signals: LinkedHashMap<Id, Id>,
+    pub interface_signals: Vec<PortDef<T>>,
 
     /// Input ports
     pub inputs: Vec<PortDef<T>>,
@@ -87,6 +105,34 @@ where
             outputs: self.inputs.clone(),
             constraints: self.constraints.clone(),
         }
+    }
+
+    /// Returns a port associated with the signature
+    pub fn get_port(
+        &self,
+        port: &Id,
+        is_input: bool,
+    ) -> FilamentResult<&PortDef<T>> {
+        // XXX(rachit): Always searching interface ports regardless of input or output
+        let maybe_pd = if is_input {
+            self.inputs
+                .iter()
+                .chain(self.interface_signals.iter())
+                .find(|pd| pd.name == port)
+        } else {
+            self.outputs
+                .iter()
+                .chain(self.interface_signals.iter())
+                .find(|pd| pd.name == port)
+        };
+        maybe_pd.ok_or_else(|| {
+            let kind = if is_input {
+                "input port"
+            } else {
+                "output port"
+            };
+            Error::undefined(port.clone(), kind.to_string())
+        })
     }
 }
 

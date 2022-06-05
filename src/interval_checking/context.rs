@@ -67,7 +67,6 @@ impl<'a> ConcreteInvoke<'a> {
 
     /// Resolve a port for this instance and return the requirement or guarantee
     /// based on whether it is an input or an input port.
-    ///
     #[inline]
     fn resolve_port(
         &self,
@@ -76,19 +75,7 @@ impl<'a> ConcreteInvoke<'a> {
     ) -> FilamentResult<core::Interval<TimeRep>> {
         match self {
             ConcreteInvoke::CI { binding, sig } => {
-                let maybe_pd = if is_input {
-                    sig.inputs.iter().find(|pd| pd.name == port)
-                } else {
-                    sig.outputs.iter().find(|pd| pd.name == port)
-                };
-                let pd = maybe_pd.ok_or_else(|| {
-                    let kind = if is_input {
-                        "input port"
-                    } else {
-                        "output port"
-                    };
-                    Error::undefined(port.clone(), kind.to_string())
-                })?;
+                let pd = sig.get_port(port, is_input)?;
                 Ok(pd.liveness.resolve(binding))
             }
             ConcreteInvoke::Fsm { start_time, fsm } => {
@@ -210,8 +197,8 @@ impl<'a> Context<'a> {
         let ports = sig
             .inputs
             .iter()
+            .chain(sig.interface_signals.iter())
             .map(|pd| &pd.name)
-            .chain(sig.interface_signals.iter().map(|(port, _)| port))
             .cloned()
             .collect();
         self.remaining_assigns.insert(bind, ports);
@@ -224,11 +211,13 @@ impl<'a> Context<'a> {
     ) -> FilamentResult<()> {
         match port {
             core::Port::CompPort { comp, name } => {
+                // Check if the port is defined
+                self.get_invoke(comp)?.resolve_port(name, true)?;
                 if let Some(ports) = self.remaining_assigns.get_mut(comp) {
                     if !ports.remove(name) {
                         return Err(Error::malformed(format!(
-                            "Multiple assignments to port: {}.{}",
-                            name, port
+                            "Multiple assignments to port: {}",
+                            port
                         )));
                     }
                 }

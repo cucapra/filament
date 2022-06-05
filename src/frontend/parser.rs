@@ -35,7 +35,7 @@ pub enum ExtOrComp {
 
 pub enum PdOrInt {
     Pd(core::PortDef<IntervalTime>),
-    Int((core::Id, core::Id)),
+    Int((core::Id, core::Id, u64)),
 }
 
 #[derive(Parser)]
@@ -142,18 +142,18 @@ impl FilamentParser {
 
     // ================ Signature =====================
 
-    fn interface(input: Node) -> ParseResult<core::Id> {
+    fn interface(input: Node) -> ParseResult<(core::Id, u64)> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(tvar)] => tvar,
+            [identifier(tvar), bitwidth(len)] => (tvar, len),
         ))
     }
 
     fn port_def(input: Node) -> ParseResult<PdOrInt> {
         let pd = match_nodes!(
             input.clone().into_children();
-            [interface(time_var), identifier(name), bitwidth(_)] => {
-                Ok(PdOrInt::Int((name, time_var)))
+            [interface((time_var, len)), identifier(name), bitwidth(_)] => {
+                Ok(PdOrInt::Int((name, time_var, len)))
             },
             [interval_range(range), identifier(name), bitwidth(bitwidth)] => {
                 core::PortDef::new(name, range.into(), bitwidth).map(PdOrInt::Pd)
@@ -172,12 +172,7 @@ impl FilamentParser {
         ))
     }
 
-    fn ports(
-        input: Node,
-    ) -> ParseResult<(
-        Vec<core::PortDef<IntervalTime>>,
-        Vec<(core::Id, core::Id)>,
-    )> {
+    fn ports(input: Node) -> ParseResult<(Ports, Ports)> {
         Ok(match_nodes!(
             input.into_children();
             [port_def(ins)..] => {
@@ -189,7 +184,10 @@ impl FilamentParser {
                         PdOrInt::Int(int) => interface_signals.push(int),
                     }
                 }
-                (ports, interface_signals)
+                let interface_ports = interface_signals.into_iter().map(|(name, time_var, len)| {
+                    core::PortDef::from_interface_signal(name, time_var, len)
+                }).collect();
+                (ports, interface_ports)
             }
         ))
     }
@@ -198,9 +196,7 @@ impl FilamentParser {
         Ok(())
     }
 
-    fn io(
-        input: Node,
-    ) -> ParseResult<(Ports, Ports, Vec<(core::Id, core::Id)>)> {
+    fn io(input: Node) -> ParseResult<(Ports, Ports, Ports)> {
         match_nodes!(
             input.clone().into_children();
             [arrow(_)] => Ok((vec![], vec![], vec![])),

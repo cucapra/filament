@@ -20,19 +20,13 @@ pub enum IntervalTime {
     },
 }
 impl IntervalTime {
-    /// Construct an [IntervalTime::Abstract].
-    #[inline]
-    pub fn abs(time_var: Id) -> Self {
-        IntervalTime::Abstract(time_var)
-    }
-
     pub fn binop_max(left: IntervalTime, right: IntervalTime) -> Self {
         match (left, right) {
             (IntervalTime::Concrete(n1), IntervalTime::Concrete(n2)) => {
                 if n1 > n2 {
-                    Self::concrete(n1)
+                    n1.into()
                 } else {
-                    Self::concrete(n2)
+                    n2.into()
                 }
             }
             (l, r) => IntervalTime::Max {
@@ -81,10 +75,16 @@ impl IntervalTime {
             },
         }
     }
+}
 
-    #[inline]
-    pub fn concrete(num: u64) -> Self {
-        IntervalTime::Concrete(num)
+impl From<u64> for IntervalTime {
+    fn from(con: u64) -> Self {
+        Self::Concrete(con)
+    }
+}
+impl From<Id> for IntervalTime {
+    fn from(con: Id) -> Self {
+        Self::Abstract(con)
     }
 }
 

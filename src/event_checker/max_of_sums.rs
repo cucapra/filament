@@ -21,9 +21,9 @@ pub fn max_of_sums(event: frontend::IntervalTime, acc: &mut core::FsmIdxs) {
                         Abstract(name) => acc.insert(name, n),
                         Max { left, right } => {
                             // XXX(rachit): This can probably use the add method on FsmIdxs
-                            let left_sum = frontend::IntervalTime::binop_add(*left, frontend::IntervalTime::concrete(n));
+                            let left_sum = frontend::IntervalTime::binop_add(*left, n.into());
                             max_of_sums(left_sum, acc);
-                            let right_sum = frontend::IntervalTime::binop_add(*right, frontend::IntervalTime::concrete(n));
+                            let right_sum = frontend::IntervalTime::binop_add(*right, n.into());
                             max_of_sums(right_sum, acc);
                         }
                         Add {  .. } => panic!("Add expressions are nested, should've been reduced"),
