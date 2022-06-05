@@ -156,10 +156,10 @@ impl FilamentParser {
                 Ok(PdOrInt::Int((name, time_var)))
             },
             [interval_range(range), identifier(name), bitwidth(bitwidth)] => {
-                core::PortDef::new(name, core::Interval::new(range), bitwidth).map(PdOrInt::Pd)
+                core::PortDef::new(name, range.into(), bitwidth).map(PdOrInt::Pd)
             },
             [interval_range(range), interval_range(exact), identifier(name), bitwidth(bitwidth)] => {
-                core::PortDef::new(name, core::Interval::new(range).with_exact(exact), bitwidth).map(PdOrInt::Pd)
+                core::PortDef::new(name, core::Interval::from(range).with_exact(exact), bitwidth).map(PdOrInt::Pd)
             }
         );
         pd.map_err(|err| input.error(format!("{err:?}")))
@@ -392,6 +392,13 @@ impl FilamentParser {
         ))
     }
 
+    fn fsm(input: Node) -> ParseResult<core::Fsm> {
+        Ok(match_nodes!(
+            input.into_children();
+            [identifier(bind), bitwidth(states), port(trigger)] => core::Fsm { bind, states, trigger }
+        ))
+    }
+
     fn command(input: Node) -> ParseResult<core::Command<IntervalTime>> {
         Ok(match_nodes!(
             input.into_children();
@@ -399,6 +406,7 @@ impl FilamentParser {
             [instance(cell)] => core::Command::Instance(cell),
             [when(wh)] => core::Command::When(wh),
             [connect(con)] => core::Command::Connect(con),
+            [fsm(fsm)] => core::Command::Fsm(fsm),
         ))
     }
 

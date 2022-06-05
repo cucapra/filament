@@ -85,7 +85,7 @@ fn merge_availability(intervals: Intervals) -> core::Interval<super::TimeRep> {
         })
         .unwrap();
 
-    core::Interval::new(within).with_exact(core::Range {
+    core::Interval::from(within).with_exact(core::Range {
         start: core::FsmIdxs::unit(event.clone(), start),
         end: core::FsmIdxs::unit(event.clone(), end),
     })
