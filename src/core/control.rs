@@ -236,7 +236,7 @@ impl<T: std::fmt::Debug> std::fmt::Display for When<T> {
 /// Representation of a finite state machine
 pub struct Fsm {
     /// Name of the FSM
-    pub bind: Id,
+    pub name: Id,
 
     /// Number of states in the FSM
     pub states: u64,
@@ -257,13 +257,13 @@ impl Fsm {
         }
         Err(Error::malformed(format!(
             "Unknown port: {}.{}",
-            self.bind, port
+            self.name, port
         )))
     }
 }
 
 impl std::fmt::Display for Fsm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "fsm {}[{}]({})", self.bind, self.states, self.trigger)
+        write!(f, "fsm {}[{}]({})", self.name, self.states, self.trigger)
     }
 }

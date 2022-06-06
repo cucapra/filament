@@ -146,7 +146,7 @@ fn check_fsm<'a>(
     ctx: &mut Context<'a>,
 ) -> FilamentResult<()> {
     let core::Fsm {
-        bind,
+        name: bind,
         states,
         trigger,
     } = fsm;
