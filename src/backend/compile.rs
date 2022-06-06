@@ -47,27 +47,8 @@ impl<'a> Context<'a> {
         &self,
         comp: &core::Id,
     ) -> Vec<(ir::Id, u64, ir::Direction, ir::Attributes)> {
-        let sig = self.sigs[comp];
-        sig.inputs
-            .iter()
-            .chain(sig.interface_signals.iter())
-            .map(|pd| {
-                (
-                    ir::Id::from(pd.name.id.clone()),
-                    pd.bitwidth,
-                    ir::Direction::Input,
-                    ir::Attributes::default(),
-                )
-            })
-            .chain(sig.outputs.iter().map(|pd| {
-                (
-                    ir::Id::from(pd.name.id.clone()),
-                    pd.bitwidth,
-                    ir::Direction::Output,
-                    ir::Attributes::default(),
-                )
-            }))
-            .collect_vec()
+        // XXX(rachit): This is uneccesary. We should just save these into the context.
+        as_port_defs(self.sigs[comp])
     }
 
     fn add_invoke(&mut self, inv: core::Id, comp: core::Id) {
@@ -189,6 +170,31 @@ fn compile_command(cmd: core::Command<TimeRep>, ctx: &mut Context) {
     }
 }
 
+fn as_port_defs(
+    sig: &core::Signature<TimeRep>,
+) -> Vec<(ir::Id, u64, ir::Direction, ir::Attributes)> {
+    sig.inputs
+        .iter()
+        .chain(sig.interface_signals.iter())
+        .map(|pd| {
+            (
+                ir::Id::from(pd.name.id.clone()),
+                pd.bitwidth,
+                ir::Direction::Input,
+                ir::Attributes::default(),
+            )
+        })
+        .chain(sig.outputs.iter().map(|pd| {
+            (
+                ir::Id::from(pd.name.id.clone()),
+                pd.bitwidth,
+                ir::Direction::Output,
+                ir::Attributes::default(),
+            )
+        }))
+        .collect_vec()
+}
+
 fn compile_component(
     comp: core::Component<TimeRep>,
     sigs: &HashMap<core::Id, &core::Signature<TimeRep>>,
@@ -238,11 +244,38 @@ fn compile_component(
     Ok(component)
 }
 
-fn get_library() -> CalyxResult<ir::Context> {
+fn compile_signature(sig: &core::Signature<TimeRep>) -> ir::Primitive {
+    ir::Primitive {
+        name: sig.name.id.clone().into(),
+        params: Vec::new(),
+        signature: as_port_defs(sig)
+            .into_iter()
+            .map(|(name, value, direction, attributes)| ir::PortDef {
+                name,
+                width: ir::Width::Const { value },
+                direction,
+                attributes,
+            })
+            .collect(),
+        is_comb: false,
+        attributes: ir::Attributes::default(),
+    }
+}
+
+fn get_library(
+    externs: &[(String, Vec<core::Signature<TimeRep>>)],
+) -> CalyxResult<ir::Context> {
     let mut ws = frontend::Workspace::construct(
         &Some("../calyx/primitives/core.futil".into()),
         &PathBuf::from("../calyx"),
     )?;
+    // Add externals
+    ws.externs.extend(externs.iter().map(|(file, sigs)| {
+        (
+            PathBuf::from(file),
+            sigs.iter().map(compile_signature).collect(),
+        )
+    }));
 
     // define a fake main component
     let main = frontend::ast::ComponentDef::new("main", vec![]);
@@ -252,9 +285,24 @@ fn get_library() -> CalyxResult<ir::Context> {
     Ok(ctx)
 }
 
+fn print(ctx: ir::Context) -> FilamentResult<()> {
+    let mut out = &mut std::io::stdout();
+    for (path, prims) in ctx.lib.externs() {
+        ir::Printer::write_extern(
+            (&path, &prims.into_iter().map(|(_, v)| v).collect_vec()),
+            &mut out,
+        )?;
+    }
+    for comp in &ctx.components {
+        ir::Printer::write_component(comp, &mut out)?;
+        println!();
+    }
+    Ok(())
+}
+
 pub fn compile(ns: core::Namespace<TimeRep>) -> FilamentResult<()> {
-    let mut calyx_ctx =
-        get_library().map_err(|err| Error::misc(format!("{:?}", err)))?;
+    let mut calyx_ctx = get_library(&ns.externs)
+        .map_err(|err| Error::misc(format!("{:?}", err)))?;
 
     let sigs = ns
         .externs
@@ -270,17 +318,5 @@ pub fn compile(ns: core::Namespace<TimeRep>) -> FilamentResult<()> {
         )?);
     }
 
-    let mut out = &mut std::io::stdout();
-    for (path, prims) in calyx_ctx.lib.externs() {
-        ir::Printer::write_extern(
-            (&path, &prims.into_iter().map(|(_, v)| v).collect_vec()),
-            &mut out,
-        )?;
-    }
-    for comp in &calyx_ctx.components {
-        ir::Printer::write_component(comp, &mut out)?;
-        println!();
-    }
-
-    Ok(())
+    print(calyx_ctx)
 }
