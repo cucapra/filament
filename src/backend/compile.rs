@@ -257,9 +257,9 @@ pub fn compile(ns: core::Namespace<TimeRep>) -> FilamentResult<()> {
         get_library().map_err(|err| Error::misc(format!("{:?}", err)))?;
 
     let sigs = ns
-        .signatures
+        .externs
         .iter()
-        .map(|s| (s.name.clone(), s))
+        .flat_map(|(_, comps)| comps.iter().map(|s| (s.name.clone(), s)))
         .collect::<HashMap<_, _>>();
 
     for comp in ns.components {

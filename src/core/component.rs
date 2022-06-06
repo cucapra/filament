@@ -180,8 +180,8 @@ where
     /// Imported files
     pub imports: Vec<String>,
 
-    /// External definitions without a body.
-    pub signatures: Vec<Signature<T>>,
+    /// Define externals and their files
+    pub externs: Vec<(String, Vec<Signature<T>>)>,
 
     /// Components defined in this file
     pub components: Vec<Component<T>>,

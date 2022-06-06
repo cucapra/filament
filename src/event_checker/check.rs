@@ -156,10 +156,12 @@ pub fn check_and_transform(
 
     Ok(core::Namespace {
         imports: ns.imports,
-        signatures: ns
-            .signatures
+        externs: ns
+            .externs
             .into_iter()
-            .map(transform_signature)
+            .map(|(p, comps)| {
+                (p, comps.into_iter().map(transform_signature).collect())
+            })
             .collect_vec(),
         components,
     })

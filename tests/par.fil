@@ -1,18 +1,20 @@
 import "primitives/core.fil";
 
-extern component FastMult<G>(
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32,
-) -> (
-  @[G+1, G+2] out: 32,
-);
+extern "dummy.sv" {
+  component FastMult<G>(
+    @[G, G+1] left: 32,
+    @[G, G+1] right: 32,
+  ) -> (
+    @[G+1, G+2] out: 32,
+  );
 
-extern component SlowMult<G>(
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32,
-) -> (
-  @[G+3, G+4] out: 32,
-);
+  component SlowMult<G>(
+    @[G, G+1] left: 32,
+    @[G, G+1] right: 32,
+  ) -> (
+    @[G+3, G+4] out: 32,
+  );
+}
 
 component main<G>(
   @[G, G+1] a: 32,

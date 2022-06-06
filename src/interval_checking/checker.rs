@@ -288,9 +288,9 @@ pub fn check(
     namespace: &core::Namespace<super::TimeRep>,
 ) -> FilamentResult<()> {
     let mut sigs = namespace
-        .signatures
+        .externs
         .iter()
-        .map(|s| (s.name.clone(), s))
+        .flat_map(|(_, comps)| comps.iter().map(|s| (s.name.clone(), s)))
         .collect::<HashMap<_, _>>();
 
     for comp in &namespace.components {
