@@ -57,11 +57,11 @@ impl<'a> ConcreteInvoke<'a> {
         &self,
         port: &core::Id,
         is_input: bool,
-    ) -> FilamentResult<core::Interval<TimeRep>> {
+    ) -> FilamentResult<Option<core::Interval<TimeRep>>> {
         match self {
             ConcreteInvoke::Concrete { binding, sig } => {
                 let pd = sig.get_port(port, is_input)?;
-                Ok(pd.liveness.resolve(binding))
+                Ok(pd.liveness.as_ref().map(|l| l.resolve(binding)))
             }
             ConcreteInvoke::Fsm { start_time, fsm } => {
                 // XXX(rachit): This is constructed everytime this method is called.
@@ -74,7 +74,7 @@ impl<'a> ConcreteInvoke<'a> {
                     start_time.clone().increment(idx),
                     start_time.clone().increment(idx + 1),
                 );
-                Ok(core::Interval::from(within).with_exact(exact))
+                Ok(Some(core::Interval::from(within).with_exact(exact)))
             }
             ConcreteInvoke::This { sig } => {
                 Ok(sig.get_port(port, is_input)?.liveness.clone())
@@ -86,7 +86,7 @@ impl<'a> ConcreteInvoke<'a> {
     pub fn port_requirements(
         &self,
         port: &core::Id,
-    ) -> FilamentResult<core::Interval<TimeRep>> {
+    ) -> FilamentResult<Option<core::Interval<TimeRep>>> {
         self.resolve_port(port, true)
     }
 
@@ -94,7 +94,7 @@ impl<'a> ConcreteInvoke<'a> {
     pub fn port_guarantees(
         &self,
         port: &core::Id,
-    ) -> FilamentResult<core::Interval<TimeRep>> {
+    ) -> FilamentResult<Option<core::Interval<TimeRep>>> {
         self.resolve_port(port, false)
     }
 }
@@ -186,7 +186,7 @@ impl<'a> Context<'a> {
             .inputs
             .iter()
             .chain(sig.interface_signals.iter())
-            .map(|pd| &pd.name)
+            .filter_map(|pd| pd.liveness.as_ref().map(|_| &pd.name))
             .cloned()
             .collect();
         self.remaining_assigns.insert(bind, ports);
@@ -282,12 +282,11 @@ impl<'a> Context<'a> {
                  * always available. */
                 Ok(None)
             }
-            core::Port::ThisPort(port) => Ok(Some(
-                self.get_invoke(&super::THIS.into())?
-                    .port_guarantees(port)?,
-            )),
+            core::Port::ThisPort(port) => Ok(self
+                .get_invoke(&super::THIS.into())?
+                .port_guarantees(port)?),
             core::Port::CompPort { comp, name } => {
-                Ok(Some(self.get_invoke(comp)?.port_guarantees(name)?))
+                Ok(self.get_invoke(comp)?.port_guarantees(name)?)
             }
         }
     }
@@ -295,7 +294,7 @@ impl<'a> Context<'a> {
     pub fn port_requirements(
         &self,
         port: &core::Port,
-    ) -> FilamentResult<core::Interval<super::TimeRep>> {
+    ) -> FilamentResult<Option<core::Interval<super::TimeRep>>> {
         match port {
             core::Port::Constant(_) => {
                 /* Constants do not generate a proof obligation because they are

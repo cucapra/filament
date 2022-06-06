@@ -14,7 +14,7 @@ where
     pub name: Id,
 
     /// Liveness condition for the Port
-    pub liveness: Interval<T>,
+    pub liveness: Option<Interval<T>>,
 
     /// Bitwidth of the port
     pub bitwidth: u64,
@@ -26,7 +26,7 @@ where
 {
     pub fn new(
         name: Id,
-        liveness: Interval<T>,
+        liveness: Option<Interval<T>>,
         bitwidth: u64,
     ) -> FilamentResult<Self> {
         Ok(Self {
@@ -59,7 +59,7 @@ impl PortDef<frontend::IntervalTime> {
         PortDef {
             name,
             bitwidth: 1,
-            liveness,
+            liveness: Some(liveness),
         }
     }
 }
@@ -145,7 +145,9 @@ where
             .iter()
             .chain(self.outputs.iter())
             .chain(self.interface_signals.iter())
-            .flat_map(|pd| pd.liveness.well_formed())
+            .flat_map(|mpd| {
+                mpd.liveness.as_ref().map(|pd| pd.well_formed()).unwrap_or_default()
+            })
     }
 }
 

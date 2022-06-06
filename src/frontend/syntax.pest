@@ -81,7 +81,7 @@ interface = {
   "@interface" ~ "<" ~ identifier ~ "," ~ bitwidth ~ ">"
 }
 port_def = {
-  (interval | interface) ~ identifier ~ ":" ~ (bitwidth | identifier)
+  (interval | interface)? ~ identifier ~ ":" ~ (bitwidth | identifier)
 }
 
 arrow = { "->" }

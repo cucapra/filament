@@ -97,7 +97,7 @@ fn transform_port_def(
     pd: core::PortDef<frontend::IntervalTime>,
 ) -> core::PortDef<core::FsmIdxs> {
     core::PortDef {
-        liveness: transform_interval(pd.liveness),
+        liveness: pd.liveness.map(transform_interval),
         name: pd.name,
         bitwidth: pd.bitwidth,
     }

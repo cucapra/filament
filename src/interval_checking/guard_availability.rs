@@ -33,7 +33,12 @@ fn guard_availability(
                         "Guards cannot contain constants",
                     ))
                 }
-            };
+            }
+            .ok_or_else(|| {
+                Error::malformed(
+                    "Guard cannot contain ports that provide no guarantees",
+                )
+            })?;
 
             if interval.exact.is_none() {
                 return Err(Error::malformed(
