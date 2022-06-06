@@ -6,5 +6,5 @@ paths = [
   "tests/*.fil"
 ]
 cmd = """
-./target/debug/filament {}
+./target/debug/filament {} --check
 """

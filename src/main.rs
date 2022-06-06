@@ -20,11 +20,13 @@ fn main() -> errors::FilamentResult<()> {
         let path: std::path::PathBuf = file.into();
         let imp = frontend::FilamentParser::parse_file(&path)?;
         ns.components.extend(imp.components.into_iter());
-        ns.signatures.extend(imp.signatures.into_iter());
+        ns.externs.extend(imp.externs.into_iter());
         imports.extend(imp.imports.into_iter());
     }
     let ns = event_checker::check_and_transform(ns)?;
     interval_checking::check(&ns)?;
-    backend::compile(ns)?;
+    if !opts.check {
+        backend::compile(ns)?;
+    }
     Ok(())
 }

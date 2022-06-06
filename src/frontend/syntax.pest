@@ -46,7 +46,7 @@ component = {
   "component" ~ signature ~ "{" ~ command* ~ "}"
 }
 external = {
-  "extern" ~ "component" ~ signature ~ ";"
+  "extern" ~ string_lit ~ "{" ~  ("component" ~ signature ~ ";")*  ~ "}"
 }
 
 comp_or_ext = {

@@ -29,7 +29,7 @@ type Ports = Vec<core::PortDef<IntervalTime>>;
 const _GRAMMAR: &str = include_str!("syntax.pest");
 
 pub enum ExtOrComp {
-    Ext(core::Signature<IntervalTime>),
+    Ext((String, Vec<core::Signature<IntervalTime>>)),
     Comp(core::Component<IntervalTime>),
 }
 
@@ -426,10 +426,12 @@ impl FilamentParser {
         ))
     }
 
-    fn external(input: Node) -> ParseResult<core::Signature<IntervalTime>> {
+    fn external(
+        input: Node,
+    ) -> ParseResult<(String, Vec<core::Signature<IntervalTime>>)> {
         Ok(match_nodes!(
             input.into_children();
-            [signature(sig)] => sig,
+            [string_lit(path), signature(sigs)..] => (path, sigs.collect()),
         ))
     }
 
@@ -454,12 +456,12 @@ impl FilamentParser {
             [imports(imps), comp_or_ext(mixed).., _EOI] => {
                 let mut namespace = core::Namespace {
                     imports: imps,
-                    signatures: vec![],
+                    externs: vec![],
                     components: vec![],
                 };
                 for m in mixed {
                     match m {
-                        ExtOrComp::Ext(sig) => namespace.signatures.push(sig),
+                        ExtOrComp::Ext(sig) => namespace.externs.push(sig),
                         ExtOrComp::Comp(comp) => namespace.components.push(comp),
                     }
                 }
