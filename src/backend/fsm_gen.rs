@@ -1,14 +1,13 @@
 use crate::core;
+use crate::errors::FilamentResult;
 use calyx::ir::{self, RRC};
 use calyx::{build_assignments, guard, structure};
 use std::rc::Rc;
 
-pub struct Fsm<'a> {
+/// A Calyx FSM that increments every cycle.
+pub struct Fsm {
     /// Fsm being constructed
-    sig: &'a core::Fsm,
-
-    /// Calyx port that triggers this Fsm
-    trigger: RRC<ir::Port>,
+    sig: core::Fsm,
 
     /// Output port for the FSM register
     output_port: RRC<ir::Port>,
@@ -17,12 +16,11 @@ pub struct Fsm<'a> {
     start_event: ir::Guard,
 }
 
-impl<'a> Fsm<'a> {
+impl Fsm {
     /// Construct a new Fsm from signature. Instantiates assignments
     /// needed to start, increment and reset the fsm.
-    pub fn new(sig: &'a core::Fsm, builder: &mut ir::Builder) -> Self {
+    pub fn new(sig: core::Fsm, builder: &mut ir::Builder) -> Self {
         let this = Rc::clone(&builder.component.signature);
-        let trigger = this.borrow().get("go");
 
         // Construct circuitry for the FSM
         let fsm = builder.add_primitive(&*sig.name.id, "std_reg", &[32]);
@@ -37,7 +35,7 @@ impl<'a> Fsm<'a> {
         // go & fsm.out == 32'd0
         let fsm_out = guard!(fsm["out"]);
         let start =
-            fsm_out.clone().eq(guard!(zero["out"])) & guard!(this["out"]);
+            fsm_out.clone().eq(guard!(zero["out"])) & guard!(this["go"]);
 
         // (fsm.out > 0 & fsm.out < last) | start
         let incr = fsm_out.clone().gt(guard!(zero["out"]))
@@ -67,14 +65,26 @@ impl<'a> Fsm<'a> {
         let output_port = fsm.borrow().get("out");
         Fsm {
             sig,
-            trigger,
             output_port,
             start_event: start,
         }
     }
 
     /// Generate guard associated with a particular state on the Fsm.
-    pub fn event(&self, state: u64) -> ir::Guard {
-        todo!()
+    pub fn event(
+        &self,
+        port: &core::Id,
+        builder: &mut ir::Builder,
+    ) -> FilamentResult<ir::Guard> {
+        let st = self.sig.state(port)?;
+        if st == 0 {
+            Ok(self.start_event.clone())
+        } else {
+            structure!(builder;
+                let c = constant(st, 32);
+            );
+            let c_out = guard!(c["out"]);
+            Ok(c_out.eq(self.output_port.clone().into()))
+        }
     }
 }
