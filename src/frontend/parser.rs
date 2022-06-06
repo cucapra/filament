@@ -155,11 +155,14 @@ impl FilamentParser {
             [interface((time_var, len)), identifier(name), bitwidth(_)] => {
                 Ok(PdOrInt::Int((name, time_var, len)))
             },
+            [identifier(name), bitwidth(bitwidth)] => {
+                core::PortDef::new(name, None, bitwidth).map(PdOrInt::Pd)
+            },
             [interval_range(range), identifier(name), bitwidth(bitwidth)] => {
-                core::PortDef::new(name, range.into(), bitwidth).map(PdOrInt::Pd)
+                core::PortDef::new(name, Some(range.into()), bitwidth).map(PdOrInt::Pd)
             },
             [interval_range(range), interval_range(exact), identifier(name), bitwidth(bitwidth)] => {
-                core::PortDef::new(name, core::Interval::from(range).with_exact(exact), bitwidth).map(PdOrInt::Pd)
+                core::PortDef::new(name, Some(core::Interval::from(range).with_exact(exact)), bitwidth).map(PdOrInt::Pd)
             }
         );
         pd.map_err(|err| input.error(format!("{err:?}")))

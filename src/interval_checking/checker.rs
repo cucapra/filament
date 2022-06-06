@@ -17,6 +17,13 @@ fn check_connect(
     ctx: &mut Context,
 ) -> FilamentResult<()> {
     ctx.remove_remaning_assign(dst)?;
+
+    let maybe_requirement = ctx.port_requirements(dst)?;
+    if maybe_requirement.is_none() {
+        return Ok(())
+    }
+    let requirement = maybe_requirement.unwrap();
+
     let maybe_guarantee = ctx.port_guarantees(src)?;
 
     // If a guard is present, use its availablity instead.
@@ -60,7 +67,6 @@ fn check_connect(
         maybe_guarantee
     };
 
-    let requirement = ctx.port_requirements(dst)?;
     // If we have: dst = src. We need:
     // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
     // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
