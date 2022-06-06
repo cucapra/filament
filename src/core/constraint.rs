@@ -121,7 +121,7 @@ where
         iter::once(cons)
     }
 
-    /// Construct a [IntervalFact] with `tag` set to [FactType::Equality].
+    /// Check that the `left` range is equal to `right`
     pub fn equality(
         left: Range<T>,
         right: Range<T>,
@@ -133,7 +133,7 @@ where
         .into_iter()
     }
 
-    /// Construct a [IntervalFact] with `tag` set to [FactType::Subset].
+    /// Check that the `left` range is a subset of `right`
     /// [ls, le] \subsetof [rs, re] <=> ls >= rs && le <= re
     pub fn subset(
         left: Range<T>,

@@ -399,7 +399,7 @@ impl FilamentParser {
     fn fsm(input: Node) -> ParseResult<core::Fsm> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(bind), bitwidth(states), port(trigger)] => core::Fsm { bind, states, trigger }
+            [identifier(name), bitwidth(states), port(trigger)] => core::Fsm { name, states, trigger }
         ))
     }
 
