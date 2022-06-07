@@ -1,3 +1,4 @@
+---STDERR---
 Proof Obligations:
 [
     max(G+5,L+5) > G+4,

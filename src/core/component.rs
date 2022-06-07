@@ -146,7 +146,10 @@ where
             .chain(self.outputs.iter())
             .chain(self.interface_signals.iter())
             .flat_map(|mpd| {
-                mpd.liveness.as_ref().map(|pd| pd.well_formed()).unwrap_or_default()
+                mpd.liveness
+                    .as_ref()
+                    .map(|pd| pd.well_formed())
+                    .unwrap_or_default()
             })
     }
 }

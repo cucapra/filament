@@ -1,7 +1,7 @@
 module Mult(
-  input wire go,
   input wire clk,
   input wire reset,
+  /* @inteface<T> */ input wire go_T,
   /* @[T, T+2]    */ input logic [31:0] left,
   /* @[T, T+1]    */ input logic [31:0] right,
   /* @[T+2, T+3]  */ output logic [31:0] out
@@ -13,9 +13,9 @@ module Mult(
   logic [31:0] r_nxt;
   logic [31:0] out_nxt;
 
-  assign r_nxt = go ? right : '0;
   assign out_nxt =  nxt ? left * rtmp : '0;
 
+  assign r_nxt = go_T ? right : '0;
   always_ff @(posedge clk) begin
     if (reset)
       rtmp <= 0;
@@ -26,14 +26,14 @@ module Mult(
   // Perform the computation
   always_ff @(posedge clk) begin
     if (reset)
-      out_tmp <= out_nxt;
+      out_tmp <= 0;
     else
       out_tmp <= out_nxt;
   end
 
   // Mark next cycle for computation
   always_ff @(posedge clk) begin
-    if (go)
+    if (go_T)
       nxt <= 1;
     else
       nxt <= 0;

@@ -4,6 +4,7 @@ use calyx::ir;
 use calyx::ir::RRC;
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -14,7 +15,7 @@ use crate::{core, errors::FilamentResult};
 
 struct Context<'a> {
     /// Mapping from names to signatures for components and externals.
-    sigs: &'a HashMap<core::Id, &'a core::Signature<TimeRep>>,
+    sigs: &'a HashMap<core::Id, Vec<ir::PortDef<u64>>>,
 
     /// Mapping from instances to cells
     instances: HashMap<core::Id, RRC<ir::Cell>>,
@@ -31,7 +32,7 @@ struct Context<'a> {
 
 impl<'a> Context<'a> {
     fn new(
-        sigs: &'a HashMap<core::Id, &'a core::Signature<TimeRep>>,
+        sigs: &'a HashMap<core::Id, Vec<ir::PortDef<u64>>>,
         builder: ir::Builder<'a>,
     ) -> Self {
         Context {
@@ -43,12 +44,8 @@ impl<'a> Context<'a> {
         }
     }
 
-    fn get_sig(
-        &self,
-        comp: &core::Id,
-    ) -> Vec<(ir::Id, u64, ir::Direction, ir::Attributes)> {
-        // XXX(rachit): This is uneccesary. We should just save these into the context.
-        as_port_defs(self.sigs[comp])
+    fn get_sig(&self, comp: &core::Id) -> &Vec<ir::PortDef<u64>> {
+        &self.sigs[comp]
     }
 
     fn add_invoke(&mut self, inv: core::Id, comp: core::Id) {
@@ -146,7 +143,7 @@ fn compile_command(cmd: core::Command<TimeRep>, ctx: &mut Context) {
             let cell = ctx.builder.add_component(
                 name.id.clone(),
                 component.id.clone(),
-                ctx.get_sig(&component),
+                ctx.get_sig(&component).clone(),
             );
             ctx.instances.insert(name, cell);
         }
@@ -172,70 +169,76 @@ fn compile_command(cmd: core::Command<TimeRep>, ctx: &mut Context) {
 
 fn as_port_defs(
     sig: &core::Signature<TimeRep>,
-) -> Vec<(ir::Id, u64, ir::Direction, ir::Attributes)> {
-    sig.inputs
-        .iter()
-        .chain(sig.interface_signals.iter())
-        .map(|pd| {
-            (
-                ir::Id::from(pd.name.id.clone()),
-                pd.bitwidth,
-                ir::Direction::Input,
-                ir::Attributes::default(),
-            )
-        })
-        .chain(sig.outputs.iter().map(|pd| {
-            (
-                ir::Id::from(pd.name.id.clone()),
-                pd.bitwidth,
-                ir::Direction::Output,
-                ir::Attributes::default(),
-            )
-        }))
-        .collect_vec()
-}
-
-fn compile_component(
-    comp: core::Component<TimeRep>,
-    sigs: &HashMap<core::Id, &core::Signature<TimeRep>>,
-    lib: &ir::LibrarySignatures,
-) -> FilamentResult<ir::Component> {
-    let interface_ports = [
-        ("go".to_string(), 1, ir::Direction::Input),
-        ("clk".to_string(), 1, ir::Direction::Input),
-        ("reset".to_string(), 1, ir::Direction::Input),
-        ("done".to_string(), 1, ir::Direction::Output),
-    ];
-
-    let sig = comp.sig;
-    let ports = sig
+    extend: bool,
+) -> Vec<ir::PortDef<u64>> {
+    let mut ports: Vec<ir::PortDef<u64>> = sig
         .inputs
         .iter()
         .chain(sig.interface_signals.iter())
         .map(|pd| {
             (
-                pd.name.id.clone(),
+                ir::Id::from(pd.name.id.clone()),
                 pd.bitwidth,
                 ir::Direction::Input,
-                ir::Attributes::default(),
             )
+                .into()
         })
         .chain(sig.outputs.iter().map(|pd| {
             (
-                pd.name.id.clone(),
+                ir::Id::from(pd.name.id.clone()),
                 pd.bitwidth,
                 ir::Direction::Output,
-                ir::Attributes::default(),
             )
+                .into()
         }))
-        .chain(interface_ports.into_iter().map(|(name, bw, dir)| {
-            let mut attrs = ir::Attributes::default();
-            attrs.insert(name.clone(), 1);
-            (name, bw, dir, attrs)
-        }))
-        .collect();
+        .collect_vec();
 
-    let mut component = ir::Component::new(&sig.name.id, ports);
+    // Add annotations for interface ports
+    let mut interface_ports = INTERFACE_PORTS
+        .iter()
+        .map(|pd| pd.0)
+        .collect::<HashSet<_>>();
+    for pd in &mut ports {
+        if interface_ports.contains(pd.name.as_ref()) {
+            interface_ports.remove(pd.name.as_ref());
+            pd.attributes.insert(pd.name.clone(), 1);
+        }
+    }
+    // Add missing interface ports
+    if extend {
+        for name in interface_ports {
+            let mut attrs = ir::Attributes::default();
+            attrs.insert(name, 1);
+            ports.push(ir::PortDef {
+                name: name.into(),
+                width: 1,
+                direction: if name == "done" {
+                    ir::Direction::Output
+                } else {
+                    ir::Direction::Input
+                },
+                attributes: attrs,
+            })
+        }
+    }
+
+    ports
+}
+
+const INTERFACE_PORTS: [(&str, u64, calyx::ir::Direction); 4] = [
+    ("go", 1, ir::Direction::Input),
+    ("clk", 1, ir::Direction::Input),
+    ("reset", 1, ir::Direction::Input),
+    ("done", 1, ir::Direction::Output),
+];
+
+fn compile_component(
+    comp: core::Component<TimeRep>,
+    sigs: &HashMap<core::Id, Vec<ir::PortDef<u64>>>,
+    lib: &ir::LibrarySignatures,
+) -> FilamentResult<ir::Component> {
+    let ports = as_port_defs(&comp.sig, true);
+    let mut component = ir::Component::new(&comp.sig.name.id, ports);
     let builder = ir::Builder::new(&mut component, lib).not_generated();
     let mut ctx = Context::new(sigs, builder);
     for cmd in comp.body {
@@ -248,14 +251,21 @@ fn compile_signature(sig: &core::Signature<TimeRep>) -> ir::Primitive {
     ir::Primitive {
         name: sig.name.id.clone().into(),
         params: Vec::new(),
-        signature: as_port_defs(sig)
+        signature: as_port_defs(sig, false)
             .into_iter()
-            .map(|(name, value, direction, attributes)| ir::PortDef {
-                name,
-                width: ir::Width::Const { value },
-                direction,
-                attributes,
-            })
+            .map(
+                |ir::PortDef {
+                     name,
+                     width,
+                     direction,
+                     attributes,
+                 }| ir::PortDef {
+                    name,
+                    width: ir::Width::Const { value: width },
+                    direction,
+                    attributes,
+                },
+            )
             .collect(),
         is_comb: false,
         attributes: ir::Attributes::default(),
@@ -307,7 +317,11 @@ pub fn compile(ns: core::Namespace<TimeRep>) -> FilamentResult<()> {
     let sigs = ns
         .externs
         .iter()
-        .flat_map(|(_, comps)| comps.iter().map(|s| (s.name.clone(), s)))
+        .flat_map(|(_, comps)| {
+            comps
+                .iter()
+                .map(|s| (s.name.clone(), as_port_defs(s, false)))
+        })
         .collect::<HashMap<_, _>>();
 
     for comp in ns.components {
