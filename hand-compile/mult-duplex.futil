@@ -31,6 +31,48 @@ extern "Mult.sv" {
   primitive Mult(@go go: 1, @clk clk: 1, @reset reset: 1, left: 32, right: 32) -> (out: 32);
 }
 
+component fsm5(@go go: 1, _0: 1, _1: 1, _2: 1, _3: 1, _4: 1, _5: 1) -> (@done done: 1) {
+  cells {
+    f = std_reg(32);
+    incr = std_add(32);
+
+    t_incr_cond = std_wire(1);
+    t_start_event = std_wire(1);
+    t_end_state = std_wire(1);
+  }
+  wires {
+    // Start event is generated when the go signal arrives and the FSM is
+    // in state 0.
+    t_start_event.in = go & t.out == 32'd0 ? 1'd1;
+
+    // Trigger the component when go is received till the FSM is
+    // done counting.
+    t_incr_cond.in = t_start_event.out | (t.out > 32'd0 & t.out < 32'd5) ? 1'd1;
+
+    // Maximum count with T is 5 so keep incrementing it.
+    t.in = t_incr_cond.out ? incr.out;
+    t.write_en = t_incr_cond.out ? 1'd1;
+    incr.left = t.out;
+    incr.right = 32'd1;
+
+    // Wires for events
+    _0 = t_start_event;
+    _1 = t.out == 32'd1 ? 1'd1;
+    _2 = t.out == 32'd2 ? 1'd1;
+    _3 = t.out == 32'd3 ? 1'd1;
+    _4 = t.out == 32'd4 ? 1'd1;
+    _5 = t_end_state.out;
+
+    // Done condition
+    done = t.out == 32'd5 ? 1'd1;
+
+    // Reset the T signal in the end state
+    t_end_state.in = t.out == 32'd5 ? 1'd1;
+    t.in = t_end_state.out ? 32'd0;
+    t.write_en = t_end_state.out ? 1'd1;
+  }
+}
+
 component main(@go go: 1, @reset reset: 1, l0: 32, l1: 32, r0: 32, r1: 32) -> (out0: 32, out1: 32) {
   cells {
     M = Mult();

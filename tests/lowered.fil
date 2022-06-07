@@ -1,5 +1,7 @@
 extern "mult.sv" {
   component Mult<T>(
+    clk: 1,
+    reset: 1,
     // Explicit interface signal that shows evidence for event "T".
     @interface<T, 2> go_T: 1,
     // ---------

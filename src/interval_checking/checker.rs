@@ -20,7 +20,7 @@ fn check_connect(
 
     let maybe_requirement = ctx.port_requirements(dst)?;
     if maybe_requirement.is_none() {
-        return Ok(())
+        return Ok(());
     }
     let requirement = maybe_requirement.unwrap();
 
@@ -265,7 +265,7 @@ fn check_component(
         .iter()
         .flat_map(|(f, _)| f.simplify())
         .collect::<Vec<&_>>();
-    println!("Proof Obligations:\n{:#?}", obligations);
+    eprintln!("Proof Obligations:\n{:#?}", obligations);
 
     if let Some(fact) = super::prove(
         comp.sig.abstract_vars.iter(),
@@ -280,7 +280,7 @@ fn check_component(
             return err;
         }
     } else {
-        println!("All proof obligations satisfied");
+        eprintln!("All proof obligations satisfied");
     }
 
     Ok(())
