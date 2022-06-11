@@ -11,10 +11,8 @@ component main<G>(
   A := new Add;
   M := new Mult;
 
-  when G {
-    m0 := M<G>(a, b);
-  }
-  when G+3 { a0 := A<G+3>(m0.out, c); }
+  m0 := M<G>(a, b);
+  a0 := A<G+3>(m0.out, c);
 
   out = a0.out;
 }

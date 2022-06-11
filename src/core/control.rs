@@ -22,7 +22,6 @@ impl std::fmt::Display for Port {
 /// Command in a component
 pub enum Command<T> {
     Invoke(Invoke<T>),
-    When(When<T>),
     Instance(Instance),
     Connect(Connect),
     Fsm(Fsm),
@@ -40,24 +39,9 @@ impl<T> From<Instance> for Command<T> {
     }
 }
 
-impl<T> From<When<T>> for Command<T> {
-    fn from(v: When<T>) -> Self {
-        Self::When(v)
-    }
-}
-
 impl<T> From<Invoke<T>> for Command<T> {
     fn from(v: Invoke<T>) -> Self {
         Self::Invoke(v)
-    }
-}
-
-impl<T> Command<T> {
-    pub fn when(time: T, body: Vec<Command<T>>) -> Self {
-        Command::When(When {
-            time,
-            commands: body,
-        })
     }
 }
 
@@ -65,7 +49,6 @@ impl<T: std::fmt::Debug> std::fmt::Display for Command<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Command::Invoke(inv) => write!(f, "{}", inv),
-            Command::When(wh) => write!(f, "{}", wh),
             Command::Instance(ins) => write!(f, "{}", ins),
             Command::Connect(con) => write!(f, "{}", con),
             Command::Fsm(fsm) => write!(f, "{}", fsm),

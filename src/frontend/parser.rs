@@ -369,15 +369,6 @@ impl FilamentParser {
         ))
     }
 
-    fn when(input: Node) -> ParseResult<core::When<IntervalTime>> {
-        Ok(match_nodes!(
-            input.into_children();
-            [time(time), command(body)..] => core::When {
-                time, commands: body.collect()
-            }
-        ))
-    }
-
     fn guard(input: Node) -> ParseResult<core::Guard> {
         Ok(match_nodes!(
             input.into_children();
@@ -411,7 +402,6 @@ impl FilamentParser {
             input.into_children();
             [invocation(assign)] => core::Command::Invoke(assign),
             [instance(cell)] => core::Command::Instance(cell),
-            [when(wh)] => core::Command::When(wh),
             [connect(con)] => core::Command::Connect(con),
             [fsm(fsm)] => core::Command::Fsm(fsm),
         ))

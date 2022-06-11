@@ -289,11 +289,10 @@ impl<'a> Context<'a> {
             core::Port::ThisPort(port) => self
                 .get_invoke(&super::THIS.into())?
                 .port_guarantees(port)?
-                .map(|f| Some(f)),
-            core::Port::CompPort { comp, name } => self
-                .get_invoke(comp)?
-                .port_guarantees(name)?
-                .map(|f| Some(f)),
+                .map(Some),
+            core::Port::CompPort { comp, name } => {
+                self.get_invoke(comp)?.port_guarantees(name)?.map(Some)
+            }
         })
     }
 

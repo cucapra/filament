@@ -78,15 +78,6 @@ fn transform_control(
                 .with_span(pos)
                 .into())
         }
-        core::Command::When(core::When { commands, time }) => {
-            Ok(core::Command::when(
-                transform_time(time),
-                commands
-                    .into_iter()
-                    .map(transform_control)
-                    .collect::<FilamentResult<Vec<_>>>()?,
-            ))
-        }
         core::Command::Instance(ins) => Ok(core::Command::Instance(ins)),
         core::Command::Connect(con) => Ok(core::Command::Connect(con)),
         core::Command::Fsm(fsm) => Ok(core::Command::Fsm(fsm)),

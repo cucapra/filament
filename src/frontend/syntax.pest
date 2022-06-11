@@ -130,16 +130,11 @@ invocation = {
   | identifier ~ ":=" ~ "invoke" ~ identifier ~ time_args ~ ";"
 }
 
-// =========== When ============
-when = {
-  "when" ~ time ~ "{" ~ command* ~ "}"
-}
-
 fsm = {
   "fsm" ~ identifier ~ "[" ~ bitwidth ~ "]" ~ "(" ~ port ~ ")" ~ ";"
 }
 
 // ========== Commands ==========
 command = {
-  instance | invocation | when | connect | fsm
+  instance | invocation | connect | fsm
 }

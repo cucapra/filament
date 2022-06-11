@@ -201,14 +201,6 @@ fn check_fsm<'a>(
     )
 }
 
-fn check_when<'a>(
-    when: &'a core::When<super::TimeRep>,
-    ctx: &mut Context<'a>,
-) -> FilamentResult<()> {
-    // TODO: Do something with the time variable for the when block
-    check_commands(&when.commands, ctx)
-}
-
 fn check_commands<'a>(
     cmds: &'a [core::Command<super::TimeRep>],
     ctx: &mut Context<'a>,
@@ -224,7 +216,6 @@ where
                 ctx.add_instance(name.clone(), component)?
             }
             core::Command::Fsm(fsm) => check_fsm(fsm, ctx)?,
-            core::Command::When(wh) => check_when(wh, ctx)?,
             core::Command::Connect(
                 con @ core::Connect {
                     dst, src, guard, ..
