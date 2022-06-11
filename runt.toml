@@ -3,7 +3,7 @@ ver = "0.4.0"
 [[tests]]
 name = "tests"
 paths = [
-  "tests/*.fil"
+  "tests/**/*.fil"
 ]
 cmd = """
 ./target/debug/filament {} --check

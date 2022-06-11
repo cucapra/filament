@@ -19,12 +19,18 @@ fn check_connect(
     ctx.remove_remaning_assign(dst)?;
 
     let maybe_requirement = ctx.port_requirements(dst)?;
-    if maybe_requirement.is_none() {
+    // If the port does not have any requirement then we don't have any proofs to discharge.
+    let requirement = if let Some(req) = maybe_requirement {
+        req
+    } else {
         return Ok(());
-    }
-    let requirement = maybe_requirement.unwrap();
+    };
 
-    let maybe_guarantee = ctx.port_guarantees(src)?;
+    let maybe_guarantee = if let Some(g) = ctx.port_guarantees(src)? {
+        g
+    } else {
+        return Err(Error::malformed("Source port does not provide any guarantees and cannot be used to fufill requirements of destination port"));
+    };
 
     // If a guard is present, use its availablity instead.
     let maybe_guarantee = if let Some(g) = &guard {
@@ -156,13 +162,16 @@ fn check_fsm<'a>(
         states,
         trigger,
     } = fsm;
-    let guarantee = ctx.port_guarantees(trigger).map(|opt| {
-        opt.ok_or_else(|| {
-            Error::malformed(
-                "Port does not provide required guarantee".to_string(),
-            )
-        })
-    })??;
+
+    let guarantee = match ctx.port_guarantees(trigger)? {
+        Some(Some(g)) => Ok(g),
+        Some(None) => Err(Error::malformed(
+            "Constant ports cannot be used to trigger fsm",
+        )),
+        None => Err(Error::malformed(
+            "Port provides no guarantees and cannot be used as fsm trigger",
+        )),
+    }?;
 
     let mb_offset = guarantee.as_exact_offset();
     let (ev, start, end) = if let Some(offset) = mb_offset {

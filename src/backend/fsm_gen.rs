@@ -1,9 +1,8 @@
+use super::Context;
 use crate::core;
 use crate::errors::FilamentResult;
 use calyx::ir::{self, RRC};
 use calyx::{build_assignments, guard, structure};
-use std::rc::Rc;
-
 /// A Calyx FSM that increments every cycle.
 pub struct Fsm {
     /// Fsm being constructed
@@ -19,8 +18,10 @@ pub struct Fsm {
 impl Fsm {
     /// Construct a new Fsm from signature. Instantiates assignments
     /// needed to start, increment and reset the fsm.
-    pub fn new(sig: core::Fsm, builder: &mut ir::Builder) -> Self {
-        let this = Rc::clone(&builder.component.signature);
+    pub fn new(sig: core::Fsm, ctx: &mut Context) -> Self {
+        let (trigger_port, guard) = ctx.compile_port(&sig.trigger);
+        assert!(guard.is_none(), "Trigger port implies guard");
+        let builder = &mut ctx.builder;
 
         // Construct circuitry for the FSM
         let fsm = builder.add_primitive(&*sig.name.id, "std_reg", &[32]);
@@ -35,7 +36,7 @@ impl Fsm {
         // go & fsm.out == 32'd0
         let fsm_out = guard!(fsm["out"]);
         let start =
-            fsm_out.clone().eq(guard!(zero["out"])) & guard!(this["go"]);
+            fsm_out.clone().eq(guard!(zero["out"])) & trigger_port.into();
 
         // (fsm.out > 0 & fsm.out < last) | start
         let incr = fsm_out.clone().gt(guard!(zero["out"]))

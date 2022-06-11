@@ -13,7 +13,10 @@ use super::TimeRep;
 use crate::errors::Error;
 use crate::{core, errors::FilamentResult};
 
-struct Context<'a> {
+pub struct Context<'a> {
+    /// Builder for the current component
+    pub builder: ir::Builder<'a>,
+
     /// Mapping from names to signatures for components and externals.
     sigs: &'a HashMap<core::Id, Vec<ir::PortDef<u64>>>,
 
@@ -23,11 +26,43 @@ struct Context<'a> {
     /// Mapping from invocation name to instance
     invokes: HashMap<core::Id, RRC<ir::Cell>>,
 
-    /// Builder for the current component
-    builder: ir::Builder<'a>,
-
     /// Mapping from name to FSMs
     fsms: HashMap<core::Id, Fsm>,
+}
+
+impl Context<'_> {
+    pub fn compile_port(
+        &mut self,
+        port: &core::Port,
+    ) -> (RRC<ir::Port>, Option<ir::Guard>) {
+        match port {
+            core::Port::ThisPort(p) => {
+                let this = self.builder.component.signature.borrow();
+                (this.get(p), None)
+            }
+            core::Port::CompPort { comp, name } => {
+                if let Some(fsm) = self.fsms.get(comp) {
+                    let cr = self.builder.add_constant(1, 1);
+                    let c = cr.borrow();
+                    (
+                        c.get("out"),
+                        Some(
+                            fsm.event(name, &mut self.builder)
+                                .expect("Undefined port on fsm"),
+                        ),
+                    )
+                } else {
+                    let cell = self.invokes[comp].borrow();
+                    (cell.get(name), None)
+                }
+            }
+            core::Port::Constant(c) => {
+                let cr = self.builder.add_constant(*c, 32);
+                let c = cr.borrow();
+                (c.get("out"), None)
+            }
+        }
+    }
 }
 
 impl<'a> Context<'a> {
@@ -54,39 +89,6 @@ impl<'a> Context<'a> {
             .get(&comp)
             .unwrap_or_else(|| panic!("Unknown instance: {}", comp));
         self.invokes.insert(inv, Rc::clone(cell));
-    }
-}
-
-fn compile_port(
-    port: core::Port,
-    ctx: &mut Context,
-) -> (RRC<ir::Port>, Option<ir::Guard>) {
-    match port {
-        core::Port::ThisPort(p) => {
-            let this = ctx.builder.component.signature.borrow();
-            (this.get(p), None)
-        }
-        core::Port::CompPort { comp, name } => {
-            if let Some(fsm) = ctx.fsms.get(&comp) {
-                let cr = ctx.builder.add_constant(1, 1);
-                let c = cr.borrow();
-                (
-                    c.get("out"),
-                    Some(
-                        fsm.event(&name, &mut ctx.builder)
-                            .expect("Undefined port on fsm"),
-                    ),
-                )
-            } else {
-                let cell = ctx.invokes[&comp].borrow();
-                (cell.get(name), None)
-            }
-        }
-        core::Port::Constant(c) => {
-            let cr = ctx.builder.add_constant(c, 32);
-            let c = cr.borrow();
-            (c.get("out"), None)
-        }
     }
 }
 
@@ -127,7 +129,7 @@ fn compile_command(cmd: core::Command<TimeRep>, ctx: &mut Context) {
         }
         core::Command::Fsm(fsm) => {
             let name = fsm.name.clone();
-            let f = Fsm::new(fsm, &mut ctx.builder);
+            let f = Fsm::new(fsm, ctx);
             ctx.fsms.insert(name, f);
         }
         core::Command::Invoke(core::Invoke {
@@ -150,9 +152,9 @@ fn compile_command(cmd: core::Command<TimeRep>, ctx: &mut Context) {
         core::Command::Connect(core::Connect {
             dst, src, guard, ..
         }) => {
-            let (dst, g) = compile_port(dst, ctx);
+            let (dst, g) = ctx.compile_port(&dst);
             assert!(g.is_none(), "Destination has a guard");
-            let (src, g) = compile_port(src, ctx);
+            let (src, g) = ctx.compile_port(&src);
             let guard = match (guard, g) {
                 (None, None) => ir::Guard::True,
                 (None, Some(g)) => g,
@@ -212,11 +214,7 @@ fn as_port_defs(
             ports.push(ir::PortDef {
                 name: name.into(),
                 width: 1,
-                direction: if name == "done" {
-                    ir::Direction::Output
-                } else {
-                    ir::Direction::Input
-                },
+                direction: ir::Direction::Input,
                 attributes: attrs,
             })
         }
@@ -225,11 +223,9 @@ fn as_port_defs(
     ports
 }
 
-const INTERFACE_PORTS: [(&str, u64, calyx::ir::Direction); 4] = [
-    ("go", 1, ir::Direction::Input),
+const INTERFACE_PORTS: [(&str, u64, calyx::ir::Direction); 2] = [
     ("clk", 1, ir::Direction::Input),
     ("reset", 1, ir::Direction::Input),
-    ("done", 1, ir::Direction::Output),
 ];
 
 fn compile_component(
@@ -239,6 +235,7 @@ fn compile_component(
 ) -> FilamentResult<ir::Component> {
     let ports = as_port_defs(&comp.sig, true);
     let mut component = ir::Component::new(&comp.sig.name.id, ports);
+    component.attributes.insert("nointerface", 1);
     let builder = ir::Builder::new(&mut component, lib).not_generated();
     let mut ctx = Context::new(sigs, builder);
     for cmd in comp.body {

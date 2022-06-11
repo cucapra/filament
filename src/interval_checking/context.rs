@@ -272,23 +272,29 @@ impl<'a> Context<'a> {
             .filter(|(_, ports)| !ports.is_empty())
     }
 
+    /// Return the guarantees of the port if any.
+    /// - None if the port does not provide any guarantees.
+    /// - Some(None) if the port is infinitely active (like a constant port).
+    /// - Some(Some(int)) if the port is active during interval `int`.
     pub fn port_guarantees(
         &self,
         port: &core::Port,
-    ) -> FilamentResult<Option<core::Interval<super::TimeRep>>> {
-        match port {
+    ) -> FilamentResult<Option<Option<core::Interval<super::TimeRep>>>> {
+        Ok(match port {
             core::Port::Constant(_) => {
                 /* Constants do not generate a proof obligation because they are
                  * always available. */
-                Ok(None)
+                Some(None)
             }
-            core::Port::ThisPort(port) => Ok(self
+            core::Port::ThisPort(port) => self
                 .get_invoke(&super::THIS.into())?
-                .port_guarantees(port)?),
-            core::Port::CompPort { comp, name } => {
-                Ok(self.get_invoke(comp)?.port_guarantees(name)?)
-            }
-        }
+                .port_guarantees(port)?
+                .map(|f| Some(f)),
+            core::Port::CompPort { comp, name } => self
+                .get_invoke(comp)?
+                .port_guarantees(name)?
+                .map(|f| Some(f)),
+        })
     }
 
     pub fn port_requirements(
