@@ -122,11 +122,6 @@ fn compile_guard(guard: core::Guard, ctx: &mut Context) -> ir::Guard {
 
 fn compile_command(cmd: core::Command<TimeRep>, ctx: &mut Context) {
     match cmd {
-        core::Command::When(core::When { commands, .. }) => {
-            commands
-                .into_iter()
-                .for_each(|cmd| compile_command(cmd, ctx));
-        }
         core::Command::Fsm(fsm) => {
             let name = fsm.name.clone();
             let f = Fsm::new(fsm, ctx);

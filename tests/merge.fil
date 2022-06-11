@@ -12,11 +12,9 @@ component main<G>(
   L := new Latch;
   M := new Merge;
 
-  when G {
-    // Intentially make the latch exist longer than needed.
-    l0 := L<G, G+4>(in);
-    m0 := M<G, G+1, G+3>(in, l0.out);
-  }
+  // Intentially make the latch exist longer than needed.
+  l0 := L<G, G+4>(in);
+  m0 := M<G, G+1, G+3>(in, l0.out);
 
   out = m0.out;
 }
