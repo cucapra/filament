@@ -94,6 +94,9 @@ impl Span {
 
 /// An IR node that may contain position information.
 pub trait WithPos {
+    /// Add span information to this node
+    fn set_span(self, sp: Option<Span>) -> Self;
+
     /// Copy the span associated with this node.
     fn copy_span(&self) -> Option<Span>;
 }

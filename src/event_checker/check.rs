@@ -75,7 +75,7 @@ fn transform_control(
             let abs: Vec<core::FsmIdxs> =
                 inv.abstract_vars.into_iter().map(transform_time).collect();
             Ok(core::Invoke::new(inv.bind, inv.comp, abs, inv.ports)
-                .with_span(pos)
+                .set_span(pos)
                 .into())
         }
         core::Command::Instance(ins) => Ok(core::Command::Instance(ins)),

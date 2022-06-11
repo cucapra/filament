@@ -161,6 +161,7 @@ fn check_fsm<'a>(
         name: bind,
         states,
         trigger,
+        ..
     } = fsm;
 
     let guarantee = match ctx.port_guarantees(trigger)? {
@@ -215,7 +216,8 @@ where
             core::Command::Instance(core::Instance { name, component }) => {
                 ctx.add_instance(name.clone(), component)?
             }
-            core::Command::Fsm(fsm) => check_fsm(fsm, ctx)?,
+            core::Command::Fsm(fsm) => check_fsm(fsm, ctx)
+                .map_err(|err| err.with_pos(fsm.copy_span()))?,
             core::Command::Connect(
                 con @ core::Connect {
                     dst, src, guard, ..
