@@ -101,12 +101,6 @@ impl<T> Invoke<T> {
             pos: None,
         }
     }
-
-    /// Attach a position to this node
-    pub fn with_span(mut self, sp: Option<errors::Span>) -> Self {
-        self.pos = sp;
-        self
-    }
 }
 impl<T: std::fmt::Debug> std::fmt::Display for Invoke<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -135,6 +129,11 @@ impl<T: std::fmt::Debug> std::fmt::Display for Invoke<T> {
     }
 }
 impl<T> errors::WithPos for Invoke<T> {
+    /// Attach a position to this node
+    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+        self.pos = sp;
+        self
+    }
     fn copy_span(&self) -> Option<errors::Span> {
         self.pos.clone()
     }
@@ -178,12 +177,6 @@ impl Connect {
             pos: None,
         }
     }
-
-    /// Attach a position to this node
-    pub fn with_span(mut self, sp: errors::Span) -> Self {
-        self.pos = Some(sp);
-        self
-    }
 }
 impl std::fmt::Display for Connect {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -195,6 +188,12 @@ impl std::fmt::Display for Connect {
     }
 }
 impl errors::WithPos for Connect {
+    /// Attach a position to this node
+    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+        self.pos = sp;
+        self
+    }
+
     fn copy_span(&self) -> Option<errors::Span> {
         self.pos.clone()
     }
@@ -226,9 +225,20 @@ pub struct Fsm {
 
     /// Signal that triggers the FSM
     pub trigger: Port,
+
+    pos: Option<errors::Span>,
 }
 
 impl Fsm {
+    pub fn new(name: Id, states: u64, trigger: Port) -> Self {
+        Self {
+            name,
+            states,
+            trigger,
+            pos: None,
+        }
+    }
+
     /// Returns the state associated with the FSM port
     pub fn state(&self, port: &Id) -> FilamentResult<u64> {
         let split = port.id.split('_').collect_vec();
@@ -242,6 +252,17 @@ impl Fsm {
             "Unknown port: {}.{}",
             self.name, port
         )))
+    }
+}
+
+impl errors::WithPos for Fsm {
+    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+        self.pos = sp;
+        self
+    }
+
+    fn copy_span(&self) -> Option<errors::Span> {
+        self.pos.clone()
     }
 }
 

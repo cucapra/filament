@@ -3,7 +3,7 @@
 //! Parser for Calyx programs.
 use super::IntervalTime;
 use crate::core::{self, Id};
-use crate::errors::{self, FilamentResult};
+use crate::errors::{self, FilamentResult, WithPos};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
 use std::path::Path;
@@ -267,12 +267,12 @@ impl FilamentParser {
                 identifier(comp),
                 time_args(abstract_vars),
                 arguments(ports)
-            ] => core::Invoke::new(bind, comp, abstract_vars, Some(ports)).with_span(Some(span)),
+            ] => core::Invoke::new(bind, comp, abstract_vars, Some(ports)).set_span(Some(span)),
             [
                 identifier(bind),
                 identifier(comp),
                 time_args(abstract_vars),
-            ] => core::Invoke::new(bind, comp, abstract_vars, None).with_span(Some(span))
+            ] => core::Invoke::new(bind, comp, abstract_vars, None).set_span(Some(span))
         ))
     }
     fn gte(input: Node) -> ParseResult<()> {
@@ -380,20 +380,21 @@ impl FilamentParser {
     }
 
     fn connect(input: Node) -> ParseResult<core::Connect> {
-        let span = Self::get_span(&input);
+        let span = Some(Self::get_span(&input));
         Ok(match_nodes!(
             input.into_children();
-            [port(dst), port(src)] => core::Connect::new(dst, src, None).with_span(span),
+            [port(dst), port(src)] => core::Connect::new(dst, src, None).set_span(span),
             [port(dst), guard(guard), port(src)] => {
-                core::Connect::new(dst, src, Some(guard)).with_span(span)
+                core::Connect::new(dst, src, Some(guard)).set_span(span)
             }
         ))
     }
 
     fn fsm(input: Node) -> ParseResult<core::Fsm> {
+        let span = Some(Self::get_span(&input));
         Ok(match_nodes!(
             input.into_children();
-            [identifier(name), bitwidth(states), port(trigger)] => core::Fsm { name, states, trigger }
+            [identifier(name), bitwidth(states), port(trigger)] => core::Fsm::new(name, states, trigger).set_span(span)
         ))
     }
 
