@@ -3,7 +3,7 @@ use linked_hash_map::LinkedHashMap;
 
 use crate::{core, interval_checking::SExp};
 
-use super::{Id, Interval};
+use super::{Id, Interval, Range};
 
 /// An interval time expression that denotes a max of sums expression.
 #[derive(Default, Hash, Clone, PartialEq, Eq)]
@@ -129,15 +129,23 @@ impl Interval<FsmIdxs> {
     /// Attempts to convert interval into (event, start, end). Only possible
     /// when the interval uses exactly the one event for both start and end.
     pub fn as_exact_offset(&self) -> Option<(&Id, u64, u64)> {
-        if let Some(core::Range { start, end }) = &self.exact {
-            if start.fsms.len() == 1 && end.fsms.len() == 1 {
-                let (s_ev, s_st) = start.fsms.iter().next().unwrap();
-                let (e_ev, e_st) = end.fsms.iter().next().unwrap();
-                if s_ev == e_ev {
-                    return Some((s_ev, *s_st, *e_st));
-                }
+        self.exact.as_ref().and_then(|inv| inv.as_offset())
+    }
+}
+
+impl Range<FsmIdxs> {
+    /// Convert this interval into an offset. Only possible when interval uses
+    /// exactly one event for both start and end.
+    pub fn as_offset(&self) -> Option<(&Id, u64, u64)> {
+        let Range { start, end } = &self;
+        if start.fsms.len() == 1 && end.fsms.len() == 1 {
+            let (s_ev, s_st) = start.fsms.iter().next().unwrap();
+            let (e_ev, e_st) = end.fsms.iter().next().unwrap();
+            if s_ev == e_ev {
+                return Some((s_ev, *s_st, *e_st));
             }
         }
+
         None
     }
 }

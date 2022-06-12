@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::{Constraint, Id, TimeRep};
+use super::{Constraint, FsmIdxs, Id, TimeRep};
 
 /// A range over time representation
 #[derive(Clone, Hash, PartialEq, Eq)]
