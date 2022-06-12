@@ -9,7 +9,7 @@ mod time_rep;
 pub use component::{Component, Namespace, PortDef, Signature};
 pub use constraint::{Constraint, OrderOp};
 pub use control::{
-    Command, Connect, Fsm, Guard, Instance, Invoke, Port, PortType, When,
+    Command, Connect, Fsm, Guard, Instance, Invoke, Port, PortType,
 };
 pub use fsm_idx::FsmIdxs;
 pub use id::Id;
