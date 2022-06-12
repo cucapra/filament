@@ -3,9 +3,6 @@ mod context;
 mod guard_availability;
 mod solver;
 
-/// Representation of time in this module
-pub type TimeRep = crate::core::FsmIdxs;
-
 /// Constant used to represent this component
 pub(super) const THIS: &str = "_this";
 

@@ -1,34 +1,33 @@
 use itertools::Itertools;
 
 use super::{Context, THIS};
-use crate::{
-    core,
-    errors::{Error, FilamentResult},
-};
+use crate::core::FsmIdxs;
+use crate::errors::{Error, FilamentResult};
+use crate::event_checker::ast;
 
-type Intervals = Vec<core::Interval<super::TimeRep>>;
+type Intervals = Vec<ast::Interval>;
 
 /// Computes the availablity of guards.
 fn guard_availability(
-    guard: &core::Guard,
+    guard: &ast::Guard,
     ctx: &Context,
     acc: &mut Intervals,
 ) -> FilamentResult<()> {
     match guard {
-        core::Guard::Or(g1, g2) => {
+        ast::Guard::Or(g1, g2) => {
             guard_availability(g1, ctx, acc)?;
             guard_availability(g2, ctx, acc)?;
             Ok(())
         }
-        core::Guard::Port(p) => {
+        ast::Guard::Port(p) => {
             let interval = match p {
-                core::Port::ThisPort(name) => {
+                ast::Port::ThisPort(name) => {
                     ctx.get_invoke(&THIS.into())?.port_guarantees(name)?
                 }
-                core::Port::CompPort { comp, name } => {
+                ast::Port::CompPort { comp, name } => {
                     ctx.get_invoke(comp)?.port_guarantees(name)?
                 }
-                core::Port::Constant(_) => {
+                ast::Port::Constant(_) => {
                     return Err(Error::malformed(
                         "Guards cannot contain constants",
                     ))
@@ -56,7 +55,7 @@ fn guard_availability(
 
 /// Merges exactly available signals into one interval.
 /// All intervals need to be based on the same time variable and only be increments.
-fn merge_availability(intervals: Intervals) -> core::Interval<super::TimeRep> {
+fn merge_availability(intervals: Intervals) -> ast::Interval {
     assert!(
         !intervals.is_empty(),
         "Cannot compute availablity with empty intervals"
@@ -90,16 +89,16 @@ fn merge_availability(intervals: Intervals) -> core::Interval<super::TimeRep> {
         })
         .unwrap();
 
-    core::Interval::from(within).with_exact(core::Range {
-        start: core::FsmIdxs::unit(event.clone(), start),
-        end: core::FsmIdxs::unit(event.clone(), end),
+    ast::Interval::from(within).with_exact(ast::Range {
+        start: FsmIdxs::unit(event.clone(), start),
+        end: FsmIdxs::unit(event.clone(), end),
     })
 }
 
 pub fn total_interval(
-    guard: &core::Guard,
+    guard: &ast::Guard,
     ctx: &Context,
-) -> FilamentResult<core::Interval<super::TimeRep>> {
+) -> FilamentResult<ast::Interval> {
     let mut intervals = vec![];
     guard_availability(guard, ctx, &mut intervals)?;
     Ok(merge_availability(intervals))

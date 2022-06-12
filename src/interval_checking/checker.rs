@@ -1,8 +1,6 @@
 use super::{ConcreteInvoke, Context, THIS};
-use crate::{
-    core::{self, Constraint},
-    errors::{self, Error, FilamentResult, WithPos},
-};
+use crate::errors::{self, Error, FilamentResult, WithPos};
+use crate::event_checker::ast::{self, Constraint};
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -10,9 +8,9 @@ use std::collections::HashMap;
 // dst = src
 // The generated proof obligation requires that req(dst) \subsetof guarantees(src)
 fn check_connect(
-    dst: &core::Port,
-    src: &core::Port,
-    guard: &Option<core::Guard>,
+    dst: &ast::Port,
+    src: &ast::Port,
+    guard: &Option<ast::Guard>,
     pos: Option<errors::Span>,
     ctx: &mut Context,
 ) -> FilamentResult<()> {
@@ -107,7 +105,7 @@ fn check_connect(
 /// Check invocation and add new [super::Fact] representing the proof obligations for checking this
 /// invocation.
 fn check_invoke<'a>(
-    invoke: &'a core::Invoke<super::TimeRep>,
+    invoke: &'a ast::Invoke,
     ctx: &mut Context<'a>,
 ) -> FilamentResult<()> {
     let sig = ctx.get_instance(&invoke.comp)?;
@@ -139,7 +137,7 @@ fn check_invoke<'a>(
     if let Some(actuals) = &invoke.ports {
         // Check connections implied by the invocation
         for (actual, formal) in actuals.iter().zip(sig.inputs.iter()) {
-            let dst = core::Port::CompPort {
+            let dst = ast::Port::CompPort {
                 comp: invoke.bind.clone(),
                 name: formal.name.clone(),
             };
@@ -154,10 +152,10 @@ fn check_invoke<'a>(
 }
 
 fn check_fsm<'a>(
-    fsm: &'a core::Fsm,
+    fsm: &'a ast::Fsm,
     ctx: &mut Context<'a>,
 ) -> FilamentResult<()> {
-    let core::Fsm {
+    let ast::Fsm {
         name: bind,
         states,
         trigger,
@@ -187,11 +185,11 @@ fn check_fsm<'a>(
     }
 
     // Prove that the signal is zero during the execution of the FSM
-    let start_time = core::FsmIdxs::unit(ev.clone(), start);
+    let start_time = crate::core::FsmIdxs::unit(ev.clone(), start);
     let end_time = start_time.clone().increment(*states);
-    let within = core::Range::new(start_time.clone(), end_time);
+    let within = ast::Range::new(start_time.clone(), end_time);
     ctx.add_obligations(
-        core::Constraint::subset(within, guarantee.within),
+        ast::Constraint::subset(within, guarantee.within),
         None,
     );
 
@@ -203,7 +201,7 @@ fn check_fsm<'a>(
 }
 
 fn check_commands<'a>(
-    cmds: &'a [core::Command<super::TimeRep>],
+    cmds: &'a [ast::Command],
     ctx: &mut Context<'a>,
 ) -> FilamentResult<()>
 where
@@ -211,15 +209,15 @@ where
     for cmd in cmds {
         log::info!("{cmd}");
         match cmd {
-            core::Command::Invoke(invoke) => check_invoke(invoke, ctx)
+            ast::Command::Invoke(invoke) => check_invoke(invoke, ctx)
                 .map_err(|err| err.with_pos(invoke.copy_span()))?,
-            core::Command::Instance(core::Instance { name, component }) => {
+            ast::Command::Instance(ast::Instance { name, component }) => {
                 ctx.add_instance(name.clone(), component)?
             }
-            core::Command::Fsm(fsm) => check_fsm(fsm, ctx)
+            ast::Command::Fsm(fsm) => check_fsm(fsm, ctx)
                 .map_err(|err| err.with_pos(fsm.copy_span()))?,
-            core::Command::Connect(
-                con @ core::Connect {
+            ast::Command::Connect(
+                con @ ast::Connect {
                     dst, src, guard, ..
                 },
             ) => check_connect(dst, src, guard, con.copy_span(), ctx)
@@ -230,8 +228,8 @@ where
 }
 
 fn check_component(
-    comp: &core::Component<super::TimeRep>,
-    sigs: &HashMap<core::Id, &core::Signature<super::TimeRep>>,
+    comp: &ast::Component,
+    sigs: &HashMap<ast::Id, &ast::Signature>,
 ) -> FilamentResult<()> {
     let mut ctx = Context::from(sigs);
 
@@ -288,13 +286,11 @@ fn check_component(
     Ok(())
 }
 
-/// Check a [core::Namespace] to prove that the interval requirements of all the ports can be
+/// Check a [ast::Namespace] to prove that the interval requirements of all the ports can be
 /// satisfied.
 /// Internally generates [super::Fact] which represent proof obligations that need to be proven for
 /// the interval requirements to be proven.
-pub fn check(
-    namespace: &core::Namespace<super::TimeRep>,
-) -> FilamentResult<()> {
+pub fn check(namespace: &ast::Namespace) -> FilamentResult<()> {
     let mut sigs = namespace
         .externs
         .iter()

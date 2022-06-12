@@ -1,6 +1,7 @@
 use rsmt2::{SmtConf, Solver};
 
-use crate::{core, errors::FilamentResult};
+use crate::errors::FilamentResult;
+use crate::event_checker::ast;
 
 /// A string that semantically represents an S-expression
 pub struct SExp(pub String);
@@ -23,11 +24,11 @@ fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
 pub fn prove<'a, A, AV>(
     abstract_vars: AV,
     assumes: A,
-    asserts: Vec<&'a core::Constraint<super::TimeRep>>,
-) -> FilamentResult<Option<&'a core::Constraint<super::TimeRep>>>
+    asserts: Vec<&'a ast::Constraint>,
+) -> FilamentResult<Option<&'a ast::Constraint>>
 where
-    A: Iterator<Item = &'a core::Constraint<super::TimeRep>>,
-    AV: Iterator<Item = &'a core::Id>,
+    A: Iterator<Item = &'a ast::Constraint>,
+    AV: Iterator<Item = &'a ast::Id>,
 {
     if asserts.is_empty() {
         return Ok(None);
@@ -67,7 +68,7 @@ where
 
 fn check_fact<P>(
     solver: &mut Solver<P>,
-    fact: &core::Constraint<super::TimeRep>,
+    fact: &ast::Constraint,
 ) -> FilamentResult<bool> {
     let sexp = SExp::from(fact);
     log::info!("Assert (not {})", sexp);

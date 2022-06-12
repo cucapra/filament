@@ -1,8 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 //! Parser for Calyx programs.
-use super::IntervalTime;
-use crate::core::{self, Id};
+use super::{ast, IntervalTime};
 use crate::errors::{self, FilamentResult, WithPos};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
@@ -23,19 +22,19 @@ type ParseResult<T> = Result<T, Error<Rule>>;
 // that have a reference to the input string
 type Node<'i> = pest_consume::Node<'i, Rule, UserData>;
 
-type Ports = Vec<core::PortDef<IntervalTime>>;
+type Ports = Vec<ast::PortDef>;
 
 // include the grammar file so that Cargo knows to rebuild this file on grammar changes
 const _GRAMMAR: &str = include_str!("syntax.pest");
 
 pub enum ExtOrComp {
-    Ext((String, Vec<core::Signature<IntervalTime>>)),
-    Comp(core::Component<IntervalTime>),
+    Ext((String, Vec<ast::Signature>)),
+    Comp(ast::Component),
 }
 
 pub enum PdOrInt {
-    Pd(core::PortDef<IntervalTime>),
-    Int((core::Id, core::Id, u64)),
+    Pd(ast::PortDef),
+    Int((ast::Id, ast::Id, u64)),
 }
 
 #[derive(Parser)]
@@ -44,9 +43,7 @@ pub struct FilamentParser;
 
 impl FilamentParser {
     /// Parse a Calyx program into an AST representation.
-    pub fn parse_file(
-        path: &Path,
-    ) -> FilamentResult<core::Namespace<IntervalTime>> {
+    pub fn parse_file(path: &Path) -> FilamentResult<ast::Namespace> {
         let content = &fs::read(path).map_err(|err| {
             errors::Error::invalid_file(format!(
                 "Failed to read {}: {}",
@@ -87,8 +84,8 @@ impl FilamentParser {
     }
 
     // ================ Literals =====================
-    fn identifier(input: Node) -> ParseResult<Id> {
-        Ok(Id::from(input.as_str()))
+    fn identifier(input: Node) -> ParseResult<ast::Id> {
+        Ok(ast::Id::from(input.as_str()))
     }
 
     fn char(input: Node) -> ParseResult<&str> {
@@ -133,16 +130,16 @@ impl FilamentParser {
         ))
     }
 
-    fn interval_range(input: Node) -> ParseResult<core::Range<IntervalTime>> {
+    fn interval_range(input: Node) -> ParseResult<ast::Range> {
         Ok(match_nodes!(
             input.into_children();
-            [time(start), time(end)] => core::Range { start, end }
+            [time(start), time(end)] => ast::Range { start, end }
         ))
     }
 
     // ================ Signature =====================
 
-    fn interface(input: Node) -> ParseResult<(core::Id, u64)> {
+    fn interface(input: Node) -> ParseResult<(ast::Id, u64)> {
         Ok(match_nodes!(
             input.into_children();
             [identifier(tvar), bitwidth(len)] => (tvar, len),
@@ -156,19 +153,19 @@ impl FilamentParser {
                 Ok(PdOrInt::Int((name, time_var, len)))
             },
             [identifier(name), bitwidth(bitwidth)] => {
-                core::PortDef::new(name, None, bitwidth).map(PdOrInt::Pd)
+                ast::PortDef::new(name, None, bitwidth).map(PdOrInt::Pd)
             },
             [interval_range(range), identifier(name), bitwidth(bitwidth)] => {
-                core::PortDef::new(name, Some(range.into()), bitwidth).map(PdOrInt::Pd)
+                ast::PortDef::new(name, Some(range.into()), bitwidth).map(PdOrInt::Pd)
             },
             [interval_range(range), interval_range(exact), identifier(name), bitwidth(bitwidth)] => {
-                core::PortDef::new(name, Some(core::Interval::from(range).with_exact(exact)), bitwidth).map(PdOrInt::Pd)
+                ast::PortDef::new(name, Some(ast::Interval::from(range).with_exact(exact)), bitwidth).map(PdOrInt::Pd)
             }
         );
         pd.map_err(|err| input.error(format!("{err:?}")))
     }
 
-    fn abstract_var(input: Node) -> ParseResult<Vec<Id>> {
+    fn abstract_var(input: Node) -> ParseResult<Vec<ast::Id>> {
         Ok(match_nodes!(
             input.into_children();
             [identifier(vars)..] => vars.collect(),
@@ -188,7 +185,7 @@ impl FilamentParser {
                     }
                 }
                 let interface_ports = interface_signals.into_iter().map(|(name, time_var, len)| {
-                    core::PortDef::from_interface_signal(name, time_var, len)
+                    ast::PortDef::from_interface_signal(name, time_var, len)
                 }).collect();
                 (ports, interface_ports)
             }
@@ -222,28 +219,28 @@ impl FilamentParser {
     }
 
     // ================ Cells =====================
-    fn instance(input: Node) -> ParseResult<core::Instance> {
+    fn instance(input: Node) -> ParseResult<ast::Instance> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(name), identifier(component)] => core::Instance {
+            [identifier(name), identifier(component)] => ast::Instance {
                 name, component
             }
         ))
     }
 
     // ================ Assignments =====================
-    fn port(input: Node) -> ParseResult<core::Port> {
+    fn port(input: Node) -> ParseResult<ast::Port> {
         Ok(match_nodes!(
             input.into_children();
-            [bitwidth(constant)] => core::Port::Constant(constant),
-            [identifier(name)] => core::Port::ThisPort(name),
-            [identifier(comp), identifier(name)] => core::Port::CompPort {
+            [bitwidth(constant)] => ast::Port::Constant(constant),
+            [identifier(name)] => ast::Port::ThisPort(name),
+            [identifier(comp), identifier(name)] => ast::Port::CompPort {
                 comp, name
             }
         ))
     }
 
-    fn arguments(input: Node) -> ParseResult<Vec<core::Port>> {
+    fn arguments(input: Node) -> ParseResult<Vec<ast::Port>> {
         Ok(match_nodes!(
             input.into_children();
             [] => vec![],
@@ -258,7 +255,7 @@ impl FilamentParser {
         ))
     }
 
-    fn invocation(input: Node) -> ParseResult<core::Invoke<IntervalTime>> {
+    fn invocation(input: Node) -> ParseResult<ast::Invoke> {
         let span = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
@@ -267,12 +264,12 @@ impl FilamentParser {
                 identifier(comp),
                 time_args(abstract_vars),
                 arguments(ports)
-            ] => core::Invoke::new(bind, comp, abstract_vars, Some(ports)).set_span(Some(span)),
+            ] => ast::Invoke::new(bind, comp, abstract_vars, Some(ports)).set_span(Some(span)),
             [
                 identifier(bind),
                 identifier(comp),
                 time_args(abstract_vars),
-            ] => core::Invoke::new(bind, comp, abstract_vars, None).set_span(Some(span))
+            ] => ast::Invoke::new(bind, comp, abstract_vars, None).set_span(Some(span))
         ))
     }
     fn gte(input: Node) -> ParseResult<()> {
@@ -291,39 +288,37 @@ impl FilamentParser {
     fn eq(input: Node) -> ParseResult<()> {
         Ok(())
     }
-    fn constraint(input: Node) -> ParseResult<core::Constraint<IntervalTime>> {
+    fn constraint(input: Node) -> ParseResult<ast::Constraint> {
         Ok(match_nodes!(
             input.clone().into_children();
             [
                 time(l),
                 eq(_),
                 time(r)
-            ] => core::Constraint {left: l, right: r, op: core::OrderOp::Eq},
+            ] => ast::Constraint {left: l, right: r, op: ast::OrderOp::Eq},
             [
                 time(l),
                 gt(_),
                 time(r)
-            ] => core::Constraint {left: l, right: r, op: core::OrderOp::Gt},
+            ] => ast::Constraint {left: l, right: r, op: ast::OrderOp::Gt},
             [
                 time(l),
                 lt(_),
                 time(r)
-            ] => core::Constraint {left: r, right: l, op: core::OrderOp::Gt},
+            ] => ast::Constraint {left: r, right: l, op: ast::OrderOp::Gt},
             [
                 time(l),
                 lte(_),
                 time(r)
-            ] => core::Constraint {left: r, right: l, op: core::OrderOp::Gte},
+            ] => ast::Constraint {left: r, right: l, op: ast::OrderOp::Gte},
             [
                 time(l),
                 gte(_),
                 time(r)
-            ] => core::Constraint {left: l, right: r, op: core::OrderOp::Gte},
+            ] => ast::Constraint {left: l, right: r, op: ast::OrderOp::Gte},
         ))
     }
-    fn constraints(
-        input: Node,
-    ) -> ParseResult<Vec<core::Constraint<IntervalTime>>> {
+    fn constraints(input: Node) -> ParseResult<Vec<ast::Constraint>> {
         Ok(match_nodes!(
             input.into_children();
             [] => Vec::default(),
@@ -332,7 +327,7 @@ impl FilamentParser {
     }
 
     // ================ Component =====================
-    fn signature(input: Node) -> ParseResult<core::Signature<IntervalTime>> {
+    fn signature(input: Node) -> ParseResult<ast::Signature> {
         Ok(match_nodes!(
             input.into_children();
             [
@@ -342,7 +337,7 @@ impl FilamentParser {
                 constraints(constraints)
             ] => {
                 let (inputs, outputs, interface_signals) = io;
-                core::Signature {
+                ast::Signature {
                     name,
                     abstract_vars,
                     interface_signals: interface_signals.into_iter().collect(),
@@ -357,7 +352,7 @@ impl FilamentParser {
                 constraints(constraints)
             ] => {
                 let (inputs, outputs, interface_signals) = io;
-                core::Signature {
+                ast::Signature {
                     name,
                     abstract_vars: vec![],
                     interface_signals: interface_signals.into_iter().collect(),
@@ -369,60 +364,58 @@ impl FilamentParser {
         ))
     }
 
-    fn guard(input: Node) -> ParseResult<core::Guard> {
+    fn guard(input: Node) -> ParseResult<ast::Guard> {
         Ok(match_nodes!(
             input.into_children();
-            [port(p)] => core::Guard::Port(p),
+            [port(p)] => ast::Guard::Port(p),
             [port(p), guard(g)] => {
-                core::Guard::Or(Box::new(core::Guard::Port(p)), Box::new(g))
+                ast::Guard::Or(Box::new(ast::Guard::Port(p)), Box::new(g))
             }
         ))
     }
 
-    fn connect(input: Node) -> ParseResult<core::Connect> {
+    fn connect(input: Node) -> ParseResult<ast::Connect> {
         let span = Some(Self::get_span(&input));
         Ok(match_nodes!(
             input.into_children();
-            [port(dst), port(src)] => core::Connect::new(dst, src, None).set_span(span),
+            [port(dst), port(src)] => ast::Connect::new(dst, src, None).set_span(span),
             [port(dst), guard(guard), port(src)] => {
-                core::Connect::new(dst, src, Some(guard)).set_span(span)
+                ast::Connect::new(dst, src, Some(guard)).set_span(span)
             }
         ))
     }
 
-    fn fsm(input: Node) -> ParseResult<core::Fsm> {
+    fn fsm(input: Node) -> ParseResult<ast::Fsm> {
         let span = Some(Self::get_span(&input));
         Ok(match_nodes!(
             input.into_children();
-            [identifier(name), bitwidth(states), port(trigger)] => core::Fsm::new(name, states, trigger).set_span(span)
+            [identifier(name), bitwidth(states), port(trigger)] => ast::Fsm::new(name, states, trigger).set_span(span)
         ))
     }
 
-    fn command(input: Node) -> ParseResult<core::Command<IntervalTime>> {
+    fn command(input: Node) -> ParseResult<ast::Command> {
         Ok(match_nodes!(
             input.into_children();
-            [invocation(assign)] => core::Command::Invoke(assign),
-            [instance(cell)] => core::Command::Instance(cell),
-            [connect(con)] => core::Command::Connect(con),
-            [fsm(fsm)] => core::Command::Fsm(fsm),
+            [invocation(assign)] => ast::Command::Invoke(assign),
+            [instance(cell)] => ast::Command::Instance(cell),
+            [connect(con)] => ast::Command::Connect(con),
+            [fsm(fsm)] => ast::Command::Fsm(fsm),
         ))
     }
 
-    fn component(input: Node) -> ParseResult<core::Component<IntervalTime>> {
+    fn component(input: Node) -> ParseResult<ast::Component> {
         Ok(match_nodes!(
             input.into_children();
             [
                 signature(sig),
                 command(body)..
             ] => {
-                core::Component::new(sig, body.collect())
+                ast::Component::new(sig, body.collect())
             }
         ))
     }
 
-    fn external(
-        input: Node,
-    ) -> ParseResult<(String, Vec<core::Signature<IntervalTime>>)> {
+    fn external(input: Node) -> ParseResult<(String, Vec<ast::Signature>)> {
         Ok(match_nodes!(
             input.into_children();
             [string_lit(path), signature(sigs)..] => (path, sigs.collect()),
@@ -444,11 +437,11 @@ impl FilamentParser {
         ))
     }
 
-    fn file(input: Node) -> ParseResult<core::Namespace<IntervalTime>> {
+    fn file(input: Node) -> ParseResult<ast::Namespace> {
         Ok(match_nodes!(
             input.into_children();
             [imports(imps), comp_or_ext(mixed).., _EOI] => {
-                let mut namespace = core::Namespace {
+                let mut namespace = ast::Namespace {
                     imports: imps,
                     externs: vec![],
                     components: vec![],
