@@ -4,43 +4,17 @@ use crate::errors::{self, Error, FilamentResult};
 
 use super::Id;
 
-pub struct Port {
-    pub typ: PortType,
-}
-impl Port {
-    pub fn this(name: Id) -> Self {
-        Port {
-            typ: PortType::ThisPort(name),
-        }
-    }
-    pub fn comp(comp: Id, name: Id) -> Self {
-        Port {
-            typ: PortType::CompPort { comp, name },
-        }
-    }
-    pub fn constant(n: u64) -> Self {
-        Port {
-            typ: PortType::Constant(n),
-        }
-    }
-}
-impl std::fmt::Display for Port {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.typ)
-    }
-}
-
-pub enum PortType {
+pub enum Port {
     ThisPort(Id),
     CompPort { comp: Id, name: Id },
     Constant(u64),
 }
-impl std::fmt::Display for PortType {
+impl std::fmt::Display for Port {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PortType::ThisPort(p) => write!(f, "{}", p),
-            PortType::CompPort { comp, name } => write!(f, "{}.{}", comp, name),
-            PortType::Constant(n) => write!(f, "{}", n),
+            Port::ThisPort(p) => write!(f, "{}", p),
+            Port::CompPort { comp, name } => write!(f, "{}.{}", comp, name),
+            Port::Constant(n) => write!(f, "{}", n),
         }
     }
 }

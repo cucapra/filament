@@ -20,14 +20,14 @@ fn guard_availability(
             Ok(())
         }
         ast::Guard::Port(p) => {
-            let interval = match &p.typ {
-                ast::PortType::ThisPort(name) => {
+            let interval = match p {
+                ast::Port::ThisPort(name) => {
                     ctx.get_invoke(&THIS.into())?.port_guarantees(name)?
                 }
-                ast::PortType::CompPort { comp, name } => {
+                ast::Port::CompPort { comp, name } => {
                     ctx.get_invoke(comp)?.port_guarantees(name)?
                 }
-                ast::PortType::Constant(_) => {
+                ast::Port::Constant(_) => {
                     return Err(Error::malformed(
                         "Guards cannot contain constants",
                     ))
