@@ -137,10 +137,7 @@ fn check_invoke<'a>(
     if let Some(actuals) = &invoke.ports {
         // Check connections implied by the invocation
         for (actual, formal) in actuals.iter().zip(sig.inputs.iter()) {
-            let dst = ast::Port::CompPort {
-                comp: invoke.bind.clone(),
-                name: formal.name.clone(),
-            };
+            let dst = ast::Port::comp(invoke.bind.clone(), formal.name.clone());
             log::info!("checking: {} = {}", dst, actual);
             check_connect(&dst, actual, &None, invoke.copy_span(), ctx)?;
         }

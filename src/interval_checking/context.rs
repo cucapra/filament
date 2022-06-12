@@ -190,8 +190,8 @@ impl<'a> Context<'a> {
         &mut self,
         port: &ast::Port,
     ) -> FilamentResult<()> {
-        match port {
-            ast::Port::CompPort { comp, name } => {
+        match &port.typ {
+            ast::PortType::CompPort { comp, name } => {
                 // Check if the port is defined
                 self.get_invoke(comp)?.resolve_port(name, true)?;
                 if let Some(ports) = self.remaining_assigns.get_mut(comp) {
@@ -204,7 +204,7 @@ impl<'a> Context<'a> {
                 }
                 Ok(())
             }
-            ast::Port::ThisPort(_) | ast::Port::Constant(_) => Ok(()),
+            ast::PortType::ThisPort(_) | ast::PortType::Constant(_) => Ok(()),
         }
     }
 
@@ -273,17 +273,17 @@ impl<'a> Context<'a> {
         &self,
         port: &ast::Port,
     ) -> FilamentResult<Option<Option<ast::Interval>>> {
-        Ok(match port {
-            ast::Port::Constant(_) => {
+        Ok(match &port.typ {
+            ast::PortType::Constant(_) => {
                 /* Constants do not generate a proof obligation because they are
                  * always available. */
                 Some(None)
             }
-            ast::Port::ThisPort(port) => self
+            ast::PortType::ThisPort(port) => self
                 .get_invoke(&super::THIS.into())?
                 .port_guarantees(port)?
                 .map(Some),
-            ast::Port::CompPort { comp, name } => {
+            ast::PortType::CompPort { comp, name } => {
                 self.get_invoke(comp)?.port_guarantees(name)?.map(Some)
             }
         })
@@ -293,16 +293,16 @@ impl<'a> Context<'a> {
         &self,
         port: &ast::Port,
     ) -> FilamentResult<Option<ast::Interval>> {
-        match port {
-            ast::Port::Constant(_) => {
+        match &port.typ {
+            ast::PortType::Constant(_) => {
                 /* Constants do not generate a proof obligation because they are
                  * always available. */
                 unreachable!("destination port cannot be a constant")
             }
-            ast::Port::ThisPort(port) => Ok(self
+            ast::PortType::ThisPort(port) => Ok(self
                 .get_invoke(&super::THIS.into())?
                 .port_requirements(port)?),
-            ast::Port::CompPort { comp, name } => {
+            ast::PortType::CompPort { comp, name } => {
                 Ok(self.get_invoke(comp)?.port_requirements(name)?)
             }
         }
