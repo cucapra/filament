@@ -5,11 +5,13 @@ use calyx::ir::RRC;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
 
 use super::Fsm;
 use super::TimeRep;
+use crate::cmdline::Opts;
 use crate::errors::Error;
 use crate::{core, errors::FilamentResult};
 
@@ -264,13 +266,14 @@ fn compile_signature(sig: &core::Signature<TimeRep>) -> ir::Primitive {
     }
 }
 
-fn get_library(
+fn init_calyx(
+    lib_loc: &Path,
     externs: &[(String, Vec<core::Signature<TimeRep>>)],
 ) -> CalyxResult<ir::Context> {
-    let mut ws = frontend::Workspace::construct(
-        &Some("../calyx/primitives/core.futil".into()),
-        &PathBuf::from("../calyx"),
-    )?;
+    let mut prims = PathBuf::from(lib_loc);
+    prims.push("primitives");
+    prims.push("core.futil");
+    let mut ws = frontend::Workspace::construct(&Some(prims), lib_loc)?;
     // Add externals
     ws.externs.extend(externs.iter().map(|(file, sigs)| {
         (
@@ -302,8 +305,11 @@ fn print(ctx: ir::Context) -> FilamentResult<()> {
     Ok(())
 }
 
-pub fn compile(ns: core::Namespace<TimeRep>) -> FilamentResult<()> {
-    let mut calyx_ctx = get_library(&ns.externs)
+pub fn compile(
+    ns: core::Namespace<TimeRep>,
+    opts: &Opts,
+) -> FilamentResult<()> {
+    let mut calyx_ctx = init_calyx(&opts.calyx_primitives, &ns.externs)
         .map_err(|err| Error::misc(format!("{:?}", err)))?;
 
     let sigs = ns

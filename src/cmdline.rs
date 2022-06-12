@@ -12,6 +12,10 @@ pub struct Opts {
     #[argh(option, long = "log", default = "log::LevelFilter::Warn")]
     pub log_level: log::LevelFilter,
 
+    /// location of the calyx primitives folder
+    #[argh(option, long = "calyx-primitives", default = "\"../calyx\".into()")]
+    pub calyx_primitives: PathBuf,
+
     /// only check the program without compilation
     #[argh(switch, short = 'c', long = "check")]
     pub check: bool,

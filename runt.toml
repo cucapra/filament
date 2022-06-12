@@ -3,8 +3,18 @@ ver = "0.4.0"
 [[tests]]
 name = "tests"
 paths = [
-  "tests/**/*.fil"
+  "tests/*.fil",
+  "tests/errors/*fil",
 ]
 cmd = """
 ./target/debug/filament {} --check
+"""
+
+[[tests]]
+name = "compile"
+paths = [
+  "tests/compile/mult/lowered.fil"
+]
+cmd = """
+./tests/compile/mult/run.sh "$(pwd)"
 """
