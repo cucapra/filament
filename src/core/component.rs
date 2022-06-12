@@ -155,7 +155,7 @@ where
 }
 
 /// A component in Filament
-pub struct Component<T, L>
+pub struct Component<T>
 where
     T: Clone + TimeRep,
 {
@@ -163,14 +163,14 @@ where
     pub sig: Rc<Signature<T>>,
 
     /// Model for this component
-    pub body: Vec<Command<T, L>>,
+    pub body: Vec<Command<T>>,
 }
 
-impl<T, L> Component<T, L>
+impl<T> Component<T>
 where
     T: Clone + TimeRep,
 {
-    pub fn new(sig: Signature<T>, body: Vec<Command<T, L>>) -> Self {
+    pub fn new(sig: Signature<T>, body: Vec<Command<T>>) -> Self {
         Self {
             sig: Rc::new(sig),
             body,
@@ -178,7 +178,7 @@ where
     }
 }
 
-pub struct Namespace<T, L>
+pub struct Namespace<T>
 where
     T: Clone + TimeRep,
 {
@@ -189,5 +189,5 @@ where
     pub externs: Vec<(String, Vec<Signature<T>>)>,
 
     /// Components defined in this file
-    pub components: Vec<Component<T, L>>,
+    pub components: Vec<Component<T>>,
 }
