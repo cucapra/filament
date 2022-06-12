@@ -1,0 +1,47 @@
+extern "mult.sv" {
+  component Mult<T>(
+    clk: 1,
+    reset: 1,
+    // Explicit interface signal that shows evidence for event "T".
+    @interface<T, 2> go_T: 1,
+    // ---------
+    @[T, T+2] left: 32,
+    @[T, T+1] right: 32
+  ) -> (
+    @[T+2, T+3] out: 32,
+  );
+}
+
+
+component main<T>(
+  @interface<T, 5> go_T: 1,
+  // ----
+  @[T, T+2]   l0: 32,
+  @[T+2, T+4] l1: 32,
+  @[T, T+1]   r0: 32,
+  @[T+2, T+3] r1: 32,
+) -> (
+  @[T+2, T+3] out0: 32,
+  @[T+4, T+5] out1: 32,
+) {
+  M := new Mult;
+
+  // Instantiate an FSM with 5 states triggered by go_T.
+  fsm t[5](go_T);
+
+  // First invocation
+  m0 := invoke M<T>;
+  // Numbered ports on the FSM correspond to internal timesteps
+  m0.go_T = t._0;
+  m0.left = t._0 | t._1 ? l0;
+  m0.right = t._0 ? r0;
+
+  // Second invocation
+  m1 := invoke M<T+2>;
+  m1.go_T = t._2;
+  m1.left = t._2 | t._3 ? l1;
+  m1.right =  t._2 ? r1;
+
+  out0 = m0.out;
+  out1 = m1.out;
+}
