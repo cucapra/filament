@@ -10,39 +10,39 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use super::Fsm;
-use super::TimeRep;
 use crate::cmdline::Opts;
 use crate::errors::Error;
-use crate::{core, errors::FilamentResult};
+use crate::errors::FilamentResult;
+use crate::event_checker::ast;
 
 pub struct Context<'a> {
     /// Builder for the current component
     pub builder: ir::Builder<'a>,
 
     /// Mapping from names to signatures for components and externals.
-    sigs: &'a HashMap<core::Id, Vec<ir::PortDef<u64>>>,
+    sigs: &'a HashMap<ast::Id, Vec<ir::PortDef<u64>>>,
 
     /// Mapping from instances to cells
-    instances: HashMap<core::Id, RRC<ir::Cell>>,
+    instances: HashMap<ast::Id, RRC<ir::Cell>>,
 
     /// Mapping from invocation name to instance
-    invokes: HashMap<core::Id, RRC<ir::Cell>>,
+    invokes: HashMap<ast::Id, RRC<ir::Cell>>,
 
     /// Mapping from name to FSMs
-    fsms: HashMap<core::Id, Fsm>,
+    fsms: HashMap<ast::Id, Fsm>,
 }
 
 impl Context<'_> {
     pub fn compile_port(
         &mut self,
-        port: &core::Port,
+        port: &ast::Port,
     ) -> (RRC<ir::Port>, Option<ir::Guard>) {
-        match port {
-            core::Port::ThisPort(p) => {
+        match &port.typ {
+            ast::PortType::ThisPort(p) => {
                 let this = self.builder.component.signature.borrow();
                 (this.get(p), None)
             }
-            core::Port::CompPort { comp, name } => {
+            ast::PortType::CompPort { comp, name } => {
                 if let Some(fsm) = self.fsms.get(comp) {
                     let cr = self.builder.add_constant(1, 1);
                     let c = cr.borrow();
@@ -58,7 +58,7 @@ impl Context<'_> {
                     (cell.get(name), None)
                 }
             }
-            core::Port::Constant(c) => {
+            ast::PortType::Constant(c) => {
                 let cr = self.builder.add_constant(*c, 32);
                 let c = cr.borrow();
                 (c.get("out"), None)
@@ -69,7 +69,7 @@ impl Context<'_> {
 
 impl<'a> Context<'a> {
     fn new(
-        sigs: &'a HashMap<core::Id, Vec<ir::PortDef<u64>>>,
+        sigs: &'a HashMap<ast::Id, Vec<ir::PortDef<u64>>>,
         builder: ir::Builder<'a>,
     ) -> Self {
         Context {
@@ -81,11 +81,11 @@ impl<'a> Context<'a> {
         }
     }
 
-    fn get_sig(&self, comp: &core::Id) -> &Vec<ir::PortDef<u64>> {
+    fn get_sig(&self, comp: &ast::Id) -> &Vec<ir::PortDef<u64>> {
         &self.sigs[comp]
     }
 
-    fn add_invoke(&mut self, inv: core::Id, comp: core::Id) {
+    fn add_invoke(&mut self, inv: ast::Id, comp: ast::Id) {
         let cell = &self
             .instances
             .get(&comp)
@@ -94,19 +94,19 @@ impl<'a> Context<'a> {
     }
 }
 
-fn compile_guard(guard: core::Guard, ctx: &mut Context) -> ir::Guard {
+fn compile_guard(guard: ast::Guard, ctx: &mut Context) -> ir::Guard {
     match guard {
-        core::Guard::Or(g1, g2) => {
+        ast::Guard::Or(g1, g2) => {
             let c1 = compile_guard(*g1, ctx);
             let c2 = compile_guard(*g2, ctx);
             c1 | c2
         }
-        core::Guard::Port(p) => match p {
-            core::Port::ThisPort(p) => {
+        ast::Guard::Port(p) => match p.typ {
+            ast::PortType::ThisPort(p) => {
                 let this = ctx.builder.component.signature.borrow();
                 this.get(p).into()
             }
-            core::Port::CompPort { comp, name } => {
+            ast::PortType::CompPort { comp, name } => {
                 if let Some(fsm) = ctx.fsms.get(&comp) {
                     fsm.event(&name, &mut ctx.builder)
                         .expect("Undefined port on fsm")
@@ -115,21 +115,21 @@ fn compile_guard(guard: core::Guard, ctx: &mut Context) -> ir::Guard {
                     cell.get(name).into()
                 }
             }
-            core::Port::Constant(_) => {
+            ast::PortType::Constant(_) => {
                 unreachable!("Constants cannot be in guards")
             }
         },
     }
 }
 
-fn compile_command(cmd: core::Command<TimeRep>, ctx: &mut Context) {
+fn compile_command(cmd: ast::Command, ctx: &mut Context) {
     match cmd {
-        core::Command::Fsm(fsm) => {
+        ast::Command::Fsm(fsm) => {
             let name = fsm.name.clone();
             let f = Fsm::new(fsm, ctx);
             ctx.fsms.insert(name, f);
         }
-        core::Command::Invoke(core::Invoke {
+        ast::Command::Invoke(ast::Invoke {
             bind, comp, ports, ..
         }) => {
             assert!(
@@ -138,7 +138,7 @@ fn compile_command(cmd: core::Command<TimeRep>, ctx: &mut Context) {
             );
             ctx.add_invoke(bind, comp);
         }
-        core::Command::Instance(core::Instance { name, component }) => {
+        ast::Command::Instance(ast::Instance { name, component }) => {
             let cell = ctx.builder.add_component(
                 name.id.clone(),
                 component.id.clone(),
@@ -146,7 +146,7 @@ fn compile_command(cmd: core::Command<TimeRep>, ctx: &mut Context) {
             );
             ctx.instances.insert(name, cell);
         }
-        core::Command::Connect(core::Connect {
+        ast::Command::Connect(ast::Connect {
             dst, src, guard, ..
         }) => {
             let (dst, g) = ctx.compile_port(&dst);
@@ -166,10 +166,7 @@ fn compile_command(cmd: core::Command<TimeRep>, ctx: &mut Context) {
     }
 }
 
-fn as_port_defs(
-    sig: &core::Signature<TimeRep>,
-    extend: bool,
-) -> Vec<ir::PortDef<u64>> {
+fn as_port_defs(sig: &ast::Signature, extend: bool) -> Vec<ir::PortDef<u64>> {
     let mut ports: Vec<ir::PortDef<u64>> = sig
         .inputs
         .iter()
@@ -226,8 +223,8 @@ const INTERFACE_PORTS: [(&str, u64, calyx::ir::Direction); 2] = [
 ];
 
 fn compile_component(
-    comp: core::Component<TimeRep>,
-    sigs: &HashMap<core::Id, Vec<ir::PortDef<u64>>>,
+    comp: ast::Component,
+    sigs: &HashMap<ast::Id, Vec<ir::PortDef<u64>>>,
     lib: &ir::LibrarySignatures,
 ) -> FilamentResult<ir::Component> {
     let ports = as_port_defs(&comp.sig, true);
@@ -241,7 +238,7 @@ fn compile_component(
     Ok(component)
 }
 
-fn compile_signature(sig: &core::Signature<TimeRep>) -> ir::Primitive {
+fn compile_signature(sig: &ast::Signature) -> ir::Primitive {
     ir::Primitive {
         name: sig.name.id.clone().into(),
         params: Vec::new(),
@@ -268,7 +265,7 @@ fn compile_signature(sig: &core::Signature<TimeRep>) -> ir::Primitive {
 
 fn init_calyx(
     lib_loc: &Path,
-    externs: &[(String, Vec<core::Signature<TimeRep>>)],
+    externs: &[(String, Vec<ast::Signature>)],
 ) -> CalyxResult<ir::Context> {
     let mut prims = PathBuf::from(lib_loc);
     prims.push("primitives");
@@ -305,10 +302,7 @@ fn print(ctx: ir::Context) -> FilamentResult<()> {
     Ok(())
 }
 
-pub fn compile(
-    ns: core::Namespace<TimeRep>,
-    opts: &Opts,
-) -> FilamentResult<()> {
+pub fn compile(ns: ast::Namespace, opts: &Opts) -> FilamentResult<()> {
     let mut calyx_ctx = init_calyx(&opts.calyx_primitives, &ns.externs)
         .map_err(|err| Error::misc(format!("{:?}", err)))?;
 
