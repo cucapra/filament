@@ -18,3 +18,4 @@ Cargo.lock
 out.sv
 a.out
 model.smt
+hand-compile

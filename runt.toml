@@ -4,10 +4,18 @@ ver = "0.4.0"
 name = "tests"
 paths = [
   "tests/*.fil",
-  "tests/errors/*fil",
 ]
 cmd = """
 ./target/debug/filament {} --check
+"""
+
+[[tests]]
+name = "errors"
+paths = [
+  "tests/errors/*fil",
+]
+cmd = """
+./target/debug/filament {}
 """
 
 [[tests]]
