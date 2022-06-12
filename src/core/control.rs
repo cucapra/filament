@@ -253,6 +253,14 @@ impl Fsm {
             self.name, port
         )))
     }
+
+    /// Return the port associated with the given state
+    pub fn port(&self, state: u64) -> Port {
+        Port::CompPort {
+            comp: self.name.clone(),
+            name: format!("_{}", state).into(),
+        }
+    }
 }
 
 impl errors::WithPos for Fsm {
