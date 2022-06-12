@@ -1,12 +1,12 @@
 use super::Context;
+use crate::core;
 use crate::errors::FilamentResult;
-use crate::event_checker::ast;
 use calyx::ir::{self, RRC};
 use calyx::{build_assignments, guard, structure};
 /// A Calyx FSM that increments every cycle.
 pub struct Fsm {
     /// Fsm being constructed
-    sig: ast::Fsm,
+    sig: core::Fsm,
 
     /// Output port for the FSM register
     output_port: RRC<ir::Port>,
@@ -18,7 +18,7 @@ pub struct Fsm {
 impl Fsm {
     /// Construct a new Fsm from signature. Instantiates assignments
     /// needed to start, increment and reset the fsm.
-    pub fn new(sig: ast::Fsm, ctx: &mut Context) -> Self {
+    pub fn new(sig: core::Fsm, ctx: &mut Context) -> Self {
         let (trigger_port, guard) = ctx.compile_port(&sig.trigger);
         assert!(guard.is_none(), "Trigger port implies guard");
         let builder = &mut ctx.builder;
@@ -74,7 +74,7 @@ impl Fsm {
     /// Generate guard associated with a particular state on the Fsm.
     pub fn event(
         &self,
-        port: &ast::Id,
+        port: &core::Id,
         builder: &mut ir::Builder,
     ) -> FilamentResult<ir::Guard> {
         let st = self.sig.state(port)?;

@@ -232,9 +232,11 @@ impl FilamentParser {
     fn port(input: Node) -> ParseResult<ast::Port> {
         Ok(match_nodes!(
             input.into_children();
-            [bitwidth(constant)] => ast::Port::constant(constant),
-            [identifier(name)] => ast::Port::this(name),
-            [identifier(comp), identifier(name)] => ast::Port::comp(comp, name)
+            [bitwidth(constant)] => ast::Port::Constant(constant),
+            [identifier(name)] => ast::Port::ThisPort(name),
+            [identifier(comp), identifier(name)] => ast::Port::CompPort {
+                comp, name
+            }
         ))
     }
 
