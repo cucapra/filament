@@ -4,32 +4,27 @@ use crate::errors::{self, Error, FilamentResult};
 
 use super::Id;
 
-/// A port in the program.
-pub struct Port<L> {
+pub struct Port {
     pub typ: PortType,
-    pub liveness: L,
 }
-impl Port<()> {
+impl Port {
     pub fn this(name: Id) -> Self {
         Port {
             typ: PortType::ThisPort(name),
-            liveness: ()
         }
     }
     pub fn comp(comp: Id, name: Id) -> Self {
         Port {
             typ: PortType::CompPort { comp, name },
-            liveness: ()
         }
     }
     pub fn constant(n: u64) -> Self {
         Port {
             typ: PortType::Constant(n),
-            liveness: ()
         }
     }
 }
-impl<T> std::fmt::Display for Port<T> {
+impl std::fmt::Display for Port {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.typ)
     }
@@ -51,32 +46,32 @@ impl std::fmt::Display for PortType {
 }
 
 /// Command in a component
-pub enum Command<T, L> {
-    Invoke(Invoke<T, L>),
+pub enum Command<T> {
+    Invoke(Invoke<T>),
     Instance(Instance),
-    Connect(Connect<L>),
-    Fsm(Fsm<L>),
+    Connect(Connect),
+    Fsm(Fsm),
 }
 
-impl<T, L> From<Connect<L>> for Command<T, L> {
-    fn from(v: Connect<L>) -> Self {
+impl<T> From<Connect> for Command<T> {
+    fn from(v: Connect) -> Self {
         Self::Connect(v)
     }
 }
 
-impl<T, L> From<Instance> for Command<T, L> {
+impl<T> From<Instance> for Command<T> {
     fn from(v: Instance) -> Self {
         Self::Instance(v)
     }
 }
 
-impl<T, L> From<Invoke<T, L>> for Command<T, L> {
-    fn from(v: Invoke<T, L>) -> Self {
+impl<T> From<Invoke<T>> for Command<T> {
+    fn from(v: Invoke<T>) -> Self {
         Self::Invoke(v)
     }
 }
 
-impl<T: std::fmt::Debug, L> std::fmt::Display for Command<T, L> {
+impl<T: std::fmt::Debug> std::fmt::Display for Command<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Command::Invoke(inv) => write!(f, "{}", inv),
@@ -101,7 +96,7 @@ impl std::fmt::Display for Instance {
 }
 
 /// An Invocation
-pub struct Invoke<T, L> {
+pub struct Invoke<T> {
     /// Name of the variable being assigned
     pub bind: Id,
 
@@ -112,17 +107,17 @@ pub struct Invoke<T, L> {
     pub abstract_vars: Vec<T>,
 
     /// Assignment for the ports
-    pub ports: Option<Vec<Port<L>>>,
+    pub ports: Option<Vec<Port>>,
 
     /// Source location of the invocation
     pos: Option<errors::Span>,
 }
-impl<T, L> Invoke<T, L> {
+impl<T> Invoke<T> {
     pub fn new(
         bind: Id,
         comp: Id,
         abstract_vars: Vec<T>,
-        ports: Option<Vec<Port<L>>>,
+        ports: Option<Vec<Port>>,
     ) -> Self {
         Self {
             bind,
@@ -133,7 +128,7 @@ impl<T, L> Invoke<T, L> {
         }
     }
 }
-impl<T: std::fmt::Debug, L> std::fmt::Display for Invoke<T, L> {
+impl<T: std::fmt::Debug> std::fmt::Display for Invoke<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let abs = self
             .abstract_vars
@@ -159,7 +154,7 @@ impl<T: std::fmt::Debug, L> std::fmt::Display for Invoke<T, L> {
         }
     }
 }
-impl<T, L> errors::WithPos for Invoke<T, L> {
+impl<T> errors::WithPos for Invoke<T> {
     /// Attach a position to this node
     fn set_span(mut self, sp: Option<errors::Span>) -> Self {
         self.pos = sp;
@@ -171,11 +166,11 @@ impl<T, L> errors::WithPos for Invoke<T, L> {
 }
 
 /// A Guard expression
-pub enum Guard<L> {
-    Or(Box<Guard<L>>, Box<Guard<L>>),
-    Port(Port<L>),
+pub enum Guard {
+    Or(Box<Guard>, Box<Guard>),
+    Port(Port),
 }
-impl<L> std::fmt::Display for Guard<L> {
+impl std::fmt::Display for Guard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Guard::Or(g1, g2) => write!(f, "{} | {}", g1, g2),
@@ -185,22 +180,22 @@ impl<L> std::fmt::Display for Guard<L> {
 }
 
 /// A Connection between ports
-pub struct Connect<L> {
+pub struct Connect {
     /// Destination port
-    pub dst: Port<L>,
+    pub dst: Port,
 
     /// Source port
-    pub src: Port<L>,
+    pub src: Port,
 
     /// Optional guard expression.
-    pub guard: Option<Guard<L>>,
+    pub guard: Option<Guard>,
 
     /// Source location of the invocation
     pos: Option<errors::Span>,
 }
 
-impl<L> Connect<L> {
-    pub fn new(dst: Port<L>, src: Port<L>, guard: Option<Guard<L>>) -> Self {
+impl Connect {
+    pub fn new(dst: Port, src: Port, guard: Option<Guard>) -> Self {
         Self {
             dst,
             src,
@@ -209,7 +204,7 @@ impl<L> Connect<L> {
         }
     }
 }
-impl<L> std::fmt::Display for Connect<L> {
+impl std::fmt::Display for Connect {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(g) = &self.guard {
             write!(f, "{} = {} ? {}", self.dst, g, self.src)
@@ -218,7 +213,7 @@ impl<L> std::fmt::Display for Connect<L> {
         }
     }
 }
-impl<L> errors::WithPos for Connect<L> {
+impl errors::WithPos for Connect {
     /// Attach a position to this node
     fn set_span(mut self, sp: Option<errors::Span>) -> Self {
         self.pos = sp;
@@ -230,8 +225,24 @@ impl<L> errors::WithPos for Connect<L> {
     }
 }
 
+/// A when statement executes its body when the provided `port` rises.
+/// It also binds the `time_var` in the body to the time when the `port` rose.
+pub struct When<T> {
+    pub time: T,
+    pub commands: Vec<Command<T>>,
+}
+impl<T: std::fmt::Debug> std::fmt::Display for When<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "when {:?} {{ ", self.time)?;
+        for cmd in &self.commands {
+            write!(f, "{}; ", cmd)?;
+        }
+        write!(f, "}}")
+    }
+}
+
 /// Representation of a finite state machine
-pub struct Fsm<L> {
+pub struct Fsm {
     /// Name of the FSM
     pub name: Id,
 
@@ -239,13 +250,13 @@ pub struct Fsm<L> {
     pub states: u64,
 
     /// Signal that triggers the FSM
-    pub trigger: Port<L>,
+    pub trigger: Port,
 
     pos: Option<errors::Span>,
 }
 
-impl<L> Fsm<L> {
-    pub fn new(name: Id, states: u64, trigger: Port<L>) -> Self {
+impl Fsm {
+    pub fn new(name: Id, states: u64, trigger: Port) -> Self {
         Self {
             name,
             states,
@@ -270,7 +281,7 @@ impl<L> Fsm<L> {
     }
 }
 
-impl<L> errors::WithPos for Fsm<L> {
+impl errors::WithPos for Fsm {
     fn set_span(mut self, sp: Option<errors::Span>) -> Self {
         self.pos = sp;
         self
@@ -281,7 +292,7 @@ impl<L> errors::WithPos for Fsm<L> {
     }
 }
 
-impl<L> std::fmt::Display for Fsm<L> {
+impl std::fmt::Display for Fsm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "fsm {}[{}]({})", self.name, self.states, self.trigger)
     }

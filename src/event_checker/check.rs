@@ -1,13 +1,12 @@
 use std::rc::Rc;
+
 use itertools::Itertools;
 
-use crate::frontend::ast as front;
 use crate::{
-    core::FsmIdxs,
+    core,
     errors::{FilamentResult, WithPos},
     frontend,
 };
-use super::ast;
 
 /// The type ascribed to an interval time expression
 #[derive(PartialEq)]
@@ -41,7 +40,7 @@ fn type_check(it: &frontend::IntervalTime) -> EvType {
     }
 }
 
-fn transform_time(it: frontend::IntervalTime) -> FsmIdxs {
+fn transform_time(it: frontend::IntervalTime) -> core::FsmIdxs {
     assert!(
         type_check(&it) == EvType::Event,
         "interval time does not represent a valid event"
@@ -50,45 +49,45 @@ fn transform_time(it: frontend::IntervalTime) -> FsmIdxs {
 }
 
 fn transform_range(
-    range: front::Range,
-) -> ast::Range {
-    ast::Range {
+    range: core::Range<frontend::IntervalTime>,
+) -> core::Range<core::FsmIdxs> {
+    core::Range {
         start: range.start.into(),
         end: range.end.into(),
     }
 }
 
 fn transform_interval(
-    interval: front::Interval,
-) -> ast::Interval {
-    ast::Interval {
+    interval: core::Interval<frontend::IntervalTime>,
+) -> core::Interval<core::FsmIdxs> {
+    core::Interval {
         within: transform_range(interval.within),
         exact: interval.exact.map(transform_range),
     }
 }
 
 fn transform_control(
-    con: front::Command,
-) -> FilamentResult<ast::Command> {
+    con: core::Command<frontend::IntervalTime>,
+) -> FilamentResult<core::Command<core::FsmIdxs>> {
     match con {
-        front::Command::Invoke(inv) => {
+        core::Command::Invoke(inv) => {
             let pos = inv.copy_span();
-            let abs: Vec<FsmIdxs> =
+            let abs: Vec<core::FsmIdxs> =
                 inv.abstract_vars.into_iter().map(transform_time).collect();
-            Ok(ast::Invoke::new(inv.bind, inv.comp, abs, inv.ports)
+            Ok(core::Invoke::new(inv.bind, inv.comp, abs, inv.ports)
                 .set_span(pos)
                 .into())
         }
-        front::Command::Instance(ins) => Ok(ast::Command::Instance(ins)),
-        front::Command::Connect(con) => Ok(ast::Command::Connect(con)),
-        front::Command::Fsm(fsm) => Ok(ast::Command::Fsm(fsm)),
+        core::Command::Instance(ins) => Ok(core::Command::Instance(ins)),
+        core::Command::Connect(con) => Ok(core::Command::Connect(con)),
+        core::Command::Fsm(fsm) => Ok(core::Command::Fsm(fsm)),
     }
 }
 
 fn transform_port_def(
-    pd: front::PortDef,
-) -> ast::PortDef {
-    ast::PortDef {
+    pd: core::PortDef<frontend::IntervalTime>,
+) -> core::PortDef<core::FsmIdxs> {
+    core::PortDef {
         liveness: pd.liveness.map(transform_interval),
         name: pd.name,
         bitwidth: pd.bitwidth,
@@ -96,9 +95,9 @@ fn transform_port_def(
 }
 
 fn transform_constraints(
-    con: front::Constraint,
-) -> ast::Constraint {
-    ast::Constraint {
+    con: core::Constraint<frontend::IntervalTime>,
+) -> core::Constraint<core::FsmIdxs> {
+    core::Constraint {
         left: transform_time(con.left),
         right: transform_time(con.right),
         op: con.op,
@@ -106,9 +105,9 @@ fn transform_constraints(
 }
 
 fn transform_signature(
-    sig: front::Signature,
-) -> ast::Signature {
-    ast::Signature {
+    sig: core::Signature<frontend::IntervalTime>,
+) -> core::Signature<core::FsmIdxs> {
+    core::Signature {
         inputs: sig.inputs.into_iter().map(transform_port_def).collect(),
         outputs: sig.outputs.into_iter().map(transform_port_def).collect(),
         constraints: sig
@@ -127,8 +126,8 @@ fn transform_signature(
 }
 
 pub fn check_and_transform(
-    ns: front::Namespace,
-) -> FilamentResult<ast::Namespace> {
+    ns: core::Namespace<frontend::IntervalTime>,
+) -> FilamentResult<core::Namespace<core::FsmIdxs>> {
     let components = ns
         .components
         .into_iter()
@@ -139,14 +138,14 @@ pub fn check_and_transform(
                 .map(transform_control)
                 .collect::<FilamentResult<Vec<_>>>()?;
 
-            Ok(ast::Component::new(
+            Ok(core::Component::new(
                 transform_signature(Rc::try_unwrap(comp.sig).unwrap()),
                 commands,
             ))
         })
         .collect::<FilamentResult<Vec<_>>>()?;
 
-    Ok(ast::Namespace {
+    Ok(core::Namespace {
         imports: ns.imports,
         externs: ns
             .externs
