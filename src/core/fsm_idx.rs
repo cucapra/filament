@@ -1,9 +1,9 @@
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 
-use crate::{core, interval_checking::SExp};
+use crate::interval_checking::SExp;
 
-use super::{Id, Interval, Range};
+use super::{Id, Interval, PortDef, Range};
 
 /// An interval time expression that denotes a max of sums expression.
 #[derive(Default, Hash, Clone, PartialEq, Eq)]
@@ -73,6 +73,15 @@ impl FsmIdxs {
         FsmIdxs { fsms: hs }
     }
 
+    /// Attempts to convert this FsmIdxs to a single (event, state) pair if possible.
+    pub fn as_unit(&self) -> Option<(&Id, &u64)> {
+        if self.fsms.len() == 1 {
+            self.fsms.iter().next()
+        } else {
+            None
+        }
+    }
+
     /// Add a new fsm state T+n to the expression
     pub fn insert(&mut self, name: Id, state: u64) {
         self.fsms.insert(name, state);
@@ -138,14 +147,25 @@ impl Range<FsmIdxs> {
     /// exactly one event for both start and end.
     pub fn as_offset(&self) -> Option<(&Id, u64, u64)> {
         let Range { start, end } = &self;
-        if start.fsms.len() == 1 && end.fsms.len() == 1 {
-            let (s_ev, s_st) = start.fsms.iter().next().unwrap();
-            let (e_ev, e_st) = end.fsms.iter().next().unwrap();
-            if s_ev == e_ev {
-                return Some((s_ev, *s_st, *e_st));
-            }
-        }
 
-        None
+        start.as_unit().and_then(|(s_ev, s_st)| {
+            end.as_unit().and_then(|(e_ev, e_st)| {
+                if s_ev == e_ev {
+                    Some((s_ev, *s_st, *e_st))
+                } else {
+                    None
+                }
+            })
+        })
+    }
+}
+
+impl PortDef<FsmIdxs> {
+    /// Attempts to convert this port definition into an interface signal and return the associated
+    /// event.
+    pub fn as_interface_port(&self) -> Option<&Id> {
+        self.liveness
+            .as_ref()
+            .and_then(|inv| inv.as_exact_offset().map(|off| off.0))
     }
 }

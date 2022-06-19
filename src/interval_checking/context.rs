@@ -2,7 +2,7 @@ use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 use linked_hash_map::LinkedHashMap;
 
-use crate::core::FsmIdxs;
+use crate::core::{self, FsmIdxs};
 use crate::errors::{self, Error, FilamentResult};
 use crate::event_checker::ast;
 
@@ -60,7 +60,7 @@ impl<'a> ConcreteInvoke<'a> {
             }
             ConcreteInvoke::Fsm { start_time, fsm } => {
                 // XXX(rachit): This is constructed everytime this method is called.
-                let idx = fsm.state(port)?;
+                let idx = core::Fsm::state(port)?;
                 let within: ast::Range = ast::Range::new(
                     start_time.clone(),
                     start_time.clone().increment(fsm.states),
