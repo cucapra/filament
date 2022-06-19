@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::core::Id;
+use crate::core::{self, Id};
 
 /// Represents a time variable which can either be:
 ///   1. An abstract variable like `G`.
@@ -127,6 +127,25 @@ impl std::fmt::Debug for IntervalTime {
                 right.fmt(f)?;
                 write!(f, ")")
             }
+        }
+    }
+}
+
+impl core::PortDef<IntervalTime> {
+    pub fn from_interface_signal(name: Id, event: Id, len: u64) -> Self {
+        let ev: IntervalTime = event.into();
+        let liveness = core::Interval::from(core::Range::new(
+            ev.clone(),
+            IntervalTime::binop_add(ev.clone(), len.into()),
+        ))
+        .with_exact(core::Range::new(
+            ev.clone(),
+            IntervalTime::binop_add(ev, 1.into()),
+        ));
+        core::PortDef {
+            name,
+            bitwidth: 1,
+            liveness: Some(liveness),
         }
     }
 }

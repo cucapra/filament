@@ -1,18 +1,31 @@
-use crate::core;
+use itertools::Itertools;
+
 use crate::{errors::FilamentResult, event_checker::ast};
 use std::collections::HashMap;
 
+#[derive(Default)]
 struct Context<'a> {
-    /// Maximum state used by an event variable.
-    pub max_states: HashMap<ast::Id, u64>,
-
     /// Signatures for instances
     pub sigs: HashMap<ast::Id, &'a ast::Signature>,
 
+    /// Maximum state used by an event variable.
+    pub max_states: HashMap<ast::Id, u64>,
+
     /// Mapping from events to FSMs
-    pub fsms: HashMap<ast::Id, &'a ast::Fsm>,
+    pub fsms: HashMap<ast::Id, ast::Fsm>,
 }
 
+/* impl<'a> From<&'a HashMap<ast::Id, &'a ast::Signature>> for Context<'a> {
+    fn from(sigs: &'a HashMap<ast::Id, &'a ast::Signature>) -> Self {
+        Context {
+            sigs,
+            max_states: HashMap::default(),
+            fsms: HashMap::default(),
+        }
+    }
+} */
+
+/// Converts an interval to a guard expression with the appropriate FSM
 fn interval_to_guard(inv: ast::Range, ctx: &mut Context) -> ast::Guard {
     if let Some((ev, st, end)) = inv.as_offset() {
         // Update max state if this interval ends at a greater value
@@ -47,9 +60,31 @@ fn compile_invoke(inv: ast::Invoke, ctx: &mut Context) -> Vec<ast::Command> {
             .zip(abstract_vars.iter())
             .collect();
 
-        let mut connects = Vec::with_capacity(ports.len());
+        let mut connects =
+            Vec::with_capacity(ports.len() + sig.interface_signals.len());
 
-        // For each port, generate the correct connect.
+        // Generate the assignment for each interface port
+        for interface in &sig.interface_signals {
+            let ev = interface.as_interface_port().unwrap_or_else(|| {
+                unreachable!("Could not get event from interface port")
+            });
+            // Get binding for this event in the invoke
+            let (_, start_time) = binding[ev].as_unit().unwrap_or_else(|| {
+                unimplemented!("Binding for event {ev} is a max-expression")
+            });
+            let port = ctx.fsms[ev].port(*start_time);
+            let con = ast::Connect::new(
+                ast::Port::CompPort {
+                    comp: bind.clone(),
+                    name: interface.name.clone(),
+                },
+                port,
+                None,
+            );
+            connects.push(con.into())
+        }
+
+        // Generate assignment for each port
         for (port, formal) in ports.into_iter().zip(sig.inputs.iter()) {
             if let Some(live) = &formal.liveness {
                 let req = live.resolve(&binding);
@@ -81,8 +116,11 @@ fn compile_invoke(inv: ast::Invoke, ctx: &mut Context) -> Vec<ast::Command> {
 /// Computes the max state traversed by each event variable
 fn max_states(
     mut comp: ast::Component,
-    ctx: &mut Context,
+    comp_sigs: &HashMap<ast::Id, &ast::Signature>,
 ) -> FilamentResult<ast::Component> {
+    let mut ctx = Context::default();
+
+    // Define max_state for each FSM to be 0.
     let events = comp
         .sig
         .abstract_vars
@@ -91,16 +129,68 @@ fn max_states(
         .collect();
     ctx.max_states = events;
 
-    comp.body = comp
-        .body
-        .into_iter()
-        .flat_map(|con| match con {
-            ast::Command::Invoke(inv) => compile_invoke(inv, ctx),
-            ast::Command::Instance(_) => vec![],
-            ast::Command::Connect(_) => vec![],
-            ast::Command::Fsm(_) => vec![],
+    // Define FSMs for each event
+    ctx.fsms = comp
+        .sig
+        .interface_signals
+        .iter()
+        .map(|interface| {
+            let ev = interface.as_interface_port().unwrap();
+            (
+                ev.clone(),
+                ast::Fsm::new(
+                    format!("{}_fsm", ev).into(),
+                    u64::MAX, // place holder value of the FSM. Patched up later.
+                    ast::Port::ThisPort(interface.name.clone()),
+                ),
+            )
         })
-        .collect();
+        .collect::<HashMap<_, _>>();
+
+    // Compile the body
+    let body = comp
+        .body
+        .drain(..)
+        .flat_map(|con| match con {
+            ast::Command::Invoke(inv) => compile_invoke(inv, &mut ctx),
+            ast::Command::Instance(ast::Instance {
+                ref name,
+                ref component,
+            }) => {
+                let sig = comp_sigs[component];
+                ctx.sigs.insert(name.clone(), sig);
+                vec![con]
+            }
+            ast::Command::Connect(_) | ast::Command::Fsm(_) => vec![con],
+        })
+        .collect_vec();
+
+    // Define the correct values for FSM states and add them to the body
+    comp.body = ctx
+        .fsms
+        .into_iter()
+        .map(|(ev, mut fsm)| {
+            fsm.states = ctx.max_states[&ev];
+            ast::Command::Fsm(fsm)
+        })
+        .chain(body)
+        .collect_vec();
 
     Ok(comp)
+}
+
+pub fn lower_invokes(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
+    let sigs = ns
+        .externs
+        .iter()
+        .flat_map(|(_, comps)| comps.iter().map(|s| (s.name.clone(), s)))
+        .collect::<HashMap<_, _>>();
+
+    ns.components = ns
+        .components
+        .into_iter()
+        .map(|comp| max_states(comp, &sigs))
+        .collect::<FilamentResult<_>>()?;
+
+    Ok(ns)
 }

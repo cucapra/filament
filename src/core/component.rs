@@ -1,8 +1,5 @@
-use super::{Command, Constraint, Id, Interval, Range, TimeRep};
-use crate::{
-    errors::{Error, FilamentResult},
-    frontend,
-};
+use super::{Command, Constraint, Id, Interval, TimeRep};
+use crate::errors::{Error, FilamentResult};
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -42,25 +39,6 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?} {}: {}", self.liveness, self.name, self.bitwidth)
-    }
-}
-
-impl PortDef<frontend::IntervalTime> {
-    pub fn from_interface_signal(name: Id, event: Id, len: u64) -> Self {
-        let ev: frontend::IntervalTime = event.into();
-        let liveness = Interval::from(Range::new(
-            ev.clone(),
-            frontend::IntervalTime::binop_add(ev.clone(), len.into()),
-        ))
-        .with_exact(Range::new(
-            ev.clone(),
-            frontend::IntervalTime::binop_add(ev, 1.into()),
-        ));
-        PortDef {
-            name,
-            bitwidth: 1,
-            liveness: Some(liveness),
-        }
     }
 }
 

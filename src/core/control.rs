@@ -9,6 +9,7 @@ pub enum Port {
     CompPort { comp: Id, name: Id },
     Constant(u64),
 }
+
 impl std::fmt::Display for Port {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -240,7 +241,7 @@ impl Fsm {
     }
 
     /// Returns the state associated with the FSM port
-    pub fn state(&self, port: &Id) -> FilamentResult<u64> {
+    pub fn state(port: &Id) -> FilamentResult<u64> {
         let split = port.id.split('_').collect_vec();
         if split.len() == 2 {
             let mb_idx = split[1].parse::<u64>();
@@ -249,8 +250,8 @@ impl Fsm {
             }
         }
         Err(Error::malformed(format!(
-            "Unknown port: {}.{}",
-            self.name, port
+            "Port cannot be converted into FSM state: {}",
+            port
         )))
     }
 

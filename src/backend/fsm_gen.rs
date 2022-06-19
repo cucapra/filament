@@ -5,9 +5,6 @@ use calyx::ir::{self, RRC};
 use calyx::{build_assignments, guard, structure};
 /// A Calyx FSM that increments every cycle.
 pub struct Fsm {
-    /// Fsm being constructed
-    sig: core::Fsm,
-
     /// Output port for the FSM register
     output_port: RRC<ir::Port>,
 
@@ -65,7 +62,6 @@ impl Fsm {
 
         let output_port = fsm.borrow().get("out");
         Fsm {
-            sig,
             output_port,
             start_event: start,
         }
@@ -77,7 +73,7 @@ impl Fsm {
         port: &core::Id,
         builder: &mut ir::Builder,
     ) -> FilamentResult<ir::Guard> {
-        let st = self.sig.state(port)?;
+        let st = core::Fsm::state(port)?;
         if st == 0 {
             Ok(self.start_event.clone())
         } else {
