@@ -1,7 +1,7 @@
-use std::fmt::Display;
-use linked_hash_map::LinkedHashMap;
-use crate::interval_checking::SExp;
 use super::{Id, Interval, PortDef, Range};
+use crate::interval_checking::SExp;
+use linked_hash_map::LinkedHashMap;
+use std::fmt::Display;
 
 /// An interval time expression that denotes a max of sums expression.
 #[derive(Default, Hash, Clone, PartialEq, Eq)]

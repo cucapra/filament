@@ -61,7 +61,17 @@ fn compile_invoke(inv: ast::Invoke, ctx: &mut Context) -> Vec<ast::Command> {
             .collect();
 
         let mut connects =
-            Vec::with_capacity(ports.len() + sig.interface_signals.len());
+            Vec::with_capacity(1 + ports.len() + sig.interface_signals.len());
+
+        // Define the low-level invoke
+        let low_inv = ast::Invoke::new(
+            bind.clone(),
+            comp.clone(),
+            abstract_vars.clone(),
+            None,
+        )
+        .into();
+        connects.push(low_inv);
 
         // Generate the assignment for each interface port
         for interface in &sig.interface_signals {
@@ -95,7 +105,7 @@ fn compile_invoke(inv: ast::Invoke, ctx: &mut Context) -> Vec<ast::Command> {
                 let guard = interval_to_guard(req.within, ctx);
                 let con = ast::Connect::new(
                     ast::Port::CompPort {
-                        comp: comp.clone(),
+                        comp: bind.clone(),
                         name: formal.name.clone(),
                     },
                     port,
@@ -106,7 +116,6 @@ fn compile_invoke(inv: ast::Invoke, ctx: &mut Context) -> Vec<ast::Command> {
                 panic!("Unannotated ports cannot be compiled")
             }
         }
-
         connects
     } else {
         return vec![inv.into()];

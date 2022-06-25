@@ -56,6 +56,7 @@ fn main() -> errors::FilamentResult<()> {
     let ns = event_checker::check_and_transform(ns)?;
     interval_checking::check(&ns)?;
     let ns = lower::lower_invokes(ns)?;
+    interval_checking::check(&ns)?;
     if !opts.check {
         backend::compile(ns, &opts)?;
     }
