@@ -1,8 +1,6 @@
-use itertools::Itertools;
+use std::fmt::Display;
 use linked_hash_map::LinkedHashMap;
-
 use crate::interval_checking::SExp;
-
 use super::{Id, Interval, PortDef, Range};
 
 /// An interval time expression that denotes a max of sums expression.
@@ -35,33 +33,22 @@ impl PartialOrd for FsmIdxs {
                 return None;
             }
         }
-        log::debug!("Comparing {self:?} & {other:?}: {cur_order:?}");
+        log::debug!("Comparing {self} & {other}: {cur_order:?}");
 
         cur_order
     }
 }
 
-impl std::fmt::Debug for FsmIdxs {
+impl Display for FsmIdxs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.fsms.len() == 1 {
-            let (ev, st) = &self.fsms.iter().next().unwrap();
-            if **st == 0 {
-                write!(f, "{ev}")
-            } else {
-                write!(f, "{ev}+{st}")
-            }
-        } else {
-            write!(f, "max(")?;
-            write!(
-                f,
-                "{}",
-                self.fsms
-                    .iter()
-                    .map(|(ev, st)| format!("{ev}+{st}"))
-                    .join(",")
-            )?;
-            write!(f, ")")
-        }
+        let mut fs = self.fsms.iter();
+        let (ev0, st0) = fs.next().unwrap();
+
+        let out = fs.fold(format!("{ev0}+{st0}"), |acc, (ev, st)| {
+            format!("max({acc}, {ev}+{st})")
+        });
+
+        write!(f, "{}", out)
     }
 }
 

@@ -75,7 +75,7 @@ fn merge_availability(intervals: Intervals) -> ast::Interval {
         .iter()
         .map(|iv| {
             iv.as_exact_offset().unwrap_or_else(|| {
-                panic!("Cannot convert interval into offset: {:?}", iv)
+                panic!("Cannot convert interval into offset: {}", iv)
             })
         })
         .sorted_by(|ev1, ev2| ev1.1.cmp(&ev2.1))

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use itertools::Itertools;
 
 use crate::errors::{self, Error, FilamentResult};
@@ -46,7 +48,7 @@ impl<T> From<Invoke<T>> for Command<T> {
     }
 }
 
-impl<T: std::fmt::Debug> std::fmt::Display for Command<T> {
+impl<T: Display> Display for Command<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Command::Invoke(inv) => write!(f, "{}", inv),
@@ -103,12 +105,12 @@ impl<T> Invoke<T> {
         }
     }
 }
-impl<T: std::fmt::Debug> std::fmt::Display for Invoke<T> {
+impl<T: Display> Display for Invoke<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let abs = self
             .abstract_vars
             .iter()
-            .map(|it| format!("{:?}", it))
+            .map(|it| format!("{}", it))
             .collect::<Vec<String>>()
             .join(",");
         if let Some(ports) = &self.ports {
@@ -206,9 +208,9 @@ pub struct When<T> {
     pub time: T,
     pub commands: Vec<Command<T>>,
 }
-impl<T: std::fmt::Debug> std::fmt::Display for When<T> {
+impl<T: Display> Display for When<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "when {:?} {{ ", self.time)?;
+        write!(f, "when {} {{ ", self.time)?;
         for cmd in &self.commands {
             write!(f, "{}; ", cmd)?;
         }

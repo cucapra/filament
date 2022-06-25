@@ -214,7 +214,7 @@ impl<'a> Context<'a> {
         F: Iterator<Item = ast::Constraint>,
     {
         for fact in facts {
-            log::info!("adding obligation {:?}", fact);
+            log::info!("adding obligation {}", fact);
             let locs = self.obligations.entry(fact).or_insert(vec![]);
             if let Some(sp) = &span {
                 locs.push(sp.clone())
@@ -228,7 +228,7 @@ impl<'a> Context<'a> {
         F: Iterator<Item = ast::Constraint>,
     {
         for fact in facts {
-            log::info!("adding known fact {:?}", fact);
+            log::info!("adding known fact {}", fact);
             let locs = self.facts.entry(fact).or_insert(vec![]);
             if let Some(sp) = &span {
                 locs.push(sp.clone())
