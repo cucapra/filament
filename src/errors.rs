@@ -223,7 +223,7 @@ impl std::fmt::Display for ErrorKind {
                 write!(f, "{}", msg)
             }
             CannotProve(fact) => {
-                write!(f, "Cannot prove fact {:?}", fact)
+                write!(f, "Cannot prove fact {}", fact)
             }
             Malformed(msg) => write!(f, "{msg}"),
         }

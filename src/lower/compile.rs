@@ -121,13 +121,14 @@ fn max_states(
     let mut ctx = Context::default();
 
     // Define max_state for each FSM to be 0.
-    let events = comp
+    ctx.max_states = comp
         .sig
         .abstract_vars
         .iter()
         .map(|ev| (ev.clone(), 0))
         .collect();
-    ctx.max_states = events;
+
+    // TODO: For each event, make sure an interface port is defined
 
     // Define FSMs for each event
     ctx.fsms = comp
@@ -146,6 +147,8 @@ fn max_states(
             )
         })
         .collect::<HashMap<_, _>>();
+
+    // println!("{}", ctx.fsms);
 
     // Compile the body
     let body = comp
@@ -191,6 +194,8 @@ pub fn lower_invokes(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
         .into_iter()
         .map(|comp| max_states(comp, &sigs))
         .collect::<FilamentResult<_>>()?;
+
+    println!("{}", ns);
 
     Ok(ns)
 }

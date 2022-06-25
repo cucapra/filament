@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use crate::core::{self, Id};
 
@@ -110,7 +110,7 @@ impl crate::core::TimeRep for IntervalTime {
     }
 }
 
-impl std::fmt::Debug for IntervalTime {
+impl Display for IntervalTime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             IntervalTime::Abstract(id) => write!(f, "{}", id),

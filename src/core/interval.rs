@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use super::{Constraint, Id, TimeRep};
 
@@ -37,12 +37,12 @@ where
     }
 }
 
-impl<T> std::fmt::Debug for Range<T>
+impl<T> Display for Range<T>
 where
-    T: TimeRep + Clone + std::fmt::Debug,
+    T: Display + TimeRep + Clone,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{:?}, {:?}]", self.start, self.end)
+        write!(f, "[{}, {}]", self.start, self.end)
     }
 }
 
@@ -100,14 +100,14 @@ where
     }
 }
 
-impl<T> std::fmt::Debug for Interval<T>
+impl<T> Display for Interval<T>
 where
-    T: std::fmt::Debug + Clone + super::TimeRep,
+    T: Display + Clone + super::TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "@{:?}", self.within)?;
+        write!(f, "@{}", self.within)?;
         if let Some(interval) = &self.exact {
-            write!(f, " + @exact{:?}", interval)?;
+            write!(f, " + @exact{}", interval)?;
         }
         Ok(())
     }

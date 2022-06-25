@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter};
+use std::{collections::HashMap, fmt::Display, iter};
 
 use crate::interval_checking::SExp;
 
@@ -147,12 +147,12 @@ where
     }
 }
 
-impl<T> std::fmt::Debug for Constraint<T>
+impl<T> Display for Constraint<T>
 where
-    T: std::fmt::Debug + TimeRep,
+    T: Display + TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?} {} {:?}", self.left, self.op, self.right)
+        write!(f, "{} {} {}", self.left, self.op, self.right)
     }
 }
 

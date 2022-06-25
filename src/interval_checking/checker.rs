@@ -33,7 +33,7 @@ fn check_connect(
     // If a guard is present, use its availablity instead.
     let maybe_guarantee = if let Some(g) = &guard {
         let guard_interval = super::total_interval(g, ctx)?;
-        log::info!("Guard availablity is: {guard_interval:?}");
+        log::info!("Guard availablity is: {guard_interval}");
 
         // When we have: dst = g ? ...
         // We need to show that:
@@ -257,15 +257,15 @@ fn check_component(
 
     let (obligations_with_pos, facts) = ctx.into();
     let facts = facts.iter().map(|(f, _)| f).collect_vec();
-    if !facts.is_empty() {
-        println!("Known Facts:\n{:#?}", facts);
-    }
+    /* if !facts.is_empty() {
+        eprintln!("Known Facts:\n{:?}", facts);
+    } */
 
     let obligations = obligations_with_pos
         .iter()
         .flat_map(|(f, _)| f.simplify())
         .collect::<Vec<&_>>();
-    eprintln!("Proof Obligations:\n{:#?}", obligations);
+    // eprintln!("Proof Obligations:\n{}", obligations);
 
     if let Some(fact) = super::prove(
         comp.sig.abstract_vars.iter(),

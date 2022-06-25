@@ -1,6 +1,8 @@
+use itertools::Itertools;
+
 use super::{Command, Constraint, Id, Interval, TimeRep};
 use crate::errors::{Error, FilamentResult};
-use std::rc::Rc;
+use std::{fmt::Display, rc::Rc};
 
 #[derive(Clone)]
 pub struct PortDef<T>
@@ -33,17 +35,19 @@ where
         })
     }
 }
-impl<T> std::fmt::Debug for PortDef<T>
+impl<T> Display for PortDef<T>
 where
-    T: std::fmt::Debug + Clone + TimeRep,
+    T: Display + Clone + TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?} {}: {}", self.liveness, self.name, self.bitwidth)
+        if let Some(liv) = &self.liveness {
+            write!(f, "{} ", liv)?;
+        }
+        write!(f, "{}: {}", self.name, self.bitwidth)
     }
 }
 
 /// The signature of a component definition
-#[derive(Debug)]
 pub struct Signature<T>
 where
     T: Clone + TimeRep,
@@ -131,6 +135,47 @@ where
             })
     }
 }
+impl<T> Display for Signature<T>
+where
+    T: Display + Clone + TimeRep,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "component {}<{}>({}, {}) -> ({})",
+            self.name,
+            self.abstract_vars
+                .iter()
+                .map(|id| id.to_string())
+                .join(", "),
+            self.interface_signals
+                .iter()
+                .map(|pd| format!("{pd}"))
+                .join(", "),
+            self.inputs.iter().map(|pd| format!("{pd}")).join(", "),
+            self.outputs.iter().map(|pd| format!("{pd}")).join(", "),
+        )?;
+        if !self.constraints.is_empty() {
+            write!(
+                f,
+                "\nwhere {}",
+                self.constraints
+                    .iter()
+                    .map(|cons| format!("{cons}"))
+                    .join(", "),
+            )?;
+        }
+        Ok(())
+    }
+}
+impl<T> std::fmt::Debug for Signature<T>
+where
+    T: Display + Clone + TimeRep,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self}")
+    }
+}
 
 /// A component in Filament
 pub struct Component<T>
@@ -155,6 +200,18 @@ where
         }
     }
 }
+impl<T> Display for Component<T>
+where
+    T: Clone + TimeRep + Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{} {{", self.sig)?;
+        for com in &self.body {
+            writeln!(f, "  {};", com)?;
+        }
+        writeln!(f, "}}")
+    }
+}
 
 pub struct Namespace<T>
 where
@@ -168,4 +225,26 @@ where
 
     /// Components defined in this file
     pub components: Vec<Component<T>>,
+}
+
+impl<T> Display for Namespace<T>
+where
+    T: Clone + TimeRep + Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for imp in &self.imports {
+            writeln!(f, "import \"{}\";", imp)?;
+        }
+        for (path, sigs) in &self.externs {
+            writeln!(f, "extern \"{}\" {{", path)?;
+            for sig in sigs {
+                writeln!(f, "  {};", sig)?;
+            }
+            writeln!(f, "}}")?;
+        }
+        for comp in &self.components {
+            writeln!(f, "{}", comp)?;
+        }
+        Ok(())
+    }
 }
