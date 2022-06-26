@@ -277,8 +277,13 @@ impl errors::WithPos for Fsm {
     }
 }
 
-impl std::fmt::Display for Fsm {
+impl Display for Fsm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "fsm {}[{}]({})", self.name, self.states, self.trigger)
+    }
+}
+impl std::fmt::Debug for Fsm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
     }
 }

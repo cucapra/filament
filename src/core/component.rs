@@ -209,23 +209,36 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "component {}<{}>({}, {}) -> ({})",
+            "component {}<{}>(",
             self.name,
             self.abstract_vars
                 .iter()
                 .map(|id| id.to_string())
                 .join(", "),
-            self.interface_signals
-                .iter()
-                .map(|pd| format!("{pd}"))
-                .join(", "),
+        )?;
+        if !self.interface_signals.is_empty() {
+            write!(
+                f,
+                "{}",
+                self.interface_signals
+                    .iter()
+                    .map(|pd| format!("{pd}"))
+                    .join(", "),
+            )?;
+            if !self.inputs.is_empty() {
+                write!(f, ", ")?;
+            }
+        }
+        write!(
+            f,
+            "{}) -> ({})",
             self.inputs.iter().map(|pd| format!("{pd}")).join(", "),
             self.outputs.iter().map(|pd| format!("{pd}")).join(", "),
         )?;
         if !self.constraints.is_empty() {
             write!(
                 f,
-                "\nwhere {}",
+                " where {}",
                 self.constraints
                     .iter()
                     .map(|cons| format!("{cons}"))
