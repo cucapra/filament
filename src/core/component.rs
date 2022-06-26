@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use super::{Command, Constraint, Id, Interval, TimeRep};
+use super::{Command, Constraint, Id, Interval, Range, TimeRep};
 use crate::errors::{Error, FilamentResult};
 use std::{fmt::Display, rc::Rc};
 
@@ -47,6 +47,56 @@ where
     }
 }
 
+#[derive(Clone)]
+pub struct InterfaceDef<T>
+where
+    T: TimeRep + Clone,
+{
+    /// Name of the port
+    pub name: Id,
+    // Event that this port is an evidence of
+    pub event: Id,
+    // Delay required for this signal
+    pub delay: u64,
+    // Liveness of the interface signal
+    liveness: Interval<T>,
+}
+impl<T> Display for InterfaceDef<T>
+where
+    T: TimeRep + Clone,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "@interface<{}, {}> {}: 1",
+            self.event, self.delay, self.name
+        )
+    }
+}
+
+impl<T> InterfaceDef<T>
+where
+    T: TimeRep + Clone,
+{
+    pub fn new(name: Id, event: Id, delay: u64) -> Self
+    where
+        T: TimeRep + Clone,
+    {
+        let start = T::unit(event.clone(), 0);
+        let liveness = Interval::from(Range::new(
+            start.clone(),
+            start.clone().increment(delay),
+        ))
+        .with_exact(Range::new(start.clone(), start.increment(1)));
+        Self {
+            name,
+            event,
+            delay,
+            liveness,
+        }
+    }
+}
+
 /// The signature of a component definition
 pub struct Signature<T>
 where
@@ -60,7 +110,7 @@ where
 
     /// Mapping from name of signals to the abstract variable they provide
     /// evidence for.
-    pub interface_signals: Vec<PortDef<T>>,
+    pub interface_signals: Vec<InterfaceDef<T>>,
 
     /// Input ports
     pub inputs: Vec<PortDef<T>>,
@@ -90,23 +140,36 @@ where
     }
 
     /// Returns a port associated with the signature
-    pub fn get_port(
+    pub fn get_liveness(
         &self,
         port: &Id,
         is_input: bool,
-    ) -> FilamentResult<&PortDef<T>> {
-        // XXX(rachit): Always searching interface ports regardless of input or output
-        let maybe_pd = if is_input {
-            self.inputs
-                .iter()
-                .chain(self.interface_signals.iter())
-                .find(|pd| pd.name == port)
+    ) -> FilamentResult<Option<Interval<T>>> {
+        let mut iter = if is_input {
+            self.inputs.iter()
         } else {
-            self.outputs
-                .iter()
-                .chain(self.interface_signals.iter())
-                .find(|pd| pd.name == port)
+            self.outputs.iter()
         };
+
+        // XXX(rachit): Always searching interface ports regardless of input or output
+        let maybe_pd = iter
+            .find_map(|pd| {
+                if pd.name == port {
+                    Some(pd.liveness.clone())
+                } else {
+                    None
+                }
+            })
+            .or_else(|| {
+                self.interface_signals.iter().find_map(|id| {
+                    if id.name == port {
+                        Some(Some(id.liveness.clone()))
+                    } else {
+                        None
+                    }
+                })
+            });
+
         maybe_pd.ok_or_else(|| {
             let kind = if is_input {
                 "input port"
@@ -126,13 +189,17 @@ where
         self.inputs
             .iter()
             .chain(self.outputs.iter())
-            .chain(self.interface_signals.iter())
             .flat_map(|mpd| {
                 mpd.liveness
                     .as_ref()
                     .map(|pd| pd.well_formed())
                     .unwrap_or_default()
             })
+            .chain(
+                self.interface_signals
+                    .iter()
+                    .flat_map(|id| id.liveness.well_formed()),
+            )
     }
 }
 impl<T> Display for Signature<T>

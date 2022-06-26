@@ -6,7 +6,7 @@ mod id;
 mod interval;
 mod time_rep;
 
-pub use component::{Component, Namespace, PortDef, Signature};
+pub use component::{Component, InterfaceDef, Namespace, PortDef, Signature};
 pub use constraint::{Constraint, OrderOp};
 pub use control::{Command, Connect, Fsm, Guard, Instance, Invoke, Port, When};
 pub use fsm_idx::FsmIdxs;

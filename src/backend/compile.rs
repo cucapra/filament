@@ -173,7 +173,6 @@ fn as_port_defs(
     let mut ports: Vec<ir::PortDef<u64>> = sig
         .inputs
         .iter()
-        .chain(sig.interface_signals.iter())
         .map(|pd| {
             (
                 ir::Id::from(pd.name.id.clone()),
@@ -182,6 +181,9 @@ fn as_port_defs(
             )
                 .into()
         })
+        .chain(sig.interface_signals.iter().map(|id| {
+            (ir::Id::from(id.name.id.clone()), 1, ir::Direction::Input).into()
+        }))
         .chain(sig.outputs.iter().map(|pd| {
             (
                 ir::Id::from(pd.name.id.clone()),

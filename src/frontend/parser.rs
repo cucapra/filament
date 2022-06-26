@@ -1,6 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 //! Parser for Calyx programs.
+use super::ast::InterfaceDef;
 use super::{ast, IntervalTime};
 use crate::errors::{self, FilamentResult, WithPos};
 use pest_consume::{match_nodes, Error, Parser};
@@ -172,7 +173,7 @@ impl FilamentParser {
         ))
     }
 
-    fn ports(input: Node) -> ParseResult<(Ports, Ports)> {
+    fn ports(input: Node) -> ParseResult<(Ports, Vec<ast::InterfaceDef>)> {
         Ok(match_nodes!(
             input.into_children();
             [port_def(ins)..] => {
@@ -184,8 +185,8 @@ impl FilamentParser {
                         PdOrInt::Int(int) => interface_signals.push(int),
                     }
                 }
-                let interface_ports = interface_signals.into_iter().map(|(name, time_var, len)| {
-                    ast::PortDef::from_interface_signal(name, time_var, len)
+                let interface_ports = interface_signals.into_iter().map(|(name, event, delay)| {
+                    ast::InterfaceDef::new(name, event, delay)
                 }).collect();
                 (ports, interface_ports)
             }
@@ -196,7 +197,7 @@ impl FilamentParser {
         Ok(())
     }
 
-    fn io(input: Node) -> ParseResult<(Ports, Ports, Ports)> {
+    fn io(input: Node) -> ParseResult<(Ports, Ports, Vec<InterfaceDef>)> {
         match_nodes!(
             input.clone().into_children();
             [arrow(_)] => Ok((vec![], vec![], vec![])),

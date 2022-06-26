@@ -75,9 +75,7 @@ fn compile_invoke(inv: ast::Invoke, ctx: &mut Context) -> Vec<ast::Command> {
 
         // Generate the assignment for each interface port
         for interface in &sig.interface_signals {
-            let ev = interface.as_interface_port().unwrap_or_else(|| {
-                unreachable!("Could not get event from interface port")
-            });
+            let ev = &interface.event;
             // Get binding for this event in the invoke
             let (_, start_time) = binding[ev].as_unit().unwrap_or_else(|| {
                 unimplemented!("Binding for event {ev} is a max-expression")
@@ -145,7 +143,7 @@ fn max_states(
         .interface_signals
         .iter()
         .map(|interface| {
-            let ev = interface.as_interface_port().unwrap();
+            let ev = &interface.event;
             (
                 ev.clone(),
                 ast::Fsm::new(
