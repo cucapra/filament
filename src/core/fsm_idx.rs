@@ -1,4 +1,4 @@
-use super::{Id, Interval, PortDef, Range};
+use super::{Id, Interval, Range};
 use crate::interval_checking::SExp;
 use linked_hash_map::LinkedHashMap;
 use std::fmt::Display;
@@ -63,13 +63,6 @@ impl Display for FsmIdxs {
 }
 
 impl FsmIdxs {
-    /// Construct an index with exactly one FSM
-    pub fn unit(name: Id, state: u64) -> Self {
-        let mut hs = LinkedHashMap::with_capacity(1);
-        hs.insert(name, state);
-        FsmIdxs { fsms: hs }
-    }
-
     /// Attempts to convert this FsmIdxs to a single (event, state) pair if possible.
     pub fn as_unit(&self) -> Option<(&Id, &u64)> {
         if self.fsms.len() == 1 {
@@ -88,9 +81,18 @@ impl FsmIdxs {
     pub fn events(&self) -> impl Iterator<Item = &Id> {
         self.fsms.iter().map(|(ev, _)| ev)
     }
+}
+
+impl super::TimeRep for FsmIdxs {
+    /// Construct an index with exactly one FSM
+    fn unit(name: Id, state: u64) -> Self {
+        let mut hs = LinkedHashMap::with_capacity(1);
+        hs.insert(name, state);
+        FsmIdxs { fsms: hs }
+    }
 
     /// Increment all the the FSM states by the provided value
-    pub fn increment(self, n: u64) -> Self {
+    fn increment(self, n: u64) -> Self {
         let fsms = self
             .fsms
             .into_iter()
@@ -98,9 +100,7 @@ impl FsmIdxs {
             .collect();
         FsmIdxs { fsms }
     }
-}
 
-impl super::TimeRep for FsmIdxs {
     fn resolve(&self, bindings: &std::collections::HashMap<Id, &Self>) -> Self {
         let mut out = LinkedHashMap::with_capacity(self.fsms.len());
         for (name, state) in &self.fsms {
@@ -154,15 +154,5 @@ impl Range<FsmIdxs> {
                 }
             })
         })
-    }
-}
-
-impl PortDef<FsmIdxs> {
-    /// Attempts to convert this port definition into an interface signal and return the associated
-    /// event.
-    pub fn as_interface_port(&self) -> Option<&Id> {
-        self.liveness
-            .as_ref()
-            .and_then(|inv| inv.as_exact_offset().map(|off| off.0))
     }
 }

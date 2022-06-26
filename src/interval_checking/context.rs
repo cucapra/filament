@@ -2,7 +2,7 @@ use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 use linked_hash_map::LinkedHashMap;
 
-use crate::core::{self, FsmIdxs};
+use crate::core::{self, FsmIdxs, TimeRep};
 use crate::errors::{self, Error, FilamentResult};
 use crate::event_checker::ast;
 
@@ -55,8 +55,8 @@ impl<'a> ConcreteInvoke<'a> {
     ) -> FilamentResult<Option<ast::Interval>> {
         match self {
             ConcreteInvoke::Concrete { binding, sig } => {
-                let pd = sig.get_port(port, is_input)?;
-                Ok(pd.liveness.as_ref().map(|l| l.resolve(binding)))
+                let live = sig.get_liveness(port, is_input)?;
+                Ok(live.as_ref().map(|l| l.resolve(binding)))
             }
             ConcreteInvoke::Fsm { start_time, fsm } => {
                 // XXX(rachit): This is constructed everytime this method is called.
@@ -72,7 +72,7 @@ impl<'a> ConcreteInvoke<'a> {
                 Ok(Some(ast::Interval::from(within).with_exact(exact)))
             }
             ConcreteInvoke::This { sig } => {
-                Ok(sig.get_port(port, is_input)?.liveness.clone())
+                Ok(sig.get_liveness(port, is_input)?)
             }
         }
     }
@@ -178,8 +178,8 @@ impl<'a> Context<'a> {
         let ports = sig
             .inputs
             .iter()
-            .chain(sig.interface_signals.iter())
             .filter_map(|pd| pd.liveness.as_ref().map(|_| &pd.name))
+            .chain(sig.interface_signals.iter().map(|id| &id.name))
             .cloned()
             .collect();
         self.remaining_assigns.insert(bind, ports);

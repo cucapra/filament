@@ -94,6 +94,12 @@ fn transform_port_def(
     }
 }
 
+fn transform_interface_def(
+    id: core::InterfaceDef<frontend::IntervalTime>,
+) -> core::InterfaceDef<core::FsmIdxs> {
+    core::InterfaceDef::<core::FsmIdxs>::new(id.name, id.event, id.delay)
+}
+
 fn transform_constraints(
     con: core::Constraint<frontend::IntervalTime>,
 ) -> core::Constraint<core::FsmIdxs> {
@@ -120,7 +126,7 @@ fn transform_signature(
         interface_signals: sig
             .interface_signals
             .into_iter()
-            .map(transform_port_def)
+            .map(transform_interface_def)
             .collect(),
     }
 }

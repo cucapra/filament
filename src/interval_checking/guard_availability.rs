@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use super::{Context, THIS};
-use crate::core::FsmIdxs;
+use crate::core::{FsmIdxs, TimeRep};
 use crate::errors::{Error, FilamentResult};
 use crate::event_checker::ast;
 

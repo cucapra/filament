@@ -19,3 +19,4 @@ pub type Connect = core::Connect;
 pub type Fsm = core::Fsm;
 pub type OrderOp = core::OrderOp;
 pub type Id = core::Id;
+pub type InterfaceDef = core::InterfaceDef<TR>;

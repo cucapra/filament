@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Display};
 
-use crate::core::{self, Id};
+use crate::core::Id;
 
 /// Represents a time variable which can either be:
 ///   1. An abstract variable like `G`.
@@ -108,6 +108,19 @@ impl crate::core::TimeRep for IntervalTime {
             ),
         }
     }
+
+    fn unit(event: Id, state: u64) -> Self {
+        let start = IntervalTime::Abstract(event);
+        if state == 0 {
+            start
+        } else {
+            IntervalTime::binop_add(start, IntervalTime::Concrete(state))
+        }
+    }
+
+    fn increment(self, n: u64) -> Self {
+        IntervalTime::binop_add(self, IntervalTime::Concrete(n))
+    }
 }
 
 impl Display for IntervalTime {
@@ -127,25 +140,6 @@ impl Display for IntervalTime {
                 right.fmt(f)?;
                 write!(f, ")")
             }
-        }
-    }
-}
-
-impl core::PortDef<IntervalTime> {
-    pub fn from_interface_signal(name: Id, event: Id, len: u64) -> Self {
-        let ev: IntervalTime = event.into();
-        let liveness = core::Interval::from(core::Range::new(
-            ev.clone(),
-            IntervalTime::binop_add(ev.clone(), len.into()),
-        ))
-        .with_exact(core::Range::new(
-            ev.clone(),
-            IntervalTime::binop_add(ev, 1.into()),
-        ));
-        core::PortDef {
-            name,
-            bitwidth: 1,
-            liveness: Some(liveness),
         }
     }
 }
