@@ -70,6 +70,14 @@ where
             exact: self.exact.as_ref().map(|range| range.resolve(bindings)),
         }
     }
+
+    pub fn events(&self) -> Vec<&T> {
+        let mut within = vec![&self.within.start, &self.within.end];
+        if let Some(range) = &self.exact {
+            within.append(&mut vec![&range.start, &range.end]);
+        }
+        within
+    }
 }
 impl<T> Interval<T>
 where

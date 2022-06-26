@@ -18,16 +18,6 @@ struct Context<'a> {
     pub fsms: HashMap<ast::Id, ast::Fsm>,
 }
 
-/* impl<'a> From<&'a HashMap<ast::Id, &'a ast::Signature>> for Context<'a> {
-    fn from(sigs: &'a HashMap<ast::Id, &'a ast::Signature>) -> Self {
-        Context {
-            sigs,
-            max_states: HashMap::default(),
-            fsms: HashMap::default(),
-        }
-    }
-} */
-
 /// Converts an interval to a guard expression with the appropriate FSM
 fn interval_to_guard(inv: ast::Range, ctx: &mut Context) -> ast::Guard {
     if let Some((ev, st, end)) = inv.as_offset() {
@@ -101,6 +91,20 @@ fn compile_invoke(inv: ast::Invoke, ctx: &mut Context) -> Vec<ast::Command> {
             );
             connects.push(con.into())
         }
+
+        // Outputs can affect the max state calculation
+        abstract_vars.iter().for_each(|fsm| {
+            fsm.events().for_each(|(ev, &st)| {
+                if ctx
+                    .max_states
+                    .get(ev)
+                    .unwrap_or_else(|| panic!("Missing max state for {ev}"))
+                    < &st
+                {
+                    *ctx.max_states.get_mut(ev).unwrap() = st;
+                }
+            })
+        });
 
         // Generate assignment for each port
         for (port, formal) in ports.into_iter().zip(sig.inputs.iter()) {
