@@ -11,6 +11,7 @@ pub type Command = core::Command<TR>;
 pub type Invoke = core::Invoke<TR>;
 pub type Interval = core::Interval<TR>;
 pub type Range = core::Range<TR>;
+pub type InterfaceDef = core::InterfaceDef<TR>;
 pub type Port = core::Port;
 pub type Guard = core::Guard;
 pub type Instance = core::Instance;

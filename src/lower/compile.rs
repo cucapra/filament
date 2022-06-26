@@ -1,7 +1,10 @@
 use itertools::Itertools;
 
 use crate::{errors::FilamentResult, event_checker::ast};
-use std::collections::HashMap;
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 #[derive(Default)]
 struct Context<'a> {
@@ -34,7 +37,14 @@ fn interval_to_guard(inv: ast::Range, ctx: &mut Context) -> ast::Guard {
         }
         (st..end)
             .into_iter()
-            .map(|st| ast::Guard::Port(ctx.fsms[ev].port(st)))
+            .map(|st| {
+                ast::Guard::Port(
+                    ctx.fsms
+                        .get(ev)
+                        .unwrap_or_else(|| panic!("FSM {ev} missing"))
+                        .port(st),
+                )
+            })
             .reduce(|l, r| ast::Guard::Or(Box::new(l), Box::new(r)))
             .unwrap()
     } else {
@@ -122,24 +132,44 @@ fn compile_invoke(inv: ast::Invoke, ctx: &mut Context) -> Vec<ast::Command> {
 
 /// Computes the max state traversed by each event variable
 fn max_states(
-    mut comp: ast::Component,
+    comp: ast::Component,
     comp_sigs: &HashMap<ast::Id, &ast::Signature>,
 ) -> FilamentResult<ast::Component> {
-    let mut ctx = Context::default();
+    let ast::Component { sig, mut body } = comp;
+
+    // Extend the signature to add missing interface signals for the defined parameters.
+    let mut sig = Rc::try_unwrap(sig).unwrap();
+    let defined_interfaces = sig
+        .interface_signals
+        .iter()
+        .map(|id| id.name.clone())
+        .collect();
+    let all_events = sig.abstract_vars.iter().cloned().collect::<HashSet<_>>();
+
+    sig.interface_signals.extend(
+        all_events
+            .difference(&defined_interfaces)
+            .into_iter()
+            .map(|ev| {
+                ast::InterfaceDef::new(
+                    format!("go_{}", ev).into(),
+                    ev.clone(),
+                    u64::MAX,
+                )
+            }),
+    );
 
     // Define max_state for each FSM to be 0.
-    ctx.max_states = comp
-        .sig
-        .abstract_vars
-        .iter()
-        .map(|ev| (ev.clone(), 0))
-        .collect();
+    let max_states =
+        sig.abstract_vars.iter().map(|ev| (ev.clone(), 0)).collect();
 
-    // TODO: For each event, make sure an interface port is defined
+    let mut ctx = Context {
+        max_states,
+        ..Default::default()
+    };
 
     // Define FSMs for each event
-    ctx.fsms = comp
-        .sig
+    ctx.fsms = sig
         .interface_signals
         .iter()
         .map(|interface| {
@@ -155,11 +185,8 @@ fn max_states(
         })
         .collect::<HashMap<_, _>>();
 
-    // println!("{}", ctx.fsms);
-
     // Compile the body
-    let body = comp
-        .body
+    let body = body
         .drain(..)
         .flat_map(|con| match con {
             ast::Command::Invoke(inv) => compile_invoke(inv, &mut ctx),
@@ -176,7 +203,7 @@ fn max_states(
         .collect_vec();
 
     // Define the correct values for FSM states and add them to the body
-    comp.body = ctx
+    let body = ctx
         .fsms
         .into_iter()
         .map(|(ev, mut fsm)| {
@@ -186,7 +213,15 @@ fn max_states(
         .chain(body)
         .collect_vec();
 
-    Ok(comp)
+    // Fix up the interface signals delays
+    sig.interface_signals
+        .iter_mut()
+        .for_each(|mut id| id.delay = ctx.max_states[&id.event]);
+
+    Ok(ast::Component {
+        sig: Rc::new(sig),
+        body,
+    })
 }
 
 pub fn lower_invokes(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
