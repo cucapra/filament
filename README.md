@@ -59,3 +59,6 @@ Plug '<absolute path to filament>/toos/vim'
 [runt]: https://docs.rs/runt/latest/runt/index.html
 [rust]: https://www.rust-lang.org/
 [z3-install]: https://github.com/Z3Prover/z3
+[chisel]: https://www.chisel-lang.org/
+[bluespec]: https://bluespec.com/
+[calyx]: https://calyxir.org
