@@ -116,7 +116,7 @@ impl<T: Display> Display for Invoke<T> {
         if let Some(ports) = &self.ports {
             write!(
                 f,
-                "{} := {}<{}>({});",
+                "{} := {}<{}>({})",
                 self.bind,
                 self.comp,
                 abs,
@@ -127,7 +127,7 @@ impl<T: Display> Display for Invoke<T> {
                     .join(",")
             )
         } else {
-            write!(f, "{} := invoke {}<{}>;", self.bind, self.comp, abs)
+            write!(f, "{} := invoke {}<{}>", self.bind, self.comp, abs)
         }
     }
 }
