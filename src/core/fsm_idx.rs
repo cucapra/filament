@@ -44,8 +44,18 @@ impl Display for FsmIdxs {
         let mut fs = self.fsms.iter();
         let (ev0, st0) = fs.next().unwrap();
 
-        let out = fs.fold(format!("{ev0}+{st0}"), |acc, (ev, st)| {
-            format!("max({acc}, {ev}+{st})")
+        let init = if *st0 != 0 {
+            format!("{ev0}+{st0}")
+        } else {
+            format!("{ev0}")
+        };
+
+        let out = fs.fold(init, |acc, (ev, st)| {
+            if *st != 0 {
+                format!("max({acc}, {ev}+{st})")
+            } else {
+                format!("max({acc}, {ev})")
+            }
         });
 
         write!(f, "{}", out)
