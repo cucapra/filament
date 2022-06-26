@@ -20,6 +20,7 @@ fn check_connect(
     let maybe_requirement = ctx.port_requirements(dst)?;
     // If the port does not have any requirement then we don't have any proofs to discharge.
     let requirement = if let Some(req) = maybe_requirement {
+        log::debug!("Dest requirement: {req}");
         req
     } else {
         return Ok(());
@@ -34,7 +35,7 @@ fn check_connect(
     // If a guard is present, use its availablity instead.
     let maybe_guarantee = if let Some(g) = &guard {
         let guard_interval = super::total_interval(g, ctx)?;
-        log::info!("Guard availablity is: {guard_interval}");
+        log::debug!("Guard availablity is: {guard_interval}");
 
         // When we have: dst = g ? ...
         // We need to show that:
@@ -43,6 +44,7 @@ fn check_connect(
         // 2. @within(dst) \subsetof @within(g): To ensure that the guard is disabling the signal
         //    for long enough.
         if let Some(guarantee) = maybe_guarantee {
+            log::debug!("Source guarantee: {guarantee}");
             // Require that the guarded value is available for longer that the
             // guard
             let exact = guard_interval

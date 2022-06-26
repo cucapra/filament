@@ -78,8 +78,8 @@ impl FsmIdxs {
     }
 
     /// Return the names of all events used in the max expression
-    pub fn events(&self) -> impl Iterator<Item = &Id> {
-        self.fsms.iter().map(|(ev, _)| ev)
+    pub fn events(&self) -> impl Iterator<Item = (&Id, &u64)> {
+        self.fsms.iter()
     }
 }
 
