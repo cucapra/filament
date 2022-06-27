@@ -36,6 +36,7 @@ pub enum ExtOrComp {
 pub enum PdOrInt {
     Pd(ast::PortDef),
     Int((ast::Id, ast::Id, u64)),
+    Un((ast::Id, u64)),
 }
 
 #[derive(Parser)]
@@ -148,22 +149,21 @@ impl FilamentParser {
     }
 
     fn port_def(input: Node) -> ParseResult<PdOrInt> {
-        let pd = match_nodes!(
+        Ok(match_nodes!(
             input.clone().into_children();
             [interface((time_var, len)), identifier(name), bitwidth(_)] => {
-                Ok(PdOrInt::Int((name, time_var, len)))
+                PdOrInt::Int((name, time_var, len))
             },
             [identifier(name), bitwidth(bitwidth)] => {
-                ast::PortDef::new(name, None, bitwidth).map(PdOrInt::Pd)
+                PdOrInt::Un((name, bitwidth))
             },
             [interval_range(range), identifier(name), bitwidth(bitwidth)] => {
-                ast::PortDef::new(name, Some(range.into()), bitwidth).map(PdOrInt::Pd)
+                PdOrInt::Pd(ast::PortDef::new(name, range.into(), bitwidth))
             },
             [interval_range(range), interval_range(exact), identifier(name), bitwidth(bitwidth)] => {
-                ast::PortDef::new(name, Some(ast::Interval::from(range).with_exact(exact)), bitwidth).map(PdOrInt::Pd)
+                PdOrInt::Pd(ast::PortDef::new(name, ast::Interval::from(range).with_exact(exact), bitwidth))
             }
-        );
-        pd.map_err(|err| input.error(format!("{err:?}")))
+        ))
     }
 
     fn abstract_var(input: Node) -> ParseResult<Vec<ast::Id>> {
@@ -173,22 +173,26 @@ impl FilamentParser {
         ))
     }
 
-    fn ports(input: Node) -> ParseResult<(Ports, Vec<ast::InterfaceDef>)> {
+    fn ports(
+        input: Node,
+    ) -> ParseResult<(Ports, Vec<ast::InterfaceDef>, Vec<(ast::Id, u64)>)> {
         Ok(match_nodes!(
             input.into_children();
             [port_def(ins)..] => {
                 let mut interface_signals = vec![];
                 let mut ports = vec![];
+                let mut unannotated_ports = vec![];
                 for m in ins {
                     match m {
                         PdOrInt::Pd(port) => ports.push(port),
                         PdOrInt::Int(int) => interface_signals.push(int),
+                        PdOrInt::Un(un) => unannotated_ports.push(un)
                     }
                 }
                 let interface_ports = interface_signals.into_iter().map(|(name, event, delay)| {
                     ast::InterfaceDef::new(name, event, delay)
                 }).collect();
-                (ports, interface_ports)
+                (ports, interface_ports, unannotated_ports)
             }
         ))
     }
@@ -197,23 +201,30 @@ impl FilamentParser {
         Ok(())
     }
 
-    fn io(input: Node) -> ParseResult<(Ports, Ports, Vec<InterfaceDef>)> {
+    fn io(
+        input: Node,
+    ) -> ParseResult<(Ports, Ports, Vec<InterfaceDef>, Vec<(ast::Id, u64)>)>
+    {
         match_nodes!(
             input.clone().into_children();
-            [arrow(_)] => Ok((vec![], vec![], vec![])),
-            [ports((ins, interface)), arrow(_)] =>  Ok((ins, vec![], interface)),
-            [arrow(_), ports((outs, out_interface))] =>  {
+            [arrow(_)] => Ok((vec![], vec![], vec![], vec![])),
+            [ports((ins, interface, un)), arrow(_)] =>  Ok((ins, vec![], interface, un)),
+            [arrow(_), ports((outs, out_interface, o_un))] =>  {
                 if !out_interface.is_empty() {
                     Err(input.error("Output interface ports not supported"))
+                } else if !o_un.is_empty() {
+                    Err(input.error("Output ports cannot be unannotated"))
                 } else {
-                    Ok((vec![], outs, vec![]))
+                    Ok((vec![], outs, vec![], vec![]))
                 }
             },
-            [ports((ins, interface)), arrow(_), ports((outs, out_interface))] => {
+            [ports((ins, interface, un)), arrow(_), ports((outs, out_interface, o_un))] => {
                 if !out_interface.is_empty() {
                     Err(input.error("Output interface ports not supported"))
+                } else if !o_un.is_empty() {
+                    Err(input.error("Output ports cannot be unannotated"))
                 } else {
-                    Ok((ins, outs, interface))
+                    Ok((ins, outs, interface, un))
                 }
             }
         )
@@ -337,10 +348,11 @@ impl FilamentParser {
                 io(io),
                 constraints(constraints)
             ] => {
-                let (inputs, outputs, interface_signals) = io;
+                let (inputs, outputs, interface_signals, unannotated_ports) = io;
                 ast::Signature {
                     name,
                     abstract_vars,
+                    unannotated_ports,
                     interface_signals: interface_signals.into_iter().collect(),
                     inputs,
                     outputs,
@@ -352,10 +364,11 @@ impl FilamentParser {
                 io(io),
                 constraints(constraints)
             ] => {
-                let (inputs, outputs, interface_signals) = io;
+                let (inputs, outputs, interface_signals, unannotated_ports) = io;
                 ast::Signature {
                     name,
                     abstract_vars: vec![],
+                    unannotated_ports,
                     interface_signals: interface_signals.into_iter().collect(),
                     inputs,
                     outputs,

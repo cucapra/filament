@@ -51,15 +51,15 @@ impl<'a> ConcreteInvoke<'a> {
     fn resolve_port<const IS_INPUT: bool>(
         &self,
         port: &ast::Id,
-    ) -> FilamentResult<Option<ast::Interval>> {
+    ) -> FilamentResult<ast::Interval> {
         match self {
             ConcreteInvoke::Concrete { binding, sig } => {
                 let live = sig.get_liveness::<IS_INPUT>(port)?;
-                Ok(live.as_ref().map(|l| l.resolve(binding)))
+                Ok(live.resolve(binding))
             }
             ConcreteInvoke::Fsm { start_time, fsm } => {
                 let state = core::Fsm::state(port)?;
-                Ok(Some(fsm.liveness(start_time, state)))
+                Ok(fsm.liveness(start_time, state))
             }
             ConcreteInvoke::This { sig } => {
                 Ok(sig.get_liveness::<IS_INPUT>(port)?)
@@ -71,7 +71,7 @@ impl<'a> ConcreteInvoke<'a> {
     pub fn port_requirements(
         &self,
         port: &ast::Id,
-    ) -> FilamentResult<Option<ast::Interval>> {
+    ) -> FilamentResult<ast::Interval> {
         self.resolve_port::<true>(port)
     }
 
@@ -79,7 +79,7 @@ impl<'a> ConcreteInvoke<'a> {
     pub fn port_guarantees(
         &self,
         port: &ast::Id,
-    ) -> FilamentResult<Option<ast::Interval>> {
+    ) -> FilamentResult<ast::Interval> {
         self.resolve_port::<false>(port)
     }
 }
@@ -168,7 +168,7 @@ impl<'a> Context<'a> {
         let ports = sig
             .inputs
             .iter()
-            .filter_map(|pd| pd.liveness.as_ref().map(|_| &pd.name))
+            .map(|pd| &pd.name)
             .chain(sig.interface_signals.iter().map(|id| &id.name))
             .cloned()
             .collect();
@@ -204,7 +204,7 @@ impl<'a> Context<'a> {
         F: Iterator<Item = ast::Constraint>,
     {
         for fact in facts {
-            log::info!("adding obligation {}", fact);
+            log::trace!("adding obligation {}", fact);
             let locs = self.obligations.entry(fact).or_insert(vec![]);
             if let Some(sp) = &span {
                 locs.push(sp.clone())
@@ -218,7 +218,7 @@ impl<'a> Context<'a> {
         F: Iterator<Item = ast::Constraint>,
     {
         for fact in facts {
-            log::info!("adding known fact {}", fact);
+            log::trace!("adding known fact {}", fact);
             let locs = self.facts.entry(fact).or_insert(vec![]);
             if let Some(sp) = &span {
                 locs.push(sp.clone())
@@ -257,24 +257,24 @@ impl<'a> Context<'a> {
 
     /// Return the guarantees of the port if any.
     /// - None if the port does not provide any guarantees.
-    /// - Some(None) if the port is infinitely active (like a constant port).
-    /// - Some(Some(int)) if the port is active during interval `int`.
+    /// - None if the port is infinitely active (like a constant port).
     pub fn port_guarantees(
         &self,
         port: &ast::Port,
-    ) -> FilamentResult<Option<Option<ast::Interval>>> {
+    ) -> FilamentResult<Option<ast::Interval>> {
         Ok(match port {
             ast::Port::Constant(_) => {
                 /* Constants do not generate a proof obligation because they are
                  * always available. */
-                Some(None)
+                None
             }
-            ast::Port::ThisPort(port) => self
-                .get_invoke(&super::THIS.into())?
-                .port_guarantees(port)?
-                .map(Some),
+            ast::Port::ThisPort(port) => Some(
+                self.get_invoke(&super::THIS.into())?
+                    .port_guarantees(port)?,
+            ),
+
             ast::Port::CompPort { comp, name } => {
-                self.get_invoke(comp)?.port_guarantees(name)?.map(Some)
+                Some(self.get_invoke(comp)?.port_guarantees(name)?)
             }
         })
     }
@@ -282,7 +282,7 @@ impl<'a> Context<'a> {
     pub fn port_requirements(
         &self,
         port: &ast::Port,
-    ) -> FilamentResult<Option<ast::Interval>> {
+    ) -> FilamentResult<ast::Interval> {
         match port {
             ast::Port::Constant(_) => {
                 /* Constants do not generate a proof obligation because they are

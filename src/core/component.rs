@@ -2,7 +2,10 @@ use itertools::Itertools;
 
 use super::{Command, Constraint, Id, Interval, Range, TimeRep};
 use crate::errors::{Error, FilamentResult};
-use std::{fmt::Display, rc::Rc};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+};
 
 #[derive(Clone)]
 pub struct PortDef<T>
@@ -13,7 +16,7 @@ where
     pub name: Id,
 
     /// Liveness condition for the Port
-    pub liveness: Option<Interval<T>>,
+    pub liveness: Interval<T>,
 
     /// Bitwidth of the port
     pub bitwidth: u64,
@@ -23,16 +26,12 @@ impl<T> PortDef<T>
 where
     T: Clone + TimeRep,
 {
-    pub fn new(
-        name: Id,
-        liveness: Option<Interval<T>>,
-        bitwidth: u64,
-    ) -> FilamentResult<Self> {
-        Ok(Self {
+    pub fn new(name: Id, liveness: Interval<T>, bitwidth: u64) -> Self {
+        Self {
             name,
             liveness,
             bitwidth,
-        })
+        }
     }
 }
 impl<T> Display for PortDef<T>
@@ -40,10 +39,7 @@ where
     T: Display + Clone + TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(liv) = &self.liveness {
-            write!(f, "{} ", liv)?;
-        }
-        write!(f, "{}: {}", self.name, self.bitwidth)
+        write!(f, "{} {}: {} ", self.liveness, self.name, self.bitwidth)
     }
 }
 
@@ -98,6 +94,7 @@ where
 }
 
 /// The signature of a component definition
+#[derive(Clone)]
 pub struct Signature<T>
 where
     T: Clone + TimeRep,
@@ -107,6 +104,9 @@ where
 
     /// Names of abstract variables bound by the component
     pub abstract_vars: Vec<Id>,
+
+    /// Unannotated ports that are thread through by the backend
+    pub unannotated_ports: Vec<(Id, u64)>,
 
     /// Mapping from name of signals to the abstract variable they provide
     /// evidence for.
@@ -130,12 +130,9 @@ where
     // with outputs.
     pub fn reversed(&self) -> Self {
         Self {
-            name: self.name.clone(),
-            abstract_vars: self.abstract_vars.clone(),
-            interface_signals: self.interface_signals.clone(),
             inputs: self.outputs.clone(),
             outputs: self.inputs.clone(),
-            constraints: self.constraints.clone(),
+            ..self.clone()
         }
     }
 
@@ -143,7 +140,7 @@ where
     pub fn get_liveness<const IS_INPUT: bool>(
         &self,
         port: &Id,
-    ) -> FilamentResult<Option<Interval<T>>> {
+    ) -> FilamentResult<Interval<T>> {
         let mut iter = if IS_INPUT {
             self.inputs.iter()
         } else {
@@ -162,7 +159,7 @@ where
             .or_else(|| {
                 self.interface_signals.iter().find_map(|id| {
                     if id.name == port {
-                        Some(Some(id.liveness.clone()))
+                        Some(id.liveness.clone())
                     } else {
                         None
                     }
@@ -178,6 +175,23 @@ where
             Error::undefined(port.clone(), kind.to_string())
         })
     }
+
+    // Return names of abstract variables that do not have a corresponding interface port defined
+    // for them
+    pub fn missing_interface_ports(&self) -> Vec<Id> {
+        let defined_interfaces = self
+            .interface_signals
+            .iter()
+            .map(|id| &id.name)
+            .cloned()
+            .collect();
+        let all_events =
+            self.abstract_vars.iter().cloned().collect::<HashSet<_>>();
+        all_events
+            .difference(&defined_interfaces)
+            .cloned()
+            .collect_vec()
+    }
 }
 impl<T> Signature<T>
 where
@@ -188,12 +202,7 @@ where
         self.inputs
             .iter()
             .chain(self.outputs.iter())
-            .flat_map(|mpd| {
-                mpd.liveness
-                    .as_ref()
-                    .map(|pd| pd.well_formed())
-                    .unwrap_or_default()
-            })
+            .flat_map(|mpd| mpd.liveness.well_formed())
             .chain(
                 self.interface_signals
                     .iter()
@@ -208,30 +217,18 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "component {}<{}>(",
+            "component {}<{}>({}) -> ({})",
             self.name,
             self.abstract_vars
                 .iter()
                 .map(|id| id.to_string())
                 .join(", "),
-        )?;
-        if !self.interface_signals.is_empty() {
-            write!(
-                f,
-                "{}",
-                self.interface_signals
-                    .iter()
-                    .map(|pd| format!("{pd}"))
-                    .join(", "),
-            )?;
-            if !self.inputs.is_empty() {
-                write!(f, ", ")?;
-            }
-        }
-        write!(
-            f,
-            "{}) -> ({})",
-            self.inputs.iter().map(|pd| format!("{pd}")).join(", "),
+            self.unannotated_ports
+                .iter()
+                .map(|(n, bw)| format!("{n}: {bw}"))
+                .chain(self.interface_signals.iter().map(|pd| format!("{pd}")))
+                .chain(self.inputs.iter().map(|pd| format!("{pd}")))
+                .join(", "),
             self.outputs.iter().map(|pd| format!("{pd}")).join(", "),
         )?;
         if !self.constraints.is_empty() {
@@ -262,7 +259,7 @@ where
     T: Clone + TimeRep,
 {
     // Signature of this component
-    pub sig: Rc<Signature<T>>,
+    pub sig: Signature<T>,
 
     /// Model for this component
     pub body: Vec<Command<T>>,
@@ -273,10 +270,7 @@ where
     T: Clone + TimeRep,
 {
     pub fn new(sig: Signature<T>, body: Vec<Command<T>>) -> Self {
-        Self {
-            sig: Rc::new(sig),
-            body,
-        }
+        Self { sig, body }
     }
 }
 impl<T> Display for Component<T>
@@ -304,6 +298,19 @@ where
 
     /// Components defined in this file
     pub components: Vec<Component<T>>,
+}
+
+impl<T> Namespace<T>
+where
+    T: TimeRep + Clone,
+{
+    /// External signatures associated with the namespace
+    pub fn signatures(&self) -> HashMap<Id, &Signature<T>> {
+        self.externs
+            .iter()
+            .flat_map(|(_, comps)| comps.iter().map(|s| (s.name.clone(), s)))
+            .collect()
+    }
 }
 
 impl<T> Display for Namespace<T>

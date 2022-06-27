@@ -17,23 +17,14 @@ fn check_connect(
 ) -> FilamentResult<()> {
     ctx.remove_remaning_assign(dst)?;
 
-    let maybe_requirement = ctx.port_requirements(dst)?;
-    // If the port does not have any requirement then we don't have any proofs to discharge.
-    let requirement = if let Some(req) = maybe_requirement {
-        log::debug!("Dest requirement: {req}");
-        req
-    } else {
-        return Ok(());
-    };
+    let requirement = ctx.port_requirements(dst)?;
+    log::debug!("Dest requirement: {requirement}");
 
-    let maybe_guarantee = if let Some(g) = ctx.port_guarantees(src)? {
-        g
-    } else {
-        return Err(Error::malformed("Source port does not provide any guarantees and cannot be used to fufill requirements of destination port"));
-    };
+    let src_guarantee = ctx.port_guarantees(src)?;
+    log::debug!("Src requirement: {requirement}");
 
     // If a guard is present, use its availablity instead.
-    let maybe_guarantee = if let Some(g) = &guard {
+    let guard_guarantee = if let Some(g) = &guard {
         let guard_interval = super::total_interval(g, ctx)?;
         log::debug!("Guard availablity is: {guard_interval}");
 
@@ -43,8 +34,7 @@ fn check_connect(
         //    meaningful value high.
         // 2. @within(dst) \subsetof @within(g): To ensure that the guard is disabling the signal
         //    for long enough.
-        if let Some(guarantee) = maybe_guarantee {
-            log::debug!("Source guarantee: {guarantee}");
+        if let Some(guarantee) = src_guarantee {
             // Require that the guarded value is available for longer that the
             // guard
             let exact = guard_interval
@@ -71,20 +61,20 @@ fn check_connect(
 
         Some(guard_interval)
     } else {
-        maybe_guarantee
+        src_guarantee
     };
 
     // If we have: dst = src. We need:
     // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
     // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
-    if let Some(guarantee) = &maybe_guarantee {
+    if let Some(guarantee) = &guard_guarantee {
         let within_fact =
             Constraint::subset(requirement.within, guarantee.within.clone());
         ctx.add_obligations(within_fact, pos.clone());
     }
 
     if let Some(exact_requirement) = requirement.exact {
-        let guarantee = maybe_guarantee.ok_or_else(|| {
+        let guarantee = guard_guarantee.ok_or_else(|| {
             errors::Error::malformed(
                 "Constant port cannot provide @exact guarantee",
             )
@@ -166,12 +156,9 @@ fn check_fsm<'a>(
     } = fsm;
 
     let guarantee = match ctx.port_guarantees(trigger)? {
-        Some(Some(g)) => Ok(g),
-        Some(None) => Err(Error::malformed(
-            "Constant ports cannot be used to trigger fsm",
-        )),
+        Some(g) => Ok(g),
         None => Err(Error::malformed(
-            "Port provides no guarantees and cannot be used as fsm trigger",
+            "Constant ports cannot be used to trigger fsm",
         )),
     }?;
 
@@ -282,10 +269,7 @@ fn check_component(
         } else {
             return err;
         }
-    } else {
-        eprintln!("All proof obligations satisfied");
     }
-
     Ok(())
 }
 
@@ -294,11 +278,7 @@ fn check_component(
 /// Internally generates [super::Fact] which represent proof obligations that need to be proven for
 /// the interval requirements to be proven.
 pub fn check(namespace: &ast::Namespace) -> FilamentResult<()> {
-    let mut sigs = namespace
-        .externs
-        .iter()
-        .flat_map(|(_, comps)| comps.iter().map(|s| (s.name.clone(), s)))
-        .collect::<HashMap<_, _>>();
+    let mut sigs = namespace.signatures();
 
     for comp in &namespace.components {
         log::info!("component {}", comp.sig.name);

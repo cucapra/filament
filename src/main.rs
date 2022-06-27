@@ -51,11 +51,15 @@ fn main() -> errors::FilamentResult<()> {
         );
         imports.extend(imp.imports.into_iter());
     }
+    // Reverse order because we inserted dependencies in the wrong order
+    ns.components.reverse();
 
     // Run the compilation pipeline
     let ns = event_checker::check_and_transform(ns)?;
     interval_checking::check(&ns)?;
+    eprintln!("{ns}");
     let ns = lower::lower_invokes(ns)?;
+    eprintln!("{ns}");
     interval_checking::check(&ns)?;
     if !opts.check {
         backend::compile(ns, &opts)?;

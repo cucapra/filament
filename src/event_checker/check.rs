@@ -1,12 +1,9 @@
-use std::rc::Rc;
-
-use itertools::Itertools;
-
 use crate::{
     core,
     errors::{FilamentResult, WithPos},
     frontend,
 };
+use itertools::Itertools;
 
 /// The type ascribed to an interval time expression
 #[derive(PartialEq)]
@@ -88,7 +85,7 @@ fn transform_port_def(
     pd: core::PortDef<frontend::IntervalTime>,
 ) -> core::PortDef<core::FsmIdxs> {
     core::PortDef {
-        liveness: pd.liveness.map(transform_interval),
+        liveness: transform_interval(pd.liveness),
         name: pd.name,
         bitwidth: pd.bitwidth,
     }
@@ -121,13 +118,14 @@ fn transform_signature(
             .into_iter()
             .map(transform_constraints)
             .collect(),
-        name: sig.name,
-        abstract_vars: sig.abstract_vars,
         interface_signals: sig
             .interface_signals
             .into_iter()
             .map(transform_interface_def)
             .collect(),
+        abstract_vars: sig.abstract_vars,
+        name: sig.name,
+        unannotated_ports: sig.unannotated_ports,
     }
 }
 
@@ -145,7 +143,7 @@ pub fn check_and_transform(
                 .collect::<FilamentResult<Vec<_>>>()?;
 
             Ok(core::Component::new(
-                transform_signature(Rc::try_unwrap(comp.sig).unwrap()),
+                transform_signature(comp.sig),
                 commands,
             ))
         })

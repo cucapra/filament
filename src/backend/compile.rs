@@ -15,12 +15,48 @@ use crate::cmdline::Opts;
 use crate::errors::Error;
 use crate::{core, errors::FilamentResult};
 
+/// Bindings associated with the current compilation context
+#[derive(Default)]
+pub struct Binding {
+    // External signatures
+    sigs: HashMap<core::Id, Vec<ir::PortDef<u64>>>,
+
+    // Component signatures
+    comps: HashMap<core::Id, RRC<ir::Cell>>,
+}
+
+impl Binding {
+    fn cell_to_port_def(cr: &RRC<ir::Cell>) -> Vec<ir::PortDef<u64>> {
+        let cell = cr.borrow();
+        cell.ports()
+            .iter()
+            .map(|pr| {
+                let port = pr.borrow();
+                // Reverse port direction because signature refers to internal interface.
+                (port.name.clone(), port.width, port.direction.reverse()).into()
+            })
+            .collect()
+    }
+
+    pub fn get(&self, name: &core::Id) -> Vec<ir::PortDef<u64>> {
+        self.sigs
+            .get(name)
+            .cloned()
+            .or_else(|| self.comps.get(name).map(Binding::cell_to_port_def))
+            .unwrap_or_else(|| panic!("No binding for {name}"))
+    }
+
+    pub fn insert_comp(&mut self, name: core::Id, sig: RRC<ir::Cell>) {
+        self.comps.insert(name, sig);
+    }
+}
+
 pub struct Context<'a> {
     /// Builder for the current component
     pub builder: ir::Builder<'a>,
 
     /// Mapping from names to signatures for components and externals.
-    sigs: &'a HashMap<core::Id, Vec<ir::PortDef<u64>>>,
+    binding: &'a Binding,
 
     /// Mapping from instances to cells
     instances: HashMap<core::Id, RRC<ir::Cell>>,
@@ -65,24 +101,8 @@ impl Context<'_> {
             }
         }
     }
-}
-
-impl<'a> Context<'a> {
-    fn new(
-        sigs: &'a HashMap<core::Id, Vec<ir::PortDef<u64>>>,
-        builder: ir::Builder<'a>,
-    ) -> Self {
-        Context {
-            sigs,
-            builder,
-            instances: HashMap::default(),
-            invokes: HashMap::default(),
-            fsms: HashMap::default(),
-        }
-    }
-
-    fn get_sig(&self, comp: &core::Id) -> &Vec<ir::PortDef<u64>> {
-        &self.sigs[comp]
+    fn get_sig(&self, comp: &core::Id) -> Vec<ir::PortDef<u64>> {
+        self.binding.get(comp)
     }
 
     fn add_invoke(&mut self, inv: core::Id, comp: core::Id) {
@@ -91,6 +111,18 @@ impl<'a> Context<'a> {
             .get(&comp)
             .unwrap_or_else(|| panic!("Unknown instance: {}", comp));
         self.invokes.insert(inv, Rc::clone(cell));
+    }
+}
+
+impl<'a> Context<'a> {
+    fn new(binding: &'a Binding, builder: ir::Builder<'a>) -> Self {
+        Context {
+            binding,
+            builder,
+            instances: HashMap::default(),
+            invokes: HashMap::default(),
+            fsms: HashMap::default(),
+        }
     }
 }
 
@@ -142,7 +174,7 @@ fn compile_command(cmd: core::Command<TimeRep>, ctx: &mut Context) {
             let cell = ctx.builder.add_component(
                 name.id.clone(),
                 component.id.clone(),
-                ctx.get_sig(&component).clone(),
+                ctx.get_sig(&component),
             );
             ctx.instances.insert(name, cell);
         }
@@ -192,6 +224,14 @@ fn as_port_defs(
             )
                 .into()
         }))
+        .chain(sig.unannotated_ports.iter().map(|(n, bw)| {
+            let mut pd =
+                ir::PortDef::from((n.id.clone(), *bw, ir::Direction::Input));
+            if INTERFACE_PORTS.iter().any(|(n, _, _)| n == &pd.name.id) {
+                pd.attributes.insert(pd.name.clone(), 1)
+            }
+            pd
+        }))
         .collect_vec();
 
     // Add annotations for interface ports
@@ -229,7 +269,7 @@ const INTERFACE_PORTS: [(&str, u64, calyx::ir::Direction); 2] = [
 
 fn compile_component(
     comp: core::Component<TimeRep>,
-    sigs: &HashMap<core::Id, Vec<ir::PortDef<u64>>>,
+    sigs: &Binding,
     lib: &ir::LibrarySignatures,
 ) -> FilamentResult<ir::Component> {
     let ports = as_port_defs(&comp.sig, true);
@@ -324,12 +364,18 @@ pub fn compile(
         })
         .collect::<HashMap<_, _>>();
 
+    let mut bindings = Binding {
+        sigs,
+        ..Default::default()
+    };
+
     for comp in ns.components {
-        calyx_ctx.components.push(compile_component(
-            comp,
-            &sigs,
-            &calyx_ctx.lib,
-        )?);
+        let comp = compile_component(comp, &bindings, &calyx_ctx.lib)?;
+        bindings.insert_comp(
+            core::Id::from(comp.name.id.as_str()),
+            Rc::clone(&comp.signature),
+        );
+        calyx_ctx.components.push(comp);
     }
 
     print(calyx_ctx)

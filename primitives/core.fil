@@ -1,20 +1,9 @@
 extern "core.sv" {
-  component Add<G>(
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-  ) -> (
-    @[G+2, G+3] out: 32,
-  );
-
-  component Mult<G>(
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-  ) -> (
-    @[G+3, G+4] out: 32,
-  );
-
   // A register that can extend the lifetime of a signal to any required length.
   component Latch<G, L>(
+    clk: 1,
+    reset: 1,
+    // -- base ports --
     @interface<G, 1> write_en: 1,
     @[G, G+1] in: 32
   ) -> (
@@ -34,4 +23,43 @@ extern "core.sv" {
   ) -> (
     @[G, E] out: 32,
   ) where L > G, E > L;
+}
+
+extern "binary.sv" {
+  // ============= Combinational =================
+  component Add<G>(
+    @[G, G+1] left: 32,
+    @[G, G+1] right: 32,
+  ) -> (
+    @[G, G+1] out: 32,
+  );
+
+  component MultComb<G>(
+    @[G, G+1] left: 32,
+    @[G, G+1] right: 32,
+  ) -> (
+    @[G, G+1] out: 32,
+  );
+}
+
+// ============= Sequential =================
+component Mult<G>(
+  clk: 1,
+  reset: 1,
+  // -- base ports --
+  @interface<G, 3> go: 1,
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32,
+) -> (
+  @[G+2, G+3] out: 32,
+) {
+  LL := new Latch;
+  LR := new Latch;
+
+  ll := LL<G, G+3>(left);
+  lr := LL<G, G+3>(right);
+
+  M := new MultComb;
+  m := M<G+2>(ll.out, lr.out);
+  out = m.out;
 }
