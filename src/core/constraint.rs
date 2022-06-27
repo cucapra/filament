@@ -123,6 +123,7 @@ where
         left: Range<T>,
         right: Range<T>,
     ) -> impl Iterator<Item = Self> {
+        log::debug!("{left} ⊆ {right}");
         vec![
             Constraint::gte(left.start, right.start),
             Constraint::gte(right.end, left.end),

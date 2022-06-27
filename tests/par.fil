@@ -20,7 +20,7 @@ component main<G>(
   @[G, G+1] a: 32,
   @[G, G+1] b: 32,
 ) -> (
-  @[G+5, G+6] out: 32
+  @[G+3, G+4] out: 32
 ) {
   // Execute the Fast and Slow mutlipliers in parallel and add their results
   FM := new FastMult;

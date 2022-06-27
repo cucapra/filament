@@ -33,7 +33,7 @@ impl PartialOrd for FsmIdxs {
                 return None;
             }
         }
-        log::debug!("Comparing {self} & {other}: {cur_order:?}");
+        log::trace!("Comparing {self} & {other}: {cur_order:?}");
 
         cur_order
     }
