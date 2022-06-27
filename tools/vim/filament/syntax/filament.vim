@@ -7,15 +7,15 @@ syn match filamentConstant "\v<[0-9]+('d[0-9]+)?>"
 
 " Type binding and interval annotations
 syn match filamentOperator "\v\@(exact)?" nextgroup=filamentInterval skipwhite
-syn region filamentInterval start="\v\(" end="\v\)" contained contains=filamentType,filamentConstant
+syn region filamentInterval start="\v\[" end="\v\]" contained contains=filamentType,filamentConstant
 
 syn match filamentOperator "\v\@interface" nextgroup=filamentAbsVar skipwhite
 
 " Components
-syn keyword filamentKeyword component nextgroup=filamentCompName skipwhite
+syn match filamentKeyword "\vcomponent|new" nextgroup=filamentCompName skipwhite
 syn match filamentCompName '\v[_a-zA-Z]((\-+)?[_a-zA-Z0-9]+)*' contained nextgroup=filamentAbsVar skipwhite
 
-syn region filamentAbsVar start="\v\<" end="\v\>" contains=filamentType contained
+syn region filamentAbsVar start="\v\<" end="\v\>" contains=filamentType,filamentConstant
 syn match filamentType '\v[_a-zA-Z]((\-+)?[_a-zA-Z0-9]+)*' contained
 
 " Comments
@@ -31,7 +31,7 @@ syn match filamentColon ':' contained nextgroup=filamentType contained skipwhite
 hi link filamentCellName filamentCompName
 
 " When statements
-syn keyword filamentKeyword when new import where fsm invoke
+syn keyword filamentKeyword when import where fsm invoke
 
 " Ports
 syn match filamentDot '\.' nextgroup=filamentPort
@@ -44,7 +44,6 @@ hi link filamentString String
 " Other keywords
 syn keyword filamentSpecialKeywords extern
 
-hi link filamentRises filamentOperator
 hi link filamentSpecialKeywords Directory
 hi link filamentPort Directory
 hi link filamentKeyword Keyword
