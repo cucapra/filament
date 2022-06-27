@@ -2,7 +2,7 @@ use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 use linked_hash_map::LinkedHashMap;
 
-use crate::core::{self, FsmIdxs, TimeRep};
+use crate::core::{self, FsmIdxs};
 use crate::errors::{self, Error, FilamentResult};
 use crate::event_checker::ast;
 
@@ -48,31 +48,21 @@ impl<'a> ConcreteInvoke<'a> {
     /// Resolve a port for this instance and return the requirement or guarantee
     /// based on whether it is an input or an input port.
     #[inline]
-    fn resolve_port(
+    fn resolve_port<const IS_INPUT: bool>(
         &self,
         port: &ast::Id,
-        is_input: bool,
     ) -> FilamentResult<Option<ast::Interval>> {
         match self {
             ConcreteInvoke::Concrete { binding, sig } => {
-                let live = sig.get_liveness(port, is_input)?;
+                let live = sig.get_liveness::<IS_INPUT>(port)?;
                 Ok(live.as_ref().map(|l| l.resolve(binding)))
             }
             ConcreteInvoke::Fsm { start_time, fsm } => {
-                // XXX(rachit): This is constructed everytime this method is called.
-                let idx = core::Fsm::state(port)?;
-                let within: ast::Range = ast::Range::new(
-                    start_time.clone(),
-                    start_time.clone().increment(fsm.states),
-                );
-                let exact = ast::Range::new(
-                    start_time.clone().increment(idx),
-                    start_time.clone().increment(idx + 1),
-                );
-                Ok(Some(ast::Interval::from(within).with_exact(exact)))
+                let state = core::Fsm::state(port)?;
+                Ok(Some(fsm.liveness(start_time, state)))
             }
             ConcreteInvoke::This { sig } => {
-                Ok(sig.get_liveness(port, is_input)?)
+                Ok(sig.get_liveness::<IS_INPUT>(port)?)
             }
         }
     }
@@ -82,7 +72,7 @@ impl<'a> ConcreteInvoke<'a> {
         &self,
         port: &ast::Id,
     ) -> FilamentResult<Option<ast::Interval>> {
-        self.resolve_port(port, true)
+        self.resolve_port::<true>(port)
     }
 
     /// Returns the guarantees provided by an output port
@@ -90,7 +80,7 @@ impl<'a> ConcreteInvoke<'a> {
         &self,
         port: &ast::Id,
     ) -> FilamentResult<Option<ast::Interval>> {
-        self.resolve_port(port, false)
+        self.resolve_port::<false>(port)
     }
 }
 
@@ -193,7 +183,7 @@ impl<'a> Context<'a> {
         match port {
             ast::Port::CompPort { comp, name } => {
                 // Check if the port is defined
-                self.get_invoke(comp)?.resolve_port(name, true)?;
+                self.get_invoke(comp)?.resolve_port::<true>(name)?;
                 if let Some(ports) = self.remaining_assigns.get_mut(comp) {
                     if !ports.remove(name) {
                         return Err(Error::malformed(format!(

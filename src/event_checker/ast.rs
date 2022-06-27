@@ -1,17 +1,17 @@
 use crate::core;
 
-type TR = crate::core::FsmIdxs;
+pub type TimeRep = crate::core::FsmIdxs;
 
-pub type Component = core::Component<TR>;
-pub type Namespace = core::Namespace<TR>;
-pub type PortDef = core::PortDef<TR>;
-pub type Signature = core::Signature<TR>;
-pub type Constraint = core::Constraint<TR>;
-pub type Command = core::Command<TR>;
-pub type Invoke = core::Invoke<TR>;
-pub type Interval = core::Interval<TR>;
-pub type Range = core::Range<TR>;
-pub type InterfaceDef = core::InterfaceDef<TR>;
+pub type Component = core::Component<TimeRep>;
+pub type Namespace = core::Namespace<TimeRep>;
+pub type PortDef = core::PortDef<TimeRep>;
+pub type Signature = core::Signature<TimeRep>;
+pub type Constraint = core::Constraint<TimeRep>;
+pub type Command = core::Command<TimeRep>;
+pub type Invoke = core::Invoke<TimeRep>;
+pub type Interval = core::Interval<TimeRep>;
+pub type Range = core::Range<TimeRep>;
+pub type InterfaceDef = core::InterfaceDef<TimeRep>;
 pub type Port = core::Port;
 pub type Guard = core::Guard;
 pub type Instance = core::Instance;

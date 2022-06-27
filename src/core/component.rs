@@ -140,12 +140,11 @@ where
     }
 
     /// Returns a port associated with the signature
-    pub fn get_liveness(
+    pub fn get_liveness<const IS_INPUT: bool>(
         &self,
         port: &Id,
-        is_input: bool,
     ) -> FilamentResult<Option<Interval<T>>> {
-        let mut iter = if is_input {
+        let mut iter = if IS_INPUT {
             self.inputs.iter()
         } else {
             self.outputs.iter()
@@ -171,7 +170,7 @@ where
             });
 
         maybe_pd.ok_or_else(|| {
-            let kind = if is_input {
+            let kind = if IS_INPUT {
                 "input port"
             } else {
                 "output port"

@@ -19,27 +19,51 @@ struct Context<'a> {
 }
 
 /// Converts an interval to a guard expression with the appropriate FSM
-fn interval_to_guard(inv: ast::Range, ctx: &mut Context) -> ast::Guard {
-    if let Some((ev, st, end)) = inv.as_offset() {
-        // Update max state if this interval ends at a greater value
-        if ctx.max_states[ev] < end {
-            *ctx.max_states.get_mut(ev).unwrap() = end;
-        }
+fn range_to_guard(range: ast::Range, ctx: &Context) -> ast::Guard {
+    if let Some((ev, st, end)) = range.as_offset() {
         (st..end)
             .into_iter()
-            .map(|st| {
-                ast::Guard::Port(
-                    ctx.fsms
-                        .get(ev)
-                        .unwrap_or_else(|| panic!("FSM {ev} missing"))
-                        .port(st),
-                )
-            })
+            .map(|st| ast::Guard::Port(ctx.fsms[ev].port(st)))
             .reduce(|l, r| ast::Guard::Or(Box::new(l), Box::new(r)))
             .unwrap()
     } else {
-        panic!("Cannot compile ranges that are not simple offsets ")
+        unimplemented!(
+            "Range `{range}` cannot be represented as a simple non-max offset",
+        )
     }
+}
+
+/// Compute max states from:
+/// 1. Inputs and output ports
+/// 2. The events used to trigger the invocation
+fn max_state_from_sig(
+    sig: &ast::Signature,
+    abstract_vars: &[ast::TimeRep],
+    binding: &HashMap<ast::Id, &ast::TimeRep>,
+    ctx: &mut Context,
+) {
+    let out_events =
+        sig.outputs.iter().chain(sig.inputs.iter()).flat_map(|pd| {
+            pd.liveness.iter().flat_map(|live| {
+                live.resolve(binding)
+                    .events()
+                    .into_iter()
+                    .cloned()
+                    .collect_vec()
+            })
+        });
+
+    // Abstract variables can affect the max state calculation
+    let abs_events = abstract_vars.iter().cloned();
+
+    // Use all ranges to compute max state
+    out_events.chain(abs_events).for_each(|fsm| {
+        fsm.events().for_each(|(ev, &st)| {
+            if ctx.max_states[ev] < st {
+                *ctx.max_states.get_mut(ev).unwrap() = st;
+            }
+        })
+    });
 }
 
 fn compile_invoke(inv: ast::Invoke, ctx: &mut Context) -> Vec<ast::Command> {
@@ -59,6 +83,9 @@ fn compile_invoke(inv: ast::Invoke, ctx: &mut Context) -> Vec<ast::Command> {
             .cloned()
             .zip(abstract_vars.iter())
             .collect();
+
+        // Compute max states from signature
+        max_state_from_sig(sig, &abstract_vars, &binding, ctx);
 
         let mut connects =
             Vec::with_capacity(1 + ports.len() + sig.interface_signals.len());
@@ -92,20 +119,6 @@ fn compile_invoke(inv: ast::Invoke, ctx: &mut Context) -> Vec<ast::Command> {
             connects.push(con.into())
         }
 
-        // Outputs can affect the max state calculation
-        abstract_vars.iter().for_each(|fsm| {
-            fsm.events().for_each(|(ev, &st)| {
-                if ctx
-                    .max_states
-                    .get(ev)
-                    .unwrap_or_else(|| panic!("Missing max state for {ev}"))
-                    < &st
-                {
-                    *ctx.max_states.get_mut(ev).unwrap() = st;
-                }
-            })
-        });
-
         // Generate assignment for each port
         for (port, formal) in ports.into_iter().zip(sig.inputs.iter()) {
             if let Some(live) = &formal.liveness {
@@ -114,7 +127,7 @@ fn compile_invoke(inv: ast::Invoke, ctx: &mut Context) -> Vec<ast::Command> {
                     req.exact.is_none(),
                     "Cannot compile ports with exact specifications"
                 );
-                let guard = interval_to_guard(req.within, ctx);
+                let guard = range_to_guard(req.within, ctx);
                 let con = ast::Connect::new(
                     ast::Port::CompPort {
                         comp: bind.clone(),
