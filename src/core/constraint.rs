@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, iter};
+use std::{cmp::Ordering, collections::HashMap, fmt::Display, iter};
 
 use crate::interval_checking::SExp;
 
@@ -68,28 +68,12 @@ where
 {
     /// Check if the constraint can be statically reduced to true.
     pub fn simplify(&self) -> Option<&Self> {
-        match self.op {
-            OrderOp::Gt => {
-                if self.left > self.right {
-                    None
-                } else {
-                    Some(self)
-                }
-            }
-            OrderOp::Gte => {
-                if self.left >= self.right {
-                    None
-                } else {
-                    Some(self)
-                }
-            }
-            OrderOp::Eq => {
-                if self.left == self.right {
-                    None
-                } else {
-                    Some(self)
-                }
-            }
+        let ord = self.left.partial_cmp(&self.right);
+        match (&self.op, ord) {
+            (OrderOp::Gte, Some(Ordering::Greater | Ordering::Equal))
+            | (OrderOp::Eq, Some(Ordering::Equal))
+            | (OrderOp::Gt, Some(Ordering::Greater)) => None,
+            _ => Some(self),
         }
     }
 

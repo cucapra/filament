@@ -4,7 +4,7 @@ use itertools::Itertools;
 
 use crate::errors::{self, Error, FilamentResult};
 
-use super::Id;
+use super::{Id, Interval, Range, TimeRep};
 
 pub enum Port {
     ThisPort(Id),
@@ -231,7 +231,6 @@ pub struct Fsm {
 
     pos: Option<errors::Span>,
 }
-
 impl Fsm {
     pub fn new(name: Id, states: u64, trigger: Port) -> Self {
         Self {
@@ -263,6 +262,22 @@ impl Fsm {
             comp: self.name.clone(),
             name: format!("_{}", state).into(),
         }
+    }
+
+    /// Get the liveness condition for the given port
+    pub fn liveness<T>(&self, start_time: &T, state: u64) -> Interval<T>
+    where
+        T: TimeRep + Clone,
+    {
+        let within = Range::new(
+            start_time.clone(),
+            start_time.clone().increment(self.states),
+        );
+        let exact = Range::new(
+            start_time.clone().increment(state),
+            start_time.clone().increment(state + 1),
+        );
+        Interval::from(within).with_exact(exact)
     }
 }
 
