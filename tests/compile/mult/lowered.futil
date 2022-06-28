@@ -1,0 +1,82 @@
+extern "mult.sv" {
+  component Mult<T>(@interface<T, 2> go_T: 1, clk: 1, reset: 1, @[T, T+2] left: 32, @[T, T+1] right: 32) -> (@[T+2, T+3] out: 32);
+}
+component main<T>(@interface<T, 0> go_T: 1, @interface<T, 0> go_T: 1, @[T, T+2] l0: 32, @[T+2, T+4] l1: 32, @[T, T+1] r0: 32, @[T+2, T+3] r1: 32) -> (@[T+2, T+3] out0: 32, @[T+4, T+5] out1: 32) {
+  fsm T_fsm[0](go_T);
+  M := new Mult;
+  fsm t[5](go_T);
+  m0 := invoke M<T>;
+  m0.go_T = t._0;
+  m0.left = t._0 | t._1 ? l0;
+  m0.right = t._0 ? r0;
+  m1 := invoke M<T+2>;
+  m1.go_T = t._2;
+  m1.left = t._2 | t._3 ? l1;
+  m1.right = t._2 ? r1;
+  out0 = m0.out;
+  out1 = m1.out;
+}
+
+
+extern "/Users/rachitnigam/git/calyx/primitives/core.sv" {
+  comb primitive std_const<"share"=1>[WIDTH, VALUE]() -> (out: WIDTH);
+  comb primitive std_wire<"share"=1>[WIDTH](in: WIDTH) -> (out: WIDTH);
+  comb primitive std_slice<"share"=1>[IN_WIDTH, OUT_WIDTH](in: IN_WIDTH) -> (out: OUT_WIDTH);
+  comb primitive std_pad<"share"=1>[IN_WIDTH, OUT_WIDTH](in: IN_WIDTH) -> (out: OUT_WIDTH);
+  comb primitive std_not<"share"=1>[WIDTH](in: WIDTH) -> (out: WIDTH);
+  comb primitive std_and<"share"=1>[WIDTH](left: WIDTH, right: WIDTH) -> (out: WIDTH);
+  comb primitive std_or<"share"=1>[WIDTH](left: WIDTH, right: WIDTH) -> (out: WIDTH);
+  comb primitive std_xor<"share"=1>[WIDTH](left: WIDTH, right: WIDTH) -> (out: WIDTH);
+  comb primitive std_add<"share"=1>[WIDTH](left: WIDTH, right: WIDTH) -> (out: WIDTH);
+  comb primitive std_sub<"share"=1>[WIDTH](left: WIDTH, right: WIDTH) -> (out: WIDTH);
+  comb primitive std_gt<"share"=1>[WIDTH](left: WIDTH, right: WIDTH) -> (out: 1);
+  comb primitive std_lt<"share"=1>[WIDTH](left: WIDTH, right: WIDTH) -> (out: 1);
+  comb primitive std_eq<"share"=1>[WIDTH](left: WIDTH, right: WIDTH) -> (out: 1);
+  comb primitive std_neq<"share"=1>[WIDTH](left: WIDTH, right: WIDTH) -> (out: 1);
+  comb primitive std_ge<"share"=1>[WIDTH](left: WIDTH, right: WIDTH) -> (out: 1);
+  comb primitive std_le<"share"=1>[WIDTH](left: WIDTH, right: WIDTH) -> (out: 1);
+  comb primitive std_lsh<"share"=1>[WIDTH](left: WIDTH, right: WIDTH) -> (out: WIDTH);
+  comb primitive std_rsh<"share"=1>[WIDTH](left: WIDTH, right: WIDTH) -> (out: WIDTH);
+  comb primitive std_mux<"share"=1>[WIDTH](cond: 1, tru: WIDTH, fal: WIDTH) -> (out: WIDTH);
+  primitive std_reg<"static"=1>[WIDTH](@write_together in: WIDTH, @write_together @go write_en: 1, @clk clk: 1, @reset reset: 1) -> (@stable out: WIDTH, @done done: 1);
+  primitive std_mem_d1<"static"=1>[WIDTH, SIZE, IDX_SIZE](@read_together addr0: IDX_SIZE, @write_together write_data: WIDTH, @write_together @go write_en: 1, @clk clk: 1) -> (@read_together read_data: WIDTH, @done done: 1);
+  primitive std_mem_d2<"static"=1>[WIDTH, D0_SIZE, D1_SIZE, D0_IDX_SIZE, D1_IDX_SIZE](@read_together @write_together(2) addr0: D0_IDX_SIZE, @read_together @write_together(2) addr1: D1_IDX_SIZE, @write_together write_data: WIDTH, @write_together @go write_en: 1, @clk clk: 1) -> (@read_together read_data: WIDTH, @done done: 1);
+  primitive std_mem_d3<"static"=1>[WIDTH, D0_SIZE, D1_SIZE, D2_SIZE, D0_IDX_SIZE, D1_IDX_SIZE, D2_IDX_SIZE](@read_together @write_together(2) addr0: D0_IDX_SIZE, @read_together @write_together(2) addr1: D1_IDX_SIZE, @read_together @write_together(2) addr2: D2_IDX_SIZE, @write_together write_data: WIDTH, @write_together @go write_en: 1, @clk clk: 1) -> (@read_together read_data: WIDTH, @done done: 1);
+  primitive std_mem_d4<"static"=1>[WIDTH, D0_SIZE, D1_SIZE, D2_SIZE, D3_SIZE, D0_IDX_SIZE, D1_IDX_SIZE, D2_IDX_SIZE, D3_IDX_SIZE](@read_together @write_together(2) addr0: D0_IDX_SIZE, @read_together @write_together(2) addr1: D1_IDX_SIZE, @read_together @write_together(2) addr2: D2_IDX_SIZE, @read_together @write_together(2) addr3: D3_IDX_SIZE, @write_together write_data: WIDTH, @write_together @go write_en: 1, @clk clk: 1) -> (@read_together read_data: WIDTH, @done done: 1);
+}
+extern "mult.sv" {
+  primitive Mult(@clk clk: 1, @reset reset: 1, left: 32, right: 32, go_T: 1) -> (out: 32);
+}
+component main<"nointerface"=1>(l0: 32, l1: 32, r0: 32, r1: 32, go_T: 1, go_T: 1, @clk clk: 1, @reset reset: 1) -> (out0: 32, out1: 32) {
+  cells {
+    T_fsm = std_reg(32);
+    add = std_add(32);
+    M = Mult();
+    t = std_reg(32);
+    add0 = std_add(32);
+  }
+  wires {
+    add.left = T_fsm.out;
+    add.right = 32'd1;
+    T_fsm.in = T_fsm.out > 32'd0 & T_fsm.out < 32'd0 | T_fsm.out == 32'd0 & go_T ? add.out;
+    T_fsm.write_en = T_fsm.out > 32'd0 & T_fsm.out < 32'd0 | T_fsm.out == 32'd0 & go_T ? 1'd1;
+    T_fsm.in = T_fsm.out == 32'd0 ? 32'd0;
+    T_fsm.write_en = T_fsm.out == 32'd0 ? 1'd1;
+    add0.left = t.out;
+    add0.right = 32'd1;
+    t.in = t.out > 32'd0 & t.out < 32'd5 | t.out == 32'd0 & go_T ? add0.out;
+    t.write_en = t.out > 32'd0 & t.out < 32'd5 | t.out == 32'd0 & go_T ? 1'd1;
+    t.in = t.out == 32'd5 ? 32'd0;
+    t.write_en = t.out == 32'd5 ? 1'd1;
+    M.go_T = t.out == 32'd0 & go_T ? 1'd1;
+    M.left = t.out == 32'd0 & go_T | 32'd1 == t.out ? l0;
+    M.right = t.out == 32'd0 & go_T ? r0;
+    M.go_T = 32'd2 == t.out ? 1'd1;
+    M.left = 32'd2 == t.out | 32'd3 == t.out ? l1;
+    M.right = 32'd2 == t.out ? r1;
+    out0 = M.out;
+    out1 = M.out;
+  }
+
+  control {}
+}
