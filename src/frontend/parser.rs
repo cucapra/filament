@@ -252,11 +252,19 @@ impl FilamentParser {
         ))
     }
 
-    fn arguments(input: Node) -> ParseResult<Vec<ast::Port>> {
+    fn port_with_span(input: Node) -> ParseResult<(ast::Port, errors::Span)> {
+        let span = Self::get_span(&input);
+        Ok(match_nodes!(
+            input.into_children();
+            [port(port)] => (port, span),
+        ))
+    }
+
+    fn arguments(input: Node) -> ParseResult<Vec<(ast::Port, errors::Span)>> {
         Ok(match_nodes!(
             input.into_children();
             [] => vec![],
-            [port(ports)..] => ports.collect(),
+            [port_with_span(ports)..] => ports.collect(),
         ))
     }
 

@@ -42,8 +42,9 @@ fn main() -> errors::FilamentResult<()> {
     // Parse all the imports
     while let Some(file) = imports.pop() {
         let path: PathBuf = file.into();
-        let imp = frontend::FilamentParser::parse_file(&path)?;
-        ns.components.extend(imp.components.into_iter());
+        let mut imp = frontend::FilamentParser::parse_file(&path)?;
+        imp.components.append(&mut ns.components);
+        ns.components = imp.components;
         ns.externs.extend(
             imp.externs
                 .into_iter()
@@ -51,15 +52,14 @@ fn main() -> errors::FilamentResult<()> {
         );
         imports.extend(imp.imports.into_iter());
     }
-    // Reverse order because we inserted dependencies in the wrong order
-    ns.components.reverse();
 
     // Run the compilation pipeline
     let ns = event_checker::check_and_transform(ns)?;
+    log::trace!("{ns}");
     interval_checking::check(&ns)?;
-    eprintln!("{ns}");
+    log::trace!("{ns}");
     let ns = lower::lower_invokes(ns)?;
-    eprintln!("{ns}");
+    log::trace!("{ns}");
     interval_checking::check(&ns)?;
     if !opts.check {
         backend::compile(ns, &opts)?;

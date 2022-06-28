@@ -1,30 +1,27 @@
 import "primitives/core.fil";
 
-extern "dummy.sv" {
-  component FastMult<G>(
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-  ) -> (
-    @[G+1, G+2] out: 32,
-  );
-
-  component SlowMult<G>(
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-  ) -> (
-    @[G+3, G+4] out: 32,
-  );
+component FastMult<G>(
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32,
+) -> (
+  @[G+1, G+2] out: 32,
+) {
+  CM := new MultComb;
+  L := new Latch;
+  cm := CM<G>(left, right);
+  l := L<G, G+2>(cm.out);
+  out = l.out;
 }
 
 component main<G>(
   @[G, G+1] a: 32,
   @[G, G+1] b: 32,
 ) -> (
-  @[G+3, G+4] out: 32
+  @[G+2, G+3] out: 32
 ) {
   // Execute the Fast and Slow mutlipliers in parallel and add their results
   FM := new FastMult;
-  SM := new SlowMult;
+  SM := new Mult;
   A := new Add;
 
   // Latches to save the value of the input signals
@@ -32,10 +29,10 @@ component main<G>(
   L2 := new Latch;
 
   sm0 := SM<G>(a, b);
-  la := L1<G, G+3>(a);
-  lb := L2<G, G+3>(b);
+  la := L1<G, G+2>(a);
+  lb := L2<G, G+2>(b);
 
-  fm0 := FM<G+2>(la.out, lb.out);
-  a0 := A<G+3>(sm0.out, fm0.out);
+  fm0 := FM<G+1>(la.out, lb.out);
+  a0 := A<G+2>(sm0.out, fm0.out);
   out = a0.out;
 }

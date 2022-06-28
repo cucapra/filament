@@ -116,9 +116,11 @@ port = {
   | bitwidth
 }
 
+port_with_span = { port }
+
 arguments = {
   "(" ~ ")"
-  | "(" ~ port ~ ("," ~ port)* ~ ")"
+  | "(" ~ port_with_span ~ ("," ~ port_with_span)* ~ ")"
 }
 
 time_args = {
