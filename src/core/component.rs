@@ -39,7 +39,7 @@ where
     T: Display + Clone + TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}: {} ", self.liveness, self.name, self.bitwidth)
+        write!(f, "{} {}: {}", self.liveness, self.name, self.bitwidth)
     }
 }
 
@@ -53,7 +53,7 @@ where
     // Event that this port is an evidence of
     pub event: Id,
     // Delay required for this signal
-    pub delay: u64,
+    delay: u64,
     // Liveness of the interface signal
     liveness: Interval<T>,
 }
@@ -90,6 +90,10 @@ where
             delay,
             liveness,
         }
+    }
+
+    pub fn delay(&self) -> u64 {
+        self.delay
     }
 }
 
@@ -182,7 +186,7 @@ where
         let defined_interfaces = self
             .interface_signals
             .iter()
-            .map(|id| &id.name)
+            .map(|id| &id.event)
             .cloned()
             .collect();
         let all_events =

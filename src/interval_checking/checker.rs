@@ -21,7 +21,9 @@ fn check_connect(
     log::debug!("Dest requirement: {requirement}");
 
     let src_guarantee = ctx.port_guarantees(src)?;
-    log::debug!("Src requirement: {requirement}");
+    if let Some(guarantee) = &src_guarantee {
+        log::debug!("Src guarantee: {guarantee}");
+    }
 
     // If a guard is present, use its availablity instead.
     let guard_guarantee = if let Some(g) = &guard {
@@ -129,13 +131,13 @@ fn check_invoke<'a>(
     // If this is a high-level invoke, check all port requirements
     if let Some(actuals) = &invoke.ports {
         // Check connections implied by the invocation
-        for (actual, formal) in actuals.iter().zip(sig.inputs.iter()) {
+        for ((actual, pos), formal) in actuals.iter().zip(sig.inputs.iter()) {
             let dst = ast::Port::CompPort {
                 comp: invoke.bind.clone(),
                 name: formal.name.clone(),
             };
             log::info!("checking: {} = {}", dst, actual);
-            check_connect(&dst, actual, &None, invoke.copy_span(), ctx)?;
+            check_connect(&dst, actual, &None, Some(pos.clone()), ctx)?;
         }
     } else {
         ctx.add_remaning_assigns(invoke.bind.clone(), &invoke.comp)?;

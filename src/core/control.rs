@@ -84,7 +84,7 @@ pub struct Invoke<T> {
     pub abstract_vars: Vec<T>,
 
     /// Assignment for the ports
-    pub ports: Option<Vec<Port>>,
+    pub ports: Option<Vec<(Port, errors::Span)>>,
 
     /// Source location of the invocation
     pos: Option<errors::Span>,
@@ -94,7 +94,7 @@ impl<T> Invoke<T> {
         bind: Id,
         comp: Id,
         abstract_vars: Vec<T>,
-        ports: Option<Vec<Port>>,
+        ports: Option<Vec<(Port, errors::Span)>>,
     ) -> Self {
         Self {
             bind,
@@ -122,7 +122,7 @@ impl<T: Display> Display for Invoke<T> {
                 abs,
                 ports
                     .iter()
-                    .map(|port| port.to_string())
+                    .map(|(port, _)| port.to_string())
                     .collect::<Vec<String>>()
                     .join(",")
             )

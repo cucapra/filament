@@ -94,7 +94,8 @@ fn transform_port_def(
 fn transform_interface_def(
     id: core::InterfaceDef<frontend::IntervalTime>,
 ) -> core::InterfaceDef<core::FsmIdxs> {
-    core::InterfaceDef::<core::FsmIdxs>::new(id.name, id.event, id.delay)
+    let d = id.delay();
+    core::InterfaceDef::<core::FsmIdxs>::new(id.name, id.event, d)
 }
 
 fn transform_constraints(

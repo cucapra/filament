@@ -154,7 +154,7 @@ fn compile_invoke(inv: ast::Invoke, ctx: &mut Context) -> Vec<ast::Command> {
         }
 
         // Generate assignment for each port
-        for (port, formal) in ports.into_iter().zip(sig.inputs.iter()) {
+        for ((port, _), formal) in ports.into_iter().zip(sig.inputs.iter()) {
             let req = formal.liveness.resolve(&binding);
             assert!(
                 req.exact.is_none(),

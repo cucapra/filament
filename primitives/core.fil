@@ -44,10 +44,6 @@ extern "binary.sv" {
 
 // ============= Sequential =================
 component Mult<G>(
-  clk: 1,
-  reset: 1,
-  // -- base ports --
-  @interface<G, 3> go: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,
 ) -> (
@@ -57,7 +53,7 @@ component Mult<G>(
   LR := new Latch;
 
   ll := LL<G, G+3>(left);
-  lr := LL<G, G+3>(right);
+  lr := LR<G, G+3>(right);
 
   M := new MultComb;
   m := M<G+2>(ll.out, lr.out);
