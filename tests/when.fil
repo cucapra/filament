@@ -3,16 +3,16 @@ import "primitives/core.fil";
 component main<G>(
   @[G, G+1] a: 32,
   @[G, G+1] b: 32,
-  @[G+3, G+4] c: 32
+  @[G+2, G+3] c: 32
 ) -> (
-  @[G+5, G+6] out: 32
+  @[G+2, G+3] out: 32
 ) {
 
   A := new Add;
   M := new Mult;
 
   m0 := M<G>(a, b);
-  a0 := A<G+3>(m0.out, c);
+  a0 := A<G+2>(m0.out, c);
 
   out = a0.out;
 }

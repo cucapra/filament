@@ -182,7 +182,7 @@ fn check_fsm<'a>(
     let within = ast::Range::new(start_time.clone(), end_time);
     ctx.add_obligations(
         ast::Constraint::subset(within, guarantee.within),
-        None,
+        fsm.copy_span(),
     );
 
     // Add the FSM instance to the context
