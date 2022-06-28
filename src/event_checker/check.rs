@@ -101,11 +101,13 @@ fn transform_interface_def(
 fn transform_constraints(
     con: core::Constraint<frontend::IntervalTime>,
 ) -> core::Constraint<core::FsmIdxs> {
-    core::Constraint {
-        left: transform_time(con.left),
-        right: transform_time(con.right),
-        op: con.op,
-    }
+    let sp = con.copy_span();
+    let cons = core::Constraint::new(
+        transform_time(con.left),
+        transform_time(con.right),
+        con.op,
+    );
+    cons.set_span(sp)
 }
 
 fn transform_signature(

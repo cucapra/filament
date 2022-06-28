@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::HashMap, fmt::Display, iter};
 
-use crate::interval_checking::SExp;
+use crate::{errors, interval_checking::SExp};
 
 use super::{FsmIdxs, Id, Range, TimeRep};
 
@@ -31,6 +31,21 @@ where
     pub left: T,
     pub right: T,
     pub op: OrderOp,
+    pos: Option<errors::Span>,
+}
+
+impl<T> Constraint<T>
+where
+    T: TimeRep,
+{
+    pub fn new(left: T, right: T, op: OrderOp) -> Self {
+        Self {
+            left,
+            right,
+            op,
+            pos: None,
+        }
+    }
 }
 
 impl<T> Constraint<T>
@@ -45,6 +60,7 @@ where
                 left: l,
                 right: r,
                 op: OrderOp::Gt,
+                pos: None,
             })
         }
     }
@@ -57,6 +73,7 @@ where
                 left: r,
                 right: l,
                 op: OrderOp::Gt,
+                pos: None,
             })
         }
     }
@@ -82,6 +99,7 @@ where
             left,
             right,
             op: OrderOp::Eq,
+            pos: None,
         }
     }
 
@@ -90,6 +108,7 @@ where
             left,
             right,
             op: OrderOp::Gte,
+            pos: None,
         }
     }
 
@@ -98,6 +117,7 @@ where
             left: self.left.resolve(binding),
             right: self.right.resolve(binding),
             op: self.op.clone(),
+            pos: None,
         }
     }
 
@@ -138,6 +158,20 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {} {}", self.left, self.op, self.right)
+    }
+}
+
+impl<T> errors::WithPos for Constraint<T>
+where
+    T: TimeRep + Clone,
+{
+    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+        self.pos = sp;
+        self
+    }
+
+    fn copy_span(&self) -> Option<errors::Span> {
+        self.pos.clone()
     }
 }
 

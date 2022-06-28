@@ -1,9 +1,7 @@
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 
-use linked_hash_map::LinkedHashMap;
-
 use crate::core::{self, FsmIdxs};
-use crate::errors::{self, Error, FilamentResult};
+use crate::errors::{Error, FilamentResult};
 use crate::event_checker::ast;
 
 pub enum ConcreteInvoke<'a> {
@@ -84,7 +82,7 @@ impl<'a> ConcreteInvoke<'a> {
     }
 }
 
-type FactMap = LinkedHashMap<ast::Constraint, Vec<errors::Span>>;
+type FactMap = Vec<ast::Constraint>;
 
 pub struct Context<'a> {
     /// Mapping from names to signatures for components and externals.
@@ -114,8 +112,8 @@ impl<'a> From<&'a HashMap<ast::Id, &'a ast::Signature>> for Context<'a> {
             remaining_assigns: HashMap::default(),
             instances: HashMap::default(),
             invocations: HashMap::default(),
-            obligations: LinkedHashMap::default(),
-            facts: LinkedHashMap::default(),
+            obligations: Vec::default(),
+            facts: Vec::default(),
         }
     }
 }
@@ -199,30 +197,24 @@ impl<'a> Context<'a> {
     }
 
     /// Add a new obligation that needs to be proved
-    pub fn add_obligations<F>(&mut self, facts: F, span: Option<errors::Span>)
+    pub fn add_obligations<F>(&mut self, facts: F)
     where
         F: Iterator<Item = ast::Constraint>,
     {
         for fact in facts {
             log::trace!("adding obligation {}", fact);
-            let locs = self.obligations.entry(fact).or_insert(vec![]);
-            if let Some(sp) = &span {
-                locs.push(sp.clone())
-            }
+            self.obligations.push(fact);
         }
     }
 
     /// Add a new known fact
-    pub fn add_fact<F>(&mut self, facts: F, span: Option<errors::Span>)
+    pub fn add_fact<F>(&mut self, facts: F)
     where
         F: Iterator<Item = ast::Constraint>,
     {
         for fact in facts {
             log::trace!("adding known fact {}", fact);
-            let locs = self.facts.entry(fact).or_insert(vec![]);
-            if let Some(sp) = &span {
-                locs.push(sp.clone())
-            }
+            self.facts.push(fact);
         }
     }
 

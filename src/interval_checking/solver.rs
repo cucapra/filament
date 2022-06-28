@@ -24,8 +24,8 @@ fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
 pub fn prove<'a, A, AV>(
     abstract_vars: AV,
     assumes: A,
-    asserts: Vec<&'a ast::Constraint>,
-) -> FilamentResult<Option<&'a ast::Constraint>>
+    asserts: Vec<ast::Constraint>,
+) -> FilamentResult<Option<ast::Constraint>>
 where
     A: Iterator<Item = &'a ast::Constraint>,
     AV: Iterator<Item = &'a ast::Id>,
@@ -58,7 +58,7 @@ where
     }
 
     for fact in asserts {
-        if !check_fact(&mut solver, fact)? {
+        if !check_fact(&mut solver, &fact)? {
             return Ok(Some(fact));
         }
     }

@@ -2,7 +2,6 @@ use super::{ConcreteInvoke, Context, THIS};
 use crate::core::TimeRep;
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use crate::event_checker::ast::{self, Constraint};
-use itertools::Itertools;
 use std::collections::HashMap;
 
 // For connect statements of the form:
@@ -47,8 +46,8 @@ fn check_connect(
                 })
                 .clone();
             ctx.add_obligations(
-                Constraint::subset(exact, guarantee.within.clone()),
-                pos.clone(),
+                Constraint::subset(exact, guarantee.within.clone())
+                    .map(|e| e.set_span(pos.clone())),
             );
 
             // Require that the guard's availability is at least as long as the signal.
@@ -56,8 +55,8 @@ fn check_connect(
                 Constraint::subset(
                     guarantee.within,
                     guard_interval.within.clone(),
-                ),
-                pos.clone(),
+                )
+                .map(|e| e.set_span(pos.clone())),
             );
         }
 
@@ -71,8 +70,9 @@ fn check_connect(
     // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
     if let Some(guarantee) = &guard_guarantee {
         let within_fact =
-            Constraint::subset(requirement.within, guarantee.within.clone());
-        ctx.add_obligations(within_fact, pos.clone());
+            Constraint::subset(requirement.within, guarantee.within.clone())
+                .map(|e| e.set_span(pos.clone()));
+        ctx.add_obligations(within_fact);
     }
 
     if let Some(exact_requirement) = requirement.exact {
@@ -84,8 +84,8 @@ fn check_connect(
 
         if let Some(exact_guarantee) = guarantee.exact {
             ctx.add_obligations(
-                Constraint::equality(exact_requirement, exact_guarantee),
-                pos,
+                Constraint::equality(exact_requirement, exact_guarantee)
+                    .map(|e| e.set_span(pos.clone())),
             );
         } else {
             return Err(errors::Error::malformed(
@@ -117,8 +117,8 @@ fn check_invoke<'a>(
         .chain(sig.constraints.iter().cloned())
         .for_each(|con| {
             ctx.add_obligations(
-                Constraint::constraint(con.resolve(&binding)),
-                invoke.copy_span(),
+                Constraint::constraint(con.resolve(&binding))
+                    .map(|e| e.set_span(invoke.copy_span())),
             )
         });
 
@@ -181,8 +181,8 @@ fn check_fsm<'a>(
     let end_time = start_time.clone().increment(*states);
     let within = ast::Range::new(start_time.clone(), end_time);
     ctx.add_obligations(
-        ast::Constraint::subset(within, guarantee.within),
-        fsm.copy_span(),
+        ast::Constraint::subset(within, guarantee.within)
+            .map(|e| e.set_span(fsm.copy_span())),
     );
 
     // Add the FSM instance to the context
@@ -232,9 +232,10 @@ fn check_component(
     ctx.add_invocation(THIS.into(), this_instance)?;
 
     // Add constraints on the interface as assumptions
-    rev_sig.constraints.iter().for_each(|con| {
-        ctx.add_fact(Constraint::constraint(con.clone()), None)
-    });
+    rev_sig
+        .constraints
+        .iter()
+        .for_each(|con| ctx.add_fact(Constraint::constraint(con.clone())));
 
     check_commands(&comp.body, &mut ctx)?;
 
@@ -247,32 +248,16 @@ fn check_component(
         )));
     }
 
-    let (obligations_with_pos, facts) = ctx.into();
-    let facts = facts.iter().map(|(f, _)| f).collect_vec();
-    /* if !facts.is_empty() {
-        eprintln!("Known Facts:\n{:?}", facts);
-    } */
+    let (obligations, facts) = ctx.into();
 
-    let obligations = obligations_with_pos
-        .iter()
-        .flat_map(|(f, _)| f.simplify())
-        .collect::<Vec<&_>>();
-    // eprintln!("Proof Obligations:\n{}", obligations);
-
-    if let Some(fact) = super::prove(
-        comp.sig.abstract_vars.iter(),
-        facts.into_iter(),
-        obligations,
-    )? {
-        let pos = &obligations_with_pos[fact];
-        let err = Err(errors::Error::cannot_prove(fact.clone()));
-        if let Some(pos) = pos.get(0) {
-            return err.map_err(|err| err.with_pos(Some(pos.clone())));
-        } else {
-            return err;
-        }
+    if let Some(fact) =
+        super::prove(comp.sig.abstract_vars.iter(), facts.iter(), obligations)?
+    {
+        let sp = fact.copy_span();
+        Err(errors::Error::cannot_prove(fact).with_pos(sp))
+    } else {
+        Ok(())
     }
-    Ok(())
 }
 
 /// Check a [ast::Namespace] to prove that the interval requirements of all the ports can be

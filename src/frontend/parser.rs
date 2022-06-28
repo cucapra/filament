@@ -315,27 +315,27 @@ impl FilamentParser {
                 time(l),
                 eq(_),
                 time(r)
-            ] => ast::Constraint {left: l, right: r, op: ast::OrderOp::Eq},
+            ] => ast::Constraint::new(l, r, ast::OrderOp::Eq),
             [
                 time(l),
                 gt(_),
                 time(r)
-            ] => ast::Constraint {left: l, right: r, op: ast::OrderOp::Gt},
+            ] => ast::Constraint::new(l, r, ast::OrderOp::Gt),
             [
                 time(l),
                 lt(_),
                 time(r)
-            ] => ast::Constraint {left: r, right: l, op: ast::OrderOp::Gt},
+            ] => ast::Constraint::new(r, l, ast::OrderOp::Gt),
             [
                 time(l),
                 lte(_),
                 time(r)
-            ] => ast::Constraint {left: r, right: l, op: ast::OrderOp::Gte},
+            ] => ast::Constraint::new(r, l, ast::OrderOp::Gte),
             [
                 time(l),
                 gte(_),
                 time(r)
-            ] => ast::Constraint {left: l, right: r, op: ast::OrderOp::Gte},
+            ] => ast::Constraint::new(l, r, ast::OrderOp::Gte),
         ))
     }
     fn constraints(input: Node) -> ParseResult<Vec<ast::Constraint>> {
