@@ -185,8 +185,8 @@ fn max_states(
     let ast::Component { mut sig, mut body } = comp;
 
     // Missing interface ports
-    let missing_interfaces = sig
-        .missing_interface_ports()
+    let missing_events = sig.missing_interface_ports();
+    let missing_interfaces = missing_events
         .iter()
         .map(|ev| {
             ast::InterfaceDef::new(
@@ -254,13 +254,15 @@ fn max_states(
         .chain(body)
         .collect_vec();
 
-    // Fix up the interface signals delays
+    // Fix up the interface signals delays for interfaces we added
     sig.interface_signals.iter_mut().for_each(|id| {
-        *id = ast::InterfaceDef::new(
-            id.name.clone(),
-            id.event.clone(),
-            ctx.max_states[&id.event],
-        )
+        if missing_events.contains(&id.name) {
+            *id = ast::InterfaceDef::new(
+                id.name.clone(),
+                id.event.clone(),
+                ctx.max_states[&id.event],
+            )
+        }
     });
 
     Ok(ast::Component { sig, body })

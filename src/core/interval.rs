@@ -18,7 +18,7 @@ where
 {
     /// Generate constraints for well formedness of this range.
     pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> {
-        Constraint::lt(self.start.clone(), self.end.clone()).into_iter()
+        std::iter::once(Constraint::lt(self.start.clone(), self.end.clone()))
     }
 }
 impl<T> Range<T>

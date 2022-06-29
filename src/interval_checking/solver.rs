@@ -1,7 +1,7 @@
-use rsmt2::{SmtConf, Solver};
-
 use crate::errors::FilamentResult;
 use crate::event_checker::ast;
+use itertools::Itertools;
+use rsmt2::{SmtConf, Solver};
 
 /// A string that semantically represents an S-expression
 pub struct SExp(pub String);
@@ -30,6 +30,11 @@ where
     A: Iterator<Item = &'a ast::Constraint>,
     AV: Iterator<Item = &'a ast::Id>,
 {
+    // Locally simplify as many asserts as possible
+    let asserts = asserts
+        .into_iter()
+        .flat_map(|con| con.simplify())
+        .collect_vec();
     if asserts.is_empty() {
         return Ok(None);
     }
