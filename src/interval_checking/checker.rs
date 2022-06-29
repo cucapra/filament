@@ -274,5 +274,7 @@ pub fn check(namespace: &ast::Namespace) -> FilamentResult<()> {
         sigs.insert(comp.sig.name.clone(), &comp.sig);
     }
 
+    log::info!("Interval checking succeeded");
+
     Ok(())
 }

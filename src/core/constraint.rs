@@ -52,45 +52,12 @@ impl<T> Constraint<T>
 where
     T: TimeRep + Clone + PartialOrd,
 {
-    pub fn gt(l: T, r: T) -> Option<Self> {
-        if l > r {
-            None
-        } else {
-            Some(Self {
-                left: l,
-                right: r,
-                op: OrderOp::Gt,
-                pos: None,
-            })
-        }
-    }
-
-    pub fn lt(l: T, r: T) -> Option<Self> {
-        if l < r {
-            None
-        } else {
-            Some(Self {
-                left: r,
-                right: l,
-                op: OrderOp::Gt,
-                pos: None,
-            })
-        }
-    }
-}
-
-impl<T> Constraint<T>
-where
-    T: TimeRep + Clone + PartialEq + PartialOrd,
-{
-    /// Check if the constraint can be statically reduced to true.
-    pub fn simplify(&self) -> Option<&Self> {
-        let ord = self.left.partial_cmp(&self.right);
-        match (&self.op, ord) {
-            (OrderOp::Gte, Some(Ordering::Greater | Ordering::Equal))
-            | (OrderOp::Eq, Some(Ordering::Equal))
-            | (OrderOp::Gt, Some(Ordering::Greater)) => None,
-            _ => Some(self),
+    pub fn lt(l: T, r: T) -> Self {
+        Self {
+            left: r,
+            right: l,
+            op: OrderOp::Gt,
+            pos: None,
         }
     }
 
@@ -111,7 +78,6 @@ where
             pos: None,
         }
     }
-
     pub fn resolve(&self, binding: &HashMap<Id, &T>) -> Constraint<T> {
         Constraint {
             left: self.left.resolve(binding),
@@ -143,12 +109,27 @@ where
         left: Range<T>,
         right: Range<T>,
     ) -> impl Iterator<Item = Self> {
-        log::debug!("{left} ⊆ {right}");
         vec![
             Constraint::gte(left.start, right.start),
             Constraint::gte(right.end, left.end),
         ]
         .into_iter()
+    }
+}
+
+impl<T> Constraint<T>
+where
+    T: TimeRep + Clone + PartialEq + PartialOrd,
+{
+    /// Check if the constraint can be statically reduced to true.
+    pub fn simplify(self) -> Option<Self> {
+        let ord = self.left.partial_cmp(&self.right);
+        match (&self.op, ord) {
+            (OrderOp::Gte, Some(Ordering::Greater | Ordering::Equal))
+            | (OrderOp::Eq, Some(Ordering::Equal))
+            | (OrderOp::Gt, Some(Ordering::Greater)) => None,
+            _ => Some(self),
+        }
     }
 }
 
