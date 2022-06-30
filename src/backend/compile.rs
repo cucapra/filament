@@ -15,6 +15,9 @@ use crate::cmdline::Opts;
 use crate::errors::Error;
 use crate::{core, errors::FilamentResult};
 
+// Attribute attached to event signals in a module interface.
+const FIL_EVENT: &str = "fil_event";
+
 /// Bindings associated with the current compilation context
 #[derive(Default)]
 pub struct Binding {
@@ -214,7 +217,13 @@ fn as_port_defs(
                 .into()
         })
         .chain(sig.interface_signals.iter().map(|id| {
-            (ir::Id::from(id.name.id.clone()), 1, ir::Direction::Input).into()
+            let mut pd = ir::PortDef::from((
+                ir::Id::from(id.name.id.clone()),
+                1,
+                ir::Direction::Input,
+            ));
+            pd.attributes.insert(FIL_EVENT, 1);
+            pd
         }))
         .chain(sig.outputs.iter().map(|pd| {
             (

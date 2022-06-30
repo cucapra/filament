@@ -256,7 +256,7 @@ fn max_states(
 
     // Fix up the interface signals delays for interfaces we added
     sig.interface_signals.iter_mut().for_each(|id| {
-        if missing_events.contains(&id.name) {
+        if missing_events.contains(&id.event) {
             *id = ast::InterfaceDef::new(
                 id.name.clone(),
                 id.event.clone(),

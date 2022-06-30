@@ -46,7 +46,7 @@ where
     conf.check_success();
 
     let mut solver = conf.spawn(parser)?;
-    solver.path_tee(std::path::PathBuf::from("./model.smt"))?;
+    // solver.path_tee(std::path::PathBuf::from("./model.smt"))?;
 
     define_prelude(&mut solver)?;
 

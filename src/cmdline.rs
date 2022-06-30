@@ -16,6 +16,10 @@ pub struct Opts {
     #[argh(option, long = "calyx-primitives", default = "\"../calyx\".into()")]
     pub calyx_primitives: PathBuf,
 
+    /// path to search for imports
+    #[argh(option, long = "library", short = 'l', default = "\".\".into()")]
+    pub library: PathBuf,
+
     /// only check the program without compilation
     #[argh(switch, short = 'c', long = "check")]
     pub check: bool,
