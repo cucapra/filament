@@ -5,7 +5,7 @@ module Latch (
   input wire reset,
   input wire write_en,
   input wire logic [31:0] in,
-  output wire logic [31:0] out
+  output logic [31:0] out
 );
   always_ff @(posedge clk) begin
     if (reset)
