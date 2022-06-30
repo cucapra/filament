@@ -17,7 +17,16 @@ fn main() -> errors::FilamentResult<()> {
         .init();
 
     let mut ns = frontend::FilamentParser::parse_file(&opts.input)?;
-    let mut imports: Vec<String> = ns.imports.drain(..).collect();
+    let mut imports: Vec<PathBuf> = ns
+        .imports
+        .drain(..)
+        .map(|s| {
+            let mut base = opts.library.clone();
+            base.push(s);
+            base
+        })
+        .collect();
+
     // Get the absolute paths for all externs
     let absolute = |ext_path: String, file: &Path| -> String {
         let ext: PathBuf = ext_path.into();
@@ -39,9 +48,9 @@ fn main() -> errors::FilamentResult<()> {
         .drain(..)
         .map(|(p, imps)| (absolute(p, &opts.input), imps))
         .collect();
+
     // Parse all the imports
-    while let Some(file) = imports.pop() {
-        let path: PathBuf = file.into();
+    while let Some(path) = imports.pop() {
         let mut imp = frontend::FilamentParser::parse_file(&path)?;
         imp.components.append(&mut ns.components);
         ns.components = imp.components;
@@ -50,7 +59,11 @@ fn main() -> errors::FilamentResult<()> {
                 .into_iter()
                 .map(|(p, imps)| (absolute(p, &path), imps)),
         );
-        imports.extend(imp.imports.into_iter());
+        imports.extend(imp.imports.into_iter().map(|s| {
+            let mut base = opts.library.clone();
+            base.push(s);
+            base
+        }));
     }
 
     // Run the compilation pipeline
