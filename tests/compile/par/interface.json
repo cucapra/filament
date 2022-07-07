@@ -1,0 +1,31 @@
+{
+  "interfaces": [
+    {
+      "name": "go_G",
+      "event": "G",
+      "delay": 5
+    }
+  ],
+  "inputs": [
+    {
+      "name": "a",
+      "event": "G",
+      "start": 0,
+      "end": 1
+    },
+    {
+      "name": "b",
+      "event": "G",
+      "start": 0,
+      "end": 1
+    }
+  ],
+  "outputs": [
+    {
+      "name": "out",
+      "event": "G",
+      "start": 2,
+      "end": 3
+    }
+  ]
+}

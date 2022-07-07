@@ -19,3 +19,4 @@ out.sv
 a.out
 model.smt
 hand-compile
+__pycache__
