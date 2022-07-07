@@ -40,10 +40,19 @@ def construct_transaction_fsm(interface):
 
     # Construct a model of what needs to be done for one transaction
     async def run(mod, data, log=False):
+        # Dictionary to store the outputs
+        # Maps signal_name -> txn_id -> listof values
+        outputs = { sig["name"]: {} for sig in interface["outputs"] }
+
         # New transaction should only trigger at the start of a cycle
         await RisingEdge(mod.clk)
 
         for txn in range(0, validate_data(data)):
+
+            # Add new dict for this transaction to the outputs
+            for sig in outputs.keys():
+                outputs[sig][txn] = []
+
             ev = interface["interfaces"][0]
 
             # Fully execute the module by triggering it till the number of
@@ -78,17 +87,18 @@ def construct_transaction_fsm(interface):
                 # outputs.
                 await FallingEdge(mod.clk)
 
-                # Check that outputs have expected values
+                # For each output, record the value if we expect it to be valid
                 for out in interface["outputs"]:
                     assert out["event"] == ev["event"], "output uses different event"
                     name = out["name"]
                     if st >= out["start"] and st < out["end"]:
                         v = mod._id(name, extended=False).value
-                        expected = data[name][txn]
-                        assert v == expected, f"(txn {txn}: cycle {st}): Expected {name} == {expected}, actual: {v.integer}"
+                        outputs[name][txn].append(v.integer)
 
                 # Wait for end of cycle
                 await RisingEdge(mod.clk)
+
+        return outputs
 
     return run
 
@@ -135,4 +145,5 @@ async def run_design(mod):
     # Setup the design and run it
     await setup_design(mod)
     runner = construct_transaction_fsm(interface)
-    await runner(mod, data)
+    outputs = await runner(mod, data)
+    print("Outputs:", json.dumps(outputs))

@@ -1,0 +1,49 @@
+{
+  "interfaces": [
+    {
+      "name": "go_T",
+      "event": "G",
+      "delay": 5
+    }
+  ],
+  "inputs": [
+    {
+      "name": "l0",
+      "event": "G",
+      "start": 0,
+      "end": 2
+    },
+    {
+      "name": "r0",
+      "event": "G",
+      "start": 0,
+      "end": 1
+    },
+    {
+      "name": "l1",
+      "event": "G",
+      "start": 2,
+      "end": 4
+    },
+    {
+      "name": "r1",
+      "event": "G",
+      "start": 2,
+      "end": 3
+    }
+  ],
+  "outputs": [
+    {
+      "name": "out0",
+      "event": "G",
+      "start": 2,
+      "end": 3
+    },
+    {
+      "name": "out1",
+      "event": "G",
+      "start": 4,
+      "end": 5
+    }
+  ]
+}
