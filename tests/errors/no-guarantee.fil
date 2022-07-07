@@ -1,7 +1,0 @@
-component Main<T>(
-  in: 32
-) -> (
-  @[T, T+1] out: 32,
-) {
-  out = in;
-}

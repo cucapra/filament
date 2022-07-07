@@ -96,6 +96,7 @@ where
         left: Range<T>,
         right: Range<T>,
     ) -> impl Iterator<Item = Self> {
+        log::info!("{left} = {right}");
         vec![
             Constraint::eq(left.start, right.start),
             Constraint::eq(left.end, right.end),
@@ -109,6 +110,7 @@ where
         left: Range<T>,
         right: Range<T>,
     ) -> impl Iterator<Item = Self> {
+        log::info!("{left} ⊆ {right}");
         vec![
             Constraint::gte(left.start, right.start),
             Constraint::gte(right.end, left.end),

@@ -70,11 +70,10 @@ fn main() -> errors::FilamentResult<()> {
     let ns = event_checker::check_and_transform(ns)?;
     log::trace!("{ns}");
     interval_checking::check(&ns)?;
-    log::trace!("{ns}");
-    let ns = lower::lower_invokes(ns)?;
-    log::trace!("{ns}");
-    interval_checking::check(&ns)?;
     if !opts.check {
+        let ns = lower::lower_invokes(ns)?;
+        log::trace!("{ns}");
+        interval_checking::check(&ns)?;
         backend::compile(ns, &opts)?;
     }
     Ok(())

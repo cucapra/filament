@@ -136,7 +136,6 @@ fn check_invoke<'a>(
                 comp: invoke.bind.clone(),
                 name: formal.name.clone(),
             };
-            log::info!("checking: {} = {}", dst, actual);
             check_connect(&dst, actual, &None, Some(pos.clone()), ctx)?;
         }
     } else {
@@ -199,7 +198,6 @@ fn check_commands<'a>(
 where
 {
     for cmd in cmds {
-        log::info!("{cmd}");
         match cmd {
             ast::Command::Invoke(invoke) => check_invoke(invoke, ctx)
                 .map_err(|err| err.with_pos(invoke.copy_span()))?,
@@ -268,7 +266,6 @@ pub fn check(namespace: &ast::Namespace) -> FilamentResult<()> {
     let mut sigs = namespace.signatures();
 
     for comp in &namespace.components {
-        log::info!("component {}", comp.sig.name);
         check_component(comp, &sigs)?;
         // Add the signature of this component to the context.
         sigs.insert(comp.sig.name.clone(), &comp.sig);
