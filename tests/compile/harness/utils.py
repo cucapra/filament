@@ -39,10 +39,10 @@ def construct_transaction_fsm(interface):
                ) == 1, "Unsupported: multiple interfaces"
 
     # Construct a model of what needs to be done for one transaction
-    async def run(mod, data, log=False):
+    async def run(mod, data):
         # Dictionary to store the outputs
         # Maps signal_name -> txn_id -> listof values
-        outputs = { sig["name"]: {} for sig in interface["outputs"] }
+        outputs = {sig["name"]: {} for sig in interface["outputs"]}
 
         # New transaction should only trigger at the start of a cycle
         await RisingEdge(mod.clk)
@@ -73,13 +73,6 @@ def construct_transaction_fsm(interface):
                     else:
                         v = BinaryValue('x')
                     mod._id(inp["name"], extended=False).setimmediatevalue(v)
-
-                # Log things if needed
-                if log:
-                    mod._log.info("%s, go_T, %s", st, mod.go_T)
-                    for sig in data.keys():
-                        mod._log.info("%s, %s, %s", st, sig,
-                                      mod._id(sig, extended=False))
 
                 # Wait for the falling edge so that combinational computations
                 # propagate.
@@ -146,4 +139,5 @@ async def run_design(mod):
     await setup_design(mod)
     runner = construct_transaction_fsm(interface)
     outputs = await runner(mod, data)
-    print("Outputs:", json.dumps(outputs))
+    out = json.dumps(outputs)
+    print("Outputs:", out)

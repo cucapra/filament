@@ -21,8 +21,9 @@ cmd = """
 [[tests]]
 name = "compile"
 paths = [
-  "tests/compile/mult/lowered.fil"
+  "tests/compile/*/test.fil"
 ]
 cmd = """
-./tests/compile/mult/run.sh "$(pwd)"
+cd $(dirname {}) && \
+make INTERFACE=interface.json DATA_FILE=data.json FIL=test.fil | grep Outputs
 """
