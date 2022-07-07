@@ -1,21 +1,12 @@
 ver = "0.4.0"
 
 [[tests]]
-name = "tests"
+name = "type checker"
 paths = [
-  "tests/*.fil",
+  "tests/check/*.fil",
 ]
 cmd = """
 ./target/debug/filament {} --check
-"""
-
-[[tests]]
-name = "errors"
-paths = [
-  "tests/errors/*fil",
-]
-cmd = """
-./target/debug/filament {}
 """
 
 [[tests]]
