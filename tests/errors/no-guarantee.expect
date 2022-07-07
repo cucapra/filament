@@ -1,6 +1,0 @@
----CODE---
-1
----STDERR---
-Error: tests/errors/no-guarantee.fil
-6 |  out = in;
-  |  ^^^^^^^^^ Source port does not provide any guarantees and cannot be used to fufill requirements of destination port

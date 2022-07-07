@@ -7,7 +7,7 @@ component main<G>() -> () {
   m0.left = 10;
   m0.right = 20;
 
-  m1 := invoke M<G+3>;
+  m1 := invoke M<G+2>;
   m1.left = m0.out;
   m1.right = m0.out;
 }

@@ -1,9 +1,0 @@
----STDERR---
-Proof Obligations:
-[
-    max(G+5,L+5) > G+4,
-    max(G+5,L+5) > L+4,
-    max(G+4,L+4) >= G+4,
-    max(G+4,L+4) >= L+4,
-]
-All proof obligations satisfied
