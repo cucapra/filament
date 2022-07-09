@@ -5,5 +5,7 @@ pub mod core;
 pub mod errors;
 pub mod event_checker;
 pub mod frontend;
+pub mod interface_infer;
 pub mod interval_checking;
 pub mod lower;
+pub mod visitor;
