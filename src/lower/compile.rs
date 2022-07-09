@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 #[derive(Default)]
 struct Bindings<'a> {
-    /// Signatures for external definitions AND instances
+    /// Signatures for external definitions
     ext_sigs: HashMap<ast::Id, &'a ast::Signature>,
     /// Signatures for components
     comps: Vec<ast::Component>,
@@ -62,8 +62,7 @@ impl Context<'_> {
                 .unwrap()
         } else {
             unimplemented!(
-            "Range `{range}` cannot be represented as a simple non-max offset",
-        )
+                "Range `{range}` cannot be represented as a simple non-max offset")
         }
     }
 }

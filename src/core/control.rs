@@ -1,10 +1,7 @@
-use std::fmt::Display;
-
-use itertools::Itertools;
-
+use super::{Id, Interval, Range, Signature, TimeRep};
 use crate::errors::{self, Error, FilamentResult};
-
-use super::{Id, Interval, Range, TimeRep};
+use itertools::Itertools;
+use std::{collections::HashMap, fmt::Display};
 
 pub enum Port {
     ThisPort(Id),
@@ -28,6 +25,12 @@ pub enum Command<T> {
     Instance(Instance),
     Connect(Connect),
     Fsm(Fsm),
+}
+
+impl<T> From<Fsm> for Command<T> {
+    fn from(v: Fsm) -> Self {
+        Self::Fsm(v)
+    }
 }
 
 impl<T> From<Connect> for Command<T> {
@@ -89,7 +92,11 @@ pub struct Invoke<T> {
     /// Source location of the invocation
     pos: Option<errors::Span>,
 }
-impl<T> Invoke<T> {
+
+impl<T> Invoke<T>
+where
+    T: TimeRep,
+{
     pub fn new(
         bind: Id,
         comp: Id,
@@ -103,6 +110,14 @@ impl<T> Invoke<T> {
             ports,
             pos: None,
         }
+    }
+
+    pub fn bindings(&self, sig: &Signature<T>) -> HashMap<Id, &T> {
+        sig.abstract_vars
+            .iter()
+            .cloned()
+            .zip(self.abstract_vars.iter())
+            .collect()
     }
 }
 impl<T: Display> Display for Invoke<T> {

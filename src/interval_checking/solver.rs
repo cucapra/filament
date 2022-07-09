@@ -39,13 +39,12 @@ where
         return Ok(None);
     }
 
-    let parser = ();
     let mut conf = SmtConf::default_z3();
 
     // Immediately checks if the command to z3 succeeded.
     conf.check_success();
 
-    let mut solver = conf.spawn(parser)?;
+    let mut solver = conf.spawn(())?;
     // solver.path_tee(std::path::PathBuf::from("./model.smt"))?;
 
     define_prelude(&mut solver)?;
