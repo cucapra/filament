@@ -250,16 +250,14 @@ fn check_component(
     }
 
     eprintln!("component {}", comp.sig.name);
-    let (obligations, facts) = ctx.into();
+    let (obligations, facts, disjointness) = ctx.try_into()?;
 
-    if let Some(fact) =
-        super::prove(comp.sig.abstract_vars.iter(), facts.iter(), obligations)?
-    {
-        let sp = fact.copy_span();
-        Err(errors::Error::cannot_prove(fact).with_pos(sp))
-    } else {
-        Ok(())
-    }
+    super::prove(
+        comp.sig.abstract_vars.iter(),
+        facts.iter(),
+        obligations,
+        disjointness,
+    )
 }
 
 /// Check a [ast::Namespace] to prove that the interval requirements of all the ports can be

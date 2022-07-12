@@ -1,13 +1,46 @@
-use crate::errors::FilamentResult;
+use crate::errors::{Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
 use itertools::Itertools;
 use rsmt2::{SmtConf, Solver};
+use std::fmt::Display;
 
 /// A string that semantically represents an S-expression
 pub struct SExp(pub String);
 impl std::fmt::Display for SExp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+/// Represents the constraint:
+/// |event1 - event2| >= delay
+pub struct Disjoint {
+    event1: ast::TimeRep,
+    event2: ast::TimeRep,
+    delay: u64,
+}
+impl Disjoint {
+    pub fn new(event1: ast::TimeRep, event2: ast::TimeRep, delay: u64) -> Self {
+        Self {
+            event1,
+            event2,
+            delay,
+        }
+    }
+}
+impl From<&Disjoint> for SExp {
+    fn from(disj: &Disjoint) -> Self {
+        Self(format!(
+            "(>= (abs (- {} {})) {})",
+            SExp::from(&disj.event1),
+            SExp::from(&disj.event2),
+            disj.delay
+        ))
+    }
+}
+impl Display for Disjoint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "|{} - {}| >= {}", self.event1, self.event2, self.delay)
     }
 }
 
@@ -18,6 +51,12 @@ fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
         "Int",
         "(ite (< x y) y x)",
     )?;
+    solver.define_fun(
+        "abs",
+        &[("x", "Int")],
+        "Int",
+        "(ite (< x 0) (- x) x)",
+    )?;
     Ok(())
 }
 
@@ -25,7 +64,8 @@ pub fn prove<'a, A, AV>(
     abstract_vars: AV,
     assumes: A,
     asserts: Vec<ast::Constraint>,
-) -> FilamentResult<Option<ast::Constraint>>
+    disjointness: Vec<Disjoint>,
+) -> FilamentResult<()>
 where
     A: Iterator<Item = &'a ast::Constraint>,
     AV: Iterator<Item = &'a ast::Id>,
@@ -35,9 +75,6 @@ where
         .into_iter()
         .flat_map(|con| con.simplify())
         .collect_vec();
-    if asserts.is_empty() {
-        return Ok(None);
-    }
 
     let mut conf = SmtConf::default_z3();
 
@@ -63,18 +100,25 @@ where
 
     for fact in asserts {
         if !check_fact(&mut solver, &fact)? {
-            return Ok(Some(fact));
+            return Err(Error::cannot_prove(fact.to_string())
+                .with_pos(fact.copy_span()));
         }
     }
 
-    Ok(None)
+    for disj in disjointness {
+        if !check_fact(&mut solver, &disj)? {
+            return Err(Error::cannot_prove(disj.to_string()));
+        }
+    }
+
+    Ok(())
 }
 
 fn check_fact<P>(
     solver: &mut Solver<P>,
-    fact: &ast::Constraint,
+    fact: impl Into<SExp>,
 ) -> FilamentResult<bool> {
-    let sexp = SExp::from(fact);
+    let sexp = fact.into();
     log::info!("Assert (not {})", sexp);
     solver.push(1)?;
     solver.assert(format!("(not {})", sexp))?;

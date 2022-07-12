@@ -165,7 +165,10 @@ fn compile_command(cmd: core::Command<TimeRep>, ctx: &mut Context) {
             ctx.fsms.insert(name, f);
         }
         core::Command::Invoke(core::Invoke {
-            bind, instance, ports, ..
+            bind,
+            instance,
+            ports,
+            ..
         }) => {
             assert!(
                 ports.is_none(),

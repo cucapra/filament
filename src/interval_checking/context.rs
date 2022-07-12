@@ -1,6 +1,7 @@
 use crate::core::{self, FsmIdxs};
-use crate::errors::{Error, FilamentResult};
+use crate::errors::{self, Error, FilamentResult};
 use crate::event_checker::ast;
+use crate::interval_checking::solver;
 use itertools::Itertools;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 
@@ -123,12 +124,20 @@ impl<'a> From<&'a HashMap<ast::Id, &'a ast::Signature>> for Context<'a> {
 }
 
 /// Decompose Context into obligations and facts
-impl From<Context<'_>> for (FactMap, FactMap) {
-    fn from(val: Context) -> Self {
-        for (inst, binds) in val.event_binds.clone() {
-            val.disjointness(inst, binds).unwrap();
-        }
-        (val.obligations, val.facts)
+impl TryFrom<Context<'_>> for (FactMap, FactMap, Vec<solver::Disjoint>) {
+    type Error = errors::Error;
+
+    fn try_from(mut val: Context) -> FilamentResult<Self> {
+        let evs = std::mem::take(&mut val.event_binds);
+        let disj = evs
+            .into_iter()
+            .map(|(inst, binds)| val.disjointness(inst, binds))
+            .collect::<FilamentResult<Vec<_>>>()?;
+        Ok((
+            val.obligations,
+            val.facts,
+            disj.into_iter().flatten().collect(),
+        ))
     }
 }
 
@@ -310,7 +319,7 @@ impl<'a> Context<'a> {
         &self,
         instance: ast::Id,
         binds: Vec<Vec<ast::TimeRep>>,
-    ) -> FilamentResult<()> /* -> impl Iterator<Item = ast::Constraint> */ {
+    ) -> FilamentResult<Vec<solver::Disjoint>> {
         eprintln!(
             "{}: {}",
             instance,
@@ -339,6 +348,7 @@ impl<'a> Context<'a> {
             .collect_vec();
 
         // Iterate over each event
+        let mut constraints = Vec::new();
         let events = delays.len();
         let num_binds = binds.len();
         (0..events).for_each(|ev| {
@@ -347,14 +357,15 @@ impl<'a> Context<'a> {
                 for i in 0..num_binds {
                     // The i'th use conflicts with all other uses
                     for k in i + 1..num_binds {
-                        println!(
-                            "|{} - {}| >= {}",
-                            binds[i][ev], binds[k][ev], delay
-                        )
+                        constraints.push(solver::Disjoint::new(
+                            binds[i][ev].clone(),
+                            binds[k][ev].clone(),
+                            delay,
+                        ))
                     }
                 }
             }
         });
-        Ok(())
+        Ok(constraints)
     }
 }
