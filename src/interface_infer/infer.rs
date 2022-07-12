@@ -1,4 +1,6 @@
-//! Infer @interface signals for all events in Filament-level modules
+//! Infer @interface signals for all events in Filament-level modules.
+//! Once this pass is run, all Filament-level components are guaranteed to have @interface defined
+//! for all the events they use.
 
 use crate::errors::{Error, FilamentResult};
 use crate::event_checker::ast;

@@ -145,10 +145,7 @@ pub fn check_and_transform(
                 .map(transform_control)
                 .collect::<FilamentResult<Vec<_>>>()?;
 
-            Ok(core::Component::new(
-                transform_signature(comp.sig),
-                commands,
-            ))
+            core::Component::new(transform_signature(comp.sig), commands)
         })
         .collect::<FilamentResult<Vec<_>>>()?;
 
