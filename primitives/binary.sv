@@ -1,6 +1,7 @@
 `default_nettype none
 
 module Add (
+  input wire logic go, // Unused port, only used for modeling
   input wire logic [31:0] left,
   input wire logic [31:0] right,
   output wire logic [31:0] out
@@ -9,6 +10,7 @@ module Add (
 endmodule
 
 module MultComb (
+  input wire logic go, // Unused port, only used for modeling
   input wire logic [31:0] left,
   input wire logic [31:0] right,
   output wire logic [31:0] out
