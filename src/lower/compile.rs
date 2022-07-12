@@ -10,12 +10,14 @@ pub struct CompileInvokes {
 }
 
 impl CompileInvokes {
-    pub fn get_fsm(&self, event: &ast::Id) -> &ast::Fsm {
-        self.fsms.get(event).unwrap_or_else(|| panic!("No FSM for event `{event}`. This likely happened because the input code already had an interface port defined for the event. The compiler assumes that for such code, the FSM is manually managed."))
+    fn get_fsm(&self, event: &ast::Id) -> &ast::Fsm {
+        self.fsms
+            .get(event)
+            .unwrap_or_else(|| panic!("No FSM for event `{event}`."))
     }
 
     /// Converts an interval to a guard expression with the appropriate FSM
-    pub fn range_to_guard(&self, range: ast::Range) -> ast::Guard {
+    fn range_to_guard(&self, range: ast::Range) -> ast::Guard {
         if let Some((ev, st, end)) = range.as_offset() {
             (st..end)
                 .into_iter()
@@ -55,7 +57,7 @@ impl visitor::Transform for CompileInvokes {
         // Compile only if this is a high-level invoke
         if let ast::Invoke {
             bind,
-            comp,
+            instance,
             abstract_vars,
             ports: Some(ports),
             ..
@@ -76,7 +78,7 @@ impl visitor::Transform for CompileInvokes {
             // Define the low-level invoke
             let low_inv = ast::Invoke::new(
                 bind.clone(),
-                comp,
+                instance,
                 abstract_vars.clone(),
                 None,
             )

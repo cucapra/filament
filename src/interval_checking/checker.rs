@@ -103,7 +103,10 @@ fn check_invoke<'a>(
     invoke: &'a ast::Invoke,
     ctx: &mut Context<'a>,
 ) -> FilamentResult<()> {
-    let sig = ctx.get_instance(&invoke.comp)?;
+    let sig = ctx.get_instance(&invoke.instance)?;
+    // Track event bindings
+    ctx.add_event_binds(invoke.instance.clone(), invoke.abstract_vars.clone());
+
     let binding: HashMap<_, _> = sig
         .abstract_vars
         .iter()
@@ -139,7 +142,7 @@ fn check_invoke<'a>(
             check_connect(&dst, actual, &None, Some(pos.clone()), ctx)?;
         }
     } else {
-        ctx.add_remaning_assigns(invoke.bind.clone(), &invoke.comp)?;
+        ctx.add_remaning_assigns(invoke.bind.clone(), &invoke.instance)?;
     }
 
     Ok(())
@@ -246,6 +249,7 @@ fn check_component(
         )));
     }
 
+    eprintln!("component {}", comp.sig.name);
     let (obligations, facts) = ctx.into();
 
     if let Some(fact) =

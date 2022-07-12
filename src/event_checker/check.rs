@@ -71,7 +71,7 @@ fn transform_control(
             let pos = inv.copy_span();
             let abs: Vec<core::FsmIdxs> =
                 inv.abstract_vars.into_iter().map(transform_time).collect();
-            Ok(core::Invoke::new(inv.bind, inv.comp, abs, inv.ports)
+            Ok(core::Invoke::new(inv.bind, inv.instance, abs, inv.ports)
                 .set_span(pos)
                 .into())
         }
