@@ -426,15 +426,16 @@ impl FilamentParser {
     }
 
     fn component(input: Node) -> ParseResult<ast::Component> {
-        Ok(match_nodes!(
+        let span = Self::get_span(&input);
+        match_nodes!(
             input.into_children();
             [
                 signature(sig),
                 command(body)..
             ] => {
-                ast::Component::new(sig, body.collect())
+                Ok(ast::Component::new(sig, body.collect()).unwrap())
             }
-        ))
+        )
     }
 
     fn external(input: Node) -> ParseResult<(String, Vec<ast::Signature>)> {

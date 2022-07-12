@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
-use super::{Command, Constraint, Id, Interval, Range, TimeRep};
-use crate::errors::{Error, FilamentResult};
+use super::{Command, Constraint, Id, Interval, Invoke, Range, TimeRep};
+use crate::errors::{Error, FilamentResult, WithPos};
 use std::{
     collections::{HashMap, HashSet},
     fmt::Display,
@@ -273,8 +273,65 @@ impl<T> Component<T>
 where
     T: Clone + TimeRep,
 {
-    pub fn new(sig: Signature<T>, body: Vec<Command<T>>) -> Self {
-        Self { sig, body }
+    pub fn new(
+        sig: Signature<T>,
+        body: Vec<Command<T>>,
+    ) -> FilamentResult<Self> {
+        let is_low = !sig.interface_signals.is_empty();
+
+        if is_low {
+            // All events should have corresponding interface signals
+            let defined_interfaces = sig
+                .interface_signals
+                .iter()
+                .map(|id| &id.event)
+                .cloned()
+                .collect();
+            let all_events =
+                sig.abstract_vars.iter().cloned().collect::<HashSet<_>>();
+            if let Some(ev) = all_events.difference(&defined_interfaces).next()
+            {
+                return Err(Error::malformed("Low-level component does not have define interface port for event `{ev}`"));
+            }
+
+            // There should be no high-level invokes
+            for con in body {
+                match con {
+                    Command::Invoke(inv @ Invoke { ports, .. }) => {
+                        if ports.is_some() {
+                            return Err(Error::malformed(
+                                "Low-level component uses high-level invoke",
+                            )
+                            .with_pos(inv.copy_span()));
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        } else {
+            // There should be no FSM constructs or low-level invokes
+            for con in body {
+                match con {
+                    Command::Invoke(inv @ Invoke { ports, .. }) => {
+                        if ports.is_none() {
+                            return Err(Error::malformed(
+                                "High-level component uses low-level invoke",
+                            )
+                            .with_pos(inv.copy_span()));
+                        }
+                    }
+                    Command::Fsm(fsm) => {
+                        return Err(Error::malformed(
+                            "High-level component uses FSM",
+                        )
+                        .with_pos(fsm.copy_span()))
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        Ok(Self { sig, body })
     }
 }
 impl<T> Display for Component<T>
