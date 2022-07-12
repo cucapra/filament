@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use filament::{
-    backend, cmdline, errors, event_checker, frontend, interval_checking,
-    lower, visitor::Transform, interface_infer,
+    backend, cmdline, errors, event_checker, frontend, interface_infer,
+    interval_checking, lower, visitor::Transform,
 };
 
 fn main() -> errors::FilamentResult<()> {

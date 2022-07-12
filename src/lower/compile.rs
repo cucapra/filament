@@ -1,4 +1,4 @@
-use crate::errors::FilamentResult;
+use crate::errors::{FilamentResult, WithPos};
 use crate::event_checker::ast;
 use crate::visitor;
 use std::collections::HashMap;
@@ -51,6 +51,7 @@ impl visitor::Transform for CompileInvokes {
         inv: ast::Invoke,
         sig: &ast::Signature,
     ) -> FilamentResult<Vec<ast::Command>> {
+        let pos = inv.copy_span();
         // Compile only if this is a high-level invoke
         if let ast::Invoke {
             bind,
@@ -79,6 +80,7 @@ impl visitor::Transform for CompileInvokes {
                 abstract_vars.clone(),
                 None,
             )
+            .set_span(pos.clone())
             .into();
             connects.push(low_inv);
 
@@ -100,7 +102,8 @@ impl visitor::Transform for CompileInvokes {
                     },
                     port,
                     None,
-                );
+                )
+                .set_span(pos.clone());
                 connects.push(con.into())
             }
 
@@ -120,7 +123,8 @@ impl visitor::Transform for CompileInvokes {
                     },
                     port,
                     Some(guard),
-                );
+                )
+                .set_span(pos.clone());
                 connects.push(con.into());
             }
             Ok(connects)
