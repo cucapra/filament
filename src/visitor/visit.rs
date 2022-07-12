@@ -110,15 +110,21 @@ where
         comp: ast::Component,
         binds: &Bindings,
     ) -> FilamentResult<ast::Component> {
+        // Binding for instances
+        let mut instances: HashMap<ast::Id, &ast::Signature> = HashMap::new();
         let ast::Component { sig, body } = self.enter_component(comp)?;
         let body: Vec<ast::Command> = body
             .into_iter()
             .map(|cmd| match cmd {
                 crate::core::Command::Invoke(inv) => {
-                    let sig = binds.get(&inv.comp);
+                    let sig = instances.get(&inv.comp).unwrap();
                     self.invoke(inv, sig)
                 }
-                crate::core::Command::Instance(inst) => self.instance(inst),
+                crate::core::Command::Instance(inst) => {
+                    let sig = binds.get(&inst.component);
+                    instances.insert(inst.name.clone(), sig);
+                    self.instance(inst)
+                }
                 crate::core::Command::Connect(con) => self.connect(con),
                 crate::core::Command::Fsm(fsm) => self.fsm(fsm),
             })
@@ -135,8 +141,6 @@ where
     }
 
     fn transform(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
-        let mut pass = Self::new(&ns);
-
         let comps = ns.components.drain(..).collect_vec();
 
         let mut binds = Bindings {
@@ -145,6 +149,7 @@ where
         };
 
         for comp in comps {
+            let mut pass = Self::new(&ns);
             let ncomp = if pass.component_filter(&comp) {
                 pass.component(comp, &binds)?
             } else {

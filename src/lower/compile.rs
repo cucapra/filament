@@ -154,4 +154,18 @@ impl visitor::Transform for CompileInvokes {
 
         Ok(comp)
     }
+
+    fn exit_component(
+        &mut self,
+        mut comp: ast::Component,
+    ) -> FilamentResult<ast::Component> {
+        // Add all the FSMs
+        comp.body = self
+            .fsms
+            .drain()
+            .map(|(_, fsm)| fsm.into())
+            .chain(comp.body.into_iter())
+            .collect();
+        Ok(comp)
+    }
 }
