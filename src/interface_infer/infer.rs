@@ -2,7 +2,7 @@
 //! Once this pass is run, all Filament-level components are guaranteed to have @interface defined
 //! for all the events they use.
 
-use crate::errors::{Error, FilamentResult};
+use crate::errors::FilamentResult;
 use crate::event_checker::ast;
 use crate::visitor;
 use itertools::Itertools;
@@ -52,6 +52,16 @@ impl InterfaceInfer {
 }
 
 impl visitor::Transform for InterfaceInfer {
+    fn new(_: &ast::Namespace) -> Self {
+        Self::default()
+    }
+
+    // Visit this component if it doesn't have interface ports defined. Otherwise, assumes that
+    // this is a low-level component.
+    fn component_filter(&self, comp: &ast::Component) -> bool {
+        comp.sig.interface_signals.is_empty()
+    }
+
     fn invoke(
         &mut self,
         inv: ast::Invoke,
@@ -67,9 +77,8 @@ impl visitor::Transform for InterfaceInfer {
         &mut self,
         mut comp: ast::Component,
     ) -> FilamentResult<ast::Component> {
-        // Add missing interface ports
-        let missing_events = comp.sig.missing_interface_ports();
-        let missing_interfaces = missing_events.iter().map(|ev| {
+        // Add interface ports for all components
+        let missing_interfaces = comp.sig.abstract_vars.iter().map(|ev| {
             ast::InterfaceDef::new(
                 format!("go_{}", ev).into(),
                 ev.clone(),
@@ -77,19 +86,6 @@ impl visitor::Transform for InterfaceInfer {
             )
         });
         comp.sig.interface_signals.extend(missing_interfaces);
-
-        // For all the defined interfaces make sure that they match what we inferred.
-        comp.sig.interface_signals.iter().try_for_each(|id| {
-            if id.delay() != self.max_states[&id.event] {
-                Err(Error::malformed(format!(
-                    "Interface signal has delay {} but compiler infers {}",
-                    id.delay(),
-                    self.max_states[&id.event]
-                )))
-            } else {
-                Ok(())
-            }
-        })?;
 
         Ok(comp)
     }

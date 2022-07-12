@@ -1,3 +1,3 @@
 mod compile;
 
-pub use compile::lower_invokes;
+pub use compile::CompileInvokes;

@@ -1,7 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use filament::{
-    backend, cmdline, errors, event_checker, frontend, interval_checking, lower,
+    backend, cmdline, errors, event_checker, frontend, interval_checking,
+    lower, visitor::Transform,
 };
 
 fn main() -> errors::FilamentResult<()> {
@@ -71,7 +72,7 @@ fn main() -> errors::FilamentResult<()> {
     log::trace!("{ns}");
     interval_checking::check(&ns)?;
     if !opts.check {
-        let ns = lower::lower_invokes(ns)?;
+        let ns = lower::CompileInvokes::transform(ns)?;
         log::trace!("{ns}");
         interval_checking::check(&ns)?;
         backend::compile(ns, &opts)?;

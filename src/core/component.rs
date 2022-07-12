@@ -179,23 +179,6 @@ where
             Error::undefined(port.clone(), kind.to_string())
         })
     }
-
-    // Return names of abstract variables that do not have a corresponding interface port defined
-    // for them
-    pub fn missing_interface_ports(&self) -> Vec<Id> {
-        let defined_interfaces = self
-            .interface_signals
-            .iter()
-            .map(|id| &id.event)
-            .cloned()
-            .collect();
-        let all_events =
-            self.abstract_vars.iter().cloned().collect::<HashSet<_>>();
-        all_events
-            .difference(&defined_interfaces)
-            .cloned()
-            .collect_vec()
-    }
 }
 impl<T> Signature<T>
 where
@@ -273,10 +256,10 @@ impl<T> Component<T>
 where
     T: Clone + TimeRep,
 {
-    pub fn new(
-        sig: Signature<T>,
-        body: Vec<Command<T>>,
-    ) -> FilamentResult<Self> {
+    pub fn validate(
+        sig: &Signature<T>,
+        body: &[Command<T>],
+    ) -> FilamentResult<()> {
         let is_low = !sig.interface_signals.is_empty();
 
         if is_low {
@@ -291,27 +274,24 @@ where
                 sig.abstract_vars.iter().cloned().collect::<HashSet<_>>();
             if let Some(ev) = all_events.difference(&defined_interfaces).next()
             {
-                return Err(Error::malformed("Low-level component does not have define interface port for event `{ev}`"));
+                return Err(Error::malformed(format!("Low-level component does not have define interface port for event `{ev}`")));
             }
 
             // There should be no high-level invokes
             for con in body {
-                match con {
-                    Command::Invoke(inv @ Invoke { ports, .. }) => {
-                        if ports.is_some() {
-                            return Err(Error::malformed(
-                                "Low-level component uses high-level invoke",
-                            )
-                            .with_pos(inv.copy_span()));
-                        }
+                if let Command::Invoke(inv @ Invoke { ports, .. }) = &con {
+                    if ports.is_some() {
+                        return Err(Error::malformed(
+                            "Low-level component uses high-level invoke",
+                        )
+                        .with_pos(inv.copy_span()));
                     }
-                    _ => (),
                 }
             }
         } else {
             // There should be no FSM constructs or low-level invokes
             for con in body {
-                match con {
+                match &con {
                     Command::Invoke(inv @ Invoke { ports, .. }) => {
                         if ports.is_none() {
                             return Err(Error::malformed(
@@ -331,6 +311,14 @@ where
             }
         }
 
+        Ok(())
+    }
+
+    pub fn new(
+        sig: Signature<T>,
+        body: Vec<Command<T>>,
+    ) -> FilamentResult<Self> {
+        Self::validate(&sig, &body)?;
         Ok(Self { sig, body })
     }
 }
