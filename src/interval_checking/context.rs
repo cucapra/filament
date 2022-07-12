@@ -320,17 +320,6 @@ impl<'a> Context<'a> {
         instance: ast::Id,
         binds: Vec<Vec<ast::TimeRep>>,
     ) -> FilamentResult<Vec<solver::Disjoint>> {
-        eprintln!(
-            "{}: {}",
-            instance,
-            binds
-                .iter()
-                .map(|times| times
-                    .iter()
-                    .map(|time| format!("{}", time))
-                    .join(", "))
-                .join("; ")
-        );
         // Get the delay associated with each event.
         let sig = self.get_instance(&instance)?;
 

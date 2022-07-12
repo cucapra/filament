@@ -249,7 +249,6 @@ fn check_component(
         )));
     }
 
-    eprintln!("component {}", comp.sig.name);
     let (obligations, facts, disjointness) = ctx.try_into()?;
 
     super::prove(
