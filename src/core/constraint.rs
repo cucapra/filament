@@ -31,7 +31,10 @@ where
     pub left: T,
     pub right: T,
     pub op: OrderOp,
+    // Source location that generates this constraint
     pos: Option<errors::Span>,
+    // Explanation of why this constraint was generated
+    explanation: Option<String>,
 }
 
 impl<T> Constraint<T>
@@ -44,7 +47,13 @@ where
             right,
             op,
             pos: None,
+            explanation: None,
         }
+    }
+
+    pub fn explanation<S: ToString>(mut self, msg: S) -> Self {
+        self.explanation = Some(msg.to_string());
+        self
     }
 }
 
@@ -58,6 +67,7 @@ where
             right: l,
             op: OrderOp::Gt,
             pos: None,
+            explanation: None,
         }
     }
 
@@ -67,6 +77,7 @@ where
             right,
             op: OrderOp::Eq,
             pos: None,
+            explanation: None,
         }
     }
 
@@ -76,6 +87,7 @@ where
             right,
             op: OrderOp::Gte,
             pos: None,
+            explanation: None,
         }
     }
     pub fn resolve(&self, binding: &HashMap<Id, &T>) -> Constraint<T> {
@@ -84,6 +96,7 @@ where
             right: self.right.resolve(binding),
             op: self.op.clone(),
             pos: None,
+            explanation: None,
         }
     }
 
@@ -140,7 +153,11 @@ where
     T: Display + TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {} {}", self.left, self.op, self.right)
+        write!(f, "{} {} {}", self.left, self.op, self.right)?;
+        if let Some(exp) = &self.explanation {
+            write!(f, ". {exp}")?;
+        }
+        Ok(())
     }
 }
 

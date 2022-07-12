@@ -1,0 +1,14 @@
+import "primitives/core.fil";
+
+component Main<G, L>(
+  @[G, G+1] left: 32,
+  @[L, L+1] right: 32
+) -> (
+  @[L+2, L+3] out: 32
+) {
+  L := new Latch;
+  M := new Mult;
+  l0 := L<G, L+1>(left);
+  m0 := M<L>(l0.out, right);
+  out = m0.out;
+}

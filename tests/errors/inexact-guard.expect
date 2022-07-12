@@ -1,0 +1,7 @@
+---CODE---
+1
+---STDERR---
+Error: tests/errors/inexact-guard.fil
+7 |  out = sel ? left;
+  |  ^^^^^^^^^^^^^^^^^ Port does not have an exact guarantee `sel`. Ports used in guards must have exact guarantees
+
