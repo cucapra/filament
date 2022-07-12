@@ -426,7 +426,6 @@ impl FilamentParser {
     }
 
     fn component(input: Node) -> ParseResult<ast::Component> {
-        let span = Self::get_span(&input);
         match_nodes!(
             input.into_children();
             [

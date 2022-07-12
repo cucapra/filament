@@ -36,7 +36,16 @@ impl From<Bindings<'_>> for Vec<ast::Component> {
 }
 
 /// Transform the given AST
-pub trait Transform {
+pub trait Transform
+where
+    Self: Sized,
+{
+    /// Whether this component should be visited or not
+    fn component_filter(&self, comp: &ast::Component) -> bool;
+
+    /// Construct an instance of this pass
+    fn new(_: &ast::Namespace) -> Self;
+
     #[inline]
     fn connect(
         &mut self,
@@ -125,10 +134,9 @@ pub trait Transform {
         self.exit_component(comp)
     }
 
-    fn transform(
-        &mut self,
-        mut ns: ast::Namespace,
-    ) -> FilamentResult<ast::Namespace> {
+    fn transform(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
+        let mut pass = Self::new(&ns);
+
         let comps = ns.components.drain(..).collect_vec();
 
         let mut binds = Bindings {
@@ -137,7 +145,11 @@ pub trait Transform {
         };
 
         for comp in comps {
-            let ncomp = self.component(comp, &binds)?;
+            let ncomp = if pass.component_filter(&comp) {
+                pass.component(comp, &binds)?
+            } else {
+                comp
+            };
             binds.add_comp(ncomp);
         }
 

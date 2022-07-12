@@ -1,19 +1,15 @@
-use itertools::Itertools;
-
 use crate::errors::FilamentResult;
 use crate::event_checker::ast;
 use crate::visitor;
 use std::collections::HashMap;
 
-pub struct CompileInvokes<'a> {
-    /// Signatures for instances
-    pub sigs: HashMap<ast::Id, &'a ast::Signature>,
-
+#[derive(Default)]
+pub struct CompileInvokes {
     /// Mapping from events to FSMs
     fsms: HashMap<ast::Id, ast::Fsm>,
 }
 
-impl CompileInvokes<'_> {
+impl CompileInvokes {
     pub fn get_fsm(&self, event: &ast::Id) -> &ast::Fsm {
         self.fsms.get(event).unwrap_or_else(|| panic!("No FSM for event `{event}`. This likely happened because the input code already had an interface port defined for the event. The compiler assumes that for such code, the FSM is manually managed."))
     }
@@ -33,7 +29,23 @@ impl CompileInvokes<'_> {
     }
 }
 
-impl visitor::Transform for CompileInvokes<'_> {
+impl visitor::Transform for CompileInvokes {
+    fn new(_: &ast::Namespace) -> Self {
+        Self::default()
+    }
+
+    /// Visit components with high-level invokes
+    fn component_filter(&self, comp: &ast::Component) -> bool {
+        comp.body.iter().any(|con| {
+            if let ast::Command::Invoke(ast::Invoke { ports, .. }) = con {
+                ports.is_some()
+            } else {
+                false
+            }
+        })
+    }
+
+    // TODO(rachit): Document how the compilation works
     fn invoke(
         &mut self,
         inv: ast::Invoke,
@@ -63,7 +75,7 @@ impl visitor::Transform for CompileInvokes<'_> {
             // Define the low-level invoke
             let low_inv = ast::Invoke::new(
                 bind.clone(),
-                comp.clone(),
+                comp,
                 abstract_vars.clone(),
                 None,
             )
@@ -113,111 +125,33 @@ impl visitor::Transform for CompileInvokes<'_> {
             }
             Ok(connects)
         } else {
-            return Ok(vec![inv.into()]);
+            Ok(vec![inv.into()])
         }
     }
-}
 
-/// Computes the max state traversed by each event variable
-fn max_states(
-    comp: ast::Component,
-    bindings: &visitor::Bindings,
-) -> FilamentResult<ast::Component> {
-    let ast::Component { mut sig, mut body } = comp;
+    /// Computes the max state traversed by each event variable
+    fn enter_component(
+        &mut self,
+        comp: ast::Component,
+    ) -> FilamentResult<ast::Component> {
+        // Define FSMs for each missing port event
+        self.fsms = comp
+            .sig
+            .interface_signals
+            .iter()
+            .map(|interface| {
+                let ev = &interface.event;
+                (
+                    ev.clone(),
+                    ast::Fsm::new(
+                        format!("{}_fsm", ev).into(),
+                        interface.delay(),
+                        ast::Port::ThisPort(interface.name.clone()),
+                    ),
+                )
+            })
+            .collect::<HashMap<_, _>>();
 
-    let defined_fsm_events = body
-        .iter()
-        .filter_map(|cmd| {
-            if let ast::Command::Fsm(fsm) = cmd {
-                Some(fsm.event)
-            } else {
-                None
-            }
-        })
-        .collect_vec();
-
-    // Define FSMs for each missing port event
-    let fsms = missing_interfaces
-        .iter()
-        .map(|interface| {
-            let ev = &interface.event;
-            (
-                ev.clone(),
-                ast::Fsm::new(
-                    format!("{}_fsm", ev).into(),
-                    u64::MAX, // place holder value of the FSM. Patched up later.
-                    ast::Port::ThisPort(interface.name.clone()),
-                ),
-            )
-        })
-        .collect::<HashMap<_, _>>();
-
-    // Define max_state for each FSM to be 0.
-    let max_states =
-        sig.abstract_vars.iter().map(|ev| (ev.clone(), 0)).collect();
-
-    let mut ctx = Context {
-        fsms,
-        max_states,
-        ..Default::default()
-    };
-
-    // Compile the body
-    let body = body
-        .drain(..)
-        .flat_map(|con| match con {
-            ast::Command::Invoke(inv) => compile_invoke(inv, &mut ctx),
-            ast::Command::Instance(ast::Instance {
-                ref name,
-                ref component,
-            }) => {
-                let sig = bindings.get(component);
-                ctx.sigs.insert(name.clone(), sig);
-                vec![con]
-            }
-            ast::Command::Connect(_) | ast::Command::Fsm(_) => vec![con],
-        })
-        .collect_vec();
-
-    // Define the correct values for FSM states and add them to the body
-    let body = ctx
-        .fsms
-        .into_iter()
-        .map(|(ev, mut fsm)| {
-            fsm.states = ctx.max_states[&ev];
-            ast::Command::Fsm(fsm)
-        })
-        .chain(body)
-        .collect_vec();
-
-    // Fix up the interface signals delays for interfaces we added
-    sig.interface_signals.iter_mut().for_each(|id| {
-        if missing_events.contains(&id.event) {
-            *id = ast::InterfaceDef::new(
-                id.name.clone(),
-                id.event.clone(),
-                ctx.max_states[&id.event],
-            )
-        }
-    });
-
-    Ok(ast::Component { sig, body })
-}
-
-pub fn lower_invokes(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
-    let comps = ns.components.drain(..).collect_vec();
-    let ext_sigs = ns.signatures();
-    let mut binding = Bindings {
-        ext_sigs,
-        ..Default::default()
-    };
-
-    for comp in comps {
-        let new_comp = max_states(comp, &binding)?;
-        binding.add_comp(new_comp);
+        Ok(comp)
     }
-
-    ns.components = binding.into();
-
-    Ok(ns)
 }
