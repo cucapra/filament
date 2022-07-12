@@ -46,8 +46,11 @@ fn check_connect(
                 })
                 .clone();
             ctx.add_obligations(
-                Constraint::subset(exact, guarantee.within.clone())
-                    .map(|e| e.set_span(pos.clone())),
+                Constraint::subset(exact, guarantee.within.clone()).map(|e| {
+                    e.set_span(pos.clone()).explanation(
+                        "Guard's @exact specification must be shorter than source",
+                    )
+                }),
             );
 
             // Require that the guard's availability is at least as long as the signal.
@@ -56,7 +59,7 @@ fn check_connect(
                     guarantee.within,
                     guard_interval.within.clone(),
                 )
-                .map(|e| e.set_span(pos.clone())),
+                .map(|e| e.set_span(pos.clone()).explanation("Guard must be active for at least as long as the source")),
             );
         }
 
@@ -71,7 +74,11 @@ fn check_connect(
     if let Some(guarantee) = &guard_guarantee {
         let within_fact =
             Constraint::subset(requirement.within, guarantee.within.clone())
-                .map(|e| e.set_span(pos.clone()));
+                .map(|e| {
+                    e.set_span(pos.clone()).explanation(
+                        "Source must drive destination for required period",
+                    )
+                });
         ctx.add_obligations(within_fact);
     }
 
@@ -85,7 +92,7 @@ fn check_connect(
         if let Some(exact_guarantee) = guarantee.exact {
             ctx.add_obligations(
                 Constraint::equality(exact_requirement, exact_guarantee)
-                    .map(|e| e.set_span(pos.clone())),
+                    .map(|e| e.set_span(pos.clone()).explanation("Source must satisfy the exact guarantee of the destination")),
             );
         } else {
             return Err(errors::Error::malformed(
@@ -121,7 +128,7 @@ fn check_invoke<'a>(
         .for_each(|con| {
             ctx.add_obligations(
                 Constraint::constraint(con.resolve(&binding))
-                    .map(|e| e.set_span(invoke.copy_span())),
+                    .map(|e| e.set_span(invoke.copy_span()).explanation("Component's where clause constraints must be satisfied")),
             )
         });
 
@@ -171,21 +178,24 @@ fn check_fsm<'a>(
         offset
     } else {
         return Err(Error::malformed(
-            "Port does not provide an exact guarantee",
+            "Trigger port for the FSM does not provide an exact guarantee",
         ));
     };
     if end != start + 1 {
-        return Err(Error::malformed("Signal is high for too long"));
+        return Err(Error::malformed("Trigger port is high for too long"));
     }
 
     // Prove that the signal is zero during the execution of the FSM
     let start_time = crate::core::FsmIdxs::unit(ev.clone(), start);
     let end_time = start_time.clone().increment(*states);
     let within = ast::Range::new(start_time.clone(), end_time);
-    ctx.add_obligations(
-        ast::Constraint::subset(within, guarantee.within)
-            .map(|e| e.set_span(fsm.copy_span())),
-    );
+    ctx.add_obligations(ast::Constraint::subset(within, guarantee.within).map(
+        |e| {
+            e.set_span(fsm.copy_span()).explanation(
+                "Trigger must not pulse more often than the FSM states",
+            )
+        },
+    ));
 
     // Add the FSM instance to the context
     ctx.add_invocation(

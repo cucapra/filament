@@ -1,0 +1,12 @@
+import "primitives/core.fil";
+
+component Main<G>(
+  @[G, G+1] left: 32,
+  @[G, G+2] right: 32
+) -> (
+  @[G+3, G+4] out: 32
+) {
+  M := new Mult;
+  m0 := M<G+1>(left, right);
+  out = m0.out;
+}

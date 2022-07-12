@@ -1,0 +1,7 @@
+---CODE---
+1
+---STDERR---
+Error: tests/errors/unsatisfied-req.fil
+10 |  m0 := M<G+1>(left, right);
+   |               ^^^^ Cannot prove fact G+1 >= G+2. Source must drive destination for required period
+

@@ -110,7 +110,7 @@ impl visitor::Transform for CompileInvokes {
             }
 
             // Generate assignment for each port
-            for ((port, _), formal) in ports.into_iter().zip(sig.inputs.iter())
+            for ((port, sp), formal) in ports.into_iter().zip(sig.inputs.iter())
             {
                 let req = formal.liveness.resolve(&binding);
                 assert!(
@@ -126,7 +126,7 @@ impl visitor::Transform for CompileInvokes {
                     port,
                     Some(guard),
                 )
-                .set_span(pos.clone());
+                .set_span(Some(sp));
                 connects.push(con.into());
             }
             Ok(connects)

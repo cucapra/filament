@@ -1,0 +1,8 @@
+component Main<G>(
+  @[G, G+2] left: 32,
+  @[G, G+1] sel: 1
+) -> (
+  @[G, G+1] out: 32,
+) {
+  out = sel ? left;
+}

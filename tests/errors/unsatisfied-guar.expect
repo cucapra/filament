@@ -1,0 +1,7 @@
+---CODE---
+1
+---STDERR---
+Error: tests/errors/unsatisfied-guar.fil
+11 |  out = m0.out;
+   |  ^^^^^^^^^^^^^ Cannot prove fact G+3 >= G+4. Source must drive destination for required period
+
