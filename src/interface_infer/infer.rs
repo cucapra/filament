@@ -12,9 +12,9 @@ use std::collections::HashMap;
 /// Walks over each component and computes the maximum observed event for each event.
 /// Events usages are only considered in other invokes.
 #[derive(Default)]
-struct InterfaceInfer {
+pub struct InterfaceInfer {
     /// Maximum state used by an event variable.
-    pub max_states: HashMap<ast::Id, u64>,
+    max_states: HashMap<ast::Id, u64>,
 }
 
 impl InterfaceInfer {
