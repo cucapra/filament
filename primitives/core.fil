@@ -8,7 +8,7 @@ extern "core.sv" {
     @[G, G+1] in: 32
   ) -> (
     @[G+1, L] out: 32
-  ) where L > G+1;
+  );
 
   // Merge two signals with disjoint lifetimes to generate a new signal available
   // for the union of their lifetimes
@@ -22,7 +22,7 @@ extern "core.sv" {
     @[L, E] in2: 32,
   ) -> (
     @[G, E] out: 32,
-  ) where L > G, E > L;
+  );
 }
 
 extern "binary.sv" {
