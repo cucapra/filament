@@ -69,14 +69,15 @@ fn main() -> errors::FilamentResult<()> {
 
     // Run the compilation pipeline
     let ns = event_checker::check_and_transform(ns)?;
-    log::trace!("{ns}");
+    log::info!("Event check:\n{ns}");
     let ns = interface_infer::InterfaceInfer::transform(ns)?;
+    log::info!("Interface Infer:\n{ns}");
     interval_checking::check(&ns)?;
 
     // Lowering pipeline
     if !opts.check {
         let ns = lower::CompileInvokes::transform(ns)?;
-        log::trace!("{ns}");
+        log::info!("Lowering:\n{ns}");
         interval_checking::check(&ns)?;
         backend::compile(ns, &opts)?;
     }
