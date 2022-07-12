@@ -68,9 +68,23 @@ impl visitor::Transform for InterfaceInfer {
         sig: &ast::Signature,
     ) -> FilamentResult<Vec<ast::Command>> {
         // Compute maximum events observed in this
+        log::info!("{inv}");
         let bindings = inv.bindings(sig);
         self.max_state_from_sig(sig, &inv.abstract_vars, &bindings);
         Ok(vec![inv.into()])
+    }
+
+    fn enter_component(
+        &mut self,
+        comp: ast::Component,
+    ) -> FilamentResult<ast::Component> {
+        self.max_states = comp
+            .sig
+            .abstract_vars
+            .iter()
+            .map(|ev| (ev.clone(), 0))
+            .collect();
+        Ok(comp)
     }
 
     fn exit_component(

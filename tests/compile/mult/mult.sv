@@ -1,10 +1,10 @@
 module Mult(
   input wire clk,
   input wire reset,
-  /* @inteface<T> */ input wire go_T,
-  /* @[T, T+2]    */ input logic [31:0] left,
-  /* @[T, T+1]    */ input logic [31:0] right,
-  /* @[T+2, T+3]  */ output logic [31:0] out
+  /* @inteface<T, 2> */ input wire go_T,
+  /* @[T, T+2]       */ input logic [31:0] left,
+  /* @[T, T+1]       */ input logic [31:0] right,
+  /* @[T+2, T+3]     */ output logic [31:0] out
 );
   logic [31:0] rtmp;
   logic [31:0] out_tmp;
