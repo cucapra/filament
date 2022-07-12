@@ -165,13 +165,13 @@ fn compile_command(cmd: core::Command<TimeRep>, ctx: &mut Context) {
             ctx.fsms.insert(name, f);
         }
         core::Command::Invoke(core::Invoke {
-            bind, comp, ports, ..
+            bind, instance, ports, ..
         }) => {
             assert!(
                 ports.is_none(),
                 "Cannot compile high-level invoke statements"
             );
-            ctx.add_invoke(bind, comp);
+            ctx.add_invoke(bind, instance);
         }
         core::Command::Instance(core::Instance { name, component }) => {
             let cell = ctx.builder.add_component(

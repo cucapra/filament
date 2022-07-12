@@ -1,8 +1,8 @@
-use std::collections::{hash_map::Entry, HashMap, HashSet};
-
 use crate::core::{self, FsmIdxs};
 use crate::errors::{Error, FilamentResult};
 use crate::event_checker::ast;
+use itertools::Itertools;
+use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 pub enum ConcreteInvoke<'a> {
     Concrete {
@@ -97,6 +97,9 @@ pub struct Context<'a> {
     /// Remaining assigmments for a given invoke.
     remaining_assigns: HashMap<ast::Id, HashSet<ast::Id>>,
 
+    /// Mapping from instance to event bindings
+    event_binds: HashMap<ast::Id, Vec<Vec<ast::TimeRep>>>,
+
     /// Set of facts that need to be proven.
     /// Mapping from facts to the locations that generated it.
     obligations: FactMap,
@@ -112,6 +115,7 @@ impl<'a> From<&'a HashMap<ast::Id, &'a ast::Signature>> for Context<'a> {
             remaining_assigns: HashMap::default(),
             instances: HashMap::default(),
             invocations: HashMap::default(),
+            event_binds: HashMap::default(),
             obligations: Vec::default(),
             facts: Vec::default(),
         }
@@ -121,6 +125,9 @@ impl<'a> From<&'a HashMap<ast::Id, &'a ast::Signature>> for Context<'a> {
 /// Decompose Context into obligations and facts
 impl From<Context<'_>> for (FactMap, FactMap) {
     fn from(val: Context) -> Self {
+        for (inst, binds) in val.event_binds.clone() {
+            val.disjointness(inst, binds).unwrap();
+        }
         (val.obligations, val.facts)
     }
 }
@@ -172,6 +179,14 @@ impl<'a> Context<'a> {
             .collect();
         self.remaining_assigns.insert(bind, ports);
         Ok(())
+    }
+
+    pub fn add_event_binds(
+        &mut self,
+        instance: ast::Id,
+        binds: Vec<ast::TimeRep>,
+    ) {
+        self.event_binds.entry(instance).or_default().push(binds);
     }
 
     pub fn remove_remaning_assign(
@@ -288,5 +303,58 @@ impl<'a> Context<'a> {
                 Ok(self.get_invoke(comp)?.port_requirements(name)?)
             }
         }
+    }
+
+    /// Generate disjointness constraints for an instance's event bindinds.
+    fn disjointness(
+        &self,
+        instance: ast::Id,
+        binds: Vec<Vec<ast::TimeRep>>,
+    ) -> FilamentResult<()> /* -> impl Iterator<Item = ast::Constraint> */ {
+        eprintln!(
+            "{}: {}",
+            instance,
+            binds
+                .iter()
+                .map(|times| times
+                    .iter()
+                    .map(|time| format!("{}", time))
+                    .join(", "))
+                .join("; ")
+        );
+        // Get the delay associated with each event.
+        let sig = self.get_instance(&instance)?;
+
+        // If there is no interface port associated with an event, it is ignored.
+        // This only happens for primitive components.
+        let delays = sig
+            .abstract_vars
+            .iter()
+            .map(|ev| {
+                sig.interface_signals
+                    .iter()
+                    .find(|id| id.event == ev)
+                    .map(|id| id.delay())
+            })
+            .collect_vec();
+
+        // Iterate over each event
+        let events = delays.len();
+        let num_binds = binds.len();
+        (0..events).for_each(|ev| {
+            if let Some(delay) = delays[ev] {
+                // For each event
+                for i in 0..num_binds {
+                    // The i'th use conflicts with all other uses
+                    for k in i + 1..num_binds {
+                        println!(
+                            "|{} - {}| >= {}",
+                            binds[i][ev], binds[k][ev], delay
+                        )
+                    }
+                }
+            }
+        });
+        Ok(())
     }
 }

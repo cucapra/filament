@@ -117,7 +117,7 @@ where
             .into_iter()
             .map(|cmd| match cmd {
                 crate::core::Command::Invoke(inv) => {
-                    let sig = instances.get(&inv.comp).unwrap();
+                    let sig = instances.get(&inv.instance).unwrap();
                     self.invoke(inv, sig)
                 }
                 crate::core::Command::Instance(inst) => {

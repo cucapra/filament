@@ -81,7 +81,7 @@ pub struct Invoke<T> {
     pub bind: Id,
 
     /// Name of the component being invoked
-    pub comp: Id,
+    pub instance: Id,
 
     /// Abstract variables used for this invocation
     pub abstract_vars: Vec<T>,
@@ -99,13 +99,13 @@ where
 {
     pub fn new(
         bind: Id,
-        comp: Id,
+        instance: Id,
         abstract_vars: Vec<T>,
         ports: Option<Vec<(Port, errors::Span)>>,
     ) -> Self {
         Self {
             bind,
-            comp,
+            instance,
             abstract_vars,
             ports,
             pos: None,
@@ -133,7 +133,7 @@ impl<T: Display> Display for Invoke<T> {
                 f,
                 "{} := {}<{}>({})",
                 self.bind,
-                self.comp,
+                self.instance,
                 abs,
                 ports
                     .iter()
@@ -142,7 +142,7 @@ impl<T: Display> Display for Invoke<T> {
                     .join(",")
             )
         } else {
-            write!(f, "{} := invoke {}<{}>", self.bind, self.comp, abs)
+            write!(f, "{} := invoke {}<{}>", self.bind, self.instance, abs)
         }
     }
 }
