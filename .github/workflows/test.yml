@@ -12,6 +12,11 @@ jobs:
         with:
           path: filament
 
+      - name: Install z3
+        run: |
+          sudo apt-get update
+          sudo apt-get install z3
+
       - name: Checkout Calyx
         uses: actions/checkout@v3
         with:
