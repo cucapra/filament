@@ -84,6 +84,7 @@ impl<'a> ConcreteInvoke<'a> {
 }
 
 type FactMap = Vec<ast::Constraint>;
+type BindsWithLoc = (Option<errors::Span>, Vec<ast::TimeRep>);
 
 pub struct Context<'a> {
     /// Mapping from names to signatures for components and externals.
@@ -99,7 +100,7 @@ pub struct Context<'a> {
     remaining_assigns: HashMap<ast::Id, HashSet<ast::Id>>,
 
     /// Mapping from instance to event bindings
-    event_binds: HashMap<ast::Id, Vec<Vec<ast::TimeRep>>>,
+    event_binds: HashMap<ast::Id, Vec<BindsWithLoc>>,
 
     /// Set of facts that need to be proven.
     /// Mapping from facts to the locations that generated it.
@@ -194,8 +195,12 @@ impl<'a> Context<'a> {
         &mut self,
         instance: ast::Id,
         binds: Vec<ast::TimeRep>,
+        pos: Option<errors::Span>,
     ) {
-        self.event_binds.entry(instance).or_default().push(binds);
+        self.event_binds
+            .entry(instance)
+            .or_default()
+            .push((pos, binds));
     }
 
     pub fn remove_remaning_assign(
@@ -318,7 +323,7 @@ impl<'a> Context<'a> {
     fn disjointness(
         &self,
         instance: ast::Id,
-        binds: Vec<Vec<ast::TimeRep>>,
+        binds: Vec<BindsWithLoc>,
     ) -> FilamentResult<Vec<solver::Disjoint>> {
         // Get the delay associated with each event.
         let sig = self.get_instance(&instance)?;
@@ -346,11 +351,18 @@ impl<'a> Context<'a> {
                 for i in 0..num_binds {
                     // The i'th use conflicts with all other uses
                     for k in i + 1..num_binds {
-                        constraints.push(solver::Disjoint::new(
-                            binds[i][ev].clone(),
-                            binds[k][ev].clone(),
-                            delay,
-                        ))
+                        let (spi, bi) = &binds[i];
+                        let (spk, bk) = &binds[k];
+                        constraints.push(
+                            solver::Disjoint::new(
+                                bi[ev].clone(),
+                                bk[ev].clone(),
+                                delay,
+                            )
+                            .add_locations(
+                                spi.into_iter().chain(spk.into_iter()).cloned(),
+                            ),
+                        )
                     }
                 }
             }

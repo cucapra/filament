@@ -1,0 +1,7 @@
+import "primitives/core.fil";
+
+component Main<G>() -> () {
+  M := new Mult;
+  m0 := M<G>(10, 20);
+  m1 := M<G+2>(30, 40);
+}

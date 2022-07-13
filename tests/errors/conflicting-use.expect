@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+Error: Cannot prove fact |G - G+2| >= 3. Conflicting invocations
+tests/errors/conflicting-use.fil
+5 |  m0 := M<G>(10, 20);
+  |  ^^^^^^^^^^^^^^^^^^^ Invocation 1
+tests/errors/conflicting-use.fil
+6 |  m1 := M<G+2>(30, 40);
+  |  ^^^^^^^^^^^^^^^^^^^^^ Invocation 2
+
