@@ -21,4 +21,4 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 .INTERMEDIATE: $(PWD)/out.sv
 
 $(PWD)/out.sv: $(FIL)
-	fud e $< -o $@ -s futil.flags ' -d papercut' --to icarus-verilog
+	fud e $< -o $@ -s futil.flags ' -d canonicalize' --to icarus-verilog

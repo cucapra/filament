@@ -81,7 +81,7 @@ impl Fsm {
                 let c = constant(st, 32);
             );
             let c_out = guard!(c["out"]);
-            Ok(c_out.eq(self.output_port.clone().into()))
+            Ok(ir::Guard::from(self.output_port.clone()).eq(c_out))
         }
     }
 }
