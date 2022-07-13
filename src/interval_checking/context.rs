@@ -360,7 +360,7 @@ impl<'a> Context<'a> {
                                 delay,
                             )
                             .add_locations(
-                                spi.into_iter().chain(spk.into_iter()).cloned(),
+                                spi.iter().chain(spk.iter()).cloned(),
                             ),
                         )
                     }
