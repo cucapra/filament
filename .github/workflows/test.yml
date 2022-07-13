@@ -47,10 +47,10 @@ jobs:
 
       - name: Build compiler
         uses: actions-rs/cargo@v1
-        working-directory: ./filament
         with:
           command: build
+          args: --manifest-path filament/Cargo.toml
 
       - name: Test
         run: |
-          runt -x compile -d -o fail
+          cd filament && runt -x compile -d -o fail
