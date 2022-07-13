@@ -90,13 +90,13 @@ impl visitor::Transform for CompileInvokes {
             for interface in &sig.interface_signals {
                 let ev = &interface.event;
                 // Get binding for this event in the invoke
-                let (_, start_time) =
+                let (s_ev, start_time) =
                     binding[ev].as_unit().unwrap_or_else(|| {
                         unimplemented!(
                             "Binding for event {ev} is a max-expression"
                         )
                     });
-                let port = self.get_fsm(ev).port(*start_time);
+                let port = self.get_fsm(s_ev).port(*start_time);
                 let con = ast::Connect::new(
                     ast::Port::CompPort {
                         comp: bind.clone(),
