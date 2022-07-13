@@ -13,7 +13,7 @@ jobs:
           path: filament
 
       - name: Install z3
-        uses: pavpanchekha/setup-z3
+        uses: pavpanchekha/setup-z3@1.2.2
         with:
           version: 4.9.1
 
