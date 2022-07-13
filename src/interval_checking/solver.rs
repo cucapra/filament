@@ -1,4 +1,4 @@
-use crate::errors::{Error, FilamentResult, WithPos};
+use crate::errors::{self, Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
 use itertools::Itertools;
 use rsmt2::{SmtConf, Solver};
@@ -18,6 +18,7 @@ pub struct Disjoint {
     event1: ast::TimeRep,
     event2: ast::TimeRep,
     delay: u64,
+    locations: Vec<errors::Span>,
 }
 impl Disjoint {
     pub fn new(event1: ast::TimeRep, event2: ast::TimeRep, delay: u64) -> Self {
@@ -25,7 +26,16 @@ impl Disjoint {
             event1,
             event2,
             delay,
+            locations: Vec::default(),
         }
+    }
+
+    pub fn add_locations<I>(mut self, locs: I) -> Self
+    where
+        I: Iterator<Item = errors::Span>,
+    {
+        self.locations.extend(locs);
+        self
     }
 }
 impl From<&Disjoint> for SExp {
@@ -40,7 +50,15 @@ impl From<&Disjoint> for SExp {
 }
 impl Display for Disjoint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "|{} - {}| >= {}", self.event1, self.event2, self.delay)
+        write!(f, "|{} - {}| >= {}", self.event1, self.event2, self.delay)?;
+        if !self.locations.is_empty() {
+            writeln!(f, ". Conflicting invocations")?;
+        }
+        for (n, loc) in self.locations.iter().enumerate() {
+            let msg = format!("Invocation {}", n + 1);
+            write!(f, "{}", loc.format(&msg))?;
+        }
+        Ok(())
     }
 }
 

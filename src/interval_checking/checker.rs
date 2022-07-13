@@ -112,7 +112,11 @@ fn check_invoke<'a>(
 ) -> FilamentResult<()> {
     let sig = ctx.get_instance(&invoke.instance)?;
     // Track event bindings
-    ctx.add_event_binds(invoke.instance.clone(), invoke.abstract_vars.clone());
+    ctx.add_event_binds(
+        invoke.instance.clone(),
+        invoke.abstract_vars.clone(),
+        invoke.copy_span(),
+    );
 
     let binding: HashMap<_, _> = sig
         .abstract_vars
