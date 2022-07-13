@@ -13,9 +13,9 @@ jobs:
           path: filament
 
       - name: Install z3
-        run: |
-          sudo apt-get update
-          sudo apt-get install z3
+        uses: pavpanchekha/setup-z3
+        with:
+          version: 4.9.1
 
       - name: Checkout Calyx
         uses: actions/checkout@v3
