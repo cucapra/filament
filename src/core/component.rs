@@ -1,7 +1,9 @@
 use itertools::Itertools;
 
-use super::{Command, Constraint, Id, Interval, Invoke, Range, TimeRep};
-use crate::errors::{Error, FilamentResult, WithPos};
+use super::{
+    Command, Constraint, FsmIdxs, Id, Interval, Invoke, Range, TimeRep,
+};
+use crate::errors::{self, Error, FilamentResult, WithPos};
 use std::{
     collections::{HashMap, HashSet},
     fmt::Display,
@@ -14,12 +16,12 @@ where
 {
     /// Name of the port
     pub name: Id,
-
     /// Liveness condition for the Port
     pub liveness: Interval<T>,
-
     /// Bitwidth of the port
     pub bitwidth: u64,
+    /// Source position
+    pos: Option<errors::Span>,
 }
 
 impl<T> PortDef<T>
@@ -31,6 +33,7 @@ where
             name,
             liveness,
             bitwidth,
+            pos: None,
         }
     }
 }
@@ -40,6 +43,19 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {}: {}", self.liveness, self.name, self.bitwidth)
+    }
+}
+impl<T> WithPos for PortDef<T>
+where
+    T: TimeRep,
+{
+    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+        self.pos = sp;
+        self
+    }
+
+    fn copy_span(&self) -> Option<errors::Span> {
+        self.pos.clone()
     }
 }
 
@@ -56,6 +72,8 @@ where
     delay: u64,
     // Liveness of the interface signal
     liveness: Interval<T>,
+    // Position
+    pos: Option<errors::Span>,
 }
 impl<T> Display for InterfaceDef<T>
 where
@@ -89,11 +107,26 @@ where
             event,
             delay,
             liveness,
+            pos: None,
         }
     }
 
     pub fn delay(&self) -> u64 {
         self.delay
+    }
+}
+
+impl<T> WithPos for InterfaceDef<T>
+where
+    T: TimeRep,
+{
+    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+        self.pos = sp;
+        self
+    }
+
+    fn copy_span(&self) -> Option<errors::Span> {
+        self.pos.clone()
     }
 }
 
@@ -180,6 +213,49 @@ where
         })
     }
 }
+
+impl Signature<FsmIdxs> {
+    /// Validate a signature instance.
+    pub fn validate(&self) -> FilamentResult<()> {
+        // The interface is invalid if the interface signal is shorter than
+        // an input signal's requirement.
+        let mut max_evs: HashMap<_, _> = self
+            .abstract_vars
+            .iter()
+            .map(|ev| (ev, (0, None)))
+            .collect();
+
+        for port in &self.inputs {
+            port.liveness.events().into_iter().for_each(|ev| {
+                ev.events().for_each(|(ev, st)| {
+                    if max_evs[ev].0 < *st {
+                        *max_evs.get_mut(ev).unwrap() = (*st, port.copy_span());
+                    }
+                })
+            });
+        }
+
+        for id in &self.interface_signals {
+            if id.delay() < max_evs[&id.event].0 {
+                let msg = if let Some(ref sp) = max_evs[&id.event].1 {
+                    sp.format("Following signal's requirement is longer than the interface")
+                } else {
+                    format!(
+                        "An input signal's requirement ends at `{}+{}`",
+                        id.event,
+                        id.delay()
+                    )
+                };
+                return Err(Error::malformed("Invalid interface signal")
+                    .with_pos(id.copy_span())
+                    .with_post_msg(msg));
+            }
+        }
+
+        Ok(())
+    }
+}
+
 impl<T> Signature<T>
 where
     T: Clone + TimeRep + PartialEq + PartialOrd,

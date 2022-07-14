@@ -3,7 +3,6 @@ use crate::{
     errors::{FilamentResult, WithPos},
     frontend,
 };
-use itertools::Itertools;
 
 /// The type ascribed to an interval time expression
 #[derive(PartialEq)]
@@ -84,18 +83,17 @@ fn transform_control(
 fn transform_port_def(
     pd: core::PortDef<frontend::IntervalTime>,
 ) -> core::PortDef<core::FsmIdxs> {
-    core::PortDef {
-        liveness: transform_interval(pd.liveness),
-        name: pd.name,
-        bitwidth: pd.bitwidth,
-    }
+    let sp = pd.copy_span();
+    core::PortDef::new(pd.name, transform_interval(pd.liveness), pd.bitwidth)
+        .set_span(sp)
 }
 
 fn transform_interface_def(
     id: core::InterfaceDef<frontend::IntervalTime>,
 ) -> core::InterfaceDef<core::FsmIdxs> {
     let d = id.delay();
-    core::InterfaceDef::<core::FsmIdxs>::new(id.name, id.event, d)
+    let sp = id.copy_span();
+    core::InterfaceDef::<core::FsmIdxs>::new(id.name, id.event, d).set_span(sp)
 }
 
 fn transform_constraints(
@@ -112,8 +110,8 @@ fn transform_constraints(
 
 fn transform_signature(
     sig: core::Signature<frontend::IntervalTime>,
-) -> core::Signature<core::FsmIdxs> {
-    core::Signature {
+) -> FilamentResult<core::Signature<core::FsmIdxs>> {
+    let sig = core::Signature {
         inputs: sig.inputs.into_iter().map(transform_port_def).collect(),
         outputs: sig.outputs.into_iter().map(transform_port_def).collect(),
         constraints: sig
@@ -129,7 +127,9 @@ fn transform_signature(
         abstract_vars: sig.abstract_vars,
         name: sig.name,
         unannotated_ports: sig.unannotated_ports,
-    }
+    };
+    sig.validate()?;
+    Ok(sig)
 }
 
 pub fn check_and_transform(
@@ -145,7 +145,7 @@ pub fn check_and_transform(
                 .map(transform_control)
                 .collect::<FilamentResult<Vec<_>>>()?;
 
-            core::Component::new(transform_signature(comp.sig), commands)
+            core::Component::new(transform_signature(comp.sig)?, commands)
         })
         .collect::<FilamentResult<Vec<_>>>()?;
 
@@ -155,9 +155,15 @@ pub fn check_and_transform(
             .externs
             .into_iter()
             .map(|(p, comps)| {
-                (p, comps.into_iter().map(transform_signature).collect())
+                Ok((
+                    p,
+                    comps
+                        .into_iter()
+                        .map(transform_signature)
+                        .collect::<FilamentResult<_>>()?,
+                ))
             })
-            .collect_vec(),
+            .collect::<FilamentResult<_>>()?,
         components,
     })
 }

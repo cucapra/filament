@@ -101,12 +101,16 @@ pub trait WithPos {
 pub struct Error {
     kind: ErrorKind,
     pos: Option<Span>,
+    post_msg: Option<String>,
 }
 impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.pos {
             None => write!(f, "{}", self.kind)?,
             Some(pos) => write!(f, "{}", pos.format(&self.kind.to_string()))?,
+        }
+        if let Some(msg) = &self.post_msg {
+            write!(f, "{msg}")?;
         }
         Ok(())
     }
@@ -118,10 +122,16 @@ impl Error {
         self
     }
 
+    pub fn with_post_msg(mut self, msg: String) -> Self {
+        self.post_msg = Some(msg);
+        self
+    }
+
     pub fn parse_error(err: pest_consume::Error<frontend::Rule>) -> Self {
         Self {
             kind: ErrorKind::ParseError(err),
             pos: None,
+            post_msg: None,
         }
     }
 
@@ -129,6 +139,7 @@ impl Error {
         Self {
             kind: ErrorKind::InvalidFile(f),
             pos: None,
+            post_msg: None,
         }
     }
 
@@ -136,6 +147,7 @@ impl Error {
         Self {
             kind: ErrorKind::WriteError(e),
             pos: None,
+            post_msg: None,
         }
     }
 
@@ -143,6 +155,7 @@ impl Error {
         Self {
             kind: ErrorKind::Malformed(msg.to_string()),
             pos: None,
+            post_msg: None,
         }
     }
 
@@ -150,6 +163,7 @@ impl Error {
         Self {
             kind: ErrorKind::Undefined(name, kind),
             pos: None,
+            post_msg: None,
         }
     }
 
@@ -157,6 +171,7 @@ impl Error {
         Self {
             kind: ErrorKind::AlreadyBound(name, kind),
             pos: None,
+            post_msg: None,
         }
     }
 
@@ -164,6 +179,7 @@ impl Error {
         Self {
             kind: ErrorKind::CannotProve(fact),
             pos: None,
+            post_msg: None,
         }
     }
 
@@ -171,6 +187,7 @@ impl Error {
         Self {
             kind: ErrorKind::Misc(msg),
             pos: None,
+            post_msg: None,
         }
     }
 }

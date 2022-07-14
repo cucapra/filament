@@ -140,7 +140,7 @@ impl visitor::Transform for CompileInvokes {
         &mut self,
         comp: ast::Component,
     ) -> FilamentResult<ast::Component> {
-        // Define FSMs for each missing port event
+        // Define FSMs for each interface signal
         self.fsms = comp
             .sig
             .interface_signals

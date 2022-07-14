@@ -33,9 +33,9 @@ pub enum ExtOrComp {
     Comp(ast::Component),
 }
 
-pub enum PdOrInt {
+pub enum Port {
     Pd(ast::PortDef),
-    Int((ast::Id, ast::Id, u64)),
+    Int(ast::InterfaceDef),
     Un((ast::Id, u64)),
 }
 
@@ -148,20 +148,21 @@ impl FilamentParser {
         ))
     }
 
-    fn port_def(input: Node) -> ParseResult<PdOrInt> {
+    fn port_def(input: Node) -> ParseResult<Port> {
+        let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.clone().into_children();
             [interface((time_var, len)), identifier(name), bitwidth(_)] => {
-                PdOrInt::Int((name, time_var, len))
+                Port::Int(ast::InterfaceDef::new(name, time_var, len).set_span(Some(sp)))
             },
             [identifier(name), bitwidth(bitwidth)] => {
-                PdOrInt::Un((name, bitwidth))
+                Port::Un((name, bitwidth))
             },
             [interval_range(range), identifier(name), bitwidth(bitwidth)] => {
-                PdOrInt::Pd(ast::PortDef::new(name, range.into(), bitwidth))
+                Port::Pd(ast::PortDef::new(name, range.into(), bitwidth).set_span(Some(sp)))
             },
             [interval_range(range), interval_range(exact), identifier(name), bitwidth(bitwidth)] => {
-                PdOrInt::Pd(ast::PortDef::new(name, ast::Interval::from(range).with_exact(exact), bitwidth))
+                Port::Pd(ast::PortDef::new(name, ast::Interval::from(range).with_exact(exact), bitwidth).set_span(Some(sp)))
             }
         ))
     }
@@ -184,15 +185,12 @@ impl FilamentParser {
                 let mut unannotated_ports = vec![];
                 for m in ins {
                     match m {
-                        PdOrInt::Pd(port) => ports.push(port),
-                        PdOrInt::Int(int) => interface_signals.push(int),
-                        PdOrInt::Un(un) => unannotated_ports.push(un)
+                        Port::Pd(port) => ports.push(port),
+                        Port::Int(int) => interface_signals.push(int),
+                        Port::Un(un) => unannotated_ports.push(un)
                     }
                 }
-                let interface_ports = interface_signals.into_iter().map(|(name, event, delay)| {
-                    ast::InterfaceDef::new(name, event, delay)
-                }).collect();
-                (ports, interface_ports, unannotated_ports)
+                (ports, interface_signals, unannotated_ports)
             }
         ))
     }
