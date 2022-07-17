@@ -1,12 +1,9 @@
----CODE---
-1
 ---STDERR---
-Error: [0m[1m[38;5;9merror[0m[1m: Cannot prove |G - G+2| >= 3. Instance has conflicting uses[0m
-  [0m[34m┌─[0m tests/errors/conflicting-use.fil:5:3
-  [0m[34m│[0m
-[0m[34m5[0m [0m[34m│[0m   [0m[31mm0 := M<G>(10, 20);[0m
-  [0m[34m│[0m   [0m[31m^^^^^^^^^^^^^^^^^^^[0m [0m[31mInvocation 1[0m
-[0m[34m6[0m [0m[34m│[0m   m1 := M<G+2>(30, 40);
-  [0m[34m│[0m   [0m[34m---------------------[0m [0m[34mInvocation 2[0m
-
+error: Cannot prove |G - G+2| >= 3. Instance has conflicting uses
+  ┌─ tests/errors/conflicting-use.fil:5:3
+  │
+5 │   m0 := M<G>(10, 20);
+  │   ^^^^^^^^^^^^^^^^^^^ Invocation 1
+6 │   m1 := M<G+2>(30, 40);
+  │   --------------------- Invocation 2
 

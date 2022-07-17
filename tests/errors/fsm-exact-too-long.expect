@@ -1,10 +1,7 @@
----CODE---
-1
 ---STDERR---
-Error: [0m[1m[38;5;9merror[0m[1m: Trigger port is high for too long[0m
-  [0m[34m┌─[0m tests/errors/fsm-exact-too-long.fil:5:12
-  [0m[34m│[0m
-[0m[34m5[0m [0m[34m│[0m   fsm M[3]([0m[31mtrig[0m);
-  [0m[34m│[0m            [0m[31m^^^^[0m [0m[31mTrigger port is active for 2 cycles[0m
-
+error: Trigger port is high for too long
+  ┌─ tests/errors/fsm-exact-too-long.fil:5:12
+  │
+5 │   fsm M[3](trig);
+  │            ^^^^ Trigger port is active for 2 cycles
 

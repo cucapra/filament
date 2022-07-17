@@ -1,10 +1,7 @@
----CODE---
-1
 ---STDERR---
-Error: [0m[1m[38;5;9merror[0m[1m: Cannot prove constraint T+4 >= T+5[0m
-  [0m[34m┌─[0m tests/errors/fsm-trig-too-long.fil:4:12
-  [0m[34m│[0m
-[0m[34m4[0m [0m[34m│[0m   fsm t[5]([0m[31mgo_T[0m);
-  [0m[34m│[0m            [0m[31m^^^^[0m [0m[31mTrigger must not pulse more often than the FSM states[0m
-
+error: Cannot prove constraint T+4 >= T+5
+  ┌─ tests/errors/fsm-trig-too-long.fil:4:12
+  │
+4 │   fsm t[5](go_T);
+  │            ^^^^ Trigger must not pulse more often than the FSM states
 

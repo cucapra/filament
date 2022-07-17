@@ -15,13 +15,13 @@ use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Span {
     /// Reference to input program source.
-    input: Rc<str>,
+    pub input: Rc<str>,
     /// Name of the input file
-    file: Rc<str>,
+    pub file: Rc<str>,
     /// The start of the span.
-    start: usize,
+    pub start: usize,
     /// The end of the span.
-    end: usize,
+    pub end: usize,
 }
 
 impl Span {
@@ -105,8 +105,8 @@ pub trait WithPos {
 }
 
 pub struct Error {
-    kind: ErrorKind,
-    extra: Vec<(String, Option<Span>)>,
+    pub kind: ErrorKind,
+    pub extra: Vec<(String, Option<Span>)>,
 }
 
 impl Error {
@@ -231,7 +231,7 @@ impl Error {
 
 /// Standard error type for Calyx errors.
 #[allow(clippy::large_enum_variant)]
-enum ErrorKind {
+pub enum ErrorKind {
     /// Error while parsing a Calyx program.
     ParseError(pest_consume::Error<frontend::Rule>),
     /// The input file is invalid (does not exist).

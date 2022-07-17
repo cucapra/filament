@@ -1,13 +1,10 @@
----CODE---
-1
 ---STDERR---
-Error: [0m[1m[38;5;9merror[0m[1m: Invalid interface signal[0m
-  [0m[34m┌─[0m tests/errors/invalid-interface.fil:4:5
-  [0m[34m│[0m
-[0m[34m4[0m [0m[34m│[0m     [0m[31m@interface<L, 1> go_L: 1[0m,
-  [0m[34m│[0m     [0m[31m^^^^^^^^^^^^^^^^^^^^^^^^[0m [0m[31mInterface does not last long enough[0m
-[0m[34m5[0m [0m[34m│[0m     @[G, G+1] in1: 32,
-[0m[34m6[0m [0m[34m│[0m     @[L, L+2] in2: 32,
-  [0m[34m│[0m     [0m[34m-----------------[0m [0m[34mFollowing signal's requirement is longer than the interface[0m
-
+error: Invalid interface signal
+  ┌─ tests/errors/invalid-interface.fil:4:5
+  │
+4 │     @interface<L, 1> go_L: 1,
+  │     ^^^^^^^^^^^^^^^^^^^^^^^^ Interface does not last long enough
+5 │     @[G, G+1] in1: 32,
+6 │     @[L, L+2] in2: 32,
+  │     ----------------- Following signal's requirement is longer than the interface
 
