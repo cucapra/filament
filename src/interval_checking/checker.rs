@@ -11,7 +11,6 @@ fn check_connect(
     dst: &ast::Port,
     src: &ast::Port,
     guard: &Option<ast::Guard>,
-    pos: Option<errors::Span>,
     ctx: &mut Context,
 ) -> FilamentResult<()> {
     ctx.remove_remaning_assign(dst)?;
@@ -26,7 +25,7 @@ fn check_connect(
 
     // If a guard is present, use its availablity instead.
     let guard_guarantee = if let Some(g) = &guard {
-        let guard_interval = super::total_interval(g, ctx, &pos)?;
+        let guard_interval = super::total_interval(g, ctx)?;
         log::debug!("Guard availablity is: {guard_interval}");
 
         // When we have: dst = g ? ...
@@ -54,7 +53,7 @@ fn check_connect(
 
             ctx.add_obligations(
                 Constraint::subset(guard_exact.clone(), guarantee.within.clone()).map(|e| {
-                    e.add_note("Guard's @exact specification must be shorter than source", pos.clone())
+                    e.add_note("Guard's @exact specification must be shorter than source", g.copy_span())
                      .add_note(format!("Guard's exact specification is {}", guard_exact), g.copy_span())
                      .add_note(format!("Source's specification is {}", guarantee.within), src.copy_span())
                 }),
@@ -89,7 +88,7 @@ fn check_connect(
         .map(|e| {
             e.add_note(
                 format!("Source is available for {}", guarantee.within),
-                pos.clone(),
+                src.copy_span(),
             )
             .add_note(
                 format!("Destination's requirement {}", requirement.within),
@@ -102,14 +101,16 @@ fn check_connect(
     if let Some(exact_requirement) = requirement.exact {
         let guarantee = guard_guarantee.ok_or_else(|| {
             errors::Error::malformed(
-                "Constant port cannot provide @exact guarantee",
-            )
+                "Destination requires @exact guarantee but source does not provide it",
+            ).with_post_msg("Constant port cannot provide @exact specification", src.copy_span())
         })?;
 
         if let Some(exact_guarantee) = guarantee.exact {
             ctx.add_obligations(
-                Constraint::equality(exact_requirement, exact_guarantee)
-                    .map(|e| e.add_note("Source must satisfy the exact guarantee of the destination", pos.clone())),
+                Constraint::equality(exact_requirement.clone(), exact_guarantee.clone())
+                    .map(|e| e.add_note("Source must satisfy the exact guarantee of the destination", src.copy_span())
+                              .add_note(format!("Source's availablity is {}", exact_guarantee), src.copy_span())
+                              .add_note(format!("Destination's requirement is {}", exact_requirement), dst.copy_span())),
             );
         } else {
             return Err(errors::Error::malformed(
@@ -177,7 +178,7 @@ fn check_invoke<'a>(
         for (actual, formal) in actuals.iter().zip(sig.inputs.iter()) {
             let dst = ast::Port::comp(invoke.bind.clone(), formal.name.clone())
                 .set_span(formal.copy_span());
-            check_connect(&dst, actual, &None, actual.copy_span(), ctx)?;
+            check_connect(&dst, actual, &None, ctx)?;
         }
     } else {
         ctx.add_remaning_assigns(invoke.bind.clone(), &invoke.instance)?;
@@ -263,11 +264,9 @@ where
                 ctx.add_instance(name.clone(), component)?
             }
             ast::Command::Fsm(fsm) => check_fsm(fsm, ctx)?,
-            ast::Command::Connect(
-                con @ ast::Connect {
-                    dst, src, guard, ..
-                },
-            ) => check_connect(dst, src, guard, con.copy_span(), ctx)?,
+            ast::Command::Connect(ast::Connect {
+                dst, src, guard, ..
+            }) => check_connect(dst, src, guard, ctx)?,
         };
     }
     Ok(())

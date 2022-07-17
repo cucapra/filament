@@ -21,7 +21,7 @@ pub struct Opts {
     pub library: PathBuf,
 
     /// disable colorized output
-    #[argh(switch, long="no-color")]
+    #[argh(switch, long = "no-color")]
     pub no_color: bool,
 
     /// only check the program without compilation.

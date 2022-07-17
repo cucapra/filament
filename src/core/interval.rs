@@ -5,7 +5,7 @@ use crate::errors;
 use super::{Constraint, Id, TimeRep};
 
 /// A range over time representation
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct Range<T>
 where
     T: TimeRep + Clone,
@@ -50,6 +50,12 @@ where
     }
 }
 
+impl<T: TimeRep + PartialEq> PartialEq for Range<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.start == other.start && self.end == other.end
+    }
+}
+
 impl<T> errors::WithPos for Range<T>
 where
     T: TimeRep,
@@ -74,7 +80,7 @@ where
 }
 
 /// An interval consists of a type tag, a start time, and a end time.
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct Interval<T>
 where
     T: TimeRep + Clone,
