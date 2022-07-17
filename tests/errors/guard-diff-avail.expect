@@ -1,0 +1,9 @@
+---STDERR---
+error: Guard ports are available for different time intervals
+  ┌─ tests/errors/guard-diff-avail.fil:9:14
+  │
+9 │   out = g1 | g2 ? in;
+  │         --   ^^ Port is available for [G, G+4]
+  │         │     
+  │         Port is available for [G, G+3]
+
