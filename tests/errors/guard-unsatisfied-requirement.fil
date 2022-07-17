@@ -1,0 +1,9 @@
+component Main<G>(
+  @interface<G, 5> go_G: 1,
+  @[G, G+2] + @exact[G, G+1] sel: 1,
+  @[G, G+2] in: 32,
+) -> (
+  @[G, G+3] out: 32,
+) {
+  out = sel ? in;
+}

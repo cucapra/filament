@@ -98,8 +98,7 @@ where
         Constraint {
             left: self.left.resolve(binding),
             right: self.right.resolve(binding),
-            op: self.op.clone(),
-            extra: self.extra.clone(),
+            ..self.clone()
         }
     }
 

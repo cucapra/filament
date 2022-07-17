@@ -24,7 +24,7 @@ fn check_connect(
     }
 
     // If a guard is present, use its availablity instead.
-    let guard_guarantee = if let Some(g) = &guard {
+    let (guarantee, src_pos) = if let Some(g) = &guard {
         let guard_interval = super::total_interval(g, ctx)?;
         log::debug!("Guard availablity is: {guard_interval}");
 
@@ -72,15 +72,15 @@ fn check_connect(
             );
         }
 
-        Some(guard_interval)
+        (Some(guard_interval), g.copy_span())
     } else {
-        src_guarantee
+        (src_guarantee, src.copy_span())
     };
 
     // If we have: dst = src. We need:
     // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
     // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
-    if let Some(guarantee) = &guard_guarantee {
+    if let Some(guarantee) = &guarantee {
         let within_fact = Constraint::subset(
             requirement.within.clone(),
             guarantee.within.clone(),
@@ -88,7 +88,7 @@ fn check_connect(
         .map(|e| {
             e.add_note(
                 format!("Source is available for {}", guarantee.within),
-                src.copy_span(),
+                src_pos.clone(),
             )
             .add_note(
                 format!("Destination's requirement {}", requirement.within),
@@ -99,7 +99,7 @@ fn check_connect(
     }
 
     if let Some(exact_requirement) = requirement.exact {
-        let guarantee = guard_guarantee.ok_or_else(|| {
+        let guarantee = guarantee.ok_or_else(|| {
             errors::Error::malformed(
                 "Destination requires @exact guarantee but source does not provide it",
             ).with_post_msg("Constant port cannot provide @exact specification", src.copy_span())
@@ -108,8 +108,8 @@ fn check_connect(
         if let Some(exact_guarantee) = guarantee.exact {
             ctx.add_obligations(
                 Constraint::equality(exact_requirement.clone(), exact_guarantee.clone())
-                    .map(|e| e.add_note("Source must satisfy the exact guarantee of the destination", src.copy_span())
-                              .add_note(format!("Source's availablity is {}", exact_guarantee), src.copy_span())
+                    .map(|e| e.add_note("Source must satisfy the exact guarantee of the destination", src_pos.clone())
+                              .add_note(format!("Source's availablity is {}", exact_guarantee), src_pos.clone())
                               .add_note(format!("Destination's requirement is {}", exact_requirement), dst.copy_span())),
             );
         } else {

@@ -45,7 +45,7 @@ where
         Range {
             start: self.start.resolve(bindings),
             end: self.end.resolve(bindings),
-            pos: self.pos.clone(),
+            ..self.clone()
         }
     }
 }
@@ -110,7 +110,7 @@ where
         Interval {
             within: self.within.resolve(bindings),
             exact: self.exact.as_ref().map(|range| range.resolve(bindings)),
-            pos: None,
+            ..self.clone()
         }
     }
 
