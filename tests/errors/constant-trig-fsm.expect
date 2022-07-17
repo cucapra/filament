@@ -1,0 +1,10 @@
+---CODE---
+1
+---STDERR---
+Error: [0m[1m[38;5;9merror[0m[1m: Invalid port for fsm trigger[0m
+  [0m[34m┌─[0m tests/errors/constant-trig-fsm.fil:2:12
+  [0m[34m│[0m
+[0m[34m2[0m [0m[34m│[0m   fsm M[5]([0m[31m10[0m);
+  [0m[34m│[0m            [0m[31m^^[0m [0m[31mCannot use constant port to trigger fsm[0m
+
+

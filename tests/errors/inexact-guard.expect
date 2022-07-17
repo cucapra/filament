@@ -1,7 +1,10 @@
 ---CODE---
 1
 ---STDERR---
-Error: tests/errors/inexact-guard.fil
-7 |  out = sel ? left;
-  |  ^^^^^^^^^^^^^^^^^ Port does not have an exact guarantee `sel`. Ports used in guards must have exact guarantees
+Error: [0m[1m[38;5;9merror[0m[1m: Ports used in guards must have exact guarantees[0m
+  [0m[34m┌─[0m tests/errors/inexact-guard.fil:7:9
+  [0m[34m│[0m
+[0m[34m7[0m [0m[34m│[0m   out = [0m[31msel[0m ? left;
+  [0m[34m│[0m         [0m[31m^^^[0m [0m[31mPort provides guarantee @[G, G+1].[0m
+
 

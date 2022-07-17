@@ -1,7 +1,13 @@
 ---CODE---
 1
 ---STDERR---
-Error: tests/errors/insufficient-guard.fil
-7 |  out = sel ? left;
-  |  ^^^^^^^^^^^^^^^^^ Cannot prove fact G+1 >= G+2. Guard must be active for at least as long as the source
+Error: [0m[1m[38;5;9merror[0m[1m: Cannot prove constraint G+1 >= G+2[0m
+  [0m[34m┌─[0m tests/errors/insufficient-guard.fil:7:9
+  [0m[34m│[0m
+[0m[34m7[0m [0m[34m│[0m   out = [0m[31msel[0m ? left;
+  [0m[34m│[0m         [0m[31m^^^[0m   [0m[34m----[0m [0m[34mSource is active for [G, G+2][0m
+  [0m[34m│[0m         [0m[31m│[0m      
+  [0m[34m│[0m         [0m[31mGuard must be active for at least as long as the source[0m
+  [0m[34m│[0m         [0m[34mGuard is active during [G, G+1][0m
+
 

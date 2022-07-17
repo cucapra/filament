@@ -1,0 +1,10 @@
+---CODE---
+1
+---STDERR---
+Error: [0m[1m[38;5;9merror[0m[1m: FSMs trigger port must have an @exact specification[0m
+  [0m[34m┌─[0m tests/errors/non-exact-trig-fsm.fil:5:12
+  [0m[34m│[0m
+[0m[34m5[0m [0m[34m│[0m   fsm M[5]([0m[31mtrig[0m);
+  [0m[34m│[0m            [0m[31m^^^^[0m [0m[31mPort's specification is @[G, G+5][0m
+
+
