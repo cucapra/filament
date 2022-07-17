@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 use std::rc::Rc;
 
-use codespan_reporting::diagnostic::{Diagnostic, Label};
+use codespan_reporting::diagnostic::{Diagnostic, Label, LabelStyle};
 use codespan_reporting::files::SimpleFiles;
 use codespan_reporting::term;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
@@ -106,16 +106,15 @@ pub trait WithPos {
 
 pub struct Error {
     kind: ErrorKind,
-    pos: Option<Span>,
     extra: Vec<(String, Option<Span>)>,
 }
 
 impl Error {
     pub fn files(&self) -> impl Iterator<Item = (Rc<str>, Rc<str>)> {
         let set: HashSet<(Rc<str>, Rc<str>)> = HashSet::from_iter(
-            self.pos
+            self.extra
                 .iter()
-                .chain(self.extra.iter().filter_map(|(_, sp)| sp.as_ref()))
+                .filter_map(|(_, sp)| sp.as_ref())
                 .map(|pos| (pos.file.clone(), pos.input.clone())),
         );
         set.into_iter()
@@ -123,63 +122,66 @@ impl Error {
 }
 
 impl std::fmt::Debug for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(pos) = &self.pos {
-            let config = term::Config::default();
+    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let config = term::Config::default();
 
-            // Construct a file Map
-            let mut file_map = HashMap::new();
-            let mut files = SimpleFiles::new();
-            for (name, file) in self.files() {
-                let idx = files.add(name.clone(), file);
-                file_map.insert(name, idx);
-            }
-
-            // Construct mapping from files to indices
-            let mut labels =
-                vec![Label::primary(file_map[&pos.file], pos.start..pos.end)
-                    .with_message(format!("{}", self.kind))];
-            let mut notes = vec![];
-            for (msg, pos) in &self.extra {
-                if let Some(pos) = pos {
-                    let l = Label::secondary(
-                        file_map[&pos.file],
-                        pos.start..pos.end,
-                    )
-                    .with_message(msg);
-                    labels.push(l);
-                } else {
-                    notes.push(msg.clone());
-                }
-            }
-
-            let diagnostic =
-                Diagnostic::error().with_labels(labels).with_notes(notes);
-            let writer = StandardStream::stderr(ColorChoice::Always);
-            term::emit(&mut writer.lock(), &config, &files, &diagnostic)
-                .unwrap();
-        } else {
-            write!(f, "{}", self.kind)?
+        // Construct a file Map
+        let mut file_map = HashMap::new();
+        let mut files = SimpleFiles::new();
+        for (name, file) in self.files() {
+            let idx = files.add(name.clone(), file);
+            file_map.insert(name, idx);
         }
+
+        // Construct mapping from files to indices
+        let mut labels = vec![];
+        let mut notes = vec![];
+        for (idx, (msg, pos)) in self.extra.iter().enumerate() {
+            if let Some(pos) = pos {
+                let l = Label::new(
+                    if idx == 0 {
+                        LabelStyle::Primary
+                    } else {
+                        LabelStyle::Secondary
+                    },
+                    file_map[&pos.file],
+                    pos.start..pos.end,
+                );
+                labels.push(l.with_message(msg));
+            } else {
+                notes.push(msg.clone());
+            }
+        }
+
+        let writer = StandardStream::stderr(ColorChoice::Always);
+        term::emit(
+            &mut writer.lock(),
+            &config,
+            &files,
+            &Diagnostic::error()
+                .with_message(format!("{}", self.kind))
+                .with_labels(labels)
+                .with_notes(notes),
+        )
+        .unwrap();
 
         Ok(())
     }
 }
 
 impl Error {
-    pub fn with_pos(mut self, pos: Option<Span>) -> Self {
-        self.pos = pos;
-        self
-    }
-
-    pub fn with_post_msg<S: ToString>(&mut self, msg: S, pos: Option<Span>) {
+    pub fn with_post_msg<S: ToString>(
+        mut self,
+        msg: S,
+        pos: Option<Span>,
+    ) -> Self {
         self.extra.push((msg.to_string(), pos));
+        self
     }
 
     pub fn parse_error(err: pest_consume::Error<frontend::Rule>) -> Self {
         Self {
             kind: ErrorKind::ParseError(err),
-            pos: None,
             extra: vec![],
         }
     }
@@ -187,7 +189,6 @@ impl Error {
     pub fn invalid_file(f: String) -> Self {
         Self {
             kind: ErrorKind::InvalidFile(f),
-            pos: None,
             extra: vec![],
         }
     }
@@ -195,7 +196,6 @@ impl Error {
     pub fn write_error(e: String) -> Self {
         Self {
             kind: ErrorKind::WriteError(e),
-            pos: None,
             extra: vec![],
         }
     }
@@ -203,7 +203,6 @@ impl Error {
     pub fn malformed<S: ToString>(msg: S) -> Self {
         Self {
             kind: ErrorKind::Malformed(msg.to_string()),
-            pos: None,
             extra: vec![],
         }
     }
@@ -211,7 +210,6 @@ impl Error {
     pub fn undefined(name: Id, kind: String) -> Self {
         Self {
             kind: ErrorKind::Undefined(name, kind),
-            pos: None,
             extra: vec![],
         }
     }
@@ -219,15 +217,6 @@ impl Error {
     pub fn already_bound(name: Id, kind: String) -> Self {
         Self {
             kind: ErrorKind::AlreadyBound(name, kind),
-            pos: None,
-            extra: vec![],
-        }
-    }
-
-    pub fn cannot_prove(fact: String) -> Self {
-        Self {
-            kind: ErrorKind::CannotProve(fact),
-            pos: None,
             extra: vec![],
         }
     }
@@ -235,7 +224,6 @@ impl Error {
     pub fn misc(msg: String) -> Self {
         Self {
             kind: ErrorKind::Misc(msg),
-            pos: None,
             extra: vec![],
         }
     }
@@ -259,9 +247,6 @@ enum ErrorKind {
     /// The name has already been bound.
     AlreadyBound(Id, String),
 
-    /// Failed to prove a fact
-    CannotProve(String),
-
     /// A miscellaneous error. Should be replaced with a more precise error.
     #[allow(unused)]
     Misc(String),
@@ -284,9 +269,6 @@ impl std::fmt::Display for ErrorKind {
             ParseError(err) => write!(f, "Filament Parser: {}", err),
             InvalidFile(msg) | Misc(msg) | WriteError(msg) => {
                 write!(f, "{}", msg)
-            }
-            CannotProve(fact) => {
-                write!(f, "Cannot prove {}", fact)
             }
             Malformed(msg) => write!(f, "{msg}"),
         }

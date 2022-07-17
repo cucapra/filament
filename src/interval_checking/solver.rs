@@ -1,8 +1,7 @@
-use crate::errors::{self, Error, FilamentResult, WithPos};
+use crate::errors::{self, Error, FilamentResult};
 use crate::event_checker::ast;
 use itertools::Itertools;
 use rsmt2::{SmtConf, Solver};
-use std::fmt::Display;
 
 /// A string that semantically represents an S-expression
 pub struct SExp(pub String);
@@ -48,17 +47,16 @@ impl From<&Disjoint> for SExp {
         ))
     }
 }
-impl Display for Disjoint {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "|{} - {}| >= {}", self.event1, self.event2, self.delay)?;
-        if !self.locations.is_empty() {
-            writeln!(f, ". Conflicting invocations")?;
+impl Disjoint {
+    fn into_err(self) -> errors::Error {
+        let mut err = Error::malformed(format!(
+            "Cannot prove |{} - {}| >= {}. Instance has conflicting uses",
+            self.event1, self.event2, self.delay
+        ));
+        for (n, loc) in self.locations.into_iter().enumerate() {
+            err = err.with_post_msg(format!("Invocation {}", n + 1), Some(loc))
         }
-        for (n, loc) in self.locations.iter().enumerate() {
-            let msg = format!("Invocation {}", n + 1);
-            write!(f, "{}", loc.format(&msg))?;
-        }
-        Ok(())
+        err
     }
 }
 
@@ -118,14 +116,18 @@ where
 
     for fact in asserts {
         if !check_fact(&mut solver, &fact)? {
-            return Err(Error::cannot_prove(fact.to_string())
-                .with_pos(fact.copy_span()));
+            let mut err =
+                Error::malformed(format!("Cannot prove constraint {fact}"));
+            for (msg, pos) in fact.notes() {
+                err = err.with_post_msg(msg, pos.clone())
+            }
+            return Err(err);
         }
     }
 
     for disj in disjointness {
         if !check_fact(&mut solver, &disj)? {
-            return Err(Error::cannot_prove(disj.to_string()));
+            return Err(disj.into_err());
         }
     }
 

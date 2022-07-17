@@ -31,10 +31,8 @@ where
     pub left: T,
     pub right: T,
     pub op: OrderOp,
-    // Source location that generates this constraint
-    pos: Option<errors::Span>,
     // Explanation of why this constraint was generated
-    explanation: Option<String>,
+    extra: Vec<(String, Option<errors::Span>)>,
 }
 
 impl<T> Constraint<T>
@@ -46,13 +44,22 @@ where
             left,
             right,
             op,
-            pos: None,
-            explanation: None,
+            extra: vec![],
         }
     }
 
-    pub fn explanation<S: ToString>(mut self, msg: S) -> Self {
-        self.explanation = Some(msg.to_string());
+    pub fn notes(
+        &self,
+    ) -> impl Iterator<Item = &(String, Option<errors::Span>)> {
+        self.extra.iter()
+    }
+
+    pub fn add_note<S: ToString>(
+        mut self,
+        msg: S,
+        pos: Option<errors::Span>,
+    ) -> Self {
+        self.extra.push((msg.to_string(), pos));
         self
     }
 }
@@ -66,8 +73,7 @@ where
             left: r,
             right: l,
             op: OrderOp::Gt,
-            pos: None,
-            explanation: None,
+            extra: vec![],
         }
     }
 
@@ -76,8 +82,7 @@ where
             left,
             right,
             op: OrderOp::Eq,
-            pos: None,
-            explanation: None,
+            extra: vec![],
         }
     }
 
@@ -86,8 +91,7 @@ where
             left,
             right,
             op: OrderOp::Gte,
-            pos: None,
-            explanation: None,
+            extra: vec![],
         }
     }
     pub fn resolve(&self, binding: &HashMap<Id, &T>) -> Constraint<T> {
@@ -95,8 +99,7 @@ where
             left: self.left.resolve(binding),
             right: self.right.resolve(binding),
             op: self.op.clone(),
-            pos: None,
-            explanation: None,
+            extra: self.extra.clone(),
         }
     }
 
@@ -154,24 +157,7 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {} {}", self.left, self.op, self.right)?;
-        if let Some(exp) = &self.explanation {
-            write!(f, ". {exp}")?;
-        }
         Ok(())
-    }
-}
-
-impl<T> errors::WithPos for Constraint<T>
-where
-    T: TimeRep + Clone,
-{
-    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> Option<errors::Span> {
-        self.pos.clone()
     }
 }
 

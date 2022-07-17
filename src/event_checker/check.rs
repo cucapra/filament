@@ -47,19 +47,19 @@ fn transform_time(it: frontend::IntervalTime) -> core::FsmIdxs {
 fn transform_range(
     range: core::Range<frontend::IntervalTime>,
 ) -> core::Range<core::FsmIdxs> {
-    core::Range {
-        start: range.start.into(),
-        end: range.end.into(),
-    }
+    let sp = range.copy_span();
+    core::Range::new(range.start.into(), range.end.into()).set_span(sp)
 }
 
 fn transform_interval(
     interval: core::Interval<frontend::IntervalTime>,
 ) -> core::Interval<core::FsmIdxs> {
-    core::Interval {
-        within: transform_range(interval.within),
-        exact: interval.exact.map(transform_range),
-    }
+    let sp = interval.copy_span();
+    core::Interval::new(
+        transform_range(interval.within),
+        interval.exact.map(transform_range),
+    )
+    .set_span(sp)
 }
 
 fn transform_control(
@@ -99,13 +99,11 @@ fn transform_interface_def(
 fn transform_constraints(
     con: core::Constraint<frontend::IntervalTime>,
 ) -> core::Constraint<core::FsmIdxs> {
-    let sp = con.copy_span();
-    let cons = core::Constraint::new(
+    core::Constraint::new(
         transform_time(con.left),
         transform_time(con.right),
         con.op,
-    );
-    cons.set_span(sp)
+    )
 }
 
 fn transform_signature(

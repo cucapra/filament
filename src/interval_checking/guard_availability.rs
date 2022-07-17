@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use super::{Context, THIS};
 use crate::core::{FsmIdxs, TimeRep};
-use crate::errors::{Error, FilamentResult};
+use crate::errors::{self, Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
 
 type Intervals = Vec<ast::Interval>;
@@ -12,34 +12,40 @@ fn guard_availability(
     guard: &ast::Guard,
     ctx: &Context,
     acc: &mut Intervals,
+    pos: &Option<errors::Span>,
 ) -> FilamentResult<()> {
     match guard {
-        ast::Guard::Or(g1, g2) => {
-            guard_availability(g1, ctx, acc)?;
-            guard_availability(g2, ctx, acc)?;
+        ast::Guard::Or(g1, g2, _) => {
+            guard_availability(g1, ctx, acc, pos)?;
+            guard_availability(g2, ctx, acc, pos)?;
             Ok(())
         }
         ast::Guard::Port(p) => {
-            let interval = match p {
-                ast::Port::ThisPort(name) => {
+            let interval = match &p.typ {
+                ast::PortType::ThisPort(name) => {
                     ctx.get_invoke(&THIS.into())?.port_guarantees(name)?
                 }
-                ast::Port::CompPort { comp, name } => {
+                ast::PortType::CompPort { comp, name } => {
                     ctx.get_invoke(comp)?.port_guarantees(name)?
                 }
-                ast::Port::Constant(_) => {
+                ast::PortType::Constant(_) => {
                     return Err(Error::malformed(
                         "Guards cannot contain constants",
+                    )
+                    .with_post_msg(
+                        "Guards cannot contain constants",
+                        p.copy_span(),
                     ))
                 }
             };
 
             if interval.exact.is_none() {
                 return Err(Error::malformed(
-                    format!(
-                        "Port does not have an exact guarantee `{}`. Ports used in guards must have exact guarantees",
-                        p
-                    ),
+                    "Ports used in guards must have exact guarantees",
+                )
+                .with_post_msg(
+                    format!("Port provides guarantee {}.", interval),
+                    p.copy_span(),
                 ));
             }
             acc.push(interval);
@@ -84,17 +90,18 @@ fn merge_availability(intervals: Intervals) -> ast::Interval {
         })
         .unwrap();
 
-    ast::Interval::from(within).with_exact(ast::Range {
-        start: FsmIdxs::unit(event.clone(), start),
-        end: FsmIdxs::unit(event.clone(), end),
-    })
+    ast::Interval::from(within).with_exact(ast::Range::new(
+        FsmIdxs::unit(event.clone(), start),
+        FsmIdxs::unit(event.clone(), end),
+    ))
 }
 
 pub fn total_interval(
     guard: &ast::Guard,
     ctx: &Context,
+    pos: &Option<errors::Span>,
 ) -> FilamentResult<ast::Interval> {
     let mut intervals = vec![];
-    guard_availability(guard, ctx, &mut intervals)?;
+    guard_availability(guard, ctx, &mut intervals, pos)?;
     Ok(merge_availability(intervals))
 }
