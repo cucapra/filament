@@ -237,18 +237,23 @@ impl Signature<FsmIdxs> {
 
         for id in &self.interface_signals {
             if id.delay() < max_evs[&id.event].0 {
-                let msg = if let Some(ref sp) = max_evs[&id.event].1 {
-                    sp.format("Following signal's requirement is longer than the interface")
+                let mut err = Error::malformed("Invalid interface signal")
+                    .with_pos(id.copy_span());
+                if let Some(ref sp) = max_evs[&id.event].1 {
+                    err.with_post_msg(
+                        "Following signal's requirement is longer than the interface",
+                        Some(sp.clone())
+                    );
                 } else {
-                    format!(
+                    let msg = format!(
                         "An input signal's requirement ends at `{}+{}`",
                         id.event,
                         id.delay()
-                    )
-                };
-                return Err(Error::malformed("Invalid interface signal")
-                    .with_pos(id.copy_span())
-                    .with_post_msg(msg));
+                    );
+                    err.with_post_msg(msg, None);
+                }
+
+                return Err(err);
             }
         }
 
