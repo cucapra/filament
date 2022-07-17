@@ -137,6 +137,34 @@ fn check_invoke<'a>(
         .zip(invoke.abstract_vars.iter())
         .collect();
 
+    let this_sig = ctx.get_invoke(&THIS.into())?;
+    // For each event provided for an abstract variable, ensure that the corresponding interface
+    // does not pulse more often than the interface allows.
+    for (abs, &evs) in &binding {
+        if let Some(interface) = sig.get_interface(abs) {
+            // Each event in the binding must pulse less often than the interface of the abstract
+            // variable.
+            for (ev, _) in evs.events() {
+                // Get interface for this event
+                let ev_int =
+                    this_sig.get_sig().get_interface(ev).ok_or_else(|| {
+                        Error::malformed(format!(
+                    "Event {ev} does not have a corresponding interface signal"
+                ))
+                    })?;
+                // Ensure that its interval is larger than the interval of the abstract variable's
+                // interface interval.
+                if interface.delay() > ev_int.delay() {
+                    return Err(Error::malformed(
+                        format!("Instance requires event to pulse no more than every {} cycles but provided event may pulse every {} cycles", interface.delay(), ev_int.delay())
+                ).add_note("Event binding violates @interface specification", invoke.copy_span())
+                 .add_note(format!("Interface requires event to trigger once in {} cycles", interface.delay()), interface.copy_span())
+                 .add_note(format!("Provided event may trigger every {} cycles", ev_int.delay()), ev_int.copy_span()));
+                }
+            }
+        }
+    }
+
     // Handle `where` clause constraints and well formedness constraints on intervals.
     sig.well_formed().for_each(|con| {
         ctx.add_obligations(Constraint::constraint(con.resolve(&binding)).map(
@@ -248,11 +276,7 @@ where
 {
     for cmd in cmds {
         match cmd {
-            ast::Command::Invoke(invoke) => {
-                check_invoke(invoke, ctx).map_err(|err| {
-                    err.add_note("Invalid invoke", invoke.copy_span())
-                })?
-            }
+            ast::Command::Invoke(invoke) => check_invoke(invoke, ctx)?,
             ast::Command::Instance(ast::Instance { name, component }) => {
                 ctx.add_instance(name.clone(), component)?
             }

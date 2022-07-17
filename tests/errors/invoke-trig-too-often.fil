@@ -1,0 +1,10 @@
+extern "dummy.sv" {
+  component Mult<G>(
+    @interface<G, 5> go_G: 1,
+  ) -> ();
+}
+
+component Main<T>(@interface<T, 3> go_T: 1) -> () {
+  M := new Mult;
+  m0 := invoke M<T+1>;
+}

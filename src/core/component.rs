@@ -114,6 +114,10 @@ where
     pub fn delay(&self) -> u64 {
         self.delay
     }
+
+    pub fn liveness(&self) -> &Interval<T> {
+        &self.liveness
+    }
 }
 
 impl<T> WithPos for InterfaceDef<T>
@@ -171,6 +175,11 @@ where
             outputs: self.inputs.clone(),
             ..self.clone()
         }
+    }
+
+    /// Return the interface associated with an event defined in the signature.
+    pub fn get_interface(&self, event: &Id) -> Option<&InterfaceDef<T>> {
+        self.interface_signals.iter().find(|id| id.event == event)
     }
 
     /// Returns a port associated with the signature
