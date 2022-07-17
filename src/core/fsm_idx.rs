@@ -143,7 +143,7 @@ impl Range<FsmIdxs> {
     /// Convert this interval into an offset. Only possible when interval uses
     /// exactly one event for both start and end.
     pub fn as_offset(&self) -> Option<(&Id, u64, u64)> {
-        let Range { start, end } = &self;
+        let Range { start, end, .. } = &self;
 
         start.as_unit().and_then(|(s_ev, s_st)| {
             end.as_unit().and_then(|(e_ev, e_st)| {

@@ -1,13 +1,19 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
+use codespan_reporting::{
+    diagnostic::{Diagnostic, Label, LabelStyle},
+    files::SimpleFiles,
+    term::{self, termcolor::ColorChoice, termcolor::StandardStream},
+};
 use filament::{
     backend, cmdline, errors, event_checker, frontend, interface_infer,
     interval_checking, lower, visitor::Transform,
 };
 
-fn main() -> errors::FilamentResult<()> {
-    let opts: cmdline::Opts = argh::from_env();
-
+fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     // enable tracing
     env_logger::Builder::new()
         .format_timestamp(None)
@@ -79,7 +85,62 @@ fn main() -> errors::FilamentResult<()> {
         let ns = lower::CompileInvokes::transform(ns)?;
         log::info!("Lowering:\n{ns}");
         interval_checking::check(&ns)?;
-        backend::compile(ns, &opts)?;
+        backend::compile(ns, opts)?;
     }
+
     Ok(())
+}
+
+fn main() {
+    let opts: cmdline::Opts = argh::from_env();
+    match run(&opts) {
+        Ok(_) => (),
+        Err(err) => {
+            let config = term::Config::default();
+
+            // Construct a file Map
+            let mut file_map = HashMap::new();
+            let mut files = SimpleFiles::new();
+            for (name, file) in err.files() {
+                let idx = files.add(name.clone(), file);
+                file_map.insert(name, idx);
+            }
+
+            // Construct mapping from files to indices
+            let mut labels = vec![];
+            let mut notes = vec![];
+            for (idx, (msg, pos)) in err.extra.iter().enumerate() {
+                if let Some(pos) = pos {
+                    let l = Label::new(
+                        if idx == 0 {
+                            LabelStyle::Primary
+                        } else {
+                            LabelStyle::Secondary
+                        },
+                        file_map[&pos.file],
+                        pos.start..pos.end,
+                    );
+                    labels.push(l.with_message(msg));
+                } else {
+                    notes.push(msg.clone());
+                }
+            }
+
+            let writer = StandardStream::stderr(if opts.no_color {
+                ColorChoice::Never
+            } else {
+                ColorChoice::Always
+            });
+            term::emit(
+                &mut writer.lock(),
+                &config,
+                &files,
+                &Diagnostic::error()
+                    .with_message(format!("{}", err.kind))
+                    .with_labels(labels)
+                    .with_notes(notes),
+            )
+            .unwrap();
+        }
+    }
 }

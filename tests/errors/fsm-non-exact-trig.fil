@@ -1,0 +1,6 @@
+component Main<G>(
+  @interface<G, 6> go_G: 1,
+  @[G, G+5] trig: 1
+) -> () {
+  fsm M[5](trig);
+}

@@ -1,7 +1,7 @@
----CODE---
-1
 ---STDERR---
-Error: tests/errors/fsm-trig-too-long.fil
-4 |  fsm t[5](go_T);
-  |  ^^^^^^^^^^^^^^^ Cannot prove fact T+4 >= T+5. Trigger must not pulse more often than the FSM states
+error: Cannot prove constraint T+4 >= T+5
+  ┌─ tests/errors/fsm-trig-too-long.fil:4:12
+  │
+4 │   fsm t[5](go_T);
+  │            ^^^^ Trigger must not pulse more often than the FSM states
 

@@ -1,0 +1,9 @@
+---STDERR---
+error: Cannot prove constraint G+2 >= G+3
+  ┌─ tests/errors/guard-unsatisfied-requirement.fil:8:9
+  │
+8 │   out = sel ? in;
+  │   ---   ^^^ Source is available for [G, G+2]
+  │   │      
+  │   Destination's requirement [G, G+3]
+

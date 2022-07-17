@@ -21,8 +21,8 @@ impl CompileInvokes {
         if let Some((ev, st, end)) = range.as_offset() {
             (st..end)
                 .into_iter()
-                .map(|st| ast::Guard::Port(self.get_fsm(ev).port(st)))
-                .reduce(|l, r| ast::Guard::Or(Box::new(l), Box::new(r)))
+                .map(|st| self.get_fsm(ev).port(st).into())
+                .reduce(ast::Guard::or)
                 .unwrap()
         } else {
             unimplemented!(
@@ -98,10 +98,7 @@ impl visitor::Transform for CompileInvokes {
                     });
                 let port = self.get_fsm(s_ev).port(*start_time);
                 let con = ast::Connect::new(
-                    ast::Port::CompPort {
-                        comp: bind.clone(),
-                        name: interface.name.clone(),
-                    },
+                    ast::Port::comp(bind.clone(), interface.name.clone()),
                     port,
                     None,
                 )
@@ -110,23 +107,20 @@ impl visitor::Transform for CompileInvokes {
             }
 
             // Generate assignment for each port
-            for ((port, sp), formal) in ports.into_iter().zip(sig.inputs.iter())
-            {
+            for (port, formal) in ports.into_iter().zip(sig.inputs.iter()) {
                 let req = formal.liveness.resolve(&binding);
                 assert!(
                     req.exact.is_none(),
                     "Cannot compile ports with exact specifications"
                 );
                 let guard = self.range_to_guard(req.within);
+                let sp = port.copy_span();
                 let con = ast::Connect::new(
-                    ast::Port::CompPort {
-                        comp: bind.clone(),
-                        name: formal.name.clone(),
-                    },
+                    ast::Port::comp(bind.clone(), formal.name.clone()),
                     port,
                     Some(guard),
                 )
-                .set_span(Some(sp));
+                .set_span(sp);
                 connects.push(con.into());
             }
             Ok(connects)
@@ -152,7 +146,7 @@ impl visitor::Transform for CompileInvokes {
                     ast::Fsm::new(
                         format!("{}_fsm", ev).into(),
                         interface.delay(),
-                        ast::Port::ThisPort(interface.name.clone()),
+                        ast::Port::this(interface.name.clone()),
                     ),
                 )
             })

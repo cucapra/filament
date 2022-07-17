@@ -1,15 +1,18 @@
 use std::{collections::HashMap, fmt::Display};
 
+use crate::errors;
+
 use super::{Constraint, Id, TimeRep};
 
 /// A range over time representation
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct Range<T>
 where
     T: TimeRep + Clone,
 {
     pub start: T,
     pub end: T,
+    pos: Option<errors::Span>,
 }
 
 impl<T> Range<T>
@@ -18,7 +21,12 @@ where
 {
     /// Generate constraints for well formedness of this range.
     pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> {
-        std::iter::once(Constraint::lt(self.start.clone(), self.end.clone()))
+        std::iter::once(
+            Constraint::lt(self.start.clone(), self.end.clone()).add_note(
+                "Interval's end time must be greater than the start time",
+                self.pos.clone(),
+            ),
+        )
     }
 }
 impl<T> Range<T>
@@ -26,14 +34,39 @@ where
     T: TimeRep + Clone,
 {
     pub fn new(start: T, end: T) -> Self {
-        Self { start, end }
+        Self {
+            start,
+            end,
+            pos: None,
+        }
     }
 
     pub fn resolve(&self, bindings: &HashMap<Id, &T>) -> Self {
         Range {
             start: self.start.resolve(bindings),
             end: self.end.resolve(bindings),
+            ..self.clone()
         }
+    }
+}
+
+impl<T: TimeRep + PartialEq> PartialEq for Range<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.start == other.start && self.end == other.end
+    }
+}
+
+impl<T> errors::WithPos for Range<T>
+where
+    T: TimeRep,
+{
+    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+        self.pos = sp;
+        self
+    }
+
+    fn copy_span(&self) -> Option<errors::Span> {
+        self.pos.clone()
     }
 }
 
@@ -47,18 +80,27 @@ where
 }
 
 /// An interval consists of a type tag, a start time, and a end time.
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct Interval<T>
 where
     T: TimeRep + Clone,
 {
     pub within: Range<T>,
     pub exact: Option<Range<T>>,
+    pos: Option<errors::Span>,
 }
 impl<T> Interval<T>
 where
     T: super::TimeRep + Clone,
 {
+    pub fn new(within: Range<T>, exact: Option<Range<T>>) -> Self {
+        Self {
+            within,
+            exact,
+            pos: None,
+        }
+    }
+
     pub fn with_exact(mut self, exact: Range<T>) -> Self {
         self.exact = Some(exact);
         self
@@ -68,6 +110,7 @@ where
         Interval {
             within: self.within.resolve(bindings),
             exact: self.exact.as_ref().map(|range| range.resolve(bindings)),
+            ..self.clone()
         }
     }
 
@@ -89,10 +132,29 @@ where
             .iter()
             .flat_map(|ex| {
                 Constraint::subset(ex.clone(), self.within.clone())
+                    .map(|con| {
+                        con.add_note(
+                            "@exact must be a subset of total interval",
+                            self.pos.clone(),
+                        )
+                    })
                     .chain(ex.well_formed())
             })
             .chain(self.within.well_formed())
             .collect()
+    }
+}
+impl<T> errors::WithPos for Interval<T>
+where
+    T: super::TimeRep,
+{
+    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+        self.pos = sp;
+        self
+    }
+
+    fn copy_span(&self) -> Option<errors::Span> {
+        self.pos.clone()
     }
 }
 
@@ -104,6 +166,7 @@ where
         Interval {
             within,
             exact: None,
+            pos: None,
         }
     }
 }

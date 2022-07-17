@@ -1,10 +1,10 @@
----CODE---
-1
 ---STDERR---
-Error: tests/errors/invalid-interface.fil
-4 |    @interface<L, 1> go_L: 1,
-  |    ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid interface signal
-tests/errors/invalid-interface.fil
-6 |    @[L, L+2] in2: 32,
-  |    ^^^^^^^^^^^^^^^^^ Following signal's requirement is longer than the interface
+error: Invalid interface signal
+  ┌─ tests/errors/invalid-interface.fil:4:5
+  │
+4 │     @interface<L, 1> go_L: 1,
+  │     ^^^^^^^^^^^^^^^^^^^^^^^^ Interface does not last long enough
+5 │     @[G, G+1] in1: 32,
+6 │     @[L, L+2] in2: 32,
+  │     ----------------- Following signal's requirement is longer than the interface
 

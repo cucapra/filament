@@ -1,0 +1,7 @@
+---STDERR---
+error: Cannot convert interval into offset: @[G, L+3] + @exact[G, L]
+  ┌─ tests/errors/guard-non-offset.fil:9:9
+  │
+9 │   out = g1 ? in;
+  │         ^^ Cannot convert @exact specification into an offset: @[G, L+3] + @exact[G, L]
+

@@ -1,0 +1,7 @@
+---STDERR---
+error: Trigger port is high for too long
+  ┌─ tests/errors/fsm-exact-too-long.fil:5:12
+  │
+5 │   fsm M[3](trig);
+  │            ^^^^ Trigger port is active for 2 cycles
+

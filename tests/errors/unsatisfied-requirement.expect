@@ -1,0 +1,12 @@
+---STDERR---
+error: Cannot prove constraint G+1 >= G+2
+   ┌─ tests/errors/unsatisfied-requirement.fil:10:16
+   │
+10 │   m0 := M<G+1>(left, right);
+   │                ^^^^ Source is available for [G, G+1]
+   │
+   ┌─ ./primitives/core.fil:49:3
+   │
+49 │   @[G, G+1] left: 32,
+   │   ------------------ Destination's requirement [G+1, G+2]
+

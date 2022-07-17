@@ -133,9 +133,10 @@ impl FilamentParser {
     }
 
     fn interval_range(input: Node) -> ParseResult<ast::Range> {
+        let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [time(start), time(end)] => ast::Range { start, end }
+            [time(start), time(end)] => ast::Range::new(start, end).set_span(Some(sp))
         ))
     }
 
@@ -240,29 +241,21 @@ impl FilamentParser {
 
     // ================ Assignments =====================
     fn port(input: Node) -> ParseResult<ast::Port> {
-        Ok(match_nodes!(
+        let sp = Self::get_span(&input);
+        let n = match_nodes!(
             input.into_children();
-            [bitwidth(constant)] => ast::Port::Constant(constant),
-            [identifier(name)] => ast::Port::ThisPort(name),
-            [identifier(comp), identifier(name)] => ast::Port::CompPort {
-                comp, name
-            }
-        ))
+            [bitwidth(constant)] => ast::Port::constant(constant),
+            [identifier(name)] => ast::Port::this(name),
+            [identifier(comp), identifier(name)] => ast::Port::comp(comp, name),
+        );
+        Ok(n.set_span(Some(sp)))
     }
 
-    fn port_with_span(input: Node) -> ParseResult<(ast::Port, errors::Span)> {
-        let span = Self::get_span(&input);
-        Ok(match_nodes!(
-            input.into_children();
-            [port(port)] => (port, span),
-        ))
-    }
-
-    fn arguments(input: Node) -> ParseResult<Vec<(ast::Port, errors::Span)>> {
+    fn arguments(input: Node) -> ParseResult<Vec<ast::Port>> {
         Ok(match_nodes!(
             input.into_children();
             [] => vec![],
-            [port_with_span(ports)..] => ports.collect(),
+            [port(ports)..] => ports.collect(),
         ))
     }
 
@@ -307,7 +300,7 @@ impl FilamentParser {
         Ok(())
     }
     fn constraint(input: Node) -> ParseResult<ast::Constraint> {
-        Ok(match_nodes!(
+        let cons = match_nodes!(
             input.clone().into_children();
             [
                 time(l),
@@ -334,7 +327,8 @@ impl FilamentParser {
                 gte(_),
                 time(r)
             ] => ast::Constraint::new(l, r, ast::OrderOp::Gte),
-        ))
+        );
+        Ok(cons)
     }
     fn constraints(input: Node) -> ParseResult<Vec<ast::Constraint>> {
         Ok(match_nodes!(
@@ -385,11 +379,12 @@ impl FilamentParser {
     }
 
     fn guard(input: Node) -> ParseResult<ast::Guard> {
+        let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [port(p)] => ast::Guard::Port(p),
+            [port(p)] => p.into(),
             [port(p), guard(g)] => {
-                ast::Guard::Or(Box::new(ast::Guard::Port(p)), Box::new(g))
+                ast::Guard::or(p.into(), g).set_span(Some(sp))
             }
         ))
     }

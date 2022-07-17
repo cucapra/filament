@@ -1,7 +1,0 @@
----CODE---
-1
----STDERR---
-Error: tests/errors/insufficient-guard.fil
-7 |  out = sel ? left;
-  |  ^^^^^^^^^^^^^^^^^ Cannot prove fact G+1 >= G+2. Guard must be active for at least as long as the source
-

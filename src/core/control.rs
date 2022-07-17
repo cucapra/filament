@@ -3,18 +3,61 @@ use crate::errors::{self, Error, FilamentResult};
 use itertools::Itertools;
 use std::{collections::HashMap, fmt::Display};
 
-pub enum Port {
+pub struct Port {
+    pub typ: PortType,
+    pos: Option<errors::Span>,
+}
+impl std::fmt::Display for Port {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.typ)
+    }
+}
+impl errors::WithPos for Port {
+    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+        self.pos = sp;
+        self
+    }
+
+    fn copy_span(&self) -> Option<errors::Span> {
+        self.pos.clone()
+    }
+}
+
+pub enum PortType {
     ThisPort(Id),
     CompPort { comp: Id, name: Id },
     Constant(u64),
 }
 
-impl std::fmt::Display for Port {
+impl Port {
+    pub fn comp(comp: Id, name: Id) -> Self {
+        Port {
+            typ: PortType::CompPort { comp, name },
+            pos: None,
+        }
+    }
+
+    pub fn this(p: Id) -> Self {
+        Port {
+            typ: PortType::ThisPort(p),
+            pos: None,
+        }
+    }
+
+    pub fn constant(v: u64) -> Self {
+        Port {
+            typ: PortType::Constant(v),
+            pos: None,
+        }
+    }
+}
+
+impl std::fmt::Display for PortType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Port::ThisPort(p) => write!(f, "{}", p),
-            Port::CompPort { comp, name } => write!(f, "{}.{}", comp, name),
-            Port::Constant(n) => write!(f, "{}", n),
+            PortType::ThisPort(p) => write!(f, "{}", p),
+            PortType::CompPort { comp, name } => write!(f, "{}.{}", comp, name),
+            PortType::Constant(n) => write!(f, "{}", n),
         }
     }
 }
@@ -87,7 +130,7 @@ pub struct Invoke<T> {
     pub abstract_vars: Vec<T>,
 
     /// Assignment for the ports
-    pub ports: Option<Vec<(Port, errors::Span)>>,
+    pub ports: Option<Vec<Port>>,
 
     /// Source location of the invocation
     pos: Option<errors::Span>,
@@ -101,7 +144,7 @@ where
         bind: Id,
         instance: Id,
         abstract_vars: Vec<T>,
-        ports: Option<Vec<(Port, errors::Span)>>,
+        ports: Option<Vec<Port>>,
     ) -> Self {
         Self {
             bind,
@@ -137,7 +180,7 @@ impl<T: Display> Display for Invoke<T> {
                 abs,
                 ports
                     .iter()
-                    .map(|(port, _)| port.to_string())
+                    .map(|port| port.to_string())
                     .collect::<Vec<String>>()
                     .join(",")
             )
@@ -159,13 +202,42 @@ impl<T> errors::WithPos for Invoke<T> {
 
 /// A Guard expression
 pub enum Guard {
-    Or(Box<Guard>, Box<Guard>),
+    Or(Box<Guard>, Box<Guard>, Option<errors::Span>),
     Port(Port),
+}
+
+impl From<Port> for Guard {
+    fn from(v: Port) -> Self {
+        Self::Port(v)
+    }
+}
+impl Guard {
+    pub fn or(g1: Guard, g2: Guard) -> Self {
+        Guard::Or(Box::new(g1), Box::new(g2), None)
+    }
+}
+impl errors::WithPos for Guard {
+    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+        match self {
+            Guard::Or(_, _, ref mut span) => {
+                *span = sp;
+                self
+            }
+            Guard::Port(p) => p.set_span(sp).into(),
+        }
+    }
+
+    fn copy_span(&self) -> Option<errors::Span> {
+        match self {
+            Guard::Or(_, _, sp) => sp.clone(),
+            Guard::Port(p) => p.copy_span(),
+        }
+    }
 }
 impl std::fmt::Display for Guard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Guard::Or(g1, g2) => write!(f, "{} | {}", g1, g2),
+            Guard::Or(g1, g2, _) => write!(f, "{} | {}", g1, g2),
             Guard::Port(p) => write!(f, "{}", p),
         }
     }
@@ -266,17 +338,14 @@ impl Fsm {
             }
         }
         Err(Error::malformed(format!(
-            "Port cannot be converted into FSM state: {}",
+            "PortType cannot be converted into FSM state: {}",
             port
         )))
     }
 
     /// Return the port associated with the given state
     pub fn port(&self, state: u64) -> Port {
-        Port::CompPort {
-            comp: self.name.clone(),
-            name: format!("_{}", state).into(),
-        }
+        Port::comp(self.name.clone(), format!("_{}", state).into())
     }
 
     /// Get the liveness condition for the given port

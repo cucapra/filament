@@ -1,7 +1,12 @@
----CODE---
-1
 ---STDERR---
-Error: tests/errors/unprovable-cons.fil
-11 |  l0 := L<G, L+1>(left);
-   |  ^^^^^^^^^^^^^^^^^^^^^^ Cannot prove fact L+1 > G+1. Component's where clause constraints must be satisfied
+error: Cannot prove constraint L+1 > G+1
+   ┌─ ./primitives/core.fil:10:5
+   │
+10 │     @[G+1, L] out: 32
+   │     ^^^^^^^^^ Interval's end time must be greater than the start time
+   │
+   ┌─ tests/errors/unprovable-cons.fil:11:3
+   │
+11 │   l0 := L<G, L+1>(left);
+   │   ---------------------- Invoke's intervals must be well-formed
 

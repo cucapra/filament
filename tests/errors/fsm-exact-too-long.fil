@@ -1,0 +1,6 @@
+component Main<G>(
+  @interface<G, 5> go_G: 1,
+  @[G, G+3] + @exact[G, G+2] trig: 1
+) -> () {
+  fsm M[3](trig);
+}

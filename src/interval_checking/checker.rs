@@ -11,7 +11,6 @@ fn check_connect(
     dst: &ast::Port,
     src: &ast::Port,
     guard: &Option<ast::Guard>,
-    pos: Option<errors::Span>,
     ctx: &mut Context,
 ) -> FilamentResult<()> {
     ctx.remove_remaning_assign(dst)?;
@@ -25,7 +24,7 @@ fn check_connect(
     }
 
     // If a guard is present, use its availablity instead.
-    let guard_guarantee = if let Some(g) = &guard {
+    let (guarantee, src_pos) = if let Some(g) = &guard {
         let guard_interval = super::total_interval(g, ctx)?;
         log::debug!("Guard availablity is: {guard_interval}");
 
@@ -38,61 +37,80 @@ fn check_connect(
         if let Some(guarantee) = src_guarantee {
             // Require that the guarded value is available for longer that the
             // guard
-            let exact = guard_interval
+            let guard_exact = guard_interval
                 .exact
                 .as_ref()
-                .unwrap_or_else(|| {
-                    panic!("Guard signal must have exact specification")
-                })
-                .clone();
-            ctx.add_obligations(
-                Constraint::subset(exact, guarantee.within.clone()).map(|e| {
-                    e.set_span(pos.clone()).explanation(
-                        "Guard's @exact specification must be shorter than source",
+                .ok_or_else(|| {
+                    Error::malformed(
+                        "Guard signal must have exact specification",
                     )
+                    .with_post_msg(
+                        format!("Guard's specification is {}", guard_interval),
+                        g.copy_span(),
+                    )
+                })?
+                .clone();
+
+            ctx.add_obligations(
+                Constraint::subset(guard_exact.clone(), guarantee.within.clone()).map(|e| {
+                    e.add_note("Guard's @exact specification must be shorter than source", g.copy_span())
+                     .add_note(format!("Guard's exact specification is {}", guard_exact), g.copy_span())
+                     .add_note(format!("Source's specification is {}", guarantee.within), src.copy_span())
                 }),
             );
 
             // Require that the guard's availability is at least as long as the signal.
             ctx.add_obligations(
                 Constraint::subset(
-                    guarantee.within,
+                    guarantee.within.clone(),
                     guard_interval.within.clone(),
                 )
-                .map(|e| e.set_span(pos.clone()).explanation("Guard must be active for at least as long as the source")),
+                .map(|e|
+                     e.add_note("Guard must be active for at least as long as the source", g.copy_span())
+                      .add_note(format!("Guard is active during {}", guard_interval.within), g.copy_span())
+                      .add_note(format!("Source is active for {}", guarantee.within), src.copy_span())),
             );
         }
 
-        Some(guard_interval)
+        (Some(guard_interval), g.copy_span())
     } else {
-        src_guarantee
+        (src_guarantee, src.copy_span())
     };
 
     // If we have: dst = src. We need:
     // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
     // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
-    if let Some(guarantee) = &guard_guarantee {
-        let within_fact =
-            Constraint::subset(requirement.within, guarantee.within.clone())
-                .map(|e| {
-                    e.set_span(pos.clone()).explanation(
-                        "Source must drive destination for required period",
-                    )
-                });
+    if let Some(guarantee) = &guarantee {
+        let within_fact = Constraint::subset(
+            requirement.within.clone(),
+            guarantee.within.clone(),
+        )
+        .map(|e| {
+            e.add_note(
+                format!("Source is available for {}", guarantee.within),
+                src_pos.clone(),
+            )
+            .add_note(
+                format!("Destination's requirement {}", requirement.within),
+                dst.copy_span(),
+            )
+        });
         ctx.add_obligations(within_fact);
     }
 
     if let Some(exact_requirement) = requirement.exact {
-        let guarantee = guard_guarantee.ok_or_else(|| {
+        let guarantee = guarantee.ok_or_else(|| {
             errors::Error::malformed(
-                "Constant port cannot provide @exact guarantee",
-            )
+                "Destination requires @exact guarantee but source does not provide it",
+            ).with_post_msg("Constant port cannot provide @exact specification", src.copy_span())
         })?;
 
         if let Some(exact_guarantee) = guarantee.exact {
             ctx.add_obligations(
-                Constraint::equality(exact_requirement, exact_guarantee)
-                    .map(|e| e.set_span(pos.clone()).explanation("Source must satisfy the exact guarantee of the destination")),
+                Constraint::equality(exact_requirement.clone(), exact_guarantee.clone())
+                    .map(|e| e.add_note("Source must satisfy the exact guarantee of the destination", src_pos.clone())
+                              .add_note(format!("Source's availablity is {}", exact_guarantee), src_pos.clone())
+                              .add_note(format!("Destination's requirement is {}", exact_requirement), dst.copy_span())),
             );
         } else {
             return Err(errors::Error::malformed(
@@ -126,15 +144,27 @@ fn check_invoke<'a>(
         .collect();
 
     // Handle `where` clause constraints and well formedness constraints on intervals.
-    sig.well_formed()
-        // XXX(rachit): This cloned call is stupid
-        .chain(sig.constraints.iter().cloned())
-        .for_each(|con| {
-            ctx.add_obligations(
-                Constraint::constraint(con.resolve(&binding))
-                    .map(|e| e.set_span(invoke.copy_span()).explanation("Component's where clause constraints must be satisfied")),
-            )
-        });
+    sig.well_formed().for_each(|con| {
+        ctx.add_obligations(Constraint::constraint(con.resolve(&binding)).map(
+            |e| {
+                e.add_note(
+                    "Invoke's intervals must be well-formed",
+                    invoke.copy_span(),
+                )
+            },
+        ))
+    });
+
+    sig.constraints.iter().for_each(|con| {
+        ctx.add_obligations(Constraint::constraint(con.resolve(&binding)).map(
+            |e| {
+                e.add_note(
+                    "Component's where clause constraints must be satisfied",
+                    invoke.copy_span(),
+                )
+            },
+        ))
+    });
 
     // Add this invocation to the context
     ctx.add_invocation(
@@ -145,12 +175,10 @@ fn check_invoke<'a>(
     // If this is a high-level invoke, check all port requirements
     if let Some(actuals) = &invoke.ports {
         // Check connections implied by the invocation
-        for ((actual, pos), formal) in actuals.iter().zip(sig.inputs.iter()) {
-            let dst = ast::Port::CompPort {
-                comp: invoke.bind.clone(),
-                name: formal.name.clone(),
-            };
-            check_connect(&dst, actual, &None, Some(pos.clone()), ctx)?;
+        for (actual, formal) in actuals.iter().zip(sig.inputs.iter()) {
+            let dst = ast::Port::comp(invoke.bind.clone(), formal.name.clone())
+                .set_span(formal.copy_span());
+            check_connect(&dst, actual, &None, ctx)?;
         }
     } else {
         ctx.add_remaning_assigns(invoke.bind.clone(), &invoke.instance)?;
@@ -172,9 +200,11 @@ fn check_fsm<'a>(
 
     let guarantee = match ctx.port_guarantees(trigger)? {
         Some(g) => Ok(g),
-        None => Err(Error::malformed(
-            "Constant ports cannot be used to trigger fsm",
-        )),
+        None => Err(Error::malformed("Invalid port for fsm trigger")
+            .with_post_msg(
+                "Cannot use constant port to trigger fsm",
+                trigger.copy_span(),
+            )),
     }?;
 
     let mb_offset = guarantee.as_exact_offset();
@@ -182,11 +212,19 @@ fn check_fsm<'a>(
         offset
     } else {
         return Err(Error::malformed(
-            "Trigger port for the FSM does not provide an exact guarantee",
+            "FSMs trigger port must have an @exact specification",
+        )
+        .with_post_msg(
+            format!("Port's specification is {}", guarantee),
+            trigger.copy_span(),
         ));
     };
     if end != start + 1 {
-        return Err(Error::malformed("Trigger port is high for too long"));
+        return Err(Error::malformed("Trigger port is high for too long")
+            .with_post_msg(
+                format!("Trigger port is active for {} cycles", end - start),
+                trigger.copy_span(),
+            ));
     }
 
     // Prove that the signal is zero during the execution of the FSM
@@ -195,8 +233,9 @@ fn check_fsm<'a>(
     let within = ast::Range::new(start_time.clone(), end_time);
     ctx.add_obligations(ast::Constraint::subset(within, guarantee.within).map(
         |e| {
-            e.set_span(fsm.copy_span()).explanation(
+            e.add_note(
                 "Trigger must not pulse more often than the FSM states",
+                trigger.copy_span(),
             )
         },
     ));
@@ -216,19 +255,18 @@ where
 {
     for cmd in cmds {
         match cmd {
-            ast::Command::Invoke(invoke) => check_invoke(invoke, ctx)
-                .map_err(|err| err.with_pos(invoke.copy_span()))?,
+            ast::Command::Invoke(invoke) => {
+                check_invoke(invoke, ctx).map_err(|err| {
+                    err.with_post_msg("Invalid invoke", invoke.copy_span())
+                })?
+            }
             ast::Command::Instance(ast::Instance { name, component }) => {
                 ctx.add_instance(name.clone(), component)?
             }
-            ast::Command::Fsm(fsm) => check_fsm(fsm, ctx)
-                .map_err(|err| err.with_pos(fsm.copy_span()))?,
-            ast::Command::Connect(
-                con @ ast::Connect {
-                    dst, src, guard, ..
-                },
-            ) => check_connect(dst, src, guard, con.copy_span(), ctx)
-                .map_err(|err| err.with_pos(con.copy_span()))?,
+            ast::Command::Fsm(fsm) => check_fsm(fsm, ctx)?,
+            ast::Command::Connect(ast::Connect {
+                dst, src, guard, ..
+            }) => check_connect(dst, src, guard, ctx)?,
         };
     }
     Ok(())

@@ -1,0 +1,9 @@
+---STDERR---
+error: Guard @exact specification should not overlap
+  ┌─ tests/errors/guard-overlap.fil:9:14
+  │
+9 │   out = g1 | g2 ? in;
+  │         --   ^^ Interval start is is G+1
+  │         │     
+  │         Interval end is G+2
+
