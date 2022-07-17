@@ -1,6 +1,6 @@
 ---STDERR---
 error: Cannot prove constraint G+1 >= G+2
-  ┌─ tests/errors/insufficient-guard.fil:7:9
+  ┌─ tests/errors/guard-insufficient.fil:7:9
   │
 7 │   out = sel ? left;
   │         ^^^   ---- Source is active for [G, G+2]

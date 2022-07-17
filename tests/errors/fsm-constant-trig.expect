@@ -1,6 +1,6 @@
 ---STDERR---
 error: Invalid port for fsm trigger
-  ┌─ tests/errors/constant-trig-fsm.fil:2:12
+  ┌─ tests/errors/fsm-constant-trig.fil:2:12
   │
 2 │   fsm M[5](10);
   │            ^^ Cannot use constant port to trigger fsm

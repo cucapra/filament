@@ -1,6 +1,6 @@
 ---STDERR---
 error: Ports used in guards must have exact guarantees
-  ┌─ tests/errors/inexact-guard.fil:7:9
+  ┌─ tests/errors/guard-inexact.fil:7:9
   │
 7 │   out = sel ? left;
   │         ^^^ Port provides guarantee @[G, G+1].
