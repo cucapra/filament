@@ -81,6 +81,16 @@ impl<'a> ConcreteInvoke<'a> {
     ) -> FilamentResult<ast::Interval> {
         self.resolve_port::<false>(port)
     }
+
+    pub fn get_sig(&self) -> &ast::Signature {
+        match &self {
+            ConcreteInvoke::Concrete { sig, .. } => sig,
+            ConcreteInvoke::This { sig } => sig,
+            ConcreteInvoke::Fsm { .. } => {
+                unreachable!("Called get_sig on FSM instance")
+            }
+        }
+    }
 }
 
 type FactMap = Vec<ast::Constraint>;
@@ -174,6 +184,8 @@ impl<'a> Context<'a> {
         }
     }
 
+    /// Add assignments that must be present to make a low-level invoke work
+    /// correctly.
     pub fn add_remaning_assigns(
         &mut self,
         bind: ast::Id,
@@ -191,6 +203,8 @@ impl<'a> Context<'a> {
         Ok(())
     }
 
+    /// Track event bindings for each instance.
+    /// This is used for the disjointness check.
     pub fn add_event_binds(
         &mut self,
         instance: ast::Id,
@@ -203,6 +217,7 @@ impl<'a> Context<'a> {
             .push((pos, binds));
     }
 
+    /// Remove a remaining assignment from an invoke
     pub fn remove_remaning_assign(
         &mut self,
         port: &ast::Port,
