@@ -16,17 +16,11 @@ fn check_connect(
     ctx.remove_remaning_assign(dst)?;
 
     let requirement = ctx.port_requirements(dst)?;
-    log::debug!("Dest requirement: {requirement}");
-
     let src_guarantee = ctx.port_guarantees(src)?;
-    if let Some(guarantee) = &src_guarantee {
-        log::debug!("Src guarantee: {guarantee}");
-    }
 
     // If a guard is present, use its availablity instead.
     let (guarantee, src_pos) = if let Some(g) = &guard {
         let guard_interval = super::total_interval(g, ctx)?;
-        log::debug!("Guard availablity is: {guard_interval}");
 
         // When we have: dst = g ? ...
         // We need to show that:
@@ -44,7 +38,7 @@ fn check_connect(
                     Error::malformed(
                         "Guard signal must have exact specification",
                     )
-                    .with_post_msg(
+                    .add_note(
                         format!("Guard's specification is {}", guard_interval),
                         g.copy_span(),
                     )
@@ -102,7 +96,7 @@ fn check_connect(
         let guarantee = guarantee.ok_or_else(|| {
             errors::Error::malformed(
                 "Destination requires @exact guarantee but source does not provide it",
-            ).with_post_msg("Constant port cannot provide @exact specification", src.copy_span())
+            ).add_note("Constant port cannot provide @exact specification", src.copy_span())
         })?;
 
         if let Some(exact_guarantee) = guarantee.exact {
@@ -200,11 +194,10 @@ fn check_fsm<'a>(
 
     let guarantee = match ctx.port_guarantees(trigger)? {
         Some(g) => Ok(g),
-        None => Err(Error::malformed("Invalid port for fsm trigger")
-            .with_post_msg(
-                "Cannot use constant port to trigger fsm",
-                trigger.copy_span(),
-            )),
+        None => Err(Error::malformed("Invalid port for fsm trigger").add_note(
+            "Cannot use constant port to trigger fsm",
+            trigger.copy_span(),
+        )),
     }?;
 
     let mb_offset = guarantee.as_exact_offset();
@@ -214,14 +207,14 @@ fn check_fsm<'a>(
         return Err(Error::malformed(
             "FSMs trigger port must have an @exact specification",
         )
-        .with_post_msg(
+        .add_note(
             format!("Port's specification is {}", guarantee),
             trigger.copy_span(),
         ));
     };
     if end != start + 1 {
         return Err(Error::malformed("Trigger port is high for too long")
-            .with_post_msg(
+            .add_note(
                 format!("Trigger port is active for {} cycles", end - start),
                 trigger.copy_span(),
             ));
@@ -257,7 +250,7 @@ where
         match cmd {
             ast::Command::Invoke(invoke) => {
                 check_invoke(invoke, ctx).map_err(|err| {
-                    err.with_post_msg("Invalid invoke", invoke.copy_span())
+                    err.add_note("Invalid invoke", invoke.copy_span())
                 })?
             }
             ast::Command::Instance(ast::Instance { name, component }) => {

@@ -54,7 +54,7 @@ impl Disjoint {
             self.event1, self.event2, self.delay
         ));
         for (n, loc) in self.locations.into_iter().enumerate() {
-            err = err.with_post_msg(format!("Invocation {}", n + 1), Some(loc))
+            err = err.add_note(format!("Invocation {}", n + 1), Some(loc))
         }
         err
     }
@@ -119,7 +119,7 @@ where
             let mut err =
                 Error::malformed(format!("Cannot prove constraint {fact}"));
             for (msg, pos) in fact.notes() {
-                err = err.with_post_msg(msg, pos.clone())
+                err = err.add_note(msg, pos.clone())
             }
             return Err(err);
         }

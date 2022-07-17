@@ -238,12 +238,12 @@ impl Signature<FsmIdxs> {
         for id in &self.interface_signals {
             if id.delay() < max_evs[&id.event].0 {
                 let err = Error::malformed("Invalid interface signal")
-                    .with_post_msg(
+                    .add_note(
                         "Interface does not last long enough",
                         id.copy_span(),
                     );
                 let err = if let Some(ref sp) = max_evs[&id.event].1 {
-                    err.with_post_msg(
+                    err.add_note(
                         "Following signal's requirement is longer than the interface",
                         Some(sp.clone())
                     )
@@ -253,7 +253,7 @@ impl Signature<FsmIdxs> {
                         id.event,
                         id.delay()
                     );
-                    err.with_post_msg(msg, None)
+                    err.add_note(msg, None)
                 };
 
                 return Err(err);
@@ -369,7 +369,7 @@ where
                         return Err(Error::malformed(
                             "Malformed low-level component",
                         )
-                        .with_post_msg(
+                        .add_note(
                             "Low-level component cannot use invoke with ports",
                             inv.copy_span(),
                         ));
@@ -385,12 +385,12 @@ where
                             return Err(Error::malformed(
                                 "Malformed High-level component",
                             )
-                            .with_post_msg("High-level component must use invokes that specify all ports", inv.copy_span()))
+                            .add_note("High-level component must use invokes that specify all ports", inv.copy_span()))
                         }
                     }
                     Command::Fsm(fsm) => {
                         return Err(Error::malformed("Malforemd High-level component")
-                        .with_post_msg("High-level components cannot use `fsm` to schedule execution", fsm.copy_span()))
+                        .add_note("High-level components cannot use `fsm` to schedule execution", fsm.copy_span()))
                     }
                     _ => (),
                 }

@@ -54,7 +54,7 @@ fn transform_range(
             transform_time(range.end)
                 .map(|e| core::Range::new(s, e).set_span(sp.clone()))
         })
-        .map_err(|e| e.with_post_msg("Malformed interval", sp))
+        .map_err(|e| e.add_note("Malformed interval", sp))
 }
 
 fn transform_interval(

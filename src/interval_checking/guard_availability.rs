@@ -31,7 +31,7 @@ fn guard_availability(
                     return Err(Error::malformed(
                         "Guards cannot contain constants",
                     )
-                    .with_post_msg(
+                    .add_note(
                         "Guards cannot contain constants",
                         p.copy_span(),
                     ))
@@ -42,7 +42,7 @@ fn guard_availability(
                 return Err(Error::malformed(
                     "Ports used in guards must have exact guarantees",
                 )
-                .with_post_msg(
+                .add_note(
                     format!("Port provides guarantee {}.", interval),
                     p.copy_span(),
                 ));
@@ -65,11 +65,11 @@ fn merge_availability(intervals: Intervals) -> FilamentResult<ast::Interval> {
             return Err(Error::malformed(
                 "Guard ports are available for different time intervals",
             )
-            .with_post_msg(
+            .add_note(
                 format!("Port is available for {}", diff.within),
                 diff_pos.clone(),
             )
-            .with_post_msg(
+            .add_note(
                 format!("Port is available for {}", int_av0.within),
                 av0_pos.clone(),
             ));
@@ -86,7 +86,7 @@ fn merge_availability(intervals: Intervals) -> FilamentResult<ast::Interval> {
                 Error::malformed(format!(
                     "Cannot convert interval into offset: {iv}",
                 ))
-                .with_post_msg(
+                .add_note(
                     format!("Cannot convert @exact specification into an offset: {iv}"),
                     pos.clone(),
                 )
@@ -103,17 +103,17 @@ fn merge_availability(intervals: Intervals) -> FilamentResult<ast::Interval> {
                 Err(Error::malformed(
                     "Intervals use different events: {event} and {ev}",
                 )
-                .with_post_msg(format!("Event is {event}"), prev_pos.clone())
-                .with_post_msg(format!("Event is {ev}"), cur_pos.clone()))
+                .add_note(format!("Event is {event}"), prev_pos.clone())
+                .add_note(format!("Event is {ev}"), cur_pos.clone()))
             } else if s != end {
                 Err(Error::malformed(
                     "Guard @exact specification should not overlap",
                 )
-                .with_post_msg(
+                .add_note(
                     format!("Interval start is is {ev}+{s}"),
                     cur_pos.clone(),
                 )
-                .with_post_msg(
+                .add_note(
                     format!("Interval end is {ev}+{end}"),
                     prev_pos.clone(),
                 ))

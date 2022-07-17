@@ -109,7 +109,7 @@ fn main() {
             // Construct mapping from files to indices
             let mut labels = vec![];
             let mut notes = vec![];
-            for (idx, (msg, pos)) in err.extra.iter().enumerate() {
+            for (idx, (msg, pos)) in err.notes.iter().enumerate() {
                 if let Some(pos) = pos {
                     let l = Label::new(
                         if idx == 0 {
