@@ -1,0 +1,1 @@
+component Main<G>(@[G, 3] go: 1) -> () {}

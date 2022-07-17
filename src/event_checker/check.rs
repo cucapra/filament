@@ -1,6 +1,6 @@
 use crate::{
     core,
-    errors::{FilamentResult, WithPos},
+    errors::{Error, FilamentResult, WithPos},
     frontend,
 };
 
@@ -36,30 +36,36 @@ fn type_check(it: &frontend::IntervalTime) -> EvType {
     }
 }
 
-fn transform_time(it: frontend::IntervalTime) -> core::FsmIdxs {
-    assert!(
-        type_check(&it) == EvType::Event,
-        "interval time does not represent a valid event"
-    );
-    it.into()
+fn transform_time(it: frontend::IntervalTime) -> FilamentResult<core::FsmIdxs> {
+    if type_check(&it) != EvType::Event {
+        Err(Error::malformed(format!("Not a well formed event: `{it}`")))
+    } else {
+        Ok(it.into())
+    }
 }
 
 fn transform_range(
     range: core::Range<frontend::IntervalTime>,
-) -> core::Range<core::FsmIdxs> {
+) -> FilamentResult<core::Range<core::FsmIdxs>> {
     let sp = range.copy_span();
-    core::Range::new(range.start.into(), range.end.into()).set_span(sp)
+
+    transform_time(range.start)
+        .and_then(|s| {
+            transform_time(range.end)
+                .map(|e| core::Range::new(s, e).set_span(sp.clone()))
+        })
+        .map_err(|e| e.with_post_msg("Malformed interval", sp))
 }
 
 fn transform_interval(
     interval: core::Interval<frontend::IntervalTime>,
-) -> core::Interval<core::FsmIdxs> {
+) -> FilamentResult<core::Interval<core::FsmIdxs>> {
     let sp = interval.copy_span();
-    core::Interval::new(
-        transform_range(interval.within),
-        interval.exact.map(transform_range),
-    )
-    .set_span(sp)
+    let ex = match interval.exact {
+        Some(e) => Some(transform_range(e)?),
+        None => None,
+    };
+    Ok(core::Interval::new(transform_range(interval.within)?, ex).set_span(sp))
 }
 
 fn transform_control(
@@ -68,8 +74,11 @@ fn transform_control(
     match con {
         core::Command::Invoke(inv) => {
             let pos = inv.copy_span();
-            let abs: Vec<core::FsmIdxs> =
-                inv.abstract_vars.into_iter().map(transform_time).collect();
+            let abs: Vec<core::FsmIdxs> = inv
+                .abstract_vars
+                .into_iter()
+                .map(transform_time)
+                .collect::<FilamentResult<_>>()?;
             Ok(core::Invoke::new(inv.bind, inv.instance, abs, inv.ports)
                 .set_span(pos)
                 .into())
@@ -82,10 +91,14 @@ fn transform_control(
 
 fn transform_port_def(
     pd: core::PortDef<frontend::IntervalTime>,
-) -> core::PortDef<core::FsmIdxs> {
+) -> FilamentResult<core::PortDef<core::FsmIdxs>> {
     let sp = pd.copy_span();
-    core::PortDef::new(pd.name, transform_interval(pd.liveness), pd.bitwidth)
-        .set_span(sp)
+    Ok(core::PortDef::new(
+        pd.name,
+        transform_interval(pd.liveness)?,
+        pd.bitwidth,
+    )
+    .set_span(sp))
 }
 
 fn transform_interface_def(
@@ -98,25 +111,33 @@ fn transform_interface_def(
 
 fn transform_constraints(
     con: core::Constraint<frontend::IntervalTime>,
-) -> core::Constraint<core::FsmIdxs> {
-    core::Constraint::new(
-        transform_time(con.left),
-        transform_time(con.right),
+) -> FilamentResult<core::Constraint<core::FsmIdxs>> {
+    Ok(core::Constraint::new(
+        transform_time(con.left)?,
+        transform_time(con.right)?,
         con.op,
-    )
+    ))
 }
 
 fn transform_signature(
     sig: core::Signature<frontend::IntervalTime>,
 ) -> FilamentResult<core::Signature<core::FsmIdxs>> {
     let sig = core::Signature {
-        inputs: sig.inputs.into_iter().map(transform_port_def).collect(),
-        outputs: sig.outputs.into_iter().map(transform_port_def).collect(),
+        inputs: sig
+            .inputs
+            .into_iter()
+            .map(transform_port_def)
+            .collect::<FilamentResult<_>>()?,
+        outputs: sig
+            .outputs
+            .into_iter()
+            .map(transform_port_def)
+            .collect::<FilamentResult<_>>()?,
         constraints: sig
             .constraints
             .into_iter()
             .map(transform_constraints)
-            .collect(),
+            .collect::<FilamentResult<_>>()?,
         interface_signals: sig
             .interface_signals
             .into_iter()
