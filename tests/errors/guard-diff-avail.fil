@@ -1,5 +1,5 @@
 component Main<G>(
-  @interface<G, 6> go_G: 1,
+  @interface[G, G+6] go_G: 1,
   @[G, G+3] in: 32,
   @[G, G+3] + @exact[G, G+1] g1: 1,
   @[G, G+4] + @exact[G+1, G+3] g2: 1,
