@@ -425,7 +425,7 @@ impl FilamentParser {
                 signature(sig),
                 command(body)..
             ] => {
-                Ok(ast::Component::new(sig, body.collect()).unwrap())
+                Ok(ast::Component::new(sig, body.collect()))
             }
         )
     }

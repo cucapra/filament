@@ -8,21 +8,7 @@ extern "core.sv" {
     @[G, G+1] in: 32
   ) -> (
     @[G+1, L] out: 32
-  );
-
-  // Merge two signals with disjoint lifetimes to generate a new signal available
-  // for the union of their lifetimes
-  // Implemented using a temporal mux that switches from signal `in1` to `in2`
-  // on event L.
-  // The signals `in1` and `in2` might exist for more their specified lifetime
-  // in this function's signature but that is okay because inputs only require
-  // signals to be active for at least as long as the requirement
-  component Merge<G, L, E>(
-    @[G, L] in1: 32,
-    @[L, E] in2: 32,
-  ) -> (
-    @[G, E] out: 32,
-  );
+  ) where L > G+1;
 }
 
 extern "binary.sv" {

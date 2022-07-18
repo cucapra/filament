@@ -1,9 +1,6 @@
 use super::{Command, Id, Invoke, Signature, TimeRep};
 use crate::errors::{Error, FilamentResult, WithPos};
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Display,
-};
+use std::{collections::HashMap, fmt::Display};
 
 /// A component in Filament
 pub struct Component<T>
@@ -21,72 +18,50 @@ impl<T> Component<T>
 where
     T: Clone + TimeRep,
 {
-    pub fn validate(
-        sig: &Signature<T>,
-        body: &[Command<T>],
-    ) -> FilamentResult<()> {
-        let is_low = !sig.interface_signals.is_empty();
+    pub fn validate(body: &[Command<T>]) -> FilamentResult<()> {
+        let mut is_low: Option<bool> = None;
 
-        if is_low {
-            // All events should have corresponding interface signals
-            let defined_interfaces = sig
-                .interface_signals
-                .iter()
-                .map(|id| &id.event)
-                .cloned()
-                .collect();
-            let all_events =
-                sig.abstract_vars.iter().cloned().collect::<HashSet<_>>();
-
-            if let Some(ev) = all_events.difference(&defined_interfaces).next()
-            {
-                return Err(Error::malformed(format!("Low-level component does not have define interface port for event `{ev}`")));
-            }
-
-            // There should be no high-level invokes
-            for con in body {
-                if let Command::Invoke(inv @ Invoke { ports, .. }) = &con {
-                    if ports.is_some() {
-                        return Err(Error::malformed(
-                            "Malformed low-level component",
-                        )
-                        .add_note(
-                            "Low-level component cannot use invoke with ports",
-                            inv.copy_span(),
-                        ));
+        for con in body {
+            match con {
+                Command::Invoke(inv @ Invoke { ports, .. }) => match is_low {
+                    Some(true) => {
+                        if ports.is_some() {
+                            return Err(Error::malformed(
+                                "Malformed low-level component",
+                            )
+                            .add_note(
+                                "Low-level component cannot use invoke with ports",
+                                inv.copy_span(),
+                            ));
+                        }
                     }
-                }
-            }
-        } else {
-            // There should be no FSM constructs or low-level invokes
-            for con in body {
-                match &con {
-                    Command::Invoke(inv @ Invoke { ports, .. }) => {
+                    Some(false) => {
                         if ports.is_none() {
                             return Err(Error::malformed(
                                 "Malformed High-level component",
                             )
-                            .add_note("High-level component must use invokes that specify all ports", inv.copy_span()))
+                            .add_note("High-level component must use invokes that specify all ports", inv.copy_span()));
                         }
                     }
-                    Command::Fsm(fsm) => {
+                    None => is_low = Some(ports.is_none()),
+                },
+                Command::Fsm(fsm) => {
+                    if let Some(false) = is_low {
                         return Err(Error::malformed("Malforemd High-level component")
-                        .add_note("High-level components cannot use `fsm` to schedule execution", fsm.copy_span()))
+                        .add_note("High-level components cannot use `fsm` to schedule execution", fsm.copy_span()));
+                    } else if is_low.is_none() {
+                        is_low = Some(true);
                     }
-                    _ => (),
                 }
+                Command::Instance(_) | Command::Connect(_) => (),
             }
         }
 
         Ok(())
     }
 
-    pub fn new(
-        sig: Signature<T>,
-        body: Vec<Command<T>>,
-    ) -> FilamentResult<Self> {
-        Self::validate(&sig, &body)?;
-        Ok(Self { sig, body })
+    pub fn new(sig: Signature<T>, body: Vec<Command<T>>) -> Self {
+        Self { sig, body }
     }
 }
 impl<T> Display for Component<T>

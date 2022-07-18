@@ -115,7 +115,7 @@ impl Signature<FsmIdxs> {
     ///    signal for `E` pulses less often than the length of the interval itself.
     pub fn well_formed(
         &self,
-    ) -> impl Iterator<Item = Constraint<FsmIdxs>> + '_ {
+    ) -> FilamentResult<impl Iterator<Item = Constraint<FsmIdxs>> + '_> {
         let mut evs: HashMap<Id, Vec<_>> = HashMap::new();
 
         // Compute mapping from events to intervals to mention the event in their start time.
@@ -125,18 +125,27 @@ impl Signature<FsmIdxs> {
 
         for port in &self.inputs {
             let delay = port.liveness.within.len();
-            port.liveness.events().into_iter().for_each(|ev| {
-                ev.events().for_each(|(ev, _)| {
-                    evs.entry(ev.clone())
-                        .or_default()
-                        .push((delay.clone(), port.copy_span()))
-                })
-            });
+            for (ev, _) in port.liveness.within.start.events() {
+                // Make sure @interface for event exists
+                if self.get_interface(ev).is_none() {
+                    return Err(Error::malformed(format!(
+                        "Missing @interface port for {ev}"
+                    ))
+                    .add_note(
+                        format!("Input port mentions `{ev}` event in its start time"),
+                        port.liveness.within.copy_span(),
+                    ));
+                }
+                evs.entry(ev.clone())
+                    .or_default()
+                    .push((delay.clone(), port.copy_span()))
+            }
         }
 
-        evs.into_iter()
+        Ok(evs
+            .into_iter()
             .flat_map(|(ev, lens)| {
-                let id = self.get_interface(&ev).unwrap_or_else(|| panic!("Variable mentioned in an input port's start time does not have an @interface port: `{ev}`"));
+                let id = self.get_interface(&ev).unwrap();
                 let len = id.delay();
                 lens.into_iter().map(move |(port_len, port_pos)| {
                     Constraint::from(ConstraintBase::gte(
@@ -154,7 +163,7 @@ impl Signature<FsmIdxs> {
                     )
                 })
             })
-            .chain(self.constraints())
+            .chain(self.constraints()))
     }
 }
 

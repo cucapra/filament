@@ -1,12 +1,13 @@
 ---STDERR---
-error: Cannot prove constraint L+1 > G+1
-   ┌─ ./primitives/core.fil:10:5
-   │
-10 │     @[G+1, L] out: 32
-   │     ^^^^^^^^^ Interval's end time must be greater than the start time
-   │
-   ┌─ tests/errors/unprovable-cons.fil:11:3
-   │
-11 │   l0 := L<G, L+1>(left);
-   │   ---------------------- Invoke's intervals must be well-formed
+error: Cannot prove constraint |G - L| >= |G+1 - G|
+  ┌─ tests/errors/unprovable-cons.fil:4:3
+  │
+4 │   @interface[G, L] go_G: 1,
+  │   ^^^^^^^^^^^^^^^^^^^^^^^^
+  │   │
+  │   Invalid interface
+  │   Interface signal lasts for |G - L|
+5 │   @interface[L, L+1] go_L: 1,
+6 │   @[G, G+1] left: 32,
+  │   ------------------ Input signal lasts for |G+1 - G|
 

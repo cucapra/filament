@@ -203,7 +203,7 @@ fn check_invoke<'a>(
     let (sig, binding) = check_invoke_binds(invoke, ctx)?;
 
     // Handle `where` clause constraints and well formedness constraints on intervals.
-    sig.well_formed().for_each(|con| {
+    sig.well_formed()?.for_each(|con| {
         ctx.add_obligations(iter::once(con.resolve(&binding)).map(|e| {
             e.add_note(
                 "Invoke's intervals must be well-formed",
@@ -327,7 +327,7 @@ fn check_component(
     let mut ctx = Context::from(sigs);
 
     // Ensure that the signature is well-formed
-    ctx.add_obligations(comp.sig.well_formed());
+    ctx.add_obligations(comp.sig.well_formed()?);
 
     // Add instance for this component. Whenever a bare port is used, it refers
     // to the port on this instance.
@@ -341,9 +341,8 @@ fn check_component(
     // Check all the commands
     check_commands(&comp.body, &mut ctx)?;
 
-    let disj = &mut ctx.drain_disjointness()?;
-    let obs = ctx.drain_obligations();
-    super::prove(comp.sig.abstract_vars.iter(), &ctx.facts, obs, disj)?;
+    let obs = ctx.drain_obligations().chain(ctx.drain_disjointness()?);
+    super::prove(comp.sig.abstract_vars.iter(), &ctx.facts, obs)?;
 
     // There should be no remaining assignments after checking a component
     if let Some((comp, ports)) = ctx.get_remaining_assigns().next() {
@@ -369,8 +368,7 @@ pub fn check(namespace: &ast::Namespace) -> FilamentResult<()> {
         super::prove(
             sig.abstract_vars.iter(),
             &sig.constraints,
-            sig.well_formed().collect(),
-            iter::empty(),
+            sig.well_formed()?,
         )?;
     }
 
