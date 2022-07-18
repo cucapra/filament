@@ -1,9 +1,7 @@
 use super::THIS;
 use crate::core::{self, FsmIdxs};
-use crate::errors::{self, Error, FilamentResult};
+use crate::errors::{self, Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
-use crate::interval_checking::solver;
-use itertools::Itertools;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 pub enum ConcreteInvoke<'a> {
@@ -319,7 +317,7 @@ impl<'a> Context<'a> {
     /// Construct disjointness constraints for the current context
     pub fn drain_disjointness(
         &mut self,
-    ) -> FilamentResult<impl Iterator<Item = solver::Disjoint>> {
+    ) -> FilamentResult<impl Iterator<Item = ast::Constraint>> {
         let evs = std::mem::take(&mut self.event_binds);
         let disj = evs
             .into_iter()
@@ -329,8 +327,10 @@ impl<'a> Context<'a> {
         Ok(disj.into_iter().flatten())
     }
 
-    pub fn drain_obligations(&mut self) -> Vec<ast::Constraint> {
-        std::mem::take(&mut self.obligations)
+    pub fn drain_obligations(
+        &mut self,
+    ) -> impl Iterator<Item = ast::Constraint> {
+        std::mem::take(&mut self.obligations).into_iter()
     }
 
     /// Generate disjointness constraints for an instance's event bindinds.
@@ -338,29 +338,17 @@ impl<'a> Context<'a> {
         &self,
         instance: ast::Id,
         binds: Vec<BindsWithLoc>,
-    ) -> FilamentResult<Vec<solver::Disjoint>> {
+    ) -> FilamentResult<Vec<ast::Constraint>> {
         // Get the delay associated with each event.
         let sig = self.get_instance(&instance)?;
 
-        // If there is no interface port associated with an event, it is ignored.
-        // This only happens for primitive components.
-        let delays: Vec<Option<u64>> = sig
-            .abstract_vars
-            .iter()
-            .map(|ev| {
-                sig.interface_signals
-                    .iter()
-                    .find(|id| id.event == ev)
-                    .map(|id| id.delay().try_into().unwrap())
-            })
-            .collect_vec();
-
         // Iterate over each event
         let mut constraints = Vec::new();
-        let events = delays.len();
         let num_binds = binds.len();
-        (0..events).for_each(|ev| {
-            if let Some(delay) = delays[ev] {
+        sig.abstract_vars.iter().enumerate().for_each(|(idx, abs)| {
+            // If there is no interface port associated with an event, it is ignored.
+            // This only happens for primitive components.
+            if let Some(id) = sig.get_interface(abs) {
                 // For each event
                 for i in 0..num_binds {
                     // The i'th use conflicts with all other uses
@@ -368,19 +356,37 @@ impl<'a> Context<'a> {
                         let (spi, bi) = &binds[i];
                         let (spk, bk) = &binds[k];
                         constraints.push(
-                            solver::Disjoint::new(
-                                bi[ev].clone(),
-                                bk[ev].clone(),
-                                delay,
+                            ast::Constraint::from(ast::CBS::gte(
+                                bi[idx].clone() - bk[idx].clone(),
+                                id.delay(),
+                            ))
+                            .add_note(
+                                format!(
+                                    "Conflicting invoke. Invoke provides binding {abs}={}",
+                                    bk[idx].clone()
+                                ),
+                                spk.clone(),
                             )
-                            .add_locations(
-                                spi.iter().chain(spk.iter()).cloned(),
-                            ),
+                            .add_note(
+                                format!(
+                                    "Invoke provides binding {abs}={}",
+                                    bi[idx].clone()
+                                ),
+                                spi.clone(),
+                            )
+                            .add_note(
+                                format!(
+                                    "@interface for {abs} specifies that invokes must {} apart",
+                                    id.delay()
+                                ),
+                                id.copy_span()
+                            )
                         )
                     }
                 }
             }
         });
+
         Ok(constraints)
     }
 }

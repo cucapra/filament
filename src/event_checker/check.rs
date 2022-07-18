@@ -1,5 +1,5 @@
 use crate::{
-    core,
+    core::{self, Component},
     errors::{Error, FilamentResult, WithPos},
     frontend,
 };
@@ -105,7 +105,8 @@ fn transform_interface_def(
     id: core::InterfaceDef<frontend::IntervalTime>,
 ) -> FilamentResult<core::InterfaceDef<core::FsmIdxs>> {
     let sp = id.copy_span();
-    let d = transform_time(id.end)?;
+    let d = transform_time(id.end)
+        .map_err(|e| e.add_note("Malformed interval", sp.clone()))?;
     Ok(
         core::InterfaceDef::<core::FsmIdxs>::new(id.name, id.event, d)
             .set_span(sp),
@@ -162,7 +163,13 @@ pub fn check_and_transform(
                 .map(transform_control)
                 .collect::<FilamentResult<Vec<_>>>()?;
 
-            core::Component::new(transform_signature(comp.sig)?, commands)
+            // Validate the component body
+            Component::validate(&commands)?;
+
+            Ok(core::Component::new(
+                transform_signature(comp.sig)?,
+                commands,
+            ))
         })
         .collect::<FilamentResult<Vec<_>>>()?;
 
