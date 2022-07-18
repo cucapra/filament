@@ -1,13 +1,13 @@
 ---STDERR---
-error: Instance requires event to pulse no more than every 5 cycles but provided event may pulse every 3 cycles
+error: Cannot prove constraint |L - L+3| > |max(T+1, L+4) - max(T+6, L+9)|
    ┌─ tests/errors/invoke-max-trig-too-often.fil:12:3
    │
- 3 │     @interface<G, 5> go_G: 1,
-   │     ------------------------ Interface requires event to trigger once in 5 cycles
+ 3 │     @interface[G, G+5] go_G: 1,
+   │     -------------------------- Interface requires event to trigger once in |max(T+1, L+4) - max(T+6, L+9)| cycles
    ·
- 9 │   @interface<L, 3> go_L: 1
-   │   ------------------------ Provided event may trigger every 3 cycles
+ 9 │   @interface[L, L+3] go_L: 1
+   │   -------------------------- Provided event may trigger every |L - L+3| cycles
    ·
 12 │   m0 := invoke M<max(T+1, L+4)>;
-   │   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Event binding violates @interface specification
+   │   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Event provided to invoke pulses more often than @interface allows
 
