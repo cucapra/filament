@@ -1,3 +1,4 @@
+use super::THIS;
 use crate::core::{self, FsmIdxs};
 use crate::errors::{self, Error, FilamentResult};
 use crate::event_checker::ast;
@@ -234,7 +235,7 @@ impl<'a> Context<'a> {
     }
 
     /// Add a new known fact
-    pub fn add_fact<F>(&mut self, facts: F)
+    pub fn add_facts<F>(&mut self, facts: F)
     where
         F: Iterator<Item = ast::Constraint>,
     {
@@ -286,10 +287,9 @@ impl<'a> Context<'a> {
                  * always available. */
                 None
             }
-            ast::PortType::ThisPort(port) => Some(
-                self.get_invoke(&super::THIS.into())?
-                    .port_guarantees(port)?,
-            ),
+            ast::PortType::ThisPort(port) => {
+                Some(self.get_invoke(&THIS.into())?.port_guarantees(port)?)
+            }
 
             ast::PortType::CompPort { comp, name } => {
                 Some(self.get_invoke(comp)?.port_guarantees(name)?)
@@ -307,9 +307,9 @@ impl<'a> Context<'a> {
                  * always available. */
                 unreachable!("destination port cannot be a constant")
             }
-            ast::PortType::ThisPort(port) => Ok(self
-                .get_invoke(&super::THIS.into())?
-                .port_requirements(port)?),
+            ast::PortType::ThisPort(port) => {
+                Ok(self.get_invoke(&THIS.into())?.port_requirements(port)?)
+            }
             ast::PortType::CompPort { comp, name } => {
                 Ok(self.get_invoke(comp)?.port_requirements(name)?)
             }
@@ -344,14 +344,14 @@ impl<'a> Context<'a> {
 
         // If there is no interface port associated with an event, it is ignored.
         // This only happens for primitive components.
-        let delays = sig
+        let delays: Vec<Option<u64>> = sig
             .abstract_vars
             .iter()
             .map(|ev| {
                 sig.interface_signals
                     .iter()
                     .find(|id| id.event == ev)
-                    .map(|id| id.delay().concrete().unwrap())
+                    .map(|id| id.delay().try_into().unwrap())
             })
             .collect_vec();
 

@@ -1,10 +1,13 @@
 ---STDERR---
-error: Invalid interface signal
+error: Cannot prove constraint |L - L+1| >= |L+2 - L|
   ┌─ tests/errors/invalid-interface.fil:4:5
   │
-4 │     @interface<L, 1> go_L: 1,
-  │     ^^^^^^^^^^^^^^^^^^^^^^^^ Interface does not last long enough
+4 │     @interface[L, L+1] go_L: 1,
+  │     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  │     │
+  │     Invalid interface
+  │     Interface signal lasts for |L - L+1|
 5 │     @[G, G+1] in1: 32,
 6 │     @[L, L+2] in2: 32,
-  │     ----------------- Following signal's requirement is longer than the interface
+  │     ----------------- Input signal lasts for |L+2 - L|
 

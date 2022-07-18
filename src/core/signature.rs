@@ -1,7 +1,10 @@
-use std::{fmt::Display, collections::HashMap};
+use super::{
+    Constraint, ConstraintBase, FsmIdxs, Id, InterfaceDef, Interval, PortDef,
+    TimeRep,
+};
+use crate::errors::{Error, FilamentResult, WithPos};
 use itertools::Itertools;
-use crate::errors::{FilamentResult, Error, WithPos};
-use super::{TimeRep, Id, InterfaceDef, PortDef, Constraint, Interval, FsmIdxs, ConstraintBase};
+use std::{collections::HashMap, fmt::Display};
 
 /// The signature of a component definition
 #[derive(Clone)]
@@ -29,12 +32,12 @@ where
     pub outputs: Vec<PortDef<T>>,
 
     /// Constraints on the abstract variables in the signature
-    pub constraints: Vec<super::Constraint<T>>,
+    pub constraints: Vec<Constraint<T>>,
 }
 
 impl<T> Signature<T>
 where
-    T: Clone + TimeRep,
+    T: TimeRep,
 {
     // Generate a new signature that has been reversed: inputs are outputs
     // with outputs.
@@ -90,14 +93,9 @@ where
             Error::undefined(port.clone(), kind.to_string())
         })
     }
-}
 
-impl<T> Signature<T>
-where
-    T: Clone + TimeRep + PartialEq + PartialOrd,
-{
     /// Constraints for well formed under a binding
-    pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> + '_ {
+    fn constraints(&self) -> impl Iterator<Item = Constraint<T>> + '_ {
         self.inputs
             .iter()
             .chain(self.outputs.iter())
@@ -109,6 +107,57 @@ where
             )
     }
 }
+
+impl Signature<FsmIdxs> {
+    /// Constraints generated to ensure that a signature is well-formed.
+    /// 1. Ensure that all the intervals are well formed
+    /// 2. Ensure for each interval that mentions event `E` in its start time, the @interface
+    ///    signal for `E` pulses less often than the length of the interval itself.
+    pub fn well_formed(
+        &self,
+    ) -> impl Iterator<Item = Constraint<FsmIdxs>> + '_ {
+        let mut evs: HashMap<Id, Vec<_>> = HashMap::new();
+
+        // Compute mapping from events to intervals to mention the event in their start time.
+        // In the same way use of `E` in an invoke describes how often the invoke might trigger,
+        // the start time of the signal describes when the signal is triggered.
+        // We do not consider the end time because that only effects the length of the signal.
+
+        for port in &self.inputs {
+            let delay = port.liveness.within.len();
+            port.liveness.events().into_iter().for_each(|ev| {
+                ev.events().for_each(|(ev, _)| {
+                    evs.entry(ev.clone())
+                        .or_default()
+                        .push((delay.clone(), port.copy_span()))
+                })
+            });
+        }
+
+        evs.into_iter()
+            .flat_map(|(ev, lens)| {
+                let id = self.get_interface(&ev).unwrap_or_else(|| panic!("Variable mentioned in an input port's start time does not have an @interface port: `{ev}`"));
+                let len = id.delay();
+                lens.into_iter().map(move |(port_len, port_pos)| {
+                    Constraint::from(ConstraintBase::gte(
+                        len.clone(),
+                        port_len.clone(),
+                    ))
+                    .add_note("Invalid interface", id.copy_span())
+                    .add_note(
+                        format!("Input signal lasts for {}", port_len),
+                        port_pos,
+                    )
+                    .add_note(
+                        format!("Interface signal lasts for {}", len),
+                        id.copy_span(),
+                    )
+                })
+            })
+            .chain(self.constraints())
+    }
+}
+
 impl<T> Display for Signature<T>
 where
     T: Display + Clone + TimeRep,
@@ -149,42 +198,5 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{self}")
-    }
-}
-
-impl Signature<FsmIdxs> {
-    /// Validate a signature instance.
-    pub fn validate(&self) -> impl Iterator<Item = Constraint<FsmIdxs>> + '_ {
-        // The interface is invalid if the interface signal is shorter than
-        // an input signal's requirement.
-        let mut max_evs: HashMap<_, _> = self
-            .abstract_vars
-            .iter()
-            .map(|ev| (ev, (0, None)))
-            .collect();
-
-        for port in &self.inputs {
-            port.liveness.events().into_iter().for_each(|ev| {
-                ev.events().for_each(|(ev, st)| {
-                    if max_evs[ev].0 < *st {
-                        *max_evs.get_mut(ev).unwrap() = (*st, port.copy_span());
-                    }
-                })
-            });
-        }
-
-        self.interface_signals.iter().map(move |id| {
-            let (st, pos) = &max_evs[&id.event];
-            let cons: Constraint<FsmIdxs> = ConstraintBase::lt(
-                FsmIdxs::unit(id.event.clone(), *st),
-                id.end.clone(),
-            )
-            .into();
-            cons.add_note("Interface does not last long enough", id.copy_span())
-                .add_note(
-                    "Input signal's requirement lasts longer",
-                    pos.clone(),
-                )
-        })
     }
 }

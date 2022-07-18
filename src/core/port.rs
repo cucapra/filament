@@ -1,7 +1,6 @@
-use std::fmt::Display;
+use super::{FsmIdxs, Id, Interval, Range, TimeRep, TimeSub, WithTime};
 use crate::errors::{self, WithPos};
-use super::{TimeRep, Id, Interval, Range, FsmIdxs, TimeSub};
-
+use std::fmt::Display;
 
 #[derive(Clone)]
 pub struct PortDef<T>
@@ -50,6 +49,17 @@ where
 
     fn copy_span(&self) -> Option<errors::Span> {
         self.pos.clone()
+    }
+}
+impl<T: Clone + TimeRep> WithTime<T> for PortDef<T> {
+    fn resolve(
+        &self,
+        bindings: &std::collections::HashMap<super::Id, &T>,
+    ) -> Self {
+        Self {
+            liveness: self.liveness.resolve(bindings),
+            ..self.clone()
+        }
     }
 }
 
@@ -124,4 +134,3 @@ where
         self.pos.clone()
     }
 }
-

@@ -1,5 +1,5 @@
 ---STDERR---
-error: Cannot prove constraint |L - L+3| > |max(T+1, L+4) - max(T+6, L+9)|
+error: Cannot prove constraint |L - L+3| >= |max(T+1, L+4) - max(T+6, L+9)|
    ┌─ tests/errors/invoke-max-trig-too-often.fil:12:3
    │
  3 │     @interface[G, G+5] go_G: 1,

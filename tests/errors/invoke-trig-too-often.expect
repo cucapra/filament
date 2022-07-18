@@ -1,5 +1,5 @@
 ---STDERR---
-error: Cannot prove constraint |T - T+3| > |T+1 - T+6|
+error: Cannot prove constraint |T - T+3| >= |T+1 - T+6|
   ┌─ tests/errors/invoke-trig-too-often.fil:9:3
   │
 3 │     @interface[G, G+5] go_G: 1,

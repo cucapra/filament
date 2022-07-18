@@ -9,7 +9,7 @@ syn match filamentConstant "\v<[0-9]+('d[0-9]+)?>"
 syn match filamentOperator "\v\@(exact)?" nextgroup=filamentInterval skipwhite
 syn region filamentInterval start="\v\[" end="\v\]" contained contains=filamentType,filamentConstant
 
-syn match filamentOperator "\v\@interface" nextgroup=filamentAbsVar skipwhite
+syn match filamentOperator "\v\@interface" nextgroup=filamentInterval skipwhite
 
 " Components
 syn match filamentKeyword "\vcomponent|new" nextgroup=filamentCompName skipwhite
