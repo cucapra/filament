@@ -149,20 +149,21 @@ fn check_invoke_binds<'a>(
         if let Some(interface) = sig.get_interface(abs) {
             // Each event in the binding must pulse less often than the interface of the abstract
             // variable.
-            for (ev, _) in evs.events() {
+            for (event, _) in evs.events() {
                 // Get interface for this event
-                let ev_int =
-                    this_sig.get_interface(ev).ok_or_else(|| {
+                let event_interface =
+                    this_sig.get_interface(event).ok_or_else(|| {
                         Error::malformed(format!(
-                            "Event {ev} does not have a corresponding interface signal"
+                            "Event {event} does not have a corresponding interface signal"
                         ))
                     })?;
-
                 let int_len = interface.delay().resolve(&binding);
-                let ev_int_len = ev_int.delay();
-                let cons = Constraint::from(ast::CBS::lt(
-                    int_len.clone(),
+                let ev_int_len = event_interface.delay();
+
+                // Generate constraint
+                let cons = Constraint::from(ast::CBS::gte(
                     ev_int_len.clone(),
+                    int_len.clone(),
                 ))
                 .add_note(
                     "Event provided to invoke pulses more often than @interface allows",
@@ -173,7 +174,7 @@ fn check_invoke_binds<'a>(
                         "Provided event may trigger every {} cycles",
                         ev_int_len,
                     ),
-                    ev_int.copy_span(),
+                    event_interface.copy_span(),
                 )
                 .add_note(
                     format!(
@@ -326,7 +327,7 @@ fn check_component(
     let mut ctx = Context::from(sigs);
 
     // Ensure that the signature is well-formed
-    ctx.add_obligations(comp.sig.validate());
+    ctx.add_obligations(comp.sig.well_formed());
 
     // Add instance for this component. Whenever a bare port is used, it refers
     // to the port on this instance.
@@ -335,10 +336,7 @@ fn check_component(
     ctx.add_invocation(THIS.into(), this_instance)?;
 
     // Add constraints on the interface as assumptions
-    rev_sig
-        .constraints
-        .iter()
-        .for_each(|con| ctx.add_fact(iter::once(con.clone())));
+    ctx.add_facts(rev_sig.constraints.iter().cloned());
 
     // Check all the commands
     check_commands(&comp.body, &mut ctx)?;
@@ -365,6 +363,16 @@ fn check_component(
 /// the interval requirements to be proven.
 pub fn check(namespace: &ast::Namespace) -> FilamentResult<()> {
     let mut sigs = namespace.signatures();
+
+    // Check that all signatures are well formed
+    for sig in sigs.values() {
+        super::prove(
+            sig.abstract_vars.iter(),
+            &sig.constraints,
+            sig.well_formed().collect(),
+            iter::empty(),
+        )?;
+    }
 
     for comp in &namespace.components {
         check_component(comp, &sigs)?;

@@ -145,7 +145,7 @@ impl visitor::Transform for CompileInvokes {
                         ev.clone(),
                         ast::Fsm::new(
                             format!("{}_fsm", ev).into(),
-                            interface.delay().concrete().expect(
+                            interface.delay().try_into().expect(
                                 "Cannot compile complex interface signals",
                             ),
                             ast::Port::this(interface.name.clone()),

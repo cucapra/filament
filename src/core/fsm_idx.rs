@@ -171,18 +171,18 @@ impl Range<FsmIdxs> {
     }
 }
 
-impl TimeSub<FsmIdxs> {
-    /// Attempts to convert this FsmIdxSub into a concrete value.
-    /// This is only possible when both operands are non-max expressions that use the same events.
-    pub fn concrete(&self) -> Option<u64> {
-        let l_len = self.a.fsms.len();
-        if l_len == 1 && l_len == self.b.fsms.len() {
-            let (l_ev, l_st) = &self.a.events().next().unwrap();
-            let (r_ev, r_st) = &self.b.events().next().unwrap();
+impl TryFrom<TimeSub<FsmIdxs>> for u64 {
+    type Error = ();
+
+    fn try_from(val: TimeSub<FsmIdxs>) -> Result<Self, Self::Error> {
+        let l_len = val.a.fsms.len();
+        if l_len == 1 && l_len == val.b.fsms.len() {
+            let (l_ev, l_st) = &val.a.events().next().unwrap();
+            let (r_ev, r_st) = &val.b.events().next().unwrap();
             if l_ev == r_ev {
-                return Some(l_st.abs_diff(**r_st));
+                return Ok(l_st.abs_diff(**r_st));
             }
         }
-        None
+        Err(())
     }
 }

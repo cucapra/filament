@@ -17,7 +17,7 @@ where
 
 impl<T> Range<T>
 where
-    T: TimeRep + Clone + PartialOrd,
+    T: TimeRep,
 {
     /// Generate constraints for well formedness of this range.
     pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> {
@@ -31,6 +31,11 @@ where
                 self.pos.clone(),
             ),
         )
+    }
+
+    /// Return the length of this range
+    pub fn len(&self) -> T::SubRep {
+        self.end.clone().sub(self.start.clone())
     }
 }
 
@@ -101,7 +106,7 @@ where
 }
 impl<T> Interval<T>
 where
-    T: super::TimeRep + Clone,
+    T: TimeRep + Clone,
 {
     pub fn new(within: Range<T>, exact: Option<Range<T>>) -> Self {
         Self {
@@ -134,7 +139,7 @@ where
 }
 impl<T> Interval<T>
 where
-    T: super::TimeRep + Clone + PartialOrd + PartialEq,
+    T: TimeRep,
 {
     /// Generate well formedness constraints for this interval
     pub fn well_formed(&self) -> Vec<Constraint<T>> {
@@ -156,7 +161,7 @@ where
 }
 impl<T> errors::WithPos for Interval<T>
 where
-    T: super::TimeRep,
+    T: TimeRep,
 {
     fn set_span(mut self, sp: Option<errors::Span>) -> Self {
         self.pos = sp;
@@ -170,7 +175,7 @@ where
 
 impl<T> From<Range<T>> for Interval<T>
 where
-    T: super::TimeRep + Clone,
+    T: TimeRep + Clone,
 {
     fn from(within: Range<T>) -> Self {
         Interval {
@@ -183,7 +188,7 @@ where
 
 impl<T> Display for Interval<T>
 where
-    T: Display + Clone + super::TimeRep,
+    T: Display + Clone + TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "@{}", self.within)?;
