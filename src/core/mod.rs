@@ -5,8 +5,12 @@ mod fsm_idx;
 mod id;
 mod interval;
 mod time_rep;
+mod signature;
+mod port;
 
-pub use component::{Component, InterfaceDef, Namespace, PortDef, Signature};
+pub use port::{InterfaceDef, PortDef};
+pub use signature::Signature;
+pub use component::{Component, Namespace};
 pub use constraint::{Constraint, ConstraintBase};
 pub use control::{
     Command, Connect, Fsm, Guard, Instance, Invoke, Port, PortType, When,
