@@ -1,12 +1,12 @@
 extern "dummy.sv" {
   component Mult<G>(
-    @interface<G, 5> go_G: 1,
+    @interface[G, G+5] go_G: 1,
   ) -> ();
 }
 
 component Main<T, L>(
-  @interface<T, 6> go_T: 1,
-  @interface<L, 3> go_L: 1
+  @interface[T, T+6] go_T: 1,
+  @interface[L, L+3] go_L: 1
 ) -> () {
   M := new Mult;
   m0 := invoke M<max(T+1, L+4)>;

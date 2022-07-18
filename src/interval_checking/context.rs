@@ -117,7 +117,7 @@ pub struct Context<'a> {
     obligations: FactMap,
 
     /// Set of assumed facts
-    facts: FactMap,
+    pub facts: FactMap,
 }
 
 impl<'a> From<&'a HashMap<ast::Id, &'a ast::Signature>> for Context<'a> {
@@ -131,24 +131,6 @@ impl<'a> From<&'a HashMap<ast::Id, &'a ast::Signature>> for Context<'a> {
             obligations: Vec::default(),
             facts: Vec::default(),
         }
-    }
-}
-
-/// Decompose Context into obligations and facts
-impl TryFrom<Context<'_>> for (FactMap, FactMap, Vec<solver::Disjoint>) {
-    type Error = errors::Error;
-
-    fn try_from(mut val: Context) -> FilamentResult<Self> {
-        let evs = std::mem::take(&mut val.event_binds);
-        let disj = evs
-            .into_iter()
-            .map(|(inst, binds)| val.disjointness(inst, binds))
-            .collect::<FilamentResult<Vec<_>>>()?;
-        Ok((
-            val.obligations,
-            val.facts,
-            disj.into_iter().flatten().collect(),
-        ))
     }
 }
 
@@ -334,6 +316,23 @@ impl<'a> Context<'a> {
         }
     }
 
+    /// Construct disjointness constraints for the current context
+    pub fn drain_disjointness(
+        &mut self,
+    ) -> FilamentResult<impl Iterator<Item = solver::Disjoint>> {
+        let evs = std::mem::take(&mut self.event_binds);
+        let disj = evs
+            .into_iter()
+            .map(|(inst, binds)| self.disjointness(inst, binds))
+            .collect::<FilamentResult<Vec<_>>>()?;
+
+        Ok(disj.into_iter().flatten())
+    }
+
+    pub fn drain_obligations(&mut self) -> Vec<ast::Constraint> {
+        std::mem::take(&mut self.obligations)
+    }
+
     /// Generate disjointness constraints for an instance's event bindinds.
     fn disjointness(
         &self,
@@ -352,7 +351,7 @@ impl<'a> Context<'a> {
                 sig.interface_signals
                     .iter()
                     .find(|id| id.event == ev)
-                    .map(|id| id.delay())
+                    .map(|id| id.delay().unwrap())
             })
             .collect_vec();
 

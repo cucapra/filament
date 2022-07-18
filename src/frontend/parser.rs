@@ -142,10 +142,10 @@ impl FilamentParser {
 
     // ================ Signature =====================
 
-    fn interface(input: Node) -> ParseResult<(ast::Id, u64)> {
+    fn interface(input: Node) -> ParseResult<(ast::Id, IntervalTime)> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(tvar), bitwidth(len)] => (tvar, len),
+            [identifier(tvar), time(t)] => (tvar, t),
         ))
     }
 
@@ -153,8 +153,8 @@ impl FilamentParser {
         let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.clone().into_children();
-            [interface((time_var, len)), identifier(name), bitwidth(_)] => {
-                Port::Int(ast::InterfaceDef::new(name, time_var, len).set_span(Some(sp)))
+            [interface((time_var, time)), identifier(name), bitwidth(_)] => {
+                Port::Int(ast::InterfaceDef::new(name, time_var, time).set_span(Some(sp)))
             },
             [identifier(name), bitwidth(bitwidth)] => {
                 Port::Un((name, bitwidth))
@@ -306,27 +306,27 @@ impl FilamentParser {
                 time(l),
                 eq(_),
                 time(r)
-            ] => ast::Constraint::new(l, r, ast::OrderOp::Eq),
+            ] => ast::ConstraintBase::eq(l, r).into(),
             [
                 time(l),
                 gt(_),
                 time(r)
-            ] => ast::Constraint::new(l, r, ast::OrderOp::Gt),
+            ] => ast::ConstraintBase::lt(r, l).into(),
             [
                 time(l),
                 lt(_),
                 time(r)
-            ] => ast::Constraint::new(r, l, ast::OrderOp::Gt),
+            ] => ast::ConstraintBase::lt(l, r).into(),
             [
                 time(l),
                 lte(_),
                 time(r)
-            ] => ast::Constraint::new(r, l, ast::OrderOp::Gte),
+            ] => ast::ConstraintBase::gte(r, l).into(),
             [
                 time(l),
                 gte(_),
                 time(r)
-            ] => ast::Constraint::new(l, r, ast::OrderOp::Gte),
+            ] => ast::ConstraintBase::gte(l, r).into(),
         );
         Ok(cons)
     }

@@ -78,7 +78,7 @@ interval = _{
 
 // Ports
 interface = {
-  "@interface" ~ "<" ~ identifier ~ "," ~ bitwidth ~ ">"
+  "@interface" ~ "[" ~ identifier ~ "," ~ time ~ "]"
 }
 port_def = {
   (interval | interface)? ~ identifier ~ ":" ~ bitwidth

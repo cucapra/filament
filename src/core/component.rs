@@ -1,7 +1,8 @@
 use itertools::Itertools;
 
 use super::{
-    Command, Constraint, FsmIdxs, Id, Interval, Invoke, Range, TimeRep,
+    Command, Constraint, ConstraintBase, FsmIdxs, Id, Interval, Invoke, Range,
+    TimeRep,
 };
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use std::{
@@ -68,8 +69,8 @@ where
     pub name: Id,
     // Event that this port is an evidence of
     pub event: Id,
-    // Delay required for this signal
-    delay: u64,
+    // End event
+    pub end: T,
     // Liveness of the interface signal
     liveness: Interval<T>,
     // Position
@@ -82,8 +83,8 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "@interface<{}, {}> {}: 1",
-            self.event, self.delay, self.name
+            "@interface[{}, {}] {}: 1",
+            self.event, self.end, self.name
         )
     }
 }
@@ -92,31 +93,39 @@ impl<T> InterfaceDef<T>
 where
     T: TimeRep + Clone,
 {
-    pub fn new(name: Id, event: Id, delay: u64) -> Self
+    pub fn new(name: Id, event: Id, end: T) -> Self
     where
         T: TimeRep + Clone,
     {
         let start = T::unit(event.clone(), 0);
-        let liveness = Interval::from(Range::new(
-            start.clone(),
-            start.clone().increment(delay),
-        ))
-        .with_exact(Range::new(start.clone(), start.increment(1)));
+        let liveness = Interval::from(Range::new(start.clone(), end.clone()))
+            .with_exact(Range::new(start.clone(), start.increment(1)));
         Self {
             name,
+            end,
             event,
-            delay,
             liveness,
             pos: None,
         }
     }
+}
 
-    pub fn delay(&self) -> u64 {
-        self.delay
-    }
-
-    pub fn liveness(&self) -> &Interval<T> {
-        &self.liveness
+impl InterfaceDef<FsmIdxs> {
+    /// Attempts to return a concrete delay for this interface. Panics if the
+    /// end time is a max-expression or uses different time variables
+    pub fn delay(&self) -> Option<u64> {
+        if let Some((ev, st)) = self.end.as_unit() {
+            if ev == &self.event {
+                Some(*st)
+            } else {
+                panic!(
+                    "Interface for event `{}` uses distinct end event `{ev}`",
+                    self.event
+                )
+            }
+        } else {
+            panic!("Cannot convert {self} into a unit time event")
+        }
     }
 }
 
@@ -225,7 +234,7 @@ where
 
 impl Signature<FsmIdxs> {
     /// Validate a signature instance.
-    pub fn validate(&self) -> FilamentResult<()> {
+    pub fn validate(&self) -> impl Iterator<Item = Constraint<FsmIdxs>> + '_ {
         // The interface is invalid if the interface signal is shorter than
         // an input signal's requirement.
         let mut max_evs: HashMap<_, _> = self
@@ -244,32 +253,19 @@ impl Signature<FsmIdxs> {
             });
         }
 
-        for id in &self.interface_signals {
-            if id.delay() < max_evs[&id.event].0 {
-                let err = Error::malformed("Invalid interface signal")
-                    .add_note(
-                        "Interface does not last long enough",
-                        id.copy_span(),
-                    );
-                let err = if let Some(ref sp) = max_evs[&id.event].1 {
-                    err.add_note(
-                        "Following signal's requirement is longer than the interface",
-                        Some(sp.clone())
-                    )
-                } else {
-                    let msg = format!(
-                        "An input signal's requirement ends at `{}+{}`",
-                        id.event,
-                        id.delay()
-                    );
-                    err.add_note(msg, None)
-                };
-
-                return Err(err);
-            }
-        }
-
-        Ok(())
+        self.interface_signals.iter().map(move |id| {
+            let (st, pos) = &max_evs[&id.event];
+            let cons: Constraint<FsmIdxs> = ConstraintBase::lt(
+                FsmIdxs::unit(id.event.clone(), *st),
+                id.end.clone(),
+            )
+            .into();
+            cons.add_note("Interface does not last long enough", id.copy_span())
+                .add_note(
+                    "Input signal's requirement lasts longer",
+                    pos.clone(),
+                )
+        })
     }
 }
 

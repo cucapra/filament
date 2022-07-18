@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use crate::errors;
 
-use super::{Constraint, Id, TimeRep};
+use super::{Constraint, ConstraintBase, Id, TimeRep};
 
 /// A range over time representation
 #[derive(Clone)]
@@ -22,7 +22,11 @@ where
     /// Generate constraints for well formedness of this range.
     pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> {
         std::iter::once(
-            Constraint::lt(self.start.clone(), self.end.clone()).add_note(
+            Constraint::from(ConstraintBase::lt(
+                self.start.clone(),
+                self.end.clone(),
+            ))
+            .add_note(
                 "Interval's end time must be greater than the start time",
                 self.pos.clone(),
             ),
@@ -131,9 +135,9 @@ where
         self.exact
             .iter()
             .flat_map(|ex| {
-                Constraint::subset(ex.clone(), self.within.clone())
+                ConstraintBase::subset(ex.clone(), self.within.clone())
                     .map(|con| {
-                        con.add_note(
+                        Constraint::from(con).add_note(
                             "@exact must be a subset of total interval",
                             self.pos.clone(),
                         )

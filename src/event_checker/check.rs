@@ -103,20 +103,19 @@ fn transform_port_def(
 
 fn transform_interface_def(
     id: core::InterfaceDef<frontend::IntervalTime>,
-) -> core::InterfaceDef<core::FsmIdxs> {
-    let d = id.delay();
+) -> FilamentResult<core::InterfaceDef<core::FsmIdxs>> {
     let sp = id.copy_span();
-    core::InterfaceDef::<core::FsmIdxs>::new(id.name, id.event, d).set_span(sp)
+    let d = transform_time(id.end)?;
+    Ok(
+        core::InterfaceDef::<core::FsmIdxs>::new(id.name, id.event, d)
+            .set_span(sp),
+    )
 }
 
 fn transform_constraints(
     con: core::Constraint<frontend::IntervalTime>,
 ) -> FilamentResult<core::Constraint<core::FsmIdxs>> {
-    Ok(core::Constraint::new(
-        transform_time(con.left)?,
-        transform_time(con.right)?,
-        con.op,
-    ))
+    con.map(&transform_time)
 }
 
 fn transform_signature(
@@ -142,12 +141,11 @@ fn transform_signature(
             .interface_signals
             .into_iter()
             .map(transform_interface_def)
-            .collect(),
+            .collect::<FilamentResult<_>>()?,
         abstract_vars: sig.abstract_vars,
         name: sig.name,
         unannotated_ports: sig.unannotated_ports,
     };
-    sig.validate()?;
     Ok(sig)
 }
 
