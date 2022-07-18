@@ -76,14 +76,13 @@ fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
     Ok(())
 }
 
-pub fn prove<'a, A, AV>(
+pub fn prove<'a, AV>(
     abstract_vars: AV,
-    assumes: A,
+    assumes: &[ast::Constraint],
     asserts: Vec<ast::Constraint>,
-    disjointness: Vec<Disjoint>,
+    disjointness: impl Iterator<Item = Disjoint>,
 ) -> FilamentResult<()>
 where
-    A: Iterator<Item = &'a ast::Constraint>,
     AV: Iterator<Item = &'a ast::Id>,
 {
     // Locally simplify as many asserts as possible

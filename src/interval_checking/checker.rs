@@ -1,8 +1,9 @@
 use super::{ConcreteInvoke, Context, THIS};
 use crate::core::TimeRep;
 use crate::errors::{self, Error, FilamentResult, WithPos};
-use crate::event_checker::ast::{self, Constraint};
+use crate::event_checker::ast::{self, Constraint, ConstraintBase};
 use std::collections::HashMap;
+use std::iter;
 
 // For connect statements of the form:
 // dst = src
@@ -46,8 +47,8 @@ fn check_connect(
                 .clone();
 
             ctx.add_obligations(
-                Constraint::subset(guard_exact.clone(), guarantee.within.clone()).map(|e| {
-                    e.add_note("Guard's @exact specification must be shorter than source", g.copy_span())
+                ConstraintBase::subset(guard_exact.clone(), guarantee.within.clone()).map(|e| {
+                    Constraint::from(e).add_note("Guard's @exact specification must be shorter than source", g.copy_span())
                      .add_note(format!("Guard's exact specification is {}", guard_exact), g.copy_span())
                      .add_note(format!("Source's specification is {}", guarantee.within), src.copy_span())
                 }),
@@ -55,12 +56,12 @@ fn check_connect(
 
             // Require that the guard's availability is at least as long as the signal.
             ctx.add_obligations(
-                Constraint::subset(
+                ConstraintBase::subset(
                     guarantee.within.clone(),
                     guard_interval.within.clone(),
                 )
                 .map(|e|
-                     e.add_note("Guard must be active for at least as long as the source", g.copy_span())
+                     Constraint::from(e).add_note("Guard must be active for at least as long as the source", g.copy_span())
                       .add_note(format!("Guard is active during {}", guard_interval.within), g.copy_span())
                       .add_note(format!("Source is active for {}", guarantee.within), src.copy_span())),
             );
@@ -75,19 +76,20 @@ fn check_connect(
     // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
     // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
     if let Some(guarantee) = &guarantee {
-        let within_fact = Constraint::subset(
+        let within_fact = ConstraintBase::subset(
             requirement.within.clone(),
             guarantee.within.clone(),
         )
         .map(|e| {
-            e.add_note(
-                format!("Source is available for {}", guarantee.within),
-                src_pos.clone(),
-            )
-            .add_note(
-                format!("Destination's requirement {}", requirement.within),
-                dst.copy_span(),
-            )
+            Constraint::from(e)
+                .add_note(
+                    format!("Source is available for {}", guarantee.within),
+                    src_pos.clone(),
+                )
+                .add_note(
+                    format!("Destination's requirement {}", requirement.within),
+                    dst.copy_span(),
+                )
         });
         ctx.add_obligations(within_fact);
     }
@@ -101,8 +103,8 @@ fn check_connect(
 
         if let Some(exact_guarantee) = guarantee.exact {
             ctx.add_obligations(
-                Constraint::equality(exact_requirement.clone(), exact_guarantee.clone())
-                    .map(|e| e.add_note("Source must satisfy the exact guarantee of the destination", src_pos.clone())
+                ConstraintBase::equality(exact_requirement.clone(), exact_guarantee.clone())
+                    .map(|e| Constraint::from(e).add_note("Source must satisfy the exact guarantee of the destination", src_pos.clone())
                               .add_note(format!("Source's availablity is {}", exact_guarantee), src_pos.clone())
                               .add_note(format!("Destination's requirement is {}", exact_requirement), dst.copy_span())),
             );
@@ -116,13 +118,62 @@ fn check_connect(
     Ok(())
 }
 
+fn check_sig(
+    sig: &ast::Signature,
+    binding: &HashMap<ast::Id, &ast::TimeRep>,
+    ctx: &mut Context,
+) -> FilamentResult<()> {
+    let this_sig = ctx.get_invoke(&THIS.into())?.get_sig();
+    let mut constraints = vec![];
+
+    // For each event provided for an abstract variable, ensure that the corresponding interface
+    // does not pulse more often than the interface allows.
+    for (abs, &evs) in binding {
+        if let Some(interface) = sig.get_interface(abs) {
+            // Each event in the binding must pulse less often than the interface of the abstract
+            // variable.
+            for (ev, _) in evs.events() {
+                // Get interface for this event
+                let ev_int =
+                    this_sig.get_interface(ev).ok_or_else(|| {
+                        Error::malformed(format!(
+                            "Event {ev} does not have a corresponding interface signal"
+                        ))
+                    })?;
+
+                let cons = Constraint::lt(
+                    ev_int.end.clone(),
+                    interface.end.resolve(binding),
+                )
+                .add_note(
+                    format!(
+                        "Provided event may trigger every {} cycles",
+                        ev_int.end
+                    ),
+                    ev_int.copy_span(),
+                )
+                .add_note(
+                    format!(
+                        "Interface requires event to trigger once in {} cycles",
+                        interface.end
+                    ),
+                    interface.copy_span(),
+                );
+                constraints.push(cons);
+            }
+        }
+    }
+    ctx.add_obligations(constraints.into_iter());
+
+    Ok(())
+}
+
 /// Check invocation and add new [super::Fact] representing the proof obligations for checking this
 /// invocation.
 fn check_invoke<'a>(
     invoke: &'a ast::Invoke,
     ctx: &mut Context<'a>,
 ) -> FilamentResult<()> {
-    let sig = ctx.get_instance(&invoke.instance)?;
     // Track event bindings
     ctx.add_event_binds(
         invoke.instance.clone(),
@@ -130,62 +181,34 @@ fn check_invoke<'a>(
         invoke.copy_span(),
     );
 
+    // Check the bindings for abstract variables do not violate @interface
+    // requirements
+    let sig = ctx.get_instance(&invoke.instance)?;
     let binding: HashMap<_, _> = sig
         .abstract_vars
         .iter()
         .cloned()
         .zip(invoke.abstract_vars.iter())
         .collect();
-
-    let this_sig = ctx.get_invoke(&THIS.into())?;
-    // For each event provided for an abstract variable, ensure that the corresponding interface
-    // does not pulse more often than the interface allows.
-    for (abs, &evs) in &binding {
-        if let Some(interface) = sig.get_interface(abs) {
-            // Each event in the binding must pulse less often than the interface of the abstract
-            // variable.
-            for (ev, _) in evs.events() {
-                // Get interface for this event
-                let ev_int =
-                    this_sig.get_sig().get_interface(ev).ok_or_else(|| {
-                        Error::malformed(format!(
-                    "Event {ev} does not have a corresponding interface signal"
-                ))
-                    })?;
-                // Ensure that its interval is larger than the interval of the abstract variable's
-                // interface interval.
-                if interface.delay() > ev_int.delay() {
-                    return Err(Error::malformed(
-                        format!("Instance requires event to pulse no more than every {} cycles but provided event may pulse every {} cycles", interface.delay(), ev_int.delay())
-                ).add_note("Event binding violates @interface specification", invoke.copy_span())
-                 .add_note(format!("Interface requires event to trigger once in {} cycles", interface.delay()), interface.copy_span())
-                 .add_note(format!("Provided event may trigger every {} cycles", ev_int.delay()), ev_int.copy_span()));
-                }
-            }
-        }
-    }
+    check_sig(sig, &binding, ctx)?;
 
     // Handle `where` clause constraints and well formedness constraints on intervals.
     sig.well_formed().for_each(|con| {
-        ctx.add_obligations(Constraint::constraint(con.resolve(&binding)).map(
-            |e| {
-                e.add_note(
-                    "Invoke's intervals must be well-formed",
-                    invoke.copy_span(),
-                )
-            },
-        ))
+        ctx.add_obligations(iter::once(con.resolve(&binding)).map(|e| {
+            e.add_note(
+                "Invoke's intervals must be well-formed",
+                invoke.copy_span(),
+            )
+        }))
     });
 
     sig.constraints.iter().for_each(|con| {
-        ctx.add_obligations(Constraint::constraint(con.resolve(&binding)).map(
-            |e| {
-                e.add_note(
-                    "Component's where clause constraints must be satisfied",
-                    invoke.copy_span(),
-                )
-            },
-        ))
+        ctx.add_obligations(iter::once(con.resolve(&binding)).map(|e| {
+            e.add_note(
+                "Component's where clause constraints must be satisfied",
+                invoke.copy_span(),
+            )
+        }))
     });
 
     // Add this invocation to the context
@@ -249,17 +272,17 @@ fn check_fsm<'a>(
     }
 
     // Prove that the signal is zero during the execution of the FSM
-    let start_time = crate::core::FsmIdxs::unit(ev.clone(), start);
+    let start_time = ast::TimeRep::unit(ev.clone(), start);
     let end_time = start_time.clone().increment(*states);
     let within = ast::Range::new(start_time.clone(), end_time);
-    ctx.add_obligations(ast::Constraint::subset(within, guarantee.within).map(
-        |e| {
-            e.add_note(
+    ctx.add_obligations(
+        ast::ConstraintBase::subset(within, guarantee.within).map(|e| {
+            Constraint::from(e).add_note(
                 "Trigger must not pulse more often than the FSM states",
                 trigger.copy_span(),
             )
-        },
-    ));
+        }),
+    );
 
     // Add the FSM instance to the context
     ctx.add_invocation(
@@ -295,6 +318,9 @@ fn check_component(
 ) -> FilamentResult<()> {
     let mut ctx = Context::from(sigs);
 
+    // Ensure that the signature is well-formed
+    ctx.add_obligations(comp.sig.validate());
+
     // Add instance for this component. Whenever a bare port is used, it refers
     // to the port on this instance.
     let rev_sig = comp.sig.reversed();
@@ -305,9 +331,14 @@ fn check_component(
     rev_sig
         .constraints
         .iter()
-        .for_each(|con| ctx.add_fact(Constraint::constraint(con.clone())));
+        .for_each(|con| ctx.add_fact(iter::once(con.clone())));
 
+    // Check all the commands
     check_commands(&comp.body, &mut ctx)?;
+
+    let disj = &mut ctx.drain_disjointness()?;
+    let obs = ctx.drain_obligations();
+    super::prove(comp.sig.abstract_vars.iter(), &ctx.facts, obs, disj)?;
 
     // There should be no remaining assignments after checking a component
     if let Some((comp, ports)) = ctx.get_remaining_assigns().next() {
@@ -318,14 +349,7 @@ fn check_component(
         )));
     }
 
-    let (obligations, facts, disjointness) = ctx.try_into()?;
-
-    super::prove(
-        comp.sig.abstract_vars.iter(),
-        facts.iter(),
-        obligations,
-        disjointness,
-    )
+    Ok(())
 }
 
 /// Check a [ast::Namespace] to prove that the interval requirements of all the ports can be

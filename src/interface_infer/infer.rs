@@ -2,6 +2,7 @@
 //! Once this pass is run, all Filament-level components are guaranteed to have @interface defined
 //! for all the events they use.
 
+use crate::core::TimeRep;
 use crate::errors::FilamentResult;
 use crate::event_checker::ast;
 use crate::visitor;
@@ -96,7 +97,7 @@ impl visitor::Transform for InterfaceInfer {
             ast::InterfaceDef::new(
                 format!("go_{}", ev).into(),
                 ev.clone(),
-                self.max_states[ev],
+                TimeRep::unit(ev.clone(), self.max_states[ev]),
             )
         });
         comp.sig.interface_signals.extend(missing_interfaces);
