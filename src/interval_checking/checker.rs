@@ -122,17 +122,30 @@ fn check_connect(
     Ok(())
 }
 
-fn check_sig(
-    sig: &ast::Signature,
-    binding: &HashMap<ast::Id, &ast::TimeRep>,
-    ctx: &mut Context,
-) -> FilamentResult<()> {
+fn check_invoke_binds<'a>(
+    invoke: &'a ast::Invoke,
+    ctx: &mut Context<'a>,
+) -> FilamentResult<(&'a ast::Signature, HashMap<ast::Id, &'a ast::TimeRep>)> {
+    // Track event bindings
+    ctx.add_event_binds(
+        invoke.instance.clone(),
+        invoke.abstract_vars.clone(),
+        invoke.copy_span(),
+    );
+
+    let sig = ctx.get_instance(&invoke.instance)?;
+    let binding: HashMap<_, _> = sig
+        .abstract_vars
+        .iter()
+        .cloned()
+        .zip(invoke.abstract_vars.iter())
+        .collect();
     let this_sig = ctx.get_invoke(&THIS.into())?.get_sig();
     let mut constraints = vec![];
 
     // For each event provided for an abstract variable, ensure that the corresponding interface
     // does not pulse more often than the interface allows.
-    for (abs, &evs) in binding {
+    for (abs, &evs) in &binding {
         if let Some(interface) = sig.get_interface(abs) {
             // Each event in the binding must pulse less often than the interface of the abstract
             // variable.
@@ -145,12 +158,16 @@ fn check_sig(
                         ))
                     })?;
 
-                let int_len = interface.delay().resolve(binding);
+                let int_len = interface.delay().resolve(&binding);
                 let ev_int_len = ev_int.delay();
                 let cons = Constraint::from(ast::CBS::lt(
                     int_len.clone(),
                     ev_int_len.clone(),
                 ))
+                .add_note(
+                    "Event provided to invoke pulses more often than @interface allows",
+                    invoke.copy_span()
+                )
                 .add_note(
                     format!(
                         "Provided event may trigger every {} cycles",
@@ -171,7 +188,7 @@ fn check_sig(
     }
     ctx.add_obligations(constraints.into_iter());
 
-    Ok(())
+    Ok((sig, binding))
 }
 
 /// Check invocation and add new [super::Fact] representing the proof obligations for checking this
@@ -180,23 +197,9 @@ fn check_invoke<'a>(
     invoke: &'a ast::Invoke,
     ctx: &mut Context<'a>,
 ) -> FilamentResult<()> {
-    // Track event bindings
-    ctx.add_event_binds(
-        invoke.instance.clone(),
-        invoke.abstract_vars.clone(),
-        invoke.copy_span(),
-    );
-
     // Check the bindings for abstract variables do not violate @interface
     // requirements
-    let sig = ctx.get_instance(&invoke.instance)?;
-    let binding: HashMap<_, _> = sig
-        .abstract_vars
-        .iter()
-        .cloned()
-        .zip(invoke.abstract_vars.iter())
-        .collect();
-    check_sig(sig, &binding, ctx)?;
+    let (sig, binding) = check_invoke_binds(invoke, ctx)?;
 
     // Handle `where` clause constraints and well formedness constraints on intervals.
     sig.well_formed().for_each(|con| {
