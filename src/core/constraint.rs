@@ -1,4 +1,4 @@
-use super::{FsmIdxs, Id, Range, TimeRep};
+use super::{FsmIdxs, Id, Range, TimeRep, TimeSub, WithTime};
 use crate::{
     errors::{self, FilamentResult},
     interval_checking::SExp,
@@ -80,15 +80,20 @@ where
     }
 }
 
-impl<T: TimeRep> ConstraintBase<T> {
-    pub fn resolve(&self, binding: &HashMap<Id, &T>) -> ConstraintBase<T> {
+impl<K: TimeRep, T: WithTime<K>> WithTime<K> for ConstraintBase<T>
+where
+    Self: Clone,
+{
+    fn resolve(&self, bindings: &HashMap<super::Id, &K>) -> Self {
         ConstraintBase {
-            left: self.left.resolve(binding),
-            right: self.right.resolve(binding),
+            left: self.left.resolve(bindings),
+            right: self.right.resolve(bindings),
             ..self.clone()
         }
     }
+}
 
+impl<T: TimeRep> ConstraintBase<T> {
     /// Check that the `left` range is equal to `right`
     pub fn equality(
         left: Range<T>,
@@ -130,11 +135,11 @@ where
 #[derive(Clone)]
 pub enum Constraint<T: TimeRep> {
     Base { base: ConstraintBase<T> },
-    Sub { base: ConstraintBase<(T, T)> },
+    Sub { base: ConstraintBase<TimeSub<T>> },
 }
 
-impl<T: TimeRep> From<ConstraintBase<(T, T)>> for Constraint<T> {
-    fn from(base: ConstraintBase<(T, T)>) -> Self {
+impl<T: TimeRep> From<ConstraintBase<TimeSub<T>>> for Constraint<T> {
+    fn from(base: ConstraintBase<TimeSub<T>>) -> Self {
         Self::Sub { base }
     }
 }
@@ -148,34 +153,7 @@ impl<T: TimeRep> From<ConstraintBase<T>> for Constraint<T> {
 impl<T: TimeRep> Constraint<T> {
     pub fn lt(l: T, r: T) -> Self {
         Self::Base {
-            base: ConstraintBase {
-                left: r,
-                right: l,
-                op: OrderOp::Gt,
-                extra: vec![],
-            },
-        }
-    }
-
-    pub fn gte(l: T, r: T) -> Self {
-        Self::Base {
-            base: ConstraintBase {
-                left: l,
-                right: r,
-                op: OrderOp::Gte,
-                extra: vec![],
-            },
-        }
-    }
-
-    pub fn eq(l: T, r: T) -> Self {
-        Self::Base {
-            base: ConstraintBase {
-                left: l,
-                right: r,
-                op: OrderOp::Eq,
-                extra: vec![],
-            },
+            base: ConstraintBase::lt(l, r),
         }
     }
 
@@ -210,28 +188,24 @@ impl<T: TimeRep> Constraint<T> {
             Constraint::Base { base } => {
                 Ok(Constraint::Base { base: base.map(f)? })
             }
-            Constraint::Sub { base } => Ok(Constraint::Sub {
-                base: base
-                    .map(|(l, r)| f(l).and_then(|l| f(r).map(|r| (l, r))))?,
-            }),
+            Constraint::Sub { .. } => todo!("Mapping over Constraint::Sub"),
         }
     }
+}
 
-    pub fn resolve(&self, binding: &HashMap<Id, &T>) -> Constraint<T> {
+impl<T: TimeRep> WithTime<T> for Constraint<T> {
+    fn resolve(&self, binding: &HashMap<Id, &T>) -> Constraint<T> {
         match self {
             Constraint::Base { base } => Constraint::Base {
                 base: base.resolve(binding),
             },
-            Constraint::Sub { base } => {
-                let (la, ra) = &base.left;
-                let (lb, rb) = &base.right;
-                let base = ConstraintBase {
-                    left: (la.resolve(binding), ra.resolve(binding)),
-                    right: (lb.resolve(binding), rb.resolve(binding)),
+            Constraint::Sub { base } => Constraint::Sub {
+                base: ConstraintBase {
+                    left: base.left.resolve(binding),
+                    right: base.right.resolve(binding),
                     ..base.clone()
-                };
-                Constraint::Sub { base }
-            }
+                },
+            },
         }
     }
 }
@@ -264,11 +238,7 @@ impl<T: Display + TimeRep> Display for Constraint<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Constraint::Base { base } => write!(f, "{}", base),
-            Constraint::Sub { base } => {
-                let (la, ra) = &base.left;
-                let (lb, rb) = &base.right;
-                write!(f, "{la}-{ra} {} {lb}-{rb}", base.op)
-            }
+            Constraint::Sub { base } => write!(f, "{}", base),
         }
     }
 }
@@ -282,18 +252,22 @@ impl From<&Constraint<FsmIdxs>> for SExp {
                 SExp::from(&base.left),
                 SExp::from(&base.right)
             )),
-            Constraint::Sub { base } => {
-                let (la, ra) = &base.left;
-                let (lb, rb) = &base.right;
-                SExp(format!(
-                    "((- {} {}) {} (- {} {}))",
-                    base.op,
-                    SExp::from(la),
-                    SExp::from(ra),
-                    SExp::from(lb),
-                    SExp::from(rb),
-                ))
-            }
+            Constraint::Sub { base } => SExp(format!(
+                "({} {} {})",
+                base.op,
+                SExp::from(&base.left),
+                SExp::from(&base.right),
+            )),
         }
+    }
+}
+
+impl From<&TimeSub<FsmIdxs>> for SExp {
+    fn from(ts: &TimeSub<FsmIdxs>) -> Self {
+        SExp(format!(
+            "(abs (- {} {}))",
+            SExp::from(&ts.a),
+            SExp::from(&ts.b)
+        ))
     }
 }

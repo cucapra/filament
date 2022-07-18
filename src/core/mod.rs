@@ -14,4 +14,4 @@ pub use control::{
 pub use fsm_idx::FsmIdxs;
 pub use id::Id;
 pub use interval::{Interval, Range};
-pub use time_rep::TimeRep;
+pub use time_rep::{TimeRep, TimeSub, WithTime};

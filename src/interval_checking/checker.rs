@@ -1,7 +1,7 @@
 use super::{ConcreteInvoke, Context, THIS};
-use crate::core::TimeRep;
+use crate::core::{TimeRep, WithTime};
 use crate::errors::{self, Error, FilamentResult, WithPos};
-use crate::event_checker::ast::{self, Constraint, ConstraintBase};
+use crate::event_checker::ast::{self, Constraint, CBT};
 use std::collections::HashMap;
 use std::iter;
 
@@ -47,7 +47,7 @@ fn check_connect(
                 .clone();
 
             ctx.add_obligations(
-                ConstraintBase::subset(guard_exact.clone(), guarantee.within.clone()).map(|e| {
+                CBT::subset(guard_exact.clone(), guarantee.within.clone()).map(|e| {
                     Constraint::from(e).add_note("Guard's @exact specification must be shorter than source", g.copy_span())
                      .add_note(format!("Guard's exact specification is {}", guard_exact), g.copy_span())
                      .add_note(format!("Source's specification is {}", guarantee.within), src.copy_span())
@@ -56,7 +56,7 @@ fn check_connect(
 
             // Require that the guard's availability is at least as long as the signal.
             ctx.add_obligations(
-                ConstraintBase::subset(
+                CBT::subset(
                     guarantee.within.clone(),
                     guard_interval.within.clone(),
                 )
@@ -76,21 +76,25 @@ fn check_connect(
     // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
     // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
     if let Some(guarantee) = &guarantee {
-        let within_fact = ConstraintBase::subset(
-            requirement.within.clone(),
-            guarantee.within.clone(),
-        )
-        .map(|e| {
-            Constraint::from(e)
-                .add_note(
-                    format!("Source is available for {}", guarantee.within),
-                    src_pos.clone(),
-                )
-                .add_note(
-                    format!("Destination's requirement {}", requirement.within),
-                    dst.copy_span(),
-                )
-        });
+        let within_fact =
+            CBT::subset(requirement.within.clone(), guarantee.within.clone())
+                .map(|e| {
+                    Constraint::from(e)
+                        .add_note(
+                            format!(
+                                "Source is available for {}",
+                                guarantee.within
+                            ),
+                            src_pos.clone(),
+                        )
+                        .add_note(
+                            format!(
+                                "Destination's requirement {}",
+                                requirement.within
+                            ),
+                            dst.copy_span(),
+                        )
+                });
         ctx.add_obligations(within_fact);
     }
 
@@ -103,7 +107,7 @@ fn check_connect(
 
         if let Some(exact_guarantee) = guarantee.exact {
             ctx.add_obligations(
-                ConstraintBase::equality(exact_requirement.clone(), exact_guarantee.clone())
+                CBT::equality(exact_requirement.clone(), exact_guarantee.clone())
                     .map(|e| Constraint::from(e).add_note("Source must satisfy the exact guarantee of the destination", src_pos.clone())
                               .add_note(format!("Source's availablity is {}", exact_guarantee), src_pos.clone())
                               .add_note(format!("Destination's requirement is {}", exact_requirement), dst.copy_span())),
@@ -141,21 +145,23 @@ fn check_sig(
                         ))
                     })?;
 
-                let cons = Constraint::lt(
-                    ev_int.end.clone(),
-                    interface.end.resolve(binding),
-                )
+                let int_len = interface.delay().resolve(binding);
+                let ev_int_len = ev_int.delay();
+                let cons = Constraint::from(ast::CBS::lt(
+                    int_len.clone(),
+                    ev_int_len.clone(),
+                ))
                 .add_note(
                     format!(
                         "Provided event may trigger every {} cycles",
-                        ev_int.end
+                        ev_int_len,
                     ),
                     ev_int.copy_span(),
                 )
                 .add_note(
                     format!(
                         "Interface requires event to trigger once in {} cycles",
-                        interface.end
+                        int_len,
                     ),
                     interface.copy_span(),
                 );
@@ -275,14 +281,12 @@ fn check_fsm<'a>(
     let start_time = ast::TimeRep::unit(ev.clone(), start);
     let end_time = start_time.clone().increment(*states);
     let within = ast::Range::new(start_time.clone(), end_time);
-    ctx.add_obligations(
-        ast::ConstraintBase::subset(within, guarantee.within).map(|e| {
-            Constraint::from(e).add_note(
-                "Trigger must not pulse more often than the FSM states",
-                trigger.copy_span(),
-            )
-        }),
-    );
+    ctx.add_obligations(ast::CBT::subset(within, guarantee.within).map(|e| {
+        Constraint::from(e).add_note(
+            "Trigger must not pulse more often than the FSM states",
+            trigger.copy_span(),
+        )
+    }));
 
     // Add the FSM instance to the context
     ctx.add_invocation(

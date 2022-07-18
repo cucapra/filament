@@ -1,10 +1,10 @@
-use super::{Id, Interval, Range};
+use super::{Id, Interval, Range, TimeSub};
 use crate::interval_checking::SExp;
 use linked_hash_map::LinkedHashMap;
 use std::fmt::Display;
 
 /// An interval time expression that denotes a max of sums expression.
-#[derive(Default, Hash, Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct FsmIdxs {
     fsms: LinkedHashMap<Id, u64>,
 }
@@ -82,8 +82,18 @@ impl FsmIdxs {
         self.fsms.iter()
     }
 }
+impl std::ops::Sub for FsmIdxs {
+    type Output = TimeSub<FsmIdxs>;
+
+    /// Representation of the difference between two FsmIdx events
+    fn sub(self, other: FsmIdxs) -> TimeSub<FsmIdxs> {
+        TimeSub { a: self, b: other }
+    }
+}
 
 impl super::TimeRep for FsmIdxs {
+    type SubRep = TimeSub<FsmIdxs>;
+
     /// Construct an index with exactly one FSM
     fn unit(name: Id, state: u64) -> Self {
         let mut hs = LinkedHashMap::with_capacity(1);
@@ -112,6 +122,10 @@ impl super::TimeRep for FsmIdxs {
             out.extend(&mut idxs.fsms.into_iter());
         }
         FsmIdxs { fsms: out }
+    }
+
+    fn sub(self, other: Self) -> Self::SubRep {
+        self - other
     }
 }
 
@@ -154,5 +168,21 @@ impl Range<FsmIdxs> {
                 }
             })
         })
+    }
+}
+
+impl TimeSub<FsmIdxs> {
+    /// Attempts to convert this FsmIdxSub into a concrete value.
+    /// This is only possible when both operands are non-max expressions that use the same events.
+    pub fn concrete(&self) -> Option<u64> {
+        let l_len = self.a.fsms.len();
+        if l_len == 1 && l_len == self.b.fsms.len() {
+            let (l_ev, l_st) = &self.a.events().next().unwrap();
+            let (r_ev, r_st) = &self.b.events().next().unwrap();
+            if l_ev == r_ev {
+                return Some(l_st.abs_diff(**r_st));
+            }
+        }
+        None
     }
 }

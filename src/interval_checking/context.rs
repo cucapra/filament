@@ -351,7 +351,7 @@ impl<'a> Context<'a> {
                 sig.interface_signals
                     .iter()
                     .find(|id| id.event == ev)
-                    .map(|id| id.delay().unwrap())
+                    .map(|id| id.delay().concrete().unwrap())
             })
             .collect_vec();
 

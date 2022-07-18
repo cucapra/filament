@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use super::{
     Command, Constraint, ConstraintBase, FsmIdxs, Id, Interval, Invoke, Range,
-    TimeRep,
+    TimeRep, TimeSub,
 };
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use std::{
@@ -113,19 +113,8 @@ where
 impl InterfaceDef<FsmIdxs> {
     /// Attempts to return a concrete delay for this interface. Panics if the
     /// end time is a max-expression or uses different time variables
-    pub fn delay(&self) -> Option<u64> {
-        if let Some((ev, st)) = self.end.as_unit() {
-            if ev == &self.event {
-                Some(*st)
-            } else {
-                panic!(
-                    "Interface for event `{}` uses distinct end event `{ev}`",
-                    self.event
-                )
-            }
-        } else {
-            panic!("Cannot convert {self} into a unit time event")
-        }
+    pub fn delay(&self) -> TimeSub<FsmIdxs> {
+        FsmIdxs::unit(self.event.clone(), 0) - self.end.clone()
     }
 }
 
