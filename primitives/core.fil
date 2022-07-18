@@ -4,7 +4,7 @@ extern "core.sv" {
     clk: 1,
     reset: 1,
     // -- base ports --
-    @interface<G, 1> write_en: 1,
+    @interface[G, L] write_en: 1,
     @[G, G+1] in: 32
   ) -> (
     @[G+1, L] out: 32
@@ -28,7 +28,7 @@ extern "core.sv" {
 extern "binary.sv" {
   // ============= Combinational =================
   component Add<G>(
-    @interface<G, 1> go: 1,
+    @interface[G, G+1] go: 1,
     @[G, G+1] left: 32,
     @[G, G+1] right: 32,
   ) -> (
@@ -36,7 +36,7 @@ extern "binary.sv" {
   );
 
   component MultComb<G>(
-    @interface<G, 1> go: 1,
+    @interface[G, G+1] go: 1,
     @[G, G+1] left: 32,
     @[G, G+1] right: 32,
   ) -> (

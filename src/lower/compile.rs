@@ -135,24 +135,24 @@ impl visitor::Transform for CompileInvokes {
         comp: ast::Component,
     ) -> FilamentResult<ast::Component> {
         // Define FSMs for each interface signal
-        self.fsms = comp
-            .sig
-            .interface_signals
-            .iter()
-            .map(|interface| {
-                let ev = &interface.event;
-                (
-                    ev.clone(),
-                    ast::Fsm::new(
-                        format!("{}_fsm", ev).into(),
-                        interface
-                            .delay()
-                            .expect("Cannot compile complex interface signals"),
-                        ast::Port::this(interface.name.clone()),
-                    ),
-                )
-            })
-            .collect::<HashMap<_, _>>();
+        self.fsms =
+            comp.sig
+                .interface_signals
+                .iter()
+                .map(|interface| {
+                    let ev = &interface.event;
+                    (
+                        ev.clone(),
+                        ast::Fsm::new(
+                            format!("{}_fsm", ev).into(),
+                            interface.delay().concrete().expect(
+                                "Cannot compile complex interface signals",
+                            ),
+                            ast::Port::this(interface.name.clone()),
+                        ),
+                    )
+                })
+                .collect::<HashMap<_, _>>();
 
         Ok(comp)
     }

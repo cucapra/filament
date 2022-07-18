@@ -1,4 +1,4 @@
-use crate::core;
+use crate::core::{self, TimeSub};
 
 pub type TimeRep = crate::core::FsmIdxs;
 
@@ -7,7 +7,8 @@ pub type Namespace = core::Namespace<TimeRep>;
 pub type PortDef = core::PortDef<TimeRep>;
 pub type Signature = core::Signature<TimeRep>;
 pub type Constraint = core::Constraint<TimeRep>;
-pub type ConstraintBase = core::ConstraintBase<TimeRep>;
+pub type CBT = core::ConstraintBase<TimeRep>;
+pub type CBS = core::ConstraintBase<TimeSub<TimeRep>>;
 pub type Command = core::Command<TimeRep>;
 pub type Invoke = core::Invoke<TimeRep>;
 pub type Interval = core::Interval<TimeRep>;

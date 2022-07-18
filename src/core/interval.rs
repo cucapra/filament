@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use crate::errors;
 
-use super::{Constraint, ConstraintBase, Id, TimeRep};
+use super::{Constraint, ConstraintBase, Id, TimeRep, WithTime};
 
 /// A range over time representation
 #[derive(Clone)]
@@ -33,6 +33,20 @@ where
         )
     }
 }
+
+impl<T> WithTime<T> for Range<T>
+where
+    T: TimeRep,
+{
+    fn resolve(&self, bindings: &HashMap<Id, &T>) -> Self {
+        Range {
+            start: self.start.resolve(bindings),
+            end: self.end.resolve(bindings),
+            ..self.clone()
+        }
+    }
+}
+
 impl<T> Range<T>
 where
     T: TimeRep + Clone,
@@ -42,14 +56,6 @@ where
             start,
             end,
             pos: None,
-        }
-    }
-
-    pub fn resolve(&self, bindings: &HashMap<Id, &T>) -> Self {
-        Range {
-            start: self.start.resolve(bindings),
-            end: self.end.resolve(bindings),
-            ..self.clone()
         }
     }
 }

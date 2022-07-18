@@ -89,6 +89,8 @@ impl From<Id> for IntervalTime {
 }
 
 impl crate::core::TimeRep for IntervalTime {
+    type SubRep = crate::core::TimeSub<IntervalTime>;
+
     /// Resolve the IntervalTime using the given bindings from abstract variables to exact
     /// bindings.
     fn resolve(&self, bindings: &HashMap<Id, &IntervalTime>) -> Self {
@@ -120,6 +122,10 @@ impl crate::core::TimeRep for IntervalTime {
 
     fn increment(self, n: u64) -> Self {
         IntervalTime::binop_add(self, IntervalTime::Concrete(n))
+    }
+
+    fn sub(self, _: Self) -> Self::SubRep {
+        todo!("Subtracting IntervalTime events")
     }
 }
 
