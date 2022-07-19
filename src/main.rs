@@ -141,6 +141,7 @@ fn main() {
                     .with_notes(notes),
             )
             .unwrap();
+            std::process::exit(1)
         }
     }
 }

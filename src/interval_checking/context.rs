@@ -376,7 +376,7 @@ impl<'a> Context<'a> {
                             )
                             .add_note(
                                 format!(
-                                    "@interface for {abs} specifies that invokes must {} apart",
+                                    "@interface for {abs} specifies that invokes must be {} cycles apart",
                                     id.delay()
                                 ),
                                 id.copy_span()
