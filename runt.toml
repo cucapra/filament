@@ -4,7 +4,7 @@ ver = "0.4.0"
 name = "type checker"
 paths = [
   "tests/check/*.fil",
-  "tests/errors/*.fil"
+  "tests/errors/*.fil",
 ]
 cmd = """
 ./target/debug/filament {} --check --no-color
