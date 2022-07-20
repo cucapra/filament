@@ -344,23 +344,20 @@ impl<'a> Context<'a> {
 
         // Iterate over each event
         let mut constraints = Vec::new();
-        let num_binds = args.len();
         for (idx, abs) in sig.abstract_vars.iter().enumerate() {
             // If there is no interface port associated with an event, it is ignored.
             // This only happens for primitive components.
             if let Some(id) = sig.get_interface(abs) {
                 // For each event
-                for i in 0..num_binds {
-                    let (spi, bi) = &args[i];
+                for (i, (spi, bi)) in args.iter().enumerate() {
                     // Delay implied by the i'th binding
                     let i_delay = id.delay().resolve(&sig.binding(bi)?);
                     // The i'th use conflicts with all other uses
-                    for k in 0..num_binds {
+                    for (k, (spk, bk)) in args.iter().enumerate() {
                         if i == k {
                             continue;
                         }
 
-                        let (spk, bk) = &args[k];
                         constraints.push(
                             ast::Constraint::from(ast::CBS::gte(
                                 bi[idx].clone() - bk[idx].clone(),
