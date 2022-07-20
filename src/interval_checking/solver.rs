@@ -1,6 +1,5 @@
 use crate::errors::{Error, FilamentResult};
 use crate::event_checker::ast;
-use itertools::Itertools;
 use rsmt2::{SmtConf, Solver};
 
 /// A string that semantically represents an S-expression
@@ -33,10 +32,10 @@ pub fn prove<'a>(
     asserts: impl Iterator<Item = ast::Constraint>,
 ) -> FilamentResult<()> {
     // Locally simplify as many asserts as possible
-    let asserts = asserts
+    /* let asserts = asserts
         .into_iter()
         .flat_map(|con| con.simplify())
-        .collect_vec();
+        .collect_vec(); */
 
     let mut conf = SmtConf::default_z3();
     // Immediately checks if the command to z3 succeeded.

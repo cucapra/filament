@@ -229,13 +229,14 @@ impl Constraint<FsmIdxs> {
             Constraint::Sub {
                 base:
                     ConstraintBase {
-                        /* ref left,
+                        ref left,
                         ref right,
-                        ref op, */
+                        ref op,
                         ..
                     },
             } => {
-                /* if let (Some(l), Some(r)) = (left.concrete(), right.concrete()) {
+                if let (Some(l), Some(r)) = (left.concrete(), right.concrete())
+                {
                     match op {
                         OrderOp::Gt => {
                             if l > r {
@@ -253,7 +254,7 @@ impl Constraint<FsmIdxs> {
                             }
                         }
                     }
-                } */
+                }
                 Some(self)
             }
         }
