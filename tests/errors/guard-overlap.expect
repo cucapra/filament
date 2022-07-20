@@ -1,3 +1,5 @@
+---CODE---
+1
 ---STDERR---
 error: Guard @exact specification should not overlap
   ┌─ tests/errors/guard-overlap.fil:9:14

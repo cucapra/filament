@@ -1,3 +1,5 @@
+---CODE---
+1
 ---STDERR---
 error: Invalid port for fsm trigger
   ┌─ tests/errors/fsm-constant-trig.fil:2:12

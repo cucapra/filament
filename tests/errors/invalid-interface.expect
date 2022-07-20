@@ -1,3 +1,5 @@
+---CODE---
+1
 ---STDERR---
 error: Cannot prove constraint |L - L+1| >= |L+2 - L|
   ┌─ tests/errors/invalid-interface.fil:4:5
