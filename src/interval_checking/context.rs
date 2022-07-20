@@ -321,7 +321,7 @@ impl<'a> Context<'a> {
         let evs = std::mem::take(&mut self.event_binds);
         let disj = evs
             .into_iter()
-            .map(|(inst, binds)| self.disjointness(inst, binds))
+            .map(|(inst, binds)| self.disjointness(inst, &binds))
             .collect::<FilamentResult<Vec<_>>>()?;
 
         Ok(disj.into_iter().flatten())
@@ -337,7 +337,7 @@ impl<'a> Context<'a> {
     fn disjointness(
         &self,
         instance: ast::Id,
-        args: Vec<BindsWithLoc>,
+        args: &[BindsWithLoc],
     ) -> FilamentResult<Vec<ast::Constraint>> {
         // Get the delay associated with each event.
         let sig = self.get_instance(&instance)?;
