@@ -1,3 +1,5 @@
+---CODE---
+1
 ---STDERR---
 error: Cannot prove constraint T+4 >= T+5
   ┌─ tests/errors/fsm-trig-too-long.fil:4:12

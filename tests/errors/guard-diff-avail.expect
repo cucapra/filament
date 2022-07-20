@@ -1,3 +1,5 @@
+---CODE---
+1
 ---STDERR---
 error: Guard ports are available for different time intervals
   ┌─ tests/errors/guard-diff-avail.fil:9:14

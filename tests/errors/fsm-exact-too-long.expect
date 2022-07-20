@@ -1,3 +1,5 @@
+---CODE---
+1
 ---STDERR---
 error: Trigger port is high for too long
   ┌─ tests/errors/fsm-exact-too-long.fil:5:12

@@ -1,3 +1,5 @@
+---CODE---
+1
 ---STDERR---
 error: Cannot prove constraint G+3 >= G+4
    ┌─ tests/errors/unsatisfied-guarantee.fil:11:9

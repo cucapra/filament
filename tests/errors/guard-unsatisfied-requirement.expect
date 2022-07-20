@@ -1,3 +1,5 @@
+---CODE---
+1
 ---STDERR---
 error: Cannot prove constraint G+2 >= G+3
   ┌─ tests/errors/guard-unsatisfied-requirement.fil:8:9

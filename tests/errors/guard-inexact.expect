@@ -1,3 +1,5 @@
+---CODE---
+1
 ---STDERR---
 error: Ports used in guards must have exact guarantees
   ┌─ tests/errors/guard-inexact.fil:7:9

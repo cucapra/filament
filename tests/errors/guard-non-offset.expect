@@ -1,3 +1,5 @@
+---CODE---
+1
 ---STDERR---
 error: Cannot convert interval into offset: @[G, L+3] + @exact[G, L]
   ┌─ tests/errors/guard-non-offset.fil:9:9
