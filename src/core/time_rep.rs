@@ -1,5 +1,6 @@
 use super::Id;
-use std::{collections::HashMap, fmt::Display};
+use itertools::Itertools;
+use std::{collections::HashMap, fmt::Debug, fmt::Display};
 
 /// Represents a binding from names to time variables.
 pub struct Binding<'a, T> {
@@ -21,6 +22,19 @@ impl<'a, T> Binding<'a, T> {
 
     pub fn iter(&self) -> impl Iterator<Item = (&Id, &&'a T)> {
         self.map.iter()
+    }
+}
+
+impl<T> Debug for Binding<'_, T>
+where
+    T: Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[{}]",
+            self.map.iter().map(|(k, v)| format!("{k}->{v}")).join(", ")
+        )
     }
 }
 
