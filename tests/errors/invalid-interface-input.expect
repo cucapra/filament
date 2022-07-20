@@ -2,7 +2,7 @@
 1
 ---STDERR---
 error: Cannot prove constraint |L - L+1| >= |L+2 - L|
-  ┌─ tests/errors/invalid-interface.fil:4:5
+  ┌─ tests/errors/invalid-interface-input.fil:4:5
   │
 4 │     @interface[L, L+1] go_L: 1,
   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -11,5 +11,5 @@ error: Cannot prove constraint |L - L+1| >= |L+2 - L|
   │     Interface signal lasts for |L - L+1|
 5 │     @[G, G+1] in1: 32,
 6 │     @[L, L+2] in2: 32,
-  │     ----------------- Input signal lasts for |L+2 - L|
+  │     ----------------- Signal lasts for |L+2 - L|
 

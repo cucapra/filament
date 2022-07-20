@@ -333,7 +333,7 @@ impl<'a> Context<'a> {
         std::mem::take(&mut self.obligations).into_iter()
     }
 
-    /// Generate disjointness constraints for an instance's event bindinds.
+    /// Generate disjointness constraints for an instance's event bindings.
     fn disjointness(
         &self,
         instance: ast::Id,
@@ -365,22 +365,22 @@ impl<'a> Context<'a> {
                             ))
                             .add_note(
                                 format!(
-                                    "Conflicting invoke. Invoke provides binding {abs}={}",
-                                    bk[idx].clone()
+                                    "Conflicting invoke. Invoke provides binding {instance}.{abs}={}",
+                                    bk[idx],
                                 ),
                                 spk.clone(),
                             )
                             .add_note(
                                 format!(
-                                    "Invoke provides binding {abs}={}",
-                                    bi[idx].clone()
+                                    "Invoke provides binding {instance}.{abs}={}",
+                                    bi[idx],
                                 ),
                                 spi.clone(),
                             )
                             .add_note(
                                 format!(
                                     "@interface for {abs} specifies that invokes must be {} cycles apart",
-                                    id.delay()
+                                    i_delay
                                 ),
                                 id.copy_span()
                             )

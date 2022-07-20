@@ -11,5 +11,5 @@ error: Cannot prove constraint |G - L| >= |G+1 - G|
   │   Interface signal lasts for |G - L|
 7 │   @interface[L, L+1] go_L: 1,
 8 │   @[G, G+1] left: 32,
-  │   ------------------ Input signal lasts for |G+1 - G|
+  │   ------------------ Signal lasts for |G+1 - G|
 

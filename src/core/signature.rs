@@ -142,7 +142,7 @@ impl Signature<FsmIdxs> {
         // the start time of the signal describes when the signal is triggered.
         // We do not consider the end time because that only effects the length of the signal.
 
-        for port in &self.inputs {
+        for port in self.inputs.iter().chain(self.outputs.iter()) {
             let delay = port.liveness.within.len();
             for (ev, _) in port.liveness.within.start.events() {
                 // Make sure @interface for event exists
@@ -151,7 +151,7 @@ impl Signature<FsmIdxs> {
                         "Missing @interface port for {ev}"
                     ))
                     .add_note(
-                        format!("Input port mentions `{ev}` event in its start time"),
+                        format!("Port mentions `{ev}` event in its start time"),
                         port.liveness.within.copy_span(),
                     ));
                 }
@@ -173,7 +173,7 @@ impl Signature<FsmIdxs> {
                     ))
                     .add_note("Invalid interface", id.copy_span())
                     .add_note(
-                        format!("Input signal lasts for {}", port_len),
+                        format!("Signal lasts for {}", port_len),
                         port_pos,
                     )
                     .add_note(

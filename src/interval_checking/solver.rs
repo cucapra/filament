@@ -33,9 +33,9 @@ pub fn prove<'a>(
 ) -> FilamentResult<()> {
     // Locally simplify as many asserts as possible
     /* let asserts = asserts
-        .into_iter()
-        .flat_map(|con| con.simplify())
-        .collect_vec(); */
+    .into_iter()
+    .flat_map(|con| con.simplify())
+    .collect_vec(); */
 
     let mut conf = SmtConf::default_z3();
     // Immediately checks if the command to z3 succeeded.
