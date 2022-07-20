@@ -18,7 +18,7 @@ component Max_mult_add<G, L>(
   A := new Add;
 
   m0 := M0<G>(a, b);
-  m1 := M0<L>(c, d);
+  m1 := M1<L>(c, d);
 
   // Latch the signals till both outputs are available.
   m0_l := L1<G+2, max(G+4, L+4) + 1>(m0.out);
