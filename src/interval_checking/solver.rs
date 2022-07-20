@@ -39,7 +39,6 @@ pub fn prove<'a>(
         .collect_vec();
 
     let mut conf = SmtConf::default_z3();
-
     // Immediately checks if the command to z3 succeeded.
     conf.check_success();
 
