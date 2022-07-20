@@ -1,7 +1,7 @@
-use super::{Id, Interval, Range, Signature, TimeRep};
+use super::{Binding, Id, Interval, Range, Signature, TimeRep};
 use crate::errors::{self, Error, FilamentResult};
 use itertools::Itertools;
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 
 pub struct Port {
     pub typ: PortType,
@@ -155,12 +155,14 @@ where
         }
     }
 
-    pub fn bindings(&self, sig: &Signature<T>) -> HashMap<Id, &T> {
-        sig.abstract_vars
-            .iter()
-            .cloned()
-            .zip(self.abstract_vars.iter())
-            .collect()
+    pub fn bindings(&self, sig: &Signature<T>) -> Binding<T> {
+        Binding::new(
+            sig.abstract_vars
+                .iter()
+                .cloned()
+                .zip(self.abstract_vars.iter())
+                .collect(),
+        )
     }
 }
 impl<T: Display> Display for Invoke<T> {

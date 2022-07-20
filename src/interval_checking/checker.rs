@@ -1,5 +1,5 @@
 use super::{ConcreteInvoke, Context, THIS};
-use crate::core::{TimeRep, WithTime};
+use crate::core::{Binding, TimeRep, WithTime};
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use crate::event_checker::ast::{self, Constraint, CBT};
 use std::collections::HashMap;
@@ -125,7 +125,7 @@ fn check_connect(
 fn check_invoke_binds<'a>(
     invoke: &'a ast::Invoke,
     ctx: &mut Context<'a>,
-) -> FilamentResult<(&'a ast::Signature, HashMap<ast::Id, &'a ast::TimeRep>)> {
+) -> FilamentResult<(&'a ast::Signature, Binding<'a, ast::TimeRep>)> {
     // Track event bindings
     ctx.add_event_binds(
         invoke.instance.clone(),
@@ -134,18 +134,13 @@ fn check_invoke_binds<'a>(
     );
 
     let sig = ctx.get_instance(&invoke.instance)?;
-    let binding: HashMap<_, _> = sig
-        .abstract_vars
-        .iter()
-        .cloned()
-        .zip(invoke.abstract_vars.iter())
-        .collect();
+    let binding = sig.binding(&invoke.abstract_vars)?;
     let this_sig = ctx.get_invoke(&THIS.into())?.get_sig();
     let mut constraints = vec![];
 
     // For each event provided for an abstract variable, ensure that the corresponding interface
     // does not pulse more often than the interface allows.
-    for (abs, &evs) in &binding {
+    for (abs, &evs) in binding.iter() {
         if let Some(interface) = sig.get_interface(abs) {
             // Each event in the binding must pulse less often than the interface of the abstract
             // variable.
@@ -340,8 +335,12 @@ fn check_component(
 
     // Check all the commands
     check_commands(&comp.body, &mut ctx)?;
+    // Add obligations from disjointness constraints
+    let disj = ctx.drain_disjointness()?;
+    ctx.add_obligations(disj);
 
-    let obs = ctx.drain_obligations().chain(ctx.drain_disjointness()?);
+    // Prove all the required obligations
+    let obs = ctx.drain_obligations();
     super::prove(comp.sig.abstract_vars.iter(), &ctx.facts, obs)?;
 
     // There should be no remaining assignments after checking a component
@@ -365,15 +364,19 @@ pub fn check(namespace: &ast::Namespace) -> FilamentResult<()> {
 
     // Check that all signatures are well formed
     for sig in sigs.values() {
+        log::info!("===== Signature {} =====", &sig.name);
         super::prove(
             sig.abstract_vars.iter(),
             &sig.constraints,
             sig.well_formed()?,
         )?;
+        log::info!("==========");
     }
 
     for comp in &namespace.components {
+        log::info!("===== Component {} =====", &comp.sig.name);
         check_component(comp, &sigs)?;
+        log::info!("==========");
         // Add the signature of this component to the context.
         sigs.insert(comp.sig.name.clone(), &comp.sig);
     }

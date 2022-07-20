@@ -7,7 +7,7 @@ use std::collections::{hash_map::Entry, HashMap, HashSet};
 pub enum ConcreteInvoke<'a> {
     Concrete {
         /// Bindings for abstract variables
-        binding: HashMap<ast::Id, &'a FsmIdxs>,
+        binding: core::Binding<'a, ast::TimeRep>,
 
         /// Signature
         sig: &'a ast::Signature,
@@ -27,7 +27,7 @@ pub enum ConcreteInvoke<'a> {
 impl<'a> ConcreteInvoke<'a> {
     /// Construct an instance from a Signature and bindings for abstract variables.
     pub fn concrete(
-        binding: HashMap<ast::Id, &'a FsmIdxs>,
+        binding: core::Binding<'a, ast::TimeRep>,
         sig: &'a ast::Signature,
     ) -> Self {
         Self::Concrete { binding, sig }
@@ -227,7 +227,7 @@ impl<'a> Context<'a> {
         F: Iterator<Item = ast::Constraint>,
     {
         for fact in facts {
-            log::trace!("adding obligation {}", fact);
+            log::info!("adding obligation {}", fact);
             self.obligations.push(fact);
         }
     }

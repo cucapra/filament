@@ -1,8 +1,8 @@
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 
 use crate::errors;
 
-use super::{Constraint, ConstraintBase, Id, TimeRep, WithTime};
+use super::{Binding, Constraint, ConstraintBase, TimeRep, WithTime};
 
 /// A range over time representation
 #[derive(Clone)]
@@ -43,7 +43,7 @@ impl<T> WithTime<T> for Range<T>
 where
     T: TimeRep,
 {
-    fn resolve(&self, bindings: &HashMap<Id, &T>) -> Self {
+    fn resolve(&self, bindings: &Binding<T>) -> Self {
         Range {
             start: self.start.resolve(bindings),
             end: self.end.resolve(bindings),
@@ -121,7 +121,7 @@ where
         self
     }
 
-    pub fn resolve(&self, bindings: &HashMap<Id, &T>) -> Self {
+    pub fn resolve(&self, bindings: &Binding<T>) -> Self {
         Interval {
             within: self.within.resolve(bindings),
             exact: self.exact.as_ref().map(|range| range.resolve(bindings)),

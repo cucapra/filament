@@ -1,6 +1,5 @@
-use std::{collections::HashMap, fmt::Display};
-
-use crate::core::Id;
+use crate::core::{self, Id};
+use std::fmt::Display;
 
 /// Represents a time variable which can either be:
 ///   1. An abstract variable like `G`.
@@ -88,18 +87,15 @@ impl From<Id> for IntervalTime {
     }
 }
 
-impl crate::core::TimeRep for IntervalTime {
-    type SubRep = crate::core::TimeSub<IntervalTime>;
+impl core::TimeRep for IntervalTime {
+    type SubRep = core::TimeSub<IntervalTime>;
 
     /// Resolve the IntervalTime using the given bindings from abstract variables to exact
     /// bindings.
-    fn resolve(&self, bindings: &HashMap<Id, &IntervalTime>) -> Self {
+    fn resolve(&self, bindings: &core::Binding<IntervalTime>) -> Self {
         match self {
             IntervalTime::Concrete(_) => self.clone(),
-            IntervalTime::Abstract(name) => (*bindings
-                .get(name)
-                .unwrap_or_else(|| panic!("No binding for {}", name)))
-            .clone(),
+            IntervalTime::Abstract(name) => bindings.get(name).clone(),
             IntervalTime::Max { left, right } => IntervalTime::binop_max(
                 left.resolve(bindings),
                 right.resolve(bindings),

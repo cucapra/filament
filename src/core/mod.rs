@@ -18,4 +18,4 @@ pub use id::Id;
 pub use interval::{Interval, Range};
 pub use port::{InterfaceDef, PortDef};
 pub use signature::Signature;
-pub use time_rep::{TimeRep, TimeSub, WithTime};
+pub use time_rep::{Binding, TimeRep, TimeSub, WithTime};

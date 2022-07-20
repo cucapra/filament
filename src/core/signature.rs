@@ -1,6 +1,6 @@
 use super::{
-    Constraint, ConstraintBase, FsmIdxs, Id, InterfaceDef, Interval, PortDef,
-    TimeRep,
+    Binding, Constraint, ConstraintBase, FsmIdxs, Id, InterfaceDef, Interval,
+    PortDef, TimeRep,
 };
 use crate::errors::{Error, FilamentResult, WithPos};
 use itertools::Itertools;
@@ -105,6 +105,25 @@ where
                     .iter()
                     .flat_map(|id| id.liveness.well_formed()),
             )
+    }
+
+    /// Construct a binding from this Signature
+    pub fn binding<'a>(&self, args: &'a [T]) -> FilamentResult<Binding<'a, T>> {
+        if self.abstract_vars.len() != args.len() {
+            return Err(Error::malformed(format!(
+                "Cannot construct binding. Expected {} arguments, provided {}",
+                self.abstract_vars.len(),
+                args.len(),
+            )));
+        }
+
+        Ok(Binding::new(
+            self.abstract_vars
+                .iter()
+                .cloned()
+                .zip(args.iter())
+                .collect(),
+        ))
     }
 }
 

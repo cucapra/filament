@@ -1,6 +1,29 @@
 use super::Id;
 use std::{collections::HashMap, fmt::Display};
 
+/// Represents a binding from names to time variables.
+pub struct Binding<'a, T> {
+    map: HashMap<Id, &'a T>,
+}
+
+impl<'a, T> Binding<'a, T> {
+    pub fn new(map: HashMap<Id, &'a T>) -> Self {
+        Self { map }
+    }
+
+    pub fn find(&self, n: &Id) -> Option<&T> {
+        self.map.get(n).copied()
+    }
+
+    pub fn get(&self, n: &Id) -> &T {
+        self.find(n).unwrap_or_else(|| panic!("No binding for {n}"))
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&Id, &&'a T)> {
+        self.map.iter()
+    }
+}
+
 /// A representation of time
 pub trait TimeRep
 where
@@ -11,7 +34,7 @@ where
 
     fn unit(event: Id, state: u64) -> Self;
     fn increment(self, n: u64) -> Self;
-    fn resolve(&self, bindings: &HashMap<Id, &Self>) -> Self;
+    fn resolve(&self, bindings: &Binding<Self>) -> Self;
     fn sub(self, other: Self) -> Self::SubRep;
 }
 
@@ -20,14 +43,14 @@ pub trait WithTime<T>
 where
     T: TimeRep,
 {
-    fn resolve(&self, bindings: &HashMap<Id, &T>) -> Self;
+    fn resolve(&self, bindings: &Binding<T>) -> Self;
 }
 
 impl<T> WithTime<T> for T
 where
     T: TimeRep,
 {
-    fn resolve(&self, bindings: &HashMap<Id, &T>) -> Self {
+    fn resolve(&self, bindings: &Binding<T>) -> Self {
         self.resolve(bindings)
     }
 }
@@ -46,7 +69,7 @@ impl<T> WithTime<T> for TimeSub<T>
 where
     T: TimeRep,
 {
-    fn resolve(&self, bindings: &std::collections::HashMap<Id, &T>) -> Self {
+    fn resolve(&self, bindings: &Binding<T>) -> Self {
         Self {
             a: self.a.resolve(bindings),
             b: self.b.resolve(bindings),

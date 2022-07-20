@@ -2,7 +2,7 @@
 //! Once this pass is run, all Filament-level components are guaranteed to have @interface defined
 //! for all the events they use.
 
-use crate::core::TimeRep;
+use crate::core::{self, TimeRep};
 use crate::errors::FilamentResult;
 use crate::event_checker::ast;
 use crate::visitor;
@@ -26,7 +26,7 @@ impl InterfaceInfer {
         &mut self,
         sig: &ast::Signature,
         abstract_vars: &[ast::TimeRep],
-        binding: &HashMap<ast::Id, &ast::TimeRep>,
+        binding: &core::Binding<ast::TimeRep>,
     ) {
         let out_events =
             sig.outputs.iter().chain(sig.inputs.iter()).flat_map(|pd| {
