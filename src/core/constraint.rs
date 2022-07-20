@@ -1,9 +1,9 @@
-use super::{FsmIdxs, Id, Range, TimeRep, TimeSub, WithTime};
+use super::{Binding, FsmIdxs, Range, TimeRep, TimeSub, WithTime};
 use crate::{
     errors::{self, FilamentResult},
     interval_checking::SExp,
 };
-use std::{cmp::Ordering, collections::HashMap, fmt::Display};
+use std::{cmp::Ordering, fmt::Display};
 
 /// Ordering operator for constraints
 #[derive(Hash, Eq, PartialEq, Clone)]
@@ -84,7 +84,7 @@ impl<K: TimeRep, T: WithTime<K>> WithTime<K> for ConstraintBase<T>
 where
     Self: Clone,
 {
-    fn resolve(&self, bindings: &HashMap<super::Id, &K>) -> Self {
+    fn resolve(&self, bindings: &Binding<K>) -> Self {
         ConstraintBase {
             left: self.left.resolve(bindings),
             right: self.right.resolve(bindings),
@@ -194,7 +194,7 @@ impl<T: TimeRep> Constraint<T> {
 }
 
 impl<T: TimeRep> WithTime<T> for Constraint<T> {
-    fn resolve(&self, binding: &HashMap<Id, &T>) -> Constraint<T> {
+    fn resolve(&self, binding: &Binding<T>) -> Constraint<T> {
         match self {
             Constraint::Base { base } => Constraint::Base {
                 base: base.resolve(binding),
@@ -210,10 +210,7 @@ impl<T: TimeRep> WithTime<T> for Constraint<T> {
     }
 }
 
-impl<T> Constraint<T>
-where
-    T: TimeRep + PartialEq + PartialOrd,
-{
+impl Constraint<FsmIdxs> {
     /// Check if the constraint can be statically reduced to true.
     pub fn simplify(self) -> Option<Self> {
         match &self {
@@ -229,7 +226,36 @@ where
                     _ => Some(self),
                 }
             }
-            Constraint::Sub { .. } => Some(self),
+            Constraint::Sub {
+                base:
+                    ConstraintBase {
+                        /* ref left,
+                        ref right,
+                        ref op, */
+                        ..
+                    },
+            } => {
+                /* if let (Some(l), Some(r)) = (left.concrete(), right.concrete()) {
+                    match op {
+                        OrderOp::Gt => {
+                            if l > r {
+                                return None;
+                            }
+                        }
+                        OrderOp::Gte => {
+                            if l >= r {
+                                return None;
+                            }
+                        }
+                        OrderOp::Eq => {
+                            if l == r {
+                                return None;
+                            }
+                        }
+                    }
+                } */
+                Some(self)
+            }
         }
     }
 }

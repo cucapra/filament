@@ -1,4 +1,4 @@
-use crate::errors::{FilamentResult, WithPos};
+use crate::errors::{Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
 use crate::visitor;
 use std::collections::HashMap;
@@ -64,12 +64,7 @@ impl visitor::Transform for CompileInvokes {
         } = inv
         {
             // Get the signature associated with this instance.
-            let binding: HashMap<_, _> = sig
-                .abstract_vars
-                .iter()
-                .cloned()
-                .zip(abstract_vars.iter())
-                .collect();
+            let binding = sig.binding(&abstract_vars)?;
 
             let mut connects = Vec::with_capacity(
                 1 + ports.len() + sig.interface_signals.len(),
@@ -91,7 +86,7 @@ impl visitor::Transform for CompileInvokes {
                 let ev = &interface.event;
                 // Get binding for this event in the invoke
                 let (s_ev, start_time) =
-                    binding[ev].as_unit().unwrap_or_else(|| {
+                    binding.get(ev).as_unit().unwrap_or_else(|| {
                         unimplemented!(
                             "Binding for event {ev} is a max-expression"
                         )
@@ -135,24 +130,31 @@ impl visitor::Transform for CompileInvokes {
         comp: ast::Component,
     ) -> FilamentResult<ast::Component> {
         // Define FSMs for each interface signal
-        self.fsms =
-            comp.sig
-                .interface_signals
-                .iter()
-                .map(|interface| {
-                    let ev = &interface.event;
-                    (
-                        ev.clone(),
-                        ast::Fsm::new(
-                            format!("{}_fsm", ev).into(),
-                            interface.delay().try_into().expect(
-                                "Cannot compile complex interface signals",
-                            ),
-                            ast::Port::this(interface.name.clone()),
-                        ),
+        self.fsms = comp
+            .sig
+            .interface_signals
+            .iter()
+            .map(|interface| {
+                let ev = &interface.event;
+                let delay = interface.delay().concrete().ok_or_else(|| {
+                    Error::malformed(
+                        "Cannot compile interface signals with max expressions",
                     )
-                })
-                .collect::<HashMap<_, _>>();
+                    .add_note(
+                        "Interface uses max expression",
+                        interface.copy_span(),
+                    )
+                })?;
+                Ok((
+                    ev.clone(),
+                    ast::Fsm::new(
+                        format!("{}_fsm", ev).into(),
+                        delay,
+                        ast::Port::this(interface.name.clone()),
+                    ),
+                ))
+            })
+            .collect::<FilamentResult<HashMap<_, _>>>()?;
 
         Ok(comp)
     }

@@ -1,4 +1,4 @@
-use super::{Id, Interval, Range, TimeSub};
+use super::{Binding, Id, Interval, Range, TimeSub};
 use crate::interval_checking::SExp;
 use linked_hash_map::LinkedHashMap;
 use std::fmt::Display;
@@ -111,14 +111,10 @@ impl super::TimeRep for FsmIdxs {
         FsmIdxs { fsms }
     }
 
-    fn resolve(&self, bindings: &std::collections::HashMap<Id, &Self>) -> Self {
+    fn resolve(&self, bindings: &Binding<Self>) -> Self {
         let mut out = LinkedHashMap::with_capacity(self.fsms.len());
         for (name, state) in &self.fsms {
-            let idxs = (*bindings
-                .get(name)
-                .unwrap_or_else(|| panic!("No binding for {}", name)))
-            .clone()
-            .increment(*state);
+            let idxs = bindings.get(name).clone().increment(*state);
             out.extend(&mut idxs.fsms.into_iter());
         }
         FsmIdxs { fsms: out }
@@ -171,18 +167,16 @@ impl Range<FsmIdxs> {
     }
 }
 
-impl TryFrom<TimeSub<FsmIdxs>> for u64 {
-    type Error = ();
-
-    fn try_from(val: TimeSub<FsmIdxs>) -> Result<Self, Self::Error> {
-        let l_len = val.a.fsms.len();
-        if l_len == 1 && l_len == val.b.fsms.len() {
-            let (l_ev, l_st) = &val.a.events().next().unwrap();
-            let (r_ev, r_st) = &val.b.events().next().unwrap();
+impl TimeSub<FsmIdxs> {
+    pub fn concrete(&self) -> Option<u64> {
+        let l_len = self.a.fsms.len();
+        if l_len == 1 && l_len == self.b.fsms.len() {
+            let (l_ev, l_st) = &self.a.events().next().unwrap();
+            let (r_ev, r_st) = &self.b.events().next().unwrap();
             if l_ev == r_ev {
-                return Ok(l_st.abs_diff(**r_st));
+                return Some(l_st.abs_diff(**r_st));
             }
         }
-        Err(())
+        None
     }
 }

@@ -1,4 +1,6 @@
-use super::{FsmIdxs, Id, Interval, Range, TimeRep, TimeSub, WithTime};
+use super::{
+    Binding, FsmIdxs, Id, Interval, Range, TimeRep, TimeSub, WithTime,
+};
 use crate::errors::{self, WithPos};
 use std::fmt::Display;
 
@@ -52,10 +54,7 @@ where
     }
 }
 impl<T: Clone + TimeRep> WithTime<T> for PortDef<T> {
-    fn resolve(
-        &self,
-        bindings: &std::collections::HashMap<super::Id, &T>,
-    ) -> Self {
+    fn resolve(&self, bindings: &Binding<T>) -> Self {
         Self {
             liveness: self.liveness.resolve(bindings),
             ..self.clone()
