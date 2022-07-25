@@ -77,7 +77,7 @@ where
             .or_else(|| {
                 self.interface_signals.iter().find_map(|id| {
                     if id.name == port {
-                        Some(id.liveness.clone())
+                        todo!("Cannot compute liveness for interface port")
                     } else {
                         None
                     }
@@ -100,11 +100,6 @@ where
             .iter()
             .chain(self.outputs.iter())
             .flat_map(|mpd| mpd.liveness.well_formed())
-            .chain(
-                self.interface_signals
-                    .iter()
-                    .flat_map(|id| id.liveness.well_formed()),
-            )
     }
 
     /// Construct a binding from this Signature
@@ -165,7 +160,7 @@ impl Signature<FsmIdxs> {
             .into_iter()
             .flat_map(|(ev, lens)| {
                 let id = self.get_interface(&ev).unwrap();
-                let len = id.delay();
+                let len = &id.delay;
                 lens.into_iter().map(move |(port_len, port_pos)| {
                     Constraint::from(ConstraintBase::gte(
                         len.clone(),

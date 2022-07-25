@@ -1,8 +1,8 @@
 import "primitives/core.fil";
 
 component Max_mult_add<G, L>(
-  @interface[G, max(G, L)+5] go_G: 1,
-  @interface[L, max(G, L)+5] go_L: 1,
+  @interface<G, |G - max(G, L)+5|> go_G: 1,
+  @interface<L, |L - max(G, L)+5|> go_L: 1,
   @[G, G+1] a: 32,
   @[G, G+1] b: 32,
   @[L, L+1] c: 32,
@@ -18,12 +18,12 @@ component Max_mult_add<G, L>(
   A := new Add;
 
   m0 := M0<G>(a, b);
-  m1 := M1<L>(c, d);
+  m1 := M0<L>(c, d);
 
   // Latch the signals till both outputs are available.
-  m0_l := L1<G+2, max(G+4, L+4) + 1>(m0.out);
-  m1_l := L0<L+2, max(G+4, L+4) + 1>(m1.out);
-  a0 := A<max(G+4, L+4)>(m0_l.out, m1_l.out);
+  m0_l := L1<G+2, max(G, L)+5>(m0.out);
+  m1_l := L0<L+2, max(G, L)+5>(m1.out);
+  a0 := A<max(G, L)+4>(m0_l.out, m1_l.out);
 
   out = a0.out;
 }

@@ -152,8 +152,8 @@ fn check_invoke_binds<'a>(
                             "Event {event} does not have a corresponding interface signal"
                         ))
                     })?;
-                let int_len = interface.delay().resolve(&binding);
-                let ev_int_len = event_interface.delay();
+                let int_len = interface.delay.resolve(&binding);
+                let ev_int_len = &event_interface.delay;
 
                 // Generate constraint
                 let cons = Constraint::from(ast::CBS::gte(

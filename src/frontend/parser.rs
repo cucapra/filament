@@ -3,6 +3,7 @@
 //! Parser for Calyx programs.
 use super::ast::InterfaceDef;
 use super::{ast, IntervalTime};
+use crate::core::TimeSub;
 use crate::errors::{self, FilamentResult, WithPos};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
@@ -132,6 +133,14 @@ impl FilamentParser {
         ))
     }
 
+    fn time_sub(input: Node) -> ParseResult<TimeSub<IntervalTime>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [bitwidth(n)] => TimeSub::new_conc(n),
+            [time(a), time(b)] => TimeSub::new_abs(a, b),
+        ))
+    }
+
     fn interval_range(input: Node) -> ParseResult<ast::Range> {
         let sp = Self::get_span(&input);
         Ok(match_nodes!(
@@ -142,10 +151,10 @@ impl FilamentParser {
 
     // ================ Signature =====================
 
-    fn interface(input: Node) -> ParseResult<(ast::Id, IntervalTime)> {
+    fn interface(input: Node) -> ParseResult<(ast::Id, TimeSub<IntervalTime>)> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(tvar), time(t)] => (tvar, t),
+            [identifier(tvar), time_sub(t)] => (tvar, t),
         ))
     }
 

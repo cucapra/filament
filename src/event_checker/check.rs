@@ -105,7 +105,9 @@ fn transform_interface_def(
     id: core::InterfaceDef<frontend::IntervalTime>,
 ) -> FilamentResult<core::InterfaceDef<core::FsmIdxs>> {
     let sp = id.copy_span();
-    let d = transform_time(id.end)
+    let d = id
+        .delay
+        .map(transform_time)
         .map_err(|e| e.add_note("Malformed interval", sp.clone()))?;
     Ok(
         core::InterfaceDef::<core::FsmIdxs>::new(id.name, id.event, d)

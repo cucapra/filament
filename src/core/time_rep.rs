@@ -1,3 +1,5 @@
+use crate::errors::FilamentResult;
+
 use super::Id;
 use itertools::Itertools;
 use std::{collections::HashMap, fmt::Debug, fmt::Display};
@@ -69,14 +71,47 @@ where
     }
 }
 
+#[derive(Clone)]
+pub enum TimeSubInner<T: TimeRep> {
+    Abs { a: T, b: T },
+    Concrete(u64),
+}
+
 /// Represents the absolute difference between two time events
 #[derive(Clone)]
 pub struct TimeSub<T>
 where
     T: TimeRep,
 {
-    pub a: T,
-    pub b: T,
+    pub(super) inner: TimeSubInner<T>,
+}
+
+impl<T> TimeSub<T>
+where
+    T: TimeRep,
+{
+    pub fn new_abs(a: T, b: T) -> Self {
+        Self {
+            inner: TimeSubInner::Abs { a, b },
+        }
+    }
+
+    pub fn new_conc(n: u64) -> Self {
+        Self {
+            inner: TimeSubInner::Concrete(n),
+        }
+    }
+
+    /// Map a function over the time expressions contained in the TimeSub
+    pub fn map<K: TimeRep, F: Fn(T) -> FilamentResult<K>>(
+        self,
+        f: F,
+    ) -> FilamentResult<TimeSub<K>> {
+        match self.inner {
+            TimeSubInner::Abs { a, b } => Ok(TimeSub::new_abs(f(a)?, f(b)?)),
+            TimeSubInner::Concrete(n) => Ok(TimeSub::new_conc(n)),
+        }
+    }
 }
 
 impl<T> WithTime<T> for TimeSub<T>
@@ -84,15 +119,20 @@ where
     T: TimeRep,
 {
     fn resolve(&self, bindings: &Binding<T>) -> Self {
-        Self {
-            a: self.a.resolve(bindings),
-            b: self.b.resolve(bindings),
+        match &self.inner {
+            TimeSubInner::Abs { a, b } => {
+                Self::new_abs(a.resolve(bindings), b.resolve(bindings))
+            }
+            TimeSubInner::Concrete(_) => self.clone(),
         }
     }
 }
 
 impl<T: TimeRep + Display> Display for TimeSub<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "|{} - {}|", self.a, self.b)
+        match &self.inner {
+            TimeSubInner::Abs { a, b } => write!(f, "|{} - {}|", a, b),
+            TimeSubInner::Concrete(n) => write!(f, "{n}"),
+        }
     }
 }

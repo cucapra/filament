@@ -1,5 +1,5 @@
 component main<T>(
-  @interface[T, T+4] go_T: 1,
+  @interface<T, 4> go_T: 1,
 ) -> () {
   fsm t[5](go_T);
 }

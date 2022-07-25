@@ -1,8 +1,8 @@
 import "primitives/core.fil";
 
 component Max_mult_add<G, L>(
-  @interface[G, G+3] go_G: 1,
-  @interface[L, L+3] go_L: 1,
+  @interface<G, 3> go_G: 1,
+  @interface<L, 3> go_L: 1,
   @[G, G+1] a: 32,
   @[G, G+1] b: 32,
   @[L, L+1] c: 32,

@@ -3,7 +3,7 @@ extern "mult.sv" {
     clk: 1,
     reset: 1,
     // Explicit interface signal that shows evidence for event "T".
-    @interface[T, T+2] go_T: 1,
+    @interface<T, 2> go_T: 1,
     // ---------
     @[T, T+2] left: 32,
     @[T, T+1] right: 32
@@ -14,7 +14,7 @@ extern "mult.sv" {
 
 
 component main<T>(
-  @interface[T, T+5] go_T: 1,
+  @interface<T, 5> go_T: 1,
   // ----
   @[T, T+2]   l0: 32,
   @[T+2, T+4] l1: 32,

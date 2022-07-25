@@ -1,6 +1,4 @@
-use super::{
-    Binding, FsmIdxs, Id, Interval, Range, TimeRep, TimeSub, WithTime,
-};
+use super::{Binding, Id, Interval, TimeRep, TimeSub, WithTime};
 use crate::errors::{self, WithPos};
 use std::fmt::Display;
 
@@ -72,9 +70,7 @@ where
     // Event that this port is an evidence of
     pub event: Id,
     // End event
-    pub end: T,
-    // Liveness of the interface signal
-    pub(super) liveness: Interval<T>,
+    pub delay: TimeSub<T>,
     // Position
     pos: Option<errors::Span>,
 }
@@ -85,8 +81,8 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "@interface[{}, {}] {}: 1",
-            self.event, self.end, self.name
+            "@interface<{}, {}> {}: 1",
+            self.event, self.delay, self.name
         )
     }
 }
@@ -95,28 +91,16 @@ impl<T> InterfaceDef<T>
 where
     T: TimeRep + Clone,
 {
-    pub fn new(name: Id, event: Id, end: T) -> Self
+    pub fn new(name: Id, event: Id, delay: TimeSub<T>) -> Self
     where
         T: TimeRep + Clone,
     {
-        let start = T::unit(event.clone(), 0);
-        let liveness = Interval::from(Range::new(start.clone(), end.clone()))
-            .with_exact(Range::new(start.clone(), start.increment(1)));
         Self {
             name,
-            end,
             event,
-            liveness,
+            delay,
             pos: None,
         }
-    }
-}
-
-impl InterfaceDef<FsmIdxs> {
-    /// Attempts to return a concrete delay for this interface. Panics if the
-    /// end time is a max-expression or uses different time variables
-    pub fn delay(&self) -> TimeSub<FsmIdxs> {
-        FsmIdxs::unit(self.event.clone(), 0) - self.end.clone()
     }
 }
 

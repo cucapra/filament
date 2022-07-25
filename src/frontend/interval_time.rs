@@ -1,4 +1,4 @@
-use crate::core::{self, Id};
+use crate::core::{self, Id, TimeSub};
 use std::fmt::Display;
 
 /// Represents a time variable which can either be:
@@ -120,8 +120,8 @@ impl core::TimeRep for IntervalTime {
         IntervalTime::binop_add(self, IntervalTime::Concrete(n))
     }
 
-    fn sub(self, _: Self) -> Self::SubRep {
-        todo!("Subtracting IntervalTime events")
+    fn sub(self, other: Self) -> Self::SubRep {
+        TimeSub::new_abs(self, other)
     }
 }
 

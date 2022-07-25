@@ -4,12 +4,12 @@
 error: Cannot prove constraint |G - L| >= |G+1 - G|
   ┌─ tests/errors/unprovable-cons.fil:6:3
   │
-6 │   @interface[G, L] go_G: 1,
-  │   ^^^^^^^^^^^^^^^^^^^^^^^^
+6 │   @interface<G, |G-L|> go_G: 1,
+  │   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   │   │
   │   Invalid interface
   │   Interface signal lasts for |G - L|
-7 │   @interface[L, L+1] go_L: 1,
+7 │   @interface<L, 1> go_L: 1,
 8 │   @[G, G+1] left: 32,
   │   ------------------ Signal lasts for |G+1 - G|
 

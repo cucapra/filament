@@ -136,7 +136,7 @@ impl visitor::Transform for CompileInvokes {
             .iter()
             .map(|interface| {
                 let ev = &interface.event;
-                let delay = interface.delay().concrete().ok_or_else(|| {
+                let delay = interface.delay.concrete().ok_or_else(|| {
                     Error::malformed(
                         "Cannot compile interface signals with max expressions",
                     )

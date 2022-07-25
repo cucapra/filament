@@ -76,9 +76,15 @@ interval = _{
   interval_range ~ ("+" ~ interval_range)?
 }
 
+// Time sub expression
+time_sub = {
+  bitwidth
+  | "|" ~ time ~ "-" ~ time ~ "|"
+}
+
 // Ports
 interface = {
-  "@interface" ~ "[" ~ identifier ~ "," ~ time ~ "]"
+  "@interface" ~ "<" ~ identifier ~ "," ~ time_sub ~ ">"
 }
 port_def = {
   (interval | interface)? ~ identifier ~ ":" ~ bitwidth

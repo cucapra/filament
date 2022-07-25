@@ -87,7 +87,7 @@ impl std::ops::Sub for FsmIdxs {
 
     /// Representation of the difference between two FsmIdx events
     fn sub(self, other: FsmIdxs) -> TimeSub<FsmIdxs> {
-        TimeSub { a: self, b: other }
+        TimeSub::new_abs(self, other)
     }
 }
 
@@ -169,14 +169,19 @@ impl Range<FsmIdxs> {
 
 impl TimeSub<FsmIdxs> {
     pub fn concrete(&self) -> Option<u64> {
-        let l_len = self.a.fsms.len();
-        if l_len == 1 && l_len == self.b.fsms.len() {
-            let (l_ev, l_st) = &self.a.events().next().unwrap();
-            let (r_ev, r_st) = &self.b.events().next().unwrap();
-            if l_ev == r_ev {
-                return Some(l_st.abs_diff(**r_st));
+        match &self.inner {
+            super::TimeSubInner::Abs { a, b } => {
+                let l_len = a.fsms.len();
+                if l_len == 1 && l_len == b.fsms.len() {
+                    let (l_ev, l_st) = &a.events().next().unwrap();
+                    let (r_ev, r_st) = &b.events().next().unwrap();
+                    if l_ev == r_ev {
+                        return Some(l_st.abs_diff(**r_st));
+                    }
+                }
+                None
             }
+            super::TimeSubInner::Concrete(n) => Some(*n),
         }
-        None
     }
 }

@@ -94,10 +94,12 @@ impl visitor::Transform for InterfaceInfer {
     ) -> FilamentResult<ast::Component> {
         // Add interface ports for all components
         let missing_interfaces = comp.sig.abstract_vars.iter().map(|ev| {
+            let start = core::FsmIdxs::unit(ev.clone(), 0);
+            let end = core::FsmIdxs::unit(ev.clone(), self.max_states[ev]);
             ast::InterfaceDef::new(
                 format!("go_{}", ev).into(),
                 ev.clone(),
-                TimeRep::unit(ev.clone(), self.max_states[ev]),
+                end - start,
             )
         });
         comp.sig.interface_signals.extend(missing_interfaces);

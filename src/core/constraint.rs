@@ -1,4 +1,6 @@
-use super::{Binding, FsmIdxs, Range, TimeRep, TimeSub, WithTime};
+use super::{
+    Binding, FsmIdxs, Range, TimeRep, TimeSub, TimeSubInner, WithTime,
+};
 use crate::{
     errors::{self, FilamentResult},
     interval_checking::SExp,
@@ -35,10 +37,10 @@ pub struct ConstraintBase<T> {
     extra: Extra,
 }
 impl<T> ConstraintBase<T> {
-    pub fn map<K, F: Fn(T) -> FilamentResult<K>>(
-        self,
-        f: F,
-    ) -> FilamentResult<ConstraintBase<K>> {
+    pub fn map<K, F>(self, f: F) -> FilamentResult<ConstraintBase<K>>
+    where
+        F: Fn(T) -> FilamentResult<K>,
+    {
         Ok(ConstraintBase {
             left: f(self.left)?,
             right: f(self.right)?,
@@ -132,6 +134,7 @@ where
     }
 }
 
+// A constraint
 #[derive(Clone)]
 pub enum Constraint<T: TimeRep> {
     Base { base: ConstraintBase<T> },
@@ -180,15 +183,26 @@ impl<T: TimeRep> Constraint<T> {
         self
     }
 
-    pub fn map<K: TimeRep, F: Fn(T) -> FilamentResult<K>>(
-        self,
-        f: F,
-    ) -> FilamentResult<Constraint<K>> {
+    pub fn map<K, F>(self, f: F) -> FilamentResult<Constraint<K>>
+    where
+        K: TimeRep,
+        F: Fn(T) -> FilamentResult<K>,
+    {
         match self {
             Constraint::Base { base } => {
                 Ok(Constraint::Base { base: base.map(f)? })
             }
-            Constraint::Sub { .. } => todo!("Mapping over Constraint::Sub"),
+            Constraint::Sub { base } => {
+                let left = base.left.map(&f)?;
+                let right = base.right.map(f)?;
+                let base = ConstraintBase {
+                    left,
+                    right,
+                    op: base.op,
+                    extra: base.extra,
+                };
+                Ok(Constraint::Sub { base })
+            }
         }
     }
 }
@@ -291,10 +305,11 @@ impl From<&Constraint<FsmIdxs>> for SExp {
 
 impl From<&TimeSub<FsmIdxs>> for SExp {
     fn from(ts: &TimeSub<FsmIdxs>) -> Self {
-        SExp(format!(
-            "(abs (- {} {}))",
-            SExp::from(&ts.a),
-            SExp::from(&ts.b)
-        ))
+        match &ts.inner {
+            TimeSubInner::Abs { a, b } => {
+                SExp(format!("(abs (- {} {}))", SExp::from(a), SExp::from(b)))
+            }
+            TimeSubInner::Concrete(n) => SExp(format!("{n}")),
+        }
     }
 }

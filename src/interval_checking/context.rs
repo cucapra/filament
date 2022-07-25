@@ -351,7 +351,7 @@ impl<'a> Context<'a> {
                 // For each event
                 for (i, (spi, bi)) in args.iter().enumerate() {
                     // Delay implied by the i'th binding
-                    let i_delay = id.delay().resolve(&sig.binding(bi)?);
+                    let i_delay = id.delay.resolve(&sig.binding(bi)?);
                     // The i'th use conflicts with all other uses
                     for (k, (spk, bk)) in args.iter().enumerate() {
                         if i == k {

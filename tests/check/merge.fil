@@ -9,8 +9,8 @@ extern "dummy.sv" {
   // in this function's signature but that is okay because inputs only require
   // signals to be active for at least as long as the requirement
   component Merge<G, L, E>(
-    @interface[G, E] go_G: 1,
-    @interface[L, E] go_L: 1,
+    @interface<G, |G-E|> go_G: 1,
+    @interface<L, |L-E|> go_L: 1,
     @[G, L] in1: 32,
     @[L, E] in2: 32,
   ) -> (

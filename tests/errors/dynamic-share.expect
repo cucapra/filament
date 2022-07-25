@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint |L - G| >= |L - L+3|
+error: Cannot prove constraint |L - G| >= |L+3 - L|
    ┌─ tests/errors/dynamic-share.fil:13:3
    │
 12 │   m1 := M<L>(c, d);
@@ -9,5 +9,5 @@ error: Cannot prove constraint |L - G| >= |L - L+3|
 13 │   m0 := M<G>(a, b);
    │   ^^^^^^^^^^^^^^^^^ Conflicting invoke. Invoke provides binding M.G=G
    │
-   = @interface for G specifies that invokes must be |L - L+3| cycles apart
+   = @interface for G specifies that invokes must be |L+3 - L| cycles apart
 

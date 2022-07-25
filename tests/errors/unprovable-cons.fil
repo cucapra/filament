@@ -3,8 +3,8 @@ import "primitives/core.fil";
 // This program should fail type checking because we do not provide evidence
 // that L > G.
 component Main<G, L>(
-  @interface[G, L] go_G: 1,
-  @interface[L, L+1] go_L: 1,
+  @interface<G, |G-L|> go_G: 1,
+  @interface<L, 1> go_L: 1,
   @[G, G+1] left: 32,
   @[L, L+1] right: 32
 ) -> (
