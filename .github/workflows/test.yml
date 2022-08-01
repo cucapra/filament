@@ -39,11 +39,11 @@ jobs:
           cd ..
           echo "============= Setting Fud configuration =============="
           fud config global.futil_directory "$(pwd)/calyx"
-          fud register filament -p "$(pwd)/filament/filament.py"
+          fud register filament -p "$(pwd)/filament.py"
           fud register icarus-verilog -p "$(pwd)/calyx/fud/icarus/icarus.py"
           fud config stages.futil.exec "$(pwd)/calyx/target/debug/futil"
-          fud config stages.filament.exec "$(pwd)/filament/target/debug/filament"
-          fud config stages.filament.library "$(pwd)/filament"
+          fud config stages.filament.exec "$(pwd)/target/debug/filament"
+          fud config stages.filament.library "$(pwd)"
           fud config
 
       - name: Install Rust
