@@ -1,6 +1,7 @@
 import "primitives/core.fil";
 
 component FastMult<G>(
+  @interface[G, G+3] go_G: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,
 ) -> (
@@ -9,11 +10,12 @@ component FastMult<G>(
   CM := new MultComb;
   L := new Latch;
   cm := CM<G>(left, right);
-  l := L<G, G+2>(cm.out);
+  l := L<G, G+1, G+2>(cm.out);
   out = l.out;
 }
 
 component main<G>(
+  @interface[G, G+4] go_G: 1,
   @[G, G+1] a: 32,
   @[G, G+1] b: 32,
 ) -> (
@@ -29,8 +31,8 @@ component main<G>(
   L2 := new Latch;
 
   sm0 := SM<G>(a, b);
-  la := L1<G, G+2>(a);
-  lb := L2<G, G+2>(b);
+  la := L1<G, G+1, G+2>(a);
+  lb := L2<G, G+1, G+2>(b);
 
   fm0 := FM<G+1>(la.out, lb.out);
   a0 := A<G+2>(sm0.out, fm0.out);

@@ -17,5 +17,5 @@ paths = [
 ]
 cmd = """
 cd $(dirname {}) && \
-make INTERFACE=interface.json DATA_FILE=data.json FIL=test.fil | grep Outputs
+make -B INTERFACE=interface.json DATA_FILE=data.json FIL=test.fil | grep Outputs
 """
