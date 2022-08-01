@@ -4,6 +4,7 @@ module Latch (
   input wire clk,
   input wire reset,
   input wire write_en,
+  input wire _go_S, // unused
   input wire logic [31:0] in,
   output logic [31:0] out
 );
