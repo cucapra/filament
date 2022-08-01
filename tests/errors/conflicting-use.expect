@@ -1,13 +1,16 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint |G - G+2| >= |G - G+3|
-  ┌─ tests/errors/conflicting-use.fil:6:3
-  │
-5 │   m0 := M<G>(10, 20);
-  │   ------------------- Invoke provides binding M.G=G
-6 │   m1 := M<G+2>(30, 40);
-  │   ^^^^^^^^^^^^^^^^^^^^^ Conflicting invoke. Invoke provides binding M.G=G+2
-  │
-  = @interface for G specifies that invokes must be |G - G+3| cycles apart
+error: Cannot prove constraint |G - G+1| >= |G - G+3|
+   ┌─ tests/errors/conflicting-use.fil:8:3
+   │
+ 7 │   m0 := M<G>(10, 20);
+   │   ------------------- Invoke provides binding M.G=G
+ 8 │   m1 := M<G+1>(30, 40);
+   │   ^^^^^^^^^^^^^^^^^^^^^ Conflicting invoke. Invoke provides binding M.G=G+1
+   │
+   ┌─ ./primitives/core.fil:36:3
+   │
+36 │   @interface[G, G+3] go_G: 1,
+   │   -------------------------- @interface for G specifies that invokes must be |G - G+3| cycles apart
 

@@ -33,6 +33,7 @@ extern "binary.sv" {
 
 // ============= Sequential =================
 component Mult<G>(
+  @interface[G, G+3] go_G: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,
 ) -> (

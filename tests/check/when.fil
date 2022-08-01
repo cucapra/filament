@@ -1,6 +1,7 @@
 import "primitives/core.fil";
 
 component main<G>(
+  @interface[G, G+3] go_G: 1,
   @[G, G+1] a: 32,
   @[G, G+1] b: 32,
   @[G+2, G+3] c: 32

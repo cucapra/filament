@@ -9,8 +9,8 @@ use codespan_reporting::{
     term::{self, termcolor::ColorChoice, termcolor::StandardStream},
 };
 use filament::{
-    backend, cmdline, errors, event_checker, frontend, interface_infer,
-    interval_checking, lower, visitor::Transform,
+    backend, cmdline, errors, event_checker, frontend, interval_checking,
+    lower, visitor::Transform,
 };
 
 fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
@@ -76,8 +76,6 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     // Run the compilation pipeline
     let ns = event_checker::check_and_transform(ns)?;
     log::info!("Event check:\n{ns}");
-    let ns = interface_infer::InterfaceInfer::transform(ns)?;
-    log::info!("Interface Infer:\n{ns}");
     interval_checking::check(&ns)?;
 
     // Lowering pipeline
