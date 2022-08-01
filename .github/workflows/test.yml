@@ -37,7 +37,6 @@ jobs:
           cd calyx/fud
           flit install --deps production
           cd ../..
-          tree
           echo "============= Setting Fud configuration =============="
           fud config global.futil_directory "$(pwd)/calyx"
           fud register filament -p "$(pwd)/filament/fud/filament.py"
@@ -74,7 +73,13 @@ jobs:
           command: install
           args: runt --version ${{ steps.versions.outputs.runt }}
 
-      - name: Build compiler
+      - name: Build Calyx
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --manifest-path calyx/Cargo.toml
+
+      - name: Build Filament
         uses: actions-rs/cargo@v1
         with:
           command: build
