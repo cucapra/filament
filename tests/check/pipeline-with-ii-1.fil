@@ -1,0 +1,29 @@
+import "primitives/core.fil";
+
+/// Implementation of a multiplier with initiation interval 1 and latency 3
+component FastMult<G>(
+  @interface[G, G+1] go_G: 1,
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32,
+) -> (
+  @[G+3, G+4] out: 32,
+) {
+  // First stage, register the inputs
+  L := new Latch;
+  R := new Latch;
+  l := L<G, G+1, G+2>(left);
+  r := R<G, G+1, G+2>(right);
+
+  // Second stage, perform the computation and save it
+  M := new MultComb;
+  m := M<G+1>(l.out, r.out);
+  OutTmp := new Latch;
+  ot := OutTmp<G+1, G+2, G+3>(m.out);
+
+  // Third stage, forward the value from temp out to out register
+  Out := new Latch;
+  final := Out<G+2, G+3, G+4>(ot.out);
+
+  // Connect the output to the out register
+  out = final.out;
+}
