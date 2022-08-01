@@ -1,7 +1,9 @@
 import "primitives/core.fil";
 
-component Main<G>() -> () {
+component Main<G>(
+  @interface[G, G+3] go_G: 1,
+) -> () {
   M := new Mult;
   m0 := M<G>(10, 20);
-  m1 := M<G+2>(30, 40);
+  m1 := M<G+1>(30, 40);
 }

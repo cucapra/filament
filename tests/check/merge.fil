@@ -23,6 +23,7 @@ extern "dummy.sv" {
 // We use a merge unit to forward the input signal in the first cycle and
 // latch the output to make it available for the remaining cycles.
 component main<G>(
+  @interface[G, G+3] go_G: 1,
   @[G, G+1] in: 32
 ) -> (
   @[G, G+3] out: 32
