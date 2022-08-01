@@ -15,13 +15,35 @@ jobs:
       - name: Install z3
         run: |
           sudo apt-get update
-          sudo apt-get install z3
+          sudo apt-get install z3 iverilog
 
       - name: Checkout Calyx
         uses: actions/checkout@v3
         with:
           repository: cucapra/calyx
           path: calyx
+
+      # Install Fud
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Install Python Dependencies
+        run: python3 -m pip install flit cocotb
+
+      - name: Install fud
+        run: |
+          cd fud
+          flit install --deps production
+          echo "============= Setting Fud configuration =============="
+          fud config global.futil_directory "$(pwd)/calyx"
+          fud register filament -p "$(pwd)/filament/filament.py"
+          fud register icarus-verilog -p "$(pwd)/calyx/fud/icarus/icarus.py"
+          fud config stages.futil.exec "$(pwd)/calyx/target/debug/futil"
+          fud config stages.filament.exec "$(pwd)/filament/target/debug/filament"
+          fud config stages.filament.library "$(pwd)/filament"
+          fud config
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -58,4 +80,4 @@ jobs:
 
       - name: Test
         run: |
-          cd filament && runt -x compile -d -o fail
+          cd filament && runt -d -o fail
