@@ -37,13 +37,14 @@ jobs:
           cd calyx/fud
           flit install --deps production
           cd ../..
+          tree
           echo "============= Setting Fud configuration =============="
           fud config global.futil_directory "$(pwd)/calyx"
-          fud register filament -p "$(pwd)/fud/filament.py"
+          fud register filament -p "$(pwd)/filament/fud/filament.py"
           fud register icarus-verilog -p "$(pwd)/calyx/fud/icarus/icarus.py"
           fud config stages.futil.exec "$(pwd)/calyx/target/debug/futil"
-          fud config stages.filament.exec "$(pwd)/target/debug/filament"
-          fud config stages.filament.library "$(pwd)"
+          fud config stages.filament.exec "$(pwd)/filament/target/debug/filament"
+          fud config stages.filament.library "$(pwd)/filament"
           fud config
 
       - name: Install Rust
