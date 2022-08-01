@@ -15,7 +15,7 @@ jobs:
       - name: Install z3
         run: |
           sudo apt-get update
-          sudo apt-get install z3 build-essentials
+          sudo apt-get install z3 build-essential
 
       - name: Checkout Icarus Verilog
         uses: actions/checkout@v3
