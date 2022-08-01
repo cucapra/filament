@@ -27,6 +27,7 @@ jobs:
         run: |
           cd iverilog
           sh autoconf.sh
+          ./configure
           make
           make install
 
