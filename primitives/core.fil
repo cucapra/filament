@@ -5,7 +5,7 @@ extern "core.sv" {
     reset: 1,
     // -- base ports --
     @interface[G, G+1] write_en: 1,
-    @interface[S, L] _go_L: 1, // unused
+    @interface[S, L] _go_S: 1, // unused
     @[G, G+1] in: 32
   ) -> (
     @[S, L] out: 32
