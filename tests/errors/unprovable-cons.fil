@@ -12,7 +12,7 @@ component Main<G, L>(
 ) {
   L := new Latch;
   M := new Mult;
-  l0 := L<G, L+1>(left);
+  l0 := L<G, G+1, L+1>(left);
   m0 := M<L>(l0.out, right);
   out = m0.out;
 }
