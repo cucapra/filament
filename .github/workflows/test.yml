@@ -26,7 +26,7 @@ jobs:
       - name: Install iverilog
         run: |
           cd iverilog
-          ./configure
+          configure
           make
           make install
 
