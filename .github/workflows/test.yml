@@ -34,8 +34,9 @@ jobs:
 
       - name: Install fud
         run: |
-          cd fud
+          cd calyx/fud
           flit install --deps production
+          cd ..
           echo "============= Setting Fud configuration =============="
           fud config global.futil_directory "$(pwd)/calyx"
           fud register filament -p "$(pwd)/filament/filament.py"
