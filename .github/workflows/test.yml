@@ -12,10 +12,42 @@ jobs:
         with:
           path: filament
 
+      - name: Versions
+        id: versions
+        run: |
+          echo "::set-output name=runt::$(grep ver filament/runt.toml | awk '{print $3}' | tr -d '"')"
+          echo "::set-output name=iverilog::$(cat filament/.github/version/iverilog)"
+        shell: bash
+
       - name: Install z3
         run: |
           sudo apt-get update
-          sudo apt-get install z3
+          sudo apt-get install z3 build-essential gperf
+
+      - name: Cache Icarus Verilog
+        id: iverilog-cache
+        uses: actions/cache@v2
+        with:
+          path: ./iverilog
+          key: iverilog-bin-${{ runner.os }}-${{ steps.versions.outputs.iverilog }}
+      - name: Checkout Icarus Verilog
+        if: steps.iverilog-cache.outputs.cache-hit != 'true'
+        uses: actions/checkout@v3
+        with:
+          repository: steveicarus/iverilog
+          path: iverilog
+          ref: v11_0
+      - name: Build iverilog
+        if: steps.iverilog-cache.outputs.cache-hit != 'true'
+        run: |
+          cd iverilog
+          sh autoconf.sh
+          ./configure
+          make
+      - name: Install iverilog
+        run: |
+          cd iverilog
+          sudo make install
 
       - name: Checkout Calyx
         uses: actions/checkout@v3
@@ -23,17 +55,34 @@ jobs:
           repository: cucapra/calyx
           path: calyx
 
+      # Install Fud
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Install Python Dependencies
+        run: python3 -m pip install flit cocotb
+
+      - name: Install fud
+        run: |
+          cd calyx/fud
+          flit install --deps production
+          cd ../..
+          echo "============= Setting Fud configuration =============="
+          fud config global.futil_directory "$(pwd)/calyx"
+          fud register filament -p "$(pwd)/filament/fud/filament.py"
+          fud register icarus-verilog -p "$(pwd)/calyx/fud/icarus/icarus.py"
+          fud config stages.futil.exec "$(pwd)/calyx/target/debug/futil"
+          fud config stages.filament.exec "$(pwd)/filament/target/debug/filament"
+          fud config stages.filament.library "$(pwd)/filament"
+          fud config
+
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: 1.60.0
           override: true
-
-      - name: Versions
-        id: versions
-        run: |
-          echo "::set-output name=runt::$(grep ver filament/runt.toml | awk '{print $3}' | tr -d '"')"
-        shell: bash
 
       # Install cargo based tools and use some caching magic.
       - name: Cache runt
@@ -50,7 +99,13 @@ jobs:
           command: install
           args: runt --version ${{ steps.versions.outputs.runt }}
 
-      - name: Build compiler
+      - name: Build Calyx
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --manifest-path calyx/Cargo.toml
+
+      - name: Build Filament
         uses: actions-rs/cargo@v1
         with:
           command: build
@@ -58,4 +113,4 @@ jobs:
 
       - name: Test
         run: |
-          cd filament && runt -x compile -d -o fail
+          cd filament && runt -d -o fail
