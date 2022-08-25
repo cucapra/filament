@@ -351,17 +351,21 @@ impl Fsm {
     }
 
     /// Get the liveness condition for the given port
-    pub fn liveness<T>(&self, start_time: &T, state: u64) -> Interval<T>
+    pub fn liveness<T>(&self, trigger: &Interval<T>, state: u64) -> Interval<T>
     where
         T: TimeRep + Clone,
     {
+        // If trigger is from: @[G, L] + @exact[G, G+1]
+        let Range { start, end, .. } = &trigger.within;
         let within = Range::new(
-            start_time.clone(),
-            start_time.clone().increment(self.states),
+            start.clone().increment(state),
+            end.clone().increment(state),
         );
+        let estart = &trigger.exact.as_ref().unwrap().start;
+        // @exact[start, start + 1]
         let exact = Range::new(
-            start_time.clone().increment(state),
-            start_time.clone().increment(state + 1),
+            estart.clone().increment(state),
+            estart.clone().increment(state + 1),
         );
         Interval::from(within).with_exact(exact)
     }

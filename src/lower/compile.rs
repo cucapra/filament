@@ -138,10 +138,10 @@ impl visitor::Transform for CompileInvokes {
                 let ev = &interface.event;
                 let delay = interface.delay().concrete().ok_or_else(|| {
                     Error::malformed(
-                        "Cannot compile interface signals with max expressions",
+                        "Cannot compile interface with dynamic delay",
                     )
                     .add_note(
-                        "Interface uses max expression",
+                        "Interface has a dynamic delay",
                         interface.copy_span(),
                     )
                 })?;
