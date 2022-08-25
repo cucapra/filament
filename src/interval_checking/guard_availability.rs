@@ -66,11 +66,11 @@ fn merge_availability(intervals: Intervals) -> FilamentResult<ast::Interval> {
                 "Guard ports are available for different time intervals",
             )
             .add_note(
-                format!("Port is available for {}", diff.within),
+                format!("Port is available for {}", diff),
                 diff_pos.clone(),
             )
             .add_note(
-                format!("Port is available for {}", int_av0.within),
+                format!("Port is available for {}", int_av0),
                 av0_pos.clone(),
             ));
         }

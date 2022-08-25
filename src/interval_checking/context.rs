@@ -1,5 +1,5 @@
 use super::THIS;
-use crate::core::{self, FsmIdxs, WithTime};
+use crate::core::{self, WithTime};
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
@@ -13,10 +13,10 @@ pub enum ConcreteInvoke<'a> {
         sig: &'a ast::Signature,
     },
     Fsm {
-        /// Start time of this FSM
-        start_time: FsmIdxs,
         /// Internal FSM
         fsm: &'a ast::Fsm,
+        /// Live time of the trigger
+        live_time: ast::Interval,
     },
     This {
         /// Signature
@@ -39,8 +39,8 @@ impl<'a> ConcreteInvoke<'a> {
     }
 
     /// Construct an FSM instance
-    pub fn fsm_instance(start_time: FsmIdxs, fsm: &'a ast::Fsm) -> Self {
-        Self::Fsm { start_time, fsm }
+    pub fn fsm_instance(live_time: ast::Interval, fsm: &'a ast::Fsm) -> Self {
+        Self::Fsm { live_time, fsm }
     }
 
     /// Resolve a port for this instance and return the requirement or guarantee
@@ -55,9 +55,9 @@ impl<'a> ConcreteInvoke<'a> {
                 let live = sig.get_liveness::<IS_INPUT>(port)?;
                 Ok(live.resolve(binding))
             }
-            ConcreteInvoke::Fsm { start_time, fsm } => {
+            ConcreteInvoke::Fsm { live_time, fsm } => {
                 let state = core::Fsm::state(port)?;
-                Ok(fsm.liveness(start_time, state))
+                Ok(fsm.liveness(&live_time, state))
             }
             ConcreteInvoke::This { sig } => {
                 Ok(sig.get_liveness::<IS_INPUT>(port)?)

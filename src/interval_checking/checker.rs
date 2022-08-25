@@ -50,7 +50,7 @@ fn check_connect(
                 CBT::subset(guard_exact.clone(), guarantee.within.clone()).map(|e| {
                     Constraint::from(e).add_note("Guard's @exact specification must be shorter than source", g.copy_span())
                      .add_note(format!("Guard's exact specification is {}", guard_exact), g.copy_span())
-                     .add_note(format!("Source's specification is {}", guarantee.within), src.copy_span())
+                     .add_note(format!("Source's specification is {}", guarantee), src.copy_span())
                 }),
             );
 
@@ -62,8 +62,8 @@ fn check_connect(
                 )
                 .map(|e|
                      Constraint::from(e).add_note("Guard must be active for at least as long as the source", g.copy_span())
-                      .add_note(format!("Guard is active during {}", guard_interval.within), g.copy_span())
-                      .add_note(format!("Source is active for {}", guarantee.within), src.copy_span())),
+                      .add_note(format!("Guard is active during {}", guard_interval), g.copy_span())
+                      .add_note(format!("Source is active for {}", guarantee), src.copy_span())),
             );
         }
 
@@ -83,14 +83,14 @@ fn check_connect(
                         .add_note(
                             format!(
                                 "Source is available for {}",
-                                guarantee.within
+                                guarantee
                             ),
                             src_pos.clone(),
                         )
                         .add_note(
                             format!(
                                 "Destination's requirement {}",
-                                requirement.within
+                                requirement
                             ),
                             dst.copy_span(),
                         )
@@ -288,7 +288,7 @@ fn check_fsm<'a>(
     let start_time = ast::TimeRep::unit(ev.clone(), start);
     let end_time = start_time.clone().increment(*states);
     let within = ast::Range::new(start_time.clone(), end_time);
-    ctx.add_obligations(ast::CBT::subset(within, guarantee.within).map(|e| {
+    ctx.add_obligations(ast::CBT::subset(within, guarantee.within.clone()).map(|e| {
         Constraint::from(e).add_note(
             "Trigger must not pulse more often than the FSM states",
             trigger.copy_span(),
@@ -298,7 +298,7 @@ fn check_fsm<'a>(
     // Add the FSM instance to the context
     ctx.add_invocation(
         bind.clone(),
-        ConcreteInvoke::fsm_instance(start_time, fsm),
+        ConcreteInvoke::fsm_instance(guarantee, fsm),
     )
 }
 
@@ -309,6 +309,7 @@ fn check_commands<'a>(
 where
 {
     for cmd in cmds {
+        log::trace!("Checking command: {}", cmd);
         match cmd {
             ast::Command::Invoke(invoke) => check_invoke(invoke, ctx)?,
             ast::Command::Instance(ast::Instance { name, component }) => {
