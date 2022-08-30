@@ -27,4 +27,8 @@ pub struct Opts {
     /// only check the program without compilation.
     #[argh(switch, short = 'c', long = "check")]
     pub check: bool,
+
+    /// output the interface.json for the input program
+    #[argh(switch, long = "dump-interface")]
+    pub dump_interface: bool,
 }
