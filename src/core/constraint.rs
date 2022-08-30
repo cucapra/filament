@@ -191,6 +191,15 @@ impl<T: TimeRep> Constraint<T> {
             Constraint::Sub { .. } => todo!("Mapping over Constraint::Sub"),
         }
     }
+
+    /// Check if this constraint is an ordering constraint
+    pub fn is_ordering(&self) -> bool {
+        match self {
+            Constraint::Base { base } => base.op != OrderOp::Eq,
+            Constraint::Sub { base } => base.op != OrderOp::Eq,
+        }
+    }
+
 }
 
 impl<T: TimeRep> WithTime<T> for Constraint<T> {

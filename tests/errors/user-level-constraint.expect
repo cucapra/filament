@@ -1,0 +1,6 @@
+---CODE---
+1
+---STDERR---
+error: User-level components cannot have ordering constraints
+ = Component defines the constraint L > G+1
+
