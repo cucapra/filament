@@ -9,9 +9,99 @@ use codespan_reporting::{
     term::{self, termcolor::ColorChoice, termcolor::StandardStream},
 };
 use filament::{
-    backend, cmdline, errors, event_checker, frontend, interval_checking,
-    lower, visitor::Transform,
+    backend, cmdline,
+    errors::{self, FilamentResult, WithPos},
+    event_checker, frontend, interval_checking, lower,
+    visitor::Transform,
 };
+
+// Prints out the interface for main component in the input program.
+fn dump_interface(
+    ns: event_checker::ast::Namespace,
+) -> errors::FilamentResult<()> {
+    let comp = ns
+        .components
+        .iter()
+        .find(|comp| comp.sig.name == "main")
+        .ok_or_else(|| {
+            errors::Error::malformed("Program does not define a main component")
+        })?;
+
+    // For an interface port like this:
+    //      @interface[G, G+5] go_G
+    // Generate the JSON information:
+    // {
+    //   "name": "go_G",
+    //   "event": "G",
+    //   "delay": 5
+    // }
+    let interfaces = comp
+        .sig
+        .interface_signals
+        .iter()
+        .map(|id| {
+            id.delay()
+                .concrete()
+                .map(|delay| format!( "{{\"name\": \"{}\", \"event\": \"{}\", \"delay\": {delay} }}", id.name, id.event))
+                .ok_or_else(|| {
+                    errors::Error::malformed(
+                        "Interface signal has no concrete delay",
+                    )
+                })
+        })
+        .collect::<FilamentResult<Vec<_>>>()?.join(",\n");
+
+    // For each input and output that looks like:
+    // @[G+n, G+m] left: 32
+    // Generate the JSON information:
+    // {
+    //   "event": "G",
+    //   "name": "left",
+    //   "start": n,
+    //   "end": m
+    // },
+    let pd_to_info = |pd: &event_checker::ast::PortDef| {
+        pd.liveness
+            .within
+            .as_offset()
+            .map(|(event, st, end)| {
+                format!(
+                    "{{ \"event\": \"{event}\", \"name\": \"{name}\", \"start\": {st}, \"end\": {end} }}",
+                    name = pd.name,
+                )
+            })
+            .ok_or_else(|| {
+                errors::Error::malformed(
+                    "Delay cannot be converted into concrete start and end",
+                )
+                .add_note(
+                    format!("Delay {} is dynamic", pd.liveness),
+                    pd.liveness.copy_span(),
+                )
+            })
+    };
+    let inputs = comp
+        .sig
+        .inputs
+        .iter()
+        .map(pd_to_info)
+        .collect::<FilamentResult<Vec<_>>>()?
+        .join(",\n");
+    let outputs = comp
+        .sig
+        .outputs
+        .iter()
+        .map(pd_to_info)
+        .collect::<FilamentResult<Vec<_>>>()?
+        .join(",\n");
+
+    // Look ma, a JSON serializer!
+    println!(
+        "{{\n\"interfaces\": [\n{interfaces}\n],\n\"inputs\": [\n{inputs}\n],\n\"outputs\": [\n{outputs}\n]\n}}",
+    );
+
+    Ok(())
+}
 
 fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     // enable tracing
@@ -77,6 +167,11 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     let ns = event_checker::check_and_transform(ns)?;
     log::info!("Event check:\n{ns}");
     interval_checking::check(&ns)?;
+
+    // Dump the interface
+    if opts.dump_interface {
+        return dump_interface(ns);
+    }
 
     // Lowering pipeline
     if !opts.check {
