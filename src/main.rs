@@ -177,7 +177,7 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     if !opts.check {
         let ns = lower::CompileInvokes::transform(ns)?;
         log::info!("Lowering:\n{ns}");
-        interval_checking::check(&ns)?;
+        // interval_checking::check(&ns)?;
         backend::compile(ns, opts)?;
     }
 

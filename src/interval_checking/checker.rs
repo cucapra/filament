@@ -338,7 +338,7 @@ fn check_component(
     let this_instance = ConcreteInvoke::this_instance(&rev_sig);
     ctx.add_invocation(THIS.into(), this_instance)?;
 
-    // User-level components are not allowed to have constraints. See https://github.com/cucapra/filament/issues/27.
+    // User-level components are not allowed to have ordering constraints. See https://github.com/cucapra/filament/issues/27.
     for constraint in &rev_sig.constraints {
         if constraint.is_ordering() {
             return Err(Error::malformed(
