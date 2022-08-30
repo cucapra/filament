@@ -1,3 +1,0 @@
-Outputs: {"out": {"0": [500], "1": [1200]}}
----STDERR---
-sys:1: ResourceWarning: unclosed file <_io.TextIOWrapper name=2 mode='w' encoding='UTF-8'>

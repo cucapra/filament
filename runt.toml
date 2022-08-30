@@ -13,9 +13,8 @@ cmd = """
 [[tests]]
 name = "compile"
 paths = [
-  "tests/compile/*/test.fil"
+  "tests/compile/*.fil"
 ]
 cmd = """
-cd $(dirname {}) && \
-make -B INTERFACE=interface.json DATA_FILE=data.json FIL=test.fil | grep Outputs
+fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize' -q | grep Outputs
 """
