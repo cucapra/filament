@@ -233,14 +233,9 @@ impl<'a> Context<'a> {
     }
 
     /// Add a new known fact
-    pub fn add_facts<F>(&mut self, facts: F)
-    where
-        F: Iterator<Item = ast::Constraint>,
-    {
-        for fact in facts {
-            log::trace!("adding known fact {}", fact);
-            self.facts.push(fact);
-        }
+    pub fn add_fact(&mut self, fact: ast::Constraint) {
+        log::trace!("adding known fact {}", fact);
+        self.facts.push(fact);
     }
 
     /// Get the signature of the instance associated with `inst`

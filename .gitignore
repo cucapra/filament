@@ -21,3 +21,4 @@ model.smt
 hand-compile
 __pycache__
 /sim_build
+*.smt

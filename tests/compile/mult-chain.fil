@@ -13,7 +13,7 @@ extern "./common/mult.sv" {
 }
 
 component main<G>(
-  @interface[G, G+5] go_G: 1,
+  @interface[G, G+2] go_G: 1,
   @[G, G+2] left: 32,
   @[G, G+1] right: 32,
 ) -> (

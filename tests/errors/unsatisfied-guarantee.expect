@@ -5,7 +5,7 @@ error: Cannot prove constraint G+3 >= G+4
    ┌─ tests/errors/unsatisfied-guarantee.fil:12:9
    │
 12 │   out = m0.out;
-   │   ---   ^^^^^^ Source is available for [G+2, G+3]
+   │   ---   ^^^^^^ Source is available for @[G+2, G+3]
    │   │      
-   │   Destination's requirement [G+3, G+4]
+   │   Destination's requirement @[G+3, G+4]
 

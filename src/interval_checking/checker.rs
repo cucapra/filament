@@ -81,10 +81,7 @@ fn check_connect(
                 .map(|e| {
                     Constraint::from(e)
                         .add_note(
-                            format!(
-                                "Source is available for {}",
-                                guarantee
-                            ),
+                            format!("Source is available for {}", guarantee),
                             src_pos.clone(),
                         )
                         .add_note(
@@ -288,12 +285,14 @@ fn check_fsm<'a>(
     let start_time = ast::TimeRep::unit(ev.clone(), start);
     let end_time = start_time.clone().increment(*states);
     let within = ast::Range::new(start_time.clone(), end_time);
-    ctx.add_obligations(ast::CBT::subset(within, guarantee.within.clone()).map(|e| {
-        Constraint::from(e).add_note(
-            "Trigger must not pulse more often than the FSM states",
-            trigger.copy_span(),
-        )
-    }));
+    ctx.add_obligations(
+        ast::CBT::subset(within, guarantee.within.clone()).map(|e| {
+            Constraint::from(e).add_note(
+                "Trigger must not pulse more often than the FSM states",
+                trigger.copy_span(),
+            )
+        }),
+    );
 
     // Add the FSM instance to the context
     ctx.add_invocation(
@@ -339,8 +338,20 @@ fn check_component(
     let this_instance = ConcreteInvoke::this_instance(&rev_sig);
     ctx.add_invocation(THIS.into(), this_instance)?;
 
-    // Add constraints on the interface as assumptions
-    ctx.add_facts(rev_sig.constraints.iter().cloned());
+    // User-level components are not allowed to have constraints. See https://github.com/cucapra/filament/issues/27.
+    for constraint in &rev_sig.constraints {
+        if constraint.is_ordering() {
+            return Err(Error::malformed(
+                "User-level components cannot have ordering constraints",
+            )
+            .add_note(
+                format!("Component defines the constraint {constraint}"),
+                None,
+            ));
+        } else {
+            ctx.add_fact(constraint.clone())
+        }
+    }
 
     // Check all the commands
     check_commands(&comp.body, &mut ctx)?;
