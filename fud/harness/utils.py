@@ -63,7 +63,7 @@ def construct_transaction_fsm(interface):
                     trg = 1
                 else:
                     trg = 0
-                mod._id(ev["name"], extended=False).setimmediatevalue(trg)
+                mod._id(ev["name"], extended=False).value = trg
 
                 # Set input values
                 for inp in interface["inputs"]:
@@ -72,7 +72,7 @@ def construct_transaction_fsm(interface):
                         v = data[inp["name"]][txn]
                     else:
                         v = BinaryValue('x')
-                    mod._id(inp["name"], extended=False).setimmediatevalue(v)
+                    mod._id(inp["name"], extended=False).value = v
 
                 # Wait for the falling edge so that combinational computations
                 # propagate.
@@ -108,17 +108,21 @@ async def log_signal(mod, signal_name, times):
         mod._log.info("%s = %s", signal_name, val)
 
 
-async def setup_design(mod):
+async def setup_design(mod, interface):
     """
     Connects a clock to the given module and runs the reset signal for 5 cycles
     """
 
     await cocotb.start(Clock(mod.clk, 10, units='step').start())
 
+    # Set all interface values to 0
+    for event in interface["interfaces"]:
+        mod._id(event["name"], extended=False).value = 0
+
     # Reset phase
     await RisingEdge(mod.clk)
     mod.reset.setimmediatevalue(1)
-    await Timer(5, units='step')  # wait a bit
+    await Timer(20, units='step')  # wait a bit
     mod.reset.setimmediatevalue(0)
     await FallingEdge(mod.clk)  # wait for falling edge/"negedge"
 
@@ -136,7 +140,7 @@ async def run_design(mod):
         data = json.load(f)
 
     # Setup the design and run it
-    await setup_design(mod)
+    await setup_design(mod, interface)
     runner = construct_transaction_fsm(interface)
     outputs = await runner(mod, data)
     out = json.dumps(outputs)

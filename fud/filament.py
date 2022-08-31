@@ -21,7 +21,7 @@ class CocotbExec(Stage):
             output_type=SourceType.Stream,
             description="Execute a Filament generated verilog program through the cocotb testbench",
         )
-    
+
     @staticmethod
     def defaults():
         root = Path(__file__).parent.parent.resolve()
@@ -61,6 +61,13 @@ class CocotbExec(Stage):
             return Path(data).resolve()
 
         @builder.step()
+        def copy_file(path: SourceType.Path, dir: SourceType.Directory, file: SourceType.String):
+            """
+            Copy the file to the given directory
+            """
+            shutil.copy(path, Path(dir.name) / file)
+
+        @builder.step()
         def mktmp() -> SourceType.Directory:
             """Make a temporary directory"""
             return TmpDir()
@@ -88,7 +95,7 @@ class CocotbExec(Stage):
             """
 
             files = ["Makefile", "sim.py", "utils.py"]
-            common = config["stages", self.name, "common"] 
+            common = config["stages", self.name, "common"]
             for file in files:
                 src = Path(common) / file
                 shutil.copy(src, Path(dir) / file)
@@ -101,7 +108,7 @@ class CocotbExec(Stage):
             # Switch to the tmpdir
             os.chdir(Path(dir))
             # Execute the make command
-            cmd = " ".join([ 
+            cmd = " ".join([
                 "make", "-B",
                 # XXX(rachit): we shouldn't need this .data here
                 f"INTERFACE={interface.data}",
@@ -113,16 +120,24 @@ class CocotbExec(Stage):
         data = get_data()
         dir = mktmp()
         copy_harness(dir)
-        ## Compile the Filament program to icarus verilog
-        path = config.registry.make_path("filament", "icarus-verilog")
-        builder.ctx.append("to_verilog")
-        verilog_stream = builder.also_do_path(input, path, config)
-        builder.ctx.pop()
-        ## Save the verilog stream into the temporary directory
-        self.save_file(builder, verilog_stream, dir, "out.sv")
+        mb_verilog = config.get(["stages", self.name, "verilog"])
+
+        ## If cocotb.verilog is defined, use that instead of the generating verilog
+        if mb_verilog is not None:
+            copy_file(Source.path(mb_verilog), dir, Source("out.sv", SourceType.String))
+        else:
+            ## Compile the Filament program to icarus verilog
+            path = config.registry.make_path("filament", "icarus-verilog")
+            builder.ctx.append("to_verilog")
+            verilog_stream = builder.also_do_path(input, path, config)
+            builder.ctx.pop()
+            ## Save the verilog stream into the temporary directory
+            self.save_file(builder, verilog_stream, dir, "out.sv")
+
         ## Generate the interface file
         interface_stream = interface_gen(input)
         interface_path = self.save_file(builder, interface_stream, dir, "interface.json")
+
         ## Run the program
         return run(dir, interface_path, data)
 
