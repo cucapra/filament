@@ -2,9 +2,11 @@ use calyx::errors::CalyxResult;
 use calyx::frontend;
 use calyx::ir;
 use calyx::ir::RRC;
+use calyx::structure;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::iter;
 use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -14,8 +16,10 @@ use crate::cmdline::Opts;
 use crate::errors::Error;
 use crate::{errors::FilamentResult, event_checker::ast};
 
-// Attribute attached to event signals in a module interface.
+/// Attribute attached to event signals in a module interface.
 const FIL_EVENT: &str = "fil_event";
+/// Attribute that represents the delay of a particular event
+const DELAY: &str = "delay";
 
 /// Bindings associated with the current compilation context
 #[derive(Default)]
@@ -25,10 +29,13 @@ pub struct Binding {
 
     // Component signatures
     comps: HashMap<ast::Id, RRC<ir::Cell>>,
+
+    /// Mapping to the component representing FSM with partiular number of states
+    pub fsm_comps: HashMap<u64, ir::Component>,
 }
 
 impl Binding {
-    fn cell_to_port_def(cr: &RRC<ir::Cell>) -> Vec<ir::PortDef<u64>> {
+    pub fn cell_to_port_def(cr: &RRC<ir::Cell>) -> Vec<ir::PortDef<u64>> {
         let cell = cr.borrow();
         cell.ports()
             .iter()
@@ -57,8 +64,11 @@ pub struct Context<'a> {
     /// Builder for the current component
     pub builder: ir::Builder<'a>,
 
+    /// Library signatures
+    pub lib: &'a ir::LibrarySignatures,
+
     /// Mapping from names to signatures for components and externals.
-    binding: &'a Binding,
+    pub binding: &'a mut Binding,
 
     /// Mapping from instances to cells
     instances: HashMap<ast::Id, RRC<ir::Cell>>,
@@ -84,13 +94,7 @@ impl Context<'_> {
                 if let Some(fsm) = self.fsms.get(comp) {
                     let cr = self.builder.add_constant(1, 1);
                     let c = cr.borrow();
-                    (
-                        c.get("out"),
-                        Some(
-                            fsm.event(name, &mut self.builder)
-                                .expect("Undefined port on fsm"),
-                        ),
-                    )
+                    (c.get("out"), Some(fsm.event(name)))
                 } else {
                     let cell = self.invokes[comp].borrow();
                     (cell.get(name), None)
@@ -117,10 +121,15 @@ impl Context<'_> {
 }
 
 impl<'a> Context<'a> {
-    fn new(binding: &'a Binding, builder: ir::Builder<'a>) -> Self {
+    fn new(
+        binding: &'a mut Binding,
+        builder: ir::Builder<'a>,
+        lib: &'a ir::LibrarySignatures,
+    ) -> Self {
         Context {
             binding,
             builder,
+            lib,
             instances: HashMap::default(),
             invokes: HashMap::default(),
             fsms: HashMap::default(),
@@ -142,8 +151,7 @@ fn compile_guard(guard: ast::Guard, ctx: &mut Context) -> ir::Guard {
             }
             ast::PortType::CompPort { comp, name } => {
                 if let Some(fsm) = ctx.fsms.get(comp) {
-                    fsm.event(name, &mut ctx.builder)
-                        .expect("Undefined port on fsm")
+                    fsm.event(name)
                 } else {
                     let cell = ctx.invokes[comp].borrow();
                     cell.get(name).into()
@@ -156,11 +164,97 @@ fn compile_guard(guard: ast::Guard, ctx: &mut Context) -> ir::Guard {
     }
 }
 
+/// Construct a new component that represents an FSM with `states`.
+/// component fsm_<states>(go: 1) -> (_0: 1, ..., <states-1>: 1) { ... }
+fn define_fsm_component(states: u64, ctx: &mut Context) {
+    let ports: Vec<ir::PortDef<u64>> = (0..states)
+        .map(|n| {
+            (ir::Id::from(format!("_{n}")), 1, ir::Direction::Output).into()
+        })
+        .chain(INTERFACE_PORTS.iter().map(|pd| {
+            let mut pd = ir::PortDef::from(pd.clone());
+            pd.attributes.insert(&pd.name, 1);
+            pd
+        }))
+        .chain(iter::once(
+            (ir::Id::from("go"), 1, ir::Direction::Input).into(),
+        ))
+        .collect();
+    let mut comp =
+        ir::Component::new(ir::Id::from(format!("fsm_{}", states)), ports);
+    comp.attributes.insert("nointerface", 1);
+    let mut builder = ir::Builder::new(&mut comp, ctx.lib).not_generated();
+
+    // Add n-1 registers
+    let regs = (0..states - 1)
+        .map(|_| builder.add_primitive("r", "std_reg", &[1]))
+        .collect_vec();
+
+    // Constant signal
+    structure!(builder;
+        let signal_on = constant(1, 1);
+    );
+    // This component's interface
+    let this = builder.component.signature.borrow();
+
+    // _0 = go;
+    let assign = builder.build_assignment(
+        this.get("_0"),
+        this.get("go"),
+        ir::Guard::True,
+    );
+    builder.component.continuous_assignments.push(assign);
+
+    // For each register, add the following assignments:
+    // rn.write_en = 1'd1;
+    // rn.in = r{n-1}.out;
+    // _n = rn.out;
+    for idx in 0..states - 1 {
+        let cell = regs[idx as usize].borrow();
+        let write_assign = if idx == 0 {
+            builder.build_assignment(
+                cell.get("in"),
+                this.get("go"),
+                ir::Guard::True,
+            )
+        } else {
+            let prev_cell = regs[(idx - 1) as usize].borrow();
+            builder.build_assignment(
+                cell.get("in"),
+                prev_cell.get("out"),
+                ir::Guard::True,
+            )
+        };
+        let enable = builder.build_assignment(
+            cell.get("write_en"),
+            signal_on.borrow().get("out"),
+            ir::Guard::True,
+        );
+        let out = builder.build_assignment(
+            this.get(format!("_{}", idx + 1)),
+            cell.get("out"),
+            ir::Guard::True,
+        );
+        builder.component.continuous_assignments.extend([
+            write_assign,
+            enable,
+            out,
+        ]);
+    }
+    drop(this);
+    ctx.binding.fsm_comps.insert(states, comp);
+}
+
 fn compile_command(cmd: ast::Command, ctx: &mut Context) {
     match cmd {
         ast::Command::Fsm(fsm) => {
+            // If FSM with required number of states has not been constructed, define a new component for it
+            if !ctx.binding.fsm_comps.contains_key(&fsm.states) {
+                define_fsm_component(fsm.states, ctx);
+            }
+            // Construct the FSM
             let name = fsm.name.clone();
-            let f = Fsm::new(fsm, ctx);
+            let f = Fsm::new(&fsm, ctx);
             ctx.fsms.insert(name, f);
         }
         ast::Command::Invoke(ast::Invoke {
@@ -203,7 +297,7 @@ fn compile_command(cmd: ast::Command, ctx: &mut Context) {
     }
 }
 
-fn as_port_defs(sig: &ast::Signature, extend: bool) -> Vec<ir::PortDef<u64>> {
+fn as_port_defs(sig: &ast::Signature, is_comp: bool) -> Vec<ir::PortDef<u64>> {
     let mut ports: Vec<ir::PortDef<u64>> = sig
         .inputs
         .iter()
@@ -222,6 +316,17 @@ fn as_port_defs(sig: &ast::Signature, extend: bool) -> Vec<ir::PortDef<u64>> {
                 ir::Direction::Input,
             ));
             pd.attributes.insert(FIL_EVENT, 1);
+            if is_comp {
+                pd.attributes.insert(
+                    DELAY,
+                    id.delay().concrete().unwrap_or_else(|| {
+                        panic!(
+                            "Event does not have a concrete delay: {}",
+                            id.delay()
+                        )
+                    }),
+                );
+            }
             pd
         }))
         .chain(sig.outputs.iter().map(|pd| {
@@ -254,7 +359,7 @@ fn as_port_defs(sig: &ast::Signature, extend: bool) -> Vec<ir::PortDef<u64>> {
         }
     }
     // Add missing interface ports
-    if extend {
+    if is_comp {
         for name in interface_ports {
             let mut attrs = ir::Attributes::default();
             attrs.insert(name, 1);
@@ -277,14 +382,14 @@ const INTERFACE_PORTS: [(&str, u64, calyx::ir::Direction); 2] = [
 
 fn compile_component(
     comp: ast::Component,
-    sigs: &Binding,
+    sigs: &mut Binding,
     lib: &ir::LibrarySignatures,
 ) -> FilamentResult<ir::Component> {
     let ports = as_port_defs(&comp.sig, true);
     let mut component = ir::Component::new(&comp.sig.name.id, ports);
     component.attributes.insert("nointerface", 1);
     let builder = ir::Builder::new(&mut component, lib).not_generated();
-    let mut ctx = Context::new(sigs, builder);
+    let mut ctx = Context::new(sigs, builder, lib);
     for cmd in comp.body {
         compile_command(cmd, &mut ctx);
     }
@@ -375,13 +480,16 @@ pub fn compile(ns: ast::Namespace, opts: &Opts) -> FilamentResult<()> {
     };
 
     for comp in ns.components {
-        let comp = compile_component(comp, &bindings, &calyx_ctx.lib)?;
+        let comp = compile_component(comp, &mut bindings, &calyx_ctx.lib)?;
         bindings.insert_comp(
             ast::Id::from(comp.name.id.as_str()),
             Rc::clone(&comp.signature),
         );
         calyx_ctx.components.push(comp);
     }
+    calyx_ctx
+        .components
+        .extend(bindings.fsm_comps.into_values());
 
     print(calyx_ctx)
 }
