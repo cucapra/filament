@@ -44,14 +44,13 @@ def construct_transaction_fsm(interface):
         # Maps signal_name -> txn_id -> listof values
         outputs = {sig["name"]: {} for sig in interface["outputs"]}
 
-        # New transaction should only trigger at the start of a cycle
-        await RisingEdge(mod.clk)
-
-        for txn in range(0, validate_data(data)):
-
+        async def txn(idx):
+            """
+            Run a complete transaction
+            """
             # Add new dict for this transaction to the outputs
             for sig in outputs.keys():
-                outputs[sig][txn] = []
+                outputs[sig][idx] = []
 
             ev = interface["interfaces"][0]
 
@@ -69,7 +68,7 @@ def construct_transaction_fsm(interface):
                 for inp in interface["inputs"]:
                     assert inp["event"] == ev["event"], "input uses different event"
                     if st >= inp["start"] and st < inp["end"]:
-                        v = data[inp["name"]][txn]
+                        v = data[inp["name"]][idx]
                     else:
                         v = BinaryValue('x')
                     mod._id(inp["name"], extended=False).value = v
@@ -86,10 +85,16 @@ def construct_transaction_fsm(interface):
                     name = out["name"]
                     if st >= out["start"] and st < out["end"]:
                         v = mod._id(name, extended=False).value
-                        outputs[name][txn].append(v.integer)
+                        outputs[name][idx].append(v.integer)
 
                 # Wait for end of cycle
                 await RisingEdge(mod.clk)
+
+        # New transaction should only trigger at the start of a cycle
+        await RisingEdge(mod.clk)
+
+        for idx in range(0, validate_data(data)):
+            await txn(idx)
 
         return outputs
 
