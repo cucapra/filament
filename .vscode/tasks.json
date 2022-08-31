@@ -24,6 +24,29 @@
 			},
 			"dependsOn": [ "build" ],
 			"dependsOrder": "sequence",
+		},
+		{
+			"label": "compile file",
+			"type": "shell",
+			"command": "cargo run -- ${file} > ${input:outfile}; code -r ${input:outfile}",
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "never",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false,
+				"clear": true,
+				"close": true
+			}
+		}
+	],
+	"inputs": [
+		{
+			"type": "promptString",
+			"id": "outfile",
+			"description": "Output file",
+			"default": "out.futil",
 		}
 	]
 }
