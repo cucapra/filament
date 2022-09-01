@@ -284,7 +284,7 @@ fn check_fsm<'a>(
     // Prove that the signal is zero during the execution of the FSM
     let start_time = ast::TimeRep::unit(ev.clone(), start);
     let end_time = start_time.clone().increment(*states);
-    let within = ast::Range::new(start_time.clone(), end_time);
+    let within = ast::Range::new(start_time, end_time);
     ctx.add_obligations(
         ast::CBT::subset(within, guarantee.within.clone()).map(|e| {
             Constraint::from(e).add_note(
