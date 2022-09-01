@@ -2,6 +2,7 @@
 
 import os
 import json
+import random
 import cocotb
 from cocotb import triggers
 from cocotb.triggers import FallingEdge, RisingEdge, ClockCycles
@@ -9,6 +10,7 @@ from cocotb.clock import Clock
 from cocotb.binary import BinaryValue
 
 RESET_CYCLES = 3
+
 
 def validate_data(data):
     """
@@ -20,7 +22,7 @@ def validate_data(data):
     return total_txns
 
 
-def construct_transaction_fsm(interface):
+def construct_transaction_fsm(interface, randomize):
     """
     Generates a coroutine that models the provided interface.
     The coroutine deals with the inputs in the form of a "transaction".
@@ -106,7 +108,9 @@ def construct_transaction_fsm(interface):
             task = cocotb.start_soon(txn(idx, event))
             tasks.append(task.join())
             # Wait for the specified delay
-            await ClockCycles(mod.clk, event["delay"])
+            delay = (random.randint(0, int(randomize))
+                     if randomize else 0) + event["delay"]
+            await ClockCycles(mod.clk, delay)
 
         # Wait for all transactions to complete
         await triggers.Combine(*tasks)
@@ -174,6 +178,8 @@ async def run_design(mod):
     data_file = os.environ.get('DATA_FILE')
     assert data_file, ("Provide the location to data file by"
                        " setting the environment variable DATA_FILE")
+    # Randomize the pipeline delay with these many cycles
+    randomize = os.environ.get('RANDOMIZE')
 
     with open(interface_file) as f:
         interface = json.load(f)
@@ -183,12 +189,13 @@ async def run_design(mod):
 
     # Setup the design and run it
     (counter_task, count) = await setup_design(mod, interface)
-    runner = construct_transaction_fsm(interface)
+    runner = construct_transaction_fsm(interface, randomize)
     outputs = await runner(mod, data)
 
     # Kill the cycle counter and add the cycle count to outputs
     counter_task.kill()
-    outputs["cycles"] = count["count"] - (RESET_CYCLES + 1) # also substract the 1 cycle it takes to propagate the go signal
+    # also substract the 1 cycle it takes to propagate the go signal
+    outputs["cycles"] = count["count"] - (RESET_CYCLES + 1)
 
     out = json.dumps(outputs)
     print("Outputs:", out)
