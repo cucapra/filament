@@ -1,4 +1,6 @@
-use crate::errors::{Error, FilamentResult, WithPos};
+use itertools::Itertools;
+
+use crate::errors::{FilamentResult, WithPos};
 use crate::event_checker::ast;
 use crate::visitor;
 use std::collections::HashMap;
@@ -7,6 +9,8 @@ use std::collections::HashMap;
 pub struct CompileInvokes {
     /// Mapping from events to FSMs
     fsms: HashMap<ast::Id, ast::Fsm>,
+    /// Mapping from event to their max state
+    max_states: HashMap<ast::Id, u64>,
 }
 
 impl CompileInvokes {
@@ -28,6 +32,35 @@ impl CompileInvokes {
             unimplemented!(
                 "Range `{range}` cannot be represented as a simple non-max offset")
         }
+    }
+
+    fn max_state_from_sig(
+        &mut self,
+        sig: &ast::Signature,
+        abstract_vars: &[ast::TimeRep],
+        binding: &ast::Binding,
+    ) {
+        let out_events =
+            sig.outputs.iter().chain(sig.inputs.iter()).flat_map(|pd| {
+                pd.liveness
+                    .resolve(binding)
+                    .events()
+                    .into_iter()
+                    .cloned()
+                    .collect_vec()
+            });
+
+        // Abstract variables can affect the max state calculation
+        let abs_events = abstract_vars.iter().cloned();
+
+        // Use all ranges to compute max state
+        out_events.chain(abs_events).for_each(|fsm| {
+            fsm.events().for_each(|(ev, &st)| {
+                if self.max_states[ev] < st {
+                    *self.max_states.get_mut(ev).unwrap() = st;
+                }
+            })
+        });
     }
 }
 
@@ -65,6 +98,7 @@ impl visitor::Transform for CompileInvokes {
         {
             // Get the signature associated with this instance.
             let binding = sig.binding(&abstract_vars)?;
+            self.max_state_from_sig(sig, &abstract_vars, &binding);
 
             let mut connects = Vec::with_capacity(
                 1 + ports.len() + sig.interface_signals.len(),
@@ -136,25 +170,25 @@ impl visitor::Transform for CompileInvokes {
             .iter()
             .map(|interface| {
                 let ev = &interface.event;
-                let delay = interface.delay().concrete().ok_or_else(|| {
-                    Error::malformed(
-                        "Cannot compile interface with dynamic delay",
-                    )
-                    .add_note(
-                        "Interface has a dynamic delay",
-                        interface.copy_span(),
-                    )
-                })?;
                 Ok((
                     ev.clone(),
                     ast::Fsm::new(
                         format!("{}_fsm", ev).into(),
-                        delay,
+                        // Assign a fake number of states. We'll patch this up
+                        // at the end.
+                        u64::MAX,
                         ast::Port::this(interface.name.clone()),
                     ),
                 ))
             })
             .collect::<FilamentResult<HashMap<_, _>>>()?;
+
+        self.max_states = comp
+            .sig
+            .interface_signals
+            .iter()
+            .map(|ev| (ev.event.clone(), 0))
+            .collect();
 
         Ok(comp)
     }
@@ -167,9 +201,13 @@ impl visitor::Transform for CompileInvokes {
         comp.body = self
             .fsms
             .drain()
-            .map(|(_, fsm)| fsm.into())
+            .map(|(ev, fsm)| {
+                ast::Fsm::new(fsm.name, self.max_states[&ev], fsm.trigger)
+                    .into()
+            })
             .chain(comp.body.into_iter())
             .collect();
+        self.max_states = HashMap::default();
         Ok(comp)
     }
 }

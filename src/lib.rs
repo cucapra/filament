@@ -9,3 +9,4 @@ pub mod interface_infer;
 pub mod interval_checking;
 pub mod lower;
 pub mod visitor;
+pub mod dump_interface;

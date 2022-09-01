@@ -19,6 +19,7 @@ out.sv
 a.out
 model.smt
 hand-compile
+pipelined
 __pycache__
 /sim_build
 *.smt

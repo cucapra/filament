@@ -7,6 +7,15 @@ pub struct Port {
     pub typ: PortType,
     pos: Option<errors::Span>,
 }
+impl Port {
+    pub fn name(&self) -> &Id {
+        match &self.typ {
+            PortType::ThisPort(n) => n,
+            PortType::CompPort { name, .. } => name,
+            PortType::Constant(_) => unreachable!("Port::name called on Constant"),
+        }
+    }
+}
 impl std::fmt::Display for Port {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.typ)
