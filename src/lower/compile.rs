@@ -1,5 +1,6 @@
 use itertools::Itertools;
 
+use crate::core::WithTime;
 use crate::errors::{FilamentResult, WithPos};
 use crate::event_checker::ast;
 use crate::visitor;
@@ -34,27 +35,22 @@ impl CompileInvokes {
         }
     }
 
+    // When computing the max-state, anything that can act as an ouput matters.
+    // For example, in
+    //  in = g ? out;
+    // We know that the interval for out is necessarily at least as big as in.
+    // Therefore, in the max-state computation, we don't have to care about anything that is an
+    // input.
     fn max_state_from_sig(
         &mut self,
-        sig: &ast::Signature,
-        abstract_vars: &[ast::TimeRep],
-        binding: &ast::Binding,
+        resolved_outputs: impl Iterator<Item = ast::PortDef>,
     ) {
-        let out_events =
-            sig.outputs.iter().chain(sig.inputs.iter()).flat_map(|pd| {
-                pd.liveness
-                    .resolve(binding)
-                    .events()
-                    .into_iter()
-                    .cloned()
-                    .collect_vec()
-            });
-
-        // Abstract variables can affect the max state calculation
-        let abs_events = abstract_vars.iter().cloned();
+        let out_events = resolved_outputs.flat_map(|pd| {
+            pd.liveness.events().into_iter().cloned().collect_vec()
+        });
 
         // Use all ranges to compute max state
-        out_events.chain(abs_events).for_each(|fsm| {
+        out_events.for_each(|fsm| {
             fsm.events().for_each(|(ev, &st)| {
                 if self.max_states[ev] < st {
                     *self.max_states.get_mut(ev).unwrap() = st;
@@ -98,7 +94,9 @@ impl visitor::Transform for CompileInvokes {
         {
             // Get the signature associated with this instance.
             let binding = sig.binding(&abstract_vars)?;
-            self.max_state_from_sig(sig, &abstract_vars, &binding);
+            self.max_state_from_sig(
+                sig.outputs.iter().map(|pd| pd.resolve(&binding)),
+            );
 
             let mut connects = Vec::with_capacity(
                 1 + ports.len() + sig.interface_signals.len(),
@@ -189,6 +187,9 @@ impl visitor::Transform for CompileInvokes {
             .iter()
             .map(|ev| (ev.event.clone(), 0))
             .collect();
+
+        // Inputs of the component act as outputs inside the body
+        self.max_state_from_sig(comp.sig.inputs.iter().cloned());
 
         Ok(comp)
     }

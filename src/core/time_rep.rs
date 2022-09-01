@@ -3,11 +3,17 @@ use itertools::Itertools;
 use std::{collections::HashMap, fmt::Debug, fmt::Display};
 
 /// Represents a binding from names to time variables.
-pub struct Binding<'a, T> {
+pub struct Binding<'a, T>
+where
+    T: TimeRep,
+{
     map: HashMap<Id, &'a T>,
 }
 
-impl<'a, T> Binding<'a, T> {
+impl<'a, T> Binding<'a, T>
+where
+    T: TimeRep,
+{
     pub fn new(map: HashMap<Id, &'a T>) -> Self {
         Self { map }
     }
@@ -27,7 +33,7 @@ impl<'a, T> Binding<'a, T> {
 
 impl<T> Debug for Binding<'_, T>
 where
-    T: Display,
+    T: Display + TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
