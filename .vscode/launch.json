@@ -1,16 +1,38 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug",
-            "program": "${workspaceFolder}/<executable file>",
-            "args": [],
-            "cwd": "${workspaceFolder}"
+            "name": "Debug Compiler",
+            "args": [
+                "${input:target}",
+                "-l",
+                "${workspaceFolder}",
+                "${input:flags}"
+            ],
+            "program": "${workspaceFolder}/target/debug/filament",
+            "windows": {
+                "program": "${workspaceFolder}/target/debug/filament.exe"
+            },
+            "cwd": "${workspaceFolder}",
+            "stopOnEntry": false,
+            "sourceLanguages": [
+                "rust"
+            ],
+            "preLaunchTask": "build",
+        },
+    ],
+    "inputs": [
+        {
+            "id": "target",
+            "type": "promptString",
+            "description": "Target file"
+        },
+        {
+            "id": "flags",
+            "type": "promptString",
+            "description": "Flags to pass to the compiler"
         }
     ]
 }
