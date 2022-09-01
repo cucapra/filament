@@ -8,6 +8,7 @@ from cocotb.triggers import FallingEdge, RisingEdge, ClockCycles
 from cocotb.clock import Clock
 from cocotb.binary import BinaryValue
 
+RESET_CYCLES = 3
 
 def validate_data(data):
     """
@@ -58,7 +59,7 @@ def construct_transaction_fsm(interface):
 
             # Fully execute the module by triggering it till the number of
             # times prescribed by the delay
-            for st in range(0, event["states"] + 1):
+            for st in range(0, event["states"]):
                 # Start the transaction by setting the interface signal to 1
                 if st == 0:
                     trg = 1
@@ -69,7 +70,7 @@ def construct_transaction_fsm(interface):
                 # Set input values
                 for inp in interface["inputs"]:
                     assert inp["event"] == event["event"], \
-                            "input uses different event"
+                        "input uses different event"
                     if st >= inp["start"] and st < inp["end"]:
                         v = data[inp["name"]][idx]
                     else:
@@ -85,7 +86,7 @@ def construct_transaction_fsm(interface):
                 # For each output, record the value if we expect it to be valid
                 for out in interface["outputs"]:
                     assert out["event"] == event["event"], \
-                            "output uses different event"
+                        "output uses different event"
                     name = out["name"]
                     if st >= out["start"] and st < out["end"]:
                         v = mod._id(name, extended=False).value
@@ -127,6 +128,20 @@ async def log_signal(mod, signal_name, times):
         mod._log.info("%s = %s", signal_name, val)
 
 
+def counter(mod):
+    """
+    Counts the number of cycles the clock is running.
+    """
+    count = {"count": 0}
+
+    async def inner():
+        while True:
+            await RisingEdge(mod.clk)
+            count["count"] += 1
+
+    return inner, count
+
+
 async def setup_design(mod, interface):
     """
     Connects a clock to the given module and runs the reset signal for 5 cycles
@@ -138,12 +153,18 @@ async def setup_design(mod, interface):
     for event in interface["interfaces"]:
         mod._id(event["name"], extended=False).value = 0
 
+    # Initialize a cycle counter
+    (proc, count) = counter(mod)
+    counter_task = cocotb.start_soon(proc())
+
     # Reset phase
     await RisingEdge(mod.clk)
     mod.reset.setimmediatevalue(1)
-    await ClockCycles(mod.clk, 3)  # wait a bit
+    await ClockCycles(mod.clk, RESET_CYCLES)  # wait a bit
     mod.reset.setimmediatevalue(0)
     await FallingEdge(mod.clk)  # wait for falling edge/"negedge"
+
+    return (counter_task, count)
 
 
 async def run_design(mod):
@@ -161,8 +182,13 @@ async def run_design(mod):
         data = json.load(f)
 
     # Setup the design and run it
-    await setup_design(mod, interface)
+    (counter_task, count) = await setup_design(mod, interface)
     runner = construct_transaction_fsm(interface)
     outputs = await runner(mod, data)
+
+    # Kill the cycle counter and add the cycle count to outputs
+    counter_task.kill()
+    outputs["cycles"] = count["count"] - (RESET_CYCLES + 1) # also substract the 1 cycle it takes to propagate the go signal
+
     out = json.dumps(outputs)
     print("Outputs:", out)
