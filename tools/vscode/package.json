@@ -1,0 +1,34 @@
+{
+    "name": "filament",
+    "displayName": "Filament",
+    "description": "Syntax highlighting for the Filament Programing Language",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.54.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "filament",
+                "aliases": [
+                    "Filament",
+                    "filament"
+                ],
+                "extensions": [
+                    ".fil"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "filament",
+                "scopeName": "source.filament",
+                "path": "./syntaxes/filament.tmLanguage.json"
+            }
+        ]
+    }
+}
