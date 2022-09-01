@@ -2,6 +2,7 @@
 pub mod backend;
 pub mod cmdline;
 pub mod core;
+pub mod dump_interface;
 pub mod errors;
 pub mod event_checker;
 pub mod frontend;
@@ -9,4 +10,3 @@ pub mod interface_infer;
 pub mod interval_checking;
 pub mod lower;
 pub mod visitor;
-pub mod dump_interface;
