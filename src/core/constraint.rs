@@ -199,7 +199,6 @@ impl<T: TimeRep> Constraint<T> {
             Constraint::Sub { base } => base.op != OrderOp::Eq,
         }
     }
-
 }
 
 impl<T: TimeRep> WithTime<T> for Constraint<T> {

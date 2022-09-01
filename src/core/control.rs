@@ -12,7 +12,9 @@ impl Port {
         match &self.typ {
             PortType::ThisPort(n) => n,
             PortType::CompPort { name, .. } => name,
-            PortType::Constant(_) => unreachable!("Port::name called on Constant"),
+            PortType::Constant(_) => {
+                unreachable!("Port::name called on Constant")
+            }
         }
     }
 }
