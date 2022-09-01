@@ -46,10 +46,10 @@ impl visitor::Transform for DumpInterface {
             let states = self.fsm_states[&id.name];
             id.delay()
                 .concrete()
-                .map(|delay| 
+                .map(|delay|
                     format!(
                         "{{\"name\": \"{}\", \"event\": \"{}\", \"delay\": {delay}, \"states\": {states} }}", 
-                        id.name, 
+                        id.name,
                         id.event
                     ))
                 .ok_or_else(|| {
