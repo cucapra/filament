@@ -3,7 +3,8 @@
 import os
 import json
 import cocotb
-from cocotb.triggers import Timer, FallingEdge, RisingEdge
+from cocotb import triggers
+from cocotb.triggers import FallingEdge, RisingEdge, ClockCycles
 from cocotb.clock import Clock
 from cocotb.binary import BinaryValue
 
@@ -44,7 +45,10 @@ def construct_transaction_fsm(interface):
         # Maps signal_name -> txn_id -> listof values
         outputs = {sig["name"]: {} for sig in interface["outputs"]}
 
-        async def txn(idx):
+        # TODO(rachit): This function is associated to a specific event's
+        # transaction. When adding support for multiple events, we should make
+        # it take the event as an input.
+        async def txn(idx, event):
             """
             Run a complete transaction
             """
@@ -52,21 +56,20 @@ def construct_transaction_fsm(interface):
             for sig in outputs.keys():
                 outputs[sig][idx] = []
 
-            ev = interface["interfaces"][0]
-
             # Fully execute the module by triggering it till the number of
             # times prescribed by the delay
-            for st in range(0, ev["delay"] + 1):
+            for st in range(0, event["states"] + 1):
                 # Start the transaction by setting the interface signal to 1
                 if st == 0:
                     trg = 1
                 else:
                     trg = 0
-                mod._id(ev["name"], extended=False).value = trg
+                mod._id(event["name"], extended=False).value = trg
 
                 # Set input values
                 for inp in interface["inputs"]:
-                    assert inp["event"] == ev["event"], "input uses different event"
+                    assert inp["event"] == event["event"], \
+                            "input uses different event"
                     if st >= inp["start"] and st < inp["end"]:
                         v = data[inp["name"]][idx]
                     else:
@@ -75,13 +78,14 @@ def construct_transaction_fsm(interface):
 
                 # Wait for the falling edge so that combinational computations
                 # propagate.
-                # NOTE(rachit): Not sure if this will actually work for combinational
-                # outputs.
+                # NOTE(rachit): Not sure if this will actually work for
+                # combinational outputs.
                 await FallingEdge(mod.clk)
 
                 # For each output, record the value if we expect it to be valid
                 for out in interface["outputs"]:
-                    assert out["event"] == ev["event"], "output uses different event"
+                    assert out["event"] == event["event"], \
+                            "output uses different event"
                     name = out["name"]
                     if st >= out["start"] and st < out["end"]:
                         v = mod._id(name, extended=False).value
@@ -93,8 +97,18 @@ def construct_transaction_fsm(interface):
         # New transaction should only trigger at the start of a cycle
         await RisingEdge(mod.clk)
 
+        # List of all transactions
+        tasks = []
         for idx in range(0, validate_data(data)):
-            await txn(idx)
+            event = interface["interfaces"][0]
+            # Start this transaction
+            task = cocotb.start_soon(txn(idx, event))
+            tasks.append(task.join())
+            # Wait for the specified delay
+            await ClockCycles(mod.clk, event["delay"])
+
+        # Wait for all transactions to complete
+        await triggers.Combine(*tasks)
 
         return outputs
 
@@ -127,16 +141,18 @@ async def setup_design(mod, interface):
     # Reset phase
     await RisingEdge(mod.clk)
     mod.reset.setimmediatevalue(1)
-    await Timer(20, units='step')  # wait a bit
+    await ClockCycles(mod.clk, 3)  # wait a bit
     mod.reset.setimmediatevalue(0)
     await FallingEdge(mod.clk)  # wait for falling edge/"negedge"
 
 
 async def run_design(mod):
     interface_file = os.environ.get('INTERFACE')
-    assert interface_file, "Provide the location to interface file by setting the environment variable INTERFACE"
+    assert interface_file, ("Provide the location to interface file by "
+                            "setting the environment variable INTERFACE")
     data_file = os.environ.get('DATA_FILE')
-    assert data_file, "Provide the location to data file by setting the environment variable DATA_FILE"
+    assert data_file, ("Provide the location to data file by"
+                       " setting the environment variable DATA_FILE")
 
     with open(interface_file) as f:
         interface = json.load(f)
