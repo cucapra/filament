@@ -10,12 +10,24 @@ extern "core.sv" {
   ) -> (
     @[S, L] out: 32
   ) where S = G+1, L > S;
+
+  // A multiplexer that chooses between two signals. It has the following requirements:
+  // 1. The inputs must be available for longer than the select signal.
+  // 2. The output is available for as long as the select signal.
+  component Mux<G, E0, E1, S>(
+    @interface[G, max(E0, E1)] _go: 1,
+    @[G, S] sel: 1,
+    @[G, E0] in0: 32,
+    @[G, E1] in1: 32,
+  ) -> (
+    @[G, S] out: 32
+  ) where E0 >= S, E1 >= S, E0 > G, E1 > G, S > G;
 }
 
 extern "binary.sv" {
   // ============= Combinational =================
   component Add<G>(
-    @interface[G, G+1] go: 1,
+    @interface[G, G+1] _go: 1, // unused
     @[G, G+1] left: 32,
     @[G, G+1] right: 32,
   ) -> (
@@ -23,7 +35,7 @@ extern "binary.sv" {
   );
 
   component MultComb<G>(
-    @interface[G, G+1] go: 1,
+    @interface[G, G+1] _go: 1, // unused
     @[G, G+1] left: 32,
     @[G, G+1] right: 32,
   ) -> (

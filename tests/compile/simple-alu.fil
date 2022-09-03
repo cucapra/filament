@@ -1,0 +1,29 @@
+import "primitives/core.fil";
+
+// Simple ALU that can either perform an addition or a multiplication
+component main<G>(
+  @interface[G, G+3] go: 1,
+  // select multiply
+  @[G+2, G+3] do_mult: 1,
+  // inputs
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32,
+) -> (
+  @[G+2, G+3] out: 32
+) {
+  M := new Mult;
+  A := new Add;
+  S := new Mux;
+
+  // Perform the Add
+  LA := new Latch;
+  a0 := A<G>(left, right);
+  la := LA<G, G+1, G+3>(a0.out);
+
+  // Perform the Mult
+  m0 := M<G>(left, right);
+
+  // Select between the two
+  mux := S<G+2, G+3, G+3, G+3>(do_mult, m0.out, la.out);
+  out = mux.out;
+}
