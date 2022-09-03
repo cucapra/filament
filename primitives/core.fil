@@ -14,14 +14,14 @@ extern "core.sv" {
   // A multiplexer that chooses between two signals. It has the following requirements:
   // 1. The inputs must be available for longer than the select signal.
   // 2. The output is available for as long as the select signal.
-  component Mux<G, E0, E1, S>(
-    @interface[G, max(E0, E1)] _go: 1,
-    @[G, S] sel: 1,
-    @[G, E0] in0: 32,
-    @[G, E1] in1: 32,
+  component Mux<G, E>(
+    @interface[G, E] _go: 1,
+    @[G, E] sel: 1,
+    @[G, E] in0: 32,
+    @[G, E] in1: 32,
   ) -> (
-    @[G, S] out: 32
-  ) where E0 >= S, E1 >= S, E0 > G, E1 > G, S > G;
+    @[G, E] out: 32
+  ) where E > G;
 }
 
 extern "binary.sv" {

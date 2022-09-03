@@ -24,6 +24,6 @@ component main<G>(
   m0 := M<G>(left, right);
 
   // Select between the two
-  mux := S<G+2, G+3, G+3, G+3>(do_mult, m0.out, la.out);
+  mux := S<G+2, G+3>(do_mult, m0.out, la.out);
   out = mux.out;
 }
