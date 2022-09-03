@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint |G - G+1| >= |G - G+3|
+error: Cannot prove constraint |G - G+1| >= |G - G+2|
    ┌─ tests/errors/conflicting-use.fil:8:3
    │
  7 │   m0 := M<G>(10, 20);
@@ -11,6 +11,6 @@ error: Cannot prove constraint |G - G+1| >= |G - G+3|
    │
    ┌─ ./primitives/core.fil:48:3
    │
-48 │   @interface[G, G+3] go_G: 1,
-   │   -------------------------- @interface for G specifies that invokes must be |G - G+3| cycles apart
+48 │   @interface[G, G+2] go_G: 1,
+   │   -------------------------- @interface for G specifies that invokes must be |G - G+2| cycles apart
 

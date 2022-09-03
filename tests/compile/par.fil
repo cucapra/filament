@@ -1,7 +1,7 @@
 import "primitives/core.fil";
 
 component FastMult<G>(
-  @interface[G, G+3] go_G: 1,
+  @interface[G, G+1] go_G: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,
 ) -> (
@@ -15,7 +15,7 @@ component FastMult<G>(
 }
 
 component main<G>(
-  @interface[G, G+4] go_G: 1,
+  @interface[G, G+2] go_G: 1,
   @[G, G+1] a: 32,
   @[G, G+1] b: 32,
 ) -> (

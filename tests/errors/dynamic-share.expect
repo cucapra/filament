@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint |L - G| >= |L - L+3|
+error: Cannot prove constraint |L - G| >= |L - L+2|
    ┌─ tests/errors/dynamic-share.fil:13:3
    │
 12 │   m1 := M<L>(c, d);
@@ -11,6 +11,6 @@ error: Cannot prove constraint |L - G| >= |L - L+3|
    │
    ┌─ ./primitives/core.fil:48:3
    │
-48 │   @interface[G, G+3] go_G: 1,
-   │   -------------------------- @interface for G specifies that invokes must be |L - L+3| cycles apart
+48 │   @interface[G, G+2] go_G: 1,
+   │   -------------------------- @interface for G specifies that invokes must be |L - L+2| cycles apart
 
