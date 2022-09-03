@@ -38,6 +38,25 @@
 				{
 					"name": "support.function",
 					"match": "\\b(import|extern)\\b"
+				},
+				{
+					"begin": "\\b(where)\\b",
+					"beginCaptures": {
+						"0": {
+							"name": "keyword.control.filament"
+						}
+					},
+					"end": ";",
+					"patterns": [
+						{
+							"name": "entity.name.tag",
+							"match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b"
+						},
+						{
+							"name": "constant.numeric",
+							"match": "\\b(\\d+)\\b"
+						}
+					]
 				}
 			]
 		},
