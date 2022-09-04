@@ -67,6 +67,8 @@ def construct_transaction_fsm(interface, randomize):
                     trg = 1
                 else:
                     trg = 0
+                # XXX(rachit): This might cause problems if another transaction
+                # attempts to write 1 while this writes 0
                 mod._id(event["name"], extended=False).value = trg
 
                 # Set input values
@@ -75,9 +77,7 @@ def construct_transaction_fsm(interface, randomize):
                         "input uses different event"
                     if st >= inp["start"] and st < inp["end"]:
                         v = data[inp["name"]][idx]
-                    else:
-                        v = BinaryValue('x')
-                    mod._id(inp["name"], extended=False).value = v
+                        mod._id(inp["name"], extended=False).value = v
 
                 # Wait for the falling edge so that combinational computations
                 # propagate.
@@ -92,7 +92,11 @@ def construct_transaction_fsm(interface, randomize):
                     name = out["name"]
                     if st >= out["start"] and st < out["end"]:
                         v = mod._id(name, extended=False).value
-                        outputs[name][idx].append(v.integer)
+                        try:
+                            out = v.integer
+                        except ValueError:
+                            out = v.binstr
+                        outputs[name][idx].append(out)
 
                 # Wait for end of cycle
                 await RisingEdge(mod.clk)
@@ -162,11 +166,9 @@ async def setup_design(mod, interface):
     counter_task = cocotb.start_soon(proc())
 
     # Reset phase
-    await RisingEdge(mod.clk)
-    mod.reset.setimmediatevalue(1)
+    mod.reset.value = 1
     await ClockCycles(mod.clk, RESET_CYCLES)  # wait a bit
-    mod.reset.setimmediatevalue(0)
-    await FallingEdge(mod.clk)  # wait for falling edge/"negedge"
+    mod.reset.value = 0
 
     return (counter_task, count)
 
