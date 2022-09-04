@@ -7,20 +7,21 @@ from fud.stages import Stage, SourceType, Source
 from fud.utils import shell, TmpDir
 
 
-class CocotbExec(Stage):
+class CocotbExecBase(Stage):
     """
     Execute a Filament generated verilog program through the cocotb testbench
     """
 
     name = "cocotb"
 
-    def __init__(self):
+    def __init__(self, target_state, is_vcd, description):
+        self.is_vcd = is_vcd
         super().__init__(
             src_state="filament",
-            target_state="cocotb-out",
+            target_state=target_state,
             input_type=SourceType.Path,
             output_type=SourceType.Stream,
-            description="Execute a Filament generated verilog program through the cocotb testbench",
+            description=description
         )
 
     @staticmethod
@@ -101,6 +102,32 @@ class CocotbExec(Stage):
                 shutil.copy(src, Path(dir) / file)
 
         @builder.step()
+        def add_vcd_gen(code: SourceType.String) -> SourceType.String:
+            """
+            Replace
+            `// COMPONENT END: main`
+            with:
+            `ifdef COCOTB_SIM
+            initial begin
+                $dumpfile ("out.vcd");
+                $dumpvars (0, main);
+                #1;
+            end
+            `endif
+            // COMPONENT END: main
+            """
+            return code.replace("// COMPONENT END: main", """
+            `ifdef COCOTB_SIM
+            initial begin
+                $dumpfile ("out.vcd");
+                $dumpvars (0, main);
+                #1;
+            end
+            `endif
+            // COMPONENT END: main
+            """)
+
+        @builder.step()
         def run(dir: SourceType.String, interface: SourceType.Path, data: SourceType.Path) -> SourceType.Stream:
             """
             Run the simulation
@@ -117,17 +144,12 @@ class CocotbExec(Stage):
             return shell(cmd)
 
         @builder.step()
-        def get_results(output: SourceType.Stream) -> SourceType.String:
+        def read_vcd(dir: SourceType.String) -> SourceType.String:
             """
-            Grep the results from cocotb's output
+            Read the vcd file
             """
-            # Find line that starts with "Outputs:" and return it
-            for line in output.readlines():
-                if line.startswith(b"Outputs:"):
-                    # Remove Output: from the front of the line
-                    return line.split(b" ", 1)[1].decode('UTF-8')
-
-            return "No results were found"
+            with open(Path(dir)/"out.vcd", 'r') as f:
+                return f.read()
 
         # Schedule the program
         data = get_data()
@@ -145,6 +167,9 @@ class CocotbExec(Stage):
             builder.ctx.append("to_verilog")
             verilog_stream = builder.also_do_path(input, path, config)
             builder.ctx.pop()
+            # If this is a VCD, we need to add the VCD generation code
+            if self.is_vcd:
+                verilog_stream = add_vcd_gen(verilog_stream)
             # Save the verilog stream into the temporary directory
             self.save_file(builder, verilog_stream, dir, "out.sv")
 
@@ -155,7 +180,73 @@ class CocotbExec(Stage):
 
         # Run the program
         out = run(dir, interface_path, data)
-        return get_results(out)
+        if self.is_vcd:
+            return read_vcd(dir)
+        else:
+            return out
+
+
+class CocotbVCD(CocotbExecBase):
+    """
+    Execute a Filament generated verilog program through the cocotb testbench
+    """
+
+    def __init__(self):
+        super().__init__(
+            target_state="cocotb-vcd",
+            is_vcd=True,
+            description="Run a Filament program through the cocotb testbench and generate a VCD"
+        )
+
+
+class CocotbOut(CocotbExecBase):
+    """
+    Execute a Filament generated verilog program through the cocotb testbench
+    """
+
+    def __init__(self):
+        super().__init__(
+            target_state="cocotb-out-raw",
+            is_vcd=False,
+            description="Run a Filament program through the cocotb testbench and generate output"
+        )
+
+
+class CleanupCocotb(Stage):
+    """
+    Execute a Filament generated verilog program through the cocotb testbench
+    """
+
+    name = 'cocotb-cleanup'
+
+    def __init__(self):
+        super().__init__(
+            src_state="cocotb-out-raw",
+            target_state="cocotb-out",
+            input_type=SourceType.Stream,
+            output_type=SourceType.Stream,
+            description="Cleanup the otuput produced by cocotb",
+        )
+
+    @staticmethod
+    def defaults():
+        return {}
+
+    def _define_steps(self, input, builder, config):
+        @builder.step()
+        def get_results(output: SourceType.Stream) -> SourceType.String:
+            """
+            Grep the results from cocotb's output
+            """
+            # Find line that starts with "Outputs:" and return it
+            for line in output.readlines():
+                if line.startswith(b"Outputs:"):
+                    # Remove Output: from the front of the line
+                    return line.split(b" ", 1)[1].decode('UTF-8')
+
+            return "No results were found"
+
+        return get_results(input)
 
 
 class FilamentStage(Stage):
@@ -206,4 +297,4 @@ class FilamentStage(Stage):
         return to_calyx(input_data)
 
 
-__STAGES__ = [FilamentStage, CocotbExec]
+__STAGES__ = [FilamentStage, CocotbOut, CocotbVCD, CleanupCocotb]
