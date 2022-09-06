@@ -14,6 +14,29 @@ fn check_connect(
     guard: &Option<ast::Guard>,
     ctx: &mut Context,
 ) -> FilamentResult<()> {
+    // Check that the source has the same width as the destination
+    if let (Some(src_width), Some(dst_width)) = (
+        ctx.get_port_width::<false>(src)?,
+        ctx.get_port_width::<true>(dst)?,
+    ) {
+        if src_width != dst_width {
+            return Err(Error::malformed(format!("Port width mismatch",))
+                .add_note(
+                    format!("Source {} has width {}", src.name(), src_width),
+                    src.copy_span(),
+                )
+                .add_note(
+                    format!(
+                        "Destination {} has width {}",
+                        dst.name(),
+                        dst_width
+                    ),
+                    dst.copy_span(),
+                ));
+        }
+    }
+
+    // Remove dst from remaining ports
     ctx.remove_remaning_assign(dst)?;
 
     let requirement = ctx.port_requirements(dst)?;

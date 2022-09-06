@@ -9,8 +9,8 @@ error: Cannot prove constraint |L - G| >= |L - L+2|
 13 │   m0 := M<G>(a, b);
    │   ^^^^^^^^^^^^^^^^^ Conflicting invoke. Invoke provides binding M.G=G
    │
-   ┌─ ./primitives/core.fil:48:3
+   ┌─ ./primitives/core.fil:71:3
    │
-48 │   @interface[G, G+2] go_G: 1,
+71 │   @interface[G, G+2] go_G: 1,
    │   -------------------------- @interface for G specifies that invokes must be |L - L+2| cycles apart
 

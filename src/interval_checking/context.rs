@@ -43,6 +43,35 @@ impl<'a> ConcreteInvoke<'a> {
         Self::Fsm { live_time, fsm }
     }
 
+    /// Return the width of a port
+    pub fn port_width<const IS_INPUT: bool>(
+        &self,
+        port: &ast::Id,
+    ) -> Option<u64> {
+        match self {
+            Self::Concrete { sig, .. } | Self::This { sig } => {
+                if IS_INPUT {
+                    sig.inputs.iter().find_map(|p| {
+                        if p.name == port {
+                            Some(p.bitwidth)
+                        } else {
+                            None
+                        }
+                    })
+                } else {
+                    sig.outputs.iter().find_map(|p| {
+                        if p.name == port {
+                            Some(p.bitwidth)
+                        } else {
+                            None
+                        }
+                    })
+                }
+            }
+            Self::Fsm { .. } => None,
+        }
+    }
+
     /// Resolve a port for this instance and return the requirement or guarantee
     /// based on whether it is an input or an input port.
     #[inline]
@@ -286,6 +315,22 @@ impl<'a> Context<'a> {
 
             ast::PortType::CompPort { comp, name } => {
                 Some(self.get_invoke(comp)?.port_guarantees(name)?)
+            }
+        })
+    }
+
+    // Returns the width of a port
+    pub fn get_port_width<const IS_INPUT: bool>(
+        &self,
+        port: &ast::Port,
+    ) -> FilamentResult<Option<u64>> {
+        Ok(match &port.typ {
+            ast::PortType::Constant(_) => None,
+            ast::PortType::ThisPort(port) => {
+                self.get_invoke(&THIS.into())?.port_width::<IS_INPUT>(port)
+            }
+            ast::PortType::CompPort { comp, name } => {
+                self.get_invoke(comp)?.port_width::<IS_INPUT>(name)
             }
         })
     }

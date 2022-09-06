@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+error: Port width mismatch
+  ┌─ tests/errors/port-mismatch.fil:2:11
+  │
+2 │     out = in;
+  │     ---   ^^ Source in has width 32
+  │     │      
+  │     Destination out has width 16
+
