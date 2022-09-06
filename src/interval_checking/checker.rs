@@ -334,9 +334,16 @@ where
         log::trace!("Checking command: {}", cmd);
         match cmd {
             ast::Command::Invoke(invoke) => check_invoke(invoke, ctx)?,
-            ast::Command::Instance(ast::Instance { name, component }) => {
-                ctx.add_instance(name.clone(), component)?
-            }
+            ast::Command::Instance(
+                inst @ ast::Instance {
+                    name, component, ..
+                },
+            ) => ctx.add_instance(name.clone(), component).map_err(|err| {
+                err.add_note(
+                    format!("No component named {}", component.clone()),
+                    inst.copy_span(),
+                )
+            })?,
             ast::Command::Fsm(fsm) => check_fsm(fsm, ctx)?,
             ast::Command::Connect(ast::Connect {
                 dst, src, guard, ..

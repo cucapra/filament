@@ -231,11 +231,10 @@ impl FilamentParser {
 
     // ================ Cells =====================
     fn instance(input: Node) -> ParseResult<ast::Instance> {
+        let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [identifier(name), identifier(component)] => ast::Instance {
-                name, component
-            }
+            [identifier(name), identifier(component)] => ast::Instance::new(name, component).set_span(Some(sp)),
         ))
     }
 

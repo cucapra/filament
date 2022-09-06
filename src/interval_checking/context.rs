@@ -171,7 +171,12 @@ impl<'a> Context<'a> {
     ) -> FilamentResult<()> {
         match self.sigs.get(comp) {
             Some(sig) => {
-                self.instances.insert(name, sig);
+                if let Some(_) = self.instances.insert(name.clone(), sig) {
+                    return Err(Error::already_bound(
+                        name,
+                        "instance".to_string(),
+                    ));
+                }
                 Ok(())
             }
             None => {

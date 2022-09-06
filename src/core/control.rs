@@ -1,5 +1,5 @@
 use super::{Binding, Id, Interval, Range, Signature, TimeRep};
-use crate::errors::{self, Error, FilamentResult};
+use crate::errors::{self, Error, FilamentResult, WithPos};
 use itertools::Itertools;
 use std::fmt::Display;
 
@@ -122,10 +122,31 @@ pub struct Instance {
     pub name: Id,
     /// Name of the component
     pub component: Id,
+    /// Source position
+    pos: Option<errors::Span>,
+}
+impl Instance {
+    pub fn new(name: Id, component: Id) -> Self {
+        Instance {
+            name,
+            component,
+            pos: None,
+        }
+    }
 }
 impl std::fmt::Display for Instance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} := new {}", self.name, self.component)
+    }
+}
+impl WithPos for Instance {
+    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+        self.pos = sp;
+        self
+    }
+
+    fn copy_span(&self) -> Option<errors::Span> {
+        self.pos.clone()
     }
 }
 

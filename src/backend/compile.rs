@@ -269,7 +269,9 @@ fn compile_command(cmd: ast::Command, ctx: &mut Context) {
             );
             ctx.add_invoke(bind, instance);
         }
-        ast::Command::Instance(ast::Instance { name, component }) => {
+        ast::Command::Instance(ast::Instance {
+            name, component, ..
+        }) => {
             let cell = ctx.builder.add_component(
                 name.id.clone(),
                 component.id.clone(),
