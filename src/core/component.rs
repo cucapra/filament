@@ -8,7 +8,7 @@ where
     T: Clone + TimeRep,
 {
     // Signature of this component
-    pub sig: Signature<T>,
+    pub sig: Signature<T, u64>,
 
     /// Model for this component
     pub body: Vec<Command<T>>,
@@ -60,7 +60,7 @@ where
         Ok(())
     }
 
-    pub fn new(sig: Signature<T>, body: Vec<Command<T>>) -> Self {
+    pub fn new(sig: Signature<T, u64>, body: Vec<Command<T>>) -> Self {
         Self { sig, body }
     }
 }
@@ -85,7 +85,7 @@ where
     pub imports: Vec<String>,
 
     /// Define externals and their files
-    pub externs: Vec<(String, Vec<Signature<T>>)>,
+    pub externs: Vec<(String, Vec<Signature<T, u64>>)>,
 
     /// Components defined in this file
     pub components: Vec<Component<T>>,
@@ -96,7 +96,7 @@ where
     T: TimeRep + Clone,
 {
     /// External signatures associated with the namespace
-    pub fn signatures(&self) -> HashMap<Id, &Signature<T>> {
+    pub fn signatures(&self) -> HashMap<Id, &Signature<T, u64>> {
         self.externs
             .iter()
             .flat_map(|(_, comps)| comps.iter().map(|s| (s.name.clone(), s)))

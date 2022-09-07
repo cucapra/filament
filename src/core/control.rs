@@ -187,7 +187,7 @@ where
         }
     }
 
-    pub fn bindings(&self, sig: &Signature<T>) -> Binding<T> {
+    pub fn bindings(&self, sig: &Signature<T, u64>) -> Binding<T> {
         Binding::new(
             sig.abstract_vars
                 .iter()

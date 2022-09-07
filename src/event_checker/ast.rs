@@ -4,8 +4,8 @@ pub type TimeRep = crate::core::FsmIdxs;
 
 pub type Component = core::Component<TimeRep>;
 pub type Namespace = core::Namespace<TimeRep>;
-pub type PortDef = core::PortDef<TimeRep>;
-pub type Signature = core::Signature<TimeRep>;
+pub type PortDef<W> = core::PortDef<TimeRep, W>;
+pub type Signature<W> = core::Signature<TimeRep, W>;
 pub type Constraint = core::Constraint<TimeRep>;
 pub type CBT = core::ConstraintBase<TimeRep>;
 pub type CBS = core::ConstraintBase<TimeSub<TimeRep>>;

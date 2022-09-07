@@ -41,11 +41,13 @@ impl CompileInvokes {
     // We know that the interval for out is necessarily at least as big as in.
     // Therefore, in the max-state computation, we don't have to care about anything that is an
     // input.
-    fn max_state_from_sig(
+    fn max_state_from_sig<W>(
         &mut self,
-        resolved_outputs: impl Iterator<Item = ast::PortDef>,
-    ) {
-        let out_events = resolved_outputs.flat_map(|pd| {
+        resolved_outputs: impl Iterator<Item = ast::PortDef<W>>,
+    ) where
+        W: Clone,
+    {
+        let out_events = resolved_outputs.flat_map(|pd: ast::PortDef<W>| {
             pd.liveness.events().into_iter().cloned().collect_vec()
         });
 
@@ -80,7 +82,7 @@ impl visitor::Transform for CompileInvokes {
     fn invoke(
         &mut self,
         inv: ast::Invoke,
-        sig: &ast::Signature,
+        sig: &ast::Signature<u64>,
     ) -> FilamentResult<Vec<ast::Command>> {
         let pos = inv.copy_span();
         // Compile only if this is a high-level invoke

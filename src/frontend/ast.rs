@@ -5,8 +5,8 @@ type TR = IntervalTime;
 
 pub type Component = core::Component<TR>;
 pub type Namespace = core::Namespace<TR>;
-pub type PortDef = core::PortDef<TR>;
-pub type Signature = core::Signature<TR>;
+pub type PortDef<W> = core::PortDef<TR, W>;
+pub type Signature<W> = core::Signature<TR, W>;
 pub type Constraint = core::Constraint<TR>;
 pub type ConstraintBase = core::ConstraintBase<TR>;
 pub type Command = core::Command<TR>;

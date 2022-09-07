@@ -48,7 +48,7 @@ impl visitor::Transform for DumpInterface {
                 .concrete()
                 .map(|delay|
                     format!(
-                        "{{\"name\": \"{}\", \"event\": \"{}\", \"delay\": {delay}, \"states\": {states} }}", 
+                        "{{\"name\": \"{}\", \"event\": \"{}\", \"delay\": {delay}, \"states\": {states} }}",
                         id.name,
                         id.event
                     ))
@@ -69,7 +69,7 @@ impl visitor::Transform for DumpInterface {
         //   "start": n,
         //   "end": m
         // },
-        let pd_to_info = |pd: &ast::PortDef| {
+        let pd_to_info = |pd: &ast::PortDef<u64>| {
             pd.liveness
             .within
             .as_offset()

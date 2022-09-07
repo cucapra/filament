@@ -10,7 +10,7 @@ pub enum ConcreteInvoke<'a> {
         binding: core::Binding<'a, ast::TimeRep>,
 
         /// Signature
-        sig: &'a ast::Signature,
+        sig: &'a ast::Signature<u64>,
     },
     Fsm {
         /// Internal FSM
@@ -20,7 +20,7 @@ pub enum ConcreteInvoke<'a> {
     },
     This {
         /// Signature
-        sig: &'a ast::Signature,
+        sig: &'a ast::Signature<u64>,
     },
 }
 
@@ -28,13 +28,13 @@ impl<'a> ConcreteInvoke<'a> {
     /// Construct an instance from a Signature and bindings for abstract variables.
     pub fn concrete(
         binding: core::Binding<'a, ast::TimeRep>,
-        sig: &'a ast::Signature,
+        sig: &'a ast::Signature<u64>,
     ) -> Self {
         Self::Concrete { binding, sig }
     }
 
     /// Construct an instance for "this" component.
-    pub fn this_instance(sig: &'a ast::Signature) -> Self {
+    pub fn this_instance(sig: &'a ast::Signature<u64>) -> Self {
         Self::This { sig }
     }
 
@@ -110,7 +110,7 @@ impl<'a> ConcreteInvoke<'a> {
         self.resolve_port::<false>(port)
     }
 
-    pub fn get_sig(&self) -> &ast::Signature {
+    pub fn get_sig(&self) -> &ast::Signature<u64> {
         match &self {
             ConcreteInvoke::Concrete { sig, .. } => sig,
             ConcreteInvoke::This { sig } => sig,
@@ -126,10 +126,10 @@ type BindsWithLoc = (Option<errors::Span>, Vec<ast::TimeRep>);
 
 pub struct Context<'a> {
     /// Mapping from names to signatures for components and externals.
-    sigs: &'a HashMap<ast::Id, &'a ast::Signature>,
+    sigs: &'a HashMap<ast::Id, &'a ast::Signature<u64>>,
 
     /// Mapping for the names of active instances
-    instances: HashMap<ast::Id, &'a ast::Signature>,
+    instances: HashMap<ast::Id, &'a ast::Signature<u64>>,
 
     /// Mapping from name of invocations to their information
     invocations: HashMap<ast::Id, ConcreteInvoke<'a>>,
@@ -148,8 +148,8 @@ pub struct Context<'a> {
     pub facts: FactMap,
 }
 
-impl<'a> From<&'a HashMap<ast::Id, &'a ast::Signature>> for Context<'a> {
-    fn from(sigs: &'a HashMap<ast::Id, &'a ast::Signature>) -> Self {
+impl<'a> From<&'a HashMap<ast::Id, &'a ast::Signature<u64>>> for Context<'a> {
+    fn from(sigs: &'a HashMap<ast::Id, &'a ast::Signature<u64>>) -> Self {
         Context {
             sigs,
             remaining_assigns: HashMap::default(),
@@ -276,7 +276,7 @@ impl<'a> Context<'a> {
     pub fn get_instance(
         &self,
         inst: &ast::Id,
-    ) -> FilamentResult<&'a ast::Signature> {
+    ) -> FilamentResult<&'a ast::Signature<u64>> {
         self.instances.get(inst).copied().ok_or_else(|| {
             Error::undefined(inst.clone(), "instance".to_string())
         })

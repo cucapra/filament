@@ -6,13 +6,13 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct Bindings<'a> {
     /// Signatures for external definitions
-    ext_sigs: HashMap<ast::Id, &'a ast::Signature>,
+    ext_sigs: HashMap<ast::Id, &'a ast::Signature<u64>>,
     /// Signatures for components
     comps: Vec<ast::Component>,
 }
 impl<'a> Bindings<'a> {
     /// Get a binding associated with a name
-    pub fn get(&'a self, name: &ast::Id) -> &'a ast::Signature {
+    pub fn get(&'a self, name: &ast::Id) -> &'a ast::Signature<u64> {
         self.ext_sigs
             .get(name)
             .cloned()
@@ -73,16 +73,16 @@ where
     fn invoke(
         &mut self,
         inv: ast::Invoke,
-        _: &ast::Signature,
+        _: &ast::Signature<u64>,
     ) -> FilamentResult<Vec<ast::Command>> {
         Ok(vec![inv.into()])
     }
 
     #[inline]
-    fn signature(
+    fn signature<W: Clone>(
         &mut self,
-        sig: ast::Signature,
-    ) -> FilamentResult<ast::Signature> {
+        sig: ast::Signature<W>,
+    ) -> FilamentResult<ast::Signature<W>> {
         Ok(sig)
     }
 
@@ -111,7 +111,8 @@ where
         binds: &Bindings,
     ) -> FilamentResult<ast::Component> {
         // Binding for instances
-        let mut instances: HashMap<ast::Id, &ast::Signature> = HashMap::new();
+        let mut instances: HashMap<ast::Id, &ast::Signature<u64>> =
+            HashMap::new();
         let ast::Component { sig, body } = self.enter_component(comp)?;
         let body: Vec<ast::Command> = body
             .into_iter()
