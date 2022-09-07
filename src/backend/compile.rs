@@ -299,7 +299,10 @@ fn compile_command(cmd: ast::Command, ctx: &mut Context) {
     }
 }
 
-fn as_port_defs(sig: &ast::Signature, is_comp: bool) -> Vec<ir::PortDef<u64>> {
+fn as_port_defs(
+    sig: &ast::Signature<u64>,
+    is_comp: bool,
+) -> Vec<ir::PortDef<u64>> {
     let mut ports: Vec<ir::PortDef<u64>> = sig
         .inputs
         .iter()
@@ -398,7 +401,7 @@ fn compile_component(
     Ok(component)
 }
 
-fn compile_signature(sig: &ast::Signature) -> ir::Primitive {
+fn compile_signature(sig: &ast::Signature<u64>) -> ir::Primitive {
     ir::Primitive {
         name: sig.name.id.clone().into(),
         params: Vec::new(),
@@ -425,7 +428,7 @@ fn compile_signature(sig: &ast::Signature) -> ir::Primitive {
 
 fn init_calyx(
     lib_loc: &Path,
-    externs: &[(String, Vec<ast::Signature>)],
+    externs: &[(String, Vec<ast::Signature<u64>>)],
 ) -> CalyxResult<ir::Context> {
     let mut prims = PathBuf::from(lib_loc);
     prims.push("primitives");

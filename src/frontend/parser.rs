@@ -23,18 +23,18 @@ type ParseResult<T> = Result<T, Error<Rule>>;
 // that have a reference to the input string
 type Node<'i> = pest_consume::Node<'i, Rule, UserData>;
 
-type Ports = Vec<ast::PortDef>;
+type Ports = Vec<ast::PortDef<u64>>;
 
 // include the grammar file so that Cargo knows to rebuild this file on grammar changes
 const _GRAMMAR: &str = include_str!("syntax.pest");
 
 pub enum ExtOrComp {
-    Ext((String, Vec<ast::Signature>)),
+    Ext((String, Vec<ast::Signature<u64>>)),
     Comp(ast::Component),
 }
 
 pub enum Port {
-    Pd(ast::PortDef),
+    Pd(ast::PortDef<u64>),
     Int(ast::InterfaceDef),
     Un((ast::Id, u64)),
 }
@@ -233,17 +233,18 @@ impl FilamentParser {
     fn instance(input: Node) -> ParseResult<Vec<ast::Command>> {
         let sp = Self::get_span(&input);
         Ok(match_nodes!(
-            input.into_children();
+            input.clone().into_children();
             [identifier(name), identifier(component)] => vec![
                 ast::Instance::new(name, component).set_span(Some(sp)).into()
             ],
             [identifier(name), identifier(component), invoke_args((abstract_vars, ports))] => {
                 // Upper case the first letter of name
-                let mut inst_name = name.id.clone();
-                if let Some(r) = inst_name.get_mut(0..1) {
-                    r.make_ascii_uppercase();
+                let mut iname = name.id.clone();
+                iname.make_ascii_uppercase();
+                let iname = ast::Id::from(iname);
+                if iname == name {
+                    input.error("Generated Instance name conflicts with original name");
                 }
-                let iname = ast::Id::from(inst_name);
                 let instance = ast::Instance::new(iname.clone(), component).set_span(Some(sp.clone())).into();
                 let invoke = ast::Invoke::new(name, iname, abstract_vars, Some(ports)).set_span(Some(sp)).into();
                 vec![instance, invoke]
@@ -359,7 +360,7 @@ impl FilamentParser {
     }
 
     // ================ Component =====================
-    fn signature(input: Node) -> ParseResult<ast::Signature> {
+    fn signature(input: Node) -> ParseResult<ast::Signature<u64>> {
         Ok(match_nodes!(
             input.into_children();
             [
@@ -450,7 +451,9 @@ impl FilamentParser {
         )
     }
 
-    fn external(input: Node) -> ParseResult<(String, Vec<ast::Signature>)> {
+    fn external(
+        input: Node,
+    ) -> ParseResult<(String, Vec<ast::Signature<u64>>)> {
         Ok(match_nodes!(
             input.into_children();
             [string_lit(path), signature(sigs)..] => (path, sigs.collect()),

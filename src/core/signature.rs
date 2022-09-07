@@ -8,9 +8,10 @@ use std::{collections::HashMap, fmt::Display};
 
 /// The signature of a component definition
 #[derive(Clone)]
-pub struct Signature<T>
+pub struct Signature<T, W>
 where
     T: Clone + TimeRep,
+    W: Clone,
 {
     /// Name of the component
     pub name: Id,
@@ -26,18 +27,19 @@ where
     pub interface_signals: Vec<InterfaceDef<T>>,
 
     /// Input ports
-    pub inputs: Vec<PortDef<T>>,
+    pub inputs: Vec<PortDef<T, W>>,
 
     /// Output ports
-    pub outputs: Vec<PortDef<T>>,
+    pub outputs: Vec<PortDef<T, W>>,
 
     /// Constraints on the abstract variables in the signature
     pub constraints: Vec<Constraint<T>>,
 }
 
-impl<T> Signature<T>
+impl<T, W> Signature<T, W>
 where
     T: TimeRep,
+    W: Clone,
 {
     // Generate a new signature that has been reversed: inputs are outputs
     // with outputs.
@@ -127,7 +129,7 @@ where
     }
 }
 
-impl Signature<FsmIdxs> {
+impl<W: Clone> Signature<FsmIdxs, W> {
     /// Constraints generated to ensure that a signature is well-formed.
     /// 1. Ensure that all the intervals are well formed
     /// 2. Ensure for each interval that mentions event `E` in its start time, the @interface
@@ -186,9 +188,10 @@ impl Signature<FsmIdxs> {
     }
 }
 
-impl<T> Display for Signature<T>
+impl<T, W> Display for Signature<T, W>
 where
     T: Display + Clone + TimeRep,
+    W: Clone + Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -220,9 +223,10 @@ where
         Ok(())
     }
 }
-impl<T> std::fmt::Debug for Signature<T>
+impl<T, W> std::fmt::Debug for Signature<T, W>
 where
     T: Display + Clone + TimeRep,
+    W: Display + Clone,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{self}")

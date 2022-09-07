@@ -89,9 +89,9 @@ fn transform_control(
     }
 }
 
-fn transform_port_def(
-    pd: core::PortDef<frontend::IntervalTime>,
-) -> FilamentResult<core::PortDef<core::FsmIdxs>> {
+fn transform_port_def<W: Clone>(
+    pd: core::PortDef<frontend::IntervalTime, W>,
+) -> FilamentResult<core::PortDef<core::FsmIdxs, W>> {
     let sp = pd.copy_span();
     Ok(core::PortDef::new(
         pd.name,
@@ -119,9 +119,9 @@ fn transform_constraints(
     con.map(&transform_time)
 }
 
-fn transform_signature(
-    sig: core::Signature<frontend::IntervalTime>,
-) -> FilamentResult<core::Signature<core::FsmIdxs>> {
+fn transform_signature<W: Clone>(
+    sig: core::Signature<frontend::IntervalTime, W>,
+) -> FilamentResult<core::Signature<core::FsmIdxs, W>> {
     let sig = core::Signature {
         inputs: sig
             .inputs

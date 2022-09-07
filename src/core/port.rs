@@ -5,25 +5,27 @@ use crate::errors::{self, WithPos};
 use std::fmt::Display;
 
 #[derive(Clone)]
-pub struct PortDef<T>
+pub struct PortDef<T, W>
 where
     T: Clone + TimeRep,
+    W: Clone,
 {
     /// Name of the port
     pub name: Id,
     /// Liveness condition for the Port
     pub liveness: Interval<T>,
     /// Bitwidth of the port
-    pub bitwidth: u64,
+    pub bitwidth: W,
     /// Source position
     pos: Option<errors::Span>,
 }
 
-impl<T> PortDef<T>
+impl<T, W> PortDef<T, W>
 where
     T: Clone + TimeRep,
+    W: Clone,
 {
-    pub fn new(name: Id, liveness: Interval<T>, bitwidth: u64) -> Self {
+    pub fn new(name: Id, liveness: Interval<T>, bitwidth: W) -> Self {
         Self {
             name,
             liveness,
@@ -32,17 +34,19 @@ where
         }
     }
 }
-impl<T> Display for PortDef<T>
+impl<T, W> Display for PortDef<T, W>
 where
     T: Display + Clone + TimeRep,
+    W: Display + Clone,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {}: {}", self.liveness, self.name, self.bitwidth)
     }
 }
-impl<T> WithPos for PortDef<T>
+impl<T, W> WithPos for PortDef<T, W>
 where
     T: TimeRep,
+    W: Clone,
 {
     fn set_span(mut self, sp: Option<errors::Span>) -> Self {
         self.pos = sp;
@@ -53,11 +57,15 @@ where
         self.pos.clone()
     }
 }
-impl<T: Clone + TimeRep> WithTime<T> for PortDef<T> {
+impl<T, W> WithTime<T> for PortDef<T, W>
+where
+    W: Clone,
+    T: Clone + TimeRep,
+{
     fn resolve(&self, bindings: &Binding<T>) -> Self {
         Self {
             liveness: self.liveness.resolve(bindings),
-            ..self.clone()
+            ..(self.clone())
         }
     }
 }

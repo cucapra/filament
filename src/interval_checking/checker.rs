@@ -145,7 +145,7 @@ fn check_connect(
 fn check_invoke_binds<'a>(
     invoke: &'a ast::Invoke,
     ctx: &mut Context<'a>,
-) -> FilamentResult<(&'a ast::Signature, Binding<'a, ast::TimeRep>)> {
+) -> FilamentResult<(&'a ast::Signature<u64>, Binding<'a, ast::TimeRep>)> {
     // Track event bindings
     ctx.add_event_binds(
         invoke.instance.clone(),
@@ -355,7 +355,7 @@ where
 
 fn check_component(
     comp: &ast::Component,
-    sigs: &HashMap<ast::Id, &ast::Signature>,
+    sigs: &HashMap<ast::Id, &ast::Signature<u64>>,
 ) -> FilamentResult<()> {
     let mut ctx = Context::from(sigs);
 

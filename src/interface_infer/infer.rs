@@ -22,9 +22,9 @@ impl InterfaceInfer {
     /// Compute max states from:
     /// 1. Inputs and output ports
     /// 2. The events used to trigger the invocation
-    fn max_state_from_sig(
+    fn max_state_from_sig<W: Clone>(
         &mut self,
-        sig: &ast::Signature,
+        sig: &ast::Signature<W>,
         abstract_vars: &[ast::TimeRep],
         binding: &core::Binding<ast::TimeRep>,
     ) {
@@ -66,7 +66,7 @@ impl visitor::Transform for InterfaceInfer {
     fn invoke(
         &mut self,
         inv: ast::Invoke,
-        sig: &ast::Signature,
+        sig: &ast::Signature<u64>,
     ) -> FilamentResult<Vec<ast::Command>> {
         // Compute maximum events observed in this
         log::info!("{inv}");
