@@ -207,18 +207,20 @@ impl<T: TimeRep> Signature<T, PortParam> {
                         pd.name.clone(),
                         pd.liveness.clone(),
                         *c,
-                    )),
+                    )
+                    .set_span(pd.copy_span())),
                     PortParam::Var(param) => {
                         if let Some(&c) = binding.get(param) {
                             Ok(PortDef::new(
                                 pd.name.clone(),
                                 pd.liveness.clone(),
                                 c,
-                            ))
+                            )
+                            .set_span(pd.copy_span()))
                         } else {
                             Err(Error::malformed(format!(
-                                "Cannot resolve signature. Port `{}.{}` is parameterized by `{}`",
-                                self.name, pd.name, param
+                                "No binding for parameter {}. Port `{}.{}` is parameterized by `{}`",
+                                param, self.name, pd.name, param
                             )))
                         }
                     }

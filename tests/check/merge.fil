@@ -28,7 +28,7 @@ component main<G>(
 ) -> (
   @[G, G+3] out: 32
 ) {
-  L := new Latch;
+  L := new Latch[32];
   M := new Merge;
 
   // Intentially make the latch exist longer than needed.

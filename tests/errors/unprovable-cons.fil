@@ -10,7 +10,7 @@ component Main<G, L>(
 ) -> (
   @[L+2, L+3] out: 32
 ) {
-  L := new Latch;
+  L := new Latch[32];
   M := new Mult;
   l0 := L<G, G+1, L+1>(left);
   m0 := M<L>(l0.out, right);

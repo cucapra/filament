@@ -39,8 +39,11 @@ constraints = {
   ("where" ~ (constraint ~ ("," ~ constraint)*))?
 }
 
+params = {
+  ("[" ~ identifier ~ ("," ~ identifier)* ~ "]")?
+}
 signature = {
-  identifier ~ abstract_var? ~ io ~ constraints
+  identifier ~ params ~ abstract_var? ~ io ~ constraints
 }
 component = {
   "component" ~ signature ~ "{" ~ command* ~ "}"
@@ -80,8 +83,11 @@ interval = _{
 interface = {
   "@interface" ~ "[" ~ identifier ~ "," ~ time ~ "]"
 }
+port_width = {
+  bitwidth | identifier
+}
 port_def = {
-  (interval | interface)? ~ identifier ~ ":" ~ bitwidth
+  (interval | interface)? ~ identifier ~ ":" ~ port_width
 }
 
 arrow = { "->" }
@@ -94,8 +100,11 @@ ports = {
 }
 
 // ====== Cell instance ======
+conc_params = {
+  ("[" ~ bitwidth ~ ("," ~ bitwidth)* ~ "]")?
+}
 instance = {
-  identifier ~ ":=" ~ "new" ~ identifier ~ invoke_args? ~ ";"
+  identifier ~ ":=" ~ "new" ~ identifier ~ conc_params ~ invoke_args? ~ ";"
 }
 
 // Connections

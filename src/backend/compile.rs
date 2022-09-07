@@ -358,6 +358,7 @@ fn as_port_defs<FW: Clone, CW>(
         for name in interface_ports {
             let mut pd = concrete_transform(&name.into(), 1);
             pd.attributes.insert(name, 1);
+            ports.push(pd);
         }
     }
 
@@ -427,7 +428,7 @@ fn prim_as_port_defs(
 fn compile_signature(sig: &ast::Signature<ast::PortParam>) -> ir::Primitive {
     ir::Primitive {
         name: sig.name.id.clone().into(),
-        params: Vec::new(),
+        params: sig.params.iter().map(|p| p.id.clone().into()).collect(),
         signature: prim_as_port_defs(sig),
         is_comb: false,
         attributes: ir::Attributes::default(),

@@ -1,26 +1,26 @@
 extern "core.sv" {
   // A register that can extend the lifetime of a signal to any required length.
-  component Latch<G, S, L>(
+  component Latch[WIDTH]<G, S, L>(
     clk: 1,
     reset: 1,
     // -- base ports --
     @interface[G, G+1] write_en: 1,
     @interface[S, L] _go_S: 1, // unused
-    @[G, G+1] in: 32
+    @[G, G+1] in: WIDTH,
   ) -> (
-    @[S, L] out: 32
+    @[S, L] out: WIDTH,
   ) where S = G+1, L > S;
 
   // A multiplexer that chooses between two signals. It has the following requirements:
   // 1. The inputs must be available for longer than the select signal.
   // 2. The output is available for as long as the select signal.
-  component Mux<G, E>(
+  component Mux[WIDTH]<G, E>(
     @interface[G, E] _go: 1,
     @[G, E] sel: 1,
-    @[G, E] in0: 32,
-    @[G, E] in1: 32,
+    @[G, E] in0: WIDTH,
+    @[G, E] in1: WIDTH,
   ) -> (
-    @[G, E] out: 32
+    @[G, E] out: WIDTH
   ) where E > G;
 }
 
@@ -30,6 +30,29 @@ extern "binary.sv" {
     @interface[G, G+1] _go: 1, // unused
     @[G, G+1] left: 32,
     @[G, G+1] right: 32,
+  ) -> (
+    @[G, G+1] out: 32,
+  );
+
+  component And<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] left: 32,
+    @[G, G+1] right: 32,
+  ) -> (
+    @[G, G+1] out: 32,
+  );
+
+  component Or<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] left: 1,
+    @[G, G+1] right: 1,
+  ) -> (
+    @[G, G+1] out: 1,
+  );
+
+  component Not<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] in: 32,
   ) -> (
     @[G, G+1] out: 32,
   );
@@ -51,8 +74,8 @@ component Mult<G>(
 ) -> (
   @[G+2, G+3] out: 32,
 ) {
-  ll := new Latch<G, G+1, G+3>(left);
-  lr := new Latch<G, G+1, G+3>(right);
+  ll := new Latch[32]<G, G+1, G+3>(left);
+  lr := new Latch[32]<G, G+1, G+3>(right);
   m := new MultComb<G+2>(ll.out, lr.out);
   out = m.out;
 }
