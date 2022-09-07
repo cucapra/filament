@@ -22,3 +22,4 @@ pub type Fsm = core::Fsm;
 pub type Id = core::Id;
 pub type PortType = core::PortType;
 pub type Binding<'a> = core::Binding<'a, TimeRep>;
+pub type PortParam = core::PortParam;

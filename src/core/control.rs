@@ -1,4 +1,4 @@
-use super::{Binding, Id, Interval, Range, Signature, TimeRep};
+use super::{Binding, Id, Interval, Range, TimeRep};
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use itertools::Itertools;
 use std::fmt::Display;
@@ -122,14 +122,17 @@ pub struct Instance {
     pub name: Id,
     /// Name of the component
     pub component: Id,
+    /// Bindings provided for this instance
+    pub bindings: Vec<u64>,
     /// Source position
     pos: Option<errors::Span>,
 }
 impl Instance {
-    pub fn new(name: Id, component: Id) -> Self {
+    pub fn new(name: Id, component: Id, bindings: Vec<u64>) -> Self {
         Instance {
             name,
             component,
+            bindings,
             pos: None,
         }
     }
@@ -187,9 +190,9 @@ where
         }
     }
 
-    pub fn bindings(&self, sig: &Signature<T, u64>) -> Binding<T> {
+    pub fn bindings(&self, abstract_vars: &[Id]) -> Binding<T> {
         Binding::new(
-            sig.abstract_vars
+            abstract_vars
                 .iter()
                 .cloned()
                 .zip(self.abstract_vars.iter())

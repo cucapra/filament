@@ -24,9 +24,6 @@ const DELAY: &str = "delay";
 /// Bindings associated with the current compilation context
 #[derive(Default)]
 pub struct Binding {
-    // External signatures
-    sigs: HashMap<ast::Id, Vec<ir::PortDef<u64>>>,
-
     // Component signatures
     comps: HashMap<ast::Id, RRC<ir::Cell>>,
 
@@ -47,12 +44,9 @@ impl Binding {
             .collect()
     }
 
-    pub fn get(&self, name: &ast::Id) -> Vec<ir::PortDef<u64>> {
-        self.sigs
-            .get(name)
-            .cloned()
-            .or_else(|| self.comps.get(name).map(Binding::cell_to_port_def))
-            .unwrap_or_else(|| panic!("No binding for {name}"))
+    /// Get a binding associated with a name
+    pub fn get(&self, name: &ast::Id) -> Option<Vec<ir::PortDef<u64>>> {
+        self.comps.get(name).map(Self::cell_to_port_def)
     }
 
     pub fn insert_comp(&mut self, name: ast::Id, sig: RRC<ir::Cell>) {
@@ -107,7 +101,7 @@ impl Context<'_> {
             }
         }
     }
-    fn get_sig(&self, comp: &ast::Id) -> Vec<ir::PortDef<u64>> {
+    fn get_sig(&self, comp: &ast::Id) -> Option<Vec<ir::PortDef<u64>>> {
         self.binding.get(comp)
     }
 
@@ -270,13 +264,24 @@ fn compile_command(cmd: ast::Command, ctx: &mut Context) {
             ctx.add_invoke(bind, instance);
         }
         ast::Command::Instance(ast::Instance {
-            name, component, ..
+            name,
+            component,
+            bindings,
+            ..
         }) => {
-            let cell = ctx.builder.add_component(
-                name.id.clone(),
-                component.id.clone(),
-                ctx.get_sig(&component),
-            );
+            let cell = if let Some(sig) = ctx.get_sig(&component) {
+                ctx.builder.add_component(
+                    name.id.clone(),
+                    component.id.clone(),
+                    sig,
+                )
+            } else {
+                ctx.builder.add_primitive(
+                    name.id.clone(),
+                    component.id,
+                    &bindings,
+                )
+            };
             ctx.instances.insert(name, cell);
         }
         ast::Command::Connect(ast::Connect {
@@ -299,27 +304,18 @@ fn compile_command(cmd: ast::Command, ctx: &mut Context) {
     }
 }
 
-fn as_port_defs(
-    sig: &ast::Signature<u64>,
+fn as_port_defs<FW: Clone, CW>(
+    sig: &ast::Signature<FW>,
+    port_transform: impl Fn(&ast::PortDef<FW>, ir::Direction) -> ir::PortDef<CW>,
+    concrete_transform: impl Fn(&ast::Id, u64) -> ir::PortDef<CW>,
     is_comp: bool,
-) -> Vec<ir::PortDef<u64>> {
-    let mut ports: Vec<ir::PortDef<u64>> = sig
+) -> Vec<ir::PortDef<CW>> {
+    let mut ports: Vec<ir::PortDef<CW>> = sig
         .inputs
         .iter()
-        .map(|pd| {
-            (
-                ir::Id::from(pd.name.id.clone()),
-                pd.bitwidth,
-                ir::Direction::Input,
-            )
-                .into()
-        })
+        .map(|pd| port_transform(pd, ir::Direction::Input))
         .chain(sig.interface_signals.iter().map(|id| {
-            let mut pd = ir::PortDef::from((
-                ir::Id::from(id.name.id.clone()),
-                1,
-                ir::Direction::Input,
-            ));
+            let mut pd = concrete_transform(&id.name, 1);
             pd.attributes.insert(FIL_EVENT, 1);
             if is_comp {
                 pd.attributes.insert(
@@ -334,22 +330,16 @@ fn as_port_defs(
             }
             pd
         }))
-        .chain(sig.outputs.iter().map(|pd| {
-            (
-                ir::Id::from(pd.name.id.clone()),
-                pd.bitwidth,
-                ir::Direction::Output,
-            )
-                .into()
-        }))
-        .chain(sig.unannotated_ports.iter().map(|(n, bw)| {
-            let mut pd =
-                ir::PortDef::from((n.id.clone(), *bw, ir::Direction::Input));
-            if INTERFACE_PORTS.iter().any(|(n, _, _)| n == &pd.name.id) {
-                pd.attributes.insert(pd.name.clone(), 1)
-            }
-            pd
-        }))
+        .chain(
+            sig.outputs
+                .iter()
+                .map(|pd| port_transform(pd, ir::Direction::Output)),
+        )
+        .chain(
+            sig.unannotated_ports
+                .iter()
+                .map(|(n, bw)| concrete_transform(n, *bw)),
+        )
         .collect_vec();
 
     // Add annotations for interface ports
@@ -366,14 +356,8 @@ fn as_port_defs(
     // Add missing interface ports
     if is_comp {
         for name in interface_ports {
-            let mut attrs = ir::Attributes::default();
-            attrs.insert(name, 1);
-            ports.push(ir::PortDef {
-                name: name.into(),
-                width: 1,
-                direction: ir::Direction::Input,
-                attributes: attrs,
-            })
+            let mut pd = concrete_transform(&name.into(), 1);
+            pd.attributes.insert(name, 1);
         }
     }
 
@@ -390,7 +374,15 @@ fn compile_component(
     sigs: &mut Binding,
     lib: &ir::LibrarySignatures,
 ) -> FilamentResult<ir::Component> {
-    let ports = as_port_defs(&comp.sig, true);
+    let port_transform =
+        |pd: &ast::PortDef<u64>, dir: ir::Direction| -> ir::PortDef<u64> {
+            (pd.name.id.clone(), pd.bitwidth, dir).into()
+        };
+    let concrete_transform = |name: &ast::Id, width: u64| -> ir::PortDef<u64> {
+        (name.id.clone(), width, ir::Direction::Input).into()
+    };
+    let ports =
+        as_port_defs(&comp.sig, port_transform, concrete_transform, true);
     let mut component = ir::Component::new(&comp.sig.name.id, ports);
     component.attributes.insert("nointerface", 1);
     let builder = ir::Builder::new(&mut component, lib).not_generated();
@@ -401,26 +393,42 @@ fn compile_component(
     Ok(component)
 }
 
-fn compile_signature(sig: &ast::Signature<u64>) -> ir::Primitive {
+fn prim_as_port_defs(
+    sig: &ast::Signature<ast::PortParam>,
+) -> Vec<ir::PortDef<ir::Width>> {
+    let port_transform = |pd: &ast::PortDef<ast::PortParam>,
+                          dir: ir::Direction|
+     -> ir::PortDef<ir::Width> {
+        let width = match &pd.bitwidth {
+            ast::PortParam::Const(v) => ir::Width::Const { value: *v },
+            ast::PortParam::Var(v) => ir::Width::Param {
+                value: v.id.clone().into(),
+            },
+        };
+        ir::PortDef {
+            name: ir::Id::from(pd.name.id.as_ref()),
+            direction: dir,
+            width,
+            attributes: Default::default(),
+        }
+    };
+    let concrete_transform =
+        |name: &ast::Id, bw: u64| -> ir::PortDef<ir::Width> {
+            ir::PortDef {
+                name: ir::Id::from(name.id.as_ref()),
+                direction: ir::Direction::Input,
+                width: ir::Width::Const { value: bw },
+                attributes: Default::default(),
+            }
+        };
+    as_port_defs(sig, port_transform, concrete_transform, false)
+}
+
+fn compile_signature(sig: &ast::Signature<ast::PortParam>) -> ir::Primitive {
     ir::Primitive {
         name: sig.name.id.clone().into(),
         params: Vec::new(),
-        signature: as_port_defs(sig, false)
-            .into_iter()
-            .map(
-                |ir::PortDef {
-                     name,
-                     width,
-                     direction,
-                     attributes,
-                 }| ir::PortDef {
-                    name,
-                    width: ir::Width::Const { value: width },
-                    direction,
-                    attributes,
-                },
-            )
-            .collect(),
+        signature: prim_as_port_defs(sig),
         is_comb: false,
         attributes: ir::Attributes::default(),
     }
@@ -428,7 +436,7 @@ fn compile_signature(sig: &ast::Signature<u64>) -> ir::Primitive {
 
 fn init_calyx(
     lib_loc: &Path,
-    externs: &[(String, Vec<ast::Signature<u64>>)],
+    externs: &[(String, Vec<ast::Signature<ast::PortParam>>)],
 ) -> CalyxResult<ir::Context> {
     let mut prims = PathBuf::from(lib_loc);
     prims.push("primitives");
@@ -469,20 +477,7 @@ pub fn compile(ns: ast::Namespace, opts: &Opts) -> FilamentResult<()> {
     let mut calyx_ctx = init_calyx(&opts.calyx_primitives, &ns.externs)
         .map_err(|err| Error::misc(format!("{:?}", err)))?;
 
-    let sigs = ns
-        .externs
-        .iter()
-        .flat_map(|(_, comps)| {
-            comps
-                .iter()
-                .map(|s| (s.name.clone(), as_port_defs(s, false)))
-        })
-        .collect::<HashMap<_, _>>();
-
-    let mut bindings = Binding {
-        sigs,
-        ..Default::default()
-    };
+    let mut bindings = Binding::default();
 
     for comp in ns.components {
         let comp = compile_component(comp, &mut bindings, &calyx_ctx.lib)?;

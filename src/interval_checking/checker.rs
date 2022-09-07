@@ -1,8 +1,10 @@
+use itertools::Itertools;
+
 use super::{ConcreteInvoke, Context, THIS};
-use crate::core::{Binding, TimeRep, WithTime};
+use crate::core::{TimeRep, WithTime};
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use crate::event_checker::ast::{self, Constraint, CBT};
-use std::collections::HashMap;
+use crate::visitor;
 use std::iter;
 
 // For connect statements of the form:
@@ -20,7 +22,7 @@ fn check_connect(
         ctx.get_port_width::<true>(dst)?,
     ) {
         if src_width != dst_width {
-            return Err(Error::malformed(format!("Port width mismatch",))
+            return Err(Error::malformed("Port width mismatch".to_string())
                 .add_note(
                     format!("Source {} has width {}", src.name(), src_width),
                     src.copy_span(),
@@ -145,7 +147,7 @@ fn check_connect(
 fn check_invoke_binds<'a>(
     invoke: &'a ast::Invoke,
     ctx: &mut Context<'a>,
-) -> FilamentResult<(&'a ast::Signature<u64>, Binding<'a, ast::TimeRep>)> {
+) -> FilamentResult<()> {
     // Track event bindings
     ctx.add_event_binds(
         invoke.instance.clone(),
@@ -212,7 +214,7 @@ fn check_invoke_binds<'a>(
     }
     ctx.add_obligations(constraints.into_iter());
 
-    Ok((sig, binding))
+    Ok(())
 }
 
 /// Check invocation and add new [super::Fact] representing the proof obligations for checking this
@@ -223,7 +225,9 @@ fn check_invoke<'a>(
 ) -> FilamentResult<()> {
     // Check the bindings for abstract variables do not violate @interface
     // requirements
-    let (sig, binding) = check_invoke_binds(invoke, ctx)?;
+    check_invoke_binds(invoke, ctx)?;
+    let sig = ctx.get_instance(&invoke.instance)?.resolve()?;
+    let binding = sig.binding(&invoke.abstract_vars)?;
 
     // Handle `where` clause constraints and well formedness constraints on intervals.
     sig.well_formed()?.for_each(|con| {
@@ -247,7 +251,8 @@ fn check_invoke<'a>(
     // Add this invocation to the context
     ctx.add_invocation(
         invoke.bind.clone(),
-        ConcreteInvoke::concrete(binding, sig),
+        // XXX(rachit): Get rid of this clone
+        ConcreteInvoke::concrete(binding, sig.clone()),
     )?;
 
     // If this is a high-level invoke, check all port requirements
@@ -336,14 +341,19 @@ where
             ast::Command::Invoke(invoke) => check_invoke(invoke, ctx)?,
             ast::Command::Instance(
                 inst @ ast::Instance {
-                    name, component, ..
+                    name,
+                    component,
+                    bindings,
+                    ..
                 },
-            ) => ctx.add_instance(name.clone(), component).map_err(|err| {
-                err.add_note(
-                    format!("No component named {}", component.clone()),
-                    inst.copy_span(),
-                )
-            })?,
+            ) => ctx
+                .add_instance(name.clone(), component, bindings)
+                .map_err(|err| {
+                    err.add_note(
+                        format!("No component named {}", component.clone()),
+                        inst.copy_span(),
+                    )
+                })?,
             ast::Command::Fsm(fsm) => check_fsm(fsm, ctx)?,
             ast::Command::Connect(ast::Connect {
                 dst, src, guard, ..
@@ -355,7 +365,7 @@ where
 
 fn check_component(
     comp: &ast::Component,
-    sigs: &HashMap<ast::Id, &ast::Signature<u64>>,
+    sigs: &visitor::Bindings,
 ) -> FilamentResult<()> {
     let mut ctx = Context::from(sigs);
 
@@ -409,8 +419,9 @@ fn check_component(
 /// satisfied.
 /// Internally generates [super::Fact] which represent proof obligations that need to be proven for
 /// the interval requirements to be proven.
-pub fn check(namespace: &ast::Namespace) -> FilamentResult<()> {
-    let mut sigs = namespace.signatures();
+pub fn check(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
+    let comps = ns.components.drain(..).collect_vec();
+    let sigs = ns.signatures();
 
     // Check that all signatures are well formed
     for sig in sigs.values() {
@@ -423,15 +434,18 @@ pub fn check(namespace: &ast::Namespace) -> FilamentResult<()> {
         log::info!("==========");
     }
 
-    for comp in &namespace.components {
+    let mut binds = visitor::Bindings::new(sigs);
+    for comp in comps {
         log::info!("===== Component {} =====", &comp.sig.name);
-        check_component(comp, &sigs)?;
+        check_component(&comp, &binds)?;
         log::info!("==========");
         // Add the signature of this component to the context.
-        sigs.insert(comp.sig.name.clone(), &comp.sig);
+        binds.add_component(comp);
     }
+
+    ns.components = binds.into();
 
     log::info!("Interval checking succeeded");
 
-    Ok(())
+    Ok(ns)
 }

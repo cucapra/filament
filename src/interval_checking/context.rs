@@ -2,6 +2,7 @@ use super::THIS;
 use crate::core::{self, WithTime};
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
+use crate::visitor;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 pub enum ConcreteInvoke<'a> {
@@ -10,7 +11,7 @@ pub enum ConcreteInvoke<'a> {
         binding: core::Binding<'a, ast::TimeRep>,
 
         /// Signature
-        sig: &'a ast::Signature<u64>,
+        sig: ast::Signature<u64>,
     },
     Fsm {
         /// Internal FSM
@@ -28,7 +29,7 @@ impl<'a> ConcreteInvoke<'a> {
     /// Construct an instance from a Signature and bindings for abstract variables.
     pub fn concrete(
         binding: core::Binding<'a, ast::TimeRep>,
-        sig: &'a ast::Signature<u64>,
+        sig: ast::Signature<u64>,
     ) -> Self {
         Self::Concrete { binding, sig }
     }
@@ -49,7 +50,26 @@ impl<'a> ConcreteInvoke<'a> {
         port: &ast::Id,
     ) -> Option<u64> {
         match self {
-            Self::Concrete { sig, .. } | Self::This { sig } => {
+            Self::Concrete { sig, .. } => {
+                if IS_INPUT {
+                    sig.inputs.iter().find_map(|p| {
+                        if p.name == port {
+                            Some(p.bitwidth)
+                        } else {
+                            None
+                        }
+                    })
+                } else {
+                    sig.outputs.iter().find_map(|p| {
+                        if p.name == port {
+                            Some(p.bitwidth)
+                        } else {
+                            None
+                        }
+                    })
+                }
+            }
+            Self::This { sig } => {
                 if IS_INPUT {
                     sig.inputs.iter().find_map(|p| {
                         if p.name == port {
@@ -86,7 +106,7 @@ impl<'a> ConcreteInvoke<'a> {
             }
             ConcreteInvoke::Fsm { live_time, fsm } => {
                 let state = core::Fsm::state(port)?;
-                Ok(fsm.liveness(&live_time, state))
+                Ok(fsm.liveness(live_time, state))
             }
             ConcreteInvoke::This { sig } => {
                 Ok(sig.get_liveness::<IS_INPUT>(port)?)
@@ -125,11 +145,11 @@ type FactMap = Vec<ast::Constraint>;
 type BindsWithLoc = (Option<errors::Span>, Vec<ast::TimeRep>);
 
 pub struct Context<'a> {
-    /// Mapping from names to signatures for components and externals.
-    sigs: &'a HashMap<ast::Id, &'a ast::Signature<u64>>,
+    /// Signatures for external primitives
+    sigs: &'a visitor::Bindings<'a>,
 
     /// Mapping for the names of active instances
-    instances: HashMap<ast::Id, &'a ast::Signature<u64>>,
+    instances: HashMap<ast::Id, visitor::ResolvedInstance<'a>>,
 
     /// Mapping from name of invocations to their information
     invocations: HashMap<ast::Id, ConcreteInvoke<'a>>,
@@ -148,8 +168,8 @@ pub struct Context<'a> {
     pub facts: FactMap,
 }
 
-impl<'a> From<&'a HashMap<ast::Id, &'a ast::Signature<u64>>> for Context<'a> {
-    fn from(sigs: &'a HashMap<ast::Id, &'a ast::Signature<u64>>) -> Self {
+impl<'a> From<&'a visitor::Bindings<'a>> for Context<'a> {
+    fn from(sigs: &'a visitor::Bindings<'a>) -> Self {
         Context {
             sigs,
             remaining_assigns: HashMap::default(),
@@ -168,21 +188,13 @@ impl<'a> Context<'a> {
         &mut self,
         name: ast::Id,
         comp: &ast::Id,
+        bindings: &[u64],
     ) -> FilamentResult<()> {
-        match self.sigs.get(comp) {
-            Some(sig) => {
-                if let Some(_) = self.instances.insert(name.clone(), sig) {
-                    return Err(Error::already_bound(
-                        name,
-                        "instance".to_string(),
-                    ));
-                }
-                Ok(())
-            }
-            None => {
-                Err(Error::undefined(comp.clone(), "component".to_string()))
-            }
+        let sig = self.sigs.get(comp, bindings)?;
+        if self.instances.insert(name.clone(), sig).is_some() {
+            return Err(Error::already_bound(name, "instance".to_string()));
         }
+        Ok(())
     }
 
     /// Add a new invocation to the context
@@ -208,11 +220,9 @@ impl<'a> Context<'a> {
     ) -> FilamentResult<()> {
         let sig = self.get_instance(comp)?;
         let ports = sig
-            .inputs
-            .iter()
-            .map(|pd| &pd.name)
-            .chain(sig.interface_signals.iter().map(|id| &id.name))
-            .cloned()
+            .input_names()
+            .into_iter()
+            .chain(sig.input_names().into_iter())
             .collect();
         self.remaining_assigns.insert(bind, ports);
         Ok(())
@@ -276,8 +286,8 @@ impl<'a> Context<'a> {
     pub fn get_instance(
         &self,
         inst: &ast::Id,
-    ) -> FilamentResult<&'a ast::Signature<u64>> {
-        self.instances.get(inst).copied().ok_or_else(|| {
+    ) -> FilamentResult<&visitor::ResolvedInstance> {
+        self.instances.get(inst).ok_or_else(|| {
             Error::undefined(inst.clone(), "instance".to_string())
         })
     }
@@ -389,7 +399,7 @@ impl<'a> Context<'a> {
 
         // Iterate over each event
         let mut constraints = Vec::new();
-        for (idx, abs) in sig.abstract_vars.iter().enumerate() {
+        for (idx, abs) in sig.abstract_vars().iter().enumerate() {
             // If there is no interface port associated with an event, it is ignored.
             // This only happens for primitive components.
             if let Some(id) = sig.get_interface(abs) {

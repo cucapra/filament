@@ -123,6 +123,7 @@ fn transform_signature<W: Clone>(
     sig: core::Signature<frontend::IntervalTime, W>,
 ) -> FilamentResult<core::Signature<core::FsmIdxs, W>> {
     let sig = core::Signature {
+        params: sig.params,
         inputs: sig
             .inputs
             .into_iter()
