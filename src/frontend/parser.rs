@@ -230,11 +230,24 @@ impl FilamentParser {
     }
 
     // ================ Cells =====================
-    fn instance(input: Node) -> ParseResult<ast::Instance> {
+    fn instance(input: Node) -> ParseResult<Vec<ast::Command>> {
         let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [identifier(name), identifier(component)] => ast::Instance::new(name, component).set_span(Some(sp)),
+            [identifier(name), identifier(component)] => vec![
+                ast::Instance::new(name, component).set_span(Some(sp)).into()
+            ],
+            [identifier(name), identifier(component), invoke_args((abstract_vars, ports))] => {
+                // Upper case the first letter of name
+                let mut inst_name = name.id.clone();
+                if let Some(r) = inst_name.get_mut(0..1) {
+                    r.make_ascii_uppercase();
+                }
+                let iname = ast::Id::from(inst_name);
+                let instance = ast::Instance::new(iname.clone(), component).set_span(Some(sp.clone())).into();
+                let invoke = ast::Invoke::new(name, iname, abstract_vars, Some(ports)).set_span(Some(sp)).into();
+                vec![instance, invoke]
+            }
         ))
     }
 
@@ -265,6 +278,15 @@ impl FilamentParser {
         ))
     }
 
+    fn invoke_args(
+        input: Node,
+    ) -> ParseResult<(Vec<IntervalTime>, Vec<ast::Port>)> {
+        Ok(match_nodes!(
+            input.into_children();
+            [time_args(time_args), arguments(args)] => (time_args, args),
+        ))
+    }
+
     fn invocation(input: Node) -> ParseResult<ast::Invoke> {
         let span = Self::get_span(&input);
         Ok(match_nodes!(
@@ -272,8 +294,7 @@ impl FilamentParser {
             [
                 identifier(bind),
                 identifier(comp),
-                time_args(abstract_vars),
-                arguments(ports)
+                invoke_args((abstract_vars, ports))
             ] => ast::Invoke::new(bind, comp, abstract_vars, Some(ports)).set_span(Some(span)),
             [
                 identifier(bind),
@@ -407,13 +428,13 @@ impl FilamentParser {
         ))
     }
 
-    fn command(input: Node) -> ParseResult<ast::Command> {
+    fn command(input: Node) -> ParseResult<Vec<ast::Command>> {
         Ok(match_nodes!(
             input.into_children();
-            [invocation(assign)] => ast::Command::Invoke(assign),
-            [instance(cell)] => ast::Command::Instance(cell),
-            [connect(con)] => ast::Command::Connect(con),
-            [fsm(fsm)] => ast::Command::Fsm(fsm),
+            [invocation(assign)] => vec![ast::Command::Invoke(assign)],
+            [instance(cmd)] => cmd,
+            [connect(con)] => vec![ast::Command::Connect(con)],
+            [fsm(fsm)] => vec![ast::Command::Fsm(fsm)],
         ))
     }
 
@@ -424,7 +445,7 @@ impl FilamentParser {
                 signature(sig),
                 command(body)..
             ] => {
-                Ok(ast::Component::new(sig, body.collect()))
+                Ok(ast::Component::new(sig, body.into_iter().flatten().collect()))
             }
         )
     }

@@ -95,7 +95,7 @@ ports = {
 
 // ====== Cell instance ======
 instance = {
-  identifier ~ ":=" ~ "new" ~ identifier ~ ";"
+  identifier ~ ":=" ~ "new" ~ identifier ~ invoke_args? ~ ";"
 }
 
 // Connections
@@ -125,8 +125,12 @@ time_args = {
   "<" ~ time ~ ("," ~ time)* ~ ">"
 }
 
+invoke_args = {
+  time_args? ~ arguments
+}
+
 invocation = {
-  identifier ~ ":=" ~ identifier ~ time_args ~ arguments ~ ";"
+  identifier ~ ":=" ~ identifier ~ invoke_args ~ ";"
   | identifier ~ ":=" ~ "invoke" ~ identifier ~ time_args ~ ";"
 }
 

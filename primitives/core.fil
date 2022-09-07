@@ -51,13 +51,8 @@ component Mult<G>(
 ) -> (
   @[G+2, G+3] out: 32,
 ) {
-  LL := new Latch;
-  LR := new Latch;
-
-  ll := LL<G, G+1, G+3>(left);
-  lr := LR<G, G+1, G+3>(right);
-
-  M := new MultComb;
-  m := M<G+2>(ll.out, lr.out);
+  ll := new Latch<G, G+1, G+3>(left);
+  lr := new Latch<G, G+1, G+3>(right);
+  m := new MultComb<G+2>(ll.out, lr.out);
   out = m.out;
 }
