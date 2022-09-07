@@ -1,12 +1,14 @@
 `default_nettype none
 
-module Latch (
+module Latch #(
+    parameter WIDTH = 32
+) (
   input wire clk,
   input wire reset,
   input wire logic write_en,
   input wire logic _go_S, // unused
-  input wire logic [31:0] in,
-  output logic [31:0] out
+  input wire logic [WIDTH-1:0] in,
+  output logic [WIDTH-1:0] out
 );
   always_ff @(posedge clk) begin
     if (reset)
@@ -19,12 +21,14 @@ module Latch (
 endmodule
 
 // Implements a simple mutliplexer
-module Mux(
+module Mux #(
+  parameter WIDTH = 32
+) (
   input wire logic _go, // unused
   input wire logic sel,
-  input wire logic [31:0] in0,
-  input wire logic [31:0] in1,
-  output logic [31:0] out
+  input wire logic [WIDTH-1:0] in0,
+  input wire logic [WIDTH-1:0] in1,
+  output logic [WIDTH-1:0] out
 );
   assign out = sel ? in0 : in1;
 endmodule

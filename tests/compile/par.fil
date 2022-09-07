@@ -7,10 +7,8 @@ component FastMult<G>(
 ) -> (
   @[G+1, G+2] out: 32,
 ) {
-  CM := new MultComb;
-  L := new Latch;
-  cm := CM<G>(left, right);
-  l := L<G, G+1, G+2>(cm.out);
+  cm := new MultComb<G>(left, right);
+  l := new Latch[32]<G, G+1, G+2>(cm.out);
   out = l.out;
 }
 
@@ -22,19 +20,14 @@ component main<G>(
   @[G+2, G+3] out: 32
 ) {
   // Execute the Fast and Slow mutlipliers in parallel and add their results
-  FM := new FastMult;
-  SM := new Mult;
-  A := new Add;
 
   // Latches to save the value of the input signals
-  L1 := new Latch;
-  L2 := new Latch;
+  sm0 := new Mult<G>(a, b);
 
-  sm0 := SM<G>(a, b);
-  la := L1<G, G+1, G+2>(a);
-  lb := L2<G, G+1, G+2>(b);
+  la := new Latch[32]<G, G+1, G+2>(a);
+  lb := new Latch[32]<G, G+1, G+2>(b);
+  fm0 := new FastMult<G+1>(la.out, lb.out);
 
-  fm0 := FM<G+1>(la.out, lb.out);
-  a0 := A<G+2>(sm0.out, fm0.out);
+  a0 := new Add<G+2>(sm0.out, fm0.out);
   out = a0.out;
 }

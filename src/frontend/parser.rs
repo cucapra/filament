@@ -149,21 +149,32 @@ impl FilamentParser {
         ))
     }
 
+    fn port_width(input: Node) -> ParseResult<ast::PortParam> {
+        Ok(match_nodes!(
+            input.into_children();
+            [identifier(id)] => ast::PortParam::Var(id),
+            [bitwidth(c)] => ast::PortParam::Const(c),
+        ))
+    }
+
     fn port_def(input: Node) -> ParseResult<Port> {
         let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.clone().into_children();
-            [interface((time_var, time)), identifier(name), bitwidth(_)] => {
+            [interface((time_var, time)), identifier(name), port_width(_)] => {
                 Port::Int(ast::InterfaceDef::new(name, time_var, time).set_span(Some(sp)))
             },
-            [identifier(name), bitwidth(bitwidth)] => {
-                Port::Un((name, bitwidth))
+            [identifier(name), port_width(bitwidth)] => {
+                match bitwidth {
+                    ast::PortParam::Const(c) => Port::Un((name, c)),
+                    ast::PortParam::Var(_) => todo!(),
+                }
             },
-            [interval_range(range), identifier(name), bitwidth(bitwidth)] => {
-                Port::Pd(ast::PortDef::new(name, range.into(), bitwidth.into()).set_span(Some(sp)))
+            [interval_range(range), identifier(name), port_width(bitwidth)] => {
+                Port::Pd(ast::PortDef::new(name, range.into(), bitwidth).set_span(Some(sp)))
             },
-            [interval_range(range), interval_range(exact), identifier(name), bitwidth(bitwidth)] => {
-                Port::Pd(ast::PortDef::new(name, ast::Interval::from(range).with_exact(exact), bitwidth.into()).set_span(Some(sp)))
+            [interval_range(range), interval_range(exact), identifier(name), port_width(bitwidth)] => {
+                Port::Pd(ast::PortDef::new(name, ast::Interval::from(range).with_exact(exact), bitwidth).set_span(Some(sp)))
             }
         ))
     }
@@ -230,14 +241,20 @@ impl FilamentParser {
     }
 
     // ================ Cells =====================
+    fn conc_params(input: Node) -> ParseResult<Vec<u64>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [bitwidth(vars)..] => vars.collect(),
+        ))
+    }
     fn instance(input: Node) -> ParseResult<Vec<ast::Command>> {
         let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.clone().into_children();
-            [identifier(name), identifier(component)] => vec![
-                ast::Instance::new(name, component, vec![]).set_span(Some(sp)).into()
+            [identifier(name), identifier(component), conc_params(params)] => vec![
+                ast::Instance::new(name, component, params).set_span(Some(sp)).into()
             ],
-            [identifier(name), identifier(component), invoke_args((abstract_vars, ports))] => {
+            [identifier(name), identifier(component), conc_params(params), invoke_args((abstract_vars, ports))] => {
                 // Upper case the first letter of name
                 let mut iname = name.id.clone();
                 iname.make_ascii_uppercase();
@@ -245,7 +262,7 @@ impl FilamentParser {
                 if iname == name {
                     input.error("Generated Instance name conflicts with original name");
                 }
-                let instance = ast::Instance::new(iname.clone(), component, vec![]).set_span(Some(sp.clone())).into();
+                let instance = ast::Instance::new(iname.clone(), component, params).set_span(Some(sp.clone())).into();
                 let invoke = ast::Invoke::new(name, iname, abstract_vars, Some(ports)).set_span(Some(sp)).into();
                 vec![instance, invoke]
             }
@@ -360,11 +377,19 @@ impl FilamentParser {
     }
 
     // ================ Component =====================
+    fn params(input: Node) -> ParseResult<Vec<ast::Id>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [] => vec![],
+            [identifier(params)..] => params.collect(),
+        ))
+    }
     fn signature(input: Node) -> ParseResult<ast::Signature<ast::PortParam>> {
         Ok(match_nodes!(
             input.into_children();
             [
                 identifier(name),
+                params(params),
                 abstract_var(abstract_vars),
                 io(io),
                 constraints(constraints)
@@ -372,7 +397,7 @@ impl FilamentParser {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
                 ast::Signature {
                     name,
-                    params: vec![],
+                    params,
                     abstract_vars,
                     unannotated_ports,
                     interface_signals: interface_signals.into_iter().collect(),
@@ -383,13 +408,14 @@ impl FilamentParser {
             },
             [
                 identifier(name),
+                params(params),
                 io(io),
                 constraints(constraints)
             ] => {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
                 ast::Signature {
                     name,
-                    params: vec![],
+                    params,
                     abstract_vars: vec![],
                     unannotated_ports,
                     interface_signals: interface_signals.into_iter().collect(),

@@ -9,20 +9,15 @@ component main<G>(
   @[G+3, G+4] out: 32,
 ) {
   // First stage, register the inputs
-  L := new Latch;
-  R := new Latch;
-  l := L<G, G+1, G+2>(left);
-  r := R<G, G+1, G+2>(right);
+  l := new Latch[32]<G, G+1, G+2>(left);
+  r := new Latch[32]<G, G+1, G+2>(right);
 
   // Second stage, perform the computation and save it
-  M := new MultComb;
-  m := M<G+1>(l.out, r.out);
-  OutTmp := new Latch;
-  ot := OutTmp<G+1, G+2, G+3>(m.out);
+  m := new MultComb<G+1>(l.out, r.out);
+  ot := new Latch[32]<G+1, G+2, G+3>(m.out);
 
   // Third stage, forward the value from temp out to out register
-  Out := new Latch;
-  final := Out<G+2, G+3, G+4>(ot.out);
+  final := new Latch[32]<G+2, G+3, G+4>(ot.out);
 
   // Connect the output to the out register
   out = final.out;
