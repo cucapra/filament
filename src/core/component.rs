@@ -1,4 +1,4 @@
-use super::{Command, Id, Invoke, Signature, TimeRep};
+use super::{Command, Id, Invoke, PortParam, Signature, TimeRep};
 use crate::errors::{Error, FilamentResult, WithPos};
 use std::{collections::HashMap, fmt::Display};
 
@@ -85,7 +85,7 @@ where
     pub imports: Vec<String>,
 
     /// Define externals and their files
-    pub externs: Vec<(String, Vec<Signature<T, u64>>)>,
+    pub externs: Vec<(String, Vec<Signature<T, PortParam>>)>,
 
     /// Components defined in this file
     pub components: Vec<Component<T>>,
@@ -96,7 +96,7 @@ where
     T: TimeRep + Clone,
 {
     /// External signatures associated with the namespace
-    pub fn signatures(&self) -> HashMap<Id, &Signature<T, u64>> {
+    pub fn signatures(&self) -> HashMap<Id, &Signature<T, PortParam>> {
         self.externs
             .iter()
             .flat_map(|(_, comps)| comps.iter().map(|s| (s.name.clone(), s)))

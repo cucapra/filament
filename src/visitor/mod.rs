@@ -1,2 +1,2 @@
 mod visit;
-pub use visit::{Bindings, Transform};
+pub use visit::{Bindings, ResolvedInstance, Transform};

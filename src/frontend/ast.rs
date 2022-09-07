@@ -21,3 +21,4 @@ pub type Fsm = core::Fsm;
 pub type Id = core::Id;
 pub type InterfaceDef = core::InterfaceDef<TR>;
 pub type PortType = core::PortType;
+pub type PortParam = core::PortParam;

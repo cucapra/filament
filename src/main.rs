@@ -75,9 +75,9 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     }
 
     // Run the compilation pipeline
-    let mut ns = event_checker::check_and_transform(ns)?;
+    let ns = event_checker::check_and_transform(ns)?;
     log::info!("Event check:\n{ns}");
-    interval_checking::check(&ns)?;
+    let mut ns = interval_checking::check(ns)?;
 
     if opts.dump_interface || !opts.check {
         ns = lower::CompileInvokes::transform(ns)?;

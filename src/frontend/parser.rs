@@ -23,18 +23,18 @@ type ParseResult<T> = Result<T, Error<Rule>>;
 // that have a reference to the input string
 type Node<'i> = pest_consume::Node<'i, Rule, UserData>;
 
-type Ports = Vec<ast::PortDef<u64>>;
+type Ports = Vec<ast::PortDef<ast::PortParam>>;
 
 // include the grammar file so that Cargo knows to rebuild this file on grammar changes
 const _GRAMMAR: &str = include_str!("syntax.pest");
 
 pub enum ExtOrComp {
-    Ext((String, Vec<ast::Signature<u64>>)),
+    Ext((String, Vec<ast::Signature<ast::PortParam>>)),
     Comp(ast::Component),
 }
 
 pub enum Port {
-    Pd(ast::PortDef<u64>),
+    Pd(ast::PortDef<ast::PortParam>),
     Int(ast::InterfaceDef),
     Un((ast::Id, u64)),
 }
@@ -160,10 +160,10 @@ impl FilamentParser {
                 Port::Un((name, bitwidth))
             },
             [interval_range(range), identifier(name), bitwidth(bitwidth)] => {
-                Port::Pd(ast::PortDef::new(name, range.into(), bitwidth).set_span(Some(sp)))
+                Port::Pd(ast::PortDef::new(name, range.into(), bitwidth.into()).set_span(Some(sp)))
             },
             [interval_range(range), interval_range(exact), identifier(name), bitwidth(bitwidth)] => {
-                Port::Pd(ast::PortDef::new(name, ast::Interval::from(range).with_exact(exact), bitwidth).set_span(Some(sp)))
+                Port::Pd(ast::PortDef::new(name, ast::Interval::from(range).with_exact(exact), bitwidth.into()).set_span(Some(sp)))
             }
         ))
     }
@@ -235,7 +235,7 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.clone().into_children();
             [identifier(name), identifier(component)] => vec![
-                ast::Instance::new(name, component).set_span(Some(sp)).into()
+                ast::Instance::new(name, component, vec![]).set_span(Some(sp)).into()
             ],
             [identifier(name), identifier(component), invoke_args((abstract_vars, ports))] => {
                 // Upper case the first letter of name
@@ -245,7 +245,7 @@ impl FilamentParser {
                 if iname == name {
                     input.error("Generated Instance name conflicts with original name");
                 }
-                let instance = ast::Instance::new(iname.clone(), component).set_span(Some(sp.clone())).into();
+                let instance = ast::Instance::new(iname.clone(), component, vec![]).set_span(Some(sp.clone())).into();
                 let invoke = ast::Invoke::new(name, iname, abstract_vars, Some(ports)).set_span(Some(sp)).into();
                 vec![instance, invoke]
             }
@@ -360,7 +360,7 @@ impl FilamentParser {
     }
 
     // ================ Component =====================
-    fn signature(input: Node) -> ParseResult<ast::Signature<u64>> {
+    fn signature(input: Node) -> ParseResult<ast::Signature<ast::PortParam>> {
         Ok(match_nodes!(
             input.into_children();
             [
@@ -372,6 +372,7 @@ impl FilamentParser {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
                 ast::Signature {
                     name,
+                    params: vec![],
                     abstract_vars,
                     unannotated_ports,
                     interface_signals: interface_signals.into_iter().collect(),
@@ -388,6 +389,7 @@ impl FilamentParser {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
                 ast::Signature {
                     name,
+                    params: vec![],
                     abstract_vars: vec![],
                     unannotated_ports,
                     interface_signals: interface_signals.into_iter().collect(),
@@ -446,14 +448,14 @@ impl FilamentParser {
                 signature(sig),
                 command(body)..
             ] => {
-                Ok(ast::Component::new(sig, body.into_iter().flatten().collect()))
+                Ok(ast::Component::new(sig.resolve(&[]).unwrap(), body.into_iter().flatten().collect()))
             }
         )
     }
 
     fn external(
         input: Node,
-    ) -> ParseResult<(String, Vec<ast::Signature<u64>>)> {
+    ) -> ParseResult<(String, Vec<ast::Signature<ast::PortParam>>)> {
         Ok(match_nodes!(
             input.into_children();
             [string_lit(path), signature(sigs)..] => (path, sigs.collect()),

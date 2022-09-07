@@ -1,6 +1,6 @@
 use super::{
     Binding, Constraint, ConstraintBase, FsmIdxs, Id, InterfaceDef, Interval,
-    PortDef, TimeRep,
+    PortDef, PortParam, TimeRep,
 };
 use crate::errors::{Error, FilamentResult, WithPos};
 use itertools::Itertools;
@@ -15,6 +15,9 @@ where
 {
     /// Name of the component
     pub name: Id,
+
+    /// Parameters for the Signature
+    pub params: Vec<Id>,
 
     /// Names of abstract variables bound by the component
     pub abstract_vars: Vec<Id>,
@@ -185,6 +188,63 @@ impl<W: Clone> Signature<FsmIdxs, W> {
                 })
             })
             .chain(self.constraints()))
+    }
+}
+
+impl<T: TimeRep> Signature<T, PortParam> {
+    /// Return a Signature<u64> if no PortDef is parameterized
+    pub fn resolve(&self, args: &[u64]) -> FilamentResult<Signature<T, u64>> {
+        let binding: HashMap<Id, u64> = self
+            .params
+            .iter()
+            .cloned()
+            .zip(args.iter().cloned())
+            .collect();
+        let resolve_port =
+            |pd: &PortDef<T, PortParam>| -> FilamentResult<PortDef<T, u64>> {
+                match &pd.bitwidth {
+                    PortParam::Const(c) => Ok(PortDef::new(
+                        pd.name.clone(),
+                        pd.liveness.clone(),
+                        *c,
+                    )),
+                    PortParam::Var(param) => {
+                        if let Some(&c) = binding.get(param) {
+                            Ok(PortDef::new(
+                                pd.name.clone(),
+                                pd.liveness.clone(),
+                                c,
+                            ))
+                        } else {
+                            Err(Error::malformed(format!(
+                                "Cannot resolve signature. Port `{}.{}` is parameterized by `{}`",
+                                self.name, pd.name, param
+                            )))
+                        }
+                    }
+                }
+            };
+
+        let resolved = Signature {
+            name: self.name.clone(),
+            abstract_vars: self.abstract_vars.clone(),
+            params: vec![],
+            unannotated_ports: self.unannotated_ports.clone(),
+            interface_signals: self.interface_signals.clone(),
+            inputs: self
+                .inputs
+                .iter()
+                .map(resolve_port)
+                .collect::<FilamentResult<_>>()?,
+            outputs: self
+                .outputs
+                .iter()
+                .map(resolve_port)
+                .collect::<FilamentResult<_>>()?,
+            constraints: self.constraints.clone(),
+        };
+
+        Ok(resolved)
     }
 }
 

@@ -5,6 +5,34 @@ use crate::errors::{self, WithPos};
 use std::fmt::Display;
 
 #[derive(Clone)]
+pub enum PortParam {
+    /// A constant
+    Const(u64),
+    /// A parameter
+    Var(Id),
+}
+
+impl From<Id> for PortParam {
+    fn from(v: Id) -> Self {
+        Self::Var(v)
+    }
+}
+
+impl From<u64> for PortParam {
+    fn from(v: u64) -> Self {
+        Self::Const(v)
+    }
+}
+impl Display for PortParam {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PortParam::Const(c) => write!(f, "{c}"),
+            PortParam::Var(v) => write!(f, "{v}"),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct PortDef<T, W>
 where
     T: Clone + TimeRep,

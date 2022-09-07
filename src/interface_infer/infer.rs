@@ -5,7 +5,7 @@
 use crate::core::{self, TimeRep};
 use crate::errors::FilamentResult;
 use crate::event_checker::ast;
-use crate::visitor;
+use crate::visitor::{self, ResolvedInstance};
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -66,12 +66,20 @@ impl visitor::Transform for InterfaceInfer {
     fn invoke(
         &mut self,
         inv: ast::Invoke,
-        sig: &ast::Signature<u64>,
+        sig: &visitor::ResolvedInstance,
     ) -> FilamentResult<Vec<ast::Command>> {
         // Compute maximum events observed in this
         log::info!("{inv}");
-        let bindings = inv.bindings(sig);
-        self.max_state_from_sig(sig, &inv.abstract_vars, &bindings);
+        match sig {
+            ResolvedInstance::Bound { sig, .. } => {
+                let bindings = inv.bindings(&sig.abstract_vars);
+                self.max_state_from_sig(sig, &inv.abstract_vars, &bindings);
+            }
+            ResolvedInstance::Concrete { sig } => {
+                let bindings = inv.bindings(&sig.abstract_vars);
+                self.max_state_from_sig(sig, &inv.abstract_vars, &bindings);
+            }
+        }
         Ok(vec![inv.into()])
     }
 

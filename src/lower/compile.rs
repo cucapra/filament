@@ -82,7 +82,7 @@ impl visitor::Transform for CompileInvokes {
     fn invoke(
         &mut self,
         inv: ast::Invoke,
-        sig: &ast::Signature<u64>,
+        sig: &visitor::ResolvedInstance,
     ) -> FilamentResult<Vec<ast::Command>> {
         let pos = inv.copy_span();
         // Compile only if this is a high-level invoke
@@ -94,6 +94,7 @@ impl visitor::Transform for CompileInvokes {
             ..
         } = inv
         {
+            let sig = sig.resolve()?;
             // Get the signature associated with this instance.
             let binding = sig.binding(&abstract_vars)?;
             self.max_state_from_sig(

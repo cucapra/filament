@@ -16,6 +16,6 @@ pub use control::{
 pub use fsm_idx::FsmIdxs;
 pub use id::Id;
 pub use interval::{Interval, Range};
-pub use port::{InterfaceDef, PortDef};
+pub use port::{InterfaceDef, PortDef, PortParam};
 pub use signature::Signature;
 pub use time_rep::{Binding, TimeRep, TimeSub, WithTime};

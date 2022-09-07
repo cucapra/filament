@@ -1,28 +1,120 @@
-use crate::{errors::FilamentResult, event_checker::ast};
+use crate::{
+    errors::{Error, FilamentResult, WithPos},
+    event_checker::ast,
+};
 use itertools::Itertools;
 use std::collections::HashMap;
 
+/// An Instance that has been resolved
+pub enum ResolvedInstance<'a> {
+    Bound {
+        sig: &'a ast::Signature<ast::PortParam>,
+        binds: Vec<u64>,
+    },
+    Concrete {
+        sig: &'a ast::Signature<u64>,
+    },
+}
+impl<'a> ResolvedInstance<'a> {
+    pub fn abstract_vars(&self) -> &[ast::Id] {
+        match self {
+            ResolvedInstance::Bound { sig, .. } => &sig.abstract_vars,
+            ResolvedInstance::Concrete { sig } => &sig.abstract_vars,
+        }
+    }
+
+    pub fn input_names(&self) -> Vec<ast::Id> {
+        match self {
+            ResolvedInstance::Bound { sig, .. } => {
+                sig.inputs.iter().map(|pd| pd.name.clone()).collect()
+            }
+            ResolvedInstance::Concrete { sig } => {
+                sig.inputs.iter().map(|pd| pd.name.clone()).collect()
+            }
+        }
+    }
+
+    pub fn interface_name(&self) -> Vec<ast::Id> {
+        match self {
+            ResolvedInstance::Bound { sig, .. } => sig
+                .interface_signals
+                .iter()
+                .map(|id| id.name.clone())
+                .collect(),
+            ResolvedInstance::Concrete { sig } => sig
+                .interface_signals
+                .iter()
+                .map(|id| id.name.clone())
+                .collect(),
+        }
+    }
+
+    pub fn get_interface(&self, event: &ast::Id) -> Option<&ast::InterfaceDef> {
+        match self {
+            ResolvedInstance::Bound { sig, .. } => sig.get_interface(event),
+            ResolvedInstance::Concrete { sig } => sig.get_interface(event),
+        }
+    }
+
+    pub fn resolve(&self) -> FilamentResult<ast::Signature<u64>> {
+        match self {
+            ResolvedInstance::Bound { sig, binds } => sig.resolve(binds),
+            ResolvedInstance::Concrete { sig } => Ok((*sig).clone()),
+        }
+    }
+
+    pub fn binding(
+        &self,
+        abs: &'a [ast::TimeRep],
+    ) -> FilamentResult<ast::Binding> {
+        match self {
+            ResolvedInstance::Bound { sig, .. } => sig.binding(abs),
+            ResolvedInstance::Concrete { sig } => sig.binding(abs),
+        }
+    }
+}
+
 /// Environment to store the current set of bindings
-#[derive(Default)]
 pub struct Bindings<'a> {
     /// Signatures for external definitions
-    ext_sigs: HashMap<ast::Id, &'a ast::Signature<u64>>,
+    ext_sigs: HashMap<ast::Id, &'a ast::Signature<ast::PortParam>>,
     /// Signatures for components
     comps: Vec<ast::Component>,
 }
 impl<'a> Bindings<'a> {
+    pub fn new(
+        ext_sigs: HashMap<ast::Id, &'a ast::Signature<ast::PortParam>>,
+    ) -> Self {
+        Self {
+            ext_sigs,
+            comps: Vec::new(),
+        }
+    }
+
+    pub fn add_component(&mut self, comp: ast::Component) {
+        self.comps.push(comp);
+    }
+
     /// Get a binding associated with a name
-    pub fn get(&'a self, name: &ast::Id) -> &'a ast::Signature<u64> {
-        self.ext_sigs
-            .get(name)
-            .cloned()
-            .or_else(|| {
-                self.comps
-                    .iter()
-                    .find(|c| c.sig.name == name)
-                    .map(|comp| &comp.sig)
+    pub fn get(
+        &'a self,
+        name: &ast::Id,
+        binds: &[u64],
+    ) -> FilamentResult<ResolvedInstance> {
+        if let Some(sig) = self.ext_sigs.get(name) {
+            Ok(ResolvedInstance::Bound {
+                sig,
+                binds: binds.to_vec(),
             })
-            .unwrap_or_else(|| panic!("No binding for {name}"))
+        } else {
+            self.comps
+                .iter()
+                .find(|c| c.sig.name == name)
+                .map(|comp| ResolvedInstance::Concrete { sig: &comp.sig })
+                .ok_or_else(|| {
+                    Error::malformed(format!("No binding for {}", name))
+                })
+        }
     }
 
     pub fn add_comp(&mut self, comp: ast::Component) {
@@ -73,7 +165,7 @@ where
     fn invoke(
         &mut self,
         inv: ast::Invoke,
-        _: &ast::Signature<u64>,
+        _: &ResolvedInstance,
     ) -> FilamentResult<Vec<ast::Command>> {
         Ok(vec![inv.into()])
     }
@@ -111,8 +203,7 @@ where
         binds: &Bindings,
     ) -> FilamentResult<ast::Component> {
         // Binding for instances
-        let mut instances: HashMap<ast::Id, &ast::Signature<u64>> =
-            HashMap::new();
+        let mut instances: HashMap<ast::Id, ResolvedInstance> = HashMap::new();
         let ast::Component { sig, body } = self.enter_component(comp)?;
         let body: Vec<ast::Command> = body
             .into_iter()
@@ -122,7 +213,14 @@ where
                     self.invoke(inv, sig)
                 }
                 crate::core::Command::Instance(inst) => {
-                    let sig = binds.get(&inst.component);
+                    let sig = binds
+                        .get(&inst.component, &inst.bindings)
+                        .map_err(|err| {
+                            err.add_note(
+                                "Instance defined here",
+                                inst.copy_span(),
+                            )
+                        })?;
                     instances.insert(inst.name.clone(), sig);
                     self.instance(inst)
                 }
@@ -143,11 +241,7 @@ where
 
     fn transform(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
         let comps = ns.components.drain(..).collect_vec();
-
-        let mut binds = Bindings {
-            ext_sigs: ns.signatures(),
-            ..Default::default()
-        };
+        let mut binds = Bindings::new(ns.signatures());
 
         for comp in comps {
             let mut pass = Self::new(&ns);
