@@ -1,0 +1,70 @@
+extern "fp-support.sv" {
+// Returns input[30:23]
+component Slice30_23<G>(
+  @interface[G, G+1] _go: 1, // unused,
+  @[G, G+1] in: 32,
+) -> (
+  @[G, G+1] out: 8,
+);
+
+component Slice22_0<G>(
+  @interface[G, G+1] _go: 1, // unused,
+  @[G, G+1] in: 32,
+) -> (
+  @[G, G+1] out: 23,
+);
+
+component Slice23_1<G>(
+  @interface[G, G+1] _go: 1, // unused,
+  @[G, G+1] in: 24,
+) -> (
+  @[G, G+1] out: 23,
+);
+
+component IsZero[WIDTH]<G>(
+  @interface[G, G+1] _go: 1, // unused,
+  @[G, G+1] in: WIDTH,
+) -> (
+  @[G, G+1] out: 1,
+);
+
+component IsOne<G>(
+  @interface[G, G+1] _go: 1, // unused,
+  @[G, G+1] in: 1,
+) -> (
+  @[G, G+1] out: 1,
+);
+
+component NormInp<G>(
+  @interface[G, G+1] _go: 1, // unused,
+  @[G, G+1] in: 23,
+) -> (
+  @[G, G+1] out: 23,
+);
+
+component ShiftRight23<G>(
+  @interface[G, G+1] _go: 1, // unused,
+  @[G, G+1] in: 23,
+  @[G, G+1] amount: 8,
+) -> (
+  @[G, G+1] out: 23,
+);
+
+component ShiftLeft24<G>(
+  @interface[G, G+1] _go: 1, // unused,
+  @[G, G+1] in: 24,
+  @[G, G+1] amount: 4,
+) -> (
+  @[G, G+1] out: 24,
+);
+
+component MergeRes<G>(
+  @interface[G, G+1] _go: 1, // unused,
+  @[G, G+1] sign: 1,
+  @[G, G+1] exp: 8,
+  @[G, G+1] mant: 23,
+) -> (
+  @[G, G+1] out: 32,
+);
+
+}
