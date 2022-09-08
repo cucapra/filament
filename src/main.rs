@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
+    time::Instant,
 };
 
 use codespan_reporting::{
@@ -75,19 +76,27 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     }
 
     // Run the compilation pipeline
+    let t = Instant::now();
     let ns = event_checker::check_and_transform(ns)?;
-    log::info!("Event check:\n{ns}");
+    log::info!("Event check: {}ms", t.elapsed().as_millis());
+    log::trace!("{ns}");
+    let t = Instant::now();
     let mut ns = interval_checking::check(ns)?;
+    log::info!("Interval check: {}ms", t.elapsed().as_millis());
 
     if opts.dump_interface || !opts.check {
+        let t = Instant::now();
         ns = lower::CompileInvokes::transform(ns)?;
-        log::info!("Lowering:\n{ns}");
+        log::info!("Lowering: {}ms", t.elapsed().as_millis());
+        log::trace!("{ns}");
     }
 
     if opts.dump_interface {
         dump_interface::DumpInterface::transform(ns)?;
     } else if !opts.check {
+        let t = Instant::now();
         backend::compile(ns, opts)?;
+        log::info!("Compilation: {}ms", t.elapsed().as_millis());
     }
 
     Ok(())

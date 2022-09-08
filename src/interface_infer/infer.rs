@@ -75,7 +75,7 @@ impl visitor::Transform for InterfaceInfer {
                 let bindings = inv.bindings(&sig.abstract_vars);
                 self.max_state_from_sig(sig, &inv.abstract_vars, &bindings);
             }
-            ResolvedInstance::Concrete { sig } => {
+            ResolvedInstance::Concrete { sig, .. } => {
                 let bindings = inv.bindings(&sig.abstract_vars);
                 self.max_state_from_sig(sig, &inv.abstract_vars, &bindings);
             }
