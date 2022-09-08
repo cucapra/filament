@@ -1,0 +1,198 @@
+import "primitives/core.fil";
+import "primitives/fp-support.fil";
+import "primitives/signed.fil";
+
+component main<G>(
+  @interface[G, G+1] go: 1,
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32
+) -> (
+  @[G+4, G+5] out: 32
+) {
+  // ---------- Stage 1 ----------
+  // left[30:23]
+  e1 := new Slice30_23<G>(left);
+  // right[30:23]
+  e2 := new Slice30_23<G>(right);
+  // left[22:0]
+  m1 := new Slice22_0<G>(left);
+  // right[22:0]
+  m2 := new Slice22_0<G>(right);
+  // left[31]
+  s1 := new Select[32, 31]<G>(left);
+  // right[31]
+  s2 := new Select[32, 31]<G>(right);
+
+  // e1 > e2
+  gt0 := new Gt[8]<G>(e1.out, e2.out);
+
+  // e1 - e2
+  sub_left := new Sub[8]<G>(e1.out, e2.out);
+  // e2 - e1
+  sub_right := new Sub[8]<G>(e2.out, e1.out);
+
+  // e1 > e2 ? e1 - e2 : e2 - e1
+  num_shift_tmp := new Mux[8]<G>(gt0.out, sub_left.out, sub_right.out);
+
+  larger_exp := new Mux[8]<G>(gt0.out, e1.out, e2.out);
+
+  // e1 > e2 ? m2 : m1
+  small_exp_mant := new Mux[23]<G>(gt0.out, m2.out, m1.out);
+
+  // e1 > e2 ? m1 : m2
+  large_mant := new Mux[23]<G>(gt0.out, m1.out, m2.out);
+
+  e1_is_zero := new IsZero[8]<G>(e1.out);
+  e2_is_zero := new IsZero[8]<G>(e2.out);
+  exp_is_zero := new Or[1]<G>(e1_is_zero.out, e2_is_zero.out);
+
+  // e1 == 0 | e2 == 0 ? 0 : num_shift_tmp
+  zero8 := new Const[8, 4]<G>();
+  num_shift := new Mux[8]<G>(exp_is_zero.out, zero8.out, num_shift_tmp.out);
+
+  // ---------- 1 => 2 ----------
+  e1_s2 := new Latch[8]<G, G+1, G+2>(e1.out);
+  e2_s2 := new Latch[8]<G, G+1, G+2>(e2.out);
+  small_exp_mant_s2 := new Latch[23]<G, G+1, G+2>(small_exp_mant.out);
+  large_mant_s2 := new Latch[23]<G, G+1, G+2>(large_mant.out);
+  num_shift_s2 := new Latch[8]<G, G+1, G+2>(num_shift.out);
+  e1_is_zero_s2 := new Latch[1]<G, G+1, G+2>(e1_is_zero.out);
+  e2_is_zero_s2 := new Latch[1]<G, G+1, G+2>(e2_is_zero.out);
+  s1_s2 := new Latch[1]<G, G+1, G+2>(s1.out);
+  s2_s2 := new Latch[1]<G, G+1, G+2>(s2.out);
+  larger_exp_s2 := new Latch[8]<G, G+1, G+2>(larger_exp.out);
+  m1_s2 := new Latch[23]<G, G+1, G+2>(m1.out);
+  m2_s2 := new Latch[23]<G, G+1, G+2>(m2.out);
+
+  // ---------- Stage 2 ----------
+  normed := new NormInp<G+1>(small_exp_mant_s2.out);
+  shifted := new ShiftRight23<G+1>(normed.out, num_shift_s2.out);
+  s_exp_mant := new Mux[23]<G+1>(e1_is_zero_s2.out, small_exp_mant_s2.out, shifted.out);
+
+  normed_large := new NormInp<G+1>(large_mant_s2.out);
+  l1_mant := new Mux[23]<G+1>(e2_is_zero_s2.out, large_mant_s2.out, normed_large.out);
+
+  // ---------- 2 => 3 ----------
+  s_exp_mant_s3 := new Latch[23]<G+1, G+2, G+3>(s_exp_mant.out);
+  l1_mant_s3 := new Latch[23]<G+1, G+2, G+3>(l1_mant.out);
+  e1_is_zero_s3 := new Latch[1]<G+1, G+2, G+3>(e1_is_zero_s2.out);
+  e2_is_zero_s3 := new Latch[1]<G+1, G+2, G+3>(e2_is_zero_s2.out);
+  s1_s3 := new Latch[1]<G+1, G+2, G+3>(s1_s2.out);
+  s2_s3 := new Latch[1]<G+1, G+2, G+3>(s2_s2.out);
+  larger_exp_s3 := new Latch[8]<G+1, G+2, G+3>(larger_exp_s2.out);
+  e1_s3 := new Latch[8]<G+1, G+2, G+3>(e1_s2.out);
+  e2_s3 := new Latch[8]<G+1, G+2, G+3>(e2_s2.out);
+  m1_s3 := new Latch[23]<G+1, G+2, G+3>(m1_s2.out);
+  m2_s3 := new Latch[23]<G+1, G+2, G+3>(m2_s2.out);
+
+  // ---------- Stage 3 ----------
+  l1_is_gt := new Gt[23]<G+2>(s_exp_mant_s3.out, l1_mant_s3.out);
+  s_mant := new Mux[23]<G+2>(l1_is_gt.out, s_exp_mant_s3.out, l1_mant_s3.out);
+  l_mant := new Mux[23]<G+2>(l1_is_gt.out, l1_mant_s3.out, s_exp_mant_s3.out);
+
+  // ---------- 3 => 4 ----------
+  e1_is_zero_s4 := new Latch[1]<G+2, G+3, G+4>(e1_is_zero_s3.out);
+  e2_is_zero_s4 := new Latch[1]<G+2, G+3, G+4>(e2_is_zero_s3.out);
+  s_mant_s4 := new Latch[23]<G+2, G+3, G+4>(s_mant.out);
+  l_mant_s4 := new Latch[23]<G+2, G+3, G+4>(l_mant.out);
+  s1_s4 := new Latch[1]<G+2, G+3, G+4>(s1_s3.out);
+  s2_s4 := new Latch[1]<G+2, G+3, G+4>(s2_s3.out);
+  larger_exp_s4 := new Latch[8]<G+2, G+3, G+4>(larger_exp_s3.out);
+  e1_s4 := new Latch[8]<G+2, G+3, G+4>(e1_s3.out);
+  e2_s4 := new Latch[8]<G+2, G+3, G+4>(e2_s3.out);
+  m1_s4 := new Latch[23]<G+2, G+3, G+4>(m1_s3.out);
+  m2_s4 := new Latch[23]<G+2, G+3, G+4>(m2_s3.out);
+
+  // ---------- Stage 4 ----------
+
+  // Add the mantissas
+  s_mant_s4_ext := new ZeroExtend[23, 24]<G+3>(s_mant_s4.out);
+  l_mant_s4_ext := new ZeroExtend[23, 24]<G+3>(l_mant_s4.out);
+  mant_sum := new Add[24]<G+3>(s_mant_s4_ext.out, l_mant_s4_ext.out);
+  mant_sub := new Sub[24]<G+3>(s_mant_s4_ext.out, l_mant_s4_ext.out);
+  sign_eq := new Eq[1]<G+3>(s1_s4.out, s2_s4.out);
+  sign_sel := new Mux[24]<G+3>(sign_eq.out, mant_sum.out, mant_sub.out);
+
+  s1_zero := new IsZero[1]<G+3>(s1_s4.out);
+  s2_zero := new IsZero[1]<G+3>(s2_s4.out);
+  either_zero := new Or[1]<G+3>(s1_zero.out, s2_zero.out);
+
+  add_mant := new Mux[24]<G+3>(either_zero.out, l_mant_s4_ext.out, sign_sel.out);
+
+  // Determine renormalization values
+  am_23 := new Select[24, 23]<G+3>(add_mant.out);
+  am_22 := new Select[24, 22]<G+3>(add_mant.out);
+  am_21 := new Select[24, 21]<G+3>(add_mant.out);
+  am_20 := new Select[24, 20]<G+3>(add_mant.out);
+  am_19 := new Select[24, 19]<G+3>(add_mant.out);
+
+  am_23_one := new IsOne<G+3>(am_23.out);
+  am_22_one := new IsOne<G+3>(am_22.out);
+  am_21_one := new IsOne<G+3>(am_21.out);
+  am_20_one := new IsOne<G+3>(am_20.out);
+  am_19_one := new IsOne<G+3>(am_19.out);
+
+  // Determine renorm shift
+  five := new Const[4, 5]<G+3>();
+  four := new Const[4, 4]<G+3>();
+  three := new Const[4, 3]<G+3>();
+  two := new Const[4, 2]<G+3>();
+  one := new Const[4, 1]<G+3>();
+  zero := new Const[4, 0]<G+3>();
+
+  rns_5 := new Mux[4]<G+3>(am_19_one.out, five.out, zero.out);
+  rns_4 := new Mux[4]<G+3>(am_20_one.out, four.out, rns_5.out);
+  rns_3 := new Mux[4]<G+3>(am_21_one.out, three.out, rns_4.out);
+  rns_2 := new Mux[4]<G+3>(am_22_one.out, two.out, rns_3.out);
+  renorm_shift := new Mux[4]<G+3>(am_23_one.out, one.out, rns_2.out);
+
+  // Determine renorm exp
+  n_one := new NegConst[8, 1]<G+3>();
+  n_two := new NegConst[8, 2]<G+3>();
+  n_three := new NegConst[8, 3]<G+3>();
+  one8 := new Const[8, 1]<G+3>();
+  zero8_1 := new Const[8, 0]<G+3>();
+
+  rne_5 := new Mux[8]<G+3>(am_19_one.out, n_three.out, zero8_1.out);
+  rne_4 := new Mux[8]<G+3>(am_20_one.out, n_two.out, rne_5.out);
+  rne_3 := new Mux[8]<G+3>(am_21_one.out, n_one.out, rne_4.out);
+  rne_2 := new Mux[8]<G+3>(am_22_one.out, zero8_1.out, rne_3.out);
+  renorm_exp := new Mux[8]<G+3>(am_23_one.out, one8.out, rne_2.out);
+
+  // ---------- 4 => 5 ----------
+  larger_exp_s5 := new Latch[8]<G+3, G+4, G+5>(larger_exp_s4.out);
+  renorm_shift_s5 := new Latch[4]<G+3, G+4, G+5>(renorm_shift.out);
+  renorm_exp_s5 := new Latch[8]<G+3, G+4, G+5>(renorm_exp.out);
+  add_mant_s5 := new Latch[24]<G+3, G+4, G+5>(add_mant.out);
+  sign_eq_s5 := new Latch[1]<G+3, G+4, G+5>(sign_eq.out);
+  e1_s5 := new Latch[8]<G+3, G+4, G+5>(e1_s4.out);
+  e2_s5 := new Latch[8]<G+3, G+4, G+5>(e2_s4.out);
+  m1_s5 := new Latch[23]<G+3, G+4, G+5>(m1_s4.out);
+  m2_s5 := new Latch[23]<G+3, G+4, G+5>(m2_s4.out);
+  s1_s5 := new Latch[1]<G+3, G+4, G+5>(s1_s4.out);
+  s2_s5 := new Latch[1]<G+3, G+4, G+5>(s2_s4.out);
+
+  // ---------- Stage 5 ----------
+  // Compute final exponent
+  final_exp := new SAdd[8]<G+4>(renorm_exp_s5.out, larger_exp_s5.out);
+
+  // Compute final mantissa
+  shifted_add_mant := new ShiftLeft24<G+4>(add_mant_s5.out, renorm_shift_s5.out);
+  rns_is_zero := new IsZero[4]<G+4>(renorm_shift_s5.out);
+  add1_mant := new Mux[24]<G+4>(rns_is_zero.out, add_mant_s5.out, shifted_add_mant.out);
+  final_mant := new Slice23_1<G+4>(add1_mant.out);
+
+  // Compute final sign
+  e1_gt_e2 := new Gt[8]<G+4>(e1_s5.out, e2_s5.out);
+  e2_gt_e1 := new Gt[8]<G+4>(e2_s5.out, e1_s5.out);
+  m1_gt_m2 := new Gt[23]<G+4>(m1_s5.out, m2_s5.out);
+
+  fs_1 := new Mux[1]<G+4>(m1_gt_m2.out, s1_s5.out, s2_s5.out);
+  fs_2 := new Mux[1]<G+4>(e2_gt_e1.out, s2_s5.out, fs_1.out);
+  fs_3 := new Mux[1]<G+4>(e1_gt_e2.out, s1_s5.out, fs_2.out);
+  final_sign := new Mux[1]<G+4>(sign_eq_s5.out, s1_s5.out, fs_3.out);
+  result := new MergeRes<G+4>(final_sign.out, final_exp.out, final_mant.out);
+
+  out = result.out;
+
+}
