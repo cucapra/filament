@@ -347,10 +347,15 @@ where
                     ..
                 },
             ) => ctx
-                .add_instance(name.clone(), component, bindings)
+                .add_instance(
+                    name.clone(),
+                    component,
+                    bindings,
+                    inst.copy_span(),
+                )
                 .map_err(|err| {
                     err.add_note(
-                        format!("No component named {}", component.clone()),
+                        format!("Defines instances {}", component.clone()),
                         inst.copy_span(),
                     )
                 })?,
@@ -425,27 +430,27 @@ pub fn check(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
 
     // Check that all signatures are well formed
     for sig in sigs.values() {
-        log::info!("===== Signature {} =====", &sig.name);
+        log::trace!("===== Signature {} =====", &sig.name);
         super::prove(
             sig.abstract_vars.iter(),
             &sig.constraints,
             sig.well_formed()?,
         )?;
-        log::info!("==========");
+        log::trace!("==========");
     }
 
     let mut binds = visitor::Bindings::new(sigs);
     for comp in comps {
-        log::info!("===== Component {} =====", &comp.sig.name);
+        log::trace!("===== Component {} =====", &comp.sig.name);
         check_component(&comp, &binds)?;
-        log::info!("==========");
+        log::trace!("==========");
         // Add the signature of this component to the context.
         binds.add_component(comp);
     }
 
     ns.components = binds.into();
 
-    log::info!("Interval checking succeeded");
+    log::trace!("Interval checking succeeded");
 
     Ok(ns)
 }

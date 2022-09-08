@@ -99,7 +99,7 @@ impl<T: TimeRep> ConstraintBase<T> {
         left: Range<T>,
         right: Range<T>,
     ) -> impl Iterator<Item = Self> {
-        log::info!("{left} = {right}");
+        log::trace!("{left} = {right}");
         vec![
             ConstraintBase::eq(left.start, right.start),
             ConstraintBase::eq(left.end, right.end),
@@ -113,7 +113,7 @@ impl<T: TimeRep> ConstraintBase<T> {
         left: Range<T>,
         right: Range<T>,
     ) -> impl Iterator<Item = Self> {
-        log::info!("{left} ⊆ {right}");
+        log::trace!("{left} ⊆ {right}");
         vec![
             ConstraintBase::gte(left.start, right.start),
             ConstraintBase::gte(right.end, left.end),

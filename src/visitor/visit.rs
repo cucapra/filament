@@ -1,5 +1,5 @@
 use crate::{
-    errors::{Error, FilamentResult, WithPos},
+    errors::{self, Error, FilamentResult, WithPos},
     event_checker::ast,
 };
 use itertools::Itertools;
@@ -10,16 +10,52 @@ pub enum ResolvedInstance<'a> {
     Bound {
         sig: &'a ast::Signature<ast::PortParam>,
         binds: Vec<u64>,
+        pos: Option<errors::Span>,
     },
     Concrete {
         sig: &'a ast::Signature<u64>,
+        pos: Option<errors::Span>,
     },
 }
+
+impl<'a> ResolvedInstance<'a> {
+    pub fn bound(
+        sig: &'a ast::Signature<ast::PortParam>,
+        binds: Vec<u64>,
+    ) -> Self {
+        Self::Bound {
+            sig,
+            binds,
+            pos: None,
+        }
+    }
+
+    pub fn concrete(sig: &'a ast::Signature<u64>) -> Self {
+        Self::Concrete { sig, pos: None }
+    }
+}
+impl WithPos for ResolvedInstance<'_> {
+    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+        match &mut self {
+            Self::Bound { pos, .. } | Self::Concrete { pos, .. } => {
+                *pos = sp;
+            }
+        }
+        self
+    }
+
+    fn copy_span(&self) -> Option<errors::Span> {
+        match self {
+            Self::Bound { pos, .. } | Self::Concrete { pos, .. } => pos.clone(),
+        }
+    }
+}
+
 impl<'a> ResolvedInstance<'a> {
     pub fn abstract_vars(&self) -> &[ast::Id] {
         match self {
             ResolvedInstance::Bound { sig, .. } => &sig.abstract_vars,
-            ResolvedInstance::Concrete { sig } => &sig.abstract_vars,
+            ResolvedInstance::Concrete { sig, .. } => &sig.abstract_vars,
         }
     }
 
@@ -28,7 +64,7 @@ impl<'a> ResolvedInstance<'a> {
             ResolvedInstance::Bound { sig, .. } => {
                 sig.inputs.iter().map(|pd| pd.name.clone()).collect()
             }
-            ResolvedInstance::Concrete { sig } => {
+            ResolvedInstance::Concrete { sig, .. } => {
                 sig.inputs.iter().map(|pd| pd.name.clone()).collect()
             }
         }
@@ -41,7 +77,7 @@ impl<'a> ResolvedInstance<'a> {
                 .iter()
                 .map(|id| id.name.clone())
                 .collect(),
-            ResolvedInstance::Concrete { sig } => sig
+            ResolvedInstance::Concrete { sig, .. } => sig
                 .interface_signals
                 .iter()
                 .map(|id| id.name.clone())
@@ -52,14 +88,18 @@ impl<'a> ResolvedInstance<'a> {
     pub fn get_interface(&self, event: &ast::Id) -> Option<&ast::InterfaceDef> {
         match self {
             ResolvedInstance::Bound { sig, .. } => sig.get_interface(event),
-            ResolvedInstance::Concrete { sig } => sig.get_interface(event),
+            ResolvedInstance::Concrete { sig, .. } => sig.get_interface(event),
         }
     }
 
     pub fn resolve(&self) -> FilamentResult<ast::Signature<u64>> {
         match self {
-            ResolvedInstance::Bound { sig, binds } => sig.resolve(binds),
-            ResolvedInstance::Concrete { sig } => Ok((*sig).clone()),
+            ResolvedInstance::Bound { sig, binds, pos } => {
+                sig.resolve(binds).map_err(|err| {
+                    err.add_note("Instance bound here", pos.clone())
+                })
+            }
+            ResolvedInstance::Concrete { sig, .. } => Ok((*sig).clone()),
         }
     }
 
@@ -69,7 +109,7 @@ impl<'a> ResolvedInstance<'a> {
     ) -> FilamentResult<ast::Binding> {
         match self {
             ResolvedInstance::Bound { sig, .. } => sig.binding(abs),
-            ResolvedInstance::Concrete { sig } => sig.binding(abs),
+            ResolvedInstance::Concrete { sig, .. } => sig.binding(abs),
         }
     }
 }
@@ -100,17 +140,15 @@ impl<'a> Bindings<'a> {
         &'a self,
         name: &ast::Id,
         binds: &[u64],
+        pos: Option<errors::Span>,
     ) -> FilamentResult<ResolvedInstance> {
         if let Some(sig) = self.ext_sigs.get(name) {
-            Ok(ResolvedInstance::Bound {
-                sig,
-                binds: binds.to_vec(),
-            })
+            Ok(ResolvedInstance::bound(sig, binds.to_vec()).set_span(pos))
         } else {
             self.comps
                 .iter()
                 .find(|c| c.sig.name == name)
-                .map(|comp| ResolvedInstance::Concrete { sig: &comp.sig })
+                .map(|comp| ResolvedInstance::concrete(&comp.sig))
                 .ok_or_else(|| {
                     Error::malformed(format!("No binding for {}", name))
                 })
@@ -214,7 +252,7 @@ where
                 }
                 crate::core::Command::Instance(inst) => {
                     let sig = binds
-                        .get(&inst.component, &inst.bindings)
+                        .get(&inst.component, &inst.bindings, inst.copy_span())
                         .map_err(|err| {
                             err.add_note(
                                 "Instance defined here",

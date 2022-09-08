@@ -189,8 +189,9 @@ impl<'a> Context<'a> {
         name: ast::Id,
         comp: &ast::Id,
         bindings: &[u64],
+        pos: Option<errors::Span>,
     ) -> FilamentResult<()> {
-        let sig = self.sigs.get(comp, bindings)?;
+        let sig = self.sigs.get(comp, bindings, pos)?;
         if self.instances.insert(name.clone(), sig).is_some() {
             return Err(Error::already_bound(name, "instance".to_string()));
         }
@@ -271,7 +272,7 @@ impl<'a> Context<'a> {
         F: Iterator<Item = ast::Constraint>,
     {
         for fact in facts {
-            log::info!("adding obligation {}", fact);
+            log::trace!("adding obligation {}", fact);
             self.obligations.push(fact);
         }
     }

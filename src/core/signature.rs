@@ -192,8 +192,15 @@ impl<W: Clone> Signature<FsmIdxs, W> {
 }
 
 impl<T: TimeRep> Signature<T, PortParam> {
-    /// Return a Signature<u64> if no PortDef is parameterized
     pub fn resolve(&self, args: &[u64]) -> FilamentResult<Signature<T, u64>> {
+        if args.len() != self.params.len() {
+            return Err(Error::malformed(format!(
+                "Cannot resolve signature. Expected {} arguments, provided {}",
+                self.params.len(),
+                args.len(),
+            )));
+        }
+
         let binding: HashMap<Id, u64> = self
             .params
             .iter()

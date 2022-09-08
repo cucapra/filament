@@ -35,7 +35,7 @@ pub fn prove<'a>(
     /* let asserts = asserts
     .into_iter()
     .flat_map(|con| con.simplify())
-    .collect_vec(); */
+    .collect::<Vec<_>>(); */
 
     let mut conf = SmtConf::default_z3();
     // Immediately checks if the command to z3 succeeded.
@@ -48,7 +48,7 @@ pub fn prove<'a>(
 
     // Define all the constants
     for var in abstract_vars {
-        log::info!("Declaring constant {}", var);
+        log::trace!("Declaring constant {}", var);
         solver.declare_const(var.to_string(), "Int")?;
     }
 
@@ -77,7 +77,7 @@ fn check_fact<P>(
     fact: impl Into<SExp>,
 ) -> FilamentResult<bool> {
     let sexp = fact.into();
-    log::info!("Assert (not {})", sexp);
+    log::trace!("Assert (not {})", sexp);
     solver.push(1)?;
     solver.assert(format!("(not {})", sexp))?;
     // Check that the assertion was unsatisfiable
