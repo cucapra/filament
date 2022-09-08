@@ -15,7 +15,7 @@ component Max_mult_add<G, L>(
   M1 := new Mult;
   L0 := new Latch[32];
   L1 := new Latch[32];
-  A := new Add;
+  A := new Add[32];
 
   m0 := M0<G>(a, b);
   m1 := M1<L>(c, d);

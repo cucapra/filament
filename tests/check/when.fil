@@ -9,7 +9,7 @@ component main<G>(
   @[G+2, G+3] out: 32
 ) {
 
-  A := new Add;
+  A := new Add[32];
   M := new Mult;
 
   m0 := M<G>(a, b);
