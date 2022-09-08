@@ -7,7 +7,7 @@ component FastMult<G>(
 ) -> (
   @[G+1, G+2] out: 32,
 ) {
-  cm := new MultComb<G>(left, right);
+  cm := new MultComb[32]<G>(left, right);
   l := new Latch[32]<G, G+1, G+2>(cm.out);
   out = l.out;
 }
@@ -28,6 +28,6 @@ component main<G>(
   lb := new Latch[32]<G, G+1, G+2>(b);
   fm0 := new FastMult<G+1>(la.out, lb.out);
 
-  a0 := new Add<G+2>(sm0.out, fm0.out);
+  a0 := new Add[32]<G+2>(sm0.out, fm0.out);
   out = a0.out;
 }

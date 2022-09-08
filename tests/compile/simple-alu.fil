@@ -12,13 +12,13 @@ component main<G>(
   @[G+2, G+3] out: 32
 ) {
   // Perform the Add
-  a0 := new Add<G>(left, right);
+  a0 := new Add[32]<G>(left, right);
   la := new Latch[32]<G, G+1, G+3>(a0.out);
 
   // Perform the Mult
   m0 := new Mult<G>(left, right);
 
   // Select between the two
-  mux := new Mux[32]<G+2, G+3>(do_mult, m0.out, la.out);
+  mux := new Mux[32]<G+2>(do_mult, m0.out, la.out);
   out = mux.out;
 }

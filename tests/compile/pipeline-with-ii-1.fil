@@ -13,7 +13,7 @@ component main<G>(
   r := new Latch[32]<G, G+1, G+2>(right);
 
   // Second stage, perform the computation and save it
-  m := new MultComb<G+1>(l.out, r.out);
+  m := new MultComb[32]<G+1>(l.out, r.out);
   ot := new Latch[32]<G+1, G+2, G+3>(m.out);
 
   // Third stage, forward the value from temp out to out register

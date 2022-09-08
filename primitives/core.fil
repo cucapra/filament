@@ -11,58 +11,124 @@ extern "core.sv" {
     @[S, L] out: WIDTH,
   ) where S = G+1, L > S;
 
-  // A multiplexer that chooses between two signals. It has the following requirements:
-  // 1. The inputs must be available for longer than the select signal.
-  // 2. The output is available for as long as the select signal.
-  component Mux[WIDTH]<G, E>(
-    @interface[G, E] _go: 1,
-    @[G, E] sel: 1,
-    @[G, E] in0: WIDTH,
-    @[G, E] in1: WIDTH,
+  component Mux[WIDTH]<G>(
+    @interface[G, G+1] _go: 1,
+    @[G, G+1] sel: 1,
+    @[G, G+1] in0: WIDTH,
+    @[G, G+1] in1: WIDTH,
   ) -> (
-    @[G, E] out: WIDTH
-  ) where E > G;
+    @[G, G+1] out: WIDTH,
+  );
 }
 
 extern "binary.sv" {
   // ============= Combinational =================
-  component Add<G>(
-    @interface[G, G+1] _go: 1, // unused
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
+
+  component Const[WIDTH, VALUE]<G>(
+    @interface[G, G+1] _go: 1,
   ) -> (
-    @[G, G+1] out: 32,
+    @[G, G+1] out: WIDTH,
   );
 
-  component And<G>(
+  component Add[WIDTH]<G>(
     @interface[G, G+1] _go: 1, // unused
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
+    @[G, G+1] left: WIDTH,
+    @[G, G+1] right: WIDTH,
   ) -> (
-    @[G, G+1] out: 32,
+    @[G, G+1] out: WIDTH,
   );
 
-  component Or<G>(
+  component Sub[WIDTH]<G>(
     @interface[G, G+1] _go: 1, // unused
-    @[G, G+1] left: 1,
-    @[G, G+1] right: 1,
+    @[G, G+1] left: WIDTH,
+    @[G, G+1] right: WIDTH,
+  ) -> (
+    @[G, G+1] out: WIDTH,
+  );
+
+  component MultComb[WIDTH]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] left: WIDTH,
+    @[G, G+1] right: WIDTH,
+  ) -> (
+    @[G, G+1] out: WIDTH,
+  );
+
+  component And[WIDTH]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] left: WIDTH,
+    @[G, G+1] right: WIDTH,
+  ) -> (
+    @[G, G+1] out: WIDTH,
+  );
+
+  component Or[WIDTH]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] left: WIDTH,
+    @[G, G+1] right: WIDTH,
   ) -> (
     @[G, G+1] out: 1,
   );
 
-  component Not<G>(
+  component Not[WIDTH]<G>(
     @interface[G, G+1] _go: 1, // unused
-    @[G, G+1] in: 32,
+    @[G, G+1] in: WIDTH,
   ) -> (
-    @[G, G+1] out: 32,
+    @[G, G+1] out: WIDTH,
   );
 
-  component MultComb<G>(
+  component Eq[WIDTH]<G>(
     @interface[G, G+1] _go: 1, // unused
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
+    @[G, G+1] left: WIDTH,
+    @[G, G+1] right: WIDTH,
   ) -> (
-    @[G, G+1] out: 32,
+    @[G, G+1] out: 1,
+  );
+
+  component Gt[WIDTH]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] left: WIDTH,
+    @[G, G+1] right: WIDTH,
+  ) -> (
+    @[G, G+1] out: 1,
+  );
+
+  component Lt[WIDTH]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] left: WIDTH,
+    @[G, G+1] right: WIDTH,
+  ) -> (
+    @[G, G+1] out: 1,
+  );
+
+  component Lte[WIDTH]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] left: WIDTH,
+    @[G, G+1] right: WIDTH,
+  ) -> (
+    @[G, G+1] out: 1,
+  );
+
+  component Gte[WIDTH]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] left: WIDTH,
+    @[G, G+1] right: WIDTH,
+  ) -> (
+    @[G, G+1] out: 1,
+  );
+
+  component ZeroExtend[IN_WIDTH, OUT_WIDTH]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] in: IN_WIDTH,
+  ) -> (
+    @[G, G+1] out: OUT_WIDTH,
+  );
+
+  component Select[WIDTH, POS]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] in: WIDTH,
+  ) -> (
+    @[G, G+1] out: 1,
   );
 }
 
@@ -76,6 +142,6 @@ component Mult<G>(
 ) {
   ll := new Latch[32]<G, G+1, G+3>(left);
   lr := new Latch[32]<G, G+1, G+3>(right);
-  m := new MultComb<G+2>(ll.out, lr.out);
+  m := new MultComb[32]<G+2>(ll.out, lr.out);
   out = m.out;
 }
