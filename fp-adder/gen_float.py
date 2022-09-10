@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from itertools import groupby
 import struct
 import random
 import numpy as np
@@ -15,7 +16,11 @@ def float32_to_int(f):
 
 # Convert hex to a 32-bit floating point number
 def int_to_float32(h):
-    return struct.unpack('<f', struct.pack('<I', h))[0]
+    try:
+        out = np.float32(struct.unpack('<f', struct.pack('<I', h))[0])
+    except struct.error:
+        out = str(h)
+    return out
 
 
 def format_float(f):
@@ -46,7 +51,7 @@ def convert_to_float32(args):
     Reads from STDIN if no file is provided.
     """
     def conv(arr):
-        return [np.float32(int_to_float32(x)) for x in arr]
+        return [int_to_float32(x) for x in arr]
 
     if args.file is None:
         fd = sys.stdin
@@ -76,6 +81,27 @@ def convert_to_int(args):
     print(json.dumps(j, indent=2))
 
 
+def all_equal(iterable):
+    g = groupby(iterable)
+    return next(g, True) and not next(g, False)
+
+
+def check(args):
+    if args.file is None:
+        fd = sys.stdin
+    else:
+        fd = open(args.file, 'r')
+    j = json.load(fd)
+    fields = ["verilog_nopipe", "out", "verilog_pipe"]
+    for (k, v) in j[fields[0]].items():
+        vals = [j[f][k] for f in fields]
+        if not all_equal(vals):
+            # Construct dictionary with all values
+            out = {f: j[f][k] for f in fields}
+            print(f"Mismatch for key {k}: " +
+                  json.dumps(out, indent=2, default=format_float))
+
+
 def random_data(args):
     """
     Generate random floating point data and print out as JSON
@@ -83,8 +109,8 @@ def random_data(args):
     out = {'left': [], 'right': [], 'sum': []}
     for _ in range(args.count):
         # Use numpy to generate a random float32
-        left = np.float32(random.uniform(-100000, 1000000))
-        right = np.float32(random.uniform(-100000, 1000000))
+        left = np.float32(random.uniform(-1000, 1000))
+        right = np.float32(random.uniform(-1000, 1000))
         sum = left + right
 
         # Append unsigned int representation of float if --raw is provided
@@ -124,6 +150,11 @@ if __name__ == '__main__':
     to_int_parser.add_argument(
         "-f", "--file", help="JSON file to be converted")
     to_int_parser.set_defaults(func=convert_to_int)
+
+    check_parser = subparsers.add_parser('check')
+    check_parser.add_argument(
+        "-f", "--file", help="JSON file to be checked")
+    check_parser.set_defaults(func=check)
 
     args = parser.parse_args()
 

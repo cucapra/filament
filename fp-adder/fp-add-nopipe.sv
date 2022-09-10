@@ -18,13 +18,11 @@ module IEEE_SP_FP_ADDER_NOPIPE (
   reg s1_80, s2_80, Final_sign_80;
   reg    [3:0]  renorm_shift_80;
   integer signed   renorm_exp_80;
-  //reg           renorm_exp_80;
   reg    [31:0] Result_80;
 
   assign Result = Result_80;
 
-
-  always @(*) begin
+  always_comb begin
     //stage 1
     e1_80 = Number1[30:23];
     e2_80 = Number2[30:23];
@@ -114,42 +112,37 @@ module IEEE_SP_FP_ADDER_NOPIPE (
     end else if (Add_mant_80[19]) begin
       renorm_shift_80 = 4'd5;
       renorm_exp_80   = -3;
+    end else begin
+      renorm_shift_80 = 0;
+      renorm_exp_80 = 0;
     end
 
     //stage 5
     // if e1==e2, no shift for exp
     Final_expo_80 = Larger_exp_80 + renorm_exp_80;
 
-    Add1_mant_80  = Add_mant_80 << renorm_shift_80;
-
+    if (renorm_shift_80 != 0) begin
+      Add1_mant_80 = Add_mant_80 << renorm_shift_80;
+    end else begin
+      Add1_mant_80 = Add_mant_80;
+    end
     Final_mant_80 = Add1_mant_80[23:1];
 
 
     if (s1_80 == s2_80) begin
       Final_sign_80 = s1_80;
-    end
-
-    if (e1_80 > e2_80) begin
+    end else if (e1_80 > e2_80) begin
       Final_sign_80 = s1_80;
     end else if (e2_80 > e1_80) begin
       Final_sign_80 = s2_80;
+    end else if (m1_80 > m2_80) begin
+      Final_sign_80 = s1_80;
     end else begin
-
-      if (m1_80 > m2_80) begin
-        Final_sign_80 = s1_80;
-      end else begin
-        Final_sign_80 = s2_80;
-      end
+      Final_sign_80 = s2_80;
     end
 
     Result_80 = {Final_sign_80, Final_expo_80, Final_mant_80};
 
-  end
-
-  always @(posedge clk) begin
-    if (reset) begin
-      Num_shift_80 <= #1 0;
-    end
   end
 
 endmodule
