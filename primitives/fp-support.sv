@@ -70,9 +70,9 @@ endmodule
 module ShiftLeft24
 (
     input logic _go,
-    input logic [24:0] in,
+    input logic [23:0] in,
     input logic [3:0] amount,
-    output logic [24:0] out
+    output logic [23:0] out
 );
     assign out = in << amount;
 endmodule

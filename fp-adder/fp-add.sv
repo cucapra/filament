@@ -141,6 +141,7 @@ module IEEE_SP_FP_ADDER (
       renorm_exp_80   = -3;
     end else begin
       renorm_exp_80 = 0;
+      renorm_shift_80 = 0;
     end
     ////// Combinational stage5 //////
     //Shift the mantissa as required; re-normalize exp; determine sign
