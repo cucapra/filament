@@ -94,8 +94,9 @@ module IEEE_SP_FP_ADDER (
     end else begin
       S_exp_mantissa_pipe2_80 = Small_exp_mantissa_pipe2_80;
     end
-
-    // if (e2_80 != 0) begin  // BUG: Uses value from previous stage. CONFIRMED: Differs from no_pipe version
+    // BUG: Uses value from previous stage.
+    // CONFIRMED: Differs from no_pipe version
+    // if (e2_80 != 0) begin
     if (e2_pipe2_80 != 0) begin
       L1_mantissa_pipe2_80 = {1'b1, Large_mantissa_pipe2_80[22:1]};
     end else begin
@@ -160,7 +161,10 @@ module IEEE_SP_FP_ADDER (
       Final_sign_80 = s1_pipe5_80;
     end else if (e1_pipe5_80 > e2_pipe5_80) begin
       Final_sign_80 = s1_pipe5_80;
-    end else if (e2_80 > e1_80) begin  // BUG: uses value from the first pipeline stage
+    // BUG: uses value from the first pipeline stage.
+    // CONFIRMED: left=3348281187, right=1203616721
+    // end else if (e2_80 > e1_80) begin
+    end else if (e2_pipe5_80 > e1_pipe5_80) begin
       Final_sign_80 = s2_pipe5_80;
     end else if (m1_pipe5_80 > m2_pipe5_80) begin
       Final_sign_80 = s1_pipe5_80;
