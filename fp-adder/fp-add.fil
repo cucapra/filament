@@ -2,7 +2,31 @@ import "primitives/core.fil";
 import "primitives/fp-support.fil";
 import "primitives/signed.fil";
 
-component main<G>(
+extern "fp-add.sv" {
+  component IEEE_SP_FP_ADDER<G>(
+    clk: 1,
+    reset: 1,
+    @interface[G, G+1] _go: 1,
+    @[G, G+1] Number1: 32,
+    @[G, G+1] Number2: 32,
+  ) -> (
+    @[G+4, G+5] Result: 32,
+  );
+}
+
+extern "fp-add-nopipe.sv" {
+  component IEEE_SP_FP_ADDER_NOPIPE<G>(
+    clk: 1,
+    reset: 1,
+    @interface[G, G+1] _go: 1,
+    @[G, G+1] Number1: 32,
+    @[G, G+1] Number2: 32,
+  ) -> (
+    @[G, G+1] Result: 32,
+  );
+}
+
+component FPAdd<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32
@@ -195,4 +219,26 @@ component main<G>(
 
   out = result.out;
 
+}
+
+component main<G>(
+  @interface[G, G+1] go: 1,
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32,
+  // The input computed in python
+  @[G+4, G+5] sum: 32,
+) -> (
+  @[G+4, G+5] out: 32,
+  @[G+4, G+5] verilog_pipe: 32,
+  @[G, G+1] verilog_nopipe: 32,
+  @[G+4, G+5] gold: 32,
+) {
+  fil := new FPAdd<G>(left, right);
+  ver := new IEEE_SP_FP_ADDER<G>(left, right);
+  ver_np := new IEEE_SP_FP_ADDER_NOPIPE<G>(left, right);
+
+  out = fil.out;
+  verilog_pipe = ver.Result;
+  verilog_nopipe = ver_np.Result;
+  gold = sum;
 }
