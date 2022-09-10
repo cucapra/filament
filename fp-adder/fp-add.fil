@@ -113,9 +113,9 @@ component main<G>(
   sign_eq := new Eq[1]<G+3>(s1_s4.out, s2_s4.out);
   sign_sel := new Mux[24]<G+3>(sign_eq.out, mant_sum.out, mant_sub.out);
 
-  s1_zero := new IsZero[1]<G+3>(s1_s4.out);
-  s2_zero := new IsZero[1]<G+3>(s2_s4.out);
-  either_zero := new Or[1]<G+3>(s1_zero.out, s2_zero.out);
+  e1_zero := new IsZero[8]<G+3>(e1_s4.out);
+  e2_zero := new IsZero[8]<G+3>(e2_s4.out);
+  either_zero := new Or[1]<G+3>(e1_zero.out, e2_zero.out);
 
   add_mant := new Mux[24]<G+3>(either_zero.out, l_mant_s4_ext.out, sign_sel.out);
 
