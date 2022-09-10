@@ -26,6 +26,20 @@ def format_float(f):
     return "{:.13f}".format(f)
 
 
+def json_arr_apply(j, f):
+    """
+    Function that recursively digs into a JSON object and applies f to the innermost arrays
+    """
+    if isinstance(j, dict):
+        for k, v in j.items():
+            j[k] = json_arr_apply(v, f)
+        return j
+    elif isinstance(j, list):
+        return f(j)
+    else:
+        return j
+
+
 def convert_to_float32(args):
     """
     Convert a JSON file with unsigned integer arrays to float32 string representation.
@@ -40,9 +54,7 @@ def convert_to_float32(args):
         fd = open(args.file, 'r')
 
     j = json.load(fd)
-    j['left'] = conv(j['left'])
-    j['right'] = conv(j['right'])
-    j['sum'] = conv(j['sum'])
+    j = json_arr_apply(j, conv)
     print(json.dumps(j, indent=2, default=format_float))
 
 
@@ -60,9 +72,7 @@ def convert_to_int(args):
         fd = open(args.file, 'r')
 
     j = json.load(fd)
-    j['left'] = conv(j['left'])
-    j['right'] = conv(j['right'])
-    j['sum'] = conv(j['sum'])
+    j = json_arr_apply(j, conv)
     print(json.dumps(j, indent=2))
 
 
