@@ -52,9 +52,8 @@ module IEEE_SP_FP_ADDER (
   reg s1_80, s2_80, Final_sign_80, s1_pipe1_80, s1_pipe2_80, s1_pipe3_80, s1_pipe4_80, s1_pipe5_80;
   reg s2_pipe1_80, s2_pipe2_80, s2_pipe3_80, s2_pipe4_80, s2_pipe5_80;
   reg [3:0] renorm_shift_80, renorm_shift_pipe5_80;
-  integer signed   renorm_exp_80;
+  integer signed   renorm_exp_80, renorm_exp_pipe5_80;
 
-  //:w
   //reg    [3:0]  renorm_exp_80,renorm_exp_pipe5_80;
   reg    [31:0] Result_80;
 
@@ -96,7 +95,8 @@ module IEEE_SP_FP_ADDER (
       S_exp_mantissa_pipe2_80 = Small_exp_mantissa_pipe2_80;
     end
 
-    if (e2_pipe2_80 != 0) begin  // BUG: Uses value from previous stage
+    // if (e2_80 != 0) begin  // BUG: Uses value from previous stage. CONFIRMED: Differs from no_pipe version
+    if (e2_pipe2_80 != 0) begin
       L1_mantissa_pipe2_80 = {1'b1, Large_mantissa_pipe2_80[22:1]};
     end else begin
       L1_mantissa_pipe2_80 = Large_mantissa_pipe2_80;
@@ -143,7 +143,11 @@ module IEEE_SP_FP_ADDER (
     end
     ////// Combinational stage5 //////
     //Shift the mantissa as required; re-normalize exp; determine sign
-    Final_expo_80 = Larger_exp_pipe5_80 + renorm_exp_80;  // BUG: uses value from the previous stage
+
+    // BUG: uses value from the previous stage.
+    // CONFIRMED: left=1197990852, right=1203616721
+    // Final_expo_80 = Larger_exp_pipe5_80 + renorm_exp_80;
+    Final_expo_80 = Larger_exp_pipe5_80 + renorm_exp_pipe5_80;
 
     if (renorm_shift_pipe5_80 != 0) begin
       Add1_mant_80 = Add_mant_pipe5_80 << renorm_shift_pipe5_80;
@@ -254,7 +258,7 @@ module IEEE_SP_FP_ADDER (
       //stage5
       Add_mant_pipe5_80           <= Add_mant_80;
       renorm_shift_pipe5_80       <= renorm_shift_80;
-      //renorm_exp_pipe5_80 <= renorm_exp_80;
+      renorm_exp_pipe5_80 <= renorm_exp_80;
     end
   end
 
