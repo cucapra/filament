@@ -106,22 +106,28 @@ def random_data(args):
     """
     Generate random floating point data and print out as JSON
     """
-    out = {'left': [], 'right': [], 'sum': []}
+
+    out = {'left': [], 'right': [], 'res': []}
     for _ in range(args.count):
         # Use numpy to generate a random float32
-        left = np.float32(random.uniform(-1000, 1000))
-        right = np.float32(random.uniform(-1000, 1000))
-        sum = left + right
+        left = np.float32(random.uniform(-1, 1))
+        right = np.float32(random.uniform(0, 1))
+        if args.op == 'add':
+            res = left + right
+        elif args.op == 'mul':
+            res = left * right
+        else:
+            raise ValueError("Unknown op " + args.op)
 
         # Append unsigned int representation of float if --raw is provided
         if args.raw:
             out['left'].append(float32_to_int(left))
             out['right'].append(float32_to_int(right))
-            out['sum'].append(float32_to_int(sum))
+            out['res'].append(float32_to_int(res))
         else:
             out['left'].append(left)
             out['right'].append(right)
-            out['sum'].append(sum)
+            out['res'].append(res)
 
     if args.raw:
         print(json.dumps(out, indent=2))
@@ -139,6 +145,8 @@ if __name__ == '__main__':
     gen_parser.add_argument("count", type=int, default=1,
                             help='Number of random data to generate')
     gen_parser.add_argument("--raw", action='store_true')
+    gen_parser.add_argument(
+        "--op", choices=['add', 'mul'], default='add', help='Operation to perform')
     gen_parser.set_defaults(func=random_data)
 
     to_float_parser = subparsers.add_parser('to_float')

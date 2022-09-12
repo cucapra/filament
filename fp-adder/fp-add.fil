@@ -226,7 +226,7 @@ component main<G>(
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,
   // The input computed in python
-  @[G+4, G+5] sum: 32,
+  @[G+4, G+5] res: 32,
 ) -> (
   @[G+4, G+5] out: 32,
   @[G+4, G+5] verilog_pipe: 32,
@@ -240,5 +240,5 @@ component main<G>(
   out = fil.out;
   verilog_pipe = ver.Result;
   verilog_nopipe = ver_np.Result;
-  gold = sum;
+  gold = res;
 }
