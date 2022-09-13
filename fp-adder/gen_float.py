@@ -92,12 +92,11 @@ def check(args):
     else:
         fd = open(args.file, 'r')
     j = json.load(fd)
-    fields = ["verilog_nopipe", "out", "verilog_pipe"]
-    for (k, v) in j[fields[0]].items():
-        vals = [j[f][k] for f in fields]
+    for (k, v) in j[args.fields[0]].items():
+        vals = [j[f][k] for f in args.fields]
         if not all_equal(vals):
             # Construct dictionary with all values
-            out = {f: j[f][k] for f in fields}
+            out = {f: j[f][k] for f in args.fields}
             print(f"Mismatch for key {k}: " +
                   json.dumps(out, indent=2, default=format_float))
 
@@ -162,6 +161,8 @@ if __name__ == '__main__':
     check_parser = subparsers.add_parser('check')
     check_parser.add_argument(
         "-f", "--file", help="JSON file to be checked")
+    check_parser.add_argument(
+        "--fields", nargs='+', default=["verilog_nopipe", "out", "verilog_pipe"])
     check_parser.set_defaults(func=check)
 
     args = parser.parse_args()
