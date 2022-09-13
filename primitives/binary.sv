@@ -164,7 +164,7 @@ endmodule
 module Concat #(
   parameter LEFT = 32,
   parameter RIGHT = 32,
-  parameter OUT = 32,
+  parameter OUT = 64
 ) (
   input wire logic _go, // Unused port
   input wire logic [LEFT-1:0] left,
@@ -188,7 +188,7 @@ endmodule
 
 module Slice #(
   parameter IN_WIDTH = 32,
-  parameter MSB = 0,
+  parameter MSB = 31,
   parameter LSB = 0,
   parameter OUT_WITDH = 32
 ) (
@@ -222,7 +222,7 @@ endmodule
 
 /// ========== Shift Operations ============
 module ShiftLeft #(
-  parameter WIDTH = 32,
+  parameter WIDTH = 32
 ) (
   input wire logic _go, // Unused port, only used for modeling
   input wire logic [WIDTH-1:0] in,
@@ -233,7 +233,7 @@ module ShiftLeft #(
 endmodule
 
 module ShiftRight #(
-  parameter WIDTH = 32,
+  parameter WIDTH = 32
 ) (
   input wire logic _go, // Unused port, only used for modeling
   input wire logic [WIDTH-1:0] in,
