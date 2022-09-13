@@ -70,6 +70,14 @@ extern "binary.sv" {
     @[G, G+1] out: 1,
   );
 
+  component Xor[WIDTH]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] left: WIDTH,
+    @[G, G+1] right: WIDTH,
+  ) -> (
+    @[G, G+1] out: WIDTH,
+  );
+
   component Not[WIDTH]<G>(
     @interface[G, G+1] _go: 1, // unused
     @[G, G+1] in: WIDTH,
@@ -124,11 +132,56 @@ extern "binary.sv" {
     @[G, G+1] out: OUT_WIDTH,
   );
 
+  component Concat[LEFT, RIGHT, OUT]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] left: LEFT,
+    @[G, G+1] right: RIGHT,
+  ) -> (
+    @[G, G+1] out: OUT,
+  );
+
   component Select[WIDTH, POS]<G>(
     @interface[G, G+1] _go: 1, // unused
     @[G, G+1] in: WIDTH,
   ) -> (
     @[G, G+1] out: 1,
+  );
+
+  component Slice[IN_WIDTH, MSB, LSB, OUT_WIDTH]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] in: IN_WIDTH,
+  ) -> (
+    @[G, G+1] out: OUT_WIDTH,
+  );
+
+  component ReduceAnd[WIDTH]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] in: WIDTH,
+  ) -> (
+    @[G, G+1] out: 1,
+  );
+
+  component ReduceOr[WIDTH]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] in: WIDTH,
+  ) -> (
+    @[G, G+1] out: 1,
+  );
+
+  component ShiftLeft[WIDTH]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] in: WIDTH,
+    @[G, G+1] shift: WIDTH,
+  ) -> (
+    @[G, G+1] out: WIDTH,
+  );
+
+  component ShiftRight[WIDTH]<G>(
+    @interface[G, G+1] _go: 1, // unused
+    @[G, G+1] in: WIDTH,
+    @[G, G+1] shift: WIDTH,
+  ) -> (
+    @[G, G+1] out: WIDTH,
   );
 }
 

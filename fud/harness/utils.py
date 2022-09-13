@@ -48,9 +48,6 @@ def construct_transaction_fsm(interface, randomize):
         # Maps signal_name -> txn_id -> listof values
         outputs = {sig["name"]: {} for sig in interface["outputs"]}
 
-        # TODO(rachit): This function is associated to a specific event's
-        # transaction. When adding support for multiple events, we should make
-        # it take the event as an input.
         async def txn(idx, event):
             """
             Run a complete transaction
@@ -81,8 +78,6 @@ def construct_transaction_fsm(interface, randomize):
 
                 # Wait for the falling edge so that combinational computations
                 # propagate.
-                # NOTE(rachit): Not sure if this will actually work for
-                # combinational outputs.
                 await FallingEdge(mod.clk)
 
                 # For each output, record the value if we expect it to be valid
