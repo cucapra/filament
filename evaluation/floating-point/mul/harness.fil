@@ -1,0 +1,46 @@
+import "fp-mul.fil";
+
+extern "fp-mult-nopipe.sv" {
+  component FP_Mult_NoPipe<G>(
+      @interface[G, G+1] _go: 1,
+      @[G, G+1] a: 32,
+      @[G, G+1] b: 32,
+  ) -> (
+      @[G, G+1] exception: 1,
+      @[G, G+1] overflow: 1,
+      @[G, G+1] underflow: 1,
+      @[G, G+1] res: 32,
+  );
+}
+
+extern "fp-mult-pipe.sv" {
+  component FP_Mult_Pipe<G>(
+      clk: 1,
+      @interface[G, G+1] _go: 1,
+      @[G, G+1] A: 32,
+      @[G, G+1] B: 32,
+  ) -> (
+      @[G+2, G+3] res: 32,
+  );
+}
+
+component main<G>(
+  @interface[G, G+1] _go: 1,
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32,
+  @[G, G+1] res: 32,
+) -> (
+  @[G, G+1] gold: 32,
+  @[G, G+1] out: 32,
+  @[G, G+1] verilog_nopipe: 32,
+  @[G+2, G+3] verilog_pipe: 32,
+) {
+  np := new FP_Mult_NoPipe<G>(left, right);
+  p := new FP_Mult_Pipe<G>(left, right);
+  f := new FP_Mult<G>(left, right);
+
+  gold = res;
+  verilog_nopipe = np.res;
+  verilog_pipe = p.res;
+  out = f.out;
+}
