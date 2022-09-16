@@ -10,8 +10,10 @@ use codespan_reporting::{
     term::{self, termcolor::ColorChoice, termcolor::StandardStream},
 };
 use filament::{
-    backend, cmdline, dump_interface, errors, event_checker, frontend,
-    interval_checking, lower, visitor::Transform,
+    backend, cmdline, dump_interface,
+    errors::{self, FilamentResult},
+    event_checker, frontend, interval_checking, lower,
+    visitor::Transform,
 };
 
 // Prints out the interface for main component in the input program.
@@ -25,55 +27,7 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
         .target(env_logger::Target::Stderr)
         .init();
 
-    let mut ns = frontend::FilamentParser::parse_file(&opts.input)?;
-    let mut imports: Vec<PathBuf> = ns
-        .imports
-        .drain(..)
-        .map(|s| {
-            let mut base = opts.library.clone();
-            base.push(s);
-            base
-        })
-        .collect();
-
-    // Get the absolute paths for all externs
-    let absolute = |ext_path: String, file: &Path| -> String {
-        let ext: PathBuf = ext_path.into();
-        if ext.is_relative() {
-            let mut base: PathBuf = file
-                .parent()
-                .unwrap_or_else(|| panic!("Parsed file does not have a parent"))
-                .into();
-            base.push(ext);
-            base
-        } else {
-            ext
-        }
-        .to_string_lossy()
-        .to_string()
-    };
-    ns.externs = ns
-        .externs
-        .drain(..)
-        .map(|(p, imps)| (absolute(p, &opts.input), imps))
-        .collect();
-
-    // Parse all the imports
-    while let Some(path) = imports.pop() {
-        let mut imp = frontend::FilamentParser::parse_file(&path)?;
-        imp.components.append(&mut ns.components);
-        ns.components = imp.components;
-        ns.externs.extend(
-            imp.externs
-                .into_iter()
-                .map(|(p, imps)| (absolute(p, &path), imps)),
-        );
-        imports.extend(imp.imports.into_iter().map(|s| {
-            let mut base = opts.library.clone();
-            base.push(s);
-            base
-        }));
-    }
+    let ns = parse_namespace(opts)?;
 
     // Run the compilation pipeline
     let t = Instant::now();
@@ -100,6 +54,93 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     }
 
     Ok(())
+}
+
+/// Parse a completely resovled namespace from an input file. Recursively parses all imported files and resolves
+/// the paths for externs.
+fn parse_namespace(
+    opts: &cmdline::Opts,
+) -> FilamentResult<frontend::ast::Namespace> {
+    let mut ns = frontend::FilamentParser::parse_file(&opts.input)?;
+
+    // Resolve import either using opts.library or relative the parent directory of the input file.
+    let resolve_import =
+        |imp: &String, dir: &Path| -> FilamentResult<PathBuf> {
+            // Resolve against the library path
+            let mut lib_base = opts.library.clone();
+            lib_base.push(imp);
+            if lib_base.exists() {
+                return Ok(lib_base);
+            }
+            // Attempt to resove against base
+            let mut cur_base = dir.to_path_buf();
+            cur_base.push(imp);
+            if cur_base.exists() {
+                Ok(cur_base)
+            } else {
+                Err(errors::Error::misc(format!(
+                "Could not resolve import path: {}. Neither {} nor {} exist.",
+                imp,
+                lib_base.display(),
+                cur_base.display()
+            )))
+            }
+        };
+
+    // Get absolute path for a relative path `ext_path` wrt to the parent of the file `file_path`.
+    let absolute = |ext_path: String, base: &Path| -> String {
+        let ext: PathBuf = ext_path.into();
+        if ext.is_relative() {
+            let mut base = base.to_path_buf();
+            base.push(ext);
+            base
+        } else {
+            ext
+        }
+        .to_string_lossy()
+        .to_string()
+    };
+
+    // Get the parent of a given file
+    let parent = |p: &Path| -> PathBuf {
+        let mut p = p.to_path_buf();
+        p.pop();
+        p
+    };
+
+    // Extern are resolved to thier absolute path relative to the input file.
+    let base = parent(&opts.input);
+    let mut imports: Vec<PathBuf> = ns
+        .imports
+        .drain(..)
+        .map(|imp| resolve_import(&imp, &base))
+        .collect::<FilamentResult<_>>()?;
+
+    ns.externs = ns
+        .externs
+        .drain(..)
+        .map(|(p, imps)| (absolute(p, &base), imps))
+        .collect();
+
+    while let Some(path) = imports.pop() {
+        let mut imp = frontend::FilamentParser::parse_file(&path)?;
+        let base = parent(&path);
+        imp.components.append(&mut ns.components);
+        ns.components = imp.components;
+        ns.externs.extend(
+            imp.externs
+                .into_iter()
+                .map(|(p, imps)| (absolute(p, &base), imps)),
+        );
+        let base = parent(&path);
+        imports.extend(
+            imp.imports
+                .into_iter()
+                .map(|s| resolve_import(&s, &base))
+                .collect::<FilamentResult<Vec<_>>>()?,
+        );
+    }
+    Ok(ns)
 }
 
 fn main() {
