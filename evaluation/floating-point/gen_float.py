@@ -23,12 +23,16 @@ def int_to_float32(h):
     return out
 
 
-def format_float(f):
+def format_float(precision):
     """
     Format a floating point value. We need 13 digits of precision to
     unambiguously represent a 32-bit float.
     """
-    return "{:.13f}".format(f)
+    fmt_str = "{{:.{}f}}".format(precision)
+
+    def fmt(f):
+        return fmt_str.format(f)
+    return fmt
 
 
 def json_arr_apply(j, f):
@@ -60,7 +64,7 @@ def convert_to_float32(args):
 
     j = json.load(fd)
     j = json_arr_apply(j, conv)
-    print(json.dumps(j, indent=2, default=format_float))
+    print(json.dumps(j, indent=2, default=format_float(args.precision)))
 
 
 def convert_to_int(args):
@@ -151,6 +155,8 @@ if __name__ == '__main__':
     to_float_parser = subparsers.add_parser('to_float')
     to_float_parser.add_argument(
         "-f", "--file", help="JSON file to be converted")
+    to_float_parser.add_argument(
+        "-p", "--precision", type=int, default=13, help="Precision of the output")
     to_float_parser.set_defaults(func=convert_to_float32)
 
     to_int_parser = subparsers.add_parser('to_int')
@@ -162,7 +168,7 @@ if __name__ == '__main__':
     check_parser.add_argument(
         "-f", "--file", help="JSON file to be checked")
     check_parser.add_argument(
-        "--fields", nargs='+', default=["verilog_nopipe", "out", "verilog_pipe"])
+        "--fields", nargs='+', default=["gold", "verilog_nopipe", "out", "verilog_pipe"])
     check_parser.set_defaults(func=check)
 
     args = parser.parse_args()
