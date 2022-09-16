@@ -22,7 +22,7 @@ module IEEE_SP_FP_ADDER_NOPIPE (
 
   assign Result = Result_80;
 
-  always_comb begin
+  always @(*) begin
     //stage 1
     e1_80 = Number1[30:23];
     e2_80 = Number2[30:23];

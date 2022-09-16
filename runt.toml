@@ -18,3 +18,15 @@ paths = [
 cmd = """
 fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize' -q
 """
+
+# Evaluation examples
+[[tests]]
+name = "floating point"
+paths = [
+  "evaluation/floating-point/*/harness.fil"
+]
+cmd = """
+dir=$(dirname {}) && \
+op=$(basename $dir) && \
+./evaluation/floating-point/check.sh $dir $op 100
+"""

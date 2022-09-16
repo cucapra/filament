@@ -244,7 +244,7 @@ class CleanupCocotb(Stage):
                     # Remove Output: from the front of the line
                     return line.split(b" ", 1)[1].decode('UTF-8')
 
-            return "No results were found"
+            raise ValueError("No results were found")
 
         return get_results(input)
 
