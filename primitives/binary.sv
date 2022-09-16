@@ -1,11 +1,9 @@
-`default_nettype none
-
 module Const #(
   parameter WIDTH = 32,
   parameter VALUE = 0
 ) (
-  input logic _go,
-  output [WIDTH-1:0] out
+  input wire logic _go,
+  output wire logic [WIDTH-1:0] out
 );
   assign out = VALUE;
 endmodule
@@ -190,11 +188,11 @@ module Slice #(
   parameter IN_WIDTH = 32,
   parameter MSB = 31,
   parameter LSB = 0,
-  parameter OUT_WITDH = 32
+  parameter OUT_WIDTH = 32
 ) (
   input wire logic _go, // Unused port, only used for modeling
   input wire logic [IN_WIDTH-1:0] in,
-  output wire logic [OUT_WITDH-1:0] out
+  output wire logic [OUT_WIDTH-1:0] out
 );
   assign out = in[MSB:LSB];
 endmodule
