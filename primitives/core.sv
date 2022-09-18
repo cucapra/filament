@@ -8,8 +8,11 @@ module Register #(
   input wire logic write_en,
   input wire logic _go_S, // unused
   input wire logic [WIDTH-1:0] in,
-  output logic [WIDTH-1:0] out
+  output logic [WIDTH-1:0] out,
+  output logic [WIDTH-1:0] prev
 );
+  // prev is just an alias for out
+  assign prev = out;
   always_ff @(posedge clk) begin
     if (reset)
       out <= 0;
