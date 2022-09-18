@@ -10,7 +10,6 @@ pub enum ResolvedInstance<'a> {
     Bound {
         sig: &'a ast::Signature<ast::PortParam>,
         binds: Vec<u64>,
-        pos: Option<errors::Span>,
     },
     Concrete {
         sig: &'a ast::Signature<u64>,
@@ -23,31 +22,16 @@ impl<'a> ResolvedInstance<'a> {
         sig: &'a ast::Signature<ast::PortParam>,
         binds: Vec<u64>,
     ) -> Self {
-        Self::Bound {
-            sig,
-            binds,
-            pos: None,
-        }
+        Self::Bound { sig, binds }
     }
 
     pub fn concrete(sig: &'a ast::Signature<u64>) -> Self {
         Self::Concrete { sig, pos: None }
     }
 }
-impl WithPos for ResolvedInstance<'_> {
-    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
-        match &mut self {
-            Self::Bound { pos, .. } | Self::Concrete { pos, .. } => {
-                *pos = sp;
-            }
-        }
-        self
-    }
-
-    fn copy_span(&self) -> Option<errors::Span> {
-        match self {
-            Self::Bound { pos, .. } | Self::Concrete { pos, .. } => pos.clone(),
-        }
+impl<'a> From<&'a ast::Signature<u64>> for ResolvedInstance<'a> {
+    fn from(sig: &'a ast::Signature<u64>) -> Self {
+        Self::Concrete { sig, pos: None }
     }
 }
 
@@ -93,14 +77,12 @@ impl<'a> ResolvedInstance<'a> {
         }
     }
 
-    pub fn resolve(&self) -> FilamentResult<ast::Signature<u64>> {
+    pub fn resolve(&self) -> ast::Signature<u64> {
         match self {
-            ResolvedInstance::Bound { sig, binds, pos } => {
-                sig.resolve(binds).map_err(|err| {
-                    err.add_note("Instance bound here", pos.clone())
-                })
-            }
-            ResolvedInstance::Concrete { sig, .. } => Ok((*sig).clone()),
+            ResolvedInstance::Bound { sig, binds, .. } => sig
+                .resolve(binds)
+                .unwrap_or_else(|_| panic!("Failed to resolve signature")),
+            ResolvedInstance::Concrete { sig, .. } => (*sig).clone(),
         }
     }
 
@@ -134,22 +116,34 @@ impl<'a> Bindings<'a> {
         self.comps.push(comp);
     }
 
-    /// Get a binding associated with a name
-    pub fn get_component(
+    /// Get a binding associated with a name or return error
+    pub fn find_component(
         &'a self,
         name: &ast::Id,
         binds: &[u64],
-        pos: Option<errors::Span>,
     ) -> FilamentResult<ResolvedInstance> {
         if let Some(sig) = self.ext_sigs.get(name) {
-            Ok(ResolvedInstance::bound(sig, binds.to_vec()).set_span(pos))
+            Ok(ResolvedInstance::bound(sig, binds.to_vec()))
         } else {
             self.comps
                 .iter()
                 .find(|c| c.sig.name == name)
                 .map(|comp| ResolvedInstance::concrete(&comp.sig))
-                .ok_or_else(|| Error::undefined(name.clone(), "component"))
+                .ok_or_else(|| {
+                    Error::undefined(name.clone(), "component")
+                        .add_note("Undefined component", name.copy_span())
+                })
         }
+    }
+
+    // Returns a component or panics
+    pub fn get_component(
+        &'a self,
+        name: &ast::Id,
+        binds: &[u64],
+    ) -> ResolvedInstance {
+        self.find_component(name, binds)
+            .unwrap_or_else(|_| panic!("Failed to find component {}", name))
     }
 }
 impl From<Bindings<'_>> for Vec<ast::Component> {
@@ -244,18 +238,8 @@ where
                     self.invoke(inv, sig)
                 }
                 crate::core::Command::Instance(inst) => {
-                    let sig = binds
-                        .get_component(
-                            &inst.component,
-                            &inst.bindings,
-                            inst.copy_span(),
-                        )
-                        .map_err(|err| {
-                            err.add_note(
-                                "Instance defined here",
-                                inst.copy_span(),
-                            )
-                        })?;
+                    let sig =
+                        binds.get_component(&inst.component, &inst.bindings);
                     instances.insert(inst.name.clone(), sig);
                     self.instance(inst)
                 }

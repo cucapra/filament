@@ -1,3 +1,5 @@
+use derivative::Derivative;
+
 use super::{Binding, FsmIdxs, Range, TimeRep, TimeSub, WithTime};
 use crate::{
     errors::{self, FilamentResult},
@@ -26,12 +28,15 @@ impl std::fmt::Display for OrderOp {
 type Extra = Vec<(String, Option<errors::Span>)>;
 
 // A ordering constraint on time expressions
-#[derive(Clone)]
+#[derive(Clone, Derivative, Eq)]
+#[derivative(PartialEq, Hash)]
 pub struct ConstraintBase<T> {
     left: T,
     right: T,
     op: OrderOp,
     // Explanation of why this constraint was generated
+    #[derivative(PartialEq = "ignore")]
+    #[derivative(Hash = "ignore")]
     extra: Extra,
 }
 impl<T> ConstraintBase<T> {
@@ -132,7 +137,7 @@ where
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Constraint<T: TimeRep> {
     Base { base: ConstraintBase<T> },
     Sub { base: ConstraintBase<TimeSub<T>> },

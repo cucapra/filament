@@ -87,7 +87,9 @@ impl FilamentParser {
 
     // ================ Literals =====================
     fn identifier(input: Node) -> ParseResult<ast::Id> {
-        Ok(ast::Id::from(input.as_str()))
+        let sp = Self::get_span(&input);
+        let id = ast::Id::from(input.as_str());
+        Ok(id.set_span(Some(sp)))
     }
 
     fn char(input: Node) -> ParseResult<&str> {
@@ -256,7 +258,7 @@ impl FilamentParser {
             ],
             [identifier(name), identifier(component), conc_params(params), invoke_args((abstract_vars, ports))] => {
                 // Upper case the first letter of name
-                let mut iname = name.id.clone();
+                let mut iname = name.id().to_string();
                 iname.make_ascii_uppercase();
                 let iname = ast::Id::from(iname);
                 if iname == name {
