@@ -76,7 +76,7 @@ where
 }
 
 /// Represents the absolute difference between two time events
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TimeSub<T>
 where
     T: TimeRep,

@@ -1,18 +1,35 @@
-#[derive(Clone, Eq, Hash)]
+use crate::errors::{self, WithPos};
+use derivative::Derivative;
+
+#[derive(Derivative, Clone, PartialOrd, Ord)]
+#[derivative(Hash, Eq, Debug)]
 pub struct Id {
-    pub id: String,
+    id: String,
+    #[derivative(Hash = "ignore")]
+    #[derivative(Debug = "ignore")]
+    pos: Option<errors::Span>,
+}
+
+impl Id {
+    pub fn id(&self) -> &str {
+        self.id.as_ref()
+    }
+}
+impl WithPos for Id {
+    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+        self.pos = sp;
+        self
+    }
+
+    fn copy_span(&self) -> Option<errors::Span> {
+        self.pos.clone()
+    }
 }
 impl std::fmt::Display for Id {
     fn fmt(
         &self,
         f: &mut std::fmt::Formatter<'_>,
     ) -> Result<(), std::fmt::Error> {
-        write!(f, "{}", self.id)
-    }
-}
-
-impl std::fmt::Debug for Id {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.id)
     }
 }
@@ -25,13 +42,16 @@ impl AsRef<str> for Id {
 
 impl From<&str> for Id {
     fn from(s: &str) -> Self {
-        Id { id: s.to_string() }
+        Id {
+            id: s.to_string(),
+            pos: None,
+        }
     }
 }
 
 impl From<String> for Id {
     fn from(s: String) -> Self {
-        Id { id: s }
+        Id { id: s, pos: None }
     }
 }
 

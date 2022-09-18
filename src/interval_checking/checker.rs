@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use super::{ConcreteInvoke, Context, THIS};
+use super::{ConcreteInvoke, Context, FilSolver, THIS};
 use crate::core::{TimeRep, WithTime};
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use crate::event_checker::ast::{self, Constraint, CBT};
@@ -16,28 +16,6 @@ fn check_connect(
     guard: &Option<ast::Guard>,
     ctx: &mut Context,
 ) -> FilamentResult<()> {
-    // Check that the source has the same width as the destination
-    if let (Some(src_width), Some(dst_width)) = (
-        ctx.get_port_width::<false>(src)?,
-        ctx.get_port_width::<true>(dst)?,
-    ) {
-        if src_width != dst_width {
-            return Err(Error::malformed("Port width mismatch".to_string())
-                .add_note(
-                    format!("Source {} has width {}", src.name(), src_width),
-                    src.copy_span(),
-                )
-                .add_note(
-                    format!(
-                        "Destination {} has width {}",
-                        dst.name(),
-                        dst_width
-                    ),
-                    dst.copy_span(),
-                ));
-        }
-    }
-
     // Remove dst from remaining ports
     ctx.remove_remaning_assign(dst)?;
 
@@ -155,9 +133,9 @@ fn check_invoke_binds<'a>(
         invoke.copy_span(),
     );
 
-    let sig = ctx.get_instance(&invoke.instance)?;
+    let sig = ctx.get_instance(&invoke.instance);
     let binding = sig.binding(&invoke.abstract_vars);
-    let this_sig = ctx.get_invoke(&THIS.into())?.get_sig();
+    let this_sig = ctx.get_invoke(&THIS.into()).get_sig();
     let mut constraints = vec![];
 
     // For each event provided for an abstract variable, ensure that the corresponding interface
@@ -218,7 +196,7 @@ fn check_invoke<'a>(
     // Check the bindings for abstract variables do not violate @interface
     // requirements
     check_invoke_binds(invoke, ctx)?;
-    let sig = ctx.get_instance(&invoke.instance)?.resolve()?;
+    let sig = ctx.get_instance(&invoke.instance).resolve();
     let binding = sig.binding(&invoke.abstract_vars);
 
     // Handle `where` clause constraints and well formedness constraints on intervals.
@@ -245,7 +223,7 @@ fn check_invoke<'a>(
         invoke.bind.clone(),
         // XXX(rachit): Get rid of this clone
         ConcreteInvoke::concrete(binding, sig.clone()),
-    )?;
+    );
 
     // If this is a high-level invoke, check all port requirements
     if let Some(actuals) = &invoke.ports {
@@ -318,7 +296,9 @@ fn check_fsm<'a>(
     ctx.add_invocation(
         bind.clone(),
         ConcreteInvoke::fsm_instance(guarantee, fsm),
-    )
+    );
+
+    Ok(())
 }
 
 fn check_commands<'a>(
@@ -331,26 +311,12 @@ where
         log::trace!("Checking command: {}", cmd);
         match cmd {
             ast::Command::Invoke(invoke) => check_invoke(invoke, ctx)?,
-            ast::Command::Instance(
-                inst @ ast::Instance {
-                    name,
-                    component,
-                    bindings,
-                    ..
-                },
-            ) => ctx
-                .add_instance(
-                    name.clone(),
-                    component,
-                    bindings,
-                    inst.copy_span(),
-                )
-                .map_err(|err| {
-                    err.add_note(
-                        format!("Defines instances {}", component.clone()),
-                        inst.copy_span(),
-                    )
-                })?,
+            ast::Command::Instance(ast::Instance {
+                name,
+                component,
+                bindings,
+                ..
+            }) => ctx.add_instance(name.clone(), component, bindings),
             ast::Command::Fsm(fsm) => check_fsm(fsm, ctx)?,
             ast::Command::Connect(ast::Connect {
                 dst, src, guard, ..
@@ -361,6 +327,7 @@ where
 }
 
 fn check_component(
+    solver: &mut FilSolver,
     comp: &ast::Component,
     sigs: &visitor::Bindings,
 ) -> FilamentResult<()> {
@@ -373,7 +340,7 @@ fn check_component(
     // to the port on this instance.
     let rev_sig = comp.sig.reversed();
     let this_instance = ConcreteInvoke::this_instance(&rev_sig);
-    ctx.add_invocation(THIS.into(), this_instance)?;
+    ctx.add_invocation(THIS.into(), this_instance);
 
     // User-level components are not allowed to have ordering constraints. See https://github.com/cucapra/filament/issues/27.
     for constraint in &rev_sig.constraints {
@@ -391,14 +358,26 @@ fn check_component(
     }
 
     // Check all the commands
+    let t = std::time::Instant::now();
     check_commands(&comp.body, &mut ctx)?;
+    log::info!(
+        "interval-check.{}.cmds: {}ms",
+        comp.sig.name,
+        t.elapsed().as_millis()
+    );
     // Add obligations from disjointness constraints
     let disj = ctx.drain_disjointness()?;
     ctx.add_obligations(disj);
 
     // Prove all the required obligations
     let obs = ctx.drain_obligations();
-    super::prove(comp.sig.abstract_vars.iter(), &ctx.facts, obs)?;
+    let t = std::time::Instant::now();
+    solver.prove(comp.sig.abstract_vars.iter(), &ctx.facts, obs.into_iter())?;
+    log::info!(
+        "interval-check.{}.prove: {}ms",
+        comp.sig.name,
+        t.elapsed().as_millis()
+    );
 
     // There should be no remaining assignments after checking a component
     if let Some((comp, ports)) = ctx.get_remaining_assigns().next() {
@@ -419,22 +398,25 @@ fn check_component(
 pub fn check(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
     let comps = ns.components.drain(..).collect_vec();
     let sigs = ns.signatures();
+    let mut solver = FilSolver::new()?;
 
     // Check that all signatures are well formed
+    let t = std::time::Instant::now();
     for sig in sigs.values() {
         log::trace!("===== Signature {} =====", &sig.name);
-        super::prove(
+        solver.prove(
             sig.abstract_vars.iter(),
             &sig.constraints,
             sig.well_formed()?,
         )?;
         log::trace!("==========");
     }
+    log::info!("interval-check.sigs: {}ms", t.elapsed().as_millis());
 
     let mut binds = visitor::Bindings::new(sigs);
     for comp in comps {
         log::trace!("===== Component {} =====", &comp.sig.name);
-        check_component(&comp, &binds)?;
+        check_component(&mut solver, &comp, &binds)?;
         log::trace!("==========");
         // Add the signature of this component to the context.
         binds.add_component(comp);

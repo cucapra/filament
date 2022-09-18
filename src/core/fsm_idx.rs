@@ -4,7 +4,7 @@ use linked_hash_map::LinkedHashMap;
 use std::fmt::Display;
 
 /// An interval time expression that denotes a max of sums expression.
-#[derive(Default, Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq, Hash)]
 pub struct FsmIdxs {
     fsms: LinkedHashMap<Id, u64>,
 }

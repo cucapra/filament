@@ -22,10 +22,10 @@ fn guard_availability(
         ast::Guard::Port(p) => {
             let interval = match &p.typ {
                 ast::PortType::ThisPort(name) => {
-                    ctx.get_invoke(&THIS.into())?.port_guarantees(name)?
+                    ctx.get_invoke(&THIS.into()).port_guarantees(name)?
                 }
                 ast::PortType::InvPort { invoke: comp, name } => {
-                    ctx.get_invoke(comp)?.port_guarantees(name)?
+                    ctx.get_invoke(comp).port_guarantees(name)?
                 }
                 ast::PortType::Constant(_) => {
                     return Err(Error::malformed(

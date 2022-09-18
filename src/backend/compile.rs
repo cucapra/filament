@@ -271,14 +271,14 @@ fn compile_command(cmd: ast::Command, ctx: &mut Context) {
         }) => {
             let cell = if let Some(sig) = ctx.get_sig(&component) {
                 ctx.builder.add_component(
-                    name.id.clone(),
-                    component.id.clone(),
+                    name.id().clone(),
+                    component.id().clone(),
                     sig,
                 )
             } else {
                 ctx.builder.add_primitive(
-                    name.id.clone(),
-                    component.id,
+                    name.id().clone(),
+                    component.id(),
                     &bindings,
                 )
             };
@@ -377,14 +377,14 @@ fn compile_component(
 ) -> FilamentResult<ir::Component> {
     let port_transform =
         |pd: &ast::PortDef<u64>, dir: ir::Direction| -> ir::PortDef<u64> {
-            (pd.name.id.clone(), pd.bitwidth, dir).into()
+            (pd.name.id().clone(), pd.bitwidth, dir).into()
         };
     let concrete_transform = |name: &ast::Id, width: u64| -> ir::PortDef<u64> {
-        (name.id.clone(), width, ir::Direction::Input).into()
+        (name.id().clone(), width, ir::Direction::Input).into()
     };
     let ports =
         as_port_defs(&comp.sig, port_transform, concrete_transform, true);
-    let mut component = ir::Component::new(&comp.sig.name.id, ports);
+    let mut component = ir::Component::new(&comp.sig.name.id(), ports);
     component.attributes.insert("nointerface", 1);
     let builder = ir::Builder::new(&mut component, lib).not_generated();
     let mut ctx = Context::new(sigs, builder, lib);
@@ -403,11 +403,11 @@ fn prim_as_port_defs(
         let width = match &pd.bitwidth {
             ast::PortParam::Const(v) => ir::Width::Const { value: *v },
             ast::PortParam::Var(v) => ir::Width::Param {
-                value: v.id.clone().into(),
+                value: v.id().clone().into(),
             },
         };
         ir::PortDef {
-            name: ir::Id::from(pd.name.id.as_ref()),
+            name: ir::Id::from(pd.name.id().as_ref()),
             direction: dir,
             width,
             attributes: Default::default(),
@@ -416,7 +416,7 @@ fn prim_as_port_defs(
     let concrete_transform =
         |name: &ast::Id, bw: u64| -> ir::PortDef<ir::Width> {
             ir::PortDef {
-                name: ir::Id::from(name.id.as_ref()),
+                name: ir::Id::from(name.id().as_ref()),
                 direction: ir::Direction::Input,
                 width: ir::Width::Const { value: bw },
                 attributes: Default::default(),
@@ -427,8 +427,8 @@ fn prim_as_port_defs(
 
 fn compile_signature(sig: &ast::Signature<ast::PortParam>) -> ir::Primitive {
     ir::Primitive {
-        name: sig.name.id.clone().into(),
-        params: sig.params.iter().map(|p| p.id.clone().into()).collect(),
+        name: sig.name.id().clone().into(),
+        params: sig.params.iter().map(|p| p.id().clone().into()).collect(),
         signature: prim_as_port_defs(sig),
         is_comb: false,
         attributes: ir::Attributes::default(),

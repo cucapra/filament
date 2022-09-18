@@ -35,7 +35,7 @@ impl BindCheck<'_> {
                 .instances
                 .get(instance)
                 .expect("THIS component is not defined")
-                .resolve()?;
+                .resolve();
             let mut iter = if INPUT {
                 sig.inputs.iter()
             } else {
@@ -53,7 +53,10 @@ impl BindCheck<'_> {
             ast::PortType::ThisPort(p) => check_port(&ast::Id::from(THIS), p),
             ast::PortType::InvPort { invoke, name } => {
                 let inst = self.invocations.get(invoke).map_err(|err| {
-                    err.add_note("Invocation is not defined", port.copy_span())
+                    err.add_note(
+                        "Invocation is not defined",
+                        invoke.copy_span(),
+                    )
                 })?;
                 check_port(inst, name)
             }
@@ -89,9 +92,7 @@ impl BindCheck<'_> {
         self.invocations
             .add(inv.bind.clone(), inv.instance.clone())?;
         // Get the signature for the instance
-        let inst = self.instances.get(&inv.instance).map_err(|err| {
-            err.add_note("Instance used here", inv.copy_span())
-        })?;
+        let inst = self.instances.get(&inv.instance)?;
 
         // Check that the number of arguments matches the number of parameters
         let formals = inst.abstract_vars().len();
@@ -100,8 +101,7 @@ impl BindCheck<'_> {
             return Err(Error::malformed(format!(
                 "Invoke of {} requires {formals} events but {actuals} were provided",
                 inv.instance,
-            ))
-            .add_note("Instance used here", inv.copy_span()));
+            )));
         }
 
         if let Some(ports) = &inv.ports {
@@ -117,7 +117,7 @@ impl BindCheck<'_> {
             }
 
             // Check the connections implied by the ports
-            let sig = inst.resolve()?;
+            let sig = inst.resolve();
             for (actual, formal) in ports.iter().zip(sig.inputs.iter()) {
                 let dst =
                     ast::Port::comp(inv.bind.clone(), formal.name.clone())
@@ -148,17 +148,7 @@ impl BindCheck<'_> {
                 crate::core::Command::Invoke(inv) => bind_check.invoke(inv)?,
                 crate::core::Command::Instance(inst) => {
                     let sig = binds
-                        .get_component(
-                            &inst.component,
-                            &inst.bindings,
-                            inst.copy_span(),
-                        )
-                        .map_err(|err| {
-                            err.add_note(
-                                "Instance defined here",
-                                inst.copy_span(),
-                            )
-                        })?;
+                        .find_component(&inst.component, &inst.bindings)?;
                     bind_check.instances.add(inst.name.clone(), sig)?;
                 }
                 crate::core::Command::Connect(con) => {

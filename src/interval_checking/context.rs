@@ -3,7 +3,7 @@ use crate::core::{self, WithTime};
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
 use crate::visitor;
-use std::collections::{hash_map::Entry, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 
 pub enum ConcreteInvoke<'a> {
     Concrete {
@@ -42,54 +42,6 @@ impl<'a> ConcreteInvoke<'a> {
     /// Construct an FSM instance
     pub fn fsm_instance(live_time: ast::Interval, fsm: &'a ast::Fsm) -> Self {
         Self::Fsm { live_time, fsm }
-    }
-
-    /// Return the width of a port
-    pub fn port_width<const IS_INPUT: bool>(
-        &self,
-        port: &ast::Id,
-    ) -> Option<u64> {
-        match self {
-            Self::Concrete { sig, .. } => {
-                if IS_INPUT {
-                    sig.inputs.iter().find_map(|p| {
-                        if p.name == port {
-                            Some(p.bitwidth)
-                        } else {
-                            None
-                        }
-                    })
-                } else {
-                    sig.outputs.iter().find_map(|p| {
-                        if p.name == port {
-                            Some(p.bitwidth)
-                        } else {
-                            None
-                        }
-                    })
-                }
-            }
-            Self::This { sig } => {
-                if IS_INPUT {
-                    sig.inputs.iter().find_map(|p| {
-                        if p.name == port {
-                            Some(p.bitwidth)
-                        } else {
-                            None
-                        }
-                    })
-                } else {
-                    sig.outputs.iter().find_map(|p| {
-                        if p.name == port {
-                            Some(p.bitwidth)
-                        } else {
-                            None
-                        }
-                    })
-                }
-            }
-            Self::Fsm { .. } => None,
-        }
     }
 
     /// Resolve a port for this instance and return the requirement or guarantee
@@ -189,13 +141,9 @@ impl<'a> Context<'a> {
         name: ast::Id,
         comp: &ast::Id,
         bindings: &[u64],
-        pos: Option<errors::Span>,
-    ) -> FilamentResult<()> {
-        let sig = self.sigs.get_component(comp, bindings, pos)?;
-        if self.instances.insert(name.clone(), sig).is_some() {
-            return Err(Error::already_bound(name, "instance"));
-        }
-        Ok(())
+    ) {
+        let sig = self.sigs.get_component(comp, bindings);
+        self.instances.insert(name.clone(), sig);
     }
 
     /// Add a new invocation to the context
@@ -203,13 +151,8 @@ impl<'a> Context<'a> {
         &mut self,
         name: ast::Id,
         instance: ConcreteInvoke<'a>,
-    ) -> FilamentResult<()> {
-        if let Entry::Vacant(e) = self.invocations.entry(name.clone()) {
-            e.insert(instance);
-            Ok(())
-        } else {
-            Err(Error::already_bound(name, "invocation"))
-        }
+    ) {
+        self.invocations.insert(name, instance);
     }
 
     /// Add assignments that must be present to make a low-level invoke work
@@ -219,7 +162,7 @@ impl<'a> Context<'a> {
         bind: ast::Id,
         comp: &ast::Id,
     ) -> FilamentResult<()> {
-        let sig = self.get_instance(comp)?;
+        let sig = self.get_instance(comp);
         let ports = sig
             .input_names()
             .into_iter()
@@ -251,7 +194,7 @@ impl<'a> Context<'a> {
         match &port.typ {
             ast::PortType::InvPort { invoke: comp, name } => {
                 // Check if the port is defined
-                self.get_invoke(comp)?.resolve_port::<true>(name)?;
+                self.get_invoke(comp).resolve_port::<true>(name)?;
                 if let Some(ports) = self.remaining_assigns.get_mut(comp) {
                     if !ports.remove(name) {
                         return Err(Error::malformed(format!(
@@ -284,23 +227,13 @@ impl<'a> Context<'a> {
     }
 
     /// Get the signature of the instance associated with `inst`
-    pub fn get_instance(
-        &self,
-        inst: &ast::Id,
-    ) -> FilamentResult<&visitor::ResolvedInstance> {
-        self.instances.get(inst).ok_or_else(|| {
-            Error::undefined(inst.clone(), "instance".to_string())
-        })
+    pub fn get_instance(&self, inst: &ast::Id) -> &visitor::ResolvedInstance {
+        &self.instances[inst]
     }
 
     /// Get the instance associated with `instance`
-    pub fn get_invoke(
-        &self,
-        instance: &ast::Id,
-    ) -> FilamentResult<&ConcreteInvoke> {
-        self.invocations.get(instance).ok_or_else(|| {
-            Error::undefined(instance.clone(), "invocation".to_string())
-        })
+    pub fn get_invoke(&self, instance: &ast::Id) -> &ConcreteInvoke {
+        &self.invocations[instance]
     }
 
     /// Return the remaining assignments in this context
@@ -326,27 +259,11 @@ impl<'a> Context<'a> {
                 None
             }
             ast::PortType::ThisPort(port) => {
-                Some(self.get_invoke(&THIS.into())?.port_guarantees(port)?)
+                Some(self.get_invoke(&THIS.into()).port_guarantees(port)?)
             }
 
             ast::PortType::InvPort { invoke: comp, name } => {
-                Some(self.get_invoke(comp)?.port_guarantees(name)?)
-            }
-        })
-    }
-
-    // Returns the width of a port
-    pub fn get_port_width<const IS_INPUT: bool>(
-        &self,
-        port: &ast::Port,
-    ) -> FilamentResult<Option<u64>> {
-        Ok(match &port.typ {
-            ast::PortType::Constant(_) => None,
-            ast::PortType::ThisPort(port) => {
-                self.get_invoke(&THIS.into())?.port_width::<IS_INPUT>(port)
-            }
-            ast::PortType::InvPort { invoke: comp, name } => {
-                self.get_invoke(comp)?.port_width::<IS_INPUT>(name)
+                Some(self.get_invoke(comp).port_guarantees(name)?)
             }
         })
     }
@@ -362,10 +279,10 @@ impl<'a> Context<'a> {
                 unreachable!("destination port cannot be a constant")
             }
             ast::PortType::ThisPort(port) => {
-                Ok(self.get_invoke(&THIS.into())?.port_requirements(port)?)
+                Ok(self.get_invoke(&THIS.into()).port_requirements(port)?)
             }
             ast::PortType::InvPort { invoke: comp, name } => {
-                Ok(self.get_invoke(comp)?.port_requirements(name)?)
+                Ok(self.get_invoke(comp).port_requirements(name)?)
             }
         }
     }
@@ -383,10 +300,8 @@ impl<'a> Context<'a> {
         Ok(disj.into_iter().flatten())
     }
 
-    pub fn drain_obligations(
-        &mut self,
-    ) -> impl Iterator<Item = ast::Constraint> {
-        std::mem::take(&mut self.obligations).into_iter()
+    pub fn drain_obligations(&mut self) -> Vec<ast::Constraint> {
+        std::mem::take(&mut self.obligations)
     }
 
     /// Generate disjointness constraints for an instance's event bindings.
@@ -396,7 +311,7 @@ impl<'a> Context<'a> {
         args: &[BindsWithLoc],
     ) -> FilamentResult<Vec<ast::Constraint>> {
         // Get the delay associated with each event.
-        let sig = self.get_instance(&instance)?;
+        let sig = self.get_instance(&instance);
 
         // Iterate over each event
         let mut constraints = Vec::new();

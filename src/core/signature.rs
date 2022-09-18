@@ -115,8 +115,10 @@ where
     /// Construct a binding from this Signature
     pub fn binding<'a>(&self, args: &'a [T]) -> Binding<'a, T> {
         debug_assert!(
-            self.abstract_vars.len() != args.len(),
-            "Insuffient events for signature"
+            self.abstract_vars.len() == args.len(),
+            "Insuffient events for signature, required {} got {}",
+            self.abstract_vars.len(),
+            args.len(),
         );
 
         Binding::new(
