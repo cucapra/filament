@@ -1,6 +1,6 @@
 `default_nettype none
 
-module Latch #(
+module Register #(
     parameter WIDTH = 32
 ) (
   input wire clk,

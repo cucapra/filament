@@ -13,7 +13,7 @@ component main<G>(
 ) {
   // Perform the Add
   a0 := new Add[32]<G>(left, right);
-  la := new Latch[32]<G, G+1, G+3>(a0.out);
+  la := new Register[32]<G, G+1, G+3>(a0.out);
 
   // Perform the Mult
   m0 := new Mult<G>(left, right);

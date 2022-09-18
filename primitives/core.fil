@@ -1,6 +1,6 @@
 extern "core.sv" {
   // A register that can extend the lifetime of a signal to any required length.
-  component Latch[WIDTH]<G, S, L>(
+  component Register[WIDTH]<G, S, L>(
     clk: 1,
     reset: 1,
     // -- base ports --
@@ -193,8 +193,8 @@ component Mult<G>(
 ) -> (
   @[G+2, G+3] out: 32,
 ) {
-  ll := new Latch[32]<G, G+1, G+3>(left);
-  lr := new Latch[32]<G, G+1, G+3>(right);
+  ll := new Register[32]<G, G+1, G+3>(left);
+  lr := new Register[32]<G, G+1, G+3>(right);
   m := new MultComb[32]<G+2>(ll.out, lr.out);
   out = m.out;
 }

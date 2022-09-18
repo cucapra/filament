@@ -21,17 +21,17 @@ extern "dummy.sv" {
 // The component produces an output signal that lives for three cycles immediately
 // starting the cycle that `in` is given.
 // We use a merge unit to forward the input signal in the first cycle and
-// latch the output to make it available for the remaining cycles.
+// Register the output to make it available for the remaining cycles.
 component main<G>(
   @interface[G, G+3] go_G: 1,
   @[G, G+1] in: 32
 ) -> (
   @[G, G+3] out: 32
 ) {
-  L := new Latch[32];
+  L := new Register[32];
   M := new Merge;
 
-  // Intentially make the latch exist longer than needed.
+  // Intentially make the Register exist longer than needed.
   l0 := L<G, G+1, G+4>(in);
   m0 := M<G, G+1, G+3>(in, l0.out);
 
