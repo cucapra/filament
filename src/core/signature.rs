@@ -113,22 +113,19 @@ where
     }
 
     /// Construct a binding from this Signature
-    pub fn binding<'a>(&self, args: &'a [T]) -> FilamentResult<Binding<'a, T>> {
-        if self.abstract_vars.len() != args.len() {
-            return Err(Error::malformed(format!(
-                "Cannot construct binding. Expected {} arguments, provided {}",
-                self.abstract_vars.len(),
-                args.len(),
-            )));
-        }
+    pub fn binding<'a>(&self, args: &'a [T]) -> Binding<'a, T> {
+        debug_assert!(
+            self.abstract_vars.len() != args.len(),
+            "Insuffient events for signature"
+        );
 
-        Ok(Binding::new(
+        Binding::new(
             self.abstract_vars
                 .iter()
                 .cloned()
                 .zip(args.iter())
                 .collect(),
-        ))
+        )
     }
 }
 

@@ -156,15 +156,7 @@ fn check_invoke_binds<'a>(
     );
 
     let sig = ctx.get_instance(&invoke.instance)?;
-    let binding = sig.binding(&invoke.abstract_vars).map_err(|err| {
-        err.add_note(
-            format!(
-                "Invocation provides {} events",
-                invoke.abstract_vars.len()
-            ),
-            invoke.copy_span(),
-        )
-    })?;
+    let binding = sig.binding(&invoke.abstract_vars);
     let this_sig = ctx.get_invoke(&THIS.into())?.get_sig();
     let mut constraints = vec![];
 
@@ -227,7 +219,7 @@ fn check_invoke<'a>(
     // requirements
     check_invoke_binds(invoke, ctx)?;
     let sig = ctx.get_instance(&invoke.instance)?.resolve()?;
-    let binding = sig.binding(&invoke.abstract_vars)?;
+    let binding = sig.binding(&invoke.abstract_vars);
 
     // Handle `where` clause constraints and well formedness constraints on intervals.
     sig.well_formed()?.for_each(|con| {

@@ -84,7 +84,7 @@ impl Context<'_> {
                 let this = self.builder.component.signature.borrow();
                 (this.get(p), None)
             }
-            ast::PortType::CompPort { comp, name } => {
+            ast::PortType::InvPort { invoke: comp, name } => {
                 if let Some(fsm) = self.fsms.get(comp) {
                     let cr = self.builder.add_constant(1, 1);
                     let c = cr.borrow();
@@ -143,7 +143,7 @@ fn compile_guard(guard: ast::Guard, ctx: &mut Context) -> ir::Guard {
                 let this = ctx.builder.component.signature.borrow();
                 this.get(p).into()
             }
-            ast::PortType::CompPort { comp, name } => {
+            ast::PortType::InvPort { invoke: comp, name } => {
                 if let Some(fsm) = ctx.fsms.get(comp) {
                     fsm.event(name)
                 } else {

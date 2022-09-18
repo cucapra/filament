@@ -96,16 +96,16 @@ impl Error {
         }
     }
 
-    pub fn undefined(name: Id, kind: String) -> Self {
+    pub fn undefined<S: ToString>(name: Id, kind: S) -> Self {
         Self {
-            kind: ErrorKind::Undefined(name, kind),
+            kind: ErrorKind::Undefined(name, kind.to_string()),
             notes: vec![],
         }
     }
 
-    pub fn already_bound(name: Id, kind: String) -> Self {
+    pub fn already_bound<S: ToString>(name: Id, kind: S) -> Self {
         Self {
-            kind: ErrorKind::AlreadyBound(name, kind),
+            kind: ErrorKind::AlreadyBound(name, kind.to_string()),
             notes: vec![],
         }
     }

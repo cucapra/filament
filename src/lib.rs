@@ -1,5 +1,7 @@
 // pub mod backend;
 pub mod backend;
+pub mod bind_check;
+pub mod bind_map;
 pub mod cmdline;
 pub mod core;
 pub mod dump_interface;
