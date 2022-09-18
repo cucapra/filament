@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -16,56 +16,15 @@ use filament::{
     visitor::Transform,
 };
 
-// Prints out the interface for main component in the input program.
-fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
-    // enable tracing
-    env_logger::Builder::new()
-        .format_timestamp(None)
-        .format_module_path(false)
-        .format_target(false)
-        .filter_level(opts.log_level)
-        .target(env_logger::Target::Stderr)
-        .init();
-
-    let ns = parse_namespace(opts)?;
-
-    // Run the compilation pipeline
-    let t = Instant::now();
-    let ns = event_checker::check_and_transform(ns)?;
-    log::info!("Event check: {}ms", t.elapsed().as_millis());
-    log::trace!("{ns}");
-
-    // Bind check
-    let ns = bind_check::check(ns)?;
-
-    let t = Instant::now();
-    let mut ns = interval_checking::check(ns)?;
-    log::info!("Interval check: {}ms", t.elapsed().as_millis());
-
-    if opts.dump_interface || !opts.check {
-        let t = Instant::now();
-        ns = lower::CompileInvokes::transform(ns)?;
-        log::info!("Lowering: {}ms", t.elapsed().as_millis());
-        log::trace!("{ns}");
-    }
-
-    if opts.dump_interface {
-        dump_interface::DumpInterface::transform(ns)?;
-    } else if !opts.check {
-        let t = Instant::now();
-        backend::compile(ns, opts)?;
-        log::info!("Compilation: {}ms", t.elapsed().as_millis());
-    }
-
-    Ok(())
-}
-
 /// Parse a completely resovled namespace from an input file. Recursively parses all imported files and resolves
 /// the paths for externs.
 fn parse_namespace(
     opts: &cmdline::Opts,
 ) -> FilamentResult<frontend::ast::Namespace> {
     let mut ns = frontend::FilamentParser::parse_file(&opts.input)?;
+
+    // Files that have already been imported
+    let mut already_imported = HashSet::new();
 
     // Resolve import either using opts.library or relative the parent directory of the input file.
     let resolve_import =
@@ -117,7 +76,19 @@ fn parse_namespace(
     let mut imports: Vec<PathBuf> = ns
         .imports
         .drain(..)
-        .map(|imp| resolve_import(&imp, &base))
+        .filter_map(|s| {
+            let f = resolve_import(&s, &base);
+            if let Ok(file) = f {
+                if !already_imported.contains(&file) {
+                    already_imported.insert(file.clone());
+                    Some(Ok(file))
+                } else {
+                    None
+                }
+            } else {
+                Some(f)
+            }
+        })
         .collect::<FilamentResult<_>>()?;
 
     ns.externs = ns
@@ -140,11 +111,69 @@ fn parse_namespace(
         imports.extend(
             imp.imports
                 .into_iter()
-                .map(|s| resolve_import(&s, &base))
+                .filter_map(|s| {
+                    let f = resolve_import(&s, &base);
+                    if let Ok(file) = f {
+                        if !already_imported.contains(&file) {
+                            already_imported.insert(file.clone());
+                            Some(Ok(file))
+                        } else {
+                            None
+                        }
+                    } else {
+                        Some(f)
+                    }
+                })
                 .collect::<FilamentResult<Vec<_>>>()?,
         );
     }
     Ok(ns)
+}
+
+// Prints out the interface for main component in the input program.
+fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
+    // enable tracing
+    env_logger::Builder::new()
+        .format_timestamp(None)
+        .format_module_path(false)
+        .format_target(false)
+        .filter_level(opts.log_level)
+        .target(env_logger::Target::Stderr)
+        .init();
+
+    let ns = parse_namespace(opts)?;
+
+    // Run the compilation pipeline
+    let t = Instant::now();
+    let ns = event_checker::check_and_transform(ns)?;
+    log::info!("Event check: {}ms", t.elapsed().as_millis());
+    log::trace!("{ns}");
+
+    // Bind check
+    let t = Instant::now();
+    let ns = bind_check::check(ns)?;
+    log::info!("Bind check: {}ms", t.elapsed().as_millis());
+
+    let t = Instant::now();
+    let mut ns = interval_checking::check(ns)?;
+    log::info!("Interval check: {}ms", t.elapsed().as_millis());
+
+    if opts.dump_interface || !opts.check {
+        let t = Instant::now();
+        ns = lower::CompileInvokes::transform(ns)?;
+        log::info!("Lowering: {}ms", t.elapsed().as_millis());
+        log::trace!("{ns}");
+    }
+
+    if opts.dump_interface {
+        dump_interface::DumpInterface::transform(ns)?;
+    } else if !opts.check {
+        let t = Instant::now();
+        backend::compile(ns, opts)?;
+        log::info!("Compilation: {}ms", t.elapsed().as_millis());
+    }
+
+    Ok(())
 }
 
 fn main() {
