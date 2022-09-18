@@ -1,6 +1,6 @@
 import "primitives/core.fil";
-import "primitives/fp-support.fil";
 import "primitives/signed.fil";
+import "../fp-support.fil";
 
 component FPAdd<G>(
   @interface[G, G+1] go: 1,
@@ -11,13 +11,13 @@ component FPAdd<G>(
 ) {
   // ---------- Stage 1 ----------
   // left[30:23]
-  e1 := new Slice30_23<G>(left);
+  e1 := new GetExp<G>(left);
   // right[30:23]
-  e2 := new Slice30_23<G>(right);
+  e2 := new GetExp<G>(right);
   // left[22:0]
-  m1 := new Slice22_0<G>(left);
+  m1 := new GetMant<G>(left);
   // right[22:0]
-  m2 := new Slice22_0<G>(right);
+  m2 := new GetMant<G>(right);
   // left[31]
   s1 := new Select[32, 31]<G>(left);
   // right[31]
@@ -42,12 +42,12 @@ component FPAdd<G>(
   // e1 > e2 ? m1 : m2
   large_mant := new Mux[23]<G>(gt0.out, m1.out, m2.out);
 
-  e1_is_zero := new IsZero[8]<G>(e1.out);
-  e2_is_zero := new IsZero[8]<G>(e2.out);
+  zero8 := new Const[8, 0]<G>();
+  e1_is_zero := new Eq[8]<G>(e1.out, zero8.out);
+  e2_is_zero := new Eq[8]<G>(e2.out, zero8.out);
   exp_is_zero := new Or[1]<G>(e1_is_zero.out, e2_is_zero.out);
 
   // e1 == 0 | e2 == 0 ? 0 : num_shift_tmp
-  zero8 := new Const[8, 4]<G>();
   num_shift := new Mux[8]<G>(exp_is_zero.out, zero8.out, num_shift_tmp.out);
 
   // ---------- 1 => 2 ----------
@@ -113,8 +113,9 @@ component FPAdd<G>(
   sign_eq := new Eq[1]<G+3>(s1_s4.out, s2_s4.out);
   sign_sel := new Mux[24]<G+3>(sign_eq.out, mant_sum.out, mant_sub.out);
 
-  e1_zero := new IsZero[8]<G+3>(e1_s4.out);
-  e2_zero := new IsZero[8]<G+3>(e2_s4.out);
+  zero8_3 := new Const[8, 0]<G+3>();
+  e1_zero := new Eq[8]<G+3>(e1_s4.out, zero8_3.out);
+  e2_zero := new Eq[8]<G+3>(e2_s4.out, zero8_3.out);
   either_zero := new Or[1]<G+3>(e1_zero.out, e2_zero.out);
 
   add_mant := new Mux[24]<G+3>(either_zero.out, l_mant_s4_ext.out, sign_sel.out);
@@ -151,12 +152,11 @@ component FPAdd<G>(
   n_two := new NegConst[8, 2]<G+3>();
   n_three := new NegConst[8, 3]<G+3>();
   one8 := new Const[8, 1]<G+3>();
-  zero8_1 := new Const[8, 0]<G+3>();
 
-  rne_5 := new Mux[8]<G+3>(am_19_one.out, n_three.out, zero8_1.out);
+  rne_5 := new Mux[8]<G+3>(am_19_one.out, n_three.out, zero8_3.out);
   rne_4 := new Mux[8]<G+3>(am_20_one.out, n_two.out, rne_5.out);
   rne_3 := new Mux[8]<G+3>(am_21_one.out, n_one.out, rne_4.out);
-  rne_2 := new Mux[8]<G+3>(am_22_one.out, zero8_1.out, rne_3.out);
+  rne_2 := new Mux[8]<G+3>(am_22_one.out, zero8_3.out, rne_3.out);
   renorm_exp := new Mux[8]<G+3>(am_23_one.out, one8.out, rne_2.out);
 
   // ---------- 4 => 5 ----------
@@ -178,9 +178,10 @@ component FPAdd<G>(
 
   // Compute final mantissa
   shifted_add_mant := new ShiftLeft24<G+4>(add_mant_s5.out, renorm_shift_s5.out);
-  rns_is_zero := new IsZero[4]<G+4>(renorm_shift_s5.out);
+  zero4 := new Const[4, 0]<G+4>();
+  rns_is_zero := new Eq[4]<G+4>(renorm_shift_s5.out, zero4.out);
   add1_mant := new Mux[24]<G+4>(rns_is_zero.out, add_mant_s5.out, shifted_add_mant.out);
-  final_mant := new Slice23_1<G+4>(add1_mant.out);
+  final_mant := new Slice[24, 23, 1, 23]<G+4>(add1_mant.out);
 
   // Compute final sign
   e1_gt_e2 := new Gt[8]<G+4>(e1_s5.out, e2_s5.out);
@@ -191,9 +192,7 @@ component FPAdd<G>(
   fs_2 := new Mux[1]<G+4>(e2_gt_e1.out, s2_s5.out, fs_1.out);
   fs_3 := new Mux[1]<G+4>(e1_gt_e2.out, s1_s5.out, fs_2.out);
   final_sign := new Mux[1]<G+4>(sign_eq_s5.out, s1_s5.out, fs_3.out);
-  result := new MergeRes<G+4>(final_sign.out, final_exp.out, final_mant.out);
+  result := new GetResult<G+4>(final_sign.out, final_exp.out, final_mant.out);
 
   out = result.out;
-
 }
-
