@@ -1,2 +1,4 @@
+mod binding;
 mod visit;
-pub use visit::{Bindings, ResolvedInstance, Transform};
+pub use binding::{Bindings, ResolvedInstance};
+pub use visit::Transform;
