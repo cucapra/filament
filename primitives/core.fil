@@ -9,6 +9,7 @@ extern "core.sv" {
     @[G, G+1] in: WIDTH,
   ) -> (
     @[S, L] out: WIDTH,
+    @[G, G+1] prev: WIDTH,
   ) where S = G+1, L > S;
 
   component Mux[WIDTH]<G>(
