@@ -1,0 +1,82 @@
+import "primitives/core.fil";
+
+component GetExp<G>(
+  @interface[G, G+1] go: 1,
+  @[G, G+1] in: 32
+) -> (
+  @[G, G+1] out: 8,
+) {
+  exp := new Slice[32,30,23,8]<G>(in);
+  out = exp.out;
+}
+
+component GetMant<G>(
+  @interface[G, G+1] go: 1,
+  @[G, G+1] in: 32
+) -> (
+  @[G, G+1] out: 23,
+) {
+  exp := new Slice[32,22,0,23]<G>(in);
+  out = exp.out;
+}
+
+component GetResult<G>(
+  @interface[G, G+1] go: 1,
+  @[G, G+1] sign: 1,
+  @[G, G+1] exp: 8,
+  @[G, G+1] mant: 23,
+) -> (
+  @[G, G+1] out: 32,
+) {
+  sign_exp := new Concat[1, 8, 9]<G>(sign, exp);
+  res := new Concat[9, 23, 32]<G>(sign_exp.out, mant);
+  out = res.out;
+}
+
+component IsOne<G>(
+  @interface[G, G+1] go: 1,
+  @[G, G+1] in: 1,
+) -> (
+  @[G, G+1] out: 1,
+) {
+  one := new Const[1, 1]<G>();
+  eq := new Eq[1]<G>(in, one.out);
+  out = eq.out;
+}
+
+component ShiftRight23<G>(
+  @interface[G, G+1] go: 1,
+  @[G, G+1] in: 23,
+  @[G, G+1] amount: 8,
+) -> (
+  @[G, G+1] out: 23,
+) {
+  ext := new ZeroExtend[8, 23]<G>(amount);
+  shr := new ShiftRight[23]<G>(in, ext.out);
+  out = shr.out;
+}
+
+component ShiftLeft24<G>(
+  @interface[G, G+1] _go: 1,
+  @[G, G+1] in: 24,
+  @[G, G+1] amount: 4,
+) -> (
+  @[G, G+1] out: 24,
+) {
+  ext := new ZeroExtend[4, 24]<G>(amount);
+  shl := new ShiftLeft[24]<G>(in, ext.out);
+  out = shl.out;
+}
+
+// Computes out = {1'b1,in[22:1]};
+component NormInp<G>(
+  @interface[G, G+1] go: 1,
+  @[G, G+1] in: 23,
+) -> (
+  @[G, G+1] out: 23,
+) {
+  sl := new Slice[23, 22, 1, 22]<G>(in);
+  one := new Const[1, 1]<G>();
+  cat := new Concat[1, 22, 23]<G>(one.out, sl.out);
+  out = cat.out;
+}

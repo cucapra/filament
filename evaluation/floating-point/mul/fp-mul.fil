@@ -1,5 +1,5 @@
 import "primitives/core.fil";
-import "primitives/fp-support.fil";
+import "../fp-support.fil";
 
 // Computes:
 // out = |in[30:23] ? {1'b1,in[22:0]} : {1'b0,in[22:0]}
@@ -9,8 +9,8 @@ component ComputeOp<G>(
 ) -> (
   @[G, G+1] out: 24,
 ) {
-  exp := new Slice30_23<G>(in);
-  mant := new Slice22_0<G>(in);
+  exp := new GetExp<G>(in);
+  mant := new GetMant<G>(in);
 
   exp_red := new ReduceOr[8]<G>(exp.out);
   zero_1 := new Const[1, 0]<G>();
@@ -19,19 +19,6 @@ component ComputeOp<G>(
   op := new Concat[1, 23, 24]<G>(ext.out, mant.out);
 
   out = op.out;
-}
-
-component GetResult<G>(
-  @interface[G, G+1] go: 1,
-  @[G, G+1] sign: 1,
-  @[G, G+1] exp: 8,
-  @[G, G+1] mant: 23,
-) -> (
-  @[G, G+1] out: 32,
-) {
-  sign_exp := new Concat[1, 8, 9]<G>(sign, exp);
-  res := new Concat[9, 23, 32]<G>(sign_exp.out, mant);
-  out = res.out;
 }
 
 component FP_Mult<G>(
@@ -48,8 +35,8 @@ component FP_Mult<G>(
   b31 := new Select[32, 31]<G>(b);
   sign := new Xor[1]<G>(a31.out, b31.out);
 
-  exp_a := new Slice30_23<G>(a);
-  exp_b := new Slice30_23<G>(b);
+  exp_a := new GetExp<G>(a);
+  exp_b := new GetExp<G>(b);
   exp_a_and := new ReduceAnd[8]<G>(exp_a.out);
   exp_b_and := new ReduceAnd[8]<G>(exp_b.out);
   exception := new Or[1]<G>(exp_a_and.out, exp_b_and.out);
