@@ -24,7 +24,7 @@ fn guard_availability(
                 ast::PortType::ThisPort(name) => {
                     ctx.get_invoke(&THIS.into())?.port_guarantees(name)?
                 }
-                ast::PortType::CompPort { comp, name } => {
+                ast::PortType::InvPort { invoke: comp, name } => {
                     ctx.get_invoke(comp)?.port_guarantees(name)?
                 }
                 ast::PortType::Constant(_) => {

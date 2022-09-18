@@ -11,7 +11,7 @@ impl Port {
     pub fn name(&self) -> &Id {
         match &self.typ {
             PortType::ThisPort(n) => n,
-            PortType::CompPort { name, .. } => name,
+            PortType::InvPort { name, .. } => name,
             PortType::Constant(_) => {
                 unreachable!("Port::name called on Constant")
             }
@@ -36,14 +36,14 @@ impl errors::WithPos for Port {
 
 pub enum PortType {
     ThisPort(Id),
-    CompPort { comp: Id, name: Id },
+    InvPort { invoke: Id, name: Id },
     Constant(u64),
 }
 
 impl Port {
     pub fn comp(comp: Id, name: Id) -> Self {
         Port {
-            typ: PortType::CompPort { comp, name },
+            typ: PortType::InvPort { invoke: comp, name },
             pos: None,
         }
     }
@@ -67,7 +67,9 @@ impl std::fmt::Display for PortType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             PortType::ThisPort(p) => write!(f, "{}", p),
-            PortType::CompPort { comp, name } => write!(f, "{}.{}", comp, name),
+            PortType::InvPort { invoke: comp, name } => {
+                write!(f, "{}.{}", comp, name)
+            }
             PortType::Constant(n) => write!(f, "{}", n),
         }
     }

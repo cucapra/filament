@@ -191,9 +191,9 @@ impl<'a> Context<'a> {
         bindings: &[u64],
         pos: Option<errors::Span>,
     ) -> FilamentResult<()> {
-        let sig = self.sigs.get(comp, bindings, pos)?;
+        let sig = self.sigs.get_component(comp, bindings, pos)?;
         if self.instances.insert(name.clone(), sig).is_some() {
-            return Err(Error::already_bound(name, "instance".to_string()));
+            return Err(Error::already_bound(name, "instance"));
         }
         Ok(())
     }
@@ -208,7 +208,7 @@ impl<'a> Context<'a> {
             e.insert(instance);
             Ok(())
         } else {
-            Err(Error::already_bound(name, "invocation".to_string()))
+            Err(Error::already_bound(name, "invocation"))
         }
     }
 
@@ -249,7 +249,7 @@ impl<'a> Context<'a> {
         port: &ast::Port,
     ) -> FilamentResult<()> {
         match &port.typ {
-            ast::PortType::CompPort { comp, name } => {
+            ast::PortType::InvPort { invoke: comp, name } => {
                 // Check if the port is defined
                 self.get_invoke(comp)?.resolve_port::<true>(name)?;
                 if let Some(ports) = self.remaining_assigns.get_mut(comp) {
@@ -329,7 +329,7 @@ impl<'a> Context<'a> {
                 Some(self.get_invoke(&THIS.into())?.port_guarantees(port)?)
             }
 
-            ast::PortType::CompPort { comp, name } => {
+            ast::PortType::InvPort { invoke: comp, name } => {
                 Some(self.get_invoke(comp)?.port_guarantees(name)?)
             }
         })
@@ -345,7 +345,7 @@ impl<'a> Context<'a> {
             ast::PortType::ThisPort(port) => {
                 self.get_invoke(&THIS.into())?.port_width::<IS_INPUT>(port)
             }
-            ast::PortType::CompPort { comp, name } => {
+            ast::PortType::InvPort { invoke: comp, name } => {
                 self.get_invoke(comp)?.port_width::<IS_INPUT>(name)
             }
         })
@@ -364,7 +364,7 @@ impl<'a> Context<'a> {
             ast::PortType::ThisPort(port) => {
                 Ok(self.get_invoke(&THIS.into())?.port_requirements(port)?)
             }
-            ast::PortType::CompPort { comp, name } => {
+            ast::PortType::InvPort { invoke: comp, name } => {
                 Ok(self.get_invoke(comp)?.port_requirements(name)?)
             }
         }
@@ -407,7 +407,7 @@ impl<'a> Context<'a> {
                 // For each event
                 for (i, (spi, bi)) in args.iter().enumerate() {
                     // Delay implied by the i'th binding
-                    let i_delay = id.delay().resolve(&sig.binding(bi)?);
+                    let i_delay = id.delay().resolve(&sig.binding(bi));
                     // The i'th use conflicts with all other uses
                     for (k, (spk, bk)) in args.iter().enumerate() {
                         if i == k {

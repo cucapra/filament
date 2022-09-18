@@ -52,6 +52,7 @@ impl WithPos for ResolvedInstance<'_> {
 }
 
 impl<'a> ResolvedInstance<'a> {
+    // Return the abstract variables defined by the signature of this instance.
     pub fn abstract_vars(&self) -> &[ast::Id] {
         match self {
             ResolvedInstance::Bound { sig, .. } => &sig.abstract_vars,
@@ -103,10 +104,7 @@ impl<'a> ResolvedInstance<'a> {
         }
     }
 
-    pub fn binding(
-        &self,
-        abs: &'a [ast::TimeRep],
-    ) -> FilamentResult<ast::Binding> {
+    pub fn binding(&self, abs: &'a [ast::TimeRep]) -> ast::Binding {
         match self {
             ResolvedInstance::Bound { sig, .. } => sig.binding(abs),
             ResolvedInstance::Concrete { sig, .. } => sig.binding(abs),
@@ -131,12 +129,13 @@ impl<'a> Bindings<'a> {
         }
     }
 
+    /// Add a component definition to the environment
     pub fn add_component(&mut self, comp: ast::Component) {
         self.comps.push(comp);
     }
 
     /// Get a binding associated with a name
-    pub fn get(
+    pub fn get_component(
         &'a self,
         name: &ast::Id,
         binds: &[u64],
@@ -149,14 +148,8 @@ impl<'a> Bindings<'a> {
                 .iter()
                 .find(|c| c.sig.name == name)
                 .map(|comp| ResolvedInstance::concrete(&comp.sig))
-                .ok_or_else(|| {
-                    Error::malformed(format!("No binding for {}", name))
-                })
+                .ok_or_else(|| Error::undefined(name.clone(), "component"))
         }
-    }
-
-    pub fn add_comp(&mut self, comp: ast::Component) {
-        self.comps.push(comp);
     }
 }
 impl From<Bindings<'_>> for Vec<ast::Component> {
@@ -252,7 +245,11 @@ where
                 }
                 crate::core::Command::Instance(inst) => {
                     let sig = binds
-                        .get(&inst.component, &inst.bindings, inst.copy_span())
+                        .get_component(
+                            &inst.component,
+                            &inst.bindings,
+                            inst.copy_span(),
+                        )
                         .map_err(|err| {
                             err.add_note(
                                 "Instance defined here",
@@ -288,7 +285,7 @@ where
             } else {
                 comp
             };
-            binds.add_comp(ncomp);
+            binds.add_component(ncomp);
         }
 
         Ok(ast::Namespace {

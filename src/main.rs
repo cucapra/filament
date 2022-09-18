@@ -10,7 +10,7 @@ use codespan_reporting::{
     term::{self, termcolor::ColorChoice, termcolor::StandardStream},
 };
 use filament::{
-    backend, cmdline, dump_interface,
+    backend, bind_check, cmdline, dump_interface,
     errors::{self, FilamentResult},
     event_checker, frontend, interval_checking, lower,
     visitor::Transform,
@@ -34,6 +34,10 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     let ns = event_checker::check_and_transform(ns)?;
     log::info!("Event check: {}ms", t.elapsed().as_millis());
     log::trace!("{ns}");
+
+    // Bind check
+    let ns = bind_check::check(ns)?;
+
     let t = Instant::now();
     let mut ns = interval_checking::check(ns)?;
     log::info!("Interval check: {}ms", t.elapsed().as_millis());
