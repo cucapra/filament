@@ -1,0 +1,14 @@
+---CODE---
+1
+---STDERR---
+error: Cannot prove constraint |G - G+10| >= max(G + |G - G+2|, G+9 + |G+9 - G+11|) - min(G, G+9)
+   ┌─ tests/errors/share-range.fil:4:3
+   │
+ 4 │   @interface[G, G+10] go_G: 1,
+   │   ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Event's delay must be longer than the difference between minimum start time and maximum end time of all other bindings.
+   ·
+12 │   m0 := M<G>(l0, r0);
+   │   ------------------- Invocation starts at `G' and finishes at `G+|G - G+2|'
+13 │   m1 := M<G+9>(l1, r1);
+   │   --------------------- Invocation starts at `G+9' and finishes at `G+9+|G+9 - G+11|'
+

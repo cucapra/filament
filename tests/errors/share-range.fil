@@ -1,0 +1,14 @@
+import "primitives/core.fil";
+
+component Main<G>(
+  @interface[G, G+10] go_G: 1,
+  @[G, G+1] l0: 32,
+  @[G, G+1] r0: 32,
+  @[G+9, G+10] l1: 32,
+  @[G+9, G+10] r1: 32,
+) -> () {
+  M := new Mult;
+
+  m0 := M<G>(l0, r0);
+  m1 := M<G+9>(l1, r1);
+}
