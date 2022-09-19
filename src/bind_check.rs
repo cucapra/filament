@@ -14,7 +14,7 @@ struct BindCheck<'a> {
     invocations: BindMap<ast::Id>,
 }
 
-/// Transform the given AST
+/// Transform the givun AST
 impl BindCheck<'_> {
     fn new() -> Self {
         Self {

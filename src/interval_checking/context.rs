@@ -359,6 +359,33 @@ impl<'a> Context<'a> {
         Ok(())
     }
 
+    /// Constraint generated for disjointness
+    fn disjointness_constraint(
+        instance: &ast::Id,
+        abs: &ast::Id,
+        (i_event, spi): (&ast::TimeRep, Option<errors::Span>),
+        (k_event, spk): (&ast::TimeRep, Option<errors::Span>),
+        i_delay: &core::TimeSub<core::FsmIdxs>,
+        id_pos: Option<errors::Span>,
+    ) -> core::Constraint<core::FsmIdxs> {
+        ast::Constraint::from(ast::CBS::gte(
+            i_event.clone() - k_event.clone(),
+            i_delay.clone(),
+        ))
+        .add_note(
+            format!("Conflicting invoke. Invoke provides binding {instance}.{abs}={k_event}"),
+            spk.clone(),
+        )
+        .add_note(
+            format!("Invoke provides binding {instance}.{abs}={i_event}"),
+            spi.clone(),
+        )
+        .add_note(
+            format!("@interface for {abs} specifies that invokes must be {i_delay} cycles apart"),
+            id_pos,
+        )
+    }
+
     /// Generate disjointness constraints for an instance's event bindings.
     fn disjointness(
         &self,
@@ -388,33 +415,14 @@ impl<'a> Context<'a> {
                             continue;
                         }
 
-                        constraints.push(
-                            ast::Constraint::from(ast::CBS::gte(
-                                bi[idx].clone() - bk[idx].clone(),
-                                i_delay.clone(),
-                            ))
-                            .add_note(
-                                format!(
-                                    "Conflicting invoke. Invoke provides binding {instance}.{abs}={}",
-                                    bk[idx],
-                                ),
-                                spk.clone(),
-                            )
-                            .add_note(
-                                format!(
-                                    "Invoke provides binding {instance}.{abs}={}",
-                                    bi[idx],
-                                ),
-                                spi.clone(),
-                            )
-                            .add_note(
-                                format!(
-                                    "@interface for {abs} specifies that invokes must be {} cycles apart",
-                                    i_delay
-                                ),
-                                id.copy_span()
-                            )
-                        )
+                        constraints.push(Context::disjointness_constraint(
+                            &instance,
+                            abs,
+                            (&bi[idx], spi.clone()),
+                            (&bk[idx], spk.clone()),
+                            &i_delay,
+                            id.copy_span(),
+                        ))
                     }
                 }
             }
