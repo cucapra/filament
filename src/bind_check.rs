@@ -28,26 +28,34 @@ impl BindCheck<'_> {
         &mut self,
         port: &ast::Port,
     ) -> FilamentResult<u64> {
-        let check_port = |instance: &ast::Id,
-                          p: &ast::Id|
-         -> FilamentResult<u64> {
-            let sig = self
-                .instances
-                .get(instance)
-                .expect("THIS component is not defined")
-                .resolve();
-            let mut iter = if INPUT {
-                sig.inputs.iter()
-            } else {
-                sig.outputs.iter()
+        let check_port =
+            |instance: &ast::Id, p: &ast::Id| -> FilamentResult<u64> {
+                let sig = self
+                    .instances
+                    .get(instance)
+                    .expect("THIS component is not defined")
+                    .resolve();
+                let mut iter = if INPUT {
+                    sig.inputs.iter()
+                } else {
+                    sig.outputs.iter()
+                };
+                let kind = if INPUT { "input" } else { "output" };
+                iter.find(|p1| p1.name == p)
+                    .map(|p| p.bitwidth)
+                    // XXX(rachit): Always search interface ports regardless of input or output because we don't
+                    // correctly reverse them.
+                    .or_else(|| {
+                        sig.interface_signals
+                            .iter()
+                            .find(|def| def.name == p)
+                            .map(|_| 1)
+                    })
+                    .ok_or_else(|| {
+                        Error::undefined(ast::Id::from(format!("{port}")), kind)
+                            .add_note("Port is not defined", port.copy_span())
+                    })
             };
-            iter.find(|p1| p1.name == p)
-                .map(|p| p.bitwidth)
-                .ok_or_else(|| {
-                    Error::undefined(ast::Id::from(format!("{port}")), "port")
-                        .add_note("Port is not defined", port.copy_span())
-                })
-        };
 
         match &port.typ {
             ast::PortType::ThisPort(p) => check_port(&ast::Id::from(THIS), p),
@@ -99,9 +107,12 @@ impl BindCheck<'_> {
         let actuals = inv.abstract_vars.len();
         if formals != actuals {
             return Err(Error::malformed(format!(
-                "Invoke of {} requires {formals} events but {actuals} were provided",
+                "Invoke of {} requires {formals} events but {actuals} are provided",
                 inv.instance,
-            )));
+            )).add_note(
+                format!("Invoke requires {formals} events but {actuals} are provided"),
+                inv.instance.copy_span()
+            ));
         }
 
         if let Some(ports) = &inv.ports {

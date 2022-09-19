@@ -105,9 +105,9 @@ where
 {
     /// Name of the port
     pub name: Id,
-    // Event that this port is an evidence of
+    /// Event that this port is an evidence of
     pub event: Id,
-    // End event
+    /// End event
     pub end: T,
     // Liveness of the interface signal
     pub(super) liveness: Interval<T>,
