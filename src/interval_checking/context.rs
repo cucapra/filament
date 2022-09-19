@@ -304,12 +304,70 @@ impl<'a> Context<'a> {
         std::mem::take(&mut self.obligations)
     }
 
+    /// # Constraints generated from sharing instances
+    /// If a resource is shared at events Gi, then for all events T defined by
+    /// the resource, where dT defines the delay for T, and dG is the delay for
+    /// G, we have:
+    /// dG >= max(Gi+dT) - min(Gi)
+    ///
+    /// In other words, the delay of the events trigger the shared instance
+    /// should be greater that the range occupied by the invocations of the
+    /// instance.
+    fn sharing_constraints(
+        &self,
+        instance: ast::Id,
+        args: &[BindsWithLoc],
+    ) -> FilamentResult<Vec<ast::Constraint>> {
+        todo!()
+    }
+
+    fn sharing_same_events(
+        &self,
+        instance: &ast::Id,
+        args: &[BindsWithLoc],
+    ) -> FilamentResult<()> {
+        // Get the delay associated with each event.
+        let sig = self.get_instance(&instance);
+        // Ensure that all bindings of an event variable use the same events
+        for (idx, abs) in sig.abstract_vars().iter().enumerate() {
+            // Ignore events without an associated interface port.
+            if sig.get_interface(abs).is_some() {
+                let mut iter =
+                    args.iter().map(|(pos, binds)| (pos, &binds[idx]));
+
+                if let Some((fpos, first)) = iter.next() {
+                    for (epos, event) in iter {
+                        if event
+                            .events()
+                            .map(|(ev, _)| ev)
+                            .collect::<HashSet<_>>()
+                            != first
+                                .events()
+                                .map(|(ev, _)| ev)
+                                .collect::<HashSet<_>>()
+                        {
+                            return Err(Error::malformed(format!(
+                                "Bindings for {instance}.{abs} uses multiple events: {first} and {event}. Sharing using multiple events is not supported.",
+                            ))
+                            .add_note(format!("Location provides binding {instance}.{abs}={first}"), fpos.clone())
+                            .add_note(format!("Location provides binding {instance}.{abs}={event}"), epos.clone()));
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Generate disjointness constraints for an instance's event bindings.
     fn disjointness(
         &self,
         instance: ast::Id,
         args: &[BindsWithLoc],
     ) -> FilamentResult<Vec<ast::Constraint>> {
+        // Ensure that bindings for events variables use the same variables.
+        self.sharing_same_events(&instance, args)?;
+
         // Get the delay associated with each event.
         let sig = self.get_instance(&instance);
 
@@ -317,7 +375,8 @@ impl<'a> Context<'a> {
         let mut constraints = Vec::new();
         for (idx, abs) in sig.abstract_vars().iter().enumerate() {
             // If there is no interface port associated with an event, it is ignored.
-            // This only happens for primitive components.
+            // This only happens for primitive components such as the Register which does
+            // not define an interface port for its end time.
             if let Some(id) = sig.get_interface(abs) {
                 // For each event
                 for (i, (spi, bi)) in args.iter().enumerate() {
