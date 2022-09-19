@@ -1,23 +1,54 @@
-use crate::errors::{Error, FilamentResult};
+use crate::errors::{self, Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
 use itertools::Itertools;
 use rsmt2::{SmtConf, Solver};
 
+#[derive(Default)]
 pub struct ShareConstraints {
     /// The events used to compute the minimum of start times
     min: Vec<ast::TimeRep>,
     /// The (event, delay) to compute the max of start times
     max: Vec<(ast::TimeRep, ast::TimeSub)>,
     /// Delays bounded by this share constraint
-    delays: Vec<ast::TimeSub>,
+    delays: Vec<ast::InterfaceDef>,
+    /// Additional error information
+    notes: Vec<(String, Option<errors::Span>)>,
 }
 impl ShareConstraints {
-    pub fn new(
-        min: Vec<ast::TimeRep>,
-        max: Vec<(ast::TimeRep, ast::TimeSub)>,
-        delays: Vec<ast::TimeSub>,
-    ) -> Self {
-        Self { min, max, delays }
+    pub fn add_note<S: Into<String>>(
+        &mut self,
+        msg: S,
+        pos: Option<errors::Span>,
+    ) {
+        self.notes.push((msg.into(), pos));
+    }
+
+    pub fn notes(self) -> Vec<(String, Option<errors::Span>)> {
+        self.notes
+    }
+
+    pub fn add_bind_info(
+        &mut self,
+        start: ast::TimeRep,
+        end: (ast::TimeRep, ast::TimeSub),
+        pos: Option<errors::Span>,
+    ) {
+        self.add_note(
+            format!(
+                "Invocation starts at `{start}' and finishes at `{}+{}'",
+                end.0, end.1
+            ),
+            pos,
+        );
+        self.min.push(start);
+        self.max.push(end);
+    }
+
+    pub fn add_delays(
+        &mut self,
+        delays: impl Iterator<Item = ast::InterfaceDef>,
+    ) {
+        self.delays.extend(delays);
     }
 }
 impl std::fmt::Display for ShareConstraints {
@@ -28,7 +59,8 @@ impl std::fmt::Display for ShareConstraints {
             .iter()
             .map(|(t, d)| format!("{} + {}", t, d))
             .join(", ");
-        let delays = self.delays.iter().map(|d| d.to_string()).join(", ");
+        let delays =
+            self.delays.iter().map(|d| d.delay().to_string()).join(", ");
         write!(f, "{delays} >= max({max}) - min({min})")
     }
 }
@@ -52,7 +84,9 @@ impl From<&ShareConstraints> for Vec<SExp> {
             .unwrap();
         sh.delays
             .iter()
-            .map(|d| SExp(format!("(>= {} (- {max} {min}))", SExp::from(d))))
+            .map(|d| {
+                SExp(format!("(>= {} (- {max} {min}))", SExp::from(&d.delay())))
+            })
             .collect()
     }
 }
@@ -148,11 +182,16 @@ impl FilSolver {
             }
         }
         for share in sharing {
-            for sexp in Vec::<SExp>::from(&share) {
+            for (idx, sexp) in Vec::<SExp>::from(&share).iter().enumerate() {
                 if !self.check_fact(sexp.clone())? {
-                    return Err(Error::malformed(format!(
+                    let mut err = Error::malformed(format!(
                         "Cannot prove constraint {share}"
-                    )));
+                    ));
+                    err = err.add_note("Event's delay must be longer than the difference between minimum start time and maximum end time of all other bindings.", share.delays[idx].copy_span());
+                    for (msg, pos) in share.notes() {
+                        err = err.add_note(msg, pos.clone())
+                    }
+                    return Err(err);
                 }
             }
         }
