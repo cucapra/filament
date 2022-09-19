@@ -134,12 +134,15 @@ class CocotbExecBase(Stage):
             """
             # Switch to the tmpdir
             os.chdir(Path(dir))
+            # Randomize value
+            randomize = config.get(["stages", self.name, "randomize"])
             # Execute the make command
             cmd = " ".join([
                 "make", "-B",
                 # XXX(rachit): we shouldn't need this .data here
                 f"INTERFACE={interface.data}",
-                f"DATA_FILE={data}"
+                f"DATA_FILE={data}",
+                f"RANDOMIZE={int(randomize)}" if randomize is not None else "",
             ])
             return shell(cmd)
 
