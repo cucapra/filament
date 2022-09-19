@@ -1,4 +1,4 @@
-use super::THIS;
+use super::{ShareConstraints, THIS};
 use crate::core::{self, WithTime};
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
@@ -288,40 +288,28 @@ impl<'a> Context<'a> {
     }
 
     /// Construct disjointness constraints for the current context
-    pub fn drain_disjointness(
+    pub fn drain_sharing(
         &mut self,
-    ) -> FilamentResult<impl Iterator<Item = ast::Constraint>> {
+    ) -> FilamentResult<(Vec<ast::Constraint>, Vec<ShareConstraints>)> {
         let evs = std::mem::take(&mut self.event_binds);
-        let disj = evs
+        let all = evs
             .into_iter()
-            .map(|(inst, binds)| self.disjointness(inst, &binds))
+            .map(|(inst, binds)| self.sharing_constraints(inst, &binds))
             .collect::<FilamentResult<Vec<_>>>()?;
-
-        Ok(disj.into_iter().flatten())
+        let mut cons = Vec::new();
+        let mut share = Vec::new();
+        for (c, s) in all {
+            cons.extend(c);
+            share.extend(s);
+        }
+        Ok((cons, share))
     }
 
     pub fn drain_obligations(&mut self) -> Vec<ast::Constraint> {
         std::mem::take(&mut self.obligations)
     }
 
-    /// # Constraints generated from sharing instances
-    /// If a resource is shared at events Gi, then for all events T defined by
-    /// the resource, where dT defines the delay for T, and dG is the delay for
-    /// G, we have:
-    /// dG >= max(Gi+dT) - min(Gi)
-    ///
-    /// In other words, the delay of the events trigger the shared instance
-    /// should be greater that the range occupied by the invocations of the
-    /// instance.
-    fn sharing_constraints(
-        &self,
-        instance: ast::Id,
-        args: &[BindsWithLoc],
-    ) -> FilamentResult<Vec<ast::Constraint>> {
-        todo!()
-    }
-
-    fn sharing_same_events(
+    fn ensure_same_events(
         &self,
         instance: &ast::Id,
         args: &[BindsWithLoc],
@@ -360,7 +348,7 @@ impl<'a> Context<'a> {
     }
 
     /// Constraint generated for disjointness
-    fn disjointness_constraint(
+    fn sharing_contraints(
         instance: &ast::Id,
         abs: &ast::Id,
         (i_event, spi): (&ast::TimeRep, Option<errors::Span>),
@@ -387,35 +375,41 @@ impl<'a> Context<'a> {
     }
 
     /// Generate disjointness constraints for an instance's event bindings.
-    fn disjointness(
+    fn sharing_constraints(
         &self,
         instance: ast::Id,
         args: &[BindsWithLoc],
-    ) -> FilamentResult<Vec<ast::Constraint>> {
+    ) -> FilamentResult<(Vec<ast::Constraint>, Vec<ShareConstraints>)> {
         // Ensure that bindings for events variables use the same variables.
-        self.sharing_same_events(&instance, args)?;
+        self.ensure_same_events(&instance, args)?;
 
         // Get the delay associated with each event.
         let sig = self.get_instance(&instance);
 
         // Iterate over each event
         let mut constraints = Vec::new();
+        let mut share_constraints = Vec::new();
         for (idx, abs) in sig.abstract_vars().iter().enumerate() {
             // If there is no interface port associated with an event, it is ignored.
             // This only happens for primitive components such as the Register which does
             // not define an interface port for its end time.
             if let Some(id) = sig.get_interface(abs) {
-                // For each event
+                // Track minimum and maximum end times for each binding
+                let mut min: Vec<ast::TimeRep> = Vec::new();
+                let mut max: Vec<(ast::TimeRep, ast::TimeSub)> = Vec::new();
+
+                let delay = id.delay();
+                // For each binding
                 for (i, (spi, bi)) in args.iter().enumerate() {
                     // Delay implied by the i'th binding
-                    let i_delay = id.delay().resolve(&sig.binding(bi));
+                    let i_delay = delay.resolve(&sig.binding(bi));
                     // The i'th use conflicts with all other uses
                     for (k, (spk, bk)) in args.iter().enumerate() {
                         if i == k {
                             continue;
                         }
 
-                        constraints.push(Context::disjointness_constraint(
+                        constraints.push(Context::sharing_contraints(
                             &instance,
                             abs,
                             (&bi[idx], spi.clone()),
@@ -424,10 +418,39 @@ impl<'a> Context<'a> {
                             id.copy_span(),
                         ))
                     }
+                    min.push(bi[idx].clone());
+                    max.push((bi[idx].clone(), i_delay));
+                }
+
+                // # Constraints generated from sharing instances
+                // If a instance is shared at events Gi, then for all events T defined by
+                // the instance, where dT defines the delay for T, and dG is the delay for
+                // G, we have:
+                // dG >= max(Gi+dT.resolve(Gi)) - min(Gi)
+                //
+                // In other words, the delay of the events trigger the shared instance
+                // should be greater that the range occupied by the invocations of the
+                // instance.
+                if let ConcreteInvoke::This { sig } =
+                    self.get_invoke(&THIS.into())
+                {
+                    // Get delays for events used in bindings. These are guaranteed to be the same across all bindings
+                    // due to the call to `ensure_same_events`.
+                    let bind = &args[0].1[idx];
+                    let delays = bind
+                        .events()
+                        .filter_map(|(ev, _)| {
+                            sig.get_interface(ev).map(|id| id.delay())
+                        })
+                        .collect::<Vec<_>>();
+                    share_constraints
+                        .push(ShareConstraints::new(min, max, delays))
+                } else {
+                    unreachable!("Signature associate with THIS is not a ConcreteInvoke::This")
                 }
             }
         }
 
-        Ok(constraints)
+        Ok((constraints, share_constraints))
     }
 }

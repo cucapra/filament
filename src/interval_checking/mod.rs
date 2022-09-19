@@ -10,4 +10,4 @@ pub(super) use context::{ConcreteInvoke, Context};
 pub(super) use guard_availability::total_interval;
 
 pub use checker::check;
-pub use solver::{FilSolver, SExp};
+pub use solver::{FilSolver, SExp, ShareConstraints};
