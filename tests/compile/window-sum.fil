@@ -1,0 +1,22 @@
+import "primitives/core.fil";
+
+// Sums up the last last two values observed by the component.
+// Produces zero when the register doesn't contain a valid value.
+component main<G>(
+  @interface[G, G+1] go: 1,
+  @[G, G+1] in: 32
+) -> (
+  @[G, G+1] out: 32
+) {
+  // Save the value of this input for the next iteration
+  r0 := new Register[32]<G, G+1, G+2>(in);
+
+  // If this component outputs 1, then the previous cycle provided a value and
+  // therefore r1 will contain a valid value in this cycle.
+  c0 := new Register[1]<G, G+1, G+2>(go);
+
+  // If r1 contains a valid value, then use it for the sum; otherwise, use 0.
+  add := new Add[32]<G>(in, r0.prev);
+  mux := new Mux[32]<G>(c0.prev, add.out, 0);
+  out = mux.out;
+}
