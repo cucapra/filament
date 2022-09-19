@@ -395,8 +395,7 @@ impl<'a> Context<'a> {
             // not define an interface port for its end time.
             if let Some(id) = sig.get_interface(abs) {
                 // Track minimum and maximum end times for each binding
-                let mut min: Vec<ast::TimeRep> = Vec::new();
-                let mut max: Vec<(ast::TimeRep, ast::TimeSub)> = Vec::new();
+                let mut share = ShareConstraints::default();
 
                 let delay = id.delay();
                 // For each binding
@@ -418,8 +417,11 @@ impl<'a> Context<'a> {
                             id.copy_span(),
                         ))
                     }
-                    min.push(bi[idx].clone());
-                    max.push((bi[idx].clone(), i_delay));
+                    share.add_bind_info(
+                        bi[idx].clone(),
+                        (bi[idx].clone(), i_delay),
+                        spi.clone(),
+                    );
                 }
 
                 // # Constraints generated from sharing instances
@@ -439,12 +441,10 @@ impl<'a> Context<'a> {
                     let bind = &args[0].1[idx];
                     let delays = bind
                         .events()
-                        .filter_map(|(ev, _)| {
-                            sig.get_interface(ev).map(|id| id.delay())
-                        })
-                        .collect::<Vec<_>>();
-                    share_constraints
-                        .push(ShareConstraints::new(min, max, delays))
+                        .filter_map(|(ev, _)| sig.get_interface(ev))
+                        .cloned();
+                    share.add_delays(delays);
+                    share_constraints.push(share);
                 } else {
                     unreachable!("Signature associate with THIS is not a ConcreteInvoke::This")
                 }
