@@ -366,13 +366,17 @@ fn check_component(
         t.elapsed().as_millis()
     );
     // Add obligations from disjointness constraints
-    let disj = ctx.drain_disjointness()?;
-    ctx.add_obligations(disj);
+    let (disj, share) = ctx.drain_sharing()?;
 
     // Prove all the required obligations
     let obs = ctx.drain_obligations();
     let t = std::time::Instant::now();
-    solver.prove(comp.sig.abstract_vars.iter(), &ctx.facts, obs.into_iter())?;
+    solver.prove(
+        comp.sig.abstract_vars.iter(),
+        &ctx.facts,
+        obs.into_iter().chain(disj.into_iter()),
+        share,
+    )?;
     log::info!(
         "interval-check.{}.prove: {}ms",
         comp.sig.name,
@@ -408,6 +412,7 @@ pub fn check(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
             sig.abstract_vars.iter(),
             &sig.constraints,
             sig.well_formed()?,
+            vec![],
         )?;
         log::trace!("==========");
     }
