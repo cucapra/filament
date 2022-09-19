@@ -89,14 +89,7 @@ where
                 })
             });
 
-        maybe_pd.ok_or_else(|| {
-            let kind = if IS_INPUT {
-                "input port"
-            } else {
-                "output port"
-            };
-            Error::undefined(port.clone(), kind.to_string())
-        })
+        maybe_pd.ok_or_else(|| panic!("Unknown port: {}", port))
     }
 
     /// Constraints for well formed under a binding

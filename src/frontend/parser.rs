@@ -260,7 +260,7 @@ impl FilamentParser {
                 // Upper case the first letter of name
                 let mut iname = name.id().to_string();
                 iname.make_ascii_uppercase();
-                let iname = ast::Id::from(iname);
+                let iname = ast::Id::from(iname).set_span(component.copy_span());
                 if iname == name {
                     input.error("Generated Instance name conflicts with original name");
                 }
