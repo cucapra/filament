@@ -100,7 +100,10 @@ impl BindCheck<'_> {
         self.invocations
             .add(inv.bind.clone(), inv.instance.clone())?;
         // Get the signature for the instance
-        let inst = self.instances.get(&inv.instance)?;
+        let inst = self.instances.get(&inv.instance).map_err(|_| {
+            Error::undefined(inv.instance.clone(), "Instance")
+                .add_note("Undefined instance", inv.instance.copy_span())
+        })?;
 
         // Check that the number of arguments matches the number of parameters
         let formals = inst.abstract_vars().len();
