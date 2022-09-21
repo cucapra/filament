@@ -66,16 +66,18 @@ impl visitor::Transform for DumpInterface {
         // {
         //   "event": "G",
         //   "name": "left",
+        //   "width": 32,
         //   "start": n,
         //   "end": m
         // },
         let pd_to_info = |pd: &ast::PortDef<u64>| {
+            let w = pd.bitwidth;
             pd.liveness
             .within
             .as_offset()
             .map(|(event, st, end)| {
                 format!(
-                    "{{ \"event\": \"{event}\", \"name\": \"{name}\", \"start\": {st}, \"end\": {end} }}",
+                    "{{ \"event\": \"{event}\", \"name\": \"{name}\", \"width\": {w} , \"start\": {st}, \"end\": {end} }}",
                     name = pd.name,
                 )
             })

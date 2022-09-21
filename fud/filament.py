@@ -1,6 +1,8 @@
 import os
+import re
 from pathlib import Path
 import shutil
+import logging as log
 
 from fud import errors
 from fud.stages import Stage, SourceType, Source
@@ -228,7 +230,7 @@ class CleanupCocotb(Stage):
             target_state="cocotb-out",
             input_type=SourceType.Stream,
             output_type=SourceType.Stream,
-            description="Cleanup the otuput produced by cocotb",
+            description="Cleanup the output produced by cocotb",
         )
 
     @staticmethod
@@ -243,6 +245,12 @@ class CleanupCocotb(Stage):
             """
             # Find line that starts with "Outputs:" and return it
             for line in output.readlines():
+                # Check if the line contains "error" or "Error"
+                if re.search(b"error", line, re.IGNORECASE) is not None:
+                    log.error(line.decode("utf-8").strip())
+                if re.search(b"warn", line, re.IGNORECASE) is not None:
+                    log.warn(line.decode("utf-8").strip())
+
                 if line.startswith(b"Outputs:"):
                     # Remove Output: from the front of the line
                     return line.split(b" ", 1)[1].decode('UTF-8')

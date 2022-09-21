@@ -7,9 +7,15 @@ import cocotb
 from cocotb import triggers
 from cocotb.triggers import FallingEdge, RisingEdge, ClockCycles
 from cocotb.clock import Clock
-from cocotb.binary import BinaryValue
 
 RESET_CYCLES = 3
+
+
+def representable(n, width):
+    """
+    Returns true iff `n` can be represented as a `width` bit number.
+    """
+    return n >= 0 and n < (1 << width)
 
 
 def validate_data(data):
@@ -74,6 +80,9 @@ def construct_transaction_fsm(interface, randomize):
                         "input uses different event"
                     if st >= inp["start"] and st < inp["end"]:
                         v = data[inp["name"]][idx]
+                        width = inp["width"]
+                        assert representable(v, width), \
+                            f"Invalid: Value {v} not representable in {width} bits"
                         mod._id(inp["name"], extended=False).value = v
 
                 # Wait for the falling edge so that combinational computations
