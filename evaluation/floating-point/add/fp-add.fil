@@ -86,7 +86,7 @@ component FPAdd<G>(
   m2_s3 := new Register[23]<G+1, G+2, G+3>(m2_s2.out);
 
   // ---------- Stage 3 ----------
-  l1_is_gt := new Gt[23]<G+2>(s_exp_mant_s3.out, l1_mant_s3.out);
+  l1_is_gt := new Gt[23]<G+2>(l1_mant_s3.out, s_exp_mant_s3.out);
   s_mant := new Mux[23]<G+2>(l1_is_gt.out, s_exp_mant_s3.out, l1_mant_s3.out);
   l_mant := new Mux[23]<G+2>(l1_is_gt.out, l1_mant_s3.out, s_exp_mant_s3.out);
 
@@ -109,7 +109,7 @@ component FPAdd<G>(
   s_mant_s4_ext := new ZeroExtend[23, 24]<G+3>(s_mant_s4.out);
   l_mant_s4_ext := new ZeroExtend[23, 24]<G+3>(l_mant_s4.out);
   mant_sum := new Add[24]<G+3>(s_mant_s4_ext.out, l_mant_s4_ext.out);
-  mant_sub := new Sub[24]<G+3>(s_mant_s4_ext.out, l_mant_s4_ext.out);
+  mant_sub := new Sub[24]<G+3>(l_mant_s4_ext.out, s_mant_s4_ext.out);
   sign_eq := new Eq[1]<G+3>(s1_s4.out, s2_s4.out);
   sign_sel := new Mux[24]<G+3>(sign_eq.out, mant_sum.out, mant_sub.out);
 
