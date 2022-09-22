@@ -27,6 +27,5 @@ paths = [
 ]
 cmd = """
 dir=$(dirname {}) && \
-op=$(basename $dir) && \
-./evaluation/floating-point/check.sh $dir $op 100
+./evaluation/floating-point/check.sh $dir 100
 """

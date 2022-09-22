@@ -91,18 +91,22 @@ def all_equal(iterable):
 
 
 def check(args):
+    err = 0
     if args.file is None:
         fd = sys.stdin
     else:
         fd = open(args.file, 'r')
     j = json.load(fd)
-    for (k, v) in j[args.fields[0]].items():
+    for k in j[args.fields[0]].keys():
         vals = [j[f][k] for f in args.fields]
         if not all_equal(vals):
+            err += 1
             # Construct dictionary with all values
             out = {f: j[f][k] for f in args.fields}
             print(f"Mismatch for key {k}: " +
                   json.dumps(out, indent=2, default=format_float))
+
+    sys.exit(err)
 
 
 def random_data(args):
@@ -110,32 +114,17 @@ def random_data(args):
     Generate random floating point data and print out as JSON
     """
 
-    out = {'left': [], 'right': [], 'res': []}
+    out = {'left': [], 'right': []}
     for _ in range(args.count):
         # Use numpy to generate a random float32
-        left = np.float32(random.uniform(-1, 1))
-        right = np.float32(random.uniform(0, 1))
-        if args.op == 'add':
-            res = left + right
-        elif args.op == 'mul':
-            res = left * right
-        else:
-            raise ValueError("Unknown op " + args.op)
+        left = random.randint(0, 2**args.width)
+        right = random.randint(0, 2**args.width)
 
         # Append unsigned int representation of float if --raw is provided
-        if args.raw:
-            out['left'].append(float32_to_int(left))
-            out['right'].append(float32_to_int(right))
-            out['res'].append(float32_to_int(res))
-        else:
-            out['left'].append(left)
-            out['right'].append(right)
-            out['res'].append(res)
+        out['left'].append(left)
+        out['right'].append(right)
 
-    if args.raw:
-        print(json.dumps(out, indent=2))
-    else:
-        print(json.dumps(out, indent=2, default=format_float))
+    print(json.dumps(out, indent=2))
 
 
 if __name__ == '__main__':
@@ -147,9 +136,7 @@ if __name__ == '__main__':
     gen_parser = subparsers.add_parser('gen')
     gen_parser.add_argument("count", type=int, default=1,
                             help='Number of random data to generate')
-    gen_parser.add_argument("--raw", action='store_true')
-    gen_parser.add_argument(
-        "--op", choices=['add', 'mul'], default='add', help='Operation to perform')
+    gen_parser.add_argument("--width", type=int, default=32)
     gen_parser.set_defaults(func=random_data)
 
     to_float_parser = subparsers.add_parser('to_float')
