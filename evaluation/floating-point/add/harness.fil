@@ -28,13 +28,10 @@ component main<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,
-  // The input computed in python
-  @[G+4, G+5] res: 32,
 ) -> (
   @[G+4, G+5] out: 32,
   @[G+4, G+5] verilog_pipe: 32,
   @[G, G+1] verilog_nopipe: 32,
-  @[G+4, G+5] gold: 32,
 ) {
   fil := new FPAdd<G>(left, right);
   ver := new IEEE_SP_FP_ADDER<G>(left, right);
@@ -43,5 +40,4 @@ component main<G>(
   out = fil.out;
   verilog_pipe = ver.Result;
   verilog_nopipe = ver_np.Result;
-  gold = res;
 }

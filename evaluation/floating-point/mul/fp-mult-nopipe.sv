@@ -9,7 +9,7 @@ module FP_Mult_NoPipe (
 );
 
   wire sign, round, normalised, zero;
-  wire [8:0] exponent, sum_exponent;
+  wire [8:0] exponent, sum_exponent, exp_norm;
   wire [22:0] product_mantissa;
   wire [23:0] op_a, op_b;
   wire [47:0] product, product_normalised;
@@ -34,7 +34,8 @@ module FP_Mult_NoPipe (
                 1'b0;
 
   assign sum_exponent = a[30:23] + b[30:23];
-  assign exponent = sum_exponent - 8'd127 + normalised;
+  assign exp_norm = sum_exponent - 8'd127;
+  assign exponent = exp_norm + normalised;
   assign overflow = ((exponent[8] & !exponent[7]) & !zero) ; 									// Overall exponent is greater than 255 then Overflow
   assign underflow = ((exponent[8] & exponent[7]) & !zero) ? 1'b1 : 1'b0; 							// Sum of exponents is less than 255 then Underflow
   assign res = exception ? 32'd0 :

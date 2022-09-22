@@ -68,12 +68,15 @@ component FP_Mult<G>(
   sel0 := new Mux[1]<G>(prod_mant_is_zero.out, one_1.out, zero_1.out);
   zero := new Mux[1]<G>(exception.out, zero_1.out, sel0.out);
 
-  sum_exponent := new Add[8]<G>(exp_a.out, exp_b.out);
+  exp_a_ext := new ZeroExtend[8, 9]<G>(exp_a.out);
+  exp_b_ext := new ZeroExtend[8, 9]<G>(exp_b.out);
+  sum_exponent := new Add[9]<G>(exp_a_ext.out, exp_b_ext.out);
+  sub_v := new Const[9, 127]<G>();
+  // exp_norm = sum_exponent - 8'd127
+  exp_norm := new Sub[9]<G>(sum_exponent.out, sub_v.out);
+  // exponent = exp_norm + normalized
   normalized_ext := new ZeroExtend[1, 9]<G>(normalized.out);
-  sub_v := new Const[8, 127]<G>();
-  exp_norm := new Sub[8]<G>(sum_exponent.out, sub_v.out);
-  exp_norm_ext := new ZeroExtend[8, 9]<G>(exp_norm.out);
-  exponent := new Add[9]<G>(exp_norm_ext.out, normalized_ext.out);
+  exponent := new Add[9]<G>(exp_norm.out, normalized_ext.out);
 
   not_zero := new Not[1]<G>(zero.out);
   exp_8 := new Select[9, 8]<G>(exponent.out);
