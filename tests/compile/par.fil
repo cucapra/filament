@@ -8,7 +8,7 @@ component FastMult<G>(
   @[G+1, G+2] out: 32,
 ) {
   cm := new MultComb[32]<G>(left, right);
-  l := new Register[32]<G, G+1, G+2>(cm.out);
+  l := new Register[32]<G, G+2>(cm.out);
   out = l.out;
 }
 
@@ -24,8 +24,8 @@ component main<G>(
   // Registeres to save the value of the input signals
   sm0 := new Mult<G>(a, b);
 
-  la := new Register[32]<G, G+1, G+2>(a);
-  lb := new Register[32]<G, G+1, G+2>(b);
+  la := new Register[32]<G, G+2>(a);
+  lb := new Register[32]<G, G+2>(b);
   fm0 := new FastMult<G+1>(la.out, lb.out);
 
   a0 := new Add[32]<G+2>(sm0.out, fm0.out);

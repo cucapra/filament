@@ -32,7 +32,7 @@ component main<G>(
   M := new Merge;
 
   // Intentially make the Register exist longer than needed.
-  l0 := L<G, G+1, G+4>(in);
+  l0 := L<G, G+4>(in);
   m0 := M<G, G+1, G+3>(in, l0.out);
 
   out = m0.out;
