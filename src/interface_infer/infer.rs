@@ -72,11 +72,11 @@ impl visitor::Transform for InterfaceInfer {
         log::info!("{inv}");
         match sig {
             ResolvedInstance::Bound { sig, .. } => {
-                let bindings = inv.bindings(sig.abstract_vars().cloned());
+                let bindings = inv.bindings(sig.events().cloned());
                 self.max_state_from_sig(sig, &inv.abstract_vars, &bindings);
             }
             ResolvedInstance::Concrete { sig, .. } => {
-                let bindings = inv.bindings(sig.abstract_vars().cloned());
+                let bindings = inv.bindings(sig.events().cloned());
                 self.max_state_from_sig(sig, &inv.abstract_vars, &bindings);
             }
         }
@@ -87,12 +87,7 @@ impl visitor::Transform for InterfaceInfer {
         &mut self,
         comp: ast::Component,
     ) -> FilamentResult<ast::Component> {
-        self.max_states = comp
-            .sig
-            .abstract_vars
-            .iter()
-            .map(|eb| (eb.event.clone(), 0))
-            .collect();
+        self.max_states = comp.sig.events().map(|ev| (ev.clone(), 0)).collect();
         Ok(comp)
     }
 
@@ -101,15 +96,18 @@ impl visitor::Transform for InterfaceInfer {
         mut comp: ast::Component,
     ) -> FilamentResult<ast::Component> {
         // Add interface ports for all components
-        let missing_interfaces = comp.sig.abstract_vars.iter().map(|eb| {
-            let ev = &eb.event;
-            ast::InterfaceDef::new(
-                format!("go_{}", ev).into(),
-                ev.clone(),
-                TimeRep::unit(ev.clone(), self.max_states[ev]),
-                false,
-            )
-        });
+        let missing_interfaces = comp
+            .sig
+            .events()
+            .map(|ev| {
+                ast::InterfaceDef::new(
+                    format!("go_{}", ev).into(),
+                    ev.clone(),
+                    TimeRep::unit(ev.clone(), self.max_states[ev]),
+                    false,
+                )
+            })
+            .collect_vec();
         comp.sig.interface_signals.extend(missing_interfaces);
 
         Ok(comp)

@@ -372,7 +372,7 @@ fn check_component(
     let obs = ctx.drain_obligations();
     let t = std::time::Instant::now();
     solver.prove(
-        comp.sig.abstract_vars(),
+        comp.sig.events(),
         &ctx.facts,
         obs.into_iter().chain(disj.into_iter()),
         share,
@@ -409,7 +409,7 @@ pub fn check(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
     for sig in sigs.values() {
         log::trace!("===== Signature {} =====", &sig.name);
         solver.prove(
-            sig.abstract_vars(),
+            sig.events(),
             &sig.constraints,
             sig.well_formed()?,
             vec![],
