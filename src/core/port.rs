@@ -109,8 +109,10 @@ where
     pub event: Id,
     /// End event
     pub end: T,
-    // Liveness of the interface signal
+    /// Liveness of the interface signal
     pub(super) liveness: Interval<T>,
+    /// Port only used for modeling purposes and does not need to be connected
+    pub phantom: bool,
     // Position
     pos: Option<errors::Span>,
 }
@@ -131,7 +133,7 @@ impl<T> InterfaceDef<T>
 where
     T: TimeRep + Clone,
 {
-    pub fn new(name: Id, event: Id, end: T) -> Self
+    pub fn new(name: Id, event: Id, end: T, phantom: bool) -> Self
     where
         T: TimeRep + Clone,
     {
@@ -143,6 +145,7 @@ where
             end,
             event,
             liveness,
+            phantom,
             pos: None,
         }
     }

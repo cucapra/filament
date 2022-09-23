@@ -107,10 +107,10 @@ fn transform_interface_def(
     let sp = id.copy_span();
     let d = transform_time(id.end)
         .map_err(|e| e.add_note("Malformed interval", sp.clone()))?;
-    Ok(
-        core::InterfaceDef::<core::FsmIdxs>::new(id.name, id.event, d)
-            .set_span(sp),
+    Ok(core::InterfaceDef::<core::FsmIdxs>::new(
+        id.name, id.event, d, id.phantom,
     )
+    .set_span(sp))
 }
 
 fn transform_constraints(

@@ -159,7 +159,7 @@ impl<'a> Context<'a> {
     /// correctly.
     pub fn add_remaning_assigns(
         &mut self,
-        bind: ast::Id,
+        invoke: ast::Id,
         comp: &ast::Id,
     ) -> FilamentResult<()> {
         let sig = self.get_instance(comp);
@@ -168,7 +168,7 @@ impl<'a> Context<'a> {
             .into_iter()
             .chain(sig.input_names().into_iter())
             .collect();
-        self.remaining_assigns.insert(bind, ports);
+        self.remaining_assigns.insert(invoke, ports);
         Ok(())
     }
 

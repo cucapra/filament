@@ -57,7 +57,7 @@ component ShiftRight23<G>(
 }
 
 component ShiftLeft24<G>(
-  @interface[G, G+1] _go: 1,
+  @interface[G, G+1] go: 1,
   @[G, G+1] in: 24,
   @[G, G+1] amount: 4,
 ) -> (

@@ -6,7 +6,6 @@ module Register #(
   input wire clk,
   input wire reset,
   input wire logic write_en,
-  input wire logic _go_S, // unused
   input wire logic [WIDTH-1:0] in,
   output logic [WIDTH-1:0] out,
   output logic [WIDTH-1:0] prev

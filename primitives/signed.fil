@@ -1,12 +1,12 @@
 extern "signed.sv" {
   component NegConst[WIDTH, VALUE]<G>(
-    @interface[G, G+1] _go: 1, // unused
+   @interface[G, G+1] @phantom go: 1,
   ) -> (
     @[G, G+1] out: WIDTH,
   );
 
   component SAdd[WIDTH]<G>(
-    @interface[G, G+1] _go: 1, // unused
+   @interface[G, G+1] @phantom go: 1,
     @[G, G+1] left: WIDTH,
     @[G, G+1] right: WIDTH
   ) -> (

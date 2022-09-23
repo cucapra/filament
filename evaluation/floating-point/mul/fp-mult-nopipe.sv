@@ -1,5 +1,4 @@
 module FP_Mult_NoPipe (
-		input _go, // unused
     input [31:0] a,
     input [31:0] b,
     output exception,

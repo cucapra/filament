@@ -118,6 +118,10 @@ impl visitor::Transform for CompileInvokes {
 
             // Generate the assignment for each interface port
             for interface in &sig.interface_signals {
+                // Skip phantom interfaces
+                if interface.phantom {
+                    continue;
+                }
                 let ev = &interface.event;
                 // Get binding for this event in the invoke
                 let (s_ev, start_time) =

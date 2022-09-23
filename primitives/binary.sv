@@ -2,7 +2,6 @@ module Const #(
   parameter WIDTH = 32,
   parameter VALUE = 0
 ) (
-  input wire logic _go,
   output wire logic [WIDTH-1:0] out
 );
   assign out = VALUE;
@@ -13,7 +12,6 @@ endmodule
 module Add #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic [WIDTH-1:0] left,
   input wire logic [WIDTH-1:0] right,
   output wire logic [WIDTH-1:0] out
@@ -24,7 +22,6 @@ endmodule
 module Sub #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic [WIDTH-1:0] left,
   input wire logic [WIDTH-1:0] right,
   output wire logic [WIDTH-1:0] out
@@ -35,7 +32,6 @@ endmodule
 module MultComb #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic [WIDTH-1:0] left,
   input wire logic [WIDTH-1:0] right,
   output wire logic [WIDTH-1:0] out
@@ -48,7 +44,6 @@ endmodule
 module And #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic [WIDTH-1:0] left,
   input wire logic [WIDTH-1:0] right,
   output wire logic [WIDTH-1:0] out
@@ -59,7 +54,6 @@ endmodule
 module Or #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic  [WIDTH-1:0] left,
   input wire logic  [WIDTH-1:0] right,
   output wire logic [WIDTH-1:0] out
@@ -70,7 +64,6 @@ endmodule
 module Xor #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic  [WIDTH-1:0] left,
   input wire logic  [WIDTH-1:0] right,
   output wire logic [WIDTH-1:0] out
@@ -81,7 +74,6 @@ endmodule
 module Not #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic  [WIDTH-1:0] in,
   output wire logic [WIDTH-1:0] out
 );
@@ -93,7 +85,6 @@ endmodule
 module Gt #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic  [WIDTH-1:0] left,
   input wire logic  [WIDTH-1:0] right,
   output wire logic out
@@ -104,7 +95,6 @@ endmodule
 module Eq #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic  [WIDTH-1:0] left,
   input wire logic  [WIDTH-1:0] right,
   output wire logic out
@@ -115,7 +105,6 @@ endmodule
 module Lt #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic  [WIDTH-1:0] left,
   input wire logic  [WIDTH-1:0] right,
   output wire logic out
@@ -126,7 +115,6 @@ endmodule
 module Gte #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic  [WIDTH-1:0] left,
   input wire logic  [WIDTH-1:0] right,
   output wire logic out
@@ -137,7 +125,6 @@ endmodule
 module Lte #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic  [WIDTH-1:0] left,
   input wire logic  [WIDTH-1:0] right,
   output wire logic out
@@ -151,7 +138,6 @@ module ZeroExtend #(
   parameter IN_WIDTH = 32,
   parameter OUT_WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic [IN_WIDTH-1:0] in,
   output wire logic [OUT_WIDTH-1:0] out
 );
@@ -164,7 +150,6 @@ module Concat #(
   parameter RIGHT = 32,
   parameter OUT = 64
 ) (
-  input wire logic _go, // Unused port
   input wire logic [LEFT-1:0] left,
   input wire logic [RIGHT-1:0] right,
   output wire logic [OUT-1:0] out
@@ -177,7 +162,6 @@ module Select #(
   parameter WIDTH = 32,
   parameter POS = 0
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic [WIDTH-1:0] in,
   output wire logic out
 );
@@ -190,7 +174,6 @@ module Slice #(
   parameter LSB = 0,
   parameter OUT_WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic [IN_WIDTH-1:0] in,
   output wire logic [OUT_WIDTH-1:0] out
 );
@@ -201,7 +184,6 @@ endmodule
 module ReduceAnd #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic [WIDTH-1:0] in,
   output wire logic out
 );
@@ -211,7 +193,6 @@ endmodule
 module ReduceOr #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic [WIDTH-1:0] in,
   output wire logic out
 );
@@ -222,7 +203,6 @@ endmodule
 module ShiftLeft #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic [WIDTH-1:0] in,
   input wire logic [WIDTH-1:0] shift,
   output wire logic [WIDTH-1:0] out
@@ -233,7 +213,6 @@ endmodule
 module ShiftRight #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // Unused port, only used for modeling
   input wire logic [WIDTH-1:0] in,
   input wire logic [WIDTH-1:0] shift,
   output wire logic [WIDTH-1:0] out

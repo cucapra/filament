@@ -81,7 +81,13 @@ impl FilamentParser {
 
 #[pest_consume::parser]
 impl FilamentParser {
+    #[allow(unused)]
+    // This is used by rust-analzyer doesn't think so
     fn EOI(_input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+
+    fn phantom(_input: Node) -> ParseResult<()> {
         Ok(())
     }
 
@@ -144,10 +150,11 @@ impl FilamentParser {
 
     // ================ Signature =====================
 
-    fn interface(input: Node) -> ParseResult<(ast::Id, IntervalTime)> {
+    fn interface(input: Node) -> ParseResult<(ast::Id, bool, IntervalTime)> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(tvar), time(t)] => (tvar, t),
+            [identifier(tvar), time(t)] => (tvar, false, t),
+            [identifier(tvar), time(t), phantom(_)] => (tvar, true, t),
         ))
     }
 
@@ -163,8 +170,8 @@ impl FilamentParser {
         let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.clone().into_children();
-            [interface((time_var, time)), identifier(name), port_width(_)] => {
-                Port::Int(ast::InterfaceDef::new(name, time_var, time).set_span(Some(sp)))
+            [interface((time_var, phantom, time)), identifier(name), port_width(_)] => {
+                Port::Int(ast::InterfaceDef::new(name, time_var, time, phantom).set_span(Some(sp)))
             },
             [identifier(name), port_width(bitwidth)] => {
                 match bitwidth {

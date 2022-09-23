@@ -80,8 +80,9 @@ interval = _{
 }
 
 // Ports
+phantom = { "@phantom" }
 interface = {
-  "@interface" ~ "[" ~ identifier ~ "," ~ time ~ "]"
+  "@interface" ~ "[" ~ identifier ~ "," ~ time ~ "]" ~ phantom?
 }
 port_width = {
   bitwidth | identifier
