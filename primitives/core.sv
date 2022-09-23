@@ -26,7 +26,6 @@ endmodule
 module Mux #(
   parameter WIDTH = 32
 ) (
-  input wire logic _go, // unused
   input wire logic sel,
   input wire logic [WIDTH-1:0] in0,
   input wire logic [WIDTH-1:0] in1,

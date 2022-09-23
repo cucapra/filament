@@ -72,11 +72,11 @@ impl visitor::Transform for InterfaceInfer {
         log::info!("{inv}");
         match sig {
             ResolvedInstance::Bound { sig, .. } => {
-                let bindings = inv.bindings(&sig.abstract_vars);
+                let bindings = inv.bindings(sig.abstract_vars().cloned());
                 self.max_state_from_sig(sig, &inv.abstract_vars, &bindings);
             }
             ResolvedInstance::Concrete { sig, .. } => {
-                let bindings = inv.bindings(&sig.abstract_vars);
+                let bindings = inv.bindings(sig.abstract_vars().cloned());
                 self.max_state_from_sig(sig, &inv.abstract_vars, &bindings);
             }
         }
@@ -91,7 +91,7 @@ impl visitor::Transform for InterfaceInfer {
             .sig
             .abstract_vars
             .iter()
-            .map(|ev| (ev.clone(), 0))
+            .map(|eb| (eb.event.clone(), 0))
             .collect();
         Ok(comp)
     }
@@ -101,7 +101,8 @@ impl visitor::Transform for InterfaceInfer {
         mut comp: ast::Component,
     ) -> FilamentResult<ast::Component> {
         // Add interface ports for all components
-        let missing_interfaces = comp.sig.abstract_vars.iter().map(|ev| {
+        let missing_interfaces = comp.sig.abstract_vars.iter().map(|eb| {
+            let ev = &eb.event;
             ast::InterfaceDef::new(
                 format!("go_{}", ev).into(),
                 ev.clone(),

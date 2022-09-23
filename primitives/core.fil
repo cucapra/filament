@@ -13,7 +13,7 @@ extern "core.sv" {
   ) where S = G+1, L > S;
 
   component Mux[WIDTH]<G>(
-    @interface[G, G+1] _go: 1,
+    @interface[G, G+1] @phantom go: 1,
     @[G, G+1] sel: 1,
     @[G, G+1] in0: WIDTH,
     @[G, G+1] in1: WIDTH,

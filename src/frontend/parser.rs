@@ -407,7 +407,7 @@ impl FilamentParser {
                 ast::Signature {
                     name,
                     params,
-                    abstract_vars,
+                    abstract_vars: abstract_vars.into_iter().map(|ev| { ast::EventBind::new(ev) }).collect(),
                     unannotated_ports,
                     interface_signals: interface_signals.into_iter().collect(),
                     inputs,

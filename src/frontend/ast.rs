@@ -22,3 +22,4 @@ pub type Id = core::Id;
 pub type InterfaceDef = core::InterfaceDef<TR>;
 pub type PortType = core::PortType;
 pub type PortParam = core::PortParam;
+pub type EventBind = core::EventBind<TR>;
