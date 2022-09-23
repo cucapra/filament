@@ -55,39 +55,39 @@ component ShareIterDiv<G>(
   QN := new Register[8];
   R := new Register[8];
 
-  acc0 := Acc<G, G+1, G+2>(s0.acc_next);
-  qn0 := QN<G, G+1, G+2>(s0.quotient_next);
-  r0 := R<G, G+1, G+2>(right);
+  acc0 := Acc<G, G+2>(s0.acc_next);
+  qn0 := QN<G, G+2>(s0.quotient_next);
+  r0 := R<G, G+2>(right);
   s1 := N<G+1>(acc0.out, r0.out, qn0.out);
 
-  acc1 := Acc<G+1, G+2, G+3>(s1.acc_next);
-  qn1 := QN<G+1, G+2, G+3>(s1.quotient_next);
-  r1 := R<G+1, G+2, G+3>(r0.out);
+  acc1 := Acc<G+1, G+3>(s1.acc_next);
+  qn1 := QN<G+1, G+3>(s1.quotient_next);
+  r1 := R<G+1, G+3>(r0.out);
   s2 := N<G+2>(acc1.out, r1.out, qn1.out);
 
-  acc2 := Acc<G+2, G+3, G+4>(s2.acc_next);
-  qn2 := QN<G+2, G+3, G+4>(s2.quotient_next);
-  r2 := R<G+2, G+3, G+4>(r1.out);
+  acc2 := Acc<G+2, G+4>(s2.acc_next);
+  qn2 := QN<G+2, G+4>(s2.quotient_next);
+  r2 := R<G+2, G+4>(r1.out);
   s3 := N<G+3>(acc2.out, r2.out, qn2.out);
 
-  acc3 := Acc<G+3, G+4, G+5>(s3.acc_next);
-  qn3 := QN<G+3, G+4, G+5>(s3.quotient_next);
-  r3 := R<G+3, G+4, G+5>(r2.out);
+  acc3 := Acc<G+3, G+5>(s3.acc_next);
+  qn3 := QN<G+3, G+5>(s3.quotient_next);
+  r3 := R<G+3, G+5>(r2.out);
   s4 := N<G+4>(acc3.out, r3.out, qn3.out);
 
-  acc4 := Acc<G+4, G+5, G+6>(s4.acc_next);
-  qn4 := QN<G+4, G+5, G+6>(s4.quotient_next);
-  r4 := R<G+4, G+5, G+6>(r3.out);
+  acc4 := Acc<G+4, G+6>(s4.acc_next);
+  qn4 := QN<G+4, G+6>(s4.quotient_next);
+  r4 := R<G+4, G+6>(r3.out);
   s5 := N<G+5>(acc4.out, r4.out, qn4.out);
 
-  acc5 := Acc<G+5, G+6, G+7>(s5.acc_next);
-  qn5 := QN<G+5, G+6, G+7>(s5.quotient_next);
-  r5 := R<G+5, G+6, G+7>(r4.out);
+  acc5 := Acc<G+5, G+7>(s5.acc_next);
+  qn5 := QN<G+5, G+7>(s5.quotient_next);
+  r5 := R<G+5, G+7>(r4.out);
   s6 := N<G+6>(acc5.out, r5.out, qn5.out);
 
-  acc6 := Acc<G+6, G+7, G+8>(s6.acc_next);
-  qn6 := QN<G+6, G+7, G+8>(s6.quotient_next);
-  r6 := R<G+6, G+7, G+8>(r5.out);
+  acc6 := Acc<G+6, G+8>(s6.acc_next);
+  qn6 := QN<G+6, G+8>(s6.quotient_next);
+  r6 := R<G+6, G+8>(r5.out);
   s7 := N<G+7>(acc6.out, r6.out, qn6.out);
 
   // Iterate 7 more times
@@ -104,39 +104,39 @@ component PipeIterDiv<G>(
   i := new Init<G>(left);
   s0 := new Next<G>(i.acc, right, i.quotient);
 
-  acc0 := new Register[9]<G, G+1, G+2>(s0.acc_next);
-  qn0 := new Register[8]<G, G+1, G+2>(s0.quotient_next);
-  r0 := new Register[8]<G, G+1, G+2>(right);
+  acc0 := new Register[9]<G, G+2>(s0.acc_next);
+  qn0 := new Register[8]<G, G+2>(s0.quotient_next);
+  r0 := new Register[8]<G, G+2>(right);
   s1 := new Next<G+1>(acc0.out, r0.out, qn0.out);
 
-  acc1 := new Register[9]<G+1, G+2, G+3>(s1.acc_next);
-  qn1 := new Register[8]<G+1, G+2, G+3>(s1.quotient_next);
-  r1 := new Register[8]<G+1, G+2, G+3>(r0.out);
+  acc1 := new Register[9]<G+1, G+3>(s1.acc_next);
+  qn1 := new Register[8]<G+1, G+3>(s1.quotient_next);
+  r1 := new Register[8]<G+1, G+3>(r0.out);
   s2 := new Next<G+2>(acc1.out, r1.out, qn1.out);
 
-  acc2 := new Register[9]<G+2, G+3, G+4>(s2.acc_next);
-  qn2 := new Register[8]<G+2, G+3, G+4>(s2.quotient_next);
-  r2 := new Register[8]<G+2, G+3, G+4>(r1.out);
+  acc2 := new Register[9]<G+2, G+4>(s2.acc_next);
+  qn2 := new Register[8]<G+2, G+4>(s2.quotient_next);
+  r2 := new Register[8]<G+2, G+4>(r1.out);
   s3 := new Next<G+3>(acc2.out, r2.out, qn2.out);
 
-  acc3 := new Register[9]<G+3, G+4, G+5>(s3.acc_next);
-  qn3 := new Register[8]<G+3, G+4, G+5>(s3.quotient_next);
-  r3 := new Register[8]<G+3, G+4, G+5>(r2.out);
+  acc3 := new Register[9]<G+3, G+5>(s3.acc_next);
+  qn3 := new Register[8]<G+3, G+5>(s3.quotient_next);
+  r3 := new Register[8]<G+3, G+5>(r2.out);
   s4 := new Next<G+4>(acc3.out, r3.out, qn3.out);
 
-  acc4 := new Register[9]<G+4, G+5, G+6>(s4.acc_next);
-  qn4 := new Register[8]<G+4, G+5, G+6>(s4.quotient_next);
-  r4 := new Register[8]<G+4, G+5, G+6>(r3.out);
+  acc4 := new Register[9]<G+4, G+6>(s4.acc_next);
+  qn4 := new Register[8]<G+4, G+6>(s4.quotient_next);
+  r4 := new Register[8]<G+4, G+6>(r3.out);
   s5 := new Next<G+5>(acc4.out, r4.out, qn4.out);
 
-  acc5 := new Register[9]<G+5, G+6, G+7>(s5.acc_next);
-  qn5 := new Register[8]<G+5, G+6, G+7>(s5.quotient_next);
-  r5 := new Register[8]<G+5, G+6, G+7>(r4.out);
+  acc5 := new Register[9]<G+5, G+7>(s5.acc_next);
+  qn5 := new Register[8]<G+5, G+7>(s5.quotient_next);
+  r5 := new Register[8]<G+5, G+7>(r4.out);
   s6 := new Next<G+6>(acc5.out, r5.out, qn5.out);
 
-  acc6 := new Register[9]<G+6, G+7, G+8>(s6.acc_next);
-  qn6 := new Register[8]<G+6, G+7, G+8>(s6.quotient_next);
-  r6 := new Register[8]<G+6, G+7, G+8>(r5.out);
+  acc6 := new Register[9]<G+6, G+8>(s6.acc_next);
+  qn6 := new Register[8]<G+6, G+8>(s6.quotient_next);
+  r6 := new Register[8]<G+6, G+8>(r5.out);
   s7 := new Next<G+7>(acc6.out, r6.out, qn6.out);
 
   // Iterate 7 more times

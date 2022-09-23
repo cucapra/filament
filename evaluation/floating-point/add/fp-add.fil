@@ -51,18 +51,18 @@ component FPAdd<G>(
   num_shift := new Mux[8]<G>(exp_is_zero.out, zero8.out, num_shift_tmp.out);
 
   // ---------- 1 => 2 ----------
-  e1_s2 := new Register[8]<G, G+1, G+2>(e1.out);
-  e2_s2 := new Register[8]<G, G+1, G+2>(e2.out);
-  small_exp_mant_s2 := new Register[23]<G, G+1, G+2>(small_exp_mant.out);
-  large_mant_s2 := new Register[23]<G, G+1, G+2>(large_mant.out);
-  num_shift_s2 := new Register[8]<G, G+1, G+2>(num_shift.out);
-  e1_is_zero_s2 := new Register[1]<G, G+1, G+2>(e1_is_zero.out);
-  e2_is_zero_s2 := new Register[1]<G, G+1, G+2>(e2_is_zero.out);
-  s1_s2 := new Register[1]<G, G+1, G+2>(s1.out);
-  s2_s2 := new Register[1]<G, G+1, G+2>(s2.out);
-  larger_exp_s2 := new Register[8]<G, G+1, G+2>(larger_exp.out);
-  m1_s2 := new Register[23]<G, G+1, G+2>(m1.out);
-  m2_s2 := new Register[23]<G, G+1, G+2>(m2.out);
+  e1_s2 := new Register[8]<G, G+2>(e1.out);
+  e2_s2 := new Register[8]<G, G+2>(e2.out);
+  small_exp_mant_s2 := new Register[23]<G, G+2>(small_exp_mant.out);
+  large_mant_s2 := new Register[23]<G, G+2>(large_mant.out);
+  num_shift_s2 := new Register[8]<G, G+2>(num_shift.out);
+  e1_is_zero_s2 := new Register[1]<G, G+2>(e1_is_zero.out);
+  e2_is_zero_s2 := new Register[1]<G, G+2>(e2_is_zero.out);
+  s1_s2 := new Register[1]<G, G+2>(s1.out);
+  s2_s2 := new Register[1]<G, G+2>(s2.out);
+  larger_exp_s2 := new Register[8]<G, G+2>(larger_exp.out);
+  m1_s2 := new Register[23]<G, G+2>(m1.out);
+  m2_s2 := new Register[23]<G, G+2>(m2.out);
 
   // ---------- Stage 2 ----------
   normed := new NormInp<G+1>(small_exp_mant_s2.out);
@@ -73,17 +73,17 @@ component FPAdd<G>(
   l1_mant := new Mux[23]<G+1>(e2_is_zero_s2.out, large_mant_s2.out, normed_large.out);
 
   // ---------- 2 => 3 ----------
-  s_exp_mant_s3 := new Register[23]<G+1, G+2, G+3>(s_exp_mant.out);
-  l1_mant_s3 := new Register[23]<G+1, G+2, G+3>(l1_mant.out);
-  e1_is_zero_s3 := new Register[1]<G+1, G+2, G+3>(e1_is_zero_s2.out);
-  e2_is_zero_s3 := new Register[1]<G+1, G+2, G+3>(e2_is_zero_s2.out);
-  s1_s3 := new Register[1]<G+1, G+2, G+3>(s1_s2.out);
-  s2_s3 := new Register[1]<G+1, G+2, G+3>(s2_s2.out);
-  larger_exp_s3 := new Register[8]<G+1, G+2, G+3>(larger_exp_s2.out);
-  e1_s3 := new Register[8]<G+1, G+2, G+3>(e1_s2.out);
-  e2_s3 := new Register[8]<G+1, G+2, G+3>(e2_s2.out);
-  m1_s3 := new Register[23]<G+1, G+2, G+3>(m1_s2.out);
-  m2_s3 := new Register[23]<G+1, G+2, G+3>(m2_s2.out);
+  s_exp_mant_s3 := new Register[23]<G+1, G+3>(s_exp_mant.out);
+  l1_mant_s3 := new Register[23]<G+1, G+3>(l1_mant.out);
+  e1_is_zero_s3 := new Register[1]<G+1, G+3>(e1_is_zero_s2.out);
+  e2_is_zero_s3 := new Register[1]<G+1, G+3>(e2_is_zero_s2.out);
+  s1_s3 := new Register[1]<G+1, G+3>(s1_s2.out);
+  s2_s3 := new Register[1]<G+1, G+3>(s2_s2.out);
+  larger_exp_s3 := new Register[8]<G+1, G+3>(larger_exp_s2.out);
+  e1_s3 := new Register[8]<G+1, G+3>(e1_s2.out);
+  e2_s3 := new Register[8]<G+1, G+3>(e2_s2.out);
+  m1_s3 := new Register[23]<G+1, G+3>(m1_s2.out);
+  m2_s3 := new Register[23]<G+1, G+3>(m2_s2.out);
 
   // ---------- Stage 3 ----------
   l1_is_gt := new Gt[23]<G+2>(l1_mant_s3.out, s_exp_mant_s3.out);
@@ -91,17 +91,17 @@ component FPAdd<G>(
   l_mant := new Mux[23]<G+2>(l1_is_gt.out, l1_mant_s3.out, s_exp_mant_s3.out);
 
   // ---------- 3 => 4 ----------
-  e1_is_zero_s4 := new Register[1]<G+2, G+3, G+4>(e1_is_zero_s3.out);
-  e2_is_zero_s4 := new Register[1]<G+2, G+3, G+4>(e2_is_zero_s3.out);
-  s_mant_s4 := new Register[23]<G+2, G+3, G+4>(s_mant.out);
-  l_mant_s4 := new Register[23]<G+2, G+3, G+4>(l_mant.out);
-  s1_s4 := new Register[1]<G+2, G+3, G+4>(s1_s3.out);
-  s2_s4 := new Register[1]<G+2, G+3, G+4>(s2_s3.out);
-  larger_exp_s4 := new Register[8]<G+2, G+3, G+4>(larger_exp_s3.out);
-  e1_s4 := new Register[8]<G+2, G+3, G+4>(e1_s3.out);
-  e2_s4 := new Register[8]<G+2, G+3, G+4>(e2_s3.out);
-  m1_s4 := new Register[23]<G+2, G+3, G+4>(m1_s3.out);
-  m2_s4 := new Register[23]<G+2, G+3, G+4>(m2_s3.out);
+  e1_is_zero_s4 := new Register[1]<G+2, G+4>(e1_is_zero_s3.out);
+  e2_is_zero_s4 := new Register[1]<G+2, G+4>(e2_is_zero_s3.out);
+  s_mant_s4 := new Register[23]<G+2, G+4>(s_mant.out);
+  l_mant_s4 := new Register[23]<G+2, G+4>(l_mant.out);
+  s1_s4 := new Register[1]<G+2, G+4>(s1_s3.out);
+  s2_s4 := new Register[1]<G+2, G+4>(s2_s3.out);
+  larger_exp_s4 := new Register[8]<G+2, G+4>(larger_exp_s3.out);
+  e1_s4 := new Register[8]<G+2, G+4>(e1_s3.out);
+  e2_s4 := new Register[8]<G+2, G+4>(e2_s3.out);
+  m1_s4 := new Register[23]<G+2, G+4>(m1_s3.out);
+  m2_s4 := new Register[23]<G+2, G+4>(m2_s3.out);
 
   // ---------- Stage 4 ----------
 
@@ -160,17 +160,17 @@ component FPAdd<G>(
   renorm_exp := new Mux[8]<G+3>(am_23_one.out, one8.out, rne_2.out);
 
   // ---------- 4 => 5 ----------
-  larger_exp_s5 := new Register[8]<G+3, G+4, G+5>(larger_exp_s4.out);
-  renorm_shift_s5 := new Register[4]<G+3, G+4, G+5>(renorm_shift.out);
-  renorm_exp_s5 := new Register[8]<G+3, G+4, G+5>(renorm_exp.out);
-  add_mant_s5 := new Register[24]<G+3, G+4, G+5>(add_mant.out);
-  sign_eq_s5 := new Register[1]<G+3, G+4, G+5>(sign_eq.out);
-  e1_s5 := new Register[8]<G+3, G+4, G+5>(e1_s4.out);
-  e2_s5 := new Register[8]<G+3, G+4, G+5>(e2_s4.out);
-  m1_s5 := new Register[23]<G+3, G+4, G+5>(m1_s4.out);
-  m2_s5 := new Register[23]<G+3, G+4, G+5>(m2_s4.out);
-  s1_s5 := new Register[1]<G+3, G+4, G+5>(s1_s4.out);
-  s2_s5 := new Register[1]<G+3, G+4, G+5>(s2_s4.out);
+  larger_exp_s5 := new Register[8]<G+3, G+5>(larger_exp_s4.out);
+  renorm_shift_s5 := new Register[4]<G+3, G+5>(renorm_shift.out);
+  renorm_exp_s5 := new Register[8]<G+3, G+5>(renorm_exp.out);
+  add_mant_s5 := new Register[24]<G+3, G+5>(add_mant.out);
+  sign_eq_s5 := new Register[1]<G+3, G+5>(sign_eq.out);
+  e1_s5 := new Register[8]<G+3, G+5>(e1_s4.out);
+  e2_s5 := new Register[8]<G+3, G+5>(e2_s4.out);
+  m1_s5 := new Register[23]<G+3, G+5>(m1_s4.out);
+  m2_s5 := new Register[23]<G+3, G+5>(m2_s4.out);
+  s1_s5 := new Register[1]<G+3, G+5>(s1_s4.out);
+  s2_s5 := new Register[1]<G+3, G+5>(s2_s4.out);
 
   // ---------- Stage 5 ----------
   // Compute final exponent

@@ -1,11 +1,11 @@
 extern "core.sv" {
   // A register that can extend the lifetime of a signal to any required length.
-  component Register[WIDTH]<G, S, L>(
+  component Register[WIDTH]<G, L, ?S = G+1>(
     clk: 1,
     reset: 1,
-    // -- base ports --
     @interface[G, G+1] write_en: 1,
-    @interface[S, L] @phantom go_S: 1, // unused
+    // Fake port to get the right delay for `G` which is |G+1 - L|
+    @interface[S, L] @phantom go_S: 1,
     @[G, G+1] in: WIDTH,
   ) -> (
     @[S, L] out: WIDTH,
@@ -194,8 +194,8 @@ component Mult<G>(
 ) -> (
   @[G+2, G+3] out: 32,
 ) {
-  ll := new Register[32]<G, G+1, G+3>(left);
-  lr := new Register[32]<G, G+1, G+3>(right);
+  ll := new Register[32]<G, G+3>(left);
+  lr := new Register[32]<G, G+3>(right);
   m := new MultComb[32]<G+2>(ll.out, lr.out);
   out = m.out;
 }
