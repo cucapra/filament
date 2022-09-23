@@ -21,11 +21,11 @@ fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize
 
 # Evaluation examples
 [[tests]]
-name = "floating point"
+name = "evaluation"
 paths = [
-  "evaluation/floating-point/*/harness.fil"
+  "evaluation/**/harness.fil"
 ]
 cmd = """
 dir=$(dirname {}) && \
-./evaluation/floating-point/check.sh $dir 100
+./evaluation/fuzz/check.sh $dir 100
 """
