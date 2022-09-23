@@ -188,11 +188,30 @@ impl FilamentParser {
         ))
     }
 
-    fn abstract_var(input: Node) -> ParseResult<Vec<ast::Id>> {
+    fn event_bind(input: Node) -> ParseResult<ast::EventBind> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(vars)..] => vars.collect(),
+            [identifier(event), time(t)] => ast::EventBind { event, default: Some(t) },
+            [identifier(event)] => ast::EventBind::new(event),
         ))
+    }
+
+    fn abstract_var(input: Node) -> ParseResult<Vec<ast::EventBind>> {
+        let evs: Vec<ast::EventBind> = match_nodes!(
+            input.clone().into_children();
+            [event_bind(vars)..] => vars.collect()
+        );
+        let mut opts_started = false;
+        for ev in &evs {
+            if ev.default.is_some() {
+                if !opts_started {
+                    opts_started = true;
+                }
+            } else {
+                return Err(input.error("Default values must be specified before non-default values"));
+            }
+        }
+        Ok(evs)
     }
 
     fn ports(
@@ -407,7 +426,7 @@ impl FilamentParser {
                 ast::Signature {
                     name,
                     params,
-                    abstract_vars: abstract_vars.into_iter().map(|ev| { ast::EventBind::new(ev) }).collect(),
+                    abstract_vars: abstract_vars,
                     unannotated_ports,
                     interface_signals: interface_signals.into_iter().collect(),
                     inputs,

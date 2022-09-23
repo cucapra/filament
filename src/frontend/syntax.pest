@@ -58,8 +58,12 @@ comp_or_ext = {
 
 // ====== Component signature ======
 
+event_bind = {
+  "?" ~ identifier ~ "=" ~ time |
+  identifier
+}
 abstract_var = {
-  "<" ~ identifier ~ ("," ~ identifier)* ~ ">"
+  "<" ~ event_bind ~ ("," ~ event_bind)* ~ ">"
 }
 
 // Time
