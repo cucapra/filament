@@ -37,10 +37,17 @@ impl<'a> From<&'a ast::Signature<u64>> for ResolvedInstance<'a> {
 
 impl<'a> ResolvedInstance<'a> {
     // Return the abstract variables defined by the signature of this instance.
-    pub fn abstract_vars(&self) -> Vec<&ast::Id> {
+    pub fn events(&self) -> Vec<&ast::Id> {
         match self {
             ResolvedInstance::Bound { sig, .. } => sig.events().collect(),
             ResolvedInstance::Concrete { sig, .. } => sig.events().collect(),
+        }
+    }
+
+    pub fn abstract_vars(&self) -> &[ast::EventBind] {
+        match self {
+            ResolvedInstance::Bound { sig, .. } => &sig.abstract_vars,
+            ResolvedInstance::Concrete { sig, .. } => &sig.abstract_vars,
         }
     }
 

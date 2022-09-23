@@ -151,22 +151,42 @@ where
     }
 
     /// Construct a binding from this Signature
-    pub fn binding<'a>(&self, args: &'a [T]) -> Binding<'a, T> {
+    pub fn binding(&self, args: &[T]) -> Binding<T> {
         debug_assert!(
-            self.abstract_vars.len() == args.len(),
-            "Insuffient events for signature, required {} got {}",
-            self.abstract_vars.len(),
+            self.abstract_vars
+                .iter()
+                .take_while(|ev| ev.default.is_none())
+                .count()
+                <= args.len(),
+            "Insuffient events for signature, required at least {} got {}",
+            self.abstract_vars
+                .iter()
+                .take_while(|ev| ev.default.is_none())
+                .count(),
             args.len(),
         );
 
-        Binding::new(
+        let mut partial_map = Binding::new(
             self.abstract_vars
                 .iter()
                 .map(|eb| &eb.event)
                 .cloned()
-                .zip(args.iter())
+                .zip(args.iter().cloned())
                 .collect(),
-        )
+        );
+        // Skip the events that have been bound
+        let remaining = self
+            .abstract_vars
+            .iter()
+            .skip(args.len())
+            .map(|eb| {
+                let bind = eb.default.as_ref().unwrap().resolve(&partial_map);
+                (eb.event.clone(), bind)
+            })
+            .collect();
+
+        partial_map.extend(remaining);
+        partial_map
     }
 }
 

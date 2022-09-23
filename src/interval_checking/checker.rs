@@ -126,22 +126,22 @@ fn check_invoke_binds<'a>(
     invoke: &'a ast::Invoke,
     ctx: &mut Context<'a>,
 ) -> FilamentResult<()> {
-    // Track event bindings
-    ctx.add_event_binds(
-        invoke.instance.clone(),
-        invoke.abstract_vars.clone(),
-        invoke.copy_span(),
-    );
+    let binding = ctx
+        .get_instance(&invoke.instance)
+        .binding(&invoke.abstract_vars);
 
-    let sig = ctx.get_instance(&invoke.instance);
-    let binding = sig.binding(&invoke.abstract_vars);
+    // Track event bindings
+    ctx.add_event_binds(invoke.instance.clone(), &binding, invoke.copy_span());
+
     let this_sig = ctx.get_invoke(&THIS.into()).get_sig();
     let mut constraints = vec![];
 
     // For each event provided for an abstract variable, ensure that the corresponding interface
     // does not pulse more often than the interface allows.
-    for (abs, &evs) in binding.iter() {
-        if let Some(interface) = sig.get_interface(abs) {
+    for (abs, evs) in binding.iter() {
+        if let Some(interface) =
+            ctx.get_instance(&invoke.instance).get_interface(abs)
+        {
             // Each event in the binding must pulse less often than the interface of the abstract
             // variable.
             for (event, _) in evs.events() {
