@@ -2,7 +2,7 @@ import "fp-mul.fil";
 
 extern "fp-mult-nopipe.sv" {
   component FP_Mult_NoPipe<G>(
-      @interface[G, G+1] _go: 1,
+      @interface[G, G+1] @phantom go: 1,
       @[G, G+1] a: 32,
       @[G, G+1] b: 32,
   ) -> (

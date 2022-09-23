@@ -106,6 +106,7 @@ impl visitor::Transform for InterfaceInfer {
                 format!("go_{}", ev).into(),
                 ev.clone(),
                 TimeRep::unit(ev.clone(), self.max_states[ev]),
+                false,
             )
         });
         comp.sig.interface_signals.extend(missing_interfaces);
