@@ -207,7 +207,7 @@ impl FilamentParser {
                 if !opts_started {
                     opts_started = true;
                 }
-            } else {
+            } else if opts_started {
                 return Err(input.error("Default values must be specified before non-default values"));
             }
         }

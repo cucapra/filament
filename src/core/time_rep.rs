@@ -1,37 +1,42 @@
 use super::Id;
 use itertools::Itertools;
-use std::{collections::HashMap, fmt::Debug, fmt::Display};
+use linked_hash_map::LinkedHashMap;
+use std::{fmt::Debug, fmt::Display};
 
 /// Represents a binding from names to time variables.
-pub struct Binding<'a, T>
+pub struct Binding<T>
 where
     T: TimeRep,
 {
-    map: HashMap<Id, &'a T>,
+    map: LinkedHashMap<Id, T>,
 }
 
-impl<'a, T> Binding<'a, T>
+impl<T> Binding<T>
 where
     T: TimeRep,
 {
-    pub fn new(map: HashMap<Id, &'a T>) -> Self {
+    pub fn new(map: LinkedHashMap<Id, T>) -> Self {
         Self { map }
     }
 
     pub fn find(&self, n: &Id) -> Option<&T> {
-        self.map.get(n).copied()
+        self.map.get(n)
     }
 
     pub fn get(&self, n: &Id) -> &T {
         self.find(n).unwrap_or_else(|| panic!("No binding for {n}"))
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&Id, &&'a T)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&Id, &T)> {
         self.map.iter()
+    }
+
+    pub fn extend(&mut self, other: Vec<(Id, T)>) {
+        self.map.extend(other);
     }
 }
 
-impl<T> Debug for Binding<'_, T>
+impl<T> Debug for Binding<T>
 where
     T: Display + TimeRep,
 {

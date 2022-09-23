@@ -105,15 +105,19 @@ impl BindCheck<'_> {
                 .add_note("Undefined instance", inv.instance.copy_span())
         })?;
 
-        // Check that the number of arguments matches the number of parameters
-        let formals = inst.abstract_vars().len();
+        // Check that the number of arguments is more than the minimum number of required formals
+        let min_formals = inst
+            .abstract_vars()
+            .iter()
+            .take_while(|eb| eb.default.is_none())
+            .count();
         let actuals = inv.abstract_vars.len();
-        if formals != actuals {
+        if min_formals > actuals {
             return Err(Error::malformed(format!(
-                "Invoke of {} requires {formals} events but {actuals} are provided",
+                "Invoke of {} requires at least {min_formals} events but {actuals} are provided",
                 inv.instance,
             )).add_note(
-                format!("Invoke requires {formals} events but {actuals} are provided"),
+                format!("Invoke requires {min_formals} events but {actuals} are provided"),
                 inv.instance.copy_span()
             ));
         }

@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 pub enum ConcreteInvoke<'a> {
     Concrete {
         /// Bindings for abstract variables
-        binding: core::Binding<'a, ast::TimeRep>,
+        binding: core::Binding<ast::TimeRep>,
 
         /// Signature
         sig: ast::Signature<u64>,
@@ -28,7 +28,7 @@ pub enum ConcreteInvoke<'a> {
 impl<'a> ConcreteInvoke<'a> {
     /// Construct an instance from a Signature and bindings for abstract variables.
     pub fn concrete(
-        binding: core::Binding<'a, ast::TimeRep>,
+        binding: core::Binding<ast::TimeRep>,
         sig: ast::Signature<u64>,
     ) -> Self {
         Self::Concrete { binding, sig }
@@ -177,13 +177,13 @@ impl<'a> Context<'a> {
     pub fn add_event_binds(
         &mut self,
         instance: ast::Id,
-        binds: Vec<ast::TimeRep>,
+        binds: &ast::Binding,
         pos: Option<errors::Span>,
     ) {
         self.event_binds
             .entry(instance)
             .or_default()
-            .push((pos, binds));
+            .push((pos, binds.iter().map(|(_, t)| t.clone()).collect()));
     }
 
     /// Remove a remaining assignment from an invoke
@@ -317,7 +317,7 @@ impl<'a> Context<'a> {
         // Get the delay associated with each event.
         let sig = self.get_instance(&instance);
         // Ensure that all bindings of an event variable use the same events
-        for (idx, abs) in sig.abstract_vars().iter().enumerate() {
+        for (idx, abs) in sig.events().iter().enumerate() {
             // Ignore events without an associated interface port.
             if sig.get_interface(abs).is_some() {
                 let mut iter =
@@ -389,7 +389,7 @@ impl<'a> Context<'a> {
         // Iterate over each event
         let mut constraints = Vec::new();
         let mut share_constraints = Vec::new();
-        for (idx, abs) in sig.abstract_vars().iter().enumerate() {
+        for (idx, abs) in sig.events().iter().enumerate() {
             // If there is no interface port associated with an event, it is ignored.
             // This only happens for primitive components such as the Register which does
             // not define an interface port for its end time.
