@@ -192,14 +192,11 @@ where
         }
     }
 
-    pub fn bindings(&self, abstract_vars: &[Id]) -> Binding<T> {
-        Binding::new(
-            abstract_vars
-                .iter()
-                .cloned()
-                .zip(self.abstract_vars.iter())
-                .collect(),
-        )
+    pub fn bindings<I>(&self, abstract_vars: I) -> Binding<T>
+    where
+        I: Iterator<Item = Id>,
+    {
+        Binding::new(abstract_vars.zip(self.abstract_vars.iter()).collect())
     }
 }
 impl<T: Display> Display for Invoke<T> {

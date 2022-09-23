@@ -6,6 +6,40 @@ use crate::errors::{Error, FilamentResult, WithPos};
 use itertools::Itertools;
 use std::{collections::HashMap, fmt::Display};
 
+#[derive(Clone)]
+/// An event variable bound in the signature
+pub struct EventBind<T>
+where
+    T: Clone + TimeRep,
+{
+    pub event: Id,
+    pub default: Option<T>,
+}
+
+impl<T> EventBind<T>
+where
+    T: Clone + TimeRep,
+{
+    pub fn new(event: Id) -> Self {
+        Self {
+            event,
+            default: None,
+        }
+    }
+}
+impl<T> Display for EventBind<T>
+where
+    T: TimeRep + Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(default) = &self.default {
+            write!(f, "?{}={}", self.event, default)
+        } else {
+            write!(f, "{}", self.event)
+        }
+    }
+}
+
 /// The signature of a component definition
 #[derive(Clone)]
 pub struct Signature<T, W>
@@ -20,7 +54,7 @@ where
     pub params: Vec<Id>,
 
     /// Names of abstract variables bound by the component
-    pub abstract_vars: Vec<Id>,
+    pub abstract_vars: Vec<EventBind<T>>,
 
     /// Unannotated ports that are thread through by the backend
     pub unannotated_ports: Vec<(Id, u64)>,
@@ -44,6 +78,11 @@ where
     T: TimeRep,
     W: Clone,
 {
+    /// Abstract variables bound by the signature
+    pub fn abstract_vars(&self) -> impl Iterator<Item = &Id> {
+        self.abstract_vars.iter().map(|eb| &eb.event)
+    }
+
     // Generate a new signature that has been reversed: inputs are outputs
     // with outputs.
     pub fn reversed(&self) -> Self {
@@ -117,6 +156,7 @@ where
         Binding::new(
             self.abstract_vars
                 .iter()
+                .map(|eb| &eb.event)
                 .cloned()
                 .zip(args.iter())
                 .collect(),

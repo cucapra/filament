@@ -144,7 +144,21 @@ fn transform_signature<W: Clone>(
             .into_iter()
             .map(transform_interface_def)
             .collect::<FilamentResult<_>>()?,
-        abstract_vars: sig.abstract_vars,
+        abstract_vars: sig
+            .abstract_vars
+            .into_iter()
+            .map(|eb| {
+                let default = if let Some(def) = eb.default {
+                    Some(transform_time(def)?)
+                } else {
+                    None
+                };
+                Ok(core::EventBind {
+                    event: eb.event,
+                    default,
+                })
+            })
+            .collect::<FilamentResult<_>>()?,
         name: sig.name,
         unannotated_ports: sig.unannotated_ports,
     };
