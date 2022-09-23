@@ -1,15 +1,15 @@
 extern "signed.sv" {
-  component NegConst[WIDTH, VALUE]<G>(
-   @interface[G, G+1] @phantom go: 1,
+  component NegConst[WIDTH, VALUE]<G, ?L=G+1>(
+   @interface[G, L] @phantom go: 1,
   ) -> (
-    @[G, G+1] out: WIDTH,
-  );
+    @[G, L] out: WIDTH,
+  ) where L > G;
 
-  component SAdd[WIDTH]<G>(
-   @interface[G, G+1] @phantom go: 1,
-    @[G, G+1] left: WIDTH,
-    @[G, G+1] right: WIDTH
+  component SAdd[WIDTH]<G, ?L=G+1>(
+    @interface[G, L] @phantom go: 1,
+    @[G, L] left: WIDTH,
+    @[G, L] right: WIDTH
   ) -> (
-    @[G, G+1] out: WIDTH,
-  );
+    @[G, L] out: WIDTH,
+  ) where L > G;
 }
