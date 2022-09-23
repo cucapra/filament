@@ -1,0 +1,34 @@
+import "./iter-div.fil";
+
+extern "iter-div.sv" {
+  component div<G, L>(
+      clk: 1,
+      reset: 1,
+      @interface[G, L] go: 1,
+      @[G, G+1] left: 8,
+      @[G, G+9] right: 8,
+  ) -> (
+      @[G+9, L] out_remainder: 8,
+      @[G+9, L] out_quotient: 8
+  ) where L > G+9;
+}
+
+component main<G>(
+  @interface[G, G+11] go: 1,
+  @[G, G+1] left: 8,
+  @[G, G+9] right: 8,
+) -> (
+  @[G, G+1] comb_noshare: 8,
+  @[G+9, G+10] verilog: 8,
+  @[G+7, G+8] share: 8,
+  @[G+7, G+8] pipe: 8,
+) {
+  d := new div<G, G+10>(left, right);
+  id := new CombNoShareIterDiv<G>(left, right);
+  s := new ShareIterDiv<G>(left, right);
+  pipe := new PipeIterDiv<G>(left, right);
+  verilog = d.out_quotient;
+  comb_noshare = id.quotient;
+  share = s.quotient;
+  pipe = pipe.quotient;
+}

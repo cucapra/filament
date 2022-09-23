@@ -117,8 +117,8 @@ def random_data(args):
     out = {'left': [], 'right': []}
     for _ in range(args.count):
         # Use numpy to generate a random float32
-        left = random.randint(0, 2**args.width)
-        right = random.randint(0, 2**args.width)
+        left = random.randint(0, 2**args.width-1)
+        right = random.randint(0, 2**args.width-1)
 
         # Append unsigned int representation of float if --raw is provided
         out['left'].append(left)
