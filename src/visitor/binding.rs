@@ -39,12 +39,8 @@ impl<'a> ResolvedInstance<'a> {
     // Return the abstract variables defined by the signature of this instance.
     pub fn abstract_vars(&self) -> Vec<&ast::Id> {
         match self {
-            ResolvedInstance::Bound { sig, .. } => {
-                sig.abstract_vars().collect()
-            }
-            ResolvedInstance::Concrete { sig, .. } => {
-                sig.abstract_vars().collect()
-            }
+            ResolvedInstance::Bound { sig, .. } => sig.events().collect(),
+            ResolvedInstance::Concrete { sig, .. } => sig.events().collect(),
         }
     }
 

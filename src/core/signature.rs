@@ -78,9 +78,15 @@ where
     T: TimeRep,
     W: Clone,
 {
-    /// Abstract variables bound by the signature
-    pub fn abstract_vars(&self) -> impl Iterator<Item = &Id> {
+    /// Events bound by the signature
+    pub fn events(&self) -> impl Iterator<Item = &Id> {
         self.abstract_vars.iter().map(|eb| &eb.event)
+    }
+
+    pub fn abstract_vars_with_defaults(
+        &self,
+    ) -> impl Iterator<Item = &EventBind<T>> {
+        self.abstract_vars.iter()
     }
 
     // Generate a new signature that has been reversed: inputs are outputs
