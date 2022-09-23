@@ -62,7 +62,7 @@ jobs:
           python-version: '3.9'
 
       - name: Install Python Dependencies
-        run: python3 -m pip install flit cocotb
+        run: python3 -m pip install flit cocotb pytest
 
       - name: Install fud
         run: |
