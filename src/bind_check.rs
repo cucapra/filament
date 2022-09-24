@@ -1,5 +1,6 @@
 use crate::{
     bind_map::BindMap,
+    core,
     errors::{Error, FilamentResult, WithPos},
     event_checker::ast,
     visitor::{Bindings, ResolvedInstance},
@@ -32,7 +33,7 @@ impl BindCheck<'_> {
             |instance: &ast::Id, p: &ast::Id| -> FilamentResult<u64> {
                 let sig = self
                     .instances
-                    .get(instance)
+                    .find(instance)
                     .expect("THIS component is not defined")
                     .resolve();
                 let mut iter = if INPUT {
@@ -60,7 +61,7 @@ impl BindCheck<'_> {
         match &port.typ {
             ast::PortType::ThisPort(p) => check_port(&ast::Id::from(THIS), p),
             ast::PortType::InvPort { invoke, name } => {
-                let inst = self.invocations.get(invoke).map_err(|err| {
+                let inst = self.invocations.find(invoke).map_err(|err| {
                     err.add_note(
                         "Invocation is not defined",
                         invoke.copy_span(),
@@ -93,14 +94,12 @@ impl BindCheck<'_> {
         Ok(())
     }
 
-    /// Transform an invoke statement. Provides access to the signature of the
-    /// component that is being invoked.
-    #[inline]
-    fn invoke(&mut self, inv: &ast::Invoke) -> FilamentResult<()> {
+    /// Check that an invoke's instance is bound and and bind its signature
+    fn bind_invoke(&mut self, inv: &ast::Invoke) -> FilamentResult<()> {
         self.invocations
             .add(inv.bind.clone(), inv.instance.clone())?;
         // Get the signature for the instance
-        let inst = self.instances.get(&inv.instance).map_err(|_| {
+        let inst = self.instances.find(&inv.instance).map_err(|_| {
             Error::undefined(inv.instance.clone(), "Instance")
                 .add_note("Undefined instance", inv.instance.copy_span())
         })?;
@@ -122,6 +121,13 @@ impl BindCheck<'_> {
             ));
         }
 
+        Ok(())
+    }
+
+    /// Transform an invoke statement. Provides access to the signature of the
+    /// component that is being invoked.
+    fn check_invoke(&mut self, inv: &ast::Invoke) -> FilamentResult<()> {
+        let inst = self.instances.get(&inv.instance);
         if let Some(ports) = &inv.ports {
             // Check that the number of ports matches the number of ports
             let formals = inst.input_names().len();
@@ -161,18 +167,27 @@ impl BindCheck<'_> {
             .instances
             .add(ast::Id::from(THIS), (&this_sig).into())?;
 
+        // Create all invoke bindings
         for cmd in &comp.body {
             match cmd {
-                crate::core::Command::Invoke(inv) => bind_check.invoke(inv)?,
-                crate::core::Command::Instance(inst) => {
+                core::Command::Invoke(inv) => bind_check.bind_invoke(inv)?,
+                core::Command::Instance(inst) => {
                     let sig = binds
                         .find_component(&inst.component, &inst.bindings)?;
                     bind_check.instances.add(inst.name.clone(), sig)?;
                 }
-                crate::core::Command::Connect(con) => {
+                core::Command::Connect(_) | core::Command::Fsm(_) => (),
+            }
+        }
+
+        // Check connections and invocation port uses
+        for cmd in &comp.body {
+            match cmd {
+                core::Command::Invoke(inv) => bind_check.check_invoke(inv)?,
+                core::Command::Connect(con) => {
                     bind_check.connect(&con.dst, &con.src)?
                 }
-                crate::core::Command::Fsm(_) => (),
+                core::Command::Fsm(_) | core::Command::Instance(_) => (),
             }
         }
 
