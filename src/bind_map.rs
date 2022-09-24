@@ -18,8 +18,13 @@ impl<K> BindMap<K> {
         }
     }
 
-    // Get the value of a binding or produce an error
-    pub fn get(&self, id: &Id) -> FilamentResult<&K> {
+    /// Get the value of a binding or panic
+    pub fn get(&self, id: &Id) -> &K {
+        &self.map[id]
+    }
+
+    /// Get the value of a binding or produce an error
+    pub fn find(&self, id: &Id) -> FilamentResult<&K> {
         if let Some(v) = self.map.get(id) {
             Ok(v)
         } else {

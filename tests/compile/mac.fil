@@ -1,0 +1,14 @@
+import "primitives/core.fil";
+
+component main<G>(
+  @interface[G, G+1] go: 1,
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32,
+) -> (
+  @[G, G+1] out: 32,
+) {
+  r := new Register[32]<G, G+2>(add.out);
+  mul := new MultComb[32]<G>(left, right);
+  add := new Add[32]<G>(mul.out, r.prev);
+  out = add.out;
+}

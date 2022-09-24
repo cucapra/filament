@@ -1,20 +1,20 @@
-use calyx::errors::CalyxResult;
-use calyx::frontend;
-use calyx::ir;
-use calyx::ir::RRC;
-use calyx::structure;
-use itertools::Itertools;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::iter;
-use std::path::Path;
-use std::path::PathBuf;
-use std::rc::Rc;
-
 use super::Fsm;
-use crate::cmdline::Opts;
-use crate::errors::Error;
-use crate::{errors::FilamentResult, event_checker::ast};
+use crate::{
+    cmdline::Opts,
+    errors::{Error, FilamentResult},
+    event_checker::ast,
+};
+use calyx::{
+    errors::CalyxResult,
+    frontend,
+    ir::{self, RRC},
+    structure,
+};
+use itertools::Itertools;
+use std::collections::{HashMap, HashSet};
+use std::iter;
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 /// Attribute attached to event signals in a module interface.
 const FIL_EVENT: &str = "fil_event";
@@ -239,69 +239,24 @@ fn define_fsm_component(states: u64, ctx: &mut Context) {
     ctx.binding.fsm_comps.insert(states, comp);
 }
 
-fn compile_command(cmd: ast::Command, ctx: &mut Context) {
-    match cmd {
-        ast::Command::Fsm(fsm) => {
-            // If FSM with required number of states has not been constructed, define a new component for it
-            if !ctx.binding.fsm_comps.contains_key(&fsm.states) {
-                define_fsm_component(fsm.states, ctx);
-            }
-            // Construct the FSM
-            let name = fsm.name.clone();
-            let f = Fsm::new(&fsm, ctx);
-            ctx.fsms.insert(name, f);
+fn compile_connect(con: ast::Connect, ctx: &mut Context) {
+    let ast::Connect {
+        dst, src, guard, ..
+    } = con;
+
+    let (dst, g) = ctx.compile_port(&dst);
+    assert!(g.is_none(), "Destination has a guard");
+    let (src, g) = ctx.compile_port(&src);
+    let guard = match (guard, g) {
+        (None, None) => ir::Guard::True,
+        (None, Some(g)) => g,
+        (Some(g), None) => compile_guard(g, ctx),
+        (Some(_), Some(_)) => {
+            panic!("Source implies guard and is guarded")
         }
-        ast::Command::Invoke(ast::Invoke {
-            bind,
-            instance,
-            ports,
-            ..
-        }) => {
-            assert!(
-                ports.is_none(),
-                "Cannot compile high-level invoke statements"
-            );
-            ctx.add_invoke(bind, instance);
-        }
-        ast::Command::Instance(ast::Instance {
-            name,
-            component,
-            bindings,
-            ..
-        }) => {
-            let cell = if let Some(sig) = ctx.get_sig(&component) {
-                ctx.builder.add_component(
-                    name.id().clone(),
-                    component.id().clone(),
-                    sig,
-                )
-            } else {
-                ctx.builder.add_primitive(
-                    name.id().clone(),
-                    component.id(),
-                    &bindings,
-                )
-            };
-            ctx.instances.insert(name, cell);
-        }
-        ast::Command::Connect(ast::Connect {
-            dst, src, guard, ..
-        }) => {
-            let (dst, g) = ctx.compile_port(&dst);
-            assert!(g.is_none(), "Destination has a guard");
-            let (src, g) = ctx.compile_port(&src);
-            let guard = match (guard, g) {
-                (None, None) => ir::Guard::True,
-                (None, Some(g)) => g,
-                (Some(g), None) => compile_guard(g, ctx),
-                (Some(_), Some(_)) => {
-                    panic!("Source implies guard and is guarded")
-                }
-            };
-            let assign = ctx.builder.build_assignment(dst, src, guard);
-            ctx.builder.component.continuous_assignments.push(assign);
-        }
-    }
+    };
+    let assign = ctx.builder.build_assignment(dst, src, guard);
+    ctx.builder.component.continuous_assignments.push(assign);
 }
 
 fn as_port_defs<FW: Clone, CW>(
@@ -390,9 +345,63 @@ fn compile_component(
     component.attributes.insert("nointerface", 1);
     let builder = ir::Builder::new(&mut component, lib).not_generated();
     let mut ctx = Context::new(sigs, builder, lib);
+
+    let mut cons = vec![];
+
+    // Construct bindings
     for cmd in comp.body {
-        compile_command(cmd, &mut ctx);
+        match cmd {
+            ast::Command::Invoke(ast::Invoke {
+                bind,
+                instance,
+                ports,
+                ..
+            }) => {
+                assert!(
+                    ports.is_none(),
+                    "Cannot compile high-level invoke statements"
+                );
+                ctx.add_invoke(bind, instance);
+            }
+            ast::Command::Fsm(fsm) => {
+                // If FSM with required number of states has not been constructed, define a new component for it
+                if !ctx.binding.fsm_comps.contains_key(&fsm.states) {
+                    define_fsm_component(fsm.states, &mut ctx);
+                }
+                // Construct the FSM
+                let name = fsm.name.clone();
+                let f = Fsm::new(&fsm, &mut ctx);
+                ctx.fsms.insert(name, f);
+            }
+            ast::Command::Instance(ast::Instance {
+                name,
+                component,
+                bindings,
+                ..
+            }) => {
+                let cell = if let Some(sig) = ctx.get_sig(&component) {
+                    ctx.builder.add_component(
+                        name.id().clone(),
+                        component.id().clone(),
+                        sig,
+                    )
+                } else {
+                    ctx.builder.add_primitive(
+                        name.id().clone(),
+                        component.id(),
+                        &bindings,
+                    )
+                };
+                ctx.instances.insert(name, cell);
+            }
+            ast::Command::Connect(con) => {
+                cons.push(con);
+            }
+        };
     }
+    // Compile commands
+    cons.into_iter()
+        .for_each(|con| compile_connect(con, &mut ctx));
     Ok(component)
 }
 
