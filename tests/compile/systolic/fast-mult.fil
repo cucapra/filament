@@ -1,0 +1,78 @@
+import "primitives/core.fil";
+
+/// Implementation of a multiplier with initiation interval 1 and latency 3
+component FastMult<G>(
+  @interface[G, G+1] go_G: 1,
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32,
+) -> (
+  @[G+3, G+4] out: 32,
+) {
+  // First stage, register the inputs
+  l := new Register[32]<G, G+2>(left);
+  r := new Register[32]<G, G+2>(right);
+
+  // Second stage, perform the computation and save it
+  m := new MultComb[32]<G+1>(l.out, r.out);
+  ot := new Register[32]<G+1, G+3>(m.out);
+
+  // Third stage, forward the value from temp out to out register
+  final := new Register[32]<G+2, G+4>(ot.out);
+
+  // Connect the output to the out register
+  out = final.out;
+}
+
+
+component Process<G>(
+  @interface[G, G+1] go: 1,
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32,
+) -> (
+  @[G+3, G+4] out: 32,
+) {
+  // Internal register to save the current value
+  mul := new FastMult<G>(left, right);
+  // XXX(rachit): acc.prev is invalid in the iteration
+  add := new Add[32]<G+3>(acc.prev, mul.out);
+  acc := new Register[32]<G+3, G+5>(add.out);
+
+  out = add.out;
+}
+
+component main<G>(
+  @interface[G, G+1] go: 1,
+  @[G, G+1] l0: 32,
+  @[G, G+1] l1: 32,
+  @[G, G+1] t0: 32,
+  @[G, G+1] t1: 32,
+) -> (
+  @[G+4, G+5] out00: 32,
+  @[G+4, G+5] out01: 32,
+  @[G+4, G+5] out10: 32,
+  @[G+4, G+5] out11: 32,
+) {
+
+  // Systolic registers that go from left to right
+  l00 := new Register[32]<G, G+2>(l0);
+  l01 := new Register[32]<G, G+2>(l00.prev);
+  l10 := new Register[32]<G, G+2>(l1);
+  l11 := new Register[32]<G, G+2>(l10.prev);
+
+  // Systolic registers that go from top to bottom
+  t00 := new Register[32]<G, G+2>(t0);
+  t10 := new Register[32]<G, G+2>(t00.prev);
+  t01 := new Register[32]<G, G+2>(t1);
+  t11 := new Register[32]<G, G+2>(t01.prev);
+
+  // Connection registers to processing elements
+  pe00 := new Process<G+1>(l00.out, t00.out);
+  pe01 := new Process<G+1>(l01.out, t01.out);
+  pe10 := new Process<G+1>(l10.out, t10.out);
+  pe11 := new Process<G+1>(l11.out, t11.out);
+
+  out00 = pe00.out;
+  out01 = pe01.out;
+  out10 = pe10.out;
+  out11 = pe11.out;
+}

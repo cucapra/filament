@@ -19,6 +19,18 @@ cmd = """
 fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize' -q
 """
 
+# Compile directories within the tests/compile directory. All *.fil files in the
+# use the same input and must produce the same output
+[[tests]]
+name = "compile multi"
+paths = [
+  "tests/compile/*/*.fil"
+]
+cmd = """
+dir=$(dirname {}) && \
+fud e -s cocotb.data "$dir/data.json" --to cocotb-out {} -s futil.flags ' -d canonicalize' -q
+"""
+
 # Evaluation examples
 [[tests]]
 name = "evaluation"
