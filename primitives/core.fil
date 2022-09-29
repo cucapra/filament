@@ -9,8 +9,18 @@ extern "core.sv" {
     @[G, G+1] in: WIDTH,
   ) -> (
     @[S, L] out: WIDTH,
-    @[G, G+1] prev: WIDTH,
   ) where S = G+1, L > S;
+
+  // A component that allows access to its previous stored value.
+  // Backend by a simple register
+  component Prev[WIDTH, SAFE]<G>(
+    clk: 1,
+    reset: 1,
+    @interface[G, G+1] write_en: 1,
+    @[G, G+1] in: WIDTH,
+  ) -> (
+    @[G, G+1] prev: WIDTH,
+  );
 
   component Mux[WIDTH]<G, ?L=G+1>(
     @interface[G, L] @phantom go: 1,

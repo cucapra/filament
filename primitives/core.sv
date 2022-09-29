@@ -7,11 +7,8 @@ module Register #(
   input wire reset,
   input wire logic write_en,
   input wire logic [WIDTH-1:0] in,
-  output logic [WIDTH-1:0] out,
-  output logic [WIDTH-1:0] prev
+  output logic [WIDTH-1:0] out
 );
-  // prev is just an alias for out
-  assign prev = out;
   always_ff @(posedge clk) begin
     if (reset)
       out <= 0;
@@ -19,6 +16,31 @@ module Register #(
       out <= in;
     else
       out <= out;
+  end
+endmodule
+
+// Same as a register except resets to 'x
+module Prev #(
+    parameter WIDTH = 32,
+    // If 0, reset to 'x, otherwise reset to 0
+    parameter SAFE = 0
+) (
+  input wire clk,
+  input wire reset,
+  input wire logic write_en,
+  input wire logic [WIDTH-1:0] in,
+  output logic [WIDTH-1:0] prev
+);
+  always_ff @(posedge clk) begin
+    if (reset)
+      if (SAFE == 0)
+        prev <= 'x;
+      else
+        prev <= '0;
+    else if (write_en)
+      prev <= in;
+    else
+      prev <= prev;
   end
 endmodule
 
