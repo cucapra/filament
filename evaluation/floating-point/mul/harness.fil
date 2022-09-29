@@ -22,7 +22,7 @@ component main<G>(
   @[G, G+1] verilog_nopipe: 32,
 ) {
   np := new FP_Mult_NoPipe<G>(left, right);
-  f := new FP_Mult<G>(left, right);
+  f := new FPMult<G>(left, right);
 
   verilog_nopipe = np.res;
   out = f.out;

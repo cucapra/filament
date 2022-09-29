@@ -21,7 +21,7 @@ component ComputeOp<G>(
   out = op.out;
 }
 
-component FP_Mult<G>(
+component FPMult<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] a: 32,
   @[G, G+1] b: 32,
