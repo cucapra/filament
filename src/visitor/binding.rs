@@ -86,9 +86,11 @@ impl<'a> ResolvedInstance<'a> {
 
     pub fn resolve(&self) -> ast::Signature<u64> {
         match self {
-            ResolvedInstance::Bound { sig, binds, .. } => sig
-                .resolve(binds)
-                .unwrap_or_else(|_| panic!("Failed to resolve signature")),
+            ResolvedInstance::Bound { sig, binds, .. } => {
+                sig.resolve(binds).unwrap_or_else(|_| {
+                    panic!("Failed to resolve signature: {}", sig.name)
+                })
+            }
             ResolvedInstance::Concrete { sig, .. } => (*sig).clone(),
         }
     }
