@@ -110,13 +110,22 @@ impl BindCheck<'_> {
             .iter()
             .take_while(|eb| eb.default.is_none())
             .count();
+        let max_formals = inst.abstract_vars().len();
         let actuals = inv.abstract_vars.len();
         if min_formals > actuals {
             return Err(Error::malformed(format!(
                 "Invoke of {} requires at least {min_formals} events but {actuals} are provided",
                 inv.instance,
             )).add_note(
-                format!("Invoke requires {min_formals} events but {actuals} are provided"),
+                format!("Invoke requires at least {min_formals} events but {actuals} are provided"),
+                inv.instance.copy_span()
+            ));
+        } else if actuals > max_formals {
+            return Err(Error::malformed(format!(
+                "Invoke of {} requires at most {max_formals} events but {actuals} are provided",
+                inv.instance,
+            )).add_note(
+                format!("Invoke accepts at most {max_formals} events but {actuals} are provided"),
                 inv.instance.copy_span()
             ));
         }
