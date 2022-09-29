@@ -7,11 +7,13 @@ component Process<G>(
 ) -> (
   @[G, G+1] out: 32,
 ) {
-  // Internal register to save the current value
-  acc := new Register[32]<G, G+2>(add.out);
+  // If acc does not contain a valid value, use 0
+  acc := new Prev[32, 0]<G>(add.out);
+  go_prev := new Prev[1, 1]<G>(go);
+  mux := new Mux[32]<G>(go_prev.prev, acc.prev, 0);
+
   mul := new MultComb[32]<G>(left, right);
-  // XXX(rachit): acc.prev is invalid in the iteration
-  add := new Add[32]<G>(acc.prev, mul.out);
+  add := new Add[32]<G>(mux.out, mul.out);
 
   out = add.out;
 }
@@ -23,29 +25,22 @@ component main<G>(
   @[G, G+1] t0: 32,
   @[G, G+1] t1: 32,
 ) -> (
-  @[G+1, G+2] out00: 32,
-  @[G+1, G+2] out01: 32,
-  @[G+1, G+2] out10: 32,
-  @[G+1, G+2] out11: 32,
+  @[G, G+1] out00: 32,
+  @[G, G+1] out01: 32,
+  @[G, G+1] out10: 32,
+  @[G, G+1] out11: 32,
 ) {
-
   // Systolic registers that go from left to right
-  l00 := new Register[32]<G, G+2>(l0);
-  l01 := new Register[32]<G, G+2>(l00.prev);
-  l10 := new Register[32]<G, G+2>(l1);
-  l11 := new Register[32]<G, G+2>(l10.prev);
-
-  // Systolic registers that go from top to bottom
-  t00 := new Register[32]<G, G+2>(t0);
-  t10 := new Register[32]<G, G+2>(t00.prev);
-  t01 := new Register[32]<G, G+2>(t1);
-  t11 := new Register[32]<G, G+2>(t01.prev);
+  r00_01 := new Prev[32, 1]<G>(l0);
+  r00_10 := new Prev[32, 1]<G>(t0);
+  r10_11 := new Prev[32, 1]<G>(l1);
+  r01_11 := new Prev[32, 1]<G>(t1);
 
   // Connection registers to processing elements
-  pe00 := new Process<G+1>(l00.out, t00.out);
-  pe01 := new Process<G+1>(l01.out, t01.out);
-  pe10 := new Process<G+1>(l10.out, t10.out);
-  pe11 := new Process<G+1>(l11.out, t11.out);
+  pe00 := new Process<G>(l0, t0);
+  pe01 := new Process<G>(r00_01.prev, t1);
+  pe10 := new Process<G>(l1, r00_10.prev);
+  pe11 := new Process<G>(r10_11.prev, r01_11.prev);
 
   out00 = pe00.out;
   out01 = pe01.out;

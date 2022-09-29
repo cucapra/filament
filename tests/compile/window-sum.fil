@@ -9,11 +9,11 @@ component main<G>(
   @[G, G+1] out: 32
 ) {
   // Save the value of this input for the next iteration
-  r0 := new Register[32]<G, G+2>(in);
+  r0 := new Prev[32, 0]<G>(in);
 
   // If this component outputs 1, then the previous cycle provided a value and
   // therefore r1 will contain a valid value in this cycle.
-  c0 := new Register[1]<G, G+2>(go);
+  c0 := new Prev[1, 1]<G>(go);
 
   // If r1 contains a valid value, then use it for the sum; otherwise, use 0.
   add := new Add[32]<G>(in, r0.prev);
