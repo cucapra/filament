@@ -19,6 +19,25 @@ module Register #(
   end
 endmodule
 
+module Delay #(
+    parameter WIDTH = 32
+) (
+  input wire clk,
+  input wire reset,
+  input wire logic [WIDTH-1:0] in,
+  output logic [WIDTH-1:0] out
+);
+
+Register #(WIDTH) reg (
+  .clk(clk),
+  .reset(reset),
+  .write_en(1'b1),
+  .in(in),
+  .out(out)
+);
+
+endmodule
+
 // Same as a register except resets to 'x
 module Prev #(
     parameter WIDTH = 32,
