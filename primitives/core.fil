@@ -11,6 +11,18 @@ extern "core.sv" {
     @[S, L] out: WIDTH,
   ) where S = G+1, L > S;
 
+  // A component that delays `in` by one cycle. Exactly the same as a register
+  // but does not require component to provide `go` signal. If the component
+  // additionally has no resource sharing, it can elide FSM generation.
+  component Delay[WIDTH]<G>(
+    clk: 1,
+    reset: 1,
+    @interface[G, G+1] @phantom go: 1,
+    @[G, G+1] in: WIDTH,
+  ) -> (
+    @[G+1, G+2] out: WIDTH,
+  );
+
   // A component that allows access to its previous stored value.
   // Backend by a simple register
   component Prev[WIDTH, SAFE]<G>(
