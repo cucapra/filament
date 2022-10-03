@@ -7,14 +7,14 @@ use crate::visitor;
 use std::collections::HashMap;
 
 #[derive(Default)]
-pub struct CompileInvokes {
+pub struct CompileInvokes<const PHANTOM: bool> {
     /// Mapping from events to FSMs
     fsms: HashMap<ast::Id, ast::Fsm>,
     /// Mapping from event to their max state
     max_states: HashMap<ast::Id, u64>,
 }
 
-impl CompileInvokes {
+impl<const PHANTOM: bool> CompileInvokes<PHANTOM> {
     fn find_fsm(&self, event: &ast::Id) -> Option<&ast::Fsm> {
         self.fsms.get(event)
     }
@@ -67,7 +67,7 @@ impl CompileInvokes {
     }
 }
 
-impl visitor::Transform for CompileInvokes {
+impl<const PHANTOM: bool> visitor::Transform for CompileInvokes<PHANTOM> {
     fn new(_: &ast::Namespace) -> Self {
         Self::default()
     }
@@ -178,7 +178,8 @@ impl visitor::Transform for CompileInvokes {
             .sig
             .interface_signals
             .iter()
-            .filter(|id| !id.phantom)
+            // If PHANTOM is set, skip FSM generation for FSM ports
+            .filter(|id| if PHANTOM { !id.phantom } else { true })
             .map(|interface| {
                 let ev = &interface.event;
                 Ok((

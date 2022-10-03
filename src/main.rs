@@ -165,16 +165,21 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     ns = phantom_check::PhantomCheck::transform(ns)?;
     log::info!("Phantom check: {}ms", t.elapsed().as_millis());
 
-    if opts.dump_interface || !opts.check {
+    if opts.dump_interface {
+        // Lowering
         let t = Instant::now();
-        ns = lower::CompileInvokes::transform(ns)?;
+        ns = lower::CompileInvokes::<false>::transform(ns)?;
         log::info!("Lowering: {}ms", t.elapsed().as_millis());
         log::info!("{ns}");
-    }
-
-    if opts.dump_interface {
         dump_interface::DumpInterface::transform(ns)?;
     } else if !opts.check {
+        // Lowering
+        let t = Instant::now();
+        ns = lower::CompileInvokes::<true>::transform(ns)?;
+        log::info!("Lowering: {}ms", t.elapsed().as_millis());
+        log::info!("{ns}");
+
+        // Compilation
         let t = Instant::now();
         backend::compile(ns, opts)?;
         log::info!("Compilation: {}ms", t.elapsed().as_millis());

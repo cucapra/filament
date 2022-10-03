@@ -72,7 +72,9 @@ def construct_transaction_fsm(interface, randomize):
                     trg = 0
                 # XXX(rachit): This might cause problems if another transaction
                 # attempts to write 1 while this writes 0
-                mod._id(event["name"], extended=False).value = trg
+                # If the interface is not @phantom, provide it
+                if not event["phantom"]:
+                    mod._id(event["name"], extended=False).value = trg
 
                 # Set input values
                 for inp in interface["inputs"]:
@@ -163,7 +165,8 @@ async def setup_design(mod, interface):
 
     # Set all interface values to 0
     for event in interface["interfaces"]:
-        mod._id(event["name"], extended=False).value = 0
+        if not event["phantom"]:
+            mod._id(event["name"], extended=False).value = 0
 
     # Initialize a cycle counter
     (proc, count) = counter(mod)
