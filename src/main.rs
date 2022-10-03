@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
+    fs,
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -12,7 +13,7 @@ use codespan_reporting::{
 use filament::{
     backend, bind_check, cmdline, dump_interface,
     errors::{self, FilamentResult},
-    event_checker, frontend, interval_checking, lower,
+    event_checker, frontend, interval_checking, lower, phantom_check,
     visitor::Transform,
 };
 
@@ -39,7 +40,7 @@ fn parse_namespace(
             let mut cur_base = dir.to_path_buf();
             cur_base.push(imp);
             if cur_base.exists() {
-                Ok(cur_base)
+                Ok(fs::canonicalize(cur_base)?)
             } else {
                 Err(errors::Error::misc(format!(
                 "Could not resolve import path: {}. Neither {} nor {} exist.",
@@ -127,6 +128,7 @@ fn parse_namespace(
                 .collect::<FilamentResult<Vec<_>>>()?,
         );
     }
+    // eprintln!("Imported: {:#?}", already_imported);
     Ok(ns)
 }
 
@@ -154,15 +156,20 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     let ns = bind_check::check(ns)?;
     log::info!("Bind check: {}ms", t.elapsed().as_millis());
 
+    // Interval checking
     let t = Instant::now();
     let mut ns = interval_checking::check(ns)?;
     log::info!("Interval check: {}ms", t.elapsed().as_millis());
+
+    // User-level @phantom ports
+    ns = phantom_check::PhantomCheck::transform(ns)?;
+    log::info!("Phantom check: {}ms", t.elapsed().as_millis());
 
     if opts.dump_interface || !opts.check {
         let t = Instant::now();
         ns = lower::CompileInvokes::transform(ns)?;
         log::info!("Lowering: {}ms", t.elapsed().as_millis());
-        log::trace!("{ns}");
+        log::info!("{ns}");
     }
 
     if opts.dump_interface {

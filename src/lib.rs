@@ -1,4 +1,3 @@
-// pub mod backend;
 pub mod backend;
 pub mod bind_check;
 pub mod bind_map;
@@ -11,4 +10,5 @@ pub mod frontend;
 pub mod interface_infer;
 pub mod interval_checking;
 pub mod lower;
+pub mod phantom_check;
 pub mod visitor;

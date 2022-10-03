@@ -15,20 +15,25 @@ pub struct CompileInvokes {
 }
 
 impl CompileInvokes {
+    fn find_fsm(&self, event: &ast::Id) -> Option<&ast::Fsm> {
+        self.fsms.get(event)
+    }
+
     fn get_fsm(&self, event: &ast::Id) -> &ast::Fsm {
-        self.fsms
-            .get(event)
+        self.find_fsm(event)
             .unwrap_or_else(|| panic!("No FSM for event `{event}`."))
     }
 
     /// Converts an interval to a guard expression with the appropriate FSM
-    fn range_to_guard(&self, range: ast::Range) -> ast::Guard {
+    fn range_to_guard(&self, range: ast::Range) -> Option<ast::Guard> {
         if let Some((ev, st, end)) = range.as_offset() {
-            (st..end)
+            let fsm = self.find_fsm(ev)?;
+            let guard = (st..end)
                 .into_iter()
-                .map(|st| self.get_fsm(ev).port(st).into())
+                .map(|st| fsm.port(st).into())
                 .reduce(ast::Guard::or)
-                .unwrap()
+                .unwrap();
+            Some(guard)
         } else {
             unimplemented!(
                 "Range `{range}` cannot be represented as a simple non-max offset")
@@ -152,7 +157,7 @@ impl visitor::Transform for CompileInvokes {
                 let con = ast::Connect::new(
                     ast::Port::comp(bind.clone(), formal.name.clone()),
                     port,
-                    Some(guard),
+                    guard,
                 )
                 .set_span(sp);
                 connects.push(con.into());
@@ -173,6 +178,7 @@ impl visitor::Transform for CompileInvokes {
             .sig
             .interface_signals
             .iter()
+            .filter(|id| !id.phantom)
             .map(|interface| {
                 let ev = &interface.event;
                 Ok((

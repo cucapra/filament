@@ -42,6 +42,7 @@ impl visitor::Transform for DumpInterface {
         .sig
         .interface_signals
         .iter()
+        .filter(|id| !id.phantom)
         .map(|id| {
             let states = self.fsm_states[&id.name];
             id.delay()
