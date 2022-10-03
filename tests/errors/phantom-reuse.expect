@@ -1,0 +1,16 @@
+---CODE---
+1
+---STDERR---
+error: Reuses instance uses phantom event for scheduling
+   ┌─ tests/errors/phantom-reuse.fil:10:13
+   │
+ 4 │     @interface[G, G+2] @phantom go: 1,
+   │                - Event defined as phantom
+   ·
+ 9 │     a0 := A<G>(left, left);
+   │           - Previous use
+10 │     a1 := A<G+1>(right, right);
+   │             ^ Invocation uses phantom port
+   │
+   = Phantom ports are compiled away and cannot be used for resource sharing
+

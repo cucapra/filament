@@ -1,0 +1,11 @@
+import "primitives/core.fil";
+
+component main<G>(
+    @interface[G, G+2] @phantom go: 1,
+    @[G, G+1] left: 32,
+    @[G+1, G+2] right: 32,
+) -> () {
+    A := new Add[32];
+    a0 := A<G>(left, left);
+    a1 := A<G+1>(right, right);
+}

@@ -51,6 +51,13 @@ impl<'a> ResolvedInstance<'a> {
         }
     }
 
+    pub fn interface_signals(&self) -> &[ast::InterfaceDef] {
+        match self {
+            ResolvedInstance::Bound { sig, .. } => &sig.interface_signals,
+            ResolvedInstance::Concrete { sig, .. } => &sig.interface_signals,
+        }
+    }
+
     pub fn input_names(&self) -> Vec<ast::Id> {
         match self {
             ResolvedInstance::Bound { sig, .. } => {
