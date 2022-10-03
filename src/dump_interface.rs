@@ -36,22 +36,23 @@ impl visitor::Transform for DumpInterface {
         //   "name": "go_G",
         //   "event": "G",
         //   "delay": 2,
-        // . "states": 5,
+        //   "states": 5,
+        //   "phantom": false
         // }
         let interfaces = comp
         .sig
         .interface_signals
         .iter()
-        .filter(|id| !id.phantom)
         .map(|id| {
             let states = self.fsm_states[&id.name];
             id.delay()
                 .concrete()
                 .map(|delay|
                     format!(
-                        "{{\"name\": \"{}\", \"event\": \"{}\", \"delay\": {delay}, \"states\": {states} }}",
+                        "{{\"name\": \"{}\", \"event\": \"{}\", \"delay\": {delay}, \"states\": {states}, \"phantom\": {} }}",
                         id.name,
-                        id.event
+                        id.event,
+                        id.phantom
                     ))
                 .ok_or_else(|| {
                     errors::Error::malformed(

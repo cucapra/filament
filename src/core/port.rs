@@ -121,10 +121,11 @@ where
     T: TimeRep + Clone,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let phan = if self.phantom { " @phantom" } else { "" };
         write!(
             f,
-            "@interface[{}, {}] {}: 1",
-            self.event, self.end, self.name
+            "@interface[{}, {}]{} {}: 1",
+            self.event, self.end, phan, self.name
         )
     }
 }
