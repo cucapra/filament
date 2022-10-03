@@ -8,7 +8,7 @@ component Max_mult_add<G, L>(
   @[L, L+1] c: 32,
   @[L, L+1] d: 32,
 ) -> () {
-  M := new Mult;
+  M := new Add[32];
   m1 := M<L>(c, d);
   m0 := M<G>(a, b);
 }

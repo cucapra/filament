@@ -1,4 +1,5 @@
 import "primitives/core.fil";
+import "primitives/sequential.fil";
 
 // Simple ALU that can either perform an addition or a multiplication
 component main<G>(

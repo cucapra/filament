@@ -1,4 +1,5 @@
 import "primitives/core.fil";
+import "primitives/sequential.fil";
 
 component Main<G>(
   @interface[G, G+10] go_G: 1,

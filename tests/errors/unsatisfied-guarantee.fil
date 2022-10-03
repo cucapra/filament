@@ -7,7 +7,7 @@ component Main<G>(
 ) -> (
   @[G+3, G+4] out: 32
 ) {
-  M := new Mult;
+  M := new MultComb[32];
   m0 := M<G>(left, right);
   out = m0.out;
 }

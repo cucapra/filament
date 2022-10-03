@@ -63,16 +63,4 @@ module Prev #(
   end
 endmodule
 
-// Implements a simple mutliplexer
-module Mux #(
-  parameter WIDTH = 32
-) (
-  input wire logic sel,
-  input wire logic [WIDTH-1:0] in0,
-  input wire logic [WIDTH-1:0] in1,
-  output logic [WIDTH-1:0] out
-);
-  assign out = sel ? in0 : in1;
-endmodule
-
 `default_nettype wire

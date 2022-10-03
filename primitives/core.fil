@@ -1,4 +1,4 @@
-extern "core.sv" {
+extern "state.sv" {
   // A register that can extend the lifetime of a signal to any required length.
   component Register[WIDTH]<G, L, ?S = G+1>(
     clk: 1,
@@ -33,18 +33,9 @@ extern "core.sv" {
   ) -> (
     @[G, G+1] prev: WIDTH,
   );
-
-  component Mux[WIDTH]<G, ?L=G+1>(
-    @interface[G, L] @phantom go: 1,
-    @[G, L] sel: 1,
-    @[G, L] in0: WIDTH,
-    @[G, L] in1: WIDTH,
-  ) -> (
-    @[G, L] out: WIDTH,
-  ) where L > G;
 }
 
-extern "binary.sv" {
+extern "comb.sv" {
   // ============= Combinational =================
 
   component Const[WIDTH, VALUE]<G, ?L=G+1>(
@@ -206,18 +197,13 @@ extern "binary.sv" {
   ) -> (
     @[G, L] out: WIDTH,
   ) where L > G;
-}
 
-// ============= Sequential =================
-component Mult<G>(
-  @interface[G, G+2] go_G: 1,
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32,
-) -> (
-  @[G+2, G+3] out: 32,
-) {
-  ll := new Register[32]<G, G+3>(left);
-  lr := new Register[32]<G, G+3>(right);
-  m := new MultComb[32]<G+2>(ll.out, lr.out);
-  out = m.out;
+  component Mux[WIDTH]<G, ?L=G+1>(
+    @interface[G, L] @phantom go: 1,
+    @[G, L] sel: 1,
+    @[G, L] in0: WIDTH,
+    @[G, L] in1: WIDTH,
+  ) -> (
+    @[G, L] out: WIDTH,
+  ) where L > G;
 }

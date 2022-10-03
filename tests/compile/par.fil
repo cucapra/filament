@@ -1,4 +1,5 @@
 import "primitives/core.fil";
+import "primitives/sequential.fil";
 
 component FastMult<G>(
   @interface[G, G+1] go_G: 1,

@@ -1,4 +1,5 @@
 import "primitives/core.fil";
+import "primitives/sequential.fil";
 
 component main<G>(
   @interface[G, G+3] go_G: 1,
@@ -10,10 +11,12 @@ component main<G>(
 ) {
 
   A := new Add[32];
-  M := new Mult;
+  M := new MultComb[32];
+  R := new Register[32];
 
   m0 := M<G>(a, b);
-  a0 := A<G+2>(m0.out, c);
+  r := R<G, G+3>(m0.out);
+  a0 := A<G+2>(r.out, c);
 
   out = a0.out;
 }
