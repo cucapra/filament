@@ -28,7 +28,7 @@ module Delay #(
   output logic [WIDTH-1:0] out
 );
 
-Register #(WIDTH) reg (
+Register #(WIDTH) r (
   .clk(clk),
   .reset(reset),
   .write_en(1'b1),

@@ -7,8 +7,8 @@ error: Cannot prove constraint G+1 >= G+2
  11 │   m0 := M<G+1>(left, right);
     │                ^^^^ Source is available for @[G, G+1]
     │
-    ┌─ ./primitives/core.fil:202:3
+    ┌─ ./primitives/core.fil:214:3
     │
-202 │   @[G, G+1] left: 32,
+214 │   @[G, G+1] left: 32,
     │   ------------------ Destination's requirement @[G+1, G+2]
 

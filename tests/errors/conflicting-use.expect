@@ -9,8 +9,8 @@ error: Cannot prove constraint |G - G+1| >= |G - G+2|
   8 │   m1 := M<G+1>(30, 40);
     │   ^^^^^^^^^^^^^^^^^^^^^ Conflicting invoke. Invoke provides binding M.G=G+1
     │
-    ┌─ ./primitives/core.fil:201:3
+    ┌─ ./primitives/core.fil:213:3
     │
-201 │   @interface[G, G+2] go_G: 1,
+213 │   @interface[G, G+2] go_G: 1,
     │   -------------------------- @interface for G specifies that invokes must be |G - G+2| cycles apart
 
