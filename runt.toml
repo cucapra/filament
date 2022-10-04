@@ -41,3 +41,14 @@ cmd = """
 dir=$(dirname {}) && \
 ./evaluation/fuzz/check.sh $dir 100
 """
+
+# Aetherling evaluation
+[[tests]]
+name = "aetherling evaluation"
+paths = [
+  "aetherling/**/harness.fil"
+]
+cmd = """
+dir=$(dirname {}) && \
+fud e -s cocotb.data "$dir/data.json" --to cocotb-out {} -s futil.flags ' -d canonicalize' -q | jq
+"""
