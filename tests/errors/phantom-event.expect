@@ -10,7 +10,7 @@ error: Component provided phantom event to non-phantom port
 7 │     r := new Register[32]<G, G+2>(left);
   │                           ^ Invoke provides phantom event to non-phantom port
   │
-  ┌─ ./primitives/core.fil:6:5
+  ┌─ ./primitives/./state.fil:6:5
   │
 6 │     @interface[G, G+1] write_en: 1,
   │     ------------------------------ Instance's signature defines this port to be concrete

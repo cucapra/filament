@@ -1,0 +1,36 @@
+extern "state.sv" {
+  // A register that can extend the lifetime of a signal to any required length.
+  component Register[WIDTH]<G, L, ?S = G+1>(
+    clk: 1,
+    reset: 1,
+    @interface[G, G+1] write_en: 1,
+    // Fake port to get the right delay for `G` which is |G+1 - L|
+    @interface[S, L] @phantom go_S: 1,
+    @[G, G+1] in: WIDTH,
+  ) -> (
+    @[S, L] out: WIDTH,
+  ) where S = G+1, L > S;
+
+  // A component that delays `in` by one cycle. Exactly the same as a register
+  // but does not require component to provide `go` signal. If the component
+  // additionally has no resource sharing, it can elide FSM generation.
+  component Delay[WIDTH]<G>(
+    clk: 1,
+    reset: 1,
+    @interface[G, G+1] @phantom go: 1,
+    @[G, G+1] in: WIDTH,
+  ) -> (
+    @[G+1, G+2] out: WIDTH,
+  );
+
+  // A component that allows access to its previous stored value.
+  // Backend by a simple register
+  component Prev[WIDTH, SAFE]<G>(
+    clk: 1,
+    reset: 1,
+    @interface[G, G+1] write_en: 1,
+    @[G, G+1] in: WIDTH,
+  ) -> (
+    @[G, G+1] prev: WIDTH,
+  );
+}
