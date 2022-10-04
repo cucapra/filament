@@ -1,0 +1,19 @@
+extern "merge.sv" {
+    // Merge two signals with overlapping lifetimes to generate a new signal available
+    // for the union of their lifetimes
+    // Implemented using a temporal mux that switches from signal `in1` to `in2`
+    // on event L.
+    // The signals `in1` and `in2` might exist for more their specified lifetime
+    // in this function's signature but that is okay because inputs only require
+    // signals to be active for at least as long as the requirement
+    component Merge[WIDTH]<G, S, E>(
+        clk: 1,
+        reset: 1,
+        @interface[G, E] go_G: 1,
+        @interface[S, E] go_S: 1,
+        @[G, S] in0: WIDTH,
+        @[S, E] in1: WIDTH,
+    ) -> (
+        @[G, E] out: WIDTH,
+    ) where S > G, E > S;
+}
