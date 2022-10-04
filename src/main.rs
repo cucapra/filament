@@ -1,6 +1,5 @@
 use std::{
     collections::{HashMap, HashSet},
-    fs,
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -40,7 +39,7 @@ fn parse_namespace(
             let mut cur_base = dir.to_path_buf();
             cur_base.push(imp);
             if cur_base.exists() {
-                Ok(fs::canonicalize(cur_base)?)
+                Ok(cur_base)
             } else {
                 Err(errors::Error::misc(format!(
                 "Could not resolve import path: {}. Neither {} nor {} exist.",

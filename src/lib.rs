@@ -10,5 +10,5 @@ pub mod frontend;
 pub mod interface_infer;
 pub mod interval_checking;
 pub mod lower;
-pub mod phantom_check;
 pub mod visitor;
+pub mod phantom_check;
