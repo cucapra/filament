@@ -1,0 +1,19 @@
+extern "sharpen0.3.v" {
+    component Sharpen<G>(
+        clk: 1,
+        @interface[G, G+3] @phantom valid_up: 1,
+        @[G, G+3] I_0: 8,
+    ) -> (
+        @[G+13, G+14] O_0: 8,
+    );
+}
+
+component main<G>(
+    @interface[G, G+3] go: 1,
+    @[G, G+3] in: 8,
+) -> (
+    @[G+13, G+14] out: 8,
+) {
+    s := new Sharpen<G>(in);
+    out = s.O_0;
+}
