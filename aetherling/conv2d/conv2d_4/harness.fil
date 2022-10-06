@@ -1,0 +1,34 @@
+extern "conv2d_4.v" {
+component Conv2d<G>(
+    clk: 1,
+    @interface[G, G+1] @phantom valid_up: 1,
+    @[G, G+1] I_0: 8,
+    @[G, G+1] I_1: 8,
+    @[G, G+1] I_2: 8,
+    @[G, G+1] I_3: 8,
+) -> (
+    @[G+6, G+7] O_0: 8,
+    @[G+6, G+7] O_1: 8,
+    @[G+6, G+7] O_2: 8,
+    @[G+6, G+7] O_3: 8,
+);
+}
+
+component main<G>(
+    @interface[G, G+1] valid_up: 1,
+    @[G, G+1] I_0: 8,
+    @[G, G+1] I_1: 8,
+    @[G, G+1] I_2: 8,
+    @[G, G+1] I_3: 8,
+) -> (
+    @[G+6, G+7] O_0: 8,
+    @[G+6, G+7] O_1: 8,
+    @[G+6, G+7] O_2: 8,
+    @[G+6, G+7] O_3: 8,
+) {
+    c := new Conv2d<G>(I_0, I_1, I_2, I_3);
+    O_0 = c.O_0;
+    O_1 = c.O_1;
+    O_2 = c.O_2;
+    O_3 = c.O_3;
+}
