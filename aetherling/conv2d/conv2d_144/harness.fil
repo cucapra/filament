@@ -1,0 +1,19 @@
+extern "conv2d_144.v" {
+component Conv2d<G>(
+    clk: 1,
+    @interface[G, G+9] @phantom valid_up: 1,
+    @[G, G+6] I: 8,
+) -> (
+    @[G+21, G+22] O: 8,
+);
+}
+
+component main<G>(
+    @interface[G, G+9] valid_up: 1,
+    @[G, G+6] I_0: 8,
+) -> (
+    @[G+21, G+22] O_0: 8,
+) {
+    c := new Conv2d<G>(I_0);
+    O_0 = c.O;
+}
