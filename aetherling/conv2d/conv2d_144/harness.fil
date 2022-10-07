@@ -1,4 +1,5 @@
 extern "conv2d_144.v" {
+// KERNEL_START=Conv2d_144
 component Conv2d<G>(
     clk: 1,
     @interface[G, G+9] @phantom valid_up: 1,
@@ -6,6 +7,7 @@ component Conv2d<G>(
 ) -> (
     @[G+21, G+22] O: 8,
 );
+// KERNEL_END=Conv2d_144
 }
 
 component main<G>(

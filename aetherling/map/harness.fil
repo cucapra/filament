@@ -1,4 +1,5 @@
 extern "map_200.v" {
+// KERNEL_START=Map_200
     component Top<G>(
         clk: 1,
         reset: 1,
@@ -8,6 +9,7 @@ extern "map_200.v" {
         @[G+4, G+5] valid_down: 1,
         @[G+4, G+5] O: 8
     );
+// KERNEL_END=Map_200
 }
 
 component main<G>(

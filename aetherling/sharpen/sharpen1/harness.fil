@@ -2,6 +2,7 @@ import "primitives/signed.fil";
 import "primitives/state.fil";
 
 extern "sharpen1.v" {
+// KERNEL_START=Sharpen_1
 component Sharpen<G>(
   clk: 1,
   @interface[G, G+1] @phantom valid_up: 1,
@@ -39,6 +40,7 @@ component Sharpen<G>(
   @[G+7, G+8] O_14: 8,
   @[G+7, G+8] O_15: 8
 );
+// KERNEL_END=Sharpen_1
 }
 
 component main<G>(

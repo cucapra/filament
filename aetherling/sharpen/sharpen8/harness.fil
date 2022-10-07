@@ -1,5 +1,6 @@
 extern "sharpen8.v" {
-    component Sharpen<G>(
+/* KERNEL_START=Sharpen_8 */
+component Sharpen<G>(
         clk: 1,
         @interface[G, G+1] @phantom valid_up: 1,
         @[G, G+1] I_0: 8,
@@ -20,6 +21,7 @@ extern "sharpen8.v" {
         @[G+7, G+8] O_6: 8,
         @[G+7, G+8] O_7: 8,
     );
+/* KERNEL_END=Sharpen_8 */
 }
 
 component main<G>(
