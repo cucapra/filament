@@ -11,27 +11,9 @@ module Tdot (
     output wire [7:0] y
 );
 
-wire r;
-reg [3:0] count;
-
-// Counter
-always @(posedge clk) begin
-    // XXX(rachit): This is not quite right because the module cannot be reset again
-    if (reset && count === 'x) begin
-        count <= 0;
-    end else if (count <= 3) begin
-        count <= count + 1;
-    end else begin
-        count <= count;
-    end
-end
-
-// While the counter < 3, r forwards the reset signal. Otherwise, r is 0.
-assign r = (count < 3) ? reset : 1'b0;
-
 top t (
     .clk(clk),
-    .reset(r),
+    .reset(reset),
     .a0(a0),
     .a1(a1),
     .a2(a2),

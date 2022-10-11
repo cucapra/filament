@@ -38,10 +38,7 @@ component main<G>(
     @[G, G+1] c: 8,
 ) -> (
     @[G+5, G+6] y: 8,
-    @[G, G+1] count: 32
 ) {
-    c := new Counter<G>();
-    count = c.out;
     t := new Tdot<G>(a0, a1, a2, b0, b1, b2, c);
     y = t.y;
 }
