@@ -190,7 +190,7 @@ async def run_design(mod):
     # Randomize the pipeline delay with these many cycles
     randomize = os.environ.get('RANDOMIZE')
     # Get the number of reset cycles
-    reset_cycles = os.environ.get('RESET_CYCLES') or RESET_CYCLES
+    reset_cycles = int(os.environ.get('RESET_CYCLES') or RESET_CYCLES)
 
     with open(interface_file) as f:
         interface = json.load(f)
