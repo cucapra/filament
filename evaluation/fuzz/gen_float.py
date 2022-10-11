@@ -114,17 +114,14 @@ def random_data(args):
     Generate random floating point data and print out as JSON
     """
 
-    out = {'left': [], 'right': []}
+    # Dictionary mapping each field to a list of values
+    fields = {k: [] for k in args.fields}
     for _ in range(args.count):
-        # Use numpy to generate a random float32
-        left = random.randint(0, 2**args.width-1)
-        right = random.randint(0, 2**args.width-1)
+        for k in args.fields:
+            v = random.randint(0, 2**args.width-1)
+            fields[k].append(v)
 
-        # Append unsigned int representation of float if --raw is provided
-        out['left'].append(left)
-        out['right'].append(right)
-
-    print(json.dumps(out, indent=2))
+    print(json.dumps(fields, indent=2))
 
 
 if __name__ == '__main__':
@@ -138,6 +135,7 @@ if __name__ == '__main__':
                             help='Number of random data to generate')
     gen_parser.add_argument("--width", type=int, default=32)
     gen_parser.set_defaults(func=random_data)
+    gen_parser.add_argument("--fields", nargs="+", default=['left', 'right'])
 
     to_float_parser = subparsers.add_parser('to_float')
     to_float_parser.add_argument(

@@ -57,9 +57,9 @@ fud e -s cocotb.data "$dir/data.json" --to cocotb-out {} -s futil.flags ' -d can
 [[tests]]
 name = "reticle evaluation"
 paths = [
-  "reticle/**/harness.fil"
+  "reticle/harness.fil"
 ]
 cmd = """
 dir=$(dirname {}) && \
-fud e -s cocotb.data "$dir/data.json" --to cocotb-out {} -s futil.flags ' -d canonicalize' -q | jq
+./reticle/check.sh $dir 100
 """
