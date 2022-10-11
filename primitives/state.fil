@@ -33,4 +33,14 @@ extern "state.sv" {
   ) -> (
     @[G, G+1] prev: WIDTH,
   );
+
+  // Prev component that continuously updates its value
+  component ContPrev[WIDTH, SAFE]<G>(
+    clk: 1,
+    reset: 1,
+    @interface[G, G+1] @phantom write_en: 1,
+    @[G, G+1] in: WIDTH,
+  ) -> (
+    @[G, G+1] prev: WIDTH,
+  );
 }

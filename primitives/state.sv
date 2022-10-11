@@ -19,6 +19,7 @@ module Register #(
   end
 endmodule
 
+// Same as a register but does not have a write enable signal.
 module Delay #(
     parameter WIDTH = 32
 ) (
@@ -35,10 +36,10 @@ Register #(WIDTH) r (
   .in(in),
   .out(out)
 );
-
 endmodule
 
-// Same as a register except resets to 'x
+// Similar to a register but provides access to its previous value only.
+// Resetting behavior controlled using the SAFE parameter.
 module Prev #(
     parameter WIDTH = 32,
     // If 0, reset to 'x, otherwise reset to 0
@@ -62,5 +63,25 @@ module Prev #(
       prev <= prev;
   end
 endmodule
+
+module ContPrev #(
+    parameter WIDTH = 32,
+    parameter SAFE = 0
+) (
+  input wire clk,
+  input wire reset,
+  input wire logic [WIDTH-1:0] in,
+  output logic [WIDTH-1:0] prev
+);
+
+Prev #(WIDTH, SAFE) r (
+  .clk(clk),
+  .reset(reset),
+  .write_en(1'b1),
+  .in(in),
+  .prev(prev)
+);
+endmodule
+
 
 `default_nettype wire
