@@ -1,0 +1,97 @@
+import "primitives/core.fil";
+import "primitives/unsynthesizable.fil";
+
+// Produces the a 2d window of 3x3 elements from a stream that represents a 4x4 matrix.
+component Stencil<G>(
+    @interface[G, G+1] @phantom go: 1,
+    @[G, G+1] in: 32,
+) -> (
+    @[G, G+1] o1: 32,
+    @[G, G+1] o2: 32,
+    @[G, G+1] o3: 32,
+    @[G, G+1] o4: 32,
+    @[G, G+1] o5: 32,
+    @[G, G+1] o6: 32,
+    @[G, G+1] o7: 32,
+    @[G, G+1] o8: 32,
+    @[G, G+1] o9: 32,
+) {
+    d9 := new ContPrev[32, 0]<G>(in);
+    d8 := new ContPrev[32, 0]<G>(d9.prev);
+    d7 := new ContPrev[32, 0]<G>(d8.prev);
+    n0 := new ContPrev[32, 0]<G>(d7.prev);
+    d6 := new ContPrev[32, 0]<G>(n0.prev);
+    d5 := new ContPrev[32, 0]<G>(d6.prev);
+    d4 := new ContPrev[32, 0]<G>(d5.prev);
+    n1 := new ContPrev[32, 0]<G>(d4.prev);
+    d3 := new ContPrev[32, 0]<G>(n1.prev);
+    d2 := new ContPrev[32, 0]<G>(d3.prev);
+    d1 := new ContPrev[32, 0]<G>(d2.prev);
+
+    o9 = d9.prev;
+    o8 = d8.prev;
+    o7 = d7.prev;
+    o6 = d6.prev;
+    o5 = d5.prev;
+    o4 = d4.prev;
+    o3 = d3.prev;
+    o2 = d2.prev;
+    o1 = d1.prev;
+}
+
+// Performs a 2d convolution on a 3x3 window of elements with the filter:
+// 1 2 1
+// 2 4 2
+// 1 2 1
+component Conv<G>(
+    @interface[G, G+1] @phantom go: 1,
+    @[G, G+1] in1: 32,
+    @[G, G+1] in2: 32,
+    @[G, G+1] in3: 32,
+    @[G, G+1] in4: 32,
+    @[G, G+1] in5: 32,
+    @[G, G+1] in6: 32,
+    @[G, G+1] in7: 32,
+    @[G, G+1] in8: 32,
+    @[G, G+1] in9: 32,
+) -> (
+    @[G, G+1] out: 32,
+) {
+    // Multiply by the filter
+    m1 := new MultComb[32]<G>(in1, 1);
+    m2 := new MultComb[32]<G>(in2, 2);
+    m3 := new MultComb[32]<G>(in3, 1);
+    m4 := new MultComb[32]<G>(in4, 2);
+    m5 := new MultComb[32]<G>(in5, 4);
+    m6 := new MultComb[32]<G>(in6, 2);
+    m7 := new MultComb[32]<G>(in7, 1);
+    m8 := new MultComb[32]<G>(in8, 2);
+    m9 := new MultComb[32]<G>(in9, 1);
+
+    // Add the results
+    a1 := new Add[32]<G>(m9.out, m8.out);
+    a2 := new Add[32]<G>(m7.out, m6.out);
+    a3 := new Add[32]<G>(m5.out, m4.out);
+    a4 := new Add[32]<G>(m3.out, m2.out);
+    a5 := new Add[32]<G>(a1.out, a2.out);
+    a6 := new Add[32]<G>(a3.out, a4.out);
+    a7 := new Add[32]<G>(a5.out, a6.out);
+    a8 := new Add[32]<G>(a7.out, m1.out);
+
+    // Divide by 16
+    d := new Div[32]<G>(a8.out, 16);
+
+    out = d.out;
+}
+
+// The component needs to be run for an extra cycle to flush the last value
+component main<G>(
+    @interface[G, G+1] @phantom go: 1,
+    @[G, G+1] in: 32,
+) -> (
+    @[G, G+1] out: 32,
+) {
+    s := new Stencil<G>(in);
+    c := new Conv<G>(s.o1, s.o2, s.o3, s.o4, s.o5, s.o6, s.o7, s.o8, s.o9);
+    out = c.out;
+}
