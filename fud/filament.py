@@ -138,6 +138,8 @@ class CocotbExecBase(Stage):
             os.chdir(Path(dir))
             # Randomize value
             randomize = config.get(["stages", self.name, "randomize"])
+            # Number of reset cycles
+            reset_cycles = config.get(["stages", self.name, "reset_cycles"])
             # Execute the make command
             cmd = " ".join([
                 "make", "-B",
@@ -145,6 +147,7 @@ class CocotbExecBase(Stage):
                 f"INTERFACE={interface.data}",
                 f"DATA_FILE={data}",
                 f"RANDOMIZE={int(randomize)}" if randomize is not None else "",
+                f"RESET_CYCLES={reset_cycles}" if reset_cycles is not None else "",
             ])
             return shell(cmd)
 
