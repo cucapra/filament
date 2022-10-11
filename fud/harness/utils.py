@@ -156,7 +156,7 @@ def counter(mod):
     return inner, count
 
 
-async def setup_design(mod, interface):
+async def setup_design(mod, interface, reset_cycles):
     """
     Connects a clock to the given module and runs the reset signal for 5 cycles
     """
@@ -174,7 +174,7 @@ async def setup_design(mod, interface):
 
     # Reset phase
     mod.reset.value = 1
-    await ClockCycles(mod.clk, RESET_CYCLES)  # wait a bit
+    await ClockCycles(mod.clk, reset_cycles)  # wait a bit
     mod.reset.value = 0
 
     return (counter_task, count)
@@ -189,6 +189,8 @@ async def run_design(mod):
                        " setting the environment variable DATA_FILE")
     # Randomize the pipeline delay with these many cycles
     randomize = os.environ.get('RANDOMIZE')
+    # Get the number of reset cycles
+    reset_cycles = os.environ.get('RESET_CYCLES') or RESET_CYCLES
 
     with open(interface_file) as f:
         interface = json.load(f)
@@ -197,14 +199,14 @@ async def run_design(mod):
         data = json.load(f)
 
     # Setup the design and run it
-    (counter_task, count) = await setup_design(mod, interface)
+    (counter_task, count) = await setup_design(mod, interface, reset_cycles)
     runner = construct_transaction_fsm(interface, randomize)
     outputs = await runner(mod, data)
 
     # Kill the cycle counter and add the cycle count to outputs
     counter_task.kill()
     # also substract the 1 cycle it takes to propagate the go signal
-    outputs["cycles"] = count["count"] - (RESET_CYCLES + 1)
+    outputs["cycles"] = count["count"] - (reset_cycles + 1)
 
     out = json.dumps(outputs)
     print("Outputs:", out)
