@@ -1,0 +1,23 @@
+{
+  "lut": 100,
+  "dsp": 0,
+  "registers": 113,
+  "muxes": 31,
+  "clb_registers": 154,
+  "carry8": 0,
+  "f7_muxes": 0,
+  "f8_muxes": 0,
+  "f9_muxes": 0,
+  "clb": 254,
+  "meet_timing": 1,
+  "worst_slack": 0.227,
+  "period": 1.5,
+  "frequency": 666.667,
+  "cell_lut1": 1,
+  "cell_lut2": 6,
+  "cell_lut3": 26,
+  "cell_lut4": 3,
+  "cell_lut5": 32,
+  "cell_lut6": 41,
+  "cell_fdre": 157
+}
