@@ -4,14 +4,14 @@ extern "tdot.v" {
 component Tdot<G>(
     clk: 1,
     reset: 1,
-    @interface[G, G+3] @phantom go: 1,
+    @interface[G, G+1] @phantom go: 1,
     @[G, G+1] a0: 8,
-    @[G, G+1] a1: 8,
-    @[G, G+1] a2: 8,
+    @[G+1, G+2] a1: 8,
+    @[G+2, G+3] a2: 8,
     @[G, G+1] b0: 8,
-    @[G, G+1] b1: 8,
-    @[G, G+1] b2: 8,
-    @[G, G+1] c: 8,
+    @[G+1, G+2] b1: 8,
+    @[G+2, G+3] b2: 8,
+    @[G+2, G+3] c: 8,
 ) -> (
     @[G+5, G+6] y: 8
 );
@@ -20,23 +20,25 @@ component Tdot<G>(
 component Golden<G>(
     @interface[G, G+1] @phantom go: 1,
     @[G, G+1] a0: 8,
-    @[G, G+1] a1: 8,
-    @[G, G+1] a2: 8,
+    @[G+1, G+2] a1: 8,
+    @[G+2, G+3] a2: 8,
     @[G, G+1] b0: 8,
-    @[G, G+1] b1: 8,
-    @[G, G+1] b2: 8,
-    @[G, G+1] c: 8
+    @[G+1, G+2] b1: 8,
+    @[G+2, G+3] b2: 8,
+    @[G+2, G+3] c: 8,
 ) -> (
-    @[G, G+1] y: 8,
+    @[G+2, G+3] y: 8,
 ) {
 
     m0 := new MultComb[8]<G>(a0, b0);
-    m1 := new MultComb[8]<G>(a1, b1);
-    m2 := new MultComb[8]<G>(a2, b2);
+    m0_d := new Delay[8]<G>(m0.out);
+    m1 := new MultComb[8]<G+1>(a1, b1);
+    m2 := new MultComb[8]<G+2>(a2, b2);
 
-    add0 := new Add[8]<G>(m0.out, m1.out);
-    add1 := new Add[8]<G>(add0.out, m2.out);
-    add2 := new Add[8]<G>(add1.out, c);
+    add0 := new Add[8]<G+1>(m0_d.out, m1.out);
+    r0 := new Delay[8]<G+1>(add0.out);
+    add1 := new Add[8]<G+2>(r0.out, m2.out);
+    add2 := new Add[8]<G+2>(add1.out, c);
 
     y = add2.out;
 }
@@ -52,17 +54,17 @@ component Counter<G>(
 }
 
 component main<G>(
-    @interface[G, G+3] @phantom go: 1,
+    @interface[G, G+1] go: 1,
     @[G, G+1] a0: 8,
-    @[G, G+1] a1: 8,
-    @[G, G+1] a2: 8,
+    @[G+1, G+2] a1: 8,
+    @[G+2, G+3] a2: 8,
     @[G, G+1] b0: 8,
-    @[G, G+1] b1: 8,
-    @[G, G+1] b2: 8,
-    @[G, G+1] c: 8,
+    @[G+1, G+2] b1: 8,
+    @[G+2, G+3] b2: 8,
+    @[G+2, G+3] c: 8,
 ) -> (
     @[G+5, G+6] y: 8,
-    @[G, G+1] gold: 8
+    @[G+2, G+3] gold: 8
 ) {
     t := new Tdot<G>(a0, a1, a2, b0, b1, b2, c);
     g := new Golden<G>(a0, a1, a2, b0, b1, b2, c);
