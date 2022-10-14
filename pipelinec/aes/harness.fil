@@ -1,0 +1,10 @@
+extern "aes.v" {
+  component top<G>(
+    clk: 1,
+    @interface[G, G+1] @phanton go: 1,
+    @[G, G+1] state_words: 128,
+    @[G, G+1] keys: 1280,
+  ) -> (
+    @[G+18, G+19] out_words: 128
+  )
+}
