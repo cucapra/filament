@@ -174,8 +174,11 @@ fn define_fsm_component(states: u64, ctx: &mut Context) {
             (ir::Id::from("go"), 1, ir::Direction::Input).into(),
         ))
         .collect();
-    let mut comp =
-        ir::Component::new(ir::Id::from(format!("fsm_{}", states)), ports);
+    let mut comp = ir::Component::new(
+        ir::Id::from(format!("fsm_{}", states)),
+        ports,
+        false,
+    );
     comp.attributes.insert("nointerface", 1);
     let mut builder = ir::Builder::new(&mut comp, ctx.lib).not_generated();
 
@@ -341,7 +344,7 @@ fn compile_component(
     };
     let ports =
         as_port_defs(&comp.sig, port_transform, concrete_transform, true);
-    let mut component = ir::Component::new(&comp.sig.name.id(), ports);
+    let mut component = ir::Component::new(&comp.sig.name.id(), ports, false);
     component.attributes.insert("nointerface", 1);
     let builder = ir::Builder::new(&mut component, lib).not_generated();
     let mut ctx = Context::new(sigs, builder, lib);
@@ -463,7 +466,7 @@ fn init_calyx(
     }));
 
     // define a fake main component
-    let main = frontend::ast::ComponentDef::new("main", vec![]);
+    let main = frontend::ast::ComponentDef::new("main", false, vec![]);
     ws.components.push(main);
     let mut ctx = ir::from_ast::ast_to_ir(ws)?;
     ctx.components.retain(|c| c.name != "main");
