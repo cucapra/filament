@@ -123,15 +123,8 @@ impl Resolver {
         while let Some(path) = imports.pop() {
             let mut imp = frontend::FilamentParser::parse_file(&path)?;
             let base = Self::parent(&path);
-            log::info!(
-                "Adding components from {}: {:?}",
-                path.display(),
-                imp.components
-                    .iter()
-                    .map(|c| c.sig.name.id().clone())
-                    .collect::<Vec<_>>()
-            );
-            ns.components.append(&mut imp.components);
+            imp.components.append(&mut ns.components);
+            ns.components = imp.components;
             ns.externs.extend(
                 imp.externs
                     .into_iter()
@@ -148,8 +141,6 @@ impl Resolver {
                     .collect::<FilamentResult<Vec<_>>>()?,
             );
         }
-
-        ns.components.reverse();
 
         log::info!("Imported: {:#?}", self.already_imported);
         log::info!(
