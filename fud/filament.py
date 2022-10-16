@@ -142,6 +142,7 @@ class CocotbExecBase(Stage):
             reset_cycles = config.get(["stages", self.name, "reset_cycles"])
             # Execute the make command
             cmd = " ".join([
+                "COMPILE_ARGS=-DICARUS",
                 "make", "-B",
                 # XXX(rachit): we shouldn't need this .data here
                 f"INTERFACE={interface.data}",
