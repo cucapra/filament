@@ -1,41 +1,14 @@
 import "primitives/core.fil";
 
-// Produces the a 2d window of 3x3 elements from a stream that represents a 4x4 matrix.
-component Stencil<G>(
-    @interface[G, G+1] @phantom go: 1,
-    @[G, G+1] in: 8,
-) -> (
-    @[G, G+1] o1: 8,
-    @[G, G+1] o2: 8,
-    @[G, G+1] o3: 8,
-    @[G, G+1] o4: 8,
-    @[G, G+1] o5: 8,
-    @[G, G+1] o6: 8,
-    @[G, G+1] o7: 8,
-    @[G, G+1] o8: 8,
-    @[G, G+1] o9: 8,
-) {
-    d9 := new ContPrev[8, 0]<G>(in);
-    d8 := new ContPrev[8, 0]<G>(d9.prev);
-    d7 := new ContPrev[8, 0]<G>(d8.prev);
-    n0 := new ContPrev[8, 0]<G>(d7.prev);
-    d6 := new ContPrev[8, 0]<G>(n0.prev);
-    d5 := new ContPrev[8, 0]<G>(d6.prev);
-    d4 := new ContPrev[8, 0]<G>(d5.prev);
-    n1 := new ContPrev[8, 0]<G>(d4.prev);
-    d3 := new ContPrev[8, 0]<G>(n1.prev);
-    d2 := new ContPrev[8, 0]<G>(d3.prev);
-    d1 := new ContPrev[8, 0]<G>(d2.prev);
-
-    o9 = d9.prev;
-    o8 = d8.prev;
-    o7 = d7.prev;
-    o6 = d6.prev;
-    o5 = d5.prev;
-    o4 = d4.prev;
-    o3 = d3.prev;
-    o2 = d2.prev;
-    o1 = d1.prev;
+extern "mul.sv" {
+    component BlackBoxMulUInt8<G>(
+        clk: 1,
+        @interface[G, G+1] @phantom go: 1,
+        @[G, G+1] I0: 8,
+        @[G, G+1] I1: 8,
+    ) -> (
+        @[G+3, G+4] O: 16,
+    );
 }
 
 // Performs a 2d convolution on a 3x3 window of elements with the filter:
@@ -54,36 +27,37 @@ component Conv<G>(
     @[G, G+1] in8: 8,
     @[G, G+1] in9: 8,
 ) -> (
-    @[G, G+1] out: 8,
+    @[G+3, G+4] out: 8,
 ) {
-
     one := new Const[8, 1]<G>();
     two := new Const[8, 2]<G>();
     four := new Const[8, 4]<G>();
 
     // Multiply by the filter
-    m1 := new MultComb[8]<G>(in1, one.out);
-    m2 := new MultComb[8]<G>(in2, two.out);
-    m3 := new MultComb[8]<G>(in3, one.out);
-    m4 := new MultComb[8]<G>(in4, two.out);
-    m5 := new MultComb[8]<G>(in5, four.out);
-    m6 := new MultComb[8]<G>(in6, two.out);
-    m7 := new MultComb[8]<G>(in7, one.out);
-    m8 := new MultComb[8]<G>(in8, two.out);
-    m9 := new MultComb[8]<G>(in9, one.out);
+    m1 := new BlackBoxMulUInt8<G>(in1, one.out);
+    m2 := new BlackBoxMulUInt8<G>(in2, two.out);
+    m3 := new BlackBoxMulUInt8<G>(in3, one.out);
+    m4 := new BlackBoxMulUInt8<G>(in4, two.out);
+    m5 := new BlackBoxMulUInt8<G>(in5, four.out);
+    m6 := new BlackBoxMulUInt8<G>(in6, two.out);
+    m7 := new BlackBoxMulUInt8<G>(in7, one.out);
+    m8 := new BlackBoxMulUInt8<G>(in8, two.out);
+    m9 := new BlackBoxMulUInt8<G>(in9, one.out);
 
     // Add the results
-    a1 := new Add[8]<G>(m9.out, m8.out);
-    a2 := new Add[8]<G>(m7.out, m6.out);
-    a3 := new Add[8]<G>(m5.out, m4.out);
-    a4 := new Add[8]<G>(m3.out, m2.out);
-    a5 := new Add[8]<G>(a1.out, a2.out);
-    a6 := new Add[8]<G>(a3.out, a4.out);
-    a7 := new Add[8]<G>(a5.out, a6.out);
-    a8 := new Add[8]<G>(a7.out, m1.out);
+    a1 := new Add[16]<G+3>(m9.O, m8.O);
+    a2 := new Add[16]<G+3>(m7.O, m6.O);
+    a3 := new Add[16]<G+3>(m5.O, m4.O);
+    a4 := new Add[16]<G+3>(m3.O, m2.O);
+    a5 := new Add[16]<G+3>(a1.out, a2.out);
+    a6 := new Add[16]<G+3>(a3.out, a4.out);
+    a7 := new Add[16]<G+3>(a5.out, a6.out);
+    a8 := new Add[16]<G+3>(a7.out, m1.O);
 
     // Divide by 16
-    d := new ShiftRight[8]<G>(a8.out, four.out);
+    four_16 := new Const[16, 4]<G+3>();
+    d := new ShiftRight[16]<G+3>(a8.out, four_16.out);
+    slice := new Slice[16, 15, 8, 8]<G+3>(d.out);
 
-    out = d.out;
+    out = slice.out;
 }
