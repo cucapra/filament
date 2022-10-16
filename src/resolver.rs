@@ -148,6 +148,9 @@ impl Resolver {
                     .collect::<FilamentResult<Vec<_>>>()?,
             );
         }
+
+        ns.components.reverse();
+
         log::info!("Imported: {:#?}", self.already_imported);
         log::info!(
             "Components: {:#?}",
