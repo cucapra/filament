@@ -1,0 +1,16 @@
+extern "tdot.v" {
+component Tdot<G>(
+    clk: 1,
+    reset: 1,
+    @interface[G, G+1] @phantom go: 1,
+    @[G, G+1] a0: 8,
+    @[G+1, G+2] a1: 8,
+    @[G+2, G+3] a2: 8,
+    @[G, G+1] b0: 8,
+    @[G+1, G+2] b1: 8,
+    @[G+2, G+3] b2: 8,
+    @[G+2, G+3] c: 8,
+) -> (
+    @[G+5, G+6] y: 8
+);
+}
