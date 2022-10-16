@@ -1,0 +1,66 @@
+import "../../reticle/tdot.fil";
+import "primitives/core.fil";
+import "stencil.fil";
+
+component Conv<G>(
+    @interface[G, G+1] @phantom go: 1,
+    @[G, G+1] in1: 8,
+    @[G+1, G+2] in2: 8,
+    @[G+2, G+3] in3: 8,
+    @[G, G+1] in4: 8,
+    @[G+1, G+2] in5: 8,
+    @[G+2, G+3] in6: 8,
+    @[G, G+1] in7: 8,
+    @[G+1, G+2] in8: 8,
+    @[G+2, G+3] in9: 8,
+) -> (
+    @[G+5, G+6] out: 8,
+) {
+    one := new Const[8, 1]<G>();
+    one_2 := new Const[8, 3]<G+2>();
+    two := new Const[8, 2]<G>();
+    two_1 := new Const[8, 2]<G+1>();
+    two_2 := new Const[8, 2]<G+2>();
+    four := new Const[8, 4]<G+1>();
+    zero := new Const[8, 0]<G+2>();
+
+    // Multiply by the filter
+    m1 := new Tdot<G>(in1, in2, in3, one.out, two_1.out, one_2.out, zero.out);
+    m2 := new Tdot<G>(in4, in5, in6, two.out, four.out, two_2.out, zero.out);
+    m3 := new Tdot<G>(in7, in8, in9, one.out, two_1.out, one_2.out, zero.out);
+
+    // Add the results
+    a0 := new Add[8]<G+5>(m1.y, m2.y);
+    a1 := new Add[8]<G+5>(a0.out, m3.y);
+
+    // Divide by 16
+    four_16 := new Const[8, 4]<G+5>();
+    d := new ShiftRight[8]<G+5>(a1.out, four_16.out);
+
+    out = d.out;
+}
+
+// The component needs to be run for an extra cycle to flush the last value
+component main<G>(
+    @interface[G, G+1] @phantom go: 1,
+    @[G, G+1] in: 8,
+) -> (
+    @[G+5, G+6] out: 8,
+) {
+    s := new Stencil<G>(in);
+    r2 := new Delay[8]<G>(s.o2);
+    r5 := new Delay[8]<G>(s.o5);
+    r8 := new Delay[8]<G>(s.o8);
+
+    r3_0 := new Delay[8]<G>(s.o3);
+    r3 := new Delay[8]<G+1>(r3_0.out);
+    r6_0 := new Delay[8]<G>(s.o6);
+    r6 := new Delay[8]<G+1>(r6_0.out);
+    r9_0 := new Delay[8]<G>(s.o9);
+    r9 := new Delay[8]<G+1>(r9_0.out);
+
+    c := new Conv<G>(s.o1, r2.out, r3.out,
+                     s.o4, r5.out, r6.out,
+                     s.o7, r8.out, r9.out);
+    out = c.out;
+}
