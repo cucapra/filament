@@ -57,7 +57,7 @@ component Conv<G>(
     // Divide by 16
     four_16 := new Const[16, 4]<G+3>();
     d := new ShiftRight[16]<G+3>(a8.out, four_16.out);
-    slice := new Slice[16, 15, 8, 8]<G+3>(d.out);
+    slice := new Slice[16, 7, 0, 8]<G+3>(d.out);
 
     out = slice.out;
 }
