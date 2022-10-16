@@ -4,7 +4,7 @@ module BlackBoxMulUInt8(
 	               output wire [15:0] O,
 	               input wire       clk
 	               );
-`ifdef VERILATOR
+`ifdef ICARUS
    reg [15:0] reg0;
    reg [15:0] reg1;
    reg [15:0] reg2;
@@ -15,7 +15,7 @@ module BlackBoxMulUInt8(
    end
    assign O = reg2;
 `endif
-`ifndef VERILATOR
+`ifndef ICARUS
    mul_uint8 mul_uint8 (
                    .A(I0),
                    .B(I1),
