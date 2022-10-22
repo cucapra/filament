@@ -1,15 +1,49 @@
 import "primitives/core.fil";
 
-extern "iter-support.sv" {
-  component Next<G>(
-    @interface[G, G+1] @phantom go: 1,
-    @[G, G+1] acc: 9,
-    @[G, G+1] right: 8,
-    @[G, G+1] quotient: 8
-  ) -> (
-    @[G, G+1] acc_next: 9,
-    @[G, G+1] quotient_next: 8,
-  );
+component Next<G>(
+  @interface[G, G+1] @phantom go: 1,
+  @[G, G+1] acc: 9,
+  @[G, G+1] right: 8,
+  @[G, G+1] quotient: 8
+) -> (
+  @[G, G+1] acc_next: 9,
+  @[G, G+1] quotient_next: 8,
+) {
+
+  /*
+  assign right_ext = {1'b0, right};
+  assign check = acc >= right_ext;
+
+  // True branch
+  assign sub = acc - right;
+  assign c = check ? {sub[7:0], quotient, 1'b1} : ({acc, quotient} << 1);
+
+  assign quotient_next = c[7:0];
+  assign acc_next = c[16:8];
+  */
+
+  right_ext := new ZeroExtend[8, 9]<G>(right);
+  check := new Gte[9]<G>(acc, right_ext.out);
+
+  // True branch
+  sub := new Sub[9]<G>(acc, right_ext.out);
+  sub_slice := new Slice[9, 7, 0, 8]<G>(sub.out);
+  one_1 := new Const[1, 1]<G>();
+  true_con_0 := new Concat[8, 1, 9]<G>(quotient, one_1.out);
+  true_con := new Concat[8, 9, 17]<G>(sub_slice.out, true_con_0.out);
+
+  // False branch
+  fal_con := new Concat[9, 8, 17]<G>(acc, quotient);
+  one_17 := new Const[17, 1]<G>();
+  fal_sh := new ShiftLeft[17]<G>(fal_con.out, one_17.out);
+
+  c := new Mux[17]<G>(check.out, true_con.out, fal_sh.out);
+
+  acc_slice := new Slice[17, 16, 8, 9]<G>(c.out);
+  q_slice := new Slice[17, 8, 0, 8]<G>(c.out);
+
+  quotient_next = q_slice.out;
+  acc_next = acc_slice.out;
 }
 
 component Init<G>(
