@@ -1,4 +1,4 @@
-
+`ifdef ICARUS
 module VCC
 (
     output wire P
@@ -1776,3 +1776,4 @@ endmodule
 /* verilator lint_on STMTDLY */
 /* verilator lint_on WIDTH */
 /* verilator lint_on UNOPTFLAT */
+`endif
