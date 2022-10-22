@@ -1,11 +1,3 @@
-module Init (
-  output logic [8:0] acc,
-  input logic [7:0] left,
-  output logic [7:0] quotient
-);
-  assign {acc, quotient} = {{8{1'b0}}, left, 1'b0};
-endmodule
-
 module Next(
   input logic [8:0] acc,
   input logic [7:0] right,
