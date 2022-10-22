@@ -5,10 +5,11 @@ import json
 import random
 import cocotb
 from cocotb import triggers
-from cocotb.triggers import FallingEdge, RisingEdge, ClockCycles
+from cocotb.triggers import FallingEdge, RisingEdge, ClockCycles, First
 from cocotb.clock import Clock
 
 RESET_CYCLES = 3
+MAX_CYCLES = 10000
 
 
 def representable(n, width):
@@ -142,21 +143,22 @@ async def log_signal(mod, signal_name, times):
         mod._log.info("%s = %s", signal_name, val)
 
 
-def counter(mod):
+def counter(mod, max_cycles):
     """
     Counts the number of cycles the clock is running.
     """
     count = {"count": 0}
 
     async def inner():
-        while True:
+        while count["count"] < max_cycles:
             await RisingEdge(mod.clk)
             count["count"] += 1
+        return {'error': f'Max cycles {max_cycles} reached'}
 
     return inner, count
 
 
-async def setup_design(mod, interface, reset_cycles):
+async def setup_design(mod, interface, reset_cycles, max_cycles):
     """
     Connects a clock to the given module and runs the reset signal for 5 cycles
     """
@@ -169,7 +171,7 @@ async def setup_design(mod, interface, reset_cycles):
             mod._id(event["name"], extended=False).value = 0
 
     # Initialize a cycle counter
-    (proc, count) = counter(mod)
+    (proc, count) = counter(mod, max_cycles)
     counter_task = cocotb.start_soon(proc())
 
     # Reset phase
@@ -191,6 +193,8 @@ async def run_design(mod):
     randomize = os.environ.get('RANDOMIZE')
     # Get the number of reset cycles
     reset_cycles = int(os.environ.get('RESET_CYCLES') or RESET_CYCLES)
+    # Maximum number of cycles
+    max_cycles = int(os.environ.get('MAX_CYCLES') or MAX_CYCLES)
 
     with open(interface_file) as f:
         interface = json.load(f)
@@ -199,14 +203,18 @@ async def run_design(mod):
         data = json.load(f)
 
     # Setup the design and run it
-    (counter_task, count) = await setup_design(mod, interface, reset_cycles)
+    (counter_task, count) = await setup_design(mod, interface, reset_cycles, max_cycles)
     runner = construct_transaction_fsm(interface, randomize)
-    outputs = await runner(mod, data)
+    main = cocotb.start_soon(runner(mod, data))
+    outputs = await First(counter_task, main)
 
-    # Kill the cycle counter and add the cycle count to outputs
-    counter_task.kill()
-    # also substract the 1 cycle it takes to propagate the go signal
-    outputs["cycles"] = count["count"] - (reset_cycles + 1)
+    if 'error' in outputs:
+        print("Outputs:", outputs)
+    else:
+        # Kill the cycle counter and add the cycle count to outputs
+        counter_task.kill()
+        # also substract the 1 cycle it takes to propagate the go signal
+        outputs["cycles"] = count["count"] - (reset_cycles + 1)
 
-    out = json.dumps(outputs)
-    print("Outputs:", out)
+        out = json.dumps(outputs)
+        print("Outputs:", out)
