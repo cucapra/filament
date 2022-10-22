@@ -262,12 +262,21 @@ fn compile_connect(con: ast::Connect, ctx: &mut Context) {
     ctx.builder.component.continuous_assignments.push(assign);
 }
 
-fn as_port_defs<FW: Clone, CW>(
+fn as_port_defs<FW, CW, F0, F1>(
+    // The signature to be converted
     sig: &ast::Signature<FW>,
-    port_transform: impl Fn(&ast::PortDef<FW>, ir::Direction) -> ir::PortDef<CW>,
-    concrete_transform: impl Fn(&ast::Id, u64) -> ir::PortDef<CW>,
+    // Transformation for ports that may have parametric width.
+    port_transform: F0,
+    // Transformation for ports that have a concrete width (interface ports, clk, reset)
+    concrete_transform: F1,
+    // Is this a component or external
     is_comp: bool,
-) -> Vec<ir::PortDef<CW>> {
+) -> Vec<ir::PortDef<CW>>
+where
+    FW: Clone,
+    F0: Fn(&ast::PortDef<FW>, ir::Direction) -> ir::PortDef<CW>,
+    F1: Fn(&ast::Id, u64) -> ir::PortDef<CW>,
+{
     let mut ports: Vec<ir::PortDef<CW>> = sig
         .inputs
         .iter()
@@ -337,7 +346,10 @@ fn compile_component(
 ) -> FilamentResult<ir::Component> {
     let port_transform =
         |pd: &ast::PortDef<u64>, dir: ir::Direction| -> ir::PortDef<u64> {
-            (pd.name.id().clone(), pd.bitwidth, dir).into()
+            let mut pd: ir::PortDef<u64> =
+                (pd.name.id().clone(), pd.bitwidth, dir).into();
+            pd.attributes.insert("data", 1);
+            pd
         };
     let concrete_transform = |name: &ast::Id, width: u64| -> ir::PortDef<u64> {
         (name.id().clone(), width, ir::Direction::Input).into()
@@ -395,6 +407,7 @@ fn compile_component(
                         &bindings,
                     )
                 };
+                cell.borrow_mut().attributes.insert("data", 1);
                 ctx.instances.insert(name, cell);
             }
             ast::Command::Connect(con) => {
@@ -420,11 +433,13 @@ fn prim_as_port_defs(
                 value: v.id().clone().into(),
             },
         };
+        let mut attributes = ir::Attributes::default();
+        attributes.insert("data", 1);
         ir::PortDef {
             name: ir::Id::from(pd.name.id().as_ref()),
             direction: dir,
             width,
-            attributes: Default::default(),
+            attributes,
         }
     };
     let concrete_transform =
