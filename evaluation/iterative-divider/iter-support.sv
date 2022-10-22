@@ -1,5 +1,4 @@
 module Init (
-  input logic _go,
   output logic [8:0] acc,
   input logic [7:0] left,
   output logic [7:0] quotient
@@ -8,19 +7,23 @@ module Init (
 endmodule
 
 module Next(
-  input logic _go,
   input logic [8:0] acc,
   input logic [7:0] right,
   input logic [7:0] quotient,
   output logic [8:0] acc_next,
   output logic [7:0] quotient_next
 );
-    always_comb begin
-      if (acc >= {1'b0, right}) begin
-        acc_next = acc - right;
-        {acc_next, quotient_next} = {acc_next[8-1:0], quotient, 1'b1};
-      end else begin
-        {acc_next, quotient_next} = {acc, quotient} << 1;
-      end
-    end
+  logic [16:0] c;
+  logic [8:0] right_ext, sub;
+  logic check;
+
+  assign right_ext = {1'b0, right};
+  assign check = acc >= right_ext;
+
+  // True branch
+  assign sub = acc - right;
+  assign c = check ? {sub[7:0], quotient, 1'b1} : ({acc, quotient} << 1);
+
+  assign quotient_next = c[7:0];
+  assign acc_next = c[16:8];
 endmodule

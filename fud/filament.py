@@ -7,6 +7,13 @@ import logging as log
 from fud import errors
 from fud.stages import Stage, SourceType, Source
 from fud.utils import shell, TmpDir
+from enum import Enum
+
+
+class CocotbOutput(Enum):
+    DAT = 0
+    VCD = 1
+    DIR = 2
 
 
 class CocotbExecBase(Stage):
@@ -16,8 +23,8 @@ class CocotbExecBase(Stage):
 
     name = "cocotb"
 
-    def __init__(self, target_state, is_vcd, description):
-        self.is_vcd = is_vcd
+    def __init__(self, target_state, out, description):
+        self.out = out
         super().__init__(
             src_state="filament",
             target_state=target_state,
@@ -142,7 +149,7 @@ class CocotbExecBase(Stage):
             reset_cycles = config.get(["stages", self.name, "reset_cycles"])
             # Execute the make command
             cmd = " ".join([
-                "COMPILE_ARGS=-DICARUS",
+                "COMPILE_ARGS='-DICARUS -gstrict-ca-eval'",
                 "make", "-B",
                 # XXX(rachit): we shouldn't need this .data here
                 f"INTERFACE={interface.data}",
@@ -177,7 +184,7 @@ class CocotbExecBase(Stage):
             verilog_stream = builder.also_do_path(input, path, config)
             builder.ctx.pop()
             # If this is a VCD, we need to add the VCD generation code
-            if self.is_vcd:
+            if self.out == CocotbOutput.VCD:
                 verilog_stream = add_vcd_gen(verilog_stream)
             # Save the verilog stream into the temporary directory
             self.save_file(builder, verilog_stream, dir, "out.sv")
@@ -189,7 +196,7 @@ class CocotbExecBase(Stage):
 
         # Run the program
         out = run(dir, interface_path, data)
-        if self.is_vcd:
+        if self.out == CocotbOutput.VCD:
             return read_vcd(dir)
         else:
             return out
@@ -203,7 +210,7 @@ class CocotbVCD(CocotbExecBase):
     def __init__(self):
         super().__init__(
             target_state="cocotb-vcd",
-            is_vcd=True,
+            out=CocotbOutput.VCD,
             description="Run a Filament program through the cocotb testbench and generate a VCD"
         )
 
@@ -216,7 +223,7 @@ class CocotbOut(CocotbExecBase):
     def __init__(self):
         super().__init__(
             target_state="cocotb-out-raw",
-            is_vcd=False,
+            out=CocotbOutput.DAT,
             description="Run a Filament program through the cocotb testbench and generate output"
         )
 

@@ -2,7 +2,7 @@ import "primitives/core.fil";
 
 extern "iter-support.sv" {
   component Init<G>(
-    @interface[G, G+1] _go: 1,
+    @interface[G, G+1] @phantom go: 1,
     @[G, G+1] left: 8,
   ) -> (
     @[G, G+1] acc: 9,
@@ -10,7 +10,7 @@ extern "iter-support.sv" {
   );
 
   component Next<G>(
-    @interface[G, G+1] _go: 1,
+    @interface[G, G+1] @phantom go: 1,
     @[G, G+1] acc: 9,
     @[G, G+1] right: 8,
     @[G, G+1] quotient: 8
@@ -23,7 +23,7 @@ extern "iter-support.sv" {
 component CombNoShareIterDiv<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] left: 8,
-  @[G, G+1] right: 8,
+  @[G, G+1] right: 8
 ) -> (
   @[G, G+1] quotient: 8
 ) {
