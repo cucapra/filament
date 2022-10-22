@@ -1,6 +1,6 @@
-import "../../reticle/tdot.fil";
+import "../../../reticle/tdot.fil";
 import "primitives/core.fil";
-import "stencil.fil";
+import "../stencil.fil";
 
 component Conv<G>(
     @interface[G, G+1] @phantom go: 1,
