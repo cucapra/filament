@@ -44,7 +44,7 @@ impl Resolver {
         // Resove against base
         let mut cur_base = dir.to_path_buf();
         cur_base.push(imp);
-        if cur_base.exists() && lib_base.exists() {
+        if cur_base.exists() && lib_base.exists() && cur_base != lib_base {
             Err(errors::Error::misc(format!(
                 "Refusing to resolve ambiguous import: {}. Both {} and {} exist.",
                 imp,
