@@ -30,8 +30,42 @@ class CocotbExecBase(Stage):
             target_state=target_state,
             input_type=SourceType.Path,
             output_type=SourceType.Stream,
-            description=description
+            description=description,
         )
+
+    @staticmethod
+    def pre_install():
+        try:
+            import cocotb
+            import find_libpython
+
+            if find_libpython.find_libpython() is None:
+                raise errors.FudRegisterError(
+                    "cocotb",
+                    (
+                        "Failed to find libpython. "
+                        "Ensure that your python installation has access to the libpython shared library"
+                    ),
+                )
+        except ImportError:
+            raise errors.FudRegisterError(
+                "cocotb",
+                (
+                    "Failed to import find_libpython. "
+                    "Ensure that `cocotb' is installed: pip install cocotb"
+                ),
+            )
+
+        try:
+            import pytest
+        except ImportError:
+            raise errors.FudRegisterError(
+                "cocotb",
+                (
+                    "Failed to import pytest. "
+                    "Ensure that `pytest' is installed: pip install pytest"
+                ),
+            )
 
     @staticmethod
     def defaults():
@@ -50,16 +84,19 @@ class CocotbExecBase(Stage):
         """
         Save a file to the given location
         """
+
         @builder.step(f"Save {{file}} to {{dir}}/{filename}")
-        def save(stream: SourceType.String, dir: SourceType.Directory) -> SourceType.Path:
+        def save(
+            stream: SourceType.String, dir: SourceType.Directory
+        ) -> SourceType.Path:
             save_loc = Path(dir.name) / filename
-            with open(save_loc, 'w') as out:
+            with open(save_loc, "w") as out:
                 out.write(stream)
             return Source.path(save_loc)
+
         return save(stream, dir)
 
     def _define_steps(self, input, builder, config) -> Source:
-
         @builder.step()
         def get_data() -> SourceType.Path:
             """Get data for execution"""
@@ -71,7 +108,9 @@ class CocotbExecBase(Stage):
             return Path(data).resolve()
 
         @builder.step()
-        def copy_file(path: SourceType.Path, dir: SourceType.Directory, file: SourceType.String):
+        def copy_file(
+            path: SourceType.Path, dir: SourceType.Directory, file: SourceType.String
+        ):
             """
             Copy the file to the given directory
             """
@@ -87,15 +126,17 @@ class CocotbExecBase(Stage):
             """
             Generate the interface file for the Filament program
             """
-            cmd = " ".join([
-                config["stages", self.name, "exec"],
-                "--library",
-                config["stages", self.name, "library"],
-                "--calyx-primitives",
-                config["global", "futil_directory"],
-                "--dump-interface",
-                "{path}"
-            ])
+            cmd = " ".join(
+                [
+                    config["stages", self.name, "exec"],
+                    "--library",
+                    config["stages", self.name, "library"],
+                    "--calyx-primitives",
+                    config["global", "futil_directory"],
+                    "--dump-interface",
+                    "{path}",
+                ]
+            )
             return shell(cmd.format(path=file))
 
         @builder.step()
@@ -125,7 +166,9 @@ class CocotbExecBase(Stage):
             `endif
             // COMPONENT END: main
             """
-            return code.replace("// COMPONENT END: main", """
+            return code.replace(
+                "// COMPONENT END: main",
+                """
             `ifdef COCOTB_SIM
             initial begin
                 $dumpfile ("out.vcd");
@@ -134,10 +177,13 @@ class CocotbExecBase(Stage):
             end
             `endif
             // COMPONENT END: main
-            """)
+            """,
+            )
 
         @builder.step()
-        def run(dir: SourceType.String, interface: SourceType.Path, data: SourceType.Path) -> SourceType.Stream:
+        def run(
+            dir: SourceType.String, interface: SourceType.Path, data: SourceType.Path
+        ) -> SourceType.Stream:
             """
             Run the simulation
             """
@@ -148,15 +194,18 @@ class CocotbExecBase(Stage):
             # Number of reset cycles
             reset_cycles = config.get(["stages", self.name, "reset_cycles"])
             # Execute the make command
-            cmd = " ".join([
-                "COMPILE_ARGS='-DICARUS -gstrict-ca-eval'",
-                "make", "-B",
-                # XXX(rachit): we shouldn't need this .data here
-                f"INTERFACE={interface.data}",
-                f"DATA_FILE={data}",
-                f"RANDOMIZE={int(randomize)}" if randomize is not None else "",
-                f"RESET_CYCLES={reset_cycles}" if reset_cycles is not None else "",
-            ])
+            cmd = " ".join(
+                [
+                    "COMPILE_ARGS='-DICARUS -gstrict-ca-eval'",
+                    "make",
+                    "-B",
+                    # XXX(rachit): we shouldn't need this .data here
+                    f"INTERFACE={interface.data}",
+                    f"DATA_FILE={data}",
+                    f"RANDOMIZE={int(randomize)}" if randomize is not None else "",
+                    f"RESET_CYCLES={reset_cycles}" if reset_cycles is not None else "",
+                ]
+            )
             return shell(cmd)
 
         @builder.step()
@@ -164,7 +213,7 @@ class CocotbExecBase(Stage):
             """
             Read the vcd file
             """
-            with open(Path(dir)/"out.vcd", 'r') as f:
+            with open(Path(dir) / "out.vcd", "r") as f:
                 return f.read()
 
         # Schedule the program
@@ -175,8 +224,7 @@ class CocotbExecBase(Stage):
 
         # If cocotb.verilog is defined, use that instead of the generating verilog
         if mb_verilog is not None:
-            copy_file(Source.path(mb_verilog), dir,
-                      Source("out.sv", SourceType.String))
+            copy_file(Source.path(mb_verilog), dir, Source("out.sv", SourceType.String))
         else:
             # Compile the Filament program to icarus verilog
             path = config.registry.make_path("filament", "icarus-verilog")
@@ -192,7 +240,8 @@ class CocotbExecBase(Stage):
         # Generate the interface file
         interface_stream = interface_gen(input)
         interface_path = self.save_file(
-            builder, interface_stream, dir, "interface.json")
+            builder, interface_stream, dir, "interface.json"
+        )
 
         # Run the program
         out = run(dir, interface_path, data)
@@ -211,7 +260,7 @@ class CocotbVCD(CocotbExecBase):
         super().__init__(
             target_state="cocotb-vcd",
             out=CocotbOutput.VCD,
-            description="Run a Filament program through the cocotb testbench and generate a VCD"
+            description="Run a Filament program through the cocotb testbench and generate a VCD",
         )
 
 
@@ -224,7 +273,7 @@ class CocotbOut(CocotbExecBase):
         super().__init__(
             target_state="cocotb-out-raw",
             out=CocotbOutput.DAT,
-            description="Run a Filament program through the cocotb testbench and generate output"
+            description="Run a Filament program through the cocotb testbench and generate output",
         )
 
 
@@ -233,7 +282,7 @@ class CleanupCocotb(Stage):
     Execute a Filament generated verilog program through the cocotb testbench
     """
 
-    name = 'cocotb-cleanup'
+    name = "cocotb-cleanup"
 
     def __init__(self):
         super().__init__(
@@ -243,6 +292,10 @@ class CleanupCocotb(Stage):
             output_type=SourceType.Stream,
             description="Cleanup the output produced by cocotb",
         )
+
+    @staticmethod
+    def pre_install():
+        pass
 
     @staticmethod
     def defaults():
@@ -264,7 +317,7 @@ class CleanupCocotb(Stage):
 
                 if line.startswith(b"Outputs:"):
                     # Remove Output: from the front of the line
-                    return line.split(b" ", 1)[1].decode('UTF-8')
+                    return line.split(b" ", 1)[1].decode("UTF-8")
 
             raise ValueError("No results were found")
 
@@ -288,33 +341,33 @@ class FilamentStage(Stage):
         )
 
     @staticmethod
+    def pre_install():
+        pass
+
+    @staticmethod
     def defaults():
         # Path to the filament respository
         root = Path(__file__).parent.parent.resolve()
         exec = (root / "target" / "debug" / "filament").resolve()
 
-        return {
-            "exec": str(exec),
-            "library": str(root),
-            "file_extensions": [".fil"]
-        }
+        return {"exec": str(exec), "library": str(root), "file_extensions": [".fil"]}
 
     def _define_steps(self, input_data, builder, config):
 
-        cmd = " ".join([
-            config["stages", self.name, "exec"],
-            "--library",
-            config["stages", self.name, "library"],
-            "--calyx-primitives",
-            config["global", "futil_directory"],
-            "{path}"
-        ])
+        cmd = " ".join(
+            [
+                config["stages", self.name, "exec"],
+                "--library",
+                config["stages", self.name, "library"],
+                "--calyx-primitives",
+                config["global", "futil_directory"],
+                "{path}",
+            ]
+        )
 
         @builder.step(description=cmd)
         def to_calyx(input_path: SourceType.Path) -> SourceType.Stream:
-            return shell(
-                cmd.format(path=input_path)
-            )
+            return shell(cmd.format(path=input_path))
 
         return to_calyx(input_data)
 
