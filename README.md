@@ -43,6 +43,13 @@ Requires [Rust][] and `cargo` (automatically installed with Rust). Run `cargo bu
 
 ## Testing
 
+The tests use [cocotb][] for cosimulation:
+* Cocotb requires access to the `libpython.so` shared library.
+  * Install the `find_libpython` package: `pip install find_libpython`
+  * Check that the `find_libpython` package can find the `libpython.so` shared library: `python -c "import find_libpython; print(find_libpython.find())"`
+  * If the above command doesn't return anything, reinstall python with shared libraries enabled. Using [pyenv][], the following command should work: `env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install 3.10`
+* Install dependencies: `pip install cocotb pytest`
+
 Examples and tests are in the `tests/` directory.
 Testing is done using [runt][]. To install, run `cargo install runt`. To run
 tests, run: `runt` from the root directory.
