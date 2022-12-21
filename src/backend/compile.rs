@@ -82,7 +82,7 @@ impl Context<'_> {
         match &port.typ {
             ast::PortType::ThisPort(p) => {
                 let this = self.builder.component.signature.borrow();
-                (this.get(p), None)
+                (this.get(p.as_ref()), None)
             }
             ast::PortType::InvPort { invoke: comp, name } => {
                 if let Some(fsm) = self.fsms.get(comp) {
@@ -91,7 +91,7 @@ impl Context<'_> {
                     (c.get("out"), Some(fsm.event(name)))
                 } else {
                     let cell = self.invokes[comp].borrow();
-                    (cell.get(name), None)
+                    (cell.get(name.as_ref()), None)
                 }
             }
             ast::PortType::Constant(c) => {
@@ -141,14 +141,14 @@ fn compile_guard(guard: ast::Guard, ctx: &mut Context) -> ir::Guard {
         ast::Guard::Port(p) => match &p.typ {
             ast::PortType::ThisPort(p) => {
                 let this = ctx.builder.component.signature.borrow();
-                this.get(p).into()
+                this.get(p.as_ref()).into()
             }
             ast::PortType::InvPort { invoke: comp, name } => {
                 if let Some(fsm) = ctx.fsms.get(comp) {
                     fsm.event(name)
                 } else {
                     let cell = ctx.invokes[comp].borrow();
-                    cell.get(name).into()
+                    cell.get(name.as_ref()).into()
                 }
             }
             ast::PortType::Constant(_) => {
@@ -167,7 +167,7 @@ fn define_fsm_component(states: u64, ctx: &mut Context) {
         })
         .chain(INTERFACE_PORTS.iter().map(|pd| {
             let mut pd = ir::PortDef::from(pd.clone());
-            pd.attributes.insert(&pd.name, 1);
+            pd.attributes.insert(pd.name.as_ref(), 1);
             pd
         }))
         .chain(iter::once(
@@ -344,19 +344,19 @@ fn compile_component(
     sigs: &mut Binding,
     lib: &ir::LibrarySignatures,
 ) -> FilamentResult<ir::Component> {
-    let port_transform =
-        |pd: &ast::PortDef<u64>, dir: ir::Direction| -> ir::PortDef<u64> {
-            let mut pd: ir::PortDef<u64> =
-                (pd.name.id().clone(), pd.bitwidth, dir).into();
-            pd.attributes.insert("data", 1);
-            pd
-        };
+    let port_transform = |pd: &ast::PortDef<u64>,
+                          dir: ir::Direction|
+     -> ir::PortDef<u64> {
+        let mut pd: ir::PortDef<u64> = (pd.name.id(), pd.bitwidth, dir).into();
+        pd.attributes.insert("data", 1);
+        pd
+    };
     let concrete_transform = |name: &ast::Id, width: u64| -> ir::PortDef<u64> {
-        (name.id().clone(), width, ir::Direction::Input).into()
+        (name.id(), width, ir::Direction::Input).into()
     };
     let ports =
         as_port_defs(&comp.sig, port_transform, concrete_transform, true);
-    let mut component = ir::Component::new(&comp.sig.name.id(), ports, false);
+    let mut component = ir::Component::new(comp.sig.name.id(), ports, false);
     component.attributes.insert("nointerface", 1);
     let builder = ir::Builder::new(&mut component, lib).not_generated();
     let mut ctx = Context::new(sigs, builder, lib);
@@ -395,14 +395,10 @@ fn compile_component(
                 ..
             }) => {
                 let cell = if let Some(sig) = ctx.get_sig(&component) {
-                    ctx.builder.add_component(
-                        name.id().clone(),
-                        component.id().clone(),
-                        sig,
-                    )
+                    ctx.builder.add_component(name.id(), component.id(), sig)
                 } else {
                     ctx.builder.add_primitive(
-                        name.id().clone(),
+                        name.id(),
                         component.id(),
                         &bindings,
                     )
@@ -430,7 +426,7 @@ fn prim_as_port_defs(
         let width = match &pd.bitwidth {
             ast::PortParam::Const(v) => ir::Width::Const { value: *v },
             ast::PortParam::Var(v) => ir::Width::Param {
-                value: v.id().clone().into(),
+                value: v.id().into(),
             },
         };
         let mut attributes = ir::Attributes::default();
@@ -456,8 +452,8 @@ fn prim_as_port_defs(
 
 fn compile_signature(sig: &ast::Signature<ast::PortParam>) -> ir::Primitive {
     ir::Primitive {
-        name: sig.name.id().clone().into(),
-        params: sig.params.iter().map(|p| p.id().clone().into()).collect(),
+        name: sig.name.id().into(),
+        params: sig.params.iter().map(|p| p.id().into()).collect(),
         signature: prim_as_port_defs(sig),
         is_comb: false,
         attributes: ir::Attributes::default(),
