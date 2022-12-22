@@ -45,7 +45,8 @@ jobs:
         run: |
           cd iverilog
           sh autoconf.sh
-          ./configure CPP=gcc || cat config.log
+          which gcc
+          ./configure CPP="$(which gcc) -E" || cat config.log
           make
       - name: Install iverilog
         run: |
