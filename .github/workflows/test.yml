@@ -45,7 +45,7 @@ jobs:
         run: |
           cd iverilog
           sh autoconf.sh
-          ./configure CC=/usr/bin/gcc CC_FOR_BUILD=/usr/bin/gcc || cat config.log
+          ./configure CC=/usr/bin/gcc CC_FOR_BUILD=/usr/bin/gcc CPP_FOR_BUILD='/usr/bin/gcc -E' || cat config.log
           make
       - name: Install iverilog
         run: |
