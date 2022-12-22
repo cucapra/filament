@@ -42,7 +42,7 @@ jobs:
         run: |
           cd iverilog
           sh autoconf.sh
-          ./configure || cat config.log
+          unset CPATH && ./configure || cat config.log
           make
       - name: Install iverilog
         run: |
