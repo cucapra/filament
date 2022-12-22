@@ -25,6 +25,7 @@ jobs:
           sudo apt-get install z3 build-essential gperf jq
           sudo apt-get install gcc-10 g++-10
           gcc --version
+          echo $CPP
 
       - name: Cache Icarus Verilog
         id: iverilog-cache
