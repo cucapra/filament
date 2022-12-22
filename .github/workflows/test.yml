@@ -22,7 +22,10 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install z3 build-essential gperf jq gcc
+          sudo apt-get install z3 build-essential gperf jq
+          sudo update-alternatives --remove-all gcc
+          sudo update-alternatives --remove-all g++
+          sudo apt-get install gcc-10 g++-10
 
       - name: Cache Icarus Verilog
         id: iverilog-cache
@@ -42,7 +45,7 @@ jobs:
         run: |
           cd iverilog
           sh autoconf.sh
-          unset CPATH && ./configure || cat config.log
+          ./configure || cat config.log
           make
       - name: Install iverilog
         run: |
