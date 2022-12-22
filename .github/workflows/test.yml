@@ -45,7 +45,7 @@ jobs:
         run: |
           cd iverilog
           sh autoconf.sh
-          ./configure CPP=gcc-10 || cat config.log
+          ./configure CC=gcc-10 || cat config.log
           make
       - name: Install iverilog
         run: |
