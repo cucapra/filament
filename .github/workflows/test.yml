@@ -39,12 +39,16 @@ jobs:
           ref: v11_0
       - name: Build iverilog
         if: steps.iverilog-cache.outputs.cache-hit != 'true'
+        env:
+          CPP: /bin/cpp
         run: |
           cd iverilog
           sh autoconf.sh
           ./configure
           make
       - name: Install iverilog
+        env:
+          CPP: /bin/cpp
         run: |
           cd iverilog
           sudo make install
