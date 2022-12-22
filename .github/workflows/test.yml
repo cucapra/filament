@@ -42,12 +42,20 @@ jobs:
           ref: v11_0
       - name: Build iverilog
         if: steps.iverilog-cache.outputs.cache-hit != 'true'
+        env:
+          CC: gcc-10
+          CCP: gcc-10
+          CXX: g++-10
         run: |
           cd iverilog
           sh autoconf.sh
           ./configure || cat config.log
           make
       - name: Install iverilog
+        env:
+          CC: gcc-10
+          CCP: gcc-10
+          CXX: g++-10
         run: |
           cd iverilog
           sudo make install
