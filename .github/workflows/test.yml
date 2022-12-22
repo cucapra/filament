@@ -40,7 +40,7 @@ jobs:
       - name: Build iverilog
         if: steps.iverilog-cache.outputs.cache-hit != 'true'
         env:
-          CPP: /bin/cpp
+          CC: /usr/bin/gcc
         run: |
           cd iverilog
           sh autoconf.sh
@@ -48,7 +48,7 @@ jobs:
           make
       - name: Install iverilog
         env:
-          CPP: /bin/cpp
+          CC: /usr/bin/gcc
         run: |
           cd iverilog
           sudo make install
