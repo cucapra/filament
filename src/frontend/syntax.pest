@@ -68,7 +68,8 @@ abstract_var = {
 
 // Time
 time = {
-  | identifier ~ ("+" ~ bitwidth)?
+  identifier ~ ("+" ~ bitwidth)?
+  | bitwidth
 }
 
 // Intervals
