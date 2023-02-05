@@ -69,10 +69,8 @@ impl From<&ShareConstraints> for Vec<SExp> {
         let min = sh
             .min
             .iter()
-            .map(|t| SExp::from(t))
-            .reduce(|a, b| {
-                SExp(format!("(min {} {})", SExp::from(a), SExp::from(b)))
-            })
+            .map(SExp::from)
+            .reduce(|a, b| SExp(format!("(min {} {})", a, b)))
             .unwrap();
         let max = sh
             .max

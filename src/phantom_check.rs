@@ -52,8 +52,8 @@ impl visitor::Transform for PhantomCheck {
     ) -> FilamentResult<Vec<ast::Command>> {
         // Check if the instance has already been used
         if let Some(prev_use) = self.instance_used.get(&inv.instance) {
-            for (ev, _) in inv.abstract_vars.iter().flat_map(|ev| ev.events()) {
-                if let Some(interface_ev) = self.phantom_events.get(&ev) {
+            for ev in inv.abstract_vars.iter().map(|ev| &ev.event) {
+                if let Some(interface_ev) = self.phantom_events.get(ev) {
                     return Err(Error::malformed(
                         "Reuses instance uses phantom event for scheduling"
                     ).add_note("Invocation uses phantom port", ev.copy_span())
@@ -79,15 +79,14 @@ impl visitor::Transform for PhantomCheck {
                 .unwrap();
             // If this event is non-phantom, ensure all provided events are non-phantom as well.
             if !id.phantom {
-                for (ev, _) in bind.events() {
-                    if let Some(interface_ev) = self.phantom_events.get(ev) {
-                        return Err(Error::malformed(
+                let ev = &bind.event;
+                if let Some(interface_ev) = self.phantom_events.get(ev) {
+                    return Err(Error::malformed(
                             "Component provided phantom event to non-phantom port",
                         ).add_note("Invoke provides phantom event to non-phantom port", ev.copy_span())
                          .add_note("Instance's signature defines this port to be concrete", id.copy_span())
                          .add_note("This event is defined to be @phantom", interface_ev.copy_span())
                          .add_note("Phantom ports are compiled away and cannot be used by subcomponents", None));
-                    }
                 }
             }
         }

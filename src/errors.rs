@@ -40,7 +40,7 @@ pub trait WithPos {
 }
 
 pub struct Error {
-    pub kind: ErrorKind,
+    pub kind: Box<ErrorKind>,
     pub notes: Vec<(String, Option<Span>)>,
 }
 
@@ -70,49 +70,49 @@ impl Error {
 
     pub fn parse_error(err: pest_consume::Error<frontend::Rule>) -> Self {
         Self {
-            kind: ErrorKind::ParseError(err),
+            kind: Box::new(ErrorKind::ParseError(err)),
             notes: vec![],
         }
     }
 
     pub fn invalid_file(f: String) -> Self {
         Self {
-            kind: ErrorKind::InvalidFile(f),
+            kind: Box::new(ErrorKind::InvalidFile(f)),
             notes: vec![],
         }
     }
 
     pub fn write_error(e: String) -> Self {
         Self {
-            kind: ErrorKind::WriteError(e),
+            kind: Box::new(ErrorKind::WriteError(e)),
             notes: vec![],
         }
     }
 
     pub fn malformed<S: ToString>(msg: S) -> Self {
         Self {
-            kind: ErrorKind::Malformed(msg.to_string()),
+            kind: Box::new(ErrorKind::Malformed(msg.to_string())),
             notes: vec![],
         }
     }
 
     pub fn undefined<S: ToString>(name: Id, kind: S) -> Self {
         Self {
-            kind: ErrorKind::Undefined(name, kind.to_string()),
+            kind: Box::new(ErrorKind::Undefined(name, kind.to_string())),
             notes: vec![],
         }
     }
 
     pub fn already_bound<S: ToString>(name: Id, kind: S) -> Self {
         Self {
-            kind: ErrorKind::AlreadyBound(name, kind.to_string()),
+            kind: Box::new(ErrorKind::AlreadyBound(name, kind.to_string())),
             notes: vec![],
         }
     }
 
     pub fn misc(msg: String) -> Self {
         Self {
-            kind: ErrorKind::Misc(msg),
+            kind: Box::new(ErrorKind::Misc(msg)),
             notes: vec![],
         }
     }

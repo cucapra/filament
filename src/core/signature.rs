@@ -1,6 +1,6 @@
 use super::{
-    Binding, Constraint, ConstraintBase, FsmIdxs, Id, InterfaceDef, Interval,
-    PortDef, PortParam, TimeRep,
+    Binding, Constraint, ConstraintBase, Id, InterfaceDef, Interval, PortDef,
+    PortParam, Time, TimeRep,
 };
 use crate::errors::{Error, FilamentResult, WithPos};
 use itertools::Itertools;
@@ -190,14 +190,14 @@ where
     }
 }
 
-impl<W: Clone> Signature<FsmIdxs, W> {
+impl<W: Clone> Signature<Time<u64>, W> {
     /// Constraints generated to ensure that a signature is well-formed.
     /// 1. Ensure that all the intervals are well formed
     /// 2. Ensure for each interval that mentions event `E` in its start time, the @interface
     ///    signal for `E` pulses less often than the length of the interval itself.
     pub fn well_formed(
         &self,
-    ) -> FilamentResult<impl Iterator<Item = Constraint<FsmIdxs>> + '_> {
+    ) -> FilamentResult<impl Iterator<Item = Constraint<Time<u64>>> + '_> {
         let mut evs: HashMap<Id, Vec<_>> = HashMap::new();
 
         // Compute mapping from events to intervals to mention the event in their start time.
@@ -207,21 +207,20 @@ impl<W: Clone> Signature<FsmIdxs, W> {
 
         for port in self.inputs.iter().chain(self.outputs.iter()) {
             let delay = port.liveness.within.len();
-            for (ev, _) in port.liveness.within.start.events() {
-                // Make sure @interface for event exists
-                if self.get_interface(ev).is_none() {
-                    return Err(Error::malformed(format!(
-                        "Missing @interface port for {ev}"
-                    ))
-                    .add_note(
-                        format!("Port mentions `{ev}` event in its start time"),
-                        port.liveness.within.copy_span(),
-                    ));
-                }
-                evs.entry(ev.clone())
-                    .or_default()
-                    .push((delay.clone(), port.copy_span()))
+            let ev = &port.liveness.within.start.event;
+            // Make sure @interface for event exists
+            if self.get_interface(ev).is_none() {
+                return Err(Error::malformed(format!(
+                    "Missing @interface port for {ev}"
+                ))
+                .add_note(
+                    format!("Port mentions `{ev}` event in its start time"),
+                    port.liveness.within.copy_span(),
+                ));
             }
+            evs.entry(ev.clone())
+                .or_default()
+                .push((delay.clone(), port.copy_span()))
         }
 
         Ok(evs

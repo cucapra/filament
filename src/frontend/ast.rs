@@ -1,7 +1,6 @@
-use super::IntervalTime;
 use crate::core;
 
-type TR = IntervalTime;
+type TR = core::Time<u64>;
 
 pub type Component = core::Component<TR>;
 pub type Namespace = core::Namespace<TR>;

@@ -1,11 +1,11 @@
 use derivative::Derivative;
 
-use super::{Binding, FsmIdxs, Range, TimeRep, TimeSub, WithTime};
+use super::{Binding, Range, Time, TimeRep, TimeSub, WithTime};
 use crate::{
     errors::{self, FilamentResult},
     interval_checking::SExp,
 };
-use std::{cmp::Ordering, fmt::Display};
+use std::fmt::Display;
 
 /// Ordering operator for constraints
 #[derive(Hash, Eq, PartialEq, Clone)]
@@ -223,7 +223,8 @@ impl<T: TimeRep> WithTime<T> for Constraint<T> {
     }
 }
 
-impl Constraint<FsmIdxs> {
+/*
+impl Constraint<Time<u64>> {
     /// Check if the constraint can be statically reduced to true.
     pub fn simplify(self) -> Option<Self> {
         match &self {
@@ -273,6 +274,7 @@ impl Constraint<FsmIdxs> {
         }
     }
 }
+*/
 
 impl<T: Display + TimeRep> Display for Constraint<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -283,8 +285,8 @@ impl<T: Display + TimeRep> Display for Constraint<T> {
     }
 }
 
-impl From<&Constraint<FsmIdxs>> for SExp {
-    fn from(con: &Constraint<FsmIdxs>) -> Self {
+impl From<&Constraint<Time<u64>>> for SExp {
+    fn from(con: &Constraint<Time<u64>>) -> Self {
         match con {
             Constraint::Base { base } => SExp(format!(
                 "({} {} {})",
@@ -302,8 +304,8 @@ impl From<&Constraint<FsmIdxs>> for SExp {
     }
 }
 
-impl From<&TimeSub<FsmIdxs>> for SExp {
-    fn from(ts: &TimeSub<FsmIdxs>) -> Self {
+impl From<&TimeSub<Time<u64>>> for SExp {
+    fn from(ts: &TimeSub<Time<u64>>) -> Self {
         SExp(format!(
             "(abs (- {} {}))",
             SExp::from(&ts.a),

@@ -3,7 +3,7 @@ use crate::{
     core::Id,
     errors::{Error, FilamentResult},
 };
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 
 pub struct BindMap<K> {
     /// Map from abstract variables to concrete variables
@@ -34,11 +34,17 @@ impl<K> BindMap<K> {
 
     // Add a binding to the map, producing an error if the binding already exists
     pub fn add(&mut self, id: Id, val: K) -> FilamentResult<()> {
-        if self.map.contains_key(&id) {
-            Err(Error::malformed(format!("Conflicting binding for {id}")))
-        } else {
-            self.map.insert(id, val);
+        if let Entry::Vacant(e) = self.map.entry(id.clone()) {
+            e.insert(val);
             Ok(())
+        } else {
+            Err(Error::malformed(format!("Conflicting binding for {id}")))
         }
+    }
+}
+
+impl<K> Default for BindMap<K> {
+    fn default() -> Self {
+        Self::new()
     }
 }

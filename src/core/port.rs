@@ -1,6 +1,4 @@
-use super::{
-    Binding, FsmIdxs, Id, Interval, Range, TimeRep, TimeSub, WithTime,
-};
+use super::{Binding, Id, Interval, Range, Time, TimeRep, TimeSub, WithTime};
 use crate::errors::{self, WithPos};
 use std::fmt::Display;
 
@@ -152,11 +150,11 @@ where
     }
 }
 
-impl InterfaceDef<FsmIdxs> {
+impl InterfaceDef<Time<u64>> {
     /// Attempts to return a concrete delay for this interface. Panics if the
     /// end time is a max-expression or uses different time variables
-    pub fn delay(&self) -> TimeSub<FsmIdxs> {
-        FsmIdxs::unit(self.event.clone(), 0) - self.end.clone()
+    pub fn delay(&self) -> TimeSub<Time<u64>> {
+        Time::unit(self.event.clone(), 0).sub(self.end.clone())
     }
 }
 

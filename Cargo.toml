@@ -14,6 +14,7 @@ rsmt2 = "0.16.0"
 itertools = "0.10.3"
 linked-hash-map = "0.5.6"
 derivative = "2.2.0"
+smallvec = "1.10.0"
 
 [dependencies.calyx]
 path = "../calyx/calyx"

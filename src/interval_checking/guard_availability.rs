@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use super::{Context, THIS};
-use crate::core::{FsmIdxs, TimeRep};
+use crate::core::{Time, TimeRep};
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
 
@@ -124,8 +124,8 @@ fn merge_availability(intervals: Intervals) -> FilamentResult<ast::Interval> {
     )?;
 
     Ok(ast::Interval::from(within).with_exact(ast::Range::new(
-        FsmIdxs::unit(event.clone(), start),
-        FsmIdxs::unit(event.clone(), end),
+        Time::unit(event.clone(), start),
+        Time::unit(event, end),
     )))
 }
 
