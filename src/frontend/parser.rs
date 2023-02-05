@@ -1,8 +1,8 @@
 #![allow(clippy::upper_case_acronyms)]
 
 //! Parser for Calyx programs.
-use super::ast::InterfaceDef;
-use super::{ast, IntervalTime};
+use super::ast::{self, InterfaceDef};
+use crate::core::{Time, TimeRep};
 use crate::errors::{self, FilamentResult, WithPos};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
@@ -117,26 +117,11 @@ impl FilamentParser {
     }
 
     // ================ Intervals =====================
-    fn time_base(input: Node) -> ParseResult<IntervalTime> {
+    fn time(input: Node) -> ParseResult<Time<u64>> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(var)] => IntervalTime::Abstract(var),
-            [time(l), time(r)] => IntervalTime::binop_max(l, r),
-            [bitwidth(time)] => IntervalTime::Concrete(time),
-        ))
-    }
-    fn time_expr(input: Node) -> ParseResult<IntervalTime> {
-        Ok(match_nodes!(
-            input.into_children();
-            [time_base(l), time(r)] => IntervalTime::binop_add(l, r),
-        ))
-    }
-
-    fn time(input: Node) -> ParseResult<IntervalTime> {
-        Ok(match_nodes!(
-            input.into_children();
-            [time_expr(time)] => time,
-            [time_base(time)] => time
+            [identifier(ev)] => TimeRep::unit(ev, 0),
+            [identifier(ev), bitwidth(st)] => TimeRep::unit(ev, st),
         ))
     }
 
@@ -150,7 +135,7 @@ impl FilamentParser {
 
     // ================ Signature =====================
 
-    fn interface(input: Node) -> ParseResult<(ast::Id, bool, IntervalTime)> {
+    fn interface(input: Node) -> ParseResult<(ast::Id, bool, Time<u64>)> {
         Ok(match_nodes!(
             input.into_children();
             [identifier(tvar), time(t)] => (tvar, false, t),
@@ -317,7 +302,7 @@ impl FilamentParser {
         ))
     }
 
-    fn time_args(input: Node) -> ParseResult<Vec<IntervalTime>> {
+    fn time_args(input: Node) -> ParseResult<Vec<Time<u64>>> {
         Ok(match_nodes!(
             input.into_children();
             [time(args)..] => args.collect(),
@@ -326,7 +311,7 @@ impl FilamentParser {
 
     fn invoke_args(
         input: Node,
-    ) -> ParseResult<(Vec<IntervalTime>, Vec<ast::Port>)> {
+    ) -> ParseResult<(Vec<Time<u64>>, Vec<ast::Port>)> {
         Ok(match_nodes!(
             input.into_children();
             [time_args(time_args), arguments(args)] => (time_args, args),

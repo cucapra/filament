@@ -144,19 +144,19 @@ fn check_invoke_binds<'a>(
         {
             // Each event in the binding must pulse less often than the interface of the abstract
             // variable.
-            for (event, _) in evs.events() {
-                // Get interface for this event
-                let event_interface =
+            let event = &evs.event;
+            // Get interface for this event
+            let event_interface =
                     this_sig.get_interface(event).ok_or_else(|| {
                         Error::malformed(format!(
                             "Event {event} does not have a corresponding interface signal"
                         ))
                     })?;
-                let int_len = interface.delay().resolve(&binding);
-                let ev_int_len = event_interface.delay();
+            let int_len = interface.delay().resolve(&binding);
+            let ev_int_len = event_interface.delay();
 
-                // Generate constraint
-                let cons = Constraint::from(ast::CBS::gte(
+            // Generate constraint
+            let cons = Constraint::from(ast::CBS::gte(
                     ev_int_len.clone(),
                     int_len.clone(),
                 ))
@@ -178,8 +178,7 @@ fn check_invoke_binds<'a>(
                     ),
                     interface.copy_span(),
                 );
-                constraints.push(cons);
-            }
+            constraints.push(cons);
         }
     }
     ctx.add_obligations(constraints.into_iter());
@@ -222,7 +221,7 @@ fn check_invoke<'a>(
     ctx.add_invocation(
         invoke.bind.clone(),
         // XXX(rachit): Get rid of this clone
-        ConcreteInvoke::concrete(binding, sig.clone()),
+        ConcreteInvoke::concrete(binding, sig),
     );
 
     Ok(())
@@ -288,7 +287,7 @@ fn check_fsm<'a>(
     }
 
     // Prove that the signal is zero during the execution of the FSM
-    let start_time = ast::TimeRep::unit(ev.clone(), start);
+    let start_time = ast::TimeRep::unit(ev, start);
     let end_time = start_time.clone().increment(*states);
     let within = ast::Range::new(start_time, end_time);
     ctx.add_obligations(

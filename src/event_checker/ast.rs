@@ -1,6 +1,6 @@
 use crate::core;
 
-pub type TimeRep = core::FsmIdxs;
+pub type TimeRep = core::Time<u64>;
 pub type TimeSub = core::TimeSub<TimeRep>;
 
 pub type Component = core::Component<TimeRep>;

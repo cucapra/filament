@@ -67,13 +67,9 @@ abstract_var = {
 }
 
 // Time
-time_base = {
-  bitwidth
-  | ("max" ~ "(" ~ time ~ "," ~ time ~ ")")
-  | identifier
+time = {
+  | identifier ~ ("+" ~ bitwidth)?
 }
-time_expr = { (time_base ~ "+" ~ time) }
-time = { time_expr | time_base }
 
 // Intervals
 interval_range = {

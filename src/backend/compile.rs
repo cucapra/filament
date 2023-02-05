@@ -457,6 +457,7 @@ fn compile_signature(sig: &ast::Signature<ast::PortParam>) -> ir::Primitive {
         signature: prim_as_port_defs(sig),
         is_comb: false,
         attributes: ir::Attributes::default(),
+        body: None,
     }
 }
 
@@ -471,7 +472,7 @@ fn init_calyx(
     // Add externals
     ws.externs.extend(externs.iter().map(|(file, sigs)| {
         (
-            PathBuf::from(file),
+            Some(PathBuf::from(file)),
             sigs.iter().map(compile_signature).collect(),
         )
     }));

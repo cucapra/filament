@@ -1,5 +1,5 @@
 use super::{ShareConstraints, THIS};
-use crate::core::{self, WithTime};
+use crate::core::{self, TimeRep, WithTime};
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
 use crate::visitor;
@@ -143,7 +143,7 @@ impl<'a> Context<'a> {
         bindings: &[u64],
     ) {
         let sig = self.sigs.get_component(comp, bindings);
-        self.instances.insert(name.clone(), sig);
+        self.instances.insert(name, sig);
     }
 
     /// Add a new invocation to the context
@@ -315,7 +315,7 @@ impl<'a> Context<'a> {
         args: &[BindsWithLoc],
     ) -> FilamentResult<()> {
         // Get the delay associated with each event.
-        let sig = self.get_instance(&instance);
+        let sig = self.get_instance(instance);
         // Ensure that all bindings of an event variable use the same events
         for (idx, abs) in sig.events().iter().enumerate() {
             // Ignore events without an associated interface port.
@@ -325,15 +325,7 @@ impl<'a> Context<'a> {
 
                 if let Some((fpos, first)) = iter.next() {
                     for (epos, event) in iter {
-                        if event
-                            .events()
-                            .map(|(ev, _)| ev)
-                            .collect::<HashSet<_>>()
-                            != first
-                                .events()
-                                .map(|(ev, _)| ev)
-                                .collect::<HashSet<_>>()
-                        {
+                        if event.event != first.event {
                             return Err(Error::malformed(format!(
                                 "Bindings for {instance}.{abs} uses multiple events: {first} and {event}. Sharing using multiple events is not supported.",
                             ))
@@ -353,20 +345,20 @@ impl<'a> Context<'a> {
         abs: &ast::Id,
         (i_event, spi): (&ast::TimeRep, Option<errors::Span>),
         (k_event, spk): (&ast::TimeRep, Option<errors::Span>),
-        i_delay: &core::TimeSub<core::FsmIdxs>,
+        i_delay: &core::TimeSub<core::Time<u64>>,
         id_pos: Option<errors::Span>,
-    ) -> core::Constraint<core::FsmIdxs> {
+    ) -> core::Constraint<core::Time<u64>> {
         ast::Constraint::from(ast::CBS::gte(
-            i_event.clone() - k_event.clone(),
+            i_event.clone().sub(k_event.clone()),
             i_delay.clone(),
         ))
         .add_note(
             format!("Conflicting invoke. Invoke provides binding {instance}.{abs}={k_event}"),
-            spk.clone(),
+            spk,
         )
         .add_note(
             format!("Invoke provides binding {instance}.{abs}={i_event}"),
-            spi.clone(),
+            spi,
         )
         .add_note(
             format!("@interface for {abs} specifies that invokes must be {i_delay} cycles apart"),
@@ -439,11 +431,10 @@ impl<'a> Context<'a> {
                     // Get delays for events used in bindings. These are guaranteed to be the same across all bindings
                     // due to the call to `ensure_same_events`.
                     let bind = &args[0].1[idx];
-                    let delays = bind
-                        .events()
-                        .filter_map(|(ev, _)| sig.get_interface(ev))
-                        .cloned();
-                    share.add_delays(delays);
+                    let ev = &bind.event;
+                    if let Some(id) = sig.get_interface(ev) {
+                        share.add_delays(std::iter::once(id.clone()));
+                    }
                     share_constraints.push(share);
                 } else {
                     unreachable!("Signature associate with THIS is not a ConcreteInvoke::This")

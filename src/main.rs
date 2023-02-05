@@ -6,9 +6,8 @@ use codespan_reporting::{
     term::{self, termcolor::ColorChoice, termcolor::StandardStream},
 };
 use filament::{
-    backend, bind_check, cmdline, dump_interface, errors, event_checker,
-    interval_checking, lower, phantom_check, resolver::Resolver,
-    visitor::Transform,
+    backend, bind_check, cmdline, dump_interface, errors, interval_checking,
+    lower, phantom_check, resolver::Resolver, visitor::Transform,
 };
 
 // Prints out the interface for main component in the input program.
@@ -26,7 +25,7 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
 
     // Run the compilation pipeline
     let t = Instant::now();
-    let ns = event_checker::check_and_transform(ns)?;
+    // let ns = event_checker::check_and_transform(ns)?;
     log::info!("Event check: {}ms", t.elapsed().as_millis());
     log::trace!("{ns}");
 

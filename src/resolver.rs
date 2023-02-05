@@ -115,7 +115,7 @@ impl Resolver {
             .imports
             .drain(..)
             .filter_map(|s| match self.resolve_import(&s, &base) {
-                Ok(file) => self.add_import(file).map(|f| Ok(f)),
+                Ok(file) => self.add_import(file).map(Ok),
                 f @ Err(_) => Some(f),
             })
             .collect::<FilamentResult<_>>()?;
@@ -153,7 +153,7 @@ impl Resolver {
             "Components: {:#?}",
             ns.components
                 .iter()
-                .map(|c| c.sig.name.id().clone())
+                .map(|c| c.sig.name.id())
                 .collect::<Vec<_>>()
         );
         log::info!(
@@ -161,7 +161,7 @@ impl Resolver {
             ns.externs
                 .iter()
                 .flat_map(|(_, comps)| comps)
-                .map(|c| c.name.id().clone())
+                .map(|c| c.name.id())
                 .collect::<Vec<_>>()
         );
         Ok(ns)

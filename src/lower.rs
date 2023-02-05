@@ -27,7 +27,7 @@ impl<const PHANTOM: bool> CompileInvokes<PHANTOM> {
     /// Converts an interval to a guard expression with the appropriate FSM
     fn range_to_guard(&self, range: ast::Range) -> Option<ast::Guard> {
         if let Some((ev, st, end)) = range.as_offset() {
-            let fsm = self.find_fsm(ev)?;
+            let fsm = self.find_fsm(&ev)?;
             let guard = (st..end)
                 .into_iter()
                 .map(|st| fsm.port(st).into())
@@ -57,12 +57,12 @@ impl<const PHANTOM: bool> CompileInvokes<PHANTOM> {
         });
 
         // Use all ranges to compute max state
-        out_events.for_each(|fsm| {
-            fsm.events().for_each(|(ev, &st)| {
-                if self.max_states[ev] < st {
-                    *self.max_states.get_mut(ev).unwrap() = st;
-                }
-            })
+        out_events.for_each(|time| {
+            let ev = &time.event;
+            let st = time.offset();
+            if self.max_states[ev] < st {
+                *self.max_states.get_mut(ev).unwrap() = st;
+            }
         });
     }
 }
@@ -111,14 +111,10 @@ impl<const PHANTOM: bool> visitor::Transform for CompileInvokes<PHANTOM> {
             );
 
             // Define the low-level invoke
-            let low_inv = ast::Invoke::new(
-                bind.clone(),
-                instance,
-                abstract_vars.clone(),
-                None,
-            )
-            .set_span(pos.clone())
-            .into();
+            let low_inv =
+                ast::Invoke::new(bind.clone(), instance, abstract_vars, None)
+                    .set_span(pos.clone())
+                    .into();
             connects.push(low_inv);
 
             // Generate the assignment for each interface port
@@ -129,13 +125,9 @@ impl<const PHANTOM: bool> visitor::Transform for CompileInvokes<PHANTOM> {
                 }
                 let ev = &interface.event;
                 // Get binding for this event in the invoke
-                let (s_ev, start_time) =
-                    binding.get(ev).as_unit().unwrap_or_else(|| {
-                        unimplemented!(
-                            "Binding for event {ev} is a max-expression"
-                        )
-                    });
-                let port = self.get_fsm(s_ev).port(*start_time);
+                let t = binding.get(ev);
+                let start_time = t.offset();
+                let port = self.get_fsm(&t.event).port(start_time);
                 let con = ast::Connect::new(
                     ast::Port::comp(bind.clone(), interface.name.clone()),
                     port,
