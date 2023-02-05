@@ -70,7 +70,7 @@ impl TimeRep for Time<u64> {
     }
 
     fn sub(self, other: Self) -> Self::SubRep {
-        TimeSub { l: self, r: other }
+        TimeSub::build(self, other)
     }
 }
 
@@ -106,10 +106,17 @@ impl Range<Time<u64>> {
 }
 
 impl TimeSub<Time<u64>> {
-    pub fn concrete(&self) -> Option<u64> {
-        if self.l.event == self.r.event {
-            return Some(self.l.offsets[0] - self.r.offsets[0]);
+    /// Attempt to automatically simplify the difference when possible
+    pub fn build(l: Time<u64>, r: Time<u64>) -> Self {
+        if l.event == r.event {
+            let l = l.offsets[0];
+            let r = r.offsets[0];
+            if l > r {
+                return Self::Unit(l - r);
+            } else {
+                return Self::Unit(r - l);
+            }
         }
-        None
+        Self::Sym { l, r }
     }
 }

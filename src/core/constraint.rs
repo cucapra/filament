@@ -303,13 +303,3 @@ impl From<&Constraint<Time<u64>>> for SExp {
         }
     }
 }
-
-impl From<&TimeSub<Time<u64>>> for SExp {
-    fn from(ts: &TimeSub<Time<u64>>) -> Self {
-        SExp(format!(
-            "(abs (- {} {}))",
-            SExp::from(&ts.l),
-            SExp::from(&ts.r)
-        ))
-    }
-}
