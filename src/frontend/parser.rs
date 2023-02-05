@@ -118,11 +118,14 @@ impl FilamentParser {
 
     // ================ Intervals =====================
     fn time(input: Node) -> ParseResult<Time<u64>> {
-        Ok(match_nodes!(
-            input.into_children();
-            [identifier(ev)] => TimeRep::unit(ev, 0),
-            [identifier(ev), bitwidth(st)] => TimeRep::unit(ev, st),
-        ))
+        match_nodes!(
+            input.clone().into_children();
+            [identifier(ev)] => Ok(TimeRep::unit(ev, 0)),
+            [identifier(ev), bitwidth(st)] => Ok(TimeRep::unit(ev, st)),
+            [bitwidth(_)] => {
+                Err(input.error("Time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number"))
+            }
+        )
     }
 
     fn interval_range(input: Node) -> ParseResult<ast::Range> {
