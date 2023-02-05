@@ -235,11 +235,11 @@ impl<W: Clone> Signature<Time<u64>, W> {
                     ))
                     .add_note("Invalid interface", id.copy_span())
                     .add_note(
-                        format!("Signal lasts for {}", port_len),
+                        format!("Signal lasts for {} cycle(s)", port_len),
                         port_pos,
                     )
                     .add_note(
-                        format!("Interface signal lasts for {}", len),
+                        format!("Interface allows event to trigger every {} cycle(s)", len),
                         id.copy_span(),
                     )
                 })
@@ -314,9 +314,8 @@ impl<T: TimeRep> Signature<T, PortParam> {
     }
 }
 
-impl<T, W> Display for Signature<T, W>
+impl<W> Display for Signature<Time<u64>, W>
 where
-    T: Display + Clone + TimeRep,
     W: Clone + Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -349,9 +348,8 @@ where
         Ok(())
     }
 }
-impl<T, W> std::fmt::Debug for Signature<T, W>
+impl<W> std::fmt::Debug for Signature<Time<u64>, W>
 where
-    T: Display + Clone + TimeRep,
     W: Display + Clone,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
