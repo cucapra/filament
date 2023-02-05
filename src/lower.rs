@@ -26,18 +26,19 @@ impl<const PHANTOM: bool> CompileInvokes<PHANTOM> {
 
     /// Converts an interval to a guard expression with the appropriate FSM
     fn range_to_guard(&self, range: ast::Range) -> Option<ast::Guard> {
-        if let Some((ev, st, end)) = range.as_offset() {
-            let fsm = self.find_fsm(&ev)?;
-            let guard = (st..end)
-                .into_iter()
-                .map(|st| fsm.port(st).into())
-                .reduce(ast::Guard::or)
-                .unwrap();
-            Some(guard)
-        } else {
-            unimplemented!(
-                "Range `{range}` cannot be represented as a simple non-max offset")
-        }
+        let Some((ev, st, end)) = range.as_offset() else {
+            unreachable!(
+                "Range `{range}` cannot be represented as a simple non-max offset"
+            )
+        };
+
+        let fsm = self.find_fsm(&ev)?;
+        let guard = (st..end)
+            .into_iter()
+            .map(|st| fsm.port(st).into())
+            .reduce(ast::Guard::or)
+            .unwrap();
+        Some(guard)
     }
 
     // When computing the max-state, anything that can act as an ouput matters.
@@ -59,9 +60,12 @@ impl<const PHANTOM: bool> CompileInvokes<PHANTOM> {
         // Use all ranges to compute max state
         out_events.for_each(|time| {
             let ev = &time.event;
-            let st = time.offset();
-            if self.max_states[ev] < st {
-                *self.max_states.get_mut(ev).unwrap() = st;
+            // If the event is not a phantom event
+            if let Some(v) = self.max_states.get_mut(ev) {
+                let st = time.offset();
+                if *v < st {
+                    *v = st;
+                }
             }
         });
     }
