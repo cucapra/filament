@@ -235,7 +235,7 @@ fn check_invoke_ports<'a>(
     // If this is a high-level invoke, check all port requirements
     if let Some(actuals) = &invoke.ports {
         // Check connections implied by the invocation
-        for (actual, formal) in actuals.iter().zip(sig.inputs.iter()) {
+        for (actual, formal) in actuals.iter().zip(sig.inputs()) {
             let dst = ast::Port::comp(invoke.bind.clone(), formal.name.clone())
                 .set_span(formal.copy_span());
             check_connect(&dst, actual, &None, ctx)?;

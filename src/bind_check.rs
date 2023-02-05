@@ -36,10 +36,10 @@ impl BindCheck<'_> {
                     .find(instance)
                     .expect("THIS component is not defined")
                     .resolve();
-                let mut iter = if INPUT {
-                    sig.inputs.iter()
+                let mut iter: Box<dyn Iterator<Item = _>> = if INPUT {
+                    Box::new(sig.inputs())
                 } else {
-                    sig.outputs.iter()
+                    Box::new(sig.outputs())
                 };
                 let kind = if INPUT { "input" } else { "output" };
                 iter.find(|p1| p1.name == p)
@@ -151,7 +151,7 @@ impl BindCheck<'_> {
 
             // Check the connections implied by the ports
             let sig = inst.resolve();
-            for (actual, formal) in ports.iter().zip(sig.inputs.iter()) {
+            for (actual, formal) in ports.iter().zip(sig.inputs()) {
                 let dst =
                     ast::Port::comp(inv.bind.clone(), formal.name.clone())
                         .set_span(formal.copy_span());

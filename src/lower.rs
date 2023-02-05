@@ -103,7 +103,7 @@ impl<const PHANTOM: bool> visitor::Transform for CompileInvokes<PHANTOM> {
             // Get the signature associated with this instance.
             let binding = sig.binding(&abstract_vars);
             self.max_state_from_sig(
-                sig.outputs.iter().map(|pd| pd.resolve(&binding)),
+                sig.outputs().map(|pd| pd.resolve(&binding)),
             );
 
             let mut connects = Vec::with_capacity(
@@ -138,7 +138,7 @@ impl<const PHANTOM: bool> visitor::Transform for CompileInvokes<PHANTOM> {
             }
 
             // Generate assignment for each port
-            for (port, formal) in ports.into_iter().zip(sig.inputs.iter()) {
+            for (port, formal) in ports.into_iter().zip(sig.inputs()) {
                 let req = formal.liveness.resolve(&binding);
                 assert!(
                     req.exact.is_none(),
@@ -195,7 +195,7 @@ impl<const PHANTOM: bool> visitor::Transform for CompileInvokes<PHANTOM> {
             .collect();
 
         // Inputs of the component act as outputs inside the body
-        self.max_state_from_sig(comp.sig.inputs.iter().cloned());
+        self.max_state_from_sig(comp.sig.inputs().cloned());
 
         Ok(comp)
     }
