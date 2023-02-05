@@ -16,6 +16,7 @@ fn check_connect(
     guard: &Option<ast::Guard>,
     ctx: &mut Context,
 ) -> FilamentResult<()> {
+    log::trace!("Checking connect: {} = {}", dst, src);
     // Remove dst from remaining ports
     ctx.remove_remaning_assign(dst)?;
 

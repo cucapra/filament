@@ -138,6 +138,20 @@ where
         within
     }
 }
+
+impl<T> From<Range<T>> for Interval<T>
+where
+    T: TimeRep,
+{
+    fn from(within: Range<T>) -> Self {
+        Self {
+            within,
+            exact: None,
+            pos: None,
+        }
+    }
+}
+
 impl<T> Interval<T>
 where
     T: TimeRep,
@@ -171,19 +185,6 @@ where
 
     fn copy_span(&self) -> Option<errors::Span> {
         self.pos.clone()
-    }
-}
-
-impl<T> From<Range<T>> for Interval<T>
-where
-    T: TimeRep + Clone,
-{
-    fn from(within: Range<T>) -> Self {
-        Interval {
-            within,
-            exact: None,
-            pos: None,
-        }
     }
 }
 
