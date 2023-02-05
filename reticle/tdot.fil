@@ -1,8 +1,7 @@
 extern "tdot.v" {
-component Tdot<G>(
+comp Tdot<G>(
     clk: 1,
     reset: 1,
-    @interface[G, G+1] @phantom go: 1,
     @[G, G+1] a0: 8,
     @[G+1, G+2] a1: 8,
     @[G+2, G+3] a2: 8,

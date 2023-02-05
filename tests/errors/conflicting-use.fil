@@ -1,7 +1,7 @@
 import "primitives/core.fil";
 import "primitives/sequential.fil";
 
-component Main<G>(
+comp Main<G>(
   @interface[G, G+3] go_G: 1,
 ) -> () {
   M := new Mult;

@@ -1,8 +1,8 @@
 import "primitives/core.fil";
 import "primitives/sequential.fil";
 
-component FastMult<G>(
-  @interface[G, G+1] go_G: 1,
+comp FastMult<G: 1>(
+  @interface[G] go_G: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,
 ) -> (
@@ -13,8 +13,8 @@ component FastMult<G>(
   out = l.out;
 }
 
-component main<G>(
-  @interface[G, G+2] go_G: 1,
+comp main<G: 2>(
+  @interface[G] go_G: 1,
   @[G, G+1] a: 32,
   @[G, G+1] b: 32,
 ) -> (

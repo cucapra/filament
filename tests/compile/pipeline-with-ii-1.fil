@@ -1,8 +1,8 @@
 import "primitives/core.fil";
 
 /// Implementation of a multiplier with initiation interval 1 and latency 3
-component main<G>(
-  @interface[G, G+1] go_G: 1,
+comp main<G: 1>(
+  @interface[G] go_G: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,
 ) -> (

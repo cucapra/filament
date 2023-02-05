@@ -1,4 +1,4 @@
-component Main<G>(
+comp Main<G>(
   @interface[G, G+6] go_G: 1,
   @[G, G+3] in: 32,
   @[G, G+3] + @exact[G, G+1] g1: 1,

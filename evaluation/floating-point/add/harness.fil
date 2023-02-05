@@ -1,7 +1,7 @@
 import "fp-add.fil";
 
 extern "fp-add.sv" {
-  component IEEE_SP_FP_ADDER<G>(
+  comp IEEE_SP_FP_ADDER<G>(
     clk: 1,
     reset: 1,
     @interface[G, G+1] _go: 1,
@@ -13,7 +13,7 @@ extern "fp-add.sv" {
 }
 
 extern "fp-add-nopipe.sv" {
-  component IEEE_SP_FP_ADDER_NOPIPE<G>(
+  comp IEEE_SP_FP_ADDER_NOPIPE<G>(
     clk: 1,
     reset: 1,
     @interface[G, G+1] _go: 1,
@@ -24,7 +24,7 @@ extern "fp-add-nopipe.sv" {
   );
 }
 
-component main<G>(
+comp main<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,

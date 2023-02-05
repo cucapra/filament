@@ -2,8 +2,7 @@ import "../../../reticle/tdot.fil";
 import "primitives/core.fil";
 import "../stencil.fil";
 
-component Conv<G>(
-    @interface[G, G+1] @phantom go: 1,
+comp Conv<G>(
     @[G, G+1] in1: 8,
     @[G+1, G+2] in2: 8,
     @[G+2, G+3] in3: 8,
@@ -40,9 +39,8 @@ component Conv<G>(
     out = d.out;
 }
 
-// The component needs to be run for an extra cycle to flush the last value
-component main<G>(
-    @interface[G, G+1] @phantom go: 1,
+// The comp needs to be run for an extra cycle to flush the last value
+comp main<G>(
     @[G, G+1] in: 8,
 ) -> (
     @[G+5, G+6] out: 8,

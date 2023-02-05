@@ -2,8 +2,7 @@ import "primitives/core.fil";
 import "tdot.fil";
 extern "unisim.v" {}
 
-component Golden<G>(
-    @interface[G, G+1] @phantom go: 1,
+comp Golden<G>(
     @[G, G+1] a0: 8,
     @[G+1, G+2] a1: 8,
     @[G+2, G+3] a2: 8,
@@ -28,8 +27,7 @@ component Golden<G>(
     y = add2.out;
 }
 
-component Counter<G>(
-    @interface[G, G+1] @phantom go: 1,
+comp Counter<G>(
 ) -> (
     @[G, G+1] out: 32
 ) {
@@ -38,7 +36,7 @@ component Counter<G>(
     out = r.prev;
 }
 
-component main<G>(
+comp main<G>(
     @interface[G, G+1] go: 1,
     @[G, G+1] a0: 8,
     @[G+1, G+2] a1: 8,

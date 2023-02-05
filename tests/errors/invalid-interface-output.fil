@@ -1,5 +1,5 @@
 extern "dummy.sv" {
-  component Main<G, L>(
+  comp Main<G, L>(
     @interface[G, G+1] go_G: 1,
     @[G, G+1] in1: 32,
   ) -> (

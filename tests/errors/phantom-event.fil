@@ -1,7 +1,6 @@
 import "primitives/core.fil";
 
-component main<G>(
-    @interface[G, G+1] @phantom go: 1,
+comp main<G>(
     @[G, G+1] left: 32,
 ) -> () {
     r := new Register[32]<G, G+2>(left);

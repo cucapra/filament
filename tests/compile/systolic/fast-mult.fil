@@ -1,8 +1,8 @@
 import "primitives/core.fil";
 
 /// Implementation of a multiplier with initiation interval 1 and latency 3
-component FastMult<G>(
-  @interface[G, G+1] go_G: 1,
+comp FastMult<G: 1>(
+  @interface[G] go_G: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,
 ) -> (
@@ -24,8 +24,8 @@ component FastMult<G>(
 }
 
 
-component Process<G>(
-  @interface[G, G+1] go: 1,
+comp Process<G: 1>(
+  @interface[G] go: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,
 ) -> (
@@ -47,8 +47,8 @@ component Process<G>(
   out = add.out;
 }
 
-component main<G>(
-  @interface[G, G+1] go: 1,
+comp main<G: 1>(
+  @interface[G] go: 1,
   @[G, G+1] l0: 32,
   @[G, G+1] l1: 32,
   @[G, G+1] t0: 32,

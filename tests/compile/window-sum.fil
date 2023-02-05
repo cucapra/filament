@@ -1,9 +1,9 @@
 import "primitives/core.fil";
 
-// Sums up the last last two values observed by the component.
+// Sums up the last last two values observed by the comp.
 // Produces zero when the register doesn't contain a valid value.
-component main<G>(
-  @interface[G, G+1] go: 1,
+comp main<G: 1>(
+  @interface[G] go: 1,
   @[G, G+1] in: 32
 ) -> (
   @[G, G+1] out: 32
@@ -11,7 +11,7 @@ component main<G>(
   // Save the value of this input for the next iteration
   r0 := new Prev[32, 0]<G>(in);
 
-  // If this component outputs 1, then the previous cycle provided a value and
+  // If this comp outputs 1, then the previous cycle provided a value and
   // therefore r1 will contain a valid value in this cycle.
   c0 := new Prev[1, 1]<G>(go);
 

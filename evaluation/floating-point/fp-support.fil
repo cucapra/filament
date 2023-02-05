@@ -1,6 +1,6 @@
 import "primitives/core.fil";
 
-component GetExp<G>(
+comp GetExp<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] in: 32
 ) -> (
@@ -10,7 +10,7 @@ component GetExp<G>(
   out = exp.out;
 }
 
-component GetMant<G>(
+comp GetMant<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] in: 32
 ) -> (
@@ -20,7 +20,7 @@ component GetMant<G>(
   out = exp.out;
 }
 
-component GetResult<G>(
+comp GetResult<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] sign: 1,
   @[G, G+1] exp: 8,
@@ -33,7 +33,7 @@ component GetResult<G>(
   out = res.out;
 }
 
-component IsOne<G>(
+comp IsOne<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] in: 1,
 ) -> (
@@ -44,7 +44,7 @@ component IsOne<G>(
   out = eq.out;
 }
 
-component ShiftRight23<G>(
+comp ShiftRight23<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] in: 23,
   @[G, G+1] amount: 8,
@@ -56,7 +56,7 @@ component ShiftRight23<G>(
   out = shr.out;
 }
 
-component ShiftLeft24<G>(
+comp ShiftLeft24<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] in: 24,
   @[G, G+1] amount: 4,
@@ -69,7 +69,7 @@ component ShiftLeft24<G>(
 }
 
 // Computes out = {1'b1,in[22:1]};
-component NormInp<G>(
+comp NormInp<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] in: 23,
 ) -> (
