@@ -23,10 +23,6 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
 
     let ns = Resolver::from(opts).parse_namespace()?;
 
-    // Run the compilation pipeline
-    let t = Instant::now();
-    // let ns = event_checker::check_and_transform(ns)?;
-    log::info!("Event check: {}ms", t.elapsed().as_millis());
     log::trace!("{ns}");
 
     // Bind check

@@ -1,6 +1,6 @@
 use super::{
     Binding, Constraint, ConstraintBase, Id, InterfaceDef, Interval, PortDef,
-    PortParam, Time, TimeRep, TimeSub,
+    PortParam, Range, Time, TimeRep, TimeSub,
 };
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use itertools::Itertools;
@@ -179,7 +179,11 @@ where
             .or_else(|| {
                 self.interface_signals.iter().find_map(|id| {
                     if id.name == port {
-                        panic!("Attempting to get liveness of interface port: {port}")
+                        // Interface signals are always active between [E, E+1]
+                        Some(Interval::from(Range::new(
+                            TimeRep::unit(id.event.clone(), 0),
+                            TimeRep::unit(id.event.clone(), 1),
+                        )))
                     } else {
                         None
                     }
