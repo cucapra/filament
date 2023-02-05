@@ -1,3 +1,5 @@
+use crate::interval_checking::SExp;
+
 use super::{Id, Time};
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
@@ -57,9 +59,13 @@ where
     /// Representation of absolute difference b/w two events of this TimeRep
     type SubRep: WithTime<Self> + Clone + Display;
 
+    /// A time expression with exactly one event and offset
     fn unit(event: Id, state: u64) -> Self;
+    /// Increment the time unit by a constant
     fn increment(self, n: u64) -> Self;
+    /// Resolve the time expression given a binding
     fn resolve(&self, bindings: &Binding<Self>) -> Self;
+    /// Substract two time expression representing the absolute difference
     fn sub(self, other: Self) -> Self::SubRep;
 }
 
@@ -82,12 +88,35 @@ where
 
 /// Represents the absolute difference between two time events
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct TimeSub<T>
+pub enum TimeSub<T>
 where
     T: TimeRep,
 {
-    pub l: T,
-    pub r: T,
+    /// Concrete difference between two time expressions
+    Unit(u64),
+    /// Symbolic difference between two time expressions
+    Sym { l: T, r: T },
+}
+
+impl<T> TimeSub<T>
+where
+    T: TimeRep,
+{
+    pub fn unit(n: u64) -> Self {
+        TimeSub::Unit(n)
+    }
+
+    pub fn sym(l: T, r: T) -> Self {
+        TimeSub::Sym { l, r }
+    }
+
+    /// Return the concrete difference if possible
+    pub fn concrete(&self) -> Option<u64> {
+        match self {
+            TimeSub::Unit(n) => Some(*n),
+            TimeSub::Sym { .. } => None,
+        }
+    }
 }
 
 impl<T> WithTime<T> for TimeSub<T>
@@ -95,25 +124,32 @@ where
     T: TimeRep,
 {
     fn resolve(&self, bindings: &Binding<T>) -> Self {
-        Self {
-            l: self.l.resolve(bindings),
-            r: self.r.resolve(bindings),
+        match self {
+            TimeSub::Unit(n) => TimeSub::Unit(*n),
+            TimeSub::Sym { l, r } => TimeSub::Sym {
+                l: l.resolve(bindings),
+                r: r.resolve(bindings),
+            },
         }
     }
 }
 
 impl Display for TimeSub<Time<u64>> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.l.event == self.r.event {
-            let lc = self.l.offset();
-            let rc = self.r.offset();
-            if lc > rc {
-                write!(f, "{}", lc - rc)
-            } else {
-                write!(f, "{}", rc - lc)
+        match self {
+            TimeSub::Unit(n) => write!(f, "{}", n),
+            TimeSub::Sym { l, r } => write!(f, "|{} - {}|", l, r),
+        }
+    }
+}
+
+impl From<&TimeSub<Time<u64>>> for SExp {
+    fn from(ts: &TimeSub<Time<u64>>) -> Self {
+        match ts {
+            TimeSub::Unit(n) => SExp(n.to_string()),
+            TimeSub::Sym { l, r } => {
+                SExp(format!("(abs (- {} {}))", SExp::from(l), SExp::from(r)))
             }
-        } else {
-            write!(f, "|{} - {}|", self.l, self.r)
         }
     }
 }
