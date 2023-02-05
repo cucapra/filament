@@ -3,9 +3,8 @@ import "primitives/state.fil";
 
 extern "sharpen1.v" {
 // KERNEL_START=Sharpen_1
-component Sharpen<G>(
+comp Sharpen<G>(
   clk: 1,
-  @interface[G, G+1] @phantom valid_up: 1,
   @[G, G+1] I_0: 8,
   @[G, G+1] I_1: 8,
   @[G, G+1] I_2: 8,
@@ -43,7 +42,7 @@ component Sharpen<G>(
 // KERNEL_END=Sharpen_1
 }
 
-component main<G>(
+comp main<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] I_0: 8,
   @[G, G+1] I_1: 8,

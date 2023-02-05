@@ -1,10 +1,10 @@
 extern "dummy.sv" {
-  component Mult<G>(
+  comp Mult<G>(
     @interface[G, G+5] go_G: 1,
   ) -> ();
 }
 
-component Main<T, L>(
+comp Main<T, L>(
   @interface[T, T+6] go_T: 1,
   @interface[L, L+3] go_L: 1
 ) -> () {

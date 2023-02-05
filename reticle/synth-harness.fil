@@ -1,7 +1,7 @@
 import "primitives/core.fil";
 import "./tdot.fil";
 
-component main<G>(
+comp main<G>(
     @interface[G, G+1] go: 1,
     @[G, G+1] a0: 8,
     @[G+1, G+2] a1: 8,

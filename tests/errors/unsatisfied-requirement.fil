@@ -1,6 +1,6 @@
 import "primitives/core.fil";
 
-component Main<G>(
+comp Main<G>(
   @interface[G, G+3] go_G: 1,
   @[G, G+1] left: 32,
   @[G, G+2] right: 32

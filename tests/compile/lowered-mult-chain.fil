@@ -1,5 +1,5 @@
 extern "./common/mult.sv" {
-  component Mult<T>(
+  comp Mult<T>(
     clk: 1,
     reset: 1,
     // Explicit interface signal that shows evidence for event "T".
@@ -13,7 +13,7 @@ extern "./common/mult.sv" {
 }
 
 
-component main<T>(
+comp main<T>(
   @interface[T, T+5] go_T: 1,
   // ----
   @[T, T+2]   l0: 32,

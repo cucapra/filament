@@ -1,7 +1,6 @@
 import "primitives/core.fil";
 
-component main<G>(
-    @interface[G, G+2] @phantom go: 1,
+comp main<G>(
     @[G, G+1] left: 32,
     @[G+1, G+2] right: 32,
 ) -> () {

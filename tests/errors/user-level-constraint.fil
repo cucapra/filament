@@ -1,6 +1,6 @@
 import "primitives/core.fil";
 
-component Main<G, L>(
+comp Main<G, L>(
   @interface[G, L] go_K: 1,
   @interface[L, L+1] go_T: 1,
 ) -> () where L > G+1, G+5 > L {

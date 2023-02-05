@@ -1,7 +1,6 @@
 import "primitives/core.fil";
 
-component Next<G>(
-  @interface[G, G+1] @phantom go: 1,
+comp Next<G>(
   @[G, G+1] acc: 9,
   @[G, G+1] right: 8,
   @[G, G+1] quotient: 8
@@ -46,8 +45,7 @@ component Next<G>(
   acc_next = acc_slice.out;
 }
 
-component Init<G>(
-  @interface[G, G+1] @phantom go: 1,
+comp Init<G>(
   @[G, G+1] left: 8,
 ) -> (
   @[G, G+1] acc: 9,
@@ -63,7 +61,7 @@ component Init<G>(
   quotient = q_slice.out;
 }
 
-component CombNoShareIterDiv<G>(
+comp CombNoShareIterDiv<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] left: 8,
   @[G, G+1] right: 8
@@ -83,7 +81,7 @@ component CombNoShareIterDiv<G>(
   quotient = s7.quotient_next;
 }
 
-component ShareIterDiv<G>(
+comp ShareIterDiv<G>(
   @interface[G, G+7] go: 1,
   @[G, G+1] left: 8,
   @[G, G+1] right: 8,
@@ -137,7 +135,7 @@ component ShareIterDiv<G>(
   quotient = s7.quotient_next;
 }
 
-component PipeIterDiv<G>(
+comp PipeIterDiv<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] left: 8,
   @[G, G+1] right: 8,

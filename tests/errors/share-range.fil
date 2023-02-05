@@ -1,7 +1,7 @@
 import "primitives/core.fil";
 import "primitives/sequential.fil";
 
-component Main<G>(
+comp Main<G>(
   @interface[G, G+10] go_G: 1,
   @[G, G+1] l0: 32,
   @[G, G+1] r0: 32,

@@ -1,8 +1,7 @@
 import "../evaluation/floating-point/add/fp-add.fil";
 extern "float_add.v" {
-  component top<G>(
+  comp top<G>(
     clk: 1,
-    @interface[G, G+1] @phantom go: 1,
     @[G, G+1] my_pipeline_x: 32,
     @[G, G+1] my_pipeline_y: 32
   ) -> (
@@ -10,7 +9,7 @@ extern "float_add.v" {
   );
 }
 
-component main<G>(
+comp main<G>(
   @interface[G, G+1] go: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32

@@ -2,8 +2,8 @@ import "primitives/core.fil";
 import "primitives/sequential.fil";
 
 // Simple ALU that can either perform an addition or a multiplication
-component main<G>(
-  @interface[G, G+2] go: 1,
+comp main<G: 2>(
+  @interface[G] go: 1,
   // select multiply
   @[G+2, G+3] do_mult: 1,
   // inputs

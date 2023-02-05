@@ -1,9 +1,8 @@
 import "primitives/core.fil";
 
 extern "mul.sv" {
-    component BlackBoxMulUInt8<G>(
+    comp BlackBoxMulUInt8<G>(
         clk: 1,
-        @interface[G, G+1] @phantom go: 1,
         @[G, G+1] I0: 8,
         @[G, G+1] I1: 8,
     ) -> (
@@ -15,8 +14,7 @@ extern "mul.sv" {
 // 1 2 1
 // 2 4 2
 // 1 2 1
-component Conv<G>(
-    @interface[G, G+1] @phantom go: 1,
+comp Conv<G>(
     @[G, G+1] in1: 8,
     @[G, G+1] in2: 8,
     @[G, G+1] in3: 8,
