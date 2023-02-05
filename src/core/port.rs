@@ -154,7 +154,7 @@ impl InterfaceDef<Time<u64>> {
     /// Attempts to return a concrete delay for this interface. Panics if the
     /// end time is a max-expression or uses different time variables
     pub fn delay(&self) -> TimeSub<Time<u64>> {
-        Time::unit(self.event.clone(), 0).sub(self.end.clone())
+        self.end.clone().sub(Time::unit(self.event.clone(), 0))
     }
 }
 
