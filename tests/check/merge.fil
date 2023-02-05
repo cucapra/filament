@@ -8,9 +8,9 @@ extern "dummy.sv" {
   // The signals `in1` and `in2` might exist for more their specified lifetime
   // in this function's signature but that is okay because inputs only require
   // signals to be active for at least as long as the requirement
-  component Merge<G, L, E>(
-    @interface[G, E] go_G: 1,
-    @interface[L, E] go_L: 1,
+  comp Merge<G: E-(G), L: E-(L), E: 1>(
+    @interface[G] go_G: 1,
+    @interface[L] go_L: 1,
     @[G, L] in1: 32,
     @[L, E] in2: 32,
   ) -> (
@@ -18,12 +18,12 @@ extern "dummy.sv" {
   ) where L > G, E > L, E > G;
 }
 
-// The component produces an output signal that lives for three cycles immediately
+// The comp produces an output signal that lives for three cycles immediately
 // starting the cycle that `in` is given.
 // We use a merge unit to forward the input signal in the first cycle and
 // Register the output to make it available for the remaining cycles.
-component main<G>(
-  @interface[G, G+3] go_G: 1,
+comp main<G: 3>(
+  @interface[G] go_G: 1,
   @[G, G+1] in: 32
 ) -> (
   @[G, G+3] out: 32
