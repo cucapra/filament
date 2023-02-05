@@ -276,7 +276,7 @@ impl Constraint<Time<u64>> {
 }
 */
 
-impl<T: Display + TimeRep> Display for Constraint<T> {
+impl Display for Constraint<Time<u64>> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Constraint::Base { base } => write!(f, "{}", base),
@@ -308,8 +308,8 @@ impl From<&TimeSub<Time<u64>>> for SExp {
     fn from(ts: &TimeSub<Time<u64>>) -> Self {
         SExp(format!(
             "(abs (- {} {}))",
-            SExp::from(&ts.a),
-            SExp::from(&ts.b)
+            SExp::from(&ts.l),
+            SExp::from(&ts.r)
         ))
     }
 }

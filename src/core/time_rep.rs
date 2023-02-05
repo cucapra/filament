@@ -1,4 +1,4 @@
-use super::Id;
+use super::{Id, Time};
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 use std::{fmt::Debug, fmt::Display};
@@ -86,8 +86,8 @@ pub struct TimeSub<T>
 where
     T: TimeRep,
 {
-    pub a: T,
-    pub b: T,
+    pub l: T,
+    pub r: T,
 }
 
 impl<T> WithTime<T> for TimeSub<T>
@@ -96,14 +96,24 @@ where
 {
     fn resolve(&self, bindings: &Binding<T>) -> Self {
         Self {
-            a: self.a.resolve(bindings),
-            b: self.b.resolve(bindings),
+            l: self.l.resolve(bindings),
+            r: self.r.resolve(bindings),
         }
     }
 }
 
-impl<T: TimeRep + Display> Display for TimeSub<T> {
+impl Display for TimeSub<Time<u64>> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "|{} - {}|", self.a, self.b)
+        if self.l.event == self.r.event {
+            let lc = self.l.offset();
+            let rc = self.r.offset();
+            if lc > rc {
+                write!(f, "{}", lc - rc)
+            } else {
+                write!(f, "{}", rc - lc)
+            }
+        } else {
+            write!(f, "|{} - {}|", self.l, self.r)
+        }
     }
 }

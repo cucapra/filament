@@ -1,9 +1,10 @@
 ---CODE---
 1
 ---STDERR---
-error: Not a well formed event: `3`
-  ┌─ tests/errors/malformed-interval.fil:1:19
-  │
-1 │ component Main<G>(@[G, 3] go: 1) -> () {}
-  │                   ^^^^^^^ Malformed interval
+error: Filament Parser:  --> tests/errors/malformed-interval.fil:1:24
+  |
+1 | component Main<G>(@[G, 3] go: 1) -> () {}
+  |                        ^---
+  |
+  = expected identifier
 

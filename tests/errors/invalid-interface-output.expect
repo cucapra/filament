@@ -1,15 +1,15 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint |G - G+1| >= |G+4 - G+2|
+error: Cannot prove constraint 1 >= 2
   ┌─ tests/errors/invalid-interface-output.fil:3:5
   │
 3 │     @interface[G, G+1] go_G: 1,
   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^
   │     │
   │     Invalid interface
-  │     Interface signal lasts for |G - G+1|
+  │     Interface allows event to trigger every 1 cycle(s)
   ·
 6 │     @[G+2, G+4] out: 1,
-  │     ------------------ Signal lasts for |G+4 - G+2|
+  │     ------------------ Signal lasts for 2 cycle(s)
 

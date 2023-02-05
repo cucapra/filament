@@ -1,4 +1,4 @@
-use super::{Command, Id, Invoke, PortParam, Signature, TimeRep};
+use super::{Command, Id, Invoke, PortParam, Signature, Time, TimeRep};
 use crate::errors::{Error, FilamentResult, WithPos};
 use std::{collections::HashMap, fmt::Display};
 
@@ -64,10 +64,7 @@ where
         Self { sig, body }
     }
 }
-impl<T> Display for Component<T>
-where
-    T: Clone + TimeRep + Display,
-{
+impl Display for Component<Time<u64>> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{} {{", self.sig)?;
         for com in &self.body {
@@ -104,10 +101,7 @@ where
     }
 }
 
-impl<T> Display for Namespace<T>
-where
-    T: Clone + TimeRep + Display,
-{
+impl Display for Namespace<Time<u64>> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for imp in &self.imports {
             writeln!(f, "import \"{}\";", imp)?;
