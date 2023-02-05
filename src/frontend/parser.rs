@@ -408,16 +408,16 @@ impl FilamentParser {
                 constraints(constraints)
             ] => {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
-                ast::Signature {
+                ast::Signature::new(
                     name,
                     params,
                     abstract_vars,
                     unannotated_ports,
-                    interface_signals: interface_signals.into_iter().collect(),
+                    interface_signals,
                     inputs,
                     outputs,
                     constraints,
-                }
+                 )
             },
             [
                 identifier(name),
@@ -426,16 +426,16 @@ impl FilamentParser {
                 constraints(constraints)
             ] => {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
-                ast::Signature {
+                ast::Signature::new(
                     name,
                     params,
-                    abstract_vars: vec![],
+                    vec![],
                     unannotated_ports,
-                    interface_signals: interface_signals.into_iter().collect(),
+                    interface_signals.into_iter().collect(),
                     inputs,
                     outputs,
                     constraints
-                }
+                 )
             }
         ))
     }

@@ -278,8 +278,7 @@ where
     F1: Fn(&ast::Id, u64) -> ir::PortDef<CW>,
 {
     let mut ports: Vec<ir::PortDef<CW>> = sig
-        .inputs
-        .iter()
+        .inputs()
         .map(|pd| port_transform(pd, ir::Direction::Input))
         .chain(sig.interface_signals.iter().filter(|id| !id.phantom).map(
             |id| {
@@ -300,8 +299,7 @@ where
             },
         ))
         .chain(
-            sig.outputs
-                .iter()
+            sig.outputs()
                 .map(|pd| port_transform(pd, ir::Direction::Output)),
         )
         .chain(

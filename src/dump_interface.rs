@@ -95,15 +95,13 @@ impl visitor::Transform for DumpInterface {
         };
         let inputs = comp
             .sig
-            .inputs
-            .iter()
+            .inputs()
             .map(pd_to_info)
             .collect::<FilamentResult<Vec<_>>>()?
             .join(",\n");
         let outputs = comp
             .sig
-            .outputs
-            .iter()
+            .outputs()
             .map(pd_to_info)
             .collect::<FilamentResult<Vec<_>>>()?
             .join(",\n");

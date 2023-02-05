@@ -54,7 +54,7 @@ where
     pub params: Vec<Id>,
 
     /// Names of abstract variables bound by the component
-    pub abstract_vars: Vec<EventBind<T>>,
+    pub events: Vec<EventBind<T>>,
 
     /// Unannotated ports that are thread through by the backend
     pub unannotated_ports: Vec<(Id, u64)>,
@@ -63,11 +63,10 @@ where
     /// evidence for.
     pub interface_signals: Vec<InterfaceDef<T>>,
 
-    /// Input ports
-    pub inputs: Vec<PortDef<T, W>>,
-
-    /// Output ports
-    pub outputs: Vec<PortDef<T, W>>,
+    /// All the input/output ports.
+    ports: Vec<PortDef<T, W>>,
+    /// Index of the first output port in the ports vector
+    outputs_idx: usize,
 
     /// Constraints on the abstract variables in the signature
     pub constraints: Vec<Constraint<T>>,
@@ -78,23 +77,53 @@ where
     T: TimeRep,
     W: Clone,
 {
-    /// Events bound by the signature
-    pub fn events(&self) -> impl Iterator<Item = &Id> {
-        self.abstract_vars.iter().map(|eb| &eb.event)
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        name: Id,
+        params: Vec<Id>,
+        events: Vec<EventBind<T>>,
+        unannotated_ports: Vec<(Id, u64)>,
+        interface_signals: Vec<InterfaceDef<T>>,
+        mut inputs: Vec<PortDef<T, W>>,
+        mut outputs: Vec<PortDef<T, W>>,
+        constraints: Vec<Constraint<T>>,
+    ) -> Self {
+        let outputs_idx = inputs.len();
+        inputs.append(&mut outputs);
+        Self {
+            name,
+            params,
+            events,
+            unannotated_ports,
+            interface_signals,
+            ports: inputs,
+            outputs_idx,
+            constraints,
+        }
     }
 
-    pub fn abstract_vars_with_defaults(
-        &self,
-    ) -> impl Iterator<Item = &EventBind<T>> {
-        self.abstract_vars.iter()
+    /// Events bound by the signature
+    pub fn events(&self) -> impl Iterator<Item = &Id> {
+        self.events.iter().map(|eb| &eb.event)
+    }
+    /// Inputs of this signature
+    pub fn inputs(&self) -> impl Iterator<Item = &PortDef<T, W>> {
+        self.ports[..self.outputs_idx].iter()
+    }
+    /// Outputs of this signature
+    pub fn outputs(&self) -> impl Iterator<Item = &PortDef<T, W>> {
+        self.ports[self.outputs_idx..].iter()
     }
 
     // Generate a new signature that has been reversed: inputs are outputs
     // with outputs.
     pub fn reversed(&self) -> Self {
+        let mut ports = self.outputs().cloned().collect_vec();
+        let outputs_idx = ports.len();
+        ports.extend(self.inputs().cloned());
         Self {
-            inputs: self.outputs.clone(),
-            outputs: self.inputs.clone(),
+            ports,
+            outputs_idx,
             ..self.clone()
         }
     }
@@ -109,14 +138,15 @@ where
         &self,
         port: &Id,
     ) -> FilamentResult<Interval<T>> {
-        let mut iter = if IS_INPUT {
-            self.inputs.iter()
+        let ports = if IS_INPUT {
+            &self.ports[..self.outputs_idx]
         } else {
-            self.outputs.iter()
+            &self.ports[self.outputs_idx..]
         };
 
         // XXX(rachit): Always searching interface ports regardless of input or output
-        let maybe_pd = iter
+        let maybe_pd = ports
+            .iter()
             .find_map(|pd| {
                 if pd.name == port {
                     Some(pd.liveness.clone())
@@ -139,9 +169,8 @@ where
 
     /// Constraints for well formed under a binding
     fn constraints(&self) -> impl Iterator<Item = Constraint<T>> + '_ {
-        self.inputs
-            .iter()
-            .chain(self.outputs.iter())
+        self.inputs()
+            .chain(self.outputs())
             .flat_map(|mpd| mpd.liveness.well_formed())
             .chain(
                 self.interface_signals
@@ -153,13 +182,13 @@ where
     /// Construct a binding from this Signature
     pub fn binding(&self, args: &[T]) -> Binding<T> {
         debug_assert!(
-            self.abstract_vars
+            self.events
                 .iter()
                 .take_while(|ev| ev.default.is_none())
                 .count()
                 <= args.len(),
             "Insuffient events for signature, required at least {} got {}",
-            self.abstract_vars
+            self.events
                 .iter()
                 .take_while(|ev| ev.default.is_none())
                 .count(),
@@ -167,7 +196,7 @@ where
         );
 
         let mut partial_map = Binding::new(
-            self.abstract_vars
+            self.events
                 .iter()
                 .map(|eb| &eb.event)
                 .cloned()
@@ -176,7 +205,7 @@ where
         );
         // Skip the events that have been bound
         let remaining = self
-            .abstract_vars
+            .events
             .iter()
             .skip(args.len())
             .map(|eb| {
@@ -205,7 +234,7 @@ impl<W: Clone> Signature<Time<u64>, W> {
         // the start time of the signal describes when the signal is triggered.
         // We do not consider the end time because that only effects the length of the signal.
 
-        for port in self.inputs.iter().chain(self.outputs.iter()) {
+        for port in self.inputs().chain(self.outputs()) {
             let delay = port.liveness.within.len();
             let ev = &port.liveness.within.start.event;
             // Make sure @interface for event exists
@@ -292,21 +321,19 @@ impl<T: TimeRep> Signature<T, PortParam> {
             };
 
         let resolved = Signature {
-            name: self.name.clone(),
-            abstract_vars: self.abstract_vars.clone(),
             params: vec![],
-            unannotated_ports: self.unannotated_ports.clone(),
+            ports: self
+                .ports
+                .clone()
+                .iter()
+                .map(resolve_port)
+                .collect::<FilamentResult<_>>()?,
+            // Clone everything else
+            outputs_idx: self.outputs_idx,
+            name: self.name.clone(),
+            events: self.events.clone(),
             interface_signals: self.interface_signals.clone(),
-            inputs: self
-                .inputs
-                .iter()
-                .map(resolve_port)
-                .collect::<FilamentResult<_>>()?,
-            outputs: self
-                .outputs
-                .iter()
-                .map(resolve_port)
-                .collect::<FilamentResult<_>>()?,
+            unannotated_ports: self.unannotated_ports.clone(),
             constraints: self.constraints.clone(),
         };
 
@@ -323,17 +350,14 @@ where
             f,
             "component {}<{}>({}) -> ({})",
             self.name,
-            self.abstract_vars
-                .iter()
-                .map(|id| id.to_string())
-                .join(", "),
+            self.events.iter().map(|id| id.to_string()).join(", "),
             self.unannotated_ports
                 .iter()
                 .map(|(n, bw)| format!("{n}: {bw}"))
                 .chain(self.interface_signals.iter().map(|pd| format!("{pd}")))
-                .chain(self.inputs.iter().map(|pd| format!("{pd}")))
+                .chain(self.inputs().map(|pd| format!("{pd}")))
                 .join(", "),
-            self.outputs.iter().map(|pd| format!("{pd}")).join(", "),
+            self.outputs().map(|pd| format!("{pd}")).join(", "),
         )?;
         if !self.constraints.is_empty() {
             write!(

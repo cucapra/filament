@@ -46,8 +46,8 @@ impl<'a> ResolvedInstance<'a> {
 
     pub fn abstract_vars(&self) -> &[ast::EventBind] {
         match self {
-            ResolvedInstance::Bound { sig, .. } => &sig.abstract_vars,
-            ResolvedInstance::Concrete { sig, .. } => &sig.abstract_vars,
+            ResolvedInstance::Bound { sig, .. } => &sig.events,
+            ResolvedInstance::Concrete { sig, .. } => &sig.events,
         }
     }
 
@@ -61,10 +61,10 @@ impl<'a> ResolvedInstance<'a> {
     pub fn input_names(&self) -> Vec<ast::Id> {
         match self {
             ResolvedInstance::Bound { sig, .. } => {
-                sig.inputs.iter().map(|pd| pd.name.clone()).collect()
+                sig.inputs().map(|pd| pd.name.clone()).collect()
             }
             ResolvedInstance::Concrete { sig, .. } => {
-                sig.inputs.iter().map(|pd| pd.name.clone()).collect()
+                sig.inputs().map(|pd| pd.name.clone()).collect()
             }
         }
     }
