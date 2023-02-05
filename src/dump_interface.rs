@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
+
 use crate::errors::{self, FilamentResult, WithPos};
 use crate::event_checker::ast;
 use crate::visitor;
@@ -29,6 +31,7 @@ impl visitor::Transform for DumpInterface {
         &mut self,
         comp: ast::Component,
     ) -> FilamentResult<ast::Component> {
+        let phantom_events = comp.sig.phantom_events().collect_vec();
         // For an interface port like this:
         //      @interface[G, G+5] go_G
         // Generate the JSON information:
@@ -40,27 +43,29 @@ impl visitor::Transform for DumpInterface {
         //   "phantom": false
         // }
         let interfaces = comp
-        .sig
-        .interface_signals
-        .iter()
-        .map(|id| {
-            let states = self.fsm_states[&id.name];
-            id.delay()
-                .concrete()
-                .map(|delay|
-                    format!(
-                        "{{\"name\": \"{}\", \"event\": \"{}\", \"delay\": {delay}, \"states\": {states}, \"phantom\": {} }}",
-                        id.name,
-                        id.event,
-                        id.phantom
-                    ))
-                .ok_or_else(|| {
-                    errors::Error::malformed(
-                        "Interface signal has no concrete delay",
-                    )
-                })
-        })
-        .collect::<FilamentResult<Vec<_>>>()?.join(",\n");
+            .sig
+            .interface_signals
+            .iter()
+            .map(|id| {
+                let states = self.fsm_states[&id.name];
+                let phantom = phantom_events.contains(&id.name);
+                let eb = comp.sig.get_event(&id.event);
+                eb.delay
+                    .concrete()
+                    .map(|delay|
+                        format!(
+                            "{{\"name\": \"{}\", \"event\": \"{}\", \"delay\": {delay}, \"states\": {states}, \"phantom\": {} }}",
+                            id.name,
+                            id.event,
+                            phantom
+                        ))
+                    .ok_or_else(|| {
+                        errors::Error::malformed(
+                            "Interface signal has no concrete delay",
+                        )
+                    })
+            })
+            .collect::<FilamentResult<Vec<_>>>()?.join(",\n");
 
         // For each input and output that looks like:
         // @[G+n, G+m] left: 32

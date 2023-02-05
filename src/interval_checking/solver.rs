@@ -10,7 +10,7 @@ pub struct ShareConstraints {
     /// The (event, delay) to compute the max of start times
     max: Vec<(ast::TimeRep, ast::TimeSub)>,
     /// Delays bounded by this share constraint
-    delays: Vec<ast::InterfaceDef>,
+    delays: Vec<ast::EventBind>,
     /// Additional error information
     notes: Vec<(String, Option<errors::Span>)>,
 }
@@ -44,10 +44,7 @@ impl ShareConstraints {
         self.max.push(end);
     }
 
-    pub fn add_delays(
-        &mut self,
-        delays: impl Iterator<Item = ast::InterfaceDef>,
-    ) {
+    pub fn add_delays(&mut self, delays: impl Iterator<Item = ast::EventBind>) {
         self.delays.extend(delays);
     }
 }
@@ -59,8 +56,7 @@ impl std::fmt::Display for ShareConstraints {
             .iter()
             .map(|(t, d)| format!("{} + {}", t, d))
             .join(", ");
-        let delays =
-            self.delays.iter().map(|d| d.delay().to_string()).join(", ");
+        let delays = self.delays.iter().map(|d| d.delay.to_string()).join(", ");
         write!(f, "{delays} >= max({max}) - min({min})")
     }
 }
@@ -83,7 +79,7 @@ impl From<&ShareConstraints> for Vec<SExp> {
         sh.delays
             .iter()
             .map(|d| {
-                SExp(format!("(>= {} (- {max} {min}))", SExp::from(&d.delay())))
+                SExp(format!("(>= {} (- {max} {min}))", SExp::from(&d.delay)))
             })
             .collect()
     }
@@ -137,9 +133,9 @@ impl FilSolver {
         Ok(Self { s: solver })
     }
 
-    pub fn prove<'a>(
+    pub fn prove(
         &mut self,
-        abstract_vars: impl Iterator<Item = &'a ast::Id>,
+        abstract_vars: impl Iterator<Item = ast::Id>,
         assumes: &[ast::Constraint],
         asserts: impl Iterator<Item = ast::Constraint>,
         sharing: Vec<ShareConstraints>,

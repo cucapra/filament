@@ -280,24 +280,22 @@ where
     let mut ports: Vec<ir::PortDef<CW>> = sig
         .inputs()
         .map(|pd| port_transform(pd, ir::Direction::Input))
-        .chain(sig.interface_signals.iter().filter(|id| !id.phantom).map(
-            |id| {
-                let mut pd = concrete_transform(&id.name, 1);
-                pd.attributes.insert(FIL_EVENT, 1);
-                if is_comp {
-                    pd.attributes.insert(
-                        DELAY,
-                        id.delay().concrete().unwrap_or_else(|| {
-                            panic!(
-                                "Event does not have a concrete delay: {}",
-                                id.delay()
-                            )
-                        }),
-                    );
-                }
-                pd
-            },
-        ))
+        .chain(sig.interface_signals.iter().map(|id| {
+            let mut pd = concrete_transform(&id.name, 1);
+            pd.attributes.insert(FIL_EVENT, 1);
+            // if is_comp {
+            //     pd.attributes.insert(
+            //         DELAY,
+            //         id.delay().concrete().unwrap_or_else(|| {
+            //             panic!(
+            //                 "Event does not have a concrete delay: {}",
+            //                 id.delay()
+            //             )
+            //         }),
+            //     );
+            // }
+            pd
+        }))
         .chain(
             sig.outputs()
                 .map(|pd| port_transform(pd, ir::Direction::Output)),

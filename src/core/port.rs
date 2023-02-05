@@ -1,4 +1,4 @@
-use super::{Binding, Id, Interval, Range, Time, TimeRep, TimeSub, WithTime};
+use super::{Binding, Id, Interval, TimeRep, WithTime};
 use crate::errors::{self, WithPos};
 use std::fmt::Display;
 
@@ -97,71 +97,31 @@ where
 }
 
 #[derive(Clone)]
-pub struct InterfaceDef<T>
-where
-    T: TimeRep + Clone,
-{
+pub struct InterfaceDef {
     /// Name of the port
     pub name: Id,
     /// Event that this port is an evidence of
     pub event: Id,
-    /// End event
-    pub end: T,
-    /// Liveness of the interface signal
-    pub(super) liveness: Interval<T>,
-    /// Port only used for modeling purposes and does not need to be connected
-    pub phantom: bool,
     // Position
     pos: Option<errors::Span>,
 }
-impl<T> Display for InterfaceDef<T>
-where
-    T: TimeRep + Clone,
-{
+impl Display for InterfaceDef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let phan = if self.phantom { " @phantom" } else { "" };
-        write!(
-            f,
-            "@interface[{}, {}]{} {}: 1",
-            self.event, self.end, phan, self.name
-        )
+        write!(f, "@interface[{}] {}: 1", self.event, self.name)
     }
 }
 
-impl<T> InterfaceDef<T>
-where
-    T: TimeRep + Clone,
-{
-    pub fn new(name: Id, event: Id, end: T, phantom: bool) -> Self
-    where
-        T: TimeRep + Clone,
-    {
-        let start = T::unit(event.clone(), 0);
-        let liveness = Interval::from(Range::new(start.clone(), end.clone()))
-            .with_exact(Range::new(start.clone(), start.increment(1)));
+impl InterfaceDef {
+    pub fn new(name: Id, event: Id) -> Self {
         Self {
             name,
-            end,
             event,
-            liveness,
-            phantom,
             pos: None,
         }
     }
 }
 
-impl InterfaceDef<Time<u64>> {
-    /// Attempts to return a concrete delay for this interface. Panics if the
-    /// end time is a max-expression or uses different time variables
-    pub fn delay(&self) -> TimeSub<Time<u64>> {
-        self.end.clone().sub(Time::unit(self.event.clone(), 0))
-    }
-}
-
-impl<T> WithPos for InterfaceDef<T>
-where
-    T: TimeRep,
-{
+impl WithPos for InterfaceDef {
     fn set_span(mut self, sp: Option<errors::Span>) -> Self {
         self.pos = sp;
         self

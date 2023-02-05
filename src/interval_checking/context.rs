@@ -385,11 +385,11 @@ impl<'a> Context<'a> {
             // If there is no interface port associated with an event, it is ignored.
             // This only happens for primitive components such as the Register which does
             // not define an interface port for its end time.
-            if let Some(id) = sig.get_interface(abs) {
+            if let Some(eb) = sig.get_event(abs) {
                 // Track minimum and maximum end times for each binding
                 let mut share = ShareConstraints::default();
 
-                let delay = id.delay();
+                let delay = &eb.delay;
                 // For each binding
                 for (i, (spi, bi)) in args.iter().enumerate() {
                     // Delay implied by the i'th binding
@@ -406,7 +406,7 @@ impl<'a> Context<'a> {
                             (&bi[idx], spi.clone()),
                             (&bk[idx], spk.clone()),
                             &i_delay,
-                            id.copy_span(),
+                            eb.copy_span(),
                         ))
                     }
                     share.add_bind_info(
@@ -432,9 +432,8 @@ impl<'a> Context<'a> {
                     // due to the call to `ensure_same_events`.
                     let bind = &args[0].1[idx];
                     let ev = &bind.event;
-                    if let Some(id) = sig.get_interface(ev) {
-                        share.add_delays(std::iter::once(id.clone()));
-                    }
+                    let eb = sig.get_event(ev);
+                    share.add_delays(std::iter::once(eb.clone()));
                     share_constraints.push(share);
                 } else {
                     unreachable!("Signature associate with THIS is not a ConcreteInvoke::This")

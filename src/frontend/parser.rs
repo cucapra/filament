@@ -2,7 +2,7 @@
 
 //! Parser for Calyx programs.
 use super::ast::{self, InterfaceDef};
-use crate::core::{Time, TimeRep};
+use crate::core::{Time, TimeRep, TimeSub};
 use crate::errors::{self, FilamentResult, WithPos};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
@@ -87,10 +87,6 @@ impl FilamentParser {
         Ok(())
     }
 
-    fn phantom(_input: Node) -> ParseResult<()> {
-        Ok(())
-    }
-
     // ================ Literals =====================
     fn identifier(input: Node) -> ParseResult<ast::Id> {
         let sp = Self::get_span(&input);
@@ -138,11 +134,10 @@ impl FilamentParser {
 
     // ================ Signature =====================
 
-    fn interface(input: Node) -> ParseResult<(ast::Id, bool, Time<u64>)> {
+    fn interface(input: Node) -> ParseResult<ast::Id> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(tvar), time(t)] => (tvar, false, t),
-            [identifier(tvar), time(t), phantom(_)] => (tvar, true, t),
+            [identifier(tvar)] => tvar,
         ))
     }
 
@@ -158,8 +153,8 @@ impl FilamentParser {
         let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.clone().into_children();
-            [interface((time_var, phantom, time)), identifier(name), port_width(_)] => {
-                Port::Int(ast::InterfaceDef::new(name, time_var, time, phantom).set_span(Some(sp)))
+            [interface(time_var), identifier(name), port_width(_)] => {
+                Port::Int(ast::InterfaceDef::new(name, time_var).set_span(Some(sp)))
             },
             [identifier(name), port_width(bitwidth)] => {
                 match bitwidth {
@@ -176,11 +171,19 @@ impl FilamentParser {
         ))
     }
 
+    fn delay(input: Node) -> ParseResult<TimeSub<Time<u64>>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [bitwidth(n)] => TimeSub::unit(n),
+            [time(l), time(r)] => TimeSub::sym(l, r),
+        ))
+    }
+
     fn event_bind(input: Node) -> ParseResult<ast::EventBind> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(event), time(t)] => ast::EventBind { event, default: Some(t) },
-            [identifier(event)] => ast::EventBind::new(event),
+            [identifier(event), delay(d), time(t)] => ast::EventBind::new(event, d, Some(t)),
+            [identifier(event), delay(d)] => ast::EventBind::new(event, d, None),
         ))
     }
 

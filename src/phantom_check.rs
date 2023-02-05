@@ -4,44 +4,29 @@ use crate::visitor;
 use std::collections::HashSet;
 
 #[derive(Default)]
-/// Checks if a user-level @inteface port marked as @phantom is valid.
-/// Such ports are valid iff:
+/// Checks if a user-level phantom events are valid.
+/// Phantom events are valid iff:
 /// 1. The component doesn't share any instances
 /// 2. The component doesn't use an subcomponents that need to use the
-///    corresponding event in their interface, i.e., the uses of the event are all
-///    to other phantom<'a> {
+///    corresponding event in their interface, i.e., the uses of the event are all phantom
 pub struct PhantomCheck {
     // Set of instances that have already been used once
     instance_used: HashSet<ast::Id>,
     // Names of @phantom events in this component
-    phantom_events: HashSet<ast::Id>,
+    phantom_events: Vec<ast::Id>,
 }
 
 impl visitor::Transform for PhantomCheck {
-    // Only check component if at least one @interface port is @phantom
+    // Only check component if at least one phantom event
     fn component_filter(&self, comp: &ast::Component) -> bool {
-        comp.sig
-            .interface_signals
-            .iter()
-            .any(|interface| interface.phantom)
+        comp.sig.phantom_events().next().is_some()
     }
 
     fn enter_component(
         &mut self,
         comp: ast::Component,
     ) -> FilamentResult<ast::Component> {
-        self.phantom_events = comp
-            .sig
-            .interface_signals
-            .iter()
-            .filter_map(|interface| {
-                if interface.phantom {
-                    Some(interface.event.clone())
-                } else {
-                    None
-                }
-            })
-            .collect();
+        self.phantom_events = comp.sig.phantom_events().collect();
         Ok(comp)
     }
 
@@ -53,11 +38,10 @@ impl visitor::Transform for PhantomCheck {
         // Check if the instance has already been used
         if let Some(prev_use) = self.instance_used.get(&inv.instance) {
             for ev in inv.abstract_vars.iter().map(|ev| &ev.event) {
-                if let Some(interface_ev) = self.phantom_events.get(ev) {
+                if self.phantom_events.contains(ev) {
                     return Err(Error::malformed(
                         "Reuses instance uses phantom event for scheduling"
                     ).add_note("Invocation uses phantom port", ev.copy_span())
-                     .add_note("Event defined as phantom", interface_ev.copy_span())
                      .add_note("Previous use", prev_use.copy_span())
                      .add_note("Phantom ports are compiled away and cannot be used for resource sharing", None));
                 }
@@ -67,25 +51,20 @@ impl visitor::Transform for PhantomCheck {
 
         // For each binding provided to a non-phantom port, check that the
         // mentioned events are not non-phantom
-        let instance_interfaces = resolved.interface_signals();
+        let instance_phantoms = resolved.phantom_events();
         for (eb, bind) in resolved
             .abstract_vars()
             .iter()
             .zip(inv.abstract_vars.iter())
         {
-            let id = instance_interfaces
-                .iter()
-                .find(|id| id.event == eb.event)
-                .unwrap();
             // If this event is non-phantom, ensure all provided events are non-phantom as well.
-            if !id.phantom {
+            if !instance_phantoms.contains(&eb.event) {
                 let ev = &bind.event;
-                if let Some(interface_ev) = self.phantom_events.get(ev) {
+                if self.phantom_events.contains(ev) {
                     return Err(Error::malformed(
-                            "Component provided phantom event to non-phantom port",
-                        ).add_note("Invoke provides phantom event to non-phantom port", ev.copy_span())
-                         .add_note("Instance's signature defines this port to be concrete", id.copy_span())
-                         .add_note("This event is defined to be @phantom", interface_ev.copy_span())
+                            "Component provided phantom event binding to non-phantom event argument",
+                        ).add_note("Invoke provides phantom event", ev.copy_span())
+                        //  .add_note("This is a phantom event", interface_ev.copy_span())
                          .add_note("Phantom ports are compiled away and cannot be used by subcomponents", None));
                 }
             }

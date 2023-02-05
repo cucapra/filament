@@ -136,48 +136,43 @@ fn check_invoke_binds<'a>(
     let this_sig = ctx.get_invoke(&THIS.into()).get_sig();
     let mut constraints = vec![];
 
-    // For each event provided for an abstract variable, ensure that the corresponding interface
+    // For each event provided in the bining, ensure that the corresponding interface
     // does not pulse more often than the interface allows.
     for (abs, evs) in binding.iter() {
-        if let Some(interface) =
-            ctx.get_instance(&invoke.instance).get_interface(abs)
+        if let Some(inst_event) =
+            ctx.get_instance(&invoke.instance).get_event(abs)
         {
             // Each event in the binding must pulse less often than the interface of the abstract
             // variable.
             let event = &evs.event;
             // Get interface for this event
-            let event_interface =
-                    this_sig.get_interface(event).ok_or_else(|| {
-                        Error::malformed(format!(
-                            "Event {event} does not have a corresponding interface signal"
-                        ))
-                    })?;
-            let int_len = interface.delay().resolve(&binding);
-            let ev_int_len = event_interface.delay();
+            let event_interface = this_sig.get_event(event);
+            let int_len = inst_event.delay.resolve(&binding);
+            let ev_int_len = &event_interface.delay;
 
             // Generate constraint
             let cons = Constraint::from(ast::CBS::gte(
-                    ev_int_len.clone(),
-                    int_len.clone(),
-                ))
-                .add_note(
-                    "Event provided to invoke pulses more often than @interface allows",
-                    invoke.copy_span()
-                )
-                .add_note(
-                    format!(
-                        "Provided event may trigger every {} cycles",
-                        ev_int_len,
-                    ),
-                    event_interface.copy_span(),
-                )
-                .add_note(
-                    format!(
-                        "Interface requires event to trigger once in {} cycles",
-                        int_len,
-                    ),
-                    interface.copy_span(),
-                );
+                ev_int_len.clone(),
+                int_len.clone(),
+            ))
+            .add_note(
+                "Event provided to invoke pulses more often than event allows",
+                invoke.copy_span(),
+            )
+            .add_note(
+                format!(
+                    "Provided event may trigger every {} cycles",
+                    ev_int_len,
+                ),
+                event_interface.copy_span(),
+            )
+            .add_note(
+                format!(
+                    "Interface requires event to trigger once in {} cycles",
+                    int_len,
+                ),
+                inst_event.copy_span(),
+            );
             constraints.push(cons);
         }
     }
