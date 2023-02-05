@@ -1,7 +1,7 @@
 import "./core.fil";
 
-component Mult<G>(
-  @interface[G, G+2] go_G: 1,
+comp Mult<G: 2>(
+  @interface[G] go_G: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,
 ) -> (

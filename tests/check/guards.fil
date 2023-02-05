@@ -1,6 +1,6 @@
 import "primitives/core.fil";
 
-component main<G>(
+comp main<G>(
   @interface[G, G+6] go_G: 1,
   @[G, G+6] in: 32,
   @[G, G+6] + @exact[G+3, G+4] sel0: 1,

@@ -1,44 +1,40 @@
 extern "state.sv" {
   // A register that can extend the lifetime of a signal to any required length.
-  component Register[WIDTH]<G, L, ?S = G+1>(
+  comp Register[WIDTH]<G: L-(G+1), L: 1>(
     clk: 1,
     reset: 1,
-    @interface[G, G+1] write_en: 1,
-    // Fake port to get the right delay for `G` which is |G+1 - L|
-    @interface[S, L] @phantom go_S: 1,
+    @interface[G] write_en: 1,
     @[G, G+1] in: WIDTH,
   ) -> (
-    @[S, L] out: WIDTH,
-  ) where S = G+1, L > S;
+    @[G+1, L] out: WIDTH,
+  ) where L > G+1;
 
-  // A component that delays `in` by one cycle. Exactly the same as a register
-  // but does not require component to provide `go` signal. If the component
+  // A comp that delays `in` by one cycle. Exactly the same as a register
+  // but does not require comp to provide `go` signal. If the comp
   // additionally has no resource sharing, it can elide FSM generation.
-  component Delay[WIDTH]<G>(
+  comp Delay[WIDTH]<G: 1>(
     clk: 1,
     reset: 1,
-    @interface[G, G+1] @phantom go: 1,
     @[G, G+1] in: WIDTH,
   ) -> (
     @[G+1, G+2] out: WIDTH,
   );
 
-  // A component that allows access to its previous stored value.
+  // A comp that allows access to its previous stored value.
   // Backend by a simple register
-  component Prev[WIDTH, SAFE]<G>(
+  comp Prev[WIDTH, SAFE]<G: 1>(
     clk: 1,
     reset: 1,
-    @interface[G, G+1] write_en: 1,
+    @interface[G] write_en: 1,
     @[G, G+1] in: WIDTH,
   ) -> (
     @[G, G+1] prev: WIDTH,
   );
 
-  // Prev component that continuously updates its value
-  component ContPrev[WIDTH, SAFE]<G>(
+  // Prev comp that continuously updates its value
+  comp ContPrev[WIDTH, SAFE]<G: 1>(
     clk: 1,
     reset: 1,
-    @interface[G, G+1] @phantom write_en: 1,
     @[G, G+1] in: WIDTH,
   ) -> (
     @[G, G+1] prev: WIDTH,

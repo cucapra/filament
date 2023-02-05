@@ -46,10 +46,10 @@ signature = {
   identifier ~ params ~ abstract_var? ~ io ~ constraints
 }
 component = {
-  "component" ~ signature ~ "{" ~ command* ~ "}"
+  "comp" ~ signature ~ "{" ~ command* ~ "}"
 }
 external = {
-  "extern" ~ string_lit ~ "{" ~  ("component" ~ signature ~ ";")*  ~ "}"
+  "extern" ~ string_lit ~ "{" ~  ("comp" ~ signature ~ ";")*  ~ "}"
 }
 
 comp_or_ext = {
@@ -60,7 +60,7 @@ comp_or_ext = {
 
 delay = {
   bitwidth
-  | time ~ "-" ~ time
+  | time ~ "-" ~ "(" ~ time ~ ")"
 }
 
 event_with_delay = _{

@@ -1,6 +1,6 @@
 import "primitives/core.fil";
 
-component Max_mult_add<G, L>(
+comp Max_mult_add<G, L>(
   @interface[G, max(G, L)+5] go_G: 1,
   @interface[L, max(G, L)+5] go_L: 1,
   @[G, G+1] a: 32,

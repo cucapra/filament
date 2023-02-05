@@ -1,13 +1,11 @@
 extern "unsynthesizable.sv" {
-    component Modulo[WIDTH]<G>(
-        @interface[G, G+1] @phantom go: 1,
+    comp Modulo[WIDTH]<G>(
         @[G, G+1] left: WIDTH,
         @[G, G+1] right: WIDTH,
     ) -> (
         @[G, G+1] out: WIDTH,
     );
-    component Div[WIDTH]<G>(
-        @interface[G, G+1] @phantom go: 1,
+    comp Div[WIDTH]<G>(
         @[G, G+1] left: WIDTH,
         @[G, G+1] right: WIDTH,
     ) -> (
