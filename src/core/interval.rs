@@ -95,6 +95,7 @@ where
 }
 
 /// An interval consists of a type tag, a start time, and a end time.
+// XXX(rachit): Replace this with Range<T> since we don't need the `exact` stuff anymore
 #[derive(Clone)]
 pub struct Interval<T>
 where

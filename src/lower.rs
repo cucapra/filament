@@ -119,10 +119,6 @@ impl<const PHANTOM: bool> visitor::Transform for CompileInvokes<PHANTOM> {
 
             // Generate the assignment for each interface port
             for interface in &sig.interface_signals {
-                // Skip phantom interfaces
-                if interface.phantom {
-                    continue;
-                }
                 let ev = &interface.event;
                 // Get binding for this event in the invoke
                 let t = binding.get(ev);
@@ -170,8 +166,6 @@ impl<const PHANTOM: bool> visitor::Transform for CompileInvokes<PHANTOM> {
             .sig
             .interface_signals
             .iter()
-            // If PHANTOM is set, skip FSM generation for FSM ports
-            .filter(|id| if PHANTOM { !id.phantom } else { true })
             .map(|interface| {
                 let ev = &interface.event;
                 Ok((

@@ -37,7 +37,7 @@ impl<'a> From<&'a ast::Signature<u64>> for ResolvedInstance<'a> {
 
 impl<'a> ResolvedInstance<'a> {
     // Return the abstract variables defined by the signature of this instance.
-    pub fn events(&self) -> Vec<&ast::Id> {
+    pub fn events(&self) -> Vec<ast::Id> {
         match self {
             ResolvedInstance::Bound { sig, .. } => sig.events().collect(),
             ResolvedInstance::Concrete { sig, .. } => sig.events().collect(),
@@ -88,6 +88,26 @@ impl<'a> ResolvedInstance<'a> {
         match self {
             ResolvedInstance::Bound { sig, .. } => sig.get_interface(event),
             ResolvedInstance::Concrete { sig, .. } => sig.get_interface(event),
+        }
+    }
+
+    pub fn get_event(&self, event: &ast::Id) -> Option<&ast::EventBind> {
+        match self {
+            ResolvedInstance::Bound { sig, .. } => Some(sig.get_event(event)),
+            ResolvedInstance::Concrete { sig, .. } => {
+                Some(sig.get_event(event))
+            }
+        }
+    }
+
+    pub fn phantom_events(&self) -> Vec<ast::Id> {
+        match self {
+            ResolvedInstance::Bound { sig, .. } => {
+                sig.phantom_events().collect()
+            }
+            ResolvedInstance::Concrete { sig, .. } => {
+                sig.phantom_events().collect()
+            }
         }
     }
 

@@ -1,8 +1,8 @@
 use super::{
     Binding, Constraint, ConstraintBase, Id, InterfaceDef, Interval, PortDef,
-    PortParam, Time, TimeRep,
+    PortParam, Time, TimeRep, TimeSub,
 };
-use crate::errors::{Error, FilamentResult, WithPos};
+use crate::errors::{self, Error, FilamentResult, WithPos};
 use itertools::Itertools;
 use std::{collections::HashMap, fmt::Display};
 
@@ -13,17 +13,35 @@ where
     T: Clone + TimeRep,
 {
     pub event: Id,
+    pub delay: TimeSub<T>,
     pub default: Option<T>,
+    pos: Option<errors::Span>,
+}
+
+impl<T> WithPos for EventBind<T>
+where
+    T: Clone + TimeRep,
+{
+    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+        self.pos = sp;
+        self
+    }
+
+    fn copy_span(&self) -> Option<errors::Span> {
+        self.pos.clone()
+    }
 }
 
 impl<T> EventBind<T>
 where
     T: Clone + TimeRep,
 {
-    pub fn new(event: Id) -> Self {
+    pub fn new(event: Id, delay: TimeSub<T>, default: Option<T>) -> Self {
         Self {
             event,
-            default: None,
+            delay,
+            default,
+            pos: None,
         }
     }
 }
@@ -49,27 +67,21 @@ where
 {
     /// Name of the component
     pub name: Id,
-
     /// Parameters for the Signature
     pub params: Vec<Id>,
-
     /// Names of abstract variables bound by the component
     pub events: Vec<EventBind<T>>,
-
     /// Unannotated ports that are thread through by the backend
     pub unannotated_ports: Vec<(Id, u64)>,
-
     /// Mapping from name of signals to the abstract variable they provide
     /// evidence for.
-    pub interface_signals: Vec<InterfaceDef<T>>,
-
+    pub interface_signals: Vec<InterfaceDef>,
+    /// Constraints on the abstract variables in the signature
+    pub constraints: Vec<Constraint<T>>,
     /// All the input/output ports.
     ports: Vec<PortDef<T, W>>,
     /// Index of the first output port in the ports vector
     outputs_idx: usize,
-
-    /// Constraints on the abstract variables in the signature
-    pub constraints: Vec<Constraint<T>>,
 }
 
 impl<T, W> Signature<T, W>
@@ -83,7 +95,7 @@ where
         params: Vec<Id>,
         events: Vec<EventBind<T>>,
         unannotated_ports: Vec<(Id, u64)>,
-        interface_signals: Vec<InterfaceDef<T>>,
+        interface_signals: Vec<InterfaceDef>,
         mut inputs: Vec<PortDef<T, W>>,
         mut outputs: Vec<PortDef<T, W>>,
         constraints: Vec<Constraint<T>>,
@@ -103,8 +115,8 @@ where
     }
 
     /// Events bound by the signature
-    pub fn events(&self) -> impl Iterator<Item = &Id> {
-        self.events.iter().map(|eb| &eb.event)
+    pub fn events(&self) -> impl Iterator<Item = Id> + '_ {
+        self.events.iter().map(|eb| &eb.event).cloned()
     }
     /// Inputs of this signature
     pub fn inputs(&self) -> impl Iterator<Item = &PortDef<T, W>> {
@@ -113,6 +125,16 @@ where
     /// Outputs of this signature
     pub fn outputs(&self) -> impl Iterator<Item = &PortDef<T, W>> {
         self.ports[self.outputs_idx..].iter()
+    }
+
+    /// Find the delay associoated with an event
+    pub fn get_event(&self, event: &Id) -> &EventBind<T> {
+        self.events
+            .iter()
+            .find(|eb| eb.event == event)
+            .unwrap_or_else(|| {
+                panic!("Event {} not found in signature:\n{}", event, self.name)
+            })
     }
 
     // Generate a new signature that has been reversed: inputs are outputs
@@ -129,7 +151,7 @@ where
     }
 
     /// Return the interface associated with an event defined in the signature.
-    pub fn get_interface(&self, event: &Id) -> Option<&InterfaceDef<T>> {
+    pub fn get_interface(&self, event: &Id) -> Option<&InterfaceDef> {
         self.interface_signals.iter().find(|id| id.event == event)
     }
 
@@ -157,7 +179,7 @@ where
             .or_else(|| {
                 self.interface_signals.iter().find_map(|id| {
                     if id.name == port {
-                        Some(id.liveness.clone())
+                        panic!("Attempting to get liveness of interface port: {port}")
                     } else {
                         None
                     }
@@ -167,16 +189,17 @@ where
         maybe_pd.ok_or_else(|| panic!("Unknown port: {}", port))
     }
 
+    /// Iterate over all phantom events. A phantom event is an event that does not have a corresponding interface signal.
+    pub fn phantom_events(&self) -> impl Iterator<Item = Id> + '_ {
+        self.events()
+            .filter(move |event| self.get_interface(event).is_none())
+    }
+
     /// Constraints for well formed under a binding
     fn constraints(&self) -> impl Iterator<Item = Constraint<T>> + '_ {
         self.inputs()
             .chain(self.outputs())
             .flat_map(|mpd| mpd.liveness.well_formed())
-            .chain(
-                self.interface_signals
-                    .iter()
-                    .flat_map(|id| id.liveness.well_formed()),
-            )
     }
 
     /// Construct a binding from this Signature
@@ -233,20 +256,9 @@ impl<W: Clone> Signature<Time<u64>, W> {
         // In the same way use of `E` in an invoke describes how often the invoke might trigger,
         // the start time of the signal describes when the signal is triggered.
         // We do not consider the end time because that only effects the length of the signal.
-
         for port in self.inputs().chain(self.outputs()) {
             let delay = port.liveness.within.len();
             let ev = &port.liveness.within.start.event;
-            // Make sure @interface for event exists
-            if self.get_interface(ev).is_none() {
-                return Err(Error::malformed(format!(
-                    "Missing @interface port for {ev}"
-                ))
-                .add_note(
-                    format!("Port mentions `{ev}` event in its start time"),
-                    port.liveness.within.copy_span(),
-                ));
-            }
             evs.entry(ev.clone())
                 .or_default()
                 .push((delay.clone(), port.copy_span()))
@@ -255,21 +267,20 @@ impl<W: Clone> Signature<Time<u64>, W> {
         Ok(evs
             .into_iter()
             .flat_map(|(ev, lens)| {
-                let id = self.get_interface(&ev).unwrap();
-                let len = id.delay();
+                let event = self.get_event(&ev);
                 lens.into_iter().map(move |(port_len, port_pos)| {
+                    let len = event.delay.clone();
                     Constraint::from(ConstraintBase::gte(
                         len.clone(),
                         port_len.clone(),
                     ))
-                    .add_note("Invalid interface", id.copy_span())
                     .add_note(
                         format!("Signal lasts for {} cycle(s)", port_len),
                         port_pos,
                     )
                     .add_note(
                         format!("Interface allows event to trigger every {} cycle(s)", len),
-                        id.copy_span(),
+                        event.copy_span(),
                     )
                 })
             })

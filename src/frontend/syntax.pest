@@ -58,9 +58,17 @@ comp_or_ext = {
 
 // ====== Component signature ======
 
+delay = {
+  bitwidth
+  | time ~ "-" ~ time
+}
+
+event_with_delay = _{
+  identifier ~ ":" ~ delay
+}
 event_bind = {
-  "?" ~ identifier ~ "=" ~ time |
-  identifier
+  "?" ~ event_with_delay ~ "=" ~ time |
+  event_with_delay
 }
 abstract_var = {
   "<" ~ event_bind ~ ("," ~ event_bind)* ~ ">"
@@ -81,9 +89,8 @@ interval = _{
 }
 
 // Ports
-phantom = { "@phantom" }
 interface = {
-  "@interface" ~ "[" ~ identifier ~ "," ~ time ~ "]" ~ phantom?
+  "@interface" ~ "[" ~ identifier ~ "]"
 }
 port_width = {
   bitwidth | identifier
