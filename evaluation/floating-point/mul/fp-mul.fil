@@ -3,8 +3,8 @@ import "../fp-support.fil";
 
 // Computes:
 // out = |in[30:23] ? {1'b1,in[22:0]} : {1'b0,in[22:0]}
-comp ComputeOp<G>(
-  @interface[G, G+1] go: 1,
+comp ComputeOp<G: 1>(
+  @interface[G] go: 1,
   @[G, G+1] in: 32
 ) -> (
   @[G, G+1] out: 24,
@@ -21,8 +21,8 @@ comp ComputeOp<G>(
   out = op.out;
 }
 
-comp FPMult<G>(
-  @interface[G, G+1] go: 1,
+comp FPMult<G: 1>(
+  @interface[G] go: 1,
   @[G, G+1] a: 32,
   @[G, G+1] b: 32,
 ) -> (

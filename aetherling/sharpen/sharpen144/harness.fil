@@ -1,6 +1,6 @@
 extern "sharpen144.v" {
 /* KERNEL_START=Sharpen_144 */
-    comp Sharpen<G>(
+    comp Sharpen<G: 9>(
         clk: 1,
         @[G, G+7] I: 8,
     ) -> (
@@ -9,8 +9,8 @@ extern "sharpen144.v" {
 /* KERNEL_END=Sharpen_144 */
 }
 
-comp main<G>(
-    @interface[G, G+9] go: 1,
+comp main<G: 9>(
+    @interface[G] go: 1,
     @[G, G+7] in: 8,
 ) -> (
     @[G+22, G+23] out: 8,

@@ -2,7 +2,7 @@ import "./stencil.fil";
 import "./conv2d.fil";
 
 // The comp needs to be run for an extra cycle to flush the last value
-comp main<G>(
+comp main<G: 1>(
     @[G, G+1] in: 8,
 ) -> (
     @[G+3, G+4] out: 8,

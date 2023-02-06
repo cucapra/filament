@@ -180,10 +180,11 @@ impl FilamentParser {
     }
 
     fn event_bind(input: Node) -> ParseResult<ast::EventBind> {
+        let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [identifier(event), delay(d), time(t)] => ast::EventBind::new(event, d, Some(t)),
-            [identifier(event), delay(d)] => ast::EventBind::new(event, d, None),
+            [identifier(event), delay(d), time(t)] => ast::EventBind::new(event, d, Some(t)).set_span(Some(sp)),
+            [identifier(event), delay(d)] => ast::EventBind::new(event, d, None).set_span(Some(sp)),
         ))
     }
 

@@ -2,7 +2,7 @@ import "../../../reticle/tdot.fil";
 import "primitives/core.fil";
 import "../stencil.fil";
 
-comp Conv<G>(
+comp Conv<G: 1>(
     @[G, G+1] in1: 8,
     @[G+1, G+2] in2: 8,
     @[G+2, G+3] in3: 8,
@@ -40,7 +40,7 @@ comp Conv<G>(
 }
 
 // The comp needs to be run for an extra cycle to flush the last value
-comp main<G>(
+comp main<G: 1>(
     @[G, G+1] in: 8,
 ) -> (
     @[G+5, G+6] out: 8,

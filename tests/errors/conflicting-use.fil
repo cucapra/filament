@@ -1,8 +1,8 @@
 import "primitives/core.fil";
 import "primitives/sequential.fil";
 
-comp Main<G>(
-  @interface[G, G+3] go_G: 1,
+comp Main<G: 3>(
+  @interface[G] go_G: 1,
 ) -> () {
   M := new Mult;
   m0 := M<G>(10, 20);

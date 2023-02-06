@@ -1,6 +1,6 @@
 extern "conv2d_1.v" {
 /* KERNEL_START=CONV2d_1 */
-comp Conv2d<G>(
+comp Conv2d<G: 8>(
     clk: 1,
     @[G, G+2] I_0: 8,
     @[G, G+2] I_1: 8,
@@ -39,8 +39,8 @@ comp Conv2d<G>(
 /* KERNEL_END=CONV2d_1 */
 }
 
-comp main<G>(
-    @interface[G, G+8] valid_up: 1,
+comp main<G: 8>(
+    @interface[G] valid_up: 1,
     @[G, G+2] I_0: 8,
     @[G, G+2] I_1: 8,
     @[G, G+2] I_2: 8,

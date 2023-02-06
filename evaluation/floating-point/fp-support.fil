@@ -1,7 +1,6 @@
 import "primitives/core.fil";
 
-comp GetExp<G>(
-  @interface[G, G+1] go: 1,
+comp GetExp<G: 1>(
   @[G, G+1] in: 32
 ) -> (
   @[G, G+1] out: 8,
@@ -10,8 +9,7 @@ comp GetExp<G>(
   out = exp.out;
 }
 
-comp GetMant<G>(
-  @interface[G, G+1] go: 1,
+comp GetMant<G: 1>(
   @[G, G+1] in: 32
 ) -> (
   @[G, G+1] out: 23,
@@ -20,8 +18,7 @@ comp GetMant<G>(
   out = exp.out;
 }
 
-comp GetResult<G>(
-  @interface[G, G+1] go: 1,
+comp GetResult<G: 1>(
   @[G, G+1] sign: 1,
   @[G, G+1] exp: 8,
   @[G, G+1] mant: 23,
@@ -33,8 +30,7 @@ comp GetResult<G>(
   out = res.out;
 }
 
-comp IsOne<G>(
-  @interface[G, G+1] go: 1,
+comp IsOne<G: 1>(
   @[G, G+1] in: 1,
 ) -> (
   @[G, G+1] out: 1,
@@ -44,8 +40,7 @@ comp IsOne<G>(
   out = eq.out;
 }
 
-comp ShiftRight23<G>(
-  @interface[G, G+1] go: 1,
+comp ShiftRight23<G: 1>(
   @[G, G+1] in: 23,
   @[G, G+1] amount: 8,
 ) -> (
@@ -56,8 +51,7 @@ comp ShiftRight23<G>(
   out = shr.out;
 }
 
-comp ShiftLeft24<G>(
-  @interface[G, G+1] go: 1,
+comp ShiftLeft24<G: 1>(
   @[G, G+1] in: 24,
   @[G, G+1] amount: 4,
 ) -> (
@@ -69,8 +63,7 @@ comp ShiftLeft24<G>(
 }
 
 // Computes out = {1'b1,in[22:1]};
-comp NormInp<G>(
-  @interface[G, G+1] go: 1,
+comp NormInp<G: 1>(
   @[G, G+1] in: 23,
 ) -> (
   @[G, G+1] out: 23,
