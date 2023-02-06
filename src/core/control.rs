@@ -349,13 +349,10 @@ impl<T: Display> Display for When<T> {
 pub struct Fsm {
     /// Name of the FSM
     pub name: Id,
-
     /// Number of states in the FSM
     pub states: u64,
-
     /// Signal that triggers the FSM
     pub trigger: Port,
-
     pos: Option<errors::Span>,
 }
 impl Fsm {

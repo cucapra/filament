@@ -8,11 +8,17 @@ pub trait Transform
 where
     Self: Sized,
 {
-    /// Whether this component should be visited or not
-    fn component_filter(&self, comp: &ast::Component) -> bool;
+    /// Extra information needed to construct this visitor.
+    type Info;
 
     /// Construct an instance of this pass
-    fn new(_: &ast::Namespace) -> Self;
+    fn new(_: &ast::Namespace, info: &Self::Info) -> Self;
+
+    /// What data should be cleared between component
+    fn clear_data(&mut self);
+
+    /// Whether this component should be visited or not
+    fn component_filter(&self, comp: &ast::Component) -> bool;
 
     #[inline]
     fn connect(
@@ -109,12 +115,16 @@ where
         self.exit_component(comp)
     }
 
-    fn transform(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
+    fn transform(
+        mut ns: ast::Namespace,
+        info: Self::Info,
+    ) -> FilamentResult<(ast::Namespace, Self)> {
         let comps = ns.components.drain(..).collect_vec();
         let mut binds = Bindings::new(ns.signatures());
+        let mut pass = Self::new(&ns, &info);
 
         for comp in comps {
-            let mut pass = Self::new(&ns);
+            pass.clear_data();
             let ncomp = if pass.component_filter(&comp) {
                 pass.component(comp, &binds)?
             } else {
@@ -123,10 +133,13 @@ where
             binds.add_component(ncomp);
         }
 
-        Ok(ast::Namespace {
-            components: binds.into(),
-            imports: ns.imports,
-            externs: ns.externs,
-        })
+        Ok((
+            ast::Namespace {
+                components: binds.into(),
+                imports: ns.imports,
+                externs: ns.externs,
+            },
+            pass,
+        ))
     }
 }

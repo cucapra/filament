@@ -1,20 +1,28 @@
-use std::collections::HashMap;
-
-use itertools::Itertools;
-
 use crate::errors::{self, FilamentResult, WithPos};
 use crate::event_checker::ast;
 use crate::visitor;
+use std::collections::HashMap;
 
-#[derive(Default)]
 pub struct DumpInterface {
     /// Map from FSM trigger to number of states
     fsm_states: HashMap<ast::Id, u64>,
+    /// Map from component to interface information
+    max_states: HashMap<ast::Id, HashMap<ast::Id, u64>>,
 }
 
 impl visitor::Transform for DumpInterface {
-    fn new(_: &ast::Namespace) -> Self {
-        Self::default()
+    // Mapping from component -> event -> max state
+    type Info = HashMap<ast::Id, HashMap<ast::Id, u64>>;
+
+    fn new(_: &ast::Namespace, max_states: &Self::Info) -> Self {
+        Self {
+            fsm_states: HashMap::new(),
+            max_states: max_states.clone(),
+        }
+    }
+
+    fn clear_data(&mut self) {
+        self.fsm_states.clear();
     }
 
     fn component_filter(&self, comp: &ast::Component) -> bool {
@@ -31,32 +39,33 @@ impl visitor::Transform for DumpInterface {
         &mut self,
         comp: ast::Component,
     ) -> FilamentResult<ast::Component> {
-        let phantom_events = comp.sig.phantom_events().collect_vec();
         // For an interface port like this:
         //      @interface[G, G+5] go_G
         // Generate the JSON information:
         // {
         //   "name": "go_G",
         //   "event": "G",
-        //   "delay": 2,
-        //   "states": 5,
+        //   "delay": 5,
+        //   "states": 2,
         //   "phantom": false
         // }
+        let events = &self.max_states[&comp.sig.name];
         let interfaces = comp
             .sig
-            .interface_signals
+            .events
             .iter()
-            .map(|id| {
-                let states = self.fsm_states[&id.name];
-                let phantom = phantom_events.contains(&id.name);
-                let eb = comp.sig.get_event(&id.event);
+            .map(|eb| {
+                let id = comp.sig.get_interface(&eb.event);
+                let phantom = id.is_none();
                 eb.delay
                     .concrete()
                     .map(|delay|
                         format!(
-                            "{{\"name\": \"{}\", \"event\": \"{}\", \"delay\": {delay}, \"states\": {states}, \"phantom\": {} }}",
-                            id.name,
-                            id.event,
+                            "{{\"name\": {}, \"event\": \"{}\", \"delay\": {}, \"states\": {}, \"phantom\": {} }}",
+                            id.map(|i| format!("\"{}\"", i.name.id())).unwrap_or_else(|| "null".to_string()),
+                            eb.event,
+                            delay,
+                            events[&eb.event],
                             phantom
                         ))
                     .ok_or_else(|| {

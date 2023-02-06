@@ -51,9 +51,9 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(default) = &self.default {
-            write!(f, "?{}={}", self.event, default)
+            write!(f, "?{}: {}={}", self.event, self.delay, default)
         } else {
-            write!(f, "{}", self.event)
+            write!(f, "{}: {}", self.event, self.delay)
         }
     }
 }
@@ -363,7 +363,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "component {}<{}>({}) -> ({})",
+            "comp {}<{}>({}) -> ({})",
             self.name,
             self.events.iter().map(|id| id.to_string()).join(", "),
             self.unannotated_ports

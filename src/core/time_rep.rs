@@ -134,7 +134,7 @@ where
     }
 }
 
-impl Display for TimeSub<Time<u64>> {
+impl<T: Display + TimeRep> Display for TimeSub<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TimeSub::Unit(n) => write!(f, "{}", n),

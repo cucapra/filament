@@ -1,20 +1,18 @@
-use itertools::Itertools;
-
-use crate::core::WithTime;
+use crate::core::Id;
 use crate::errors::{FilamentResult, WithPos};
 use crate::event_checker::ast;
 use crate::visitor;
 use std::collections::HashMap;
 
 #[derive(Default)]
-pub struct CompileInvokes<const PHANTOM: bool> {
+pub struct CompileInvokes {
     /// Mapping from events to FSMs
     fsms: HashMap<ast::Id, ast::Fsm>,
-    /// Mapping from event to their max state
-    max_states: HashMap<ast::Id, u64>,
+    /// Max state map
+    max_states: HashMap<ast::Id, HashMap<ast::Id, u64>>,
 }
 
-impl<const PHANTOM: bool> CompileInvokes<PHANTOM> {
+impl CompileInvokes {
     fn find_fsm(&self, event: &ast::Id) -> Option<&ast::Fsm> {
         self.fsms.get(event)
     }
@@ -40,40 +38,21 @@ impl<const PHANTOM: bool> CompileInvokes<PHANTOM> {
             .unwrap();
         Some(guard)
     }
-
-    // When computing the max-state, anything that can act as an ouput matters.
-    // For example, in
-    //  in = g ? out;
-    // We know that the interval for out is necessarily at least as big as in.
-    // Therefore, in the max-state computation, we don't have to care about anything that is an
-    // input.
-    fn max_state_from_sig<W>(
-        &mut self,
-        resolved_outputs: impl Iterator<Item = ast::PortDef<W>>,
-    ) where
-        W: Clone,
-    {
-        let out_events = resolved_outputs.flat_map(|pd: ast::PortDef<W>| {
-            pd.liveness.events().into_iter().cloned().collect_vec()
-        });
-
-        // Use all ranges to compute max state
-        out_events.for_each(|time| {
-            let ev = &time.event;
-            // If the event is not a phantom event
-            if let Some(v) = self.max_states.get_mut(ev) {
-                let st = time.offset();
-                if *v < st {
-                    *v = st;
-                }
-            }
-        });
-    }
 }
 
-impl<const PHANTOM: bool> visitor::Transform for CompileInvokes<PHANTOM> {
-    fn new(_: &ast::Namespace) -> Self {
-        Self::default()
+impl visitor::Transform for CompileInvokes {
+    /// Mapping from component -> event -> max state
+    type Info = HashMap<Id, HashMap<Id, u64>>;
+
+    fn new(_: &ast::Namespace, max_states: &Self::Info) -> Self {
+        Self {
+            fsms: HashMap::new(),
+            max_states: max_states.clone(),
+        }
+    }
+
+    fn clear_data(&mut self) {
+        self.fsms.clear();
     }
 
     /// Visit components with high-level invokes
@@ -106,9 +85,6 @@ impl<const PHANTOM: bool> visitor::Transform for CompileInvokes<PHANTOM> {
             let sig = sig.resolve();
             // Get the signature associated with this instance.
             let binding = sig.binding(&abstract_vars);
-            self.max_state_from_sig(
-                sig.outputs().map(|pd| pd.resolve(&binding)),
-            );
 
             let mut connects = Vec::with_capacity(
                 1 + ports.len() + sig.interface_signals.len(),
@@ -166,6 +142,7 @@ impl<const PHANTOM: bool> visitor::Transform for CompileInvokes<PHANTOM> {
         comp: ast::Component,
     ) -> FilamentResult<ast::Component> {
         // Define FSMs for each interface signal
+        let events = &self.max_states[&comp.sig.name];
         self.fsms = comp
             .sig
             .interface_signals
@@ -176,43 +153,26 @@ impl<const PHANTOM: bool> visitor::Transform for CompileInvokes<PHANTOM> {
                     ev.clone(),
                     ast::Fsm::new(
                         format!("{}_fsm", ev).into(),
-                        // Assign a fake number of states. We'll patch this up
-                        // at the end.
-                        u64::MAX,
+                        events[ev],
                         ast::Port::this(interface.name.clone()),
                     ),
                 ))
             })
             .collect::<FilamentResult<HashMap<_, _>>>()?;
 
-        self.max_states = comp
-            .sig
-            .interface_signals
-            .iter()
-            .map(|ev| (ev.event.clone(), 0))
-            .collect();
-
-        // Inputs of the component act as outputs inside the body
-        self.max_state_from_sig(comp.sig.inputs().cloned());
-
         Ok(comp)
     }
 
     fn exit_component(
         &mut self,
-        mut comp: ast::Component,
+        comp: ast::Component,
     ) -> FilamentResult<ast::Component> {
-        // Add all the FSMs
-        comp.body = self
-            .fsms
-            .drain()
-            .map(|(ev, fsm)| {
-                ast::Fsm::new(fsm.name, self.max_states[&ev], fsm.trigger)
-                    .into()
-            })
-            .chain(comp.body.into_iter())
-            .collect();
-        self.max_states = HashMap::default();
+        // Add the FSMs to the component
+        let mut comp = comp;
+        let fsms = std::mem::take(&mut self.fsms)
+            .into_values()
+            .map(|f| f.into());
+        comp.body = fsms.chain(comp.body.into_iter()).collect();
         Ok(comp)
     }
 }
