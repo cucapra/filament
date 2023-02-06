@@ -163,10 +163,7 @@ impl FilamentParser {
                 }
             },
             [interval_range(range), identifier(name), port_width(bitwidth)] => {
-                Port::Pd(ast::PortDef::new(name, range.into(), bitwidth).set_span(Some(sp)))
-            },
-            [interval_range(range), interval_range(exact), identifier(name), port_width(bitwidth)] => {
-                Port::Pd(ast::PortDef::new(name, ast::Interval::from(range).with_exact(exact), bitwidth).set_span(Some(sp)))
+                Port::Pd(ast::PortDef::new(name, range, bitwidth).set_span(Some(sp)))
             }
         ))
     }

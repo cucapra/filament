@@ -89,7 +89,6 @@ impl visitor::Transform for DumpInterface {
         let pd_to_info = |pd: &ast::PortDef<u64>| {
             let w = pd.bitwidth;
             pd.liveness
-            .within
             .as_offset()
             .map(|(event, st, end)| {
                 format!(

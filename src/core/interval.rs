@@ -33,6 +33,10 @@ where
         )
     }
 
+    pub fn events(&self) -> Vec<&T> {
+        vec![&self.start, &self.end]
+    }
+
     /// Return the length of this range
     pub fn len(&self) -> T::SubRep {
         self.end.clone().sub(self.start.clone())
@@ -91,112 +95,5 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[{}, {}]", self.start, self.end)
-    }
-}
-
-/// An interval consists of a type tag, a start time, and a end time.
-// XXX(rachit): Replace this with Range<T> since we don't need the `exact` stuff anymore
-#[derive(Clone)]
-pub struct Interval<T>
-where
-    T: TimeRep + Clone,
-{
-    pub within: Range<T>,
-    pub exact: Option<Range<T>>,
-    pos: Option<errors::Span>,
-}
-impl<T> Interval<T>
-where
-    T: TimeRep + Clone,
-{
-    pub fn new(within: Range<T>, exact: Option<Range<T>>) -> Self {
-        Self {
-            within,
-            exact,
-            pos: None,
-        }
-    }
-
-    pub fn with_exact(mut self, exact: Range<T>) -> Self {
-        self.exact = Some(exact);
-        self
-    }
-
-    pub fn resolve(&self, bindings: &Binding<T>) -> Self {
-        Interval {
-            within: self.within.resolve(bindings),
-            exact: self.exact.as_ref().map(|range| range.resolve(bindings)),
-            ..self.clone()
-        }
-    }
-
-    pub fn events(&self) -> Vec<&T> {
-        let mut within = vec![&self.within.start, &self.within.end];
-        if let Some(range) = &self.exact {
-            within.append(&mut vec![&range.start, &range.end]);
-        }
-        within
-    }
-}
-
-impl<T> From<Range<T>> for Interval<T>
-where
-    T: TimeRep,
-{
-    fn from(within: Range<T>) -> Self {
-        Self {
-            within,
-            exact: None,
-            pos: None,
-        }
-    }
-}
-
-impl<T> Interval<T>
-where
-    T: TimeRep,
-{
-    /// Generate well formedness constraints for this interval
-    pub fn well_formed(&self) -> Vec<Constraint<T>> {
-        self.exact
-            .iter()
-            .flat_map(|ex| {
-                ConstraintBase::subset(ex.clone(), self.within.clone())
-                    .map(|con| {
-                        Constraint::from(con).add_note(
-                            "@exact must be a subset of total interval",
-                            self.pos.clone(),
-                        )
-                    })
-                    .chain(ex.well_formed())
-            })
-            .chain(self.within.well_formed())
-            .collect()
-    }
-}
-impl<T> errors::WithPos for Interval<T>
-where
-    T: TimeRep,
-{
-    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> Option<errors::Span> {
-        self.pos.clone()
-    }
-}
-
-impl<T> Display for Interval<T>
-where
-    T: Display + Clone + TimeRep,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "@{}", self.within)?;
-        if let Some(interval) = &self.exact {
-            write!(f, " + @exact{}", interval)?;
-        }
-        Ok(())
     }
 }

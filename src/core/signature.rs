@@ -1,6 +1,6 @@
 use super::{
-    Binding, Constraint, ConstraintBase, Id, InterfaceDef, Interval, PortDef,
-    PortParam, Range, Time, TimeRep, TimeSub,
+    Binding, Constraint, ConstraintBase, Id, InterfaceDef, PortDef, PortParam,
+    Range, Time, TimeRep, TimeSub,
 };
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use itertools::Itertools;
@@ -159,7 +159,7 @@ where
     pub fn get_liveness<const IS_INPUT: bool>(
         &self,
         port: &Id,
-    ) -> FilamentResult<Interval<T>> {
+    ) -> FilamentResult<Range<T>> {
         let ports = if IS_INPUT {
             &self.ports[..self.outputs_idx]
         } else {
@@ -180,10 +180,10 @@ where
                 self.interface_signals.iter().find_map(|id| {
                     if id.name == port {
                         // Interface signals are always active between [E, E+1]
-                        Some(Interval::from(Range::new(
+                        Some(Range::new(
                             TimeRep::unit(id.event.clone(), 0),
                             TimeRep::unit(id.event.clone(), 1),
-                        )))
+                        ))
                     } else {
                         None
                     }
@@ -261,8 +261,8 @@ impl<W: Clone> Signature<Time<u64>, W> {
         // the start time of the signal describes when the signal is triggered.
         // We do not consider the end time because that only effects the length of the signal.
         for port in self.inputs().chain(self.outputs()) {
-            let delay = port.liveness.within.len();
-            let ev = &port.liveness.within.start.event;
+            let delay = port.liveness.len();
+            let ev = &port.liveness.start.event;
             evs.entry(ev.clone())
                 .or_default()
                 .push((delay.clone(), port.copy_span()))

@@ -1,4 +1,4 @@
-use super::{Binding, Id, Interval, Range, TimeRep};
+use super::{Binding, Id, Range, TimeRep};
 use crate::errors::{self, Error, FilamentResult, WithPos};
 use itertools::Itertools;
 use std::fmt::Display;
@@ -386,23 +386,13 @@ impl Fsm {
     }
 
     /// Get the liveness condition for the given port
-    pub fn liveness<T>(&self, trigger: &Interval<T>, state: u64) -> Interval<T>
+    pub fn liveness<T>(&self, trigger: &Range<T>, state: u64) -> Range<T>
     where
         T: TimeRep + Clone,
     {
         // If trigger is from: @[G, L] + @exact[G, G+1]
-        let Range { start, end, .. } = &trigger.within;
-        let within = Range::new(
-            start.clone().increment(state),
-            end.clone().increment(state),
-        );
-        let estart = &trigger.exact.as_ref().unwrap().start;
-        // @exact[start, start + 1]
-        let exact = Range::new(
-            estart.clone().increment(state),
-            estart.clone().increment(state + 1),
-        );
-        Interval::from(within).with_exact(exact)
+        let Range { start, end, .. } = &trigger;
+        Range::new(start.clone().increment(state), end.clone().increment(state))
     }
 }
 

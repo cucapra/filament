@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::interval_checking::SExp;
 
-use super::{Id, Interval, Range, TimeRep, TimeSub};
+use super::{Id, Range, TimeRep, TimeSub};
 use itertools::Itertools;
 use smallvec::{smallvec, SmallVec};
 
@@ -81,14 +81,6 @@ impl From<&Time<u64>> for SExp {
             t.event,
             t.offsets.iter().map(|v| v.to_string()).join(" ")
         ))
-    }
-}
-
-impl Interval<Time<u64>> {
-    /// Attempts to convert interval into (event, start, end). Only possible
-    /// when the interval uses exactly the one event for both start and end.
-    pub fn as_exact_offset(&self) -> Option<(Id, u64, u64)> {
-        self.exact.as_ref().and_then(|inv| inv.as_offset())
     }
 }
 
