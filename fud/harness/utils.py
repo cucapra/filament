@@ -24,8 +24,9 @@ def validate_data(data):
     Validate the data format provided to the file.
     """
     total_txns = len(list(data.values())[0])
-    assert all([len(vs) == total_txns for vs in data.values()]
-               ), "Invalid: Mismatched sizes for inputs"
+    assert all(
+        [len(vs) == total_txns for vs in data.values()]
+    ), "Invalid: Mismatched sizes for inputs"
     return total_txns
 
 
@@ -46,8 +47,8 @@ def construct_transaction_fsm(interface, randomize):
     specified cycles and match the value in the data array.
     """
 
-    assert len(interface["interfaces"]
-               ) == 1, "Unsupported: multiple interfaces"
+    assert len(interface["interfaces"]) > 0, "No interfaces defined"
+    assert len(interface["interfaces"]) == 1, "Unsupported: multiple interfaces"
 
     # Construct a model of what needs to be done for one transaction
     async def run(mod, data):
@@ -79,13 +80,13 @@ def construct_transaction_fsm(interface, randomize):
 
                 # Set input values
                 for inp in interface["inputs"]:
-                    assert inp["event"] == event["event"], \
-                        "input uses different event"
+                    assert inp["event"] == event["event"], "input uses different event"
                     if st >= inp["start"] and st < inp["end"]:
                         v = data[inp["name"]][idx]
                         width = inp["width"]
-                        assert representable(v, width), \
-                            f"Invalid: Value {v} not representable in {width} bits"
+                        assert representable(
+                            v, width
+                        ), f"Invalid: Value {v} not representable in {width} bits"
                         mod._id(inp["name"], extended=False).value = v
 
                 # Wait for the falling edge so that combinational computations
@@ -94,8 +95,7 @@ def construct_transaction_fsm(interface, randomize):
 
                 # For each output, record the value if we expect it to be valid
                 for out in interface["outputs"]:
-                    assert out["event"] == event["event"], \
-                        "output uses different event"
+                    assert out["event"] == event["event"], "output uses different event"
                     name = out["name"]
                     if st >= out["start"] and st < out["end"]:
                         v = mod._id(name, extended=False).value
@@ -119,8 +119,9 @@ def construct_transaction_fsm(interface, randomize):
             task = cocotb.start_soon(txn(idx, event))
             tasks.append(task.join())
             # Wait for the specified delay
-            delay = (random.randint(0, int(randomize))
-                     if randomize else 0) + event["delay"]
+            delay = (random.randint(0, int(randomize)) if randomize else 0) + event[
+                "delay"
+            ]
             await ClockCycles(mod.clk, delay)
 
         # Wait for all transactions to complete
@@ -153,7 +154,7 @@ def counter(mod, max_cycles):
         while count["count"] < max_cycles:
             await RisingEdge(mod.clk)
             count["count"] += 1
-        return {'error': f'Max cycles {max_cycles} reached'}
+        return {"error": f"Max cycles {max_cycles} reached"}
 
     return inner, count
 
@@ -163,7 +164,7 @@ async def setup_design(mod, interface, reset_cycles, max_cycles):
     Connects a clock to the given module and runs the reset signal for 5 cycles
     """
 
-    await cocotb.start(Clock(mod.clk, 10, units='step').start())
+    await cocotb.start(Clock(mod.clk, 10, units="step").start())
 
     # Set all interface values to 0
     for event in interface["interfaces"]:
@@ -183,18 +184,22 @@ async def setup_design(mod, interface, reset_cycles, max_cycles):
 
 
 async def run_design(mod):
-    interface_file = os.environ.get('INTERFACE')
-    assert interface_file, ("Provide the location to interface file by "
-                            "setting the environment variable INTERFACE")
-    data_file = os.environ.get('DATA_FILE')
-    assert data_file, ("Provide the location to data file by"
-                       " setting the environment variable DATA_FILE")
+    interface_file = os.environ.get("INTERFACE")
+    assert interface_file, (
+        "Provide the location to interface file by "
+        "setting the environment variable INTERFACE"
+    )
+    data_file = os.environ.get("DATA_FILE")
+    assert data_file, (
+        "Provide the location to data file by"
+        " setting the environment variable DATA_FILE"
+    )
     # Randomize the pipeline delay with these many cycles
-    randomize = os.environ.get('RANDOMIZE')
+    randomize = os.environ.get("RANDOMIZE")
     # Get the number of reset cycles
-    reset_cycles = int(os.environ.get('RESET_CYCLES') or RESET_CYCLES)
+    reset_cycles = int(os.environ.get("RESET_CYCLES") or RESET_CYCLES)
     # Maximum number of cycles
-    max_cycles = int(os.environ.get('MAX_CYCLES') or MAX_CYCLES)
+    max_cycles = int(os.environ.get("MAX_CYCLES") or MAX_CYCLES)
 
     with open(interface_file) as f:
         interface = json.load(f)
@@ -208,7 +213,7 @@ async def run_design(mod):
     main = cocotb.start_soon(runner(mod, data))
     outputs = await First(counter_task, main)
 
-    if 'error' in outputs:
+    if "error" in outputs:
         print("Outputs:", outputs)
     else:
         # Kill the cycle counter and add the cycle count to outputs
