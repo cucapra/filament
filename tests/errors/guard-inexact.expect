@@ -1,9 +1,0 @@
----CODE---
-1
----STDERR---
-error: Ports used in guards must have exact guarantees
-  ┌─ tests/errors/guard-inexact.fil:8:9
-  │
-8 │   out = sel ? left;
-  │         ^^^ Port provides guarantee @[G, G+1].
-
