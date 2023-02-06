@@ -1,9 +1,0 @@
----CODE---
-1
----STDERR---
-error: FSMs trigger port must have an @exact specification
-  ┌─ tests/errors/fsm-non-exact-trig.fil:5:12
-  │
-5 │   fsm M[5](trig);
-  │            ^^^^ Port's specification is @[G, G+5]
-

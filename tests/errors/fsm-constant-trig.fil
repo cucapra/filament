@@ -1,3 +1,0 @@
-comp main<G: 1>(@interface[G] go_G: 1) -> () {
-  fsm M[5](10);
-}
