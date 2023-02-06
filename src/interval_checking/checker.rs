@@ -91,7 +91,7 @@ fn check_invoke_binds<'a>(
             )
             .add_note(
                 format!(
-                    "Interface requires event to trigger once in {} cycles",
+                    "Delay requires event to trigger once in {} cycles",
                     int_len,
                 ),
                 inst_event.copy_span(),

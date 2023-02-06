@@ -48,10 +48,11 @@ impl visitor::Transform for PhantomCheck {
         // Check if the instance has already been used
         if let Some(prev_use) = self.instance_used.get(&inv.instance) {
             for ev in inv.abstract_vars.iter().map(|ev| &ev.event) {
-                if self.phantom_events.contains(ev) {
+                if let Some(e) = self.phantom_events.iter().find(|e| *e == ev) {
                     return Err(Error::malformed(
                         "Reuses instance uses phantom event for scheduling"
-                    ).add_note("Invocation uses phantom port", ev.copy_span())
+                    ).add_note("Invocation uses phantom event", ev.copy_span())
+                     .add_note("Event is a phantom event", e.copy_span())
                      .add_note("Previous use", prev_use.copy_span())
                      .add_note("Phantom ports are compiled away and cannot be used for resource sharing", None));
                 }
@@ -70,11 +71,12 @@ impl visitor::Transform for PhantomCheck {
             // If this event is non-phantom, ensure all provided events are non-phantom as well.
             if !instance_phantoms.contains(&eb.event) {
                 let ev = &bind.event;
-                if self.phantom_events.contains(ev) {
+                if let Some(e) = self.phantom_events.iter().find(|e| *e == ev) {
                     return Err(Error::malformed(
                             "Component provided phantom event binding to non-phantom event argument",
                         ).add_note("Invoke provides phantom event", ev.copy_span())
-                        //  .add_note("This is a phantom event", interface_ev.copy_span())
+                         .add_note("Event is a phantom event", e.copy_span())
+                         .add_note("Instance's event is not phantom", eb.copy_span())
                          .add_note("Phantom ports are compiled away and cannot be used by subcomponents", None));
                 }
             }
