@@ -1,7 +1,7 @@
 import "primitives/state.fil";
 
 // Produces the a 2d window of 3x3 elements from a stream that represents a 4x4 matrix.
-comp Stencil<G>(
+comp Stencil<G: 1>(
     @[G, G+1] in: 8,
 ) -> (
     @[G, G+1] o1: 8,

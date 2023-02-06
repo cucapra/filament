@@ -2,8 +2,8 @@ import "primitives/core.fil";
 import "primitives/signed.fil";
 import "../fp-support.fil";
 
-comp FPAdd<G>(
-  @interface[G, G+1] go: 1,
+comp FPAdd<G: 1>(
+  @interface[G] go: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32
 ) -> (

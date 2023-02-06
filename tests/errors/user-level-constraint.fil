@@ -1,8 +1,8 @@
 import "primitives/core.fil";
 
-comp Main<G, L>(
-  @interface[G, L] go_K: 1,
-  @interface[L, L+1] go_T: 1,
+comp Main<G: L-(G), L: 1>(
+  @interface[G] go_K: 1,
+  @interface[L] go_T: 1,
 ) -> () where L > G+1, G+5 > L {
   L := new Register[32];
   l0 := L<G, L>(10);

@@ -1,5 +1,5 @@
 extern "tdot.v" {
-comp Tdot<G>(
+comp Tdot<G: 1>(
     clk: 1,
     reset: 1,
     @[G, G+1] a0: 8,

@@ -1,9 +1,9 @@
 extern "map_200.v" {
 // KERNEL_START=Map_200
-    comp Top<G>(
+    comp Top<G: 1>(
         clk: 1,
         reset: 1,
-        @interface[G, G+1] valid_up: 1,
+        @interface[G] valid_up: 1,
         @[G, G+1] I: 8,
     ) -> (
         @[G+4, G+5] valid_down: 1,
@@ -12,8 +12,8 @@ extern "map_200.v" {
 // KERNEL_END=Map_200
 }
 
-comp main<G>(
-    @interface[G, G+1] valid_up: 1,
+comp main<G: 1>(
+    @interface[G] valid_up: 1,
     @[G, G+1] in: 8
 ) -> (
     @[G+4, G+5] out: 8,

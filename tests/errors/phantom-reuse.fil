@@ -1,6 +1,6 @@
 import "primitives/core.fil";
 
-comp main<G>(
+comp main<G: 1>(
     @[G, G+1] left: 32,
     @[G+1, G+2] right: 32,
 ) -> () {

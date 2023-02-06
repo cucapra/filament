@@ -1,6 +1,6 @@
-comp Main<G, L>(
-  @interface[G, G+6] go_G: 1,
-  @interface[L, L+6] go_G: 1,
+comp Main<G: 6, L: 6>(
+  @interface[G] go_G: 1,
+  @interface[L] go_G: 1,
   @[G, G+3] in: 32,
   @[G, L+3] + @exact[G, L] g1: 1,
 ) -> (

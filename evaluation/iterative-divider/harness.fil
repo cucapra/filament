@@ -1,10 +1,10 @@
 import "./iter-div.fil";
 
 extern "iter-div.sv" {
-  comp div<G, L>(
+  comp div<G: L-(G), L: 1>(
       clk: 1,
       reset: 1,
-      @interface[G, L] go: 1,
+      @interface[G] go: 1,
       @[G, G+1] left: 8,
       @[G, G+9] right: 8,
   ) -> (
@@ -13,8 +13,8 @@ extern "iter-div.sv" {
   ) where L > G+9;
 }
 
-comp main<G>(
-  @interface[G, G+11] go: 1,
+comp main<G: 11>(
+  @interface[G] go: 1,
   @[G, G+1] left: 8,
   @[G, G+9] right: 8,
 ) -> (

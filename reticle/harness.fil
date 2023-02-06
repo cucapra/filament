@@ -2,7 +2,7 @@ import "primitives/core.fil";
 import "tdot.fil";
 extern "unisim.v" {}
 
-comp Golden<G>(
+comp Golden<G: 1>(
     @[G, G+1] a0: 8,
     @[G+1, G+2] a1: 8,
     @[G+2, G+3] a2: 8,
@@ -27,8 +27,7 @@ comp Golden<G>(
     y = add2.out;
 }
 
-comp Counter<G>(
-) -> (
+comp Counter<G: 1>() -> (
     @[G, G+1] out: 32
 ) {
     r := new ContPrev[32, 1]<G>(add.out);
@@ -36,8 +35,8 @@ comp Counter<G>(
     out = r.prev;
 }
 
-comp main<G>(
-    @interface[G, G+1] go: 1,
+comp main<G: 1>(
+    @interface[G] go: 1,
     @[G, G+1] a0: 8,
     @[G+1, G+2] a1: 8,
     @[G+2, G+3] a2: 8,

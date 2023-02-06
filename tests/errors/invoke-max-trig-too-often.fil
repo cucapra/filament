@@ -1,12 +1,12 @@
 extern "dummy.sv" {
-  comp Mult<G>(
-    @interface[G, G+5] go_G: 1,
+  comp Mult<G: 5>(
+    @interface[G] go_G: 1,
   ) -> ();
 }
 
-comp Main<T, L>(
-  @interface[T, T+6] go_T: 1,
-  @interface[L, L+3] go_L: 1
+comp Main<T: 6, L: 3>(
+  @interface[T] go_T: 1,
+  @interface[L] go_L: 1
 ) -> () {
   M := new Mult;
   m0 := invoke M<max(T+1, L+4)>;
