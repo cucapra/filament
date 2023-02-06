@@ -13,12 +13,6 @@ pub enum ConcreteInvoke<'a> {
         /// Signature
         sig: ast::Signature<u64>,
     },
-    Fsm {
-        /// Internal FSM
-        fsm: &'a ast::Fsm,
-        /// Live time of the trigger
-        live_time: ast::Interval,
-    },
     This {
         /// Signature
         sig: &'a ast::Signature<u64>,
@@ -39,11 +33,6 @@ impl<'a> ConcreteInvoke<'a> {
         Self::This { sig }
     }
 
-    /// Construct an FSM instance
-    pub fn fsm_instance(live_time: ast::Interval, fsm: &'a ast::Fsm) -> Self {
-        Self::Fsm { live_time, fsm }
-    }
-
     /// Resolve a port for this instance and return the requirement or guarantee
     /// based on whether it is an input or an input port.
     #[inline]
@@ -55,10 +44,6 @@ impl<'a> ConcreteInvoke<'a> {
             ConcreteInvoke::Concrete { binding, sig } => {
                 let live = sig.get_liveness::<IS_INPUT>(port)?;
                 Ok(live.resolve(binding))
-            }
-            ConcreteInvoke::Fsm { live_time, fsm } => {
-                let state = core::Fsm::state(port)?;
-                Ok(fsm.liveness(live_time, state))
             }
             ConcreteInvoke::This { sig } => {
                 Ok(sig.get_liveness::<IS_INPUT>(port)?)
@@ -86,9 +71,6 @@ impl<'a> ConcreteInvoke<'a> {
         match &self {
             ConcreteInvoke::Concrete { sig, .. } => sig,
             ConcreteInvoke::This { sig } => sig,
-            ConcreteInvoke::Fsm { .. } => {
-                unreachable!("Called get_sig on FSM instance")
-            }
         }
     }
 }

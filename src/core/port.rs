@@ -1,4 +1,4 @@
-use super::{Binding, Id, Interval, TimeRep, WithTime};
+use super::{Binding, Id, Range, TimeRep, WithTime};
 use crate::errors::{self, WithPos};
 use std::fmt::Display;
 
@@ -39,7 +39,7 @@ where
     /// Name of the port
     pub name: Id,
     /// Liveness condition for the Port
-    pub liveness: Interval<T>,
+    pub liveness: Range<T>,
     /// Bitwidth of the port
     pub bitwidth: W,
     /// Source position
@@ -51,7 +51,7 @@ where
     T: Clone + TimeRep,
     W: Clone,
 {
-    pub fn new(name: Id, liveness: Interval<T>, bitwidth: W) -> Self {
+    pub fn new(name: Id, liveness: Range<T>, bitwidth: W) -> Self {
         Self {
             name,
             liveness,

@@ -14,7 +14,7 @@ pub use control::{
     Command, Connect, Fsm, Guard, Instance, Invoke, Port, PortType, When,
 };
 pub use id::Id;
-pub use interval::{Interval, Range};
+pub use interval::Range;
 pub use offset_time::Time;
 pub use port::{InterfaceDef, PortDef, PortParam};
 pub use signature::{EventBind, Signature};

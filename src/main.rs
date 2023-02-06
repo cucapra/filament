@@ -46,6 +46,8 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     if opts.dump_interface {
         dump_interface::DumpInterface::transform(ns, states.max_states)?;
         return Ok(());
+    } else if opts.check {
+        return Ok(());
     }
 
     // Lowering

@@ -1,8 +1,8 @@
 use itertools::Itertools;
 
 use super::{ConcreteInvoke, Context, FilSolver, THIS};
-use crate::core::{TimeRep, WithTime};
-use crate::errors::{self, Error, FilamentResult, WithPos};
+use crate::core::WithTime;
+use crate::errors::{Error, FilamentResult, WithPos};
 use crate::event_checker::ast::{self, Constraint, CBT};
 use crate::visitor;
 use std::iter;
@@ -13,7 +13,6 @@ use std::iter;
 fn check_connect(
     dst: &ast::Port,
     src: &ast::Port,
-    guard: &Option<ast::Guard>,
     ctx: &mut Context,
 ) -> FilamentResult<()> {
     log::trace!("Checking connect: {} = {}", dst, src);
@@ -21,103 +20,26 @@ fn check_connect(
     ctx.remove_remaning_assign(dst)?;
 
     let requirement = ctx.port_requirements(dst)?;
-    let src_guarantee = ctx.port_guarantees(src)?;
-
-    // If a guard is present, use its availablity instead.
-    let (guarantee, src_pos) = if let Some(g) = &guard {
-        let guard_interval = super::total_interval(g, ctx)?;
-
-        // When we have: dst = g ? ...
-        // We need to show that:
-        // 1. @exact(g) \subsetof @within(dst): To ensure that the guarded signal is keeping a
-        //    meaningful value high.
-        // 2. @within(dst) \subsetof @within(g): To ensure that the guard is disabling the signal
-        //    for long enough.
-        if let Some(guarantee) = src_guarantee {
-            // Require that the guarded value is available for longer that the
-            // guard
-            let guard_exact = guard_interval
-                .exact
-                .as_ref()
-                .ok_or_else(|| {
-                    Error::malformed(
-                        "Guard signal must have exact specification",
-                    )
-                    .add_note(
-                        format!("Guard's specification is {}", guard_interval),
-                        g.copy_span(),
-                    )
-                })?
-                .clone();
-
-            ctx.add_obligations(
-                CBT::subset(guard_exact.clone(), guarantee.within.clone()).map(|e| {
-                    Constraint::from(e).add_note("Guard's @exact specification must be shorter than source", g.copy_span())
-                     .add_note(format!("Guard's exact specification is {}", guard_exact), g.copy_span())
-                     .add_note(format!("Source's specification is {}", guarantee), src.copy_span())
-                }),
-            );
-
-            // Require that the guard's availability is at least as long as the signal.
-            ctx.add_obligations(
-                CBT::subset(
-                    guarantee.within.clone(),
-                    guard_interval.within.clone(),
-                )
-                .map(|e|
-                     Constraint::from(e).add_note("Guard must be active for at least as long as the source", g.copy_span())
-                      .add_note(format!("Guard is active during {}", guard_interval), g.copy_span())
-                      .add_note(format!("Source is active for {}", guarantee), src.copy_span())),
-            );
-        }
-
-        (Some(guard_interval), g.copy_span())
-    } else {
-        (src_guarantee, src.copy_span())
-    };
+    let guarantee = ctx.port_guarantees(src)?;
+    let src_pos = src.copy_span();
 
     // If we have: dst = src. We need:
     // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
     // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
     if let Some(guarantee) = &guarantee {
-        let within_fact =
-            CBT::subset(requirement.within.clone(), guarantee.within.clone())
-                .map(|e| {
-                    Constraint::from(e)
-                        .add_note(
-                            format!("Source is available for {}", guarantee),
-                            src_pos.clone(),
-                        )
-                        .add_note(
-                            format!(
-                                "Destination's requirement {}",
-                                requirement
-                            ),
-                            dst.copy_span(),
-                        )
-                });
+        let within_fact = CBT::subset(requirement.clone(), guarantee.clone())
+            .map(|e| {
+                Constraint::from(e)
+                    .add_note(
+                        format!("Source is available for {}", guarantee),
+                        src_pos.clone(),
+                    )
+                    .add_note(
+                        format!("Destination's requirement {}", requirement),
+                        dst.copy_span(),
+                    )
+            });
         ctx.add_obligations(within_fact);
-    }
-
-    if let Some(exact_requirement) = requirement.exact {
-        let guarantee = guarantee.ok_or_else(|| {
-            errors::Error::malformed(
-                "Destination requires @exact guarantee but source does not provide it",
-            ).add_note("Constant port cannot provide @exact specification", src.copy_span())
-        })?;
-
-        if let Some(exact_guarantee) = guarantee.exact {
-            ctx.add_obligations(
-                CBT::equality(exact_requirement.clone(), exact_guarantee.clone())
-                    .map(|e| Constraint::from(e).add_note("Source must satisfy the exact guarantee of the destination", src_pos.clone())
-                              .add_note(format!("Source's availablity is {}", exact_guarantee), src_pos.clone())
-                              .add_note(format!("Destination's requirement is {}", exact_requirement), dst.copy_span())),
-            );
-        } else {
-            return Err(errors::Error::malformed(
-                "Souce port does not provide an exact guarantee while destination port requires it.",
-            ));
-        }
     }
 
     Ok(())
@@ -234,72 +156,11 @@ fn check_invoke_ports<'a>(
         for (actual, formal) in actuals.iter().zip(sig.inputs()) {
             let dst = ast::Port::comp(invoke.bind.clone(), formal.name.clone())
                 .set_span(formal.copy_span());
-            check_connect(&dst, actual, &None, ctx)?;
+            check_connect(&dst, actual, ctx)?;
         }
     } else {
         ctx.add_remaning_assigns(invoke.bind.clone(), &invoke.instance)?;
     }
-
-    Ok(())
-}
-
-fn check_fsm<'a>(
-    fsm: &'a ast::Fsm,
-    ctx: &mut Context<'a>,
-) -> FilamentResult<()> {
-    let ast::Fsm {
-        name: bind,
-        states,
-        trigger,
-        ..
-    } = fsm;
-
-    let guarantee = match ctx.port_guarantees(trigger)? {
-        Some(g) => Ok(g),
-        None => Err(Error::malformed("Invalid port for fsm trigger").add_note(
-            "Cannot use constant port to trigger fsm",
-            trigger.copy_span(),
-        )),
-    }?;
-
-    let mb_offset = guarantee.as_exact_offset();
-    let (ev, start, end) = if let Some(offset) = mb_offset {
-        offset
-    } else {
-        return Err(Error::malformed(
-            "FSMs trigger port must have an @exact specification",
-        )
-        .add_note(
-            format!("Port's specification is {}", guarantee),
-            trigger.copy_span(),
-        ));
-    };
-    if end != start + 1 {
-        return Err(Error::malformed("Trigger port is high for too long")
-            .add_note(
-                format!("Trigger port is active for {} cycles", end - start),
-                trigger.copy_span(),
-            ));
-    }
-
-    // Prove that the signal is zero during the execution of the FSM
-    let start_time = ast::TimeRep::unit(ev, start);
-    let end_time = start_time.clone().increment(*states);
-    let within = ast::Range::new(start_time, end_time);
-    ctx.add_obligations(
-        ast::CBT::subset(within, guarantee.within.clone()).map(|e| {
-            Constraint::from(e).add_note(
-                "Trigger must not pulse more often than the FSM states",
-                trigger.copy_span(),
-            )
-        }),
-    );
-
-    // Add the FSM instance to the context
-    ctx.add_invocation(
-        bind.clone(),
-        ConcreteInvoke::fsm_instance(guarantee, fsm),
-    );
 
     Ok(())
 }
@@ -320,8 +181,7 @@ where
                 bindings,
                 ..
             }) => ctx.add_instance(name.clone(), component, bindings),
-            ast::Command::Fsm(fsm) => check_fsm(fsm, ctx)?,
-            ast::Command::Connect(_) => (),
+            ast::Command::Fsm(_) | ast::Command::Connect(_) => (),
         };
     }
 
@@ -331,7 +191,11 @@ where
             ast::Command::Invoke(invoke) => check_invoke_ports(invoke, ctx)?,
             ast::Command::Connect(ast::Connect {
                 dst, src, guard, ..
-            }) => check_connect(dst, src, guard, ctx)?,
+            }) => {
+                if guard.is_none() {
+                    check_connect(dst, src, ctx)?
+                }
+            }
             ast::Command::Instance(_) | ast::Command::Fsm(_) => (),
         };
     }

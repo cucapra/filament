@@ -1,4 +1,4 @@
-use crate::core::Id;
+use crate::core::{Id, WithTime};
 use crate::errors::{FilamentResult, WithPos};
 use crate::event_checker::ast;
 use crate::visitor;
@@ -116,11 +116,7 @@ impl visitor::Transform for CompileInvokes {
             // Generate assignment for each port
             for (port, formal) in ports.into_iter().zip(sig.inputs()) {
                 let req = formal.liveness.resolve(&binding);
-                assert!(
-                    req.exact.is_none(),
-                    "Cannot compile ports with exact specifications"
-                );
-                let guard = self.range_to_guard(req.within);
+                let guard = self.range_to_guard(req);
                 let sp = port.copy_span();
                 let con = ast::Connect::new(
                     ast::Port::comp(bind.clone(), formal.name.clone()),
