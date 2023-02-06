@@ -2,10 +2,10 @@
 1
 ---STDERR---
 error: Cannot prove constraint 10 >= max(G + 2, G+9 + 2) - min(G, G+9)
-   ┌─ tests/errors/share-range.fil:5:3
+   ┌─ tests/errors/share-range.fil:4:11
    │
- 5 │   @interface[G, G+10] go_G: 1,
-   │   ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Event's delay must be longer than the difference between minimum start time and maximum end time of all other bindings.
+ 4 │ comp Main<G: 10>(
+   │           ^^^^^ Event's delay must be longer than the difference between minimum start time and maximum end time of all other bindings.
    ·
 13 │   m0 := M<G>(l0, r0);
    │   ------------------- Invocation starts at `G' and finishes at `G+2'

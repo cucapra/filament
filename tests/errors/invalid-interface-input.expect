@@ -2,14 +2,11 @@
 1
 ---STDERR---
 error: Cannot prove constraint 1 >= 2
-  ┌─ tests/errors/invalid-interface-input.fil:4:5
+  ┌─ tests/errors/invalid-interface-input.fil:6:5
   │
-4 │     @interface[L, L+1] go_L: 1,
-  │     ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  │     │
-  │     Invalid interface
-  │     Interface allows event to trigger every 1 cycle(s)
-5 │     @[G, G+1] in1: 32,
+2 │   comp Main<G: 3, L: 1>(
+  │                   ---- Interface allows event to trigger every 1 cycle(s)
+  ·
 6 │     @[L, L+2] in2: 32,
-  │     ----------------- Signal lasts for 2 cycle(s)
+  │     ^^^^^^^^^^^^^^^^^ Signal lasts for 2 cycle(s)
 

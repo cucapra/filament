@@ -343,7 +343,7 @@ impl<'a> Context<'a> {
             spi,
         )
         .add_note(
-            format!("@interface for {abs} specifies that invokes must be {i_delay} cycles apart"),
+            format!("Delay for {abs} specifies that invokes must be {i_delay} cycles apart"),
             id_pos,
         )
     }

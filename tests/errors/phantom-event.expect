@@ -1,19 +1,19 @@
 ---CODE---
 1
 ---STDERR---
-error: Component provided phantom event to non-phantom port
-  ┌─ tests/errors/phantom-event.fil:7:27
+error: Component provided phantom event binding to non-phantom event argument
+  ┌─ tests/errors/phantom-event.fil:6:27
   │
-4 │     @interface[G, G+1] @phantom go: 1,
-  │                - This event is defined to be @phantom
+3 │ comp main<G: 1>(
+  │           - Event is a phantom event
   ·
-7 │     r := new Register[32]<G, G+2>(left);
-  │                           ^ Invoke provides phantom event to non-phantom port
+6 │     r := new Register[32]<G, G+2>(left);
+  │                           ^ Invoke provides phantom event
   │
-  ┌─ ./primitives/./state.fil:6:5
+  ┌─ ./primitives/./state.fil:3:24
   │
-6 │     @interface[G, G+1] write_en: 1,
-  │     ------------------------------ Instance's signature defines this port to be concrete
+3 │   comp Register[WIDTH]<G: L-(G+1), L: 1>(
+  │                        ---------- Instance's event is not phantom
   │
   = Phantom ports are compiled away and cannot be used by subcomponents
 
