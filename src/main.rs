@@ -7,7 +7,7 @@ use codespan_reporting::{
 };
 use filament::{
     backend, bind_check, cmdline, dump_interface, errors, interval_checking,
-    lower, phantom_check, resolver::Resolver, visitor::Transform,
+    lower, max_states, phantom_check, resolver::Resolver, visitor::Transform,
 };
 
 // Prints out the interface for main component in the input program.
@@ -36,28 +36,28 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     log::info!("Interval check: {}ms", t.elapsed().as_millis());
 
     // User-level @phantom ports
-    ns = phantom_check::PhantomCheck::transform(ns)?;
+    (ns, _) = phantom_check::PhantomCheck::transform(ns, ())?;
     log::info!("Phantom check: {}ms", t.elapsed().as_millis());
 
-    if opts.dump_interface {
-        // Lowering
-        let t = Instant::now();
-        ns = lower::CompileInvokes::<false>::transform(ns)?;
-        log::info!("Lowering: {}ms", t.elapsed().as_millis());
-        log::info!("{ns}");
-        dump_interface::DumpInterface::transform(ns)?;
-    } else if !opts.check {
-        // Lowering
-        let t = Instant::now();
-        ns = lower::CompileInvokes::<true>::transform(ns)?;
-        log::info!("Lowering: {}ms", t.elapsed().as_millis());
-        log::info!("{ns}");
+    let (mut ns, states) = max_states::MaxStates::transform(ns, ())?;
+    log::info!("Max states: {:?}", states.max_states);
 
-        // Compilation
-        let t = Instant::now();
-        backend::compile(ns, opts)?;
-        log::info!("Compilation: {}ms", t.elapsed().as_millis());
+    // Return early if we're asked to dump the interface
+    if opts.dump_interface {
+        dump_interface::DumpInterface::transform(ns, states.max_states)?;
+        return Ok(());
     }
+
+    // Lowering
+    let t = Instant::now();
+    (ns, _) = lower::CompileInvokes::transform(ns, states.max_states)?;
+    log::info!("Lowering: {}ms", t.elapsed().as_millis());
+    log::info!("{ns}");
+
+    // Compilation
+    let t = Instant::now();
+    backend::compile(ns, opts)?;
+    log::info!("Compilation: {}ms", t.elapsed().as_millis());
 
     Ok(())
 }

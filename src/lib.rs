@@ -10,6 +10,7 @@ pub mod frontend;
 // pub mod interface_infer;
 pub mod interval_checking;
 pub mod lower;
+pub mod max_states;
 pub mod phantom_check;
 pub mod resolver;
 pub mod visitor;

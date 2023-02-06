@@ -17,6 +17,16 @@ pub struct PhantomCheck {
 }
 
 impl visitor::Transform for PhantomCheck {
+    type Info = ();
+    fn new(_: &ast::Namespace, _: &Self::Info) -> Self {
+        Self::default()
+    }
+
+    fn clear_data(&mut self) {
+        self.instance_used.clear();
+        self.phantom_events.clear();
+    }
+
     // Only check component if at least one phantom event
     fn component_filter(&self, comp: &ast::Component) -> bool {
         comp.sig.phantom_events().next().is_some()
@@ -71,9 +81,5 @@ impl visitor::Transform for PhantomCheck {
         }
 
         Ok(vec![inv.into()])
-    }
-
-    fn new(_: &ast::Namespace) -> Self {
-        Self::default()
     }
 }

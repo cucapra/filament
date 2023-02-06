@@ -27,7 +27,7 @@ pub struct Binding {
     // Component signatures
     comps: HashMap<ast::Id, RRC<ir::Cell>>,
 
-    /// Mapping to the component representing FSM with partiular number of states
+    /// Mapping to the component representing FSM with particular number of states
     pub fsm_comps: HashMap<u64, ir::Component>,
 }
 
