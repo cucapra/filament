@@ -30,9 +30,9 @@ jobs:
           # Register Icarus
           fud register icarus-verilog -p "$(pwd)/calyx/fud/icarus/icarus.py"
           # Register filament relevant stages
-          fud register filament -p "${GITHUB_WORKSPACE}/filament/fud/filament.py"
-          fud config stages.filament.exec "${GITHUB_WORKSPACE}filament/target/debug/filament"
-          fud config stages.filament.library "${GITHUB_WORKSPACE}filament"
+          fud register filament -p "${GITHUB_WORKSPACE}/fud/filament.py"
+          fud config stages.filament.exec "${GITHUB_WORKSPACE}/target/debug/filament"
+          fud config stages.filament.library "${GITHUB_WORKSPACE}"
 
       - name: Build Filament
         uses: actions-rs/cargo@v1
