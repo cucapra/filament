@@ -35,6 +35,10 @@ jobs:
           fud config stages.filament.exec "${GITHUB_WORKSPACE}/target/debug/filament"
           fud config stages.filament.library "${GITHUB_WORKSPACE}"
 
+      - name: Fixup Calyx location
+        run:
+          sed -i 's|../calyx/calyx|/home/calyx|' ${GITHUB_WORKSPACE}/Cargo.toml
+
       - name: Build Filament
         uses: actions-rs/cargo@v1
         with:
