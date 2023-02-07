@@ -44,13 +44,19 @@ impl Resolver {
         // Resove against base
         let mut cur_base = dir.to_path_buf();
         cur_base.push(imp);
-        if cur_base.exists() && lib_base.exists() && cur_base != lib_base {
-            Err(errors::Error::misc(format!(
-                "Refusing to resolve ambiguous import: {}. Both {} and {} exist.",
+        if cur_base.exists() && lib_base.exists() {
+            let canon_base = fs::canonicalize(cur_base.clone()).unwrap();
+            let canon_lib_base = fs::canonicalize(lib_base.clone()).unwrap();
+            if canon_base != canon_lib_base {
+                Err(errors::Error::misc(format!(
+                "Refusing to resolve ambiguous import: {}. Conflicting candidates found:\n{}\n{}",
                 imp,
                 fs::canonicalize(lib_base).unwrap().display(),
                 fs::canonicalize(cur_base).unwrap().display(),
             )))
+            } else {
+                Ok(cur_base)
+            }
         } else if cur_base.exists() {
             Ok(cur_base)
         } else if lib_base.exists() {
@@ -135,7 +141,7 @@ impl Resolver {
                 imp.imports
                     .into_iter()
                     .filter_map(|s| match self.resolve_import(&s, &base) {
-                        Ok(file) => self.add_import(file).map(|f| Ok(f)),
+                        Ok(file) => self.add_import(file).map(Ok),
                         f @ Err(_) => Some(f),
                     })
                     .collect::<FilamentResult<Vec<_>>>()?,

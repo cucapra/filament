@@ -39,7 +39,7 @@ impl Binding {
             .map(|pr| {
                 let port = pr.borrow();
                 // Reverse port direction because signature refers to internal interface.
-                (port.name.clone(), port.width, port.direction.reverse()).into()
+                (port.name, port.width, port.direction.reverse()).into()
             })
             .collect()
     }
@@ -319,7 +319,7 @@ where
     for pd in &mut ports {
         if interface_ports.contains(pd.name.as_ref()) {
             interface_ports.remove(pd.name.as_ref());
-            pd.attributes.insert(pd.name.clone(), 1);
+            pd.attributes.insert(pd.name, 1);
         }
     }
     // Add missing interface ports
@@ -432,7 +432,7 @@ fn prim_as_port_defs(
         let mut attributes = ir::Attributes::default();
         attributes.insert("data", 1);
         ir::PortDef {
-            name: ir::Id::from(pd.name.id().as_ref()),
+            name: ir::Id::from(pd.name.id()),
             direction: dir,
             width,
             attributes,
@@ -441,7 +441,7 @@ fn prim_as_port_defs(
     let concrete_transform =
         |name: &ast::Id, bw: u64| -> ir::PortDef<ir::Width> {
             ir::PortDef {
-                name: ir::Id::from(name.id().as_ref()),
+                name: ir::Id::from(name.id()),
                 direction: ir::Direction::Input,
                 width: ir::Width::Const { value: bw },
                 attributes: Default::default(),
