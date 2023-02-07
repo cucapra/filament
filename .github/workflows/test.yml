@@ -38,6 +38,7 @@ jobs:
       - name: Fixup Calyx location
         run: |
           sed -i 's|../calyx/calyx|/home/calyx|' ${GITHUB_WORKSPACE}/Cargo.toml
+          cat ${GITHUB_WORKSPACE}/Cargo.toml
           ls /home/calyx
 
       - name: Build Filament
