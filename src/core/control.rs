@@ -1,11 +1,14 @@
 use super::{Binding, Id, Range, TimeRep};
-use crate::errors::{self, Error, FilamentResult, WithPos};
+use crate::{
+    errors::{self, Error, FilamentResult, WithPos},
+    utils::GPosIdx,
+};
 use itertools::Itertools;
 use std::fmt::Display;
 
 pub struct Port {
     pub typ: PortType,
-    pos: Option<errors::Span>,
+    pos: GPosIdx,
 }
 impl Port {
     pub fn name(&self) -> &Id {
@@ -24,13 +27,13 @@ impl std::fmt::Display for Port {
     }
 }
 impl errors::WithPos for Port {
-    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+    fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
     }
 
-    fn copy_span(&self) -> Option<errors::Span> {
-        self.pos.clone()
+    fn copy_span(&self) -> GPosIdx {
+        self.pos
     }
 }
 
@@ -44,21 +47,21 @@ impl Port {
     pub fn comp(comp: Id, name: Id) -> Self {
         Port {
             typ: PortType::InvPort { invoke: comp, name },
-            pos: None,
+            pos: GPosIdx::UNKNOWN,
         }
     }
 
     pub fn this(p: Id) -> Self {
         Port {
             typ: PortType::ThisPort(p),
-            pos: None,
+            pos: GPosIdx::UNKNOWN,
         }
     }
 
     pub fn constant(v: u64) -> Self {
         Port {
             typ: PortType::Constant(v),
-            pos: None,
+            pos: GPosIdx::UNKNOWN,
         }
     }
 }
@@ -127,7 +130,7 @@ pub struct Instance {
     /// Bindings provided for this instance
     pub bindings: Vec<u64>,
     /// Source position
-    pos: Option<errors::Span>,
+    pos: GPosIdx,
 }
 impl Instance {
     pub fn new(name: Id, component: Id, bindings: Vec<u64>) -> Self {
@@ -135,7 +138,7 @@ impl Instance {
             name,
             component,
             bindings,
-            pos: None,
+            pos: GPosIdx::UNKNOWN,
         }
     }
 }
@@ -145,13 +148,13 @@ impl std::fmt::Display for Instance {
     }
 }
 impl WithPos for Instance {
-    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+    fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
     }
 
-    fn copy_span(&self) -> Option<errors::Span> {
-        self.pos.clone()
+    fn copy_span(&self) -> GPosIdx {
+        self.pos
     }
 }
 
@@ -170,7 +173,7 @@ pub struct Invoke<T> {
     pub ports: Option<Vec<Port>>,
 
     /// Source location of the invocation
-    pos: Option<errors::Span>,
+    pos: GPosIdx,
 }
 
 impl<T> Invoke<T>
@@ -188,7 +191,7 @@ where
             instance,
             abstract_vars,
             ports,
-            pos: None,
+            pos: GPosIdx::UNKNOWN,
         }
     }
 
@@ -231,18 +234,18 @@ impl<T: Display> Display for Invoke<T> {
 }
 impl<T> errors::WithPos for Invoke<T> {
     /// Attach a position to this node
-    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+    fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
     }
-    fn copy_span(&self) -> Option<errors::Span> {
-        self.pos.clone()
+    fn copy_span(&self) -> GPosIdx {
+        self.pos
     }
 }
 
 /// A Guard expression
 pub enum Guard {
-    Or(Box<Guard>, Box<Guard>, Option<errors::Span>),
+    Or(Box<Guard>, Box<Guard>, GPosIdx),
     Port(Port),
 }
 
@@ -253,11 +256,11 @@ impl From<Port> for Guard {
 }
 impl Guard {
     pub fn or(g1: Guard, g2: Guard) -> Self {
-        Guard::Or(Box::new(g1), Box::new(g2), None)
+        Guard::Or(Box::new(g1), Box::new(g2), GPosIdx::UNKNOWN)
     }
 }
 impl errors::WithPos for Guard {
-    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+    fn set_span(mut self, sp: GPosIdx) -> Self {
         match self {
             Guard::Or(_, _, ref mut span) => {
                 *span = sp;
@@ -267,9 +270,9 @@ impl errors::WithPos for Guard {
         }
     }
 
-    fn copy_span(&self) -> Option<errors::Span> {
+    fn copy_span(&self) -> GPosIdx {
         match self {
-            Guard::Or(_, _, sp) => sp.clone(),
+            Guard::Or(_, _, sp) => *sp,
             Guard::Port(p) => p.copy_span(),
         }
     }
@@ -295,7 +298,7 @@ pub struct Connect {
     pub guard: Option<Guard>,
 
     /// Source location of the invocation
-    pos: Option<errors::Span>,
+    pos: GPosIdx,
 }
 
 impl Connect {
@@ -304,7 +307,7 @@ impl Connect {
             dst,
             src,
             guard,
-            pos: None,
+            pos: GPosIdx::UNKNOWN,
         }
     }
 }
@@ -319,13 +322,13 @@ impl std::fmt::Display for Connect {
 }
 impl errors::WithPos for Connect {
     /// Attach a position to this node
-    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+    fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
     }
 
-    fn copy_span(&self) -> Option<errors::Span> {
-        self.pos.clone()
+    fn copy_span(&self) -> GPosIdx {
+        self.pos
     }
 }
 
@@ -353,7 +356,7 @@ pub struct Fsm {
     pub states: u64,
     /// Signal that triggers the FSM
     pub trigger: Port,
-    pos: Option<errors::Span>,
+    pos: GPosIdx,
 }
 impl Fsm {
     pub fn new(name: Id, states: u64, trigger: Port) -> Self {
@@ -361,7 +364,7 @@ impl Fsm {
             name,
             states,
             trigger,
-            pos: None,
+            pos: GPosIdx::UNKNOWN,
         }
     }
 
@@ -397,13 +400,13 @@ impl Fsm {
 }
 
 impl errors::WithPos for Fsm {
-    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+    fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
     }
 
-    fn copy_span(&self) -> Option<errors::Span> {
-        self.pos.clone()
+    fn copy_span(&self) -> GPosIdx {
+        self.pos
     }
 }
 

@@ -1,8 +1,8 @@
 use crate::{
-    bind_map::BindMap,
     core,
     errors::{Error, FilamentResult, WithPos},
     event_checker::ast,
+    utils::BindMap,
     visitor::{Bindings, ResolvedInstance},
 };
 use itertools::Itertools;

@@ -1,10 +1,10 @@
-use itertools::Itertools;
-
 use super::{ConcreteInvoke, Context, FilSolver, THIS};
 use crate::core::WithTime;
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::event_checker::ast::{self, Constraint, CBT};
+use crate::utils::GPosIdx;
 use crate::visitor;
+use itertools::Itertools;
 use std::iter;
 
 // For connect statements of the form:
@@ -32,7 +32,7 @@ fn check_connect(
                 Constraint::from(e)
                     .add_note(
                         format!("Source is available for {}", guarantee),
-                        src_pos.clone(),
+                        src_pos,
                     )
                     .add_note(
                         format!("Destination's requirement {}", requirement),
@@ -226,7 +226,7 @@ fn check_component(
             )
             .add_note(
                 format!("Component defines the constraint {constraint}"),
-                None,
+                GPosIdx::UNKNOWN,
             ));
         } else {
             ctx.add_fact(constraint.clone())

@@ -1,16 +1,15 @@
 pub mod backend;
 pub mod bind_check;
-pub mod bind_map;
 pub mod cmdline;
 pub mod core;
 pub mod dump_interface;
 pub mod errors;
 pub mod event_checker;
 pub mod frontend;
-// pub mod interface_infer;
 pub mod interval_checking;
 pub mod lower;
 pub mod max_states;
 pub mod phantom_check;
 pub mod resolver;
+pub mod utils;
 pub mod visitor;

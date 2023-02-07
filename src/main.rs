@@ -7,7 +7,8 @@ use codespan_reporting::{
 };
 use filament::{
     backend, bind_check, cmdline, dump_interface, errors, interval_checking,
-    lower, max_states, phantom_check, resolver::Resolver, visitor::Transform,
+    lower, max_states, phantom_check, resolver::Resolver,
+    utils::GlobalPositionTable, visitor::Transform,
 };
 
 // Prints out the interface for main component in the input program.
@@ -75,22 +76,25 @@ fn main() {
             let mut file_map = HashMap::new();
             let mut files = SimpleFiles::new();
             for (name, file) in err.files() {
-                let idx = files.add(name.clone(), file);
+                let idx = files.add(name.to_string().clone(), file);
                 file_map.insert(name, idx);
             }
 
             // Construct mapping from files to indices
+            let table = GlobalPositionTable::as_ref();
             let mut labels = vec![];
             let mut notes = vec![];
             for (idx, (msg, pos)) in err.notes.iter().enumerate() {
-                if let Some(pos) = pos {
+                if let Some(p) = pos.into_option() {
+                    let pos = table.get_pos(p.0);
+                    let (file, _) = table.get_file_info(p.0);
                     let l = Label::new(
                         if idx == 0 {
                             LabelStyle::Primary
                         } else {
                             LabelStyle::Secondary
                         },
-                        file_map[&pos.file],
+                        file_map[file],
                         pos.start..pos.end,
                     );
                     labels.push(l.with_message(msg));

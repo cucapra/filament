@@ -1,5 +1,6 @@
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
+use crate::utils::GPosIdx;
 use crate::visitor;
 use std::collections::HashSet;
 
@@ -54,7 +55,7 @@ impl visitor::Transform for PhantomCheck {
                     ).add_note("Invocation uses phantom event", ev.copy_span())
                      .add_note("Event is a phantom event", e.copy_span())
                      .add_note("Previous use", prev_use.copy_span())
-                     .add_note("Phantom ports are compiled away and cannot be used for resource sharing", None));
+                     .add_note("Phantom ports are compiled away and cannot be used for resource sharing", GPosIdx::UNKNOWN));
                 }
             }
         }
@@ -77,7 +78,7 @@ impl visitor::Transform for PhantomCheck {
                         ).add_note("Invoke provides phantom event", ev.copy_span())
                          .add_note("Event is a phantom event", e.copy_span())
                          .add_note("Instance's event is not phantom", eb.copy_span())
-                         .add_note("Phantom ports are compiled away and cannot be used by subcomponents", None));
+                         .add_note("Phantom ports are compiled away and cannot be used by subcomponents", GPosIdx::UNKNOWN));
                 }
             }
         }

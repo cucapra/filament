@@ -1,10 +1,7 @@
 use derivative::Derivative;
 
 use super::{Binding, Range, Time, TimeRep, TimeSub, WithTime};
-use crate::{
-    errors::{self, FilamentResult},
-    interval_checking::SExp,
-};
+use crate::{errors::FilamentResult, interval_checking::SExp, utils::GPosIdx};
 use std::fmt::Display;
 
 /// Ordering operator for constraints
@@ -25,7 +22,7 @@ impl std::fmt::Display for OrderOp {
     }
 }
 
-type Extra = Vec<(String, Option<errors::Span>)>;
+type Extra = Vec<(String, GPosIdx)>;
 
 // A ordering constraint on time expressions
 #[derive(Clone, Derivative, Eq)]
@@ -162,20 +159,14 @@ impl<T: TimeRep> Constraint<T> {
         }
     }
 
-    pub fn notes(
-        &self,
-    ) -> impl Iterator<Item = &(String, Option<errors::Span>)> {
+    pub fn notes(&self) -> impl Iterator<Item = &(String, GPosIdx)> {
         match self {
             Constraint::Base { base } => base.extra.iter(),
             Constraint::Sub { base } => base.extra.iter(),
         }
     }
 
-    pub fn add_note<S: ToString>(
-        mut self,
-        msg: S,
-        pos: Option<errors::Span>,
-    ) -> Self {
+    pub fn add_note<S: ToString>(mut self, msg: S, pos: GPosIdx) -> Self {
         match &mut self {
             Constraint::Base { base } => {
                 base.extra.push((msg.to_string(), pos))

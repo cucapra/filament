@@ -93,7 +93,7 @@ impl visitor::Transform for CompileInvokes {
             // Define the low-level invoke
             let low_inv =
                 ast::Invoke::new(bind.clone(), instance, abstract_vars, None)
-                    .set_span(pos.clone())
+                    .set_span(pos)
                     .into();
             connects.push(low_inv);
 
@@ -109,7 +109,7 @@ impl visitor::Transform for CompileInvokes {
                     port,
                     None,
                 )
-                .set_span(pos.clone());
+                .set_span(pos);
                 connects.push(con.into())
             }
 

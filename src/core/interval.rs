@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::errors;
+use crate::{errors, utils::GPosIdx};
 
 use super::{Binding, Constraint, ConstraintBase, TimeRep, WithTime};
 
@@ -12,7 +12,7 @@ where
 {
     pub start: T,
     pub end: T,
-    pos: Option<errors::Span>,
+    pos: GPosIdx,
 }
 
 impl<T> Range<T>
@@ -28,7 +28,7 @@ where
             ))
             .add_note(
                 "Interval's end time must be greater than the start time",
-                self.pos.clone(),
+                self.pos,
             ),
         )
     }
@@ -64,7 +64,7 @@ where
         Self {
             start,
             end,
-            pos: None,
+            pos: GPosIdx::UNKNOWN,
         }
     }
 }
@@ -79,13 +79,13 @@ impl<T> errors::WithPos for Range<T>
 where
     T: TimeRep,
 {
-    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+    fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
     }
 
-    fn copy_span(&self) -> Option<errors::Span> {
-        self.pos.clone()
+    fn copy_span(&self) -> GPosIdx {
+        self.pos
     }
 }
 

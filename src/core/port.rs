@@ -1,5 +1,5 @@
 use super::{Binding, Id, Range, TimeRep, WithTime};
-use crate::errors::{self, WithPos};
+use crate::{errors::WithPos, utils::GPosIdx};
 use std::fmt::Display;
 
 #[derive(Clone)]
@@ -43,7 +43,7 @@ where
     /// Bitwidth of the port
     pub bitwidth: W,
     /// Source position
-    pos: Option<errors::Span>,
+    pos: GPosIdx,
 }
 
 impl<T, W> PortDef<T, W>
@@ -56,7 +56,7 @@ where
             name,
             liveness,
             bitwidth,
-            pos: None,
+            pos: GPosIdx::UNKNOWN,
         }
     }
 }
@@ -74,13 +74,13 @@ where
     T: TimeRep,
     W: Clone,
 {
-    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+    fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
     }
 
-    fn copy_span(&self) -> Option<errors::Span> {
-        self.pos.clone()
+    fn copy_span(&self) -> GPosIdx {
+        self.pos
     }
 }
 impl<T, W> WithTime<T> for PortDef<T, W>
@@ -103,7 +103,7 @@ pub struct InterfaceDef {
     /// Event that this port is an evidence of
     pub event: Id,
     // Position
-    pos: Option<errors::Span>,
+    pos: GPosIdx,
 }
 impl Display for InterfaceDef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -116,18 +116,18 @@ impl InterfaceDef {
         Self {
             name,
             event,
-            pos: None,
+            pos: GPosIdx::UNKNOWN,
         }
     }
 }
 
 impl WithPos for InterfaceDef {
-    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+    fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
     }
 
-    fn copy_span(&self) -> Option<errors::Span> {
-        self.pos.clone()
+    fn copy_span(&self) -> GPosIdx {
+        self.pos
     }
 }

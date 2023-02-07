@@ -1,5 +1,6 @@
-use crate::errors::{self, Error, FilamentResult, WithPos};
+use crate::errors::{Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
+use crate::utils::GPosIdx;
 use itertools::Itertools;
 use rsmt2::{SmtConf, Solver};
 
@@ -12,18 +13,14 @@ pub struct ShareConstraints {
     /// Delays bounded by this share constraint
     delays: Vec<ast::EventBind>,
     /// Additional error information
-    notes: Vec<(String, Option<errors::Span>)>,
+    notes: Vec<(String, GPosIdx)>,
 }
 impl ShareConstraints {
-    pub fn add_note<S: Into<String>>(
-        &mut self,
-        msg: S,
-        pos: Option<errors::Span>,
-    ) {
+    pub fn add_note<S: Into<String>>(&mut self, msg: S, pos: GPosIdx) {
         self.notes.push((msg.into(), pos));
     }
 
-    pub fn notes(self) -> Vec<(String, Option<errors::Span>)> {
+    pub fn notes(self) -> Vec<(String, GPosIdx)> {
         self.notes
     }
 
@@ -31,7 +28,7 @@ impl ShareConstraints {
         &mut self,
         start: ast::TimeRep,
         end: (ast::TimeRep, ast::TimeSub),
-        pos: Option<errors::Span>,
+        pos: GPosIdx,
     ) {
         self.add_note(
             format!(
@@ -170,7 +167,7 @@ impl FilSolver {
                 let mut err =
                     Error::malformed(format!("Cannot prove constraint {fact}"));
                 for (msg, pos) in fact.notes() {
-                    err = err.add_note(msg, pos.clone())
+                    err = err.add_note(msg, *pos)
                 }
                 return Err(err);
             }
@@ -183,7 +180,7 @@ impl FilSolver {
                     ));
                     err = err.add_note("Event's delay must be longer than the difference between minimum start time and maximum end time of all other bindings.", share.delays[idx].copy_span());
                     for (msg, pos) in share.notes() {
-                        err = err.add_note(msg, pos.clone())
+                        err = err.add_note(msg, pos)
                     }
                     return Err(err);
                 }

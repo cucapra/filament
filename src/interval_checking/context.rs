@@ -1,7 +1,8 @@
 use super::{ShareConstraints, THIS};
 use crate::core::{self, TimeRep, WithTime};
-use crate::errors::{self, Error, FilamentResult, WithPos};
+use crate::errors::{Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
+use crate::utils::GPosIdx;
 use crate::visitor;
 use std::collections::{HashMap, HashSet};
 
@@ -76,7 +77,7 @@ impl<'a> ConcreteInvoke<'a> {
 }
 
 type FactMap = Vec<ast::Constraint>;
-type BindsWithLoc = (Option<errors::Span>, Vec<ast::TimeRep>);
+type BindsWithLoc = (GPosIdx, Vec<ast::TimeRep>);
 
 pub struct Context<'a> {
     /// Signatures for external primitives
@@ -160,7 +161,7 @@ impl<'a> Context<'a> {
         &mut self,
         instance: ast::Id,
         binds: &ast::Binding,
-        pos: Option<errors::Span>,
+        pos: GPosIdx,
     ) {
         self.event_binds
             .entry(instance)
@@ -311,8 +312,8 @@ impl<'a> Context<'a> {
                             return Err(Error::malformed(format!(
                                 "Bindings for {instance}.{abs} uses multiple events: {first} and {event}. Sharing using multiple events is not supported.",
                             ))
-                            .add_note(format!("Location provides binding {instance}.{abs}={first}"), fpos.clone())
-                            .add_note(format!("Location provides binding {instance}.{abs}={event}"), epos.clone()));
+                            .add_note(format!("Location provides binding {instance}.{abs}={first}"), *fpos)
+                            .add_note(format!("Location provides binding {instance}.{abs}={event}"), *epos));
                         }
                     }
                 }
@@ -325,10 +326,10 @@ impl<'a> Context<'a> {
     fn sharing_contraints(
         instance: &ast::Id,
         abs: &ast::Id,
-        (i_event, spi): (&ast::TimeRep, Option<errors::Span>),
-        (k_event, spk): (&ast::TimeRep, Option<errors::Span>),
+        (i_event, spi): (&ast::TimeRep, GPosIdx),
+        (k_event, spk): (&ast::TimeRep, GPosIdx),
         i_delay: &core::TimeSub<core::Time<u64>>,
-        id_pos: Option<errors::Span>,
+        id_pos: GPosIdx,
     ) -> core::Constraint<core::Time<u64>> {
         ast::Constraint::from(ast::CBS::gte(
             i_event.clone().sub(k_event.clone()),
@@ -385,8 +386,8 @@ impl<'a> Context<'a> {
                         constraints.push(Context::sharing_contraints(
                             &instance,
                             abs,
-                            (&bi[idx], spi.clone()),
-                            (&bk[idx], spk.clone()),
+                            (&bi[idx], *spi),
+                            (&bk[idx], *spk),
                             &i_delay,
                             eb.copy_span(),
                         ))
@@ -394,7 +395,7 @@ impl<'a> Context<'a> {
                     share.add_bind_info(
                         bi[idx].clone(),
                         (bi[idx].clone(), i_delay),
-                        spi.clone(),
+                        *spi,
                     );
                 }
 

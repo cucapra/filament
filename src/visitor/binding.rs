@@ -1,6 +1,7 @@
 use crate::errors::WithPos;
+use crate::utils::GPosIdx;
 use crate::{
-    errors::{self, Error, FilamentResult},
+    errors::{Error, FilamentResult},
     event_checker::ast,
 };
 use std::collections::HashMap;
@@ -13,7 +14,7 @@ pub enum ResolvedInstance<'a> {
     },
     Concrete {
         sig: &'a ast::Signature<u64>,
-        pos: Option<errors::Span>,
+        pos: GPosIdx,
     },
 }
 
@@ -26,12 +27,18 @@ impl<'a> ResolvedInstance<'a> {
     }
 
     pub fn concrete(sig: &'a ast::Signature<u64>) -> Self {
-        Self::Concrete { sig, pos: None }
+        Self::Concrete {
+            sig,
+            pos: GPosIdx::UNKNOWN,
+        }
     }
 }
 impl<'a> From<&'a ast::Signature<u64>> for ResolvedInstance<'a> {
     fn from(sig: &'a ast::Signature<u64>) -> Self {
-        Self::Concrete { sig, pos: None }
+        Self::Concrete {
+            sig,
+            pos: GPosIdx::UNKNOWN,
+        }
     }
 }
 
