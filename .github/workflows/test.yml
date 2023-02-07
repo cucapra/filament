@@ -30,6 +30,7 @@ jobs:
           # Register Icarus
           fud register icarus-verilog -p "$(pwd)/calyx/fud/icarus/icarus.py"
           # Register filament relevant stages
+          pip install cocotb
           fud register filament -p "${GITHUB_WORKSPACE}/fud/filament.py"
           fud config stages.filament.exec "${GITHUB_WORKSPACE}/target/debug/filament"
           fud config stages.filament.library "${GITHUB_WORKSPACE}"
