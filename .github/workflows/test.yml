@@ -16,11 +16,11 @@ jobs:
           git pull
 
       - name: Checkout commit that triggered run
+        uses: actions/checkout@master
         working-directory: /home
-        run: |
-          git clone https://github.com/cucapra/filament.git
-          git fetch --all
-          git checkout $GITHUB_SHA
+        with:
+          name: cucapra/filament
+          refs: ${{ github.sha }}
 
       - name: Configure fud
         run: |
