@@ -2,7 +2,10 @@ use super::{
     Binding, Constraint, ConstraintBase, Id, InterfaceDef, PortDef, PortParam,
     Range, Time, TimeRep, TimeSub,
 };
-use crate::errors::{self, Error, FilamentResult, WithPos};
+use crate::{
+    errors::{Error, FilamentResult, WithPos},
+    utils::GPosIdx,
+};
 use itertools::Itertools;
 use std::{collections::HashMap, fmt::Display};
 
@@ -15,20 +18,20 @@ where
     pub event: Id,
     pub delay: TimeSub<T>,
     pub default: Option<T>,
-    pos: Option<errors::Span>,
+    pos: GPosIdx,
 }
 
 impl<T> WithPos for EventBind<T>
 where
     T: Clone + TimeRep,
 {
-    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+    fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
     }
 
-    fn copy_span(&self) -> Option<errors::Span> {
-        self.pos.clone()
+    fn copy_span(&self) -> GPosIdx {
+        self.pos
     }
 }
 
@@ -41,7 +44,7 @@ where
             event,
             delay,
             default,
-            pos: None,
+            pos: GPosIdx::UNKNOWN,
         }
     }
 }

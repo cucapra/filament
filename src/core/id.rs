@@ -1,13 +1,16 @@
-use crate::errors::{self, WithPos};
+use crate::{errors::WithPos, utils::GPosIdx};
 use derivative::Derivative;
 
-#[derive(Derivative, Clone, PartialOrd, Ord)]
-#[derivative(Hash, Eq, Debug)]
+#[derive(Derivative, Clone)]
+#[derivative(Hash, Eq, Debug, PartialOrd, Ord)]
 pub struct Id {
     id: String,
     #[derivative(Hash = "ignore")]
     #[derivative(Debug = "ignore")]
-    pos: Option<errors::Span>,
+    #[derivative(PartialEq = "ignore")]
+    #[derivative(PartialOrd = "ignore")]
+    #[derivative(Ord = "ignore")]
+    pos: GPosIdx,
 }
 
 impl Id {
@@ -16,13 +19,13 @@ impl Id {
     }
 }
 impl WithPos for Id {
-    fn set_span(mut self, sp: Option<errors::Span>) -> Self {
+    fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
     }
 
-    fn copy_span(&self) -> Option<errors::Span> {
-        self.pos.clone()
+    fn copy_span(&self) -> GPosIdx {
+        self.pos
     }
 }
 impl std::fmt::Display for Id {
@@ -44,14 +47,17 @@ impl From<&str> for Id {
     fn from(s: &str) -> Self {
         Id {
             id: s.to_string(),
-            pos: None,
+            pos: GPosIdx::UNKNOWN,
         }
     }
 }
 
 impl From<String> for Id {
     fn from(s: String) -> Self {
-        Id { id: s, pos: None }
+        Id {
+            id: s,
+            pos: GPosIdx::UNKNOWN,
+        }
     }
 }
 

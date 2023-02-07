@@ -4,18 +4,16 @@
 use super::ast::{self, InterfaceDef};
 use crate::core::{Time, TimeRep, TimeSub};
 use crate::errors::{self, FilamentResult, WithPos};
+use crate::utils::{FileIdx, GPosIdx, GlobalPositionTable};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
 use std::path::Path;
-use std::rc::Rc;
 
 /// Data associated with parsing the file.
 #[derive(Clone)]
 struct UserData {
-    /// Input to the parser
-    pub input: Rc<str>,
-    /// Path of the file
-    pub file: Rc<str>,
+    /// Index to the current file
+    pub file: FileIdx,
 }
 
 type ParseResult<T> = Result<T, Error<Rule>>;
@@ -44,38 +42,43 @@ pub enum Port {
 pub struct FilamentParser;
 
 impl FilamentParser {
-    /// Parse a Calyx program into an AST representation.
     pub fn parse_file(path: &Path) -> FilamentResult<ast::Namespace> {
+        let time = std::time::Instant::now();
         let content = &fs::read(path).map_err(|err| {
             errors::Error::invalid_file(format!(
-                "Failed to read {}: {}",
+                "Failed to read {}: {err}",
                 path.to_string_lossy(),
-                err
             ))
         })?;
-        let string_content = std::str::from_utf8(content)?;
-
-        let user_data = UserData {
-            input: Rc::from(string_content),
-            file: Rc::from(path.to_string_lossy()),
-        };
-        let inputs = FilamentParser::parse_with_userdata(
-            Rule::file,
-            string_content,
-            user_data,
-        )
-        .map_err(|e| e.with_path(&path.to_string_lossy()))?;
+        // Add a new file to the position table
+        let string_content = std::str::from_utf8(content)?.to_string();
+        let file = GlobalPositionTable::as_mut()
+            .add_file(path.to_string_lossy().to_string(), string_content);
+        let user_data = UserData { file };
+        let content = GlobalPositionTable::as_ref().get_source(file);
+        // Parse the file
+        let inputs =
+            FilamentParser::parse_with_userdata(Rule::file, content, user_data)
+                .map_err(|e| e.with_path(&path.to_string_lossy()))?;
         let input = inputs.single()?;
-        Ok(FilamentParser::file(input)?)
+        let out = FilamentParser::file(input)?;
+        log::info!(
+            "Parsed `{}` in {}ms",
+            path.to_string_lossy(),
+            time.elapsed().as_millis()
+        );
+        Ok(out)
     }
 
-    fn get_span(node: &Node) -> errors::Span {
+    fn get_span(node: &Node) -> GPosIdx {
         let ud = node.user_data();
-        errors::Span::new(
-            node.as_span(),
-            Rc::clone(&ud.file),
-            Rc::clone(&ud.input),
-        )
+        let sp = node.as_span();
+        let pos = GlobalPositionTable::as_mut().add_pos(
+            ud.file,
+            sp.start(),
+            sp.end(),
+        );
+        GPosIdx(pos)
     }
 }
 
@@ -91,7 +94,7 @@ impl FilamentParser {
     fn identifier(input: Node) -> ParseResult<ast::Id> {
         let sp = Self::get_span(&input);
         let id = ast::Id::from(input.as_str());
-        Ok(id.set_span(Some(sp)))
+        Ok(id.set_span(sp))
     }
 
     fn char(input: Node) -> ParseResult<&str> {
@@ -128,7 +131,7 @@ impl FilamentParser {
         let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [time(start), time(end)] => ast::Range::new(start, end).set_span(Some(sp))
+            [time(start), time(end)] => ast::Range::new(start, end).set_span(sp)
         ))
     }
 
@@ -154,7 +157,7 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.clone().into_children();
             [interface(time_var), identifier(name), port_width(_)] => {
-                Port::Int(ast::InterfaceDef::new(name, time_var).set_span(Some(sp)))
+                Port::Int(ast::InterfaceDef::new(name, time_var).set_span(sp))
             },
             [identifier(name), port_width(bitwidth)] => {
                 match bitwidth {
@@ -163,7 +166,7 @@ impl FilamentParser {
                 }
             },
             [interval_range(range), identifier(name), port_width(bitwidth)] => {
-                Port::Pd(ast::PortDef::new(name, range, bitwidth).set_span(Some(sp)))
+                Port::Pd(ast::PortDef::new(name, range, bitwidth).set_span(sp))
             }
         ))
     }
@@ -180,8 +183,8 @@ impl FilamentParser {
         let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [identifier(event), delay(d), time(t)] => ast::EventBind::new(event, d, Some(t)).set_span(Some(sp)),
-            [identifier(event), delay(d)] => ast::EventBind::new(event, d, None).set_span(Some(sp)),
+            [identifier(event), delay(d), time(t)] => ast::EventBind::new(event, d, Some(t)).set_span(sp),
+            [identifier(event), delay(d)] => ast::EventBind::new(event, d, None).set_span(sp),
         ))
     }
 
@@ -269,7 +272,7 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.clone().into_children();
             [identifier(name), identifier(component), conc_params(params)] => vec![
-                ast::Instance::new(name, component, params).set_span(Some(sp)).into()
+                ast::Instance::new(name, component, params).set_span(sp).into()
             ],
             [identifier(name), identifier(component), conc_params(params), invoke_args((abstract_vars, ports))] => {
                 // Upper case the first letter of name
@@ -279,8 +282,8 @@ impl FilamentParser {
                 if iname == name {
                     input.error("Generated Instance name conflicts with original name");
                 }
-                let instance = ast::Instance::new(iname.clone(), component, params).set_span(Some(sp.clone())).into();
-                let invoke = ast::Invoke::new(name, iname, abstract_vars, Some(ports)).set_span(Some(sp)).into();
+                let instance = ast::Instance::new(iname.clone(), component, params).set_span(sp).into();
+                let invoke = ast::Invoke::new(name, iname, abstract_vars, Some(ports)).set_span(sp).into();
                 vec![instance, invoke]
             }
         ))
@@ -295,7 +298,7 @@ impl FilamentParser {
             [identifier(name)] => ast::Port::this(name),
             [identifier(comp), identifier(name)] => ast::Port::comp(comp, name),
         );
-        Ok(n.set_span(Some(sp)))
+        Ok(n.set_span(sp))
     }
 
     fn arguments(input: Node) -> ParseResult<Vec<ast::Port>> {
@@ -330,12 +333,12 @@ impl FilamentParser {
                 identifier(bind),
                 identifier(comp),
                 invoke_args((abstract_vars, ports))
-            ] => ast::Invoke::new(bind, comp, abstract_vars, Some(ports)).set_span(Some(span)),
+            ] => ast::Invoke::new(bind, comp, abstract_vars, Some(ports)).set_span(span),
             [
                 identifier(bind),
                 identifier(comp),
                 time_args(abstract_vars),
-            ] => ast::Invoke::new(bind, comp, abstract_vars, None).set_span(Some(span))
+            ] => ast::Invoke::new(bind, comp, abstract_vars, None).set_span(span)
         ))
     }
     fn gte(input: Node) -> ParseResult<()> {
@@ -450,13 +453,13 @@ impl FilamentParser {
             input.into_children();
             [port(p)] => p.into(),
             [port(p), guard(g)] => {
-                ast::Guard::or(p.into(), g).set_span(Some(sp))
+                ast::Guard::or(p.into(), g).set_span(sp)
             }
         ))
     }
 
     fn connect(input: Node) -> ParseResult<ast::Connect> {
-        let span = Some(Self::get_span(&input));
+        let span = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
             [port(dst), port(src)] => ast::Connect::new(dst, src, None).set_span(span),
@@ -467,7 +470,7 @@ impl FilamentParser {
     }
 
     fn fsm(input: Node) -> ParseResult<ast::Fsm> {
-        let span = Some(Self::get_span(&input));
+        let span = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
             [identifier(name), bitwidth(states), port(trigger)] => ast::Fsm::new(name, states, trigger).set_span(span)
