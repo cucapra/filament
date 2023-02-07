@@ -20,6 +20,7 @@ jobs:
         with:
           name: cucapra/filament
           refs: ${{ github.sha }}
+          path: /home
 
       - name: Configure fud
         working-directory: /home
