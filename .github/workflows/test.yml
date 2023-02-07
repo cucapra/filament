@@ -27,10 +27,8 @@ jobs:
           mkdir -p $HOME/.config
           cp -r /root/.config/* $HOME/.config
           # Register Icarus
-          cd /home/calyx
           fud register icarus-verilog -p "$(pwd)/calyx/fud/icarus/icarus.py"
           # Register filament relevant stages
-          cd /home/filament
           fud register filament -p "$(pwd)/filament/fud/filament.py"
           fud config stages.filament.exec "$(pwd)/filament/target/debug/filament"
           fud config stages.filament.library "$(pwd)/filament"
