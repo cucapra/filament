@@ -16,10 +16,10 @@ jobs:
           git pull
 
       - name: Checkout commit that triggered run
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
         with:
-          name: cucapra/filament
-          refs: ${{ github.sha }}
+          repository: cucapra/filament
+          ref: ${{ github.sha }}
           path: /home
 
       - name: Configure fud
