@@ -8,6 +8,11 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/cucapra/calyx:latest
     steps:
+      - name: Install z3
+        run: |
+          apt-get update
+          apt-get install -y z3
+
       - name: Checkout Calyx latest
         working-directory: /home/calyx
         run: |
