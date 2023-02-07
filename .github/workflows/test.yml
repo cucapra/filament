@@ -11,6 +11,7 @@ jobs:
       - name: Checkout Calyx latest
         working-directory: /home/calyx
         run: |
+          git fetch
           git pull
 
       - name: Checkout commit that triggered run
