@@ -45,7 +45,5 @@ jobs:
           command: build
 
       - name: Test
-        working-directory: /home/filament
-        run: |
-          cd ${GITHUB_WORKSPACE}/filament
+        run:
           runt -d -o fail -j 1 --max-futures 10
