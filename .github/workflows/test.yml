@@ -20,7 +20,6 @@ jobs:
         with:
           repository: cucapra/filament
           ref: ${{ github.sha }}
-          path: /home
 
       - name: Configure fud
         working-directory: /home
@@ -31,17 +30,17 @@ jobs:
           # Register Icarus
           fud register icarus-verilog -p "$(pwd)/calyx/fud/icarus/icarus.py"
           # Register filament relevant stages
-          fud register filament -p "$(pwd)/filament/fud/filament.py"
-          fud config stages.filament.exec "$(pwd)/filament/target/debug/filament"
-          fud config stages.filament.library "$(pwd)/filament"
+          fud register filament -p "${GITHUB_WORKSPACE}/filament/fud/filament.py"
+          fud config stages.filament.exec "${GITHUB_WORKSPACE}filament/target/debug/filament"
+          fud config stages.filament.library "${GITHUB_WORKSPACE}filament"
 
       - name: Build Filament
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --manifest-path /home/filament/Cargo.toml
 
       - name: Test
         working-directory: /home/filament
         run: |
+          cd ${GITHUB_WORKSPACE}/filament
           runt -d -o fail -j 1 --max-futures 10
