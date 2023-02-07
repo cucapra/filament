@@ -22,6 +22,7 @@ jobs:
           refs: ${{ github.sha }}
 
       - name: Configure fud
+        working-directory: /home
         run: |
           # Copy fud configuration
           mkdir -p $HOME/.config
