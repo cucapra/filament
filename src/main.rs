@@ -58,7 +58,10 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     log::info!("{ns}");
 
     // Monomorphize the program.
+    let t = Instant::now();
     let ns = monomorphize::Monomorphize::transform(ns)?;
+    log::info!("Monomorphize: {}ms", t.elapsed().as_millis());
+    log::info!("{ns}");
 
     // Compilation
     let t = Instant::now();

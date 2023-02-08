@@ -6,6 +6,7 @@ use crate::{
 use itertools::Itertools;
 use std::fmt::Display;
 
+#[derive(Clone)]
 pub struct Port {
     pub typ: PortType,
     pos: GPosIdx,
@@ -37,6 +38,7 @@ impl errors::WithPos for Port {
     }
 }
 
+#[derive(Clone)]
 pub enum PortType {
     ThisPort(Id),
     InvPort { invoke: Id, name: Id },
@@ -78,39 +80,40 @@ impl std::fmt::Display for PortType {
     }
 }
 
+#[derive(Clone)]
 /// Command in a component
-pub enum Command<Time, Width> {
+pub enum Command<Time, Width: Clone> {
     Invoke(Invoke<Time>),
     Instance(Instance<Width>),
     Connect(Connect),
     Fsm(Fsm),
 }
 
-impl<T, W> From<Fsm> for Command<T, W> {
+impl<T, W: Clone> From<Fsm> for Command<T, W> {
     fn from(v: Fsm) -> Self {
         Self::Fsm(v)
     }
 }
 
-impl<T, W> From<Connect> for Command<T, W> {
+impl<T, W: Clone> From<Connect> for Command<T, W> {
     fn from(v: Connect) -> Self {
         Self::Connect(v)
     }
 }
 
-impl<T, W> From<Instance<W>> for Command<T, W> {
+impl<T, W: Clone> From<Instance<W>> for Command<T, W> {
     fn from(v: Instance<W>) -> Self {
         Self::Instance(v)
     }
 }
 
-impl<T, W> From<Invoke<T>> for Command<T, W> {
+impl<T, W: Clone> From<Invoke<T>> for Command<T, W> {
     fn from(v: Invoke<T>) -> Self {
         Self::Invoke(v)
     }
 }
 
-impl<T: Display, W> Display for Command<T, W> {
+impl<T: Display, W: Clone> Display for Command<T, W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Command::Invoke(inv) => write!(f, "{}", inv),
@@ -121,8 +124,9 @@ impl<T: Display, W> Display for Command<T, W> {
     }
 }
 
+#[derive(Clone)]
 /// A new component instance
-pub struct Instance<Width> {
+pub struct Instance<Width: Clone> {
     /// Name of the instance.
     pub name: Id,
     /// Name of the component
@@ -132,7 +136,7 @@ pub struct Instance<Width> {
     /// Source position
     pos: GPosIdx,
 }
-impl<W> Instance<W> {
+impl<W: Clone> Instance<W> {
     pub fn new(name: Id, component: Id, bindings: Vec<W>) -> Self {
         Instance {
             name,
@@ -142,12 +146,12 @@ impl<W> Instance<W> {
         }
     }
 }
-impl<W> std::fmt::Display for Instance<W> {
+impl<W: Clone> std::fmt::Display for Instance<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} := new {}", self.name, self.component)
     }
 }
-impl<W> WithPos for Instance<W> {
+impl<W: Clone> WithPos for Instance<W> {
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
@@ -158,6 +162,7 @@ impl<W> WithPos for Instance<W> {
     }
 }
 
+#[derive(Clone)]
 /// An Invocation
 pub struct Invoke<T> {
     /// Name of the variable being assigned
@@ -239,6 +244,7 @@ impl<T> errors::WithPos for Invoke<T> {
     }
 }
 
+#[derive(Clone)]
 /// A Guard expression
 pub enum Guard {
     Or(Box<Guard>, Box<Guard>, GPosIdx),
@@ -282,6 +288,7 @@ impl std::fmt::Display for Guard {
     }
 }
 
+#[derive(Clone)]
 /// A Connection between ports
 pub struct Connect {
     /// Destination port
@@ -328,6 +335,7 @@ impl errors::WithPos for Connect {
     }
 }
 
+#[derive(Clone)]
 /// Representation of a finite state machine
 pub struct Fsm {
     /// Name of the FSM

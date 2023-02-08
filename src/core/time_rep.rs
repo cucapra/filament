@@ -5,6 +5,7 @@ use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 use std::{fmt::Debug, fmt::Display};
 
+#[derive(Default)]
 /// Represents a binding from names to time variables.
 pub struct Binding<T> {
     map: LinkedHashMap<Id, T>,
@@ -31,6 +32,10 @@ impl<T> Binding<T> {
 
     pub fn extend(&mut self, other: Vec<(Id, T)>) {
         self.map.extend(other);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
     }
 }
 
