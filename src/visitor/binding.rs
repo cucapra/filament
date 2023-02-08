@@ -93,9 +93,11 @@ pub struct Bindings<'a> {
     comps: Vec<ast::Component>,
 }
 impl<'a> Bindings<'a> {
-    pub fn new(ext_sigs: HashMap<ast::Id, &'a ast::Signature>) -> Self {
+    pub fn new(
+        ext_sigs: impl IntoIterator<Item = (ast::Id, &'a ast::Signature)>,
+    ) -> Self {
         Self {
-            ext_sigs,
+            ext_sigs: ext_sigs.into_iter().collect(),
             comps: Vec::new(),
         }
     }

@@ -6,6 +6,7 @@ use crate::{
     visitor::{Bindings, ResolvedInstance},
 };
 use itertools::Itertools;
+use std::collections::HashMap;
 
 const THIS: &str = "_this";
 
@@ -281,7 +282,7 @@ impl BindCheck<'_> {
 
 pub fn check(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
     let comps = ns.components.drain(..).collect_vec();
-    let sigs = ns.signatures();
+    let sigs: HashMap<_, _> = ns.signatures().collect();
     for sig in sigs.values() {
         BindCheck::check_sig(sig)?;
     }

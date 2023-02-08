@@ -5,6 +5,7 @@ use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
 use crate::visitor;
 use itertools::Itertools;
+use std::collections::HashMap;
 use std::iter;
 
 // For connect statements of the form:
@@ -276,7 +277,7 @@ fn check_component(
 /// the interval requirements to be proven.
 pub fn check(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
     let comps = ns.components.drain(..).collect_vec();
-    let sigs = ns.signatures();
+    let sigs: HashMap<_, _> = ns.signatures().collect();
     let mut solver = FilSolver::new()?;
 
     // Check that all signatures are well formed

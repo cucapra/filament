@@ -9,6 +9,7 @@ pub mod frontend;
 pub mod interval_checking;
 pub mod lower;
 pub mod max_states;
+pub mod monomorphize;
 pub mod phantom_check;
 pub mod resolver;
 pub mod utils;

@@ -234,8 +234,7 @@ where
                 .iter()
                 .map(|eb| &eb.event)
                 .cloned()
-                .zip(args.iter().cloned())
-                .collect(),
+                .zip(args.iter().cloned()),
         );
         // Skip the events that have been bound
         let remaining = self
@@ -250,6 +249,29 @@ where
 
         partial_map.extend(remaining);
         partial_map
+    }
+}
+
+impl<T: TimeRep, W: Clone> Signature<T, W> {
+    pub fn map<W0, F>(self, f: F) -> Signature<T, W0>
+    where
+        W0: Clone,
+        F: Fn(W) -> W0,
+    {
+        Signature {
+            name: self.name,
+            ports: self
+                .ports
+                .into_iter()
+                .map(|pd| PortDef::new(pd.name, pd.liveness, f(pd.bitwidth)))
+                .collect(),
+            outputs_idx: self.outputs_idx,
+            params: self.params,
+            unannotated_ports: self.unannotated_ports,
+            constraints: self.constraints,
+            events: self.events,
+            interface_signals: self.interface_signals,
+        }
     }
 }
 

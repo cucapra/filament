@@ -10,6 +10,15 @@ pub enum PortParam {
     Var(Id),
 }
 
+impl PortParam {
+    pub fn resolve(&self, bindings: &Binding<u64>) -> u64 {
+        match self {
+            PortParam::Const(c) => *c,
+            PortParam::Var(v) => *bindings.get(v),
+        }
+    }
+}
+
 impl From<Id> for PortParam {
     fn from(v: Id) -> Self {
         Self::Var(v)

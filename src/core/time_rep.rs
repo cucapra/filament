@@ -6,19 +6,15 @@ use linked_hash_map::LinkedHashMap;
 use std::{fmt::Debug, fmt::Display};
 
 /// Represents a binding from names to time variables.
-pub struct Binding<T>
-where
-    T: TimeRep,
-{
+pub struct Binding<T> {
     map: LinkedHashMap<Id, T>,
 }
 
-impl<T> Binding<T>
-where
-    T: TimeRep,
-{
-    pub fn new(map: LinkedHashMap<Id, T>) -> Self {
-        Self { map }
+impl<T> Binding<T> {
+    pub fn new(map: impl IntoIterator<Item = (Id, T)>) -> Self {
+        Self {
+            map: map.into_iter().collect(),
+        }
     }
 
     pub fn find(&self, n: &Id) -> Option<&T> {

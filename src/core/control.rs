@@ -199,11 +199,7 @@ where
     where
         I: Iterator<Item = Id>,
     {
-        Binding::new(
-            abstract_vars
-                .zip(self.abstract_vars.iter().cloned())
-                .collect(),
-        )
+        Binding::new(abstract_vars.zip(self.abstract_vars.iter().cloned()))
     }
 }
 impl<T: Display> Display for Invoke<T> {

@@ -7,7 +7,7 @@ use codespan_reporting::{
 };
 use filament::{
     backend, bind_check, cmdline, dump_interface, errors, interval_checking,
-    lower, max_states, phantom_check, resolver::Resolver,
+    lower, max_states, monomorphize, phantom_check, resolver::Resolver,
     utils::GlobalPositionTable, visitor::Transform,
 };
 
@@ -57,9 +57,12 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     log::info!("Lowering: {}ms", t.elapsed().as_millis());
     log::info!("{ns}");
 
+    // Monomorphize the program.
+    let ns = monomorphize::Monomorphize::transform(ns)?;
+
     // Compilation
     let t = Instant::now();
-    // backend::compile(ns, opts)?;
+    backend::compile(ns, opts)?;
     log::info!("Compilation: {}ms", t.elapsed().as_millis());
 
     Ok(())

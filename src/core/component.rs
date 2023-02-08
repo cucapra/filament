@@ -1,6 +1,6 @@
 use super::{Command, Id, Invoke, PortParam, Signature, Time, TimeRep};
 use crate::errors::{Error, FilamentResult, WithPos};
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 
 /// A component in Filament
 pub struct Component<Time, Width>
@@ -100,11 +100,12 @@ where
     W: Clone,
 {
     /// External signatures associated with the namespace
-    pub fn signatures(&self) -> HashMap<Id, &Signature<T, PortParam>> {
+    pub fn signatures(
+        &self,
+    ) -> impl Iterator<Item = (Id, &Signature<T, PortParam>)> {
         self.externs
             .iter()
             .flat_map(|(_, comps)| comps.iter().map(|s| (s.name.clone(), s)))
-            .collect()
     }
 }
 
