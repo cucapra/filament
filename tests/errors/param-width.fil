@@ -1,0 +1,6 @@
+import "primitives/core.fil";
+
+comp Mac[W]<G: 1>(@[G, G+1] a: W,) -> () {
+    A := new Add[32];
+    a0 := A<G>(a, a);
+}

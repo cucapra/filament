@@ -1,0 +1,45 @@
+import "primitives/core.fil";
+
+comp Mult[W]<G: 2>(
+  @interface[G] go_G: 1,
+  @[G, G+1] left: W,
+  @[G, G+1] right: W,
+) -> (
+  @[G+2, G+3] out: W,
+) {
+  ll := new Register[W]<G, G+3>(left);
+  lr := new Register[W]<G, G+3>(right);
+  m := new MultComb[W]<G+2>(ll.out, lr.out);
+  out = m.out;
+}
+
+comp Mac[W]<G: 2>(
+    @interface[G] go_G: 1,
+    @[G, G+1] l: W,
+    @[G, G+1] r: W,
+    @[G+2, G+3] acc: W,
+) -> (
+    @[G+2, G+3] out: W,
+) {
+    A := new Add[W];
+    M := new Mult[W];
+    m0 := M<G>(l, r);
+    a0 := A<G+2>(acc, m0.out);
+    out = a0.out;
+}
+
+comp main<G: 2>(
+    @interface[G] go_G: 1,
+    @[G, G+1] a: 32,
+    @[G+2, G+3] a_acc: 32,
+    @[G, G+1] b: 16,
+    @[G+2, G+3] b_acc: 16,
+) -> (
+    @[G+2, G+3] a_out: 32,
+    @[G+2, G+3] b_out: 16,
+) {
+    out0 := new Mac[32]<G>(a, a, a_acc);
+    out1 := new Mac[16]<G>(b, b, b_acc);
+    a_out = out0.out;
+    b_out = out1.out;
+}
