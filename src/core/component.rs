@@ -3,22 +3,24 @@ use crate::errors::{Error, FilamentResult, WithPos};
 use std::{collections::HashMap, fmt::Display};
 
 /// A component in Filament
-pub struct Component<Time>
+pub struct Component<Time, Width>
 where
     Time: Clone + TimeRep,
+    Width: Clone,
 {
     // Signature of this component
-    pub sig: Signature<Time, PortParam>,
+    pub sig: Signature<Time, Width>,
 
     /// Model for this component
-    pub body: Vec<Command<Time>>,
+    pub body: Vec<Command<Time, Width>>,
 }
 
-impl<T> Component<T>
+impl<T, W> Component<T, W>
 where
     T: Clone + TimeRep,
+    W: Clone,
 {
-    pub fn validate(body: &[Command<T>]) -> FilamentResult<()> {
+    pub fn validate(body: &[Command<T, W>]) -> FilamentResult<()> {
         let mut is_low: Option<bool> = None;
 
         for con in body {
@@ -60,11 +62,14 @@ where
         Ok(())
     }
 
-    pub fn new(sig: Signature<T, PortParam>, body: Vec<Command<T>>) -> Self {
+    pub fn new(sig: Signature<T, W>, body: Vec<Command<T, W>>) -> Self {
         Self { sig, body }
     }
 }
-impl Display for Component<Time<u64>> {
+impl<W> Display for Component<Time<u64>, W>
+where
+    W: Clone + Display,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{} {{", self.sig)?;
         for com in &self.body {
@@ -74,9 +79,10 @@ impl Display for Component<Time<u64>> {
     }
 }
 
-pub struct Namespace<T>
+pub struct Namespace<T, W>
 where
     T: Clone + TimeRep,
+    W: Clone,
 {
     /// Imported files
     pub imports: Vec<String>,
@@ -85,12 +91,13 @@ where
     pub externs: Vec<(String, Vec<Signature<T, PortParam>>)>,
 
     /// Components defined in this file
-    pub components: Vec<Component<T>>,
+    pub components: Vec<Component<T, W>>,
 }
 
-impl<T> Namespace<T>
+impl<T, W> Namespace<T, W>
 where
     T: TimeRep + Clone,
+    W: Clone,
 {
     /// External signatures associated with the namespace
     pub fn signatures(&self) -> HashMap<Id, &Signature<T, PortParam>> {
@@ -101,7 +108,10 @@ where
     }
 }
 
-impl Display for Namespace<Time<u64>> {
+impl<W> Display for Namespace<Time<u64>, W>
+where
+    W: Clone + Display,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for imp in &self.imports {
             writeln!(f, "import \"{}\";", imp)?;

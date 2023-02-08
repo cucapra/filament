@@ -1,9 +1,9 @@
 #![allow(clippy::upper_case_acronyms)]
 
 //! Parser for Calyx programs.
-use super::ast::{self, InterfaceDef};
 use crate::core::{Time, TimeRep, TimeSub};
 use crate::errors::{self, FilamentResult, WithPos};
+use crate::event_checker::{ast, ast::InterfaceDef};
 use crate::utils::{FileIdx, GPosIdx, GlobalPositionTable};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
@@ -364,27 +364,27 @@ impl FilamentParser {
                 time(l),
                 eq(_),
                 time(r)
-            ] => ast::ConstraintBase::eq(l, r).into(),
+            ] => ast::CBT::eq(l, r).into(),
             [
                 time(l),
                 gt(_),
                 time(r)
-            ] => ast::ConstraintBase::lt(r, l).into(),
+            ] => ast::CBT::lt(r, l).into(),
             [
                 time(l),
                 lt(_),
                 time(r)
-            ] => ast::ConstraintBase::lt(l, r).into(),
+            ] => ast::CBT::lt(l, r).into(),
             [
                 time(l),
                 lte(_),
                 time(r)
-            ] => ast::ConstraintBase::gte(r, l).into(),
+            ] => ast::CBT::gte(r, l).into(),
             [
                 time(l),
                 gte(_),
                 time(r)
-            ] => ast::ConstraintBase::gte(l, r).into(),
+            ] => ast::CBT::gte(l, r).into(),
         );
         Ok(cons)
     }

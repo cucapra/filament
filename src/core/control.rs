@@ -1,4 +1,4 @@
-use super::{Binding, Id, PortParam, Range, TimeRep};
+use super::{Binding, Id, Range, TimeRep};
 use crate::{
     errors::{self, Error, FilamentResult, WithPos},
     utils::GPosIdx,
@@ -79,38 +79,38 @@ impl std::fmt::Display for PortType {
 }
 
 /// Command in a component
-pub enum Command<T> {
-    Invoke(Invoke<T>),
-    Instance(Instance),
+pub enum Command<Time, Width> {
+    Invoke(Invoke<Time>),
+    Instance(Instance<Width>),
     Connect(Connect),
     Fsm(Fsm),
 }
 
-impl<T> From<Fsm> for Command<T> {
+impl<T, W> From<Fsm> for Command<T, W> {
     fn from(v: Fsm) -> Self {
         Self::Fsm(v)
     }
 }
 
-impl<T> From<Connect> for Command<T> {
+impl<T, W> From<Connect> for Command<T, W> {
     fn from(v: Connect) -> Self {
         Self::Connect(v)
     }
 }
 
-impl<T> From<Instance> for Command<T> {
-    fn from(v: Instance) -> Self {
+impl<T, W> From<Instance<W>> for Command<T, W> {
+    fn from(v: Instance<W>) -> Self {
         Self::Instance(v)
     }
 }
 
-impl<T> From<Invoke<T>> for Command<T> {
+impl<T, W> From<Invoke<T>> for Command<T, W> {
     fn from(v: Invoke<T>) -> Self {
         Self::Invoke(v)
     }
 }
 
-impl<T: Display> Display for Command<T> {
+impl<T: Display, W> Display for Command<T, W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Command::Invoke(inv) => write!(f, "{}", inv),
@@ -122,18 +122,18 @@ impl<T: Display> Display for Command<T> {
 }
 
 /// A new component instance
-pub struct Instance {
+pub struct Instance<Width> {
     /// Name of the instance.
     pub name: Id,
     /// Name of the component
     pub component: Id,
     /// Bindings provided for this instance
-    pub bindings: Vec<PortParam>,
+    pub bindings: Vec<Width>,
     /// Source position
     pos: GPosIdx,
 }
-impl Instance {
-    pub fn new(name: Id, component: Id, bindings: Vec<PortParam>) -> Self {
+impl<W> Instance<W> {
+    pub fn new(name: Id, component: Id, bindings: Vec<W>) -> Self {
         Instance {
             name,
             component,
@@ -142,12 +142,12 @@ impl Instance {
         }
     }
 }
-impl std::fmt::Display for Instance {
+impl<W> std::fmt::Display for Instance<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} := new {}", self.name, self.component)
     }
 }
-impl WithPos for Instance {
+impl<W> WithPos for Instance<W> {
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
@@ -329,22 +329,6 @@ impl errors::WithPos for Connect {
 
     fn copy_span(&self) -> GPosIdx {
         self.pos
-    }
-}
-
-/// A when statement executes its body when the provided `port` rises.
-/// It also binds the `time_var` in the body to the time when the `port` rose.
-pub struct When<T> {
-    pub time: T,
-    pub commands: Vec<Command<T>>,
-}
-impl<T: Display> Display for When<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "when {} {{ ", self.time)?;
-        for cmd in &self.commands {
-            write!(f, "{}; ", cmd)?;
-        }
-        write!(f, "}}")
     }
 }
 
