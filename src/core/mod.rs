@@ -7,6 +7,7 @@ mod offset_time;
 mod port;
 mod signature;
 mod time_rep;
+mod width_rep;
 
 pub use component::{Component, Namespace};
 pub use constraint::{Constraint, OrderConstraint};
@@ -19,3 +20,4 @@ pub use offset_time::Time;
 pub use port::{InterfaceDef, PortDef, PortParam};
 pub use signature::{EventBind, Signature};
 pub use time_rep::{Binding, TimeRep, TimeSub, WithTime};
+pub use width_rep::WidthRep;

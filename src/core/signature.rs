@@ -1,6 +1,6 @@
 use super::{
     Binding, Constraint, Id, InterfaceDef, OrderConstraint, PortDef, PortParam,
-    Range, Time, TimeRep, TimeSub,
+    Range, Time, TimeRep, TimeSub, WidthRep,
 };
 use crate::{
     errors::{Error, FilamentResult, WithPos},
@@ -13,7 +13,7 @@ use std::{collections::HashMap, fmt::Display};
 /// An event variable bound in the signature
 pub struct EventBind<T>
 where
-    T: Clone + TimeRep,
+    T: TimeRep,
 {
     pub event: Id,
     pub delay: TimeSub<T>,
@@ -23,7 +23,7 @@ where
 
 impl<T> WithPos for EventBind<T>
 where
-    T: Clone + TimeRep,
+    T: TimeRep,
 {
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
@@ -37,7 +37,7 @@ where
 
 impl<T> EventBind<T>
 where
-    T: Clone + TimeRep,
+    T: TimeRep,
 {
     pub fn new(event: Id, delay: TimeSub<T>, default: Option<T>) -> Self {
         Self {
@@ -50,7 +50,7 @@ where
 }
 impl<T> Display for EventBind<T>
 where
-    T: TimeRep + Display,
+    T: TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(default) = &self.default {
@@ -65,8 +65,8 @@ where
 #[derive(Clone)]
 pub struct Signature<Time, Width>
 where
-    Time: Clone + TimeRep,
-    Width: Clone,
+    Time: TimeRep,
+    Width: WidthRep,
 {
     /// Name of the component
     pub name: Id,
@@ -90,7 +90,7 @@ where
 impl<T, W> Signature<T, W>
 where
     T: TimeRep,
-    W: Clone,
+    W: WidthRep,
 {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -252,11 +252,16 @@ where
     }
 }
 
-impl<T: TimeRep, W: Clone> Signature<T, W> {
+impl<T, W> Signature<T, W>
+where
+    T: TimeRep,
+    W: WidthRep,
+{
     pub fn map<W0, F>(self, f: F) -> Signature<T, W0>
     where
         W0: Clone,
         F: Fn(W) -> W0,
+        W0: WidthRep,
     {
         Signature {
             name: self.name,
@@ -275,7 +280,7 @@ impl<T: TimeRep, W: Clone> Signature<T, W> {
     }
 }
 
-impl<W: Clone> Signature<Time<u64>, W> {
+impl<W: WidthRep> Signature<Time<u64>, W> {
     /// Constraints generated to ensure that a signature is well-formed.
     /// 1. Ensure that all the intervals are well formed
     /// 2. Ensure for each interval that mentions event `E` in its start time, the @interface
@@ -384,9 +389,10 @@ impl<T: TimeRep> Signature<T, PortParam> {
     }
 }
 
-impl<W> Display for Signature<Time<u64>, W>
+impl<T, W> Display for Signature<T, W>
 where
-    W: Clone + Display,
+    W: WidthRep,
+    T: TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -416,9 +422,10 @@ where
         Ok(())
     }
 }
-impl<W> std::fmt::Debug for Signature<Time<u64>, W>
+impl<W, T> std::fmt::Debug for Signature<T, W>
 where
-    W: Display + Clone,
+    W: WidthRep,
+    T: TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{self}")

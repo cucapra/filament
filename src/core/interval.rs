@@ -8,7 +8,7 @@ use super::{Binding, Constraint, OrderConstraint, TimeRep, WithTime};
 #[derive(Clone)]
 pub struct Range<T>
 where
-    T: TimeRep + Clone,
+    T: TimeRep,
 {
     pub start: T,
     pub end: T,
@@ -58,7 +58,7 @@ where
 
 impl<T> Range<T>
 where
-    T: TimeRep + Clone,
+    T: TimeRep,
 {
     pub fn new(start: T, end: T) -> Self {
         Self {
@@ -91,7 +91,7 @@ where
 
 impl<T> Display for Range<T>
 where
-    T: Display + TimeRep + Clone,
+    T: Display + TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "@[{}, {}]", self.start, self.end)

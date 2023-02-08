@@ -1,17 +1,25 @@
-use crate::core::{self, TimeRep};
+use crate::core::{self, TimeRep, WidthRep};
 use std::collections::{HashMap, HashSet};
 use topological_sort::{self, TopologicalSort};
 
 /// Defines a post-order traversal of the components.
 /// There is an edge between src -> dst if `src` instantiates an instance of `dst`.
-pub struct PostOrder<T: TimeRep, W: Clone> {
+pub struct PostOrder<T, W>
+where
+    T: TimeRep,
+    W: WidthRep,
+{
     /// The namespace
     ns: core::Namespace<T, W>,
     /// The post-order traversal
     order: TopologicalSort<usize>,
 }
 
-impl<T: TimeRep, W: Clone> From<core::Namespace<T, W>> for PostOrder<T, W> {
+impl<T, W> From<core::Namespace<T, W>> for PostOrder<T, W>
+where
+    T: TimeRep,
+    W: WidthRep,
+{
     /// Construct a post-order traversal over a namespace.
     fn from(ns: core::Namespace<T, W>) -> Self {
         let externs: HashSet<_> =
@@ -41,7 +49,11 @@ impl<T: TimeRep, W: Clone> From<core::Namespace<T, W>> for PostOrder<T, W> {
     }
 }
 
-impl<T: TimeRep, W: Clone> PostOrder<T, W> {
+impl<T, W> PostOrder<T, W>
+where
+    T: TimeRep,
+    W: WidthRep,
+{
     /// Apply a mutable function to each component in the post-order traversal.
     pub fn apply<F>(&mut self, mut upd: F)
     where

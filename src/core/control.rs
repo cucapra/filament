@@ -1,4 +1,4 @@
-use super::{Binding, Id, Range, TimeRep};
+use super::{Binding, Id, Range, TimeRep, WidthRep};
 use crate::{
     errors::{self, Error, FilamentResult, WithPos},
     utils::GPosIdx,
@@ -82,38 +82,62 @@ impl std::fmt::Display for PortType {
 
 #[derive(Clone)]
 /// Command in a component
-pub enum Command<Time, Width: Clone> {
+pub enum Command<Time, Width>
+where
+    Time: TimeRep,
+    Width: WidthRep,
+{
     Invoke(Invoke<Time>),
     Instance(Instance<Width>),
     Connect(Connect),
     Fsm(Fsm),
 }
 
-impl<T, W: Clone> From<Fsm> for Command<T, W> {
+impl<T, W> From<Fsm> for Command<T, W>
+where
+    T: TimeRep,
+    W: WidthRep,
+{
     fn from(v: Fsm) -> Self {
         Self::Fsm(v)
     }
 }
 
-impl<T, W: Clone> From<Connect> for Command<T, W> {
+impl<T, W> From<Connect> for Command<T, W>
+where
+    T: TimeRep,
+    W: WidthRep,
+{
     fn from(v: Connect) -> Self {
         Self::Connect(v)
     }
 }
 
-impl<T, W: Clone> From<Instance<W>> for Command<T, W> {
+impl<T, W> From<Instance<W>> for Command<T, W>
+where
+    T: TimeRep,
+    W: WidthRep,
+{
     fn from(v: Instance<W>) -> Self {
         Self::Instance(v)
     }
 }
 
-impl<T, W: Clone> From<Invoke<T>> for Command<T, W> {
+impl<T, W> From<Invoke<T>> for Command<T, W>
+where
+    T: TimeRep,
+    W: WidthRep,
+{
     fn from(v: Invoke<T>) -> Self {
         Self::Invoke(v)
     }
 }
 
-impl<T: Display, W: Clone + Display> Display for Command<T, W> {
+impl<T, W> Display for Command<T, W>
+where
+    T: TimeRep,
+    W: WidthRep,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Command::Invoke(inv) => write!(f, "{}", inv),
@@ -126,7 +150,7 @@ impl<T: Display, W: Clone + Display> Display for Command<T, W> {
 
 #[derive(Clone)]
 /// A new component instance
-pub struct Instance<Width: Clone> {
+pub struct Instance<Width: WidthRep> {
     /// Name of the instance.
     pub name: Id,
     /// Name of the component
@@ -136,7 +160,7 @@ pub struct Instance<Width: Clone> {
     /// Source position
     pos: GPosIdx,
 }
-impl<W: Clone> Instance<W> {
+impl<W: WidthRep> Instance<W> {
     pub fn new(name: Id, component: Id, bindings: Vec<W>) -> Self {
         Instance {
             name,
@@ -146,7 +170,7 @@ impl<W: Clone> Instance<W> {
         }
     }
 }
-impl<W: Clone + Display> std::fmt::Display for Instance<W> {
+impl<W: WidthRep> std::fmt::Display for Instance<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} := new {}", self.name, self.component)?;
         if !self.bindings.is_empty() {
@@ -156,7 +180,7 @@ impl<W: Clone + Display> std::fmt::Display for Instance<W> {
         }
     }
 }
-impl<W: Clone> WithPos for Instance<W> {
+impl<W: WidthRep> WithPos for Instance<W> {
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
@@ -169,7 +193,7 @@ impl<W: Clone> WithPos for Instance<W> {
 
 #[derive(Clone)]
 /// An Invocation
-pub struct Invoke<T> {
+pub struct Invoke<T: TimeRep> {
     /// Name of the variable being assigned
     pub bind: Id,
 
@@ -212,7 +236,7 @@ where
         Binding::new(abstract_vars.zip(self.abstract_vars.iter().cloned()))
     }
 }
-impl<T: Display> Display for Invoke<T> {
+impl<T: TimeRep> Display for Invoke<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let abs = self
             .abstract_vars
@@ -238,7 +262,7 @@ impl<T: Display> Display for Invoke<T> {
         }
     }
 }
-impl<T> errors::WithPos for Invoke<T> {
+impl<T: TimeRep> errors::WithPos for Invoke<T> {
     /// Attach a position to this node
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
@@ -384,7 +408,7 @@ impl Fsm {
     /// Get the liveness condition for the given port
     pub fn liveness<T>(&self, trigger: &Range<T>, state: u64) -> Range<T>
     where
-        T: TimeRep + Clone,
+        T: TimeRep,
     {
         // If trigger is from: @[G, L] + @exact[G, G+1]
         let Range { start, end, .. } = &trigger;
