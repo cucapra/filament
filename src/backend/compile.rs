@@ -460,6 +460,7 @@ fn compile_signature(
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn init_calyx(
     lib_loc: &Path,
     externs: &[(String, Vec<core::Signature<Time<u64>, ast::PortParam>>)],

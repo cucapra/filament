@@ -113,7 +113,7 @@ impl<T, W: Clone> From<Invoke<T>> for Command<T, W> {
     }
 }
 
-impl<T: Display, W: Clone> Display for Command<T, W> {
+impl<T: Display, W: Clone + Display> Display for Command<T, W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Command::Invoke(inv) => write!(f, "{}", inv),
@@ -146,9 +146,14 @@ impl<W: Clone> Instance<W> {
         }
     }
 }
-impl<W: Clone> std::fmt::Display for Instance<W> {
+impl<W: Clone + Display> std::fmt::Display for Instance<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} := new {}", self.name, self.component)
+        write!(f, "{} := new {}", self.name, self.component)?;
+        if !self.bindings.is_empty() {
+            write!(f, "[{}]", self.bindings.iter().join(", "))
+        } else {
+            Ok(())
+        }
     }
 }
 impl<W: Clone> WithPos for Instance<W> {

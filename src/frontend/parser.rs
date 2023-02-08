@@ -206,6 +206,7 @@ impl FilamentParser {
         Ok(evs)
     }
 
+    #[allow(clippy::type_complexity)]
     fn ports(
         input: Node,
     ) -> ParseResult<(Ports, Vec<ast::InterfaceDef>, Vec<(ast::Id, u64)>)> {
@@ -231,6 +232,7 @@ impl FilamentParser {
         Ok(())
     }
 
+    #[allow(clippy::type_complexity)]
     fn io(
         input: Node,
     ) -> ParseResult<(Ports, Ports, Vec<ast::InterfaceDef>, Vec<(ast::Id, u64)>)>

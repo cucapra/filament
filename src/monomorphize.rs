@@ -108,15 +108,15 @@ pub struct Monomorphize<T: TimeRep> {
 
 impl<T: TimeRep> Monomorphize<T> {
     /// Gnerate name for a monomorphized component based on the binding parameters.
-    fn generate_mono_name(comp: &core::Id, binding: &Binding<u64>) -> core::Id {
-        if binding.is_empty() {
-            return comp.clone();
-        }
+    fn generate_mono_name(
+        comp: &core::Id,
+        params: impl IntoIterator<Item = u64>,
+    ) -> core::Id {
         let mut name = String::from(comp.id());
         name += "_";
-        name += &binding
-            .iter()
-            .map(|(_, v)| v.to_string())
+        name += &params
+            .into_iter()
+            .map(|v| v.to_string())
             .collect::<Vec<_>>()
             .join("_");
         name.into()
@@ -127,7 +127,10 @@ impl<T: TimeRep> Monomorphize<T> {
         binding: &Binding<u64>,
     ) -> core::Signature<T, u64> {
         let mut nsig = sig.clone().map(|param| param.resolve(binding));
-        nsig.name = Self::generate_mono_name(&sig.name, binding);
+        nsig.name = Self::generate_mono_name(
+            &sig.name,
+            binding.iter().map(|(_, v)| *v),
+        );
         nsig
     }
 
@@ -159,7 +162,7 @@ impl<T: TimeRep> Monomorphize<T> {
                         // If this is a component, replace the instance name with the monomorphized version
                         core::Instance::new(
                             name,
-                            Self::generate_mono_name(&component, binding),
+                            Self::generate_mono_name(&component, resolved),
                             vec![],
                         )
                         .into()

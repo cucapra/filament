@@ -41,7 +41,7 @@ impl<T> Binding<T> {
 
 impl<T> Debug for Binding<T>
 where
-    T: Display + TimeRep,
+    T: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
