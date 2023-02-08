@@ -391,8 +391,9 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "comp {}<{}>({}) -> ({})",
+            "comp {}[{}]<{}>({}) -> ({})",
             self.name,
+            self.params.iter().map(|p| p.to_string()).join(", "),
             self.events.iter().map(|id| id.to_string()).join(", "),
             self.unannotated_ports
                 .iter()

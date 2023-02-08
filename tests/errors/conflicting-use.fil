@@ -4,7 +4,7 @@ import "primitives/sequential.fil";
 comp Main<G: 3>(
   @interface[G] go_G: 1,
 ) -> () {
-  M := new Mult;
+  M := new Mult[32];
   m0 := M<G>(10, 20);
   m1 := M<G+1>(30, 40);
 }

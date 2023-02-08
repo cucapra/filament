@@ -86,7 +86,9 @@ impl InstanceParams {
             // Add bindings from each instance
             for command in &comp.body {
                 if let core::Command::Instance(inst) = command {
-                    if !externals.contains(&inst.component) {
+                    if !externals.contains(&inst.component)
+                        && !inst.bindings.is_empty()
+                    {
                         inst_params.add_params(
                             &comp.sig.name,
                             &inst.component,
@@ -113,12 +115,9 @@ impl<T: TimeRep> Monomorphize<T> {
         params: impl IntoIterator<Item = u64>,
     ) -> core::Id {
         let mut name = String::from(comp.id());
-        name += "_";
-        name += &params
-            .into_iter()
-            .map(|v| v.to_string())
-            .collect::<Vec<_>>()
-            .join("_");
+        for p in params {
+            name += format!("_{}", p).as_str();
+        }
         name.into()
     }
 
