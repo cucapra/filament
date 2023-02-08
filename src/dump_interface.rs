@@ -1,5 +1,4 @@
 use crate::ast::param as ast;
-use crate::core::PortParam;
 use crate::errors::{self, FilamentResult, WithPos};
 use crate::visitor;
 use std::collections::HashMap;

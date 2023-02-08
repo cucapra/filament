@@ -48,7 +48,7 @@ impl BindCheck<'_> {
             };
             let kind = if INPUT { "input" } else { "output" };
             iter.find(|p1| p1.name == p)
-                .map(|p| p.bitwidth)
+                .map(|p| p.bitwidth.clone())
                 // XXX(rachit): Always search interface ports regardless of input or output because we don't
                 // correctly reverse them.
                 .or_else(|| {

@@ -59,7 +59,7 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
 
     // Compilation
     let t = Instant::now();
-    backend::compile(ns, opts)?;
+    // backend::compile(ns, opts)?;
     log::info!("Compilation: {}ms", t.elapsed().as_millis());
 
     Ok(())

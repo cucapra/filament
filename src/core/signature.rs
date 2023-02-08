@@ -324,11 +324,11 @@ impl<T: TimeRep> Signature<T, PortParam> {
                 match &pd.bitwidth {
                     PortParam::Const(c) => Ok(pd.clone()),
                     PortParam::Var(param) => {
-                        if let Some(&c) = binding.get(param) {
+                        if let Some(c) = binding.get(param) {
                             Ok(PortDef::new(
                                 pd.name.clone(),
                                 pd.liveness.clone(),
-                                c,
+                                c.clone(),
                             )
                             .set_span(pd.copy_span()))
                         } else {

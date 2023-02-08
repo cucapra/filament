@@ -1,6 +1,6 @@
 use super::Fsm;
 use crate::{
-    ast::param as ast,
+    ast::mono as ast,
     cmdline::Opts,
     core::{self, Time},
     errors::{Error, FilamentResult},
@@ -341,15 +341,13 @@ fn compile_component(
     sigs: &mut Binding,
     lib: &ir::LibrarySignatures,
 ) -> FilamentResult<ir::Component> {
-    let port_transform =
-        |pd: &ast::PortDef, dir: ir::Direction| -> ir::PortDef<u64> {
-            let ast::PortParam::Const(width) = pd.bitwidth else {
-            panic!("Port {} has a non-concrete width", pd.name)
-        };
-            let mut pd: ir::PortDef<u64> = (pd.name.id(), width, dir).into();
-            pd.attributes.insert("data", 1);
-            pd
-        };
+    let port_transform = |pd: &ast::PortDef<u64>,
+                          dir: ir::Direction|
+     -> ir::PortDef<u64> {
+        let mut pd: ir::PortDef<u64> = (pd.name.id(), pd.bitwidth, dir).into();
+        pd.attributes.insert("data", 1);
+        pd
+    };
     let concrete_transform = |name: &ast::Id, width: u64| -> ir::PortDef<u64> {
         (name.id(), width, ir::Direction::Input).into()
     };
@@ -419,23 +417,24 @@ fn compile_component(
 fn prim_as_port_defs(
     sig: &core::Signature<Time<u64>, ast::PortParam>,
 ) -> Vec<ir::PortDef<ir::Width>> {
-    let port_transform =
-        |pd: &ast::PortDef, dir: ir::Direction| -> ir::PortDef<ir::Width> {
-            let width = match &pd.bitwidth {
-                ast::PortParam::Const(v) => ir::Width::Const { value: *v },
-                ast::PortParam::Var(v) => ir::Width::Param {
-                    value: v.id().into(),
-                },
-            };
-            let mut attributes = ir::Attributes::default();
-            attributes.insert("data", 1);
-            ir::PortDef {
-                name: ir::Id::from(pd.name.id()),
-                direction: dir,
-                width,
-                attributes,
-            }
+    let port_transform = |pd: &ast::PortDef<ast::PortParam>,
+                          dir: ir::Direction|
+     -> ir::PortDef<ir::Width> {
+        let width = match &pd.bitwidth {
+            ast::PortParam::Const(v) => ir::Width::Const { value: *v },
+            ast::PortParam::Var(v) => ir::Width::Param {
+                value: v.id().into(),
+            },
         };
+        let mut attributes = ir::Attributes::default();
+        attributes.insert("data", 1);
+        ir::PortDef {
+            name: ir::Id::from(pd.name.id()),
+            direction: dir,
+            width,
+            attributes,
+        }
+    };
     let concrete_transform =
         |name: &ast::Id, bw: u64| -> ir::PortDef<ir::Width> {
             ir::PortDef {
