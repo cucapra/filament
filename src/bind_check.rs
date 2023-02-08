@@ -10,6 +10,9 @@ use itertools::Itertools;
 const THIS: &str = "_this";
 
 struct BindCheck<'a> {
+    /// Bound events
+    events: Vec<ast::Id>,
+    /// Bound instances
     instances: BindMap<ResolvedInstance<'a>>,
     // mapping from name of invocations to the instance that they invoke
     invocations: BindMap<ast::Id>,
@@ -17,8 +20,9 @@ struct BindCheck<'a> {
 
 /// Transform the givun AST
 impl BindCheck<'_> {
-    fn new() -> Self {
+    fn new(events: Vec<ast::Id>) -> Self {
         Self {
+            events,
             instances: BindMap::new(),
             invocations: BindMap::new(),
         }
@@ -138,6 +142,15 @@ impl BindCheck<'_> {
     fn check_invoke(&mut self, inv: &ast::Invoke) -> FilamentResult<()> {
         let inst = self.instances.get(&inv.instance);
         if let Some(ports) = &inv.ports {
+            // Check that scheduling events are bound
+            for time in &inv.abstract_vars {
+                let ev = &time.event;
+                if !self.events.contains(ev) {
+                    return Err(Error::undefined(ev.clone(), "Event")
+                        .add_note("Event is not bound", ev.copy_span()));
+                }
+            }
+
             // Check that the number of ports matches the number of ports
             let formals = inst.input_names().len();
             let actuals = ports.len();
@@ -162,13 +175,59 @@ impl BindCheck<'_> {
         Ok(())
     }
 
+    /// Check the binding of a component
+    fn check_sig<W: Clone>(sig: &ast::Signature<W>) -> FilamentResult<()> {
+        let events = sig.events().collect_vec();
+        // Check all the definitions only use bound events
+        for pd in sig.ports() {
+            for time in pd.liveness.events() {
+                let ev = &time.event;
+                if !events.contains(ev) {
+                    return Err(Error::undefined(ev.clone(), "event")
+                        .add_note(
+                            "Event is not defined in the signature",
+                            ev.copy_span(),
+                        ));
+                }
+            }
+        }
+        // Check that interface ports use only bound events
+        for id in &sig.interface_signals {
+            if !events.contains(&id.event) {
+                return Err(Error::undefined(id.event.clone(), "event")
+                    .add_note(
+                        "Event is not defined in the signature",
+                        id.event.copy_span(),
+                    ));
+            }
+        }
+        // Check constraints use bound events
+        for constraint in &sig.constraints {
+            for ev in constraint.events() {
+                if !events.contains(&ev) {
+                    return Err(Error::undefined(ev.clone(), "event")
+                        .add_note(
+                            "Event is not defined in the signature",
+                            ev.copy_span(),
+                        ));
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Perform the component traversal
     fn component(
         comp: &ast::Component,
         binds: &Bindings,
     ) -> FilamentResult<()> {
+        // Check this signature
+        Self::check_sig(&comp.sig)?;
+
         // Binding for instances
-        let mut bind_check = BindCheck::new();
+        let mut bind_check = BindCheck::new(
+            comp.sig.events.iter().map(|e| e.event.clone()).collect(),
+        );
 
         // Add THIS instance
         let this_sig = comp.sig.reversed();
@@ -206,7 +265,11 @@ impl BindCheck<'_> {
 
 pub fn check(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
     let comps = ns.components.drain(..).collect_vec();
-    let mut binds = Bindings::new(ns.signatures());
+    let sigs = ns.signatures();
+    for sig in sigs.values() {
+        BindCheck::check_sig(*sig)?;
+    }
+    let mut binds = Bindings::new(sigs);
 
     for comp in comps {
         BindCheck::component(&comp, &binds)?;

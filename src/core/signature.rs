@@ -1,5 +1,5 @@
 use super::{
-    Binding, Constraint, ConstraintBase, Id, InterfaceDef, PortDef, PortParam,
+    Binding, Constraint, Id, InterfaceDef, OrderConstraint, PortDef, PortParam,
     Range, Time, TimeRep, TimeSub,
 };
 use crate::{
@@ -128,6 +128,10 @@ where
     /// Outputs of this signature
     pub fn outputs(&self) -> impl Iterator<Item = &PortDef<T, W>> {
         self.ports[self.outputs_idx..].iter()
+    }
+    /// Iterator over all the ports of this signature
+    pub fn ports(&self) -> impl Iterator<Item = &PortDef<T, W>> {
+        self.ports.iter()
     }
 
     /// Find the delay associoated with an event
@@ -277,7 +281,7 @@ impl<W: Clone> Signature<Time<u64>, W> {
                 let event = self.get_event(&ev);
                 lens.into_iter().map(move |(port_len, port_pos)| {
                     let len = event.delay.clone();
-                    Constraint::from(ConstraintBase::gte(
+                    Constraint::from(OrderConstraint::gte(
                         len.clone(),
                         port_len.clone(),
                     ))

@@ -19,7 +19,7 @@ use std::rc::Rc;
 /// Attribute attached to event signals in a module interface.
 const FIL_EVENT: &str = "fil_event";
 /// Attribute that represents the delay of a particular event
-const DELAY: &str = "delay";
+// const DELAY: &str = "delay";
 
 /// Bindings associated with the current compilation context
 #[derive(Default)]

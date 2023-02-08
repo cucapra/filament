@@ -67,6 +67,8 @@ where
     fn resolve(&self, bindings: &Binding<Self>) -> Self;
     /// Substract two time expression representing the absolute difference
     fn sub(self, other: Self) -> Self::SubRep;
+    /// All events used in the time expression
+    fn events(&self) -> Vec<Id>;
 }
 
 /// Functions provided by data structures that contain a time representation
@@ -108,6 +110,17 @@ where
 
     pub fn sym(l: T, r: T) -> Self {
         TimeSub::Sym { l, r }
+    }
+
+    pub fn events(&self) -> Vec<Id> {
+        match self {
+            TimeSub::Unit(_) => vec![],
+            TimeSub::Sym { l, r } => {
+                let mut events = l.events();
+                events.extend(r.events());
+                events
+            }
+        }
     }
 
     /// Return the concrete difference if possible
