@@ -68,7 +68,7 @@ impl visitor::Transform for MaxStates {
         inv: ast::Invoke,
         sig: &visitor::ResolvedInstance,
     ) -> FilamentResult<Vec<ast::Command>> {
-        let sig = sig.resolve();
+        let sig = sig.resolve()?;
         // Get the signature associated with this instance.
         let binding = sig.binding(&inv.abstract_vars);
         self.max_state_from_ports(sig.outputs().map(|pd| pd.resolve(&binding)));

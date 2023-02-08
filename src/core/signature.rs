@@ -322,7 +322,7 @@ impl<T: TimeRep> Signature<T, PortParam> {
         let resolve_port =
             |pd: &PortDef<T, PortParam>| -> FilamentResult<PortDef<T, PortParam>> {
                 match &pd.bitwidth {
-                    PortParam::Const(c) => Ok(pd.clone()),
+                    PortParam::Const(_) => Ok(pd.clone()),
                     PortParam::Var(param) => {
                         if let Some(c) = binding.get(param) {
                             Ok(PortDef::new(

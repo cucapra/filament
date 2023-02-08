@@ -40,7 +40,7 @@ impl BindCheck<'_> {
                 .instances
                 .find(instance)
                 .expect("THIS component is not defined")
-                .resolve();
+                .resolve()?;
             let mut iter: Box<dyn Iterator<Item = _>> = if INPUT {
                 Box::new(sig.inputs())
             } else {
@@ -88,11 +88,11 @@ impl BindCheck<'_> {
         if dst_w != src_w {
             return Err(Error::malformed("Port width mismatch".to_string())
                 .add_note(
-                    format!("Source {} has width {src_w}", src.name()),
+                    format!("Source `{}' has width {src_w}", src.name()),
                     src.copy_span(),
                 )
                 .add_note(
-                    format!("Destination {} has width {dst_w}", dst.name(),),
+                    format!("Destination `{}' has width {dst_w}", dst.name(),),
                     dst.copy_span(),
                 ));
         }
@@ -166,7 +166,7 @@ impl BindCheck<'_> {
             }
 
             // Check the connections implied by the ports
-            let sig = inst.resolve();
+            let sig = inst.resolve()?;
             for (actual, formal) in ports.iter().zip(sig.inputs()) {
                 let dst =
                     ast::Port::comp(inv.bind.clone(), formal.name.clone())
@@ -234,10 +234,9 @@ impl BindCheck<'_> {
 
         // Add THIS instance
         let this_sig = comp.sig.reversed();
-        bind_check.instances.add(
-            ast::Id::from(THIS),
-            ResolvedInstance::bound(&this_sig, vec![]),
-        )?;
+        bind_check
+            .instances
+            .add(ast::Id::from(THIS), ResolvedInstance::this(&this_sig))?;
 
         // Create all invoke bindings
         for cmd in &comp.body {
@@ -245,7 +244,20 @@ impl BindCheck<'_> {
                 core::Command::Invoke(inv) => bind_check.bind_invoke(inv)?,
                 core::Command::Instance(inst) => {
                     let sig = binds
-                        .find_component(&inst.component, &inst.bindings)?;
+                        .find_component(&inst.component, &inst.bindings)
+                        .map_err(|err| {
+                            err.add_note("For this instance", inst.copy_span())
+                        })?;
+                    if sig.sig().params.len() != inst.bindings.len() {
+                        let msg = format!(
+                            "`{}' requires {} bindings but {} were provided",
+                            inst.component,
+                            sig.sig().params.len(),
+                            inst.bindings.len(),
+                        );
+                        return Err(Error::malformed(msg.clone())
+                            .add_note(msg, inst.copy_span()));
+                    }
                     bind_check.instances.add(inst.name.clone(), sig)?;
                 }
                 core::Command::Connect(_) | core::Command::Fsm(_) => (),
@@ -271,7 +283,7 @@ pub fn check(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
     let comps = ns.components.drain(..).collect_vec();
     let sigs = ns.signatures();
     for sig in sigs.values() {
-        BindCheck::check_sig(*sig)?;
+        BindCheck::check_sig(sig)?;
     }
     let mut binds = Bindings::new(sigs);
 

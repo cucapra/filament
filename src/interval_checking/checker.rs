@@ -113,7 +113,7 @@ fn check_invoke<'a>(
     // Check the bindings for abstract variables do not violate @interface
     // requirements
     check_invoke_binds(invoke, ctx)?;
-    let sig = ctx.get_instance(&invoke.instance).resolve();
+    let sig = ctx.get_instance(&invoke.instance).resolve()?;
     let binding = sig.binding(&invoke.abstract_vars);
 
     // Handle `where` clause constraints and well formedness constraints on intervals.
@@ -148,7 +148,7 @@ fn check_invoke_ports<'a>(
     invoke: &'a ast::Invoke,
     ctx: &mut Context<'a>,
 ) -> FilamentResult<()> {
-    let sig = ctx.get_instance(&invoke.instance).resolve();
+    let sig = ctx.get_instance(&invoke.instance).resolve()?;
     // If this is a high-level invoke, check all port requirements
     if let Some(actuals) = &invoke.ports {
         // Check connections implied by the invocation

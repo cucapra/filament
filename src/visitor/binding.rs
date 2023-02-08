@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::errors::WithPos;
 use crate::{
     ast::param as ast,
@@ -13,15 +15,25 @@ pub struct ResolvedInstance<'a> {
 
 impl<'a> ResolvedInstance<'a> {
     pub fn bound(sig: &'a ast::Signature, binds: Vec<ast::PortParam>) -> Self {
+        log::trace!("sig = {}, binds = {:?}", sig, binds);
         Self { sig, binds }
     }
 
-    pub fn concrete(sig: &'a ast::Signature) -> Self {
-        Self { sig, binds: vec![] }
+    pub fn this(sig: &'a ast::Signature) -> Self {
+        let binds = sig
+            .params
+            .iter()
+            .map(|p| ast::PortParam::Var(p.clone()))
+            .collect_vec();
+        Self::bound(sig, binds)
     }
 }
 
 impl<'a> ResolvedInstance<'a> {
+    pub fn sig(&self) -> &'a ast::Signature {
+        self.sig
+    }
+
     // Return the abstract variables defined by the signature of this instance.
     pub fn events(&self) -> Vec<ast::Id> {
         self.sig.events().collect()
@@ -59,9 +71,12 @@ impl<'a> ResolvedInstance<'a> {
         self.sig.phantom_events().collect()
     }
 
-    pub fn resolve(&self) -> ast::Signature {
-        self.sig.resolve(&self.binds).unwrap_or_else(|_| {
-            panic!("Failed to resolve signature: {}", self.sig.name)
+    pub fn resolve(&self) -> FilamentResult<ast::Signature> {
+        self.sig.resolve(&self.binds).map_err(|e| {
+            e.add_note(
+                "Attempting to resolve signature",
+                self.sig.name.copy_span(),
+            )
         })
     }
 
@@ -102,7 +117,7 @@ impl<'a> Bindings<'a> {
             self.comps
                 .iter()
                 .find(|c| c.sig.name == name)
-                .map(|comp| ResolvedInstance::bound(&comp.sig, vec![]))
+                .map(|comp| ResolvedInstance::bound(&comp.sig, binds.to_vec()))
                 .ok_or_else(|| {
                     Error::undefined(name.clone(), "component")
                         .add_note("Undefined component", name.copy_span())
