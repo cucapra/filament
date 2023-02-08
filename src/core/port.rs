@@ -2,12 +2,21 @@ use super::{Binding, Id, Range, TimeRep, WithTime};
 use crate::{errors::WithPos, utils::GPosIdx};
 use std::fmt::Display;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum PortParam {
     /// A constant
     Const(u64),
     /// A parameter
     Var(Id),
+}
+
+impl PortParam {
+    pub fn resolve(&self, bindings: &Binding<u64>) -> u64 {
+        match self {
+            PortParam::Const(c) => *c,
+            PortParam::Var(v) => *bindings.get(v),
+        }
+    }
 }
 
 impl From<Id> for PortParam {

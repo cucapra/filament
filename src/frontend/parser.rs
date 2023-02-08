@@ -1,7 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 //! Parser for Calyx programs.
-use super::ast::{self, InterfaceDef};
+use crate::ast::param as ast;
 use crate::core::{Time, TimeRep, TimeSub};
 use crate::errors::{self, FilamentResult, WithPos};
 use crate::utils::{FileIdx, GPosIdx, GlobalPositionTable};
@@ -21,18 +21,18 @@ type ParseResult<T> = Result<T, Error<Rule>>;
 // that have a reference to the input string
 type Node<'i> = pest_consume::Node<'i, Rule, UserData>;
 
-type Ports = Vec<ast::PortDef<ast::PortParam>>;
+type Ports = Vec<ast::PortDef>;
 
 // include the grammar file so that Cargo knows to rebuild this file on grammar changes
 const _GRAMMAR: &str = include_str!("syntax.pest");
 
 pub enum ExtOrComp {
-    Ext((String, Vec<ast::Signature<ast::PortParam>>)),
+    Ext((String, Vec<ast::Signature>)),
     Comp(ast::Component),
 }
 
 pub enum Port {
-    Pd(ast::PortDef<ast::PortParam>),
+    Pd(ast::PortDef),
     Int(ast::InterfaceDef),
     Un((ast::Id, u64)),
 }
@@ -206,6 +206,7 @@ impl FilamentParser {
         Ok(evs)
     }
 
+    #[allow(clippy::type_complexity)]
     fn ports(
         input: Node,
     ) -> ParseResult<(Ports, Vec<ast::InterfaceDef>, Vec<(ast::Id, u64)>)> {
@@ -231,9 +232,10 @@ impl FilamentParser {
         Ok(())
     }
 
+    #[allow(clippy::type_complexity)]
     fn io(
         input: Node,
-    ) -> ParseResult<(Ports, Ports, Vec<InterfaceDef>, Vec<(ast::Id, u64)>)>
+    ) -> ParseResult<(Ports, Ports, Vec<ast::InterfaceDef>, Vec<(ast::Id, u64)>)>
     {
         match_nodes!(
             input.clone().into_children();
@@ -261,10 +263,10 @@ impl FilamentParser {
     }
 
     // ================ Cells =====================
-    fn conc_params(input: Node) -> ParseResult<Vec<u64>> {
+    fn conc_params(input: Node) -> ParseResult<Vec<ast::PortParam>> {
         Ok(match_nodes!(
             input.into_children();
-            [bitwidth(vars)..] => vars.collect(),
+            [port_width(vars)..] => vars.collect(),
         ))
     }
     fn instance(input: Node) -> ParseResult<Vec<ast::Command>> {
@@ -364,27 +366,27 @@ impl FilamentParser {
                 time(l),
                 eq(_),
                 time(r)
-            ] => ast::ConstraintBase::eq(l, r).into(),
+            ] => ast::CBT::eq(l, r).into(),
             [
                 time(l),
                 gt(_),
                 time(r)
-            ] => ast::ConstraintBase::lt(r, l).into(),
+            ] => ast::CBT::lt(r, l).into(),
             [
                 time(l),
                 lt(_),
                 time(r)
-            ] => ast::ConstraintBase::lt(l, r).into(),
+            ] => ast::CBT::lt(l, r).into(),
             [
                 time(l),
                 lte(_),
                 time(r)
-            ] => ast::ConstraintBase::gte(r, l).into(),
+            ] => ast::CBT::gte(r, l).into(),
             [
                 time(l),
                 gte(_),
                 time(r)
-            ] => ast::ConstraintBase::gte(l, r).into(),
+            ] => ast::CBT::gte(l, r).into(),
         );
         Ok(cons)
     }
@@ -404,7 +406,7 @@ impl FilamentParser {
             [identifier(params)..] => params.collect(),
         ))
     }
-    fn signature(input: Node) -> ParseResult<ast::Signature<ast::PortParam>> {
+    fn signature(input: Node) -> ParseResult<ast::Signature> {
         Ok(match_nodes!(
             input.into_children();
             [
@@ -494,14 +496,12 @@ impl FilamentParser {
                 signature(sig),
                 command(body)..
             ] => {
-                Ok(ast::Component::new(sig.resolve(&[]).unwrap(), body.into_iter().flatten().collect()))
+                Ok(ast::Component::new(sig, body.into_iter().flatten().collect()))
             }
         )
     }
 
-    fn external(
-        input: Node,
-    ) -> ParseResult<(String, Vec<ast::Signature<ast::PortParam>>)> {
+    fn external(input: Node) -> ParseResult<(String, Vec<ast::Signature>)> {
         Ok(match_nodes!(
             input.into_children();
             [string_lit(path), signature(sigs)..] => (path, sigs.collect()),

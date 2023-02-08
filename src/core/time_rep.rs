@@ -5,20 +5,17 @@ use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 use std::{fmt::Debug, fmt::Display};
 
+#[derive(Default)]
 /// Represents a binding from names to time variables.
-pub struct Binding<T>
-where
-    T: TimeRep,
-{
+pub struct Binding<T> {
     map: LinkedHashMap<Id, T>,
 }
 
-impl<T> Binding<T>
-where
-    T: TimeRep,
-{
-    pub fn new(map: LinkedHashMap<Id, T>) -> Self {
-        Self { map }
+impl<T> Binding<T> {
+    pub fn new(map: impl IntoIterator<Item = (Id, T)>) -> Self {
+        Self {
+            map: map.into_iter().collect(),
+        }
     }
 
     pub fn find(&self, n: &Id) -> Option<&T> {
@@ -36,11 +33,15 @@ where
     pub fn extend(&mut self, other: Vec<(Id, T)>) {
         self.map.extend(other);
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
 }
 
 impl<T> Debug for Binding<T>
 where
-    T: Display + TimeRep,
+    T: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -67,6 +68,8 @@ where
     fn resolve(&self, bindings: &Binding<Self>) -> Self;
     /// Substract two time expression representing the absolute difference
     fn sub(self, other: Self) -> Self::SubRep;
+    /// All events used in the time expression
+    fn events(&self) -> Vec<Id>;
 }
 
 /// Functions provided by data structures that contain a time representation
@@ -108,6 +111,17 @@ where
 
     pub fn sym(l: T, r: T) -> Self {
         TimeSub::Sym { l, r }
+    }
+
+    pub fn events(&self) -> Vec<Id> {
+        match self {
+            TimeSub::Unit(_) => vec![],
+            TimeSub::Sym { l, r } => {
+                let mut events = l.events();
+                events.extend(r.events());
+                events
+            }
+        }
     }
 
     /// Return the concrete difference if possible

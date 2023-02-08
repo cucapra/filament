@@ -1,155 +1,103 @@
+use itertools::Itertools;
+
 use crate::errors::WithPos;
-use crate::utils::GPosIdx;
 use crate::{
+    ast::param as ast,
     errors::{Error, FilamentResult},
-    event_checker::ast,
 };
 use std::collections::HashMap;
 
 /// An Instance that has been resolved
-pub enum ResolvedInstance<'a> {
-    Bound {
-        sig: &'a ast::Signature<ast::PortParam>,
-        binds: Vec<u64>,
-    },
-    Concrete {
-        sig: &'a ast::Signature<u64>,
-        pos: GPosIdx,
-    },
+pub struct ResolvedInstance<'a> {
+    sig: &'a ast::Signature,
+    binds: Vec<ast::PortParam>,
 }
 
 impl<'a> ResolvedInstance<'a> {
-    pub fn bound(
-        sig: &'a ast::Signature<ast::PortParam>,
-        binds: Vec<u64>,
-    ) -> Self {
-        Self::Bound { sig, binds }
+    pub fn bound(sig: &'a ast::Signature, binds: Vec<ast::PortParam>) -> Self {
+        log::trace!("sig = {}, binds = {:?}", sig, binds);
+        Self { sig, binds }
     }
 
-    pub fn concrete(sig: &'a ast::Signature<u64>) -> Self {
-        Self::Concrete {
-            sig,
-            pos: GPosIdx::UNKNOWN,
-        }
-    }
-}
-impl<'a> From<&'a ast::Signature<u64>> for ResolvedInstance<'a> {
-    fn from(sig: &'a ast::Signature<u64>) -> Self {
-        Self::Concrete {
-            sig,
-            pos: GPosIdx::UNKNOWN,
-        }
+    pub fn this(sig: &'a ast::Signature) -> Self {
+        let binds = sig
+            .params
+            .iter()
+            .map(|p| ast::PortParam::Var(p.clone()))
+            .collect_vec();
+        Self::bound(sig, binds)
     }
 }
 
 impl<'a> ResolvedInstance<'a> {
+    pub fn sig(&self) -> &'a ast::Signature {
+        self.sig
+    }
+
     // Return the abstract variables defined by the signature of this instance.
     pub fn events(&self) -> Vec<ast::Id> {
-        match self {
-            ResolvedInstance::Bound { sig, .. } => sig.events().collect(),
-            ResolvedInstance::Concrete { sig, .. } => sig.events().collect(),
-        }
+        self.sig.events().collect()
     }
 
     pub fn abstract_vars(&self) -> &[ast::EventBind] {
-        match self {
-            ResolvedInstance::Bound { sig, .. } => &sig.events,
-            ResolvedInstance::Concrete { sig, .. } => &sig.events,
-        }
+        &self.sig.events
     }
 
     pub fn interface_signals(&self) -> &[ast::InterfaceDef] {
-        match self {
-            ResolvedInstance::Bound { sig, .. } => &sig.interface_signals,
-            ResolvedInstance::Concrete { sig, .. } => &sig.interface_signals,
-        }
+        &self.sig.interface_signals
     }
 
     pub fn input_names(&self) -> Vec<ast::Id> {
-        match self {
-            ResolvedInstance::Bound { sig, .. } => {
-                sig.inputs().map(|pd| pd.name.clone()).collect()
-            }
-            ResolvedInstance::Concrete { sig, .. } => {
-                sig.inputs().map(|pd| pd.name.clone()).collect()
-            }
-        }
+        self.sig.inputs().map(|pd| pd.name.clone()).collect()
     }
 
     pub fn interface_name(&self) -> Vec<ast::Id> {
-        match self {
-            ResolvedInstance::Bound { sig, .. } => sig
-                .interface_signals
-                .iter()
-                .map(|id| id.name.clone())
-                .collect(),
-            ResolvedInstance::Concrete { sig, .. } => sig
-                .interface_signals
-                .iter()
-                .map(|id| id.name.clone())
-                .collect(),
-        }
+        self.sig
+            .interface_signals
+            .iter()
+            .map(|id| id.name.clone())
+            .collect()
     }
 
     pub fn get_interface(&self, event: &ast::Id) -> Option<&ast::InterfaceDef> {
-        match self {
-            ResolvedInstance::Bound { sig, .. } => sig.get_interface(event),
-            ResolvedInstance::Concrete { sig, .. } => sig.get_interface(event),
-        }
+        self.sig.get_interface(event)
     }
 
     pub fn get_event(&self, event: &ast::Id) -> Option<&ast::EventBind> {
-        match self {
-            ResolvedInstance::Bound { sig, .. } => Some(sig.get_event(event)),
-            ResolvedInstance::Concrete { sig, .. } => {
-                Some(sig.get_event(event))
-            }
-        }
+        Some(self.sig.get_event(event))
     }
 
     pub fn phantom_events(&self) -> Vec<ast::Id> {
-        match self {
-            ResolvedInstance::Bound { sig, .. } => {
-                sig.phantom_events().collect()
-            }
-            ResolvedInstance::Concrete { sig, .. } => {
-                sig.phantom_events().collect()
-            }
-        }
+        self.sig.phantom_events().collect()
     }
 
-    pub fn resolve(&self) -> ast::Signature<u64> {
-        match self {
-            ResolvedInstance::Bound { sig, binds, .. } => {
-                sig.resolve(binds).unwrap_or_else(|_| {
-                    panic!("Failed to resolve signature: {}", sig.name)
-                })
-            }
-            ResolvedInstance::Concrete { sig, .. } => (*sig).clone(),
-        }
+    pub fn resolve(&self) -> FilamentResult<ast::Signature> {
+        self.sig.resolve(&self.binds).map_err(|e| {
+            e.add_note(
+                "Attempting to resolve signature",
+                self.sig.name.copy_span(),
+            )
+        })
     }
 
     pub fn binding(&self, abs: &'a [ast::TimeRep]) -> ast::Binding {
-        match self {
-            ResolvedInstance::Bound { sig, .. } => sig.binding(abs),
-            ResolvedInstance::Concrete { sig, .. } => sig.binding(abs),
-        }
+        self.sig.binding(abs)
     }
 }
 
 /// Environment to store the current set of bindings
 pub struct Bindings<'a> {
     /// Signatures for external definitions
-    ext_sigs: HashMap<ast::Id, &'a ast::Signature<ast::PortParam>>,
+    ext_sigs: HashMap<ast::Id, &'a ast::Signature>,
     /// Signatures for components
     comps: Vec<ast::Component>,
 }
 impl<'a> Bindings<'a> {
     pub fn new(
-        ext_sigs: HashMap<ast::Id, &'a ast::Signature<ast::PortParam>>,
+        ext_sigs: impl IntoIterator<Item = (ast::Id, &'a ast::Signature)>,
     ) -> Self {
         Self {
-            ext_sigs,
+            ext_sigs: ext_sigs.into_iter().collect(),
             comps: Vec::new(),
         }
     }
@@ -163,7 +111,7 @@ impl<'a> Bindings<'a> {
     pub fn find_component(
         &'a self,
         name: &ast::Id,
-        binds: &[u64],
+        binds: &[ast::PortParam],
     ) -> FilamentResult<ResolvedInstance> {
         if let Some(sig) = self.ext_sigs.get(name) {
             Ok(ResolvedInstance::bound(sig, binds.to_vec()))
@@ -171,7 +119,7 @@ impl<'a> Bindings<'a> {
             self.comps
                 .iter()
                 .find(|c| c.sig.name == name)
-                .map(|comp| ResolvedInstance::concrete(&comp.sig))
+                .map(|comp| ResolvedInstance::bound(&comp.sig, binds.to_vec()))
                 .ok_or_else(|| {
                     Error::undefined(name.clone(), "component")
                         .add_note("Undefined component", name.copy_span())
@@ -183,7 +131,7 @@ impl<'a> Bindings<'a> {
     pub fn get_component(
         &'a self,
         name: &ast::Id,
-        binds: &[u64],
+        binds: &[ast::PortParam],
     ) -> ResolvedInstance {
         self.find_component(name, binds)
             .unwrap_or_else(|_| panic!("Failed to find component {}", name))

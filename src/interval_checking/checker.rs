@@ -1,10 +1,11 @@
 use super::{ConcreteInvoke, Context, FilSolver, THIS};
+use crate::ast::param::{self as ast, Constraint, CBT};
 use crate::core::WithTime;
 use crate::errors::{Error, FilamentResult, WithPos};
-use crate::event_checker::ast::{self, Constraint, CBT};
 use crate::utils::GPosIdx;
 use crate::visitor;
 use itertools::Itertools;
+use std::collections::HashMap;
 use std::iter;
 
 // For connect statements of the form:
@@ -56,7 +57,7 @@ fn check_invoke_binds<'a>(
     // Track event bindings
     ctx.add_event_binds(invoke.instance.clone(), &binding, invoke.copy_span());
 
-    let this_sig = ctx.get_invoke(&THIS.into()).get_sig();
+    let inv = ctx.get_invoke(&THIS.into());
     let mut constraints = vec![];
 
     // For each event provided in the bining, ensure that the corresponding interface
@@ -69,7 +70,7 @@ fn check_invoke_binds<'a>(
             // variable.
             let event = &evs.event;
             // Get interface for this event
-            let event_interface = this_sig.get_event(event);
+            let event_interface = inv.get_event(event);
             let int_len = inst_event.delay.resolve(&binding);
             let ev_int_len = &event_interface.delay;
 
@@ -113,7 +114,7 @@ fn check_invoke<'a>(
     // Check the bindings for abstract variables do not violate @interface
     // requirements
     check_invoke_binds(invoke, ctx)?;
-    let sig = ctx.get_instance(&invoke.instance).resolve();
+    let sig = ctx.get_instance(&invoke.instance).resolve()?;
     let binding = sig.binding(&invoke.abstract_vars);
 
     // Handle `where` clause constraints and well formedness constraints on intervals.
@@ -138,7 +139,6 @@ fn check_invoke<'a>(
     // Add this invocation to the context
     ctx.add_invocation(
         invoke.bind.clone(),
-        // XXX(rachit): Get rid of this clone
         ConcreteInvoke::concrete(binding, sig),
     );
 
@@ -149,7 +149,7 @@ fn check_invoke_ports<'a>(
     invoke: &'a ast::Invoke,
     ctx: &mut Context<'a>,
 ) -> FilamentResult<()> {
-    let sig = ctx.get_instance(&invoke.instance).resolve();
+    let sig = ctx.get_instance(&invoke.instance).resolve()?;
     // If this is a high-level invoke, check all port requirements
     if let Some(actuals) = &invoke.ports {
         // Check connections implied by the invocation
@@ -277,7 +277,7 @@ fn check_component(
 /// the interval requirements to be proven.
 pub fn check(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
     let comps = ns.components.drain(..).collect_vec();
-    let sigs = ns.signatures();
+    let sigs: HashMap<_, _> = ns.signatures().collect();
     let mut solver = FilSolver::new()?;
 
     // Check that all signatures are well formed

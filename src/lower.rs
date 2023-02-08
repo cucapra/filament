@@ -1,6 +1,6 @@
+use crate::ast::param as ast;
 use crate::core::{Id, WithTime};
 use crate::errors::{FilamentResult, WithPos};
-use crate::event_checker::ast;
 use crate::visitor;
 use std::collections::HashMap;
 
@@ -82,7 +82,7 @@ impl visitor::Transform for CompileInvokes {
             ..
         } = inv
         {
-            let sig = sig.resolve();
+            let sig = sig.resolve()?;
             // Get the signature associated with this instance.
             let binding = sig.binding(&abstract_vars);
 

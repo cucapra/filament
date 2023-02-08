@@ -82,10 +82,7 @@ time = {
 
 // Intervals
 interval_range = {
- "@" ~ "exact"? ~ "[" ~ time ~ "," ~ time ~ "]"
-}
-interval = _{
-  interval_range ~ ("+" ~ interval_range)?
+ "@" ~ "[" ~ time ~ "," ~ time ~ "]"
 }
 
 // Ports
@@ -96,7 +93,7 @@ port_width = {
   bitwidth | identifier
 }
 port_def = {
-  (interval | interface)? ~ identifier ~ ":" ~ port_width
+  (interval_range | interface)? ~ identifier ~ ":" ~ port_width
 }
 
 arrow = { "->" }
@@ -110,7 +107,7 @@ ports = {
 
 // ====== Cell instance ======
 conc_params = {
-  ("[" ~ bitwidth ~ ("," ~ bitwidth)* ~ "]")?
+  ("[" ~ port_width ~ ("," ~ port_width)* ~ "]")?
 }
 instance = {
   identifier ~ ":=" ~ "new" ~ identifier ~ conc_params ~ invoke_args? ~ ";"

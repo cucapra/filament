@@ -6,6 +6,7 @@ use crate::{
 use itertools::Itertools;
 use std::fmt::Display;
 
+#[derive(Clone)]
 pub struct Port {
     pub typ: PortType,
     pos: GPosIdx,
@@ -37,6 +38,7 @@ impl errors::WithPos for Port {
     }
 }
 
+#[derive(Clone)]
 pub enum PortType {
     ThisPort(Id),
     InvPort { invoke: Id, name: Id },
@@ -78,39 +80,40 @@ impl std::fmt::Display for PortType {
     }
 }
 
+#[derive(Clone)]
 /// Command in a component
-pub enum Command<T> {
-    Invoke(Invoke<T>),
-    Instance(Instance),
+pub enum Command<Time, Width: Clone> {
+    Invoke(Invoke<Time>),
+    Instance(Instance<Width>),
     Connect(Connect),
     Fsm(Fsm),
 }
 
-impl<T> From<Fsm> for Command<T> {
+impl<T, W: Clone> From<Fsm> for Command<T, W> {
     fn from(v: Fsm) -> Self {
         Self::Fsm(v)
     }
 }
 
-impl<T> From<Connect> for Command<T> {
+impl<T, W: Clone> From<Connect> for Command<T, W> {
     fn from(v: Connect) -> Self {
         Self::Connect(v)
     }
 }
 
-impl<T> From<Instance> for Command<T> {
-    fn from(v: Instance) -> Self {
+impl<T, W: Clone> From<Instance<W>> for Command<T, W> {
+    fn from(v: Instance<W>) -> Self {
         Self::Instance(v)
     }
 }
 
-impl<T> From<Invoke<T>> for Command<T> {
+impl<T, W: Clone> From<Invoke<T>> for Command<T, W> {
     fn from(v: Invoke<T>) -> Self {
         Self::Invoke(v)
     }
 }
 
-impl<T: Display> Display for Command<T> {
+impl<T: Display, W: Clone + Display> Display for Command<T, W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Command::Invoke(inv) => write!(f, "{}", inv),
@@ -121,19 +124,20 @@ impl<T: Display> Display for Command<T> {
     }
 }
 
+#[derive(Clone)]
 /// A new component instance
-pub struct Instance {
+pub struct Instance<Width: Clone> {
     /// Name of the instance.
     pub name: Id,
     /// Name of the component
     pub component: Id,
     /// Bindings provided for this instance
-    pub bindings: Vec<u64>,
+    pub bindings: Vec<Width>,
     /// Source position
     pos: GPosIdx,
 }
-impl Instance {
-    pub fn new(name: Id, component: Id, bindings: Vec<u64>) -> Self {
+impl<W: Clone> Instance<W> {
+    pub fn new(name: Id, component: Id, bindings: Vec<W>) -> Self {
         Instance {
             name,
             component,
@@ -142,12 +146,17 @@ impl Instance {
         }
     }
 }
-impl std::fmt::Display for Instance {
+impl<W: Clone + Display> std::fmt::Display for Instance<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} := new {}", self.name, self.component)
+        write!(f, "{} := new {}", self.name, self.component)?;
+        if !self.bindings.is_empty() {
+            write!(f, "[{}]", self.bindings.iter().join(", "))
+        } else {
+            Ok(())
+        }
     }
 }
-impl WithPos for Instance {
+impl<W: Clone> WithPos for Instance<W> {
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
@@ -158,6 +167,7 @@ impl WithPos for Instance {
     }
 }
 
+#[derive(Clone)]
 /// An Invocation
 pub struct Invoke<T> {
     /// Name of the variable being assigned
@@ -199,11 +209,7 @@ where
     where
         I: Iterator<Item = Id>,
     {
-        Binding::new(
-            abstract_vars
-                .zip(self.abstract_vars.iter().cloned())
-                .collect(),
-        )
+        Binding::new(abstract_vars.zip(self.abstract_vars.iter().cloned()))
     }
 }
 impl<T: Display> Display for Invoke<T> {
@@ -243,6 +249,7 @@ impl<T> errors::WithPos for Invoke<T> {
     }
 }
 
+#[derive(Clone)]
 /// A Guard expression
 pub enum Guard {
     Or(Box<Guard>, Box<Guard>, GPosIdx),
@@ -286,6 +293,7 @@ impl std::fmt::Display for Guard {
     }
 }
 
+#[derive(Clone)]
 /// A Connection between ports
 pub struct Connect {
     /// Destination port
@@ -332,22 +340,7 @@ impl errors::WithPos for Connect {
     }
 }
 
-/// A when statement executes its body when the provided `port` rises.
-/// It also binds the `time_var` in the body to the time when the `port` rose.
-pub struct When<T> {
-    pub time: T,
-    pub commands: Vec<Command<T>>,
-}
-impl<T: Display> Display for When<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "when {} {{ ", self.time)?;
-        for cmd in &self.commands {
-            write!(f, "{}; ", cmd)?;
-        }
-        write!(f, "}}")
-    }
-}
-
+#[derive(Clone)]
 /// Representation of a finite state machine
 pub struct Fsm {
     /// Name of the FSM

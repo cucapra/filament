@@ -72,6 +72,10 @@ impl TimeRep for Time<u64> {
     fn sub(self, other: Self) -> Self::SubRep {
         TimeSub::build(self, other)
     }
+
+    fn events(&self) -> Vec<Id> {
+        vec![self.event.clone()]
+    }
 }
 
 impl From<&Time<u64>> for SExp {

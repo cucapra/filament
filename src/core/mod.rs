@@ -9,9 +9,9 @@ mod signature;
 mod time_rep;
 
 pub use component::{Component, Namespace};
-pub use constraint::{Constraint, ConstraintBase};
+pub use constraint::{Constraint, OrderConstraint};
 pub use control::{
-    Command, Connect, Fsm, Guard, Instance, Invoke, Port, PortType, When,
+    Command, Connect, Fsm, Guard, Instance, Invoke, Port, PortType,
 };
 pub use id::Id;
 pub use interval::Range;

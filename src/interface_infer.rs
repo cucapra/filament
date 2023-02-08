@@ -2,9 +2,9 @@
 //! Once this pass is run, all Filament-level components are guaranteed to have @interface defined
 //! for all the events they use.
 
+use crate::ast::param::ast;
 use crate::core::{self, TimeRep};
 use crate::errors::FilamentResult;
-use crate::event_checker::ast;
 use crate::visitor::{self, ResolvedInstance};
 use itertools::Itertools;
 use std::collections::HashMap;

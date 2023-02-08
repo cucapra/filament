@@ -5,6 +5,7 @@ use std::{
 };
 
 use crate::{
+    ast::param as ast,
     cmdline,
     errors::{self, FilamentResult},
     frontend,
@@ -103,9 +104,7 @@ impl Resolver {
         }
     }
 
-    pub fn parse_namespace(
-        &mut self,
-    ) -> FilamentResult<frontend::ast::Namespace> {
+    pub fn parse_namespace(&mut self) -> FilamentResult<ast::Namespace> {
         // Parse the top-level file
         let mut ns = frontend::FilamentParser::parse_file(&self.input)?;
 

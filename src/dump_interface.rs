@@ -1,5 +1,5 @@
+use crate::ast::param as ast;
 use crate::errors::{self, FilamentResult, WithPos};
-use crate::event_checker::ast;
 use crate::visitor;
 use std::collections::HashMap;
 
@@ -86,8 +86,8 @@ impl visitor::Transform for DumpInterface {
         //   "start": n,
         //   "end": m
         // },
-        let pd_to_info = |pd: &ast::PortDef<u64>| {
-            let w = pd.bitwidth;
+        let pd_to_info = |pd: &ast::PortDef| {
+            let w = &pd.bitwidth;
             pd.liveness
             .as_offset()
             .map(|(event, st, end)| {

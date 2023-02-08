@@ -1,5 +1,5 @@
 use super::{Bindings, ResolvedInstance};
-use crate::{errors::FilamentResult, event_checker::ast};
+use crate::{ast::param as ast, errors::FilamentResult};
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -53,10 +53,10 @@ where
     }
 
     #[inline]
-    fn signature<W: Clone>(
+    fn signature(
         &mut self,
-        sig: ast::Signature<W>,
-    ) -> FilamentResult<ast::Signature<W>> {
+        sig: ast::Signature,
+    ) -> FilamentResult<ast::Signature> {
         Ok(sig)
     }
 

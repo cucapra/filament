@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::{errors, utils::GPosIdx};
 
-use super::{Binding, Constraint, ConstraintBase, TimeRep, WithTime};
+use super::{Binding, Constraint, OrderConstraint, TimeRep, WithTime};
 
 /// A range over time representation
 #[derive(Clone)]
@@ -22,7 +22,7 @@ where
     /// Generate constraints for well formedness of this range.
     pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> {
         std::iter::once(
-            Constraint::from(ConstraintBase::lt(
+            Constraint::from(OrderConstraint::lt(
                 self.start.clone(),
                 self.end.clone(),
             ))

@@ -9,8 +9,8 @@ error: Cannot prove constraint 1 >= 2
 9 │   m1 := M<G+1>(30, 40);
   │   ^^^^^^^^^^^^^^^^^^^^^ Conflicting invoke. Invoke provides binding M.G=G+1
   │
-  ┌─ ./primitives/sequential.fil:3:11
+  ┌─ ./primitives/sequential.fil:3:14
   │
-3 │ comp Mult<G: 2>(
-  │           ---- Delay for G specifies that invokes must be 2 cycles apart
+3 │ comp Mult[W]<G: 2>(
+  │              ---- Delay for G specifies that invokes must be 2 cycles apart
 

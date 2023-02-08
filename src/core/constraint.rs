@@ -1,6 +1,6 @@
 use derivative::Derivative;
 
-use super::{Binding, Range, Time, TimeRep, TimeSub, WithTime};
+use super::{Binding, Id, Range, Time, TimeRep, TimeSub, WithTime};
 use crate::{errors::FilamentResult, interval_checking::SExp, utils::GPosIdx};
 use std::fmt::Display;
 
@@ -24,10 +24,10 @@ impl std::fmt::Display for OrderOp {
 
 type Extra = Vec<(String, GPosIdx)>;
 
-// A ordering constraint on time expressions
+// An ordering constraint
 #[derive(Clone, Derivative, Eq)]
 #[derivative(PartialEq, Hash)]
-pub struct ConstraintBase<T> {
+pub struct OrderConstraint<T> {
     left: T,
     right: T,
     op: OrderOp,
@@ -36,12 +36,12 @@ pub struct ConstraintBase<T> {
     #[derivative(Hash = "ignore")]
     extra: Extra,
 }
-impl<T> ConstraintBase<T> {
+impl<T> OrderConstraint<T> {
     pub fn map<K, F: Fn(T) -> FilamentResult<K>>(
         self,
         f: F,
-    ) -> FilamentResult<ConstraintBase<K>> {
-        Ok(ConstraintBase {
+    ) -> FilamentResult<OrderConstraint<K>> {
+        Ok(OrderConstraint {
             left: f(self.left)?,
             right: f(self.right)?,
             op: self.op,
@@ -50,7 +50,7 @@ impl<T> ConstraintBase<T> {
     }
 }
 
-impl<T> ConstraintBase<T>
+impl<T> OrderConstraint<T>
 where
     T: Clone,
 {
@@ -64,7 +64,7 @@ where
     }
 
     pub fn eq(left: T, right: T) -> Self {
-        ConstraintBase {
+        OrderConstraint {
             left,
             right,
             op: OrderOp::Eq,
@@ -73,7 +73,7 @@ where
     }
 
     pub fn gte(left: T, right: T) -> Self {
-        ConstraintBase {
+        OrderConstraint {
             left,
             right,
             op: OrderOp::Gte,
@@ -82,12 +82,12 @@ where
     }
 }
 
-impl<K: TimeRep, T: WithTime<K>> WithTime<K> for ConstraintBase<T>
+impl<K: TimeRep, T: WithTime<K>> WithTime<K> for OrderConstraint<T>
 where
     Self: Clone,
 {
     fn resolve(&self, bindings: &Binding<K>) -> Self {
-        ConstraintBase {
+        OrderConstraint {
             left: self.left.resolve(bindings),
             right: self.right.resolve(bindings),
             ..self.clone()
@@ -95,7 +95,7 @@ where
     }
 }
 
-impl<T: TimeRep> ConstraintBase<T> {
+impl<T: TimeRep> OrderConstraint<T> {
     /// Check that the `left` range is equal to `right`
     pub fn equality(
         left: Range<T>,
@@ -103,8 +103,8 @@ impl<T: TimeRep> ConstraintBase<T> {
     ) -> impl Iterator<Item = Self> {
         log::trace!("{left} = {right}");
         vec![
-            ConstraintBase::eq(left.start, right.start),
-            ConstraintBase::eq(left.end, right.end),
+            OrderConstraint::eq(left.start, right.start),
+            OrderConstraint::eq(left.end, right.end),
         ]
         .into_iter()
     }
@@ -117,14 +117,14 @@ impl<T: TimeRep> ConstraintBase<T> {
     ) -> impl Iterator<Item = Self> {
         log::trace!("{left} ⊆ {right}");
         vec![
-            ConstraintBase::gte(left.start, right.start),
-            ConstraintBase::gte(right.end, left.end),
+            OrderConstraint::gte(left.start, right.start),
+            OrderConstraint::gte(right.end, left.end),
         ]
         .into_iter()
     }
 }
 
-impl<T> Display for ConstraintBase<T>
+impl<T> Display for OrderConstraint<T>
 where
     T: Display,
 {
@@ -134,28 +134,35 @@ where
     }
 }
 
+/// A ordering constraint over time expressions or time ranges.
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Constraint<T: TimeRep> {
-    Base { base: ConstraintBase<T> },
-    Sub { base: ConstraintBase<TimeSub<T>> },
+    Base {
+        base: OrderConstraint<T>,
+    },
+    /// Represents ordering over time ranges.
+    Sub {
+        base: OrderConstraint<TimeSub<T>>,
+    },
 }
 
-impl<T: TimeRep> From<ConstraintBase<TimeSub<T>>> for Constraint<T> {
-    fn from(base: ConstraintBase<TimeSub<T>>) -> Self {
+impl<T: TimeRep> From<OrderConstraint<TimeSub<T>>> for Constraint<T> {
+    fn from(base: OrderConstraint<TimeSub<T>>) -> Self {
         Self::Sub { base }
     }
 }
 
-impl<T: TimeRep> From<ConstraintBase<T>> for Constraint<T> {
-    fn from(base: ConstraintBase<T>) -> Self {
+impl<T: TimeRep> From<OrderConstraint<T>> for Constraint<T> {
+    fn from(base: OrderConstraint<T>) -> Self {
         Self::Base { base }
     }
 }
 
 impl<T: TimeRep> Constraint<T> {
+    /// Create a new constraint that `l` is less than `r`
     pub fn lt(l: T, r: T) -> Self {
         Self::Base {
-            base: ConstraintBase::lt(l, r),
+            base: OrderConstraint::lt(l, r),
         }
     }
 
@@ -176,15 +183,31 @@ impl<T: TimeRep> Constraint<T> {
         self
     }
 
-    pub fn map<K: TimeRep, F: Fn(T) -> FilamentResult<K>>(
-        self,
-        f: F,
-    ) -> FilamentResult<Constraint<K>> {
+    pub fn map<K, F>(self, f: F) -> FilamentResult<Constraint<K>>
+    where
+        K: TimeRep,
+        F: Fn(T) -> FilamentResult<K>,
+    {
         match self {
             Constraint::Base { base } => {
                 Ok(Constraint::Base { base: base.map(f)? })
             }
             Constraint::Sub { .. } => todo!("Mapping over Constraint::Sub"),
+        }
+    }
+
+    pub fn events(&self) -> Vec<Id> {
+        match self {
+            Constraint::Base { base } => {
+                let mut evs = base.left.events();
+                evs.append(&mut base.right.events());
+                evs
+            }
+            Constraint::Sub { base } => {
+                let mut evs = base.left.events();
+                evs.append(&mut base.right.events());
+                evs
+            }
         }
     }
 
@@ -204,7 +227,7 @@ impl<T: TimeRep> WithTime<T> for Constraint<T> {
                 base: base.resolve(binding),
             },
             Constraint::Sub { base } => Constraint::Sub {
-                base: ConstraintBase {
+                base: OrderConstraint {
                     left: base.left.resolve(binding),
                     right: base.right.resolve(binding),
                     ..base.clone()
@@ -214,60 +237,7 @@ impl<T: TimeRep> WithTime<T> for Constraint<T> {
     }
 }
 
-/*
-impl Constraint<Time<u64>> {
-    /// Check if the constraint can be statically reduced to true.
-    pub fn simplify(self) -> Option<Self> {
-        match &self {
-            Constraint::Base { base } => {
-                let ord = base.left.partial_cmp(&base.right);
-                match (&base.op, ord) {
-                    (
-                        OrderOp::Gte,
-                        Some(Ordering::Greater | Ordering::Equal),
-                    )
-                    | (OrderOp::Eq, Some(Ordering::Equal))
-                    | (OrderOp::Gt, Some(Ordering::Greater)) => None,
-                    _ => Some(self),
-                }
-            }
-            Constraint::Sub {
-                base:
-                    ConstraintBase {
-                        ref left,
-                        ref right,
-                        ref op,
-                        ..
-                    },
-            } => {
-                if let (Some(l), Some(r)) = (left.concrete(), right.concrete())
-                {
-                    match op {
-                        OrderOp::Gt => {
-                            if l > r {
-                                return None;
-                            }
-                        }
-                        OrderOp::Gte => {
-                            if l >= r {
-                                return None;
-                            }
-                        }
-                        OrderOp::Eq => {
-                            if l == r {
-                                return None;
-                            }
-                        }
-                    }
-                }
-                Some(self)
-            }
-        }
-    }
-}
-*/
-
-impl Display for Constraint<Time<u64>> {
+impl<T: Display + TimeRep> Display for Constraint<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Constraint::Base { base } => write!(f, "{}", base),

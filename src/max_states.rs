@@ -1,7 +1,7 @@
 use crate::{
+    ast::param as ast,
     core::{Id, WithTime},
     errors::FilamentResult,
-    event_checker::ast,
     visitor,
 };
 use itertools::Itertools;
@@ -18,13 +18,11 @@ pub struct MaxStates {
 }
 
 impl MaxStates {
-    fn max_state_from_ports<W>(
+    fn max_state_from_ports(
         &mut self,
-        resolved_outputs: impl Iterator<Item = ast::PortDef<W>>,
-    ) where
-        W: Clone,
-    {
-        let out_events = resolved_outputs.flat_map(|pd: ast::PortDef<W>| {
+        resolved_outputs: impl Iterator<Item = ast::PortDef>,
+    ) {
+        let out_events = resolved_outputs.flat_map(|pd: ast::PortDef| {
             pd.liveness.events().into_iter().cloned().collect_vec()
         });
 
@@ -70,7 +68,7 @@ impl visitor::Transform for MaxStates {
         inv: ast::Invoke,
         sig: &visitor::ResolvedInstance,
     ) -> FilamentResult<Vec<ast::Command>> {
-        let sig = sig.resolve();
+        let sig = sig.resolve()?;
         // Get the signature associated with this instance.
         let binding = sig.binding(&inv.abstract_vars);
         self.max_state_from_ports(sig.outputs().map(|pd| pd.resolve(&binding)));
