@@ -1,5 +1,5 @@
 use super::{Binding, Context};
-use crate::event_checker::ast;
+use crate::ast::param as ast;
 use calyx::ir::{self, RRC};
 /// A Calyx FSM that increments every cycle.
 pub struct Fsm {

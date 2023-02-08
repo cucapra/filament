@@ -1,25 +1,22 @@
 use crate::errors::WithPos;
 use crate::{
+    ast::param as ast,
     errors::{Error, FilamentResult},
-    event_checker::ast,
 };
 use std::collections::HashMap;
 
 /// An Instance that has been resolved
 pub struct ResolvedInstance<'a> {
-    sig: &'a ast::Signature<ast::PortParam>,
+    sig: &'a ast::Signature,
     binds: Vec<ast::PortParam>,
 }
 
 impl<'a> ResolvedInstance<'a> {
-    pub fn bound(
-        sig: &'a ast::Signature<ast::PortParam>,
-        binds: Vec<ast::PortParam>,
-    ) -> Self {
+    pub fn bound(sig: &'a ast::Signature, binds: Vec<ast::PortParam>) -> Self {
         Self { sig, binds }
     }
 
-    pub fn concrete(sig: &'a ast::Signature<ast::PortParam>) -> Self {
+    pub fn concrete(sig: &'a ast::Signature) -> Self {
         Self { sig, binds: vec![] }
     }
 }
@@ -62,7 +59,7 @@ impl<'a> ResolvedInstance<'a> {
         self.sig.phantom_events().collect()
     }
 
-    pub fn resolve(&self) -> ast::Signature<ast::PortParam> {
+    pub fn resolve(&self) -> ast::Signature {
         self.sig.resolve(&self.binds).unwrap_or_else(|_| {
             panic!("Failed to resolve signature: {}", self.sig.name)
         })
@@ -76,14 +73,12 @@ impl<'a> ResolvedInstance<'a> {
 /// Environment to store the current set of bindings
 pub struct Bindings<'a> {
     /// Signatures for external definitions
-    ext_sigs: HashMap<ast::Id, &'a ast::Signature<ast::PortParam>>,
+    ext_sigs: HashMap<ast::Id, &'a ast::Signature>,
     /// Signatures for components
     comps: Vec<ast::Component>,
 }
 impl<'a> Bindings<'a> {
-    pub fn new(
-        ext_sigs: HashMap<ast::Id, &'a ast::Signature<ast::PortParam>>,
-    ) -> Self {
+    pub fn new(ext_sigs: HashMap<ast::Id, &'a ast::Signature>) -> Self {
         Self {
             ext_sigs,
             comps: Vec::new(),

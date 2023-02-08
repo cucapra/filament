@@ -1,7 +1,7 @@
 use super::{ShareConstraints, THIS};
+use crate::ast::param as ast;
 use crate::core::{self, PortParam, TimeRep, WithTime};
 use crate::errors::{Error, FilamentResult, WithPos};
-use crate::event_checker::ast;
 use crate::utils::GPosIdx;
 use crate::visitor;
 use std::collections::{HashMap, HashSet};
@@ -11,11 +11,11 @@ pub enum ConcreteInvoke<'a> {
         /// Bindings for abstract variables
         binding: core::Binding<ast::TimeRep>,
         /// Signature
-        sig: ast::Signature<PortParam>,
+        sig: ast::Signature,
     },
     This {
         /// Signature
-        sig: &'a ast::Signature<PortParam>,
+        sig: &'a ast::Signature,
     },
 }
 
@@ -23,13 +23,13 @@ impl<'a> ConcreteInvoke<'a> {
     /// Construct an instance from a Signature and bindings for abstract variables.
     pub fn concrete(
         binding: core::Binding<ast::TimeRep>,
-        sig: ast::Signature<PortParam>,
+        sig: ast::Signature,
     ) -> Self {
         Self::Concrete { binding, sig }
     }
 
     /// Construct an instance for "this" component.
-    pub fn this_instance(sig: &'a ast::Signature<PortParam>) -> Self {
+    pub fn this_instance(sig: &'a ast::Signature) -> Self {
         Self::This { sig }
     }
 

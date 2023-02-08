@@ -1,9 +1,9 @@
 #![allow(clippy::upper_case_acronyms)]
 
 //! Parser for Calyx programs.
+use crate::ast::param as ast;
 use crate::core::{Time, TimeRep, TimeSub};
 use crate::errors::{self, FilamentResult, WithPos};
-use crate::event_checker::{ast, ast::InterfaceDef};
 use crate::utils::{FileIdx, GPosIdx, GlobalPositionTable};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
@@ -21,18 +21,18 @@ type ParseResult<T> = Result<T, Error<Rule>>;
 // that have a reference to the input string
 type Node<'i> = pest_consume::Node<'i, Rule, UserData>;
 
-type Ports = Vec<ast::PortDef<ast::PortParam>>;
+type Ports = Vec<ast::PortDef>;
 
 // include the grammar file so that Cargo knows to rebuild this file on grammar changes
 const _GRAMMAR: &str = include_str!("syntax.pest");
 
 pub enum ExtOrComp {
-    Ext((String, Vec<ast::Signature<ast::PortParam>>)),
+    Ext((String, Vec<ast::Signature>)),
     Comp(ast::Component),
 }
 
 pub enum Port {
-    Pd(ast::PortDef<ast::PortParam>),
+    Pd(ast::PortDef),
     Int(ast::InterfaceDef),
     Un((ast::Id, u64)),
 }
@@ -233,7 +233,7 @@ impl FilamentParser {
 
     fn io(
         input: Node,
-    ) -> ParseResult<(Ports, Ports, Vec<InterfaceDef>, Vec<(ast::Id, u64)>)>
+    ) -> ParseResult<(Ports, Ports, Vec<ast::InterfaceDef>, Vec<(ast::Id, u64)>)>
     {
         match_nodes!(
             input.clone().into_children();
@@ -404,7 +404,7 @@ impl FilamentParser {
             [identifier(params)..] => params.collect(),
         ))
     }
-    fn signature(input: Node) -> ParseResult<ast::Signature<ast::PortParam>> {
+    fn signature(input: Node) -> ParseResult<ast::Signature> {
         Ok(match_nodes!(
             input.into_children();
             [
@@ -499,9 +499,7 @@ impl FilamentParser {
         )
     }
 
-    fn external(
-        input: Node,
-    ) -> ParseResult<(String, Vec<ast::Signature<ast::PortParam>>)> {
+    fn external(input: Node) -> ParseResult<(String, Vec<ast::Signature>)> {
         Ok(match_nodes!(
             input.into_children();
             [string_lit(path), signature(sigs)..] => (path, sigs.collect()),

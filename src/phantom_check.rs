@@ -1,5 +1,5 @@
+use crate::ast::param as ast;
 use crate::errors::{Error, FilamentResult, WithPos};
-use crate::event_checker::ast;
 use crate::utils::GPosIdx;
 use crate::visitor;
 use std::collections::HashSet;

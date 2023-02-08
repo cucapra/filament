@@ -1,7 +1,7 @@
 use crate::{
+    ast::param as ast,
     core,
     errors::{Error, FilamentResult, WithPos},
-    event_checker::ast,
     utils::BindMap,
     visitor::{Bindings, ResolvedInstance},
 };
@@ -179,7 +179,7 @@ impl BindCheck<'_> {
     }
 
     /// Check the binding of a component
-    fn check_sig<W: Clone>(sig: &ast::Signature<W>) -> FilamentResult<()> {
+    fn check_sig(sig: &ast::Signature) -> FilamentResult<()> {
         let events = sig.events().collect_vec();
         // Check all the definitions only use bound events
         for pd in sig.ports() {

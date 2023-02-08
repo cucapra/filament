@@ -1,8 +1,9 @@
 use super::Fsm;
 use crate::{
+    ast::param as ast,
     cmdline::Opts,
+    core::{self, Time},
     errors::{Error, FilamentResult},
-    event_checker::ast,
 };
 use calyx::{
     errors::CalyxResult,
@@ -264,7 +265,7 @@ fn compile_connect(con: ast::Connect, ctx: &mut Context) {
 
 fn as_port_defs<FW, CW, F0, F1>(
     // The signature to be converted
-    sig: &ast::Signature<FW>,
+    sig: &core::Signature<Time<u64>, FW>,
     // Transformation for ports that may have parametric width.
     port_transform: F0,
     // Transformation for ports that have a concrete width (interface ports, clk, reset)
@@ -274,7 +275,7 @@ fn as_port_defs<FW, CW, F0, F1>(
 ) -> Vec<ir::PortDef<CW>>
 where
     FW: Clone,
-    F0: Fn(&ast::PortDef<FW>, ir::Direction) -> ir::PortDef<CW>,
+    F0: Fn(&core::PortDef<Time<u64>, FW>, ir::Direction) -> ir::PortDef<CW>,
     F1: Fn(&ast::Id, u64) -> ir::PortDef<CW>,
 {
     let mut ports: Vec<ir::PortDef<CW>> = sig
@@ -340,16 +341,15 @@ fn compile_component(
     sigs: &mut Binding,
     lib: &ir::LibrarySignatures,
 ) -> FilamentResult<ir::Component> {
-    let port_transform = |pd: &ast::PortDef<ast::PortParam>,
-                          dir: ir::Direction|
-     -> ir::PortDef<u64> {
-        let ast::PortParam::Const(width) = pd.bitwidth else {
+    let port_transform =
+        |pd: &ast::PortDef, dir: ir::Direction| -> ir::PortDef<u64> {
+            let ast::PortParam::Const(width) = pd.bitwidth else {
             panic!("Port {} has a non-concrete width", pd.name)
         };
-        let mut pd: ir::PortDef<u64> = (pd.name.id(), width, dir).into();
-        pd.attributes.insert("data", 1);
-        pd
-    };
+            let mut pd: ir::PortDef<u64> = (pd.name.id(), width, dir).into();
+            pd.attributes.insert("data", 1);
+            pd
+        };
     let concrete_transform = |name: &ast::Id, width: u64| -> ir::PortDef<u64> {
         (name.id(), width, ir::Direction::Input).into()
     };
@@ -417,26 +417,25 @@ fn compile_component(
 }
 
 fn prim_as_port_defs(
-    sig: &ast::Signature<ast::PortParam>,
+    sig: &core::Signature<Time<u64>, ast::PortParam>,
 ) -> Vec<ir::PortDef<ir::Width>> {
-    let port_transform = |pd: &ast::PortDef<ast::PortParam>,
-                          dir: ir::Direction|
-     -> ir::PortDef<ir::Width> {
-        let width = match &pd.bitwidth {
-            ast::PortParam::Const(v) => ir::Width::Const { value: *v },
-            ast::PortParam::Var(v) => ir::Width::Param {
-                value: v.id().into(),
-            },
+    let port_transform =
+        |pd: &ast::PortDef, dir: ir::Direction| -> ir::PortDef<ir::Width> {
+            let width = match &pd.bitwidth {
+                ast::PortParam::Const(v) => ir::Width::Const { value: *v },
+                ast::PortParam::Var(v) => ir::Width::Param {
+                    value: v.id().into(),
+                },
+            };
+            let mut attributes = ir::Attributes::default();
+            attributes.insert("data", 1);
+            ir::PortDef {
+                name: ir::Id::from(pd.name.id()),
+                direction: dir,
+                width,
+                attributes,
+            }
         };
-        let mut attributes = ir::Attributes::default();
-        attributes.insert("data", 1);
-        ir::PortDef {
-            name: ir::Id::from(pd.name.id()),
-            direction: dir,
-            width,
-            attributes,
-        }
-    };
     let concrete_transform =
         |name: &ast::Id, bw: u64| -> ir::PortDef<ir::Width> {
             ir::PortDef {
@@ -449,7 +448,9 @@ fn prim_as_port_defs(
     as_port_defs(sig, port_transform, concrete_transform, false)
 }
 
-fn compile_signature(sig: &ast::Signature<ast::PortParam>) -> ir::Primitive {
+fn compile_signature(
+    sig: &core::Signature<Time<u64>, ast::PortParam>,
+) -> ir::Primitive {
     ir::Primitive {
         name: sig.name.id().into(),
         params: sig.params.iter().map(|p| p.id().into()).collect(),
@@ -462,7 +463,7 @@ fn compile_signature(sig: &ast::Signature<ast::PortParam>) -> ir::Primitive {
 
 fn init_calyx(
     lib_loc: &Path,
-    externs: &[(String, Vec<ast::Signature<ast::PortParam>>)],
+    externs: &[(String, Vec<core::Signature<Time<u64>, ast::PortParam>>)],
 ) -> CalyxResult<ir::Context> {
     let mut prims = PathBuf::from(lib_loc);
     prims.push("primitives");

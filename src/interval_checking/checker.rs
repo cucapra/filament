@@ -1,7 +1,7 @@
 use super::{ConcreteInvoke, Context, FilSolver, THIS};
+use crate::ast::param::{self as ast, Constraint, CBT};
 use crate::core::WithTime;
 use crate::errors::{Error, FilamentResult, WithPos};
-use crate::event_checker::ast::{self, Constraint, CBT};
 use crate::utils::GPosIdx;
 use crate::visitor;
 use itertools::Itertools;

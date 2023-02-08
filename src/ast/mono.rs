@@ -2,12 +2,12 @@ use crate::core;
 
 pub type TimeRep = core::Time<u64>;
 pub type TimeSub = core::TimeSub<TimeRep>;
-pub type Width = core::PortParam;
+pub type Width = u64;
 
 pub type Component = core::Component<TimeRep, Width>;
 pub type Namespace = core::Namespace<TimeRep, Width>;
 pub type PortDef<W> = core::PortDef<TimeRep, W>;
-pub type Signature<W> = core::Signature<TimeRep, W>;
+pub type Signature = core::Signature<TimeRep, Width>;
 pub type Constraint = core::Constraint<TimeRep>;
 pub type CBT = core::OrderConstraint<TimeRep>;
 pub type CBS = core::OrderConstraint<TimeSub>;
