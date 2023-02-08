@@ -63,26 +63,26 @@ where
 
 /// The signature of a component definition
 #[derive(Clone)]
-pub struct Signature<T, W>
+pub struct Signature<Time, Width>
 where
-    T: Clone + TimeRep,
-    W: Clone,
+    Time: Clone + TimeRep,
+    Width: Clone,
 {
     /// Name of the component
     pub name: Id,
     /// Parameters for the Signature
     pub params: Vec<Id>,
     /// Names of abstract variables bound by the component
-    pub events: Vec<EventBind<T>>,
-    /// Unannotated ports that are thread through by the backend
+    pub events: Vec<EventBind<Time>>,
+    /// Unannotated ports that are threaded through by the backend
     pub unannotated_ports: Vec<(Id, u64)>,
     /// Mapping from name of signals to the abstract variable they provide
     /// evidence for.
     pub interface_signals: Vec<InterfaceDef>,
     /// Constraints on the abstract variables in the signature
-    pub constraints: Vec<Constraint<T>>,
+    pub constraints: Vec<Constraint<Time>>,
     /// All the input/output ports.
-    ports: Vec<PortDef<T, W>>,
+    ports: Vec<PortDef<Time, Width>>,
     /// Index of the first output port in the ports vector
     outputs_idx: usize,
 }
@@ -300,7 +300,10 @@ impl<W: Clone> Signature<Time<u64>, W> {
 }
 
 impl<T: TimeRep> Signature<T, PortParam> {
-    pub fn resolve(&self, args: &[u64]) -> FilamentResult<Signature<T, u64>> {
+    pub fn resolve(
+        &self,
+        args: &[PortParam],
+    ) -> FilamentResult<Signature<T, PortParam>> {
         if args.len() != self.params.len() {
             return Err(Error::malformed(format!(
                 "Cannot resolve signature. Expected {} arguments, provided {}",
@@ -309,21 +312,17 @@ impl<T: TimeRep> Signature<T, PortParam> {
             )));
         }
 
-        let binding: HashMap<Id, u64> = self
+        let binding: HashMap<Id, PortParam> = self
             .params
             .iter()
             .cloned()
             .zip(args.iter().cloned())
             .collect();
+
         let resolve_port =
-            |pd: &PortDef<T, PortParam>| -> FilamentResult<PortDef<T, u64>> {
+            |pd: &PortDef<T, PortParam>| -> FilamentResult<PortDef<T, PortParam>> {
                 match &pd.bitwidth {
-                    PortParam::Const(c) => Ok(PortDef::new(
-                        pd.name.clone(),
-                        pd.liveness.clone(),
-                        *c,
-                    )
-                    .set_span(pd.copy_span())),
+                    PortParam::Const(c) => Ok(pd.clone()),
                     PortParam::Var(param) => {
                         if let Some(&c) = binding.get(param) {
                             Ok(PortDef::new(

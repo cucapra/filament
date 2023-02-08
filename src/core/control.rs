@@ -1,4 +1,4 @@
-use super::{Binding, Id, Range, TimeRep};
+use super::{Binding, Id, PortParam, Range, TimeRep};
 use crate::{
     errors::{self, Error, FilamentResult, WithPos},
     utils::GPosIdx,
@@ -128,12 +128,12 @@ pub struct Instance {
     /// Name of the component
     pub component: Id,
     /// Bindings provided for this instance
-    pub bindings: Vec<u64>,
+    pub bindings: Vec<PortParam>,
     /// Source position
     pos: GPosIdx,
 }
 impl Instance {
-    pub fn new(name: Id, component: Id, bindings: Vec<u64>) -> Self {
+    pub fn new(name: Id, component: Id, bindings: Vec<PortParam>) -> Self {
         Instance {
             name,
             component,

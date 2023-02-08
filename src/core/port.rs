@@ -2,7 +2,7 @@ use super::{Binding, Id, Range, TimeRep, WithTime};
 use crate::{errors::WithPos, utils::GPosIdx};
 use std::fmt::Display;
 
-#[derive(Clone)]
+#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum PortParam {
     /// A constant
     Const(u64),

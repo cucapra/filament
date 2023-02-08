@@ -32,35 +32,36 @@ impl BindCheck<'_> {
     fn port<const INPUT: bool>(
         &mut self,
         port: &ast::Port,
-    ) -> FilamentResult<u64> {
-        let check_port =
-            |instance: &ast::Id, p: &ast::Id| -> FilamentResult<u64> {
-                let sig = self
-                    .instances
-                    .find(instance)
-                    .expect("THIS component is not defined")
-                    .resolve();
-                let mut iter: Box<dyn Iterator<Item = _>> = if INPUT {
-                    Box::new(sig.inputs())
-                } else {
-                    Box::new(sig.outputs())
-                };
-                let kind = if INPUT { "input" } else { "output" };
-                iter.find(|p1| p1.name == p)
-                    .map(|p| p.bitwidth)
-                    // XXX(rachit): Always search interface ports regardless of input or output because we don't
-                    // correctly reverse them.
-                    .or_else(|| {
-                        sig.interface_signals
-                            .iter()
-                            .find(|def| def.name == p)
-                            .map(|_| 1)
-                    })
-                    .ok_or_else(|| {
-                        Error::undefined(ast::Id::from(format!("{port}")), kind)
-                            .add_note("Port is not defined", port.copy_span())
-                    })
+    ) -> FilamentResult<ast::PortParam> {
+        let check_port = |instance: &ast::Id,
+                          p: &ast::Id|
+         -> FilamentResult<ast::PortParam> {
+            let sig = self
+                .instances
+                .find(instance)
+                .expect("THIS component is not defined")
+                .resolve();
+            let mut iter: Box<dyn Iterator<Item = _>> = if INPUT {
+                Box::new(sig.inputs())
+            } else {
+                Box::new(sig.outputs())
             };
+            let kind = if INPUT { "input" } else { "output" };
+            iter.find(|p1| p1.name == p)
+                .map(|p| p.bitwidth)
+                // XXX(rachit): Always search interface ports regardless of input or output because we don't
+                // correctly reverse them.
+                .or_else(|| {
+                    sig.interface_signals
+                        .iter()
+                        .find(|def| def.name == p)
+                        .map(|_| ast::PortParam::Const(1))
+                })
+                .ok_or_else(|| {
+                    Error::undefined(ast::Id::from(format!("{port}")), kind)
+                        .add_note("Port is not defined", port.copy_span())
+                })
+        };
 
         match &port.typ {
             ast::PortType::ThisPort(p) => check_port(&ast::Id::from(THIS), p),
@@ -73,7 +74,7 @@ impl BindCheck<'_> {
                 })?;
                 check_port(inst, name)
             }
-            ast::PortType::Constant(_) => Ok(32),
+            ast::PortType::Constant(_) => Ok(ast::PortParam::Const(32)),
         }
     }
 
@@ -152,6 +153,8 @@ impl BindCheck<'_> {
             }
 
             // Check that the number of ports matches the number of ports
+            // XXX(rachit): We can directly count the number of inputs by defining a method on
+            // signatures
             let formals = inst.input_names().len();
             let actuals = ports.len();
             if formals != actuals {
@@ -231,9 +234,10 @@ impl BindCheck<'_> {
 
         // Add THIS instance
         let this_sig = comp.sig.reversed();
-        bind_check
-            .instances
-            .add(ast::Id::from(THIS), (&this_sig).into())?;
+        bind_check.instances.add(
+            ast::Id::from(THIS),
+            ResolvedInstance::bound(&this_sig, vec![]),
+        )?;
 
         // Create all invoke bindings
         for cmd in &comp.body {

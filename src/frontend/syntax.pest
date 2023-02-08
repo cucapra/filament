@@ -107,7 +107,7 @@ ports = {
 
 // ====== Cell instance ======
 conc_params = {
-  ("[" ~ bitwidth ~ ("," ~ bitwidth)* ~ "]")?
+  ("[" ~ port_width ~ ("," ~ port_width)* ~ "]")?
 }
 instance = {
   identifier ~ ":=" ~ "new" ~ identifier ~ conc_params ~ invoke_args? ~ ";"

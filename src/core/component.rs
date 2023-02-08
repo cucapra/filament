@@ -3,15 +3,15 @@ use crate::errors::{Error, FilamentResult, WithPos};
 use std::{collections::HashMap, fmt::Display};
 
 /// A component in Filament
-pub struct Component<T>
+pub struct Component<Time>
 where
-    T: Clone + TimeRep,
+    Time: Clone + TimeRep,
 {
     // Signature of this component
-    pub sig: Signature<T, u64>,
+    pub sig: Signature<Time, PortParam>,
 
     /// Model for this component
-    pub body: Vec<Command<T>>,
+    pub body: Vec<Command<Time>>,
 }
 
 impl<T> Component<T>
@@ -60,7 +60,7 @@ where
         Ok(())
     }
 
-    pub fn new(sig: Signature<T, u64>, body: Vec<Command<T>>) -> Self {
+    pub fn new(sig: Signature<T, PortParam>, body: Vec<Command<T>>) -> Self {
         Self { sig, body }
     }
 }

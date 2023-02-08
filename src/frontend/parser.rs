@@ -261,10 +261,10 @@ impl FilamentParser {
     }
 
     // ================ Cells =====================
-    fn conc_params(input: Node) -> ParseResult<Vec<u64>> {
+    fn conc_params(input: Node) -> ParseResult<Vec<ast::PortParam>> {
         Ok(match_nodes!(
             input.into_children();
-            [bitwidth(vars)..] => vars.collect(),
+            [port_width(vars)..] => vars.collect(),
         ))
     }
     fn instance(input: Node) -> ParseResult<Vec<ast::Command>> {
@@ -494,7 +494,7 @@ impl FilamentParser {
                 signature(sig),
                 command(body)..
             ] => {
-                Ok(ast::Component::new(sig.resolve(&[]).unwrap(), body.into_iter().flatten().collect()))
+                Ok(ast::Component::new(sig, body.into_iter().flatten().collect()))
             }
         )
     }

@@ -340,10 +340,13 @@ fn compile_component(
     sigs: &mut Binding,
     lib: &ir::LibrarySignatures,
 ) -> FilamentResult<ir::Component> {
-    let port_transform = |pd: &ast::PortDef<u64>,
+    let port_transform = |pd: &ast::PortDef<ast::PortParam>,
                           dir: ir::Direction|
      -> ir::PortDef<u64> {
-        let mut pd: ir::PortDef<u64> = (pd.name.id(), pd.bitwidth, dir).into();
+        let ast::PortParam::Const(width) = pd.bitwidth else {
+            panic!("Port {} has a non-concrete width", pd.name)
+        };
+        let mut pd: ir::PortDef<u64> = (pd.name.id(), width, dir).into();
         pd.attributes.insert("data", 1);
         pd
     };

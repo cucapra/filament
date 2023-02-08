@@ -1,5 +1,5 @@
 use super::{ShareConstraints, THIS};
-use crate::core::{self, TimeRep, WithTime};
+use crate::core::{self, PortParam, TimeRep, WithTime};
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::event_checker::ast;
 use crate::utils::GPosIdx;
@@ -10,13 +10,12 @@ pub enum ConcreteInvoke<'a> {
     Concrete {
         /// Bindings for abstract variables
         binding: core::Binding<ast::TimeRep>,
-
         /// Signature
-        sig: ast::Signature<u64>,
+        sig: ast::Signature<PortParam>,
     },
     This {
         /// Signature
-        sig: &'a ast::Signature<u64>,
+        sig: &'a ast::Signature<PortParam>,
     },
 }
 
@@ -24,13 +23,13 @@ impl<'a> ConcreteInvoke<'a> {
     /// Construct an instance from a Signature and bindings for abstract variables.
     pub fn concrete(
         binding: core::Binding<ast::TimeRep>,
-        sig: ast::Signature<u64>,
+        sig: ast::Signature<PortParam>,
     ) -> Self {
         Self::Concrete { binding, sig }
     }
 
     /// Construct an instance for "this" component.
-    pub fn this_instance(sig: &'a ast::Signature<u64>) -> Self {
+    pub fn this_instance(sig: &'a ast::Signature<PortParam>) -> Self {
         Self::This { sig }
     }
 
@@ -68,10 +67,10 @@ impl<'a> ConcreteInvoke<'a> {
         self.resolve_port::<false>(port)
     }
 
-    pub fn get_sig(&self) -> &ast::Signature<u64> {
+    pub fn get_event(&self, event: &ast::Id) -> &ast::EventBind {
         match &self {
-            ConcreteInvoke::Concrete { sig, .. } => sig,
-            ConcreteInvoke::This { sig } => sig,
+            ConcreteInvoke::Concrete { sig, .. } => sig.get_event(event),
+            ConcreteInvoke::This { sig } => sig.get_event(event),
         }
     }
 }
@@ -123,7 +122,7 @@ impl<'a> Context<'a> {
         &mut self,
         name: ast::Id,
         comp: &ast::Id,
-        bindings: &[u64],
+        bindings: &[PortParam],
     ) {
         let sig = self.sigs.get_component(comp, bindings);
         self.instances.insert(name, sig);
