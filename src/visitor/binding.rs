@@ -31,16 +31,11 @@ impl<'a, T: TimeRep, W: WidthRep> ResolvedInstance<'a, T, W> {
         log::trace!("sig = {}, binds = {:?}", sig, binds);
         Self::External { sig, binds }
     }
-}
 
-impl<'a, T: TimeRep> ResolvedInstance<'a, T, core::PortParam> {
     /// Construct a binding for this component instance
-    pub fn this(sig: &'a core::Signature<T, core::PortParam>) -> Self {
-        let binds = sig
-            .params
-            .iter()
-            .map(|p| core::PortParam::Var(p.clone()))
-            .collect_vec();
+    pub fn this(sig: &'a core::Signature<T, W>) -> Self {
+        let binds =
+            sig.params.iter().map(|p| W::param(p.clone())).collect_vec();
         Self::bound(sig, binds)
     }
 }

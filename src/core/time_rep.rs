@@ -22,6 +22,7 @@ impl<T> Binding<T> {
         self.map.get(n)
     }
 
+    /// Return binding for n, or panic if it doesn't exist
     pub fn get(&self, n: &Id) -> &T {
         self.find(n).unwrap_or_else(|| panic!("No binding for {n}"))
     }

@@ -29,7 +29,7 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     // Bind check
     let t = Instant::now();
     let ns = bind_check::check(ns)?;
-    log::info!("Bind check: {}ms", t.elapsed().as_millis());
+    log::info!("Parameteric Bind check: {}ms", t.elapsed().as_millis());
 
     // Interval checking
     let t = Instant::now();
@@ -59,9 +59,14 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
 
     // Monomorphize the program.
     let t = Instant::now();
-    let ns = monomorphize::Monomorphize::transform(ns)?;
+    let mut ns = monomorphize::Monomorphize::transform(ns)?;
     log::info!("Monomorphize: {}ms", t.elapsed().as_millis());
     log::info!("{ns}");
+
+    // Monomorphic Bind check
+    let t = Instant::now();
+    ns = bind_check::check(ns)?;
+    log::info!("Monomorphoic Bind check: {}ms", t.elapsed().as_millis());
 
     // Compilation
     let t = Instant::now();
