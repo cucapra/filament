@@ -1,6 +1,6 @@
 use derivative::Derivative;
 
-use super::{Binding, Id, Range, Time, TimeRep, TimeSub, WithTime};
+use super::{Binding, Id, Range, TimeRep, WithTime};
 use crate::{errors::FilamentResult, interval_checking::SExp, utils::GPosIdx};
 use std::fmt::Display;
 
@@ -93,6 +93,10 @@ where
             ..self.clone()
         }
     }
+
+    fn events(&self) -> Vec<Id> {
+        todo!("Events for OrderConstraint")
+    }
 }
 
 impl<T: TimeRep> OrderConstraint<T> {
@@ -134,6 +138,20 @@ where
     }
 }
 
+impl<T> From<OrderConstraint<T>> for SExp
+where
+    SExp: From<T>,
+{
+    fn from(c: OrderConstraint<T>) -> Self {
+        SExp(format!(
+            "({} {} {})",
+            c.op,
+            SExp::from(c.left),
+            SExp::from(c.right)
+        ))
+    }
+}
+
 /// A ordering constraint over time expressions or time ranges.
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Constraint<T: TimeRep> {
@@ -142,23 +160,19 @@ pub enum Constraint<T: TimeRep> {
     },
     /// Represents ordering over time ranges.
     Sub {
-        base: OrderConstraint<TimeSub<T>>,
+        base: OrderConstraint<T::SubRep>,
     },
 }
 
-impl<T: TimeRep> From<OrderConstraint<TimeSub<T>>> for Constraint<T> {
-    fn from(base: OrderConstraint<TimeSub<T>>) -> Self {
-        Self::Sub { base }
-    }
-}
-
-impl<T: TimeRep> From<OrderConstraint<T>> for Constraint<T> {
-    fn from(base: OrderConstraint<T>) -> Self {
+impl<T: TimeRep> Constraint<T> {
+    pub fn base(base: OrderConstraint<T>) -> Self {
         Self::Base { base }
     }
-}
 
-impl<T: TimeRep> Constraint<T> {
+    pub fn sub(base: OrderConstraint<T::SubRep>) -> Self {
+        Self::Sub { base }
+    }
+
     /// Create a new constraint that `l` is less than `r`
     pub fn lt(l: T, r: T) -> Self {
         Self::Base {
@@ -199,9 +213,7 @@ impl<T: TimeRep> Constraint<T> {
     pub fn events(&self) -> Vec<Id> {
         match self {
             Constraint::Base { base } => {
-                let mut evs = base.left.events();
-                evs.append(&mut base.right.events());
-                evs
+                vec![base.left.event(), base.right.event()]
             }
             Constraint::Sub { base } => {
                 let mut evs = base.left.events();
@@ -235,6 +247,10 @@ impl<T: TimeRep> WithTime<T> for Constraint<T> {
             },
         }
     }
+
+    fn events(&self) -> Vec<Id> {
+        todo!("Events for Constraint")
+    }
 }
 
 impl<T: Display + TimeRep> Display for Constraint<T> {
@@ -246,20 +262,20 @@ impl<T: Display + TimeRep> Display for Constraint<T> {
     }
 }
 
-impl From<&Constraint<Time<u64>>> for SExp {
-    fn from(con: &Constraint<Time<u64>>) -> Self {
+impl<T: TimeRep> From<Constraint<T>> for SExp {
+    fn from(con: Constraint<T>) -> Self {
         match con {
             Constraint::Base { base } => SExp(format!(
                 "({} {} {})",
                 base.op,
-                SExp::from(&base.left),
-                SExp::from(&base.right)
+                base.left.into(),
+                base.right.into()
             )),
             Constraint::Sub { base } => SExp(format!(
                 "({} {} {})",
                 base.op,
-                SExp::from(&base.left),
-                SExp::from(&base.right),
+                base.left.into(),
+                base.right.into(),
             )),
         }
     }

@@ -1,29 +1,33 @@
-use crate::ast::param as ast;
-use crate::core::{Id, WithTime};
+use crate::core::{self, Id, Time, TimeRep, WidthRep, WithTime};
 use crate::errors::{FilamentResult, WithPos};
 use crate::visitor;
 use std::collections::HashMap;
 
 #[derive(Default)]
-pub struct CompileInvokes {
+pub struct CompileInvokes<W: WidthRep> {
     /// Mapping from events to FSMs
-    fsms: HashMap<ast::Id, ast::Fsm>,
+    fsms: HashMap<core::Id, core::Fsm>,
     /// Max state map
-    max_states: HashMap<ast::Id, HashMap<ast::Id, u64>>,
+    max_states: HashMap<core::Id, HashMap<core::Id, u64>>,
+    /// Phantom data for time and width
+    _tw: std::marker::PhantomData<W>,
 }
 
-impl CompileInvokes {
-    fn find_fsm(&self, event: &ast::Id) -> Option<&ast::Fsm> {
+impl<W: WidthRep> CompileInvokes<W> {
+    fn find_fsm(&self, event: &core::Id) -> Option<&core::Fsm> {
         self.fsms.get(event)
     }
 
-    fn get_fsm(&self, event: &ast::Id) -> &ast::Fsm {
+    fn get_fsm(&self, event: &core::Id) -> &core::Fsm {
         self.find_fsm(event)
             .unwrap_or_else(|| panic!("No FSM for event `{event}`."))
     }
 
     /// Converts an interval to a guard expression with the appropriate FSM
-    fn range_to_guard(&self, range: ast::Range) -> Option<ast::Guard> {
+    fn range_to_guard(
+        &self,
+        range: core::Range<Time<u64>>,
+    ) -> Option<core::Guard> {
         let Some((ev, st, end)) = range.as_offset() else {
             unreachable!(
                 "Range `{range}` cannot be represented as a simple non-max offset"
@@ -34,20 +38,21 @@ impl CompileInvokes {
         let guard = (st..end)
             .into_iter()
             .map(|st| fsm.port(st).into())
-            .reduce(ast::Guard::or)
+            .reduce(core::Guard::or)
             .unwrap();
         Some(guard)
     }
 }
 
-impl visitor::Transform for CompileInvokes {
+impl<W: WidthRep> visitor::Transform<Time<u64>, W> for CompileInvokes<W> {
     /// Mapping from component -> event -> max state
     type Info = HashMap<Id, HashMap<Id, u64>>;
 
-    fn new(_: &ast::Namespace, max_states: &Self::Info) -> Self {
+    fn new(_: &core::Namespace<Time<u64>, W>, max_states: &Self::Info) -> Self {
         Self {
             fsms: HashMap::new(),
             max_states: max_states.clone(),
+            _tw: std::marker::PhantomData,
         }
     }
 
@@ -56,9 +61,9 @@ impl visitor::Transform for CompileInvokes {
     }
 
     /// Visit components with high-level invokes
-    fn component_filter(&self, comp: &ast::Component) -> bool {
+    fn component_filter(&self, comp: &core::Component<Time<u64>, W>) -> bool {
         comp.body.iter().any(|con| {
-            if let ast::Command::Invoke(ast::Invoke { ports, .. }) = con {
+            if let core::Command::Invoke(core::Invoke { ports, .. }) = con {
                 ports.is_some()
             } else {
                 false
@@ -69,12 +74,12 @@ impl visitor::Transform for CompileInvokes {
     // TODO(rachit): Document how the compilation works
     fn invoke(
         &mut self,
-        inv: ast::Invoke,
-        sig: &visitor::ResolvedInstance,
-    ) -> FilamentResult<Vec<ast::Command>> {
+        inv: core::Invoke<Time<u64>>,
+        sig: &visitor::ResolvedInstance<Time<u64>, W>,
+    ) -> FilamentResult<Vec<core::Command<Time<u64>, W>>> {
         let pos = inv.copy_span();
         // Compile only if this is a high-level invoke
-        if let ast::Invoke {
+        if let core::Invoke {
             bind,
             instance,
             abstract_vars,
@@ -92,7 +97,7 @@ impl visitor::Transform for CompileInvokes {
 
             // Define the low-level invoke
             let low_inv =
-                ast::Invoke::new(bind.clone(), instance, abstract_vars, None)
+                core::Invoke::new(bind.clone(), instance, abstract_vars, None)
                     .set_span(pos)
                     .into();
             connects.push(low_inv);
@@ -103,9 +108,9 @@ impl visitor::Transform for CompileInvokes {
                 // Get binding for this event in the invoke
                 let t = binding.get(ev);
                 let start_time = t.offset();
-                let port = self.get_fsm(&t.event).port(start_time);
-                let con = ast::Connect::new(
-                    ast::Port::comp(bind.clone(), interface.name.clone()),
+                let port = self.get_fsm(&t.event()).port(start_time);
+                let con = core::Connect::new(
+                    core::Port::comp(bind.clone(), interface.name.clone()),
                     port,
                     None,
                 )
@@ -118,8 +123,8 @@ impl visitor::Transform for CompileInvokes {
                 let req = formal.liveness.resolve(&binding);
                 let guard = self.range_to_guard(req);
                 let sp = port.copy_span();
-                let con = ast::Connect::new(
-                    ast::Port::comp(bind.clone(), formal.name.clone()),
+                let con = core::Connect::new(
+                    core::Port::comp(bind.clone(), formal.name.clone()),
                     port,
                     guard,
                 )
@@ -135,8 +140,8 @@ impl visitor::Transform for CompileInvokes {
     /// Computes the max state traversed by each event variable
     fn enter_component(
         &mut self,
-        comp: ast::Component,
-    ) -> FilamentResult<ast::Component> {
+        comp: core::Component<Time<u64>, W>,
+    ) -> FilamentResult<core::Component<Time<u64>, W>> {
         // Define FSMs for each interface signal
         let events = &self.max_states[&comp.sig.name];
         self.fsms = comp
@@ -147,10 +152,10 @@ impl visitor::Transform for CompileInvokes {
                 let ev = &interface.event;
                 Ok((
                     ev.clone(),
-                    ast::Fsm::new(
+                    core::Fsm::new(
                         format!("{}_fsm", ev).into(),
                         events[ev],
-                        ast::Port::this(interface.name.clone()),
+                        core::Port::this(interface.name.clone()),
                     ),
                 ))
             })
@@ -161,8 +166,8 @@ impl visitor::Transform for CompileInvokes {
 
     fn exit_component(
         &mut self,
-        comp: ast::Component,
-    ) -> FilamentResult<ast::Component> {
+        comp: core::Component<Time<u64>, W>,
+    ) -> FilamentResult<core::Component<Time<u64>, W>> {
         // Add the FSMs to the component
         let mut comp = comp;
         let fsms = std::mem::take(&mut self.fsms)

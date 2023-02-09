@@ -1,21 +1,33 @@
-use crate::ast::param as ast;
+use crate::core::{self, TimeRep};
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
 use itertools::Itertools;
 use rsmt2::{SmtConf, Solver};
 
-#[derive(Default)]
-pub struct ShareConstraints {
+#[derive(Clone)]
+pub struct ShareConstraints<T: TimeRep> {
     /// The events used to compute the minimum of start times
-    min: Vec<ast::TimeRep>,
+    min: Vec<T>,
     /// The (event, delay) to compute the max of start times
-    max: Vec<(ast::TimeRep, ast::TimeSub)>,
+    max: Vec<(T, T::SubRep)>,
     /// Delays bounded by this share constraint
-    delays: Vec<ast::EventBind>,
+    delays: Vec<core::EventBind<T>>,
     /// Additional error information
     notes: Vec<(String, GPosIdx)>,
 }
-impl ShareConstraints {
+
+impl<T: TimeRep> Default for ShareConstraints<T> {
+    fn default() -> Self {
+        Self {
+            min: vec![],
+            max: vec![],
+            delays: vec![],
+            notes: vec![],
+        }
+    }
+}
+
+impl<T: TimeRep> ShareConstraints<T> {
     pub fn add_note<S: Into<String>>(&mut self, msg: S, pos: GPosIdx) {
         self.notes.push((msg.into(), pos));
     }
@@ -26,8 +38,8 @@ impl ShareConstraints {
 
     pub fn add_bind_info(
         &mut self,
-        start: ast::TimeRep,
-        end: (ast::TimeRep, ast::TimeSub),
+        start: T,
+        end: (T, T::SubRep),
         pos: GPosIdx,
     ) {
         self.add_note(
@@ -41,11 +53,14 @@ impl ShareConstraints {
         self.max.push(end);
     }
 
-    pub fn add_delays(&mut self, delays: impl Iterator<Item = ast::EventBind>) {
+    pub fn add_delays(
+        &mut self,
+        delays: impl Iterator<Item = core::EventBind<T>>,
+    ) {
         self.delays.extend(delays);
     }
 }
-impl std::fmt::Display for ShareConstraints {
+impl<T: TimeRep> std::fmt::Display for ShareConstraints<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let min = self.min.iter().map(|t| t.to_string()).join(", ");
         let max = self
@@ -57,27 +72,23 @@ impl std::fmt::Display for ShareConstraints {
         write!(f, "{delays} >= max({max}) - min({min})")
     }
 }
-impl From<&ShareConstraints> for Vec<SExp> {
-    fn from(sh: &ShareConstraints) -> Self {
+impl<T: TimeRep> From<ShareConstraints<T>> for Vec<SExp> {
+    fn from(sh: ShareConstraints<T>) -> Self {
         let min = sh
             .min
-            .iter()
-            .map(SExp::from)
+            .into_iter()
+            .map(|t| t.into())
             .reduce(|a, b| SExp(format!("(min {} {})", a, b)))
             .unwrap();
         let max = sh
             .max
-            .iter()
-            .map(|(t, d)| {
-                SExp(format!("(+ {} {})", SExp::from(t), SExp::from(d)))
-            })
+            .into_iter()
+            .map(|(t, d)| SExp(format!("(+ {} {})", t.into(), d.into())))
             .reduce(|a, b| SExp(format!("(max {} {})", a, b)))
             .unwrap();
         sh.delays
-            .iter()
-            .map(|d| {
-                SExp(format!("(>= {} (- {max} {min}))", SExp::from(&d.delay)))
-            })
+            .into_iter()
+            .map(|d| SExp(format!("(>= {} (- {max} {min}))", d.delay.into())))
             .collect()
     }
 }
@@ -113,11 +124,12 @@ fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
     Ok(())
 }
 
-pub struct FilSolver {
+pub struct FilSolver<T: TimeRep> {
     s: Solver<()>,
+    _t: std::marker::PhantomData<T>,
 }
 
-impl FilSolver {
+impl<T: TimeRep> FilSolver<T> {
     pub fn new() -> FilamentResult<Self> {
         let mut conf = SmtConf::default_z3();
         // Immediately checks if the command to z3 succeeded.
@@ -127,15 +139,18 @@ impl FilSolver {
         // solver.path_tee(std::path::PathBuf::from("./model.smt"))?;
 
         define_prelude(&mut solver)?;
-        Ok(Self { s: solver })
+        Ok(Self {
+            s: solver,
+            _t: std::marker::PhantomData,
+        })
     }
 
     pub fn prove(
         &mut self,
-        abstract_vars: impl Iterator<Item = ast::Id>,
-        assumes: &[ast::Constraint],
-        asserts: impl Iterator<Item = ast::Constraint>,
-        sharing: Vec<ShareConstraints>,
+        abstract_vars: impl Iterator<Item = core::Id>,
+        assumes: Vec<core::Constraint<T>>,
+        asserts: impl Iterator<Item = core::Constraint<T>>,
+        sharing: Vec<ShareConstraints<T>>,
     ) -> FilamentResult<()> {
         // Locally simplify as many asserts as possible
         /* let asserts = asserts
@@ -158,12 +173,13 @@ impl FilSolver {
 
         // Define assumptions on constraints
         for assume in assumes {
-            let sexp = SExp::from(assume);
+            let sexp: SExp = assume.into();
             self.s.assert(format!("{}", sexp))?;
         }
 
         for fact in asserts {
-            if !self.check_fact(&fact)? {
+            // XXX(rachit): Unnecessary clone
+            if !self.check_fact(fact.clone())? {
                 let mut err =
                     Error::malformed(format!("Cannot prove constraint {fact}"));
                 for (msg, pos) in fact.notes() {
@@ -173,7 +189,10 @@ impl FilSolver {
             }
         }
         for share in sharing {
-            for (idx, sexp) in Vec::<SExp>::from(&share).iter().enumerate() {
+            // XXX(rachit): Unnecessary clone
+            for (idx, sexp) in
+                Vec::<SExp>::from(share.clone()).iter().enumerate()
+            {
                 if !self.check_fact(sexp.clone())? {
                     let mut err = Error::malformed(format!(
                         "Cannot prove constraint {share}"

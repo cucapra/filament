@@ -1,12 +1,12 @@
-use super::{Command, Id, Invoke, PortParam, Signature, Time, TimeRep};
+use super::{Command, Id, Invoke, PortParam, Signature, TimeRep, WidthRep};
 use crate::errors::{Error, FilamentResult, WithPos};
 use std::fmt::Display;
 
 /// A component in Filament
 pub struct Component<Time, Width>
 where
-    Time: Clone + TimeRep,
-    Width: Clone,
+    Time: TimeRep,
+    Width: WidthRep,
 {
     // Signature of this component
     pub sig: Signature<Time, Width>,
@@ -17,8 +17,8 @@ where
 
 impl<T, W> Component<T, W>
 where
-    T: Clone + TimeRep,
-    W: Clone,
+    T: TimeRep,
+    W: WidthRep,
 {
     pub fn validate(body: &[Command<T, W>]) -> FilamentResult<()> {
         let mut is_low: Option<bool> = None;
@@ -66,9 +66,10 @@ where
         Self { sig, body }
     }
 }
-impl<W> Display for Component<Time<u64>, W>
+impl<T, W> Display for Component<T, W>
 where
-    W: Clone + Display,
+    W: WidthRep,
+    T: TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{} {{", self.sig)?;
@@ -81,8 +82,8 @@ where
 
 pub struct Namespace<T, W>
 where
-    T: Clone + TimeRep,
-    W: Clone,
+    T: TimeRep,
+    W: WidthRep,
 {
     /// Imported files
     pub imports: Vec<String>,
@@ -96,8 +97,8 @@ where
 
 impl<T, W> Namespace<T, W>
 where
-    T: TimeRep + Clone,
-    W: Clone,
+    T: TimeRep,
+    W: WidthRep,
 {
     /// External signatures associated with the namespace
     pub fn signatures(
@@ -109,9 +110,10 @@ where
     }
 }
 
-impl<W> Display for Namespace<Time<u64>, W>
+impl<T, W> Display for Namespace<T, W>
 where
-    W: Clone + Display,
+    W: WidthRep,
+    T: TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for imp in &self.imports {

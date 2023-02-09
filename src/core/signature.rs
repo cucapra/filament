@@ -1,6 +1,6 @@
 use super::{
-    Binding, Constraint, Id, InterfaceDef, OrderConstraint, PortDef, PortParam,
-    Range, Time, TimeRep, TimeSub,
+    Binding, Constraint, Id, InterfaceDef, OrderConstraint, PortDef, Range,
+    TimeRep, WidthRep,
 };
 use crate::{
     errors::{Error, FilamentResult, WithPos},
@@ -13,17 +13,17 @@ use std::{collections::HashMap, fmt::Display};
 /// An event variable bound in the signature
 pub struct EventBind<T>
 where
-    T: Clone + TimeRep,
+    T: TimeRep,
 {
     pub event: Id,
-    pub delay: TimeSub<T>,
+    pub delay: T::SubRep,
     pub default: Option<T>,
     pos: GPosIdx,
 }
 
 impl<T> WithPos for EventBind<T>
 where
-    T: Clone + TimeRep,
+    T: TimeRep,
 {
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
@@ -37,9 +37,9 @@ where
 
 impl<T> EventBind<T>
 where
-    T: Clone + TimeRep,
+    T: TimeRep,
 {
-    pub fn new(event: Id, delay: TimeSub<T>, default: Option<T>) -> Self {
+    pub fn new(event: Id, delay: T::SubRep, default: Option<T>) -> Self {
         Self {
             event,
             delay,
@@ -50,7 +50,7 @@ where
 }
 impl<T> Display for EventBind<T>
 where
-    T: TimeRep + Display,
+    T: TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(default) = &self.default {
@@ -65,8 +65,8 @@ where
 #[derive(Clone)]
 pub struct Signature<Time, Width>
 where
-    Time: Clone + TimeRep,
-    Width: Clone,
+    Time: TimeRep,
+    Width: WidthRep,
 {
     /// Name of the component
     pub name: Id,
@@ -90,7 +90,7 @@ where
 impl<T, W> Signature<T, W>
 where
     T: TimeRep,
-    W: Clone,
+    W: WidthRep,
 {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -252,11 +252,16 @@ where
     }
 }
 
-impl<T: TimeRep, W: Clone> Signature<T, W> {
+impl<T, W> Signature<T, W>
+where
+    T: TimeRep,
+    W: WidthRep,
+{
     pub fn map<W0, F>(self, f: F) -> Signature<T, W0>
     where
         W0: Clone,
         F: Fn(W) -> W0,
+        W0: WidthRep,
     {
         Signature {
             name: self.name,
@@ -275,14 +280,14 @@ impl<T: TimeRep, W: Clone> Signature<T, W> {
     }
 }
 
-impl<W: Clone> Signature<Time<u64>, W> {
+impl<T: TimeRep, W: WidthRep> Signature<T, W> {
     /// Constraints generated to ensure that a signature is well-formed.
     /// 1. Ensure that all the intervals are well formed
     /// 2. Ensure for each interval that mentions event `E` in its start time, the @interface
     ///    signal for `E` pulses less often than the length of the interval itself.
     pub fn well_formed(
         &self,
-    ) -> FilamentResult<impl Iterator<Item = Constraint<Time<u64>>> + '_> {
+    ) -> FilamentResult<impl Iterator<Item = Constraint<T>> + '_> {
         let mut evs: HashMap<Id, Vec<_>> = HashMap::new();
 
         // Compute mapping from events to intervals to mention the event in their start time.
@@ -291,7 +296,7 @@ impl<W: Clone> Signature<Time<u64>, W> {
         // We do not consider the end time because that only effects the length of the signal.
         for port in self.inputs().chain(self.outputs()) {
             let delay = port.liveness.len();
-            let ev = &port.liveness.start.event;
+            let ev = &port.liveness.start.event();
             evs.entry(ev.clone())
                 .or_default()
                 .push((delay.clone(), port.copy_span()))
@@ -303,7 +308,7 @@ impl<W: Clone> Signature<Time<u64>, W> {
                 let event = self.get_event(&ev);
                 lens.into_iter().map(move |(port_len, port_pos)| {
                     let len = event.delay.clone();
-                    Constraint::from(OrderConstraint::gte(
+                    Constraint::sub(OrderConstraint::gte(
                         len.clone(),
                         port_len.clone(),
                     ))
@@ -321,11 +326,11 @@ impl<W: Clone> Signature<Time<u64>, W> {
     }
 }
 
-impl<T: TimeRep> Signature<T, PortParam> {
-    pub fn resolve(
+impl<T: TimeRep, W: WidthRep> Signature<T, W> {
+    pub fn resolve<WO: WidthRep>(
         &self,
-        args: &[PortParam],
-    ) -> FilamentResult<Signature<T, PortParam>> {
+        args: &[WO],
+    ) -> FilamentResult<Signature<T, WO>> {
         if args.len() != self.params.len() {
             return Err(Error::malformed(format!(
                 "Cannot resolve signature. Expected {} arguments, provided {}",
@@ -334,32 +339,19 @@ impl<T: TimeRep> Signature<T, PortParam> {
             )));
         }
 
-        let binding: HashMap<Id, PortParam> = self
-            .params
-            .iter()
-            .cloned()
-            .zip(args.iter().cloned())
-            .collect();
+        let binding: Binding<WO> =
+            Binding::new(self.params.iter().cloned().zip(args.iter().cloned()));
 
         let resolve_port =
-            |pd: &PortDef<T, PortParam>| -> FilamentResult<PortDef<T, PortParam>> {
-                match &pd.bitwidth {
-                    PortParam::Const(_) => Ok(pd.clone()),
-                    PortParam::Var(param) => {
-                        if let Some(c) = binding.get(param) {
-                            Ok(PortDef::new(
-                                pd.name.clone(),
-                                pd.liveness.clone(),
-                                c.clone(),
-                            )
-                            .set_span(pd.copy_span()))
-                        } else {
-                            Err(Error::malformed(format!(
-                                "No binding for parameter {}. Port `{}.{}` is parameterized by `{}`",
-                                param, self.name, pd.name, param
-                            )))
-                        }
-                    }
+            |pd: &PortDef<T, W>| -> FilamentResult<PortDef<T, WO>> {
+                if let Some(p) = pd.bitwidth.resolve(&binding) {
+                    Ok(PortDef::new(pd.name.clone(), pd.liveness.clone(), p)
+                        .set_span(pd.copy_span()))
+                } else {
+                    Err(Error::malformed(format!(
+                        "No binding for parameter {}. Port `{}.{}` is parameterized by `{}`",
+                        pd.bitwidth, self.name, pd.name, pd.bitwidth
+                    )))
                 }
             };
 
@@ -384,9 +376,10 @@ impl<T: TimeRep> Signature<T, PortParam> {
     }
 }
 
-impl<W> Display for Signature<Time<u64>, W>
+impl<T, W> Display for Signature<T, W>
 where
-    W: Clone + Display,
+    W: WidthRep,
+    T: TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -416,9 +409,11 @@ where
         Ok(())
     }
 }
-impl<W> std::fmt::Debug for Signature<Time<u64>, W>
+impl<W, T> std::fmt::Debug for Signature<T, W>
 where
-    W: Display + Clone,
+    W:,
+    W: WidthRep,
+    T: TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{self}")

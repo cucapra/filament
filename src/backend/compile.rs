@@ -2,7 +2,7 @@ use super::Fsm;
 use crate::{
     ast::mono as ast,
     cmdline::Opts,
-    core::{self, Time},
+    core::{self, Time, WidthRep},
     errors::{Error, FilamentResult},
 };
 use calyx::{
@@ -274,9 +274,9 @@ fn as_port_defs<FW, CW, F0, F1>(
     is_comp: bool,
 ) -> Vec<ir::PortDef<CW>>
 where
-    FW: Clone,
     F0: Fn(&core::PortDef<Time<u64>, FW>, ir::Direction) -> ir::PortDef<CW>,
     F1: Fn(&ast::Id, u64) -> ir::PortDef<CW>,
+    FW: WidthRep,
 {
     let mut ports: Vec<ir::PortDef<CW>> = sig
         .inputs()

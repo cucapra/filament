@@ -22,6 +22,7 @@ impl<T> Binding<T> {
         self.map.get(n)
     }
 
+    /// Return binding for n, or panic if it doesn't exist
     pub fn get(&self, n: &Id) -> &T {
         self.find(n).unwrap_or_else(|| panic!("No binding for {n}"))
     }
@@ -55,10 +56,15 @@ where
 /// A representation of time
 pub trait TimeRep
 where
-    Self: Sized + Clone + Display,
+    Self: Sized + Eq + std::hash::Hash + Clone + Display + Into<SExp>,
 {
     /// Representation of absolute difference b/w two events of this TimeRep
-    type SubRep: WithTime<Self> + Clone + Display;
+    type SubRep: WithTime<Self>
+        + Clone
+        + Eq
+        + std::hash::Hash
+        + Display
+        + Into<SExp>;
 
     /// A time expression with exactly one event and offset
     fn unit(event: Id, state: u64) -> Self;
@@ -69,7 +75,7 @@ where
     /// Substract two time expression representing the absolute difference
     fn sub(self, other: Self) -> Self::SubRep;
     /// All events used in the time expression
-    fn events(&self) -> Vec<Id>;
+    fn event(&self) -> Id;
 }
 
 /// Functions provided by data structures that contain a time representation
@@ -77,6 +83,7 @@ pub trait WithTime<T>
 where
     T: TimeRep,
 {
+    fn events(&self) -> Vec<Id>;
     fn resolve(&self, bindings: &Binding<T>) -> Self;
 }
 
@@ -86,6 +93,9 @@ where
 {
     fn resolve(&self, bindings: &Binding<T>) -> Self {
         self.resolve(bindings)
+    }
+    fn events(&self) -> Vec<Id> {
+        vec![self.event()]
     }
 }
 
@@ -117,9 +127,7 @@ where
         match self {
             TimeSub::Unit(_) => vec![],
             TimeSub::Sym { l, r } => {
-                let mut events = l.events();
-                events.extend(r.events());
-                events
+                vec![l.event(), r.event()]
             }
         }
     }
@@ -146,6 +154,15 @@ where
             },
         }
     }
+
+    fn events(&self) -> Vec<Id> {
+        match self {
+            TimeSub::Unit(_) => vec![],
+            TimeSub::Sym { l, r } => {
+                vec![l.event(), r.event()]
+            }
+        }
+    }
 }
 
 impl<T: Display + TimeRep> Display for TimeSub<T> {
@@ -157,8 +174,8 @@ impl<T: Display + TimeRep> Display for TimeSub<T> {
     }
 }
 
-impl From<&TimeSub<Time<u64>>> for SExp {
-    fn from(ts: &TimeSub<Time<u64>>) -> Self {
+impl From<TimeSub<Time<u64>>> for SExp {
+    fn from(ts: TimeSub<Time<u64>>) -> Self {
         match ts {
             TimeSub::Unit(n) => SExp(n.to_string()),
             TimeSub::Sym { l, r } => {

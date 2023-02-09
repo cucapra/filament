@@ -29,7 +29,7 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     // Bind check
     let t = Instant::now();
     let ns = bind_check::check(ns)?;
-    log::info!("Bind check: {}ms", t.elapsed().as_millis());
+    log::info!("Parameteric Bind check: {}ms", t.elapsed().as_millis());
 
     // Interval checking
     let t = Instant::now();
@@ -40,27 +40,39 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     (ns, _) = phantom_check::PhantomCheck::transform(ns, ())?;
     log::info!("Phantom check: {}ms", t.elapsed().as_millis());
 
-    let (mut ns, states) = max_states::MaxStates::transform(ns, ())?;
-    log::info!("Max states: {:?}", states.max_states);
-
     // Return early if we're asked to dump the interface
     if opts.dump_interface {
+        let (ns, states) = max_states::MaxStates::transform(ns, ())?;
         dump_interface::DumpInterface::transform(ns, states.max_states)?;
         return Ok(());
     } else if opts.check {
         return Ok(());
     }
 
-    // Lowering
-    let t = Instant::now();
-    (ns, _) = lower::CompileInvokes::transform(ns, states.max_states)?;
-    log::info!("Lowering: {}ms", t.elapsed().as_millis());
-    log::info!("{ns}");
-
     // Monomorphize the program.
     let t = Instant::now();
     let ns = monomorphize::Monomorphize::transform(ns)?;
     log::info!("Monomorphize: {}ms", t.elapsed().as_millis());
+    log::info!("{ns}");
+
+    // Monomorphic Bind check
+    let t = Instant::now();
+    let ns = bind_check::check(ns)?;
+    log::info!("Monomorphoic Bind check: {}ms", t.elapsed().as_millis());
+
+    // Monomorphic Interval checking
+    let t = Instant::now();
+    let ns = interval_checking::check(ns)?;
+    log::info!("Monomorphoic Interval check: {}ms", t.elapsed().as_millis());
+
+    // Max state calculation
+    let (mut ns, states) = max_states::MaxStates::transform(ns, ())?;
+    log::info!("Max states: {:?}", states.max_states);
+
+    // Lowering
+    let t = Instant::now();
+    (ns, _) = lower::CompileInvokes::transform(ns, states.max_states)?;
+    log::info!("Lowering: {}ms", t.elapsed().as_millis());
     log::info!("{ns}");
 
     // Compilation

@@ -1,5 +1,5 @@
 use crate::{
-    core::{self, Binding, TimeRep},
+    core::{self, Binding, TimeRep, WidthRep},
     errors::FilamentResult,
     utils::PostOrder,
 };
@@ -125,11 +125,12 @@ impl<T: TimeRep> Monomorphize<T> {
         sig: &core::Signature<T, core::PortParam>,
         binding: &Binding<u64>,
     ) -> core::Signature<T, u64> {
-        let mut nsig = sig.clone().map(|param| param.resolve(binding));
+        let mut nsig = sig.clone().map(|param| param.resolve(binding).unwrap());
         nsig.name = Self::generate_mono_name(
             &sig.name,
             binding.iter().map(|(_, v)| *v),
         );
+        nsig.params = vec![];
         nsig
     }
 
@@ -152,7 +153,7 @@ impl<T: TimeRep> Monomorphize<T> {
                     } = inst;
                     let resolved = bindings
                         .into_iter()
-                        .map(|p| p.resolve(binding))
+                        .map(|p| p.resolve(binding).unwrap())
                         .collect();
 
                     if externals.contains(&component) {

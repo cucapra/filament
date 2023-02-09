@@ -1,4 +1,5 @@
 use crate::ast::param as ast;
+use crate::core;
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
 use crate::visitor;
@@ -17,7 +18,7 @@ pub struct PhantomCheck {
     phantom_events: Vec<ast::Id>,
 }
 
-impl visitor::Transform for PhantomCheck {
+impl visitor::Transform<core::Time<u64>, core::PortParam> for PhantomCheck {
     type Info = ();
     fn new(_: &ast::Namespace, _: &Self::Info) -> Self {
         Self::default()
@@ -44,7 +45,7 @@ impl visitor::Transform for PhantomCheck {
     fn invoke(
         &mut self,
         inv: ast::Invoke,
-        resolved: &visitor::ResolvedInstance,
+        resolved: &ast::ResolvedInstance,
     ) -> FilamentResult<Vec<ast::Command>> {
         // Check if the instance has already been used
         if let Some(prev_use) = self.instance_used.get(&inv.instance) {

@@ -1,27 +1,26 @@
 use crate::{
-    ast::param as ast,
-    core,
+    core::{self, TimeRep, WidthRep},
     errors::{Error, FilamentResult, WithPos},
     utils::BindMap,
-    visitor::{Bindings, ResolvedInstance},
+    visitor::{self, Bindings, ResolvedInstance},
 };
 use itertools::Itertools;
 use std::collections::HashMap;
 
 const THIS: &str = "_this";
 
-struct BindCheck<'a> {
+struct BindCheck<'a, T: TimeRep, W: WidthRep> {
     /// Bound events
-    events: Vec<ast::Id>,
+    events: Vec<core::Id>,
     /// Bound instances
-    instances: BindMap<ResolvedInstance<'a>>,
+    instances: BindMap<visitor::ResolvedInstance<'a, T, W>>,
     // mapping from name of invocations to the instance that they invoke
-    invocations: BindMap<ast::Id>,
+    invocations: BindMap<core::Id>,
 }
 
 /// Transform the givun AST
-impl BindCheck<'_> {
-    fn new(events: Vec<ast::Id>) -> Self {
+impl<'a, T: TimeRep, W: WidthRep> BindCheck<'a, T, W> {
+    fn new(events: Vec<core::Id>) -> Self {
         Self {
             events,
             instances: BindMap::new(),
@@ -32,11 +31,11 @@ impl BindCheck<'_> {
     // Checks if the port is well defined and returns its width.
     fn port<const INPUT: bool>(
         &mut self,
-        port: &ast::Port,
-    ) -> FilamentResult<ast::PortParam> {
-        let check_port = |instance: &ast::Id,
-                          p: &ast::Id|
-         -> FilamentResult<ast::PortParam> {
+        port: &core::Port,
+    ) -> FilamentResult<W> {
+        let check_port = |instance: &core::Id,
+                          p: &core::Id|
+         -> FilamentResult<W> {
             let sig = self
                 .instances
                 .find(instance)
@@ -56,17 +55,17 @@ impl BindCheck<'_> {
                     sig.interface_signals
                         .iter()
                         .find(|def| def.name == p)
-                        .map(|_| ast::PortParam::Const(1))
+                        .map(|_| W::concrete(1))
                 })
                 .ok_or_else(|| {
-                    Error::undefined(ast::Id::from(format!("{port}")), kind)
+                    Error::undefined(core::Id::from(format!("{port}")), kind)
                         .add_note("Port is not defined", port.copy_span())
                 })
         };
 
         match &port.typ {
-            ast::PortType::ThisPort(p) => check_port(&ast::Id::from(THIS), p),
-            ast::PortType::InvPort { invoke, name } => {
+            core::PortType::ThisPort(p) => check_port(&core::Id::from(THIS), p),
+            core::PortType::InvPort { invoke, name } => {
                 let inst = self.invocations.find(invoke).map_err(|err| {
                     err.add_note(
                         "Invocation is not defined",
@@ -75,14 +74,14 @@ impl BindCheck<'_> {
                 })?;
                 check_port(inst, name)
             }
-            ast::PortType::Constant(_) => Ok(ast::PortParam::Const(32)),
+            core::PortType::Constant(_) => Ok(W::concrete(32)),
         }
     }
 
     fn connect(
         &mut self,
-        dst: &ast::Port,
-        src: &ast::Port,
+        dst: &core::Port,
+        src: &core::Port,
     ) -> FilamentResult<()> {
         let dst_w = self.port::<true>(dst)?;
         let src_w = self.port::<false>(src)?;
@@ -101,7 +100,7 @@ impl BindCheck<'_> {
     }
 
     /// Check that an invoke's instance is bound and and bind its signature
-    fn bind_invoke(&mut self, inv: &ast::Invoke) -> FilamentResult<()> {
+    fn bind_invoke(&mut self, inv: &core::Invoke<T>) -> FilamentResult<()> {
         self.invocations
             .add(inv.bind.clone(), inv.instance.clone())?;
         // Get the signature for the instance
@@ -141,13 +140,13 @@ impl BindCheck<'_> {
 
     /// Transform an invoke statement. Provides access to the signature of the
     /// component that is being invoked.
-    fn check_invoke(&mut self, inv: &ast::Invoke) -> FilamentResult<()> {
+    fn check_invoke(&mut self, inv: &core::Invoke<T>) -> FilamentResult<()> {
         let inst = self.instances.get(&inv.instance);
         if let Some(ports) = &inv.ports {
             // Check that scheduling events are bound
             for time in &inv.abstract_vars {
-                let ev = &time.event;
-                if !self.events.contains(ev) {
+                let ev = time.event();
+                if !self.events.contains(&ev) {
                     return Err(Error::undefined(ev.clone(), "Event")
                         .add_note("Event is not bound", ev.copy_span()));
                 }
@@ -170,7 +169,7 @@ impl BindCheck<'_> {
             let sig = inst.resolve()?;
             for (actual, formal) in ports.iter().zip(sig.inputs()) {
                 let dst =
-                    ast::Port::comp(inv.bind.clone(), formal.name.clone())
+                    core::Port::comp(inv.bind.clone(), formal.name.clone())
                         .set_span(formal.copy_span());
                 self.connect(&dst, actual)?;
             }
@@ -180,13 +179,13 @@ impl BindCheck<'_> {
     }
 
     /// Check the binding of a component
-    fn check_sig(sig: &ast::Signature) -> FilamentResult<()> {
+    fn check_sig(sig: &core::Signature<T, W>) -> FilamentResult<()> {
         let events = sig.events().collect_vec();
         // Check all the definitions only use bound events
         for pd in sig.ports() {
             for time in pd.liveness.events() {
-                let ev = &time.event;
-                if !events.contains(ev) {
+                let ev = time.event();
+                if !events.contains(&ev) {
                     return Err(Error::undefined(ev.clone(), "event")
                         .add_note(
                             "Event is not defined in the signature",
@@ -222,8 +221,8 @@ impl BindCheck<'_> {
 
     /// Perform the component traversal
     fn component(
-        comp: &ast::Component,
-        binds: &Bindings,
+        comp: &core::Component<T, W>,
+        binds: &'a visitor::Bindings<T, W>,
     ) -> FilamentResult<()> {
         // Check this signature
         Self::check_sig(&comp.sig)?;
@@ -237,7 +236,7 @@ impl BindCheck<'_> {
         let this_sig = comp.sig.reversed();
         bind_check
             .instances
-            .add(ast::Id::from(THIS), ResolvedInstance::this(&this_sig))?;
+            .add(core::Id::from(THIS), ResolvedInstance::this(&this_sig))?;
 
         // Create all invoke bindings
         for cmd in &comp.body {
@@ -249,11 +248,12 @@ impl BindCheck<'_> {
                         .map_err(|err| {
                             err.add_note("For this instance", inst.copy_span())
                         })?;
-                    if sig.sig().params.len() != inst.bindings.len() {
+
+                    if sig.params().len() != inst.bindings.len() {
                         let msg = format!(
                             "`{}' requires {} bindings but {} were provided",
                             inst.component,
-                            sig.sig().params.len(),
+                            sig.params().len(),
                             inst.bindings.len(),
                         );
                         return Err(Error::malformed(msg.clone())
@@ -280,7 +280,9 @@ impl BindCheck<'_> {
     }
 }
 
-pub fn check(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
+pub fn check<T: TimeRep, W: WidthRep>(
+    mut ns: core::Namespace<T, W>,
+) -> FilamentResult<core::Namespace<T, W>> {
     let comps = ns.components.drain(..).collect_vec();
     let sigs: HashMap<_, _> = ns.signatures().collect();
     for sig in sigs.values() {
@@ -293,7 +295,7 @@ pub fn check(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
         binds.add_component(comp);
     }
 
-    Ok(ast::Namespace {
+    Ok(core::Namespace {
         components: binds.into(),
         imports: ns.imports,
         externs: ns.externs,

@@ -8,7 +8,7 @@ use super::{Binding, Constraint, OrderConstraint, TimeRep, WithTime};
 #[derive(Clone)]
 pub struct Range<T>
 where
-    T: TimeRep + Clone,
+    T: TimeRep,
 {
     pub start: T,
     pub end: T,
@@ -22,7 +22,7 @@ where
     /// Generate constraints for well formedness of this range.
     pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> {
         std::iter::once(
-            Constraint::from(OrderConstraint::lt(
+            Constraint::base(OrderConstraint::lt(
                 self.start.clone(),
                 self.end.clone(),
             ))
@@ -54,11 +54,15 @@ where
             ..self.clone()
         }
     }
+
+    fn events(&self) -> Vec<super::Id> {
+        vec![self.start.event(), self.end.event()]
+    }
 }
 
 impl<T> Range<T>
 where
-    T: TimeRep + Clone,
+    T: TimeRep,
 {
     pub fn new(start: T, end: T) -> Self {
         Self {
@@ -91,7 +95,7 @@ where
 
 impl<T> Display for Range<T>
 where
-    T: Display + TimeRep + Clone,
+    T: Display + TimeRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "@[{}, {}]", self.start, self.end)

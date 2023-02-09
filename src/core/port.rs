@@ -1,4 +1,4 @@
-use super::{Binding, Id, Range, TimeRep, WithTime};
+use super::{Binding, Id, Range, TimeRep, WidthRep, WithTime};
 use crate::{errors::WithPos, utils::GPosIdx};
 use std::fmt::Display;
 
@@ -8,15 +8,6 @@ pub enum PortParam {
     Const(u64),
     /// A parameter
     Var(Id),
-}
-
-impl PortParam {
-    pub fn resolve(&self, bindings: &Binding<u64>) -> u64 {
-        match self {
-            PortParam::Const(c) => *c,
-            PortParam::Var(v) => *bindings.get(v),
-        }
-    }
 }
 
 impl From<Id> for PortParam {
@@ -42,8 +33,8 @@ impl Display for PortParam {
 #[derive(Clone)]
 pub struct PortDef<T, W>
 where
-    T: Clone + TimeRep,
-    W: Clone,
+    T: TimeRep,
+    W: WidthRep,
 {
     /// Name of the port
     pub name: Id,
@@ -57,8 +48,8 @@ where
 
 impl<T, W> PortDef<T, W>
 where
-    T: Clone + TimeRep,
-    W: Clone,
+    T: TimeRep,
+    W: WidthRep,
 {
     pub fn new(name: Id, liveness: Range<T>, bitwidth: W) -> Self {
         Self {
@@ -71,8 +62,8 @@ where
 }
 impl<T, W> Display for PortDef<T, W>
 where
-    T: Display + Clone + TimeRep,
-    W: Display + Clone,
+    T: TimeRep,
+    W: WidthRep,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {}: {}", self.liveness, self.name, self.bitwidth)
@@ -81,7 +72,7 @@ where
 impl<T, W> WithPos for PortDef<T, W>
 where
     T: TimeRep,
-    W: Clone,
+    W: WidthRep,
 {
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
@@ -94,14 +85,18 @@ where
 }
 impl<T, W> WithTime<T> for PortDef<T, W>
 where
-    W: Clone,
-    T: Clone + TimeRep,
+    W: WidthRep,
+    T: TimeRep,
 {
     fn resolve(&self, bindings: &Binding<T>) -> Self {
         Self {
             liveness: self.liveness.resolve(bindings),
             ..(self.clone())
         }
+    }
+
+    fn events(&self) -> Vec<Id> {
+        todo!("events for PortDef")
     }
 }
 
