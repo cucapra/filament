@@ -2,9 +2,10 @@
 
 //! Parser for Calyx programs.
 use crate::ast::param as ast;
-use crate::core::{Time, TimeRep, TimeSub};
+use crate::core::{ParamTime, Time, TimeSub};
 use crate::errors::{self, FilamentResult, WithPos};
 use crate::utils::{FileIdx, GPosIdx, GlobalPositionTable};
+use itertools::Itertools;
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
 use std::path::Path;
@@ -116,11 +117,10 @@ impl FilamentParser {
     }
 
     // ================ Intervals =====================
-    fn time(input: Node) -> ParseResult<Time<u64>> {
+    fn time(input: Node) -> ParseResult<ast::TimeRep> {
         match_nodes!(
             input.clone().into_children();
-            [identifier(ev)] => Ok(TimeRep::unit(ev, 0)),
-            [identifier(ev), bitwidth(st)] => Ok(TimeRep::unit(ev, st)),
+            [identifier(ev), port_width(sts)..] => Ok(Time::new(ev, ParamTime::from(sts.into_iter().collect_vec()))),
             [bitwidth(_)] => {
                 Err(input.error("Time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number"))
             }
@@ -171,7 +171,7 @@ impl FilamentParser {
         ))
     }
 
-    fn delay(input: Node) -> ParseResult<TimeSub<Time<u64>>> {
+    fn delay(input: Node) -> ParseResult<TimeSub<ast::TimeRep>> {
         Ok(match_nodes!(
             input.into_children();
             [bitwidth(n)] => TimeSub::unit(n),
@@ -311,7 +311,7 @@ impl FilamentParser {
         ))
     }
 
-    fn time_args(input: Node) -> ParseResult<Vec<Time<u64>>> {
+    fn time_args(input: Node) -> ParseResult<Vec<ast::TimeRep>> {
         Ok(match_nodes!(
             input.into_children();
             [time(args)..] => args.collect(),
@@ -320,7 +320,7 @@ impl FilamentParser {
 
     fn invoke_args(
         input: Node,
-    ) -> ParseResult<(Vec<Time<u64>>, Vec<ast::Port>)> {
+    ) -> ParseResult<(Vec<ast::TimeRep>, Vec<ast::Port>)> {
         Ok(match_nodes!(
             input.into_children();
             [time_args(time_args), arguments(args)] => (time_args, args),

@@ -40,14 +40,11 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     log::info!("Phantom check: {}ms", t.elapsed().as_millis());
 
     // Return early if we're asked to dump the interface
-    if opts.dump_interface {
-        let (ns, states) = max_states::MaxStates::transform(ns, ())?;
-        dump_interface::DumpInterface::transform(ns, states.max_states)?;
-        return Ok(());
-    } else if opts.check {
+    if opts.check {
         return Ok(());
     }
 
+    /*
     // Monomorphize the program.
     let t = Instant::now();
     let ns = monomorphize::Monomorphize::transform(ns)?;
@@ -58,6 +55,12 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     let t = Instant::now();
     let ns = bind_check::check(ns)?;
     log::info!("Monomorphoic Bind check: {}ms", t.elapsed().as_millis());
+
+    if opts.dump_interface {
+        let (ns, states) = max_states::MaxStates::transform(ns, ())?;
+        dump_interface::DumpInterface::transform(ns, states.max_states)?;
+        return Ok(());
+    }
 
     // Monomorphic Interval checking
     let t = Instant::now();
@@ -78,6 +81,8 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     let t = Instant::now();
     backend::compile(ns, opts)?;
     log::info!("Compilation: {}ms", t.elapsed().as_millis());
+
+    */
 
     Ok(())
 }

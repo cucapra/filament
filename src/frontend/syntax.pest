@@ -76,7 +76,7 @@ abstract_var = {
 
 // Time
 time = {
-  identifier ~ ("+" ~ bitwidth)?
+  identifier ~ ("+" ~ port_width)*
   | bitwidth
 }
 

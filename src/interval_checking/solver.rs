@@ -153,7 +153,7 @@ impl<T: TimeRep> FilSolver<T> {
 
     pub fn prove(
         &mut self,
-        abstract_vars: impl Iterator<Item = core::Id>,
+        vars: impl Iterator<Item = core::Id>,
         assumes: Vec<core::Constraint<T>>,
         asserts: impl Iterator<Item = core::Constraint<T>>,
         sharing: Vec<ShareConstraints<T>>,
@@ -172,7 +172,7 @@ impl<T: TimeRep> FilSolver<T> {
 
         self.s.push(1)?;
         // Define all the constants
-        for var in abstract_vars {
+        for var in vars {
             log::trace!("Declaring constant {}", var);
             self.s.declare_const(var.to_string(), "Int")?;
         }

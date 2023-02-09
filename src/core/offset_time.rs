@@ -12,6 +12,10 @@ pub struct Time<Offset: Clone> {
 }
 
 impl<T: Clone> Time<T> {
+    pub fn new(event: Id, offset: T) -> Self {
+        Self { event, offset }
+    }
+
     pub fn offset(&self) -> &T {
         &self.offset
     }
@@ -103,6 +107,12 @@ impl TimeRep for Time<u64> {
 #[derive(Clone, Eq, Hash, PartialEq)]
 /// Implementation of parameteric time
 pub struct ParamTime(Vec<PortParam>);
+
+impl From<Vec<PortParam>> for ParamTime {
+    fn from(v: Vec<PortParam>) -> Self {
+        Self(v)
+    }
+}
 
 impl Display for Time<ParamTime> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

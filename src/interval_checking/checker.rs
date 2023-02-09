@@ -259,7 +259,7 @@ impl<T: TimeRep, W: WidthRep> Context<'_, T, W> {
         let obs = ctx.drain_obligations();
         let t = std::time::Instant::now();
         solver.prove(
-            comp.sig.events(),
+            comp.sig.events().chain(comp.sig.params.iter().cloned()),
             // XXX(rachit): Unnecessary clone
             ctx.facts.clone(),
             obs.into_iter().chain(disj.into_iter()),
@@ -300,7 +300,7 @@ pub fn check<T: TimeRep, W: WidthRep>(
     for sig in sigs.values() {
         log::trace!("===== Signature {} =====", &sig.name);
         solver.prove(
-            sig.events(),
+            sig.events().chain(sig.params.iter().cloned()),
             sig.constraints.clone(),
             sig.well_formed()?,
             vec![],

@@ -1,6 +1,6 @@
-use crate::core;
+use crate::core::{self, ParamTime};
 
-pub type TimeRep = core::Time<u64>;
+pub type TimeRep = core::Time<ParamTime>;
 pub type TimeSub = core::TimeSub<TimeRep>;
 pub type Width = core::PortParam;
 
