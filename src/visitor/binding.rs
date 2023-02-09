@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::core::{self, TimeRep, WidthRep, WithTime};
+use crate::core::{self, TimeRep, WidthRep};
 use crate::errors::WithPos;
 use crate::errors::{Error, FilamentResult};
 use std::collections::HashMap;
@@ -39,17 +39,6 @@ impl<'a, T: TimeRep, W: WidthRep> ResolvedInstance<'a, T, W> {
         Self::bound(sig, binds)
     }
 }
-
-// impl<'a, T: TimeRep> ResolvedInstance<'a, T, u64> {
-//     /// Construct a binding for this component instance
-//     pub fn this(sig: &'a core::Signature<T, u64>) -> Self {
-//         assert!(
-//             sig.params.is_empty(),
-//             "Cannot bind instance with parameters"
-//         );
-//         Self::bound(sig, vec![])
-//     }
-// }
 
 impl<'a, T: TimeRep, W: WidthRep> ResolvedInstance<'a, T, W> {
     pub fn params(&self) -> &[core::Id] {

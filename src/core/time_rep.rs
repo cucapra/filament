@@ -83,14 +83,24 @@ where
     fn resolve_offset(&self, bindings: &Binding<Self::Offset>) -> Self;
 }
 
+/// Traits that allow application of a binding to a data structure
+/// Type `T` is the type being traversed over
+/// Type `B` is the type being resolved
+pub trait Resolve<T, R> {
+    fn traverse(&self, binding: &Binding<R>) -> Self;
+}
+
 /// Functions provided by data structures that contain a time representation
 pub trait WithTime<T>
 where
     T: TimeRep,
     Self: Sized,
 {
+    /// The events bound this type
     fn events(&self) -> Vec<Id>;
+    /// Resolve the event using a binding
     fn resolve_event(&self, bindings: &Binding<T>) -> Self;
+    /// Resolve the offset using a binding
     fn resolve_offset(&self, bindings: &Binding<T::Offset>) -> Self;
 }
 

@@ -1,6 +1,6 @@
 use super::{
     Binding, Constraint, Id, InterfaceDef, OrderConstraint, PortDef, Range,
-    TimeRep, WidthRep,
+    TimeRep, WidthRep, WithTime,
 };
 use crate::{
     errors::{Error, FilamentResult, WithPos},
@@ -19,6 +19,31 @@ where
     pub delay: T::SubRep,
     pub default: Option<T>,
     pos: GPosIdx,
+}
+
+impl<T: TimeRep> WithTime<T> for EventBind<T> {
+    fn events(&self) -> Vec<Id> {
+        todo!("events for EventBind")
+    }
+
+    fn resolve_event(&self, bindings: &Binding<T>) -> Self {
+        Self {
+            delay: self.delay.resolve_event(bindings),
+            default: self.default.as_ref().map(|d| d.resolve_event(bindings)),
+            ..self.clone()
+        }
+    }
+
+    fn resolve_offset(
+        &self,
+        bindings: &Binding<<T as TimeRep>::Offset>,
+    ) -> Self {
+        Self {
+            delay: self.delay.resolve_offset(bindings),
+            default: self.default.as_ref().map(|d| d.resolve_offset(bindings)),
+            ..self.clone()
+        }
+    }
 }
 
 impl<T> WithPos for EventBind<T>
@@ -390,6 +415,61 @@ impl<T: TimeRep, W: WidthRep> Signature<T, W> {
         };
 
         Ok(resolved)
+    }
+}
+
+impl<T, W> WithTime<T> for Signature<T, W>
+where
+    T: TimeRep,
+    W: WidthRep,
+{
+    fn events(&self) -> Vec<Id> {
+        todo!("events for signature")
+    }
+
+    fn resolve_event(&self, bindings: &Binding<T>) -> Self {
+        Self {
+            ports: self
+                .ports
+                .iter()
+                .map(|pd| pd.resolve_event(bindings))
+                .collect(),
+            constraints: self
+                .constraints
+                .iter()
+                .map(|c| c.resolve_event(bindings))
+                .collect(),
+            events: self
+                .events
+                .iter()
+                .map(|eb| eb.resolve_event(bindings))
+                .collect(),
+            ..(self.clone())
+        }
+    }
+
+    fn resolve_offset(
+        &self,
+        bindings: &Binding<<T as TimeRep>::Offset>,
+    ) -> Self {
+        Self {
+            ports: self
+                .ports
+                .iter()
+                .map(|pd| pd.resolve_offset(bindings))
+                .collect(),
+            constraints: self
+                .constraints
+                .iter()
+                .map(|c| c.resolve_offset(bindings))
+                .collect(),
+            events: self
+                .events
+                .iter()
+                .map(|eb| eb.resolve_offset(bindings))
+                .collect(),
+            ..(self.clone())
+        }
     }
 }
 
