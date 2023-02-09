@@ -1,9 +1,8 @@
 use super::{ShareConstraints, THIS};
-use crate::ast::param as ast;
+use crate::ast::param::{self as ast, ResolvedInstance};
 use crate::core::{self, PortParam, TimeRep, WithTime};
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
-use crate::visitor;
 use std::collections::{HashMap, HashSet};
 
 pub enum ConcreteInvoke<'a> {
@@ -80,10 +79,10 @@ type BindsWithLoc = (GPosIdx, Vec<ast::TimeRep>);
 
 pub struct Context<'a> {
     /// Signatures for external primitives
-    sigs: &'a visitor::Bindings<'a>,
+    sigs: &'a ast::Bindings<'a>,
 
     /// Mapping for the names of active instances
-    instances: HashMap<ast::Id, visitor::ResolvedInstance<'a>>,
+    instances: HashMap<ast::Id, ast::ResolvedInstance<'a>>,
 
     /// Mapping from name of invocations to their information
     invocations: HashMap<ast::Id, ConcreteInvoke<'a>>,
@@ -102,8 +101,8 @@ pub struct Context<'a> {
     pub facts: FactMap,
 }
 
-impl<'a> From<&'a visitor::Bindings<'a>> for Context<'a> {
-    fn from(sigs: &'a visitor::Bindings<'a>) -> Self {
+impl<'a> From<&'a ast::Bindings<'a>> for Context<'a> {
+    fn from(sigs: &'a ast::Bindings<'a>) -> Self {
         Context {
             sigs,
             remaining_assigns: HashMap::default(),
@@ -124,8 +123,9 @@ impl<'a> Context<'a> {
         comp: &ast::Id,
         bindings: &[PortParam],
     ) {
-        let sig = self.sigs.get_component(comp, bindings);
-        self.instances.insert(name, sig);
+        let sig = self.sigs.get_component(comp);
+        self.instances
+            .insert(name, ResolvedInstance::bound(sig, bindings.to_vec()));
     }
 
     /// Add a new invocation to the context
@@ -209,7 +209,7 @@ impl<'a> Context<'a> {
     }
 
     /// Get the signature of the instance associated with `inst`
-    pub fn get_instance(&self, inst: &ast::Id) -> &visitor::ResolvedInstance {
+    pub fn get_instance(&self, inst: &ast::Id) -> &ast::ResolvedInstance {
         &self.instances[inst]
     }
 

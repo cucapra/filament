@@ -70,7 +70,7 @@ impl visitor::Transform for CompileInvokes {
     fn invoke(
         &mut self,
         inv: ast::Invoke,
-        sig: &visitor::ResolvedInstance,
+        sig: &ast::ResolvedInstance,
     ) -> FilamentResult<Vec<ast::Command>> {
         let pos = inv.copy_span();
         // Compile only if this is a high-level invoke

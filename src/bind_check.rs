@@ -14,7 +14,7 @@ struct BindCheck<'a> {
     /// Bound events
     events: Vec<ast::Id>,
     /// Bound instances
-    instances: BindMap<ResolvedInstance<'a>>,
+    instances: BindMap<ast::ResolvedInstance<'a>>,
     // mapping from name of invocations to the instance that they invoke
     invocations: BindMap<ast::Id>,
 }
@@ -223,7 +223,7 @@ impl BindCheck<'_> {
     /// Perform the component traversal
     fn component(
         comp: &ast::Component,
-        binds: &Bindings,
+        binds: &ast::Bindings,
     ) -> FilamentResult<()> {
         // Check this signature
         Self::check_sig(&comp.sig)?;
@@ -244,22 +244,25 @@ impl BindCheck<'_> {
             match cmd {
                 core::Command::Invoke(inv) => bind_check.bind_invoke(inv)?,
                 core::Command::Instance(inst) => {
-                    let sig = binds
-                        .find_component(&inst.component, &inst.bindings)
-                        .map_err(|err| {
+                    let sig = binds.find_component(&inst.component).map_err(
+                        |err| {
                             err.add_note("For this instance", inst.copy_span())
-                        })?;
-                    if sig.sig().params.len() != inst.bindings.len() {
+                        },
+                    )?;
+                    if sig.params.len() != inst.bindings.len() {
                         let msg = format!(
                             "`{}' requires {} bindings but {} were provided",
                             inst.component,
-                            sig.sig().params.len(),
+                            sig.params.len(),
                             inst.bindings.len(),
                         );
                         return Err(Error::malformed(msg.clone())
                             .add_note(msg, inst.copy_span()));
                     }
-                    bind_check.instances.add(inst.name.clone(), sig)?;
+                    bind_check.instances.add(
+                        inst.name.clone(),
+                        ResolvedInstance::bound(sig, inst.bindings.clone()),
+                    )?;
                 }
                 core::Command::Connect(_) | core::Command::Fsm(_) => (),
             }

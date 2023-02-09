@@ -47,7 +47,7 @@ where
     fn invoke(
         &mut self,
         inv: ast::Invoke,
-        _: &ResolvedInstance,
+        _: &ast::ResolvedInstance,
     ) -> FilamentResult<Vec<ast::Command>> {
         Ok(vec![inv.into()])
     }
@@ -82,10 +82,11 @@ where
     fn component(
         &mut self,
         comp: ast::Component,
-        binds: &Bindings,
+        binds: &ast::Bindings,
     ) -> FilamentResult<ast::Component> {
         // Binding for instances
-        let mut instances: HashMap<ast::Id, ResolvedInstance> = HashMap::new();
+        let mut instances: HashMap<ast::Id, ast::ResolvedInstance> =
+            HashMap::new();
         let ast::Component { sig, body } = self.enter_component(comp)?;
         let body: Vec<ast::Command> = body
             .into_iter()
@@ -95,9 +96,11 @@ where
                     self.invoke(inv, sig)
                 }
                 crate::core::Command::Instance(inst) => {
-                    let sig =
-                        binds.get_component(&inst.component, &inst.bindings);
-                    instances.insert(inst.name.clone(), sig);
+                    let sig = binds.get_component(&inst.component);
+                    instances.insert(
+                        inst.name.clone(),
+                        ResolvedInstance::bound(sig, inst.bindings.clone()),
+                    );
                     self.instance(inst)
                 }
                 crate::core::Command::Connect(con) => self.connect(con),

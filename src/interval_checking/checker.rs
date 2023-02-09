@@ -205,7 +205,7 @@ where
 fn check_component(
     solver: &mut FilSolver,
     comp: &ast::Component,
-    sigs: &visitor::Bindings,
+    sigs: &ast::Bindings,
 ) -> FilamentResult<()> {
     let mut ctx = Context::from(sigs);
 

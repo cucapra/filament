@@ -1,6 +1,6 @@
 use super::{
-    Binding, Constraint, Id, InterfaceDef, OrderConstraint, PortDef, PortParam,
-    Range, Time, TimeRep, TimeSub, WidthRep,
+    Binding, Constraint, Id, InterfaceDef, OrderConstraint, PortDef, Range,
+    Time, TimeRep, TimeSub, WidthRep,
 };
 use crate::{
     errors::{Error, FilamentResult, WithPos},
@@ -326,11 +326,8 @@ impl<W: WidthRep> Signature<Time<u64>, W> {
     }
 }
 
-impl<T: TimeRep> Signature<T, PortParam> {
-    pub fn resolve(
-        &self,
-        args: &[PortParam],
-    ) -> FilamentResult<Signature<T, PortParam>> {
+impl<T: TimeRep, W: WidthRep> Signature<T, W> {
+    pub fn resolve(&self, args: &[W]) -> FilamentResult<Signature<T, W>> {
         if args.len() != self.params.len() {
             return Err(Error::malformed(format!(
                 "Cannot resolve signature. Expected {} arguments, provided {}",
@@ -339,32 +336,19 @@ impl<T: TimeRep> Signature<T, PortParam> {
             )));
         }
 
-        let binding: HashMap<Id, PortParam> = self
-            .params
-            .iter()
-            .cloned()
-            .zip(args.iter().cloned())
-            .collect();
+        let binding: Binding<W> =
+            Binding::new(self.params.iter().cloned().zip(args.iter().cloned()));
 
         let resolve_port =
-            |pd: &PortDef<T, PortParam>| -> FilamentResult<PortDef<T, PortParam>> {
-                match &pd.bitwidth {
-                    PortParam::Const(_) => Ok(pd.clone()),
-                    PortParam::Var(param) => {
-                        if let Some(c) = binding.get(param) {
-                            Ok(PortDef::new(
-                                pd.name.clone(),
-                                pd.liveness.clone(),
-                                c.clone(),
-                            )
-                            .set_span(pd.copy_span()))
-                        } else {
-                            Err(Error::malformed(format!(
-                                "No binding for parameter {}. Port `{}.{}` is parameterized by `{}`",
-                                param, self.name, pd.name, param
-                            )))
-                        }
-                    }
+            |pd: &PortDef<T, W>| -> FilamentResult<PortDef<T, W>> {
+                if let Some(p) = pd.bitwidth.resolve(&binding) {
+                    Ok(PortDef::new(pd.name.clone(), pd.liveness.clone(), p)
+                        .set_span(pd.copy_span()))
+                } else {
+                    Err(Error::malformed(format!(
+                        "No binding for parameter {}. Port `{}.{}` is parameterized by `{}`",
+                        pd.bitwidth, self.name, pd.name, pd.bitwidth
+                    )))
                 }
             };
 
@@ -424,6 +408,7 @@ where
 }
 impl<W, T> std::fmt::Debug for Signature<T, W>
 where
+    W:,
     W: WidthRep,
     T: TimeRep,
 {

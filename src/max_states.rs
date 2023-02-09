@@ -66,7 +66,7 @@ impl visitor::Transform for MaxStates {
     fn invoke(
         &mut self,
         inv: ast::Invoke,
-        sig: &visitor::ResolvedInstance,
+        sig: &ast::ResolvedInstance,
     ) -> FilamentResult<Vec<ast::Command>> {
         let sig = sig.resolve()?;
         // Get the signature associated with this instance.

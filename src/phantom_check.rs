@@ -44,7 +44,7 @@ impl visitor::Transform for PhantomCheck {
     fn invoke(
         &mut self,
         inv: ast::Invoke,
-        resolved: &visitor::ResolvedInstance,
+        resolved: &ast::ResolvedInstance,
     ) -> FilamentResult<Vec<ast::Command>> {
         // Check if the instance has already been used
         if let Some(prev_use) = self.instance_used.get(&inv.instance) {
