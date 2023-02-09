@@ -130,6 +130,7 @@ impl<T: TimeRep> Monomorphize<T> {
             &sig.name,
             binding.iter().map(|(_, v)| *v),
         );
+        nsig.params = vec![];
         nsig
     }
 
