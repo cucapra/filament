@@ -24,7 +24,7 @@ pub struct Time<Offset> {
 
 impl Time<u64> {
     pub fn offset(&self) -> u64 {
-        debug_assert!(
+        assert!(
             self.offsets.len() == 1,
             "Time::offset called on non-concrete time"
         );
@@ -73,8 +73,8 @@ impl TimeRep for Time<u64> {
         TimeSub::build(self, other)
     }
 
-    fn events(&self) -> Vec<Id> {
-        vec![self.event.clone()]
+    fn event(&self) -> Id {
+        self.event.clone()
     }
 }
 

@@ -145,11 +145,10 @@ impl<'a, T: TimeRep, W: WidthRep> BindCheck<'a, T, W> {
         if let Some(ports) = &inv.ports {
             // Check that scheduling events are bound
             for time in &inv.abstract_vars {
-                for ev in time.events() {
-                    if !self.events.contains(&ev) {
-                        return Err(Error::undefined(ev.clone(), "Event")
-                            .add_note("Event is not bound", ev.copy_span()));
-                    }
+                let ev = time.event();
+                if !self.events.contains(&ev) {
+                    return Err(Error::undefined(ev.clone(), "Event")
+                        .add_note("Event is not bound", ev.copy_span()));
                 }
             }
 
@@ -185,14 +184,13 @@ impl<'a, T: TimeRep, W: WidthRep> BindCheck<'a, T, W> {
         // Check all the definitions only use bound events
         for pd in sig.ports() {
             for time in pd.liveness.events() {
-                for ev in &time.events() {
-                    if !events.contains(ev) {
-                        return Err(Error::undefined(ev.clone(), "event")
-                            .add_note(
-                                "Event is not defined in the signature",
-                                ev.copy_span(),
-                            ));
-                    }
+                let ev = time.event();
+                if !events.contains(&ev) {
+                    return Err(Error::undefined(ev.clone(), "event")
+                        .add_note(
+                            "Event is not defined in the signature",
+                            ev.copy_span(),
+                        ));
                 }
             }
         }

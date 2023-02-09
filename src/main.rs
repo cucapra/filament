@@ -40,7 +40,7 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     (ns, _) = phantom_check::PhantomCheck::transform(ns, ())?;
     log::info!("Phantom check: {}ms", t.elapsed().as_millis());
 
-    let (mut ns, states) = max_states::MaxStates::transform(ns, ())?;
+    let (ns, states) = max_states::MaxStates::transform(ns, ())?;
     log::info!("Max states: {:?}", states.max_states);
 
     // Return early if we're asked to dump the interface
@@ -50,12 +50,6 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     } else if opts.check {
         return Ok(());
     }
-
-    // Lowering
-    let t = Instant::now();
-    (ns, _) = lower::CompileInvokes::transform(ns, states.max_states)?;
-    log::info!("Lowering: {}ms", t.elapsed().as_millis());
-    log::info!("{ns}");
 
     // Monomorphize the program.
     let t = Instant::now();
@@ -67,6 +61,12 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     let t = Instant::now();
     ns = bind_check::check(ns)?;
     log::info!("Monomorphoic Bind check: {}ms", t.elapsed().as_millis());
+
+    // Lowering
+    let t = Instant::now();
+    (ns, _) = lower::CompileInvokes::transform(ns, states.max_states)?;
+    log::info!("Lowering: {}ms", t.elapsed().as_millis());
+    log::info!("{ns}");
 
     // Compilation
     let t = Instant::now();

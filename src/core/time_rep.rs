@@ -70,7 +70,7 @@ where
     /// Substract two time expression representing the absolute difference
     fn sub(self, other: Self) -> Self::SubRep;
     /// All events used in the time expression
-    fn events(&self) -> Vec<Id>;
+    fn event(&self) -> Id;
 }
 
 /// Functions provided by data structures that contain a time representation
@@ -118,9 +118,7 @@ where
         match self {
             TimeSub::Unit(_) => vec![],
             TimeSub::Sym { l, r } => {
-                let mut events = l.events();
-                events.extend(r.events());
-                events
+                vec![l.event(), r.event()]
             }
         }
     }

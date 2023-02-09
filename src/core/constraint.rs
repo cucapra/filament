@@ -199,9 +199,7 @@ impl<T: TimeRep> Constraint<T> {
     pub fn events(&self) -> Vec<Id> {
         match self {
             Constraint::Base { base } => {
-                let mut evs = base.left.events();
-                evs.append(&mut base.right.events());
-                evs
+                vec![base.left.event(), base.right.event()]
             }
             Constraint::Sub { base } => {
                 let mut evs = base.left.events();
