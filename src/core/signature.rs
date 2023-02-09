@@ -206,15 +206,16 @@ where
             .filter(move |event| self.get_interface(event).is_none())
     }
 
-    /// Constraints for well formed under a binding
+    /// Constraints for well formed
     fn constraints(&self) -> impl Iterator<Item = Constraint<T>> + '_ {
         self.inputs()
             .chain(self.outputs())
             .flat_map(|mpd| mpd.liveness.well_formed())
     }
 
-    /// Construct a binding from this Signature
-    pub fn binding(&self, args: &[T]) -> Binding<T> {
+    /// Construct an event binding from this Signature's events and the given
+    /// arguments.
+    pub fn event_binding(&self, args: &[T]) -> Binding<T> {
         debug_assert!(
             self.events
                 .iter()
@@ -242,13 +243,26 @@ where
             .iter()
             .skip(args.len())
             .map(|eb| {
-                let bind = eb.default.as_ref().unwrap().resolve(&partial_map);
+                let bind =
+                    eb.default.as_ref().unwrap().resolve_event(&partial_map);
                 (eb.event.clone(), bind)
             })
             .collect();
 
         partial_map.extend(remaining);
         partial_map
+    }
+
+    /// Construct a parameter binding from this Signature's parameters and the
+    pub fn param_binding<W0: WidthRep>(&self, args: &[W0]) -> Binding<W0> {
+        debug_assert!(
+            self.params.len() == args.len(),
+            "Insuffient params for signature, required {} got {}",
+            self.params.len(),
+            args.len(),
+        );
+
+        Binding::new(self.params.iter().cloned().zip(args.iter().cloned()))
     }
 }
 
@@ -327,6 +341,23 @@ impl<T: TimeRep, W: WidthRep> Signature<T, W> {
 }
 
 impl<T: TimeRep, W: WidthRep> Signature<T, W> {
+    /// Resolve a port definition using the given binding.
+    fn resolve_port<WO: WidthRep>(
+        &self,
+        pd: &PortDef<T, W>,
+        binding: &Binding<WO>,
+    ) -> FilamentResult<PortDef<T, WO>> {
+        if let Some(p) = pd.bitwidth.resolve(binding) {
+            Ok(PortDef::new(pd.name.clone(), pd.liveness.clone(), p)
+                .set_span(pd.copy_span()))
+        } else {
+            Err(Error::malformed(format!(
+            "No binding for parameter {}. Port `{}.{}` is parameterized by `{}`",
+            pd.bitwidth, self.name, pd.name, pd.bitwidth
+        )))
+        }
+    }
+
     pub fn resolve<WO: WidthRep>(
         &self,
         args: &[WO],
@@ -339,21 +370,7 @@ impl<T: TimeRep, W: WidthRep> Signature<T, W> {
             )));
         }
 
-        let binding: Binding<WO> =
-            Binding::new(self.params.iter().cloned().zip(args.iter().cloned()));
-
-        let resolve_port =
-            |pd: &PortDef<T, W>| -> FilamentResult<PortDef<T, WO>> {
-                if let Some(p) = pd.bitwidth.resolve(&binding) {
-                    Ok(PortDef::new(pd.name.clone(), pd.liveness.clone(), p)
-                        .set_span(pd.copy_span()))
-                } else {
-                    Err(Error::malformed(format!(
-                        "No binding for parameter {}. Port `{}.{}` is parameterized by `{}`",
-                        pd.bitwidth, self.name, pd.name, pd.bitwidth
-                    )))
-                }
-            };
+        let binding: Binding<WO> = self.param_binding(args);
 
         let resolved = Signature {
             params: vec![],
@@ -361,7 +378,7 @@ impl<T: TimeRep, W: WidthRep> Signature<T, W> {
                 .ports
                 .clone()
                 .iter()
-                .map(resolve_port)
+                .map(|pd| self.resolve_port(pd, &binding))
                 .collect::<FilamentResult<_>>()?,
             // Clone everything else
             outputs_idx: self.outputs_idx,

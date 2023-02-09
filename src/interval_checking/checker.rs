@@ -59,7 +59,7 @@ impl<T: TimeRep, W: WidthRep> Context<'_, T, W> {
     ) -> FilamentResult<()> {
         let binding = self
             .get_instance(&invoke.instance)
-            .binding(&invoke.abstract_vars);
+            .event_binding(&invoke.abstract_vars);
 
         // Track event bindings
         self.add_event_binds(
@@ -82,7 +82,7 @@ impl<T: TimeRep, W: WidthRep> Context<'_, T, W> {
                 let event = &evs.event();
                 // Get interface for this event
                 let event_interface = inv.get_event(event);
-                let int_len = inst_event.delay.resolve(&binding);
+                let int_len = inst_event.delay.resolve_event(&binding);
                 let ev_int_len = &event_interface.delay;
 
                 // Generate constraint
@@ -122,25 +122,29 @@ impl<T: TimeRep, W: WidthRep> Context<'_, T, W> {
         // requirements
         self.check_invoke_binds(invoke)?;
         let sig = self.get_instance(&invoke.instance).resolve()?;
-        let binding = sig.binding(&invoke.abstract_vars);
+        let binding = sig.event_binding(&invoke.abstract_vars);
 
         // Handle `where` clause constraints and well formedness constraints on intervals.
         sig.well_formed()?.for_each(|con| {
-            self.add_obligations(iter::once(con.resolve(&binding)).map(|e| {
-                e.add_note(
-                    "Invoke's intervals must be well-formed",
-                    invoke.copy_span(),
-                )
-            }))
+            self.add_obligations(iter::once(con.resolve_event(&binding)).map(
+                |e| {
+                    e.add_note(
+                        "Invoke's intervals must be well-formed",
+                        invoke.copy_span(),
+                    )
+                },
+            ))
         });
 
         sig.constraints.iter().for_each(|con| {
-            self.add_obligations(iter::once(con.resolve(&binding)).map(|e| {
-                e.add_note(
+            self.add_obligations(iter::once(con.resolve_event(&binding)).map(
+                |e| {
+                    e.add_note(
                     "Component's where clause constraints must be satisfied",
                     invoke.copy_span(),
                 )
-            }))
+                },
+            ))
         });
 
         // Add this invocation to the context

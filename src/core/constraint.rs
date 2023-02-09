@@ -86,10 +86,21 @@ impl<K: TimeRep, T: WithTime<K>> WithTime<K> for OrderConstraint<T>
 where
     Self: Clone,
 {
-    fn resolve(&self, bindings: &Binding<K>) -> Self {
+    fn resolve_event(&self, bindings: &Binding<K>) -> Self {
         OrderConstraint {
-            left: self.left.resolve(bindings),
-            right: self.right.resolve(bindings),
+            left: self.left.resolve_event(bindings),
+            right: self.right.resolve_event(bindings),
+            ..self.clone()
+        }
+    }
+
+    fn resolve_offset(
+        &self,
+        bindings: &Binding<<K as TimeRep>::Offset>,
+    ) -> Self {
+        OrderConstraint {
+            left: self.left.resolve_offset(bindings),
+            right: self.right.resolve_offset(bindings),
             ..self.clone()
         }
     }
@@ -233,15 +244,33 @@ impl<T: TimeRep> Constraint<T> {
 }
 
 impl<T: TimeRep> WithTime<T> for Constraint<T> {
-    fn resolve(&self, binding: &Binding<T>) -> Constraint<T> {
+    fn resolve_event(&self, binding: &Binding<T>) -> Constraint<T> {
         match self {
             Constraint::Base { base } => Constraint::Base {
-                base: base.resolve(binding),
+                base: base.resolve_event(binding),
             },
             Constraint::Sub { base } => Constraint::Sub {
                 base: OrderConstraint {
-                    left: base.left.resolve(binding),
-                    right: base.right.resolve(binding),
+                    left: base.left.resolve_event(binding),
+                    right: base.right.resolve_event(binding),
+                    ..base.clone()
+                },
+            },
+        }
+    }
+
+    fn resolve_offset(
+        &self,
+        bindings: &Binding<<T as TimeRep>::Offset>,
+    ) -> Self {
+        match self {
+            Constraint::Base { base } => Constraint::Base {
+                base: base.resolve_offset(bindings),
+            },
+            Constraint::Sub { base } => Constraint::Sub {
+                base: OrderConstraint {
+                    left: base.left.resolve_offset(bindings),
+                    right: base.right.resolve_offset(bindings),
                     ..base.clone()
                 },
             },

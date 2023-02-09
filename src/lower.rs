@@ -89,7 +89,7 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for CompileInvokes<W> {
         {
             let sig = sig.resolve()?;
             // Get the signature associated with this instance.
-            let binding = sig.binding(&abstract_vars);
+            let binding = sig.event_binding(&abstract_vars);
 
             let mut connects = Vec::with_capacity(
                 1 + ports.len() + sig.interface_signals.len(),
@@ -120,7 +120,7 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for CompileInvokes<W> {
 
             // Generate assignment for each port
             for (port, formal) in ports.into_iter().zip(sig.inputs()) {
-                let req = formal.liveness.resolve(&binding);
+                let req = formal.liveness.resolve_event(&binding);
                 let guard = self.range_to_guard(req);
                 let sp = port.copy_span();
                 let con = core::Connect::new(

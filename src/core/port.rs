@@ -88,9 +88,19 @@ where
     W: WidthRep,
     T: TimeRep,
 {
-    fn resolve(&self, bindings: &Binding<T>) -> Self {
+    fn resolve_event(&self, bindings: &Binding<T>) -> Self {
         Self {
-            liveness: self.liveness.resolve(bindings),
+            liveness: self.liveness.resolve_event(bindings),
+            ..(self.clone())
+        }
+    }
+
+    fn resolve_offset(
+        &self,
+        bindings: &Binding<<T as TimeRep>::Offset>,
+    ) -> Self {
+        Self {
+            liveness: self.liveness.resolve_offset(bindings),
             ..(self.clone())
         }
     }

@@ -65,33 +65,47 @@ where
         + Display
         + Into<SExp>;
 
+    /// Offset for this time expression
+    type Offset;
+
     /// A time expression with exactly one event and offset
     fn unit(event: Id, state: u64) -> Self;
     /// Increment the time unit by a constant
     fn increment(self, n: u64) -> Self;
-    /// Resolve the time expression given a binding
-    fn resolve(&self, bindings: &Binding<Self>) -> Self;
     /// Substract two time expression representing the absolute difference
     fn sub(self, other: Self) -> Self::SubRep;
     /// All events used in the time expression
     fn event(&self) -> Id;
+
+    /// Resolve the time expression given a binding
+    fn resolve_event(&self, bindings: &Binding<Self>) -> Self;
+    /// Resolve the offset given a binding
+    fn resolve_offset(&self, bindings: &Binding<Self::Offset>) -> Self;
 }
 
 /// Functions provided by data structures that contain a time representation
 pub trait WithTime<T>
 where
     T: TimeRep,
+    Self: Sized,
 {
     fn events(&self) -> Vec<Id>;
-    fn resolve(&self, bindings: &Binding<T>) -> Self;
+    fn resolve_event(&self, bindings: &Binding<T>) -> Self;
+    fn resolve_offset(&self, bindings: &Binding<T::Offset>) -> Self;
 }
 
 impl<T> WithTime<T> for T
 where
     T: TimeRep,
 {
-    fn resolve(&self, bindings: &Binding<T>) -> Self {
-        self.resolve(bindings)
+    fn resolve_event(&self, bindings: &Binding<T>) -> Self {
+        self.resolve_event(bindings)
+    }
+    fn resolve_offset(
+        &self,
+        bindings: &Binding<<T as TimeRep>::Offset>,
+    ) -> Self {
+        self.resolve_offset(bindings)
     }
     fn events(&self) -> Vec<Id> {
         vec![self.event()]
@@ -144,12 +158,25 @@ impl<T> WithTime<T> for TimeSub<T>
 where
     T: TimeRep,
 {
-    fn resolve(&self, bindings: &Binding<T>) -> Self {
+    fn resolve_event(&self, bindings: &Binding<T>) -> Self {
         match self {
             TimeSub::Unit(n) => TimeSub::Unit(*n),
             TimeSub::Sym { l, r } => TimeSub::Sym {
-                l: l.resolve(bindings),
-                r: r.resolve(bindings),
+                l: l.resolve_event(bindings),
+                r: r.resolve_event(bindings),
+            },
+        }
+    }
+
+    fn resolve_offset(
+        &self,
+        bindings: &Binding<<T as TimeRep>::Offset>,
+    ) -> Self {
+        match self {
+            TimeSub::Unit(n) => TimeSub::Unit(*n),
+            TimeSub::Sym { l, r } => TimeSub::Sym {
+                l: l.resolve_offset(bindings),
+                r: r.resolve_offset(bindings),
             },
         }
     }

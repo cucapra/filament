@@ -42,7 +42,7 @@ impl<'a, T: TimeRep, W: WidthRep> ConcreteInvoke<'a, T, W> {
         match self {
             ConcreteInvoke::Concrete { binding, sig } => {
                 let live = sig.get_liveness::<IS_INPUT>(port)?;
-                Ok(live.resolve(binding))
+                Ok(live.resolve_event(binding))
             }
             ConcreteInvoke::This { sig } => {
                 Ok(sig.get_liveness::<IS_INPUT>(port)?)
@@ -379,7 +379,7 @@ impl<'a, T: TimeRep, W: WidthRep> Context<'a, T, W> {
                 // For each binding
                 for (i, (spi, bi)) in args.iter().enumerate() {
                     // Delay implied by the i'th binding
-                    let i_delay = delay.resolve(&sig.binding(bi));
+                    let i_delay = delay.resolve_event(&sig.event_binding(bi));
                     // The i'th use conflicts with all other uses
                     for (k, (spk, bk)) in args.iter().enumerate() {
                         if i == k {

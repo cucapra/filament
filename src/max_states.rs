@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 type States = HashMap<Id, u64>;
 
+/// Compute the maximum number of states for each event in a component
 #[derive(Default)]
 pub struct MaxStates<W: WidthRep> {
     /// Map for each event to the maximum number of states for each component
@@ -75,8 +76,10 @@ impl<W: WidthRep> visitor::Transform<core::Time<u64>, W> for MaxStates<W> {
     ) -> FilamentResult<Vec<core::Command<Time<u64>, W>>> {
         let sig = sig.resolve()?;
         // Get the signature associated with this instance.
-        let binding = sig.binding(&inv.abstract_vars);
-        self.max_state_from_ports(sig.outputs().map(|pd| pd.resolve(&binding)));
+        let binding = sig.event_binding(&inv.abstract_vars);
+        self.max_state_from_ports(
+            sig.outputs().map(|pd| pd.resolve_event(&binding)),
+        );
         Ok(vec![core::Command::Invoke(inv)])
     }
     fn exit_component(

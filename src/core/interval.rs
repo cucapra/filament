@@ -47,10 +47,21 @@ impl<T> WithTime<T> for Range<T>
 where
     T: TimeRep,
 {
-    fn resolve(&self, bindings: &Binding<T>) -> Self {
+    fn resolve_event(&self, bindings: &Binding<T>) -> Self {
         Range {
-            start: self.start.resolve(bindings),
-            end: self.end.resolve(bindings),
+            start: self.start.resolve_event(bindings),
+            end: self.end.resolve_event(bindings),
+            ..self.clone()
+        }
+    }
+
+    fn resolve_offset(
+        &self,
+        bindings: &Binding<<T as TimeRep>::Offset>,
+    ) -> Self {
+        Range {
+            start: self.start.resolve_offset(bindings),
+            end: self.end.resolve_offset(bindings),
             ..self.clone()
         }
     }

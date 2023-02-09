@@ -79,6 +79,7 @@ impl Display for Time<u64> {
 
 impl TimeRep for Time<u64> {
     type SubRep = TimeSub<Self>;
+    type Offset = u64;
 
     fn unit(event: Id, offset: u64) -> Self {
         Self { event, offset }
@@ -89,10 +90,14 @@ impl TimeRep for Time<u64> {
         self
     }
 
-    fn resolve(&self, bindings: &super::Binding<Self>) -> Self {
+    fn resolve_event(&self, bindings: &super::Binding<Self>) -> Self {
         let mut n = bindings.get(&self.event).clone();
         n.offset += self.offset;
         n
+    }
+
+    fn resolve_offset(&self, _: &super::Binding<Self::Offset>) -> Self {
+        self.clone()
     }
 
     fn sub(self, other: Self) -> Self::SubRep {
@@ -142,6 +147,7 @@ impl From<Time<ParamTime>> for SExp {
 
 impl TimeRep for Time<ParamTime> {
     type SubRep = TimeSub<Self>;
+    type Offset = ParamTime;
 
     fn unit(event: Id, state: u64) -> Self {
         Time {
@@ -155,10 +161,28 @@ impl TimeRep for Time<ParamTime> {
         self
     }
 
-    fn resolve(&self, bindings: &super::Binding<Self>) -> Self {
+    fn resolve_event(&self, bindings: &super::Binding<Self>) -> Self {
         let mut n = bindings.get(&self.event).clone();
         n.offset.0.extend(self.offset.0.clone());
         n
+    }
+
+    fn resolve_offset(&self, bindings: &super::Binding<Self::Offset>) -> Self {
+        let mut offsets = Vec::with_capacity(self.offset.0.len());
+
+        for x in &self.offset.0 {
+            match x {
+                PortParam::Const(x) => offsets.push(PortParam::Const(*x)),
+                PortParam::Var(x) => {
+                    offsets.extend(bindings.get(x).0.iter().cloned())
+                }
+            }
+        }
+
+        Self {
+            event: self.event.clone(),
+            offset: ParamTime(offsets),
+        }
     }
 
     fn sub(self, other: Self) -> Self::SubRep {

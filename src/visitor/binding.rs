@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::core::{self, TimeRep, WidthRep};
+use crate::core::{self, TimeRep, WidthRep, WithTime};
 use crate::errors::WithPos;
 use crate::errors::{Error, FilamentResult};
 use std::collections::HashMap;
@@ -141,10 +141,18 @@ impl<'a, T: TimeRep, W: WidthRep> ResolvedInstance<'a, T, W> {
         }
     }
 
-    pub fn binding(&self, abs: &'a [T]) -> core::Binding<T> {
+    /// Event binding for this instance
+    pub fn event_binding(&self, abs: &'a [T]) -> core::Binding<T> {
         match self {
-            Self::Component { sig, .. } => sig.binding(abs),
-            Self::External { sig, .. } => sig.binding(abs),
+            Self::Component { sig, .. } => sig.event_binding(abs),
+            Self::External { sig, .. } => sig.event_binding(abs),
+        }
+    }
+
+    pub fn param_binding(&self) -> core::Binding<W> {
+        match self {
+            Self::Component { sig, binds } => sig.param_binding(binds),
+            Self::External { sig, binds } => sig.param_binding(binds),
         }
     }
 }
