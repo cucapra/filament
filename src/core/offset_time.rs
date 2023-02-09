@@ -78,8 +78,8 @@ impl TimeRep for Time<u64> {
     }
 }
 
-impl From<&Time<u64>> for SExp {
-    fn from(t: &Time<u64>) -> SExp {
+impl From<Time<u64>> for SExp {
+    fn from(t: Time<u64>) -> SExp {
         SExp(format!(
             "(+ {} {})",
             t.event,

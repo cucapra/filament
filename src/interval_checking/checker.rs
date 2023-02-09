@@ -1,6 +1,5 @@
 use super::{ConcreteInvoke, Context, FilSolver, THIS};
-use crate::ast::param::{self as ast, Constraint, CBT};
-use crate::core::WithTime;
+use crate::core::{self, OrderConstraint, TimeRep, WidthRep, WithTime};
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
 use crate::visitor;
@@ -8,14 +7,14 @@ use itertools::Itertools;
 use std::collections::HashMap;
 use std::iter;
 
-impl Context<'_> {
+impl<T: TimeRep, W: WidthRep> Context<'_, T, W> {
     // For connect statements of the form:
     // dst = src
     // The generated proof obligation requires that req(dst) \subsetof guarantees(src)
     fn check_connect(
         &mut self,
-        dst: &ast::Port,
-        src: &ast::Port,
+        dst: &core::Port,
+        src: &core::Port,
     ) -> FilamentResult<()> {
         log::trace!("Checking connect: {} = {}", dst, src);
         // Remove dst from remaining ports
@@ -30,20 +29,24 @@ impl Context<'_> {
         // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
         if let Some(guarantee) = &guarantee {
             let within_fact =
-                CBT::subset(requirement.clone(), guarantee.clone()).map(|e| {
-                    Constraint::from(e)
-                        .add_note(
-                            format!("Source is available for {}", guarantee),
-                            src_pos,
-                        )
-                        .add_note(
-                            format!(
-                                "Destination's requirement {}",
-                                requirement
-                            ),
-                            dst.copy_span(),
-                        )
-                });
+                OrderConstraint::subset(requirement.clone(), guarantee.clone())
+                    .map(|e| {
+                        core::Constraint::base(e)
+                            .add_note(
+                                format!(
+                                    "Source is available for {}",
+                                    guarantee
+                                ),
+                                src_pos,
+                            )
+                            .add_note(
+                                format!(
+                                    "Destination's requirement {}",
+                                    requirement
+                                ),
+                                dst.copy_span(),
+                            )
+                    });
             self.add_obligations(within_fact);
         }
 
@@ -52,7 +55,7 @@ impl Context<'_> {
 
     fn check_invoke_binds(
         &mut self,
-        invoke: &ast::Invoke,
+        invoke: &core::Invoke<T>,
     ) -> FilamentResult<()> {
         let binding = self
             .get_instance(&invoke.instance)
@@ -76,35 +79,34 @@ impl Context<'_> {
             {
                 // Each event in the binding must pulse less often than the interface of the abstract
                 // variable.
-                let event = &evs.event;
+                let event = &evs.event();
                 // Get interface for this event
                 let event_interface = inv.get_event(event);
                 let int_len = inst_event.delay.resolve(&binding);
                 let ev_int_len = &event_interface.delay;
 
                 // Generate constraint
-                let cons = Constraint::from(ast::CBS::gte(
-                ev_int_len.clone(),
-                int_len.clone(),
-            ))
-            .add_note(
-                "Event provided to invoke pulses more often than event allows",
-                invoke.copy_span(),
-            )
-            .add_note(
-                format!(
-                    "Provided event may trigger every {} cycles",
-                    ev_int_len,
-                ),
-                event_interface.copy_span(),
-            )
-            .add_note(
-                format!(
-                    "Delay requires event to trigger once in {} cycles",
-                    int_len,
-                ),
-                inst_event.copy_span(),
-            );
+                let cons = core::Constraint::sub(core::OrderConstraint::gte(
+                    ev_int_len.clone(),
+                    int_len.clone(),
+                )).add_note(
+                    "Event provided to invoke pulses more often than event allows",
+                    invoke.copy_span(),
+                )
+                .add_note(
+                    format!(
+                        "Provided event may trigger every {} cycles",
+                        ev_int_len,
+                    ),
+                    event_interface.copy_span(),
+                )
+                .add_note(
+                    format!(
+                        "Delay requires event to trigger once in {} cycles",
+                        int_len,
+                    ),
+                    inst_event.copy_span(),
+                );
                 constraints.push(cons);
             }
         }
@@ -115,7 +117,7 @@ impl Context<'_> {
 
     /// Check invocation and add new [super::Fact] representing the proof obligations for checking this
     /// invocation.
-    fn check_invoke(&mut self, invoke: &ast::Invoke) -> FilamentResult<()> {
+    fn check_invoke(&mut self, invoke: &core::Invoke<T>) -> FilamentResult<()> {
         // Check the bindings for abstract variables do not violate @interface
         // requirements
         self.check_invoke_binds(invoke)?;
@@ -152,7 +154,7 @@ impl Context<'_> {
 
     fn check_invoke_ports(
         &mut self,
-        invoke: &ast::Invoke,
+        invoke: &core::Invoke<T>,
     ) -> FilamentResult<()> {
         let sig = self.get_instance(&invoke.instance).resolve()?;
         // If this is a high-level invoke, check all port requirements
@@ -160,7 +162,7 @@ impl Context<'_> {
             // Check connections implied by the invocation
             for (actual, formal) in actuals.iter().zip(sig.inputs()) {
                 let dst =
-                    ast::Port::comp(invoke.bind.clone(), formal.name.clone())
+                    core::Port::comp(invoke.bind.clone(), formal.name.clone())
                         .set_span(formal.copy_span());
                 self.check_connect(&dst, actual)?;
             }
@@ -171,44 +173,50 @@ impl Context<'_> {
         Ok(())
     }
 
-    fn check_commands(&mut self, cmds: &[ast::Command]) -> FilamentResult<()> {
+    fn check_commands(
+        &mut self,
+        cmds: &[core::Command<T, W>],
+    ) -> FilamentResult<()> {
         // Walk over the commands and add bindings for all invocations
         for cmd in cmds {
             match cmd {
-                ast::Command::Invoke(invoke) => self.check_invoke(invoke)?,
-                ast::Command::Instance(ast::Instance {
+                core::Command::Invoke(invoke) => self.check_invoke(invoke)?,
+                core::Command::Instance(core::Instance {
                     name,
                     component,
                     bindings,
                     ..
                 }) => self.add_instance(name.clone(), component, bindings),
-                ast::Command::Fsm(_) | ast::Command::Connect(_) => (),
+                core::Command::Fsm(_) | core::Command::Connect(_) => (),
             };
         }
 
         // Check port availability for all connections
         for cmd in cmds {
             match cmd {
-                ast::Command::Invoke(invoke) => {
+                core::Command::Invoke(invoke) => {
                     self.check_invoke_ports(invoke)?
                 }
-                ast::Command::Connect(ast::Connect {
-                    dst, src, guard, ..
+                core::Command::Connect(core::Connect {
+                    dst,
+                    src,
+                    guard,
+                    ..
                 }) => {
                     if guard.is_none() {
                         self.check_connect(dst, src)?
                     }
                 }
-                ast::Command::Instance(_) | ast::Command::Fsm(_) => (),
+                core::Command::Instance(_) | core::Command::Fsm(_) => (),
             };
         }
         Ok(())
     }
 
     fn check_component(
-        solver: &mut FilSolver,
-        comp: &ast::Component,
-        sigs: &ast::Bindings,
+        solver: &mut FilSolver<T>,
+        comp: &core::Component<T, W>,
+        sigs: &visitor::Bindings<T, W>,
     ) -> FilamentResult<()> {
         let mut ctx = Context::from(sigs);
 
@@ -252,7 +260,8 @@ impl Context<'_> {
         let t = std::time::Instant::now();
         solver.prove(
             comp.sig.events(),
-            &ctx.facts,
+            // XXX(rachit): Unnecessary clone
+            ctx.facts.clone(),
             obs.into_iter().chain(disj.into_iter()),
             share,
         )?;
@@ -275,11 +284,13 @@ impl Context<'_> {
     }
 }
 
-/// Check a [ast::Namespace] to prove that the interval requirements of all the ports can be
+/// Check a [core::Namespace] to prove that the interval requirements of all the ports can be
 /// satisfied.
 /// Internally generates [super::Fact] which represent proof obligations that need to be proven for
 /// the interval requirements to be proven.
-pub fn check(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
+pub fn check<T: TimeRep, W: WidthRep>(
+    mut ns: core::Namespace<T, W>,
+) -> FilamentResult<core::Namespace<T, W>> {
     let comps = ns.components.drain(..).collect_vec();
     let sigs: HashMap<_, _> = ns.signatures().collect();
     let mut solver = FilSolver::new()?;
@@ -290,7 +301,7 @@ pub fn check(mut ns: ast::Namespace) -> FilamentResult<ast::Namespace> {
         log::trace!("===== Signature {} =====", &sig.name);
         solver.prove(
             sig.events(),
-            &sig.constraints,
+            sig.constraints.clone(),
             sig.well_formed()?,
             vec![],
         )?;

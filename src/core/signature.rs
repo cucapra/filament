@@ -1,6 +1,6 @@
 use super::{
     Binding, Constraint, Id, InterfaceDef, OrderConstraint, PortDef, Range,
-    Time, TimeRep, TimeSub, WidthRep,
+    TimeRep, WidthRep,
 };
 use crate::{
     errors::{Error, FilamentResult, WithPos},
@@ -16,7 +16,7 @@ where
     T: TimeRep,
 {
     pub event: Id,
-    pub delay: TimeSub<T>,
+    pub delay: T::SubRep,
     pub default: Option<T>,
     pos: GPosIdx,
 }
@@ -39,7 +39,7 @@ impl<T> EventBind<T>
 where
     T: TimeRep,
 {
-    pub fn new(event: Id, delay: TimeSub<T>, default: Option<T>) -> Self {
+    pub fn new(event: Id, delay: T::SubRep, default: Option<T>) -> Self {
         Self {
             event,
             delay,
@@ -280,14 +280,14 @@ where
     }
 }
 
-impl<W: WidthRep> Signature<Time<u64>, W> {
+impl<T: TimeRep, W: WidthRep> Signature<T, W> {
     /// Constraints generated to ensure that a signature is well-formed.
     /// 1. Ensure that all the intervals are well formed
     /// 2. Ensure for each interval that mentions event `E` in its start time, the @interface
     ///    signal for `E` pulses less often than the length of the interval itself.
     pub fn well_formed(
         &self,
-    ) -> FilamentResult<impl Iterator<Item = Constraint<Time<u64>>> + '_> {
+    ) -> FilamentResult<impl Iterator<Item = Constraint<T>> + '_> {
         let mut evs: HashMap<Id, Vec<_>> = HashMap::new();
 
         // Compute mapping from events to intervals to mention the event in their start time.
@@ -296,7 +296,7 @@ impl<W: WidthRep> Signature<Time<u64>, W> {
         // We do not consider the end time because that only effects the length of the signal.
         for port in self.inputs().chain(self.outputs()) {
             let delay = port.liveness.len();
-            let ev = &port.liveness.start.event;
+            let ev = &port.liveness.start.event();
             evs.entry(ev.clone())
                 .or_default()
                 .push((delay.clone(), port.copy_span()))
@@ -308,7 +308,7 @@ impl<W: WidthRep> Signature<Time<u64>, W> {
                 let event = self.get_event(&ev);
                 lens.into_iter().map(move |(port_len, port_pos)| {
                     let len = event.delay.clone();
-                    Constraint::from(OrderConstraint::gte(
+                    Constraint::sub(OrderConstraint::gte(
                         len.clone(),
                         port_len.clone(),
                     ))

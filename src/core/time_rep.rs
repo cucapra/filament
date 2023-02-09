@@ -56,10 +56,15 @@ where
 /// A representation of time
 pub trait TimeRep
 where
-    Self: Sized + Clone + Display,
+    Self: Sized + Eq + std::hash::Hash + Clone + Display + Into<SExp>,
 {
     /// Representation of absolute difference b/w two events of this TimeRep
-    type SubRep: WithTime<Self> + Clone + Display;
+    type SubRep: WithTime<Self>
+        + Clone
+        + Eq
+        + std::hash::Hash
+        + Display
+        + Into<SExp>;
 
     /// A time expression with exactly one event and offset
     fn unit(event: Id, state: u64) -> Self;
@@ -78,6 +83,7 @@ pub trait WithTime<T>
 where
     T: TimeRep,
 {
+    fn events(&self) -> Vec<Id>;
     fn resolve(&self, bindings: &Binding<T>) -> Self;
 }
 
@@ -87,6 +93,9 @@ where
 {
     fn resolve(&self, bindings: &Binding<T>) -> Self {
         self.resolve(bindings)
+    }
+    fn events(&self) -> Vec<Id> {
+        vec![self.event()]
     }
 }
 
@@ -145,6 +154,15 @@ where
             },
         }
     }
+
+    fn events(&self) -> Vec<Id> {
+        match self {
+            TimeSub::Unit(_) => vec![],
+            TimeSub::Sym { l, r } => {
+                vec![l.event(), r.event()]
+            }
+        }
+    }
 }
 
 impl<T: Display + TimeRep> Display for TimeSub<T> {
@@ -156,8 +174,8 @@ impl<T: Display + TimeRep> Display for TimeSub<T> {
     }
 }
 
-impl From<&TimeSub<Time<u64>>> for SExp {
-    fn from(ts: &TimeSub<Time<u64>>) -> Self {
+impl From<TimeSub<Time<u64>>> for SExp {
+    fn from(ts: TimeSub<Time<u64>>) -> Self {
         match ts {
             TimeSub::Unit(n) => SExp(n.to_string()),
             TimeSub::Sym { l, r } => {

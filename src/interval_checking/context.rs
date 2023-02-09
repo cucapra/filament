@@ -1,34 +1,34 @@
 use super::{ShareConstraints, THIS};
-use crate::ast::param as ast;
-use crate::core::{self, PortParam, TimeRep, WithTime};
+use crate::core::{self, Constraint, TimeRep, WidthRep, WithTime};
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
+use crate::visitor;
 use std::collections::{HashMap, HashSet};
 
-pub enum ConcreteInvoke<'a> {
+pub enum ConcreteInvoke<'a, T: TimeRep, W: WidthRep> {
     Concrete {
         /// Bindings for abstract variables
-        binding: core::Binding<ast::TimeRep>,
+        binding: core::Binding<T>,
         /// Signature
-        sig: ast::Signature,
+        sig: core::Signature<T, W>,
     },
     This {
         /// Signature
-        sig: &'a ast::Signature,
+        sig: &'a core::Signature<T, W>,
     },
 }
 
-impl<'a> ConcreteInvoke<'a> {
+impl<'a, T: TimeRep, W: WidthRep> ConcreteInvoke<'a, T, W> {
     /// Construct an instance from a Signature and bindings for abstract variables.
     pub fn concrete(
-        binding: core::Binding<ast::TimeRep>,
-        sig: ast::Signature,
+        binding: core::Binding<T>,
+        sig: core::Signature<T, W>,
     ) -> Self {
         Self::Concrete { binding, sig }
     }
 
     /// Construct an instance for "this" component.
-    pub fn this_instance(sig: &'a ast::Signature) -> Self {
+    pub fn this_instance(sig: &'a core::Signature<T, W>) -> Self {
         Self::This { sig }
     }
 
@@ -37,8 +37,8 @@ impl<'a> ConcreteInvoke<'a> {
     #[inline]
     fn resolve_port<const IS_INPUT: bool>(
         &self,
-        port: &ast::Id,
-    ) -> FilamentResult<ast::Interval> {
+        port: &core::Id,
+    ) -> FilamentResult<core::Range<T>> {
         match self {
             ConcreteInvoke::Concrete { binding, sig } => {
                 let live = sig.get_liveness::<IS_INPUT>(port)?;
@@ -53,20 +53,20 @@ impl<'a> ConcreteInvoke<'a> {
     /// Returns the requirements of an input port.
     pub fn port_requirements(
         &self,
-        port: &ast::Id,
-    ) -> FilamentResult<ast::Interval> {
+        port: &core::Id,
+    ) -> FilamentResult<core::Range<T>> {
         self.resolve_port::<true>(port)
     }
 
     /// Returns the guarantees provided by an output port
     pub fn port_guarantees(
         &self,
-        port: &ast::Id,
-    ) -> FilamentResult<ast::Interval> {
+        port: &core::Id,
+    ) -> FilamentResult<core::Range<T>> {
         self.resolve_port::<false>(port)
     }
 
-    pub fn get_event(&self, event: &ast::Id) -> &ast::EventBind {
+    pub fn get_event(&self, event: &core::Id) -> &core::EventBind<T> {
         match &self {
             ConcreteInvoke::Concrete { sig, .. } => sig.get_event(event),
             ConcreteInvoke::This { sig } => sig.get_event(event),
@@ -74,35 +74,37 @@ impl<'a> ConcreteInvoke<'a> {
     }
 }
 
-type FactMap = Vec<ast::Constraint>;
-type BindsWithLoc = (GPosIdx, Vec<ast::TimeRep>);
+type FactMap<T> = Vec<core::Constraint<T>>;
+type BindsWithLoc<T> = (GPosIdx, Vec<T>);
 
-pub struct Context<'a> {
+pub struct Context<'a, T: TimeRep, W: WidthRep> {
     /// Signatures for external primitives
-    sigs: &'a ast::Bindings<'a>,
+    sigs: &'a visitor::Bindings<'a, T, W>,
 
     /// Mapping for the names of active instances
-    instances: HashMap<ast::Id, ast::ResolvedInstance<'a>>,
+    instances: HashMap<core::Id, visitor::ResolvedInstance<'a, T, W>>,
 
     /// Mapping from name of invocations to their information
-    invocations: HashMap<ast::Id, ConcreteInvoke<'a>>,
+    invocations: HashMap<core::Id, ConcreteInvoke<'a, T, W>>,
 
     /// Remaining assigmments for a given invoke.
-    remaining_assigns: HashMap<ast::Id, HashSet<ast::Id>>,
+    remaining_assigns: HashMap<core::Id, HashSet<core::Id>>,
 
     /// Mapping from instance to event bindings
-    event_binds: HashMap<ast::Id, Vec<BindsWithLoc>>,
+    event_binds: HashMap<core::Id, Vec<BindsWithLoc<T>>>,
 
     /// Set of facts that need to be proven.
     /// Mapping from facts to the locations that generated it.
-    obligations: FactMap,
+    obligations: FactMap<T>,
 
     /// Set of assumed facts
-    pub facts: FactMap,
+    pub facts: FactMap<T>,
 }
 
-impl<'a> From<&'a ast::Bindings<'a>> for Context<'a> {
-    fn from(sigs: &'a ast::Bindings<'a>) -> Self {
+impl<'a, T: TimeRep, W: WidthRep> From<&'a visitor::Bindings<'a, T, W>>
+    for Context<'a, T, W>
+{
+    fn from(sigs: &'a visitor::Bindings<'a, T, W>) -> Self {
         Context {
             sigs,
             remaining_assigns: HashMap::default(),
@@ -115,13 +117,13 @@ impl<'a> From<&'a ast::Bindings<'a>> for Context<'a> {
     }
 }
 
-impl<'a> Context<'a> {
+impl<'a, T: TimeRep, W: WidthRep> Context<'a, T, W> {
     /// Add a new instance to the context with the signatuer from `comp`
     pub fn add_instance(
         &mut self,
-        name: ast::Id,
-        comp: &ast::Id,
-        bindings: &[PortParam],
+        name: core::Id,
+        comp: &core::Id,
+        bindings: &[W],
     ) {
         let sig = self.sigs.get_component(comp, bindings);
         self.instances.insert(name, sig);
@@ -130,8 +132,8 @@ impl<'a> Context<'a> {
     /// Add a new invocation to the context
     pub fn add_invocation(
         &mut self,
-        name: ast::Id,
-        instance: ConcreteInvoke<'a>,
+        name: core::Id,
+        instance: ConcreteInvoke<'a, T, W>,
     ) {
         self.invocations.insert(name, instance);
     }
@@ -140,8 +142,8 @@ impl<'a> Context<'a> {
     /// correctly.
     pub fn add_remaning_assigns(
         &mut self,
-        invoke: ast::Id,
-        comp: &ast::Id,
+        invoke: core::Id,
+        comp: &core::Id,
     ) -> FilamentResult<()> {
         let sig = self.get_instance(comp);
         let ports = sig
@@ -157,8 +159,8 @@ impl<'a> Context<'a> {
     /// This is used for the disjointness check.
     pub fn add_event_binds(
         &mut self,
-        instance: ast::Id,
-        binds: &ast::Binding,
+        instance: core::Id,
+        binds: &core::Binding<T>,
         pos: GPosIdx,
     ) {
         self.event_binds
@@ -170,10 +172,10 @@ impl<'a> Context<'a> {
     /// Remove a remaining assignment from an invoke
     pub fn remove_remaning_assign(
         &mut self,
-        port: &ast::Port,
+        port: &core::Port,
     ) -> FilamentResult<()> {
         match &port.typ {
-            ast::PortType::InvPort { invoke: comp, name } => {
+            core::PortType::InvPort { invoke: comp, name } => {
                 // Check if the port is defined
                 self.get_invoke(comp).resolve_port::<true>(name)?;
                 if let Some(ports) = self.remaining_assigns.get_mut(comp) {
@@ -186,14 +188,14 @@ impl<'a> Context<'a> {
                 }
                 Ok(())
             }
-            ast::PortType::ThisPort(_) | ast::PortType::Constant(_) => Ok(()),
+            core::PortType::ThisPort(_) | core::PortType::Constant(_) => Ok(()),
         }
     }
 
     /// Add a new obligation that needs to be proved
     pub fn add_obligations<F>(&mut self, facts: F)
     where
-        F: Iterator<Item = ast::Constraint>,
+        F: Iterator<Item = core::Constraint<T>>,
     {
         for fact in facts {
             log::trace!("adding obligation {}", fact);
@@ -202,25 +204,28 @@ impl<'a> Context<'a> {
     }
 
     /// Add a new known fact
-    pub fn add_fact(&mut self, fact: ast::Constraint) {
+    pub fn add_fact(&mut self, fact: core::Constraint<T>) {
         log::trace!("adding known fact {}", fact);
         self.facts.push(fact);
     }
 
     /// Get the signature of the instance associated with `inst`
-    pub fn get_instance(&self, inst: &ast::Id) -> &ast::ResolvedInstance {
+    pub fn get_instance(
+        &self,
+        inst: &core::Id,
+    ) -> &visitor::ResolvedInstance<T, W> {
         &self.instances[inst]
     }
 
     /// Get the instance associated with `instance`
-    pub fn get_invoke(&self, instance: &ast::Id) -> &ConcreteInvoke {
+    pub fn get_invoke(&self, instance: &core::Id) -> &ConcreteInvoke<T, W> {
         &self.invocations[instance]
     }
 
     /// Return the remaining assignments in this context
     pub fn get_remaining_assigns(
         &self,
-    ) -> impl Iterator<Item = (&ast::Id, &HashSet<ast::Id>)> {
+    ) -> impl Iterator<Item = (&core::Id, &HashSet<core::Id>)> {
         self.remaining_assigns
             .iter()
             .filter(|(_, ports)| !ports.is_empty())
@@ -231,19 +236,19 @@ impl<'a> Context<'a> {
     /// - None if the port is infinitely active (like a constant port).
     pub fn port_guarantees(
         &self,
-        port: &ast::Port,
-    ) -> FilamentResult<Option<ast::Interval>> {
+        port: &core::Port,
+    ) -> FilamentResult<Option<core::Range<T>>> {
         Ok(match &port.typ {
-            ast::PortType::Constant(_) => {
+            core::PortType::Constant(_) => {
                 /* Constants do not generate a proof obligation because they are
                  * always available. */
                 None
             }
-            ast::PortType::ThisPort(port) => {
+            core::PortType::ThisPort(port) => {
                 Some(self.get_invoke(&THIS.into()).port_guarantees(port)?)
             }
 
-            ast::PortType::InvPort { invoke: comp, name } => {
+            core::PortType::InvPort { invoke: comp, name } => {
                 Some(self.get_invoke(comp).port_guarantees(name)?)
             }
         })
@@ -251,18 +256,18 @@ impl<'a> Context<'a> {
 
     pub fn port_requirements(
         &self,
-        port: &ast::Port,
-    ) -> FilamentResult<ast::Interval> {
+        port: &core::Port,
+    ) -> FilamentResult<core::Range<T>> {
         match &port.typ {
-            ast::PortType::Constant(_) => {
+            core::PortType::Constant(_) => {
                 /* Constants do not generate a proof obligation because they are
                  * always available. */
                 unreachable!("destination port cannot be a constant")
             }
-            ast::PortType::ThisPort(port) => {
+            core::PortType::ThisPort(port) => {
                 Ok(self.get_invoke(&THIS.into()).port_requirements(port)?)
             }
-            ast::PortType::InvPort { invoke: comp, name } => {
+            core::PortType::InvPort { invoke: comp, name } => {
                 Ok(self.get_invoke(comp).port_requirements(name)?)
             }
         }
@@ -271,7 +276,7 @@ impl<'a> Context<'a> {
     /// Construct disjointness constraints for the current context
     pub fn drain_sharing(
         &mut self,
-    ) -> FilamentResult<(Vec<ast::Constraint>, Vec<ShareConstraints>)> {
+    ) -> FilamentResult<(Vec<Constraint<T>>, Vec<ShareConstraints<T>>)> {
         let evs = std::mem::take(&mut self.event_binds);
         let all = evs
             .into_iter()
@@ -286,14 +291,14 @@ impl<'a> Context<'a> {
         Ok((cons, share))
     }
 
-    pub fn drain_obligations(&mut self) -> Vec<ast::Constraint> {
+    pub fn drain_obligations(&mut self) -> Vec<core::Constraint<T>> {
         std::mem::take(&mut self.obligations)
     }
 
     fn ensure_same_events(
         &self,
-        instance: &ast::Id,
-        args: &[BindsWithLoc],
+        instance: &core::Id,
+        args: &[BindsWithLoc<T>],
     ) -> FilamentResult<()> {
         // Get the delay associated with each event.
         let sig = self.get_instance(instance);
@@ -306,7 +311,7 @@ impl<'a> Context<'a> {
 
                 if let Some((fpos, first)) = iter.next() {
                     for (epos, event) in iter {
-                        if event.event != first.event {
+                        if event.event() != first.event() {
                             return Err(Error::malformed(format!(
                                 "Bindings for {instance}.{abs} uses multiple events: {first} and {event}. Sharing using multiple events is not supported.",
                             ))
@@ -322,14 +327,14 @@ impl<'a> Context<'a> {
 
     /// Constraint generated for disjointness
     fn sharing_contraints(
-        instance: &ast::Id,
-        abs: &ast::Id,
-        (i_event, spi): (&ast::TimeRep, GPosIdx),
-        (k_event, spk): (&ast::TimeRep, GPosIdx),
-        i_delay: &core::TimeSub<core::Time<u64>>,
+        instance: &core::Id,
+        abs: &core::Id,
+        (i_event, spi): (&T, GPosIdx),
+        (k_event, spk): (&T, GPosIdx),
+        i_delay: &T::SubRep,
         id_pos: GPosIdx,
-    ) -> core::Constraint<core::Time<u64>> {
-        ast::Constraint::from(ast::CBS::gte(
+    ) -> core::Constraint<T> {
+        core::Constraint::sub(core::OrderConstraint::gte(
             i_event.clone().sub(k_event.clone()),
             i_delay.clone(),
         ))
@@ -350,9 +355,9 @@ impl<'a> Context<'a> {
     /// Generate disjointness constraints for an instance's event bindings.
     fn sharing_constraints(
         &self,
-        instance: ast::Id,
-        args: &[BindsWithLoc],
-    ) -> FilamentResult<(Vec<ast::Constraint>, Vec<ShareConstraints>)> {
+        instance: core::Id,
+        args: &[BindsWithLoc<T>],
+    ) -> FilamentResult<(Vec<Constraint<T>>, Vec<ShareConstraints<T>>)> {
         // Ensure that bindings for events variables use the same variables.
         self.ensure_same_events(&instance, args)?;
 
@@ -381,7 +386,7 @@ impl<'a> Context<'a> {
                             continue;
                         }
 
-                        constraints.push(Context::sharing_contraints(
+                        constraints.push(Self::sharing_contraints(
                             &instance,
                             abs,
                             (&bi[idx], *spi),
@@ -412,7 +417,7 @@ impl<'a> Context<'a> {
                     // Get delays for events used in bindings. These are guaranteed to be the same across all bindings
                     // due to the call to `ensure_same_events`.
                     let bind = &args[0].1[idx];
-                    let ev = &bind.event;
+                    let ev = &bind.event();
                     let eb = sig.get_event(ev);
                     share.add_delays(std::iter::once(eb.clone()));
                     share_constraints.push(share);

@@ -366,29 +366,29 @@ impl FilamentParser {
                 time(l),
                 eq(_),
                 time(r)
-            ] => ast::CBT::eq(l, r).into(),
+            ] => ast::CBT::eq(l, r),
             [
                 time(l),
                 gt(_),
                 time(r)
-            ] => ast::CBT::lt(r, l).into(),
+            ] => ast::CBT::lt(r, l),
             [
                 time(l),
                 lt(_),
                 time(r)
-            ] => ast::CBT::lt(l, r).into(),
+            ] => ast::CBT::lt(l, r),
             [
                 time(l),
                 lte(_),
                 time(r)
-            ] => ast::CBT::gte(r, l).into(),
+            ] => ast::CBT::gte(r, l),
             [
                 time(l),
                 gte(_),
                 time(r)
-            ] => ast::CBT::gte(l, r).into(),
+            ] => ast::CBT::gte(l, r),
         );
-        Ok(cons)
+        Ok(ast::Constraint::base(cons))
     }
     fn constraints(input: Node) -> ParseResult<Vec<ast::Constraint>> {
         Ok(match_nodes!(

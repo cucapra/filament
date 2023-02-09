@@ -94,6 +94,10 @@ where
             ..(self.clone())
         }
     }
+
+    fn events(&self) -> Vec<Id> {
+        todo!("events for PortDef")
+    }
 }
 
 #[derive(Clone)]

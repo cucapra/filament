@@ -22,7 +22,7 @@ where
     /// Generate constraints for well formedness of this range.
     pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> {
         std::iter::once(
-            Constraint::from(OrderConstraint::lt(
+            Constraint::base(OrderConstraint::lt(
                 self.start.clone(),
                 self.end.clone(),
             ))
@@ -53,6 +53,10 @@ where
             end: self.end.resolve(bindings),
             ..self.clone()
         }
+    }
+
+    fn events(&self) -> Vec<super::Id> {
+        vec![self.start.event(), self.end.event()]
     }
 }
 
