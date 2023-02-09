@@ -1,24 +1,26 @@
-use crate::ast::param as ast;
-use crate::core;
+use crate::core::{self, Time, WidthRep};
 use crate::errors::{self, FilamentResult, WithPos};
 use crate::visitor;
 use std::collections::HashMap;
 
-pub struct DumpInterface {
+pub struct DumpInterface<W: WidthRep> {
     /// Map from FSM trigger to number of states
-    fsm_states: HashMap<ast::Id, u64>,
+    fsm_states: HashMap<core::Id, u64>,
     /// Map from component to interface information
-    max_states: HashMap<ast::Id, HashMap<ast::Id, u64>>,
+    max_states: HashMap<core::Id, HashMap<core::Id, u64>>,
+    /// Phantom data for width
+    _w: std::marker::PhantomData<W>,
 }
 
-impl visitor::Transform<core::Time<u64>, core::PortParam> for DumpInterface {
+impl<W: WidthRep> visitor::Transform<Time<u64>, W> for DumpInterface<W> {
     // Mapping from component -> event -> max state
-    type Info = HashMap<ast::Id, HashMap<ast::Id, u64>>;
+    type Info = HashMap<core::Id, HashMap<core::Id, u64>>;
 
-    fn new(_: &ast::Namespace, max_states: &Self::Info) -> Self {
+    fn new(_: &core::Namespace<Time<u64>, W>, max_states: &Self::Info) -> Self {
         Self {
             fsm_states: HashMap::new(),
             max_states: max_states.clone(),
+            _w: std::marker::PhantomData,
         }
     }
 
@@ -26,11 +28,14 @@ impl visitor::Transform<core::Time<u64>, core::PortParam> for DumpInterface {
         self.fsm_states.clear();
     }
 
-    fn component_filter(&self, comp: &ast::Component) -> bool {
+    fn component_filter(&self, comp: &core::Component<Time<u64>, W>) -> bool {
         comp.sig.name == "main"
     }
 
-    fn fsm(&mut self, fsm: ast::Fsm) -> FilamentResult<Vec<ast::Command>> {
+    fn fsm(
+        &mut self,
+        fsm: core::Fsm,
+    ) -> FilamentResult<Vec<core::Command<Time<u64>, W>>> {
         self.fsm_states
             .insert(fsm.trigger.name().clone(), fsm.states);
         Ok(vec![fsm.into()])
@@ -38,8 +43,8 @@ impl visitor::Transform<core::Time<u64>, core::PortParam> for DumpInterface {
 
     fn exit_component(
         &mut self,
-        comp: ast::Component,
-    ) -> FilamentResult<ast::Component> {
+        comp: core::Component<Time<u64>, W>,
+    ) -> FilamentResult<core::Component<Time<u64>, W>> {
         // For an interface port like this:
         //      @interface[G, G+5] go_G
         // Generate the JSON information:
@@ -87,7 +92,7 @@ impl visitor::Transform<core::Time<u64>, core::PortParam> for DumpInterface {
         //   "start": n,
         //   "end": m
         // },
-        let pd_to_info = |pd: &ast::PortDef| {
+        let pd_to_info = |pd: &core::PortDef<Time<u64>, W>| {
             let w = &pd.bitwidth;
             pd.liveness
             .as_offset()

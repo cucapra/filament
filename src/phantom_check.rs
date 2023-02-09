@@ -1,27 +1,30 @@
-use crate::ast::param as ast;
-use crate::core;
+use crate::core::{self, TimeRep, WidthRep};
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
 use crate::visitor;
 use std::collections::HashSet;
 
-#[derive(Default)]
 /// Checks if a user-level phantom events are valid.
 /// Phantom events are valid iff:
 /// 1. The component doesn't share any instances
 /// 2. The component doesn't use an subcomponents that need to use the
 ///    corresponding event in their interface, i.e., the uses of the event are all phantom
-pub struct PhantomCheck {
+pub struct PhantomCheck<T: TimeRep, W: WidthRep> {
     // Set of instances that have already been used once
-    instance_used: HashSet<ast::Id>,
+    instance_used: HashSet<core::Id>,
     // Names of @phantom events in this component
-    phantom_events: Vec<ast::Id>,
+    phantom_events: Vec<core::Id>,
+    _tw: std::marker::PhantomData<(T, W)>,
 }
 
-impl visitor::Transform<core::Time<u64>, core::PortParam> for PhantomCheck {
+impl<T: TimeRep, W: WidthRep> visitor::Transform<T, W> for PhantomCheck<T, W> {
     type Info = ();
-    fn new(_: &ast::Namespace, _: &Self::Info) -> Self {
-        Self::default()
+    fn new(_: &core::Namespace<T, W>, _: &Self::Info) -> Self {
+        Self {
+            instance_used: HashSet::new(),
+            phantom_events: Vec::new(),
+            _tw: std::marker::PhantomData,
+        }
     }
 
     fn clear_data(&mut self) {
@@ -30,27 +33,28 @@ impl visitor::Transform<core::Time<u64>, core::PortParam> for PhantomCheck {
     }
 
     // Only check component if at least one phantom event
-    fn component_filter(&self, comp: &ast::Component) -> bool {
+    fn component_filter(&self, comp: &core::Component<T, W>) -> bool {
         comp.sig.phantom_events().next().is_some()
     }
 
     fn enter_component(
         &mut self,
-        comp: ast::Component,
-    ) -> FilamentResult<ast::Component> {
+        comp: core::Component<T, W>,
+    ) -> FilamentResult<core::Component<T, W>> {
         self.phantom_events = comp.sig.phantom_events().collect();
         Ok(comp)
     }
 
     fn invoke(
         &mut self,
-        inv: ast::Invoke,
-        resolved: &ast::ResolvedInstance,
-    ) -> FilamentResult<Vec<ast::Command>> {
+        inv: core::Invoke<T>,
+        resolved: &visitor::ResolvedInstance<T, W>,
+    ) -> FilamentResult<Vec<core::Command<T, W>>> {
         // Check if the instance has already been used
         if let Some(prev_use) = self.instance_used.get(&inv.instance) {
-            for ev in inv.abstract_vars.iter().map(|ev| &ev.event) {
-                if let Some(e) = self.phantom_events.iter().find(|e| *e == ev) {
+            for ev in inv.abstract_vars.iter().map(|ev| ev.event()) {
+                if let Some(e) = self.phantom_events.iter().find(|e| **e == ev)
+                {
                     return Err(Error::malformed(
                         "Reuses instance uses phantom event for scheduling"
                     ).add_note("Invocation uses phantom event", ev.copy_span())
@@ -72,7 +76,7 @@ impl visitor::Transform<core::Time<u64>, core::PortParam> for PhantomCheck {
         {
             // If this event is non-phantom, ensure all provided events are non-phantom as well.
             if !instance_phantoms.contains(&eb.event) {
-                let ev = &bind.event;
+                let ev = &bind.event();
                 if let Some(e) = self.phantom_events.iter().find(|e| *e == ev) {
                     return Err(Error::malformed(
                             "Component provided phantom event binding to non-phantom event argument",
