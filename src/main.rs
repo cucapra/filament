@@ -40,11 +40,9 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     (ns, _) = phantom_check::PhantomCheck::transform(ns, ())?;
     log::info!("Phantom check: {}ms", t.elapsed().as_millis());
 
-    let (ns, states) = max_states::MaxStates::transform(ns, ())?;
-    log::info!("Max states: {:?}", states.max_states);
-
     // Return early if we're asked to dump the interface
     if opts.dump_interface {
+        let (ns, states) = max_states::MaxStates::transform(ns, ())?;
         dump_interface::DumpInterface::transform(ns, states.max_states)?;
         return Ok(());
     } else if opts.check {
@@ -53,14 +51,18 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
 
     // Monomorphize the program.
     let t = Instant::now();
-    let mut ns = monomorphize::Monomorphize::transform(ns)?;
+    let ns = monomorphize::Monomorphize::transform(ns)?;
     log::info!("Monomorphize: {}ms", t.elapsed().as_millis());
     log::info!("{ns}");
 
     // Monomorphic Bind check
     let t = Instant::now();
-    ns = bind_check::check(ns)?;
+    let ns = bind_check::check(ns)?;
     log::info!("Monomorphoic Bind check: {}ms", t.elapsed().as_millis());
+
+    // Max state calculation
+    let (mut ns, states) = max_states::MaxStates::transform(ns, ())?;
+    log::info!("Max states: {:?}", states.max_states);
 
     // Lowering
     let t = Instant::now();
