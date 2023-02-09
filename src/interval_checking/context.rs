@@ -1,5 +1,5 @@
 use super::{ShareConstraints, THIS};
-use crate::ast::param::{self as ast, ResolvedInstance};
+use crate::ast::param as ast;
 use crate::core::{self, PortParam, TimeRep, WithTime};
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
@@ -123,9 +123,8 @@ impl<'a> Context<'a> {
         comp: &ast::Id,
         bindings: &[PortParam],
     ) {
-        let sig = self.sigs.get_component(comp);
-        self.instances
-            .insert(name, ResolvedInstance::bound(sig, bindings.to_vec()));
+        let sig = self.sigs.get_component(comp, bindings);
+        self.instances.insert(name, sig);
     }
 
     /// Add a new invocation to the context

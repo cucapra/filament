@@ -327,7 +327,10 @@ impl<W: WidthRep> Signature<Time<u64>, W> {
 }
 
 impl<T: TimeRep, W: WidthRep> Signature<T, W> {
-    pub fn resolve(&self, args: &[W]) -> FilamentResult<Signature<T, W>> {
+    pub fn resolve<WO: WidthRep>(
+        &self,
+        args: &[WO],
+    ) -> FilamentResult<Signature<T, WO>> {
         if args.len() != self.params.len() {
             return Err(Error::malformed(format!(
                 "Cannot resolve signature. Expected {} arguments, provided {}",
@@ -336,11 +339,11 @@ impl<T: TimeRep, W: WidthRep> Signature<T, W> {
             )));
         }
 
-        let binding: Binding<W> =
+        let binding: Binding<WO> =
             Binding::new(self.params.iter().cloned().zip(args.iter().cloned()));
 
         let resolve_port =
-            |pd: &PortDef<T, W>| -> FilamentResult<PortDef<T, W>> {
+            |pd: &PortDef<T, W>| -> FilamentResult<PortDef<T, WO>> {
                 if let Some(p) = pd.bitwidth.resolve(&binding) {
                     Ok(PortDef::new(pd.name.clone(), pd.liveness.clone(), p)
                         .set_span(pd.copy_span()))

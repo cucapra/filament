@@ -1,4 +1,5 @@
 use crate::ast::param as ast;
+use crate::core;
 use crate::errors::{self, FilamentResult, WithPos};
 use crate::visitor;
 use std::collections::HashMap;
@@ -10,7 +11,7 @@ pub struct DumpInterface {
     max_states: HashMap<ast::Id, HashMap<ast::Id, u64>>,
 }
 
-impl visitor::Transform for DumpInterface {
+impl visitor::Transform<core::Time<u64>, core::PortParam> for DumpInterface {
     // Mapping from component -> event -> max state
     type Info = HashMap<ast::Id, HashMap<ast::Id, u64>>;
 

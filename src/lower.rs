@@ -1,5 +1,5 @@
 use crate::ast::param as ast;
-use crate::core::{Id, WithTime};
+use crate::core::{self, Id, WithTime};
 use crate::errors::{FilamentResult, WithPos};
 use crate::visitor;
 use std::collections::HashMap;
@@ -40,7 +40,7 @@ impl CompileInvokes {
     }
 }
 
-impl visitor::Transform for CompileInvokes {
+impl visitor::Transform<core::Time<u64>, core::PortParam> for CompileInvokes {
     /// Mapping from component -> event -> max state
     type Info = HashMap<Id, HashMap<Id, u64>>;
 

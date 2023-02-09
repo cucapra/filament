@@ -5,16 +5,31 @@ use crate::errors::WithPos;
 use crate::errors::{Error, FilamentResult};
 use std::collections::HashMap;
 
-/// An Instance that has been resolved
-pub struct ResolvedInstance<'a, T: TimeRep, W: WidthRep> {
-    sig: &'a core::Signature<T, W>,
-    binds: Vec<W>,
+pub enum ResolvedInstance<'a, T: TimeRep, W: WidthRep> {
+    /// A component that uses width `W`
+    Component {
+        sig: &'a core::Signature<T, W>,
+        binds: Vec<W>,
+    },
+    /// An external that always uses `PortParam`
+    External {
+        sig: &'a core::Signature<T, core::PortParam>,
+        binds: Vec<W>,
+    },
 }
 
 impl<'a, T: TimeRep, W: WidthRep> ResolvedInstance<'a, T, W> {
     pub fn bound(sig: &'a core::Signature<T, W>, binds: Vec<W>) -> Self {
         log::trace!("sig = {}, binds = {:?}", sig, binds);
-        Self { sig, binds }
+        Self::Component { sig, binds }
+    }
+
+    pub fn external(
+        sig: &'a core::Signature<T, core::PortParam>,
+        binds: Vec<W>,
+    ) -> Self {
+        log::trace!("sig = {}, binds = {:?}", sig, binds);
+        Self::External { sig, binds }
     }
 }
 
@@ -42,74 +57,115 @@ impl<'a, T: TimeRep> ResolvedInstance<'a, T, core::PortParam> {
 // }
 
 impl<'a, T: TimeRep, W: WidthRep> ResolvedInstance<'a, T, W> {
-    pub fn sig(&self) -> &'a core::Signature<T, W> {
-        self.sig
+    pub fn params(&self) -> &[core::Id] {
+        match self {
+            Self::Component { sig, .. } => &sig.params,
+            Self::External { sig, .. } => &sig.params,
+        }
     }
 
     // Return the abstract variables defined by the signature of this instance.
     pub fn events(&self) -> Vec<core::Id> {
-        self.sig.events().collect()
+        match self {
+            Self::Component { sig, .. } => sig.events().collect(),
+            Self::External { sig, .. } => sig.events().collect(),
+        }
     }
 
     pub fn abstract_vars(&self) -> &[core::EventBind<T>] {
-        &self.sig.events
+        match self {
+            Self::Component { sig, .. } => &sig.events,
+            Self::External { sig, .. } => &sig.events,
+        }
     }
 
     pub fn interface_signals(&self) -> &[core::InterfaceDef] {
-        &self.sig.interface_signals
+        match self {
+            Self::Component { sig, .. } => &sig.interface_signals,
+            Self::External { sig, .. } => &sig.interface_signals,
+        }
     }
 
     pub fn input_names(&self) -> Vec<core::Id> {
-        self.sig.inputs().map(|pd| pd.name.clone()).collect()
+        match self {
+            Self::Component { sig, .. } => {
+                sig.inputs().map(|pd| pd.name.clone()).collect()
+            }
+            Self::External { sig, .. } => {
+                sig.inputs().map(|pd| pd.name.clone()).collect()
+            }
+        }
     }
 
     pub fn interface_name(&self) -> Vec<core::Id> {
-        self.sig
-            .interface_signals
-            .iter()
-            .map(|id| id.name.clone())
-            .collect()
+        let interfaces = match self {
+            Self::Component { sig, .. } => &sig.interface_signals,
+            Self::External { sig, .. } => &sig.interface_signals,
+        };
+        interfaces.iter().map(|id| id.name.clone()).collect()
     }
 
     pub fn get_interface(
         &self,
         event: &core::Id,
     ) -> Option<&core::InterfaceDef> {
-        self.sig.get_interface(event)
+        match self {
+            Self::Component { sig, .. } => sig.get_interface(event),
+            Self::External { sig, .. } => sig.get_interface(event),
+        }
     }
 
     pub fn get_event(&self, event: &core::Id) -> Option<&core::EventBind<T>> {
-        Some(self.sig.get_event(event))
-    }
-
-    pub fn phantom_events(&self) -> Vec<core::Id> {
-        self.sig.phantom_events().collect()
-    }
-
-    pub fn resolve(&self) -> FilamentResult<core::Signature<T, W>> {
-        self.sig.resolve(&self.binds).map_err(|e| {
-            e.add_note(
-                "Attempting to resolve signature",
-                self.sig.name.copy_span(),
-            )
+        Some(match self {
+            Self::Component { sig, .. } => sig.get_event(event),
+            Self::External { sig, .. } => sig.get_event(event),
         })
     }
 
+    pub fn phantom_events(&self) -> Vec<core::Id> {
+        match self {
+            Self::Component { sig, .. } => sig.phantom_events().collect(),
+            Self::External { sig, .. } => sig.phantom_events().collect(),
+        }
+    }
+
+    pub fn resolve(&self) -> FilamentResult<core::Signature<T, W>> {
+        match self {
+            Self::Component { sig, binds } => sig.resolve(binds).map_err(|e| {
+                e.add_note(
+                    "Attempting to resolve signature",
+                    sig.name.copy_span(),
+                )
+            }),
+            Self::External { sig, binds } => sig.resolve(binds).map_err(|e| {
+                e.add_note(
+                    "Attempting to resolve signature",
+                    sig.name.copy_span(),
+                )
+            }),
+        }
+    }
+
     pub fn binding(&self, abs: &'a [T]) -> core::Binding<T> {
-        self.sig.binding(abs)
+        match self {
+            Self::Component { sig, .. } => sig.binding(abs),
+            Self::External { sig, .. } => sig.binding(abs),
+        }
     }
 }
 
 /// Environment to store the current set of bindings
 pub struct Bindings<'a, T: TimeRep, W: WidthRep> {
     /// Signatures for external definitions
-    ext_sigs: HashMap<core::Id, &'a core::Signature<T, W>>,
+    ext_sigs: HashMap<core::Id, &'a core::Signature<T, core::PortParam>>,
     /// Signatures for components
     comps: Vec<core::Component<T, W>>,
 }
 impl<'a, T: TimeRep, W: WidthRep> Bindings<'a, T, W> {
     pub fn new(
-        ext_sigs: impl IntoIterator<Item = (core::Id, &'a core::Signature<T, W>)>,
+        ext_sigs: impl IntoIterator<
+            Item = (core::Id, &'a core::Signature<T, core::PortParam>),
+        >,
     ) -> Self {
         Self {
             ext_sigs: ext_sigs.into_iter().collect(),
@@ -126,16 +182,19 @@ impl<'a, T: TimeRep, W: WidthRep> Bindings<'a, T, W> {
     pub fn find_component(
         &'a self,
         name: &core::Id,
-    ) -> FilamentResult<&'a core::Signature<T, W>> {
+        binds: &[W],
+    ) -> FilamentResult<ResolvedInstance<'a, T, W>> {
         if let Some(sig) = self.ext_sigs.get(name) {
-            Ok(sig)
-        } else if let Some(comp) =
-            self.comps.iter().find(|c| c.sig.name == name)
-        {
-            Ok(&comp.sig)
+            Ok(ResolvedInstance::external(sig, binds.to_vec()))
         } else {
-            Err(Error::undefined(name.clone(), "component")
-                .add_note("Undefined component", name.copy_span()))
+            self.comps
+                .iter()
+                .find(|c| c.sig.name == name)
+                .map(|comp| ResolvedInstance::bound(&comp.sig, binds.to_vec()))
+                .ok_or_else(|| {
+                    Error::undefined(name.clone(), "component")
+                        .add_note("Undefined component", name.copy_span())
+                })
         }
     }
 
@@ -143,8 +202,9 @@ impl<'a, T: TimeRep, W: WidthRep> Bindings<'a, T, W> {
     pub fn get_component(
         &'a self,
         name: &core::Id,
-    ) -> &'a core::Signature<T, W> {
-        self.find_component(name)
+        binds: &[W],
+    ) -> ResolvedInstance<'a, T, W> {
+        self.find_component(name, binds)
             .unwrap_or_else(|_| panic!("Failed to find component {}", name))
     }
 }

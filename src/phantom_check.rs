@@ -1,4 +1,5 @@
 use crate::ast::param as ast;
+use crate::core;
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
 use crate::visitor;
@@ -17,7 +18,7 @@ pub struct PhantomCheck {
     phantom_events: Vec<ast::Id>,
 }
 
-impl visitor::Transform for PhantomCheck {
+impl visitor::Transform<core::Time<u64>, core::PortParam> for PhantomCheck {
     type Info = ();
     fn new(_: &ast::Namespace, _: &Self::Info) -> Self {
         Self::default()

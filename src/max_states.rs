@@ -1,6 +1,6 @@
 use crate::{
     ast::param as ast,
-    core::{Id, WithTime},
+    core::{self, Id, WithTime},
     errors::FilamentResult,
     visitor,
 };
@@ -38,7 +38,7 @@ impl MaxStates {
     }
 }
 
-impl visitor::Transform for MaxStates {
+impl visitor::Transform<core::Time<u64>, core::PortParam> for MaxStates {
     type Info = ();
 
     fn new(_: &ast::Namespace, _: &Self::Info) -> Self {
