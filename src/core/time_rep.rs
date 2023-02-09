@@ -1,6 +1,5 @@
+use super::Id;
 use crate::interval_checking::SExp;
-
-use super::{Id, Time};
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 use std::{fmt::Debug, fmt::Display};
@@ -174,8 +173,12 @@ impl<T: Display + TimeRep> Display for TimeSub<T> {
     }
 }
 
-impl From<TimeSub<Time<u64>>> for SExp {
-    fn from(ts: TimeSub<Time<u64>>) -> Self {
+impl<T> From<TimeSub<T>> for SExp
+where
+    SExp: From<T>,
+    T: TimeRep,
+{
+    fn from(ts: TimeSub<T>) -> Self {
         match ts {
             TimeSub::Unit(n) => SExp(n.to_string()),
             TimeSub::Sym { l, r } => {
