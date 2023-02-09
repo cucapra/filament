@@ -60,6 +60,11 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     let ns = bind_check::check(ns)?;
     log::info!("Monomorphoic Bind check: {}ms", t.elapsed().as_millis());
 
+    // Monomorphic Interval checking
+    let t = Instant::now();
+    let ns = interval_checking::check(ns)?;
+    log::info!("Monomorphoic Interval check: {}ms", t.elapsed().as_millis());
+
     // Max state calculation
     let (mut ns, states) = max_states::MaxStates::transform(ns, ())?;
     log::info!("Max states: {:?}", states.max_states);
