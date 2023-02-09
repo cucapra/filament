@@ -102,6 +102,12 @@ impl std::fmt::Display for SExp {
     }
 }
 
+impl From<u64> for SExp {
+    fn from(n: u64) -> Self {
+        SExp(n.to_string())
+    }
+}
+
 fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
     solver.define_fun(
         "max",

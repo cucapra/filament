@@ -23,8 +23,7 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
         .init();
 
     let ns = Resolver::from(opts).parse_namespace()?;
-
-    log::trace!("{ns}");
+    log::info!("{ns}");
 
     // Bind check
     let t = Instant::now();
@@ -33,11 +32,11 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
 
     // Interval checking
     let t = Instant::now();
-    let mut ns = interval_checking::check(ns)?;
+    let ns = interval_checking::check(ns)?;
     log::info!("Interval check: {}ms", t.elapsed().as_millis());
 
     // User-level @phantom ports
-    (ns, _) = phantom_check::PhantomCheck::transform(ns, ())?;
+    let (ns, _) = phantom_check::PhantomCheck::transform(ns, ())?;
     log::info!("Phantom check: {}ms", t.elapsed().as_millis());
 
     // Return early if we're asked to dump the interface
@@ -67,7 +66,7 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
 
     // Max state calculation
     let (mut ns, states) = max_states::MaxStates::transform(ns, ())?;
-    log::info!("Max states: {:?}", states.max_states);
+    log::trace!("Max states: {:?}", states.max_states);
 
     // Lowering
     let t = Instant::now();

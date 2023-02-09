@@ -107,7 +107,7 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for CompileInvokes<W> {
                 let ev = &interface.event;
                 // Get binding for this event in the invoke
                 let t = binding.get(ev);
-                let start_time = t.offset();
+                let start_time = *t.offset();
                 let port = self.get_fsm(&t.event()).port(start_time);
                 let con = core::Connect::new(
                     core::Port::comp(bind.clone(), interface.name.clone()),
