@@ -58,6 +58,8 @@ pub struct BoundInvoke<T: TimeRep> {
 pub struct CompBinding<'p, T: TimeRep, W: WidthRep> {
     /// Context associated with the program
     pub prog: &'p ProgBinding<'p, T, W>,
+    /// Signature associated with this component
+    sig: SigIdx,
     /// Instances bound in this component
     instances: Vec<BoundInstance<W>>,
     /// Invocations bound in this component
@@ -94,8 +96,10 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
         prog_ctx: &'p ProgBinding<'p, T, W>,
         comp: &core::Component<T, W>,
     ) -> Self {
+        let sig = prog_ctx.find_sig_idx(&comp.sig.name).unwrap();
         let mut ctx = Self {
             prog: prog_ctx,
+            sig,
             instances: Vec::new(),
             invocations: Vec::new(),
             inst_map: HashMap::new(),
@@ -173,11 +177,37 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
         Some(idx)
     }
 
+    /// Returns a resolved port definition for the given port.
+    /// Returns `None` if and only if the given port is a constant.
+    pub fn get_resolved_port<F>(
+        &self,
+        port: &core::Port,
+        resolve_liveness: F,
+    ) -> Option<core::PortDef<T, W>>
+    where
+        F: Fn(
+            &core::Range<T>,
+            &core::Binding<T>,
+            &core::Binding<W>,
+        ) -> core::Range<T>,
+    {
+        match &port.typ {
+            core::PortType::ThisPort(p) => {
+                Some(self.prog.abstract_comp_port(self.sig, p).clone())
+            }
+            core::PortType::InvPort { invoke, name } => Some(
+                self.get_invoke_port(invoke, name, resolve_liveness)
+                    .unwrap(),
+            ),
+            core::PortType::Constant(_) => None,
+        }
+    }
+
     /// Fully resolve a port.
     /// Returns None if and only if the invocation is not defined
     ///
     /// Accepts a function to resolve the liveness of the port using time and width bindings.
-    pub fn get_resolved_port<F>(
+    pub fn get_invoke_port<F>(
         &self,
         inv: &Id,
         port: &Id,
@@ -309,6 +339,20 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
         match sig {
             SigIdx::Ext(idx) => &self.externals[idx].events,
             SigIdx::Comp(idx) => &self.components[idx].events,
+        }
+    }
+
+    /// Return port associated with a component
+    pub fn abstract_comp_port(
+        &self,
+        sig: SigIdx,
+        port: &Id,
+    ) -> &core::PortDef<T, W> {
+        match sig {
+            SigIdx::Ext(idx) => {
+                unreachable!("abstract_comp_port called on external signature")
+            }
+            SigIdx::Comp(idx) => self.components[idx].get_port(port),
         }
     }
 }

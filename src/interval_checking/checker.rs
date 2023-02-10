@@ -7,6 +7,67 @@ use itertools::Itertools;
 use std::collections::HashMap;
 use std::iter;
 
+impl<'a, T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
+    for Context<'a, T, W>
+{
+    fn new() -> Self {
+        todo!()
+    }
+    fn clear_data(&mut self) {
+        todo!()
+    }
+
+    fn connect(
+        &mut self,
+        con: &core::Connect,
+        ctx: &visitor::CompBinding<T, W>,
+    ) -> FilamentResult<()> {
+        let src = &con.src;
+        let dst = &con.dst;
+        log::trace!("Checking connect: {} = {}", dst, src);
+        // Remove dst from remaining ports
+        self.remove_remaning_assign(dst)?;
+
+        let resolve_liveness =
+            |r: &core::Range<T>,
+             event_b: &core::Binding<T>,
+             param_b: &core::Binding<W>| {
+                r.resolve_event(event_b).resolve_offset(param_b)
+            };
+
+        let requirement = ctx
+            .get_resolved_port(src, resolve_liveness)
+            .unwrap()
+            .liveness;
+        let guarantee = ctx.get_resolved_port(dst, resolve_liveness);
+        let src_pos = src.copy_span();
+
+        // If we have: dst = src. We need:
+        // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
+        // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
+        if let Some(guarantee) = &guarantee {
+            let within_fact = OrderConstraint::subset(
+                requirement.clone(),
+                guarantee.liveness.clone(),
+            )
+            .map(|e| {
+                core::Constraint::base(e)
+                    .add_note(
+                        format!("Source is available for {}", guarantee),
+                        src_pos,
+                    )
+                    .add_note(
+                        format!("Destination's requirement {}", requirement),
+                        dst.copy_span(),
+                    )
+            });
+            self.add_obligations(within_fact);
+        }
+
+        Ok(())
+    }
+}
+
 impl<T: TimeRep, W: WidthRep> Context<'_, T, W> {
     // For connect statements of the form:
     // dst = src

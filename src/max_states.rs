@@ -74,7 +74,7 @@ impl<W: WidthRep> visitor::Checker<core::Time<u64>, W> for MaxStates<W> {
         let inst = ctx.get_instance(&inv.instance);
         let outputs = ctx.prog.output_names(inst.sig);
         let ports = outputs.into_iter().map(|port| {
-            ctx.get_resolved_port(&inv.name, port, |range, event_b, _| {
+            ctx.get_invoke_port(&inv.name, port, |range, event_b, _| {
                 range.resolve_event(event_b)
             })
             .unwrap()
