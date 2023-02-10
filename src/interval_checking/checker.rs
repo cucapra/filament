@@ -43,18 +43,16 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
         let dst = &con.dst;
         log::trace!("Checking connect: {} = {}", dst, src);
 
-        let resolve_liveness =
+        let resolve_range =
             |r: &core::Range<T>,
              event_b: &core::Binding<T>,
              param_b: &core::Binding<W>| {
-                r.resolve_event(event_b).resolve_offset(param_b)
+                r.resolve_offset(param_b).resolve_event(event_b)
             };
 
-        let requirement = ctx
-            .get_resolved_port(dst, resolve_liveness)
-            .unwrap()
-            .liveness;
-        let guarantee = ctx.get_resolved_port(src, resolve_liveness);
+        let requirement =
+            ctx.get_resolved_port(dst, resolve_range).unwrap().liveness;
+        let guarantee = ctx.get_resolved_port(src, resolve_range);
         let src_pos = src.copy_span();
 
         // If we have: dst = src. We need:

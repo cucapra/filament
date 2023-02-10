@@ -179,11 +179,11 @@ impl TimeRep for Time<u64> {
 impl Display for Time<PortParam> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.event)?;
-        if self.offset.concrete != 0 {
-            write!(f, "+{}", self.offset.concrete)?;
-        }
         for x in &self.offset.abs {
             write!(f, "+{x}")?;
+        }
+        if self.offset.concrete != 0 {
+            write!(f, "+{}", self.offset.concrete)?;
         }
         Ok(())
     }
@@ -238,9 +238,10 @@ impl TimeRep for Time<PortParam> {
         for x in &self.offset.abs {
             match x {
                 PortParam::Const(_) => unreachable!("Representation Invariant: abs should only contain PortParam::Var"),
-                PortParam::Var(x) => match bindings.get(x) {
-                    PortParam::Const(c) => offset.concrete += c,
-                    PortParam::Var(v) => offset.abs.push(PortParam::Var(v.clone())),
+                PortParam::Var(x) => match bindings.find(x) {
+                    Some(PortParam::Const(c)) => offset.concrete += c,
+                    Some(PortParam::Var(v)) => offset.abs.push(PortParam::Var(v.clone())),
+                    None => offset.abs.push(PortParam::Var(x.clone())),
                 }
             }
         }

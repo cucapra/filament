@@ -214,7 +214,7 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
     /// Accepts a function to resolve the liveness of the port using time and width bindings.
     pub fn get_invoke_port<F>(
         &self,
-        inv: &Id,
+        invoke: &Id,
         port: &Id,
         resolve_range: F,
     ) -> Option<core::PortDef<T, W>>
@@ -225,7 +225,7 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
             &core::Binding<W>,
         ) -> core::Range<T>,
     {
-        let inv_idx = self.get_invoke_idx(inv)?;
+        let inv_idx = self.get_invoke_idx(invoke)?;
         let inv = &self.invocations[inv_idx.0];
         let inst = &self.instances[inv.instance.0];
         let param_b = self.prog.param_binding(inst.sig, &inst.params);

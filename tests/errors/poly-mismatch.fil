@@ -1,0 +1,26 @@
+import "primitives/core.fil";
+
+/// This file doesn't acutally contain a shift register
+extern "../../primitives/state.fil" {
+    comp Shift[W, N]<G: 1>(@[G, G+1] in: W,) -> (@[G+N, G+N+1] out: W,);
+}
+
+comp Mac[W, N]<G: 1>(
+    @[G, G+1] left: W,
+    @[G, G+1] right: W,
+    @[G+N, G+N+1] acc: W,
+) -> (
+    @[G+N, G+N+1] out: W,
+) {
+    m := new MultComb[W]<G>(left, right);
+    s := new Shift[W, N]<G>(m.out);
+    a := new Add[W]<G+W>(s.out, acc);
+    out = a.out;
+}
+
+comp main<G: 1>(
+    @[G, G+1] in: 32
+) -> (@[G+4, G+5] out: 32) {
+    S := new Shift[32, 2]<G>(in);
+    out = S.out;
+}

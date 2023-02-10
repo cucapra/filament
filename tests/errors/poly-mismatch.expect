@@ -1,0 +1,14 @@
+---CODE---
+1
+---STDERR---
+error: Cannot prove constraint G+W >= G+N
+   ┌─ tests/errors/poly-mismatch.fil:17:26
+   │
+17 │     a := new Add[W]<G+W>(s.out, acc);
+   │                          ^^^^^ Source is available for @[G+N, G+N+1]
+   │
+   ┌─ ./primitives/core.fil:11:13
+   │
+11 │     @[G, L] left: WIDTH,
+   │             ---- Destination's requirement @[G+W, G+W+1]
+
