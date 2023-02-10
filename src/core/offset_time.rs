@@ -270,39 +270,38 @@ fn build_param_sub(
     if l.event == r.event && l.offset().abs == r.offset().abs {
         TimeSub::Unit(u64::abs_diff(lc, rc))
     } else {
-        // // Only add abstract variable when neither side has it.
-        // let mut abs = vec![];
-        // for a in &l.offset().abs {
-        //     if !r.offset().abs.contains(a) {
-        //         abs.push(a.clone());
-        //     }
-        // }
+        // Only add abstract variable when neither side has it.
+        let mut abs = vec![];
+        for a in &l.offset().abs {
+            if !r.offset().abs.contains(a) {
+                abs.push(a.clone());
+            }
+        }
 
-        // // If the left side has more concrete time, then the right side
-        // // is the one that is subtracted.
-        // if lc > rc {
-        //     TimeSub::Sym {
-        //         l: Time {
-        //             event: l.event,
-        //             offset: TimeSum {
-        //                 concrete: lc - rc,
-        //                 abs,
-        //             },
-        //         },
-        //         r: Time::unit(r.event, 0),
-        //     }
-        // } else {
-        //     TimeSub::Sym {
-        //         l: Time::unit(l.event, 0),
-        //         r: Time {
-        //             event: r.event,
-        //             offset: TimeSum {
-        //                 concrete: rc - lc,
-        //                 abs,
-        //             },
-        //         },
-        //     }
-        // }
-        TimeSub::Sym { l, r }
+        // If the left side has more concrete time, then the right side
+        // is the one that is subtracted.
+        if lc > rc {
+            TimeSub::Sym {
+                l: Time {
+                    event: l.event,
+                    offset: TimeSum {
+                        concrete: lc - rc,
+                        abs,
+                    },
+                },
+                r: Time::unit(r.event, 0),
+            }
+        } else {
+            TimeSub::Sym {
+                l: Time::unit(l.event, 0),
+                r: Time {
+                    event: r.event,
+                    offset: TimeSum {
+                        concrete: rc - lc,
+                        abs,
+                    },
+                },
+            }
+        }
     }
 }

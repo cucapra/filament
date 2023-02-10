@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: Different invocation of instance `M' use multiple events for event `G' binding: L and G. Sharing using multiple events is not supported.
+error: Invocations of instance `M' use multiple events for event `G' binding: L and G. Sharing using multiple events is not supported.
    ┌─ tests/errors/dynamic-share.fil:12:3
    │
 12 │   m1 := M<L>(c, d);
