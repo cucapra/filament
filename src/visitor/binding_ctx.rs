@@ -57,23 +57,46 @@ pub struct BoundInvoke<T: TimeRep> {
 }
 
 /// Track binding information for a component
-pub struct CompBinding<'p, 'c, T: TimeRep, W: WidthRep> {
+pub struct CompBinding<'p, T: TimeRep, W: WidthRep> {
     /// Context associated with the program
     prog_ctx: &'p ProgBinding<'p, T, W>,
-    /// This component's signature
-    sig: &'c core::Signature<T, W>,
     /// Instances bound in this component
     instances: Vec<BoundInstance<W>>,
     /// Invocations bound in this component
     invocations: Vec<BoundInvoke<T>>,
-
     /// Mapping from name of instance to its index
     inst_map: HashMap<Id, InstIdx>,
     /// Mapping from name of invocation to its index
     inv_map: HashMap<Id, InvIdx>,
 }
 
-impl<'p, 'c, T: TimeRep, W: WidthRep> CompBinding<'p, 'c, T, W> {
+impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
+    /// Construct a new binding context for a component
+    pub fn new(
+        prog_ctx: &'p ProgBinding<'p, T, W>,
+        comp: &core::Component<T, W>,
+    ) -> Self {
+        let mut ctx = Self {
+            prog_ctx,
+            instances: Vec::new(),
+            invocations: Vec::new(),
+            inst_map: HashMap::new(),
+            inv_map: HashMap::new(),
+        };
+        for cmd in &comp.body {
+            match cmd {
+                core::Command::Instance(inst) => {
+                    ctx.add_instance(inst);
+                }
+                core::Command::Invoke(inv) => {
+                    ctx.add_invoke(inv);
+                }
+                _ => (),
+            }
+        }
+        ctx
+    }
+
     /// Get the index for a given instance name
     fn get_instance_idx(&self, name: &Id) -> Option<InstIdx> {
         self.inst_map.get(name).cloned()
@@ -164,7 +187,7 @@ impl<'p, 'c, T: TimeRep, W: WidthRep> CompBinding<'p, 'c, T, W> {
 /// Signatures bound in a program.
 pub struct ProgBinding<'a, T: TimeRep, W: WidthRep> {
     externals: Vec<&'a core::Signature<T, PortParam>>,
-    components: Vec<core::Signature<T, W>>,
+    components: Vec<&'a core::Signature<T, W>>,
 }
 
 impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
@@ -181,7 +204,7 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
     }
 
     /// Add a component signature to the program binding
-    pub fn add_component(&mut self, sig: core::Signature<T, W>) -> SigIdx {
+    pub fn add_component(&mut self, sig: &'a core::Signature<T, W>) -> SigIdx {
         let idx = SigIdx::Comp(self.components.len());
         self.components.push(sig);
         idx
@@ -194,9 +217,11 @@ impl<'a, T: TimeRep, W: WidthRep> From<&'a core::Namespace<T, W>>
     fn from(ns: &'a core::Namespace<T, W>) -> Self {
         let externals =
             ns.externs.iter().flat_map(|(_, comps)| comps).collect_vec();
+        let components =
+            ns.components.iter().map(|comp| &comp.sig).collect_vec();
         Self {
             externals,
-            components: vec![],
+            components,
         }
     }
 }
