@@ -142,7 +142,7 @@ impl<T: TimeRep> FilSolver<T> {
         conf.check_success();
 
         let mut solver = conf.spawn(())?;
-        // solver.path_tee(std::path::PathBuf::from("./model.smt"))?;
+        solver.path_tee(std::path::PathBuf::from("./model.smt"))?;
 
         define_prelude(&mut solver)?;
         Ok(Self {
@@ -167,8 +167,6 @@ impl<T: TimeRep> FilSolver<T> {
         if asserts.is_empty() {
             return Ok(());
         }
-
-        // self.s.path_tee(std::path::PathBuf::from("./model.smt"))?;
 
         self.s.push(1)?;
         // Define all the constants
@@ -218,11 +216,16 @@ impl<T: TimeRep> FilSolver<T> {
 
     fn check_fact(&mut self, fact: impl Into<SExp>) -> FilamentResult<bool> {
         let sexp = fact.into();
-        log::trace!("Assert (not {})", sexp);
         self.s.push(1)?;
         self.s.assert(format!("(not {})", sexp))?;
         // Check that the assertion was unsatisfiable
         let unsat = !self.s.check_sat()?;
+        log::trace!("Assert (not {}): UNSAT = {}", sexp, unsat);
+        if !unsat {
+            log::trace!("MODEL: {:?}", self.s.get_model()?);
+        } else {
+            log::trace!("Unsat");
+        }
         self.s.pop(1)?;
         Ok(unsat)
     }

@@ -6,17 +6,40 @@ use std::fmt::Display;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 /// An opaque time sum expression
-pub struct TimeSum<T>(Vec<T>);
+pub struct TimeSum<T> {
+    concrete: u64,
+    abs: Vec<T>,
+}
 
 impl TimeSum<u64> {
     pub fn concrete(&self) -> u64 {
-        self.0[0]
+        assert!(self.abs.is_empty());
+        self.concrete
     }
 }
 
-impl<T> From<Vec<T>> for TimeSum<T> {
-    fn from(v: Vec<T>) -> Self {
-        Self(v)
+impl From<Vec<u64>> for TimeSum<u64> {
+    fn from(v: Vec<u64>) -> Self {
+        Self {
+            concrete: v.iter().sum(),
+            abs: vec![],
+        }
+    }
+}
+
+impl From<Vec<PortParam>> for TimeSum<PortParam> {
+    fn from(v: Vec<PortParam>) -> Self {
+        let mut ts = Self {
+            concrete: 0,
+            abs: vec![],
+        };
+        for p in v {
+            match p {
+                PortParam::Const(c) => ts.concrete += c,
+                PortParam::Var(_) => ts.abs.push(p),
+            }
+        }
+        ts
     }
 }
 
@@ -30,15 +53,17 @@ pub struct Time<Offset: Clone> {
 }
 
 impl<T: Clone> Time<T> {
-    pub fn new(event: Id, offset: Vec<T>) -> Self {
+    pub fn offset(&self) -> &TimeSum<T> {
+        &self.offset
+    }
+}
+
+impl Time<PortParam> {
+    pub fn new(event: Id, offset: Vec<PortParam>) -> Self {
         Self {
             event,
             offset: offset.into(),
         }
-    }
-
-    pub fn offset(&self) -> &TimeSum<T> {
-        &self.offset
     }
 }
 
@@ -47,17 +72,24 @@ where
     SExp: From<T>,
 {
     fn from(t: Time<T>) -> SExp {
-        SExp(format!(
-            "(+ {} {})",
-            t.event,
-            t.offset
-                .0
-                .clone()
-                .into_iter()
-                .map(|e| SExp::from(e).to_string())
-                .collect_vec()
-                .join(" ")
-        ))
+        if t.offset.abs.is_empty() && t.offset.concrete == 0 {
+            SExp(format!("{}", t.event))
+        } else if t.offset.abs.is_empty() {
+            SExp(format!("(+ {} {})", t.event, t.offset.concrete))
+        } else {
+            SExp(format!(
+                "(+ {} {} {})",
+                t.event,
+                t.offset.concrete,
+                t.offset
+                    .abs
+                    .clone()
+                    .into_iter()
+                    .map(|e| SExp::from(e).to_string())
+                    .collect_vec()
+                    .join(" ")
+            ))
+        }
     }
 }
 
@@ -86,9 +118,9 @@ impl TimeSub<Time<u64>> {
     /// Attempt to automatically simplify the difference when possible
     pub fn build(l: Time<u64>, r: Time<u64>) -> Self {
         if l.event == r.event {
-            // Guaranteed to only have one offset
-            let l = l.offset().0[0];
-            let r = r.offset().0[0];
+            // Guaranteed to only have concrete part.
+            let l = l.offset().concrete;
+            let r = r.offset().concrete;
             if l > r {
                 return Self::Unit(l - r);
             } else {
@@ -102,8 +134,8 @@ impl TimeSub<Time<u64>> {
 impl Display for Time<u64> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.event)?;
-        if self.offset.0[0] != 0 {
-            write!(f, "+{}", self.offset.0[0])?;
+        if self.offset.concrete() != 0 {
+            write!(f, "+{}", self.offset.concrete())?;
         }
         Ok(())
     }
@@ -121,13 +153,13 @@ impl TimeRep for Time<u64> {
     }
 
     fn increment(mut self, n: u64) -> Self {
-        self.offset.0[0] += n;
+        self.offset.concrete += n;
         self
     }
 
     fn resolve_event(&self, bindings: &super::Binding<Self>) -> Self {
         let mut n = bindings.get(&self.event).clone();
-        n.offset.0[0] += self.offset.0[0];
+        n.offset.concrete += self.offset.concrete;
         n
     }
 
@@ -147,7 +179,10 @@ impl TimeRep for Time<u64> {
 impl Display for Time<PortParam> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.event)?;
-        for x in &self.offset.0 {
+        if self.offset.concrete != 0 {
+            write!(f, "+{}", self.offset.concrete)?;
+        }
+        for x in &self.offset.abs {
             write!(f, "+{x}")?;
         }
         Ok(())
@@ -157,11 +192,12 @@ impl Display for Time<PortParam> {
 impl From<Time<PortParam>> for SExp {
     fn from(value: Time<PortParam>) -> Self {
         SExp(format!(
-            "(+ {} {})",
+            "(+ {} {} {})",
             value.event,
+            value.offset.concrete,
             value
                 .offset
-                .0
+                .abs
                 .iter()
                 .map(|x| x.to_string())
                 .collect::<Vec<_>>()
@@ -182,37 +218,91 @@ impl TimeRep for Time<PortParam> {
     }
 
     fn increment(mut self, n: u64) -> Self {
-        self.offset.0.push(PortParam::Const(n));
+        self.offset.concrete += n;
         self
     }
 
     fn resolve_event(&self, bindings: &super::Binding<Self>) -> Self {
         let mut n = bindings.get(&self.event).clone();
-        n.offset.0.extend(self.offset.0.clone());
+        n.offset.concrete += self.offset.concrete;
+        n.offset.abs.extend(self.offset.abs.clone());
         n
     }
 
     fn resolve_offset(&self, bindings: &super::Binding<Self::Offset>) -> Self {
-        let mut offset = Vec::with_capacity(self.offset.0.len());
+        let mut offset = TimeSum {
+            concrete: self.offset.concrete,
+            abs: vec![],
+        };
 
-        for x in &self.offset.0 {
+        for x in &self.offset.abs {
             match x {
-                PortParam::Const(x) => offset.push(PortParam::Const(*x)),
-                PortParam::Var(x) => offset.push(bindings.get(x).clone()),
+                PortParam::Const(_) => unreachable!("Representation Invariant: abs should only contain PortParam::Var"),
+                PortParam::Var(x) => match bindings.get(x) {
+                    PortParam::Const(c) => offset.concrete += c,
+                    PortParam::Var(v) => offset.abs.push(PortParam::Var(v.clone())),
+                }
             }
         }
 
-        Self {
+        Time {
             event: self.event.clone(),
-            offset: offset.into(),
+            offset,
         }
     }
 
     fn sub(self, other: Self) -> Self::SubRep {
-        TimeSub::sym(self, other)
+        build_param_sub(self, other)
     }
 
     fn event(&self) -> Id {
         self.event.clone()
+    }
+}
+
+/// Attempt to automatically simplify the difference when possible
+fn build_param_sub(
+    l: Time<PortParam>,
+    r: Time<PortParam>,
+) -> TimeSub<Time<PortParam>> {
+    let lc = l.offset().concrete;
+    let rc = r.offset().concrete;
+    if l.event == r.event && l.offset().abs == r.offset().abs {
+        TimeSub::Unit(u64::abs_diff(lc, rc))
+    } else {
+        // // Only add abstract variable when neither side has it.
+        // let mut abs = vec![];
+        // for a in &l.offset().abs {
+        //     if !r.offset().abs.contains(a) {
+        //         abs.push(a.clone());
+        //     }
+        // }
+
+        // // If the left side has more concrete time, then the right side
+        // // is the one that is subtracted.
+        // if lc > rc {
+        //     TimeSub::Sym {
+        //         l: Time {
+        //             event: l.event,
+        //             offset: TimeSum {
+        //                 concrete: lc - rc,
+        //                 abs,
+        //             },
+        //         },
+        //         r: Time::unit(r.event, 0),
+        //     }
+        // } else {
+        //     TimeSub::Sym {
+        //         l: Time::unit(l.event, 0),
+        //         r: Time {
+        //             event: r.event,
+        //             offset: TimeSum {
+        //                 concrete: rc - lc,
+        //                 abs,
+        //             },
+        //         },
+        //     }
+        // }
+        TimeSub::Sym { l, r }
     }
 }

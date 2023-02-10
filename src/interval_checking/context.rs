@@ -95,16 +95,15 @@ impl<T: TimeRep> IntervalCheck<T> {
         // Get the delay associated with each event.
         let sig = ctx.get_instance(instance).sig;
         // Ensure that all bindings of an event variable use the same events
-        for (idx, abs) in ctx.prog.events(sig).iter().enumerate() {
-            // Ignore events without an associated interface port.
-
+        for (idx, eb) in ctx.prog.events(sig).iter().enumerate() {
             let mut iter = args.iter().map(|(pos, binds)| (pos, &binds[idx]));
+            let abs = &eb.event;
 
             if let Some((fpos, first)) = iter.next() {
                 for (epos, event) in iter {
                     if event.event() != first.event() {
                         return Err(Error::malformed(format!(
-                                "Bindings for {instance}.{abs} uses multiple events: {first} and {event}. Sharing using multiple events is not supported.",
+                                "Invocations of instance `{instance}' use multiple events for event `{abs}' binding: {first} and {event}. Sharing using multiple events is not supported.",
                             ))
                             .add_note(format!("Location provides binding {instance}.{abs}={first}"), *fpos)
                             .add_note(format!("Location provides binding {instance}.{abs}={event}"), *epos));

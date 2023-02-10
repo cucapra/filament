@@ -51,10 +51,10 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
             };
 
         let requirement = ctx
-            .get_resolved_port(src, resolve_liveness)
+            .get_resolved_port(dst, resolve_liveness)
             .unwrap()
             .liveness;
-        let guarantee = ctx.get_resolved_port(dst, resolve_liveness);
+        let guarantee = ctx.get_resolved_port(src, resolve_liveness);
         let src_pos = src.copy_span();
 
         // If we have: dst = src. We need:
@@ -68,7 +68,10 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
             .map(|e| {
                 core::Constraint::base(e)
                     .add_note(
-                        format!("Source is available for {}", guarantee),
+                        format!(
+                            "Source is available for {}",
+                            guarantee.liveness
+                        ),
                         src_pos,
                     )
                     .add_note(
@@ -112,13 +115,11 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
         Ok(())
     }
 
-    fn exit_component(
+    fn enter_component(
         &mut self,
         comp: &core::Component<T, W>,
-        ctx: &CompBinding<T, W>,
+        _: &CompBinding<T, W>,
     ) -> FilamentResult<()> {
-        // let mut ctx = Context::default();
-
         // Ensure that the signature is well-formed
         self.add_obligations(comp.sig.well_formed());
 
@@ -137,6 +138,14 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
             }
         }
 
+        Ok(())
+    }
+
+    fn exit_component(
+        &mut self,
+        comp: &core::Component<T, W>,
+        ctx: &CompBinding<T, W>,
+    ) -> FilamentResult<()> {
         // Add obligations from disjointness constraints
         let (disj, share) = self.drain_sharing(ctx)?;
 

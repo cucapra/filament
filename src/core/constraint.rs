@@ -80,6 +80,15 @@ where
             extra: vec![],
         }
     }
+
+    pub fn lte(l: T, r: T) -> Self {
+        OrderConstraint {
+            left: r,
+            right: l,
+            op: OrderOp::Gte,
+            extra: vec![],
+        }
+    }
 }
 
 impl<K: TimeRep, T: WithTime<K>> WithTime<K> for OrderConstraint<T>
@@ -125,14 +134,14 @@ impl<T: TimeRep> OrderConstraint<T> {
     }
 
     /// Check that the `left` range is a subset of `right`
-    /// [ls, le] \subsetof [rs, re] <=> ls >= rs && le <= re
+    /// [ls, le] \subsetof [rs, re] <=> rs <= ls <= le <= re
     pub fn subset(
         left: Range<T>,
         right: Range<T>,
     ) -> impl Iterator<Item = Self> {
         log::trace!("{left} ⊆ {right}");
         vec![
-            OrderConstraint::gte(left.start, right.start),
+            OrderConstraint::lte(right.start, left.start),
             OrderConstraint::gte(right.end, left.end),
         ]
         .into_iter()

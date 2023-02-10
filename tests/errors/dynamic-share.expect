@@ -1,16 +1,11 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint |L - G| >= |L+1 - L|
-   ┌─ tests/errors/dynamic-share.fil:13:3
+error: Different invocation of instance `M' use multiple events for event `G' binding: L and G. Sharing using multiple events is not supported.
+   ┌─ tests/errors/dynamic-share.fil:12:3
    │
 12 │   m1 := M<L>(c, d);
-   │   ----------------- Invoke provides binding M.G=L
+   │   ^^^^^^^^^^^^^^^^^ Location provides binding M.G=L
 13 │   m0 := M<G>(a, b);
-   │   ^^^^^^^^^^^^^^^^^ Conflicting invoke. Invoke provides binding M.G=G
-   │
-   ┌─ ./primitives/core.fil:10:19
-   │
-10 │   comp Add[WIDTH]<G: L-(G), ?L: 1=G+1>(
-   │                   -------- Delay for G specifies that invokes must be |L+1 - L| cycles apart
+   │   ----------------- Location provides binding M.G=G
 
