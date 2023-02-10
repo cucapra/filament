@@ -197,6 +197,7 @@ where
     }
 
     /// Returns a port associated with the signature
+    /// XXX: remove this function once interval_checker becomes a checker
     pub fn get_liveness<const IS_INPUT: bool>(
         &self,
         port: &Id,
@@ -333,9 +334,7 @@ impl<T: TimeRep, W: WidthRep> Signature<T, W> {
     /// 1. Ensure that all the intervals are well formed
     /// 2. Ensure for each interval that mentions event `E` in its start time, the @interface
     ///    signal for `E` pulses less often than the length of the interval itself.
-    pub fn well_formed(
-        &self,
-    ) -> FilamentResult<impl Iterator<Item = Constraint<T>> + '_> {
+    pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> + '_ {
         let mut evs: HashMap<Id, Vec<_>> = HashMap::new();
 
         // Compute mapping from events to intervals to mention the event in their start time.
@@ -350,7 +349,7 @@ impl<T: TimeRep, W: WidthRep> Signature<T, W> {
                 .push((delay.clone(), port.copy_span()))
         }
 
-        Ok(evs
+        evs
             .into_iter()
             .flat_map(|(ev, lens)| {
                 let event = self.get_event(&ev);
@@ -370,7 +369,7 @@ impl<T: TimeRep, W: WidthRep> Signature<T, W> {
                     )
                 })
             })
-            .chain(self.constraints()))
+            .chain(self.constraints())
     }
 }
 

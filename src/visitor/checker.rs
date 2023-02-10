@@ -64,7 +64,7 @@ where
     #[inline]
     fn signature(
         &mut self,
-        sig: &core::Signature<T, W>,
+        _: &core::Signature<T, W>,
         _ctx: &CompBinding<T, W>,
     ) -> FilamentResult<()> {
         Ok(())
@@ -74,7 +74,7 @@ where
     #[inline]
     fn enter_component(
         &mut self,
-        comp: &core::Component<T, W>,
+        _: &core::Component<T, W>,
         _ctx: &CompBinding<T, W>,
     ) -> FilamentResult<()> {
         Ok(())
@@ -84,7 +84,7 @@ where
     #[inline]
     fn exit_component(
         &mut self,
-        comp: &core::Component<T, W>,
+        _: &core::Component<T, W>,
         _ctx: &CompBinding<T, W>,
     ) -> FilamentResult<()> {
         Ok(())

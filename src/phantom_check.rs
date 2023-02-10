@@ -39,7 +39,7 @@ impl<T: TimeRep, W: WidthRep> visitor::Checker<T, W> for PhantomCheck<T, W> {
     fn enter_component(
         &mut self,
         comp: &core::Component<T, W>,
-        ctx: &visitor::CompBinding<T, W>,
+        _: &visitor::CompBinding<T, W>,
     ) -> FilamentResult<()> {
         self.phantom_events = comp.sig.phantom_events().collect();
         Ok(())

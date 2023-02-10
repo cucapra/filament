@@ -55,7 +55,7 @@ impl<W: WidthRep> visitor::Checker<core::Time<u64>, W> for MaxStates<W> {
     fn enter_component(
         &mut self,
         comp: &core::Component<Time<u64>, W>,
-        ctx: &visitor::CompBinding<Time<u64>, W>,
+        _: &visitor::CompBinding<Time<u64>, W>,
     ) -> FilamentResult<()> {
         self.cur_states = comp
             .sig
@@ -87,7 +87,7 @@ impl<W: WidthRep> visitor::Checker<core::Time<u64>, W> for MaxStates<W> {
     fn exit_component(
         &mut self,
         comp: &core::Component<Time<u64>, W>,
-        ctx: &visitor::CompBinding<Time<u64>, W>,
+        _: &visitor::CompBinding<Time<u64>, W>,
     ) -> FilamentResult<()> {
         let events = std::mem::take(&mut self.cur_states);
         self.max_states.insert(comp.sig.name.clone(), events);

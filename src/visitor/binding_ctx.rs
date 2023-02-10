@@ -211,7 +211,7 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
         &self,
         inv: &Id,
         port: &Id,
-        resolve_liveness: F,
+        resolve_range: F,
     ) -> Option<core::PortDef<T, W>>
     where
         F: Fn(
@@ -223,29 +223,70 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
         let inv_idx = self.get_invoke_idx(inv)?;
         let inv = &self.invocations[inv_idx.0];
         let inst = &self.instances[inv.instance.0];
+        let param_b = self.prog.param_binding(inst.sig, &inst.params);
+        let event_b = self.prog.event_binding(inst.sig, &inv.events);
 
         match inst.sig {
             SigIdx::Ext(idx) => {
                 let sig = self.prog.externals[idx];
                 let port = sig.get_port(port);
-                let param_b = sig.param_binding(&inst.params);
-                let event_b = sig.event_binding(&inv.events);
                 Some(core::PortDef::new(
                     port.name.clone(),
-                    resolve_liveness(&port.liveness, &event_b, &param_b),
+                    resolve_range(&port.liveness, &event_b, &param_b),
                     port.bitwidth.resolve(&param_b).unwrap(),
                 ))
             }
             SigIdx::Comp(idx) => {
                 let sig = &self.prog.components[idx];
                 let port = sig.get_port(port);
-                let param_b = sig.param_binding(&inst.params);
-                let event_b = sig.event_binding(&inv.events);
                 Some(core::PortDef::new(
                     port.name.clone(),
-                    resolve_liveness(&port.liveness, &event_b, &param_b),
+                    resolve_range(&port.liveness, &event_b, &param_b),
                     port.bitwidth.resolve(&param_b).unwrap(),
                 ))
+            }
+        }
+    }
+
+    /// Get all the fully resolved constraints for the signature of an invocation.
+    /// This includes:
+    /// - The constraints of the component
+    /// - Well-formedness constraints
+    pub fn get_resolved_sig_constraints<F>(
+        &self,
+        invoke: &Id,
+        resolve_constraint: F,
+    ) -> Vec<core::Constraint<T>>
+    where
+        F: Fn(
+            &core::Constraint<T>,
+            &core::Binding<T>,
+            &core::Binding<W>,
+        ) -> core::Constraint<T>,
+    {
+        let inv = self.get_invoke(invoke);
+        let inst = &self[inv.instance];
+        let sig = inst.sig;
+        let param_b = &self.prog.param_binding(sig, &inst.params);
+        let event_b = &self.prog.event_binding(sig, &inv.events);
+        let resolve_ref = |c| resolve_constraint(c, event_b, param_b);
+        let resolve = |c| resolve_constraint(&c, event_b, param_b);
+        match sig {
+            SigIdx::Ext(idx) => {
+                let sig = self.prog.externals[idx];
+                sig.constraints
+                    .iter()
+                    .map(resolve_ref)
+                    .chain(sig.well_formed().map(resolve))
+                    .collect()
+            }
+            SigIdx::Comp(idx) => {
+                let sig = self.prog.components[idx];
+                sig.constraints
+                    .iter()
+                    .map(resolve_ref)
+                    .chain(sig.well_formed().map(resolve))
+                    .collect()
             }
         }
     }
@@ -342,6 +383,27 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
         }
     }
 
+    pub fn constraints(&self, sig: SigIdx) -> &Vec<core::Constraint<T>> {
+        match sig {
+            SigIdx::Ext(idx) => &self.externals[idx].constraints,
+            SigIdx::Comp(idx) => &self.components[idx].constraints,
+        }
+    }
+
+    fn event_binding(&self, sig: SigIdx, event: &[T]) -> core::Binding<T> {
+        match sig {
+            SigIdx::Ext(idx) => self.externals[idx].event_binding(event),
+            SigIdx::Comp(idx) => self.components[idx].event_binding(event),
+        }
+    }
+
+    fn param_binding(&self, sig: SigIdx, param: &[W]) -> core::Binding<W> {
+        match sig {
+            SigIdx::Ext(idx) => self.externals[idx].param_binding(param),
+            SigIdx::Comp(idx) => self.components[idx].param_binding(param),
+        }
+    }
+
     /// Return port associated with a component
     pub fn abstract_comp_port(
         &self,
@@ -349,7 +411,7 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
         port: &Id,
     ) -> &core::PortDef<T, W> {
         match sig {
-            SigIdx::Ext(idx) => {
+            SigIdx::Ext(_) => {
                 unreachable!("abstract_comp_port called on external signature")
             }
             SigIdx::Comp(idx) => self.components[idx].get_port(port),

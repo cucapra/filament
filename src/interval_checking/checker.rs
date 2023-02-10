@@ -2,7 +2,7 @@ use super::{ConcreteInvoke, Context, FilSolver, THIS};
 use crate::core::{self, OrderConstraint, TimeRep, WidthRep, WithTime};
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
-use crate::visitor;
+use crate::visitor::{self, CompBinding};
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::iter;
@@ -63,6 +63,33 @@ impl<'a, T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
             });
             self.add_obligations(within_fact);
         }
+
+        Ok(())
+    }
+
+    fn invoke(
+        &mut self,
+        invoke: &core::Invoke<T>,
+        ctx: &CompBinding<T, W>,
+    ) -> FilamentResult<()> {
+        // Check the bindings for abstract variables do not violate @interface
+        // requirements
+        self.check_invoke_binds(invoke)?;
+
+        // Check that the invocation's events satisfy well-formedness the component's constraints
+        let constraints = ctx
+            .get_resolved_sig_constraints(&invoke.name, |c, e, p| {
+                c.resolve_event(e).resolve_offset(p)
+            });
+
+        constraints.into_iter().for_each(|con| {
+            self.add_obligations(iter::once(con).map(|e| {
+                e.add_note(
+                    "Component's where clause constraints must be satisfied",
+                    invoke.copy_span(),
+                )
+            }))
+        });
 
         Ok(())
     }
@@ -186,7 +213,7 @@ impl<T: TimeRep, W: WidthRep> Context<'_, T, W> {
         let binding = sig.event_binding(&invoke.abstract_vars);
 
         // Handle `where` clause constraints and well formedness constraints on intervals.
-        sig.well_formed()?.for_each(|con| {
+        sig.well_formed().for_each(|con| {
             self.add_obligations(iter::once(con.resolve_event(&binding)).map(
                 |e| {
                     e.add_note(
@@ -286,7 +313,7 @@ impl<T: TimeRep, W: WidthRep> Context<'_, T, W> {
         let mut ctx = Context::from(sigs);
 
         // Ensure that the signature is well-formed
-        ctx.add_obligations(comp.sig.well_formed()?);
+        ctx.add_obligations(comp.sig.well_formed());
 
         // Add instance for this component. Whenever a bare port is used, it refers
         // to the port on this instance.
@@ -367,7 +394,7 @@ pub fn check<T: TimeRep, W: WidthRep>(
         solver.prove(
             sig.events().chain(sig.params.iter().cloned()),
             sig.constraints.clone(),
-            sig.well_formed()?,
+            sig.well_formed(),
             vec![],
         )?;
         log::trace!("==========");
