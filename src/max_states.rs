@@ -21,12 +21,13 @@ pub struct MaxStates<W: WidthRep> {
 impl<W: WidthRep> MaxStates<W> {
     fn max_state_from_ports(
         &mut self,
-        resolved_outputs: impl Iterator<Item = core::PortDef<Time<u64>, W>>,
+        resolved_outputs: impl IntoIterator<Item = core::PortDef<Time<u64>, W>>,
     ) {
-        let out_events =
-            resolved_outputs.flat_map(|pd: core::PortDef<Time<u64>, W>| {
+        let out_events = resolved_outputs.into_iter().flat_map(
+            |pd: core::PortDef<Time<u64>, W>| {
                 pd.liveness.events().into_iter().cloned().collect_vec()
-            });
+            },
+        );
 
         // Use all ranges to compute max state
         out_events.for_each(|time| {
@@ -40,10 +41,8 @@ impl<W: WidthRep> MaxStates<W> {
     }
 }
 
-impl<W: WidthRep> visitor::Transform<core::Time<u64>, W> for MaxStates<W> {
-    type Info = ();
-
-    fn new(_: &core::Namespace<Time<u64>, W>, _: &Self::Info) -> Self {
+impl<W: WidthRep> visitor::Checker<core::Time<u64>, W> for MaxStates<W> {
+    fn new() -> Self {
         Self {
             max_states: HashMap::new(),
             cur_states: HashMap::new(),
@@ -53,13 +52,11 @@ impl<W: WidthRep> visitor::Transform<core::Time<u64>, W> for MaxStates<W> {
     fn clear_data(&mut self) {
         self.cur_states.clear();
     }
-    fn component_filter(&self, _: &core::Component<Time<u64>, W>) -> bool {
-        true
-    }
     fn enter_component(
         &mut self,
-        comp: core::Component<Time<u64>, W>,
-    ) -> FilamentResult<core::Component<Time<u64>, W>> {
+        comp: &core::Component<Time<u64>, W>,
+        ctx: &visitor::CompBinding<Time<u64>, W>,
+    ) -> FilamentResult<()> {
         self.cur_states = comp
             .sig
             .events
@@ -67,27 +64,33 @@ impl<W: WidthRep> visitor::Transform<core::Time<u64>, W> for MaxStates<W> {
             .map(|eb| (eb.event.clone(), 0))
             .collect();
         self.max_state_from_ports(comp.sig.inputs().cloned());
-        Ok(comp)
+        Ok(())
     }
     fn invoke(
         &mut self,
-        inv: core::Invoke<Time<u64>>,
-        sig: &visitor::ResolvedInstance<Time<u64>, W>,
-    ) -> FilamentResult<Vec<core::Command<Time<u64>, W>>> {
-        let sig = sig.resolve()?;
+        inv: &core::Invoke<Time<u64>>,
+        ctx: &visitor::CompBinding<Time<u64>, W>,
+    ) -> FilamentResult<()> {
+        let inst = ctx.get_instance(&inv.instance);
+        let outputs = ctx.prog.output_names(inst.sig);
+        let ports = outputs.into_iter().map(|port| {
+            ctx.get_resolved_port(&inv.name, port, |range, event_b, _| {
+                range.resolve_event(event_b)
+            })
+            .unwrap()
+        });
+
         // Get the signature associated with this instance.
-        let binding = sig.event_binding(&inv.abstract_vars);
-        self.max_state_from_ports(
-            sig.outputs().map(|pd| pd.resolve_event(&binding)),
-        );
-        Ok(vec![core::Command::Invoke(inv)])
+        self.max_state_from_ports(ports);
+        Ok(())
     }
     fn exit_component(
         &mut self,
-        comp: core::Component<Time<u64>, W>,
-    ) -> FilamentResult<core::Component<Time<u64>, W>> {
+        comp: &core::Component<Time<u64>, W>,
+        ctx: &visitor::CompBinding<Time<u64>, W>,
+    ) -> FilamentResult<()> {
         let events = std::mem::take(&mut self.cur_states);
         self.max_states.insert(comp.sig.name.clone(), events);
-        Ok(comp)
+        Ok(())
     }
 }
