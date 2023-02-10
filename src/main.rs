@@ -34,7 +34,7 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
 
     // Interval checking
     let t = Instant::now();
-    let ns = interval_checking::check(ns)?;
+    interval_checking::IntervalCheck::check(&ns)?;
     log::info!("Interval check: {}ms", t.elapsed().as_millis());
 
     // User-level @phantom ports

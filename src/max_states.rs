@@ -42,12 +42,12 @@ impl<W: WidthRep> MaxStates<W> {
 }
 
 impl<W: WidthRep> visitor::Checker<core::Time<u64>, W> for MaxStates<W> {
-    fn new() -> Self {
-        Self {
+    fn new(_: &core::Namespace<Time<u64>, W>) -> FilamentResult<Self> {
+        Ok(Self {
             max_states: HashMap::new(),
             cur_states: HashMap::new(),
             w: std::marker::PhantomData,
-        }
+        })
     }
     fn clear_data(&mut self) {
         self.cur_states.clear();

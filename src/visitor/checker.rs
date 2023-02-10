@@ -13,7 +13,7 @@ where
     Self: Sized,
 {
     /// Construct a new instance of this pass
-    fn new() -> Self;
+    fn new(_: &core::Namespace<T, W>) -> FilamentResult<Self>;
 
     /// Clear any data that should be cleared between components
     fn clear_data(&mut self);
@@ -111,7 +111,7 @@ where
 
     fn check(ns: &core::Namespace<T, W>) -> FilamentResult<Self> {
         let prog_ctx = &ProgBinding::from(ns);
-        let mut pass = Self::new();
+        let mut pass = Self::new(ns)?;
 
         for comp in &ns.components {
             if pass.component_filter(comp) {

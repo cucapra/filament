@@ -119,6 +119,11 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
         ctx
     }
 
+    /// Signature associated with this component
+    pub fn sig(&self) -> SigIdx {
+        self.sig
+    }
+
     /// Get instance binding for a given instance name
     pub fn get_instance(&self, idx: &Id) -> &BoundInstance<W> {
         let idx = self.get_instance_idx(idx).unwrap();
@@ -383,6 +388,18 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
         }
     }
 
+    /// Get binding for a particular event
+    pub fn get_event(
+        &self,
+        sig: SigIdx,
+        event: &core::Id,
+    ) -> &core::EventBind<T> {
+        match sig {
+            SigIdx::Ext(idx) => self.externals[idx].get_event(event),
+            SigIdx::Comp(idx) => self.components[idx].get_event(event),
+        }
+    }
+
     pub fn constraints(&self, sig: SigIdx) -> &Vec<core::Constraint<T>> {
         match sig {
             SigIdx::Ext(idx) => &self.externals[idx].constraints,
@@ -390,14 +407,14 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
         }
     }
 
-    fn event_binding(&self, sig: SigIdx, event: &[T]) -> core::Binding<T> {
+    pub fn event_binding(&self, sig: SigIdx, event: &[T]) -> core::Binding<T> {
         match sig {
             SigIdx::Ext(idx) => self.externals[idx].event_binding(event),
             SigIdx::Comp(idx) => self.components[idx].event_binding(event),
         }
     }
 
-    fn param_binding(&self, sig: SigIdx, param: &[W]) -> core::Binding<W> {
+    pub fn param_binding(&self, sig: SigIdx, param: &[W]) -> core::Binding<W> {
         match sig {
             SigIdx::Ext(idx) => self.externals[idx].param_binding(param),
             SigIdx::Comp(idx) => self.components[idx].param_binding(param),

@@ -18,12 +18,12 @@ pub struct PhantomCheck<T: TimeRep, W: WidthRep> {
 }
 
 impl<T: TimeRep, W: WidthRep> visitor::Checker<T, W> for PhantomCheck<T, W> {
-    fn new() -> Self {
-        Self {
+    fn new(_: &core::Namespace<T, W>) -> FilamentResult<Self> {
+        Ok(Self {
             instance_used: HashSet::new(),
             phantom_events: Vec::new(),
             _tw: std::marker::PhantomData,
-        }
+        })
     }
 
     fn clear_data(&mut self) {
