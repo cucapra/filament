@@ -1,7 +1,7 @@
 use derivative::Derivative;
 
 use super::{Binding, Id, Range, TimeRep, WithTime};
-use crate::{errors::FilamentResult, interval_checking::SExp, utils::GPosIdx};
+use crate::{interval_checking::SExp, utils::GPosIdx};
 use std::fmt::Display;
 
 /// Ordering operator for constraints
@@ -35,19 +35,6 @@ pub struct OrderConstraint<T> {
     #[derivative(PartialEq = "ignore")]
     #[derivative(Hash = "ignore")]
     extra: Extra,
-}
-impl<T> OrderConstraint<T> {
-    pub fn map<K, F: Fn(T) -> FilamentResult<K>>(
-        self,
-        f: F,
-    ) -> FilamentResult<OrderConstraint<K>> {
-        Ok(OrderConstraint {
-            left: f(self.left)?,
-            right: f(self.right)?,
-            op: self.op,
-            extra: self.extra,
-        })
-    }
 }
 
 impl<T> OrderConstraint<T>
@@ -215,19 +202,6 @@ impl<T: TimeRep> Constraint<T> {
             Constraint::Sub { base } => base.extra.push((msg.to_string(), pos)),
         }
         self
-    }
-
-    pub fn map<K, F>(self, f: F) -> FilamentResult<Constraint<K>>
-    where
-        K: TimeRep,
-        F: Fn(T) -> FilamentResult<K>,
-    {
-        match self {
-            Constraint::Base { base } => {
-                Ok(Constraint::Base { base: base.map(f)? })
-            }
-            Constraint::Sub { .. } => todo!("Mapping over Constraint::Sub"),
-        }
     }
 
     pub fn events(&self) -> Vec<Id> {
