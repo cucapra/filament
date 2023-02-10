@@ -33,9 +33,9 @@ impl<W: WidthRep> MaxStates<W> {
         out_events.for_each(|time| {
             let ev = &time.event;
             let v = self.cur_states.get_mut(ev).unwrap();
-            let st = time.offset();
-            if *v < *st {
-                *v = *st;
+            let st = time.offset().concrete();
+            if *v < st {
+                *v = st;
             }
         });
     }

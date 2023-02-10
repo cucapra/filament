@@ -1,6 +1,24 @@
+use itertools::Itertools;
+
 use super::{Id, PortParam, Range, TimeRep, TimeSub};
 use crate::interval_checking::SExp;
 use std::fmt::Display;
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+/// An opaque time sum expression
+pub struct TimeSum<T>(Vec<T>);
+
+impl TimeSum<u64> {
+    pub fn concrete(&self) -> u64 {
+        self.0[0]
+    }
+}
+
+impl<T> From<Vec<T>> for TimeSum<T> {
+    fn from(v: Vec<T>) -> Self {
+        Self(v)
+    }
+}
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 /// Represents expression of the form `G+1+k`
@@ -8,15 +26,18 @@ pub struct Time<Offset: Clone> {
     /// The event for the time expression
     pub event: Id,
     /// The offsets for the time expression
-    offset: Offset,
+    offset: TimeSum<Offset>,
 }
 
 impl<T: Clone> Time<T> {
-    pub fn new(event: Id, offset: T) -> Self {
-        Self { event, offset }
+    pub fn new(event: Id, offset: Vec<T>) -> Self {
+        Self {
+            event,
+            offset: offset.into(),
+        }
     }
 
-    pub fn offset(&self) -> &T {
+    pub fn offset(&self) -> &TimeSum<T> {
         &self.offset
     }
 }
@@ -26,7 +47,17 @@ where
     SExp: From<T>,
 {
     fn from(t: Time<T>) -> SExp {
-        SExp(format!("(+ {} {})", t.event, SExp::from(t.offset)))
+        SExp(format!(
+            "(+ {} {})",
+            t.event,
+            t.offset
+                .0
+                .clone()
+                .into_iter()
+                .map(|e| SExp::from(e).to_string())
+                .collect_vec()
+                .join(" ")
+        ))
     }
 }
 
@@ -36,7 +67,7 @@ where
 {
     /// Convert this interval into an offset. Only possible when interval uses
     /// exactly one event for both start and end.
-    pub fn as_offset(&self) -> Option<(Id, T, T)> {
+    pub fn as_offset(&self) -> Option<(Id, TimeSum<T>, TimeSum<T>)> {
         let Range { start, end, .. } = &self;
         if start.event == end.event {
             Some((
@@ -55,8 +86,9 @@ impl TimeSub<Time<u64>> {
     /// Attempt to automatically simplify the difference when possible
     pub fn build(l: Time<u64>, r: Time<u64>) -> Self {
         if l.event == r.event {
-            let l = l.offset();
-            let r = r.offset();
+            // Guaranteed to only have one offset
+            let l = l.offset().0[0];
+            let r = r.offset().0[0];
             if l > r {
                 return Self::Unit(l - r);
             } else {
@@ -70,8 +102,8 @@ impl TimeSub<Time<u64>> {
 impl Display for Time<u64> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.event)?;
-        if self.offset != 0 {
-            write!(f, "+{}", self.offset)?;
+        if self.offset.0[0] != 0 {
+            write!(f, "+{}", self.offset.0[0])?;
         }
         Ok(())
     }
@@ -82,17 +114,20 @@ impl TimeRep for Time<u64> {
     type Offset = u64;
 
     fn unit(event: Id, offset: u64) -> Self {
-        Self { event, offset }
+        Self {
+            event,
+            offset: vec![offset].into(),
+        }
     }
 
     fn increment(mut self, n: u64) -> Self {
-        self.offset += n;
+        self.offset.0[0] += n;
         self
     }
 
     fn resolve_event(&self, bindings: &super::Binding<Self>) -> Self {
         let mut n = bindings.get(&self.event).clone();
-        n.offset += self.offset;
+        n.offset.0[0] += self.offset.0[0];
         n
     }
 
@@ -109,17 +144,7 @@ impl TimeRep for Time<u64> {
     }
 }
 
-#[derive(Clone, Eq, Hash, PartialEq)]
-/// Implementation of parameteric time
-pub struct ParamTime(Vec<PortParam>);
-
-impl From<Vec<PortParam>> for ParamTime {
-    fn from(v: Vec<PortParam>) -> Self {
-        Self(v)
-    }
-}
-
-impl Display for Time<ParamTime> {
+impl Display for Time<PortParam> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.event)?;
         for x in &self.offset.0 {
@@ -129,8 +154,8 @@ impl Display for Time<ParamTime> {
     }
 }
 
-impl From<Time<ParamTime>> for SExp {
-    fn from(value: Time<ParamTime>) -> Self {
+impl From<Time<PortParam>> for SExp {
+    fn from(value: Time<PortParam>) -> Self {
         SExp(format!(
             "(+ {} {})",
             value.event,
@@ -145,14 +170,14 @@ impl From<Time<ParamTime>> for SExp {
     }
 }
 
-impl TimeRep for Time<ParamTime> {
+impl TimeRep for Time<PortParam> {
     type SubRep = TimeSub<Self>;
-    type Offset = ParamTime;
+    type Offset = PortParam;
 
     fn unit(event: Id, state: u64) -> Self {
         Time {
             event,
-            offset: ParamTime(vec![PortParam::Const(state)]),
+            offset: vec![PortParam::Const(state)].into(),
         }
     }
 
@@ -168,20 +193,18 @@ impl TimeRep for Time<ParamTime> {
     }
 
     fn resolve_offset(&self, bindings: &super::Binding<Self::Offset>) -> Self {
-        let mut offsets = Vec::with_capacity(self.offset.0.len());
+        let mut offset = Vec::with_capacity(self.offset.0.len());
 
         for x in &self.offset.0 {
             match x {
-                PortParam::Const(x) => offsets.push(PortParam::Const(*x)),
-                PortParam::Var(x) => {
-                    offsets.extend(bindings.get(x).0.iter().cloned())
-                }
+                PortParam::Const(x) => offset.push(PortParam::Const(*x)),
+                PortParam::Var(x) => offset.push(bindings.get(x).clone()),
             }
         }
 
         Self {
             event: self.event.clone(),
-            offset: ParamTime(offsets),
+            offset: offset.into(),
         }
     }
 

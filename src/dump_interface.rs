@@ -100,6 +100,8 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for DumpInterface<W> {
                 format!(
                     "{{ \"event\": \"{event}\", \"name\": \"{name}\", \"width\": {w} , \"start\": {st}, \"end\": {end} }}",
                     name = pd.name,
+                    st = st.concrete(),
+                    end = end.concrete(),
                 )
             })
             .ok_or_else(|| {

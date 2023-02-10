@@ -30,12 +30,12 @@ impl<W: WidthRep> CompileInvokes<W> {
     ) -> Option<core::Guard> {
         let Some((ev, st, end)) = range.as_offset() else {
             unreachable!(
-                "Range `{range}` cannot be represented as a simple non-max offset"
+                "Range `{range}` cannot be represented as a simple offset"
             )
         };
 
         let fsm = self.find_fsm(&ev)?;
-        let guard = (st..end)
+        let guard = (st.concrete()..end.concrete())
             .into_iter()
             .map(|st| fsm.port(st).into())
             .reduce(core::Guard::or)
@@ -107,7 +107,7 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for CompileInvokes<W> {
                 let ev = &interface.event;
                 // Get binding for this event in the invoke
                 let t = binding.get(ev);
-                let start_time = *t.offset();
+                let start_time = t.offset().concrete();
                 let port = self.get_fsm(&t.event()).port(start_time);
                 let con = core::Connect::new(
                     core::Port::comp(bind.clone(), interface.name.clone()),

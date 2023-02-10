@@ -2,7 +2,7 @@
 
 //! Parser for Calyx programs.
 use crate::ast::param as ast;
-use crate::core::{ParamTime, Time, TimeSub};
+use crate::core::{Time, TimeSub};
 use crate::errors::{self, FilamentResult, WithPos};
 use crate::utils::{FileIdx, GPosIdx, GlobalPositionTable};
 use itertools::Itertools;
@@ -120,7 +120,7 @@ impl FilamentParser {
     fn time(input: Node) -> ParseResult<ast::TimeRep> {
         match_nodes!(
             input.clone().into_children();
-            [identifier(ev), port_width(sts)..] => Ok(Time::new(ev, ParamTime::from(sts.into_iter().collect_vec()))),
+            [identifier(ev), port_width(sts)..] => Ok(Time::new(ev, sts.into_iter().collect_vec())),
             [bitwidth(_)] => {
                 Err(input.error("Time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number"))
             }
