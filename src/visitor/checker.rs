@@ -18,11 +18,16 @@ where
     /// Clear any data that should be cleared between components
     fn clear_data(&mut self);
 
+    /// Check if this component should be traversed
+    fn component_filter(&self, _: &core::Component<T, W>) -> bool {
+        true
+    }
+
     #[inline]
     fn connect(
         &mut self,
         _: &core::Connect,
-        ctx: &CompBinding<T, W>,
+        _ctx: &CompBinding<T, W>,
     ) -> FilamentResult<()> {
         Ok(())
     }
@@ -31,7 +36,7 @@ where
     fn instance(
         &mut self,
         _: &core::Instance<W>,
-        ctx: &CompBinding<T, W>,
+        _ctx: &CompBinding<T, W>,
     ) -> FilamentResult<()> {
         Ok(())
     }
@@ -40,7 +45,7 @@ where
     fn fsm(
         &mut self,
         _: &core::Fsm,
-        ctx: &CompBinding<T, W>,
+        _ctx: &CompBinding<T, W>,
     ) -> FilamentResult<()> {
         Ok(())
     }
@@ -51,7 +56,7 @@ where
     fn invoke(
         &mut self,
         _: &core::Invoke<T>,
-        ctx: &CompBinding<T, W>,
+        _ctx: &CompBinding<T, W>,
     ) -> FilamentResult<()> {
         Ok(())
     }
@@ -60,7 +65,7 @@ where
     fn signature(
         &mut self,
         sig: &core::Signature<T, W>,
-        ctx: &CompBinding<T, W>,
+        _ctx: &CompBinding<T, W>,
     ) -> FilamentResult<()> {
         Ok(())
     }
@@ -70,7 +75,7 @@ where
     fn enter_component(
         &mut self,
         comp: &core::Component<T, W>,
-        ctx: &CompBinding<T, W>,
+        _ctx: &CompBinding<T, W>,
     ) -> FilamentResult<()> {
         Ok(())
     }
@@ -80,7 +85,7 @@ where
     fn exit_component(
         &mut self,
         comp: &core::Component<T, W>,
-        ctx: &CompBinding<T, W>,
+        _ctx: &CompBinding<T, W>,
     ) -> FilamentResult<()> {
         Ok(())
     }
@@ -109,8 +114,10 @@ where
         let mut pass = Self::new();
 
         for comp in &ns.components {
-            pass.clear_data();
-            pass.component(comp, &prog_ctx)?;
+            if pass.component_filter(comp) {
+                pass.clear_data();
+                pass.component(comp, prog_ctx)?;
+            }
         }
 
         Ok(pass)

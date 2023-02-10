@@ -7,8 +7,10 @@ use codespan_reporting::{
 };
 use filament::{
     backend, bind_check, cmdline, dump_interface, errors, interval_checking,
-    lower, max_states, monomorphize, phantom_check, resolver::Resolver,
-    utils::GlobalPositionTable, visitor::Transform,
+    lower, max_states, monomorphize, phantom_check,
+    resolver::Resolver,
+    utils::GlobalPositionTable,
+    visitor::{Checker, Transform},
 };
 
 // Prints out the interface for main component in the input program.
@@ -36,7 +38,7 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     log::info!("Interval check: {}ms", t.elapsed().as_millis());
 
     // User-level @phantom ports
-    let (ns, _) = phantom_check::PhantomCheck::transform(ns, ())?;
+    phantom_check::PhantomCheck::check(&ns)?;
     log::info!("Phantom check: {}ms", t.elapsed().as_millis());
 
     // Return early if we're asked to dump the interface

@@ -1,7 +1,6 @@
 //! Context that tracks the binding information in a particular program
-use itertools::Itertools;
-
 use crate::core::{self, Id, PortParam, TimeRep, WidthRep};
+use itertools::Itertools;
 use std::collections::HashMap;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -126,6 +125,13 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
     pub fn get_invoke(&self, idx: &Id) -> &BoundInvoke<T> {
         let idx = self.get_invoke_idx(idx).unwrap();
         &self[idx]
+    }
+
+    /// Get the signature associated with an invoke
+    pub fn get_invoke_sig(&self, invoke: &Id) -> SigIdx {
+        let inv = self.get_invoke(invoke);
+        let inst = &self[inv.instance];
+        inst.sig
     }
 
     /// Get the index for a given instance name
@@ -283,6 +289,26 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
                 .inputs()
                 .map(|pd| &pd.name)
                 .collect_vec(),
+        }
+    }
+
+    /// Get the phantom events
+    pub fn phantom_events(&self, sig: SigIdx) -> Vec<Id> {
+        match sig {
+            SigIdx::Ext(idx) => {
+                self.externals[idx].phantom_events().collect_vec()
+            }
+            SigIdx::Comp(idx) => {
+                self.components[idx].phantom_events().collect_vec()
+            }
+        }
+    }
+
+    /// Get the events from a signature
+    pub fn events(&self, sig: SigIdx) -> &Vec<core::EventBind<T>> {
+        match sig {
+            SigIdx::Ext(idx) => &self.externals[idx].events,
+            SigIdx::Comp(idx) => &self.components[idx].events,
         }
     }
 }

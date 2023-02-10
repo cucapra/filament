@@ -17,9 +17,8 @@ pub struct PhantomCheck<T: TimeRep, W: WidthRep> {
     _tw: std::marker::PhantomData<(T, W)>,
 }
 
-impl<T: TimeRep, W: WidthRep> visitor::Transform<T, W> for PhantomCheck<T, W> {
-    type Info = ();
-    fn new(_: &core::Namespace<T, W>, _: &Self::Info) -> Self {
+impl<T: TimeRep, W: WidthRep> visitor::Checker<T, W> for PhantomCheck<T, W> {
+    fn new() -> Self {
         Self {
             instance_used: HashSet::new(),
             phantom_events: Vec::new(),
@@ -39,17 +38,18 @@ impl<T: TimeRep, W: WidthRep> visitor::Transform<T, W> for PhantomCheck<T, W> {
 
     fn enter_component(
         &mut self,
-        comp: core::Component<T, W>,
-    ) -> FilamentResult<core::Component<T, W>> {
+        comp: &core::Component<T, W>,
+        ctx: &visitor::CompBinding<T, W>,
+    ) -> FilamentResult<()> {
         self.phantom_events = comp.sig.phantom_events().collect();
-        Ok(comp)
+        Ok(())
     }
 
     fn invoke(
         &mut self,
-        inv: core::Invoke<T>,
-        resolved: &visitor::ResolvedInstance<T, W>,
-    ) -> FilamentResult<Vec<core::Command<T, W>>> {
+        inv: &core::Invoke<T>,
+        ctx: &visitor::CompBinding<T, W>,
+    ) -> FilamentResult<()> {
         // Check if the instance has already been used
         if let Some(prev_use) = self.instance_used.get(&inv.instance) {
             for ev in inv.abstract_vars.iter().map(|ev| ev.event()) {
@@ -68,11 +68,10 @@ impl<T: TimeRep, W: WidthRep> visitor::Transform<T, W> for PhantomCheck<T, W> {
 
         // For each binding provided to a non-phantom port, check that the
         // mentioned events are not non-phantom
-        let instance_phantoms = resolved.phantom_events();
-        for (eb, bind) in resolved
-            .abstract_vars()
-            .iter()
-            .zip(inv.abstract_vars.iter())
+        let sig = ctx.get_invoke_sig(&inv.name);
+        let instance_phantoms = ctx.prog.phantom_events(sig);
+        for (eb, bind) in
+            ctx.prog.events(sig).iter().zip(inv.abstract_vars.iter())
         {
             // If this event is non-phantom, ensure all provided events are non-phantom as well.
             if !instance_phantoms.contains(&eb.event) {
@@ -88,6 +87,6 @@ impl<T: TimeRep, W: WidthRep> visitor::Transform<T, W> for PhantomCheck<T, W> {
             }
         }
 
-        Ok(vec![inv.into()])
+        Ok(())
     }
 }
