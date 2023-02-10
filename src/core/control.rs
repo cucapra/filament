@@ -12,13 +12,11 @@ pub struct Port {
     pos: GPosIdx,
 }
 impl Port {
-    pub fn name(&self) -> &Id {
+    pub fn name(&self) -> Id {
         match &self.typ {
-            PortType::ThisPort(n) => n,
-            PortType::InvPort { name, .. } => name,
-            PortType::Constant(_) => {
-                unreachable!("Port::name called on Constant")
-            }
+            PortType::ThisPort(n) => n.clone(),
+            PortType::InvPort { name, .. } => name.clone(),
+            PortType::Constant(n) => Id::from(format!("const<{}>", n)),
         }
     }
 }

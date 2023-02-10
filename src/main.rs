@@ -6,6 +6,7 @@ use codespan_reporting::{
     term::{self, termcolor::ColorChoice, termcolor::StandardStream},
 };
 use filament::{
+    ast::mono,
     backend, bind_check, cmdline, dump_interface, errors, interval_checking,
     lower, max_states, monomorphize, phantom_check,
     resolver::Resolver,
@@ -29,7 +30,7 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
 
     // Bind check
     let t = Instant::now();
-    let ns = bind_check::check(ns)?;
+    bind_check::BindCheck::check(&ns)?;
     log::info!("Parameteric Bind check: {}ms", t.elapsed().as_millis());
 
     // Interval checking
@@ -45,6 +46,9 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     if opts.check {
         return Ok(());
     }
+
+    let ns: mono::Namespace = mono::Namespace::default();
+    interval_checking::IntervalCheck::check(&ns)?;
 
     /*
     // Monomorphize the program.

@@ -7,8 +7,8 @@ error: Port width mismatch
  5 │     a0 := A<G>(a, a);
    │                ^ Source `a' has width W
    │
-   ┌─ ./primitives/core.fil:11:5
+   ┌─ ./primitives/core.fil:11:13
    │
 11 │     @[G, L] left: WIDTH,
-   │     ------------------- Destination `left' has width 32
+   │             ---- Destination `left' has width 32
 

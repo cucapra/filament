@@ -1,5 +1,8 @@
 //! Context that tracks the binding information in a particular program
-use crate::core::{self, Id, PortParam, TimeRep, WidthRep};
+use crate::{
+    core::{self, Id, PortParam, TimeRep, WidthRep},
+    errors::{Error, FilamentResult, WithPos},
+};
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -8,7 +11,7 @@ use std::collections::HashMap;
 pub enum SigIdx {
     /// An external component
     Ext(usize),
-    /// A Filament componen
+    /// A Filament component
     Comp(usize),
 }
 
@@ -23,9 +26,7 @@ pub struct InvIdx(usize);
 /// The type of instance binding
 pub enum InstBind<'a, T: TimeRep, W: WidthRep> {
     /// Signature for external components always contains parameterized ports.
-    External {
-        sig: &'a core::Signature<T, core::PortParam>,
-    },
+    External { sig: &'a core::ExternalSignature },
     /// Filament-level components are width parameteric.
     Component { sig: &'a core::Signature<T, W> },
 }
@@ -95,7 +96,7 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
     pub fn new(
         prog_ctx: &'p ProgBinding<'p, T, W>,
         comp: &core::Component<T, W>,
-    ) -> Self {
+    ) -> FilamentResult<Self> {
         let sig = prog_ctx.find_sig_idx(&comp.sig.name).unwrap();
         let mut ctx = Self {
             prog: prog_ctx,
@@ -108,15 +109,33 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
         for cmd in &comp.body {
             match cmd {
                 core::Command::Instance(inst) => {
-                    ctx.add_instance(inst);
+                    if ctx.add_instance(inst).is_none() {
+                        return Err(Error::undefined(
+                            inst.component.clone(),
+                            "component",
+                        )
+                        .add_note(
+                            "Component is not bound",
+                            inst.component.copy_span(),
+                        ));
+                    }
                 }
                 core::Command::Invoke(inv) => {
-                    ctx.add_invoke(inv);
+                    if ctx.add_invoke(inv).is_none() {
+                        return Err(Error::undefined(
+                            inv.instance.clone(),
+                            "instance",
+                        )
+                        .add_note(
+                            "Instance is not bound",
+                            inv.instance.copy_span(),
+                        ));
+                    }
                 }
                 _ => (),
             }
         }
-        ctx
+        Ok(ctx)
     }
 
     /// Signature associated with this component
@@ -340,44 +359,45 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
 
     // ============= Dispatch methods on Signatures =============
 
+    /// Apply function on either an external or component signature and return the result
+    #[inline]
+    pub fn map_signature<O>(
+        &self,
+        sig: SigIdx,
+        ext: impl Fn(&'a core::Signature<T, PortParam>) -> O,
+        comp: impl Fn(&'a core::Signature<T, W>) -> O,
+    ) -> O {
+        match sig {
+            SigIdx::Ext(idx) => ext(self.externals[idx]),
+            SigIdx::Comp(idx) => comp(self.components[idx]),
+        }
+    }
+
     /// Get all the outputs in a signature
     pub fn output_names(&self, sig: SigIdx) -> Vec<&Id> {
-        match sig {
-            SigIdx::Ext(idx) => self.externals[idx]
-                .outputs()
-                .map(|pd| &pd.name)
-                .collect_vec(),
-            SigIdx::Comp(idx) => self.components[idx]
-                .outputs()
-                .map(|pd| &pd.name)
-                .collect_vec(),
-        }
+        self.map_signature(
+            sig,
+            |ext| ext.outputs().map(|pd| &pd.name).collect_vec(),
+            |comp| comp.outputs().map(|pd| &pd.name).collect_vec(),
+        )
     }
 
     /// Get all the inputs in a signature
     pub fn input_names(&self, sig: SigIdx) -> Vec<&Id> {
-        match sig {
-            SigIdx::Ext(idx) => self.externals[idx]
-                .inputs()
-                .map(|pd| &pd.name)
-                .collect_vec(),
-            SigIdx::Comp(idx) => self.components[idx]
-                .inputs()
-                .map(|pd| &pd.name)
-                .collect_vec(),
-        }
+        self.map_signature(
+            sig,
+            |ext| ext.inputs().map(|pd| &pd.name).collect_vec(),
+            |comp| comp.inputs().map(|pd| &pd.name).collect_vec(),
+        )
     }
 
     /// Get the phantom events
     pub fn phantom_events(&self, sig: SigIdx) -> Vec<Id> {
-        match sig {
-            SigIdx::Ext(idx) => {
-                self.externals[idx].phantom_events().collect_vec()
-            }
-            SigIdx::Comp(idx) => {
-                self.components[idx].phantom_events().collect_vec()
-            }
-        }
+        self.map_signature(
+            sig,
+            |ext| ext.phantom_events().collect_vec(),
+            |comp| comp.phantom_events().collect_vec(),
+        )
     }
 
     /// Get the events from a signature

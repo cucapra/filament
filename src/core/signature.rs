@@ -1,6 +1,6 @@
 use super::{
-    Binding, Constraint, Id, InterfaceDef, OrderConstraint, PortDef, Range,
-    TimeRep, WidthRep, WithTime,
+    Binding, Constraint, Id, InterfaceDef, OrderConstraint, PortDef, PortParam,
+    Range, Time, TimeRep, WidthRep, WithTime,
 };
 use crate::{
     errors::{Error, FilamentResult, WithPos},
@@ -85,6 +85,10 @@ where
         }
     }
 }
+
+/// Signature of an external signature. The compiler cannot modify this type
+/// during compilation.
+pub type ExternalSignature = Signature<Time<PortParam>, PortParam>;
 
 /// The signature of a component definition
 #[derive(Clone)]

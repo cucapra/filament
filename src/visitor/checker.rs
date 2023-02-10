@@ -96,7 +96,7 @@ where
         comp: &core::Component<T, W>,
         prog_ctx: &super::ProgBinding<T, W>,
     ) -> FilamentResult<()> {
-        let ctx = &CompBinding::new(prog_ctx, comp);
+        let ctx = &CompBinding::new(prog_ctx, comp)?;
 
         // Binding for instances
         self.enter_component(comp, ctx)?;
@@ -109,9 +109,20 @@ where
         self.exit_component(comp, ctx)
     }
 
+    fn external(
+        &mut self,
+        _: &core::Signature<T, core::PortParam>,
+    ) -> FilamentResult<()> {
+        Ok(())
+    }
+
     fn check(ns: &core::Namespace<T, W>) -> FilamentResult<Self> {
         let prog_ctx = &ProgBinding::from(ns);
         let mut pass = Self::new(ns)?;
+
+        for (_, ext) in ns.signatures() {
+            pass.external(ext)?;
+        }
 
         for comp in &ns.components {
             if pass.component_filter(comp) {

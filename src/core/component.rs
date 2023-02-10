@@ -87,12 +87,20 @@ where
 {
     /// Imported files
     pub imports: Vec<String>,
-
     /// Define externals and their files
     pub externs: Vec<(String, Vec<Signature<T, PortParam>>)>,
-
     /// Components defined in this file
     pub components: Vec<Component<T, W>>,
+}
+
+impl<T: TimeRep, W: WidthRep> Default for Namespace<T, W> {
+    fn default() -> Self {
+        Self {
+            imports: Vec::new(),
+            externs: Vec::new(),
+            components: Vec::new(),
+        }
+    }
 }
 
 impl<T, W> Namespace<T, W>
