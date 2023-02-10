@@ -195,7 +195,7 @@ impl<W: WidthRep> WithPos for Instance<W> {
 /// An Invocation
 pub struct Invoke<T: TimeRep> {
     /// Name of the variable being assigned
-    pub bind: Id,
+    pub name: Id,
 
     /// Name of the component being invoked
     pub instance: Id,
@@ -221,7 +221,7 @@ where
         ports: Option<Vec<Port>>,
     ) -> Self {
         Self {
-            bind,
+            name: bind,
             instance,
             abstract_vars,
             ports,
@@ -248,7 +248,7 @@ impl<T: TimeRep> Display for Invoke<T> {
             write!(
                 f,
                 "{} := {}<{}>({})",
-                self.bind,
+                self.name,
                 self.instance,
                 abs,
                 ports
@@ -258,7 +258,7 @@ impl<T: TimeRep> Display for Invoke<T> {
                     .join(",")
             )
         } else {
-            write!(f, "{} := invoke {}<{}>", self.bind, self.instance, abs)
+            write!(f, "{} := invoke {}<{}>", self.name, self.instance, abs)
         }
     }
 }

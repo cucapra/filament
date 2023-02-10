@@ -102,7 +102,7 @@ impl<'a, T: TimeRep, W: WidthRep> BindCheck<'a, T, W> {
     /// Check that an invoke's instance is bound and and bind its signature
     fn bind_invoke(&mut self, inv: &core::Invoke<T>) -> FilamentResult<()> {
         self.invocations
-            .add(inv.bind.clone(), inv.instance.clone())?;
+            .add(inv.name.clone(), inv.instance.clone())?;
         // Get the signature for the instance
         let inst = self.instances.find(&inv.instance).map_err(|_| {
             Error::undefined(inv.instance.clone(), "Instance")
@@ -169,7 +169,7 @@ impl<'a, T: TimeRep, W: WidthRep> BindCheck<'a, T, W> {
             let sig = inst.resolve()?;
             for (actual, formal) in ports.iter().zip(sig.inputs()) {
                 let dst =
-                    core::Port::comp(inv.bind.clone(), formal.name.clone())
+                    core::Port::comp(inv.name.clone(), formal.name.clone())
                         .set_span(formal.copy_span());
                 self.connect(&dst, actual)?;
             }

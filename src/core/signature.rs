@@ -97,13 +97,13 @@ where
     pub name: Id,
     /// Parameters for the Signature
     pub params: Vec<Id>,
-    /// Names of abstract variables bound by the component
-    pub events: Vec<EventBind<Time>>,
     /// Unannotated ports that are threaded through by the backend
     pub unannotated_ports: Vec<(Id, u64)>,
     /// Mapping from name of signals to the abstract variable they provide
     /// evidence for.
     pub interface_signals: Vec<InterfaceDef>,
+    /// Names of abstract variables bound by the component
+    pub events: Vec<EventBind<Time>>,
     /// Constraints on the abstract variables in the signature
     pub constraints: Vec<Constraint<Time>>,
     /// All the input/output ports.
@@ -166,6 +166,15 @@ where
             .find(|eb| eb.event == event)
             .unwrap_or_else(|| {
                 panic!("Event {} not found in signature:\n{}", event, self.name)
+            })
+    }
+    /// Get a port using its name
+    pub fn get_port(&self, port: &Id) -> &PortDef<T, W> {
+        self.ports
+            .iter()
+            .find(|p| p.name == *port)
+            .unwrap_or_else(|| {
+                panic!("Port {} not found in signature:\n{}", port, self.name)
             })
     }
 

@@ -149,7 +149,7 @@ impl<T: TimeRep, W: WidthRep> Context<'_, T, W> {
 
         // Add this invocation to the context
         self.add_invocation(
-            invoke.bind.clone(),
+            invoke.name.clone(),
             ConcreteInvoke::concrete(binding, sig),
         );
 
@@ -166,12 +166,12 @@ impl<T: TimeRep, W: WidthRep> Context<'_, T, W> {
             // Check connections implied by the invocation
             for (actual, formal) in actuals.iter().zip(sig.inputs()) {
                 let dst =
-                    core::Port::comp(invoke.bind.clone(), formal.name.clone())
+                    core::Port::comp(invoke.name.clone(), formal.name.clone())
                         .set_span(formal.copy_span());
                 self.check_connect(&dst, actual)?;
             }
         } else {
-            self.add_remaning_assigns(invoke.bind.clone(), &invoke.instance)?;
+            self.add_remaning_assigns(invoke.name.clone(), &invoke.instance)?;
         }
 
         Ok(())

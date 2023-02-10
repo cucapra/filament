@@ -364,7 +364,7 @@ fn compile_component(
     for cmd in comp.body {
         match cmd {
             ast::Command::Invoke(ast::Invoke {
-                bind,
+                name: bind,
                 instance,
                 ports,
                 ..

@@ -80,7 +80,7 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for CompileInvokes<W> {
         let pos = inv.copy_span();
         // Compile only if this is a high-level invoke
         if let core::Invoke {
-            bind,
+            name: bind,
             instance,
             abstract_vars,
             ports: Some(ports),
