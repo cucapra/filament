@@ -63,12 +63,12 @@ impl<T: TimeRep, W: WidthRep> visitor::Checker<T, W> for BindCheck {
     ) -> FilamentResult<()> {
         Self::bind_invoke(inv, ctx)?;
         let sig = ctx.get_invoke_sig(&inv.name);
-        let events = ctx.prog.events(sig);
+        let events = ctx.prog.event_names(sig);
         if let Some(ports) = &inv.ports {
             // Check that scheduling events are bound
             for time in &inv.abstract_vars {
                 let ev = time.event();
-                if !events.iter().any(|e| e.event == ev) {
+                if !events.iter().any(|e| **e == ev) {
                     return Err(Error::undefined(ev.clone(), "Event")
                         .add_note("Event is not bound", ev.copy_span()));
                 }
@@ -143,13 +143,22 @@ impl BindCheck {
     ) -> FilamentResult<()> {
         let sig = ctx.get_invoke_sig(&inv.name);
         // Check that the number of arguments is more than the minimum number of required formals
-        let min_formals = ctx
-            .prog
-            .events(sig)
-            .iter()
-            .take_while(|eb| eb.default.is_none())
-            .count();
-        let max_formals = ctx.prog.events(sig).len();
+        let min_formals = ctx.prog.map_signature(
+            sig,
+            |e| {
+                e.events
+                    .iter()
+                    .take_while(|eb| eb.default.is_none())
+                    .count()
+            },
+            |c| {
+                c.events
+                    .iter()
+                    .take_while(|eb| eb.default.is_none())
+                    .count()
+            },
+        );
+        let max_formals = ctx.prog.event_names(sig).len();
         let actuals = inv.abstract_vars.len();
         if min_formals > actuals {
             return Err(Error::malformed(format!(

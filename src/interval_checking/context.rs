@@ -122,10 +122,9 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T, W> {
         }
 
         // Iterate over each event
-        let events = ctx.prog.events(ctx[inst].sig);
+        let events = ctx.prog.event_names(ctx[inst].sig);
         let mut share_constraints = Vec::new();
         let num_bindings = invoke_bindings.len();
-        // for (idx) in ctx.prog.events(sig).iter().enumerate() {
         for event in 0..events.len() {
             // Build up a sharing constraint for each event in the signature.
             // Since all bindings use the same event, we can use the event mentioned in the first binding

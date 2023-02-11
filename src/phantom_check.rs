@@ -70,11 +70,14 @@ impl<T: TimeRep, W: WidthRep> visitor::Checker<T, W> for PhantomCheck<T, W> {
         // mentioned events are not non-phantom
         let sig = ctx.get_invoke_sig(&inv.name);
         let instance_phantoms = ctx.prog.phantom_events(sig);
-        for (eb, bind) in
-            ctx.prog.events(sig).iter().zip(inv.abstract_vars.iter())
+        for (eb, bind) in ctx
+            .prog
+            .event_names(sig)
+            .iter()
+            .zip(inv.abstract_vars.iter())
         {
             // If this event is non-phantom, ensure all provided events are non-phantom as well.
-            if !instance_phantoms.contains(&eb.event) {
+            if !instance_phantoms.contains(eb) {
                 let ev = &bind.event();
                 if let Some(e) = self.phantom_events.iter().find(|e| *e == ev) {
                     return Err(Error::malformed(

@@ -96,7 +96,9 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
 
         // Check that the invocation's events satisfy well-formedness the component's constraints
         let constraints = ctx
-            .get_resolved_sig_constraints(&invoke.name, |c, e, p| {
+            .get_invoke_idx(&invoke.name)
+            .unwrap()
+            .get_resolved_sig_constraints(ctx, |c, e, p| {
                 c.resolve_event(e).resolve_offset(p)
             });
 
@@ -174,47 +176,49 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T, W> {
         invoke: &core::Invoke<T>,
         ctx: &CompBinding<T, W>,
     ) -> FilamentResult<()> {
-        let sig = ctx.get_invoke_sig(&invoke.name);
-        let binding = ctx.prog.event_binding(sig, &invoke.abstract_vars);
+        let inv_sig = ctx
+            .get_invoke_idx(&invoke.name)
+            .unwrap()
+            .resolved_signature(ctx);
+        let binds = &ctx.get_invoke(&invoke.name).events;
+        let this_sig = ctx.prog.comp_sig(ctx.sig());
 
         let mut constraints = vec![];
 
-        // For each event provided in the bining, ensure that the corresponding interface
-        // does not pulse more often than the interface allows.
-        for (abs, evs) in binding.iter() {
-            let inst_event = ctx.prog.get_event(sig, abs);
+        // For each event provided in the bindings, ensure that the delay is
+        // less than the delay in the interface.
+        for (idx, ev_expr) in binds.iter().enumerate() {
+            let ev = ev_expr.event();
 
-            // Each event in the binding must pulse less often than the interface of the abstract
-            // variable.
-            let event = &evs.event();
-            // Get interface for this event
-            let event_interface = ctx.prog.get_event(ctx.sig(), event);
-            let int_len = inst_event.delay.resolve_event(&binding);
-            let ev_int_len = &event_interface.delay;
+            let this_ev = this_sig.get_event(&ev);
+            let this_ev_delay = &this_ev.delay;
+            let ev = &inv_sig.events[idx];
+            let ev_delay = &ev.delay;
 
             // Generate constraint
-            let cons = core::Constraint::sub(core::OrderConstraint::gte(
-                ev_int_len.clone(),
-                int_len.clone(),
-            ))
-            .add_note(
-                "Event provided to invoke pulses more often than event allows",
-                invoke.copy_span(),
-            )
-            .add_note(
-                format!(
-                    "Provided event may trigger every {} cycles",
-                    ev_int_len,
-                ),
-                event_interface.copy_span(),
-            )
-            .add_note(
-                format!(
-                    "Delay requires event to trigger once in {} cycles",
-                    int_len,
-                ),
-                inst_event.copy_span(),
-            );
+            let cons =
+                core::Constraint::sub(core::OrderConstraint::gte(
+                    this_ev_delay.clone(),
+                    ev_delay.clone(),
+                ))
+                .add_note(
+                    "Event provided to invoke triggers too often",
+                    invoke.copy_span(),
+                )
+                .add_note(
+                    format!(
+                        "Provided event may trigger every {} cycles",
+                        ev_delay,
+                    ),
+                    ev.copy_span(),
+                )
+                .add_note(
+                    format!(
+                        "Interface requires event to trigger once in {} cycles",
+                        this_ev_delay,
+                    ),
+                    this_ev.copy_span(),
+                );
             constraints.push(cons);
         }
         self.add_obligations(constraints.into_iter());

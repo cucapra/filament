@@ -74,10 +74,12 @@ impl<W: WidthRep> visitor::Checker<core::Time<u64>, W> for MaxStates<W> {
         let inst = ctx.get_instance(&inv.instance);
         let outputs = ctx.prog.output_names(inst.sig);
         let ports = outputs.into_iter().map(|port| {
-            ctx.get_invoke_port(&inv.name, port, |range, event_b, _| {
-                range.resolve_event(event_b)
-            })
-            .unwrap()
+            ctx.get_invoke_idx(&inv.name)
+                .unwrap()
+                .get_invoke_port(ctx, port, |range, event_b, _| {
+                    range.resolve_event(event_b)
+                })
+                .unwrap()
         });
 
         // Get the signature associated with this instance.
