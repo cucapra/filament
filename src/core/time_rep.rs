@@ -67,12 +67,7 @@ where
     Self: Sized + Eq + std::hash::Hash + Clone + Display + Into<SExp>,
 {
     /// Representation of absolute difference b/w two events of this TimeRep
-    type SubRep: WithTime<Self>
-        + Clone
-        + Eq
-        + std::hash::Hash
-        + Display
-        + Into<SExp>;
+    type SubRep: TimeSubRep<Self>;
 
     /// Offset for this time expression
     type Offset;
@@ -92,7 +87,20 @@ where
     fn resolve_offset(&self, bindings: &Binding<Self::Offset>) -> Self;
 
     /// Convert this into a time with port param.
-    fn into_port_param(self) -> Time<PortParam>;
+    fn lift(self) -> Time<PortParam>;
+}
+
+/// Representation of time events being substracted
+pub trait TimeSubRep<T>
+where
+    T: TimeRep,
+    Self: WithTime<T> + Clone + Eq + std::hash::Hash + Display + Into<SExp>,
+{
+    fn unit(n: u64) -> Self;
+    fn sym(l: T, r: T) -> Self;
+    /// Return the concrete difference if possible
+    fn concrete(&self) -> Option<u64>;
+    fn lift(self) -> TimeSub<Time<PortParam>>;
 }
 
 /// Traits that allow application of a binding to a data structure
@@ -146,32 +154,33 @@ where
     Sym { l: T, r: T },
 }
 
-impl<T> TimeSub<T>
+impl<T> TimeSubRep<T> for TimeSub<T>
 where
     T: TimeRep,
+    SExp: From<T>,
 {
-    pub fn unit(n: u64) -> Self {
+    fn unit(n: u64) -> Self {
         TimeSub::Unit(n)
     }
 
-    pub fn sym(l: T, r: T) -> Self {
+    fn sym(l: T, r: T) -> Self {
         TimeSub::Sym { l, r }
     }
 
-    pub fn events(&self) -> Vec<Id> {
-        match self {
-            TimeSub::Unit(_) => vec![],
-            TimeSub::Sym { l, r } => {
-                vec![l.event(), r.event()]
-            }
-        }
-    }
-
-    /// Return the concrete difference if possible
-    pub fn concrete(&self) -> Option<u64> {
+    fn concrete(&self) -> Option<u64> {
         match self {
             TimeSub::Unit(n) => Some(*n),
             TimeSub::Sym { .. } => None,
+        }
+    }
+
+    fn lift(self) -> TimeSub<Time<PortParam>> {
+        match self {
+            TimeSub::Unit(n) => TimeSub::Unit(n),
+            TimeSub::Sym { l, r } => TimeSub::Sym {
+                l: l.lift(),
+                r: r.lift(),
+            },
         }
     }
 }

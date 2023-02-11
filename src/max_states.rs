@@ -1,5 +1,5 @@
 use crate::{
-    core::{self, Id, Time, WidthRep, WithTime},
+    core::{self, Id, Time, TimeRep, WidthRep, WithTime},
     errors::FilamentResult,
     visitor,
 };
@@ -19,12 +19,14 @@ pub struct MaxStates<W: WidthRep> {
 }
 
 impl<W: WidthRep> MaxStates<W> {
-    fn max_state_from_ports(
+    fn max_state_from_ports<T: Clone>(
         &mut self,
-        resolved_outputs: impl IntoIterator<Item = core::PortDef<Time<u64>, W>>,
-    ) {
+        resolved_outputs: impl IntoIterator<Item = core::PortDef<Time<T>, W>>,
+    ) where
+        Time<T>: TimeRep,
+    {
         let out_events = resolved_outputs.into_iter().flat_map(
-            |pd: core::PortDef<Time<u64>, W>| {
+            |pd: core::PortDef<Time<T>, W>| {
                 pd.liveness.events().into_iter().cloned().collect_vec()
             },
         );

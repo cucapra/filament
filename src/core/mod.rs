@@ -19,5 +19,5 @@ pub use interval::Range;
 pub use offset_time::{Time, TimeSum};
 pub use port::{InterfaceDef, PortDef, PortParam};
 pub use signature::{EventBind, ExternalSignature, Signature};
-pub use time_rep::{Binding, TimeRep, TimeSub, WithTime};
+pub use time_rep::{Binding, TimeRep, TimeSub, TimeSubRep, WithTime};
 pub use width_rep::WidthRep;

@@ -1,4 +1,4 @@
-use crate::core::{self, Time, WidthRep};
+use crate::core::{self, Time, TimeSubRep, WidthRep};
 use crate::errors::{self, FilamentResult, WithPos};
 use crate::visitor;
 use std::collections::HashMap;

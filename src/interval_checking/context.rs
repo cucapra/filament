@@ -144,15 +144,16 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T, W> {
                     GPosIdx::UNKNOWN,
                 );
 
-                for k in 0..num_bindings {
+                // All other bindings must be separated by at least the delay of this binding
+                // XXX: There probably a more efficient encoding where we ensure that the
+                //      events are max(delay_i, delay_k) cycles apart
+                for (k, start_k) in
+                    invoke_bindings.iter().map(|b| &b[event].0).enumerate()
+                {
                     if i == k {
                         continue;
                     }
 
-                    // The bindings must be separated by at least the delay of the first binding
-                    // XXX: There probably a more efficient encoding where we ensure that the
-                    //      events are max(delay_i, delay_k) cycles apart
-                    let (start_k, _) = &invoke_bindings[k][event];
                     let con =
                         core::Constraint::sub(core::OrderConstraint::gte(
                             start_i.clone().sub(start_k.clone()),

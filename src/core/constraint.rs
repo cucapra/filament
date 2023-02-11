@@ -1,6 +1,9 @@
 use derivative::Derivative;
 
-use super::{Binding, Id, Range, TimeRep, WithTime};
+use super::{
+    time_rep::TimeSubRep, Binding, Id, PortParam, Range, Time, TimeRep,
+    WithTime,
+};
 use crate::{interval_checking::SExp, utils::GPosIdx};
 use std::fmt::Display;
 
@@ -222,6 +225,45 @@ impl<T: TimeRep> Constraint<T> {
         match self {
             Constraint::Base { base } => base.op != OrderOp::Eq,
             Constraint::Sub { base } => base.op != OrderOp::Eq,
+        }
+    }
+
+    pub fn lift(self) -> Constraint<Time<PortParam>> {
+        match self {
+            Constraint::Base {
+                base:
+                    OrderConstraint {
+                        left,
+                        right,
+                        op,
+                        extra,
+                        ..
+                    },
+            } => Constraint::Base {
+                base: OrderConstraint {
+                    left: left.lift(),
+                    right: right.lift(),
+                    op,
+                    extra,
+                },
+            },
+            Constraint::Sub {
+                base:
+                    OrderConstraint {
+                        left,
+                        right,
+                        op,
+                        extra,
+                        ..
+                    },
+            } => Constraint::Sub {
+                base: OrderConstraint {
+                    left: left.lift(),
+                    right: right.lift(),
+                    op,
+                    extra,
+                },
+            },
         }
     }
 }

@@ -2,7 +2,9 @@ use std::fmt::Display;
 
 use crate::{errors, utils::GPosIdx};
 
-use super::{Binding, Constraint, OrderConstraint, TimeRep, WithTime};
+use super::{
+    Binding, Constraint, OrderConstraint, PortParam, Time, TimeRep, WithTime,
+};
 
 /// A range over time representation
 #[derive(Clone)]
@@ -40,6 +42,14 @@ where
     /// Return the length of this range
     pub fn len(&self) -> T::SubRep {
         self.end.clone().sub(self.start.clone())
+    }
+
+    pub fn lift(self) -> Range<Time<PortParam>> {
+        Range {
+            start: self.start.lift(),
+            end: self.end.lift(),
+            pos: self.pos,
+        }
     }
 }
 

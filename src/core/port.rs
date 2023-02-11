@@ -1,4 +1,4 @@
-use super::{Binding, Id, Range, TimeRep, WidthRep, WithTime};
+use super::{Binding, Id, Range, Time, TimeRep, WidthRep, WithTime};
 use crate::{errors::WithPos, utils::GPosIdx};
 use std::fmt::Display;
 
@@ -57,6 +57,15 @@ where
             liveness,
             bitwidth,
             pos: GPosIdx::UNKNOWN,
+        }
+    }
+
+    pub fn lift(self) -> PortDef<Time<PortParam>, PortParam> {
+        PortDef {
+            name: self.name,
+            liveness: self.liveness.lift(),
+            bitwidth: self.bitwidth.lift(),
+            pos: self.pos,
         }
     }
 }

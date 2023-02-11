@@ -11,6 +11,8 @@ where
     fn param(v: Id) -> Self;
     /// Resolve the width given a binding
     fn resolve<W: WidthRep>(&self, bindings: &Binding<W>) -> Option<W>;
+    /// Lift the width to a port param
+    fn lift(self) -> PortParam;
 }
 
 impl WidthRep for u64 {
@@ -22,6 +24,9 @@ impl WidthRep for u64 {
     }
     fn resolve<W: WidthRep>(&self, _: &Binding<W>) -> Option<W> {
         Some(W::concrete(*self))
+    }
+    fn lift(self) -> PortParam {
+        PortParam::Const(self)
     }
 }
 impl WidthRep for PortParam {
@@ -36,5 +41,8 @@ impl WidthRep for PortParam {
             PortParam::Const(c) => Some(W::concrete(*c)),
             PortParam::Var(v) => bindings.find(v).cloned(),
         }
+    }
+    fn lift(self) -> PortParam {
+        self
     }
 }

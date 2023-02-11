@@ -11,7 +11,7 @@ pub struct TimeSum<T> {
     abs: Vec<T>,
 }
 
-impl TimeSum<u64> {
+impl<T> TimeSum<T> {
     pub fn concrete(&self) -> u64 {
         assert!(self.abs.is_empty());
         self.concrete
@@ -175,7 +175,7 @@ impl TimeRep for Time<u64> {
         self.event.clone()
     }
 
-    fn into_port_param(self) -> Time<PortParam> {
+    fn lift(self) -> Time<PortParam> {
         Time {
             event: self.event,
             offset: vec![PortParam::Const(self.offset.concrete)].into(),
@@ -267,7 +267,7 @@ impl TimeRep for Time<PortParam> {
         self.event.clone()
     }
 
-    fn into_port_param(self) -> Time<PortParam> {
+    fn lift(self) -> Time<PortParam> {
         self
     }
 }

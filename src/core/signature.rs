@@ -1,6 +1,6 @@
 use super::{
-    Binding, Constraint, Id, InterfaceDef, OrderConstraint, PortDef, PortParam,
-    Range, Time, TimeRep, WidthRep, WithTime,
+    time_rep::TimeSubRep, Binding, Constraint, Id, InterfaceDef,
+    OrderConstraint, PortDef, PortParam, Time, TimeRep, WidthRep, WithTime,
 };
 use crate::{
     errors::{Error, FilamentResult, WithPos},
@@ -72,7 +72,17 @@ where
             pos: GPosIdx::UNKNOWN,
         }
     }
+
+    pub fn lift(self) -> EventBind<Time<PortParam>> {
+        EventBind {
+            event: self.event,
+            delay: self.delay.lift(),
+            default: self.default.map(|d| d.lift()),
+            pos: self.pos,
+        }
+    }
 }
+
 impl<T> Display for EventBind<T>
 where
     T: TimeRep,
@@ -198,45 +208,6 @@ where
     /// Return the interface associated with an event defined in the signature.
     pub fn get_interface(&self, event: &Id) -> Option<&InterfaceDef> {
         self.interface_signals.iter().find(|id| id.event == event)
-    }
-
-    /// Returns a port associated with the signature
-    /// XXX: remove this function once interval_checker becomes a checker
-    pub fn get_liveness<const IS_INPUT: bool>(
-        &self,
-        port: &Id,
-    ) -> FilamentResult<Range<T>> {
-        let ports = if IS_INPUT {
-            &self.ports[..self.outputs_idx]
-        } else {
-            &self.ports[self.outputs_idx..]
-        };
-
-        // XXX(rachit): Always searching interface ports regardless of input or output
-        let maybe_pd = ports
-            .iter()
-            .find_map(|pd| {
-                if pd.name == port {
-                    Some(pd.liveness.clone())
-                } else {
-                    None
-                }
-            })
-            .or_else(|| {
-                self.interface_signals.iter().find_map(|id| {
-                    if id.name == port {
-                        // Interface signals are always active between [E, E+1]
-                        Some(Range::new(
-                            TimeRep::unit(id.event.clone(), 0),
-                            TimeRep::unit(id.event.clone(), 1),
-                        ))
-                    } else {
-                        None
-                    }
-                })
-            });
-
-        maybe_pd.ok_or_else(|| panic!("Unknown port: {}", port))
     }
 
     /// Iterate over all phantom events. A phantom event is an event that does not have a corresponding interface signal.
@@ -375,9 +346,7 @@ impl<T: TimeRep, W: WidthRep> Signature<T, W> {
             })
             .chain(self.constraints())
     }
-}
 
-impl<T: TimeRep, W: WidthRep> Signature<T, W> {
     /// Resolve a port definition using the given binding.
     fn resolve_port<WO: WidthRep>(
         &self,
@@ -427,6 +396,29 @@ impl<T: TimeRep, W: WidthRep> Signature<T, W> {
         };
 
         Ok(resolved)
+    }
+}
+
+impl<T, W> Signature<T, W>
+where
+    W: WidthRep, T: TimeRep
+{
+    // Lift the signature into an external signature
+    pub fn lift(self) -> ExternalSignature {
+        ExternalSignature {
+            ports: self.ports.into_iter().map(|pd| pd.lift()).collect(),
+            constraints: self
+                .constraints
+                .into_iter()
+                .map(|c| c.lift())
+                .collect(),
+            events: self.events.into_iter().map(|e| e.lift()).collect(),
+            outputs_idx: self.outputs_idx,
+            params: self.params,
+            name: self.name,
+            unannotated_ports: self.unannotated_ports,
+            interface_signals: self.interface_signals,
+        }
     }
 }
 

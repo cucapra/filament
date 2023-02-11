@@ -2,7 +2,7 @@
 
 //! Parser for Calyx programs.
 use crate::ast::param as ast;
-use crate::core::{Time, TimeSub};
+use crate::core::{Time, TimeSub, TimeSubRep};
 use crate::errors::{self, FilamentResult, WithPos};
 use crate::utils::{FileIdx, GPosIdx, GlobalPositionTable};
 use itertools::Itertools;
