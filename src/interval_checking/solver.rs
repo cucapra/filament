@@ -6,22 +6,23 @@ use rsmt2::{SmtConf, Solver};
 
 #[derive(Clone)]
 pub struct ShareConstraints<T: TimeRep> {
+    /// Delay bounded by the share constraint
+    /// XXX: We store the event binding so that we can get the position of the binding.
+    event_bind: core::EventBind<T>,
     /// The events used to compute the minimum of start times
-    min: Vec<T>,
+    starts: Vec<T>,
     /// The (event, delay) to compute the max of start times
-    max: Vec<(T, T::SubRep)>,
-    /// Delays bounded by this share constraint
-    delays: Vec<core::EventBind<T>>,
+    ends: Vec<(T, T::SubRep)>,
     /// Additional error information
     notes: Vec<(String, GPosIdx)>,
 }
 
-impl<T: TimeRep> Default for ShareConstraints<T> {
-    fn default() -> Self {
+impl<T: TimeRep> From<core::EventBind<T>> for ShareConstraints<T> {
+    fn from(bind: core::EventBind<T>) -> Self {
         Self {
-            min: vec![],
-            max: vec![],
-            delays: vec![],
+            starts: vec![],
+            ends: vec![],
+            event_bind: bind,
             notes: vec![],
         }
     }
@@ -43,53 +44,44 @@ impl<T: TimeRep> ShareConstraints<T> {
         pos: GPosIdx,
     ) {
         self.add_note(
-            format!(
-                "Invocation starts at `{start}' and finishes at `{}+{}'",
-                end.0, end.1
-            ),
+            format!("Invocation active during [{start}, {}+{})", end.0, end.1),
             pos,
         );
-        self.min.push(start);
-        self.max.push(end);
-    }
-
-    pub fn add_delays(
-        &mut self,
-        delays: impl Iterator<Item = core::EventBind<T>>,
-    ) {
-        self.delays.extend(delays);
+        self.starts.push(start);
+        self.ends.push(end);
     }
 }
 impl<T: TimeRep> std::fmt::Display for ShareConstraints<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let min = self.min.iter().map(|t| t.to_string()).join(", ");
+        let min = self.starts.iter().map(|t| t.to_string()).join(", ");
         let max = self
-            .max
+            .ends
             .iter()
             .map(|(t, d)| format!("{} + {}", t, d))
             .join(", ");
-        let delays = self.delays.iter().map(|d| d.delay.to_string()).join(", ");
-        write!(f, "{delays} >= max({max}) - min({min})")
+        let delay = &self.event_bind.delay;
+        write!(f, "{delay} >= max({max}) - min({min})")
     }
 }
-impl<T: TimeRep> From<ShareConstraints<T>> for Vec<SExp> {
+impl<T: TimeRep> From<ShareConstraints<T>> for SExp {
     fn from(sh: ShareConstraints<T>) -> Self {
         let min = sh
-            .min
+            .starts
             .into_iter()
             .map(|t| t.into())
             .reduce(|a, b| SExp(format!("(min {} {})", a, b)))
             .unwrap();
         let max = sh
-            .max
+            .ends
             .into_iter()
             .map(|(t, d)| SExp(format!("(+ {} {})", t.into(), d.into())))
             .reduce(|a, b| SExp(format!("(max {} {})", a, b)))
             .unwrap();
-        sh.delays
-            .into_iter()
-            .map(|d| SExp(format!("(>= {} (- {max} {min}))", d.delay.into())))
-            .collect()
+
+        SExp(format!(
+            "(>= {} (- {max} {min}))",
+            sh.event_bind.delay.into()
+        ))
     }
 }
 
@@ -193,20 +185,17 @@ impl<T: TimeRep> FilSolver<T> {
             }
         }
         for share in sharing {
-            // XXX(rachit): Unnecessary clone
-            for (idx, sexp) in
-                Vec::<SExp>::from(share.clone()).iter().enumerate()
-            {
-                if !self.check_fact(sexp.clone())? {
-                    let mut err = Error::malformed(format!(
-                        "Cannot prove constraint {share}"
-                    ));
-                    err = err.add_note("Event's delay must be longer than the difference between minimum start time and maximum end time of all other bindings.", share.delays[idx].copy_span());
-                    for (msg, pos) in share.notes() {
-                        err = err.add_note(msg, pos)
-                    }
-                    return Err(err);
+            let cons = SExp::from(share.clone());
+
+            if !self.check_fact(cons)? {
+                let mut err = Error::malformed(format!(
+                    "Cannot prove constraint {share}"
+                ));
+                err = err.add_note("Event's delay must be longer than the difference between minimum start time and maximum end time of all other bindings.", share.event_bind.copy_span());
+                for (msg, pos) in share.notes() {
+                    err = err.add_note(msg, pos)
                 }
+                return Err(err);
             }
         }
         self.s.pop(1)?;
@@ -217,14 +206,13 @@ impl<T: TimeRep> FilSolver<T> {
     fn check_fact(&mut self, fact: impl Into<SExp>) -> FilamentResult<bool> {
         let sexp = fact.into();
         self.s.push(1)?;
-        self.s.assert(format!("(not {})", sexp))?;
+        let formula = format!("(not {})", sexp);
+        log::trace!("Assert {}", formula);
+        self.s.assert(formula)?;
         // Check that the assertion was unsatisfiable
         let unsat = !self.s.check_sat()?;
-        log::trace!("Assert (not {}): UNSAT = {}", sexp, unsat);
         if !unsat {
             log::trace!("MODEL: {:?}", self.s.get_model()?);
-        } else {
-            log::trace!("Unsat");
         }
         self.s.pop(1)?;
         Ok(unsat)

@@ -36,8 +36,7 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for DumpInterface<W> {
         &mut self,
         fsm: core::Fsm,
     ) -> FilamentResult<Vec<core::Command<Time<u64>, W>>> {
-        self.fsm_states
-            .insert(fsm.trigger.name().clone(), fsm.states);
+        self.fsm_states.insert(fsm.trigger.name(), fsm.states);
         Ok(vec![fsm.into()])
     }
 

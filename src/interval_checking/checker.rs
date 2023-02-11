@@ -6,7 +6,7 @@ use crate::visitor::{self, Checker, CompBinding};
 use std::iter;
 
 impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
-    for IntervalCheck<T>
+    for IntervalCheck<T, W>
 {
     fn new(ns: &core::Namespace<T, W>) -> FilamentResult<Self> {
         let mut solver = FilSolver::new()?;
@@ -29,7 +29,6 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
     }
 
     fn clear_data(&mut self) {
-        self.event_binds.clear();
         self.obligations.clear();
         self.facts.clear();
     }
@@ -145,7 +144,7 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
         ctx: &CompBinding<T, W>,
     ) -> FilamentResult<()> {
         // Add obligations from disjointness constraints
-        let (disj, share) = self.drain_sharing(ctx)?;
+        let share = self.drain_sharing(ctx)?;
 
         // Prove all the required obligations
         let obs = self.drain_obligations();
@@ -154,7 +153,7 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
             comp.sig.events().chain(comp.sig.params.iter().cloned()),
             // XXX(rachit): Unnecessary clone
             self.facts.clone(),
-            obs.into_iter().chain(disj.into_iter()),
+            obs.into_iter(),
             share,
         )?;
         log::info!(
@@ -167,7 +166,7 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
     }
 }
 
-impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T> {
+impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T, W> {
     /// Check that the events provided to an invoke obey the constraints implied
     /// by the component's delays.
     fn check_invoke_binds(
@@ -177,13 +176,6 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T> {
     ) -> FilamentResult<()> {
         let sig = ctx.get_invoke_sig(&invoke.name);
         let binding = ctx.prog.event_binding(sig, &invoke.abstract_vars);
-
-        // Track event bindings for generating delay constraints
-        self.add_event_binds(
-            invoke.instance.clone(),
-            &binding,
-            invoke.copy_span(),
-        );
 
         let mut constraints = vec![];
 

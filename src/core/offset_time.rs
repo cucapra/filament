@@ -174,6 +174,13 @@ impl TimeRep for Time<u64> {
     fn event(&self) -> Id {
         self.event.clone()
     }
+
+    fn into_port_param(self) -> Time<PortParam> {
+        Time {
+            event: self.event,
+            offset: vec![PortParam::Const(self.offset.concrete)].into(),
+        }
+    }
 }
 
 impl Display for Time<PortParam> {
@@ -258,6 +265,10 @@ impl TimeRep for Time<PortParam> {
 
     fn event(&self) -> Id {
         self.event.clone()
+    }
+
+    fn into_port_param(self) -> Time<PortParam> {
+        self
     }
 }
 

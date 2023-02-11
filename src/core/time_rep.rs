@@ -1,4 +1,4 @@
-use super::Id;
+use super::{Id, PortParam, Time};
 use crate::interval_checking::SExp;
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
@@ -36,6 +36,15 @@ impl<T> Binding<T> {
 
     pub fn is_empty(&self) -> bool {
         self.map.is_empty()
+    }
+}
+
+impl<T> IntoIterator for Binding<T> {
+    type Item = (Id, T);
+    type IntoIter = linked_hash_map::IntoIter<Id, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.map.into_iter()
     }
 }
 
@@ -81,6 +90,9 @@ where
     fn resolve_event(&self, bindings: &Binding<Self>) -> Self;
     /// Resolve the offset given a binding
     fn resolve_offset(&self, bindings: &Binding<Self::Offset>) -> Self;
+
+    /// Convert this into a time with port param.
+    fn into_port_param(self) -> Time<PortParam>;
 }
 
 /// Traits that allow application of a binding to a data structure

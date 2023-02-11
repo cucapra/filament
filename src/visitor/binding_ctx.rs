@@ -1,6 +1,6 @@
 //! Context that tracks the binding information in a particular program
 use crate::{
-    core::{self, Id, PortParam, TimeRep, WidthRep},
+    core::{self, Id, PortParam, TimeRep, WidthRep, WithTime},
     errors::{Error, FilamentResult, WithPos},
 };
 use itertools::Itertools;
@@ -17,25 +17,197 @@ pub enum SigIdx {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 /// Index of an instance bound in a component
+/// Defined methods represent operations on an instance and require a
+/// component binding to be resolved.
 pub struct InstIdx(usize);
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-/// Index of an invocation bound in a component
-pub struct InvIdx(usize);
+impl InstIdx {
+    /// Returns all the invocations associated with an instance
+    pub fn get_all_invokes<'a, T: TimeRep, W: WidthRep>(
+        &'a self,
+        ctx: &'a CompBinding<'a, T, W>,
+    ) -> impl Iterator<Item = InvIdx> + '_ {
+        ctx.invocations
+            .iter()
+            .enumerate()
+            .filter_map(move |(idx, inv)| {
+                if inv.instance == *self {
+                    Some(InvIdx(idx))
+                } else {
+                    None
+                }
+            })
+    }
 
-/// The type of instance binding
-pub enum InstBind<'a, T: TimeRep, W: WidthRep> {
-    /// Signature for external components always contains parameterized ports.
-    External { sig: &'a core::ExternalSignature },
-    /// Filament-level components are width parameteric.
-    Component { sig: &'a core::Signature<T, W> },
+    /// Get the signature of this instance by resolving against the parameter bindings.
+    /// Note that such a signature still has unresolved event bindings (such as the delay of a Register)
+    /// that are only resolved through an invocation.
+    pub fn param_resolved_signature<T: TimeRep, W: WidthRep>(
+        &self,
+        ctx: &CompBinding<'_, T, W>,
+    ) -> core::Signature<T, W> {
+        let inst = &ctx.instances[self.0];
+        match inst.sig {
+            SigIdx::Ext(idx) => {
+                ctx.prog.externals[idx].resolve(&inst.params).unwrap()
+            }
+            SigIdx::Comp(idx) => {
+                ctx.prog.components[idx].resolve(&inst.params).unwrap()
+            }
+        }
+    }
 }
 
-impl<'a, T: TimeRep, W: WidthRep> InstBind<'a, T, W> {
-    pub fn name(&self) -> Id {
-        match self {
-            Self::External { sig } => sig.name.clone(),
-            Self::Component { sig } => sig.name.clone(),
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+/// Index of an invocation bound in a component.
+/// Defined methods represent operations on an invocation and require a
+/// component binding to be resolved.
+pub struct InvIdx(usize);
+
+impl InvIdx {
+    /// Get resolved event bindings for the invocation
+    pub fn resolved_event_binding<T: TimeRep<Offset = W>, W: WidthRep>(
+        &self,
+        ctx: &CompBinding<T, W>,
+    ) -> Vec<T> {
+        let inv = &ctx.invocations[self.0];
+        let inst = &ctx.instances[inv.instance.0];
+        let param_b = ctx.prog.param_binding(inst.sig, &inst.params);
+
+        inv.events
+            .iter()
+            .map(|e| e.resolve_offset(&param_b))
+            .collect()
+    }
+
+    /// Return the signature of the component being invoked using the parameter bindings and
+    /// the event bindings of the invocation.
+    pub fn resolved_signature<T: TimeRep<Offset = W>, W: WidthRep>(
+        &self,
+        ctx: &CompBinding<T, W>,
+    ) -> core::Signature<T, W> {
+        let inv = &ctx.invocations[self.0];
+        let inst_idx = inv.instance;
+        let inst = &ctx.instances[inst_idx.0];
+        let event_b = ctx.prog.event_binding(inst.sig, &inv.events);
+        inst_idx
+            .param_resolved_signature(ctx)
+            .resolve_event(&event_b)
+    }
+
+    /// Get the "active range" for an event in the invocation.
+    /// If we have something like:
+    /// ```
+    /// comp Reg<G: L-(G+2), L: L-G>(...) { ... }
+    ///
+    /// comp main<T: 1> {
+    ///   R := new Reg;
+    ///   r0 := R<T+3, T+6>
+    /// }
+    /// ```
+    ///
+    /// The active ranges for events in the signature are:
+    /// G -> [T+3, T+3+Delay(G)] = [T+3, T+4]
+    /// L -> [T+5, T+5+Delay(L)] = [T+6, T+9]
+    ///
+    /// The function returns the (start_time, delay) for each event in the signature.
+    pub fn event_active_ranges<T: TimeRep<Offset = W>, W: WidthRep>(
+        &self,
+        ctx: &CompBinding<T, W>,
+    ) -> Vec<(T, T::SubRep)> {
+        let inv = &ctx.invocations[self.0];
+        let sig = self.resolved_signature(ctx);
+        sig.events
+            .iter()
+            .zip(&inv.events)
+            .map(|(ev, bind)| (bind.clone(), ev.delay.clone()))
+            .collect_vec()
+    }
+
+    /// Fully resolve a port.
+    /// Returns None if and only if the invocation is not defined
+    ///
+    /// Accepts a function to resolve the liveness of the port using time and width bindings.
+    pub fn get_invoke_port<T: TimeRep, W: WidthRep, F>(
+        &self,
+        ctx: &CompBinding<T, W>,
+        port: &Id,
+        resolve_range: F,
+    ) -> Option<core::PortDef<T, W>>
+    where
+        F: Fn(
+            &core::Range<T>,
+            &core::Binding<T>,
+            &core::Binding<W>,
+        ) -> core::Range<T>,
+    {
+        let inv = &ctx.invocations[self.0];
+        let inst = &ctx.instances[inv.instance.0];
+        let param_b = ctx.prog.param_binding(inst.sig, &inst.params);
+        let event_b = ctx.prog.event_binding(inst.sig, &inv.events);
+
+        match inst.sig {
+            SigIdx::Ext(idx) => {
+                let sig = ctx.prog.externals[idx];
+                let port = sig.get_port(port);
+                Some(core::PortDef::new(
+                    port.name.clone(),
+                    resolve_range(&port.liveness, &event_b, &param_b),
+                    port.bitwidth.resolve(&param_b).unwrap(),
+                ))
+            }
+            SigIdx::Comp(idx) => {
+                let sig = &ctx.prog.components[idx];
+                let port = sig.get_port(port);
+                Some(core::PortDef::new(
+                    port.name.clone(),
+                    resolve_range(&port.liveness, &event_b, &param_b),
+                    port.bitwidth.resolve(&param_b).unwrap(),
+                ))
+            }
+        }
+    }
+
+    /// Get all the fully resolved constraints for the signature of an invocation.
+    /// This includes:
+    /// - The constraints of the component
+    /// - Well-formedness constraints
+    pub fn get_resolved_sig_constraints<T: TimeRep, W: WidthRep, F>(
+        &self,
+        ctx: &CompBinding<T, W>,
+        resolve_constraint: F,
+    ) -> Vec<core::Constraint<T>>
+    where
+        F: Fn(
+            &core::Constraint<T>,
+            &core::Binding<T>,
+            &core::Binding<W>,
+        ) -> core::Constraint<T>,
+    {
+        let inv = &ctx.invocations[self.0];
+        let inst = &ctx[inv.instance];
+        let sig = inst.sig;
+        let param_b = &ctx.prog.param_binding(sig, &inst.params);
+        let event_b = &ctx.prog.event_binding(sig, &inv.events);
+        let resolve_ref = |c| resolve_constraint(c, event_b, param_b);
+        let resolve = |c| resolve_constraint(&c, event_b, param_b);
+        match sig {
+            SigIdx::Ext(idx) => {
+                let sig = ctx.prog.externals[idx];
+                sig.constraints
+                    .iter()
+                    .map(resolve_ref)
+                    .chain(sig.well_formed().map(resolve))
+                    .collect()
+            }
+            SigIdx::Comp(idx) => {
+                let sig = ctx.prog.components[idx];
+                sig.constraints
+                    .iter()
+                    .map(resolve_ref)
+                    .chain(sig.well_formed().map(resolve))
+                    .collect()
+            }
         }
     }
 }
@@ -138,6 +310,16 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
         Ok(ctx)
     }
 
+    /// Return instances associated with this component
+    pub fn instances(&self) -> impl Iterator<Item = InstIdx> {
+        (0..self.instances.len()).map(InstIdx)
+    }
+
+    /// Return the invocations associated with this component
+    pub fn invocations(&self) -> impl Iterator<Item = InvIdx> {
+        (0..self.invocations.len()).map(InvIdx)
+    }
+
     /// Signature associated with this component
     pub fn sig(&self) -> SigIdx {
         self.sig
@@ -163,11 +345,11 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
     }
 
     /// Get the index for a given instance name
-    fn get_instance_idx(&self, name: &Id) -> Option<InstIdx> {
+    pub fn get_instance_idx(&self, name: &Id) -> Option<InstIdx> {
         self.inst_map.get(name).cloned()
     }
     /// Get the index for a given invocation name
-    fn get_invoke_idx(&self, name: &Id) -> Option<InvIdx> {
+    pub fn get_invoke_idx(&self, name: &Id) -> Option<InvIdx> {
         self.inv_map.get(name).cloned()
     }
 
@@ -188,14 +370,18 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
         Some(idx)
     }
 
-    /// Add a new invocation to this binding.
+    /// Add a new invocation to this binding. Fully resolves the binding
+    /// by filling in the default arguments.
     /// Returns `None` when the provided instance is not bound.
     pub fn add_invoke(&mut self, inv: &core::Invoke<T>) -> Option<InvIdx> {
         let instance = self.inst_map.get(&inv.instance)?;
+        let binding = self
+            .prog
+            .event_binding(self.instances[instance.0].sig, &inv.abstract_vars);
         let idx = InvIdx(self.invocations.len());
         self.invocations.push(BoundInvoke {
             instance: *instance,
-            events: inv.abstract_vars.clone(),
+            events: binding.into_iter().map(|b| b.1).collect(),
         });
         self.inv_map.insert(inv.name.clone(), idx);
         Some(idx)
@@ -244,32 +430,8 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
             &core::Binding<W>,
         ) -> core::Range<T>,
     {
-        let inv_idx = self.get_invoke_idx(invoke)?;
-        let inv = &self.invocations[inv_idx.0];
-        let inst = &self.instances[inv.instance.0];
-        let param_b = self.prog.param_binding(inst.sig, &inst.params);
-        let event_b = self.prog.event_binding(inst.sig, &inv.events);
-
-        match inst.sig {
-            SigIdx::Ext(idx) => {
-                let sig = self.prog.externals[idx];
-                let port = sig.get_port(port);
-                Some(core::PortDef::new(
-                    port.name.clone(),
-                    resolve_range(&port.liveness, &event_b, &param_b),
-                    port.bitwidth.resolve(&param_b).unwrap(),
-                ))
-            }
-            SigIdx::Comp(idx) => {
-                let sig = &self.prog.components[idx];
-                let port = sig.get_port(port);
-                Some(core::PortDef::new(
-                    port.name.clone(),
-                    resolve_range(&port.liveness, &event_b, &param_b),
-                    port.bitwidth.resolve(&param_b).unwrap(),
-                ))
-            }
-        }
+        self.get_invoke_idx(invoke)?
+            .get_invoke_port(self, port, resolve_range)
     }
 
     /// Get all the fully resolved constraints for the signature of an invocation.
@@ -288,31 +450,9 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
             &core::Binding<W>,
         ) -> core::Constraint<T>,
     {
-        let inv = self.get_invoke(invoke);
-        let inst = &self[inv.instance];
-        let sig = inst.sig;
-        let param_b = &self.prog.param_binding(sig, &inst.params);
-        let event_b = &self.prog.event_binding(sig, &inv.events);
-        let resolve_ref = |c| resolve_constraint(c, event_b, param_b);
-        let resolve = |c| resolve_constraint(&c, event_b, param_b);
-        match sig {
-            SigIdx::Ext(idx) => {
-                let sig = self.prog.externals[idx];
-                sig.constraints
-                    .iter()
-                    .map(resolve_ref)
-                    .chain(sig.well_formed().map(resolve))
-                    .collect()
-            }
-            SigIdx::Comp(idx) => {
-                let sig = self.prog.components[idx];
-                sig.constraints
-                    .iter()
-                    .map(resolve_ref)
-                    .chain(sig.well_formed().map(resolve))
-                    .collect()
-            }
-        }
+        self.get_invoke_idx(invoke)
+            .unwrap()
+            .get_resolved_sig_constraints(self, resolve_constraint)
     }
 }
 
@@ -400,6 +540,8 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
         )
     }
 
+    // XXX(rachit): We should never return a parameter binding from a signature
+    // directly because it is not resolved w.r.t to the parameters yet.
     /// Get the events from a signature
     pub fn events(&self, sig: SigIdx) -> &Vec<core::EventBind<T>> {
         match sig {
@@ -427,17 +569,17 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
         }
     }
 
-    pub fn event_binding(&self, sig: SigIdx, event: &[T]) -> core::Binding<T> {
+    pub fn event_binding(&self, sig: SigIdx, events: &[T]) -> core::Binding<T> {
         match sig {
-            SigIdx::Ext(idx) => self.externals[idx].event_binding(event),
-            SigIdx::Comp(idx) => self.components[idx].event_binding(event),
+            SigIdx::Ext(idx) => self.externals[idx].event_binding(events),
+            SigIdx::Comp(idx) => self.components[idx].event_binding(events),
         }
     }
 
-    pub fn param_binding(&self, sig: SigIdx, param: &[W]) -> core::Binding<W> {
+    pub fn param_binding(&self, sig: SigIdx, params: &[W]) -> core::Binding<W> {
         match sig {
-            SigIdx::Ext(idx) => self.externals[idx].param_binding(param),
-            SigIdx::Comp(idx) => self.components[idx].param_binding(param),
+            SigIdx::Ext(idx) => self.externals[idx].param_binding(params),
+            SigIdx::Comp(idx) => self.components[idx].param_binding(params),
         }
     }
 
@@ -452,6 +594,16 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
                 unreachable!("abstract_comp_port called on external signature")
             }
             SigIdx::Comp(idx) => self.components[idx].get_port(port),
+        }
+    }
+
+    /// Returns the underlying comp signature. Panics if the signature actually points to an external.
+    pub fn comp_sig(&self, sig: SigIdx) -> &'a core::Signature<T, W> {
+        match sig {
+            SigIdx::Ext(_) => {
+                unreachable!("comp_sig called on external signature")
+            }
+            SigIdx::Comp(idx) => self.components[idx],
         }
     }
 }

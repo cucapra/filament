@@ -1,51 +1,40 @@
 use super::{FilSolver, ShareConstraints};
-use crate::core::{self, Constraint, TimeRep, WidthRep, WithTime};
-use crate::errors::{Error, FilamentResult, WithPos};
+use crate::core::{self, Constraint, OrderConstraint, TimeRep, WidthRep};
+use crate::errors::FilamentResult;
 use crate::utils::GPosIdx;
 use crate::visitor;
-use std::collections::HashMap;
+use itertools::Itertools;
+use std::iter;
+use std::marker::PhantomData;
 
 type FactMap<T> = Vec<core::Constraint<T>>;
-type BindsWithLoc<T> = (GPosIdx, Vec<T>);
 
-pub struct IntervalCheck<T: TimeRep> {
+pub struct IntervalCheck<T: TimeRep<Offset = W>, W: WidthRep> {
     /// Solver associated with this context
     pub(super) solver: FilSolver<T>,
-    /// Mapping from instance to event bindings
-    pub(super) event_binds: HashMap<core::Id, Vec<BindsWithLoc<T>>>,
     /// Set of facts that need to be proven.
     /// Mapping from facts to the locations that generated it.
     pub(super) obligations: FactMap<T>,
     /// Set of assumed facts
     pub(super) facts: FactMap<T>,
+
+    _w: PhantomData<W>,
 }
 
-impl<T: TimeRep> From<FilSolver<T>> for IntervalCheck<T> {
+impl<T: TimeRep<Offset = W>, W: WidthRep> From<FilSolver<T>>
+    for IntervalCheck<T, W>
+{
     fn from(solver: FilSolver<T>) -> Self {
         Self {
             solver,
-            event_binds: HashMap::new(),
             obligations: Vec::new(),
             facts: Vec::new(),
+            _w: PhantomData,
         }
     }
 }
 
-impl<T: TimeRep> IntervalCheck<T> {
-    /// Track event bindings for each instance.
-    /// This is used for the disjointness check.
-    pub fn add_event_binds(
-        &mut self,
-        instance: core::Id,
-        binds: &core::Binding<T>,
-        pos: GPosIdx,
-    ) {
-        self.event_binds
-            .entry(instance)
-            .or_default()
-            .push((pos, binds.iter().map(|(_, t)| t.clone()).collect()));
-    }
-
+impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T, W> {
     /// Add a new obligation that needs to be proved
     pub fn add_obligations<F>(&mut self, facts: F)
     where
@@ -63,23 +52,21 @@ impl<T: TimeRep> IntervalCheck<T> {
         self.facts.push(fact);
     }
 
-    /// Construct disjointness constraints for the current context
-    pub fn drain_sharing<W: WidthRep>(
+    /// Construct constraints for shared instances.
+    /// Add disjointness constraints to the context and returns the set of sharing constraints.
+    pub fn drain_sharing(
         &mut self,
         ctx: &visitor::CompBinding<T, W>,
-    ) -> FilamentResult<(Vec<Constraint<T>>, Vec<ShareConstraints<T>>)> {
-        let evs = std::mem::take(&mut self.event_binds);
-        let all = evs
-            .into_iter()
-            .map(|(inst, binds)| Self::sharing_constraints(inst, &binds, ctx))
+    ) -> FilamentResult<Vec<ShareConstraints<T>>> {
+        let all = ctx
+            .instances()
+            .map(|inst| self.sharing_constraints(inst, ctx))
             .collect::<FilamentResult<Vec<_>>>()?;
-        let mut cons = Vec::new();
         let mut share = Vec::new();
-        for (c, s) in all {
-            cons.extend(c);
+        for s in all {
             share.extend(s);
         }
-        Ok((cons, share))
+        Ok(share)
     }
 
     /// Get the obligations that need to be proven
@@ -87,105 +74,93 @@ impl<T: TimeRep> IntervalCheck<T> {
         std::mem::take(&mut self.obligations)
     }
 
-    fn ensure_same_events<W: WidthRep>(
-        instance: &core::Id,
-        args: &[BindsWithLoc<T>],
+    /// Generate disjointness constraints for an instance's event bindings.
+    /// Get's all the invokes associated with an instance and then ensures that
+    /// each binding event occupies a disjoint interval
+    fn sharing_constraints(
+        &mut self,
+        inst: visitor::InstIdx,
         ctx: &visitor::CompBinding<T, W>,
-    ) -> FilamentResult<()> {
-        // Get the delay associated with each event.
-        let sig = ctx.get_instance(instance).sig;
-        // Ensure that all bindings of an event variable use the same events
-        for (idx, eb) in ctx.prog.events(sig).iter().enumerate() {
-            let mut iter = args.iter().map(|(pos, binds)| (pos, &binds[idx]));
-            let abs = &eb.event;
+    ) -> FilamentResult<Vec<ShareConstraints<T>>> {
+        // Get bindings for all invokes and transpose them so that each inner
+        // vector represents the bindings for a single event
+        // Reprents invoke -> list (event, delay)
+        let invoke_bindings = inst
+            .get_all_invokes(ctx)
+            .map(|inv| inv.event_active_ranges(ctx))
+            .collect_vec();
 
-            if let Some((fpos, first)) = iter.next() {
-                for (epos, event) in iter {
-                    if event.event() != first.event() {
-                        return Err(Error::malformed(format!(
-                                "Invocations of instance `{instance}' use multiple events for event `{abs}' binding: {first} and {event}. Sharing using multiple events is not supported.",
-                            ))
-                            .add_note(format!("Location provides binding {instance}.{abs}={first}"), *fpos)
-                            .add_note(format!("Location provides binding {instance}.{abs}={event}"), *epos));
-                    }
+        // If we don't have multiple invokes, we don't need to generate any
+        // constraints
+        if invoke_bindings.len() < 2 {
+            return Ok(Vec::new());
+        }
+
+        // Check that all invokes use the same event binding
+        let first_bind = &invoke_bindings[0];
+        for binds in &invoke_bindings[1..] {
+            for event in 0..first_bind.len() {
+                let e1 = first_bind[event].0.event();
+                let e2 = binds[event].0.event();
+                // If the events are not syntactically equal, add constraint requiring that the events are the same
+                if e1 != e2 {
+                    let con = Constraint::base(
+                        OrderConstraint::eq(
+                            T::unit(e1.clone(), 0),
+                            T::unit(e2.clone(), 0)
+                        )
+                    ).add_note(
+                        format!(
+                        "Invocations of instance use multiple events in invocations: {first} and {event}. Sharing using multiple events is not supported.",
+                        first = e1,
+                        event = e2),
+                        GPosIdx::UNKNOWN,
+                    );
+                    self.add_obligations(iter::once(con));
                 }
             }
         }
-        Ok(())
-    }
-
-    /// Constraint generated for disjointness
-    fn sharing_contraints(
-        instance: &core::Id,
-        abs: &core::Id,
-        (i_event, spi): (&T, GPosIdx),
-        (k_event, spk): (&T, GPosIdx),
-        i_delay: &T::SubRep,
-        id_pos: GPosIdx,
-    ) -> core::Constraint<T> {
-        core::Constraint::sub(core::OrderConstraint::gte(
-            i_event.clone().sub(k_event.clone()),
-            i_delay.clone(),
-        ))
-        .add_note(
-            format!("Conflicting invoke. Invoke provides binding {instance}.{abs}={k_event}"),
-            spk,
-        )
-        .add_note(
-            format!("Invoke provides binding {instance}.{abs}={i_event}"),
-            spi,
-        )
-        .add_note(
-            format!("Delay for {abs} specifies that invokes must be {i_delay} cycles apart"),
-            id_pos,
-        )
-    }
-
-    /// Generate disjointness constraints for an instance's event bindings.
-    fn sharing_constraints<W: WidthRep>(
-        instance: core::Id,
-        args: &[BindsWithLoc<T>],
-        ctx: &visitor::CompBinding<T, W>,
-    ) -> FilamentResult<(Vec<Constraint<T>>, Vec<ShareConstraints<T>>)> {
-        // Ensure that bindings for events variables use the same variables.
-        Self::ensure_same_events(&instance, args, ctx)?;
-
-        // Get the delay associated with each event.
-        let sig = ctx.get_instance(&instance).sig;
 
         // Iterate over each event
-        let mut constraints = Vec::new();
+        let events = ctx.prog.events(ctx[inst].sig);
         let mut share_constraints = Vec::new();
-        for (idx, eb) in ctx.prog.events(sig).iter().enumerate() {
-            // Track minimum and maximum end times for each binding
-            let mut share = ShareConstraints::default();
+        let num_bindings = invoke_bindings.len();
+        // for (idx) in ctx.prog.events(sig).iter().enumerate() {
+        for event in 0..events.len() {
+            // Build up a sharing constraint for each event in the signature.
+            // Since all bindings use the same event, we can use the event mentioned in the first binding
+            // as the one to use for the sharing constraint
+            let bounded_event = first_bind[event].0.event();
+            let this = ctx.prog.comp_sig(ctx.sig());
+            let mut share =
+                ShareConstraints::from(this.get_event(&bounded_event).clone());
 
-            let delay = &eb.delay;
-            // For each binding
-            for (i, (spi, bi)) in args.iter().enumerate() {
-                // Delay implied by the i'th binding
-                let i_delay =
-                    delay.resolve_event(&ctx.prog.event_binding(sig, bi));
-                // The i'th use conflicts with all other uses
-                for (k, (spk, bk)) in args.iter().enumerate() {
+            // Iterate over all pairs of bindings
+            for i in 0..num_bindings {
+                // Add the event binding to the share constraint
+                let (start_i, delay) = &invoke_bindings[i][event];
+                share.add_bind_info(
+                    start_i.clone(),
+                    (start_i.clone(), delay.clone()),
+                    GPosIdx::UNKNOWN,
+                );
+
+                for k in 0..num_bindings {
                     if i == k {
                         continue;
                     }
 
-                    constraints.push(Self::sharing_contraints(
-                        &instance,
-                        &eb.event,
-                        (&bi[idx], *spi),
-                        (&bk[idx], *spk),
-                        &i_delay,
-                        eb.copy_span(),
-                    ))
+                    // The bindings must be separated by at least the delay of the first binding
+                    // XXX: There probably a more efficient encoding where we ensure that the
+                    //      events are max(delay_i, delay_k) cycles apart
+                    let (start_k, _) = &invoke_bindings[k][event];
+                    let con =
+                        core::Constraint::sub(core::OrderConstraint::gte(
+                            start_i.clone().sub(start_k.clone()),
+                            delay.clone(),
+                        ));
+                    self.add_obligations(iter::once(con));
                 }
-                share.add_bind_info(
-                    bi[idx].clone(),
-                    (bi[idx].clone(), i_delay),
-                    *spi,
-                );
             }
 
             // # Constraints generated from sharing instances
@@ -197,16 +172,9 @@ impl<T: TimeRep> IntervalCheck<T> {
             // In other words, the delay of the events trigger the shared instance
             // should be greater that the range occupied by the invocations of the
             // instance.
-            let this_sig = ctx.sig();
-            // Get delays for events used in bindings. These are guaranteed to be the same across all bindings
-            // due to the call to `ensure_same_events`.
-            let bind = &args[0].1[idx];
-            let ev = &bind.event();
-            let eb = ctx.prog.get_event(this_sig, ev);
-            share.add_delays(std::iter::once(eb.clone()));
             share_constraints.push(share);
         }
 
-        Ok((constraints, share_constraints))
+        Ok(share_constraints)
     }
 }
