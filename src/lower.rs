@@ -1,19 +1,18 @@
-use crate::core::{self, Id, Time, TimeRep, WidthRep, WithTime};
+use crate::core::{self, Id, Time, TimeRep, WithTime};
 use crate::errors::{FilamentResult, WithPos};
-use crate::visitor;
+use crate::visitor::{self, CompBinding};
+use itertools::Itertools;
 use std::collections::HashMap;
 
 #[derive(Default)]
-pub struct CompileInvokes<W: WidthRep> {
+pub struct CompileInvokes {
     /// Mapping from events to FSMs
     fsms: HashMap<core::Id, core::Fsm>,
     /// Max state map
     max_states: HashMap<core::Id, HashMap<core::Id, u64>>,
-    /// Phantom data for time and width
-    _tw: std::marker::PhantomData<W>,
 }
 
-impl<W: WidthRep> CompileInvokes<W> {
+impl CompileInvokes {
     fn find_fsm(&self, event: &core::Id) -> Option<&core::Fsm> {
         self.fsms.get(event)
     }
@@ -44,15 +43,17 @@ impl<W: WidthRep> CompileInvokes<W> {
     }
 }
 
-impl<W: WidthRep> visitor::Transform<Time<u64>, W> for CompileInvokes<W> {
+impl visitor::Transform<Time<u64>, u64> for CompileInvokes {
     /// Mapping from component -> event -> max state
     type Info = HashMap<Id, HashMap<Id, u64>>;
 
-    fn new(_: &core::Namespace<Time<u64>, W>, max_states: &Self::Info) -> Self {
+    fn new(
+        _: &core::Namespace<Time<u64>, u64>,
+        max_states: &Self::Info,
+    ) -> Self {
         Self {
             fsms: HashMap::new(),
             max_states: max_states.clone(),
-            _tw: std::marker::PhantomData,
         }
     }
 
@@ -61,22 +62,16 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for CompileInvokes<W> {
     }
 
     /// Visit components with high-level invokes
-    fn component_filter(&self, comp: &core::Component<Time<u64>, W>) -> bool {
-        comp.body.iter().any(|con| {
-            if let core::Command::Invoke(core::Invoke { ports, .. }) = con {
-                ports.is_some()
-            } else {
-                false
-            }
-        })
+    fn component_filter(&self, _: &CompBinding<Time<u64>, u64>) -> bool {
+        true
     }
 
     // TODO(rachit): Document how the compilation works
     fn invoke(
         &mut self,
         inv: core::Invoke<Time<u64>>,
-        sig: &visitor::ResolvedInstance<Time<u64>, W>,
-    ) -> FilamentResult<Vec<core::Command<Time<u64>, W>>> {
+        ctx: &CompBinding<Time<u64>, u64>,
+    ) -> FilamentResult<Vec<core::Command<Time<u64>, u64>>> {
         let pos = inv.copy_span();
         // Compile only if this is a high-level invoke
         if let core::Invoke {
@@ -87,7 +82,8 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for CompileInvokes<W> {
             ..
         } = inv
         {
-            let sig = sig.resolve()?;
+            let idx = ctx.get_invoke_idx(&bind).unwrap();
+            let sig = idx.resolved_signature(ctx);
             // Get the signature associated with this instance.
             let binding = sig.event_binding(&abstract_vars);
 
@@ -140,12 +136,13 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for CompileInvokes<W> {
     /// Computes the max state traversed by each event variable
     fn enter_component(
         &mut self,
-        comp: core::Component<Time<u64>, W>,
-    ) -> FilamentResult<core::Component<Time<u64>, W>> {
+        ctx: &CompBinding<Time<u64>, u64>,
+    ) -> FilamentResult<Vec<core::Command<Time<u64>, u64>>> {
+        let sig = ctx.this();
+
         // Define FSMs for each interface signal
-        let events = &self.max_states[&comp.sig.name];
-        self.fsms = comp
-            .sig
+        let events = &self.max_states[&sig.name];
+        self.fsms = sig
             .interface_signals
             .iter()
             .map(|interface| {
@@ -161,19 +158,18 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for CompileInvokes<W> {
             })
             .collect::<FilamentResult<HashMap<_, _>>>()?;
 
-        Ok(comp)
+        Ok(vec![])
     }
 
     fn exit_component(
         &mut self,
-        comp: core::Component<Time<u64>, W>,
-    ) -> FilamentResult<core::Component<Time<u64>, W>> {
+        _: &CompBinding<Time<u64>, u64>,
+    ) -> FilamentResult<Vec<core::Command<Time<u64>, u64>>> {
         // Add the FSMs to the component
-        let mut comp = comp;
         let fsms = std::mem::take(&mut self.fsms)
             .into_values()
-            .map(|f| f.into());
-        comp.body = fsms.chain(comp.body.into_iter()).collect();
-        Ok(comp)
+            .map(|f| f.into())
+            .collect_vec();
+        Ok(fsms)
     }
 }

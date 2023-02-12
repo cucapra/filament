@@ -56,16 +56,18 @@ impl<T: Clone> Time<T> {
     pub fn offset(&self) -> &TimeSum<T> {
         &self.offset
     }
-}
 
-impl Time<PortParam> {
-    pub fn new(event: Id, offset: Vec<PortParam>) -> Self {
+    pub fn new(event: Id, offset: Vec<T>) -> Self
+    where
+        TimeSum<T>: From<Vec<T>>,
+    {
         Self {
             event,
             offset: offset.into(),
         }
     }
 }
+
 
 impl<T: Clone> From<Time<T>> for SExp
 where

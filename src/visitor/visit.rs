@@ -1,11 +1,9 @@
-use super::Bindings;
+use super::{CompBinding, ProgBinding};
 use crate::{
     core::{self, TimeRep, WidthRep},
     errors::FilamentResult,
-    visitor,
 };
 use itertools::Itertools;
-use std::collections::HashMap;
 
 /// Transform the given AST
 pub trait Transform<T, W>
@@ -24,12 +22,13 @@ where
     fn clear_data(&mut self);
 
     /// Whether this component should be visited or not
-    fn component_filter(&self, comp: &core::Component<T, W>) -> bool;
+    fn component_filter(&self, comp: &CompBinding<T, W>) -> bool;
 
     #[inline]
     fn connect(
         &mut self,
         con: core::Connect,
+        _: &CompBinding<T, W>,
     ) -> FilamentResult<Vec<core::Command<T, W>>> {
         Ok(vec![con.into()])
     }
@@ -38,6 +37,7 @@ where
     fn instance(
         &mut self,
         inst: core::Instance<W>,
+        _: &CompBinding<T, W>,
     ) -> FilamentResult<Vec<core::Command<T, W>>> {
         Ok(vec![inst.into()])
     }
@@ -46,6 +46,7 @@ where
     fn fsm(
         &mut self,
         fsm: core::Fsm,
+        _: &CompBinding<T, W>,
     ) -> FilamentResult<Vec<core::Command<T, W>>> {
         Ok(vec![fsm.into()])
     }
@@ -56,7 +57,7 @@ where
     fn invoke(
         &mut self,
         inv: core::Invoke<T>,
-        _: &visitor::ResolvedInstance<T, W>,
+        _: &CompBinding<T, W>,
     ) -> FilamentResult<Vec<core::Command<T, W>>> {
         Ok(vec![inv.into()])
     }
@@ -65,6 +66,7 @@ where
     fn signature(
         &mut self,
         sig: core::Signature<T, W>,
+        _: &CompBinding<T, W>,
     ) -> FilamentResult<core::Signature<T, W>> {
         Ok(sig)
     }
@@ -73,83 +75,76 @@ where
     #[inline]
     fn enter_component(
         &mut self,
-        comp: core::Component<T, W>,
-    ) -> FilamentResult<core::Component<T, W>> {
-        Ok(comp)
+        _: &CompBinding<T, W>,
+    ) -> FilamentResult<Vec<core::Command<T, W>>> {
+        Ok(vec![])
     }
 
     /// Perform computation after the component traversal
     #[inline]
     fn exit_component(
         &mut self,
-        comp: core::Component<T, W>,
-    ) -> FilamentResult<core::Component<T, W>> {
-        Ok(comp)
+        _: &CompBinding<T, W>,
+    ) -> FilamentResult<Vec<core::Command<T, W>>> {
+        Ok(vec![])
     }
 
-    /// Perform the component traversal
-    fn component(
-        &mut self,
-        comp: core::Component<T, W>,
-        binds: &visitor::Bindings<T, W>,
-    ) -> FilamentResult<core::Component<T, W>> {
-        // Binding for instances
-        let mut instances: HashMap<core::Id, visitor::ResolvedInstance<T, W>> =
-            HashMap::new();
-        let core::Component { sig, body } = self.enter_component(comp)?;
-        let body: Vec<core::Command<_, _>> = body
-            .into_iter()
-            .map(|cmd| match cmd {
-                crate::core::Command::Invoke(inv) => {
-                    let sig = instances.get(&inv.instance).unwrap();
-                    self.invoke(inv, sig)
-                }
-                crate::core::Command::Instance(inst) => {
-                    let sig =
-                        binds.get_component(&inst.component, &inst.bindings);
-                    instances.insert(inst.name.clone(), sig);
-                    self.instance(inst)
-                }
-                crate::core::Command::Connect(con) => self.connect(con),
-                crate::core::Command::Fsm(fsm) => self.fsm(fsm),
-            })
-            .collect::<FilamentResult<Vec<Vec<_>>>>()?
-            .into_iter()
-            .flatten()
-            .collect_vec();
-
-        let comp = core::Component {
-            body,
-            sig: self.signature(sig)?,
-        };
-        self.exit_component(comp)
-    }
-
+    /// Transform the program
     fn transform(
         mut ns: core::Namespace<T, W>,
         info: Self::Info,
     ) -> FilamentResult<(core::Namespace<T, W>, Self)> {
-        let comps = ns.components.drain(..).collect_vec();
-        let mut binds = Bindings::new(ns.signatures());
+        // Build a new pass
         let mut pass = Self::new(&ns, &info);
 
-        for comp in comps {
+        // Extract (name, commands) from the components
+        let comp_data: Vec<(core::Id, Vec<core::Command<T, W>>)> = ns
+            .components
+            .iter_mut()
+            .map(|comp| {
+                (comp.sig.name.clone(), comp.body.drain(..).collect_vec())
+            })
+            .collect_vec();
+
+        // Collect the updated component data
+        let mut new_comp_data = Vec::with_capacity(comp_data.len());
+
+        // The program binding
+        let prog_bind = ProgBinding::from(&ns);
+        for (name, cmds) in comp_data {
             pass.clear_data();
-            let ncomp = if pass.component_filter(&comp) {
-                pass.component(comp, &binds)?
-            } else {
-                comp
-            };
-            binds.add_component(ncomp);
+            let ctx = CompBinding::from_comp_data(&prog_bind, &name, &cmds)?;
+            if !pass.component_filter(&ctx) {
+                new_comp_data.push(cmds);
+                continue;
+            }
+
+            // Traverse over the commands and apply the transfomation functions
+            let mut n_cmds = Vec::with_capacity(cmds.len());
+            n_cmds.extend(pass.enter_component(&ctx)?);
+
+            for cmd in cmds {
+                let cmds = match cmd {
+                    core::Command::Invoke(inv) => pass.invoke(inv, &ctx)?,
+                    core::Command::Instance(inst) => {
+                        pass.instance(inst, &ctx)?
+                    }
+                    core::Command::Connect(con) => pass.connect(con, &ctx)?,
+                    core::Command::Fsm(fsm) => pass.fsm(fsm, &ctx)?,
+                };
+                n_cmds.extend(cmds);
+            }
+
+            let cmds = pass.exit_component(&ctx)?;
+            n_cmds.extend(cmds);
+            new_comp_data.push(n_cmds);
         }
 
-        Ok((
-            core::Namespace {
-                components: binds.into(),
-                imports: ns.imports,
-                externs: ns.externs,
-            },
-            pass,
-        ))
+        // Add the updated commands to the components
+        for (comp, cmds) in ns.components.iter_mut().zip(new_comp_data) {
+            comp.body = cmds;
+        }
+
+        Ok((ns, pass))
     }
 }

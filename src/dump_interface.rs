@@ -1,11 +1,9 @@
 use crate::core::{self, Time, TimeSubRep, WidthRep};
 use crate::errors::{self, FilamentResult, WithPos};
-use crate::visitor;
+use crate::visitor::{self, CompBinding};
 use std::collections::HashMap;
 
 pub struct DumpInterface<W: WidthRep> {
-    /// Map from FSM trigger to number of states
-    fsm_states: HashMap<core::Id, u64>,
     /// Map from component to interface information
     max_states: HashMap<core::Id, HashMap<core::Id, u64>>,
     /// Phantom data for width
@@ -18,32 +16,27 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for DumpInterface<W> {
 
     fn new(_: &core::Namespace<Time<u64>, W>, max_states: &Self::Info) -> Self {
         Self {
-            fsm_states: HashMap::new(),
             max_states: max_states.clone(),
             _w: std::marker::PhantomData,
         }
     }
 
-    fn clear_data(&mut self) {
-        self.fsm_states.clear();
-    }
+    fn clear_data(&mut self) {}
 
-    fn component_filter(&self, comp: &core::Component<Time<u64>, W>) -> bool {
-        comp.sig.name == "main"
-    }
-
-    fn fsm(
-        &mut self,
-        fsm: core::Fsm,
-    ) -> FilamentResult<Vec<core::Command<Time<u64>, W>>> {
-        self.fsm_states.insert(fsm.trigger.name(), fsm.states);
-        Ok(vec![fsm.into()])
+    fn component_filter(
+        &self,
+        comp: &visitor::CompBinding<Time<u64>, W>,
+    ) -> bool {
+        let sig = comp.this();
+        sig.name == "main"
     }
 
     fn exit_component(
         &mut self,
-        comp: core::Component<Time<u64>, W>,
-    ) -> FilamentResult<core::Component<Time<u64>, W>> {
+        comp: &CompBinding<Time<u64>, W>,
+    ) -> FilamentResult<Vec<core::Command<Time<u64>, W>>> {
+        let sig = comp.this();
+
         // For an interface port like this:
         //      @interface[G, G+5] go_G
         // Generate the JSON information:
@@ -54,13 +47,12 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for DumpInterface<W> {
         //   "states": 2,
         //   "phantom": false
         // }
-        let events = &self.max_states[&comp.sig.name];
-        let interfaces = comp
-            .sig
+        let events = &self.max_states[&sig.name];
+        let interfaces = sig
             .events
             .iter()
             .map(|eb| {
-                let id = comp.sig.get_interface(&eb.event);
+                let id = sig.get_interface(&eb.event);
                 let phantom = id.is_none();
                 eb.delay
                     .concrete()
@@ -113,14 +105,13 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for DumpInterface<W> {
                 )
             })
         };
-        let inputs = comp
-            .sig
+        let inputs = sig
             .inputs()
             .map(pd_to_info)
             .collect::<FilamentResult<Vec<_>>>()?
             .join(",\n");
-        let outputs = comp
-            .sig
+
+        let outputs = sig
             .outputs()
             .map(pd_to_info)
             .collect::<FilamentResult<Vec<_>>>()?
@@ -131,6 +122,6 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for DumpInterface<W> {
             "{{\n\"interfaces\": [\n{interfaces}\n],\n\"inputs\": [\n{inputs}\n],\n\"outputs\": [\n{outputs}\n]\n}}",
         );
 
-        Ok(comp)
+        Ok(vec![])
     }
 }

@@ -26,6 +26,3 @@ pub type PortType = core::PortType;
 pub type Binding = core::Binding<TimeRep>;
 pub type PortParam = core::PortParam;
 pub type EventBind = core::EventBind<TimeRep>;
-pub type ResolvedInstance<'a> =
-    crate::visitor::ResolvedInstance<'a, TimeRep, Width>;
-pub type Bindings<'a> = crate::visitor::Bindings<'a, TimeRep, Width>;

@@ -269,16 +269,25 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
         prog_ctx: &'p ProgBinding<'p, T, W>,
         comp: &core::Component<T, W>,
     ) -> FilamentResult<Self> {
-        let sig = prog_ctx.find_sig_idx(&comp.sig.name).unwrap();
+        Self::from_comp_data(prog_ctx, &comp.sig.name, &comp.body)
+    }
+
+    pub fn from_comp_data(
+        prog: &'p ProgBinding<'p, T, W>,
+        comp: &core::Id,
+        cmds: &Vec<core::Command<T, W>>,
+    ) -> FilamentResult<Self> {
+        let sig = prog.find_sig_idx(comp).unwrap();
         let mut ctx = Self {
-            prog: prog_ctx,
+            prog,
             sig,
             instances: Vec::new(),
             invocations: Vec::new(),
             inst_map: HashMap::new(),
             inv_map: HashMap::new(),
         };
-        for cmd in &comp.body {
+
+        for cmd in cmds {
             match cmd {
                 core::Command::Instance(inst) => {
                     if ctx.add_instance(inst).is_none() {
@@ -307,7 +316,14 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
                 _ => (),
             }
         }
+
         Ok(ctx)
+    }
+
+    /// Get the **unresolved** signature associated with this component.
+    /// If this signature should be completely resolved, use [[InvIdx::resolve_signature]].
+    pub fn this(&self) -> &core::Signature<T, W> {
+        &self.prog.comp_sig(self.sig)
     }
 
     /// Return instances associated with this component
