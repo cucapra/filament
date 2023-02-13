@@ -3,9 +3,9 @@ mod constraint;
 mod control;
 mod id;
 mod interval;
-mod offset_time;
 mod port;
 mod signature;
+mod time;
 mod width_rep;
 
 pub use component::{Component, Namespace};
@@ -15,6 +15,6 @@ pub use control::{
 };
 pub use id::Id;
 pub use interval::Range;
-pub use offset_time::{Time, TimeSub, TimeSum};
 pub use port::{Expr, InterfaceDef, PortDef};
 pub use signature::{EventBind, Signature};
+pub use time::{Time, TimeSub, TimeSum};
