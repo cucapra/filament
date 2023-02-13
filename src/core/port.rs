@@ -1,4 +1,4 @@
-use super::{Binding, Id, Range, Time, TimeRep, WidthRep, WithTime};
+use super::{Binding, ConcTime, Id, Range};
 use crate::{errors::WithPos, utils::GPosIdx};
 use std::fmt::Display;
 
@@ -10,12 +10,31 @@ pub enum PortParam {
     Var(Id),
 }
 
+/// Representation of widths in the program
+pub type Width = PortParam;
+
+impl PortParam {
+    pub fn concrete(&self) -> u64 {
+        match self {
+            PortParam::Const(c) => *c,
+            PortParam::Var(_) => {
+                unreachable!("Cannot convert {} into concrete value", self)
+            }
+        }
+    }
+    pub fn resolve(&self, bindings: &Binding<Width>) -> Option<Width> {
+        match self {
+            PortParam::Const(_) => Some(self.clone()),
+            PortParam::Var(v) => bindings.find(v).cloned(),
+        }
+    }
+}
+
 impl From<Id> for PortParam {
     fn from(v: Id) -> Self {
         Self::Var(v)
     }
 }
-
 impl From<u64> for PortParam {
     fn from(v: u64) -> Self {
         Self::Const(v)
@@ -31,27 +50,19 @@ impl Display for PortParam {
 }
 
 #[derive(Clone)]
-pub struct PortDef<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
+pub struct PortDef {
     /// Name of the port
     pub name: Id,
     /// Liveness condition for the Port
-    pub liveness: Range<T>,
+    pub liveness: Range,
     /// Bitwidth of the port
-    pub bitwidth: W,
+    pub bitwidth: Width,
     /// Source position
     pos: GPosIdx,
 }
 
-impl<T, W> PortDef<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
-    pub fn new(name: Id, liveness: Range<T>, bitwidth: W) -> Self {
+impl PortDef {
+    pub fn new(name: Id, liveness: Range, bitwidth: Width) -> Self {
         Self {
             name,
             liveness,
@@ -59,30 +70,13 @@ where
             pos: GPosIdx::UNKNOWN,
         }
     }
-
-    pub fn lift(self) -> PortDef<Time<PortParam>, PortParam> {
-        PortDef {
-            name: self.name,
-            liveness: self.liveness.lift(),
-            bitwidth: self.bitwidth.lift(),
-            pos: self.pos,
-        }
-    }
 }
-impl<T, W> Display for PortDef<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
+impl Display for PortDef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {}: {}", self.liveness, self.name, self.bitwidth)
     }
 }
-impl<T, W> WithPos for PortDef<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
+impl WithPos for PortDef {
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
@@ -92,30 +86,25 @@ where
         self.pos
     }
 }
-impl<T, W> WithTime<T> for PortDef<T, W>
-where
-    W: WidthRep,
-    T: TimeRep,
-{
-    fn resolve_event(&self, bindings: &Binding<T>) -> Self {
+impl PortDef {
+    /// Resolves all time expressions in this port definition
+    pub fn resolve_event(&self, bindings: &Binding<ConcTime>) -> Self {
         Self {
             liveness: self.liveness.resolve_event(bindings),
             ..(self.clone())
         }
     }
 
-    fn resolve_offset(
-        &self,
-        bindings: &Binding<<T as TimeRep>::Offset>,
-    ) -> Self {
+    /// Resolves all width expressions in this port definition.
+    /// Specifically:
+    /// - The bitwidth of the port
+    /// - The liveness condition
+    pub fn resolve_offset(&self, bindings: &Binding<Width>) -> Self {
         Self {
+            bitwidth: self.bitwidth.resolve(bindings).unwrap(),
             liveness: self.liveness.resolve_offset(bindings),
             ..(self.clone())
         }
-    }
-
-    fn events(&self) -> Vec<Id> {
-        todo!("events for PortDef")
     }
 }
 

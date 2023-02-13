@@ -1,25 +1,20 @@
-use crate::{
-    core::{self, TimeRep, WidthRep},
-    errors::FilamentResult,
-};
+use crate::{core, errors::FilamentResult};
 
 use super::{CompBinding, ProgBinding};
 
 /// A pass that checks the AST and computes some information about it without modifying it.
-pub trait Checker<T, W>
+pub trait Checker
 where
-    T: TimeRep,
-    W: WidthRep,
     Self: Sized,
 {
     /// Construct a new instance of this pass
-    fn new(_: &core::Namespace<T, W>) -> FilamentResult<Self>;
+    fn new(_: &core::Namespace) -> FilamentResult<Self>;
 
     /// Clear any data that should be cleared between components
     fn clear_data(&mut self);
 
     /// Check if this component should be traversed
-    fn component_filter(&self, _: &core::Component<T, W>) -> bool {
+    fn component_filter(&self, _: &core::Component) -> bool {
         true
     }
 
@@ -27,7 +22,7 @@ where
     fn connect(
         &mut self,
         _: &core::Connect,
-        _ctx: &CompBinding<T, W>,
+        _ctx: &CompBinding,
     ) -> FilamentResult<()> {
         Ok(())
     }
@@ -35,18 +30,14 @@ where
     #[inline]
     fn instance(
         &mut self,
-        _: &core::Instance<W>,
-        _ctx: &CompBinding<T, W>,
+        _: &core::Instance,
+        _ctx: &CompBinding,
     ) -> FilamentResult<()> {
         Ok(())
     }
 
     #[inline]
-    fn fsm(
-        &mut self,
-        _: &core::Fsm,
-        _ctx: &CompBinding<T, W>,
-    ) -> FilamentResult<()> {
+    fn fsm(&mut self, _: &core::Fsm, _ctx: &CompBinding) -> FilamentResult<()> {
         Ok(())
     }
 
@@ -55,8 +46,8 @@ where
     #[inline]
     fn invoke(
         &mut self,
-        _: &core::Invoke<T>,
-        _ctx: &CompBinding<T, W>,
+        _: &core::Invoke,
+        _ctx: &CompBinding,
     ) -> FilamentResult<()> {
         Ok(())
     }
@@ -64,8 +55,8 @@ where
     #[inline]
     fn signature(
         &mut self,
-        _: &core::Signature<T, W>,
-        _ctx: &CompBinding<T, W>,
+        _: &core::Signature,
+        _ctx: &CompBinding,
     ) -> FilamentResult<()> {
         Ok(())
     }
@@ -74,8 +65,8 @@ where
     #[inline]
     fn enter_component(
         &mut self,
-        _: &core::Component<T, W>,
-        _ctx: &CompBinding<T, W>,
+        _: &core::Component,
+        _ctx: &CompBinding,
     ) -> FilamentResult<()> {
         Ok(())
     }
@@ -84,8 +75,8 @@ where
     #[inline]
     fn exit_component(
         &mut self,
-        _: &core::Component<T, W>,
-        _ctx: &CompBinding<T, W>,
+        _: &core::Component,
+        _ctx: &CompBinding,
     ) -> FilamentResult<()> {
         Ok(())
     }
@@ -93,8 +84,8 @@ where
     /// Perform the component traversal
     fn component(
         &mut self,
-        comp: &core::Component<T, W>,
-        prog_ctx: &super::ProgBinding<T, W>,
+        comp: &core::Component,
+        prog_ctx: &super::ProgBinding,
     ) -> FilamentResult<()> {
         let ctx = &CompBinding::new(prog_ctx, comp)?;
 
@@ -109,14 +100,11 @@ where
         self.exit_component(comp, ctx)
     }
 
-    fn external(
-        &mut self,
-        _: &core::Signature<T, core::PortParam>,
-    ) -> FilamentResult<()> {
+    fn external(&mut self, _: &core::Signature) -> FilamentResult<()> {
         Ok(())
     }
 
-    fn check(ns: &core::Namespace<T, W>) -> FilamentResult<Self> {
+    fn check(ns: &core::Namespace) -> FilamentResult<Self> {
         let prog_ctx = &ProgBinding::from(ns);
         let mut pass = Self::new(ns)?;
 

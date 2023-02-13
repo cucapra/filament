@@ -1,9 +1,6 @@
 use derivative::Derivative;
 
-use super::{
-    time_rep::TimeSubRep, Binding, Id, PortParam, Range, Time, TimeRep,
-    WithTime,
-};
+use super::{Binding, ConcTime, Id, Range, TimeSub, Width};
 use crate::{interval_checking::SExp, utils::GPosIdx};
 use std::fmt::Display;
 
@@ -81,11 +78,8 @@ where
     }
 }
 
-impl<K: TimeRep, T: WithTime<K>> WithTime<K> for OrderConstraint<T>
-where
-    Self: Clone,
-{
-    fn resolve_event(&self, bindings: &Binding<K>) -> Self {
+impl OrderConstraint<ConcTime> {
+    fn resolve_event(&self, bindings: &Binding<ConcTime>) -> Self {
         OrderConstraint {
             left: self.left.resolve_event(bindings),
             right: self.right.resolve_event(bindings),
@@ -93,28 +87,35 @@ where
         }
     }
 
-    fn resolve_offset(
-        &self,
-        bindings: &Binding<<K as TimeRep>::Offset>,
-    ) -> Self {
+    fn resolve_offset(&self, bindings: &Binding<Width>) -> Self {
         OrderConstraint {
             left: self.left.resolve_offset(bindings),
             right: self.right.resolve_offset(bindings),
             ..self.clone()
         }
     }
+}
+impl OrderConstraint<TimeSub> {
+    fn resolve_event(&self, bindings: &Binding<ConcTime>) -> Self {
+        OrderConstraint {
+            left: self.left.resolve_event(bindings),
+            right: self.right.resolve_event(bindings),
+            ..self.clone()
+        }
+    }
 
-    fn events(&self) -> Vec<Id> {
-        todo!("Events for OrderConstraint")
+    fn resolve_offset(&self, bindings: &Binding<Width>) -> Self {
+        OrderConstraint {
+            left: self.left.resolve_offset(bindings),
+            right: self.right.resolve_offset(bindings),
+            ..self.clone()
+        }
     }
 }
 
-impl<T: TimeRep> OrderConstraint<T> {
+impl OrderConstraint<ConcTime> {
     /// Check that the `left` range is equal to `right`
-    pub fn equality(
-        left: Range<T>,
-        right: Range<T>,
-    ) -> impl Iterator<Item = Self> {
+    pub fn equality(left: Range, right: Range) -> impl Iterator<Item = Self> {
         log::trace!("{left} = {right}");
         vec![
             OrderConstraint::eq(left.start, right.start),
@@ -125,10 +126,7 @@ impl<T: TimeRep> OrderConstraint<T> {
 
     /// Check that the `left` range is a subset of `right`
     /// [ls, le] \subsetof [rs, re] <=> rs <= ls <= le <= re
-    pub fn subset(
-        left: Range<T>,
-        right: Range<T>,
-    ) -> impl Iterator<Item = Self> {
+    pub fn subset(left: Range, right: Range) -> impl Iterator<Item = Self> {
         log::trace!("{left} ⊆ {right}");
         vec![
             OrderConstraint::lte(right.start, left.start),
@@ -164,27 +162,27 @@ where
 
 /// A ordering constraint over time expressions or time ranges.
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub enum Constraint<T: TimeRep> {
+pub enum Constraint {
     Base {
-        base: OrderConstraint<T>,
+        base: OrderConstraint<ConcTime>,
     },
     /// Represents ordering over time ranges.
     Sub {
-        base: OrderConstraint<T::SubRep>,
+        base: OrderConstraint<TimeSub>,
     },
 }
 
-impl<T: TimeRep> Constraint<T> {
-    pub fn base(base: OrderConstraint<T>) -> Self {
+impl Constraint {
+    pub fn base(base: OrderConstraint<ConcTime>) -> Self {
         Self::Base { base }
     }
 
-    pub fn sub(base: OrderConstraint<T::SubRep>) -> Self {
+    pub fn sub(base: OrderConstraint<TimeSub>) -> Self {
         Self::Sub { base }
     }
 
     /// Create a new constraint that `l` is less than `r`
-    pub fn lt(l: T, r: T) -> Self {
+    pub fn lt(l: ConcTime, r: ConcTime) -> Self {
         Self::Base {
             base: OrderConstraint::lt(l, r),
         }
@@ -227,87 +225,33 @@ impl<T: TimeRep> Constraint<T> {
             Constraint::Sub { base } => base.op != OrderOp::Eq,
         }
     }
-
-    pub fn lift(self) -> Constraint<Time<PortParam>> {
-        match self {
-            Constraint::Base {
-                base:
-                    OrderConstraint {
-                        left,
-                        right,
-                        op,
-                        extra,
-                        ..
-                    },
-            } => Constraint::Base {
-                base: OrderConstraint {
-                    left: left.lift(),
-                    right: right.lift(),
-                    op,
-                    extra,
-                },
-            },
-            Constraint::Sub {
-                base:
-                    OrderConstraint {
-                        left,
-                        right,
-                        op,
-                        extra,
-                        ..
-                    },
-            } => Constraint::Sub {
-                base: OrderConstraint {
-                    left: left.lift(),
-                    right: right.lift(),
-                    op,
-                    extra,
-                },
-            },
-        }
-    }
 }
 
-impl<T: TimeRep> WithTime<T> for Constraint<T> {
-    fn resolve_event(&self, binding: &Binding<T>) -> Constraint<T> {
+impl Constraint {
+    pub fn resolve_event(&self, binding: &Binding<ConcTime>) -> Constraint {
         match self {
             Constraint::Base { base } => Constraint::Base {
                 base: base.resolve_event(binding),
             },
             Constraint::Sub { base } => Constraint::Sub {
-                base: OrderConstraint {
-                    left: base.left.resolve_event(binding),
-                    right: base.right.resolve_event(binding),
-                    ..base.clone()
-                },
+                base: base.resolve_event(binding),
             },
         }
     }
 
-    fn resolve_offset(
-        &self,
-        bindings: &Binding<<T as TimeRep>::Offset>,
-    ) -> Self {
+    pub fn resolve_offset(&self, bindings: &Binding<Width>) -> Self {
         match self {
             Constraint::Base { base } => Constraint::Base {
                 base: base.resolve_offset(bindings),
             },
             Constraint::Sub { base } => Constraint::Sub {
-                base: OrderConstraint {
-                    left: base.left.resolve_offset(bindings),
-                    right: base.right.resolve_offset(bindings),
-                    ..base.clone()
-                },
+                base: base.resolve_offset(bindings),
             },
         }
     }
-
-    fn events(&self) -> Vec<Id> {
-        todo!("Events for Constraint")
-    }
 }
 
-impl<T: Display + TimeRep> Display for Constraint<T> {
+impl Display for Constraint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Constraint::Base { base } => write!(f, "{}", base),
@@ -316,20 +260,20 @@ impl<T: Display + TimeRep> Display for Constraint<T> {
     }
 }
 
-impl<T: TimeRep> From<Constraint<T>> for SExp {
-    fn from(con: Constraint<T>) -> Self {
+impl From<Constraint> for SExp {
+    fn from(con: Constraint) -> Self {
         match con {
             Constraint::Base { base } => SExp(format!(
                 "({} {} {})",
                 base.op,
-                base.left.into(),
-                base.right.into()
+                SExp::from(base.left),
+                SExp::from(base.right),
             )),
             Constraint::Sub { base } => SExp(format!(
                 "({} {} {})",
                 base.op,
-                base.left.into(),
-                base.right.into(),
+                SExp::from(base.left),
+                SExp::from(base.right),
             )),
         }
     }

@@ -1,40 +1,34 @@
-use crate::core::{self, Time, TimeSubRep, WidthRep};
+use crate::core;
 use crate::errors::{self, FilamentResult, WithPos};
 use crate::visitor::{self, CompBinding};
 use std::collections::HashMap;
 
-pub struct DumpInterface<W: WidthRep> {
+pub struct DumpInterface {
     /// Map from component to interface information
     max_states: HashMap<core::Id, HashMap<core::Id, u64>>,
-    /// Phantom data for width
-    _w: std::marker::PhantomData<W>,
 }
 
-impl<W: WidthRep> visitor::Transform<Time<u64>, W> for DumpInterface<W> {
+impl visitor::Transform for DumpInterface {
     // Mapping from component -> event -> max state
     type Info = HashMap<core::Id, HashMap<core::Id, u64>>;
 
-    fn new(_: &core::Namespace<Time<u64>, W>, max_states: &Self::Info) -> Self {
+    fn new(_: &core::Namespace, max_states: &Self::Info) -> Self {
         Self {
             max_states: max_states.clone(),
-            _w: std::marker::PhantomData,
         }
     }
 
     fn clear_data(&mut self) {}
 
-    fn component_filter(
-        &self,
-        comp: &visitor::CompBinding<Time<u64>, W>,
-    ) -> bool {
+    fn component_filter(&self, comp: &visitor::CompBinding) -> bool {
         let sig = comp.this();
         sig.name == "main"
     }
 
     fn exit_component(
         &mut self,
-        comp: &CompBinding<Time<u64>, W>,
-    ) -> FilamentResult<Vec<core::Command<Time<u64>, W>>> {
+        comp: &CompBinding,
+    ) -> FilamentResult<Vec<core::Command>> {
         let sig = comp.this();
 
         // For an interface port like this:
@@ -83,7 +77,7 @@ impl<W: WidthRep> visitor::Transform<Time<u64>, W> for DumpInterface<W> {
         //   "start": n,
         //   "end": m
         // },
-        let pd_to_info = |pd: &core::PortDef<Time<u64>, W>| {
+        let pd_to_info = |pd: &core::PortDef| {
             let w = &pd.bitwidth;
             pd.liveness
             .as_offset()

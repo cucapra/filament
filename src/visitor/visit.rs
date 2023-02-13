@@ -1,44 +1,39 @@
 use super::{CompBinding, ProgBinding};
-use crate::{
-    core::{self, TimeRep, WidthRep},
-    errors::FilamentResult,
-};
+use crate::{core, errors::FilamentResult};
 use itertools::Itertools;
 
 /// Transform the given AST
-pub trait Transform<T, W>
+pub trait Transform
 where
     Self: Sized,
-    T: TimeRep,
-    W: WidthRep,
 {
     /// Extra information needed to construct this visitor.
     type Info;
 
     /// Construct an instance of this pass
-    fn new(_: &core::Namespace<T, W>, info: &Self::Info) -> Self;
+    fn new(_: &core::Namespace, info: &Self::Info) -> Self;
 
     /// What data should be cleared between component
     fn clear_data(&mut self);
 
     /// Whether this component should be visited or not
-    fn component_filter(&self, comp: &CompBinding<T, W>) -> bool;
+    fn component_filter(&self, comp: &CompBinding) -> bool;
 
     #[inline]
     fn connect(
         &mut self,
         con: core::Connect,
-        _: &CompBinding<T, W>,
-    ) -> FilamentResult<Vec<core::Command<T, W>>> {
+        _: &CompBinding,
+    ) -> FilamentResult<Vec<core::Command>> {
         Ok(vec![con.into()])
     }
 
     #[inline]
     fn instance(
         &mut self,
-        inst: core::Instance<W>,
-        _: &CompBinding<T, W>,
-    ) -> FilamentResult<Vec<core::Command<T, W>>> {
+        inst: core::Instance,
+        _: &CompBinding,
+    ) -> FilamentResult<Vec<core::Command>> {
         Ok(vec![inst.into()])
     }
 
@@ -46,8 +41,8 @@ where
     fn fsm(
         &mut self,
         fsm: core::Fsm,
-        _: &CompBinding<T, W>,
-    ) -> FilamentResult<Vec<core::Command<T, W>>> {
+        _: &CompBinding,
+    ) -> FilamentResult<Vec<core::Command>> {
         Ok(vec![fsm.into()])
     }
 
@@ -56,18 +51,18 @@ where
     #[inline]
     fn invoke(
         &mut self,
-        inv: core::Invoke<T>,
-        _: &CompBinding<T, W>,
-    ) -> FilamentResult<Vec<core::Command<T, W>>> {
+        inv: core::Invoke,
+        _: &CompBinding,
+    ) -> FilamentResult<Vec<core::Command>> {
         Ok(vec![inv.into()])
     }
 
     #[inline]
     fn signature(
         &mut self,
-        sig: core::Signature<T, W>,
-        _: &CompBinding<T, W>,
-    ) -> FilamentResult<core::Signature<T, W>> {
+        sig: core::Signature,
+        _: &CompBinding,
+    ) -> FilamentResult<core::Signature> {
         Ok(sig)
     }
 
@@ -75,8 +70,8 @@ where
     #[inline]
     fn enter_component(
         &mut self,
-        _: &CompBinding<T, W>,
-    ) -> FilamentResult<Vec<core::Command<T, W>>> {
+        _: &CompBinding,
+    ) -> FilamentResult<Vec<core::Command>> {
         Ok(vec![])
     }
 
@@ -84,21 +79,21 @@ where
     #[inline]
     fn exit_component(
         &mut self,
-        _: &CompBinding<T, W>,
-    ) -> FilamentResult<Vec<core::Command<T, W>>> {
+        _: &CompBinding,
+    ) -> FilamentResult<Vec<core::Command>> {
         Ok(vec![])
     }
 
     /// Transform the program
     fn transform(
-        mut ns: core::Namespace<T, W>,
+        mut ns: core::Namespace,
         info: Self::Info,
-    ) -> FilamentResult<(core::Namespace<T, W>, Self)> {
+    ) -> FilamentResult<(core::Namespace, Self)> {
         // Build a new pass
         let mut pass = Self::new(&ns, &info);
 
         // Extract (name, commands) from the components
-        let comp_data: Vec<(core::Id, Vec<core::Command<T, W>>)> = ns
+        let comp_data: Vec<(core::Id, Vec<core::Command>)> = ns
             .components
             .iter_mut()
             .map(|comp| {

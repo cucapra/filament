@@ -1,14 +1,12 @@
 use super::{FilSolver, IntervalCheck};
-use crate::core::{self, OrderConstraint, TimeRep, WidthRep, WithTime};
+use crate::core::{self, ConcTime, OrderConstraint, Width};
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
 use crate::visitor::{self, Checker, CompBinding};
 use std::iter;
 
-impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
-    for IntervalCheck<T, W>
-{
-    fn new(ns: &core::Namespace<T, W>) -> FilamentResult<Self> {
+impl visitor::Checker for IntervalCheck {
+    fn new(ns: &core::Namespace) -> FilamentResult<Self> {
         let mut solver = FilSolver::new()?;
 
         // Check that all signatures are well formed
@@ -36,16 +34,16 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
     fn connect(
         &mut self,
         con: &core::Connect,
-        ctx: &visitor::CompBinding<T, W>,
+        ctx: &visitor::CompBinding,
     ) -> FilamentResult<()> {
         let src = &con.src;
         let dst = &con.dst;
         log::trace!("Checking connect: {} = {}", dst, src);
 
         let resolve_range =
-            |r: &core::Range<T>,
-             event_b: &core::Binding<T>,
-             param_b: &core::Binding<W>| {
+            |r: &core::Range,
+             event_b: &core::Binding<ConcTime>,
+             param_b: &core::Binding<Width>| {
                 r.resolve_offset(param_b).resolve_event(event_b)
             };
 
@@ -84,8 +82,8 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
 
     fn invoke(
         &mut self,
-        invoke: &core::Invoke<T>,
-        ctx: &CompBinding<T, W>,
+        invoke: &core::Invoke,
+        ctx: &CompBinding,
     ) -> FilamentResult<()> {
         // Check the bindings for abstract variables do not violate @interface
         // requirements
@@ -116,8 +114,8 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
 
     fn enter_component(
         &mut self,
-        comp: &core::Component<T, W>,
-        _: &CompBinding<T, W>,
+        comp: &core::Component,
+        _: &CompBinding,
     ) -> FilamentResult<()> {
         // Ensure that the signature is well-formed
         self.add_obligations(comp.sig.well_formed());
@@ -142,8 +140,8 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
 
     fn exit_component(
         &mut self,
-        comp: &core::Component<T, W>,
-        ctx: &CompBinding<T, W>,
+        comp: &core::Component,
+        ctx: &CompBinding,
     ) -> FilamentResult<()> {
         // Add obligations from disjointness constraints
         let share = self.drain_sharing(ctx)?;
@@ -168,13 +166,13 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> visitor::Checker<T, W>
     }
 }
 
-impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T, W> {
+impl IntervalCheck {
     /// Check that the events provided to an invoke obey the constraints implied
     /// by the component's delays.
     fn check_invoke_binds(
         &mut self,
-        invoke: &core::Invoke<T>,
-        ctx: &CompBinding<T, W>,
+        invoke: &core::Invoke,
+        ctx: &CompBinding,
     ) -> FilamentResult<()> {
         let inv_sig = ctx
             .get_invoke_idx(&invoke.name)
@@ -228,8 +226,8 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T, W> {
 
     fn check_invoke_ports(
         &mut self,
-        invoke: &core::Invoke<T>,
-        ctx: &CompBinding<T, W>,
+        invoke: &core::Invoke,
+        ctx: &CompBinding,
     ) -> FilamentResult<()> {
         // If this is a high-level invoke, check all port requirements
         if let Some(actuals) = invoke.ports.clone() {

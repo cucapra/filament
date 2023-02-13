@@ -6,7 +6,6 @@ use codespan_reporting::{
     term::{self, termcolor::ColorChoice, termcolor::StandardStream},
 };
 use filament::{
-    ast::mono,
     backend, bind_check, cmdline, dump_interface, errors, interval_checking,
     lower, max_states, monomorphize, phantom_check,
     resolver::Resolver,
@@ -47,10 +46,8 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
         return Ok(());
     }
 
-    let ns: mono::Namespace = mono::Namespace::default();
     interval_checking::IntervalCheck::check(&ns)?;
 
-    /*
     // Monomorphize the program.
     let t = Instant::now();
     let ns = monomorphize::Monomorphize::transform(ns)?;
@@ -59,27 +56,27 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
 
     // Monomorphic Bind check
     let t = Instant::now();
-    let ns = bind_check::check(ns)?;
+    bind_check::BindCheck::check(&ns)?;
     log::info!("Monomorphoic Bind check: {}ms", t.elapsed().as_millis());
 
     if opts.dump_interface {
-        let (ns, states) = max_states::MaxStates::transform(ns, ())?;
+        let states = max_states::MaxStates::check(&ns)?;
         dump_interface::DumpInterface::transform(ns, states.max_states)?;
         return Ok(());
     }
 
     // Monomorphic Interval checking
     let t = Instant::now();
-    let ns = interval_checking::check(ns)?;
+    interval_checking::IntervalCheck::check(&ns)?;
     log::info!("Monomorphoic Interval check: {}ms", t.elapsed().as_millis());
 
     // Max state calculation
-    let (mut ns, states) = max_states::MaxStates::transform(ns, ())?;
+    let states = max_states::MaxStates::check(&ns)?;
     log::trace!("Max states: {:?}", states.max_states);
 
     // Lowering
     let t = Instant::now();
-    (ns, _) = lower::CompileInvokes::transform(ns, states.max_states)?;
+    let (ns, _) = lower::CompileInvokes::transform(ns, states.max_states)?;
     log::info!("Lowering: {}ms", t.elapsed().as_millis());
     log::info!("{ns}");
 
@@ -87,8 +84,6 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
     let t = Instant::now();
     backend::compile(ns, opts)?;
     log::info!("Compilation: {}ms", t.elapsed().as_millis());
-
-    */
 
     Ok(())
 }

@@ -1,44 +1,38 @@
 use super::{FilSolver, ShareConstraints};
-use crate::core::{self, Constraint, OrderConstraint, TimeRep, WidthRep};
+use crate::core::{self, ConcTime, Constraint, OrderConstraint};
 use crate::errors::FilamentResult;
 use crate::utils::GPosIdx;
 use crate::visitor;
 use itertools::Itertools;
 use std::iter;
-use std::marker::PhantomData;
 
-type FactMap<T> = Vec<core::Constraint<T>>;
+type FactMap = Vec<core::Constraint>;
 
-pub struct IntervalCheck<T: TimeRep<Offset = W>, W: WidthRep> {
+pub struct IntervalCheck {
     /// Solver associated with this context
-    pub(super) solver: FilSolver<T>,
+    pub(super) solver: FilSolver,
     /// Set of facts that need to be proven.
     /// Mapping from facts to the locations that generated it.
-    pub(super) obligations: FactMap<T>,
+    pub(super) obligations: FactMap,
     /// Set of assumed facts
-    pub(super) facts: FactMap<T>,
-
-    _w: PhantomData<W>,
+    pub(super) facts: FactMap,
 }
 
-impl<T: TimeRep<Offset = W>, W: WidthRep> From<FilSolver<T>>
-    for IntervalCheck<T, W>
-{
-    fn from(solver: FilSolver<T>) -> Self {
+impl From<FilSolver> for IntervalCheck {
+    fn from(solver: FilSolver) -> Self {
         Self {
             solver,
             obligations: Vec::new(),
             facts: Vec::new(),
-            _w: PhantomData,
         }
     }
 }
 
-impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T, W> {
+impl IntervalCheck {
     /// Add a new obligation that needs to be proved
     pub fn add_obligations<F>(&mut self, facts: F)
     where
-        F: Iterator<Item = core::Constraint<T>>,
+        F: Iterator<Item = core::Constraint>,
     {
         for fact in facts {
             log::trace!("adding obligation {}", fact);
@@ -47,7 +41,7 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T, W> {
     }
 
     /// Add a new known fact
-    pub fn add_fact(&mut self, fact: core::Constraint<T>) {
+    pub fn add_fact(&mut self, fact: core::Constraint) {
         log::trace!("adding known fact {}", fact);
         self.facts.push(fact);
     }
@@ -56,8 +50,8 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T, W> {
     /// Add disjointness constraints to the context and returns the set of sharing constraints.
     pub fn drain_sharing(
         &mut self,
-        ctx: &visitor::CompBinding<T, W>,
-    ) -> FilamentResult<Vec<ShareConstraints<T>>> {
+        ctx: &visitor::CompBinding,
+    ) -> FilamentResult<Vec<ShareConstraints>> {
         let all = ctx
             .instances()
             .map(|inst| self.sharing_constraints(inst, ctx))
@@ -70,7 +64,7 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T, W> {
     }
 
     /// Get the obligations that need to be proven
-    pub fn drain_obligations(&mut self) -> Vec<core::Constraint<T>> {
+    pub fn drain_obligations(&mut self) -> Vec<core::Constraint> {
         std::mem::take(&mut self.obligations)
     }
 
@@ -80,8 +74,8 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T, W> {
     fn sharing_constraints(
         &mut self,
         inst: visitor::InstIdx,
-        ctx: &visitor::CompBinding<T, W>,
-    ) -> FilamentResult<Vec<ShareConstraints<T>>> {
+        ctx: &visitor::CompBinding,
+    ) -> FilamentResult<Vec<ShareConstraints>> {
         // Get bindings for all invokes and transpose them so that each inner
         // vector represents the bindings for a single event
         // Reprents invoke -> list (event, delay)
@@ -106,8 +100,8 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T, W> {
                 if e1 != e2 {
                     let con = Constraint::base(
                         OrderConstraint::eq(
-                            T::unit(e1.clone(), 0),
-                            T::unit(e2.clone(), 0)
+                            ConcTime::unit(e1.clone(), 0),
+                            ConcTime::unit(e2.clone(), 0)
                         )
                     ).add_note(
                         format!(
@@ -156,7 +150,7 @@ impl<T: TimeRep<Offset = W>, W: WidthRep> IntervalCheck<T, W> {
 
                     let con =
                         core::Constraint::sub(core::OrderConstraint::gte(
-                            start_i.clone().sub(start_k.clone()),
+                            start_i.clone() - start_k.clone(),
                             delay.clone(),
                         ));
                     self.add_obligations(iter::once(con));

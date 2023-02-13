@@ -1,32 +1,22 @@
 use super::{
-    time_rep::TimeSubRep, Binding, Constraint, Id, InterfaceDef,
-    OrderConstraint, PortDef, PortParam, Time, TimeRep, WidthRep, WithTime,
+    Binding, ConcTime, Constraint, Id, InterfaceDef, OrderConstraint, PortDef,
+    TimeSub, Width,
 };
-use crate::{
-    errors::{Error, FilamentResult, WithPos},
-    utils::GPosIdx,
-};
+use crate::{errors::WithPos, utils::GPosIdx};
 use itertools::Itertools;
 use std::{collections::HashMap, fmt::Display};
 
 #[derive(Clone)]
 /// An event variable bound in the signature
-pub struct EventBind<T>
-where
-    T: TimeRep,
-{
+pub struct EventBind {
     pub event: Id,
-    pub delay: T::SubRep,
-    pub default: Option<T>,
+    pub delay: TimeSub,
+    pub default: Option<ConcTime>,
     pos: GPosIdx,
 }
 
-impl<T: TimeRep> WithTime<T> for EventBind<T> {
-    fn events(&self) -> Vec<Id> {
-        todo!("events for EventBind")
-    }
-
-    fn resolve_event(&self, bindings: &Binding<T>) -> Self {
+impl EventBind {
+    fn resolve_event(&self, bindings: &Binding<ConcTime>) -> Self {
         Self {
             delay: self.delay.resolve_event(bindings),
             default: self.default.as_ref().map(|d| d.resolve_event(bindings)),
@@ -34,10 +24,7 @@ impl<T: TimeRep> WithTime<T> for EventBind<T> {
         }
     }
 
-    fn resolve_offset(
-        &self,
-        bindings: &Binding<<T as TimeRep>::Offset>,
-    ) -> Self {
+    fn resolve_offset(&self, bindings: &Binding<Width>) -> Self {
         Self {
             delay: self.delay.resolve_offset(bindings),
             default: self.default.as_ref().map(|d| d.resolve_offset(bindings)),
@@ -46,10 +33,7 @@ impl<T: TimeRep> WithTime<T> for EventBind<T> {
     }
 }
 
-impl<T> WithPos for EventBind<T>
-where
-    T: TimeRep,
-{
+impl WithPos for EventBind {
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
@@ -60,11 +44,8 @@ where
     }
 }
 
-impl<T> EventBind<T>
-where
-    T: TimeRep,
-{
-    pub fn new(event: Id, delay: T::SubRep, default: Option<T>) -> Self {
+impl EventBind {
+    pub fn new(event: Id, delay: TimeSub, default: Option<ConcTime>) -> Self {
         Self {
             event,
             delay,
@@ -72,21 +53,9 @@ where
             pos: GPosIdx::UNKNOWN,
         }
     }
-
-    pub fn lift(self) -> EventBind<Time<PortParam>> {
-        EventBind {
-            event: self.event,
-            delay: self.delay.lift(),
-            default: self.default.map(|d| d.lift()),
-            pos: self.pos,
-        }
-    }
 }
 
-impl<T> Display for EventBind<T>
-where
-    T: TimeRep,
-{
+impl Display for EventBind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(default) = &self.default {
             write!(f, "?{}: {}={}", self.event, self.delay, default)
@@ -96,17 +65,9 @@ where
     }
 }
 
-/// Signature of an external signature. The compiler cannot modify this type
-/// during compilation.
-pub type ExternalSignature = Signature<Time<PortParam>, PortParam>;
-
 /// The signature of a component definition
 #[derive(Clone)]
-pub struct Signature<Time, Width>
-where
-    Time: TimeRep,
-    Width: WidthRep,
-{
+pub struct Signature {
     /// Name of the component
     pub name: Id,
     /// Parameters for the Signature
@@ -117,30 +78,26 @@ where
     /// evidence for.
     pub interface_signals: Vec<InterfaceDef>,
     /// Names of abstract variables bound by the component
-    pub events: Vec<EventBind<Time>>,
+    pub events: Vec<EventBind>,
     /// Constraints on the abstract variables in the signature
-    pub constraints: Vec<Constraint<Time>>,
+    pub constraints: Vec<Constraint>,
     /// All the input/output ports.
-    ports: Vec<PortDef<Time, Width>>,
+    ports: Vec<PortDef>,
     /// Index of the first output port in the ports vector
     outputs_idx: usize,
 }
 
-impl<T, W> Signature<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
+impl Signature {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: Id,
         params: Vec<Id>,
-        events: Vec<EventBind<T>>,
+        events: Vec<EventBind>,
         unannotated_ports: Vec<(Id, u64)>,
         interface_signals: Vec<InterfaceDef>,
-        mut inputs: Vec<PortDef<T, W>>,
-        mut outputs: Vec<PortDef<T, W>>,
-        constraints: Vec<Constraint<T>>,
+        mut inputs: Vec<PortDef>,
+        mut outputs: Vec<PortDef>,
+        constraints: Vec<Constraint>,
     ) -> Self {
         let outputs_idx = inputs.len();
         inputs.append(&mut outputs);
@@ -161,20 +118,20 @@ where
         self.events.iter().map(|eb| &eb.event).cloned()
     }
     /// Inputs of this signature
-    pub fn inputs(&self) -> impl Iterator<Item = &PortDef<T, W>> {
+    pub fn inputs(&self) -> impl Iterator<Item = &PortDef> {
         self.ports[..self.outputs_idx].iter()
     }
     /// Outputs of this signature
-    pub fn outputs(&self) -> impl Iterator<Item = &PortDef<T, W>> {
+    pub fn outputs(&self) -> impl Iterator<Item = &PortDef> {
         self.ports[self.outputs_idx..].iter()
     }
     /// Iterator over all the ports of this signature
-    pub fn ports(&self) -> impl Iterator<Item = &PortDef<T, W>> {
+    pub fn ports(&self) -> impl Iterator<Item = &PortDef> {
         self.ports.iter()
     }
 
     /// Find the delay associoated with an event
-    pub fn get_event(&self, event: &Id) -> &EventBind<T> {
+    pub fn get_event(&self, event: &Id) -> &EventBind {
         self.events
             .iter()
             .find(|eb| eb.event == event)
@@ -183,7 +140,7 @@ where
             })
     }
     /// Get a port using its name
-    pub fn get_port(&self, port: &Id) -> &PortDef<T, W> {
+    pub fn get_port(&self, port: &Id) -> &PortDef {
         self.ports
             .iter()
             .find(|p| p.name == *port)
@@ -217,7 +174,7 @@ where
     }
 
     /// Constraints for well formed
-    fn constraints(&self) -> impl Iterator<Item = Constraint<T>> + '_ {
+    fn constraints(&self) -> impl Iterator<Item = Constraint> + '_ {
         self.inputs()
             .chain(self.outputs())
             .flat_map(|mpd| mpd.liveness.well_formed())
@@ -225,7 +182,7 @@ where
 
     /// Construct an event binding from this Signature's events and the given
     /// arguments.
-    pub fn event_binding(&self, args: &[T]) -> Binding<T> {
+    pub fn event_binding(&self, args: &[ConcTime]) -> Binding<ConcTime> {
         debug_assert!(
             self.events
                 .iter()
@@ -264,7 +221,7 @@ where
     }
 
     /// Construct a parameter binding from this Signature's parameters and the
-    pub fn param_binding<W0: WidthRep>(&self, args: &[W0]) -> Binding<W0> {
+    pub fn param_binding(&self, args: &[Width]) -> Binding<Width> {
         debug_assert!(
             self.params.len() == args.len(),
             "Insuffient params for signature, required {} got {}",
@@ -276,16 +233,10 @@ where
     }
 }
 
-impl<T, W> Signature<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
-    pub fn map<W0, F>(self, f: F) -> Signature<T, W0>
+impl Signature {
+    pub fn map<F>(self, f: F) -> Signature
     where
-        W0: Clone,
-        F: Fn(W) -> W0,
-        W0: WidthRep,
+        F: Fn(Width) -> Width,
     {
         Signature {
             name: self.name,
@@ -304,12 +255,12 @@ where
     }
 }
 
-impl<T: TimeRep, W: WidthRep> Signature<T, W> {
+impl Signature {
     /// Constraints generated to ensure that a signature is well-formed.
     /// 1. Ensure that all the intervals are well formed
     /// 2. Ensure for each interval that mentions event `E` in its start time, the @interface
     ///    signal for `E` pulses less often than the length of the interval itself.
-    pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> + '_ {
+    pub fn well_formed(&self) -> impl Iterator<Item = Constraint> + '_ {
         let mut evs: HashMap<Id, Vec<_>> = HashMap::new();
 
         // Compute mapping from events to intervals to mention the event in their start time.
@@ -347,91 +298,33 @@ impl<T: TimeRep, W: WidthRep> Signature<T, W> {
             .chain(self.constraints())
     }
 
-    /// Resolve a port definition using the given binding.
-    fn resolve_port<WO: WidthRep>(
-        &self,
-        pd: &PortDef<T, W>,
-        binding: &Binding<WO>,
-    ) -> FilamentResult<PortDef<T, WO>> {
-        if let Some(p) = pd.bitwidth.resolve(binding) {
-            Ok(PortDef::new(pd.name.clone(), pd.liveness.clone(), p)
-                .set_span(pd.copy_span()))
-        } else {
-            Err(Error::malformed(format!(
-            "No binding for parameter {}. Port `{}.{}` is parameterized by `{}`",
-            pd.bitwidth, self.name, pd.name, pd.bitwidth
-        )))
-        }
-    }
-
-    pub fn resolve<WO: WidthRep>(
-        &self,
-        args: &[WO],
-    ) -> FilamentResult<Signature<T, WO>> {
-        if args.len() != self.params.len() {
-            return Err(Error::malformed(format!(
-                "Cannot resolve signature. Expected {} arguments, provided {}",
-                self.params.len(),
-                args.len(),
-            )));
-        }
-
-        let binding: Binding<WO> = self.param_binding(args);
+    pub fn resolve_offset(&self, args: &[Width]) -> Signature {
+        let binding: Binding<Width> = self.param_binding(args);
 
         let resolved = Signature {
             params: vec![],
             ports: self
                 .ports
-                .clone()
                 .iter()
-                .map(|pd| self.resolve_port(pd, &binding))
-                .collect::<FilamentResult<_>>()?,
-            // Clone everything else
-            outputs_idx: self.outputs_idx,
-            name: self.name.clone(),
-            events: self.events.clone(),
-            interface_signals: self.interface_signals.clone(),
-            unannotated_ports: self.unannotated_ports.clone(),
-            constraints: self.constraints.clone(),
-        };
-
-        Ok(resolved)
-    }
-}
-
-impl<T, W> Signature<T, W>
-where
-    W: WidthRep, T: TimeRep
-{
-    // Lift the signature into an external signature
-    pub fn lift(self) -> ExternalSignature {
-        ExternalSignature {
-            ports: self.ports.into_iter().map(|pd| pd.lift()).collect(),
+                .map(|pd| pd.resolve_offset(&binding))
+                .collect_vec(),
+            events: self
+                .events
+                .iter()
+                .map(|eb| eb.resolve_offset(&binding))
+                .collect_vec(),
             constraints: self
                 .constraints
-                .into_iter()
-                .map(|c| c.lift())
-                .collect(),
-            events: self.events.into_iter().map(|e| e.lift()).collect(),
-            outputs_idx: self.outputs_idx,
-            params: self.params,
-            name: self.name,
-            unannotated_ports: self.unannotated_ports,
-            interface_signals: self.interface_signals,
-        }
-    }
-}
+                .iter()
+                .map(|c| c.resolve_offset(&binding))
+                .collect_vec(),
+            ..self.clone()
+        };
 
-impl<T, W> WithTime<T> for Signature<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
-    fn events(&self) -> Vec<Id> {
-        todo!("events for signature")
+        resolved
     }
 
-    fn resolve_event(&self, bindings: &Binding<T>) -> Self {
+    pub fn resolve_event(&self, bindings: &Binding<ConcTime>) -> Self {
         Self {
             ports: self
                 .ports
@@ -451,37 +344,9 @@ where
             ..(self.clone())
         }
     }
-
-    fn resolve_offset(
-        &self,
-        bindings: &Binding<<T as TimeRep>::Offset>,
-    ) -> Self {
-        Self {
-            ports: self
-                .ports
-                .iter()
-                .map(|pd| pd.resolve_offset(bindings))
-                .collect(),
-            constraints: self
-                .constraints
-                .iter()
-                .map(|c| c.resolve_offset(bindings))
-                .collect(),
-            events: self
-                .events
-                .iter()
-                .map(|eb| eb.resolve_offset(bindings))
-                .collect(),
-            ..(self.clone())
-        }
-    }
 }
 
-impl<T, W> Display for Signature<T, W>
-where
-    W: WidthRep,
-    T: TimeRep,
-{
+impl Display for Signature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -517,12 +382,7 @@ where
         Ok(())
     }
 }
-impl<W, T> std::fmt::Debug for Signature<T, W>
-where
-    W:,
-    W: WidthRep,
-    T: TimeRep,
-{
+impl std::fmt::Debug for Signature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{self}")
     }

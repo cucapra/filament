@@ -1,54 +1,44 @@
 use crate::{
-    core::{self, Id, Time, TimeRep, WidthRep, WithTime},
+    core::{self, Id},
     errors::FilamentResult,
     visitor,
 };
-use itertools::Itertools;
 use std::collections::HashMap;
 
 type States = HashMap<Id, u64>;
 
 /// Compute the maximum number of states for each event in a component
 #[derive(Default)]
-pub struct MaxStates<W: WidthRep> {
+pub struct MaxStates {
     /// Map for each event to the maximum number of states for each component
     pub max_states: HashMap<Id, States>,
     /// Current set of states we're working on
     cur_states: States,
-    w: std::marker::PhantomData<W>,
 }
 
-impl<W: WidthRep> MaxStates<W> {
-    fn max_state_from_ports<T: Clone>(
+impl MaxStates {
+    fn max_state_from_ports<'a>(
         &mut self,
-        resolved_outputs: impl IntoIterator<Item = core::PortDef<Time<T>, W>>,
-    ) where
-        Time<T>: TimeRep,
-    {
-        let out_events = resolved_outputs.into_iter().flat_map(
-            |pd: core::PortDef<Time<T>, W>| {
-                pd.liveness.events().into_iter().cloned().collect_vec()
-            },
-        );
-
-        // Use all ranges to compute max state
-        out_events.for_each(|time| {
-            let ev = &time.event;
-            let v = self.cur_states.get_mut(ev).unwrap();
-            let st = time.offset().concrete();
-            if *v < st {
-                *v = st;
+        ports: impl IntoIterator<Item = &'a core::PortDef>,
+    ) {
+        for pd in ports {
+            for time in pd.liveness.time_exprs() {
+                let ev = &time.event;
+                let v = self.cur_states.get_mut(ev).unwrap();
+                let st = time.offset().concrete();
+                if *v < st {
+                    *v = st;
+                }
             }
-        });
+        }
     }
 }
 
-impl<W: WidthRep> visitor::Checker<core::Time<u64>, W> for MaxStates<W> {
-    fn new(_: &core::Namespace<Time<u64>, W>) -> FilamentResult<Self> {
+impl visitor::Checker for MaxStates {
+    fn new(_: &core::Namespace) -> FilamentResult<Self> {
         Ok(Self {
             max_states: HashMap::new(),
             cur_states: HashMap::new(),
-            w: std::marker::PhantomData,
         })
     }
     fn clear_data(&mut self) {
@@ -56,8 +46,8 @@ impl<W: WidthRep> visitor::Checker<core::Time<u64>, W> for MaxStates<W> {
     }
     fn enter_component(
         &mut self,
-        comp: &core::Component<Time<u64>, W>,
-        _: &visitor::CompBinding<Time<u64>, W>,
+        comp: &core::Component,
+        _: &visitor::CompBinding,
     ) -> FilamentResult<()> {
         self.cur_states = comp
             .sig
@@ -65,35 +55,27 @@ impl<W: WidthRep> visitor::Checker<core::Time<u64>, W> for MaxStates<W> {
             .iter()
             .map(|eb| (eb.event.clone(), 0))
             .collect();
-        self.max_state_from_ports(comp.sig.inputs().cloned());
+        self.max_state_from_ports(comp.sig.inputs());
         Ok(())
     }
     fn invoke(
         &mut self,
-        inv: &core::Invoke<Time<u64>>,
-        ctx: &visitor::CompBinding<Time<u64>, W>,
+        inv: &core::Invoke,
+        ctx: &visitor::CompBinding,
     ) -> FilamentResult<()> {
-        let inst = ctx.get_instance(&inv.instance);
-        let outputs = ctx.prog.output_names(inst.sig);
-        let ports = outputs.into_iter().map(|port| {
-            ctx.get_invoke_idx(&inv.name)
-                .unwrap()
-                .get_invoke_port(ctx, port, |range, event_b, _| {
-                    range.resolve_event(event_b)
-                })
-                .unwrap()
-        });
-
-        // Get the signature associated with this instance.
-        self.max_state_from_ports(ports);
+        // Get the fully resolved signature
+        let inv_idx = ctx.get_invoke_idx(&inv.name).unwrap();
+        let sig = inv_idx.resolved_signature(ctx);
+        self.max_state_from_ports(sig.inputs());
         Ok(())
     }
     fn exit_component(
         &mut self,
-        comp: &core::Component<Time<u64>, W>,
-        _: &visitor::CompBinding<Time<u64>, W>,
+        comp: &core::Component,
+        _: &visitor::CompBinding,
     ) -> FilamentResult<()> {
         let events = std::mem::take(&mut self.cur_states);
+        log::info!("Max states for {}: {:?}", comp.sig.name, events);
         self.max_states.insert(comp.sig.name.clone(), events);
         Ok(())
     }

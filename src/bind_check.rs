@@ -1,5 +1,5 @@
 use crate::{
-    core::{self, TimeRep, WidthRep},
+    core,
     errors::{Error, FilamentResult, WithPos},
     visitor,
 };
@@ -7,8 +7,8 @@ use itertools::Itertools;
 
 pub struct BindCheck;
 
-impl<T: TimeRep, W: WidthRep> visitor::Checker<T, W> for BindCheck {
-    fn new(_: &core::Namespace<T, W>) -> FilamentResult<Self> {
+impl visitor::Checker for BindCheck {
+    fn new(_: &core::Namespace) -> FilamentResult<Self> {
         Ok(Self)
     }
 
@@ -16,23 +16,20 @@ impl<T: TimeRep, W: WidthRep> visitor::Checker<T, W> for BindCheck {
 
     fn enter_component(
         &mut self,
-        comp: &core::Component<T, W>,
-        _ctx: &visitor::CompBinding<T, W>,
+        comp: &core::Component,
+        _ctx: &visitor::CompBinding,
     ) -> FilamentResult<()> {
         Self::signature(&comp.sig)
     }
 
-    fn external(
-        &mut self,
-        sig: &core::Signature<T, core::PortParam>,
-    ) -> FilamentResult<()> {
+    fn external(&mut self, sig: &core::Signature) -> FilamentResult<()> {
         Self::signature(sig)
     }
 
     fn instance(
         &mut self,
-        inst: &core::Instance<W>,
-        ctx: &visitor::CompBinding<T, W>,
+        inst: &core::Instance,
+        ctx: &visitor::CompBinding,
     ) -> FilamentResult<()> {
         let bound = ctx.get_instance(&inst.name);
         let param_len = ctx.prog.map_signature(
@@ -58,8 +55,8 @@ impl<T: TimeRep, W: WidthRep> visitor::Checker<T, W> for BindCheck {
 
     fn invoke(
         &mut self,
-        inv: &core::Invoke<T>,
-        ctx: &visitor::CompBinding<T, W>,
+        inv: &core::Invoke,
+        ctx: &visitor::CompBinding,
     ) -> FilamentResult<()> {
         Self::bind_invoke(inv, ctx)?;
         let sig = ctx.get_invoke_sig(&inv.name);
@@ -102,20 +99,20 @@ impl<T: TimeRep, W: WidthRep> visitor::Checker<T, W> for BindCheck {
     fn connect(
         &mut self,
         con: &core::Connect,
-        ctx: &visitor::CompBinding<T, W>,
+        ctx: &visitor::CompBinding,
     ) -> FilamentResult<()> {
         let resolve =
-            |r: &core::Range<T>, _: &core::Binding<T>, _: &core::Binding<W>| {
-                r.clone()
-            };
+            |r: &core::Range,
+             _: &core::Binding<core::ConcTime>,
+             _: &core::Binding<core::Width>| r.clone();
         let dst_w = ctx
             .get_resolved_port(&con.dst, resolve)
             .map(|p| p.bitwidth)
-            .unwrap_or_else(|| W::concrete(32));
+            .unwrap_or_else(|| 32.into());
         let src_w = ctx
             .get_resolved_port(&con.src, resolve)
             .map(|p| p.bitwidth)
-            .unwrap_or_else(|| W::concrete(32));
+            .unwrap_or_else(|| 32.into());
 
         if dst_w != src_w {
             return Err(Error::malformed("Port width mismatch".to_string())
@@ -137,9 +134,9 @@ impl<T: TimeRep, W: WidthRep> visitor::Checker<T, W> for BindCheck {
 
 impl BindCheck {
     /// Check that an invoke's instance is bound and and bind its signature
-    fn bind_invoke<T: TimeRep, W: WidthRep>(
-        inv: &core::Invoke<T>,
-        ctx: &visitor::CompBinding<T, W>,
+    fn bind_invoke(
+        inv: &core::Invoke,
+        ctx: &visitor::CompBinding,
     ) -> FilamentResult<()> {
         let sig = ctx.get_invoke_sig(&inv.name);
         // Check that the number of arguments is more than the minimum number of required formals
@@ -182,15 +179,13 @@ impl BindCheck {
     }
 
     /// Check the binding of a component
-    fn signature<T: TimeRep, W: WidthRep>(
-        sig: &core::Signature<T, W>,
-    ) -> FilamentResult<()> {
+    fn signature(sig: &core::Signature) -> FilamentResult<()> {
         let events = sig.events().collect_vec();
         // Check all the definitions only use bound events
         for pd in sig.ports() {
-            for time in pd.liveness.events() {
-                let ev = time.event();
-                if !events.contains(&ev) {
+            for time in pd.liveness.time_exprs() {
+                let ev = &time.event;
+                if !events.contains(ev) {
                     return Err(Error::undefined(ev.clone(), "event")
                         .add_note(
                             "Event is not defined in the signature",

@@ -1,27 +1,19 @@
-use crate::core::{self, TimeRep, WidthRep};
+use crate::core;
 use std::collections::{HashMap, HashSet};
 use topological_sort::{self, TopologicalSort};
 
 /// Defines a post-order traversal of the components.
 /// There is an edge between src -> dst if `src` instantiates an instance of `dst`.
-pub struct PostOrder<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
+pub struct PostOrder {
     /// The namespace
-    ns: core::Namespace<T, W>,
+    ns: core::Namespace,
     /// The post-order traversal
     order: TopologicalSort<usize>,
 }
 
-impl<T, W> From<core::Namespace<T, W>> for PostOrder<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
+impl From<core::Namespace> for PostOrder {
     /// Construct a post-order traversal over a namespace.
-    fn from(ns: core::Namespace<T, W>) -> Self {
+    fn from(ns: core::Namespace) -> Self {
         let externs: HashSet<_> =
             ns.signatures().map(|(_, sig)| sig.name.clone()).collect();
 
@@ -49,15 +41,11 @@ where
     }
 }
 
-impl<T, W> PostOrder<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
+impl PostOrder {
     /// Apply a mutable function to each component in the post-order traversal.
     pub fn apply<F>(&mut self, mut upd: F)
     where
-        F: FnMut(&mut core::Component<T, W>),
+        F: FnMut(&mut core::Component),
     {
         self.order
             .clone()
@@ -66,7 +54,7 @@ where
     }
 
     /// Take the namespace from the post order structure.
-    pub fn take(self) -> core::Namespace<T, W> {
+    pub fn take(self) -> core::Namespace {
         self.ns
     }
 }

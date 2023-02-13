@@ -1,6 +1,6 @@
 //! Context that tracks the binding information in a particular program
 use crate::{
-    core::{self, Id, PortParam, TimeRep, WidthRep, WithTime},
+    core::{self, ConcTime, Id, TimeSub, Width},
     errors::{Error, FilamentResult, WithPos},
 };
 use itertools::Itertools;
@@ -23,9 +23,9 @@ pub struct InstIdx(usize);
 
 impl InstIdx {
     /// Returns all the invocations associated with an instance
-    pub fn get_all_invokes<'a, T: TimeRep, W: WidthRep>(
+    pub fn get_all_invokes<'a>(
         &'a self,
-        ctx: &'a CompBinding<'a, T, W>,
+        ctx: &'a CompBinding<'a>,
     ) -> impl Iterator<Item = InvIdx> + '_ {
         ctx.invocations
             .iter()
@@ -42,17 +42,14 @@ impl InstIdx {
     /// Get the signature of this instance by resolving against the parameter bindings.
     /// Note that such a signature still has unresolved event bindings (such as the delay of a Register)
     /// that are only resolved through an invocation.
-    fn param_resolved_signature<T: TimeRep, W: WidthRep>(
-        &self,
-        ctx: &CompBinding<'_, T, W>,
-    ) -> core::Signature<T, W> {
+    fn param_resolved_signature(&self, ctx: &CompBinding) -> core::Signature {
         let inst = &ctx.instances[self.0];
         match inst.sig {
             SigIdx::Ext(idx) => {
-                ctx.prog.externals[idx].resolve(&inst.params).unwrap()
+                ctx.prog.externals[idx].resolve_offset(&inst.params)
             }
             SigIdx::Comp(idx) => {
-                ctx.prog.components[idx].resolve(&inst.params).unwrap()
+                ctx.prog.components[idx].resolve_offset(&inst.params)
             }
         }
     }
@@ -66,10 +63,7 @@ pub struct InvIdx(usize);
 
 impl InvIdx {
     /// Get resolved event bindings for the invocation
-    pub fn resolved_event_binding<T: TimeRep<Offset = W>, W: WidthRep>(
-        &self,
-        ctx: &CompBinding<T, W>,
-    ) -> Vec<T> {
+    pub fn resolved_event_binding(&self, ctx: &CompBinding) -> Vec<ConcTime> {
         let inv = &ctx.invocations[self.0];
         let inst = &ctx.instances[inv.instance.0];
         let param_b = ctx.prog.param_binding(inst.sig, &inst.params);
@@ -82,10 +76,7 @@ impl InvIdx {
 
     /// Return the signature of the component being invoked using the parameter bindings and
     /// the event bindings of the invocation.
-    pub fn resolved_signature<T: TimeRep<Offset = W>, W: WidthRep>(
-        &self,
-        ctx: &CompBinding<T, W>,
-    ) -> core::Signature<T, W> {
+    pub fn resolved_signature(&self, ctx: &CompBinding) -> core::Signature {
         let inv = &ctx.invocations[self.0];
         let inst_idx = inv.instance;
         let inst = &ctx.instances[inst_idx.0];
@@ -111,10 +102,10 @@ impl InvIdx {
     /// L -> [T+5, T+5+Delay(L)] = [T+6, T+9]
     ///
     /// The function returns the (start_time, delay) for each event in the signature.
-    pub fn event_active_ranges<T: TimeRep<Offset = W>, W: WidthRep>(
+    pub fn event_active_ranges(
         &self,
-        ctx: &CompBinding<T, W>,
-    ) -> Vec<(T, T::SubRep)> {
+        ctx: &CompBinding,
+    ) -> Vec<(ConcTime, TimeSub)> {
         let inv = &ctx.invocations[self.0];
         let sig = self.resolved_signature(ctx);
         sig.events
@@ -128,18 +119,18 @@ impl InvIdx {
     /// Returns None if and only if the invocation is not defined
     ///
     /// Accepts a function to resolve the liveness of the port using time and width bindings.
-    pub fn get_invoke_port<T: TimeRep, W: WidthRep, F>(
+    pub fn get_invoke_port<F>(
         &self,
-        ctx: &CompBinding<T, W>,
+        ctx: &CompBinding,
         port: &Id,
         resolve_range: F,
-    ) -> Option<core::PortDef<T, W>>
+    ) -> Option<core::PortDef>
     where
         F: Fn(
-            &core::Range<T>,
-            &core::Binding<T>,
-            &core::Binding<W>,
-        ) -> core::Range<T>,
+            &core::Range,
+            &core::Binding<ConcTime>,
+            &core::Binding<Width>,
+        ) -> core::Range,
     {
         let inv = &ctx.invocations[self.0];
         let inst = &ctx.instances[inv.instance.0];
@@ -172,17 +163,17 @@ impl InvIdx {
     /// This includes:
     /// - The constraints of the component
     /// - Well-formedness constraints
-    pub fn get_resolved_sig_constraints<T: TimeRep, W: WidthRep, F>(
+    pub fn get_resolved_sig_constraints<F>(
         &self,
-        ctx: &CompBinding<T, W>,
+        ctx: &CompBinding,
         resolve_constraint: F,
-    ) -> Vec<core::Constraint<T>>
+    ) -> Vec<core::Constraint>
     where
         F: Fn(
-            &core::Constraint<T>,
-            &core::Binding<T>,
-            &core::Binding<W>,
-        ) -> core::Constraint<T>,
+            &core::Constraint,
+            &core::Binding<ConcTime>,
+            &core::Binding<Width>,
+        ) -> core::Constraint,
     {
         let inv = &ctx.invocations[self.0];
         let inst = &ctx[inv.instance];
@@ -213,30 +204,30 @@ impl InvIdx {
 }
 
 /// An instance bound by a component
-pub struct BoundInstance<W: WidthRep> {
+pub struct BoundInstance {
     /// The signature of this instance
     pub sig: SigIdx,
     /// Parameter binding for this instance
-    pub params: Vec<W>,
+    pub params: Vec<Width>,
 }
 
-pub struct BoundInvoke<T: TimeRep> {
+pub struct BoundInvoke {
     /// The instance being invoked
     pub instance: InstIdx,
     /// Event binding for this invocation
-    pub events: Vec<T>,
+    pub events: Vec<ConcTime>,
 }
 
 /// Track binding information for a component
-pub struct CompBinding<'p, T: TimeRep, W: WidthRep> {
+pub struct CompBinding<'p> {
     /// Context associated with the program
-    pub prog: &'p ProgBinding<'p, T, W>,
+    pub prog: &'p ProgBinding<'p>,
     /// Signature associated with this component
     sig: SigIdx,
     /// Instances bound in this component
-    instances: Vec<BoundInstance<W>>,
+    instances: Vec<BoundInstance>,
     /// Invocations bound in this component
-    invocations: Vec<BoundInvoke<T>>,
+    invocations: Vec<BoundInvoke>,
     /// Mapping from name of instance to its index
     inst_map: HashMap<Id, InstIdx>,
     /// Mapping from name of invocation to its index
@@ -244,38 +235,34 @@ pub struct CompBinding<'p, T: TimeRep, W: WidthRep> {
 }
 
 // Index into the component binding using InstIdx
-impl<'p, T: TimeRep, W: WidthRep> std::ops::Index<InstIdx>
-    for CompBinding<'p, T, W>
-{
-    type Output = BoundInstance<W>;
+impl<'p> std::ops::Index<InstIdx> for CompBinding<'p> {
+    type Output = BoundInstance;
     fn index(&self, idx: InstIdx) -> &Self::Output {
         &self.instances[idx.0]
     }
 }
 
 // Index into the component binding using InvIdx
-impl<'p, T: TimeRep, W: WidthRep> std::ops::Index<InvIdx>
-    for CompBinding<'p, T, W>
-{
-    type Output = BoundInvoke<T>;
+impl<'p> std::ops::Index<InvIdx> for CompBinding<'p> {
+    type Output = BoundInvoke;
     fn index(&self, idx: InvIdx) -> &Self::Output {
         &self.invocations[idx.0]
     }
 }
 
-impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
+impl<'p> CompBinding<'p> {
     /// Construct a new binding context for a component
     pub fn new(
-        prog_ctx: &'p ProgBinding<'p, T, W>,
-        comp: &core::Component<T, W>,
+        prog_ctx: &'p ProgBinding<'p>,
+        comp: &core::Component,
     ) -> FilamentResult<Self> {
         Self::from_comp_data(prog_ctx, &comp.sig.name, &comp.body)
     }
 
     pub fn from_comp_data(
-        prog: &'p ProgBinding<'p, T, W>,
+        prog: &'p ProgBinding<'p>,
         comp: &core::Id,
-        cmds: &Vec<core::Command<T, W>>,
+        cmds: &Vec<core::Command>,
     ) -> FilamentResult<Self> {
         let sig = prog.find_sig_idx(comp).unwrap();
         let mut ctx = Self {
@@ -322,8 +309,8 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
 
     /// Get the **unresolved** signature associated with this component.
     /// If this signature should be completely resolved, use [[InvIdx::resolve_signature]].
-    pub fn this(&self) -> &core::Signature<T, W> {
-        &self.prog.comp_sig(self.sig)
+    pub fn this(&self) -> &core::Signature {
+        self.prog.comp_sig(self.sig)
     }
 
     /// Return instances associated with this component
@@ -342,13 +329,13 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
     }
 
     /// Get instance binding for a given instance name
-    pub fn get_instance(&self, name: &Id) -> &BoundInstance<W> {
+    pub fn get_instance(&self, name: &Id) -> &BoundInstance {
         let idx = self.get_instance_idx(name).unwrap();
         &self[idx]
     }
 
     /// Get invocation binding for a given invocation name
-    pub fn get_invoke(&self, name: &Id) -> &BoundInvoke<T> {
+    pub fn get_invoke(&self, name: &Id) -> &BoundInvoke {
         let idx = self.get_invoke_idx(name).unwrap();
         &self[idx]
     }
@@ -371,10 +358,7 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
 
     /// Add a new instance to this binding.
     /// Returns None when the component is not bound.
-    pub fn add_instance(
-        &mut self,
-        inst: &core::Instance<W>,
-    ) -> Option<InstIdx> {
+    pub fn add_instance(&mut self, inst: &core::Instance) -> Option<InstIdx> {
         let sig = self.prog.find_sig_idx(&inst.component)?;
         let idx = InstIdx(self.instances.len());
         self.instances.push(BoundInstance {
@@ -389,7 +373,7 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
     /// Add a new invocation to this binding. Fully resolves the binding
     /// by filling in the default arguments.
     /// Returns `None` when the provided instance is not bound.
-    pub fn add_invoke(&mut self, inv: &core::Invoke<T>) -> Option<InvIdx> {
+    pub fn add_invoke(&mut self, inv: &core::Invoke) -> Option<InvIdx> {
         let instance = self.inst_map.get(&inv.instance)?;
         let binding = self
             .prog
@@ -409,13 +393,13 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
         &self,
         port: &core::Port,
         resolve_liveness: F,
-    ) -> Option<core::PortDef<T, W>>
+    ) -> Option<core::PortDef>
     where
         F: Fn(
-            &core::Range<T>,
-            &core::Binding<T>,
-            &core::Binding<W>,
-        ) -> core::Range<T>,
+            &core::Range,
+            &core::Binding<ConcTime>,
+            &core::Binding<Width>,
+        ) -> core::Range,
     {
         match &port.typ {
             core::PortType::ThisPort(p) => {
@@ -435,13 +419,13 @@ impl<'p, T: TimeRep, W: WidthRep> CompBinding<'p, T, W> {
 /// Signatures bound in a program.
 /// Also acts a dispatcher for methods on [[core::Signature]] since external and
 /// component signatures have different types.
-pub struct ProgBinding<'a, T: TimeRep, W: WidthRep> {
-    externals: Vec<&'a core::Signature<T, PortParam>>,
-    components: Vec<&'a core::Signature<T, W>>,
+pub struct ProgBinding<'a> {
+    externals: Vec<&'a core::Signature>,
+    components: Vec<&'a core::Signature>,
     name_map: HashMap<Id, SigIdx>,
 }
 
-impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
+impl<'a> ProgBinding<'a> {
     /// Get index associated with a signature
     fn find_sig_idx(&self, name: &core::Id) -> Option<SigIdx> {
         if let Some(idx) = self.externals.iter().position(|s| *name == s.name) {
@@ -455,7 +439,7 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
     }
 
     /// Add a component signature to the program binding
-    pub fn add_component(&mut self, sig: &'a core::Signature<T, W>) -> SigIdx {
+    pub fn add_component(&mut self, sig: &'a core::Signature) -> SigIdx {
         let idx = SigIdx::Comp(self.components.len());
         self.components.push(sig);
         self.name_map.insert(sig.name.clone(), idx);
@@ -463,10 +447,7 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
     }
 
     /// Add a component signature to the program binding
-    pub fn add_external(
-        &mut self,
-        sig: &'a core::Signature<T, PortParam>,
-    ) -> SigIdx {
+    pub fn add_external(&mut self, sig: &'a core::Signature) -> SigIdx {
         let idx = SigIdx::Ext(self.externals.len());
         self.externals.push(sig);
         self.name_map.insert(sig.name.clone(), idx);
@@ -480,8 +461,8 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
     pub fn map_signature<O>(
         &self,
         sig: SigIdx,
-        ext: impl Fn(&'a core::Signature<T, PortParam>) -> O,
-        comp: impl Fn(&'a core::Signature<T, W>) -> O,
+        ext: impl Fn(&'a core::Signature) -> O,
+        comp: impl Fn(&'a core::Signature) -> O,
     ) -> O {
         match sig {
             SigIdx::Ext(idx) => ext(self.externals[idx]),
@@ -531,7 +512,7 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
     }
 
     /// Returns the underlying comp signature. Panics if the signature actually points to an external.
-    pub fn comp_sig(&self, sig: SigIdx) -> &'a core::Signature<T, W> {
+    pub fn comp_sig(&self, sig: SigIdx) -> &'a core::Signature {
         match sig {
             SigIdx::Ext(_) => {
                 unreachable!("comp_sig called on external signature")
@@ -542,7 +523,11 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
 
     /// Event binding generated from a signature
     /// XXX: Can be constructed using the binding and the event names
-    fn event_binding(&self, sig: SigIdx, events: &[T]) -> core::Binding<T> {
+    fn event_binding(
+        &self,
+        sig: SigIdx,
+        events: &[ConcTime],
+    ) -> core::Binding<ConcTime> {
         match sig {
             SigIdx::Ext(idx) => self.externals[idx].event_binding(events),
             SigIdx::Comp(idx) => self.components[idx].event_binding(events),
@@ -550,7 +535,11 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
     }
 
     /// XXX: Can be constructed using the binding and the param names
-    fn param_binding(&self, sig: SigIdx, params: &[W]) -> core::Binding<W> {
+    fn param_binding(
+        &self,
+        sig: SigIdx,
+        params: &[Width],
+    ) -> core::Binding<Width> {
         match sig {
             SigIdx::Ext(idx) => self.externals[idx].param_binding(params),
             SigIdx::Comp(idx) => self.components[idx].param_binding(params),
@@ -558,10 +547,8 @@ impl<'a, T: TimeRep, W: WidthRep> ProgBinding<'a, T, W> {
     }
 }
 
-impl<'a, T: TimeRep, W: WidthRep> From<&'a core::Namespace<T, W>>
-    for ProgBinding<'a, T, W>
-{
-    fn from(ns: &'a core::Namespace<T, W>) -> Self {
+impl<'a> From<&'a core::Namespace> for ProgBinding<'a> {
+    fn from(ns: &'a core::Namespace) -> Self {
         let mut ctx = ProgBinding {
             externals: Vec::new(),
             components: Vec::new(),

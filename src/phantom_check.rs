@@ -1,4 +1,4 @@
-use crate::core::{self, TimeRep, WidthRep};
+use crate::core;
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
 use crate::visitor;
@@ -9,20 +9,18 @@ use std::collections::HashSet;
 /// 1. The component doesn't share any instances
 /// 2. The component doesn't use an subcomponents that need to use the
 ///    corresponding event in their interface, i.e., the uses of the event are all phantom
-pub struct PhantomCheck<T: TimeRep, W: WidthRep> {
+pub struct PhantomCheck {
     // Set of instances that have already been used once
     instance_used: HashSet<core::Id>,
     // Names of @phantom events in this component
     phantom_events: Vec<core::Id>,
-    _tw: std::marker::PhantomData<(T, W)>,
 }
 
-impl<T: TimeRep, W: WidthRep> visitor::Checker<T, W> for PhantomCheck<T, W> {
-    fn new(_: &core::Namespace<T, W>) -> FilamentResult<Self> {
+impl visitor::Checker for PhantomCheck {
+    fn new(_: &core::Namespace) -> FilamentResult<Self> {
         Ok(Self {
             instance_used: HashSet::new(),
             phantom_events: Vec::new(),
-            _tw: std::marker::PhantomData,
         })
     }
 
@@ -32,14 +30,14 @@ impl<T: TimeRep, W: WidthRep> visitor::Checker<T, W> for PhantomCheck<T, W> {
     }
 
     // Only check component if at least one phantom event
-    fn component_filter(&self, comp: &core::Component<T, W>) -> bool {
+    fn component_filter(&self, comp: &core::Component) -> bool {
         comp.sig.phantom_events().next().is_some()
     }
 
     fn enter_component(
         &mut self,
-        comp: &core::Component<T, W>,
-        _: &visitor::CompBinding<T, W>,
+        comp: &core::Component,
+        _: &visitor::CompBinding,
     ) -> FilamentResult<()> {
         self.phantom_events = comp.sig.phantom_events().collect();
         Ok(())
@@ -47,8 +45,8 @@ impl<T: TimeRep, W: WidthRep> visitor::Checker<T, W> for PhantomCheck<T, W> {
 
     fn invoke(
         &mut self,
-        inv: &core::Invoke<T>,
-        ctx: &visitor::CompBinding<T, W>,
+        inv: &core::Invoke,
+        ctx: &visitor::CompBinding,
     ) -> FilamentResult<()> {
         // Check if the instance has already been used
         if let Some(prev_use) = self.instance_used.get(&inv.instance) {

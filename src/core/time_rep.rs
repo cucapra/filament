@@ -1,4 +1,4 @@
-use super::{Id, PortParam, Time};
+use super::{ConcTime, Id, Width};
 use crate::interval_checking::SExp;
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
@@ -19,6 +19,10 @@ impl<T> Binding<T> {
 
     pub fn find(&self, n: &Id) -> Option<&T> {
         self.map.get(n)
+    }
+
+    pub fn values(&self) -> impl Iterator<Item = &T> {
+        self.map.values()
     }
 
     /// Return binding for n, or panic if it doesn't exist
@@ -61,138 +65,34 @@ where
     }
 }
 
-/// Representation of a time of the form of `event + offset`
-/// Defines type that descibe the type of the offset and the type generated when
-/// substracting two time expressions
-pub trait TimeRep
-where
-    Self: Sized + Eq + std::hash::Hash + Clone + Display + Into<SExp>,
-{
-    /// Representation of absolute difference b/w two events of this TimeRep
-    type SubRep: TimeSubRep<Self>;
-
-    /// Offset for this time expression
-    type Offset;
-
-    /// All events used in the time expression
-    fn event(&self) -> Id;
-
-    /// A time expression with exactly one event and offset
-    fn unit(event: Id, state: u64) -> Self;
-    /// Increment the time by a constant
-    fn increment(self, n: PortParam) -> Self;
-    /// Substract two time expression representing the absolute difference
-    fn sub(self, other: Self) -> Self::SubRep;
-
-    /// Resolve the time expression given a binding
-    fn resolve_event(&self, bindings: &Binding<Self>) -> Self;
-    /// Resolve the offset given a binding
-    fn resolve_offset(&self, bindings: &Binding<Self::Offset>) -> Self;
-
-    /// Convert this into a time with port param.
-    fn lift(self) -> Time<PortParam>;
-}
-
-/// Representation of time events being substracted
-pub trait TimeSubRep<T>
-where
-    T: TimeRep,
-    Self: WithTime<T> + Clone + Eq + std::hash::Hash + Display + Into<SExp>,
-{
-    fn unit(n: u64) -> Self;
-    fn sym(l: T, r: T) -> Self;
-    /// Return the concrete difference if possible
-    fn concrete(&self) -> Option<u64>;
-    fn lift(self) -> TimeSub<Time<PortParam>>;
-}
-
-/// Traits that allow application of a binding to a data structure
-/// Type `T` is the type being traversed over
-/// Type `B` is the type being resolved
-pub trait Resolve<T, R> {
-    fn traverse(&self, binding: &Binding<R>) -> Self;
-}
-
-/// Functions provided by data structures that contain a time representation
-pub trait WithTime<T>
-where
-    T: TimeRep,
-    Self: Sized,
-{
-    /// The events bound this type
-    fn events(&self) -> Vec<Id>;
-    /// Resolve the event using a binding
-    fn resolve_event(&self, bindings: &Binding<T>) -> Self;
-    /// Resolve the offset using a binding
-    fn resolve_offset(&self, bindings: &Binding<T::Offset>) -> Self;
-}
-
-impl<T> WithTime<T> for T
-where
-    T: TimeRep,
-{
-    fn resolve_event(&self, bindings: &Binding<T>) -> Self {
-        self.resolve_event(bindings)
-    }
-    fn resolve_offset(
-        &self,
-        bindings: &Binding<<T as TimeRep>::Offset>,
-    ) -> Self {
-        self.resolve_offset(bindings)
-    }
-    fn events(&self) -> Vec<Id> {
-        vec![self.event()]
-    }
-}
-
 /// Represents the absolute difference between two time events
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub enum TimeSub<T>
-where
-    T: TimeRep,
-{
+pub enum TimeSub {
     /// Concrete difference between two time expressions
     Unit(u64),
     /// Symbolic difference between two time expressions
-    Sym { l: T, r: T },
+    Sym { l: ConcTime, r: ConcTime },
 }
 
-impl<T> TimeSubRep<T> for TimeSub<T>
-where
-    T: TimeRep,
-    SExp: From<T>,
-{
-    fn unit(n: u64) -> Self {
+impl TimeSub {
+    pub fn unit(n: u64) -> Self {
         TimeSub::Unit(n)
     }
 
-    fn sym(l: T, r: T) -> Self {
+    pub fn sym(l: ConcTime, r: ConcTime) -> Self {
         TimeSub::Sym { l, r }
     }
 
-    fn concrete(&self) -> Option<u64> {
+    pub fn concrete(&self) -> Option<u64> {
         match self {
             TimeSub::Unit(n) => Some(*n),
             TimeSub::Sym { .. } => None,
         }
     }
-
-    fn lift(self) -> TimeSub<Time<PortParam>> {
-        match self {
-            TimeSub::Unit(n) => TimeSub::Unit(n),
-            TimeSub::Sym { l, r } => TimeSub::Sym {
-                l: l.lift(),
-                r: r.lift(),
-            },
-        }
-    }
 }
 
-impl<T> WithTime<T> for TimeSub<T>
-where
-    T: TimeRep,
-{
-    fn resolve_event(&self, bindings: &Binding<T>) -> Self {
+impl TimeSub {
+    pub fn resolve_event(&self, bindings: &Binding<ConcTime>) -> Self {
         match self {
             TimeSub::Unit(n) => TimeSub::Unit(*n),
             TimeSub::Sym { l, r } => TimeSub::Sym {
@@ -202,10 +102,7 @@ where
         }
     }
 
-    fn resolve_offset(
-        &self,
-        bindings: &Binding<<T as TimeRep>::Offset>,
-    ) -> Self {
+    pub fn resolve_offset(&self, bindings: &Binding<Width>) -> Self {
         match self {
             TimeSub::Unit(n) => TimeSub::Unit(*n),
             TimeSub::Sym { l, r } => TimeSub::Sym {
@@ -215,7 +112,7 @@ where
         }
     }
 
-    fn events(&self) -> Vec<Id> {
+    pub fn events(&self) -> Vec<Id> {
         match self {
             TimeSub::Unit(_) => vec![],
             TimeSub::Sym { l, r } => {
@@ -225,7 +122,7 @@ where
     }
 }
 
-impl<T: Display + TimeRep> Display for TimeSub<T> {
+impl Display for TimeSub {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TimeSub::Unit(n) => write!(f, "{}", n),
@@ -234,12 +131,8 @@ impl<T: Display + TimeRep> Display for TimeSub<T> {
     }
 }
 
-impl<T> From<TimeSub<T>> for SExp
-where
-    SExp: From<T>,
-    T: TimeRep,
-{
-    fn from(ts: TimeSub<T>) -> Self {
+impl From<TimeSub> for SExp {
+    fn from(ts: TimeSub) -> Self {
         match ts {
             TimeSub::Unit(n) => SExp(n.to_string()),
             TimeSub::Sym { l, r } => {

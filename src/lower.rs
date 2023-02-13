@@ -1,4 +1,4 @@
-use crate::core::{self, Id, Time, TimeRep, WithTime};
+use crate::core::{self, Id};
 use crate::errors::{FilamentResult, WithPos};
 use crate::visitor::{self, CompBinding};
 use itertools::Itertools;
@@ -23,10 +23,7 @@ impl CompileInvokes {
     }
 
     /// Converts an interval to a guard expression with the appropriate FSM
-    fn range_to_guard(
-        &self,
-        range: core::Range<Time<u64>>,
-    ) -> Option<core::Guard> {
+    fn range_to_guard(&self, range: &core::Range) -> Option<core::Guard> {
         let Some((ev, st, end)) = range.as_offset() else {
             unreachable!(
                 "Range `{range}` cannot be represented as a simple offset"
@@ -43,14 +40,11 @@ impl CompileInvokes {
     }
 }
 
-impl visitor::Transform<Time<u64>, u64> for CompileInvokes {
+impl visitor::Transform for CompileInvokes {
     /// Mapping from component -> event -> max state
     type Info = HashMap<Id, HashMap<Id, u64>>;
 
-    fn new(
-        _: &core::Namespace<Time<u64>, u64>,
-        max_states: &Self::Info,
-    ) -> Self {
+    fn new(_: &core::Namespace, max_states: &Self::Info) -> Self {
         Self {
             fsms: HashMap::new(),
             max_states: max_states.clone(),
@@ -62,16 +56,16 @@ impl visitor::Transform<Time<u64>, u64> for CompileInvokes {
     }
 
     /// Visit components with high-level invokes
-    fn component_filter(&self, _: &CompBinding<Time<u64>, u64>) -> bool {
+    fn component_filter(&self, _: &CompBinding) -> bool {
         true
     }
 
     // TODO(rachit): Document how the compilation works
     fn invoke(
         &mut self,
-        inv: core::Invoke<Time<u64>>,
-        ctx: &CompBinding<Time<u64>, u64>,
-    ) -> FilamentResult<Vec<core::Command<Time<u64>, u64>>> {
+        inv: core::Invoke,
+        ctx: &CompBinding,
+    ) -> FilamentResult<Vec<core::Command>> {
         let pos = inv.copy_span();
         // Compile only if this is a high-level invoke
         if let core::Invoke {
@@ -116,8 +110,7 @@ impl visitor::Transform<Time<u64>, u64> for CompileInvokes {
 
             // Generate assignment for each port
             for (port, formal) in ports.into_iter().zip(sig.inputs()) {
-                let req = formal.liveness.resolve_event(&binding);
-                let guard = self.range_to_guard(req);
+                let guard = self.range_to_guard(&formal.liveness);
                 let sp = port.copy_span();
                 let con = core::Connect::new(
                     core::Port::comp(bind.clone(), formal.name.clone()),
@@ -136,8 +129,8 @@ impl visitor::Transform<Time<u64>, u64> for CompileInvokes {
     /// Computes the max state traversed by each event variable
     fn enter_component(
         &mut self,
-        ctx: &CompBinding<Time<u64>, u64>,
-    ) -> FilamentResult<Vec<core::Command<Time<u64>, u64>>> {
+        ctx: &CompBinding,
+    ) -> FilamentResult<Vec<core::Command>> {
         let sig = ctx.this();
 
         // Define FSMs for each interface signal
@@ -163,8 +156,8 @@ impl visitor::Transform<Time<u64>, u64> for CompileInvokes {
 
     fn exit_component(
         &mut self,
-        _: &CompBinding<Time<u64>, u64>,
-    ) -> FilamentResult<Vec<core::Command<Time<u64>, u64>>> {
+        _: &CompBinding,
+    ) -> FilamentResult<Vec<core::Command>> {
         // Add the FSMs to the component
         let fsms = std::mem::take(&mut self.fsms)
             .into_values()
