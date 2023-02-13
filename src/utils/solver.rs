@@ -1,4 +1,4 @@
-use crate::core::{self, ConcTime, TimeSub};
+use crate::core::{self, Time, TimeSub};
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
 use itertools::Itertools;
@@ -10,9 +10,9 @@ pub struct ShareConstraints {
     /// XXX: We store the event binding so that we can get the position of the binding.
     event_bind: core::EventBind,
     /// The events used to compute the minimum of start times
-    starts: Vec<ConcTime>,
+    starts: Vec<Time>,
     /// The (event, delay) to compute the max of start times
-    ends: Vec<(ConcTime, TimeSub)>,
+    ends: Vec<(Time, TimeSub)>,
     /// Additional error information
     notes: Vec<(String, GPosIdx)>,
 }
@@ -39,8 +39,8 @@ impl ShareConstraints {
 
     pub fn add_bind_info(
         &mut self,
-        start: ConcTime,
-        end: (ConcTime, TimeSub),
+        start: Time,
+        end: (Time, TimeSub),
         pos: GPosIdx,
     ) {
         self.add_note(

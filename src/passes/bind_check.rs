@@ -105,8 +105,8 @@ impl visitor::Checker for BindCheck {
     ) -> FilamentResult<()> {
         let resolve =
             |r: &core::Range,
-             _: &core::Binding<core::ConcTime>,
-             _: &core::Binding<core::Width>| r.clone();
+             _: &core::Binding<core::Time>,
+             _: &core::Binding<core::Expr>| r.clone();
         let dst_w = ctx
             .get_resolved_port(&con.dst, resolve)
             .map(|p| p.bitwidth)

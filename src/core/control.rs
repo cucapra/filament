@@ -1,4 +1,4 @@
-use super::{Binding, ConcTime, Id, Width};
+use super::{Binding, Expr, Id, Time};
 use crate::{
     errors::{self, Error, FilamentResult, WithPos},
     utils::GPosIdx,
@@ -130,12 +130,12 @@ pub struct Instance {
     /// Name of the component
     pub component: Id,
     /// Bindings provided for this instance
-    pub bindings: Vec<Width>,
+    pub bindings: Vec<Expr>,
     /// Source position
     pos: GPosIdx,
 }
 impl Instance {
-    pub fn new(name: Id, component: Id, bindings: Vec<Width>) -> Self {
+    pub fn new(name: Id, component: Id, bindings: Vec<Expr>) -> Self {
         Instance {
             name,
             component,
@@ -173,7 +173,7 @@ pub struct Invoke {
     /// Name of the component being invoked
     pub instance: Id,
     /// Abstract variables used for this invocation
-    pub abstract_vars: Vec<ConcTime>,
+    pub abstract_vars: Vec<Time>,
     /// Assignment for the ports
     pub ports: Option<Vec<Port>>,
     /// Source location of the invocation
@@ -184,7 +184,7 @@ impl Invoke {
     pub fn new(
         name: Id,
         instance: Id,
-        abstract_vars: Vec<ConcTime>,
+        abstract_vars: Vec<Time>,
         ports: Option<Vec<Port>>,
     ) -> Self {
         Self {
@@ -197,7 +197,7 @@ impl Invoke {
     }
 
     // XXX: This can probably be removed
-    pub fn bindings<I>(&self, abstract_vars: I) -> Binding<ConcTime>
+    pub fn bindings<I>(&self, abstract_vars: I) -> Binding<Time>
     where
         I: Iterator<Item = Id>,
     {

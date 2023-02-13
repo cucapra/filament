@@ -1,4 +1,4 @@
-use super::{ConcTime, Id, PortParam, Width};
+use super::{Expr, Id, Time};
 use crate::utils::SExp;
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
@@ -69,30 +69,30 @@ where
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum TimeSub {
     /// Concrete difference between two time expressions
-    Unit(PortParam),
+    Unit(Expr),
     /// Symbolic difference between two time expressions
-    Sym { l: ConcTime, r: ConcTime },
+    Sym { l: Time, r: Time },
 }
 
 impl TimeSub {
-    pub fn unit(n: PortParam) -> Self {
+    pub fn unit(n: Expr) -> Self {
         TimeSub::Unit(n)
     }
 
-    pub fn sym(l: ConcTime, r: ConcTime) -> Self {
+    pub fn sym(l: Time, r: Time) -> Self {
         TimeSub::Sym { l, r }
     }
 
     pub fn concrete(&self) -> Option<u64> {
         match self {
-            TimeSub::Unit(PortParam::Const(n)) => Some(*n),
+            TimeSub::Unit(Expr::Const(n)) => Some(*n),
             _ => None,
         }
     }
 }
 
 impl TimeSub {
-    pub fn resolve_event(&self, bindings: &Binding<ConcTime>) -> Self {
+    pub fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
         match self {
             // Unit cannot contain any events
             TimeSub::Unit(_) => self.clone(),
@@ -103,7 +103,7 @@ impl TimeSub {
         }
     }
 
-    pub fn resolve_offset(&self, bindings: &Binding<Width>) -> Self {
+    pub fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         match self {
             TimeSub::Unit(n) => TimeSub::Unit(n.resolve(bindings).unwrap()),
             TimeSub::Sym { l, r } => TimeSub::Sym {
@@ -143,8 +143,8 @@ impl From<TimeSub> for SExp {
     }
 }
 
-impl From<PortParam> for TimeSub {
-    fn from(n: PortParam) -> Self {
+impl From<Expr> for TimeSub {
+    fn from(n: Expr) -> Self {
         TimeSub::Unit(n)
     }
 }

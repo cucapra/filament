@@ -1,6 +1,6 @@
 use derivative::Derivative;
 
-use super::{Binding, ConcTime, Id, Range, TimeSub, Width};
+use super::{Binding, Expr, Id, Range, Time, TimeSub};
 use crate::{utils::GPosIdx, utils::SExp};
 use std::fmt::Display;
 
@@ -87,8 +87,8 @@ where
     }
 }
 
-impl OrderConstraint<ConcTime> {
-    fn resolve_event(&self, bindings: &Binding<ConcTime>) -> Self {
+impl OrderConstraint<Time> {
+    fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
         OrderConstraint {
             left: self.left.resolve_event(bindings),
             right: self.right.resolve_event(bindings),
@@ -96,7 +96,7 @@ impl OrderConstraint<ConcTime> {
         }
     }
 
-    fn resolve_offset(&self, bindings: &Binding<Width>) -> Self {
+    fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         OrderConstraint {
             left: self.left.resolve_offset(bindings),
             right: self.right.resolve_offset(bindings),
@@ -105,7 +105,7 @@ impl OrderConstraint<ConcTime> {
     }
 }
 impl OrderConstraint<TimeSub> {
-    fn resolve_event(&self, bindings: &Binding<ConcTime>) -> Self {
+    fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
         OrderConstraint {
             left: self.left.resolve_event(bindings),
             right: self.right.resolve_event(bindings),
@@ -113,7 +113,7 @@ impl OrderConstraint<TimeSub> {
         }
     }
 
-    fn resolve_offset(&self, bindings: &Binding<Width>) -> Self {
+    fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         OrderConstraint {
             left: self.left.resolve_offset(bindings),
             right: self.right.resolve_offset(bindings),
@@ -122,7 +122,7 @@ impl OrderConstraint<TimeSub> {
     }
 }
 
-impl OrderConstraint<ConcTime> {
+impl OrderConstraint<Time> {
     /// Check that the `left` range is equal to `right`
     pub fn equality(left: Range, right: Range) -> impl Iterator<Item = Self> {
         log::trace!("{left} = {right}");
@@ -173,7 +173,7 @@ where
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Constraint {
     Base {
-        base: OrderConstraint<ConcTime>,
+        base: OrderConstraint<Time>,
     },
     /// Represents ordering over time ranges.
     Sub {
@@ -182,7 +182,7 @@ pub enum Constraint {
 }
 
 impl Constraint {
-    pub fn base(base: OrderConstraint<ConcTime>) -> Self {
+    pub fn base(base: OrderConstraint<Time>) -> Self {
         Self::Base { base }
     }
 
@@ -191,7 +191,7 @@ impl Constraint {
     }
 
     /// Create a new constraint that `l` is less than `r`
-    pub fn lt(l: ConcTime, r: ConcTime) -> Self {
+    pub fn lt(l: Time, r: Time) -> Self {
         Self::Base {
             base: OrderConstraint::lt(l, r),
         }
@@ -237,7 +237,7 @@ impl Constraint {
 }
 
 impl Constraint {
-    pub fn resolve_event(&self, binding: &Binding<ConcTime>) -> Constraint {
+    pub fn resolve_event(&self, binding: &Binding<Time>) -> Constraint {
         match self {
             Constraint::Base { base } => Constraint::Base {
                 base: base.resolve_event(binding),
@@ -248,7 +248,7 @@ impl Constraint {
         }
     }
 
-    pub fn resolve_offset(&self, bindings: &Binding<Width>) -> Self {
+    pub fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         match self {
             Constraint::Base { base } => Constraint::Base {
                 base: base.resolve_offset(bindings),

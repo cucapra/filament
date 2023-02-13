@@ -1,6 +1,6 @@
 use super::{
-    Binding, ConcTime, Constraint, Id, InterfaceDef, OrderConstraint, PortDef,
-    TimeSub, Width,
+    Binding, Constraint, Expr, Id, InterfaceDef, OrderConstraint, PortDef,
+    Time, TimeSub,
 };
 use crate::{errors::WithPos, utils::GPosIdx};
 use itertools::Itertools;
@@ -11,12 +11,12 @@ use std::{collections::HashMap, fmt::Display};
 pub struct EventBind {
     pub event: Id,
     pub delay: TimeSub,
-    pub default: Option<ConcTime>,
+    pub default: Option<Time>,
     pos: GPosIdx,
 }
 
 impl EventBind {
-    fn resolve_event(&self, bindings: &Binding<ConcTime>) -> Self {
+    fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
         Self {
             delay: self.delay.resolve_event(bindings),
             default: self.default.as_ref().map(|d| d.resolve_event(bindings)),
@@ -24,7 +24,7 @@ impl EventBind {
         }
     }
 
-    fn resolve_offset(&self, bindings: &Binding<Width>) -> Self {
+    fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         Self {
             delay: self.delay.resolve_offset(bindings),
             default: self.default.as_ref().map(|d| d.resolve_offset(bindings)),
@@ -45,7 +45,7 @@ impl WithPos for EventBind {
 }
 
 impl EventBind {
-    pub fn new(event: Id, delay: TimeSub, default: Option<ConcTime>) -> Self {
+    pub fn new(event: Id, delay: TimeSub, default: Option<Time>) -> Self {
         Self {
             event,
             delay,
@@ -139,8 +139,9 @@ impl Signature {
                 panic!("Event {} not found in signature:\n{}", event, self.name)
             })
     }
-    /// Get a port using its name
-    pub fn get_port(&self, port: &Id) -> PortDef {
+
+    /// Find a port on the component. Returns `None` if the port does not exist.
+    pub fn find_port(&self, port: &Id) -> Option<PortDef> {
         self.ports
             .iter()
             .find(|p| p.name == *port)
@@ -154,9 +155,13 @@ impl Signature {
                     }
                 })
             })
-            .unwrap_or_else(|| {
-                panic!("Port {} not found in signature:\n{}", port, self.name)
-            })
+    }
+
+    /// Get a port in the signature. Panics if the port is not found.
+    pub fn get_port(&self, port: &Id) -> PortDef {
+        self.find_port(port).unwrap_or_else(|| {
+            panic!("Port {} not found in signature:\n{}", port, self.name)
+        })
     }
 
     // Generate a new signature that has been reversed: inputs are outputs
@@ -192,7 +197,7 @@ impl Signature {
 
     /// Construct an event binding from this Signature's events and the given
     /// arguments.
-    pub fn event_binding(&self, args: &[ConcTime]) -> Binding<ConcTime> {
+    pub fn event_binding(&self, args: &[Time]) -> Binding<Time> {
         debug_assert!(
             self.events
                 .iter()
@@ -231,7 +236,7 @@ impl Signature {
     }
 
     /// Construct a parameter binding from this Signature's parameters and the
-    pub fn param_binding(&self, args: &[Width]) -> Binding<Width> {
+    pub fn param_binding(&self, args: &[Expr]) -> Binding<Expr> {
         debug_assert!(
             self.params.len() == args.len(),
             "Insuffient params for signature, required {} got {}",
@@ -246,7 +251,7 @@ impl Signature {
 impl Signature {
     pub fn map<F>(self, f: F) -> Signature
     where
-        F: Fn(Width) -> Width,
+        F: Fn(Expr) -> Expr,
     {
         Signature {
             name: self.name,
@@ -308,8 +313,8 @@ impl Signature {
             .chain(self.constraints())
     }
 
-    pub fn resolve_offset(&self, args: &[Width]) -> Signature {
-        let binding: Binding<Width> = self.param_binding(args);
+    pub fn resolve_offset(&self, args: &[Expr]) -> Signature {
+        let binding: Binding<Expr> = self.param_binding(args);
 
         let resolved = Signature {
             params: vec![],
@@ -334,7 +339,7 @@ impl Signature {
         resolved
     }
 
-    pub fn resolve_event(&self, bindings: &Binding<ConcTime>) -> Self {
+    pub fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
         Self {
             ports: self
                 .ports

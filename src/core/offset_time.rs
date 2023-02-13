@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use super::{Id, PortParam, Range, TimeSub, Width};
+use super::{Expr, Id, Range, TimeSub};
 use crate::utils::SExp;
 use std::fmt::Display;
 
@@ -27,24 +27,21 @@ impl From<Vec<u64>> for TimeSum {
     }
 }
 
-impl From<Vec<PortParam>> for TimeSum {
-    fn from(v: Vec<PortParam>) -> Self {
+impl From<Vec<Expr>> for TimeSum {
+    fn from(v: Vec<Expr>) -> Self {
         let mut ts = Self {
             concrete: 0,
             abs: vec![],
         };
         for p in v {
             match p {
-                PortParam::Const(c) => ts.concrete += c,
-                PortParam::Var(v) => ts.abs.push(v),
+                Expr::Const(c) => ts.concrete += c,
+                Expr::Var(v) => ts.abs.push(v),
             }
         }
         ts
     }
 }
-
-/// Representation of time in the program
-pub type ConcTime = Time;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 /// Represents expression of the form `G+1+k`
@@ -56,7 +53,7 @@ pub struct Time {
 }
 
 impl Time {
-    pub fn new(event: Id, offset: Vec<PortParam>) -> Self {
+    pub fn new(event: Id, offset: Vec<Expr>) -> Self {
         Self {
             event,
             offset: TimeSum::from(offset),
@@ -108,7 +105,7 @@ impl Range {
     }
 }
 
-impl Display for ConcTime {
+impl Display for Time {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.event)?;
         for x in &self.offset.abs {
@@ -138,18 +135,18 @@ impl Display for ConcTime {
 //     }
 // }
 
-impl ConcTime {
+impl Time {
     pub fn unit(event: Id, state: u64) -> Self {
         Time {
             event,
-            offset: vec![PortParam::Const(state)].into(),
+            offset: vec![Expr::Const(state)].into(),
         }
     }
 
-    pub fn increment(mut self, n: PortParam) -> Self {
+    pub fn increment(mut self, n: Expr) -> Self {
         match n {
-            PortParam::Const(n) => self.offset.concrete += n,
-            PortParam::Var(v) => self.offset.abs.push(v),
+            Expr::Const(n) => self.offset.concrete += n,
+            Expr::Var(v) => self.offset.abs.push(v),
         }
         self
     }
@@ -161,7 +158,7 @@ impl ConcTime {
         n
     }
 
-    pub fn resolve_offset(&self, bind: &super::Binding<Width>) -> Self {
+    pub fn resolve_offset(&self, bind: &super::Binding<Expr>) -> Self {
         let mut offset = TimeSum {
             concrete: self.offset.concrete,
             abs: vec![],
@@ -169,8 +166,8 @@ impl ConcTime {
 
         for x in &self.offset.abs {
             match bind.find(x) {
-                Some(PortParam::Const(c)) => offset.concrete += c,
-                Some(PortParam::Var(v)) => offset.abs.push(v.clone()),
+                Some(Expr::Const(c)) => offset.concrete += c,
+                Some(Expr::Var(v)) => offset.abs.push(v.clone()),
                 None => offset.abs.push(x.clone()),
             }
         }
@@ -186,7 +183,7 @@ impl ConcTime {
     }
 }
 
-impl std::ops::Sub for ConcTime {
+impl std::ops::Sub for Time {
     type Output = TimeSub;
 
     fn sub(self, other: Self) -> Self::Output {

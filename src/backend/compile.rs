@@ -421,8 +421,8 @@ fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
     let port_transform =
         |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<ir::Width> {
             let width = match &pd.bitwidth {
-                core::PortParam::Const(v) => ir::Width::Const { value: *v },
-                core::PortParam::Var(v) => ir::Width::Param {
+                core::Expr::Const(v) => ir::Width::Const { value: *v },
+                core::Expr::Var(v) => ir::Width::Param {
                     value: v.id().into(),
                 },
             };

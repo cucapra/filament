@@ -1,4 +1,4 @@
-use crate::core::{self, ConcTime, Constraint, OrderConstraint};
+use crate::core::{self, Constraint, OrderConstraint, Time};
 use crate::errors::FilamentResult;
 use crate::utils::GPosIdx;
 use crate::utils::{FilSolver, ShareConstraints};
@@ -100,8 +100,8 @@ impl IntervalCheck {
                 if e1 != e2 {
                     let con = Constraint::base(
                         OrderConstraint::eq(
-                            ConcTime::unit(e1.clone(), 0),
-                            ConcTime::unit(e2.clone(), 0)
+                            Time::unit(e1.clone(), 0),
+                            Time::unit(e2.clone(), 0)
                         )
                     ).add_note(
                         format!(

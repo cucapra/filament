@@ -116,10 +116,10 @@ impl FilamentParser {
     }
 
     // ================ Intervals =====================
-    fn time(input: Node) -> ParseResult<core::ConcTime> {
+    fn time(input: Node) -> ParseResult<core::Time> {
         match_nodes!(
             input.clone().into_children();
-            [identifier(ev), port_width(sts)..] => Ok(core::ConcTime::new(ev, sts.collect_vec())),
+            [identifier(ev), port_width(sts)..] => Ok(core::Time::new(ev, sts.collect_vec())),
             [bitwidth(_)] => {
                 Err(input.error("Time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number"))
             }
@@ -143,11 +143,11 @@ impl FilamentParser {
         ))
     }
 
-    fn port_width(input: Node) -> ParseResult<core::PortParam> {
+    fn port_width(input: Node) -> ParseResult<core::Expr> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(id)] => core::PortParam::Var(id),
-            [bitwidth(c)] => core::PortParam::Const(c),
+            [identifier(id)] => core::Expr::Var(id),
+            [bitwidth(c)] => core::Expr::Const(c),
         ))
     }
 
@@ -160,8 +160,8 @@ impl FilamentParser {
             },
             [identifier(name), port_width(bitwidth)] => {
                 match bitwidth {
-                    core::PortParam::Const(c) => Port::Un((name, c)),
-                    core::PortParam::Var(_) => todo!(),
+                    core::Expr::Const(c) => Port::Un((name, c)),
+                    core::Expr::Var(_) => todo!(),
                 }
             },
             [interval_range(range), identifier(name), port_width(bitwidth)] => {
@@ -267,7 +267,7 @@ impl FilamentParser {
     }
 
     // ================ Cells =====================
-    fn conc_params(input: Node) -> ParseResult<Vec<core::PortParam>> {
+    fn conc_params(input: Node) -> ParseResult<Vec<core::Expr>> {
         Ok(match_nodes!(
             input.into_children();
             [port_width(vars)..] => vars.collect(),
@@ -315,7 +315,7 @@ impl FilamentParser {
         ))
     }
 
-    fn time_args(input: Node) -> ParseResult<Vec<core::ConcTime>> {
+    fn time_args(input: Node) -> ParseResult<Vec<core::Time>> {
         Ok(match_nodes!(
             input.into_children();
             [time(args)..] => args.collect(),
@@ -324,7 +324,7 @@ impl FilamentParser {
 
     fn invoke_args(
         input: Node,
-    ) -> ParseResult<(Vec<core::ConcTime>, Vec<core::Port>)> {
+    ) -> ParseResult<(Vec<core::Time>, Vec<core::Port>)> {
         Ok(match_nodes!(
             input.into_children();
             [time_args(time_args), arguments(args)] => (time_args, args),

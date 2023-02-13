@@ -1,6 +1,6 @@
 //! Context that tracks the binding information in a particular program
 use crate::{
-    core::{self, ConcTime, Id, TimeSub, Width},
+    core::{self, Expr, Id, Time, TimeSub},
     errors::{Error, FilamentResult, WithPos},
 };
 use itertools::Itertools;
@@ -63,7 +63,7 @@ pub struct InvIdx(usize);
 
 impl InvIdx {
     /// Get resolved event bindings for the invocation
-    pub fn resolved_event_binding(&self, ctx: &CompBinding) -> Vec<ConcTime> {
+    pub fn resolved_event_binding(&self, ctx: &CompBinding) -> Vec<Time> {
         let inv = &ctx.invocations[self.0];
         let inst = &ctx.instances[inv.instance.0];
         let param_b = ctx.prog.param_binding(inst.sig, &inst.params);
@@ -112,7 +112,7 @@ impl InvIdx {
     pub fn event_active_ranges(
         &self,
         ctx: &CompBinding,
-    ) -> Vec<(ConcTime, TimeSub)> {
+    ) -> Vec<(Time, TimeSub)> {
         let inv = &ctx.invocations[self.0];
         let sig = self.resolved_signature(ctx);
         sig.events
@@ -135,8 +135,8 @@ impl InvIdx {
     where
         F: Fn(
             &core::Range,
-            &core::Binding<ConcTime>,
-            &core::Binding<Width>,
+            &core::Binding<Time>,
+            &core::Binding<Expr>,
         ) -> core::Range,
     {
         let inv = &ctx.invocations[self.0];
@@ -178,8 +178,8 @@ impl InvIdx {
     where
         F: Fn(
             &core::Constraint,
-            &core::Binding<ConcTime>,
-            &core::Binding<Width>,
+            &core::Binding<Time>,
+            &core::Binding<Expr>,
         ) -> core::Constraint,
     {
         let inv = &ctx.invocations[self.0];
@@ -215,14 +215,14 @@ pub struct BoundInstance {
     /// The signature of this instance
     pub sig: SigIdx,
     /// Parameter binding for this instance
-    pub params: Vec<Width>,
+    pub params: Vec<Expr>,
 }
 
 pub struct BoundInvoke {
     /// The instance being invoked
     pub instance: InstIdx,
     /// Event binding for this invocation
-    pub events: Vec<ConcTime>,
+    pub events: Vec<Time>,
 }
 
 /// Track binding information for a component
@@ -397,8 +397,8 @@ impl<'p> CompBinding<'p> {
     where
         F: Fn(
             &core::Range,
-            &core::Binding<ConcTime>,
-            &core::Binding<Width>,
+            &core::Binding<Time>,
+            &core::Binding<Expr>,
         ) -> core::Range,
     {
         match &port.typ {
@@ -534,8 +534,8 @@ impl<'a> ProgBinding<'a> {
     fn event_binding(
         &self,
         sig: SigIdx,
-        events: &[ConcTime],
-    ) -> core::Binding<ConcTime> {
+        events: &[Time],
+    ) -> core::Binding<Time> {
         match sig {
             SigIdx::Ext(idx) => self.externals[idx].event_binding(events),
             SigIdx::Comp(idx) => self.components[idx].event_binding(events),
@@ -546,8 +546,8 @@ impl<'a> ProgBinding<'a> {
     fn param_binding(
         &self,
         sig: SigIdx,
-        params: &[Width],
-    ) -> core::Binding<Width> {
+        params: &[Expr],
+    ) -> core::Binding<Expr> {
         match sig {
             SigIdx::Ext(idx) => self.externals[idx].param_binding(params),
             SigIdx::Comp(idx) => self.components[idx].param_binding(params),

@@ -1,4 +1,4 @@
-use super::{Binding, ConcTime, Constraint, OrderConstraint, TimeSub, Width};
+use super::{Binding, Constraint, Expr, OrderConstraint, Time, TimeSub};
 use crate::{errors, utils::GPosIdx};
 use derivative::Derivative;
 use std::fmt::Display;
@@ -7,8 +7,8 @@ use std::fmt::Display;
 #[derive(Clone, Derivative)]
 #[derivative(PartialEq)]
 pub struct Range {
-    pub start: ConcTime,
-    pub end: ConcTime,
+    pub start: Time,
+    pub end: Time,
     #[derivative(PartialEq = "ignore")]
     pos: GPosIdx,
 }
@@ -34,7 +34,7 @@ impl Range {
 }
 
 impl Range {
-    pub fn resolve_event(&self, bindings: &Binding<ConcTime>) -> Self {
+    pub fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
         Range {
             start: self.start.resolve_event(bindings),
             end: self.end.resolve_event(bindings),
@@ -42,7 +42,7 @@ impl Range {
         }
     }
 
-    pub fn resolve_offset(&self, bindings: &Binding<Width>) -> Self {
+    pub fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         Range {
             start: self.start.resolve_offset(bindings),
             end: self.end.resolve_offset(bindings),
@@ -51,13 +51,13 @@ impl Range {
     }
 
     /// Returns all the time expressions associated with this range
-    pub fn time_exprs(&self) -> Vec<&ConcTime> {
+    pub fn time_exprs(&self) -> Vec<&Time> {
         vec![&self.start, &self.end]
     }
 }
 
 impl Range {
-    pub fn new(start: ConcTime, end: ConcTime) -> Self {
+    pub fn new(start: Time, end: Time) -> Self {
         Self {
             start,
             end,

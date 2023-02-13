@@ -16,7 +16,7 @@ pub use control::{
 };
 pub use id::Id;
 pub use interval::Range;
-pub use offset_time::{ConcTime, Time, TimeSum};
-pub use port::{InterfaceDef, PortDef, PortParam, Width};
+pub use offset_time::{Time, TimeSum};
+pub use port::{Expr, InterfaceDef, PortDef};
 pub use signature::{EventBind, Signature};
 pub use time_rep::{Binding, TimeSub};
