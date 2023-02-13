@@ -10,7 +10,7 @@ mod time_rep;
 mod width_rep;
 
 pub use component::{Component, Namespace};
-pub use constraint::{Constraint, OrderConstraint};
+pub use constraint::{Constraint, OrderConstraint, OrderOp};
 pub use control::{
     Command, Connect, Fsm, Guard, Instance, Invoke, Port, PortType,
 };

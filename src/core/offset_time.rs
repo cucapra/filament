@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use super::{Id, PortParam, Range, TimeSub, Width};
-use crate::interval_checking::SExp;
+use crate::utils::SExp;
 use std::fmt::Display;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -194,7 +194,7 @@ impl std::ops::Sub for ConcTime {
         let rc = other.offset().concrete;
         if self.event == other.event && self.offset().abs == other.offset().abs
         {
-            TimeSub::Unit(u64::abs_diff(lc, rc))
+            TimeSub::Unit(u64::abs_diff(lc, rc).into())
         } else {
             // Only add abstract variable when neither side has it.
             let mut abs = vec![];

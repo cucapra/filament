@@ -1,7 +1,7 @@
-use super::{FilSolver, ShareConstraints};
 use crate::core::{self, ConcTime, Constraint, OrderConstraint};
 use crate::errors::FilamentResult;
 use crate::utils::GPosIdx;
+use crate::utils::{FilSolver, ShareConstraints};
 use crate::visitor;
 use itertools::Itertools;
 use std::iter;

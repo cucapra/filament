@@ -141,7 +141,7 @@ impl BindCheck {
         ctx: &visitor::CompBinding,
     ) -> FilamentResult<visitor::InvIdx> {
         let Some(inv_idx) = ctx.get_invoke_idx(&inv.name) else {
-            return Err(Error::undefined(inv.name.clone(), "instance").add_note("Instance is not bound", inv.instance.copy_span()));
+            return Err(Error::undefined(inv.instance.clone(), "instance").add_note("Instance is not bound", inv.instance.copy_span()));
         };
         let sig = inv_idx.unresolved_signature(ctx);
 

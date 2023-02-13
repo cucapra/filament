@@ -1,12 +1,12 @@
 use derivative::Derivative;
 
 use super::{Binding, ConcTime, Id, Range, TimeSub, Width};
-use crate::{interval_checking::SExp, utils::GPosIdx};
+use crate::{utils::GPosIdx, utils::SExp};
 use std::fmt::Display;
 
 /// Ordering operator for constraints
 #[derive(Hash, Eq, PartialEq, Clone)]
-enum OrderOp {
+pub enum OrderOp {
     Gt,
     Gte,
     Eq,
@@ -41,6 +41,15 @@ impl<T> OrderConstraint<T>
 where
     T: Clone,
 {
+    pub fn new(left: T, right: T, op: OrderOp) -> Self {
+        Self {
+            left,
+            right,
+            op,
+            extra: vec![],
+        }
+    }
+
     pub fn lt(l: T, r: T) -> Self {
         Self {
             left: r,

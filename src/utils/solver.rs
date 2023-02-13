@@ -68,7 +68,7 @@ impl From<ShareConstraints> for SExp {
         let min = sh
             .starts
             .into_iter()
-            .map(|t| t.into())
+            .map(SExp::from)
             .reduce(|a, b| SExp(format!("(min {} {})", a, b)))
             .unwrap();
         let max = sh

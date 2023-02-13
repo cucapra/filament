@@ -1,6 +1,6 @@
 #![allow(clippy::upper_case_acronyms)]
 
-//! Parser for Calyx programs.
+//! Parser for Filament programs.
 use crate::ast::param as ast;
 use crate::core::{self, TimeSub};
 use crate::errors::{self, FilamentResult, WithPos};
@@ -174,7 +174,7 @@ impl FilamentParser {
     fn delay(input: Node) -> ParseResult<TimeSub> {
         Ok(match_nodes!(
             input.into_children();
-            [bitwidth(n)] => TimeSub::unit(n),
+            [port_width(n)] => TimeSub::unit(n),
             [time(l), time(r)] => TimeSub::sym(l, r),
         ))
     }
@@ -359,37 +359,49 @@ impl FilamentParser {
     fn eq(input: Node) -> ParseResult<()> {
         Ok(())
     }
+
+    /// Returns the order operation and whether it is reversed
+    fn order_op(input: Node) -> ParseResult<(core::OrderOp, bool)> {
+        match_nodes!(
+            input.into_children();
+            [gt(_)] => Ok((core::OrderOp::Gt, false)),
+            [lt(_)] => Ok((core::OrderOp::Gt, true)),
+            [gte(_)] => Ok((core::OrderOp::Gte, false)),
+            [lte(_)] => Ok((core::OrderOp::Gte, true)),
+            [eq(_)] => Ok((core::OrderOp::Eq, false)),
+        )
+    }
+
     fn constraint(input: Node) -> ParseResult<ast::Constraint> {
-        let cons = match_nodes!(
+        match_nodes!(
             input.clone().into_children();
             [
                 time(l),
-                eq(_),
+                order_op((op, rev)),
                 time(r)
-            ] => ast::CBT::eq(l, r),
+            ] => {
+                let con = if !rev {
+                    ast::CBT::new(l, r, op)
+                } else {
+                    ast::CBT::new(r, l, op)
+                };
+                Ok(ast::Constraint::base(con))
+            },
             [
-                time(l),
-                gt(_),
-                time(r)
-            ] => ast::CBT::lt(r, l),
-            [
-                time(l),
-                lt(_),
-                time(r)
-            ] => ast::CBT::lt(l, r),
-            [
-                time(l),
-                lte(_),
-                time(r)
-            ] => ast::CBT::gte(r, l),
-            [
-                time(l),
-                gte(_),
-                time(r)
-            ] => ast::CBT::gte(l, r),
-        );
-        Ok(ast::Constraint::base(cons))
+                port_width(l),
+                order_op((op, rev)),
+                port_width(r)
+            ] => {
+                let con = if !rev {
+                    ast::CBS::new(l.into(), r.into(), op)
+                } else {
+                    ast::CBS::new(r.into(), l.into(), op)
+                };
+                Ok(ast::Constraint::sub(con))
+            }
+        )
     }
+
     fn constraints(input: Node) -> ParseResult<Vec<ast::Constraint>> {
         Ok(match_nodes!(
             input.into_children();

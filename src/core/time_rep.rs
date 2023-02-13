@@ -1,5 +1,5 @@
-use super::{ConcTime, Id, Width};
-use crate::interval_checking::SExp;
+use super::{ConcTime, Id, PortParam, Width};
+use crate::utils::SExp;
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 use std::{fmt::Debug, fmt::Display};
@@ -69,13 +69,13 @@ where
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum TimeSub {
     /// Concrete difference between two time expressions
-    Unit(u64),
+    Unit(PortParam),
     /// Symbolic difference between two time expressions
     Sym { l: ConcTime, r: ConcTime },
 }
 
 impl TimeSub {
-    pub fn unit(n: u64) -> Self {
+    pub fn unit(n: PortParam) -> Self {
         TimeSub::Unit(n)
     }
 
@@ -85,8 +85,8 @@ impl TimeSub {
 
     pub fn concrete(&self) -> Option<u64> {
         match self {
-            TimeSub::Unit(n) => Some(*n),
-            TimeSub::Sym { .. } => None,
+            TimeSub::Unit(PortParam::Const(n)) => Some(*n),
+            _ => None,
         }
     }
 }
@@ -94,7 +94,8 @@ impl TimeSub {
 impl TimeSub {
     pub fn resolve_event(&self, bindings: &Binding<ConcTime>) -> Self {
         match self {
-            TimeSub::Unit(n) => TimeSub::Unit(*n),
+            // Unit cannot contain any events
+            TimeSub::Unit(_) => self.clone(),
             TimeSub::Sym { l, r } => TimeSub::Sym {
                 l: l.resolve_event(bindings),
                 r: r.resolve_event(bindings),
@@ -104,7 +105,7 @@ impl TimeSub {
 
     pub fn resolve_offset(&self, bindings: &Binding<Width>) -> Self {
         match self {
-            TimeSub::Unit(n) => TimeSub::Unit(*n),
+            TimeSub::Unit(n) => TimeSub::Unit(n.resolve(bindings).unwrap()),
             TimeSub::Sym { l, r } => TimeSub::Sym {
                 l: l.resolve_offset(bindings),
                 r: r.resolve_offset(bindings),
@@ -139,5 +140,11 @@ impl From<TimeSub> for SExp {
                 SExp(format!("(abs (- {} {}))", SExp::from(l), SExp::from(r)))
             }
         }
+    }
+}
+
+impl From<PortParam> for TimeSub {
+    fn from(n: PortParam) -> Self {
+        TimeSub::Unit(n)
     }
 }

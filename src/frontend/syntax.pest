@@ -30,10 +30,11 @@ gte = { ">=" }
 lt =  { "<" }
 lte = { "<=" }
 eq =  { "=" }
-order_op = _{ gte | gt | lte | lt | eq }
+order_op = { gte | gt | lte | lt | eq }
 
 constraint = {
-  time ~ order_op ~ time
+  port_width ~ order_op ~ port_width
+  | time ~ order_op ~ time
 }
 constraints = {
   ("where" ~ (constraint ~ ("," ~ constraint)*))?
@@ -59,7 +60,7 @@ comp_or_ext = {
 // ====== Component signature ======
 
 delay = {
-  bitwidth
+  port_width
   | time ~ "-" ~ "(" ~ time ~ ")"
 }
 

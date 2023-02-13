@@ -1,7 +1,7 @@
-use super::{FilSolver, IntervalCheck};
+use super::IntervalCheck;
 use crate::core::{self, ConcTime, OrderConstraint, Width};
 use crate::errors::{Error, FilamentResult, WithPos};
-use crate::utils::GPosIdx;
+use crate::utils::{FilSolver, GPosIdx};
 use crate::visitor::{self, Checker, CompBinding};
 use std::iter;
 
