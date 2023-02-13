@@ -1,4 +1,5 @@
-use super::{Binding, Constraint, Expr, OrderConstraint, Time, TimeSub};
+use super::{Constraint, Expr, OrderConstraint, Time, TimeSub};
+use crate::utils::Binding;
 use crate::{errors, utils::GPosIdx};
 use derivative::Derivative;
 use std::fmt::Display;

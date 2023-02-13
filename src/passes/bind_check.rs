@@ -1,7 +1,7 @@
 use crate::{
     core,
     errors::{Error, FilamentResult, WithPos},
-    visitor,
+    utils, visitor,
 };
 use itertools::Itertools;
 
@@ -105,8 +105,8 @@ impl visitor::Checker for BindCheck {
     ) -> FilamentResult<()> {
         let resolve =
             |r: &core::Range,
-             _: &core::Binding<core::Time>,
-             _: &core::Binding<core::Expr>| r.clone();
+             _: &utils::Binding<core::Time>,
+             _: &utils::Binding<core::Expr>| r.clone();
         let dst_w = ctx
             .get_resolved_port(&con.dst, resolve)
             .map(|p| p.bitwidth)

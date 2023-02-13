@@ -1,6 +1,7 @@
 use derivative::Derivative;
 
-use super::{Binding, Expr, Id, Range, Time, TimeSub};
+use super::{Expr, Id, Range, Time, TimeSub};
+use crate::utils::Binding;
 use crate::{utils::GPosIdx, utils::SExp};
 use std::fmt::Display;
 

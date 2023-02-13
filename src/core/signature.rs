@@ -1,7 +1,7 @@
 use super::{
-    Binding, Constraint, Expr, Id, InterfaceDef, OrderConstraint, PortDef,
-    Time, TimeSub,
+    Constraint, Expr, Id, InterfaceDef, OrderConstraint, PortDef, Time, TimeSub,
 };
+use crate::utils::Binding;
 use crate::{errors::WithPos, utils::GPosIdx};
 use itertools::Itertools;
 use std::{collections::HashMap, fmt::Display};

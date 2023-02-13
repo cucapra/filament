@@ -1,4 +1,5 @@
-use super::{Binding, Id, Range, Time};
+use super::{Id, Range, Time};
+use crate::utils::Binding;
 use crate::{errors::WithPos, utils::GPosIdx};
 use std::fmt::Display;
 

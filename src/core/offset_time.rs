@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
-use super::{Expr, Id, Range, TimeSub};
-use crate::utils::SExp;
+use super::{Expr, Id, Range};
+use crate::utils::{self, SExp};
 use std::fmt::Display;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -151,14 +151,14 @@ impl Time {
         self
     }
 
-    pub fn resolve_event(&self, bindings: &super::Binding<Self>) -> Self {
+    pub fn resolve_event(&self, bindings: &utils::Binding<Self>) -> Self {
         let mut n = bindings.get(&self.event).clone();
         n.offset.concrete += self.offset.concrete;
         n.offset.abs.extend(self.offset.abs.clone());
         n
     }
 
-    pub fn resolve_offset(&self, bind: &super::Binding<Expr>) -> Self {
+    pub fn resolve_offset(&self, bind: &utils::Binding<Expr>) -> Self {
         let mut offset = TimeSum {
             concrete: self.offset.concrete,
             abs: vec![],
@@ -227,5 +227,89 @@ impl std::ops::Sub for Time {
                 }
             }
         }
+    }
+}
+
+/// Represents the absolute difference between two time events
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum TimeSub {
+    /// Concrete difference between two time expressions
+    Unit(Expr),
+    /// Symbolic difference between two time expressions
+    Sym { l: Time, r: Time },
+}
+
+impl TimeSub {
+    pub fn unit(n: Expr) -> Self {
+        TimeSub::Unit(n)
+    }
+
+    pub fn sym(l: Time, r: Time) -> Self {
+        TimeSub::Sym { l, r }
+    }
+
+    pub fn concrete(&self) -> Option<u64> {
+        match self {
+            TimeSub::Unit(Expr::Const(n)) => Some(*n),
+            _ => None,
+        }
+    }
+}
+
+impl TimeSub {
+    pub fn resolve_event(&self, bindings: &utils::Binding<Time>) -> Self {
+        match self {
+            // Unit cannot contain any events
+            TimeSub::Unit(_) => self.clone(),
+            TimeSub::Sym { l, r } => TimeSub::Sym {
+                l: l.resolve_event(bindings),
+                r: r.resolve_event(bindings),
+            },
+        }
+    }
+
+    pub fn resolve_offset(&self, bindings: &utils::Binding<Expr>) -> Self {
+        match self {
+            TimeSub::Unit(n) => TimeSub::Unit(n.resolve(bindings).unwrap()),
+            TimeSub::Sym { l, r } => TimeSub::Sym {
+                l: l.resolve_offset(bindings),
+                r: r.resolve_offset(bindings),
+            },
+        }
+    }
+
+    pub fn events(&self) -> Vec<Id> {
+        match self {
+            TimeSub::Unit(_) => vec![],
+            TimeSub::Sym { l, r } => {
+                vec![l.event(), r.event()]
+            }
+        }
+    }
+}
+
+impl Display for TimeSub {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TimeSub::Unit(n) => write!(f, "{}", n),
+            TimeSub::Sym { l, r } => write!(f, "|{} - {}|", l, r),
+        }
+    }
+}
+
+impl From<TimeSub> for SExp {
+    fn from(ts: TimeSub) -> Self {
+        match ts {
+            TimeSub::Unit(n) => SExp(n.to_string()),
+            TimeSub::Sym { l, r } => {
+                SExp(format!("(abs (- {} {}))", SExp::from(l), SExp::from(r)))
+            }
+        }
+    }
+}
+
+impl From<Expr> for TimeSub {
+    fn from(n: Expr) -> Self {
+        TimeSub::Unit(n)
     }
 }

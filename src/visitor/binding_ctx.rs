@@ -2,6 +2,7 @@
 use crate::{
     core::{self, Expr, Id, Time, TimeSub},
     errors::{Error, FilamentResult, WithPos},
+    utils,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -135,8 +136,8 @@ impl InvIdx {
     where
         F: Fn(
             &core::Range,
-            &core::Binding<Time>,
-            &core::Binding<Expr>,
+            &utils::Binding<Time>,
+            &utils::Binding<Expr>,
         ) -> core::Range,
     {
         let inv = &ctx.invocations[self.0];
@@ -178,8 +179,8 @@ impl InvIdx {
     where
         F: Fn(
             &core::Constraint,
-            &core::Binding<Time>,
-            &core::Binding<Expr>,
+            &utils::Binding<Time>,
+            &utils::Binding<Expr>,
         ) -> core::Constraint,
     {
         let inv = &ctx.invocations[self.0];
@@ -397,8 +398,8 @@ impl<'p> CompBinding<'p> {
     where
         F: Fn(
             &core::Range,
-            &core::Binding<Time>,
-            &core::Binding<Expr>,
+            &utils::Binding<Time>,
+            &utils::Binding<Expr>,
         ) -> core::Range,
     {
         match &port.typ {
@@ -535,7 +536,7 @@ impl<'a> ProgBinding<'a> {
         &self,
         sig: SigIdx,
         events: &[Time],
-    ) -> core::Binding<Time> {
+    ) -> utils::Binding<Time> {
         match sig {
             SigIdx::Ext(idx) => self.externals[idx].event_binding(events),
             SigIdx::Comp(idx) => self.components[idx].event_binding(events),
@@ -547,7 +548,7 @@ impl<'a> ProgBinding<'a> {
         &self,
         sig: SigIdx,
         params: &[Expr],
-    ) -> core::Binding<Expr> {
+    ) -> utils::Binding<Expr> {
         match sig {
             SigIdx::Ext(idx) => self.externals[idx].param_binding(params),
             SigIdx::Comp(idx) => self.components[idx].param_binding(params),

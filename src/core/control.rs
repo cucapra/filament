@@ -1,4 +1,5 @@
-use super::{Binding, Expr, Id, Time};
+use super::{Expr, Id, Time};
+use crate::utils::Binding;
 use crate::{
     errors::{self, Error, FilamentResult, WithPos},
     utils::GPosIdx,

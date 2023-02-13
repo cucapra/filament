@@ -1,7 +1,7 @@
 use crate::{
-    core::{self, Binding},
+    core,
     errors::FilamentResult,
-    utils::PostOrder,
+    utils::{Binding, PostOrder},
 };
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};

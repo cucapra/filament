@@ -1,7 +1,7 @@
 use super::IntervalCheck;
 use crate::core::{self, Expr, OrderConstraint, Time};
 use crate::errors::{Error, FilamentResult, WithPos};
-use crate::utils::{FilSolver, GPosIdx};
+use crate::utils::{self, FilSolver, GPosIdx};
 use crate::visitor::{self, Checker, CompBinding};
 use std::iter;
 
@@ -42,8 +42,8 @@ impl visitor::Checker for IntervalCheck {
 
         let resolve_range =
             |r: &core::Range,
-             event_b: &core::Binding<Time>,
-             param_b: &core::Binding<Expr>| {
+             event_b: &utils::Binding<Time>,
+             param_b: &utils::Binding<Expr>| {
                 r.resolve_offset(param_b).resolve_event(event_b)
             };
 
