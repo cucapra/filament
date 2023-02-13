@@ -66,7 +66,8 @@ impl visitor::Checker for PhantomCheck {
 
         // For each binding provided to a non-phantom port, check that the
         // mentioned events are not non-phantom
-        let sig = ctx.get_invoke_sig(&inv.name);
+        let inv_idx = ctx.get_invoke_idx(&inv.name).unwrap();
+        let sig = inv_idx.unresolved_signature(ctx);
         let instance_phantoms = ctx.prog.phantom_events(sig);
         for (eb, bind) in ctx
             .prog

@@ -74,6 +74,13 @@ impl InvIdx {
             .collect()
     }
 
+    /// Return the idx for the signature associated with the invocation.
+    pub fn unresolved_signature(&self, ctx: &CompBinding) -> SigIdx {
+        let inv = &ctx.invocations[self.0];
+        let inst = &ctx[inv.instance];
+        inst.sig
+    }
+
     /// Return the signature of the component being invoked using the parameter bindings and
     /// the event bindings of the invocation.
     pub fn resolved_signature(&self, ctx: &CompBinding) -> core::Signature {
@@ -340,13 +347,6 @@ impl<'p> CompBinding<'p> {
         &self[idx]
     }
 
-    /// Get the signature associated with an invoke
-    pub fn get_invoke_sig(&self, invoke: &Id) -> SigIdx {
-        let inv = self.get_invoke(invoke);
-        let inst = &self[inv.instance];
-        inst.sig
-    }
-
     /// Get the index for a given instance name
     pub fn get_instance_idx(&self, name: &Id) -> Option<InstIdx> {
         self.inst_map.get(name).cloned()
@@ -455,6 +455,14 @@ impl<'a> ProgBinding<'a> {
     }
 
     // ============= Dispatch methods on Signatures =============
+
+    /// Return the underlying signature
+    pub fn sig(&self, sig: SigIdx) -> &'a core::Signature {
+        match sig {
+            SigIdx::Ext(idx) => self.externals[idx],
+            SigIdx::Comp(idx) => self.components[idx],
+        }
+    }
 
     /// Apply function on either an external or component signature and return the result
     #[inline]

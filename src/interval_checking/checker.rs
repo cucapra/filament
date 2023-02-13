@@ -231,7 +231,10 @@ impl IntervalCheck {
     ) -> FilamentResult<()> {
         // If this is a high-level invoke, check all port requirements
         if let Some(actuals) = invoke.ports.clone() {
-            let sig = ctx.get_invoke_sig(&invoke.name);
+            let inv_idx = ctx.get_invoke_idx(&invoke.name).unwrap();
+            // We use an unresolved signature here because [[Self::connect]] will eventually resolve them using
+            // [[CompBinding::get_resolved_ports]
+            let sig = inv_idx.unresolved_signature(ctx);
             let inputs = ctx.prog.input_names(sig);
             // Check connections implied by the invocation
             for (actual, formal) in actuals.iter().zip(inputs) {
