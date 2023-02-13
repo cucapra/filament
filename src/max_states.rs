@@ -66,7 +66,7 @@ impl visitor::Checker for MaxStates {
         // Get the fully resolved signature
         let inv_idx = ctx.get_invoke_idx(&inv.name).unwrap();
         let sig = inv_idx.resolved_signature(ctx);
-        self.max_state_from_ports(sig.inputs());
+        self.max_state_from_ports(sig.outputs());
         Ok(())
     }
     fn exit_component(

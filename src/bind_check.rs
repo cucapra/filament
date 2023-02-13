@@ -59,9 +59,10 @@ impl visitor::Checker for BindCheck {
         ctx: &visitor::CompBinding,
     ) -> FilamentResult<()> {
         let inv_idx = Self::bind_invoke(inv, ctx)?;
+        let sig = inv_idx.unresolved_signature(ctx);
+
         let this_sig = ctx.this();
         let this_events = &this_sig.events;
-        let sig = inv_idx.unresolved_signature(ctx);
         if let Some(ports) = &inv.ports {
             // Check that scheduling events are bound
             for time in &inv.abstract_vars {

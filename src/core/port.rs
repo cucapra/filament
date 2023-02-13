@@ -133,6 +133,14 @@ impl InterfaceDef {
     }
 }
 
+impl From<InterfaceDef> for PortDef {
+    fn from(id: InterfaceDef) -> Self {
+        let start = ConcTime::unit(id.event, 0);
+        let end = start.clone().increment(PortParam::Const(1));
+        PortDef::new(id.name, Range::new(start, end), 1.into())
+    }
+}
+
 impl WithPos for InterfaceDef {
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;

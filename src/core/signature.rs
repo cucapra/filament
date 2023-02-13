@@ -140,10 +140,20 @@ impl Signature {
             })
     }
     /// Get a port using its name
-    pub fn get_port(&self, port: &Id) -> &PortDef {
+    pub fn get_port(&self, port: &Id) -> PortDef {
         self.ports
             .iter()
             .find(|p| p.name == *port)
+            .cloned()
+            .or_else(|| {
+                self.interface_signals.iter().find_map(|id| {
+                    if id.name == *port {
+                        Some(id.clone().into())
+                    } else {
+                        None
+                    }
+                })
+            })
             .unwrap_or_else(|| {
                 panic!("Port {} not found in signature:\n{}", port, self.name)
             })

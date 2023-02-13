@@ -403,7 +403,7 @@ impl<'p> CompBinding<'p> {
     {
         match &port.typ {
             core::PortType::ThisPort(p) => {
-                Some(self.prog.comp_sig(self.sig).get_port(p).clone())
+                Some(self.prog.comp_sig(self.sig).get_port(p))
             }
             core::PortType::InvPort { invoke, name } => Some(
                 self.get_invoke_idx(invoke)
