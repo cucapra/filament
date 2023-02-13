@@ -5,7 +5,7 @@ use linked_hash_map::LinkedHashMap;
 use std::{fmt::Debug, fmt::Display};
 
 #[derive(Default)]
-/// Represents a binding from names to time variables.
+/// Represents a binding from names to type T.
 pub struct Binding<T> {
     map: LinkedHashMap<Id, T>,
 }
@@ -61,7 +61,9 @@ where
     }
 }
 
-/// A representation of time
+/// Representation of a time of the form of `event + offset`
+/// Defines type that descibe the type of the offset and the type generated when
+/// substracting two time expressions
 pub trait TimeRep
 where
     Self: Sized + Eq + std::hash::Hash + Clone + Display + Into<SExp>,
@@ -72,14 +74,15 @@ where
     /// Offset for this time expression
     type Offset;
 
-    /// A time expression with exactly one event and offset
-    fn unit(event: Id, state: u64) -> Self;
-    /// Increment the time unit by a constant
-    fn increment(self, n: u64) -> Self;
-    /// Substract two time expression representing the absolute difference
-    fn sub(self, other: Self) -> Self::SubRep;
     /// All events used in the time expression
     fn event(&self) -> Id;
+
+    /// A time expression with exactly one event and offset
+    fn unit(event: Id, state: u64) -> Self;
+    /// Increment the time by a constant
+    fn increment(self, n: PortParam) -> Self;
+    /// Substract two time expression representing the absolute difference
+    fn sub(self, other: Self) -> Self::SubRep;
 
     /// Resolve the time expression given a binding
     fn resolve_event(&self, bindings: &Binding<Self>) -> Self;

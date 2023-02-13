@@ -68,7 +68,6 @@ impl<T: Clone> Time<T> {
     }
 }
 
-
 impl<T: Clone> From<Time<T>> for SExp
 where
     SExp: From<T>,
@@ -154,7 +153,10 @@ impl TimeRep for Time<u64> {
         }
     }
 
-    fn increment(mut self, n: u64) -> Self {
+    fn increment(mut self, n: PortParam) -> Self {
+        let PortParam::Const(n) = n else {
+            unreachable!("Incrementing concrete time with non-constant offset")
+        };
         self.offset.concrete += n;
         self
     }
@@ -226,8 +228,11 @@ impl TimeRep for Time<PortParam> {
         }
     }
 
-    fn increment(mut self, n: u64) -> Self {
-        self.offset.concrete += n;
+    fn increment(mut self, n: PortParam) -> Self {
+        match n {
+            PortParam::Const(n) => self.offset.concrete += n,
+            PortParam::Var(_) => self.offset.abs.push(n),
+        }
         self
     }
 

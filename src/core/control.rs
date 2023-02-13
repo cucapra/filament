@@ -410,7 +410,10 @@ impl Fsm {
     {
         // If trigger is from: @[G, L] + @exact[G, G+1]
         let Range { start, end, .. } = &trigger;
-        Range::new(start.clone().increment(state), end.clone().increment(state))
+        Range::new(
+            start.clone().increment(state.into()),
+            end.clone().increment(state.into()),
+        )
     }
 }
 
