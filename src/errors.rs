@@ -8,7 +8,6 @@ use std::collections::HashSet;
 pub trait WithPos {
     /// Add span information to this node
     fn set_span(self, sp: GPosIdx) -> Self;
-
     /// Copy the span associated with this node.
     fn copy_span(&self) -> GPosIdx;
 }
@@ -45,7 +44,7 @@ impl Error {
 
     pub fn parse_error(err: pest_consume::Error<frontend::Rule>) -> Self {
         Self {
-            kind: Box::new(ErrorKind::ParseError(err)),
+            kind: Box::new(ErrorKind::ParseError(Box::new(err))),
             notes: vec![],
         }
     }
@@ -94,10 +93,9 @@ impl Error {
 }
 
 /// Standard error type for Calyx errors.
-#[allow(clippy::large_enum_variant)]
 pub enum ErrorKind {
     /// Error while parsing a Calyx program.
-    ParseError(pest_consume::Error<frontend::Rule>),
+    ParseError(Box<pest_consume::Error<frontend::Rule>>),
     /// The input file is invalid (does not exist).
     InvalidFile(String),
     /// Failed to write the output

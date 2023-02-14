@@ -30,9 +30,10 @@ gte = { ">=" }
 lt =  { "<" }
 lte = { "<=" }
 eq =  { "=" }
-order_op = _{ gte | gt | lte | lt | eq }
+order_op = { gte | gt | lte | lt | eq }
 
 constraint = {
+  // port_width ~ order_op ~ port_width |
   time ~ order_op ~ time
 }
 constraints = {
@@ -59,8 +60,9 @@ comp_or_ext = {
 // ====== Component signature ======
 
 delay = {
-  bitwidth
-  | time ~ "-" ~ "(" ~ time ~ ")"
+  // port_width |
+  bitwidth |
+  time ~ "-" ~ "(" ~ time ~ ")"
 }
 
 event_with_delay = _{
@@ -76,7 +78,7 @@ abstract_var = {
 
 // Time
 time = {
-  identifier ~ ("+" ~ bitwidth)?
+  identifier ~ ("+" ~ port_width)*
   | bitwidth
 }
 

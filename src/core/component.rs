@@ -1,26 +1,18 @@
-use super::{Command, Id, Invoke, PortParam, Signature, TimeRep, WidthRep};
+use super::{Command, Id, Invoke, Signature};
 use crate::errors::{Error, FilamentResult, WithPos};
 use std::fmt::Display;
 
 /// A component in Filament
-pub struct Component<Time, Width>
-where
-    Time: TimeRep,
-    Width: WidthRep,
-{
+pub struct Component {
     // Signature of this component
-    pub sig: Signature<Time, Width>,
+    pub sig: Signature,
 
     /// Model for this component
-    pub body: Vec<Command<Time, Width>>,
+    pub body: Vec<Command>,
 }
 
-impl<T, W> Component<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
-    pub fn validate(body: &[Command<T, W>]) -> FilamentResult<()> {
+impl Component {
+    pub fn validate(body: &[Command]) -> FilamentResult<()> {
         let mut is_low: Option<bool> = None;
 
         for con in body {
@@ -62,15 +54,11 @@ where
         Ok(())
     }
 
-    pub fn new(sig: Signature<T, W>, body: Vec<Command<T, W>>) -> Self {
+    pub fn new(sig: Signature, body: Vec<Command>) -> Self {
         Self { sig, body }
     }
 }
-impl<T, W> Display for Component<T, W>
-where
-    W: WidthRep,
-    T: TimeRep,
-{
+impl Display for Component {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{} {{", self.sig)?;
         for com in &self.body {
@@ -80,41 +68,26 @@ where
     }
 }
 
-pub struct Namespace<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
+#[derive(Default)]
+pub struct Namespace {
     /// Imported files
     pub imports: Vec<String>,
-
     /// Define externals and their files
-    pub externs: Vec<(String, Vec<Signature<T, PortParam>>)>,
-
+    pub externs: Vec<(String, Vec<Signature>)>,
     /// Components defined in this file
-    pub components: Vec<Component<T, W>>,
+    pub components: Vec<Component>,
 }
 
-impl<T, W> Namespace<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
+impl Namespace {
     /// External signatures associated with the namespace
-    pub fn signatures(
-        &self,
-    ) -> impl Iterator<Item = (Id, &Signature<T, PortParam>)> {
+    pub fn signatures(&self) -> impl Iterator<Item = (Id, &Signature)> {
         self.externs
             .iter()
             .flat_map(|(_, comps)| comps.iter().map(|s| (s.name.clone(), s)))
     }
 }
 
-impl<T, W> Display for Namespace<T, W>
-where
-    W: WidthRep,
-    T: TimeRep,
-{
+impl Display for Namespace {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for imp in &self.imports {
             writeln!(f, "import \"{}\";", imp)?;

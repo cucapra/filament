@@ -1,50 +1,70 @@
-//! Implements a binding map that errors provides errors for missing and conflicting bindings.
-use crate::{
-    core::Id,
-    errors::{Error, FilamentResult},
-};
-use std::collections::{hash_map::Entry, HashMap};
+use crate::core::Id;
+use itertools::Itertools;
+use linked_hash_map::LinkedHashMap;
+use std::{fmt::Debug, fmt::Display};
 
-pub struct BindMap<K> {
-    /// Map from abstract variables to concrete variables
-    map: HashMap<Id, K>,
+#[derive(Default)]
+/// Represents a binding from names to type T.
+pub struct Binding<T> {
+    map: LinkedHashMap<Id, T>,
 }
 
-impl<K> BindMap<K> {
-    // Construct a new binding map
-    pub fn new() -> Self {
+impl<T> Binding<T> {
+    pub fn new(map: impl IntoIterator<Item = (Id, T)>) -> Self {
         Self {
-            map: HashMap::new(),
+            map: map.into_iter().collect(),
         }
     }
 
-    /// Get the value of a binding or panic
-    pub fn get(&self, id: &Id) -> &K {
-        &self.map[id]
+    /// Find the binding for n, or return None
+    pub fn find(&self, n: &Id) -> Option<&T> {
+        self.map.get(n)
     }
 
-    /// Get the value of a binding or produce an error
-    pub fn find(&self, id: &Id) -> FilamentResult<&K> {
-        if let Some(v) = self.map.get(id) {
-            Ok(v)
-        } else {
-            Err(Error::malformed(format!("Missing binding for {id}")))
-        }
+    /// Iterate over the values of the binding
+    pub fn values(&self) -> impl Iterator<Item = &T> {
+        self.map.values()
     }
 
-    // Add a binding to the map, producing an error if the binding already exists
-    pub fn add(&mut self, id: Id, val: K) -> FilamentResult<()> {
-        if let Entry::Vacant(e) = self.map.entry(id.clone()) {
-            e.insert(val);
-            Ok(())
-        } else {
-            Err(Error::malformed(format!("Conflicting binding for {id}")))
-        }
+    /// Return binding for n, or panic if it doesn't exist
+    pub fn get(&self, n: &Id) -> &T {
+        self.find(n).unwrap_or_else(|| panic!("No binding for {n}"))
+    }
+
+    /// Iterate over the binding
+    pub fn iter(&self) -> impl Iterator<Item = (&Id, &T)> {
+        self.map.iter()
+    }
+
+    /// Extend the binding
+    pub fn extend(&mut self, other: Vec<(Id, T)>) {
+        self.map.extend(other);
+    }
+
+    /// Check if the binding is emtpy
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
     }
 }
 
-impl<K> Default for BindMap<K> {
-    fn default() -> Self {
-        Self::new()
+impl<T> IntoIterator for Binding<T> {
+    type Item = (Id, T);
+    type IntoIter = linked_hash_map::IntoIter<Id, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.map.into_iter()
+    }
+}
+
+impl<T> Debug for Binding<T>
+where
+    T: Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[{}]",
+            self.map.iter().map(|(k, v)| format!("{k}->{v}")).join(", ")
+        )
     }
 }

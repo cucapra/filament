@@ -20,6 +20,16 @@ extern "state.sv" {
     @[G+1, G+2] out: WIDTH,
   );
 
+  // A component that delays `in` by N cycles. Uses the Delay component under the
+  // hood.
+  comp Shift[WIDTH, N]<G: 1>(
+    clk: 1,
+    reset: 1,
+    @[G, G+1] in: WIDTH,
+  ) -> (
+    @[G+N, G+N+1] out: WIDTH,
+  );
+
   // A comp that allows access to its previous stored value.
   // Backend by a simple register
   comp Prev[WIDTH, SAFE]<G: 1>(

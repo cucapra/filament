@@ -21,6 +21,7 @@ struct File {
     pub source: String,
 }
 
+/// The data associated with a position
 pub struct PosData {
     /// The file in the program. The index refers to the index in the
     /// [PositionTable::files] vector.
@@ -31,7 +32,7 @@ pub struct PosData {
     pub end: usize,
 }
 
-/// Source position information for a Calyx program.
+/// Source position information for a full program
 pub struct PositionTable {
     /// The source files of the program
     files: Vec<File>,
@@ -135,7 +136,8 @@ impl GlobalPositionTable {
 pub struct GPosIdx(pub PosIdx);
 
 impl GPosIdx {
-    /// Symbol for the unknown position
+    /// Symbol for the unknown position.
+    /// All [PositionTable] must allocate the first index for this use.
     pub const UNKNOWN: GPosIdx = GPosIdx(PosIdx(0));
 
     /// Convert the position into an optional.

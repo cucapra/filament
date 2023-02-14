@@ -1,33 +1,34 @@
-use crate::core::{self, TimeRep};
+use crate::core::{self, Time, TimeSub};
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
 use itertools::Itertools;
 use rsmt2::{SmtConf, Solver};
 
 #[derive(Clone)]
-pub struct ShareConstraints<T: TimeRep> {
+pub struct ShareConstraints {
+    /// Delay bounded by the share constraint
+    /// XXX: We store the event binding so that we can get the position of the binding.
+    event_bind: core::EventBind,
     /// The events used to compute the minimum of start times
-    min: Vec<T>,
+    starts: Vec<Time>,
     /// The (event, delay) to compute the max of start times
-    max: Vec<(T, T::SubRep)>,
-    /// Delays bounded by this share constraint
-    delays: Vec<core::EventBind<T>>,
+    ends: Vec<(Time, TimeSub)>,
     /// Additional error information
     notes: Vec<(String, GPosIdx)>,
 }
 
-impl<T: TimeRep> Default for ShareConstraints<T> {
-    fn default() -> Self {
+impl From<core::EventBind> for ShareConstraints {
+    fn from(bind: core::EventBind) -> Self {
         Self {
-            min: vec![],
-            max: vec![],
-            delays: vec![],
+            starts: vec![],
+            ends: vec![],
+            event_bind: bind,
             notes: vec![],
         }
     }
 }
 
-impl<T: TimeRep> ShareConstraints<T> {
+impl ShareConstraints {
     pub fn add_note<S: Into<String>>(&mut self, msg: S, pos: GPosIdx) {
         self.notes.push((msg.into(), pos));
     }
@@ -38,58 +39,51 @@ impl<T: TimeRep> ShareConstraints<T> {
 
     pub fn add_bind_info(
         &mut self,
-        start: T,
-        end: (T, T::SubRep),
+        start: Time,
+        end: (Time, TimeSub),
         pos: GPosIdx,
     ) {
         self.add_note(
-            format!(
-                "Invocation starts at `{start}' and finishes at `{}+{}'",
-                end.0, end.1
-            ),
+            format!("Invocation active during [{start}, {}+{})", end.0, end.1),
             pos,
         );
-        self.min.push(start);
-        self.max.push(end);
-    }
-
-    pub fn add_delays(
-        &mut self,
-        delays: impl Iterator<Item = core::EventBind<T>>,
-    ) {
-        self.delays.extend(delays);
+        self.starts.push(start);
+        self.ends.push(end);
     }
 }
-impl<T: TimeRep> std::fmt::Display for ShareConstraints<T> {
+impl std::fmt::Display for ShareConstraints {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let min = self.min.iter().map(|t| t.to_string()).join(", ");
+        let min = self.starts.iter().map(|t| t.to_string()).join(", ");
         let max = self
-            .max
+            .ends
             .iter()
             .map(|(t, d)| format!("{} + {}", t, d))
             .join(", ");
-        let delays = self.delays.iter().map(|d| d.delay.to_string()).join(", ");
-        write!(f, "{delays} >= max({max}) - min({min})")
+        let delay = &self.event_bind.delay;
+        write!(f, "{delay} >= max({max}) - min({min})")
     }
 }
-impl<T: TimeRep> From<ShareConstraints<T>> for Vec<SExp> {
-    fn from(sh: ShareConstraints<T>) -> Self {
+impl From<ShareConstraints> for SExp {
+    fn from(sh: ShareConstraints) -> Self {
         let min = sh
-            .min
+            .starts
             .into_iter()
-            .map(|t| t.into())
+            .map(SExp::from)
             .reduce(|a, b| SExp(format!("(min {} {})", a, b)))
             .unwrap();
         let max = sh
-            .max
+            .ends
             .into_iter()
-            .map(|(t, d)| SExp(format!("(+ {} {})", t.into(), d.into())))
+            .map(|(t, d)| {
+                SExp(format!("(+ {} {})", SExp::from(t), SExp::from(d)))
+            })
             .reduce(|a, b| SExp(format!("(max {} {})", a, b)))
             .unwrap();
-        sh.delays
-            .into_iter()
-            .map(|d| SExp(format!("(>= {} (- {max} {min}))", d.delay.into())))
-            .collect()
+
+        SExp(format!(
+            "(>= {} (- {max} {min}))",
+            SExp::from(sh.event_bind.delay)
+        ))
     }
 }
 
@@ -99,6 +93,12 @@ pub struct SExp(pub String);
 impl std::fmt::Display for SExp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl From<u64> for SExp {
+    fn from(n: u64) -> Self {
+        SExp(n.to_string())
     }
 }
 
@@ -124,33 +124,29 @@ fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
     Ok(())
 }
 
-pub struct FilSolver<T: TimeRep> {
+pub struct FilSolver {
     s: Solver<()>,
-    _t: std::marker::PhantomData<T>,
 }
 
-impl<T: TimeRep> FilSolver<T> {
+impl FilSolver {
     pub fn new() -> FilamentResult<Self> {
         let mut conf = SmtConf::default_z3();
         // Immediately checks if the command to z3 succeeded.
         conf.check_success();
 
         let mut solver = conf.spawn(())?;
-        // solver.path_tee(std::path::PathBuf::from("./model.smt"))?;
+        solver.path_tee(std::path::PathBuf::from("./model.smt"))?;
 
         define_prelude(&mut solver)?;
-        Ok(Self {
-            s: solver,
-            _t: std::marker::PhantomData,
-        })
+        Ok(Self { s: solver })
     }
 
     pub fn prove(
         &mut self,
-        abstract_vars: impl Iterator<Item = core::Id>,
-        assumes: Vec<core::Constraint<T>>,
-        asserts: impl Iterator<Item = core::Constraint<T>>,
-        sharing: Vec<ShareConstraints<T>>,
+        vars: impl Iterator<Item = core::Id>,
+        assumes: Vec<core::Constraint>,
+        asserts: impl Iterator<Item = core::Constraint>,
+        sharing: Vec<ShareConstraints>,
     ) -> FilamentResult<()> {
         // Locally simplify as many asserts as possible
         /* let asserts = asserts
@@ -162,11 +158,9 @@ impl<T: TimeRep> FilSolver<T> {
             return Ok(());
         }
 
-        // self.s.path_tee(std::path::PathBuf::from("./model.smt"))?;
-
         self.s.push(1)?;
         // Define all the constants
-        for var in abstract_vars {
+        for var in vars {
             log::trace!("Declaring constant {}", var);
             self.s.declare_const(var.to_string(), "Int")?;
         }
@@ -189,20 +183,17 @@ impl<T: TimeRep> FilSolver<T> {
             }
         }
         for share in sharing {
-            // XXX(rachit): Unnecessary clone
-            for (idx, sexp) in
-                Vec::<SExp>::from(share.clone()).iter().enumerate()
-            {
-                if !self.check_fact(sexp.clone())? {
-                    let mut err = Error::malformed(format!(
-                        "Cannot prove constraint {share}"
-                    ));
-                    err = err.add_note("Event's delay must be longer than the difference between minimum start time and maximum end time of all other bindings.", share.delays[idx].copy_span());
-                    for (msg, pos) in share.notes() {
-                        err = err.add_note(msg, pos)
-                    }
-                    return Err(err);
+            let cons = SExp::from(share.clone());
+
+            if !self.check_fact(cons)? {
+                let mut err = Error::malformed(format!(
+                    "Cannot prove constraint {share}"
+                ));
+                err = err.add_note("Event's delay must be longer than the difference between minimum start time and maximum end time of all other bindings.", share.event_bind.copy_span());
+                for (msg, pos) in share.notes() {
+                    err = err.add_note(msg, pos)
                 }
+                return Err(err);
             }
         }
         self.s.pop(1)?;
@@ -212,11 +203,15 @@ impl<T: TimeRep> FilSolver<T> {
 
     fn check_fact(&mut self, fact: impl Into<SExp>) -> FilamentResult<bool> {
         let sexp = fact.into();
-        log::trace!("Assert (not {})", sexp);
         self.s.push(1)?;
-        self.s.assert(format!("(not {})", sexp))?;
+        let formula = format!("(not {})", sexp);
+        log::trace!("Assert {}", formula);
+        self.s.assert(formula)?;
         // Check that the assertion was unsatisfiable
         let unsat = !self.s.check_sat()?;
+        if !unsat {
+            log::trace!("MODEL: {:?}", self.s.get_model()?);
+        }
         self.s.pop(1)?;
         Ok(unsat)
     }

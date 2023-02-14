@@ -8,48 +8,34 @@ use std::collections::HashMap;
 pub enum ResolvedInstance<'a, T: TimeRep, W: WidthRep> {
     /// A component that uses width `W`
     Component {
-        sig: &'a core::Signature<T, W>,
+        sig: &'a core::Signature,
         binds: Vec<W>,
     },
     /// An external that always uses `PortParam`
     External {
-        sig: &'a core::Signature<T, core::PortParam>,
+        sig: &'a core::Signature,
         binds: Vec<W>,
     },
 }
 
 impl<'a, T: TimeRep, W: WidthRep> ResolvedInstance<'a, T, W> {
-    pub fn bound(sig: &'a core::Signature<T, W>, binds: Vec<W>) -> Self {
+    pub fn bound(sig: &'a core::Signature, binds: Vec<W>) -> Self {
         log::trace!("sig = {}, binds = {:?}", sig, binds);
         Self::Component { sig, binds }
     }
 
-    pub fn external(
-        sig: &'a core::Signature<T, core::PortParam>,
-        binds: Vec<W>,
-    ) -> Self {
+    pub fn external(sig: &'a core::Signature, binds: Vec<W>) -> Self {
         log::trace!("sig = {}, binds = {:?}", sig, binds);
         Self::External { sig, binds }
     }
 
     /// Construct a binding for this component instance
-    pub fn this(sig: &'a core::Signature<T, W>) -> Self {
+    pub fn this(sig: &'a core::Signature) -> Self {
         let binds =
             sig.params.iter().map(|p| W::param(p.clone())).collect_vec();
         Self::bound(sig, binds)
     }
 }
-
-// impl<'a, T: TimeRep> ResolvedInstance<'a, T, u64> {
-//     /// Construct a binding for this component instance
-//     pub fn this(sig: &'a core::Signature<T, u64>) -> Self {
-//         assert!(
-//             sig.params.is_empty(),
-//             "Cannot bind instance with parameters"
-//         );
-//         Self::bound(sig, vec![])
-//     }
-// }
 
 impl<'a, T: TimeRep, W: WidthRep> ResolvedInstance<'a, T, W> {
     pub fn params(&self) -> &[core::Id] {
@@ -124,7 +110,7 @@ impl<'a, T: TimeRep, W: WidthRep> ResolvedInstance<'a, T, W> {
         }
     }
 
-    pub fn resolve(&self) -> FilamentResult<core::Signature<T, W>> {
+    pub fn resolve(&self) -> FilamentResult<core::Signature> {
         match self {
             Self::Component { sig, binds } => sig.resolve(binds).map_err(|e| {
                 e.add_note(
@@ -141,10 +127,18 @@ impl<'a, T: TimeRep, W: WidthRep> ResolvedInstance<'a, T, W> {
         }
     }
 
-    pub fn binding(&self, abs: &'a [T]) -> core::Binding<T> {
+    /// Event binding for this instance
+    pub fn event_binding(&self, abs: &'a [T]) -> core::Binding<T> {
         match self {
-            Self::Component { sig, .. } => sig.binding(abs),
-            Self::External { sig, .. } => sig.binding(abs),
+            Self::Component { sig, .. } => sig.event_binding(abs),
+            Self::External { sig, .. } => sig.event_binding(abs),
+        }
+    }
+
+    pub fn param_binding(&self) -> core::Binding<W> {
+        match self {
+            Self::Component { sig, binds } => sig.param_binding(binds),
+            Self::External { sig, binds } => sig.param_binding(binds),
         }
     }
 }
@@ -152,15 +146,13 @@ impl<'a, T: TimeRep, W: WidthRep> ResolvedInstance<'a, T, W> {
 /// Environment to store the current set of bindings
 pub struct Bindings<'a, T: TimeRep, W: WidthRep> {
     /// Signatures for external definitions
-    ext_sigs: HashMap<core::Id, &'a core::Signature<T, core::PortParam>>,
+    ext_sigs: HashMap<core::Id, &'a core::Signature>,
     /// Signatures for components
-    comps: Vec<core::Component<T, W>>,
+    comps: Vec<core::Component>,
 }
 impl<'a, T: TimeRep, W: WidthRep> Bindings<'a, T, W> {
     pub fn new(
-        ext_sigs: impl IntoIterator<
-            Item = (core::Id, &'a core::Signature<T, core::PortParam>),
-        >,
+        ext_sigs: impl IntoIterator<Item = (core::Id, &'a core::Signature)>,
     ) -> Self {
         Self {
             ext_sigs: ext_sigs.into_iter().collect(),
@@ -169,7 +161,7 @@ impl<'a, T: TimeRep, W: WidthRep> Bindings<'a, T, W> {
     }
 
     /// Add a component definition to the environment
-    pub fn add_component(&mut self, comp: core::Component<T, W>) {
+    pub fn add_component(&mut self, comp: core::Component) {
         self.comps.push(comp);
     }
 
@@ -204,7 +196,7 @@ impl<'a, T: TimeRep, W: WidthRep> Bindings<'a, T, W> {
     }
 }
 impl<T: TimeRep, W: WidthRep> From<Bindings<'_, T, W>>
-    for Vec<core::Component<T, W>>
+    for Vec<core::Component>
 {
     fn from(bind: Bindings<'_, T, W>) -> Self {
         bind.comps

@@ -3,21 +3,18 @@ mod constraint;
 mod control;
 mod id;
 mod interval;
-mod offset_time;
 mod port;
 mod signature;
-mod time_rep;
+mod time;
 mod width_rep;
 
 pub use component::{Component, Namespace};
-pub use constraint::{Constraint, OrderConstraint};
+pub use constraint::{Constraint, OrderConstraint, OrderOp};
 pub use control::{
     Command, Connect, Fsm, Guard, Instance, Invoke, Port, PortType,
 };
 pub use id::Id;
 pub use interval::Range;
-pub use offset_time::Time;
-pub use port::{InterfaceDef, PortDef, PortParam};
+pub use port::{Expr, InterfaceDef, PortDef};
 pub use signature::{EventBind, Signature};
-pub use time_rep::{Binding, TimeRep, TimeSub, WithTime};
-pub use width_rep::WidthRep;
+pub use time::{Time, TimeSub, TimeSum};

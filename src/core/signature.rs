@@ -1,30 +1,39 @@
 use super::{
-    Binding, Constraint, Id, InterfaceDef, OrderConstraint, PortDef, Range,
-    TimeRep, WidthRep,
+    Constraint, Expr, Id, InterfaceDef, OrderConstraint, PortDef, Time, TimeSub,
 };
-use crate::{
-    errors::{Error, FilamentResult, WithPos},
-    utils::GPosIdx,
-};
+use crate::utils::Binding;
+use crate::{errors::WithPos, utils::GPosIdx};
 use itertools::Itertools;
 use std::{collections::HashMap, fmt::Display};
 
 #[derive(Clone)]
 /// An event variable bound in the signature
-pub struct EventBind<T>
-where
-    T: TimeRep,
-{
+pub struct EventBind {
     pub event: Id,
-    pub delay: T::SubRep,
-    pub default: Option<T>,
+    pub delay: TimeSub,
+    pub default: Option<Time>,
     pos: GPosIdx,
 }
 
-impl<T> WithPos for EventBind<T>
-where
-    T: TimeRep,
-{
+impl EventBind {
+    fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
+        Self {
+            delay: self.delay.resolve_event(bindings),
+            default: self.default.as_ref().map(|d| d.resolve_event(bindings)),
+            ..self.clone()
+        }
+    }
+
+    fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
+        Self {
+            delay: self.delay.resolve_offset(bindings),
+            default: self.default.as_ref().map(|d| d.resolve_offset(bindings)),
+            ..self.clone()
+        }
+    }
+}
+
+impl WithPos for EventBind {
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
@@ -35,11 +44,8 @@ where
     }
 }
 
-impl<T> EventBind<T>
-where
-    T: TimeRep,
-{
-    pub fn new(event: Id, delay: T::SubRep, default: Option<T>) -> Self {
+impl EventBind {
+    pub fn new(event: Id, delay: TimeSub, default: Option<Time>) -> Self {
         Self {
             event,
             delay,
@@ -48,10 +54,8 @@ where
         }
     }
 }
-impl<T> Display for EventBind<T>
-where
-    T: TimeRep,
-{
+
+impl Display for EventBind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(default) = &self.default {
             write!(f, "?{}: {}={}", self.event, self.delay, default)
@@ -63,45 +67,37 @@ where
 
 /// The signature of a component definition
 #[derive(Clone)]
-pub struct Signature<Time, Width>
-where
-    Time: TimeRep,
-    Width: WidthRep,
-{
+pub struct Signature {
     /// Name of the component
     pub name: Id,
     /// Parameters for the Signature
     pub params: Vec<Id>,
-    /// Names of abstract variables bound by the component
-    pub events: Vec<EventBind<Time>>,
     /// Unannotated ports that are threaded through by the backend
     pub unannotated_ports: Vec<(Id, u64)>,
     /// Mapping from name of signals to the abstract variable they provide
     /// evidence for.
     pub interface_signals: Vec<InterfaceDef>,
+    /// Names of abstract variables bound by the component
+    pub events: Vec<EventBind>,
     /// Constraints on the abstract variables in the signature
-    pub constraints: Vec<Constraint<Time>>,
+    pub constraints: Vec<Constraint>,
     /// All the input/output ports.
-    ports: Vec<PortDef<Time, Width>>,
+    ports: Vec<PortDef>,
     /// Index of the first output port in the ports vector
     outputs_idx: usize,
 }
 
-impl<T, W> Signature<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
+impl Signature {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: Id,
         params: Vec<Id>,
-        events: Vec<EventBind<T>>,
+        events: Vec<EventBind>,
         unannotated_ports: Vec<(Id, u64)>,
         interface_signals: Vec<InterfaceDef>,
-        mut inputs: Vec<PortDef<T, W>>,
-        mut outputs: Vec<PortDef<T, W>>,
-        constraints: Vec<Constraint<T>>,
+        mut inputs: Vec<PortDef>,
+        mut outputs: Vec<PortDef>,
+        constraints: Vec<Constraint>,
     ) -> Self {
         let outputs_idx = inputs.len();
         inputs.append(&mut outputs);
@@ -122,26 +118,50 @@ where
         self.events.iter().map(|eb| &eb.event).cloned()
     }
     /// Inputs of this signature
-    pub fn inputs(&self) -> impl Iterator<Item = &PortDef<T, W>> {
+    pub fn inputs(&self) -> impl Iterator<Item = &PortDef> {
         self.ports[..self.outputs_idx].iter()
     }
     /// Outputs of this signature
-    pub fn outputs(&self) -> impl Iterator<Item = &PortDef<T, W>> {
+    pub fn outputs(&self) -> impl Iterator<Item = &PortDef> {
         self.ports[self.outputs_idx..].iter()
     }
     /// Iterator over all the ports of this signature
-    pub fn ports(&self) -> impl Iterator<Item = &PortDef<T, W>> {
+    pub fn ports(&self) -> impl Iterator<Item = &PortDef> {
         self.ports.iter()
     }
 
     /// Find the delay associoated with an event
-    pub fn get_event(&self, event: &Id) -> &EventBind<T> {
+    pub fn get_event(&self, event: &Id) -> &EventBind {
         self.events
             .iter()
             .find(|eb| eb.event == event)
             .unwrap_or_else(|| {
                 panic!("Event {} not found in signature:\n{}", event, self.name)
             })
+    }
+
+    /// Find a port on the component. Returns `None` if the port does not exist.
+    pub fn find_port(&self, port: &Id) -> Option<PortDef> {
+        self.ports
+            .iter()
+            .find(|p| p.name == *port)
+            .cloned()
+            .or_else(|| {
+                self.interface_signals.iter().find_map(|id| {
+                    if id.name == *port {
+                        Some(id.clone().into())
+                    } else {
+                        None
+                    }
+                })
+            })
+    }
+
+    /// Get a port in the signature. Panics if the port is not found.
+    pub fn get_port(&self, port: &Id) -> PortDef {
+        self.find_port(port).unwrap_or_else(|| {
+            panic!("Port {} not found in signature:\n{}", port, self.name)
+        })
     }
 
     // Generate a new signature that has been reversed: inputs are outputs
@@ -162,59 +182,22 @@ where
         self.interface_signals.iter().find(|id| id.event == event)
     }
 
-    /// Returns a port associated with the signature
-    pub fn get_liveness<const IS_INPUT: bool>(
-        &self,
-        port: &Id,
-    ) -> FilamentResult<Range<T>> {
-        let ports = if IS_INPUT {
-            &self.ports[..self.outputs_idx]
-        } else {
-            &self.ports[self.outputs_idx..]
-        };
-
-        // XXX(rachit): Always searching interface ports regardless of input or output
-        let maybe_pd = ports
-            .iter()
-            .find_map(|pd| {
-                if pd.name == port {
-                    Some(pd.liveness.clone())
-                } else {
-                    None
-                }
-            })
-            .or_else(|| {
-                self.interface_signals.iter().find_map(|id| {
-                    if id.name == port {
-                        // Interface signals are always active between [E, E+1]
-                        Some(Range::new(
-                            TimeRep::unit(id.event.clone(), 0),
-                            TimeRep::unit(id.event.clone(), 1),
-                        ))
-                    } else {
-                        None
-                    }
-                })
-            });
-
-        maybe_pd.ok_or_else(|| panic!("Unknown port: {}", port))
-    }
-
     /// Iterate over all phantom events. A phantom event is an event that does not have a corresponding interface signal.
     pub fn phantom_events(&self) -> impl Iterator<Item = Id> + '_ {
         self.events()
             .filter(move |event| self.get_interface(event).is_none())
     }
 
-    /// Constraints for well formed under a binding
-    fn constraints(&self) -> impl Iterator<Item = Constraint<T>> + '_ {
+    /// Constraints for well formed
+    fn constraints(&self) -> impl Iterator<Item = Constraint> + '_ {
         self.inputs()
             .chain(self.outputs())
             .flat_map(|mpd| mpd.liveness.well_formed())
     }
 
-    /// Construct a binding from this Signature
-    pub fn binding(&self, args: &[T]) -> Binding<T> {
+    /// Construct an event binding from this Signature's events and the given
+    /// arguments.
+    pub fn event_binding(&self, args: &[Time]) -> Binding<Time> {
         debug_assert!(
             self.events
                 .iter()
@@ -242,7 +225,8 @@ where
             .iter()
             .skip(args.len())
             .map(|eb| {
-                let bind = eb.default.as_ref().unwrap().resolve(&partial_map);
+                let bind =
+                    eb.default.as_ref().unwrap().resolve_event(&partial_map);
                 (eb.event.clone(), bind)
             })
             .collect();
@@ -250,18 +234,24 @@ where
         partial_map.extend(remaining);
         partial_map
     }
+
+    /// Construct a parameter binding from this Signature's parameters and the
+    pub fn param_binding(&self, args: &[Expr]) -> Binding<Expr> {
+        debug_assert!(
+            self.params.len() == args.len(),
+            "Insuffient params for signature, required {} got {}",
+            self.params.len(),
+            args.len(),
+        );
+
+        Binding::new(self.params.iter().cloned().zip(args.iter().cloned()))
+    }
 }
 
-impl<T, W> Signature<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
-    pub fn map<W0, F>(self, f: F) -> Signature<T, W0>
+impl Signature {
+    pub fn map<F>(self, f: F) -> Signature
     where
-        W0: Clone,
-        F: Fn(W) -> W0,
-        W0: WidthRep,
+        F: Fn(Expr) -> Expr,
     {
         Signature {
             name: self.name,
@@ -280,14 +270,12 @@ where
     }
 }
 
-impl<T: TimeRep, W: WidthRep> Signature<T, W> {
+impl Signature {
     /// Constraints generated to ensure that a signature is well-formed.
     /// 1. Ensure that all the intervals are well formed
     /// 2. Ensure for each interval that mentions event `E` in its start time, the @interface
     ///    signal for `E` pulses less often than the length of the interval itself.
-    pub fn well_formed(
-        &self,
-    ) -> FilamentResult<impl Iterator<Item = Constraint<T>> + '_> {
+    pub fn well_formed(&self) -> impl Iterator<Item = Constraint> + '_ {
         let mut evs: HashMap<Id, Vec<_>> = HashMap::new();
 
         // Compute mapping from events to intervals to mention the event in their start time.
@@ -302,7 +290,7 @@ impl<T: TimeRep, W: WidthRep> Signature<T, W> {
                 .push((delay.clone(), port.copy_span()))
         }
 
-        Ok(evs
+        evs
             .into_iter()
             .flat_map(|(ev, lens)| {
                 let event = self.get_event(&ev);
@@ -322,71 +310,71 @@ impl<T: TimeRep, W: WidthRep> Signature<T, W> {
                     )
                 })
             })
-            .chain(self.constraints()))
+            .chain(self.constraints())
     }
-}
 
-impl<T: TimeRep, W: WidthRep> Signature<T, W> {
-    pub fn resolve<WO: WidthRep>(
-        &self,
-        args: &[WO],
-    ) -> FilamentResult<Signature<T, WO>> {
-        if args.len() != self.params.len() {
-            return Err(Error::malformed(format!(
-                "Cannot resolve signature. Expected {} arguments, provided {}",
-                self.params.len(),
-                args.len(),
-            )));
-        }
-
-        let binding: Binding<WO> =
-            Binding::new(self.params.iter().cloned().zip(args.iter().cloned()));
-
-        let resolve_port =
-            |pd: &PortDef<T, W>| -> FilamentResult<PortDef<T, WO>> {
-                if let Some(p) = pd.bitwidth.resolve(&binding) {
-                    Ok(PortDef::new(pd.name.clone(), pd.liveness.clone(), p)
-                        .set_span(pd.copy_span()))
-                } else {
-                    Err(Error::malformed(format!(
-                        "No binding for parameter {}. Port `{}.{}` is parameterized by `{}`",
-                        pd.bitwidth, self.name, pd.name, pd.bitwidth
-                    )))
-                }
-            };
+    pub fn resolve_offset(&self, args: &[Expr]) -> Signature {
+        let binding: Binding<Expr> = self.param_binding(args);
 
         let resolved = Signature {
             params: vec![],
             ports: self
                 .ports
-                .clone()
                 .iter()
-                .map(resolve_port)
-                .collect::<FilamentResult<_>>()?,
-            // Clone everything else
-            outputs_idx: self.outputs_idx,
-            name: self.name.clone(),
-            events: self.events.clone(),
-            interface_signals: self.interface_signals.clone(),
-            unannotated_ports: self.unannotated_ports.clone(),
-            constraints: self.constraints.clone(),
+                .map(|pd| pd.resolve_offset(&binding))
+                .collect_vec(),
+            events: self
+                .events
+                .iter()
+                .map(|eb| eb.resolve_offset(&binding))
+                .collect_vec(),
+            constraints: self
+                .constraints
+                .iter()
+                .map(|c| c.resolve_offset(&binding))
+                .collect_vec(),
+            ..self.clone()
         };
 
-        Ok(resolved)
+        resolved
+    }
+
+    pub fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
+        Self {
+            ports: self
+                .ports
+                .iter()
+                .map(|pd| pd.resolve_event(bindings))
+                .collect(),
+            constraints: self
+                .constraints
+                .iter()
+                .map(|c| c.resolve_event(bindings))
+                .collect(),
+            events: self
+                .events
+                .iter()
+                .map(|eb| eb.resolve_event(bindings))
+                .collect(),
+            ..(self.clone())
+        }
     }
 }
 
-impl<T, W> Display for Signature<T, W>
-where
-    W: WidthRep,
-    T: TimeRep,
-{
+impl Display for Signature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "comp {}[{}]<{}>({}) -> ({})",
+            "comp {}{}<{}>({}) -> ({})",
             self.name,
-            self.params.iter().map(|p| p.to_string()).join(", "),
+            if self.params.is_empty() {
+                "".to_string()
+            } else {
+                format!(
+                    "[{}]",
+                    self.params.iter().map(|p| p.to_string()).join(", ")
+                )
+            },
             self.events.iter().map(|id| id.to_string()).join(", "),
             self.unannotated_ports
                 .iter()
@@ -409,12 +397,7 @@ where
         Ok(())
     }
 }
-impl<W, T> std::fmt::Debug for Signature<T, W>
-where
-    W:,
-    W: WidthRep,
-    T: TimeRep,
-{
+impl std::fmt::Debug for Signature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{self}")
     }

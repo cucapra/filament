@@ -6,9 +6,10 @@ use codespan_reporting::{
     term::{self, termcolor::ColorChoice, termcolor::StandardStream},
 };
 use filament::{
-    backend, bind_check, cmdline, dump_interface, errors, interval_checking,
-    lower, max_states, monomorphize, phantom_check, resolver::Resolver,
-    utils::GlobalPositionTable, visitor::Transform,
+    backend, cmdline, errors, passes,
+    resolver::Resolver,
+    utils::GlobalPositionTable,
+    visitor::{Checker, Transform},
 };
 
 // Prints out the interface for main component in the input program.
@@ -23,55 +24,58 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
         .init();
 
     let ns = Resolver::from(opts).parse_namespace()?;
-
-    log::trace!("{ns}");
+    log::info!("{ns}");
 
     // Bind check
     let t = Instant::now();
-    let ns = bind_check::check(ns)?;
+    passes::BindCheck::check(&ns)?;
     log::info!("Parameteric Bind check: {}ms", t.elapsed().as_millis());
 
     // Interval checking
     let t = Instant::now();
-    let mut ns = interval_checking::check(ns)?;
+    passes::IntervalCheck::check(&ns)?;
     log::info!("Interval check: {}ms", t.elapsed().as_millis());
 
     // User-level @phantom ports
-    (ns, _) = phantom_check::PhantomCheck::transform(ns, ())?;
+    passes::PhantomCheck::check(&ns)?;
     log::info!("Phantom check: {}ms", t.elapsed().as_millis());
 
     // Return early if we're asked to dump the interface
-    if opts.dump_interface {
-        let (ns, states) = max_states::MaxStates::transform(ns, ())?;
-        dump_interface::DumpInterface::transform(ns, states.max_states)?;
-        return Ok(());
-    } else if opts.check {
+    if opts.check {
         return Ok(());
     }
 
+    passes::IntervalCheck::check(&ns)?;
+
     // Monomorphize the program.
     let t = Instant::now();
-    let ns = monomorphize::Monomorphize::transform(ns)?;
+    let ns = passes::Monomorphize::transform(ns)?;
     log::info!("Monomorphize: {}ms", t.elapsed().as_millis());
     log::info!("{ns}");
 
     // Monomorphic Bind check
     let t = Instant::now();
-    let ns = bind_check::check(ns)?;
+    passes::BindCheck::check(&ns)?;
     log::info!("Monomorphoic Bind check: {}ms", t.elapsed().as_millis());
+
+    if opts.dump_interface {
+        let states = passes::MaxStates::check(&ns)?;
+        passes::DumpInterface::transform(ns, states.max_states)?;
+        return Ok(());
+    }
 
     // Monomorphic Interval checking
     let t = Instant::now();
-    let ns = interval_checking::check(ns)?;
+    passes::IntervalCheck::check(&ns)?;
     log::info!("Monomorphoic Interval check: {}ms", t.elapsed().as_millis());
 
     // Max state calculation
-    let (mut ns, states) = max_states::MaxStates::transform(ns, ())?;
-    log::info!("Max states: {:?}", states.max_states);
+    let states = passes::MaxStates::check(&ns)?;
+    log::trace!("Max states: {:?}", states.max_states);
 
     // Lowering
     let t = Instant::now();
-    (ns, _) = lower::CompileInvokes::transform(ns, states.max_states)?;
+    let (ns, _) = passes::CompileInvokes::transform(ns, states.max_states)?;
     log::info!("Lowering: {}ms", t.elapsed().as_millis());
     log::info!("{ns}");
 

@@ -1,57 +1,67 @@
-use super::{Binding, Id, Range, TimeRep, WidthRep, WithTime};
+use super::{Id, Range, Time};
+use crate::utils::Binding;
 use crate::{errors::WithPos, utils::GPosIdx};
 use std::fmt::Display;
 
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub enum PortParam {
+/// An expression that can represent either constants or variables
+#[derive(Hash, Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub enum Expr {
     /// A constant
     Const(u64),
     /// A parameter
     Var(Id),
 }
 
-impl From<Id> for PortParam {
+impl Expr {
+    pub fn concrete(&self) -> u64 {
+        match self {
+            Expr::Const(c) => *c,
+            Expr::Var(_) => {
+                unreachable!("Cannot convert {} into concrete value", self)
+            }
+        }
+    }
+    pub fn resolve(&self, bindings: &Binding<Expr>) -> Option<Expr> {
+        match self {
+            Expr::Const(_) => Some(self.clone()),
+            Expr::Var(v) => bindings.find(v).cloned(),
+        }
+    }
+}
+
+impl From<Id> for Expr {
     fn from(v: Id) -> Self {
         Self::Var(v)
     }
 }
-
-impl From<u64> for PortParam {
+impl From<u64> for Expr {
     fn from(v: u64) -> Self {
         Self::Const(v)
     }
 }
-impl Display for PortParam {
+impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PortParam::Const(c) => write!(f, "{c}"),
-            PortParam::Var(v) => write!(f, "{v}"),
+            Expr::Const(c) => write!(f, "{c}"),
+            Expr::Var(v) => write!(f, "{v}"),
         }
     }
 }
 
 #[derive(Clone)]
-pub struct PortDef<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
+pub struct PortDef {
     /// Name of the port
     pub name: Id,
     /// Liveness condition for the Port
-    pub liveness: Range<T>,
+    pub liveness: Range,
     /// Bitwidth of the port
-    pub bitwidth: W,
+    pub bitwidth: Expr,
     /// Source position
     pos: GPosIdx,
 }
 
-impl<T, W> PortDef<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
-    pub fn new(name: Id, liveness: Range<T>, bitwidth: W) -> Self {
+impl PortDef {
+    pub fn new(name: Id, liveness: Range, bitwidth: Expr) -> Self {
         Self {
             name,
             liveness,
@@ -60,20 +70,12 @@ where
         }
     }
 }
-impl<T, W> Display for PortDef<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
+impl Display for PortDef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {}: {}", self.liveness, self.name, self.bitwidth)
     }
 }
-impl<T, W> WithPos for PortDef<T, W>
-where
-    T: TimeRep,
-    W: WidthRep,
-{
+impl WithPos for PortDef {
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
@@ -83,20 +85,25 @@ where
         self.pos
     }
 }
-impl<T, W> WithTime<T> for PortDef<T, W>
-where
-    W: WidthRep,
-    T: TimeRep,
-{
-    fn resolve(&self, bindings: &Binding<T>) -> Self {
+impl PortDef {
+    /// Resolves all time expressions in this port definition
+    pub fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
         Self {
-            liveness: self.liveness.resolve(bindings),
+            liveness: self.liveness.resolve_event(bindings),
             ..(self.clone())
         }
     }
 
-    fn events(&self) -> Vec<Id> {
-        todo!("events for PortDef")
+    /// Resolves all width expressions in this port definition.
+    /// Specifically:
+    /// - The bitwidth of the port
+    /// - The liveness condition
+    pub fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
+        Self {
+            bitwidth: self.bitwidth.resolve(bindings).unwrap(),
+            liveness: self.liveness.resolve_offset(bindings),
+            ..(self.clone())
+        }
     }
 }
 
@@ -122,6 +129,14 @@ impl InterfaceDef {
             event,
             pos: GPosIdx::UNKNOWN,
         }
+    }
+}
+
+impl From<InterfaceDef> for PortDef {
+    fn from(id: InterfaceDef) -> Self {
+        let start = Time::unit(id.event, 0);
+        let end = start.clone().increment(Expr::Const(1));
+        PortDef::new(id.name, Range::new(start, end), 1.into())
     }
 }
 

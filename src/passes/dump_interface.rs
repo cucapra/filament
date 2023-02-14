@@ -1,45 +1,36 @@
-use crate::ast::param as ast;
 use crate::core;
 use crate::errors::{self, FilamentResult, WithPos};
-use crate::visitor;
+use crate::visitor::{self, CompBinding};
 use std::collections::HashMap;
 
 pub struct DumpInterface {
-    /// Map from FSM trigger to number of states
-    fsm_states: HashMap<ast::Id, u64>,
     /// Map from component to interface information
-    max_states: HashMap<ast::Id, HashMap<ast::Id, u64>>,
+    max_states: HashMap<core::Id, HashMap<core::Id, u64>>,
 }
 
-impl visitor::Transform<core::Time<u64>, core::PortParam> for DumpInterface {
+impl visitor::Transform for DumpInterface {
     // Mapping from component -> event -> max state
-    type Info = HashMap<ast::Id, HashMap<ast::Id, u64>>;
+    type Info = HashMap<core::Id, HashMap<core::Id, u64>>;
 
-    fn new(_: &ast::Namespace, max_states: &Self::Info) -> Self {
+    fn new(_: &core::Namespace, max_states: &Self::Info) -> Self {
         Self {
-            fsm_states: HashMap::new(),
             max_states: max_states.clone(),
         }
     }
 
-    fn clear_data(&mut self) {
-        self.fsm_states.clear();
-    }
+    fn clear_data(&mut self) {}
 
-    fn component_filter(&self, comp: &ast::Component) -> bool {
-        comp.sig.name == "main"
-    }
-
-    fn fsm(&mut self, fsm: ast::Fsm) -> FilamentResult<Vec<ast::Command>> {
-        self.fsm_states
-            .insert(fsm.trigger.name().clone(), fsm.states);
-        Ok(vec![fsm.into()])
+    fn component_filter(&self, comp: &visitor::CompBinding) -> bool {
+        let sig = comp.this();
+        sig.name == "main"
     }
 
     fn exit_component(
         &mut self,
-        comp: ast::Component,
-    ) -> FilamentResult<ast::Component> {
+        comp: &CompBinding,
+    ) -> FilamentResult<Vec<core::Command>> {
+        let sig = comp.this();
+
         // For an interface port like this:
         //      @interface[G, G+5] go_G
         // Generate the JSON information:
@@ -50,20 +41,19 @@ impl visitor::Transform<core::Time<u64>, core::PortParam> for DumpInterface {
         //   "states": 2,
         //   "phantom": false
         // }
-        let events = &self.max_states[&comp.sig.name];
-        let interfaces = comp
-            .sig
+        let events = &self.max_states[&sig.name];
+        let interfaces = sig
             .events
             .iter()
             .map(|eb| {
-                let id = comp.sig.get_interface(&eb.event);
+                let id = sig.get_interface(&eb.event);
                 let phantom = id.is_none();
                 eb.delay
                     .concrete()
                     .map(|delay|
                         format!(
                             "{{\"name\": {}, \"event\": \"{}\", \"delay\": {}, \"states\": {}, \"phantom\": {} }}",
-                            id.map(|i| format!("\"{}\"", i.name.id())).unwrap_or_else(|| "null".to_string()),
+                            id.map(|i| format!("\"{}\"", i.name.as_ref())).unwrap_or_else(|| "null".to_string()),
                             eb.event,
                             delay,
                             events[&eb.event],
@@ -87,7 +77,7 @@ impl visitor::Transform<core::Time<u64>, core::PortParam> for DumpInterface {
         //   "start": n,
         //   "end": m
         // },
-        let pd_to_info = |pd: &ast::PortDef| {
+        let pd_to_info = |pd: &core::PortDef| {
             let w = &pd.bitwidth;
             pd.liveness
             .as_offset()
@@ -95,6 +85,8 @@ impl visitor::Transform<core::Time<u64>, core::PortParam> for DumpInterface {
                 format!(
                     "{{ \"event\": \"{event}\", \"name\": \"{name}\", \"width\": {w} , \"start\": {st}, \"end\": {end} }}",
                     name = pd.name,
+                    st = st.concrete(),
+                    end = end.concrete(),
                 )
             })
             .ok_or_else(|| {
@@ -107,14 +99,13 @@ impl visitor::Transform<core::Time<u64>, core::PortParam> for DumpInterface {
                 )
             })
         };
-        let inputs = comp
-            .sig
+        let inputs = sig
             .inputs()
             .map(pd_to_info)
             .collect::<FilamentResult<Vec<_>>>()?
             .join(",\n");
-        let outputs = comp
-            .sig
+
+        let outputs = sig
             .outputs()
             .map(pd_to_info)
             .collect::<FilamentResult<Vec<_>>>()?
@@ -125,6 +116,6 @@ impl visitor::Transform<core::Time<u64>, core::PortParam> for DumpInterface {
             "{{\n\"interfaces\": [\n{interfaces}\n],\n\"inputs\": [\n{inputs}\n],\n\"outputs\": [\n{outputs}\n]\n}}",
         );
 
-        Ok(comp)
+        Ok(vec![])
     }
 }

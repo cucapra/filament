@@ -8,7 +8,7 @@ error: Cannot prove constraint 10 >= max(G + 2, G+9 + 2) - min(G, G+9)
    │           ^^^^^ Event's delay must be longer than the difference between minimum start time and maximum end time of all other bindings.
    ·
 13 │   m0 := M<G>(l0, r0);
-   │   ------------------- Invocation starts at `G' and finishes at `G+2'
+   │   ------------------- Invocation active during [G, G+2)
 14 │   m1 := M<G+9>(l1, r1);
-   │   --------------------- Invocation starts at `G+9' and finishes at `G+9+2'
+   │   --------------------- Invocation active during [G+9, G+9+2)
 

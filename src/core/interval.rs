@@ -1,26 +1,22 @@
+use super::{Constraint, Expr, OrderConstraint, Time, TimeSub};
+use crate::utils::Binding;
+use crate::{errors, utils::GPosIdx};
+use derivative::Derivative;
 use std::fmt::Display;
 
-use crate::{errors, utils::GPosIdx};
-
-use super::{Binding, Constraint, OrderConstraint, TimeRep, WithTime};
-
 /// A range over time representation
-#[derive(Clone)]
-pub struct Range<T>
-where
-    T: TimeRep,
-{
-    pub start: T,
-    pub end: T,
+#[derive(Clone, Derivative)]
+#[derivative(PartialEq)]
+pub struct Range {
+    pub start: Time,
+    pub end: Time,
+    #[derivative(PartialEq = "ignore")]
     pos: GPosIdx,
 }
 
-impl<T> Range<T>
-where
-    T: TimeRep,
-{
+impl Range {
     /// Generate constraints for well formedness of this range.
-    pub fn well_formed(&self) -> impl Iterator<Item = Constraint<T>> {
+    pub fn well_formed(&self) -> impl Iterator<Item = Constraint> {
         std::iter::once(
             Constraint::base(OrderConstraint::lt(
                 self.start.clone(),
@@ -33,38 +29,36 @@ where
         )
     }
 
-    pub fn events(&self) -> Vec<&T> {
-        vec![&self.start, &self.end]
-    }
-
-    /// Return the length of this range
-    pub fn len(&self) -> T::SubRep {
-        self.end.clone().sub(self.start.clone())
+    pub fn len(&self) -> TimeSub {
+        self.end.clone() - self.start.clone()
     }
 }
 
-impl<T> WithTime<T> for Range<T>
-where
-    T: TimeRep,
-{
-    fn resolve(&self, bindings: &Binding<T>) -> Self {
+impl Range {
+    pub fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
         Range {
-            start: self.start.resolve(bindings),
-            end: self.end.resolve(bindings),
+            start: self.start.resolve_event(bindings),
+            end: self.end.resolve_event(bindings),
             ..self.clone()
         }
     }
 
-    fn events(&self) -> Vec<super::Id> {
-        vec![self.start.event(), self.end.event()]
+    pub fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
+        Range {
+            start: self.start.resolve_offset(bindings),
+            end: self.end.resolve_offset(bindings),
+            ..self.clone()
+        }
+    }
+
+    /// Returns all the time expressions associated with this range
+    pub fn time_exprs(&self) -> Vec<&Time> {
+        vec![&self.start, &self.end]
     }
 }
 
-impl<T> Range<T>
-where
-    T: TimeRep,
-{
-    pub fn new(start: T, end: T) -> Self {
+impl Range {
+    pub fn new(start: Time, end: Time) -> Self {
         Self {
             start,
             end,
@@ -73,16 +67,7 @@ where
     }
 }
 
-impl<T: TimeRep + PartialEq> PartialEq for Range<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.start == other.start && self.end == other.end
-    }
-}
-
-impl<T> errors::WithPos for Range<T>
-where
-    T: TimeRep,
-{
+impl errors::WithPos for Range {
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
         self
@@ -93,10 +78,7 @@ where
     }
 }
 
-impl<T> Display for Range<T>
-where
-    T: Display + TimeRep,
-{
+impl Display for Range {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "@[{}, {}]", self.start, self.end)
     }
