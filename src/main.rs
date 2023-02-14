@@ -24,7 +24,7 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
         .init();
 
     let ns = Resolver::from(opts).parse_namespace()?;
-    log::info!("{ns}");
+    log::trace!("{ns}");
 
     // Bind check
     let t = Instant::now();
@@ -45,13 +45,11 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
         return Ok(());
     }
 
-    passes::IntervalCheck::check(&ns)?;
-
     // Monomorphize the program.
     let t = Instant::now();
     let ns = passes::Monomorphize::transform(ns)?;
     log::info!("Monomorphize: {}ms", t.elapsed().as_millis());
-    log::info!("{ns}");
+    log::trace!("{ns}");
 
     // Monomorphic Bind check
     let t = Instant::now();
@@ -71,7 +69,6 @@ fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {
 
     // Max state calculation
     let states = passes::MaxStates::check(&ns)?;
-    log::trace!("Max states: {:?}", states.max_states);
 
     // Lowering
     let t = Instant::now();

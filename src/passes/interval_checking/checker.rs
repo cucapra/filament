@@ -16,7 +16,7 @@ impl visitor::Checker for IntervalCheck {
             solver.prove(
                 sig.events().chain(sig.params.iter().cloned()),
                 sig.constraints.clone(),
-                sig.well_formed(),
+                sig.well_formed().collect(),
                 vec![],
             )?;
             log::trace!("==========");
@@ -153,7 +153,7 @@ impl visitor::Checker for IntervalCheck {
             comp.sig.events().chain(comp.sig.params.iter().cloned()),
             // XXX(rachit): Unnecessary clone
             self.facts.clone(),
-            obs.into_iter(),
+            obs,
             share,
         )?;
         log::info!(
