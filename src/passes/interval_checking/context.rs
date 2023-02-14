@@ -1,5 +1,5 @@
 use crate::core::{self, Constraint, OrderConstraint, Time};
-use crate::errors::FilamentResult;
+use crate::errors::{FilamentResult, WithPos};
 use crate::utils::GPosIdx;
 use crate::utils::{FilSolver, ShareConstraints};
 use crate::visitor;
@@ -81,7 +81,7 @@ impl IntervalCheck {
         // Reprents invoke -> list (event, delay)
         let invoke_bindings = inst
             .get_all_invokes(ctx)
-            .map(|inv| inv.event_active_ranges(ctx))
+            .map(|inv| (inv, inv.event_active_ranges(ctx)))
             .collect_vec();
 
         // If we don't have multiple invokes, we don't need to generate any
@@ -91,8 +91,8 @@ impl IntervalCheck {
         }
 
         // Check that all invokes use the same event binding
-        let first_bind = &invoke_bindings[0];
-        for binds in &invoke_bindings[1..] {
+        let (_, first_bind) = &invoke_bindings[0];
+        for (_, binds) in &invoke_bindings[1..] {
             for event in 0..first_bind.len() {
                 let e1 = first_bind[event].0.event();
                 let e2 = binds[event].0.event();
@@ -103,11 +103,13 @@ impl IntervalCheck {
                             Time::unit(e1.clone(), 0),
                             Time::unit(e2.clone(), 0)
                         )
-                    ).add_note(
+                    )
+                    .add_note(format!("Invocation uses event {e1}"), e1.copy_span())
+                    .add_note(format!("Invocation uses event {e2}"), e2.copy_span())
+                    .add_note(
                         format!(
-                        "Invocations of instance use multiple events in invocations: {first} and {event}. Sharing using multiple events is not supported.",
-                        first = e1,
-                        event = e2),
+                            "Invocations of instance use multiple events in invocations: {e1} and {e2}. Sharing using multiple events is not supported."
+                        ),
                         GPosIdx::UNKNOWN,
                     );
                     self.add_obligations(iter::once(con));
@@ -131,28 +133,41 @@ impl IntervalCheck {
             // Iterate over all pairs of bindings
             for i in 0..num_bindings {
                 // Add the event binding to the share constraint
-                let (start_i, delay) = &invoke_bindings[i][event];
+                let (inv_i, binds) = &invoke_bindings[i];
+                let (start_i, delay) = &binds[event];
                 share.add_bind_info(
                     start_i.clone(),
                     (start_i.clone(), delay.clone()),
-                    GPosIdx::UNKNOWN,
+                    inv_i.pos(ctx),
                 );
 
                 // All other bindings must be separated by at least the delay of this binding
                 // XXX: There probably a more efficient encoding where we ensure that the
                 //      events are max(delay_i, delay_k) cycles apart
-                for (k, start_k) in
-                    invoke_bindings.iter().map(|b| &b[event].0).enumerate()
+                for (k, (inv_k, start_k)) in invoke_bindings
+                    .iter()
+                    .map(|(inv, b)| (inv, &b[event].0))
+                    .enumerate()
                 {
                     if i == k {
                         continue;
                     }
 
-                    let con =
-                        core::Constraint::sub(core::OrderConstraint::gte(
+                    let con = core::Constraint::sub(
+                        core::OrderConstraint::gte(
                             start_i.clone() - start_k.clone(),
                             delay.clone(),
-                        ));
+                        ),
+                    )
+                    .add_note(
+                        format!("Conflicting invoke, starts at `{start_k}'"),
+                        inv_k.pos(ctx),
+                    )
+                    .add_note(
+                        format!("Invocation starts at `{start_i}'"),
+                        inv_i.pos(ctx),
+                    )
+                    .add_note(format!("Delay requires {} cycle between event but reuse may occur after {} cycles", delay.clone(), start_i.clone() - start_k.clone()), GPosIdx::UNKNOWN);
                     self.add_obligations(iter::once(con));
                 }
             }

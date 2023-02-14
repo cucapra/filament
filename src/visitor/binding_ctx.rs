@@ -2,7 +2,7 @@
 use crate::{
     core::{self, Expr, Id, Time, TimeSub},
     errors::{Error, FilamentResult, WithPos},
-    utils,
+    utils::{self, GPosIdx},
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -23,6 +23,11 @@ pub enum SigIdx {
 pub struct InstIdx(usize);
 
 impl InstIdx {
+    /// Get the position of the instance
+    pub fn pos(&self, ctx: &CompBinding) -> GPosIdx {
+        ctx.instances[self.0].pos
+    }
+
     /// Returns all the invocations associated with an instance
     pub fn get_all_invokes<'a>(
         &'a self,
@@ -63,6 +68,11 @@ impl InstIdx {
 pub struct InvIdx(usize);
 
 impl InvIdx {
+    /// Get the position of the invocation
+    pub fn pos(&self, ctx: &CompBinding) -> GPosIdx {
+        ctx.invocations[self.0].pos
+    }
+
     /// Get resolved event bindings for the invocation
     pub fn resolved_event_binding(&self, ctx: &CompBinding) -> Vec<Time> {
         let inv = &ctx.invocations[self.0];
@@ -217,6 +227,19 @@ pub struct BoundInstance {
     pub sig: SigIdx,
     /// Parameter binding for this instance
     pub params: Vec<Expr>,
+    /// Position associated with this instance
+    pos: GPosIdx,
+}
+
+impl WithPos for BoundInstance {
+    fn set_span(mut self, sp: GPosIdx) -> Self {
+        self.pos = sp;
+        self
+    }
+
+    fn copy_span(&self) -> GPosIdx {
+        self.pos
+    }
 }
 
 pub struct BoundInvoke {
@@ -224,6 +247,19 @@ pub struct BoundInvoke {
     pub instance: InstIdx,
     /// Event binding for this invocation
     pub events: Vec<Time>,
+    /// Position associated with this invocation
+    pos: GPosIdx,
+}
+
+impl WithPos for BoundInvoke {
+    fn set_span(mut self, sp: GPosIdx) -> Self {
+        self.pos = sp;
+        self
+    }
+
+    fn copy_span(&self) -> GPosIdx {
+        self.pos
+    }
 }
 
 /// Track binding information for a component
@@ -365,6 +401,7 @@ impl<'p> CompBinding<'p> {
         self.instances.push(BoundInstance {
             sig,
             params: inst.bindings.clone(),
+            pos: inst.copy_span(),
         });
         // Add the name to the map
         self.inst_map.insert(inst.name.clone(), idx);
@@ -383,6 +420,7 @@ impl<'p> CompBinding<'p> {
         self.invocations.push(BoundInvoke {
             instance: *instance,
             events: binding.into_iter().map(|b| b.1).collect(),
+            pos: inv.copy_span(),
         });
         self.inv_map.insert(inv.name.clone(), idx);
         Some(idx)

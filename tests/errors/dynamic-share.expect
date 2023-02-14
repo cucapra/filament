@@ -1,11 +1,13 @@
 ---CODE---
 1
 ---STDERR---
-error: Invocations of instance `M' use multiple events for event `G' binding: L and G. Sharing using multiple events is not supported.
-   ┌─ tests/errors/dynamic-share.fil:12:3
+error: Cannot prove constraint L = G
+   ┌─ tests/errors/dynamic-share.fil:12:11
    │
 12 │   m1 := M<L>(c, d);
-   │   ^^^^^^^^^^^^^^^^^ Location provides binding M.G=L
+   │           ^ Invocation uses event L
 13 │   m0 := M<G>(a, b);
-   │   ----------------- Location provides binding M.G=G
+   │           - Invocation uses event G
+   │
+   = Invocations of instance use multiple events in invocations: L and G. Sharing using multiple events is not supported.
 

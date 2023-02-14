@@ -13,7 +13,7 @@ error: Component provided phantom event binding to non-phantom event argument
   ┌─ ./primitives/./state.fil:3:24
   │
 3 │   comp Register[WIDTH]<G: L-(G+1), L: 1>(
-  │                        ---------- Instance's event is not phantom
+  │                        - Instance's event is not phantom
   │
   = Phantom ports are compiled away and cannot be used by subcomponents
 

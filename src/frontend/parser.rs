@@ -173,7 +173,8 @@ impl FilamentParser {
     fn delay(input: Node) -> ParseResult<TimeSub> {
         Ok(match_nodes!(
             input.into_children();
-            [port_width(n)] => TimeSub::unit(n),
+            // [port_width(n)] => TimeSub::unit(n),
+            [bitwidth(n)] => TimeSub::unit(n.into()),
             [time(l), time(r)] => TimeSub::sym(l, r),
         ))
     }
