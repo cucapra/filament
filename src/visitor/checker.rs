@@ -1,4 +1,4 @@
-use crate::{core, errors::FilamentResult};
+use crate::{core, diagnostics, errors::FilamentResult};
 
 use super::{CompBinding, ProgBinding};
 
@@ -53,11 +53,7 @@ where
     }
 
     #[inline]
-    fn signature(
-        &mut self,
-        _: &core::Signature,
-        _ctx: &CompBinding,
-    ) -> FilamentResult<()> {
+    fn signature(&mut self, _: &core::Signature) -> FilamentResult<()> {
         Ok(())
     }
 
@@ -81,12 +77,13 @@ where
         Ok(())
     }
 
-    /// Perform the component traversal
+    /// Check the component signature and perform the component traversal
     fn component(
         &mut self,
         comp: &core::Component,
         prog_ctx: &super::ProgBinding,
     ) -> FilamentResult<()> {
+        self.signature(&comp.sig)?;
         let ctx = &CompBinding::new(prog_ctx, comp)?;
 
         // Binding for instances
@@ -100,8 +97,9 @@ where
         self.exit_component(comp, ctx)
     }
 
-    fn external(&mut self, _: &core::Signature) -> FilamentResult<()> {
-        Ok(())
+    /// Check an external signature. By default, simply calls `signature`.
+    fn external(&mut self, sig: &core::Signature) -> FilamentResult<()> {
+        self.signature(sig)
     }
 
     fn check(ns: &core::Namespace) -> FilamentResult<Self> {

@@ -1,4 +1,5 @@
 use crate::core::{self, Time, TimeSub};
+use crate::diagnostics::{self, Diagnostics};
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
 use itertools::Itertools;

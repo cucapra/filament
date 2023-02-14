@@ -1,5 +1,8 @@
+use itertools::Itertools;
+
 use super::IntervalCheck;
 use crate::core::{self, Expr, OrderConstraint, Time};
+use crate::diagnostics;
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::{self, FilSolver, GPosIdx};
 use crate::visitor::{self, Checker, CompBinding};
@@ -8,6 +11,7 @@ use std::iter;
 impl visitor::Checker for IntervalCheck {
     fn new(ns: &core::Namespace) -> FilamentResult<Self> {
         let mut solver = FilSolver::new()?;
+        let mut diagnostics = diagnostics::Diagnostics::default();
 
         // Check that all signatures are well formed
         let t = std::time::Instant::now();
@@ -16,14 +20,14 @@ impl visitor::Checker for IntervalCheck {
             solver.prove(
                 sig.events().chain(sig.params.iter().cloned()),
                 sig.constraints.clone(),
-                sig.well_formed().collect(),
+                sig.well_formed(&mut diagnostics),
                 vec![],
             )?;
             log::trace!("==========");
         }
         log::info!("interval-check.sigs: {}ms", t.elapsed().as_millis());
 
-        Ok(Self::from(solver))
+        Ok(Self::from((solver, diagnostics)))
     }
 
     fn clear_data(&mut self) {
@@ -62,18 +66,19 @@ impl visitor::Checker for IntervalCheck {
             )
             .map(|e| {
                 core::Constraint::base(e)
-                    .add_note(
+                    .add_note(self.diag.add_info(
                         format!(
                             "Source is available for {}",
                             guarantee.liveness
                         ),
                         src_pos,
-                    )
-                    .add_note(
+                    ))
+                    .add_note(self.diag.add_info(
                         format!("Destination's requirement {}", requirement),
                         dst.copy_span(),
-                    )
-            });
+                    ))
+            })
+            .collect_vec();
             self.add_obligations(within_fact);
         }
 
@@ -93,21 +98,24 @@ impl visitor::Checker for IntervalCheck {
         self.check_invoke_ports(invoke, ctx)?;
 
         // Check that the invocation's events satisfy well-formedness the component's constraints
-        let constraints = ctx
+        let sig = ctx
             .get_invoke_idx(&invoke.name)
             .unwrap()
-            .get_resolved_sig_constraints(ctx, |c, e, p| {
-                c.resolve_event(e).resolve_offset(p)
-            });
+            .resolved_signature(ctx);
 
-        constraints.into_iter().for_each(|con| {
-            self.add_obligations(iter::once(con).map(|e| {
-                e.add_note(
-                    "Component's where clause constraints must be satisfied",
-                    invoke.copy_span(),
-                )
-            }))
-        });
+        let constraints = sig
+            .constraints
+            .iter()
+            .cloned()
+            .chain(sig.well_formed(&mut self.diag).into_iter());
+
+        for con in constraints {
+            let con_with_info = con.add_note(self.diag.add_info(
+                "Component's where clause constraints must be satisfied",
+                invoke.copy_span(),
+            ));
+            self.add_obligations(iter::once(con_with_info));
+        }
 
         Ok(())
     }
@@ -118,7 +126,8 @@ impl visitor::Checker for IntervalCheck {
         _: &CompBinding,
     ) -> FilamentResult<()> {
         // Ensure that the signature is well-formed
-        self.add_obligations(comp.sig.well_formed());
+        let cons = comp.sig.well_formed(&mut self.diag);
+        self.add_obligations(cons);
 
         // User-level components are not allowed to have ordering constraints. See https://github.com/cucapra/filament/issues/27.
         for constraint in &comp.sig.constraints {
@@ -126,10 +135,10 @@ impl visitor::Checker for IntervalCheck {
                 return Err(Error::malformed(
                     "User-level components cannot have ordering constraints",
                 )
-                .add_note(
+                .add_note(self.diag.add_info(
                     format!("Component defines the constraint {constraint}"),
                     GPosIdx::UNKNOWN,
-                ));
+                )));
             } else {
                 self.add_fact(constraint.clone())
             }
@@ -199,24 +208,24 @@ impl IntervalCheck {
                     this_ev_delay.clone(),
                     ev_delay.clone(),
                 ))
-                .add_note(
+                .add_note(self.diag.add_info(
                     "Event provided to invoke triggers too often",
                     invoke.copy_span(),
-                )
-                .add_note(
+                ))
+                .add_note(self.diag.add_info(
                     format!(
                         "Provided event may trigger every {} cycles",
                         ev_delay,
                     ),
                     ev.copy_span(),
-                )
-                .add_note(
+                ))
+                .add_note(self.diag.add_info(
                     format!(
                         "Interface requires event to trigger once in {} cycles",
                         this_ev_delay,
                     ),
                     this_ev.copy_span(),
-                );
+                ));
             constraints.push(cons);
         }
         self.add_obligations(constraints.into_iter());

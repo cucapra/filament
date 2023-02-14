@@ -1,7 +1,7 @@
-use crate::core;
 use crate::errors::{Error, FilamentResult, WithPos};
 use crate::utils::GPosIdx;
 use crate::visitor;
+use crate::{core, diagnostics};
 use std::collections::HashSet;
 
 /// Checks if a user-level phantom events are valid.
@@ -14,6 +14,8 @@ pub struct PhantomCheck {
     instance_used: HashSet<core::Id>,
     // Names of @phantom events in this component
     phantom_events: Vec<core::Id>,
+    // Diagnostics information
+    diag: diagnostics::Diagnostics,
 }
 
 impl visitor::Checker for PhantomCheck {
@@ -21,6 +23,7 @@ impl visitor::Checker for PhantomCheck {
         Ok(Self {
             instance_used: HashSet::new(),
             phantom_events: Vec::new(),
+            diag: diagnostics::Diagnostics::default(),
         })
     }
 
@@ -53,12 +56,12 @@ impl visitor::Checker for PhantomCheck {
             for ev in inv.abstract_vars.iter().map(|ev| ev.event()) {
                 if let Some(e) = self.phantom_events.iter().find(|e| **e == ev)
                 {
-                    return Err(Error::malformed(
+                    let err =  Error::malformed(
                         "Reuses instance uses phantom event for scheduling"
-                    ).add_note("Invocation uses phantom event", ev.copy_span())
-                     .add_note("Event is a phantom event", e.copy_span())
-                     .add_note("Previous use", prev_use.copy_span())
-                     .add_note("Phantom ports are compiled away and cannot be used for resource sharing", GPosIdx::UNKNOWN));
+                    ).add_note(self.diag.add_info("Invocation uses phantom event", ev.copy_span()))
+                     .add_note(self.diag.add_info("Event is a phantom event", e.copy_span()))
+                     .add_note(self.diag.add_info("Previous use", prev_use.copy_span()))
+                     .add_note(self.diag.add_info("Phantom ports are compiled away and cannot be used for resource sharing", GPosIdx::UNKNOWN));
                 }
             }
         }
@@ -79,12 +82,13 @@ impl visitor::Checker for PhantomCheck {
             if !instance_phantoms.contains(eb) {
                 let ev = &bind.event();
                 if let Some(e) = self.phantom_events.iter().find(|e| *e == ev) {
-                    return Err(Error::malformed(
-                            "Component provided phantom event binding to non-phantom event argument",
-                        ).add_note("Invoke provides phantom event", ev.copy_span())
-                         .add_note("Event is a phantom event", e.copy_span())
-                         .add_note("Instance's event is not phantom", eb.copy_span())
-                         .add_note("Phantom ports are compiled away and cannot be used by subcomponents", GPosIdx::UNKNOWN));
+                    let err = Error::malformed(
+                        "Component provided phantom event binding to non-phantom event argument",
+                    ).add_note(self.diag.add_info("Invoke provides phantom event", ev.copy_span()))
+                    .add_note(self.diag.add_info("Event is a phantom event", e.copy_span()))
+                    .add_note(self.diag.add_info("Instance's event is not phantom", eb.copy_span()))
+                    .add_note(self.diag.add_message("Phantom ports are compiled away and cannot be used by subcomponents"));
+                    self.diag.add_error(err);
                 }
             }
         }

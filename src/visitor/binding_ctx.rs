@@ -134,9 +134,8 @@ impl InvIdx {
     }
 
     /// Fully resolve a port.
-    /// Returns None if and only if the invocation is not defined
-    ///
     /// Accepts a function to resolve the liveness of the port using time and width bindings.
+    // XXX: Does not need to return an option
     pub fn get_invoke_port<F>(
         &self,
         ctx: &CompBinding,
@@ -154,70 +153,13 @@ impl InvIdx {
         let inst = &ctx.instances[inv.instance.0];
         let param_b = ctx.prog.param_binding(inst.sig, &inst.params);
         let event_b = ctx.prog.event_binding(inst.sig, &inv.events);
-
-        match inst.sig {
-            SigIdx::Ext(idx) => {
-                let sig = ctx.prog.externals[idx];
-                let port = sig.get_port(port);
-                Some(core::PortDef::new(
-                    port.name.clone(),
-                    resolve_range(&port.liveness, &event_b, &param_b),
-                    port.bitwidth.resolve(&param_b).unwrap(),
-                ))
-            }
-            SigIdx::Comp(idx) => {
-                let sig = &ctx.prog.components[idx];
-                let port = sig.get_port(port);
-                Some(core::PortDef::new(
-                    port.name.clone(),
-                    resolve_range(&port.liveness, &event_b, &param_b),
-                    port.bitwidth.resolve(&param_b).unwrap(),
-                ))
-            }
-        }
-    }
-
-    /// Get all the fully resolved constraints for the signature of an invocation.
-    /// This includes:
-    /// - The constraints of the component
-    /// - Well-formedness constraints
-    pub fn get_resolved_sig_constraints<F>(
-        &self,
-        ctx: &CompBinding,
-        resolve_constraint: F,
-    ) -> Vec<core::Constraint>
-    where
-        F: Fn(
-            &core::Constraint,
-            &utils::Binding<Time>,
-            &utils::Binding<Expr>,
-        ) -> core::Constraint,
-    {
-        let inv = &ctx.invocations[self.0];
-        let inst = &ctx[inv.instance];
-        let sig = inst.sig;
-        let param_b = &ctx.prog.param_binding(sig, &inst.params);
-        let event_b = &ctx.prog.event_binding(sig, &inv.events);
-        let resolve_ref = |c| resolve_constraint(c, event_b, param_b);
-        let resolve = |c| resolve_constraint(&c, event_b, param_b);
-        match sig {
-            SigIdx::Ext(idx) => {
-                let sig = ctx.prog.externals[idx];
-                sig.constraints
-                    .iter()
-                    .map(resolve_ref)
-                    .chain(sig.well_formed().map(resolve))
-                    .collect()
-            }
-            SigIdx::Comp(idx) => {
-                let sig = ctx.prog.components[idx];
-                sig.constraints
-                    .iter()
-                    .map(resolve_ref)
-                    .chain(sig.well_formed().map(resolve))
-                    .collect()
-            }
-        }
+        let sig = ctx.prog.sig(inst.sig);
+        let port = sig.get_port(port);
+        Some(core::PortDef::new(
+            port.name.clone(),
+            resolve_range(&port.liveness, &event_b, &param_b),
+            port.bitwidth.resolve(&param_b).unwrap(),
+        ))
     }
 }
 
@@ -303,6 +245,7 @@ impl<'p> CompBinding<'p> {
         Self::from_comp_data(prog_ctx, &comp.sig.name, &comp.body)
     }
 
+    /// Construct a new instance using information from a [[core::Component]].
     pub fn from_comp_data(
         prog: &'p ProgBinding<'p>,
         comp: &core::Id,
@@ -325,11 +268,11 @@ impl<'p> CompBinding<'p> {
                         return Err(Error::undefined(
                             inst.component.clone(),
                             "component",
-                        )
-                        .add_note(
-                            "Component is not bound",
-                            inst.component.copy_span(),
                         ));
+                        // .add_note(
+                        //     "Component is not bound",
+                        //     inst.component.copy_span(),
+                        // ));
                     }
                 }
                 core::Command::Invoke(inv) => {
@@ -337,11 +280,11 @@ impl<'p> CompBinding<'p> {
                         return Err(Error::undefined(
                             inv.instance.clone(),
                             "instance",
-                        )
-                        .add_note(
-                            "Instance is not bound",
-                            inv.instance.copy_span(),
                         ));
+                        // .add_note(
+                        //     "Instance is not bound",
+                        //     inv.instance.copy_span(),
+                        // ));
                     }
                 }
                 _ => (),

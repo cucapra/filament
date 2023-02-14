@@ -55,7 +55,7 @@ impl FilamentParser {
         let file = GlobalPositionTable::as_mut()
             .add_file(path.to_string_lossy().to_string(), string_content);
         let user_data = UserData { file };
-        let content = GlobalPositionTable::as_ref().get_source(file);
+        let (_, content) = GlobalPositionTable::as_ref().get_file_data(file);
         // Parse the file
         let inputs =
             FilamentParser::parse_with_userdata(Rule::file, content, user_data)

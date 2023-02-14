@@ -1,6 +1,7 @@
 use crate::core;
-use crate::errors::{self, FilamentResult, WithPos};
+use crate::errors::{self, FilamentResult};
 use crate::visitor::{self, CompBinding};
+use itertools::Itertools;
 use std::collections::HashMap;
 
 pub struct DumpInterface {
@@ -79,37 +80,19 @@ impl visitor::Transform for DumpInterface {
         // },
         let pd_to_info = |pd: &core::PortDef| {
             let w = &pd.bitwidth;
-            pd.liveness
+            let (event, st, end) = pd.liveness
             .as_offset()
-            .map(|(event, st, end)| {
-                format!(
-                    "{{ \"event\": \"{event}\", \"name\": \"{name}\", \"width\": {w} , \"start\": {st}, \"end\": {end} }}",
-                    name = pd.name,
-                    st = st.concrete(),
-                    end = end.concrete(),
-                )
-            })
-            .ok_or_else(|| {
-                errors::Error::malformed(
-                    "Delay cannot be converted into concrete start and end",
-                )
-                .add_note(
-                    format!("Delay {} is dynamic", pd.liveness),
-                    pd.liveness.copy_span(),
-                )
-            })
+            .unwrap_or_else(|| unreachable!("Cannot covert delay into concrete start and end. Resolved delays should use the same event."));
+            format!(
+                "{{ \"event\": \"{event}\", \"name\": \"{name}\", \"width\": {w} , \"start\": {st}, \"end\": {end} }}",
+                name = pd.name,
+                st = st.concrete(),
+                end = end.concrete(),
+            )
         };
-        let inputs = sig
-            .inputs()
-            .map(pd_to_info)
-            .collect::<FilamentResult<Vec<_>>>()?
-            .join(",\n");
 
-        let outputs = sig
-            .outputs()
-            .map(pd_to_info)
-            .collect::<FilamentResult<Vec<_>>>()?
-            .join(",\n");
+        let inputs = sig.inputs().map(pd_to_info).collect_vec().join(",\n");
+        let outputs = sig.outputs().map(pd_to_info).collect_vec().join(",\n");
 
         // Look ma, a JSON serializer!
         println!(

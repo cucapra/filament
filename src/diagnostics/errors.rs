@@ -4,6 +4,8 @@ use crate::utils::GlobalPositionTable;
 use crate::{core::Id, frontend};
 use std::collections::HashSet;
 
+use super::InfoIdx;
+
 /// An IR node that may contain position information.
 pub trait WithPos {
     /// Add span information to this node
@@ -14,19 +16,20 @@ pub trait WithPos {
 
 pub struct Error {
     pub kind: Box<ErrorKind>,
-    pub notes: Vec<(String, GPosIdx)>,
+    pub notes: Vec<InfoIdx>,
 }
 
 impl Error {
     pub fn files(&self) -> impl Iterator<Item = (&'static str, &'static str)> {
-        let table = GlobalPositionTable::as_ref();
-        let set: HashSet<(&'static str, &'static str)> = HashSet::from_iter(
-            self.notes
-                .iter()
-                .filter_map(|(_, sp)| sp.into_option())
-                .map(|pos| table.get_file_info(pos.0)),
-        );
-        set.into_iter()
+        vec![].into_iter()
+        // let table = GlobalPositionTable::as_ref();
+        // let set: HashSet<(&'static str, &'static str)> = HashSet::from_iter(
+        //     self.notes
+        //         .iter()
+        //         .filter_map(|(_, sp)| sp.into_option())
+        //         .map(|pos| table.get_file_info(pos.0)),
+        // );
+        // set.into_iter()
     }
 }
 
@@ -37,8 +40,8 @@ impl std::fmt::Debug for Error {
 }
 
 impl Error {
-    pub fn add_note<S: ToString>(mut self, msg: S, pos: GPosIdx) -> Self {
-        self.notes.push((msg.to_string(), pos));
+    pub fn add_note(mut self, note: InfoIdx) -> Self {
+        self.notes.push(note);
         self
     }
 

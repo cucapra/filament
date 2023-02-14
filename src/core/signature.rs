@@ -1,6 +1,7 @@
 use super::{
     Constraint, Expr, Id, InterfaceDef, OrderConstraint, PortDef, Time, TimeSub,
 };
+use crate::diagnostics::Diagnostics;
 use crate::utils::Binding;
 use crate::{errors::WithPos, utils::GPosIdx};
 use itertools::Itertools;
@@ -189,10 +190,11 @@ impl Signature {
     }
 
     /// Constraints for well formed
-    fn constraints(&self) -> impl Iterator<Item = Constraint> + '_ {
+    fn constraints(&self, diag: &mut Diagnostics) -> Vec<Constraint> {
         self.inputs()
             .chain(self.outputs())
-            .flat_map(|mpd| mpd.liveness.well_formed())
+            .flat_map(|mpd| mpd.liveness.well_formed(diag))
+            .collect_vec()
     }
 
     /// Construct an event binding from this Signature's events and the given
@@ -275,7 +277,7 @@ impl Signature {
     /// 1. Ensure that all the intervals are well formed
     /// 2. Ensure for each interval that mentions event `E` in its start time, the @interface
     ///    signal for `E` pulses less often than the length of the interval itself.
-    pub fn well_formed(&self) -> impl Iterator<Item = Constraint> + '_ {
+    pub fn well_formed(&self, diag: &mut Diagnostics) -> Vec<Constraint> {
         let mut evs: HashMap<Id, Vec<_>> = HashMap::new();
 
         // Compute mapping from events to intervals to mention the event in their start time.
@@ -290,27 +292,32 @@ impl Signature {
                 .push((delay.clone(), port.copy_span()))
         }
 
-        evs
-            .into_iter()
-            .flat_map(|(ev, lens)| {
-                let event = self.get_event(&ev);
-                lens.into_iter().map(move |(port_len, port_pos)| {
-                    let len = event.delay.clone();
-                    Constraint::sub(OrderConstraint::gte(
-                        len.clone(),
-                        port_len.clone(),
-                    ))
-                    .add_note(
-                        format!("Signal lasts for {} cycle(s)", port_len),
-                        port_pos,
-                    )
-                    .add_note(
-                        format!("Interface allows event to trigger every {} cycle(s)", len),
-                        event.copy_span(),
-                    )
-                })
-            })
-            .chain(self.constraints())
+        let mut cons = self.constraints(diag);
+
+        for (ev, lens) in evs {
+            let event = self.get_event(&ev);
+            let len = event.delay.clone();
+            for (port_len, port_pos) in lens {
+                let con = Constraint::sub(OrderConstraint::gte(
+                    len.clone(),
+                    port_len.clone(),
+                ))
+                .add_note(diag.add_info(
+                    format!("Signal lasts for {} cycle(s)", port_len),
+                    port_pos,
+                ))
+                .add_note(diag.add_info(
+                    format!(
+                        "Interface allows event to trigger every {} cycle(s)",
+                        len
+                    ),
+                    event.copy_span(),
+                ));
+                cons.push(con);
+            }
+        }
+
+        cons
     }
 
     pub fn resolve_offset(&self, args: &[Expr]) -> Signature {

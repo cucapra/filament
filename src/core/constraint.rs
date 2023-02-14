@@ -1,8 +1,9 @@
 use derivative::Derivative;
 
 use super::{Expr, Id, Range, Time, TimeSub};
+use crate::diagnostics::{self, InfoIdx};
 use crate::utils::Binding;
-use crate::{utils::GPosIdx, utils::SExp};
+use crate::utils::SExp;
 use std::fmt::Display;
 
 /// Ordering operator for constraints
@@ -23,8 +24,6 @@ impl std::fmt::Display for OrderOp {
     }
 }
 
-type Extra = Vec<(String, GPosIdx)>;
-
 // An ordering constraint
 #[derive(Clone, Derivative, Eq)]
 #[derivative(PartialEq, Hash)]
@@ -35,7 +34,7 @@ pub struct OrderConstraint<T> {
     // Explanation of why this constraint was generated
     #[derivative(PartialEq = "ignore")]
     #[derivative(Hash = "ignore")]
-    extra: Extra,
+    extra: Vec<diagnostics::InfoIdx>,
 }
 
 impl<T> OrderConstraint<T>
@@ -198,19 +197,17 @@ impl Constraint {
         }
     }
 
-    pub fn notes(&self) -> impl Iterator<Item = &(String, GPosIdx)> {
+    pub fn notes(&self) -> impl Iterator<Item = &diagnostics::InfoIdx> {
         match self {
             Constraint::Base { base } => base.extra.iter(),
             Constraint::Sub { base } => base.extra.iter(),
         }
     }
 
-    pub fn add_note<S: ToString>(mut self, msg: S, pos: GPosIdx) -> Self {
+    pub fn add_note(mut self, note: InfoIdx) -> Self {
         match &mut self {
-            Constraint::Base { base } => {
-                base.extra.push((msg.to_string(), pos))
-            }
-            Constraint::Sub { base } => base.extra.push((msg.to_string(), pos)),
+            Constraint::Base { base } => base.extra.push(note),
+            Constraint::Sub { base } => base.extra.push(note),
         }
         self
     }

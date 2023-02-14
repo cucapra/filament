@@ -89,54 +89,7 @@ fn main() {
     match run(&opts) {
         Ok(_) => (),
         Err(err) => {
-            let config = term::Config::default();
-
-            // Construct a file Map
-            let mut file_map = HashMap::new();
-            let mut files = SimpleFiles::new();
-            for (name, file) in err.files() {
-                let idx = files.add(name.to_string().clone(), file);
-                file_map.insert(name, idx);
-            }
-
-            // Construct mapping from files to indices
-            let table = GlobalPositionTable::as_ref();
-            let mut labels = vec![];
-            let mut notes = vec![];
-            for (idx, (msg, pos)) in err.notes.iter().enumerate() {
-                if let Some(p) = pos.into_option() {
-                    let pos = table.get_pos(p.0);
-                    let (file, _) = table.get_file_info(p.0);
-                    let l = Label::new(
-                        if idx == 0 {
-                            LabelStyle::Primary
-                        } else {
-                            LabelStyle::Secondary
-                        },
-                        file_map[file],
-                        pos.start..pos.end,
-                    );
-                    labels.push(l.with_message(msg));
-                } else {
-                    notes.push(msg.clone());
-                }
-            }
-
-            let writer = StandardStream::stderr(if opts.no_color {
-                ColorChoice::Never
-            } else {
-                ColorChoice::Always
-            });
-            term::emit(
-                &mut writer.lock(),
-                &config,
-                &files,
-                &Diagnostic::error()
-                    .with_message(format!("{}", err.kind))
-                    .with_labels(labels)
-                    .with_notes(notes),
-            )
-            .unwrap();
+            eprintln!("Escaped error: {err:?}");
             std::process::exit(1)
         }
     }

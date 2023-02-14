@@ -1,4 +1,5 @@
 use super::{Constraint, Expr, OrderConstraint, Time, TimeSub};
+use crate::diagnostics::Diagnostics;
 use crate::utils::Binding;
 use crate::{errors, utils::GPosIdx};
 use derivative::Derivative;
@@ -16,16 +17,19 @@ pub struct Range {
 
 impl Range {
     /// Generate constraints for well formedness of this range.
-    pub fn well_formed(&self) -> impl Iterator<Item = Constraint> {
+    pub fn well_formed(
+        &self,
+        diag: &mut Diagnostics,
+    ) -> impl Iterator<Item = Constraint> {
         std::iter::once(
             Constraint::base(OrderConstraint::lt(
                 self.start.clone(),
                 self.end.clone(),
             ))
-            .add_note(
+            .add_note(diag.add_info(
                 "Interval's end time must be greater than the start time",
                 self.pos,
-            ),
+            )),
         )
     }
 

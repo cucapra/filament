@@ -1,8 +1,7 @@
 use crate::core::{self, Constraint, OrderConstraint, Time};
 use crate::errors::{FilamentResult, WithPos};
-use crate::utils::GPosIdx;
 use crate::utils::{FilSolver, ShareConstraints};
-use crate::visitor;
+use crate::{diagnostics, visitor};
 use itertools::Itertools;
 use std::iter;
 
@@ -16,14 +15,17 @@ pub struct IntervalCheck {
     pub(super) obligations: FactMap,
     /// Set of assumed facts
     pub(super) facts: FactMap,
+    /// Diagnostics
+    pub diag: diagnostics::Diagnostics,
 }
 
-impl From<FilSolver> for IntervalCheck {
-    fn from(solver: FilSolver) -> Self {
+impl From<(FilSolver, diagnostics::Diagnostics)> for IntervalCheck {
+    fn from((solver, diag): (FilSolver, diagnostics::Diagnostics)) -> Self {
         Self {
             solver,
             obligations: Vec::new(),
             facts: Vec::new(),
+            diag,
         }
     }
 }
@@ -32,7 +34,7 @@ impl IntervalCheck {
     /// Add a new obligation that needs to be proved
     pub fn add_obligations<F>(&mut self, facts: F)
     where
-        F: Iterator<Item = core::Constraint>,
+        F: IntoIterator<Item = core::Constraint>,
     {
         for fact in facts {
             log::trace!("adding obligation {}", fact);
@@ -98,20 +100,16 @@ impl IntervalCheck {
                 let e2 = binds[event].0.event();
                 // If the events are not syntactically equal, add constraint requiring that the events are the same
                 if e1 != e2 {
-                    let con = Constraint::base(
-                        OrderConstraint::eq(
-                            Time::unit(e1.clone(), 0),
-                            Time::unit(e2.clone(), 0)
-                        )
-                    )
-                    .add_note(format!("Invocation uses event {e1}"), e1.copy_span())
-                    .add_note(format!("Invocation uses event {e2}"), e2.copy_span())
-                    .add_note(
+                    let con = Constraint::base(OrderConstraint::eq(
+                        Time::unit(e1.clone(), 0),
+                        Time::unit(e2.clone(), 0)
+                    ))
+                    .add_note(self.diag.add_info(format!("Invocation uses event {e1}"), e1.copy_span()))
+                    .add_note(self.diag.add_info(format!("Invocation uses event {e2}"), e2.copy_span()))
+                    .add_note(self.diag.add_message(
                         format!(
                             "Invocations of instance use multiple events in invocations: {e1} and {e2}. Sharing using multiple events is not supported."
-                        ),
-                        GPosIdx::UNKNOWN,
-                    );
+                    )));
                     self.add_obligations(iter::once(con));
                 }
             }
@@ -159,15 +157,17 @@ impl IntervalCheck {
                             delay.clone(),
                         ),
                     )
-                    .add_note(
+                    .add_note(self.diag.add_info(
                         format!("Conflicting invoke, starts at `{start_k}'"),
                         inv_k.pos(ctx),
-                    )
-                    .add_note(
+                    ))
+                    .add_note(self.diag.add_info(
                         format!("Invocation starts at `{start_i}'"),
                         inv_i.pos(ctx),
-                    )
-                    .add_note(format!("Delay requires {} cycle between event but reuse may occur after {} cycles", delay.clone(), start_i.clone() - start_k.clone()), GPosIdx::UNKNOWN);
+                    ))
+                    .add_note(self.diag.add_message(
+                        format!("Delay requires {} cycle between event but reuse may occur after {} cycles", delay.clone(), start_i.clone() - start_k.clone())
+                    ));
                     self.add_obligations(iter::once(con));
                 }
             }
