@@ -1,10 +1,13 @@
-use crate::{errors::WithPos, utils::GPosIdx};
+use crate::{
+    errors::WithPos,
+    utils::{GPosIdx, GSym},
+};
 use derivative::Derivative;
 
 #[derive(Derivative, Clone)]
 #[derivative(Hash, Eq, Debug, PartialOrd, Ord)]
 pub struct Id {
-    id: String,
+    id: GSym,
     #[derivative(Hash = "ignore")]
     #[derivative(Debug = "ignore")]
     #[derivative(PartialEq = "ignore")]
@@ -14,10 +17,14 @@ pub struct Id {
 }
 
 impl Id {
-    pub fn id(&self) -> &str {
-        self.id.as_ref()
+    pub fn new<S: ToString>(id: S) -> Self {
+        Id {
+            id: id.to_string().into(),
+            pos: GPosIdx::UNKNOWN,
+        }
     }
 }
+
 impl WithPos for Id {
     fn set_span(mut self, sp: GPosIdx) -> Self {
         self.pos = sp;
@@ -28,6 +35,15 @@ impl WithPos for Id {
         self.pos
     }
 }
+
+/* =================== Impls for Id to make them easier to use ============== */
+
+impl Default for Id {
+    fn default() -> Self {
+        Id::new("")
+    }
+}
+
 impl std::fmt::Display for Id {
     fn fmt(
         &self,
@@ -39,36 +55,60 @@ impl std::fmt::Display for Id {
 
 impl AsRef<str> for Id {
     fn as_ref(&self) -> &str {
-        &self.id
+        self.id.as_str()
     }
 }
 
 impl From<&str> for Id {
     fn from(s: &str) -> Self {
-        Id {
-            id: s.to_string(),
-            pos: GPosIdx::UNKNOWN,
-        }
+        Id::new(s)
     }
 }
 
 impl From<String> for Id {
     fn from(s: String) -> Self {
-        Id {
-            id: s,
-            pos: GPosIdx::UNKNOWN,
-        }
+        Id::new(s)
     }
 }
-
+impl PartialEq<Id> for Id {
+    fn eq(&self, other: &Id) -> bool {
+        self.id == other.id
+    }
+}
+impl PartialEq<GSym> for Id {
+    fn eq(&self, other: &GSym) -> bool {
+        self.id == *other
+    }
+}
 impl PartialEq<str> for Id {
     fn eq(&self, other: &str) -> bool {
-        self.id == other
+        self.id == GSym::from(other)
+    }
+}
+impl PartialEq<&str> for Id {
+    fn eq(&self, other: &&str) -> bool {
+        self.id == GSym::from(*other)
+    }
+}
+impl PartialEq<&Id> for Id {
+    fn eq(&self, other: &&Id) -> bool {
+        self.id == other.id
+    }
+}
+impl PartialEq<String> for Id {
+    fn eq(&self, other: &String) -> bool {
+        self.id == GSym::from(other)
     }
 }
 
-impl<S: AsRef<str>> PartialEq<S> for Id {
-    fn eq(&self, other: &S) -> bool {
-        self.id == other.as_ref()
+impl From<Id> for GSym {
+    fn from(id: Id) -> Self {
+        id.id
+    }
+}
+
+impl From<&Id> for GSym {
+    fn from(id: &Id) -> Self {
+        id.id
     }
 }

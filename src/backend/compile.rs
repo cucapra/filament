@@ -342,17 +342,18 @@ fn compile_component(
     let port_transform =
         |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<u64> {
             let mut pd: ir::PortDef<u64> =
-                (pd.name.id(), pd.bitwidth.concrete(), dir).into();
+                (pd.name.as_ref(), pd.bitwidth.concrete(), dir).into();
             pd.attributes.insert("data", 1);
             pd
         };
     let concrete_transform =
         |name: &core::Id, width: u64| -> ir::PortDef<u64> {
-            (name.id(), width, ir::Direction::Input).into()
+            (name.as_ref(), width, ir::Direction::Input).into()
         };
     let ports =
         as_port_defs(&comp.sig, port_transform, concrete_transform, true);
-    let mut component = ir::Component::new(comp.sig.name.id(), ports, false);
+    let mut component =
+        ir::Component::new(comp.sig.name.as_ref(), ports, false);
     component.attributes.insert("nointerface", 1);
     let builder = ir::Builder::new(&mut component, lib).not_generated();
     let mut ctx = Context::new(sigs, builder, lib);
@@ -391,15 +392,19 @@ fn compile_component(
                 ..
             }) => {
                 let cell = if let Some(sig) = ctx.get_sig(&component) {
-                    ctx.builder.add_component(name.id(), component.id(), sig)
+                    ctx.builder.add_component(
+                        name.as_ref(),
+                        component.as_ref(),
+                        sig,
+                    )
                 } else {
                     let conc_bind = bindings
                         .into_iter()
                         .map(|v| v.concrete())
                         .collect_vec();
                     ctx.builder.add_primitive(
-                        name.id(),
-                        component.id(),
+                        name.as_ref(),
+                        component.as_ref(),
                         &conc_bind,
                     )
                 };
@@ -423,13 +428,13 @@ fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
             let width = match &pd.bitwidth {
                 core::Expr::Const(v) => ir::Width::Const { value: *v },
                 core::Expr::Var(v) => ir::Width::Param {
-                    value: v.id().into(),
+                    value: v.as_ref().into(),
                 },
             };
             let mut attributes = ir::Attributes::default();
             attributes.insert("data", 1);
             ir::PortDef {
-                name: ir::Id::from(pd.name.id()),
+                name: ir::Id::from(pd.name.as_ref()),
                 direction: dir,
                 width,
                 attributes,
@@ -438,7 +443,7 @@ fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
     let concrete_transform =
         |name: &core::Id, bw: u64| -> ir::PortDef<ir::Width> {
             ir::PortDef {
-                name: ir::Id::from(name.id()),
+                name: ir::Id::from(name.as_ref()),
                 direction: ir::Direction::Input,
                 width: ir::Width::Const { value: bw },
                 attributes: Default::default(),
@@ -449,8 +454,8 @@ fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
 
 fn compile_signature(sig: &core::Signature) -> ir::Primitive {
     ir::Primitive {
-        name: sig.name.id().into(),
-        params: sig.params.iter().map(|p| p.id().into()).collect(),
+        name: sig.name.as_ref().into(),
+        params: sig.params.iter().map(|p| p.as_ref().into()).collect(),
         signature: prim_as_port_defs(sig),
         is_comb: false,
         attributes: ir::Attributes::default(),

@@ -151,7 +151,7 @@ impl Resolver {
             "Components: {:#?}",
             ns.components
                 .iter()
-                .map(|c| c.sig.name.id())
+                .map(|c| c.sig.name.as_ref())
                 .collect::<Vec<_>>()
         );
         log::info!(
@@ -159,7 +159,7 @@ impl Resolver {
             ns.externs
                 .iter()
                 .flat_map(|(_, comps)| comps)
-                .map(|c| c.name.id())
+                .map(|c| c.name.as_ref())
                 .collect::<Vec<_>>()
         );
         Ok(ns)

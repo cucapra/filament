@@ -282,7 +282,7 @@ impl FilamentParser {
             ],
             [identifier(name), identifier(component), conc_params(params), invoke_args((abstract_vars, ports))] => {
                 // Upper case the first letter of name
-                let mut iname = name.id().to_string();
+                let mut iname = name.as_ref().to_string();
                 iname.make_ascii_uppercase();
                 let iname = core::Id::from(iname).set_span(component.copy_span());
                 if iname == name {

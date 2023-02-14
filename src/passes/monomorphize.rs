@@ -105,7 +105,7 @@ impl Monomorphize {
         comp: &core::Id,
         params: impl IntoIterator<Item = &'a core::Expr>,
     ) -> core::Id {
-        let mut name = String::from(comp.id());
+        let mut name = String::from(comp.as_ref());
         for p in params {
             match p {
                 core::Expr::Const(p) => name += format!("_{}", p).as_str(),

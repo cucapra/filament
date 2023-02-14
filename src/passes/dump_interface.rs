@@ -53,7 +53,7 @@ impl visitor::Transform for DumpInterface {
                     .map(|delay|
                         format!(
                             "{{\"name\": {}, \"event\": \"{}\", \"delay\": {}, \"states\": {}, \"phantom\": {} }}",
-                            id.map(|i| format!("\"{}\"", i.name.id())).unwrap_or_else(|| "null".to_string()),
+                            id.map(|i| format!("\"{}\"", i.name.as_ref())).unwrap_or_else(|| "null".to_string()),
                             eb.event,
                             delay,
                             events[&eb.event],
