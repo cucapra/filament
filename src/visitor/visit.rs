@@ -108,7 +108,7 @@ where
         let prog_bind = ProgBinding::from(&ns);
         for (name, cmds) in comp_data {
             pass.clear_data();
-            let ctx = CompBinding::from_comp_data(&prog_bind, &name, &cmds)?;
+            let ctx = CompBinding::from_comp_data(&prog_bind, &name, &cmds);
             if !pass.component_filter(&ctx) {
                 new_comp_data.push(cmds);
                 continue;
@@ -141,5 +141,19 @@ where
         }
 
         Ok((ns, pass))
+    }
+
+    /// Report the error message if any occur during the transformation
+    fn transform_unwrap(
+        ns: core::Namespace,
+        info: Self::Info,
+    ) -> Option<core::Namespace> {
+        match Self::transform(ns, info) {
+            Ok((ns, _)) => Some(ns),
+            Err(err) => {
+                eprintln!("Error: {}", err.kind);
+                None
+            }
+        }
     }
 }

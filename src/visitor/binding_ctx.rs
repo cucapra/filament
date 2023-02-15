@@ -1,7 +1,7 @@
 //! Context that tracks the binding information in a particular program
 use crate::{
     core::{self, Expr, Id, Time, TimeSub},
-    errors::{Error, FilamentResult, WithPos},
+    errors::WithPos,
     utils::{self, GPosIdx},
 };
 use itertools::Itertools;
@@ -238,10 +238,7 @@ impl<'p> std::ops::Index<InvIdx> for CompBinding<'p> {
 
 impl<'p> CompBinding<'p> {
     /// Construct a new binding context for a component
-    pub fn new(
-        prog_ctx: &'p ProgBinding<'p>,
-        comp: &core::Component,
-    ) -> FilamentResult<Self> {
+    pub fn new(prog_ctx: &'p ProgBinding<'p>, comp: &core::Component) -> Self {
         Self::from_comp_data(prog_ctx, &comp.sig.name, &comp.body)
     }
 
@@ -250,7 +247,7 @@ impl<'p> CompBinding<'p> {
         prog: &'p ProgBinding<'p>,
         comp: &core::Id,
         cmds: &Vec<core::Command>,
-    ) -> FilamentResult<Self> {
+    ) -> Self {
         let sig = prog.find_sig_idx(comp).unwrap();
         let mut ctx = Self {
             prog,
@@ -265,33 +262,19 @@ impl<'p> CompBinding<'p> {
             match cmd {
                 core::Command::Instance(inst) => {
                     if ctx.add_instance(inst).is_none() {
-                        return Err(Error::undefined(
-                            inst.component.clone(),
-                            "component",
-                        ));
-                        // .add_note(
-                        //     "Component is not bound",
-                        //     inst.component.copy_span(),
-                        // ));
+                        panic!("Unknown component: {}", inst.component);
                     }
                 }
                 core::Command::Invoke(inv) => {
                     if ctx.add_invoke(inv).is_none() {
-                        return Err(Error::undefined(
-                            inv.instance.clone(),
-                            "instance",
-                        ));
-                        // .add_note(
-                        //     "Instance is not bound",
-                        //     inv.instance.copy_span(),
-                        // ));
+                        panic!("Unknown instance: {}", inv.instance);
                     }
                 }
                 _ => (),
             }
         }
 
-        Ok(ctx)
+        ctx
     }
 
     /// Get the **unresolved** signature associated with this component.

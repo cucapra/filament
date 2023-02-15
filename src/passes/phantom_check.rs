@@ -1,6 +1,6 @@
-use crate::errors::{Error, FilamentResult, WithPos};
+use crate::errors::{Error, WithPos};
 use crate::utils::GPosIdx;
-use crate::visitor;
+use crate::visitor::{self, Traverse};
 use crate::{core, diagnostics};
 use std::collections::HashSet;
 
@@ -19,12 +19,12 @@ pub struct PhantomCheck {
 }
 
 impl visitor::Checker for PhantomCheck {
-    fn new(_: &core::Namespace) -> FilamentResult<Self> {
-        Ok(Self {
+    fn new(_: &core::Namespace) -> Self {
+        Self {
             instance_used: HashSet::new(),
             phantom_events: Vec::new(),
             diag: diagnostics::Diagnostics::default(),
-        })
+        }
     }
 
     fn clear_data(&mut self) {
@@ -45,16 +45,16 @@ impl visitor::Checker for PhantomCheck {
         &mut self,
         comp: &core::Component,
         _: &visitor::CompBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         self.phantom_events = comp.sig.phantom_events().collect();
-        Ok(())
+        Traverse::Continue(())
     }
 
     fn invoke(
         &mut self,
         inv: &core::Invoke,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         // Check if the instance has already been used
         if let Some(prev_use) = self.instance_used.get(&inv.instance) {
             for ev in inv.abstract_vars.iter().map(|ev| ev.event()) {
@@ -98,6 +98,6 @@ impl visitor::Checker for PhantomCheck {
             }
         }
 
-        Ok(())
+        Traverse::Continue(())
     }
 }

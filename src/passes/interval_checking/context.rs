@@ -1,5 +1,5 @@
 use crate::core::{self, Constraint, OrderConstraint, Time};
-use crate::errors::{FilamentResult, WithPos};
+use crate::errors::WithPos;
 use crate::utils::{FilSolver, ShareConstraint};
 use crate::{diagnostics, visitor};
 use itertools::Itertools;
@@ -53,16 +53,16 @@ impl IntervalCheck {
     pub fn drain_sharing(
         &mut self,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<Vec<ShareConstraint>> {
+    ) -> Vec<ShareConstraint> {
         let all = ctx
             .instances()
             .map(|inst| self.sharing_constraints(inst, ctx))
-            .collect::<FilamentResult<Vec<_>>>()?;
+            .collect_vec();
         let mut share = Vec::new();
         for s in all {
             share.extend(s);
         }
-        Ok(share)
+        share
     }
 
     /// Get the obligations that need to be proven
@@ -77,7 +77,7 @@ impl IntervalCheck {
         &mut self,
         inst: visitor::InstIdx,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<Vec<ShareConstraint>> {
+    ) -> Vec<ShareConstraint> {
         // Get bindings for all invokes and transpose them so that each inner
         // vector represents the bindings for a single event
         // Reprents invoke -> list (event, delay)
@@ -89,7 +89,7 @@ impl IntervalCheck {
         // If we don't have multiple invokes, we don't need to generate any
         // constraints
         if invoke_bindings.len() < 2 {
-            return Ok(Vec::new());
+            return Vec::new();
         }
 
         // Check that all invokes use the same event binding
@@ -185,6 +185,6 @@ impl IntervalCheck {
             share_constraints.push(share);
         }
 
-        Ok(share_constraints)
+        share_constraints
     }
 }

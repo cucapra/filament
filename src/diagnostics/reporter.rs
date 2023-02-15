@@ -62,7 +62,7 @@ impl Diagnostics {
 
     /// Report all errors and return the number of errors.
     /// Returns None if there are no errors.
-    pub fn report_all(self) -> Option<u64> {
+    pub fn report_all(&mut self) -> Option<u64> {
         // XXX: Pass no_color opt
         let writer = StandardStream::stderr(if false {
             ColorChoice::Never
@@ -72,7 +72,7 @@ impl Diagnostics {
         let num_errors = self.errors.len();
 
         let table = GlobalPositionTable::as_ref();
-        for err in self.errors {
+        for err in &self.errors {
             let mut labels = vec![];
             let mut notes = vec![];
             for (idx, info) in err.notes.iter().enumerate() {

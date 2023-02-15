@@ -375,22 +375,26 @@ impl FilSolver {
         asserts: Vec<core::Constraint>,
         sharing: Vec<ShareConstraint>,
         diag: &mut Diagnostics,
-    ) -> FilamentResult<()> {
+    ) {
         if asserts.is_empty() {
-            return Ok(());
+            return;
         }
 
         let mut manager = SolveManager::new(self);
         // Define all the constants
         for var in vars {
             log::trace!("Declaring constant {}", var);
-            manager.solver.s.declare_const(var.to_string(), "Int")?;
+            manager
+                .solver
+                .s
+                .declare_const(var.to_string(), "Int")
+                .unwrap();
         }
 
         // Define assumptions on constraints
         for assume in assumes {
             let sexp: SExp = assume.into();
-            manager.solver.s.assert(format!("{}", sexp))?;
+            manager.solver.s.assert(format!("{}", sexp)).unwrap();
         }
 
         // Build up the full formula
@@ -402,7 +406,7 @@ impl FilSolver {
         });
 
         // Get all the constraints that were violated
-        let (cons, share_cons) = manager.get_all_violated()?;
+        let (cons, share_cons) = manager.get_all_violated().unwrap();
         // For each violated constraint, display the error
         for con in cons {
             diag.add_error(con.into());
@@ -410,7 +414,5 @@ impl FilSolver {
         for share_con in share_cons {
             diag.add_error(share_con.into());
         }
-
-        Ok(())
     }
 }

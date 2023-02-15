@@ -1,7 +1,8 @@
 use crate::{
     core, diagnostics,
-    errors::{Error, FilamentResult, WithPos},
-    utils, visitor,
+    errors::{Error, WithPos},
+    utils,
+    visitor::{self, InvIdx, Traverse},
 };
 use itertools::Itertools;
 
@@ -10,10 +11,10 @@ pub struct BindCheck {
 }
 
 impl visitor::Checker for BindCheck {
-    fn new(_: &core::Namespace) -> FilamentResult<Self> {
-        Ok(Self {
+    fn new(_: &core::Namespace) -> Self {
+        Self {
             diag: diagnostics::Diagnostics::default(),
-        })
+        }
     }
 
     fn clear_data(&mut self) {}
@@ -23,51 +24,57 @@ impl visitor::Checker for BindCheck {
     }
 
     /// Check the binding of a component
-    fn signature(&mut self, sig: &core::Signature) -> FilamentResult<()> {
+    fn signature(&mut self, sig: &core::Signature) -> Traverse {
         let events = sig.events().collect_vec();
         // Check all the definitions only use bound events
         for pd in sig.ports() {
             for time in pd.liveness.time_exprs() {
                 let ev = &time.event;
                 if !events.contains(ev) {
-                    return Err(Error::undefined(ev.clone(), "event")
-                        .add_note(self.diag.add_info(
+                    let err = Error::undefined(ev.clone(), "event").add_note(
+                        self.diag.add_info(
                             "Event is not defined in the signature",
                             ev.copy_span(),
-                        )));
+                        ),
+                    );
+                    self.diag.add_error(err);
                 }
             }
         }
         // Check that interface ports use only bound events
         for id in &sig.interface_signals {
             if !events.contains(&id.event) {
-                return Err(Error::undefined(id.event.clone(), "event")
-                    .add_note(self.diag.add_info(
+                let err = Error::undefined(id.event.clone(), "event").add_note(
+                    self.diag.add_info(
                         "Event is not defined in the signature",
                         id.event.copy_span(),
-                    )));
+                    ),
+                );
+                self.diag.add_error(err);
             }
         }
         // Check constraints use bound events
         for constraint in &sig.constraints {
             for ev in constraint.events() {
                 if !events.contains(&ev) {
-                    return Err(Error::undefined(ev.clone(), "event")
-                        .add_note(self.diag.add_info(
+                    let err = Error::undefined(ev.clone(), "event").add_note(
+                        self.diag.add_info(
                             "Event is not defined in the signature",
                             ev.copy_span(),
-                        )));
+                        ),
+                    );
+                    self.diag.add_error(err);
                 }
             }
         }
-        Ok(())
+        Traverse::Continue(())
     }
 
     fn instance(
         &mut self,
         inst: &core::Instance,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         let bound = ctx.get_instance(&inst.name);
         let param_len = ctx.prog.map_signature(
             bound.sig,
@@ -87,15 +94,15 @@ impl visitor::Checker for BindCheck {
             self.diag.add_error(err);
         }
 
-        Ok(())
+        Traverse::Continue(())
     }
 
     fn invoke(
         &mut self,
         inv: &core::Invoke,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<()> {
-        let inv_idx = self.bind_invoke(inv, ctx)?;
+    ) -> Traverse {
+        let inv_idx = self.bind_invoke(inv, ctx);
         let sig = inv_idx.unresolved_signature(ctx);
 
         let this_sig = ctx.this();
@@ -135,14 +142,14 @@ impl visitor::Checker for BindCheck {
                 self.connect(&con, ctx)?;
             }
         }
-        Ok(())
+        Traverse::Continue(())
     }
 
     fn connect(
         &mut self,
         con: &core::Connect,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         let resolve =
             |r: &core::Range,
              _: &utils::Binding<core::Time>,
@@ -171,7 +178,7 @@ impl visitor::Checker for BindCheck {
                 ));
             self.diag.add_error(err);
         }
-        Ok(())
+        Traverse::Continue(())
     }
 }
 
@@ -181,7 +188,7 @@ impl BindCheck {
         &mut self,
         inv: &core::Invoke,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<visitor::InvIdx> {
+    ) -> InvIdx {
         let inv_idx = ctx
             .get_invoke_idx(&inv.name)
             .unwrap_or_else(|| unreachable!("Instance is not bound. BindingCtx construction should have failed."));
@@ -216,6 +223,6 @@ impl BindCheck {
             self.diag.add_error(err);
         }
 
-        Ok(inv_idx)
+        inv_idx
     }
 }

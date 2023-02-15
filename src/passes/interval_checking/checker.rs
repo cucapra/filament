@@ -3,14 +3,14 @@ use itertools::Itertools;
 use super::IntervalCheck;
 use crate::core::{self, Expr, OrderConstraint, Time};
 use crate::diagnostics;
-use crate::errors::{Error, FilamentResult, WithPos};
+use crate::errors::{Error, WithPos};
 use crate::utils::{self, FilSolver, GPosIdx};
-use crate::visitor::{self, Checker, CompBinding};
+use crate::visitor::{self, Checker, CompBinding, Traverse};
 use std::iter;
 
 impl visitor::Checker for IntervalCheck {
-    fn new(ns: &core::Namespace) -> FilamentResult<Self> {
-        let mut solver = FilSolver::new()?;
+    fn new(ns: &core::Namespace) -> Self {
+        let mut solver = FilSolver::new().unwrap();
         let mut diagnostics = diagnostics::Diagnostics::default();
 
         // Check that all signatures are well formed
@@ -23,12 +23,12 @@ impl visitor::Checker for IntervalCheck {
                 sig.well_formed(&mut diagnostics),
                 vec![],
                 &mut diagnostics,
-            )?;
+            );
             log::trace!("==========");
         }
         log::info!("interval-check.sigs: {}ms", t.elapsed().as_millis());
 
-        Ok(Self::from((solver, diagnostics)))
+        Self::from((solver, diagnostics))
     }
 
     fn clear_data(&mut self) {
@@ -44,7 +44,7 @@ impl visitor::Checker for IntervalCheck {
         &mut self,
         con: &core::Connect,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         let src = &con.src;
         let dst = &con.dst;
         log::trace!("Checking connect: {} = {}", dst, src);
@@ -87,14 +87,10 @@ impl visitor::Checker for IntervalCheck {
             self.add_obligations(within_fact);
         }
 
-        Ok(())
+        Traverse::Continue(())
     }
 
-    fn invoke(
-        &mut self,
-        invoke: &core::Invoke,
-        ctx: &CompBinding,
-    ) -> FilamentResult<()> {
+    fn invoke(&mut self, invoke: &core::Invoke, ctx: &CompBinding) -> Traverse {
         // Check the bindings for abstract variables do not violate @interface
         // requirements
         self.check_invoke_binds(invoke, ctx)?;
@@ -122,14 +118,14 @@ impl visitor::Checker for IntervalCheck {
             self.add_obligations(iter::once(con_with_info));
         }
 
-        Ok(())
+        Traverse::Continue(())
     }
 
     fn enter_component(
         &mut self,
         comp: &core::Component,
         _: &CompBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         // Ensure that the signature is well-formed
         let cons = comp.sig.well_formed(&mut self.diag);
         self.add_obligations(cons);
@@ -137,28 +133,29 @@ impl visitor::Checker for IntervalCheck {
         // User-level components are not allowed to have ordering constraints. See https://github.com/cucapra/filament/issues/27.
         for constraint in &comp.sig.constraints {
             if constraint.is_ordering() {
-                return Err(Error::malformed(
+                let err = Error::malformed(
                     "User-level components cannot have ordering constraints",
                 )
                 .add_note(self.diag.add_info(
                     format!("Component defines the constraint {constraint}"),
                     GPosIdx::UNKNOWN,
-                )));
+                ));
+                self.diag.add_error(err);
             } else {
                 self.add_fact(constraint.clone())
             }
         }
 
-        Ok(())
+        Traverse::Continue(())
     }
 
     fn exit_component(
         &mut self,
         comp: &core::Component,
         ctx: &CompBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         // Add obligations from disjointness constraints
-        let share = self.drain_sharing(ctx)?;
+        let share = self.drain_sharing(ctx);
 
         // Prove all the required obligations
         let obs = self.drain_obligations();
@@ -170,14 +167,14 @@ impl visitor::Checker for IntervalCheck {
             obs,
             share,
             &mut self.diag,
-        )?;
+        );
         log::info!(
             "interval-check.{}.prove: {}ms",
             comp.sig.name,
             t.elapsed().as_millis()
         );
 
-        Ok(())
+        Traverse::Continue(())
     }
 }
 
@@ -188,7 +185,7 @@ impl IntervalCheck {
         &mut self,
         invoke: &core::Invoke,
         ctx: &CompBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         let inv_sig = ctx
             .get_invoke_idx(&invoke.name)
             .unwrap()
@@ -236,14 +233,14 @@ impl IntervalCheck {
         }
         self.add_obligations(constraints.into_iter());
 
-        Ok(())
+        Traverse::Continue(())
     }
 
     fn check_invoke_ports(
         &mut self,
         invoke: &core::Invoke,
         ctx: &CompBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         // If this is a high-level invoke, check all port requirements
         if let Some(actuals) = invoke.ports.clone() {
             let inv_idx = ctx.get_invoke_idx(&invoke.name).unwrap();
@@ -260,6 +257,6 @@ impl IntervalCheck {
             }
         }
 
-        Ok(())
+        Traverse::Continue(())
     }
 }

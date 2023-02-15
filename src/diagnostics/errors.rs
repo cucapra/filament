@@ -93,9 +93,9 @@ impl Error {
     }
 }
 
-/// Standard error type for Calyx errors.
+/// Standard error type
 pub enum ErrorKind {
-    /// Error while parsing a Calyx program.
+    /// Error while parsing a program.
     ParseError(Box<pest_consume::Error<frontend::Rule>>),
     /// The input file is invalid (does not exist).
     InvalidFile(String),

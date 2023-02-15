@@ -1,6 +1,5 @@
 use crate::{
     core,
-    errors::FilamentResult,
     utils::{Binding, PostOrder},
 };
 use itertools::Itertools;
@@ -194,7 +193,7 @@ impl Monomorphize {
     }
 
     /// Monomorphize the program by generate a component for each parameter of each instance.
-    pub fn transform(ns: core::Namespace) -> FilamentResult<core::Namespace> {
+    pub fn transform(ns: core::Namespace) -> core::Namespace {
         let (mut inst_params, old_ns) = InstanceParams::build(ns);
         let mut ns = core::Namespace {
             imports: old_ns.imports,
@@ -228,6 +227,6 @@ impl Monomorphize {
                 ns.components.push(comp);
             }
         }
-        Ok(ns)
+        ns
     }
 }

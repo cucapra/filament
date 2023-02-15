@@ -1,7 +1,6 @@
 use crate::{
     core::{self, Id},
-    errors::FilamentResult,
-    visitor,
+    visitor::{self, Traverse},
 };
 use std::collections::HashMap;
 
@@ -36,8 +35,8 @@ impl MaxStates {
 }
 
 impl visitor::Checker for MaxStates {
-    fn new(_: &core::Namespace) -> FilamentResult<Self> {
-        Ok(Self::default())
+    fn new(_: &core::Namespace) -> Self {
+        Self::default()
     }
     fn clear_data(&mut self) {
         self.cur_states.clear();
@@ -49,7 +48,7 @@ impl visitor::Checker for MaxStates {
         &mut self,
         comp: &core::Component,
         _: &visitor::CompBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         self.cur_states = comp
             .sig
             .events
@@ -57,27 +56,27 @@ impl visitor::Checker for MaxStates {
             .map(|eb| (eb.event.clone(), 0))
             .collect();
         self.max_state_from_ports(comp.sig.inputs());
-        Ok(())
+        Traverse::Continue(())
     }
     fn invoke(
         &mut self,
         inv: &core::Invoke,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         // Get the fully resolved signature
         let inv_idx = ctx.get_invoke_idx(&inv.name).unwrap();
         let sig = inv_idx.resolved_signature(ctx);
         self.max_state_from_ports(sig.outputs());
-        Ok(())
+        Traverse::Continue(())
     }
     fn exit_component(
         &mut self,
         comp: &core::Component,
         _: &visitor::CompBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         let events = std::mem::take(&mut self.cur_states);
         log::info!("Max states for {}: {:?}", comp.sig.name, events);
         self.max_states.insert(comp.sig.name.clone(), events);
-        Ok(())
+        Traverse::Continue(())
     }
 }

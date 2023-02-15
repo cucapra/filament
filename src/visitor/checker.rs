@@ -1,6 +1,10 @@
-use crate::{core, diagnostics, errors::FilamentResult};
+use std::ops::ControlFlow;
 
 use super::{CompBinding, ProgBinding};
+use crate::{core, diagnostics};
+
+/// Should the traversal continue or stop?
+pub type Traverse = ControlFlow<(), ()>;
 
 /// A pass that checks the AST and computes some information about it without modifying it.
 pub trait Checker
@@ -8,7 +12,7 @@ where
     Self: Sized,
 {
     /// Construct a new instance of this pass
-    fn new(_: &core::Namespace) -> FilamentResult<Self>;
+    fn new(_: &core::Namespace) -> Self;
 
     /// Clear any data that should be cleared between components
     fn clear_data(&mut self);
@@ -22,42 +26,30 @@ where
     }
 
     #[inline]
-    fn connect(
-        &mut self,
-        _: &core::Connect,
-        _ctx: &CompBinding,
-    ) -> FilamentResult<()> {
-        Ok(())
+    fn connect(&mut self, _: &core::Connect, _ctx: &CompBinding) -> Traverse {
+        Traverse::Continue(())
     }
 
     #[inline]
-    fn instance(
-        &mut self,
-        _: &core::Instance,
-        _ctx: &CompBinding,
-    ) -> FilamentResult<()> {
-        Ok(())
+    fn instance(&mut self, _: &core::Instance, _ctx: &CompBinding) -> Traverse {
+        Traverse::Continue(())
     }
 
     #[inline]
-    fn fsm(&mut self, _: &core::Fsm, _ctx: &CompBinding) -> FilamentResult<()> {
-        Ok(())
+    fn fsm(&mut self, _: &core::Fsm, _ctx: &CompBinding) -> Traverse {
+        Traverse::Continue(())
     }
 
     /// Transform an invoke statement. Provides access to the signature of the
     /// component that is being invoked.
     #[inline]
-    fn invoke(
-        &mut self,
-        _: &core::Invoke,
-        _ctx: &CompBinding,
-    ) -> FilamentResult<()> {
-        Ok(())
+    fn invoke(&mut self, _: &core::Invoke, _ctx: &CompBinding) -> Traverse {
+        Traverse::Continue(())
     }
 
     #[inline]
-    fn signature(&mut self, _: &core::Signature) -> FilamentResult<()> {
-        Ok(())
+    fn signature(&mut self, _: &core::Signature) -> Traverse {
+        Traverse::Continue(())
     }
 
     /// Perform computation before the component traversal
@@ -66,8 +58,8 @@ where
         &mut self,
         _: &core::Component,
         _ctx: &CompBinding,
-    ) -> FilamentResult<()> {
-        Ok(())
+    ) -> Traverse {
+        Traverse::Continue(())
     }
 
     /// Perform computation after the component traversal
@@ -76,8 +68,8 @@ where
         &mut self,
         _: &core::Component,
         _ctx: &CompBinding,
-    ) -> FilamentResult<()> {
-        Ok(())
+    ) -> Traverse {
+        Traverse::Continue(())
     }
 
     /// Check the component signature and perform the component traversal
@@ -85,9 +77,9 @@ where
         &mut self,
         comp: &core::Component,
         prog_ctx: &super::ProgBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         self.signature(&comp.sig)?;
-        let ctx = &CompBinding::new(prog_ctx, comp)?;
+        let ctx = &CompBinding::new(prog_ctx, comp);
 
         // Binding for instances
         self.enter_component(comp, ctx)?;
@@ -101,25 +93,31 @@ where
     }
 
     /// Check an external signature. By default, simply calls `signature`.
-    fn external(&mut self, sig: &core::Signature) -> FilamentResult<()> {
+    fn external(&mut self, sig: &core::Signature) -> Traverse {
         self.signature(sig)
     }
 
-    fn check(ns: &core::Namespace) -> FilamentResult<Self> {
+    fn check(ns: &core::Namespace) -> Result<Self, u64> {
         let prog_ctx = &ProgBinding::from(ns);
-        let mut pass = Self::new(ns)?;
+        let mut pass = Self::new(ns);
 
         for (_, ext) in ns.signatures() {
-            pass.external(ext)?;
+            // Ignore the return value from traversal because we don't need to
+            // abort anything from it.
+            pass.external(ext);
         }
 
         for comp in &ns.components {
             if pass.component_filter(comp) {
                 pass.clear_data();
-                pass.component(comp, prog_ctx)?;
+                pass.component(comp, prog_ctx);
             }
         }
 
-        Ok(pass)
+        if let Some(errs) = pass.diagnostics().report_all() {
+            Err(errs)
+        } else {
+            Ok(pass)
+        }
     }
 }
