@@ -5,11 +5,12 @@ error: Cannot prove constraint 3 >= 5
   ┌─ tests/errors/invoke-trig-too-often.fil:9:3
   │
 2 │   comp Mult<G: 5>(
-  │             ---- Provided event may trigger every 5 cycles
+  │             ---- provided event may trigger every 5 cycles
   ·
 7 │ comp Main<T: 3>(@interface[T] go_T: 1) -> () {
-  │           ---- Interface requires event to trigger once in 3 cycles
+  │           ---- interface requires event to trigger once in 3 cycles
 8 │   M := new Mult;
 9 │   m0 := invoke M<T+1>;
-  │   ^^^^^^^^^^^^^^^^^^^^ Event provided to invoke triggers too often
+  │   ^^^^^^^^^^^^^^^^^^^^ event provided to invoke triggers too often
 
+Compilation failed with 1 errors.

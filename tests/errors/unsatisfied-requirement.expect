@@ -5,10 +5,19 @@ error: Cannot prove constraint G+1 >= G+2
    ┌─ tests/errors/unsatisfied-requirement.fil:11:16
    │
 11 │   m0 := M<G+1>(left, right);
-   │                ^^^^ Source is available for @[G, G+1]
+   │                ^^^^ source is available for @[G, G+1]
    │
    ┌─ ./primitives/core.fil:25:13
    │
 25 │     @[G, L] left: WIDTH,
-   │             ---- Destination's requirement @[G+1, G+2]
+   │             ---- destination's requirement @[G+1, G+2]
 
+error: Cannot prove constraint G+2 >= G+4
+   ┌─ tests/errors/unsatisfied-requirement.fil:12:9
+   │
+12 │   out = m0.out;
+   │   ---   ^^^^^^ source is available for @[G+1, G+2]
+   │   │      
+   │   destination's requirement @[G+3, G+4]
+
+Compilation failed with 2 errors.

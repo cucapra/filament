@@ -5,12 +5,12 @@ error: Undefined component name: Add
   ┌─ tests/errors/unbound.fil:4:14
   │
 4 │     A := new Add;
-  │              ^^^ Unknown component
+  │              ^^^ unknown component
 
 error: Undefined instance name: B
   ┌─ tests/errors/unbound.fil:5:10
   │
 5 │     a := B<G>(20, 30);
-  │          ^ Unknown instance
+  │          ^ unknown instance
 
 Compilation failed with 2 errors.

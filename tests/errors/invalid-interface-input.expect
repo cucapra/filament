@@ -5,8 +5,9 @@ error: Cannot prove constraint 1 >= 2
   ┌─ tests/errors/invalid-interface-input.fil:6:5
   │
 2 │   comp Main<G: 3, L: 1>(
-  │                   ---- Interface allows event to trigger every 1 cycle(s)
+  │                   ---- interface allows event to trigger every 1 cycle(s)
   ·
 6 │     @[L, L+2] in2: 32,
-  │     ^^^^^^^^^^^^^^^^^ Signal lasts for 2 cycle(s)
+  │     ^^^^^^^^^^^^^^^^^ signal lasts for 2 cycle(s)
 
+Compilation failed with 1 errors.
