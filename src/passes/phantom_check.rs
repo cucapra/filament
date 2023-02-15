@@ -32,6 +32,10 @@ impl visitor::Checker for PhantomCheck {
         self.phantom_events.clear();
     }
 
+    fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics {
+        &mut self.diag
+    }
+
     // Only check component if at least one phantom event
     fn component_filter(&self, comp: &core::Component) -> bool {
         comp.sig.phantom_events().next().is_some()
@@ -62,6 +66,7 @@ impl visitor::Checker for PhantomCheck {
                      .add_note(self.diag.add_info("Event is a phantom event", e.copy_span()))
                      .add_note(self.diag.add_info("Previous use", prev_use.copy_span()))
                      .add_note(self.diag.add_info("Phantom ports are compiled away and cannot be used for resource sharing", GPosIdx::UNKNOWN));
+                    self.diag.add_error(err);
                 }
             }
         }

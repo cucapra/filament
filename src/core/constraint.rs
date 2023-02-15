@@ -2,6 +2,7 @@ use derivative::Derivative;
 
 use super::{Expr, Id, Range, Time, TimeSub};
 use crate::diagnostics::{self, InfoIdx};
+use crate::errors::Error;
 use crate::utils::Binding;
 use crate::utils::SExp;
 use std::fmt::Display;
@@ -283,5 +284,13 @@ impl From<Constraint> for SExp {
                 SExp::from(base.right),
             )),
         }
+    }
+}
+
+impl From<Constraint> for Error {
+    fn from(con: Constraint) -> Self {
+        let mut err = Error::malformed(format!("Cannot prove: {}", con));
+        err.notes = con.notes().cloned().collect();
+        err
     }
 }

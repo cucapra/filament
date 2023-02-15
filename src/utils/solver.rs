@@ -1,12 +1,12 @@
 use crate::core::{self, Time, TimeSub};
-use crate::diagnostics::{self, Diagnostics};
-use crate::errors::{Error, FilamentResult, WithPos};
+use crate::diagnostics::{Diagnostics, InfoIdx};
+use crate::errors::{Error, FilamentResult};
 use crate::utils::GPosIdx;
 use itertools::Itertools;
 use rsmt2::{SmtConf, Solver};
 
 #[derive(Clone)]
-pub struct ShareConstraints {
+pub struct ShareConstraint {
     /// Delay bounded by the share constraint
     /// XXX: We store the event binding so that we can get the position of the binding.
     event_bind: core::EventBind,
@@ -15,10 +15,10 @@ pub struct ShareConstraints {
     /// The (event, delay) to compute the max of start times
     ends: Vec<(Time, TimeSub)>,
     /// Additional error information
-    notes: Vec<(String, GPosIdx)>,
+    notes: Vec<InfoIdx>,
 }
 
-impl From<core::EventBind> for ShareConstraints {
+impl From<core::EventBind> for ShareConstraint {
     fn from(bind: core::EventBind) -> Self {
         Self {
             starts: vec![],
@@ -29,13 +29,9 @@ impl From<core::EventBind> for ShareConstraints {
     }
 }
 
-impl ShareConstraints {
-    pub fn add_note<S: Into<String>>(&mut self, msg: S, pos: GPosIdx) {
-        self.notes.push((msg.into(), pos));
-    }
-
-    pub fn notes(self) -> Vec<(String, GPosIdx)> {
-        self.notes
+impl ShareConstraint {
+    pub fn add_note(&mut self, info: InfoIdx) {
+        self.notes.push(info);
     }
 
     pub fn add_bind_info(
@@ -43,16 +39,17 @@ impl ShareConstraints {
         start: Time,
         end: (Time, TimeSub),
         pos: GPosIdx,
+        diag: &mut Diagnostics,
     ) {
-        self.add_note(
+        self.add_note(diag.add_info(
             format!("Invocation active during [{start}, {}+{})", end.0, end.1),
             pos,
-        );
+        ));
         self.starts.push(start);
         self.ends.push(end);
     }
 }
-impl std::fmt::Display for ShareConstraints {
+impl std::fmt::Display for ShareConstraint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let min = self.starts.iter().map(|t| t.to_string()).join(", ");
         let max = self
@@ -64,8 +61,8 @@ impl std::fmt::Display for ShareConstraints {
         write!(f, "{delay} >= max({max}) - min({min})")
     }
 }
-impl From<ShareConstraints> for SExp {
-    fn from(sh: ShareConstraints) -> Self {
+impl From<ShareConstraint> for SExp {
+    fn from(sh: ShareConstraint) -> Self {
         let min = sh
             .starts
             .into_iter()
@@ -85,6 +82,15 @@ impl From<ShareConstraints> for SExp {
             "(>= {} (- {max} {min}))",
             SExp::from(sh.event_bind.delay)
         ))
+    }
+}
+
+impl From<ShareConstraint> for Error {
+    fn from(sh: ShareConstraint) -> Self {
+        let msg = format!("Cannot prove: {}", sh);
+        let mut err = Error::malformed(msg);
+        err.notes = sh.notes;
+        err
     }
 }
 
@@ -133,7 +139,7 @@ struct SolveManager<'a> {
     // Solver associated with this manager
     solver: &'a mut FilSolver,
     constraints: Vec<core::Constraint>,
-    share_constraints: Vec<ShareConstraints>,
+    share_constraints: Vec<ShareConstraint>,
     // Indicator variables that need to be declared
     indicators: Vec<String>,
     // Current set of active formulas
@@ -176,7 +182,7 @@ impl<'a> SolveManager<'a> {
     }
 
     /// Add a new share constraint to the manager
-    fn add_share_constraint(&mut self, share: ShareConstraints) {
+    fn add_share_constraint(&mut self, share: ShareConstraint) {
         let indicator =
             format!("{}{}", Self::SHARE, self.share_constraints.len());
         log::trace!("{}: {}", &indicator, &share);
@@ -229,7 +235,7 @@ impl<'a> SolveManager<'a> {
     /// Solve the set of constraints and get all violated constraints
     fn get_all_violated(
         mut self,
-    ) -> FilamentResult<(Vec<core::Constraint>, Vec<ShareConstraints>)> {
+    ) -> FilamentResult<(Vec<core::Constraint>, Vec<ShareConstraint>)> {
         self.assert_all()?;
         let solver = &mut self.solver.s;
         // Declare the indicator variables and assert the formula
@@ -305,7 +311,7 @@ impl<'a> SolveManager<'a> {
     fn get_violated_constraints(
         self,
         model: Model,
-    ) -> (Vec<core::Constraint>, Vec<ShareConstraints>) {
+    ) -> (Vec<core::Constraint>, Vec<ShareConstraint>) {
         let (mut cons, mut shares) = (vec![], vec![]);
         for (name, _, _, val) in model {
             if let Some(val) = self.parse_value(&val) {
@@ -367,7 +373,8 @@ impl FilSolver {
         vars: impl Iterator<Item = core::Id>,
         assumes: Vec<core::Constraint>,
         asserts: Vec<core::Constraint>,
-        sharing: Vec<ShareConstraints>,
+        sharing: Vec<ShareConstraint>,
+        diag: &mut Diagnostics,
     ) -> FilamentResult<()> {
         if asserts.is_empty() {
             return Ok(());
@@ -397,11 +404,11 @@ impl FilSolver {
         // Get all the constraints that were violated
         let (cons, share_cons) = manager.get_all_violated()?;
         // For each violated constraint, display the error
-        for cons in cons {
-            log::error!("Constraint violated: {}", cons);
+        for con in cons {
+            diag.add_error(con.into());
         }
-        for share_cons in share_cons {
-            log::error!("Share constraint violated: {}", share_cons);
+        for share_con in share_cons {
+            diag.add_error(share_con.into());
         }
 
         Ok(())

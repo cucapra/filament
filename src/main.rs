@@ -1,16 +1,9 @@
-use std::{collections::HashMap, time::Instant};
-
-use codespan_reporting::{
-    diagnostic::{Diagnostic, Label, LabelStyle},
-    files::SimpleFiles,
-    term::{self, termcolor::ColorChoice, termcolor::StandardStream},
-};
 use filament::{
     backend, cmdline, errors, passes,
     resolver::Resolver,
-    utils::GlobalPositionTable,
     visitor::{Checker, Transform},
 };
+use std::time::Instant;
 
 // Prints out the interface for main component in the input program.
 fn run(opts: &cmdline::Opts) -> errors::FilamentResult<()> {

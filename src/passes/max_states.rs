@@ -14,6 +14,7 @@ pub struct MaxStates {
     pub max_states: HashMap<Id, States>,
     /// Current set of states we're working on
     cur_states: States,
+    diag: crate::diagnostics::Diagnostics,
 }
 
 impl MaxStates {
@@ -36,13 +37,13 @@ impl MaxStates {
 
 impl visitor::Checker for MaxStates {
     fn new(_: &core::Namespace) -> FilamentResult<Self> {
-        Ok(Self {
-            max_states: HashMap::new(),
-            cur_states: HashMap::new(),
-        })
+        Ok(Self::default())
     }
     fn clear_data(&mut self) {
         self.cur_states.clear();
+    }
+    fn diagnostics(&mut self) -> &mut crate::diagnostics::Diagnostics {
+        &mut self.diag
     }
     fn enter_component(
         &mut self,

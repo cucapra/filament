@@ -1,6 +1,6 @@
 use crate::core::{self, Constraint, OrderConstraint, Time};
 use crate::errors::{FilamentResult, WithPos};
-use crate::utils::{FilSolver, ShareConstraints};
+use crate::utils::{FilSolver, ShareConstraint};
 use crate::{diagnostics, visitor};
 use itertools::Itertools;
 use std::iter;
@@ -53,7 +53,7 @@ impl IntervalCheck {
     pub fn drain_sharing(
         &mut self,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<Vec<ShareConstraints>> {
+    ) -> FilamentResult<Vec<ShareConstraint>> {
         let all = ctx
             .instances()
             .map(|inst| self.sharing_constraints(inst, ctx))
@@ -77,7 +77,7 @@ impl IntervalCheck {
         &mut self,
         inst: visitor::InstIdx,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<Vec<ShareConstraints>> {
+    ) -> FilamentResult<Vec<ShareConstraint>> {
         // Get bindings for all invokes and transpose them so that each inner
         // vector represents the bindings for a single event
         // Reprents invoke -> list (event, delay)
@@ -126,7 +126,7 @@ impl IntervalCheck {
             let bounded_event = first_bind[event].0.event();
             let this = ctx.prog.comp_sig(ctx.sig());
             let mut share =
-                ShareConstraints::from(this.get_event(&bounded_event).clone());
+                ShareConstraint::from(this.get_event(&bounded_event).clone());
 
             // Iterate over all pairs of bindings
             for i in 0..num_bindings {
@@ -137,6 +137,7 @@ impl IntervalCheck {
                     start_i.clone(),
                     (start_i.clone(), delay.clone()),
                     inv_i.pos(ctx),
+                    &mut self.diag,
                 );
 
                 // All other bindings must be separated by at least the delay of this binding

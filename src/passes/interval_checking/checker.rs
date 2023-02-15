@@ -22,6 +22,7 @@ impl visitor::Checker for IntervalCheck {
                 sig.constraints.clone(),
                 sig.well_formed(&mut diagnostics),
                 vec![],
+                &mut diagnostics,
             )?;
             log::trace!("==========");
         }
@@ -33,6 +34,10 @@ impl visitor::Checker for IntervalCheck {
     fn clear_data(&mut self) {
         self.obligations.clear();
         self.facts.clear();
+    }
+
+    fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics {
+        &mut self.diag
     }
 
     fn connect(
@@ -164,6 +169,7 @@ impl visitor::Checker for IntervalCheck {
             self.facts.clone(),
             obs,
             share,
+            &mut self.diag,
         )?;
         log::info!(
             "interval-check.{}.prove: {}ms",

@@ -17,7 +17,7 @@ impl Component {
 
         for con in body {
             match con {
-                Command::Invoke(inv @ Invoke { ports, .. }) => match is_low {
+                Command::Invoke(Invoke { ports, .. }) => match is_low {
                     Some(true) => {
                         if ports.is_some() {
                             return Err(Error::malformed(
@@ -34,7 +34,7 @@ impl Component {
                     }
                     None => is_low = Some(ports.is_none()),
                 },
-                Command::Fsm(fsm) => {
+                Command::Fsm(_) => {
                     if let Some(false) = is_low {
                         return Err(Error::malformed("Malforemd High-level component: Cannot use the `fsm` construct"));
                     } else if is_low.is_none() {

@@ -18,6 +18,10 @@ impl visitor::Checker for BindCheck {
 
     fn clear_data(&mut self) {}
 
+    fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics {
+        &mut self.diag
+    }
+
     /// Check the binding of a component
     fn signature(&mut self, sig: &core::Signature) -> FilamentResult<()> {
         let events = sig.events().collect_vec();

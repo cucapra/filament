@@ -13,6 +13,9 @@ where
     /// Clear any data that should be cleared between components
     fn clear_data(&mut self);
 
+    /// Get the diagnostics for this pass
+    fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics;
+
     /// Check if this component should be traversed
     fn component_filter(&self, _: &core::Component) -> bool {
         true
