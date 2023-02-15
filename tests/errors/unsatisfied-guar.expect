@@ -1,9 +1,0 @@
----STDERR---
-error: Cannot prove constraint G+3 >= G+4
-   ┌─ tests/errors/unsatisfied-guar.fil:11:9
-   │
-11 │   out = m0.out;
-   │   ---   ^^^^^^ Source is available for [G+2, G+3]
-   │   │      
-   │   Destination's requirement [G+3, G+4]
-

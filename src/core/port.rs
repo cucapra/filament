@@ -134,7 +134,7 @@ impl InterfaceDef {
 
 impl From<InterfaceDef> for PortDef {
     fn from(id: InterfaceDef) -> Self {
-        let start = Time::unit(id.event, 0);
+        let start = Time::from(id.event);
         let end = start.clone().increment(Expr::Const(1));
         PortDef::new(id.name, Range::new(start, end), 1.into())
     }

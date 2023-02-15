@@ -1,84 +1,194 @@
 use crate::core::{self, Time, TimeSub};
+use crate::diagnostics::{self, Diagnostics, InfoIdx};
 use crate::errors::{Error, FilamentResult, WithPos};
-use crate::utils::GPosIdx;
 use itertools::Itertools;
 use rsmt2::{SmtConf, Solver};
 
 #[derive(Clone)]
-pub struct ShareConstraints {
-    /// Delay bounded by the share constraint
-    /// XXX: We store the event binding so that we can get the position of the binding.
-    event_bind: core::EventBind,
-    /// The events used to compute the minimum of start times
-    starts: Vec<Time>,
-    /// The (event, delay) to compute the max of start times
-    ends: Vec<(Time, TimeSub)>,
-    /// Additional error information
-    notes: Vec<(String, GPosIdx)>,
+/// Represents the sum of a time and a time sub
+enum TimeDelSum {
+    Time(Time),
+    Sum(Time, TimeSub),
 }
 
-impl From<core::EventBind> for ShareConstraints {
+impl From<(Time, TimeSub)> for TimeDelSum {
+    fn from((time, delay): (Time, TimeSub)) -> Self {
+        match time.try_increment(delay) {
+            Ok(t) => TimeDelSum::Time(t),
+            Err((time, delay)) => TimeDelSum::Sum(time, delay),
+        }
+    }
+}
+
+impl std::fmt::Display for TimeDelSum {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TimeDelSum::Time(t) => write!(f, "{}", t),
+            TimeDelSum::Sum(t, d) => write!(f, "({}+{})", t, d),
+        }
+    }
+}
+
+impl From<TimeDelSum> for SExp {
+    fn from(t: TimeDelSum) -> Self {
+        match t {
+            TimeDelSum::Time(t) => SExp::from(t),
+            TimeDelSum::Sum(t, d) => {
+                SExp(format!("(+ {} {})", SExp::from(t), SExp::from(d)))
+            }
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ShareConstraint {
+    /// Delay bounded by the share constraint
+    event_bind: core::EventBind,
+    /// The events used to compute the minimum of start times
+    starts: Vec<(Time, InfoIdx)>,
+    /// The (event, delay) to compute the max of start times
+    ends: Vec<(TimeDelSum, InfoIdx)>,
+}
+
+impl From<core::EventBind> for ShareConstraint {
     fn from(bind: core::EventBind) -> Self {
         Self {
             starts: vec![],
             ends: vec![],
             event_bind: bind,
-            notes: vec![],
         }
     }
 }
 
-impl ShareConstraints {
-    pub fn add_note<S: Into<String>>(&mut self, msg: S, pos: GPosIdx) {
-        self.notes.push((msg.into(), pos));
-    }
-
-    pub fn notes(self) -> Vec<(String, GPosIdx)> {
-        self.notes
-    }
-
+impl ShareConstraint {
     pub fn add_bind_info(
         &mut self,
         start: Time,
         end: (Time, TimeSub),
-        pos: GPosIdx,
+        diag: &mut Diagnostics,
     ) {
-        self.add_note(
-            format!("Invocation active during [{start}, {}+{})", end.0, end.1),
+        let td = TimeDelSum::from(end);
+        let pos = start.event.copy_span();
+        let info = diag.add_info(
+            format!("invocation starts at `{start}' and ends at `{td}'"),
             pos,
         );
-        self.starts.push(start);
-        self.ends.push(end);
+        if let TimeDelSum::Time(ref t) = td {
+            match self.is_min_start(t) {
+                Some(false) => { /* Safe to ignore this */ }
+                Some(true) => {
+                    let info = diag.add_info(
+                        format!("invocation starts at `{start}'"),
+                        pos,
+                    );
+                    self.starts = vec![(start, info)];
+                }
+                None => self.starts.push((start, info)),
+            }
+            match self.is_max_end(t) {
+                Some(false) => { /* Safe to ignore this */ }
+                Some(true) => {
+                    let info =
+                        diag.add_info(format!("invocation ends at `{t}'"), pos);
+                    self.ends = vec![(td, info)];
+                }
+                None => self.ends.push((td, info)),
+            }
+        } else {
+            self.starts.push((start, info));
+            self.ends.push((td, info));
+        }
+    }
+
+    // Check whether this is the minimum start time.
+    // Returns None if the list contains incompatible times
+    fn is_min_start(&self, time: &Time) -> Option<bool> {
+        for (start, _) in &self.starts {
+            match start.partial_cmp(time) {
+                Some(std::cmp::Ordering::Less) => {
+                    return Some(false);
+                }
+                None => {
+                    return None;
+                }
+                Some(_) => (),
+            }
+        }
+        Some(true)
+    }
+
+    // Check whether this is the maximum end time.
+    // Returns None if the list contains incompatible times
+    fn is_max_end(&self, time: &Time) -> Option<bool> {
+        for (end, _) in &self.ends {
+            match end {
+                TimeDelSum::Time(t) => {
+                    // Return if t > time
+                    if t.partial_cmp(time) == Some(std::cmp::Ordering::Greater)
+                    {
+                        return Some(false);
+                    }
+                }
+                // Cannot compare a sum with a time
+                TimeDelSum::Sum(_, _) => {
+                    return None;
+                }
+            }
+        }
+        Some(true)
+    }
+
+    /// Transform the share constraint into an error
+    fn error(self, diag: &mut diagnostics::Diagnostics) -> Error {
+        let msg = format!("Cannot prove constraint {}", self);
+        let mut err = Error::malformed(msg);
+        err = err.add_note(diag.add_info(
+            "event's delay must be longer than the difference between minimum start time and maximum end time of all invocations",
+            self.event_bind.copy_span())
+        );
+        let all_notes = self
+            .starts
+            .iter()
+            .map(|(_, i)| i)
+            .chain(self.ends.iter().map(|(_, i)| i))
+            .unique();
+        err.notes.extend(all_notes);
+        err
     }
 }
-impl std::fmt::Display for ShareConstraints {
+impl std::fmt::Display for ShareConstraint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let min = self.starts.iter().map(|t| t.to_string()).join(", ");
+        let min = self.starts.iter().map(|(t, _)| t.to_string()).join(", ");
         let max = self
             .ends
             .iter()
-            .map(|(t, d)| format!("{} + {}", t, d))
+            .cloned()
+            .map(|(e, _)| format!("{e}"))
             .join(", ");
         let delay = &self.event_bind.delay;
         write!(f, "{delay} >= max({max}) - min({min})")
     }
 }
-impl From<ShareConstraints> for SExp {
-    fn from(sh: ShareConstraints) -> Self {
-        let min = sh
-            .starts
-            .into_iter()
-            .map(SExp::from)
-            .reduce(|a, b| SExp(format!("(min {} {})", a, b)))
-            .unwrap();
-        let max = sh
-            .ends
-            .into_iter()
-            .map(|(t, d)| {
-                SExp(format!("(+ {} {})", SExp::from(t), SExp::from(d)))
-            })
-            .reduce(|a, b| SExp(format!("(max {} {})", a, b)))
-            .unwrap();
+impl From<ShareConstraint> for SExp {
+    fn from(mut sh: ShareConstraint) -> Self {
+        let min = if sh.starts.len() > 1 {
+            sh.starts
+                .into_iter()
+                .map(|(t, _)| SExp::from(t))
+                .reduce(|a, b| SExp(format!("(min {} {})", a, b)))
+                .unwrap()
+        } else {
+            SExp::from(sh.starts.pop().unwrap().0)
+        };
+        let max = if sh.ends.len() > 1 {
+            sh.ends
+                .into_iter()
+                .map(|(t, _)| SExp::from(t))
+                .reduce(|a, b| SExp(format!("(max {} {})", a, b)))
+                .unwrap()
+        } else {
+            SExp::from(sh.ends.pop().unwrap().0)
+        };
 
         SExp(format!(
             "(>= {} (- {max} {min}))",
@@ -130,11 +240,12 @@ pub struct FilSolver {
 
 impl FilSolver {
     pub fn new() -> FilamentResult<Self> {
-        let mut conf = SmtConf::default_z3();
-        // Immediately checks if the command to z3 succeeded.
-        conf.check_success();
+        let conf = SmtConf::default_z3();
+        // Disable this because it doesn't seem to work with activation literals
+        // conf.check_success();
 
         let mut solver = conf.spawn(())?;
+        solver.produce_models()?;
         solver.path_tee(std::path::PathBuf::from("./model.smt"))?;
 
         define_prelude(&mut solver)?;
@@ -145,74 +256,56 @@ impl FilSolver {
         &mut self,
         vars: impl Iterator<Item = core::Id>,
         assumes: Vec<core::Constraint>,
-        asserts: impl Iterator<Item = core::Constraint>,
-        sharing: Vec<ShareConstraints>,
-    ) -> FilamentResult<()> {
-        // Locally simplify as many asserts as possible
-        /* let asserts = asserts
-        .into_iter()
-        .flat_map(|con| con.simplify())
-        .collect::<Vec<_>>(); */
-        let asserts = asserts.unique().collect_vec();
+        asserts: Vec<core::Constraint>,
+        sharing: Vec<ShareConstraint>,
+        diag: &mut Diagnostics,
+    ) {
         if asserts.is_empty() {
-            return Ok(());
+            return;
         }
 
-        self.s.push(1)?;
+        let asserts = asserts.into_iter().unique().collect_vec();
+        self.s.push(1).unwrap();
         // Define all the constants
         for var in vars {
             log::trace!("Declaring constant {}", var);
-            self.s.declare_const(var.to_string(), "Int")?;
+            self.s.declare_const(var.to_string(), "Int").unwrap();
         }
 
         // Define assumptions on constraints
         for assume in assumes {
+            log::trace!("Assuming {}", assume);
             let sexp: SExp = assume.into();
-            self.s.assert(format!("{}", sexp))?;
+            self.s.assert(format!("{}", sexp)).unwrap();
         }
 
         for fact in asserts {
-            // XXX(rachit): Unnecessary clone
-            if !self.check_fact(fact.clone())? {
-                let mut err =
-                    Error::malformed(format!("Cannot prove constraint {fact}"));
-                for (msg, pos) in fact.notes() {
-                    err = err.add_note(msg, *pos)
-                }
-                return Err(err);
+            if !self.check_fact(fact.clone()) {
+                diag.add_error(fact.into());
             }
         }
         for share in sharing {
-            let cons = SExp::from(share.clone());
-
-            if !self.check_fact(cons)? {
-                let mut err = Error::malformed(format!(
-                    "Cannot prove constraint {share}"
-                ));
-                err = err.add_note("Event's delay must be longer than the difference between minimum start time and maximum end time of all other bindings.", share.event_bind.copy_span());
-                for (msg, pos) in share.notes() {
-                    err = err.add_note(msg, pos)
-                }
-                return Err(err);
+            if !self.check_fact(share.clone()) {
+                let err = share.error(diag);
+                diag.add_error(err);
             }
         }
-        self.s.pop(1)?;
 
-        Ok(())
+        self.s.pop(1).unwrap();
     }
 
-    fn check_fact(&mut self, fact: impl Into<SExp>) -> FilamentResult<bool> {
+    fn check_fact(&mut self, fact: impl Into<SExp>) -> bool {
         let sexp = fact.into();
-        self.s.push(1)?;
+        self.s.push(1).unwrap();
         let formula = format!("(not {})", sexp);
         log::trace!("Assert {}", formula);
-        self.s.assert(formula)?;
+        self.s.assert(formula).unwrap();
         // Check that the assertion was unsatisfiable
-        let unsat = !self.s.check_sat()?;
+        let unsat = !self.s.check_sat().unwrap();
         if !unsat {
-            log::trace!("MODEL: {:?}", self.s.get_model()?);
+            log::trace!("MODEL: {:?}", self.s.get_model().unwrap());
         }
-        self.s.pop(1)?;
-        Ok(unsat)
+        self.s.pop(1).unwrap();
+        unsat
     }
 }

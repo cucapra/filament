@@ -1,8 +1,9 @@
-use derivative::Derivative;
-
 use super::{Expr, Id, Range, Time, TimeSub};
+use crate::diagnostics::{self, InfoIdx};
+use crate::errors::Error;
 use crate::utils::Binding;
-use crate::{utils::GPosIdx, utils::SExp};
+use crate::utils::SExp;
+use std::collections::BTreeSet;
 use std::fmt::Display;
 
 /// Ordering operator for constraints
@@ -23,19 +24,13 @@ impl std::fmt::Display for OrderOp {
     }
 }
 
-type Extra = Vec<(String, GPosIdx)>;
-
 // An ordering constraint
-#[derive(Clone, Derivative, Eq)]
-#[derivative(PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct OrderConstraint<T> {
     left: T,
     right: T,
     op: OrderOp,
-    // Explanation of why this constraint was generated
-    #[derivative(PartialEq = "ignore")]
-    #[derivative(Hash = "ignore")]
-    extra: Extra,
+    extra: BTreeSet<diagnostics::InfoIdx>,
 }
 
 impl<T> OrderConstraint<T>
@@ -47,7 +42,7 @@ where
             left,
             right,
             op,
-            extra: vec![],
+            extra: BTreeSet::default(),
         }
     }
 
@@ -56,7 +51,7 @@ where
             left: r,
             right: l,
             op: OrderOp::Gt,
-            extra: vec![],
+            extra: BTreeSet::default(),
         }
     }
 
@@ -65,7 +60,7 @@ where
             left,
             right,
             op: OrderOp::Eq,
-            extra: vec![],
+            extra: BTreeSet::default(),
         }
     }
 
@@ -74,7 +69,7 @@ where
             left,
             right,
             op: OrderOp::Gte,
-            extra: vec![],
+            extra: BTreeSet::default(),
         }
     }
 
@@ -83,7 +78,7 @@ where
             left: r,
             right: l,
             op: OrderOp::Gte,
-            extra: vec![],
+            extra: BTreeSet::default(),
         }
     }
 }
@@ -99,8 +94,8 @@ impl OrderConstraint<Time> {
 
     fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         OrderConstraint {
-            left: self.left.resolve_offset(bindings),
-            right: self.right.resolve_offset(bindings),
+            left: self.left.resolve_expr(bindings),
+            right: self.right.resolve_expr(bindings),
             ..self.clone()
         }
     }
@@ -198,20 +193,18 @@ impl Constraint {
         }
     }
 
-    pub fn notes(&self) -> impl Iterator<Item = &(String, GPosIdx)> {
+    pub fn notes(&self) -> impl Iterator<Item = &diagnostics::InfoIdx> {
         match self {
             Constraint::Base { base } => base.extra.iter(),
             Constraint::Sub { base } => base.extra.iter(),
         }
     }
 
-    pub fn add_note<S: ToString>(mut self, msg: S, pos: GPosIdx) -> Self {
+    pub fn add_note(mut self, note: InfoIdx) -> Self {
         match &mut self {
-            Constraint::Base { base } => {
-                base.extra.push((msg.to_string(), pos))
-            }
-            Constraint::Sub { base } => base.extra.push((msg.to_string(), pos)),
-        }
+            Constraint::Base { base } => base.extra.insert(note),
+            Constraint::Sub { base } => base.extra.insert(note),
+        };
         self
     }
 
@@ -286,5 +279,14 @@ impl From<Constraint> for SExp {
                 SExp::from(base.right),
             )),
         }
+    }
+}
+
+impl From<Constraint> for Error {
+    fn from(con: Constraint) -> Self {
+        let mut err =
+            Error::malformed(format!("Cannot prove constraint {}", con));
+        err.notes = con.notes().cloned().collect();
+        err
     }
 }

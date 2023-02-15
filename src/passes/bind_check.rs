@@ -1,36 +1,84 @@
 use crate::{
-    core,
-    errors::{Error, FilamentResult, WithPos},
-    utils, visitor,
+    core, diagnostics,
+    errors::{Error, WithPos},
+    utils,
+    visitor::{self, InvIdx, Traverse},
 };
 use itertools::Itertools;
 
-pub struct BindCheck;
+pub struct BindCheck {
+    diag: diagnostics::Diagnostics,
+}
 
 impl visitor::Checker for BindCheck {
-    fn new(_: &core::Namespace) -> FilamentResult<Self> {
-        Ok(Self)
+    fn new(_: &core::Namespace) -> Self {
+        Self {
+            diag: diagnostics::Diagnostics::default(),
+        }
     }
 
     fn clear_data(&mut self) {}
 
-    fn enter_component(
-        &mut self,
-        comp: &core::Component,
-        _ctx: &visitor::CompBinding,
-    ) -> FilamentResult<()> {
-        Self::signature(&comp.sig)
+    fn require_binding_check(&self) -> bool {
+        true
     }
 
-    fn external(&mut self, sig: &core::Signature) -> FilamentResult<()> {
-        Self::signature(sig)
+    fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics {
+        &mut self.diag
+    }
+
+    /// Check the binding of a component
+    fn signature(&mut self, sig: &core::Signature) -> Traverse {
+        let events = sig.events().collect_vec();
+        // Check all the definitions only use bound events
+        for pd in sig.ports() {
+            for time in pd.liveness.time_exprs() {
+                let ev = &time.event;
+                if !events.contains(ev) {
+                    let err = Error::undefined(ev.clone(), "event").add_note(
+                        self.diag.add_info(
+                            "event is not defined in the signature",
+                            ev.copy_span(),
+                        ),
+                    );
+                    self.diag.add_error(err);
+                }
+            }
+        }
+        // Check that interface ports use only bound events
+        for id in &sig.interface_signals {
+            if !events.contains(&id.event) {
+                let err = Error::undefined(id.event.clone(), "event").add_note(
+                    self.diag.add_info(
+                        "event is not defined in the signature",
+                        id.event.copy_span(),
+                    ),
+                );
+                self.diag.add_error(err);
+            }
+        }
+        // Check constraints use bound events
+        for constraint in &sig.constraints {
+            for ev in constraint.events() {
+                if !events.contains(&ev) {
+                    let err = Error::undefined(ev.clone(), "event").add_note(
+                        self.diag.add_info(
+                            "event is not defined in the signature",
+                            ev.copy_span(),
+                        ),
+                    );
+                    self.diag.add_error(err);
+                }
+            }
+        }
+        Traverse::Continue(())
     }
 
     fn instance(
         &mut self,
         inst: &core::Instance,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         let bound = ctx.get_instance(&inst.name);
         let param_len = ctx.prog.map_signature(
             bound.sig,
@@ -40,25 +88,25 @@ impl visitor::Checker for BindCheck {
 
         if param_len != inst.bindings.len() {
             let msg = format!(
-                "`{}' requires {} bindings but {} were provided",
+                "`{}' requires {} parameters but {} were provided",
                 inst.component,
                 param_len,
                 inst.bindings.len(),
             );
-            return Err(
-                Error::malformed(msg.clone()).add_note(msg, inst.copy_span())
-            );
+            let err = Error::malformed(msg.clone())
+                .add_note(self.diag.add_info(msg, inst.copy_span()));
+            self.diag.add_error(err);
         }
 
-        Ok(())
+        Traverse::Continue(())
     }
 
     fn invoke(
         &mut self,
         inv: &core::Invoke,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<()> {
-        let inv_idx = Self::bind_invoke(inv, ctx)?;
+    ) -> Traverse {
+        let inv_idx = self.bind_invoke(inv, ctx);
         let sig = inv_idx.unresolved_signature(ctx);
 
         let this_sig = ctx.this();
@@ -68,8 +116,11 @@ impl visitor::Checker for BindCheck {
             for time in &inv.abstract_vars {
                 let ev = time.event();
                 if !this_events.iter().any(|e| e.event == ev) {
-                    return Err(Error::undefined(ev.clone(), "Event")
-                        .add_note("Event is not bound", ev.copy_span()));
+                    let err = Error::undefined(ev.clone(), "Event").add_note(
+                        self.diag
+                            .add_info("event is not bound", ev.copy_span()),
+                    );
+                    self.diag.add_error(err);
                 }
             }
 
@@ -80,11 +131,11 @@ impl visitor::Checker for BindCheck {
             let formals = inputs.len();
             let actuals = ports.len();
             if formals != actuals {
-                return Err(Error::malformed(format!(
+                let err = Error::malformed(format!(
                     "Invoke of {} requires {formals} ports but {actuals} were provided",
                     inv.instance,
-                ))
-                .add_note("Instance used here", inv.copy_span()));
+                )).add_note(self.diag.add_info("instance used here", inv.copy_span()));
+                self.diag.add_error(err);
             }
 
             // Check the connections implied by the ports
@@ -95,14 +146,14 @@ impl visitor::Checker for BindCheck {
                 self.connect(&con, ctx)?;
             }
         }
-        Ok(())
+        Traverse::Continue(())
     }
 
     fn connect(
         &mut self,
         con: &core::Connect,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<()> {
+    ) -> Traverse {
         let resolve =
             |r: &core::Range,
              _: &utils::Binding<core::Time>,
@@ -117,34 +168,33 @@ impl visitor::Checker for BindCheck {
             .unwrap_or_else(|| 32.into());
 
         if dst_w != src_w {
-            return Err(Error::malformed("Port width mismatch".to_string())
-                .add_note(
-                    format!("Source `{}' has width {src_w}", con.src.name()),
+            let err = Error::malformed("port width mismatch".to_string())
+                .add_note(self.diag.add_info(
+                    format!("source `{}' has width {src_w}", con.src.name()),
                     con.src.copy_span(),
-                )
-                .add_note(
+                ))
+                .add_note(self.diag.add_info(
                     format!(
-                        "Destination `{}' has width {dst_w}",
+                        "destination `{}' has width {dst_w}",
                         con.dst.name(),
                     ),
                     con.dst.copy_span(),
                 ));
+            self.diag.add_error(err);
         }
-        Ok(())
+        Traverse::Continue(())
     }
 }
 
 impl BindCheck {
     /// Check that an invoke's instance is bound and and bind its signature
     fn bind_invoke(
+        &mut self,
         inv: &core::Invoke,
         ctx: &visitor::CompBinding,
-    ) -> FilamentResult<visitor::InvIdx> {
-        let Some(inv_idx) = ctx.get_invoke_idx(&inv.name) else {
-            return Err(Error::undefined(inv.instance.clone(), "instance").add_note("Instance is not bound", inv.instance.copy_span()));
-        };
+    ) -> InvIdx {
+        let inv_idx = ctx.get_invoke_idx(&inv.name);
         let sig = inv_idx.unresolved_signature(ctx);
-
         // Check that the number of arguments is more than the minimum number of required formals
         let sig = ctx.prog.sig(sig);
         let min_formals = sig
@@ -155,64 +205,25 @@ impl BindCheck {
         let max_formals = sig.events.len();
         let actuals = inv.abstract_vars.len();
         if min_formals > actuals {
-            return Err(Error::malformed(format!(
-                "Invoke of {} requires at least {min_formals} events but {actuals} are provided",
+            let err = Error::malformed(format!(
+                "invoke of {} requires at least {min_formals} events but {actuals} are provided",
                 inv.instance,
-            )).add_note(
-                format!("Invoke requires at least {min_formals} events but {actuals} are provided"),
+            )).add_note(self.diag.add_info(
+                format!("invoke requires at least {min_formals} events but {actuals} are provided"),
                 inv.instance.copy_span()
             ));
+            self.diag.add_error(err);
         } else if actuals > max_formals {
-            return Err(Error::malformed(format!(
-                "Invoke of {} requires at most {max_formals} events but {actuals} are provided",
+            let err = Error::malformed(format!(
+                "invoke of {} requires at most {max_formals} events but {actuals} are provided",
                 inv.instance,
-            )).add_note(
-                format!("Invoke accepts at most {max_formals} events but {actuals} are provided"),
+            )).add_note(self.diag.add_info(
+                format!("invoke accepts at most {max_formals} events but {actuals} are provided"),
                 inv.instance.copy_span()
             ));
+            self.diag.add_error(err);
         }
 
-        Ok(inv_idx)
-    }
-
-    /// Check the binding of a component
-    fn signature(sig: &core::Signature) -> FilamentResult<()> {
-        let events = sig.events().collect_vec();
-        // Check all the definitions only use bound events
-        for pd in sig.ports() {
-            for time in pd.liveness.time_exprs() {
-                let ev = &time.event;
-                if !events.contains(ev) {
-                    return Err(Error::undefined(ev.clone(), "event")
-                        .add_note(
-                            "Event is not defined in the signature",
-                            ev.copy_span(),
-                        ));
-                }
-            }
-        }
-        // Check that interface ports use only bound events
-        for id in &sig.interface_signals {
-            if !events.contains(&id.event) {
-                return Err(Error::undefined(id.event.clone(), "event")
-                    .add_note(
-                        "Event is not defined in the signature",
-                        id.event.copy_span(),
-                    ));
-            }
-        }
-        // Check constraints use bound events
-        for constraint in &sig.constraints {
-            for ev in constraint.events() {
-                if !events.contains(&ev) {
-                    return Err(Error::undefined(ev.clone(), "event")
-                        .add_note(
-                            "Event is not defined in the signature",
-                            ev.copy_span(),
-                        ));
-                }
-            }
-        }
-        Ok(())
+        inv_idx
     }
 }

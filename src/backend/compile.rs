@@ -1,9 +1,5 @@
 use super::Fsm;
-use crate::{
-    cmdline::Opts,
-    core,
-    errors::{Error, FilamentResult},
-};
+use crate::{cmdline::Opts, core, errors::FilamentResult};
 use calyx::{
     errors::CalyxResult,
     frontend,
@@ -488,29 +484,34 @@ fn init_calyx(
     Ok(ctx)
 }
 
-fn print(ctx: ir::Context) -> FilamentResult<()> {
+fn print(ctx: ir::Context) {
     let mut out = &mut std::io::stdout();
     for (path, prims) in ctx.lib.externs() {
         ir::Printer::write_extern(
             (&path, &prims.into_iter().map(|(_, v)| v).collect_vec()),
             &mut out,
-        )?;
+        )
+        .unwrap();
     }
     for comp in &ctx.components {
-        ir::Printer::write_component(comp, &mut out)?;
+        ir::Printer::write_component(comp, &mut out).unwrap();
         println!();
     }
-    Ok(())
 }
 
-pub fn compile(ns: core::Namespace, opts: &Opts) -> FilamentResult<()> {
+pub fn compile(ns: core::Namespace, opts: &Opts) {
     let mut calyx_ctx = init_calyx(&opts.calyx_primitives, &ns.externs)
-        .map_err(|err| Error::misc(format!("{:?}", err)))?;
+        .unwrap_or_else(|e| {
+            panic!("Error initializing calyx context: {:?}", e);
+        });
 
     let mut bindings = Binding::default();
 
     for comp in ns.components {
-        let comp = compile_component(comp, &mut bindings, &calyx_ctx.lib)?;
+        let comp = compile_component(comp, &mut bindings, &calyx_ctx.lib)
+            .unwrap_or_else(|e| {
+                panic!("Error compiling component: {:?}", e);
+            });
         bindings.insert_comp(
             core::Id::from(comp.name.id.as_str()),
             Rc::clone(&comp.signature),

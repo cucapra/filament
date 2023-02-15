@@ -1,6 +1,16 @@
 ---CODE---
 1
 ---STDERR---
-error: User-level components cannot have ordering constraints
- = Component defines the constraint L > G+1
+error: user-level components cannot have ordering constraints
+  ┌─ tests/errors/user-level-constraint.fil:3:6
+  │
+3 │ comp Main<G: L-(G), L: 1>(
+  │      ^^^^ component defines the constraint L > G+1
 
+error: user-level components cannot have ordering constraints
+  ┌─ tests/errors/user-level-constraint.fil:3:6
+  │
+3 │ comp Main<G: L-(G), L: 1>(
+  │      ^^^^ component defines the constraint G+5 > L
+
+Compilation failed with 2 errors.

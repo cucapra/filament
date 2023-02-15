@@ -1,14 +1,15 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint 10 >= max(G + 2, G+9 + 2) - min(G, G+9)
+error: Cannot prove constraint 10 >= max(G+11) - min(G)
    ┌─ tests/errors/share-range.fil:4:11
    │
  4 │ comp Main<G: 10>(
-   │           ^^^^^ Event's delay must be longer than the difference between minimum start time and maximum end time of all other bindings.
+   │           ^^^^^ event's delay must be longer than the difference between minimum start time and maximum end time of all invocations
    ·
 13 │   m0 := M<G>(l0, r0);
-   │   ------------------- Invocation active during [G, G+2)
+   │           - invocation starts at `G'
 14 │   m1 := M<G+9>(l1, r1);
-   │   --------------------- Invocation active during [G+9, G+9+2)
+   │           - invocation ends at `G+11'
 
+Compilation failed with 1 errors.

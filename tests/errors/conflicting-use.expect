@@ -2,12 +2,14 @@
 1
 ---STDERR---
 error: Cannot prove constraint 1 >= 2
-  ┌─ tests/errors/conflicting-use.fil:9:3
+  ┌─ tests/errors/conflicting-use.fil:4:11
   │
+4 │ comp Main<G: 3>(
+  │           ^^^^ delay requires 2 cycle between event but reuse may occur after 1 cycles
+  ·
 8 │   m0 := M<G>(10, 20);
-  │   ------------------- Invocation starts at `G'
+  │   ------------------- invocation starts at `G'
 9 │   m1 := M<G+1>(30, 40);
-  │   ^^^^^^^^^^^^^^^^^^^^^ Conflicting invoke, starts at `G+1'
-  │
-  = Delay requires 2 cycle between event but reuse may occur after 1 cycles
+  │   --------------------- invocation starts at `G+1'
 
+Compilation failed with 1 errors.

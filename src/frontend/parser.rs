@@ -55,7 +55,7 @@ impl FilamentParser {
         let file = GlobalPositionTable::as_mut()
             .add_file(path.to_string_lossy().to_string(), string_content);
         let user_data = UserData { file };
-        let content = GlobalPositionTable::as_ref().get_source(file);
+        let (_, content) = GlobalPositionTable::as_ref().get_file_data(file);
         // Parse the file
         let inputs =
             FilamentParser::parse_with_userdata(Rule::file, content, user_data)
@@ -175,7 +175,7 @@ impl FilamentParser {
             input.into_children();
             // [port_width(n)] => TimeSub::unit(n),
             [bitwidth(n)] => TimeSub::unit(n.into()),
-            [time(l), time(r)] => TimeSub::sym(l, r),
+            [time(l), time(r)] => l - r,
         ))
     }
 
@@ -285,7 +285,7 @@ impl FilamentParser {
                 // Upper case the first letter of name
                 let mut iname = name.as_ref().to_string();
                 iname.make_ascii_uppercase();
-                let iname = core::Id::from(iname).set_span(component.copy_span());
+                let iname = core::Id::from(iname);
                 if iname == name {
                     input.error("Generated Instance name conflicts with original name");
                 }

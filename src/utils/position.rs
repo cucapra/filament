@@ -1,5 +1,6 @@
 //! Definitions for tracking source position information of Calyx programs
 
+use codespan_reporting::files::SimpleFiles;
 use itertools::Itertools;
 use std::{cmp, fmt::Write, mem, sync};
 
@@ -11,14 +12,13 @@ pub struct PosIdx(u32);
 #[derive(Clone, Copy, PartialEq, Eq)]
 /// Handle to a file in a [PositionTable]
 /// The index refers to the index in the [PositionTable::files] vector.
-pub struct FileIdx(u32);
+pub struct FileIdx(usize);
 
-/// A source program file
-struct File {
-    /// Name of the file
-    pub name: String,
-    /// The source code of the file
-    pub source: String,
+impl FileIdx {
+    /// Get the index of the file
+    pub fn get(self) -> usize {
+        self.0
+    }
 }
 
 /// The data associated with a position
@@ -35,7 +35,7 @@ pub struct PosData {
 /// Source position information for a full program
 pub struct PositionTable {
     /// The source files of the program
-    files: Vec<File>,
+    files: SimpleFiles<String, String>,
     /// Mapping from indexes to position data
     indices: Vec<PosData>,
 }
@@ -53,7 +53,7 @@ impl PositionTable {
     /// Create a new position table where the first file and first position are unknown
     pub fn new() -> Self {
         let mut table = PositionTable {
-            files: Vec::new(),
+            files: SimpleFiles::new(),
             indices: Vec::new(),
         };
         table.add_file("unknown".to_string(), "".to_string());
@@ -62,22 +62,20 @@ impl PositionTable {
         table
     }
 
-    /// Add a new file to the position table
-    pub fn add_file(&mut self, name: String, source: String) -> FileIdx {
-        let file = File { name, source };
-        let file_idx = self.files.len();
-        self.files.push(file);
-        FileIdx(file_idx as u32)
+    /// Return handle to the files in the position table
+    pub fn files(&self) -> &SimpleFiles<String, String> {
+        &self.files
     }
 
-    pub fn get_source(&self, file: FileIdx) -> &str {
-        &self.get_file_data(file).source
+    /// Add a new file to the position table
+    pub fn add_file(&mut self, name: String, source: String) -> FileIdx {
+        let idx = self.files.add(name, source);
+        FileIdx(idx)
     }
 
     pub fn get_file_info(&self, pos: PosIdx) -> (&str, &str) {
         let pos_d = self.get_pos(pos);
-        let file = self.get_file_data(pos_d.file);
-        (&file.name, &file.source)
+        self.get_file_data(pos_d.file)
     }
 
     /// Add a new position to the position table
@@ -97,9 +95,10 @@ impl PositionTable {
         &self.indices[pos.0 as usize]
     }
 
-    /// Return a reference to the file with the given index
-    fn get_file_data(&self, file: FileIdx) -> &File {
-        &self.files[file.0 as usize]
+    /// Return the name and source of the file
+    pub fn get_file_data(&self, file: FileIdx) -> (&str, &str) {
+        let file = &self.files.get(file.0).unwrap();
+        (file.name(), file.source())
     }
 }
 
@@ -157,7 +156,7 @@ impl GPosIdx {
     fn get_lines(&self) -> (Vec<&str>, usize, usize) {
         let table = GlobalPositionTable::as_ref();
         let pos_d = table.get_pos(self.0);
-        let file = &table.get_file_data(pos_d.file).source;
+        let (_, file) = &table.get_file_data(pos_d.file);
 
         let lines = file.split('\n').collect_vec();
         let mut pos: usize = 0;
@@ -190,7 +189,7 @@ impl GPosIdx {
     pub fn format<S: AsRef<str>>(&self, err_msg: S) -> String {
         let table = GlobalPositionTable::as_ref();
         let pos_d = table.get_pos(self.0);
-        let name = &table.get_file_data(pos_d.file).name;
+        let (name, _) = &table.get_file_data(pos_d.file);
 
         let (lines, pos, linum) = self.get_lines();
         let mut buf = name.to_string();

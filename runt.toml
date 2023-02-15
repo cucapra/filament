@@ -7,7 +7,7 @@ paths = [
   "tests/errors/*.fil",
 ]
 cmd = """
-./target/debug/filament {} --check --no-color
+./target/debug/filament {} --check
 """
 
 [[tests]]

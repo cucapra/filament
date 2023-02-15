@@ -9,4 +9,4 @@ pub use bind_map::Binding;
 pub use gsym::GSym;
 pub use position::{FileIdx, GPosIdx, GlobalPositionTable, PosData};
 pub use post_order::PostOrder;
-pub use solver::{FilSolver, SExp, ShareConstraints};
+pub use solver::{FilSolver, SExp, ShareConstraint};

@@ -1,7 +1,8 @@
 //! Context that tracks the binding information in a particular program
 use crate::{
     core::{self, Expr, Id, Time, TimeSub},
-    errors::{Error, FilamentResult, WithPos},
+    diagnostics,
+    errors::{Error, WithPos},
     utils::{self, GPosIdx},
 };
 use itertools::Itertools;
@@ -16,11 +17,21 @@ pub enum SigIdx {
     Comp(usize),
 }
 
+impl SigIdx {
+    /// The Unknown signature
+    pub const UNKNOWN: SigIdx = SigIdx::Ext(usize::MAX);
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 /// Index of an instance bound in a component
 /// Defined methods represent operations on an instance and require a
 /// component binding to be resolved.
 pub struct InstIdx(usize);
+
+impl InstIdx {
+    /// The Unknown instance
+    pub const UNKNOWN: InstIdx = InstIdx(usize::MAX);
+}
 
 impl InstIdx {
     /// Get the position of the instance
@@ -68,6 +79,11 @@ impl InstIdx {
 pub struct InvIdx(usize);
 
 impl InvIdx {
+    /// The Unknown invocation
+    pub const UNKNOWN: InvIdx = InvIdx(usize::MAX);
+}
+
+impl InvIdx {
     /// Get the position of the invocation
     pub fn pos(&self, ctx: &CompBinding) -> GPosIdx {
         ctx.invocations[self.0].pos
@@ -81,7 +97,7 @@ impl InvIdx {
 
         inv.events
             .iter()
-            .map(|e| e.resolve_offset(&param_b))
+            .map(|e| e.resolve_expr(&param_b))
             .collect()
     }
 
@@ -134,15 +150,14 @@ impl InvIdx {
     }
 
     /// Fully resolve a port.
-    /// Returns None if and only if the invocation is not defined
-    ///
     /// Accepts a function to resolve the liveness of the port using time and width bindings.
+    // XXX: Does not need to return an option
     pub fn get_invoke_port<F>(
         &self,
         ctx: &CompBinding,
         port: &Id,
         resolve_range: F,
-    ) -> Option<core::PortDef>
+    ) -> core::PortDef
     where
         F: Fn(
             &core::Range,
@@ -154,27 +169,13 @@ impl InvIdx {
         let inst = &ctx.instances[inv.instance.0];
         let param_b = ctx.prog.param_binding(inst.sig, &inst.params);
         let event_b = ctx.prog.event_binding(inst.sig, &inv.events);
-
-        match inst.sig {
-            SigIdx::Ext(idx) => {
-                let sig = ctx.prog.externals[idx];
-                let port = sig.get_port(port);
-                Some(core::PortDef::new(
-                    port.name.clone(),
-                    resolve_range(&port.liveness, &event_b, &param_b),
-                    port.bitwidth.resolve(&param_b).unwrap(),
-                ))
-            }
-            SigIdx::Comp(idx) => {
-                let sig = &ctx.prog.components[idx];
-                let port = sig.get_port(port);
-                Some(core::PortDef::new(
-                    port.name.clone(),
-                    resolve_range(&port.liveness, &event_b, &param_b),
-                    port.bitwidth.resolve(&param_b).unwrap(),
-                ))
-            }
-        }
+        let sig = ctx.prog.sig(inst.sig);
+        let port = sig.get_port(port);
+        core::PortDef::new(
+            port.name.clone(),
+            resolve_range(&port.liveness, &event_b, &param_b),
+            port.bitwidth.resolve(&param_b).unwrap(),
+        )
     }
 
     /// Get all the fully resolved constraints for the signature of an invocation.
@@ -185,6 +186,7 @@ impl InvIdx {
         &self,
         ctx: &CompBinding,
         resolve_constraint: F,
+        diag: &mut diagnostics::Diagnostics,
     ) -> Vec<core::Constraint>
     where
         F: Fn(
@@ -206,7 +208,7 @@ impl InvIdx {
                 sig.constraints
                     .iter()
                     .map(resolve_ref)
-                    .chain(sig.well_formed().map(resolve))
+                    .chain(sig.well_formed(diag).into_iter().map(resolve))
                     .collect()
             }
             SigIdx::Comp(idx) => {
@@ -214,7 +216,7 @@ impl InvIdx {
                 sig.constraints
                     .iter()
                     .map(resolve_ref)
-                    .chain(sig.well_formed().map(resolve))
+                    .chain(sig.well_formed(diag).into_iter().map(resolve))
                     .collect()
             }
         }
@@ -296,19 +298,25 @@ impl<'p> std::ops::Index<InvIdx> for CompBinding<'p> {
 
 impl<'p> CompBinding<'p> {
     /// Construct a new binding context for a component
-    pub fn new(
-        prog_ctx: &'p ProgBinding<'p>,
-        comp: &core::Component,
-    ) -> FilamentResult<Self> {
-        Self::from_comp_data(prog_ctx, &comp.sig.name, &comp.body)
+    pub fn new(prog_ctx: &'p ProgBinding<'p>, comp: &core::Component) -> Self {
+        Self::from_component(prog_ctx, &comp.sig.name, &comp.body)
     }
 
-    pub fn from_comp_data(
+    pub fn new_checked(
+        prog_ctx: &'p ProgBinding<'p>,
+        comp: &core::Component,
+        diag: &mut diagnostics::Diagnostics,
+    ) -> Option<Self> {
+        Self::from_component_checked(prog_ctx, &comp.sig.name, &comp.body, diag)
+    }
+
+    /// Construct a new instance using information from a [[core::Component]].
+    pub fn from_component(
         prog: &'p ProgBinding<'p>,
         comp: &core::Id,
         cmds: &Vec<core::Command>,
-    ) -> FilamentResult<Self> {
-        let sig = prog.find_sig_idx(comp).unwrap();
+    ) -> Self {
+        let sig = prog.get_sig_idx(comp);
         let mut ctx = Self {
             prog,
             sig,
@@ -321,34 +329,110 @@ impl<'p> CompBinding<'p> {
         for cmd in cmds {
             match cmd {
                 core::Command::Instance(inst) => {
-                    if ctx.add_instance(inst).is_none() {
-                        return Err(Error::undefined(
-                            inst.component.clone(),
-                            "component",
-                        )
-                        .add_note(
-                            "Component is not bound",
-                            inst.component.copy_span(),
-                        ));
-                    }
+                    ctx.add_instance(inst);
                 }
                 core::Command::Invoke(inv) => {
-                    if ctx.add_invoke(inv).is_none() {
-                        return Err(Error::undefined(
-                            inv.instance.clone(),
-                            "instance",
-                        )
-                        .add_note(
-                            "Instance is not bound",
-                            inv.instance.copy_span(),
-                        ));
-                    }
+                    ctx.add_invoke(inv);
                 }
                 _ => (),
             }
         }
 
-        Ok(ctx)
+        ctx
+    }
+
+    /// Similar to [[Self::from_component]], does not assume that bindings are valid.
+    /// Adds error information to a [[Diagnostic]] object if there are any errors.
+    pub fn from_component_checked(
+        prog: &'p ProgBinding<'p>,
+        comp: &core::Id,
+        cmds: &Vec<core::Command>,
+        diag: &mut diagnostics::Diagnostics,
+    ) -> Option<Self> {
+        let sig = prog.get_sig_idx(comp); // Cannot throw error
+        let mut ctx = Self {
+            prog,
+            sig,
+            instances: Vec::new(),
+            invocations: Vec::new(),
+            inst_map: HashMap::new(),
+            inv_map: HashMap::new(),
+        };
+        let mut has_errors = false;
+        for cmd in cmds {
+            match cmd {
+                core::Command::Instance(inst) => {
+                    let comp = &inst.component;
+                    if ctx.prog.find_sig_idx(comp).is_some() {
+                        ctx.add_instance(inst);
+                    } else {
+                        has_errors = true;
+                        // If there is no component with this name, add an error and use a dummy signature
+                        let err = Error::undefined(comp.clone(), "component")
+                            .add_note(diag.add_info(
+                                "unknown component",
+                                comp.copy_span(),
+                            ));
+                        diag.add_error(err);
+                        ctx.add_bound_instance(
+                            inst.name.clone(),
+                            SigIdx::UNKNOWN,
+                            vec![],
+                            inst.copy_span(),
+                        );
+                    }
+                }
+                core::Command::Invoke(inv) => {
+                    if ctx.inst_map.get(&inv.instance).is_some() {
+                        ctx.add_invoke(inv);
+                    } else {
+                        has_errors = true;
+                        // If there is no component with this name, add an error and use a dummy signature
+                        let err =
+                            Error::undefined(inv.instance.clone(), "instance")
+                                .add_note(diag.add_info(
+                                    "unknown instance",
+                                    inv.instance.copy_span(),
+                                ));
+                        diag.add_error(err);
+                        ctx.add_bound_invoke(
+                            inv.name.clone(),
+                            InstIdx::UNKNOWN,
+                            vec![],
+                            inv.copy_span(),
+                        );
+                    }
+                }
+                core::Command::Connect(core::Connect { src, dst, .. }) => {
+                    let mut check_port = |port: &core::Port| {
+                        if let core::PortType::InvPort { invoke, .. } =
+                            &port.typ
+                        {
+                            if ctx.inv_map.get(&invoke).is_none() {
+                                let err = Error::undefined(
+                                    invoke.clone(),
+                                    "invocation",
+                                )
+                                .add_note(diag.add_info(
+                                    "unknown invocation",
+                                    invoke.copy_span(),
+                                ));
+                                diag.add_error(err)
+                            }
+                        }
+                    };
+                    check_port(src);
+                    check_port(dst);
+                }
+                _ => (),
+            }
+        }
+
+        if has_errors {
+            None
+        } else {
+            Some(ctx)
+        }
     }
 
     /// Get the **unresolved** signature associated with this component.
@@ -374,56 +458,85 @@ impl<'p> CompBinding<'p> {
 
     /// Get instance binding for a given instance name
     pub fn get_instance(&self, name: &Id) -> &BoundInstance {
-        let idx = self.get_instance_idx(name).unwrap();
+        let idx = self.get_instance_idx(name);
         &self[idx]
     }
 
     /// Get invocation binding for a given invocation name
     pub fn get_invoke(&self, name: &Id) -> &BoundInvoke {
-        let idx = self.get_invoke_idx(name).unwrap();
+        let idx = self.get_invoke_idx(name);
         &self[idx]
     }
 
     /// Get the index for a given instance name
-    pub fn get_instance_idx(&self, name: &Id) -> Option<InstIdx> {
-        self.inst_map.get(name).cloned()
+    pub fn get_instance_idx(&self, name: &Id) -> InstIdx {
+        self.inst_map[name]
     }
+
     /// Get the index for a given invocation name
-    pub fn get_invoke_idx(&self, name: &Id) -> Option<InvIdx> {
-        self.inv_map.get(name).cloned()
+    pub fn get_invoke_idx(&self, name: &Id) -> InvIdx {
+        self.inv_map[name]
     }
 
     /// Add a new instance to this binding.
     /// Returns None when the component is not bound.
-    pub fn add_instance(&mut self, inst: &core::Instance) -> Option<InstIdx> {
-        let sig = self.prog.find_sig_idx(&inst.component)?;
-        let idx = InstIdx(self.instances.len());
-        self.instances.push(BoundInstance {
+    pub fn add_instance(&mut self, inst: &core::Instance) -> InstIdx {
+        let sig = self.prog.get_sig_idx(&inst.component);
+        self.add_bound_instance(
+            inst.name.clone(),
             sig,
-            params: inst.bindings.clone(),
-            pos: inst.copy_span(),
-        });
-        // Add the name to the map
-        self.inst_map.insert(inst.name.clone(), idx);
-        Some(idx)
+            inst.bindings.clone(),
+            inst.copy_span(),
+        )
+    }
+
+    fn add_bound_instance(
+        &mut self,
+        name: Id,
+        sig: SigIdx,
+        params: Vec<core::Expr>,
+        pos: GPosIdx,
+    ) -> InstIdx {
+        let idx = InstIdx(self.instances.len());
+        self.instances.push(BoundInstance { sig, params, pos });
+        self.inst_map.insert(name, idx);
+        idx
     }
 
     /// Add a new invocation to this binding. Fully resolves the binding
     /// by filling in the default arguments.
     /// Returns `None` when the provided instance is not bound.
-    pub fn add_invoke(&mut self, inv: &core::Invoke) -> Option<InvIdx> {
-        let instance = self.inst_map.get(&inv.instance)?;
-        let binding = self
+    pub fn add_invoke(&mut self, inv: &core::Invoke) -> InvIdx {
+        let instance = self.inst_map[&inv.instance];
+        let events = self
             .prog
-            .event_binding(self.instances[instance.0].sig, &inv.abstract_vars);
+            .event_binding(self.instances[instance.0].sig, &inv.abstract_vars)
+            .into_iter()
+            .map(|b| b.1)
+            .collect();
+        self.add_bound_invoke(
+            inv.name.clone(),
+            instance,
+            events,
+            inv.copy_span(),
+        )
+    }
+
+    fn add_bound_invoke(
+        &mut self,
+        name: Id,
+        instance: InstIdx,
+        events: Vec<Time>,
+        pos: GPosIdx,
+    ) -> InvIdx {
         let idx = InvIdx(self.invocations.len());
         self.invocations.push(BoundInvoke {
-            instance: *instance,
-            events: binding.into_iter().map(|b| b.1).collect(),
-            pos: inv.copy_span(),
+            instance,
+            events,
+            pos,
         });
-        self.inv_map.insert(inv.name.clone(), idx);
-        Some(idx)
+        self.inv_map.insert(name, idx);
+        idx
     }
 
     /// Returns a resolved port definition for the given port.
@@ -444,12 +557,13 @@ impl<'p> CompBinding<'p> {
             core::PortType::ThisPort(p) => {
                 Some(self.prog.comp_sig(self.sig).get_port(p))
             }
-            core::PortType::InvPort { invoke, name } => Some(
-                self.get_invoke_idx(invoke)
-                    .unwrap()
-                    .get_invoke_port(self, name, resolve_liveness)
-                    .unwrap(),
-            ),
+            core::PortType::InvPort { invoke, name } => {
+                Some(self.get_invoke_idx(invoke).get_invoke_port(
+                    self,
+                    name,
+                    resolve_liveness,
+                ))
+            }
             core::PortType::Constant(_) => None,
         }
     }
@@ -475,6 +589,11 @@ impl<'a> ProgBinding<'a> {
                 .position(|s| *name == s.name)
                 .map(SigIdx::Comp)
         }
+    }
+
+    fn get_sig_idx(&self, name: &core::Id) -> SigIdx {
+        self.find_sig_idx(name)
+            .unwrap_or_else(|| panic!("Unknown signature: {}", name))
     }
 
     /// Add a component signature to the program binding

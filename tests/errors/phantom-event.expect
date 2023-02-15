@@ -1,19 +1,20 @@
 ---CODE---
 1
 ---STDERR---
-error: Component provided phantom event binding to non-phantom event argument
+error: component provided phantom event binding to non-phantom event argument
   ┌─ tests/errors/phantom-event.fil:6:27
   │
 3 │ comp main<G: 1>(
-  │           - Event is a phantom event
+  │           - event is a phantom event
   ·
 6 │     r := new Register[32]<G, G+2>(left);
-  │                           ^ Invoke provides phantom event
+  │                           ^ invoke provides phantom event
   │
   ┌─ ./primitives/./state.fil:3:24
   │
 3 │   comp Register[WIDTH]<G: L-(G+1), L: 1>(
-  │                        - Instance's event is not phantom
+  │                        - instance's event is not phantom
   │
-  = Phantom ports are compiled away and cannot be used by subcomponents
+  = phantom ports are compiled away and cannot be used by subcomponents
 
+Compilation failed with 1 errors.

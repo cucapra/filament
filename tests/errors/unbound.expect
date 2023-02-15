@@ -1,0 +1,22 @@
+---CODE---
+1
+---STDERR---
+error: Undefined component name: Add
+  ┌─ tests/errors/unbound.fil:4:14
+  │
+4 │     A := new Add;
+  │              ^^^ unknown component
+
+error: Undefined instance name: B
+  ┌─ tests/errors/unbound.fil:5:10
+  │
+5 │     a := B<G>(20, 30);
+  │          ^ unknown instance
+
+error: Undefined invocation name: c
+  ┌─ tests/errors/unbound.fil:6:11
+  │
+6 │     out = c.out;
+  │           ^ unknown invocation
+
+Compilation failed with 3 errors.
