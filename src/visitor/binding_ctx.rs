@@ -403,6 +403,27 @@ impl<'p> CompBinding<'p> {
                         );
                     }
                 }
+                core::Command::Connect(core::Connect { src, dst, .. }) => {
+                    let mut check_port = |port: &core::Port| {
+                        if let core::PortType::InvPort { invoke, .. } =
+                            &port.typ
+                        {
+                            if ctx.inv_map.get(&invoke).is_none() {
+                                let err = Error::undefined(
+                                    invoke.clone(),
+                                    "invocation",
+                                )
+                                .add_note(diag.add_info(
+                                    "unknown invocation",
+                                    invoke.copy_span(),
+                                ));
+                                diag.add_error(err)
+                            }
+                        }
+                    };
+                    check_port(src);
+                    check_port(dst);
+                }
                 _ => (),
             }
         }
