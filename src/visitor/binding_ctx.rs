@@ -177,6 +177,50 @@ impl InvIdx {
             port.bitwidth.resolve(&param_b).unwrap(),
         )
     }
+
+    /// Get all the fully resolved constraints for the signature of an invocation.
+    /// This includes:
+    /// - The constraints of the component
+    /// - Well-formedness constraints
+    pub fn get_resolved_sig_constraints<F>(
+        &self,
+        ctx: &CompBinding,
+        resolve_constraint: F,
+        diag: &mut diagnostics::Diagnostics,
+    ) -> Vec<core::Constraint>
+    where
+        F: Fn(
+            &core::Constraint,
+            &utils::Binding<Time>,
+            &utils::Binding<Expr>,
+        ) -> core::Constraint,
+    {
+        let inv = &ctx.invocations[self.0];
+        let inst = &ctx[inv.instance];
+        let sig = inst.sig;
+        let param_b = &ctx.prog.param_binding(sig, &inst.params);
+        let event_b = &ctx.prog.event_binding(sig, &inv.events);
+        let resolve_ref = |c| resolve_constraint(c, event_b, param_b);
+        let resolve = |c| resolve_constraint(&c, event_b, param_b);
+        match sig {
+            SigIdx::Ext(idx) => {
+                let sig = ctx.prog.externals[idx];
+                sig.constraints
+                    .iter()
+                    .map(resolve_ref)
+                    .chain(sig.well_formed(diag).into_iter().map(resolve))
+                    .collect()
+            }
+            SigIdx::Comp(idx) => {
+                let sig = ctx.prog.components[idx];
+                sig.constraints
+                    .iter()
+                    .map(resolve_ref)
+                    .chain(sig.well_formed(diag).into_iter().map(resolve))
+                    .collect()
+            }
+        }
+    }
 }
 
 /// An instance bound by a component

@@ -99,13 +99,15 @@ impl visitor::Checker for IntervalCheck {
         self.check_invoke_ports(invoke, ctx)?;
 
         // Check that the invocation's events satisfy well-formedness the component's constraints
-        let sig = ctx.get_invoke_idx(&invoke.name).resolved_signature(ctx);
-
-        let constraints = sig
-            .constraints
-            .iter()
-            .cloned()
-            .chain(sig.well_formed(&mut self.diag).into_iter());
+        // XXX: We cannot replace this call with `resolved_signature` because the `well_formed` call fails.
+        //      This is because the resolution process doesn't correctly change the name of the event bindings.
+        let constraints = ctx
+            .get_invoke_idx(&invoke.name)
+            .get_resolved_sig_constraints(
+                ctx,
+                |c, e, p| c.resolve_event(e).resolve_offset(p),
+                &mut self.diag,
+            );
 
         for con in constraints {
             let con_with_info = con.add_note(self.diag.add_info(
