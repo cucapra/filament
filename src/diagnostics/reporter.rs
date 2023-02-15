@@ -8,11 +8,12 @@ use codespan_reporting::{
     term::{self, termcolor::StandardStream},
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 /// Index for information associated with a [Diagnostic] instance.
 // XXX: Define `add_message` and `add_info` on this type so that user code can use it as a builder pattern.
 pub struct InfoIdx(usize);
 
+#[derive(Eq, PartialEq)]
 /// Information attached to a [Diagnostic] instance.
 // XXX: Change this to track a vector of messages and positions which logically
 // correspond to one error.
@@ -43,9 +44,14 @@ impl Diagnostics {
         message: S,
         pos: GPosIdx,
     ) -> InfoIdx {
-        let idx = self.infos.len();
-        self.infos.push(Information::new(message.to_string(), pos));
-        InfoIdx(idx)
+        let info = Information::new(message.to_string(), pos);
+        if let Some(idx) = self.infos.iter().position(|i| *i == info) {
+            InfoIdx(idx)
+        } else {
+            let idx = self.infos.len();
+            self.infos.push(info);
+            InfoIdx(idx)
+        }
     }
 
     /// Add a message without any position information.
@@ -57,17 +63,20 @@ impl Diagnostics {
     // XXX: Make this add a new information object so that its easy to express
     // the "create error and add info" pattern.
     pub fn add_error(&mut self, error: Error) {
-        self.errors.push(error);
+        if !self.errors.contains(&error) {
+            self.errors.push(error);
+        }
     }
 
     /// Report all errors and return the number of errors.
     /// Returns None if there are no errors.
     pub fn report_all(&mut self) -> Option<u64> {
-        // XXX: Pass no_color opt
-        let writer = StandardStream::stderr(if false {
-            ColorChoice::Never
-        } else {
+        eprintln!("{:#?}", self.errors);
+        let is_tty = atty::is(atty::Stream::Stderr);
+        let writer = StandardStream::stderr(if is_tty {
             ColorChoice::Always
+        } else {
+            ColorChoice::Never
         });
         let num_errors = self.errors.len();
         if num_errors == 0 {
@@ -110,11 +119,5 @@ impl Diagnostics {
         }
 
         Some(num_errors as u64)
-    }
-
-    /// Signals an unrecoverable error.
-    /// Prints the current diagnostics and exits the program.
-    pub fn unrecoverable(&mut self) -> ! {
-        todo!()
     }
 }

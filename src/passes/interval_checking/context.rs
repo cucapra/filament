@@ -1,4 +1,4 @@
-use crate::core::{self, Constraint, OrderConstraint, Time};
+use crate::core::{self, Constraint, OrderConstraint};
 use crate::errors::WithPos;
 use crate::utils::{FilSolver, ShareConstraint};
 use crate::{diagnostics, visitor};
@@ -101,8 +101,8 @@ impl IntervalCheck {
                 // If the events are not syntactically equal, add constraint requiring that the events are the same
                 if e1 != e2 {
                     let con = Constraint::base(OrderConstraint::eq(
-                        Time::unit(e1.clone(), 0),
-                        Time::unit(e2.clone(), 0)
+                        e1.clone().into(),
+                        e2.clone().into(),
                     ))
                     .add_note(self.diag.add_info(format!("Invocation uses event {e1}"), e1.copy_span()))
                     .add_note(self.diag.add_info(format!("Invocation uses event {e2}"), e2.copy_span()))

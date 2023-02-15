@@ -66,6 +66,12 @@ impl Time {
     }
 }
 
+impl From<Id> for Time {
+    fn from(event: Id) -> Self {
+        Time::unit(event, 0)
+    }
+}
+
 impl From<Time> for SExp {
     fn from(t: Time) -> SExp {
         if t.offset.abs.is_empty() && t.offset.concrete == 0 {
@@ -212,11 +218,11 @@ impl std::ops::Sub for Time {
                             abs,
                         },
                     },
-                    r: Time::unit(other.event, 0),
+                    r: other.event.into(),
                 }
             } else {
                 TimeSub::Sym {
-                    l: Time::unit(self.event, 0),
+                    l: self.event.into(),
                     r: Time {
                         event: other.event,
                         offset: TimeSum {

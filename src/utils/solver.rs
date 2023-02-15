@@ -304,6 +304,7 @@ impl<'a> SolveManager<'a> {
             "Binary search says there is a model, but solver says unsat"
         );
         let model = solver.get_model()?;
+        log::trace!("{model:#?}");
         Ok(self.get_violated_constraints(model))
     }
 
@@ -380,6 +381,9 @@ impl FilSolver {
             return;
         }
 
+        eprintln!("Asserts: {}", asserts.len());
+        let asserts = asserts.into_iter().unique().collect_vec();
+        eprintln!("Unique asserts: {}", asserts.len());
         let mut manager = SolveManager::new(self);
         // Define all the constants
         for var in vars {
@@ -393,6 +397,7 @@ impl FilSolver {
 
         // Define assumptions on constraints
         for assume in assumes {
+            log::trace!("Assuming {}", assume);
             let sexp: SExp = assume.into();
             manager.solver.s.assert(format!("{}", sexp)).unwrap();
         }

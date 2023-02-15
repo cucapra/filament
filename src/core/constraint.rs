@@ -1,5 +1,3 @@
-use derivative::Derivative;
-
 use super::{Expr, Id, Range, Time, TimeSub};
 use crate::diagnostics::{self, InfoIdx};
 use crate::errors::Error;
@@ -26,15 +24,11 @@ impl std::fmt::Display for OrderOp {
 }
 
 // An ordering constraint
-#[derive(Clone, Derivative, Eq)]
-#[derivative(PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct OrderConstraint<T> {
     left: T,
     right: T,
     op: OrderOp,
-    // Explanation of why this constraint was generated
-    #[derivative(PartialEq = "ignore")]
-    #[derivative(Hash = "ignore")]
     extra: Vec<diagnostics::InfoIdx>,
 }
 
@@ -289,7 +283,8 @@ impl From<Constraint> for SExp {
 
 impl From<Constraint> for Error {
     fn from(con: Constraint) -> Self {
-        let mut err = Error::malformed(format!("Cannot prove: {}", con));
+        let mut err =
+            Error::malformed(format!("Cannot prove constraint {}", con));
         err.notes = con.notes().cloned().collect();
         err
     }
