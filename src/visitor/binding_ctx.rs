@@ -339,7 +339,7 @@ impl<'p> CompBinding<'p> {
                     }
                 }
                 core::Command::Invoke(inv) => {
-                    if ctx.inv_map.get(&inv.instance).is_some() {
+                    if ctx.inst_map.get(&inv.instance).is_some() {
                         ctx.add_invoke(inv);
                     } else {
                         has_errors = true;
