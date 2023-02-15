@@ -7,8 +7,9 @@ use codespan_reporting::{
     diagnostic::{Diagnostic, Label, LabelStyle},
     term::{self, termcolor::StandardStream},
 };
+use std::collections::BTreeMap;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(PartialOrd, Ord, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 /// Index for information associated with a [Diagnostic] instance.
 // XXX: Define `add_message` and `add_info` on this type so that user code can use it as a builder pattern.
 pub struct InfoIdx(usize);
@@ -71,23 +72,32 @@ impl Diagnostics {
     /// Report all errors and return the number of errors.
     /// Returns None if there are no errors.
     pub fn report_all(&mut self) -> Option<u64> {
-        eprintln!("{:#?}", self.errors);
         let is_tty = atty::is(atty::Stream::Stderr);
         let writer = StandardStream::stderr(if is_tty {
             ColorChoice::Always
         } else {
             ColorChoice::Never
         });
-        let num_errors = self.errors.len();
-        if num_errors == 0 {
+        if self.errors.is_empty() {
             return None;
         }
 
+        let mut total = 0;
+
+        // Deduplicate errors based on the location attached to the error
+        let mut error_map = BTreeMap::new();
+        for error in self.errors.drain(..) {
+            error_map
+                .entry(error.notes)
+                .or_insert_with(Vec::new)
+                .push(error.kind);
+        }
+
         let table = GlobalPositionTable::as_ref();
-        for err in &self.errors {
+        for (all_notes, errors) in error_map {
             let mut labels = vec![];
             let mut notes = vec![];
-            for (idx, info) in err.notes.iter().enumerate() {
+            for (idx, info) in all_notes.iter().enumerate() {
                 let info = &self.infos[info.0];
                 if let Some(p) = info.pos.into_option() {
                     let pos = table.get_pos(p.0);
@@ -106,18 +116,26 @@ impl Diagnostics {
                 }
             }
 
+            let msg = if errors.len() > 1 {
+                notes.extend(errors.iter().map(|e| format!("{}", e)));
+                "Multiple errors encountered".to_string()
+            } else {
+                format!("{}", errors[0])
+            };
+
+            total += 1;
             term::emit(
                 &mut writer.lock(),
                 &term::Config::default(),
                 table.files(),
                 &Diagnostic::error()
-                    .with_message(format!("{}", err.kind))
+                    .with_message(msg)
                     .with_labels(labels)
                     .with_notes(notes),
             )
             .unwrap();
         }
 
-        Some(num_errors as u64)
+        Some(total)
     }
 }

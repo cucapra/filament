@@ -55,7 +55,7 @@ impl std::fmt::Display for ShareConstraint {
         let max = self
             .ends
             .iter()
-            .map(|(t, d)| format!("{} + {}", t, d))
+            .map(|(t, d)| format!("{}+{}", t, d))
             .join(", ");
         let delay = &self.event_bind.delay;
         write!(f, "{delay} >= max({max}) - min({min})")
@@ -87,7 +87,7 @@ impl From<ShareConstraint> for SExp {
 
 impl From<ShareConstraint> for Error {
     fn from(sh: ShareConstraint) -> Self {
-        let msg = format!("Cannot prove: {}", sh);
+        let msg = format!("Cannot prove constraint {}", sh);
         let mut err = Error::malformed(msg);
         err.notes = sh.notes;
         err
@@ -161,9 +161,7 @@ impl FilSolver {
             return;
         }
 
-        eprintln!("Asserts: {}", asserts.len());
         let asserts = asserts.into_iter().unique().collect_vec();
-        eprintln!("Unique asserts: {}", asserts.len());
         self.s.push(1).unwrap();
         // Define all the constants
         for var in vars {

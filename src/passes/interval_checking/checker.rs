@@ -4,7 +4,7 @@ use super::IntervalCheck;
 use crate::core::{self, Expr, OrderConstraint, Time};
 use crate::diagnostics;
 use crate::errors::{Error, WithPos};
-use crate::utils::{self, FilSolver, GPosIdx};
+use crate::utils::{self, FilSolver};
 use crate::visitor::{self, Checker, CompBinding, Traverse};
 use std::iter;
 
@@ -130,19 +130,24 @@ impl visitor::Checker for IntervalCheck {
         self.add_obligations(cons);
 
         // User-level components are not allowed to have ordering constraints. See https://github.com/cucapra/filament/issues/27.
+        let mut has_ulc = false;
         for constraint in &comp.sig.constraints {
             if constraint.is_ordering() {
+                has_ulc = true;
                 let err = Error::malformed(
                     "User-level components cannot have ordering constraints",
                 )
                 .add_note(self.diag.add_info(
                     format!("Component defines the constraint {constraint}"),
-                    GPosIdx::UNKNOWN,
+                    comp.sig.name.copy_span(),
                 ));
                 self.diag.add_error(err);
             } else {
                 self.add_fact(constraint.clone())
             }
+        }
+        if has_ulc {
+            return Traverse::Break(());
         }
 
         Traverse::Continue(())

@@ -3,6 +3,7 @@ use crate::diagnostics::{self, InfoIdx};
 use crate::errors::Error;
 use crate::utils::Binding;
 use crate::utils::SExp;
+use std::collections::BTreeSet;
 use std::fmt::Display;
 
 /// Ordering operator for constraints
@@ -29,7 +30,7 @@ pub struct OrderConstraint<T> {
     left: T,
     right: T,
     op: OrderOp,
-    extra: Vec<diagnostics::InfoIdx>,
+    extra: BTreeSet<diagnostics::InfoIdx>,
 }
 
 impl<T> OrderConstraint<T>
@@ -41,7 +42,7 @@ where
             left,
             right,
             op,
-            extra: vec![],
+            extra: BTreeSet::default(),
         }
     }
 
@@ -50,7 +51,7 @@ where
             left: r,
             right: l,
             op: OrderOp::Gt,
-            extra: vec![],
+            extra: BTreeSet::default(),
         }
     }
 
@@ -59,7 +60,7 @@ where
             left,
             right,
             op: OrderOp::Eq,
-            extra: vec![],
+            extra: BTreeSet::default(),
         }
     }
 
@@ -68,7 +69,7 @@ where
             left,
             right,
             op: OrderOp::Gte,
-            extra: vec![],
+            extra: BTreeSet::default(),
         }
     }
 
@@ -77,7 +78,7 @@ where
             left: r,
             right: l,
             op: OrderOp::Gte,
-            extra: vec![],
+            extra: BTreeSet::default(),
         }
     }
 }
@@ -201,9 +202,9 @@ impl Constraint {
 
     pub fn add_note(mut self, note: InfoIdx) -> Self {
         match &mut self {
-            Constraint::Base { base } => base.extra.push(note),
-            Constraint::Sub { base } => base.extra.push(note),
-        }
+            Constraint::Base { base } => base.extra.insert(note),
+            Constraint::Sub { base } => base.extra.insert(note),
+        };
         self
     }
 

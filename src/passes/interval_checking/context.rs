@@ -125,8 +125,9 @@ impl IntervalCheck {
             // as the one to use for the sharing constraint
             let bounded_event = first_bind[event].0.event();
             let this = ctx.prog.comp_sig(ctx.sig());
-            let mut share =
-                ShareConstraint::from(this.get_event(&bounded_event).clone());
+            let eb = this.get_event(&bounded_event).clone();
+            let eb_pos = eb.copy_span();
+            let mut share = ShareConstraint::from(eb);
 
             // Iterate over all pairs of bindings
             for i in 0..num_bindings {
@@ -159,15 +160,16 @@ impl IntervalCheck {
                         ),
                     )
                     .add_note(self.diag.add_info(
-                        format!("Conflicting invoke, starts at `{start_k}'"),
+                        format!("Delay requires {} cycle between event but reuse may occur after {} cycles", delay.clone(), start_i.clone() - start_k.clone()),
+                        eb_pos,
+                    ))
+                    .add_note(self.diag.add_info(
+                        format!("Invocation starts at `{start_k}'"),
                         inv_k.pos(ctx),
                     ))
                     .add_note(self.diag.add_info(
                         format!("Invocation starts at `{start_i}'"),
                         inv_i.pos(ctx),
-                    ))
-                    .add_note(self.diag.add_message(
-                        format!("Delay requires {} cycle between event but reuse may occur after {} cycles", delay.clone(), start_i.clone() - start_k.clone())
                     ));
                     self.add_obligations(iter::once(con));
                 }
