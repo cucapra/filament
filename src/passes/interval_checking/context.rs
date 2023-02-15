@@ -104,11 +104,11 @@ impl IntervalCheck {
                         e1.clone().into(),
                         e2.clone().into(),
                     ))
-                    .add_note(self.diag.add_info(format!("Invocation uses event {e1}"), e1.copy_span()))
-                    .add_note(self.diag.add_info(format!("Invocation uses event {e2}"), e2.copy_span()))
+                    .add_note(self.diag.add_info(format!("invocation uses event {e1}"), e1.copy_span()))
+                    .add_note(self.diag.add_info(format!("invocation uses event {e2}"), e2.copy_span()))
                     .add_note(self.diag.add_message(
                         format!(
-                            "Invocations of instance use multiple events in invocations: {e1} and {e2}. Sharing using multiple events is not supported."
+                            "invocations of instance use multiple events in invocations: {e1} and {e2}. Sharing using multiple events is not supported."
                     )));
                     self.add_obligations(iter::once(con));
                 }
@@ -137,7 +137,6 @@ impl IntervalCheck {
                 share.add_bind_info(
                     start_i.clone(),
                     (start_i.clone(), delay.clone()),
-                    inv_i.pos(ctx),
                     &mut self.diag,
                 );
 
@@ -160,15 +159,15 @@ impl IntervalCheck {
                         ),
                     )
                     .add_note(self.diag.add_info(
-                        format!("Delay requires {} cycle between event but reuse may occur after {} cycles", delay.clone(), start_i.clone() - start_k.clone()),
+                        format!("delay requires {} cycle between event but reuse may occur after {} cycles", delay.clone(), start_i.clone() - start_k.clone()),
                         eb_pos,
                     ))
                     .add_note(self.diag.add_info(
-                        format!("Invocation starts at `{start_k}'"),
+                        format!("invocation starts at `{start_k}'"),
                         inv_k.pos(ctx),
                     ))
                     .add_note(self.diag.add_info(
-                        format!("Invocation starts at `{start_i}'"),
+                        format!("invocation starts at `{start_i}'"),
                         inv_i.pos(ctx),
                     ));
                     self.add_obligations(iter::once(con));

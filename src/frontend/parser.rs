@@ -175,7 +175,7 @@ impl FilamentParser {
             input.into_children();
             // [port_width(n)] => TimeSub::unit(n),
             [bitwidth(n)] => TimeSub::unit(n.into()),
-            [time(l), time(r)] => TimeSub::sym(l, r),
+            [time(l), time(r)] => l - r,
         ))
     }
 

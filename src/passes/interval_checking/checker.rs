@@ -73,13 +73,13 @@ impl visitor::Checker for IntervalCheck {
                 core::Constraint::base(e)
                     .add_note(self.diag.add_info(
                         format!(
-                            "Source is available for {}",
+                            "source is available for {}",
                             guarantee.liveness
                         ),
                         src_pos,
                     ))
                     .add_note(self.diag.add_info(
-                        format!("Destination's requirement {}", requirement),
+                        format!("destination's requirement {}", requirement),
                         dst.copy_span(),
                     ))
             })
@@ -111,7 +111,7 @@ impl visitor::Checker for IntervalCheck {
 
         for con in constraints {
             let con_with_info = con.add_note(self.diag.add_info(
-                "Component's where clause constraints must be satisfied",
+                "component's where clause constraints must be satisfied",
                 invoke.copy_span(),
             ));
             self.add_obligations(iter::once(con_with_info));
@@ -135,10 +135,10 @@ impl visitor::Checker for IntervalCheck {
             if constraint.is_ordering() {
                 has_ulc = true;
                 let err = Error::malformed(
-                    "User-level components cannot have ordering constraints",
+                    "user-level components cannot have ordering constraints",
                 )
                 .add_note(self.diag.add_info(
-                    format!("Component defines the constraint {constraint}"),
+                    format!("component defines the constraint {constraint}"),
                     comp.sig.name.copy_span(),
                 ));
                 self.diag.add_error(err);
@@ -146,6 +146,7 @@ impl visitor::Checker for IntervalCheck {
                 self.add_fact(constraint.clone())
             }
         }
+        // If the component uses a user-level constraint, we cannot verify it's internal.
         if has_ulc {
             return Traverse::Break(());
         }
@@ -213,19 +214,19 @@ impl IntervalCheck {
                     ev_delay.clone(),
                 ))
                 .add_note(self.diag.add_info(
-                    "Event provided to invoke triggers too often",
+                    "event provided to invoke triggers too often",
                     invoke.copy_span(),
                 ))
                 .add_note(self.diag.add_info(
                     format!(
-                        "Provided event may trigger every {} cycles",
+                        "provided event may trigger every {} cycles",
                         ev_delay,
                     ),
                     ev.copy_span(),
                 ))
                 .add_note(self.diag.add_info(
                     format!(
-                        "Interface requires event to trigger once in {} cycles",
+                        "interface requires event to trigger once in {} cycles",
                         this_ev_delay,
                     ),
                     this_ev.copy_span(),

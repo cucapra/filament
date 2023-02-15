@@ -6,9 +6,25 @@ use std::fmt::Display;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 /// An opaque time sum expression
+/// Comparison between two [TimeSum] does not take into account the order of the
+/// variables.
 pub struct TimeSum {
+    // Concrete part of the time sum
     concrete: u64,
+    // Abstract part of the time sum
     abs: Vec<Id>,
+}
+
+impl PartialOrd for TimeSum {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        let s1 = self.abs.iter().sorted().collect_vec();
+        let s2 = other.abs.iter().sorted().collect_vec();
+        if s1 == s2 {
+            self.concrete.partial_cmp(&other.concrete)
+        } else {
+            None
+        }
+    }
 }
 
 impl TimeSum {
@@ -43,7 +59,7 @@ impl From<Vec<Expr>> for TimeSum {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd)]
 /// Represents expression of the form `G+1+k`
 pub struct Time {
     /// The event for the time expression
@@ -63,6 +79,66 @@ impl Time {
     /// Get the offset associated with this time expression
     pub fn offset(&self) -> &TimeSum {
         &self.offset
+    }
+
+    /// Unit time expression that occurs when the event occurs
+    pub fn unit(event: Id, state: u64) -> Self {
+        Time {
+            event,
+            offset: vec![Expr::Const(state)].into(),
+        }
+    }
+
+    /// Time expression that occurs `n` cycles after this time expression
+    pub fn increment(mut self, n: Expr) -> Self {
+        match n {
+            Expr::Const(n) => self.offset.concrete += n,
+            Expr::Var(v) => self.offset.abs.push(v),
+        }
+        self
+    }
+
+    /// Attempt to add a [TimeSub] expression to this time expression.
+    /// Only possible when the [TimeSub::Unit] expression is a concrete value.
+    pub fn try_increment(self, sub: TimeSub) -> Result<Self, (Self, TimeSub)> {
+        match sub {
+            TimeSub::Unit(n) => Ok(self.increment(n)),
+            TimeSub::Sym { .. } => Err((self, sub)),
+        }
+    }
+
+    /// Resolve the events bound in this time expression
+    pub fn resolve_event(&self, bindings: &utils::Binding<Self>) -> Self {
+        let mut n = bindings.get(&self.event).clone();
+        n.offset.concrete += self.offset.concrete;
+        n.offset.abs.extend(self.offset.abs.clone());
+        n
+    }
+
+    /// Resolve all expressions bound in this time expression
+    pub fn resolve_expr(&self, bind: &utils::Binding<Expr>) -> Self {
+        let mut offset = TimeSum {
+            concrete: self.offset.concrete,
+            abs: vec![],
+        };
+
+        for x in &self.offset.abs {
+            match bind.find(x) {
+                Some(Expr::Const(c)) => offset.concrete += c,
+                Some(Expr::Var(v)) => offset.abs.push(v.clone()),
+                None => offset.abs.push(x.clone()),
+            }
+        }
+
+        Time {
+            event: self.event.clone(),
+            offset,
+        }
+    }
+
+    /// Get the event associated with this time expression
+    pub fn event(&self) -> Id {
+        self.event.clone()
     }
 }
 
@@ -121,71 +197,6 @@ impl Display for Time {
             write!(f, "+{}", self.offset.concrete)?;
         }
         Ok(())
-    }
-}
-
-// impl From<ConcTime> for SExp {
-//     fn from(value: ConcTime) -> Self {
-//         SExp(format!(
-//             "(+ {} {} {})",
-//             value.event,
-//             value.offset.concrete,
-//             value
-//                 .offset
-//                 .abs
-//                 .iter()
-//                 .map(|x| x.to_string())
-//                 .collect::<Vec<_>>()
-//                 .join(" ")
-//         ))
-//     }
-// }
-
-impl Time {
-    pub fn unit(event: Id, state: u64) -> Self {
-        Time {
-            event,
-            offset: vec![Expr::Const(state)].into(),
-        }
-    }
-
-    pub fn increment(mut self, n: Expr) -> Self {
-        match n {
-            Expr::Const(n) => self.offset.concrete += n,
-            Expr::Var(v) => self.offset.abs.push(v),
-        }
-        self
-    }
-
-    pub fn resolve_event(&self, bindings: &utils::Binding<Self>) -> Self {
-        let mut n = bindings.get(&self.event).clone();
-        n.offset.concrete += self.offset.concrete;
-        n.offset.abs.extend(self.offset.abs.clone());
-        n
-    }
-
-    pub fn resolve_offset(&self, bind: &utils::Binding<Expr>) -> Self {
-        let mut offset = TimeSum {
-            concrete: self.offset.concrete,
-            abs: vec![],
-        };
-
-        for x in &self.offset.abs {
-            match bind.find(x) {
-                Some(Expr::Const(c)) => offset.concrete += c,
-                Some(Expr::Var(v)) => offset.abs.push(v.clone()),
-                None => offset.abs.push(x.clone()),
-            }
-        }
-
-        Time {
-            event: self.event.clone(),
-            offset,
-        }
-    }
-
-    pub fn event(&self) -> Id {
-        self.event.clone()
     }
 }
 
@@ -250,10 +261,6 @@ impl TimeSub {
         TimeSub::Unit(n)
     }
 
-    pub fn sym(l: Time, r: Time) -> Self {
-        TimeSub::Sym { l, r }
-    }
-
     pub fn concrete(&self) -> Option<u64> {
         match self {
             TimeSub::Unit(Expr::Const(n)) => Some(*n),
@@ -267,20 +274,18 @@ impl TimeSub {
         match self {
             // Unit cannot contain any events
             TimeSub::Unit(_) => self.clone(),
-            TimeSub::Sym { l, r } => TimeSub::Sym {
-                l: l.resolve_event(bindings),
-                r: r.resolve_event(bindings),
-            },
+            TimeSub::Sym { l, r } => {
+                l.resolve_event(bindings) - r.resolve_event(bindings)
+            }
         }
     }
 
     pub fn resolve_offset(&self, bindings: &utils::Binding<Expr>) -> Self {
         match self {
             TimeSub::Unit(n) => TimeSub::Unit(n.resolve(bindings).unwrap()),
-            TimeSub::Sym { l, r } => TimeSub::Sym {
-                l: l.resolve_offset(bindings),
-                r: r.resolve_offset(bindings),
-            },
+            TimeSub::Sym { l, r } => {
+                l.resolve_expr(bindings) - r.resolve_expr(bindings)
+            }
         }
     }
 

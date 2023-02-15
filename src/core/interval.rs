@@ -27,7 +27,7 @@ impl Range {
                 self.end.clone(),
             ))
             .add_note(diag.add_info(
-                "Interval's end time must be greater than the start time",
+                "interval's end time must be greater than the start time",
                 self.pos,
             )),
         )
@@ -49,8 +49,8 @@ impl Range {
 
     pub fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         Range {
-            start: self.start.resolve_offset(bindings),
-            end: self.end.resolve_offset(bindings),
+            start: self.start.resolve_expr(bindings),
+            end: self.end.resolve_expr(bindings),
             ..self.clone()
         }
     }

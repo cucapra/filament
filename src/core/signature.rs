@@ -28,7 +28,7 @@ impl EventBind {
     fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         Self {
             delay: self.delay.resolve_offset(bindings),
-            default: self.default.as_ref().map(|d| d.resolve_offset(bindings)),
+            default: self.default.as_ref().map(|d| d.resolve_expr(bindings)),
             ..self.clone()
         }
     }
@@ -303,12 +303,12 @@ impl Signature {
                     port_len.clone(),
                 ))
                 .add_note(diag.add_info(
-                    format!("Signal lasts for {} cycle(s)", port_len),
+                    format!("signal lasts for {} cycle(s)", port_len),
                     port_pos,
                 ))
                 .add_note(diag.add_info(
                     format!(
-                        "Interface allows event to trigger every {} cycle(s)",
+                        "interface allows event to trigger every {} cycle(s)",
                         len
                     ),
                     event.copy_span(),

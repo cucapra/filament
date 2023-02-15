@@ -61,11 +61,11 @@ impl visitor::Checker for PhantomCheck {
                 if let Some(e) = self.phantom_events.iter().find(|e| **e == ev)
                 {
                     let err =  Error::malformed(
-                        "Reuses instance uses phantom event for scheduling"
-                    ).add_note(self.diag.add_info("Invocation uses phantom event", ev.copy_span()))
-                     .add_note(self.diag.add_info("Event is a phantom event", e.copy_span()))
-                     .add_note(self.diag.add_info("Previous use", prev_use.copy_span()))
-                     .add_note(self.diag.add_info("Phantom ports are compiled away and cannot be used for resource sharing", GPosIdx::UNKNOWN));
+                        "reuses instance uses phantom event for scheduling"
+                    ).add_note(self.diag.add_info("invocation uses phantom event", ev.copy_span()))
+                     .add_note(self.diag.add_info("event is a phantom event", e.copy_span()))
+                     .add_note(self.diag.add_info("previous use", prev_use.copy_span()))
+                     .add_note(self.diag.add_info("phantom ports are compiled away and cannot be used for resource sharing", GPosIdx::UNKNOWN));
                     self.diag.add_error(err);
                 }
             }
@@ -88,11 +88,11 @@ impl visitor::Checker for PhantomCheck {
                 let ev = &bind.event();
                 if let Some(e) = self.phantom_events.iter().find(|e| *e == ev) {
                     let err = Error::malformed(
-                        "Component provided phantom event binding to non-phantom event argument",
-                    ).add_note(self.diag.add_info("Invoke provides phantom event", ev.copy_span()))
-                    .add_note(self.diag.add_info("Event is a phantom event", e.copy_span()))
-                    .add_note(self.diag.add_info("Instance's event is not phantom", eb.copy_span()))
-                    .add_note(self.diag.add_message("Phantom ports are compiled away and cannot be used by subcomponents"));
+                        "component provided phantom event binding to non-phantom event argument",
+                    ).add_note(self.diag.add_info("invoke provides phantom event", ev.copy_span()))
+                    .add_note(self.diag.add_info("event is a phantom event", e.copy_span()))
+                    .add_note(self.diag.add_info("instance's event is not phantom", eb.copy_span()))
+                    .add_note(self.diag.add_message("phantom ports are compiled away and cannot be used by subcomponents"));
                     self.diag.add_error(err);
                 }
             }

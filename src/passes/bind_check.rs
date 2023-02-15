@@ -37,7 +37,7 @@ impl visitor::Checker for BindCheck {
                 if !events.contains(ev) {
                     let err = Error::undefined(ev.clone(), "event").add_note(
                         self.diag.add_info(
-                            "Event is not defined in the signature",
+                            "event is not defined in the signature",
                             ev.copy_span(),
                         ),
                     );
@@ -50,7 +50,7 @@ impl visitor::Checker for BindCheck {
             if !events.contains(&id.event) {
                 let err = Error::undefined(id.event.clone(), "event").add_note(
                     self.diag.add_info(
-                        "Event is not defined in the signature",
+                        "event is not defined in the signature",
                         id.event.copy_span(),
                     ),
                 );
@@ -63,7 +63,7 @@ impl visitor::Checker for BindCheck {
                 if !events.contains(&ev) {
                     let err = Error::undefined(ev.clone(), "event").add_note(
                         self.diag.add_info(
-                            "Event is not defined in the signature",
+                            "event is not defined in the signature",
                             ev.copy_span(),
                         ),
                     );
@@ -88,7 +88,7 @@ impl visitor::Checker for BindCheck {
 
         if param_len != inst.bindings.len() {
             let msg = format!(
-                "`{}' requires {} bindings but {} were provided",
+                "`{}' requires {} parameters but {} were provided",
                 inst.component,
                 param_len,
                 inst.bindings.len(),
@@ -118,7 +118,7 @@ impl visitor::Checker for BindCheck {
                 if !this_events.iter().any(|e| e.event == ev) {
                     let err = Error::undefined(ev.clone(), "Event").add_note(
                         self.diag
-                            .add_info("Event is not bound", ev.copy_span()),
+                            .add_info("event is not bound", ev.copy_span()),
                     );
                     self.diag.add_error(err);
                 }
@@ -134,7 +134,7 @@ impl visitor::Checker for BindCheck {
                 let err = Error::malformed(format!(
                     "Invoke of {} requires {formals} ports but {actuals} were provided",
                     inv.instance,
-                )).add_note(self.diag.add_info("Instance used here", inv.copy_span()));
+                )).add_note(self.diag.add_info("instance used here", inv.copy_span()));
                 self.diag.add_error(err);
             }
 
@@ -168,14 +168,14 @@ impl visitor::Checker for BindCheck {
             .unwrap_or_else(|| 32.into());
 
         if dst_w != src_w {
-            let err = Error::malformed("Port width mismatch".to_string())
+            let err = Error::malformed("port width mismatch".to_string())
                 .add_note(self.diag.add_info(
-                    format!("Source `{}' has width {src_w}", con.src.name()),
+                    format!("source `{}' has width {src_w}", con.src.name()),
                     con.src.copy_span(),
                 ))
                 .add_note(self.diag.add_info(
                     format!(
-                        "Destination `{}' has width {dst_w}",
+                        "destination `{}' has width {dst_w}",
                         con.dst.name(),
                     ),
                     con.dst.copy_span(),
@@ -206,19 +206,19 @@ impl BindCheck {
         let actuals = inv.abstract_vars.len();
         if min_formals > actuals {
             let err = Error::malformed(format!(
-                "Invoke of {} requires at least {min_formals} events but {actuals} are provided",
+                "invoke of {} requires at least {min_formals} events but {actuals} are provided",
                 inv.instance,
             )).add_note(self.diag.add_info(
-                format!("Invoke requires at least {min_formals} events but {actuals} are provided"),
+                format!("invoke requires at least {min_formals} events but {actuals} are provided"),
                 inv.instance.copy_span()
             ));
             self.diag.add_error(err);
         } else if actuals > max_formals {
             let err = Error::malformed(format!(
-                "Invoke of {} requires at most {max_formals} events but {actuals} are provided",
+                "invoke of {} requires at most {max_formals} events but {actuals} are provided",
                 inv.instance,
             )).add_note(self.diag.add_info(
-                format!("Invoke accepts at most {max_formals} events but {actuals} are provided"),
+                format!("invoke accepts at most {max_formals} events but {actuals} are provided"),
                 inv.instance.copy_span()
             ));
             self.diag.add_error(err);

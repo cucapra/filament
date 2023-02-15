@@ -144,7 +144,7 @@ impl Monomorphize {
                     instance,
                     abstract_vars
                         .into_iter()
-                        .map(|t| t.resolve_offset(param_binding))
+                        .map(|t| t.resolve_expr(param_binding))
                         .collect_vec(),
                     ports,
                 )

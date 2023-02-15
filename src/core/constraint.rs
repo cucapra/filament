@@ -94,8 +94,8 @@ impl OrderConstraint<Time> {
 
     fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         OrderConstraint {
-            left: self.left.resolve_offset(bindings),
-            right: self.right.resolve_offset(bindings),
+            left: self.left.resolve_expr(bindings),
+            right: self.right.resolve_expr(bindings),
             ..self.clone()
         }
     }

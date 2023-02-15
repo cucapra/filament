@@ -97,7 +97,7 @@ impl InvIdx {
 
         inv.events
             .iter()
-            .map(|e| e.resolve_offset(&param_b))
+            .map(|e| e.resolve_expr(&param_b))
             .collect()
     }
 
@@ -370,7 +370,7 @@ impl<'p> CompBinding<'p> {
                         // If there is no component with this name, add an error and use a dummy signature
                         let err = Error::undefined(comp.clone(), "component")
                             .add_note(diag.add_info(
-                                "Unknown component",
+                                "unknown component",
                                 comp.copy_span(),
                             ));
                         diag.add_error(err);
@@ -391,7 +391,7 @@ impl<'p> CompBinding<'p> {
                         let err =
                             Error::undefined(inv.instance.clone(), "instance")
                                 .add_note(diag.add_info(
-                                    "Unknown instance",
+                                    "unknown instance",
                                     inv.instance.copy_span(),
                                 ));
                         diag.add_error(err);
