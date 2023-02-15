@@ -64,7 +64,7 @@ impl visitor::Checker for MaxStates {
         ctx: &visitor::CompBinding,
     ) -> Traverse {
         // Get the fully resolved signature
-        let inv_idx = ctx.get_invoke_idx(&inv.name).unwrap();
+        let inv_idx = ctx.get_invoke_idx(&inv.name);
         let sig = inv_idx.resolved_signature(ctx);
         self.max_state_from_ports(sig.outputs());
         Traverse::Continue(())

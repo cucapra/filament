@@ -91,7 +91,7 @@ fn main() {
     match run(&opts) {
         Ok(_) => (),
         Err(err) => {
-            eprintln!("Escaped error: {err:?}");
+            eprintln!("Compilation failed with {err} errors.");
             std::process::exit(1)
         }
     }

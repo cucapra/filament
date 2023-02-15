@@ -76,7 +76,7 @@ impl visitor::Transform for CompileInvokes {
             ..
         } = inv
         {
-            let idx = ctx.get_invoke_idx(&bind).unwrap();
+            let idx = ctx.get_invoke_idx(&bind);
             let sig = idx.resolved_signature(ctx);
             // Get the signature associated with this instance.
             let binding = sig.event_binding(&abstract_vars);

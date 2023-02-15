@@ -19,6 +19,10 @@ impl visitor::Checker for BindCheck {
 
     fn clear_data(&mut self) {}
 
+    fn require_binding_check(&self) -> bool {
+        true
+    }
+
     fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics {
         &mut self.diag
     }
@@ -189,10 +193,7 @@ impl BindCheck {
         inv: &core::Invoke,
         ctx: &visitor::CompBinding,
     ) -> InvIdx {
-        let inv_idx = ctx
-            .get_invoke_idx(&inv.name)
-            .unwrap_or_else(|| unreachable!("Instance is not bound. BindingCtx construction should have failed."));
-
+        let inv_idx = ctx.get_invoke_idx(&inv.name);
         let sig = inv_idx.unresolved_signature(ctx);
         // Check that the number of arguments is more than the minimum number of required formals
         let sig = ctx.prog.sig(sig);

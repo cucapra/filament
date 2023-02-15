@@ -1,0 +1,16 @@
+---CODE---
+1
+---STDERR---
+[0m[1m[38;5;9merror[0m[1m: Undefined component name: Add[0m
+  [0m[34m┌─[0m tests/errors/unbound.fil:4:14
+  [0m[34m│[0m
+[0m[34m4[0m [0m[34m│[0m     A := new [0m[31mAdd[0m;
+  [0m[34m│[0m              [0m[31m^^^[0m [0m[31mUnknown component[0m
+
+[0m[1m[38;5;9merror[0m[1m: Undefined instance name: B[0m
+  [0m[34m┌─[0m tests/errors/unbound.fil:5:10
+  [0m[34m│[0m
+[0m[34m5[0m [0m[34m│[0m     a := [0m[31mB[0m<G>(20, 30);
+  [0m[34m│[0m          [0m[31m^[0m [0m[31mUnknown instance[0m
+
+Compilation failed with 2 errors.

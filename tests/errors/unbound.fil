@@ -1,0 +1,7 @@
+comp main<G: 1>(
+    @interface[G] go: 1,
+) -> () {
+    A := new Add;
+    a := B<G>(20, 30);
+    out = c.out;
+}

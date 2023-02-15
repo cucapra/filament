@@ -99,10 +99,7 @@ impl visitor::Checker for IntervalCheck {
         self.check_invoke_ports(invoke, ctx)?;
 
         // Check that the invocation's events satisfy well-formedness the component's constraints
-        let sig = ctx
-            .get_invoke_idx(&invoke.name)
-            .unwrap()
-            .resolved_signature(ctx);
+        let sig = ctx.get_invoke_idx(&invoke.name).resolved_signature(ctx);
 
         let constraints = sig
             .constraints
@@ -186,10 +183,7 @@ impl IntervalCheck {
         invoke: &core::Invoke,
         ctx: &CompBinding,
     ) -> Traverse {
-        let inv_sig = ctx
-            .get_invoke_idx(&invoke.name)
-            .unwrap()
-            .resolved_signature(ctx);
+        let inv_sig = ctx.get_invoke_idx(&invoke.name).resolved_signature(ctx);
         let binds = &ctx.get_invoke(&invoke.name).events;
         let this_sig = ctx.prog.comp_sig(ctx.sig());
 
@@ -243,7 +237,7 @@ impl IntervalCheck {
     ) -> Traverse {
         // If this is a high-level invoke, check all port requirements
         if let Some(actuals) = invoke.ports.clone() {
-            let inv_idx = ctx.get_invoke_idx(&invoke.name).unwrap();
+            let inv_idx = ctx.get_invoke_idx(&invoke.name);
             // We use an unresolved signature here because [[Self::connect]] will eventually resolve them using
             // [[CompBinding::get_resolved_ports]
             let sig = inv_idx.unresolved_signature(ctx);

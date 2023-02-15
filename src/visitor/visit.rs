@@ -108,7 +108,7 @@ where
         let prog_bind = ProgBinding::from(&ns);
         for (name, cmds) in comp_data {
             pass.clear_data();
-            let ctx = CompBinding::from_comp_data(&prog_bind, &name, &cmds);
+            let ctx = CompBinding::from_component(&prog_bind, &name, &cmds);
             if !pass.component_filter(&ctx) {
                 new_comp_data.push(cmds);
                 continue;

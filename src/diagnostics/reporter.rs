@@ -70,6 +70,9 @@ impl Diagnostics {
             ColorChoice::Always
         });
         let num_errors = self.errors.len();
+        if num_errors == 0 {
+            return None;
+        }
 
         let table = GlobalPositionTable::as_ref();
         for err in &self.errors {
