@@ -1,7 +1,13 @@
-comp main<G: 1>(
-    @interface[G] go: 1,
+comp Add[#W, #L]<G: 1>(
+    @[G, G+#W] a: #W,
 ) -> () {
-    A := new Add;
+    M := new Mult;
     a := B<G>(20, 30);
     out = c.out;
+}
+
+comp main[#W, #L]<G: 1>(
+    @[G, G+#K] a: #P,
+) -> () where #W+#N+L > L+1 {
+    a := new Add[#W, #J]<L+#N>(a);
 }

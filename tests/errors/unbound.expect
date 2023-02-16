@@ -1,22 +1,85 @@
 ---CODE---
 1
 ---STDERR---
-error: Undefined component name: Add
+error: undefined component name: Mult
   ┌─ tests/errors/unbound.fil:4:14
   │
-4 │     A := new Add;
-  │              ^^^ unknown component
+4 │     M := new Mult;
+  │              ^^^^ unknown component
 
-error: Undefined instance name: B
+error: undefined instance name: B
   ┌─ tests/errors/unbound.fil:5:10
   │
 5 │     a := B<G>(20, 30);
   │          ^ unknown instance
 
-error: Undefined invocation name: c
+error: undefined invocation name: c
   ┌─ tests/errors/unbound.fil:6:11
   │
 6 │     out = c.out;
   │           ^ unknown invocation
 
-Compilation failed with 3 errors.
+error: undefined port name: out
+  ┌─ tests/errors/unbound.fil:6:5
+  │
+6 │     out = c.out;
+  │     ^^^ unknown port
+
+error: undefined parameter name: K
+   ┌─ tests/errors/unbound.fil:10:12
+   │
+10 │     @[G, G+#K] a: #P,
+   │            ^^ parameter is not defined in the signature
+
+error: undefined parameter name: P
+   ┌─ tests/errors/unbound.fil:10:19
+   │
+10 │     @[G, G+#K] a: #P,
+   │                   ^^ parameter is not defined in the signature
+
+error: undefined event name: L
+   ┌─ tests/errors/unbound.fil:11:21
+   │
+11 │ ) -> () where #W+#N+L > L+1 {
+   │                     ^ event is not defined in the signature
+
+error: undefined event name: L
+   ┌─ tests/errors/unbound.fil:11:25
+   │
+11 │ ) -> () where #W+#N+L > L+1 {
+   │                         ^ event is not defined in the signature
+
+error: undefined parameter name: N
+   ┌─ tests/errors/unbound.fil:11:18
+   │
+11 │ ) -> () where #W+#N+L > L+1 {
+   │                  ^^ parameter is not defined in the signature
+
+error: undefined parameter name: J
+   ┌─ tests/errors/unbound.fil:12:22
+   │
+12 │     a := new Add[#W, #J]<L+#N>(a);
+   │                      ^^ parameter is not defined in the signature
+
+error: undefined event name: L
+   ┌─ tests/errors/unbound.fil:12:26
+   │
+12 │     a := new Add[#W, #J]<L+#N>(a);
+   │                          ^ event is not defined in the signature
+
+error: undefined parameter name: N
+   ┌─ tests/errors/unbound.fil:12:28
+   │
+12 │     a := new Add[#W, #J]<L+#N>(a);
+   │                            ^^ parameter is not defined in the signature
+
+error: port width mismatch
+   ┌─ tests/errors/unbound.fil:12:32
+   │
+ 2 │     @[G, G+#W] a: #W,
+   │                - destination `a' has width #W
+   ·
+12 │     a := new Add[#W, #J]<L+#N>(a);
+   │                                ^ source `a' has width #P
+
+Compilation failed with 13 errors.
