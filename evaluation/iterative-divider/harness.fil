@@ -1,16 +1,17 @@
 import "./iter-div.fil";
 
 extern "iter-div.sv" {
-  comp div<G: L-(G), L: 1>(
+  comp IterDiv[#W]<G: #W+1>(
       clk: 1,
       reset: 1,
       @interface[G] go: 1,
-      @[G, G+1] left: 8,
-      @[G, G+9] right: 8,
+      @[G, G+1] left: #W,
+      @[G, G+#W+1] right: #W,
   ) -> (
-      @[G+9, L] out_remainder: 8,
-      @[G+9, L] out_quotient: 8
-  ) where L > G+9;
+      @[G+#W+1, G+#W+2] out_remainder: #W,
+      @[G+#W+1, G+#W+2] out_quotient: #W,
+      @[G+#W+1, G+#W+2] done: 1
+  ) where #W > 0;
 }
 
 comp main<G: 11>(
@@ -23,7 +24,7 @@ comp main<G: 11>(
   @[G+7, G+8] share: 8,
   @[G+7, G+8] pipe: 8,
 ) {
-  d := new div<G, G+10>(left, right);
+  d := new IterDiv[8]<G>(left, right);
   id := new CombNoShareIterDiv<G>(left, right);
   s := new ShareIterDiv<G>(left, right);
   pipe := new PipeIterDiv<G>(left, right);

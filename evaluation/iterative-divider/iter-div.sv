@@ -1,21 +1,19 @@
-module std_fp_div_pipe #(
-  parameter WIDTH = 32,
-  parameter INT_WIDTH = 16,
-  parameter FRAC_WIDTH = 16
+module IterDiv #(
+  parameter W = 32
 ) (
     input  logic             go,
     input  logic             clk,
     input  logic             reset,
-    input  logic [WIDTH-1:0] left,
-    input  logic [WIDTH-1:0] right,
-    output logic [WIDTH-1:0] out_remainder,
-    output logic [WIDTH-1:0] out_quotient,
+    input  logic [W-1:0] left,
+    input  logic [W-1:0] right,
+    output logic [W-1:0] out_remainder,
+    output logic [W-1:0] out_quotient,
     output logic             done
 );
-    localparam ITERATIONS = WIDTH + FRAC_WIDTH;
+    localparam ITERATIONS = W;
 
-    logic [WIDTH-1:0] quotient, quotient_next;
-    logic [WIDTH:0] acc, acc_next;
+    logic [W-1:0] quotient, quotient_next;
+    logic [W:0] acc, acc_next;
     logic [$clog2(ITERATIONS):0] idx;
     logic start, running, finished, dividend_is_zero;
 
@@ -35,7 +33,7 @@ module std_fp_div_pipe #(
     always_comb begin
       if (acc >= {1'b0, right}) begin
         acc_next = acc - right;
-        {acc_next, quotient_next} = {acc_next[WIDTH-1:0], quotient, 1'b1};
+        {acc_next, quotient_next} = {acc_next[W-1:0], quotient, 1'b1};
       end else begin
         {acc_next, quotient_next} = {acc, quotient} << 1;
       end
@@ -71,7 +69,7 @@ module std_fp_div_pipe #(
         out_remainder <= out_remainder;
       end else begin
         out_quotient <= out_quotient;
-        if (right <= out_remainder)
+        if (out_remainder >= right)
           out_remainder <= out_remainder - right;
         else
           out_remainder <= out_remainder;
@@ -83,36 +81,10 @@ module std_fp_div_pipe #(
         acc <= 0;
         quotient <= 0;
       end else if (start) begin
-        {acc, quotient} <= {{WIDTH{1'b0}}, left, 1'b0};
+        {acc, quotient} <= {{W{1'b0}}, left, 1'b0};
       end else begin
         acc <= acc_next;
         quotient <= quotient_next;
       end
     end
-endmodule
-
-module div (
-    input  logic             go,
-    input  logic             clk,
-    input  logic             reset,
-    input  logic [7:0] left,
-    input  logic [7:0] right,
-    output logic [7:0] out_remainder,
-    output logic [7:0] out_quotient
-);
-
-  std_fp_div_pipe #(
-    .WIDTH(8),
-    .INT_WIDTH(8),
-    .FRAC_WIDTH(0)
-  ) u_div_pipe (
-    .go(go),
-    .clk(clk),
-    .reset(reset),
-    .left(left),
-    .right(right),
-    .out_remainder(out_remainder),
-    .out_quotient(out_quotient),
-    .done()
-  );
 endmodule
