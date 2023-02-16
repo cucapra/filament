@@ -1,5 +1,6 @@
 use super::{
-    Constraint, Expr, Id, InterfaceDef, OrderConstraint, PortDef, Time, TimeSub,
+    Constraint, Expr, Id, InterfaceDef, OrderConstraint, PortDef, Time,
+    TimeSub, TimeSum,
 };
 use crate::diagnostics::Diagnostics;
 use crate::utils::Binding;
@@ -253,7 +254,7 @@ impl Signature {
 impl Signature {
     pub fn map<F>(self, f: F) -> Signature
     where
-        F: Fn(Expr) -> Expr,
+        F: Fn(TimeSum) -> TimeSum,
     {
         Signature {
             name: self.name,

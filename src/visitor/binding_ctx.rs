@@ -174,7 +174,7 @@ impl InvIdx {
         core::PortDef::new(
             port.name.clone(),
             resolve_range(&port.liveness, &event_b, &param_b),
-            port.bitwidth.resolve(&param_b).unwrap(),
+            port.bitwidth.resolve(&param_b),
         )
     }
 

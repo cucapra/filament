@@ -165,7 +165,7 @@ impl FilamentParser {
                 }
             },
             [interval_range(range), identifier(name), port_width(bitwidth)] => {
-                Port::Pd(core::PortDef::new(name, range, bitwidth).set_span(sp))
+                Port::Pd(core::PortDef::new(name, range, bitwidth.into()).set_span(sp))
             }
         ))
     }

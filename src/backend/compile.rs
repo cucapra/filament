@@ -338,8 +338,7 @@ fn compile_component(
     let port_transform =
         |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<u64> {
             let mut pd: ir::PortDef<u64> =
-                (pd.name.as_ref(), u64::try_from(&pd.bitwidth).unwrap(), dir)
-                    .into();
+                (pd.name.as_ref(), pd.bitwidth.concrete(), dir).into();
             pd.attributes.insert("data", 1);
             pd
         };
@@ -422,11 +421,13 @@ fn compile_component(
 fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
     let port_transform =
         |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<ir::Width> {
-            let width = match &pd.bitwidth {
-                core::Expr::Const(v) => ir::Width::Const { value: *v },
-                core::Expr::Var(v) => ir::Width::Param {
-                    value: v.as_ref().into(),
+            let w = &pd.bitwidth;
+            let width = match w.abs.len() {
+                0 => ir::Width::Const { value: w.concrete },
+                1 => ir::Width::Param {
+                    value: w.abs[0].as_ref().into(),
                 },
+                _ => panic!("cannot complex width expr: {w}"),
             };
             let mut attributes = ir::Attributes::default();
             attributes.insert("data", 1);

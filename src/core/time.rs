@@ -10,21 +10,9 @@ use std::fmt::Display;
 /// variables.
 pub struct TimeSum {
     // Concrete part of the time sum
-    concrete: u64,
+    pub concrete: u64,
     // Abstract part of the time sum
-    abs: Vec<Id>,
-}
-
-impl PartialOrd for TimeSum {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        let s1 = self.abs.iter().sorted().collect_vec();
-        let s2 = other.abs.iter().sorted().collect_vec();
-        if s1 == s2 {
-            self.concrete.partial_cmp(&other.concrete)
-        } else {
-            None
-        }
-    }
+    pub abs: Vec<Id>,
 }
 
 impl TimeSum {
@@ -53,6 +41,27 @@ impl TimeSum {
     }
 }
 
+impl PartialOrd for TimeSum {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        let s1 = self.abs.iter().sorted().collect_vec();
+        let s2 = other.abs.iter().sorted().collect_vec();
+        if s1 == s2 {
+            self.concrete.partial_cmp(&other.concrete)
+        } else {
+            None
+        }
+    }
+}
+
+impl Display for TimeSum {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for x in &self.abs {
+            write!(f, "{x}+")?;
+        }
+        write!(f, "{}", self.concrete)
+    }
+}
+
 impl From<Vec<u64>> for TimeSum {
     fn from(v: Vec<u64>) -> Self {
         Self {
@@ -75,6 +84,30 @@ impl From<Vec<Expr>> for TimeSum {
             }
         }
         ts
+    }
+}
+
+impl From<Expr> for TimeSum {
+    fn from(e: Expr) -> Self {
+        match e {
+            Expr::Const(c) => Self {
+                concrete: c,
+                abs: vec![],
+            },
+            Expr::Var(v) => Self {
+                concrete: 0,
+                abs: vec![v],
+            },
+        }
+    }
+}
+
+impl From<u64> for TimeSum {
+    fn from(v: u64) -> Self {
+        Self {
+            concrete: v,
+            abs: vec![],
+        }
     }
 }
 
