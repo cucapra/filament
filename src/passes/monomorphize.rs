@@ -3,7 +3,7 @@ use crate::{
     utils::{Binding, PostOrder},
 };
 use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 type Params = Vec<u64>;
 
@@ -13,7 +13,7 @@ struct InstanceParams {
     /// Parameters for a component
     params: HashMap<core::Id, Vec<core::Id>>,
     /// The parameters for the component
-    bindings: HashMap<core::Id, Vec<Params>>,
+    bindings: HashMap<core::Id, BTreeSet<Params>>,
 }
 
 impl InstanceParams {
