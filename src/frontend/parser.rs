@@ -4,7 +4,6 @@
 use crate::core::{self, TimeSub};
 use crate::errors::{self, FilamentResult, WithPos};
 use crate::utils::{FileIdx, GPosIdx, GlobalPositionTable};
-use itertools::Itertools;
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
 use std::path::Path;
@@ -35,6 +34,13 @@ pub enum Port {
     Pd(core::PortDef),
     Int(core::InterfaceDef),
     Un((core::Id, u64)),
+}
+
+pub enum Expr {
+    /// A constant
+    Const(u64),
+    /// A parameter
+    Var(core::Id),
 }
 
 #[derive(Parser)]
@@ -119,7 +125,8 @@ impl FilamentParser {
     fn time(input: Node) -> ParseResult<core::Time> {
         match_nodes!(
             input.clone().into_children();
-            [identifier(ev), port_width(sts)..] => Ok(core::Time::new(ev, sts.collect_vec())),
+            [identifier(ev), port_width(sts)] => Ok(core::Time::new(ev, sts)),
+            [identifier(ev)] => Ok(core::Time::new(ev, core::TimeSum::default())),
             [bitwidth(_)] => {
                 Err(input.error("Time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number"))
             }
@@ -143,31 +150,47 @@ impl FilamentParser {
         ))
     }
 
-    fn port_width(input: Node) -> ParseResult<core::Expr> {
+    fn conc_or_var(input: Node) -> ParseResult<Expr> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(id)] => core::Expr::Var(id),
-            [bitwidth(c)] => core::Expr::Const(c),
+            [identifier(id)] => Expr::Var(id),
+            [bitwidth(c)] => Expr::Const(c),
+        ))
+    }
+
+    fn port_width(input: Node) -> ParseResult<core::TimeSum> {
+        Ok(match_nodes!(
+            input.into_children();
+            [conc_or_var(es)..] => {
+                let mut ts = core::TimeSum::default();
+                for e in es {
+                    match e {
+                        Expr::Const(c) => { ts.concrete += c; },
+                        Expr::Var(v) => { ts.abs.push(v); },
+                    }
+                }
+                ts
+            }
         ))
     }
 
     fn port_def(input: Node) -> ParseResult<Port> {
         let sp = Self::get_span(&input);
-        Ok(match_nodes!(
+        match_nodes!(
             input.clone().into_children();
             [interface(time_var), identifier(name), port_width(_)] => {
-                Port::Int(core::InterfaceDef::new(name, time_var).set_span(sp))
+                Ok(Port::Int(core::InterfaceDef::new(name, time_var).set_span(sp)))
             },
             [identifier(name), port_width(bitwidth)] => {
-                match bitwidth {
-                    core::Expr::Const(c) => Port::Un((name, c)),
-                    core::Expr::Var(_) => todo!(),
+                match bitwidth.concrete() {
+                    Some(n) => Ok(Port::Un((name, n))),
+                    None => Err(input.error("Port width must be concrete")),
                 }
             },
             [interval_range(range), identifier(name), port_width(bitwidth)] => {
-                Port::Pd(core::PortDef::new(name, range, bitwidth.into()).set_span(sp))
+                Ok(Port::Pd(core::PortDef::new(name, range, bitwidth).set_span(sp)))
             }
-        ))
+        )
     }
 
     fn delay(input: Node) -> ParseResult<TimeSub> {
@@ -268,7 +291,7 @@ impl FilamentParser {
     }
 
     // ================ Cells =====================
-    fn conc_params(input: Node) -> ParseResult<Vec<core::Expr>> {
+    fn conc_params(input: Node) -> ParseResult<Vec<core::TimeSum>> {
         Ok(match_nodes!(
             input.into_children();
             [port_width(vars)..] => vars.collect(),

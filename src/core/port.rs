@@ -3,55 +3,6 @@ use crate::utils::Binding;
 use crate::{errors::WithPos, utils::GPosIdx};
 use std::fmt::Display;
 
-/// An expression that can represent either constants or variables
-#[derive(Hash, Debug, Clone, Eq, PartialEq)]
-pub enum Expr {
-    /// A constant
-    Const(u64),
-    /// A parameter
-    Var(Id),
-}
-
-impl TryFrom<&Expr> for u64 {
-    type Error = String;
-    fn try_from(e: &Expr) -> Result<Self, Self::Error> {
-        match e {
-            Expr::Const(c) => Ok(*c),
-            Expr::Var(_) => {
-                Err(format!("Cannot convert {} into concrete value", e))
-            }
-        }
-    }
-}
-
-impl Expr {
-    // pub fn resolve(&self, bindings: &Binding<TimeSum>) -> Option<Expr> {
-    //     match self {
-    //         Expr::Const(_) => Some(self.clone()),
-    //         Expr::Var(v) => bindings.find(v).cloned(),
-    //     }
-    // }
-}
-
-impl From<Id> for Expr {
-    fn from(v: Id) -> Self {
-        Self::Var(v)
-    }
-}
-impl From<u64> for Expr {
-    fn from(v: u64) -> Self {
-        Self::Const(v)
-    }
-}
-impl Display for Expr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Expr::Const(c) => write!(f, "{c}"),
-            Expr::Var(v) => write!(f, "{v}"),
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct PortDef {
     /// Name of the port

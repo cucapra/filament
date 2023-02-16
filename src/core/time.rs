@@ -1,10 +1,10 @@
 use itertools::Itertools;
 
-use super::{Expr, Id, Range};
+use super::{Id, Range};
 use crate::utils::{self, SExp};
 use std::fmt::Display;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Default, Clone, PartialEq, Eq, Hash)]
 /// An opaque time sum expression
 /// Comparison between two [TimeSum] does not take into account the order of the
 /// variables.
@@ -16,6 +16,13 @@ pub struct TimeSum {
 }
 
 impl TimeSum {
+    pub fn new(concrete: u64, abs: Vec<Id>) -> Self {
+        Self {
+            concrete,
+            abs: abs.into_iter().unique().collect(),
+        }
+    }
+
     // Attempt to transform this in to a concrete time.
     // Panics if there are abstract values.
     pub fn concrete(&self) -> Option<u64> {
@@ -39,6 +46,11 @@ impl TimeSum {
         }
 
         offset
+    }
+
+    /// Check if this TimeSum is equal to 0
+    pub fn is_zero(&self) -> bool {
+        self.concrete == 0 && self.abs.is_empty()
     }
 }
 
@@ -74,10 +86,16 @@ impl PartialOrd for TimeSum {
 
 impl Display for TimeSum {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for x in &self.abs {
-            write!(f, "{x}+")?;
-        }
-        write!(f, "{}", self.concrete)
+        self.abs
+            .iter()
+            .map(|t| t.to_string())
+            .chain(
+                std::iter::once(self.concrete)
+                    .filter(|c| *c != 0)
+                    .map(|t| t.to_string()),
+            )
+            .join("+")
+            .fmt(f)
     }
 }
 
@@ -86,37 +104,6 @@ impl From<Vec<u64>> for TimeSum {
         Self {
             concrete: v.iter().sum(),
             abs: vec![],
-        }
-    }
-}
-
-impl From<Vec<Expr>> for TimeSum {
-    fn from(v: Vec<Expr>) -> Self {
-        let mut ts = Self {
-            concrete: 0,
-            abs: vec![],
-        };
-        for p in v {
-            match p {
-                Expr::Const(c) => ts.concrete += c,
-                Expr::Var(v) => ts.abs.push(v),
-            }
-        }
-        ts
-    }
-}
-
-impl From<Expr> for TimeSum {
-    fn from(e: Expr) -> Self {
-        match e {
-            Expr::Const(c) => Self {
-                concrete: c,
-                abs: vec![],
-            },
-            Expr::Var(v) => Self {
-                concrete: 0,
-                abs: vec![v],
-            },
         }
     }
 }
@@ -140,11 +127,8 @@ pub struct Time {
 }
 
 impl Time {
-    pub fn new(event: Id, offset: Vec<Expr>) -> Self {
-        Self {
-            event,
-            offset: TimeSum::from(offset),
-        }
+    pub fn new(event: Id, offset: TimeSum) -> Self {
+        Self { event, offset }
     }
 
     /// Get the offset associated with this time expression
@@ -156,7 +140,7 @@ impl Time {
     pub fn unit(event: Id, state: u64) -> Self {
         Time {
             event,
-            offset: vec![Expr::Const(state)].into(),
+            offset: TimeSum::new(state, vec![]),
         }
     }
 
@@ -244,12 +228,10 @@ impl Range {
 
 impl Display for Time {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.event)?;
-        for x in &self.offset.abs {
-            write!(f, "+{x}")?;
-        }
-        if self.offset.concrete != 0 {
-            write!(f, "+{}", self.offset.concrete)?;
+        if self.offset.is_zero() {
+            write!(f, "{}", self.event)?;
+        } else {
+            write!(f, "{}+{}", self.event, self.offset)?;
         }
         Ok(())
     }
@@ -375,8 +357,8 @@ impl From<TimeSub> for SExp {
     }
 }
 
-impl From<Expr> for TimeSub {
-    fn from(n: Expr) -> Self {
-        TimeSub::Unit(n.into())
+impl From<TimeSum> for TimeSub {
+    fn from(n: TimeSum) -> Self {
+        TimeSub::Unit(n)
     }
 }

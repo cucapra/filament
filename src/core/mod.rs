@@ -15,6 +15,6 @@ pub use control::{
 };
 pub use id::Id;
 pub use interval::Range;
-pub use port::{Expr, InterfaceDef, PortDef};
+pub use port::{InterfaceDef, PortDef};
 pub use signature::{EventBind, Signature};
 pub use time::{Time, TimeSub, TimeSum};
