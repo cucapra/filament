@@ -134,42 +134,14 @@ impl std::ops::Sub for Time {
     fn sub(self, other: Self) -> Self::Output {
         let lc = self.offset().concrete;
         let rc = other.offset().concrete;
-        if self.event == other.event && self.offset().abs == other.offset().abs
-        {
+        if self.event == other.event {
             TimeSub::Unit(u64::abs_diff(lc, rc).into())
         } else {
-            // Only add abstract variable when neither side has it.
-            let mut abs = vec![];
-            for a in &self.offset().abs {
-                if !other.offset().abs.contains(a) {
-                    abs.push(a.clone());
-                }
-            }
-
-            // If the left side has more concrete time, then the right side
-            // is the one that is subtracted.
-            if lc > rc {
-                TimeSub::Sym {
-                    l: Time {
-                        event: self.event,
-                        offset: Expr {
-                            concrete: lc - rc,
-                            abs,
-                        },
-                    },
-                    r: other.event.into(),
-                }
-            } else {
-                TimeSub::Sym {
-                    l: self.event.into(),
-                    r: Time {
-                        event: other.event,
-                        offset: Expr {
-                            concrete: rc - lc,
-                            abs,
-                        },
-                    },
-                }
+            let (l_off, r_mb_off) = self.offset - other.offset;
+            let r_off = r_mb_off.unwrap_or_default();
+            TimeSub::Sym {
+                l: Time::new(self.event, l_off),
+                r: Time::new(other.event, r_off),
             }
         }
     }

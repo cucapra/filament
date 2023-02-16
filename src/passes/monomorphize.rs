@@ -222,6 +222,11 @@ impl Monomorphize {
                     ns.components.push(comp);
                 }
             } else {
+                // If we have a component with parameters but not bindings, it was probably unused.
+                if !comp.sig.params.is_empty() {
+                    log::warn!("skipping monomorphization for unused parameteric component `{}'", comp.sig.name);
+                    continue;
+                }
                 let comp = Self::generate_comp(
                     &comp,
                     &Binding::new(std::iter::empty()),

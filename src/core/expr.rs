@@ -77,6 +77,39 @@ impl std::ops::AddAssign for Expr {
     }
 }
 
+impl std::ops::Sub for Expr {
+    /// Return the difference and optionally the "residual" if the subtraction needs to
+    /// represent some concrete or abstract values not on the left hand hide.
+    /// For example:
+    ///   L+1 - (W+2) => (L, Some(W+1))
+    type Output = (Expr, Option<Expr>);
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        // If the LHS concrete is bigger, then there is no residual
+        let (concrete, residual) = if self.concrete >= rhs.concrete {
+            (self.concrete - rhs.concrete, 0)
+        } else {
+            (0, rhs.concrete - self.concrete)
+        };
+
+        // Each time a variable occurs in the RHS, remove it from the LHS
+        let mut left = self.abs;
+        let mut right = vec![];
+        for x in rhs.abs {
+            if let Some(i) = left.iter().position(|y| *y == x) {
+                left.remove(i);
+            } else {
+                right.push(x);
+            }
+        }
+        if right.is_empty() && residual == 0 {
+            (Expr::new(concrete, left), None)
+        } else {
+            (Expr::new(concrete, left), Some(Expr::new(residual, right)))
+        }
+    }
+}
+
 impl PartialOrd for Expr {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         let s1 = self.abs.iter().sorted().collect_vec();

@@ -209,7 +209,8 @@ impl Signature {
                 .take_while(|ev| ev.default.is_none())
                 .count()
                 <= args.len(),
-            "Insuffient events for signature, required at least {} got {}",
+            "Insuffient events for component `{}', required at least {} got {}",
+            self.name,
             self.events
                 .iter()
                 .take_while(|ev| ev.default.is_none())
@@ -244,7 +245,8 @@ impl Signature {
     pub fn param_binding(&self, args: &[Expr]) -> Binding<Expr> {
         debug_assert!(
             self.params.len() == args.len(),
-            "Insuffient params for signature, required {} got {}",
+            "Insuffient params for component `{}', required {} got {}",
+            self.name,
             self.params.len(),
             args.len(),
         );

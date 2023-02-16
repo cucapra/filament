@@ -46,11 +46,11 @@ comp Next<G: 1>(
 }
 
 comp Init[#W]<G: 1>(
-  @[G, G+1] left: W,
+  @[G, G+1] left: #W,
 ) -> (
   @[G, G+1] acc: #W+1,
   @[G, G+1] quotient: #W,
-) {
+) where #W > 0 {
   zero_one := new Const[1, 0]<G>();
   c := new Concat[#W, 1, #W+1]<G>(left, zero_one.out);
   c_ext := new ZeroExtend[#W+1, #W+#W+1]<G>(c.out);

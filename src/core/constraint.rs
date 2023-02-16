@@ -235,10 +235,12 @@ impl Constraint {
     }
 
     /// Check if this constraint is an ordering constraint
-    pub fn is_ordering(&self) -> bool {
+    pub fn is_time_ordering(&self) -> bool {
         match self {
             Constraint::Base { base } => base.op != OrderOp::Eq,
-            Constraint::Sub { base } => base.op != OrderOp::Eq,
+            Constraint::Sub { base } => {
+                base.op != OrderOp::Eq && !self.events().is_empty()
+            }
         }
     }
 }

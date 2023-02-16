@@ -36,10 +36,8 @@ pub enum Port {
     Un((core::Id, u64)),
 }
 
-pub enum Expr {
-    /// A constant
+pub enum ConstOrVar {
     Const(u64),
-    /// A parameter
     Var(core::Id),
 }
 
@@ -163,11 +161,11 @@ impl FilamentParser {
         ))
     }
 
-    fn conc_or_var(input: Node) -> ParseResult<Expr> {
+    fn conc_or_var(input: Node) -> ParseResult<ConstOrVar> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(id)] => Expr::Var(id),
-            [bitwidth(c)] => Expr::Const(c),
+            [param_var(id)] => ConstOrVar::Var(id),
+            [bitwidth(c)] => ConstOrVar::Const(c),
         ))
     }
 
@@ -178,8 +176,8 @@ impl FilamentParser {
                 let mut ts = core::Expr::default();
                 for e in es {
                     match e {
-                        Expr::Const(c) => { ts.concrete += c; },
-                        Expr::Var(v) => { ts.abs.push(v); },
+                        ConstOrVar::Const(c) => { ts.concrete += c; },
+                        ConstOrVar::Var(v) => { ts.abs.push(v); },
                     }
                 }
                 ts
