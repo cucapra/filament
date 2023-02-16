@@ -18,7 +18,7 @@ impl Expr {
     pub fn new(concrete: u64, abs: Vec<Id>) -> Self {
         Self {
             concrete,
-            abs: abs.into_iter().unique().collect(),
+            abs: abs.into_iter().collect(),
         }
     }
 

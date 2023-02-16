@@ -94,14 +94,14 @@ comp Const[#WIDTH, #VALUE]<G: L-(G), ?L: 1=G+1>() -> (
     @[G, L] in: #IN_WIDTH,
   ) -> (
     @[G, L] out: #OUT_WIDTH,
-  ) where L > G;
+  ) where L > G, #OUT_WIDTH > #IN_WIDTH;
 
   comp Concat[#LEFT, #RIGHT, #OUT]<G: L-(G), ?L: 1=G+1>(
     @[G, L] left: #LEFT,
     @[G, L] right: #RIGHT,
   ) -> (
     @[G, L] out: #OUT,
-  ) where L > G;
+  ) where L > G, #OUT = #LEFT + #RIGHT;
 
   comp Select[#WIDTH, #POS]<G: L-(G), ?L: 1=G+1>(
     @[G, L] in: #WIDTH,

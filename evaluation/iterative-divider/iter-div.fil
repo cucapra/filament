@@ -45,17 +45,17 @@ comp Next<G: 1>(
   acc_next = acc_slice.out;
 }
 
-comp Init<G: 1>(
-  @[G, G+1] left: 8,
+comp Init[#W]<G: 1>(
+  @[G, G+1] left: W,
 ) -> (
-  @[G, G+1] acc: 9,
-  @[G, G+1] quotient: 8,
+  @[G, G+1] acc: #W+1,
+  @[G, G+1] quotient: #W,
 ) {
   zero_one := new Const[1, 0]<G>();
-  c := new Concat[8, 1, 9]<G>(left, zero_one.out);
-  c_ext := new ZeroExtend[9, 17]<G>(c.out);
-  acc_slice := new Slice[17, 16, 8, 9]<G>(c_ext.out);
-  q_slice := new Slice[17, 8, 0, 8]<G>(c_ext.out);
+  c := new Concat[#W, 1, #W+1]<G>(left, zero_one.out);
+  c_ext := new ZeroExtend[#W+1, #W+#W+1]<G>(c.out);
+  acc_slice := new Slice[#W+#W+1, #W+#W, #W, #W+1]<G>(c_ext.out);
+  q_slice := new Slice[#W+#W+1, #W, 0, #W]<G>(c_ext.out);
 
   acc = acc_slice.out;
   quotient = q_slice.out;
@@ -68,7 +68,7 @@ comp CombNoShareIterDiv<G: 1>(
 ) -> (
   @[G, G+1] quotient: 8
 ) {
-  i := new Init<G>(left);
+  i := new Init[8]<G>(left);
   s0 := new Next<G>(i.acc, right, i.quotient);
   // Iterate 7 more times
   s1 := new Next<G>(s0.acc_next, right, s0.quotient_next);
@@ -88,7 +88,7 @@ comp ShareIterDiv<G: 7>(
 ) -> (
   @[G+7, G+8] quotient: 8
 ) {
-  i := new Init<G>(left);
+  i := new Init[8]<G>(left);
   s0 := new Next<G>(i.acc, right, i.quotient);
 
   N := new Next;
@@ -142,7 +142,7 @@ comp PipeIterDiv<G: 1>(
 ) -> (
   @[G+7, G+8] quotient: 8
 ) {
-  i := new Init<G>(left);
+  i := new Init[8]<G>(left);
   s0 := new Next<G>(i.acc, right, i.quotient);
 
   acc0 := new Register[9]<G, G+2>(s0.acc_next);
