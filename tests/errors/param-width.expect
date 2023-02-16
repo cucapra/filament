@@ -5,22 +5,22 @@ error: port width mismatch
    ┌─ tests/errors/param-width.fil:5:16
    │
  5 │     a0 := A<G>(a, a);
-   │                ^ source `a' has width W
+   │                ^ source `a' has width #W
    │
    ┌─ ./primitives/core.fil:11:13
    │
-11 │     @[G, L] left: WIDTH,
+11 │     @[G, L] left: #WIDTH,
    │             ---- destination `left' has width 32
 
 error: port width mismatch
    ┌─ tests/errors/param-width.fil:5:19
    │
  5 │     a0 := A<G>(a, a);
-   │                   ^ source `a' has width W
+   │                   ^ source `a' has width #W
    │
    ┌─ ./primitives/core.fil:12:13
    │
-12 │     @[G, L] right: WIDTH,
+12 │     @[G, L] right: #WIDTH,
    │             ----- destination `right' has width 32
 
 Compilation failed with 2 errors.

@@ -18,7 +18,7 @@ impl Expr {
     pub fn new(concrete: u64, abs: Vec<Id>) -> Self {
         Self {
             concrete,
-            abs: abs.into_iter().unique().collect(),
+            abs: abs.into_iter().collect(),
         }
     }
 
@@ -32,6 +32,7 @@ impl Expr {
         }
     }
 
+    /// Resolve this expression using the given binding for abstract variables.
     pub fn resolve(&self, bind: &utils::Binding<Expr>) -> Self {
         let mut offset = Expr {
             concrete: self.concrete,
@@ -50,6 +51,11 @@ impl Expr {
     /// Check if this TimeSum is equal to 0
     pub fn is_zero(&self) -> bool {
         self.concrete == 0 && self.abs.is_empty()
+    }
+
+    /// Get all the abstract variables in this expression
+    pub fn exprs(&self) -> &Vec<Id> {
+        &self.abs
     }
 }
 
@@ -71,6 +77,39 @@ impl std::ops::AddAssign for Expr {
     }
 }
 
+impl std::ops::Sub for Expr {
+    /// Return the difference and optionally the "residual" if the subtraction needs to
+    /// represent some concrete or abstract values not on the left hand hide.
+    /// For example:
+    ///   L+1 - (W+2) => (L, Some(W+1))
+    type Output = (Expr, Option<Expr>);
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        // If the LHS concrete is bigger, then there is no residual
+        let (concrete, residual) = if self.concrete >= rhs.concrete {
+            (self.concrete - rhs.concrete, 0)
+        } else {
+            (0, rhs.concrete - self.concrete)
+        };
+
+        // Each time a variable occurs in the RHS, remove it from the LHS
+        let mut left = self.abs;
+        let mut right = vec![];
+        for x in rhs.abs {
+            if let Some(i) = left.iter().position(|y| *y == x) {
+                left.remove(i);
+            } else {
+                right.push(x);
+            }
+        }
+        if right.is_empty() && residual == 0 {
+            (Expr::new(concrete, left), None)
+        } else {
+            (Expr::new(concrete, left), Some(Expr::new(residual, right)))
+        }
+    }
+}
+
 impl PartialOrd for Expr {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         let s1 = self.abs.iter().sorted().collect_vec();
@@ -85,16 +124,30 @@ impl PartialOrd for Expr {
 
 impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.abs
-            .iter()
-            .map(|t| t.to_string())
-            .chain(
-                std::iter::once(self.concrete)
-                    .filter(|c| *c != 0)
-                    .map(|t| t.to_string()),
-            )
-            .join("+")
-            .fmt(f)
+        if self.abs.is_empty() {
+            write!(f, "{}", self.concrete)
+        } else {
+            self.abs
+                .iter()
+                .map(|t| format!("#{t}"))
+                .chain(
+                    std::iter::once(self.concrete)
+                        .filter(|c| *c != 0)
+                        .map(|t| t.to_string()),
+                )
+                .join("+")
+                .fmt(f)
+        }
+    }
+}
+
+impl From<Expr> for utils::SExp {
+    fn from(value: Expr) -> Self {
+        utils::SExp(format!(
+            "(+ {} {})",
+            value.abs.iter().map(|t| t.as_ref()).join(" "),
+            value.concrete
+        ))
     }
 }
 

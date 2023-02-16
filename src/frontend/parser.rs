@@ -36,10 +36,8 @@ pub enum Port {
     Un((core::Id, u64)),
 }
 
-pub enum Expr {
-    /// A constant
+pub enum ConstOrVar {
     Const(u64),
-    /// A parameter
     Var(core::Id),
 }
 
@@ -96,11 +94,23 @@ impl FilamentParser {
         Ok(())
     }
 
+    fn pound(_i: Node) -> ParseResult<()> {
+        Ok(())
+    }
+
     // ================ Literals =====================
     fn identifier(input: Node) -> ParseResult<core::Id> {
         let sp = Self::get_span(&input);
         let id = core::Id::from(input.as_str());
         Ok(id.set_span(sp))
+    }
+
+    fn param_var(input: Node) -> ParseResult<core::Id> {
+        let sp = Self::get_span(&input);
+        Ok(match_nodes!(
+            input.into_children();
+            [pound(_), identifier(id)] => id.set_span(sp),
+        ))
     }
 
     fn char(input: Node) -> ParseResult<&str> {
@@ -125,10 +135,11 @@ impl FilamentParser {
     fn time(input: Node) -> ParseResult<core::Time> {
         match_nodes!(
             input.clone().into_children();
-            [identifier(ev), port_width(sts)] => Ok(core::Time::new(ev, sts)),
+            [identifier(ev), expr(sts)] => Ok(core::Time::new(ev, sts)),
+            [expr(sts), identifier(ev)] => Ok(core::Time::new(ev, sts)),
             [identifier(ev)] => Ok(core::Time::new(ev, core::Expr::default())),
-            [bitwidth(_)] => {
-                Err(input.error("Time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number"))
+            [expr(_)] => {
+                Err(input.error("time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number or sum of parameters"))
             }
         )
     }
@@ -150,23 +161,23 @@ impl FilamentParser {
         ))
     }
 
-    fn conc_or_var(input: Node) -> ParseResult<Expr> {
+    fn conc_or_var(input: Node) -> ParseResult<ConstOrVar> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(id)] => Expr::Var(id),
-            [bitwidth(c)] => Expr::Const(c),
+            [param_var(id)] => ConstOrVar::Var(id),
+            [bitwidth(c)] => ConstOrVar::Const(c),
         ))
     }
 
-    fn port_width(input: Node) -> ParseResult<core::Expr> {
+    fn expr(input: Node) -> ParseResult<core::Expr> {
         Ok(match_nodes!(
             input.into_children();
             [conc_or_var(es)..] => {
                 let mut ts = core::Expr::default();
                 for e in es {
                     match e {
-                        Expr::Const(c) => { ts.concrete += c; },
-                        Expr::Var(v) => { ts.abs.push(v); },
+                        ConstOrVar::Const(c) => { ts.concrete += c; },
+                        ConstOrVar::Var(v) => { ts.abs.push(v); },
                     }
                 }
                 ts
@@ -178,16 +189,16 @@ impl FilamentParser {
         let sp = Self::get_span(&input);
         match_nodes!(
             input.clone().into_children();
-            [interface(time_var), identifier(name), port_width(_)] => {
+            [interface(time_var), identifier(name), expr(_)] => {
                 Ok(Port::Int(core::InterfaceDef::new(name, time_var).set_span(sp)))
             },
-            [identifier(name), port_width(bitwidth)] => {
+            [identifier(name), expr(bitwidth)] => {
                 match bitwidth.concrete() {
                     Some(n) => Ok(Port::Un((name, n))),
                     None => Err(input.error("Port width must be concrete")),
                 }
             },
-            [interval_range(range), identifier(name), port_width(bitwidth)] => {
+            [interval_range(range), identifier(name), expr(bitwidth)] => {
                 Ok(Port::Pd(core::PortDef::new(name, range, bitwidth).set_span(sp)))
             }
         )
@@ -196,8 +207,7 @@ impl FilamentParser {
     fn delay(input: Node) -> ParseResult<TimeSub> {
         Ok(match_nodes!(
             input.into_children();
-            // [port_width(n)] => TimeSub::unit(n),
-            [bitwidth(n)] => TimeSub::unit(n.into()),
+            [expr(n)] => n.into(),
             [time(l), time(r)] => l - r,
         ))
     }
@@ -294,7 +304,7 @@ impl FilamentParser {
     fn conc_params(input: Node) -> ParseResult<Vec<core::Expr>> {
         Ok(match_nodes!(
             input.into_children();
-            [port_width(vars)..] => vars.collect(),
+            [expr(vars)..] => vars.collect(),
         ))
     }
     fn instance(input: Node) -> ParseResult<Vec<core::Command>> {
@@ -417,9 +427,9 @@ impl FilamentParser {
                 Ok(core::Constraint::base(con))
             },
             [
-                port_width(l),
+                expr(l),
                 order_op((op, rev)),
-                port_width(r)
+                expr(r)
             ] => {
                 let con = if !rev {
                     core::OrderConstraint::new(l.into(), r.into(), op)
@@ -444,7 +454,7 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.into_children();
             [] => vec![],
-            [identifier(params)..] => params.collect(),
+            [param_var(params)..] => params.collect(),
         ))
     }
     fn signature(input: Node) -> ParseResult<core::Signature> {

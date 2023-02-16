@@ -1,16 +1,16 @@
 import "primitives/core.fil";
 import "primitives/state.fil";
 
-comp Mac[W, N]<G: 1>(
-    @[G, G+1] left: W,
-    @[G, G+1] right: W,
-    @[G+N, G+N+1] acc: W,
+comp Mac[#W, #N]<G: 1>(
+    @[G, G+1] left: #W,
+    @[G, G+1] right: #W,
+    @[G+#N, G+#N+1] acc: #W,
 ) -> (
-    @[G+N, G+N+1] out: W,
-) {
-    m := new MultComb[W]<G>(left, right);
-    s := new Shift[W, N]<G>(m.out);
-    a := new Add[W]<G+N>(s.out, acc);
+    @[G+#N, G+#N+1] out: #W,
+) where #W > 0 {
+    m := new MultComb[#W]<G>(left, right);
+    s := new Shift[#W, #N]<G>(m.out);
+    a := new Add[#W]<G+#N>(s.out, acc);
     out = a.out;
 }
 

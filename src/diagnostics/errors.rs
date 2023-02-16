@@ -121,10 +121,10 @@ impl std::fmt::Display for ErrorKind {
         use ErrorKind::*;
         match self {
             AlreadyBound(name, bound_by) => {
-                write!(f, "Name `{}' is already bound by {}", name, bound_by)
+                write!(f, "name `{}' is already bound by {}", name, bound_by)
             }
             Undefined(name, typ) => {
-                write!(f, "Undefined {} name: {}", typ, name)
+                write!(f, "undefined {} name: {}", typ, name)
             }
             ParseError(err) => write!(f, "Filament Parser: {}", err),
             InvalidFile(msg) | Misc(msg) | WriteError(msg) => {

@@ -10,6 +10,45 @@ pub struct BindCheck {
     diag: diagnostics::Diagnostics,
 }
 
+impl BindCheck {
+    /// Check that a time expression is well-formed
+    fn time(
+        &mut self,
+        time: &core::Time,
+        events: &[core::Id],
+        params: &[core::Id],
+    ) {
+        // Check that events are bound
+        let ev = &time.event;
+        if !events.contains(ev) {
+            let err = Error::undefined(ev.clone(), "event").add_note(
+                self.diag.add_info(
+                    "event is not defined in the signature",
+                    ev.copy_span(),
+                ),
+            );
+            self.diag.add_error(err);
+        }
+
+        // Check that the abstract variables are bound
+        self.expr(time.offset(), params);
+    }
+
+    fn expr(&mut self, expr: &core::Expr, params: &[core::Id]) {
+        for abs in expr.exprs() {
+            if !params.contains(abs) {
+                let err = Error::undefined(abs.clone(), "parameter").add_note(
+                    self.diag.add_info(
+                        "parameter is not defined in the signature",
+                        abs.copy_span(),
+                    ),
+                );
+                self.diag.add_error(err);
+            }
+        }
+    }
+}
+
 impl visitor::Checker for BindCheck {
     fn new(_: &core::Namespace) -> Self {
         Self {
@@ -30,20 +69,13 @@ impl visitor::Checker for BindCheck {
     /// Check the binding of a component
     fn signature(&mut self, sig: &core::Signature) -> Traverse {
         let events = sig.events().collect_vec();
-        // Check all the definitions only use bound events
+        let params = &sig.params;
+        // Check all the definitions only use bound events and parameters
         for pd in sig.ports() {
             for time in pd.liveness.time_exprs() {
-                let ev = &time.event;
-                if !events.contains(ev) {
-                    let err = Error::undefined(ev.clone(), "event").add_note(
-                        self.diag.add_info(
-                            "event is not defined in the signature",
-                            ev.copy_span(),
-                        ),
-                    );
-                    self.diag.add_error(err);
-                }
+                self.time(time, &events, params);
             }
+            self.expr(&pd.bitwidth, params);
         }
         // Check that interface ports use only bound events
         for id in &sig.interface_signals {
@@ -57,18 +89,28 @@ impl visitor::Checker for BindCheck {
                 self.diag.add_error(err);
             }
         }
-        // Check constraints use bound events
+
+        // Check that the event delays use bound parameters
+        for eb in &sig.events {
+            let delay = &eb.delay;
+            // XXX: This check does duplicated work because if a TimeSub has
+            // time in it, the first loop will get all the expressions as well.
+            for time in delay.events() {
+                self.time(time, &events, params)
+            }
+            for expr in delay.exprs() {
+                self.expr(expr, params);
+            }
+        }
+
+        // Check constraints use bound events and parameters
         for constraint in &sig.constraints {
-            for ev in constraint.events() {
-                if !events.contains(&ev) {
-                    let err = Error::undefined(ev.clone(), "event").add_note(
-                        self.diag.add_info(
-                            "event is not defined in the signature",
-                            ev.copy_span(),
-                        ),
-                    );
-                    self.diag.add_error(err);
-                }
+            // XXX: Same problem as the loop above
+            for time in constraint.events() {
+                self.time(time, &events, params)
+            }
+            for expr in constraint.exprs() {
+                self.expr(expr, params);
             }
         }
         Traverse::Continue(())
@@ -85,6 +127,10 @@ impl visitor::Checker for BindCheck {
             |e| e.params.len(),
             |c| c.params.len(),
         );
+
+        for param in &inst.bindings {
+            self.expr(param, &ctx.this().params);
+        }
 
         if param_len != inst.bindings.len() {
             let msg = format!(
@@ -110,23 +156,15 @@ impl visitor::Checker for BindCheck {
         let sig = inv_idx.unresolved_signature(ctx);
 
         let this_sig = ctx.this();
-        let this_events = &this_sig.events;
+        let this_events = this_sig.events().collect_vec();
+        let this_params = &this_sig.params;
         if let Some(ports) = &inv.ports {
             // Check that scheduling events are bound
             for time in &inv.abstract_vars {
-                let ev = time.event();
-                if !this_events.iter().any(|e| e.event == ev) {
-                    let err = Error::undefined(ev.clone(), "Event").add_note(
-                        self.diag
-                            .add_info("event is not bound", ev.copy_span()),
-                    );
-                    self.diag.add_error(err);
-                }
+                self.time(time, &this_events, this_params);
             }
 
             // Check that the number of ports matches the number of ports
-            // XXX(rachit): We can directly count the number of inputs by defining a method on
-            // signatures
             let inputs = ctx.prog.input_names(sig);
             let formals = inputs.len();
             let actuals = ports.len();

@@ -10,6 +10,7 @@ error: Cannot prove constraint L = G
    │           - invocation uses event G
    │
    = invocations of instance use multiple events in invocations: L and G. Sharing using multiple events is not supported.
+   = assignment violates constraint: G=1, L=0
 
 error: Cannot prove constraint |L - G| >= 1
    ┌─ tests/errors/dynamic-share.fil:3:25
@@ -21,6 +22,8 @@ error: Cannot prove constraint |L - G| >= 1
    │   ----------------- invocation starts at `L'
 13 │   m0 := M<G>(a, b);
    │   ----------------- invocation starts at `G'
+   │
+   = assignment violates constraint: G=0, L=0
 
 error: Cannot prove constraint |L - G| >= 1
    ┌─ tests/errors/dynamic-share.fil:3:25
@@ -32,6 +35,8 @@ error: Cannot prove constraint |L - G| >= 1
    │   ----------------- invocation starts at `L+1'
 13 │   m0 := M<G>(a, b);
    │   ----------------- invocation starts at `G+1'
+   │
+   = assignment violates constraint: G=0, L=0
 
 error: Cannot prove constraint |G - L| >= 1
    ┌─ tests/errors/dynamic-share.fil:13:3
@@ -43,6 +48,8 @@ error: Cannot prove constraint |G - L| >= 1
    │   ----------------- invocation starts at `L'
 13 │   m0 := M<G>(a, b);
    │   ^^^^^^^^^^^^^^^^^ invocation starts at `G'
+   │
+   = assignment violates constraint: G=0, L=0
 
 error: Cannot prove constraint |G - L| >= 1
    ┌─ tests/errors/dynamic-share.fil:3:25
@@ -54,6 +61,8 @@ error: Cannot prove constraint |G - L| >= 1
    │   ----------------- invocation starts at `L+1'
 13 │   m0 := M<G>(a, b);
    │   ----------------- invocation starts at `G+1'
+   │
+   = assignment violates constraint: G=0, L=0
 
 error: Cannot prove constraint 3 >= max(L+1) - min(G)
    ┌─ tests/errors/dynamic-share.fil:3:25
@@ -65,6 +74,8 @@ error: Cannot prove constraint 3 >= max(L+1) - min(G)
    │           - invocation ends at `L+1'
 13 │   m0 := M<G>(a, b);
    │           - invocation starts at `G'
+   │
+   = assignment violates constraint: G=0, L=3
 
 error: Cannot prove constraint 3 >= max(L+2) - min(G+1)
    ┌─ tests/errors/dynamic-share.fil:3:25
@@ -76,5 +87,7 @@ error: Cannot prove constraint 3 >= max(L+2) - min(G+1)
    │           - invocation ends at `L+2'
 13 │   m0 := M<G>(a, b);
    │           - invocation starts at `G+1'
+   │
+   = assignment violates constraint: G=0, L=3
 
 Compilation failed with 7 errors.

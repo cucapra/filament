@@ -56,7 +56,7 @@ impl PortDef {
     pub fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         Self {
             bitwidth: self.bitwidth.resolve(bindings),
-            liveness: self.liveness.resolve_offset(bindings),
+            liveness: self.liveness.resolve_exprs(bindings),
             ..(self.clone())
         }
     }

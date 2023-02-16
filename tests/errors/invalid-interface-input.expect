@@ -9,5 +9,7 @@ error: Cannot prove constraint 1 >= 2
   ·
 6 │     @[L, L+2] in2: 32,
   │     ^^^^^^^^^^^^^^^^^ signal lasts for 2 cycle(s)
+  │
+  = assignment violates constraint: G=0, L=0
 
 Compilation failed with 1 errors.

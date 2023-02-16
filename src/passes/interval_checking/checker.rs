@@ -53,7 +53,7 @@ impl visitor::Checker for IntervalCheck {
             |r: &core::Range,
              event_b: &utils::Binding<Time>,
              param_b: &utils::Binding<core::Expr>| {
-                r.resolve_offset(param_b).resolve_event(event_b)
+                r.resolve_exprs(param_b).resolve_event(event_b)
             };
 
         let requirement =
@@ -134,13 +134,13 @@ impl visitor::Checker for IntervalCheck {
         // User-level components are not allowed to have ordering constraints. See https://github.com/cucapra/filament/issues/27.
         let mut has_ulc = false;
         for constraint in &comp.sig.constraints {
-            if constraint.is_ordering() {
+            if constraint.is_time_ordering() {
                 has_ulc = true;
                 let err = Error::malformed(
-                    "user-level components cannot have ordering constraints",
+                    "user-level component cannot have ordering constraints over events",
                 )
                 .add_note(self.diag.add_info(
-                    format!("component defines the constraint {constraint}"),
+                    format!("user-level component defines ordering between events: {constraint}"),
                     comp.sig.name.copy_span(),
                 ));
                 self.diag.add_error(err);

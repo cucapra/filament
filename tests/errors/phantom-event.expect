@@ -10,10 +10,10 @@ error: component provided phantom event binding to non-phantom event argument
 6 │     r := new Register[32]<G, G+2>(left);
   │                           ^ invoke provides phantom event
   │
-  ┌─ ./primitives/./state.fil:3:24
+  ┌─ ./primitives/./state.fil:3:25
   │
-3 │   comp Register[WIDTH]<G: L-(G+1), L: 1>(
-  │                        - instance's event is not phantom
+3 │   comp Register[#WIDTH]<G: L-(G+1), L: 1>(
+  │                         - instance's event is not phantom
   │
   = phantom ports are compiled away and cannot be used by subcomponents
 

@@ -65,6 +65,11 @@ impl Time {
     pub fn event(&self) -> Id {
         self.event.clone()
     }
+
+    /// Abstract expressions in this time expression
+    pub fn exprs(&self) -> &Vec<Id> {
+        self.offset.exprs()
+    }
 }
 
 impl From<Id> for Time {
@@ -129,42 +134,14 @@ impl std::ops::Sub for Time {
     fn sub(self, other: Self) -> Self::Output {
         let lc = self.offset().concrete;
         let rc = other.offset().concrete;
-        if self.event == other.event && self.offset().abs == other.offset().abs
-        {
+        if self.event == other.event {
             TimeSub::Unit(u64::abs_diff(lc, rc).into())
         } else {
-            // Only add abstract variable when neither side has it.
-            let mut abs = vec![];
-            for a in &self.offset().abs {
-                if !other.offset().abs.contains(a) {
-                    abs.push(a.clone());
-                }
-            }
-
-            // If the left side has more concrete time, then the right side
-            // is the one that is subtracted.
-            if lc > rc {
-                TimeSub::Sym {
-                    l: Time {
-                        event: self.event,
-                        offset: Expr {
-                            concrete: lc - rc,
-                            abs,
-                        },
-                    },
-                    r: other.event.into(),
-                }
-            } else {
-                TimeSub::Sym {
-                    l: self.event.into(),
-                    r: Time {
-                        event: other.event,
-                        offset: Expr {
-                            concrete: rc - lc,
-                            abs,
-                        },
-                    },
-                }
+            let (l_off, r_mb_off) = self.offset - other.offset;
+            let r_off = r_mb_off.unwrap_or_default();
+            TimeSub::Sym {
+                l: Time::new(self.event, l_off),
+                r: Time::new(other.event, r_off),
             }
         }
     }
@@ -191,9 +168,8 @@ impl TimeSub {
             _ => None,
         }
     }
-}
 
-impl TimeSub {
+    /// Resolve events bound in this time expression
     pub fn resolve_event(&self, bindings: &utils::Binding<Time>) -> Self {
         match self {
             // Unit cannot contain any events
@@ -204,7 +180,7 @@ impl TimeSub {
         }
     }
 
-    pub fn resolve_offset(&self, bindings: &utils::Binding<Expr>) -> Self {
+    pub fn resolve_expr(&self, bindings: &utils::Binding<Expr>) -> Self {
         match self {
             TimeSub::Unit(n) => TimeSub::Unit(n.resolve(bindings)),
             TimeSub::Sym { l, r } => {
@@ -213,11 +189,20 @@ impl TimeSub {
         }
     }
 
-    pub fn events(&self) -> Vec<Id> {
+    pub fn events(&self) -> Vec<&Time> {
         match self {
             TimeSub::Unit(_) => vec![],
             TimeSub::Sym { l, r } => {
-                vec![l.event(), r.event()]
+                vec![l, r]
+            }
+        }
+    }
+
+    pub fn exprs(&self) -> Vec<&Expr> {
+        match self {
+            TimeSub::Unit(n) => vec![n],
+            TimeSub::Sym { l, r } => {
+                vec![&l.offset, &r.offset]
             }
         }
     }
@@ -235,7 +220,7 @@ impl Display for TimeSub {
 impl From<TimeSub> for SExp {
     fn from(ts: TimeSub) -> Self {
         match ts {
-            TimeSub::Unit(n) => SExp(n.to_string()),
+            TimeSub::Unit(n) => n.into(),
             TimeSub::Sym { l, r } => {
                 SExp(format!("(abs (- {} {}))", SExp::from(l), SExp::from(r)))
             }

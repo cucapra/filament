@@ -11,5 +11,7 @@ error: Cannot prove constraint 1 >= 2
   │   ------------------- invocation starts at `G'
 9 │   m1 := M<G+1>(30, 40);
   │   --------------------- invocation starts at `G+1'
+  │
+  = assignment violates constraint: G=0
 
 Compilation failed with 1 errors.

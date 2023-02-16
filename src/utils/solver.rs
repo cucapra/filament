@@ -267,9 +267,12 @@ impl FilSolver {
         let asserts = asserts.into_iter().unique().collect_vec();
         self.s.push(1).unwrap();
         // Define all the constants
-        for var in vars {
+        let vars = vars.collect_vec();
+        for var in &vars {
             log::trace!("Declaring constant {}", var);
             self.s.declare_const(var.to_string(), "Int").unwrap();
+            // All values must be positive
+            self.s.assert(format!("(>= {} 0)", var)).unwrap();
         }
 
         // Define assumptions on constraints
@@ -280,13 +283,15 @@ impl FilSolver {
         }
 
         for fact in asserts {
-            if !self.check_fact(fact.clone()) {
-                diag.add_error(fact.into());
+            if let Some(model) = self.check_fact(fact.clone(), &vars) {
+                let info = diag.add_message(model);
+                diag.add_error(Error::from(fact).add_note(info));
             }
         }
         for share in sharing {
-            if !self.check_fact(share.clone()) {
-                let err = share.error(diag);
+            if let Some(model) = self.check_fact(share.clone(), &vars) {
+                let info = diag.add_message(model);
+                let err = share.error(diag).add_note(info);
                 diag.add_error(err);
             }
         }
@@ -294,7 +299,13 @@ impl FilSolver {
         self.s.pop(1).unwrap();
     }
 
-    fn check_fact(&mut self, fact: impl Into<SExp>) -> bool {
+    /// Attempt to check facts.
+    /// If the fact is false, add notes to the error showing the assignments that make it false.
+    fn check_fact(
+        &mut self,
+        fact: impl Into<SExp>,
+        vars: &[core::Id],
+    ) -> Option<String> {
         let sexp = fact.into();
         self.s.push(1).unwrap();
         let formula = format!("(not {})", sexp);
@@ -302,10 +313,21 @@ impl FilSolver {
         self.s.assert(formula).unwrap();
         // Check that the assertion was unsatisfiable
         let unsat = !self.s.check_sat().unwrap();
-        if !unsat {
+        let assigns = if !unsat {
             log::trace!("MODEL: {:?}", self.s.get_model().unwrap());
-        }
+            let assigns = self
+                .s
+                .get_values(vars.iter().map(|n| n.to_string()))
+                .unwrap()
+                .into_iter()
+                .map(|(n, v)| format!("{}={}", n, v))
+                .collect_vec()
+                .join(", ");
+            Some(format!("assignment violates constraint: {}", assigns))
+        } else {
+            None
+        };
         self.s.pop(1).unwrap();
-        unsat
+        assigns
     }
 }

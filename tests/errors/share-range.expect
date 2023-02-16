@@ -11,5 +11,7 @@ error: Cannot prove constraint 10 >= max(G+11) - min(G)
    │           - invocation starts at `G'
 14 │   m1 := M<G+9>(l1, r1);
    │           - invocation ends at `G+11'
+   │
+   = assignment violates constraint: G=0
 
 Compilation failed with 1 errors.

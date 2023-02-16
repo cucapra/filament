@@ -3,7 +3,7 @@ use crate::{
     utils::{Binding, PostOrder},
 };
 use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 type Params = Vec<u64>;
 
@@ -13,7 +13,7 @@ struct InstanceParams {
     /// Parameters for a component
     params: HashMap<core::Id, Vec<core::Id>>,
     /// The parameters for the component
-    bindings: HashMap<core::Id, Vec<Params>>,
+    bindings: HashMap<core::Id, BTreeSet<Params>>,
 }
 
 impl InstanceParams {
@@ -222,6 +222,11 @@ impl Monomorphize {
                     ns.components.push(comp);
                 }
             } else {
+                // If we have a component with parameters but not bindings, it was probably unused.
+                if !comp.sig.params.is_empty() {
+                    log::warn!("skipping monomorphization for unused parameteric component `{}'", comp.sig.name);
+                    continue;
+                }
                 let comp = Self::generate_comp(
                     &comp,
                     &Binding::new(std::iter::empty()),

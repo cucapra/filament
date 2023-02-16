@@ -27,7 +27,7 @@ impl EventBind {
 
     fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         Self {
-            delay: self.delay.resolve_offset(bindings),
+            delay: self.delay.resolve_expr(bindings),
             default: self.default.as_ref().map(|d| d.resolve_expr(bindings)),
             ..self.clone()
         }
@@ -127,8 +127,8 @@ impl Signature {
         self.ports[self.outputs_idx..].iter()
     }
     /// Iterator over all the ports of this signature
-    pub fn ports(&self) -> impl Iterator<Item = &PortDef> {
-        self.ports.iter()
+    pub fn ports(&self) -> &Vec<PortDef> {
+        &self.ports
     }
 
     /// Find the delay associoated with an event
@@ -137,7 +137,10 @@ impl Signature {
             .iter()
             .find(|eb| eb.event == event)
             .unwrap_or_else(|| {
-                panic!("Event {} not found in signature:\n{}", event, self.name)
+                panic!(
+                    "Event `{}' not found in component `{}'",
+                    event, self.name
+                )
             })
     }
 
@@ -161,7 +164,7 @@ impl Signature {
     /// Get a port in the signature. Panics if the port is not found.
     pub fn get_port(&self, port: &Id) -> PortDef {
         self.find_port(port).unwrap_or_else(|| {
-            panic!("Port {} not found in signature:\n{}", port, self.name)
+            panic!("Port `{}' not found in component `{}'", port, self.name)
         })
     }
 
@@ -206,7 +209,8 @@ impl Signature {
                 .take_while(|ev| ev.default.is_none())
                 .count()
                 <= args.len(),
-            "Insuffient events for signature, required at least {} got {}",
+            "Insuffient events for component `{}', required at least {} got {}",
+            self.name,
             self.events
                 .iter()
                 .take_while(|ev| ev.default.is_none())
@@ -241,7 +245,8 @@ impl Signature {
     pub fn param_binding(&self, args: &[Expr]) -> Binding<Expr> {
         debug_assert!(
             self.params.len() == args.len(),
-            "Insuffient params for signature, required {} got {}",
+            "Insuffient params for component `{}', required {} got {}",
+            self.name,
             self.params.len(),
             args.len(),
         );
@@ -379,7 +384,7 @@ impl Display for Signature {
             } else {
                 format!(
                     "[{}]",
-                    self.params.iter().map(|p| p.to_string()).join(", ")
+                    self.params.iter().map(|p| format!("#{p}")).join(", ")
                 )
             },
             self.events.iter().map(|id| id.to_string()).join(", "),
