@@ -86,8 +86,8 @@ impl visitor::Transform for DumpInterface {
             format!(
                 "{{ \"event\": \"{event}\", \"name\": \"{name}\", \"width\": {w} , \"start\": {st}, \"end\": {end} }}",
                 name = pd.name,
-                st = st.concrete(),
-                end = end.concrete(),
+                st = st.concrete().unwrap(),
+                end = end.concrete().unwrap(),
             )
         };
 

@@ -1,6 +1,6 @@
 //! Context that tracks the binding information in a particular program
 use crate::{
-    core::{self, Expr, Id, Time, TimeSub},
+    core::{self, Id, Time, TimeSub},
     diagnostics,
     errors::{Error, WithPos},
     utils::{self, GPosIdx},
@@ -162,7 +162,7 @@ impl InvIdx {
         F: Fn(
             &core::Range,
             &utils::Binding<Time>,
-            &utils::Binding<Expr>,
+            &utils::Binding<core::Expr>,
         ) -> core::Range,
     {
         let inv = &ctx.invocations[self.0];
@@ -174,7 +174,7 @@ impl InvIdx {
         core::PortDef::new(
             port.name.clone(),
             resolve_range(&port.liveness, &event_b, &param_b),
-            port.bitwidth.resolve(&param_b).unwrap(),
+            port.bitwidth.resolve(&param_b),
         )
     }
 
@@ -192,7 +192,7 @@ impl InvIdx {
         F: Fn(
             &core::Constraint,
             &utils::Binding<Time>,
-            &utils::Binding<Expr>,
+            &utils::Binding<core::Expr>,
         ) -> core::Constraint,
     {
         let inv = &ctx.invocations[self.0];
@@ -228,7 +228,7 @@ pub struct BoundInstance {
     /// The signature of this instance
     pub sig: SigIdx,
     /// Parameter binding for this instance
-    pub params: Vec<Expr>,
+    pub params: Vec<core::Expr>,
     /// Position associated with this instance
     pos: GPosIdx,
 }
@@ -408,7 +408,7 @@ impl<'p> CompBinding<'p> {
                         if let core::PortType::InvPort { invoke, .. } =
                             &port.typ
                         {
-                            if ctx.inv_map.get(&invoke).is_none() {
+                            if ctx.inv_map.get(invoke).is_none() {
                                 let err = Error::undefined(
                                     invoke.clone(),
                                     "invocation",
@@ -550,7 +550,7 @@ impl<'p> CompBinding<'p> {
         F: Fn(
             &core::Range,
             &utils::Binding<Time>,
-            &utils::Binding<Expr>,
+            &utils::Binding<core::Expr>,
         ) -> core::Range,
     {
         match &port.typ {
@@ -704,8 +704,8 @@ impl<'a> ProgBinding<'a> {
     fn param_binding(
         &self,
         sig: SigIdx,
-        params: &[Expr],
-    ) -> utils::Binding<Expr> {
+        params: &[core::Expr],
+    ) -> utils::Binding<core::Expr> {
         match sig {
             SigIdx::Ext(idx) => self.externals[idx].param_binding(params),
             SigIdx::Comp(idx) => self.components[idx].param_binding(params),

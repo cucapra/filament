@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use super::IntervalCheck;
-use crate::core::{self, Expr, OrderConstraint, Time};
+use crate::core::{self, OrderConstraint, Time};
 use crate::diagnostics;
 use crate::errors::{Error, WithPos};
 use crate::utils::{self, FilSolver};
@@ -52,7 +52,7 @@ impl visitor::Checker for IntervalCheck {
         let resolve_range =
             |r: &core::Range,
              event_b: &utils::Binding<Time>,
-             param_b: &utils::Binding<Expr>| {
+             param_b: &utils::Binding<core::Expr>| {
                 r.resolve_offset(param_b).resolve_event(event_b)
             };
 
@@ -105,7 +105,9 @@ impl visitor::Checker for IntervalCheck {
             .get_invoke_idx(&invoke.name)
             .get_resolved_sig_constraints(
                 ctx,
-                |c, e, p| c.resolve_event(e).resolve_offset(p),
+                |c: &core::Constraint, e, p| {
+                    c.resolve_event(e).resolve_offset(p)
+                },
                 &mut self.diag,
             );
 

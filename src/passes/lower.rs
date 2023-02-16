@@ -31,7 +31,7 @@ impl CompileInvokes {
         };
 
         let fsm = self.find_fsm(&ev)?;
-        let guard = (st.concrete()..end.concrete())
+        let guard = (st.concrete().unwrap()..end.concrete().unwrap())
             .into_iter()
             .map(|st| fsm.port(st).into())
             .reduce(core::Guard::or)
@@ -97,7 +97,7 @@ impl visitor::Transform for CompileInvokes {
                 let ev = &interface.event;
                 // Get binding for this event in the invoke
                 let t = binding.get(ev);
-                let start_time = t.offset().concrete();
+                let start_time = t.offset().concrete().unwrap();
                 let port = self.get_fsm(&t.event()).port(start_time);
                 let con = core::Connect::new(
                     core::Port::comp(bind.clone(), interface.name.clone()),

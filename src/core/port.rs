@@ -1,52 +1,7 @@
-use super::{Id, Range, Time};
+use super::{Expr, Id, Range, Time};
 use crate::utils::Binding;
 use crate::{errors::WithPos, utils::GPosIdx};
 use std::fmt::Display;
-
-/// An expression that can represent either constants or variables
-#[derive(Hash, Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub enum Expr {
-    /// A constant
-    Const(u64),
-    /// A parameter
-    Var(Id),
-}
-
-impl Expr {
-    pub fn concrete(&self) -> u64 {
-        match self {
-            Expr::Const(c) => *c,
-            Expr::Var(_) => {
-                unreachable!("Cannot convert {} into concrete value", self)
-            }
-        }
-    }
-    pub fn resolve(&self, bindings: &Binding<Expr>) -> Option<Expr> {
-        match self {
-            Expr::Const(_) => Some(self.clone()),
-            Expr::Var(v) => bindings.find(v).cloned(),
-        }
-    }
-}
-
-impl From<Id> for Expr {
-    fn from(v: Id) -> Self {
-        Self::Var(v)
-    }
-}
-impl From<u64> for Expr {
-    fn from(v: u64) -> Self {
-        Self::Const(v)
-    }
-}
-impl Display for Expr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Expr::Const(c) => write!(f, "{c}"),
-            Expr::Var(v) => write!(f, "{v}"),
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct PortDef {
@@ -100,7 +55,7 @@ impl PortDef {
     /// - The liveness condition
     pub fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         Self {
-            bitwidth: self.bitwidth.resolve(bindings).unwrap(),
+            bitwidth: self.bitwidth.resolve(bindings),
             liveness: self.liveness.resolve_offset(bindings),
             ..(self.clone())
         }
@@ -135,7 +90,7 @@ impl InterfaceDef {
 impl From<InterfaceDef> for PortDef {
     fn from(id: InterfaceDef) -> Self {
         let start = Time::from(id.event);
-        let end = start.clone().increment(Expr::Const(1));
+        let end = start.clone().increment(1.into());
         PortDef::new(id.name, Range::new(start, end), 1.into())
     }
 }

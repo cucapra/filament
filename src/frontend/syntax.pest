@@ -78,7 +78,7 @@ abstract_var = {
 
 // Time
 time = {
-  identifier ~ ("+" ~ port_width)*
+  identifier ~ ("+" ~ port_width)?
   | bitwidth
 }
 
@@ -91,8 +91,11 @@ interval_range = {
 interface = {
   "@interface" ~ "[" ~ identifier ~ "]"
 }
-port_width = {
+conc_or_var = {
   bitwidth | identifier
+}
+port_width = {
+  conc_or_var ~ ("+" ~ conc_or_var)*
 }
 port_def = {
   (interval_range | interface)? ~ identifier ~ ":" ~ port_width

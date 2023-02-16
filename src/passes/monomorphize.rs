@@ -38,15 +38,18 @@ impl InstanceParams {
         comp: &core::Id,
         params: &[core::Expr],
     ) {
-        log::trace!("{} -> {} -> {:?}", parent, comp, params);
+        // log::trace!("{} -> {} -> {}", parent, comp, params);
 
         // All possible values for each parameter computed by resolving each parameter that occurs in the binding
         let all_binds = params
             .iter()
-            .map(|p| match p {
-                core::Expr::Var(p) => self.param_values(parent, p).collect(),
-                core::Expr::Const(c) => vec![*c],
-            })
+            .map(|p|
+                match p.abs.len() {
+                    0 => vec![p.concrete],
+                    1 => self.param_values(parent, &p.abs[0]).collect(),
+                    n => unreachable!("Cannot have more than one abstract parameter in a binding: {n}")
+                }
+            )
             .multi_cartesian_product()
             .collect_vec();
 
@@ -106,9 +109,9 @@ impl Monomorphize {
     ) -> core::Id {
         let mut name = String::from(comp.as_ref());
         for p in params {
-            match p {
-                core::Expr::Const(p) => name += format!("_{}", p).as_str(),
-                core::Expr::Var(_) => {
+            match p.concrete() {
+                Some(p) => name += format!("_{}", p).as_str(),
+                None => {
                     unreachable!("Binding should only contain concrete values")
                 }
             }
@@ -160,7 +163,7 @@ impl Monomorphize {
                     } = inst;
                     let resolved = bindings
                         .into_iter()
-                        .map(|p| p.resolve(param_binding).unwrap())
+                        .map(|p| p.resolve(param_binding))
                         .collect();
 
                     if externals.contains(&component) {
