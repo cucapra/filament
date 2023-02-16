@@ -4,7 +4,7 @@ use crate::{errors::WithPos, utils::GPosIdx};
 use std::fmt::Display;
 
 /// An expression that can represent either constants or variables
-#[derive(Hash, Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Hash, Debug, Clone, Eq, PartialEq)]
 pub enum Expr {
     /// A constant
     Const(u64),

@@ -28,9 +28,28 @@ impl PartialOrd for TimeSum {
 }
 
 impl TimeSum {
+    // Attempt to transform this in to a concrete time.
+    // Panics if there are abstract values.
     pub fn concrete(&self) -> u64 {
         assert!(self.abs.is_empty());
         self.concrete
+    }
+
+    pub fn resolve(&self, bind: &utils::Binding<Expr>) -> Self {
+        let mut offset = TimeSum {
+            concrete: self.concrete,
+            abs: vec![],
+        };
+
+        for x in &self.abs {
+            match bind.find(x) {
+                Some(Expr::Const(c)) => offset.concrete += c,
+                Some(Expr::Var(v)) => offset.abs.push(v.clone()),
+                None => offset.abs.push(x.clone()),
+            }
+        }
+
+        offset
     }
 }
 
@@ -117,22 +136,9 @@ impl Time {
 
     /// Resolve all expressions bound in this time expression
     pub fn resolve_expr(&self, bind: &utils::Binding<Expr>) -> Self {
-        let mut offset = TimeSum {
-            concrete: self.offset.concrete,
-            abs: vec![],
-        };
-
-        for x in &self.offset.abs {
-            match bind.find(x) {
-                Some(Expr::Const(c)) => offset.concrete += c,
-                Some(Expr::Var(v)) => offset.abs.push(v.clone()),
-                None => offset.abs.push(x.clone()),
-            }
-        }
-
         Time {
             event: self.event.clone(),
-            offset,
+            offset: self.offset.resolve(bind),
         }
     }
 
