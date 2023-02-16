@@ -379,7 +379,7 @@ impl Display for Signature {
             } else {
                 format!(
                     "[{}]",
-                    self.params.iter().map(|p| p.to_string()).join(", ")
+                    self.params.iter().map(|p| format!("#{p}")).join(", ")
                 )
             },
             self.events.iter().map(|id| id.to_string()).join(", "),

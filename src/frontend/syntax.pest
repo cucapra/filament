@@ -33,7 +33,6 @@ eq =  { "=" }
 order_op = { gte | gt | lte | lt | eq }
 
 constraint = {
-  // port_width ~ order_op ~ port_width |
   time ~ order_op ~ time
 }
 constraints = {
@@ -41,7 +40,7 @@ constraints = {
 }
 
 params = {
-  ("[" ~ identifier ~ ("," ~ identifier)* ~ "]")?
+  ("[" ~ param_var ~ ("," ~ param_var)* ~ "]")?
 }
 signature = {
   identifier ~ params ~ abstract_var? ~ io ~ constraints
@@ -59,12 +58,24 @@ comp_or_ext = {
 
 // ====== Component signature ======
 
+// Expressions
+pound = { "#" }
+param_var = ${ pound ~ identifier }
+interface = {
+  "@interface" ~ "[" ~ identifier ~ "]"
+}
+conc_or_var = {
+  bitwidth | param_var
+}
+expr = {
+  conc_or_var ~ ("+" ~ conc_or_var)*
+}
+
+// Event bindings
 delay = {
-  // port_width |
   bitwidth |
   time ~ "-" ~ "(" ~ time ~ ")"
 }
-
 event_with_delay = _{
   identifier ~ ":" ~ delay
 }
@@ -78,7 +89,9 @@ abstract_var = {
 
 // Time
 time = {
-  identifier ~ ("+" ~ port_width)?
+  identifier ~ "+" ~ expr
+  | expr ~ "+" ~ identifier
+  | identifier
   | bitwidth
 }
 
@@ -88,17 +101,8 @@ interval_range = {
 }
 
 // Ports
-interface = {
-  "@interface" ~ "[" ~ identifier ~ "]"
-}
-conc_or_var = {
-  bitwidth | identifier
-}
-port_width = {
-  conc_or_var ~ ("+" ~ conc_or_var)*
-}
 port_def = {
-  (interval_range | interface)? ~ identifier ~ ":" ~ port_width
+  (interval_range | interface)? ~ identifier ~ ":" ~ expr
 }
 
 arrow = { "->" }
@@ -112,7 +116,7 @@ ports = {
 
 // ====== Cell instance ======
 conc_params = {
-  ("[" ~ port_width ~ ("," ~ port_width)* ~ "]")?
+  ("[" ~ expr ~ ("," ~ expr)* ~ "]")?
 }
 instance = {
   identifier ~ ":=" ~ "new" ~ identifier ~ conc_params ~ invoke_args? ~ ";"

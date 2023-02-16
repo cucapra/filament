@@ -87,7 +87,7 @@ impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.abs
             .iter()
-            .map(|t| t.to_string())
+            .map(|t| format!("#{t}"))
             .chain(
                 std::iter::once(self.concrete)
                     .filter(|c| *c != 0)

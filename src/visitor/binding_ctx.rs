@@ -384,7 +384,17 @@ impl<'p> CompBinding<'p> {
                 }
                 core::Command::Invoke(inv) => {
                     if ctx.inst_map.get(&inv.instance).is_some() {
-                        ctx.add_invoke(inv);
+                        // If there have been previous errors, we cannot rely on signatures being valid
+                        if has_errors {
+                            ctx.add_bound_invoke(
+                                inv.name.clone(),
+                                InstIdx::UNKNOWN,
+                                vec![],
+                                inv.copy_span(),
+                            );
+                        } else {
+                            ctx.add_invoke(inv);
+                        }
                     } else {
                         has_errors = true;
                         // If there is no component with this name, add an error and use a dummy signature

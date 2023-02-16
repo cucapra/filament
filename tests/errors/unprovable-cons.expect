@@ -4,7 +4,7 @@
 error: Cannot prove constraint L+1 > G+1
    ┌─ ./primitives/./state.fil:9:5
    │
- 9 │     @[G+1, L] out: WIDTH,
+ 9 │     @[G+1, L] out: #WIDTH,
    │     ^^^^^^^^^ interval's end time must be greater than the start time
    │
    ┌─ tests/errors/unprovable-cons.fil:14:3
@@ -15,11 +15,11 @@ error: Cannot prove constraint L+1 > G+1
 error: Cannot prove constraint |L - G| >= 1
    ┌─ ./primitives/./state.fil:7:5
    │
- 3 │   comp Register[WIDTH]<G: L-(G+1), L: 1>(
-   │                        ---------- interface allows event to trigger every |L - G+1| cycle(s)
+ 3 │   comp Register[#WIDTH]<G: L-(G+1), L: 1>(
+   │                         ---------- interface allows event to trigger every |L - G+1| cycle(s)
    ·
- 7 │     @[G, G+1] in: WIDTH,
-   │     ^^^^^^^^^^^^^^^^^^^ signal lasts for 1 cycle(s)
+ 7 │     @[G, G+1] in: #WIDTH,
+   │     ^^^^^^^^^^^^^^^^^^^^ signal lasts for 1 cycle(s)
    │
    ┌─ tests/errors/unprovable-cons.fil:14:3
    │

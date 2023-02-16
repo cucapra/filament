@@ -1,52 +1,52 @@
 extern "state.sv" {
   // A register that can extend the lifetime of a signal to any required length.
-  comp Register[WIDTH]<G: L-(G+1), L: 1>(
+  comp Register[#WIDTH]<G: L-(G+1), L: 1>(
     clk: 1,
     reset: 1,
     @interface[G] write_en: 1,
-    @[G, G+1] in: WIDTH,
+    @[G, G+1] in: #WIDTH,
   ) -> (
-    @[G+1, L] out: WIDTH,
+    @[G+1, L] out: #WIDTH,
   ) where L > G+1;
 
   // A comp that delays `in` by one cycle. Exactly the same as a register
   // but does not require comp to provide `go` signal. If the comp
   // additionally has no resource sharing, it can elide FSM generation.
-  comp Delay[WIDTH]<G: 1>(
+  comp Delay[#WIDTH]<G: 1>(
     clk: 1,
     reset: 1,
-    @[G, G+1] in: WIDTH,
+    @[G, G+1] in: #WIDTH,
   ) -> (
-    @[G+1, G+2] out: WIDTH,
+    @[G+1, G+2] out: #WIDTH,
   );
 
   // A component that delays `in` by N cycles. Uses the Delay component under the
   // hood.
-  comp Shift[WIDTH, N]<G: 1>(
+  comp Shift[#WIDTH, #N]<G: 1>(
     clk: 1,
     reset: 1,
-    @[G, G+1] in: WIDTH,
+    @[G, G+1] in: #WIDTH,
   ) -> (
-    @[G+N, G+N+1] out: WIDTH,
+    @[G+#N, G+#N+1] out: #WIDTH,
   );
 
   // A comp that allows access to its previous stored value.
   // Backend by a simple register
-  comp Prev[WIDTH, SAFE]<G: 1>(
+  comp Prev[#WIDTH, #SAFE]<G: 1>(
     clk: 1,
     reset: 1,
     @interface[G] write_en: 1,
-    @[G, G+1] in: WIDTH,
+    @[G, G+1] in: #WIDTH,
   ) -> (
-    @[G, G+1] prev: WIDTH,
+    @[G, G+1] prev: #WIDTH,
   );
 
   // Prev comp that continuously updates its value
-  comp ContPrev[WIDTH, SAFE]<G: 1>(
+  comp ContPrev[#WIDTH, #SAFE]<G: 1>(
     clk: 1,
     reset: 1,
-    @[G, G+1] in: WIDTH,
+    @[G, G+1] in: #WIDTH,
   ) -> (
-    @[G, G+1] prev: WIDTH,
+    @[G, G+1] prev: #WIDTH,
   );
 }
