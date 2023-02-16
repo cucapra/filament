@@ -235,7 +235,7 @@ impl Display for TimeSub {
 impl From<TimeSub> for SExp {
     fn from(ts: TimeSub) -> Self {
         match ts {
-            TimeSub::Unit(n) => SExp(n.to_string()),
+            TimeSub::Unit(n) => n.into(),
             TimeSub::Sym { l, r } => {
                 SExp(format!("(abs (- {} {}))", SExp::from(l), SExp::from(r)))
             }

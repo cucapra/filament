@@ -33,7 +33,8 @@ eq =  { "=" }
 order_op = { gte | gt | lte | lt | eq }
 
 constraint = {
-  time ~ order_op ~ time
+  expr ~ order_op ~ expr
+  | time ~ order_op ~ time
 }
 constraints = {
   ("where" ~ (constraint ~ ("," ~ constraint)*))?
@@ -73,7 +74,7 @@ expr = {
 
 // Event bindings
 delay = {
-  bitwidth |
+  expr |
   time ~ "-" ~ "(" ~ time ~ ")"
 }
 event_with_delay = _{
@@ -92,7 +93,7 @@ time = {
   identifier ~ "+" ~ expr
   | expr ~ "+" ~ identifier
   | identifier
-  | bitwidth
+  | expr
 }
 
 // Intervals

@@ -85,16 +85,30 @@ impl PartialOrd for Expr {
 
 impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.abs
-            .iter()
-            .map(|t| format!("#{t}"))
-            .chain(
-                std::iter::once(self.concrete)
-                    .filter(|c| *c != 0)
-                    .map(|t| t.to_string()),
-            )
-            .join("+")
-            .fmt(f)
+        if self.abs.is_empty() {
+            write!(f, "{}", self.concrete)
+        } else {
+            self.abs
+                .iter()
+                .map(|t| format!("#{t}"))
+                .chain(
+                    std::iter::once(self.concrete)
+                        .filter(|c| *c != 0)
+                        .map(|t| t.to_string()),
+                )
+                .join("+")
+                .fmt(f)
+        }
+    }
+}
+
+impl From<Expr> for utils::SExp {
+    fn from(value: Expr) -> Self {
+        utils::SExp(format!(
+            "(+ {} {})",
+            value.abs.iter().map(|t| t.as_ref()).join(" "),
+            value.concrete
+        ))
     }
 }
 

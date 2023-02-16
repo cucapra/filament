@@ -140,8 +140,8 @@ impl FilamentParser {
             [identifier(ev), expr(sts)] => Ok(core::Time::new(ev, sts)),
             [expr(sts), identifier(ev)] => Ok(core::Time::new(ev, sts)),
             [identifier(ev)] => Ok(core::Time::new(ev, core::Expr::default())),
-            [bitwidth(_)] => {
-                Err(input.error("Time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number"))
+            [expr(_)] => {
+                Err(input.error("time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number or sum of parameters"))
             }
         )
     }
@@ -209,8 +209,7 @@ impl FilamentParser {
     fn delay(input: Node) -> ParseResult<TimeSub> {
         Ok(match_nodes!(
             input.into_children();
-            // [expr(n)] => TimeSub::unit(n),
-            [bitwidth(n)] => TimeSub::unit(n.into()),
+            [expr(n)] => n.into(),
             [time(l), time(r)] => l - r,
         ))
     }
