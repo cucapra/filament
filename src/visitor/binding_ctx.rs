@@ -408,7 +408,7 @@ impl<'p> CompBinding<'p> {
                         if let core::PortType::InvPort { invoke, .. } =
                             &port.typ
                         {
-                            if ctx.inv_map.get(&invoke).is_none() {
+                            if ctx.inv_map.get(invoke).is_none() {
                                 let err = Error::undefined(
                                     invoke.clone(),
                                     "invocation",

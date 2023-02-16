@@ -12,15 +12,19 @@ pub enum Expr {
     Var(Id),
 }
 
-impl Expr {
-    pub fn concrete(&self) -> u64 {
-        match self {
-            Expr::Const(c) => *c,
+impl TryFrom<&Expr> for u64 {
+    type Error = String;
+    fn try_from(e: &Expr) -> Result<Self, Self::Error> {
+        match e {
+            Expr::Const(c) => Ok(*c),
             Expr::Var(_) => {
-                unreachable!("Cannot convert {} into concrete value", self)
+                Err(format!("Cannot convert {} into concrete value", e))
             }
         }
     }
+}
+
+impl Expr {
     pub fn resolve(&self, bindings: &Binding<Expr>) -> Option<Expr> {
         match self {
             Expr::Const(_) => Some(self.clone()),
