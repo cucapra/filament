@@ -1,4 +1,4 @@
-use super::{Expr, Id, Range, Time, TimeSub};
+use super::{Expr, Range, Time, TimeSub};
 use crate::diagnostics::{self, InfoIdx};
 use crate::errors::Error;
 use crate::utils::Binding;
@@ -111,8 +111,8 @@ impl OrderConstraint<TimeSub> {
 
     fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         OrderConstraint {
-            left: self.left.resolve_offset(bindings),
-            right: self.right.resolve_offset(bindings),
+            left: self.left.resolve_expr(bindings),
+            right: self.right.resolve_expr(bindings),
             ..self.clone()
         }
     }
@@ -208,14 +208,27 @@ impl Constraint {
         self
     }
 
-    pub fn events(&self) -> Vec<Id> {
+    pub fn events(&self) -> Vec<&Time> {
         match self {
             Constraint::Base { base } => {
-                vec![base.left.event(), base.right.event()]
+                vec![&base.left, &base.right]
             }
             Constraint::Sub { base } => {
                 let mut evs = base.left.events();
                 evs.append(&mut base.right.events());
+                evs
+            }
+        }
+    }
+
+    pub fn exprs(&self) -> Vec<&Expr> {
+        match self {
+            Constraint::Base { base } => {
+                vec![base.left.offset(), base.right.offset()]
+            }
+            Constraint::Sub { base } => {
+                let mut evs = base.left.exprs();
+                evs.append(&mut base.right.exprs());
                 evs
             }
         }

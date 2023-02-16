@@ -429,6 +429,16 @@ impl<'p> CompBinding<'p> {
                                 ));
                                 diag.add_error(err)
                             }
+                        } else if let core::PortType::ThisPort(p) = &port.typ {
+                            if !ctx.this().ports().iter().any(|pd| pd.name == p)
+                            {
+                                let err = Error::undefined(p.clone(), "port")
+                                    .add_note(diag.add_info(
+                                        "unknown port",
+                                        p.copy_span(),
+                                    ));
+                                diag.add_error(err)
+                            }
                         }
                     };
                     check_port(src);

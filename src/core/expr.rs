@@ -32,6 +32,7 @@ impl Expr {
         }
     }
 
+    /// Resolve this expression using the given binding for abstract variables.
     pub fn resolve(&self, bind: &utils::Binding<Expr>) -> Self {
         let mut offset = Expr {
             concrete: self.concrete,
@@ -50,6 +51,11 @@ impl Expr {
     /// Check if this TimeSum is equal to 0
     pub fn is_zero(&self) -> bool {
         self.concrete == 0 && self.abs.is_empty()
+    }
+
+    /// Get all the abstract variables in this expression
+    pub fn exprs(&self) -> &Vec<Id> {
+        &self.abs
     }
 }
 

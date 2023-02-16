@@ -65,6 +65,11 @@ impl Time {
     pub fn event(&self) -> Id {
         self.event.clone()
     }
+
+    /// Abstract expressions in this time expression
+    pub fn exprs(&self) -> &Vec<Id> {
+        self.offset.exprs()
+    }
 }
 
 impl From<Id> for Time {
@@ -191,9 +196,8 @@ impl TimeSub {
             _ => None,
         }
     }
-}
 
-impl TimeSub {
+    /// Resolve events bound in this time expression
     pub fn resolve_event(&self, bindings: &utils::Binding<Time>) -> Self {
         match self {
             // Unit cannot contain any events
@@ -204,7 +208,7 @@ impl TimeSub {
         }
     }
 
-    pub fn resolve_offset(&self, bindings: &utils::Binding<Expr>) -> Self {
+    pub fn resolve_expr(&self, bindings: &utils::Binding<Expr>) -> Self {
         match self {
             TimeSub::Unit(n) => TimeSub::Unit(n.resolve(bindings)),
             TimeSub::Sym { l, r } => {
@@ -213,11 +217,20 @@ impl TimeSub {
         }
     }
 
-    pub fn events(&self) -> Vec<Id> {
+    pub fn events(&self) -> Vec<&Time> {
         match self {
             TimeSub::Unit(_) => vec![],
             TimeSub::Sym { l, r } => {
-                vec![l.event(), r.event()]
+                vec![l, r]
+            }
+        }
+    }
+
+    pub fn exprs(&self) -> Vec<&Expr> {
+        match self {
+            TimeSub::Unit(n) => vec![n],
+            TimeSub::Sym { l, r } => {
+                vec![&l.offset, &r.offset]
             }
         }
     }

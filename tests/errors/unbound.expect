@@ -37,23 +37,29 @@ error: undefined parameter name: P
 10 │     @[G, G+#K] a: #P,
    │                   ^^ parameter is not defined in the signature
 
+error: undefined parameter name: M
+  ┌─ tests/errors/unbound.fil:9:22
+  │
+9 │ comp main[#W, #L]<G: #M>(
+  │                      ^^ parameter is not defined in the signature
+
 error: undefined event name: L
    ┌─ tests/errors/unbound.fil:11:21
    │
 11 │ ) -> () where #W+#N+L > L+1 {
    │                     ^ event is not defined in the signature
 
-error: undefined event name: L
-   ┌─ tests/errors/unbound.fil:11:25
-   │
-11 │ ) -> () where #W+#N+L > L+1 {
-   │                         ^ event is not defined in the signature
-
 error: undefined parameter name: N
    ┌─ tests/errors/unbound.fil:11:18
    │
 11 │ ) -> () where #W+#N+L > L+1 {
    │                  ^^ parameter is not defined in the signature
+
+error: undefined event name: L
+   ┌─ tests/errors/unbound.fil:11:25
+   │
+11 │ ) -> () where #W+#N+L > L+1 {
+   │                         ^ event is not defined in the signature
 
 error: undefined parameter name: J
    ┌─ tests/errors/unbound.fil:12:22
@@ -82,4 +88,4 @@ error: port width mismatch
 12 │     a := new Add[#W, #J]<L+#N>(a);
    │                                ^ source `a' has width #P
 
-Compilation failed with 13 errors.
+Compilation failed with 14 errors.

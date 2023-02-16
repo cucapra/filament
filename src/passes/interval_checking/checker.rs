@@ -53,7 +53,7 @@ impl visitor::Checker for IntervalCheck {
             |r: &core::Range,
              event_b: &utils::Binding<Time>,
              param_b: &utils::Binding<core::Expr>| {
-                r.resolve_offset(param_b).resolve_event(event_b)
+                r.resolve_exprs(param_b).resolve_event(event_b)
             };
 
         let requirement =
