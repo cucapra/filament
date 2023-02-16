@@ -1,6 +1,6 @@
 //! Context that tracks the binding information in a particular program
 use crate::{
-    core::{self, Expr, Id, Time, TimeSub},
+    core::{self, Id, Time, TimeSub},
     diagnostics,
     errors::{Error, WithPos},
     utils::{self, GPosIdx},
@@ -162,7 +162,7 @@ impl InvIdx {
         F: Fn(
             &core::Range,
             &utils::Binding<Time>,
-            &utils::Binding<Expr>,
+            &utils::Binding<core::TimeSum>,
         ) -> core::Range,
     {
         let inv = &ctx.invocations[self.0];
@@ -192,7 +192,7 @@ impl InvIdx {
         F: Fn(
             &core::Constraint,
             &utils::Binding<Time>,
-            &utils::Binding<Expr>,
+            &utils::Binding<core::TimeSum>,
         ) -> core::Constraint,
     {
         let inv = &ctx.invocations[self.0];
@@ -228,7 +228,7 @@ pub struct BoundInstance {
     /// The signature of this instance
     pub sig: SigIdx,
     /// Parameter binding for this instance
-    pub params: Vec<Expr>,
+    pub params: Vec<core::TimeSum>,
     /// Position associated with this instance
     pos: GPosIdx,
 }
@@ -494,7 +494,7 @@ impl<'p> CompBinding<'p> {
         &mut self,
         name: Id,
         sig: SigIdx,
-        params: Vec<core::Expr>,
+        params: Vec<core::TimeSum>,
         pos: GPosIdx,
     ) -> InstIdx {
         let idx = InstIdx(self.instances.len());
@@ -550,7 +550,7 @@ impl<'p> CompBinding<'p> {
         F: Fn(
             &core::Range,
             &utils::Binding<Time>,
-            &utils::Binding<Expr>,
+            &utils::Binding<core::TimeSum>,
         ) -> core::Range,
     {
         match &port.typ {
@@ -704,8 +704,8 @@ impl<'a> ProgBinding<'a> {
     fn param_binding(
         &self,
         sig: SigIdx,
-        params: &[Expr],
-    ) -> utils::Binding<Expr> {
+        params: &[core::TimeSum],
+    ) -> utils::Binding<core::TimeSum> {
         match sig {
             SigIdx::Ext(idx) => self.externals[idx].param_binding(params),
             SigIdx::Comp(idx) => self.components[idx].param_binding(params),

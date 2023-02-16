@@ -18,26 +18,45 @@ pub struct TimeSum {
 impl TimeSum {
     // Attempt to transform this in to a concrete time.
     // Panics if there are abstract values.
-    pub fn concrete(&self) -> u64 {
-        assert!(self.abs.is_empty());
-        self.concrete
+    pub fn concrete(&self) -> Option<u64> {
+        if self.abs.is_empty() {
+            Some(self.concrete)
+        } else {
+            None
+        }
     }
 
-    pub fn resolve(&self, bind: &utils::Binding<Expr>) -> Self {
+    pub fn resolve(&self, bind: &utils::Binding<TimeSum>) -> Self {
         let mut offset = TimeSum {
             concrete: self.concrete,
             abs: vec![],
         };
 
         for x in &self.abs {
-            match bind.find(x) {
-                Some(Expr::Const(c)) => offset.concrete += c,
-                Some(Expr::Var(v)) => offset.abs.push(v.clone()),
-                None => offset.abs.push(x.clone()),
+            if let Some(sum) = bind.find(x) {
+                offset += sum.clone();
             }
         }
 
         offset
+    }
+}
+
+impl std::ops::Add for TimeSum {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            concrete: self.concrete + rhs.concrete,
+            abs: self.abs.into_iter().chain(rhs.abs.into_iter()).collect(),
+        }
+    }
+}
+
+impl std::ops::AddAssign for TimeSum {
+    fn add_assign(&mut self, rhs: Self) {
+        self.concrete += rhs.concrete;
+        self.abs.extend(rhs.abs);
     }
 }
 
@@ -142,11 +161,8 @@ impl Time {
     }
 
     /// Time expression that occurs `n` cycles after this time expression
-    pub fn increment(mut self, n: Expr) -> Self {
-        match n {
-            Expr::Const(n) => self.offset.concrete += n,
-            Expr::Var(v) => self.offset.abs.push(v),
-        }
+    pub fn increment(mut self, n: TimeSum) -> Self {
+        self.offset += n;
         self
     }
 
@@ -168,7 +184,7 @@ impl Time {
     }
 
     /// Resolve all expressions bound in this time expression
-    pub fn resolve_expr(&self, bind: &utils::Binding<Expr>) -> Self {
+    pub fn resolve_expr(&self, bind: &utils::Binding<TimeSum>) -> Self {
         Time {
             event: self.event.clone(),
             offset: self.offset.resolve(bind),
@@ -290,19 +306,20 @@ impl std::ops::Sub for Time {
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum TimeSub {
     /// Concrete difference between two time expressions
-    Unit(Expr),
+    Unit(TimeSum),
     /// Symbolic difference between two time expressions
     Sym { l: Time, r: Time },
 }
 
 impl TimeSub {
-    pub fn unit(n: Expr) -> Self {
+    pub fn unit(n: TimeSum) -> Self {
         TimeSub::Unit(n)
     }
 
+    /// Convert this time expression into a concrete value
     pub fn concrete(&self) -> Option<u64> {
         match self {
-            TimeSub::Unit(Expr::Const(n)) => Some(*n),
+            TimeSub::Unit(n) => n.concrete(),
             _ => None,
         }
     }
@@ -319,9 +336,9 @@ impl TimeSub {
         }
     }
 
-    pub fn resolve_offset(&self, bindings: &utils::Binding<Expr>) -> Self {
+    pub fn resolve_offset(&self, bindings: &utils::Binding<TimeSum>) -> Self {
         match self {
-            TimeSub::Unit(n) => TimeSub::Unit(n.resolve(bindings).unwrap()),
+            TimeSub::Unit(n) => TimeSub::Unit(n.resolve(bindings)),
             TimeSub::Sym { l, r } => {
                 l.resolve_expr(bindings) - r.resolve_expr(bindings)
             }
@@ -360,6 +377,6 @@ impl From<TimeSub> for SExp {
 
 impl From<Expr> for TimeSub {
     fn from(n: Expr) -> Self {
-        TimeSub::Unit(n)
+        TimeSub::Unit(n.into())
     }
 }

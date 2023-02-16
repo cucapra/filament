@@ -25,12 +25,12 @@ impl TryFrom<&Expr> for u64 {
 }
 
 impl Expr {
-    pub fn resolve(&self, bindings: &Binding<Expr>) -> Option<Expr> {
-        match self {
-            Expr::Const(_) => Some(self.clone()),
-            Expr::Var(v) => bindings.find(v).cloned(),
-        }
-    }
+    // pub fn resolve(&self, bindings: &Binding<TimeSum>) -> Option<Expr> {
+    //     match self {
+    //         Expr::Const(_) => Some(self.clone()),
+    //         Expr::Var(v) => bindings.find(v).cloned(),
+    //     }
+    // }
 }
 
 impl From<Id> for Expr {
@@ -102,7 +102,7 @@ impl PortDef {
     /// Specifically:
     /// - The bitwidth of the port
     /// - The liveness condition
-    pub fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
+    pub fn resolve_offset(&self, bindings: &Binding<TimeSum>) -> Self {
         Self {
             bitwidth: self.bitwidth.resolve(bindings),
             liveness: self.liveness.resolve_offset(bindings),
@@ -139,7 +139,7 @@ impl InterfaceDef {
 impl From<InterfaceDef> for PortDef {
     fn from(id: InterfaceDef) -> Self {
         let start = Time::from(id.event);
-        let end = start.clone().increment(Expr::Const(1));
+        let end = start.clone().increment(1.into());
         PortDef::new(id.name, Range::new(start, end), 1.into())
     }
 }

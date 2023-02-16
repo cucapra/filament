@@ -36,17 +36,20 @@ impl InstanceParams {
         &mut self,
         parent: &core::Id,
         comp: &core::Id,
-        params: &[core::Expr],
+        params: &[core::TimeSum],
     ) {
-        log::trace!("{} -> {} -> {:?}", parent, comp, params);
+        // log::trace!("{} -> {} -> {}", parent, comp, params);
 
         // All possible values for each parameter computed by resolving each parameter that occurs in the binding
         let all_binds = params
             .iter()
-            .map(|p| match p {
-                core::Expr::Var(p) => self.param_values(parent, p).collect(),
-                core::Expr::Const(c) => vec![*c],
-            })
+            .map(|p|
+                match p.abs.len() {
+                    0 => vec![p.concrete],
+                    1 => self.param_values(parent, &p.abs[0]).collect(),
+                    n => unreachable!("Cannot have more than one abstract parameter in a binding: {n}")
+                }
+            )
             .multi_cartesian_product()
             .collect_vec();
 
@@ -102,13 +105,13 @@ impl Monomorphize {
     /// Gnerate name for a monomorphized component based on the binding parameters.
     fn generate_mono_name<'a>(
         comp: &core::Id,
-        params: impl IntoIterator<Item = &'a core::Expr>,
+        params: impl IntoIterator<Item = &'a core::TimeSum>,
     ) -> core::Id {
         let mut name = String::from(comp.as_ref());
         for p in params {
-            match p {
-                core::Expr::Const(p) => name += format!("_{}", p).as_str(),
-                core::Expr::Var(_) => {
+            match p.concrete() {
+                Some(p) => name += format!("_{}", p).as_str(),
+                None => {
                     unreachable!("Binding should only contain concrete values")
                 }
             }
@@ -116,7 +119,10 @@ impl Monomorphize {
         name.into()
     }
 
-    fn sig(sig: &core::Signature, binding: &[core::Expr]) -> core::Signature {
+    fn sig(
+        sig: &core::Signature,
+        binding: &[core::TimeSum],
+    ) -> core::Signature {
         // XXX: Short-circuit if binding is empty
         let mut nsig = sig.resolve_offset(binding);
         nsig.name = Self::generate_mono_name(&sig.name, binding);
@@ -128,7 +134,7 @@ impl Monomorphize {
         commands: impl Iterator<Item = core::Command>,
         // Binding for the parameters of the component.
         // Must only contain concrete values
-        param_binding: &Binding<core::Expr>,
+        param_binding: &Binding<core::TimeSum>,
         externals: &HashSet<core::Id>,
     ) -> Vec<core::Command> {
         commands
@@ -160,7 +166,7 @@ impl Monomorphize {
                     } = inst;
                     let resolved = bindings
                         .into_iter()
-                        .map(|p| p.resolve(param_binding).unwrap())
+                        .map(|p| p.resolve(param_binding))
                         .collect();
 
                     if externals.contains(&component) {
@@ -182,7 +188,7 @@ impl Monomorphize {
     /// Generate a new component using the binding parameters.
     fn generate_comp(
         comp: &core::Component,
-        binding: &Binding<core::Expr>,
+        binding: &Binding<core::TimeSum>,
         externals: &HashSet<core::Id>,
     ) -> core::Component {
         let sig =

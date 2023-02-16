@@ -279,7 +279,7 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.clone().into_children();
             [identifier(name), identifier(component), conc_params(params)] => vec![
-                core::Instance::new(name, component, params).set_span(sp).into()
+                core::Instance::new(name, component, params.into_iter().map(core::TimeSum::from).collect()).set_span(sp).into()
             ],
             [identifier(name), identifier(component), conc_params(params), invoke_args((abstract_vars, ports))] => {
                 // Upper case the first letter of name
@@ -289,6 +289,7 @@ impl FilamentParser {
                 if iname == name {
                     input.error("Generated Instance name conflicts with original name");
                 }
+                let params = params.into_iter().map(core::TimeSum::from).collect();
                 let instance = core::Instance::new(iname.clone(), component, params).set_span(sp).into();
                 let invoke = core::Invoke::new(name, iname, abstract_vars, Some(ports)).set_span(sp).into();
                 vec![instance, invoke]

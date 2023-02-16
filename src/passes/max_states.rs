@@ -25,7 +25,7 @@ impl MaxStates {
             for time in pd.liveness.time_exprs() {
                 let ev = &time.event;
                 let v = self.cur_states.get_mut(ev).unwrap();
-                let st = time.offset().concrete();
+                let st = time.offset().concrete().unwrap();
                 if *v < st {
                     *v = st;
                 }

@@ -338,7 +338,7 @@ fn compile_component(
     let port_transform =
         |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<u64> {
             let mut pd: ir::PortDef<u64> =
-                (pd.name.as_ref(), pd.bitwidth.concrete(), dir).into();
+                (pd.name.as_ref(), pd.bitwidth.concrete().unwrap(), dir).into();
             pd.attributes.insert("data", 1);
             pd
         };
@@ -396,7 +396,7 @@ fn compile_component(
                 } else {
                     let conc_bind = bindings
                         .into_iter()
-                        .map(|v| u64::try_from(&v).unwrap())
+                        .map(|v| v.concrete().unwrap())
                         .collect_vec();
                     ctx.builder.add_primitive(
                         name.as_ref(),
