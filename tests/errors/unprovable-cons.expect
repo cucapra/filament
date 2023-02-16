@@ -11,6 +11,8 @@ error: Cannot prove constraint L+1 > G+1
    │
 14 │   l0 := L<G, L+1>(left);
    │   ---------------------- component's where clause constraints must be satisfied
+   │
+   = assignment violates constraint: G=0, L=0
 
 error: Cannot prove constraint |L - G| >= 1
    ┌─ ./primitives/./state.fil:7:5
@@ -25,6 +27,8 @@ error: Cannot prove constraint |L - G| >= 1
    │
 14 │   l0 := L<G, L+1>(left);
    │   ---------------------- component's where clause constraints must be satisfied
+   │
+   = assignment violates constraint: G=0, L=0
 
 error: Cannot prove constraint |L - G| >= 1
   ┌─ tests/errors/unprovable-cons.fil:8:3
@@ -34,12 +38,16 @@ error: Cannot prove constraint |L - G| >= 1
   ·
 8 │   @[G, G+1] left: 32,
   │   ^^^^^^^^^^^^^^^^^^ signal lasts for 1 cycle(s)
+  │
+  = assignment violates constraint: G=0, L=0
 
 error: Cannot prove constraint L+1 > G+1
    ┌─ tests/errors/unprovable-cons.fil:14:3
    │
 14 │   l0 := L<G, L+1>(left);
    │   ^^^^^^^^^^^^^^^^^^^^^^ component's where clause constraints must be satisfied
+   │
+   = assignment violates constraint: G=0, L=0
 
 error: Multiple errors encountered
    ┌─ tests/errors/unprovable-cons.fil:15:9
@@ -49,6 +57,7 @@ error: Multiple errors encountered
    │   │      
    │   destination's requirement @[L+2, L+3]
    │
+   = assignment violates constraint: G=2, L=0
    = Cannot prove constraint L+2 >= G+1
    = Cannot prove constraint L+1 >= L+3
 

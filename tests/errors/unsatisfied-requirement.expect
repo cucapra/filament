@@ -11,6 +11,8 @@ error: Cannot prove constraint G+1 >= G+2
    │
 25 │     @[G, L] left: #WIDTH,
    │             ---- destination's requirement @[G+1, G+2]
+   │
+   = assignment violates constraint: G=0
 
 error: Cannot prove constraint G+2 >= G+4
    ┌─ tests/errors/unsatisfied-requirement.fil:12:9
@@ -19,5 +21,7 @@ error: Cannot prove constraint G+2 >= G+4
    │   ---   ^^^^^^ source is available for @[G+1, G+2]
    │   │      
    │   destination's requirement @[G+3, G+4]
+   │
+   = assignment violates constraint: G=0
 
 Compilation failed with 2 errors.

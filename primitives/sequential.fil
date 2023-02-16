@@ -6,7 +6,7 @@ comp Mult[#W]<G: 2>(
   @[G, G+1] right: #W,
 ) -> (
   @[G+2, G+3] out: #W
-) {
+) where #W > 1 {
   ll := new Register[#W]<G, G+3>(left);
   lr := new Register[#W]<G, G+3>(right);
   m := new MultComb[#W]<G+2>(ll.out, lr.out);
