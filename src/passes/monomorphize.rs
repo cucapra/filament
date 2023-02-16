@@ -36,7 +36,7 @@ impl InstanceParams {
         &mut self,
         parent: &core::Id,
         comp: &core::Id,
-        params: &[core::TimeSum],
+        params: &[core::Expr],
     ) {
         // log::trace!("{} -> {} -> {}", parent, comp, params);
 
@@ -105,7 +105,7 @@ impl Monomorphize {
     /// Gnerate name for a monomorphized component based on the binding parameters.
     fn generate_mono_name<'a>(
         comp: &core::Id,
-        params: impl IntoIterator<Item = &'a core::TimeSum>,
+        params: impl IntoIterator<Item = &'a core::Expr>,
     ) -> core::Id {
         let mut name = String::from(comp.as_ref());
         for p in params {
@@ -119,10 +119,7 @@ impl Monomorphize {
         name.into()
     }
 
-    fn sig(
-        sig: &core::Signature,
-        binding: &[core::TimeSum],
-    ) -> core::Signature {
+    fn sig(sig: &core::Signature, binding: &[core::Expr]) -> core::Signature {
         // XXX: Short-circuit if binding is empty
         let mut nsig = sig.resolve_offset(binding);
         nsig.name = Self::generate_mono_name(&sig.name, binding);
@@ -134,7 +131,7 @@ impl Monomorphize {
         commands: impl Iterator<Item = core::Command>,
         // Binding for the parameters of the component.
         // Must only contain concrete values
-        param_binding: &Binding<core::TimeSum>,
+        param_binding: &Binding<core::Expr>,
         externals: &HashSet<core::Id>,
     ) -> Vec<core::Command> {
         commands
@@ -188,7 +185,7 @@ impl Monomorphize {
     /// Generate a new component using the binding parameters.
     fn generate_comp(
         comp: &core::Component,
-        binding: &Binding<core::TimeSum>,
+        binding: &Binding<core::Expr>,
         externals: &HashSet<core::Id>,
     ) -> core::Component {
         let sig =

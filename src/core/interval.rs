@@ -1,4 +1,4 @@
-use super::{Constraint, OrderConstraint, Time, TimeSub, TimeSum};
+use super::{Constraint, Expr, OrderConstraint, Time, TimeSub};
 use crate::diagnostics::Diagnostics;
 use crate::utils::Binding;
 use crate::{errors, utils::GPosIdx};
@@ -47,7 +47,7 @@ impl Range {
         }
     }
 
-    pub fn resolve_offset(&self, bindings: &Binding<TimeSum>) -> Self {
+    pub fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         Range {
             start: self.start.resolve_expr(bindings),
             end: self.end.resolve_expr(bindings),

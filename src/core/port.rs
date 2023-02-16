@@ -1,4 +1,4 @@
-use super::{Id, Range, Time, TimeSum};
+use super::{Expr, Id, Range, Time};
 use crate::utils::Binding;
 use crate::{errors::WithPos, utils::GPosIdx};
 use std::fmt::Display;
@@ -10,13 +10,13 @@ pub struct PortDef {
     /// Liveness condition for the Port
     pub liveness: Range,
     /// Bitwidth of the port
-    pub bitwidth: TimeSum,
+    pub bitwidth: Expr,
     /// Source position
     pos: GPosIdx,
 }
 
 impl PortDef {
-    pub fn new(name: Id, liveness: Range, bitwidth: TimeSum) -> Self {
+    pub fn new(name: Id, liveness: Range, bitwidth: Expr) -> Self {
         Self {
             name,
             liveness,
@@ -53,7 +53,7 @@ impl PortDef {
     /// Specifically:
     /// - The bitwidth of the port
     /// - The liveness condition
-    pub fn resolve_offset(&self, bindings: &Binding<TimeSum>) -> Self {
+    pub fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         Self {
             bitwidth: self.bitwidth.resolve(bindings),
             liveness: self.liveness.resolve_offset(bindings),

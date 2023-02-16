@@ -1,4 +1,4 @@
-use super::{Id, Time, TimeSum};
+use super::{Expr, Id, Time};
 use crate::utils::Binding;
 use crate::{
     errors::{self, Error, FilamentResult, WithPos},
@@ -131,12 +131,12 @@ pub struct Instance {
     /// Name of the component
     pub component: Id,
     /// Bindings provided for this instance
-    pub bindings: Vec<TimeSum>,
+    pub bindings: Vec<Expr>,
     /// Source position
     pos: GPosIdx,
 }
 impl Instance {
-    pub fn new(name: Id, component: Id, bindings: Vec<TimeSum>) -> Self {
+    pub fn new(name: Id, component: Id, bindings: Vec<Expr>) -> Self {
         Instance {
             name,
             component,

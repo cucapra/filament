@@ -1,6 +1,7 @@
 mod component;
 mod constraint;
 mod control;
+mod expr;
 mod id;
 mod interval;
 mod port;
@@ -13,8 +14,9 @@ pub use constraint::{Constraint, OrderConstraint, OrderOp};
 pub use control::{
     Command, Connect, Fsm, Guard, Instance, Invoke, Port, PortType,
 };
+pub use expr::Expr;
 pub use id::Id;
 pub use interval::Range;
 pub use port::{InterfaceDef, PortDef};
 pub use signature::{EventBind, Signature};
-pub use time::{Time, TimeSub, TimeSum};
+pub use time::{Time, TimeSub};

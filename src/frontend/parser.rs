@@ -126,7 +126,7 @@ impl FilamentParser {
         match_nodes!(
             input.clone().into_children();
             [identifier(ev), port_width(sts)] => Ok(core::Time::new(ev, sts)),
-            [identifier(ev)] => Ok(core::Time::new(ev, core::TimeSum::default())),
+            [identifier(ev)] => Ok(core::Time::new(ev, core::Expr::default())),
             [bitwidth(_)] => {
                 Err(input.error("Time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number"))
             }
@@ -158,11 +158,11 @@ impl FilamentParser {
         ))
     }
 
-    fn port_width(input: Node) -> ParseResult<core::TimeSum> {
+    fn port_width(input: Node) -> ParseResult<core::Expr> {
         Ok(match_nodes!(
             input.into_children();
             [conc_or_var(es)..] => {
-                let mut ts = core::TimeSum::default();
+                let mut ts = core::Expr::default();
                 for e in es {
                     match e {
                         Expr::Const(c) => { ts.concrete += c; },
@@ -291,7 +291,7 @@ impl FilamentParser {
     }
 
     // ================ Cells =====================
-    fn conc_params(input: Node) -> ParseResult<Vec<core::TimeSum>> {
+    fn conc_params(input: Node) -> ParseResult<Vec<core::Expr>> {
         Ok(match_nodes!(
             input.into_children();
             [port_width(vars)..] => vars.collect(),
@@ -302,7 +302,7 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.clone().into_children();
             [identifier(name), identifier(component), conc_params(params)] => vec![
-                core::Instance::new(name, component, params.into_iter().map(core::TimeSum::from).collect()).set_span(sp).into()
+                core::Instance::new(name, component, params.into_iter().map(core::Expr::from).collect()).set_span(sp).into()
             ],
             [identifier(name), identifier(component), conc_params(params), invoke_args((abstract_vars, ports))] => {
                 // Upper case the first letter of name
@@ -312,7 +312,7 @@ impl FilamentParser {
                 if iname == name {
                     input.error("Generated Instance name conflicts with original name");
                 }
-                let params = params.into_iter().map(core::TimeSum::from).collect();
+                let params = params.into_iter().map(core::Expr::from).collect();
                 let instance = core::Instance::new(iname.clone(), component, params).set_span(sp).into();
                 let invoke = core::Invoke::new(name, iname, abstract_vars, Some(ports)).set_span(sp).into();
                 vec![instance, invoke]

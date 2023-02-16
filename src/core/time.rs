@@ -1,121 +1,7 @@
-use itertools::Itertools;
-
-use super::{Id, Range};
+use super::{Expr, Id, Range};
 use crate::utils::{self, SExp};
+use itertools::Itertools;
 use std::fmt::Display;
-
-#[derive(Default, Clone, PartialEq, Eq, Hash)]
-/// An opaque time sum expression
-/// Comparison between two [TimeSum] does not take into account the order of the
-/// variables.
-pub struct TimeSum {
-    // Concrete part of the time sum
-    pub concrete: u64,
-    // Abstract part of the time sum
-    pub abs: Vec<Id>,
-}
-
-impl TimeSum {
-    pub fn new(concrete: u64, abs: Vec<Id>) -> Self {
-        Self {
-            concrete,
-            abs: abs.into_iter().unique().collect(),
-        }
-    }
-
-    // Attempt to transform this in to a concrete time.
-    // Panics if there are abstract values.
-    pub fn concrete(&self) -> Option<u64> {
-        if self.abs.is_empty() {
-            Some(self.concrete)
-        } else {
-            None
-        }
-    }
-
-    pub fn resolve(&self, bind: &utils::Binding<TimeSum>) -> Self {
-        let mut offset = TimeSum {
-            concrete: self.concrete,
-            abs: vec![],
-        };
-
-        for x in &self.abs {
-            if let Some(sum) = bind.find(x) {
-                offset += sum.clone();
-            }
-        }
-
-        offset
-    }
-
-    /// Check if this TimeSum is equal to 0
-    pub fn is_zero(&self) -> bool {
-        self.concrete == 0 && self.abs.is_empty()
-    }
-}
-
-impl std::ops::Add for TimeSum {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Self {
-            concrete: self.concrete + rhs.concrete,
-            abs: self.abs.into_iter().chain(rhs.abs.into_iter()).collect(),
-        }
-    }
-}
-
-impl std::ops::AddAssign for TimeSum {
-    fn add_assign(&mut self, rhs: Self) {
-        self.concrete += rhs.concrete;
-        self.abs.extend(rhs.abs);
-    }
-}
-
-impl PartialOrd for TimeSum {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        let s1 = self.abs.iter().sorted().collect_vec();
-        let s2 = other.abs.iter().sorted().collect_vec();
-        if s1 == s2 {
-            self.concrete.partial_cmp(&other.concrete)
-        } else {
-            None
-        }
-    }
-}
-
-impl Display for TimeSum {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.abs
-            .iter()
-            .map(|t| t.to_string())
-            .chain(
-                std::iter::once(self.concrete)
-                    .filter(|c| *c != 0)
-                    .map(|t| t.to_string()),
-            )
-            .join("+")
-            .fmt(f)
-    }
-}
-
-impl From<Vec<u64>> for TimeSum {
-    fn from(v: Vec<u64>) -> Self {
-        Self {
-            concrete: v.iter().sum(),
-            abs: vec![],
-        }
-    }
-}
-
-impl From<u64> for TimeSum {
-    fn from(v: u64) -> Self {
-        Self {
-            concrete: v,
-            abs: vec![],
-        }
-    }
-}
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd)]
 /// Represents expression of the form `G+1+k`
@@ -123,16 +9,16 @@ pub struct Time {
     /// The event for the time expression
     pub event: Id,
     /// The offsets for the time expression
-    offset: TimeSum,
+    offset: Expr,
 }
 
 impl Time {
-    pub fn new(event: Id, offset: TimeSum) -> Self {
+    pub fn new(event: Id, offset: Expr) -> Self {
         Self { event, offset }
     }
 
     /// Get the offset associated with this time expression
-    pub fn offset(&self) -> &TimeSum {
+    pub fn offset(&self) -> &Expr {
         &self.offset
     }
 
@@ -140,12 +26,12 @@ impl Time {
     pub fn unit(event: Id, state: u64) -> Self {
         Time {
             event,
-            offset: TimeSum::new(state, vec![]),
+            offset: Expr::new(state, vec![]),
         }
     }
 
     /// Time expression that occurs `n` cycles after this time expression
-    pub fn increment(mut self, n: TimeSum) -> Self {
+    pub fn increment(mut self, n: Expr) -> Self {
         self.offset += n;
         self
     }
@@ -168,7 +54,7 @@ impl Time {
     }
 
     /// Resolve all expressions bound in this time expression
-    pub fn resolve_expr(&self, bind: &utils::Binding<TimeSum>) -> Self {
+    pub fn resolve_expr(&self, bind: &utils::Binding<Expr>) -> Self {
         Time {
             event: self.event.clone(),
             offset: self.offset.resolve(bind),
@@ -212,7 +98,7 @@ impl From<Time> for SExp {
 impl Range {
     /// Convert this interval into an offset. Only possible when interval uses
     /// exactly one event for both start and end.
-    pub fn as_offset(&self) -> Option<(Id, TimeSum, TimeSum)> {
+    pub fn as_offset(&self) -> Option<(Id, Expr, Expr)> {
         let Range { start, end, .. } = &self;
         if start.event == end.event {
             Some((
@@ -261,7 +147,7 @@ impl std::ops::Sub for Time {
                 TimeSub::Sym {
                     l: Time {
                         event: self.event,
-                        offset: TimeSum {
+                        offset: Expr {
                             concrete: lc - rc,
                             abs,
                         },
@@ -273,7 +159,7 @@ impl std::ops::Sub for Time {
                     l: self.event.into(),
                     r: Time {
                         event: other.event,
-                        offset: TimeSum {
+                        offset: Expr {
                             concrete: rc - lc,
                             abs,
                         },
@@ -288,13 +174,13 @@ impl std::ops::Sub for Time {
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum TimeSub {
     /// Concrete difference between two time expressions
-    Unit(TimeSum),
+    Unit(Expr),
     /// Symbolic difference between two time expressions
     Sym { l: Time, r: Time },
 }
 
 impl TimeSub {
-    pub fn unit(n: TimeSum) -> Self {
+    pub fn unit(n: Expr) -> Self {
         TimeSub::Unit(n)
     }
 
@@ -318,7 +204,7 @@ impl TimeSub {
         }
     }
 
-    pub fn resolve_offset(&self, bindings: &utils::Binding<TimeSum>) -> Self {
+    pub fn resolve_offset(&self, bindings: &utils::Binding<Expr>) -> Self {
         match self {
             TimeSub::Unit(n) => TimeSub::Unit(n.resolve(bindings)),
             TimeSub::Sym { l, r } => {
@@ -357,8 +243,8 @@ impl From<TimeSub> for SExp {
     }
 }
 
-impl From<TimeSum> for TimeSub {
-    fn from(n: TimeSum) -> Self {
+impl From<Expr> for TimeSub {
+    fn from(n: Expr) -> Self {
         TimeSub::Unit(n)
     }
 }

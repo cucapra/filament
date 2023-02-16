@@ -157,7 +157,7 @@ impl visitor::Checker for BindCheck {
         let resolve =
             |r: &core::Range,
              _: &utils::Binding<core::Time>,
-             _: &utils::Binding<core::TimeSum>| r.clone();
+             _: &utils::Binding<core::Expr>| r.clone();
         let dst_w = ctx
             .get_resolved_port(&con.dst, resolve)
             .map(|p| p.bitwidth)

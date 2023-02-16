@@ -1,4 +1,4 @@
-use super::{Id, Range, Time, TimeSub, TimeSum};
+use super::{Expr, Id, Range, Time, TimeSub};
 use crate::diagnostics::{self, InfoIdx};
 use crate::errors::Error;
 use crate::utils::Binding;
@@ -92,7 +92,7 @@ impl OrderConstraint<Time> {
         }
     }
 
-    fn resolve_offset(&self, bindings: &Binding<TimeSum>) -> Self {
+    fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         OrderConstraint {
             left: self.left.resolve_expr(bindings),
             right: self.right.resolve_expr(bindings),
@@ -109,7 +109,7 @@ impl OrderConstraint<TimeSub> {
         }
     }
 
-    fn resolve_offset(&self, bindings: &Binding<TimeSum>) -> Self {
+    fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         OrderConstraint {
             left: self.left.resolve_offset(bindings),
             right: self.right.resolve_offset(bindings),
@@ -242,7 +242,7 @@ impl Constraint {
         }
     }
 
-    pub fn resolve_offset(&self, bindings: &Binding<TimeSum>) -> Self {
+    pub fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         match self {
             Constraint::Base { base } => Constraint::Base {
                 base: base.resolve_offset(bindings),

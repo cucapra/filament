@@ -1,6 +1,5 @@
 use super::{
-    Constraint, Id, InterfaceDef, OrderConstraint, PortDef, Time, TimeSub,
-    TimeSum,
+    Constraint, Expr, Id, InterfaceDef, OrderConstraint, PortDef, Time, TimeSub,
 };
 use crate::diagnostics::Diagnostics;
 use crate::utils::Binding;
@@ -26,7 +25,7 @@ impl EventBind {
         }
     }
 
-    fn resolve_offset(&self, bindings: &Binding<TimeSum>) -> Self {
+    fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
         Self {
             delay: self.delay.resolve_offset(bindings),
             default: self.default.as_ref().map(|d| d.resolve_expr(bindings)),
@@ -239,7 +238,7 @@ impl Signature {
     }
 
     /// Construct a parameter binding from this Signature's parameters and the
-    pub fn param_binding(&self, args: &[TimeSum]) -> Binding<TimeSum> {
+    pub fn param_binding(&self, args: &[Expr]) -> Binding<Expr> {
         debug_assert!(
             self.params.len() == args.len(),
             "Insuffient params for signature, required {} got {}",
@@ -254,7 +253,7 @@ impl Signature {
 impl Signature {
     pub fn map<F>(self, f: F) -> Signature
     where
-        F: Fn(TimeSum) -> TimeSum,
+        F: Fn(Expr) -> Expr,
     {
         Signature {
             name: self.name,
@@ -321,8 +320,8 @@ impl Signature {
         cons
     }
 
-    pub fn resolve_offset(&self, args: &[TimeSum]) -> Signature {
-        let binding: Binding<TimeSum> = self.param_binding(args);
+    pub fn resolve_offset(&self, args: &[Expr]) -> Signature {
+        let binding: Binding<Expr> = self.param_binding(args);
 
         let resolved = Signature {
             params: vec![],
