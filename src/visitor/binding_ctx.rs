@@ -326,17 +326,7 @@ impl<'p> CompBinding<'p> {
             inv_map: HashMap::new(),
         };
 
-        for cmd in cmds {
-            match cmd {
-                core::Command::Instance(inst) => {
-                    ctx.add_instance(inst);
-                }
-                core::Command::Invoke(inv) => {
-                    ctx.add_invoke(inv);
-                }
-                _ => (),
-            }
-        }
+        process_cmds(cmds, &mut ctx);
 
         ctx
     }
@@ -358,96 +348,8 @@ impl<'p> CompBinding<'p> {
             inst_map: HashMap::new(),
             inv_map: HashMap::new(),
         };
-        let mut has_errors = false;
-        for cmd in cmds {
-            match cmd {
-                core::Command::Instance(inst) => {
-                    let comp = &inst.component;
-                    if ctx.prog.find_sig_idx(comp).is_some() {
-                        ctx.add_instance(inst);
-                    } else {
-                        has_errors = true;
-                        // If there is no component with this name, add an error and use a dummy signature
-                        let err = Error::undefined(comp.clone(), "component")
-                            .add_note(diag.add_info(
-                                "unknown component",
-                                comp.copy_span(),
-                            ));
-                        diag.add_error(err);
-                        ctx.add_bound_instance(
-                            inst.name.clone(),
-                            SigIdx::UNKNOWN,
-                            vec![],
-                            inst.copy_span(),
-                        );
-                    }
-                }
-                core::Command::Invoke(inv) => {
-                    if ctx.inst_map.get(&inv.instance).is_some() {
-                        // If there have been previous errors, we cannot rely on signatures being valid
-                        if has_errors {
-                            ctx.add_bound_invoke(
-                                inv.name.clone(),
-                                InstIdx::UNKNOWN,
-                                vec![],
-                                inv.copy_span(),
-                            );
-                        } else {
-                            ctx.add_invoke(inv);
-                        }
-                    } else {
-                        has_errors = true;
-                        // If there is no component with this name, add an error and use a dummy signature
-                        let err =
-                            Error::undefined(inv.instance.clone(), "instance")
-                                .add_note(diag.add_info(
-                                    "unknown instance",
-                                    inv.instance.copy_span(),
-                                ));
-                        diag.add_error(err);
-                        ctx.add_bound_invoke(
-                            inv.name.clone(),
-                            InstIdx::UNKNOWN,
-                            vec![],
-                            inv.copy_span(),
-                        );
-                    }
-                }
-                core::Command::Connect(core::Connect { src, dst, .. }) => {
-                    let mut check_port = |port: &core::Port| {
-                        if let core::PortType::InvPort { invoke, .. } =
-                            &port.typ
-                        {
-                            if ctx.inv_map.get(invoke).is_none() {
-                                let err = Error::undefined(
-                                    invoke.clone(),
-                                    "invocation",
-                                )
-                                .add_note(diag.add_info(
-                                    "unknown invocation",
-                                    invoke.copy_span(),
-                                ));
-                                diag.add_error(err)
-                            }
-                        } else if let core::PortType::ThisPort(p) = &port.typ {
-                            if !ctx.this().ports().iter().any(|pd| pd.name == p)
-                            {
-                                let err = Error::undefined(p.clone(), "port")
-                                    .add_note(diag.add_info(
-                                        "unknown port",
-                                        p.copy_span(),
-                                    ));
-                                diag.add_error(err)
-                            }
-                        }
-                    };
-                    check_port(src);
-                    check_port(dst);
-                }
-                _ => (),
-            }
-        }
 
+        let has_errors = process_checked_cmds(&mut ctx, cmds, diag);
         if has_errors {
             None
         } else {
@@ -490,12 +392,18 @@ impl<'p> CompBinding<'p> {
 
     /// Get the index for a given instance name
     pub fn get_instance_idx(&self, name: &Id) -> InstIdx {
-        self.inst_map[name]
+        *self
+            .inst_map
+            .get(name)
+            .unwrap_or_else(|| panic!("Unknown instance: {name}"))
     }
 
     /// Get the index for a given invocation name
     pub fn get_invoke_idx(&self, name: &Id) -> InvIdx {
-        self.inv_map[name]
+        *self
+            .inv_map
+            .get(name)
+            .unwrap_or_else(|| panic!("Unknown invocation: {name}"))
     }
 
     /// Add a new instance to this binding.
@@ -587,6 +495,123 @@ impl<'p> CompBinding<'p> {
             core::PortType::Constant(_) => None,
         }
     }
+}
+
+fn process_cmds(cmds: &Vec<core::Command>, ctx: &mut CompBinding) {
+    for cmd in cmds {
+        match cmd {
+            core::Command::Instance(inst) => {
+                ctx.add_instance(inst);
+            }
+            core::Command::Invoke(inv) => {
+                ctx.add_invoke(inv);
+            }
+            core::Command::ForLoop(l) => {
+                process_cmds(&l.body, ctx);
+            }
+            core::Command::Connect(_) | core::Command::Fsm(_) => (),
+        }
+    }
+}
+
+fn process_checked_cmds(
+    ctx: &mut CompBinding,
+    cmds: &Vec<core::Command>,
+    diag: &mut diagnostics::Diagnostics,
+) -> bool {
+    let mut has_errors = false;
+    for cmd in cmds {
+        match cmd {
+            core::Command::Instance(inst) => {
+                let comp = &inst.component;
+                if ctx.prog.find_sig_idx(comp).is_some() {
+                    ctx.add_instance(inst);
+                } else {
+                    has_errors = true;
+                    // If there is no component with this name, add an error and use a dummy signature
+                    let err = Error::undefined(comp.clone(), "component")
+                        .add_note(
+                            diag.add_info(
+                                "unknown component",
+                                comp.copy_span(),
+                            ),
+                        );
+                    diag.add_error(err);
+                    ctx.add_bound_instance(
+                        inst.name.clone(),
+                        SigIdx::UNKNOWN,
+                        vec![],
+                        inst.copy_span(),
+                    );
+                }
+            }
+            core::Command::Invoke(inv) => {
+                if ctx.inst_map.get(&inv.instance).is_some() {
+                    // If there have been previous errors, we cannot rely on signatures being valid
+                    if has_errors {
+                        ctx.add_bound_invoke(
+                            inv.name.clone(),
+                            InstIdx::UNKNOWN,
+                            vec![],
+                            inv.copy_span(),
+                        );
+                    } else {
+                        ctx.add_invoke(inv);
+                    }
+                } else {
+                    has_errors = true;
+                    // If there is no component with this name, add an error and use a dummy signature
+                    let err =
+                        Error::undefined(inv.instance.clone(), "instance")
+                            .add_note(diag.add_info(
+                                "unknown instance",
+                                inv.instance.copy_span(),
+                            ));
+                    diag.add_error(err);
+                    ctx.add_bound_invoke(
+                        inv.name.clone(),
+                        InstIdx::UNKNOWN,
+                        vec![],
+                        inv.copy_span(),
+                    );
+                }
+            }
+            core::Command::Connect(core::Connect { src, dst, .. }) => {
+                let mut check_port = |port: &core::Port| {
+                    if let core::PortType::InvPort { invoke, .. } = &port.typ {
+                        if ctx.inv_map.get(invoke).is_none() {
+                            let err =
+                                Error::undefined(invoke.clone(), "invocation")
+                                    .add_note(diag.add_info(
+                                        "unknown invocation",
+                                        invoke.copy_span(),
+                                    ));
+                            diag.add_error(err)
+                        }
+                    } else if let core::PortType::ThisPort(p) = &port.typ {
+                        if !ctx.this().ports().iter().any(|pd| pd.name == p) {
+                            let err = Error::undefined(p.clone(), "port")
+                                .add_note(
+                                    diag.add_info(
+                                        "unknown port",
+                                        p.copy_span(),
+                                    ),
+                                );
+                            diag.add_error(err)
+                        }
+                    }
+                };
+                check_port(src);
+                check_port(dst);
+            }
+            core::Command::ForLoop(l) => {
+                has_errors |= process_checked_cmds(ctx, &l.body, diag);
+            }
+            core::Command::Fsm(_) => (),
+        }
+    }
+
+    has_errors
 }
 
 /// Signatures bound in a program.

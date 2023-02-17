@@ -163,7 +163,13 @@ fsm = {
   "fsm" ~ identifier ~ "[" ~ bitwidth ~ "]" ~ "(" ~ port ~ ")" ~ ";"
 }
 
+// ====== Loops ==========
+
+for_loop = {
+  "for" ~ param_var ~ "in" ~ expr ~ ".." ~ expr ~ "{" ~ command* ~ "}"
+}
+
 // ========== Commands ==========
 command = {
-  instance | invocation | connect | fsm
+  instance | invocation | connect | fsm | for_loop
 }

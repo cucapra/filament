@@ -45,7 +45,10 @@ where
     }
 
     #[inline]
-    fn forloop(&mut self, _: &core::ForLoop, _ctx: &CompBinding) -> Traverse {
+    fn forloop(&mut self, l: &core::ForLoop, ctx: &CompBinding) -> Traverse {
+        for cmd in &l.body {
+            self.command(cmd, ctx)?;
+        }
         Traverse::Continue(())
     }
 
@@ -81,6 +84,16 @@ where
         Traverse::Continue(())
     }
 
+    fn command(&mut self, cmd: &core::Command, ctx: &CompBinding) -> Traverse {
+        match cmd {
+            core::Command::Invoke(inv) => self.invoke(inv, ctx),
+            core::Command::Instance(inst) => self.instance(inst, ctx),
+            core::Command::Connect(con) => self.connect(con, ctx),
+            core::Command::Fsm(fsm) => self.fsm(fsm, ctx),
+            core::Command::ForLoop(l) => self.forloop(l, ctx),
+        }
+    }
+
     /// Check the component signature and perform the component traversal
     fn component(
         &mut self,
@@ -99,13 +112,9 @@ where
 
         // Binding for instances
         self.enter_component(comp, ctx)?;
-        comp.body.iter().try_for_each(|cmd| match cmd {
-            core::Command::Invoke(inv) => self.invoke(inv, ctx),
-            core::Command::Instance(inst) => self.instance(inst, ctx),
-            core::Command::Connect(con) => self.connect(con, ctx),
-            core::Command::Fsm(fsm) => self.fsm(fsm, ctx),
-            core::Command::ForLoop(l) => self.forloop(l, ctx),
-        })?;
+        comp.body
+            .iter()
+            .try_for_each(|cmd| self.command(cmd, ctx))?;
         self.exit_component(comp, ctx)
     }
 

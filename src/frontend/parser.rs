@@ -530,6 +530,15 @@ impl FilamentParser {
         ))
     }
 
+    fn for_loop(input: Node) -> ParseResult<core::ForLoop> {
+        Ok(match_nodes!(
+            input.into_children();
+            [param_var(var), expr(start), expr(end), command(body)..] => {
+                core::ForLoop::new(var, start, end, body.into_iter().flatten().collect())
+            }
+        ))
+    }
+
     fn command(input: Node) -> ParseResult<Vec<core::Command>> {
         Ok(match_nodes!(
             input.into_children();
@@ -537,6 +546,7 @@ impl FilamentParser {
             [instance(cmd)] => cmd,
             [connect(con)] => vec![core::Command::Connect(con)],
             [fsm(fsm)] => vec![core::Command::Fsm(fsm)],
+            [for_loop(l)] => vec![core::Command::ForLoop(l)],
         ))
     }
 
