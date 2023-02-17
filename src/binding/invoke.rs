@@ -9,9 +9,16 @@ use itertools::Itertools;
 /// Index of an invocation bound in a component.
 /// Defined methods represent operations on an invocation and require a
 /// component binding to be resolved.
-pub struct InvIdx(pub(super) usize);
+pub struct InvIdx(pub(super) u32);
 
 impl InvIdx {
+    /// An unknown invocation
+    pub const UNKNOWN: Self = InvIdx(u32::MAX);
+
+    pub(super) fn new(idx: usize) -> Self {
+        InvIdx(idx as u32)
+    }
+
     /// Get the position of the invocation
     pub fn pos(&self, ctx: &CompBinding) -> GPosIdx {
         ctx[*self].pos
@@ -97,7 +104,7 @@ impl InvIdx {
         let inst = &ctx[inv.instance];
         let param_b = ctx.prog.param_binding(inst.sig, &inst.params);
         let event_b = ctx.prog.event_binding(inst.sig, &inv.events);
-        let sig = ctx.prog.sig(inst.sig);
+        let sig = &ctx.prog[inst.sig];
         let port = sig.get_port(port);
         core::PortDef::new(
             port.name.clone(),
@@ -130,7 +137,7 @@ impl InvIdx {
         let event_b = &ctx.prog.event_binding(sig_idx, &inv.events);
         let resolve_ref = |c| resolve_constraint(c, event_b, param_b);
         let resolve = |c| resolve_constraint(&c, event_b, param_b);
-        let sig = ctx.prog.sig(sig_idx);
+        let sig = &ctx.prog[sig_idx];
         sig.constraints
             .iter()
             .map(resolve_ref)

@@ -6,14 +6,16 @@ use crate::{errors::WithPos, utils::GPosIdx};
 /// Index of an instance bound in a component
 /// Defined methods represent operations on an instance and require a
 /// component binding to be resolved.
-pub struct InstIdx(pub(super) usize);
+pub struct InstIdx(pub(super) u32);
 
 impl InstIdx {
     /// The Unknown instance
-    pub const UNKNOWN: InstIdx = InstIdx(usize::MAX);
-}
+    pub const UNKNOWN: InstIdx = InstIdx(u32::MAX);
 
-impl InstIdx {
+    pub(super) fn new(idx: usize) -> Self {
+        InstIdx(idx as u32)
+    }
+
     /// Get the position of the instance
     pub fn pos(&self, ctx: &CompBinding) -> GPosIdx {
         ctx[*self].pos
@@ -35,7 +37,7 @@ impl InstIdx {
         ctx: &CompBinding,
     ) -> core::Signature {
         let inst = &ctx[*self];
-        ctx.prog.sig(inst.sig).resolve_offset(&inst.params)
+        ctx.prog[inst.sig].resolve_offset(&inst.params)
     }
 }
 

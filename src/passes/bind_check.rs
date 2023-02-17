@@ -123,12 +123,7 @@ impl visitor::Checker for BindCheck {
         ctx: &binding::CompBinding,
     ) -> Traverse {
         let bound = ctx.get_instance(&inst.name);
-        let param_len = ctx.prog.map_signature(
-            bound.sig,
-            |e| e.params.len(),
-            |c| c.params.len(),
-        );
-
+        let param_len = ctx.prog[bound.sig].params.len();
         for param in &inst.bindings {
             self.expr(param, &ctx.this().params);
         }
@@ -166,7 +161,10 @@ impl visitor::Checker for BindCheck {
             }
 
             // Check that the number of ports matches the number of ports
-            let inputs = ctx.prog.input_names(sig);
+            let inputs = ctx.prog[sig]
+                .inputs()
+                .map(|pd| pd.name.clone())
+                .collect_vec();
             let formals = inputs.len();
             let actuals = ports.len();
             if formals != actuals {
@@ -235,7 +233,7 @@ impl BindCheck {
         let inv_idx = ctx.get_invoke_idx(&inv.name);
         let sig = inv_idx.unresolved_signature(ctx);
         // Check that the number of arguments is more than the minimum number of required formals
-        let sig = ctx.prog.sig(sig);
+        let sig = &ctx.prog[sig];
         let min_formals = sig
             .events
             .iter()

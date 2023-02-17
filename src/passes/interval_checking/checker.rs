@@ -192,7 +192,7 @@ impl IntervalCheck {
     ) -> Traverse {
         let inv_sig = ctx.get_invoke_idx(&invoke.name).resolved_signature(ctx);
         let binds = &ctx.get_invoke(&invoke.name).events;
-        let this_sig = ctx.prog.comp_sig(ctx.sig());
+        let this_sig = ctx.this();
 
         let mut constraints = vec![];
 
@@ -245,10 +245,13 @@ impl IntervalCheck {
         // If this is a high-level invoke, check all port requirements
         if let Some(actuals) = invoke.ports.clone() {
             let inv_idx = ctx.get_invoke_idx(&invoke.name);
-            // We use an unresolved signature here because [[Self::connect]] will eventually resolve them using
-            // [[CompBinding::get_resolved_ports]
+            // We use an unresolved signature here because [Self::connect] will eventually resolve them using
+            // [CompBinding::get_resolved_ports]
             let sig = inv_idx.unresolved_signature(ctx);
-            let inputs = ctx.prog.input_names(sig);
+            let inputs = ctx.prog[sig]
+                .inputs()
+                .map(|pd| pd.name.clone())
+                .collect_vec();
             // Check connections implied by the invocation
             for (actual, formal) in actuals.iter().zip(inputs) {
                 let dst = core::Port::comp(invoke.name.clone(), formal.clone())

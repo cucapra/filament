@@ -116,7 +116,7 @@ impl IntervalCheck {
         }
 
         // Iterate over each event
-        let events = ctx.prog.event_names(ctx[inst].sig);
+        let events = ctx.prog[ctx[inst].sig].events().collect_vec();
         let mut share_constraints = Vec::new();
         let num_bindings = invoke_bindings.len();
         for event in 0..events.len() {
@@ -124,7 +124,7 @@ impl IntervalCheck {
             // Since all bindings use the same event, we can use the event mentioned in the first binding
             // as the one to use for the sharing constraint
             let bounded_event = first_bind[event].0.event();
-            let this = ctx.prog.comp_sig(ctx.sig());
+            let this = ctx.this();
             let eb = this.get_event(&bounded_event).clone();
             let eb_pos = eb.copy_span();
             let mut share = ShareConstraint::from(eb);

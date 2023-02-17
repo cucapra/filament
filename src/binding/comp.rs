@@ -30,6 +30,8 @@ impl<'p> CompBinding<'p> {
         Self::from_component(prog_ctx, &comp.sig.name, &comp.body)
     }
 
+    /// Construct bindings while checking for errors.
+    /// Returns None if there are any errors.
     pub fn new_checked(
         prog_ctx: &'p ProgBinding<'p>,
         comp: &core::Component,
@@ -38,7 +40,7 @@ impl<'p> CompBinding<'p> {
         Self::from_component_checked(prog_ctx, &comp.sig.name, &comp.body, diag)
     }
 
-    /// Construct a new instance using information from a [[core::Component]].
+    /// Construct a new instance using information from a [core::Component].
     pub fn from_component(
         prog: &'p ProgBinding<'p>,
         comp: &core::Id,
@@ -55,7 +57,6 @@ impl<'p> CompBinding<'p> {
         };
 
         process_cmds(cmds, &mut ctx);
-
         ctx
     }
 
@@ -88,17 +89,17 @@ impl<'p> CompBinding<'p> {
     /// Get the **unresolved** signature associated with this component.
     /// If this signature should be completely resolved, use [[InvIdx::resolve_signature]].
     pub fn this(&self) -> &core::Signature {
-        self.prog.comp_sig(self.sig)
+        &self.prog[self.sig]
     }
 
     /// Return instances associated with this component
     pub fn instances(&self) -> impl Iterator<Item = InstIdx> {
-        (0..self.instances.len()).map(InstIdx)
+        (0..self.instances.len()).map(InstIdx::new)
     }
 
     /// Return the invocations associated with this component
     pub fn invocations(&self) -> impl Iterator<Item = InvIdx> {
-        (0..self.invocations.len()).map(InvIdx)
+        (0..self.invocations.len()).map(InvIdx::new)
     }
 
     /// Signature associated with this component
@@ -153,7 +154,7 @@ impl<'p> CompBinding<'p> {
         params: Vec<core::Expr>,
         pos: GPosIdx,
     ) -> InstIdx {
-        let idx = InstIdx(self.instances.len());
+        let idx = InstIdx::new(self.instances.len());
         self.instances.push(BoundInstance::new(sig, params, pos));
         self.inst_map.insert(name, idx);
         idx
@@ -166,7 +167,7 @@ impl<'p> CompBinding<'p> {
         let instance = self.inst_map[&inv.instance];
         let events = self
             .prog
-            .event_binding(self.instances[instance.0].sig, &inv.abstract_vars)
+            .event_binding(self[instance].sig, &inv.abstract_vars)
             .into_iter()
             .map(|b| b.1)
             .collect();
@@ -185,7 +186,7 @@ impl<'p> CompBinding<'p> {
         events: Vec<Time>,
         pos: GPosIdx,
     ) -> InvIdx {
-        let idx = InvIdx(self.invocations.len());
+        let idx = InvIdx::new(self.invocations.len());
         self.invocations
             .push(BoundInvoke::new(instance, events, pos));
         self.inv_map.insert(name, idx);
@@ -207,9 +208,7 @@ impl<'p> CompBinding<'p> {
         ) -> core::Range,
     {
         match &port.typ {
-            core::PortType::ThisPort(p) => {
-                Some(self.prog.comp_sig(self.sig).get_port(p))
-            }
+            core::PortType::ThisPort(p) => Some(self.this().get_port(p)),
             core::PortType::InvPort { invoke, name } => {
                 Some(self.get_invoke_idx(invoke).get_invoke_port(
                     self,
@@ -226,7 +225,11 @@ impl<'p> CompBinding<'p> {
 impl<'p> std::ops::Index<InstIdx> for CompBinding<'p> {
     type Output = BoundInstance;
     fn index(&self, idx: InstIdx) -> &Self::Output {
-        &self.instances[idx.0]
+        debug_assert!(
+            idx != InstIdx::UNKNOWN,
+            "Attempted to use unknown instance index"
+        );
+        &self.instances[idx.0 as usize]
     }
 }
 
@@ -234,7 +237,11 @@ impl<'p> std::ops::Index<InstIdx> for CompBinding<'p> {
 impl<'p> std::ops::Index<InvIdx> for CompBinding<'p> {
     type Output = BoundInvoke;
     fn index(&self, idx: InvIdx) -> &Self::Output {
-        &self.invocations[idx.0]
+        debug_assert!(
+            idx != InvIdx::UNKNOWN,
+            "Attempted to use unknown invoke index"
+        );
+        &self.invocations[idx.0 as usize]
     }
 }
 
