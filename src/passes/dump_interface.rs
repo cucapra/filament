@@ -1,6 +1,7 @@
+use crate::binding::CompBinding;
 use crate::core;
 use crate::errors::{self, FilamentResult};
-use crate::visitor::{self, CompBinding};
+use crate::visitor;
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -21,7 +22,7 @@ impl visitor::Transform for DumpInterface {
 
     fn clear_data(&mut self) {}
 
-    fn component_filter(&self, comp: &visitor::CompBinding) -> bool {
+    fn component_filter(&self, comp: &CompBinding) -> bool {
         let sig = comp.this();
         sig.name == "main"
     }

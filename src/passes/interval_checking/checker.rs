@@ -1,11 +1,12 @@
 use itertools::Itertools;
 
 use super::IntervalCheck;
+use crate::binding::CompBinding;
 use crate::core::{self, OrderConstraint, Time};
 use crate::diagnostics;
 use crate::errors::{Error, WithPos};
 use crate::utils::{self, FilSolver};
-use crate::visitor::{self, Checker, CompBinding, Traverse};
+use crate::visitor::{self, Checker, Traverse};
 use std::iter;
 
 impl visitor::Checker for IntervalCheck {
@@ -40,11 +41,7 @@ impl visitor::Checker for IntervalCheck {
         &mut self.diag
     }
 
-    fn connect(
-        &mut self,
-        con: &core::Connect,
-        ctx: &visitor::CompBinding,
-    ) -> Traverse {
+    fn connect(&mut self, con: &core::Connect, ctx: &CompBinding) -> Traverse {
         let src = &con.src;
         let dst = &con.dst;
         log::trace!("Checking connect: {} = {}", dst, src);

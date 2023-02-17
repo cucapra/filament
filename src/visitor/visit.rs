@@ -1,4 +1,4 @@
-use super::{CompBinding, ProgBinding};
+use crate::binding::{CompBinding, ProgBinding};
 use crate::{core, errors::FilamentResult};
 use itertools::Itertools;
 

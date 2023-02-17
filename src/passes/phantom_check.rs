@@ -1,7 +1,7 @@
 use crate::errors::{Error, WithPos};
 use crate::utils::GPosIdx;
 use crate::visitor::{self, Traverse};
-use crate::{core, diagnostics};
+use crate::{binding, core, diagnostics};
 use std::collections::HashSet;
 
 /// Checks if a user-level phantom events are valid.
@@ -44,7 +44,7 @@ impl visitor::Checker for PhantomCheck {
     fn enter_component(
         &mut self,
         comp: &core::Component,
-        _: &visitor::CompBinding,
+        _: &binding::CompBinding,
     ) -> Traverse {
         self.phantom_events = comp.sig.phantom_events().collect();
         Traverse::Continue(())
@@ -53,7 +53,7 @@ impl visitor::Checker for PhantomCheck {
     fn invoke(
         &mut self,
         inv: &core::Invoke,
-        ctx: &visitor::CompBinding,
+        ctx: &binding::CompBinding,
     ) -> Traverse {
         // Check if the instance has already been used
         if let Some(prev_use) = self.instance_used.get(&inv.instance) {

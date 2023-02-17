@@ -8,19 +8,7 @@ use crate::{
 use itertools::Itertools;
 use std::collections::HashMap;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-/// Index of a signature bound in the program
-pub enum SigIdx {
-    /// An external component
-    Ext(usize),
-    /// A Filament component
-    Comp(usize),
-}
-
-impl SigIdx {
-    /// The Unknown signature
-    pub const UNKNOWN: SigIdx = SigIdx::Ext(usize::MAX);
-}
+use super::{ProgBinding, SigIdx};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 /// Index of an instance bound in a component
@@ -61,14 +49,7 @@ impl InstIdx {
     /// that are only resolved through an invocation.
     fn param_resolved_signature(&self, ctx: &CompBinding) -> core::Signature {
         let inst = &ctx.instances[self.0];
-        match inst.sig {
-            SigIdx::Ext(idx) => {
-                ctx.prog.externals[idx].resolve_offset(&inst.params)
-            }
-            SigIdx::Comp(idx) => {
-                ctx.prog.components[idx].resolve_offset(&inst.params)
-            }
-        }
+        ctx.prog.sig(inst.sig).resolve_offset(&inst.params)
     }
 }
 
@@ -197,29 +178,17 @@ impl InvIdx {
     {
         let inv = &ctx.invocations[self.0];
         let inst = &ctx[inv.instance];
-        let sig = inst.sig;
-        let param_b = &ctx.prog.param_binding(sig, &inst.params);
-        let event_b = &ctx.prog.event_binding(sig, &inv.events);
+        let sig_idx = inst.sig;
+        let param_b = &ctx.prog.param_binding(sig_idx, &inst.params);
+        let event_b = &ctx.prog.event_binding(sig_idx, &inv.events);
         let resolve_ref = |c| resolve_constraint(c, event_b, param_b);
         let resolve = |c| resolve_constraint(&c, event_b, param_b);
-        match sig {
-            SigIdx::Ext(idx) => {
-                let sig = ctx.prog.externals[idx];
-                sig.constraints
-                    .iter()
-                    .map(resolve_ref)
-                    .chain(sig.well_formed(diag).into_iter().map(resolve))
-                    .collect()
-            }
-            SigIdx::Comp(idx) => {
-                let sig = ctx.prog.components[idx];
-                sig.constraints
-                    .iter()
-                    .map(resolve_ref)
-                    .chain(sig.well_formed(diag).into_iter().map(resolve))
-                    .collect()
-            }
-        }
+        let sig = ctx.prog.sig(sig_idx);
+        sig.constraints
+            .iter()
+            .map(resolve_ref)
+            .chain(sig.well_formed(diag).into_iter().map(resolve))
+            .collect()
     }
 }
 
@@ -278,22 +247,6 @@ pub struct CompBinding<'p> {
     inst_map: HashMap<Id, InstIdx>,
     /// Mapping from name of invocation to its index
     inv_map: HashMap<Id, InvIdx>,
-}
-
-// Index into the component binding using InstIdx
-impl<'p> std::ops::Index<InstIdx> for CompBinding<'p> {
-    type Output = BoundInstance;
-    fn index(&self, idx: InstIdx) -> &Self::Output {
-        &self.instances[idx.0]
-    }
-}
-
-// Index into the component binding using InvIdx
-impl<'p> std::ops::Index<InvIdx> for CompBinding<'p> {
-    type Output = BoundInvoke;
-    fn index(&self, idx: InvIdx) -> &Self::Output {
-        &self.invocations[idx.0]
-    }
 }
 
 impl<'p> CompBinding<'p> {
@@ -497,6 +450,22 @@ impl<'p> CompBinding<'p> {
     }
 }
 
+// Index into the component binding using InstIdx
+impl<'p> std::ops::Index<InstIdx> for CompBinding<'p> {
+    type Output = BoundInstance;
+    fn index(&self, idx: InstIdx) -> &Self::Output {
+        &self.instances[idx.0]
+    }
+}
+
+// Index into the component binding using InvIdx
+impl<'p> std::ops::Index<InvIdx> for CompBinding<'p> {
+    type Output = BoundInvoke;
+    fn index(&self, idx: InvIdx) -> &Self::Output {
+        &self.invocations[idx.0]
+    }
+}
+
 fn process_cmds(cmds: &Vec<core::Command>, ctx: &mut CompBinding) {
     for cmd in cmds {
         match cmd {
@@ -612,168 +581,4 @@ fn process_checked_cmds(
     }
 
     has_errors
-}
-
-/// Signatures bound in a program.
-/// Also acts a dispatcher for methods on [[core::Signature]] since external and
-/// component signatures have different types.
-pub struct ProgBinding<'a> {
-    externals: Vec<&'a core::Signature>,
-    components: Vec<&'a core::Signature>,
-    name_map: HashMap<Id, SigIdx>,
-}
-
-impl<'a> ProgBinding<'a> {
-    /// Get index associated with a signature
-    fn find_sig_idx(&self, name: &core::Id) -> Option<SigIdx> {
-        if let Some(idx) = self.externals.iter().position(|s| *name == s.name) {
-            Some(SigIdx::Ext(idx))
-        } else {
-            self.components
-                .iter()
-                .position(|s| *name == s.name)
-                .map(SigIdx::Comp)
-        }
-    }
-
-    fn get_sig_idx(&self, name: &core::Id) -> SigIdx {
-        self.find_sig_idx(name)
-            .unwrap_or_else(|| panic!("Unknown signature: {}", name))
-    }
-
-    /// Add a component signature to the program binding
-    pub fn add_component(&mut self, sig: &'a core::Signature) -> SigIdx {
-        let idx = SigIdx::Comp(self.components.len());
-        self.components.push(sig);
-        self.name_map.insert(sig.name.clone(), idx);
-        idx
-    }
-
-    /// Add a component signature to the program binding
-    pub fn add_external(&mut self, sig: &'a core::Signature) -> SigIdx {
-        let idx = SigIdx::Ext(self.externals.len());
-        self.externals.push(sig);
-        self.name_map.insert(sig.name.clone(), idx);
-        idx
-    }
-
-    // ============= Dispatch methods on Signatures =============
-
-    /// Return the underlying signature
-    pub fn sig(&self, sig: SigIdx) -> &'a core::Signature {
-        match sig {
-            SigIdx::Ext(idx) => self.externals[idx],
-            SigIdx::Comp(idx) => self.components[idx],
-        }
-    }
-
-    /// Apply function on either an external or component signature and return the result
-    #[inline]
-    pub fn map_signature<O>(
-        &self,
-        sig: SigIdx,
-        ext: impl Fn(&'a core::Signature) -> O,
-        comp: impl Fn(&'a core::Signature) -> O,
-    ) -> O {
-        match sig {
-            SigIdx::Ext(idx) => ext(self.externals[idx]),
-            SigIdx::Comp(idx) => comp(self.components[idx]),
-        }
-    }
-
-    /// Get all the outputs in a signature
-    pub fn output_names(&self, sig: SigIdx) -> Vec<&Id> {
-        self.map_signature(
-            sig,
-            |ext| ext.outputs().map(|pd| &pd.name).collect_vec(),
-            |comp| comp.outputs().map(|pd| &pd.name).collect_vec(),
-        )
-    }
-
-    /// Get all the inputs in a signature
-    pub fn input_names(&self, sig: SigIdx) -> Vec<&Id> {
-        self.map_signature(
-            sig,
-            |ext| ext.inputs().map(|pd| &pd.name).collect_vec(),
-            |comp| comp.inputs().map(|pd| &pd.name).collect_vec(),
-        )
-    }
-
-    /// Name of the events associated with a signature
-    pub fn event_names(&self, sig: SigIdx) -> Vec<&Id> {
-        self.map_signature(
-            sig,
-            |ext| ext.events.iter().map(|eb| &eb.event).collect_vec(),
-            |comp| comp.events.iter().map(|eb| &eb.event).collect_vec(),
-        )
-    }
-
-    /// Name of the parameters associated with a signature
-    pub fn param_names(&self, sig: SigIdx) -> &Vec<Id> {
-        self.map_signature(sig, |ext| &ext.params, |comp| &comp.params)
-    }
-
-    /// Get the phantom events
-    pub fn phantom_events(&self, sig: SigIdx) -> Vec<Id> {
-        self.map_signature(
-            sig,
-            |ext| ext.phantom_events().collect_vec(),
-            |comp| comp.phantom_events().collect_vec(),
-        )
-    }
-
-    /// Returns the underlying comp signature. Panics if the signature actually points to an external.
-    pub fn comp_sig(&self, sig: SigIdx) -> &'a core::Signature {
-        match sig {
-            SigIdx::Ext(_) => {
-                unreachable!("comp_sig called on external signature")
-            }
-            SigIdx::Comp(idx) => self.components[idx],
-        }
-    }
-
-    /// Event binding generated from a signature
-    /// XXX: Can be constructed using the binding and the event names
-    fn event_binding(
-        &self,
-        sig: SigIdx,
-        events: &[Time],
-    ) -> utils::Binding<Time> {
-        match sig {
-            SigIdx::Ext(idx) => self.externals[idx].event_binding(events),
-            SigIdx::Comp(idx) => self.components[idx].event_binding(events),
-        }
-    }
-
-    /// XXX: Can be constructed using the binding and the param names
-    fn param_binding(
-        &self,
-        sig: SigIdx,
-        params: &[core::Expr],
-    ) -> utils::Binding<core::Expr> {
-        match sig {
-            SigIdx::Ext(idx) => self.externals[idx].param_binding(params),
-            SigIdx::Comp(idx) => self.components[idx].param_binding(params),
-        }
-    }
-}
-
-impl<'a> From<&'a core::Namespace> for ProgBinding<'a> {
-    fn from(ns: &'a core::Namespace) -> Self {
-        let mut ctx = ProgBinding {
-            externals: Vec::new(),
-            components: Vec::new(),
-            name_map: HashMap::new(),
-        };
-        ns.externs
-            .iter()
-            .flat_map(|(_, comps)| comps)
-            .for_each(|c| {
-                ctx.add_external(c);
-            });
-        ns.components.iter().map(|comp| &comp.sig).for_each(|c| {
-            ctx.add_component(c);
-        });
-        ctx
-    }
 }

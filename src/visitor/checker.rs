@@ -1,6 +1,6 @@
 use std::ops::ControlFlow;
 
-use super::{CompBinding, ProgBinding};
+use crate::binding::{CompBinding, ProgBinding};
 use crate::{core, diagnostics};
 
 /// Should the traversal continue or stop?
@@ -98,7 +98,7 @@ where
     fn component(
         &mut self,
         comp: &core::Component,
-        prog_ctx: &super::ProgBinding,
+        prog_ctx: &ProgBinding,
     ) -> Traverse {
         self.signature(&comp.sig)?;
         let ctx = &if self.require_binding_check() {

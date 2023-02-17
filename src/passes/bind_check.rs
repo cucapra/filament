@@ -1,8 +1,9 @@
 use crate::{
+    binding::{self, InvIdx},
     core, diagnostics,
     errors::{Error, WithPos},
     utils,
-    visitor::{self, InvIdx, Traverse},
+    visitor::{self, Traverse},
 };
 use itertools::Itertools;
 
@@ -119,7 +120,7 @@ impl visitor::Checker for BindCheck {
     fn instance(
         &mut self,
         inst: &core::Instance,
-        ctx: &visitor::CompBinding,
+        ctx: &binding::CompBinding,
     ) -> Traverse {
         let bound = ctx.get_instance(&inst.name);
         let param_len = ctx.prog.map_signature(
@@ -150,7 +151,7 @@ impl visitor::Checker for BindCheck {
     fn invoke(
         &mut self,
         inv: &core::Invoke,
-        ctx: &visitor::CompBinding,
+        ctx: &binding::CompBinding,
     ) -> Traverse {
         let inv_idx = self.bind_invoke(inv, ctx);
         let sig = inv_idx.unresolved_signature(ctx);
@@ -190,7 +191,7 @@ impl visitor::Checker for BindCheck {
     fn connect(
         &mut self,
         con: &core::Connect,
-        ctx: &visitor::CompBinding,
+        ctx: &binding::CompBinding,
     ) -> Traverse {
         let resolve =
             |r: &core::Range,
@@ -229,7 +230,7 @@ impl BindCheck {
     fn bind_invoke(
         &mut self,
         inv: &core::Invoke,
-        ctx: &visitor::CompBinding,
+        ctx: &binding::CompBinding,
     ) -> InvIdx {
         let inv_idx = ctx.get_invoke_idx(&inv.name);
         let sig = inv_idx.unresolved_signature(ctx);
