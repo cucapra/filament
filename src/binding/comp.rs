@@ -1,237 +1,12 @@
 //! Context that tracks the binding information in a particular program
+use super::{BoundInstance, BoundInvoke, InstIdx, InvIdx, ProgBinding, SigIdx};
 use crate::{
-    core::{self, Id, Time, TimeSub},
+    core::{self, Id, Time},
     diagnostics,
     errors::{Error, WithPos},
     utils::{self, GPosIdx},
 };
-use itertools::Itertools;
 use std::collections::HashMap;
-
-use super::{ProgBinding, SigIdx};
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-/// Index of an instance bound in a component
-/// Defined methods represent operations on an instance and require a
-/// component binding to be resolved.
-pub struct InstIdx(usize);
-
-impl InstIdx {
-    /// The Unknown instance
-    pub const UNKNOWN: InstIdx = InstIdx(usize::MAX);
-}
-
-impl InstIdx {
-    /// Get the position of the instance
-    pub fn pos(&self, ctx: &CompBinding) -> GPosIdx {
-        ctx.instances[self.0].pos
-    }
-
-    /// Returns all the invocations associated with an instance
-    pub fn get_all_invokes<'a>(
-        &'a self,
-        ctx: &'a CompBinding<'a>,
-    ) -> impl Iterator<Item = InvIdx> + '_ {
-        ctx.invocations
-            .iter()
-            .enumerate()
-            .filter_map(move |(idx, inv)| {
-                if inv.instance == *self {
-                    Some(InvIdx(idx))
-                } else {
-                    None
-                }
-            })
-    }
-
-    /// Get the signature of this instance by resolving against the parameter bindings.
-    /// Note that such a signature still has unresolved event bindings (such as the delay of a Register)
-    /// that are only resolved through an invocation.
-    fn param_resolved_signature(&self, ctx: &CompBinding) -> core::Signature {
-        let inst = &ctx.instances[self.0];
-        ctx.prog.sig(inst.sig).resolve_offset(&inst.params)
-    }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-/// Index of an invocation bound in a component.
-/// Defined methods represent operations on an invocation and require a
-/// component binding to be resolved.
-pub struct InvIdx(usize);
-
-impl InvIdx {
-    /// The Unknown invocation
-    pub const UNKNOWN: InvIdx = InvIdx(usize::MAX);
-}
-
-impl InvIdx {
-    /// Get the position of the invocation
-    pub fn pos(&self, ctx: &CompBinding) -> GPosIdx {
-        ctx.invocations[self.0].pos
-    }
-
-    /// Get resolved event bindings for the invocation
-    pub fn resolved_event_binding(&self, ctx: &CompBinding) -> Vec<Time> {
-        let inv = &ctx.invocations[self.0];
-        let inst = &ctx.instances[inv.instance.0];
-        let param_b = ctx.prog.param_binding(inst.sig, &inst.params);
-
-        inv.events
-            .iter()
-            .map(|e| e.resolve_expr(&param_b))
-            .collect()
-    }
-
-    /// Return the idx for the signature associated with the invocation.
-    pub fn unresolved_signature(&self, ctx: &CompBinding) -> SigIdx {
-        let inv = &ctx.invocations[self.0];
-        let inst = &ctx[inv.instance];
-        inst.sig
-    }
-
-    /// Return the signature of the component being invoked using the parameter bindings and
-    /// the event bindings of the invocation.
-    pub fn resolved_signature(&self, ctx: &CompBinding) -> core::Signature {
-        let inv = &ctx.invocations[self.0];
-        let inst_idx = inv.instance;
-        let inst = &ctx.instances[inst_idx.0];
-        let event_b = ctx.prog.event_binding(inst.sig, &inv.events);
-        inst_idx
-            .param_resolved_signature(ctx)
-            .resolve_event(&event_b)
-    }
-
-    /// Get the "active range" for an event in the invocation.
-    /// If we have something like:
-    /// ```
-    /// comp Reg<G: L-(G+2), L: L-G>(...) { ... }
-    ///
-    /// comp main<T: 1> {
-    ///   R := new Reg;
-    ///   r0 := R<T+3, T+6>
-    /// }
-    /// ```
-    ///
-    /// The active ranges for events in the signature are:
-    /// G -> [T+3, T+3+Delay(G)] = [T+3, T+4]
-    /// L -> [T+5, T+5+Delay(L)] = [T+6, T+9]
-    ///
-    /// The function returns the (start_time, delay) for each event in the signature.
-    pub fn event_active_ranges(
-        &self,
-        ctx: &CompBinding,
-    ) -> Vec<(Time, TimeSub)> {
-        let inv = &ctx.invocations[self.0];
-        let sig = self.resolved_signature(ctx);
-        sig.events
-            .iter()
-            .zip(&inv.events)
-            .map(|(ev, bind)| (bind.clone(), ev.delay.clone()))
-            .collect_vec()
-    }
-
-    /// Fully resolve a port.
-    /// Accepts a function to resolve the liveness of the port using time and width bindings.
-    // XXX: Does not need to return an option
-    pub fn get_invoke_port<F>(
-        &self,
-        ctx: &CompBinding,
-        port: &Id,
-        resolve_range: F,
-    ) -> core::PortDef
-    where
-        F: Fn(
-            &core::Range,
-            &utils::Binding<Time>,
-            &utils::Binding<core::Expr>,
-        ) -> core::Range,
-    {
-        let inv = &ctx.invocations[self.0];
-        let inst = &ctx.instances[inv.instance.0];
-        let param_b = ctx.prog.param_binding(inst.sig, &inst.params);
-        let event_b = ctx.prog.event_binding(inst.sig, &inv.events);
-        let sig = ctx.prog.sig(inst.sig);
-        let port = sig.get_port(port);
-        core::PortDef::new(
-            port.name.clone(),
-            resolve_range(&port.liveness, &event_b, &param_b),
-            port.bitwidth.resolve(&param_b),
-        )
-    }
-
-    /// Get all the fully resolved constraints for the signature of an invocation.
-    /// This includes:
-    /// - The constraints of the component
-    /// - Well-formedness constraints
-    pub fn get_resolved_sig_constraints<F>(
-        &self,
-        ctx: &CompBinding,
-        resolve_constraint: F,
-        diag: &mut diagnostics::Diagnostics,
-    ) -> Vec<core::Constraint>
-    where
-        F: Fn(
-            &core::Constraint,
-            &utils::Binding<Time>,
-            &utils::Binding<core::Expr>,
-        ) -> core::Constraint,
-    {
-        let inv = &ctx.invocations[self.0];
-        let inst = &ctx[inv.instance];
-        let sig_idx = inst.sig;
-        let param_b = &ctx.prog.param_binding(sig_idx, &inst.params);
-        let event_b = &ctx.prog.event_binding(sig_idx, &inv.events);
-        let resolve_ref = |c| resolve_constraint(c, event_b, param_b);
-        let resolve = |c| resolve_constraint(&c, event_b, param_b);
-        let sig = ctx.prog.sig(sig_idx);
-        sig.constraints
-            .iter()
-            .map(resolve_ref)
-            .chain(sig.well_formed(diag).into_iter().map(resolve))
-            .collect()
-    }
-}
-
-/// An instance bound by a component
-pub struct BoundInstance {
-    /// The signature of this instance
-    pub sig: SigIdx,
-    /// Parameter binding for this instance
-    pub params: Vec<core::Expr>,
-    /// Position associated with this instance
-    pos: GPosIdx,
-}
-
-impl WithPos for BoundInstance {
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> GPosIdx {
-        self.pos
-    }
-}
-
-pub struct BoundInvoke {
-    /// The instance being invoked
-    pub instance: InstIdx,
-    /// Event binding for this invocation
-    pub events: Vec<Time>,
-    /// Position associated with this invocation
-    pos: GPosIdx,
-}
-
-impl WithPos for BoundInvoke {
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> GPosIdx {
-        self.pos
-    }
-}
 
 /// Track binding information for a component
 pub struct CompBinding<'p> {
@@ -240,13 +15,13 @@ pub struct CompBinding<'p> {
     /// Signature associated with this component
     sig: SigIdx,
     /// Instances bound in this component
-    instances: Vec<BoundInstance>,
+    pub(super) instances: Vec<BoundInstance>,
     /// Invocations bound in this component
-    invocations: Vec<BoundInvoke>,
+    pub(super) invocations: Vec<BoundInvoke>,
     /// Mapping from name of instance to its index
-    inst_map: HashMap<Id, InstIdx>,
+    pub(super) inst_map: HashMap<Id, InstIdx>,
     /// Mapping from name of invocation to its index
-    inv_map: HashMap<Id, InvIdx>,
+    pub(super) inv_map: HashMap<Id, InvIdx>,
 }
 
 impl<'p> CompBinding<'p> {
@@ -379,7 +154,7 @@ impl<'p> CompBinding<'p> {
         pos: GPosIdx,
     ) -> InstIdx {
         let idx = InstIdx(self.instances.len());
-        self.instances.push(BoundInstance { sig, params, pos });
+        self.instances.push(BoundInstance::new(sig, params, pos));
         self.inst_map.insert(name, idx);
         idx
     }
@@ -411,11 +186,8 @@ impl<'p> CompBinding<'p> {
         pos: GPosIdx,
     ) -> InvIdx {
         let idx = InvIdx(self.invocations.len());
-        self.invocations.push(BoundInvoke {
-            instance,
-            events,
-            pos,
-        });
+        self.invocations
+            .push(BoundInvoke::new(instance, events, pos));
         self.inv_map.insert(name, idx);
         idx
     }
