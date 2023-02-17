@@ -44,6 +44,11 @@ where
         Traverse::Continue(())
     }
 
+    #[inline]
+    fn forloop(&mut self, _: &core::ForLoop, _ctx: &CompBinding) -> Traverse {
+        Traverse::Continue(())
+    }
+
     /// Transform an invoke statement. Provides access to the signature of the
     /// component that is being invoked.
     #[inline]
@@ -95,10 +100,11 @@ where
         // Binding for instances
         self.enter_component(comp, ctx)?;
         comp.body.iter().try_for_each(|cmd| match cmd {
-            crate::core::Command::Invoke(inv) => self.invoke(inv, ctx),
-            crate::core::Command::Instance(inst) => self.instance(inst, ctx),
-            crate::core::Command::Connect(con) => self.connect(con, ctx),
-            crate::core::Command::Fsm(fsm) => self.fsm(fsm, ctx),
+            core::Command::Invoke(inv) => self.invoke(inv, ctx),
+            core::Command::Instance(inst) => self.instance(inst, ctx),
+            core::Command::Connect(con) => self.connect(con, ctx),
+            core::Command::Fsm(fsm) => self.fsm(fsm, ctx),
+            core::Command::ForLoop(l) => self.forloop(l, ctx),
         })?;
         self.exit_component(comp, ctx)
     }

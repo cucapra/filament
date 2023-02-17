@@ -86,6 +86,7 @@ pub enum Command {
     Instance(Instance),
     Connect(Connect),
     Fsm(Fsm),
+    ForLoop(ForLoop),
 }
 
 impl From<Fsm> for Command {
@@ -119,6 +120,7 @@ impl Display for Command {
             Command::Instance(ins) => write!(f, "{}", ins),
             Command::Connect(con) => write!(f, "{}", con),
             Command::Fsm(fsm) => write!(f, "{}", fsm),
+            Command::ForLoop(l) => write!(f, "{}", l),
         }
     }
 }
@@ -394,5 +396,31 @@ impl Display for Fsm {
 impl std::fmt::Debug for Fsm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self)
+    }
+}
+
+#[derive(Clone)]
+/// A generative loop:
+/// ```
+/// for #i in 0..#W { ... }
+/// ```
+pub struct ForLoop {
+    /// Index associated with this loop
+    idx: Id,
+    /// Start of the range of this loop
+    start: Expr,
+    /// End of the range of this loop
+    end: Expr,
+    /// Body of the loop
+    body: Vec<Command>,
+}
+
+impl Display for ForLoop {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "for #{} in {}..{} {{", self.idx, self.start, self.end)?;
+        for cmd in &self.body {
+            write!(f, "{}", cmd)?;
+        }
+        write!(f, "}}")
     }
 }

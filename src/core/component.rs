@@ -41,7 +41,9 @@ impl Component {
                         is_low = Some(true);
                     }
                 }
-                Command::Instance(_) | Command::Connect(_) => (),
+                Command::Instance(_)
+                | Command::Connect(_)
+                | Command::ForLoop(_) => (),
             }
         }
 

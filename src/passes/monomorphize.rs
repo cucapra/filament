@@ -178,6 +178,7 @@ impl Monomorphize {
                         .into()
                     }
                 }
+                core::Command::ForLoop(_) => todo!("Monomorphizing loops"),
             })
             .collect_vec()
     }

@@ -410,6 +410,9 @@ fn compile_component(
             core::Command::Connect(con) => {
                 cons.push(con);
             }
+            core::Command::ForLoop(_) => {
+                unreachable!("Loop should have been compiled away.")
+            }
         };
     }
     // Compile commands
