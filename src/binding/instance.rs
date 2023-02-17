@@ -16,7 +16,7 @@ impl InstIdx {
 impl InstIdx {
     /// Get the position of the instance
     pub fn pos(&self, ctx: &CompBinding) -> GPosIdx {
-        ctx.instances[self.0].pos
+        ctx[*self].pos
     }
 
     /// Returns all the invocations associated with an instance
@@ -24,16 +24,7 @@ impl InstIdx {
         &'a self,
         ctx: &'a CompBinding<'a>,
     ) -> impl Iterator<Item = InvIdx> + '_ {
-        ctx.invocations
-            .iter()
-            .enumerate()
-            .filter_map(move |(idx, inv)| {
-                if inv.instance == *self {
-                    Some(InvIdx(idx))
-                } else {
-                    None
-                }
-            })
+        ctx.invocations().filter(|inv| ctx[*inv].instance == *self)
     }
 
     /// Get the signature of this instance by resolving against the parameter bindings.
@@ -43,7 +34,7 @@ impl InstIdx {
         &self,
         ctx: &CompBinding,
     ) -> core::Signature {
-        let inst = &ctx.instances[self.0];
+        let inst = &ctx[*self];
         ctx.prog.sig(inst.sig).resolve_offset(&inst.params)
     }
 }

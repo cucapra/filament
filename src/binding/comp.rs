@@ -15,13 +15,13 @@ pub struct CompBinding<'p> {
     /// Signature associated with this component
     sig: SigIdx,
     /// Instances bound in this component
-    pub(super) instances: Vec<BoundInstance>,
+    instances: Vec<BoundInstance>,
     /// Invocations bound in this component
-    pub(super) invocations: Vec<BoundInvoke>,
+    invocations: Vec<BoundInvoke>,
     /// Mapping from name of instance to its index
-    pub(super) inst_map: HashMap<Id, InstIdx>,
+    inst_map: HashMap<Id, InstIdx>,
     /// Mapping from name of invocation to its index
-    pub(super) inv_map: HashMap<Id, InvIdx>,
+    inv_map: HashMap<Id, InvIdx>,
 }
 
 impl<'p> CompBinding<'p> {

@@ -12,20 +12,15 @@ use itertools::Itertools;
 pub struct InvIdx(pub(super) usize);
 
 impl InvIdx {
-    /// The Unknown invocation
-    pub const UNKNOWN: InvIdx = InvIdx(usize::MAX);
-}
-
-impl InvIdx {
     /// Get the position of the invocation
     pub fn pos(&self, ctx: &CompBinding) -> GPosIdx {
-        ctx.invocations[self.0].pos
+        ctx[*self].pos
     }
 
     /// Get resolved event bindings for the invocation
     pub fn resolved_event_binding(&self, ctx: &CompBinding) -> Vec<Time> {
-        let inv = &ctx.invocations[self.0];
-        let inst = &ctx.instances[inv.instance.0];
+        let inv = &ctx[*self];
+        let inst = &ctx[inv.instance];
         let param_b = ctx.prog.param_binding(inst.sig, &inst.params);
 
         inv.events
@@ -36,7 +31,7 @@ impl InvIdx {
 
     /// Return the idx for the signature associated with the invocation.
     pub fn unresolved_signature(&self, ctx: &CompBinding) -> SigIdx {
-        let inv = &ctx.invocations[self.0];
+        let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
         inst.sig
     }
@@ -44,9 +39,9 @@ impl InvIdx {
     /// Return the signature of the component being invoked using the parameter bindings and
     /// the event bindings of the invocation.
     pub fn resolved_signature(&self, ctx: &CompBinding) -> core::Signature {
-        let inv = &ctx.invocations[self.0];
+        let inv = &ctx[*self];
         let inst_idx = inv.instance;
-        let inst = &ctx.instances[inst_idx.0];
+        let inst = &ctx[inst_idx];
         let event_b = ctx.prog.event_binding(inst.sig, &inv.events);
         inst_idx
             .param_resolved_signature(ctx)
@@ -73,7 +68,7 @@ impl InvIdx {
         &self,
         ctx: &CompBinding,
     ) -> Vec<(Time, TimeSub)> {
-        let inv = &ctx.invocations[self.0];
+        let inv = &ctx[*self];
         let sig = self.resolved_signature(ctx);
         sig.events
             .iter()
@@ -98,8 +93,8 @@ impl InvIdx {
             &utils::Binding<core::Expr>,
         ) -> core::Range,
     {
-        let inv = &ctx.invocations[self.0];
-        let inst = &ctx.instances[inv.instance.0];
+        let inv = &ctx[*self];
+        let inst = &ctx[inv.instance];
         let param_b = ctx.prog.param_binding(inst.sig, &inst.params);
         let event_b = ctx.prog.event_binding(inst.sig, &inv.events);
         let sig = ctx.prog.sig(inst.sig);
@@ -128,7 +123,7 @@ impl InvIdx {
             &utils::Binding<core::Expr>,
         ) -> core::Constraint,
     {
-        let inv = &ctx.invocations[self.0];
+        let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
         let sig_idx = inst.sig;
         let param_b = &ctx.prog.param_binding(sig_idx, &inst.params);
