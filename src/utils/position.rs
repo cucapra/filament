@@ -1,5 +1,4 @@
-//! Definitions for tracking source position information of Calyx programs
-
+//! Tracking of source positions
 use codespan_reporting::files::SimpleFiles;
 use itertools::Itertools;
 use std::{cmp, fmt::Write, mem, sync};

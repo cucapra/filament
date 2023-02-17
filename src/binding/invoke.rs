@@ -5,20 +5,10 @@ use crate::errors::WithPos;
 use crate::utils::{self, GPosIdx};
 use itertools::Itertools;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-/// Index of an invocation bound in a component.
-/// Defined methods represent operations on an invocation and require a
-/// component binding to be resolved.
-pub struct InvIdx(pub(super) u32);
+/// Index to a bound invocation
+pub type InvIdx = utils::Idx<BoundInvoke>;
 
 impl InvIdx {
-    /// An unknown invocation
-    pub const UNKNOWN: Self = InvIdx(u32::MAX);
-
-    pub(super) fn new(idx: usize) -> Self {
-        InvIdx(idx as u32)
-    }
-
     /// Get the position of the invocation
     pub fn pos(&self, ctx: &CompBinding) -> GPosIdx {
         ctx[*self].pos

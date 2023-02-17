@@ -225,11 +225,7 @@ impl<'p> CompBinding<'p> {
 impl<'p> std::ops::Index<InstIdx> for CompBinding<'p> {
     type Output = BoundInstance;
     fn index(&self, idx: InstIdx) -> &Self::Output {
-        debug_assert!(
-            idx != InstIdx::UNKNOWN,
-            "Attempted to use unknown instance index"
-        );
-        &self.instances[idx.0 as usize]
+        &self.instances[idx.get()]
     }
 }
 
@@ -237,11 +233,7 @@ impl<'p> std::ops::Index<InstIdx> for CompBinding<'p> {
 impl<'p> std::ops::Index<InvIdx> for CompBinding<'p> {
     type Output = BoundInvoke;
     fn index(&self, idx: InvIdx) -> &Self::Output {
-        debug_assert!(
-            idx != InvIdx::UNKNOWN,
-            "Attempted to use unknown invoke index"
-        );
-        &self.invocations[idx.0 as usize]
+        &self.invocations[idx.get()]
     }
 }
 

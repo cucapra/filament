@@ -1,21 +1,10 @@
 use super::{CompBinding, InvIdx, SigIdx};
-use crate::core;
+use crate::{core, utils};
 use crate::{errors::WithPos, utils::GPosIdx};
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-/// Index of an instance bound in a component
-/// Defined methods represent operations on an instance and require a
-/// component binding to be resolved.
-pub struct InstIdx(pub(super) u32);
+pub type InstIdx = utils::Idx<BoundInstance>;
 
 impl InstIdx {
-    /// The Unknown instance
-    pub const UNKNOWN: InstIdx = InstIdx(u32::MAX);
-
-    pub(super) fn new(idx: usize) -> Self {
-        InstIdx(idx as u32)
-    }
-
     /// Get the position of the instance
     pub fn pos(&self, ctx: &CompBinding) -> GPosIdx {
         ctx[*self].pos
