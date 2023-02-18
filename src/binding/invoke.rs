@@ -18,7 +18,7 @@ impl InvIdx {
     pub fn resolved_event_binding(&self, ctx: &CompBinding) -> Vec<Time> {
         let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
-        let param_b = ctx.prog.param_binding(inst.sig, &inst.params);
+        let param_b = ctx.prog[inst.sig].param_binding(&inst.params);
 
         inv.events
             .iter()
@@ -39,7 +39,7 @@ impl InvIdx {
         let inv = &ctx[*self];
         let inst_idx = inv.instance;
         let inst = &ctx[inst_idx];
-        let event_b = ctx.prog.event_binding(inst.sig, &inv.events);
+        let event_b = ctx.prog[inst.sig].event_binding(&inv.events);
         inst_idx
             .param_resolved_signature(ctx)
             .resolve_event(&event_b)
@@ -92,8 +92,8 @@ impl InvIdx {
     {
         let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
-        let param_b = ctx.prog.param_binding(inst.sig, &inst.params);
-        let event_b = ctx.prog.event_binding(inst.sig, &inv.events);
+        let param_b = ctx.prog[inst.sig].param_binding(&inst.params);
+        let event_b = ctx.prog[inst.sig].event_binding(&inv.events);
         let sig = &ctx.prog[inst.sig];
         let port = sig.get_port(port);
         core::PortDef::new(
@@ -115,8 +115,8 @@ impl InvIdx {
         let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
         let sig_idx = inst.sig;
-        let param_b = &ctx.prog.param_binding(sig_idx, &inst.params);
-        let event_b = &ctx.prog.event_binding(sig_idx, &inv.events);
+        let param_b = &ctx.prog[sig_idx].param_binding(&inst.params);
+        let event_b = &ctx.prog[sig_idx].event_binding(&inv.events);
         let sig = &ctx.prog[sig_idx];
         sig.constraints
             .iter()

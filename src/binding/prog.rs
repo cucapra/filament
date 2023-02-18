@@ -1,7 +1,4 @@
-use crate::{
-    core::{self, Id, Time},
-    utils,
-};
+use crate::core::{self, Id};
 use std::collections::HashMap;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -36,58 +33,6 @@ impl<'a> ProgBinding<'a> {
         SigIdx::Comp(s as u32)
     }
 
-    /// Get index associated with a signature
-    pub(super) fn find_sig_idx(&self, name: &core::Id) -> Option<SigIdx> {
-        if let Some(idx) = self.externals.iter().position(|s| *name == s.name) {
-            Some(Self::ext(idx))
-        } else {
-            self.components
-                .iter()
-                .position(|s| *name == s.name)
-                .map(Self::comp)
-        }
-    }
-
-    /// Get the signature index associated with a name.
-    /// Panic if the signature is not found.
-    pub(super) fn get_sig_idx(&self, name: &core::Id) -> SigIdx {
-        self.find_sig_idx(name)
-            .unwrap_or_else(|| panic!("Unknown signature: {}", name))
-    }
-
-    /// Event binding generated from a signature
-    /// XXX: Can be constructed using the binding and the event names
-    pub(super) fn event_binding(
-        &self,
-        sig: SigIdx,
-        events: &[Time],
-    ) -> utils::Binding<Time> {
-        match sig {
-            SigIdx::Ext(idx) => {
-                self.externals[idx as usize].event_binding(events)
-            }
-            SigIdx::Comp(idx) => {
-                self.components[idx as usize].event_binding(events)
-            }
-        }
-    }
-
-    /// XXX: Can be constructed using the binding and the param names
-    pub(super) fn param_binding(
-        &self,
-        sig: SigIdx,
-        params: &[core::Expr],
-    ) -> utils::Binding<core::Expr> {
-        match sig {
-            SigIdx::Ext(idx) => {
-                self.externals[idx as usize].param_binding(params)
-            }
-            SigIdx::Comp(idx) => {
-                self.components[idx as usize].param_binding(params)
-            }
-        }
-    }
-
     /// Add a component signature to the program binding
     fn add_component(&mut self, sig: &'a core::Signature) -> SigIdx {
         let idx = Self::comp(self.components.len());
@@ -102,6 +47,25 @@ impl<'a> ProgBinding<'a> {
         self.externals.push(sig);
         self.name_map.insert(sig.name.clone(), idx);
         idx
+    }
+
+    /// Get index associated with a signature
+    pub fn find_sig_idx(&self, name: &core::Id) -> Option<SigIdx> {
+        if let Some(idx) = self.externals.iter().position(|s| *name == s.name) {
+            Some(Self::ext(idx))
+        } else {
+            self.components
+                .iter()
+                .position(|s| *name == s.name)
+                .map(Self::comp)
+        }
+    }
+
+    /// Get the signature index associated with a name.
+    /// Panic if the signature is not found.
+    pub fn get_sig_idx(&self, name: &core::Id) -> SigIdx {
+        self.find_sig_idx(name)
+            .unwrap_or_else(|| panic!("Unknown signature: {}", name))
     }
 }
 
