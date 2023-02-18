@@ -283,7 +283,12 @@ impl FilSolver {
         }
 
         for fact in asserts {
-            if let Some(model) = self.check_fact(fact.clone(), &vars) {
+            let relevant_vars = fact
+                .exprs()
+                .into_iter()
+                .flat_map(|e| e.abs.clone())
+                .collect_vec();
+            if let Some(model) = self.check_fact(fact.clone(), &relevant_vars) {
                 let info = diag.add_message(model);
                 diag.add_error(Error::from(fact).add_note(info));
             }
@@ -315,15 +320,21 @@ impl FilSolver {
         let unsat = !self.s.check_sat().unwrap();
         let assigns = if !unsat {
             log::trace!("MODEL: {:?}", self.s.get_model().unwrap());
-            let assigns = self
-                .s
-                .get_values(vars.iter().map(|n| n.to_string()))
-                .unwrap()
-                .into_iter()
-                .map(|(n, v)| format!("{}={}", n, v))
-                .collect_vec()
-                .join(", ");
-            Some(format!("assignment violates constraint: {}", assigns))
+            // If there are no relevant variables, we can't show a model
+            let msg = if !vars.is_empty() {
+                let assigns = self
+                    .s
+                    .get_values(vars.iter().map(|n| n.to_string()))
+                    .unwrap()
+                    .into_iter()
+                    .map(|(n, v)| format!("{}={}", n, v))
+                    .collect_vec()
+                    .join(", ");
+                format!("assignment violates constraint: {}", assigns)
+            } else {
+                "".to_string()
+            };
+            Some(msg)
         } else {
             None
         };
