@@ -9,6 +9,5 @@ error: Cannot prove constraint G+1 >= G+4
    │   │      
    │   destination's requirement @[G+3, G+4]
    │
-   = assignment violates constraint: G=0
 
 Compilation failed with 1 errors.

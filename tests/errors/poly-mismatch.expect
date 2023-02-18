@@ -12,7 +12,7 @@ error: Cannot prove constraint G+#W >= G+#N
 11 │     @[G, L] left: #WIDTH,
    │             ---- destination's requirement @[G+#W, G+#W+1]
    │
-   = assignment violates constraint: G=0, W=1, N=2
+   = assignment violates constraint: W=1, N=2
 
 error: Cannot prove constraint G+#N+1 >= G+#W+1
    ┌─ tests/errors/poly-mismatch.fil:17:28
@@ -25,7 +25,7 @@ error: Cannot prove constraint G+#N+1 >= G+#W+1
 11 │     @[G, L] left: #WIDTH,
    │             ---- destination's requirement @[G+#W, G+#W+1]
    │
-   = assignment violates constraint: G=0, W=3, N=2
+   = assignment violates constraint: N=2, W=3
 
 error: Cannot prove constraint G+#W >= G+#N
    ┌─ tests/errors/poly-mismatch.fil:17:35
@@ -38,7 +38,7 @@ error: Cannot prove constraint G+#W >= G+#N
 12 │     @[G, L] right: #WIDTH,
    │             ----- destination's requirement @[G+#W, G+#W+1]
    │
-   = assignment violates constraint: G=0, W=3, N=4
+   = assignment violates constraint: W=3, N=4
 
 error: Cannot prove constraint G+#N+1 >= G+#W+1
    ┌─ tests/errors/poly-mismatch.fil:17:35
@@ -51,7 +51,7 @@ error: Cannot prove constraint G+#N+1 >= G+#W+1
 12 │     @[G, L] right: #WIDTH,
    │             ----- destination's requirement @[G+#W, G+#W+1]
    │
-   = assignment violates constraint: G=0, W=5, N=4
+   = assignment violates constraint: N=4, W=5
 
 error: Cannot prove constraint G+#N >= G+#W
    ┌─ tests/errors/poly-mismatch.fil:18:11
@@ -61,7 +61,7 @@ error: Cannot prove constraint G+#N >= G+#W
    │     │      
    │     destination's requirement @[G+#N, G+#N+1]
    │
-   = assignment violates constraint: G=0, W=5, N=4
+   = assignment violates constraint: N=4, W=5
 
 error: Cannot prove constraint G+#W+1 >= G+#N+1
    ┌─ tests/errors/poly-mismatch.fil:18:11
@@ -71,7 +71,7 @@ error: Cannot prove constraint G+#W+1 >= G+#N+1
    │     │      
    │     destination's requirement @[G+#N, G+#N+1]
    │
-   = assignment violates constraint: G=0, W=5, N=6
+   = assignment violates constraint: W=5, N=6
 
 error: Cannot prove constraint G+3 >= G+5
    ┌─ tests/errors/poly-mismatch.fil:25:11
@@ -81,6 +81,5 @@ error: Cannot prove constraint G+3 >= G+5
    │     │      
    │     destination's requirement @[G+4, G+5]
    │
-   = assignment violates constraint: G=0
 
 Compilation failed with 7 errors.

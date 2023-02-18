@@ -10,6 +10,5 @@ error: Cannot prove constraint 1 >= 2
 6 │     @[G+2, G+4] out: 1,
   │     ------------------ signal lasts for 2 cycle(s)
   │
-  = assignment violates constraint: G=0, L=0
 
 Compilation failed with 1 errors.
