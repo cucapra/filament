@@ -8,10 +8,24 @@ use crate::{
 use itertools::Itertools;
 
 pub struct BindCheck {
+    // Currently bound parameters
+    vars: Vec<core::Id>,
     diag: diagnostics::Diagnostics,
 }
 
 impl BindCheck {
+    /// Push a new set of bound variables and return the number of variables added
+    fn push_vars(&mut self, vars: &[core::Id]) -> usize {
+        let n = vars.len();
+        self.vars.extend_from_slice(vars);
+        n
+    }
+
+    /// Remove the last `n` variables
+    fn pop_vars(&mut self, n: usize) {
+        self.vars.truncate(self.vars.len() - n);
+    }
+
     /// Check that a time expression is well-formed
     fn time(
         &mut self,
@@ -37,7 +51,7 @@ impl BindCheck {
 
     fn expr(&mut self, expr: &core::Expr, params: &[core::Id]) {
         for abs in expr.exprs() {
-            if !params.contains(abs) {
+            if !params.iter().chain(self.vars.iter()).contains(abs) {
                 let err = Error::undefined(abs.clone(), "parameter").add_note(
                     self.diag.add_info(
                         "parameter is not defined in the signature",
@@ -54,10 +68,13 @@ impl visitor::Checker for BindCheck {
     fn new(_: &core::Namespace) -> Self {
         Self {
             diag: diagnostics::Diagnostics::default(),
+            vars: Vec::new(),
         }
     }
 
-    fn clear_data(&mut self) {}
+    fn clear_data(&mut self) {
+        self.vars.clear();
+    }
 
     fn require_binding_check(&self) -> bool {
         true
@@ -114,6 +131,19 @@ impl visitor::Checker for BindCheck {
                 self.expr(expr, params);
             }
         }
+        Traverse::Continue(())
+    }
+
+    fn forloop(
+        &mut self,
+        l: &core::ForLoop,
+        ctx: &binding::CompBinding,
+    ) -> Traverse {
+        let vars = self.push_vars(&[l.idx.clone()]);
+        for cmd in &l.body {
+            self.command(cmd, ctx);
+        }
+        self.pop_vars(vars);
         Traverse::Continue(())
     }
 

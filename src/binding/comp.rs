@@ -164,16 +164,16 @@ impl<'p> CompBinding<'p> {
     /// by filling in the default arguments.
     /// Returns `None` when the provided instance is not bound.
     pub fn add_invoke(&mut self, inv: &core::Invoke) -> InvIdx {
-        let instance = self.inst_map[&inv.instance];
-        let events = self
-            .prog
-            .event_binding(self[instance].sig, &inv.abstract_vars)
+        let inst_idx = self.inst_map[&inv.instance];
+        let instance = &self[inst_idx];
+        let events = self.prog[instance.sig]
+            .event_binding(&inv.abstract_vars)
             .into_iter()
             .map(|b| b.1)
             .collect();
         self.add_bound_invoke(
             inv.name.clone(),
-            instance,
+            inst_idx,
             events,
             inv.copy_span(),
         )

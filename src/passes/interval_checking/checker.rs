@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use super::IntervalCheck;
 use crate::binding::CompBinding;
-use crate::core::{self, OrderConstraint, Time};
+use crate::core::{self, ForLoop, OrderConstraint, Time};
 use crate::diagnostics;
 use crate::errors::{Error, WithPos};
 use crate::utils::{self, FilSolver};
@@ -39,6 +39,36 @@ impl visitor::Checker for IntervalCheck {
 
     fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics {
         &mut self.diag
+    }
+
+    fn forloop(&mut self, l: &core::ForLoop, ctx: &CompBinding) -> Traverse {
+        let ForLoop {
+            idx,
+            start,
+            end,
+            body,
+        } = l;
+
+        self.add_var(idx.clone());
+        let var_bounds = vec![
+            core::OrderConstraint::gte(
+                core::TimeSub::from(core::Expr::from(idx.clone())),
+                core::TimeSub::from(start.clone()),
+            )
+            .into(),
+            core::OrderConstraint::lt(
+                core::TimeSub::from(core::Expr::from(idx.clone())),
+                core::TimeSub::from(end.clone()),
+            )
+            .into(),
+        ];
+        self.add_facts(var_bounds);
+
+        for cmd in body {
+            self.command(cmd, ctx);
+        }
+
+        Traverse::Continue(())
     }
 
     fn connect(&mut self, con: &core::Connect, ctx: &CompBinding) -> Traverse {
@@ -88,6 +118,7 @@ impl visitor::Checker for IntervalCheck {
     }
 
     fn invoke(&mut self, invoke: &core::Invoke, ctx: &CompBinding) -> Traverse {
+        log::trace!("Checking: {invoke}");
         // Check the bindings for abstract variables do not violate @interface
         // requirements
         self.check_invoke_binds(invoke, ctx)?;
@@ -98,15 +129,9 @@ impl visitor::Checker for IntervalCheck {
         // Check that the invocation's events satisfy well-formedness the component's constraints
         // XXX: We cannot replace this call with `resolved_signature` because the `well_formed` call fails.
         //      This is because the resolution process doesn't correctly change the name of the event bindings.
-        let constraints = ctx
+        let constraints: Vec<core::Constraint> = ctx
             .get_invoke_idx(&invoke.name)
-            .get_resolved_sig_constraints(
-                ctx,
-                |c: &core::Constraint, e, p| {
-                    c.resolve_event(e).resolve_offset(p)
-                },
-                &mut self.diag,
-            );
+            .get_resolved_sig_constraints(ctx, &mut self.diag);
 
         for con in constraints {
             let con_with_info = con.add_note(self.diag.add_info(
@@ -128,7 +153,8 @@ impl visitor::Checker for IntervalCheck {
         let cons = comp.sig.well_formed(&mut self.diag);
         self.add_obligations(cons);
 
-        // User-level components are not allowed to have ordering constraints. See https://github.com/cucapra/filament/issues/27.
+        // User-level components are not allowed to have ordering constraints.
+        // See https://github.com/cucapra/filament/issues/27.
         let mut has_ulc = false;
         for constraint in &comp.sig.constraints {
             if constraint.is_time_ordering() {
@@ -142,7 +168,7 @@ impl visitor::Checker for IntervalCheck {
                 ));
                 self.diag.add_error(err);
             } else {
-                self.add_fact(constraint.clone())
+                self.add_facts(Some(constraint.clone()))
             }
         }
         // If the component uses a user-level constraint, we cannot verify it's internal.
@@ -164,14 +190,15 @@ impl visitor::Checker for IntervalCheck {
         // Prove all the required obligations
         let obs = self.drain_obligations();
         let t = std::time::Instant::now();
-        self.solver.prove(
-            comp.sig.events().chain(comp.sig.params.iter().cloned()),
-            // XXX(rachit): Unnecessary clone
-            self.facts.clone(),
-            obs,
-            share,
-            &mut self.diag,
-        );
+        let vars = comp
+            .sig
+            .events()
+            .chain(comp.sig.params.iter().cloned())
+            .chain(self.vars())
+            .collect_vec();
+
+        self.solver
+            .prove(vars, self.facts.clone(), obs, share, &mut self.diag);
         log::info!(
             "interval-check.{}.prove: {}ms",
             comp.sig.name,

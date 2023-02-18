@@ -17,6 +17,8 @@ pub struct IntervalCheck {
     pub(super) facts: FactMap,
     /// Diagnostics
     pub diag: diagnostics::Diagnostics,
+    /// Variables used in the current set of constraints
+    vars: Vec<core::Id>,
 }
 
 impl From<(FilSolver, diagnostics::Diagnostics)> for IntervalCheck {
@@ -26,6 +28,7 @@ impl From<(FilSolver, diagnostics::Diagnostics)> for IntervalCheck {
             obligations: Vec::new(),
             facts: Vec::new(),
             diag,
+            vars: Vec::new(),
         }
     }
 }
@@ -43,9 +46,24 @@ impl IntervalCheck {
     }
 
     /// Add a new known fact
-    pub fn add_fact(&mut self, fact: core::Constraint) {
-        log::trace!("adding known fact {}", fact);
-        self.facts.push(fact);
+    pub fn add_facts<F>(&mut self, facts: F)
+    where
+        F: IntoIterator<Item = core::Constraint>,
+    {
+        for fact in facts {
+            log::trace!("adding known fact {}", fact);
+            self.facts.push(fact);
+        }
+    }
+
+    /// Add a new variable to the context
+    pub fn add_var(&mut self, var: core::Id) {
+        self.vars.push(var);
+    }
+
+    /// Iterator over the variables
+    pub fn vars(&self) -> impl Iterator<Item = core::Id> + '_ {
+        self.vars.iter().cloned()
     }
 
     /// Construct constraints for shared instances.
