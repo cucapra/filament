@@ -133,14 +133,20 @@ impl std::ops::Sub for Time {
 
     fn sub(self, other: Self) -> Self::Output {
         let (l_off, r_mb_off) = self.offset - other.offset;
-        if self.event == other.event && r_mb_off.is_none() {
-            TimeSub::Unit(l_off)
-        } else {
-            let r_off = r_mb_off.unwrap_or_default();
-            TimeSub::Sym {
-                l: Time::new(self.event, l_off),
-                r: Time::new(other.event, r_off),
+
+        if self.event == other.event {
+            if r_mb_off.is_none() {
+                return TimeSub::Unit(l_off);
+            } else if l_off.is_zero() {
+                let r_off = r_mb_off.unwrap_or_default();
+                return TimeSub::Unit(r_off);
             }
+        }
+
+        let r_off = r_mb_off.unwrap_or_default();
+        TimeSub::Sym {
+            l: Time::new(self.event, l_off),
+            r: Time::new(other.event, r_off),
         }
     }
 }
