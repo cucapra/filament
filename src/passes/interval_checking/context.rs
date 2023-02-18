@@ -1,7 +1,7 @@
 use crate::core::{self, Constraint, OrderConstraint};
 use crate::errors::WithPos;
 use crate::utils::{FilSolver, ShareConstraint};
-use crate::{diagnostics, visitor};
+use crate::{binding, diagnostics};
 use itertools::Itertools;
 use std::iter;
 
@@ -52,7 +52,7 @@ impl IntervalCheck {
     /// Add disjointness constraints to the context and returns the set of sharing constraints.
     pub fn drain_sharing(
         &mut self,
-        ctx: &visitor::CompBinding,
+        ctx: &binding::CompBinding,
     ) -> Vec<ShareConstraint> {
         let all = ctx
             .instances()
@@ -75,8 +75,8 @@ impl IntervalCheck {
     /// each binding event occupies a disjoint interval
     fn sharing_constraints(
         &mut self,
-        inst: visitor::InstIdx,
-        ctx: &visitor::CompBinding,
+        inst: binding::InstIdx,
+        ctx: &binding::CompBinding,
     ) -> Vec<ShareConstraint> {
         // Get bindings for all invokes and transpose them so that each inner
         // vector represents the bindings for a single event
@@ -116,7 +116,7 @@ impl IntervalCheck {
         }
 
         // Iterate over each event
-        let events = ctx.prog.event_names(ctx[inst].sig);
+        let events = ctx.prog[ctx[inst].sig].events().collect_vec();
         let mut share_constraints = Vec::new();
         let num_bindings = invoke_bindings.len();
         for event in 0..events.len() {
@@ -124,7 +124,7 @@ impl IntervalCheck {
             // Since all bindings use the same event, we can use the event mentioned in the first binding
             // as the one to use for the sharing constraint
             let bounded_event = first_bind[event].0.event();
-            let this = ctx.prog.comp_sig(ctx.sig());
+            let this = ctx.this();
             let eb = this.get_event(&bounded_event).clone();
             let eb_pos = eb.copy_span();
             let mut share = ShareConstraint::from(eb);

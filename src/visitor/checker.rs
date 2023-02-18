@@ -1,6 +1,6 @@
 use std::ops::ControlFlow;
 
-use super::{CompBinding, ProgBinding};
+use crate::binding::{CompBinding, ProgBinding};
 use crate::{core, diagnostics};
 
 /// Should the traversal continue or stop?
@@ -44,6 +44,14 @@ where
         Traverse::Continue(())
     }
 
+    #[inline]
+    fn forloop(&mut self, l: &core::ForLoop, ctx: &CompBinding) -> Traverse {
+        for cmd in &l.body {
+            self.command(cmd, ctx)?;
+        }
+        Traverse::Continue(())
+    }
+
     /// Transform an invoke statement. Provides access to the signature of the
     /// component that is being invoked.
     #[inline]
@@ -76,11 +84,21 @@ where
         Traverse::Continue(())
     }
 
+    fn command(&mut self, cmd: &core::Command, ctx: &CompBinding) -> Traverse {
+        match cmd {
+            core::Command::Invoke(inv) => self.invoke(inv, ctx),
+            core::Command::Instance(inst) => self.instance(inst, ctx),
+            core::Command::Connect(con) => self.connect(con, ctx),
+            core::Command::Fsm(fsm) => self.fsm(fsm, ctx),
+            core::Command::ForLoop(l) => self.forloop(l, ctx),
+        }
+    }
+
     /// Check the component signature and perform the component traversal
     fn component(
         &mut self,
         comp: &core::Component,
-        prog_ctx: &super::ProgBinding,
+        prog_ctx: &ProgBinding,
     ) -> Traverse {
         self.signature(&comp.sig)?;
         let ctx = &if self.require_binding_check() {
@@ -94,12 +112,9 @@ where
 
         // Binding for instances
         self.enter_component(comp, ctx)?;
-        comp.body.iter().try_for_each(|cmd| match cmd {
-            crate::core::Command::Invoke(inv) => self.invoke(inv, ctx),
-            crate::core::Command::Instance(inst) => self.instance(inst, ctx),
-            crate::core::Command::Connect(con) => self.connect(con, ctx),
-            crate::core::Command::Fsm(fsm) => self.fsm(fsm, ctx),
-        })?;
+        comp.body
+            .iter()
+            .try_for_each(|cmd| self.command(cmd, ctx))?;
         self.exit_component(comp, ctx)
     }
 

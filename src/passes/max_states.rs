@@ -1,4 +1,5 @@
 use crate::{
+    binding,
     core::{self, Id},
     visitor::{self, Traverse},
 };
@@ -47,7 +48,7 @@ impl visitor::Checker for MaxStates {
     fn enter_component(
         &mut self,
         comp: &core::Component,
-        _: &visitor::CompBinding,
+        _: &binding::CompBinding,
     ) -> Traverse {
         self.cur_states = comp
             .sig
@@ -61,7 +62,7 @@ impl visitor::Checker for MaxStates {
     fn invoke(
         &mut self,
         inv: &core::Invoke,
-        ctx: &visitor::CompBinding,
+        ctx: &binding::CompBinding,
     ) -> Traverse {
         // Get the fully resolved signature
         let inv_idx = ctx.get_invoke_idx(&inv.name);
@@ -72,7 +73,7 @@ impl visitor::Checker for MaxStates {
     fn exit_component(
         &mut self,
         comp: &core::Component,
-        _: &visitor::CompBinding,
+        _: &binding::CompBinding,
     ) -> Traverse {
         let events = std::mem::take(&mut self.cur_states);
         log::info!("Max states for {}: {:?}", comp.sig.name, events);

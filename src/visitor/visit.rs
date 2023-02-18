@@ -1,4 +1,4 @@
-use super::{CompBinding, ProgBinding};
+use crate::binding::{CompBinding, ProgBinding};
 use crate::{core, errors::FilamentResult};
 use itertools::Itertools;
 
@@ -126,6 +126,7 @@ where
                     }
                     core::Command::Connect(con) => pass.connect(con, &ctx)?,
                     core::Command::Fsm(fsm) => pass.fsm(fsm, &ctx)?,
+                    core::Command::ForLoop(_) => todo!("Transforming loops"),
                 };
                 n_cmds.extend(cmds);
             }

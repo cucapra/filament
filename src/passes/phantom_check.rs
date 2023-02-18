@@ -1,7 +1,8 @@
 use crate::errors::{Error, WithPos};
 use crate::utils::GPosIdx;
 use crate::visitor::{self, Traverse};
-use crate::{core, diagnostics};
+use crate::{binding, core, diagnostics};
+use itertools::Itertools;
 use std::collections::HashSet;
 
 /// Checks if a user-level phantom events are valid.
@@ -44,7 +45,7 @@ impl visitor::Checker for PhantomCheck {
     fn enter_component(
         &mut self,
         comp: &core::Component,
-        _: &visitor::CompBinding,
+        _: &binding::CompBinding,
     ) -> Traverse {
         self.phantom_events = comp.sig.phantom_events().collect();
         Traverse::Continue(())
@@ -53,7 +54,7 @@ impl visitor::Checker for PhantomCheck {
     fn invoke(
         &mut self,
         inv: &core::Invoke,
-        ctx: &visitor::CompBinding,
+        ctx: &binding::CompBinding,
     ) -> Traverse {
         // Check if the instance has already been used
         if let Some(prev_use) = self.instance_used.get(&inv.instance) {
@@ -76,22 +77,19 @@ impl visitor::Checker for PhantomCheck {
         // mentioned events are not non-phantom
         let inv_idx = ctx.get_invoke_idx(&inv.name);
         let sig = inv_idx.unresolved_signature(ctx);
-        let instance_phantoms = ctx.prog.phantom_events(sig);
-        for (eb, bind) in ctx
-            .prog
-            .event_names(sig)
-            .iter()
-            .zip(inv.abstract_vars.iter())
+        let instance_phantoms = ctx.prog[sig].phantom_events().collect_vec();
+        for (event, bind) in
+            ctx.prog[sig].events().zip(inv.abstract_vars.iter())
         {
             // If this event is non-phantom, ensure all provided events are non-phantom as well.
-            if !instance_phantoms.contains(eb) {
+            if !instance_phantoms.contains(&event) {
                 let ev = &bind.event();
                 if let Some(e) = self.phantom_events.iter().find(|e| *e == ev) {
                     let err = Error::malformed(
                         "component provided phantom event binding to non-phantom event argument",
                     ).add_note(self.diag.add_info("invoke provides phantom event", ev.copy_span()))
                     .add_note(self.diag.add_info("event is a phantom event", e.copy_span()))
-                    .add_note(self.diag.add_info("instance's event is not phantom", eb.copy_span()))
+                    .add_note(self.diag.add_info("instance's event is not phantom", event.copy_span()))
                     .add_note(self.diag.add_message("phantom ports are compiled away and cannot be used by subcomponents"));
                     self.diag.add_error(err);
                 }

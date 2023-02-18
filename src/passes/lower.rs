@@ -1,6 +1,7 @@
+use crate::binding::CompBinding;
 use crate::core::{self, Id};
 use crate::errors::{FilamentResult, WithPos};
-use crate::visitor::{self, CompBinding};
+use crate::visitor;
 use itertools::Itertools;
 use std::collections::HashMap;
 
