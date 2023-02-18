@@ -192,11 +192,11 @@ impl Signature {
             .filter(move |event| self.get_interface(event).is_none())
     }
 
-    /// Constraints for well formed
+    /// Constraints for well formedness
     fn constraints(&self, diag: &mut Diagnostics) -> Vec<Constraint> {
         self.inputs()
             .chain(self.outputs())
-            .flat_map(|mpd| mpd.liveness.well_formed(diag))
+            .map(|mpd| mpd.liveness.well_formed(diag))
             .collect_vec()
     }
 
@@ -343,7 +343,7 @@ impl Signature {
             constraints: self
                 .constraints
                 .iter()
-                .map(|c| c.resolve_offset(&binding))
+                .map(|c| c.resolve_expr(&binding))
                 .collect_vec(),
             ..self.clone()
         };

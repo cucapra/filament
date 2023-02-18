@@ -129,15 +129,9 @@ impl visitor::Checker for IntervalCheck {
         // Check that the invocation's events satisfy well-formedness the component's constraints
         // XXX: We cannot replace this call with `resolved_signature` because the `well_formed` call fails.
         //      This is because the resolution process doesn't correctly change the name of the event bindings.
-        let constraints = ctx
+        let constraints: Vec<core::Constraint> = ctx
             .get_invoke_idx(&invoke.name)
-            .get_resolved_sig_constraints(
-                ctx,
-                |c: &core::Constraint, e, p| {
-                    c.resolve_event(e).resolve_offset(p)
-                },
-                &mut self.diag,
-            );
+            .get_resolved_sig_constraints(ctx, &mut self.diag);
 
         for con in constraints {
             let con_with_info = con.add_note(self.diag.add_info(

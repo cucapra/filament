@@ -42,6 +42,8 @@ impl Expr {
         for x in &self.abs {
             if let Some(sum) = bind.find(x) {
                 offset += sum.clone();
+            } else {
+                offset.abs.push(x.clone());
             }
         }
 

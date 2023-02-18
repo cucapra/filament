@@ -107,31 +107,25 @@ impl InvIdx {
     /// This includes:
     /// - The constraints of the component
     /// - Well-formedness constraints
-    pub fn get_resolved_sig_constraints<F>(
+    pub fn get_resolved_sig_constraints(
         &self,
         ctx: &CompBinding,
-        resolve_constraint: F,
         diag: &mut diagnostics::Diagnostics,
-    ) -> Vec<core::Constraint>
-    where
-        F: Fn(
-            &core::Constraint,
-            &utils::Binding<Time>,
-            &utils::Binding<core::Expr>,
-        ) -> core::Constraint,
-    {
+    ) -> Vec<core::Constraint> {
         let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
         let sig_idx = inst.sig;
         let param_b = &ctx.prog.param_binding(sig_idx, &inst.params);
         let event_b = &ctx.prog.event_binding(sig_idx, &inv.events);
-        let resolve_ref = |c| resolve_constraint(c, event_b, param_b);
-        let resolve = |c| resolve_constraint(&c, event_b, param_b);
         let sig = &ctx.prog[sig_idx];
         sig.constraints
             .iter()
-            .map(resolve_ref)
-            .chain(sig.well_formed(diag).into_iter().map(resolve))
+            .map(|c| c.resolve_event(event_b).resolve_expr(param_b))
+            .chain(
+                sig.well_formed(diag)
+                    .into_iter()
+                    .map(|c| c.resolve_event(event_b).resolve_expr(param_b)),
+            )
             .collect()
     }
 }

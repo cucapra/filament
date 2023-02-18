@@ -17,20 +17,15 @@ pub struct Range {
 
 impl Range {
     /// Generate constraints for well formedness of this range.
-    pub fn well_formed(
-        &self,
-        diag: &mut Diagnostics,
-    ) -> impl Iterator<Item = Constraint> {
-        std::iter::once(
-            Constraint::base(OrderConstraint::lt(
-                self.start.clone(),
-                self.end.clone(),
-            ))
-            .add_note(diag.add_info(
-                "interval's end time must be greater than the start time",
-                self.pos,
-            )),
-        )
+    pub fn well_formed(&self, diag: &mut Diagnostics) -> Constraint {
+        Constraint::base(OrderConstraint::lt(
+            self.start.clone(),
+            self.end.clone(),
+        ))
+        .add_note(diag.add_info(
+            "interval's end time must be greater than the start time",
+            self.pos,
+        ))
     }
 
     /// Length of this range

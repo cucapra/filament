@@ -92,7 +92,7 @@ impl OrderConstraint<Time> {
         }
     }
 
-    fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
+    fn resolve_expr(&self, bindings: &Binding<Expr>) -> Self {
         OrderConstraint {
             left: self.left.resolve_expr(bindings),
             right: self.right.resolve_expr(bindings),
@@ -100,6 +100,7 @@ impl OrderConstraint<Time> {
         }
     }
 }
+
 impl OrderConstraint<TimeSub> {
     fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
         OrderConstraint {
@@ -109,7 +110,7 @@ impl OrderConstraint<TimeSub> {
         }
     }
 
-    fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
+    fn resolve_expr(&self, bindings: &Binding<Expr>) -> Self {
         OrderConstraint {
             left: self.left.resolve_expr(bindings),
             right: self.right.resolve_expr(bindings),
@@ -256,13 +257,13 @@ impl Constraint {
         }
     }
 
-    pub fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
+    pub fn resolve_expr(&self, bindings: &Binding<Expr>) -> Self {
         match self {
             Constraint::Base { base } => Constraint::Base {
-                base: base.resolve_offset(bindings),
+                base: base.resolve_expr(bindings),
             },
             Constraint::Sub { base } => Constraint::Sub {
-                base: base.resolve_offset(bindings),
+                base: base.resolve_expr(bindings),
             },
         }
     }
