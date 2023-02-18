@@ -153,7 +153,8 @@ impl visitor::Checker for IntervalCheck {
         let cons = comp.sig.well_formed(&mut self.diag);
         self.add_obligations(cons);
 
-        // User-level components are not allowed to have ordering constraints. See https://github.com/cucapra/filament/issues/27.
+        // User-level components are not allowed to have ordering constraints.
+        // See https://github.com/cucapra/filament/issues/27.
         let mut has_ulc = false;
         for constraint in &comp.sig.constraints {
             if constraint.is_time_ordering() {
