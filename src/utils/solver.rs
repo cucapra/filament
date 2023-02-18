@@ -254,7 +254,7 @@ impl FilSolver {
 
     pub fn prove(
         &mut self,
-        vars: impl Iterator<Item = core::Id>,
+        vars: impl IntoIterator<Item = core::Id>,
         assumes: Vec<core::Constraint>,
         asserts: Vec<core::Constraint>,
         sharing: Vec<ShareConstraint>,
@@ -267,7 +267,7 @@ impl FilSolver {
         let asserts = asserts.into_iter().unique().collect_vec();
         self.s.push(1).unwrap();
         // Define all the constants
-        let vars = vars.collect_vec();
+        let vars = vars.into_iter().collect_vec();
         for var in &vars {
             log::trace!("Declaring constant {}", var);
             self.s.declare_const(var.to_string(), "Int").unwrap();

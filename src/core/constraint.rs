@@ -243,9 +243,7 @@ impl Constraint {
             }
         }
     }
-}
 
-impl Constraint {
     pub fn resolve_event(&self, binding: &Binding<Time>) -> Constraint {
         match self {
             Constraint::Base { base } => Constraint::Base {
@@ -303,5 +301,17 @@ impl From<Constraint> for Error {
             Error::malformed(format!("Cannot prove constraint {}", con));
         err.notes = con.notes().cloned().collect();
         err
+    }
+}
+
+impl From<OrderConstraint<Time>> for Constraint {
+    fn from(con: OrderConstraint<Time>) -> Self {
+        Constraint::Base { base: con }
+    }
+}
+
+impl From<OrderConstraint<TimeSub>> for Constraint {
+    fn from(con: OrderConstraint<TimeSub>) -> Self {
+        Constraint::Sub { base: con }
     }
 }

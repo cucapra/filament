@@ -168,3 +168,12 @@ impl From<u64> for Expr {
         }
     }
 }
+
+impl From<Id> for Expr {
+    fn from(v: Id) -> Self {
+        Self {
+            concrete: 0,
+            abs: vec![v],
+        }
+    }
+}
