@@ -221,6 +221,7 @@ impl Constraint {
         }
     }
 
+    /// All expressions used in this constraint
     pub fn exprs(&self) -> Vec<&Expr> {
         match self {
             Constraint::Base { base } => {
