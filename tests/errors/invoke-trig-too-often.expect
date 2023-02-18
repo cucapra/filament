@@ -13,6 +13,5 @@ error: Cannot prove constraint 3 >= 5
 9 │   m0 := invoke M<T+1>;
   │   ^^^^^^^^^^^^^^^^^^^^ event provided to invoke triggers too often
   │
-  = assignment violates constraint: T=0
 
 Compilation failed with 1 errors.
