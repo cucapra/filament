@@ -312,12 +312,15 @@ impl FilSolver {
         vars: &[core::Id],
     ) -> Option<String> {
         let sexp = fact.into();
-        self.s.push(1).unwrap();
+        // Generate an activation literal
+        let act = self.s.get_actlit().unwrap();
         let formula = format!("(not {})", sexp);
         log::trace!("Assert {}", formula);
-        self.s.assert(formula).unwrap();
+        self.s.assert_act(&act, formula).unwrap();
         // Check that the assertion was unsatisfiable
-        let unsat = !self.s.check_sat().unwrap();
+        let unsat = !self.s.check_sat_act(Some(&act)).unwrap();
+
+        // If the assignment was not unsatisfiable, attempt to generate an assignment
         let assigns = if !unsat {
             log::trace!("MODEL: {:?}", self.s.get_model().unwrap());
             // If there are no relevant variables, we can't show a model
@@ -338,7 +341,7 @@ impl FilSolver {
         } else {
             None
         };
-        self.s.pop(1).unwrap();
+        self.s.de_actlit(act).unwrap();
         assigns
     }
 }
