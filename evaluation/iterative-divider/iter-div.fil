@@ -1,13 +1,14 @@
 import "primitives/core.fil";
 
-comp Next<G: 1>(
-  @[G, G+1] acc: 9,
-  @[G, G+1] right: 8,
-  @[G, G+1] quotient: 8
+// XXX: We need #L because we can't say #W-1
+comp Next[#W, #L]<G: 1>(
+  @[G, G+1] acc: #W+1,
+  @[G, G+1] right: #W,
+  @[G, G+1] quotient: #W,
 ) -> (
-  @[G, G+1] acc_next: 9,
-  @[G, G+1] quotient_next: 8,
-) {
+  @[G, G+1] acc_next: #W+1,
+  @[G, G+1] quotient_next: #W,
+) where #W > 0, #W = #L + 1 {
 
   /*
   assign right_ext = {1'b0, right};
@@ -21,25 +22,25 @@ comp Next<G: 1>(
   assign acc_next = c[16:8];
   */
 
-  right_ext := new ZeroExtend[8, 9]<G>(right);
-  check := new Gte[9]<G>(acc, right_ext.out);
+  right_ext := new ZeroExtend[#W, #W+1]<G>(right);
+  check := new Gte[#W+1]<G>(acc, right_ext.out);
 
   // True branch
-  sub := new Sub[9]<G>(acc, right_ext.out);
-  sub_slice := new Slice[9, 7, 0, 8]<G>(sub.out);
+  sub := new Sub[#W+1]<G>(acc, right_ext.out);
+  sub_slice := new Slice[#W+1, #L, 0, #W]<G>(sub.out);
   one_1 := new Const[1, 1]<G>();
-  true_con_0 := new Concat[8, 1, 9]<G>(quotient, one_1.out);
-  true_con := new Concat[8, 9, 17]<G>(sub_slice.out, true_con_0.out);
+  true_con_0 := new Concat[#W, 1, #W+1]<G>(quotient, one_1.out);
+  true_con := new Concat[#W, #W+1, #W+#W+1]<G>(sub_slice.out, true_con_0.out);
 
   // False branch
-  fal_con := new Concat[9, 8, 17]<G>(acc, quotient);
-  one_17 := new Const[17, 1]<G>();
-  fal_sh := new ShiftLeft[17]<G>(fal_con.out, one_17.out);
+  fal_con := new Concat[#W+1, #W, #W+#W+1]<G>(acc, quotient);
+  one_WW1 := new Const[#W+#W+1, 1]<G>();
+  fal_sh := new ShiftLeft[#W+#W+1]<G>(fal_con.out, one_WW1.out);
 
-  c := new Mux[17]<G>(check.out, true_con.out, fal_sh.out);
+  c := new Mux[#W+#W+1]<G>(check.out, true_con.out, fal_sh.out);
 
-  acc_slice := new Slice[17, 16, 8, 9]<G>(c.out);
-  q_slice := new Slice[17, 8, 0, 8]<G>(c.out);
+  acc_slice := new Slice[#W+#W+1, #W+#W, #W, #W+1]<G>(c.out);
+  q_slice := new Slice[#W+#W+1, #W, 0, #W]<G>(c.out);
 
   quotient_next = q_slice.out;
   acc_next = acc_slice.out;
@@ -69,15 +70,15 @@ comp CombNoShareIterDiv<G: 1>(
   @[G, G+1] quotient: 8
 ) {
   i := new Init[8]<G>(left);
-  s0 := new Next<G>(i.acc, right, i.quotient);
+  s0 := new Next[8, 7]<G>(i.acc, right, i.quotient);
   // Iterate 7 more times
-  s1 := new Next<G>(s0.acc_next, right, s0.quotient_next);
-  s2 := new Next<G>(s1.acc_next, right, s1.quotient_next);
-  s3 := new Next<G>(s2.acc_next, right, s2.quotient_next);
-  s4 := new Next<G>(s3.acc_next, right, s3.quotient_next);
-  s5 := new Next<G>(s4.acc_next, right, s4.quotient_next);
-  s6 := new Next<G>(s5.acc_next, right, s5.quotient_next);
-  s7 := new Next<G>(s6.acc_next, right, s6.quotient_next);
+  s1 := new Next[8, 7]<G>(s0.acc_next, right, s0.quotient_next);
+  s2 := new Next[8, 7]<G>(s1.acc_next, right, s1.quotient_next);
+  s3 := new Next[8, 7]<G>(s2.acc_next, right, s2.quotient_next);
+  s4 := new Next[8, 7]<G>(s3.acc_next, right, s3.quotient_next);
+  s5 := new Next[8, 7]<G>(s4.acc_next, right, s4.quotient_next);
+  s6 := new Next[8, 7]<G>(s5.acc_next, right, s5.quotient_next);
+  s7 := new Next[8, 7]<G>(s6.acc_next, right, s6.quotient_next);
   quotient = s7.quotient_next;
 }
 
@@ -89,9 +90,9 @@ comp ShareIterDiv<G: 7>(
   @[G+7, G+8] quotient: 8
 ) {
   i := new Init[8]<G>(left);
-  s0 := new Next<G>(i.acc, right, i.quotient);
+  s0 := new Next[8, 7]<G>(i.acc, right, i.quotient);
 
-  N := new Next;
+  N := new Next[8, 7];
   Acc := new Register[9];
   QN := new Register[8];
   R := new Register[8];
@@ -143,42 +144,42 @@ comp PipeIterDiv<G: 1>(
   @[G+7, G+8] quotient: 8
 ) {
   i := new Init[8]<G>(left);
-  s0 := new Next<G>(i.acc, right, i.quotient);
+  s0 := new Next[8, 7]<G>(i.acc, right, i.quotient);
 
   acc0 := new Register[9]<G, G+2>(s0.acc_next);
   qn0 := new Register[8]<G, G+2>(s0.quotient_next);
   r0 := new Register[8]<G, G+2>(right);
-  s1 := new Next<G+1>(acc0.out, r0.out, qn0.out);
+  s1 := new Next[8, 7]<G+1>(acc0.out, r0.out, qn0.out);
 
   acc1 := new Register[9]<G+1, G+3>(s1.acc_next);
   qn1 := new Register[8]<G+1, G+3>(s1.quotient_next);
   r1 := new Register[8]<G+1, G+3>(r0.out);
-  s2 := new Next<G+2>(acc1.out, r1.out, qn1.out);
+  s2 := new Next[8, 7]<G+2>(acc1.out, r1.out, qn1.out);
 
   acc2 := new Register[9]<G+2, G+4>(s2.acc_next);
   qn2 := new Register[8]<G+2, G+4>(s2.quotient_next);
   r2 := new Register[8]<G+2, G+4>(r1.out);
-  s3 := new Next<G+3>(acc2.out, r2.out, qn2.out);
+  s3 := new Next[8, 7]<G+3>(acc2.out, r2.out, qn2.out);
 
   acc3 := new Register[9]<G+3, G+5>(s3.acc_next);
   qn3 := new Register[8]<G+3, G+5>(s3.quotient_next);
   r3 := new Register[8]<G+3, G+5>(r2.out);
-  s4 := new Next<G+4>(acc3.out, r3.out, qn3.out);
+  s4 := new Next[8, 7]<G+4>(acc3.out, r3.out, qn3.out);
 
   acc4 := new Register[9]<G+4, G+6>(s4.acc_next);
   qn4 := new Register[8]<G+4, G+6>(s4.quotient_next);
   r4 := new Register[8]<G+4, G+6>(r3.out);
-  s5 := new Next<G+5>(acc4.out, r4.out, qn4.out);
+  s5 := new Next[8, 7]<G+5>(acc4.out, r4.out, qn4.out);
 
   acc5 := new Register[9]<G+5, G+7>(s5.acc_next);
   qn5 := new Register[8]<G+5, G+7>(s5.quotient_next);
   r5 := new Register[8]<G+5, G+7>(r4.out);
-  s6 := new Next<G+6>(acc5.out, r5.out, qn5.out);
+  s6 := new Next[8, 7]<G+6>(acc5.out, r5.out, qn5.out);
 
   acc6 := new Register[9]<G+6, G+8>(s6.acc_next);
   qn6 := new Register[8]<G+6, G+8>(s6.quotient_next);
   r6 := new Register[8]<G+6, G+8>(r5.out);
-  s7 := new Next<G+7>(acc6.out, r6.out, qn6.out);
+  s7 := new Next[8, 7]<G+7>(acc6.out, r6.out, qn6.out);
 
   // Iterate 7 more times
   quotient = s7.quotient_next;
