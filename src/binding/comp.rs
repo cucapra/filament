@@ -8,7 +8,7 @@ use crate::{
 };
 use std::collections::HashMap;
 
-pub(super) struct BoundComponent {
+pub struct BoundComponent {
     /// Signature associated with this component
     sig: SigIdx,
     /// Instances bound in this component
@@ -19,6 +19,18 @@ pub(super) struct BoundComponent {
     inst_map: HashMap<Id, InstIdx>,
     /// Mapping from name of invocation to its index
     inv_map: HashMap<Id, InvIdx>,
+}
+
+impl From<SigIdx> for BoundComponent {
+    fn from(sig: SigIdx) -> Self {
+        Self {
+            sig,
+            instances: Vec::new(),
+            invocations: Vec::new(),
+            inst_map: HashMap::new(),
+            inv_map: HashMap::new(),
+        }
+    }
 }
 
 impl BoundComponent {
@@ -88,7 +100,11 @@ impl BoundComponent {
         idx
     }
 
-    fn process_cmds(&mut self, prog: &ProgBinding, cmds: &Vec<core::Command>) {
+    pub(super) fn process_cmds(
+        &mut self,
+        prog: &ProgBinding,
+        cmds: &Vec<core::Command>,
+    ) {
         for cmd in cmds {
             match cmd {
                 core::Command::Instance(inst) => {
@@ -105,7 +121,7 @@ impl BoundComponent {
         }
     }
 
-    fn process_checked_cmds(
+    pub(super) fn process_checked_cmds(
         &mut self,
         prog: &ProgBinding,
         cmds: &Vec<core::Command>,
