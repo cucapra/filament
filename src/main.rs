@@ -76,7 +76,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
             return Err(1);
         };
     log::info!("Lowering: {}ms", t.elapsed().as_millis());
-    log::info!("{ns}");
+    log::trace!("{ns}");
 
     // Compilation
     let t = Instant::now();
