@@ -12,6 +12,10 @@ use std::collections::HashMap;
 pub struct CompBinding<'p> {
     /// Context associated with the program
     pub prog: &'p ProgBinding<'p>,
+    comp: BoundComponent,
+}
+
+pub(super) struct BoundComponent {
     /// Signature associated with this component
     sig: SigIdx,
     /// Instances bound in this component
@@ -49,13 +53,14 @@ impl<'p> CompBinding<'p> {
         let sig = prog.get_sig_idx(comp);
         let mut ctx = Self {
             prog,
-            sig,
-            instances: Vec::new(),
-            invocations: Vec::new(),
-            inst_map: HashMap::new(),
-            inv_map: HashMap::new(),
+            comp: BoundComponent {
+                sig,
+                instances: Vec::new(),
+                invocations: Vec::new(),
+                inst_map: HashMap::new(),
+                inv_map: HashMap::new(),
+            },
         };
-
         process_cmds(cmds, &mut ctx);
         ctx
     }
@@ -71,11 +76,13 @@ impl<'p> CompBinding<'p> {
         let sig = prog.get_sig_idx(comp); // Cannot throw error
         let mut ctx = Self {
             prog,
-            sig,
-            instances: Vec::new(),
-            invocations: Vec::new(),
-            inst_map: HashMap::new(),
-            inv_map: HashMap::new(),
+            comp: BoundComponent {
+                sig,
+                instances: Vec::new(),
+                invocations: Vec::new(),
+                inst_map: HashMap::new(),
+                inv_map: HashMap::new(),
+            },
         };
 
         let has_errors = process_checked_cmds(&mut ctx, cmds, diag);
@@ -89,22 +96,22 @@ impl<'p> CompBinding<'p> {
     /// Get the **unresolved** signature associated with this component.
     /// If this signature should be completely resolved, use [[InvIdx::resolve_signature]].
     pub fn this(&self) -> &core::Signature {
-        &self.prog[self.sig]
+        &self.prog[self.comp.sig]
     }
 
     /// Return instances associated with this component
     pub fn instances(&self) -> impl Iterator<Item = InstIdx> {
-        (0..self.instances.len()).map(InstIdx::new)
+        (0..self.comp.instances.len()).map(InstIdx::new)
     }
 
     /// Return the invocations associated with this component
     pub fn invocations(&self) -> impl Iterator<Item = InvIdx> {
-        (0..self.invocations.len()).map(InvIdx::new)
+        (0..self.comp.invocations.len()).map(InvIdx::new)
     }
 
     /// Signature associated with this component
     pub fn sig(&self) -> SigIdx {
-        self.sig
+        self.comp.sig
     }
 
     /// Get instance binding for a given instance name
@@ -122,6 +129,7 @@ impl<'p> CompBinding<'p> {
     /// Get the index for a given instance name
     pub fn get_instance_idx(&self, name: &Id) -> InstIdx {
         *self
+            .comp
             .inst_map
             .get(name)
             .unwrap_or_else(|| panic!("Unknown instance: {name}"))
@@ -130,6 +138,7 @@ impl<'p> CompBinding<'p> {
     /// Get the index for a given invocation name
     pub fn get_invoke_idx(&self, name: &Id) -> InvIdx {
         *self
+            .comp
             .inv_map
             .get(name)
             .unwrap_or_else(|| panic!("Unknown invocation: {name}"))
@@ -154,9 +163,11 @@ impl<'p> CompBinding<'p> {
         params: Vec<core::Expr>,
         pos: GPosIdx,
     ) -> InstIdx {
-        let idx = InstIdx::new(self.instances.len());
-        self.instances.push(BoundInstance::new(sig, params, pos));
-        self.inst_map.insert(name, idx);
+        let idx = InstIdx::new(self.comp.instances.len());
+        self.comp
+            .instances
+            .push(BoundInstance::new(sig, params, pos));
+        self.comp.inst_map.insert(name, idx);
         idx
     }
 
@@ -164,7 +175,7 @@ impl<'p> CompBinding<'p> {
     /// by filling in the default arguments.
     /// Returns `None` when the provided instance is not bound.
     pub fn add_invoke(&mut self, inv: &core::Invoke) -> InvIdx {
-        let inst_idx = self.inst_map[&inv.instance];
+        let inst_idx = self.comp.inst_map[&inv.instance];
         let instance = &self[inst_idx];
         let events = self.prog[instance.sig]
             .event_binding(&inv.abstract_vars)
@@ -186,10 +197,11 @@ impl<'p> CompBinding<'p> {
         events: Vec<Time>,
         pos: GPosIdx,
     ) -> InvIdx {
-        let idx = InvIdx::new(self.invocations.len());
-        self.invocations
+        let idx = InvIdx::new(self.comp.invocations.len());
+        self.comp
+            .invocations
             .push(BoundInvoke::new(instance, events, pos));
-        self.inv_map.insert(name, idx);
+        self.comp.inv_map.insert(name, idx);
         idx
     }
 
@@ -225,7 +237,7 @@ impl<'p> CompBinding<'p> {
 impl<'p> std::ops::Index<InstIdx> for CompBinding<'p> {
     type Output = BoundInstance;
     fn index(&self, idx: InstIdx) -> &Self::Output {
-        &self.instances[idx.get()]
+        &self.comp.instances[idx.get()]
     }
 }
 
@@ -233,7 +245,7 @@ impl<'p> std::ops::Index<InstIdx> for CompBinding<'p> {
 impl<'p> std::ops::Index<InvIdx> for CompBinding<'p> {
     type Output = BoundInvoke;
     fn index(&self, idx: InvIdx) -> &Self::Output {
-        &self.invocations[idx.get()]
+        &self.comp.invocations[idx.get()]
     }
 }
 
@@ -286,7 +298,7 @@ fn process_checked_cmds(
                 }
             }
             core::Command::Invoke(inv) => {
-                if ctx.inst_map.get(&inv.instance).is_some() {
+                if ctx.comp.inst_map.get(&inv.instance).is_some() {
                     // If there have been previous errors, we cannot rely on signatures being valid
                     if has_errors {
                         ctx.add_bound_invoke(
@@ -319,7 +331,7 @@ fn process_checked_cmds(
             core::Command::Connect(core::Connect { src, dst, .. }) => {
                 let mut check_port = |port: &core::Port| {
                     if let core::PortType::InvPort { invoke, .. } = &port.typ {
-                        if ctx.inv_map.get(invoke).is_none() {
+                        if ctx.comp.inv_map.get(invoke).is_none() {
                             let err =
                                 Error::undefined(invoke.clone(), "invocation")
                                     .add_note(diag.add_info(
