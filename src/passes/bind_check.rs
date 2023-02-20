@@ -76,10 +76,6 @@ impl visitor::Checker for BindCheck {
         self.vars.clear();
     }
 
-    fn require_binding_check(&self) -> bool {
-        true
-    }
-
     fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics {
         &mut self.diag
     }

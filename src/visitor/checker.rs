@@ -25,10 +25,6 @@ where
         true
     }
 
-    fn require_binding_check(&self) -> bool {
-        false
-    }
-
     #[inline]
     fn connect(&mut self, _: &core::Connect, _ctx: &CompBinding) -> Traverse {
         Traverse::Continue(())
@@ -101,15 +97,7 @@ where
         prog_ctx: &ProgBinding,
     ) -> Traverse {
         self.signature(&comp.sig)?;
-        let ctx = &if self.require_binding_check() {
-            let Some(ctx) = CompBinding::new_checked(prog_ctx, comp, self.diagnostics()) else {
-                return Traverse::Break(());
-            };
-            ctx
-        } else {
-            CompBinding::new(prog_ctx, comp)
-        };
-
+        let ctx = &CompBinding::new(prog_ctx, &comp.sig.name);
         // Binding for instances
         self.enter_component(comp, ctx)?;
         comp.body

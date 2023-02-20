@@ -56,6 +56,11 @@ impl<'a> ProgBinding<'a> {
         idx
     }
 
+    pub(super) fn get_comp_binding(&self, name: &core::Id) -> &BoundComponent {
+        let idx = self.get_sig_idx(name);
+        &self.comps[idx.get()]
+    }
+
     /// Get the signature index associated with a name.
     /// Panic if the signature is not found.
     pub(super) fn get_sig_idx(&self, name: &core::Id) -> SigIdx {

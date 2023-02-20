@@ -50,6 +50,19 @@ impl BoundComponent {
         )
     }
 
+    /// Build a binding from a component's body.
+    /// Assumes that there are no binding errors in the body.
+    pub fn from_component(
+        prog: &ProgBinding,
+        name: &core::Id,
+        cmds: &Vec<core::Command>,
+    ) -> Self {
+        let idx = prog.get_sig_idx(name);
+        let mut bind = BoundComponent::from(idx);
+        bind.process_cmds(prog, cmds);
+        bind
+    }
+
     fn add_bound_instance(
         &mut self,
         name: Id,
@@ -245,68 +258,17 @@ impl std::ops::Index<InvIdx> for BoundComponent {
 }
 
 /// Track binding information for a component
-pub struct CompBinding<'p> {
+pub struct CompBinding<'c, 'p: 'c> {
     /// Context associated with the program
     pub prog: &'p ProgBinding<'p>,
-    comp: BoundComponent,
+    pub comp: &'c BoundComponent,
 }
 
-impl<'p> CompBinding<'p> {
+impl<'c, 'p> CompBinding<'c, 'p> {
     /// Construct a new binding context for a component
-    pub fn new(prog_ctx: &'p ProgBinding<'p>, comp: &core::Component) -> Self {
-        Self::from_component(prog_ctx, &comp.sig.name, &comp.body)
-    }
-
-    /// Construct bindings while checking for errors.
-    /// Returns None if there are any errors.
-    pub fn new_checked(
-        prog_ctx: &'p ProgBinding<'p>,
-        comp: &core::Component,
-        diag: &mut diagnostics::Diagnostics,
-    ) -> Option<Self> {
-        Self::from_component_checked(prog_ctx, &comp.sig.name, &comp.body, diag)
-    }
-
-    /// Construct a new instance using information from a [core::Component].
-    pub fn from_component(
-        prog: &'p ProgBinding<'p>,
-        comp: &core::Id,
-        cmds: &Vec<core::Command>,
-    ) -> Self {
-        let sig = prog.get_sig_idx(comp);
-        let mut comp = BoundComponent {
-            sig,
-            instances: Vec::new(),
-            invocations: Vec::new(),
-            inst_map: HashMap::new(),
-            inv_map: HashMap::new(),
-        };
-        comp.process_cmds(prog, cmds);
+    pub fn new(prog: &'p ProgBinding<'p>, name: &Id) -> Self {
+        let comp = prog.get_comp_binding(name);
         Self { prog, comp }
-    }
-
-    /// Similar to [[Self::from_component]], does not assume that bindings are valid.
-    /// Adds error information to a [[Diagnostic]] object if there are any errors.
-    pub fn from_component_checked(
-        prog: &'p ProgBinding<'p>,
-        comp: &core::Id,
-        cmds: &Vec<core::Command>,
-        diag: &mut diagnostics::Diagnostics,
-    ) -> Option<Self> {
-        let sig = prog.get_sig_idx(comp); // Cannot throw error
-        let mut comp = BoundComponent {
-            sig,
-            instances: Vec::new(),
-            invocations: Vec::new(),
-            inst_map: HashMap::new(),
-            inv_map: HashMap::new(),
-        };
-        let has_errors = comp.process_checked_cmds(prog, cmds, diag);
-        if has_errors {
-            None
-        } else {
-            Some(Self { prog, comp })
-        }
     }
 
     /// Get the **unresolved** signature associated with this component.
@@ -389,7 +351,7 @@ impl<'p> CompBinding<'p> {
 }
 
 // Index into the component binding using InstIdx
-impl<'p> std::ops::Index<InstIdx> for CompBinding<'p> {
+impl<'c, 'p> std::ops::Index<InstIdx> for CompBinding<'c, 'p> {
     type Output = BoundInstance;
     fn index(&self, idx: InstIdx) -> &Self::Output {
         &self.comp[idx]
@@ -397,7 +359,7 @@ impl<'p> std::ops::Index<InstIdx> for CompBinding<'p> {
 }
 
 // Index into the component binding using InvIdx
-impl<'p> std::ops::Index<InvIdx> for CompBinding<'p> {
+impl<'c, 'p> std::ops::Index<InvIdx> for CompBinding<'c, 'p> {
     type Output = BoundInvoke;
     fn index(&self, idx: InvIdx) -> &Self::Output {
         &self.comp[idx]
