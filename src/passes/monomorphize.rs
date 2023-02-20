@@ -135,14 +135,14 @@ impl Monomorphize {
         externals: &HashSet<core::Id>,
     ) -> Vec<core::Command> {
         commands
-            .map(|cmd| match cmd {
+            .flat_map(|cmd| match cmd {
                 core::Command::Invoke(core::Invoke {
                     name,
                     instance,
                     abstract_vars,
                     ports,
                     ..
-                }) => core::Invoke::new(
+                }) => vec![core::Invoke::new(
                     name,
                     instance,
                     abstract_vars
@@ -151,9 +151,9 @@ impl Monomorphize {
                         .collect_vec(),
                     ports,
                 )
-                .into(),
-                core::Command::Connect(con) => con.into(),
-                core::Command::Fsm(fsm) => fsm.into(),
+                .into()],
+                core::Command::Connect(con) => vec![con.into()],
+                core::Command::Fsm(fsm) => vec![fsm.into()],
                 core::Command::Instance(inst) => {
                     let core::Instance {
                         name,
@@ -167,18 +167,47 @@ impl Monomorphize {
                         .collect();
 
                     if externals.contains(&component) {
-                        core::Instance::new(name, component, resolved).into()
+                        vec![core::Instance::new(name, component, resolved)
+                            .into()]
                     } else {
                         // If this is a component, replace the instance name with the monomorphized version
-                        core::Instance::new(
+                        vec![core::Instance::new(
                             name,
                             Self::generate_mono_name(&component, &resolved),
                             vec![],
                         )
-                        .into()
+                        .into()]
                     }
                 }
-                core::Command::ForLoop(_) => todo!("Monomorphizing loops"),
+                core::Command::ForLoop(core::ForLoop {
+                    idx,
+                    start,
+                    end,
+                    body,
+                    ..
+                }) => {
+                    // Compute the start and end values of the loop
+                    let s =
+                        start.resolve(param_binding).concrete().unwrap_or_else(
+                            || panic!("Loop start must be concrete"),
+                        );
+                    let e = end
+                        .resolve(param_binding)
+                        .concrete()
+                        .unwrap_or_else(|| panic!("Loop end must be concrete"));
+                    let mut cmds =
+                        Vec::with_capacity((e - s) as usize * body.len());
+                    for i in s..e {
+                        let mut new_binding = (*param_binding).clone();
+                        new_binding.insert(idx.clone(), i.into());
+                        cmds.extend(Self::commands(
+                            body.iter().cloned(),
+                            &new_binding,
+                            externals,
+                        ));
+                    }
+                    cmds
+                }
             })
             .collect_vec()
     }
