@@ -1,5 +1,5 @@
 use filament::{
-    backend, cmdline, passes,
+    backend, binding, cmdline, passes,
     resolver::Resolver,
     visitor::{Checker, Transform},
 };
@@ -25,18 +25,21 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     };
     log::trace!("{ns}");
 
+    // Construct a binding
+    let bind = binding::ProgBinding::try_from(&ns)?;
+
     // Bind check
     let t = Instant::now();
-    passes::BindCheck::check(&ns)?;
+    passes::BindCheck::check(&ns, &bind)?;
     log::info!("Parameteric Bind check: {}ms", t.elapsed().as_millis());
 
     // Interval checking
     let t = Instant::now();
-    passes::IntervalCheck::check(&ns)?;
+    passes::IntervalCheck::check(&ns, &bind)?;
     log::info!("Interval check: {}ms", t.elapsed().as_millis());
 
     // User-level @phantom ports
-    passes::PhantomCheck::check(&ns)?;
+    passes::PhantomCheck::check(&ns, &bind)?;
     log::info!("Phantom check: {}ms", t.elapsed().as_millis());
 
     // Return early if we're asked to dump the interface
@@ -50,24 +53,26 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     log::info!("Monomorphize: {}ms", t.elapsed().as_millis());
     log::trace!("{ns}");
 
+    // Rebuild the binding
+    let bind = binding::ProgBinding::try_from(&ns)?;
+
     // Monomorphic Bind check
     let t = Instant::now();
-    passes::BindCheck::check(&ns)?;
+    passes::BindCheck::check(&ns, &bind)?;
     log::info!("Monomorphoic Bind check: {}ms", t.elapsed().as_millis());
-
-    if opts.dump_interface {
-        let states = passes::MaxStates::check(&ns)?;
-        passes::DumpInterface::transform_unwrap(ns, states.max_states);
-        return Ok(());
-    }
 
     // Monomorphic Interval checking
     let t = Instant::now();
-    passes::IntervalCheck::check(&ns)?;
+    passes::IntervalCheck::check(&ns, &bind)?;
     log::info!("Monomorphoic Interval check: {}ms", t.elapsed().as_millis());
 
     // Max state calculation
-    let states = passes::MaxStates::check(&ns)?;
+    let states = passes::MaxStates::check(&ns, &bind)?;
+
+    if opts.dump_interface {
+        passes::DumpInterface::transform_unwrap(ns, states.max_states);
+        return Ok(());
+    }
 
     // Lowering
     let t = Instant::now();

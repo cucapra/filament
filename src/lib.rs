@@ -1,5 +1,5 @@
 pub mod backend;
-pub(crate) mod binding;
+pub mod binding;
 pub mod cmdline;
 pub(crate) mod core;
 pub mod diagnostics;

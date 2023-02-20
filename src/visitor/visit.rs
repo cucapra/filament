@@ -105,7 +105,8 @@ where
         let mut new_comp_data = Vec::with_capacity(comp_data.len());
 
         // The program binding
-        let prog_bind = ProgBinding::from(&ns);
+        let prog_bind = ProgBinding::try_from(&ns)
+            .unwrap_or_else(|_| panic!("Failed to create a valid binding"));
         for (name, cmds) in comp_data {
             pass.clear_data();
             let ctx = CompBinding::from_component(&prog_bind, &name, &cmds);

@@ -123,8 +123,7 @@ where
         self.signature(sig)
     }
 
-    fn check(ns: &core::Namespace) -> Result<Self, u64> {
-        let prog_ctx = &ProgBinding::from(ns);
+    fn check(ns: &core::Namespace, ctx: &ProgBinding) -> Result<Self, u64> {
         let mut pass = Self::new(ns);
 
         for (_, ext) in ns.signatures() {
@@ -136,7 +135,7 @@ where
         for comp in &ns.components {
             if pass.component_filter(comp) {
                 pass.clear_data();
-                pass.component(comp, prog_ctx);
+                pass.component(comp, ctx);
             }
         }
 
