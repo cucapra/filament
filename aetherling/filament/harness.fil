@@ -7,7 +7,7 @@ comp main<G: 1>(
 ) -> (
     @[G+3, G+4] out: 8,
 ) {
-    s := new Stencil<G>(in);
+    s := new Stencil[8]<G>(in);
     c := new Conv<G>(s.o1, s.o2, s.o3, s.o4, s.o5, s.o6, s.o7, s.o8, s.o9);
     out = c.out;
 }

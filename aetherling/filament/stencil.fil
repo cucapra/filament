@@ -1,30 +1,30 @@
 import "primitives/state.fil";
 
 // Produces the a 2d window of 3x3 elements from a stream that represents a 4x4 matrix.
-comp Stencil<G: 1>(
-    @[G, G+1] in: 8,
+comp Stencil[#W]<G: 1>(
+    @[G, G+1] in: #W,
 ) -> (
-    @[G, G+1] o1: 8,
-    @[G, G+1] o2: 8,
-    @[G, G+1] o3: 8,
-    @[G, G+1] o4: 8,
-    @[G, G+1] o5: 8,
-    @[G, G+1] o6: 8,
-    @[G, G+1] o7: 8,
-    @[G, G+1] o8: 8,
-    @[G, G+1] o9: 8,
+    @[G, G+1] o1: #W,
+    @[G, G+1] o2: #W,
+    @[G, G+1] o3: #W,
+    @[G, G+1] o4: #W,
+    @[G, G+1] o5: #W,
+    @[G, G+1] o6: #W,
+    @[G, G+1] o7: #W,
+    @[G, G+1] o8: #W,
+    @[G, G+1] o9: #W,
 ) {
-    d9 := new ContPrev[8, 0]<G>(in);
-    d8 := new ContPrev[8, 0]<G>(d9.prev);
-    d7 := new ContPrev[8, 0]<G>(d8.prev);
-    n0 := new ContPrev[8, 0]<G>(d7.prev);
-    d6 := new ContPrev[8, 0]<G>(n0.prev);
-    d5 := new ContPrev[8, 0]<G>(d6.prev);
-    d4 := new ContPrev[8, 0]<G>(d5.prev);
-    n1 := new ContPrev[8, 0]<G>(d4.prev);
-    d3 := new ContPrev[8, 0]<G>(n1.prev);
-    d2 := new ContPrev[8, 0]<G>(d3.prev);
-    d1 := new ContPrev[8, 0]<G>(d2.prev);
+    d9 := new ContPrev[#W, 0]<G>(in);
+    d8 := new ContPrev[#W, 0]<G>(d9.prev);
+    d7 := new ContPrev[#W, 0]<G>(d8.prev);
+    n0 := new ContPrev[#W, 0]<G>(d7.prev);
+    d6 := new ContPrev[#W, 0]<G>(n0.prev);
+    d5 := new ContPrev[#W, 0]<G>(d6.prev);
+    d4 := new ContPrev[#W, 0]<G>(d5.prev);
+    n1 := new ContPrev[#W, 0]<G>(d4.prev);
+    d3 := new ContPrev[#W, 0]<G>(n1.prev);
+    d2 := new ContPrev[#W, 0]<G>(d3.prev);
+    d1 := new ContPrev[#W, 0]<G>(d2.prev);
 
     o9 = d9.prev;
     o8 = d8.prev;

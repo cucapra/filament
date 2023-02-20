@@ -45,7 +45,7 @@ comp main<G: 1>(
 ) -> (
     @[G+5, G+6] out: 8,
 ) {
-    s := new Stencil<G>(in);
+    s := new Stencil[8]<G>(in);
     r2 := new Delay[8]<G>(s.o2);
     r5 := new Delay[8]<G>(s.o5);
     r8 := new Delay[8]<G>(s.o8);
