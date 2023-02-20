@@ -146,15 +146,15 @@ impl Resolver {
             );
         }
 
-        log::info!("Imported: {:#?}", self.already_imported);
-        log::info!(
+        log::trace!("Imported: {:#?}", self.already_imported);
+        log::trace!(
             "Components: {:#?}",
             ns.components
                 .iter()
                 .map(|c| c.sig.name.as_ref())
                 .collect::<Vec<_>>()
         );
-        log::info!(
+        log::trace!(
             "Externs: {:#?}",
             ns.externs
                 .iter()

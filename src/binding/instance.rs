@@ -13,7 +13,7 @@ impl InstIdx {
     /// Returns all the invocations associated with an instance
     pub fn get_all_invokes<'a>(
         &'a self,
-        ctx: &'a CompBinding<'a>,
+        ctx: &'a CompBinding<'_, 'a>,
     ) -> impl Iterator<Item = InvIdx> + '_ {
         ctx.invocations().filter(|inv| ctx[*inv].instance == *self)
     }

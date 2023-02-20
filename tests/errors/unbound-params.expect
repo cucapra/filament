@@ -1,0 +1,67 @@
+---CODE---
+1
+---STDERR---
+error: undefined parameter name: K
+  ┌─ tests/errors/unbound-params.fil:6:12
+  │
+6 │     @[G, G+#K] a: #P,
+  │            ^^ parameter is not defined in the signature
+
+error: undefined parameter name: P
+  ┌─ tests/errors/unbound-params.fil:6:19
+  │
+6 │     @[G, G+#K] a: #P,
+  │                   ^^ parameter is not defined in the signature
+
+error: undefined parameter name: M
+  ┌─ tests/errors/unbound-params.fil:5:22
+  │
+5 │ comp main[#W, #L]<G: #M>(
+  │                      ^^ parameter is not defined in the signature
+
+error: undefined event name: L
+  ┌─ tests/errors/unbound-params.fil:7:21
+  │
+7 │ ) -> () where #W+#N+L > L+1 {
+  │                     ^ event is not defined in the signature
+
+error: undefined parameter name: N
+  ┌─ tests/errors/unbound-params.fil:7:18
+  │
+7 │ ) -> () where #W+#N+L > L+1 {
+  │                  ^^ parameter is not defined in the signature
+
+error: undefined event name: L
+  ┌─ tests/errors/unbound-params.fil:7:25
+  │
+7 │ ) -> () where #W+#N+L > L+1 {
+  │                         ^ event is not defined in the signature
+
+error: undefined parameter name: J
+  ┌─ tests/errors/unbound-params.fil:8:22
+  │
+8 │     a := new Add[#W, #J]<L+#N>(a);
+  │                      ^^ parameter is not defined in the signature
+
+error: undefined event name: L
+  ┌─ tests/errors/unbound-params.fil:8:26
+  │
+8 │     a := new Add[#W, #J]<L+#N>(a);
+  │                          ^ event is not defined in the signature
+
+error: undefined parameter name: N
+  ┌─ tests/errors/unbound-params.fil:8:28
+  │
+8 │     a := new Add[#W, #J]<L+#N>(a);
+  │                            ^^ parameter is not defined in the signature
+
+error: port width mismatch
+  ┌─ tests/errors/unbound-params.fil:8:32
+  │
+2 │     @[G, G+#W] a: #W,
+  │                - destination `a' has width #W
+  ·
+8 │     a := new Add[#W, #J]<L+#N>(a);
+  │                                ^ source `a' has width #P
+
+Compilation failed with 10 errors.

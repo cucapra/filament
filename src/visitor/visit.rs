@@ -1,4 +1,4 @@
-use crate::binding::{CompBinding, ProgBinding};
+use crate::binding::{BoundComponent, CompBinding, ProgBinding};
 use crate::{core, errors::FilamentResult};
 use itertools::Itertools;
 
@@ -105,10 +105,17 @@ where
         let mut new_comp_data = Vec::with_capacity(comp_data.len());
 
         // The program binding
-        let prog_bind = ProgBinding::from(&ns);
+        let prog_bind = ProgBinding::try_from(&ns)
+            .unwrap_or_else(|_| panic!("Failed to create a valid binding"));
         for (name, cmds) in comp_data {
             pass.clear_data();
-            let ctx = CompBinding::from_component(&prog_bind, &name, &cmds);
+            // Manually construct the component binding because we removed all
+            // commands from components previously.
+            let bind = BoundComponent::from_component(&prog_bind, &name, &cmds);
+            let ctx = CompBinding {
+                prog: &prog_bind,
+                comp: &bind,
+            };
             if !pass.component_filter(&ctx) {
                 new_comp_data.push(cmds);
                 continue;

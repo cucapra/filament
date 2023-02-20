@@ -20,15 +20,6 @@ where
     /// Get the diagnostics for this pass
     fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics;
 
-    /// Check if this component should be traversed
-    fn component_filter(&self, _: &core::Component) -> bool {
-        true
-    }
-
-    fn require_binding_check(&self) -> bool {
-        false
-    }
-
     #[inline]
     fn connect(&mut self, _: &core::Connect, _ctx: &CompBinding) -> Traverse {
         Traverse::Continue(())
@@ -101,15 +92,7 @@ where
         prog_ctx: &ProgBinding,
     ) -> Traverse {
         self.signature(&comp.sig)?;
-        let ctx = &if self.require_binding_check() {
-            let Some(ctx) = CompBinding::new_checked(prog_ctx, comp, self.diagnostics()) else {
-                return Traverse::Break(());
-            };
-            ctx
-        } else {
-            CompBinding::new(prog_ctx, comp)
-        };
-
+        let ctx = &CompBinding::new(prog_ctx, &comp.sig.name);
         // Binding for instances
         self.enter_component(comp, ctx)?;
         comp.body
@@ -123,8 +106,7 @@ where
         self.signature(sig)
     }
 
-    fn check(ns: &core::Namespace) -> Result<Self, u64> {
-        let prog_ctx = &ProgBinding::from(ns);
+    fn check(ns: &core::Namespace, ctx: &ProgBinding) -> Result<Self, u64> {
         let mut pass = Self::new(ns);
 
         for (_, ext) in ns.signatures() {
@@ -134,10 +116,8 @@ where
         }
 
         for comp in &ns.components {
-            if pass.component_filter(comp) {
-                pass.clear_data();
-                pass.component(comp, prog_ctx);
-            }
+            pass.clear_data();
+            pass.component(comp, ctx);
         }
 
         if let Some(errs) = pass.diagnostics().report_all() {
