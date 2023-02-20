@@ -39,13 +39,9 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     log::info!("Interval check: {}ms", t.elapsed().as_millis());
 
     // User-level @phantom ports
+    let t = Instant::now();
     passes::PhantomCheck::check(&ns, &bind)?;
     log::info!("Phantom check: {}ms", t.elapsed().as_millis());
-
-    // Return early if we're asked to dump the interface
-    if opts.check {
-        return Ok(());
-    }
 
     // Monomorphize the program.
     let t = Instant::now();
@@ -74,6 +70,10 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         return Ok(());
     }
 
+    // Return early if we're asked to dump the interface
+    if opts.check {
+        return Ok(());
+    }
     // Lowering
     let t = Instant::now();
     let Some(ns) =
