@@ -37,18 +37,17 @@ impl visitor::Checker for PhantomCheck {
         &mut self.diag
     }
 
-    // Only check component if at least one phantom event
-    fn component_filter(&self, comp: &core::Component) -> bool {
-        comp.sig.phantom_events().next().is_some()
-    }
-
     fn enter_component(
         &mut self,
         comp: &core::Component,
         _: &binding::CompBinding,
     ) -> Traverse {
         self.phantom_events = comp.sig.phantom_events().collect();
-        Traverse::Continue(())
+        if self.phantom_events.is_empty() {
+            Traverse::Break(())
+        } else {
+            Traverse::Continue(())
+        }
     }
 
     fn invoke(

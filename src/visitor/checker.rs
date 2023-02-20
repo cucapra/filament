@@ -20,11 +20,6 @@ where
     /// Get the diagnostics for this pass
     fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics;
 
-    /// Check if this component should be traversed
-    fn component_filter(&self, _: &core::Component) -> bool {
-        true
-    }
-
     #[inline]
     fn connect(&mut self, _: &core::Connect, _ctx: &CompBinding) -> Traverse {
         Traverse::Continue(())
@@ -121,10 +116,8 @@ where
         }
 
         for comp in &ns.components {
-            if pass.component_filter(comp) {
-                pass.clear_data();
-                pass.component(comp, ctx);
-            }
+            pass.clear_data();
+            pass.component(comp, ctx);
         }
 
         if let Some(errs) = pass.diagnostics().report_all() {
