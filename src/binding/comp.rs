@@ -386,6 +386,9 @@ impl<'c, 'p> CompBinding<'c, 'p> {
                     resolve_liveness,
                 ))
             }
+            core::PortType::Bundle { .. } => {
+                todo!("resolving bundle port")
+            }
             core::PortType::Constant(_) => None,
         }
     }

@@ -17,6 +17,7 @@ impl Port {
         match &self.typ {
             PortType::ThisPort(n) => n.clone(),
             PortType::InvPort { name, .. } => name.clone(),
+            PortType::Bundle { name, idx } => format!("{name}[{idx}]").into(),
             PortType::Constant(n) => Id::from(format!("const<{}>", n)),
         }
     }
@@ -47,9 +48,14 @@ impl errors::WithPos for Port {
 
 #[derive(Clone)]
 pub enum PortType {
+    /// A port on this component
     ThisPort(Id),
-    InvPort { invoke: Id, name: Id },
+    /// A constant
     Constant(u64),
+    /// A port on an invoke
+    InvPort { invoke: Id, name: Id },
+    /// Index in a bundle
+    Bundle { name: Id, idx: Expr },
 }
 
 impl Port {
@@ -83,6 +89,7 @@ impl std::fmt::Display for PortType {
                 write!(f, "{}.{}", comp, name)
             }
             PortType::Constant(n) => write!(f, "{}", n),
+            PortType::Bundle { name, idx } => write!(f, "{name}[{idx}]"),
         }
     }
 }

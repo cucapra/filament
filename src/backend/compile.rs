@@ -76,6 +76,9 @@ impl Context<'_> {
         port: &core::Port,
     ) -> (RRC<ir::Port>, Option<ir::Guard>) {
         match &port.typ {
+            core::PortType::Bundle { .. } => {
+                unreachable!("Bundles should be compiled away")
+            }
             core::PortType::ThisPort(p) => {
                 let this = self.builder.component.signature.borrow();
                 (this.get(p.as_ref()), None)
@@ -135,6 +138,9 @@ fn compile_guard(guard: core::Guard, ctx: &mut Context) -> ir::Guard {
             c1 | c2
         }
         core::Guard::Port(p) => match &p.typ {
+            core::PortType::Bundle { .. } => {
+                unreachable!("Bundles should be compiled away")
+            }
             core::PortType::ThisPort(p) => {
                 let this = ctx.builder.component.signature.borrow();
                 this.get(p.as_ref()).into()
