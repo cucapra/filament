@@ -21,13 +21,13 @@ comp main<G: 11>(
 ) -> (
   @[G, G+1] comb_noshare: 8,
   @[G+9, G+10] verilog: 8,
-  @[G+7, G+8] share: 8,
-  @[G+7, G+8] pipe: 8,
+  @[G+8, G+9] share: 8,
+  @[G+8, G+9] pipe: 8,
 ) {
   d := new IterDiv[8]<G>(left, right);
-  id := new CombNoShareIterDiv<G>(left, right);
-  s := new ShareIterDiv<G>(left, right);
-  pipe := new PipeIterDiv<G>(left, right);
+  id := new CombNoShareIterDiv[8, 7]<G>(left, right);
+  s := new ShareIterDiv[8, 7]<G>(left, right);
+  pipe := new PipeIterDiv[8, 7]<G>(left, right);
   verilog = d.out_quotient;
   comb_noshare = id.quotient;
   share = s.quotient;

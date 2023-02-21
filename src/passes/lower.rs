@@ -48,11 +48,10 @@ impl Lower {
         match port.typ {
             core::PortType::Bundle { name, idx } => {
                 let idx = idx.concrete().unwrap() as usize;
-                let writes = self
-                    .bundle_writes
-                    .get(&name)
-                    .unwrap_or_else(|| panic!("No write to {name}{{{idx}}}"));
-                writes[idx].clone().unwrap()
+                let writes = self.bundle_writes.get(&name).unwrap();
+                writes[idx]
+                    .clone()
+                    .unwrap_or_else(|| panic!("No write to {name}{{{idx}}}"))
             }
             _ => port.clone(),
         }

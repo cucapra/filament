@@ -62,125 +62,93 @@ comp Init[#W]<G: 1>(
   quotient = q_slice.out;
 }
 
-comp CombNoShareIterDiv<G: 1>(
+comp CombNoShareIterDiv[#W, #L]<G: 1>(
   @interface[G] go: 1,
-  @[G, G+1] left: 8,
-  @[G, G+1] right: 8
+  @[G, G+1] left: #W,
+  @[G, G+1] right: #W,
 ) -> (
-  @[G, G+1] quotient: 8
-) {
-  i := new Init[8]<G>(left);
-  s0 := new Next[8, 7]<G>(i.acc, right, i.quotient);
-  // Iterate 7 more times
-  s1 := new Next[8, 7]<G>(s0.acc_next, right, s0.quotient_next);
-  s2 := new Next[8, 7]<G>(s1.acc_next, right, s1.quotient_next);
-  s3 := new Next[8, 7]<G>(s2.acc_next, right, s2.quotient_next);
-  s4 := new Next[8, 7]<G>(s3.acc_next, right, s3.quotient_next);
-  s5 := new Next[8, 7]<G>(s4.acc_next, right, s4.quotient_next);
-  s6 := new Next[8, 7]<G>(s5.acc_next, right, s5.quotient_next);
-  s7 := new Next[8, 7]<G>(s6.acc_next, right, s6.quotient_next);
-  quotient = s7.quotient_next;
+  @[G, G+1] quotient: #W
+) where #W > 0, #W = #L + 1 {
+  bundle acc[#W+1]: for<#i> @[G, G+1] #W+1;
+  bundle quotient_next[#W+1]: for<#i> @[G, G+1] #W;
+
+  // Initialize the accumulator and quotient
+  init := new Init[#W]<G>(left);
+  acc{0} = init.acc;
+  quotient_next{0} = init.quotient;
+
+  for #i in 0..#W {
+    s := new Next[#W, #L]<G>(acc{#i}, right, quotient_next{#i});
+    acc{#i+1} = s.acc_next;
+    quotient_next{#i+1} = s.quotient_next;
+  }
+
+  quotient = quotient_next{#W};
 }
 
-comp ShareIterDiv<G: 7>(
+comp ShareIterDiv[#W, #L]<G: #W>(
   @interface[G] go: 1,
-  @[G, G+1] left: 8,
-  @[G, G+1] right: 8,
+  @[G, G+1] left: #W,
+  @[G, G+1] right: #W,
 ) -> (
-  @[G+7, G+8] quotient: 8
-) {
-  i := new Init[8]<G>(left);
-  s0 := new Next[8, 7]<G>(i.acc, right, i.quotient);
+  @[G+#W, G+#W+1] quotient: #W
+) where #W > 0, #W = #L + 1 {
+  bundle acc[#W+1]: for<#i> @[G+#i, G+#i+1] #W+1;
+  bundle qn[#W+1]: for<#i> @[G+#i, G+#i+1] #W;
+  bundle r[#W+1]: for<#i> @[G+#i, G+#i+1] #W;
 
-  N := new Next[8, 7];
-  Acc := new Register[9];
-  QN := new Register[8];
-  R := new Register[8];
+  i := new Init[#W]<G>(left);
+  acc{0} = i.acc;
+  qn{0} = i.quotient;
+  r{0} = right;
 
-  acc0 := Acc<G, G+2>(s0.acc_next);
-  qn0 := QN<G, G+2>(s0.quotient_next);
-  r0 := R<G, G+2>(right);
-  s1 := N<G+1>(acc0.out, r0.out, qn0.out);
+  N := new Next[#W, #L];
+  Acc := new Delay[#W+1];
+  QN := new Delay[#W];
+  R := new Delay[#W];
 
-  acc1 := Acc<G+1, G+3>(s1.acc_next);
-  qn1 := QN<G+1, G+3>(s1.quotient_next);
-  r1 := R<G+1, G+3>(r0.out);
-  s2 := N<G+2>(acc1.out, r1.out, qn1.out);
-
-  acc2 := Acc<G+2, G+4>(s2.acc_next);
-  qn2 := QN<G+2, G+4>(s2.quotient_next);
-  r2 := R<G+2, G+4>(r1.out);
-  s3 := N<G+3>(acc2.out, r2.out, qn2.out);
-
-  acc3 := Acc<G+3, G+5>(s3.acc_next);
-  qn3 := QN<G+3, G+5>(s3.quotient_next);
-  r3 := R<G+3, G+5>(r2.out);
-  s4 := N<G+4>(acc3.out, r3.out, qn3.out);
-
-  acc4 := Acc<G+4, G+6>(s4.acc_next);
-  qn4 := QN<G+4, G+6>(s4.quotient_next);
-  r4 := R<G+4, G+6>(r3.out);
-  s5 := N<G+5>(acc4.out, r4.out, qn4.out);
-
-  acc5 := Acc<G+5, G+7>(s5.acc_next);
-  qn5 := QN<G+5, G+7>(s5.quotient_next);
-  r5 := R<G+5, G+7>(r4.out);
-  s6 := N<G+6>(acc5.out, r5.out, qn5.out);
-
-  acc6 := Acc<G+6, G+8>(s6.acc_next);
-  qn6 := QN<G+6, G+8>(s6.quotient_next);
-  r6 := R<G+6, G+8>(r5.out);
-  s7 := N<G+7>(acc6.out, r6.out, qn6.out);
+  for #i in 0..#W {
+    s := N<G+#i>(acc{#i}, r{#i}, qn{#i});
+    acc_reg := Acc<G+#i>(s.acc_next);
+    acc{#i+1} = acc_reg.out;
+    qn_reg := QN<G+#i>(s.quotient_next);
+    qn{#i+1} = qn_reg.out;
+    r_reg := R<G+#i>(r{#i});
+    r{#i+1} = r_reg.out;
+  }
 
   // Iterate 7 more times
-  quotient = s7.quotient_next;
+  quotient = qn{#W};
 }
 
-comp PipeIterDiv<G: 1>(
+comp PipeIterDiv[#W, #L]<G: 1>(
   @interface[G] go: 1,
-  @[G, G+1] left: 8,
-  @[G, G+1] right: 8,
+  @[G, G+1] left: #W,
+  @[G, G+1] right: #W,
 ) -> (
-  @[G+7, G+8] quotient: 8
-) {
-  i := new Init[8]<G>(left);
-  s0 := new Next[8, 7]<G>(i.acc, right, i.quotient);
+  @[G+#W, G+#W+1] quotient: #W
+) where #W > 0, #W = #L + 1 {
+  bundle acc[#W+1]: for<#i> @[G+#i, G+#i+1] #W+1;
+  bundle qn[#W+1]: for<#i> @[G+#i, G+#i+1] #W;
+  bundle r[#W+1]: for<#i> @[G+#i, G+#i+1] #W;
 
-  acc0 := new Register[9]<G, G+2>(s0.acc_next);
-  qn0 := new Register[8]<G, G+2>(s0.quotient_next);
-  r0 := new Register[8]<G, G+2>(right);
-  s1 := new Next[8, 7]<G+1>(acc0.out, r0.out, qn0.out);
+  i := new Init[#W]<G>(left);
+  acc{0} = i.acc;
+  qn{0} = i.quotient;
+  r{0} = right;
 
-  acc1 := new Register[9]<G+1, G+3>(s1.acc_next);
-  qn1 := new Register[8]<G+1, G+3>(s1.quotient_next);
-  r1 := new Register[8]<G+1, G+3>(r0.out);
-  s2 := new Next[8, 7]<G+2>(acc1.out, r1.out, qn1.out);
+  for #i in 0..#W {
+    s := new Next[#W, #L]<G+#i>(acc{#i}, r{#i}, qn{#i});
+    acc_reg := new Delay[#W+1]<G+#i>(s.acc_next);
+    acc{#i+1} = acc_reg.out;
+    qn_reg := new Delay[#W]<G+#i>(s.quotient_next);
+    qn{#i+1} = qn_reg.out;
+    r_reg := new Delay[#W]<G+#i>(r{#i});
+    r{#i+1} = r_reg.out;
+  }
 
-  acc2 := new Register[9]<G+2, G+4>(s2.acc_next);
-  qn2 := new Register[8]<G+2, G+4>(s2.quotient_next);
-  r2 := new Register[8]<G+2, G+4>(r1.out);
-  s3 := new Next[8, 7]<G+3>(acc2.out, r2.out, qn2.out);
+  // This unecessarily registers the last value of the quotient increasing the
+  // latency by 1 increasing the latency by 1.
 
-  acc3 := new Register[9]<G+3, G+5>(s3.acc_next);
-  qn3 := new Register[8]<G+3, G+5>(s3.quotient_next);
-  r3 := new Register[8]<G+3, G+5>(r2.out);
-  s4 := new Next[8, 7]<G+4>(acc3.out, r3.out, qn3.out);
-
-  acc4 := new Register[9]<G+4, G+6>(s4.acc_next);
-  qn4 := new Register[8]<G+4, G+6>(s4.quotient_next);
-  r4 := new Register[8]<G+4, G+6>(r3.out);
-  s5 := new Next[8, 7]<G+5>(acc4.out, r4.out, qn4.out);
-
-  acc5 := new Register[9]<G+5, G+7>(s5.acc_next);
-  qn5 := new Register[8]<G+5, G+7>(s5.quotient_next);
-  r5 := new Register[8]<G+5, G+7>(r4.out);
-  s6 := new Next[8, 7]<G+6>(acc5.out, r5.out, qn5.out);
-
-  acc6 := new Register[9]<G+6, G+8>(s6.acc_next);
-  qn6 := new Register[8]<G+6, G+8>(s6.quotient_next);
-  r6 := new Register[8]<G+6, G+8>(r5.out);
-  s7 := new Next[8, 7]<G+7>(acc6.out, r6.out, qn6.out);
-
-  // Iterate 7 more times
-  quotient = s7.quotient_next;
+  quotient = qn{#W};
 }
