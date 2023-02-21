@@ -1,4 +1,4 @@
-use super::{Expr, Id, Range, Time};
+use super::{Expr, Id, PortDef, Range, Time};
 use crate::utils::Binding;
 use crate::{
     errors::{self, Error, FilamentResult, WithPos},
@@ -469,16 +469,16 @@ pub struct BundleType {
     /// The name of the parameter for the bundle type
     idx: Id,
     /// Availability interval for the bundle
-    range: Range,
+    liveness: Range,
     /// Bitwidth of the bundle
     bitwidth: Expr,
 }
 
 impl BundleType {
-    pub fn new(idx: Id, range: Range, bitwidth: Expr) -> Self {
+    pub fn new(idx: Id, liveness: Range, bitwidth: Expr) -> Self {
         Self {
             idx,
-            range,
+            liveness,
             bitwidth,
         }
     }
@@ -486,7 +486,7 @@ impl BundleType {
 
 impl Display for BundleType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "for<#{}> {} {}", self.idx, self.range, self.bitwidth)
+        write!(f, "for<#{}> {} {}", self.idx, self.liveness, self.bitwidth)
     }
 }
 
@@ -497,7 +497,7 @@ impl Display for BundleType {
 /// ```
 pub struct Bundle {
     /// Name of the bundle
-    name: Id,
+    pub name: Id,
     /// Length of the bundle
     len: Expr,
     /// Type of the bundle
@@ -507,6 +507,17 @@ pub struct Bundle {
 impl Bundle {
     pub fn new(name: Id, len: Expr, typ: BundleType) -> Self {
         Self { name, len, typ }
+    }
+
+    /// Generate a port definition corresponding to a given index
+    pub fn liveness(&self, idx: Expr) -> PortDef {
+        let mut bind = Binding::default();
+        bind.insert(self.typ.idx.clone(), idx);
+        PortDef::new(
+            "__FAKE_NAME_SHOULD_NOT_BE_USED".into(),
+            self.typ.liveness.resolve_exprs(&bind),
+            self.typ.bitwidth.clone(),
+        )
     }
 }
 

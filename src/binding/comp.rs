@@ -6,6 +6,7 @@ use crate::{
     errors::{Error, WithPos},
     utils::{self, GPosIdx},
 };
+use itertools::Itertools;
 use std::collections::HashMap;
 
 pub type BundleIdx = utils::Idx<core::Bundle>;
@@ -72,6 +73,7 @@ impl BoundComponent {
     /// Add a new bundle to this binding.
     pub fn add_bundle(&mut self, bundle: core::Bundle) -> BundleIdx {
         let idx = BundleIdx::new(self.bundles.len());
+        self.bundle_map.insert(bundle.name.clone(), idx);
         self.bundles.push(bundle);
         idx
     }
@@ -391,11 +393,17 @@ impl<'c, 'p> CompBinding<'c, 'p> {
 
     /// Get the bundle associated with a given bundle name
     pub fn get_bundle_idx(&self, name: &Id) -> BundleIdx {
-        *self
-            .comp
-            .bundle_map
-            .get(name)
-            .unwrap_or_else(|| panic!("Unknown bundle: {name}"))
+        *self.comp.bundle_map.get(name).unwrap_or_else(|| {
+            panic!(
+                "Unknown bundle: {name}. Known bundles: [{}]",
+                self.comp
+                    .bundle_map
+                    .keys()
+                    .map(|id| id.to_string())
+                    .collect_vec()
+                    .join(", ")
+            )
+        })
     }
 
     /// Returns a resolved port definition for the given port.
@@ -421,8 +429,9 @@ impl<'c, 'p> CompBinding<'c, 'p> {
                     resolve_liveness,
                 ))
             }
-            core::PortType::Bundle { .. } => {
-                todo!("resolving bundle port")
+            core::PortType::Bundle { name, idx, .. } => {
+                let bi = self.get_bundle_idx(name);
+                Some(self[bi].liveness(idx.clone()))
             }
             core::PortType::Constant(_) => None,
         }
