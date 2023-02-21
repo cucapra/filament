@@ -1,0 +1,6 @@
+import "primitives/core.fil";
+
+comp main<G: 1>() -> () {
+    A := new Add[32];
+    A := new Add[16];
+}

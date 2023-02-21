@@ -34,6 +34,17 @@ impl From<SigIdx> for BoundComponent {
 }
 
 impl BoundComponent {
+    /// Check if this name is already bound in this component
+    fn name_is_bound(&self, name: &Id) -> Option<GPosIdx> {
+        if let Some(idx) = self.inst_map.get(name) {
+            Some(self.instances[idx.get()].pos)
+        } else {
+            self.inv_map
+                .get(name)
+                .map(|idx| self.invocations[idx.get()].pos)
+        }
+    }
+
     /// Add a new instance to this binding.
     /// Returns None when the component is not bound.
     pub fn add_instance(
@@ -145,6 +156,20 @@ impl BoundComponent {
             match cmd {
                 core::Command::Instance(inst) => {
                     let comp = &inst.component;
+                    // Check if the name is already bound
+                    if let Some(pos) = self.name_is_bound(&inst.name) {
+                        has_errors = true;
+                        let err =
+                            Error::already_bound(inst.name.clone(), "instance")
+                                .add_note(diag.add_info(
+                                    "name is already bound",
+                                    inst.name.copy_span(),
+                                ))
+                                .add_note(
+                                    diag.add_info("previous binding", pos),
+                                );
+                        diag.add_error(err);
+                    }
                     if prog.find_sig_idx(comp).is_some() {
                         self.add_instance(prog, inst);
                     } else {
@@ -165,6 +190,20 @@ impl BoundComponent {
                     }
                 }
                 core::Command::Invoke(inv) => {
+                    // Check if the invoke name is already bound
+                    if let Some(pos) = self.name_is_bound(&inv.name) {
+                        has_errors = true;
+                        let err =
+                            Error::already_bound(inv.name.clone(), "invoke")
+                                .add_note(diag.add_info(
+                                    "name is already bound",
+                                    inv.name.copy_span(),
+                                ))
+                                .add_note(
+                                    diag.add_info("previous binding", pos),
+                                );
+                        diag.add_error(err);
+                    }
                     if self.inst_map.get(&inv.instance).is_some() {
                         // If there have been previous errors, we cannot rely on signatures being valid
                         if has_errors {
