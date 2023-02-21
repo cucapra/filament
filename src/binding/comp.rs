@@ -140,7 +140,9 @@ impl BoundComponent {
                 core::Command::ForLoop(l) => {
                     self.process_cmds(prog, &l.body);
                 }
-                core::Command::Connect(_) | core::Command::Fsm(_) => (),
+                core::Command::Connect(_)
+                | core::Command::Fsm(_)
+                | core::Command::Bundle(_) => (),
             }
         }
     }
@@ -272,7 +274,7 @@ impl BoundComponent {
                     has_errors |=
                         self.process_checked_cmds(prog, &l.body, diag);
                 }
-                core::Command::Fsm(_) => (),
+                core::Command::Fsm(_) | core::Command::Bundle(_) => (),
             }
         }
 

@@ -413,6 +413,9 @@ fn compile_component(
             core::Command::ForLoop(_) => {
                 unreachable!("Loop should have been compiled away.")
             }
+            core::Command::Bundle(_) => {
+                unreachable!("Bundles should have been compiled away.")
+            }
         };
     }
     // Compile commands

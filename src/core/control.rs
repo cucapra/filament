@@ -1,4 +1,4 @@
-use super::{Expr, Id, Time};
+use super::{Expr, Id, Range, Time};
 use crate::utils::Binding;
 use crate::{
     errors::{self, Error, FilamentResult, WithPos},
@@ -95,6 +95,7 @@ pub enum Command {
     Connect(Connect),
     Fsm(Fsm),
     ForLoop(ForLoop),
+    Bundle(Bundle),
 }
 
 impl From<Fsm> for Command {
@@ -129,6 +130,7 @@ impl Display for Command {
             Command::Connect(con) => write!(f, "{}", con),
             Command::Fsm(fsm) => write!(f, "{}", fsm),
             Command::ForLoop(l) => write!(f, "{}", l),
+            Command::Bundle(b) => write!(f, "{}", b),
         }
     }
 }
@@ -441,5 +443,61 @@ impl Display for ForLoop {
             write!(f, "{}", cmd)?;
         }
         write!(f, "}}")
+    }
+}
+
+#[derive(Clone)]
+/// The type of the bundle:
+/// ```
+/// for<#i> @[G+#i, G+#i+1] #W
+/// ```
+pub struct BundleType {
+    /// The name of the parameter for the bundle type
+    idx: Id,
+    /// Availability interval for the bundle
+    range: Range,
+    /// Bitwidth of the bundle
+    bitwidth: Expr,
+}
+
+impl BundleType {
+    pub fn new(idx: Id, range: Range, bitwidth: Expr) -> Self {
+        Self {
+            idx,
+            range,
+            bitwidth,
+        }
+    }
+}
+
+impl Display for BundleType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "for<#{}> {} {}", self.idx, self.range, self.bitwidth)
+    }
+}
+
+#[derive(Clone)]
+/// Represents a bundle of wires with timing guarantees
+/// ```
+/// bundle f[10]: for<#i> @[G+#i, G+#i+1] #W;
+/// ```
+pub struct Bundle {
+    /// Name of the bundle
+    name: Id,
+    /// Length of the bundle
+    len: Expr,
+    /// Type of the bundle
+    typ: BundleType,
+}
+
+impl Bundle {
+    pub fn new(name: Id, len: Expr, typ: BundleType) -> Self {
+        Self { name, len, typ }
+    }
+}
+
+impl Display for Bundle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "bundle {}[{}]: {};", self.name, self.len, self.typ)
     }
 }

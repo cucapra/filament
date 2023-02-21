@@ -43,6 +43,7 @@ impl Component {
                 }
                 Command::Instance(_)
                 | Command::Connect(_)
+                | Command::Bundle(_)
                 | Command::ForLoop(_) => (),
             }
         }
