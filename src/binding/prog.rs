@@ -40,7 +40,8 @@ impl<'a> ProgBinding<'a> {
         let loc = self.comps.len();
         debug_assert!(
             idx.get() == loc,
-            "Component body added to a different index than signature"
+            "Component binding added to a different index ({}) than its signature ({loc})",
+            idx.get(),
         );
 
         let mut bind = BoundComponent::from(idx);

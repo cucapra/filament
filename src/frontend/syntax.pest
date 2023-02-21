@@ -137,7 +137,7 @@ connect = {
 
 port = {
   identifier ~ "." ~ identifier
-  | identifier ~ "[" ~ expr ~ "]"
+  | identifier ~ "{" ~ expr ~ "}"
   | identifier
   | bitwidth
 }
@@ -181,5 +181,5 @@ bundle = {
 
 // ========== Commands ==========
 command = {
-  instance | invocation | connect | fsm | for_loop
+  bundle | instance | invocation | connect | fsm | for_loop
 }
