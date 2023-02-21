@@ -7,6 +7,120 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 
 type Params = Vec<u64>;
 
+/// Rewrite commands based on the binding.
+struct Rewriter {
+    /// Mapping for bound names. Any name that is bound will not be renamed.
+    binding: Binding<core::Id>,
+    /// Suffix used to generate new names
+    suffix: String,
+}
+
+impl Rewriter {
+    fn new(binding: Binding<core::Id>, suffix: String) -> Self {
+        Self { binding, suffix }
+    }
+
+    /// Rename a name based on the binding.
+    fn add_name(&mut self, name: core::Id) {
+        if self.binding.find(&name).is_none() {
+            let n = format!("{}{}", name, self.suffix).into();
+            self.binding.insert(name, n)
+        }
+    }
+
+    fn rewrite_port(&mut self, port: core::Port) -> core::Port {
+        match port.typ {
+            core::PortType::InvPort { invoke, name } => {
+                core::PortType::InvPort {
+                    invoke: self.binding[&invoke].clone(),
+                    name,
+                }
+            }
+            t => t,
+        }
+        .into()
+    }
+
+    /// Generate new set of commands by renaming name based on the binding.
+    fn rewrite(&mut self, cmds: Vec<core::Command>) -> Vec<core::Command> {
+        // First rename all binders
+        for cmd in &cmds {
+            match cmd {
+                core::Command::Invoke(inv) => self.add_name(inv.name.clone()),
+                core::Command::Instance(inst) => {
+                    self.add_name(inst.name.clone())
+                }
+                core::Command::Fsm(_) => {
+                    unreachable!("Cannot monomorphize FSMs")
+                }
+                core::Command::ForLoop(_) => {
+                    unreachable!("Inner loops should be monomorphized already")
+                }
+                _ => (),
+            }
+        }
+        let mut n_cmds = Vec::with_capacity(cmds.len());
+        // Rename all uses of the binders
+        for cmd in cmds {
+            match cmd {
+                core::Command::Invoke(core::Invoke {
+                    abstract_vars,
+                    instance,
+                    name,
+                    ports,
+                    ..
+                }) => {
+                    let name = self.binding[&name].clone();
+                    let instance = self.binding[&instance].clone();
+                    let ports: Option<Vec<core::Port>> = ports.map(|ps| {
+                        ps.into_iter()
+                            .map(|p| self.rewrite_port(p))
+                            .collect_vec()
+                    });
+                    n_cmds.push(
+                        core::Invoke::new(name, instance, abstract_vars, ports)
+                            .into(),
+                    )
+                }
+                core::Command::Instance(core::Instance {
+                    name,
+                    bindings,
+                    component,
+                    ..
+                }) => {
+                    n_cmds.push(
+                        core::Instance::new(
+                            self.binding[&name].clone(),
+                            component,
+                            bindings,
+                        )
+                        .into(),
+                    );
+                }
+                core::Command::Connect(core::Connect {
+                    src,
+                    dst,
+                    guard,
+                    ..
+                }) => {
+                    assert!(guard.is_none(), "Cannot monomorphize guards");
+                    n_cmds.push(
+                        core::Connect::new(
+                            self.rewrite_port(src),
+                            self.rewrite_port(dst),
+                            None,
+                        )
+                        .into(),
+                    )
+                }
+                core::Command::ForLoop(_) => todo!(),
+                core::Command::Fsm(_) => unreachable!(),
+            }
+        }
+        n_cmds
+    }
+}
+
 #[derive(Default)]
 /// Parameters used for each instance of a Filament-level components
 struct InstanceParams {
@@ -39,7 +153,6 @@ impl InstanceParams {
         params: &[core::Expr],
     ) {
         // log::trace!("{} -> {} -> {}", parent, comp, params);
-
         // All possible values for each parameter computed by resolving each parameter that occurs in the binding
         let all_binds = params
             .iter()
@@ -132,28 +245,42 @@ impl Monomorphize {
         // Binding for the parameters of the component.
         // Must only contain concrete values
         param_binding: &Binding<core::Expr>,
+        // Name of components that should not be monomorphized.
         externals: &HashSet<core::Id>,
+        // Current set of bound names
+        mut prev_names: Binding<core::Id>,
+        // Current suffix
+        suffix: &str,
     ) -> Vec<core::Command> {
-        commands
-            .flat_map(|cmd| match cmd {
+        let mut n_cmds = Vec::new();
+        for cmd in commands {
+            match cmd {
                 core::Command::Invoke(core::Invoke {
                     name,
                     instance,
                     abstract_vars,
                     ports,
                     ..
-                }) => vec![core::Invoke::new(
-                    name,
-                    instance,
-                    abstract_vars
-                        .into_iter()
-                        .map(|t| t.resolve_expr(param_binding))
-                        .collect_vec(),
-                    ports,
-                )
-                .into()],
-                core::Command::Connect(con) => vec![con.into()],
-                core::Command::Fsm(fsm) => vec![fsm.into()],
+                }) => {
+                    // Add identity mapping for name
+                    prev_names.insert(name.clone(), name.clone());
+                    // Resolve the expressions in the invoke
+                    n_cmds.push(
+                        core::Invoke::new(
+                            name,
+                            instance,
+                            abstract_vars
+                                .into_iter()
+                                .map(|t| t.resolve_expr(param_binding))
+                                .collect_vec(),
+                            ports,
+                        )
+                        .into(),
+                    );
+                }
+                core::Command::Connect(con) => {
+                    n_cmds.push(con.into());
+                }
                 core::Command::Instance(inst) => {
                     let core::Instance {
                         name,
@@ -161,22 +288,29 @@ impl Monomorphize {
                         bindings,
                         ..
                     } = inst;
+                    // Add identity mapping for name
+                    prev_names.insert(name.clone(), name.clone());
+
                     let resolved = bindings
                         .into_iter()
                         .map(|p| p.resolve(param_binding))
                         .collect();
 
                     if externals.contains(&component) {
-                        vec![core::Instance::new(name, component, resolved)
-                            .into()]
+                        n_cmds.push(
+                            core::Instance::new(name, component, resolved)
+                                .into(),
+                        );
                     } else {
                         // If this is a component, replace the instance name with the monomorphized version
-                        vec![core::Instance::new(
-                            name,
-                            Self::generate_mono_name(&component, &resolved),
-                            vec![],
-                        )
-                        .into()]
+                        n_cmds.push(
+                            core::Instance::new(
+                                name,
+                                Self::generate_mono_name(&component, &resolved),
+                                vec![],
+                            )
+                            .into(),
+                        );
                     }
                 }
                 core::Command::ForLoop(core::ForLoop {
@@ -195,21 +329,32 @@ impl Monomorphize {
                         .resolve(param_binding)
                         .concrete()
                         .unwrap_or_else(|| panic!("Loop end must be concrete"));
-                    let mut cmds =
-                        Vec::with_capacity((e - s) as usize * body.len());
+
                     for i in s..e {
                         let mut new_binding = (*param_binding).clone();
                         new_binding.insert(idx.clone(), i.into());
-                        cmds.extend(Self::commands(
+                        // Recur on the body of the loop
+                        let ncmds = Self::commands(
                             body.iter().cloned(),
                             &new_binding,
                             externals,
-                        ));
+                            prev_names.clone(),
+                            suffix,
+                        );
+                        // Rewrite all names in the body and add them to the new commands
+                        let mut rw = Rewriter::new(
+                            prev_names.clone(),
+                            format!("{suffix}{i}"),
+                        );
+                        n_cmds.extend(rw.rewrite(ncmds));
                     }
-                    cmds
                 }
-            })
-            .collect_vec()
+                core::Command::Fsm(_) => {
+                    unreachable!("Cannot mono FSMs ")
+                }
+            }
+        }
+        n_cmds
     }
 
     /// Generate a new component using the binding parameters.
@@ -220,8 +365,13 @@ impl Monomorphize {
     ) -> core::Component {
         let sig =
             Self::sig(&comp.sig, &binding.values().cloned().collect_vec());
-        let body =
-            Self::commands(comp.body.iter().cloned(), binding, externals);
+        let body = Self::commands(
+            comp.body.iter().cloned(),
+            binding,
+            externals,
+            Binding::default(),
+            "",
+        );
         core::Component { sig, body }
     }
 

@@ -52,6 +52,14 @@ impl<T> Binding<T> {
     }
 }
 
+impl<T> std::ops::Index<&Id> for Binding<T> {
+    type Output = T;
+
+    fn index(&self, n: &Id) -> &Self::Output {
+        self.get(n)
+    }
+}
+
 impl<T> IntoIterator for Binding<T> {
     type Item = (Id, T);
     type IntoIter = linked_hash_map::IntoIter<Id, T>;
