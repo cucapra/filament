@@ -17,8 +17,49 @@ impl Port {
         match &self.typ {
             PortType::ThisPort(n) => n.clone(),
             PortType::InvPort { name, .. } => name.clone(),
-            PortType::Bundle { name, idx } => format!("{name}[{idx}]").into(),
+            PortType::Bundle { name, idx } => format!("{name}{{{idx}}}").into(),
             PortType::Constant(n) => Id::from(format!("const<{}>", n)),
+        }
+    }
+
+    pub fn comp(comp: Id, name: Id) -> Self {
+        Port {
+            typ: PortType::InvPort { invoke: comp, name },
+            pos: GPosIdx::UNKNOWN,
+        }
+    }
+
+    pub fn this(p: Id) -> Self {
+        Port {
+            typ: PortType::ThisPort(p),
+            pos: GPosIdx::UNKNOWN,
+        }
+    }
+
+    pub fn constant(v: u64) -> Self {
+        Port {
+            typ: PortType::Constant(v),
+            pos: GPosIdx::UNKNOWN,
+        }
+    }
+
+    pub fn bundle(name: Id, idx: Expr) -> Self {
+        Port {
+            typ: PortType::Bundle { name, idx },
+            pos: GPosIdx::UNKNOWN,
+        }
+    }
+
+    pub fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
+        match self.typ {
+            PortType::Bundle { name, idx } => Port {
+                typ: PortType::Bundle {
+                    name,
+                    idx: idx.resolve(bindings),
+                },
+                ..self
+            },
+            _ => self,
         }
     }
 }
@@ -58,36 +99,6 @@ pub enum PortType {
     Bundle { name: Id, idx: Expr },
 }
 
-impl Port {
-    pub fn comp(comp: Id, name: Id) -> Self {
-        Port {
-            typ: PortType::InvPort { invoke: comp, name },
-            pos: GPosIdx::UNKNOWN,
-        }
-    }
-
-    pub fn this(p: Id) -> Self {
-        Port {
-            typ: PortType::ThisPort(p),
-            pos: GPosIdx::UNKNOWN,
-        }
-    }
-
-    pub fn constant(v: u64) -> Self {
-        Port {
-            typ: PortType::Constant(v),
-            pos: GPosIdx::UNKNOWN,
-        }
-    }
-
-    pub fn bundle(name: Id, idx: Expr) -> Self {
-        Port {
-            typ: PortType::Bundle { name, idx },
-            pos: GPosIdx::UNKNOWN,
-        }
-    }
-}
-
 impl std::fmt::Display for PortType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -96,7 +107,7 @@ impl std::fmt::Display for PortType {
                 write!(f, "{}.{}", comp, name)
             }
             PortType::Constant(n) => write!(f, "{}", n),
-            PortType::Bundle { name, idx } => write!(f, "{name}[{idx}]"),
+            PortType::Bundle { name, idx } => write!(f, "{name}{{{idx}}}"),
         }
     }
 }
@@ -133,6 +144,12 @@ impl From<Instance> for Command {
 impl From<Invoke> for Command {
     fn from(v: Invoke) -> Self {
         Self::Invoke(v)
+    }
+}
+
+impl From<Bundle> for Command {
+    fn from(v: Bundle) -> Self {
+        Self::Bundle(v)
     }
 }
 
@@ -317,13 +334,10 @@ impl std::fmt::Display for Guard {
 pub struct Connect {
     /// Destination port
     pub dst: Port,
-
     /// Source port
     pub src: Port,
-
     /// Optional guard expression.
     pub guard: Option<Guard>,
-
     /// Source location of the invocation
     pos: GPosIdx,
 }
@@ -482,6 +496,14 @@ impl BundleType {
             bitwidth,
         }
     }
+
+    pub fn resolve_exprs(self, binding: &Binding<Expr>) -> Self {
+        Self {
+            idx: self.idx,
+            liveness: self.liveness.resolve_exprs(binding),
+            bitwidth: self.bitwidth.resolve(binding),
+        }
+    }
 }
 
 impl Display for BundleType {
@@ -499,9 +521,9 @@ pub struct Bundle {
     /// Name of the bundle
     pub name: Id,
     /// Length of the bundle
-    len: Expr,
+    pub len: Expr,
     /// Type of the bundle
-    typ: BundleType,
+    pub typ: BundleType,
 }
 
 impl Bundle {
@@ -518,6 +540,15 @@ impl Bundle {
             self.typ.liveness.resolve_exprs(&bind),
             self.typ.bitwidth.clone(),
         )
+    }
+
+    /// Resolve expressions in the Bundle
+    pub fn resolve_exprs(self, binding: &Binding<Expr>) -> Self {
+        Self {
+            name: self.name,
+            len: self.len.resolve(binding),
+            typ: self.typ.resolve_exprs(binding),
+        }
     }
 }
 

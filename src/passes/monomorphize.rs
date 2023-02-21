@@ -50,6 +50,7 @@ impl Rewriter {
                 core::Command::Instance(inst) => {
                     self.add_name(inst.name.clone())
                 }
+                core::Command::Bundle(bl) => self.add_name(bl.name.clone()),
                 core::Command::Fsm(_) => {
                     unreachable!("Cannot monomorphize FSMs")
                 }
@@ -57,7 +58,6 @@ impl Rewriter {
                     unreachable!("Inner loops should be monomorphized already")
                 }
                 core::Command::Connect(_) => {}
-                core::Command::Bundle(_) => todo!(),
             }
         }
         let mut n_cmds = Vec::with_capacity(cmds.len());
@@ -107,14 +107,23 @@ impl Rewriter {
                     assert!(guard.is_none(), "Cannot monomorphize guards");
                     n_cmds.push(
                         core::Connect::new(
-                            self.rewrite_port(src),
                             self.rewrite_port(dst),
+                            self.rewrite_port(src),
                             None,
                         )
                         .into(),
                     )
                 }
-                core::Command::Bundle(_) => todo!("monomorphizing bundles"),
+                core::Command::Bundle(core::Bundle { name, len, typ }) => {
+                    n_cmds.push(
+                        core::Bundle::new(
+                            self.binding[&name].clone(),
+                            len,
+                            typ,
+                        )
+                        .into(),
+                    )
+                }
                 core::Command::ForLoop(_) => unreachable!(),
                 core::Command::Fsm(_) => unreachable!(),
             }
@@ -242,6 +251,17 @@ impl Monomorphize {
         nsig
     }
 
+    fn connect(
+        con: core::Connect,
+        binding: &Binding<core::Expr>,
+    ) -> core::Connect {
+        core::Connect::new(
+            con.dst.resolve_exprs(binding),
+            con.src.resolve_exprs(binding),
+            con.guard,
+        )
+    }
+
     fn commands(
         commands: impl Iterator<Item = core::Command>,
         // Binding for the parameters of the component.
@@ -257,7 +277,9 @@ impl Monomorphize {
         let mut n_cmds = Vec::new();
         for cmd in commands {
             match cmd {
-                core::Command::Bundle(_) => todo!("monomorphizing bundles"),
+                core::Command::Bundle(bl) => {
+                    n_cmds.push(bl.resolve_exprs(param_binding).into());
+                }
                 core::Command::Invoke(core::Invoke {
                     name,
                     instance,
@@ -276,13 +298,17 @@ impl Monomorphize {
                                 .into_iter()
                                 .map(|t| t.resolve_expr(param_binding))
                                 .collect_vec(),
-                            ports,
+                            ports.map(|ps| {
+                                ps.into_iter()
+                                    .map(|p| p.resolve_exprs(param_binding))
+                                    .collect_vec()
+                            }),
                         )
                         .into(),
                     );
                 }
                 core::Command::Connect(con) => {
-                    n_cmds.push(con.into());
+                    n_cmds.push(Self::connect(con, param_binding).into());
                 }
                 core::Command::Instance(inst) => {
                     let core::Instance {
