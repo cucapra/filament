@@ -3,7 +3,7 @@ use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 use std::{fmt::Debug, fmt::Display};
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 /// Represents a binding from names to type T.
 pub struct Binding<T> {
     map: LinkedHashMap<Id, T>,
@@ -16,19 +16,24 @@ impl<T> Binding<T> {
         }
     }
 
+    /// Insert a binding
+    pub fn insert(&mut self, n: Id, t: T) {
+        self.map.insert(n, t);
+    }
+
     /// Find the binding for n, or return None
     pub fn find(&self, n: &Id) -> Option<&T> {
         self.map.get(n)
     }
 
-    /// Iterate over the values of the binding
-    pub fn values(&self) -> impl Iterator<Item = &T> {
-        self.map.values()
-    }
-
     /// Return binding for n, or panic if it doesn't exist
     pub fn get(&self, n: &Id) -> &T {
         self.find(n).unwrap_or_else(|| panic!("No binding for {n}"))
+    }
+
+    /// Iterate over the values of the binding
+    pub fn values(&self) -> impl Iterator<Item = &T> {
+        self.map.values()
     }
 
     /// Iterate over the binding
@@ -44,6 +49,14 @@ impl<T> Binding<T> {
     /// Check if the binding is emtpy
     pub fn is_empty(&self) -> bool {
         self.map.is_empty()
+    }
+}
+
+impl<T> std::ops::Index<&Id> for Binding<T> {
+    type Output = T;
+
+    fn index(&self, n: &Id) -> &Self::Output {
+        self.get(n)
     }
 }
 
