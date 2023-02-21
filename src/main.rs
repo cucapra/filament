@@ -77,7 +77,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     // Lowering
     let t = Instant::now();
     let Some(ns) =
-        passes::CompileInvokes::transform_unwrap(ns, states.max_states) else {
+        passes::Lower::transform_unwrap(ns, states.max_states) else {
             return Err(1);
         };
     log::info!("Lowering: {}ms", t.elapsed().as_millis());
