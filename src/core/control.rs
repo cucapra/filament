@@ -79,6 +79,13 @@ impl Port {
             pos: GPosIdx::UNKNOWN,
         }
     }
+
+    pub fn bundle(name: Id, idx: Expr) -> Self {
+        Port {
+            typ: PortType::Bundle { name, idx },
+            pos: GPosIdx::UNKNOWN,
+        }
+    }
 }
 
 impl std::fmt::Display for PortType {

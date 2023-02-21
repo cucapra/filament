@@ -137,6 +137,7 @@ connect = {
 
 port = {
   identifier ~ "." ~ identifier
+  | identifier ~ "[" ~ expr ~ "]"
   | identifier
   | bitwidth
 }

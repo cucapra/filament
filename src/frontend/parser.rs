@@ -338,6 +338,7 @@ impl FilamentParser {
             [bitwidth(constant)] => core::Port::constant(constant),
             [identifier(name)] => core::Port::this(name),
             [identifier(comp), identifier(name)] => core::Port::comp(comp, name),
+            [identifier(name), expr(idx)] => core::Port::bundle(name, idx),
         );
         Ok(n.set_span(sp))
     }
