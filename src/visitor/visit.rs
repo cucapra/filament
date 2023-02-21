@@ -134,6 +134,7 @@ where
                     core::Command::Connect(con) => pass.connect(con, &ctx)?,
                     core::Command::Fsm(fsm) => pass.fsm(fsm, &ctx)?,
                     core::Command::ForLoop(_) => todo!("Transforming loops"),
+                    core::Command::Bundle(_) => todo!("Transforming bundles"),
                 };
                 n_cmds.extend(cmds);
             }

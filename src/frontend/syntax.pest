@@ -137,6 +137,7 @@ connect = {
 
 port = {
   identifier ~ "." ~ identifier
+  | identifier ~ "{" ~ expr ~ "}"
   | identifier
   | bitwidth
 }
@@ -169,7 +170,16 @@ for_loop = {
   "for" ~ param_var ~ "in" ~ expr ~ ".." ~ expr ~ "{" ~ command* ~ "}"
 }
 
+// ====== Wire bundles ==========
+bundle_typ = {
+  "for" ~ "<" ~ param_var ~ ">" ~ interval_range ~ expr
+}
+
+bundle = {
+  "bundle" ~ identifier ~ "[" ~ expr ~ "]" ~ ":" ~ bundle_typ ~ ";"
+}
+
 // ========== Commands ==========
 command = {
-  instance | invocation | connect | fsm | for_loop
+  bundle | instance | invocation | connect | fsm | for_loop
 }

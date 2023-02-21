@@ -51,6 +51,11 @@ where
     }
 
     #[inline]
+    fn bundle(&mut self, _: &core::Bundle, _ctx: &CompBinding) -> Traverse {
+        Traverse::Continue(())
+    }
+
+    #[inline]
     fn signature(&mut self, _: &core::Signature) -> Traverse {
         Traverse::Continue(())
     }
@@ -77,6 +82,7 @@ where
 
     fn command(&mut self, cmd: &core::Command, ctx: &CompBinding) -> Traverse {
         match cmd {
+            core::Command::Bundle(bl) => self.bundle(bl, ctx),
             core::Command::Invoke(inv) => self.invoke(inv, ctx),
             core::Command::Instance(inst) => self.instance(inst, ctx),
             core::Command::Connect(con) => self.connect(con, ctx),

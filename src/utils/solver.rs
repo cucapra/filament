@@ -287,6 +287,7 @@ impl FilSolver {
                 .exprs()
                 .into_iter()
                 .flat_map(|e| e.abs.clone())
+                .unique()
                 .collect_vec();
             if let Some(model) = self.check_fact(fact.clone(), &relevant_vars) {
                 let info = diag.add_message(model);

@@ -56,7 +56,8 @@ impl Rewriter {
                 core::Command::ForLoop(_) => {
                     unreachable!("Inner loops should be monomorphized already")
                 }
-                _ => (),
+                core::Command::Connect(_) => {}
+                core::Command::Bundle(_) => todo!(),
             }
         }
         let mut n_cmds = Vec::with_capacity(cmds.len());
@@ -113,7 +114,8 @@ impl Rewriter {
                         .into(),
                     )
                 }
-                core::Command::ForLoop(_) => todo!(),
+                core::Command::Bundle(_) => todo!("monomorphizing bundles"),
+                core::Command::ForLoop(_) => unreachable!(),
                 core::Command::Fsm(_) => unreachable!(),
             }
         }
@@ -255,6 +257,7 @@ impl Monomorphize {
         let mut n_cmds = Vec::new();
         for cmd in commands {
             match cmd {
+                core::Command::Bundle(_) => todo!("monomorphizing bundles"),
                 core::Command::Invoke(core::Invoke {
                     name,
                     instance,

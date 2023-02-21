@@ -6,7 +6,10 @@ use crate::{
     errors::{Error, WithPos},
     utils::{self, GPosIdx},
 };
+use itertools::Itertools;
 use std::collections::HashMap;
+
+pub type BundleIdx = utils::Idx<core::Bundle>;
 
 pub struct BoundComponent {
     /// Signature associated with this component
@@ -15,10 +18,14 @@ pub struct BoundComponent {
     instances: Vec<BoundInstance>,
     /// Invocations bound in this component
     invocations: Vec<BoundInvoke>,
+    /// Bundles bound in the component
+    bundles: Vec<core::Bundle>,
     /// Mapping from name of instance to its index
     inst_map: HashMap<Id, InstIdx>,
     /// Mapping from name of invocation to its index
     inv_map: HashMap<Id, InvIdx>,
+    /// Mapping from name of bundle to its index
+    bundle_map: HashMap<Id, BundleIdx>,
 }
 
 impl From<SigIdx> for BoundComponent {
@@ -27,8 +34,10 @@ impl From<SigIdx> for BoundComponent {
             sig,
             instances: Vec::new(),
             invocations: Vec::new(),
+            bundles: Vec::new(),
             inst_map: HashMap::new(),
             inv_map: HashMap::new(),
+            bundle_map: HashMap::new(),
         }
     }
 }
@@ -59,6 +68,14 @@ impl BoundComponent {
             inst.bindings.clone(),
             inst.copy_span(),
         )
+    }
+
+    /// Add a new bundle to this binding.
+    pub fn add_bundle(&mut self, bundle: core::Bundle) -> BundleIdx {
+        let idx = BundleIdx::new(self.bundles.len());
+        self.bundle_map.insert(bundle.name.clone(), idx);
+        self.bundles.push(bundle);
+        idx
     }
 
     /// Build a binding from a component's body.
@@ -136,6 +153,9 @@ impl BoundComponent {
                 }
                 core::Command::Invoke(inv) => {
                     self.add_invoke(prog, inv);
+                }
+                core::Command::Bundle(bundle) => {
+                    self.add_bundle(bundle.clone());
                 }
                 core::Command::ForLoop(l) => {
                     self.process_cmds(prog, &l.body);
@@ -273,6 +293,9 @@ impl BoundComponent {
                         self.process_checked_cmds(prog, &l.body, diag);
                 }
                 core::Command::Fsm(_) => (),
+                core::Command::Bundle(bl) => {
+                    self.add_bundle(bl.clone());
+                }
             }
         }
 
@@ -293,6 +316,13 @@ impl std::ops::Index<InvIdx> for BoundComponent {
     type Output = BoundInvoke;
     fn index(&self, idx: InvIdx) -> &Self::Output {
         &self.invocations[idx.get()]
+    }
+}
+
+impl std::ops::Index<BundleIdx> for BoundComponent {
+    type Output = core::Bundle;
+    fn index(&self, idx: BundleIdx) -> &Self::Output {
+        &self.bundles[idx.get()]
     }
 }
 
@@ -361,6 +391,21 @@ impl<'c, 'p> CompBinding<'c, 'p> {
             .unwrap_or_else(|| panic!("Unknown invocation: {name}"))
     }
 
+    /// Get the bundle associated with a given bundle name
+    pub fn get_bundle_idx(&self, name: &Id) -> BundleIdx {
+        *self.comp.bundle_map.get(name).unwrap_or_else(|| {
+            panic!(
+                "Unknown bundle: {name}. Known bundles: [{}]",
+                self.comp
+                    .bundle_map
+                    .keys()
+                    .map(|id| id.to_string())
+                    .collect_vec()
+                    .join(", ")
+            )
+        })
+    }
+
     /// Returns a resolved port definition for the given port.
     /// Returns `None` if and only if the given port is a constant.
     pub fn get_resolved_port<F>(
@@ -384,6 +429,10 @@ impl<'c, 'p> CompBinding<'c, 'p> {
                     resolve_liveness,
                 ))
             }
+            core::PortType::Bundle { name, idx, .. } => {
+                let bi = self.get_bundle_idx(name);
+                Some(self[bi].liveness(idx.clone()))
+            }
             core::PortType::Constant(_) => None,
         }
     }
@@ -401,6 +450,13 @@ impl<'c, 'p> std::ops::Index<InstIdx> for CompBinding<'c, 'p> {
 impl<'c, 'p> std::ops::Index<InvIdx> for CompBinding<'c, 'p> {
     type Output = BoundInvoke;
     fn index(&self, idx: InvIdx) -> &Self::Output {
+        &self.comp[idx]
+    }
+}
+
+impl<'c, 'p> std::ops::Index<BundleIdx> for CompBinding<'c, 'p> {
+    type Output = core::Bundle;
+    fn index(&self, idx: BundleIdx) -> &Self::Output {
         &self.comp[idx]
     }
 }

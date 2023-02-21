@@ -338,6 +338,7 @@ impl FilamentParser {
             [bitwidth(constant)] => core::Port::constant(constant),
             [identifier(name)] => core::Port::this(name),
             [identifier(comp), identifier(name)] => core::Port::comp(comp, name),
+            [identifier(name), expr(idx)] => core::Port::bundle(name, idx),
         );
         Ok(n.set_span(sp))
     }
@@ -539,6 +540,20 @@ impl FilamentParser {
         ))
     }
 
+    fn bundle_typ(input: Node) -> ParseResult<core::BundleType> {
+        Ok(match_nodes!(
+            input.into_children();
+            [param_var(param), interval_range(range), expr(width)] => core::BundleType::new(param, range, width),
+        ))
+    }
+
+    fn bundle(input: Node) -> ParseResult<core::Bundle> {
+        Ok(match_nodes!(
+            input.into_children();
+            [identifier(name), expr(size), bundle_typ(typ)] => core::Bundle::new(name, size, typ),
+        ))
+    }
+
     fn command(input: Node) -> ParseResult<Vec<core::Command>> {
         Ok(match_nodes!(
             input.into_children();
@@ -547,6 +562,7 @@ impl FilamentParser {
             [connect(con)] => vec![core::Command::Connect(con)],
             [fsm(fsm)] => vec![core::Command::Fsm(fsm)],
             [for_loop(l)] => vec![core::Command::ForLoop(l)],
+            [bundle(bl)] => vec![core::Command::Bundle(bl)],
         ))
     }
 

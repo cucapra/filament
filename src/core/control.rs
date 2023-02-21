@@ -1,4 +1,4 @@
-use super::{Expr, Id, Time};
+use super::{Expr, Id, PortDef, Range, Time};
 use crate::utils::Binding;
 use crate::{
     errors::{self, Error, FilamentResult, WithPos},
@@ -17,6 +17,7 @@ impl Port {
         match &self.typ {
             PortType::ThisPort(n) => n.clone(),
             PortType::InvPort { name, .. } => name.clone(),
+            PortType::Bundle { name, idx } => format!("{name}[{idx}]").into(),
             PortType::Constant(n) => Id::from(format!("const<{}>", n)),
         }
     }
@@ -47,9 +48,14 @@ impl errors::WithPos for Port {
 
 #[derive(Clone)]
 pub enum PortType {
+    /// A port on this component
     ThisPort(Id),
-    InvPort { invoke: Id, name: Id },
+    /// A constant
     Constant(u64),
+    /// A port on an invoke
+    InvPort { invoke: Id, name: Id },
+    /// Index in a bundle
+    Bundle { name: Id, idx: Expr },
 }
 
 impl Port {
@@ -73,6 +79,13 @@ impl Port {
             pos: GPosIdx::UNKNOWN,
         }
     }
+
+    pub fn bundle(name: Id, idx: Expr) -> Self {
+        Port {
+            typ: PortType::Bundle { name, idx },
+            pos: GPosIdx::UNKNOWN,
+        }
+    }
 }
 
 impl std::fmt::Display for PortType {
@@ -83,6 +96,7 @@ impl std::fmt::Display for PortType {
                 write!(f, "{}.{}", comp, name)
             }
             PortType::Constant(n) => write!(f, "{}", n),
+            PortType::Bundle { name, idx } => write!(f, "{name}[{idx}]"),
         }
     }
 }
@@ -95,6 +109,7 @@ pub enum Command {
     Connect(Connect),
     Fsm(Fsm),
     ForLoop(ForLoop),
+    Bundle(Bundle),
 }
 
 impl From<Fsm> for Command {
@@ -129,6 +144,7 @@ impl Display for Command {
             Command::Connect(con) => write!(f, "{}", con),
             Command::Fsm(fsm) => write!(f, "{}", fsm),
             Command::ForLoop(l) => write!(f, "{}", l),
+            Command::Bundle(b) => write!(f, "{}", b),
         }
     }
 }
@@ -441,5 +457,72 @@ impl Display for ForLoop {
             write!(f, "{}", cmd)?;
         }
         write!(f, "}}")
+    }
+}
+
+#[derive(Clone)]
+/// The type of the bundle:
+/// ```
+/// for<#i> @[G+#i, G+#i+1] #W
+/// ```
+pub struct BundleType {
+    /// The name of the parameter for the bundle type
+    idx: Id,
+    /// Availability interval for the bundle
+    liveness: Range,
+    /// Bitwidth of the bundle
+    bitwidth: Expr,
+}
+
+impl BundleType {
+    pub fn new(idx: Id, liveness: Range, bitwidth: Expr) -> Self {
+        Self {
+            idx,
+            liveness,
+            bitwidth,
+        }
+    }
+}
+
+impl Display for BundleType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "for<#{}> {} {}", self.idx, self.liveness, self.bitwidth)
+    }
+}
+
+#[derive(Clone)]
+/// Represents a bundle of wires with timing guarantees
+/// ```
+/// bundle f[10]: for<#i> @[G+#i, G+#i+1] #W;
+/// ```
+pub struct Bundle {
+    /// Name of the bundle
+    pub name: Id,
+    /// Length of the bundle
+    len: Expr,
+    /// Type of the bundle
+    typ: BundleType,
+}
+
+impl Bundle {
+    pub fn new(name: Id, len: Expr, typ: BundleType) -> Self {
+        Self { name, len, typ }
+    }
+
+    /// Generate a port definition corresponding to a given index
+    pub fn liveness(&self, idx: Expr) -> PortDef {
+        let mut bind = Binding::default();
+        bind.insert(self.typ.idx.clone(), idx);
+        PortDef::new(
+            "__FAKE_NAME_SHOULD_NOT_BE_USED".into(),
+            self.typ.liveness.resolve_exprs(&bind),
+            self.typ.bitwidth.clone(),
+        )
+    }
+}
+
+impl Display for Bundle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "bundle {}[{}]: {};", self.name, self.len, self.typ)
     }
 }
