@@ -1,5 +1,3 @@
-use itertools::Itertools;
-
 use super::IntervalCheck;
 use crate::binding::CompBinding;
 use crate::core::{self, ForLoop, OrderConstraint, Time};
@@ -7,7 +5,112 @@ use crate::diagnostics;
 use crate::errors::{Error, WithPos};
 use crate::utils::{self, FilSolver};
 use crate::visitor::{self, Checker, Traverse};
+use itertools::Itertools;
 use std::iter;
+
+impl IntervalCheck {
+    /// Check that a bundle access is within bounds
+    fn port_bundle_index(&mut self, port: &core::Port, ctx: &CompBinding) {
+        let core::PortType::Bundle { name, idx } = &port.typ else {
+            return
+        };
+        let bun_idx = ctx.get_bundle_idx(name);
+        let bun_len = &ctx[bun_idx].len;
+        let con = core::Constraint::sub(OrderConstraint::lt(
+            idx.clone().into(),
+            bun_len.clone().into(),
+        ))
+        .add_note(
+            self.diag
+                .add_info(
+                    format!("cannot prove within-bounds bundle access: bundle of length {bun_len} with index {idx}"),
+                    port.copy_span()
+                ),
+        );
+        self.add_obligations(Some(con));
+    }
+
+    /// Check that the events provided to an invoke obey the constraints implied
+    /// by the component's delays.
+    fn check_invoke_binds(
+        &mut self,
+        invoke: &core::Invoke,
+        ctx: &CompBinding,
+    ) -> Traverse {
+        let inv_sig = ctx.get_invoke_idx(&invoke.name).resolved_signature(ctx);
+        let binds = &ctx.get_invoke(&invoke.name).events;
+        let this_sig = ctx.this();
+
+        let mut constraints = vec![];
+
+        // For each event provided in the bindings, ensure that the delay is
+        // less than the delay in the interface.
+        for (idx, ev_expr) in binds.iter().enumerate() {
+            let ev = ev_expr.event();
+
+            let this_ev = this_sig.get_event(&ev);
+            let this_ev_delay = &this_ev.delay;
+            let ev = &inv_sig.events[idx];
+            let ev_delay = &ev.delay;
+
+            // Generate constraint
+            let cons =
+                core::Constraint::sub(core::OrderConstraint::gte(
+                    this_ev_delay.clone(),
+                    ev_delay.clone(),
+                ))
+                .add_note(self.diag.add_info(
+                    "event provided to invoke triggers too often",
+                    invoke.copy_span(),
+                ))
+                .add_note(self.diag.add_info(
+                    format!(
+                        "provided event may trigger every {} cycles",
+                        ev_delay,
+                    ),
+                    ev.copy_span(),
+                ))
+                .add_note(self.diag.add_info(
+                    format!(
+                        "interface requires event to trigger once in {} cycles",
+                        this_ev_delay,
+                    ),
+                    this_ev.copy_span(),
+                ));
+            constraints.push(cons);
+        }
+        self.add_obligations(constraints.into_iter());
+
+        Traverse::Continue(())
+    }
+
+    fn check_invoke_ports(
+        &mut self,
+        invoke: &core::Invoke,
+        ctx: &CompBinding,
+    ) -> Traverse {
+        // If this is a high-level invoke, check all port requirements
+        if let Some(actuals) = invoke.ports.clone() {
+            let inv_idx = ctx.get_invoke_idx(&invoke.name);
+            // We use an unresolved signature here because [Self::connect] will eventually resolve them using
+            // [CompBinding::get_resolved_ports]
+            let sig = inv_idx.unresolved_signature(ctx);
+            let inputs = ctx.prog[sig]
+                .inputs()
+                .map(|pd| pd.name.clone())
+                .collect_vec();
+            // Check connections implied by the invocation
+            for (actual, formal) in actuals.iter().zip(inputs) {
+                let dst = core::Port::comp(invoke.name.clone(), formal.clone())
+                    .set_span(formal.copy_span());
+                let con = core::Connect::new(dst, actual.clone(), None);
+                self.connect(&con, ctx)?;
+            }
+        }
+
+        Traverse::Continue(())
+    }
+}
 
 impl visitor::Checker for IntervalCheck {
     fn new(ns: &core::Namespace) -> Self {
@@ -35,6 +138,7 @@ impl visitor::Checker for IntervalCheck {
     fn clear_data(&mut self) {
         self.obligations.clear();
         self.facts.clear();
+        self.vars.clear();
     }
 
     fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics {
@@ -75,6 +179,10 @@ impl visitor::Checker for IntervalCheck {
         let src = &con.src;
         let dst = &con.dst;
         log::trace!("Checking connect: {} = {}", dst, src);
+
+        // Check within-bounds access if the ports are bundles
+        self.port_bundle_index(src, ctx);
+        self.port_bundle_index(dst, ctx);
 
         let resolve_range =
             |r: &core::Range,
@@ -204,89 +312,6 @@ impl visitor::Checker for IntervalCheck {
             comp.sig.name,
             t.elapsed().as_millis()
         );
-
-        Traverse::Continue(())
-    }
-}
-
-impl IntervalCheck {
-    /// Check that the events provided to an invoke obey the constraints implied
-    /// by the component's delays.
-    fn check_invoke_binds(
-        &mut self,
-        invoke: &core::Invoke,
-        ctx: &CompBinding,
-    ) -> Traverse {
-        let inv_sig = ctx.get_invoke_idx(&invoke.name).resolved_signature(ctx);
-        let binds = &ctx.get_invoke(&invoke.name).events;
-        let this_sig = ctx.this();
-
-        let mut constraints = vec![];
-
-        // For each event provided in the bindings, ensure that the delay is
-        // less than the delay in the interface.
-        for (idx, ev_expr) in binds.iter().enumerate() {
-            let ev = ev_expr.event();
-
-            let this_ev = this_sig.get_event(&ev);
-            let this_ev_delay = &this_ev.delay;
-            let ev = &inv_sig.events[idx];
-            let ev_delay = &ev.delay;
-
-            // Generate constraint
-            let cons =
-                core::Constraint::sub(core::OrderConstraint::gte(
-                    this_ev_delay.clone(),
-                    ev_delay.clone(),
-                ))
-                .add_note(self.diag.add_info(
-                    "event provided to invoke triggers too often",
-                    invoke.copy_span(),
-                ))
-                .add_note(self.diag.add_info(
-                    format!(
-                        "provided event may trigger every {} cycles",
-                        ev_delay,
-                    ),
-                    ev.copy_span(),
-                ))
-                .add_note(self.diag.add_info(
-                    format!(
-                        "interface requires event to trigger once in {} cycles",
-                        this_ev_delay,
-                    ),
-                    this_ev.copy_span(),
-                ));
-            constraints.push(cons);
-        }
-        self.add_obligations(constraints.into_iter());
-
-        Traverse::Continue(())
-    }
-
-    fn check_invoke_ports(
-        &mut self,
-        invoke: &core::Invoke,
-        ctx: &CompBinding,
-    ) -> Traverse {
-        // If this is a high-level invoke, check all port requirements
-        if let Some(actuals) = invoke.ports.clone() {
-            let inv_idx = ctx.get_invoke_idx(&invoke.name);
-            // We use an unresolved signature here because [Self::connect] will eventually resolve them using
-            // [CompBinding::get_resolved_ports]
-            let sig = inv_idx.unresolved_signature(ctx);
-            let inputs = ctx.prog[sig]
-                .inputs()
-                .map(|pd| pd.name.clone())
-                .collect_vec();
-            // Check connections implied by the invocation
-            for (actual, formal) in actuals.iter().zip(inputs) {
-                let dst = core::Port::comp(invoke.name.clone(), formal.clone())
-                    .set_span(formal.copy_span());
-                let con = core::Connect::new(dst, actual.clone(), None);
-                self.connect(&con, ctx)?;
-            }
-        }
 
         Traverse::Continue(())
     }

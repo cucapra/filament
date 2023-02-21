@@ -468,7 +468,7 @@ impl Display for ForLoop {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "for #{} in {}..{} {{", self.idx, self.start, self.end)?;
         for cmd in &self.body {
-            write!(f, "{}", cmd)?;
+            writeln!(f, "{};", cmd)?;
         }
         write!(f, "}}")
     }
@@ -481,11 +481,11 @@ impl Display for ForLoop {
 /// ```
 pub struct BundleType {
     /// The name of the parameter for the bundle type
-    idx: Id,
+    pub idx: Id,
     /// Availability interval for the bundle
-    liveness: Range,
+    pub liveness: Range,
     /// Bitwidth of the bundle
-    bitwidth: Expr,
+    pub bitwidth: Expr,
 }
 
 impl BundleType {
