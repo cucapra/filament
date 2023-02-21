@@ -1,10 +1,10 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, num::NonZeroU32};
 
 #[derive(Eq, Debug)]
 /// Wrapper around a newtyped index associated with a type-level tag.
 /// Since the type does not contain a value of type T, it is always copy.
 pub struct Idx<T> {
-    idx: u32,
+    idx: NonZeroU32,
     _phantom: PhantomData<T>,
 }
 
@@ -29,14 +29,14 @@ impl<T> Copy for Idx<T> {}
 impl<T> Idx<T> {
     /// Representing an unknown index
     pub const UNKNOWN: Self = Self {
-        idx: u32::MAX,
+        idx: unsafe { NonZeroU32::new_unchecked(u32::MAX - 1) },
         _phantom: PhantomData,
     };
 
     /// Create a new index
     pub fn new(idx: usize) -> Self {
         Self {
-            idx: idx as u32,
+            idx: NonZeroU32::new(u32::try_from(idx + 1).unwrap()).unwrap(),
             _phantom: PhantomData,
         }
     }
@@ -44,9 +44,9 @@ impl<T> Idx<T> {
     /// Get the index
     pub fn get(self) -> usize {
         debug_assert!(
-            self.idx != u32::MAX,
+            self != Self::UNKNOWN,
             "Attempting to convert unknown index"
         );
-        self.idx as usize
+        (self.idx.get() - 1) as usize
     }
 }
