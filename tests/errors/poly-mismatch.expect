@@ -76,7 +76,7 @@ error: Cannot prove constraint G+#N >= G+#W
 error: Cannot prove constraint G+3 >= G+5
    ┌─ tests/errors/poly-mismatch.fil:25:11
    │
-25 │     out = S.out;
+25 │     out = s.out;
    │     ---   ^^^^^ source is available for @[G+2, G+3]
    │     │      
    │     destination's requirement @[G+4, G+5]

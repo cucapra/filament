@@ -37,7 +37,7 @@ pub struct BoundInstance {
     /// Parameter binding for this instance
     pub params: Vec<core::Expr>,
     /// Position associated with this instance
-    pos: GPosIdx,
+    pub(super) pos: GPosIdx,
 }
 
 impl BoundInstance {

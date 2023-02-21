@@ -21,6 +21,6 @@ comp Mac[#W, #N]<G: 1>(
 comp main<G: 1>(
     @[G, G+1] in: 32
 ) -> (@[G+4, G+5] out: 32) {
-    S := new Shift[32, 2]<G>(in);
-    out = S.out;
+    s := new Shift[32, 2]<G>(in);
+    out = s.out;
 }

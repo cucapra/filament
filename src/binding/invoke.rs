@@ -136,7 +136,7 @@ pub struct BoundInvoke {
     /// Event binding for this invocation
     pub events: Vec<Time>,
     /// Position associated with this invocation
-    pos: GPosIdx,
+    pub(super) pos: GPosIdx,
 }
 
 impl BoundInvoke {
