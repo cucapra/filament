@@ -131,10 +131,6 @@ impl<'a> TryFrom<&'a core::Namespace> for ProgBinding<'a> {
 impl std::ops::Index<SigIdx> for ProgBinding<'_> {
     type Output = core::Signature;
     fn index(&self, idx: SigIdx) -> &Self::Output {
-        debug_assert!(
-            idx != SigIdx::UNKNOWN,
-            "Attempted to use unknown signature"
-        );
         self.signatures[idx.get()]
     }
 }

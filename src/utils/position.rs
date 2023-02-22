@@ -1,7 +1,6 @@
 //! Tracking of source positions
 use codespan_reporting::files::SimpleFiles;
-use itertools::Itertools;
-use std::{cmp, fmt::Write, mem, sync};
+use std::{mem, sync};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 /// Handle to a position in a [PositionTable]
@@ -146,81 +145,6 @@ impl GPosIdx {
         } else {
             Some(self)
         }
-    }
-
-    /// Returns the
-    /// 1. lines associated with this span
-    /// 2. start position of the first line in span
-    /// 3. line number of the span
-    fn get_lines(&self) -> (Vec<&str>, usize, usize) {
-        let table = GlobalPositionTable::as_ref();
-        let pos_d = table.get_pos(self.0);
-        let (_, file) = &table.get_file_data(pos_d.file);
-
-        let lines = file.split('\n').collect_vec();
-        let mut pos: usize = 0;
-        let mut linum: usize = 1;
-        let mut collect_lines = false;
-        let mut buf = Vec::new();
-
-        let mut out_line: usize = 0;
-        let mut out_idx: usize = 0;
-        for l in lines {
-            let next_pos = pos + l.len();
-            if pos_d.start >= pos && pos_d.start <= next_pos {
-                out_line = linum;
-                out_idx = pos;
-                collect_lines = true;
-            }
-            if collect_lines && pos_d.end >= pos {
-                buf.push(l)
-            }
-            if pos_d.end <= next_pos {
-                break;
-            }
-            pos = next_pos + 1;
-            linum += 1;
-        }
-        (buf, out_idx, out_line)
-    }
-
-    /// Format this position with a the error message `err_msg`
-    pub fn format<S: AsRef<str>>(&self, err_msg: S) -> String {
-        let table = GlobalPositionTable::as_ref();
-        let pos_d = table.get_pos(self.0);
-        let (name, _) = &table.get_file_data(pos_d.file);
-
-        let (lines, pos, linum) = self.get_lines();
-        let mut buf = name.to_string();
-
-        let l = lines[0];
-        let linum_text = format!("{} ", linum);
-        let linum_space: String = " ".repeat(linum_text.len());
-        let mark: String = "^".repeat(cmp::min(
-            pos_d.end - pos_d.start,
-            l.len() - (pos_d.start - pos),
-        ));
-        let space: String = " ".repeat(pos_d.start - pos);
-        writeln!(buf).unwrap();
-        writeln!(buf, "{}|{}", linum_text, l).unwrap();
-        write!(
-            buf,
-            "{}|{}{} {}",
-            linum_space,
-            space,
-            mark,
-            err_msg.as_ref()
-        )
-        .unwrap();
-        buf
-    }
-
-    /// Visualizes the span without any message or mkaring
-    pub fn show(&self) -> String {
-        let (lines, _, linum) = self.get_lines();
-        let l = lines[0];
-        let linum_text = format!("{} ", linum);
-        format!("{}|{}\n", linum_text, l)
     }
 }
 
