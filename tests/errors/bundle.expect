@@ -1,6 +1,14 @@
 ---CODE---
 1
 ---STDERR---
+error: Cannot prove constraint #N > 1
+   ┌─ tests/errors/bundle.fil:10:5
+   │
+10 │     f{1} = input;
+   │     ^^^^ cannot prove within-bounds bundle access: bundle of length #N with index 1
+   │
+   = assignment violates constraint: N=1
+
 error: Cannot prove constraint G+1 >= G+2
    ┌─ tests/errors/bundle.fil:10:12
    │
@@ -20,6 +28,14 @@ error: Cannot prove constraint G+#i >= G+#i+1
    │
    = assignment violates constraint: i=0
 
+error: Cannot prove constraint #N > #N+1
+   ┌─ tests/errors/bundle.fil:15:11
+   │
+15 │     out = f{#N+1};
+   │           ^^^^^^^ cannot prove within-bounds bundle access: bundle of length #N with index #N+1
+   │
+   = assignment violates constraint: N=1
+
 error: Cannot prove constraint G+#N >= G+#N+1
    ┌─ tests/errors/bundle.fil:15:11
    │
@@ -30,4 +46,4 @@ error: Cannot prove constraint G+#N >= G+#N+1
    │
    = assignment violates constraint: N=1
 
-Compilation failed with 3 errors.
+Compilation failed with 5 errors.
