@@ -66,6 +66,15 @@ where
         Ok(sig)
     }
 
+    #[inline]
+    fn bundle(
+        &mut self,
+        bundle: core::Bundle,
+        _: &CompBinding,
+    ) -> FilamentResult<Vec<core::Command>> {
+        Ok(vec![bundle.into()])
+    }
+
     /// Perform computation before the component traversal
     #[inline]
     fn enter_component(
@@ -133,8 +142,8 @@ where
                     }
                     core::Command::Connect(con) => pass.connect(con, &ctx)?,
                     core::Command::Fsm(fsm) => pass.fsm(fsm, &ctx)?,
+                    core::Command::Bundle(bl) => pass.bundle(bl, &ctx)?,
                     core::Command::ForLoop(_) => todo!("Transforming loops"),
-                    core::Command::Bundle(_) => todo!("Transforming bundles"),
                 };
                 n_cmds.extend(cmds);
             }

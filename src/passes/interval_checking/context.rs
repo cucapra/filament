@@ -18,7 +18,7 @@ pub struct IntervalCheck {
     /// Diagnostics
     pub diag: diagnostics::Diagnostics,
     /// Variables used in the current set of constraints
-    vars: Vec<core::Id>,
+    pub(super) vars: Vec<core::Id>,
 }
 
 impl From<(FilSolver, diagnostics::Diagnostics)> for IntervalCheck {

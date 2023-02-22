@@ -14,6 +14,26 @@ extern "iter-div.sv" {
   ) where #W > 0;
 }
 
+comp DiffTest[#W, #L]<G: #W+1>(
+  @interface[G] go: 1,
+  @[G, G+1] left: #W,
+  @[G, G+#W+1] right: #W,
+) -> (
+  @[G, G+1] comb_noshare: #W,
+  @[G+#W+1, G+#W+2] verilog: #W,
+  @[G+#W, G+#W+1] share: #W,
+  @[G+#W, G+#W+1] pipe: #W,
+) where #W > 0, #W = #L + 1 {
+  d := new IterDiv[#W]<G>(left, right);
+  id := new CombNoShareIterDiv[#W, #L]<G>(left, right);
+  s := new ShareIterDiv[#W, #L]<G>(left, right);
+  pipe := new PipeIterDiv[#W, #L]<G>(left, right);
+  verilog = d.out_quotient;
+  comb_noshare = id.quotient;
+  share = s.quotient;
+  pipe = pipe.quotient;
+}
+
 comp main<G: 11>(
   @interface[G] go: 1,
   @[G, G+1] left: 8,
@@ -21,15 +41,12 @@ comp main<G: 11>(
 ) -> (
   @[G, G+1] comb_noshare: 8,
   @[G+9, G+10] verilog: 8,
-  @[G+7, G+8] share: 8,
-  @[G+7, G+8] pipe: 8,
+  @[G+8, G+9] share: 8,
+  @[G+8, G+9] pipe: 8,
 ) {
-  d := new IterDiv[8]<G>(left, right);
-  id := new CombNoShareIterDiv<G>(left, right);
-  s := new ShareIterDiv<G>(left, right);
-  pipe := new PipeIterDiv<G>(left, right);
-  verilog = d.out_quotient;
-  comb_noshare = id.quotient;
-  share = s.quotient;
-  pipe = pipe.quotient;
+  d := new DiffTest[8, 7]<G>(left, right);
+  verilog = d.verilog;
+  comb_noshare = d.comb_noshare;
+  share = d.share;
+  pipe = d.pipe;
 }

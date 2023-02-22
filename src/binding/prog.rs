@@ -1,6 +1,8 @@
 use crate::{
     core::{self, Id},
-    diagnostics, utils,
+    diagnostics,
+    errors::{Error, WithPos},
+    utils,
 };
 use std::collections::HashMap;
 
@@ -20,13 +22,11 @@ pub struct ProgBinding<'a> {
 }
 
 impl<'a> ProgBinding<'a> {
-    /// Add a component signature to the program binding and build the
-    /// [super::BoundComponent] struct for it.
-    fn add_comp_sig(&mut self, sig: &'a core::Signature) -> SigIdx {
-        let idx = SigIdx::new(self.signatures.len());
-        self.signatures.push(sig);
-        self.name_map.insert(sig.name.clone(), idx);
-        idx
+    // Is this name already bound?
+    pub fn is_bound(&self, name: &core::Id) -> Option<&core::Signature> {
+        self.name_map
+            .get(name)
+            .map(|idx| self.signatures[idx.get()])
     }
 
     /// Build a [BoundComponent] for the component and return a boolean indicating if there were
@@ -50,11 +50,30 @@ impl<'a> ProgBinding<'a> {
     }
 
     /// Add a component signature to the program binding
-    fn add_external(&mut self, sig: &'a core::Signature) -> SigIdx {
-        let idx = SigIdx::new(self.signatures.len());
-        self.signatures.push(sig);
-        self.name_map.insert(sig.name.clone(), idx);
-        idx
+    fn add_sig(
+        &mut self,
+        sig: &'a core::Signature,
+        diag: &mut diagnostics::Diagnostics,
+    ) -> SigIdx {
+        if let Some(old_sig) = self.is_bound(&sig.name) {
+            let err =
+                Error::already_bound(sig.name.clone(), "signature")
+                    .add_note(diag.add_info(
+                        "signature with same name is already bound",
+                        sig.name.copy_span(),
+                    ))
+                    .add_note(diag.add_info(
+                        "previous definition",
+                        old_sig.name.copy_span(),
+                    ));
+            diag.add_error(err);
+            self.get_sig_idx(&sig.name)
+        } else {
+            let idx = SigIdx::new(self.signatures.len());
+            self.signatures.push(sig);
+            self.name_map.insert(sig.name.clone(), idx);
+            idx
+        }
     }
 
     pub(super) fn get_comp_binding(&self, name: &core::Id) -> &BoundComponent {
@@ -84,19 +103,19 @@ impl<'a> TryFrom<&'a core::Namespace> for ProgBinding<'a> {
             comps: Vec::with_capacity(ns.components.len()),
             name_map: HashMap::new(),
         };
+        let mut diag = diagnostics::Diagnostics::default();
         // Add component signatures first so that we can index comps vector using the same
         // index as the signature.
         ns.components.iter().for_each(|c| {
-            ctx.add_comp_sig(&c.sig);
+            ctx.add_sig(&c.sig, &mut diag);
         });
         ns.externs
             .iter()
             .flat_map(|(_, comps)| comps)
             .for_each(|c| {
-                ctx.add_external(c);
+                ctx.add_sig(c, &mut diag);
             });
 
-        let mut diag = diagnostics::Diagnostics::default();
         // Build and add bindings for components
         ns.components.iter().for_each(|c| {
             ctx.add_comp_bind(c, &mut diag);

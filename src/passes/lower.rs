@@ -5,15 +5,19 @@ use crate::visitor;
 use itertools::Itertools;
 use std::collections::HashMap;
 
+/// Compiles high-level invokes into low-level invokes by instantiating FSMs and generating guards.
+/// Additionally removes all bundles and inlines their reads.
 #[derive(Default)]
-pub struct CompileInvokes {
+pub struct Lower {
     /// Mapping from events to FSMs
     fsms: HashMap<core::Id, core::Fsm>,
     /// Max state map
     max_states: HashMap<core::Id, HashMap<core::Id, u64>>,
+    /// Track writes to bundles
+    bundle_writes: HashMap<core::Id, Vec<Option<core::Port>>>,
 }
 
-impl CompileInvokes {
+impl Lower {
     fn find_fsm(&self, event: &core::Id) -> Option<&core::Fsm> {
         self.fsms.get(event)
     }
@@ -39,9 +43,22 @@ impl CompileInvokes {
             .unwrap();
         Some(guard)
     }
+
+    fn port(&self, port: core::Port) -> core::Port {
+        match port.typ {
+            core::PortType::Bundle { name, idx } => {
+                let idx = idx.concrete().unwrap() as usize;
+                let writes = self.bundle_writes.get(&name).unwrap();
+                writes[idx]
+                    .clone()
+                    .unwrap_or_else(|| panic!("No write to {name}{{{idx}}}"))
+            }
+            _ => port.clone(),
+        }
+    }
 }
 
-impl visitor::Transform for CompileInvokes {
+impl visitor::Transform for Lower {
     /// Mapping from component -> event -> max state
     type Info = HashMap<Id, HashMap<Id, u64>>;
 
@@ -49,16 +66,52 @@ impl visitor::Transform for CompileInvokes {
         Self {
             fsms: HashMap::new(),
             max_states: max_states.clone(),
+            bundle_writes: HashMap::new(),
         }
     }
 
     fn clear_data(&mut self) {
         self.fsms.clear();
+        self.bundle_writes.clear();
     }
 
     /// Visit components with high-level invokes
     fn component_filter(&self, _: &CompBinding) -> bool {
         true
+    }
+
+    fn bundle(
+        &mut self,
+        bundle: core::Bundle,
+        _: &CompBinding,
+    ) -> FilamentResult<Vec<core::Command>> {
+        self.bundle_writes.insert(
+            bundle.name,
+            vec![None; bundle.len.concrete().unwrap() as usize],
+        );
+        Ok(vec![])
+    }
+
+    fn connect(
+        &mut self,
+        con: core::Connect,
+        _: &CompBinding,
+    ) -> FilamentResult<Vec<core::Command>> {
+        let src = self.port(con.src);
+        if let core::PortType::Bundle { name, idx } = con.dst.typ {
+            let idx = idx.concrete().unwrap() as usize;
+            debug_assert!(
+                self.bundle_writes[&name][idx].is_none(),
+                "multiple writes to {name}{{{idx}}}"
+            );
+            let writes = self.bundle_writes.get_mut(&name).unwrap();
+            writes[idx] = Some(src);
+            // Remove assignment to bundle port
+            Ok(vec![])
+        } else {
+            let con = core::Connect::new(con.dst, src, con.guard);
+            Ok(vec![con.into()])
+        }
     }
 
     // TODO(rachit): Document how the compilation works
@@ -110,8 +163,9 @@ impl visitor::Transform for CompileInvokes {
             }
 
             // Generate assignment for each port
-            for (port, formal) in ports.into_iter().zip(sig.inputs()) {
+            for (src, formal) in ports.into_iter().zip(sig.inputs()) {
                 let guard = self.range_to_guard(&formal.liveness);
+                let port = self.port(src);
                 let sp = port.copy_span();
                 let con = core::Connect::new(
                     core::Port::comp(bind.clone(), formal.name.clone()),
