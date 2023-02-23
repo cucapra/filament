@@ -246,7 +246,7 @@ impl Monomorphize {
 
     fn sig(sig: &core::Signature, binding: &[core::Expr]) -> core::Signature {
         // XXX: Short-circuit if binding is empty
-        let mut nsig = sig.resolve_offset(binding);
+        let mut nsig = sig.clone().resolve_exprs(binding);
         nsig.name = Self::generate_mono_name(&sig.name, binding);
         nsig.params = vec![];
         nsig

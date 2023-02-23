@@ -252,6 +252,7 @@ impl visitor::Checker for BindCheck {
 
         let ds = dst_w.simplify();
         let ss = src_w.simplify();
+        // XXX(rachit): This cannot be checked locally. We need to generate constraints in the interval checker to check this property.
         if ds != ss {
             let err = Error::malformed("port width mismatch".to_string())
                 .add_note(self.diag.add_info(

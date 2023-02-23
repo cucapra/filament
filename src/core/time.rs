@@ -45,14 +45,14 @@ impl Time {
     }
 
     /// Resolve the events bound in this time expression
-    pub fn resolve_event(&self, bindings: &utils::Binding<Self>) -> Self {
+    pub fn resolve_event(self, bindings: &utils::Binding<Self>) -> Self {
         let mut n = bindings.get(&self.event).clone();
-        n.offset += self.offset.clone();
+        n.offset += self.offset;
         n
     }
 
     /// Resolve all expressions bound in this time expression
-    pub fn resolve_expr(&self, bind: &utils::Binding<Expr>) -> Self {
+    pub fn resolve_expr(self, bind: &utils::Binding<Expr>) -> Self {
         Time {
             event: self.event.clone(),
             offset: self.offset.resolve(bind),
@@ -139,7 +139,7 @@ impl TimeSub {
     }
 
     /// Resolve events bound in this time expression
-    pub fn resolve_event(&self, bindings: &utils::Binding<Time>) -> Self {
+    pub fn resolve_event(self, bindings: &utils::Binding<Time>) -> Self {
         match self {
             // Unit cannot contain any events
             TimeSub::Unit(_) => self.clone(),
@@ -149,7 +149,7 @@ impl TimeSub {
         }
     }
 
-    pub fn resolve_expr(&self, bindings: &utils::Binding<Expr>) -> Self {
+    pub fn resolve_expr(self, bindings: &utils::Binding<Expr>) -> Self {
         match self {
             TimeSub::Unit(n) => TimeSub::Unit(n.resolve(bindings)),
             TimeSub::Sym { l, r } => {

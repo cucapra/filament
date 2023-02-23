@@ -537,7 +537,7 @@ impl Bundle {
         bind.insert(self.typ.idx.clone(), idx);
         PortDef::new(
             "__FAKE_NAME_SHOULD_NOT_BE_USED".into(),
-            self.typ.liveness.resolve_exprs(&bind),
+            self.typ.liveness.clone().resolve_exprs(&bind),
             self.typ.bitwidth.clone(),
         )
     }

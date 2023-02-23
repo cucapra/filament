@@ -17,19 +17,19 @@ pub struct EventBind {
 }
 
 impl EventBind {
-    fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
+    fn resolve_event(self, bindings: &Binding<Time>) -> Self {
         Self {
             delay: self.delay.resolve_event(bindings),
-            default: self.default.as_ref().map(|d| d.resolve_event(bindings)),
-            ..self.clone()
+            default: self.default.map(|d| d.resolve_event(bindings)),
+            ..self
         }
     }
 
-    fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
+    fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
         Self {
             delay: self.delay.resolve_expr(bindings),
-            default: self.default.as_ref().map(|d| d.resolve_expr(bindings)),
-            ..self.clone()
+            default: self.default.map(|d| d.resolve_expr(bindings)),
+            ..self
         }
     }
 }
@@ -231,8 +231,12 @@ impl Signature {
             .iter()
             .skip(args.len())
             .map(|eb| {
-                let bind =
-                    eb.default.as_ref().unwrap().resolve_event(&partial_map);
+                let bind = eb
+                    .default
+                    .as_ref()
+                    .unwrap()
+                    .clone()
+                    .resolve_event(&partial_map);
                 (eb.event.clone(), bind)
             })
             .collect();
@@ -325,7 +329,7 @@ impl Signature {
         cons
     }
 
-    pub fn resolve_offset(&self, args: &[Expr]) -> Signature {
+    pub fn resolve_exprs(self, args: &[Expr]) -> Signature {
         let binding: Binding<Expr> = self.param_binding(args);
 
         let resolved = Signature {
@@ -333,42 +337,42 @@ impl Signature {
             ports: self
                 .ports
                 .iter()
-                .map(|pd| pd.resolve_offset(&binding))
+                .map(|pd| pd.clone().resolve_offset(&binding))
                 .collect_vec(),
             events: self
                 .events
-                .iter()
-                .map(|eb| eb.resolve_offset(&binding))
+                .into_iter()
+                .map(|eb| eb.resolve_exprs(&binding))
                 .collect_vec(),
             constraints: self
                 .constraints
-                .iter()
+                .into_iter()
                 .map(|c| c.resolve_expr(&binding))
                 .collect_vec(),
-            ..self.clone()
+            ..self
         };
 
         resolved
     }
 
-    pub fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
+    pub fn resolve_event(self, bindings: &Binding<Time>) -> Self {
         Self {
             ports: self
                 .ports
-                .iter()
+                .into_iter()
                 .map(|pd| pd.resolve_event(bindings))
                 .collect(),
             constraints: self
                 .constraints
-                .iter()
+                .into_iter()
                 .map(|c| c.resolve_event(bindings))
                 .collect(),
             events: self
                 .events
-                .iter()
+                .into_iter()
                 .map(|eb| eb.resolve_event(bindings))
                 .collect(),
-            ..(self.clone())
+            ..self
         }
     }
 }

@@ -32,20 +32,20 @@ impl Range {
     }
 
     /// Resolve events mentioned in this range
-    pub fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
+    pub fn resolve_event(self, bindings: &Binding<Time>) -> Self {
         Range {
             start: self.start.resolve_event(bindings),
             end: self.end.resolve_event(bindings),
-            ..self.clone()
+            ..self
         }
     }
 
     /// Resolve [Expr] mentioned in this range.
-    pub fn resolve_exprs(&self, bindings: &Binding<Expr>) -> Self {
+    pub fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
         Range {
             start: self.start.resolve_expr(bindings),
             end: self.end.resolve_expr(bindings),
-            ..self.clone()
+            ..self
         }
     }
 

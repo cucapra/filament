@@ -26,7 +26,7 @@ impl InstIdx {
         ctx: &CompBinding,
     ) -> core::Signature {
         let inst = &ctx[*self];
-        ctx.prog[inst.sig].resolve_offset(&inst.params)
+        ctx.prog[inst.sig].clone().resolve_exprs(&inst.params)
     }
 }
 

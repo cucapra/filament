@@ -65,7 +65,7 @@ impl Expr {
     }
 
     /// Resolve this expression using the given binding for abstract variables.
-    pub fn resolve(&self, bind: &utils::Binding<Expr>) -> Self {
+    pub fn resolve(self, bind: &utils::Binding<Expr>) -> Self {
         todo!()
     }
 

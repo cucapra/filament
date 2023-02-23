@@ -42,10 +42,10 @@ impl WithPos for PortDef {
 }
 impl PortDef {
     /// Resolves all time expressions in this port definition
-    pub fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
+    pub fn resolve_event(self, bindings: &Binding<Time>) -> Self {
         Self {
             liveness: self.liveness.resolve_event(bindings),
-            ..(self.clone())
+            ..self
         }
     }
 
@@ -53,11 +53,11 @@ impl PortDef {
     /// Specifically:
     /// - The bitwidth of the port
     /// - The liveness condition
-    pub fn resolve_offset(&self, bindings: &Binding<Expr>) -> Self {
+    pub fn resolve_offset(self, bindings: &Binding<Expr>) -> Self {
         Self {
             bitwidth: self.bitwidth.resolve(bindings),
             liveness: self.liveness.resolve_exprs(bindings),
-            ..(self.clone())
+            ..self
         }
     }
 }
