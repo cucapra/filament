@@ -181,7 +181,7 @@ impl TimeSub {
 impl Display for TimeSub {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TimeSub::Unit(n) => write!(f, "{}", n),
+            TimeSub::Unit(n) => write!(f, "|{}|", n),
             TimeSub::Sym { l, r } => write!(f, "|{} - {}|", l, r),
         }
     }
@@ -190,7 +190,7 @@ impl Display for TimeSub {
 impl From<TimeSub> for SExp {
     fn from(ts: TimeSub) -> Self {
         match ts {
-            TimeSub::Unit(n) => n.into(),
+            TimeSub::Unit(n) => SExp(format!("(abs {})", SExp::from(n))),
             TimeSub::Sym { l, r } => {
                 SExp(format!("(abs (- {} {}))", SExp::from(l), SExp::from(r)))
             }

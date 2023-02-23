@@ -9,6 +9,6 @@ pub mod utils;
 pub mod visitor;
 
 pub(crate) mod core;
-pub(crate) mod expr_simplifier;
+// pub(crate) mod expr_simplifier;
 
 pub use diagnostics::errors;

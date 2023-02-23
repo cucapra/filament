@@ -36,6 +36,10 @@ impl Rewriter {
                     name,
                 }
             }
+            core::PortType::Bundle { name, idx } => core::PortType::Bundle {
+                name: self.binding[&name].clone(),
+                idx,
+            },
             t => t,
         }
         .into()
@@ -63,7 +67,7 @@ impl Rewriter {
         let mut n_cmds = Vec::with_capacity(cmds.len());
         // Rename all uses of the binders
         for cmd in cmds {
-            match cmd {
+            let out = match cmd.clone() {
                 core::Command::Invoke(core::Invoke {
                     abstract_vars,
                     instance,
@@ -78,26 +82,21 @@ impl Rewriter {
                             .map(|p| self.rewrite_port(p))
                             .collect_vec()
                     });
-                    n_cmds.push(
-                        core::Invoke::new(name, instance, abstract_vars, ports)
-                            .into(),
-                    )
+
+                    core::Invoke::new(name, instance, abstract_vars, ports)
+                        .into()
                 }
                 core::Command::Instance(core::Instance {
                     name,
                     bindings,
                     component,
                     ..
-                }) => {
-                    n_cmds.push(
-                        core::Instance::new(
-                            self.binding[&name].clone(),
-                            component,
-                            bindings,
-                        )
-                        .into(),
-                    );
-                }
+                }) => core::Instance::new(
+                    self.binding[&name].clone(),
+                    component,
+                    bindings,
+                )
+                .into(),
                 core::Command::Connect(core::Connect {
                     src,
                     dst,
@@ -105,24 +104,21 @@ impl Rewriter {
                     ..
                 }) => {
                     assert!(guard.is_none(), "Cannot monomorphize guards");
-                    n_cmds.push(
-                        core::Connect::new(
-                            self.rewrite_port(dst),
-                            self.rewrite_port(src),
-                            None,
-                        )
-                        .into(),
+                    core::Connect::new(
+                        self.rewrite_port(dst),
+                        self.rewrite_port(src),
+                        None,
                     )
+                    .into()
                 }
                 core::Command::Bundle(core::Bundle {
                     name, len, typ, ..
-                }) => n_cmds.push(
-                    core::Bundle::new(self.binding[&name].clone(), len, typ)
-                        .into(),
-                ),
+                }) => core::Bundle::new(self.binding[&name].clone(), len, typ)
+                    .into(),
                 core::Command::ForLoop(_) => unreachable!(),
                 core::Command::Fsm(_) => unreachable!(),
-            }
+            };
+            n_cmds.push(out);
         }
         n_cmds
     }
@@ -275,6 +271,7 @@ impl Monomorphize {
         for cmd in commands {
             match cmd {
                 core::Command::Bundle(bl) => {
+                    prev_names.insert(bl.name.clone(), bl.name.clone());
                     n_cmds.push(bl.resolve_exprs(param_binding).into());
                 }
                 core::Command::Invoke(core::Invoke {
@@ -347,13 +344,15 @@ impl Monomorphize {
                     ..
                 }) => {
                     // Compute the start and end values of the loop
-                    let s: u64 =
-                        start.resolve(param_binding).try_into().unwrap_or_else(
-                            |_| panic!("Loop start must be concrete"),
-                        );
+                    let s: u64 = start
+                        .resolve(param_binding)
+                        .try_into()
+                        .unwrap_or_else(|e| {
+                            panic!("loop start must be concrete but was {e}")
+                        });
                     let e =
                         end.resolve(param_binding).try_into().unwrap_or_else(
-                            |_| panic!("Loop end must be concrete"),
+                            |e| panic!("loop end must be concrete but was {e}"),
                         );
 
                     for i in s..e {

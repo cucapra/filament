@@ -46,11 +46,6 @@ pub enum Port {
     Un((core::Id, u64)),
 }
 
-pub enum ConstOrVar {
-    Const(u64),
-    Var(core::Id),
-}
-
 #[derive(Parser)]
 #[grammar = "frontend/syntax.pest"]
 pub struct FilamentParser;

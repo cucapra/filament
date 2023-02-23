@@ -1,8 +1,5 @@
 use super::Id;
-use crate::{
-    expr_simplifier,
-    utils::{self, SExp},
-};
+use crate::utils::{self, SExp};
 use std::fmt::Display;
 
 /// Binary operation over expressions
@@ -67,16 +64,21 @@ impl Expr {
         Expr::Concrete(n)
     }
 
-    pub fn op(op: Op, left: Expr, right: Expr) -> Self {
-        let out = Expr::Op {
+    pub fn op(op: Op, l: Expr, r: Expr) -> Self {
+        match op {
+            Op::Add => l + r,
+            Op::Sub => l - r,
+            Op::Mul => l * r,
+            Op::Div => l / r,
+        }
+    }
+
+    fn op_base(op: Op, l: Expr, r: Expr) -> Self {
+        Expr::Op {
             op,
-            left: Box::new(left),
-            right: Box::new(right),
-        };
-        // expr_simplifier::Simplifier::simplify(
-        //     &SExp::from(out.clone()).to_string(),
-        // );
-        out
+            left: Box::new(l),
+            right: Box::new(r),
+        }
     }
 
     /// Resolve this expression using the given binding for abstract variables.
@@ -85,12 +87,13 @@ impl Expr {
             Expr::Concrete(_) => self,
             Expr::Abstract(ref id) => bind.find(id).cloned().unwrap_or(self),
             Expr::Op { op, left, right } => {
-                let left = left.resolve(bind);
-                let right = right.resolve(bind);
-                Expr::Op {
-                    op,
-                    left: Box::new(left),
-                    right: Box::new(right),
+                let l = left.resolve(bind);
+                let r = right.resolve(bind);
+                match op {
+                    Op::Add => l + r,
+                    Op::Sub => l - r,
+                    Op::Mul => l * r,
+                    Op::Div => l / r,
                 }
             }
         }
@@ -118,10 +121,9 @@ impl std::ops::Add for Expr {
 
     fn add(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Expr::Concrete(0), rhs) => rhs,
-            (lhs, Expr::Concrete(0)) => lhs,
+            (Expr::Concrete(0), e) | (e, Expr::Concrete(0)) => e,
             (Expr::Concrete(l), Expr::Concrete(r)) => Expr::Concrete(l + r),
-            (left, right) => Self::op(Op::Add, left, right),
+            (left, right) => Self::op_base(Op::Add, left, right),
         }
     }
 }
@@ -134,10 +136,45 @@ impl std::ops::AddAssign for Expr {
 }
 
 impl std::ops::Sub for Expr {
-    type Output = Expr;
+    type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Self::op(Op::Sub, self, rhs)
+        match (self, rhs) {
+            (lhs, Expr::Concrete(0)) => lhs,
+            (Expr::Concrete(l), Expr::Concrete(r)) => match l.checked_sub(r) {
+                Some(n) => Expr::Concrete(n),
+                None => Self::op_base(Op::Sub, l.into(), r.into()),
+            },
+            (left, right) => Self::op_base(Op::Sub, left, right),
+        }
+    }
+}
+
+impl std::ops::Mul for Expr {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Expr::Concrete(0), _) | (_, Expr::Concrete(0)) => {
+                Expr::Concrete(0)
+            }
+            (Expr::Concrete(1), e) | (e, Expr::Concrete(1)) => e,
+            (Expr::Concrete(l), Expr::Concrete(r)) => Expr::Concrete(l * r),
+            (left, right) => Self::op_base(Op::Mul, left, right),
+        }
+    }
+}
+
+impl std::ops::Div for Expr {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Expr::Concrete(0), _) => Expr::Concrete(0),
+            (e, Expr::Concrete(1)) => e,
+            (Expr::Concrete(l), Expr::Concrete(r)) => Expr::Concrete(l / r),
+            (left, right) => Self::op_base(Op::Mul, left, right),
+        }
     }
 }
 
