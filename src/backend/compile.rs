@@ -341,13 +341,14 @@ fn compile_component(
     sigs: &mut Binding,
     lib: &ir::LibrarySignatures,
 ) -> FilamentResult<ir::Component> {
-    let port_transform =
-        |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<u64> {
-            let mut pd: ir::PortDef<u64> =
-                (pd.name.as_ref(), pd.bitwidth.concrete().unwrap(), dir).into();
-            pd.attributes.insert("data", 1);
-            pd
-        };
+    let port_transform = |pd: &core::PortDef,
+                          dir: ir::Direction|
+     -> ir::PortDef<u64> {
+        let mut pd: ir::PortDef<u64> =
+            (pd.name.as_ref(), (&pd.bitwidth).try_into().unwrap(), dir).into();
+        pd.attributes.insert("data", 1);
+        pd
+    };
     let concrete_transform =
         |name: &core::Id, width: u64| -> ir::PortDef<u64> {
             (name.as_ref(), width, ir::Direction::Input).into()
@@ -402,7 +403,7 @@ fn compile_component(
                 } else {
                     let conc_bind = bindings
                         .into_iter()
-                        .map(|v| v.concrete().unwrap())
+                        .map(|v| (&v).try_into().unwrap())
                         .collect_vec();
                     ctx.builder.add_primitive(
                         name.as_ref(),
@@ -437,7 +438,7 @@ fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
             let abs = w.exprs();
             let width = match abs.len() {
                 0 => ir::Width::Const {
-                    value: w.concrete().unwrap(),
+                    value: w.try_into().unwrap(),
                 },
                 1 => ir::Width::Param {
                     value: abs[0].as_ref().into(),

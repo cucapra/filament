@@ -170,7 +170,7 @@ impl InstanceParams {
             .map(|p| {
                 let abs = p.exprs();
                 match abs.len() {
-                    0 => vec![p.concrete().unwrap()],
+                    0 => vec![u64::try_from(p).unwrap()],
                     1 => self.param_values(parent, &abs[0]).collect(),
                     n => unreachable!("Cannot have more than one abstract parameter in a binding: {n}")
                 }
@@ -234,9 +234,9 @@ impl Monomorphize {
     ) -> core::Id {
         let mut name = String::from(comp.as_ref());
         for p in params {
-            match p.concrete() {
-                Some(p) => name += format!("_{}", p).as_str(),
-                None => {
+            match u64::try_from(p) {
+                Ok(p) => name += format!("_{}", p).as_str(),
+                Err(_) => {
                     unreachable!("Binding should only contain concrete values")
                 }
             }
@@ -351,14 +351,14 @@ impl Monomorphize {
                     ..
                 }) => {
                     // Compute the start and end values of the loop
-                    let s =
-                        start.resolve(param_binding).concrete().unwrap_or_else(
-                            || panic!("Loop start must be concrete"),
+                    let s: u64 =
+                        start.resolve(param_binding).try_into().unwrap_or_else(
+                            |_| panic!("Loop start must be concrete"),
                         );
-                    let e = end
-                        .resolve(param_binding)
-                        .concrete()
-                        .unwrap_or_else(|| panic!("Loop end must be concrete"));
+                    let e =
+                        end.resolve(param_binding).try_into().unwrap_or_else(
+                            |_| panic!("Loop end must be concrete"),
+                        );
 
                     for i in s..e {
                         let mut new_binding = (*param_binding).clone();

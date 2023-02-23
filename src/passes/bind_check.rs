@@ -250,17 +250,16 @@ impl visitor::Checker for BindCheck {
             .map(|p| p.bitwidth)
             .unwrap_or_else(|| 32.into());
 
-        if dst_w != src_w {
+        let ds = dst_w.simplify();
+        let ss = src_w.simplify();
+        if ds != ss {
             let err = Error::malformed("port width mismatch".to_string())
                 .add_note(self.diag.add_info(
-                    format!("source `{}' has width {src_w}", con.src.name()),
+                    format!("source `{}' has width {ss}", con.src.name()),
                     con.src.copy_span(),
                 ))
                 .add_note(self.diag.add_info(
-                    format!(
-                        "destination `{}' has width {dst_w}",
-                        con.dst.name(),
-                    ),
+                    format!("destination `{}' has width {ds}", con.dst.name(),),
                     con.dst.copy_span(),
                 ));
             self.diag.add_error(err);

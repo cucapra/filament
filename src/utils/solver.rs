@@ -103,39 +103,45 @@ impl ShareConstraint {
     // Check whether this is the minimum start time.
     // Returns None if the list contains incompatible times
     fn is_min_start(&self, time: &Time) -> Option<bool> {
-        for (start, _) in &self.starts {
-            match start.partial_cmp(time) {
-                Some(std::cmp::Ordering::Less) => {
-                    return Some(false);
-                }
-                None => {
-                    return None;
-                }
-                Some(_) => (),
-            }
-        }
-        Some(true)
+        todo!()
+        // for (start, _) in &self.starts {
+        //     if start.event != time.event {
+        //         return None;
+        //     }
+        //     match start.partial_cmp(time) {
+        //         Some(std::cmp::Ordering::Less) => {
+        //             return Some(false);
+        //         }
+        //         None => {
+        //             return None;
+        //         }
+        //         Some(_) => (),
+        //     }
+        // }
+        // Some(true)
     }
 
     // Check whether this is the maximum end time.
     // Returns None if the list contains incompatible times
     fn is_max_end(&self, time: &Time) -> Option<bool> {
-        for (end, _) in &self.ends {
-            match end {
-                TimeDelSum::Time(t) => {
-                    // Return if t > time
-                    if t.partial_cmp(time) == Some(std::cmp::Ordering::Greater)
-                    {
-                        return Some(false);
-                    }
-                }
-                // Cannot compare a sum with a time
-                TimeDelSum::Sum(_, _) => {
-                    return None;
-                }
-            }
-        }
-        Some(true)
+        todo!()
+        // for (end, _) in &self.ends {
+        //     todo!()
+        //     match end {
+        //         TimeDelSum::Time(t) => {
+        //             // Return if t > time
+        //             if t.partial_cmp(time) == Some(std::cmp::Ordering::Greater)
+        //             {
+        //                 return Some(false);
+        //             }
+        //         }
+        //         // Cannot compare a sum with a time
+        //         TimeDelSum::Sum(_, _) => {
+        //             return None;
+        //         }
+        //     }
+        // }
+        // Some(true)
     }
 
     /// Transform the share constraint into an error
@@ -264,7 +270,7 @@ impl FilSolver {
             return;
         }
 
-        let asserts = asserts.into_iter().unique().collect_vec();
+        let asserts = asserts.into_iter().collect_vec();
         self.s.push(1).unwrap();
         // Define all the constants
         let vars = vars.into_iter().collect_vec();

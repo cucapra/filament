@@ -6,12 +6,10 @@ use derivative::Derivative;
 use std::fmt::Display;
 
 /// A range over time representation
-#[derive(Clone, Derivative)]
-#[derivative(PartialEq)]
+#[derive(Clone)]
 pub struct Range {
     pub start: Time,
     pub end: Time,
-    #[derivative(PartialEq = "ignore")]
     pos: GPosIdx,
 }
 

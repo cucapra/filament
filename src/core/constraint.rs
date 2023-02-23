@@ -167,7 +167,7 @@ where
 }
 
 /// A ordering constraint over time expressions or time ranges.
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Hash)]
 pub enum Constraint {
     Base {
         base: OrderConstraint<Time>,

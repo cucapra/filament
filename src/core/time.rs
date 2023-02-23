@@ -2,7 +2,7 @@ use super::{Expr, Id, Range};
 use crate::utils::{self, SExp};
 use std::fmt::Display;
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd)]
+#[derive(Clone, Hash)]
 /// Represents expression of the form `G+1+k`
 pub struct Time {
     /// The event for the time expression
@@ -25,7 +25,7 @@ impl Time {
     pub fn unit(event: Id, state: u64) -> Self {
         Time {
             event,
-            offset: Expr::new(state, vec![]),
+            offset: Expr::concrete(state),
         }
     }
 
@@ -108,27 +108,16 @@ impl std::ops::Sub for Time {
     type Output = TimeSub;
 
     fn sub(self, other: Self) -> Self::Output {
-        let (l_off, r_mb_off) = self.offset - other.offset;
-
         if self.event == other.event {
-            if r_mb_off.is_none() {
-                return TimeSub::Unit(l_off);
-            } else if l_off.is_zero() {
-                let r_off = r_mb_off.unwrap_or_default();
-                return TimeSub::Unit(r_off);
-            }
+            return TimeSub::Unit(self.offset - other.offset);
         }
 
-        let r_off = r_mb_off.unwrap_or_default();
-        TimeSub::Sym {
-            l: Time::new(self.event, l_off),
-            r: Time::new(other.event, r_off),
-        }
+        TimeSub::Sym { l: self, r: other }
     }
 }
 
 /// Represents the absolute difference between two time events
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Hash)]
 pub enum TimeSub {
     /// Concrete difference between two time expressions
     Unit(Expr),
@@ -144,7 +133,7 @@ impl TimeSub {
     /// Convert this time expression into a concrete value
     pub fn concrete(&self) -> Option<u64> {
         match self {
-            TimeSub::Unit(n) => n.concrete(),
+            TimeSub::Unit(n) => u64::try_from(n).ok(),
             _ => None,
         }
     }

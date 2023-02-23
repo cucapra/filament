@@ -193,7 +193,7 @@ impl FilamentParser {
                 Ok(Port::Int(core::InterfaceDef::new(name, time_var).set_span(sp)))
             },
             [identifier(name), expr(bitwidth)] => {
-                match bitwidth.concrete() {
+                match (&bitwidth).try_into().ok() {
                     Some(n) => Ok(Port::Un((name, n))),
                     None => Err(input.error("Port width must be concrete")),
                 }
