@@ -63,16 +63,17 @@ impl Time {
     pub fn event(&self) -> Id {
         self.event.clone()
     }
-
-    /// Abstract expressions in this time expression
-    pub fn exprs(&self) -> &Vec<Id> {
-        self.offset.exprs()
-    }
 }
 
 impl From<Id> for Time {
     fn from(event: Id) -> Self {
         Time::unit(event, 0)
+    }
+}
+
+impl From<Time> for SExp {
+    fn from(value: Time) -> Self {
+        SExp(format!("(+ {} {})", value.event, SExp::from(value.offset)))
     }
 }
 

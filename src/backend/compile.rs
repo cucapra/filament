@@ -435,7 +435,7 @@ fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
     let port_transform =
         |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<ir::Width> {
             let w = &pd.bitwidth;
-            let abs = w.exprs();
+            let abs = w.exprs().collect_vec();
             let width = match abs.len() {
                 0 => ir::Width::Const {
                     value: w.try_into().unwrap(),

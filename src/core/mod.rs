@@ -15,7 +15,7 @@ pub use control::{
     Bundle, BundleType, Command, Connect, ForLoop, Fsm, Guard, Instance,
     Invoke, Port, PortType,
 };
-pub use expr::{Expr, SimplifiedExpr};
+pub use expr::Expr;
 pub use id::Id;
 pub use interval::Range;
 pub use port::{InterfaceDef, PortDef};

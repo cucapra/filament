@@ -168,10 +168,10 @@ impl InstanceParams {
         let all_binds = params
             .iter()
             .map(|p| {
-                let abs = p.exprs();
+                let abs = p.exprs().collect_vec();
                 match abs.len() {
                     0 => vec![u64::try_from(p).unwrap()],
-                    1 => self.param_values(parent, &abs[0]).collect(),
+                    1 => self.param_values(parent, abs[0]).collect(),
                     n => unreachable!("Cannot have more than one abstract parameter in a binding: {n}")
                 }
             })

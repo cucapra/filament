@@ -250,21 +250,19 @@ impl visitor::Checker for BindCheck {
             .map(|p| p.bitwidth)
             .unwrap_or_else(|| 32.into());
 
-        let ds = dst_w.simplify();
-        let ss = src_w.simplify();
         // XXX(rachit): This cannot be checked locally. We need to generate constraints in the interval checker to check this property.
-        if ds != ss {
-            let err = Error::malformed("port width mismatch".to_string())
-                .add_note(self.diag.add_info(
-                    format!("source `{}' has width {ss}", con.src.name()),
-                    con.src.copy_span(),
-                ))
-                .add_note(self.diag.add_info(
-                    format!("destination `{}' has width {ds}", con.dst.name(),),
-                    con.dst.copy_span(),
-                ));
-            self.diag.add_error(err);
-        }
+        // if dst_w != ss {
+        //     let err = Error::malformed("port width mismatch".to_string())
+        //         .add_note(self.diag.add_info(
+        //             format!("source `{}' has width {ss}", con.src.name()),
+        //             con.src.copy_span(),
+        //         ))
+        //         .add_note(self.diag.add_info(
+        //             format!("destination `{}' has width {ds}", con.dst.name(),),
+        //             con.dst.copy_span(),
+        //         ));
+        //     self.diag.add_error(err);
+        // }
         Traverse::Continue(())
     }
 }

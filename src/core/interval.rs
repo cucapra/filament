@@ -2,7 +2,6 @@ use super::{Constraint, Expr, OrderConstraint, Time, TimeSub};
 use crate::diagnostics::Diagnostics;
 use crate::utils::Binding;
 use crate::{errors, utils::GPosIdx};
-use derivative::Derivative;
 use std::fmt::Display;
 
 /// A range over time representation

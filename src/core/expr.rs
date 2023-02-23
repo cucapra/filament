@@ -1,13 +1,14 @@
-use super::{Id, Time};
+use super::Id;
 use crate::utils::{self, SExp};
-use itertools::Itertools;
 use std::fmt::Display;
 
+/// Binary operation over expressions
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd)]
 pub enum Op {
     Add,
     Sub,
     Mul,
+    Div,
 }
 
 impl Display for Op {
@@ -16,10 +17,12 @@ impl Display for Op {
             Op::Add => write!(f, "+"),
             Op::Sub => write!(f, "-"),
             Op::Mul => write!(f, "*"),
+            Op::Div => write!(f, "/"),
         }
     }
 }
 
+/// An expression containing integers and abstract variables
 #[derive(Clone, Hash)]
 pub enum Expr {
     Concrete(u64),
@@ -66,7 +69,19 @@ impl Expr {
 
     /// Resolve this expression using the given binding for abstract variables.
     pub fn resolve(self, bind: &utils::Binding<Expr>) -> Self {
-        todo!()
+        match self {
+            Expr::Concrete(_) => self,
+            Expr::Abstract(ref id) => bind.find(id).cloned().unwrap_or(self),
+            Expr::Op { op, left, right } => {
+                let left = left.resolve(bind);
+                let right = right.resolve(bind);
+                Expr::Op {
+                    op,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                }
+            }
+        }
     }
 
     /// Check if this TimeSum is equal to 0
@@ -75,13 +90,14 @@ impl Expr {
     }
 
     /// Get all the abstract variables in this expression
-    pub fn exprs(&self) -> &Vec<Id> {
-        todo!()
-    }
-
-    /// Attempt to simplify this expression
-    pub fn simplify(self) -> SimplifiedExpr {
-        todo!()
+    pub fn exprs(&self) -> Box<dyn Iterator<Item = &Id> + '_> {
+        match self {
+            Expr::Concrete(_) => Box::new(std::iter::empty()),
+            Expr::Abstract(id) => Box::new(std::iter::once(id)),
+            Expr::Op { left, right, .. } => {
+                Box::new(left.exprs().chain(right.exprs()))
+            }
+        }
     }
 }
 
@@ -99,7 +115,8 @@ impl std::ops::Add for Expr {
 
 impl std::ops::AddAssign for Expr {
     fn add_assign(&mut self, rhs: Self) {
-        todo!()
+        let lhs = std::mem::take(self);
+        *self = lhs + rhs;
     }
 }
 
@@ -129,12 +146,16 @@ impl Display for Expr {
 
 impl From<Expr> for utils::SExp {
     fn from(value: Expr) -> Self {
-        todo!()
-        // utils::SExp(format!(
-        //     "(+ {} {})",
-        //     value.abs.iter().map(|t| t.as_ref()).join(" "),
-        //     value.concrete
-        // ))
+        match value {
+            Expr::Concrete(n) => SExp(format!("{}", n)),
+            Expr::Abstract(id) => SExp(format!("{}", id)),
+            Expr::Op { op, left, right } => SExp(format!(
+                "({} {} {})",
+                op,
+                SExp::from(*left),
+                SExp::from(*right)
+            )),
+        }
     }
 }
 
@@ -153,39 +174,5 @@ impl From<u64> for Expr {
 impl From<Id> for Expr {
     fn from(v: Id) -> Self {
         Self::Abstract(v)
-    }
-}
-
-impl From<Time> for SExp {
-    fn from(t: Time) -> SExp {
-        todo!()
-        // if t.offset().abs.is_empty() && t.offset().concrete == 0 {
-        //     SExp(format!("{}", t.event))
-        // } else if t.offset().abs.is_empty() {
-        //     SExp(format!("(+ {} {})", t.event, t.offset().concrete))
-        // } else {
-        //     SExp(format!(
-        //         "(+ {} {} {})",
-        //         t.event,
-        //         t.offset().concrete,
-        //         t.offset()
-        //             .abs
-        //             .iter()
-        //             .map(|e| e.to_string())
-        //             .collect_vec()
-        //             .join(" ")
-        //     ))
-        // }
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-/// An expression that has been simplified and canonicalized.
-/// Supports efficient comparison and ordering operations.
-pub struct SimplifiedExpr;
-
-impl Display for SimplifiedExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
     }
 }

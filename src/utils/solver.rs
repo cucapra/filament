@@ -126,7 +126,6 @@ impl ShareConstraint {
     fn is_max_end(&self, time: &Time) -> Option<bool> {
         todo!()
         // for (end, _) in &self.ends {
-        //     todo!()
         //     match end {
         //         TimeDelSum::Time(t) => {
         //             // Return if t > time
@@ -292,7 +291,7 @@ impl FilSolver {
             let relevant_vars = fact
                 .exprs()
                 .into_iter()
-                .flat_map(|e| e.exprs().clone())
+                .flat_map(|e| e.exprs().cloned())
                 .unique()
                 .collect_vec();
             if let Some(model) = self.check_fact(fact.clone(), &relevant_vars) {
