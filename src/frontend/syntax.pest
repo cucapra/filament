@@ -65,11 +65,19 @@ param_var = ${ pound ~ identifier }
 interface = {
   "@interface" ~ "[" ~ identifier ~ "]"
 }
-conc_or_var = {
-  bitwidth | param_var
+op_mul = { "*" }
+op_div = { "/" }
+op_add = { "+" }
+op_sub = { "-" }
+operator = _{ op_mul | op_div | op_add | op_sub }
+
+expr_base = {
+  | "(" ~ expr ~ ")"
+  | bitwidth
+  | param_var
 }
 expr = {
-  conc_or_var ~ ("+" ~ conc_or_var)*
+  expr_base ~ (operator ~ expr_base)*
 }
 
 // Event bindings

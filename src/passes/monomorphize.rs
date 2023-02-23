@@ -114,16 +114,12 @@ impl Rewriter {
                         .into(),
                     )
                 }
-                core::Command::Bundle(core::Bundle { name, len, typ }) => {
-                    n_cmds.push(
-                        core::Bundle::new(
-                            self.binding[&name].clone(),
-                            len,
-                            typ,
-                        )
+                core::Command::Bundle(core::Bundle {
+                    name, len, typ, ..
+                }) => n_cmds.push(
+                    core::Bundle::new(self.binding[&name].clone(), len, typ)
                         .into(),
-                    )
-                }
+                ),
                 core::Command::ForLoop(_) => unreachable!(),
                 core::Command::Fsm(_) => unreachable!(),
             }

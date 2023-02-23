@@ -1,12 +1,12 @@
 use super::{CompBinding, InstIdx, SigIdx};
 use crate::core::{self, Id, Time, TimeSub};
-use crate::diagnostics;
 use crate::errors::WithPos;
 use crate::utils::{self, GPosIdx};
+use crate::{diagnostics, idx};
 use itertools::Itertools;
 
 /// Index to a bound invocation
-pub type InvIdx = utils::Idx<BoundInvoke>;
+pub type InvIdx = idx!(BoundInvoke);
 
 impl InvIdx {
     /// Get the position of the invocation

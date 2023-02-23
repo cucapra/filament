@@ -4,6 +4,7 @@
 use crate::core::{self, TimeSub};
 use crate::errors::{self, FilamentResult, WithPos};
 use crate::utils::{FileIdx, GPosIdx, GlobalPositionTable};
+use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
 use std::path::Path;
@@ -24,6 +25,15 @@ type Ports = Vec<core::PortDef>;
 
 // include the grammar file so that Cargo knows to rebuild this file on grammar changes
 const _GRAMMAR: &str = include_str!("syntax.pest");
+
+// Define the precedence of binary operations. We use `lazy_static` so that
+// this is only ever constructed once.
+lazy_static::lazy_static! {
+    static ref PRATT: PrattParser<Rule> =
+    PrattParser::new()
+        .op(Op::infix(Rule::op_add, Assoc::Left) | Op::infix(Rule::op_sub, Assoc::Left))
+        .op(Op::infix(Rule::op_mul, Assoc::Left) | Op::infix(Rule::op_div, Assoc::Left));
+}
 
 pub enum ExtOrComp {
     Ext((String, Vec<core::Signature>)),
@@ -83,6 +93,31 @@ impl FilamentParser {
             sp.end(),
         );
         GPosIdx(pos)
+    }
+
+    #[allow(clippy::result_large_err)]
+    fn expr_helper(
+        ud: UserData,
+        pairs: pest::iterators::Pairs<Rule>,
+    ) -> ParseResult<core::Expr> {
+        PRATT
+            .map_primary(|primary| match primary.as_rule() {
+                Rule::expr_base => Self::expr_base(Node::new_with_user_data(
+                    primary,
+                    ud.clone(),
+                )),
+                x => unreachable!("Unexpected rule `{:?}' for expr_helper", x),
+            })
+            .map_infix(|lhs, op, rhs| {
+                Ok(match op.as_rule() {
+                    Rule::op_add => core::Expr::op(core::Op::Add, lhs?, rhs?),
+                    Rule::op_sub => core::Expr::op(core::Op::Sub, lhs?, rhs?),
+                    Rule::op_mul => core::Expr::op(core::Op::Mul, lhs?, rhs?),
+                    Rule::op_div => core::Expr::op(core::Op::Div, lhs?, rhs?),
+                    _ => unreachable!(),
+                })
+            })
+            .parse(pairs)
     }
 }
 
@@ -161,28 +196,18 @@ impl FilamentParser {
         ))
     }
 
-    fn conc_or_var(input: Node) -> ParseResult<ConstOrVar> {
+    fn expr_base(input: Node) -> ParseResult<core::Expr> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(id)] => ConstOrVar::Var(id),
-            [bitwidth(c)] => ConstOrVar::Const(c),
+            [param_var(id)] => id.into(),
+            [bitwidth(c)] => c.into(),
+            [expr(e)] => e,
         ))
     }
 
     fn expr(input: Node) -> ParseResult<core::Expr> {
-        Ok(match_nodes!(
-            input.into_children();
-            [conc_or_var(es)..] => {
-                let mut ts = core::Expr::default();
-                for e in es {
-                    match e {
-                        ConstOrVar::Const(c) => { ts += c.into(); },
-                        ConstOrVar::Var(v) => { ts += v.into(); },
-                    }
-                }
-                ts
-            }
-        ))
+        let ud = input.user_data().clone();
+        Self::expr_helper(ud, input.into_pair().into_inner())
     }
 
     fn port_def(input: Node) -> ParseResult<Port> {
@@ -193,9 +218,9 @@ impl FilamentParser {
                 Ok(Port::Int(core::InterfaceDef::new(name, time_var).set_span(sp)))
             },
             [identifier(name), expr(bitwidth)] => {
-                match (&bitwidth).try_into().ok() {
-                    Some(n) => Ok(Port::Un((name, n))),
-                    None => Err(input.error("Port width must be concrete")),
+                match (&bitwidth).try_into() {
+                    Ok(n) => Ok(Port::Un((name, n))),
+                    Err(n) => Err(input.error(format!("port width must be concrete. `{n}' is not a concrete number"))),
                 }
             },
             [interval_range(range), identifier(name), expr(bitwidth)] => {
@@ -548,9 +573,10 @@ impl FilamentParser {
     }
 
     fn bundle(input: Node) -> ParseResult<core::Bundle> {
+        let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [identifier(name), expr(size), bundle_typ(typ)] => core::Bundle::new(name, size, typ),
+            [identifier(name), expr(size), bundle_typ(typ)] => core::Bundle::new(name, size, typ).set_span(sp),
         ))
     }
 

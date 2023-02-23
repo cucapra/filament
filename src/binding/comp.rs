@@ -4,12 +4,13 @@ use crate::{
     core::{self, Id, Time},
     diagnostics,
     errors::{Error, WithPos},
+    idx,
     utils::{self, GPosIdx},
 };
 use itertools::Itertools;
 use std::collections::HashMap;
 
-pub type BundleIdx = utils::Idx<core::Bundle>;
+pub type BundleIdx = idx!(core::Bundle);
 
 pub struct BoundComponent {
     /// Signature associated with this component
@@ -26,6 +27,8 @@ pub struct BoundComponent {
     inv_map: HashMap<Id, InvIdx>,
     /// Mapping from name of bundle to its index
     bundle_map: HashMap<Id, BundleIdx>,
+    /// Error was encountered while binding this component
+    is_err: bool,
 }
 
 impl From<SigIdx> for BoundComponent {
@@ -38,15 +41,24 @@ impl From<SigIdx> for BoundComponent {
             inst_map: HashMap::new(),
             inv_map: HashMap::new(),
             bundle_map: HashMap::new(),
+            is_err: false,
         }
     }
 }
 
 impl BoundComponent {
+    /// We encountered an error while binding this component
+    fn set_err(&mut self) {
+        log::info!("Error encountered while binding component");
+        self.is_err = true;
+    }
+
     /// Check if this name is already bound in this component
     fn name_is_bound(&self, name: &Id) -> Option<GPosIdx> {
         if let Some(idx) = self.inst_map.get(name) {
             Some(self.instances[idx.get()].pos)
+        } else if let Some(bun) = self.bundle_map.get(name) {
+            Some(self.bundles[bun.get()].copy_span())
         } else {
             self.inv_map
                 .get(name)
@@ -170,15 +182,14 @@ impl BoundComponent {
         prog: &ProgBinding,
         cmds: &Vec<core::Command>,
         diag: &mut diagnostics::Diagnostics,
-    ) -> bool {
-        let mut has_errors = false;
+    ) {
         for cmd in cmds {
             match cmd {
                 core::Command::Instance(inst) => {
                     let comp = &inst.component;
                     // Check if the name is already bound
                     if let Some(pos) = self.name_is_bound(&inst.name) {
-                        has_errors = true;
+                        self.set_err();
                         let err =
                             Error::already_bound(inst.name.clone(), "instance")
                                 .add_note(diag.add_info(
@@ -193,7 +204,7 @@ impl BoundComponent {
                     if prog.find_sig_idx(comp).is_some() {
                         self.add_instance(prog, inst);
                     } else {
-                        has_errors = true;
+                        self.set_err();
                         // If there is no component with this name, add an error and use a dummy signature
                         let err = Error::undefined(comp.clone(), "component")
                             .add_note(diag.add_info(
@@ -212,7 +223,7 @@ impl BoundComponent {
                 core::Command::Invoke(inv) => {
                     // Check if the invoke name is already bound
                     if let Some(pos) = self.name_is_bound(&inv.name) {
-                        has_errors = true;
+                        self.set_err();
                         let err =
                             Error::already_bound(inv.name.clone(), "invoke")
                                 .add_note(diag.add_info(
@@ -224,9 +235,11 @@ impl BoundComponent {
                                 );
                         diag.add_error(err);
                     }
+
+                    // Check if the instance name is bound
                     if self.inst_map.get(&inv.instance).is_some() {
                         // If there have been previous errors, we cannot rely on signatures being valid
-                        if has_errors {
+                        if self.is_err {
                             self.add_bound_invoke(
                                 inv.name.clone(),
                                 InstIdx::UNKNOWN,
@@ -237,7 +250,7 @@ impl BoundComponent {
                             self.add_invoke(prog, inv);
                         }
                     } else {
-                        has_errors = true;
+                        self.set_err();
                         // If there is no component with this name, add an error and use a dummy signature
                         let err =
                             Error::undefined(inv.instance.clone(), "instance")
@@ -289,8 +302,7 @@ impl BoundComponent {
                     check_port(dst);
                 }
                 core::Command::ForLoop(l) => {
-                    has_errors |=
-                        self.process_checked_cmds(prog, &l.body, diag);
+                    self.process_checked_cmds(prog, &l.body, diag);
                 }
                 core::Command::Fsm(_) => (),
                 core::Command::Bundle(bl) => {
@@ -298,8 +310,6 @@ impl BoundComponent {
                 }
             }
         }
-
-        has_errors
     }
 }
 

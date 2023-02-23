@@ -139,3 +139,13 @@ impl Diagnostics {
         Some(total)
     }
 }
+
+impl Drop for Diagnostics {
+    fn drop(&mut self) {
+        if let Some(errs) = self.report_all() {
+            if std::thread::panicking() {
+                eprintln!("{errs} errors encountered before panic");
+            }
+        }
+    }
+}

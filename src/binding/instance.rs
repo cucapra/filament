@@ -1,8 +1,8 @@
 use super::{CompBinding, InvIdx, SigIdx};
-use crate::{core, utils};
+use crate::{core, idx};
 use crate::{errors::WithPos, utils::GPosIdx};
 
-pub type InstIdx = utils::Idx<BoundInstance>;
+pub type InstIdx = idx!(BoundInstance);
 
 impl InstIdx {
     /// Get the position of the instance

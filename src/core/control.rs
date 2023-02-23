@@ -524,11 +524,17 @@ pub struct Bundle {
     pub len: Expr,
     /// Type of the bundle
     pub typ: BundleType,
+    pos: GPosIdx,
 }
 
 impl Bundle {
     pub fn new(name: Id, len: Expr, typ: BundleType) -> Self {
-        Self { name, len, typ }
+        Self {
+            name,
+            len,
+            typ,
+            pos: GPosIdx::UNKNOWN,
+        }
     }
 
     /// Generate a port definition corresponding to a given index
@@ -545,10 +551,21 @@ impl Bundle {
     /// Resolve expressions in the Bundle
     pub fn resolve_exprs(self, binding: &Binding<Expr>) -> Self {
         Self {
-            name: self.name,
             len: self.len.resolve(binding),
             typ: self.typ.resolve_exprs(binding),
+            ..self
         }
+    }
+}
+
+impl WithPos for Bundle {
+    fn set_span(mut self, sp: GPosIdx) -> Self {
+        self.pos = sp;
+        self
+    }
+
+    fn copy_span(&self) -> GPosIdx {
+        self.pos
     }
 }
 

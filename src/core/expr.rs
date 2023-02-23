@@ -1,5 +1,8 @@
 use super::Id;
-use crate::utils::{self, SExp};
+use crate::{
+    expr_simplifier,
+    utils::{self, SExp},
+};
 use std::fmt::Display;
 
 /// Binary operation over expressions
@@ -41,22 +44,19 @@ impl Default for Expr {
 }
 
 impl TryFrom<Expr> for u64 {
-    type Error = ();
+    type Error = String;
 
     fn try_from(value: Expr) -> Result<Self, Self::Error> {
-        match value {
-            Expr::Concrete(n) => Ok(n),
-            _ => Err(()),
-        }
+        (&value).try_into()
     }
 }
 impl TryFrom<&Expr> for u64 {
-    type Error = ();
+    type Error = String;
 
     fn try_from(value: &Expr) -> Result<Self, Self::Error> {
         match value {
             Expr::Concrete(n) => Ok(*n),
-            _ => Err(()),
+            n => Err(format!("`{n}'")),
         }
     }
 }
@@ -65,6 +65,18 @@ impl Expr {
     /// Construct a new expression from a concrete value
     pub fn concrete(n: u64) -> Self {
         Expr::Concrete(n)
+    }
+
+    pub fn op(op: Op, left: Expr, right: Expr) -> Self {
+        let out = Expr::Op {
+            op,
+            left: Box::new(left),
+            right: Box::new(right),
+        };
+        // expr_simplifier::Simplifier::simplify(
+        //     &SExp::from(out.clone()).to_string(),
+        // );
+        out
     }
 
     /// Resolve this expression using the given binding for abstract variables.
@@ -105,10 +117,11 @@ impl std::ops::Add for Expr {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Self::Op {
-            op: Op::Add,
-            left: Box::new(self),
-            right: Box::new(rhs),
+        match (self, rhs) {
+            (Expr::Concrete(0), rhs) => rhs,
+            (lhs, Expr::Concrete(0)) => lhs,
+            (Expr::Concrete(l), Expr::Concrete(r)) => Expr::Concrete(l + r),
+            (left, right) => Self::op(Op::Add, left, right),
         }
     }
 }
@@ -124,11 +137,7 @@ impl std::ops::Sub for Expr {
     type Output = Expr;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Self::Op {
-            op: Op::Sub,
-            left: Box::new(self),
-            right: Box::new(rhs),
-        }
+        Self::op(Op::Sub, self, rhs)
     }
 }
 
@@ -136,9 +145,9 @@ impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expr::Concrete(n) => write!(f, "{}", n),
-            Expr::Abstract(id) => write!(f, "{}", id),
+            Expr::Abstract(id) => write!(f, "#{}", id),
             Expr::Op { op, left, right } => {
-                write!(f, "({} {} {})", op, left, right)
+                write!(f, "({left}{op}{right})")
             }
         }
     }
