@@ -1,5 +1,5 @@
-use super::Id;
-use crate::utils;
+use super::{Id, Time};
+use crate::utils::{self, SExp};
 use itertools::Itertools;
 use std::fmt::Display;
 
@@ -9,9 +9,9 @@ use std::fmt::Display;
 /// variables.
 pub struct Expr {
     // Concrete part of the time sum
-    pub concrete: u64,
+    concrete: u64,
     // Abstract part of the time sum
-    pub abs: Vec<Id>,
+    abs: Vec<Id>,
 }
 
 impl Expr {
@@ -176,6 +176,28 @@ impl From<Id> for Expr {
         Self {
             concrete: 0,
             abs: vec![v],
+        }
+    }
+}
+
+impl From<Time> for SExp {
+    fn from(t: Time) -> SExp {
+        if t.offset().abs.is_empty() && t.offset().concrete == 0 {
+            SExp(format!("{}", t.event))
+        } else if t.offset().abs.is_empty() {
+            SExp(format!("(+ {} {})", t.event, t.offset().concrete))
+        } else {
+            SExp(format!(
+                "(+ {} {} {})",
+                t.event,
+                t.offset().concrete,
+                t.offset()
+                    .abs
+                    .iter()
+                    .map(|e| e.to_string())
+                    .collect_vec()
+                    .join(" ")
+            ))
         }
     }
 }

@@ -1,6 +1,5 @@
 use super::{Expr, Id, Range};
 use crate::utils::{self, SExp};
-use itertools::Itertools;
 use std::fmt::Display;
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd)]
@@ -48,8 +47,7 @@ impl Time {
     /// Resolve the events bound in this time expression
     pub fn resolve_event(&self, bindings: &utils::Binding<Self>) -> Self {
         let mut n = bindings.get(&self.event).clone();
-        n.offset.concrete += self.offset.concrete;
-        n.offset.abs.extend(self.offset.abs.clone());
+        n.offset += self.offset.clone();
         n
     }
 
@@ -75,28 +73,6 @@ impl Time {
 impl From<Id> for Time {
     fn from(event: Id) -> Self {
         Time::unit(event, 0)
-    }
-}
-
-impl From<Time> for SExp {
-    fn from(t: Time) -> SExp {
-        if t.offset.abs.is_empty() && t.offset.concrete == 0 {
-            SExp(format!("{}", t.event))
-        } else if t.offset.abs.is_empty() {
-            SExp(format!("(+ {} {})", t.event, t.offset.concrete))
-        } else {
-            SExp(format!(
-                "(+ {} {} {})",
-                t.event,
-                t.offset.concrete,
-                t.offset
-                    .abs
-                    .iter()
-                    .map(|e| e.to_string())
-                    .collect_vec()
-                    .join(" ")
-            ))
-        }
     }
 }
 

@@ -286,7 +286,7 @@ impl FilSolver {
             let relevant_vars = fact
                 .exprs()
                 .into_iter()
-                .flat_map(|e| e.abs.clone())
+                .flat_map(|e| e.exprs().clone())
                 .unique()
                 .collect_vec();
             if let Some(model) = self.check_fact(fact.clone(), &relevant_vars) {

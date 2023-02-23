@@ -434,10 +434,13 @@ fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
     let port_transform =
         |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<ir::Width> {
             let w = &pd.bitwidth;
-            let width = match w.abs.len() {
-                0 => ir::Width::Const { value: w.concrete },
+            let abs = w.exprs();
+            let width = match abs.len() {
+                0 => ir::Width::Const {
+                    value: w.concrete().unwrap(),
+                },
                 1 => ir::Width::Param {
-                    value: w.abs[0].as_ref().into(),
+                    value: abs[0].as_ref().into(),
                 },
                 _ => panic!("cannot complex width expr: {w}"),
             };

@@ -167,13 +167,14 @@ impl InstanceParams {
         // All possible values for each parameter computed by resolving each parameter that occurs in the binding
         let all_binds = params
             .iter()
-            .map(|p|
-                match p.abs.len() {
-                    0 => vec![p.concrete],
-                    1 => self.param_values(parent, &p.abs[0]).collect(),
+            .map(|p| {
+                let abs = p.exprs();
+                match abs.len() {
+                    0 => vec![p.concrete().unwrap()],
+                    1 => self.param_values(parent, &abs[0]).collect(),
                     n => unreachable!("Cannot have more than one abstract parameter in a binding: {n}")
                 }
-            )
+            })
             .multi_cartesian_product()
             .collect_vec();
 

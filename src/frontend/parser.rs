@@ -176,8 +176,8 @@ impl FilamentParser {
                 let mut ts = core::Expr::default();
                 for e in es {
                     match e {
-                        ConstOrVar::Const(c) => { ts.concrete += c; },
-                        ConstOrVar::Var(v) => { ts.abs.push(v); },
+                        ConstOrVar::Const(c) => { ts += c.into(); },
+                        ConstOrVar::Var(v) => { ts += v.into(); },
                     }
                 }
                 ts
