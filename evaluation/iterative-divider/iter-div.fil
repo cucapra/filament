@@ -1,74 +1,13 @@
 import "primitives/core.fil";
+import "base.fil";
 
-// XXX: We need #L because we can't say #W-1
-comp Next[#W, #L]<G: 1>(
-  @[G, G+1] acc: #W+1,
-  @[G, G+1] right: #W,
-  @[G, G+1] quotient: #W,
-) -> (
-  @[G, G+1] acc_next: #W+1,
-  @[G, G+1] quotient_next: #W,
-) where #W > 0, #W = #L + 1 {
-
-  /*
-  assign right_ext = {1'b0, right};
-  assign check = acc >= right_ext;
-
-  // True branch
-  assign sub = acc - right;
-  assign c = check ? {sub[7:0], quotient, 1'b1} : ({acc, quotient} << 1);
-
-  assign quotient_next = c[7:0];
-  assign acc_next = c[16:8];
-  */
-
-  right_ext := new ZeroExtend[#W, #W+1]<G>(right);
-  check := new Gte[#W+1]<G>(acc, right_ext.out);
-
-  // True branch
-  sub := new Sub[#W+1]<G>(acc, right_ext.out);
-  sub_slice := new Slice[#W+1, #L, 0, #W]<G>(sub.out);
-  one_1 := new Const[1, 1]<G>();
-  true_con_0 := new Concat[#W, 1, #W+1]<G>(quotient, one_1.out);
-  true_con := new Concat[#W, #W+1, #W+#W+1]<G>(sub_slice.out, true_con_0.out);
-
-  // False branch
-  fal_con := new Concat[#W+1, #W, #W+#W+1]<G>(acc, quotient);
-  one_WW1 := new Const[#W+#W+1, 1]<G>();
-  fal_sh := new ShiftLeft[#W+#W+1]<G>(fal_con.out, one_WW1.out);
-
-  c := new Mux[#W+#W+1]<G>(check.out, true_con.out, fal_sh.out);
-
-  acc_slice := new Slice[#W+#W+1, #W+#W, #W, #W+1]<G>(c.out);
-  q_slice := new Slice[#W+#W+1, #W, 0, #W]<G>(c.out);
-
-  quotient_next = q_slice.out;
-  acc_next = acc_slice.out;
-}
-
-comp Init[#W]<G: 1>(
-  @[G, G+1] left: #W,
-) -> (
-  @[G, G+1] acc: #W+1,
-  @[G, G+1] quotient: #W,
-) where #W > 0 {
-  zero_one := new Const[1, 0]<G>();
-  c := new Concat[#W, 1, #W+1]<G>(left, zero_one.out);
-  c_ext := new ZeroExtend[#W+1, #W+#W+1]<G>(c.out);
-  acc_slice := new Slice[#W+#W+1, #W+#W, #W, #W+1]<G>(c_ext.out);
-  q_slice := new Slice[#W+#W+1, #W, 0, #W]<G>(c_ext.out);
-
-  acc = acc_slice.out;
-  quotient = q_slice.out;
-}
-
-comp CombNoShareIterDiv[#W, #L]<G: 1>(
+comp CombNoShareIterDiv[#W]<G: 1>(
   @interface[G] go: 1,
   @[G, G+1] left: #W,
   @[G, G+1] right: #W,
 ) -> (
   @[G, G+1] quotient: #W
-) where #W > 0, #W = #L + 1 {
+) where #W > 0 {
   bundle acc[#W+1]: for<#i> @[G, G+1] #W+1;
   bundle quotient_next[#W+1]: for<#i> @[G, G+1] #W;
 
@@ -78,7 +17,7 @@ comp CombNoShareIterDiv[#W, #L]<G: 1>(
   quotient_next{0} = init.quotient;
 
   for #i in 0..#W {
-    s := new Next[#W, #L]<G>(acc{#i}, right, quotient_next{#i});
+    s := new Next[#W]<G>(acc{#i}, right, quotient_next{#i});
     acc{#i+1} = s.acc_next;
     quotient_next{#i+1} = s.quotient_next;
   }
@@ -86,38 +25,22 @@ comp CombNoShareIterDiv[#W, #L]<G: 1>(
   quotient = quotient_next{#W};
 }
 
-comp ShareIterDiv[#W, #L]<G: #W>(
+/// An iterative divider that instantiates `I` circuits and reuses them for `K`
+/// cycles.
+/// At a high-level, we use two sets of bundles
+///  1. Bundles that track the "outer" signals which forward signals between the reused instances.
+///  2. Bundles that track the "inner" signals which "loop back" the signals into the reused instances.
+comp TradeoffDiv[#W, #I, #K]<G: #K>(
   @interface[G] go: 1,
   @[G, G+1] left: #W,
   @[G, G+1] right: #W,
 ) -> (
-  @[G+#W, G+#W+1] quotient: #W
-) where #W > 0, #W = #L + 1 {
-  td := new TradeoffDiv[#W, 1, #W, #L]<G>(left, right);
-  quotient = td.out;
-}
-
-comp PipeIterDiv[#W, #L]<G: 1>(
-  @interface[G] go: 1,
-  @[G, G+1] left: #W,
-  @[G, G+1] right: #W,
-) -> (
-  @[G+#W, G+#W+1] quotient: #W
-) where #W > 0, #L = #W - 1 {
-  td := new TradeoffDiv[#W, #W, 1, #L]<G>(left, right);
-  quotient = td.out;
-}
-
-
-// An iterative divider that instantiates `I` circuits and reuses them for `K`
-// cycles.
-comp TradeoffDiv[#W, #I, #K, #L]<G: #K>(
-  @interface[G] go: 1,
-  @[G, G+1] left: #W,
-  @[G, G+1] right: #W,
-) -> (
-    @[G+#W, G+#W+1] out: #W,
-) where #I > 0, #K > 0, #W = #I * #K, #L = #W - 1 {
+  @[G+#W, G+#W+1] out: #W,
+) where
+  #I > 0,
+  #K > 0,
+  #W = #I * #K
+{
 
     /// Bundles that track the "outer" signals which connect each reused instance in the circuit.
     bundle o_acc[#I+1]: for<#a> @[G+#a*#K, G+#a*#K+1] #W;
@@ -130,9 +53,8 @@ comp TradeoffDiv[#W, #I, #K, #L]<G: #K>(
     o_r{0} = right;
 
     for #i in 0..#I {
-
         // Instantiate the I'th circuit
-        N := new Next[#W, #L];
+        N := new Next[#W];
         Acc := new Delay[#W+1];
         QN := new Delay[#W];
         R := new Delay[#W];
@@ -148,6 +70,7 @@ comp TradeoffDiv[#W, #I, #K, #L]<G: #K>(
         qn{0} = o_qn{#i};
         r{0} = o_r{#i};
 
+        // Loop back the computation into the same circuit for K cycles.
         for #j in 0..#K {
             s := N<G+(#K*#i)+#j>(acc{#j}, r{#j}, qn{#j});
             acc_reg := Acc<G+(#K*#i)+#j>(s.acc_next);
@@ -158,11 +81,36 @@ comp TradeoffDiv[#W, #I, #K, #L]<G: #K>(
             r{#j+1} = r_reg.out;
         }
 
+        // Forward signals from the final reuse to the next circuit.
         o_acc{#i+1} = acc{#K};
         o_qn{#i+1} = qn{#K};
         o_r{#i+1} = r{#K};
     }
 
     out = o_qn{#I};
-
 }
+
+/// An iterative divider that uses exactly one `Next` circuit and shares it over W cycles.
+comp ShareIterDiv[#W]<G: #W>(
+  @interface[G] go: 1,
+  @[G, G+1] left: #W,
+  @[G, G+1] right: #W,
+) -> (
+  @[G+#W, G+#W+1] quotient: #W
+) where #W > 0 {
+  td := new TradeoffDiv[#W, 1, #W]<G>(left, right);
+  quotient = td.out;
+}
+
+/// An iterative divider that uses W `Next` circuits and does not share them.
+comp PipeIterDiv[#W]<G: 1>(
+  @interface[G] go: 1,
+  @[G, G+1] left: #W,
+  @[G, G+1] right: #W,
+) -> (
+  @[G+#W, G+#W+1] quotient: #W
+) where #W > 0 {
+  td := new TradeoffDiv[#W, #W, 1]<G>(left, right);
+  quotient = td.out;
+}
+

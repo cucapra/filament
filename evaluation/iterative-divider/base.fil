@@ -1,0 +1,63 @@
+import "primitives/core.fil";
+
+// XXX: We need #L because we can't say #W-1
+comp Next[#W]<G: 1>(
+  @[G, G+1] acc: #W+1,
+  @[G, G+1] right: #W,
+  @[G, G+1] quotient: #W,
+) -> (
+  @[G, G+1] acc_next: #W+1,
+  @[G, G+1] quotient_next: #W,
+) where #W > 0 {
+
+  /*
+  assign right_ext = {1'b0, right};
+  assign check = acc >= right_ext;
+
+  // True branch
+  assign sub = acc - right;
+  assign c = check ? {sub[7:0], quotient, 1'b1} : ({acc, quotient} << 1);
+
+  assign quotient_next = c[7:0];
+  assign acc_next = c[16:8];
+  */
+
+  right_ext := new ZeroExtend[#W, #W+1]<G>(right);
+  check := new Gte[#W+1]<G>(acc, right_ext.out);
+
+  // True branch
+  sub := new Sub[#W+1]<G>(acc, right_ext.out);
+  sub_slice := new Slice[#W+1, #W-1, 0, #W]<G>(sub.out);
+  one_1 := new Const[1, 1]<G>();
+  true_con_0 := new Concat[#W, 1, #W+1]<G>(quotient, one_1.out);
+  true_con := new Concat[#W, #W+1, 2*#W+1]<G>(sub_slice.out, true_con_0.out);
+
+  // False branch
+  fal_con := new Concat[#W+1, #W, 2*#W+1]<G>(acc, quotient);
+  one_WW1 := new Const[2*#W+1, 1]<G>();
+  fal_sh := new ShiftLeft[2*#W+1]<G>(fal_con.out, one_WW1.out);
+
+  c := new Mux[2*#W+1]<G>(check.out, true_con.out, fal_sh.out);
+
+  acc_slice := new Slice[2*#W+1, 2*#W, #W, #W+1]<G>(c.out);
+  q_slice := new Slice[2*#W+1, #W, 0, #W]<G>(c.out);
+
+  quotient_next = q_slice.out;
+  acc_next = acc_slice.out;
+}
+
+comp Init[#W]<G: 1>(
+  @[G, G+1] left: #W,
+) -> (
+  @[G, G+1] acc: #W+1,
+  @[G, G+1] quotient: #W,
+) where #W > 0 {
+  zero_one := new Const[1, 0]<G>();
+  c := new Concat[#W, 1, #W+1]<G>(left, zero_one.out);
+  c_ext := new ZeroExtend[#W+1, 2*#W+1]<G>(c.out);
+  acc_slice := new Slice[2*#W+1, 2*#W, #W, #W+1]<G>(c_ext.out);
+  q_slice := new Slice[2*#W+1, #W, 0, #W]<G>(c_ext.out);
+
+  acc = acc_slice.out;
+  quotient = q_slice.out;
+}
