@@ -1,6 +1,5 @@
 import "primitives/core.fil";
 
-// XXX: We need #L because we can't say #W-1
 comp Next[#W]<G: 1>(
   @[G, G+1] acc: #W+1,
   @[G, G+1] right: #W,
