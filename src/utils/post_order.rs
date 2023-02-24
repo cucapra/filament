@@ -3,16 +3,16 @@ use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use topological_sort::{self, TopologicalSort};
 
-/// Defines a post-order traversal of the components.
+/// Defines a traversal of the components.
 /// There is an edge between src -> dst if `src` instantiates an instance of `dst`.
-pub struct PostOrder {
+pub struct Traversal {
     /// The namespace
     ns: core::Namespace,
     /// The post-order traversal
     order: TopologicalSort<usize>,
 }
 
-impl From<core::Namespace> for PostOrder {
+impl From<core::Namespace> for Traversal {
     /// Construct a post-order traversal over a namespace.
     fn from(ns: core::Namespace) -> Self {
         let externs: HashSet<_> =
@@ -63,8 +63,8 @@ fn process_cmd(
     }
 }
 
-impl PostOrder {
-    /// Apply a mutable function to each component in the post-order traversal.
+impl Traversal {
+    /// Apply a mutable function to each component in a post-order traversal.
     pub fn apply_post_order<F>(&mut self, mut upd: F)
     where
         F: FnMut(&mut core::Component),
@@ -76,7 +76,7 @@ impl PostOrder {
         }
     }
 
-    /// Apply a function to each component in the pre-order traversal.
+    /// Apply a function to each component in a pre-order traversal.
     pub fn apply_pre_order<F>(&mut self, mut upd: F)
     where
         F: FnMut(&mut core::Component),

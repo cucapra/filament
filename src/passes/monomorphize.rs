@@ -1,6 +1,6 @@
 use crate::{
     core,
-    utils::{Binding, PostOrder},
+    utils::{Binding, Traversal},
 };
 use itertools::Itertools;
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -140,11 +140,15 @@ impl InstanceParams {
         &self,
         comp: &core::Id,
         param: &core::Id,
-    ) -> impl Iterator<Item = u64> + '_ {
+    ) -> Box<dyn Iterator<Item = u64> + '_> {
         // Find the index of the parameter in the component
         let idx = self.params[comp].iter().position(|p| p == param).unwrap();
         // Return all values that occur at that position
-        self.bindings[comp].iter().map(move |binding| binding[idx])
+        if let Some(params) = self.bindings.get(comp) {
+            Box::new(params.iter().map(move |binding| binding[idx]))
+        } else {
+            Box::new(std::iter::empty())
+        }
     }
 
     /// Resolve and add all the bindings implied by an abstract binding.
@@ -218,7 +222,7 @@ impl InstanceParams {
             .collect::<HashSet<_>>();
 
         let mut inst_params = InstanceParams::default();
-        let mut order = PostOrder::from(ns);
+        let mut order = Traversal::from(ns);
 
         order.apply_post_order(|comp| {
             // Add parameters for this component

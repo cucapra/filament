@@ -5,7 +5,7 @@ use crate::{
 use derivative::Derivative;
 
 #[derive(Derivative, Clone)]
-#[derivative(Hash, Eq, Debug, PartialOrd, Ord)]
+#[derivative(Hash, Eq, PartialOrd, Ord)]
 pub struct Id {
     id: GSym,
     #[derivative(Hash = "ignore")]
@@ -45,6 +45,15 @@ impl Default for Id {
 }
 
 impl std::fmt::Display for Id {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> Result<(), std::fmt::Error> {
+        write!(f, "{}", self.id)
+    }
+}
+
+impl std::fmt::Debug for Id {
     fn fmt(
         &self,
         f: &mut std::fmt::Formatter<'_>,

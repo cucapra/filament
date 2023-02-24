@@ -16,18 +16,28 @@ impl IntervalCheck {
         };
         let bun_idx = ctx.get_bundle_idx(name);
         let bun_len = &ctx[bun_idx].len;
-        let con = core::Constraint::sub(OrderConstraint::lt(
+        let greater = core::Constraint::sub(OrderConstraint::lt(
             idx.clone().into(),
             bun_len.clone().into(),
         ))
         .add_note(
             self.diag
                 .add_info(
-                    format!("cannot prove within-bounds bundle access: bundle of length {bun_len} with index {idx}"),
+                    format!("cannot prove within-bounds bundle access: index {idx} greater than bundle length {bun_len}"),
                     port.copy_span()
                 ),
         );
-        self.add_obligations(Some(con));
+        let smaller = core::Constraint::sub(OrderConstraint::gte(
+            idx.clone().into(),
+            core::Expr::from(0).into(),
+        )).add_note(
+            self.diag
+                .add_info(
+                    format!("cannot prove within-bounds bundle access: index {idx} less than 0"),
+                    port.copy_span()
+                ),
+        );
+        self.add_obligations([greater, smaller]);
     }
 
     fn check_width(

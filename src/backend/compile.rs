@@ -1,5 +1,5 @@
 use super::Fsm;
-use crate::{cmdline::Opts, core, errors::FilamentResult, utils::PostOrder};
+use crate::{cmdline::Opts, core, errors::FilamentResult, utils::Traversal};
 use calyx::{
     errors::CalyxResult,
     frontend,
@@ -522,7 +522,7 @@ pub fn compile(ns: core::Namespace, opts: &Opts) {
 
     let mut bindings = Binding::default();
 
-    let mut po = PostOrder::from(ns);
+    let mut po = Traversal::from(ns);
 
     po.apply_pre_order(|comp| {
         let comp = compile_component(comp, &mut bindings, &calyx_ctx.lib)
