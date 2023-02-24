@@ -181,7 +181,11 @@ impl TimeSub {
 impl Display for TimeSub {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TimeSub::Unit(n) => write!(f, "|{}|", n),
+            TimeSub::Unit(n) => match n {
+                Expr::Concrete(n) => write!(f, "{}", n),
+                Expr::Abstract(id) => write!(f, "{}", id),
+                n => write!(f, "|{}|", n),
+            },
             TimeSub::Sym { l, r } => write!(f, "|{} - {}|", l, r),
         }
     }

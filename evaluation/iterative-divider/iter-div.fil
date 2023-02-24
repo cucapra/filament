@@ -43,7 +43,7 @@ comp TradeoffDiv[#W, #I, #K]<G: #K>(
 {
 
     /// Bundles that track the "outer" signals which connect each reused instance in the circuit.
-    bundle o_acc[#I+1]: for<#a> @[G+#a*#K, G+#a*#K+1] #W;
+    bundle o_acc[#I+1]: for<#a> @[G+#a*#K, G+#a*#K+1] #W+1;
     bundle o_qn [#I+1]: for<#a> @[G+#a*#K, G+#a*#K+1] #W;
     bundle o_r  [#I+1]: for<#a> @[G+#a*#K, G+#a*#K+1] #W;
 
@@ -74,10 +74,10 @@ comp TradeoffDiv[#W, #I, #K]<G: #K>(
         for #j in 0..#K {
             s := N<G+(#K*#i)+#j>(acc{#j}, r{#j}, qn{#j});
             acc_reg := Acc<G+(#K*#i)+#j>(s.acc_next);
-            acc{#j+1} = acc_reg.out;
             qn_reg := QN<G+(#K*#i)+#j>(s.quotient_next);
-            qn{#j+1} = qn_reg.out;
             r_reg := R<G+(#K*#i)+#j>(r{#j});
+            acc{#j+1} = acc_reg.out;
+            qn{#j+1} = qn_reg.out;
             r{#j+1} = r_reg.out;
         }
 
