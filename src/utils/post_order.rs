@@ -1,4 +1,5 @@
 use crate::core;
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use topological_sort::{self, TopologicalSort};
 
@@ -27,13 +28,7 @@ impl From<core::Namespace> for PostOrder {
 
         for (idx, comp) in ns.components.iter().enumerate() {
             for inst in &comp.body {
-                if let core::Command::Instance(inst) = inst {
-                    // If the instance is not an external, add a dependency edge
-                    if !externs.contains(&inst.component) {
-                        let src = rev_map[&inst.component];
-                        ts.add_dependency(idx, src);
-                    }
-                }
+                process_cmd(inst, &externs, &rev_map, &mut ts, idx);
             }
         }
 
@@ -41,16 +36,57 @@ impl From<core::Namespace> for PostOrder {
     }
 }
 
+fn process_cmd(
+    cmd: &core::Command,
+    externs: &HashSet<core::Id>,
+    rev_map: &HashMap<core::Id, usize>,
+    ts: &mut TopologicalSort<usize>,
+    idx: usize,
+) {
+    match cmd {
+        core::Command::Instance(inst) => {
+            // If the instance is not an external, add a dependency edge
+            if !externs.contains(&inst.component) {
+                let src = rev_map[&inst.component];
+                ts.add_dependency(idx, src);
+            }
+        }
+        core::Command::ForLoop(fl) => {
+            for cmd in &fl.body {
+                process_cmd(cmd, externs, rev_map, ts, idx);
+            }
+        }
+        core::Command::Connect(_)
+        | core::Command::Invoke(_)
+        | core::Command::Bundle(_)
+        | core::Command::Fsm(_) => (),
+    }
+}
+
 impl PostOrder {
     /// Apply a mutable function to each component in the post-order traversal.
-    pub fn apply<F>(&mut self, mut upd: F)
+    pub fn apply_post_order<F>(&mut self, mut upd: F)
     where
         F: FnMut(&mut core::Component),
     {
-        self.order
-            .clone()
-            .into_iter()
-            .for_each(|idx| upd(&mut self.ns.components[idx]))
+        for idx in self.order.clone() {
+            let comp = &mut self.ns.components[idx];
+            log::trace!("Post-order: {}", comp.sig.name);
+            upd(comp)
+        }
+    }
+
+    /// Apply a function to each component in the pre-order traversal.
+    pub fn apply_pre_order<F>(&mut self, mut upd: F)
+    where
+        F: FnMut(&mut core::Component),
+    {
+        let order = self.order.clone().into_iter().collect_vec();
+        for idx in order.into_iter().rev() {
+            let comp = &mut self.ns.components[idx];
+            log::trace!("Pre-order: {}", comp.sig.name);
+            upd(comp)
+        }
     }
 
     /// Take the namespace from the post order structure.

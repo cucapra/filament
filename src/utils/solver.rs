@@ -102,7 +102,7 @@ impl ShareConstraint {
 
     // Check whether this is the minimum start time.
     // Returns None if the list contains incompatible times
-    fn is_min_start(&self, time: &Time) -> Option<bool> {
+    fn is_min_start(&self, _: &Time) -> Option<bool> {
         None
         // for (start, _) in &self.starts {
         //     if start.event != time.event {
@@ -123,7 +123,7 @@ impl ShareConstraint {
 
     // Check whether this is the maximum end time.
     // Returns None if the list contains incompatible times
-    fn is_max_end(&self, time: &Time) -> Option<bool> {
+    fn is_max_end(&self, _: &Time) -> Option<bool> {
         None
         // for (end, _) in &self.ends {
         //     match end {

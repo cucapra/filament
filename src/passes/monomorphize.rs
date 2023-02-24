@@ -129,7 +129,8 @@ impl Rewriter {
 struct InstanceParams {
     /// Parameters for a component
     params: HashMap<core::Id, Vec<core::Id>>,
-    /// The parameters for the component
+    /// The parameters discovered for each component
+    /// Maps component name to all parameter bindings used for it
     bindings: HashMap<core::Id, BTreeSet<Params>>,
 }
 
@@ -155,7 +156,6 @@ impl InstanceParams {
         comp: &core::Id,
         params: &[core::Expr],
     ) {
-        // log::trace!("{} -> {} -> {}", parent, comp, params);
         // All possible values for each parameter computed by resolving each parameter that occurs in the binding
         let all_binds = params
             .iter()
@@ -168,9 +168,10 @@ impl InstanceParams {
                 }
             })
             .multi_cartesian_product()
+            .unique()
             .collect_vec();
 
-        log::trace!("all_binds = {:?}", all_binds);
+        log::trace!("{parent} -> {comp} -> {all_binds:?}");
 
         self.bindings
             .entry(comp.clone())
@@ -180,6 +181,36 @@ impl InstanceParams {
 }
 
 impl InstanceParams {
+    fn process_cmd(
+        comp: &core::Id,
+        cmd: &core::Command,
+        inst_params: &mut InstanceParams,
+        externals: &HashSet<core::Id>,
+    ) {
+        match cmd {
+            core::Command::Instance(inst) => {
+                if !externals.contains(&inst.component)
+                    && !inst.bindings.is_empty()
+                {
+                    inst_params.add_params(
+                        comp,
+                        &inst.component,
+                        &inst.bindings,
+                    );
+                }
+            }
+            core::Command::ForLoop(fl) => {
+                for cmd in &fl.body {
+                    Self::process_cmd(comp, cmd, inst_params, externals);
+                }
+            }
+            core::Command::Bundle(_)
+            | core::Command::Connect(_)
+            | core::Command::Fsm(_)
+            | core::Command::Invoke(_) => (),
+        }
+    }
+
     fn build(ns: core::Namespace) -> (Self, core::Namespace) {
         let externals = ns
             .signatures()
@@ -189,25 +220,20 @@ impl InstanceParams {
         let mut inst_params = InstanceParams::default();
         let mut order = PostOrder::from(ns);
 
-        order.apply(|comp| {
+        order.apply_post_order(|comp| {
             // Add parameters for this component
             inst_params
                 .params
                 .insert(comp.sig.name.clone(), comp.sig.params.clone());
 
             // Add bindings from each instance
-            for command in &comp.body {
-                if let core::Command::Instance(inst) = command {
-                    if !externals.contains(&inst.component)
-                        && !inst.bindings.is_empty()
-                    {
-                        inst_params.add_params(
-                            &comp.sig.name,
-                            &inst.component,
-                            &inst.bindings,
-                        );
-                    }
-                }
+            for cmd in &comp.body {
+                Self::process_cmd(
+                    &comp.sig.name,
+                    cmd,
+                    &mut inst_params,
+                    &externals,
+                )
             }
         });
 

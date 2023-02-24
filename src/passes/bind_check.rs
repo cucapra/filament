@@ -234,21 +234,21 @@ impl visitor::Checker for BindCheck {
 
     fn connect(
         &mut self,
-        con: &core::Connect,
-        ctx: &binding::CompBinding,
+        _con: &core::Connect,
+        _ctx: &binding::CompBinding,
     ) -> Traverse {
-        let resolve =
+        let _resolve =
             |r: &core::Range,
              _: &utils::Binding<core::Time>,
              _: &utils::Binding<core::Expr>| r.clone();
-        let dst_w = ctx
-            .get_resolved_port(&con.dst, resolve)
-            .map(|p| p.bitwidth)
-            .unwrap_or_else(|| 32.into());
-        let src_w = ctx
-            .get_resolved_port(&con.src, resolve)
-            .map(|p| p.bitwidth)
-            .unwrap_or_else(|| 32.into());
+        // let dst_w = ctx
+        //     .get_resolved_port(&con.dst, resolve)
+        //     .map(|p| p.bitwidth)
+        //     .unwrap_or_else(|| 32.into());
+        // let src_w = ctx
+        //     .get_resolved_port(&con.src, resolve)
+        //     .map(|p| p.bitwidth)
+        //     .unwrap_or_else(|| 32.into());
 
         // XXX(rachit): This cannot be checked locally. We need to generate constraints in the interval checker to check this property.
         // if dst_w != ss {

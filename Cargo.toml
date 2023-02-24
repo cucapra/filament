@@ -17,6 +17,7 @@ derivative = "2.2"
 smallvec = "1"
 topological-sort = "0.2"
 atty = "0.2"
+lazy_static = "1.4.0"
 
 [dependencies.calyx]
 path = "../calyx/calyx"
