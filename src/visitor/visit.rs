@@ -143,7 +143,9 @@ where
                     core::Command::Connect(con) => pass.connect(con, &ctx)?,
                     core::Command::Fsm(fsm) => pass.fsm(fsm, &ctx)?,
                     core::Command::Bundle(bl) => pass.bundle(bl, &ctx)?,
-                    core::Command::ForLoop(_) => todo!("Transforming loops"),
+                    core::Command::ForLoop(_) => unreachable!(
+                        "Visitor does not support transforming programs"
+                    ),
                 };
                 n_cmds.extend(cmds);
             }

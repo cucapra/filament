@@ -84,37 +84,37 @@ where
 }
 
 impl OrderConstraint<Time> {
-    fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
+    fn resolve_event(self, bindings: &Binding<Time>) -> Self {
         OrderConstraint {
             left: self.left.resolve_event(bindings),
             right: self.right.resolve_event(bindings),
-            ..self.clone()
+            ..self
         }
     }
 
-    fn resolve_expr(&self, bindings: &Binding<Expr>) -> Self {
+    fn resolve_expr(self, bindings: &Binding<Expr>) -> Self {
         OrderConstraint {
             left: self.left.resolve_expr(bindings),
             right: self.right.resolve_expr(bindings),
-            ..self.clone()
+            ..self
         }
     }
 }
 
 impl OrderConstraint<TimeSub> {
-    fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
+    fn resolve_event(self, bindings: &Binding<Time>) -> Self {
         OrderConstraint {
             left: self.left.resolve_event(bindings),
             right: self.right.resolve_event(bindings),
-            ..self.clone()
+            ..self
         }
     }
 
-    fn resolve_expr(&self, bindings: &Binding<Expr>) -> Self {
+    fn resolve_expr(self, bindings: &Binding<Expr>) -> Self {
         OrderConstraint {
             left: self.left.resolve_expr(bindings),
             right: self.right.resolve_expr(bindings),
-            ..self.clone()
+            ..self
         }
     }
 }
@@ -167,7 +167,7 @@ where
 }
 
 /// A ordering constraint over time expressions or time ranges.
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Hash)]
 pub enum Constraint {
     Base {
         base: OrderConstraint<Time>,
@@ -246,7 +246,7 @@ impl Constraint {
         }
     }
 
-    pub fn resolve_event(&self, binding: &Binding<Time>) -> Constraint {
+    pub fn resolve_event(self, binding: &Binding<Time>) -> Constraint {
         match self {
             Constraint::Base { base } => Constraint::Base {
                 base: base.resolve_event(binding),
@@ -257,7 +257,7 @@ impl Constraint {
         }
     }
 
-    pub fn resolve_expr(&self, bindings: &Binding<Expr>) -> Self {
+    pub fn resolve_expr(self, bindings: &Binding<Expr>) -> Self {
         match self {
             Constraint::Base { base } => Constraint::Base {
                 base: base.resolve_expr(bindings),

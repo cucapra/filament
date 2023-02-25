@@ -1,12 +1,13 @@
 ---CODE---
 1
 ---STDERR---
-error: port width mismatch
+error: Cannot prove constraint 16 = 32
   ┌─ tests/errors/port-mismatch.fil:2:11
   │
 2 │     out = in;
   │     ---   ^^ source `in' has width 32
   │     │      
   │     destination `out' has width 16
+  │
 
 Compilation failed with 1 errors.

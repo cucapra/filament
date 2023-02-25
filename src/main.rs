@@ -8,11 +8,11 @@ use std::time::Instant;
 // Prints out the interface for main component in the input program.
 fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     // enable tracing
-    env_logger::Builder::new()
+    env_logger::Builder::from_default_env()
         .format_timestamp(None)
         .format_module_path(false)
         .format_target(false)
-        .filter_level(opts.log_level)
+        // .filter_level(opts.log_level)
         .target(env_logger::Target::Stderr)
         .init();
 

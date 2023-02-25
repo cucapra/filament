@@ -234,37 +234,35 @@ impl visitor::Checker for BindCheck {
 
     fn connect(
         &mut self,
-        con: &core::Connect,
-        ctx: &binding::CompBinding,
+        _con: &core::Connect,
+        _ctx: &binding::CompBinding,
     ) -> Traverse {
-        let resolve =
+        let _resolve =
             |r: &core::Range,
              _: &utils::Binding<core::Time>,
              _: &utils::Binding<core::Expr>| r.clone();
-        let dst_w = ctx
-            .get_resolved_port(&con.dst, resolve)
-            .map(|p| p.bitwidth)
-            .unwrap_or_else(|| 32.into());
-        let src_w = ctx
-            .get_resolved_port(&con.src, resolve)
-            .map(|p| p.bitwidth)
-            .unwrap_or_else(|| 32.into());
+        // let dst_w = ctx
+        //     .get_resolved_port(&con.dst, resolve)
+        //     .map(|p| p.bitwidth)
+        //     .unwrap_or_else(|| 32.into());
+        // let src_w = ctx
+        //     .get_resolved_port(&con.src, resolve)
+        //     .map(|p| p.bitwidth)
+        //     .unwrap_or_else(|| 32.into());
 
-        if dst_w != src_w {
-            let err = Error::malformed("port width mismatch".to_string())
-                .add_note(self.diag.add_info(
-                    format!("source `{}' has width {src_w}", con.src.name()),
-                    con.src.copy_span(),
-                ))
-                .add_note(self.diag.add_info(
-                    format!(
-                        "destination `{}' has width {dst_w}",
-                        con.dst.name(),
-                    ),
-                    con.dst.copy_span(),
-                ));
-            self.diag.add_error(err);
-        }
+        // XXX(rachit): This cannot be checked locally. We need to generate constraints in the interval checker to check this property.
+        // if dst_w != ss {
+        //     let err = Error::malformed("port width mismatch".to_string())
+        //         .add_note(self.diag.add_info(
+        //             format!("source `{}' has width {ss}", con.src.name()),
+        //             con.src.copy_span(),
+        //         ))
+        //         .add_note(self.diag.add_info(
+        //             format!("destination `{}' has width {ds}", con.dst.name(),),
+        //             con.dst.copy_span(),
+        //         ));
+        //     self.diag.add_error(err);
+        // }
         Traverse::Continue(())
     }
 }

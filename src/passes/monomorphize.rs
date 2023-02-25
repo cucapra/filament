@@ -1,6 +1,6 @@
 use crate::{
     core,
-    utils::{Binding, PostOrder},
+    utils::{Binding, Traversal},
 };
 use itertools::Itertools;
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -36,6 +36,10 @@ impl Rewriter {
                     name,
                 }
             }
+            core::PortType::Bundle { name, idx } => core::PortType::Bundle {
+                name: self.binding[&name].clone(),
+                idx,
+            },
             t => t,
         }
         .into()
@@ -63,7 +67,7 @@ impl Rewriter {
         let mut n_cmds = Vec::with_capacity(cmds.len());
         // Rename all uses of the binders
         for cmd in cmds {
-            match cmd {
+            let out = match cmd.clone() {
                 core::Command::Invoke(core::Invoke {
                     abstract_vars,
                     instance,
@@ -78,26 +82,21 @@ impl Rewriter {
                             .map(|p| self.rewrite_port(p))
                             .collect_vec()
                     });
-                    n_cmds.push(
-                        core::Invoke::new(name, instance, abstract_vars, ports)
-                            .into(),
-                    )
+
+                    core::Invoke::new(name, instance, abstract_vars, ports)
+                        .into()
                 }
                 core::Command::Instance(core::Instance {
                     name,
                     bindings,
                     component,
                     ..
-                }) => {
-                    n_cmds.push(
-                        core::Instance::new(
-                            self.binding[&name].clone(),
-                            component,
-                            bindings,
-                        )
-                        .into(),
-                    );
-                }
+                }) => core::Instance::new(
+                    self.binding[&name].clone(),
+                    component,
+                    bindings,
+                )
+                .into(),
                 core::Command::Connect(core::Connect {
                     src,
                     dst,
@@ -105,28 +104,21 @@ impl Rewriter {
                     ..
                 }) => {
                     assert!(guard.is_none(), "Cannot monomorphize guards");
-                    n_cmds.push(
-                        core::Connect::new(
-                            self.rewrite_port(dst),
-                            self.rewrite_port(src),
-                            None,
-                        )
-                        .into(),
+                    core::Connect::new(
+                        self.rewrite_port(dst),
+                        self.rewrite_port(src),
+                        None,
                     )
+                    .into()
                 }
-                core::Command::Bundle(core::Bundle { name, len, typ }) => {
-                    n_cmds.push(
-                        core::Bundle::new(
-                            self.binding[&name].clone(),
-                            len,
-                            typ,
-                        )
-                        .into(),
-                    )
-                }
+                core::Command::Bundle(core::Bundle {
+                    name, len, typ, ..
+                }) => core::Bundle::new(self.binding[&name].clone(), len, typ)
+                    .into(),
                 core::Command::ForLoop(_) => unreachable!(),
                 core::Command::Fsm(_) => unreachable!(),
-            }
+            };
+            n_cmds.push(out);
         }
         n_cmds
     }
@@ -137,7 +129,8 @@ impl Rewriter {
 struct InstanceParams {
     /// Parameters for a component
     params: HashMap<core::Id, Vec<core::Id>>,
-    /// The parameters for the component
+    /// The parameters discovered for each component
+    /// Maps component name to all parameter bindings used for it
     bindings: HashMap<core::Id, BTreeSet<Params>>,
 }
 
@@ -147,11 +140,16 @@ impl InstanceParams {
         &self,
         comp: &core::Id,
         param: &core::Id,
-    ) -> impl Iterator<Item = u64> + '_ {
+    ) -> Box<dyn Iterator<Item = u64> + '_> {
         // Find the index of the parameter in the component
         let idx = self.params[comp].iter().position(|p| p == param).unwrap();
         // Return all values that occur at that position
-        self.bindings[comp].iter().map(move |binding| binding[idx])
+        if let Some(params) = self.bindings.get(comp) {
+            Box::new(params.iter().map(move |binding| binding[idx]))
+        } else {
+            log::trace!("No binding for {comp}");
+            Box::new(std::iter::empty())
+        }
     }
 
     /// Resolve and add all the bindings implied by an abstract binding.
@@ -163,21 +161,22 @@ impl InstanceParams {
         comp: &core::Id,
         params: &[core::Expr],
     ) {
-        // log::trace!("{} -> {} -> {}", parent, comp, params);
         // All possible values for each parameter computed by resolving each parameter that occurs in the binding
         let all_binds = params
             .iter()
-            .map(|p|
-                match p.abs.len() {
-                    0 => vec![p.concrete],
-                    1 => self.param_values(parent, &p.abs[0]).collect(),
+            .map(|p| {
+                let abs = p.exprs().collect_vec();
+                match abs.len() {
+                    0 => vec![u64::try_from(p).unwrap()],
+                    1 => self.param_values(parent, abs[0]).collect(),
                     n => unreachable!("Cannot have more than one abstract parameter in a binding: {n}")
                 }
-            )
+            })
             .multi_cartesian_product()
+            .unique()
             .collect_vec();
 
-        log::trace!("all_binds = {:?}", all_binds);
+        log::trace!("{parent} -> {comp} -> {all_binds:?}");
 
         self.bindings
             .entry(comp.clone())
@@ -187,6 +186,36 @@ impl InstanceParams {
 }
 
 impl InstanceParams {
+    fn process_cmd(
+        comp: &core::Id,
+        cmd: &core::Command,
+        inst_params: &mut InstanceParams,
+        externals: &HashSet<core::Id>,
+    ) {
+        match cmd {
+            core::Command::Instance(inst) => {
+                if !externals.contains(&inst.component)
+                    && !inst.bindings.is_empty()
+                {
+                    inst_params.add_params(
+                        comp,
+                        &inst.component,
+                        &inst.bindings,
+                    );
+                }
+            }
+            core::Command::ForLoop(fl) => {
+                for cmd in &fl.body {
+                    Self::process_cmd(comp, cmd, inst_params, externals);
+                }
+            }
+            core::Command::Bundle(_)
+            | core::Command::Connect(_)
+            | core::Command::Fsm(_)
+            | core::Command::Invoke(_) => (),
+        }
+    }
+
     fn build(ns: core::Namespace) -> (Self, core::Namespace) {
         let externals = ns
             .signatures()
@@ -194,27 +223,22 @@ impl InstanceParams {
             .collect::<HashSet<_>>();
 
         let mut inst_params = InstanceParams::default();
-        let mut order = PostOrder::from(ns);
+        let mut order = Traversal::from(ns);
 
-        order.apply(|comp| {
+        order.apply_post_order(|comp| {
             // Add parameters for this component
             inst_params
                 .params
                 .insert(comp.sig.name.clone(), comp.sig.params.clone());
 
             // Add bindings from each instance
-            for command in &comp.body {
-                if let core::Command::Instance(inst) = command {
-                    if !externals.contains(&inst.component)
-                        && !inst.bindings.is_empty()
-                    {
-                        inst_params.add_params(
-                            &comp.sig.name,
-                            &inst.component,
-                            &inst.bindings,
-                        );
-                    }
-                }
+            for cmd in &comp.body {
+                Self::process_cmd(
+                    &comp.sig.name,
+                    cmd,
+                    &mut inst_params,
+                    &externals,
+                )
             }
         });
 
@@ -233,10 +257,10 @@ impl Monomorphize {
     ) -> core::Id {
         let mut name = String::from(comp.as_ref());
         for p in params {
-            match p.concrete() {
-                Some(p) => name += format!("_{}", p).as_str(),
-                None => {
-                    unreachable!("Binding should only contain concrete values")
+            match u64::try_from(p) {
+                Ok(p) => name += format!("_{}", p).as_str(),
+                Err(n) => {
+                    unreachable!("Binding contains non-concrete value: {n}")
                 }
             }
         }
@@ -245,7 +269,7 @@ impl Monomorphize {
 
     fn sig(sig: &core::Signature, binding: &[core::Expr]) -> core::Signature {
         // XXX: Short-circuit if binding is empty
-        let mut nsig = sig.resolve_offset(binding);
+        let mut nsig = sig.clone().resolve_exprs(binding);
         nsig.name = Self::generate_mono_name(&sig.name, binding);
         nsig.params = vec![];
         nsig
@@ -278,6 +302,7 @@ impl Monomorphize {
         for cmd in commands {
             match cmd {
                 core::Command::Bundle(bl) => {
+                    prev_names.insert(bl.name.clone(), bl.name.clone());
                     n_cmds.push(bl.resolve_exprs(param_binding).into());
                 }
                 core::Command::Invoke(core::Invoke {
@@ -350,14 +375,16 @@ impl Monomorphize {
                     ..
                 }) => {
                     // Compute the start and end values of the loop
-                    let s =
-                        start.resolve(param_binding).concrete().unwrap_or_else(
-                            || panic!("Loop start must be concrete"),
-                        );
-                    let e = end
+                    let s: u64 = start
                         .resolve(param_binding)
-                        .concrete()
-                        .unwrap_or_else(|| panic!("Loop end must be concrete"));
+                        .try_into()
+                        .unwrap_or_else(|e| {
+                            panic!("loop start must be concrete but was {e}")
+                        });
+                    let e =
+                        end.resolve(param_binding).try_into().unwrap_or_else(
+                            |e| panic!("loop end must be concrete but was {e}"),
+                        );
 
                     for i in s..e {
                         let mut new_binding = (*param_binding).clone();
@@ -420,6 +447,11 @@ impl Monomorphize {
         for comp in old_ns.components {
             if let Some(all_binds) = inst_params.bindings.remove(&comp.sig.name)
             {
+                assert!(
+                    !all_binds.is_empty(),
+                    "No bindings for component {}",
+                    comp.sig.name
+                );
                 for bind_assigns in all_binds {
                     let binding =
                         Binding::new(
@@ -433,6 +465,10 @@ impl Monomorphize {
             } else {
                 // If we have a component with parameters but not bindings, it was not used.
                 if !comp.sig.params.is_empty() {
+                    log::trace!(
+                        "Parameterized component `{}' is not used",
+                        &comp.sig.name
+                    );
                     continue;
                 }
                 let comp = Self::generate_comp(

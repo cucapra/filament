@@ -12,5 +12,5 @@ pub use gsym::GSym;
 pub use idx::Idx;
 pub use namegenerator::NameGenerator;
 pub use position::{FileIdx, GPosIdx, GlobalPositionTable, PosData};
-pub use post_order::PostOrder;
+pub use post_order::Traversal;
 pub use solver::{FilSolver, SExp, ShareConstraint};

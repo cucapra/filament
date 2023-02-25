@@ -1,16 +1,32 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint 1 >= 2
-  ┌─ tests/errors/conflicting-use.fil:4:11
+error: Cannot prove constraint |(0-1)| >= 2
+  ┌─ ./primitives/sequential.fil:3:15
   │
-4 │ comp Main<G: 3>(
-  │           ^^^^ delay requires 2 cycle between event but reuse may occur after 1 cycles
-  ·
+3 │ comp Mult[#W]<G: 2>(
+  │               ^^^^ delay requires 2 cycle between event but reuse may occur after |(0-1)| cycles
+  │
+  ┌─ tests/errors/conflicting-use.fil:8:3
+  │
 8 │   m0 := M<G>(10, 20);
   │   ------------------- invocation starts at `G'
 9 │   m1 := M<G+1>(30, 40);
   │   --------------------- invocation starts at `G+1'
   │
 
-Compilation failed with 1 errors.
+error: Cannot prove constraint 1 >= 2
+  ┌─ tests/errors/conflicting-use.fil:9:3
+  │
+8 │   m0 := M<G>(10, 20);
+  │   ------------------- invocation starts at `G'
+9 │   m1 := M<G+1>(30, 40);
+  │   ^^^^^^^^^^^^^^^^^^^^^ invocation starts at `G+1'
+  │
+  ┌─ ./primitives/sequential.fil:3:15
+  │
+3 │ comp Mult[#W]<G: 2>(
+  │               ---- delay requires 2 cycle between event but reuse may occur after 1 cycles
+  │
+
+Compilation failed with 2 errors.

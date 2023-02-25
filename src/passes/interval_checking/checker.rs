@@ -16,18 +16,60 @@ impl IntervalCheck {
         };
         let bun_idx = ctx.get_bundle_idx(name);
         let bun_len = &ctx[bun_idx].len;
-        let con = core::Constraint::sub(OrderConstraint::lt(
+        let greater = core::Constraint::sub(OrderConstraint::lt(
             idx.clone().into(),
             bun_len.clone().into(),
         ))
         .add_note(
             self.diag
                 .add_info(
-                    format!("cannot prove within-bounds bundle access: bundle of length {bun_len} with index {idx}"),
+                    format!("cannot prove within-bounds bundle access: index {idx} greater than bundle length {bun_len}"),
                     port.copy_span()
                 ),
         );
-        self.add_obligations(Some(con));
+        let smaller = core::Constraint::sub(OrderConstraint::gte(
+            idx.clone().into(),
+            core::Expr::from(0).into(),
+        )).add_note(
+            self.diag
+                .add_info(
+                    format!("cannot prove within-bounds bundle access: index {idx} less than 0"),
+                    port.copy_span()
+                ),
+        );
+        self.add_obligations([greater, smaller]);
+    }
+
+    fn check_width(
+        &mut self,
+        con: &core::Connect,
+        // Resolved ports
+        src: &Option<core::PortDef>,
+        dst: &Option<core::PortDef>,
+    ) {
+        let dst_w = dst
+            .as_ref()
+            .map(|p| p.bitwidth.clone())
+            .unwrap_or_else(|| 32.into());
+        let src_w = src
+            .as_ref()
+            .map(|p| p.bitwidth.clone())
+            .unwrap_or_else(|| 32.into());
+
+        // If we can't syntactically check
+        let cons = core::Constraint::sub(core::OrderConstraint::eq(
+            dst_w.clone().into(),
+            src_w.clone().into(),
+        ))
+        .add_note(self.diag.add_info(
+            format!("source `{}' has width {src_w}", con.src.name()),
+            con.src.copy_span(),
+        ))
+        .add_note(self.diag.add_info(
+            format!("destination `{}' has width {dst_w}", con.dst.name(),),
+            con.dst.copy_span(),
+        ));
+        self.add_obligations(Some(cons));
     }
 
     /// Check that the events provided to an invoke obey the constraints implied
@@ -188,18 +230,19 @@ impl visitor::Checker for IntervalCheck {
             |r: &core::Range,
              event_b: &utils::Binding<Time>,
              param_b: &utils::Binding<core::Expr>| {
-                r.resolve_exprs(param_b).resolve_event(event_b)
+                r.clone().resolve_exprs(param_b).resolve_event(event_b)
             };
 
-        let requirement =
-            ctx.get_resolved_port(dst, resolve_range).unwrap().liveness;
-        let guarantee = ctx.get_resolved_port(src, resolve_range);
-        let src_pos = src.copy_span();
+        let dst_port = ctx.get_resolved_port(dst, resolve_range);
+        let src_port = ctx.get_resolved_port(src, resolve_range);
+        self.check_width(con, &src_port, &dst_port);
 
+        let requirement = dst_port.unwrap().liveness;
+        let src_pos = src.copy_span();
         // If we have: dst = src. We need:
         // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
         // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
-        if let Some(guarantee) = &guarantee {
+        if let Some(guarantee) = &src_port {
             let within_fact = OrderConstraint::subset(
                 requirement.clone(),
                 guarantee.liveness.clone(),

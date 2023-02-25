@@ -1,12 +1,12 @@
 use super::{CompBinding, InstIdx, SigIdx};
 use crate::core::{self, Id, Time, TimeSub};
-use crate::diagnostics;
 use crate::errors::WithPos;
 use crate::utils::{self, GPosIdx};
+use crate::{diagnostics, idx};
 use itertools::Itertools;
 
 /// Index to a bound invocation
-pub type InvIdx = utils::Idx<BoundInvoke>;
+pub type InvIdx = idx!(BoundInvoke);
 
 impl InvIdx {
     /// Get the position of the invocation
@@ -22,7 +22,7 @@ impl InvIdx {
 
         inv.events
             .iter()
-            .map(|e| e.resolve_expr(&param_b))
+            .map(|e| e.clone().resolve_expr(&param_b))
             .collect()
     }
 
@@ -120,7 +120,7 @@ impl InvIdx {
         let sig = &ctx.prog[sig_idx];
         sig.constraints
             .iter()
-            .map(|c| c.resolve_event(event_b).resolve_expr(param_b))
+            .map(|c| c.clone().resolve_event(event_b).resolve_expr(param_b))
             .chain(
                 sig.well_formed(diag)
                     .into_iter()

@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: port width mismatch
+error: Cannot prove constraint 32 = W
    ┌─ tests/errors/param-width.fil:5:16
    │
  5 │     a0 := A<G>(a, a);
@@ -11,8 +11,10 @@ error: port width mismatch
    │
 11 │     @[G, L] left: #WIDTH,
    │             ---- destination `left' has width 32
+   │
+   = assignment violates constraint: W=0
 
-error: port width mismatch
+error: Cannot prove constraint 32 = W
    ┌─ tests/errors/param-width.fil:5:19
    │
  5 │     a0 := A<G>(a, a);
@@ -22,5 +24,7 @@ error: port width mismatch
    │
 12 │     @[G, L] right: #WIDTH,
    │             ----- destination `right' has width 32
+   │
+   = assignment violates constraint: W=0
 
 Compilation failed with 2 errors.

@@ -2,16 +2,13 @@ use super::{Constraint, Expr, OrderConstraint, Time, TimeSub};
 use crate::diagnostics::Diagnostics;
 use crate::utils::Binding;
 use crate::{errors, utils::GPosIdx};
-use derivative::Derivative;
 use std::fmt::Display;
 
 /// A range over time representation
-#[derive(Clone, Derivative)]
-#[derivative(PartialEq)]
+#[derive(Clone)]
 pub struct Range {
     pub start: Time,
     pub end: Time,
-    #[derivative(PartialEq = "ignore")]
     pos: GPosIdx,
 }
 
@@ -34,20 +31,20 @@ impl Range {
     }
 
     /// Resolve events mentioned in this range
-    pub fn resolve_event(&self, bindings: &Binding<Time>) -> Self {
+    pub fn resolve_event(self, bindings: &Binding<Time>) -> Self {
         Range {
             start: self.start.resolve_event(bindings),
             end: self.end.resolve_event(bindings),
-            ..self.clone()
+            ..self
         }
     }
 
     /// Resolve [Expr] mentioned in this range.
-    pub fn resolve_exprs(&self, bindings: &Binding<Expr>) -> Self {
+    pub fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
         Range {
             start: self.start.resolve_expr(bindings),
             end: self.end.resolve_expr(bindings),
-            ..self.clone()
+            ..self
         }
     }
 

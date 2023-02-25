@@ -12,77 +12,85 @@ error: Cannot prove constraint L = G
    = invocations of instance use multiple events in invocations: L and G. Sharing using multiple events is not supported.
 
 error: Cannot prove constraint |L - G| >= 1
-   ┌─ tests/errors/dynamic-share.fil:3:25
+   ┌─ ./primitives/core.fil:10:20
    │
- 3 │ comp Max_mult_add<G: 3, L: 3>(
-   │                         ^^^^ delay requires 1 cycle between event but reuse may occur after |L - G| cycles
-   ·
+10 │   comp Add[#WIDTH]<G: L-(G), ?L: 1=G+1>(
+   │                    ^^^^^^^^ delay requires 1 cycle between event but reuse may occur after |L - G| cycles
+   │
+   ┌─ tests/errors/dynamic-share.fil:12:3
+   │
 12 │   m1 := M<L>(c, d);
    │   ----------------- invocation starts at `L'
 13 │   m0 := M<G>(a, b);
    │   ----------------- invocation starts at `G'
    │
 
-error: Cannot prove constraint |L - G| >= 1
-   ┌─ tests/errors/dynamic-share.fil:3:25
-   │
- 3 │ comp Max_mult_add<G: 3, L: 3>(
-   │                         ^^^^ delay requires 1 cycle between event but reuse may occur after |L - G| cycles
-   ·
-12 │   m1 := M<L>(c, d);
-   │   ----------------- invocation starts at `L+1'
-13 │   m0 := M<G>(a, b);
-   │   ----------------- invocation starts at `G+1'
-   │
-
 error: Cannot prove constraint |G - L| >= 1
    ┌─ tests/errors/dynamic-share.fil:13:3
    │
- 3 │ comp Max_mult_add<G: 3, L: 3>(
-   │                         ---- delay requires 1 cycle between event but reuse may occur after |G - L| cycles
-   ·
 12 │   m1 := M<L>(c, d);
    │   ----------------- invocation starts at `L'
 13 │   m0 := M<G>(a, b);
    │   ^^^^^^^^^^^^^^^^^ invocation starts at `G'
    │
-
-error: Cannot prove constraint |G - L| >= 1
-   ┌─ tests/errors/dynamic-share.fil:3:25
+   ┌─ ./primitives/core.fil:10:20
    │
- 3 │ comp Max_mult_add<G: 3, L: 3>(
-   │                         ^^^^ delay requires 1 cycle between event but reuse may occur after |G - L| cycles
-   ·
+10 │   comp Add[#WIDTH]<G: L-(G), ?L: 1=G+1>(
+   │                    -------- delay requires 1 cycle between event but reuse may occur after |G - L| cycles
+   │
+
+error: Cannot prove constraint |L+1 - G+1| >= 1
+   ┌─ ./primitives/core.fil:10:30
+   │
+10 │   comp Add[#WIDTH]<G: L-(G), ?L: 1=G+1>(
+   │                              ^^^^^^^^^ delay requires 1 cycle between event but reuse may occur after |L+1 - G+1| cycles
+   │
+   ┌─ tests/errors/dynamic-share.fil:12:3
+   │
 12 │   m1 := M<L>(c, d);
    │   ----------------- invocation starts at `L+1'
 13 │   m0 := M<G>(a, b);
    │   ----------------- invocation starts at `G+1'
    │
 
-error: Cannot prove constraint 3 >= max(L+1) - min(G)
-   ┌─ tests/errors/dynamic-share.fil:3:25
+error: Cannot prove constraint |G+1 - L+1| >= 1
+   ┌─ tests/errors/dynamic-share.fil:13:3
    │
- 3 │ comp Max_mult_add<G: 3, L: 3>(
-   │                         ^^^^ event's delay must be longer than the difference between minimum start time and maximum end time of all invocations
-   ·
 12 │   m1 := M<L>(c, d);
-   │           - invocation ends at `L+1'
+   │   ----------------- invocation starts at `L+1'
 13 │   m0 := M<G>(a, b);
-   │           - invocation starts at `G'
+   │   ^^^^^^^^^^^^^^^^^ invocation starts at `G+1'
    │
-   = assignment violates constraint: G=0, L=3
+   ┌─ ./primitives/core.fil:10:30
+   │
+10 │   comp Add[#WIDTH]<G: L-(G), ?L: 1=G+1>(
+   │                              --------- delay requires 1 cycle between event but reuse may occur after |G+1 - L+1| cycles
+   │
 
-error: Cannot prove constraint 3 >= max(L+2) - min(G+1)
+error: Cannot prove constraint 3 >= max(L+1, G+1) - min(L, G)
    ┌─ tests/errors/dynamic-share.fil:3:25
    │
  3 │ comp Max_mult_add<G: 3, L: 3>(
    │                         ^^^^ event's delay must be longer than the difference between minimum start time and maximum end time of all invocations
    ·
 12 │   m1 := M<L>(c, d);
-   │           - invocation ends at `L+2'
+   │           - invocation starts at `L' and ends at `L+1'
 13 │   m0 := M<G>(a, b);
-   │           - invocation starts at `G+1'
+   │           - invocation starts at `G' and ends at `G+1'
    │
-   = assignment violates constraint: G=0, L=3
+   = assignment violates constraint: G=3, L=0
+
+error: Cannot prove constraint 3 >= max(L+2, G+2) - min(L+1, G+1)
+   ┌─ tests/errors/dynamic-share.fil:3:25
+   │
+ 3 │ comp Max_mult_add<G: 3, L: 3>(
+   │                         ^^^^ event's delay must be longer than the difference between minimum start time and maximum end time of all invocations
+   ·
+12 │   m1 := M<L>(c, d);
+   │           - invocation starts at `L+1' and ends at `L+2'
+13 │   m0 := M<G>(a, b);
+   │           - invocation starts at `G+1' and ends at `G+2'
+   │
+   = assignment violates constraint: G=3, L=0
 
 Compilation failed with 7 errors.

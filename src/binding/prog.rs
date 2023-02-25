@@ -2,13 +2,13 @@ use crate::{
     core::{self, Id},
     diagnostics,
     errors::{Error, WithPos},
-    utils,
+    idx,
 };
 use std::collections::HashMap;
 
 use super::BoundComponent;
 
-pub type SigIdx = utils::Idx<core::Signature>;
+pub type SigIdx = idx!(core::Signature);
 
 /// Signatures bound in a program.
 /// Also acts a dispatcher for methods on [core::Signature] since external and

@@ -1,5 +1,12 @@
 use std::{marker::PhantomData, num::NonZeroU32};
 
+#[macro_export]
+macro_rules! idx {
+    ($name:ty) => {
+       $crate::utils::Idx<$name>
+    };
+}
+
 #[derive(Eq, Debug)]
 /// Wrapper around a newtyped index associated with a type-level tag.
 /// Since the type does not contain a value of type T, it is always copy.
@@ -45,7 +52,8 @@ impl<T> Idx<T> {
     pub fn get(self) -> usize {
         debug_assert!(
             self != Self::UNKNOWN,
-            "Attempting to convert unknown index"
+            "attempting to convert unknown index for type `{}'",
+            std::any::type_name::<T>(),
         );
         (self.idx.get() - 1) as usize
     }

@@ -36,7 +36,7 @@ impl Lower {
         };
 
         let fsm = self.find_fsm(&ev)?;
-        let guard = (st.concrete().unwrap()..end.concrete().unwrap())
+        let guard = (st.try_into().unwrap()..end.try_into().unwrap())
             .into_iter()
             .map(|st| fsm.port(st).into())
             .reduce(core::Guard::or)
@@ -47,7 +47,7 @@ impl Lower {
     fn port(&self, port: core::Port) -> core::Port {
         match port.typ {
             core::PortType::Bundle { name, idx } => {
-                let idx = idx.concrete().unwrap() as usize;
+                let idx = u64::try_from(idx).unwrap() as usize;
                 let writes = self.bundle_writes.get(&name).unwrap();
                 writes[idx]
                     .clone()
@@ -87,7 +87,7 @@ impl visitor::Transform for Lower {
     ) -> FilamentResult<Vec<core::Command>> {
         self.bundle_writes.insert(
             bundle.name,
-            vec![None; bundle.len.concrete().unwrap() as usize],
+            vec![None; u64::try_from(bundle.len).unwrap() as usize],
         );
         Ok(vec![])
     }
@@ -99,7 +99,7 @@ impl visitor::Transform for Lower {
     ) -> FilamentResult<Vec<core::Command>> {
         let src = self.port(con.src);
         if let core::PortType::Bundle { name, idx } = con.dst.typ {
-            let idx = idx.concrete().unwrap() as usize;
+            let idx = u64::try_from(idx).unwrap() as usize;
             debug_assert!(
                 self.bundle_writes[&name][idx].is_none(),
                 "multiple writes to {name}{{{idx}}}"
@@ -151,7 +151,7 @@ impl visitor::Transform for Lower {
                 let ev = &interface.event;
                 // Get binding for this event in the invoke
                 let t = binding.get(ev);
-                let start_time = t.offset().concrete().unwrap();
+                let start_time = u64::try_from(t.offset()).unwrap();
                 let port = self.get_fsm(&t.event()).port(start_time);
                 let con = core::Connect::new(
                     core::Port::comp(bind.clone(), interface.name.clone()),

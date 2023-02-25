@@ -55,13 +55,4 @@ error: undefined parameter name: N
 8 │     a := new Add[#W, #J]<L+#N>(a);
   │                            ^^ parameter is not defined in the signature
 
-error: port width mismatch
-  ┌─ tests/errors/unbound-params.fil:8:32
-  │
-2 │     @[G, G+#W] a: #W,
-  │                - destination `a' has width #W
-  ·
-8 │     a := new Add[#W, #J]<L+#N>(a);
-  │                                ^ source `a' has width #P
-
-Compilation failed with 10 errors.
+Compilation failed with 9 errors.

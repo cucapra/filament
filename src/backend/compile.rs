@@ -1,5 +1,5 @@
 use super::Fsm;
-use crate::{cmdline::Opts, core, errors::FilamentResult};
+use crate::{cmdline::Opts, core, errors::FilamentResult, utils::Traversal};
 use calyx::{
     errors::CalyxResult,
     frontend,
@@ -50,22 +50,18 @@ impl Binding {
     }
 }
 
+/// Context for the building a component.
 pub struct Context<'a> {
     /// Builder for the current component
     pub builder: ir::Builder<'a>,
-
     /// Library signatures
     pub lib: &'a ir::LibrarySignatures,
-
     /// Mapping from names to signatures for components and externals.
     pub binding: &'a mut Binding,
-
     /// Mapping from instances to cells
     instances: HashMap<core::Id, RRC<ir::Cell>>,
-
     /// Mapping from invocation name to instance
     invokes: HashMap<core::Id, RRC<ir::Cell>>,
-
     /// Mapping from name to FSMs
     fsms: HashMap<core::Id, Fsm>,
 }
@@ -100,6 +96,7 @@ impl Context<'_> {
             }
         }
     }
+
     fn get_sig(&self, comp: &core::Id) -> Option<Vec<ir::PortDef<u64>>> {
         self.binding.get(comp)
     }
@@ -337,17 +334,18 @@ const INTERFACE_PORTS: [(&str, u64, calyx::ir::Direction); 2] = [
 ];
 
 fn compile_component(
-    comp: core::Component,
+    comp: &mut core::Component,
     sigs: &mut Binding,
     lib: &ir::LibrarySignatures,
 ) -> FilamentResult<ir::Component> {
-    let port_transform =
-        |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<u64> {
-            let mut pd: ir::PortDef<u64> =
-                (pd.name.as_ref(), pd.bitwidth.concrete().unwrap(), dir).into();
-            pd.attributes.insert("data", 1);
-            pd
-        };
+    let port_transform = |pd: &core::PortDef,
+                          dir: ir::Direction|
+     -> ir::PortDef<u64> {
+        let mut pd: ir::PortDef<u64> =
+            (pd.name.as_ref(), (&pd.bitwidth).try_into().unwrap(), dir).into();
+        pd.attributes.insert("data", 1);
+        pd
+    };
     let concrete_transform =
         |name: &core::Id, width: u64| -> ir::PortDef<u64> {
             (name.as_ref(), width, ir::Direction::Input).into()
@@ -363,7 +361,7 @@ fn compile_component(
     let mut cons = vec![];
 
     // Construct bindings
-    for cmd in comp.body {
+    for cmd in comp.body.drain(..) {
         match cmd {
             core::Command::Invoke(core::Invoke {
                 name: bind,
@@ -402,7 +400,7 @@ fn compile_component(
                 } else {
                     let conc_bind = bindings
                         .into_iter()
-                        .map(|v| v.concrete().unwrap())
+                        .map(|v| (&v).try_into().unwrap())
                         .collect_vec();
                     ctx.builder.add_primitive(
                         name.as_ref(),
@@ -434,10 +432,13 @@ fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
     let port_transform =
         |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<ir::Width> {
             let w = &pd.bitwidth;
-            let width = match w.abs.len() {
-                0 => ir::Width::Const { value: w.concrete },
+            let abs = w.exprs().collect_vec();
+            let width = match abs.len() {
+                0 => ir::Width::Const {
+                    value: w.try_into().unwrap(),
+                },
                 1 => ir::Width::Param {
-                    value: w.abs[0].as_ref().into(),
+                    value: abs[0].as_ref().into(),
                 },
                 _ => panic!("cannot complex width expr: {w}"),
             };
@@ -521,7 +522,9 @@ pub fn compile(ns: core::Namespace, opts: &Opts) {
 
     let mut bindings = Binding::default();
 
-    for comp in ns.components {
+    let mut po = Traversal::from(ns);
+
+    po.apply_pre_order(|comp| {
         let comp = compile_component(comp, &mut bindings, &calyx_ctx.lib)
             .unwrap_or_else(|e| {
                 panic!("Error compiling component: {:?}", e);
@@ -531,7 +534,8 @@ pub fn compile(ns: core::Namespace, opts: &Opts) {
             Rc::clone(&comp.signature),
         );
         calyx_ctx.components.push(comp);
-    }
+    });
+
     calyx_ctx
         .components
         .extend(bindings.fsm_comps.into_values());
