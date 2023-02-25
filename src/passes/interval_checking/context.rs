@@ -134,17 +134,16 @@ impl IntervalCheck {
         }
 
         // Iterate over each event
-        let events = ctx.prog[ctx[inst].sig].events().collect_vec();
+        let event_binds = &ctx.prog[ctx[inst].sig].events;
         let mut share_constraints = Vec::new();
         let num_bindings = invoke_bindings.len();
-        for event in 0..events.len() {
+        for event in 0..event_binds.len() {
             // Build up a sharing constraint for each event in the signature.
             // Since all bindings use the same event, we can use the event mentioned in the first binding
             // as the one to use for the sharing constraint
             let bounded_event = first_bind[event].0.event();
             let this = ctx.this();
             let eb = this.get_event(&bounded_event).clone();
-            let eb_pos = eb.copy_span();
             let mut share = ShareConstraint::from(eb);
 
             // Iterate over all pairs of bindings
@@ -178,7 +177,7 @@ impl IntervalCheck {
                     )
                     .add_note(self.diag.add_info(
                         format!("delay requires {} cycle between event but reuse may occur after {} cycles", delay.clone(), start_i.clone() - start_k.clone()),
-                        eb_pos,
+                        event_binds[event].copy_span(),
                     ))
                     .add_note(self.diag.add_info(
                         format!("invocation starts at `{start_k}'"),

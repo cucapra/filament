@@ -147,6 +147,7 @@ impl InstanceParams {
         if let Some(params) = self.bindings.get(comp) {
             Box::new(params.iter().map(move |binding| binding[idx]))
         } else {
+            log::trace!("No binding for {comp}");
             Box::new(std::iter::empty())
         }
     }
@@ -258,8 +259,8 @@ impl Monomorphize {
         for p in params {
             match u64::try_from(p) {
                 Ok(p) => name += format!("_{}", p).as_str(),
-                Err(_) => {
-                    unreachable!("Binding should only contain concrete values")
+                Err(n) => {
+                    unreachable!("Binding contains non-concrete value: {n}")
                 }
             }
         }
@@ -446,6 +447,11 @@ impl Monomorphize {
         for comp in old_ns.components {
             if let Some(all_binds) = inst_params.bindings.remove(&comp.sig.name)
             {
+                assert!(
+                    !all_binds.is_empty(),
+                    "No bindings for component {}",
+                    comp.sig.name
+                );
                 for bind_assigns in all_binds {
                     let binding =
                         Binding::new(
@@ -459,6 +465,10 @@ impl Monomorphize {
             } else {
                 // If we have a component with parameters but not bindings, it was not used.
                 if !comp.sig.params.is_empty() {
+                    log::trace!(
+                        "Parameterized component `{}' is not used",
+                        &comp.sig.name
+                    );
                     continue;
                 }
                 let comp = Self::generate_comp(

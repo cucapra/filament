@@ -1,5 +1,4 @@
 use crate::core;
-use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use topological_sort::{self, TopologicalSort};
 
@@ -9,7 +8,7 @@ pub struct Traversal {
     /// The namespace
     ns: core::Namespace,
     /// The post-order traversal
-    order: TopologicalSort<usize>,
+    order: Vec<usize>,
 }
 
 impl From<core::Namespace> for Traversal {
@@ -23,7 +22,11 @@ impl From<core::Namespace> for Traversal {
             .components
             .iter()
             .enumerate()
-            .map(|(idx, comp)| (comp.sig.name.clone(), idx))
+            .map(|(idx, comp)| {
+                // Add component to the graph
+                ts.insert(idx);
+                (comp.sig.name.clone(), idx)
+            })
             .collect();
 
         for (idx, comp) in ns.components.iter().enumerate() {
@@ -32,7 +35,15 @@ impl From<core::Namespace> for Traversal {
             }
         }
 
-        Self { ns, order: ts }
+        let order: Vec<_> = ts.into_iter().collect();
+        debug_assert!(
+            order.len() == ns.components.len(),
+            "Ordering contains {} elements but namespace has {} components",
+            order.len(),
+            ns.components.len()
+        );
+
+        Self { ns, order }
     }
 }
 
@@ -81,8 +92,7 @@ impl Traversal {
     where
         F: FnMut(&mut core::Component),
     {
-        let order = self.order.clone().into_iter().collect_vec();
-        for idx in order.into_iter().rev() {
+        for &idx in self.order.iter().rev() {
             let comp = &mut self.ns.components[idx];
             log::trace!("Pre-order: {}", comp.sig.name);
             upd(comp)
