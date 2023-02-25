@@ -1,11 +1,11 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint #N > 1
+error: Cannot prove constraint N > 1
    ┌─ tests/errors/bundle.fil:10:5
    │
 10 │     f{1} = input;
-   │     ^^^^ cannot prove within-bounds bundle access: bundle of length #N with index 1
+   │     ^^^^ cannot prove within-bounds bundle access: index 1 greater than bundle length #N
    │
    = assignment violates constraint: N=1
 
@@ -18,31 +18,31 @@ error: Cannot prove constraint G+1 >= G+2
    │     destination's requirement @[G+1, G+2]
    │
 
-error: Cannot prove constraint G+#i >= G+#i+1
+error: Cannot prove constraint G+#i >= G+(#i+1)
    ┌─ tests/errors/bundle.fil:13:17
    │
 13 │         f{#i} = d.out;
-   │         -----   ^^^^^ source is available for @[G+#i+1, G+#i+2]
+   │         -----   ^^^^^ source is available for @[G+(#i+1), G+(#i+2)]
    │         │        
-   │         destination's requirement @[G+#i, G+#i+1]
+   │         destination's requirement @[G+#i, G+(#i+1)]
    │
    = assignment violates constraint: i=0
 
-error: Cannot prove constraint #N > #N+1
+error: Cannot prove constraint N > |(#N+1)|
    ┌─ tests/errors/bundle.fil:15:11
    │
 15 │     out = f{#N+1};
-   │           ^^^^^^^ cannot prove within-bounds bundle access: bundle of length #N with index #N+1
+   │           ^^^^^^^ cannot prove within-bounds bundle access: index (#N+1) greater than bundle length #N
    │
    = assignment violates constraint: N=1
 
-error: Cannot prove constraint G+#N >= G+#N+1
+error: Cannot prove constraint G+#N >= G+(#N+1)
    ┌─ tests/errors/bundle.fil:15:11
    │
 15 │     out = f{#N+1};
-   │     ---   ^^^^^^^ source is available for @[G+#N+1, G+#N+2]
+   │     ---   ^^^^^^^ source is available for @[G+(#N+1), G+((#N+1)+1)]
    │     │      
-   │     destination's requirement @[G+#N, G+#N+1]
+   │     destination's requirement @[G+#N, G+(#N+1)]
    │
    = assignment violates constraint: N=1
 
