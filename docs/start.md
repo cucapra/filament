@@ -8,7 +8,8 @@ The following commands are sufficient to build the Filament compiler and have it
 - [Install Rust][install-rust] which will configure the `cargo` tool.
 - **TK**: Install Calyx/pin Filament to use particular release of Calyx IR.
 - Install [z3][z3-install].
-  - On Mac OS, this can be done using `brew install z3`.
+  - On Mac OS: `brew install z3`.
+  - On Ubuntu: `apt install z3`
 - Build the compiler by running: `cargo build` in the root of the folder.
 
 In order to simulate Filament programs, we need a couple more tools:
@@ -24,6 +25,11 @@ In order to simulate Filament programs, we need a couple more tools:
 - Register Filament's fud stages by running the command in the filament repository: `fud register -p fud/filament.py filament`
     - Run `fud check` to make sure that the filament stages are correctly installed.
 - Install [`runt`][runt]: `cargo install runt`
+- Install [`jq`][jq]
+  - On Mac OS: `brew install jq`
+  - On Ubuntu: `apt install jq`
+
+For a sanity check, run `fud check`. It should report that `iverilog`, `jq`, `filament`, `futil`, `cocotb` are correctly installed.
 
 Once all tools are installed, running the following command should print out the test report:
 ```
