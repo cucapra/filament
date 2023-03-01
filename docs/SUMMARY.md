@@ -1,5 +1,7 @@
 # Summary
 
 - [Getting Started](./start.md)
-- [Language Reference](./lang/index.md)
+- [Tutorial](./lang/index.md)
+    - [Hardware Design for the Curious Developer](./lang/tutorial.md)
+    - [Running Filament Designs](./lang/run.md)
 - [Testing](./test/index.md)

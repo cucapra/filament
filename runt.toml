@@ -19,6 +19,15 @@ cmd = """
 fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize' -q
 """
 
+[[tests]]
+name = "examples"
+paths = [
+  "examples/*.fil"
+]
+cmd = """
+./target/debug/filament {} --check
+"""
+
 # Compile directories within the tests/compile directory. All *.fil files in the
 # use the same input and must produce the same output
 [[tests]]

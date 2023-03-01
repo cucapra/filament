@@ -1,6 +1,6 @@
 # Getting Started
 
-Filament's compiler is implemented in using the Rust programming language.
+Filament is a programming language for Fearless Hardware Design. It aims to enable software programmers without much hardware background to start designing performant hardware. At its heart, Filament uses a type system to encode properties important for designing efficient hardware. This guide helps you install the various tools to make Filament work.
 
 ## Prerequisites
 
@@ -30,6 +30,12 @@ Once all tools are installed, running the following command should print out the
 runt -j 1
 ```
 
+## Next Steps
+
+Now that we have installed the Filament compiler and accompanying tools, we can start using Filament. Use the following links to learn more about Filament:
+
+- Writing your [first Filament Program](./lang/tutorial.md).
+- Overview of the [Filament Language](./lang/index.md).
 
 ## Debugging Cocotb Installation
 
