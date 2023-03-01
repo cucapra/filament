@@ -4,17 +4,30 @@ Filament is a programming language for Fearless Hardware Design. It aims to enab
 
 ## Prerequisites
 
-The following commands are sufficient to build the Filament compiler and have it generate Verilog:
+### Minimal Build
+
+The following commands are sufficient to build the Filament compiler and have it generate [Calyx IR](https://calyxir.org). First, we need to configure the Calyx compiler which acts as the backend for Filament.
+- Clone the [Calyx repository][calyx-repo]: `git clone https://github.com/cucapra/calyx.git`
+- Clone this repository: `git clone https://github.com/cucapra/filament.git`
+- Both repositories **must** be contained in the same parent folder such that they are sibling folders.
+
+Next, we can install the dependencies for the Filament compiler:
 - [Install Rust][install-rust] which will configure the `cargo` tool.
-- **TK**: Install Calyx/pin Filament to use particular release of Calyx IR.
 - Install [z3][z3-install].
   - On Mac OS: `brew install z3`.
   - On Ubuntu: `apt install z3`
 - Build the compiler by running: `cargo build` in the root of the folder.
 
-In order to simulate Filament programs, we need a couple more tools:
+To check that the compiler works, run the following command:
+```
+cargo run -- tests/compile/par.fil
+```
+Which should generate the Calyx IR for the program.
+
+### Full Build
+
+In order to generate Verilog, run the test suite, and simulate Filament programs, we need a couple more tools:
 - Install [`fud`][fud] which manages hardware tools and makes it easy to test Filament programs.
-  - Clone the [Calyx repository][calyx-repo]: `git clone https://github.com/cucapra/calyx`
   - Install [flit][]: `python -m pip install flit`
   - Install [fud][]: `cd calyx/fud && flit install -s`
   - Check `fud` was installed: `fud check`. It will report some tools are missing. This is expected.
