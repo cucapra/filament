@@ -1,0 +1,6 @@
+[book]
+authors = ["Rachit Nigam"]
+language = "en"
+multilingual = false
+src = "docs"
+title = "Filament"
