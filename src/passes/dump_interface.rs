@@ -24,7 +24,7 @@ impl visitor::Transform for DumpInterface {
 
     fn component_filter(&self, comp: &CompBinding) -> bool {
         let sig = comp.this();
-        sig.name == "main"
+        sig.name.inner() == "main"
     }
 
     fn exit_component(
@@ -79,7 +79,7 @@ impl visitor::Transform for DumpInterface {
         //   "start": n,
         //   "end": m
         // },
-        let pd_to_info = |pd: &core::PortDef| {
+        let pd_to_info = |pd: &core::Loc<core::PortDef>| {
             let w = &pd.bitwidth;
             let (event, st, end) = pd.liveness
             .as_offset()

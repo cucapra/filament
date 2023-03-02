@@ -1,25 +1,24 @@
 use super::{
-    Constraint, Expr, Id, InterfaceDef, OrderConstraint, PortDef, Time, TimeSub,
+    Constraint, Expr, Id, InterfaceDef, Loc, OrderConstraint, PortDef, Time,
+    TimeSub,
 };
 use crate::diagnostics::Diagnostics;
 use crate::utils::Binding;
-use crate::{errors::WithPos, utils::GPosIdx};
 use itertools::Itertools;
 use std::{collections::HashMap, fmt::Display};
 
 #[derive(Clone)]
 /// An event variable bound in the signature
 pub struct EventBind {
-    pub event: Id,
-    pub delay: TimeSub,
+    pub event: Loc<Id>,
+    pub delay: Loc<TimeSub>,
     pub default: Option<Time>,
-    pos: GPosIdx,
 }
 
 impl EventBind {
     fn resolve_event(self, bindings: &Binding<Time>) -> Self {
         Self {
-            delay: self.delay.resolve_event(bindings),
+            delay: self.delay.map(|e| e.resolve_event(bindings)),
             default: self.default.map(|d| d.resolve_event(bindings)),
             ..self
         }
@@ -27,31 +26,23 @@ impl EventBind {
 
     fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
         Self {
-            delay: self.delay.resolve_expr(bindings),
+            delay: self.delay.map(|e| e.resolve_expr(bindings)),
             default: self.default.map(|d| d.resolve_expr(bindings)),
             ..self
         }
     }
 }
 
-impl WithPos for EventBind {
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> GPosIdx {
-        self.pos
-    }
-}
-
 impl EventBind {
-    pub fn new(event: Id, delay: TimeSub, default: Option<Time>) -> Self {
+    pub fn new(
+        event: Loc<Id>,
+        delay: Loc<TimeSub>,
+        default: Option<Time>,
+    ) -> Self {
         Self {
             event,
             delay,
             default,
-            pos: GPosIdx::UNKNOWN,
         }
     }
 }
@@ -70,7 +61,7 @@ impl Display for EventBind {
 #[derive(Clone)]
 pub struct Signature {
     /// Name of the component
-    pub name: Id,
+    pub name: Loc<Id>,
     /// Parameters for the Signature
     pub params: Vec<Id>,
     /// Unannotated ports that are threaded through by the backend
@@ -79,11 +70,11 @@ pub struct Signature {
     /// evidence for.
     pub interface_signals: Vec<InterfaceDef>,
     /// Names of abstract variables bound by the component
-    pub events: Vec<EventBind>,
+    pub events: Vec<Loc<EventBind>>,
     /// Constraints on the abstract variables in the signature
-    pub constraints: Vec<Constraint>,
+    pub constraints: Vec<Loc<Constraint>>,
     /// All the input/output ports.
-    ports: Vec<PortDef>,
+    ports: Vec<Loc<PortDef>>,
     /// Index of the first output port in the ports vector
     outputs_idx: usize,
 }
@@ -91,14 +82,14 @@ pub struct Signature {
 impl Signature {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        name: Id,
+        name: Loc<Id>,
         params: Vec<Id>,
-        events: Vec<EventBind>,
+        events: Vec<Loc<EventBind>>,
         unannotated_ports: Vec<(Id, u64)>,
         interface_signals: Vec<InterfaceDef>,
-        mut inputs: Vec<PortDef>,
-        mut outputs: Vec<PortDef>,
-        constraints: Vec<Constraint>,
+        mut inputs: Vec<Loc<PortDef>>,
+        mut outputs: Vec<Loc<PortDef>>,
+        constraints: Vec<Loc<Constraint>>,
     ) -> Self {
         let outputs_idx = inputs.len();
         inputs.append(&mut outputs);
@@ -115,27 +106,27 @@ impl Signature {
     }
 
     /// Events bound by the signature
-    pub fn events(&self) -> impl Iterator<Item = Id> + '_ {
+    pub fn events(&self) -> impl Iterator<Item = Loc<Id>> + '_ {
         self.events.iter().map(|eb| &eb.event).cloned()
     }
     /// Inputs of this signature
-    pub fn inputs(&self) -> impl Iterator<Item = &PortDef> {
+    pub fn inputs(&self) -> impl Iterator<Item = &Loc<PortDef>> {
         self.ports[..self.outputs_idx].iter()
     }
     /// Outputs of this signature
-    pub fn outputs(&self) -> impl Iterator<Item = &PortDef> {
+    pub fn outputs(&self) -> impl Iterator<Item = &Loc<PortDef>> {
         self.ports[self.outputs_idx..].iter()
     }
     /// Iterator over all the ports of this signature
-    pub fn ports(&self) -> &Vec<PortDef> {
+    pub fn ports(&self) -> &Vec<Loc<PortDef>> {
         &self.ports
     }
 
     /// Find the delay associoated with an event
-    pub fn get_event(&self, event: &Id) -> &EventBind {
+    pub fn get_event(&self, event: &Id) -> &Loc<EventBind> {
         self.events
             .iter()
-            .find(|eb| eb.event == event)
+            .find(|eb| eb.event.inner() == event)
             .unwrap_or_else(|| {
                 panic!(
                     "Event `{}' not found in component `{}'",
@@ -145,15 +136,15 @@ impl Signature {
     }
 
     /// Find a port on the component. Returns `None` if the port does not exist.
-    pub fn find_port(&self, port: &Id) -> Option<PortDef> {
+    pub fn find_port(&self, port: &Id) -> Option<Loc<PortDef>> {
         self.ports
             .iter()
-            .find(|p| p.name == *port)
+            .find(|p| p.name.inner() == port)
             .cloned()
             .or_else(|| {
                 self.interface_signals.iter().find_map(|id| {
-                    if id.name == *port {
-                        Some(id.clone().into())
+                    if *id.name.inner() == *port {
+                        Some(PortDef::from(id.clone()).into())
                     } else {
                         None
                     }
@@ -162,7 +153,7 @@ impl Signature {
     }
 
     /// Get a port in the signature. Panics if the port is not found.
-    pub fn get_port(&self, port: &Id) -> PortDef {
+    pub fn get_port(&self, port: &Id) -> Loc<PortDef> {
         self.find_port(port).unwrap_or_else(|| {
             panic!("Port `{}' not found in component `{}'", port, self.name)
         })
@@ -187,22 +178,26 @@ impl Signature {
     }
 
     /// Iterate over all phantom events. A phantom event is an event that does not have a corresponding interface signal.
-    pub fn phantom_events(&self) -> impl Iterator<Item = Id> + '_ {
+    pub fn phantom_events(&self) -> impl Iterator<Item = Loc<Id>> + '_ {
         self.events()
             .filter(move |event| self.get_interface(event).is_none())
     }
 
     /// Constraints for well formedness
-    fn constraints(&self, diag: &mut Diagnostics) -> Vec<Constraint> {
+    fn constraints(&self) -> Vec<Loc<Constraint>> {
         self.inputs()
             .chain(self.outputs())
-            .map(|mpd| mpd.liveness.well_formed(diag))
+            .map(|mpd| Loc::new(mpd.liveness.well_formed(), mpd.pos()))
             .collect_vec()
     }
 
     /// Construct an event binding from this Signature's events and the given
     /// arguments.
-    pub fn event_binding(&self, args: &[Time]) -> Binding<Time> {
+    pub fn event_binding(
+        &self,
+        args: impl IntoIterator<Item = Time>,
+    ) -> Binding<Time> {
+        let args = args.into_iter().collect_vec();
         debug_assert!(
             self.events
                 .iter()
@@ -221,7 +216,7 @@ impl Signature {
         let mut partial_map = Binding::new(
             self.events
                 .iter()
-                .map(|eb| &eb.event)
+                .map(|eb| eb.event.inner())
                 .cloned()
                 .zip(args.iter().cloned()),
         );
@@ -237,7 +232,7 @@ impl Signature {
                     .unwrap()
                     .clone()
                     .resolve_event(&partial_map);
-                (eb.event.clone(), bind)
+                (*eb.event.inner(), bind)
             })
             .collect();
 
@@ -260,33 +255,11 @@ impl Signature {
 }
 
 impl Signature {
-    pub fn map<F>(self, f: F) -> Signature
-    where
-        F: Fn(Expr) -> Expr,
-    {
-        Signature {
-            name: self.name,
-            ports: self
-                .ports
-                .into_iter()
-                .map(|pd| PortDef::new(pd.name, pd.liveness, f(pd.bitwidth)))
-                .collect(),
-            outputs_idx: self.outputs_idx,
-            params: self.params,
-            unannotated_ports: self.unannotated_ports,
-            constraints: self.constraints,
-            events: self.events,
-            interface_signals: self.interface_signals,
-        }
-    }
-}
-
-impl Signature {
     /// Constraints generated to ensure that a signature is well-formed.
     /// 1. Ensure that all the intervals are well formed
     /// 2. Ensure for each interval that mentions event `E` in its start time, the @interface
     ///    signal for `E` pulses less often than the length of the interval itself.
-    pub fn well_formed(&self, diag: &mut Diagnostics) -> Vec<Constraint> {
+    pub fn well_formed(&self, diag: &mut Diagnostics) -> Vec<Loc<Constraint>> {
         let mut evs: HashMap<Id, Vec<_>> = HashMap::new();
 
         // Compute mapping from events to intervals to mention the event in their start time.
@@ -296,19 +269,19 @@ impl Signature {
         for port in self.inputs().chain(self.outputs()) {
             let delay = port.liveness.len();
             let ev = &port.liveness.start.event();
-            evs.entry(ev.clone())
+            evs.entry(*ev)
                 .or_default()
-                .push((delay.clone(), port.copy_span()))
+                .push((delay.clone(), port.name.pos()))
         }
 
-        let mut cons = self.constraints(diag);
+        let mut cons = self.constraints();
 
         for (ev, lens) in evs {
-            let event = self.get_event(&ev);
-            let len = event.delay.clone();
+            let eb = self.get_event(&ev);
+            let len = eb.delay.clone();
             for (port_len, port_pos) in lens {
                 let con = Constraint::sub(OrderConstraint::gte(
-                    len.clone(),
+                    len.inner().clone(),
                     port_len.clone(),
                 ))
                 .add_note(diag.add_info(
@@ -320,9 +293,9 @@ impl Signature {
                         "interface allows event to trigger every {} cycle(s)",
                         len
                     ),
-                    event.copy_span(),
+                    eb.event.pos(),
                 ));
-                cons.push(con);
+                cons.push(con.into());
             }
         }
 
@@ -331,28 +304,27 @@ impl Signature {
 
     pub fn resolve_exprs(self, args: &[Expr]) -> Signature {
         let binding: Binding<Expr> = self.param_binding(args);
+        
 
-        let resolved = Signature {
+        Signature {
             params: vec![],
             ports: self
                 .ports
-                .iter()
-                .map(|pd| pd.clone().resolve_offset(&binding))
+                .into_iter()
+                .map(|pd| pd.map(|p| p.resolve_offset(&binding)))
                 .collect_vec(),
             events: self
                 .events
                 .into_iter()
-                .map(|eb| eb.resolve_exprs(&binding))
+                .map(|eb| eb.map(|e| e.resolve_exprs(&binding)))
                 .collect_vec(),
             constraints: self
                 .constraints
                 .into_iter()
-                .map(|c| c.resolve_expr(&binding))
+                .map(|c| c.map(|c| c.resolve_expr(&binding)))
                 .collect_vec(),
             ..self
-        };
-
-        resolved
+        }
     }
 
     pub fn resolve_event(self, bindings: &Binding<Time>) -> Self {
@@ -360,17 +332,17 @@ impl Signature {
             ports: self
                 .ports
                 .into_iter()
-                .map(|pd| pd.resolve_event(bindings))
+                .map(|pd| pd.map(|p| p.resolve_event(bindings)))
                 .collect(),
             constraints: self
                 .constraints
                 .into_iter()
-                .map(|c| c.resolve_event(bindings))
+                .map(|c| c.map(|c| c.resolve_event(bindings)))
                 .collect(),
             events: self
                 .events
                 .into_iter()
-                .map(|eb| eb.resolve_event(bindings))
+                .map(|eb| eb.map(|e| e.resolve_event(bindings)))
                 .collect(),
             ..self
         }

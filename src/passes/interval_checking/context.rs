@@ -1,5 +1,4 @@
 use crate::core::{self, Constraint, OrderConstraint};
-use crate::errors::WithPos;
 use crate::utils::{FilSolver, ShareConstraint};
 use crate::{binding, diagnostics};
 use itertools::Itertools;
@@ -119,11 +118,11 @@ impl IntervalCheck {
                 // If the events are not syntactically equal, add constraint requiring that the events are the same
                 if e1 != e2 {
                     let con = Constraint::base(OrderConstraint::eq(
-                        e1.clone().into(),
-                        e2.clone().into(),
+                        e1.into(),
+                        e2.into(),
                     ))
-                    .add_note(self.diag.add_info(format!("invocation uses event {e1}"), e1.copy_span()))
-                    .add_note(self.diag.add_info(format!("invocation uses event {e2}"), e2.copy_span()))
+                    .add_note(self.diag.add_message(format!("invocation uses event {e1}")))
+                    .add_note(self.diag.add_message(format!("invocation uses event {e2}")))
                     .add_note(self.diag.add_message(
                         format!(
                             "invocations of instance use multiple events in invocations: {e1} and {e2}. Sharing using multiple events is not supported."
@@ -153,7 +152,7 @@ impl IntervalCheck {
                 let (start_i, delay) = &binds[event];
                 share.add_bind_info(
                     start_i.clone(),
-                    (start_i.clone(), delay.clone()),
+                    (start_i.inner().clone(), delay.inner().clone()),
                     &mut self.diag,
                 );
 
@@ -169,15 +168,18 @@ impl IntervalCheck {
                         continue;
                     }
 
+                    let diff =
+                        start_i.inner().clone() - start_k.inner().clone();
+
                     let con = core::Constraint::sub(
                         core::OrderConstraint::gte(
-                            start_i.clone() - start_k.clone(),
-                            delay.clone(),
+                            diff.clone(),
+                            delay.inner().clone(),
                         ),
                     )
                     .add_note(self.diag.add_info(
-                        format!("delay requires {} cycle between event but reuse may occur after {} cycles", delay.clone(), start_i.clone() - start_k.clone()),
-                        event_binds[event].copy_span(),
+                        format!("delay requires {} cycle between event but reuse may occur after {} cycles", delay.clone(), diff),
+                        event_binds[event].delay.pos(),
                     ))
                     .add_note(self.diag.add_info(
                         format!("invocation starts at `{start_k}'"),

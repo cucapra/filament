@@ -1,6 +1,6 @@
 use super::{CompBinding, InvIdx, SigIdx};
+use crate::utils::GPosIdx;
 use crate::{core, idx};
-use crate::{errors::WithPos, utils::GPosIdx};
 
 pub type InstIdx = idx!(BoundInstance);
 
@@ -44,16 +44,5 @@ impl BoundInstance {
     /// Create a new instance
     pub fn new(sig: SigIdx, params: Vec<core::Expr>, pos: GPosIdx) -> Self {
         Self { sig, params, pos }
-    }
-}
-
-impl WithPos for BoundInstance {
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> GPosIdx {
-        self.pos
     }
 }

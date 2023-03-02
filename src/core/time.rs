@@ -54,14 +54,14 @@ impl Time {
     /// Resolve all expressions bound in this time expression
     pub fn resolve_expr(self, bind: &utils::Binding<Expr>) -> Self {
         Time {
-            event: self.event.clone(),
+            event: self.event,
             offset: self.offset.resolve(bind),
         }
     }
 
     /// Get the event associated with this time expression
     pub fn event(&self) -> Id {
-        self.event.clone()
+        self.event
     }
 }
 
@@ -84,7 +84,7 @@ impl Range {
         let Range { start, end, .. } = &self;
         if start.event == end.event {
             Some((
-                start.event.clone(),
+                start.event,
                 start.offset.clone(),
                 end.offset().clone(),
             ))

@@ -1,7 +1,7 @@
 use crate::{
     core::{self, Id},
     diagnostics,
-    errors::{Error, WithPos},
+    errors::Error,
     idx,
 };
 use std::collections::HashMap;
@@ -56,22 +56,20 @@ impl<'a> ProgBinding<'a> {
         diag: &mut diagnostics::Diagnostics,
     ) -> SigIdx {
         if let Some(old_sig) = self.is_bound(&sig.name) {
-            let err =
-                Error::already_bound(sig.name.clone(), "signature")
-                    .add_note(diag.add_info(
-                        "signature with same name is already bound",
-                        sig.name.copy_span(),
-                    ))
-                    .add_note(diag.add_info(
-                        "previous definition",
-                        old_sig.name.copy_span(),
-                    ));
+            let err = Error::already_bound(*sig.name.inner(), "signature")
+                .add_note(diag.add_info(
+                    "signature with same name is already bound",
+                    sig.name.pos(),
+                ))
+                .add_note(
+                    diag.add_info("previous definition", old_sig.name.pos()),
+                );
             diag.add_error(err);
             self.get_sig_idx(&sig.name)
         } else {
             let idx = SigIdx::new(self.signatures.len());
             self.signatures.push(sig);
-            self.name_map.insert(sig.name.clone(), idx);
+            self.name_map.insert(*sig.name.inner(), idx);
             idx
         }
     }

@@ -1,38 +1,16 @@
-use crate::{
-    errors::WithPos,
-    utils::{GPosIdx, GSym},
-};
+use crate::utils::GSym;
 use derivative::Derivative;
 
-#[derive(Derivative, Clone)]
-#[derivative(Hash, Eq, PartialOrd, Ord)]
+#[derive(Derivative, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct Id {
     id: GSym,
-    #[derivative(Hash = "ignore")]
-    #[derivative(Debug = "ignore")]
-    #[derivative(PartialEq = "ignore")]
-    #[derivative(PartialOrd = "ignore")]
-    #[derivative(Ord = "ignore")]
-    pos: GPosIdx,
 }
 
 impl Id {
     pub fn new<S: ToString>(id: S) -> Self {
         Id {
             id: id.to_string().into(),
-            pos: GPosIdx::UNKNOWN,
         }
-    }
-}
-
-impl WithPos for Id {
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> GPosIdx {
-        self.pos
     }
 }
 
@@ -77,11 +55,6 @@ impl From<&str> for Id {
 impl From<String> for Id {
     fn from(s: String) -> Self {
         Id::new(s)
-    }
-}
-impl PartialEq<Id> for Id {
-    fn eq(&self, other: &Id) -> bool {
-        self.id == other.id
     }
 }
 impl PartialEq<GSym> for Id {

@@ -1,6 +1,5 @@
 use super::{CompBinding, InstIdx, SigIdx};
 use crate::core::{self, Id, Time, TimeSub};
-use crate::errors::WithPos;
 use crate::utils::{self, GPosIdx};
 use crate::{diagnostics, idx};
 use itertools::Itertools;
@@ -39,7 +38,7 @@ impl InvIdx {
         let inv = &ctx[*self];
         let inst_idx = inv.instance;
         let inst = &ctx[inst_idx];
-        let event_b = ctx.prog[inst.sig].event_binding(&inv.events);
+        let event_b = ctx.prog[inst.sig].event_binding(inv.events.clone());
         inst_idx
             .param_resolved_signature(ctx)
             .resolve_event(&event_b)
@@ -64,13 +63,13 @@ impl InvIdx {
     pub fn event_active_ranges(
         &self,
         ctx: &CompBinding,
-    ) -> Vec<(Time, TimeSub)> {
+    ) -> Vec<(core::Loc<Time>, core::Loc<TimeSub>)> {
         let inv = &ctx[*self];
         let sig = self.resolved_signature(ctx);
         sig.events
             .iter()
             .zip(&inv.events)
-            .map(|(ev, bind)| (bind.clone(), ev.delay.clone()))
+            .map(|(ev, bind)| (bind.clone().into(), ev.delay.clone()))
             .collect_vec()
     }
 
@@ -93,13 +92,13 @@ impl InvIdx {
         let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
         let param_b = ctx.prog[inst.sig].param_binding(&inst.params);
-        let event_b = ctx.prog[inst.sig].event_binding(&inv.events);
+        let event_b = ctx.prog[inst.sig].event_binding(inv.events.clone());
         let sig = &ctx.prog[inst.sig];
         let port = sig.get_port(port);
         core::PortDef::new(
             port.name.clone(),
-            resolve_range(&port.liveness, &event_b, &param_b),
-            port.bitwidth.resolve(&param_b),
+            resolve_range(&port.liveness, &event_b, &param_b).into(),
+            port.bitwidth.inner().clone().resolve(&param_b).into(),
         )
     }
 
@@ -111,21 +110,22 @@ impl InvIdx {
         &self,
         ctx: &CompBinding,
         diag: &mut diagnostics::Diagnostics,
-    ) -> Vec<core::Constraint> {
+    ) -> Vec<core::Loc<core::Constraint>> {
         let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
         let sig_idx = inst.sig;
         let param_b = &ctx.prog[sig_idx].param_binding(&inst.params);
-        let event_b = &ctx.prog[sig_idx].event_binding(&inv.events);
+        let event_b = &ctx.prog[sig_idx].event_binding(inv.events.clone());
         let sig = &ctx.prog[sig_idx];
         sig.constraints
             .iter()
-            .map(|c| c.clone().resolve_event(event_b).resolve_expr(param_b))
-            .chain(
-                sig.well_formed(diag)
-                    .into_iter()
-                    .map(|c| c.resolve_event(event_b).resolve_expr(param_b)),
-            )
+            .map(|c| {
+                c.clone()
+                    .map(|c| c.resolve_event(event_b).resolve_expr(param_b))
+            })
+            .chain(sig.well_formed(diag).into_iter().map(|c| {
+                c.map(|c| c.resolve_event(event_b).resolve_expr(param_b))
+            }))
             .collect()
     }
 }
@@ -146,16 +146,5 @@ impl BoundInvoke {
             events,
             pos,
         }
-    }
-}
-
-impl WithPos for BoundInvoke {
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> GPosIdx {
-        self.pos
     }
 }

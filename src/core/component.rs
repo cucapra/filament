@@ -80,7 +80,7 @@ impl Namespace {
     pub fn signatures(&self) -> impl Iterator<Item = (Id, &Signature)> {
         self.externs
             .iter()
-            .flat_map(|(_, comps)| comps.iter().map(|s| (s.name.clone(), s)))
+            .flat_map(|(_, comps)| comps.iter().map(|s| (*s.name.inner(), s)))
     }
 }
 

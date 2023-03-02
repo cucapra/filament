@@ -2,7 +2,7 @@ use super::IntervalCheck;
 use crate::binding::CompBinding;
 use crate::core::{self, ForLoop, OrderConstraint, Time};
 use crate::diagnostics;
-use crate::errors::{Error, WithPos};
+use crate::errors::Error;
 use crate::utils::{self, FilSolver};
 use crate::visitor::{self, Checker, Traverse};
 use itertools::Itertools;
@@ -17,24 +17,24 @@ impl IntervalCheck {
         let bun_idx = ctx.get_bundle_idx(name);
         let bun_len = &ctx[bun_idx].len;
         let greater = core::Constraint::sub(OrderConstraint::lt(
-            idx.clone().into(),
-            bun_len.clone().into(),
+            idx.inner().clone().into(),
+            bun_len.inner().clone().into(),
         ))
         .add_note(
             self.diag
                 .add_info(
                     format!("cannot prove within-bounds bundle access: index {idx} greater than bundle length {bun_len}"),
-                    port.copy_span()
+                    idx.pos()
                 ),
         );
         let smaller = core::Constraint::sub(OrderConstraint::gte(
-            idx.clone().into(),
+            idx.inner().clone().into(),
             core::Expr::from(0).into(),
         )).add_note(
             self.diag
                 .add_info(
                     format!("cannot prove within-bounds bundle access: index {idx} less than 0"),
-                    port.copy_span()
+                    idx.pos()
                 ),
         );
         self.add_obligations([greater, smaller]);
@@ -49,25 +49,24 @@ impl IntervalCheck {
     ) {
         let dst_w = dst
             .as_ref()
-            .map(|p| p.bitwidth.clone())
+            .map(|p| p.bitwidth.inner().clone())
             .unwrap_or_else(|| 32.into());
         let src_w = src
             .as_ref()
-            .map(|p| p.bitwidth.clone())
+            .map(|p| p.bitwidth.inner().clone())
             .unwrap_or_else(|| 32.into());
 
-        // If we can't syntactically check
         let cons = core::Constraint::sub(core::OrderConstraint::eq(
             dst_w.clone().into(),
             src_w.clone().into(),
         ))
         .add_note(self.diag.add_info(
             format!("source `{}' has width {src_w}", con.src.name()),
-            con.src.copy_span(),
+            con.src.pos(),
         ))
         .add_note(self.diag.add_info(
             format!("destination `{}' has width {dst_w}", con.dst.name(),),
-            con.dst.copy_span(),
+            con.dst.pos(),
         ));
         self.add_obligations(Some(cons));
     }
@@ -87,7 +86,11 @@ impl IntervalCheck {
 
         // For each event provided in the bindings, ensure that the delay is
         // less than the delay in the interface.
-        for (idx, ev_expr) in binds.iter().enumerate() {
+        for (idx, (ev_expr, pos)) in binds
+            .iter()
+            .zip(invoke.abstract_vars.iter().map(|t| t.pos()))
+            .enumerate()
+        {
             let ev = ev_expr.event();
 
             let this_ev = this_sig.get_event(&ev);
@@ -98,26 +101,26 @@ impl IntervalCheck {
             // Generate constraint
             let cons =
                 core::Constraint::sub(core::OrderConstraint::gte(
-                    this_ev_delay.clone(),
-                    ev_delay.clone(),
+                    this_ev_delay.inner().clone(),
+                    ev_delay.inner().clone(),
                 ))
                 .add_note(self.diag.add_info(
                     "event provided to invoke triggers too often",
-                    invoke.copy_span(),
+                    pos,
                 ))
                 .add_note(self.diag.add_info(
                     format!(
                         "provided event may trigger every {} cycles",
                         ev_delay,
                     ),
-                    ev.copy_span(),
+                    ev.delay.pos(),
                 ))
                 .add_note(self.diag.add_info(
                     format!(
                         "interface requires event to trigger once in {} cycles",
                         this_ev_delay,
                     ),
-                    this_ev.copy_span(),
+                    this_ev.delay.pos(),
                 ));
             constraints.push(cons);
         }
@@ -143,8 +146,10 @@ impl IntervalCheck {
                 .collect_vec();
             // Check connections implied by the invocation
             for (actual, formal) in actuals.iter().zip(inputs) {
-                let dst = core::Port::comp(invoke.name.clone(), formal.clone())
-                    .set_span(formal.copy_span());
+                let dst = core::Loc::new(
+                    core::Port::comp(invoke.name.clone(), formal.clone()),
+                    formal.pos(),
+                );
                 let con = core::Connect::new(dst, actual.clone(), None);
                 self.connect(&con, ctx)?;
             }
@@ -164,9 +169,18 @@ impl visitor::Checker for IntervalCheck {
         for (_, sig) in ns.signatures() {
             log::trace!("===== Signature {} =====", &sig.name);
             solver.prove(
-                sig.events().chain(sig.params.iter().cloned()),
-                sig.constraints.clone(),
-                sig.well_formed(&mut diagnostics),
+                sig.events()
+                    .map(|e| e.take())
+                    .chain(sig.params.iter().cloned()),
+                sig.constraints
+                    .clone()
+                    .into_iter()
+                    .map(|c| c.take())
+                    .collect(),
+                sig.well_formed(&mut diagnostics)
+                    .into_iter()
+                    .map(|c| c.take())
+                    .collect(),
                 vec![],
                 &mut diagnostics,
             );
@@ -195,15 +209,15 @@ impl visitor::Checker for IntervalCheck {
             body,
         } = l;
 
-        self.add_var(idx.clone());
+        self.add_var(*idx);
         let var_bounds = vec![
             core::OrderConstraint::gte(
-                core::TimeSub::from(core::Expr::from(idx.clone())),
+                core::TimeSub::from(core::Expr::from(*idx)),
                 core::TimeSub::from(start.clone()),
             )
             .into(),
             core::OrderConstraint::lt(
-                core::TimeSub::from(core::Expr::from(idx.clone())),
+                core::TimeSub::from(core::Expr::from(*idx)),
                 core::TimeSub::from(end.clone()),
             )
             .into(),
@@ -238,14 +252,13 @@ impl visitor::Checker for IntervalCheck {
         self.check_width(con, &src_port, &dst_port);
 
         let requirement = dst_port.unwrap().liveness;
-        let src_pos = src.copy_span();
         // If we have: dst = src. We need:
         // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
         // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
         if let Some(guarantee) = &src_port {
             let within_fact = OrderConstraint::subset(
-                requirement.clone(),
-                guarantee.liveness.clone(),
+                requirement.clone().take(),
+                guarantee.liveness.clone().take(),
             )
             .map(|e| {
                 core::Constraint::base(e)
@@ -254,11 +267,11 @@ impl visitor::Checker for IntervalCheck {
                             "source is available for {}",
                             guarantee.liveness
                         ),
-                        src_pos,
+                        src.pos(),
                     ))
                     .add_note(self.diag.add_info(
                         format!("destination's requirement {}", requirement),
-                        dst.copy_span(),
+                        dst.pos(),
                     ))
             })
             .collect_vec();
@@ -280,14 +293,16 @@ impl visitor::Checker for IntervalCheck {
         // Check that the invocation's events satisfy well-formedness the component's constraints
         // XXX: We cannot replace this call with `resolved_signature` because the `well_formed` call fails.
         //      This is because the resolution process doesn't correctly change the name of the event bindings.
-        let constraints: Vec<core::Constraint> = ctx
+        let constraints = ctx
             .get_invoke_idx(&invoke.name)
             .get_resolved_sig_constraints(ctx, &mut self.diag);
 
         for con in constraints {
-            let con_with_info = con.add_note(self.diag.add_info(
+            let pos = con.pos();
+            // XXX(rachit): Attach location information for constraints
+            let con_with_info = con.take().add_note(self.diag.add_info(
                 "component's where clause constraints must be satisfied",
-                invoke.copy_span(),
+                pos,
             ));
             self.add_obligations(iter::once(con_with_info));
         }
@@ -302,7 +317,7 @@ impl visitor::Checker for IntervalCheck {
     ) -> Traverse {
         // Ensure that the signature is well-formed
         let cons = comp.sig.well_formed(&mut self.diag);
-        self.add_obligations(cons);
+        self.add_obligations(cons.into_iter().map(|c| c.take()));
 
         // User-level components are not allowed to have ordering constraints.
         // See https://github.com/cucapra/filament/issues/27.
@@ -315,11 +330,11 @@ impl visitor::Checker for IntervalCheck {
                 )
                 .add_note(self.diag.add_info(
                     format!("user-level component defines ordering between events: {constraint}"),
-                    comp.sig.name.copy_span(),
+                    constraint.pos(),
                 ));
                 self.diag.add_error(err);
             } else {
-                self.add_facts(Some(constraint.clone()))
+                self.add_facts(Some(constraint.inner().clone()))
             }
         }
         // If the component uses a user-level constraint, we cannot verify it's internal.
@@ -344,6 +359,7 @@ impl visitor::Checker for IntervalCheck {
         let vars = comp
             .sig
             .events()
+            .map(|e| e.take())
             .chain(comp.sig.params.iter().cloned())
             .chain(self.vars())
             .collect_vec();

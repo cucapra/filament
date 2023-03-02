@@ -1,7 +1,7 @@
 use crate::{
     binding::{self, InvIdx},
     core, diagnostics,
-    errors::{Error, WithPos},
+    errors::Error,
     utils,
     visitor::{self, Traverse},
 };
@@ -33,10 +33,10 @@ impl BindCheck {
         // Check that events are bound
         let ev = &time.event;
         if !self.events.contains(ev) {
-            let err = Error::undefined(ev.clone(), "event").add_note(
-                self.diag.add_info(
+            let err = Error::undefined(*ev, "event").add_note(
+                self.diag.add_message(
                     "event is not defined in the signature",
-                    ev.copy_span(),
+                    // ev.copy_span(),
                 ),
             );
             self.diag.add_error(err);
@@ -49,10 +49,10 @@ impl BindCheck {
     fn expr(&mut self, expr: &core::Expr) {
         for abs in expr.exprs() {
             if !self.vars.iter().chain(self.vars.iter()).contains(abs) {
-                let err = Error::undefined(abs.clone(), "parameter").add_note(
-                    self.diag.add_info(
+                let err = Error::undefined(*abs, "parameter").add_note(
+                    self.diag.add_message(
                         "parameter is not defined in the signature",
-                        abs.copy_span(),
+                        // abs.copy_span(),
                     ),
                 );
                 self.diag.add_error(err);
@@ -89,7 +89,7 @@ impl visitor::Checker for BindCheck {
             liveness,
             bitwidth,
         } = &bun.typ;
-        let n = self.push_vars(&[idx.clone()]);
+        let n = self.push_vars(&[*idx]);
         for time in liveness.time_exprs() {
             self.time(time);
         }
@@ -105,7 +105,7 @@ impl visitor::Checker for BindCheck {
         let events = sig.events().collect_vec();
         let params = &sig.params;
         self.push_vars(params);
-        self.events.extend(events);
+        self.events.extend(events.iter().map(|ev| *ev.inner()));
         // Check all the definitions only use bound events and parameters
         for pd in sig.ports() {
             for time in pd.liveness.time_exprs() {
@@ -116,10 +116,10 @@ impl visitor::Checker for BindCheck {
         // Check that interface ports use only bound events
         for id in &sig.interface_signals {
             if !self.events.contains(&id.event) {
-                let err = Error::undefined(id.event.clone(), "event").add_note(
-                    self.diag.add_info(
+                let err = Error::undefined(id.event, "event").add_note(
+                    self.diag.add_message(
                         "event is not defined in the signature",
-                        id.event.copy_span(),
+                        // id.event.copy_span(),
                     ),
                 );
                 self.diag.add_error(err);
@@ -158,7 +158,7 @@ impl visitor::Checker for BindCheck {
         l: &core::ForLoop,
         ctx: &binding::CompBinding,
     ) -> Traverse {
-        let vars = self.push_vars(&[l.idx.clone()]);
+        let vars = self.push_vars(&[l.idx]);
         for cmd in &l.body {
             self.command(cmd, ctx);
         }
@@ -185,7 +185,7 @@ impl visitor::Checker for BindCheck {
                 inst.bindings.len(),
             );
             let err = Error::malformed(msg.clone())
-                .add_note(self.diag.add_info(msg, inst.copy_span()));
+                .add_note(self.diag.add_info(msg, inst.name.pos()));
             self.diag.add_error(err);
         }
 
@@ -217,14 +217,16 @@ impl visitor::Checker for BindCheck {
                 let err = Error::malformed(format!(
                     "Invoke of {} requires {formals} ports but {actuals} were provided",
                     inv.instance,
-                )).add_note(self.diag.add_info("instance used here", inv.copy_span()));
+                )).add_note(self.diag.add_info("instance used here", inv.instance.pos()));
                 self.diag.add_error(err);
             }
 
             // Check the connections implied by the ports
             for (actual, formal) in ports.iter().zip(inputs) {
-                let dst = core::Port::comp(inv.name.clone(), formal.clone())
-                    .set_span(formal.copy_span());
+                let dst = core::Loc::new(
+                    core::Port::comp(inv.name.clone(), formal.clone()),
+                    formal.pos(),
+                );
                 let con = core::Connect::new(dst, actual.clone(), None);
                 self.connect(&con, ctx)?;
             }
@@ -291,7 +293,7 @@ impl BindCheck {
                 inv.instance,
             )).add_note(self.diag.add_info(
                 format!("invoke requires at least {min_formals} events but {actuals} are provided"),
-                inv.instance.copy_span()
+                inv.instance.pos()
             ));
             self.diag.add_error(err);
         } else if actuals > max_formals {
@@ -300,7 +302,7 @@ impl BindCheck {
                 inv.instance,
             )).add_note(self.diag.add_info(
                 format!("invoke accepts at most {max_formals} events but {actuals} are provided"),
-                inv.instance.copy_span()
+                inv.instance.pos()
             ));
             self.diag.add_error(err);
         }

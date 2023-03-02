@@ -3,7 +3,7 @@ use super::{BoundInstance, BoundInvoke, InstIdx, InvIdx, ProgBinding, SigIdx};
 use crate::{
     core::{self, Id, Time},
     diagnostics,
-    errors::{Error, WithPos},
+    errors::Error,
     idx,
     utils::{self, GPosIdx},
 };
@@ -58,7 +58,7 @@ impl BoundComponent {
         if let Some(idx) = self.inst_map.get(name) {
             Some(self.instances[idx.get()].pos)
         } else if let Some(bun) = self.bundle_map.get(name) {
-            Some(self.bundles[bun.get()].copy_span())
+            Some(self.bundles[bun.get()].name.pos())
         } else {
             self.inv_map
                 .get(name)
@@ -75,17 +75,17 @@ impl BoundComponent {
     ) -> InstIdx {
         let sig = prog.get_sig_idx(&inst.component);
         self.add_bound_instance(
-            inst.name.clone(),
+            *inst.name.inner(),
             sig,
             inst.bindings.clone(),
-            inst.copy_span(),
+            inst.name.pos(),
         )
     }
 
     /// Add a new bundle to this binding.
     pub fn add_bundle(&mut self, bundle: core::Bundle) -> BundleIdx {
         let idx = BundleIdx::new(self.bundles.len());
-        self.bundle_map.insert(bundle.name.clone(), idx);
+        self.bundle_map.insert(*bundle.name.inner(), idx);
         self.bundles.push(bundle);
         idx
     }
@@ -127,15 +127,15 @@ impl BoundComponent {
         let inst_idx = self.inst_map[&inv.instance];
         let instance = &self[inst_idx];
         let events = prog[instance.sig]
-            .event_binding(&inv.abstract_vars)
+            .event_binding(inv.abstract_vars.iter().map(|c| c.inner().clone()))
             .into_iter()
             .map(|b| b.1)
             .collect();
         self.add_bound_invoke(
-            inv.name.clone(),
+            *inv.name.inner(),
             inst_idx,
             events,
-            inv.copy_span(),
+            inv.name.pos(),
         )
     }
 
@@ -191,14 +191,15 @@ impl BoundComponent {
                     if let Some(pos) = self.name_is_bound(&inst.name) {
                         self.set_err();
                         let err =
-                            Error::already_bound(inst.name.clone(), "instance")
-                                .add_note(diag.add_info(
-                                    "name is already bound",
-                                    inst.name.copy_span(),
-                                ))
-                                .add_note(
-                                    diag.add_info("previous binding", pos),
-                                );
+                            Error::already_bound(
+                                *inst.name.inner(),
+                                "instance",
+                            )
+                            .add_note(diag.add_info(
+                                "name is already bound",
+                                inst.name.pos(),
+                            ))
+                            .add_note(diag.add_info("previous binding", pos));
                         diag.add_error(err);
                     }
                     if prog.find_sig_idx(comp).is_some() {
@@ -206,17 +207,16 @@ impl BoundComponent {
                     } else {
                         self.set_err();
                         // If there is no component with this name, add an error and use a dummy signature
-                        let err = Error::undefined(comp.clone(), "component")
-                            .add_note(diag.add_info(
-                                "unknown component",
-                                comp.copy_span(),
-                            ));
+                        let err = Error::undefined(*comp.inner(), "component")
+                            .add_note(
+                                diag.add_info("unknown component", comp.pos()),
+                            );
                         diag.add_error(err);
                         self.add_bound_instance(
-                            inst.name.clone(),
+                            *inst.name.inner(),
                             SigIdx::UNKNOWN,
                             vec![],
-                            inst.copy_span(),
+                            inst.name.pos(),
                         );
                     }
                 }
@@ -225,10 +225,10 @@ impl BoundComponent {
                     if let Some(pos) = self.name_is_bound(&inv.name) {
                         self.set_err();
                         let err =
-                            Error::already_bound(inv.name.clone(), "invoke")
+                            Error::already_bound(*inv.name.inner(), "invoke")
                                 .add_note(diag.add_info(
                                     "name is already bound",
-                                    inv.name.copy_span(),
+                                    inv.name.pos(),
                                 ))
                                 .add_note(
                                     diag.add_info("previous binding", pos),
@@ -241,10 +241,10 @@ impl BoundComponent {
                         // If there have been previous errors, we cannot rely on signatures being valid
                         if self.is_err {
                             self.add_bound_invoke(
-                                inv.name.clone(),
+                                *inv.name.inner(),
                                 InstIdx::UNKNOWN,
                                 vec![],
-                                inv.copy_span(),
+                                inv.name.pos(),
                             );
                         } else {
                             self.add_invoke(prog, inv);
@@ -253,17 +253,17 @@ impl BoundComponent {
                         self.set_err();
                         // If there is no component with this name, add an error and use a dummy signature
                         let err =
-                            Error::undefined(inv.instance.clone(), "instance")
+                            Error::undefined(*inv.instance.inner(), "instance")
                                 .add_note(diag.add_info(
                                     "unknown instance",
-                                    inv.instance.copy_span(),
+                                    inv.instance.pos(),
                                 ));
                         diag.add_error(err);
                         self.add_bound_invoke(
-                            inv.name.clone(),
+                            *inv.name.inner(),
                             InstIdx::UNKNOWN,
                             vec![],
-                            inv.copy_span(),
+                            inv.name.pos(),
                         );
                     }
                 }
@@ -274,12 +274,12 @@ impl BoundComponent {
                         {
                             if self.inv_map.get(invoke).is_none() {
                                 let err = Error::undefined(
-                                    invoke.clone(),
+                                    *invoke.inner(),
                                     "invocation",
                                 )
                                 .add_note(diag.add_info(
                                     "unknown invocation",
-                                    invoke.copy_span(),
+                                    invoke.pos(),
                                 ));
                                 diag.add_error(err)
                             }
@@ -287,13 +287,12 @@ impl BoundComponent {
                             if !prog[self.sig]
                                 .ports()
                                 .iter()
-                                .any(|pd| pd.name == p)
+                                .any(|pd| pd.name == *p)
                             {
-                                let err = Error::undefined(p.clone(), "port")
-                                    .add_note(diag.add_info(
-                                        "unknown port",
-                                        p.copy_span(),
-                                    ));
+                                let err = Error::undefined(*p.inner(), "port")
+                                    .add_note(
+                                        diag.add_info("unknown port", p.pos()),
+                                    );
                                 diag.add_error(err)
                             }
                         }
@@ -431,7 +430,9 @@ impl<'c, 'p> CompBinding<'c, 'p> {
         ) -> core::Range,
     {
         match &port.typ {
-            core::PortType::ThisPort(p) => Some(self.this().get_port(p)),
+            core::PortType::ThisPort(p) => {
+                Some(self.this().get_port(p.inner()).take())
+            }
             core::PortType::InvPort { invoke, name } => {
                 Some(self.get_invoke_idx(invoke).get_invoke_port(
                     self,
@@ -441,7 +442,7 @@ impl<'c, 'p> CompBinding<'c, 'p> {
             }
             core::PortType::Bundle { name, idx, .. } => {
                 let bi = self.get_bundle_idx(name);
-                Some(self[bi].liveness(idx.clone()))
+                Some(self[bi].liveness(idx.inner().clone()))
             }
             core::PortType::Constant(_) => None,
         }

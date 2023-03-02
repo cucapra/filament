@@ -1,52 +1,48 @@
-use super::{Expr, Id, PortDef, Range, Time};
+use super::{Expr, Id, Loc, PortDef, Range, Time};
 use crate::utils::Binding;
 use crate::{
-    errors::{self, Error, FilamentResult, WithPos},
+    errors::{Error, FilamentResult},
     utils::GPosIdx,
 };
 use itertools::Itertools;
 use std::fmt::Display;
 
+// XXX(rachit): Remove this once we're done with the transition to positions
 #[derive(Clone)]
 pub struct Port {
     pub typ: PortType,
-    pos: GPosIdx,
 }
 impl Port {
     pub fn name(&self) -> Id {
         match &self.typ {
-            PortType::ThisPort(n) => n.clone(),
-            PortType::InvPort { name, .. } => name.clone(),
+            PortType::ThisPort(n) => *n.inner(),
+            PortType::InvPort { name, .. } => *name.inner(),
             PortType::Bundle { name, idx } => format!("{name}{{{idx}}}").into(),
             PortType::Constant(n) => Id::from(format!("const<{}>", n)),
         }
     }
 
-    pub fn comp(comp: Id, name: Id) -> Self {
+    pub fn comp(comp: Loc<Id>, name: Loc<Id>) -> Self {
         Port {
             typ: PortType::InvPort { invoke: comp, name },
-            pos: GPosIdx::UNKNOWN,
         }
     }
 
-    pub fn this(p: Id) -> Self {
+    pub fn this(p: Loc<Id>) -> Self {
         Port {
             typ: PortType::ThisPort(p),
-            pos: GPosIdx::UNKNOWN,
         }
     }
 
     pub fn constant(v: u64) -> Self {
         Port {
             typ: PortType::Constant(v),
-            pos: GPosIdx::UNKNOWN,
         }
     }
 
-    pub fn bundle(name: Id, idx: Expr) -> Self {
+    pub fn bundle(name: Loc<Id>, idx: Loc<Expr>) -> Self {
         Port {
             typ: PortType::Bundle { name, idx },
-            pos: GPosIdx::UNKNOWN,
         }
     }
 
@@ -55,9 +51,8 @@ impl Port {
             PortType::Bundle { name, idx } => Port {
                 typ: PortType::Bundle {
                     name,
-                    idx: idx.resolve(bindings),
+                    idx: idx.map(|i| i.resolve(bindings)),
                 },
-                ..self
             },
             _ => self,
         }
@@ -65,10 +60,7 @@ impl Port {
 }
 impl From<PortType> for Port {
     fn from(typ: PortType) -> Self {
-        Self {
-            typ,
-            pos: GPosIdx::UNKNOWN,
-        }
+        Self { typ }
     }
 }
 impl std::fmt::Display for Port {
@@ -76,27 +68,17 @@ impl std::fmt::Display for Port {
         write!(f, "{}", self.typ)
     }
 }
-impl errors::WithPos for Port {
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> GPosIdx {
-        self.pos
-    }
-}
 
 #[derive(Clone)]
 pub enum PortType {
     /// A port on this component
-    ThisPort(Id),
+    ThisPort(Loc<Id>),
     /// A constant
     Constant(u64),
     /// A port on an invoke
-    InvPort { invoke: Id, name: Id },
+    InvPort { invoke: Loc<Id>, name: Loc<Id> },
     /// Index in a bundle
-    Bundle { name: Id, idx: Expr },
+    Bundle { name: Loc<Id>, idx: Loc<Expr> },
 }
 
 impl std::fmt::Display for PortType {
@@ -170,21 +152,18 @@ impl Display for Command {
 /// A new component instance
 pub struct Instance {
     /// Name of the instance.
-    pub name: Id,
+    pub name: Loc<Id>,
     /// Name of the component
-    pub component: Id,
+    pub component: Loc<Id>,
     /// Bindings provided for this instance
     pub bindings: Vec<Expr>,
-    /// Source position
-    pos: GPosIdx,
 }
 impl Instance {
-    pub fn new(name: Id, component: Id, bindings: Vec<Expr>) -> Self {
+    pub fn new(name: Loc<Id>, component: Loc<Id>, bindings: Vec<Expr>) -> Self {
         Instance {
             name,
             component,
             bindings,
-            pos: GPosIdx::UNKNOWN,
         }
     }
 }
@@ -198,45 +177,32 @@ impl std::fmt::Display for Instance {
         }
     }
 }
-impl WithPos for Instance {
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> GPosIdx {
-        self.pos
-    }
-}
 
 #[derive(Clone)]
 /// An Invocation
 pub struct Invoke {
     /// Name of the variable being assigned
-    pub name: Id,
+    pub name: Loc<Id>,
     /// Name of the component being invoked
-    pub instance: Id,
+    pub instance: Loc<Id>,
     /// Abstract variables used for this invocation
-    pub abstract_vars: Vec<Time>,
+    pub abstract_vars: Vec<Loc<Time>>,
     /// Assignment for the ports
-    pub ports: Option<Vec<Port>>,
-    /// Source location of the invocation
-    pos: GPosIdx,
+    pub ports: Option<Vec<Loc<Port>>>,
 }
 
 impl Invoke {
     pub fn new(
-        name: Id,
-        instance: Id,
-        abstract_vars: Vec<Time>,
-        ports: Option<Vec<Port>>,
+        name: Loc<Id>,
+        instance: Loc<Id>,
+        abstract_vars: Vec<Loc<Time>>,
+        ports: Option<Vec<Loc<Port>>>,
     ) -> Self {
         Self {
             name,
             instance,
             abstract_vars,
             ports,
-            pos: GPosIdx::UNKNOWN,
         }
     }
 
@@ -245,7 +211,10 @@ impl Invoke {
     where
         I: Iterator<Item = Id>,
     {
-        Binding::new(abstract_vars.zip(self.abstract_vars.iter().cloned()))
+        Binding::new(
+            abstract_vars
+                .zip(self.abstract_vars.iter().cloned().map(|t| t.take())),
+        )
     }
 }
 impl Display for Invoke {
@@ -274,16 +243,6 @@ impl Display for Invoke {
         }
     }
 }
-impl errors::WithPos for Invoke {
-    /// Attach a position to this node
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        self.pos = sp;
-        self
-    }
-    fn copy_span(&self) -> GPosIdx {
-        self.pos
-    }
-}
 
 #[derive(Clone)]
 /// A Guard expression
@@ -302,24 +261,6 @@ impl Guard {
         Guard::Or(Box::new(g1), Box::new(g2), GPosIdx::UNKNOWN)
     }
 }
-impl errors::WithPos for Guard {
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        match self {
-            Guard::Or(_, _, ref mut span) => {
-                *span = sp;
-                self
-            }
-            Guard::Port(p) => p.set_span(sp).into(),
-        }
-    }
-
-    fn copy_span(&self) -> GPosIdx {
-        match self {
-            Guard::Or(_, _, sp) => *sp,
-            Guard::Port(p) => p.copy_span(),
-        }
-    }
-}
 impl std::fmt::Display for Guard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -333,23 +274,16 @@ impl std::fmt::Display for Guard {
 /// A Connection between ports
 pub struct Connect {
     /// Destination port
-    pub dst: Port,
+    pub dst: Loc<Port>,
     /// Source port
-    pub src: Port,
+    pub src: Loc<Port>,
     /// Optional guard expression.
     pub guard: Option<Guard>,
-    /// Source location of the invocation
-    pos: GPosIdx,
 }
 
 impl Connect {
-    pub fn new(dst: Port, src: Port, guard: Option<Guard>) -> Self {
-        Self {
-            dst,
-            src,
-            guard,
-            pos: GPosIdx::UNKNOWN,
-        }
+    pub fn new(dst: Loc<Port>, src: Loc<Port>, guard: Option<Guard>) -> Self {
+        Self { dst, src, guard }
     }
 }
 impl std::fmt::Display for Connect {
@@ -359,17 +293,6 @@ impl std::fmt::Display for Connect {
         } else {
             write!(f, "{} = {}", self.dst, self.src)
         }
-    }
-}
-impl errors::WithPos for Connect {
-    /// Attach a position to this node
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> GPosIdx {
-        self.pos
     }
 }
 
@@ -382,7 +305,6 @@ pub struct Fsm {
     pub states: u64,
     /// Signal that triggers the FSM
     pub trigger: Port,
-    pos: GPosIdx,
 }
 impl Fsm {
     pub fn new(name: Id, states: u64, trigger: Port) -> Self {
@@ -390,7 +312,6 @@ impl Fsm {
             name,
             states,
             trigger,
-            pos: GPosIdx::UNKNOWN,
         }
     }
 
@@ -411,18 +332,7 @@ impl Fsm {
 
     /// Return the port associated with the given state
     pub fn port(&self, state: u64) -> Port {
-        Port::comp(self.name.clone(), format!("_{}", state).into())
-    }
-}
-
-impl errors::WithPos for Fsm {
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> GPosIdx {
-        self.pos
+        Port::comp(self.name.into(), Id::from(format!("_{}", state)).into())
     }
 }
 
@@ -483,13 +393,13 @@ pub struct BundleType {
     /// The name of the parameter for the bundle type
     pub idx: Id,
     /// Availability interval for the bundle
-    pub liveness: Range,
+    pub liveness: Loc<Range>,
     /// Bitwidth of the bundle
-    pub bitwidth: Expr,
+    pub bitwidth: Loc<Expr>,
 }
 
 impl BundleType {
-    pub fn new(idx: Id, liveness: Range, bitwidth: Expr) -> Self {
+    pub fn new(idx: Id, liveness: Loc<Range>, bitwidth: Loc<Expr>) -> Self {
         Self {
             idx,
             liveness,
@@ -500,8 +410,8 @@ impl BundleType {
     pub fn resolve_exprs(self, binding: &Binding<Expr>) -> Self {
         Self {
             idx: self.idx,
-            liveness: self.liveness.resolve_exprs(binding),
-            bitwidth: self.bitwidth.resolve(binding),
+            liveness: self.liveness.map(|e| e.resolve_exprs(binding)),
+            bitwidth: self.bitwidth.map(|e| e.resolve(binding)),
         }
     }
 }
@@ -519,31 +429,26 @@ impl Display for BundleType {
 /// ```
 pub struct Bundle {
     /// Name of the bundle
-    pub name: Id,
+    pub name: Loc<Id>,
     /// Length of the bundle
-    pub len: Expr,
+    pub len: Loc<Expr>,
     /// Type of the bundle
     pub typ: BundleType,
-    pos: GPosIdx,
 }
 
 impl Bundle {
-    pub fn new(name: Id, len: Expr, typ: BundleType) -> Self {
-        Self {
-            name,
-            len,
-            typ,
-            pos: GPosIdx::UNKNOWN,
-        }
+    pub fn new(name: Loc<Id>, len: Loc<Expr>, typ: BundleType) -> Self {
+        Self { name, len, typ }
     }
 
     /// Generate a port definition corresponding to a given index
     pub fn liveness(&self, idx: Expr) -> PortDef {
         let mut bind = Binding::default();
-        bind.insert(self.typ.idx.clone(), idx);
+        bind.insert(self.typ.idx, idx);
+        let liveness = self.typ.liveness.clone();
         PortDef::new(
-            "__FAKE_NAME_SHOULD_NOT_BE_USED".into(),
-            self.typ.liveness.clone().resolve_exprs(&bind),
+            Id::from("__FAKE_NAME_SHOULD_NOT_BE_USED").into(),
+            liveness.map(|r| r.resolve_exprs(&bind)),
             self.typ.bitwidth.clone(),
         )
     }
@@ -551,21 +456,10 @@ impl Bundle {
     /// Resolve expressions in the Bundle
     pub fn resolve_exprs(self, binding: &Binding<Expr>) -> Self {
         Self {
-            len: self.len.resolve(binding),
+            len: self.len.map(|e| e.resolve(binding)),
             typ: self.typ.resolve_exprs(binding),
             ..self
         }
-    }
-}
-
-impl WithPos for Bundle {
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> GPosIdx {
-        self.pos
     }
 }
 
