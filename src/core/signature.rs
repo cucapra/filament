@@ -271,7 +271,7 @@ impl Signature {
             let ev = &port.liveness.start.event();
             evs.entry(*ev)
                 .or_default()
-                .push((delay.clone(), port.name.pos()))
+                .push((delay.clone(), port.liveness.pos()))
         }
 
         let mut cons = self.constraints();
@@ -304,7 +304,6 @@ impl Signature {
 
     pub fn resolve_exprs(self, args: &[Expr]) -> Signature {
         let binding: Binding<Expr> = self.param_binding(args);
-        
 
         Signature {
             params: vec![],

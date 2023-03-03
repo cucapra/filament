@@ -173,6 +173,7 @@ fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
     Ok(())
 }
 
+/// An instance of a SMT solver for Filament constraints
 pub struct FilSolver {
     s: Solver<()>,
 }
