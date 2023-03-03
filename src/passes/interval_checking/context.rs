@@ -1,5 +1,5 @@
 use crate::core::{self, Constraint, OrderConstraint};
-use crate::utils::{FilSolver, ShareConstraint};
+use crate::utils::{self, FilSolver, ShareConstraint};
 use crate::{binding, diagnostics};
 use itertools::Itertools;
 use std::iter;
@@ -11,7 +11,7 @@ pub struct IntervalCheck {
     pub(super) solver: FilSolver,
     /// Set of facts that need to be proven.
     /// Mapping from facts to the locations that generated it.
-    pub(super) obligations: FactMap,
+    pub(super) obligations: Vec<utils::Obligation>,
     /// Set of assumed facts
     pub(super) facts: FactMap,
     /// Diagnostics
@@ -36,10 +36,10 @@ impl IntervalCheck {
     /// Add a new obligation that needs to be proved
     pub fn add_obligations<F>(&mut self, facts: F)
     where
-        F: IntoIterator<Item = core::Constraint>,
+        F: IntoIterator<Item = utils::Obligation>,
     {
         for fact in facts {
-            log::trace!("adding obligation {}", fact);
+            // log::trace!("adding obligation {}", fact);
             self.obligations.push(fact);
         }
     }
@@ -83,7 +83,7 @@ impl IntervalCheck {
     }
 
     /// Get the obligations that need to be proven
-    pub fn drain_obligations(&mut self) -> Vec<core::Constraint> {
+    pub fn drain_obligations(&mut self) -> Vec<utils::Obligation> {
         std::mem::take(&mut self.obligations)
     }
 
@@ -121,6 +121,7 @@ impl IntervalCheck {
                         e1.into(),
                         e2.into(),
                     ))
+                    .obligation("shared resources must use the same event")
                     .add_note(self.diag.add_message(format!("invocation uses event {e1}")))
                     .add_note(self.diag.add_message(format!("invocation uses event {e2}")))
                     .add_note(self.diag.add_message(
@@ -177,6 +178,7 @@ impl IntervalCheck {
                             delay.inner().clone(),
                         ),
                     )
+                    .obligation("instance must be shared with sufficient delay")
                     .add_note(self.diag.add_info(
                         format!("delay requires {} cycle between event but reuse may occur after {} cycles", delay.clone(), diff),
                         event_binds[event].delay.pos(),

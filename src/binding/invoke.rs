@@ -1,7 +1,7 @@
 use super::{CompBinding, InstIdx, SigIdx};
 use crate::core::{self, Id, Time, TimeSub};
+use crate::idx;
 use crate::utils::{self, GPosIdx};
-use crate::{diagnostics, idx};
 use itertools::Itertools;
 
 /// Index to a bound invocation
@@ -109,7 +109,6 @@ impl InvIdx {
     pub fn get_resolved_sig_constraints(
         &self,
         ctx: &CompBinding,
-        diag: &mut diagnostics::Diagnostics,
     ) -> Vec<core::Loc<core::Constraint>> {
         let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
@@ -123,9 +122,6 @@ impl InvIdx {
                 c.clone()
                     .map(|c| c.resolve_event(event_b).resolve_expr(param_b))
             })
-            .chain(sig.well_formed(diag).into_iter().map(|c| {
-                c.map(|c| c.resolve_event(event_b).resolve_expr(param_b))
-            }))
             .collect()
     }
 }

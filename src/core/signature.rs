@@ -3,7 +3,7 @@ use super::{
     TimeSub,
 };
 use crate::diagnostics::Diagnostics;
-use crate::utils::Binding;
+use crate::utils::{self, Binding};
 use itertools::Itertools;
 use std::{collections::HashMap, fmt::Display};
 
@@ -184,10 +184,10 @@ impl Signature {
     }
 
     /// Constraints for well formedness
-    fn constraints(&self) -> Vec<Loc<Constraint>> {
+    fn portdefs_well_formed(&self) -> Vec<Loc<Constraint>> {
         self.inputs()
             .chain(self.outputs())
-            .map(|mpd| Loc::new(mpd.liveness.well_formed(), mpd.pos()))
+            .map(|mpd| Loc::new(mpd.liveness.well_formed(), mpd.liveness.pos()))
             .collect_vec()
     }
 
@@ -259,7 +259,10 @@ impl Signature {
     /// 1. Ensure that all the intervals are well formed
     /// 2. Ensure for each interval that mentions event `E` in its start time, the @interface
     ///    signal for `E` pulses less often than the length of the interval itself.
-    pub fn well_formed(&self, diag: &mut Diagnostics) -> Vec<Loc<Constraint>> {
+    pub fn well_formed(
+        &self,
+        diag: &mut Diagnostics,
+    ) -> Vec<utils::Obligation> {
         let mut evs: HashMap<Id, Vec<_>> = HashMap::new();
 
         // Compute mapping from events to intervals to mention the event in their start time.
@@ -274,7 +277,16 @@ impl Signature {
                 .push((delay.clone(), port.liveness.pos()))
         }
 
-        let mut cons = self.constraints();
+        let mut cons = self
+            .portdefs_well_formed()
+            .into_iter()
+            .map(|c| {
+                let pos = c.pos();
+                c.take()
+                 .obligation("interval's end must occur at least one cycle after its start")
+                 .add_note(diag.add_info("cannot prove interval is well-formed", pos))
+            })
+            .collect_vec();
 
         for (ev, lens) in evs {
             let eb = self.get_event(&ev);
@@ -284,6 +296,9 @@ impl Signature {
                     len.inner().clone(),
                     port_len.clone(),
                 ))
+                .obligation(
+                    "delay must be longer than the length of the signal",
+                )
                 .add_note(diag.add_info(
                     format!("signal lasts for {} cycle(s)", port_len),
                     port_pos,
@@ -295,7 +310,7 @@ impl Signature {
                     ),
                     eb.event.pos(),
                 ));
-                cons.push(con.into());
+                cons.push(con);
             }
         }
 

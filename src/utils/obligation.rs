@@ -31,6 +31,11 @@ impl Obligation {
     pub fn constraint(&self) -> &SExp {
         &self.cons
     }
+
+    /// Turn this Obligation into an Error
+    pub fn error(self) -> Error {
+        self.into()
+    }
 }
 
 impl From<Obligation> for Error {

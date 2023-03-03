@@ -20,6 +20,7 @@ impl IntervalCheck {
             idx.inner().clone().into(),
             bun_len.inner().clone().into(),
         ))
+        .obligation("bundle index must be less than bundle length")
         .add_note(
             self.diag
                 .add_info(
@@ -30,7 +31,9 @@ impl IntervalCheck {
         let smaller = core::Constraint::sub(OrderConstraint::gte(
             idx.inner().clone().into(),
             core::Expr::from(0).into(),
-        )).add_note(
+        ))
+        .obligation("bundle index must be greater than or equal to 0")
+        .add_note(
             self.diag
                 .add_info(
                     format!("cannot prove within-bounds bundle access: index {idx} less than 0"),
@@ -60,6 +63,7 @@ impl IntervalCheck {
             dst_w.clone().into(),
             src_w.clone().into(),
         ))
+        .obligation("source and destination widths must match")
         .add_note(self.diag.add_info(
             format!("source `{}' has width {src_w}", con.src.name()),
             con.src.pos(),
@@ -104,6 +108,7 @@ impl IntervalCheck {
                     this_ev_delay.inner().clone(),
                     ev_delay.inner().clone(),
                 ))
+                .obligation("event provided to invocation triggers more often that invocation's event's delay allows")
                 .add_note(self.diag.add_info(
                     "event provided to invoke triggers too often",
                     pos,
@@ -177,10 +182,7 @@ impl visitor::Checker for IntervalCheck {
                     .into_iter()
                     .map(|c| c.take())
                     .collect(),
-                sig.well_formed(&mut diagnostics)
-                    .into_iter()
-                    .map(|c| c.take())
-                    .collect(),
+                sig.well_formed(&mut diagnostics).into_iter().collect(),
                 vec![],
                 &mut diagnostics,
             );
@@ -262,6 +264,7 @@ impl visitor::Checker for IntervalCheck {
             )
             .map(|e| {
                 core::Constraint::base(e)
+                    .obligation("source port must be available longer than the destination port requires")
                     .add_note(self.diag.add_info(
                         format!(
                             "source is available for {}",
@@ -295,15 +298,17 @@ impl visitor::Checker for IntervalCheck {
         //      This is because the resolution process doesn't correctly change the name of the event bindings.
         let constraints = ctx
             .get_invoke_idx(&invoke.name)
-            .get_resolved_sig_constraints(ctx, &mut self.diag);
+            .get_resolved_sig_constraints(ctx);
 
         for con in constraints {
             let pos = con.pos();
             // XXX(rachit): Attach location information for constraints
-            let con_with_info = con.take().add_note(self.diag.add_info(
-                "component's where clause constraints must be satisfied",
-                pos,
-            ));
+            let con_with_info = con
+                .take()
+                .obligation(
+                    "component's where clause constraints must be satisfied",
+                )
+                .add_note(self.diag.add_info("constraints was violated", pos));
             self.add_obligations(iter::once(con_with_info));
         }
 
@@ -317,7 +322,7 @@ impl visitor::Checker for IntervalCheck {
     ) -> Traverse {
         // Ensure that the signature is well-formed
         let cons = comp.sig.well_formed(&mut self.diag);
-        self.add_obligations(cons.into_iter().map(|c| c.take()));
+        self.add_obligations(cons);
 
         // User-level components are not allowed to have ordering constraints.
         // See https://github.com/cucapra/filament/issues/27.

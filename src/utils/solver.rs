@@ -4,6 +4,8 @@ use crate::errors::{Error, FilamentResult};
 use itertools::Itertools;
 use rsmt2::{SmtConf, Solver};
 
+use super::Obligation;
+
 #[derive(Clone)]
 /// Represents the sum of a time and a time sub
 enum TimeDelSum {
@@ -195,16 +197,16 @@ impl FilSolver {
     pub fn prove(
         &mut self,
         vars: impl IntoIterator<Item = core::Id>,
-        assumes: Vec<core::Constraint>,
-        asserts: Vec<core::Constraint>,
+        assumptions: Vec<core::Constraint>,
+        to_prove: Vec<Obligation>,
         sharing: Vec<ShareConstraint>,
         diag: &mut Diagnostics,
     ) {
-        if asserts.is_empty() {
+        if to_prove.is_empty() {
             return;
         }
 
-        let asserts = asserts.into_iter().collect_vec();
+        let asserts = to_prove.into_iter().collect_vec();
         self.s.push(1).unwrap();
         // Define all the constants
         let vars = vars.into_iter().collect_vec();
@@ -216,26 +218,22 @@ impl FilSolver {
         }
 
         // Define assumptions on constraints
-        for assume in assumes {
+        for assume in assumptions {
             log::trace!("Assuming {}", assume);
             let sexp: SExp = assume.into();
             self.s.assert(format!("{}", sexp)).unwrap();
         }
 
         for fact in asserts {
-            let relevant_vars = fact
-                .exprs()
-                .into_iter()
-                .flat_map(|e| e.exprs().cloned())
-                .unique()
-                .collect_vec();
-            if let Some(model) = self.check_fact(fact.clone(), &relevant_vars) {
+            if let Some(model) = self.check_fact(fact.constraint(), &vars) {
                 let info = diag.add_message(model);
                 diag.add_error(Error::from(fact).add_note(info));
             }
         }
         for share in sharing {
-            if let Some(model) = self.check_fact(share.clone(), &vars) {
+            if let Some(model) =
+                self.check_fact(&SExp::from(share.clone()), &vars)
+            {
                 let info = diag.add_message(model);
                 let err = share.error(diag).add_note(info);
                 diag.add_error(err);
@@ -247,12 +245,7 @@ impl FilSolver {
 
     /// Attempt to check facts.
     /// If the fact is false, add notes to the error showing the assignments that make it false.
-    fn check_fact(
-        &mut self,
-        fact: impl Into<SExp>,
-        vars: &[core::Id],
-    ) -> Option<String> {
-        let sexp = fact.into();
+    fn check_fact(&mut self, sexp: &SExp, vars: &[core::Id]) -> Option<String> {
         // Generate an activation literal
         let act = self.s.get_actlit().unwrap();
         let formula = format!("(not {})", sexp);
