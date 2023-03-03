@@ -5,7 +5,8 @@ import json
 import random
 import cocotb
 from cocotb import triggers
-from cocotb.triggers import FallingEdge, RisingEdge, ClockCycles, First
+from cocotb.binary import BinaryValue
+from cocotb.triggers import FallingEdge, RisingEdge, ClockCycles, First, ReadOnly
 from cocotb.clock import Clock
 
 RESET_CYCLES = 3
@@ -50,6 +51,33 @@ def construct_transaction_fsm(interface, randomize):
     assert len(interface["interfaces"]) > 0, "No interfaces defined"
     assert len(interface["interfaces"]) == 1, "Unsupported: multiple interfaces"
 
+    # Track which inputs have been written to
+    inp_write_idx = [0 for _ in interface["inputs"]]
+
+    async def finalize_writes(mod):
+        """
+        Check that all inputs have been written to once and inputs
+        without writes get assigned 'x
+        """
+        while True:
+            await FallingEdge(mod.clk)
+            # mod._log.warning(f"Finalizing writes: {inp_write_idx}")
+            for idx, inp in enumerate(interface["inputs"]):
+                if inp_write_idx[idx] == 0:
+                    # mod._log.warning(f"{inp['name']} <= 'x")
+                    # No writes to this input, assign 'x
+                    mod._id(inp["name"], extended=False).value = BinaryValue(
+                        "x", inp["width"]
+                    )
+
+                else:
+                    assert (
+                        inp_write_idx[idx] == 1
+                    ), f"Invalid: {inp_write_idx[idx]} writes to input `{inp['name']}'"
+
+                # Reset the write index
+                inp_write_idx[idx] = 0
+
     # Construct a model of what needs to be done for one transaction
     async def run(mod, data):
         # Dictionary to store the outputs
@@ -79,15 +107,18 @@ def construct_transaction_fsm(interface, randomize):
                     mod._id(event["name"], extended=False).value = trg
 
                 # Set input values
-                for inp in interface["inputs"]:
+                for inp_idx, inp in enumerate(interface["inputs"]):
                     assert inp["event"] == event["event"], "input uses different event"
                     if st >= inp["start"] and st < inp["end"]:
+                        # mod._log.warning(f"{inp['name']} <= {data[inp['name']][idx]}")
                         v = data[inp["name"]][idx]
                         width = inp["width"]
                         assert representable(
                             v, width
                         ), f"Invalid: Value {v} not representable in {width} bits"
                         mod._id(inp["name"], extended=False).value = v
+                        # Track which inputs have been written to
+                        inp_write_idx[inp_idx] += 1
 
                 # Wait for the falling edge so that combinational computations
                 # propagate.
@@ -129,7 +160,7 @@ def construct_transaction_fsm(interface, randomize):
 
         return outputs
 
-    return run
+    return (run, finalize_writes)
 
 
 async def log_signal(mod, signal_name, times):
@@ -154,6 +185,7 @@ def counter(mod, max_cycles):
         while count["count"] < max_cycles:
             await RisingEdge(mod.clk)
             count["count"] += 1
+            # mod._log.warn(f"Cycle: {count['count']}")
         return {"error": f"Max cycles {max_cycles} reached"}
 
     return inner, count
@@ -209,7 +241,8 @@ async def run_design(mod):
 
     # Setup the design and run it
     (counter_task, count) = await setup_design(mod, interface, reset_cycles, max_cycles)
-    runner = construct_transaction_fsm(interface, randomize)
+    (runner, finalizer) = construct_transaction_fsm(interface, randomize)
+    cocotb.start_soon(finalizer(mod))
     main = cocotb.start_soon(runner(mod, data))
     outputs = await First(counter_task, main)
 
