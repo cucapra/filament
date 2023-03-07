@@ -28,13 +28,13 @@ Which should generate the Calyx IR for the program.
 
 In order to generate Verilog, run the test suite, and simulate Filament programs, we need a couple more tools:
 - Install [`fud`][fud] which manages hardware tools and makes it easy to test Filament programs.
-  - Install [flit][]: `python -m pip install flit`
+  - Install [flit][]: `python3 -m pip install flit`
   - Install [fud][]: `cd calyx/fud && flit install -s`
   - Check `fud` was installed: `fud check`. It will report some tools are missing. This is expected.
 - Install [Icarus Verilog][iverilog-install] and [configure `fud` to use it][fud-icarus].
   - Running `fud check` again should report that `icarus-verilog` was installed correctly.
-- Install [cocotb][]: `python -m pip install cocotb`.
-  - Cocotb install can often fail. Check it was installed correctly by running `python -c "import cocotb; print(cocotb.__version__)"`. If this command fails, see [Debugging Cocotb Installation](#debugging-cocotb-installation).
+- Install [cocotb][]: `python3 -m pip install cocotb`.
+  - Cocotb install can often fail. Check it was installed correctly by running `python3 -c "import cocotb; print(cocotb.__version__)"`. If this command fails, see [Debugging Cocotb Installation](#debugging-cocotb-installation).
 - Register Filament's fud stages by running the command in the filament repository: `fud register -p fud/filament.py filament`
     - Run `fud check` to make sure that the filament stages are correctly installed.
 - Install [`runt`][runt]: `cargo install runt`
@@ -60,11 +60,11 @@ Now that we have installed the Filament compiler and accompanying tools, we can 
 
 Cocotb requires the python shared library `libpython.so`/`libpython.dylib` (Mac OS) to work correctly. A common reason for a cocotb installation not working is when this library is missing.
 
-To check if cocotb is able to find the shared library install `find_libpython`: `python -m pip install find_libpython`.
+To check if cocotb is able to find the shared library install `find_libpython`: `python3 -m pip install find_libpython`.
 
 Next, run the following:
 ```
-python -c "import find_libpython; print(find_libpython.find())"
+python3 -c "import find_libpython; print(find_libpython.find())"
 ```
 
 If the above command does not print out anything, that means that the python library was not found and the python installation needs to be rebuilt.
