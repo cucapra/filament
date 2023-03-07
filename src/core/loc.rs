@@ -15,6 +15,14 @@ impl<T> Loc<T> {
         Self { inner, pos }
     }
 
+    /// A value with no position information.
+    pub fn unknown(inner: T) -> Self {
+        Self {
+            inner,
+            pos: GPosIdx::UNKNOWN,
+        }
+    }
+
     /// Get the position associted with this `Loc`.
     pub fn pos(&self) -> GPosIdx {
         self.pos
@@ -69,15 +77,6 @@ impl<T> std::ops::Deref for Loc<T> {
 impl<T> std::ops::DerefMut for Loc<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
-    }
-}
-
-impl<T> From<T> for Loc<T> {
-    fn from(inner: T) -> Self {
-        Self {
-            inner,
-            pos: GPosIdx::UNKNOWN,
-        }
     }
 }
 

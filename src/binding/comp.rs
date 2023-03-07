@@ -1,7 +1,7 @@
 //! Context that tracks the binding information in a particular program
 use super::{BoundInstance, BoundInvoke, InstIdx, InvIdx, ProgBinding, SigIdx};
 use crate::{
-    core::{self, Id, Time},
+    core::{self, Id, Loc, Time},
     diagnostics,
     errors::Error,
     idx,
@@ -124,17 +124,26 @@ impl BoundComponent {
         prog: &ProgBinding,
         inv: &core::Invoke,
     ) -> InvIdx {
-        let inst_idx = self.inst_map[&inv.instance];
+        let inst_idx = self.inst_map[inv.instance.inner()];
         let instance = &self[inst_idx];
+        let abs_vars = &inv.abstract_vars;
         let events = prog[instance.sig]
             .event_binding(inv.abstract_vars.iter().map(|c| c.inner().clone()))
             .into_iter()
-            .map(|b| b.1)
+            .enumerate()
+            .map(|(idx, b)| {
+                if let Some(ev) = abs_vars.get(idx) {
+                    Loc::new(b.1, ev.pos())
+                } else {
+                    Loc::unknown(b.1)
+                }
+            })
             .collect();
         self.add_bound_invoke(
             *inv.name.inner(),
             inst_idx,
             events,
+            inv.abstract_vars.len(),
             inv.name.pos(),
         )
     }
@@ -143,12 +152,17 @@ impl BoundComponent {
         &mut self,
         name: Id,
         instance: InstIdx,
-        events: Vec<Time>,
+        events: Vec<Loc<Time>>,
+        default_start: usize,
         pos: GPosIdx,
     ) -> InvIdx {
         let idx = InvIdx::new(self.invocations.len());
-        self.invocations
-            .push(BoundInvoke::new(instance, events, pos));
+        self.invocations.push(BoundInvoke::new(
+            instance,
+            events,
+            default_start,
+            pos,
+        ));
         self.inv_map.insert(name, idx);
         idx
     }
@@ -244,6 +258,7 @@ impl BoundComponent {
                                 *inv.name.inner(),
                                 InstIdx::UNKNOWN,
                                 vec![],
+                                0,
                                 inv.name.pos(),
                             );
                         } else {
@@ -263,6 +278,7 @@ impl BoundComponent {
                             *inv.name.inner(),
                             InstIdx::UNKNOWN,
                             vec![],
+                            0,
                             inv.name.pos(),
                         );
                     }

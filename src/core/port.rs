@@ -78,8 +78,8 @@ impl From<InterfaceDef> for PortDef {
         let end = start.clone().increment(1.into());
         PortDef::new(
             id.name,
-            Range::new(start, end).into(),
-            Expr::from(1).into(),
+            Loc::unknown(Range::new(start, end)),
+            Loc::unknown(Expr::from(1)),
         )
     }
 }

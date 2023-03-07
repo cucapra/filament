@@ -5,7 +5,7 @@ use itertools::Itertools;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct Error {
-    pub kind: Box<ErrorKind>,
+    pub kind: String,
     pub notes: Vec<InfoIdx>,
 }
 
@@ -32,103 +32,65 @@ impl Error {
 
     pub fn parse_error(err: pest_consume::Error<frontend::Rule>) -> Self {
         Self {
-            kind: Box::new(ErrorKind::ParseError(Box::new(err))),
+            kind: format!("error while parsing: {}", err),
             notes: vec![],
         }
     }
 
     pub fn invalid_file(f: String) -> Self {
         Self {
-            kind: Box::new(ErrorKind::InvalidFile(f)),
+            kind: format!("invalid file: {}", f),
             notes: vec![],
         }
     }
 
     pub fn write_error(e: String) -> Self {
         Self {
-            kind: Box::new(ErrorKind::WriteError(e)),
+            kind: format!("failed to write output: {}", e),
             notes: vec![],
         }
     }
 
     pub fn malformed<S: ToString>(msg: S) -> Self {
         Self {
-            kind: Box::new(ErrorKind::Malformed(msg.to_string())),
+            kind: format!("{}", msg.to_string()),
             notes: vec![],
         }
     }
 
     pub fn undefined<S: ToString>(name: Id, kind: S) -> Self {
         Self {
-            kind: Box::new(ErrorKind::Undefined(name, kind.to_string())),
+            kind: format!(
+                "undefined {kind} name: {name}",
+                kind = kind.to_string()
+            ),
             notes: vec![],
         }
     }
 
     pub fn already_bound<S: ToString>(name: Id, kind: S) -> Self {
         Self {
-            kind: Box::new(ErrorKind::AlreadyBound(name, kind.to_string())),
+            kind: format!(
+                "name `{name}' already bound by {}",
+                kind.to_string()
+            ),
             notes: vec![],
         }
     }
 
     pub fn misc(msg: String) -> Self {
         Self {
-            kind: Box::new(ErrorKind::Misc(msg)),
+            kind: format!("{msg}"),
             notes: vec![],
         }
     }
 }
 
-#[derive(PartialEq, Eq, Hash)]
-/// Standard error type
-pub enum ErrorKind {
-    /// Error while parsing a program.
-    ParseError(Box<pest_consume::Error<frontend::Rule>>),
-    /// The input file is invalid (does not exist).
-    InvalidFile(String),
-    /// Failed to write the output
-    WriteError(String),
-
-    /// The program is malformed
-    Malformed(String),
-
-    /// The name has not been bound
-    Undefined(Id, String),
-    /// The name has already been bound.
-    AlreadyBound(Id, String),
-
-    /// A miscellaneous error. Should be replaced with a more precise error.
-    #[allow(unused)]
-    Misc(String),
-}
-
 /// Convience wrapper to represent success or meaningul compiler error.
 pub type FilamentResult<T> = std::result::Result<T, Error>;
 
-/// A span of the input program.
-impl std::fmt::Display for ErrorKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        use ErrorKind::*;
-        match self {
-            AlreadyBound(name, bound_by) => {
-                write!(f, "name `{}' is already bound by {}", name, bound_by)
-            }
-            Undefined(name, typ) => {
-                write!(f, "undefined {} name: {}", typ, name)
-            }
-            ParseError(err) => write!(f, "Filament Parser: {}", err),
-            InvalidFile(msg) | Misc(msg) | WriteError(msg) => {
-                write!(f, "{}", msg)
-            }
-            Malformed(msg) => write!(f, "{msg}"),
-        }
-    }
-}
-
 // Conversions from other error types to our error type so that
 // we can use `?` in all the places.
-
 impl From<std::str::Utf8Error> for Error {
     fn from(err: std::str::Utf8Error) -> Self {
         Error::invalid_file(err.to_string())

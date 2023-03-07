@@ -336,7 +336,10 @@ impl Fsm {
 
     /// Return the port associated with the given state
     pub fn port(&self, state: u64) -> Port {
-        Port::comp(self.name.into(), Id::from(format!("_{}", state)).into())
+        Port::comp(
+            Loc::unknown(self.name),
+            Loc::unknown(Id::from(format!("_{}", state))),
+        )
     }
 }
 
@@ -451,7 +454,7 @@ impl Bundle {
         bind.insert(self.typ.idx, idx);
         let liveness = self.typ.liveness.clone();
         PortDef::new(
-            Id::from("__FAKE_NAME_SHOULD_NOT_BE_USED").into(),
+            Loc::unknown(Id::from("__FAKE_NAME_SHOULD_NOT_BE_USED")),
             liveness.map(|r| r.resolve_exprs(&bind)),
             self.typ.bitwidth.clone(),
         )

@@ -83,11 +83,7 @@ impl Range {
     pub fn as_offset(&self) -> Option<(Id, Expr, Expr)> {
         let Range { start, end, .. } = &self;
         if start.event == end.event {
-            Some((
-                start.event,
-                start.offset.clone(),
-                end.offset().clone(),
-            ))
+            Some((start.event, start.offset.clone(), end.offset().clone()))
         } else {
             None
         }

@@ -144,7 +144,7 @@ impl Signature {
             .or_else(|| {
                 self.interface_signals.iter().find_map(|id| {
                     if *id.name.inner() == *port {
-                        Some(PortDef::from(id.clone()).into())
+                        Some(Loc::unknown(PortDef::from(id.clone())))
                     } else {
                         None
                     }

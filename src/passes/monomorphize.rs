@@ -32,12 +32,12 @@ impl Rewriter {
         match port.typ {
             core::PortType::InvPort { invoke, name } => {
                 core::PortType::InvPort {
-                    invoke: self.binding[&invoke].into(),
+                    invoke: Loc::unknown(self.binding[invoke.inner()]),
                     name,
                 }
             }
             core::PortType::Bundle { name, idx } => core::PortType::Bundle {
-                name: self.binding[&name].into(),
+                name: Loc::unknown(self.binding[name.inner()]),
                 idx,
             },
             t => t,
@@ -85,8 +85,8 @@ impl Rewriter {
                         });
 
                     core::Invoke::new(
-                        name.into(),
-                        instance.into(),
+                        Loc::unknown(name),
+                        Loc::unknown(instance),
                         abstract_vars,
                         ports,
                     )
@@ -98,7 +98,7 @@ impl Rewriter {
                     component,
                     ..
                 }) => core::Instance::new(
-                    self.binding[&name].into(),
+                    Loc::unknown(self.binding[name.inner()]),
                     component,
                     bindings,
                 )
@@ -119,8 +119,12 @@ impl Rewriter {
                 }
                 core::Command::Bundle(core::Bundle {
                     name, len, typ, ..
-                }) => core::Bundle::new(self.binding[&name].into(), len, typ)
-                    .into(),
+                }) => core::Bundle::new(
+                    Loc::unknown(self.binding[name.inner()]),
+                    len,
+                    typ,
+                )
+                .into(),
                 core::Command::ForLoop(_) => unreachable!(),
                 core::Command::Fsm(_) => unreachable!(),
             };
@@ -272,7 +276,7 @@ impl Monomorphize {
 
     fn sig(sig: &core::Signature, binding: Vec<core::Expr>) -> core::Signature {
         // XXX: Short-circuit if binding is empty
-        let name = Self::generate_mono_name(&sig.name, &binding).into();
+        let name = Loc::unknown(Self::generate_mono_name(&sig.name, &binding));
         let mut nsig = sig.clone().resolve_exprs(binding);
         nsig.name = name;
         nsig.params = vec![];
@@ -370,11 +374,10 @@ impl Monomorphize {
                         n_cmds.push(
                             core::Instance::new(
                                 name,
-                                Self::generate_mono_name(
+                                Loc::unknown(Self::generate_mono_name(
                                     &component,
                                     resolved.iter().map(|p| p.inner()),
-                                )
-                                .into(),
+                                )),
                                 vec![],
                             )
                             .into(),

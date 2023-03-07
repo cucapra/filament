@@ -110,24 +110,31 @@ impl IntervalCheck {
         }
 
         // Check that all invokes use the same event binding
-        let (_, first_bind) = &invoke_bindings[0];
-        for (_, binds) in &invoke_bindings[1..] {
+        let (inv1, first_bind) = &invoke_bindings[0];
+        for (inv2, binds) in &invoke_bindings[1..] {
             for event in 0..first_bind.len() {
-                let e1 = first_bind[event].0.event();
-                let e2 = binds[event].0.event();
+                if inv1.is_inferred(ctx, event) && inv2.is_inferred(ctx, event)
+                {
+                    continue;
+                }
+
+                let ev1 = &first_bind[event].0;
+                let e1 = ev1.event();
+                let ev2 = &binds[event].0;
+                let e2 = ev2.event();
                 // If the events are not syntactically equal, add constraint requiring that the events are the same
                 if e1 != e2 {
                     let con = Constraint::base(OrderConstraint::eq(
                         e1.into(),
                         e2.into(),
                     ))
-                    .obligation("shared resources must use the same event")
-                    .add_note(self.diag.add_message(format!("invocation uses event {e1}")))
-                    .add_note(self.diag.add_message(format!("invocation uses event {e2}")))
-                    .add_note(self.diag.add_message(
+                    .obligation(
                         format!(
-                            "invocations of instance use multiple events in invocations: {e1} and {e2}. Sharing using multiple events is not supported."
-                    )));
+                            "invocations of instance use multiple events in invocations: {e1} and {e2}",
+                        )
+                    )
+                    .add_note(self.diag.add_info(format!("invocation uses event {e1}"), ev1.pos()))
+                    .add_note(self.diag.add_info(format!("invocation uses event {e2}"), ev2.pos()));
                     self.add_obligations(iter::once(con));
                 }
             }
@@ -151,11 +158,15 @@ impl IntervalCheck {
                 // Add the event binding to the share constraint
                 let (inv_i, binds) = &invoke_bindings[i];
                 let (start_i, delay) = &binds[event];
-                share.add_bind_info(
-                    start_i.clone(),
-                    (start_i.inner().clone(), delay.inner().clone()),
-                    &mut self.diag,
-                );
+
+                // If this is not an inferred binding, add it to the share constraint
+                if !inv_i.is_inferred(ctx, event) {
+                    share.add_bind_info(
+                        start_i.clone(),
+                        (start_i.inner().clone(), delay.inner().clone()),
+                        &mut self.diag,
+                    );
+                }
 
                 // All other bindings must be separated by at least the delay of this binding
                 // XXX: There probably a more efficient encoding where we ensure that the
@@ -168,10 +179,17 @@ impl IntervalCheck {
                     if i == k {
                         continue;
                     }
+                    // If both the events are inferred, don't generate constraints
+                    if inv_i.is_inferred(ctx, event)
+                        && inv_k.is_inferred(ctx, event)
+                    {
+                        continue;
+                    }
 
                     let diff =
                         start_i.inner().clone() - start_k.inner().clone();
 
+                    let bind_pos = event_binds[event].delay.pos();
                     let con = core::Constraint::sub(
                         core::OrderConstraint::gte(
                             diff.clone(),
@@ -181,7 +199,7 @@ impl IntervalCheck {
                     .obligation("instance must be shared with sufficient delay")
                     .add_note(self.diag.add_info(
                         format!("delay requires {} cycle between event but reuse may occur after {} cycles", delay.clone(), diff),
-                        event_binds[event].delay.pos(),
+                        bind_pos
                     ))
                     .add_note(self.diag.add_info(
                         format!("invocation starts at `{start_k}'"),
@@ -204,7 +222,9 @@ impl IntervalCheck {
             // In other words, the delay of the events trigger the shared instance
             // should be greater that the range occupied by the invocations of the
             // instance.
-            share_constraints.push(share);
+            if !share.is_empty() {
+                share_constraints.push(share);
+            }
         }
 
         share_constraints

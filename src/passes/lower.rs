@@ -1,5 +1,5 @@
 use crate::binding::CompBinding;
-use crate::core::{self, Id};
+use crate::core::{self, Id, Loc};
 use crate::errors::FilamentResult;
 use crate::visitor;
 use itertools::Itertools;
@@ -101,7 +101,7 @@ impl visitor::Transform for Lower {
         if let core::PortType::Bundle { name, idx } = &con.dst.typ {
             let idx = u64::try_from(idx.inner()).unwrap() as usize;
             debug_assert!(
-                self.bundle_writes[name][idx].is_none(),
+                self.bundle_writes[name.inner()][idx].is_none(),
                 "multiple writes to {name}{{{idx}}}"
             );
             let writes = self.bundle_writes.get_mut(name).unwrap();
@@ -109,7 +109,8 @@ impl visitor::Transform for Lower {
             // Remove assignment to bundle port
             Ok(vec![])
         } else {
-            let con = core::Connect::new(con.dst, src.into(), con.guard);
+            let con =
+                core::Connect::new(con.dst, core::Loc::unknown(src), con.guard);
             Ok(vec![con.into()])
         }
     }
@@ -153,9 +154,11 @@ impl visitor::Transform for Lower {
                 let start_time = u64::try_from(t.offset()).unwrap();
                 let port = self.get_fsm(&t.event()).port(start_time);
                 let con = core::Connect::new(
-                    core::Port::comp(bind.clone(), interface.name.clone())
-                        .into(),
-                    port.into(),
+                    Loc::unknown(core::Port::comp(
+                        bind.clone(),
+                        interface.name.clone(),
+                    )),
+                    Loc::unknown(port),
                     None,
                 );
                 connects.push(con.into())
@@ -166,8 +169,11 @@ impl visitor::Transform for Lower {
                 let guard = self.range_to_guard(&formal.liveness);
                 let port = self.port(src.inner());
                 let con = core::Connect::new(
-                    core::Port::comp(bind.clone(), formal.name.clone()).into(),
-                    port.into(),
+                    Loc::unknown(core::Port::comp(
+                        bind.clone(),
+                        formal.name.clone(),
+                    )),
+                    Loc::unknown(port),
                     guard,
                 );
                 connects.push(con.into());

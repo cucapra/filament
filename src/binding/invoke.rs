@@ -1,5 +1,5 @@
 use super::{CompBinding, InstIdx, SigIdx};
-use crate::core::{self, Id, Time, TimeSub};
+use crate::core::{self, Id, Loc, Time, TimeSub};
 use crate::idx;
 use crate::utils::{self, GPosIdx};
 use itertools::Itertools;
@@ -13,6 +13,11 @@ impl InvIdx {
         ctx[*self].pos
     }
 
+    /// Returns true iff the event at idx is inferred
+    pub fn is_inferred(&self, ctx: &CompBinding, idx: usize) -> bool {
+        idx >= ctx[*self].default_start
+    }
+
     /// Get resolved event bindings for the invocation
     pub fn resolved_event_binding(&self, ctx: &CompBinding) -> Vec<Time> {
         let inv = &ctx[*self];
@@ -23,7 +28,7 @@ impl InvIdx {
 
         inv.events
             .iter()
-            .map(|e| e.clone().resolve_expr(&param_b))
+            .map(|e| e.clone().take().resolve_expr(&param_b))
             .collect()
     }
 
@@ -40,7 +45,8 @@ impl InvIdx {
         let inv = &ctx[*self];
         let inst_idx = inv.instance;
         let inst = &ctx[inst_idx];
-        let event_b = ctx.prog[inst.sig].event_binding(inv.events.clone());
+        let event_b = ctx.prog[inst.sig]
+            .event_binding(inv.events.clone().into_iter().map(|e| e.take()));
         inst_idx
             .param_resolved_signature(ctx)
             .resolve_event(&event_b)
@@ -71,7 +77,7 @@ impl InvIdx {
         sig.events
             .iter()
             .zip(&inv.events)
-            .map(|(ev, bind)| (bind.clone().into(), ev.delay.clone()))
+            .map(|(ev, bind)| (bind.clone(), ev.delay.clone()))
             .collect_vec()
     }
 
@@ -96,13 +102,20 @@ impl InvIdx {
         let param_b = ctx.prog[inst.sig].param_binding(
             inst.params.clone().into_iter().map(|p| p.take()).collect(),
         );
-        let event_b = ctx.prog[inst.sig].event_binding(inv.events.clone());
+        let event_b = ctx.prog[inst.sig]
+            .event_binding(inv.events.clone().into_iter().map(|e| e.take()));
         let sig = &ctx.prog[inst.sig];
         let port = sig.get_port(port);
         core::PortDef::new(
             port.name.clone(),
-            resolve_range(&port.liveness, &event_b, &param_b).into(),
-            port.bitwidth.inner().clone().resolve(&param_b).into(),
+            Loc::new(
+                resolve_range(&port.liveness, &event_b, &param_b),
+                port.liveness.pos(),
+            ),
+            Loc::new(
+                port.bitwidth.inner().clone().resolve(&param_b),
+                port.bitwidth.pos(),
+            ),
         )
     }
 
@@ -120,7 +133,8 @@ impl InvIdx {
         let param_b = &ctx.prog[sig_idx].param_binding(
             inst.params.clone().into_iter().map(|p| p.take()).collect(),
         );
-        let event_b = &ctx.prog[sig_idx].event_binding(inv.events.clone());
+        let event_b = &ctx.prog[sig_idx]
+            .event_binding(inv.events.clone().into_iter().map(|e| e.take()));
         let sig = &ctx.prog[sig_idx];
         sig.constraints
             .iter()
@@ -136,15 +150,23 @@ pub struct BoundInvoke {
     /// The instance being invoked
     pub instance: InstIdx,
     /// Event binding for this invocation
-    pub events: Vec<Time>,
+    pub events: Vec<Loc<Time>>,
+    /// Start index for inferred defaults
+    pub default_start: usize,
     /// Position associated with this invocation
     pub(super) pos: GPosIdx,
 }
 
 impl BoundInvoke {
-    pub fn new(instance: InstIdx, events: Vec<Time>, pos: GPosIdx) -> Self {
+    pub fn new(
+        instance: InstIdx,
+        events: Vec<Loc<Time>>,
+        default_start: usize,
+        pos: GPosIdx,
+    ) -> Self {
         Self {
             instance,
+            default_start,
             events,
             pos,
         }

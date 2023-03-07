@@ -1,10 +1,9 @@
+use super::Obligation;
 use crate::core::{self, Time, TimeSub};
 use crate::diagnostics::{self, Diagnostics, InfoIdx};
 use crate::errors::{Error, FilamentResult};
 use itertools::Itertools;
 use rsmt2::{SmtConf, Solver};
-
-use super::Obligation;
 
 #[derive(Clone)]
 /// Represents the sum of a time and a time sub
@@ -63,6 +62,10 @@ impl From<core::Loc<core::EventBind>> for ShareConstraint {
 }
 
 impl ShareConstraint {
+    pub fn is_empty(&self) -> bool {
+        self.starts.is_empty() && self.ends.is_empty()
+    }
+
     pub fn add_bind_info(
         &mut self,
         start: core::Loc<Time>,
@@ -70,9 +73,8 @@ impl ShareConstraint {
         diag: &mut Diagnostics,
     ) {
         let td = TimeDelSum::from(end);
-        // let pos = start.event.copy_span();
         let info = diag.add_info(
-            format!("invocation starts at `{start}' and ends at `{td}'"),
+            format!("event use starts at `{start}' and ends at `{td}'"),
             start.pos(),
         );
         self.starts.push((start.take(), info));
