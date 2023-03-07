@@ -31,7 +31,8 @@ cmd = """
 [[tests]]
 name = "run examples"
 paths = [
-  "examples/tut-seq.fil"
+  "examples/tut-seq.fil",
+  "examples/tut-pipe.fil"
 ]
 expect_dir = "examples/run/"
 cmd = """

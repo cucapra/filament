@@ -116,6 +116,8 @@ Sadly, Filament is still angry at us:
 
 The problem is that we accept the `op` input and produce the output `out` in the interval [G, G+1). However, we know that it is not possible to produce the output as soon as we get the input because the multiplier takes two cycles to produce its output!
 
+## A Correct Implementation
+
 The fix is easy: we change the signature of the ALU to reflect this cruel reality
 ```
 {{#include ../../examples/tut-seq.fil}}

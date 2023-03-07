@@ -25,7 +25,7 @@ This means, that the above data file will run the design with four inputs and ca
 ## Running Designs
 
 Running the design is straightforward, assuming you've [configured `fud`][fud-setup] already:
-```
+```sh
 fud e --to cocotb-out examples/tut-seq.fil \
       -s cocotb.data examples/data.json \
       -s futil.flags ' -d canonicalize'
@@ -38,7 +38,7 @@ The output captures the values on the `out` port of the ALU for each transaction
 ```
 
 In general, the command to run designs is:
-```
+```sh
 fud e --to cocotb-out <filament-file> \
       -s cocotb.data <data-file> \
       -s futil.flags ' -d canonicalize'
@@ -62,7 +62,7 @@ For example, if the main event has a delay of `2`, then the next transaction wil
 
 However, it can be useful to change the scheduling behavior to check if there are pipelining bugs.
 Our `fud`-based harness provides a way to randomize the timing of transactions by adding a random delay:
-```
+```sh
 fud e --to cocotb-out examples/tut-seq.fil \
       -s cocotb.data examples/data.json \
       -s cocotb.randomize 10 \
