@@ -1,4 +1,5 @@
 extern "state.sv" {
+  /// ANCHOR: register
   // A register that can extend the lifetime of a signal to any required length.
   comp Register[#WIDTH]<G: L-(G+1), L: 1>(
     clk: 1,
@@ -8,6 +9,7 @@ extern "state.sv" {
   ) -> (
     @[G+1, L] out: #WIDTH,
   ) where L > G+1;
+  /// ANCHOR_END: register
 
   // A comp that delays `in` by one cycle. Exactly the same as a register
   // but does not require comp to provide `go` signal. If the comp

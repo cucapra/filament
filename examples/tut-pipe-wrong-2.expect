@@ -1,0 +1,31 @@
+---CODE---
+1
+---STDERR---
+error: Cannot prove constraint 1 >= 2
+   ┌─ ./primitives/./state.fil:4:25
+   │
+ 4 │   comp Register[#WIDTH]<G: L-(G+1), L: 1>(
+   │                         ^^^^^^^^^^ provided event may trigger every 2 cycles
+   │
+   ┌─ examples/tut-pipe-wrong-2.fil:4:11
+   │
+ 4 │ comp main<G: 1>(
+   │           ---- interface requires event to trigger once in 1 cycles
+   ·
+16 │     r0 := new Register[32]<G, G+3>(a0.out);
+   │     --------------------------------------- event provided to invoke triggers too often
+   │
+
+error: Cannot prove constraint G+2 >= G+3
+    ┌─ examples/tut-pipe-wrong-2.fil:18:40
+    │
+ 18 │     mx := new Mux[32]<G+2>(op, r0.out, m0.out);
+    │                                        ^^^^^^ source is available for @[G+3, G+4]
+    │
+    ┌─ ./primitives/core.fil:152:13
+    │
+152 │     @[G, L] in1: #WIDTH,
+    │             --- destination's requirement @[G+2, G+3]
+    │
+
+Compilation failed with 2 errors.

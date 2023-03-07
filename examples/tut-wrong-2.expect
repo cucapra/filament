@@ -1,0 +1,25 @@
+---CODE---
+1
+---STDERR---
+error: Cannot prove constraint G+1 >= G+3
+    ┌─ examples/tut-wrong-2.fil:19:28
+    │
+ 19 │     mx := new Mux[32]<G+2>(op, r0.out, m0.out);
+    │                            ^^ source is available for @[G, G+1]
+    │
+    ┌─ ./primitives/core.fil:150:13
+    │
+150 │     @[G, L] sel: 1,
+    │             --- destination's requirement @[G+2, G+3]
+    │
+
+error: Cannot prove constraint G >= G+2
+   ┌─ examples/tut-wrong-2.fil:20:11
+   │
+20 │     out = mx.out;
+   │     ---   ^^^^^^ source is available for @[G+2, G+3]
+   │     │      
+   │     destination's requirement @[G, G+1]
+   │
+
+Compilation failed with 2 errors.
