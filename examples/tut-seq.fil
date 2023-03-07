@@ -1,7 +1,7 @@
 import "primitives/core.fil";
 import "primitives/sequential.fil";
 
-comp ALU<G: 3>(
+comp main<G: 3>(
     @interface[G] go: 1,
     @[G, G+3] op: 1,
     @[G, G+1] left: 32,

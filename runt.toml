@@ -28,6 +28,16 @@ cmd = """
 ./target/debug/filament {} --check
 """
 
+[[tests]]
+name = "run examples"
+paths = [
+  "examples/tut-seq.fil"
+]
+expect_dir = "examples/run/"
+cmd = """
+fud e -s cocotb.data examples/data.json --to cocotb-out {} -s futil.flags ' -d canonicalize' -q
+"""
+
 # Compile directories within the tests/compile directory. All *.fil files in the
 # use the same input and must produce the same output
 [[tests]]
