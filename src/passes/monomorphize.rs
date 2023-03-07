@@ -1,5 +1,5 @@
 use crate::{
-    core,
+    core::{self, Loc},
     utils::{Binding, Traversal},
 };
 use itertools::Itertools;
@@ -165,7 +165,7 @@ impl InstanceParams {
         &mut self,
         parent: &core::Id,
         comp: &core::Id,
-        params: &[core::Expr],
+        params: &[Loc<core::Expr>],
     ) {
         // All possible values for each parameter computed by resolving each parameter that occurs in the binding
         let all_binds = params
@@ -173,7 +173,7 @@ impl InstanceParams {
             .map(|p| {
                 let abs = p.exprs().collect_vec();
                 match abs.len() {
-                    0 => vec![u64::try_from(p).unwrap()],
+                    0 => vec![u64::try_from(p.inner()).unwrap()],
                     1 => self.param_values(parent, abs[0]).collect(),
                     n => unreachable!("Cannot have more than one abstract parameter in a binding: {n}")
                 }
@@ -270,10 +270,11 @@ impl Monomorphize {
         name.into()
     }
 
-    fn sig(sig: &core::Signature, binding: &[core::Expr]) -> core::Signature {
+    fn sig(sig: &core::Signature, binding: Vec<core::Expr>) -> core::Signature {
         // XXX: Short-circuit if binding is empty
+        let name = Self::generate_mono_name(&sig.name, &binding).into();
         let mut nsig = sig.clone().resolve_exprs(binding);
-        nsig.name = Self::generate_mono_name(&sig.name, binding).into();
+        nsig.name = name;
         nsig.params = vec![];
         nsig
     }
@@ -356,7 +357,7 @@ impl Monomorphize {
 
                     let resolved = bindings
                         .into_iter()
-                        .map(|p| p.resolve(param_binding))
+                        .map(|p| p.map(|p| p.resolve(param_binding)))
                         .collect();
 
                     if externals.contains(&component) {
@@ -369,8 +370,11 @@ impl Monomorphize {
                         n_cmds.push(
                             core::Instance::new(
                                 name,
-                                Self::generate_mono_name(&component, &resolved)
-                                    .into(),
+                                Self::generate_mono_name(
+                                    &component,
+                                    resolved.iter().map(|p| p.inner()),
+                                )
+                                .into(),
                                 vec![],
                             )
                             .into(),
@@ -429,8 +433,7 @@ impl Monomorphize {
         binding: &Binding<core::Expr>,
         externals: &HashSet<core::Id>,
     ) -> core::Component {
-        let sig =
-            Self::sig(&comp.sig, &binding.values().cloned().collect_vec());
+        let sig = Self::sig(&comp.sig, binding.values().cloned().collect_vec());
         let body = Self::commands(
             comp.body.iter().cloned(),
             binding,

@@ -85,7 +85,7 @@ impl Context<'_> {
                     let c = cr.borrow();
                     (c.get("out"), Some(fsm.event(name)))
                 } else {
-                    let cell = self.invokes[comp].borrow();
+                    let cell = self.invokes[comp.inner()].borrow();
                     (cell.get(name.as_ref()), None)
                 }
             }
@@ -146,7 +146,7 @@ fn compile_guard(guard: core::Guard, ctx: &mut Context) -> ir::Guard {
                 if let Some(fsm) = ctx.fsms.get(comp) {
                     fsm.event(name)
                 } else {
-                    let cell = ctx.invokes[comp].borrow();
+                    let cell = ctx.invokes[comp.inner()].borrow();
                     cell.get(name.as_ref()).into()
                 }
             }
@@ -403,7 +403,7 @@ fn compile_component(
                 } else {
                     let conc_bind = bindings
                         .into_iter()
-                        .map(|v| (&v).try_into().unwrap())
+                        .map(|v| v.inner().try_into().unwrap())
                         .collect_vec();
                     ctx.builder.add_primitive(
                         name.as_ref(),

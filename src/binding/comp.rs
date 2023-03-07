@@ -107,7 +107,7 @@ impl BoundComponent {
         &mut self,
         name: Id,
         sig: SigIdx,
-        params: Vec<core::Expr>,
+        params: Vec<core::Loc<core::Expr>>,
         pos: GPosIdx,
     ) -> InstIdx {
         let idx = InstIdx::new(self.instances.len());

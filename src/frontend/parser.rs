@@ -326,17 +326,17 @@ impl FilamentParser {
     }
 
     // ================ Cells =====================
-    fn conc_params(input: Node) -> ParseResult<Vec<core::Expr>> {
+    fn conc_params(input: Node) -> ParseResult<Vec<Loc<core::Expr>>> {
         Ok(match_nodes!(
             input.into_children();
-            [expr(vars)..] => vars.map(|v| v.take()).collect(),
+            [expr(vars)..] => vars.collect(),
         ))
     }
     fn instance(input: Node) -> ParseResult<Vec<core::Command>> {
         Ok(match_nodes!(
             input.clone().into_children();
             [identifier(name), identifier(component), conc_params(params)] => vec![
-                core::Instance::new(name, component, params.into_iter().map(core::Expr::from).collect()).into()
+                core::Instance::new(name, component, params).into()
             ],
             [identifier(name), identifier(component), conc_params(params), invoke_args((abstract_vars, ports))] => {
                 // Upper case the first letter of name
@@ -346,7 +346,6 @@ impl FilamentParser {
                 if iname == name {
                     input.error("Generated Instance name conflicts with original name");
                 }
-                let params = params.into_iter().map(core::Expr::from).collect();
                 let instance = core::Instance::new(iname.clone(), component, params).into();
                 let invoke = core::Invoke::new(name, iname, abstract_vars, Some(ports)).into();
                 vec![instance, invoke]

@@ -17,7 +17,9 @@ impl InvIdx {
     pub fn resolved_event_binding(&self, ctx: &CompBinding) -> Vec<Time> {
         let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
-        let param_b = ctx.prog[inst.sig].param_binding(&inst.params);
+        let param_b = ctx.prog[inst.sig].param_binding(
+            inst.params.clone().into_iter().map(|p| p.take()).collect(),
+        );
 
         inv.events
             .iter()
@@ -91,7 +93,9 @@ impl InvIdx {
     {
         let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
-        let param_b = ctx.prog[inst.sig].param_binding(&inst.params);
+        let param_b = ctx.prog[inst.sig].param_binding(
+            inst.params.clone().into_iter().map(|p| p.take()).collect(),
+        );
         let event_b = ctx.prog[inst.sig].event_binding(inv.events.clone());
         let sig = &ctx.prog[inst.sig];
         let port = sig.get_port(port);
@@ -113,7 +117,9 @@ impl InvIdx {
         let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
         let sig_idx = inst.sig;
-        let param_b = &ctx.prog[sig_idx].param_binding(&inst.params);
+        let param_b = &ctx.prog[sig_idx].param_binding(
+            inst.params.clone().into_iter().map(|p| p.take()).collect(),
+        );
         let event_b = &ctx.prog[sig_idx].event_binding(inv.events.clone());
         let sig = &ctx.prog[sig_idx];
         sig.constraints

@@ -156,10 +156,14 @@ pub struct Instance {
     /// Name of the component
     pub component: Loc<Id>,
     /// Bindings provided for this instance
-    pub bindings: Vec<Expr>,
+    pub bindings: Vec<Loc<Expr>>,
 }
 impl Instance {
-    pub fn new(name: Loc<Id>, component: Loc<Id>, bindings: Vec<Expr>) -> Self {
+    pub fn new(
+        name: Loc<Id>,
+        component: Loc<Id>,
+        bindings: Vec<Loc<Expr>>,
+    ) -> Self {
         Instance {
             name,
             component,

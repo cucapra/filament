@@ -241,7 +241,7 @@ impl Signature {
     }
 
     /// Construct a parameter binding from this Signature's parameters and the
-    pub fn param_binding(&self, args: &[Expr]) -> Binding<Expr> {
+    pub fn param_binding(&self, args: Vec<Expr>) -> Binding<Expr> {
         debug_assert!(
             self.params.len() == args.len(),
             "Insuffient params for component `{}', required {} got {}",
@@ -250,7 +250,7 @@ impl Signature {
             args.len(),
         );
 
-        Binding::new(self.params.iter().cloned().zip(args.iter().cloned()))
+        Binding::new(self.params.iter().cloned().zip(args.into_iter()))
     }
 }
 
@@ -317,7 +317,7 @@ impl Signature {
         cons
     }
 
-    pub fn resolve_exprs(self, args: &[Expr]) -> Signature {
+    pub fn resolve_exprs(self, args: Vec<Expr>) -> Signature {
         let binding: Binding<Expr> = self.param_binding(args);
 
         Signature {
