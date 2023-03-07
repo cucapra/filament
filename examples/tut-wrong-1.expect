@@ -2,9 +2,9 @@
 1
 ---STDERR---
 error: Cannot prove constraint G >= G+2
-    ┌─ examples/tut-wrong-1.fil:15:38
+    ┌─ examples/tut-wrong-1.fil:17:38
     │
- 15 │     mx := new Mux[32]<G>(op, a0.out, m0.out);
+ 17 │     mx := new Mux[32]<G>(op, a0.out, m0.out);
     │                                      ^^^^^^ source is available for @[G+2, G+3]
     │
     ┌─ ./primitives/core.fil:152:13
