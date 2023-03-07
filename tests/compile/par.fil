@@ -1,7 +1,7 @@
 import "primitives/core.fil";
 import "primitives/sequential.fil";
 
-comp FastMult<G: 1>(
+comp Mult2<G: 1>(
   @interface[G] go_G: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,
@@ -27,7 +27,7 @@ comp main<G: 2>(
 
   la := new Register[32]<G, G+2>(a);
   lb := new Register[32]<G, G+2>(b);
-  fm0 := new FastMult<G+1>(la.out, lb.out);
+  fm0 := new Mult2<G+1>(la.out, lb.out);
 
   a0 := new Add[32]<G+2>(sm0.out, fm0.out);
   out = a0.out;
