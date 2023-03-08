@@ -1,44 +1,47 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint 1 >= 2
-   ┌─ ./primitives/./state.fil:4:25
-   │
- 4 │   comp Register[#WIDTH]<G: L-(G+1), L: 1>(
-   │                         ^^^^^^^^^^ provided event may trigger every 2 cycles
-   │
-   ┌─ examples/tut-pipe-wrong-1.fil:5:11
-   │
- 5 │ comp main<G: 1>(
-   │           ---- interface requires event to trigger once in 1 cycles
-   ·
-18 │     r0 := new Register[32]<G, G+3>(a0.out);
-   │     --------------------------------------- event provided to invoke triggers too often
-   │
-
-error: Cannot prove constraint 1 >= 3
+error: delay must be longer than the length of the signal
   ┌─ examples/tut-pipe-wrong-1.fil:8:5
   │
 5 │ comp main<G: 1>(
-  │           ---- interface allows event to trigger every 1 cycle(s)
+  │           - interface allows event to trigger every 1 cycle(s)
   ·
 8 │     @[G, G+3] op: 1,
-  │     ^^^^^^^^^^^^^^^ signal lasts for 3 cycle(s)
+  │     ^^^^^^^^^ signal lasts for 3 cycle(s)
   │
+  = assignment violates constraint: G=0
 
-error: Cannot prove constraint 1 >= 2
-   ┌─ examples/tut-pipe-wrong-1.fil:15:5
+error: event provided to invocation triggers more often that invocation's event's delay allows
+   ┌─ examples/tut-pipe-wrong-1.fil:15:13
    │
  5 │ comp main<G: 1>(
-   │           ---- interface requires event to trigger once in 1 cycles
+   │              - this event triggers every 1 cycles
    ·
 15 │     m0 := M<G>(left, right);
-   │     ^^^^^^^^^^^^^^^^^^^^^^^^ event provided to invoke triggers too often
+   │             ^ event provided to invoke triggers too often
    │
-   ┌─ ./primitives/sequential.fil:3:15
+   ┌─ ./primitives/sequential.fil:3:18
    │
  3 │ comp Mult[#W]<G: 2>(
-   │               ---- provided event may trigger every 2 cycles
+   │                  - invocation's event is allowed to trigger every 2 cycles
    │
+   = assignment violates constraint: G=0
+
+error: event provided to invocation triggers more often that invocation's event's delay allows
+   ┌─ examples/tut-pipe-wrong-1.fil:18:28
+   │
+ 5 │ comp main<G: 1>(
+   │              - this event triggers every 1 cycles
+   ·
+18 │     r0 := new Register[32]<G, G+3>(a0.out);
+   │                            ^ event provided to invoke triggers too often
+   │
+   ┌─ ./primitives/./state.fil:4:28
+   │
+ 4 │   comp Register[#WIDTH]<G: L-(G+1), L: 1>(
+   │                            ------- invocation's event is allowed to trigger every 2 cycles
+   │
+   = assignment violates constraint: G=0
 
 Compilation failed with 3 errors.
