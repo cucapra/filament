@@ -14,10 +14,8 @@ pub struct Traversal {
 impl From<core::Namespace> for Traversal {
     /// Construct a post-order traversal over a namespace.
     fn from(ns: core::Namespace) -> Self {
-        let externs: HashSet<_> = ns
-            .signatures()
-            .map(|(_, sig)| *sig.name.inner())
-            .collect();
+        let externs: HashSet<_> =
+            ns.signatures().map(|(_, sig)| *sig.name.inner()).collect();
 
         let mut ts = TopologicalSort::<usize>::new();
         let rev_map: HashMap<core::Id, usize> = ns
@@ -66,6 +64,14 @@ fn process_cmd(
         }
         core::Command::ForLoop(fl) => {
             for cmd in &fl.body {
+                process_cmd(cmd, externs, rev_map, ts, idx);
+            }
+        }
+        core::Command::If(i) => {
+            for cmd in &i.then {
+                process_cmd(cmd, externs, rev_map, ts, idx);
+            }
+            for cmd in &i.alt {
                 process_cmd(cmd, externs, rev_map, ts, idx);
             }
         }

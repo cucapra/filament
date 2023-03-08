@@ -186,6 +186,10 @@ impl BoundComponent {
                 core::Command::ForLoop(l) => {
                     self.process_cmds(prog, &l.body);
                 }
+                core::Command::If(if_) => {
+                    self.process_cmds(prog, &if_.then);
+                    self.process_cmds(prog, &if_.alt);
+                }
                 core::Command::Connect(_) | core::Command::Fsm(_) => (),
             }
         }
@@ -318,6 +322,10 @@ impl BoundComponent {
                 }
                 core::Command::ForLoop(l) => {
                     self.process_checked_cmds(prog, &l.body, diag);
+                }
+                core::Command::If(i) => {
+                    self.process_checked_cmds(prog, &i.then, diag);
+                    self.process_checked_cmds(prog, &i.alt, diag);
                 }
                 core::Command::Fsm(_) => (),
                 core::Command::Bundle(bl) => {
