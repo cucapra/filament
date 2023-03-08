@@ -8,9 +8,9 @@ error: Cannot prove constraint 10 >= max(G+2, G+11) - min(G, G+9)
    │           ^^^^^ event's delay must be longer than the difference between minimum start time and maximum end time of all invocations
    ·
 13 │   m0 := M<G>(l0, r0);
-   │           - invocation starts at `G' and ends at `G+2'
+   │           - event use starts at `G' and ends at `G+2'
 14 │   m1 := M<G+9>(l1, r1);
-   │           - invocation starts at `G+9' and ends at `G+11'
+   │           --- event use starts at `G+9' and ends at `G+11'
    │
    = assignment violates constraint: G=0
 

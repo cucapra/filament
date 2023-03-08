@@ -71,7 +71,7 @@ impl Error {
     pub fn already_bound<S: ToString>(name: Id, kind: S) -> Self {
         Self {
             kind: format!(
-                "name `{name}' already bound by {}",
+                "name `{name}' is already bound by {}",
                 kind.to_string()
             ),
             notes: vec![],

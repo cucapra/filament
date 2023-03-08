@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint G+1 >= G+2
+error: source port must be available longer than the destination port requires
    ┌─ tests/errors/unsatisfied-requirement.fil:11:16
    │
 11 │   m0 := M<G+1>(left, right);
@@ -12,8 +12,9 @@ error: Cannot prove constraint G+1 >= G+2
 25 │     @[G, L] left: #WIDTH,
    │             ---- destination's requirement @[G+1, G+2]
    │
+   = assignment violates constraint: G=0
 
-error: Cannot prove constraint G+2 >= G+4
+error: source port must be available longer than the destination port requires
    ┌─ tests/errors/unsatisfied-requirement.fil:12:9
    │
 12 │   out = m0.out;
@@ -21,5 +22,6 @@ error: Cannot prove constraint G+2 >= G+4
    │   │      
    │   destination's requirement @[G+3, G+4]
    │
+   = assignment violates constraint: G=0
 
 Compilation failed with 2 errors.

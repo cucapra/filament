@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint 32 = W
+error: source and destination widths must match
    ┌─ tests/errors/param-width.fil:5:16
    │
  5 │     a0 := A<G>(a, a);
@@ -12,9 +12,9 @@ error: Cannot prove constraint 32 = W
 11 │     @[G, L] left: #WIDTH,
    │             ---- destination `left' has width 32
    │
-   = assignment violates constraint: W=0
+   = assignment violates constraint: G=0, W=0
 
-error: Cannot prove constraint 32 = W
+error: source and destination widths must match
    ┌─ tests/errors/param-width.fil:5:19
    │
  5 │     a0 := A<G>(a, a);
@@ -25,6 +25,6 @@ error: Cannot prove constraint 32 = W
 12 │     @[G, L] right: #WIDTH,
    │             ----- destination `right' has width 32
    │
-   = assignment violates constraint: W=0
+   = assignment violates constraint: G=0, W=0
 
 Compilation failed with 2 errors.

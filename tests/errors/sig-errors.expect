@@ -1,0 +1,33 @@
+---CODE---
+1
+---STDERR---
+error: interval's end must occur at least one cycle after its start
+  ┌─ tests/errors/sig-errors.fil:5:9
+  │
+5 │         @[G, L] out: 32,
+  │         ^^^^^^^ cannot prove interval is well-formed
+  │
+  = assignment violates constraint: G=0, L=0
+
+error: delay must be longer than the length of the signal
+  ┌─ tests/errors/sig-errors.fil:3:9
+  │
+2 │     comp Wrong<G: 1, L: 1>(
+  │                - interface allows event to trigger every 1 cycle(s)
+3 │         @[G, G+2] in: 32,
+  │         ^^^^^^^^^ signal lasts for 2 cycle(s)
+  │
+  = assignment violates constraint: G=0, L=0
+
+error: delay must be longer than the length of the signal
+  ┌─ tests/errors/sig-errors.fil:5:9
+  │
+2 │     comp Wrong<G: 1, L: 1>(
+  │                - interface allows event to trigger every 1 cycle(s)
+  ·
+5 │         @[G, L] out: 32,
+  │         ^^^^^^^ signal lasts for |L - G| cycle(s)
+  │
+  = assignment violates constraint: G=0, L=2
+
+Compilation failed with 3 errors.

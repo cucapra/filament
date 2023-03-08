@@ -1,14 +1,15 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint 1 >= 2
+error: delay must be longer than the length of the signal
   ┌─ tests/errors/invalid-interface-input.fil:6:5
   │
 2 │   comp Main<G: 3, L: 1>(
-  │                   ---- interface allows event to trigger every 1 cycle(s)
+  │                   - interface allows event to trigger every 1 cycle(s)
   ·
 6 │     @[L, L+2] in2: 32,
-  │     ^^^^^^^^^^^^^^^^^ signal lasts for 2 cycle(s)
+  │     ^^^^^^^^^ signal lasts for 2 cycle(s)
   │
+  = assignment violates constraint: G=0, L=0
 
 Compilation failed with 1 errors.

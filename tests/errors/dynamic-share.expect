@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint L = G
+error: invocations of instance use multiple events in invocations: L and G
    ┌─ tests/errors/dynamic-share.fil:12:11
    │
 12 │   m1 := M<L>(c, d);
@@ -9,63 +9,37 @@ error: Cannot prove constraint L = G
 13 │   m0 := M<G>(a, b);
    │           - invocation uses event G
    │
-   = invocations of instance use multiple events in invocations: L and G. Sharing using multiple events is not supported.
+   = assignment violates constraint: G=0, L=1
 
-error: Cannot prove constraint |L - G| >= 1
-   ┌─ ./primitives/core.fil:10:20
+error: instance must be shared with sufficient delay
+   ┌─ ./primitives/core.fil:10:23
    │
 10 │   comp Add[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-   │                    ^^^^^^^^ delay requires 1 cycle between event but reuse may occur after |L - G| cycles
+   │                       ^^^^^ delay requires 1 cycle between event but reuse may occur after |L - G| cycles
    │
    ┌─ tests/errors/dynamic-share.fil:12:3
    │
 12 │   m1 := M<L>(c, d);
-   │   ----------------- invocation starts at `L'
+   │   -- invocation starts at `L'
 13 │   m0 := M<G>(a, b);
-   │   ----------------- invocation starts at `G'
+   │   -- invocation starts at `G'
    │
+   = assignment violates constraint: G=0, L=0
 
-error: Cannot prove constraint |G - L| >= 1
-   ┌─ tests/errors/dynamic-share.fil:13:3
-   │
-12 │   m1 := M<L>(c, d);
-   │   ----------------- invocation starts at `L'
-13 │   m0 := M<G>(a, b);
-   │   ^^^^^^^^^^^^^^^^^ invocation starts at `G'
-   │
-   ┌─ ./primitives/core.fil:10:20
+error: instance must be shared with sufficient delay
+   ┌─ ./primitives/core.fil:10:23
    │
 10 │   comp Add[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-   │                    -------- delay requires 1 cycle between event but reuse may occur after |G - L| cycles
-   │
-
-error: Cannot prove constraint |L+1 - G+1| >= 1
-   ┌─ ./primitives/core.fil:10:30
-   │
-10 │   comp Add[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-   │                              ^^^^^^^^^ delay requires 1 cycle between event but reuse may occur after |L+1 - G+1| cycles
+   │                       ^^^^^ delay requires 1 cycle between event but reuse may occur after |G - L| cycles
    │
    ┌─ tests/errors/dynamic-share.fil:12:3
    │
 12 │   m1 := M<L>(c, d);
-   │   ----------------- invocation starts at `L+1'
+   │   -- invocation starts at `L'
 13 │   m0 := M<G>(a, b);
-   │   ----------------- invocation starts at `G+1'
+   │   -- invocation starts at `G'
    │
-
-error: Cannot prove constraint |G+1 - L+1| >= 1
-   ┌─ tests/errors/dynamic-share.fil:13:3
-   │
-12 │   m1 := M<L>(c, d);
-   │   ----------------- invocation starts at `L+1'
-13 │   m0 := M<G>(a, b);
-   │   ^^^^^^^^^^^^^^^^^ invocation starts at `G+1'
-   │
-   ┌─ ./primitives/core.fil:10:30
-   │
-10 │   comp Add[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-   │                              --------- delay requires 1 cycle between event but reuse may occur after |G+1 - L+1| cycles
-   │
+   = assignment violates constraint: G=0, L=0
 
 error: Cannot prove constraint 3 >= max(L+1, G+1) - min(L, G)
    ┌─ tests/errors/dynamic-share.fil:3:25
@@ -74,23 +48,10 @@ error: Cannot prove constraint 3 >= max(L+1, G+1) - min(L, G)
    │                         ^^^^ event's delay must be longer than the difference between minimum start time and maximum end time of all invocations
    ·
 12 │   m1 := M<L>(c, d);
-   │           - invocation starts at `L' and ends at `L+1'
+   │           - event use starts at `L' and ends at `L+1'
 13 │   m0 := M<G>(a, b);
-   │           - invocation starts at `G' and ends at `G+1'
+   │           - event use starts at `G' and ends at `G+1'
    │
    = assignment violates constraint: G=3, L=0
 
-error: Cannot prove constraint 3 >= max(L+2, G+2) - min(L+1, G+1)
-   ┌─ tests/errors/dynamic-share.fil:3:25
-   │
- 3 │ comp Max_mult_add<G: 3, L: 3>(
-   │                         ^^^^ event's delay must be longer than the difference between minimum start time and maximum end time of all invocations
-   ·
-12 │   m1 := M<L>(c, d);
-   │           - invocation starts at `L+1' and ends at `L+2'
-13 │   m0 := M<G>(a, b);
-   │           - invocation starts at `G+1' and ends at `G+2'
-   │
-   = assignment violates constraint: G=3, L=0
-
-Compilation failed with 7 errors.
+Compilation failed with 4 errors.

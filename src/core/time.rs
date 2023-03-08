@@ -106,10 +106,10 @@ impl std::ops::Sub for Time {
 
     fn sub(self, other: Self) -> Self::Output {
         if self.event == other.event {
-            return TimeSub::Unit(self.offset - other.offset);
+            TimeSub::Unit(self.offset - other.offset)
+        } else {
+            TimeSub::Sym { l: self, r: other }
         }
-
-        TimeSub::Sym { l: self, r: other }
     }
 }
 

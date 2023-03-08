@@ -5,7 +5,7 @@ error: name `A' is already bound by instance
   ┌─ tests/errors/already-bound.fil:5:5
   │
 4 │     A := new Add[32];
-  │     ----------------- previous binding
+  │     - previous binding
 5 │     A := new Add[16];
   │     ^ name is already bound
 

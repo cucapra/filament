@@ -1,15 +1,15 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint N > 1
-   ┌─ tests/errors/bundle.fil:10:5
+error: bundle index must be less than bundle length
+   ┌─ tests/errors/bundle.fil:10:7
    │
 10 │     f{1} = input;
-   │     ^^^^ cannot prove within-bounds bundle access: index 1 greater than bundle length #N
+   │       ^ cannot prove within-bounds bundle access: index 1 greater than bundle length #N
    │
-   = assignment violates constraint: N=1
+   = assignment violates constraint: G=0, W=0, N=1, i=0
 
-error: Cannot prove constraint G+1 >= G+2
+error: source port must be available longer than the destination port requires
    ┌─ tests/errors/bundle.fil:10:12
    │
 10 │     f{1} = input;
@@ -17,8 +17,9 @@ error: Cannot prove constraint G+1 >= G+2
    │     │       
    │     destination's requirement @[G+1, G+2]
    │
+   = assignment violates constraint: G=0, W=0, N=1, i=0
 
-error: Cannot prove constraint G+#i >= G+(#i+1)
+error: source port must be available longer than the destination port requires
    ┌─ tests/errors/bundle.fil:13:17
    │
 13 │         f{#i} = d.out;
@@ -26,17 +27,17 @@ error: Cannot prove constraint G+#i >= G+(#i+1)
    │         │        
    │         destination's requirement @[G+#i, G+(#i+1)]
    │
-   = assignment violates constraint: i=0
+   = assignment violates constraint: G=0, W=0, N=1, i=0
 
-error: Cannot prove constraint N > |(#N+1)|
-   ┌─ tests/errors/bundle.fil:15:11
+error: bundle index must be less than bundle length
+   ┌─ tests/errors/bundle.fil:15:13
    │
 15 │     out = f{#N+1};
-   │           ^^^^^^^ cannot prove within-bounds bundle access: index (#N+1) greater than bundle length #N
+   │             ^^^^ cannot prove within-bounds bundle access: index (#N+1) greater than bundle length #N
    │
-   = assignment violates constraint: N=1
+   = assignment violates constraint: G=0, W=0, N=1, i=0
 
-error: Cannot prove constraint G+#N >= G+(#N+1)
+error: source port must be available longer than the destination port requires
    ┌─ tests/errors/bundle.fil:15:11
    │
 15 │     out = f{#N+1};
@@ -44,6 +45,6 @@ error: Cannot prove constraint G+#N >= G+(#N+1)
    │     │      
    │     destination's requirement @[G+#N, G+(#N+1)]
    │
-   = assignment violates constraint: N=1
+   = assignment violates constraint: G=0, W=0, N=1, i=0
 
 Compilation failed with 5 errors.

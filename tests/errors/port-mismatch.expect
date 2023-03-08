@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint 16 = 32
+error: source and destination widths must match
   ┌─ tests/errors/port-mismatch.fil:2:11
   │
 2 │     out = in;
@@ -9,5 +9,6 @@ error: Cannot prove constraint 16 = 32
   │     │      
   │     destination `out' has width 16
   │
+  = assignment violates constraint: G=0
 
 Compilation failed with 1 errors.

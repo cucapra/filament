@@ -115,14 +115,14 @@ impl IntervalCheck {
                 ))
                 .add_note(self.diag.add_info(
                     format!(
-                        "provided event may trigger every {} cycles",
+                        "invocation's event is allowed to trigger every {} cycles",
                         ev_delay,
                     ),
                     ev.delay.pos(),
                 ))
                 .add_note(self.diag.add_info(
                     format!(
-                        "interface requires event to trigger once in {} cycles",
+                        "this event triggers every {} cycles",
                         this_ev_delay,
                     ),
                     this_ev.delay.pos(),
@@ -305,10 +305,12 @@ impl visitor::Checker for IntervalCheck {
             // XXX(rachit): Attach location information for constraints
             let con_with_info = con
                 .take()
-                .obligation(
-                    "component's where clause constraints must be satisfied",
-                )
-                .add_note(self.diag.add_info("constraints was violated", pos));
+                .obligation("invocation violates component's constraint")
+                .add_note(self.diag.add_info("constraint was violated", pos))
+                .add_note(self.diag.add_info(
+                    "invocation violates component's constraint",
+                    invoke.name.pos(),
+                ));
             self.add_obligations(iter::once(con_with_info));
         }
 

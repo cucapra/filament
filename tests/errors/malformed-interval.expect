@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-Error: Filament Parser:  --> 1:22
+Error: error while parsing:  --> 1:22
   |
 1 | comp Main<G: 1>(@[G, 3] go: 1) -> () {}
   |                      ^
