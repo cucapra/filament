@@ -1,6 +1,7 @@
+use super::Obligation;
 use crate::core::{self, Time, TimeSub};
 use crate::diagnostics::{self, Diagnostics, InfoIdx};
-use crate::errors::{Error, FilamentResult, WithPos};
+use crate::errors::{Error, FilamentResult};
 use itertools::Itertools;
 use rsmt2::{SmtConf, Solver};
 
@@ -43,104 +44,41 @@ impl From<TimeDelSum> for SExp {
 #[derive(Clone)]
 pub struct ShareConstraint {
     /// Delay bounded by the share constraint
-    event_bind: core::EventBind,
+    event_bind: core::Loc<core::EventBind>,
     /// The events used to compute the minimum of start times
     starts: Vec<(Time, InfoIdx)>,
     /// The (event, delay) to compute the max of start times
     ends: Vec<(TimeDelSum, InfoIdx)>,
 }
 
-impl From<core::EventBind> for ShareConstraint {
-    fn from(bind: core::EventBind) -> Self {
+impl From<core::Loc<core::EventBind>> for ShareConstraint {
+    fn from(event_bind: core::Loc<core::EventBind>) -> Self {
         Self {
             starts: vec![],
             ends: vec![],
-            event_bind: bind,
+            event_bind,
         }
     }
 }
 
 impl ShareConstraint {
+    pub fn is_empty(&self) -> bool {
+        self.starts.is_empty() && self.ends.is_empty()
+    }
+
     pub fn add_bind_info(
         &mut self,
-        start: Time,
+        start: core::Loc<Time>,
         end: (Time, TimeSub),
         diag: &mut Diagnostics,
     ) {
         let td = TimeDelSum::from(end);
-        let pos = start.event.copy_span();
         let info = diag.add_info(
-            format!("invocation starts at `{start}' and ends at `{td}'"),
-            pos,
+            format!("event use starts at `{start}' and ends at `{td}'"),
+            start.pos(),
         );
-        if let TimeDelSum::Time(ref t) = td {
-            match self.is_min_start(t) {
-                Some(false) => { /* Safe to ignore this */ }
-                Some(true) => {
-                    let info = diag.add_info(
-                        format!("invocation starts at `{start}'"),
-                        pos,
-                    );
-                    self.starts = vec![(start, info)];
-                }
-                None => self.starts.push((start, info)),
-            }
-            match self.is_max_end(t) {
-                Some(false) => { /* Safe to ignore this */ }
-                Some(true) => {
-                    let info =
-                        diag.add_info(format!("invocation ends at `{t}'"), pos);
-                    self.ends = vec![(td, info)];
-                }
-                None => self.ends.push((td, info)),
-            }
-        } else {
-            self.starts.push((start, info));
-            self.ends.push((td, info));
-        }
-    }
-
-    // Check whether this is the minimum start time.
-    // Returns None if the list contains incompatible times
-    fn is_min_start(&self, _: &Time) -> Option<bool> {
-        None
-        // for (start, _) in &self.starts {
-        //     if start.event != time.event {
-        //         return None;
-        //     }
-        //     match start.partial_cmp(time) {
-        //         Some(std::cmp::Ordering::Less) => {
-        //             return Some(false);
-        //         }
-        //         None => {
-        //             return None;
-        //         }
-        //         Some(_) => (),
-        //     }
-        // }
-        // Some(true)
-    }
-
-    // Check whether this is the maximum end time.
-    // Returns None if the list contains incompatible times
-    fn is_max_end(&self, _: &Time) -> Option<bool> {
-        None
-        // for (end, _) in &self.ends {
-        //     match end {
-        //         TimeDelSum::Time(t) => {
-        //             // Return if t > time
-        //             if t.partial_cmp(time) == Some(std::cmp::Ordering::Greater)
-        //             {
-        //                 return Some(false);
-        //             }
-        //         }
-        //         // Cannot compare a sum with a time
-        //         TimeDelSum::Sum(_, _) => {
-        //             return None;
-        //         }
-        //     }
-        // }
-        // Some(true)
+        self.starts.push((start.take(), info));
+        self.ends.push((td, info));
     }
 
     /// Transform the share constraint into an error
@@ -149,7 +87,7 @@ impl ShareConstraint {
         let mut err = Error::malformed(msg);
         err = err.add_note(diag.add_info(
             "event's delay must be longer than the difference between minimum start time and maximum end time of all invocations",
-            self.event_bind.copy_span())
+            self.event_bind.pos())
         );
         let all_notes = self
             .starts
@@ -197,7 +135,7 @@ impl From<ShareConstraint> for SExp {
 
         SExp(format!(
             "(>= {} (- {max} {min}))",
-            SExp::from(sh.event_bind.delay)
+            SExp::from(sh.event_bind.delay.inner().clone())
         ))
     }
 }
@@ -239,12 +177,16 @@ fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
     Ok(())
 }
 
+/// An instance of a SMT solver for Filament constraints
 pub struct FilSolver {
+    /// Generate models for failing queries
+    show_models: bool,
+    /// Underlying solver
     s: Solver<()>,
 }
 
 impl FilSolver {
-    pub fn new() -> FilamentResult<Self> {
+    pub fn new(show_models: bool) -> FilamentResult<Self> {
         let conf = SmtConf::default_z3();
         // Disable this because it doesn't seem to work with activation literals
         // conf.check_success();
@@ -254,22 +196,25 @@ impl FilSolver {
         solver.path_tee(std::path::PathBuf::from("./model.smt"))?;
 
         define_prelude(&mut solver)?;
-        Ok(Self { s: solver })
+        Ok(Self {
+            show_models,
+            s: solver,
+        })
     }
 
     pub fn prove(
         &mut self,
         vars: impl IntoIterator<Item = core::Id>,
-        assumes: Vec<core::Constraint>,
-        asserts: Vec<core::Constraint>,
+        assumptions: Vec<core::Constraint>,
+        to_prove: Vec<Obligation>,
         sharing: Vec<ShareConstraint>,
         diag: &mut Diagnostics,
     ) {
-        if asserts.is_empty() {
+        if to_prove.is_empty() {
             return;
         }
 
-        let asserts = asserts.into_iter().collect_vec();
+        let asserts = to_prove.into_iter().collect_vec();
         self.s.push(1).unwrap();
         // Define all the constants
         let vars = vars.into_iter().collect_vec();
@@ -281,28 +226,31 @@ impl FilSolver {
         }
 
         // Define assumptions on constraints
-        for assume in assumes {
+        for assume in assumptions {
             log::trace!("Assuming {}", assume);
             let sexp: SExp = assume.into();
             self.s.assert(format!("{}", sexp)).unwrap();
         }
 
         for fact in asserts {
-            let relevant_vars = fact
-                .exprs()
-                .into_iter()
-                .flat_map(|e| e.exprs().cloned())
-                .unique()
-                .collect_vec();
-            if let Some(model) = self.check_fact(fact.clone(), &relevant_vars) {
-                let info = diag.add_message(model);
-                diag.add_error(Error::from(fact).add_note(info));
+            if let Some(model) = self.check_fact(fact.constraint(), &vars) {
+                let mut err = Error::from(fact);
+                if self.show_models {
+                    let info = diag.add_message(model);
+                    err = err.add_note(info)
+                }
+                diag.add_error(err);
             }
         }
         for share in sharing {
-            if let Some(model) = self.check_fact(share.clone(), &vars) {
-                let info = diag.add_message(model);
-                let err = share.error(diag).add_note(info);
+            if let Some(model) =
+                self.check_fact(&SExp::from(share.clone()), &vars)
+            {
+                let mut err = share.error(diag);
+                if self.show_models {
+                    let info = diag.add_message(model);
+                    err = err.add_note(info)
+                }
                 diag.add_error(err);
             }
         }
@@ -312,12 +260,7 @@ impl FilSolver {
 
     /// Attempt to check facts.
     /// If the fact is false, add notes to the error showing the assignments that make it false.
-    fn check_fact(
-        &mut self,
-        fact: impl Into<SExp>,
-        vars: &[core::Id],
-    ) -> Option<String> {
-        let sexp = fact.into();
+    fn check_fact(&mut self, sexp: &SExp, vars: &[core::Id]) -> Option<String> {
         // Generate an activation literal
         let act = self.s.get_actlit().unwrap();
         let formula = format!("(not {})", sexp);

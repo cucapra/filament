@@ -85,7 +85,7 @@ impl Context<'_> {
                     let c = cr.borrow();
                     (c.get("out"), Some(fsm.event(name)))
                 } else {
-                    let cell = self.invokes[comp].borrow();
+                    let cell = self.invokes[comp.inner()].borrow();
                     (cell.get(name.as_ref()), None)
                 }
             }
@@ -146,7 +146,7 @@ fn compile_guard(guard: core::Guard, ctx: &mut Context) -> ir::Guard {
                 if let Some(fsm) = ctx.fsms.get(comp) {
                     fsm.event(name)
                 } else {
-                    let cell = ctx.invokes[comp].borrow();
+                    let cell = ctx.invokes[comp.inner()].borrow();
                     cell.get(name.as_ref()).into()
                 }
             }
@@ -338,14 +338,17 @@ fn compile_component(
     sigs: &mut Binding,
     lib: &ir::LibrarySignatures,
 ) -> FilamentResult<ir::Component> {
-    let port_transform = |pd: &core::PortDef,
-                          dir: ir::Direction|
-     -> ir::PortDef<u64> {
-        let mut pd: ir::PortDef<u64> =
-            (pd.name.as_ref(), (&pd.bitwidth).try_into().unwrap(), dir).into();
-        pd.attributes.insert("data", 1);
-        pd
-    };
+    let port_transform =
+        |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<u64> {
+            let mut pd: ir::PortDef<u64> = (
+                pd.name.as_ref(),
+                (pd.bitwidth.inner().clone()).try_into().unwrap(),
+                dir,
+            )
+                .into();
+            pd.attributes.insert("data", 1);
+            pd
+        };
     let concrete_transform =
         |name: &core::Id, width: u64| -> ir::PortDef<u64> {
             (name.as_ref(), width, ir::Direction::Input).into()
@@ -373,7 +376,7 @@ fn compile_component(
                     ports.is_none(),
                     "Cannot compile high-level invoke statements"
                 );
-                ctx.add_invoke(bind, instance);
+                ctx.add_invoke(*bind.inner(), *instance.inner());
             }
             core::Command::Fsm(fsm) => {
                 // If FSM with required number of states has not been constructed, define a new component for it
@@ -381,7 +384,7 @@ fn compile_component(
                     define_fsm_component(fsm.states, &mut ctx);
                 }
                 // Construct the FSM
-                let name = fsm.name.clone();
+                let name = fsm.name;
                 let f = Fsm::new(&fsm, &mut ctx);
                 ctx.fsms.insert(name, f);
             }
@@ -400,7 +403,7 @@ fn compile_component(
                 } else {
                     let conc_bind = bindings
                         .into_iter()
-                        .map(|v| (&v).try_into().unwrap())
+                        .map(|v| v.inner().try_into().unwrap())
                         .collect_vec();
                     ctx.builder.add_primitive(
                         name.as_ref(),
@@ -409,7 +412,7 @@ fn compile_component(
                     )
                 };
                 cell.borrow_mut().attributes.insert("data", 1);
-                ctx.instances.insert(name, cell);
+                ctx.instances.insert(name.take(), cell);
             }
             core::Command::Connect(con) => {
                 cons.push(con);
@@ -431,7 +434,7 @@ fn compile_component(
 fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
     let port_transform =
         |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<ir::Width> {
-            let w = &pd.bitwidth;
+            let w = pd.bitwidth.inner();
             let abs = w.exprs().collect_vec();
             let width = match abs.len() {
                 0 => ir::Width::Const {

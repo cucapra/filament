@@ -1,7 +1,5 @@
 use super::{Constraint, Expr, OrderConstraint, Time, TimeSub};
-use crate::diagnostics::Diagnostics;
 use crate::utils::Binding;
-use crate::{errors, utils::GPosIdx};
 use std::fmt::Display;
 
 /// A range over time representation
@@ -9,19 +7,14 @@ use std::fmt::Display;
 pub struct Range {
     pub start: Time,
     pub end: Time,
-    pos: GPosIdx,
 }
 
 impl Range {
     /// Generate constraints for well formedness of this range.
-    pub fn well_formed(&self, diag: &mut Diagnostics) -> Constraint {
+    pub fn well_formed(&self) -> Constraint {
         Constraint::base(OrderConstraint::lt(
             self.start.clone(),
             self.end.clone(),
-        ))
-        .add_note(diag.add_info(
-            "interval's end time must be greater than the start time",
-            self.pos,
         ))
     }
 
@@ -35,7 +28,6 @@ impl Range {
         Range {
             start: self.start.resolve_event(bindings),
             end: self.end.resolve_event(bindings),
-            ..self
         }
     }
 
@@ -44,7 +36,6 @@ impl Range {
         Range {
             start: self.start.resolve_expr(bindings),
             end: self.end.resolve_expr(bindings),
-            ..self
         }
     }
 
@@ -56,22 +47,7 @@ impl Range {
 
 impl Range {
     pub fn new(start: Time, end: Time) -> Self {
-        Self {
-            start,
-            end,
-            pos: GPosIdx::UNKNOWN,
-        }
-    }
-}
-
-impl errors::WithPos for Range {
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> GPosIdx {
-        self.pos
+        Self { start, end }
     }
 }
 

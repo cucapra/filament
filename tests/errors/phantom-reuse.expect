@@ -10,8 +10,9 @@ error: reuses instance uses phantom event for scheduling
 8 │     a0 := A<G>(left, left);
   │           - previous use
 9 │     a1 := A<G+1>(right, right);
-  │             ^ invocation uses phantom event
+  │             ^^^ invocation uses phantom event
   │
   = phantom ports are compiled away and cannot be used for resource sharing
 
 Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

@@ -1,6 +1,7 @@
 use super::{CompBinding, InvIdx, SigIdx};
+use crate::utils::GPosIdx;
 use crate::{core, idx};
-use crate::{errors::WithPos, utils::GPosIdx};
+use itertools::Itertools;
 
 pub type InstIdx = idx!(BoundInstance);
 
@@ -26,7 +27,9 @@ impl InstIdx {
         ctx: &CompBinding,
     ) -> core::Signature {
         let inst = &ctx[*self];
-        ctx.prog[inst.sig].clone().resolve_exprs(&inst.params)
+        let binds: Vec<core::Expr> =
+            inst.params.iter().map(|p| p.clone().take()).collect_vec();
+        ctx.prog[inst.sig].clone().resolve_exprs(binds)
     }
 }
 
@@ -35,25 +38,18 @@ pub struct BoundInstance {
     /// The signature of this instance
     pub sig: SigIdx,
     /// Parameter binding for this instance
-    pub params: Vec<core::Expr>,
+    pub params: Vec<core::Loc<core::Expr>>,
     /// Position associated with this instance
     pub(super) pos: GPosIdx,
 }
 
 impl BoundInstance {
     /// Create a new instance
-    pub fn new(sig: SigIdx, params: Vec<core::Expr>, pos: GPosIdx) -> Self {
+    pub fn new(
+        sig: SigIdx,
+        params: Vec<core::Loc<core::Expr>>,
+        pos: GPosIdx,
+    ) -> Self {
         Self { sig, params, pos }
-    }
-}
-
-impl WithPos for BoundInstance {
-    fn set_span(mut self, sp: GPosIdx) -> Self {
-        self.pos = sp;
-        self
-    }
-
-    fn copy_span(&self) -> GPosIdx {
-        self.pos
     }
 }

@@ -14,8 +14,10 @@ pub struct Traversal {
 impl From<core::Namespace> for Traversal {
     /// Construct a post-order traversal over a namespace.
     fn from(ns: core::Namespace) -> Self {
-        let externs: HashSet<_> =
-            ns.signatures().map(|(_, sig)| sig.name.clone()).collect();
+        let externs: HashSet<_> = ns
+            .signatures()
+            .map(|(_, sig)| *sig.name.inner())
+            .collect();
 
         let mut ts = TopologicalSort::<usize>::new();
         let rev_map: HashMap<core::Id, usize> = ns
@@ -25,7 +27,7 @@ impl From<core::Namespace> for Traversal {
             .map(|(idx, comp)| {
                 // Add component to the graph
                 ts.insert(idx);
-                (comp.sig.name.clone(), idx)
+                (*comp.sig.name.inner(), idx)
             })
             .collect();
 

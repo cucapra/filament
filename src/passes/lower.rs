@@ -1,6 +1,6 @@
 use crate::binding::CompBinding;
-use crate::core::{self, Id};
-use crate::errors::{FilamentResult, WithPos};
+use crate::core::{self, Id, Loc};
+use crate::errors::FilamentResult;
 use crate::visitor;
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -44,11 +44,11 @@ impl Lower {
         Some(guard)
     }
 
-    fn port(&self, port: core::Port) -> core::Port {
-        match port.typ {
+    fn port(&self, port: &core::Port) -> core::Port {
+        match &port.typ {
             core::PortType::Bundle { name, idx } => {
-                let idx = u64::try_from(idx).unwrap() as usize;
-                let writes = self.bundle_writes.get(&name).unwrap();
+                let idx = u64::try_from(idx.inner()).unwrap() as usize;
+                let writes = self.bundle_writes.get(name).unwrap();
                 writes[idx]
                     .clone()
                     .unwrap_or_else(|| panic!("No write to {name}{{{idx}}}"))
@@ -86,8 +86,8 @@ impl visitor::Transform for Lower {
         _: &CompBinding,
     ) -> FilamentResult<Vec<core::Command>> {
         self.bundle_writes.insert(
-            bundle.name,
-            vec![None; u64::try_from(bundle.len).unwrap() as usize],
+            *bundle.name,
+            vec![None; u64::try_from(bundle.len.inner()).unwrap() as usize],
         );
         Ok(vec![])
     }
@@ -97,19 +97,20 @@ impl visitor::Transform for Lower {
         con: core::Connect,
         _: &CompBinding,
     ) -> FilamentResult<Vec<core::Command>> {
-        let src = self.port(con.src);
-        if let core::PortType::Bundle { name, idx } = con.dst.typ {
-            let idx = u64::try_from(idx).unwrap() as usize;
+        let src = self.port(con.src.inner());
+        if let core::PortType::Bundle { name, idx } = &con.dst.typ {
+            let idx = u64::try_from(idx.inner()).unwrap() as usize;
             debug_assert!(
-                self.bundle_writes[&name][idx].is_none(),
+                self.bundle_writes[name.inner()][idx].is_none(),
                 "multiple writes to {name}{{{idx}}}"
             );
-            let writes = self.bundle_writes.get_mut(&name).unwrap();
+            let writes = self.bundle_writes.get_mut(name).unwrap();
             writes[idx] = Some(src);
             // Remove assignment to bundle port
             Ok(vec![])
         } else {
-            let con = core::Connect::new(con.dst, src, con.guard);
+            let con =
+                core::Connect::new(con.dst, core::Loc::unknown(src), con.guard);
             Ok(vec![con.into()])
         }
     }
@@ -120,7 +121,6 @@ impl visitor::Transform for Lower {
         inv: core::Invoke,
         ctx: &CompBinding,
     ) -> FilamentResult<Vec<core::Command>> {
-        let pos = inv.copy_span();
         // Compile only if this is a high-level invoke
         if let core::Invoke {
             name: bind,
@@ -133,7 +133,8 @@ impl visitor::Transform for Lower {
             let idx = ctx.get_invoke_idx(&bind);
             let sig = idx.resolved_signature(ctx);
             // Get the signature associated with this instance.
-            let binding = sig.event_binding(&abstract_vars);
+            let binding = sig
+                .event_binding(abstract_vars.iter().map(|t| t.inner().clone()));
 
             let mut connects = Vec::with_capacity(
                 1 + ports.len() + sig.interface_signals.len(),
@@ -142,7 +143,6 @@ impl visitor::Transform for Lower {
             // Define the low-level invoke
             let low_inv =
                 core::Invoke::new(bind.clone(), instance, abstract_vars, None)
-                    .set_span(pos)
                     .into();
             connects.push(low_inv);
 
@@ -154,25 +154,28 @@ impl visitor::Transform for Lower {
                 let start_time = u64::try_from(t.offset()).unwrap();
                 let port = self.get_fsm(&t.event()).port(start_time);
                 let con = core::Connect::new(
-                    core::Port::comp(bind.clone(), interface.name.clone()),
-                    port,
+                    Loc::unknown(core::Port::comp(
+                        bind.clone(),
+                        interface.name.clone(),
+                    )),
+                    Loc::unknown(port),
                     None,
-                )
-                .set_span(pos);
+                );
                 connects.push(con.into())
             }
 
             // Generate assignment for each port
             for (src, formal) in ports.into_iter().zip(sig.inputs()) {
                 let guard = self.range_to_guard(&formal.liveness);
-                let port = self.port(src);
-                let sp = port.copy_span();
+                let port = self.port(src.inner());
                 let con = core::Connect::new(
-                    core::Port::comp(bind.clone(), formal.name.clone()),
-                    port,
+                    Loc::unknown(core::Port::comp(
+                        bind.clone(),
+                        formal.name.clone(),
+                    )),
+                    Loc::unknown(port),
                     guard,
-                )
-                .set_span(sp);
+                );
                 connects.push(con.into());
             }
             Ok(connects)
@@ -196,7 +199,7 @@ impl visitor::Transform for Lower {
             .map(|interface| {
                 let ev = &interface.event;
                 Ok((
-                    ev.clone(),
+                    *ev,
                     core::Fsm::new(
                         format!("{}_fsm", ev).into(),
                         events[ev],

@@ -1,5 +1,5 @@
 use crate::{
-    core,
+    core::{self, Loc},
     utils::{Binding, Traversal},
 };
 use itertools::Itertools;
@@ -32,12 +32,12 @@ impl Rewriter {
         match port.typ {
             core::PortType::InvPort { invoke, name } => {
                 core::PortType::InvPort {
-                    invoke: self.binding[&invoke].clone(),
+                    invoke: Loc::unknown(self.binding[invoke.inner()]),
                     name,
                 }
             }
             core::PortType::Bundle { name, idx } => core::PortType::Bundle {
-                name: self.binding[&name].clone(),
+                name: Loc::unknown(self.binding[name.inner()]),
                 idx,
             },
             t => t,
@@ -50,11 +50,11 @@ impl Rewriter {
         // First rename all binders
         for cmd in &cmds {
             match cmd {
-                core::Command::Invoke(inv) => self.add_name(inv.name.clone()),
+                core::Command::Invoke(inv) => self.add_name(*inv.name.inner()),
                 core::Command::Instance(inst) => {
-                    self.add_name(inst.name.clone())
+                    self.add_name(*inst.name.inner())
                 }
-                core::Command::Bundle(bl) => self.add_name(bl.name.clone()),
+                core::Command::Bundle(bl) => self.add_name(*bl.name.inner()),
                 core::Command::Fsm(_) => {
                     unreachable!("Cannot monomorphize FSMs")
                 }
@@ -75,16 +75,22 @@ impl Rewriter {
                     ports,
                     ..
                 }) => {
-                    let name = self.binding[&name].clone();
-                    let instance = self.binding[&instance].clone();
-                    let ports: Option<Vec<core::Port>> = ports.map(|ps| {
-                        ps.into_iter()
-                            .map(|p| self.rewrite_port(p))
-                            .collect_vec()
-                    });
+                    let name = self.binding[&name];
+                    let instance = self.binding[&instance];
+                    let ports: Option<Vec<core::Loc<core::Port>>> =
+                        ports.map(|ps| {
+                            ps.into_iter()
+                                .map(|p| p.map(|p| self.rewrite_port(p)))
+                                .collect_vec()
+                        });
 
-                    core::Invoke::new(name, instance, abstract_vars, ports)
-                        .into()
+                    core::Invoke::new(
+                        Loc::unknown(name),
+                        Loc::unknown(instance),
+                        abstract_vars,
+                        ports,
+                    )
+                    .into()
                 }
                 core::Command::Instance(core::Instance {
                     name,
@@ -92,7 +98,7 @@ impl Rewriter {
                     component,
                     ..
                 }) => core::Instance::new(
-                    self.binding[&name].clone(),
+                    Loc::unknown(self.binding[name.inner()]),
                     component,
                     bindings,
                 )
@@ -105,16 +111,20 @@ impl Rewriter {
                 }) => {
                     assert!(guard.is_none(), "Cannot monomorphize guards");
                     core::Connect::new(
-                        self.rewrite_port(dst),
-                        self.rewrite_port(src),
+                        dst.map(|p| self.rewrite_port(p)),
+                        src.map(|p| self.rewrite_port(p)),
                         None,
                     )
                     .into()
                 }
                 core::Command::Bundle(core::Bundle {
                     name, len, typ, ..
-                }) => core::Bundle::new(self.binding[&name].clone(), len, typ)
-                    .into(),
+                }) => core::Bundle::new(
+                    Loc::unknown(self.binding[name.inner()]),
+                    len,
+                    typ,
+                )
+                .into(),
                 core::Command::ForLoop(_) => unreachable!(),
                 core::Command::Fsm(_) => unreachable!(),
             };
@@ -159,7 +169,7 @@ impl InstanceParams {
         &mut self,
         parent: &core::Id,
         comp: &core::Id,
-        params: &[core::Expr],
+        params: &[Loc<core::Expr>],
     ) {
         // All possible values for each parameter computed by resolving each parameter that occurs in the binding
         let all_binds = params
@@ -167,7 +177,7 @@ impl InstanceParams {
             .map(|p| {
                 let abs = p.exprs().collect_vec();
                 match abs.len() {
-                    0 => vec![u64::try_from(p).unwrap()],
+                    0 => vec![u64::try_from(p.inner()).unwrap()],
                     1 => self.param_values(parent, abs[0]).collect(),
                     n => unreachable!("Cannot have more than one abstract parameter in a binding: {n}")
                 }
@@ -178,10 +188,7 @@ impl InstanceParams {
 
         log::trace!("{parent} -> {comp} -> {all_binds:?}");
 
-        self.bindings
-            .entry(comp.clone())
-            .or_default()
-            .extend(all_binds);
+        self.bindings.entry(*comp).or_default().extend(all_binds);
     }
 }
 
@@ -219,7 +226,7 @@ impl InstanceParams {
     fn build(ns: core::Namespace) -> (Self, core::Namespace) {
         let externals = ns
             .signatures()
-            .map(|(_, sig)| sig.name.clone())
+            .map(|(_, sig)| *sig.name.inner())
             .collect::<HashSet<_>>();
 
         let mut inst_params = InstanceParams::default();
@@ -229,7 +236,7 @@ impl InstanceParams {
             // Add parameters for this component
             inst_params
                 .params
-                .insert(comp.sig.name.clone(), comp.sig.params.clone());
+                .insert(*comp.sig.name.inner(), comp.sig.params.clone());
 
             // Add bindings from each instance
             for cmd in &comp.body {
@@ -267,10 +274,11 @@ impl Monomorphize {
         name.into()
     }
 
-    fn sig(sig: &core::Signature, binding: &[core::Expr]) -> core::Signature {
+    fn sig(sig: &core::Signature, binding: Vec<core::Expr>) -> core::Signature {
         // XXX: Short-circuit if binding is empty
+        let name = Loc::unknown(Self::generate_mono_name(&sig.name, &binding));
         let mut nsig = sig.clone().resolve_exprs(binding);
-        nsig.name = Self::generate_mono_name(&sig.name, binding);
+        nsig.name = name;
         nsig.params = vec![];
         nsig
     }
@@ -280,8 +288,8 @@ impl Monomorphize {
         binding: &Binding<core::Expr>,
     ) -> core::Connect {
         core::Connect::new(
-            con.dst.resolve_exprs(binding),
-            con.src.resolve_exprs(binding),
+            con.dst.map(|e| e.resolve_exprs(binding)),
+            con.src.map(|e| e.resolve_exprs(binding)),
             con.guard,
         )
     }
@@ -302,7 +310,7 @@ impl Monomorphize {
         for cmd in commands {
             match cmd {
                 core::Command::Bundle(bl) => {
-                    prev_names.insert(bl.name.clone(), bl.name.clone());
+                    prev_names.insert(*bl.name.inner(), *bl.name.inner());
                     n_cmds.push(bl.resolve_exprs(param_binding).into());
                 }
                 core::Command::Invoke(core::Invoke {
@@ -313,7 +321,7 @@ impl Monomorphize {
                     ..
                 }) => {
                     // Add identity mapping for name
-                    prev_names.insert(name.clone(), name.clone());
+                    prev_names.insert(*name.inner(), *name.inner());
                     // Resolve the expressions in the invoke
                     n_cmds.push(
                         core::Invoke::new(
@@ -321,11 +329,17 @@ impl Monomorphize {
                             instance,
                             abstract_vars
                                 .into_iter()
-                                .map(|t| t.resolve_expr(param_binding))
+                                .map(|t| {
+                                    t.map(|t| t.resolve_expr(param_binding))
+                                })
                                 .collect_vec(),
                             ports.map(|ps| {
                                 ps.into_iter()
-                                    .map(|p| p.resolve_exprs(param_binding))
+                                    .map(|p| {
+                                        p.map(|p| {
+                                            p.resolve_exprs(param_binding)
+                                        })
+                                    })
                                     .collect_vec()
                             }),
                         )
@@ -343,11 +357,11 @@ impl Monomorphize {
                         ..
                     } = inst;
                     // Add identity mapping for name
-                    prev_names.insert(name.clone(), name.clone());
+                    prev_names.insert(*name.inner(), *name.inner());
 
                     let resolved = bindings
                         .into_iter()
-                        .map(|p| p.resolve(param_binding))
+                        .map(|p| p.map(|p| p.resolve(param_binding)))
                         .collect();
 
                     if externals.contains(&component) {
@@ -360,7 +374,10 @@ impl Monomorphize {
                         n_cmds.push(
                             core::Instance::new(
                                 name,
-                                Self::generate_mono_name(&component, &resolved),
+                                Loc::unknown(Self::generate_mono_name(
+                                    &component,
+                                    resolved.iter().map(|p| p.inner()),
+                                )),
                                 vec![],
                             )
                             .into(),
@@ -388,7 +405,7 @@ impl Monomorphize {
 
                     for i in s..e {
                         let mut new_binding = (*param_binding).clone();
-                        new_binding.insert(idx.clone(), i.into());
+                        new_binding.insert(idx, i.into());
                         // Recur on the body of the loop
                         let ncmds = Self::commands(
                             body.iter().cloned(),
@@ -419,8 +436,7 @@ impl Monomorphize {
         binding: &Binding<core::Expr>,
         externals: &HashSet<core::Id>,
     ) -> core::Component {
-        let sig =
-            Self::sig(&comp.sig, &binding.values().cloned().collect_vec());
+        let sig = Self::sig(&comp.sig, binding.values().cloned().collect_vec());
         let body = Self::commands(
             comp.body.iter().cloned(),
             binding,
@@ -441,7 +457,7 @@ impl Monomorphize {
         };
 
         let externals: HashSet<_> =
-            ns.signatures().map(|(_, sig)| sig.name.clone()).collect();
+            ns.signatures().map(|(_, sig)| *sig.name.inner()).collect();
 
         // For each parameter of each instance, generate a new component
         for comp in old_ns.components {

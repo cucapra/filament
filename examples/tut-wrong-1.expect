@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint G >= G+2
+error: source port must be available longer than the destination port requires
     ┌─ examples/tut-wrong-1.fil:17:38
     │
  17 │     mx := new Mux[32]<G>(op, a0.out, m0.out);
@@ -11,6 +11,6 @@ error: Cannot prove constraint G >= G+2
     │
 152 │     @[G, L] in1: #WIDTH,
     │             --- destination's requirement @[G, G+1]
-    │
 
 Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

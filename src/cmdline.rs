@@ -8,9 +8,9 @@ pub struct Opts {
     #[argh(positional)]
     pub input: PathBuf,
 
-    /// enable verbose printing
-    #[argh(option, long = "log", default = "log::LevelFilter::Warn")]
-    pub log_level: log::LevelFilter,
+    /// print out assignments that falisfy the constraints
+    #[argh(switch, long = "show-models")]
+    pub show_models: bool,
 
     /// location of the calyx primitives folder
     #[argh(option, long = "calyx-primitives", default = "\"../calyx\".into()")]

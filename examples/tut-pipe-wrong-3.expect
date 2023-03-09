@@ -1,19 +1,19 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint 1 >= 3
-   ┌─ examples/tut-pipe-wrong-3.fil:4:11
+error: event provided to invocation triggers more often that invocation's event's delay allows
+   ┌─ examples/tut-pipe-wrong-3.fil:16:28
    │
  4 │ comp main<G: 1>(
-   │           ^^^^ interface requires event to trigger once in 1 cycles
+   │              - this event triggers every 1 cycles
    ·
 16 │     r0 := new Register[32]<G, G+4>(a0.out);
-   │     --------------------------------------- event provided to invoke triggers too often
+   │                            ^ event provided to invoke triggers too often
    │
-   ┌─ ./primitives/./state.fil:4:25
+   ┌─ ./primitives/./state.fil:4:28
    │
  4 │   comp Register[#WIDTH]<G: L-(G+1), L: 1>(
-   │                         ---------- provided event may trigger every 3 cycles
-   │
+   │                            ------- invocation's event is allowed to trigger every 3 cycles
 
 Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

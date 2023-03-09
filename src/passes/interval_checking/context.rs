@@ -1,6 +1,5 @@
 use crate::core::{self, Constraint, OrderConstraint};
-use crate::errors::WithPos;
-use crate::utils::{FilSolver, ShareConstraint};
+use crate::utils::{self, FilSolver, ShareConstraint};
 use crate::{binding, diagnostics};
 use itertools::Itertools;
 use std::iter;
@@ -12,7 +11,7 @@ pub struct IntervalCheck {
     pub(super) solver: FilSolver,
     /// Set of facts that need to be proven.
     /// Mapping from facts to the locations that generated it.
-    pub(super) obligations: FactMap,
+    pub(super) obligations: Vec<utils::Obligation>,
     /// Set of assumed facts
     pub(super) facts: FactMap,
     /// Diagnostics
@@ -21,14 +20,15 @@ pub struct IntervalCheck {
     pub(super) vars: Vec<core::Id>,
 }
 
-impl From<(FilSolver, diagnostics::Diagnostics)> for IntervalCheck {
-    fn from((solver, diag): (FilSolver, diagnostics::Diagnostics)) -> Self {
+impl IntervalCheck {
+    /// Construct a new context
+    pub fn new(solver: FilSolver, diag: diagnostics::Diagnostics) -> Self {
         Self {
-            solver,
+            vars: Vec::new(),
             obligations: Vec::new(),
             facts: Vec::new(),
             diag,
-            vars: Vec::new(),
+            solver,
         }
     }
 }
@@ -37,10 +37,10 @@ impl IntervalCheck {
     /// Add a new obligation that needs to be proved
     pub fn add_obligations<F>(&mut self, facts: F)
     where
-        F: IntoIterator<Item = core::Constraint>,
+        F: IntoIterator<Item = utils::Obligation>,
     {
         for fact in facts {
-            log::trace!("adding obligation {}", fact);
+            // log::trace!("adding obligation {}", fact);
             self.obligations.push(fact);
         }
     }
@@ -84,7 +84,7 @@ impl IntervalCheck {
     }
 
     /// Get the obligations that need to be proven
-    pub fn drain_obligations(&mut self) -> Vec<core::Constraint> {
+    pub fn drain_obligations(&mut self) -> Vec<utils::Obligation> {
         std::mem::take(&mut self.obligations)
     }
 
@@ -111,23 +111,31 @@ impl IntervalCheck {
         }
 
         // Check that all invokes use the same event binding
-        let (_, first_bind) = &invoke_bindings[0];
-        for (_, binds) in &invoke_bindings[1..] {
+        let (inv1, first_bind) = &invoke_bindings[0];
+        for (inv2, binds) in &invoke_bindings[1..] {
             for event in 0..first_bind.len() {
-                let e1 = first_bind[event].0.event();
-                let e2 = binds[event].0.event();
+                if inv1.is_inferred(ctx, event) && inv2.is_inferred(ctx, event)
+                {
+                    continue;
+                }
+
+                let ev1 = &first_bind[event].0;
+                let e1 = ev1.event();
+                let ev2 = &binds[event].0;
+                let e2 = ev2.event();
                 // If the events are not syntactically equal, add constraint requiring that the events are the same
                 if e1 != e2 {
                     let con = Constraint::base(OrderConstraint::eq(
-                        e1.clone().into(),
-                        e2.clone().into(),
+                        e1.into(),
+                        e2.into(),
                     ))
-                    .add_note(self.diag.add_info(format!("invocation uses event {e1}"), e1.copy_span()))
-                    .add_note(self.diag.add_info(format!("invocation uses event {e2}"), e2.copy_span()))
-                    .add_note(self.diag.add_message(
+                    .obligation(
                         format!(
-                            "invocations of instance use multiple events in invocations: {e1} and {e2}. Sharing using multiple events is not supported."
-                    )));
+                            "invocations of instance use multiple events in invocations: {e1} and {e2}",
+                        )
+                    )
+                    .add_note(self.diag.add_info(format!("invocation uses event {e1}"), ev1.pos()))
+                    .add_note(self.diag.add_info(format!("invocation uses event {e2}"), ev2.pos()));
                     self.add_obligations(iter::once(con));
                 }
             }
@@ -151,11 +159,15 @@ impl IntervalCheck {
                 // Add the event binding to the share constraint
                 let (inv_i, binds) = &invoke_bindings[i];
                 let (start_i, delay) = &binds[event];
-                share.add_bind_info(
-                    start_i.clone(),
-                    (start_i.clone(), delay.clone()),
-                    &mut self.diag,
-                );
+
+                // If this is not an inferred binding, add it to the share constraint
+                if !inv_i.is_inferred(ctx, event) {
+                    share.add_bind_info(
+                        start_i.clone(),
+                        (start_i.inner().clone(), delay.inner().clone()),
+                        &mut self.diag,
+                    );
+                }
 
                 // All other bindings must be separated by at least the delay of this binding
                 // XXX: There probably a more efficient encoding where we ensure that the
@@ -168,16 +180,27 @@ impl IntervalCheck {
                     if i == k {
                         continue;
                     }
+                    // If both the events are inferred, don't generate constraints
+                    if inv_i.is_inferred(ctx, event)
+                        && inv_k.is_inferred(ctx, event)
+                    {
+                        continue;
+                    }
 
+                    let diff =
+                        start_i.inner().clone() - start_k.inner().clone();
+
+                    let bind_pos = event_binds[event].delay.pos();
                     let con = core::Constraint::sub(
                         core::OrderConstraint::gte(
-                            start_i.clone() - start_k.clone(),
-                            delay.clone(),
+                            diff.clone(),
+                            delay.inner().clone(),
                         ),
                     )
+                    .obligation("instance must be shared with sufficient delay")
                     .add_note(self.diag.add_info(
-                        format!("delay requires {} cycle between event but reuse may occur after {} cycles", delay.clone(), start_i.clone() - start_k.clone()),
-                        event_binds[event].copy_span(),
+                        format!("delay requires {} cycle between event but reuse may occur after {} cycles", delay.clone(), diff),
+                        bind_pos
                     ))
                     .add_note(self.diag.add_info(
                         format!("invocation starts at `{start_k}'"),
@@ -200,7 +223,9 @@ impl IntervalCheck {
             // In other words, the delay of the events trigger the shared instance
             // should be greater that the range occupied by the invocations of the
             // instance.
-            share_constraints.push(share);
+            if !share.is_empty() {
+                share_constraints.push(share);
+            }
         }
 
         share_constraints

@@ -106,7 +106,7 @@ where
             .components
             .iter_mut()
             .map(|comp| {
-                (comp.sig.name.clone(), comp.body.drain(..).collect_vec())
+                (*comp.sig.name.inner(), comp.body.drain(..).collect_vec())
             })
             .collect_vec();
 

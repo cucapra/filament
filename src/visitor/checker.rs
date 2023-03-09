@@ -1,7 +1,6 @@
-use std::ops::ControlFlow;
-
 use crate::binding::{CompBinding, ProgBinding};
-use crate::{core, diagnostics};
+use crate::{cmdline, core, diagnostics};
+use std::ops::ControlFlow;
 
 /// Should the traversal continue or stop?
 pub type Traverse = ControlFlow<(), ()>;
@@ -12,7 +11,7 @@ where
     Self: Sized,
 {
     /// Construct a new instance of this pass
-    fn new(_: &core::Namespace) -> Self;
+    fn new(_opts: &cmdline::Opts, _ns: &core::Namespace) -> Self;
 
     /// Clear any data that should be cleared between components
     fn clear_data(&mut self);
@@ -112,8 +111,12 @@ where
         self.signature(sig)
     }
 
-    fn check(ns: &core::Namespace, ctx: &ProgBinding) -> Result<Self, u64> {
-        let mut pass = Self::new(ns);
+    fn check(
+        opts: &cmdline::Opts,
+        ns: &core::Namespace,
+        ctx: &ProgBinding,
+    ) -> Result<Self, u64> {
+        let mut pass = Self::new(opts, ns);
 
         for (_, ext) in ns.signatures() {
             // Ignore the return value from traversal because we don't need to

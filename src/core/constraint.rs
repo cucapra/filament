@@ -1,9 +1,7 @@
 use super::{Expr, Range, Time, TimeSub};
-use crate::diagnostics::{self, InfoIdx};
-use crate::errors::Error;
 use crate::utils::Binding;
+use crate::utils::Obligation;
 use crate::utils::SExp;
-use std::collections::BTreeSet;
 use std::fmt::Display;
 
 /// Ordering operator for constraints
@@ -30,7 +28,6 @@ pub struct OrderConstraint<T> {
     left: T,
     right: T,
     op: OrderOp,
-    extra: BTreeSet<diagnostics::InfoIdx>,
 }
 
 impl<T> OrderConstraint<T>
@@ -38,12 +35,7 @@ where
     T: Clone,
 {
     pub fn new(left: T, right: T, op: OrderOp) -> Self {
-        Self {
-            left,
-            right,
-            op,
-            extra: BTreeSet::default(),
-        }
+        Self { left, right, op }
     }
 
     pub fn lt(l: T, r: T) -> Self {
@@ -51,7 +43,6 @@ where
             left: r,
             right: l,
             op: OrderOp::Gt,
-            extra: BTreeSet::default(),
         }
     }
 
@@ -60,7 +51,6 @@ where
             left,
             right,
             op: OrderOp::Eq,
-            extra: BTreeSet::default(),
         }
     }
 
@@ -69,7 +59,6 @@ where
             left,
             right,
             op: OrderOp::Gte,
-            extra: BTreeSet::default(),
         }
     }
 
@@ -78,7 +67,6 @@ where
             left: r,
             right: l,
             op: OrderOp::Gte,
-            extra: BTreeSet::default(),
         }
     }
 }
@@ -194,21 +182,6 @@ impl Constraint {
         }
     }
 
-    pub fn notes(&self) -> impl Iterator<Item = &diagnostics::InfoIdx> {
-        match self {
-            Constraint::Base { base } => base.extra.iter(),
-            Constraint::Sub { base } => base.extra.iter(),
-        }
-    }
-
-    pub fn add_note(mut self, note: InfoIdx) -> Self {
-        match &mut self {
-            Constraint::Base { base } => base.extra.insert(note),
-            Constraint::Sub { base } => base.extra.insert(note),
-        };
-        self
-    }
-
     pub fn events(&self) -> Vec<&Time> {
         match self {
             Constraint::Base { base } => {
@@ -267,6 +240,11 @@ impl Constraint {
             },
         }
     }
+
+    /// Generate an obligation for this constraint and provide a reason
+    pub fn obligation<S: ToString>(self, reason: S) -> Obligation {
+        Obligation::new(SExp::from(self), reason.to_string())
+    }
 }
 
 impl Display for Constraint {
@@ -294,15 +272,6 @@ impl From<Constraint> for SExp {
                 SExp::from(base.right),
             )),
         }
-    }
-}
-
-impl From<Constraint> for Error {
-    fn from(con: Constraint) -> Self {
-        let mut err =
-            Error::malformed(format!("Cannot prove constraint {}", con));
-        err.notes = con.notes().cloned().collect();
-        err
     }
 }
 

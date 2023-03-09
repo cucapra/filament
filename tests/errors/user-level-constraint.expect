@@ -2,15 +2,16 @@
 1
 ---STDERR---
 error: user-level component cannot have ordering constraints over events
-  ┌─ tests/errors/user-level-constraint.fil:3:6
+  ┌─ tests/errors/user-level-constraint.fil:6:15
   │
-3 │ comp Main<G: L-(G), L: 1>(
-  │      ^^^^ user-level component defines ordering between events: L > G+1
+6 │ ) -> () where L > G+1, G+5 > L {
+  │               ^^^^^^^ user-level component defines ordering between events: L > G+1
 
 error: user-level component cannot have ordering constraints over events
-  ┌─ tests/errors/user-level-constraint.fil:3:6
+  ┌─ tests/errors/user-level-constraint.fil:6:24
   │
-3 │ comp Main<G: L-(G), L: 1>(
-  │      ^^^^ user-level component defines ordering between events: G+5 > L
+6 │ ) -> () where L > G+1, G+5 > L {
+  │                        ^^^^^^^ user-level component defines ordering between events: G+5 > L
 
 Compilation failed with 2 errors.
+Run with --show-models to generate assignments for failing constraints.

@@ -2,7 +2,7 @@
 use codespan_reporting::files::SimpleFiles;
 use std::{mem, sync};
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 /// Handle to a position in a [PositionTable]
 /// The index refers to the index in the [PositionTable::indices] vector.
 pub struct PosIdx(u32);
@@ -128,7 +128,7 @@ impl GlobalPositionTable {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 /// A position index backed by a global [PositionTable]
 pub struct GPosIdx(pub PosIdx);
 
@@ -146,10 +146,4 @@ impl GPosIdx {
             Some(self)
         }
     }
-}
-
-/// An IR node that may contain position information.
-pub trait WithPos {
-    /// Copy the span associated with this node.
-    fn copy_span(&self) -> GPosIdx;
 }

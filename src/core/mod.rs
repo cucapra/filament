@@ -4,6 +4,7 @@ mod control;
 mod expr;
 mod id;
 mod interval;
+mod loc;
 mod port;
 mod signature;
 mod time;
@@ -18,6 +19,7 @@ pub use control::{
 pub use expr::{Expr, Op};
 pub use id::Id;
 pub use interval::Range;
+pub use loc::Loc;
 pub use port::{InterfaceDef, PortDef};
 pub use signature::{EventBind, Signature};
 pub use time::{Time, TimeSub};

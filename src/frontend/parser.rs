@@ -1,9 +1,10 @@
 #![allow(clippy::upper_case_acronyms)]
 
 //! Parser for Filament programs.
-use crate::core::{self, TimeSub};
-use crate::errors::{self, FilamentResult, WithPos};
+use crate::core::{self, Loc, TimeSub};
+use crate::errors::{self, FilamentResult};
 use crate::utils::{FileIdx, GPosIdx, GlobalPositionTable};
+use itertools::Itertools;
 use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
@@ -21,7 +22,7 @@ type ParseResult<T> = Result<T, Error<Rule>>;
 // that have a reference to the input string
 type Node<'i> = pest_consume::Node<'i, Rule, UserData>;
 
-type Ports = Vec<core::PortDef>;
+type Ports = Vec<Loc<core::PortDef>>;
 
 // include the grammar file so that Cargo knows to rebuild this file on grammar changes
 const _GRAMMAR: &str = include_str!("syntax.pest");
@@ -41,7 +42,7 @@ pub enum ExtOrComp {
 }
 
 pub enum Port {
-    Pd(core::PortDef),
+    Pd(Loc<core::PortDef>),
     Int(core::InterfaceDef),
     Un((core::Id, u64)),
 }
@@ -129,17 +130,16 @@ impl FilamentParser {
     }
 
     // ================ Literals =====================
-    fn identifier(input: Node) -> ParseResult<core::Id> {
+    fn identifier(input: Node) -> ParseResult<Loc<core::Id>> {
         let sp = Self::get_span(&input);
         let id = core::Id::from(input.as_str());
-        Ok(id.set_span(sp))
+        Ok(Loc::new(id, sp))
     }
 
-    fn param_var(input: Node) -> ParseResult<core::Id> {
-        let sp = Self::get_span(&input);
+    fn param_var(input: Node) -> ParseResult<Loc<core::Id>> {
         Ok(match_nodes!(
             input.into_children();
-            [pound(_), identifier(id)] => id.set_span(sp),
+            [pound(_), identifier(id)] => id,
         ))
     }
 
@@ -162,47 +162,49 @@ impl FilamentParser {
     }
 
     // ================ Intervals =====================
-    fn time(input: Node) -> ParseResult<core::Time> {
+    fn time(input: Node) -> ParseResult<Loc<core::Time>> {
+        let sp = Self::get_span(&input);
         match_nodes!(
             input.clone().into_children();
-            [identifier(ev), expr(sts)] => Ok(core::Time::new(ev, sts)),
-            [expr(sts), identifier(ev)] => Ok(core::Time::new(ev, sts)),
-            [identifier(ev)] => Ok(core::Time::new(ev, core::Expr::default())),
+            [identifier(ev), expr(sts)] => Ok(Loc::new(core::Time::new(ev.take(), sts.take()), sp)),
+            [expr(sts), identifier(ev)] => Ok(Loc::new(core::Time::new(ev.take(), sts.take()), sp)),
+            [identifier(ev)] => Ok(Loc::new(core::Time::new(ev.take(), core::Expr::default()), sp)),
             [expr(_)] => {
                 Err(input.error("time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number or sum of parameters"))
             }
         )
     }
 
-    fn interval_range(input: Node) -> ParseResult<core::Range> {
+    fn interval_range(input: Node) -> ParseResult<Loc<core::Range>> {
         let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [time(start), time(end)] => core::Range::new(start, end).set_span(sp)
+            [time(start), time(end)] => Loc::new(core::Range::new(start.take(), end.take()), sp)
         ))
     }
 
     // ================ Signature =====================
-
     fn interface(input: Node) -> ParseResult<core::Id> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(tvar)] => tvar,
+            [identifier(tvar)] => tvar.take(),
         ))
     }
 
     fn expr_base(input: Node) -> ParseResult<core::Expr> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(id)] => id.into(),
+            [param_var(id)] => id.take().into(),
             [bitwidth(c)] => c.into(),
-            [expr(e)] => e,
+            [expr(e)] => e.take(),
         ))
     }
 
-    fn expr(input: Node) -> ParseResult<core::Expr> {
+    fn expr(input: Node) -> ParseResult<Loc<core::Expr>> {
+        let sp = Self::get_span(&input);
         let ud = input.user_data().clone();
         Self::expr_helper(ud, input.into_pair().into_inner())
+            .map(|e| Loc::new(e, sp))
     }
 
     fn port_def(input: Node) -> ParseResult<Port> {
@@ -210,41 +212,44 @@ impl FilamentParser {
         match_nodes!(
             input.clone().into_children();
             [interface(time_var), identifier(name), expr(_)] => {
-                Ok(Port::Int(core::InterfaceDef::new(name, time_var).set_span(sp)))
+                Ok(Port::Int(core::InterfaceDef::new(name, time_var)))
             },
             [identifier(name), expr(bitwidth)] => {
-                match (&bitwidth).try_into() {
-                    Ok(n) => Ok(Port::Un((name, n))),
+                match (&bitwidth.take()).try_into() {
+                    Ok(n) => Ok(Port::Un((name.take(), n))),
                     Err(n) => Err(input.error(format!("port width must be concrete. `{n}' is not a concrete number"))),
                 }
             },
             [interval_range(range), identifier(name), expr(bitwidth)] => {
-                Ok(Port::Pd(core::PortDef::new(name, range, bitwidth).set_span(sp)))
+                Ok(Port::Pd(Loc::new(core::PortDef::new(name, range, bitwidth), sp)))
             }
         )
     }
 
-    fn delay(input: Node) -> ParseResult<TimeSub> {
-        Ok(match_nodes!(
-            input.into_children();
-            [expr(n)] => n.into(),
-            [time(l), time(r)] => l - r,
-        ))
-    }
-
-    fn event_bind(input: Node) -> ParseResult<core::EventBind> {
+    fn delay(input: Node) -> ParseResult<Loc<TimeSub>> {
         let sp = Self::get_span(&input);
-        Ok(match_nodes!(
+        let out = match_nodes!(
             input.into_children();
-            [identifier(event), delay(d), time(t)] => core::EventBind::new(event, d, Some(t)).set_span(sp),
-            [identifier(event), delay(d)] => core::EventBind::new(event, d, None).set_span(sp),
-        ))
+            [expr(n)] => n.take().into(),
+            [time(l), time(r)] => l.take() - r.take(),
+        );
+        Ok(Loc::new(out, sp))
     }
 
-    fn abstract_var(input: Node) -> ParseResult<Vec<core::EventBind>> {
-        let evs: Vec<core::EventBind> = match_nodes!(
+    fn event_bind(input: Node) -> ParseResult<Loc<core::EventBind>> {
+        let sp = Self::get_span(&input);
+        let out = match_nodes!(
+            input.into_children();
+            [identifier(event), delay(d), time(t)] => core::EventBind::new(event, d, Some(t.take())),
+            [identifier(event), delay(d)] => core::EventBind::new(event, d, None),
+        );
+        Ok(Loc::new(out, sp))
+    }
+
+    fn abstract_var(input: Node) -> ParseResult<Vec<Loc<core::EventBind>>> {
+        let evs = match_nodes!(
             input.clone().into_children();
-            [event_bind(vars)..] => vars.collect()
+            [event_bind(vars)..] => vars.collect_vec()
         );
         let mut opts_started = false;
         for ev in &evs {
@@ -321,37 +326,35 @@ impl FilamentParser {
     }
 
     // ================ Cells =====================
-    fn conc_params(input: Node) -> ParseResult<Vec<core::Expr>> {
+    fn conc_params(input: Node) -> ParseResult<Vec<Loc<core::Expr>>> {
         Ok(match_nodes!(
             input.into_children();
             [expr(vars)..] => vars.collect(),
         ))
     }
     fn instance(input: Node) -> ParseResult<Vec<core::Command>> {
-        let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.clone().into_children();
             [identifier(name), identifier(component), conc_params(params)] => vec![
-                core::Instance::new(name, component, params.into_iter().map(core::Expr::from).collect()).set_span(sp).into()
+                core::Instance::new(name, component, params).into()
             ],
             [identifier(name), identifier(component), conc_params(params), invoke_args((abstract_vars, ports))] => {
                 // Upper case the first letter of name
                 let mut iname = name.as_ref().to_string();
                 iname.make_ascii_uppercase();
-                let iname = core::Id::from(iname);
+                let iname = Loc::new(core::Id::from(iname), name.pos());
                 if iname == name {
                     input.error("Generated Instance name conflicts with original name");
                 }
-                let params = params.into_iter().map(core::Expr::from).collect();
-                let instance = core::Instance::new(iname.clone(), component, params).set_span(sp).into();
-                let invoke = core::Invoke::new(name, iname, abstract_vars, Some(ports)).set_span(sp).into();
+                let instance = core::Instance::new(iname.clone(), component, params).into();
+                let invoke = core::Invoke::new(name, iname, abstract_vars, Some(ports)).into();
                 vec![instance, invoke]
             }
         ))
     }
 
     // ================ Assignments =====================
-    fn port(input: Node) -> ParseResult<core::Port> {
+    fn port(input: Node) -> ParseResult<Loc<core::Port>> {
         let sp = Self::get_span(&input);
         let n = match_nodes!(
             input.into_children();
@@ -360,10 +363,10 @@ impl FilamentParser {
             [identifier(comp), identifier(name)] => core::Port::comp(comp, name),
             [identifier(name), expr(idx)] => core::Port::bundle(name, idx),
         );
-        Ok(n.set_span(sp))
+        Ok(Loc::new(n, sp))
     }
 
-    fn arguments(input: Node) -> ParseResult<Vec<core::Port>> {
+    fn arguments(input: Node) -> ParseResult<Vec<Loc<core::Port>>> {
         Ok(match_nodes!(
             input.into_children();
             [] => vec![],
@@ -371,16 +374,17 @@ impl FilamentParser {
         ))
     }
 
-    fn time_args(input: Node) -> ParseResult<Vec<core::Time>> {
+    fn time_args(input: Node) -> ParseResult<Vec<Loc<core::Time>>> {
         Ok(match_nodes!(
             input.into_children();
             [time(args)..] => args.collect(),
         ))
     }
 
+    #[allow(clippy::type_complexity)]
     fn invoke_args(
         input: Node,
-    ) -> ParseResult<(Vec<core::Time>, Vec<core::Port>)> {
+    ) -> ParseResult<(Vec<Loc<core::Time>>, Vec<Loc<core::Port>>)> {
         Ok(match_nodes!(
             input.into_children();
             [time_args(time_args), arguments(args)] => (time_args, args),
@@ -388,19 +392,18 @@ impl FilamentParser {
     }
 
     fn invocation(input: Node) -> ParseResult<core::Invoke> {
-        let span = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
             [
                 identifier(bind),
                 identifier(comp),
                 invoke_args((abstract_vars, ports))
-            ] => core::Invoke::new(bind, comp, abstract_vars, Some(ports)).set_span(span),
+            ] => core::Invoke::new(bind, comp, abstract_vars, Some(ports)),
             [
                 identifier(bind),
                 identifier(comp),
                 time_args(abstract_vars),
-            ] => core::Invoke::new(bind, comp, abstract_vars, None).set_span(span)
+            ] => core::Invoke::new(bind, comp, abstract_vars, None),
         ))
     }
     fn gte(input: Node) -> ParseResult<()> {
@@ -432,7 +435,8 @@ impl FilamentParser {
         )
     }
 
-    fn constraint(input: Node) -> ParseResult<core::Constraint> {
+    fn constraint(input: Node) -> ParseResult<Loc<core::Constraint>> {
+        let sp = Self::get_span(&input);
         match_nodes!(
             input.clone().into_children();
             [
@@ -440,12 +444,14 @@ impl FilamentParser {
                 order_op((op, rev)),
                 time(r)
             ] => {
+                let l = l.take();
+                let r = r.take();
                 let con = if !rev {
                     core::OrderConstraint::new(l, r, op)
                 } else {
                     core::OrderConstraint::new(r, l, op)
                 };
-                Ok(core::Constraint::base(con))
+                Ok(Loc::new(core::Constraint::base(con), sp))
             },
             [
                 expr(l),
@@ -453,16 +459,16 @@ impl FilamentParser {
                 expr(r)
             ] => {
                 let con = if !rev {
-                    core::OrderConstraint::new(l.into(), r.into(), op)
+                    core::OrderConstraint::new(l.take().into(), r.take().into(), op)
                 } else {
-                    core::OrderConstraint::new(r.into(), l.into(), op)
+                    core::OrderConstraint::new(r.take().into(), l.take().into(), op)
                 };
-                Ok(core::Constraint::sub(con))
+                Ok(Loc::new(core::Constraint::sub(con), sp))
             }
         )
     }
 
-    fn constraints(input: Node) -> ParseResult<Vec<core::Constraint>> {
+    fn constraints(input: Node) -> ParseResult<Vec<Loc<core::Constraint>>> {
         Ok(match_nodes!(
             input.into_children();
             [] => Vec::default(),
@@ -475,7 +481,7 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.into_children();
             [] => vec![],
-            [param_var(params)..] => params.collect(),
+            [param_var(params)..] => params.map(|p| p.take()).collect(),
         ))
     }
     fn signature(input: Node) -> ParseResult<core::Signature> {
@@ -522,32 +528,29 @@ impl FilamentParser {
     }
 
     fn guard(input: Node) -> ParseResult<core::Guard> {
-        let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [port(p)] => p.into(),
+            [port(p)] => p.take().into(),
             [port(p), guard(g)] => {
-                core::Guard::or(p.into(), g).set_span(sp)
+                core::Guard::or(p.take().into(), g)
             }
         ))
     }
 
     fn connect(input: Node) -> ParseResult<core::Connect> {
-        let span = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [port(dst), port(src)] => core::Connect::new(dst, src, None).set_span(span),
+            [port(dst), port(src)] => core::Connect::new(dst, src, None),
             [port(dst), guard(guard), port(src)] => {
-                core::Connect::new(dst, src, Some(guard)).set_span(span)
+                core::Connect::new(dst, src, Some(guard))
             }
         ))
     }
 
     fn fsm(input: Node) -> ParseResult<core::Fsm> {
-        let span = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [identifier(name), bitwidth(states), port(trigger)] => core::Fsm::new(name, states, trigger).set_span(span)
+            [identifier(name), bitwidth(states), port(trigger)] => core::Fsm::new(name.take(), states, trigger.take()),
         ))
     }
 
@@ -555,7 +558,7 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.into_children();
             [param_var(var), expr(start), expr(end), command(body)..] => {
-                core::ForLoop::new(var, start, end, body.into_iter().flatten().collect())
+                core::ForLoop::new(var.take(), start.take(), end.take(), body.into_iter().flatten().collect())
             }
         ))
     }
@@ -563,15 +566,14 @@ impl FilamentParser {
     fn bundle_typ(input: Node) -> ParseResult<core::BundleType> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(param), interval_range(range), expr(width)] => core::BundleType::new(param, range, width),
+            [param_var(param), interval_range(range), expr(width)] => core::BundleType::new(param.take(), range, width),
         ))
     }
 
     fn bundle(input: Node) -> ParseResult<core::Bundle> {
-        let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [identifier(name), expr(size), bundle_typ(typ)] => core::Bundle::new(name, size, typ).set_span(sp),
+            [identifier(name), expr(size), bundle_typ(typ)] => core::Bundle::new(name, size, typ),
         ))
     }
 

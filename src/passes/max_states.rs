@@ -1,5 +1,5 @@
 use crate::{
-    binding,
+    binding, cmdline,
     core::{self, Id},
     visitor::{self, Traverse},
 };
@@ -20,10 +20,10 @@ pub struct MaxStates {
 impl MaxStates {
     fn max_state_from_ports<'a>(
         &mut self,
-        ports: impl IntoIterator<Item = &'a core::PortDef>,
+        ports: impl IntoIterator<Item = &'a core::Loc<core::PortDef>>,
     ) {
         for pd in ports {
-            for time in pd.liveness.time_exprs() {
+            for time in pd.inner().liveness.time_exprs() {
                 let ev = &time.event;
                 let v = self.cur_states.get_mut(ev).unwrap();
                 let st = u64::try_from(time.offset()).unwrap();
@@ -36,7 +36,7 @@ impl MaxStates {
 }
 
 impl visitor::Checker for MaxStates {
-    fn new(_: &core::Namespace) -> Self {
+    fn new(_opts: &cmdline::Opts, _: &core::Namespace) -> Self {
         Self::default()
     }
     fn clear_data(&mut self) {
@@ -54,7 +54,7 @@ impl visitor::Checker for MaxStates {
             .sig
             .events
             .iter()
-            .map(|eb| (eb.event.clone(), 0))
+            .map(|eb| (*eb.event.inner(), 0))
             .collect();
         self.max_state_from_ports(comp.sig.inputs());
         Traverse::Continue(())
@@ -77,7 +77,7 @@ impl visitor::Checker for MaxStates {
     ) -> Traverse {
         let events = std::mem::take(&mut self.cur_states);
         log::info!("Max states for {}: {:?}", comp.sig.name, events);
-        self.max_states.insert(comp.sig.name.clone(), events);
+        self.max_states.insert(*comp.sig.name.inner(), events);
         Traverse::Continue(())
     }
 }

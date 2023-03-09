@@ -39,13 +39,7 @@ pub struct Diagnostics {
 }
 
 impl Diagnostics {
-    /// Add information to the diagnostics instance.
-    pub fn add_info<S: ToString>(
-        &mut self,
-        message: S,
-        pos: GPosIdx,
-    ) -> InfoIdx {
-        let info = Information::new(message.to_string(), pos);
+    fn add_info_help(&mut self, info: Information) -> InfoIdx {
         if let Some(idx) = self.infos.iter().position(|i| *i == info) {
             InfoIdx(idx)
         } else {
@@ -55,9 +49,27 @@ impl Diagnostics {
         }
     }
 
+    /// Add information to the diagnostics instance.
+    pub fn add_info<S: ToString>(
+        &mut self,
+        message: S,
+        pos: GPosIdx,
+    ) -> InfoIdx {
+        if pos == GPosIdx::UNKNOWN {
+            log::info!(
+                "Adding info with unknown position: {}",
+                message.to_string()
+            )
+        }
+        self.add_info_help(Information::new(message.to_string(), pos))
+    }
+
     /// Add a message without any position information.
     pub fn add_message<S: ToString>(&mut self, message: S) -> InfoIdx {
-        self.add_info(message.to_string(), GPosIdx::UNKNOWN)
+        self.add_info_help(Information::new(
+            message.to_string(),
+            GPosIdx::UNKNOWN,
+        ))
     }
 
     /// Add an error to the diagnostics instance.
@@ -86,7 +98,12 @@ impl Diagnostics {
 
         // Deduplicate errors based on the location attached to the error
         let mut error_map = BTreeMap::new();
-        for error in self.errors.drain(..) {
+        for mut error in self.errors.drain(..) {
+            // Sort everything except the first element
+            let first = error.notes.remove(0);
+            error.notes.sort();
+            error.notes.insert(0, first);
+
             error_map
                 .entry(error.notes)
                 .or_insert_with(Vec::new)

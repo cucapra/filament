@@ -1,8 +1,8 @@
 use crate::{
     binding::{self, InvIdx},
-    core, diagnostics,
-    errors::{Error, WithPos},
-    utils,
+    cmdline, core, diagnostics,
+    errors::Error,
+    utils::{self, GPosIdx},
     visitor::{self, Traverse},
 };
 use itertools::Itertools;
@@ -29,30 +29,31 @@ impl BindCheck {
     }
 
     /// Check that a time expression is well-formed
-    fn time(&mut self, time: &core::Time) {
+    fn time(&mut self, time: &core::Time, pos: GPosIdx) {
         // Check that events are bound
         let ev = &time.event;
         if !self.events.contains(ev) {
-            let err = Error::undefined(ev.clone(), "event").add_note(
-                self.diag.add_info(
-                    "event is not defined in the signature",
-                    ev.copy_span(),
-                ),
-            );
+            let err =
+                Error::undefined(*ev, "event").add_note(self.diag.add_info(
+                    format!("event `{ev}' is not defined in the signature"),
+                    pos,
+                ));
             self.diag.add_error(err);
         }
 
         // Check that the abstract variables are bound
-        self.expr(time.offset());
+        self.expr(time.offset(), pos);
     }
 
-    fn expr(&mut self, expr: &core::Expr) {
+    fn expr(&mut self, expr: &core::Expr, pos: GPosIdx) {
         for abs in expr.exprs() {
             if !self.vars.iter().chain(self.vars.iter()).contains(abs) {
-                let err = Error::undefined(abs.clone(), "parameter").add_note(
+                let err = Error::undefined(*abs, "parameter").add_note(
                     self.diag.add_info(
-                        "parameter is not defined in the signature",
-                        abs.copy_span(),
+                        format!(
+                            "parameter `{abs}' is not defined in the signature"
+                        ),
+                        pos,
                     ),
                 );
                 self.diag.add_error(err);
@@ -62,7 +63,7 @@ impl BindCheck {
 }
 
 impl visitor::Checker for BindCheck {
-    fn new(_: &core::Namespace) -> Self {
+    fn new(_: &cmdline::Opts, _: &core::Namespace) -> Self {
         Self {
             diag: diagnostics::Diagnostics::default(),
             vars: Vec::new(),
@@ -89,12 +90,12 @@ impl visitor::Checker for BindCheck {
             liveness,
             bitwidth,
         } = &bun.typ;
-        let n = self.push_vars(&[idx.clone()]);
+        let n = self.push_vars(&[*idx]);
         for time in liveness.time_exprs() {
-            self.time(time);
+            self.time(time, liveness.pos());
         }
         for expr in &[bitwidth, &bun.len] {
-            self.expr(expr);
+            self.expr(expr, expr.pos());
         }
         self.pop_vars(n);
         Traverse::Continue(())
@@ -105,21 +106,21 @@ impl visitor::Checker for BindCheck {
         let events = sig.events().collect_vec();
         let params = &sig.params;
         self.push_vars(params);
-        self.events.extend(events);
+        self.events.extend(events.iter().map(|ev| *ev.inner()));
         // Check all the definitions only use bound events and parameters
         for pd in sig.ports() {
             for time in pd.liveness.time_exprs() {
-                self.time(time);
+                self.time(time, pd.liveness.pos());
             }
-            self.expr(&pd.bitwidth);
+            self.expr(&pd.bitwidth, pd.bitwidth.pos());
         }
         // Check that interface ports use only bound events
         for id in &sig.interface_signals {
             if !self.events.contains(&id.event) {
-                let err = Error::undefined(id.event.clone(), "event").add_note(
-                    self.diag.add_info(
+                let err = Error::undefined(id.event, "event").add_note(
+                    self.diag.add_message(
                         "event is not defined in the signature",
-                        id.event.copy_span(),
+                        // id.event.copy_span(),
                     ),
                 );
                 self.diag.add_error(err);
@@ -132,10 +133,10 @@ impl visitor::Checker for BindCheck {
             // XXX: This check does duplicated work because if a TimeSub has
             // time in it, the first loop will get all the expressions as well.
             for time in delay.events() {
-                self.time(time)
+                self.time(time, delay.pos())
             }
             for expr in delay.exprs() {
-                self.expr(expr);
+                self.expr(expr, delay.pos());
             }
         }
 
@@ -143,10 +144,10 @@ impl visitor::Checker for BindCheck {
         for constraint in &sig.constraints {
             // XXX: Same problem as the loop above
             for time in constraint.events() {
-                self.time(time)
+                self.time(time, constraint.pos())
             }
             for expr in constraint.exprs() {
-                self.expr(expr);
+                self.expr(expr, constraint.pos());
             }
         }
 
@@ -158,7 +159,7 @@ impl visitor::Checker for BindCheck {
         l: &core::ForLoop,
         ctx: &binding::CompBinding,
     ) -> Traverse {
-        let vars = self.push_vars(&[l.idx.clone()]);
+        let vars = self.push_vars(&[l.idx]);
         for cmd in &l.body {
             self.command(cmd, ctx);
         }
@@ -174,7 +175,7 @@ impl visitor::Checker for BindCheck {
         let bound = ctx.get_instance(&inst.name);
         let param_len = ctx.prog[bound.sig].params.len();
         for param in &inst.bindings {
-            self.expr(param);
+            self.expr(param, param.pos());
         }
 
         if param_len != inst.bindings.len() {
@@ -185,7 +186,7 @@ impl visitor::Checker for BindCheck {
                 inst.bindings.len(),
             );
             let err = Error::malformed(msg.clone())
-                .add_note(self.diag.add_info(msg, inst.copy_span()));
+                .add_note(self.diag.add_info(msg, inst.name.pos()));
             self.diag.add_error(err);
         }
 
@@ -203,7 +204,7 @@ impl visitor::Checker for BindCheck {
         if let Some(ports) = &inv.ports {
             // Check that scheduling events are bound
             for time in &inv.abstract_vars {
-                self.time(time);
+                self.time(time, time.pos());
             }
 
             // Check that the number of ports matches the number of ports
@@ -217,14 +218,16 @@ impl visitor::Checker for BindCheck {
                 let err = Error::malformed(format!(
                     "Invoke of {} requires {formals} ports but {actuals} were provided",
                     inv.instance,
-                )).add_note(self.diag.add_info("instance used here", inv.copy_span()));
+                )).add_note(self.diag.add_info("instance used here", inv.instance.pos()));
                 self.diag.add_error(err);
             }
 
             // Check the connections implied by the ports
             for (actual, formal) in ports.iter().zip(inputs) {
-                let dst = core::Port::comp(inv.name.clone(), formal.clone())
-                    .set_span(formal.copy_span());
+                let dst = core::Loc::new(
+                    core::Port::comp(inv.name.clone(), formal.clone()),
+                    formal.pos(),
+                );
                 let con = core::Connect::new(dst, actual.clone(), None);
                 self.connect(&con, ctx)?;
             }
@@ -291,7 +294,7 @@ impl BindCheck {
                 inv.instance,
             )).add_note(self.diag.add_info(
                 format!("invoke requires at least {min_formals} events but {actuals} are provided"),
-                inv.instance.copy_span()
+                inv.instance.pos()
             ));
             self.diag.add_error(err);
         } else if actuals > max_formals {
@@ -300,7 +303,7 @@ impl BindCheck {
                 inv.instance,
             )).add_note(self.diag.add_info(
                 format!("invoke accepts at most {max_formals} events but {actuals} are provided"),
-                inv.instance.copy_span()
+                inv.instance.pos()
             ));
             self.diag.add_error(err);
         }

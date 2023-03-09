@@ -54,14 +54,14 @@ impl Time {
     /// Resolve all expressions bound in this time expression
     pub fn resolve_expr(self, bind: &utils::Binding<Expr>) -> Self {
         Time {
-            event: self.event.clone(),
+            event: self.event,
             offset: self.offset.resolve(bind),
         }
     }
 
     /// Get the event associated with this time expression
     pub fn event(&self) -> Id {
-        self.event.clone()
+        self.event
     }
 }
 
@@ -83,11 +83,7 @@ impl Range {
     pub fn as_offset(&self) -> Option<(Id, Expr, Expr)> {
         let Range { start, end, .. } = &self;
         if start.event == end.event {
-            Some((
-                start.event.clone(),
-                start.offset.clone(),
-                end.offset().clone(),
-            ))
+            Some((start.event, start.offset.clone(), end.offset().clone()))
         } else {
             None
         }
@@ -110,10 +106,10 @@ impl std::ops::Sub for Time {
 
     fn sub(self, other: Self) -> Self::Output {
         if self.event == other.event {
-            return TimeSub::Unit(self.offset - other.offset);
+            TimeSub::Unit(self.offset - other.offset)
+        } else {
+            TimeSub::Sym { l: self, r: other }
         }
-
-        TimeSub::Sym { l: self, r: other }
     }
 }
 

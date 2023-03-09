@@ -1,59 +1,33 @@
 ---CODE---
 1
 ---STDERR---
-error: Cannot prove constraint L+1 > G+1
-   ┌─ ./primitives/./state.fil:10:5
-   │
-10 │     @[G+1, L] out: #WIDTH,
-   │     ^^^^^^^^^ interval's end time must be greater than the start time
-   │
-   ┌─ tests/errors/unprovable-cons.fil:14:3
-   │
-14 │   l0 := L<G, L+1>(left);
-   │   ---------------------- component's where clause constraints must be satisfied
-   │
-
-error: Cannot prove constraint |L+1 - G+1| >= 1
-   ┌─ ./primitives/./state.fil:8:5
-   │
- 4 │   comp Register[#WIDTH]<G: L-(G+1), L: 1>(
-   │                         ---------- interface allows event to trigger every |L - G+1| cycle(s)
-   ·
- 8 │     @[G, G+1] in: #WIDTH,
-   │     ^^^^^^^^^^^^^^^^^^^^ signal lasts for 1 cycle(s)
-   │
-   ┌─ tests/errors/unprovable-cons.fil:14:3
-   │
-14 │   l0 := L<G, L+1>(left);
-   │   ---------------------- component's where clause constraints must be satisfied
-   │
-
-error: Cannot prove constraint |L - G| >= 1
+error: delay must be longer than the length of the signal
   ┌─ tests/errors/unprovable-cons.fil:8:3
   │
 5 │ comp Main<G: L-(G), L: 1>(
-  │           -------- interface allows event to trigger every |L - G| cycle(s)
+  │           - interface allows event to trigger every |L - G| cycle(s)
   ·
 8 │   @[G, G+1] left: 32,
-  │   ^^^^^^^^^^^^^^^^^^ signal lasts for 1 cycle(s)
-  │
+  │   ^^^^^^^^^ signal lasts for 1 cycle(s)
 
-error: Cannot prove constraint L+1 > G+1
+error: invocation violates component's constraint
+   ┌─ ./primitives/./state.fil:11:11
+   │
+11 │   ) where L > G+1;
+   │           ^^^^^^^ constraint was violated
+   │
    ┌─ tests/errors/unprovable-cons.fil:14:3
    │
 14 │   l0 := L<G, L+1>(left);
-   │   ^^^^^^^^^^^^^^^^^^^^^^ component's where clause constraints must be satisfied
-   │
+   │   -- invocation violates component's constraint
 
-error: Multiple errors encountered
+error: source port must be available longer than the destination port requires
    ┌─ tests/errors/unprovable-cons.fil:15:9
    │
 15 │   out = l0.out;
    │   ---   ^^^^^^ source is available for @[G+1, L+1]
    │   │      
    │   destination's requirement @[L+2, L+3]
-   │
-   = Cannot prove constraint L+2 >= G+1
-   = Cannot prove constraint L+1 >= L+3
 
-Compilation failed with 5 errors.
+Compilation failed with 3 errors.
+Run with --show-models to generate assignments for failing constraints.
