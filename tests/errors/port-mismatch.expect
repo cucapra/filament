@@ -8,7 +8,6 @@ error: source and destination widths must match
   │     ---   ^^ source `in' has width 32
   │     │      
   │     destination `out' has width 16
-  │
-  = assignment violates constraint: G=0
 
 Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

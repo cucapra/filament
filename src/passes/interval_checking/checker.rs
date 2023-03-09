@@ -165,8 +165,8 @@ impl IntervalCheck {
 }
 
 impl visitor::Checker for IntervalCheck {
-    fn new(_: &cmdline::Opts, ns: &core::Namespace) -> Self {
-        let mut solver = FilSolver::new().unwrap();
+    fn new(opts: &cmdline::Opts, ns: &core::Namespace) -> Self {
+        let mut solver = FilSolver::new(opts.show_models).unwrap();
         let mut diagnostics = diagnostics::Diagnostics::default();
 
         // Check that all signatures are well formed

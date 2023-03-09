@@ -15,3 +15,4 @@ error: reuses instance uses phantom event for scheduling
   = phantom ports are compiled away and cannot be used for resource sharing
 
 Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

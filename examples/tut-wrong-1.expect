@@ -11,7 +11,6 @@ error: source port must be available longer than the destination port requires
     │
 152 │     @[G, L] in1: #WIDTH,
     │             --- destination's requirement @[G, G+1]
-    │
-    = assignment violates constraint: G=0
 
 Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

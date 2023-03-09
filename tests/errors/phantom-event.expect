@@ -18,3 +18,4 @@ error: component provided phantom event binding to non-phantom event argument
   = phantom ports are compiled away and cannot be used by subcomponents
 
 Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

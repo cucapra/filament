@@ -13,8 +13,6 @@ error: instance must be shared with sufficient delay
   │   -- invocation starts at `G'
 9 │   m1 := M<G+1>(30, 40);
   │   -- invocation starts at `G+1'
-  │
-  = assignment violates constraint: G=0
 
 error: instance must be shared with sufficient delay
   ┌─ ./primitives/sequential.fil:3:18
@@ -28,7 +26,6 @@ error: instance must be shared with sufficient delay
   │   -- invocation starts at `G'
 9 │   m1 := M<G+1>(30, 40);
   │   -- invocation starts at `G+1'
-  │
-  = assignment violates constraint: G=0
 
 Compilation failed with 2 errors.
+Run with --show-models to generate assignments for failing constraints.

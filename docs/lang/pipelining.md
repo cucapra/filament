@@ -62,7 +62,7 @@ The fix is easy: looking at our original design, we see that `op` is only used b
 ### Delays of Subcomponents
 The second error message points out that the ALU component may execute every cycle but the multiplier we used can only execute every two cycles:
 ```
-{{#include ../../examples/tut-pipe-wrong-1.expect:15:29}}
+{{#include ../../examples/tut-pipe-wrong-1.expect:13:25}}
 ```
 
 Yet again, our request is physically impossible to satisfy: our multiplier circuit is fundamentally incapable of executing every cycle.
@@ -78,7 +78,7 @@ We can change out program to use this component instead:
 
 However, in making this change, we've created a new problem for ourselves:
 ```
-{{#include ../../examples/tut-pipe-wrong-2.expect:20:30}}
+{{#include ../../examples/tut-pipe-wrong-2.expect:18:27}}
 ```
 Filament tells us that `FastMult`'s `out` port is available in the interval [G+3, G+4) instead of [G+2, G+3) for `Mult`, i.e., the latency of `FastMult` is different from the latency of `Mult`.
 

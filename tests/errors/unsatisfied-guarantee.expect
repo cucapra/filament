@@ -8,7 +8,6 @@ error: source port must be available longer than the destination port requires
    │   ---   ^^^^^^ source is available for @[G, G+1]
    │   │      
    │   destination's requirement @[G+3, G+4]
-   │
-   = assignment violates constraint: G=0
 
 Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

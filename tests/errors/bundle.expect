@@ -6,8 +6,6 @@ error: bundle index must be less than bundle length
    │
 10 │     f{1} = input;
    │       ^ cannot prove within-bounds bundle access: index 1 greater than bundle length #N
-   │
-   = assignment violates constraint: G=0, W=0, N=1, i=0
 
 error: source port must be available longer than the destination port requires
    ┌─ tests/errors/bundle.fil:10:12
@@ -16,8 +14,6 @@ error: source port must be available longer than the destination port requires
    │     ----   ^^^^^ source is available for @[G, G+1]
    │     │       
    │     destination's requirement @[G+1, G+2]
-   │
-   = assignment violates constraint: G=0, W=0, N=1, i=0
 
 error: source port must be available longer than the destination port requires
    ┌─ tests/errors/bundle.fil:13:17
@@ -26,16 +22,12 @@ error: source port must be available longer than the destination port requires
    │         -----   ^^^^^ source is available for @[G+(#i+1), G+(#i+2)]
    │         │        
    │         destination's requirement @[G+#i, G+(#i+1)]
-   │
-   = assignment violates constraint: G=0, W=0, N=1, i=0
 
 error: bundle index must be less than bundle length
    ┌─ tests/errors/bundle.fil:15:13
    │
 15 │     out = f{#N+1};
    │             ^^^^ cannot prove within-bounds bundle access: index (#N+1) greater than bundle length #N
-   │
-   = assignment violates constraint: G=0, W=0, N=1, i=0
 
 error: source port must be available longer than the destination port requires
    ┌─ tests/errors/bundle.fil:15:11
@@ -44,7 +36,6 @@ error: source port must be available longer than the destination port requires
    │     ---   ^^^^^^^ source is available for @[G+(#N+1), G+((#N+1)+1)]
    │     │      
    │     destination's requirement @[G+#N, G+(#N+1)]
-   │
-   = assignment violates constraint: G=0, W=0, N=1, i=0
 
 Compilation failed with 5 errors.
+Run with --show-models to generate assignments for failing constraints.

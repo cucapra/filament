@@ -97,6 +97,9 @@ fn main() {
         Ok(_) => (),
         Err(err) => {
             eprintln!("Compilation failed with {err} errors.");
+            if !opts.show_models {
+                eprintln!("Run with --show-models to generate assignments for failing constraints.");
+            }
             std::process::exit(1)
         }
     }

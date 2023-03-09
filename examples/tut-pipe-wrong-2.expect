@@ -14,8 +14,6 @@ error: event provided to invocation triggers more often that invocation's event'
    │
  4 │   comp Register[#WIDTH]<G: L-(G+1), L: 1>(
    │                            ------- invocation's event is allowed to trigger every 2 cycles
-   │
-   = assignment violates constraint: G=0
 
 error: source port must be available longer than the destination port requires
     ┌─ examples/tut-pipe-wrong-2.fil:18:40
@@ -27,7 +25,6 @@ error: source port must be available longer than the destination port requires
     │
 152 │     @[G, L] in1: #WIDTH,
     │             --- destination's requirement @[G+2, G+3]
-    │
-    = assignment violates constraint: G=0
 
 Compilation failed with 2 errors.
+Run with --show-models to generate assignments for failing constraints.

@@ -11,21 +11,6 @@ error: source port must be available longer than the destination port requires
    │
 11 │     @[G, L] left: #WIDTH,
    │             ---- destination's requirement @[G+#W, G+(#W+1)]
-   │
-   = assignment violates constraint: G=0, W=1, N=2
-
-error: source port must be available longer than the destination port requires
-   ┌─ tests/errors/poly-mismatch.fil:12:28
-   │
-12 │     a := new Add[#W]<G+#W>(s.out, acc);
-   │                            ^^^^^ source is available for @[G+#N, G+(#N+1)]
-   │
-   ┌─ ./primitives/core.fil:11:13
-   │
-11 │     @[G, L] left: #WIDTH,
-   │             ---- destination's requirement @[G+#W, G+(#W+1)]
-   │
-   = assignment violates constraint: G=0, W=1, N=0
 
 error: source port must be available longer than the destination port requires
    ┌─ tests/errors/poly-mismatch.fil:12:35
@@ -37,21 +22,6 @@ error: source port must be available longer than the destination port requires
    │
 12 │     @[G, L] right: #WIDTH,
    │             ----- destination's requirement @[G+#W, G+(#W+1)]
-   │
-   = assignment violates constraint: G=0, W=1, N=2
-
-error: source port must be available longer than the destination port requires
-   ┌─ tests/errors/poly-mismatch.fil:12:35
-   │
-12 │     a := new Add[#W]<G+#W>(s.out, acc);
-   │                                   ^^^ source is available for @[G+#N, G+(#N+1)]
-   │
-   ┌─ ./primitives/core.fil:12:13
-   │
-12 │     @[G, L] right: #WIDTH,
-   │             ----- destination's requirement @[G+#W, G+(#W+1)]
-   │
-   = assignment violates constraint: G=0, W=1, N=0
 
 error: source port must be available longer than the destination port requires
    ┌─ tests/errors/poly-mismatch.fil:13:11
@@ -60,18 +30,6 @@ error: source port must be available longer than the destination port requires
    │     ---   ^^^^^ source is available for @[G+#W, G+(#W+1)]
    │     │      
    │     destination's requirement @[G+#N, G+(#N+1)]
-   │
-   = assignment violates constraint: G=0, W=1, N=2
-
-error: source port must be available longer than the destination port requires
-   ┌─ tests/errors/poly-mismatch.fil:13:11
-   │
-13 │     out = a.out;
-   │     ---   ^^^^^ source is available for @[G+#W, G+(#W+1)]
-   │     │      
-   │     destination's requirement @[G+#N, G+(#N+1)]
-   │
-   = assignment violates constraint: G=0, W=1, N=0
 
 error: source port must be available longer than the destination port requires
    ┌─ tests/errors/poly-mismatch.fil:20:11
@@ -80,7 +38,6 @@ error: source port must be available longer than the destination port requires
    │     ---   ^^^^^ source is available for @[G+2, G+3]
    │     │      
    │     destination's requirement @[G+4, G+5]
-   │
-   = assignment violates constraint: G=0
 
-Compilation failed with 7 errors.
+Compilation failed with 4 errors.
+Run with --show-models to generate assignments for failing constraints.
