@@ -19,7 +19,7 @@ jobs:
         run: mdbook build
       - name: Create CNAME file
         run: |
-          echo 'filament.rachitnigam.org' > ./book/CNAME
+          echo 'filament.rachitnigam.com' > ./book/CNAME
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
