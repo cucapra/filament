@@ -1,6 +1,6 @@
 use crate::{
     binding::{self, InvIdx},
-    core, diagnostics,
+    cmdline, core, diagnostics,
     errors::Error,
     utils::{self, GPosIdx},
     visitor::{self, Traverse},
@@ -48,14 +48,14 @@ impl BindCheck {
     fn expr(&mut self, expr: &core::Expr, pos: GPosIdx) {
         for abs in expr.exprs() {
             if !self.vars.iter().chain(self.vars.iter()).contains(abs) {
-                let err =
-                    Error::undefined(*abs, "parameter")
-                        .add_note(self.diag.add_info(
+                let err = Error::undefined(*abs, "parameter").add_note(
+                    self.diag.add_info(
                         format!(
                             "parameter `{abs}' is not defined in the signature"
                         ),
                         pos,
-                    ));
+                    ),
+                );
                 self.diag.add_error(err);
             }
         }
@@ -63,7 +63,7 @@ impl BindCheck {
 }
 
 impl visitor::Checker for BindCheck {
-    fn new(_: &core::Namespace) -> Self {
+    fn new(_: &cmdline::Opts, _: &core::Namespace) -> Self {
         Self {
             diag: diagnostics::Diagnostics::default(),
             vars: Vec::new(),

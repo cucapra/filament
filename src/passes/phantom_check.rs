@@ -1,7 +1,7 @@
 use crate::errors::Error;
 use crate::utils::GPosIdx;
 use crate::visitor::{self, Traverse};
-use crate::{binding, core, diagnostics};
+use crate::{binding, cmdline, core, diagnostics};
 use itertools::Itertools;
 use std::collections::HashSet;
 
@@ -20,7 +20,7 @@ pub struct PhantomCheck {
 }
 
 impl visitor::Checker for PhantomCheck {
-    fn new(_: &core::Namespace) -> Self {
+    fn new(_opts: &cmdline::Opts, _: &core::Namespace) -> Self {
         Self {
             instance_used: HashSet::new(),
             phantom_events: Vec::new(),

@@ -30,17 +30,17 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
 
     // Bind check
     let t = Instant::now();
-    passes::BindCheck::check(&ns, &bind)?;
+    passes::BindCheck::check(&opts, &ns, &bind)?;
     log::info!("Parameteric Bind check: {}ms", t.elapsed().as_millis());
 
     // Interval checking
     let t = Instant::now();
-    passes::IntervalCheck::check(&ns, &bind)?;
+    passes::IntervalCheck::check(&opts, &ns, &bind)?;
     log::info!("Interval check: {}ms", t.elapsed().as_millis());
 
     // User-level @phantom ports
     let t = Instant::now();
-    passes::PhantomCheck::check(&ns, &bind)?;
+    passes::PhantomCheck::check(&opts, &ns, &bind)?;
     log::info!("Phantom check: {}ms", t.elapsed().as_millis());
 
     // Monomorphize the program.
@@ -54,16 +54,16 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
 
     // Monomorphic Bind check
     let t = Instant::now();
-    passes::BindCheck::check(&ns, &bind)?;
+    passes::BindCheck::check(&opts, &ns, &bind)?;
     log::info!("Monomorphoic Bind check: {}ms", t.elapsed().as_millis());
 
     // Monomorphic Interval checking
     let t = Instant::now();
-    passes::IntervalCheck::check(&ns, &bind)?;
+    passes::IntervalCheck::check(&opts, &ns, &bind)?;
     log::info!("Monomorphoic Interval check: {}ms", t.elapsed().as_millis());
 
     // Max state calculation
-    let states = passes::MaxStates::check(&ns, &bind)?;
+    let states = passes::MaxStates::check(&opts, &ns, &bind)?;
 
     if opts.dump_interface {
         passes::DumpInterface::transform_unwrap(ns, states.max_states);

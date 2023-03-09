@@ -1,5 +1,5 @@
 use crate::{
-    binding,
+    binding, cmdline,
     core::{self, Id},
     visitor::{self, Traverse},
 };
@@ -36,7 +36,7 @@ impl MaxStates {
 }
 
 impl visitor::Checker for MaxStates {
-    fn new(_: &core::Namespace) -> Self {
+    fn new(_opts: &cmdline::Opts, _: &core::Namespace) -> Self {
         Self::default()
     }
     fn clear_data(&mut self) {

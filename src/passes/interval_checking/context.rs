@@ -20,14 +20,15 @@ pub struct IntervalCheck {
     pub(super) vars: Vec<core::Id>,
 }
 
-impl From<(FilSolver, diagnostics::Diagnostics)> for IntervalCheck {
-    fn from((solver, diag): (FilSolver, diagnostics::Diagnostics)) -> Self {
+impl IntervalCheck {
+    /// Construct a new context
+    pub fn new(solver: FilSolver, diag: diagnostics::Diagnostics) -> Self {
         Self {
-            solver,
+            vars: Vec::new(),
             obligations: Vec::new(),
             facts: Vec::new(),
             diag,
-            vars: Vec::new(),
+            solver,
         }
     }
 }
