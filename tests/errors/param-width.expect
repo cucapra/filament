@@ -11,8 +11,6 @@ error: source and destination widths must match
    │
 11 │     @[G, L] left: #WIDTH,
    │             ---- destination `left' has width 32
-   │
-   = assignment violates constraint: G=0, W=0
 
 error: source and destination widths must match
    ┌─ tests/errors/param-width.fil:5:19
@@ -24,7 +22,6 @@ error: source and destination widths must match
    │
 12 │     @[G, L] right: #WIDTH,
    │             ----- destination `right' has width 32
-   │
-   = assignment violates constraint: G=0, W=0
 
 Compilation failed with 2 errors.
+Run with --show-models to generate assignments for failing constraints.

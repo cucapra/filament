@@ -26,3 +26,4 @@ error: undefined port name: out
   │     ^^^ unknown port
 
 Compilation failed with 4 errors.
+Run with --show-models to generate assignments for failing constraints.

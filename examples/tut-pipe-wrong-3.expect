@@ -14,7 +14,6 @@ error: event provided to invocation triggers more often that invocation's event'
    │
  4 │   comp Register[#WIDTH]<G: L-(G+1), L: 1>(
    │                            ------- invocation's event is allowed to trigger every 3 cycles
-   │
-   = assignment violates constraint: G=0
 
 Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

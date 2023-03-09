@@ -11,7 +11,6 @@ error: Cannot prove constraint 10 >= max(G+2, G+11) - min(G, G+9)
    │           - event use starts at `G' and ends at `G+2'
 14 │   m1 := M<G+9>(l1, r1);
    │           --- event use starts at `G+9' and ends at `G+11'
-   │
-   = assignment violates constraint: G=0
 
 Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

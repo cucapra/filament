@@ -50,3 +50,4 @@ error: undefined parameter name: N
   │                          ^^^^ parameter `N' is not defined in the signature
 
 Compilation failed with 8 errors.
+Run with --show-models to generate assignments for failing constraints.

@@ -9,8 +9,6 @@ error: delay must be longer than the length of the signal
   ·
 8 │     @[G, G+3] op: 1,
   │     ^^^^^^^^^ signal lasts for 3 cycle(s)
-  │
-  = assignment violates constraint: G=0
 
 error: event provided to invocation triggers more often that invocation's event's delay allows
    ┌─ examples/tut-pipe-wrong-1.fil:15:13
@@ -25,8 +23,6 @@ error: event provided to invocation triggers more often that invocation's event'
    │
  3 │ comp Mult[#W]<G: 2>(
    │                  - invocation's event is allowed to trigger every 2 cycles
-   │
-   = assignment violates constraint: G=0
 
 error: event provided to invocation triggers more often that invocation's event's delay allows
    ┌─ examples/tut-pipe-wrong-1.fil:18:28
@@ -41,7 +37,6 @@ error: event provided to invocation triggers more often that invocation's event'
    │
  4 │   comp Register[#WIDTH]<G: L-(G+1), L: 1>(
    │                            ------- invocation's event is allowed to trigger every 2 cycles
-   │
-   = assignment violates constraint: G=0
 
 Compilation failed with 3 errors.
+Run with --show-models to generate assignments for failing constraints.

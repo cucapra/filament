@@ -14,3 +14,4 @@ error: user-level component cannot have ordering constraints over events
   │                        ^^^^^^^ user-level component defines ordering between events: G+5 > L
 
 Compilation failed with 2 errors.
+Run with --show-models to generate assignments for failing constraints.

@@ -1,10 +1,10 @@
 use super::IntervalCheck;
 use crate::binding::CompBinding;
 use crate::core::{self, ForLoop, OrderConstraint, Time};
-use crate::diagnostics;
 use crate::errors::Error;
 use crate::utils::{self, FilSolver};
 use crate::visitor::{self, Checker, Traverse};
+use crate::{cmdline, diagnostics};
 use itertools::Itertools;
 use std::iter;
 
@@ -165,8 +165,8 @@ impl IntervalCheck {
 }
 
 impl visitor::Checker for IntervalCheck {
-    fn new(ns: &core::Namespace) -> Self {
-        let mut solver = FilSolver::new().unwrap();
+    fn new(opts: &cmdline::Opts, ns: &core::Namespace) -> Self {
+        let mut solver = FilSolver::new(opts.show_models).unwrap();
         let mut diagnostics = diagnostics::Diagnostics::default();
 
         // Check that all signatures are well formed
@@ -190,7 +190,7 @@ impl visitor::Checker for IntervalCheck {
         }
         log::info!("interval-check.sigs: {}ms", t.elapsed().as_millis());
 
-        Self::from((solver, diagnostics))
+        Self::new(solver, diagnostics)
     }
 
     fn clear_data(&mut self) {

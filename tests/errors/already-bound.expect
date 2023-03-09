@@ -10,3 +10,4 @@ error: name `A' is already bound by instance
   │     ^ name is already bound
 
 Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

@@ -9,8 +9,6 @@ error: delay must be longer than the length of the signal
   ·
 8 │   @[G, G+1] left: 32,
   │   ^^^^^^^^^ signal lasts for 1 cycle(s)
-  │
-  = assignment violates constraint: G=0, L=0
 
 error: invocation violates component's constraint
    ┌─ ./primitives/./state.fil:11:11
@@ -22,8 +20,6 @@ error: invocation violates component's constraint
    │
 14 │   l0 := L<G, L+1>(left);
    │   -- invocation violates component's constraint
-   │
-   = assignment violates constraint: G=0, L=0
 
 error: source port must be available longer than the destination port requires
    ┌─ tests/errors/unprovable-cons.fil:15:9
@@ -32,7 +28,6 @@ error: source port must be available longer than the destination port requires
    │   ---   ^^^^^^ source is available for @[G+1, L+1]
    │   │      
    │   destination's requirement @[L+2, L+3]
-   │
-   = assignment violates constraint: G=2, L=0
 
 Compilation failed with 3 errors.
+Run with --show-models to generate assignments for failing constraints.

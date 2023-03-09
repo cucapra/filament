@@ -179,11 +179,14 @@ fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
 
 /// An instance of a SMT solver for Filament constraints
 pub struct FilSolver {
+    /// Generate models for failing queries
+    show_models: bool,
+    /// Underlying solver
     s: Solver<()>,
 }
 
 impl FilSolver {
-    pub fn new() -> FilamentResult<Self> {
+    pub fn new(show_models: bool) -> FilamentResult<Self> {
         let conf = SmtConf::default_z3();
         // Disable this because it doesn't seem to work with activation literals
         // conf.check_success();
@@ -193,7 +196,10 @@ impl FilSolver {
         solver.path_tee(std::path::PathBuf::from("./model.smt"))?;
 
         define_prelude(&mut solver)?;
-        Ok(Self { s: solver })
+        Ok(Self {
+            show_models,
+            s: solver,
+        })
     }
 
     pub fn prove(
@@ -228,16 +234,23 @@ impl FilSolver {
 
         for fact in asserts {
             if let Some(model) = self.check_fact(fact.constraint(), &vars) {
-                let info = diag.add_message(model);
-                diag.add_error(Error::from(fact).add_note(info));
+                let mut err = Error::from(fact);
+                if self.show_models {
+                    let info = diag.add_message(model);
+                    err = err.add_note(info)
+                }
+                diag.add_error(err);
             }
         }
         for share in sharing {
             if let Some(model) =
                 self.check_fact(&SExp::from(share.clone()), &vars)
             {
-                let info = diag.add_message(model);
-                let err = share.error(diag).add_note(info);
+                let mut err = share.error(diag);
+                if self.show_models {
+                    let info = diag.add_message(model);
+                    err = err.add_note(info)
+                }
                 diag.add_error(err);
             }
         }

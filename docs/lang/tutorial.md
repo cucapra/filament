@@ -17,7 +17,20 @@ def alu(op, left, right):
     return out
 ```
 
-**TODO**: Show a high-level diagram of the generated hardware.
+The generated hardware will look something like this:
+```mermaid
+graph TB;
+    L([left])
+    R([right])
+    O([op])
+    A[Add]
+    M[Mult]
+    Mx[Mux]
+
+    L & R -->A & M;
+    A & M --> Mx -->out([out]);
+    O--->Mx;
+```
 
 We start by defining a Filament component which wraps all the hardware required to implement some computation:
 ```
