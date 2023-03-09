@@ -19,6 +19,9 @@ jobs:
         with:
           command: install
           args: mdbook-mermaid
+      - name: Add mermaid assets
+        run: |
+          mdbook-mermaid install .
       - name: mdbook
         run: mdbook build
       - name: Create CNAME file
