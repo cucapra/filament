@@ -37,7 +37,6 @@ impl Lower {
 
         let fsm = self.find_fsm(&ev)?;
         let guard = (st.try_into().unwrap()..end.try_into().unwrap())
-            .into_iter()
             .map(|st| fsm.port(st).into())
             .reduce(core::Guard::or)
             .unwrap();

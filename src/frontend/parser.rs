@@ -554,11 +554,33 @@ impl FilamentParser {
         ))
     }
 
+    fn expr_cmp(input: Node) -> ParseResult<core::OrderConstraint<core::Expr>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [expr(l), order_op((op, rev)), expr(r)] => {
+                if !rev {
+                    core::OrderConstraint::new(l.take(), r.take(), op)
+                } else {
+                    core::OrderConstraint::new(r.take(), l.take(), op)
+                }
+            }
+        ))
+    }
+
+    fn if_stmt(input: Node) -> ParseResult<core::If> {
+        Ok(match_nodes!(
+            input.into_children();
+            [expr_cmp(cond), commands(then), commands(else_)] => {
+                core::If::new(cond, then, else_)
+            }
+        ))
+    }
+
     fn for_loop(input: Node) -> ParseResult<core::ForLoop> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(var), expr(start), expr(end), command(body)..] => {
-                core::ForLoop::new(var.take(), start.take(), end.take(), body.into_iter().flatten().collect())
+            [param_var(var), expr(start), expr(end), commands(body)] => {
+                core::ForLoop::new(var.take(), start.take(), end.take(), body)
             }
         ))
     }
@@ -586,6 +608,13 @@ impl FilamentParser {
             [fsm(fsm)] => vec![core::Command::Fsm(fsm)],
             [for_loop(l)] => vec![core::Command::ForLoop(l)],
             [bundle(bl)] => vec![core::Command::Bundle(bl)],
+        ))
+    }
+
+    fn commands(input: Node) -> ParseResult<Vec<core::Command>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [command(cmd)..] => cmd.into_iter().flatten().collect(),
         ))
     }
 

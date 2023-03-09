@@ -4,12 +4,12 @@ use std::hash::Hash;
 
 #[derive(Clone)]
 /// A type that contains several position objects and contains and inner value.
-pub struct Loc<T> {
+pub struct Loc<T: Clone> {
     inner: T,
     pos: GPosIdx,
 }
 
-impl<T> Loc<T> {
+impl<T: Clone> Loc<T> {
     /// Construct a new `Loc` with the given inner value and no positions.
     pub fn new(inner: T, pos: GPosIdx) -> Self {
         Self { inner, pos }
@@ -55,7 +55,7 @@ impl<T> Loc<T> {
     }
 
     /// Map over the inner value.
-    pub fn map<U, F>(self, mut f: F) -> Loc<U>
+    pub fn map<U: Clone, F>(self, mut f: F) -> Loc<U>
     where
         F: FnMut(T) -> U,
     {
@@ -66,7 +66,7 @@ impl<T> Loc<T> {
     }
 }
 
-impl<T> std::ops::Deref for Loc<T> {
+impl<T: Clone> std::ops::Deref for Loc<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -74,32 +74,32 @@ impl<T> std::ops::Deref for Loc<T> {
     }
 }
 
-impl<T> std::ops::DerefMut for Loc<T> {
+impl<T: Clone> std::ops::DerefMut for Loc<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
 
-impl<T: Display> Display for Loc<T> {
+impl<T: Display + Clone> Display for Loc<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner)
     }
 }
 
-impl<T: PartialEq> PartialEq for Loc<T> {
+impl<T: PartialEq + Clone> PartialEq for Loc<T> {
     fn eq(&self, other: &Self) -> bool {
         self.inner == other.inner
     }
 }
-impl<T: Eq> Eq for Loc<T> {}
+impl<T: Eq + Clone> Eq for Loc<T> {}
 
-impl<T: PartialOrd> PartialOrd for Loc<T> {
+impl<T: PartialOrd + Clone> PartialOrd for Loc<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.inner.partial_cmp(&other.inner)
     }
 }
 
-impl<T: Hash> Hash for Loc<T> {
+impl<T: Hash + Clone> Hash for Loc<T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.inner.hash(state)
     }

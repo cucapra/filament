@@ -35,7 +35,7 @@ impl From<core::Namespace> for Traversal {
             }
         }
 
-        let order: Vec<_> = ts.into_iter().collect();
+        let order: Vec<_> = ts.collect();
         debug_assert!(
             order.len() == ns.components.len(),
             "Ordering contains {} elements but namespace has {} components",

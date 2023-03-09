@@ -102,12 +102,7 @@ impl ShareConstraint {
 impl std::fmt::Display for ShareConstraint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let min = self.starts.iter().map(|(t, _)| t.to_string()).join(", ");
-        let max = self
-            .ends
-            .iter()
-            .cloned()
-            .map(|(e, _)| format!("{e}"))
-            .join(", ");
+        let max = self.ends.iter().map(|(e, _)| format!("{e}")).join(", ");
         let delay = &self.event_bind.delay;
         write!(f, "{delay} >= max({max}) - min({min})")
     }
@@ -244,7 +239,7 @@ impl FilSolver {
         }
         for share in sharing {
             if let Some(model) =
-                self.check_fact(&SExp::from(share.clone()), &vars)
+                self.check_fact(&SExp::from(Clone::clone(&share)), &vars)
             {
                 let mut err = share.error(diag);
                 if self.show_models {

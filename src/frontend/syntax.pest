@@ -172,10 +172,18 @@ fsm = {
   "fsm" ~ identifier ~ "[" ~ bitwidth ~ "]" ~ "(" ~ port ~ ")" ~ ";"
 }
 
+// ===== if statements ====
+expr_cmp = {
+  expr ~ order_op ~ expr
+}
+if_stmt = {
+  "if" ~ "(" ~ expr_cmp ~ ")" ~ "{" ~ commands ~ "}" ~ ("else" ~ "{" ~ commands ~ "}")?
+}
+
 // ====== Loops ==========
 
 for_loop = {
-  "for" ~ param_var ~ "in" ~ expr ~ ".." ~ expr ~ "{" ~ command* ~ "}"
+  "for" ~ param_var ~ "in" ~ expr ~ ".." ~ expr ~ "{" ~ commands ~ "}"
 }
 
 // ====== Wire bundles ==========
@@ -191,3 +199,5 @@ bundle = {
 command = {
   bundle | instance | invocation | connect | fsm | for_loop
 }
+
+commands = { command* }
