@@ -15,6 +15,10 @@ jobs:
         uses: peaceiris/actions-mdbook@v1
         with:
           mdbook-version: 'latest'
+      - uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: mdbook-mermaid
       - name: mdbook
         run: mdbook build
       - name: Create CNAME file
