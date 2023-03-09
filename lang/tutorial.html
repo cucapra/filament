@@ -1,0 +1,399 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Hardware Design for the Curious Developer - Filament</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = null;
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../start.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li class="chapter-item expanded "><a href="../lang/tutorial.html" class="active"><strong aria-hidden="true">2.</strong> Hardware Design for the Curious Developer</a></li><li class="chapter-item expanded "><a href="../lang/run.html"><strong aria-hidden="true">3.</strong> Running Filament Designs</a></li><li class="chapter-item expanded "><a href="../lang/pipelining.html"><strong aria-hidden="true">4.</strong> Pipelining with Filament</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="hardware-design-for-the-curious-developer"><a class="header" href="#hardware-design-for-the-curious-developer">Hardware Design for the Curious Developer</a></h1>
+<p>Filament is a low-level hardware description language. This means that it does not have a lot of primitive constructs and essentially requires us to build up our hardware from scratch. However, Filament's type system helps us build small reusable components and guarantees that composing them generated efficient and correct hardware.</p>
+<blockquote>
+<p>This tutorial is written for folks with no hardware design background. If you're familiar with hardware design, head to our &quot;Introduction to Filament for Cool Architects&quot; (<strong>TK</strong>).</p>
+</blockquote>
+<h2 id="building-an-arithmetic-logic-unit"><a class="header" href="#building-an-arithmetic-logic-unit">Building an Arithmetic Logic Unit</a></h2>
+<p>Arithmetic Logic Units (ALUs) are a key component of most processors. In a nutshell, they perform various arithmetic operations based on a given op code. We will implement a simple ALU that either performs an addition or multiplication based on the <code>op</code> boolean. At a high-level, we want to build a circuit that performs the same computation as this python program:</p>
+<pre><code class="language-python">def alu(op, left, right):
+    if op:
+        out = left * right
+    else:
+        out = left + right
+    return out
+</code></pre>
+<p><strong>TODO</strong>: Show a high-level diagram of the generated hardware.</p>
+<p>We start by defining a Filament component which wraps all the hardware required to implement some computation:</p>
+<pre><code>comp main&lt;G: 3&gt;(
+    @interface[G] go: 1,
+    @[G, G+1] op: 1,
+    @[G, G+1] left: 32,
+    @[G, G+1] right: 32,
+) -&gt; (@[G, G+1] out: 32)
+</code></pre>
+<p>The <code>&lt;G: 1&gt;</code> syntax defined the event <code>G</code> which can be thought of as the &quot;start time&quot; of the component.
+We define a module that takes the inputs <code>op</code>, <code>left</code>, and <code>right</code> and produces the output <code>out</code>.
+Since we're working with hardware, we need to specify the <em>bitwidth</em> of each input and output.
+Unlike other hardware description languages, Filament <em>also</em> requires us to specify exactly when we'll use the input signals and provide the outputs. The syntax <code>@[G, G+1]</code> states that the signal must be available in the half-open interval [G, G+1).</p>
+<p>Next, we need to perform the computations. Since we're working with hardware designs, we don't get access to primitive operations like <code>*</code> and <code>+</code>; we must build circuits to perform these computations!</p>
+<p>Thankfully, the Filament standard library defines these operations for us, so we can simply import those definitions and instantiate an adder and a multiplier:</p>
+<pre><code>import &quot;primitives/core.fil&quot;;       // Defines Add
+import &quot;primitives/sequential.fil&quot;; // Defines Mult
+
+comp ALU&lt;G: 3&gt;(...) -&gt; (...) {
+    A := new Add[32];
+    M := new Mult[32];
+}
+</code></pre>
+<p>We define two circuits <code>A</code> and <code>M</code> which represent an 32-bit adder and a multiplier respectively. The <code>Add[32]</code> syntax represents us passing the value 32 for the width parameter of the pre-defined components.</p>
+<p>Next, we need to perform the two computation. In Filament, we have to specify the time when a particular computation occurs using an <em>invocation</em>:</p>
+<pre><code>    A := new Add[32];
+    M := new Mult[32];
+    a0 := A&lt;G&gt;(left, right);
+    m0 := M&lt;G&gt;(left, right);
+</code></pre>
+<p>Here, <code>a0</code> and <code>m0</code> are invocations of the adder and the multiplier that are performed when the event <code>G</code> occurs. We provide values for the input ports of the adder and the multiplier. Finally, we can use a multiplexer to select between the output signals of the two invocations:</p>
+<pre><code>mx := new Mux[32]&lt;G&gt;(op, a0.out, m0.out);
+out = mx.out
+</code></pre>
+<p>We make use of Filament's combined instance creation and invocation syntax to define a new multiplexer and use it when event <code>G</code> occurs. Finally, we forward the output from the multiplexer to the output signal of the component.</p>
+<p>Coming from a software background, it might seem weird that we're performing both the computations first and selecting the output after the fact. However, a hardware circuit is <em>always active</em><sup class="footnote-reference"><a href="#clock-gating">1</a></sup>–the multiplier and adder are always propagating signals and performing some computation even if the inputs are nonsensical. Furthermore, constructs like <code>if</code>-<code>else</code> are not compositional.<sup class="footnote-reference"><a href="#control-comp">2</a></sup></p>
+<p>The final program looks like this:</p>
+<pre><code>import &quot;primitives/core.fil&quot;;
+import &quot;primitives/sequential.fil&quot;;
+
+/// ANCHOR: signature
+comp main&lt;G: 3&gt;(
+    @interface[G] go: 1,
+    @[G, G+1] op: 1,
+    @[G, G+1] left: 32,
+    @[G, G+1] right: 32,
+) -&gt; (@[G, G+1] out: 32)
+// ANCHOR_END: signature
+{
+    A := new Add[32];
+    M := new Mult[32];
+    a0 := A&lt;G&gt;(left, right);
+    m0 := M&lt;G&gt;(left, right);
+    mx := new Mux[32]&lt;G&gt;(op, a0.out, m0.out);
+    out = mx.out;
+}
+</code></pre>
+<h2 id="checking-timing-behavior"><a class="header" href="#checking-timing-behavior">Checking Timing Behavior</a></h2>
+<p>Filament's prime directive is to ensure that your hardware is does not violate temporal constraints.
+Let's see what that means exactly by trying to compile our program.
+Save the file as <code>alu.fil</code> and run the following command from the Filament repository:</p>
+<pre><code>cargo run -- alu.fil
+</code></pre>
+<p>Filament tells us that the program is incorrect:</p>
+<pre><code>error: source port must be available longer than the destination port requires
+    ┌─ examples/tut-wrong-1.fil:17:38
+    │
+ 17 │     mx := new Mux[32]&lt;G&gt;(op, a0.out, m0.out);
+    │                                      ^^^^^^ source is available for @[G+2, G+3]
+    │
+    ┌─ ./primitives/core.fil:152:13
+    │
+152 │     @[G, L] in1: #WIDTH,
+    │             --- destination's requirement @[G, G+1]
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.
+</code></pre>
+<p>Filament is telling us that our multiplexer expects its input during the interval [G, G+1) but the multiplier's output is only available in the interval [G+2, G+3).
+What went wrong? We started our adder and the multiplier at the same time (when event <code>G</code> occurs) but the multiplier seems to take longer.
+This is because multipliers are fundamentally different from adders–they require a lot more hardware and a lot more time to perform their computation.
+This <em>temporal constraint</em>–that multiplier may take several cycles while adders may not–is checked by Filament to ensure that our resulting hardware only reads meaningful values.</p>
+<p>In order to fix this, we need to execute the multiplexer when the signal from the multiplier is available. However, in that case, we won't have access to the signal from the adder which only provides its output in the interval [G, G+1). We need to somehow make the signal from the adder last longer as well.</p>
+<h2 id="saving-values-for-the-future"><a class="header" href="#saving-values-for-the-future">Saving Values for the Future</a></h2>
+<p>Registers are the primitive stateful building block for hardware designs and can extend the availability of signals. The signature of a register is complicated by interesting:</p>
+<pre><code>  // A register that can extend the lifetime of a signal to any required length.
+  comp Register[#WIDTH]&lt;G: L-(G+1), L: 1&gt;(
+    clk: 1,
+    reset: 1,
+    @interface[G] write_en: 1,
+    @[G, G+1] in: #WIDTH,
+  ) -&gt; (
+    @[G+1, L] out: #WIDTH,
+  ) where L &gt; G+1;
+</code></pre>
+<p>Notice the availability for the <code>out</code> signal: it is available in the interval [G, L) where <code>L</code> is provided to the component during its invocation.
+This means that a register can hold onto a value for as long as needed!
+The additional <code>where</code> clause ensures that <code>out</code>'s interval is well-formed; it would be troublesome if we could say that <code>out</code> is available between [G+10, G+5).</p>
+<p>Let try to fix our program by making changes:</p>
+<pre><code>import &quot;primitives/core.fil&quot;;
+import &quot;primitives/sequential.fil&quot;;
+
+comp main&lt;G: 3&gt;(
+    @interface[G] go: 1,
+    @[G, G+1] op: 1,
+    @[G, G+1] left: 32,
+    @[G, G+1] right: 32,
+) -&gt; (
+    @[G, G+1] out: 32,
+) {
+    A := new Add[32];
+    M := new Mult[32];
+    m0 := M&lt;G&gt;(left, right);
+    a0 := A&lt;G&gt;(left, right);
+    // Use register to hold the adder's value
+    r0 := new Register[32]&lt;G, G+3&gt;(a0.out);
+    // Use the multiplexer when the mult's output is ready
+    mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
+    out = mx.out;
+}
+</code></pre>
+<p>We made a couple of changes to our program:</p>
+<ul>
+<li>Run the multiplexer when the output from the multiplier is available (at <code>G+2</code>).</li>
+<li>Save the value from the adder in the register invocation <code>r0</code></li>
+<li>Use the value from the register instead of the adder for multiplexing.</li>
+</ul>
+<p>Sadly, Filament is still angry at us:</p>
+<pre><code>error: source port must be available longer than the destination port requires
+    ┌─ examples/tut-wrong-2.fil:19:28
+    │
+ 19 │     mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
+    │                            ^^ source is available for @[G, G+1]
+    │
+    ┌─ ./primitives/core.fil:150:13
+    │
+150 │     @[G, L] sel: 1,
+    │             --- destination's requirement @[G+2, G+3]
+
+error: source port must be available longer than the destination port requires
+   ┌─ examples/tut-wrong-2.fil:20:11
+   │
+20 │     out = mx.out;
+   │     ---   ^^^^^^ source is available for @[G+2, G+3]
+   │     │      
+   │     destination's requirement @[G, G+1]
+
+Compilation failed with 2 errors.
+Run with --show-models to generate assignments for failing constraints.
+</code></pre>
+<p>The problem is that we accept the <code>op</code> input and produce the output <code>out</code> in the interval [G, G+1). However, we know that it is not possible to produce the output as soon as we get the input because the multiplier takes two cycles to produce its output!</p>
+<h2 id="a-correct-implementation"><a class="header" href="#a-correct-implementation">A Correct Implementation</a></h2>
+<p>The fix is easy: we change the signature of the ALU to reflect this cruel reality</p>
+<pre><code>import &quot;primitives/core.fil&quot;;
+import &quot;primitives/sequential.fil&quot;;
+
+/// ANCHOR: sig
+comp main&lt;G: 3&gt;(
+/// ANCHOR_END: sig
+    @interface[G] go: 1,
+    @[G, G+3] op: 1,
+    @[G, G+1] left: 32,
+    @[G, G+1] right: 32,
+) -&gt; (@[G+2, G+3] out: 32)
+{
+    A := new Add[32];
+    M := new Mult[32];
+    m0 := M&lt;G&gt;(left, right);
+    a0 := A&lt;G&gt;(left, right);
+    // Use register to hold the adder's value
+    r0 := new Register[32]&lt;G, G+3&gt;(a0.out);
+    // Use the multiplexer when the mult's output is ready
+    mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
+    out = mx.out;
+}
+</code></pre>
+<p>And running the compiler again generates no longer generates any errors:</p>
+<pre><code>cargo run -- alu.fil
+</code></pre>
+<div class="footnote-definition" id="clock-gating"><sup class="footnote-definition-label">1</sup>
+<p>This is not quite true since we can build circuits where the clock signal to a particular sub-circuit is disabled (or &quot;gated&quot;) based on a particular signal. However, this kind of clock-gating is generally not recommended for fine-grained usage.</p>
+</div>
+<div class="footnote-definition" id="control-comp"><sup class="footnote-definition-label">2</sup>
+<p>While control operators like <code>if</code> and <code>for</code> are supported in languages like Verilog, they don't quite work the same in all contexts. <code>for</code> loops are compile-time constructs whereas <code>if</code> can only be used for combinational circuits like adders but not multipliers.</p>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../start.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../lang/run.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../start.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../lang/run.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
