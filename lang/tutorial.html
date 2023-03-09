@@ -160,7 +160,19 @@
         out = left + right
     return out
 </code></pre>
-<p><strong>TODO</strong>: Show a high-level diagram of the generated hardware.</p>
+<p>The generated hardware will look something like this:</p>
+<pre class="mermaid">graph TB;
+    L([left])
+    R([right])
+    O([op])
+    A[Add]
+    M[Mult]
+    Mx[Mux]
+
+    L &amp; R --&gt;A &amp; M;
+    A &amp; M --&gt; Mx --&gt;out([out]);
+    O---&gt;Mx;
+</pre>
 <p>We start by defining a Filament component which wraps all the hardware required to implement some computation:</p>
 <pre><code>comp main&lt;G: 3&gt;(
     @interface[G] go: 1,
@@ -392,6 +404,8 @@ comp main&lt;G: 3&gt;(
         <script src="../book.js"></script>
 
         <!-- Custom JS scripts -->
+        <script src="../mermaid.min.js"></script>
+        <script src="../mermaid-init.js"></script>
 
 
     </div>
