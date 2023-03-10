@@ -415,11 +415,11 @@ impl If {
 
 impl Display for If {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "if {} {{", self.cond)?;
+        writeln!(f, "if {} {{", self.cond)?;
         for cmd in &self.then {
             writeln!(f, "{}", cmd)?;
         }
-        write!(f, "}} else {{")?;
+        writeln!(f, "}} else {{")?;
         for cmd in &self.alt {
             writeln!(f, "{}", cmd)?;
         }

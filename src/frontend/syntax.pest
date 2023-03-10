@@ -177,7 +177,7 @@ expr_cmp = {
   expr ~ order_op ~ expr
 }
 if_stmt = {
-  "if" ~ "(" ~ expr_cmp ~ ")" ~ "{" ~ commands ~ "}" ~ ("else" ~ "{" ~ commands ~ "}")?
+  "if" ~ expr_cmp ~ "{" ~ commands ~ "}" ~ ("else" ~ "{" ~ commands ~ "}")?
 }
 
 // ====== Loops ==========
@@ -197,7 +197,7 @@ bundle = {
 
 // ========== Commands ==========
 command = {
-  bundle | instance | invocation | connect | fsm | for_loop
+  bundle | instance | invocation | connect | fsm | for_loop | if_stmt
 }
 
 commands = { command* }

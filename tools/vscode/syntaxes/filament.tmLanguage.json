@@ -160,7 +160,7 @@
 				},
 				{
 					"begin": "<",
-					"end": ">",
+					"end": "\n|>",
 					"patterns": [
 						{
 							"name": "entity.name.tag",

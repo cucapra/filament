@@ -203,6 +203,24 @@ impl visitor::Checker for IntervalCheck {
         &mut self.diag
     }
 
+    fn if_(&mut self, l: &core::If, ctx: &CompBinding) -> Traverse {
+        let cond = utils::SExp::from(l.cond.clone());
+
+        // Check the then branch using the condition as a path condition
+        self.push_path_cond(cond.clone());
+        for cmd in &l.then {
+            self.command(cmd, ctx);
+        }
+
+        self.pop_path_cond();
+        self.push_path_cond(!cond);
+        for cmd in &l.alt {
+            self.command(cmd, ctx);
+        }
+
+        Traverse::Continue(())
+    }
+
     fn forloop(&mut self, l: &core::ForLoop, ctx: &CompBinding) -> Traverse {
         let ForLoop {
             idx,

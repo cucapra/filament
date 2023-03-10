@@ -150,6 +150,13 @@ impl From<u64> for SExp {
     }
 }
 
+impl std::ops::Not for SExp {
+    type Output = SExp;
+    fn not(self) -> Self::Output {
+        SExp(format!("(not {})", self.0))
+    }
+}
+
 fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
     solver.define_fun(
         "max",
@@ -228,7 +235,7 @@ impl FilSolver {
         }
 
         for fact in asserts {
-            if let Some(model) = self.check_fact(fact.constraint(), &vars) {
+            if let Some(model) = self.check_fact(&fact.constraint(), &vars) {
                 let mut err = Error::from(fact);
                 if self.show_models {
                     let info = diag.add_message(model);
@@ -239,7 +246,7 @@ impl FilSolver {
         }
         for share in sharing {
             if let Some(model) =
-                self.check_fact(&SExp::from(Clone::clone(&share)), &vars)
+                self.check_fact(&SExp::from(share.clone()), &vars)
             {
                 let mut err = share.error(diag);
                 if self.show_models {

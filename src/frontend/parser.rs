@@ -608,6 +608,7 @@ impl FilamentParser {
             [fsm(fsm)] => vec![core::Command::Fsm(fsm)],
             [for_loop(l)] => vec![core::Command::ForLoop(l)],
             [bundle(bl)] => vec![core::Command::Bundle(bl)],
+            [if_stmt(if_)] => vec![core::Command::If(if_)],
         ))
     }
 

@@ -7,6 +7,8 @@ use std::iter;
 type FactMap = Vec<core::Constraint>;
 
 pub struct IntervalCheck {
+    /// Diagnostics
+    pub diag: diagnostics::Diagnostics,
     /// Solver associated with this context
     pub(super) solver: FilSolver,
     /// Set of facts that need to be proven.
@@ -14,34 +16,44 @@ pub struct IntervalCheck {
     pub(super) obligations: Vec<utils::Obligation>,
     /// Set of assumed facts
     pub(super) facts: FactMap,
-    /// Diagnostics
-    pub diag: diagnostics::Diagnostics,
     /// Variables used in the current set of constraints
     pub(super) vars: Vec<core::Id>,
+    /// Current path condition
+    path_cond: Vec<utils::SExp>,
 }
 
 impl IntervalCheck {
     /// Construct a new context
     pub fn new(solver: FilSolver, diag: diagnostics::Diagnostics) -> Self {
         Self {
+            diag,
+            solver,
             vars: Vec::new(),
             obligations: Vec::new(),
             facts: Vec::new(),
-            diag,
-            solver,
+            path_cond: Vec::new(),
         }
     }
-}
 
-impl IntervalCheck {
-    /// Add a new obligation that needs to be proved
+    /// Add a new path condition
+    pub fn push_path_cond(&mut self, cond: utils::SExp) {
+        log::trace!("Path condition: {}", cond);
+        self.path_cond.push(cond);
+    }
+
+    /// Remove the last path condition
+    pub fn pop_path_cond(&mut self) {
+        self.path_cond.pop();
+    }
+
+    /// Add a new obligations that need to be proved under the current path condition
     pub fn add_obligations<F>(&mut self, facts: F)
     where
         F: IntoIterator<Item = utils::Obligation>,
     {
         for fact in facts {
-            // log::trace!("adding obligation {}", fact);
-            self.obligations.push(fact);
+            self.obligations
+                .push(fact.with_path_cond(self.path_cond.clone()));
         }
     }
 
