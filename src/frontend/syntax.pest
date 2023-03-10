@@ -29,7 +29,7 @@ gt =  { ">" }
 gte = { ">=" }
 lt =  { "<" }
 lte = { "<=" }
-eq =  { "=" }
+eq =  { "==" }
 order_op = { gte | gt | lte | lt | eq }
 
 constraint = {

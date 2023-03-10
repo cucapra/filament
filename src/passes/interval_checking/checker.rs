@@ -205,6 +205,7 @@ impl visitor::Checker for IntervalCheck {
         self.obligations.clear();
         self.facts.clear();
         self.vars.clear();
+        assert!(self.path_cond.is_empty(), "path condition not empty");
     }
 
     fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics {
@@ -225,6 +226,7 @@ impl visitor::Checker for IntervalCheck {
         for cmd in &l.alt {
             self.command(cmd, ctx);
         }
+        self.pop_path_cond();
 
         Traverse::Continue(())
     }

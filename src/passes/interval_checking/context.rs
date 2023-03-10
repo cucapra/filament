@@ -17,7 +17,7 @@ pub struct IntervalCheck {
     /// Variables used in the current set of constraints
     pub(super) vars: Vec<core::Id>,
     /// Current path condition
-    path_cond: Vec<utils::SExp>,
+    pub(super) path_cond: Vec<utils::SExp>,
 }
 
 impl IntervalCheck {

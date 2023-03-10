@@ -85,11 +85,22 @@ where
 }
 
 impl OrderConstraint<Expr> {
-    pub fn resolve_expr(self, bindings: &Binding<Expr>) -> Self {
+    pub fn resolve_expr(self, binding: &Binding<Expr>) -> Self {
         OrderConstraint {
-            left: self.left.resolve(bindings),
-            right: self.right.resolve(bindings),
+            left: self.left.resolve(binding),
+            right: self.right.resolve(binding),
             ..self
+        }
+    }
+
+    pub fn eval(self, binding: &Binding<Expr>) -> bool {
+        let OrderConstraint { left, right, op } = self.resolve_expr(binding);
+        let l: u64 = left.try_into().unwrap();
+        let r: u64 = right.try_into().unwrap();
+        match op {
+            OrderOp::Gt => l > r,
+            OrderOp::Gte => l >= r,
+            OrderOp::Eq => l == r,
         }
     }
 }

@@ -398,7 +398,17 @@ impl Monomorphize {
                         );
                     }
                 }
-                core::Command::If(_) => todo!(),
+                core::Command::If(core::If { cond, then, alt }) => {
+                    let cond = cond.eval(param_binding);
+                    let cmds = if cond { then } else { alt };
+                    n_cmds.extend(Self::commands(
+                        cmds.into_iter(),
+                        param_binding,
+                        externals,
+                        prev_names.clone(),
+                        suffix,
+                    ));
+                }
                 core::Command::ForLoop(core::ForLoop {
                     idx,
                     start,

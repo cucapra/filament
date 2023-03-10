@@ -101,7 +101,7 @@ extern "comb.sv" {
     @[G, L] right: #RIGHT,
   ) -> (
     @[G, L] out: #OUT,
-  ) where L > G, #LEFT > 0, #RIGHT > 0, #OUT = #LEFT + #RIGHT;
+  ) where L > G, #LEFT > 0, #RIGHT > 0, #OUT == #LEFT + #RIGHT;
 
   comp Select[#WIDTH, #POS]<G: L-(G), ?L: 1=G+1>(
     @[G, L] in: #WIDTH,
