@@ -39,7 +39,7 @@ comp TradeoffDiv[#W, #I, #K]<G: #K>(
 ) where
   #I > 0,
   #K > 0,
-  #W = #I * #K
+  #W == #I * #K
 {
 
     /// Bundles that track the "outer" signals which connect each reused instance in the circuit.
