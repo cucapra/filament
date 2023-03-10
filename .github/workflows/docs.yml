@@ -1,9 +1,9 @@
 name: Docs website
 
-on:
-  push:
-    branches:
-      - main
+on: [push]
+  # push:
+  #   branches:
+  #     - main
 
 jobs:
   playground:
@@ -23,12 +23,12 @@ jobs:
         run: |
           mdbook-mermaid install .
       - name: mdbook
-        run: mdbook build
+        run: mdbook build doc/
       - name: Create CNAME file
         run: |
-          echo 'filament.rachitnigam.com' > ./book/CNAME
+          echo 'filament.rachitnigam.com' > ./doc/book/CNAME
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./book
+          publish_dir: ./doc/book

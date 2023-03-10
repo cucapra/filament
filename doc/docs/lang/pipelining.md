@@ -21,19 +21,19 @@ Which generates the following output:
 Note that this sequential design takes 12 cycles to process 4 inputs.
 
 We'll start with pipelining our program:
-```
+```filament
 {{#include ../../examples/tut-seq.fil}}
 ```
 
 ## Delays and Throughput
 
 Filament uses an event's *delay* to determine when the module is can accept new inputs.
-```
+```filament
 {{#include ../../examples/tut-seq.fil:sig}}
 ```
 Note that the delay for the event `G` is `3` which indicates to Filament that the ALU process new inputs every three cycles.
 We can tell Filament that we instead want a module that can process new inputs every cycle by changing the delay to `1`:
-```
+```filament
 {{#include ../../examples/tut-pipe-wrong-1.fil:sig}}
 ```
 
@@ -67,12 +67,12 @@ The second error message points out that the ALU component may execute every cyc
 
 Yet again, our request is physically impossible to satisfy: our multiplier circuit is fundamentally incapable of executing every cycle.
 Thankfully for us, the `primitives/sequential.file` file provides a component called `FastMult` which does have delay 1:
-```
+```filament
 {{#include ../../primitives/sequential.fil:fastmult}}
 ```
 
 We can change out program to use this component instead:
-```
+```filament
 {{#include ../../examples/tut-pipe-wrong-2.fil}}
 ```
 
@@ -84,7 +84,7 @@ Filament tells us that `FastMult`'s `out` port is available in the interval [G+3
 
 Filament catching this bug is important-it would be very easy to miss such a mistake in a Verilog program.
 Fixing it is quite mechanical:
-```
+```filament
 {{#include ../../examples/tut-pipe-wrong-3.fil}}
 ```
 
@@ -105,7 +105,7 @@ To get both the pipelining and correctness we want, we need to instantiate a *ch
 The intuition behind this is that because we want our ALU to process inputs every cycle, we need to "save" the computation in every cycle and push it forward.
 
 The final program will look like this:
-```
+```filament
 {{#include ../../examples/tut-pipe.fil}}
 ```
 

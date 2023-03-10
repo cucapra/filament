@@ -2,7 +2,7 @@
 
 
 For now, check out this implementation:
-```
+```filament
 {{#include ../../primitives/state.fil:shift}}
 ```
 

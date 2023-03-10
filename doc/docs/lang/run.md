@@ -8,7 +8,7 @@ We use [fud][] to make the process of running Filament designs seamless: the use
 
 The test runner's data format is a JSON file that contains the names of each port mentioned in a Filament program's `main` component.
 For example, for the [tutorial ALU][tut-alu] with the signature:
-```
+```filament
 {{#include ../../examples/tut-wrong-1.fil:signature}}
 ```
 
@@ -75,7 +75,7 @@ The `-s cocotb.randomize 10` flag adds a random delay of up to 10 cycles between
 
 [calyx]: https://calyxir.org
 [iverilog]: https://github.com/steveicarus/iverilog
-[fud-setup]: http://localhost:3000/start.html#full-build
+[fud-setup]: ./start.html#full-build
 [fud]: https://docs.calyxir.org/fud/index.html
-[tut-alu]: http://localhost:3000/lang/tutorial.html#building-an-arithmetic-logic-unit
+[tut-alu]: ./lang/tutorial.html#building-an-arithmetic-logic-unit
 [x-value]: https://stackoverflow.com/questions/69530556/what-exactly-do-x-and-z-values-represent-in-verilog
