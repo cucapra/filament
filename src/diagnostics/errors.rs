@@ -53,7 +53,7 @@ impl Error {
 
     pub fn malformed<S: ToString>(msg: S) -> Self {
         Self {
-            kind: format!("{}", msg.to_string()),
+            kind: msg.to_string(),
             notes: vec![],
         }
     }
@@ -80,7 +80,7 @@ impl Error {
 
     pub fn misc(msg: String) -> Self {
         Self {
-            kind: format!("{msg}"),
+            kind: msg,
             notes: vec![],
         }
     }

@@ -134,10 +134,10 @@ impl Diagnostics {
             }
 
             let msg = if errors.len() > 1 {
-                notes.extend(errors.iter().map(|e| format!("{}", e)));
+                notes.extend(errors.iter().map(|e| e.to_string()));
                 "Multiple errors encountered".to_string()
             } else {
-                format!("{}", errors[0])
+                errors[0].to_string()
             };
 
             total += 1;

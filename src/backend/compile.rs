@@ -423,6 +423,9 @@ fn compile_component(
             core::Command::Bundle(_) => {
                 unreachable!("Bundles should have been compiled away.")
             }
+            core::Command::If(_) => {
+                unreachable!("If should have been compiled away.")
+            }
         };
     }
     // Compile commands

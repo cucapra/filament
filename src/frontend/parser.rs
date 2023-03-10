@@ -41,6 +41,12 @@ pub enum ExtOrComp {
     Comp(core::Component),
 }
 
+#[derive(Clone)]
+pub enum FCons {
+    ExprC(core::OrderConstraint<core::Expr>),
+    TimeC(core::OrderConstraint<core::Time>),
+}
+
 pub enum Port {
     Pd(Loc<core::PortDef>),
     Int(core::InterfaceDef),
@@ -435,7 +441,7 @@ impl FilamentParser {
         )
     }
 
-    fn constraint(input: Node) -> ParseResult<Loc<core::Constraint>> {
+    fn constraint(input: Node) -> ParseResult<Loc<FCons>> {
         let sp = Self::get_span(&input);
         match_nodes!(
             input.clone().into_children();
@@ -451,7 +457,7 @@ impl FilamentParser {
                 } else {
                     core::OrderConstraint::new(r, l, op)
                 };
-                Ok(Loc::new(core::Constraint::base(con), sp))
+                Ok(Loc::new(FCons::TimeC(con), sp))
             },
             [
                 expr(l),
@@ -459,20 +465,36 @@ impl FilamentParser {
                 expr(r)
             ] => {
                 let con = if !rev {
-                    core::OrderConstraint::new(l.take().into(), r.take().into(), op)
+                    core::OrderConstraint::new(l.take(), r.take(), op)
                 } else {
-                    core::OrderConstraint::new(r.take().into(), l.take().into(), op)
+                    core::OrderConstraint::new(r.take(), l.take(), op)
                 };
-                Ok(Loc::new(core::Constraint::sub(con), sp))
+                Ok(Loc::new(FCons::ExprC(con), sp))
             }
         )
     }
 
-    fn constraints(input: Node) -> ParseResult<Vec<Loc<core::Constraint>>> {
+    #[allow(clippy::type_complexity)]
+    fn constraints(
+        input: Node,
+    ) -> ParseResult<(
+        Vec<Loc<core::OrderConstraint<core::Expr>>>,
+        Vec<Loc<core::OrderConstraint<core::Time>>>,
+    )> {
         Ok(match_nodes!(
             input.into_children();
-            [] => Vec::default(),
-            [constraint(cons)..] => cons.collect()
+            [] => (vec![], vec![]),
+            [constraint(cons)..] => {
+                let (mut expr, mut time) = (vec![], vec![]);
+                for con in cons {
+                    let pos = con.pos();
+                    match con.take() {
+                        FCons::ExprC(c) => expr.push(Loc::new(c, pos)),
+                        FCons::TimeC(c) => time.push(Loc::new(c, pos)),
+                    }
+                }
+                (expr, time)
+            }
         ))
     }
 
@@ -492,7 +514,7 @@ impl FilamentParser {
                 params(params),
                 abstract_var(abstract_vars),
                 io(io),
-                constraints(constraints)
+                constraints((expr_c, time_c))
             ] => {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
                 core::Signature::new(
@@ -503,14 +525,15 @@ impl FilamentParser {
                     interface_signals,
                     inputs,
                     outputs,
-                    constraints,
+                    expr_c,
+                    time_c,
                  )
             },
             [
                 identifier(name),
                 params(params),
                 io(io),
-                constraints(constraints)
+                constraints((expr_c, time_c))
             ] => {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
                 core::Signature::new(
@@ -521,7 +544,8 @@ impl FilamentParser {
                     interface_signals.into_iter().collect(),
                     inputs,
                     outputs,
-                    constraints
+                    expr_c,
+                    time_c
                  )
             }
         ))
@@ -554,11 +578,33 @@ impl FilamentParser {
         ))
     }
 
+    fn expr_cmp(input: Node) -> ParseResult<core::OrderConstraint<core::Expr>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [expr(l), order_op((op, rev)), expr(r)] => {
+                if !rev {
+                    core::OrderConstraint::new(l.take(), r.take(), op)
+                } else {
+                    core::OrderConstraint::new(r.take(), l.take(), op)
+                }
+            }
+        ))
+    }
+
+    fn if_stmt(input: Node) -> ParseResult<core::If> {
+        Ok(match_nodes!(
+            input.into_children();
+            [expr_cmp(cond), commands(then), commands(else_)] => {
+                core::If::new(cond, then, else_)
+            }
+        ))
+    }
+
     fn for_loop(input: Node) -> ParseResult<core::ForLoop> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(var), expr(start), expr(end), command(body)..] => {
-                core::ForLoop::new(var.take(), start.take(), end.take(), body.into_iter().flatten().collect())
+            [param_var(var), expr(start), expr(end), commands(body)] => {
+                core::ForLoop::new(var.take(), start.take(), end.take(), body)
             }
         ))
     }
@@ -586,6 +632,14 @@ impl FilamentParser {
             [fsm(fsm)] => vec![core::Command::Fsm(fsm)],
             [for_loop(l)] => vec![core::Command::ForLoop(l)],
             [bundle(bl)] => vec![core::Command::Bundle(bl)],
+            [if_stmt(if_)] => vec![core::Command::If(if_)],
+        ))
+    }
+
+    fn commands(input: Node) -> ParseResult<Vec<core::Command>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [command(cmd)..] => cmd.into_iter().flatten().collect(),
         ))
     }
 

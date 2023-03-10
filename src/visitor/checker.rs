@@ -42,6 +42,17 @@ where
         Traverse::Continue(())
     }
 
+    #[inline]
+    fn if_(&mut self, l: &core::If, ctx: &CompBinding) -> Traverse {
+        for cmd in &l.then {
+            self.command(cmd, ctx)?;
+        }
+        for cmd in &l.alt {
+            self.command(cmd, ctx)?;
+        }
+        Traverse::Continue(())
+    }
+
     /// Transform an invoke statement. Provides access to the signature of the
     /// component that is being invoked.
     #[inline]
@@ -87,6 +98,7 @@ where
             core::Command::Connect(con) => self.connect(con, ctx),
             core::Command::Fsm(fsm) => self.fsm(fsm, ctx),
             core::Command::ForLoop(l) => self.forloop(l, ctx),
+            core::Command::If(i) => self.if_(i, ctx),
         }
     }
 

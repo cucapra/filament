@@ -60,7 +60,7 @@
 				},
 				{
 					"name": "keyword.control.filament",
-					"match": "\\b(where|for)\\b"
+					"match": "\\b(where|for|if|else)\\b"
 				}
 			]
 		},
@@ -160,7 +160,7 @@
 				},
 				{
 					"begin": "<",
-					"end": ">",
+					"end": "\n|>",
 					"patterns": [
 						{
 							"name": "entity.name.tag",

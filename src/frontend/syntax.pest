@@ -29,7 +29,7 @@ gt =  { ">" }
 gte = { ">=" }
 lt =  { "<" }
 lte = { "<=" }
-eq =  { "=" }
+eq =  { "==" }
 order_op = { gte | gt | lte | lt | eq }
 
 constraint = {
@@ -172,10 +172,18 @@ fsm = {
   "fsm" ~ identifier ~ "[" ~ bitwidth ~ "]" ~ "(" ~ port ~ ")" ~ ";"
 }
 
+// ===== if statements ====
+expr_cmp = {
+  expr ~ order_op ~ expr
+}
+if_stmt = {
+  "if" ~ expr_cmp ~ "{" ~ commands ~ "}" ~ ("else" ~ "{" ~ commands ~ "}")?
+}
+
 // ====== Loops ==========
 
 for_loop = {
-  "for" ~ param_var ~ "in" ~ expr ~ ".." ~ expr ~ "{" ~ command* ~ "}"
+  "for" ~ param_var ~ "in" ~ expr ~ ".." ~ expr ~ "{" ~ commands ~ "}"
 }
 
 // ====== Wire bundles ==========
@@ -189,5 +197,7 @@ bundle = {
 
 // ========== Commands ==========
 command = {
-  bundle | instance | invocation | connect | fsm | for_loop
+  bundle | instance | invocation | connect | fsm | for_loop | if_stmt
 }
+
+commands = { command* }

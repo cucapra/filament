@@ -102,12 +102,7 @@ impl ShareConstraint {
 impl std::fmt::Display for ShareConstraint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let min = self.starts.iter().map(|(t, _)| t.to_string()).join(", ");
-        let max = self
-            .ends
-            .iter()
-            .cloned()
-            .map(|(e, _)| format!("{e}"))
-            .join(", ");
+        let max = self.ends.iter().map(|(e, _)| format!("{e}")).join(", ");
         let delay = &self.event_bind.delay;
         write!(f, "{delay} >= max({max}) - min({min})")
     }
@@ -152,6 +147,13 @@ impl std::fmt::Display for SExp {
 impl From<u64> for SExp {
     fn from(n: u64) -> Self {
         SExp(n.to_string())
+    }
+}
+
+impl std::ops::Not for SExp {
+    type Output = SExp;
+    fn not(self) -> Self::Output {
+        SExp(format!("(not {})", self.0))
     }
 }
 
@@ -205,7 +207,7 @@ impl FilSolver {
     pub fn prove(
         &mut self,
         vars: impl IntoIterator<Item = core::Id>,
-        assumptions: Vec<core::Constraint>,
+        assumptions: Vec<SExp>,
         to_prove: Vec<Obligation>,
         sharing: Vec<ShareConstraint>,
         diag: &mut Diagnostics,
@@ -228,12 +230,11 @@ impl FilSolver {
         // Define assumptions on constraints
         for assume in assumptions {
             log::trace!("Assuming {}", assume);
-            let sexp: SExp = assume.into();
-            self.s.assert(format!("{}", sexp)).unwrap();
+            self.s.assert(format!("{}", assume)).unwrap();
         }
 
         for fact in asserts {
-            if let Some(model) = self.check_fact(fact.constraint(), &vars) {
+            if let Some(model) = self.check_fact(&fact.constraint(), &vars) {
                 let mut err = Error::from(fact);
                 if self.show_models {
                     let info = diag.add_message(model);

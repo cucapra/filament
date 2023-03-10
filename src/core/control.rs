@@ -1,4 +1,4 @@
-use super::{Expr, Id, Loc, PortDef, Range, Time};
+use super::{Expr, Id, Loc, OrderConstraint, PortDef, Range, Time};
 use crate::utils::Binding;
 use crate::{
     errors::{Error, FilamentResult},
@@ -102,6 +102,7 @@ pub enum Command {
     Connect(Connect),
     Fsm(Fsm),
     ForLoop(ForLoop),
+    If(If),
     Bundle(Bundle),
 }
 
@@ -143,6 +144,7 @@ impl Display for Command {
             Command::Connect(con) => write!(f, "{}", con),
             Command::Fsm(fsm) => write!(f, "{}", fsm),
             Command::ForLoop(l) => write!(f, "{}", l),
+            Command::If(l) => write!(f, "{}", l),
             Command::Bundle(b) => write!(f, "{}", b),
         }
     }
@@ -386,6 +388,40 @@ impl Display for ForLoop {
         write!(f, "for #{} in {}..{} {{", self.idx, self.start, self.end)?;
         for cmd in &self.body {
             writeln!(f, "{};", cmd)?;
+        }
+        write!(f, "}}")
+    }
+}
+
+#[derive(Clone)]
+/// A conditional statement:
+/// The `then` branch is checked assuming that the condition is true and the `else` branch is checked
+/// assuming that the condition is false.
+pub struct If {
+    pub cond: OrderConstraint<Expr>,
+    pub then: Vec<Command>,
+    pub alt: Vec<Command>,
+}
+
+impl If {
+    pub fn new(
+        cond: OrderConstraint<Expr>,
+        then: Vec<Command>,
+        alt: Vec<Command>,
+    ) -> Self {
+        Self { cond, then, alt }
+    }
+}
+
+impl Display for If {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "if {} {{", self.cond)?;
+        for cmd in &self.then {
+            writeln!(f, "{}", cmd)?;
+        }
+        writeln!(f, "}} else {{")?;
+        for cmd in &self.alt {
+            writeln!(f, "{}", cmd)?;
         }
         write!(f, "}}")
     }

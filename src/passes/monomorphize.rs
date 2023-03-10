@@ -61,6 +61,11 @@ impl Rewriter {
                 core::Command::ForLoop(_) => {
                     unreachable!("Inner loops should be monomorphized already")
                 }
+                core::Command::If(_) => {
+                    unreachable!(
+                        "If statements should be monomorphized already"
+                    )
+                }
                 core::Command::Connect(_) => {}
             }
         }
@@ -125,6 +130,7 @@ impl Rewriter {
                     typ,
                 )
                 .into(),
+                core::Command::If(_) => todo!(),
                 core::Command::ForLoop(_) => unreachable!(),
                 core::Command::Fsm(_) => unreachable!(),
             };
@@ -213,6 +219,14 @@ impl InstanceParams {
             }
             core::Command::ForLoop(fl) => {
                 for cmd in &fl.body {
+                    Self::process_cmd(comp, cmd, inst_params, externals);
+                }
+            }
+            core::Command::If(i) => {
+                for cmd in &i.then {
+                    Self::process_cmd(comp, cmd, inst_params, externals);
+                }
+                for cmd in &i.alt {
                     Self::process_cmd(comp, cmd, inst_params, externals);
                 }
             }
@@ -383,6 +397,17 @@ impl Monomorphize {
                             .into(),
                         );
                     }
+                }
+                core::Command::If(core::If { cond, then, alt }) => {
+                    let cond = cond.eval(param_binding);
+                    let cmds = if cond { then } else { alt };
+                    n_cmds.extend(Self::commands(
+                        cmds.into_iter(),
+                        param_binding,
+                        externals,
+                        prev_names.clone(),
+                        suffix,
+                    ));
                 }
                 core::Command::ForLoop(core::ForLoop {
                     idx,

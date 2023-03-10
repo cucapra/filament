@@ -22,7 +22,7 @@ impl InstIdx {
     /// Get the signature of this instance by resolving against the parameter bindings.
     /// Note that such a signature still has unresolved event bindings (such as the delay of a Register)
     /// that are only resolved through an invocation.
-    pub(super) fn param_resolved_signature(
+    pub fn param_resolved_signature(
         &self,
         ctx: &CompBinding,
     ) -> core::Signature {

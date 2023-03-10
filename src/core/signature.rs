@@ -71,8 +71,10 @@ pub struct Signature {
     pub interface_signals: Vec<InterfaceDef>,
     /// Names of abstract variables bound by the component
     pub events: Vec<Loc<EventBind>>,
-    /// Constraints on the abstract variables in the signature
-    pub constraints: Vec<Loc<Constraint>>,
+    /// Constraints over the parameters in the signature
+    pub param_constraints: Vec<Loc<OrderConstraint<Expr>>>,
+    /// Constraints over events in the signature
+    pub event_constraints: Vec<Loc<OrderConstraint<Time>>>,
     /// All the input/output ports.
     ports: Vec<Loc<PortDef>>,
     /// Index of the first output port in the ports vector
@@ -89,7 +91,8 @@ impl Signature {
         interface_signals: Vec<InterfaceDef>,
         mut inputs: Vec<Loc<PortDef>>,
         mut outputs: Vec<Loc<PortDef>>,
-        constraints: Vec<Loc<Constraint>>,
+        param_constraints: Vec<Loc<OrderConstraint<Expr>>>,
+        event_constraints: Vec<Loc<OrderConstraint<Time>>>,
     ) -> Self {
         let outputs_idx = inputs.len();
         inputs.append(&mut outputs);
@@ -101,7 +104,8 @@ impl Signature {
             interface_signals,
             ports: inputs,
             outputs_idx,
-            constraints,
+            param_constraints,
+            event_constraints,
         }
     }
 
@@ -332,8 +336,13 @@ impl Signature {
                 .into_iter()
                 .map(|eb| eb.map(|e| e.resolve_exprs(&binding)))
                 .collect_vec(),
-            constraints: self
-                .constraints
+            param_constraints: self
+                .param_constraints
+                .into_iter()
+                .map(|c| c.map(|c| c.resolve_expr(&binding)))
+                .collect_vec(),
+            event_constraints: self
+                .event_constraints
                 .into_iter()
                 .map(|c| c.map(|c| c.resolve_expr(&binding)))
                 .collect_vec(),
@@ -348,8 +357,8 @@ impl Signature {
                 .into_iter()
                 .map(|pd| pd.map(|p| p.resolve_event(bindings)))
                 .collect(),
-            constraints: self
-                .constraints
+            event_constraints: self
+                .event_constraints
                 .into_iter()
                 .map(|c| c.map(|c| c.resolve_event(bindings)))
                 .collect(),
@@ -386,13 +395,20 @@ impl Display for Signature {
                 .join(", "),
             self.outputs().map(|pd| format!("{pd}")).join(", "),
         )?;
-        if !self.constraints.is_empty() {
+        if !self.event_constraints.is_empty()
+            || !self.param_constraints.is_empty()
+        {
             write!(
                 f,
                 " where {}",
-                self.constraints
+                self.event_constraints
                     .iter()
                     .map(|cons| format!("{cons}"))
+                    .chain(
+                        self.param_constraints
+                            .iter()
+                            .map(|cons| format!("{cons}"))
+                    )
                     .join(", "),
             )?;
         }

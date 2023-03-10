@@ -144,7 +144,10 @@ where
                     core::Command::Fsm(fsm) => pass.fsm(fsm, &ctx)?,
                     core::Command::Bundle(bl) => pass.bundle(bl, &ctx)?,
                     core::Command::ForLoop(_) => unreachable!(
-                        "Visitor does not support transforming programs"
+                        "Visitor does not support transforming loops"
+                    ),
+                    core::Command::If(_) => unreachable!(
+                        "Visitor does not support transforming if statements"
                     ),
                 };
                 n_cmds.extend(cmds);
