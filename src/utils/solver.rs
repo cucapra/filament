@@ -207,7 +207,7 @@ impl FilSolver {
     pub fn prove(
         &mut self,
         vars: impl IntoIterator<Item = core::Id>,
-        assumptions: Vec<core::Constraint>,
+        assumptions: Vec<SExp>,
         to_prove: Vec<Obligation>,
         sharing: Vec<ShareConstraint>,
         diag: &mut Diagnostics,
@@ -230,8 +230,7 @@ impl FilSolver {
         // Define assumptions on constraints
         for assume in assumptions {
             log::trace!("Assuming {}", assume);
-            let sexp: SExp = assume.into();
-            self.s.assert(format!("{}", sexp)).unwrap();
+            self.s.assert(format!("{}", assume)).unwrap();
         }
 
         for fact in asserts {

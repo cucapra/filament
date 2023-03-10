@@ -4,8 +4,6 @@ use crate::{binding, diagnostics};
 use itertools::Itertools;
 use std::iter;
 
-type FactMap = Vec<core::Constraint>;
-
 pub struct IntervalCheck {
     /// Diagnostics
     pub diag: diagnostics::Diagnostics,
@@ -15,7 +13,7 @@ pub struct IntervalCheck {
     /// Mapping from facts to the locations that generated it.
     pub(super) obligations: Vec<utils::Obligation>,
     /// Set of assumed facts
-    pub(super) facts: FactMap,
+    pub(super) facts: Vec<utils::SExp>,
     /// Variables used in the current set of constraints
     pub(super) vars: Vec<core::Id>,
     /// Current path condition
@@ -60,7 +58,7 @@ impl IntervalCheck {
     /// Add a new known fact
     pub fn add_facts<F>(&mut self, facts: F)
     where
-        F: IntoIterator<Item = core::Constraint>,
+        F: IntoIterator<Item = utils::SExp>,
     {
         for fact in facts {
             log::trace!("adding known fact {}", fact);

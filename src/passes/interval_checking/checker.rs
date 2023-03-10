@@ -173,15 +173,23 @@ impl visitor::Checker for IntervalCheck {
         let t = std::time::Instant::now();
         for (_, sig) in ns.signatures() {
             log::trace!("===== Signature {} =====", &sig.name);
+
+            let constraints = sig
+                .event_constraints
+                .iter()
+                .map(|c| utils::SExp::from(c.inner().clone()))
+                .chain(
+                    sig.param_constraints
+                        .iter()
+                        .map(|c| utils::SExp::from(c.inner().clone())),
+                )
+                .collect_vec();
+
             solver.prove(
                 sig.events()
                     .map(|e| e.take())
                     .chain(sig.params.iter().cloned()),
-                sig.constraints
-                    .clone()
-                    .into_iter()
-                    .map(|c| c.take())
-                    .collect(),
+                constraints,
                 sig.well_formed(&mut diagnostics).into_iter().collect(),
                 vec![],
                 &mut diagnostics,
@@ -251,6 +259,36 @@ impl visitor::Checker for IntervalCheck {
         Traverse::Continue(())
     }
 
+    fn instance(
+        &mut self,
+        inst: &core::Instance,
+        ctx: &CompBinding,
+    ) -> Traverse {
+        // Check that the binding parameters provided to the instance are well-formed
+        let inst_idx = ctx.get_instance_idx(&inst.name);
+        let sig = inst_idx.param_resolved_signature(ctx);
+        let cons = sig
+            .param_constraints
+            .into_iter()
+            .map(|c| {
+                let pos = c.pos();
+                c.take()
+                    .obligation("instantiation violates component's constraint")
+                    .add_note(
+                        self.diag.add_info("constraint was violated", pos),
+                    )
+                    .add_note(
+                        self.diag.add_info(
+                            "instantiation occurs here",
+                            inst.name.pos(),
+                        ),
+                    )
+            })
+            .collect_vec();
+        self.add_obligations(cons);
+        Traverse::Continue(())
+    }
+
     fn connect(&mut self, con: &core::Connect, ctx: &CompBinding) -> Traverse {
         let src = &con.src;
         let dst = &con.dst;
@@ -316,7 +354,7 @@ impl visitor::Checker for IntervalCheck {
         //      This is because the resolution process doesn't correctly change the name of the event bindings.
         let constraints = ctx
             .get_invoke_idx(&invoke.name)
-            .get_resolved_sig_constraints(ctx);
+            .resolved_event_constraints(ctx);
 
         for con in constraints {
             let pos = con.pos();
@@ -340,15 +378,16 @@ impl visitor::Checker for IntervalCheck {
         comp: &core::Component,
         _: &CompBinding,
     ) -> Traverse {
+        log::trace!("=========== Component {} ==========", comp.sig.name);
         // Ensure that the signature is well-formed
         let cons = comp.sig.well_formed(&mut self.diag);
         self.add_obligations(cons);
 
-        // User-level components are not allowed to have ordering constraints.
+        // User-level components are not allowed to have ordering constraints over events.
         // See https://github.com/cucapra/filament/issues/27.
         let mut has_ulc = false;
-        for constraint in &comp.sig.constraints {
-            if constraint.is_time_ordering() {
+        for constraint in &comp.sig.event_constraints {
+            if !constraint.is_eq() {
                 has_ulc = true;
                 let err = Error::malformed(
                     "user-level component cannot have ordering constraints over events",
@@ -359,9 +398,20 @@ impl visitor::Checker for IntervalCheck {
                 ));
                 self.diag.add_error(err);
             } else {
-                self.add_facts(Some(constraint.inner().clone()))
+                self.add_facts(vec![utils::SExp::from(
+                    constraint.inner().clone(),
+                )])
             }
         }
+
+        // Add all parameter constraints
+        self.add_facts(
+            comp.sig
+                .param_constraints
+                .iter()
+                .map(|c| utils::SExp::from(c.inner().clone())),
+        );
+
         // If the component uses a user-level constraint, we cannot verify it's internal.
         if has_ulc {
             return Traverse::Break(());

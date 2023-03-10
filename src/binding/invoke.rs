@@ -123,10 +123,10 @@ impl InvIdx {
     /// This includes:
     /// - The constraints of the component
     /// - Well-formedness constraints
-    pub fn get_resolved_sig_constraints(
+    pub fn resolved_event_constraints(
         &self,
         ctx: &CompBinding,
-    ) -> Vec<core::Loc<core::Constraint>> {
+    ) -> Vec<core::Loc<core::OrderConstraint<Time>>> {
         let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
         let sig_idx = inst.sig;
@@ -136,7 +136,7 @@ impl InvIdx {
         let event_b = &ctx.prog[sig_idx]
             .event_binding(inv.events.clone().into_iter().map(|e| e.take()));
         let sig = &ctx.prog[sig_idx];
-        sig.constraints
+        sig.event_constraints
             .iter()
             .map(|c| {
                 c.clone()

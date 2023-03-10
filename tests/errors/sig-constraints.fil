@@ -1,0 +1,5 @@
+comp Foo[#W]<G: 1>() -> () where #W > 1 {}
+comp main<G: 1>() -> () {
+    F := new Foo[1];
+    f := F<G>();
+}

@@ -140,15 +140,22 @@ impl visitor::Checker for BindCheck {
             }
         }
 
+        // Check the parameter constraints
+        for constraint in &sig.param_constraints {
+            let cons = constraint.inner();
+            self.expr(&cons.left, constraint.pos());
+            self.expr(&cons.right, constraint.pos());
+        }
+
         // Check constraints use bound events and parameters
-        for constraint in &sig.constraints {
+        for constraint in &sig.event_constraints {
             // XXX: Same problem as the loop above
-            for time in constraint.events() {
-                self.time(time, constraint.pos())
-            }
-            for expr in constraint.exprs() {
-                self.expr(expr, constraint.pos());
-            }
+            let cons = constraint.inner();
+            self.time(&cons.left, constraint.pos());
+            self.time(&cons.right, constraint.pos());
+
+            self.expr(cons.left.offset(), constraint.pos());
+            self.expr(cons.right.offset(), constraint.pos());
         }
 
         Traverse::Continue(())

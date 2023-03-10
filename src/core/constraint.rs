@@ -25,8 +25,8 @@ impl std::fmt::Display for OrderOp {
 // An ordering constraint
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct OrderConstraint<T> {
-    left: T,
-    right: T,
+    pub left: T,
+    pub right: T,
     op: OrderOp,
 }
 
@@ -36,6 +36,10 @@ where
 {
     pub fn new(left: T, right: T, op: OrderOp) -> Self {
         Self { left, right, op }
+    }
+
+    pub fn is_eq(&self) -> bool {
+        self.op == OrderOp::Eq
     }
 
     pub fn lt(l: T, r: T) -> Self {
@@ -71,8 +75,27 @@ where
     }
 }
 
+impl<T> OrderConstraint<T>
+where
+    SExp: From<OrderConstraint<T>>,
+{
+    pub fn obligation<S: ToString>(self, reason: S) -> Obligation {
+        Obligation::new(SExp::from(self), reason.to_string())
+    }
+}
+
+impl OrderConstraint<Expr> {
+    pub fn resolve_expr(self, bindings: &Binding<Expr>) -> Self {
+        OrderConstraint {
+            left: self.left.resolve(bindings),
+            right: self.right.resolve(bindings),
+            ..self
+        }
+    }
+}
+
 impl OrderConstraint<Time> {
-    fn resolve_event(self, bindings: &Binding<Time>) -> Self {
+    pub fn resolve_event(self, bindings: &Binding<Time>) -> Self {
         OrderConstraint {
             left: self.left.resolve_event(bindings),
             right: self.right.resolve_event(bindings),
@@ -80,7 +103,7 @@ impl OrderConstraint<Time> {
         }
     }
 
-    fn resolve_expr(self, bindings: &Binding<Expr>) -> Self {
+    pub fn resolve_expr(self, bindings: &Binding<Expr>) -> Self {
         OrderConstraint {
             left: self.left.resolve_expr(bindings),
             right: self.right.resolve_expr(bindings),
@@ -205,16 +228,6 @@ impl Constraint {
                 let mut evs = base.left.exprs();
                 evs.append(&mut base.right.exprs());
                 evs
-            }
-        }
-    }
-
-    /// Check if this constraint is an ordering constraint
-    pub fn is_time_ordering(&self) -> bool {
-        match self {
-            Constraint::Base { base } => base.op != OrderOp::Eq,
-            Constraint::Sub { base } => {
-                base.op != OrderOp::Eq && !self.events().is_empty()
             }
         }
     }
