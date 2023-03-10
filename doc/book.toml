@@ -7,7 +7,7 @@ title = "Filament"
 
 [output.html]
 mathjax-support = true
-additional-js = ["mermaid.min.js", "mermaid-init.js"]
+additional-js = ["mermaid.min.js", "mermaid-init.js", "static/custom-highlight.js"]
 
 [preprocessor]
 

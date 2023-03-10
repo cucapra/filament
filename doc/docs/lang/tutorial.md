@@ -33,8 +33,8 @@ graph TB;
 ```
 
 We start by defining a Filament component which wraps all the hardware required to implement some computation:
-```
-{{#include ../../examples/tut-wrong-1.fil:signature}}
+```filament
+{{#include ../../../examples/tut-wrong-1.fil:signature}}
 ```
 
 The `<G: 1>` syntax defined the event `G` which can be thought of as the "start time" of the component.
@@ -45,7 +45,7 @@ Unlike other hardware description languages, Filament *also* requires us to spec
 Next, we need to perform the computations. Since we're working with hardware designs, we don't get access to primitive operations like `*` and `+`; we must build circuits to perform these computations!
 
 Thankfully, the Filament standard library defines these operations for us, so we can simply import those definitions and instantiate an adder and a multiplier:
-```
+```filament
 import "primitives/core.fil";       // Defines Add
 import "primitives/sequential.fil"; // Defines Mult
 
@@ -58,7 +58,7 @@ comp ALU<G: 3>(...) -> (...) {
 We define two circuits `A` and `M` which represent an 32-bit adder and a multiplier respectively. The `Add[32]` syntax represents us passing the value 32 for the width parameter of the pre-defined components.
 
 Next, we need to perform the two computation. In Filament, we have to specify the time when a particular computation occurs using an *invocation*:
-```
+```filament
     A := new Add[32];
     M := new Mult[32];
     a0 := A<G>(left, right);
@@ -66,7 +66,7 @@ Next, we need to perform the two computation. In Filament, we have to specify th
 ```
 
 Here, `a0` and `m0` are invocations of the adder and the multiplier that are performed when the event `G` occurs. We provide values for the input ports of the adder and the multiplier. Finally, we can use a multiplexer to select between the output signals of the two invocations:
-```
+```filament
 mx := new Mux[32]<G>(op, a0.out, m0.out);
 out = mx.out
 ```
@@ -76,8 +76,8 @@ We make use of Filament's combined instance creation and invocation syntax to de
 Coming from a software background, it might seem weird that we're performing both the computations first and selecting the output after the fact. However, a hardware circuit is *always active*[^clock-gating]–the multiplier and adder are always propagating signals and performing some computation even if the inputs are nonsensical. Furthermore, constructs like `if`-`else` are not compositional.[^control-comp]
 
 The final program looks like this:
-```
-{{#include ../../examples/tut-wrong-1.fil}}
+```filament
+{{#include ../../../examples/tut-wrong-1.fil}}
 ```
 
 ## Checking Timing Behavior
@@ -90,8 +90,8 @@ cargo run -- alu.fil
 ```
 
 Filament tells us that the program is incorrect:
-```
-{{#include ../../examples/tut-wrong-1.expect:4:}}
+```filament
+{{#include ../../../examples/tut-wrong-1.expect:4:}}
 ```
 
 Filament is telling us that our multiplexer expects its input during the interval [G, G+1) but the multiplier's output is only available in the interval [G+2, G+3).
@@ -104,8 +104,8 @@ In order to fix this, we need to execute the multiplexer when the signal from th
 ## Saving Values for the Future
 
 Registers are the primitive stateful building block for hardware designs and can extend the availability of signals. The signature of a register is complicated by interesting:
-```
-{{#include ../../primitives/state.fil:register}}
+```filament
+{{#include ../../../primitives/state.fil:register}}
 ```
 
 Notice the availability for the `out` signal: it is available in the interval [G, L) where `L` is provided to the component during its invocation.
@@ -113,8 +113,8 @@ This means that a register can hold onto a value for as long as needed!
 The additional `where` clause ensures that `out`'s interval is well-formed; it would be troublesome if we could say that `out` is available between [G+10, G+5).
 
 Let try to fix our program by making changes:
-```
-{{#include ../../examples/tut-wrong-2.fil}}
+```filament
+{{#include ../../../examples/tut-wrong-2.fil}}
 ```
 We made a couple of changes to our program:
 - Run the multiplexer when the output from the multiplier is available (at `G+2`).
@@ -124,7 +124,7 @@ We made a couple of changes to our program:
 
 Sadly, Filament is still angry at us:
 ```
-{{#include ../../examples/tut-wrong-2.expect:4:}}
+{{#include ../../../examples/tut-wrong-2.expect:4:}}
 ```
 
 The problem is that we accept the `op` input and produce the output `out` in the interval [G, G+1). However, we know that it is not possible to produce the output as soon as we get the input because the multiplier takes two cycles to produce its output!
@@ -132,8 +132,8 @@ The problem is that we accept the `op` input and produce the output `out` in the
 ## A Correct Implementation
 
 The fix is easy: we change the signature of the ALU to reflect this cruel reality
-```
-{{#include ../../examples/tut-seq.fil}}
+```filament
+{{#include ../../../examples/tut-seq.fil}}
 ```
 
 And running the compiler again generates no longer generates any errors:

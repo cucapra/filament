@@ -8,13 +8,13 @@ We use [fud][] to make the process of running Filament designs seamless: the use
 
 The test runner's data format is a JSON file that contains the names of each port mentioned in a Filament program's `main` component.
 For example, for the [tutorial ALU][tut-alu] with the signature:
-```
-{{#include ../../examples/tut-wrong-1.fil:signature}}
+```filament
+{{#include ../../../examples/tut-wrong-1.fil:signature}}
 ```
 
 We can have the following data file:
 ```json
-{{#include ../../examples/data.json}}
+{{#include ../../../examples/data.json}}
 ```
 
 The test harness operates with the idea of *transactions* where each transaction is a set of inputs and outputs corresponding to the indices into the JSON file.
@@ -34,7 +34,7 @@ fud e --to cocotb-out examples/tut-seq.fil \
 This instructs `fud` to compile the design to Verilog, setup the test harness, and run the simulation.
 The output captures the values on the `out` port of the ALU for each transaction in the data file and tells us how many cycles it took to run the design:
 ```
-{{#include ../../examples/run/tut-seq.expect:1}}
+{{#include ../../../examples/run/tut-seq.expect:1}}
 ```
 
 In general, the command to run designs is:
@@ -75,7 +75,7 @@ The `-s cocotb.randomize 10` flag adds a random delay of up to 10 cycles between
 
 [calyx]: https://calyxir.org
 [iverilog]: https://github.com/steveicarus/iverilog
-[fud-setup]: http://localhost:3000/start.html#full-build
+[fud-setup]: ./start.html#full-build
 [fud]: https://docs.calyxir.org/fud/index.html
-[tut-alu]: http://localhost:3000/lang/tutorial.html#building-an-arithmetic-logic-unit
+[tut-alu]: ./lang/tutorial.html#building-an-arithmetic-logic-unit
 [x-value]: https://stackoverflow.com/questions/69530556/what-exactly-do-x-and-z-values-represent-in-verilog
