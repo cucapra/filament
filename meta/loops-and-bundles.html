@@ -148,7 +148,22 @@
                     <main>
                         <h1 id="loops-and-bundles"><a class="header" href="#loops-and-bundles">Loops and Bundles</a></h1>
 <p>For now, check out this implementation:</p>
-<pre><code class="language-filament">{{#include ../../primitives/state.fil:shift}}
+<pre><code class="language-filament">// A component that delays `in` by N cycles.
+// Uses the Delay component under the hood.
+comp Shift[#W, #N]&lt;G: 1&gt;(
+    @[G, G+1] in: #W
+) -&gt; (
+    @[G+#N, G+#N+1] out: #W
+) {
+    bundle f[#N+1]: for&lt;#i&gt; @[G+#i, G+#i+1] #W;
+
+    f{0} = in;
+    for #i in 0..#N {
+        d := new Delay[#W]&lt;G+#i&gt;(f{#i});
+        f{#i+1} = d.out;
+    }
+    out = f{#N};
+}
 </code></pre>
 <p><strong>TK.</strong> Explanation of how this works?</p>
 
