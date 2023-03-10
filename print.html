@@ -86,7 +86,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="start.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li class="chapter-item expanded "><a href="lang/tutorial.html"><strong aria-hidden="true">2.</strong> Hardware Design for the Curious Developer</a></li><li class="chapter-item expanded "><a href="lang/run.html"><strong aria-hidden="true">3.</strong> Running Filament Designs</a></li><li class="chapter-item expanded "><a href="lang/pipelining.html"><strong aria-hidden="true">4.</strong> Pipelining with Filament</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="start.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li class="chapter-item expanded affix "><li class="part-title">The Filament Language</li><li class="chapter-item expanded "><a href="lang/tutorial.html"><strong aria-hidden="true">2.</strong> Your First Filament Program</a></li><li class="chapter-item expanded "><a href="lang/run.html"><strong aria-hidden="true">3.</strong> Running Filament Designs</a></li><li class="chapter-item expanded "><a href="lang/pipelining.html"><strong aria-hidden="true">4.</strong> Pipelining with Filament</a></li><li class="chapter-item expanded "><a href="lang/external.html"><strong aria-hidden="true">5.</strong> Using Verilog Modules in Filament</a></li><li class="chapter-item expanded affix "><li class="part-title">Metaprogramming with Filament</li><li class="chapter-item expanded "><a href="meta/overview.html"><strong aria-hidden="true">6.</strong> Metaprogramming Overview</a></li><li class="chapter-item expanded "><a href="meta/loops-and-bundles.html"><strong aria-hidden="true">7.</strong> Loops and Bundles</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -716,6 +716,134 @@ comp main&lt;G: 1&gt;(
 Once the program type checked, it produced the correct output <em>and</em> was correctly pipelined.
 Filament supports many other features but at its heart, this is the guarantee it provides: if your program type checks, it is correctly pipelined.
 Fast and correct, you can have both!</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="using-verilog-modules-in-filament"><a class="header" href="#using-verilog-modules-in-filament">Using Verilog Modules in Filament</a></h1>
+<p>Filament is designed to make it easy to use Verilog modules in a correct and efficient manner.
+In short, to use a Verilog module, a Filament program needs to:</p>
+<ol>
+<li>Provide the location of the Verilog module's source file</li>
+<li>Provide a Filament signature for the Verilog module</li>
+</ol>
+<h2 id="using-extern-to-import-verilog-modules"><a class="header" href="#using-extern-to-import-verilog-modules">Using <code>extern</code> to Import Verilog Modules</a></h2>
+<p>Filament's <code>extern</code> keyword allows us to specify the signatures of all Verilog modules in a source file.
+For example, if we have a file <code>modules.sv</code> that defines several modules:</p>
+<pre><code class="language-verilog">module Add(input [31:0] a, input [31:0] b, output [31:0] c);
+...
+endmodule
+
+module Mult(input [31:0] a, input [31:0] b, output [31:0] c);
+...
+endmodule
+</code></pre>
+<p>We can use the <code>extern</code> block to specify the location of the file and provide Filament signatures for each module:</p>
+<pre><code class="language-filament">extern &quot;modules.sv&quot; {
+comp Add&lt;G: 1&gt;(
+    @[G, G+1] a: 32, @[G, G+1] b: 32
+) -&gt; (@[G, G+1] c: 32);
+
+comp Mult&lt;G: 1&gt;(
+    @[G, G+1] a: 32, @[G, G+1] b: 32
+) -&gt; (@[G+2, G+3] c: 32);
+}
+</code></pre>
+<p>Note that unlike a Filament component, the <code>comp</code> definitions do not have a body; they simply define the signature of the Verilog module.</p>
+<p><strong>Note.</strong> The location of the Verilog file is determined relative to the location of the Filament file containing the <code>extern</code> block.</p>
+<p>Once the definitions are specified, the Filament compiler will automatically link the Verilog modules into the final design.</p>
+<h2 id="defining-the-right-interface"><a class="header" href="#defining-the-right-interface">Defining the Right Interface</a></h2>
+<p>The trick with using external modules in Filament requires us to define the &quot;right&quot; interface.
+For example, one way of defining a combinational component is something that produces its output in the same cycle as its inputs.
+The following Filament signature captures this property</p>
+<pre><code class="language-filament">extern &quot;comb.sv&quot; {
+comp Add&lt;G: 1&gt;(
+    @[G, G+1] left: 32, @[G, G+1] right: 32
+) -&gt; (@[G, G+1] sum: 32);
+}
+</code></pre>
+<p>The signature states that the <code>Add</code> module accepts an input in the first cycle and immediately produces the output in the same cycle.</p>
+<p>However, another way to define a combinational component is something that can produce an output as long as its input is available; this means that the adder can produce the output for five or ten cycles <em>as long as</em> the input is available for <em>the same number of cycles</em>.</p>
+<p>To capture such a signature, which can hold a signal for a caller defined number of cycles, we can use multiple events:</p>
+<pre><code class="language-filament">comp Add&lt;G: L-(G), L: 1&gt;(
+    @[G, L] left: 32,
+    @[G, L] right: 32
+) -&gt; (
+    @[G, L] sum: 32
+) where L &gt; G;
+</code></pre>
+<p>The above signal states that the invocation of an <code>Add</code> instance gets to decide how long the output is available for.
+We require that the event <code>L</code> occurs after <code>G</code> to ensure that the intervals are well-formed.
+Finally, we also require that the delay of <code>G</code> is affected by the length of the signals; if the output is held for 10 cycles, then the adder cannot be used for 10 cycles.</p>
+<p>Using such an component is straightforward:</p>
+<pre><code class="language-filament">A := new Add;
+a := A&lt;G, G+10&gt;(l, r)
+</code></pre>
+<h3 id="default-binding-for-events"><a class="header" href="#default-binding-for-events">Default Binding for Events</a></h3>
+<p>In the above example, the signature for <code>Add</code> is more flexible that the original one.
+However, specifying the common case, where we use the adder for exactly one cycle, is a bit cumbersome:</p>
+<pre><code class="language-filament">A := new Add
+a := A&lt;G, G+1&gt;(l, r)
+</code></pre>
+<p>Instead, we can provide a default binding for the event <code>L</code> that is used when the caller does not specify a value for <code>L</code>:</p>
+<pre><code class="language-filament">comp Add&lt;G: L-(G), ?L=G+1: 1&gt;(
+    @[G, L] left: 32,
+    @[G, L] right: 32
+) -&gt; (
+    @[G, L] sum: 32
+) where L &gt; G;
+</code></pre>
+<p>The syntax <code>?L=G+1</code> tells the compiler to use the binding <code>G+1</code> for <code>L</code> when there is no binding provided for it.</p>
+<blockquote>
+<p><strong>Note.</strong> Events with default bindings must occur after non-default events.</p>
+</blockquote>
+<h2 id="optimizing-verilog-modules-using-filament-signatures"><a class="header" href="#optimizing-verilog-modules-using-filament-signatures">Optimizing Verilog Modules using Filament Signatures</a></h2>
+<p>Filament's signatures are a powerful tool–if we know that a Verilog module is only going to be used in a certain way, we can optimize the module to be used in that way.
+For example, if the module's interface requires that an input signal be available for multiple cycles, we don't have to save that signal in a register.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="metaprogramming-overview"><a class="header" href="#metaprogramming-overview">Metaprogramming Overview</a></h1>
+<p>When building hardware, it is often useful to design it <em>parameterically</em> so that we can use the same code to generate different hardware designs.
+For example, it is extremely common to design modules for numerical operations, such as adders, to be parameter over the bitwidth of the operands.</p>
+<pre><code class="language-verilog">module Add #(
+    parameter WIDTH = 32
+) (
+    input [WIDTH-1:0] a,
+    input [WIDTH-1:0] b,
+    output [WIDTH-1:0] c
+);
+    assign c = a + b;
+endmodule
+</code></pre>
+<p>The Verilog module above specifies a parameter <code>WIDTH</code> that can be used to specify the bitwidth of the operands.
+User code can simply instantiate the module with the desired bitwidth:</p>
+<pre><code class="language-verilog">Add #(.WIDTH(32)) adder_32(...);
+Add #(.WIDTH(64)) adder_64(...);
+</code></pre>
+<p>Of course, this example hides the fact that metaprogramming ends up generating hardware.
+This is because the <code>+</code> operation needs to be implemented differently for different bitwidths; a 32-bit adder needs a lot more circuitry than a 1-bit adder.
+HDLs like Verilog provide abstractions like <a href="https://www.chipverify.com/verilog/verilog-generate-block"><code>generate</code> blocks</a> to allow users to <em>generate hardware</em> at compile time.
+Languages like <a href="https://www.chisel-lang.org/">Chisel</a> go one step further to generate hardware by writing Scala programs.</p>
+<p>The challenge with generative programming is ensuring that the generated code is correct.
+This is harder than it seems because we don't have to ensure that one piece of code is correct; we have to ensure that <em>all possible code</em> generate-able from a module definition is correct.
+Scala's strong types are useful in ensuring that code generated by <a href="https://www.chisel-lang.org/">Chisel</a> is free of some bugs, such as missing ports connections, but it misses crucial properties like correct pipelining and timing.</p>
+<h3 id="filaments-promise"><a class="header" href="#filaments-promise">Filament's promise</a></h3>
+<p>Our goal with Filament is to provide an expressive metaprogramming model parameteric modules that typecheck are guaranteed to generate correctly pipelined hardware.
+Read on to see how we do this.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="loops-and-bundles"><a class="header" href="#loops-and-bundles">Loops and Bundles</a></h1>
+<p>For now, check out this implementation:</p>
+<pre><code>// A component that delays `in` by N cycles.
+// Uses the Delay component under the hood.
+comp Shift[#W, #N]&lt;G: 1&gt;(
+    @[G, G+1] in: #W
+) -&gt; (
+    @[G+#N, G+#N+1] out: #W
+) {
+    bundle f[#N+1]: for&lt;#i&gt; @[G+#i, G+#i+1] #W;
+
+    f{0} = in;
+    for #i in 0..#N {
+        d := new Delay[#W]&lt;G+#i&gt;(f{#i});
+        f{#i+1} = d.out;
+    }
+    out = f{#N};
+}
+</code></pre>
+<p><strong>TK.</strong> Explanation of how this works?</p>
 
                     </main>
 

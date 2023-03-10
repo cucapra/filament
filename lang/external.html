@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Running Filament Designs - Filament</title>
+        <title>Using Verilog Modules in Filament - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -85,7 +85,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../start.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li class="chapter-item expanded affix "><li class="part-title">The Filament Language</li><li class="chapter-item expanded "><a href="../lang/tutorial.html"><strong aria-hidden="true">2.</strong> Your First Filament Program</a></li><li class="chapter-item expanded "><a href="../lang/run.html" class="active"><strong aria-hidden="true">3.</strong> Running Filament Designs</a></li><li class="chapter-item expanded "><a href="../lang/pipelining.html"><strong aria-hidden="true">4.</strong> Pipelining with Filament</a></li><li class="chapter-item expanded "><a href="../lang/external.html"><strong aria-hidden="true">5.</strong> Using Verilog Modules in Filament</a></li><li class="chapter-item expanded affix "><li class="part-title">Metaprogramming with Filament</li><li class="chapter-item expanded "><a href="../meta/overview.html"><strong aria-hidden="true">6.</strong> Metaprogramming Overview</a></li><li class="chapter-item expanded "><a href="../meta/loops-and-bundles.html"><strong aria-hidden="true">7.</strong> Loops and Bundles</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../start.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li class="chapter-item expanded affix "><li class="part-title">The Filament Language</li><li class="chapter-item expanded "><a href="../lang/tutorial.html"><strong aria-hidden="true">2.</strong> Your First Filament Program</a></li><li class="chapter-item expanded "><a href="../lang/run.html"><strong aria-hidden="true">3.</strong> Running Filament Designs</a></li><li class="chapter-item expanded "><a href="../lang/pipelining.html"><strong aria-hidden="true">4.</strong> Pipelining with Filament</a></li><li class="chapter-item expanded "><a href="../lang/external.html" class="active"><strong aria-hidden="true">5.</strong> Using Verilog Modules in Filament</a></li><li class="chapter-item expanded affix "><li class="part-title">Metaprogramming with Filament</li><li class="chapter-item expanded "><a href="../meta/overview.html"><strong aria-hidden="true">6.</strong> Metaprogramming Overview</a></li><li class="chapter-item expanded "><a href="../meta/loops-and-bundles.html"><strong aria-hidden="true">7.</strong> Loops and Bundles</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -146,78 +146,96 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="running-filament-designs"><a class="header" href="#running-filament-designs">Running Filament Designs</a></h1>
-<p>Filament designs are compiled to Verilog using the <a href="https://calyxir.org">Calyx</a> backend and simulated using tools like <a href="https://github.com/steveicarus/iverilog">Icarus Verilog</a>.
-However, figuring out the right incantations to get these tools to work together and building testing harnesses can be tedious.
-We use <a href="https://docs.calyxir.org/fud/index.html">fud</a> to make the process of running Filament designs seamless: the user provides a file with the test data and runs a single command to compile, simulate, and generate outputs.</p>
-<h2 id="data-format"><a class="header" href="#data-format">Data Format</a></h2>
-<p>The test runner's data format is a JSON file that contains the names of each port mentioned in a Filament program's <code>main</code> component.
-For example, for the <a href="http://localhost:3000/lang/tutorial.html#building-an-arithmetic-logic-unit">tutorial ALU</a> with the signature:</p>
-<pre><code>comp main&lt;G: 3&gt;(
-    @interface[G] go: 1,
-    @[G, G+1] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -&gt; (@[G, G+1] out: 32)
+                        <h1 id="using-verilog-modules-in-filament"><a class="header" href="#using-verilog-modules-in-filament">Using Verilog Modules in Filament</a></h1>
+<p>Filament is designed to make it easy to use Verilog modules in a correct and efficient manner.
+In short, to use a Verilog module, a Filament program needs to:</p>
+<ol>
+<li>Provide the location of the Verilog module's source file</li>
+<li>Provide a Filament signature for the Verilog module</li>
+</ol>
+<h2 id="using-extern-to-import-verilog-modules"><a class="header" href="#using-extern-to-import-verilog-modules">Using <code>extern</code> to Import Verilog Modules</a></h2>
+<p>Filament's <code>extern</code> keyword allows us to specify the signatures of all Verilog modules in a source file.
+For example, if we have a file <code>modules.sv</code> that defines several modules:</p>
+<pre><code class="language-verilog">module Add(input [31:0] a, input [31:0] b, output [31:0] c);
+...
+endmodule
+
+module Mult(input [31:0] a, input [31:0] b, output [31:0] c);
+...
+endmodule
 </code></pre>
-<p>We can have the following data file:</p>
-<pre><code class="language-json">{
-    &quot;op&quot;: [ 0, 1, 0, 1 ],
-    &quot;left&quot;: [ 4, 5, 6, 7 ],
-    &quot;right&quot;: [ 7, 5, 11, 9 ]
+<p>We can use the <code>extern</code> block to specify the location of the file and provide Filament signatures for each module:</p>
+<pre><code class="language-filament">extern &quot;modules.sv&quot; {
+comp Add&lt;G: 1&gt;(
+    @[G, G+1] a: 32, @[G, G+1] b: 32
+) -&gt; (@[G, G+1] c: 32);
+
+comp Mult&lt;G: 1&gt;(
+    @[G, G+1] a: 32, @[G, G+1] b: 32
+) -&gt; (@[G+2, G+3] c: 32);
 }
 </code></pre>
-<p>The test harness operates with the idea of <em>transactions</em> where each transaction is a set of inputs and outputs corresponding to the indices into the JSON file.
-For example, the first transaction sends the inputs <code>op[0]</code>, <code>left[0]</code>, and <code>right[0]</code> to the Verilog design and capture outputs for <code>out[0]</code>, corresponding to the output ports of the ALU.</p>
-<p>This means, that the above data file will run the design with four inputs and capture four outputs. Adding another transaction is easy: just add another set of inputs to the JSON file.</p>
-<h2 id="running-designs"><a class="header" href="#running-designs">Running Designs</a></h2>
-<p>Running the design is straightforward, assuming you've <a href="http://localhost:3000/start.html#full-build">configured <code>fud</code></a> already:</p>
-<pre><code class="language-sh">fud e --to cocotb-out examples/tut-seq.fil \
-      -s cocotb.data examples/data.json \
-      -s futil.flags ' -d canonicalize'
+<p>Note that unlike a Filament component, the <code>comp</code> definitions do not have a body; they simply define the signature of the Verilog module.</p>
+<p><strong>Note.</strong> The location of the Verilog file is determined relative to the location of the Filament file containing the <code>extern</code> block.</p>
+<p>Once the definitions are specified, the Filament compiler will automatically link the Verilog modules into the final design.</p>
+<h2 id="defining-the-right-interface"><a class="header" href="#defining-the-right-interface">Defining the Right Interface</a></h2>
+<p>The trick with using external modules in Filament requires us to define the &quot;right&quot; interface.
+For example, one way of defining a combinational component is something that produces its output in the same cycle as its inputs.
+The following Filament signature captures this property</p>
+<pre><code class="language-filament">extern &quot;comb.sv&quot; {
+comp Add&lt;G: 1&gt;(
+    @[G, G+1] left: 32, @[G, G+1] right: 32
+) -&gt; (@[G, G+1] sum: 32);
+}
 </code></pre>
-<p>This instructs <code>fud</code> to compile the design to Verilog, setup the test harness, and run the simulation.
-The output captures the values on the <code>out</code> port of the ALU for each transaction in the data file and tells us how many cycles it took to run the design:</p>
-<pre><code>{&quot;out&quot;: {&quot;0&quot;: [28], &quot;1&quot;: [10], &quot;2&quot;: [66], &quot;3&quot;: [16]}, &quot;cycles&quot;: 12}
+<p>The signature states that the <code>Add</code> module accepts an input in the first cycle and immediately produces the output in the same cycle.</p>
+<p>However, another way to define a combinational component is something that can produce an output as long as its input is available; this means that the adder can produce the output for five or ten cycles <em>as long as</em> the input is available for <em>the same number of cycles</em>.</p>
+<p>To capture such a signature, which can hold a signal for a caller defined number of cycles, we can use multiple events:</p>
+<pre><code class="language-filament">comp Add&lt;G: L-(G), L: 1&gt;(
+    @[G, L] left: 32,
+    @[G, L] right: 32
+) -&gt; (
+    @[G, L] sum: 32
+) where L &gt; G;
 </code></pre>
-<p>In general, the command to run designs is:</p>
-<pre><code class="language-sh">fud e --to cocotb-out &lt;filament-file&gt; \
-      -s cocotb.data &lt;data-file&gt; \
-      -s futil.flags ' -d canonicalize'
+<p>The above signal states that the invocation of an <code>Add</code> instance gets to decide how long the output is available for.
+We require that the event <code>L</code> occurs after <code>G</code> to ensure that the intervals are well-formed.
+Finally, we also require that the delay of <code>G</code> is affected by the length of the signals; if the output is held for 10 cycles, then the adder cannot be used for 10 cycles.</p>
+<p>Using such an component is straightforward:</p>
+<pre><code class="language-filament">A := new Add;
+a := A&lt;G, G+10&gt;(l, r)
 </code></pre>
-<h2 id="under-the-hood"><a class="header" href="#under-the-hood">Under the Hood</a></h2>
+<h3 id="default-binding-for-events"><a class="header" href="#default-binding-for-events">Default Binding for Events</a></h3>
+<p>In the above example, the signature for <code>Add</code> is more flexible that the original one.
+However, specifying the common case, where we use the adder for exactly one cycle, is a bit cumbersome:</p>
+<pre><code class="language-filament">A := new Add
+a := A&lt;G, G+1&gt;(l, r)
+</code></pre>
+<p>Instead, we can provide a default binding for the event <code>L</code> that is used when the caller does not specify a value for <code>L</code>:</p>
+<pre><code class="language-filament">comp Add&lt;G: L-(G), ?L=G+1: 1&gt;(
+    @[G, L] left: 32,
+    @[G, L] right: 32
+) -&gt; (
+    @[G, L] sum: 32
+) where L &gt; G;
+</code></pre>
+<p>The syntax <code>?L=G+1</code> tells the compiler to use the binding <code>G+1</code> for <code>L</code> when there is no binding provided for it.</p>
 <blockquote>
-<p>Note: If you're following the tutorial, skip to the <a href="./pipelining.html">Pipelining with Filament</a> section and come back here after you've finished.</p>
+<p><strong>Note.</strong> Events with default bindings must occur after non-default events.</p>
 </blockquote>
-<p>Filament's test runner uses the signature of the <code>main</code> component to decide how long to provide inputs for, when to capture the outputs, and when to schedule the next transaction.</p>
-<h3 id="providing-inputs"><a class="header" href="#providing-inputs">Providing Inputs</a></h3>
-<p>The test harness holds the inputs for exactly the interval specified for each input and then provides <a href="https://stackoverflow.com/questions/69530556/what-exactly-do-x-and-z-values-represent-in-verilog"><code>'x</code> values</a> to the input.
-This is done to make sure that incorrect designs that read inputs outside of their specified interval will not pass the test.</p>
-<h3 id="scheduling-transactions"><a class="header" href="#scheduling-transactions">Scheduling Transactions</a></h3>
-<p>Because Filament is represents hardware pipelines, new transactions can start before the previous transaction has finished.
-By default, new transactions are scheduled exactly when the delay for the main event specifies.
-For example, if the main event has a delay of <code>2</code>, then the next transaction will be scheduled after two cycles after starting the previous transaction.</p>
-<p>However, it can be useful to change the scheduling behavior to check if there are pipelining bugs.
-Our <code>fud</code>-based harness provides a way to randomize the timing of transactions by adding a random delay:</p>
-<pre><code class="language-sh">fud e --to cocotb-out examples/tut-seq.fil \
-      -s cocotb.data examples/data.json \
-      -s cocotb.randomize 10 \
-      -s futil.flags ' -d canonicalize'
-</code></pre>
-<p>The <code>-s cocotb.randomize 10</code> flag adds a random delay of up to 10 cycles between transactions.</p>
-<blockquote>
-<p>Note: A well-typed Filament program produces the same output values regardless of the scheduling of transactions.</p>
-</blockquote>
+<h2 id="optimizing-verilog-modules-using-filament-signatures"><a class="header" href="#optimizing-verilog-modules-using-filament-signatures">Optimizing Verilog Modules using Filament Signatures</a></h2>
+<p>Filament's signatures are a powerful tool–if we know that a Verilog module is only going to be used in a certain way, we can optimize the module to be used in that way.
+For example, if the module's interface requires that an input signal be available for multiple cycles, we don't have to save that signal in a register.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../lang/tutorial.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../lang/pipelining.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next" href="../lang/pipelining.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../meta/overview.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -227,11 +245,11 @@ Our <code>fud</code>-based harness provides a way to randomize the timing of tra
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../lang/tutorial.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../lang/pipelining.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next" href="../lang/pipelining.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="../meta/overview.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
