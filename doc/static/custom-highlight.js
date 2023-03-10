@@ -1,7 +1,7 @@
 hljs.registerLanguage("filament", (hljs) => ({
     name: "filament",
     keywords: {
-        keyword: "in import extern for if else comp new where",
+        keyword: "bundle in import extern for if else comp new where",
     },
     contains: [
         hljs.QUOTE_STRING_MODE,
