@@ -15,26 +15,26 @@ fud e --to cocotb-out examples/tut-seq.fil \
 
 Which generates the following output:
 ```
-{{#include ../../examples/run/tut-seq.expect:1}}
+{{#include ../../../examples/run/tut-seq.expect:1}}
 ```
 
 Note that this sequential design takes 12 cycles to process 4 inputs.
 
 We'll start with pipelining our program:
 ```filament
-{{#include ../../examples/tut-seq.fil}}
+{{#include ../../../examples/tut-seq.fil}}
 ```
 
 ## Delays and Throughput
 
 Filament uses an event's *delay* to determine when the module is can accept new inputs.
 ```filament
-{{#include ../../examples/tut-seq.fil:sig}}
+{{#include ../../../examples/tut-seq.fil:sig}}
 ```
 Note that the delay for the event `G` is `3` which indicates to Filament that the ALU process new inputs every three cycles.
 We can tell Filament that we instead want a module that can process new inputs every cycle by changing the delay to `1`:
 ```filament
-{{#include ../../examples/tut-pipe-wrong-1.fil:sig}}
+{{#include ../../../examples/tut-pipe-wrong-1.fil:sig}}
 ```
 
 And run the compiler:
@@ -50,7 +50,7 @@ Let's work through each error and see how we can fix it.
 ### Availability Intervals of Ports
 The first error message points out that one of the inputs is required for three cycles, but the module may re-execute every cycle:
 ```
-{{#include ../../examples/tut-pipe-wrong-1.expect:4:13}}
+{{#include ../../../examples/tut-pipe-wrong-1.expect:4:13}}
 ```
 
 This is problematic because `op` represents a *physical wire*; it is incapable of holding multiple values.
@@ -62,37 +62,37 @@ The fix is easy: looking at our original design, we see that `op` is only used b
 ### Delays of Subcomponents
 The second error message points out that the ALU component may execute every cycle but the multiplier we used can only execute every two cycles:
 ```
-{{#include ../../examples/tut-pipe-wrong-1.expect:13:25}}
+{{#include ../../../examples/tut-pipe-wrong-1.expect:13:25}}
 ```
 
 Yet again, our request is physically impossible to satisfy: our multiplier circuit is fundamentally incapable of executing every cycle.
 Thankfully for us, the `primitives/sequential.file` file provides a component called `FastMult` which does have delay 1:
 ```filament
-{{#include ../../primitives/sequential.fil:fastmult}}
+{{#include ../../../primitives/sequential.fil:fastmult}}
 ```
 
 We can change out program to use this component instead:
 ```filament
-{{#include ../../examples/tut-pipe-wrong-2.fil}}
+{{#include ../../../examples/tut-pipe-wrong-2.fil}}
 ```
 
 However, in making this change, we've created a new problem for ourselves:
 ```
-{{#include ../../examples/tut-pipe-wrong-2.expect:18:27}}
+{{#include ../../../examples/tut-pipe-wrong-2.expect:18:27}}
 ```
 Filament tells us that `FastMult`'s `out` port is available in the interval [G+3, G+4) instead of [G+2, G+3) for `Mult`, i.e., the latency of `FastMult` is different from the latency of `Mult`.
 
 Filament catching this bug is important-it would be very easy to miss such a mistake in a Verilog program.
 Fixing it is quite mechanical:
 ```filament
-{{#include ../../examples/tut-pipe-wrong-3.fil}}
+{{#include ../../../examples/tut-pipe-wrong-3.fil}}
 ```
 
 ### Registers that Hold on for too Long
 
 The final problem is quite similar to the previous one:
 ```
-{{#include ../../examples/tut-pipe-wrong-3.expect:4:18}}
+{{#include ../../../examples/tut-pipe-wrong-3.expect:4:18}}
 ```
 
 The compiler is telling us the register's delay is 3 cycles.
@@ -106,7 +106,7 @@ The intuition behind this is that because we want our ALU to process inputs ever
 
 The final program will look like this:
 ```filament
-{{#include ../../examples/tut-pipe.fil}}
+{{#include ../../../examples/tut-pipe.fil}}
 ```
 
 ## Running the Pipelined Design
@@ -120,7 +120,7 @@ fud e --to cocotb-out examples/tut-pipe.fil \
 
 We get the following output which shows that the design took only 7 cycles to process 4 inputs:
 ```
-{{#include ../../examples/run/tut-pipe.expect:1}}
+{{#include ../../../examples/run/tut-pipe.expect:1}}
 ```
 
 If you're still not convinced, try adding [another transaction][transaction] to the data file in `examples/data.json` and see how the cycle count for the original sequential and pipelined designs change.

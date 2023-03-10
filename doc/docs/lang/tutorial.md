@@ -34,7 +34,7 @@ graph TB;
 
 We start by defining a Filament component which wraps all the hardware required to implement some computation:
 ```filament
-{{#include ../../examples/tut-wrong-1.fil:signature}}
+{{#include ../../../examples/tut-wrong-1.fil:signature}}
 ```
 
 The `<G: 1>` syntax defined the event `G` which can be thought of as the "start time" of the component.
@@ -77,7 +77,7 @@ Coming from a software background, it might seem weird that we're performing bot
 
 The final program looks like this:
 ```filament
-{{#include ../../examples/tut-wrong-1.fil}}
+{{#include ../../../examples/tut-wrong-1.fil}}
 ```
 
 ## Checking Timing Behavior
@@ -91,7 +91,7 @@ cargo run -- alu.fil
 
 Filament tells us that the program is incorrect:
 ```filament
-{{#include ../../examples/tut-wrong-1.expect:4:}}
+{{#include ../../../examples/tut-wrong-1.expect:4:}}
 ```
 
 Filament is telling us that our multiplexer expects its input during the interval [G, G+1) but the multiplier's output is only available in the interval [G+2, G+3).
@@ -105,7 +105,7 @@ In order to fix this, we need to execute the multiplexer when the signal from th
 
 Registers are the primitive stateful building block for hardware designs and can extend the availability of signals. The signature of a register is complicated by interesting:
 ```filament
-{{#include ../../primitives/state.fil:register}}
+{{#include ../../../primitives/state.fil:register}}
 ```
 
 Notice the availability for the `out` signal: it is available in the interval [G, L) where `L` is provided to the component during its invocation.
@@ -114,7 +114,7 @@ The additional `where` clause ensures that `out`'s interval is well-formed; it w
 
 Let try to fix our program by making changes:
 ```filament
-{{#include ../../examples/tut-wrong-2.fil}}
+{{#include ../../../examples/tut-wrong-2.fil}}
 ```
 We made a couple of changes to our program:
 - Run the multiplexer when the output from the multiplier is available (at `G+2`).
@@ -124,7 +124,7 @@ We made a couple of changes to our program:
 
 Sadly, Filament is still angry at us:
 ```
-{{#include ../../examples/tut-wrong-2.expect:4:}}
+{{#include ../../../examples/tut-wrong-2.expect:4:}}
 ```
 
 The problem is that we accept the `op` input and produce the output `out` in the interval [G, G+1). However, we know that it is not possible to produce the output as soon as we get the input because the multiplier takes two cycles to produce its output!
@@ -133,7 +133,7 @@ The problem is that we accept the `op` input and produce the output `out` in the
 
 The fix is easy: we change the signature of the ALU to reflect this cruel reality
 ```filament
-{{#include ../../examples/tut-seq.fil}}
+{{#include ../../../examples/tut-seq.fil}}
 ```
 
 And running the compiler again generates no longer generates any errors:

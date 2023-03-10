@@ -9,12 +9,12 @@ We use [fud][] to make the process of running Filament designs seamless: the use
 The test runner's data format is a JSON file that contains the names of each port mentioned in a Filament program's `main` component.
 For example, for the [tutorial ALU][tut-alu] with the signature:
 ```filament
-{{#include ../../examples/tut-wrong-1.fil:signature}}
+{{#include ../../../examples/tut-wrong-1.fil:signature}}
 ```
 
 We can have the following data file:
 ```json
-{{#include ../../examples/data.json}}
+{{#include ../../../examples/data.json}}
 ```
 
 The test harness operates with the idea of *transactions* where each transaction is a set of inputs and outputs corresponding to the indices into the JSON file.
@@ -34,7 +34,7 @@ fud e --to cocotb-out examples/tut-seq.fil \
 This instructs `fud` to compile the design to Verilog, setup the test harness, and run the simulation.
 The output captures the values on the `out` port of the ALU for each transaction in the data file and tells us how many cycles it took to run the design:
 ```
-{{#include ../../examples/run/tut-seq.expect:1}}
+{{#include ../../../examples/run/tut-seq.expect:1}}
 ```
 
 In general, the command to run designs is:
