@@ -8,7 +8,7 @@ hljs.registerLanguage("filament", (hljs) => ({
         {
             className: 'literal',
             scope: 'number',
-            begin: '[0-9]+'
+            begin: '\\b[0-9]+'
         },
         {
             className: 'operator',
