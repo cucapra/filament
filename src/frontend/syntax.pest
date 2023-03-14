@@ -112,6 +112,7 @@ interval_range = {
 // Ports
 port_def = {
   (interval_range | interface)? ~ identifier ~ ":" ~ expr
+  | identifier ~ "[" ~ expr ~ "]" ~ ":" ~ bundle_typ
 }
 
 arrow = { "->" }

@@ -16,7 +16,7 @@ pub enum PortDef {
 }
 
 impl PortDef {
-    pub fn new(
+    pub fn port(
         name: Loc<Id>,
         liveness: Loc<Range>,
         bitwidth: Loc<Expr>,
@@ -26,6 +26,10 @@ impl PortDef {
             liveness,
             bitwidth,
         }
+    }
+
+    pub fn bundle(bundle: Bundle) -> Self {
+        Self::Bundle(bundle)
     }
 
     /// Name of this Port
@@ -128,7 +132,7 @@ impl From<InterfaceDef> for PortDef {
     fn from(id: InterfaceDef) -> Self {
         let start = Time::from(id.event);
         let end = start.clone().increment(1.into());
-        PortDef::new(
+        PortDef::port(
             id.name,
             Loc::unknown(Range::new(start, end)),
             Loc::unknown(Expr::from(1)),

@@ -106,7 +106,7 @@ impl InvIdx {
             .event_binding(inv.events.clone().into_iter().map(|e| e.take()));
         let sig = &ctx.prog[inst.sig];
         let port = sig.get_port(port);
-        core::PortDef::new(
+        core::PortDef::port(
             port.name().clone(),
             Loc::new(
                 resolve_range(port.liveness(), &event_b, &param_b),

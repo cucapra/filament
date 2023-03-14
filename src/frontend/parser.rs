@@ -227,7 +227,10 @@ impl FilamentParser {
                 }
             },
             [interval_range(range), identifier(name), expr(bitwidth)] => {
-                Ok(Port::Pd(Loc::new(core::PortDef::new(name, range, bitwidth), sp)))
+                Ok(Port::Pd(Loc::new(core::PortDef::port(name, range, bitwidth), sp)))
+            },
+            [identifier(name), expr(bitwidth), bundle_typ(bt)] => {
+                Ok(Port::Pd(Loc::new(core::PortDef::bundle(core::Bundle::new(name, bitwidth, bt)), sp)))
             }
         )
     }

@@ -481,7 +481,7 @@ impl Bundle {
         let mut bind = Binding::default();
         bind.insert(self.typ.idx, idx);
         let liveness = self.typ.liveness.clone();
-        PortDef::new(
+        PortDef::port(
             Loc::unknown(Id::from("__FAKE_NAME_SHOULD_NOT_BE_USED")),
             liveness.map(|r| r.resolve_exprs(&bind)),
             self.typ.bitwidth.clone(),
