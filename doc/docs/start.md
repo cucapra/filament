@@ -88,3 +88,4 @@ Rerun the command to check that `libpython` was found after installing a new pyt
 [calyx-repo]: https://github.com/cucapra/calyx
 [runt]: https://github.com/cucapra/runt
 [pyenv]: https://github.com/pyenv/pyenv
+[jq]: https://stedolan.github.io/jq/
