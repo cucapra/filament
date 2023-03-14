@@ -49,7 +49,7 @@ Thankfully, the Filament standard library defines these operations for us, so we
 import "primitives/core.fil";       // Defines Add
 import "primitives/sequential.fil"; // Defines Mult
 
-comp ALU<G: 3>(...) -> (...) {
+comp main<G: 3>(...) -> (...) {
     A := new Add[32];
     M := new Mult[32];
 }
