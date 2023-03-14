@@ -190,7 +190,7 @@ Unlike other hardware description languages, Filament <em>also</em> requires us 
 <pre><code class="language-filament">import &quot;primitives/core.fil&quot;;       // Defines Add
 import &quot;primitives/sequential.fil&quot;; // Defines Mult
 
-comp ALU&lt;G: 3&gt;(...) -&gt; (...) {
+comp main&lt;G: 3&gt;(...) -&gt; (...) {
     A := new Add[32];
     M := new Mult[32];
 }
