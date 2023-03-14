@@ -1,6 +1,6 @@
 use super::{Binding, Context};
 use crate::core;
-use calyx::ir::{self, RRC};
+use calyx_ir::{self as ir, RRC};
 /// A Calyx FSM that increments every cycle.
 pub struct Fsm {
     cell: RRC<ir::Cell>,

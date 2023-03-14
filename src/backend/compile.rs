@@ -1,11 +1,8 @@
 use super::Fsm;
 use crate::{cmdline::Opts, core, errors::FilamentResult, utils::Traversal};
-use calyx::{
-    errors::CalyxResult,
-    frontend,
-    ir::{self, RRC},
-    structure,
-};
+use calyx_frontend as frontend;
+use calyx_ir::{self as ir, structure, RRC};
+use calyx_utils::CalyxResult;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::iter;
@@ -328,7 +325,7 @@ where
     ports
 }
 
-const INTERFACE_PORTS: [(&str, u64, calyx::ir::Direction); 2] = [
+const INTERFACE_PORTS: [(&str, u64, ir::Direction); 2] = [
     ("clk", 1, ir::Direction::Input),
     ("reset", 1, ir::Direction::Input),
 ];
