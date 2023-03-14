@@ -68,15 +68,15 @@ impl Context<'_> {
         &mut self,
         port: &core::Port,
     ) -> (RRC<ir::Port>, Option<ir::Guard>) {
-        match &port.typ {
-            core::PortType::Bundle { .. } => {
+        match &port {
+            core::Port::Bundle { .. } => {
                 unreachable!("Bundles should be compiled away")
             }
-            core::PortType::ThisPort(p) => {
+            core::Port::ThisPort(p) => {
                 let this = self.builder.component.signature.borrow();
                 (this.get(p.as_ref()), None)
             }
-            core::PortType::InvPort { invoke: comp, name } => {
+            core::Port::InvPort { invoke: comp, name } => {
                 if let Some(fsm) = self.fsms.get(comp) {
                     let cr = self.builder.add_constant(1, 1);
                     let c = cr.borrow();
@@ -86,7 +86,7 @@ impl Context<'_> {
                     (cell.get(name.as_ref()), None)
                 }
             }
-            core::PortType::Constant(c) => {
+            core::Port::Constant(c) => {
                 let cr = self.builder.add_constant(*c, 32);
                 let c = cr.borrow();
                 (c.get("out"), None)
@@ -131,15 +131,15 @@ fn compile_guard(guard: core::Guard, ctx: &mut Context) -> ir::Guard {
             let c2 = compile_guard(*g2, ctx);
             c1 | c2
         }
-        core::Guard::Port(p) => match &p.typ {
-            core::PortType::Bundle { .. } => {
+        core::Guard::Port(p) => match &p {
+            core::Port::Bundle { .. } => {
                 unreachable!("Bundles should be compiled away")
             }
-            core::PortType::ThisPort(p) => {
+            core::Port::ThisPort(p) => {
                 let this = ctx.builder.component.signature.borrow();
                 this.get(p.as_ref()).into()
             }
-            core::PortType::InvPort { invoke: comp, name } => {
+            core::Port::InvPort { invoke: comp, name } => {
                 if let Some(fsm) = ctx.fsms.get(comp) {
                     fsm.event(name)
                 } else {
@@ -147,7 +147,7 @@ fn compile_guard(guard: core::Guard, ctx: &mut Context) -> ir::Guard {
                     cell.get(name.as_ref()).into()
                 }
             }
-            core::PortType::Constant(_) => {
+            core::Port::Constant(_) => {
                 unreachable!("Constants cannot be in guards")
             }
         },

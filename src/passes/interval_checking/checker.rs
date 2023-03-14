@@ -11,7 +11,7 @@ use std::iter;
 impl IntervalCheck {
     /// Check that a bundle access is within bounds
     fn port_bundle_index(&mut self, port: &core::Port, ctx: &CompBinding) {
-        let core::PortType::Bundle { name, idx } = &port.typ else {
+        let core::Port::Bundle { name, idx } = &port else {
             return
         };
         let bun_idx = ctx.get_bundle_idx(name);
@@ -360,7 +360,6 @@ impl visitor::Checker for IntervalCheck {
 
         for con in constraints {
             let pos = con.pos();
-            // XXX(rachit): Attach location information for constraints
             let con_with_info = con
                 .take()
                 .obligation("invocation violates component's constraint")

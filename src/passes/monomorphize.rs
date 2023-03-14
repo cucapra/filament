@@ -29,20 +29,17 @@ impl Rewriter {
     }
 
     fn rewrite_port(&mut self, port: core::Port) -> core::Port {
-        match port.typ {
-            core::PortType::InvPort { invoke, name } => {
-                core::PortType::InvPort {
-                    invoke: Loc::unknown(self.binding[invoke.inner()]),
-                    name,
-                }
-            }
-            core::PortType::Bundle { name, idx } => core::PortType::Bundle {
+        match port {
+            core::Port::InvPort { invoke, name } => core::Port::InvPort {
+                invoke: Loc::unknown(self.binding[invoke.inner()]),
+                name,
+            },
+            core::Port::Bundle { name, idx } => core::Port::Bundle {
                 name: Loc::unknown(self.binding[name.inner()]),
                 idx,
             },
             t => t,
         }
-        .into()
     }
 
     /// Generate new set of commands by renaming name based on the binding.

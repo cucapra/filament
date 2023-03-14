@@ -7,70 +7,45 @@ use crate::{
 use itertools::Itertools;
 use std::fmt::Display;
 
-// XXX(rachit): Remove this once we're done with the transition to positions
-#[derive(Clone)]
-pub struct Port {
-    pub typ: PortType,
-}
 impl Port {
     pub fn name(&self) -> Id {
-        match &self.typ {
-            PortType::ThisPort(n) => *n.inner(),
-            PortType::InvPort { name, .. } => *name.inner(),
-            PortType::Bundle { name, idx } => format!("{name}{{{idx}}}").into(),
-            PortType::Constant(n) => Id::from(format!("const<{}>", n)),
+        match &self {
+            Port::ThisPort(n) => *n.inner(),
+            Port::InvPort { name, .. } => *name.inner(),
+            Port::Bundle { name, idx } => format!("{name}{{{idx}}}").into(),
+            Port::Constant(n) => Id::from(format!("const<{}>", n)),
         }
     }
 
     pub fn comp(comp: Loc<Id>, name: Loc<Id>) -> Self {
-        Port {
-            typ: PortType::InvPort { invoke: comp, name },
-        }
+        Port::InvPort { invoke: comp, name }
     }
 
     pub fn this(p: Loc<Id>) -> Self {
-        Port {
-            typ: PortType::ThisPort(p),
-        }
+        Port::ThisPort(p)
     }
 
     pub fn constant(v: u64) -> Self {
-        Port {
-            typ: PortType::Constant(v),
-        }
+        Port::Constant(v)
     }
 
     pub fn bundle(name: Loc<Id>, idx: Loc<Expr>) -> Self {
-        Port {
-            typ: PortType::Bundle { name, idx },
-        }
+        Port::Bundle { name, idx }
     }
 
     pub fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
-        match self.typ {
-            PortType::Bundle { name, idx } => Port {
-                typ: PortType::Bundle {
-                    name,
-                    idx: idx.map(|i| i.resolve(bindings)),
-                },
+        match self {
+            Port::Bundle { name, idx } => Port::Bundle {
+                name,
+                idx: idx.map(|i| i.resolve(bindings)),
             },
             _ => self,
         }
     }
 }
-impl From<PortType> for Port {
-    fn from(typ: PortType) -> Self {
-        Self { typ }
-    }
-}
-impl std::fmt::Display for Port {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.typ)
-    }
-}
 
 #[derive(Clone)]
-pub enum PortType {
+pub enum Port {
     /// A port on this component
     ThisPort(Loc<Id>),
     /// A constant
@@ -81,15 +56,15 @@ pub enum PortType {
     Bundle { name: Loc<Id>, idx: Loc<Expr> },
 }
 
-impl std::fmt::Display for PortType {
+impl std::fmt::Display for Port {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PortType::ThisPort(p) => write!(f, "{}", p),
-            PortType::InvPort { invoke: comp, name } => {
+            Port::ThisPort(p) => write!(f, "{}", p),
+            Port::InvPort { invoke: comp, name } => {
                 write!(f, "{}.{}", comp, name)
             }
-            PortType::Constant(n) => write!(f, "{}", n),
-            PortType::Bundle { name, idx } => write!(f, "{name}{{{idx}}}"),
+            Port::Constant(n) => write!(f, "{}", n),
+            Port::Bundle { name, idx } => write!(f, "{name}{{{idx}}}"),
         }
     }
 }
@@ -456,6 +431,15 @@ impl BundleType {
             liveness: self.liveness.map(|e| e.resolve_exprs(binding)),
             bitwidth: self.bitwidth.map(|e| e.resolve(binding)),
         }
+    }
+
+    /// Check if this bundle type is alpha equivalent to another bundle type
+    pub fn alpha_eq(&self, other: Self) -> bool {
+        // Resolve the other expression by providing a binding for index to be
+        // the same name as this type's index.
+        let binding = Binding::new(Some((other.idx, Expr::from(self.idx))));
+        let resolved = other.resolve_exprs(&binding);
+        todo!()
     }
 }
 

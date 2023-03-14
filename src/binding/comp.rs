@@ -289,9 +289,7 @@ impl BoundComponent {
                 }
                 core::Command::Connect(core::Connect { src, dst, .. }) => {
                     let mut check_port = |port: &core::Port| {
-                        if let core::PortType::InvPort { invoke, .. } =
-                            &port.typ
-                        {
+                        if let core::Port::InvPort { invoke, .. } = &port {
                             if self.inv_map.get(invoke).is_none() {
                                 let err = Error::undefined(
                                     *invoke.inner(),
@@ -303,7 +301,7 @@ impl BoundComponent {
                                 ));
                                 diag.add_error(err)
                             }
-                        } else if let core::PortType::ThisPort(p) = &port.typ {
+                        } else if let core::Port::ThisPort(p) = &port {
                             if !prog[self.sig]
                                 .ports()
                                 .iter()
@@ -453,22 +451,22 @@ impl<'c, 'p> CompBinding<'c, 'p> {
             &utils::Binding<core::Expr>,
         ) -> core::Range,
     {
-        match &port.typ {
-            core::PortType::ThisPort(p) => {
+        match &port {
+            core::Port::ThisPort(p) => {
                 Some(self.this().get_port(p.inner()).take())
             }
-            core::PortType::InvPort { invoke, name } => {
+            core::Port::InvPort { invoke, name } => {
                 Some(self.get_invoke_idx(invoke).get_invoke_port(
                     self,
                     name,
                     resolve_liveness,
                 ))
             }
-            core::PortType::Bundle { name, idx, .. } => {
+            core::Port::Bundle { name, idx, .. } => {
                 let bi = self.get_bundle_idx(name);
                 Some(self[bi].liveness(idx.inner().clone()))
             }
-            core::PortType::Constant(_) => None,
+            core::Port::Constant(_) => None,
         }
     }
 }
