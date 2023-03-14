@@ -7,10 +7,23 @@ use crate::{
 use itertools::Itertools;
 use std::fmt::Display;
 
+/// A port mentioned in the program
+#[derive(Clone)]
+pub enum Port {
+    /// A port on this component
+    This(Loc<Id>),
+    /// A constant
+    Constant(u64),
+    /// A port on an invoke
+    InvPort { invoke: Loc<Id>, name: Loc<Id> },
+    /// Index in a bundle
+    Bundle { name: Loc<Id>, idx: Loc<Expr> },
+}
+
 impl Port {
     pub fn name(&self) -> Id {
         match &self {
-            Port::ThisPort(n) => *n.inner(),
+            Port::This(n) => *n.inner(),
             Port::InvPort { name, .. } => *name.inner(),
             Port::Bundle { name, idx } => format!("{name}{{{idx}}}").into(),
             Port::Constant(n) => Id::from(format!("const<{}>", n)),
@@ -22,7 +35,7 @@ impl Port {
     }
 
     pub fn this(p: Loc<Id>) -> Self {
-        Port::ThisPort(p)
+        Port::This(p)
     }
 
     pub fn constant(v: u64) -> Self {
@@ -44,22 +57,10 @@ impl Port {
     }
 }
 
-#[derive(Clone)]
-pub enum Port {
-    /// A port on this component
-    ThisPort(Loc<Id>),
-    /// A constant
-    Constant(u64),
-    /// A port on an invoke
-    InvPort { invoke: Loc<Id>, name: Loc<Id> },
-    /// Index in a bundle
-    Bundle { name: Loc<Id>, idx: Loc<Expr> },
-}
-
 impl std::fmt::Display for Port {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Port::ThisPort(p) => write!(f, "{}", p),
+            Port::This(p) => write!(f, "{}", p),
             Port::InvPort { invoke: comp, name } => {
                 write!(f, "{}.{}", comp, name)
             }

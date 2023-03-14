@@ -301,11 +301,11 @@ impl BoundComponent {
                                 ));
                                 diag.add_error(err)
                             }
-                        } else if let core::Port::ThisPort(p) = &port {
+                        } else if let core::Port::This(p) = &port {
                             if !prog[self.sig]
                                 .ports()
                                 .iter()
-                                .any(|pd| pd.name == *p)
+                                .any(|pd| pd.name() == p)
                             {
                                 let err = Error::undefined(*p.inner(), "port")
                                     .add_note(
@@ -452,9 +452,7 @@ impl<'c, 'p> CompBinding<'c, 'p> {
         ) -> core::Range,
     {
         match &port {
-            core::Port::ThisPort(p) => {
-                Some(self.this().get_port(p.inner()).take())
-            }
+            core::Port::This(p) => Some(self.this().get_port(p.inner()).take()),
             core::Port::InvPort { invoke, name } => {
                 Some(self.get_invoke_idx(invoke).get_invoke_port(
                     self,

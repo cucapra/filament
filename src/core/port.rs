@@ -6,11 +6,11 @@ use std::fmt::Display;
 #[derive(Clone)]
 pub struct PortDef {
     /// Name of the port
-    pub name: Loc<Id>,
+    name: Loc<Id>,
     /// Liveness condition for the Port
-    pub liveness: Loc<Range>,
+    liveness: Loc<Range>,
     /// Bitwidth of the port
-    pub bitwidth: Loc<Expr>,
+    bitwidth: Loc<Expr>,
 }
 
 impl PortDef {
@@ -24,6 +24,19 @@ impl PortDef {
             liveness,
             bitwidth,
         }
+    }
+
+    /// Name of this Port
+    pub fn name(&self) -> &Loc<Id> {
+        &self.name
+    }
+
+    pub fn bitwidth(&self) -> &Loc<Expr> {
+        &self.bitwidth
+    }
+
+    pub fn liveness(&self) -> &Loc<Range> {
+        &self.liveness
     }
 }
 impl Display for PortDef {

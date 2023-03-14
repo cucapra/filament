@@ -109,10 +109,10 @@ impl visitor::Checker for BindCheck {
         self.events.extend(events.iter().map(|ev| *ev.inner()));
         // Check all the definitions only use bound events and parameters
         for pd in sig.ports() {
-            for time in pd.liveness.time_exprs() {
-                self.time(time, pd.liveness.pos());
+            for time in pd.liveness().time_exprs() {
+                self.time(time, pd.liveness().pos());
             }
-            self.expr(&pd.bitwidth, pd.bitwidth.pos());
+            self.expr(pd.bitwidth(), pd.bitwidth().pos());
         }
         // Check that interface ports use only bound events
         for id in &sig.interface_signals {
@@ -217,7 +217,7 @@ impl visitor::Checker for BindCheck {
             // Check that the number of ports matches the number of ports
             let inputs = ctx.prog[sig]
                 .inputs()
-                .map(|pd| pd.name.clone())
+                .map(|pd| pd.name().clone())
                 .collect_vec();
             let formals = inputs.len();
             let actuals = ports.len();

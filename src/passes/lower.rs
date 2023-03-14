@@ -165,12 +165,12 @@ impl visitor::Transform for Lower {
 
             // Generate assignment for each port
             for (src, formal) in ports.into_iter().zip(sig.inputs()) {
-                let guard = self.range_to_guard(&formal.liveness);
+                let guard = self.range_to_guard(formal.liveness());
                 let port = self.port(src.inner());
                 let con = core::Connect::new(
                     Loc::unknown(core::Port::comp(
                         bind.clone(),
-                        formal.name.clone(),
+                        formal.name().clone(),
                     )),
                     Loc::unknown(port),
                     guard,

@@ -80,13 +80,13 @@ impl visitor::Transform for DumpInterface {
         //   "end": m
         // },
         let pd_to_info = |pd: &core::Loc<core::PortDef>| {
-            let w = &pd.bitwidth;
-            let (event, st, end) = pd.liveness
+            let w = &pd.bitwidth();
+            let (event, st, end) = pd.liveness()
             .as_offset()
             .unwrap_or_else(|| unreachable!("Cannot covert delay into concrete start and end. Resolved delays should use the same event."));
             format!(
                 "{{ \"event\": \"{event}\", \"name\": \"{name}\", \"width\": {w} , \"start\": {st}, \"end\": {end} }}",
-                name = pd.name,
+                name = pd.name(),
                 st = u64::try_from(&st).unwrap(),
                 end = u64::try_from(&end).unwrap(),
             )

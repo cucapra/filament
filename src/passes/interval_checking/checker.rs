@@ -52,11 +52,11 @@ impl IntervalCheck {
     ) {
         let dst_w = dst
             .as_ref()
-            .map(|p| p.bitwidth.inner().clone())
+            .map(|p| p.bitwidth().inner().clone())
             .unwrap_or_else(|| 32.into());
         let src_w = src
             .as_ref()
-            .map(|p| p.bitwidth.inner().clone())
+            .map(|p| p.bitwidth().inner().clone())
             .unwrap_or_else(|| 32.into());
 
         let cons = core::Constraint::sub(core::OrderConstraint::eq(
@@ -147,7 +147,7 @@ impl IntervalCheck {
             let sig = inv_idx.unresolved_signature(ctx);
             let inputs = ctx.prog[sig]
                 .inputs()
-                .map(|pd| pd.name.clone())
+                .map(|pd| pd.name().clone())
                 .collect_vec();
             // Check connections implied by the invocation
             for (actual, formal) in actuals.iter().zip(inputs) {
@@ -311,14 +311,15 @@ impl visitor::Checker for IntervalCheck {
         let src_port = ctx.get_resolved_port(src, resolve_range);
         self.check_width(con, &src_port, &dst_port);
 
-        let requirement = dst_port.unwrap().liveness;
+        let d = dst_port.unwrap();
+        let requirement = d.liveness();
         // If we have: dst = src. We need:
         // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
         // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
         if let Some(guarantee) = &src_port {
             let within_fact = OrderConstraint::subset(
                 requirement.clone().take(),
-                guarantee.liveness.clone().take(),
+                guarantee.liveness().clone().take(),
             )
             .map(|e| {
                 core::Constraint::base(e)
@@ -326,7 +327,7 @@ impl visitor::Checker for IntervalCheck {
                     .add_note(self.diag.add_info(
                         format!(
                             "source is available for {}",
-                            guarantee.liveness
+                            guarantee.liveness()
                         ),
                         src.pos(),
                     ))

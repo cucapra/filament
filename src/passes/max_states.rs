@@ -23,7 +23,7 @@ impl MaxStates {
         ports: impl IntoIterator<Item = &'a core::Loc<core::PortDef>>,
     ) {
         for pd in ports {
-            for time in pd.inner().liveness.time_exprs() {
+            for time in pd.inner().liveness().time_exprs() {
                 let ev = &time.event;
                 let v = self.cur_states.get_mut(ev).unwrap();
                 let st = u64::try_from(time.offset()).unwrap();

@@ -143,7 +143,7 @@ impl Signature {
     pub fn find_port(&self, port: &Id) -> Option<Loc<PortDef>> {
         self.ports
             .iter()
-            .find(|p| p.name.inner() == port)
+            .find(|p| p.name().inner() == port)
             .cloned()
             .or_else(|| {
                 self.interface_signals.iter().find_map(|id| {
@@ -191,7 +191,9 @@ impl Signature {
     fn portdefs_well_formed(&self) -> Vec<Loc<Constraint>> {
         self.inputs()
             .chain(self.outputs())
-            .map(|mpd| Loc::new(mpd.liveness.well_formed(), mpd.liveness.pos()))
+            .map(|mpd| {
+                Loc::new(mpd.liveness().well_formed(), mpd.liveness().pos())
+            })
             .collect_vec()
     }
 
@@ -274,11 +276,11 @@ impl Signature {
         // the start time of the signal describes when the signal is triggered.
         // We do not consider the end time because that only effects the length of the signal.
         for port in self.inputs().chain(self.outputs()) {
-            let delay = port.liveness.len();
-            let ev = &port.liveness.start.event();
+            let delay = port.liveness().len();
+            let ev = &port.liveness().start.event();
             evs.entry(*ev)
                 .or_default()
-                .push((delay.clone(), port.liveness.pos()))
+                .push((delay.clone(), port.liveness().pos()))
         }
 
         let mut cons = self
