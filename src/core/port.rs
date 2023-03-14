@@ -1,16 +1,18 @@
-use super::{Expr, Id, Loc, Range, Time};
+use super::{Bundle, Expr, Id, Loc, Range, Time};
 use crate::utils::Binding;
 use std::fmt::Display;
 
 /// A port definition in a [super::Signature].
 #[derive(Clone)]
-pub struct PortDef {
-    /// Name of the port
-    name: Loc<Id>,
-    /// Liveness condition for the Port
-    liveness: Loc<Range>,
-    /// Bitwidth of the port
-    bitwidth: Loc<Expr>,
+pub enum PortDef {
+    Port {
+        name: Loc<Id>,
+        /// Liveness condition for the Port
+        liveness: Loc<Range>,
+        /// Bitwidth of the port
+        bitwidth: Loc<Expr>,
+    },
+    Bundle(Bundle),
 }
 
 impl PortDef {
@@ -19,7 +21,7 @@ impl PortDef {
         liveness: Loc<Range>,
         bitwidth: Loc<Expr>,
     ) -> Self {
-        Self {
+        Self::Port {
             name,
             liveness,
             bitwidth,
@@ -28,28 +30,58 @@ impl PortDef {
 
     /// Name of this Port
     pub fn name(&self) -> &Loc<Id> {
-        &self.name
+        match &self {
+            PortDef::Port { name, .. } => name,
+            PortDef::Bundle(b) => &b.name,
+        }
     }
 
     pub fn bitwidth(&self) -> &Loc<Expr> {
-        &self.bitwidth
+        match &self {
+            PortDef::Port { bitwidth, .. } => bitwidth,
+            PortDef::Bundle(b) => &b.typ.bitwidth,
+        }
     }
 
     pub fn liveness(&self) -> &Loc<Range> {
-        &self.liveness
+        match &self {
+            PortDef::Port { liveness, .. } => liveness,
+            PortDef::Bundle(_) => todo!("liveness for bundle port"),
+        }
     }
 }
 impl Display for PortDef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}: {}", *self.liveness, self.name, *self.bitwidth,)
+        match &self {
+            PortDef::Port {
+                name,
+                liveness,
+                bitwidth,
+            } => {
+                write!(f, "{} {}: {}", *liveness, name, *bitwidth,)
+            }
+            PortDef::Bundle(b) => write!(f, "{b}"),
+        }
     }
 }
 impl PortDef {
     /// Resolves all time expressions in this port definition
     pub fn resolve_event(self, bindings: &Binding<Time>) -> Self {
-        Self {
-            liveness: self.liveness.map(|l| l.resolve_event(bindings)),
-            ..self
+        match self {
+            PortDef::Port {
+                name,
+                liveness,
+                bitwidth,
+            } => PortDef::Port {
+                name,
+                liveness: liveness.map(|l| l.resolve_event(bindings)),
+                bitwidth,
+            },
+            PortDef::Bundle(b) => {
+                let t = b.typ.resolve_event(bindings);
+                let bun = Bundle { typ: t, ..b };
+                PortDef::Bundle(bun)
+            }
         }
     }
 
@@ -57,11 +89,18 @@ impl PortDef {
     /// Specifically:
     /// - The bitwidth of the port
     /// - The liveness condition
-    pub fn resolve_offset(self, bindings: &Binding<Expr>) -> Self {
-        Self {
-            bitwidth: self.bitwidth.map(|b| b.resolve(bindings)),
-            liveness: self.liveness.map(|l| l.resolve_exprs(bindings)),
-            ..self
+    pub fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
+        match self {
+            PortDef::Port {
+                name,
+                liveness,
+                bitwidth,
+            } => PortDef::Port {
+                name,
+                liveness: liveness.map(|l| l.resolve_exprs(bindings)),
+                bitwidth: bitwidth.map(|b| b.resolve(bindings)),
+            },
+            PortDef::Bundle(b) => PortDef::Bundle(b.resolve_exprs(bindings)),
         }
     }
 }

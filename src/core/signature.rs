@@ -331,7 +331,7 @@ impl Signature {
             ports: self
                 .ports
                 .into_iter()
-                .map(|pd| pd.map(|p| p.resolve_offset(&binding)))
+                .map(|pd| pd.map(|p| p.resolve_exprs(&binding)))
                 .collect_vec(),
             events: self
                 .events

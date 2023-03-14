@@ -434,12 +434,19 @@ impl BundleType {
         }
     }
 
+    pub fn resolve_event(self, binding: &Binding<Time>) -> Self {
+        Self {
+            liveness: self.liveness.map(|e| e.resolve_event(binding)),
+            ..self
+        }
+    }
+
     /// Check if this bundle type is alpha equivalent to another bundle type
-    pub fn alpha_eq(&self, other: Self) -> bool {
+    pub fn alpha_eq(&self, _: Self) -> bool {
         // Resolve the other expression by providing a binding for index to be
         // the same name as this type's index.
-        let binding = Binding::new(Some((other.idx, Expr::from(self.idx))));
-        let resolved = other.resolve_exprs(&binding);
+        // let binding = Binding::new(Some((other.idx, Expr::from(self.idx))));
+        // let resolved = other.resolve_exprs(&binding);
         todo!()
     }
 }
