@@ -50,7 +50,7 @@ impl PortDef {
     pub fn liveness(&self) -> &Loc<Range> {
         match &self {
             PortDef::Port { liveness, .. } => liveness,
-            PortDef::Bundle(_) => todo!("liveness for bundle port"),
+            PortDef::Bundle(b) => &b.typ.liveness,
         }
     }
 }
