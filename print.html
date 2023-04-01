@@ -182,6 +182,12 @@
 <li>Check <code>fud</code> was installed: <code>fud check</code>. It will report some tools are missing. This is expected.</li>
 </ul>
 </li>
+<li>Configure the <code>fud</code> to use an absolute path for the Calyx compiler:
+<ul>
+<li>Run the following command from the Calyx repository: <code>cargo build &amp;&amp; fud config stages.futil.exec &quot;$(pwd)/target/debug/futil&quot;</code></li>
+<li>Run <code>fud check</code>. It should report that the <code>futil</code> is installed correctly.</li>
+</ul>
+</li>
 <li>Install <a href="https://iverilog.fandom.com/wiki/Installation_Guide">Icarus Verilog</a> and <a href="https://docs.calyxir.org/fud/index.html#icarus-verilog">configure <code>fud</code> to use it</a>.
 <ul>
 <li>Running <code>fud check</code> again should report that <code>icarus-verilog</code> was installed correctly.</li>
