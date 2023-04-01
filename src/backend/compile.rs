@@ -67,7 +67,7 @@ impl Context<'_> {
     pub fn compile_port(
         &mut self,
         port: &core::Port,
-    ) -> (RRC<ir::Port>, Option<ir::Guard>) {
+    ) -> (RRC<ir::Port>, Option<ir::Guard<ir::Nothing>>) {
         match &port {
             core::Port::Bundle { .. } => {
                 unreachable!("Bundles should be compiled away")
@@ -124,7 +124,10 @@ impl<'a> Context<'a> {
     }
 }
 
-fn compile_guard(guard: core::Guard, ctx: &mut Context) -> ir::Guard {
+fn compile_guard(
+    guard: core::Guard,
+    ctx: &mut Context,
+) -> ir::Guard<ir::Nothing> {
     match guard {
         core::Guard::Or(g1, g2, _) => {
             let c1 = compile_guard(*g1, ctx);
