@@ -109,8 +109,22 @@ impl visitor::Checker for BindCheck {
         self.events.extend(events.iter().map(|ev| *ev.inner()));
         // Check all the definitions only use bound events and parameters
         for pd in sig.ports() {
-            for time in pd.liveness().time_exprs() {
-                self.time(time, pd.liveness().pos());
+            match pd.inner() {
+                core::PortDef::Port { liveness, .. } => {
+                    for time in liveness.time_exprs() {
+                        self.time(time, liveness.pos());
+                    }
+                }
+                core::PortDef::Bundle(core::Bundle {
+                    typ: core::BundleType { idx, liveness, .. },
+                    ..
+                }) => {
+                    let n = self.push_vars(&[*idx]);
+                    for time in liveness.time_exprs() {
+                        self.time(time, liveness.pos());
+                    }
+                    self.pop_vars(n);
+                }
             }
             self.expr(pd.bitwidth(), pd.bitwidth().pos());
         }

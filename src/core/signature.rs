@@ -126,6 +126,19 @@ impl Signature {
         &self.ports
     }
 
+    /// Replace the ports of this component by iterating over the ports and applying the function to get other ports.
+    pub fn replace_ports<F>(mut self, f: &mut F) -> Self
+    where
+        F: FnMut(Loc<PortDef>) -> Vec<Loc<PortDef>>,
+    {
+        let mut n_ports = Vec::with_capacity(self.ports.len());
+        for p in self.ports {
+            n_ports.extend(f(p));
+        }
+        self.ports = n_ports;
+        self
+    }
+
     /// Find the delay associoated with an event
     pub fn get_event(&self, event: &Id) -> &Loc<EventBind> {
         self.events

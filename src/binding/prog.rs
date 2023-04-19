@@ -45,6 +45,12 @@ impl<'a> ProgBinding<'a> {
         );
 
         let mut bind = BoundComponent::from(idx);
+        // Add all the bundles from the signature
+        for pd in comp.sig.ports() {
+            if let core::PortDef::Bundle(bun) = pd.inner() {
+                bind.add_bundle(bun.clone());
+            }
+        }
         bind.process_checked_cmds(self, &comp.body, diag);
         self.comps.push(bind);
     }

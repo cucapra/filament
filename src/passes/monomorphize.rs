@@ -291,7 +291,39 @@ impl Monomorphize {
         let mut nsig = sig.clone().resolve_exprs(binding);
         nsig.name = name;
         nsig.params = vec![];
-        nsig
+        // Generate ports for each bundle
+        nsig.replace_ports(&mut |p| {
+            let pos = p.pos();
+            match p.take() {
+                p @ core::PortDef::Port { .. } => vec![Loc::new(p, pos)],
+                core::PortDef::Bundle(core::Bundle { name, len, typ }) => {
+                    let core::BundleType {
+                        idx,
+                        liveness,
+                        bitwidth,
+                    } = typ;
+                    let len: u64 = len.take().try_into().unwrap_or_else(|s| {
+                        panic!("Failed to concretize `{s}'")
+                    });
+                    (0..len)
+                        .map(|i| {
+                            let bind = Binding::new(vec![(
+                                idx,
+                                core::Expr::concrete(i),
+                            )]);
+                            let liveness =
+                                liveness.clone().take().resolve_exprs(&bind);
+                            let name = core::Id::from(format!("{name}_{i}"));
+                            Loc::unknown(core::PortDef::Port {
+                                name: Loc::unknown(name),
+                                liveness: Loc::unknown(liveness),
+                                bitwidth: bitwidth.clone(),
+                            })
+                        })
+                        .collect_vec()
+                }
+            }
+        })
     }
 
     fn connect(
