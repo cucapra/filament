@@ -31,6 +31,9 @@ In order to generate Verilog, run the test suite, and simulate Filament programs
   - Install [flit][]: `python3 -m pip install flit`
   - Install [fud][]: `cd calyx/fud && flit install -s`
   - Check `fud` was installed: `fud check`. It will report some tools are missing. This is expected.
+- Configure the `fud` to use an absolute path for the Calyx compiler:
+  - Run the following command from the Calyx repository: `cargo build && fud config stages.futil.exec "$(pwd)/target/debug/futil"`
+  - Run `fud check`. It should report that the `futil` is installed correctly.
 - Install [Icarus Verilog][iverilog-install] and [configure `fud` to use it][fud-icarus].
   - Running `fud check` again should report that `icarus-verilog` was installed correctly.
 - Install [cocotb][]: `python3 -m pip install cocotb`.

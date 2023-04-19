@@ -29,7 +29,7 @@ impl Fsm {
     }
 
     /// Generate guard associated with a particular state on the Fsm.
-    pub fn event(&self, port: &core::Id) -> ir::Guard {
+    pub fn event(&self, port: &core::Id) -> ir::Guard<ir::Nothing> {
         self.cell.borrow().get(format!("{port}")).into()
     }
 }
