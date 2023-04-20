@@ -285,18 +285,42 @@ impl Monomorphize {
         name.into()
     }
 
-    fn sig(sig: &core::Signature, binding: Vec<core::Expr>) -> core::Signature {
+    /// Transform the signature of a monomorphized component and generate any assignments needed to
+    /// implement the bundles mentioned in the signature.
+    /// - Any IO bundles are moved into the component body.
+    /// - Input bundles generate assignments from the bundle to the port
+    /// - Output bundles generate assignments from the port to the bundles
+    fn sig(
+        sig: &core::Signature,
+        binding: Vec<core::Expr>,
+    ) -> (core::Signature, Vec<core::Command>, Vec<core::Command>) {
+        // To add before and after the body
+        let (mut pre_cmds, mut post_cmds) = (vec![], vec![]);
         // XXX: Short-circuit if binding is empty
         let name = Loc::unknown(Self::generate_mono_name(&sig.name, &binding));
         let mut nsig = sig.clone().resolve_exprs(binding);
-        nsig.name = name;
+        nsig.name = name.clone();
         nsig.params = vec![];
         // Generate ports for each bundle
-        nsig.replace_ports(&mut |p| {
+        let sig = nsig.replace_ports(&mut |p, is_input| {
             let pos = p.pos();
             match p.take() {
                 p @ core::PortDef::Port { .. } => vec![Loc::new(p, pos)],
-                core::PortDef::Bundle(core::Bundle { name, len, typ }) => {
+                core::PortDef::Bundle(core::Bundle {
+                    name: bundle_name,
+                    len,
+                    typ,
+                }) => {
+                    // Add bundle to the top-level commands
+                    pre_cmds.push(
+                        core::Bundle::new(
+                            bundle_name.clone(),
+                            len.clone(),
+                            typ.clone(),
+                        )
+                        .into(),
+                    );
+                    // Extract the bundle type
                     let core::BundleType {
                         idx,
                         liveness,
@@ -305,6 +329,7 @@ impl Monomorphize {
                     let len: u64 = len.take().try_into().unwrap_or_else(|s| {
                         panic!("Failed to concretize `{s}'")
                     });
+                    // For each index in the bundle, generate a corresponding port
                     (0..len)
                         .map(|i| {
                             let bind = Binding::new(vec![(
@@ -313,17 +338,48 @@ impl Monomorphize {
                             )]);
                             let liveness =
                                 liveness.clone().take().resolve_exprs(&bind);
-                            let name = core::Id::from(format!("{name}_{i}"));
-                            Loc::unknown(core::PortDef::Port {
-                                name: Loc::unknown(name),
+                            let name = Loc::unknown(core::Id::from(format!(
+                                "{}_{i}",
+                                bundle_name.clone()
+                            )));
+                            let port = Loc::unknown(core::PortDef::Port {
+                                name: name.clone(),
                                 liveness: Loc::unknown(liveness),
                                 bitwidth: bitwidth.clone(),
-                            })
+                            });
+                            let this_port =
+                                Loc::unknown(core::Port::This(name));
+                            let bundle_port = Loc::unknown(core::Port::bundle(
+                                bundle_name.clone(),
+                                Loc::unknown(core::Expr::concrete(i)),
+                            ));
+                            // Generate assignment for the bundle
+                            if is_input {
+                                // bundle{i} = this.p
+                                pre_cmds.push(core::Command::Connect(
+                                    core::Connect::new(
+                                        bundle_port,
+                                        this_port,
+                                        None,
+                                    ),
+                                ))
+                            } else {
+                                // this.p = bundle{i}
+                                post_cmds.push(core::Command::Connect(
+                                    core::Connect::new(
+                                        this_port,
+                                        bundle_port,
+                                        None,
+                                    ),
+                                ))
+                            };
+                            port
                         })
                         .collect_vec()
                 }
             }
-        })
+        });
+        (sig, pre_cmds, post_cmds)
     }
 
     fn connect(
@@ -490,15 +546,32 @@ impl Monomorphize {
         binding: &Binding<core::Expr>,
         externals: &HashSet<core::Id>,
     ) -> core::Component {
-        let sig = Self::sig(&comp.sig, binding.values().cloned().collect_vec());
+        let (sig, mut pre_cmds, post_cmds) =
+            Self::sig(&comp.sig, binding.values().cloned().collect_vec());
+        // Map all port names to themselves
+        let prev_names = Binding::new(
+            comp.sig
+                .ports()
+                .iter()
+                .map(|p| {
+                    let n = *p.inner().name().inner();
+                    (n, n)
+                })
+                .collect_vec(),
+        );
         let body = Self::commands(
             comp.body.iter().cloned(),
             binding,
             externals,
-            Binding::default(),
+            prev_names,
             "",
         );
-        core::Component { sig, body }
+        pre_cmds.extend(body);
+        pre_cmds.extend(post_cmds);
+        core::Component {
+            sig,
+            body: pre_cmds,
+        }
     }
 
     /// Monomorphize the program by generate a component for each parameter of each instance.

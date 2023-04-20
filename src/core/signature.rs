@@ -129,11 +129,11 @@ impl Signature {
     /// Replace the ports of this component by iterating over the ports and applying the function to get other ports.
     pub fn replace_ports<F>(mut self, f: &mut F) -> Self
     where
-        F: FnMut(Loc<PortDef>) -> Vec<Loc<PortDef>>,
+        F: FnMut(Loc<PortDef>, bool) -> Vec<Loc<PortDef>>,
     {
         let mut n_ports = Vec::with_capacity(self.ports.len());
-        for p in self.ports {
-            n_ports.extend(f(p));
+        for (idx, p) in self.ports.into_iter().enumerate() {
+            n_ports.extend(f(p, idx < self.outputs_idx));
         }
         self.ports = n_ports;
         self
