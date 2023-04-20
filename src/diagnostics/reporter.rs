@@ -56,7 +56,7 @@ impl Diagnostics {
         pos: GPosIdx,
     ) -> InfoIdx {
         if pos == GPosIdx::UNKNOWN {
-            log::info!(
+            log::trace!(
                 "Adding info with unknown position: {}",
                 message.to_string()
             )

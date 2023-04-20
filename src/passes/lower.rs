@@ -45,7 +45,7 @@ impl Lower {
 
     fn port(&self, port: &core::Port) -> core::Port {
         match &port {
-            core::Port::Bundle { name, idx } => {
+            core::Port::BundlePort { name, idx } => {
                 let idx = u64::try_from(idx.inner()).unwrap() as usize;
                 let writes = self.bundle_writes.get(name).unwrap();
                 writes[idx]
@@ -97,7 +97,7 @@ impl visitor::Transform for Lower {
         _: &CompBinding,
     ) -> FilamentResult<Vec<core::Command>> {
         let src = self.port(con.src.inner());
-        if let core::Port::Bundle { name, idx } = con.dst.inner() {
+        if let core::Port::BundlePort { name, idx } = con.dst.inner() {
             let idx = u64::try_from(idx.inner()).unwrap() as usize;
             debug_assert!(
                 self.bundle_writes[name.inner()][idx].is_none(),

@@ -69,7 +69,7 @@ impl Context<'_> {
         port: &core::Port,
     ) -> (RRC<ir::Port>, Option<ir::Guard<ir::Nothing>>) {
         match &port {
-            core::Port::Bundle { .. } => {
+            core::Port::BundlePort { .. } => {
                 unreachable!("Bundles should be compiled away")
             }
             core::Port::This(p) => {
@@ -135,7 +135,7 @@ fn compile_guard(
             c1 | c2
         }
         core::Guard::Port(p) => match &p {
-            core::Port::Bundle { .. } => {
+            core::Port::BundlePort { .. } => {
                 unreachable!("Bundles should be compiled away")
             }
             core::Port::This(p) => {

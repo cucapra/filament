@@ -127,15 +127,23 @@ impl Signature {
     }
 
     /// Replace the ports of this component by iterating over the ports and applying the function to get other ports.
+    /// The function is passed the port and a boolean indicating if the port is an input port.
     pub fn replace_ports<F>(mut self, f: &mut F) -> Self
     where
-        F: FnMut(Loc<PortDef>, bool) -> Vec<Loc<PortDef>>,
+        F: FnMut(Loc<PortDef>, bool) -> (Vec<Loc<PortDef>>, bool),
     {
-        let mut n_ports = Vec::with_capacity(self.ports.len());
+        let (mut inps, mut outs) = (vec![], vec![]);
         for (idx, p) in self.ports.into_iter().enumerate() {
-            n_ports.extend(f(p, idx < self.outputs_idx));
+            let (ports, is_inp) = f(p, idx < self.outputs_idx);
+            if is_inp {
+                inps.extend(ports);
+            } else {
+                outs.extend(ports);
+            }
         }
-        self.ports = n_ports;
+        self.ports = inps;
+        self.outputs_idx = self.ports.len();
+        self.ports.extend(outs);
         self
     }
 

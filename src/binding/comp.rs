@@ -460,7 +460,7 @@ impl<'c, 'p> CompBinding<'c, 'p> {
                     resolve_liveness,
                 ))
             }
-            core::Port::Bundle { name, idx, .. } => {
+            core::Port::BundlePort { name, idx, .. } => {
                 let bi = self.get_bundle_idx(name);
                 Some(self[bi].liveness(idx.inner().clone()))
             }

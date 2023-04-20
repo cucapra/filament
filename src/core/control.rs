@@ -17,7 +17,7 @@ pub enum Port {
     /// A port on an invoke
     InvPort { invoke: Loc<Id>, name: Loc<Id> },
     /// Index in a bundle
-    Bundle { name: Loc<Id>, idx: Loc<Expr> },
+    BundlePort { name: Loc<Id>, idx: Loc<Expr> },
 }
 
 impl Port {
@@ -25,7 +25,7 @@ impl Port {
         match &self {
             Port::This(n) => *n.inner(),
             Port::InvPort { name, .. } => *name.inner(),
-            Port::Bundle { name, idx } => format!("{name}{{{idx}}}").into(),
+            Port::BundlePort { name, idx } => format!("{name}{{{idx}}}").into(),
             Port::Constant(n) => Id::from(format!("const<{}>", n)),
         }
     }
@@ -43,12 +43,12 @@ impl Port {
     }
 
     pub fn bundle(name: Loc<Id>, idx: Loc<Expr>) -> Self {
-        Port::Bundle { name, idx }
+        Port::BundlePort { name, idx }
     }
 
     pub fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
         match self {
-            Port::Bundle { name, idx } => Port::Bundle {
+            Port::BundlePort { name, idx } => Port::BundlePort {
                 name,
                 idx: idx.map(|i| i.resolve(bindings)),
             },
@@ -65,7 +65,7 @@ impl std::fmt::Display for Port {
                 write!(f, "{}.{}", comp, name)
             }
             Port::Constant(n) => write!(f, "{}", n),
-            Port::Bundle { name, idx } => write!(f, "{name}{{{idx}}}"),
+            Port::BundlePort { name, idx } => write!(f, "{name}{{{idx}}}"),
         }
     }
 }

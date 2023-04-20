@@ -34,7 +34,7 @@ impl Rewriter {
                 invoke: Loc::unknown(self.binding[invoke.inner()]),
                 name,
             },
-            core::Port::Bundle { name, idx } => core::Port::Bundle {
+            core::Port::BundlePort { name, idx } => core::Port::BundlePort {
                 name: Loc::unknown(self.binding[name.inner()]),
                 idx,
             },
@@ -285,11 +285,100 @@ impl Monomorphize {
         name.into()
     }
 
-    /// Transform the signature of a monomorphized component and generate any assignments needed to
-    /// implement the bundles mentioned in the signature.
-    /// - Any IO bundles are moved into the component body.
+    /// Compile bundles mentioned in the signature of a component:
+    /// - IO bundles are moved into the component body.
     /// - Input bundles generate assignments from the bundle to the port
     /// - Output bundles generate assignments from the port to the bundles
+    /// Returns the ports generated from this process and whether the generated ports are inputs.
+    fn compile_sig_port(
+        p: Loc<core::PortDef>,
+        is_input: bool,
+        pre_cmds: &mut Vec<core::Command>,
+        post_cmds: &mut Vec<core::Command>,
+    ) -> (Vec<Loc<core::PortDef>>, bool) {
+        let pos = p.pos();
+        match p.take() {
+            p @ core::PortDef::Port { .. } => {
+                (vec![Loc::new(p, pos)], is_input)
+            }
+            core::PortDef::Bundle(core::Bundle {
+                name: bundle_name,
+                len,
+                typ,
+            }) => {
+                // Add bundle to the top-level commands
+                pre_cmds.push(
+                    core::Bundle::new(
+                        bundle_name.clone(),
+                        len.clone(),
+                        typ.clone(),
+                    )
+                    .into(),
+                );
+                // Extract the bundle type
+                let core::BundleType {
+                    idx,
+                    liveness,
+                    bitwidth,
+                } = typ;
+                let len: u64 = len
+                    .take()
+                    .try_into()
+                    .unwrap_or_else(|s| panic!("Failed to concretize `{s}'"));
+                // For each index in the bundle, generate a corresponding port
+                let ports = (0..len)
+                    .map(|i| {
+                        let bind =
+                            Binding::new(vec![(idx, core::Expr::concrete(i))]);
+                        let liveness =
+                            liveness.clone().take().resolve_exprs(&bind).into();
+                        // Name of the new port is the bundle name with the index appended
+                        let name = Loc::unknown(core::Id::from(format!(
+                            "{}_{i}",
+                            bundle_name.clone()
+                        )));
+                        // Generate connection associated with this bundle port's creation.
+                        let this_port = core::Port::This(name.clone()).into();
+                        let bundle_port = core::Port::bundle(
+                            bundle_name.clone(),
+                            core::Expr::concrete(i).into(),
+                        )
+                        .into();
+                        // Generate assignment for the bundle
+                        if is_input {
+                            // bundle{i} = this.p
+                            pre_cmds.push(core::Command::Connect(
+                                core::Connect::new(
+                                    bundle_port,
+                                    this_port,
+                                    None,
+                                ),
+                            ))
+                        } else {
+                            // this.p = bundle{i}
+                            post_cmds.push(core::Command::Connect(
+                                core::Connect::new(
+                                    this_port,
+                                    bundle_port,
+                                    None,
+                                ),
+                            ))
+                        };
+                        let port = core::PortDef::Port {
+                            name,
+                            liveness,
+                            bitwidth: bitwidth.clone(),
+                        };
+                        port.into()
+                    })
+                    .collect_vec();
+                (ports, is_input)
+            }
+        }
+    }
+
+    /// Transform the signature of a monomorphized component and generate any assignments needed to
+    /// implement the bundles mentioned in the signature.
     fn sig(
         sig: &core::Signature,
         binding: Vec<core::Expr>,
@@ -299,85 +388,11 @@ impl Monomorphize {
         // XXX: Short-circuit if binding is empty
         let name = Loc::unknown(Self::generate_mono_name(&sig.name, &binding));
         let mut nsig = sig.clone().resolve_exprs(binding);
-        nsig.name = name.clone();
+        nsig.name = name;
         nsig.params = vec![];
         // Generate ports for each bundle
         let sig = nsig.replace_ports(&mut |p, is_input| {
-            let pos = p.pos();
-            match p.take() {
-                p @ core::PortDef::Port { .. } => vec![Loc::new(p, pos)],
-                core::PortDef::Bundle(core::Bundle {
-                    name: bundle_name,
-                    len,
-                    typ,
-                }) => {
-                    // Add bundle to the top-level commands
-                    pre_cmds.push(
-                        core::Bundle::new(
-                            bundle_name.clone(),
-                            len.clone(),
-                            typ.clone(),
-                        )
-                        .into(),
-                    );
-                    // Extract the bundle type
-                    let core::BundleType {
-                        idx,
-                        liveness,
-                        bitwidth,
-                    } = typ;
-                    let len: u64 = len.take().try_into().unwrap_or_else(|s| {
-                        panic!("Failed to concretize `{s}'")
-                    });
-                    // For each index in the bundle, generate a corresponding port
-                    (0..len)
-                        .map(|i| {
-                            let bind = Binding::new(vec![(
-                                idx,
-                                core::Expr::concrete(i),
-                            )]);
-                            let liveness =
-                                liveness.clone().take().resolve_exprs(&bind);
-                            let name = Loc::unknown(core::Id::from(format!(
-                                "{}_{i}",
-                                bundle_name.clone()
-                            )));
-                            let port = Loc::unknown(core::PortDef::Port {
-                                name: name.clone(),
-                                liveness: Loc::unknown(liveness),
-                                bitwidth: bitwidth.clone(),
-                            });
-                            let this_port =
-                                Loc::unknown(core::Port::This(name));
-                            let bundle_port = Loc::unknown(core::Port::bundle(
-                                bundle_name.clone(),
-                                Loc::unknown(core::Expr::concrete(i)),
-                            ));
-                            // Generate assignment for the bundle
-                            if is_input {
-                                // bundle{i} = this.p
-                                pre_cmds.push(core::Command::Connect(
-                                    core::Connect::new(
-                                        bundle_port,
-                                        this_port,
-                                        None,
-                                    ),
-                                ))
-                            } else {
-                                // this.p = bundle{i}
-                                post_cmds.push(core::Command::Connect(
-                                    core::Connect::new(
-                                        this_port,
-                                        bundle_port,
-                                        None,
-                                    ),
-                                ))
-                            };
-                            port
-                        })
-                        .collect_vec()
-                }
-            }
+            Self::compile_sig_port(p, is_input, &mut pre_cmds, &mut post_cmds)
         });
         (sig, pre_cmds, post_cmds)
     }

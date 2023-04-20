@@ -207,7 +207,7 @@ impl visitor::Checker for BindCheck {
                 inst.bindings.len(),
             );
             let err = Error::malformed(msg.clone())
-                .add_note(self.diag.add_info(msg, inst.name.pos()));
+                .add_note(self.diag.add_info(msg, inst.component.pos()));
             self.diag.add_error(err);
         }
 

@@ -11,7 +11,7 @@ use std::iter;
 impl IntervalCheck {
     /// Check that a bundle access is within bounds
     fn port_bundle_index(&mut self, port: &core::Port, ctx: &CompBinding) {
-        let core::Port::Bundle { name, idx } = &port else {
+        let core::Port::BundlePort { name, idx } = &port else {
             return
         };
         let bun_idx = ctx.get_bundle_idx(name);
