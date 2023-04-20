@@ -144,10 +144,12 @@ connect = {
 
 // ====== Invocations ==========
 
+splat = { "{" ~ ".." ~ "}" }
+
 port = {
-  identifier ~ "." ~ identifier
+  identifier ~ "." ~ identifier ~ splat?
   | identifier ~ "{" ~ expr ~ "}"
-  | identifier
+  | identifier ~ splat?
   | bitwidth
 }
 

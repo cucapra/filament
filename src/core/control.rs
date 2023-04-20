@@ -18,6 +18,10 @@ pub enum Port {
     InvPort { invoke: Loc<Id>, name: Loc<Id> },
     /// Index in a bundle
     BundlePort { name: Loc<Id>, idx: Loc<Expr> },
+    /// A full bundle bound by this component
+    Bundle { name: Loc<Id> },
+    /// A bundle port on an invocation
+    InvBundle { invoke: Loc<Id>, port: Loc<Id> },
 }
 
 impl Port {
@@ -27,6 +31,10 @@ impl Port {
             Port::InvPort { name, .. } => *name.inner(),
             Port::BundlePort { name, idx } => format!("{name}{{{idx}}}").into(),
             Port::Constant(n) => Id::from(format!("const<{}>", n)),
+            Port::Bundle { name } => Id::from(format!("{name}{{..}}")),
+            Port::InvBundle { invoke, port } => {
+                Id::from(format!("{invoke}.{port}{{..}}"))
+            }
         }
     }
 
@@ -66,6 +74,10 @@ impl std::fmt::Display for Port {
             }
             Port::Constant(n) => write!(f, "{}", n),
             Port::BundlePort { name, idx } => write!(f, "{name}{{{idx}}}"),
+            Port::Bundle { name } => write!(f, "{name}{{..}}"),
+            Port::InvBundle { invoke, port } => {
+                write!(f, "{invoke}.{port}{{..}}")
+            }
         }
     }
 }

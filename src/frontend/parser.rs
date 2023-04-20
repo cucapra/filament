@@ -363,13 +363,19 @@ impl FilamentParser {
     }
 
     // ================ Assignments =====================
+    fn splat(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+
     fn port(input: Node) -> ParseResult<Loc<core::Port>> {
         let sp = Self::get_span(&input);
         let n = match_nodes!(
             input.into_children();
             [bitwidth(constant)] => core::Port::constant(constant),
             [identifier(name)] => core::Port::this(name),
+            [identifier(name), splat(_)] => core::Port::Bundle{name},
             [identifier(comp), identifier(name)] => core::Port::comp(comp, name),
+            [identifier(invoke), identifier(port), splat(_)] => core::Port::InvBundle { invoke, port },
             [identifier(name), expr(idx)] => core::Port::bundle(name, idx),
         );
         Ok(Loc::new(n, sp))
