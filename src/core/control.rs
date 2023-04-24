@@ -13,11 +13,11 @@ pub enum Splat {
     /// All of the values in the bundle
     All,
     /// A range of values in the bundle
-    Range(usize, usize),
+    Range(Expr, Expr),
 }
 
 impl Splat {
-    pub fn range(l: usize, r: usize) -> Self {
+    pub fn range(l: Expr, r: Expr) -> Self {
         Splat::Range(l, r)
     }
 }

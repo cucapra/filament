@@ -148,7 +148,7 @@ dots = { ".." }
 splat = {
    "{" ~
       (dots |
-      (bitwidth ~ dots ~ bitwidth)) ~
+      (expr ~ dots ~ expr)) ~
    "}"
 }
 

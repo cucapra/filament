@@ -371,7 +371,7 @@ impl FilamentParser {
     fn splat(input: Node) -> ParseResult<core::Splat> {
         Ok(match_nodes!(
             input.into_children();
-            [bitwidth(l), dots(_), bitwidth(r)] => core::Splat::range(l as usize, r as usize),
+            [expr(l), dots(_), expr(r)] => core::Splat::range(l.take(), r.take()),
             [dots(_)] => core::Splat::All,
         ))
     }
