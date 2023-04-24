@@ -363,8 +363,17 @@ impl FilamentParser {
     }
 
     // ================ Assignments =====================
-    fn splat(input: Node) -> ParseResult<()> {
+
+    fn dots(input: Node) -> ParseResult<()> {
         Ok(())
+    }
+
+    fn splat(input: Node) -> ParseResult<core::Splat> {
+        Ok(match_nodes!(
+            input.into_children();
+            [bitwidth(l), dots(_), bitwidth(r)] => core::Splat::range(l as usize, r as usize),
+            [dots(_)] => core::Splat::All,
+        ))
     }
 
     fn port(input: Node) -> ParseResult<Loc<core::Port>> {
@@ -373,9 +382,9 @@ impl FilamentParser {
             input.into_children();
             [bitwidth(constant)] => core::Port::constant(constant),
             [identifier(name)] => core::Port::this(name),
-            [identifier(name), splat(_)] => core::Port::Bundle{name},
+            [identifier(name), splat(range)] => core::Port::Bundle{ name, range },
             [identifier(comp), identifier(name)] => core::Port::comp(comp, name),
-            [identifier(invoke), identifier(port), splat(_)] => core::Port::InvBundle { invoke, port },
+            [identifier(invoke), identifier(port), splat(range)] => core::Port::InvBundle { invoke, port, range },
             [identifier(name), expr(idx)] => core::Port::bundle(name, idx),
         );
         Ok(Loc::new(n, sp))

@@ -7,6 +7,30 @@ use crate::{
 use itertools::Itertools;
 use std::fmt::Display;
 
+#[derive(Clone)]
+/// A range over the indices of a bundle
+pub enum Splat {
+    /// All of the values in the bundle
+    All,
+    /// A range of values in the bundle
+    Range(usize, usize),
+}
+
+impl Splat {
+    pub fn range(l: usize, r: usize) -> Self {
+        Splat::Range(l, r)
+    }
+}
+
+impl Display for Splat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Splat::All => write!(f, ".."),
+            Splat::Range(l, r) => write!(f, "{}..{}", l, r),
+        }
+    }
+}
+
 /// A port mentioned in the program
 #[derive(Clone)]
 pub enum Port {
@@ -16,12 +40,16 @@ pub enum Port {
     Constant(u64),
     /// A port on an invoke
     InvPort { invoke: Loc<Id>, name: Loc<Id> },
-    /// Index in a bundle
+    /// A port represented by an index into a bundle
     BundlePort { name: Loc<Id>, idx: Loc<Expr> },
     /// A full bundle bound by this component
-    Bundle { name: Loc<Id> },
+    Bundle { name: Loc<Id>, range: Splat },
     /// A bundle port on an invocation
-    InvBundle { invoke: Loc<Id>, port: Loc<Id> },
+    InvBundle {
+        invoke: Loc<Id>,
+        port: Loc<Id>,
+        range: Splat,
+    },
 }
 
 impl Port {
@@ -31,10 +59,14 @@ impl Port {
             Port::InvPort { name, .. } => *name.inner(),
             Port::BundlePort { name, idx } => format!("{name}{{{idx}}}").into(),
             Port::Constant(n) => Id::from(format!("const<{}>", n)),
-            Port::Bundle { name } => Id::from(format!("{name}{{..}}")),
-            Port::InvBundle { invoke, port } => {
-                Id::from(format!("{invoke}.{port}{{..}}"))
+            Port::Bundle { name, range } => {
+                Id::from(format!("{name}{{{range}}}"))
             }
+            Port::InvBundle {
+                invoke,
+                port,
+                range,
+            } => Id::from(format!("{invoke}.{port}{{{range}}}")),
         }
     }
 
@@ -74,9 +106,13 @@ impl std::fmt::Display for Port {
             }
             Port::Constant(n) => write!(f, "{}", n),
             Port::BundlePort { name, idx } => write!(f, "{name}{{{idx}}}"),
-            Port::Bundle { name } => write!(f, "{name}{{..}}"),
-            Port::InvBundle { invoke, port } => {
-                write!(f, "{invoke}.{port}{{..}}")
+            Port::Bundle { name, range } => write!(f, "{name}{{{range}}}"),
+            Port::InvBundle {
+                invoke,
+                port,
+                range,
+            } => {
+                write!(f, "{invoke}.{port}{{{range}}}")
             }
         }
     }
