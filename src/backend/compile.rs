@@ -69,10 +69,10 @@ impl Context<'_> {
         port: &core::Port,
     ) -> (RRC<ir::Port>, Option<ir::Guard<ir::Nothing>>) {
         match &port {
-            core::Port::Bundle { .. } => {
+            core::Port::BundlePort { .. } => {
                 unreachable!("Bundles should be compiled away")
             }
-            core::Port::ThisPort(p) => {
+            core::Port::This(p) => {
                 let this = self.builder.component.signature.borrow();
                 (this.get(p.as_ref()), None)
             }
@@ -90,6 +90,9 @@ impl Context<'_> {
                 let cr = self.builder.add_constant(*c, 32);
                 let c = cr.borrow();
                 (c.get("out"), None)
+            }
+            core::Port::ThisBundle { .. } | core::Port::InvBundle { .. } => {
+                unreachable!("Bundles should be compiled away")
             }
         }
     }
@@ -135,10 +138,10 @@ fn compile_guard(
             c1 | c2
         }
         core::Guard::Port(p) => match &p {
-            core::Port::Bundle { .. } => {
+            core::Port::BundlePort { .. } => {
                 unreachable!("Bundles should be compiled away")
             }
-            core::Port::ThisPort(p) => {
+            core::Port::This(p) => {
                 let this = ctx.builder.component.signature.borrow();
                 this.get(p.as_ref()).into()
             }
@@ -152,6 +155,9 @@ fn compile_guard(
             }
             core::Port::Constant(_) => {
                 unreachable!("Constants cannot be in guards")
+            }
+            core::Port::ThisBundle { .. } | core::Port::InvBundle { .. } => {
+                unreachable!("Bundles should be compiled away")
             }
         },
     }
@@ -341,8 +347,8 @@ fn compile_component(
     let port_transform =
         |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<u64> {
             let mut pd: ir::PortDef<u64> = (
-                pd.name.as_ref(),
-                (pd.bitwidth.inner().clone()).try_into().unwrap(),
+                pd.name().as_ref(),
+                (pd.bitwidth().inner().clone()).try_into().unwrap(),
                 dir,
             )
                 .into();
@@ -437,7 +443,7 @@ fn compile_component(
 fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
     let port_transform =
         |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<ir::Width> {
-            let w = pd.bitwidth.inner();
+            let w = pd.bitwidth().inner();
             let abs = w.exprs().collect_vec();
             let width = match abs.len() {
                 0 => ir::Width::Const {
@@ -451,7 +457,7 @@ fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
             let mut attributes = ir::Attributes::default();
             attributes.insert("data", 1);
             ir::PortDef {
-                name: ir::Id::from(pd.name.as_ref()),
+                name: ir::Id::from(pd.name().as_ref()),
                 direction: dir,
                 width,
                 attributes,

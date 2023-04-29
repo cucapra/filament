@@ -106,15 +106,15 @@ impl InvIdx {
             .event_binding(inv.events.clone().into_iter().map(|e| e.take()));
         let sig = &ctx.prog[inst.sig];
         let port = sig.get_port(port);
-        core::PortDef::new(
-            port.name.clone(),
+        core::PortDef::port(
+            port.name().clone(),
             Loc::new(
-                resolve_range(&port.liveness, &event_b, &param_b),
-                port.liveness.pos(),
+                resolve_range(port.liveness(), &event_b, &param_b),
+                port.liveness().pos(),
             ),
             Loc::new(
-                port.bitwidth.inner().clone().resolve(&param_b),
-                port.bitwidth.pos(),
+                port.bitwidth().inner().clone().resolve(&param_b),
+                port.bitwidth().pos(),
             ),
         )
     }

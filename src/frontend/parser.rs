@@ -227,7 +227,10 @@ impl FilamentParser {
                 }
             },
             [interval_range(range), identifier(name), expr(bitwidth)] => {
-                Ok(Port::Pd(Loc::new(core::PortDef::new(name, range, bitwidth), sp)))
+                Ok(Port::Pd(Loc::new(core::PortDef::port(name, range, bitwidth), sp)))
+            },
+            [identifier(name), expr(bitwidth), bundle_typ(bt)] => {
+                Ok(Port::Pd(Loc::new(core::PortDef::bundle(core::Bundle::new(name, bitwidth, bt)), sp)))
             }
         )
     }
@@ -360,13 +363,28 @@ impl FilamentParser {
     }
 
     // ================ Assignments =====================
+
+    fn dots(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+
+    fn splat(input: Node) -> ParseResult<core::Splat> {
+        match_nodes!(
+            input.clone().into_children();
+            [expr(l), dots(_), expr(r)] => Ok(core::Splat::range(l.take(), r.take())),
+            [dots(_)] => Err(input.error("Complete splat is not supported yet"))
+        )
+    }
+
     fn port(input: Node) -> ParseResult<Loc<core::Port>> {
         let sp = Self::get_span(&input);
         let n = match_nodes!(
             input.into_children();
             [bitwidth(constant)] => core::Port::constant(constant),
             [identifier(name)] => core::Port::this(name),
+            [identifier(name), splat(range)] => core::Port::ThisBundle{ name, range },
             [identifier(comp), identifier(name)] => core::Port::comp(comp, name),
+            [identifier(invoke), identifier(port), splat(range)] => core::Port::InvBundle { invoke, port, range },
             [identifier(name), expr(idx)] => core::Port::bundle(name, idx),
         );
         Ok(Loc::new(n, sp))

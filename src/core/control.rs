@@ -7,13 +7,68 @@ use crate::{
 use itertools::Itertools;
 use std::fmt::Display;
 
+#[derive(Clone)]
+/// A range over the indices of a bundle
+pub struct Splat {
+    pub start: Expr,
+    pub end: Expr,
+}
+
+impl Splat {
+    pub fn range(start: Expr, end: Expr) -> Self {
+        Splat { start, end }
+    }
+
+    pub fn resolve(self, bindings: &Binding<Expr>) -> Self {
+        Splat {
+            start: self.start.resolve(bindings),
+            end: self.end.resolve(bindings),
+        }
+    }
+}
+
+impl Display for Splat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}..{}", self.start, self.end)
+    }
+}
+
+/// A port mentioned in the program
+#[derive(Clone)]
+pub enum Port {
+    /// A port on this component
+    This(Loc<Id>),
+    /// A constant
+    Constant(u64),
+    /// A port on an invoke
+    InvPort { invoke: Loc<Id>, name: Loc<Id> },
+    /// A port represented by an index into a bundle
+    BundlePort { name: Loc<Id>, idx: Loc<Expr> },
+    /// A full bundle bound by this component
+    ThisBundle { name: Loc<Id>, range: Splat },
+    /// A bundle port on an invocation
+    InvBundle {
+        invoke: Loc<Id>,
+        port: Loc<Id>,
+        range: Splat,
+    },
+}
+
 impl Port {
     pub fn name(&self) -> Id {
         match &self {
-            Port::ThisPort(n) => *n.inner(),
+            Port::This(n) => *n.inner(),
             Port::InvPort { name, .. } => *name.inner(),
-            Port::Bundle { name, idx } => format!("{name}{{{idx}}}").into(),
+            Port::BundlePort { name, idx } => format!("{name}{{{idx}}}").into(),
             Port::Constant(n) => Id::from(format!("const<{}>", n)),
+            Port::ThisBundle { name, range } => {
+                Id::from(format!("{name}{{{range}}}"))
+            }
+            Port::InvBundle {
+                invoke,
+                port,
+                range,
+            } => Id::from(format!("{invoke}.{port}{{{range}}}")),
         }
     }
 
@@ -22,7 +77,7 @@ impl Port {
     }
 
     pub fn this(p: Loc<Id>) -> Self {
-        Port::ThisPort(p)
+        Port::This(p)
     }
 
     pub fn constant(v: u64) -> Self {
@@ -30,41 +85,50 @@ impl Port {
     }
 
     pub fn bundle(name: Loc<Id>, idx: Loc<Expr>) -> Self {
-        Port::Bundle { name, idx }
+        Port::BundlePort { name, idx }
     }
 
     pub fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
         match self {
-            Port::Bundle { name, idx } => Port::Bundle {
+            Port::BundlePort { name, idx } => Port::BundlePort {
                 name,
                 idx: idx.map(|i| i.resolve(bindings)),
+            },
+            Port::ThisBundle { name, range } => Port::ThisBundle {
+                name,
+                range: range.resolve(bindings),
+            },
+            Port::InvBundle {
+                invoke,
+                port,
+                range,
+            } => Port::InvBundle {
+                invoke,
+                port,
+                range: range.resolve(bindings),
             },
             _ => self,
         }
     }
 }
 
-#[derive(Clone)]
-pub enum Port {
-    /// A port on this component
-    ThisPort(Loc<Id>),
-    /// A constant
-    Constant(u64),
-    /// A port on an invoke
-    InvPort { invoke: Loc<Id>, name: Loc<Id> },
-    /// Index in a bundle
-    Bundle { name: Loc<Id>, idx: Loc<Expr> },
-}
-
 impl std::fmt::Display for Port {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Port::ThisPort(p) => write!(f, "{}", p),
+            Port::This(p) => write!(f, "{}", p),
             Port::InvPort { invoke: comp, name } => {
                 write!(f, "{}.{}", comp, name)
             }
             Port::Constant(n) => write!(f, "{}", n),
-            Port::Bundle { name, idx } => write!(f, "{name}{{{idx}}}"),
+            Port::BundlePort { name, idx } => write!(f, "{name}{{{idx}}}"),
+            Port::ThisBundle { name, range } => write!(f, "{name}{{{range}}}"),
+            Port::InvBundle {
+                invoke,
+                port,
+                range,
+            } => {
+                write!(f, "{invoke}.{port}{{{range}}}")
+            }
         }
     }
 }
@@ -368,6 +432,12 @@ impl Display for ForLoop {
     }
 }
 
+impl From<ForLoop> for Command {
+    fn from(v: ForLoop) -> Self {
+        Self::ForLoop(v)
+    }
+}
+
 #[derive(Clone)]
 /// A conditional statement:
 /// The `then` branch is checked assuming that the condition is true and the `else` branch is checked
@@ -402,6 +472,12 @@ impl Display for If {
     }
 }
 
+impl From<If> for Command {
+    fn from(v: If) -> Self {
+        Self::If(v)
+    }
+}
+
 #[derive(Clone)]
 /// The type of the bundle:
 /// ```
@@ -433,13 +509,36 @@ impl BundleType {
         }
     }
 
+    pub fn resolve_event(self, binding: &Binding<Time>) -> Self {
+        Self {
+            liveness: self.liveness.map(|e| e.resolve_event(binding)),
+            ..self
+        }
+    }
+
     /// Check if this bundle type is alpha equivalent to another bundle type
-    pub fn alpha_eq(&self, other: Self) -> bool {
+    pub fn alpha_eq(&self, _: Self) -> bool {
         // Resolve the other expression by providing a binding for index to be
         // the same name as this type's index.
-        let binding = Binding::new(Some((other.idx, Expr::from(self.idx))));
-        let resolved = other.resolve_exprs(&binding);
+        // let binding = Binding::new(Some((other.idx, Expr::from(self.idx))));
+        // let resolved = other.resolve_exprs(&binding);
         todo!()
+    }
+
+    /// Return the type for a bundle that has been offset by the given expression.
+    /// For example:
+    /// ```
+    /// for<#i> @[G+#i, G+#i+1] #W
+    /// ```
+    /// offset by `#K` becomes
+    /// ```
+    /// for<#i> @[G+#i+#K, G+#i+1+#K] #W
+    /// ```
+    pub fn offset(self, offset: Expr) -> Self {
+        // Generate the offset by resolving the index of the bundle type with index+offset
+        let binding =
+            Binding::new(Some((self.idx, Expr::abs(self.idx) + offset)));
+        self.resolve_exprs(&binding)
     }
 }
 
@@ -473,7 +572,7 @@ impl Bundle {
         let mut bind = Binding::default();
         bind.insert(self.typ.idx, idx);
         let liveness = self.typ.liveness.clone();
-        PortDef::new(
+        PortDef::port(
             Loc::unknown(Id::from("__FAKE_NAME_SHOULD_NOT_BE_USED")),
             liveness.map(|r| r.resolve_exprs(&bind)),
             self.typ.bitwidth.clone(),

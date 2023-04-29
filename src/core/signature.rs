@@ -126,6 +126,27 @@ impl Signature {
         &self.ports
     }
 
+    /// Replace the ports of this component by iterating over the ports and applying the function to get other ports.
+    /// The function is passed the port and a boolean indicating if the port is an input port.
+    pub fn replace_ports<F>(mut self, f: &mut F) -> Self
+    where
+        F: FnMut(Loc<PortDef>, bool) -> (Vec<Loc<PortDef>>, bool),
+    {
+        let (mut inps, mut outs) = (vec![], vec![]);
+        for (idx, p) in self.ports.into_iter().enumerate() {
+            let (ports, is_inp) = f(p, idx < self.outputs_idx);
+            if is_inp {
+                inps.extend(ports);
+            } else {
+                outs.extend(ports);
+            }
+        }
+        self.ports = inps;
+        self.outputs_idx = self.ports.len();
+        self.ports.extend(outs);
+        self
+    }
+
     /// Find the delay associoated with an event
     pub fn get_event(&self, event: &Id) -> &Loc<EventBind> {
         self.events
@@ -143,7 +164,7 @@ impl Signature {
     pub fn find_port(&self, port: &Id) -> Option<Loc<PortDef>> {
         self.ports
             .iter()
-            .find(|p| p.name.inner() == port)
+            .find(|p| p.name().inner() == port)
             .cloned()
             .or_else(|| {
                 self.interface_signals.iter().find_map(|id| {
@@ -191,7 +212,9 @@ impl Signature {
     fn portdefs_well_formed(&self) -> Vec<Loc<Constraint>> {
         self.inputs()
             .chain(self.outputs())
-            .map(|mpd| Loc::new(mpd.liveness.well_formed(), mpd.liveness.pos()))
+            .map(|mpd| {
+                Loc::new(mpd.liveness().well_formed(), mpd.liveness().pos())
+            })
             .collect_vec()
     }
 
@@ -274,11 +297,11 @@ impl Signature {
         // the start time of the signal describes when the signal is triggered.
         // We do not consider the end time because that only effects the length of the signal.
         for port in self.inputs().chain(self.outputs()) {
-            let delay = port.liveness.len();
-            let ev = &port.liveness.start.event();
+            let delay = port.liveness().len();
+            let ev = &port.liveness().start.event();
             evs.entry(*ev)
                 .or_default()
-                .push((delay.clone(), port.liveness.pos()))
+                .push((delay.clone(), port.liveness().pos()))
         }
 
         let mut cons = self
@@ -329,7 +352,7 @@ impl Signature {
             ports: self
                 .ports
                 .into_iter()
-                .map(|pd| pd.map(|p| p.resolve_offset(&binding)))
+                .map(|pd| pd.map(|p| p.resolve_exprs(&binding)))
                 .collect_vec(),
             events: self
                 .events

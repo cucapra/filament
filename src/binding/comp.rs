@@ -301,11 +301,11 @@ impl BoundComponent {
                                 ));
                                 diag.add_error(err)
                             }
-                        } else if let core::Port::ThisPort(p) = &port {
+                        } else if let core::Port::This(p) = &port {
                             if !prog[self.sig]
                                 .ports()
                                 .iter()
-                                .any(|pd| pd.name == *p)
+                                .any(|pd| pd.name() == p)
                             {
                                 let err = Error::undefined(*p.inner(), "port")
                                     .add_note(
@@ -452,9 +452,7 @@ impl<'c, 'p> CompBinding<'c, 'p> {
         ) -> core::Range,
     {
         match &port {
-            core::Port::ThisPort(p) => {
-                Some(self.this().get_port(p.inner()).take())
-            }
+            core::Port::This(p) => Some(self.this().get_port(p.inner()).take()),
             core::Port::InvPort { invoke, name } => {
                 Some(self.get_invoke_idx(invoke).get_invoke_port(
                     self,
@@ -462,11 +460,33 @@ impl<'c, 'p> CompBinding<'c, 'p> {
                     resolve_liveness,
                 ))
             }
-            core::Port::Bundle { name, idx, .. } => {
+            core::Port::BundlePort { name, idx, .. } => {
                 let bi = self.get_bundle_idx(name);
                 Some(self[bi].liveness(idx.inner().clone()))
             }
             core::Port::Constant(_) => None,
+            core::Port::ThisBundle { name, range: splat } => {
+                let bi = self.get_bundle_idx(name.inner());
+                let mut bundle = self[bi].clone();
+                bundle.typ = bundle.typ.offset(splat.start.clone());
+                Some(core::PortDef::Bundle(bundle))
+            }
+            core::Port::InvBundle {
+                invoke,
+                port,
+                range,
+            } => {
+                let bi = self.get_invoke_idx(invoke);
+                let inv = &self[bi];
+                let inst = &self[inv.instance];
+                let sig = &self.prog[inst.sig];
+                let port = sig.get_port(port);
+                let core::PortDef::Bundle(mut bun) = port.take() else {
+                    unreachable!("Port must be a bundle")
+                };
+                bun.typ = bun.typ.offset(range.start.clone());
+                Some(core::PortDef::Bundle(bun))
+            }
         }
     }
 }

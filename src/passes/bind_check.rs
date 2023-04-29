@@ -109,10 +109,24 @@ impl visitor::Checker for BindCheck {
         self.events.extend(events.iter().map(|ev| *ev.inner()));
         // Check all the definitions only use bound events and parameters
         for pd in sig.ports() {
-            for time in pd.liveness.time_exprs() {
-                self.time(time, pd.liveness.pos());
+            match pd.inner() {
+                core::PortDef::Port { liveness, .. } => {
+                    for time in liveness.time_exprs() {
+                        self.time(time, liveness.pos());
+                    }
+                }
+                core::PortDef::Bundle(core::Bundle {
+                    typ: core::BundleType { idx, liveness, .. },
+                    ..
+                }) => {
+                    let n = self.push_vars(&[*idx]);
+                    for time in liveness.time_exprs() {
+                        self.time(time, liveness.pos());
+                    }
+                    self.pop_vars(n);
+                }
             }
-            self.expr(&pd.bitwidth, pd.bitwidth.pos());
+            self.expr(pd.bitwidth(), pd.bitwidth().pos());
         }
         // Check that interface ports use only bound events
         for id in &sig.interface_signals {
@@ -193,7 +207,7 @@ impl visitor::Checker for BindCheck {
                 inst.bindings.len(),
             );
             let err = Error::malformed(msg.clone())
-                .add_note(self.diag.add_info(msg, inst.name.pos()));
+                .add_note(self.diag.add_info(msg, inst.component.pos()));
             self.diag.add_error(err);
         }
 
@@ -217,7 +231,7 @@ impl visitor::Checker for BindCheck {
             // Check that the number of ports matches the number of ports
             let inputs = ctx.prog[sig]
                 .inputs()
-                .map(|pd| pd.name.clone())
+                .map(|pd| pd.name().clone())
                 .collect_vec();
             let formals = inputs.len();
             let actuals = ports.len();

@@ -66,6 +66,12 @@ impl<T: Clone> Loc<T> {
     }
 }
 
+impl<T: Clone> From<T> for Loc<T> {
+    fn from(inner: T) -> Self {
+        Self::unknown(inner)
+    }
+}
+
 impl<T: Clone> std::ops::Deref for Loc<T> {
     type Target = T;
 

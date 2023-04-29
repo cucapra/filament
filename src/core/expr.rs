@@ -64,6 +64,11 @@ impl Expr {
         Expr::Concrete(n)
     }
 
+    /// Construct a new expression from an abstract variable
+    pub fn abs(id: Id) -> Self {
+        Expr::Abstract(id)
+    }
+
     pub fn op(op: Op, l: Expr, r: Expr) -> Self {
         match op {
             Op::Add => l + r,

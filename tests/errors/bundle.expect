@@ -33,7 +33,7 @@ error: source port must be available longer than the destination port requires
    ┌─ tests/errors/bundle.fil:15:11
    │
 15 │     out = f{#N+1};
-   │     ---   ^^^^^^^ source is available for @[G+(#N+1), G+((#N+1)+1)]
+   │     ----  ^^^^^^^ source is available for @[G+(#N+1), G+((#N+1)+1)]
    │     │      
    │     destination's requirement @[G+#N, G+(#N+1)]
 

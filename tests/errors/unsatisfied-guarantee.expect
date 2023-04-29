@@ -5,7 +5,7 @@ error: source port must be available longer than the destination port requires
    ┌─ tests/errors/unsatisfied-guarantee.fil:12:9
    │
 12 │   out = m0.out;
-   │   ---   ^^^^^^ source is available for @[G, G+1]
+   │   ----  ^^^^^^ source is available for @[G, G+1]
    │   │      
    │   destination's requirement @[G+3, G+4]
 

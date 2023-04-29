@@ -25,7 +25,7 @@ error: source port must be available longer than the destination port requires
    ┌─ tests/errors/unprovable-cons.fil:15:9
    │
 15 │   out = l0.out;
-   │   ---   ^^^^^^ source is available for @[G+1, L+1]
+   │   ----  ^^^^^^ source is available for @[G+1, L+1]
    │   │      
    │   destination's requirement @[L+2, L+3]
 

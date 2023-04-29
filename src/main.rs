@@ -23,7 +23,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
             return Err(1);
         }
     };
-    log::trace!("{ns}");
+    log::debug!("{ns}");
 
     // Construct a binding
     let bind = binding::ProgBinding::try_from(&ns)?;
@@ -47,7 +47,13 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     let t = Instant::now();
     let ns = passes::Monomorphize::transform(ns);
     log::info!("Monomorphize: {}ms", t.elapsed().as_millis());
-    log::trace!("{ns}");
+    log::debug!("{ns}");
+
+    // Bundle elimination
+    let t = Instant::now();
+    let ns = passes::BundleElim::transform(ns);
+    log::info!("Bundle elimination: {}ms", t.elapsed().as_millis());
+    log::debug!("{ns}");
 
     // Rebuild the binding
     let bind = binding::ProgBinding::try_from(&ns)?;
@@ -81,7 +87,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
             return Err(1);
         };
     log::info!("Lowering: {}ms", t.elapsed().as_millis());
-    log::trace!("{ns}");
+    log::debug!("{ns}");
 
     // Compilation
     let t = Instant::now();
