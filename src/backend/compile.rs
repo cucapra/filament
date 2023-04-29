@@ -514,8 +514,8 @@ fn init_calyx(
 fn print(ctx: ir::Context) {
     let mut out = &mut std::io::stdout();
     for (path, prims) in ctx.lib.externs() {
-        ir::Printer::write_extern(
-            (&path, &prims.into_iter().map(|(_, v)| v).collect_vec()),
+        ir::Printer::write_externs(
+            (&path, prims.iter().map(|(_, v)| v)),
             &mut out,
         )
         .unwrap();
