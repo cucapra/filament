@@ -91,7 +91,7 @@ impl Context<'_> {
                 let c = cr.borrow();
                 (c.get("out"), None)
             }
-            core::Port::Bundle { .. } | core::Port::InvBundle { .. } => {
+            core::Port::ThisBundle { .. } | core::Port::InvBundle { .. } => {
                 unreachable!("Bundles should be compiled away")
             }
         }
@@ -156,7 +156,7 @@ fn compile_guard(
             core::Port::Constant(_) => {
                 unreachable!("Constants cannot be in guards")
             }
-            core::Port::Bundle { .. } | core::Port::InvBundle { .. } => {
+            core::Port::ThisBundle { .. } | core::Port::InvBundle { .. } => {
                 unreachable!("Bundles should be compiled away")
             }
         },

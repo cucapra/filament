@@ -465,7 +465,7 @@ impl<'c, 'p> CompBinding<'c, 'p> {
                 Some(self[bi].liveness(idx.inner().clone()))
             }
             core::Port::Constant(_) => None,
-            core::Port::Bundle { name, range: splat } => {
+            core::Port::ThisBundle { name, range: splat } => {
                 let bi = self.get_bundle_idx(name.inner());
                 let mut bundle = self[bi].clone();
                 bundle.typ = bundle.typ.offset(splat.start.clone());

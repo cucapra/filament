@@ -45,7 +45,7 @@ pub enum Port {
     /// A port represented by an index into a bundle
     BundlePort { name: Loc<Id>, idx: Loc<Expr> },
     /// A full bundle bound by this component
-    Bundle { name: Loc<Id>, range: Splat },
+    ThisBundle { name: Loc<Id>, range: Splat },
     /// A bundle port on an invocation
     InvBundle {
         invoke: Loc<Id>,
@@ -61,7 +61,7 @@ impl Port {
             Port::InvPort { name, .. } => *name.inner(),
             Port::BundlePort { name, idx } => format!("{name}{{{idx}}}").into(),
             Port::Constant(n) => Id::from(format!("const<{}>", n)),
-            Port::Bundle { name, range } => {
+            Port::ThisBundle { name, range } => {
                 Id::from(format!("{name}{{{range}}}"))
             }
             Port::InvBundle {
@@ -94,7 +94,7 @@ impl Port {
                 name,
                 idx: idx.map(|i| i.resolve(bindings)),
             },
-            Port::Bundle { name, range } => Port::Bundle {
+            Port::ThisBundle { name, range } => Port::ThisBundle {
                 name,
                 range: range.resolve(bindings),
             },
@@ -121,7 +121,7 @@ impl std::fmt::Display for Port {
             }
             Port::Constant(n) => write!(f, "{}", n),
             Port::BundlePort { name, idx } => write!(f, "{name}{{{idx}}}"),
-            Port::Bundle { name, range } => write!(f, "{name}{{{range}}}"),
+            Port::ThisBundle { name, range } => write!(f, "{name}{{{range}}}"),
             Port::InvBundle {
                 invoke,
                 port,
@@ -432,6 +432,12 @@ impl Display for ForLoop {
     }
 }
 
+impl From<ForLoop> for Command {
+    fn from(v: ForLoop) -> Self {
+        Self::ForLoop(v)
+    }
+}
+
 #[derive(Clone)]
 /// A conditional statement:
 /// The `then` branch is checked assuming that the condition is true and the `else` branch is checked
@@ -463,6 +469,12 @@ impl Display for If {
             writeln!(f, "{}", cmd)?;
         }
         write!(f, "}}")
+    }
+}
+
+impl From<If> for Command {
+    fn from(v: If) -> Self {
+        Self::If(v)
     }
 }
 

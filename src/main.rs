@@ -49,6 +49,12 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     log::info!("Monomorphize: {}ms", t.elapsed().as_millis());
     log::trace!("{ns}");
 
+    // Bundle elimination
+    let t = Instant::now();
+    let ns = passes::BundleElim::transform(ns);
+    log::info!("Bundle elimination: {}ms", t.elapsed().as_millis());
+    log::trace!("{ns}");
+
     // Rebuild the binding
     let bind = binding::ProgBinding::try_from(&ns)?;
 

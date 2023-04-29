@@ -382,7 +382,7 @@ impl FilamentParser {
             input.into_children();
             [bitwidth(constant)] => core::Port::constant(constant),
             [identifier(name)] => core::Port::this(name),
-            [identifier(name), splat(range)] => core::Port::Bundle{ name, range },
+            [identifier(name), splat(range)] => core::Port::ThisBundle{ name, range },
             [identifier(comp), identifier(name)] => core::Port::comp(comp, name),
             [identifier(invoke), identifier(port), splat(range)] => core::Port::InvBundle { invoke, port, range },
             [identifier(name), expr(idx)] => core::Port::bundle(name, idx),

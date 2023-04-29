@@ -23,7 +23,7 @@ pub struct ProgBinding<'a> {
 
 impl<'a> ProgBinding<'a> {
     // Is this name already bound?
-    pub fn is_bound(&self, name: &core::Id) -> Option<&core::Signature> {
+    fn is_bound(&self, name: &core::Id) -> Option<&core::Signature> {
         self.name_map
             .get(name)
             .map(|idx| self.signatures[idx.get()])

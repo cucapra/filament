@@ -1,4 +1,5 @@
 mod bind_check;
+mod bundle_elim;
 mod dump_interface;
 mod interval_checking;
 mod lower;
@@ -7,6 +8,7 @@ mod monomorphize;
 mod phantom_check;
 
 pub use bind_check::BindCheck;
+pub use bundle_elim::BundleElim;
 pub use dump_interface::DumpInterface;
 pub use interval_checking::IntervalCheck;
 pub use lower::Lower;
