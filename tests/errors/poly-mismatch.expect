@@ -27,7 +27,7 @@ error: source port must be available longer than the destination port requires
    ┌─ tests/errors/poly-mismatch.fil:13:11
    │
 13 │     out = a.out;
-   │     ---   ^^^^^ source is available for @[G+#W, G+(#W+1)]
+   │     ----  ^^^^^ source is available for @[G+#W, G+(#W+1)]
    │     │      
    │     destination's requirement @[G+#N, G+(#N+1)]
 
@@ -35,7 +35,7 @@ error: source port must be available longer than the destination port requires
    ┌─ tests/errors/poly-mismatch.fil:20:11
    │
 20 │     out = s.out;
-   │     ---   ^^^^^ source is available for @[G+2, G+3]
+   │     ----  ^^^^^ source is available for @[G+2, G+3]
    │     │      
    │     destination's requirement @[G+4, G+5]
 

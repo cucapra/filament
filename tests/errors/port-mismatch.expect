@@ -5,7 +5,7 @@ error: source and destination widths must match
   ┌─ tests/errors/port-mismatch.fil:2:11
   │
 2 │     out = in;
-  │     ---   ^^ source `in' has width 32
+  │     ----  ^^ source `in' has width 32
   │     │      
   │     destination `out' has width 16
 
