@@ -1,0 +1,76 @@
+import "primitives/state.fil";
+import "primitives/core.fil";
+// import "evaluation/iterative-divider/iter-div.fil";
+
+// // A sequential reduction tree with N-1 stages
+// comp SeqReduceTree[#N, #W]<G: 1>(
+//     in[#N]: for<#i> @[G+#i, G+#i+1] #W,
+// ) -> (
+//     @[G+#N, G+#N+1] out: #W
+// ) where #W > 0 {
+//     // Track the output from each adder
+//     bundle o[#N]: for<#i> @[G+#i+1, G+#i+2] #W;
+//     for #i in 0..#N {
+//         if #i == 0 {
+//             d1 := new Delay[#W]<G+#i>(in{#i});
+//             o{#i} = d1.out;
+//         } else {
+//             a := new Add[#W]<G+#i>(o{#i-1}, in{#i});
+//             d2 := new Delay[#W]<G+#i>(a.out);
+//             o{#i} = d2.out;
+//         }
+//     }
+// }
+
+comp Window[#N, #W]<G: 1>(
+    @[G, G+1] in: #W,
+) -> (
+    out[#N+1]: for<#i> @[G, G+1] #W
+) {
+    bundle f[#N+1]: for<#i> @[G, G+1] #W;
+
+    f{0} = in;
+    out{0} = f{0};
+    for #i in 0..#N {
+        d := new ContPrev[#W, 1]<G>(f{#i});
+        f{#i+1} = d.prev;
+        out{#i+1} = f{#i+1};
+    }
+}
+
+/// Combinationally add up numbers
+comp CombReduceTree[#N, #W]<G: 1>(
+    in[#N]: for<#i> @[G, G+1] #W
+) -> (
+    @[G, G+1] out: #W
+) where #W > 0 {
+    // Track the output from each adder
+    bundle o[#N]: for<#i> @[G, G+1] #W;
+    o{0} = in{0};
+    for #i in 1..#N {
+        a := new Add[#W]<G>(o{#i-1}, in{#i});
+        o{#i} = a.out;
+    }
+    out = o{#N-1};
+}
+
+comp MovingSum[#N, #W]<G: 1>(
+    @[G, G+1] in: #W
+) -> (
+    @[G, G+1] out: #W
+) where #W > 0 {
+    w := new Window[#N, #W]<G>(in);
+    r := new CombReduceTree[#N, #W]<G>(w.out{1..#N+1});
+    out = r.out;
+}
+
+comp main<G: 1>(@[G, G+1] in: 32) -> (@[G, G+1] out2: 32, @[G, G+1] out3: 32, @[G, G+1] out5: 32) {
+    avg2 := new MovingSum[2, 32]<G>(in);
+    out2 = avg2.out;
+
+    avg3 := new MovingSum[3, 32]<G>(in);
+    out3 = avg3.out;
+
+    avg5 := new MovingSum[5, 32]<G>(in);
+    out5 = avg5.out;
+}
