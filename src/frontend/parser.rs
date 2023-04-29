@@ -369,11 +369,11 @@ impl FilamentParser {
     }
 
     fn splat(input: Node) -> ParseResult<core::Splat> {
-        Ok(match_nodes!(
-            input.into_children();
-            [expr(l), dots(_), expr(r)] => core::Splat::range(l.take(), r.take()),
-            [dots(_)] => core::Splat::All,
-        ))
+        match_nodes!(
+            input.clone().into_children();
+            [expr(l), dots(_), expr(r)] => Ok(core::Splat::range(l.take(), r.take())),
+            [dots(_)] => Err(input.error("Complete splat is not supported yet"))
+        )
     }
 
     fn port(input: Node) -> ParseResult<Loc<core::Port>> {

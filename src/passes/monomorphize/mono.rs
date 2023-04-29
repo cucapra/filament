@@ -284,6 +284,14 @@ impl Monomorphize {
         con: core::Connect,
         binding: &Binding<core::Expr>,
     ) -> core::Connect {
+        // If the connections are bundles, we need to generate a connection for each index
+        if matches!(
+            con.src.inner(),
+            core::Port::InvBundle { .. } | core::Port::Bundle { .. }
+        ) {
+            log::warn!("Monomorphizing bundle connection");
+        }
+
         core::Connect::new(
             con.dst.map(|e| e.resolve_exprs(binding)),
             con.src.map(|e| e.resolve_exprs(binding)),

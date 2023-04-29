@@ -9,25 +9,27 @@ use std::fmt::Display;
 
 #[derive(Clone)]
 /// A range over the indices of a bundle
-pub enum Splat {
-    /// All of the values in the bundle
-    All,
-    /// A range of values in the bundle
-    Range(Expr, Expr),
+pub struct Splat {
+    pub start: Expr,
+    pub end: Expr,
 }
 
 impl Splat {
-    pub fn range(l: Expr, r: Expr) -> Self {
-        Splat::Range(l, r)
+    pub fn range(start: Expr, end: Expr) -> Self {
+        Splat { start, end }
+    }
+
+    pub fn resolve(self, bindings: &Binding<Expr>) -> Self {
+        Splat {
+            start: self.start.resolve(bindings),
+            end: self.end.resolve(bindings),
+        }
     }
 }
 
 impl Display for Splat {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Splat::All => write!(f, ".."),
-            Splat::Range(l, r) => write!(f, "{}..{}", l, r),
-        }
+        write!(f, "{}..{}", self.start, self.end)
     }
 }
 
@@ -91,6 +93,19 @@ impl Port {
             Port::BundlePort { name, idx } => Port::BundlePort {
                 name,
                 idx: idx.map(|i| i.resolve(bindings)),
+            },
+            Port::Bundle { name, range } => Port::Bundle {
+                name,
+                range: range.resolve(bindings),
+            },
+            Port::InvBundle {
+                invoke,
+                port,
+                range,
+            } => Port::InvBundle {
+                invoke,
+                port,
+                range: range.resolve(bindings),
             },
             _ => self,
         }
@@ -496,6 +511,22 @@ impl BundleType {
         // let binding = Binding::new(Some((other.idx, Expr::from(self.idx))));
         // let resolved = other.resolve_exprs(&binding);
         todo!()
+    }
+
+    /// Return the type for a bundle that has been offset by the given expression.
+    /// For example:
+    /// ```
+    /// for<#i> @[G+#i, G+#i+1] #W
+    /// ```
+    /// offset by `#K` becomes
+    /// ```
+    /// for<#i> @[G+#i+#K, G+#i+1+#K] #W
+    /// ```
+    pub fn offset(self, offset: Expr) -> Self {
+        // Generate the offset by resolving the index of the bundle type with index+offset
+        let binding =
+            Binding::new(Some((self.idx, Expr::abs(self.idx) + offset)));
+        self.resolve_exprs(&binding)
     }
 }
 

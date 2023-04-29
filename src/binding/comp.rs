@@ -465,28 +465,27 @@ impl<'c, 'p> CompBinding<'c, 'p> {
                 Some(self[bi].liveness(idx.inner().clone()))
             }
             core::Port::Constant(_) => None,
-            core::Port::Bundle { name, range } => {
-                assert!(
-                    matches!(range, core::Splat::All),
-                    "Ranged splat not supported"
-                );
+            core::Port::Bundle { name, range: splat } => {
                 let bi = self.get_bundle_idx(name.inner());
-                Some(core::PortDef::Bundle(self[bi].clone()))
+                let mut bundle = self[bi].clone();
+                bundle.typ = bundle.typ.offset(splat.start.clone());
+                Some(core::PortDef::Bundle(bundle))
             }
             core::Port::InvBundle {
                 invoke,
                 port,
                 range,
             } => {
-                assert!(
-                    matches!(range, core::Splat::All),
-                    "Ranged splat not supported"
-                );
                 let bi = self.get_invoke_idx(invoke);
                 let inv = &self[bi];
                 let inst = &self[inv.instance];
                 let sig = &self.prog[inst.sig];
-                sig.find_port(port).map(|l| l.inner().clone())
+                let port = sig.get_port(port);
+                let core::PortDef::Bundle(mut bun) = port.take() else {
+                    unreachable!("Port must be a bundle")
+                };
+                bun.typ = bun.typ.offset(range.start.clone());
+                Some(core::PortDef::Bundle(bun))
             }
         }
     }
