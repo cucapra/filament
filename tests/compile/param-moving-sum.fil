@@ -1,26 +1,5 @@
 import "primitives/state.fil";
 import "primitives/core.fil";
-// import "evaluation/iterative-divider/iter-div.fil";
-
-// // A sequential reduction tree with N-1 stages
-// comp SeqReduceTree[#N, #W]<G: 1>(
-//     in[#N]: for<#i> @[G+#i, G+#i+1] #W,
-// ) -> (
-//     @[G+#N, G+#N+1] out: #W
-// ) where #W > 0 {
-//     // Track the output from each adder
-//     bundle o[#N]: for<#i> @[G+#i+1, G+#i+2] #W;
-//     for #i in 0..#N {
-//         if #i == 0 {
-//             d1 := new Delay[#W]<G+#i>(in{#i});
-//             o{#i} = d1.out;
-//         } else {
-//             a := new Add[#W]<G+#i>(o{#i-1}, in{#i});
-//             d2 := new Delay[#W]<G+#i>(a.out);
-//             o{#i} = d2.out;
-//         }
-//     }
-// }
 
 comp Window[#N, #W]<G: 1>(
     @[G, G+1] in: #W,
