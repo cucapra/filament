@@ -56,7 +56,7 @@ runt -j 1
 Now that we have installed the Filament compiler and accompanying tools, we can start using Filament. Use the following links to learn more about Filament:
 
 - Writing your [first Filament Program](./lang/tutorial.md).
-- Overview of the [Filament Language](./lang/index.md).
+- [How do I integrate black-box Verilog with Filament](./lang/external.md)?
 
 ## Debugging Cocotb Installation
 
