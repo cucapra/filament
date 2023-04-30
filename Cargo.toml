@@ -19,9 +19,9 @@ topological-sort = "0.2"
 atty = "0.2"
 lazy_static = "1.4.0"
 
-calyx-ir = { path = "../calyx/calyx-ir" }
-calyx-frontend = { path = "../calyx/calyx-frontend" }
-calyx-utils = { path = "../calyx/calyx-utils" }
+calyx-ir = { version = "0.1.1" }
+calyx-frontend = { version = "0.1.1" }
+calyx-utils = { version = "0.1.1" }
 
 [dependencies.env_logger]
 version = "0.9"
