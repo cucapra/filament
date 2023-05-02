@@ -116,9 +116,10 @@ impl InstanceParams {
 
         order.apply_post_order(|comp| {
             // Add parameters for this component
-            inst_params
-                .params
-                .insert(*comp.sig.name.inner(), comp.sig.params.clone());
+            inst_params.params.insert(
+                *comp.sig.name.inner(),
+                comp.sig.params.iter().map(|p| p.copy()).collect(),
+            );
 
             // Add bindings from each instance
             for cmd in &comp.body {
@@ -304,7 +305,7 @@ impl Monomorphize {
 
                     for i in s..e {
                         let mut new_binding = (*param_binding).clone();
-                        new_binding.insert(idx, i.into());
+                        new_binding.insert(idx.copy(), i.into());
                         // Recur on the body of the loop
                         let ncmds = Self::commands(
                             body.iter().cloned(),
@@ -382,7 +383,7 @@ impl Monomorphize {
                 for bind_assigns in all_binds {
                     let binding =
                         Binding::new(
-                            comp.sig.params.iter().cloned().zip(
+                            comp.sig.params.iter().map(|p| p.copy()).zip(
                                 bind_assigns.into_iter().map(|v| v.into()),
                             ),
                         );

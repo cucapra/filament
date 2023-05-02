@@ -51,7 +51,7 @@ comp Shift[#W, #N]<G: 1>(
 ) -> (
     @[G+#N, G+#N+1] out: #W
 ) {
-    bundle f[#N+1]: for<#i> @[G+#i, G+#i+1] #W;
+    bundle f[#N+1]: for<#k> @[G+#k, G+#k+1] #W;
 
     f{0} = in;
     for #i in 0..#N {

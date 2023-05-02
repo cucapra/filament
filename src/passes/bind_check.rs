@@ -1,15 +1,20 @@
+use std::collections::HashSet;
+
 use crate::{
     binding::{self, InvIdx},
-    cmdline, core, diagnostics,
+    cmdline,
+    core::{self, Loc},
+    diagnostics,
     errors::Error,
-    utils::{self, GPosIdx},
+    utils::GPosIdx,
     visitor::{self, Traverse},
 };
 use itertools::Itertools;
 
 pub struct BindCheck {
-    /// Currently bound parameters
-    vars: Vec<core::Id>,
+    /// Currently bound parameters. All parameters are considered visible in a
+    /// component and we don't allow shadowing.
+    vars: Vec<Loc<core::Id>>,
     /// Currently bound events
     events: Vec<core::Id>,
     /// Current set of diagnostics
@@ -18,15 +23,13 @@ pub struct BindCheck {
 
 impl BindCheck {
     /// Push a new set of bound variables and return the number of variables added
-    fn push_vars(&mut self, vars: &[core::Id]) -> usize {
-        let n = vars.len();
+    fn add_vars(&mut self, vars: &[Loc<core::Id>]) {
         self.vars.extend_from_slice(vars);
-        n
     }
 
-    /// Remove the last `n` variables
-    fn pop_vars(&mut self, n: usize) {
-        self.vars.truncate(self.vars.len() - n);
+    /// Check if the given variable is bound
+    fn has_var(&self, var: &core::Id) -> bool {
+        self.vars.iter().any(|v| *v.inner() == *var)
     }
 
     /// Check that a time expression is well-formed
@@ -48,7 +51,7 @@ impl BindCheck {
 
     fn expr(&mut self, expr: &core::Expr, pos: GPosIdx) {
         for abs in expr.exprs() {
-            if !self.vars.iter().chain(self.vars.iter()).contains(abs) {
+            if !self.has_var(abs) {
                 let err = Error::undefined(*abs, "parameter").add_note(
                     self.diag.add_info(
                         format!(
@@ -93,14 +96,13 @@ impl visitor::Checker for BindCheck {
             liveness,
             bitwidth,
         } = &bun.typ;
-        let n = self.push_vars(&[*idx.inner()]);
+        self.add_vars(&[idx.clone()]);
         for time in liveness.time_exprs() {
             self.time(time, liveness.pos());
         }
         for expr in &[bitwidth, len] {
             self.expr(expr, expr.pos());
         }
-        self.pop_vars(n);
         Traverse::Continue(())
     }
 
@@ -108,25 +110,13 @@ impl visitor::Checker for BindCheck {
     fn signature(&mut self, sig: &core::Signature) -> Traverse {
         let events = sig.events().collect_vec();
         let params = &sig.params;
-        self.push_vars(params);
+        self.add_vars(params);
         self.events.extend(events.iter().map(|ev| *ev.inner()));
         // Check all the definitions only use bound events and parameters
         for pd in sig.ports() {
-            match pd.inner() {
-                core::PortDef::Port { liveness, .. } => {
-                    for time in liveness.time_exprs() {
-                        self.time(time, liveness.pos());
-                    }
-                }
-                core::PortDef::Bundle(core::Bundle {
-                    typ: core::BundleType { idx, liveness, .. },
-                    ..
-                }) => {
-                    let n = self.push_vars(&[*idx.inner()]);
-                    for time in liveness.time_exprs() {
-                        self.time(time, liveness.pos());
-                    }
-                    self.pop_vars(n);
+            if let core::PortDef::Port { liveness, .. } = pd.inner() {
+                for time in liveness.time_exprs() {
+                    self.time(time, liveness.pos());
                 }
             }
             self.expr(pd.bitwidth(), pd.bitwidth().pos());
@@ -183,11 +173,10 @@ impl visitor::Checker for BindCheck {
         l: &core::ForLoop,
         ctx: &binding::CompBinding,
     ) -> Traverse {
-        let vars = self.push_vars(&[l.idx]);
+        self.add_vars(&[l.idx.clone()]);
         for cmd in &l.body {
             self.command(cmd, ctx);
         }
-        self.pop_vars(vars);
         Traverse::Continue(())
     }
 
@@ -259,37 +248,26 @@ impl visitor::Checker for BindCheck {
         Traverse::Continue(())
     }
 
-    fn connect(
+    fn exit_component(
         &mut self,
-        _con: &core::Connect,
+        _: &core::Component,
         _ctx: &binding::CompBinding,
     ) -> Traverse {
-        let _resolve =
-            |r: &core::Range,
-             _: &utils::Binding<core::Time>,
-             _: &utils::Binding<core::Expr>| r.clone();
-        // let dst_w = ctx
-        //     .get_resolved_port(&con.dst, resolve)
-        //     .map(|p| p.bitwidth)
-        //     .unwrap_or_else(|| 32.into());
-        // let src_w = ctx
-        //     .get_resolved_port(&con.src, resolve)
-        //     .map(|p| p.bitwidth)
-        //     .unwrap_or_else(|| 32.into());
+        // Find all duplicate bindings for parameters and report them
+        let mut defined = HashSet::with_capacity(self.vars.len());
+        for v in &self.vars {
+            if !defined.insert(v) {
+                let old = defined.get(v).unwrap();
+                let err = Error::malformed(format!(
+                    "duplicate binding for parameter `{}`",
+                    v
+                ))
+                .add_note(self.diag.add_info("duplicate binding here", v.pos()))
+                .add_note(self.diag.add_info("first binding here", old.pos()));
+                self.diag.add_error(err);
+            }
+        }
 
-        // XXX(rachit): This cannot be checked locally. We need to generate constraints in the interval checker to check this property.
-        // if dst_w != ss {
-        //     let err = Error::malformed("port width mismatch".to_string())
-        //         .add_note(self.diag.add_info(
-        //             format!("source `{}' has width {ss}", con.src.name()),
-        //             con.src.copy_span(),
-        //         ))
-        //         .add_note(self.diag.add_info(
-        //             format!("destination `{}' has width {ds}", con.dst.name(),),
-        //             con.dst.copy_span(),
-        //         ));
-        //     self.diag.add_error(err);
-        // }
         Traverse::Continue(())
     }
 }

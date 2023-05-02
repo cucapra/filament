@@ -63,7 +63,7 @@ pub struct Signature {
     /// Name of the component
     pub name: Loc<Id>,
     /// Parameters for the Signature
-    pub params: Vec<Id>,
+    pub params: Vec<Loc<Id>>,
     /// Unannotated ports that are threaded through by the backend
     pub unannotated_ports: Vec<(Id, u64)>,
     /// Mapping from name of signals to the abstract variable they provide
@@ -85,7 +85,7 @@ impl Signature {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: Loc<Id>,
-        params: Vec<Id>,
+        params: Vec<Loc<Id>>,
         events: Vec<Loc<EventBind>>,
         unannotated_ports: Vec<(Id, u64)>,
         interface_signals: Vec<InterfaceDef>,
@@ -284,7 +284,7 @@ impl Signature {
             args.len(),
         );
 
-        Binding::new(self.params.iter().cloned().zip(args.into_iter()))
+        Binding::new(self.params.iter().map(|p| p.copy()).zip(args.into_iter()))
     }
 }
 

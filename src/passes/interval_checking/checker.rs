@@ -188,7 +188,7 @@ impl visitor::Checker for IntervalCheck {
             solver.prove(
                 sig.events()
                     .map(|e| e.take())
-                    .chain(sig.params.iter().cloned()),
+                    .chain(sig.params.iter().map(|p| p.copy())),
                 constraints,
                 sig.well_formed(&mut diagnostics).into_iter().collect(),
                 vec![],
@@ -239,15 +239,16 @@ impl visitor::Checker for IntervalCheck {
             body,
         } = l;
 
-        self.add_var(*idx);
+        let idx = *idx.inner();
+        self.add_var(idx);
         let var_bounds = vec![
             core::OrderConstraint::gte(
-                core::TimeSub::from(core::Expr::from(*idx)),
+                core::TimeSub::from(core::Expr::from(idx)),
                 core::TimeSub::from(start.clone()),
             )
             .into(),
             core::OrderConstraint::lt(
-                core::TimeSub::from(core::Expr::from(*idx)),
+                core::TimeSub::from(core::Expr::from(idx)),
                 core::TimeSub::from(end.clone()),
             )
             .into(),
@@ -501,7 +502,7 @@ impl visitor::Checker for IntervalCheck {
             .sig
             .events()
             .map(|e| e.take())
-            .chain(comp.sig.params.iter().cloned())
+            .chain(comp.sig.params.iter().map(|p| p.copy()))
             .chain(self.vars())
             .collect_vec();
 

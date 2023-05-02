@@ -402,7 +402,7 @@ impl std::fmt::Debug for Fsm {
 /// ```
 pub struct ForLoop {
     /// Index associated with this loop
-    pub idx: Id,
+    pub idx: Loc<Id>,
     /// Start of the range of this loop
     pub start: Expr,
     /// End of the range of this loop
@@ -412,7 +412,12 @@ pub struct ForLoop {
 }
 
 impl ForLoop {
-    pub fn new(idx: Id, start: Expr, end: Expr, body: Vec<Command>) -> Self {
+    pub fn new(
+        idx: Loc<Id>,
+        start: Expr,
+        end: Expr,
+        body: Vec<Command>,
+    ) -> Self {
         Self {
             idx,
             start,

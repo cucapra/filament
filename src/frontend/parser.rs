@@ -517,11 +517,11 @@ impl FilamentParser {
     }
 
     // ================ Component =====================
-    fn params(input: Node) -> ParseResult<Vec<core::Id>> {
+    fn params(input: Node) -> ParseResult<Vec<Loc<core::Id>>> {
         Ok(match_nodes!(
             input.into_children();
             [] => vec![],
-            [param_var(params)..] => params.map(|p| p.take()).collect(),
+            [param_var(params)..] => params.collect_vec(),
         ))
     }
     fn signature(input: Node) -> ParseResult<core::Signature> {
@@ -622,7 +622,7 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.into_children();
             [param_var(var), expr(start), expr(end), commands(body)] => {
-                core::ForLoop::new(var.take(), start.take(), end.take(), body)
+                core::ForLoop::new(var, start.take(), end.take(), body)
             }
         ))
     }
