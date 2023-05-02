@@ -293,9 +293,6 @@ impl FilSolver {
 
         // Generate an activation literal
         let act = self.s.get_actlit().unwrap();
-        for fact in obl.assumes().iter().cloned() {
-            self.assume(fact, Some(&act));
-        }
 
         let formula = format!("(not {})", obl.constraint());
         log::trace!("Assert {}", formula);

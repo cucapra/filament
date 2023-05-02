@@ -263,7 +263,12 @@ impl visitor::Checker for IntervalCheck {
 
     // Checking a bundle involves checking that the availability of all signals in the bundle is
     // less than the delay of the containing component.
-    fn bundle(&mut self, bundle: &core::Bundle, ctx: &CompBinding) -> Traverse {
+    fn bundle(
+        &mut self,
+        _is_port: bool,
+        bundle: &core::Bundle,
+        ctx: &CompBinding,
+    ) -> Traverse {
         log::warn!("Checking bundle");
         let core::BundleType {
             idx, len, liveness, ..
@@ -302,12 +307,12 @@ impl visitor::Checker for IntervalCheck {
         .add_note(live_note)
         .add_note(idx_note)
         .add_note(self.diag.add_info("event's delay", delay.pos()))
-        .with_assumes(idx_range.clone()).with_defines(iter::once(*idx.inner()));
+        .with_path_cond(idx_range.clone()).with_defines(iter::once(*idx.inner()));
 
         // Ensure that the availabilty of each index of bundle is well-formed (end > start)
         let wf = liveness.inner().well_formed().obligation(
             "bundle's liveness interval is malformed: end is not strictly greater than start",
-        ).add_note(live_note).add_note(idx_note).with_defines(iter::once(*idx.inner())).with_assumes(idx_range);
+        ).add_note(live_note).add_note(idx_note).with_defines(iter::once(*idx.inner())).with_path_cond(idx_range);
 
         self.add_obligations(vec![wf, delay_obl]);
         Traverse::Continue(())
@@ -430,7 +435,7 @@ impl visitor::Checker for IntervalCheck {
     fn enter_component(
         &mut self,
         comp: &core::Component,
-        _: &CompBinding,
+        ctx: &CompBinding,
     ) -> Traverse {
         log::trace!("=========== Component {} ==========", comp.sig.name);
         // Ensure that the signature is well-formed
@@ -465,6 +470,13 @@ impl visitor::Checker for IntervalCheck {
                 .iter()
                 .map(|c| utils::SExp::from(c.inner().clone())),
         );
+
+        // Check bundle ports for well-formedness
+        for p in comp.sig.ports() {
+            if let core::PortDef::Bundle(b) = p.inner() {
+                self.bundle(true, b, ctx)?;
+            }
+        }
 
         // If the component uses a user-level constraint, we cannot verify it's internal.
         if has_ulc {

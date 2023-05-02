@@ -14,8 +14,6 @@ pub struct Obligation {
     reason: String,
     /// Any extra information that can be used to debug the obligation
     info: Vec<InfoIdx>,
-    /// Assumptions for this set of obligations
-    assumes: Vec<SExp>,
 }
 
 impl Obligation {
@@ -27,7 +25,6 @@ impl Obligation {
             info: vec![],
             path_cond: Vec::new(),
             defines: Vec::new(),
-            assumes: Vec::new(),
         }
     }
 
@@ -41,18 +38,12 @@ impl Obligation {
     }
 
     /// Add assumptions to the obligation
-    pub fn with_assumes<I, S>(mut self, assumes: I) -> Self
+    pub fn with_path_cond<I, S>(mut self, assumes: I) -> Self
     where
         S: Into<SExp>,
         I: IntoIterator<Item = S>,
     {
-        self.assumes.extend(assumes.into_iter().map(|x| x.into()));
-        self
-    }
-
-    /// Add a path condition to this obligation
-    pub fn with_path_cond(mut self, path_cond: Vec<SExp>) -> Self {
-        self.path_cond = path_cond;
+        self.path_cond.extend(assumes.into_iter().map(|x| x.into()));
         self
     }
 
@@ -60,11 +51,6 @@ impl Obligation {
     pub fn add_note(mut self, info: InfoIdx) -> Self {
         self.info.push(info);
         self
-    }
-
-    /// The assumptions for this obligation
-    pub fn assumes(&self) -> &[SExp] {
-        &self.assumes
     }
 
     /// The constraint associated with this obligation

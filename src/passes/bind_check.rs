@@ -8,10 +8,11 @@ use crate::{
 use itertools::Itertools;
 
 pub struct BindCheck {
-    // Currently bound parameters
+    /// Currently bound parameters
     vars: Vec<core::Id>,
-    // Currently bound events
+    /// Currently bound events
     events: Vec<core::Id>,
+    /// Current set of diagnostics
     diag: diagnostics::Diagnostics,
 }
 
@@ -82,8 +83,9 @@ impl visitor::Checker for BindCheck {
 
     fn bundle(
         &mut self,
+        _is_port: bool,
         bun: &core::Bundle,
-        _: &binding::CompBinding,
+        _bind: &binding::CompBinding,
     ) -> Traverse {
         let core::BundleType {
             idx,
