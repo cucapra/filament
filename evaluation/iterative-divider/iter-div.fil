@@ -8,8 +8,8 @@ comp CombNoShareIterDiv[#W]<G: 1>(
 ) -> (
   @[G, G+1] quotient: #W
 ) where #W > 0 {
-  bundle acc[#W+1]: for<#i> @[G, G+1] #W+1;
-  bundle quotient_next[#W+1]: for<#i> @[G, G+1] #W;
+  bundle acc[#W+1]: for<#k> @[G, G+1] #W+1;
+  bundle quotient_next[#W+1]: for<#k> @[G, G+1] #W;
 
   // Initialize the accumulator and quotient
   init := new Init[#W]<G>(left);

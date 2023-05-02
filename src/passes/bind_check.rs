@@ -11,10 +11,12 @@ use crate::{
 };
 use itertools::Itertools;
 
+#[derive(Default)]
 pub struct BindCheck {
-    /// Currently bound parameters. All parameters are considered visible in a
-    /// component and we don't allow shadowing.
-    vars: Vec<Loc<core::Id>>,
+    /// Currently bound parameters.
+    params: Vec<Loc<core::Id>>,
+    /// Parameters used by bundle. Should not conflict with `params`.
+    bundle_params: Vec<Loc<core::Id>>,
     /// Currently bound events
     events: Vec<core::Id>,
     /// Current set of diagnostics
@@ -23,13 +25,24 @@ pub struct BindCheck {
 
 impl BindCheck {
     /// Push a new set of bound variables and return the number of variables added
-    fn add_vars(&mut self, vars: &[Loc<core::Id>]) {
-        self.vars.extend_from_slice(vars);
+    fn add_global_params(&mut self, vars: &[Loc<core::Id>]) {
+        self.params.extend_from_slice(vars);
+    }
+
+    fn push_bundle_params(&mut self, vars: &[Loc<core::Id>]) -> usize {
+        let len = self.params.len();
+        self.add_global_params(vars);
+        self.bundle_params.extend_from_slice(vars);
+        len
+    }
+
+    fn pop_bundle_params(&mut self, len: usize) {
+        self.params.truncate(len);
     }
 
     /// Check if the given variable is bound
-    fn has_var(&self, var: &core::Id) -> bool {
-        self.vars.iter().any(|v| *v.inner() == *var)
+    fn get_var(&self, var: &core::Id) -> Option<&Loc<core::Id>> {
+        self.params.iter().find(|v| *v.inner() == *var)
     }
 
     /// Check that a time expression is well-formed
@@ -51,7 +64,7 @@ impl BindCheck {
 
     fn expr(&mut self, expr: &core::Expr, pos: GPosIdx) {
         for abs in expr.exprs() {
-            if !self.has_var(abs) {
+            if self.get_var(abs).is_none() {
                 let err = Error::undefined(*abs, "parameter").add_note(
                     self.diag.add_info(
                         format!(
@@ -68,15 +81,11 @@ impl BindCheck {
 
 impl visitor::Checker for BindCheck {
     fn new(_: &cmdline::Opts, _: &core::Namespace) -> Self {
-        Self {
-            diag: diagnostics::Diagnostics::default(),
-            vars: Vec::new(),
-            events: Vec::new(),
-        }
+        Self::default()
     }
 
     fn clear_data(&mut self) {
-        self.vars.clear();
+        self.params.clear();
         self.events.clear();
     }
 
@@ -96,13 +105,14 @@ impl visitor::Checker for BindCheck {
             liveness,
             bitwidth,
         } = &bun.typ;
-        self.add_vars(&[idx.clone()]);
+        let n = self.push_bundle_params(&[idx.clone()]);
         for time in liveness.time_exprs() {
             self.time(time, liveness.pos());
         }
         for expr in &[bitwidth, len] {
             self.expr(expr, expr.pos());
         }
+        self.pop_bundle_params(n);
         Traverse::Continue(())
     }
 
@@ -110,7 +120,7 @@ impl visitor::Checker for BindCheck {
     fn signature(&mut self, sig: &core::Signature) -> Traverse {
         let events = sig.events().collect_vec();
         let params = &sig.params;
-        self.add_vars(params);
+        self.add_global_params(params);
         self.events.extend(events.iter().map(|ev| *ev.inner()));
         // Check all the definitions only use bound events and parameters
         for pd in sig.ports() {
@@ -173,7 +183,7 @@ impl visitor::Checker for BindCheck {
         l: &core::ForLoop,
         ctx: &binding::CompBinding,
     ) -> Traverse {
-        self.add_vars(&[l.idx.clone()]);
+        self.add_global_params(&[l.idx.clone()]);
         for cmd in &l.body {
             self.command(cmd, ctx);
         }
@@ -254,8 +264,8 @@ impl visitor::Checker for BindCheck {
         _ctx: &binding::CompBinding,
     ) -> Traverse {
         // Find all duplicate bindings for parameters and report them
-        let mut defined = HashSet::with_capacity(self.vars.len());
-        for v in &self.vars {
+        let mut defined = HashSet::with_capacity(self.params.len());
+        for v in &self.params {
             if !defined.insert(v) {
                 let old = defined.get(v).unwrap();
                 let err = Error::malformed(format!(
@@ -264,6 +274,23 @@ impl visitor::Checker for BindCheck {
                 ))
                 .add_note(self.diag.add_info("duplicate binding here", v.pos()))
                 .add_note(self.diag.add_info("first binding here", old.pos()));
+                self.diag.add_error(err);
+            }
+        }
+        for bv in &self.bundle_params {
+            if let Some(old) = defined.get(bv) {
+                let err = Error::malformed(format!(
+                    "conflicting binding for parameter `{}`",
+                    bv
+                ))
+                .add_note(self.diag.add_info("conflicting binding", bv.pos()))
+                .add_note(self.diag.add_info(
+                    "this binding is globally visible in the component",
+                    old.pos(),
+                ))
+                .add_note(self.diag.add_message(
+                    "parameter scoping rules are not the greatest. Sorry.",
+                ));
                 self.diag.add_error(err);
             }
         }

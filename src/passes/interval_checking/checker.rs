@@ -270,7 +270,6 @@ impl visitor::Checker for IntervalCheck {
         bundle: &core::Bundle,
         ctx: &CompBinding,
     ) -> Traverse {
-        log::warn!("Checking bundle");
         let core::BundleType {
             idx, len, liveness, ..
         } = &bundle.typ;
