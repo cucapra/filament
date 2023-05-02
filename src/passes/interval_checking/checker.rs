@@ -75,6 +75,62 @@ impl IntervalCheck {
         self.add_obligations(Some(cons));
     }
 
+    /// Checks that the availabilities of the left bundle are a subset of the
+    /// availabilities of the right bundle.
+    fn bundle_inclusion(
+        &mut self,
+        left: core::Loc<core::BundleType>,
+        right: core::Loc<core::BundleType>,
+    ) {
+        // Check that the bundle's lengths are equal
+        let left_len = &left.len;
+        let right_len = &right.len;
+        let len_eq = core::OrderConstraint::eq(
+            left_len.inner().clone(),
+            right_len.inner().clone(),
+        );
+        let len_cons = len_eq
+            .clone()
+            .obligation("bundle lengths must be equal")
+            .add_note(self.diag.add_info(
+                format!("length of bundle is {}", left.len),
+                left.pos(),
+            ))
+            .add_note(self.diag.add_info(
+                format!("length of bundle is {}", right.len),
+                right.pos(),
+            ));
+
+        // Check that for each index, the left bundle's availability is a subset
+        // of the right bundle's availability
+        let incl = OrderConstraint::subset(
+            left.liveness.inner().clone(),
+            right.liveness.inner().clone(),
+        ).map(|c| {
+            c.obligation("source bundle's wires must be available for as long as required")
+             .add_note(self.diag.add_info(
+                 format!("bundle's wires are available for {}", right.liveness),
+                 right.pos(),
+             ))
+             .add_note(self.diag.add_info(
+                 format!("bundle's wires are required for {}", left.liveness),
+                 left.liveness.pos(),
+             ))
+             .add_note(self.diag.add_info(
+                 format!("parameter ranges from 0 to {}", right.len),
+                 right.idx.pos(),
+             ))
+             .add_note(self.diag.add_info(
+                 format!("parameter ranges from 0 to {}", left.len),
+                 left.idx.pos(),
+             ))
+             .with_defines(vec![right.idx.copy(), left.idx.copy()])
+             .with_path_cond(vec![len_eq.clone()])
+        }).chain(iter::once(len_cons)).collect_vec();
+
+        self.add_obligations(incl)
+    }
+
     /// Check that the events provided to an invoke obey the constraints implied
     /// by the component's delays.
     fn check_invoke_binds(
@@ -364,37 +420,58 @@ impl visitor::Checker for IntervalCheck {
                 r.clone().resolve_exprs(param_b).resolve_event(event_b)
             };
 
-        let dst_port = ctx.get_resolved_port(dst, resolve_range);
-        let src_port = ctx.get_resolved_port(src, resolve_range);
-        self.check_width(con, &src_port, &dst_port);
+        // Check that the widths of the ports match
+        let mb_dst = ctx.get_resolved_port(dst, resolve_range);
+        let mb_src = ctx.get_resolved_port(src, resolve_range);
+        self.check_width(con, &mb_src, &mb_dst);
 
-        let d = dst_port.unwrap();
-        let requirement = d.liveness();
         // If we have: dst = src. We need:
         // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
         // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
-        if let Some(guarantee) = &src_port {
-            let within_fact = OrderConstraint::subset(
-                requirement.clone().take(),
-                guarantee.liveness().clone().take(),
-            )
-            .map(|e| {
-                core::Constraint::base(e)
-                    .obligation("source port must be available longer than the destination port requires")
-                    .add_note(self.diag.add_info(
-                        format!(
-                            "source is available for {}",
-                            guarantee.liveness()
-                        ),
-                        src.pos(),
-                    ))
-                    .add_note(self.diag.add_info(
-                        format!("destination's requirement {}", requirement),
-                        dst.pos(),
-                    ))
-            })
-            .collect_vec();
-            self.add_obligations(within_fact);
+        match mb_dst.unwrap() {
+            core::PortDef::Port {
+                liveness: requirement,
+                ..
+            } => {
+                if let Some(src_port) = &mb_src {
+                    let core::PortDef::Port {
+                        liveness: src_liveness,
+                        ..
+                    } = src_port else {
+                        todo!("Expected port type, provided bundle type")
+                    };
+
+                    let within_fact = OrderConstraint::subset(
+                        requirement.clone().take(),
+                        src_liveness.clone().take(),
+                    )
+                    .map(|e| {
+                        core::Constraint::base(e)
+                            .obligation("source port must be available longer than the destination port requires")
+                            .add_note(self.diag.add_info(
+                                format!(
+                                    "source is available for {}",
+                                    src_liveness
+                                ),
+                                src.pos(),
+                            ))
+                            .add_note(self.diag.add_info(
+                                format!("destination's requirement {}", requirement),
+                                dst.pos(),
+                            ))
+                    })
+                    .collect_vec();
+                    self.add_obligations(within_fact);
+                }
+            }
+            core::PortDef::Bundle(bl) => {
+                let Some(core::PortDef::Bundle(br)) = mb_src else {
+                    todo!("Expected bundle type, provided port type")
+                };
+                let blt = core::Loc::new(bl.typ, dst.pos());
+                let brt = core::Loc::new(br.typ, src.pos());
+                self.bundle_inclusion(blt, brt)
+            }
         }
 
         Traverse::Continue(())
