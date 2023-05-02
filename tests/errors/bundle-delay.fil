@@ -1,0 +1,5 @@
+comp Bar[#P]<G:1>() -> () {
+    // f{0} is available during @[G, G+#P] so the delay of
+    // G must be P.
+    bundle f[#P+1]: for<#k> @[G+#k, G+#P] 16;
+}

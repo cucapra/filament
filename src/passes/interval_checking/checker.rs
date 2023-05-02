@@ -15,7 +15,7 @@ impl IntervalCheck {
             return
         };
         let bun_idx = ctx.get_bundle_idx(name);
-        let bun_len = &ctx[bun_idx].len;
+        let bun_len = &ctx[bun_idx].typ.len;
         let greater = core::Constraint::sub(OrderConstraint::lt(
             idx.inner().clone().into(),
             bun_len.inner().clone().into(),
@@ -258,6 +258,58 @@ impl visitor::Checker for IntervalCheck {
             self.command(cmd, ctx);
         }
 
+        Traverse::Continue(())
+    }
+
+    // Checking a bundle involves checking that the availability of all signals in the bundle is
+    // less than the delay of the containing component.
+    fn bundle(&mut self, bundle: &core::Bundle, ctx: &CompBinding) -> Traverse {
+        log::warn!("Checking bundle");
+        let core::BundleType {
+            idx, len, liveness, ..
+        } = &bundle.typ;
+
+        // The index ranges over the length of the bundle
+        let idx_range = [
+            OrderConstraint::gte(
+                core::Expr::abs(*idx.inner()),
+                core::Expr::concrete(0),
+            ),
+            OrderConstraint::lt(
+                core::Expr::abs(*idx.inner()),
+                len.inner().clone(),
+            ),
+        ];
+
+        // Get the delay associated with the event used in the bundle
+        let ev = liveness.inner().start.event();
+        let delay = &ctx.prog[ctx.sig()].get_event(&ev).inner().delay;
+        let live_note = self.diag.add_info(
+            format!("bundle's liveness is {}", liveness.len()),
+            liveness.pos(),
+        );
+        let idx_note = self.diag.add_info(
+            format!("parameter ranges from 0 to {}", len.inner()),
+            idx.pos(),
+        );
+        // The event's delay must be gte than availability's length
+        let delay_obl = OrderConstraint::gte(
+            delay.inner().clone(),
+            liveness.len()
+        ).obligation(
+            "length of bundle wire availability must be less than event's delay"
+        )
+        .add_note(live_note)
+        .add_note(idx_note)
+        .add_note(self.diag.add_info("event's delay", delay.pos()))
+        .with_assumes(idx_range.clone()).with_defines(iter::once(*idx.inner()));
+
+        // Ensure that the availabilty of each index of bundle is well-formed (end > start)
+        let wf = liveness.inner().well_formed().obligation(
+            "bundle's liveness interval is malformed: end is not strictly greater than start",
+        ).add_note(live_note).add_note(idx_note).with_defines(iter::once(*idx.inner())).with_assumes(idx_range);
+
+        self.add_obligations(vec![wf, delay_obl]);
         Traverse::Continue(())
     }
 

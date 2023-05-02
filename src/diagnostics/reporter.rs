@@ -77,6 +77,7 @@ impl Diagnostics {
     // the "create error and add info" pattern.
     pub fn add_error(&mut self, error: Error) {
         if !self.errors.contains(&error) {
+            log::trace!("Adding error: {}", error.kind);
             self.errors.push(error);
         }
     }
@@ -99,6 +100,12 @@ impl Diagnostics {
         // Deduplicate errors based on the location attached to the error
         let mut error_map = BTreeMap::new();
         for mut error in self.errors.drain(..) {
+            if error.notes.is_empty() {
+                unreachable!(
+                    "Error without any notes. Cannot report this error: {:?}",
+                    error
+                );
+            }
             // Sort everything except the first element
             let first = error.notes.remove(0);
             error.notes.sort();

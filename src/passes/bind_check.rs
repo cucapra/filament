@@ -87,14 +87,15 @@ impl visitor::Checker for BindCheck {
     ) -> Traverse {
         let core::BundleType {
             idx,
+            len,
             liveness,
             bitwidth,
         } = &bun.typ;
-        let n = self.push_vars(&[*idx]);
+        let n = self.push_vars(&[*idx.inner()]);
         for time in liveness.time_exprs() {
             self.time(time, liveness.pos());
         }
-        for expr in &[bitwidth, &bun.len] {
+        for expr in &[bitwidth, len] {
             self.expr(expr, expr.pos());
         }
         self.pop_vars(n);
@@ -119,7 +120,7 @@ impl visitor::Checker for BindCheck {
                     typ: core::BundleType { idx, liveness, .. },
                     ..
                 }) => {
-                    let n = self.push_vars(&[*idx]);
+                    let n = self.push_vars(&[*idx.inner()]);
                     for time in liveness.time_exprs() {
                         self.time(time, liveness.pos());
                     }

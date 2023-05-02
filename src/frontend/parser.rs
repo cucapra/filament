@@ -229,8 +229,8 @@ impl FilamentParser {
             [interval_range(range), identifier(name), expr(bitwidth)] => {
                 Ok(Port::Pd(Loc::new(core::PortDef::port(name, range, bitwidth), sp)))
             },
-            [identifier(name), expr(bitwidth), bundle_typ(bt)] => {
-                Ok(Port::Pd(Loc::new(core::PortDef::bundle(core::Bundle::new(name, bitwidth, bt)), sp)))
+            [identifier(name), expr(len), bundle_typ((idx, live, width))] => {
+                Ok(Port::Pd(Loc::new(core::Bundle::new(name, core::BundleType::new(idx, len, live, width)).into(), sp)))
             }
         )
     }
@@ -627,17 +627,19 @@ impl FilamentParser {
         ))
     }
 
-    fn bundle_typ(input: Node) -> ParseResult<core::BundleType> {
+    fn bundle_typ(
+        input: Node,
+    ) -> ParseResult<(Loc<core::Id>, Loc<core::Range>, Loc<core::Expr>)> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(param), interval_range(range), expr(width)] => core::BundleType::new(param.take(), range, width),
+            [param_var(param), interval_range(range), expr(width)] => (param, range, width),
         ))
     }
 
     fn bundle(input: Node) -> ParseResult<core::Bundle> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(name), expr(size), bundle_typ(typ)] => core::Bundle::new(name, size, typ),
+            [identifier(name), expr(size), bundle_typ((param, range, width))] => core::Bundle::new(name, core::BundleType::new(param, size, range, width)),
         ))
     }
 
