@@ -1,32 +1,23 @@
 ---CODE---
 1
 ---STDERR---
-error: source and destination widths must match
-  ┌─ tests/errors/bundle-mismatch.fil:9:16
-  │
-2 │     in[#N]: for<#i> @[G+#i, G+#i+1] 32
-  │     -- destination has width 32
-  ·
-9 │     f0 := F<T>(f{1..#P});
-  │                ^^^^^^^^ source has width 16
-
 error: bundle lengths must be equal
   ┌─ tests/errors/bundle-mismatch.fil:2:5
   │
 2 │     in[#N]: for<#i> @[G+#i, G+#i+1] 32
   │     ^^ length of bundle is #P
   ·
-9 │     f0 := F<T>(f{1..#P});
-  │                -------- length of bundle is (#P-1)
+8 │     f0 := new Foo[#P]<T>(f{1..#P});
+  │                          -------- length of bundle is (#P-1)
 
 error: source bundle's wires must be available for as long as required
-  ┌─ tests/errors/bundle-mismatch.fil:9:16
+  ┌─ tests/errors/bundle-mismatch.fil:9:28
   │
 2 │     in[#N]: for<#i> @[G+#i, G+#i+1] 32
-  │                     --------------- bundle's wires are required for @[T+#i, T+(#i+1)]
+  │                     --------------- bundle's wires are required for @[T+(1+#i), T+(1+(#i+1))]
   ·
-9 │     f0 := F<T>(f{1..#P});
-  │                ^^^^^^^^ bundle's wires are available for @[T+(#k+1), T+((#k+1)+1)]
+9 │     f1 := new Foo[#P]<T+1>(f{0..#P});
+  │                            ^^^^^^^^ bundle's wires are available for @[T+#k, T+(#k+1)]
 
-Compilation failed with 3 errors.
+Compilation failed with 2 errors.
 Run with --show-models to generate assignments for failing constraints.

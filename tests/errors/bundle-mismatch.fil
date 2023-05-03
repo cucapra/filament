@@ -3,8 +3,8 @@ comp Foo[#N]<G:1>(
 ) -> () {}
 
 comp Bar[#P]<T:1>() -> () {
-    bundle f[#P]: for<#k> @[T+#k, T+#k+1] 16;
+    bundle f[#P]: for<#k> @[T+#k, T+#k+1] 32;
 
-    F := new Foo[#P];
-    f0 := F<T>(f{1..#P});
+    f0 := new Foo[#P]<T>(f{1..#P});
+    f1 := new Foo[#P]<T+1>(f{0..#P});
 }

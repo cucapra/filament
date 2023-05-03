@@ -105,14 +105,18 @@ impl IntervalCheck {
 
         // Check that for each index, the left bundle's availability is a subset
         // of the right bundle's availability
-        let idx_eq = core::OrderConstraint::eq(
-            left.idx.copy().into(),
-            right.idx.copy().into(),
-        );
-        let incl = OrderConstraint::subset(
-            left.liveness.inner().clone(),
-            right.liveness.inner().clone(),
-        ).map(|c| {
+        // Canonicalize left to use the same index as right
+        let l_live =
+            left.liveness
+                .inner()
+                .clone()
+                .resolve_exprs(&utils::Binding::new(Some((
+                    left.idx.copy(),
+                    right.idx.copy().into(),
+                ))));
+
+        let r_live = right.liveness.inner().clone();
+        let incl = OrderConstraint::subset(l_live, r_live).map(|c| {
             c.obligation("source bundle's wires must be available for as long as required")
              .add_note(self.diag.add_info(
                  format!("bundle's wires are available for {}", right.liveness),
@@ -122,16 +126,9 @@ impl IntervalCheck {
                  format!("bundle's wires are required for {}", left.liveness),
                  left.liveness.pos(),
              ))
-            //  .add_note(self.diag.add_info(
-            //      format!("parameter ranges from 0 to {}", right.len),
-            //      right.idx.pos(),
-            //  ))
-            //  .add_note(self.diag.add_info(
-            //      format!("parameter ranges from 0 to {}", left.len),
-            //      left.idx.pos(),
-            //  ))
-             .with_defines(vec![right.idx.copy(), left.idx.copy()])
-             .with_path_cond(vec![len_eq.clone(), idx_eq.clone()])
+             // Only define the right bundle's index
+             .with_defines(vec![right.idx.copy()])
+             .with_path_cond(vec![len_eq.clone()])
         }).chain(iter::once(len_cons)).collect_vec();
 
         self.add_obligations(incl)

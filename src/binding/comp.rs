@@ -470,10 +470,8 @@ impl<'c, 'p> CompBinding<'c, 'p> {
                 let core::PortDef::Bundle(mut bun) = port else {
                     unreachable!("Expected bundle port, received: `{port}'")
                 };
-                log::trace!("resolved {bun}, shrink with {range}");
                 bun.typ =
                     bun.typ.shrink(range.start.clone(), range.end.clone());
-                log::trace!("shrunk {bun}");
                 Some(core::PortDef::Bundle(bun))
             }
         }
