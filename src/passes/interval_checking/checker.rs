@@ -63,8 +63,9 @@ impl IntervalCheck {
                     core::Loc::new(start.clone(), pos),
                     len.clone(),
                 );
+                // True end is one less than `end`
                 self.bundle_index_constraint(
-                    core::Loc::new(end.clone(), pos),
+                    core::Loc::new(end.clone() - 1.into(), pos),
                     len,
                 );
                 // end must be greater than start
