@@ -1,7 +1,7 @@
 use super::{CompBinding, InstIdx, SigIdx};
 use crate::core::{self, Id, Loc, Time, TimeSub};
 use crate::idx;
-use crate::utils::{self, GPosIdx};
+use crate::utils::GPosIdx;
 use itertools::Itertools;
 
 /// Index to a bound invocation
@@ -83,20 +83,11 @@ impl InvIdx {
 
     /// Fully resolve a port.
     /// Accepts a function to resolve the liveness of the port using time and width bindings.
-    // XXX: Does not need to return an option
-    pub fn get_invoke_port<F>(
+    pub fn resolved_inv_port(
         &self,
         ctx: &CompBinding,
         port: &Id,
-        resolve_range: F,
-    ) -> core::PortDef
-    where
-        F: Fn(
-            &core::Range,
-            &utils::Binding<Time>,
-            &utils::Binding<core::Expr>,
-        ) -> core::Range,
-    {
+    ) -> core::PortDef {
         let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
         let param_b = ctx.prog[inst.sig].param_binding(
@@ -106,17 +97,11 @@ impl InvIdx {
             .event_binding(inv.events.clone().into_iter().map(|e| e.take()));
         let sig = &ctx.prog[inst.sig];
         let port = sig.get_port(port);
-        core::PortDef::port(
-            port.name().clone(),
-            Loc::new(
-                resolve_range(port.liveness(), &event_b, &param_b),
-                port.liveness().pos(),
-            ),
-            Loc::new(
-                port.bitwidth().inner().clone().resolve(&param_b),
-                port.bitwidth().pos(),
-            ),
-        )
+
+        port.inner()
+            .clone()
+            .resolve_event(&event_b)
+            .resolve_exprs(&param_b)
     }
 
     /// Get all the fully resolved constraints for the signature of an invocation.

@@ -548,11 +548,14 @@ impl BundleType {
     /// ```
     /// for<#i> @[G+#i+#K, G+#i+1+#K] #W
     /// ```
-    pub fn offset(self, offset: Expr) -> Self {
+    pub fn shrink(self, start: Expr, end: Expr) -> Self {
         // Generate the offset by resolving the index of the bundle type with index+offset
-        let idx = *self.idx.inner();
-        let binding = Binding::new(Some((idx, Expr::abs(idx) + offset)));
-        self.resolve_exprs(&binding)
+        let len = end - start.clone();
+        let idx = self.idx.copy();
+        let binding = Binding::new(Some((idx, Expr::abs(idx) + start)));
+        let mut resolved = self.resolve_exprs(&binding);
+        *resolved.len.inner_mut() = len;
+        resolved
     }
 }
 

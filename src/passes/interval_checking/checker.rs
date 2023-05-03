@@ -1,6 +1,6 @@
 use super::IntervalCheck;
 use crate::binding::CompBinding;
-use crate::core::{self, ForLoop, OrderConstraint, Time};
+use crate::core::{self, ForLoop, OrderConstraint};
 use crate::errors::Error;
 use crate::utils::{self, FilSolver};
 use crate::visitor::{self, Checker, Traverse};
@@ -64,14 +64,16 @@ impl IntervalCheck {
             src_w.clone().into(),
         ))
         .obligation("source and destination widths must match")
-        .add_note(self.diag.add_info(
-            format!("source `{}' has width {src_w}", con.src.name()),
-            con.src.pos(),
-        ))
-        .add_note(self.diag.add_info(
-            format!("destination `{}' has width {dst_w}", con.dst.name(),),
-            con.dst.pos(),
-        ));
+        .add_note(
+            self.diag
+                .add_info(format!("source has width {src_w}"), con.src.pos()),
+        )
+        .add_note(
+            self.diag.add_info(
+                format!("destination has width {dst_w}"),
+                con.dst.pos(),
+            ),
+        );
         self.add_obligations(Some(cons));
     }
 
@@ -103,6 +105,10 @@ impl IntervalCheck {
 
         // Check that for each index, the left bundle's availability is a subset
         // of the right bundle's availability
+        let idx_eq = core::OrderConstraint::eq(
+            left.idx.copy().into(),
+            right.idx.copy().into(),
+        );
         let incl = OrderConstraint::subset(
             left.liveness.inner().clone(),
             right.liveness.inner().clone(),
@@ -116,16 +122,16 @@ impl IntervalCheck {
                  format!("bundle's wires are required for {}", left.liveness),
                  left.liveness.pos(),
              ))
-             .add_note(self.diag.add_info(
-                 format!("parameter ranges from 0 to {}", right.len),
-                 right.idx.pos(),
-             ))
-             .add_note(self.diag.add_info(
-                 format!("parameter ranges from 0 to {}", left.len),
-                 left.idx.pos(),
-             ))
+            //  .add_note(self.diag.add_info(
+            //      format!("parameter ranges from 0 to {}", right.len),
+            //      right.idx.pos(),
+            //  ))
+            //  .add_note(self.diag.add_info(
+            //      format!("parameter ranges from 0 to {}", left.len),
+            //      left.idx.pos(),
+            //  ))
              .with_defines(vec![right.idx.copy(), left.idx.copy()])
-             .with_path_cond(vec![len_eq.clone()])
+             .with_path_cond(vec![len_eq.clone(), idx_eq.clone()])
         }).chain(iter::once(len_cons)).collect_vec();
 
         self.add_obligations(incl)
@@ -200,18 +206,31 @@ impl IntervalCheck {
             let inv_idx = ctx.get_invoke_idx(&invoke.name);
             // We use an unresolved signature here because [Self::connect] will eventually resolve them using
             // [CompBinding::get_resolved_ports]
-            let sig = inv_idx.unresolved_signature(ctx);
-            let inputs = ctx.prog[sig]
-                .inputs()
-                .map(|pd| pd.name().clone())
-                .collect_vec();
+            let sig = inv_idx.resolved_signature(ctx);
+            let inputs = sig.inputs().map(|pd| pd.name().clone()).collect_vec();
             // Check connections implied by the invocation
             for (actual, formal) in actuals.iter().zip(inputs) {
-                let dst = core::Loc::new(
-                    core::Port::comp(invoke.name.clone(), formal.clone()),
-                    formal.pos(),
+                let dst = if let core::PortDef::Bundle(b) =
+                    sig.get_port(&formal).inner()
+                {
+                    // Generate a complete range splat for the invocation bundle implied
+                    // by this port.
+                    core::Port::InvBundle {
+                        invoke: invoke.name.clone(),
+                        port: formal.clone(),
+                        range: core::Splat::range(
+                            core::Expr::concrete(0),
+                            b.typ.len.inner().clone(),
+                        ),
+                    }
+                } else {
+                    core::Port::comp(invoke.name.clone(), formal.clone())
+                };
+                let con = core::Connect::new(
+                    core::Loc::new(dst, formal.pos()),
+                    actual.clone(),
+                    None,
                 );
-                let con = core::Connect::new(dst, actual.clone(), None);
                 self.connect(&con, ctx)?;
             }
         }
@@ -413,17 +432,16 @@ impl visitor::Checker for IntervalCheck {
         self.port_bundle_index(src, ctx);
         self.port_bundle_index(dst, ctx);
 
-        let resolve_range =
-            |r: &core::Range,
-             event_b: &utils::Binding<Time>,
-             param_b: &utils::Binding<core::Expr>| {
-                r.clone().resolve_exprs(param_b).resolve_event(event_b)
-            };
-
         // Check that the widths of the ports match
-        let mb_dst = ctx.get_resolved_port(dst, resolve_range);
-        let mb_src = ctx.get_resolved_port(src, resolve_range);
+        let mb_dst = ctx.get_resolved_port(dst);
+        let mb_src = ctx.get_resolved_port(src);
         self.check_width(con, &mb_src, &mb_dst);
+
+        log::trace!(
+            "Checking connect types:\n{}\n{}",
+            mb_dst.clone().unwrap(),
+            mb_src.clone().unwrap()
+        );
 
         // If we have: dst = src. We need:
         // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
@@ -438,7 +456,7 @@ impl visitor::Checker for IntervalCheck {
                         liveness: src_liveness,
                         ..
                     } = src_port else {
-                        todo!("Expected port type, provided bundle type")
+                        todo!("Mismatched types:\nsource: {src_port}\ndestination: {dst}")
                     };
 
                     let within_fact = OrderConstraint::subset(

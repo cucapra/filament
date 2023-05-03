@@ -58,6 +58,7 @@ impl Obligation {
         if self.path_cond.is_empty() {
             self.cons.clone()
         } else {
+            // XXX: Why is this an or instead of an and?
             let assumes = format!(
                 "(or {})",
                 self.path_cond

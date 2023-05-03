@@ -5,9 +5,9 @@ error: source and destination widths must match
   ┌─ tests/errors/port-mismatch.fil:2:11
   │
 2 │     out = in;
-  │     ----  ^^ source `in' has width 32
+  │     ----  ^^ source has width 32
   │     │      
-  │     destination `out' has width 16
+  │     destination has width 16
 
 Compilation failed with 1 errors.
 Run with --show-models to generate assignments for failing constraints.

@@ -162,7 +162,7 @@ impl Signature {
 
     /// Find a port on the component. Returns `None` if the port does not exist.
     pub fn find_port(&self, port: &Id) -> Option<Loc<PortDef>> {
-        self.ports
+        self.ports()
             .iter()
             .find(|p| p.name().inner() == port)
             .cloned()

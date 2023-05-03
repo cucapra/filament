@@ -205,7 +205,7 @@ impl FilSolver {
     }
 
     pub fn declare_var(&mut self, var: core::Id) {
-        log::trace!("Declaring constant {}", var);
+        log::trace!("Declaring {}", var);
         self.s.declare_const(var.to_string(), "Int").unwrap();
         // All values must be positive
         self.s.assert(format!("(>= {} 0)", var)).unwrap();

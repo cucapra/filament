@@ -26,7 +26,12 @@ impl InstanceParams {
         param: &core::Id,
     ) -> Box<dyn Iterator<Item = u64> + '_> {
         // Find the index of the parameter in the component
-        let idx = self.params[comp].iter().position(|p| p == param).unwrap();
+        let idx = self.params[comp]
+            .iter()
+            .position(|p| p == param)
+            .unwrap_or_else(|| {
+                panic!("Parameter `{param}' not found in `{comp}'")
+            });
         // Return all values that occur at that position
         if let Some(params) = self.bindings.get(comp) {
             Box::new(params.iter().map(move |binding| binding[idx]))

@@ -1,0 +1,10 @@
+comp Foo[#N]<G:1>(
+    in[#N]: for<#i> @[G+#i, G+#i+1] 32
+) -> () {}
+
+comp Bar[#P]<T:1>() -> () {
+    bundle f[#P]: for<#k> @[T+#k, T+#k+1] 16;
+
+    F := new Foo[#P];
+    f0 := F<T>(f{1..#P});
+}

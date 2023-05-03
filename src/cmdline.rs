@@ -29,6 +29,6 @@ pub struct Opts {
     pub dump_interface: bool,
 
     /// set log level
-    #[argh(option, long = "log", default = "log::LevelFilter::Info")]
+    #[argh(option, long = "log", default = "log::LevelFilter::Warn")]
     pub log_level: log::LevelFilter,
 }
