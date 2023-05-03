@@ -497,7 +497,13 @@ impl visitor::Checker for IntervalCheck {
                         liveness: src_liveness,
                         ..
                     } = src_port else {
-                        todo!("Mismatched types:\nsource: {src_port}\ndestination: {dst}")
+                        let err = Error::malformed("expected port type but found bundle").add_note(
+                            self.diag.add_info("is a port", dst.pos())
+                        ).add_note(
+                            self.diag.add_info("is a bundle", src.pos())
+                        );
+                        self.diag.add_error(err);
+                        return Traverse::Continue(());
                     };
 
                     let within_fact = OrderConstraint::subset(
