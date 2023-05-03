@@ -524,12 +524,21 @@ impl visitor::Checker for IntervalCheck {
                 }
             }
             core::PortDef::Bundle(bl) => {
-                let Some(core::PortDef::Bundle(br)) = mb_src else {
-                    todo!("Expected bundle type, provided port type")
+                if let Some(core::PortDef::Bundle(br)) = mb_src {
+                    let blt = core::Loc::new(bl.typ, dst.pos());
+                    let brt = core::Loc::new(br.typ, src.pos());
+                    self.bundle_inclusion(blt, brt);
+                } else {
+                    let err =
+                        Error::malformed("expected bundle but found port")
+                            .add_note(
+                                self.diag.add_info("is a bundle", dst.pos()),
+                            )
+                            .add_note(
+                                self.diag.add_info("is a port", src.pos()),
+                            );
+                    self.diag.add_error(err);
                 };
-                let blt = core::Loc::new(bl.typ, dst.pos());
-                let brt = core::Loc::new(br.typ, src.pos());
-                self.bundle_inclusion(blt, brt)
             }
         }
 
