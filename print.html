@@ -885,7 +885,7 @@ comp Shift[#W, #N]&lt;G: 1&gt;(
 ) -&gt; (
     @[G+#N, G+#N+1] out: #W
 ) {
-    bundle f[#N+1]: for&lt;#i&gt; @[G+#i, G+#i+1] #W;
+    bundle f[#N+1]: for&lt;#k&gt; @[G+#k, G+#k+1] #W;
 
     f{0} = in;
     for #i in 0..#N {
