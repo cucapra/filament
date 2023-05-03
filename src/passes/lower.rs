@@ -45,8 +45,11 @@ impl Lower {
 
     fn port(&self, port: &core::Port) -> core::Port {
         match &port {
-            core::Port::BundlePort { name, idx } => {
-                let idx = u64::try_from(idx.inner()).unwrap() as usize;
+            core::Port::Bundle { name, access } => {
+                let core::Access::Index(idx) = access.inner() else {
+                    unreachable!("Unexpected bundle range access found: `{port}'")
+                };
+                let idx = u64::try_from(idx).unwrap() as usize;
                 let writes = self.bundle_writes.get(name).unwrap();
                 writes[idx]
                     .clone()
@@ -97,8 +100,11 @@ impl visitor::Transform for Lower {
         _: &CompBinding,
     ) -> FilamentResult<Vec<core::Command>> {
         let src = self.port(con.src.inner());
-        if let core::Port::BundlePort { name, idx } = con.dst.inner() {
-            let idx = u64::try_from(idx.inner()).unwrap() as usize;
+        if let core::Port::Bundle { name, access } = con.dst.inner() {
+            let core::Access::Index(idx) = access.inner() else {
+                unreachable!("Unexpected bundle range access found: `{}'", con.dst)
+            };
+            let idx = u64::try_from(idx).unwrap() as usize;
             debug_assert!(
                 self.bundle_writes[name.inner()][idx].is_none(),
                 "multiple writes to {name}{{{idx}}}"
@@ -153,7 +159,7 @@ impl visitor::Transform for Lower {
                 let start_time = u64::try_from(t.offset()).unwrap();
                 let port = self.get_fsm(&t.event()).port(start_time);
                 let con = core::Connect::new(
-                    Loc::unknown(core::Port::comp(
+                    Loc::unknown(core::Port::inv_port(
                         bind.clone(),
                         interface.name.clone(),
                     )),
@@ -168,7 +174,7 @@ impl visitor::Transform for Lower {
                 let guard = self.range_to_guard(formal.liveness());
                 let port = self.port(src.inner());
                 let con = core::Connect::new(
-                    Loc::unknown(core::Port::comp(
+                    Loc::unknown(core::Port::inv_port(
                         bind.clone(),
                         formal.name().clone(),
                     )),

@@ -368,10 +368,11 @@ impl FilamentParser {
         Ok(())
     }
 
-    fn splat(input: Node) -> ParseResult<core::Splat> {
+    fn splat(input: Node) -> ParseResult<Loc<core::Access>> {
+        let sp = Self::get_span(&input);
         match_nodes!(
             input.clone().into_children();
-            [expr(l), dots(_), expr(r)] => Ok(core::Splat::range(l.take(), r.take())),
+            [expr(l), dots(_), expr(r)] => Ok(Loc::new(core::Access::range(l.take(), r.take()), sp)),
             [dots(_)] => Err(input.error("Complete splat is not supported yet"))
         )
     }
@@ -382,10 +383,10 @@ impl FilamentParser {
             input.into_children();
             [bitwidth(constant)] => core::Port::constant(constant),
             [identifier(name)] => core::Port::this(name),
-            [identifier(name), splat(range)] => core::Port::ThisBundle{ name, range },
-            [identifier(comp), identifier(name)] => core::Port::comp(comp, name),
-            [identifier(invoke), identifier(port), splat(range)] => core::Port::InvBundle { invoke, port, range },
-            [identifier(name), expr(idx)] => core::Port::bundle(name, idx),
+            [identifier(name), splat(range)] => core::Port::bundle(name, range),
+            [identifier(comp), identifier(name)] => core::Port::inv_port(comp, name),
+            [identifier(invoke), identifier(port), splat(access)] => core::Port::InvBundle { invoke, port, access },
+            [identifier(name), expr(idx)] => core::Port::bundle(name, idx.map(|x| x.into())),
         );
         Ok(Loc::new(n, sp))
     }

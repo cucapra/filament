@@ -76,7 +76,7 @@ impl BundleElim {
                     let this_port = core::Port::This(name.clone()).into();
                     let bundle_port = core::Port::bundle(
                         bundle_name.clone(),
-                        core::Expr::concrete(i).into(),
+                        Loc::unknown(core::Expr::concrete(i).into()),
                     )
                     .into();
                     // Generate assignment for the bundle
@@ -145,7 +145,7 @@ impl BundleElim {
         &self,
         comp: core::Id,
         bundle: core::Id,
-        range: core::Splat,
+        (start, end): (core::Expr, core::Expr),
     ) -> impl Iterator<Item = Loc<core::Id>> + '_ {
         let renamed =
             &self.sig_bundle_map.get(&(comp, bundle)).unwrap_or_else(|| {
@@ -154,9 +154,83 @@ impl BundleElim {
                     bundle, comp
                 )
             });
-        let start: u64 = range.start.try_into().unwrap();
-        let end: u64 = range.end.try_into().unwrap();
+        let start: u64 = start.try_into().unwrap();
+        let end: u64 = end.try_into().unwrap();
         (start..end).map(|i| Loc::unknown(renamed[i as usize]))
+    }
+
+    fn port(
+        &self,
+        cur_name: core::Id,
+        p: Loc<core::Port>,
+    ) -> Vec<Loc<core::Port>> {
+        let pos = p.pos();
+        match p.take() {
+            core::Port::Bundle { name, access } => {
+                // XXX: Dumb pattern because let-else doesn't drop the borrow
+                // from access in the else branch.
+                if matches!(access.inner(), core::Access::Index(_)) {
+                    return vec![Loc::new(
+                        core::Port::bundle(name, access),
+                        pos,
+                    )];
+                }
+                let core::Access::Range { start, end } = access.take() else {
+                    unreachable!();
+                };
+
+                // This is a bundle in the signature
+                if self.sig_bundle_map.contains_key(&(cur_name, *name)) {
+                    return self
+                        .bundle_splat_ports(cur_name, *name, (start, end))
+                        .map(|p| Loc::new(core::Port::This(p), pos))
+                        .collect_vec();
+                }
+
+                // This is a locally bound bundle
+                let s: u64 = start.try_into().unwrap();
+                let e: u64 = end.try_into().unwrap();
+                (s..e)
+                    .map(|idx| {
+                        core::Port::bundle(
+                            name.clone(),
+                            Loc::unknown(core::Expr::concrete(idx).into()),
+                        )
+                        .into()
+                    })
+                    .collect_vec()
+            }
+            core::Port::InvBundle {
+                invoke,
+                port,
+                access,
+            } => {
+                if let core::Access::Index(_) = access.inner() {
+                    return vec![Loc::new(
+                        core::Port::inv_bundle(invoke, port, access),
+                        pos,
+                    )];
+                }
+                let core::Access::Range { start, end } = access.take() else {
+                    unreachable!();
+                };
+
+                self.bundle_splat_ports(
+                    self.sig_from_invoke(*invoke),
+                    *port,
+                    (start, end),
+                )
+                .map(|name| {
+                    core::Port::InvPort {
+                        invoke: invoke.clone(),
+                        name,
+                    }
+                    .into()
+                })
+                .collect_vec()
+            }
+            p => vec![Loc::new(p, pos)],
+        }
     }
 
     fn commands(
@@ -175,100 +249,26 @@ impl BundleElim {
                     self.inst_map.insert(**name, **component);
                     cmd
                 }
-                core::Command::Invoke(core::Invoke {
-                    name,
-                    instance,
-                    abstract_vars,
-                    ports,
-                }) => {
+                core::Command::Invoke(mut inv) => {
                     // Add invoke -> instance mapping
-                    self.inv_map.insert(*name, *instance);
-
-                    let Some(ports) = ports else {
-                        return core::Invoke {
-                            name,
-                            instance,
-                            abstract_vars,
-                            ports,
-                        }.into();
-                    };
-                    let ports = ports
-                        .into_iter()
-                        .flat_map(|p| {
-                            let pos = p.pos();
-                            match p.take() {
-                                core::Port::ThisBundle { name, range } => {
-                                    if self
-                                        .sig_bundle_map
-                                        .contains_key(&(cur_name, *name))
-                                    {
-                                        // This is a bundle in the signature
-                                        self.bundle_splat_ports(
-                                            cur_name, *name, range,
-                                        )
-                                        .map(|p| {
-                                            Loc::new(core::Port::This(p), pos)
-                                        })
-                                        .collect_vec()
-                                    } else {
-                                        // This is a locally bound bundle
-                                        let s: u64 =
-                                            range.start.try_into().unwrap();
-                                        let e: u64 =
-                                            range.end.try_into().unwrap();
-                                        (s..e)
-                                            .map(|idx| {
-                                                core::Port::bundle(
-                                                    name.clone(),
-                                                    core::Expr::concrete(idx)
-                                                        .into(),
-                                                )
-                                                .into()
-                                            })
-                                            .collect_vec()
-                                    }
-                                }
-                                core::Port::InvBundle {
-                                    invoke,
-                                    port,
-                                    range,
-                                } => self
-                                    .bundle_splat_ports(
-                                        self.sig_from_invoke(*invoke),
-                                        *port,
-                                        range,
-                                    )
-                                    .map(|name| {
-                                        core::Port::InvPort {
-                                            invoke: invoke.clone(),
-                                            name,
-                                        }
-                                        .into()
-                                    })
-                                    .collect_vec(),
-                                p => vec![Loc::new(p, pos)],
-                            }
-                        })
-                        .collect_vec();
-                    core::Invoke {
-                        name,
-                        instance,
-                        abstract_vars,
-                        ports: Some(ports),
+                    self.inv_map.insert(*inv.name, *inv.instance);
+                    if let Some(ports) = inv.ports {
+                        inv.ports = Some(
+                            ports
+                                .into_iter()
+                                .flat_map(|p| self.port(cur_name, p))
+                                .collect_vec(),
+                        );
                     }
-                    .into()
+                    inv.into()
                 }
-                core::Command::Connect(core::Connect { dst, src, guard }) => {
-                    if matches!(
-                        dst.inner(),
-                        core::Port::InvBundle { .. }
-                            | core::Port::ThisBundle { .. }
-                    ) {
+                core::Command::Connect(con) => {
+                    if matches!(con.dst.inner(), core::Port::InvBundle { .. }) {
                         unimplemented!(
                             "Bundle splatting in connect not yet implemented"
                         )
                     } else {
-                        core::Connect { dst, src, guard }.into()
+                        con.into()
                     }
                 }
                 core::Command::ForLoop(core::ForLoop {

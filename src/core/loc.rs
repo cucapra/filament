@@ -64,6 +64,17 @@ impl<T: Clone> Loc<T> {
             pos: self.pos,
         }
     }
+
+    pub fn map_into<B>(self) -> Loc<B>
+    where
+        T: Into<B>,
+        B: Clone,
+    {
+        Loc {
+            inner: self.inner.into(),
+            pos: self.pos,
+        }
+    }
 }
 
 impl<T: Copy> Loc<T> {
