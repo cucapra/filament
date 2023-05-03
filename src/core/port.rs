@@ -14,6 +14,11 @@ pub enum PortDef {
     },
     Bundle(Bundle),
 }
+impl From<Bundle> for PortDef {
+    fn from(b: Bundle) -> Self {
+        Self::Bundle(b)
+    }
+}
 
 impl PortDef {
     pub fn port(

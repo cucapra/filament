@@ -86,7 +86,7 @@ impl visitor::Transform for Lower {
     ) -> FilamentResult<Vec<core::Command>> {
         self.bundle_writes.insert(
             *bundle.name,
-            vec![None; u64::try_from(bundle.len.inner()).unwrap() as usize],
+            vec![None; u64::try_from(bundle.typ.len.inner()).unwrap() as usize],
         );
         Ok(vec![])
     }

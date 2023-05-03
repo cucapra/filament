@@ -1,6 +1,6 @@
 use super::IntervalCheck;
 use crate::binding::CompBinding;
-use crate::core::{self, ForLoop, OrderConstraint, Time};
+use crate::core::{self, ForLoop, OrderConstraint};
 use crate::errors::Error;
 use crate::utils::{self, FilSolver};
 use crate::visitor::{self, Checker, Traverse};
@@ -15,7 +15,7 @@ impl IntervalCheck {
             return
         };
         let bun_idx = ctx.get_bundle_idx(name);
-        let bun_len = &ctx[bun_idx].len;
+        let bun_len = &ctx[bun_idx].typ.len;
         let greater = core::Constraint::sub(OrderConstraint::lt(
             idx.inner().clone().into(),
             bun_len.inner().clone().into(),
@@ -64,15 +64,74 @@ impl IntervalCheck {
             src_w.clone().into(),
         ))
         .obligation("source and destination widths must match")
-        .add_note(self.diag.add_info(
-            format!("source `{}' has width {src_w}", con.src.name()),
-            con.src.pos(),
-        ))
-        .add_note(self.diag.add_info(
-            format!("destination `{}' has width {dst_w}", con.dst.name(),),
-            con.dst.pos(),
-        ));
+        .add_note(
+            self.diag
+                .add_info(format!("source has width {src_w}"), con.src.pos()),
+        )
+        .add_note(
+            self.diag.add_info(
+                format!("destination has width {dst_w}"),
+                con.dst.pos(),
+            ),
+        );
         self.add_obligations(Some(cons));
+    }
+
+    /// Checks that the availabilities of the left bundle are a subset of the
+    /// availabilities of the right bundle.
+    fn bundle_inclusion(
+        &mut self,
+        left: core::Loc<core::BundleType>,
+        right: core::Loc<core::BundleType>,
+    ) {
+        // Check that the bundle's lengths are equal
+        let left_len = &left.len;
+        let right_len = &right.len;
+        let len_eq = core::OrderConstraint::eq(
+            left_len.inner().clone(),
+            right_len.inner().clone(),
+        );
+        let len_cons = len_eq
+            .clone()
+            .obligation("bundle lengths must be equal")
+            .add_note(self.diag.add_info(
+                format!("length of bundle is {}", left.len),
+                left.pos(),
+            ))
+            .add_note(self.diag.add_info(
+                format!("length of bundle is {}", right.len),
+                right.pos(),
+            ));
+
+        // Check that for each index, the left bundle's availability is a subset
+        // of the right bundle's availability
+        // Canonicalize left to use the same index as right
+        let l_live =
+            left.liveness
+                .inner()
+                .clone()
+                .resolve_exprs(&utils::Binding::new(Some((
+                    left.idx.copy(),
+                    right.idx.copy().into(),
+                ))));
+
+        let r_live = right.liveness.inner().clone();
+        let incl = OrderConstraint::subset(l_live, r_live).map(|c| {
+            c.obligation("source bundle's wires must be available for as long as required")
+             .add_note(self.diag.add_info(
+                 format!("bundle's wires are available for {}", right.liveness),
+                 right.pos(),
+             ))
+             .add_note(self.diag.add_info(
+                 format!("bundle's wires are required for {}", left.liveness),
+                 left.liveness.pos(),
+             ))
+             // Only define the right bundle's index
+             .with_defines(vec![right.idx.copy()])
+             .with_path_cond(vec![len_eq.clone()])
+        }).chain(iter::once(len_cons)).collect_vec();
+
+        self.add_obligations(incl)
     }
 
     /// Check that the events provided to an invoke obey the constraints implied
@@ -144,18 +203,31 @@ impl IntervalCheck {
             let inv_idx = ctx.get_invoke_idx(&invoke.name);
             // We use an unresolved signature here because [Self::connect] will eventually resolve them using
             // [CompBinding::get_resolved_ports]
-            let sig = inv_idx.unresolved_signature(ctx);
-            let inputs = ctx.prog[sig]
-                .inputs()
-                .map(|pd| pd.name().clone())
-                .collect_vec();
+            let sig = inv_idx.resolved_signature(ctx);
+            let inputs = sig.inputs().map(|pd| pd.name().clone()).collect_vec();
             // Check connections implied by the invocation
             for (actual, formal) in actuals.iter().zip(inputs) {
-                let dst = core::Loc::new(
-                    core::Port::comp(invoke.name.clone(), formal.clone()),
-                    formal.pos(),
+                let dst = if let core::PortDef::Bundle(b) =
+                    sig.get_port(&formal).inner()
+                {
+                    // Generate a complete range splat for the invocation bundle implied
+                    // by this port.
+                    core::Port::InvBundle {
+                        invoke: invoke.name.clone(),
+                        port: formal.clone(),
+                        range: core::Splat::range(
+                            core::Expr::concrete(0),
+                            b.typ.len.inner().clone(),
+                        ),
+                    }
+                } else {
+                    core::Port::comp(invoke.name.clone(), formal.clone())
+                };
+                let con = core::Connect::new(
+                    core::Loc::new(dst, formal.pos()),
+                    actual.clone(),
+                    None,
                 );
-                let con = core::Connect::new(dst, actual.clone(), None);
                 self.connect(&con, ctx)?;
             }
         }
@@ -188,7 +260,7 @@ impl visitor::Checker for IntervalCheck {
             solver.prove(
                 sig.events()
                     .map(|e| e.take())
-                    .chain(sig.params.iter().cloned()),
+                    .chain(sig.params.iter().map(|p| p.copy())),
                 constraints,
                 sig.well_formed(&mut diagnostics).into_iter().collect(),
                 vec![],
@@ -239,15 +311,16 @@ impl visitor::Checker for IntervalCheck {
             body,
         } = l;
 
-        self.add_var(*idx);
+        let idx = *idx.inner();
+        self.add_var(idx);
         let var_bounds = vec![
             core::OrderConstraint::gte(
-                core::TimeSub::from(core::Expr::from(*idx)),
+                core::TimeSub::from(core::Expr::from(idx)),
                 core::TimeSub::from(start.clone()),
             )
             .into(),
             core::OrderConstraint::lt(
-                core::TimeSub::from(core::Expr::from(*idx)),
+                core::TimeSub::from(core::Expr::from(idx)),
                 core::TimeSub::from(end.clone()),
             )
             .into(),
@@ -258,6 +331,62 @@ impl visitor::Checker for IntervalCheck {
             self.command(cmd, ctx);
         }
 
+        Traverse::Continue(())
+    }
+
+    // Checking a bundle involves checking that the availability of all signals in the bundle is
+    // less than the delay of the containing component.
+    fn bundle(
+        &mut self,
+        _is_port: bool,
+        bundle: &core::Bundle,
+        ctx: &CompBinding,
+    ) -> Traverse {
+        let core::BundleType {
+            idx, len, liveness, ..
+        } = &bundle.typ;
+
+        // The index ranges over the length of the bundle
+        let idx_range = [
+            OrderConstraint::gte(
+                core::Expr::abs(*idx.inner()),
+                core::Expr::concrete(0),
+            ),
+            OrderConstraint::lt(
+                core::Expr::abs(*idx.inner()),
+                len.inner().clone(),
+            ),
+        ];
+
+        // Get the delay associated with the event used in the bundle
+        let ev = liveness.inner().start.event();
+        let delay = &ctx.prog[ctx.sig()].get_event(&ev).inner().delay;
+        let live_note = self.diag.add_info(
+            format!("bundle's liveness is {}", liveness.len()),
+            liveness.pos(),
+        );
+        let idx_note = self.diag.add_info(
+            format!("parameter ranges from 0 to {}", len.inner()),
+            idx.pos(),
+        );
+        // The event's delay must be gte than availability's length
+        let delay_obl = OrderConstraint::gte(
+            delay.inner().clone(),
+            liveness.len()
+        ).obligation(
+            "length of bundle wire availability must be less than event's delay"
+        )
+        .add_note(live_note)
+        .add_note(idx_note)
+        .add_note(self.diag.add_info("event's delay", delay.pos()))
+        .with_path_cond(idx_range.clone()).with_defines(iter::once(*idx.inner()));
+
+        // Ensure that the availabilty of each index of bundle is well-formed (end > start)
+        let wf = liveness.inner().well_formed().obligation(
+            "bundle's liveness interval is malformed: end is not strictly greater than start",
+        ).add_note(live_note).add_note(idx_note).with_defines(iter::once(*idx.inner())).with_path_cond(idx_range);
+
+        self.add_obligations(vec![wf, delay_obl]);
         Traverse::Continue(())
     }
 
@@ -300,44 +429,64 @@ impl visitor::Checker for IntervalCheck {
         self.port_bundle_index(src, ctx);
         self.port_bundle_index(dst, ctx);
 
-        let resolve_range =
-            |r: &core::Range,
-             event_b: &utils::Binding<Time>,
-             param_b: &utils::Binding<core::Expr>| {
-                r.clone().resolve_exprs(param_b).resolve_event(event_b)
-            };
+        // Check that the widths of the ports match
+        let mb_dst = ctx.get_resolved_port(dst);
+        let mb_src = ctx.get_resolved_port(src);
+        self.check_width(con, &mb_src, &mb_dst);
 
-        let dst_port = ctx.get_resolved_port(dst, resolve_range);
-        let src_port = ctx.get_resolved_port(src, resolve_range);
-        self.check_width(con, &src_port, &dst_port);
+        log::trace!(
+            "Checking connect types:\n{}\n{}",
+            mb_dst.clone().unwrap(),
+            mb_src.clone().unwrap()
+        );
 
-        let d = dst_port.unwrap();
-        let requirement = d.liveness();
         // If we have: dst = src. We need:
         // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
         // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
-        if let Some(guarantee) = &src_port {
-            let within_fact = OrderConstraint::subset(
-                requirement.clone().take(),
-                guarantee.liveness().clone().take(),
-            )
-            .map(|e| {
-                core::Constraint::base(e)
-                    .obligation("source port must be available longer than the destination port requires")
-                    .add_note(self.diag.add_info(
-                        format!(
-                            "source is available for {}",
-                            guarantee.liveness()
-                        ),
-                        src.pos(),
-                    ))
-                    .add_note(self.diag.add_info(
-                        format!("destination's requirement {}", requirement),
-                        dst.pos(),
-                    ))
-            })
-            .collect_vec();
-            self.add_obligations(within_fact);
+        match mb_dst.unwrap() {
+            core::PortDef::Port {
+                liveness: requirement,
+                ..
+            } => {
+                if let Some(src_port) = &mb_src {
+                    let core::PortDef::Port {
+                        liveness: src_liveness,
+                        ..
+                    } = src_port else {
+                        todo!("Mismatched types:\nsource: {src_port}\ndestination: {dst}")
+                    };
+
+                    let within_fact = OrderConstraint::subset(
+                        requirement.clone().take(),
+                        src_liveness.clone().take(),
+                    )
+                    .map(|e| {
+                        core::Constraint::base(e)
+                            .obligation("source port must be available longer than the destination port requires")
+                            .add_note(self.diag.add_info(
+                                format!(
+                                    "source is available for {}",
+                                    src_liveness
+                                ),
+                                src.pos(),
+                            ))
+                            .add_note(self.diag.add_info(
+                                format!("destination's requirement {}", requirement),
+                                dst.pos(),
+                            ))
+                    })
+                    .collect_vec();
+                    self.add_obligations(within_fact);
+                }
+            }
+            core::PortDef::Bundle(bl) => {
+                let Some(core::PortDef::Bundle(br)) = mb_src else {
+                    todo!("Expected bundle type, provided port type")
+                };
+                let blt = core::Loc::new(bl.typ, dst.pos());
+                let brt = core::Loc::new(br.typ, src.pos());
+                self.bundle_inclusion(blt, brt)
+            }
         }
 
         Traverse::Continue(())
@@ -378,7 +527,7 @@ impl visitor::Checker for IntervalCheck {
     fn enter_component(
         &mut self,
         comp: &core::Component,
-        _: &CompBinding,
+        ctx: &CompBinding,
     ) -> Traverse {
         log::trace!("=========== Component {} ==========", comp.sig.name);
         // Ensure that the signature is well-formed
@@ -414,6 +563,13 @@ impl visitor::Checker for IntervalCheck {
                 .map(|c| utils::SExp::from(c.inner().clone())),
         );
 
+        // Check bundle ports for well-formedness
+        for p in comp.sig.ports() {
+            if let core::PortDef::Bundle(b) = p.inner() {
+                self.bundle(true, b, ctx)?;
+            }
+        }
+
         // If the component uses a user-level constraint, we cannot verify it's internal.
         if has_ulc {
             return Traverse::Break(());
@@ -437,7 +593,7 @@ impl visitor::Checker for IntervalCheck {
             .sig
             .events()
             .map(|e| e.take())
-            .chain(comp.sig.params.iter().cloned())
+            .chain(comp.sig.params.iter().map(|p| p.copy()))
             .chain(self.vars())
             .collect_vec();
 

@@ -115,14 +115,10 @@ impl Rewriter {
                     )
                     .into()
                 }
-                core::Command::Bundle(core::Bundle {
-                    name, len, typ, ..
-                }) => core::Bundle::new(
-                    Loc::unknown(self.binding[name.inner()]),
-                    len,
-                    typ,
-                )
-                .into(),
+                core::Command::Bundle(core::Bundle { name, typ, .. }) => {
+                    core::Bundle::new(self.binding[name.inner()].into(), typ)
+                        .into()
+                }
                 core::Command::If(_) => todo!(),
                 core::Command::ForLoop(_) => unreachable!(),
                 core::Command::Fsm(_) => unreachable!(),

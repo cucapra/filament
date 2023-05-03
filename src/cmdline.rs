@@ -27,4 +27,8 @@ pub struct Opts {
     /// output the interface.json for the input program
     #[argh(switch, long = "dump-interface")]
     pub dump_interface: bool,
+
+    /// set log level
+    #[argh(option, long = "log", default = "log::LevelFilter::Warn")]
+    pub log_level: log::LevelFilter,
 }

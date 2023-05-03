@@ -204,6 +204,26 @@ impl FilSolver {
         })
     }
 
+    pub fn declare_var(&mut self, var: core::Id) {
+        log::trace!("Declaring {}", var);
+        self.s.declare_const(var.to_string(), "Int").unwrap();
+        // All values must be positive
+        self.s.assert(format!("(>= {} 0)", var)).unwrap();
+    }
+
+    pub fn assume(
+        &mut self,
+        assume: SExp,
+        act_lit: Option<&rsmt2::actlit::Actlit>,
+    ) {
+        log::trace!("Assuming {}", assume);
+        if let Some(act) = act_lit {
+            self.s.assert_act(act, format!("{}", assume)).unwrap();
+        } else {
+            self.s.assert(format!("{}", assume)).unwrap();
+        }
+    }
+
     pub fn prove(
         &mut self,
         vars: impl IntoIterator<Item = core::Id>,
@@ -221,20 +241,16 @@ impl FilSolver {
         // Define all the constants
         let vars = vars.into_iter().collect_vec();
         for var in &vars {
-            log::trace!("Declaring constant {}", var);
-            self.s.declare_const(var.to_string(), "Int").unwrap();
-            // All values must be positive
-            self.s.assert(format!("(>= {} 0)", var)).unwrap();
+            self.declare_var(*var);
         }
 
         // Define assumptions on constraints
         for assume in assumptions {
-            log::trace!("Assuming {}", assume);
-            self.s.assert(format!("{}", assume)).unwrap();
+            self.assume(assume, None);
         }
 
         for fact in asserts {
-            if let Some(model) = self.check_fact(&fact.constraint(), &vars) {
+            if let Some(model) = self.check_fact(&fact, &vars) {
                 let mut err = Error::from(fact);
                 if self.show_models {
                     let info = diag.add_message(model);
@@ -244,9 +260,8 @@ impl FilSolver {
             }
         }
         for share in sharing {
-            if let Some(model) =
-                self.check_fact(&SExp::from(share.clone()), &vars)
-            {
+            let obs = Obligation::new(SExp::from(share.clone()), "");
+            if let Some(model) = self.check_fact(&obs, &vars) {
                 let mut err = share.error(diag);
                 if self.show_models {
                     let info = diag.add_message(model);
@@ -261,10 +276,25 @@ impl FilSolver {
 
     /// Attempt to check facts.
     /// If the fact is false, add notes to the error showing the assignments that make it false.
-    fn check_fact(&mut self, sexp: &SExp, vars: &[core::Id]) -> Option<String> {
+    fn check_fact(
+        &mut self,
+        obl: &Obligation,
+        vars: &[core::Id],
+    ) -> Option<String> {
+        let mut requires_ctx = false;
+        // If the fact requires defining vars, we need to push a context
+        if !obl.defines.is_empty() {
+            requires_ctx = true;
+            self.s.push(1).unwrap();
+            for v in &obl.defines {
+                self.declare_var(*v);
+            }
+        }
+
         // Generate an activation literal
         let act = self.s.get_actlit().unwrap();
-        let formula = format!("(not {})", sexp);
+
+        let formula = format!("(not {})", obl.constraint());
         log::trace!("Assert {}", formula);
         self.s.assert_act(&act, formula).unwrap();
         // Check that the assertion was unsatisfiable
@@ -277,7 +307,11 @@ impl FilSolver {
             let msg = if !vars.is_empty() {
                 let assigns = self
                     .s
-                    .get_values(vars.iter().map(|n| n.to_string()))
+                    .get_values(
+                        vars.iter()
+                            .chain(obl.defines.iter())
+                            .map(|n| n.to_string()),
+                    )
                     .unwrap()
                     .into_iter()
                     .map(|(n, v)| format!("{}={}", n, v))
@@ -291,7 +325,13 @@ impl FilSolver {
         } else {
             None
         };
+
+        // Deactivate the activation literal
         self.s.de_actlit(act).unwrap();
+        // Pop context if needed
+        if requires_ctx {
+            self.s.pop(1).unwrap();
+        }
         assigns
     }
 }

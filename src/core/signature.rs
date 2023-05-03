@@ -63,7 +63,7 @@ pub struct Signature {
     /// Name of the component
     pub name: Loc<Id>,
     /// Parameters for the Signature
-    pub params: Vec<Id>,
+    pub params: Vec<Loc<Id>>,
     /// Unannotated ports that are threaded through by the backend
     pub unannotated_ports: Vec<(Id, u64)>,
     /// Mapping from name of signals to the abstract variable they provide
@@ -85,7 +85,7 @@ impl Signature {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: Loc<Id>,
-        params: Vec<Id>,
+        params: Vec<Loc<Id>>,
         events: Vec<Loc<EventBind>>,
         unannotated_ports: Vec<(Id, u64)>,
         interface_signals: Vec<InterfaceDef>,
@@ -162,7 +162,7 @@ impl Signature {
 
     /// Find a port on the component. Returns `None` if the port does not exist.
     pub fn find_port(&self, port: &Id) -> Option<Loc<PortDef>> {
-        self.ports
+        self.ports()
             .iter()
             .find(|p| p.name().inner() == port)
             .cloned()
@@ -208,12 +208,19 @@ impl Signature {
             .filter(move |event| self.get_interface(event).is_none())
     }
 
-    /// Constraints for well formedness
+    /// Constraints for non-bundle port well-formedness
     fn portdefs_well_formed(&self) -> Vec<Loc<Constraint>> {
         self.inputs()
             .chain(self.outputs())
-            .map(|mpd| {
-                Loc::new(mpd.liveness().well_formed(), mpd.liveness().pos())
+            .filter_map(|mpd| {
+                if let PortDef::Bundle(_) = mpd.inner() {
+                    None
+                } else {
+                    Some(Loc::new(
+                        mpd.liveness().well_formed(),
+                        mpd.liveness().pos(),
+                    ))
+                }
             })
             .collect_vec()
     }
@@ -277,7 +284,7 @@ impl Signature {
             args.len(),
         );
 
-        Binding::new(self.params.iter().cloned().zip(args.into_iter()))
+        Binding::new(self.params.iter().map(|p| p.copy()).zip(args.into_iter()))
     }
 }
 
@@ -296,7 +303,12 @@ impl Signature {
         // In the same way use of `E` in an invoke describes how often the invoke might trigger,
         // the start time of the signal describes when the signal is triggered.
         // We do not consider the end time because that only effects the length of the signal.
-        for port in self.inputs().chain(self.outputs()) {
+        // We skip this check for bundles and have it be separately handled by the interval checker.
+        for port in self
+            .inputs()
+            .chain(self.outputs())
+            .filter(|pd| matches!(pd.inner(), PortDef::Port { .. }))
+        {
             let delay = port.liveness().len();
             let ev = &port.liveness().start.event();
             evs.entry(*ev)

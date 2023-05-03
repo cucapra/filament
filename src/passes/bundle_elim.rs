@@ -41,23 +41,18 @@ impl BundleElim {
         pre_cmds: &mut Vec<core::Command>,
         post_cmds: &mut Vec<core::Command>,
     ) -> (Vec<Loc<core::PortDef>>, bool) {
+        // Add bundle to the top-level commands
+        pre_cmds.push(p.clone().into());
         let core::Bundle {
             name: bundle_name,
-            len,
-            typ,
+            typ:
+                core::BundleType {
+                    idx,
+                    len,
+                    liveness,
+                    bitwidth,
+                },
         } = p;
-
-        // Add bundle to the top-level commands
-        pre_cmds.push(
-            core::Bundle::new(bundle_name.clone(), len.clone(), typ.clone())
-                .into(),
-        );
-        // Extract the bundle type
-        let core::BundleType {
-            idx,
-            liveness,
-            bitwidth,
-        } = typ;
         let len: u64 = len
             .take()
             .try_into()
@@ -66,8 +61,10 @@ impl BundleElim {
         let ports =
             (0..len)
                 .map(|i| {
-                    let bind =
-                        Binding::new(vec![(idx, core::Expr::concrete(i))]);
+                    let bind = Binding::new(vec![(
+                        *idx.inner(),
+                        core::Expr::concrete(i),
+                    )]);
                     let liveness =
                         liveness.clone().take().resolve_exprs(&bind).into();
                     // Name of the new port is the bundle name with the index appended

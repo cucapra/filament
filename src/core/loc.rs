@@ -2,7 +2,7 @@ use crate::utils::GPosIdx;
 use std::fmt::Display;
 use std::hash::Hash;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 /// A type that contains several position objects and contains and inner value.
 pub struct Loc<T: Clone> {
     inner: T,
@@ -63,6 +63,13 @@ impl<T: Clone> Loc<T> {
             inner: f(self.inner),
             pos: self.pos,
         }
+    }
+}
+
+impl<T: Copy> Loc<T> {
+    /// Get a copy of the inner value.
+    pub fn copy(&self) -> T {
+        self.inner
     }
 }
 

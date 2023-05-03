@@ -61,7 +61,12 @@ where
     }
 
     #[inline]
-    fn bundle(&mut self, _: &core::Bundle, _ctx: &CompBinding) -> Traverse {
+    fn bundle(
+        &mut self,
+        _is_port: bool,
+        _: &core::Bundle,
+        _ctx: &CompBinding,
+    ) -> Traverse {
         Traverse::Continue(())
     }
 
@@ -74,9 +79,14 @@ where
     #[inline]
     fn enter_component(
         &mut self,
-        _: &core::Component,
+        comp: &core::Component,
         _ctx: &CompBinding,
     ) -> Traverse {
+        for p in comp.sig.ports() {
+            if let core::PortDef::Bundle(b) = p.inner() {
+                self.bundle(true, b, _ctx)?
+            }
+        }
         Traverse::Continue(())
     }
 
@@ -92,7 +102,7 @@ where
 
     fn command(&mut self, cmd: &core::Command, ctx: &CompBinding) -> Traverse {
         match cmd {
-            core::Command::Bundle(bl) => self.bundle(bl, ctx),
+            core::Command::Bundle(bl) => self.bundle(false, bl, ctx),
             core::Command::Invoke(inv) => self.invoke(inv, ctx),
             core::Command::Instance(inst) => self.instance(inst, ctx),
             core::Command::Connect(con) => self.connect(con, ctx),

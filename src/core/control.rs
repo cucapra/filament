@@ -402,7 +402,7 @@ impl std::fmt::Debug for Fsm {
 /// ```
 pub struct ForLoop {
     /// Index associated with this loop
-    pub idx: Id,
+    pub idx: Loc<Id>,
     /// Start of the range of this loop
     pub start: Expr,
     /// End of the range of this loop
@@ -412,7 +412,12 @@ pub struct ForLoop {
 }
 
 impl ForLoop {
-    pub fn new(idx: Id, start: Expr, end: Expr, body: Vec<Command>) -> Self {
+    pub fn new(
+        idx: Loc<Id>,
+        start: Expr,
+        end: Expr,
+        body: Vec<Command>,
+    ) -> Self {
         Self {
             idx,
             start,
@@ -485,7 +490,9 @@ impl From<If> for Command {
 /// ```
 pub struct BundleType {
     /// The name of the parameter for the bundle type
-    pub idx: Id,
+    pub idx: Loc<Id>,
+    /// Length of the bundle. The index parameter ranges over [0, len)
+    pub len: Loc<Expr>,
     /// Availability interval for the bundle
     pub liveness: Loc<Range>,
     /// Bitwidth of the bundle
@@ -493,9 +500,15 @@ pub struct BundleType {
 }
 
 impl BundleType {
-    pub fn new(idx: Id, liveness: Loc<Range>, bitwidth: Loc<Expr>) -> Self {
+    pub fn new(
+        idx: Loc<Id>,
+        len: Loc<Expr>,
+        liveness: Loc<Range>,
+        bitwidth: Loc<Expr>,
+    ) -> Self {
         Self {
             idx,
+            len,
             liveness,
             bitwidth,
         }
@@ -504,6 +517,7 @@ impl BundleType {
     pub fn resolve_exprs(self, binding: &Binding<Expr>) -> Self {
         Self {
             idx: self.idx,
+            len: self.len.map(|e| e.resolve(binding)),
             liveness: self.liveness.map(|e| e.resolve_exprs(binding)),
             bitwidth: self.bitwidth.map(|e| e.resolve(binding)),
         }
@@ -534,17 +548,14 @@ impl BundleType {
     /// ```
     /// for<#i> @[G+#i+#K, G+#i+1+#K] #W
     /// ```
-    pub fn offset(self, offset: Expr) -> Self {
+    pub fn shrink(self, start: Expr, end: Expr) -> Self {
         // Generate the offset by resolving the index of the bundle type with index+offset
-        let binding =
-            Binding::new(Some((self.idx, Expr::abs(self.idx) + offset)));
-        self.resolve_exprs(&binding)
-    }
-}
-
-impl Display for BundleType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "for<#{}> {} {}", self.idx, self.liveness, self.bitwidth)
+        let len = end - start.clone();
+        let idx = self.idx.copy();
+        let binding = Binding::new(Some((idx, Expr::abs(idx) + start)));
+        let mut resolved = self.resolve_exprs(&binding);
+        *resolved.len.inner_mut() = len;
+        resolved
     }
 }
 
@@ -556,21 +567,19 @@ impl Display for BundleType {
 pub struct Bundle {
     /// Name of the bundle
     pub name: Loc<Id>,
-    /// Length of the bundle
-    pub len: Loc<Expr>,
     /// Type of the bundle
     pub typ: BundleType,
 }
 
 impl Bundle {
-    pub fn new(name: Loc<Id>, len: Loc<Expr>, typ: BundleType) -> Self {
-        Self { name, len, typ }
+    pub fn new(name: Loc<Id>, typ: BundleType) -> Self {
+        Self { name, typ }
     }
 
     /// Generate a port definition corresponding to a given index
     pub fn liveness(&self, idx: Expr) -> PortDef {
         let mut bind = Binding::default();
-        bind.insert(self.typ.idx, idx);
+        bind.insert(*self.typ.idx.inner(), idx);
         let liveness = self.typ.liveness.clone();
         PortDef::port(
             Loc::unknown(Id::from("__FAKE_NAME_SHOULD_NOT_BE_USED")),
@@ -582,7 +591,6 @@ impl Bundle {
     /// Resolve expressions in the Bundle
     pub fn resolve_exprs(self, binding: &Binding<Expr>) -> Self {
         Self {
-            len: self.len.map(|e| e.resolve(binding)),
             typ: self.typ.resolve_exprs(binding),
             ..self
         }
@@ -591,6 +599,11 @@ impl Bundle {
 
 impl Display for Bundle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "bundle {}[{}]: {};", self.name, self.len, self.typ)
+        write!(f, "bundle {}[{}]: ", self.name, self.typ.len)?;
+        write!(
+            f,
+            "for<#{}> {} {};",
+            self.typ.idx, self.typ.liveness, self.typ.bitwidth
+        )
     }
 }

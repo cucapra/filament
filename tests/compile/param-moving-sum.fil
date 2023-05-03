@@ -4,9 +4,9 @@ import "primitives/core.fil";
 comp Window[#N, #W]<G: 1>(
     @[G, G+1] in: #W,
 ) -> (
-    out[#N+1]: for<#i> @[G, G+1] #W
+    out[#N+1]: for<#k> @[G, G+1] #W
 ) {
-    bundle f[#N+1]: for<#i> @[G, G+1] #W;
+    bundle f[#N+1]: for<#k> @[G, G+1] #W;
 
     f{0} = in;
     out{0} = f{0};
@@ -19,12 +19,12 @@ comp Window[#N, #W]<G: 1>(
 
 /// Combinationally add up numbers
 comp CombReduceTree[#N, #W]<G: 1>(
-    in[#N]: for<#i> @[G, G+1] #W
+    in[#N]: for<#k> @[G, G+1] #W
 ) -> (
     @[G, G+1] out: #W
 ) where #W > 0 {
     // Track the output from each adder
-    bundle o[#N]: for<#i> @[G, G+1] #W;
+    bundle o[#N]: for<#k> @[G, G+1] #W;
     o{0} = in{0};
     for #i in 1..#N {
         a := new Add[#W]<G>(o{#i-1}, in{#i});

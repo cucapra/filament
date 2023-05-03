@@ -5,7 +5,7 @@ use crate::{
     diagnostics,
     errors::Error,
     idx,
-    utils::{self, GPosIdx},
+    utils::GPosIdx,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -439,26 +439,14 @@ impl<'c, 'p> CompBinding<'c, 'p> {
 
     /// Returns a resolved port definition for the given port.
     /// Returns `None` if and only if the given port is a constant.
-    pub fn get_resolved_port<F>(
+    pub fn get_resolved_port(
         &self,
         port: &core::Port,
-        resolve_liveness: F,
-    ) -> Option<core::PortDef>
-    where
-        F: Fn(
-            &core::Range,
-            &utils::Binding<Time>,
-            &utils::Binding<core::Expr>,
-        ) -> core::Range,
-    {
+    ) -> Option<core::PortDef> {
         match &port {
             core::Port::This(p) => Some(self.this().get_port(p.inner()).take()),
             core::Port::InvPort { invoke, name } => {
-                Some(self.get_invoke_idx(invoke).get_invoke_port(
-                    self,
-                    name,
-                    resolve_liveness,
-                ))
+                Some(self.get_invoke_idx(invoke).resolved_inv_port(self, name))
             }
             core::Port::BundlePort { name, idx, .. } => {
                 let bi = self.get_bundle_idx(name);
@@ -468,7 +456,8 @@ impl<'c, 'p> CompBinding<'c, 'p> {
             core::Port::ThisBundle { name, range: splat } => {
                 let bi = self.get_bundle_idx(name.inner());
                 let mut bundle = self[bi].clone();
-                bundle.typ = bundle.typ.offset(splat.start.clone());
+                bundle.typ =
+                    bundle.typ.shrink(splat.start.clone(), splat.end.clone());
                 Some(core::PortDef::Bundle(bundle))
             }
             core::Port::InvBundle {
@@ -476,15 +465,13 @@ impl<'c, 'p> CompBinding<'c, 'p> {
                 port,
                 range,
             } => {
-                let bi = self.get_invoke_idx(invoke);
-                let inv = &self[bi];
-                let inst = &self[inv.instance];
-                let sig = &self.prog[inst.sig];
-                let port = sig.get_port(port);
-                let core::PortDef::Bundle(mut bun) = port.take() else {
-                    unreachable!("Port must be a bundle")
+                let port =
+                    self.get_invoke_idx(invoke).resolved_inv_port(self, port);
+                let core::PortDef::Bundle(mut bun) = port else {
+                    unreachable!("Expected bundle port, received: `{port}'")
                 };
-                bun.typ = bun.typ.offset(range.start.clone());
+                bun.typ =
+                    bun.typ.shrink(range.start.clone(), range.end.clone());
                 Some(core::PortDef::Bundle(bun))
             }
         }
