@@ -12,7 +12,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         .format_timestamp(None)
         .format_module_path(false)
         .format_target(false)
-        // .filter_level(opts.log_level)
+        .filter_level(opts.log_level)
         .target(env_logger::Target::Stderr)
         .init();
 
