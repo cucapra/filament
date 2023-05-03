@@ -145,17 +145,15 @@ connect = {
 // ====== Invocations ==========
 
 dots = { ".." }
-splat = {
+access = {
    "{" ~
-      (dots |
-      (expr ~ dots ~ expr)) ~
+      ((expr ~ dots ~ expr) | expr) ~
    "}"
 }
 
 port = {
-  identifier ~ "." ~ identifier ~ splat?
-  | identifier ~ "{" ~ expr ~ "}"
-  | identifier ~ splat?
+  identifier ~ "." ~ identifier ~ access?
+  | identifier ~ access?
   | bitwidth
 }
 
