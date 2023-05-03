@@ -248,7 +248,7 @@ impl visitor::Checker for BindCheck {
             // Check the connections implied by the ports
             for (actual, formal) in ports.iter().zip(inputs) {
                 let dst = core::Loc::new(
-                    core::Port::comp(inv.name.clone(), formal.clone()),
+                    core::Port::inv_port(inv.name.clone(), formal.clone()),
                     formal.pos(),
                 );
                 let con = core::Connect::new(dst, actual.clone(), None);

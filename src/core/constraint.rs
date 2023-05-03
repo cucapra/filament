@@ -42,6 +42,14 @@ where
         self.op == OrderOp::Eq
     }
 
+    pub fn gt(l: T, r: T) -> Self {
+        Self {
+            left: l,
+            right: r,
+            op: OrderOp::Gt,
+        }
+    }
+
     pub fn lt(l: T, r: T) -> Self {
         Self {
             left: r,

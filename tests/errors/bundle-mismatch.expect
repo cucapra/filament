@@ -1,6 +1,18 @@
 ---CODE---
 1
 ---STDERR---
+error: bundle index must be less than bundle length
+  ┌─ tests/errors/bundle-mismatch.fil:8:27
+  │
+8 │     f0 := new Foo[#P]<T>(f{1..#P});
+  │                           ^^^^^^^ cannot prove within-bounds bundle access: index 1 greater than bundle length #P
+
+error: range end must be greater than start
+  ┌─ tests/errors/bundle-mismatch.fil:8:27
+  │
+8 │     f0 := new Foo[#P]<T>(f{1..#P});
+  │                           ^^^^^^^ ill formed bundle range access: range end #P less than start 1
+
 error: bundle lengths must be equal
   ┌─ tests/errors/bundle-mismatch.fil:2:5
   │
@@ -19,5 +31,5 @@ error: source bundle's wires must be available for as long as required
 9 │     f1 := new Foo[#P]<T+1>(f{0..#P});
   │                            ^^^^^^^^ bundle's wires are available for @[T+#k, T+(#k+1)]
 
-Compilation failed with 2 errors.
+Compilation failed with 4 errors.
 Run with --show-models to generate assignments for failing constraints.

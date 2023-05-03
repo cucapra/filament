@@ -30,9 +30,9 @@ impl Rewriter {
                 invoke: Loc::unknown(self.binding[invoke.inner()]),
                 name,
             },
-            core::Port::BundlePort { name, idx } => core::Port::BundlePort {
+            core::Port::Bundle { name, access } => core::Port::Bundle {
                 name: Loc::unknown(self.binding[name.inner()]),
-                idx,
+                access,
             },
             t => t,
         }

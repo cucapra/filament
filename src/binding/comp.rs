@@ -437,6 +437,19 @@ impl<'c, 'p> CompBinding<'c, 'p> {
         })
     }
 
+    fn bundle_access(
+        mut bun: core::Bundle,
+        acc: &core::Access,
+    ) -> core::PortDef {
+        match acc {
+            core::Access::Index(idx) => bun.index(idx.clone()),
+            core::Access::Range { start, end } => {
+                bun.typ = bun.typ.shrink(start.clone(), end.clone());
+                bun.into()
+            }
+        }
+    }
+
     /// Returns a resolved port definition for the given port.
     /// Returns `None` if and only if the given port is a constant.
     pub fn get_resolved_port(
@@ -448,31 +461,22 @@ impl<'c, 'p> CompBinding<'c, 'p> {
             core::Port::InvPort { invoke, name } => {
                 Some(self.get_invoke_idx(invoke).resolved_inv_port(self, name))
             }
-            core::Port::BundlePort { name, idx, .. } => {
+            core::Port::Bundle { name, access, .. } => {
                 let bi = self.get_bundle_idx(name);
-                Some(self[bi].liveness(idx.inner().clone()))
+                Some(Self::bundle_access(self[bi].clone(), access.inner()))
             }
             core::Port::Constant(_) => None,
-            core::Port::ThisBundle { name, range: splat } => {
-                let bi = self.get_bundle_idx(name.inner());
-                let mut bundle = self[bi].clone();
-                bundle.typ =
-                    bundle.typ.shrink(splat.start.clone(), splat.end.clone());
-                Some(core::PortDef::Bundle(bundle))
-            }
             core::Port::InvBundle {
                 invoke,
                 port,
-                range,
+                access,
             } => {
                 let port =
                     self.get_invoke_idx(invoke).resolved_inv_port(self, port);
-                let core::PortDef::Bundle(mut bun) = port else {
+                let core::PortDef::Bundle(bun) = port else {
                     unreachable!("Expected bundle port, received: `{port}'")
                 };
-                bun.typ =
-                    bun.typ.shrink(range.start.clone(), range.end.clone());
-                Some(core::PortDef::Bundle(bun))
+                Some(Self::bundle_access(bun, access))
             }
         }
     }

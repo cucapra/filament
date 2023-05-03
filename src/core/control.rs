@@ -8,28 +8,42 @@ use itertools::Itertools;
 use std::fmt::Display;
 
 #[derive(Clone)]
-/// A range over the indices of a bundle
-pub struct Splat {
-    pub start: Expr,
-    pub end: Expr,
+/// Access into a bundle
+pub enum Access {
+    /// Index into the bundle
+    Index(Expr),
+    /// Range over a bundle
+    Range { start: Expr, end: Expr },
 }
 
-impl Splat {
+impl Access {
     pub fn range(start: Expr, end: Expr) -> Self {
-        Splat { start, end }
+        Access::Range { start, end }
     }
 
-    pub fn resolve(self, bindings: &Binding<Expr>) -> Self {
-        Splat {
-            start: self.start.resolve(bindings),
-            end: self.end.resolve(bindings),
+    pub fn resolve(self, binds: &Binding<Expr>) -> Self {
+        match self {
+            Access::Index(e) => Access::Index(e.resolve(binds)),
+            Access::Range { start, end } => Access::Range {
+                start: start.resolve(binds),
+                end: end.resolve(binds),
+            },
         }
     }
 }
 
-impl Display for Splat {
+impl From<Expr> for Access {
+    fn from(e: Expr) -> Self {
+        Access::Index(e)
+    }
+}
+
+impl std::fmt::Display for Access {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}..{}", self.start, self.end)
+        match self {
+            Access::Index(e) => write!(f, "{e}"),
+            Access::Range { start, end } => write!(f, "{start}..{end}"),
+        }
     }
 }
 
@@ -42,37 +56,19 @@ pub enum Port {
     Constant(u64),
     /// A port on an invoke
     InvPort { invoke: Loc<Id>, name: Loc<Id> },
+
     /// A port represented by an index into a bundle
-    BundlePort { name: Loc<Id>, idx: Loc<Expr> },
-    /// A full bundle bound by this component
-    ThisBundle { name: Loc<Id>, range: Splat },
+    Bundle { name: Loc<Id>, access: Loc<Access> },
     /// A bundle port on an invocation
     InvBundle {
         invoke: Loc<Id>,
         port: Loc<Id>,
-        range: Splat,
+        access: Loc<Access>,
     },
 }
 
 impl Port {
-    pub fn name(&self) -> Id {
-        match &self {
-            Port::This(n) => *n.inner(),
-            Port::InvPort { name, .. } => *name.inner(),
-            Port::BundlePort { name, idx } => format!("{name}{{{idx}}}").into(),
-            Port::Constant(n) => Id::from(format!("const<{}>", n)),
-            Port::ThisBundle { name, range } => {
-                Id::from(format!("{name}{{{range}}}"))
-            }
-            Port::InvBundle {
-                invoke,
-                port,
-                range,
-            } => Id::from(format!("{invoke}.{port}{{{range}}}")),
-        }
-    }
-
-    pub fn comp(comp: Loc<Id>, name: Loc<Id>) -> Self {
+    pub fn inv_port(comp: Loc<Id>, name: Loc<Id>) -> Self {
         Port::InvPort { invoke: comp, name }
     }
 
@@ -84,28 +80,36 @@ impl Port {
         Port::Constant(v)
     }
 
-    pub fn bundle(name: Loc<Id>, idx: Loc<Expr>) -> Self {
-        Port::BundlePort { name, idx }
+    pub fn bundle(name: Loc<Id>, access: Loc<Access>) -> Self {
+        Port::Bundle { name, access }
+    }
+
+    pub fn inv_bundle(
+        invoke: Loc<Id>,
+        port: Loc<Id>,
+        access: Loc<Access>,
+    ) -> Self {
+        Port::InvBundle {
+            invoke,
+            port,
+            access,
+        }
     }
 
     pub fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
         match self {
-            Port::BundlePort { name, idx } => Port::BundlePort {
+            Port::Bundle { name, access } => Port::Bundle {
                 name,
-                idx: idx.map(|i| i.resolve(bindings)),
-            },
-            Port::ThisBundle { name, range } => Port::ThisBundle {
-                name,
-                range: range.resolve(bindings),
+                access: access.map(|i| i.resolve(bindings)),
             },
             Port::InvBundle {
                 invoke,
                 port,
-                range,
+                access,
             } => Port::InvBundle {
                 invoke,
                 port,
-                range: range.resolve(bindings),
+                access: access.map(|a| a.resolve(bindings)),
             },
             _ => self,
         }
@@ -120,14 +124,15 @@ impl std::fmt::Display for Port {
                 write!(f, "{}.{}", comp, name)
             }
             Port::Constant(n) => write!(f, "{}", n),
-            Port::BundlePort { name, idx } => write!(f, "{name}{{{idx}}}"),
-            Port::ThisBundle { name, range } => write!(f, "{name}{{{range}}}"),
+            Port::Bundle { name, access } => {
+                write!(f, "{name}{{{access}}}")
+            }
             Port::InvBundle {
                 invoke,
                 port,
-                range,
+                access,
             } => {
-                write!(f, "{invoke}.{port}{{{range}}}")
+                write!(f, "{invoke}.{port}{{{access}}}")
             }
         }
     }
@@ -377,7 +382,7 @@ impl Fsm {
 
     /// Return the port associated with the given state
     pub fn port(&self, state: u64) -> Port {
-        Port::comp(
+        Port::inv_port(
             Loc::unknown(self.name),
             Loc::unknown(Id::from(format!("_{}", state))),
         )
@@ -577,7 +582,7 @@ impl Bundle {
     }
 
     /// Generate a port definition corresponding to a given index
-    pub fn liveness(&self, idx: Expr) -> PortDef {
+    pub fn index(&self, idx: Expr) -> PortDef {
         let mut bind = Binding::default();
         bind.insert(*self.typ.idx.inner(), idx);
         let liveness = self.typ.liveness.clone();

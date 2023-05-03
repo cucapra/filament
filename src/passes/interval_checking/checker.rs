@@ -9,22 +9,21 @@ use itertools::Itertools;
 use std::iter;
 
 impl IntervalCheck {
-    /// Check that a bundle access is within bounds
-    fn port_bundle_index(&mut self, port: &core::Port, ctx: &CompBinding) {
-        let core::Port::BundlePort { name, idx } = &port else {
-            return
-        };
-        let bun_idx = ctx.get_bundle_idx(name);
-        let bun_len = &ctx[bun_idx].typ.len;
+    /// Constraint generated for an index on a bundle
+    fn bundle_index_constraint(
+        &mut self,
+        idx: core::Loc<core::Expr>,
+        len: core::Expr,
+    ) {
         let greater = core::Constraint::sub(OrderConstraint::lt(
             idx.inner().clone().into(),
-            bun_len.inner().clone().into(),
+            len.clone().into(),
         ))
         .obligation("bundle index must be less than bundle length")
         .add_note(
             self.diag
                 .add_info(
-                    format!("cannot prove within-bounds bundle access: index {idx} greater than bundle length {bun_len}"),
+                    format!("cannot prove within-bounds bundle access: index {idx} greater than bundle length {len}"),
                     idx.pos()
                 ),
         );
@@ -40,7 +39,51 @@ impl IntervalCheck {
                     idx.pos()
                 ),
         );
-        self.add_obligations([greater, smaller]);
+        self.add_obligations([greater, smaller])
+    }
+
+    /// Check that a bundle access is within bounds
+    fn port_bundle_index(&mut self, port: &core::Port, ctx: &CompBinding) {
+        let core::Port::Bundle { name, access } = &port else {
+            return
+        };
+        let bun_idx = ctx.get_bundle_idx(name);
+        let len = ctx[bun_idx].typ.len.inner().clone();
+
+        let pos = access.pos();
+        match access.inner() {
+            core::Access::Index(idx) => {
+                self.bundle_index_constraint(
+                    core::Loc::new(idx.clone(), pos),
+                    len,
+                );
+            }
+            core::Access::Range { start, end } => {
+                self.bundle_index_constraint(
+                    core::Loc::new(start.clone(), pos),
+                    len.clone(),
+                );
+                // True end is one less than `end`
+                self.bundle_index_constraint(
+                    core::Loc::new(end.clone() - 1.into(), pos),
+                    len,
+                );
+                // end must be greater than start
+                let cons = core::Constraint::sub(core::OrderConstraint::gt(
+                    end.clone().into(),
+                    start.clone().into(),
+                ))
+                .obligation("range end must be greater than start")
+                .add_note(
+                    self.diag
+                        .add_info(
+                            format!("ill formed bundle range access: range end {end} less than start {start}"),
+                            pos
+                        ),
+                );
+                self.add_obligations(Some(cons));
+            }
+        }
     }
 
     fn check_width(
@@ -215,13 +258,14 @@ impl IntervalCheck {
                     core::Port::InvBundle {
                         invoke: invoke.name.clone(),
                         port: formal.clone(),
-                        range: core::Splat::range(
+                        access: core::Access::range(
                             core::Expr::concrete(0),
                             b.typ.len.inner().clone(),
-                        ),
+                        )
+                        .into(),
                     }
                 } else {
-                    core::Port::comp(invoke.name.clone(), formal.clone())
+                    core::Port::inv_port(invoke.name.clone(), formal.clone())
                 };
                 let con = core::Connect::new(
                     core::Loc::new(dst, formal.pos()),
@@ -453,7 +497,13 @@ impl visitor::Checker for IntervalCheck {
                         liveness: src_liveness,
                         ..
                     } = src_port else {
-                        todo!("Mismatched types:\nsource: {src_port}\ndestination: {dst}")
+                        let err = Error::malformed("expected port type but found bundle").add_note(
+                            self.diag.add_info("is a port", dst.pos())
+                        ).add_note(
+                            self.diag.add_info("is a bundle", src.pos())
+                        );
+                        self.diag.add_error(err);
+                        return Traverse::Continue(());
                     };
 
                     let within_fact = OrderConstraint::subset(
@@ -480,12 +530,21 @@ impl visitor::Checker for IntervalCheck {
                 }
             }
             core::PortDef::Bundle(bl) => {
-                let Some(core::PortDef::Bundle(br)) = mb_src else {
-                    todo!("Expected bundle type, provided port type")
+                if let Some(core::PortDef::Bundle(br)) = mb_src {
+                    let blt = core::Loc::new(bl.typ, dst.pos());
+                    let brt = core::Loc::new(br.typ, src.pos());
+                    self.bundle_inclusion(blt, brt);
+                } else {
+                    let err =
+                        Error::malformed("expected bundle but found port")
+                            .add_note(
+                                self.diag.add_info("is a bundle", dst.pos()),
+                            )
+                            .add_note(
+                                self.diag.add_info("is a port", src.pos()),
+                            );
+                    self.diag.add_error(err);
                 };
-                let blt = core::Loc::new(bl.typ, dst.pos());
-                let brt = core::Loc::new(br.typ, src.pos());
-                self.bundle_inclusion(blt, brt)
             }
         }
 
