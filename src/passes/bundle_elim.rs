@@ -252,7 +252,7 @@ impl BundleElim {
         cmds: Vec<core::Command>,
     ) -> Vec<core::Command> {
         cmds.into_iter()
-            .map(|cmd| match cmd {
+            .flat_map(|cmd| match cmd {
                 core::Command::Instance(core::Instance {
                     ref name,
                     ref component,
@@ -260,7 +260,7 @@ impl BundleElim {
                 }) => {
                     // Add instance -> component mapping
                     self.inst_map.insert(**name, **component);
-                    cmd
+                    vec![cmd]
                 }
                 core::Command::Invoke(mut inv) => {
                     // Add invoke -> instance mapping
@@ -273,7 +273,7 @@ impl BundleElim {
                                 .collect_vec(),
                         );
                     }
-                    inv.into()
+                    vec![inv.into()]
                 }
                 core::Command::Connect(con) => {
                     if con.dst.range_access() || con.src.range_access() {
@@ -282,16 +282,23 @@ impl BundleElim {
                         )
                     }
                     // Rewrite the ports
-                    let mut dst = self.port(cur_name, con.dst);
-                    assert!(dst.len() == 1, "dst is a ranged access");
-                    let mut src = self.port(cur_name, con.src);
-                    assert!(src.len() == 1, "src is a ranged access");
-                    core::Connect {
-                        dst: dst.remove(0),
-                        src: src.remove(0),
-                        ..con
-                    }
-                    .into()
+                    let dst = self.port(cur_name, con.dst);
+                    let src = self.port(cur_name, con.src);
+                    assert!(
+                        src.len() == dst.len(),
+                        "src and dst produced different number of ports"
+                    );
+                    src.into_iter()
+                        .zip(dst.into_iter())
+                        .map(|(src, dst)| {
+                            core::Connect {
+                                dst,
+                                src,
+                                guard: con.guard.clone(),
+                            }
+                            .into()
+                        })
+                        .collect_vec()
                 }
                 core::Command::ForLoop(core::ForLoop {
                     idx,
@@ -300,20 +307,22 @@ impl BundleElim {
                     body,
                 }) => {
                     let body = self.commands(cur_name, body);
-                    core::ForLoop {
+                    vec![core::ForLoop {
                         idx,
                         start,
                         end,
                         body,
                     }
-                    .into()
+                    .into()]
                 }
                 core::Command::If(core::If { cond, then, alt }) => {
                     let then = self.commands(cur_name, then);
                     let alt = self.commands(cur_name, alt);
-                    core::If { cond, then, alt }.into()
+                    vec![core::If { cond, then, alt }.into()]
                 }
-                c @ (core::Command::Fsm(_) | core::Command::Bundle(_)) => c,
+                c @ (core::Command::Fsm(_) | core::Command::Bundle(_)) => {
+                    vec![c]
+                }
             })
             .collect_vec()
     }
