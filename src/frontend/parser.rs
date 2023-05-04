@@ -198,11 +198,26 @@ impl FilamentParser {
         ))
     }
 
+    fn pow2(input: Node) -> ParseResult<core::UnFn> {
+        Ok(core::UnFn::Pow2)
+    }
+    fn log2(input: Node) -> ParseResult<core::UnFn> {
+        Ok(core::UnFn::Log2)
+    }
+    fn un_fn(input: Node) -> ParseResult<core::UnFn> {
+        Ok(match_nodes!(
+            input.into_children();
+            [pow2(_)] => core::UnFn::Pow2,
+            [log2(_)] => core::UnFn::Log2,
+        ))
+    }
+
     fn expr_base(input: Node) -> ParseResult<core::Expr> {
         Ok(match_nodes!(
             input.into_children();
             [param_var(id)] => id.take().into(),
             [bitwidth(c)] => c.into(),
+            [un_fn(f), expr(e)] => core::Expr::func(f, e.take()),
             [expr(e)] => e.take(),
         ))
     }

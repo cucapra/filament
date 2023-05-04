@@ -72,7 +72,12 @@ op_add = { "+" }
 op_sub = { "-" }
 operator = _{ op_mul | op_div | op_add | op_sub | op_mod }
 
+pow2 = { "pow2" }
+log2 = { "log2" }
+un_fn = { pow2 | log2 }
+
 expr_base = {
+  | un_fn ~ "(" ~ expr ~ ")"
   | "(" ~ expr ~ ")"
   | bitwidth
   | param_var
