@@ -96,6 +96,16 @@ impl Port {
         }
     }
 
+    /// Returns true iff this port represents a ranged access on a bundle
+    pub fn range_access(&self) -> bool {
+        match self {
+            Port::Bundle { access, .. } | Port::InvBundle { access, .. } => {
+                matches!(access.inner(), Access::Range { .. })
+            }
+            _ => false,
+        }
+    }
+
     pub fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
         match self {
             Port::Bundle { name, access } => Port::Bundle {
