@@ -479,7 +479,9 @@ impl visitor::Checker for IntervalCheck {
         log::trace!(
             "Checking connect types:\n{}\n{}",
             mb_dst.clone().unwrap(),
-            mb_src.clone().unwrap()
+            mb_src.clone()
+                .map(|x| format!("{}", x))
+                .unwrap_or("CONSTANT".to_string())
         );
 
         // If we have: dst = src. We need:
