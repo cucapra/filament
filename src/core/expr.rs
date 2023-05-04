@@ -178,7 +178,7 @@ impl std::ops::Div for Expr {
             (Expr::Concrete(0), _) => Expr::Concrete(0),
             (e, Expr::Concrete(1)) => e,
             (Expr::Concrete(l), Expr::Concrete(r)) => Expr::Concrete(l / r),
-            (left, right) => Self::op_base(Op::Mul, left, right),
+            (left, right) => Self::op_base(Op::Div, left, right),
         }
     }
 }
