@@ -33,7 +33,7 @@ lazy_static::lazy_static! {
     static ref PRATT: PrattParser<Rule> =
     PrattParser::new()
         .op(Op::infix(Rule::op_add, Assoc::Left) | Op::infix(Rule::op_sub, Assoc::Left))
-        .op(Op::infix(Rule::op_mul, Assoc::Left) | Op::infix(Rule::op_div, Assoc::Left));
+        .op(Op::infix(Rule::op_mul, Assoc::Left) | Op::infix(Rule::op_div, Assoc::Left) | Op::infix(Rule::op_mod, Assoc::Left));
 }
 
 pub enum ExtOrComp {
@@ -116,7 +116,8 @@ impl FilamentParser {
                     Rule::op_sub => core::Expr::op(core::Op::Sub, lhs?, rhs?),
                     Rule::op_mul => core::Expr::op(core::Op::Mul, lhs?, rhs?),
                     Rule::op_div => core::Expr::op(core::Op::Div, lhs?, rhs?),
-                    _ => unreachable!(),
+                    Rule::op_mod => core::Expr::op(core::Op::Mod, lhs?, rhs?),
+                    _ => unreachable!("Unknown binary operator"),
                 })
             })
             .parse(pairs)

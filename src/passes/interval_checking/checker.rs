@@ -452,12 +452,10 @@ impl visitor::Checker for IntervalCheck {
                     .add_note(
                         self.diag.add_info("constraint was violated", pos),
                     )
-                    .add_note(
-                        self.diag.add_info(
-                            "instantiation occurs here",
-                            inst.name.pos(),
-                        ),
-                    )
+                    .add_note(self.diag.add_info(
+                        "instantiation occurs here",
+                        inst.component.pos(),
+                    ))
             })
             .collect_vec();
         self.add_obligations(cons);

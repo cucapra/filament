@@ -9,6 +9,7 @@ pub enum Op {
     Sub,
     Mul,
     Div,
+    Mod,
 }
 
 impl Display for Op {
@@ -18,6 +19,7 @@ impl Display for Op {
             Op::Sub => write!(f, "-"),
             Op::Mul => write!(f, "*"),
             Op::Div => write!(f, "/"),
+            Op::Mod => write!(f, "mod"),
         }
     }
 }
@@ -75,6 +77,7 @@ impl Expr {
             Op::Sub => l - r,
             Op::Mul => l * r,
             Op::Div => l / r,
+            Op::Mod => l % r,
         }
     }
 
@@ -99,6 +102,7 @@ impl Expr {
                     Op::Sub => l - r,
                     Op::Mul => l * r,
                     Op::Div => l / r,
+                    Op::Mod => l % r,
                 }
             }
         }
@@ -179,6 +183,20 @@ impl std::ops::Div for Expr {
             (e, Expr::Concrete(1)) => e,
             (Expr::Concrete(l), Expr::Concrete(r)) => Expr::Concrete(l / r),
             (left, right) => Self::op_base(Op::Div, left, right),
+        }
+    }
+}
+
+impl std::ops::Rem for Expr {
+    type Output = Self;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Expr::Concrete(0), _) | (_, Expr::Concrete(1)) => {
+                Expr::Concrete(0)
+            }
+            (Expr::Concrete(l), Expr::Concrete(r)) => Expr::Concrete(l % r),
+            (left, right) => Self::op_base(Op::Mod, left, right),
         }
     }
 }
