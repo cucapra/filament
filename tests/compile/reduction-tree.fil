@@ -1,0 +1,31 @@
+import "primitives/core.fil";
+
+// Implement a additive reduction tree
+comp AddRed[#W, #N]<G:1>(
+    in[#N]: for<#i> @[G, G+1] #W
+) -> (
+    @[G, G+1] out: #W
+) where #W > 1, #N >= 1 {
+    if #N == 1 {
+        out = in{0};
+    } else {
+        left := new AddRed[#W, #N/2]<G>(in{0..#N/2});
+        right := new AddRed[#W, #N/2]<G>(in{#N/2..#N});
+        add := new Add[#W]<G>(left.out, right.out);
+        out = add.out;
+    }
+}
+
+comp main<G:1>(
+    @[G, G+1] in0: 32,
+    @[G, G+1] in1: 32,
+    @[G, G+1] in2: 32,
+    @[G, G+1] in3: 32,
+) -> (
+    @[G, G+1] out: 32
+) {
+    bundle in[4]: for<#i> @[G, G+1] 32;
+    in{0} = in0; in{1} = in1; in{2} = in2; in{3} = in3;
+    reduce := new AddRed[32, 4]<G>(in{0..4});
+    out = reduce.out;
+}
