@@ -1,166 +1,77 @@
 use super::Rewriter;
-use crate::{
-    core::{self, Loc},
-    utils::{Binding, Traversal},
-};
+use crate::{core, utils::Binding};
 use itertools::Itertools;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use linked_hash_set::LinkedHashSet;
+use std::collections::HashSet;
 
-type Params = Vec<u64>;
-
-#[derive(Default)]
-/// Parameters used for each instance of a Filament-level components
-struct InstanceParams {
-    /// Parameters for a component
-    params: HashMap<core::Id, Vec<core::Id>>,
-    /// The parameters discovered for each component
-    /// Maps component name to all parameter bindings used for it
-    bindings: HashMap<core::Id, BTreeSet<Params>>,
-}
-
-impl InstanceParams {
-    /// Returns all possible values a particular parameter can take in a component.
-    fn param_values(
-        &self,
-        comp: &core::Id,
-        param: &core::Id,
-    ) -> Box<dyn Iterator<Item = u64> + '_> {
-        // Find the index of the parameter in the component
-        let idx = self.params[comp]
-            .iter()
-            .position(|p| p == param)
-            .unwrap_or_else(|| {
-                panic!("Parameter `{param}' not found in `{comp}'")
-            });
-        // Return all values that occur at that position
-        if let Some(params) = self.bindings.get(comp) {
-            Box::new(params.iter().map(move |binding| binding[idx]))
-        } else {
-            log::trace!("No binding for {comp}");
-            Box::new(std::iter::empty())
-        }
-    }
-
-    /// Resolve and add all the bindings implied by an abstract binding.
-    /// A binding will look like this: [W, 1, 2, K]
-    /// In order to resolve it, we look at all possible values for `W` and `K` in the parent parameters
-    fn add_params(
-        &mut self,
-        parent: &core::Id,
-        comp: &core::Id,
-        params: &[Loc<core::Expr>],
-    ) {
-        // All possible values for each parameter computed by resolving each parameter that occurs in the binding
-        let all_binds = params
-            .iter()
-            .map(|p| {
-                let abs = p.exprs().collect_vec();
-                match abs.len() {
-                    0 => vec![u64::try_from(p.inner()).unwrap()],
-                    1 => self.param_values(parent, abs[0]).collect(),
-                    n => unreachable!("Cannot have more than one abstract parameter in a binding: {n}")
-                }
-            })
-            .multi_cartesian_product()
-            .unique()
-            .collect_vec();
-
-        log::trace!("{parent} -> {comp} -> {all_binds:?}");
-
-        self.bindings.entry(*comp).or_default().extend(all_binds);
-    }
-}
-
-impl InstanceParams {
-    fn process_cmd(
-        comp: &core::Id,
-        cmd: &core::Command,
-        inst_params: &mut InstanceParams,
-        externals: &HashSet<core::Id>,
-    ) {
-        match cmd {
-            core::Command::Instance(inst) => {
-                if !externals.contains(&inst.component)
-                    && !inst.bindings.is_empty()
-                {
-                    inst_params.add_params(
-                        comp,
-                        &inst.component,
-                        &inst.bindings,
-                    );
-                }
-            }
-            core::Command::ForLoop(fl) => {
-                for cmd in &fl.body {
-                    Self::process_cmd(comp, cmd, inst_params, externals);
-                }
-            }
-            core::Command::If(i) => {
-                for cmd in &i.then {
-                    Self::process_cmd(comp, cmd, inst_params, externals);
-                }
-                for cmd in &i.alt {
-                    Self::process_cmd(comp, cmd, inst_params, externals);
-                }
-            }
-            core::Command::Bundle(_)
-            | core::Command::Connect(_)
-            | core::Command::Fsm(_)
-            | core::Command::Invoke(_) => (),
-        }
-    }
-
-    fn build(ns: core::Namespace) -> (Self, core::Namespace) {
-        let externals = ns
-            .signatures()
-            .map(|(_, sig)| *sig.name.inner())
-            .collect::<HashSet<_>>();
-
-        let mut inst_params = InstanceParams::default();
-        let mut order = Traversal::from(ns);
-
-        order.apply_post_order(|comp| {
-            // Add parameters for this component
-            inst_params.params.insert(
-                *comp.sig.name.inner(),
-                comp.sig.params.iter().map(|p| p.copy()).collect(),
-            );
-
-            // Add bindings from each instance
-            for cmd in &comp.body {
-                Self::process_cmd(
-                    &comp.sig.name,
-                    cmd,
-                    &mut inst_params,
-                    &externals,
-                )
-            }
-        });
-
-        (inst_params, order.take())
-    }
-}
-
-#[derive(Default)]
 /// Monomorphize the Filament program
-pub struct Monomorphize;
+pub struct Monomorphize<'e> {
+    /// Instances that have already been processed
+    processed: HashSet<(core::Id, Vec<u64>)>,
+    /// Instances that need to be generated
+    queue: LinkedHashSet<(core::Id, Vec<u64>)>,
+    /// Names of external components
+    externals: &'e HashSet<core::Id>,
+}
 
-impl Monomorphize {
+impl<'e> Monomorphize<'e> {
+    fn new(externals: &'e HashSet<core::Id>) -> Self {
+        Self {
+            queue: LinkedHashSet::new(),
+            processed: HashSet::new(),
+            externals,
+        }
+    }
+
     /// Gnerate name for a monomorphized component based on the binding parameters.
-    fn generate_mono_name<'a>(
-        comp: &core::Id,
+    fn generate_mono_name(comp: &core::Id, params: &[u64]) -> core::Id {
+        let suf = params.iter().map(|p| format!("_{}", p)).join("");
+        format!("{comp}{suf}").into()
+    }
+
+    /// Coerce a list of expressions into a list of concrete values.
+    fn coerce_params<'a>(
+        params: impl IntoIterator<Item = &'a core::Expr>,
+    ) -> Vec<u64> {
+        params
+            .into_iter()
+            .map(|p| {
+                u64::try_from(p).unwrap_or_else(|_| {
+                    panic!("Parameter must be concrete but was {p}")
+                })
+            })
+            .collect()
+    }
+
+    /// Return the name associated with the (component, params)
+    // XXX: We should stop using generate_mono_name here
+    fn get_name(&self, comp: core::Id, params: &[u64]) -> core::Id {
+        Self::generate_mono_name(&comp, params)
+    }
+
+    /// Add instance for processing
+    fn add_instance<'a>(
+        &mut self,
+        comp: core::Id,
         params: impl IntoIterator<Item = &'a core::Expr>,
     ) -> core::Id {
-        let mut name = String::from(comp.as_ref());
-        for p in params {
-            match u64::try_from(p) {
-                Ok(p) => name += format!("_{}", p).as_str(),
-                Err(n) => {
-                    unreachable!("Binding contains non-concrete value: {n}")
-                }
-            }
+        let conc = Self::coerce_params(params);
+        if self.processed.contains(&(comp, conc.clone())) {
+            log::warn!("{}[{:?}] already processed", comp, conc);
+            return self.get_name(comp, &conc);
         }
-        name.into()
+        let gen_name = Self::generate_mono_name(&comp, &conc);
+        let key = (comp, conc);
+        self.queue.insert(key);
+        gen_name
+    }
+
+    /// Process the next instance in the queue. We mark it as processed
+    /// and assume that it has been added to the namespace.
+    fn process_instance(&mut self) -> Option<(core::Id, Vec<u64>)> {
+        let inst = self.queue.pop_back()?;
+        self.processed.insert(inst.clone());
+        Some(inst)
     }
 
     /// Transform the signature of a monomorphized component and give it a unique name using its parameters.
@@ -169,10 +80,12 @@ impl Monomorphize {
         sig: &core::Signature,
         binding: Vec<core::Expr>,
     ) -> core::Signature {
-        // XXX: Short-circuit if binding is empty
-        let name = Loc::unknown(Self::generate_mono_name(&sig.name, &binding));
+        let name = self
+            .get_name(sig.name.copy(), &Self::coerce_params(binding.iter()))
+            .into();
         let mut nsig = sig.clone().resolve_exprs(binding);
         nsig.name = name;
+        // Remove the parameters from the signature
         nsig.params.clear();
         nsig
     }
@@ -189,12 +102,11 @@ impl Monomorphize {
     }
 
     fn commands(
+        &mut self,
         commands: impl Iterator<Item = core::Command>,
         // Binding for the parameters of the component.
         // Must only contain concrete values
         param_binding: &Binding<core::Expr>,
-        // Name of components that should not be monomorphized.
-        externals: &HashSet<core::Id>,
         // Current set of bound names
         mut prev_names: Binding<core::Id>,
         // Current suffix
@@ -258,33 +170,33 @@ impl Monomorphize {
                         .map(|p| p.map(|p| p.resolve(param_binding)))
                         .collect();
 
-                    if externals.contains(&component) {
+                    if self.externals.contains(&component) {
                         n_cmds.push(
                             core::Instance::new(name, component, resolved)
                                 .into(),
                         );
                     } else {
                         // If this is a component, replace the instance name with the monomorphized version
-                        n_cmds.push(
-                            core::Instance::new(
-                                name,
-                                Loc::unknown(Self::generate_mono_name(
-                                    &component,
-                                    resolved.iter().map(|p| p.inner()),
-                                )),
-                                vec![],
+                        let new_name = self
+                            .add_instance(
+                                component.copy(),
+                                resolved
+                                    .iter()
+                                    .map(|p| p.inner())
+                                    .collect_vec(),
                             )
-                            .into(),
+                            .into();
+                        n_cmds.push(
+                            core::Instance::new(name, new_name, vec![]).into(),
                         );
                     }
                 }
                 core::Command::If(core::If { cond, then, alt }) => {
                     let cond = cond.eval(param_binding);
                     let cmds = if cond { then } else { alt };
-                    n_cmds.extend(Self::commands(
+                    n_cmds.extend(self.commands(
                         cmds.into_iter(),
                         param_binding,
-                        externals,
                         prev_names.clone(),
                         suffix,
                     ));
@@ -312,10 +224,9 @@ impl Monomorphize {
                         let mut new_binding = (*param_binding).clone();
                         new_binding.insert(idx.copy(), i.into());
                         // Recur on the body of the loop
-                        let ncmds = Self::commands(
+                        let ncmds = self.commands(
                             body.iter().cloned(),
                             &new_binding,
-                            externals,
                             prev_names.clone(),
                             suffix,
                         );
@@ -328,7 +239,7 @@ impl Monomorphize {
                     }
                 }
                 core::Command::Fsm(_) => {
-                    unreachable!("Cannot mono FSMs ")
+                    unreachable!("FSMs cannot be monomorphized")
                 }
             }
         }
@@ -340,7 +251,6 @@ impl Monomorphize {
         &mut self,
         comp: &core::Component,
         binding: &Binding<core::Expr>,
-        externals: &HashSet<core::Id>,
     ) -> core::Component {
         let sig = self.sig(&comp.sig, binding.values().cloned().collect_vec());
         // Map all port names to themselves
@@ -354,64 +264,52 @@ impl Monomorphize {
                 })
                 .collect_vec(),
         );
-        let body = Self::commands(
-            comp.body.iter().cloned(),
-            binding,
-            externals,
-            prev_names,
-            "",
-        );
+        let body =
+            self.commands(comp.body.iter().cloned(), binding, prev_names, "");
         core::Component { sig, body }
     }
 
     /// Monomorphize the program by generate a component for each parameter of each instance.
-    pub fn transform(ns: core::Namespace) -> core::Namespace {
-        let mut mono = Self::default();
-        let (mut inst_params, old_ns) = InstanceParams::build(ns);
-        let mut ns = core::Namespace {
-            components: Vec::new(),
-            ..old_ns
+    pub fn transform(mut ns: core::Namespace) -> core::Namespace {
+        let Some(top_idx) = ns.main_idx() else {
+            log::warn!("program has no main component so resulting program will be empty");
+            ns.components.clear();
+            return ns;
         };
 
-        let externals: HashSet<_> =
+        // Start the process by monomorphizing the main component
+        let main = ns.components.remove(top_idx);
+        let externals =
             ns.signatures().map(|(_, sig)| *sig.name.inner()).collect();
+        let mut mono = Monomorphize::new(&externals);
+        let mut comps = vec![mono.generate_comp(&main, &Binding::new(None))];
 
-        // For each parameter of each instance, generate a new component
-        for comp in old_ns.components {
-            if let Some(all_binds) = inst_params.bindings.remove(&comp.sig.name)
-            {
-                assert!(
-                    !all_binds.is_empty(),
-                    "No bindings for component {}",
-                    comp.sig.name
-                );
-                for bind_assigns in all_binds {
-                    let binding =
-                        Binding::new(
-                            comp.sig.params.iter().map(|p| p.copy()).zip(
-                                bind_assigns.into_iter().map(|v| v.into()),
-                            ),
-                        );
-                    let comp = mono.generate_comp(&comp, &binding, &externals);
-                    ns.components.push(comp);
-                }
-            } else {
-                // If we have a component with parameters but not bindings, it was not used.
-                if !comp.sig.params.is_empty() {
-                    log::trace!(
-                        "Parameterized component `{}' is not used",
-                        &comp.sig.name
-                    );
-                    continue;
-                }
-                let comp = mono.generate_comp(
-                    &comp,
-                    &Binding::new(std::iter::empty()),
-                    &externals,
-                );
-                ns.components.push(comp);
-            }
+        while let Some((name, params)) = mono.process_instance() {
+            log::trace!(
+                "processing {}[{}]",
+                name,
+                params.iter().map(|p| p.to_string()).join(", "),
+            );
+            // Get the component associated with the instance
+            let comp = ns
+                .components
+                .iter()
+                .find(|c| *c.sig.name.inner() == name)
+                .unwrap();
+            // Generate binding for the component
+            let binding = Binding::new(
+                comp.sig
+                    .params
+                    .iter()
+                    .map(|p| p.copy())
+                    .zip(params.into_iter().map(|v| v.into())),
+            );
+            comps.push(mono.generate_comp(comp, &binding));
         }
+        drop(mono);
+
+        comps.reverse();
+        ns.components = comps;
         ns
     }
 }

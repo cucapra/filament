@@ -83,6 +83,14 @@ impl Namespace {
             .iter()
             .flat_map(|(_, comps)| comps.iter().map(|s| (*s.name.inner(), s)))
     }
+
+    /// Get the index to the top-level component.
+    /// Currently, this is the distinguished "main" component
+    pub fn main_idx(&self) -> Option<usize> {
+        self.components
+            .iter()
+            .position(|c| c.sig.name.inner() == "main")
+    }
 }
 
 impl Display for Namespace {
