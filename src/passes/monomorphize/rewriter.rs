@@ -34,7 +34,16 @@ impl Rewriter {
                 name: Loc::unknown(self.binding[name.inner()]),
                 access,
             },
-            t => t,
+            core::Port::InvBundle {
+                invoke,
+                port,
+                access,
+            } => core::Port::InvBundle {
+                invoke: Loc::unknown(self.binding[invoke.inner()]),
+                port,
+                access,
+            },
+            p @ (core::Port::This(_) | core::Port::Constant(_)) => p,
         }
     }
 
