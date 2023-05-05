@@ -74,7 +74,8 @@ operator = _{ op_mul | op_div | op_add | op_sub | op_mod }
 
 pow2 = { "pow2" }
 log2 = { "log2" }
-un_fn = { pow2 | log2 }
+unknown_fn = { identifier }
+un_fn = { pow2 | log2 | unknown_fn }
 
 expr_base = {
   | un_fn ~ "(" ~ expr ~ ")"
@@ -208,9 +209,13 @@ bundle = {
   "bundle" ~ identifier ~ "[" ~ expr ~ "]" ~ ":" ~ bundle_typ ~ ";"
 }
 
+assume = {
+  "assume" ~ expr_cmp ~ ";"
+}
+
 // ========== Commands ==========
 command = {
-  bundle | instance | invocation | connect | fsm | for_loop | if_stmt
+  bundle | instance | invocation | connect | fsm | for_loop | if_stmt | assume
 }
 
 commands = { command* }

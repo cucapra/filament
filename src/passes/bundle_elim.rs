@@ -54,10 +54,7 @@ impl BundleElim {
                     bitwidth,
                 },
         } = p;
-        let len: u64 = len
-            .take()
-            .try_into()
-            .unwrap_or_else(|s| panic!("Failed to concretize `{s}'"));
+        let len: u64 = len.take().try_into().unwrap();
         // For each index in the bundle, generate a corresponding port
         let ports =
             (0..len)

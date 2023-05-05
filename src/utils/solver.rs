@@ -178,12 +178,6 @@ fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
     )?;
     solver.declare_fun("pow2", &["Int"], "Int")?;
     solver.declare_fun("log2", &["Int"], "Int")?;
-    // Declare axioms for unary functions
-    [core::UnFn::Pow2, core::UnFn::Log2].iter().for_each(|f| {
-        f.axioms().into_iter().for_each(|ax| {
-            solver.assert(ax.to_string()).unwrap();
-        });
-    });
     Ok(())
 }
 

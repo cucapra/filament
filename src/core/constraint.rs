@@ -1,4 +1,5 @@
 use super::{Expr, Range, Time, TimeSub};
+use crate::errors::FilamentResult;
 use crate::utils::Binding;
 use crate::utils::Obligation;
 use crate::utils::SExp;
@@ -101,15 +102,15 @@ impl OrderConstraint<Expr> {
         }
     }
 
-    pub fn eval(self, binding: &Binding<Expr>) -> bool {
+    pub fn eval(self, binding: &Binding<Expr>) -> FilamentResult<bool> {
         let OrderConstraint { left, right, op } = self.resolve_expr(binding);
-        let l: u64 = left.try_into().unwrap();
-        let r: u64 = right.try_into().unwrap();
-        match op {
+        let l: u64 = left.try_into()?;
+        let r: u64 = right.try_into()?;
+        Ok(match op {
             OrderOp::Gt => l > r,
             OrderOp::Gte => l >= r,
             OrderOp::Eq => l == r,
-        }
+        })
     }
 }
 

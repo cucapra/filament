@@ -1,5 +1,8 @@
 use super::Id;
-use crate::utils::{self, SExp};
+use crate::{
+    errors,
+    utils::{self, SExp},
+};
 use std::fmt::Display;
 
 /// Binary operation over expressions
@@ -41,26 +44,6 @@ impl std::fmt::Display for UnFn {
     }
 }
 impl UnFn {
-    /// Axioms for each uninterpreted function
-    pub fn axioms(&self) -> Vec<SExp> {
-        match self {
-            UnFn::Pow2 => vec![
-                // SExp("(= (pow2 0) 1)".into()),
-                // SExp(
-                //     "(forall ((n Int)) (=> (> n 0) (= (pow2 (+ n 1)) (* 2 (pow2 n)))))"
-                //         .into(),
-                // ),
-            ],
-            UnFn::Log2 => vec![
-                // SExp("(= (log2 1) 0)".into()),
-                // SExp(
-                //     "(forall ((n Int)) (=> (> n 1) (= (log2 (* 2 n)) (+ 1 (log2 n)))))"
-                //         .into(),
-                // ),
-            ],
-        }
-    }
-
     pub fn apply(self, arg: Expr) -> Expr {
         match (self, arg) {
             (UnFn::Pow2, Expr::Concrete(n)) => {
@@ -100,19 +83,21 @@ impl Default for Expr {
 }
 
 impl TryFrom<Expr> for u64 {
-    type Error = String;
+    type Error = errors::Error;
 
     fn try_from(value: Expr) -> Result<Self, Self::Error> {
         (&value).try_into()
     }
 }
 impl TryFrom<&Expr> for u64 {
-    type Error = String;
+    type Error = errors::Error;
 
     fn try_from(value: &Expr) -> Result<Self, Self::Error> {
         match value {
             Expr::Concrete(n) => Ok(*n),
-            n => Err(format!("`{n}'")),
+            n => Err(errors::Error::malformed(format!(
+                "Cannot concretize `{n}'"
+            ))),
         }
     }
 }

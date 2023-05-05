@@ -60,7 +60,7 @@
 				},
 				{
 					"name": "keyword.control.filament",
-					"match": "\\b(where|for|if|else)\\b"
+					"match": "\\b(where|for|if|else|assume)\\b"
 				}
 			]
 		},

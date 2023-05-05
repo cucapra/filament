@@ -312,7 +312,7 @@ impl Display for Invoke {
 /// Assumed to be true during type checking and validated during code
 /// generation.
 pub struct Assume {
-    cons: Loc<OrderConstraint<Expr>>,
+    pub cons: Loc<OrderConstraint<Expr>>,
 }
 
 impl Assume {
@@ -343,19 +343,6 @@ impl Assume {
     /// Get the position of the assumption
     pub fn pos(&self) -> GPosIdx {
         self.cons.pos()
-    }
-
-    /// Attempts to evaluate the assumption to a boolean value.
-    /// Does not work if the assumption has not been resolved.
-    pub fn force(self) -> bool {
-        let (OrderConstraint { left, right, op }, ..) = self.cons.split();
-        let l: u64 = left.try_into().unwrap();
-        let r: u64 = right.try_into().unwrap();
-        match op {
-            super::OrderOp::Gt => l > r,
-            super::OrderOp::Gte => l >= r,
-            super::OrderOp::Eq => l == r,
-        }
     }
 }
 
