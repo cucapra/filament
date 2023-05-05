@@ -320,7 +320,9 @@ impl BundleElim {
                     let alt = self.commands(cur_name, alt);
                     vec![core::If { cond, then, alt }.into()]
                 }
-                c @ (core::Command::Fsm(_) | core::Command::Bundle(_)) => {
+                c @ (core::Command::Fsm(_)
+                | core::Command::Bundle(_)
+                | core::Command::Assume(_)) => {
                     vec![c]
                 }
             })

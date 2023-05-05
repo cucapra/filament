@@ -13,8 +13,8 @@ mod width_rep;
 pub use component::{Component, Namespace};
 pub use constraint::{Constraint, OrderConstraint, OrderOp};
 pub use control::{
-    Access, Bundle, BundleType, Command, Connect, ForLoop, Fsm, Guard, If,
-    Instance, Invoke, Port,
+    Access, Assume, Bundle, BundleType, Command, Connect, ForLoop, Fsm, Guard,
+    If, Instance, Invoke, Port,
 };
 pub use expr::{Expr, Op, UnFn};
 pub use id::Id;

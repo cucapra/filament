@@ -27,7 +27,7 @@ impl std::fmt::Display for OrderOp {
 pub struct OrderConstraint<T> {
     pub left: T,
     pub right: T,
-    op: OrderOp,
+    pub op: OrderOp,
 }
 
 impl<T> OrderConstraint<T>

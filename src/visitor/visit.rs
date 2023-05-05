@@ -143,6 +143,9 @@ where
                     core::Command::Connect(con) => pass.connect(con, &ctx)?,
                     core::Command::Fsm(fsm) => pass.fsm(fsm, &ctx)?,
                     core::Command::Bundle(bl) => pass.bundle(bl, &ctx)?,
+                    core::Command::Assume(_) => unreachable!(
+                        "Visitor does not support transforming assumptions"
+                    ),
                     core::Command::ForLoop(_) => unreachable!(
                         "Visitor does not support transforming loops"
                     ),

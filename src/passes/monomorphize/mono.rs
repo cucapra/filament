@@ -115,6 +115,11 @@ impl<'e> Monomorphize<'e> {
         let mut n_cmds = Vec::new();
         for cmd in commands {
             match cmd {
+                core::Command::Assume(a) => {
+                    if !a.resolve(param_binding).force() {
+                        panic!("Assumption violated during elaboration.")
+                    }
+                }
                 core::Command::Bundle(bl) => {
                     prev_names.insert(*bl.name.inner(), *bl.name.inner());
                     n_cmds.push(bl.resolve_exprs(param_binding).into());

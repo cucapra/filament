@@ -48,6 +48,8 @@ impl Rewriter {
     }
 
     /// Generate new set of commands by renaming name based on the binding.
+    /// The commands should have been fully evaluated and be free of
+    /// assumptions, loops, and conditional statements.
     pub fn rewrite(&mut self, cmds: Vec<core::Command>) -> Vec<core::Command> {
         // First rename all binders
         for cmd in &cmds {
@@ -68,7 +70,7 @@ impl Rewriter {
                         "If statements should be monomorphized already"
                     )
                 }
-                core::Command::Connect(_) => {}
+                core::Command::Connect(_) | core::Command::Assume(_) => {}
             }
         }
         let mut n_cmds = Vec::with_capacity(cmds.len());
@@ -128,9 +130,10 @@ impl Rewriter {
                     core::Bundle::new(self.binding[name.inner()].into(), typ)
                         .into()
                 }
-                core::Command::If(_) => todo!(),
-                core::Command::ForLoop(_) => unreachable!(),
-                core::Command::Fsm(_) => unreachable!(),
+                core::Command::If(_)
+                | core::Command::ForLoop(_)
+                | core::Command::Assume(_)
+                | core::Command::Fsm(_) => unreachable!(),
             };
             n_cmds.push(out);
         }

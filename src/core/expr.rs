@@ -45,20 +45,18 @@ impl UnFn {
     pub fn axioms(&self) -> Vec<SExp> {
         match self {
             UnFn::Pow2 => vec![
-                SExp("(= (pow2 0) 1)".into()),
-                SExp(
-                    "(forall ((n Int)) (= (pow2 (+ n 1)) (* 2 (pow2 n))))"
-                        .into(),
-                ),
-                SExp("(forall ((n Int)) (=> (>= n 0) (>= (pow2 n) 1)))".into()),
+                // SExp("(= (pow2 0) 1)".into()),
+                // SExp(
+                //     "(forall ((n Int)) (=> (> n 0) (= (pow2 (+ n 1)) (* 2 (pow2 n)))))"
+                //         .into(),
+                // ),
             ],
             UnFn::Log2 => vec![
-                SExp("(= (log2 1) 0)".into()),
-                SExp(
-                    "(forall ((n Int)) (= (log2 (* 2 n)) (+ 1 (log2 n))))"
-                        .into(),
-                ),
-                SExp("(forall ((n Int)) (=> (>= n 1) (>= (log2 n) 0)))".into()),
+                // SExp("(= (log2 1) 0)".into()),
+                // SExp(
+                //     "(forall ((n Int)) (=> (> n 1) (= (log2 (* 2 n)) (+ 1 (log2 n)))))"
+                //         .into(),
+                // ),
             ],
         }
     }

@@ -153,6 +153,7 @@ impl std::fmt::Display for Port {
 pub enum Command {
     Invoke(Invoke),
     Instance(Instance),
+    Assume(Assume),
     Connect(Connect),
     Fsm(Fsm),
     ForLoop(ForLoop),
@@ -165,28 +166,29 @@ impl From<Fsm> for Command {
         Self::Fsm(v)
     }
 }
-
 impl From<Connect> for Command {
     fn from(v: Connect) -> Self {
         Self::Connect(v)
     }
 }
-
 impl From<Instance> for Command {
     fn from(v: Instance) -> Self {
         Self::Instance(v)
     }
 }
-
 impl From<Invoke> for Command {
     fn from(v: Invoke) -> Self {
         Self::Invoke(v)
     }
 }
-
 impl From<Bundle> for Command {
     fn from(v: Bundle) -> Self {
         Self::Bundle(v)
+    }
+}
+impl From<Assume> for Command {
+    fn from(v: Assume) -> Self {
+        Self::Assume(v)
     }
 }
 
@@ -199,7 +201,8 @@ impl Display for Command {
             Command::Fsm(fsm) => write!(f, "{}", fsm),
             Command::ForLoop(l) => write!(f, "{}", l),
             Command::If(l) => write!(f, "{}", l),
-            Command::Bundle(b) => write!(f, "{}", b),
+            Command::Bundle(b) => write!(f, "{b}"),
+            Command::Assume(a) => write!(f, "{a}"),
         }
     }
 }
@@ -301,6 +304,55 @@ impl Display for Invoke {
         } else {
             write!(f, "{} := invoke {}<{}>", self.name, self.instance, abs)
         }
+    }
+}
+
+#[derive(Clone)]
+/// An assumption in the component.
+/// Assumed to be true during type checking and validated during code
+/// generation.
+pub struct Assume {
+    cons: Loc<OrderConstraint<Expr>>,
+}
+
+impl Assume {
+    pub fn new(cons: Loc<OrderConstraint<Expr>>) -> Self {
+        Assume { cons }
+    }
+
+    /// Resolve expression in the assumption
+    pub fn resolve(self, bind: &Binding<Expr>) -> Self {
+        Assume {
+            cons: self.cons.map(|c| OrderConstraint {
+                left: c.left.resolve(bind),
+                right: c.right.resolve(bind),
+                ..c
+            }),
+        }
+    }
+
+    /// Get the position of the assumption
+    pub fn pos(&self) -> GPosIdx {
+        self.cons.pos()
+    }
+
+    /// Attempts to evaluate the assumption to a boolean value.
+    /// Does not work if the assumption has not been resolved.
+    pub fn force(self) -> bool {
+        let (OrderConstraint { left, right, op }, ..) = self.cons.split();
+        let l: u64 = left.try_into().unwrap();
+        let r: u64 = right.try_into().unwrap();
+        match op {
+            super::OrderOp::Gt => l > r,
+            super::OrderOp::Gte => l >= r,
+            super::OrderOp::Eq => l == r,
+        }
+    }
+}
+
+impl std::fmt::Display for Assume {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "assume {}", self.cons)
     }
 }
 
