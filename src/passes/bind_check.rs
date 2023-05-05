@@ -93,6 +93,17 @@ impl visitor::Checker for BindCheck {
         &mut self.diag
     }
 
+    fn assume(
+        &mut self,
+        a: &core::Assume,
+        _ctx: &binding::CompBinding,
+    ) -> Traverse {
+        for e in a.exprs() {
+            self.expr(e, a.pos())
+        }
+        Traverse::Continue(())
+    }
+
     fn bundle(
         &mut self,
         _is_port: bool,

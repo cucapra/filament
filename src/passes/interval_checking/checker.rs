@@ -328,21 +328,28 @@ impl visitor::Checker for IntervalCheck {
         &mut self.diag
     }
 
+    fn assume(&mut self, a: &core::Assume, _: &CompBinding) -> Traverse {
+        self.push_path_cond(a.clone().constraint());
+        Traverse::Continue(())
+    }
+
     fn if_(&mut self, l: &core::If, ctx: &CompBinding) -> Traverse {
         let cond = utils::SExp::from(l.cond.clone());
 
         // Check the then branch using the condition as a path condition
+        let og = self.path_cond_len();
         self.push_path_cond(cond.clone());
         for cmd in &l.then {
             self.command(cmd, ctx);
         }
+        self.trunc_path_cond(og);
 
-        self.pop_path_cond();
+        let og = self.path_cond_len();
         self.push_path_cond(!cond);
         for cmd in &l.alt {
             self.command(cmd, ctx);
         }
-        self.pop_path_cond();
+        self.trunc_path_cond(og);
 
         Traverse::Continue(())
     }
@@ -371,9 +378,12 @@ impl visitor::Checker for IntervalCheck {
         ];
         self.add_facts(var_bounds);
 
+        // Mark the current length of path condition
+        let og = self.path_cond_len();
         for cmd in body {
             self.command(cmd, ctx);
         }
+        self.trunc_path_cond(og);
 
         Traverse::Continue(())
     }

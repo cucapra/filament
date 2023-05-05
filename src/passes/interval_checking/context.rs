@@ -39,9 +39,14 @@ impl IntervalCheck {
         self.path_cond.push(cond);
     }
 
-    /// Remove the last path condition
-    pub fn pop_path_cond(&mut self) {
-        self.path_cond.pop();
+    /// Number of path conditions enqueued
+    pub fn path_cond_len(&self) -> usize {
+        self.path_cond.len()
+    }
+
+    /// Truncate path condition to the given length
+    pub fn trunc_path_cond(&mut self, n: usize) {
+        self.path_cond.truncate(n)
     }
 
     /// Add a new obligations that need to be proved under the current path condition

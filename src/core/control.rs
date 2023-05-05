@@ -1,5 +1,5 @@
 use super::{Expr, Id, Loc, OrderConstraint, PortDef, Range, Time};
-use crate::utils::Binding;
+use crate::utils::{self, Binding};
 use crate::{
     errors::{Error, FilamentResult},
     utils::GPosIdx,
@@ -318,6 +318,15 @@ pub struct Assume {
 impl Assume {
     pub fn new(cons: Loc<OrderConstraint<Expr>>) -> Self {
         Assume { cons }
+    }
+
+    pub fn exprs(&self) -> [&Expr; 2] {
+        let OrderConstraint { left, right, .. } = self.cons.inner();
+        [left, right]
+    }
+
+    pub fn constraint(self) -> utils::SExp {
+        self.cons.take().into()
     }
 
     /// Resolve expression in the assumption
