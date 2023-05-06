@@ -321,28 +321,35 @@ impl visitor::Checker for IntervalCheck {
         self.obligations.clear();
         self.facts.clear();
         self.vars.clear();
-        assert!(self.path_cond.is_empty(), "path condition not empty");
+        self.path_cond.clear();
     }
 
     fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics {
         &mut self.diag
     }
 
+    fn assume(&mut self, a: &core::Assume, _: &CompBinding) -> Traverse {
+        self.push_path_cond(a.clone().constraint());
+        Traverse::Continue(())
+    }
+
     fn if_(&mut self, l: &core::If, ctx: &CompBinding) -> Traverse {
         let cond = utils::SExp::from(l.cond.clone());
 
         // Check the then branch using the condition as a path condition
+        let og = self.path_cond_len();
         self.push_path_cond(cond.clone());
         for cmd in &l.then {
             self.command(cmd, ctx);
         }
+        self.trunc_path_cond(og);
 
-        self.pop_path_cond();
+        let og = self.path_cond_len();
         self.push_path_cond(!cond);
         for cmd in &l.alt {
             self.command(cmd, ctx);
         }
-        self.pop_path_cond();
+        self.trunc_path_cond(og);
 
         Traverse::Continue(())
     }
@@ -371,9 +378,12 @@ impl visitor::Checker for IntervalCheck {
         ];
         self.add_facts(var_bounds);
 
+        // Mark the current length of path condition
+        let og = self.path_cond_len();
         for cmd in body {
             self.command(cmd, ctx);
         }
+        self.trunc_path_cond(og);
 
         Traverse::Continue(())
     }
@@ -410,7 +420,7 @@ impl visitor::Checker for IntervalCheck {
             liveness.pos(),
         );
         let idx_note = self.diag.add_info(
-            format!("parameter ranges from 0 to {}", len.inner()),
+            format!("parameter ranges from 0 to {}-1", len.inner()),
             idx.pos(),
         );
         // The event's delay must be gte than availability's length
@@ -465,7 +475,6 @@ impl visitor::Checker for IntervalCheck {
     fn connect(&mut self, con: &core::Connect, ctx: &CompBinding) -> Traverse {
         let src = &con.src;
         let dst = &con.dst;
-        log::trace!("Checking connect: {} = {}", dst, src);
 
         // Check within-bounds access if the ports are bundles
         self.port_bundle_index(src, ctx);
@@ -475,12 +484,6 @@ impl visitor::Checker for IntervalCheck {
         let mb_dst = ctx.get_resolved_port(dst);
         let mb_src = ctx.get_resolved_port(src);
         self.check_width(con, &mb_src, &mb_dst);
-
-        log::trace!(
-            "Checking connect types:\n{}\n{}",
-            mb_dst.clone().unwrap(),
-            mb_src.clone().unwrap()
-        );
 
         // If we have: dst = src. We need:
         // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.

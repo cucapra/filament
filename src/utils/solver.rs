@@ -176,6 +176,8 @@ fn define_prelude<P>(solver: &mut Solver<P>) -> FilamentResult<()> {
         "Int",
         "(ite (< x 0) (- x) x)",
     )?;
+    solver.declare_fun("pow2", &["Int"], "Int")?;
+    solver.declare_fun("log2", &["Int"], "Int")?;
     Ok(())
 }
 

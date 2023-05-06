@@ -1,5 +1,8 @@
 use super::Id;
-use crate::utils::{self, SExp};
+use crate::{
+    errors,
+    utils::{self, SExp},
+};
 use std::fmt::Display;
 
 /// Binary operation over expressions
@@ -24,11 +27,48 @@ impl Display for Op {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd)]
+/// A unary uninterpreted function over integers.
+pub enum UnFn {
+    /// The `pow2` function
+    Pow2,
+    /// The `log2` function
+    Log2,
+}
+impl std::fmt::Display for UnFn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UnFn::Pow2 => write!(f, "pow2"),
+            UnFn::Log2 => write!(f, "log2"),
+        }
+    }
+}
+impl UnFn {
+    pub fn apply(self, arg: Expr) -> Expr {
+        match (self, arg) {
+            (UnFn::Pow2, Expr::Concrete(n)) => {
+                Expr::Concrete(2u64.pow(n as u32))
+            }
+            (UnFn::Log2, Expr::Concrete(n)) => {
+                Expr::Concrete((n as f64).log2().ceil() as u64)
+            }
+            (func, arg) => Expr::App {
+                func,
+                arg: Box::new(arg),
+            },
+        }
+    }
+}
+
 /// An expression containing integers and abstract variables
 #[derive(Clone, Hash)]
 pub enum Expr {
     Concrete(u64),
     Abstract(Id),
+    App {
+        func: UnFn,
+        arg: Box<Expr>,
+    },
     Op {
         op: Op,
         left: Box<Expr>,
@@ -43,19 +83,21 @@ impl Default for Expr {
 }
 
 impl TryFrom<Expr> for u64 {
-    type Error = String;
+    type Error = errors::Error;
 
     fn try_from(value: Expr) -> Result<Self, Self::Error> {
         (&value).try_into()
     }
 }
 impl TryFrom<&Expr> for u64 {
-    type Error = String;
+    type Error = errors::Error;
 
     fn try_from(value: &Expr) -> Result<Self, Self::Error> {
         match value {
             Expr::Concrete(n) => Ok(*n),
-            n => Err(format!("`{n}'")),
+            n => Err(errors::Error::malformed(format!(
+                "Cannot concretize `{n}'"
+            ))),
         }
     }
 }
@@ -69,6 +111,11 @@ impl Expr {
     /// Construct a new expression from an abstract variable
     pub fn abs(id: Id) -> Self {
         Expr::Abstract(id)
+    }
+
+    /// Function application
+    pub fn func(func: UnFn, arg: Expr) -> Self {
+        func.apply(arg)
     }
 
     pub fn op(op: Op, l: Expr, r: Expr) -> Self {
@@ -94,6 +141,7 @@ impl Expr {
         match self {
             Expr::Concrete(_) => self,
             Expr::Abstract(ref id) => bind.find(id).cloned().unwrap_or(self),
+            Expr::App { func, arg } => func.apply(arg.resolve(bind)),
             Expr::Op { op, left, right } => {
                 let l = left.resolve(bind);
                 let r = right.resolve(bind);
@@ -118,6 +166,7 @@ impl Expr {
         match self {
             Expr::Concrete(_) => Box::new(std::iter::empty()),
             Expr::Abstract(id) => Box::new(std::iter::once(id)),
+            Expr::App { arg, .. } => Box::new(arg.exprs()),
             Expr::Op { left, right, .. } => {
                 Box::new(left.exprs().chain(right.exprs()))
             }
@@ -206,6 +255,7 @@ impl Display for Expr {
         match self {
             Expr::Concrete(n) => write!(f, "{}", n),
             Expr::Abstract(id) => write!(f, "#{}", id),
+            Expr::App { func, arg } => write!(f, "{}({})", func, arg),
             Expr::Op { op, left, right } => {
                 write!(f, "({left}{op}{right})")
             }
@@ -218,6 +268,9 @@ impl From<Expr> for utils::SExp {
         match value {
             Expr::Concrete(n) => SExp(format!("{}", n)),
             Expr::Abstract(id) => SExp(format!("{}", id)),
+            Expr::App { func, arg } => {
+                SExp(format!("({} {})", func, SExp::from(*arg)))
+            }
             Expr::Op { op, left, right } => SExp(format!(
                 "({} {} {})",
                 op,

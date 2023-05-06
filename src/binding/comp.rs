@@ -190,7 +190,9 @@ impl BoundComponent {
                     self.process_cmds(prog, &if_.then);
                     self.process_cmds(prog, &if_.alt);
                 }
-                core::Command::Connect(_) | core::Command::Fsm(_) => (),
+                core::Command::Connect(_)
+                | core::Command::Fsm(_)
+                | core::Command::Assume(_) => (),
             }
         }
     }
@@ -325,10 +327,10 @@ impl BoundComponent {
                     self.process_checked_cmds(prog, &i.then, diag);
                     self.process_checked_cmds(prog, &i.alt, diag);
                 }
-                core::Command::Fsm(_) => (),
                 core::Command::Bundle(bl) => {
                     self.add_bundle(bl.clone());
                 }
+                core::Command::Fsm(_) | core::Command::Assume(_) => (),
             }
         }
     }

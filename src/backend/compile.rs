@@ -426,6 +426,9 @@ fn compile_component(
             core::Command::If(_) => {
                 unreachable!("If should have been compiled away.")
             }
+            core::Command::Assume(a) => {
+                unreachable!("Assumption `{a}' should have been compiled away.")
+            }
         };
     }
     // Compile commands

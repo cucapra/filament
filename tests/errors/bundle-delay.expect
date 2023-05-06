@@ -1,14 +1,6 @@
 ---CODE---
 1
 ---STDERR---
-error: bundle's liveness interval is malformed: end is not strictly greater than start
-  ┌─ tests/errors/bundle-delay.fil:2:20
-  │
-2 │    in[#K]: for<#j> @[G+#j, G+#K] 16,
-  │                 -  ^^^^^^^^^^^^^ bundle's liveness is |(#K-#j)|
-  │                 │   
-  │                 parameter ranges from 0 to #K
-
 error: length of bundle wire availability must be less than event's delay
   ┌─ tests/errors/bundle-delay.fil:2:20
   │
@@ -17,7 +9,7 @@ error: length of bundle wire availability must be less than event's delay
 2 │    in[#K]: for<#j> @[G+#j, G+#K] 16,
   │                 -  ^^^^^^^^^^^^^ bundle's liveness is |(#K-#j)|
   │                 │   
-  │                 parameter ranges from 0 to #K
+  │                 parameter ranges from 0 to #K-1
 
 error: length of bundle wire availability must be less than event's delay
   ┌─ tests/errors/bundle-delay.fil:6:29
@@ -28,7 +20,7 @@ error: length of bundle wire availability must be less than event's delay
 6 │     bundle f[#P+1]: for<#k> @[G+#k, G+#P] 16;
   │                          -  ^^^^^^^^^^^^^ bundle's liveness is |(#P-#k)|
   │                          │   
-  │                          parameter ranges from 0 to (#P+1)
+  │                          parameter ranges from 0 to (#P+1)-1
 
 error: bundle's liveness interval is malformed: end is not strictly greater than start
   ┌─ tests/errors/bundle-delay.fil:6:29
@@ -36,7 +28,7 @@ error: bundle's liveness interval is malformed: end is not strictly greater than
 6 │     bundle f[#P+1]: for<#k> @[G+#k, G+#P] 16;
   │                          -  ^^^^^^^^^^^^^ bundle's liveness is |(#P-#k)|
   │                          │   
-  │                          parameter ranges from 0 to (#P+1)
+  │                          parameter ranges from 0 to (#P+1)-1
 
-Compilation failed with 4 errors.
+Compilation failed with 3 errors.
 Run with --show-models to generate assignments for failing constraints.

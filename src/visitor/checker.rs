@@ -100,8 +100,14 @@ where
         Traverse::Continue(())
     }
 
+    #[inline]
+    fn assume(&mut self, _: &core::Assume, _ctx: &CompBinding) -> Traverse {
+        Traverse::Continue(())
+    }
+
     fn command(&mut self, cmd: &core::Command, ctx: &CompBinding) -> Traverse {
         match cmd {
+            core::Command::Assume(a) => self.assume(a, ctx),
             core::Command::Bundle(bl) => self.bundle(false, bl, ctx),
             core::Command::Invoke(inv) => self.invoke(inv, ctx),
             core::Command::Instance(inst) => self.instance(inst, ctx),

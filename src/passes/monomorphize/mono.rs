@@ -1,5 +1,5 @@
 use super::Rewriter;
-use crate::{core, utils::Binding};
+use crate::{core, errors::Error, utils::Binding};
 use itertools::Itertools;
 use linked_hash_set::LinkedHashSet;
 use std::collections::HashSet;
@@ -115,6 +115,22 @@ impl<'e> Monomorphize<'e> {
         let mut n_cmds = Vec::new();
         for cmd in commands {
             match cmd {
+                core::Command::Assume(core::Assume { cons }) => {
+                    match cons.clone().take().eval(param_binding) {
+                        Ok(true) => (),
+                        Ok(false) => {
+                            panic!("Assumption violated during elaboration.")
+                        }
+                        Err(e) => {
+                            panic!(
+                                "Assumption `{}' violated: {}. Bindings: {:?}",
+                                cons.inner(),
+                                e.kind,
+                                param_binding
+                            )
+                        }
+                    }
+                }
                 core::Command::Bundle(bl) => {
                     prev_names.insert(*bl.name.inner(), *bl.name.inner());
                     n_cmds.push(bl.resolve_exprs(param_binding).into());
@@ -192,7 +208,7 @@ impl<'e> Monomorphize<'e> {
                     }
                 }
                 core::Command::If(core::If { cond, then, alt }) => {
-                    let cond = cond.eval(param_binding);
+                    let cond = cond.eval(param_binding).unwrap();
                     let cmds = if cond { then } else { alt };
                     n_cmds.extend(self.commands(
                         cmds.into_iter(),
@@ -212,13 +228,21 @@ impl<'e> Monomorphize<'e> {
                     let s: u64 = start
                         .resolve(param_binding)
                         .try_into()
-                        .unwrap_or_else(|e| {
-                            panic!("loop start must be concrete but was {e}")
+                        .unwrap_or_else(|e: Error| {
+                            panic!(
+                                "loop start must be concrete but was {}",
+                                e.kind
+                            )
                         });
-                    let e =
-                        end.resolve(param_binding).try_into().unwrap_or_else(
-                            |e| panic!("loop end must be concrete but was {e}"),
-                        );
+                    let e = end
+                        .resolve(param_binding)
+                        .try_into()
+                        .unwrap_or_else(|e: Error| {
+                            panic!(
+                                "loop end must be concrete but was {}",
+                                e.kind
+                            )
+                        });
 
                     for i in s..e {
                         let mut new_binding = (*param_binding).clone();

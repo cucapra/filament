@@ -198,11 +198,30 @@ impl FilamentParser {
         ))
     }
 
+    fn pow2(input: Node) -> ParseResult<core::UnFn> {
+        Ok(core::UnFn::Pow2)
+    }
+    fn log2(input: Node) -> ParseResult<core::UnFn> {
+        Ok(core::UnFn::Log2)
+    }
+    fn unknown_fn(input: Node) -> ParseResult<core::UnFn> {
+        Err(input.error("Unknown function"))
+    }
+    fn un_fn(input: Node) -> ParseResult<core::UnFn> {
+        Ok(match_nodes!(
+            input.into_children();
+            [pow2(_)] => core::UnFn::Pow2,
+            [log2(_)] => core::UnFn::Log2,
+            [unknown_fn(_)] => unreachable!(),
+        ))
+    }
+
     fn expr_base(input: Node) -> ParseResult<core::Expr> {
         Ok(match_nodes!(
             input.into_children();
             [param_var(id)] => id.take().into(),
             [bitwidth(c)] => c.into(),
+            [un_fn(f), expr(e)] => core::Expr::func(f, e.take()),
             [expr(e)] => e.take(),
         ))
     }
@@ -224,7 +243,7 @@ impl FilamentParser {
             [identifier(name), expr(bitwidth)] => {
                 match (&bitwidth.take()).try_into() {
                     Ok(n) => Ok(Port::Un((name.take(), n))),
-                    Err(n) => Err(input.error(format!("port width must be concrete. `{n}' is not a concrete number"))),
+                    Err(n) => Err(input.error(format!("port width must be concrete: {}", n.kind))),
                 }
             },
             [interval_range(range), identifier(name), expr(bitwidth)] => {
@@ -646,6 +665,13 @@ impl FilamentParser {
         ))
     }
 
+    fn assume(input: Node) -> ParseResult<core::Assume> {
+        Ok(match_nodes!(
+            input.into_children();
+            [expr_cmp(e)] => core::Assume::new(e.into()),
+        ))
+    }
+
     fn command(input: Node) -> ParseResult<Vec<core::Command>> {
         Ok(match_nodes!(
             input.into_children();
@@ -654,8 +680,9 @@ impl FilamentParser {
             [connect(con)] => vec![core::Command::Connect(con)],
             [fsm(fsm)] => vec![core::Command::Fsm(fsm)],
             [for_loop(l)] => vec![core::Command::ForLoop(l)],
-            [bundle(bl)] => vec![core::Command::Bundle(bl)],
-            [if_stmt(if_)] => vec![core::Command::If(if_)],
+            [bundle(bl)] => vec![bl.into()],
+            [if_stmt(if_)] => vec![if_.into()],
+            [assume(a)] => vec![a.into()]
         ))
     }
 

@@ -1,5 +1,5 @@
 use super::{Expr, Id, Loc, OrderConstraint, PortDef, Range, Time};
-use crate::utils::Binding;
+use crate::utils::{self, Binding};
 use crate::{
     errors::{Error, FilamentResult},
     utils::GPosIdx,
@@ -153,6 +153,7 @@ impl std::fmt::Display for Port {
 pub enum Command {
     Invoke(Invoke),
     Instance(Instance),
+    Assume(Assume),
     Connect(Connect),
     Fsm(Fsm),
     ForLoop(ForLoop),
@@ -165,28 +166,29 @@ impl From<Fsm> for Command {
         Self::Fsm(v)
     }
 }
-
 impl From<Connect> for Command {
     fn from(v: Connect) -> Self {
         Self::Connect(v)
     }
 }
-
 impl From<Instance> for Command {
     fn from(v: Instance) -> Self {
         Self::Instance(v)
     }
 }
-
 impl From<Invoke> for Command {
     fn from(v: Invoke) -> Self {
         Self::Invoke(v)
     }
 }
-
 impl From<Bundle> for Command {
     fn from(v: Bundle) -> Self {
         Self::Bundle(v)
+    }
+}
+impl From<Assume> for Command {
+    fn from(v: Assume) -> Self {
+        Self::Assume(v)
     }
 }
 
@@ -199,7 +201,8 @@ impl Display for Command {
             Command::Fsm(fsm) => write!(f, "{}", fsm),
             Command::ForLoop(l) => write!(f, "{}", l),
             Command::If(l) => write!(f, "{}", l),
-            Command::Bundle(b) => write!(f, "{}", b),
+            Command::Bundle(b) => write!(f, "{b}"),
+            Command::Assume(a) => write!(f, "{a}"),
         }
     }
 }
@@ -301,6 +304,51 @@ impl Display for Invoke {
         } else {
             write!(f, "{} := invoke {}<{}>", self.name, self.instance, abs)
         }
+    }
+}
+
+#[derive(Clone)]
+/// An assumption in the component.
+/// Assumed to be true during type checking and validated during code
+/// generation.
+pub struct Assume {
+    pub cons: Loc<OrderConstraint<Expr>>,
+}
+
+impl Assume {
+    pub fn new(cons: Loc<OrderConstraint<Expr>>) -> Self {
+        Assume { cons }
+    }
+
+    pub fn exprs(&self) -> [&Expr; 2] {
+        let OrderConstraint { left, right, .. } = self.cons.inner();
+        [left, right]
+    }
+
+    pub fn constraint(self) -> utils::SExp {
+        self.cons.take().into()
+    }
+
+    /// Resolve expression in the assumption
+    pub fn resolve(self, bind: &Binding<Expr>) -> Self {
+        Assume {
+            cons: self.cons.map(|c| OrderConstraint {
+                left: c.left.resolve(bind),
+                right: c.right.resolve(bind),
+                ..c
+            }),
+        }
+    }
+
+    /// Get the position of the assumption
+    pub fn pos(&self) -> GPosIdx {
+        self.cons.pos()
+    }
+}
+
+impl std::fmt::Display for Assume {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "assume {}", self.cons)
     }
 }
 
