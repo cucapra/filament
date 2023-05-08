@@ -273,11 +273,6 @@ impl BundleElim {
                     vec![inv.into()]
                 }
                 core::Command::Connect(con) => {
-                    if con.dst.range_access() || con.src.range_access() {
-                        unimplemented!(
-                            "Range accesses in connect not yet implemented"
-                        )
-                    }
                     // Rewrite the ports
                     let dst = self.port(cur_name, con.dst);
                     let src = self.port(cur_name, con.src);
