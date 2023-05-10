@@ -8,7 +8,6 @@ mod loc;
 mod port;
 mod signature;
 mod time;
-mod width_rep;
 
 pub use component::{Component, Namespace};
 pub use constraint::{Constraint, OrderConstraint, OrderOp};

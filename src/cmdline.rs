@@ -12,10 +12,6 @@ pub struct Opts {
     #[argh(switch, long = "show-models")]
     pub show_models: bool,
 
-    /// location of the calyx primitives folder
-    #[argh(option, long = "calyx-primitives", default = "\"../calyx\".into()")]
-    pub calyx_primitives: PathBuf,
-
     /// path to search for imports
     #[argh(option, long = "library", short = 'l', default = "\".\".into()")]
     pub library: PathBuf,
