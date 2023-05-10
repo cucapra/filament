@@ -131,8 +131,6 @@ class CocotbExecBase(Stage):
                     config["stages", self.name, "exec"],
                     "--library",
                     config["stages", self.name, "library"],
-                    "--calyx-primitives",
-                    config["global", "futil_directory"],
                     "--dump-interface",
                     "{path}",
                 ]
@@ -359,8 +357,6 @@ class FilamentStage(Stage):
                 config["stages", self.name, "exec"],
                 "--library",
                 config["stages", self.name, "library"],
-                "--calyx-primitives",
-                config["global", "futil_directory"],
                 "{path}",
             ]
         )
