@@ -1,12 +1,12 @@
 use super::Fsm;
-use crate::{cmdline::Opts, core, errors::FilamentResult, utils::Traversal};
+use crate::{core, errors::FilamentResult, utils::Traversal};
 use calyx_frontend as frontend;
 use calyx_ir::{self as ir, structure, RRC};
 use calyx_utils::CalyxResult;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::iter;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::rc::Rc;
 
 const INTERFACE_PORTS: [(ir::BoolAttr, (&str, u64, ir::Direction)); 2] = [
@@ -477,13 +477,9 @@ fn compile_signature(sig: &core::Signature) -> ir::Primitive {
 
 #[allow(clippy::type_complexity)]
 fn init_calyx(
-    lib_loc: &Path,
     externs: &[(String, Vec<core::Signature>)],
 ) -> CalyxResult<ir::Context> {
-    let mut prims = PathBuf::from(lib_loc);
-    prims.push("primitives");
-    prims.push("core.futil");
-    let mut ws = frontend::Workspace::construct(&Some(prims), lib_loc)?;
+    let mut ws = frontend::Workspace::from_compile_lib()?;
     // Add externals
     ws.externs.extend(externs.iter().map(|(file, sigs)| {
         (
@@ -500,26 +496,10 @@ fn init_calyx(
     Ok(ctx)
 }
 
-fn print(ctx: ir::Context) {
-    let mut out = &mut std::io::stdout();
-    for (path, prims) in ctx.lib.externs() {
-        ir::Printer::write_externs(
-            (&path, prims.iter().map(|(_, v)| v)),
-            &mut out,
-        )
-        .unwrap();
-    }
-    for comp in &ctx.components {
-        ir::Printer::write_component(comp, &mut out).unwrap();
-        println!();
-    }
-}
-
-pub fn compile(ns: core::Namespace, opts: &Opts) {
-    let mut calyx_ctx = init_calyx(&opts.calyx_primitives, &ns.externs)
-        .unwrap_or_else(|e| {
-            panic!("Error initializing calyx context: {:?}", e);
-        });
+pub fn compile(ns: core::Namespace) {
+    let mut calyx_ctx = init_calyx(&ns.externs).unwrap_or_else(|e| {
+        panic!("Error initializing calyx context: {:?}", e);
+    });
 
     let mut bindings = Binding::default();
 
@@ -541,5 +521,6 @@ pub fn compile(ns: core::Namespace, opts: &Opts) {
         .components
         .extend(bindings.fsm_comps.into_values());
 
-    print(calyx_ctx)
+    let mut out = &mut std::io::stdout();
+    ir::Printer::write_context(&calyx_ctx, false, &mut out).unwrap();
 }
