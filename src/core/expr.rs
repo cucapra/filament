@@ -21,7 +21,7 @@ impl Display for Op {
             Op::Add => write!(f, "+"),
             Op::Sub => write!(f, "-"),
             Op::Mul => write!(f, "*"),
-            Op::Div => write!(f, "/"),
+            Op::Div => write!(f, "div"),
             Op::Mod => write!(f, "mod"),
         }
     }
