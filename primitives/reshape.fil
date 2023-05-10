@@ -1,18 +1,42 @@
 import "primitives/state.fil";
 
-// Implements an n*K to K serializer
+// Implements an n*K to K serializer.
+// Takes #N*#K inputs in the first cycle and produces #K every cycle for #N
+// cycles.
 comp Serialize[#N, #K, #W]<G: #N>(
     @interface[G] go: 1,
     in[#N*#K]: for<#p> @[G, G+1] #W
 ) -> (
-    out[#N*#K]: for<#p> @[G+#p/#K, G+#p/#K + 1] #W
-) {
+    out[#N*#K]: for<#p> @[G+#p/#K, G+#p/#K+1] #W
+) where #N > 0, #K > 0 {
     for #i in 0..#N {
         for #j in 0..#K {
             if #i > 0 {
                 // #i+1 is the end time because we want to hold the signal for
                 // #i cycles
                 d := new Register[#W]<G, G+#i+1>(in{#K*#i+#j});
+                out{#K*#i+#j} = d.out;
+            } else {
+                out{#K*#i+#j} = in{#K*#i+#j};
+            }
+        }
+    }
+}
+
+// Implements a #K to n*K deserializer.
+// Accepts #K inputs every cycle for #N cycles and produces #N*#K outputs in
+// the last cycle.
+comp Deserialize[#N, #K, #W]<G: #N-1>(
+    @interface[G] go: 1,
+    in[#N*#K]: for<#p> @[G+#p/#K, G+#p/#K+1] #W
+) -> (
+    out[#N*#K]: for<#p> @[G+#N-1, G+#N] #W
+) where #N > 1, #K > 0 {
+    for #i in 0..#N {
+        // Accepts #K inputs this cycle and delay them
+        for #j in 0..#K {
+            if #i < #N-1 {
+                d := new Register[#W]<G+#i, G+#N>(in{#K*#i+#j});
                 out{#K*#i+#j} = d.out;
             } else {
                 out{#K*#i+#j} = in{#K*#i+#j};
