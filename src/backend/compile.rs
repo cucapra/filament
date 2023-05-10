@@ -1,18 +1,18 @@
 use super::Fsm;
-use crate::{cmdline::Opts, core, errors::FilamentResult, utils::Traversal};
+use crate::{core, errors::FilamentResult, utils::Traversal};
 use calyx_frontend as frontend;
 use calyx_ir::{self as ir, structure, RRC};
 use calyx_utils::CalyxResult;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::iter;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::rc::Rc;
 
-/// Attribute attached to event signals in a module interface.
-const FIL_EVENT: &str = "fil_event";
-/// Attribute that represents the delay of a particular event
-// const DELAY: &str = "delay";
+const INTERFACE_PORTS: [(ir::BoolAttr, (&str, u64, ir::Direction)); 2] = [
+    (ir::BoolAttr::Clk, ("clk", 1, ir::Direction::Input)),
+    (ir::BoolAttr::Reset, ("reset", 1, ir::Direction::Input)),
+];
 
 /// Bindings associated with the current compilation context
 #[derive(Default)]
@@ -164,9 +164,9 @@ fn define_fsm_component(states: u64, ctx: &mut Context) {
         .map(|n| {
             (ir::Id::from(format!("_{n}")), 1, ir::Direction::Output).into()
         })
-        .chain(INTERFACE_PORTS.iter().map(|pd| {
+        .chain(INTERFACE_PORTS.iter().map(|(attr, pd)| {
             let mut pd = ir::PortDef::from(pd.clone());
-            pd.attributes.insert(pd.name.as_ref(), 1);
+            pd.attributes.insert(*attr, 1);
             pd
         }))
         .chain(iter::once(
@@ -178,7 +178,7 @@ fn define_fsm_component(states: u64, ctx: &mut Context) {
         ports,
         false,
     );
-    comp.attributes.insert("nointerface", 1);
+    comp.attributes.insert(ir::BoolAttr::NoInterface, 1);
     let mut builder = ir::Builder::new(&mut comp, ctx.lib).not_generated();
 
     // Add n-1 registers
@@ -280,18 +280,8 @@ where
         .map(|pd| port_transform(pd, ir::Direction::Input))
         .chain(sig.interface_signals.iter().map(|id| {
             let mut pd = concrete_transform(&id.name, 1);
-            pd.attributes.insert(FIL_EVENT, 1);
-            // if is_comp {
-            //     pd.attributes.insert(
-            //         DELAY,
-            //         id.delay().concrete().unwrap_or_else(|| {
-            //             panic!(
-            //                 "Event does not have a concrete delay: {}",
-            //                 id.delay()
-            //             )
-            //         }),
-            //     );
-            // }
+            pd.attributes
+                .insert(ir::Attribute::Unknown("fil_event".into()), 1);
             pd
         }))
         .chain(
@@ -308,30 +298,32 @@ where
     // Add annotations for interface ports
     let mut interface_ports = INTERFACE_PORTS
         .iter()
-        .map(|pd| pd.0)
+        .map(|pd| (pd.0, pd.1 .0))
         .collect::<HashSet<_>>();
+
+    // Walk over the ports and if they match the known port name, add the attribute.
+    // The name of the `clk` and `reset` ports are currently hardcoded.
     for pd in &mut ports {
-        if interface_ports.contains(pd.name.as_ref()) {
-            interface_ports.remove(pd.name.as_ref());
-            pd.attributes.insert(pd.name, 1);
+        if let Some((a, n)) = interface_ports
+            .iter()
+            .find(|(_, n)| *n == pd.name.as_ref())
+            .cloned()
+        {
+            interface_ports.remove(&(a, n));
+            pd.attributes.insert(a, 1);
         }
     }
     // Add missing interface ports
     if is_comp {
-        for name in interface_ports {
+        for (attr, name) in interface_ports {
             let mut pd = concrete_transform(&name.into(), 1);
-            pd.attributes.insert(name, 1);
+            pd.attributes.insert(attr, 1);
             ports.push(pd);
         }
     }
 
     ports
 }
-
-const INTERFACE_PORTS: [(&str, u64, ir::Direction); 2] = [
-    ("clk", 1, ir::Direction::Input),
-    ("reset", 1, ir::Direction::Input),
-];
 
 fn compile_component(
     comp: &mut core::Component,
@@ -346,7 +338,7 @@ fn compile_component(
                 dir,
             )
                 .into();
-            pd.attributes.insert("data", 1);
+            pd.attributes.insert(ir::BoolAttr::Data, 1);
             pd
         };
     let concrete_transform =
@@ -357,7 +349,7 @@ fn compile_component(
         as_port_defs(&comp.sig, port_transform, concrete_transform, true);
     let mut component =
         ir::Component::new(comp.sig.name.as_ref(), ports, false);
-    component.attributes.insert("nointerface", 1);
+    component.attributes.insert(ir::BoolAttr::NoInterface, 1);
     let builder = ir::Builder::new(&mut component, lib).not_generated();
     let mut ctx = Context::new(sigs, builder, lib);
 
@@ -411,7 +403,7 @@ fn compile_component(
                         &conc_bind,
                     )
                 };
-                cell.borrow_mut().attributes.insert("data", 1);
+                cell.borrow_mut().attributes.insert(ir::BoolAttr::Data, 1);
                 ctx.instances.insert(name.take(), cell);
             }
             core::Command::Connect(con) => {
@@ -452,7 +444,7 @@ fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
                 _ => panic!("cannot complex width expr: {w}"),
             };
             let mut attributes = ir::Attributes::default();
-            attributes.insert("data", 1);
+            attributes.insert(ir::BoolAttr::Data, 1);
             ir::PortDef {
                 name: ir::Id::from(pd.name().as_ref()),
                 direction: dir,
@@ -485,13 +477,9 @@ fn compile_signature(sig: &core::Signature) -> ir::Primitive {
 
 #[allow(clippy::type_complexity)]
 fn init_calyx(
-    lib_loc: &Path,
     externs: &[(String, Vec<core::Signature>)],
 ) -> CalyxResult<ir::Context> {
-    let mut prims = PathBuf::from(lib_loc);
-    prims.push("primitives");
-    prims.push("core.futil");
-    let mut ws = frontend::Workspace::construct(&Some(prims), lib_loc)?;
+    let mut ws = frontend::Workspace::from_compile_lib()?;
     // Add externals
     ws.externs.extend(externs.iter().map(|(file, sigs)| {
         (
@@ -508,26 +496,10 @@ fn init_calyx(
     Ok(ctx)
 }
 
-fn print(ctx: ir::Context) {
-    let mut out = &mut std::io::stdout();
-    for (path, prims) in ctx.lib.externs() {
-        ir::Printer::write_externs(
-            (&path, prims.iter().map(|(_, v)| v)),
-            &mut out,
-        )
-        .unwrap();
-    }
-    for comp in &ctx.components {
-        ir::Printer::write_component(comp, &mut out).unwrap();
-        println!();
-    }
-}
-
-pub fn compile(ns: core::Namespace, opts: &Opts) {
-    let mut calyx_ctx = init_calyx(&opts.calyx_primitives, &ns.externs)
-        .unwrap_or_else(|e| {
-            panic!("Error initializing calyx context: {:?}", e);
-        });
+pub fn compile(ns: core::Namespace) {
+    let mut calyx_ctx = init_calyx(&ns.externs).unwrap_or_else(|e| {
+        panic!("Error initializing calyx context: {:?}", e);
+    });
 
     let mut bindings = Binding::default();
 
@@ -549,5 +521,6 @@ pub fn compile(ns: core::Namespace, opts: &Opts) {
         .components
         .extend(bindings.fsm_comps.into_values());
 
-    print(calyx_ctx)
+    let mut out = &mut std::io::stdout();
+    ir::Printer::write_context(&calyx_ctx, false, &mut out).unwrap();
 }
