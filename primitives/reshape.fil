@@ -1,0 +1,22 @@
+import "primitives/state.fil";
+
+// Implements an n*K to K serializer
+comp Serialize[#N, #K, #W]<G: #N>(
+    @interface[G] go: 1,
+    in[#N*#K]: for<#p> @[G, G+1] #W
+) -> (
+    out[#N*#K]: for<#p> @[G+#p/#K, G+#p/#K + 1] #W
+) {
+    for #i in 0..#N {
+        for #j in 0..#K {
+            if #i > 0 {
+                // #i+1 is the end time because we want to hold the signal for
+                // #i cycles
+                d := new Register[#W]<G, G+#i+1>(in{#K*#i+#j});
+                out{#K*#i+#j} = d.out;
+            } else {
+                out{#K*#i+#j} = in{#K*#i+#j};
+            }
+        }
+    }
+}
