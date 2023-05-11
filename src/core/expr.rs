@@ -1,9 +1,11 @@
-use super::Id;
+use itertools::Itertools;
+
+use super::{Id, OrderConstraint, Assume, Loc};
 use crate::{
     errors,
-    utils::{self, SExp},
+    utils::{self, SExp, Binding},
 };
-use std::fmt::Display;
+use std::{fmt::Display, sync, mem};
 
 /// Binary operation over expressions
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd)]
@@ -27,6 +29,62 @@ impl Display for Op {
     }
 }
 
+/// A custom function definition
+pub struct FnAssume
+{
+    assumptions: Vec<OrderConstraint<Expr>>
+}
+
+impl FnAssume {
+    /// Creates a unique ID to be replaced for function definitions.
+    /// Returns `(l, r)`: [core::Id] terms for the left and right expressions used in `assume`
+    fn replaceable_ids() -> &'static (Id, Id) {
+        static mut SINGLETON: mem::MaybeUninit<(Id, Id)> = mem::MaybeUninit::uninit();
+        static ONCE: sync::Once = sync::Once::new();
+
+        // SAFETY:
+        // - writing to the singleton is OK because we only do it one time
+        // - the ONCE guarantees that SINGLETON is init'ed before assume_init_ref
+        unsafe {
+            ONCE.call_once(|| {
+                SINGLETON.write((Id::new("_FnAssume_left"), Id::new("_FnAssume_right")));
+            });
+            SINGLETON.assume_init_ref()
+        }
+    }
+
+    /// Get a reference to the left id
+    fn left() -> Id {
+        FnAssume::replaceable_ids().0.clone()
+    }
+
+    /// Get a reference to the right id
+    fn right() -> Id {
+        FnAssume::replaceable_ids().1.clone()
+    }
+
+    fn new(assumptions: Vec<OrderConstraint<Expr>>) -> Self {
+        Self {
+            assumptions
+        }
+    }
+
+    /// Creates the assumptions necessary for this function
+    /// Assumes `l = f(r)`
+    fn assume (&self, left: Expr, right: Expr) -> Vec<Assume> {
+        let bind = Binding::new(
+        vec![(FnAssume::left(), left), (FnAssume::right(), right)]
+        );
+        self.assumptions
+            .clone()
+            .into_iter()
+            .map(|x| x.replace_expr(&bind))
+            .map(Loc::unknown)
+            .map(Assume::new)
+            .collect_vec()
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd)]
 /// A unary uninterpreted function over integers.
 pub enum UnFn {
@@ -43,7 +101,13 @@ impl std::fmt::Display for UnFn {
         }
     }
 }
+
 impl UnFn {
+    /// Returns the generated assumptions for this function given a left and right.
+    pub fn assume(self, left: Expr, right: Expr) -> Vec<Assume> {
+        Into::<FnAssume>::into(self).assume(left, right)
+    }
+
     pub fn apply(self, arg: Expr) -> Expr {
         match (self, arg) {
             (UnFn::Pow2, Expr::Concrete(n)) => {
@@ -56,6 +120,87 @@ impl UnFn {
                 func,
                 arg: Box::new(arg),
             },
+        }
+    }
+}
+
+impl Into<FnAssume> for UnFn {
+    fn into(self) -> FnAssume {
+        match self {
+            UnFn::Pow2 => FnAssume::new(vec![
+                // assume #l*2 == pow2(#r+1);
+                OrderConstraint::eq(
+                    Expr::op(
+                        Op::Mul,
+                        Expr::abs(FnAssume::left()),
+                        Expr::concrete(2)
+                    ),
+                    self.clone().apply(
+                        Expr::op (
+                            Op::Sub,
+                            Expr::abs(FnAssume::right()),
+                            Expr::concrete(1)
+                        )
+                    )
+                ),
+                // assume #l == pow2(#r-1)*2;
+                OrderConstraint::eq(
+                    Expr::abs(FnAssume::left()),
+                    Expr::op (
+                        Op::Mul,
+                        self.clone().apply(
+                            Expr::op (
+                                Op::Sub,
+                                Expr::abs(FnAssume::right()),
+                                Expr::concrete(1)
+                            )
+                        ),
+                        Expr::concrete(2)
+                    )
+                ),
+                // assume #r >= 0;
+                OrderConstraint::gte(
+                    Expr::abs(FnAssume::right()),
+                    Expr::concrete(0)
+                )
+            ]),
+            UnFn::Log2 => FnAssume::new(vec![
+                // assume #l+1 == log2(#r*2);
+                OrderConstraint::eq(
+                    Expr::op(
+                        Op::Add,
+                        Expr::abs(FnAssume::left()),
+                        Expr::concrete(1)
+                    ),
+                    self.clone().apply(
+                        Expr::op (
+                            Op::Mul,
+                            Expr::abs(FnAssume::right()),
+                            Expr::concrete(2)
+                        )
+                    )
+                ),
+                // assume #l-1 == log2(#r/2);
+                OrderConstraint::eq(
+                    Expr::op(
+                        Op::Sub,
+                        Expr::abs(FnAssume::left()),
+                        Expr::concrete(1)
+                    ),
+                    self.clone().apply(
+                        Expr::op (
+                            Op::Div,
+                            Expr::abs(FnAssume::right()),
+                            Expr::concrete(2)
+                        )
+                    )
+                ),
+                // assume #l >= 0;
+                OrderConstraint::gte(
+                    Expr::abs(FnAssume::left()),
+                    Expr::concrete(0)
+                )
+            ])
         }
     }
 }
@@ -153,6 +298,20 @@ impl Expr {
                     Op::Mod => l % r,
                 }
             }
+        }
+    }
+
+    /// Replace variables in this expression using the given binding without actually evaluating.
+    pub fn replace(self, bind: &utils::Binding<Expr>) -> Self {
+        match self {
+            Expr::Abstract(ref id) => bind.find(id).cloned().unwrap_or(self),
+            Expr::App { func, arg } => func.apply(arg.replace(bind)),
+            Expr::Op { op, left, right } => Expr::op(
+                op,
+                left.replace(bind),
+                right.replace(bind)
+            ),
+            Expr::Concrete(_) => self
         }
     }
 

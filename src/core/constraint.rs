@@ -102,6 +102,14 @@ impl OrderConstraint<Expr> {
         }
     }
 
+    pub fn replace_expr(self, binding: &Binding<Expr>) -> Self {
+        OrderConstraint {
+            left: self.left.replace(binding),
+            right: self.right.resolve(binding),
+            ..self
+        }
+    }
+
     pub fn eval(self, binding: &Binding<Expr>) -> FilamentResult<bool> {
         let OrderConstraint { left, right, op } = self.resolve_expr(binding);
         let l: u64 = left.try_into()?;
