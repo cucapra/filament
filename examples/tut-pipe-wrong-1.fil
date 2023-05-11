@@ -3,12 +3,12 @@ import "primitives/sequential.fil";
 
 /// ANCHOR: sig
 comp main<G: 1>(
-/// ANCHOR_END: sig
     @interface[G] go: 1,
     @[G, G+3] op: 1,
     @[G, G+1] left: 32,
     @[G, G+1] right: 32,
 ) -> (@[G+2, G+3] out: 32)
+/// ANCHOR_END: sig
 {
     A := new Add[32];
     M := new Mult[32];
