@@ -71,9 +71,9 @@ impl FnAssume {
 
     /// Creates the assumptions necessary for this function
     /// Assumes `l = f(r)`
-    fn assume (&self, left: Expr, right: Expr) -> Vec<Assume> {
+    fn assume (&self, left: &Expr, right: &Expr) -> Vec<Assume> {
         let bind = Binding::new(
-        vec![(FnAssume::left(), left), (FnAssume::right(), right)]
+        vec![(FnAssume::left(), left.clone()), (FnAssume::right(), right.clone())]
         );
         self.assumptions
             .clone()
@@ -104,7 +104,7 @@ impl std::fmt::Display for UnFn {
 
 impl UnFn {
     /// Returns the generated assumptions for this function given a left and right.
-    pub fn assume(self, left: Expr, right: Expr) -> Vec<Assume> {
+    pub fn assume(self, left: &Expr, right: &Expr) -> Vec<Assume> {
         Into::<FnAssume>::into(self).assume(left, right)
     }
 
@@ -125,6 +125,7 @@ impl UnFn {
 }
 
 impl Into<FnAssume> for UnFn {
+    /// Returns the default [FnAssume] function assumptions for every [UnFn]
     fn into(self) -> FnAssume {
         match self {
             UnFn::Pow2 => FnAssume::new(vec![
