@@ -1,5 +1,5 @@
 use filament::{
-    backend, binding, cmdline, passes,
+    backend, binding, cmdline, passes::{self, Pass},
     resolver::Resolver,
     visitor::{Checker, Transform},
 };
