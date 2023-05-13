@@ -1,4 +1,4 @@
-use super::{Expr, Id, Loc, OrderConstraint, PortDef, Range, Time};
+use super::{Expr, Id, Loc, OrderConstraint, PortDef, Range, Time, Implication};
 use crate::utils::{self, Binding};
 use crate::{
     errors::{Error, FilamentResult},
@@ -166,26 +166,31 @@ impl From<Fsm> for Command {
         Self::Fsm(v)
     }
 }
+
 impl From<Connect> for Command {
     fn from(v: Connect) -> Self {
         Self::Connect(v)
     }
 }
+
 impl From<Instance> for Command {
     fn from(v: Instance) -> Self {
         Self::Instance(v)
     }
 }
+
 impl From<Invoke> for Command {
     fn from(v: Invoke) -> Self {
         Self::Invoke(v)
     }
 }
+
 impl From<Bundle> for Command {
     fn from(v: Bundle) -> Self {
         Self::Bundle(v)
     }
 }
+
 impl From<Assume> for Command {
     fn from(v: Assume) -> Self {
         Self::Assume(v)
@@ -309,20 +314,20 @@ impl Display for Invoke {
 
 #[derive(Clone)]
 /// An assumption in the component.
+/// Contains a guard 
 /// Assumed to be true during type checking and validated during code
 /// generation.
 pub struct Assume {
-    pub cons: Loc<OrderConstraint<Expr>>,
+    pub cons: Loc<Implication<Expr>>,
 }
 
 impl Assume {
-    pub fn new(cons: Loc<OrderConstraint<Expr>>) -> Self {
+    pub fn new(cons: Loc<Implication<Expr>>) -> Self {
         Assume { cons }
     }
 
-    pub fn exprs(&self) -> [&Expr; 2] {
-        let OrderConstraint { left, right, .. } = self.cons.inner();
-        [left, right]
+    pub fn exprs(&self) -> Vec<&Expr> {
+        self.cons.inner().exprs()
     }
 
     pub fn constraint(self) -> utils::SExp {
@@ -332,11 +337,7 @@ impl Assume {
     /// Resolve expression in the assumption
     pub fn resolve(self, bind: &Binding<Expr>) -> Self {
         Assume {
-            cons: self.cons.map(|c| OrderConstraint {
-                left: c.left.resolve(bind),
-                right: c.right.resolve(bind),
-                ..c
-            }),
+            cons: self.cons.map(|c| c.resolve_expr(bind)),
         }
     }
 

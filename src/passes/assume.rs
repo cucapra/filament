@@ -1,10 +1,8 @@
 use crate::{
-    core::{self, Loc, OrderConstraint, Expr},
-    utils::Binding,
+    core::{self, OrderConstraint, Expr},
     passes::Pass
 };
 use itertools::Itertools;
-use std::collections::HashMap;
 
 /// Add default assumptions to the Filament program
 pub struct Assume;

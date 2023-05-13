@@ -1,5 +1,5 @@
 use super::Rewriter;
-use crate::{core, errors::Error, utils::Binding, passes::Pass};
+use crate::{core::{self, EvalBool}, errors::Error, utils::Binding, passes::Pass};
 use itertools::Itertools;
 use linked_hash_set::LinkedHashSet;
 use std::collections::HashSet;
@@ -116,10 +116,10 @@ impl<'e> Monomorphize<'e> {
         for cmd in commands {
             match cmd {
                 core::Command::Assume(core::Assume { cons }) => {
-                    match cons.clone().take().eval(param_binding) {
+                    match cons.clone().take().resolve_bool(param_binding) {
                         Ok(true) => (),
                         Ok(false) => {
-                            panic!("Assumption violated during elaboration.")
+                            panic!("Assumption {} violated during elaboration.", cons)
                         }
                         Err(e) => {
                             panic!(
@@ -208,7 +208,7 @@ impl<'e> Monomorphize<'e> {
                     }
                 }
                 core::Command::If(core::If { cond, then, alt }) => {
-                    let cond = cond.eval(param_binding).unwrap();
+                    let cond = cond.resolve_bool(param_binding).unwrap();
                     let cmds = if cond { then } else { alt };
                     n_cmds.extend(self.commands(
                         cmds.into_iter(),

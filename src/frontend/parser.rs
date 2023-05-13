@@ -665,10 +665,18 @@ impl FilamentParser {
         ))
     }
 
+    fn implication(input: Node) -> ParseResult<core::Implication<core::Expr>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [expr_cmp(guard), expr_cmp(e)] => core::Implication::new(guard.into(), e.into())
+        ))
+    }
+
     fn assume(input: Node) -> ParseResult<core::Assume> {
         Ok(match_nodes!(
             input.into_children();
-            [expr_cmp(e)] => core::Assume::new(e.into()),
+            [expr_cmp(e)] => core::Assume::new(core::Implication::from(e).into()),
+            [implication(e)] => core::Assume::new(e.into())
         ))
     }
 

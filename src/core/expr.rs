@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use super::{Id, OrderConstraint, Assume, Loc};
+use super::{Id, OrderConstraint, Assume, Loc, Implication};
 use crate::{
     errors,
     utils::{self, SExp, Binding},
@@ -32,7 +32,7 @@ impl Display for Op {
 /// A custom function definition
 pub struct FnAssume
 {
-    assumptions: Vec<OrderConstraint<Expr>>
+    assumptions: Vec<Implication<Expr>>
 }
 
 impl FnAssume {
@@ -63,7 +63,7 @@ impl FnAssume {
         FnAssume::replaceable_ids().1.clone()
     }
 
-    fn new(assumptions: Vec<OrderConstraint<Expr>>) -> Self {
+    fn new(assumptions: Vec<Implication<Expr>>) -> Self {
         Self {
             assumptions
         }
@@ -78,7 +78,7 @@ impl FnAssume {
         self.assumptions
             .clone()
             .into_iter()
-            .map(|x| x.replace_expr(&bind))
+            .map(|x| x.resolve_expr(&bind))
             .map(Loc::unknown)
             .map(Assume::new)
             .collect_vec()
@@ -124,10 +124,10 @@ impl UnFn {
     }
 }
 
-impl Into<FnAssume> for UnFn {
+impl From<UnFn> for FnAssume {
     /// Returns the default [FnAssume] function assumptions for every [UnFn]
-    fn into(self) -> FnAssume {
-        match self {
+    fn from(func: UnFn) -> FnAssume {
+        match func {
             UnFn::Pow2 => FnAssume::new(vec![
                 // assume #l*2 == pow2(#r+1);
                 OrderConstraint::eq(
@@ -136,34 +136,40 @@ impl Into<FnAssume> for UnFn {
                         Expr::abs(FnAssume::left()),
                         Expr::concrete(2)
                     ),
-                    self.clone().apply(
+                    func.clone().apply(
                         Expr::op (
-                            Op::Sub,
+                            Op::Add,
                             Expr::abs(FnAssume::right()),
                             Expr::concrete(1)
                         )
                     )
-                ),
-                // assume #l == pow2(#r-1)*2;
-                OrderConstraint::eq(
-                    Expr::abs(FnAssume::left()),
-                    Expr::op (
-                        Op::Mul,
-                        self.clone().apply(
-                            Expr::op (
-                                Op::Sub,
-                                Expr::abs(FnAssume::right()),
-                                Expr::concrete(1)
-                            )
-                        ),
-                        Expr::concrete(2)
+                ).into(),
+                // assume #r >= 1 => #l == pow2(#r-1)*2;
+                Implication::new(
+                    OrderConstraint::gte(
+                        Expr::abs(FnAssume::right()),
+                        Expr::concrete(1)
+                    ),
+                    OrderConstraint::eq(
+                        Expr::abs(FnAssume::left()),
+                        Expr::op (
+                            Op::Mul,
+                            func.clone().apply(
+                                Expr::op (
+                                    Op::Sub,
+                                    Expr::abs(FnAssume::right()),
+                                    Expr::concrete(1)
+                                )
+                            ),
+                            Expr::concrete(2)
+                        )
                     )
                 ),
                 // assume #r >= 0;
                 OrderConstraint::gte(
                     Expr::abs(FnAssume::right()),
                     Expr::concrete(0)
-                )
+                ).into()
             ]),
             UnFn::Log2 => FnAssume::new(vec![
                 // assume #l+1 == log2(#r*2);
@@ -173,26 +179,32 @@ impl Into<FnAssume> for UnFn {
                         Expr::abs(FnAssume::left()),
                         Expr::concrete(1)
                     ),
-                    self.clone().apply(
+                    func.clone().apply(
                         Expr::op (
                             Op::Mul,
                             Expr::abs(FnAssume::right()),
                             Expr::concrete(2)
                         )
                     )
-                ),
-                // assume #l-1 == log2(#r/2);
-                OrderConstraint::eq(
-                    Expr::op(
-                        Op::Sub,
+                ).into(),
+                // assume #l >= 1 => #l-1 == log2(#r/2);
+                Implication::new(
+                    OrderConstraint::gte(
                         Expr::abs(FnAssume::left()),
                         Expr::concrete(1)
                     ),
-                    self.clone().apply(
-                        Expr::op (
-                            Op::Div,
-                            Expr::abs(FnAssume::right()),
-                            Expr::concrete(2)
+                    OrderConstraint::eq(
+                        Expr::op(
+                            Op::Sub,
+                            Expr::abs(FnAssume::left()),
+                            Expr::concrete(1)
+                        ),
+                        func.clone().apply(
+                            Expr::op (
+                                Op::Div,
+                                Expr::abs(FnAssume::right()),
+                                Expr::concrete(2)
+                            )
                         )
                     )
                 ),
@@ -200,10 +212,16 @@ impl Into<FnAssume> for UnFn {
                 OrderConstraint::gte(
                     Expr::abs(FnAssume::left()),
                     Expr::concrete(0)
-                )
+                ).into()
             ])
         }
     }
+}
+
+/// A trait representing whether an expression type can be evaluated as a boolean
+pub trait EvalBool {
+    /// Resolve self to either true or false given a set of bindings.
+    fn resolve_bool(self, bind: &Binding<Expr>) -> errors::FilamentResult<bool>;
 }
 
 /// An expression containing integers and abstract variables
@@ -235,6 +253,7 @@ impl TryFrom<Expr> for u64 {
         (&value).try_into()
     }
 }
+
 impl TryFrom<&Expr> for u64 {
     type Error = errors::Error;
 
@@ -299,20 +318,6 @@ impl Expr {
                     Op::Mod => l % r,
                 }
             }
-        }
-    }
-
-    /// Replace variables in this expression using the given binding without actually evaluating.
-    pub fn replace(self, bind: &utils::Binding<Expr>) -> Self {
-        match self {
-            Expr::Abstract(ref id) => bind.find(id).cloned().unwrap_or(self),
-            Expr::App { func, arg } => func.apply(arg.replace(bind)),
-            Expr::Op { op, left, right } => Expr::op(
-                op,
-                left.replace(bind),
-                right.replace(bind)
-            ),
-            Expr::Concrete(_) => self
         }
     }
 
@@ -456,5 +461,14 @@ impl From<u64> for Expr {
 impl From<Id> for Expr {
     fn from(v: Id) -> Self {
         Self::Abstract(v)
+    }
+}
+
+impl EvalBool for Expr {
+    fn resolve_bool(self, bind: &Binding<Expr>) -> errors::FilamentResult<bool> {
+        match self.resolve(bind) {
+            Expr::Concrete(x) => Ok(x != 0),
+            exp => Err(errors::Error::malformed(format!("Failed to concretize {} when evaluating to boolean.", exp)))
+        } 
     }
 }
