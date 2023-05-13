@@ -22,7 +22,7 @@ import "primitives/state.fil";
 // In general, you probably don't want to use the #C and #H parameters at
 // all. They are most useful when the serializer is providing inputs to
 // a component that is not fully pipelined.
-comp GenSerialize[#W, #N, #B, #C, #H]<G: #C*#N+#H-1>(
+comp GenSerialize[#W, #N, #B, #C, #H]<G: #C*(#N-1)+#H>(
     @interface[G] go: 1,
     in[#N*#B]: for<#p> @[G, G+#H] #W
 ) -> (
@@ -52,7 +52,7 @@ comp Serialize[#W, #N, #B]<G:#N>(
     out[#N*#B]: for<#p> @[G+#p/#B, G+#p/#B+1] #W
 ) where #N > 0, #B > 0 {
     s := new GenSerialize[#W, #N, #B, 1, 1]<G>(in{0..#N*#B});
-    out = s.out;
+    out{0..#N*#B} = s.out{0..#N*#B};
 }
 
 
@@ -107,7 +107,7 @@ comp Deserialize[#W, #N, #B]<G: #N-1>(
     out[#N*#B]: for<#p> @[G+#N-1, G+#N] #W
 ) where #N > 1, #B > 0 {
     d := new GenDeserialize[#W, #N, #B, 1, 1]<G>(in{0..#N*#B});
-    out = d.out;
+    out{0..#N*#B} = d.out{0..#N*#B};
 }
 
 /// Take a bundle of length #L that produces values every #N and cycles and make
