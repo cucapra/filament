@@ -264,7 +264,7 @@ impl std::ops::Rem for Expr {
 
 impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", ECtx::Func.print(self))
+        write!(f, "{}", ECtx::default().print(self))
         // match self {
         //     Expr::Concrete(n) => write!(f, "{}", n),
         //     Expr::Abstract(id) => write!(f, "#{}", id),
@@ -312,9 +312,10 @@ impl From<Id> for Expr {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 /// Track the current context within an expression for pretty printing
 enum ECtx {
+    #[default]
     /// Inside an addition priority expression (+ or -)
     Add,
     /// Inside an multiplication priority expression (* or / or %)
