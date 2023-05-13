@@ -7,6 +7,10 @@ import "primitives/state.fil";
 // * #C: The number of cycles between each bundle
 // * #H: The number of cycles each signal is held for
 //
+// The serializer consumes #N*#B inputs in over #H cycles and produces
+// #N bundles of #B elements each every #C cycles, and holds each output
+// for #H cycles.
+//
 // The number of parameters can be overhelming to here is an example:
 // ```
 // s := new Serialize[8, 2, 32, 1, 1]<G>(...)
@@ -52,26 +56,58 @@ comp Serialize[#W, #N, #B]<G:#N>(
 }
 
 
-// Implements a M:N deserializer
-// Accepts #B inputs every cycle for #N cycles and produces #N*#B outputs in
-// the last cycle.
-comp GenDeserialize[#W, #N, #B, #C, #H]<G: #C*#N+#H-1>(
+// A highly parameterized deserializer. The parameters are:
+// * #W: The width of the inputs
+// * #N: The number of "bundles" to be consumed
+// * #B: The size of each bundle
+// * #C: The number of cycles between each bundle
+// * #H: The number of cycles each signal is held for
+//
+// The deserializer consumes #N bundles of #B elements each every #C cycles
+// where each input must be held for #H cycles.
+// It produces all the outputs on cycle #C*(#N-1) and holds them for #H cycles.the first
+//
+// The number of parameters can be overhelming to here is an example:
+// ```
+// s := new Deserialize[8, 2, 32, 1, 1]<G>(...)
+// ```
+// This is a deserializer that accepts 8 bundles of 2 elements each every cycle,
+// and holds each input for one cycle each. It produces 16 32-bit outputs in the
+// in the 7th cycle and holds them for 1 cycle.
+//
+// In general, you probably don't want to use the #C and #H parameters at
+// all. They are most useful when the deserializer is consuming inputs from
+// a component that is not fully pipelined.
+comp GenDeserialize[#W, #N, #B, #C, #H]<G: #C*#N+#H-2>(
     @interface[G] go: 1,
-    in[#N*#B]: for<#p> @[G+#C*(#p/#B), G+#C*(#p/#B+1)+#H] #W
+    in[#N*#B]: for<#p> @[G+#C*(#p/#B), G+#C*(#p/#B)+#H] #W
 ) -> (
-    out[#N*#B]: for<#p> @[G+#C*(#N-1), G+#C*#N+#H] #W
+    out[#N*#B]: for<#p> @[G+#C*(#N-1), G+#C*(#N-1)+#H] #W
 ) where #N > 1, #B > 0, #C > 0, #H > 0 {
     for #i in 0..#N {
         // Accepts #B inputs this cycle and delay them
         for #j in 0..#B {
             if #i < #N-1 {
-                d := new Register[#W]<G+#C*#i, G+#C*#N+#H>(in{#B*#i+#j});
+                d := new Register[#W]<G+#C*#i, G+#C*#N+#H-1>(in{#B*#i+#j});
                 out{#B*#i+#j} = d.out;
             } else {
                 out{#B*#i+#j} = in{#B*#i+#j};
             }
         }
     }
+}
+
+// Implements a #K to n*K deserializer.
+// Accepts #K inputs every cycle for #N cycles and produces #N*#K outputs in
+// the last cycle.
+comp Deserialize[#W, #N, #B]<G: #N-1>(
+    @interface[G] go: 1,
+    in[#N*#B]: for<#p> @[G+#p/#B, G+#p/#B+1] #W
+) -> (
+    out[#N*#B]: for<#p> @[G+#N-1, G+#N] #W
+) where #N > 1, #B > 0 {
+    d := new GenDeserialize[#W, #N, #B, 1, 1]<G>(in{0..#N*#B});
+    out = d.out;
 }
 
 /// Take a bundle of length #L that produces values every #N and cycles and make
