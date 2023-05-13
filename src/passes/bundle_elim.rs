@@ -1,6 +1,7 @@
 use crate::{
     core::{self, Loc},
     utils::Binding,
+    passes::Pass
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -332,9 +333,11 @@ impl BundleElim {
             body: pre_cmds,
         }
     }
+}
 
+impl Pass for BundleElim {
     /// Monomorphize the program by generate a component for each parameter of each instance.
-    pub fn transform(old_ns: core::Namespace) -> core::Namespace {
+    fn transform(old_ns: core::Namespace) -> core::Namespace {
         let mut pass = Self::default();
         let mut ns = core::Namespace {
             components: Vec::new(),
