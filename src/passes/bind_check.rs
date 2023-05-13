@@ -87,6 +87,7 @@ impl visitor::Checker for BindCheck {
     fn clear_data(&mut self) {
         self.params.clear();
         self.events.clear();
+        self.bundle_params.clear();
     }
 
     fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics {

@@ -97,7 +97,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
 
     // Compilation
     let t = Instant::now();
-    backend::compile(ns, opts);
+    backend::compile(ns);
     log::info!("Compilation: {}ms", t.elapsed().as_millis());
 
     Ok(())

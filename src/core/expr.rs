@@ -8,7 +8,7 @@ use crate::{
 use std::{fmt::Display, sync, mem};
 
 /// Binary operation over expressions
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd)]
 pub enum Op {
     Add,
     Sub,
@@ -24,7 +24,19 @@ impl Display for Op {
             Op::Sub => write!(f, "-"),
             Op::Mul => write!(f, "*"),
             Op::Div => write!(f, "/"),
-            Op::Mod => write!(f, "mod"),
+            Op::Mod => write!(f, "%"),
+        }
+    }
+}
+
+impl From<Op> for utils::SExp {
+    fn from(value: Op) -> Self {
+        match value {
+            Op::Add => SExp("+".to_string()),
+            Op::Sub => SExp("-".to_string()),
+            Op::Mul => SExp("*".to_string()),
+            Op::Div => SExp("div".to_string()),
+            Op::Mod => SExp("mod".to_string()),
         }
     }
 }
@@ -438,7 +450,7 @@ impl From<Expr> for utils::SExp {
             }
             Expr::Op { op, left, right } => SExp(format!(
                 "({} {} {})",
-                op,
+                SExp::from(op),
                 SExp::from(*left),
                 SExp::from(*right)
             )),
