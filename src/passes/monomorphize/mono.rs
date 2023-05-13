@@ -1,5 +1,5 @@
 use super::Rewriter;
-use crate::{core, errors::Error, utils::Binding, passes::Pass};
+use crate::{core, errors::Error, passes::Pass, utils::Binding};
 use itertools::Itertools;
 use linked_hash_set::LinkedHashSet;
 use std::collections::HashSet;
@@ -294,9 +294,7 @@ impl<'e> Monomorphize<'e> {
     }
 }
 
-
-impl Pass for Monomorphize<'_>
-{
+impl Pass for Monomorphize<'_> {
     /// Monomorphize the program by generate a component for each parameter of each instance.
     fn transform(mut ns: core::Namespace) -> core::Namespace {
         let Some(top_idx) = ns.main_idx() else {

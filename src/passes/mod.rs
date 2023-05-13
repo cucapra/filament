@@ -5,8 +5,8 @@ mod interval_checking;
 mod lower;
 mod max_states;
 mod monomorphize;
-mod phantom_check;
 mod pass;
+mod phantom_check;
 
 pub use bind_check::BindCheck;
 pub use bundle_elim::BundleElim;
@@ -15,5 +15,5 @@ pub use interval_checking::IntervalCheck;
 pub use lower::Lower;
 pub use max_states::MaxStates;
 pub use monomorphize::Monomorphize;
-pub use phantom_check::PhantomCheck;
 pub use pass::Pass;
+pub use phantom_check::PhantomCheck;
