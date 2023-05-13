@@ -1,6 +1,6 @@
 use crate::{
-    core::{self, OrderConstraint, Expr},
-    passes::Pass
+    core,
+    passes::Pass,
 };
 use itertools::Itertools;
 
@@ -12,26 +12,7 @@ impl Assume {
     fn sig(sig: &core::Signature) -> Vec<core::Command> {
         sig.param_constraints
             .iter()
-            .filter_map(|c| match c.inner() {
-                OrderConstraint {
-                    op: core::OrderOp::Eq,
-                    left,
-                    right
-                } => {
-                    match (left, right) {
-                        (
-                            _,
-                            Expr::App { func, arg: right}
-                        ) => Some (func.clone().assume(left, right)),
-                        (
-                            Expr::App { func, arg: left},
-                            _
-                        ) => Some (func.clone().assume(right, left)),
-                        _ => None
-                    }
-                },
-                _ => None
-            })
+            .map(|c| core::Assume::from_constraint(c.inner()))
             .flatten()
             .map(core::Command::from)
             .collect_vec()
@@ -48,12 +29,12 @@ impl Assume {
     }
 }
 
-impl Pass for Assume
-{
+impl Pass for Assume {
     /// Monomorphize the program by generate a component for each parameter of each instance.
     fn transform(ns: core::Namespace) -> core::Namespace {
         core::Namespace {
-            components: ns.components
+            components: ns
+                .components
                 .into_iter()
                 .map(Assume::component)
                 .collect_vec(),

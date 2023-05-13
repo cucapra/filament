@@ -1,4 +1,7 @@
-use super::{Expr, Id, Loc, OrderConstraint, PortDef, Range, Time, Implication};
+use super::expr::FnAssume;
+use super::{
+    Expr, Id, Implication, Loc, OrderConstraint, PortDef, Range, Time,
+};
 use crate::utils::{self, Binding};
 use crate::{
     errors::{Error, FilamentResult},
@@ -314,7 +317,7 @@ impl Display for Invoke {
 
 #[derive(Clone)]
 /// An assumption in the component.
-/// Contains a guard 
+/// Contains a guard
 /// Assumed to be true during type checking and validated during code
 /// generation.
 pub struct Assume {
@@ -344,6 +347,11 @@ impl Assume {
     /// Get the position of the assumption
     pub fn pos(&self) -> GPosIdx {
         self.cons.pos()
+    }
+
+    /// Get a list of function assumptions associated with a constraint
+    pub fn from_constraint(constraint: &OrderConstraint<Expr>) -> Vec<Self> {
+        FnAssume::from_constraint(constraint)
     }
 }
 

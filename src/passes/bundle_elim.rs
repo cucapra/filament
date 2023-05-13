@@ -1,7 +1,7 @@
 use crate::{
     core::{self, Loc},
+    passes::Pass,
     utils::Binding,
-    passes::Pass
 };
 use itertools::Itertools;
 use std::collections::HashMap;
