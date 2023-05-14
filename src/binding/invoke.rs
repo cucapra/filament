@@ -100,8 +100,8 @@ impl InvIdx {
 
         port.inner()
             .clone()
-            .resolve_event(&event_b)
             .resolve_exprs(&param_b)
+            .resolve_event(&event_b)
     }
 
     /// Get all the fully resolved constraints for the signature of an invocation.
