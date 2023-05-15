@@ -115,11 +115,11 @@ impl<'e> Monomorphize<'e> {
         let mut n_cmds = Vec::new();
         for cmd in commands {
             match cmd {
-                core::Command::Fact(core::Fact { cons }) => {
+                core::Command::Fact(core::Fact { cons, .. }) => {
                     match cons.clone().take().eval(param_binding) {
                         Ok(true) => (),
                         Ok(false) => {
-                            panic!("Assumption violated during elaboration.")
+                            panic!("Assumption `{}' violated during elaboration. Bindings: {:?}", cons.inner(), param_binding)
                         }
                         Err(e) => {
                             panic!(

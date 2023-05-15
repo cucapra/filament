@@ -668,7 +668,7 @@ impl FilamentParser {
     fn assume(input: Node) -> ParseResult<core::Fact> {
         Ok(match_nodes!(
             input.into_children();
-            [expr_cmp(e)] => core::Fact::new(e.into()),
+            [expr_cmp(e)] => core::Fact::new(e.into(), false),
         ))
     }
 

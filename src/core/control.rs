@@ -308,16 +308,18 @@ impl Display for Invoke {
 }
 
 #[derive(Clone)]
-/// An assumption in the component.
-/// Assumed to be true during type checking and validated during code
-/// generation.
+/// An `assert` or `assume` statement.
+/// If `checked` is true, the statement is checked to be statically true.
+/// Otherwise, it is assumed to be true.
 pub struct Fact {
     pub cons: Loc<OrderConstraint<Expr>>,
+    // If this fact is statically checked.
+    pub checked: bool,
 }
 
 impl Fact {
-    pub fn new(cons: Loc<OrderConstraint<Expr>>) -> Self {
-        Fact { cons }
+    pub fn new(cons: Loc<OrderConstraint<Expr>>, checked: bool) -> Self {
+        Fact { cons, checked }
     }
 
     pub fn exprs(&self) -> [&Expr; 2] {
@@ -337,6 +339,7 @@ impl Fact {
                 right: c.right.resolve(bind),
                 ..c
             }),
+            ..self
         }
     }
 
