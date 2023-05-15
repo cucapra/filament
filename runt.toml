@@ -16,7 +16,7 @@ paths = [
   "tests/compile/*.fil"
 ]
 cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize' -q
+fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
 """
 
 [[tests]]
