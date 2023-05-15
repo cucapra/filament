@@ -192,7 +192,7 @@ impl BoundComponent {
                 }
                 core::Command::Connect(_)
                 | core::Command::Fsm(_)
-                | core::Command::Assume(_) => (),
+                | core::Command::Fact(_) => (),
             }
         }
     }
@@ -330,7 +330,7 @@ impl BoundComponent {
                 core::Command::Bundle(bl) => {
                     self.add_bundle(bl.clone());
                 }
-                core::Command::Fsm(_) | core::Command::Assume(_) => (),
+                core::Command::Fsm(_) | core::Command::Fact(_) => (),
             }
         }
     }

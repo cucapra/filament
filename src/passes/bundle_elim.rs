@@ -300,7 +300,7 @@ impl BundleElim {
                 }
                 c @ (core::Command::Fsm(_)
                 | core::Command::Bundle(_)
-                | core::Command::Assume(_)) => {
+                | core::Command::Fact(_)) => {
                     vec![c]
                 }
             })

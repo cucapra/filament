@@ -209,13 +209,15 @@ bundle = {
   "bundle" ~ identifier ~ "[" ~ expr ~ "]" ~ ":" ~ bundle_typ ~ ";"
 }
 
-assume = {
-  "assume" ~ expr_cmp ~ ";"
+assume_w = { "assume" }
+assert_w = { "assert" }
+fact = {
+  (assume_w | assert_w) ~ expr_cmp ~ ";"
 }
 
 // ========== Commands ==========
 command = {
-  bundle | instance | invocation | connect | fsm | for_loop | if_stmt | assume
+  bundle | instance | invocation | connect | fsm | for_loop | if_stmt | fact
 }
 
 commands = { command* }
