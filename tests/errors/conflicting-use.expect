@@ -5,7 +5,7 @@ error: instance must be shared with sufficient delay
   ┌─ ./primitives/sequential.fil:3:18
   │
 3 │ comp Mult[#W]<G: 2>(
-  │                  ^ delay requires 2 cycle between event but reuse may occur after |(0-1)| cycles
+  │                  ^ delay requires 2 cycle between event but reuse may occur after |0-1| cycles
   │
   ┌─ tests/errors/conflicting-use.fil:8:3
   │

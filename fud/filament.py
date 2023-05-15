@@ -6,7 +6,7 @@ import logging as log
 
 from fud import errors
 from fud.stages import Stage, SourceType, Source
-from fud.utils import shell, TmpDir
+from fud.utils import shell, TmpDir,unwrap_or
 from enum import Enum
 
 
@@ -351,12 +351,13 @@ class FilamentStage(Stage):
         return {"exec": str(exec), "library": str(root), "file_extensions": [".fil"]}
 
     def _define_steps(self, input_data, builder, config):
-
+        flags = unwrap_or(config.get(["stages", self.name, "flags"]), "")
         cmd = " ".join(
             [
                 config["stages", self.name, "exec"],
                 "--library",
                 config["stages", self.name, "library"],
+                flags,
                 "{path}",
             ]
         )

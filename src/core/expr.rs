@@ -264,14 +264,15 @@ impl std::ops::Rem for Expr {
 
 impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Expr::Concrete(n) => write!(f, "{}", n),
-            Expr::Abstract(id) => write!(f, "#{}", id),
-            Expr::App { func, arg } => write!(f, "{}({})", func, arg),
-            Expr::Op { op, left, right } => {
-                write!(f, "({left}{op}{right})")
-            }
-        }
+        write!(f, "{}", ECtx::default().print(self))
+        // match self {
+        //     Expr::Concrete(n) => write!(f, "{}", n),
+        //     Expr::Abstract(id) => write!(f, "#{}", id),
+        //     Expr::App { func, arg } => write!(f, "{}({})", func, arg),
+        //     Expr::Op { op, left, right } => {
+        //         write!(f, "({left}{op}{right})")
+        //     }
+        // }
     }
 }
 
@@ -308,5 +309,78 @@ impl From<u64> for Expr {
 impl From<Id> for Expr {
     fn from(v: Id) -> Self {
         Self::Abstract(v)
+    }
+}
+
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
+/// Track the current context within an expression for pretty printing
+enum ECtx {
+    #[default]
+    /// Inside an addition priority expression (+ or -)
+    Add,
+    /// Inside an multiplication priority expression (* or / or %)
+    Mul,
+    /// Inside a function application
+    Func,
+}
+
+impl ECtx {
+    fn print(&self, e: &Expr) -> String {
+        match e {
+            Expr::Concrete(n) => {
+                format!("{n}")
+            }
+            Expr::Abstract(v) => {
+                format!("#{v}")
+            }
+            Expr::App { func, arg } => {
+                format!("{}({})", func, Self::Func.print(arg))
+            }
+            Expr::Op { op, left, right } => {
+                let inner = Self::from(*op);
+                let left = inner.print(left);
+                let right = inner.print(right);
+                if inner < *self {
+                    format!("({}{}{})", left, op, right)
+                } else {
+                    format!("{}{}{}", left, op, right)
+                }
+            }
+        }
+    }
+}
+
+impl From<Op> for ECtx {
+    fn from(op: Op) -> Self {
+        match op {
+            Op::Add | Op::Sub => ECtx::Add,
+            Op::Mul | Op::Div | Op::Mod => ECtx::Mul,
+        }
+    }
+}
+
+// Ordering for expression printing context. If other is less than this,
+// then we are in a tightly binding context and need to add parens.
+impl Ord for ECtx {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        use std::cmp::Ordering::*;
+        match (self, other) {
+            // Functions are the tightest
+            (ECtx::Func, ECtx::Func) => Equal,
+            (ECtx::Func, _) => Greater,
+            // Mults are next
+            (ECtx::Mul, ECtx::Mul) => Equal,
+            (ECtx::Mul, ECtx::Func) => Less,
+            (ECtx::Mul, _) => Greater,
+            // Adds are last
+            (ECtx::Add, ECtx::Add) => Equal,
+            (ECtx::Add, _) => Less,
+        }
+    }
+}
+
+impl PartialOrd for ECtx {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }

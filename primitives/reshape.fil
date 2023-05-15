@@ -1,0 +1,131 @@
+import "primitives/state.fil";
+
+// A highly parameterized serializer. The parameters are:
+// * #W: The width of the inputs
+// * #N: The number of "bundles" to be produced
+// * #B: The size of each bundle
+// * #C: The number of cycles between each bundle
+// * #H: The number of cycles each signal is held for
+//
+// The serializer consumes #N*#B inputs in over #H cycles and produces
+// #N bundles of #B elements each every #C cycles, and holds each output
+// for #H cycles.
+//
+// The number of parameters can be overhelming to here is an example:
+// ```
+// s := new Serialize[8, 2, 32, 1, 1]<G>(...)
+// ```
+// This is a serializer that accepts 16 32-bit inputs in the first cycle
+// and produces 8 bundles of 2 elements each every cycle, and holds each
+// output for one cycle each.
+//
+// In general, you probably don't want to use the #C and #H parameters at
+// all. They are most useful when the serializer is providing inputs to
+// a component that is not fully pipelined.
+comp GenSerialize[#W, #N, #B, #C, #H]<G: #C*(#N-1)+#H>(
+    @interface[G] go: 1,
+    in[#N*#B]: for<#p> @[G, G+#H] #W
+) -> (
+    // The parenthesis are important because we want to perform integer
+    // division.
+    out[#N*#B]: for<#p> @[G+#C*(#p/#B), G+#C*(#p/#B)+#H] #W
+) where #N > 0, #B > 0, #C > 0, #H > 0 {
+    for #i in 0..#N {
+        for #j in 0..#B {
+            assume (#B*#i+#j)/#B == #i;
+            if #i > 0 {
+                d := new Register[#W]<G, G+#C*#i+#H>(in{#B*#i+#j});
+                out{#B*#i+#j} = d.out;
+            } else {
+                out{#B*#i+#j} = in{#B*#i+#j};
+            }
+        }
+    }
+}
+
+// A serializer that hides the more complex interface of `GenSerialize`.
+// NOTE(rachit): Once we have default parameters (https://github.com/cucapra/filament/issues/133),
+// We should remove this and change GenSerialize to have #C=1 and #H=1.
+comp Serialize[#W, #N, #B]<G:#N>(
+    @interface[G] go: 1,
+    in[#N*#B]: for<#p> @[G, G+1] #W
+) -> (
+    out[#N*#B]: for<#p> @[G+#p/#B, G+#p/#B+1] #W
+) where #N > 0, #B > 0 {
+    s := new GenSerialize[#W, #N, #B, 1, 1]<G>(in{0..#N*#B});
+    out{0..#N*#B} = s.out{0..#N*#B};
+}
+
+
+// A highly parameterized deserializer. The parameters are:
+// * #W: The width of the inputs
+// * #N: The number of "bundles" to be consumed
+// * #B: The size of each bundle
+// * #C: The number of cycles between each bundle
+// * #H: The number of cycles each signal is held for
+//
+// The deserializer consumes #N bundles of #B elements each every #C cycles
+// where each input must be held for #H cycles.
+// It produces all the outputs on cycle #C*(#N-1) and holds them for #H cycles.the first
+//
+// The number of parameters can be overhelming to here is an example:
+// ```
+// s := new Deserialize[8, 2, 32, 1, 1]<G>(...)
+// ```
+// This is a deserializer that accepts 8 bundles of 2 elements each every cycle,
+// and holds each input for one cycle each. It produces 16 32-bit outputs in the
+// in the 7th cycle and holds them for 1 cycle.
+//
+// In general, you probably don't want to use the #C and #H parameters at
+// all. They are most useful when the deserializer is consuming inputs from
+// a component that is not fully pipelined.
+comp GenDeserialize[#W, #N, #B, #C, #H]<G: #C*#N+#H-2>(
+    @interface[G] go: 1,
+    in[#N*#B]: for<#p> @[G+#C*(#p/#B), G+#C*(#p/#B)+#H] #W
+) -> (
+    out[#N*#B]: for<#p> @[G+#C*(#N-1), G+#C*(#N-1)+#H] #W
+) where #N > 1, #B > 0, #C > 0, #H > 0 {
+    for #i in 0..#N {
+        // Accepts #B inputs this cycle and delay them
+        for #j in 0..#B {
+            assume (#B*#i+#j)/#B == #i;
+            if #i < #N-1 {
+                d := new Register[#W]<G+#C*#i, G+#C*#N+#H-1>(in{#B*#i+#j});
+                out{#B*#i+#j} = d.out;
+            } else {
+                out{#B*#i+#j} = in{#B*#i+#j};
+            }
+        }
+    }
+}
+
+// Implements a #K to n*K deserializer.
+// Accepts #K inputs every cycle for #N cycles and produces #N*#K outputs in
+// the last cycle.
+comp Deserialize[#W, #N, #B]<G: #N-1>(
+    @interface[G] go: 1,
+    in[#N*#B]: for<#p> @[G+#p/#B, G+#p/#B+1] #W
+) -> (
+    out[#N*#B]: for<#p> @[G+#N-1, G+#N] #W
+) where #N > 1, #B > 0 {
+    d := new GenDeserialize[#W, #N, #B, 1, 1]<G>(in{0..#N*#B});
+    out{0..#N*#B} = d.out{0..#N*#B};
+}
+
+/// Take a bundle of length #L that produces values every #N and cycles and make
+/// it produce values every #M cycles where #M > #N.
+comp Downsample[#N, #M, #L, #W]<G: (#M-#N)*#L>(
+    @interface[G] go: 1,
+    in[#L]: for<#p> @[G+#N*#p, G+#N*#p+1] #W
+) -> (
+    out[#L]: for<#p> @[G+#M*#p, G+#M*#p+1] #W
+) where #N > 0, #M > #N {
+    for #i in 0..#L {
+        if #i == 0 {
+            out{#i} = in{#i};
+        } else {
+            d := new Register[#W]<G+#N*#i, G+#M*#i+1>(in{#i});
+            out{#i} = d.out;
+        }
+    }
+}

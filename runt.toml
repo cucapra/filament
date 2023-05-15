@@ -16,7 +16,7 @@ paths = [
   "tests/compile/*.fil"
 ]
 cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize' -q
+fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
 """
 
 [[tests]]
@@ -48,7 +48,10 @@ paths = [
 ]
 cmd = """
 dir=$(dirname {}) && \
-fud e -s cocotb.data "$dir/data.json" --to cocotb-out {} -s futil.flags ' -d canonicalize' -q
+fud e -s cocotb.data "$dir/data.json" \
+      --to cocotb-out {} \
+      -s filament.flags ' --show-models' \
+      -s futil.flags ' -d canonicalize' -q
 """
 
 # Evaluation examples
