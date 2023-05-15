@@ -301,7 +301,7 @@ impl FilSolver {
         self.s.assert_act(&act, formula.clone()).unwrap();
         // Check that the assertion was unsatisfiable
         let Some(sat) = self.s.check_sat_act_or_unk(Some(&act)).unwrap() else {
-            panic!("Query {formula} returned unknown. This likely happened because the query timed out.")
+            return Some(format!("Query `{formula}' returned unknown. This likely happened because the query timed out."))
         };
 
         // If the assignment was not unsatisfiable, attempt to generate an assignment
