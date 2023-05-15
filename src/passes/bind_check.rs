@@ -96,7 +96,7 @@ impl visitor::Checker for BindCheck {
 
     fn assume(
         &mut self,
-        a: &core::Assume,
+        a: &core::Fact,
         _ctx: &binding::CompBinding,
     ) -> Traverse {
         for e in a.exprs() {

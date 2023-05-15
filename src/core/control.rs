@@ -153,7 +153,7 @@ impl std::fmt::Display for Port {
 pub enum Command {
     Invoke(Invoke),
     Instance(Instance),
-    Assume(Assume),
+    Fact(Fact),
     Connect(Connect),
     Fsm(Fsm),
     ForLoop(ForLoop),
@@ -186,9 +186,9 @@ impl From<Bundle> for Command {
         Self::Bundle(v)
     }
 }
-impl From<Assume> for Command {
-    fn from(v: Assume) -> Self {
-        Self::Assume(v)
+impl From<Fact> for Command {
+    fn from(v: Fact) -> Self {
+        Self::Fact(v)
     }
 }
 
@@ -202,7 +202,7 @@ impl Display for Command {
             Command::ForLoop(l) => write!(f, "{}", l),
             Command::If(l) => write!(f, "{}", l),
             Command::Bundle(b) => write!(f, "{b}"),
-            Command::Assume(a) => write!(f, "{a}"),
+            Command::Fact(a) => write!(f, "{a}"),
         }
     }
 }
@@ -311,13 +311,13 @@ impl Display for Invoke {
 /// An assumption in the component.
 /// Assumed to be true during type checking and validated during code
 /// generation.
-pub struct Assume {
+pub struct Fact {
     pub cons: Loc<OrderConstraint<Expr>>,
 }
 
-impl Assume {
+impl Fact {
     pub fn new(cons: Loc<OrderConstraint<Expr>>) -> Self {
-        Assume { cons }
+        Fact { cons }
     }
 
     pub fn exprs(&self) -> [&Expr; 2] {
@@ -331,7 +331,7 @@ impl Assume {
 
     /// Resolve expression in the assumption
     pub fn resolve(self, bind: &Binding<Expr>) -> Self {
-        Assume {
+        Fact {
             cons: self.cons.map(|c| OrderConstraint {
                 left: c.left.resolve(bind),
                 right: c.right.resolve(bind),
@@ -346,7 +346,7 @@ impl Assume {
     }
 }
 
-impl std::fmt::Display for Assume {
+impl std::fmt::Display for Fact {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "assume {}", self.cons)
     }

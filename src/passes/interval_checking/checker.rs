@@ -328,7 +328,7 @@ impl visitor::Checker for IntervalCheck {
         &mut self.diag
     }
 
-    fn assume(&mut self, a: &core::Assume, _: &CompBinding) -> Traverse {
+    fn assume(&mut self, a: &core::Fact, _: &CompBinding) -> Traverse {
         self.push_path_cond(a.clone().constraint());
         Traverse::Continue(())
     }

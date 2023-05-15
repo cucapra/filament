@@ -70,7 +70,7 @@ impl Rewriter {
                         "If statements should be monomorphized already"
                     )
                 }
-                core::Command::Connect(_) | core::Command::Assume(_) => {}
+                core::Command::Connect(_) | core::Command::Fact(_) => {}
             }
         }
         let mut n_cmds = Vec::with_capacity(cmds.len());
@@ -132,7 +132,7 @@ impl Rewriter {
                 }
                 core::Command::If(_)
                 | core::Command::ForLoop(_)
-                | core::Command::Assume(_)
+                | core::Command::Fact(_)
                 | core::Command::Fsm(_) => unreachable!(),
             };
             n_cmds.push(out);
