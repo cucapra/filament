@@ -194,12 +194,9 @@ impl FilSolver {
         let mut conf = SmtConf::default_z3();
         // Queries should time out about 30 seconds
         conf.option("-t:30000");
-        // Disable this because it doesn't seem to work with activation literals
-        // conf.check_success();
 
         let mut solver = conf.spawn(())?;
         solver.produce_models()?;
-        // Queries should not take more than 30 seconds per.
         solver.path_tee(std::path::PathBuf::from("./model.smt"))?;
 
         define_prelude(&mut solver)?;
@@ -301,10 +298,10 @@ impl FilSolver {
 
         let formula = format!("(not {})", obl.constraint());
         log::trace!("Assert {}", formula);
-        self.s.assert_act(&act, formula).unwrap();
+        self.s.assert_act(&act, formula.clone()).unwrap();
         // Check that the assertion was unsatisfiable
         let Some(sat) = self.s.check_sat_act_or_unk(Some(&act)).unwrap() else {
-            panic!("Query returned unknown. This likely happened because the query timed out.")
+            panic!("Query {formula} returned unknown. This likely happened because the query timed out.")
         };
 
         // If the assignment was not unsatisfiable, attempt to generate an assignment
