@@ -665,10 +665,19 @@ impl FilamentParser {
         ))
     }
 
-    fn assume(input: Node) -> ParseResult<core::Fact> {
+    fn assume_w(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+    fn assert_w(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+
+    fn fact(input: Node) -> ParseResult<core::Fact> {
+        let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [expr_cmp(e)] => core::Fact::new(e.into(), false),
+            [assume_w(_), expr_cmp(e)] => core::Fact::new(Loc::new(e, sp), false),
+            [assert_w(_), expr_cmp(e)] => core::Fact::new(Loc::new(e, sp), true),
         ))
     }
 
@@ -682,7 +691,7 @@ impl FilamentParser {
             [for_loop(l)] => vec![core::Command::ForLoop(l)],
             [bundle(bl)] => vec![bl.into()],
             [if_stmt(if_)] => vec![if_.into()],
-            [assume(a)] => vec![a.into()]
+            [fact(a)] => vec![a.into()]
         ))
     }
 

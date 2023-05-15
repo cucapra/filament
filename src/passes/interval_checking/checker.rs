@@ -328,7 +328,18 @@ impl visitor::Checker for IntervalCheck {
         &mut self.diag
     }
 
-    fn assume(&mut self, a: &core::Fact, _: &CompBinding) -> Traverse {
+    fn fact(&mut self, a: &core::Fact, _: &CompBinding) -> Traverse {
+        if a.checked {
+            let obl = a
+                .cons
+                .inner()
+                .clone()
+                .obligation("assertion is false")
+                .add_note(
+                    self.diag.add_info("assertion is false", a.cons.pos()),
+                );
+            self.add_obligations(Some(obl))
+        }
         self.push_path_cond(a.clone().constraint());
         Traverse::Continue(())
     }
