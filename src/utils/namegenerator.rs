@@ -1,4 +1,4 @@
-use crate::core::Id;
+use crate::ast::Id;
 use std::collections::{HashMap, HashSet};
 
 /// Simple HashMap-based name generator that generates new names for each

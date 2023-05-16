@@ -1,5 +1,5 @@
+use crate::ast;
 use crate::binding::CompBinding;
-use crate::core;
 use crate::errors::{self, FilamentResult};
 use crate::visitor;
 use itertools::Itertools;
@@ -7,14 +7,14 @@ use std::collections::HashMap;
 
 pub struct DumpInterface {
     /// Map from component to interface information
-    max_states: HashMap<core::Id, HashMap<core::Id, u64>>,
+    max_states: HashMap<ast::Id, HashMap<ast::Id, u64>>,
 }
 
 impl visitor::Transform for DumpInterface {
     // Mapping from component -> event -> max state
-    type Info = HashMap<core::Id, HashMap<core::Id, u64>>;
+    type Info = HashMap<ast::Id, HashMap<ast::Id, u64>>;
 
-    fn new(_: &core::Namespace, max_states: &Self::Info) -> Self {
+    fn new(_: &ast::Namespace, max_states: &Self::Info) -> Self {
         Self {
             max_states: max_states.clone(),
         }
@@ -30,7 +30,7 @@ impl visitor::Transform for DumpInterface {
     fn exit_component(
         &mut self,
         comp: &CompBinding,
-    ) -> FilamentResult<Vec<core::Command>> {
+    ) -> FilamentResult<Vec<ast::Command>> {
         let sig = comp.this();
 
         // For an interface port like this:
@@ -79,7 +79,7 @@ impl visitor::Transform for DumpInterface {
         //   "start": n,
         //   "end": m
         // },
-        let pd_to_info = |pd: &core::Loc<core::PortDef>| {
+        let pd_to_info = |pd: &ast::Loc<ast::PortDef>| {
             let w = &pd.bitwidth();
             let (event, st, end) = pd.liveness()
             .as_offset()

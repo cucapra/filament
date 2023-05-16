@@ -1,4 +1,4 @@
-use crate::core;
+use crate::ast;
 pub trait Pass {
-    fn transform(ns: core::Namespace) -> core::Namespace;
+    fn transform(ns: ast::Namespace) -> ast::Namespace;
 }

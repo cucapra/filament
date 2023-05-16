@@ -1,5 +1,5 @@
 use crate::binding::{CompBinding, ProgBinding};
-use crate::{cmdline, core, diagnostics};
+use crate::{ast, cmdline, diagnostics};
 use std::ops::ControlFlow;
 
 /// Should the traversal continue or stop?
@@ -11,7 +11,7 @@ where
     Self: Sized,
 {
     /// Construct a new instance of this pass
-    fn new(_opts: &cmdline::Opts, _ns: &core::Namespace) -> Self;
+    fn new(_opts: &cmdline::Opts, _ns: &ast::Namespace) -> Self;
 
     /// Clear any data that should be cleared between components
     fn clear_data(&mut self);
@@ -20,22 +20,22 @@ where
     fn diagnostics(&mut self) -> &mut diagnostics::Diagnostics;
 
     #[inline]
-    fn connect(&mut self, _: &core::Connect, _ctx: &CompBinding) -> Traverse {
+    fn connect(&mut self, _: &ast::Connect, _ctx: &CompBinding) -> Traverse {
         Traverse::Continue(())
     }
 
     #[inline]
-    fn instance(&mut self, _: &core::Instance, _ctx: &CompBinding) -> Traverse {
+    fn instance(&mut self, _: &ast::Instance, _ctx: &CompBinding) -> Traverse {
         Traverse::Continue(())
     }
 
     #[inline]
-    fn fsm(&mut self, _: &core::Fsm, _ctx: &CompBinding) -> Traverse {
+    fn fsm(&mut self, _: &ast::Fsm, _ctx: &CompBinding) -> Traverse {
         Traverse::Continue(())
     }
 
     #[inline]
-    fn forloop(&mut self, l: &core::ForLoop, ctx: &CompBinding) -> Traverse {
+    fn forloop(&mut self, l: &ast::ForLoop, ctx: &CompBinding) -> Traverse {
         for cmd in &l.body {
             self.command(cmd, ctx)?;
         }
@@ -43,7 +43,7 @@ where
     }
 
     #[inline]
-    fn if_(&mut self, l: &core::If, ctx: &CompBinding) -> Traverse {
+    fn if_(&mut self, l: &ast::If, ctx: &CompBinding) -> Traverse {
         for cmd in &l.then {
             self.command(cmd, ctx)?;
         }
@@ -56,7 +56,7 @@ where
     /// Transform an invoke statement. Provides access to the signature of the
     /// component that is being invoked.
     #[inline]
-    fn invoke(&mut self, _: &core::Invoke, _ctx: &CompBinding) -> Traverse {
+    fn invoke(&mut self, _: &ast::Invoke, _ctx: &CompBinding) -> Traverse {
         Traverse::Continue(())
     }
 
@@ -64,14 +64,14 @@ where
     fn bundle(
         &mut self,
         _is_port: bool,
-        _: &core::Bundle,
+        _: &ast::Bundle,
         _ctx: &CompBinding,
     ) -> Traverse {
         Traverse::Continue(())
     }
 
     #[inline]
-    fn signature(&mut self, _: &core::Signature) -> Traverse {
+    fn signature(&mut self, _: &ast::Signature) -> Traverse {
         Traverse::Continue(())
     }
 
@@ -79,11 +79,11 @@ where
     #[inline]
     fn enter_component(
         &mut self,
-        comp: &core::Component,
+        comp: &ast::Component,
         _ctx: &CompBinding,
     ) -> Traverse {
         for p in comp.sig.ports() {
-            if let core::PortDef::Bundle(b) = p.inner() {
+            if let ast::PortDef::Bundle(b) = p.inner() {
                 self.bundle(true, b, _ctx)?
             }
         }
@@ -94,34 +94,34 @@ where
     #[inline]
     fn exit_component(
         &mut self,
-        _: &core::Component,
+        _: &ast::Component,
         _ctx: &CompBinding,
     ) -> Traverse {
         Traverse::Continue(())
     }
 
     #[inline]
-    fn fact(&mut self, _: &core::Fact, _ctx: &CompBinding) -> Traverse {
+    fn fact(&mut self, _: &ast::Fact, _ctx: &CompBinding) -> Traverse {
         Traverse::Continue(())
     }
 
-    fn command(&mut self, cmd: &core::Command, ctx: &CompBinding) -> Traverse {
+    fn command(&mut self, cmd: &ast::Command, ctx: &CompBinding) -> Traverse {
         match cmd {
-            core::Command::Fact(a) => self.fact(a, ctx),
-            core::Command::Bundle(bl) => self.bundle(false, bl, ctx),
-            core::Command::Invoke(inv) => self.invoke(inv, ctx),
-            core::Command::Instance(inst) => self.instance(inst, ctx),
-            core::Command::Connect(con) => self.connect(con, ctx),
-            core::Command::Fsm(fsm) => self.fsm(fsm, ctx),
-            core::Command::ForLoop(l) => self.forloop(l, ctx),
-            core::Command::If(i) => self.if_(i, ctx),
+            ast::Command::Fact(a) => self.fact(a, ctx),
+            ast::Command::Bundle(bl) => self.bundle(false, bl, ctx),
+            ast::Command::Invoke(inv) => self.invoke(inv, ctx),
+            ast::Command::Instance(inst) => self.instance(inst, ctx),
+            ast::Command::Connect(con) => self.connect(con, ctx),
+            ast::Command::Fsm(fsm) => self.fsm(fsm, ctx),
+            ast::Command::ForLoop(l) => self.forloop(l, ctx),
+            ast::Command::If(i) => self.if_(i, ctx),
         }
     }
 
     /// Check the component signature and perform the component traversal
     fn component(
         &mut self,
-        comp: &core::Component,
+        comp: &ast::Component,
         prog_ctx: &ProgBinding,
     ) -> Traverse {
         self.signature(&comp.sig)?;
@@ -135,13 +135,13 @@ where
     }
 
     /// Check an external signature. By default, simply calls `signature`.
-    fn external(&mut self, sig: &core::Signature) -> Traverse {
+    fn external(&mut self, sig: &ast::Signature) -> Traverse {
         self.signature(sig)
     }
 
     fn check(
         opts: &cmdline::Opts,
-        ns: &core::Namespace,
+        ns: &ast::Namespace,
         ctx: &ProgBinding,
     ) -> Result<Self, u64> {
         let mut pass = Self::new(opts, ns);

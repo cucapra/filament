@@ -1,7 +1,7 @@
 //! Context that tracks the binding information in a particular program
 use super::{BoundInstance, BoundInvoke, InstIdx, InvIdx, ProgBinding, SigIdx};
 use crate::{
-    core::{self, Id, Loc, Time},
+    ast::{self, Id, Loc, Time},
     diagnostics,
     errors::Error,
     idx,
@@ -10,7 +10,7 @@ use crate::{
 use itertools::Itertools;
 use std::collections::HashMap;
 
-pub type BundleIdx = idx!(core::Bundle);
+pub type BundleIdx = idx!(ast::Bundle);
 
 pub struct BoundComponent {
     /// Signature associated with this component
@@ -20,7 +20,7 @@ pub struct BoundComponent {
     /// Invocations bound in this component
     invocations: Vec<BoundInvoke>,
     /// Bundles bound in the component
-    bundles: Vec<core::Bundle>,
+    bundles: Vec<ast::Bundle>,
     /// Mapping from name of instance to its index
     inst_map: HashMap<Id, InstIdx>,
     /// Mapping from name of invocation to its index
@@ -71,7 +71,7 @@ impl BoundComponent {
     pub fn add_instance(
         &mut self,
         prog: &ProgBinding,
-        inst: &core::Instance,
+        inst: &ast::Instance,
     ) -> InstIdx {
         let sig = prog.get_sig_idx(&inst.component);
         self.add_bound_instance(
@@ -83,7 +83,7 @@ impl BoundComponent {
     }
 
     /// Add a new bundle to this binding.
-    pub fn add_bundle(&mut self, bundle: core::Bundle) -> BundleIdx {
+    pub fn add_bundle(&mut self, bundle: ast::Bundle) -> BundleIdx {
         let idx = BundleIdx::new(self.bundles.len());
         self.bundle_map.insert(*bundle.name.inner(), idx);
         self.bundles.push(bundle);
@@ -94,8 +94,8 @@ impl BoundComponent {
     /// Assumes that there are no binding errors in the body.
     pub fn from_component(
         prog: &ProgBinding,
-        name: &core::Id,
-        cmds: &Vec<core::Command>,
+        name: &ast::Id,
+        cmds: &Vec<ast::Command>,
     ) -> Self {
         let idx = prog.get_sig_idx(name);
         let mut bind = BoundComponent::from(idx);
@@ -107,7 +107,7 @@ impl BoundComponent {
         &mut self,
         name: Id,
         sig: SigIdx,
-        params: Vec<core::Loc<core::Expr>>,
+        params: Vec<ast::Loc<ast::Expr>>,
         pos: GPosIdx,
     ) -> InstIdx {
         let idx = InstIdx::new(self.instances.len());
@@ -122,7 +122,7 @@ impl BoundComponent {
     pub fn add_invoke(
         &mut self,
         prog: &ProgBinding,
-        inv: &core::Invoke,
+        inv: &ast::Invoke,
     ) -> InvIdx {
         let inst_idx = self.inst_map[inv.instance.inner()];
         let instance = &self[inst_idx];
@@ -170,29 +170,29 @@ impl BoundComponent {
     pub(super) fn process_cmds(
         &mut self,
         prog: &ProgBinding,
-        cmds: &Vec<core::Command>,
+        cmds: &Vec<ast::Command>,
     ) {
         for cmd in cmds {
             match cmd {
-                core::Command::Instance(inst) => {
+                ast::Command::Instance(inst) => {
                     self.add_instance(prog, inst);
                 }
-                core::Command::Invoke(inv) => {
+                ast::Command::Invoke(inv) => {
                     self.add_invoke(prog, inv);
                 }
-                core::Command::Bundle(bundle) => {
+                ast::Command::Bundle(bundle) => {
                     self.add_bundle(bundle.clone());
                 }
-                core::Command::ForLoop(l) => {
+                ast::Command::ForLoop(l) => {
                     self.process_cmds(prog, &l.body);
                 }
-                core::Command::If(if_) => {
+                ast::Command::If(if_) => {
                     self.process_cmds(prog, &if_.then);
                     self.process_cmds(prog, &if_.alt);
                 }
-                core::Command::Connect(_)
-                | core::Command::Fsm(_)
-                | core::Command::Fact(_) => (),
+                ast::Command::Connect(_)
+                | ast::Command::Fsm(_)
+                | ast::Command::Fact(_) => (),
             }
         }
     }
@@ -200,12 +200,12 @@ impl BoundComponent {
     pub(super) fn process_checked_cmds(
         &mut self,
         prog: &ProgBinding,
-        cmds: &Vec<core::Command>,
+        cmds: &Vec<ast::Command>,
         diag: &mut diagnostics::Diagnostics,
     ) {
         for cmd in cmds {
             match cmd {
-                core::Command::Instance(inst) => {
+                ast::Command::Instance(inst) => {
                     let comp = &inst.component;
                     // Check if the name is already bound
                     if let Some(pos) = self.name_is_bound(&inst.name) {
@@ -240,7 +240,7 @@ impl BoundComponent {
                         );
                     }
                 }
-                core::Command::Invoke(inv) => {
+                ast::Command::Invoke(inv) => {
                     // Check if the invoke name is already bound
                     if let Some(pos) = self.name_is_bound(&inv.name) {
                         self.set_err();
@@ -289,9 +289,9 @@ impl BoundComponent {
                         );
                     }
                 }
-                core::Command::Connect(core::Connect { src, dst, .. }) => {
-                    let mut check_port = |port: &core::Port| {
-                        if let core::Port::InvPort { invoke, .. } = &port {
+                ast::Command::Connect(ast::Connect { src, dst, .. }) => {
+                    let mut check_port = |port: &ast::Port| {
+                        if let ast::Port::InvPort { invoke, .. } = &port {
                             if self.inv_map.get(invoke).is_none() {
                                 let err = Error::undefined(
                                     *invoke.inner(),
@@ -303,7 +303,7 @@ impl BoundComponent {
                                 ));
                                 diag.add_error(err)
                             }
-                        } else if let core::Port::This(p) = &port {
+                        } else if let ast::Port::This(p) = &port {
                             if !prog[self.sig]
                                 .ports()
                                 .iter()
@@ -320,17 +320,17 @@ impl BoundComponent {
                     check_port(src);
                     check_port(dst);
                 }
-                core::Command::ForLoop(l) => {
+                ast::Command::ForLoop(l) => {
                     self.process_checked_cmds(prog, &l.body, diag);
                 }
-                core::Command::If(i) => {
+                ast::Command::If(i) => {
                     self.process_checked_cmds(prog, &i.then, diag);
                     self.process_checked_cmds(prog, &i.alt, diag);
                 }
-                core::Command::Bundle(bl) => {
+                ast::Command::Bundle(bl) => {
                     self.add_bundle(bl.clone());
                 }
-                core::Command::Fsm(_) | core::Command::Fact(_) => (),
+                ast::Command::Fsm(_) | ast::Command::Fact(_) => (),
             }
         }
     }
@@ -353,7 +353,7 @@ impl std::ops::Index<InvIdx> for BoundComponent {
 }
 
 impl std::ops::Index<BundleIdx> for BoundComponent {
-    type Output = core::Bundle;
+    type Output = ast::Bundle;
     fn index(&self, idx: BundleIdx) -> &Self::Output {
         &self.bundles[idx.get()]
     }
@@ -375,7 +375,7 @@ impl<'c, 'p> CompBinding<'c, 'p> {
 
     /// Get the **unresolved** signature associated with this component.
     /// If this signature should be completely resolved, use [[InvIdx::resolve_signature]].
-    pub fn this(&self) -> &core::Signature {
+    pub fn this(&self) -> &ast::Signature {
         &self.prog[self.comp.sig]
     }
 
@@ -439,13 +439,10 @@ impl<'c, 'p> CompBinding<'c, 'p> {
         })
     }
 
-    fn bundle_access(
-        mut bun: core::Bundle,
-        acc: &core::Access,
-    ) -> core::PortDef {
+    fn bundle_access(mut bun: ast::Bundle, acc: &ast::Access) -> ast::PortDef {
         match acc {
-            core::Access::Index(idx) => bun.index(idx.clone()),
-            core::Access::Range { start, end } => {
+            ast::Access::Index(idx) => bun.index(idx.clone()),
+            ast::Access::Range { start, end } => {
                 bun.typ = bun.typ.shrink(start.clone(), end.clone());
                 bun.into()
             }
@@ -454,28 +451,25 @@ impl<'c, 'p> CompBinding<'c, 'p> {
 
     /// Returns a resolved port definition for the given port.
     /// Returns `None` if and only if the given port is a constant.
-    pub fn get_resolved_port(
-        &self,
-        port: &core::Port,
-    ) -> Option<core::PortDef> {
+    pub fn get_resolved_port(&self, port: &ast::Port) -> Option<ast::PortDef> {
         match &port {
-            core::Port::This(p) => Some(self.this().get_port(p.inner()).take()),
-            core::Port::InvPort { invoke, name } => {
+            ast::Port::This(p) => Some(self.this().get_port(p.inner()).take()),
+            ast::Port::InvPort { invoke, name } => {
                 Some(self.get_invoke_idx(invoke).resolved_inv_port(self, name))
             }
-            core::Port::Bundle { name, access, .. } => {
+            ast::Port::Bundle { name, access, .. } => {
                 let bi = self.get_bundle_idx(name);
                 Some(Self::bundle_access(self[bi].clone(), access.inner()))
             }
-            core::Port::Constant(_) => None,
-            core::Port::InvBundle {
+            ast::Port::Constant(_) => None,
+            ast::Port::InvBundle {
                 invoke,
                 port,
                 access,
             } => {
                 let port =
                     self.get_invoke_idx(invoke).resolved_inv_port(self, port);
-                let core::PortDef::Bundle(bun) = port else {
+                let ast::PortDef::Bundle(bun) = port else {
                     unreachable!("Expected bundle port, received: `{port}'")
                 };
                 Some(Self::bundle_access(bun, access))
@@ -501,7 +495,7 @@ impl<'c, 'p> std::ops::Index<InvIdx> for CompBinding<'c, 'p> {
 }
 
 impl<'c, 'p> std::ops::Index<BundleIdx> for CompBinding<'c, 'p> {
-    type Output = core::Bundle;
+    type Output = ast::Bundle;
     fn index(&self, idx: BundleIdx) -> &Self::Output {
         &self.comp[idx]
     }

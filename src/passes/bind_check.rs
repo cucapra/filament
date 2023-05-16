@@ -1,10 +1,9 @@
 use std::collections::HashSet;
 
 use crate::{
+    ast::{self, Loc},
     binding::{self, InvIdx},
-    cmdline,
-    core::{self, Loc},
-    diagnostics,
+    cmdline, diagnostics,
     errors::Error,
     utils::GPosIdx,
     visitor::{self, Traverse},
@@ -14,22 +13,22 @@ use itertools::Itertools;
 #[derive(Default)]
 pub struct BindCheck {
     /// Currently bound parameters.
-    params: Vec<Loc<core::Id>>,
+    params: Vec<Loc<ast::Id>>,
     /// Parameters used by bundle. Should not conflict with `params`.
-    bundle_params: Vec<Loc<core::Id>>,
+    bundle_params: Vec<Loc<ast::Id>>,
     /// Currently bound events
-    events: Vec<core::Id>,
+    events: Vec<ast::Id>,
     /// Current set of diagnostics
     diag: diagnostics::Diagnostics,
 }
 
 impl BindCheck {
     /// Push a new set of bound variables and return the number of variables added
-    fn add_global_params(&mut self, vars: &[Loc<core::Id>]) {
+    fn add_global_params(&mut self, vars: &[Loc<ast::Id>]) {
         self.params.extend_from_slice(vars);
     }
 
-    fn push_bundle_params(&mut self, vars: &[Loc<core::Id>]) -> usize {
+    fn push_bundle_params(&mut self, vars: &[Loc<ast::Id>]) -> usize {
         let len = self.params.len();
         self.add_global_params(vars);
         self.bundle_params.extend_from_slice(vars);
@@ -41,12 +40,12 @@ impl BindCheck {
     }
 
     /// Check if the given variable is bound
-    fn get_var(&self, var: &core::Id) -> Option<&Loc<core::Id>> {
+    fn get_var(&self, var: &ast::Id) -> Option<&Loc<ast::Id>> {
         self.params.iter().find(|v| *v.inner() == *var)
     }
 
     /// Check that a time expression is well-formed
-    fn time(&mut self, time: &core::Time, pos: GPosIdx) {
+    fn time(&mut self, time: &ast::Time, pos: GPosIdx) {
         // Check that events are bound
         let ev = &time.event;
         if !self.events.contains(ev) {
@@ -62,7 +61,7 @@ impl BindCheck {
         self.expr(time.offset(), pos);
     }
 
-    fn expr(&mut self, expr: &core::Expr, pos: GPosIdx) {
+    fn expr(&mut self, expr: &ast::Expr, pos: GPosIdx) {
         for abs in expr.exprs() {
             if self.get_var(abs).is_none() {
                 let err = Error::undefined(*abs, "parameter").add_note(
@@ -80,7 +79,7 @@ impl BindCheck {
 }
 
 impl visitor::Checker for BindCheck {
-    fn new(_: &cmdline::Opts, _: &core::Namespace) -> Self {
+    fn new(_: &cmdline::Opts, _: &ast::Namespace) -> Self {
         Self::default()
     }
 
@@ -94,11 +93,7 @@ impl visitor::Checker for BindCheck {
         &mut self.diag
     }
 
-    fn fact(
-        &mut self,
-        a: &core::Fact,
-        _ctx: &binding::CompBinding,
-    ) -> Traverse {
+    fn fact(&mut self, a: &ast::Fact, _ctx: &binding::CompBinding) -> Traverse {
         for e in a.exprs() {
             self.expr(e, a.pos())
         }
@@ -108,10 +103,10 @@ impl visitor::Checker for BindCheck {
     fn bundle(
         &mut self,
         _is_port: bool,
-        bun: &core::Bundle,
+        bun: &ast::Bundle,
         _bind: &binding::CompBinding,
     ) -> Traverse {
-        let core::BundleType {
+        let ast::BundleType {
             idx,
             len,
             liveness,
@@ -129,14 +124,14 @@ impl visitor::Checker for BindCheck {
     }
 
     /// Check the binding of a component
-    fn signature(&mut self, sig: &core::Signature) -> Traverse {
+    fn signature(&mut self, sig: &ast::Signature) -> Traverse {
         let events = sig.events().collect_vec();
         let params = &sig.params;
         self.add_global_params(params);
         self.events.extend(events.iter().map(|ev| *ev.inner()));
         // Check all the definitions only use bound events and parameters
         for pd in sig.ports() {
-            if let core::PortDef::Port { liveness, .. } = pd.inner() {
+            if let ast::PortDef::Port { liveness, .. } = pd.inner() {
                 for time in liveness.time_exprs() {
                     self.time(time, liveness.pos());
                 }
@@ -192,7 +187,7 @@ impl visitor::Checker for BindCheck {
 
     fn forloop(
         &mut self,
-        l: &core::ForLoop,
+        l: &ast::ForLoop,
         ctx: &binding::CompBinding,
     ) -> Traverse {
         self.add_global_params(&[l.idx.clone()]);
@@ -204,7 +199,7 @@ impl visitor::Checker for BindCheck {
 
     fn instance(
         &mut self,
-        inst: &core::Instance,
+        inst: &ast::Instance,
         ctx: &binding::CompBinding,
     ) -> Traverse {
         let bound = ctx.get_instance(&inst.name);
@@ -230,7 +225,7 @@ impl visitor::Checker for BindCheck {
 
     fn invoke(
         &mut self,
-        inv: &core::Invoke,
+        inv: &ast::Invoke,
         ctx: &binding::CompBinding,
     ) -> Traverse {
         let inv_idx = self.bind_invoke(inv, ctx);
@@ -259,11 +254,11 @@ impl visitor::Checker for BindCheck {
 
             // Check the connections implied by the ports
             for (actual, formal) in ports.iter().zip(inputs) {
-                let dst = core::Loc::new(
-                    core::Port::inv_port(inv.name.clone(), formal.clone()),
+                let dst = ast::Loc::new(
+                    ast::Port::inv_port(inv.name.clone(), formal.clone()),
                     formal.pos(),
                 );
-                let con = core::Connect::new(dst, actual.clone(), None);
+                let con = ast::Connect::new(dst, actual.clone(), None);
                 self.connect(&con, ctx)?;
             }
         }
@@ -272,7 +267,7 @@ impl visitor::Checker for BindCheck {
 
     fn exit_component(
         &mut self,
-        _: &core::Component,
+        _: &ast::Component,
         _ctx: &binding::CompBinding,
     ) -> Traverse {
         // Find all duplicate bindings for parameters and report them
@@ -315,7 +310,7 @@ impl BindCheck {
     /// Check that an invoke's instance is bound and and bind its signature
     fn bind_invoke(
         &mut self,
-        inv: &core::Invoke,
+        inv: &ast::Invoke,
         ctx: &binding::CompBinding,
     ) -> InvIdx {
         let inv_idx = ctx.get_invoke_idx(&inv.name);

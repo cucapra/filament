@@ -1,5 +1,5 @@
 use crate::{
-    core::{self, Id},
+    ast::{self, Id},
     diagnostics,
     errors::Error,
     idx,
@@ -8,13 +8,13 @@ use std::collections::HashMap;
 
 use super::BoundComponent;
 
-pub type SigIdx = idx!(core::Signature);
+pub type SigIdx = idx!(ast::Signature);
 
 /// Signatures bound in a program.
-/// Also acts a dispatcher for methods on [core::Signature] since external and
+/// Also acts a dispatcher for methods on [ast::Signature] since external and
 /// component signatures have different types.
 pub struct ProgBinding<'a> {
-    signatures: Vec<&'a core::Signature>,
+    signatures: Vec<&'a ast::Signature>,
     /// Component bindings. Invariant: the index of the component in this vector is the same as
     /// the index of the component signature in the `signatures` vector.
     comps: Vec<super::BoundComponent>,
@@ -23,7 +23,7 @@ pub struct ProgBinding<'a> {
 
 impl<'a> ProgBinding<'a> {
     // Is this name already bound?
-    fn is_bound(&self, name: &core::Id) -> Option<&core::Signature> {
+    fn is_bound(&self, name: &ast::Id) -> Option<&ast::Signature> {
         self.name_map
             .get(name)
             .map(|idx| self.signatures[idx.get()])
@@ -33,7 +33,7 @@ impl<'a> ProgBinding<'a> {
     /// any errors.
     fn add_comp_bind(
         &mut self,
-        comp: &'a core::Component,
+        comp: &'a ast::Component,
         diag: &mut diagnostics::Diagnostics,
     ) {
         let idx = self.get_sig_idx(&comp.sig.name);
@@ -47,7 +47,7 @@ impl<'a> ProgBinding<'a> {
         let mut bind = BoundComponent::from(idx);
         // Add all the bundles from the signature
         for pd in comp.sig.ports() {
-            if let core::PortDef::Bundle(bun) = pd.inner() {
+            if let ast::PortDef::Bundle(bun) = pd.inner() {
                 bind.add_bundle(bun.clone());
             }
         }
@@ -58,7 +58,7 @@ impl<'a> ProgBinding<'a> {
     /// Add a component signature to the program binding
     fn add_sig(
         &mut self,
-        sig: &'a core::Signature,
+        sig: &'a ast::Signature,
         diag: &mut diagnostics::Diagnostics,
     ) -> SigIdx {
         if let Some(old_sig) = self.is_bound(&sig.name) {
@@ -80,28 +80,28 @@ impl<'a> ProgBinding<'a> {
         }
     }
 
-    pub(super) fn get_comp_binding(&self, name: &core::Id) -> &BoundComponent {
+    pub(super) fn get_comp_binding(&self, name: &ast::Id) -> &BoundComponent {
         let idx = self.get_sig_idx(name);
         &self.comps[idx.get()]
     }
 
     /// Get the signature index associated with a name.
     /// Panic if the signature is not found.
-    pub(super) fn get_sig_idx(&self, name: &core::Id) -> SigIdx {
+    pub(super) fn get_sig_idx(&self, name: &ast::Id) -> SigIdx {
         self.find_sig_idx(name)
             .unwrap_or_else(|| panic!("Unknown signature: {}", name))
     }
 
     /// Get index associated with a signature
-    pub(super) fn find_sig_idx(&self, name: &core::Id) -> Option<SigIdx> {
+    pub(super) fn find_sig_idx(&self, name: &ast::Id) -> Option<SigIdx> {
         self.name_map.get(name).copied()
     }
 }
 
-impl<'a> TryFrom<&'a core::Namespace> for ProgBinding<'a> {
+impl<'a> TryFrom<&'a ast::Namespace> for ProgBinding<'a> {
     type Error = u64;
 
-    fn try_from(ns: &'a core::Namespace) -> Result<Self, Self::Error> {
+    fn try_from(ns: &'a ast::Namespace) -> Result<Self, Self::Error> {
         let mut ctx = ProgBinding {
             signatures: Vec::new(),
             comps: Vec::with_capacity(ns.components.len()),
@@ -133,14 +133,14 @@ impl<'a> TryFrom<&'a core::Namespace> for ProgBinding<'a> {
 }
 
 impl std::ops::Index<SigIdx> for ProgBinding<'_> {
-    type Output = core::Signature;
+    type Output = ast::Signature;
     fn index(&self, idx: SigIdx) -> &Self::Output {
         self.signatures[idx.get()]
     }
 }
 
 impl std::ops::Index<&Id> for ProgBinding<'_> {
-    type Output = core::Signature;
+    type Output = ast::Signature;
     fn index(&self, name: &Id) -> &Self::Output {
         let idx = self.get_sig_idx(name);
         &self[idx]

@@ -1,5 +1,5 @@
 use super::Obligation;
-use crate::core::{self, Time, TimeSub};
+use crate::ast::{self, Time, TimeSub};
 use crate::diagnostics::{self, Diagnostics, InfoIdx};
 use crate::errors::{Error, FilamentResult};
 use itertools::Itertools;
@@ -44,15 +44,15 @@ impl From<TimeDelSum> for SExp {
 #[derive(Clone)]
 pub struct ShareConstraint {
     /// Delay bounded by the share constraint
-    event_bind: core::Loc<core::EventBind>,
+    event_bind: ast::Loc<ast::EventBind>,
     /// The events used to compute the minimum of start times
     starts: Vec<(Time, InfoIdx)>,
     /// The (event, delay) to compute the max of start times
     ends: Vec<(TimeDelSum, InfoIdx)>,
 }
 
-impl From<core::Loc<core::EventBind>> for ShareConstraint {
-    fn from(event_bind: core::Loc<core::EventBind>) -> Self {
+impl From<ast::Loc<ast::EventBind>> for ShareConstraint {
+    fn from(event_bind: ast::Loc<ast::EventBind>) -> Self {
         Self {
             starts: vec![],
             ends: vec![],
@@ -68,7 +68,7 @@ impl ShareConstraint {
 
     pub fn add_bind_info(
         &mut self,
-        start: core::Loc<Time>,
+        start: ast::Loc<Time>,
         end: (Time, TimeSub),
         diag: &mut Diagnostics,
     ) {
@@ -206,7 +206,7 @@ impl FilSolver {
         })
     }
 
-    pub fn declare_var(&mut self, var: core::Id) {
+    pub fn declare_var(&mut self, var: ast::Id) {
         log::trace!("Declaring {}", var);
         self.s.declare_const(var.to_string(), "Int").unwrap();
         // All values must be positive
@@ -228,7 +228,7 @@ impl FilSolver {
 
     pub fn prove(
         &mut self,
-        vars: impl IntoIterator<Item = core::Id>,
+        vars: impl IntoIterator<Item = ast::Id>,
         assumptions: Vec<SExp>,
         to_prove: Vec<Obligation>,
         sharing: Vec<ShareConstraint>,
@@ -281,7 +281,7 @@ impl FilSolver {
     fn check_fact(
         &mut self,
         obl: &Obligation,
-        vars: &[core::Id],
+        vars: &[ast::Id],
     ) -> Option<String> {
         let mut requires_ctx = false;
         // If the fact requires defining vars, we need to push a context

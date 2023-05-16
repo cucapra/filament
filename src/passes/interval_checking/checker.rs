@@ -1,6 +1,6 @@
 use super::IntervalCheck;
+use crate::ast::{self, ForLoop, OrderConstraint};
 use crate::binding::CompBinding;
-use crate::core::{self, ForLoop, OrderConstraint};
 use crate::errors::Error;
 use crate::utils::{self, FilSolver};
 use crate::visitor::{self, Checker, Traverse};
@@ -12,10 +12,10 @@ impl IntervalCheck {
     /// Constraint generated for an index on a bundle
     fn bundle_index_constraint(
         &mut self,
-        idx: core::Loc<core::Expr>,
-        len: core::Expr,
+        idx: ast::Loc<ast::Expr>,
+        len: ast::Expr,
     ) {
-        let greater = core::Constraint::sub(OrderConstraint::lt(
+        let greater = ast::Constraint::sub(OrderConstraint::lt(
             idx.inner().clone().into(),
             len.clone().into(),
         ))
@@ -27,9 +27,9 @@ impl IntervalCheck {
                     idx.pos()
                 ),
         );
-        let smaller = core::Constraint::sub(OrderConstraint::gte(
+        let smaller = ast::Constraint::sub(OrderConstraint::gte(
             idx.inner().clone().into(),
-            core::Expr::from(0).into(),
+            ast::Expr::from(0).into(),
         ))
         .obligation("bundle index must be greater than or equal to 0")
         .add_note(
@@ -43,8 +43,8 @@ impl IntervalCheck {
     }
 
     /// Check that a bundle access is within bounds
-    fn port_bundle_index(&mut self, port: &core::Port, ctx: &CompBinding) {
-        let core::Port::Bundle { name, access } = &port else {
+    fn port_bundle_index(&mut self, port: &ast::Port, ctx: &CompBinding) {
+        let ast::Port::Bundle { name, access } = &port else {
             return
         };
         let bun_idx = ctx.get_bundle_idx(name);
@@ -52,24 +52,24 @@ impl IntervalCheck {
 
         let pos = access.pos();
         match access.inner() {
-            core::Access::Index(idx) => {
+            ast::Access::Index(idx) => {
                 self.bundle_index_constraint(
-                    core::Loc::new(idx.clone(), pos),
+                    ast::Loc::new(idx.clone(), pos),
                     len,
                 );
             }
-            core::Access::Range { start, end } => {
+            ast::Access::Range { start, end } => {
                 self.bundle_index_constraint(
-                    core::Loc::new(start.clone(), pos),
+                    ast::Loc::new(start.clone(), pos),
                     len.clone(),
                 );
                 // True end is one less than `end`
                 self.bundle_index_constraint(
-                    core::Loc::new(end.clone() - 1.into(), pos),
+                    ast::Loc::new(end.clone() - 1.into(), pos),
                     len,
                 );
                 // end must be greater than start
-                let cons = core::Constraint::sub(core::OrderConstraint::gt(
+                let cons = ast::Constraint::sub(ast::OrderConstraint::gt(
                     end.clone().into(),
                     start.clone().into(),
                 ))
@@ -88,10 +88,10 @@ impl IntervalCheck {
 
     fn check_width(
         &mut self,
-        con: &core::Connect,
+        con: &ast::Connect,
         // Resolved ports
-        src: &Option<core::PortDef>,
-        dst: &Option<core::PortDef>,
+        src: &Option<ast::PortDef>,
+        dst: &Option<ast::PortDef>,
     ) {
         let dst_w = dst
             .as_ref()
@@ -102,7 +102,7 @@ impl IntervalCheck {
             .map(|p| p.bitwidth().inner().clone())
             .unwrap_or_else(|| 32.into());
 
-        let cons = core::Constraint::sub(core::OrderConstraint::eq(
+        let cons = ast::Constraint::sub(ast::OrderConstraint::eq(
             dst_w.clone().into(),
             src_w.clone().into(),
         ))
@@ -124,13 +124,13 @@ impl IntervalCheck {
     /// availabilities of the right bundle.
     fn bundle_inclusion(
         &mut self,
-        left: core::Loc<core::BundleType>,
-        right: core::Loc<core::BundleType>,
+        left: ast::Loc<ast::BundleType>,
+        right: ast::Loc<ast::BundleType>,
     ) {
         // Check that the bundle's lengths are equal
         let left_len = &left.len;
         let right_len = &right.len;
-        let len_eq = core::OrderConstraint::eq(
+        let len_eq = ast::OrderConstraint::eq(
             left_len.inner().clone(),
             right_len.inner().clone(),
         );
@@ -181,7 +181,7 @@ impl IntervalCheck {
     /// by the component's delays.
     fn check_invoke_binds(
         &mut self,
-        invoke: &core::Invoke,
+        invoke: &ast::Invoke,
         ctx: &CompBinding,
     ) -> Traverse {
         let inv_sig = ctx.get_invoke_idx(&invoke.name).resolved_signature(ctx);
@@ -206,7 +206,7 @@ impl IntervalCheck {
 
             // Generate constraint
             let cons =
-                core::Constraint::sub(core::OrderConstraint::gte(
+                ast::Constraint::sub(ast::OrderConstraint::gte(
                     this_ev_delay.inner().clone(),
                     ev_delay.inner().clone(),
                 ))
@@ -238,7 +238,7 @@ impl IntervalCheck {
 
     fn check_invoke_ports(
         &mut self,
-        invoke: &core::Invoke,
+        invoke: &ast::Invoke,
         ctx: &CompBinding,
     ) -> Traverse {
         // If this is a high-level invoke, check all port requirements
@@ -250,25 +250,25 @@ impl IntervalCheck {
             let inputs = sig.inputs().map(|pd| pd.name().clone()).collect_vec();
             // Check connections implied by the invocation
             for (actual, formal) in actuals.iter().zip(inputs) {
-                let dst = if let core::PortDef::Bundle(b) =
+                let dst = if let ast::PortDef::Bundle(b) =
                     sig.get_port(&formal).inner()
                 {
                     // Generate a complete range splat for the invocation bundle implied
                     // by this port.
-                    core::Port::InvBundle {
+                    ast::Port::InvBundle {
                         invoke: invoke.name.clone(),
                         port: formal.clone(),
-                        access: core::Access::range(
-                            core::Expr::concrete(0),
+                        access: ast::Access::range(
+                            ast::Expr::concrete(0),
                             b.typ.len.inner().clone(),
                         )
                         .into(),
                     }
                 } else {
-                    core::Port::inv_port(invoke.name.clone(), formal.clone())
+                    ast::Port::inv_port(invoke.name.clone(), formal.clone())
                 };
-                let con = core::Connect::new(
-                    core::Loc::new(dst, formal.pos()),
+                let con = ast::Connect::new(
+                    ast::Loc::new(dst, formal.pos()),
                     actual.clone(),
                     None,
                 );
@@ -281,7 +281,7 @@ impl IntervalCheck {
 }
 
 impl visitor::Checker for IntervalCheck {
-    fn new(opts: &cmdline::Opts, ns: &core::Namespace) -> Self {
+    fn new(opts: &cmdline::Opts, ns: &ast::Namespace) -> Self {
         let mut solver = FilSolver::new(opts.show_models).unwrap();
         let mut diagnostics = diagnostics::Diagnostics::default();
 
@@ -328,7 +328,7 @@ impl visitor::Checker for IntervalCheck {
         &mut self.diag
     }
 
-    fn fact(&mut self, a: &core::Fact, _: &CompBinding) -> Traverse {
+    fn fact(&mut self, a: &ast::Fact, _: &CompBinding) -> Traverse {
         if a.checked {
             let obl = a
                 .cons
@@ -344,7 +344,7 @@ impl visitor::Checker for IntervalCheck {
         Traverse::Continue(())
     }
 
-    fn if_(&mut self, l: &core::If, ctx: &CompBinding) -> Traverse {
+    fn if_(&mut self, l: &ast::If, ctx: &CompBinding) -> Traverse {
         let cond = utils::SExp::from(l.cond.clone());
 
         // Check the then branch using the condition as a path condition
@@ -365,7 +365,7 @@ impl visitor::Checker for IntervalCheck {
         Traverse::Continue(())
     }
 
-    fn forloop(&mut self, l: &core::ForLoop, ctx: &CompBinding) -> Traverse {
+    fn forloop(&mut self, l: &ast::ForLoop, ctx: &CompBinding) -> Traverse {
         let ForLoop {
             idx,
             start,
@@ -376,14 +376,14 @@ impl visitor::Checker for IntervalCheck {
         let idx = *idx.inner();
         self.add_var(idx);
         let var_bounds = vec![
-            core::OrderConstraint::gte(
-                core::TimeSub::from(core::Expr::from(idx)),
-                core::TimeSub::from(start.clone()),
+            ast::OrderConstraint::gte(
+                ast::TimeSub::from(ast::Expr::from(idx)),
+                ast::TimeSub::from(start.clone()),
             )
             .into(),
-            core::OrderConstraint::lt(
-                core::TimeSub::from(core::Expr::from(idx)),
-                core::TimeSub::from(end.clone()),
+            ast::OrderConstraint::lt(
+                ast::TimeSub::from(ast::Expr::from(idx)),
+                ast::TimeSub::from(end.clone()),
             )
             .into(),
         ];
@@ -404,21 +404,21 @@ impl visitor::Checker for IntervalCheck {
     fn bundle(
         &mut self,
         _is_port: bool,
-        bundle: &core::Bundle,
+        bundle: &ast::Bundle,
         ctx: &CompBinding,
     ) -> Traverse {
-        let core::BundleType {
+        let ast::BundleType {
             idx, len, liveness, ..
         } = &bundle.typ;
 
         // The index ranges over the length of the bundle
         let idx_range = [
             OrderConstraint::gte(
-                core::Expr::abs(*idx.inner()),
-                core::Expr::concrete(0),
+                ast::Expr::abs(*idx.inner()),
+                ast::Expr::concrete(0),
             ),
             OrderConstraint::lt(
-                core::Expr::abs(*idx.inner()),
+                ast::Expr::abs(*idx.inner()),
                 len.inner().clone(),
             ),
         ];
@@ -457,7 +457,7 @@ impl visitor::Checker for IntervalCheck {
 
     fn instance(
         &mut self,
-        inst: &core::Instance,
+        inst: &ast::Instance,
         ctx: &CompBinding,
     ) -> Traverse {
         // Check that the binding parameters provided to the instance are well-formed
@@ -483,7 +483,7 @@ impl visitor::Checker for IntervalCheck {
         Traverse::Continue(())
     }
 
-    fn connect(&mut self, con: &core::Connect, ctx: &CompBinding) -> Traverse {
+    fn connect(&mut self, con: &ast::Connect, ctx: &CompBinding) -> Traverse {
         let src = &con.src;
         let dst = &con.dst;
 
@@ -500,12 +500,12 @@ impl visitor::Checker for IntervalCheck {
         // 1. @within(dst) \subsetof @within(src): To ensure that src drives within for long enough.
         // 2. @exact(src) == @exact(dst): To ensure that `dst` exact guarantee is maintained.
         match mb_dst.unwrap() {
-            core::PortDef::Port {
+            ast::PortDef::Port {
                 liveness: requirement,
                 ..
             } => {
                 if let Some(src_port) = &mb_src {
-                    let core::PortDef::Port {
+                    let ast::PortDef::Port {
                         liveness: src_liveness,
                         ..
                     } = src_port else {
@@ -523,7 +523,7 @@ impl visitor::Checker for IntervalCheck {
                         src_liveness.clone().take(),
                     )
                     .map(|e| {
-                        core::Constraint::base(e)
+                        ast::Constraint::base(e)
                             .obligation("source port must be available longer than the destination port requires")
                             .add_note(self.diag.add_info(
                                 format!(
@@ -541,10 +541,10 @@ impl visitor::Checker for IntervalCheck {
                     self.add_obligations(within_fact);
                 }
             }
-            core::PortDef::Bundle(bl) => {
-                if let Some(core::PortDef::Bundle(br)) = mb_src {
-                    let blt = core::Loc::new(bl.typ, dst.pos());
-                    let brt = core::Loc::new(br.typ, src.pos());
+            ast::PortDef::Bundle(bl) => {
+                if let Some(ast::PortDef::Bundle(br)) = mb_src {
+                    let blt = ast::Loc::new(bl.typ, dst.pos());
+                    let brt = ast::Loc::new(br.typ, src.pos());
                     self.bundle_inclusion(blt, brt);
                 } else {
                     let err =
@@ -563,7 +563,7 @@ impl visitor::Checker for IntervalCheck {
         Traverse::Continue(())
     }
 
-    fn invoke(&mut self, invoke: &core::Invoke, ctx: &CompBinding) -> Traverse {
+    fn invoke(&mut self, invoke: &ast::Invoke, ctx: &CompBinding) -> Traverse {
         log::trace!("Checking: {invoke}");
         // Check the bindings for abstract variables do not violate @interface
         // requirements
@@ -597,7 +597,7 @@ impl visitor::Checker for IntervalCheck {
 
     fn enter_component(
         &mut self,
-        comp: &core::Component,
+        comp: &ast::Component,
         ctx: &CompBinding,
     ) -> Traverse {
         log::trace!("=========== Component {} ==========", comp.sig.name);
@@ -636,7 +636,7 @@ impl visitor::Checker for IntervalCheck {
 
         // Check bundle ports for well-formedness
         for p in comp.sig.ports() {
-            if let core::PortDef::Bundle(b) = p.inner() {
+            if let ast::PortDef::Bundle(b) = p.inner() {
                 self.bundle(true, b, ctx)?;
             }
         }
@@ -651,7 +651,7 @@ impl visitor::Checker for IntervalCheck {
 
     fn exit_component(
         &mut self,
-        comp: &core::Component,
+        comp: &ast::Component,
         ctx: &CompBinding,
     ) -> Traverse {
         // Add obligations from disjointness constraints

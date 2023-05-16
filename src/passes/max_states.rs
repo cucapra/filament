@@ -1,6 +1,6 @@
 use crate::{
+    ast::{self, Id},
     binding, cmdline,
-    core::{self, Id},
     visitor::{self, Traverse},
 };
 use std::collections::HashMap;
@@ -20,7 +20,7 @@ pub struct MaxStates {
 impl MaxStates {
     fn max_state_from_ports<'a>(
         &mut self,
-        ports: impl IntoIterator<Item = &'a core::Loc<core::PortDef>>,
+        ports: impl IntoIterator<Item = &'a ast::Loc<ast::PortDef>>,
     ) {
         for pd in ports {
             for time in pd.inner().liveness().time_exprs() {
@@ -36,7 +36,7 @@ impl MaxStates {
 }
 
 impl visitor::Checker for MaxStates {
-    fn new(_opts: &cmdline::Opts, _: &core::Namespace) -> Self {
+    fn new(_opts: &cmdline::Opts, _: &ast::Namespace) -> Self {
         Self::default()
     }
     fn clear_data(&mut self) {
@@ -47,7 +47,7 @@ impl visitor::Checker for MaxStates {
     }
     fn enter_component(
         &mut self,
-        comp: &core::Component,
+        comp: &ast::Component,
         _: &binding::CompBinding,
     ) -> Traverse {
         self.cur_states = comp
@@ -61,7 +61,7 @@ impl visitor::Checker for MaxStates {
     }
     fn invoke(
         &mut self,
-        inv: &core::Invoke,
+        inv: &ast::Invoke,
         ctx: &binding::CompBinding,
     ) -> Traverse {
         // Get the fully resolved signature
@@ -72,7 +72,7 @@ impl visitor::Checker for MaxStates {
     }
     fn exit_component(
         &mut self,
-        comp: &core::Component,
+        comp: &ast::Component,
         _: &binding::CompBinding,
     ) -> Traverse {
         let events = std::mem::take(&mut self.cur_states);

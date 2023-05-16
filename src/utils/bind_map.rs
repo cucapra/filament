@@ -1,4 +1,4 @@
-use crate::core::Id;
+use crate::ast::Id;
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 use std::{fmt::Debug, fmt::Display};

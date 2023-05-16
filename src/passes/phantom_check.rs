@@ -1,7 +1,7 @@
 use crate::errors::Error;
 use crate::utils::GPosIdx;
 use crate::visitor::{self, Traverse};
-use crate::{binding, cmdline, core, diagnostics};
+use crate::{ast, binding, cmdline, diagnostics};
 use itertools::Itertools;
 use std::collections::HashSet;
 
@@ -12,15 +12,15 @@ use std::collections::HashSet;
 ///    corresponding event in their interface, i.e., the uses of the event are all phantom
 pub struct PhantomCheck {
     // Set of instances that have already been used once
-    instance_used: HashSet<core::Loc<core::Id>>,
+    instance_used: HashSet<ast::Loc<ast::Id>>,
     // Names of @phantom events in this component
-    phantom_events: Vec<core::Loc<core::Id>>,
+    phantom_events: Vec<ast::Loc<ast::Id>>,
     // Diagnostics information
     diag: diagnostics::Diagnostics,
 }
 
 impl visitor::Checker for PhantomCheck {
-    fn new(_opts: &cmdline::Opts, _: &core::Namespace) -> Self {
+    fn new(_opts: &cmdline::Opts, _: &ast::Namespace) -> Self {
         Self {
             instance_used: HashSet::new(),
             phantom_events: Vec::new(),
@@ -39,7 +39,7 @@ impl visitor::Checker for PhantomCheck {
 
     fn enter_component(
         &mut self,
-        comp: &core::Component,
+        comp: &ast::Component,
         _: &binding::CompBinding,
     ) -> Traverse {
         self.phantom_events = comp.sig.phantom_events().collect();
@@ -52,7 +52,7 @@ impl visitor::Checker for PhantomCheck {
 
     fn invoke(
         &mut self,
-        inv: &core::Invoke,
+        inv: &ast::Invoke,
         ctx: &binding::CompBinding,
     ) -> Traverse {
         // Check if the instance has already been used
