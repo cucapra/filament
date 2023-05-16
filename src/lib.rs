@@ -8,7 +8,6 @@ pub mod resolver;
 pub mod utils;
 pub mod visitor;
 
-pub(crate) mod core;
-// pub(crate) mod expr_simplifier;
+pub(crate) mod ast;
 
 pub use diagnostics::errors;

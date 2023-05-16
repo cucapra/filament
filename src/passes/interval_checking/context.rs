@@ -1,4 +1,4 @@
-use crate::core::{self, Constraint, OrderConstraint};
+use crate::ast::{self, Constraint, OrderConstraint};
 use crate::utils::{self, FilSolver, ShareConstraint};
 use crate::{binding, diagnostics};
 use itertools::Itertools;
@@ -15,7 +15,7 @@ pub struct IntervalCheck {
     /// Set of assumed facts
     pub(super) facts: Vec<utils::SExp>,
     /// Variables used in the current set of constraints
-    pub(super) vars: Vec<core::Id>,
+    pub(super) vars: Vec<ast::Id>,
     /// Current path condition
     pub(super) path_cond: Vec<utils::SExp>,
 }
@@ -72,12 +72,12 @@ impl IntervalCheck {
     }
 
     /// Add a new variable to the context
-    pub fn add_var(&mut self, var: core::Id) {
+    pub fn add_var(&mut self, var: ast::Id) {
         self.vars.push(var);
     }
 
     /// Iterator over the variables
-    pub fn vars(&self) -> impl Iterator<Item = core::Id> + '_ {
+    pub fn vars(&self) -> impl Iterator<Item = ast::Id> + '_ {
         self.vars.iter().cloned()
     }
 
@@ -206,8 +206,8 @@ impl IntervalCheck {
                         start_i.inner().clone() - start_k.inner().clone();
 
                     let bind_pos = event_binds[event].delay.pos();
-                    let con = core::Constraint::sub(
-                        core::OrderConstraint::gte(
+                    let con = ast::Constraint::sub(
+                        ast::OrderConstraint::gte(
                             diff.clone(),
                             delay.inner().clone(),
                         ),

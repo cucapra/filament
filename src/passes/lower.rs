@@ -1,5 +1,5 @@
+use crate::ast::{self, Id, Loc};
 use crate::binding::CompBinding;
-use crate::core::{self, Id, Loc};
 use crate::errors::FilamentResult;
 use crate::visitor;
 use itertools::Itertools;
@@ -10,25 +10,25 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct Lower {
     /// Mapping from events to FSMs
-    fsms: HashMap<core::Id, core::Fsm>,
+    fsms: HashMap<ast::Id, ast::Fsm>,
     /// Max state map
-    max_states: HashMap<core::Id, HashMap<core::Id, u64>>,
+    max_states: HashMap<ast::Id, HashMap<ast::Id, u64>>,
     /// Track writes to bundles
-    bundle_writes: HashMap<core::Id, Vec<Option<core::Port>>>,
+    bundle_writes: HashMap<ast::Id, Vec<Option<ast::Port>>>,
 }
 
 impl Lower {
-    fn find_fsm(&self, event: &core::Id) -> Option<&core::Fsm> {
+    fn find_fsm(&self, event: &ast::Id) -> Option<&ast::Fsm> {
         self.fsms.get(event)
     }
 
-    fn get_fsm(&self, event: &core::Id) -> &core::Fsm {
+    fn get_fsm(&self, event: &ast::Id) -> &ast::Fsm {
         self.find_fsm(event)
             .unwrap_or_else(|| panic!("No FSM for event `{event}`."))
     }
 
     /// Converts an interval to a guard expression with the appropriate FSM
-    fn range_to_guard(&self, range: &core::Range) -> Option<core::Guard> {
+    fn range_to_guard(&self, range: &ast::Range) -> Option<ast::Guard> {
         let Some((ev, st, end)) = range.as_offset() else {
             unreachable!(
                 "Range `{range}` cannot be represented as a simple offset"
@@ -38,15 +38,15 @@ impl Lower {
         let fsm = self.find_fsm(&ev)?;
         let guard = (st.try_into().unwrap()..end.try_into().unwrap())
             .map(|st| fsm.port(st).into())
-            .reduce(core::Guard::or)
+            .reduce(ast::Guard::or)
             .unwrap();
         Some(guard)
     }
 
-    fn port(&self, port: &core::Port) -> core::Port {
+    fn port(&self, port: &ast::Port) -> ast::Port {
         match &port {
-            core::Port::Bundle { name, access } => {
-                let core::Access::Index(idx) = access.inner() else {
+            ast::Port::Bundle { name, access } => {
+                let ast::Access::Index(idx) = access.inner() else {
                     unreachable!("Unexpected bundle range access found: `{port}'")
                 };
                 let idx = u64::try_from(idx).unwrap() as usize;
@@ -64,7 +64,7 @@ impl visitor::Transform for Lower {
     /// Mapping from component -> event -> max state
     type Info = HashMap<Id, HashMap<Id, u64>>;
 
-    fn new(_: &core::Namespace, max_states: &Self::Info) -> Self {
+    fn new(_: &ast::Namespace, max_states: &Self::Info) -> Self {
         Self {
             fsms: HashMap::new(),
             max_states: max_states.clone(),
@@ -84,9 +84,9 @@ impl visitor::Transform for Lower {
 
     fn bundle(
         &mut self,
-        bundle: core::Bundle,
+        bundle: ast::Bundle,
         _: &CompBinding,
-    ) -> FilamentResult<Vec<core::Command>> {
+    ) -> FilamentResult<Vec<ast::Command>> {
         self.bundle_writes.insert(
             *bundle.name,
             vec![None; u64::try_from(bundle.typ.len.inner()).unwrap() as usize],
@@ -96,12 +96,12 @@ impl visitor::Transform for Lower {
 
     fn connect(
         &mut self,
-        con: core::Connect,
+        con: ast::Connect,
         _: &CompBinding,
-    ) -> FilamentResult<Vec<core::Command>> {
+    ) -> FilamentResult<Vec<ast::Command>> {
         let src = self.port(con.src.inner());
-        if let core::Port::Bundle { name, access } = con.dst.inner() {
-            let core::Access::Index(idx) = access.inner() else {
+        if let ast::Port::Bundle { name, access } = con.dst.inner() {
+            let ast::Access::Index(idx) = access.inner() else {
                 unreachable!("Unexpected bundle range access found: `{}'", con.dst)
             };
             let idx = u64::try_from(idx).unwrap() as usize;
@@ -115,7 +115,7 @@ impl visitor::Transform for Lower {
             Ok(vec![])
         } else {
             let con =
-                core::Connect::new(con.dst, core::Loc::unknown(src), con.guard);
+                ast::Connect::new(con.dst, ast::Loc::unknown(src), con.guard);
             Ok(vec![con.into()])
         }
     }
@@ -123,11 +123,11 @@ impl visitor::Transform for Lower {
     // TODO(rachit): Document how the compilation works
     fn invoke(
         &mut self,
-        inv: core::Invoke,
+        inv: ast::Invoke,
         ctx: &CompBinding,
-    ) -> FilamentResult<Vec<core::Command>> {
+    ) -> FilamentResult<Vec<ast::Command>> {
         // Compile only if this is a high-level invoke
-        if let core::Invoke {
+        if let ast::Invoke {
             name: bind,
             instance,
             abstract_vars,
@@ -147,7 +147,7 @@ impl visitor::Transform for Lower {
 
             // Define the low-level invoke
             let low_inv =
-                core::Invoke::new(bind.clone(), instance, abstract_vars, None)
+                ast::Invoke::new(bind.clone(), instance, abstract_vars, None)
                     .into();
             connects.push(low_inv);
 
@@ -158,8 +158,8 @@ impl visitor::Transform for Lower {
                 let t = binding.get(ev);
                 let start_time = u64::try_from(t.offset()).unwrap();
                 let port = self.get_fsm(&t.event()).port(start_time);
-                let con = core::Connect::new(
-                    Loc::unknown(core::Port::inv_port(
+                let con = ast::Connect::new(
+                    Loc::unknown(ast::Port::inv_port(
                         bind.clone(),
                         interface.name.clone(),
                     )),
@@ -173,8 +173,8 @@ impl visitor::Transform for Lower {
             for (src, formal) in ports.into_iter().zip(sig.inputs()) {
                 let guard = self.range_to_guard(formal.liveness());
                 let port = self.port(src.inner());
-                let con = core::Connect::new(
-                    Loc::unknown(core::Port::inv_port(
+                let con = ast::Connect::new(
+                    Loc::unknown(ast::Port::inv_port(
                         bind.clone(),
                         formal.name().clone(),
                     )),
@@ -193,7 +193,7 @@ impl visitor::Transform for Lower {
     fn enter_component(
         &mut self,
         ctx: &CompBinding,
-    ) -> FilamentResult<Vec<core::Command>> {
+    ) -> FilamentResult<Vec<ast::Command>> {
         let sig = ctx.this();
 
         // Define FSMs for each interface signal
@@ -205,10 +205,10 @@ impl visitor::Transform for Lower {
                 let ev = &interface.event;
                 Ok((
                     *ev,
-                    core::Fsm::new(
+                    ast::Fsm::new(
                         format!("{}_fsm", ev).into(),
                         events[ev],
-                        core::Port::this(interface.name.clone()),
+                        ast::Port::this(interface.name.clone()),
                     ),
                 ))
             })
@@ -220,7 +220,7 @@ impl visitor::Transform for Lower {
     fn exit_component(
         &mut self,
         _: &CompBinding,
-    ) -> FilamentResult<Vec<core::Command>> {
+    ) -> FilamentResult<Vec<ast::Command>> {
         // Add the FSMs to the component
         let fsms = std::mem::take(&mut self.fsms)
             .into_values()

@@ -1,5 +1,5 @@
 use crate::binding::{BoundComponent, CompBinding, ProgBinding};
-use crate::{core, errors::FilamentResult};
+use crate::{ast, errors::FilamentResult};
 use itertools::Itertools;
 
 /// Transform the given AST
@@ -11,7 +11,7 @@ where
     type Info;
 
     /// Construct an instance of this pass
-    fn new(_: &core::Namespace, info: &Self::Info) -> Self;
+    fn new(_: &ast::Namespace, info: &Self::Info) -> Self;
 
     /// What data should be cleared between component
     fn clear_data(&mut self);
@@ -22,27 +22,27 @@ where
     #[inline]
     fn connect(
         &mut self,
-        con: core::Connect,
+        con: ast::Connect,
         _: &CompBinding,
-    ) -> FilamentResult<Vec<core::Command>> {
+    ) -> FilamentResult<Vec<ast::Command>> {
         Ok(vec![con.into()])
     }
 
     #[inline]
     fn instance(
         &mut self,
-        inst: core::Instance,
+        inst: ast::Instance,
         _: &CompBinding,
-    ) -> FilamentResult<Vec<core::Command>> {
+    ) -> FilamentResult<Vec<ast::Command>> {
         Ok(vec![inst.into()])
     }
 
     #[inline]
     fn fsm(
         &mut self,
-        fsm: core::Fsm,
+        fsm: ast::Fsm,
         _: &CompBinding,
-    ) -> FilamentResult<Vec<core::Command>> {
+    ) -> FilamentResult<Vec<ast::Command>> {
         Ok(vec![fsm.into()])
     }
 
@@ -51,27 +51,27 @@ where
     #[inline]
     fn invoke(
         &mut self,
-        inv: core::Invoke,
+        inv: ast::Invoke,
         _: &CompBinding,
-    ) -> FilamentResult<Vec<core::Command>> {
+    ) -> FilamentResult<Vec<ast::Command>> {
         Ok(vec![inv.into()])
     }
 
     #[inline]
     fn signature(
         &mut self,
-        sig: core::Signature,
+        sig: ast::Signature,
         _: &CompBinding,
-    ) -> FilamentResult<core::Signature> {
+    ) -> FilamentResult<ast::Signature> {
         Ok(sig)
     }
 
     #[inline]
     fn bundle(
         &mut self,
-        bundle: core::Bundle,
+        bundle: ast::Bundle,
         _: &CompBinding,
-    ) -> FilamentResult<Vec<core::Command>> {
+    ) -> FilamentResult<Vec<ast::Command>> {
         Ok(vec![bundle.into()])
     }
 
@@ -80,7 +80,7 @@ where
     fn enter_component(
         &mut self,
         _: &CompBinding,
-    ) -> FilamentResult<Vec<core::Command>> {
+    ) -> FilamentResult<Vec<ast::Command>> {
         Ok(vec![])
     }
 
@@ -89,20 +89,20 @@ where
     fn exit_component(
         &mut self,
         _: &CompBinding,
-    ) -> FilamentResult<Vec<core::Command>> {
+    ) -> FilamentResult<Vec<ast::Command>> {
         Ok(vec![])
     }
 
     /// Transform the program
     fn transform(
-        mut ns: core::Namespace,
+        mut ns: ast::Namespace,
         info: Self::Info,
-    ) -> FilamentResult<(core::Namespace, Self)> {
+    ) -> FilamentResult<(ast::Namespace, Self)> {
         // Build a new pass
         let mut pass = Self::new(&ns, &info);
 
         // Extract (name, commands) from the components
-        let comp_data: Vec<(core::Id, Vec<core::Command>)> = ns
+        let comp_data: Vec<(ast::Id, Vec<ast::Command>)> = ns
             .components
             .iter_mut()
             .map(|comp| {
@@ -136,20 +136,20 @@ where
 
             for cmd in cmds {
                 let cmds = match cmd {
-                    core::Command::Invoke(inv) => pass.invoke(inv, &ctx)?,
-                    core::Command::Instance(inst) => {
+                    ast::Command::Invoke(inv) => pass.invoke(inv, &ctx)?,
+                    ast::Command::Instance(inst) => {
                         pass.instance(inst, &ctx)?
                     }
-                    core::Command::Connect(con) => pass.connect(con, &ctx)?,
-                    core::Command::Fsm(fsm) => pass.fsm(fsm, &ctx)?,
-                    core::Command::Bundle(bl) => pass.bundle(bl, &ctx)?,
-                    core::Command::Fact(_) => unreachable!(
+                    ast::Command::Connect(con) => pass.connect(con, &ctx)?,
+                    ast::Command::Fsm(fsm) => pass.fsm(fsm, &ctx)?,
+                    ast::Command::Bundle(bl) => pass.bundle(bl, &ctx)?,
+                    ast::Command::Fact(_) => unreachable!(
                         "Visitor does not support transforming assumptions"
                     ),
-                    core::Command::ForLoop(_) => unreachable!(
+                    ast::Command::ForLoop(_) => unreachable!(
                         "Visitor does not support transforming loops"
                     ),
-                    core::Command::If(_) => unreachable!(
+                    ast::Command::If(_) => unreachable!(
                         "Visitor does not support transforming if statements"
                     ),
                 };
@@ -171,9 +171,9 @@ where
 
     /// Report the error message if any occur during the transformation
     fn transform_unwrap(
-        ns: core::Namespace,
+        ns: ast::Namespace,
         info: Self::Info,
-    ) -> Option<core::Namespace> {
+    ) -> Option<ast::Namespace> {
         match Self::transform(ns, info) {
             Ok((ns, _)) => Some(ns),
             Err(err) => {

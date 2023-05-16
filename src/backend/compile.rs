@@ -1,5 +1,5 @@
 use super::Fsm;
-use crate::{core, errors::FilamentResult, utils::Traversal};
+use crate::{ast, errors::FilamentResult, utils::Traversal};
 use calyx_frontend as frontend;
 use calyx_ir::{self as ir, structure, RRC};
 use calyx_utils::CalyxResult;
@@ -18,7 +18,7 @@ const INTERFACE_PORTS: [(ir::BoolAttr, (&str, u64, ir::Direction)); 2] = [
 #[derive(Default)]
 pub struct Binding {
     // Component signatures
-    comps: HashMap<core::Id, RRC<ir::Cell>>,
+    comps: HashMap<ast::Id, RRC<ir::Cell>>,
 
     /// Mapping to the component representing FSM with particular number of states
     pub fsm_comps: HashMap<u64, ir::Component>,
@@ -38,11 +38,11 @@ impl Binding {
     }
 
     /// Get a binding associated with a name
-    pub fn get(&self, name: &core::Id) -> Option<Vec<ir::PortDef<u64>>> {
+    pub fn get(&self, name: &ast::Id) -> Option<Vec<ir::PortDef<u64>>> {
         self.comps.get(name).map(Self::cell_to_port_def)
     }
 
-    pub fn insert_comp(&mut self, name: core::Id, sig: RRC<ir::Cell>) {
+    pub fn insert_comp(&mut self, name: ast::Id, sig: RRC<ir::Cell>) {
         self.comps.insert(name, sig);
     }
 }
@@ -56,24 +56,24 @@ pub struct Context<'a> {
     /// Mapping from names to signatures for components and externals.
     pub binding: &'a mut Binding,
     /// Mapping from instances to cells
-    instances: HashMap<core::Id, RRC<ir::Cell>>,
+    instances: HashMap<ast::Id, RRC<ir::Cell>>,
     /// Mapping from invocation name to instance
-    invokes: HashMap<core::Id, RRC<ir::Cell>>,
+    invokes: HashMap<ast::Id, RRC<ir::Cell>>,
     /// Mapping from name to FSMs
-    fsms: HashMap<core::Id, Fsm>,
+    fsms: HashMap<ast::Id, Fsm>,
 }
 
 impl Context<'_> {
     pub fn compile_port(
         &mut self,
-        port: &core::Port,
+        port: &ast::Port,
     ) -> (RRC<ir::Port>, Option<ir::Guard<ir::Nothing>>) {
         match &port {
-            core::Port::This(p) => {
+            ast::Port::This(p) => {
                 let this = self.builder.component.signature.borrow();
                 (this.get(p.as_ref()), None)
             }
-            core::Port::InvPort { invoke: comp, name } => {
+            ast::Port::InvPort { invoke: comp, name } => {
                 if let Some(fsm) = self.fsms.get(comp) {
                     let cr = self.builder.add_constant(1, 1);
                     let c = cr.borrow();
@@ -83,22 +83,22 @@ impl Context<'_> {
                     (cell.get(name.as_ref()), None)
                 }
             }
-            core::Port::Constant(c) => {
+            ast::Port::Constant(c) => {
                 let cr = self.builder.add_constant(*c, 32);
                 let c = cr.borrow();
                 (c.get("out"), None)
             }
-            core::Port::Bundle { .. } | core::Port::InvBundle { .. } => {
+            ast::Port::Bundle { .. } | ast::Port::InvBundle { .. } => {
                 unreachable!("Bundles should be compiled away")
             }
         }
     }
 
-    fn get_sig(&self, comp: &core::Id) -> Option<Vec<ir::PortDef<u64>>> {
+    fn get_sig(&self, comp: &ast::Id) -> Option<Vec<ir::PortDef<u64>>> {
         self.binding.get(comp)
     }
 
-    fn add_invoke(&mut self, inv: core::Id, comp: core::Id) {
+    fn add_invoke(&mut self, inv: ast::Id, comp: ast::Id) {
         let cell = &self
             .instances
             .get(&comp)
@@ -125,21 +125,21 @@ impl<'a> Context<'a> {
 }
 
 fn compile_guard(
-    guard: core::Guard,
+    guard: ast::Guard,
     ctx: &mut Context,
 ) -> ir::Guard<ir::Nothing> {
     match guard {
-        core::Guard::Or(g1, g2, _) => {
+        ast::Guard::Or(g1, g2, _) => {
             let c1 = compile_guard(*g1, ctx);
             let c2 = compile_guard(*g2, ctx);
             c1 | c2
         }
-        core::Guard::Port(p) => match &p {
-            core::Port::This(p) => {
+        ast::Guard::Port(p) => match &p {
+            ast::Port::This(p) => {
                 let this = ctx.builder.component.signature.borrow();
                 this.get(p.as_ref()).into()
             }
-            core::Port::InvPort { invoke: comp, name } => {
+            ast::Port::InvPort { invoke: comp, name } => {
                 if let Some(fsm) = ctx.fsms.get(comp) {
                     fsm.event(name)
                 } else {
@@ -147,10 +147,10 @@ fn compile_guard(
                     cell.get(name.as_ref()).into()
                 }
             }
-            core::Port::Constant(_) => {
+            ast::Port::Constant(_) => {
                 unreachable!("Constants cannot be in guards")
             }
-            core::Port::Bundle { .. } | core::Port::InvBundle { .. } => {
+            ast::Port::Bundle { .. } | ast::Port::InvBundle { .. } => {
                 unreachable!("Bundles should be compiled away")
             }
         },
@@ -241,8 +241,8 @@ fn define_fsm_component(states: u64, ctx: &mut Context) {
     ctx.binding.fsm_comps.insert(states, comp);
 }
 
-fn compile_connect(con: core::Connect, ctx: &mut Context) {
-    let core::Connect {
+fn compile_connect(con: ast::Connect, ctx: &mut Context) {
+    let ast::Connect {
         dst, src, guard, ..
     } = con;
 
@@ -263,7 +263,7 @@ fn compile_connect(con: core::Connect, ctx: &mut Context) {
 
 fn as_port_defs<CW, F0, F1>(
     // The signature to be converted
-    sig: &core::Signature,
+    sig: &ast::Signature,
     // Transformation for ports that may have parametric width.
     port_transform: F0,
     // Transformation for ports that have a concrete width (interface ports, clk, reset)
@@ -272,8 +272,8 @@ fn as_port_defs<CW, F0, F1>(
     is_comp: bool,
 ) -> Vec<ir::PortDef<CW>>
 where
-    F0: Fn(&core::PortDef, ir::Direction) -> ir::PortDef<CW>,
-    F1: Fn(&core::Id, u64) -> ir::PortDef<CW>,
+    F0: Fn(&ast::PortDef, ir::Direction) -> ir::PortDef<CW>,
+    F1: Fn(&ast::Id, u64) -> ir::PortDef<CW>,
 {
     let mut ports: Vec<ir::PortDef<CW>> = sig
         .inputs()
@@ -326,12 +326,12 @@ where
 }
 
 fn compile_component(
-    comp: &mut core::Component,
+    comp: &mut ast::Component,
     sigs: &mut Binding,
     lib: &ir::LibrarySignatures,
 ) -> FilamentResult<ir::Component> {
     let port_transform =
-        |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<u64> {
+        |pd: &ast::PortDef, dir: ir::Direction| -> ir::PortDef<u64> {
             let mut pd: ir::PortDef<u64> = (
                 pd.name().as_ref(),
                 (pd.bitwidth().inner().clone()).try_into().unwrap(),
@@ -341,10 +341,9 @@ fn compile_component(
             pd.attributes.insert(ir::BoolAttr::Data, 1);
             pd
         };
-    let concrete_transform =
-        |name: &core::Id, width: u64| -> ir::PortDef<u64> {
-            (name.as_ref(), width, ir::Direction::Input).into()
-        };
+    let concrete_transform = |name: &ast::Id, width: u64| -> ir::PortDef<u64> {
+        (name.as_ref(), width, ir::Direction::Input).into()
+    };
     let ports =
         as_port_defs(&comp.sig, port_transform, concrete_transform, true);
     let mut component =
@@ -358,7 +357,7 @@ fn compile_component(
     // Construct bindings
     for cmd in comp.body.drain(..) {
         match cmd {
-            core::Command::Invoke(core::Invoke {
+            ast::Command::Invoke(ast::Invoke {
                 name: bind,
                 instance,
                 ports,
@@ -370,7 +369,7 @@ fn compile_component(
                 );
                 ctx.add_invoke(*bind.inner(), *instance.inner());
             }
-            core::Command::Fsm(fsm) => {
+            ast::Command::Fsm(fsm) => {
                 // If FSM with required number of states has not been constructed, define a new component for it
                 if !ctx.binding.fsm_comps.contains_key(&fsm.states) {
                     define_fsm_component(fsm.states, &mut ctx);
@@ -380,7 +379,7 @@ fn compile_component(
                 let f = Fsm::new(&fsm, &mut ctx);
                 ctx.fsms.insert(name, f);
             }
-            core::Command::Instance(core::Instance {
+            ast::Command::Instance(ast::Instance {
                 name,
                 component,
                 bindings,
@@ -406,19 +405,19 @@ fn compile_component(
                 cell.borrow_mut().attributes.insert(ir::BoolAttr::Data, 1);
                 ctx.instances.insert(name.take(), cell);
             }
-            core::Command::Connect(con) => {
+            ast::Command::Connect(con) => {
                 cons.push(con);
             }
-            core::Command::ForLoop(_) => {
+            ast::Command::ForLoop(_) => {
                 unreachable!("Loop should have been compiled away.")
             }
-            core::Command::Bundle(_) => {
+            ast::Command::Bundle(_) => {
                 unreachable!("Bundles should have been compiled away.")
             }
-            core::Command::If(_) => {
+            ast::Command::If(_) => {
                 unreachable!("If should have been compiled away.")
             }
-            core::Command::Fact(a) => {
+            ast::Command::Fact(a) => {
                 unreachable!("Assumption `{a}' should have been compiled away.")
             }
         };
@@ -429,9 +428,9 @@ fn compile_component(
     Ok(component)
 }
 
-fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
+fn prim_as_port_defs(sig: &ast::Signature) -> Vec<ir::PortDef<ir::Width>> {
     let port_transform =
-        |pd: &core::PortDef, dir: ir::Direction| -> ir::PortDef<ir::Width> {
+        |pd: &ast::PortDef, dir: ir::Direction| -> ir::PortDef<ir::Width> {
             let w = pd.bitwidth().inner();
             let abs = w.exprs().collect_vec();
             let width = match abs.len() {
@@ -453,7 +452,7 @@ fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
             }
         };
     let concrete_transform =
-        |name: &core::Id, bw: u64| -> ir::PortDef<ir::Width> {
+        |name: &ast::Id, bw: u64| -> ir::PortDef<ir::Width> {
             ir::PortDef {
                 name: ir::Id::from(name.as_ref()),
                 direction: ir::Direction::Input,
@@ -464,7 +463,7 @@ fn prim_as_port_defs(sig: &core::Signature) -> Vec<ir::PortDef<ir::Width>> {
     as_port_defs(sig, port_transform, concrete_transform, false)
 }
 
-fn compile_signature(sig: &core::Signature) -> ir::Primitive {
+fn compile_signature(sig: &ast::Signature) -> ir::Primitive {
     ir::Primitive {
         name: sig.name.as_ref().into(),
         params: sig.params.iter().map(|p| p.as_ref().into()).collect(),
@@ -477,7 +476,7 @@ fn compile_signature(sig: &core::Signature) -> ir::Primitive {
 
 #[allow(clippy::type_complexity)]
 fn init_calyx(
-    externs: &[(String, Vec<core::Signature>)],
+    externs: &[(String, Vec<ast::Signature>)],
 ) -> CalyxResult<ir::Context> {
     let mut ws = frontend::Workspace::from_compile_lib()?;
     // Add externals
@@ -496,7 +495,7 @@ fn init_calyx(
     Ok(ctx)
 }
 
-pub fn compile(ns: core::Namespace) {
+pub fn compile(ns: ast::Namespace) {
     let mut calyx_ctx = init_calyx(&ns.externs).unwrap_or_else(|e| {
         panic!("Error initializing calyx context: {:?}", e);
     });
@@ -511,7 +510,7 @@ pub fn compile(ns: core::Namespace) {
                 panic!("Error compiling component: {:?}", e);
             });
         bindings.insert_comp(
-            core::Id::from(comp.name.id.as_str()),
+            ast::Id::from(comp.name.id.as_str()),
             Rc::clone(&comp.signature),
         );
         calyx_ctx.components.push(comp);

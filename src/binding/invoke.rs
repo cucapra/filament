@@ -1,5 +1,5 @@
 use super::{CompBinding, InstIdx, SigIdx};
-use crate::core::{self, Id, Loc, Time, TimeSub};
+use crate::ast::{self, Id, Loc, Time, TimeSub};
 use crate::idx;
 use crate::utils::GPosIdx;
 use itertools::Itertools;
@@ -41,7 +41,7 @@ impl InvIdx {
 
     /// Return the signature of the component being invoked using the parameter bindings and
     /// the event bindings of the invocation.
-    pub fn resolved_signature(&self, ctx: &CompBinding) -> core::Signature {
+    pub fn resolved_signature(&self, ctx: &CompBinding) -> ast::Signature {
         let inv = &ctx[*self];
         let inst_idx = inv.instance;
         let inst = &ctx[inst_idx];
@@ -71,7 +71,7 @@ impl InvIdx {
     pub fn event_active_ranges(
         &self,
         ctx: &CompBinding,
-    ) -> Vec<(core::Loc<Time>, core::Loc<TimeSub>)> {
+    ) -> Vec<(ast::Loc<Time>, ast::Loc<TimeSub>)> {
         let inv = &ctx[*self];
         let sig = self.resolved_signature(ctx);
         sig.events
@@ -87,7 +87,7 @@ impl InvIdx {
         &self,
         ctx: &CompBinding,
         port: &Id,
-    ) -> core::PortDef {
+    ) -> ast::PortDef {
         let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
         let param_b = ctx.prog[inst.sig].param_binding(
@@ -111,7 +111,7 @@ impl InvIdx {
     pub fn resolved_event_constraints(
         &self,
         ctx: &CompBinding,
-    ) -> Vec<core::Loc<core::OrderConstraint<Time>>> {
+    ) -> Vec<ast::Loc<ast::OrderConstraint<Time>>> {
         let inv = &ctx[*self];
         let inst = &ctx[inv.instance];
         let sig_idx = inst.sig;

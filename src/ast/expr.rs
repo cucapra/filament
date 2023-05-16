@@ -47,7 +47,7 @@ pub struct FnAssume {
 
 impl FnAssume {
     /// Creates a unique ID to be replaced for function definitions.
-    /// Returns `(l, r)`: [core::Id] terms for the left and right expressions used in `assume`
+    /// Returns `(l, r)`: [ast::Id] terms for the left and right expressions used in `assume`
     fn replaceable_ids() -> &'static (Id, Id) {
         static mut SINGLETON: mem::MaybeUninit<(Id, Id)> =
             mem::MaybeUninit::uninit();

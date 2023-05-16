@@ -1,13 +1,12 @@
+use crate::{
+    ast, cmdline,
+    errors::{self, FilamentResult},
+    frontend,
+};
 use std::{
     collections::HashSet,
     fs,
     path::{Path, PathBuf},
-};
-
-use crate::{
-    cmdline, core,
-    errors::{self, FilamentResult},
-    frontend,
 };
 
 /// Completely parse all dependecies of a Filament program
@@ -103,7 +102,7 @@ impl Resolver {
         }
     }
 
-    pub fn parse_namespace(&mut self) -> FilamentResult<core::Namespace> {
+    pub fn parse_namespace(&mut self) -> FilamentResult<ast::Namespace> {
         // Parse the top-level file
         let mut ns = frontend::FilamentParser::parse_file(&self.input)?;
 

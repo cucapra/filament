@@ -1,5 +1,5 @@
 use super::{Binding, Context};
-use crate::core;
+use crate::ast;
 use calyx_ir::{self as ir, RRC};
 /// A Calyx FSM that increments every cycle.
 pub struct Fsm {
@@ -8,7 +8,7 @@ pub struct Fsm {
 
 impl Fsm {
     // Construct a new FSM
-    pub fn new(fsm: &core::Fsm, ctx: &mut Context) -> Self {
+    pub fn new(fsm: &ast::Fsm, ctx: &mut Context) -> Self {
         let event = &fsm.name;
         let comp = &ctx.binding.fsm_comps[&fsm.states];
         let cell = ctx.builder.add_component(
@@ -29,7 +29,7 @@ impl Fsm {
     }
 
     /// Generate guard associated with a particular state on the Fsm.
-    pub fn event(&self, port: &core::Id) -> ir::Guard<ir::Nothing> {
+    pub fn event(&self, port: &ast::Id) -> ir::Guard<ir::Nothing> {
         self.cell.borrow().get(format!("{port}")).into()
     }
 }

@@ -1,6 +1,6 @@
 use super::{CompBinding, InvIdx, SigIdx};
 use crate::utils::GPosIdx;
-use crate::{core, idx};
+use crate::{ast, idx};
 use itertools::Itertools;
 
 pub type InstIdx = idx!(BoundInstance);
@@ -25,9 +25,9 @@ impl InstIdx {
     pub fn param_resolved_signature(
         &self,
         ctx: &CompBinding,
-    ) -> core::Signature {
+    ) -> ast::Signature {
         let inst = &ctx[*self];
-        let binds: Vec<core::Expr> =
+        let binds: Vec<ast::Expr> =
             inst.params.iter().map(|p| p.clone().take()).collect_vec();
         ctx.prog[inst.sig].clone().resolve_exprs(binds)
     }
@@ -38,7 +38,7 @@ pub struct BoundInstance {
     /// The signature of this instance
     pub sig: SigIdx,
     /// Parameter binding for this instance
-    pub params: Vec<core::Loc<core::Expr>>,
+    pub params: Vec<ast::Loc<ast::Expr>>,
     /// Position associated with this instance
     pub(super) pos: GPosIdx,
 }
@@ -47,7 +47,7 @@ impl BoundInstance {
     /// Create a new instance
     pub fn new(
         sig: SigIdx,
-        params: Vec<core::Loc<core::Expr>>,
+        params: Vec<ast::Loc<ast::Expr>>,
         pos: GPosIdx,
     ) -> Self {
         Self { sig, params, pos }
