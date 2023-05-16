@@ -188,7 +188,7 @@ Unlike other hardware description languages, Filament <em>also</em> requires us 
 <p>Next, we need to perform the computations. Since we're working with hardware designs, we don't get access to primitive operations like <code>*</code> and <code>+</code>; we must build circuits to perform these computations!</p>
 <p>Thankfully, the Filament standard library defines these operations for us, so we can simply import those definitions and instantiate an adder and a multiplier:</p>
 <pre><code class="language-filament">import &quot;primitives/core.fil&quot;;       // Defines Add
-import &quot;primitives/sequential.fil&quot;; // Defines Mult
+import &quot;./sequential.fil&quot;; // Defines Mult
 
 comp main&lt;G: 3&gt;(...) -&gt; (...) {
     A := new Add[32];
@@ -210,7 +210,7 @@ out = mx.out
 <p>Coming from a software background, it might seem weird that we're performing both the computations first and selecting the output after the fact. However, a hardware circuit is <em>always active</em><sup class="footnote-reference"><a href="#clock-gating">1</a></sup>–the multiplier and adder are always propagating signals and performing some computation even if the inputs are nonsensical. Furthermore, constructs like <code>if</code>-<code>else</code> are not compositional.<sup class="footnote-reference"><a href="#control-comp">2</a></sup></p>
 <p>The final program looks like this:</p>
 <pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;primitives/sequential.fil&quot;;
+import &quot;./sequential.fil&quot;;
 
 /// ANCHOR: signature
 comp main&lt;G: 3&gt;(
@@ -242,9 +242,9 @@ Save the file as <code>alu.fil</code> and run the following command from the Fil
  17 │     mx := new Mux[32]&lt;G&gt;(op, a0.out, m0.out);
     │                                      ^^^^^^ source is available for @[G+2, G+3]
     │
-    ┌─ ./primitives/core.fil:152:13
+    ┌─ ./primitives/./comb.fil:150:13
     │
-152 │     @[G, L] in1: #WIDTH,
+150 │     @[G, L] in1: #WIDTH,
     │             --- destination's requirement @[G, G+1]
 
 Compilation failed with 1 errors.
@@ -272,7 +272,7 @@ This means that a register can hold onto a value for as long as needed!
 The additional <code>where</code> clause ensures that <code>out</code>'s interval is well-formed; it would be troublesome if we could say that <code>out</code> is available between [G+10, G+5).</p>
 <p>Let try to fix our program by making changes:</p>
 <pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;primitives/sequential.fil&quot;;
+import &quot;./sequential.fil&quot;;
 
 comp main&lt;G: 3&gt;(
     @interface[G] go: 1,
@@ -306,9 +306,9 @@ comp main&lt;G: 3&gt;(
  19 │     mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
     │                            ^^ source is available for @[G, G+1]
     │
-    ┌─ ./primitives/core.fil:150:13
+    ┌─ ./primitives/./comb.fil:148:13
     │
-150 │     @[G, L] sel: 1,
+148 │     @[G, L] sel: 1,
     │             --- destination's requirement @[G+2, G+3]
 
 error: source port must be available longer than the destination port requires
@@ -326,7 +326,7 @@ Run with --show-models to generate assignments for failing constraints.
 <h2 id="a-correct-implementation"><a class="header" href="#a-correct-implementation">A Correct Implementation</a></h2>
 <p>The fix is easy: we change the signature of the ALU to reflect this cruel reality</p>
 <pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;primitives/sequential.fil&quot;;
+import &quot;./sequential.fil&quot;;
 
 /// ANCHOR: sig
 comp main&lt;G: 3&gt;(

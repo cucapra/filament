@@ -163,7 +163,7 @@ Before that, however, let's run the design and see how it performs:</p>
 <p>Note that this sequential design takes 12 cycles to process 4 inputs.</p>
 <p>We'll start with pipelining our program:</p>
 <pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;primitives/sequential.fil&quot;;
+import &quot;./sequential.fil&quot;;
 
 /// ANCHOR: sig
 comp main&lt;G: 3&gt;(
@@ -229,16 +229,16 @@ The fix is easy: looking at our original design, we see that <code>op</code> is 
 15 │     m0 := M&lt;G&gt;(left, right);
    │             ^ event provided to invoke triggers too often
    │
-   ┌─ ./primitives/sequential.fil:3:18
+   ┌─ examples/./sequential.fil:3:18
    │
  3 │ comp Mult[#W]&lt;G: 2&gt;(
    │                  - invocation's event is allowed to trigger every 2 cycles
 </code></pre>
 <p>Yet again, our request is physically impossible to satisfy: our multiplier circuit is fundamentally incapable of executing every cycle.
-Thankfully for us, the <code>primitives/sequential.file</code> file provides a component called <code>FastMult</code> which does have delay 1:</p>
-<pre><code class="language-filament">/// Implementation of a multiplier with initiation interval 1 and latency 3
+Thankfully for us, the <code>primitives/math.fil</code> file provides a component called <code>FastMult</code> which does have delay 1:</p>
+<pre><code class="language-filament">/// Implementation of a multiplier with initiation interval 1 and latency 3.
+/// Written in a way to allow Vivado to infer a DSP.
 comp FastMult[#W]&lt;G: 1&gt;(
-  @interface[G] go_G: 1,
   @[G, G+1] left: #W,
   @[G, G+1] right: #W,
 ) -&gt; (
@@ -247,7 +247,7 @@ comp FastMult[#W]&lt;G: 1&gt;(
 </code></pre>
 <p>We can change out program to use this component instead:</p>
 <pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;primitives/sequential.fil&quot;;
+import &quot;./sequential.fil&quot;;
 
 comp main&lt;G: 1&gt;(
     @interface[G] go: 1,
@@ -274,16 +274,16 @@ comp main&lt;G: 1&gt;(
  18 │     mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
     │                                        ^^^^^^ source is available for @[G+3, G+4]
     │
-    ┌─ ./primitives/core.fil:152:13
+    ┌─ ./primitives/./comb.fil:150:13
     │
-152 │     @[G, L] in1: #WIDTH,
+150 │     @[G, L] in1: #WIDTH,
     │             --- destination's requirement @[G+2, G+3]
 </code></pre>
 <p>Filament tells us that <code>FastMult</code>'s <code>out</code> port is available in the interval [G+3, G+4) instead of [G+2, G+3) for <code>Mult</code>, i.e., the latency of <code>FastMult</code> is different from the latency of <code>Mult</code>.</p>
 <p>Filament catching this bug is important-it would be very easy to miss such a mistake in a Verilog program.
 Fixing it is quite mechanical:</p>
 <pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;primitives/sequential.fil&quot;;
+import &quot;./sequential.fil&quot;;
 
 comp main&lt;G: 1&gt;(
     @interface[G] go: 1,
@@ -329,7 +329,7 @@ To get both the pipelining and correctness we want, we need to instantiate a <em
 <p>The intuition behind this is that because we want our ALU to process inputs every cycle, we need to &quot;save&quot; the computation in every cycle and push it forward.</p>
 <p>The final program will look like this:</p>
 <pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;primitives/sequential.fil&quot;;
+import &quot;./sequential.fil&quot;;
 
 comp main&lt;G: 1&gt;(
     @interface[G] go: 1,
