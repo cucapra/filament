@@ -439,12 +439,7 @@ impl FilamentParser {
                 identifier(bind),
                 identifier(comp),
                 invoke_args((abstract_vars, ports))
-            ] => ast::Invoke::new(bind, comp, abstract_vars, Some(ports)),
-            [
-                identifier(bind),
-                identifier(comp),
-                time_args(abstract_vars),
-            ] => ast::Invoke::new(bind, comp, abstract_vars, None),
+            ] => ast::Invoke::new(bind, comp, abstract_vars, Some(ports))
         ))
     }
     fn gte(input: Node) -> ParseResult<()> {
