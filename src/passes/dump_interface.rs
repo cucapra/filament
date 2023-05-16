@@ -1,37 +1,23 @@
 use crate::ast;
-use crate::binding::CompBinding;
-use crate::errors::{self, FilamentResult};
-use crate::visitor;
 use itertools::Itertools;
 use std::collections::HashMap;
 
-pub struct DumpInterface {
-    /// Map from component to interface information
-    max_states: HashMap<ast::Id, HashMap<ast::Id, u64>>,
-}
+pub struct DumpInterface;
 
-impl visitor::Transform for DumpInterface {
-    // Mapping from component -> event -> max state
-    type Info = HashMap<ast::Id, HashMap<ast::Id, u64>>;
+// Mapping from component -> event -> max state
+type States = HashMap<ast::Id, HashMap<ast::Id, u64>>;
 
-    fn new(_: &ast::Namespace, max_states: &Self::Info) -> Self {
-        Self {
-            max_states: max_states.clone(),
-        }
-    }
+impl DumpInterface {
+    /// Print out the interface of the main component in JSON format
+    pub fn print(ns: &ast::Namespace, max_states: &States) {
+        // Search for the main component
+        let main = ns
+            .components
+            .iter()
+            .find(|c| c.sig.name.inner() == "main")
+            .unwrap_or_else(|| panic!("Component named `main' not found"));
 
-    fn clear_data(&mut self) {}
-
-    fn component_filter(&self, comp: &CompBinding) -> bool {
-        let sig = comp.this();
-        sig.name.inner() == "main"
-    }
-
-    fn exit_component(
-        &mut self,
-        comp: &CompBinding,
-    ) -> FilamentResult<Vec<ast::Command>> {
-        let sig = comp.this();
+        let sig = &main.sig;
 
         // For an interface port like this:
         //      @interface[G, G+5] go_G
@@ -43,31 +29,24 @@ impl visitor::Transform for DumpInterface {
         //   "states": 2,
         //   "phantom": false
         // }
-        let events = &self.max_states[&sig.name];
+        let events = &max_states[&sig.name];
         let interfaces = sig
             .events
             .iter()
             .map(|eb| {
                 let id = sig.get_interface(&eb.event);
                 let phantom = id.is_none();
-                eb.delay
-                    .concrete()
-                    .map(|delay|
-                        format!(
-                            "{{\"name\": {}, \"event\": \"{}\", \"delay\": {}, \"states\": {}, \"phantom\": {} }}",
-                            id.map(|i| format!("\"{}\"", i.name.as_ref())).unwrap_or_else(|| "null".to_string()),
-                            eb.event,
-                            delay,
-                            events[&eb.event],
-                            phantom
-                        ))
-                    .ok_or_else(|| {
-                        errors::Error::malformed(
-                            "Interface signal has no concrete delay",
-                        )
-                    })
+                let delay = eb.delay .concrete() .unwrap();
+                format!(
+                    "{{\"name\": {}, \"event\": \"{}\", \"delay\": {}, \"states\": {}, \"phantom\": {} }}",
+                    id.map(|i| format!("\"{}\"", i.name.as_ref())).unwrap_or_else(|| "null".to_string()),
+                    eb.event,
+                    delay,
+                    events[&eb.event],
+                    phantom
+                )
             })
-            .collect::<FilamentResult<Vec<_>>>()?.join(",\n");
+            .collect_vec().join(",\n");
 
         // For each input and output that looks like:
         // @[G+n, G+m] left: 32
@@ -99,7 +78,5 @@ impl visitor::Transform for DumpInterface {
         println!(
             "{{\n\"interfaces\": [\n{interfaces}\n],\n\"inputs\": [\n{inputs}\n],\n\"outputs\": [\n{outputs}\n]\n}}",
         );
-
-        Ok(vec![])
     }
 }

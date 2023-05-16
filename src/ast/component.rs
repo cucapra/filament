@@ -1,4 +1,4 @@
-use super::{Command, Id, Invoke, Signature};
+use super::{Command, Fsm, Id, Invoke, Signature};
 use crate::errors::{Error, FilamentResult};
 use std::fmt::Display;
 
@@ -6,9 +6,10 @@ use std::fmt::Display;
 pub struct Component {
     // Signature of this component
     pub sig: Signature,
-
     /// Model for this component
     pub body: Vec<Command>,
+    /// FSMs associated with this component
+    pub fsms: Vec<Fsm>,
 }
 
 impl Component {
@@ -34,13 +35,6 @@ impl Component {
                     }
                     None => is_low = Some(ports.is_none()),
                 },
-                Command::Fsm(_) => {
-                    if let Some(false) = is_low {
-                        return Err(Error::malformed("Malforemd High-level component: Cannot use the `fsm` construct"));
-                    } else if is_low.is_none() {
-                        is_low = Some(true);
-                    }
-                }
                 Command::Instance(_)
                 | Command::Connect(_)
                 | Command::Fact(_)
@@ -54,12 +48,19 @@ impl Component {
     }
 
     pub fn new(sig: Signature, body: Vec<Command>) -> Self {
-        Self { sig, body }
+        Self {
+            sig,
+            body,
+            fsms: Vec::new(),
+        }
     }
 }
 impl Display for Component {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{} {{", self.sig)?;
+        for fsm in &self.fsms {
+            writeln!(f, "  {}", fsm)?;
+        }
         for com in &self.body {
             writeln!(f, "  {};", com)?;
         }

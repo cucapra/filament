@@ -16,9 +16,6 @@ where
     /// What data should be cleared between component
     fn clear_data(&mut self);
 
-    /// Whether this component should be visited or not
-    fn component_filter(&self, comp: &CompBinding) -> bool;
-
     #[inline]
     fn connect(
         &mut self,
@@ -35,15 +32,6 @@ where
         _: &CompBinding,
     ) -> FilamentResult<Vec<ast::Command>> {
         Ok(vec![inst.into()])
-    }
-
-    #[inline]
-    fn fsm(
-        &mut self,
-        fsm: ast::Fsm,
-        _: &CompBinding,
-    ) -> FilamentResult<Vec<ast::Command>> {
-        Ok(vec![fsm.into()])
     }
 
     /// Transform an invoke statement. Provides access to the signature of the
@@ -93,6 +81,13 @@ where
         Ok(vec![])
     }
 
+    /// Generate FSMs to be added to the component. This is called after the
+    /// component traversal.
+    #[inline]
+    fn fsms(&mut self) -> FilamentResult<Vec<ast::Fsm>> {
+        Ok(vec![])
+    }
+
     /// Transform the program
     fn transform(
         mut ns: ast::Namespace,
@@ -116,8 +111,10 @@ where
         // The program binding
         let prog_bind = ProgBinding::try_from(&ns)
             .unwrap_or_else(|_| panic!("Failed to create a valid binding"));
+
         for (name, cmds) in comp_data {
             pass.clear_data();
+
             // Manually construct the component binding because we removed all
             // commands from components previously.
             let bind = BoundComponent::from_component(&prog_bind, &name, &cmds);
@@ -125,10 +122,6 @@ where
                 prog: &prog_bind,
                 comp: &bind,
             };
-            if !pass.component_filter(&ctx) {
-                new_comp_data.push(cmds);
-                continue;
-            }
 
             // Traverse over the commands and apply the transfomation functions
             let mut n_cmds = Vec::with_capacity(cmds.len());
@@ -141,7 +134,6 @@ where
                         pass.instance(inst, &ctx)?
                     }
                     ast::Command::Connect(con) => pass.connect(con, &ctx)?,
-                    ast::Command::Fsm(fsm) => pass.fsm(fsm, &ctx)?,
                     ast::Command::Bundle(bl) => pass.bundle(bl, &ctx)?,
                     ast::Command::Fact(_) => unreachable!(
                         "Visitor does not support transforming assumptions"
@@ -158,12 +150,15 @@ where
 
             let cmds = pass.exit_component(&ctx)?;
             n_cmds.extend(cmds);
-            new_comp_data.push(n_cmds);
+            let fsms = pass.fsms()?;
+            new_comp_data.push((n_cmds, fsms));
         }
 
         // Add the updated commands to the components
-        for (comp, cmds) in ns.components.iter_mut().zip(new_comp_data) {
+        for (comp, (cmds, fsms)) in ns.components.iter_mut().zip(new_comp_data)
+        {
             comp.body = cmds;
+            comp.fsms.extend(fsms);
         }
 
         Ok((ns, pass))

@@ -179,11 +179,6 @@ invoke_args = {
 
 invocation = {
   identifier ~ ":=" ~ identifier ~ invoke_args ~ ";"
-  | identifier ~ ":=" ~ "invoke" ~ identifier ~ time_args ~ ";"
-}
-
-fsm = {
-  "fsm" ~ identifier ~ "[" ~ bitwidth ~ "]" ~ "(" ~ port ~ ")" ~ ";"
 }
 
 // ===== if statements ====
@@ -223,7 +218,7 @@ fact = {
 
 // ========== Commands ==========
 command = {
-  bundle | instance | invocation | connect | fsm | for_loop | if_stmt | fact
+  bundle | instance | invocation | connect | for_loop | if_stmt | fact
 }
 
 commands = { command* }

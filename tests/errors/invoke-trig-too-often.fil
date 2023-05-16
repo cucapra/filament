@@ -6,5 +6,5 @@ extern "dummy.sv" {
 
 comp Main<T: 3>(@interface[T] go_T: 1) -> () {
   M := new Mult;
-  m0 := invoke M<T+1>;
+  m0 := M<T+1>();
 }

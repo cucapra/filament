@@ -30,11 +30,6 @@ where
     }
 
     #[inline]
-    fn fsm(&mut self, _: &ast::Fsm, _ctx: &CompBinding) -> Traverse {
-        Traverse::Continue(())
-    }
-
-    #[inline]
     fn forloop(&mut self, l: &ast::ForLoop, ctx: &CompBinding) -> Traverse {
         for cmd in &l.body {
             self.command(cmd, ctx)?;
@@ -112,7 +107,6 @@ where
             ast::Command::Invoke(inv) => self.invoke(inv, ctx),
             ast::Command::Instance(inst) => self.instance(inst, ctx),
             ast::Command::Connect(con) => self.connect(con, ctx),
-            ast::Command::Fsm(fsm) => self.fsm(fsm, ctx),
             ast::Command::ForLoop(l) => self.forloop(l, ctx),
             ast::Command::If(i) => self.if_(i, ctx),
         }

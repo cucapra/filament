@@ -143,6 +143,10 @@ fn compile_guard(
                 if let Some(fsm) = ctx.fsms.get(comp) {
                     fsm.event(name)
                 } else {
+                    assert!(
+                        ctx.invokes.contains_key(comp.inner()),
+                        "`{comp}' is neither a bound invoke nor an fsm"
+                    );
                     let cell = ctx.invokes[comp.inner()].borrow();
                     cell.get(name.as_ref()).into()
                 }
@@ -354,6 +358,18 @@ fn compile_component(
 
     let mut cons = vec![];
 
+    // Construct all the FSMs
+    for fsm in &comp.fsms {
+        // If FSM with required number of states has not been constructed, define a new component for it
+        if !ctx.binding.fsm_comps.contains_key(&fsm.states) {
+            define_fsm_component(fsm.states, &mut ctx);
+        }
+        // Construct the FSM
+        let name = fsm.name;
+        let f = Fsm::new(fsm, &mut ctx);
+        ctx.fsms.insert(name, f);
+    }
+
     // Construct bindings
     for cmd in comp.body.drain(..) {
         match cmd {
@@ -368,16 +384,6 @@ fn compile_component(
                     "Cannot compile high-level invoke statements"
                 );
                 ctx.add_invoke(*bind.inner(), *instance.inner());
-            }
-            ast::Command::Fsm(fsm) => {
-                // If FSM with required number of states has not been constructed, define a new component for it
-                if !ctx.binding.fsm_comps.contains_key(&fsm.states) {
-                    define_fsm_component(fsm.states, &mut ctx);
-                }
-                // Construct the FSM
-                let name = fsm.name;
-                let f = Fsm::new(&fsm, &mut ctx);
-                ctx.fsms.insert(name, f);
             }
             ast::Command::Instance(ast::Instance {
                 name,

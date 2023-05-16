@@ -190,9 +190,7 @@ impl BoundComponent {
                     self.process_cmds(prog, &if_.then);
                     self.process_cmds(prog, &if_.alt);
                 }
-                ast::Command::Connect(_)
-                | ast::Command::Fsm(_)
-                | ast::Command::Fact(_) => (),
+                ast::Command::Connect(_) | ast::Command::Fact(_) => (),
             }
         }
     }
@@ -330,7 +328,7 @@ impl BoundComponent {
                 ast::Command::Bundle(bl) => {
                     self.add_bundle(bl.clone());
                 }
-                ast::Command::Fsm(_) | ast::Command::Fact(_) => (),
+                ast::Command::Fact(_) => (),
             }
         }
     }

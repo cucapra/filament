@@ -77,11 +77,6 @@ impl visitor::Transform for Lower {
         self.bundle_writes.clear();
     }
 
-    /// Visit components with high-level invokes
-    fn component_filter(&self, _: &CompBinding) -> bool {
-        true
-    }
-
     fn bundle(
         &mut self,
         bundle: ast::Bundle,
@@ -105,7 +100,7 @@ impl visitor::Transform for Lower {
                 unreachable!("Unexpected bundle range access found: `{}'", con.dst)
             };
             let idx = u64::try_from(idx).unwrap() as usize;
-            debug_assert!(
+            assert!(
                 self.bundle_writes[name.inner()][idx].is_none(),
                 "multiple writes to {name}{{{idx}}}"
             );
@@ -196,7 +191,7 @@ impl visitor::Transform for Lower {
     ) -> FilamentResult<Vec<ast::Command>> {
         let sig = ctx.this();
 
-        // Define FSMs for each interface signal
+        // Define FSMs for each event
         let events = &self.max_states[&sig.name];
         self.fsms = sig
             .interface_signals
@@ -217,15 +212,7 @@ impl visitor::Transform for Lower {
         Ok(vec![])
     }
 
-    fn exit_component(
-        &mut self,
-        _: &CompBinding,
-    ) -> FilamentResult<Vec<ast::Command>> {
-        // Add the FSMs to the component
-        let fsms = std::mem::take(&mut self.fsms)
-            .into_values()
-            .map(|f| f.into())
-            .collect_vec();
-        Ok(fsms)
+    fn fsms(&mut self) -> FilamentResult<Vec<ast::Fsm>> {
+        Ok(std::mem::take(&mut self.fsms).into_values().collect_vec())
     }
 }

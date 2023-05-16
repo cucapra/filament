@@ -299,9 +299,7 @@ impl BundleElim {
                     let alt = self.commands(alt);
                     vec![ast::If { cond, then, alt }.into()]
                 }
-                c @ (ast::Command::Fsm(_)
-                | ast::Command::Bundle(_)
-                | ast::Command::Fact(_)) => {
+                c @ (ast::Command::Bundle(_) | ast::Command::Fact(_)) => {
                     vec![c]
                 }
             })
@@ -317,6 +315,7 @@ impl BundleElim {
         ast::Component {
             sig,
             body: pre_cmds,
+            ..comp
         }
     }
 }
