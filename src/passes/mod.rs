@@ -1,3 +1,4 @@
+mod assume;
 mod bind_check;
 mod bundle_elim;
 mod dump_interface;
@@ -8,6 +9,7 @@ mod monomorphize;
 mod pass;
 mod phantom_check;
 
+pub use assume::Assume;
 pub use bind_check::BindCheck;
 pub use bundle_elim::BundleElim;
 pub use dump_interface::DumpInterface;

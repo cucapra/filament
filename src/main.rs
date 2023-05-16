@@ -26,6 +26,12 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     };
     log::debug!("{ns}");
 
+    // Add default assumption constraints
+    let t = Instant::now();
+    let ns = passes::Assume::transform(ns);
+    log::info!("Assume: {}ms", t.elapsed().as_millis());
+    log::debug!("{ns}");
+
     // Construct a binding
     let bind = binding::ProgBinding::try_from(&ns)?;
 

@@ -190,6 +190,7 @@ fsm = {
 expr_cmp = {
   expr ~ order_op ~ expr
 }
+
 if_stmt = {
   "if" ~ expr_cmp ~ "{" ~ commands ~ "}" ~ ("else" ~ "{" ~ commands ~ "}")?
 }
@@ -209,10 +210,15 @@ bundle = {
   "bundle" ~ identifier ~ "[" ~ expr ~ "]" ~ ":" ~ bundle_typ ~ ";"
 }
 
+/// ===== Assumptions ==========
+implication = {
+  (expr_cmp ~ "=>")? ~ expr_cmp
+}
+
 assume_w = { "assume" }
 assert_w = { "assert" }
 fact = {
-  (assume_w | assert_w) ~ expr_cmp ~ ";"
+  (assume_w | assert_w) ~ implication ~ ";"
 }
 
 // ========== Commands ==========

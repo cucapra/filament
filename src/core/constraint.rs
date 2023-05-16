@@ -1,3 +1,4 @@
+use super::expr::EvalBool;
 use super::{Expr, Range, Time, TimeSub};
 use crate::errors::FilamentResult;
 use crate::utils::Binding;
@@ -102,7 +103,13 @@ impl OrderConstraint<Expr> {
         }
     }
 
-    pub fn eval(self, binding: &Binding<Expr>) -> FilamentResult<bool> {
+    pub fn exprs(&self) -> Vec<&Expr> {
+        vec![&self.left, &self.right]
+    }
+}
+
+impl EvalBool for OrderConstraint<Expr> {
+    fn resolve_bool(self, binding: &Binding<Expr>) -> FilamentResult<bool> {
         let OrderConstraint { left, right, op } = self.resolve_expr(binding);
         let l: u64 = left.try_into()?;
         let r: u64 = right.try_into()?;
@@ -246,7 +253,7 @@ impl Constraint {
             }
             Constraint::Sub { base } => {
                 let mut evs = base.left.exprs();
-                evs.append(&mut base.right.exprs());
+                evs.extend(base.right.exprs().into_iter());
                 evs
             }
         }

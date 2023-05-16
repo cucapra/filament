@@ -1,9 +1,10 @@
-use super::Id;
+use super::{Fact, Id, Implication, OrderConstraint, OrderOp};
 use crate::{
     errors,
-    utils::{self, SExp},
+    utils::{self, Binding, SExp},
 };
-use std::fmt::Display;
+use itertools::Itertools;
+use std::{fmt::Display, mem, sync};
 
 /// Binary operation over expressions
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd)]
@@ -39,6 +40,82 @@ impl From<Op> for utils::SExp {
     }
 }
 
+/// A struct representing the assumptions necessary to validate custom functions
+pub struct FnAssume {
+    assumptions: Vec<Implication<Expr>>,
+}
+
+impl FnAssume {
+    /// Creates a unique ID to be replaced for function definitions.
+    /// Returns `(l, r)`: [core::Id] terms for the left and right expressions used in `assume`
+    fn replaceable_ids() -> &'static (Id, Id) {
+        static mut SINGLETON: mem::MaybeUninit<(Id, Id)> =
+            mem::MaybeUninit::uninit();
+        static ONCE: sync::Once = sync::Once::new();
+
+        // SAFETY:
+        // - writing to the singleton is OK because we only do it one time
+        // - the ONCE guarantees that SINGLETON is init'ed before assume_init_ref
+        unsafe {
+            ONCE.call_once(|| {
+                SINGLETON.write((
+                    Id::new("_FnAssume_left"),
+                    Id::new("_FnAssume_right"),
+                ));
+            });
+            SINGLETON.assume_init_ref()
+        }
+    }
+
+    /// Get a reference to the left id
+    fn left() -> Id {
+        FnAssume::replaceable_ids().0
+    }
+
+    /// Get a reference to the right id
+    fn right() -> Id {
+        FnAssume::replaceable_ids().1
+    }
+
+    fn new(assumptions: Vec<Implication<Expr>>) -> Self {
+        Self { assumptions }
+    }
+
+    /// Creates the assumptions necessary for this function
+    /// Assumes `l = f(r)`
+    fn assume(&self, left: &Expr, right: &Expr) -> Vec<Fact> {
+        let bind = Binding::new(vec![
+            (FnAssume::left(), left.clone()),
+            (FnAssume::right(), right.clone()),
+        ]);
+        self.assumptions
+            .clone()
+            .into_iter()
+            .map(|x| Fact::assume(x.resolve_expr(&bind).into()))
+            .collect_vec()
+    }
+
+    /// Returns the assumptions generated when given a constraint with a left and right expression.
+    pub fn from_constraint(constraint: &OrderConstraint<Expr>) -> Vec<Fact> {
+        match constraint {
+            OrderConstraint {
+                op: OrderOp::Eq,
+                left,
+                right,
+            } => match (left, right) {
+                (_, Expr::App { func, arg: right }) => {
+                    func.clone().assume(left, right)
+                }
+                (Expr::App { func, arg: left }, _) => {
+                    func.clone().assume(right, left)
+                }
+                _ => Vec::new(),
+            },
+            _ => Vec::new(),
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd)]
 /// A unary uninterpreted function over integers.
 pub enum UnFn {
@@ -55,7 +132,13 @@ impl std::fmt::Display for UnFn {
         }
     }
 }
+
 impl UnFn {
+    /// Returns the generated assumptions for this function given a left and right.
+    pub fn assume(self, left: &Expr, right: &Expr) -> Vec<Fact> {
+        FnAssume::from(self).assume(left, right)
+    }
+
     pub fn apply(self, arg: Expr) -> Expr {
         match (self, arg) {
             (UnFn::Pow2, Expr::Concrete(n)) => {
@@ -70,6 +153,103 @@ impl UnFn {
             },
         }
     }
+}
+
+impl From<UnFn> for FnAssume {
+    /// Returns the default [FnAssume] function assumptions for every [UnFn]
+    fn from(func: UnFn) -> FnAssume {
+        match func {
+            UnFn::Pow2 => FnAssume::new(vec![
+                // assume #l*2 == pow2(#r+1);
+                OrderConstraint::eq(
+                    Expr::op(
+                        Op::Mul,
+                        Expr::abs(FnAssume::left()),
+                        Expr::concrete(2),
+                    ),
+                    func.clone().apply(Expr::op(
+                        Op::Add,
+                        Expr::abs(FnAssume::right()),
+                        Expr::concrete(1),
+                    )),
+                )
+                .into(),
+                // assume #r >= 1 => #l == pow2(#r-1)*2;
+                Implication::implies(
+                    OrderConstraint::gte(
+                        Expr::abs(FnAssume::right()),
+                        Expr::concrete(1),
+                    ),
+                    OrderConstraint::eq(
+                        Expr::abs(FnAssume::left()),
+                        Expr::op(
+                            Op::Mul,
+                            func.apply(Expr::op(
+                                Op::Sub,
+                                Expr::abs(FnAssume::right()),
+                                Expr::concrete(1),
+                            )),
+                            Expr::concrete(2),
+                        ),
+                    ),
+                ),
+                // assume #r >= 0;
+                OrderConstraint::gte(
+                    Expr::abs(FnAssume::right()),
+                    Expr::concrete(0),
+                )
+                .into(),
+            ]),
+            UnFn::Log2 => FnAssume::new(vec![
+                // assume #l+1 == log2(#r*2);
+                OrderConstraint::eq(
+                    Expr::op(
+                        Op::Add,
+                        Expr::abs(FnAssume::left()),
+                        Expr::concrete(1),
+                    ),
+                    func.clone().apply(Expr::op(
+                        Op::Mul,
+                        Expr::abs(FnAssume::right()),
+                        Expr::concrete(2),
+                    )),
+                )
+                .into(),
+                // assume #l >= 1 => #l-1 == log2(#r/2);
+                Implication::implies(
+                    OrderConstraint::gte(
+                        Expr::abs(FnAssume::left()),
+                        Expr::concrete(1),
+                    ),
+                    OrderConstraint::eq(
+                        Expr::op(
+                            Op::Sub,
+                            Expr::abs(FnAssume::left()),
+                            Expr::concrete(1),
+                        ),
+                        func.apply(Expr::op(
+                            Op::Div,
+                            Expr::abs(FnAssume::right()),
+                            Expr::concrete(2),
+                        )),
+                    ),
+                ),
+                // assume #l >= 0;
+                OrderConstraint::gte(
+                    Expr::abs(FnAssume::left()),
+                    Expr::concrete(0),
+                )
+                .into(),
+            ]),
+        }
+    }
+}
+
+/// A trait representing whether an expression type can be evaluated as a boolean
+pub trait EvalBool {
+    /// Resolve self to either true or false given a set of bindings.
+    fn resolve_bool(self, bind: &Binding<Expr>)
+        -> errors::FilamentResult<bool>;
 }
 
 /// An expression containing integers and abstract variables
@@ -101,6 +281,7 @@ impl TryFrom<Expr> for u64 {
         (&value).try_into()
     }
 }
+
 impl TryFrom<&Expr> for u64 {
     type Error = errors::Error;
 
@@ -382,5 +563,20 @@ impl Ord for ECtx {
 impl PartialOrd for ECtx {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl EvalBool for Expr {
+    fn resolve_bool(
+        self,
+        bind: &Binding<Expr>,
+    ) -> errors::FilamentResult<bool> {
+        match self.resolve(bind) {
+            Expr::Concrete(x) => Ok(x != 0),
+            exp => Err(errors::Error::malformed(format!(
+                "Failed to concretize {} when evaluating to boolean.",
+                exp
+            ))),
+        }
     }
 }

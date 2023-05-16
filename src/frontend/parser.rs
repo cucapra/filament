@@ -665,6 +665,14 @@ impl FilamentParser {
         ))
     }
 
+    fn implication(input: Node) -> ParseResult<core::Implication<core::Expr>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [expr_cmp(guard), expr_cmp(e)] => core::Implication::implies(guard, e),
+            [expr_cmp(e)] => core::Implication::fact(e)
+        ))
+    }
+
     fn assume_w(input: Node) -> ParseResult<()> {
         Ok(())
     }
@@ -676,8 +684,8 @@ impl FilamentParser {
         let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [assume_w(_), expr_cmp(e)] => core::Fact::new(Loc::new(e, sp), false),
-            [assert_w(_), expr_cmp(e)] => core::Fact::new(Loc::new(e, sp), true),
+            [assume_w(_), implication(e)] => core::Fact::assume(Loc::new(e, sp)),
+            [assert_w(_), implication(e)] => core::Fact::assert(Loc::new(e, sp)),
         ))
     }
 

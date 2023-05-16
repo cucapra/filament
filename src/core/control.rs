@@ -1,4 +1,7 @@
-use super::{Expr, Id, Loc, OrderConstraint, PortDef, Range, Time};
+use super::expr::FnAssume;
+use super::{
+    Expr, Id, Implication, Loc, OrderConstraint, PortDef, Range, Time,
+};
 use crate::utils::{self, Binding};
 use crate::{
     errors::{Error, FilamentResult},
@@ -166,21 +169,25 @@ impl From<Fsm> for Command {
         Self::Fsm(v)
     }
 }
+
 impl From<Connect> for Command {
     fn from(v: Connect) -> Self {
         Self::Connect(v)
     }
 }
+
 impl From<Instance> for Command {
     fn from(v: Instance) -> Self {
         Self::Instance(v)
     }
 }
+
 impl From<Invoke> for Command {
     fn from(v: Invoke) -> Self {
         Self::Invoke(v)
     }
 }
+
 impl From<Bundle> for Command {
     fn from(v: Bundle) -> Self {
         Self::Bundle(v)
@@ -309,22 +316,32 @@ impl Display for Invoke {
 
 #[derive(Clone)]
 /// An `assert` or `assume` statement.
+/// Contains a guard
 /// If `checked` is true, the statement is checked to be statically true.
 /// Otherwise, it is assumed to be true.
 pub struct Fact {
-    pub cons: Loc<OrderConstraint<Expr>>,
+    pub cons: Loc<Implication<Expr>>,
     // If this fact is statically checked.
     pub checked: bool,
 }
 
 impl Fact {
-    pub fn new(cons: Loc<OrderConstraint<Expr>>, checked: bool) -> Self {
-        Fact { cons, checked }
+    pub fn assume(cons: Loc<Implication<Expr>>) -> Self {
+        Fact {
+            cons,
+            checked: false,
+        }
     }
 
-    pub fn exprs(&self) -> [&Expr; 2] {
-        let OrderConstraint { left, right, .. } = self.cons.inner();
-        [left, right]
+    pub fn assert(cons: Loc<Implication<Expr>>) -> Self {
+        Fact {
+            cons,
+            checked: true,
+        }
+    }
+
+    pub fn exprs(&self) -> Vec<&Expr> {
+        self.cons.inner().exprs()
     }
 
     pub fn constraint(self) -> utils::SExp {
@@ -334,11 +351,7 @@ impl Fact {
     /// Resolve expression in the assumption
     pub fn resolve(self, bind: &Binding<Expr>) -> Self {
         Fact {
-            cons: self.cons.map(|c| OrderConstraint {
-                left: c.left.resolve(bind),
-                right: c.right.resolve(bind),
-                ..c
-            }),
+            cons: self.cons.map(|c| c.resolve_expr(bind)),
             ..self
         }
     }
@@ -346,6 +359,11 @@ impl Fact {
     /// Get the position of the assumption
     pub fn pos(&self) -> GPosIdx {
         self.cons.pos()
+    }
+
+    /// Get a list of function assumptions associated with a constraint
+    pub fn from_constraint(constraint: &OrderConstraint<Expr>) -> Vec<Self> {
+        FnAssume::from_constraint(constraint)
     }
 }
 

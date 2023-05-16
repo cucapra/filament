@@ -3,6 +3,7 @@ mod constraint;
 mod control;
 mod expr;
 mod id;
+mod implication;
 mod interval;
 mod loc;
 mod port;
@@ -15,8 +16,9 @@ pub use control::{
     Access, Bundle, BundleType, Command, Connect, Fact, ForLoop, Fsm, Guard,
     If, Instance, Invoke, Port,
 };
-pub use expr::{Expr, Op, UnFn};
+pub use expr::{EvalBool, Expr, Op, UnFn};
 pub use id::Id;
+pub use implication::Implication;
 pub use interval::Range;
 pub use loc::Loc;
 pub use port::{InterfaceDef, PortDef};
