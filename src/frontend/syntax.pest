@@ -218,7 +218,7 @@ implication = {
 assume_w = { "assume" }
 assert_w = { "assert" }
 fact = {
-  (assume_w | assert_w) ~ expr_cmp ~ ";"
+  (assume_w | assert_w) ~ implication ~ ";"
 }
 
 // ========== Commands ==========
