@@ -1,7 +1,7 @@
 use super::{expr::EvalBool, Expr, OrderConstraint};
 use crate::{
     errors::FilamentResult,
-    utils::{Binding, SExp},
+    utils::{self, Binding, SExp},
 };
 use itertools::Itertools;
 use std::fmt::Display;
@@ -15,7 +15,7 @@ pub struct Implication<T> {
 
 impl<T> Implication<T> {
     /// Creates an [Implication] `guard => cons`
-    pub fn implication(
+    pub fn implies(
         guard: OrderConstraint<T>,
         cons: OrderConstraint<T>,
     ) -> Self {
@@ -33,6 +33,15 @@ impl<T> Implication<T> {
         cons: OrderConstraint<T>,
     ) -> Self {
         Implication { guard, cons }
+    }
+}
+
+impl<T> Implication<T>
+where
+    SExp: From<Implication<T>>,
+{
+    pub fn obligation<S: ToString>(self, reason: S) -> utils::Obligation {
+        utils::Obligation::new(SExp::from(self), reason.to_string())
     }
 }
 

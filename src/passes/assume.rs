@@ -9,8 +9,7 @@ impl Assume {
     fn sig(sig: &core::Signature) -> Vec<core::Command> {
         sig.param_constraints
             .iter()
-            .map(|c| core::Fact::from_constraint(c.inner()))
-            .flatten()
+            .flat_map(|c| core::Fact::from_constraint(c.inner()))
             .map(core::Command::from)
             .collect_vec()
     }

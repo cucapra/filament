@@ -69,12 +69,12 @@ impl FnAssume {
 
     /// Get a reference to the left id
     fn left() -> Id {
-        FnAssume::replaceable_ids().0.clone()
+        FnAssume::replaceable_ids().0
     }
 
     /// Get a reference to the right id
     fn right() -> Id {
-        FnAssume::replaceable_ids().1.clone()
+        FnAssume::replaceable_ids().1
     }
 
     fn new(assumptions: Vec<Implication<Expr>>) -> Self {
@@ -175,7 +175,7 @@ impl From<UnFn> for FnAssume {
                 )
                 .into(),
                 // assume #r >= 1 => #l == pow2(#r-1)*2;
-                Implication::implication(
+                Implication::implies(
                     OrderConstraint::gte(
                         Expr::abs(FnAssume::right()),
                         Expr::concrete(1),
@@ -184,7 +184,7 @@ impl From<UnFn> for FnAssume {
                         Expr::abs(FnAssume::left()),
                         Expr::op(
                             Op::Mul,
-                            func.clone().apply(Expr::op(
+                            func.apply(Expr::op(
                                 Op::Sub,
                                 Expr::abs(FnAssume::right()),
                                 Expr::concrete(1),
@@ -216,7 +216,7 @@ impl From<UnFn> for FnAssume {
                 )
                 .into(),
                 // assume #l >= 1 => #l-1 == log2(#r/2);
-                Implication::implication(
+                Implication::implies(
                     OrderConstraint::gte(
                         Expr::abs(FnAssume::left()),
                         Expr::concrete(1),
@@ -227,7 +227,7 @@ impl From<UnFn> for FnAssume {
                             Expr::abs(FnAssume::left()),
                             Expr::concrete(1),
                         ),
-                        func.clone().apply(Expr::op(
+                        func.apply(Expr::op(
                             Op::Div,
                             Expr::abs(FnAssume::right()),
                             Expr::concrete(2),
