@@ -606,13 +606,6 @@ impl FilamentParser {
         ))
     }
 
-    fn fsm(input: Node) -> ParseResult<ast::Fsm> {
-        Ok(match_nodes!(
-            input.into_children();
-            [identifier(name), bitwidth(states), port(trigger)] => ast::Fsm::new(name.take(), states, trigger.take()),
-        ))
-    }
-
     fn expr_cmp(input: Node) -> ParseResult<ast::OrderConstraint<ast::Expr>> {
         Ok(match_nodes!(
             input.into_children();
@@ -690,7 +683,6 @@ impl FilamentParser {
             [invocation(assign)] => vec![ast::Command::Invoke(assign)],
             [instance(cmd)] => cmd,
             [connect(con)] => vec![ast::Command::Connect(con)],
-            [fsm(fsm)] => vec![ast::Command::Fsm(fsm)],
             [for_loop(l)] => vec![ast::Command::ForLoop(l)],
             [bundle(bl)] => vec![bl.into()],
             [if_stmt(if_)] => vec![if_.into()],

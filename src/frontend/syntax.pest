@@ -182,10 +182,6 @@ invocation = {
   | identifier ~ ":=" ~ "invoke" ~ identifier ~ time_args ~ ";"
 }
 
-fsm = {
-  "fsm" ~ identifier ~ "[" ~ bitwidth ~ "]" ~ "(" ~ port ~ ")" ~ ";"
-}
-
 // ===== if statements ====
 expr_cmp = {
   expr ~ order_op ~ expr
@@ -223,7 +219,7 @@ fact = {
 
 // ========== Commands ==========
 command = {
-  bundle | instance | invocation | connect | fsm | for_loop | if_stmt | fact
+  bundle | instance | invocation | connect | for_loop | if_stmt | fact
 }
 
 commands = { command* }
