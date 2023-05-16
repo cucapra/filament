@@ -66,9 +66,9 @@ The second error message points out that the ALU component may execute every cyc
 ```
 
 Yet again, our request is physically impossible to satisfy: our multiplier circuit is fundamentally incapable of executing every cycle.
-Thankfully for us, the `primitives/sequential.file` file provides a component called `FastMult` which does have delay 1:
+Thankfully for us, the `primitives/math.fil` file provides a component called `FastMult` which does have delay 1:
 ```filament
-{{#include ../../../primitives/sequential.fil:fastmult}}
+{{#include ../../../primitives/math.fil:fastmult}}
 ```
 
 We can change out program to use this component instead:

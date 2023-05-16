@@ -1,5 +1,5 @@
 import "primitives/core.fil";
-import "primitives/sequential.fil";
+import "./sequential.fil";
 
 /// ANCHOR: sig
 comp main<G: 3>(

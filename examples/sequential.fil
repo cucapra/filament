@@ -1,4 +1,4 @@
-import "./core.fil";
+import "primitives/core.fil";
 
 comp Mult[#W]<G: 2>(
   @interface[G] go_G: 1,

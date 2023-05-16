@@ -7,9 +7,9 @@ error: source port must be available longer than the destination port requires
 12 │     a := new Add[#W]<G+#W>(s.out, acc);
    │                            ^^^^^ source is available for @[G+#N, G+#N+1]
    │
-   ┌─ ./primitives/core.fil:11:13
+   ┌─ ./primitives/./comb.fil:9:13
    │
-11 │     @[G, L] left: #WIDTH,
+ 9 │     @[G, L] left: #WIDTH,
    │             ---- destination's requirement @[G+#W, G+#W+1]
 
 error: source port must be available longer than the destination port requires
@@ -18,9 +18,9 @@ error: source port must be available longer than the destination port requires
 12 │     a := new Add[#W]<G+#W>(s.out, acc);
    │                                   ^^^ source is available for @[G+#N, G+#N+1]
    │
-   ┌─ ./primitives/core.fil:12:13
+   ┌─ ./primitives/./comb.fil:10:13
    │
-12 │     @[G, L] right: #WIDTH,
+10 │     @[G, L] right: #WIDTH,
    │             ----- destination's requirement @[G+#W, G+#W+1]
 
 error: source port must be available longer than the destination port requires
