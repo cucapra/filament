@@ -2,15 +2,15 @@
 1
 ---STDERR---
 error: source and destination widths must match
-   ┌─ tests/errors/param-width.fil:5:16
-   │
- 5 │     a0 := A<G>(a, a);
-   │                ^ source has width #W
-   │
-   ┌─ ./primitives/core.fil:11:13
-   │
-11 │     @[G, L] left: #WIDTH,
-   │             ---- destination has width 32
+  ┌─ tests/errors/param-width.fil:5:16
+  │
+5 │     a0 := A<G>(a, a);
+  │                ^ source has width #W
+  │
+  ┌─ ./primitives/./comb.fil:9:13
+  │
+9 │     @[G, L] left: #WIDTH,
+  │             ---- destination has width 32
 
 error: source and destination widths must match
    ┌─ tests/errors/param-width.fil:5:19
@@ -18,9 +18,9 @@ error: source and destination widths must match
  5 │     a0 := A<G>(a, a);
    │                   ^ source has width #W
    │
-   ┌─ ./primitives/core.fil:12:13
+   ┌─ ./primitives/./comb.fil:10:13
    │
-12 │     @[G, L] right: #WIDTH,
+10 │     @[G, L] right: #WIDTH,
    │             ----- destination has width 32
 
 Compilation failed with 2 errors.

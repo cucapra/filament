@@ -57,7 +57,6 @@ impl<'e> Monomorphize<'e> {
     ) -> core::Id {
         let conc = Self::coerce_params(params);
         if self.processed.contains(&(comp, conc.clone())) {
-            log::warn!("{}[{:?}] already processed", comp, conc);
             return self.get_name(comp, &conc);
         }
         let gen_name = Self::generate_mono_name(&comp, &conc);

@@ -47,7 +47,7 @@ Next, we need to perform the computations. Since we're working with hardware des
 Thankfully, the Filament standard library defines these operations for us, so we can simply import those definitions and instantiate an adder and a multiplier:
 ```filament
 import "primitives/core.fil";       // Defines Add
-import "primitives/sequential.fil"; // Defines Mult
+import "./sequential.fil"; // Defines Mult
 
 comp main<G: 3>(...) -> (...) {
     A := new Add[32];
