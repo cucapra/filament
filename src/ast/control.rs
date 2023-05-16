@@ -158,16 +158,9 @@ pub enum Command {
     Instance(Instance),
     Fact(Fact),
     Connect(Connect),
-    Fsm(Fsm),
     ForLoop(ForLoop),
     If(If),
     Bundle(Bundle),
-}
-
-impl From<Fsm> for Command {
-    fn from(v: Fsm) -> Self {
-        Self::Fsm(v)
-    }
 }
 
 impl From<Connect> for Command {
@@ -205,7 +198,6 @@ impl Display for Command {
             Command::Invoke(inv) => write!(f, "{}", inv),
             Command::Instance(ins) => write!(f, "{}", ins),
             Command::Connect(con) => write!(f, "{}", con),
-            Command::Fsm(fsm) => write!(f, "{}", fsm),
             Command::ForLoop(l) => write!(f, "{}", l),
             Command::If(l) => write!(f, "{}", l),
             Command::Bundle(b) => write!(f, "{b}"),

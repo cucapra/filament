@@ -79,7 +79,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     let states = passes::MaxStates::check(opts, &ns, &bind)?;
 
     if opts.dump_interface {
-        passes::DumpInterface::transform_unwrap(ns, states.max_states);
+        passes::DumpInterface::print(&ns, &states.max_states);
         return Ok(());
     }
 

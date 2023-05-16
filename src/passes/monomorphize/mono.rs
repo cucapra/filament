@@ -266,9 +266,6 @@ impl<'e> Monomorphize<'e> {
                         n_cmds.extend(rw.rewrite(ncmds));
                     }
                 }
-                ast::Command::Fsm(_) => {
-                    unreachable!("FSMs cannot be monomorphized")
-                }
             }
         }
         n_cmds
@@ -294,7 +291,9 @@ impl<'e> Monomorphize<'e> {
         );
         let body =
             self.commands(comp.body.iter().cloned(), binding, prev_names, "");
-        ast::Component { sig, body }
+
+        assert!(comp.fsms.is_empty(), "Component should not have FSMs");
+        ast::Component::new(sig, body)
     }
 }
 

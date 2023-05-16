@@ -59,9 +59,6 @@ impl Rewriter {
                     self.add_name(*inst.name.inner())
                 }
                 ast::Command::Bundle(bl) => self.add_name(*bl.name.inner()),
-                ast::Command::Fsm(_) => {
-                    unreachable!("Cannot monomorphize FSMs")
-                }
                 ast::Command::ForLoop(_) => {
                     unreachable!("Inner loops should be monomorphized already")
                 }
@@ -129,8 +126,7 @@ impl Rewriter {
                 }
                 ast::Command::If(_)
                 | ast::Command::ForLoop(_)
-                | ast::Command::Fact(_)
-                | ast::Command::Fsm(_) => unreachable!(),
+                | ast::Command::Fact(_) => unreachable!(),
             };
             n_cmds.push(out);
         }
