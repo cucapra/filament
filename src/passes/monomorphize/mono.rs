@@ -62,7 +62,6 @@ impl<'e> Monomorphize<'e> {
     ) -> core::Id {
         let conc = Self::coerce_params(params);
         if self.processed.contains(&(comp, conc.clone())) {
-            log::warn!("{}[{:?}] already processed", comp, conc);
             return self.get_name(comp, &conc);
         }
         let gen_name = Self::generate_mono_name(&comp, &conc);
@@ -120,14 +119,11 @@ impl<'e> Monomorphize<'e> {
         let mut n_cmds = Vec::new();
         for cmd in commands {
             match cmd {
-                core::Command::Assume(core::Assume { cons }) => {
+                core::Command::Fact(core::Fact { cons, .. }) => {
                     match cons.clone().take().resolve_bool(param_binding) {
                         Ok(true) => (),
                         Ok(false) => {
-                            panic!(
-                                "Assumption {} violated during elaboration.",
-                                cons
-                            )
+                            panic!("Assumption `{}' violated during elaboration. Bindings: {:?}", cons.inner(), param_binding)
                         }
                         Err(e) => {
                             panic!(

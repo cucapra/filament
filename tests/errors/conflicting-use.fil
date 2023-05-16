@@ -1,5 +1,4 @@
-import "primitives/core.fil";
-import "primitives/sequential.fil";
+import "../../examples/sequential.fil";
 
 comp Main<G: 3>(
   @interface[G] go_G: 1,

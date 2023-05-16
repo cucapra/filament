@@ -156,7 +156,7 @@ impl std::fmt::Display for Port {
 pub enum Command {
     Invoke(Invoke),
     Instance(Instance),
-    Assume(Assume),
+    Fact(Fact),
     Connect(Connect),
     Fsm(Fsm),
     ForLoop(ForLoop),
@@ -193,10 +193,9 @@ impl From<Bundle> for Command {
         Self::Bundle(v)
     }
 }
-
-impl From<Assume> for Command {
-    fn from(v: Assume) -> Self {
-        Self::Assume(v)
+impl From<Fact> for Command {
+    fn from(v: Fact) -> Self {
+        Self::Fact(v)
     }
 }
 
@@ -210,7 +209,7 @@ impl Display for Command {
             Command::ForLoop(l) => write!(f, "{}", l),
             Command::If(l) => write!(f, "{}", l),
             Command::Bundle(b) => write!(f, "{b}"),
-            Command::Assume(a) => write!(f, "{a}"),
+            Command::Fact(a) => write!(f, "{a}"),
         }
     }
 }
@@ -316,17 +315,29 @@ impl Display for Invoke {
 }
 
 #[derive(Clone)]
-/// An assumption in the component.
+/// An `assert` or `assume` statement.
 /// Contains a guard
-/// Assumed to be true during type checking and validated during code
-/// generation.
-pub struct Assume {
+/// If `checked` is true, the statement is checked to be statically true.
+/// Otherwise, it is assumed to be true.
+pub struct Fact {
     pub cons: Loc<Implication<Expr>>,
+    // If this fact is statically checked.
+    pub checked: bool,
 }
 
-impl Assume {
-    pub fn new(cons: Loc<Implication<Expr>>) -> Self {
-        Assume { cons }
+impl Fact {
+    pub fn assume(cons: Loc<Implication<Expr>>) -> Self {
+        Fact {
+            cons,
+            checked: false,
+        }
+    }
+
+    pub fn assert(cons: Loc<Implication<Expr>>) -> Self {
+        Fact {
+            cons,
+            checked: true,
+        }
     }
 
     pub fn exprs(&self) -> Vec<&Expr> {
@@ -339,8 +350,9 @@ impl Assume {
 
     /// Resolve expression in the assumption
     pub fn resolve(self, bind: &Binding<Expr>) -> Self {
-        Assume {
+        Fact {
             cons: self.cons.map(|c| c.resolve_expr(bind)),
+            ..self
         }
     }
 
@@ -355,7 +367,7 @@ impl Assume {
     }
 }
 
-impl std::fmt::Display for Assume {
+impl std::fmt::Display for Fact {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "assume {}", self.cons)
     }

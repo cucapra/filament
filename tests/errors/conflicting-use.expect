@@ -2,29 +2,29 @@
 1
 ---STDERR---
 error: instance must be shared with sufficient delay
-  ┌─ ./primitives/sequential.fil:3:18
+  ┌─ tests/errors/../../examples/sequential.fil:3:18
   │
 3 │ comp Mult[#W]<G: 2>(
-  │                  ^ delay requires 2 cycle between event but reuse may occur after |(0-1)| cycles
+  │                  ^ delay requires 2 cycle between event but reuse may occur after |0-1| cycles
   │
-  ┌─ tests/errors/conflicting-use.fil:8:3
+  ┌─ tests/errors/conflicting-use.fil:7:3
   │
-8 │   m0 := M<G>(10, 20);
+7 │   m0 := M<G>(10, 20);
   │   -- invocation starts at `G'
-9 │   m1 := M<G+1>(30, 40);
+8 │   m1 := M<G+1>(30, 40);
   │   -- invocation starts at `G+1'
 
 error: instance must be shared with sufficient delay
-  ┌─ ./primitives/sequential.fil:3:18
+  ┌─ tests/errors/../../examples/sequential.fil:3:18
   │
 3 │ comp Mult[#W]<G: 2>(
   │                  ^ delay requires 2 cycle between event but reuse may occur after 1 cycles
   │
-  ┌─ tests/errors/conflicting-use.fil:8:3
+  ┌─ tests/errors/conflicting-use.fil:7:3
   │
-8 │   m0 := M<G>(10, 20);
+7 │   m0 := M<G>(10, 20);
   │   -- invocation starts at `G'
-9 │   m1 := M<G+1>(30, 40);
+8 │   m1 := M<G+1>(30, 40);
   │   -- invocation starts at `G+1'
 
 Compilation failed with 2 errors.

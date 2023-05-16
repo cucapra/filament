@@ -7,7 +7,8 @@ use itertools::Itertools;
 use std::collections::HashMap;
 
 #[derive(Default)]
-/// Eliminate the uses of bundles in the component signatures.
+/// Eliminate the uses of bundles in the component signatures and "splat" the
+/// bundle range access syntax.
 /// For each component that mentions bundles in its signature, we generate
 /// explicit ports for each index in the bundle.
 /// For each invocation of such components, we replace the bundle ports
@@ -158,11 +159,7 @@ impl BundleElim {
         (start..end).map(|i| Loc::unknown(renamed[i as usize]))
     }
 
-    fn port(
-        &self,
-        cur_name: core::Id,
-        p: Loc<core::Port>,
-    ) -> Vec<Loc<core::Port>> {
+    fn port(&self, p: Loc<core::Port>) -> Vec<Loc<core::Port>> {
         let pos = p.pos();
         match p.take() {
             core::Port::Bundle { name, access } => {
@@ -177,14 +174,6 @@ impl BundleElim {
                 let core::Access::Range { start, end } = access.take() else {
                     unreachable!();
                 };
-
-                // This is a bundle in the signature
-                if self.sig_bundle_map.contains_key(&(cur_name, *name)) {
-                    return self
-                        .bundle_splat_ports(cur_name, *name, (start, end))
-                        .map(|p| Loc::new(core::Port::This(p), pos))
-                        .collect_vec();
-                }
 
                 // This is a locally bound bundle
                 let s: u64 = start.try_into().unwrap();
@@ -244,11 +233,7 @@ impl BundleElim {
         }
     }
 
-    fn commands(
-        &mut self,
-        cur_name: core::Id,
-        cmds: Vec<core::Command>,
-    ) -> Vec<core::Command> {
+    fn commands(&mut self, cmds: Vec<core::Command>) -> Vec<core::Command> {
         cmds.into_iter()
             .flat_map(|cmd| match cmd {
                 core::Command::Instance(core::Instance {
@@ -267,7 +252,7 @@ impl BundleElim {
                         inv.ports = Some(
                             ports
                                 .into_iter()
-                                .flat_map(|p| self.port(cur_name, p))
+                                .flat_map(|p| self.port(p))
                                 .collect_vec(),
                         );
                     }
@@ -275,11 +260,11 @@ impl BundleElim {
                 }
                 core::Command::Connect(con) => {
                     // Rewrite the ports
-                    let dst = self.port(cur_name, con.dst);
-                    let src = self.port(cur_name, con.src);
+                    let dst = self.port(con.dst);
+                    let src = self.port(con.src);
                     assert!(
                         src.len() == dst.len(),
-                        "src and dst produced different number of ports"
+                        "src and dst bundles produced different number of ports"
                     );
                     src.into_iter()
                         .zip(dst.into_iter())
@@ -299,7 +284,7 @@ impl BundleElim {
                     end,
                     body,
                 }) => {
-                    let body = self.commands(cur_name, body);
+                    let body = self.commands(body);
                     vec![core::ForLoop {
                         idx,
                         start,
@@ -309,13 +294,13 @@ impl BundleElim {
                     .into()]
                 }
                 core::Command::If(core::If { cond, then, alt }) => {
-                    let then = self.commands(cur_name, then);
-                    let alt = self.commands(cur_name, alt);
+                    let then = self.commands(then);
+                    let alt = self.commands(alt);
                     vec![core::If { cond, then, alt }.into()]
                 }
                 c @ (core::Command::Fsm(_)
                 | core::Command::Bundle(_)
-                | core::Command::Assume(_)) => {
+                | core::Command::Fact(_)) => {
                     vec![c]
                 }
             })
@@ -325,7 +310,7 @@ impl BundleElim {
     /// Tranverse the component and eliminate bundles.
     fn component(&mut self, comp: core::Component) -> core::Component {
         let (sig, mut pre_cmds, post_cmds) = self.sig(comp.sig);
-        let body = self.commands(*sig.name, comp.body);
+        let body = self.commands(comp.body);
         pre_cmds.extend(body);
         pre_cmds.extend(post_cmds);
         core::Component {

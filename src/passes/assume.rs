@@ -1,7 +1,4 @@
-use crate::{
-    core,
-    passes::Pass,
-};
+use crate::{core, passes::Pass};
 use itertools::Itertools;
 
 /// Add default assumptions to the Filament program
@@ -12,7 +9,7 @@ impl Assume {
     fn sig(sig: &core::Signature) -> Vec<core::Command> {
         sig.param_constraints
             .iter()
-            .map(|c| core::Assume::from_constraint(c.inner()))
+            .map(|c| core::Fact::from_constraint(c.inner()))
             .flatten()
             .map(core::Command::from)
             .collect_vec()

@@ -13,7 +13,7 @@ mod time;
 pub use component::{Component, Namespace};
 pub use constraint::{Constraint, OrderConstraint, OrderOp};
 pub use control::{
-    Access, Assume, Bundle, BundleType, Command, Connect, ForLoop, Fsm, Guard,
+    Access, Bundle, BundleType, Command, Connect, Fact, ForLoop, Fsm, Guard,
     If, Instance, Invoke, Port,
 };
 pub use expr::{EvalBool, Expr, Op, UnFn};

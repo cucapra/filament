@@ -78,7 +78,7 @@ fn process_cmd(
         core::Command::Connect(_)
         | core::Command::Invoke(_)
         | core::Command::Bundle(_)
-        | core::Command::Assume(_)
+        | core::Command::Fact(_)
         | core::Command::Fsm(_) => (),
     }
 }

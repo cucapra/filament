@@ -668,15 +668,24 @@ impl FilamentParser {
     fn implication(input: Node) -> ParseResult<core::Implication<core::Expr>> {
         Ok(match_nodes!(
             input.into_children();
-            [expr_cmp(guard), expr_cmp(e)] => core::Implication::implication(guard.into(), e.into())
+            [expr_cmp(guard), expr_cmp(e)] => core::Implication::implication(guard.into(), e.into()),
+            [expr_cmp(e)] => core::Implication::fact(e.into())
         ))
     }
 
-    fn assume(input: Node) -> ParseResult<core::Assume> {
+    fn assume_w(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+    fn assert_w(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+
+    fn fact(input: Node) -> ParseResult<core::Fact> {
+        let sp = Self::get_span(&input);
         Ok(match_nodes!(
             input.into_children();
-            [expr_cmp(e)] => core::Assume::new(core::Implication::from(e).into()),
-            [implication(e)] => core::Assume::new(e.into())
+            [assume_w(_), implication(e)] => core::Fact::assume(Loc::new(e, sp)),
+            [assert_w(_), implication(e)] => core::Fact::assert(Loc::new(e, sp)),
         ))
     }
 
@@ -690,7 +699,7 @@ impl FilamentParser {
             [for_loop(l)] => vec![core::Command::ForLoop(l)],
             [bundle(bl)] => vec![bl.into()],
             [if_stmt(if_)] => vec![if_.into()],
-            [assume(a)] => vec![a.into()]
+            [fact(a)] => vec![a.into()]
         ))
     }
 

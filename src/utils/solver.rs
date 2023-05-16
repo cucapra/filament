@@ -191,9 +191,9 @@ pub struct FilSolver {
 
 impl FilSolver {
     pub fn new(show_models: bool) -> FilamentResult<Self> {
-        let conf = SmtConf::default_z3();
-        // Disable this because it doesn't seem to work with activation literals
-        // conf.check_success();
+        let mut conf = SmtConf::default_z3();
+        // Queries should time out about 30 seconds
+        conf.option("-t:30000");
 
         let mut solver = conf.spawn(())?;
         solver.produce_models()?;
@@ -298,12 +298,14 @@ impl FilSolver {
 
         let formula = format!("(not {})", obl.constraint());
         log::trace!("Assert {}", formula);
-        self.s.assert_act(&act, formula).unwrap();
+        self.s.assert_act(&act, formula.clone()).unwrap();
         // Check that the assertion was unsatisfiable
-        let unsat = !self.s.check_sat_act(Some(&act)).unwrap();
+        let Some(sat) = self.s.check_sat_act_or_unk(Some(&act)).unwrap() else {
+            return Some(format!("Query `{formula}' returned unknown. This likely happened because the query timed out."))
+        };
 
         // If the assignment was not unsatisfiable, attempt to generate an assignment
-        let assigns = if !unsat {
+        let assigns = if sat {
             log::trace!("MODEL: {:?}", self.s.get_model().unwrap());
             // If there are no relevant variables, we can't show a model
             let msg = if !vars.is_empty() {

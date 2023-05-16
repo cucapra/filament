@@ -25,3 +25,4 @@ __pycache__
 *.smt
 aetherling/base
 book/
+evaluation/iterative-divider/data.json

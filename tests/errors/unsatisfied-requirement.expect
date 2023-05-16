@@ -7,9 +7,9 @@ error: source port must be available longer than the destination port requires
 11 │   m0 := M<G+1>(left, right);
    │                ^^^^ source is available for @[G, G+1]
    │
-   ┌─ ./primitives/core.fil:25:13
+   ┌─ ./primitives/./comb.fil:23:13
    │
-25 │     @[G, L] left: #WIDTH,
+23 │     @[G, L] left: #WIDTH,
    │             ---- destination's requirement @[G+1, G+2]
 
 error: source port must be available longer than the destination port requires
