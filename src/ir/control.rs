@@ -3,6 +3,7 @@ use super::{
     LoopIdx, ParamIdx, PortIdx,
 };
 
+#[derive(Clone, PartialEq, Eq)]
 /// A flattened and minimized representation of the control flow graph.
 /// Bundle definitions and facts are removed during the process of compilation to the IR.
 pub enum Command {
@@ -13,25 +14,31 @@ pub enum Command {
     If(IfIdx),
 }
 
+#[derive(Clone, PartialEq, Eq)]
 /// An instantiated component
 pub struct Instance {
     comp: CompIdx,
     params: Box<[ParamIdx]>,
 }
 
+#[derive(Clone, PartialEq, Eq)]
 /// A connection between two ports
 pub struct Connect {
     src: PortIdx,
     dst: PortIdx,
 }
 
+#[derive(Clone, PartialEq, Eq)]
 /// An invocation of a component
+/// Unlike in the AST, invocations are completely desuarged and do not have any
+/// ports.
+/// The ports are represented as connections.
 pub struct Invoke {
-    comp: CompIdx,
+    comp: InstIdx,
     events: Box<[EventIdx]>,
-    ports: Box<[PortIdx]>,
 }
 
+#[derive(Clone, PartialEq, Eq)]
 /// A loop over a range of numbers
 pub struct Loop {
     index: ParamIdx,
@@ -40,6 +47,7 @@ pub struct Loop {
     body: Box<[CmdIdx]>,
 }
 
+#[derive(Clone, PartialEq, Eq)]
 /// A conditional statement
 pub struct If {
     cond: ExprIdx,

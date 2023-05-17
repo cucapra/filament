@@ -7,7 +7,19 @@ macro_rules! idx {
     };
 }
 
-#[derive(Eq, Debug)]
+#[macro_export]
+macro_rules! define_idx {
+    ($name:ident, $st:ty, $pre:expr) => {
+        pub type $name = $crate::utils::Idx<$st>;
+        impl ::std::fmt::Debug for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                // We love MLIR
+                write!(f, concat!("%", $pre, "{}"), self.get())
+            }
+        }
+    };
+}
+
 /// Wrapper around a newtyped index associated with a type-level tag.
 /// Since the type does not contain a value of type T, it is always copy.
 pub struct Idx<T> {
@@ -20,6 +32,8 @@ impl<T> PartialEq for Idx<T> {
         self.idx == other.idx
     }
 }
+
+impl<T> Eq for Idx<T> {}
 
 impl<T> std::hash::Hash for Idx<T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {

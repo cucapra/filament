@@ -2,14 +2,14 @@ use super::{
     Command, Component, Connect, Ctx, Event, Expr, If, Instance, Invoke, Loop,
     Param, Port, Range, Time,
 };
-use crate::idx;
+use crate::define_idx;
 
-pub type ParamIdx = idx!(Param);
-pub type EventIdx = idx!(Event);
-pub type TimeIdx = idx!(Time);
-pub type RangeIdx = idx!(Range);
+define_idx!(ParamIdx, Param, "pr");
+define_idx!(EventIdx, Event, "ev");
+define_idx!(TimeIdx, Time, "t");
+define_idx!(RangeIdx, Range, "rg");
 
-pub type ExprIdx = idx!(Expr);
+define_idx!(ExprIdx, Expr, "e");
 impl ExprIdx {
     /// Attempts to convert this expression into a concrete value.
     pub fn as_concrete(&self, ctx: &impl Ctx<Expr>) -> Option<u64> {
@@ -37,8 +37,9 @@ impl ExprIdx {
     }
 }
 
-/// Reference to a defined port-like value.
-pub type PortIdx = idx!(Port);
+// Reference to a defined port-like value.
+define_idx!(PortIdx, Port, "p");
+
 impl PortIdx {
     /// Return true if this port is definitely not a bundle.
     /// This is the case if we can statically prove that the port has a length of 1.
@@ -51,11 +52,11 @@ impl PortIdx {
     }
 }
 
-pub type CmdIdx = idx!(Command);
-pub type InstIdx = idx!(Instance);
-pub type InvIdx = idx!(Invoke);
-pub type ConIdx = idx!(Connect);
-pub type IfIdx = idx!(If);
-pub type LoopIdx = idx!(Loop);
+define_idx!(CmdIdx, Command, "cmd");
+define_idx!(InstIdx, Instance, "inst");
+define_idx!(InvIdx, Invoke, "inv");
+define_idx!(ConIdx, Connect, "con");
+define_idx!(IfIdx, If, "if");
+define_idx!(LoopIdx, Loop, "loop");
 
-pub type CompIdx = idx!(Component);
+define_idx!(CompIdx, Component, "comp");
