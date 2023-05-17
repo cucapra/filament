@@ -21,6 +21,12 @@ impl<T> PartialEq for Idx<T> {
     }
 }
 
+impl<T> std::hash::Hash for Idx<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.idx.hash(state)
+    }
+}
+
 impl<T> Clone for Idx<T> {
     fn clone(&self) -> Self {
         Self {
@@ -40,6 +46,7 @@ impl<T> Idx<T> {
         _phantom: PhantomData,
     };
 
+    #[inline]
     /// Create a new index
     pub fn new(idx: usize) -> Self {
         Self {
@@ -48,6 +55,7 @@ impl<T> Idx<T> {
         }
     }
 
+    #[inline]
     /// Get the index
     pub fn get(self) -> usize {
         debug_assert!(
