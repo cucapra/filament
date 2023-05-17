@@ -77,7 +77,7 @@ where
     K: Eq,
 {
     /// Evaluate this subsitution if the underlying type knows how to apply it.
-    fn apply(&self, ctx: &mut T::Context) -> T {
+    pub fn apply(&self, ctx: &mut T::Context) -> T {
         self.base
             .fold_with(ctx, &mut |k| self.bind.get(&k).cloned())
     }

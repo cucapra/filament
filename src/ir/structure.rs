@@ -1,4 +1,4 @@
-use super::{EventIdx, ExprIdx, RangeIdx, TimeIdx};
+use super::{EventIdx, ExprIdx, ParamIdx, RangeIdx, TimeIdx};
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 /// A temporal event. Represents an offset from the start of the event.
@@ -15,12 +15,44 @@ pub struct Range {
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
+/// The context in which a port was defined.
+pub enum PortOwner {
+    /// The port is defined in the signature
+    Sig,
+    /// The port is defined locally
+    Local,
+}
+
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+pub enum Direction {
+    /// Input port
+    In,
+    /// Output port
+    Out,
+    /// Inout port. Should only be possible if the port is a local port.
+    Inout,
+}
+
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+/// Duration when the port caries a meaningful value.
+/// Equivalent to the bundle type:
+/// ```
+/// p[N]: for<#i> @[G, G+i+10]
+/// ```
+pub struct Liveness {
+    pub idx: ParamIdx,
+    pub len: ExprIdx,
+    pub range: RangeIdx,
+}
+
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 /// A port tracks its definition and liveness.
 /// A port in the IR generalizes both bundles and normal ports.
 pub struct Port {
-    pub len: ExprIdx,
+    pub owner: PortOwner,
+    pub dir: Direction,
     pub width: ExprIdx,
-    pub liveness: RangeIdx,
+    pub live: Liveness,
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]

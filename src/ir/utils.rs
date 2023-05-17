@@ -69,3 +69,13 @@ where
         &self.store[idx.get()]
     }
 }
+
+/// A context for interning values.
+/// In addition to adding and getting values, the context also supports applying
+/// a substitution to a value.
+pub trait Ctx<T> {
+    /// Add a value to the context
+    fn add(&mut self, val: T) -> Idx<T>;
+    /// Get the information associated with a value
+    fn get(&self, idx: Idx<T>) -> &T;
+}
