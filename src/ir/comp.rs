@@ -1,32 +1,46 @@
 use super::{
-    Ctx, Event, EventIdx, Expr, ExprIdx, Fact, Indexed, Param, ParamIdx, Port,
-    PortIdx, Prop, SmallIndexed, Time, TimeIdx,
+    Ctx, Event, EventIdx, Expr, ExprIdx, Fact, Indexed, InstIdx, Instance,
+    InvIdx, Invoke, Param, ParamIdx, Port, PortIdx, Prop, SmallIndexed, Time,
+    TimeIdx,
 };
 use crate::utils::Idx;
 
+#[derive(Default)]
 pub struct Component {
     // Component defined values. Once created, we don't expect too many of these
     // to be created.
     /// Ports and bundles defined by the component.
-    ports: SmallIndexed<Port>,
+    pub(super) ports: SmallIndexed<Port>,
     /// Parameters defined the component
-    params: SmallIndexed<Param>,
+    pub(super) params: SmallIndexed<Param>,
     /// Events defined by the component
-    events: SmallIndexed<Event>,
+    pub(super) events: SmallIndexed<Event>,
+
+    /// Instances defined by the component
+    pub(super) instances: SmallIndexed<Instance>,
+    /// Invocations defined by the component
+    pub(super) invocations: SmallIndexed<Invoke>,
 
     /// Facts in the component.
     /// All nested facts are hoisted out to the top context by adding the path
     /// condition as the antecedant.
-    facts: Vec<Fact>,
+    pub(super) facts: Vec<Fact>,
 
     // Interned data. We store this on a per-component basis because events with the
     // same identifiers in different components are not equal.
     /// Interned expressions
-    exprs: Indexed<Expr>,
+    pub(super) exprs: Indexed<Expr>,
     /// Interned times
-    times: Indexed<Time>,
+    pub(super) times: Indexed<Time>,
     /// Interned propositions
-    props: Indexed<Prop>,
+    pub(super) props: Indexed<Prop>,
+}
+
+impl Component {
+    /// Add a number to the context and get handle to it.
+    pub fn num(&mut self, n: u64) -> ExprIdx {
+        self.exprs.add(Expr::Concrete(n))
+    }
 }
 
 impl Ctx<Port> for Component {
@@ -56,6 +70,26 @@ impl Ctx<Event> for Component {
 
     fn get(&self, idx: EventIdx) -> &Event {
         self.events.get(idx)
+    }
+}
+
+impl Ctx<Instance> for Component {
+    fn add(&mut self, val: Instance) -> InstIdx {
+        self.instances.add(val)
+    }
+
+    fn get(&self, idx: InstIdx) -> &Instance {
+        self.instances.get(idx)
+    }
+}
+
+impl Ctx<Invoke> for Component {
+    fn add(&mut self, val: Invoke) -> InvIdx {
+        self.invocations.add(val)
+    }
+
+    fn get(&self, idx: InvIdx) -> &Invoke {
+        self.invocations.get(idx)
     }
 }
 

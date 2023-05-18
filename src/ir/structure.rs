@@ -1,11 +1,4 @@
-use super::{EventIdx, ExprIdx, InvIdx, ParamIdx, TimeIdx};
-
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
-/// A temporal event. Represents an offset from the start of the event.
-pub struct Time {
-    pub event: EventIdx,
-    pub offset: ExprIdx,
-}
+use super::{EventIdx, ExprIdx, InvIdx, ParamIdx, TimeIdx, TimeSub};
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 /// An interval of time
@@ -23,6 +16,19 @@ pub enum PortOwner {
     Inv { inv: InvIdx, dir: Direction },
     /// The port is defined locally
     Local,
+}
+impl PortOwner {
+    /// Input on the signature
+    pub const fn sig_in() -> Self {
+        Self::Sig { dir: Direction::In }
+    }
+
+    /// Output on the signature
+    pub const fn sig_out() -> Self {
+        Self::Sig {
+            dir: Direction::Out,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
@@ -59,10 +65,20 @@ pub struct Port {
 pub struct Param {
     pub default: Option<ExprIdx>,
 }
+impl Param {
+    pub fn new() -> Self {
+        Self { default: None }
+    }
+    pub fn with_default(default: ExprIdx) -> Self {
+        Self {
+            default: Some(default),
+        }
+    }
+}
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 /// Events must have a delay and an optional default value
 pub struct Event {
-    pub delay: ExprIdx,
-    pub default: Option<ExprIdx>,
+    pub delay: TimeSub,
+    pub default: Option<TimeIdx>,
 }

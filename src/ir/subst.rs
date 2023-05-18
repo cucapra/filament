@@ -134,7 +134,7 @@ impl Foldable<EventIdx, TimeIdx> for TimeIdx {
         if let Some(time) = subst_fn(event) {
             // If we get a new time event, we need to take the old time's offset and add it to this.
             let new_time = ctx.get(time).clone();
-            let new_offset = ctx.add(new_time.offset + offset);
+            let new_offset = new_time.offset.add(offset, ctx);
             ctx.add(Time {
                 event: new_time.event,
                 offset: new_offset,

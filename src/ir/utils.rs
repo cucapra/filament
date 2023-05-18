@@ -17,6 +17,18 @@ where
     map: HashMap<T, Idx<T>>,
 }
 
+impl<T> Default for Indexed<T>
+where
+    T: Eq + std::hash::Hash,
+{
+    fn default() -> Self {
+        Self {
+            store: Vec::new(),
+            map: HashMap::new(),
+        }
+    }
+}
+
 impl<T> Indexed<T>
 where
     T: Eq + std::hash::Hash,
@@ -48,6 +60,12 @@ where
     T: Eq,
 {
     store: Vec<T>,
+}
+
+impl<T: Eq> Default for SmallIndexed<T> {
+    fn default() -> Self {
+        Self { store: Vec::new() }
+    }
 }
 
 impl<T> SmallIndexed<T>
