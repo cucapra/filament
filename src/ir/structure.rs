@@ -1,4 +1,4 @@
-use super::{EventIdx, ExprIdx, InvIdx, ParamIdx, RangeIdx, TimeIdx};
+use super::{EventIdx, ExprIdx, InvIdx, ParamIdx, TimeIdx};
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 /// A temporal event. Represents an offset from the start of the event.
@@ -42,7 +42,7 @@ pub enum Direction {
 pub struct Liveness {
     pub idx: ParamIdx,
     pub len: ExprIdx,
-    pub range: RangeIdx,
+    pub range: Range,
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]

@@ -1,13 +1,12 @@
 use super::{
     Command, Component, Connect, Ctx, Event, Expr, If, Instance, Invoke, Loop,
-    Param, Port, Range, Time,
+    Param, Port, Prop, Time,
 };
 use crate::define_idx;
 
 define_idx!(ParamIdx, Param, "pr");
 define_idx!(EventIdx, Event, "ev");
 define_idx!(TimeIdx, Time, "t");
-define_idx!(RangeIdx, Range, "rg");
 
 define_idx!(ExprIdx, Expr, "e");
 impl ExprIdx {
@@ -51,6 +50,8 @@ impl PortIdx {
         port.live.len.is_const(ctx, 1)
     }
 }
+
+define_idx!(PropIdx, Prop, "prop");
 
 define_idx!(CmdIdx, Command, "cmd");
 define_idx!(InstIdx, Instance, "inst");

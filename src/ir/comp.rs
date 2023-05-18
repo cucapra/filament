@@ -1,6 +1,6 @@
 use super::{
-    Ctx, Event, Expr, ExprIdx, Indexed, Param, Port, Range, SmallIndexed, Time,
-    TimeIdx,
+    Ctx, Event, EventIdx, Expr, ExprIdx, Fact, Indexed, Param, ParamIdx, Port,
+    PortIdx, Prop, SmallIndexed, Time, TimeIdx,
 };
 use crate::utils::Idx;
 
@@ -17,7 +17,7 @@ pub struct Component {
     /// Facts in the component.
     /// All nested facts are hoisted out to the top context by adding the path
     /// condition as the antecedant.
-    // fact: SmallIndexed<Fact>,
+    facts: Vec<Fact>,
 
     // Interned data. We store this on a per-component basis because events with the
     // same identifiers in different components are not equal.
@@ -25,8 +25,38 @@ pub struct Component {
     exprs: Indexed<Expr>,
     /// Interned times
     times: Indexed<Time>,
-    /// Interned ranges
-    ranges: Indexed<Range>,
+    /// Interned propositions
+    props: Indexed<Prop>,
+}
+
+impl Ctx<Port> for Component {
+    fn add(&mut self, val: Port) -> PortIdx {
+        self.ports.add(val)
+    }
+
+    fn get(&self, idx: PortIdx) -> &Port {
+        self.ports.get(idx)
+    }
+}
+
+impl Ctx<Param> for Component {
+    fn add(&mut self, val: Param) -> ParamIdx {
+        self.params.add(val)
+    }
+
+    fn get(&self, idx: ParamIdx) -> &Param {
+        self.params.get(idx)
+    }
+}
+
+impl Ctx<Event> for Component {
+    fn add(&mut self, val: Event) -> EventIdx {
+        self.events.add(val)
+    }
+
+    fn get(&self, idx: EventIdx) -> &Event {
+        self.events.get(idx)
+    }
 }
 
 impl Ctx<Expr> for Component {
@@ -46,6 +76,16 @@ impl Ctx<Time> for Component {
 
     fn get(&self, idx: TimeIdx) -> &Time {
         self.times.get(idx)
+    }
+}
+
+impl Ctx<Prop> for Component {
+    fn add(&mut self, val: Prop) -> Idx<Prop> {
+        self.props.add(val)
+    }
+
+    fn get(&self, idx: Idx<Prop>) -> &Prop {
+        self.props.get(idx)
     }
 }
 

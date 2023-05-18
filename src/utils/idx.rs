@@ -50,6 +50,18 @@ impl<T> Clone for Idx<T> {
     }
 }
 
+impl<T> PartialOrd for Idx<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.idx.partial_cmp(&other.idx)
+    }
+}
+
+impl<T> Ord for Idx<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.idx.cmp(&other.idx)
+    }
+}
+
 /// All indexes are copy
 impl<T> Copy for Idx<T> {}
 
