@@ -159,88 +159,110 @@ impl From<UnFn> for FnAssume {
     /// Returns the default [FnAssume] function assumptions for every [UnFn]
     fn from(func: UnFn) -> FnAssume {
         match func {
-            UnFn::Pow2 => FnAssume::new(vec![
-                // assume #l*2 == pow2(#r+1);
-                OrderConstraint::eq(
-                    Expr::op(
-                        Op::Mul,
-                        Expr::abs(FnAssume::left()),
-                        Expr::concrete(2),
-                    ),
-                    func.clone().apply(Expr::op(
-                        Op::Add,
-                        Expr::abs(FnAssume::right()),
-                        Expr::concrete(1),
-                    )),
-                )
-                .into(),
-                // assume #r >= 1 => #l == pow2(#r-1)*2;
-                Implication::implies(
-                    OrderConstraint::gte(
-                        Expr::abs(FnAssume::right()),
-                        Expr::concrete(1),
-                    ),
+            UnFn::Pow2 => FnAssume::new(
+                vec![
+                    // assume #l*2 == pow2(#r+1);
                     OrderConstraint::eq(
-                        Expr::abs(FnAssume::left()),
                         Expr::op(
                             Op::Mul,
-                            func.apply(Expr::op(
-                                Op::Sub,
-                                Expr::abs(FnAssume::right()),
-                                Expr::concrete(1),
-                            )),
+                            Expr::abs(FnAssume::left()),
                             Expr::concrete(2),
                         ),
+                        func.clone().apply(Expr::op(
+                            Op::Add,
+                            Expr::abs(FnAssume::right()),
+                            Expr::concrete(1),
+                        )),
+                    )
+                    .into(),
+                    // assume #r >= 1 => #l == pow2(#r-1)*2;
+                    Implication::implies(
+                        OrderConstraint::gte(
+                            Expr::abs(FnAssume::right()),
+                            Expr::concrete(1),
+                        ),
+                        OrderConstraint::eq(
+                            Expr::abs(FnAssume::left()),
+                            Expr::op(
+                                Op::Mul,
+                                func.apply(Expr::op(
+                                    Op::Sub,
+                                    Expr::abs(FnAssume::right()),
+                                    Expr::concrete(1),
+                                )),
+                                Expr::concrete(2),
+                            ),
+                        ),
                     ),
-                ),
-                // assume #r >= 0;
-                OrderConstraint::gte(
-                    Expr::abs(FnAssume::right()),
-                    Expr::concrete(0),
-                )
-                .into(),
-            ]),
-            UnFn::Log2 => FnAssume::new(vec![
-                // assume #l+1 == log2(#r*2);
-                OrderConstraint::eq(
-                    Expr::op(
-                        Op::Add,
-                        Expr::abs(FnAssume::left()),
-                        Expr::concrete(1),
-                    ),
-                    func.clone().apply(Expr::op(
-                        Op::Mul,
-                        Expr::abs(FnAssume::right()),
-                        Expr::concrete(2),
-                    )),
-                )
-                .into(),
-                // assume #l >= 1 => #l-1 == log2(#r/2);
-                Implication::implies(
-                    OrderConstraint::gte(
-                        Expr::abs(FnAssume::left()),
-                        Expr::concrete(1),
-                    ),
-                    OrderConstraint::eq(
-                        Expr::op(
-                            Op::Sub,
+                ]
+                .into_iter()
+                .chain(
+                    // assume #l == 1 <=> #r == 0;
+                    Implication::iff(
+                        OrderConstraint::eq(
                             Expr::abs(FnAssume::left()),
                             Expr::concrete(1),
                         ),
-                        func.apply(Expr::op(
-                            Op::Div,
+                        OrderConstraint::eq(
+                            Expr::abs(FnAssume::right()),
+                            Expr::concrete(0),
+                        ),
+                    ),
+                )
+                .collect_vec(),
+            ),
+            UnFn::Log2 => FnAssume::new(
+                vec![
+                    // assume #l+1 == log2(#r*2);
+                    OrderConstraint::eq(
+                        Expr::op(
+                            Op::Add,
+                            Expr::abs(FnAssume::left()),
+                            Expr::concrete(1),
+                        ),
+                        func.clone().apply(Expr::op(
+                            Op::Mul,
                             Expr::abs(FnAssume::right()),
                             Expr::concrete(2),
                         )),
+                    )
+                    .into(),
+                    // assume #l >= 1 => #l-1 == log2(#r/2);
+                    Implication::implies(
+                        OrderConstraint::gte(
+                            Expr::abs(FnAssume::left()),
+                            Expr::concrete(1),
+                        ),
+                        OrderConstraint::eq(
+                            Expr::op(
+                                Op::Sub,
+                                Expr::abs(FnAssume::left()),
+                                Expr::concrete(1),
+                            ),
+                            func.apply(Expr::op(
+                                Op::Div,
+                                Expr::abs(FnAssume::right()),
+                                Expr::concrete(2),
+                            )),
+                        ),
                     ),
-                ),
-                // assume #l >= 0;
-                OrderConstraint::gte(
-                    Expr::abs(FnAssume::left()),
-                    Expr::concrete(0),
+                ]
+                .into_iter()
+                .chain(
+                    // assume #l == 0 <=> #r == 1;
+                    Implication::iff(
+                        OrderConstraint::eq(
+                            Expr::abs(FnAssume::left()),
+                            Expr::concrete(0),
+                        ),
+                        OrderConstraint::eq(
+                            Expr::abs(FnAssume::right()),
+                            Expr::concrete(1),
+                        ),
+                    ),
                 )
-                .into(),
-            ]),
+                .collect_vec(),
+            ),
         }
     }
 }
