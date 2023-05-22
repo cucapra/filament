@@ -1,8 +1,12 @@
 use super::{Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Time, TimeIdx};
 
-pub struct Bind<'a, K, V>(&'a [(K, V)])
-where
-    K: Eq;
+pub struct Bind<'a, K: Eq, V>(&'a [(K, V)]);
+
+impl<'a, K: Eq, V> Bind<'a, K, V> {
+    pub fn new(bind: &'a [(K, V)]) -> Self {
+        Self(bind)
+    }
+}
 
 impl<K: Eq, V> Clone for Bind<'_, K, V> {
     fn clone(&self) -> Self {
@@ -29,14 +33,14 @@ where
     K: Eq,
 {
     base: T,
-    bind: Bind<'a, K, V>,
+    bind: &'a Bind<'a, K, V>,
 }
 
 impl<'a, T, K, V> Subst<'a, T, K, V>
 where
     K: Eq,
 {
-    pub fn new(base: T, bind: Bind<'a, K, V>) -> Self {
+    pub fn new(base: T, bind: &'a Bind<'a, K, V>) -> Self {
         Self { base, bind }
     }
 
@@ -44,7 +48,7 @@ where
     pub fn new_base<U>(&self, new_base: U) -> Subst<'a, U, K, V> {
         Subst {
             base: new_base,
-            bind: self.bind.clone(),
+            bind: self.bind,
         }
     }
 
@@ -58,7 +62,7 @@ where
     {
         Subst {
             base: f(self.base),
-            bind: self.bind.clone(),
+            bind: self.bind,
         }
     }
 
@@ -84,7 +88,14 @@ where
 }
 
 /// A type that can be folded using a function that transforms all instances of
-/// `K` to `V` using the given context.
+/// `K` using a `K` -> `V` binding for the implementing type.
+///
+/// As an example, the impl:
+/// ```
+/// impl Foldable<ParamIdx, ExprIdx> for TimeIdx { ... }
+/// ```
+/// Allows all uses of [ParamIdx] in [TimeIdx] to be resolved using a [ParamIdx]
+/// to [ExprIdx] map.
 pub trait Foldable<K, V>
 where
     K: Eq,

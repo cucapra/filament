@@ -17,7 +17,7 @@ pub enum Command {
 #[derive(Clone, PartialEq, Eq)]
 /// An instantiated component
 pub struct Instance {
-    comp: CompIdx,
+    // comp: CompIdx,
     params: Box<[ParamIdx]>,
 }
 

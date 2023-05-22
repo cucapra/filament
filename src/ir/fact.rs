@@ -1,4 +1,4 @@
-use super::{idxs::PropIdx, Ctx, ExprIdx};
+use super::{idxs::PropIdx, Component, Ctx, ExprIdx, Foldable, ParamIdx};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 /// Comparison operators
@@ -99,4 +99,41 @@ impl PropIdx {
 pub struct Fact {
     prop: PropIdx,
     checked: bool,
+}
+
+impl Foldable<ParamIdx, ExprIdx> for PropIdx {
+    type Context = Component;
+
+    fn fold_with<F>(&self, ctx: &mut Self::Context, subst_fn: &mut F) -> Self
+    where
+        F: FnMut(ParamIdx) -> Option<ExprIdx>,
+    {
+        match ctx.get(*self) {
+            Prop::True => *self,
+            &Prop::Cmp { op, lhs, rhs } => {
+                let lhs = lhs.fold_with(ctx, subst_fn);
+                let rhs = rhs.fold_with(ctx, subst_fn);
+                ctx.add(Prop::Cmp { op, lhs, rhs })
+            }
+            Prop::Not(p) => {
+                let p = p.fold_with(ctx, subst_fn);
+                p.not(ctx)
+            }
+            Prop::And(l, r) => {
+                let l = l.fold_with(ctx, subst_fn);
+                let r = r.fold_with(ctx, subst_fn);
+                l.and(r, ctx)
+            }
+            Prop::Or(l, r) => {
+                let l = l.fold_with(ctx, subst_fn);
+                let r = r.fold_with(ctx, subst_fn);
+                l.or(r, ctx)
+            }
+            Prop::Implies(a, c) => {
+                let a = a.fold_with(ctx, subst_fn);
+                let c = c.fold_with(ctx, subst_fn);
+                ctx.add(Prop::Implies(a, c))
+            }
+        }
+    }
 }

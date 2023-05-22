@@ -1,12 +1,15 @@
 //! Convert the frontend AST to the IR.
+use super::{
+    Bind, Component, Ctx, Event, ExprIdx, Fact, IndexStore, Instance, Invoke,
+    Param, ParamIdx, Port, Subst, TimeIdx,
+};
 use crate::{
     ast::{self, Id},
     ir,
-    utils::Idx,
+    utils::{Binding, Idx},
 };
+use itertools::Itertools;
 use std::collections::HashMap;
-
-use super::{Ctx, Event, ExprIdx, Fact, Param, ParamIdx, Port, TimeIdx};
 
 /// Structure to track name bindings through scopes
 struct ScopeMap<V> {
@@ -56,14 +59,15 @@ impl<V> std::ops::Index<&Id> for ScopeMap<V> {
     }
 }
 
+#[derive(Clone)]
 /// The signature of component.
 ///
-/// A signature defines the parameters, ports, and facts all of which are added
-/// to the component instantiating the signature.
+/// A signature defines the ports which are added to the component instantiating
+/// the signature.
 struct Sig {
-    params: Vec<Param>,
-    ports: Vec<Port>,
-    facts: Vec<Fact>,
+    params: Vec<ast::Id>,
+    ports: Vec<ast::Port>,
+    facts: Vec<ast::Fact>,
 }
 
 /// Track the defined signature in the current scope.
@@ -92,22 +96,28 @@ impl std::ops::Index<&Id> for SigMap {
 }
 
 /// Context used while building the IR.
-struct BuildCtx<'a> {
-    comp: &'a mut ir::Component,
+struct BuildCtx<'ctx, 'prog> {
+    comp: &'ctx mut ir::Component,
+    sigs: &'prog SigMap,
 
     // Mapping from names to IR nodes.
     param_map: ScopeMap<Param>,
     event_map: ScopeMap<Event>,
     port_map: ScopeMap<Port>,
+    inst_map: ScopeMap<Instance>,
+    inv_map: ScopeMap<Invoke>,
 }
 
-impl<'a> BuildCtx<'a> {
-    fn new(comp: &'a mut ir::Component) -> Self {
+impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
+    fn new(comp: &'ctx mut ir::Component, sigs: &'prog SigMap) -> Self {
         Self {
             comp,
+            sigs,
             param_map: ScopeMap::new(),
             event_map: ScopeMap::new(),
             port_map: ScopeMap::new(),
+            inst_map: ScopeMap::new(),
+            inv_map: ScopeMap::new(),
         }
     }
 
@@ -117,6 +127,8 @@ impl<'a> BuildCtx<'a> {
         self.param_map.push();
         self.event_map.push();
         self.port_map.push();
+        self.inst_map.push();
+        self.inv_map.push();
     }
 
     /// Pop the last scope level
@@ -125,6 +137,8 @@ impl<'a> BuildCtx<'a> {
         self.param_map.pop();
         self.event_map.pop();
         self.port_map.pop();
+        self.inst_map.pop();
+        self.inv_map.pop();
     }
 
     /// Perform some action within a new scope
@@ -289,6 +303,23 @@ impl<'a> BuildCtx<'a> {
             component,
             bindings,
         } = inst;
+        // Add the facts defined by the instance as assertions in the
+        // component.
+        let comp = self.sigs.get(&component).unwrap().clone();
+        let binding = Binding::new(
+            comp.params
+                .iter()
+                .map(|p| *p)
+                .zip(bindings.into_iter().map(|b| b.take())),
+        );
+        let facts = comp.facts.into_iter().map(|f| {
+            let p = f.cons.resolve_expr(&binding);
+            let cons = self.expr(p);
+            ir::Fact {
+                cons,
+                checked: true,
+            }
+        });
     }
 
     fn invoke(&mut self, inv: ast::Invoke) {
