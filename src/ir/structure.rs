@@ -14,7 +14,8 @@ pub enum PortOwner {
     Sig { dir: Direction },
     /// The port is defined by an invocation
     Inv { inv: InvIdx, dir: Direction },
-    /// The port is defined locally
+    /// The port is defined locally.
+    /// It does not have a direction because both reading and writing to it is allowed.
     Local,
 }
 impl PortOwner {
@@ -26,6 +27,22 @@ impl PortOwner {
     /// Output on the signature
     pub const fn sig_out() -> Self {
         Self::Sig {
+            dir: Direction::Out,
+        }
+    }
+
+    /// An input port created by an invocation
+    pub const fn inv_in(inv: InvIdx) -> Self {
+        Self::Inv {
+            inv,
+            dir: Direction::In,
+        }
+    }
+
+    /// An output port created by an invocation
+    pub const fn inv_out(inv: InvIdx) -> Self {
+        Self::Inv {
+            inv,
             dir: Direction::Out,
         }
     }
@@ -60,15 +77,15 @@ pub struct Port {
     pub live: Liveness,
 }
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(Default, PartialEq, Eq, Hash, Clone, Debug)]
 /// Parameters with an optional initial value
 pub struct Param {
+    // XXX(rachit): Should we have default values at this level or should they be
+    // compiled away by the time we generate the IR.
     pub default: Option<ExprIdx>,
 }
 impl Param {
-    pub fn new() -> Self {
-        Self { default: None }
-    }
+    /// Construct a parameter with a default value.
     pub fn with_default(default: ExprIdx) -> Self {
         Self {
             default: Some(default),

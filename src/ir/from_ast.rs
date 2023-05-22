@@ -2,31 +2,140 @@
 use crate::{
     ast::{self, Id},
     ir,
+    utils::Idx,
 };
 use std::collections::HashMap;
 
-use super::{
-    expr, Ctx, Event, EventIdx, ExprIdx, Param, ParamIdx, PortIdx, TimeIdx,
-};
+use super::{Ctx, Event, ExprIdx, Fact, Param, ParamIdx, Port, TimeIdx};
+
+/// Structure to track name bindings through scopes
+struct ScopeMap<V> {
+    map: Vec<HashMap<Id, Idx<V>>>,
+}
+impl<V> ScopeMap<V> {
+    fn new() -> Self {
+        Self {
+            map: vec![HashMap::new()],
+        }
+    }
+
+    #[inline]
+    /// Push a new scope level
+    fn push(&mut self) {
+        self.map.push(HashMap::new());
+    }
+
+    #[inline]
+    /// Pop the last scope level
+    fn pop(&mut self) {
+        self.map.pop();
+        assert!(!self.map.is_empty(), "Cannot pop last scope level");
+    }
+
+    /// Insert binding into the scope level
+    fn insert(&mut self, id: Id, idx: Idx<V>) {
+        self.map.last_mut().unwrap().insert(id, idx);
+    }
+
+    /// Return the value by searching through the scope levels
+    fn get(&self, id: &Id) -> Option<&Idx<V>> {
+        for scope in self.map.iter().rev() {
+            if let Some(val) = scope.get(id) {
+                return Some(val);
+            }
+        }
+        None
+    }
+}
+
+impl<V> std::ops::Index<&Id> for ScopeMap<V> {
+    type Output = Idx<V>;
+
+    fn index(&self, id: &Id) -> &Self::Output {
+        self.get(id).unwrap()
+    }
+}
+
+/// The signature of component.
+///
+/// A signature defines the parameters, ports, and facts all of which are added
+/// to the component instantiating the signature.
+struct Sig {
+    params: Vec<Param>,
+    ports: Vec<Port>,
+    facts: Vec<Fact>,
+}
+
+/// Track the defined signature in the current scope.
+struct SigMap {
+    map: HashMap<Id, Sig>,
+}
+impl SigMap {
+    fn new() -> Self {
+        Self {
+            map: HashMap::new(),
+        }
+    }
+    fn insert(&mut self, id: Id, sig: Sig) {
+        self.map.insert(id, sig);
+    }
+    fn get(&self, id: &Id) -> Option<&Sig> {
+        self.map.get(id)
+    }
+}
+impl std::ops::Index<&Id> for SigMap {
+    type Output = Sig;
+
+    fn index(&self, id: &Id) -> &Self::Output {
+        self.get(id).unwrap()
+    }
+}
 
 /// Context used while building the IR.
 struct BuildCtx<'a> {
     comp: &'a mut ir::Component,
 
     // Mapping from names to IR nodes.
-    param_map: HashMap<Id, ParamIdx>,
-    event_map: HashMap<Id, EventIdx>,
-    port_map: HashMap<Id, PortIdx>,
+    param_map: ScopeMap<Param>,
+    event_map: ScopeMap<Event>,
+    port_map: ScopeMap<Port>,
 }
 
 impl<'a> BuildCtx<'a> {
     fn new(comp: &'a mut ir::Component) -> Self {
         Self {
             comp,
-            param_map: HashMap::new(),
-            event_map: HashMap::new(),
-            port_map: HashMap::new(),
+            param_map: ScopeMap::new(),
+            event_map: ScopeMap::new(),
+            port_map: ScopeMap::new(),
         }
+    }
+
+    /// Push a new scope level
+    #[inline]
+    fn push(&mut self) {
+        self.param_map.push();
+        self.event_map.push();
+        self.port_map.push();
+    }
+
+    /// Pop the last scope level
+    #[inline]
+    fn pop(&mut self) {
+        self.param_map.pop();
+        self.event_map.pop();
+        self.port_map.pop();
+    }
+
+    /// Perform some action within a new scope
+    fn with_scope<T, F>(&mut self, f: F) -> T
+    where
+        F: FnOnce(&mut Self) -> T,
+    {
+        self.push();
+        let out = f(self);
+        self.pop();
+        out
     }
 
     fn expr(&mut self, expr: ast::Expr) -> ExprIdx {
@@ -64,13 +173,18 @@ impl<'a> BuildCtx<'a> {
 
     /// Add a parameter to the component.
     fn param(&mut self, param: ast::Id) -> ParamIdx {
-        let idx = self.comp.add(Param::new());
+        // TODO(rachit): Parameters do not have default values yet.
+        let idx = self.comp.add(Param::default());
         self.param_map.insert(param, idx);
         idx
     }
 
     fn time(&mut self, t: ast::Time) -> TimeIdx {
-        todo!()
+        let Some(event) = self.event_map.get(&t.event).copied() else {
+            unreachable!("Event {} not found", t.event)
+        };
+        let offset = self.expr(t.offset);
+        self.comp.add(ir::Time { event, offset })
     }
 
     fn timesub(&mut self, ts: ast::TimeSub) -> ir::TimeSub {
@@ -106,13 +220,15 @@ impl<'a> BuildCtx<'a> {
                 liveness,
                 bitwidth,
             } => {
-                let range = self.range(liveness.take());
                 // The bundle type uses a fake bundle index and has a length of 1.
-                let live = ir::Liveness {
+                // We don't need to push a new scope because this type is does not
+                // bind any new parameters.
+                let live = self.with_scope(|ctx| ir::Liveness {
                     idx: ParamIdx::UNKNOWN,
-                    len: self.comp.num(1),
-                    range,
-                };
+                    len: ctx.comp.num(1),
+                    range: ctx.range(liveness.take()),
+                });
+
                 let p = ir::Port {
                     width: self.expr(bitwidth.take()),
                     owner,
@@ -131,12 +247,13 @@ impl<'a> BuildCtx<'a> {
                         bitwidth,
                     },
             }) => {
-                let range = self.range(liveness.take());
-                let live = ir::Liveness {
-                    idx: self.param(*idx),
-                    len: self.expr(len.take()),
-                    range,
-                };
+                // Construct the bundle type in a new scope.
+                let live = self.with_scope(|ctx| ir::Liveness {
+                    idx: ctx.param(*idx),
+                    len: ctx.expr(len.take()),
+                    range: ctx.range(liveness.take()),
+                });
+
                 let p = ir::Port {
                     width: self.expr(bitwidth.take()),
                     owner,
@@ -163,6 +280,42 @@ impl<'a> BuildCtx<'a> {
         }
         for event in sig.events {
             self.event(event.take());
+        }
+    }
+
+    fn instance(&mut self, inst: ast::Instance) {
+        let ast::Instance {
+            name,
+            component,
+            bindings,
+        } = inst;
+    }
+
+    fn invoke(&mut self, inv: ast::Invoke) {
+        let ast::Invoke {
+            name,
+            instance,
+            abstract_vars,
+            ports,
+        } = inv;
+        todo!()
+    }
+
+    fn commands(&mut self, cmds: Vec<ast::Command>) {
+        for cmd in cmds {
+            self.command(cmd);
+        }
+    }
+
+    fn command(&mut self, cmd: ast::Command) {
+        match cmd {
+            ast::Command::Invoke(inv) => self.invoke(inv),
+            ast::Command::Instance(inst) => self.instance(inst),
+            ast::Command::Fact(_) => todo!(),
+            ast::Command::Connect(_) => todo!(),
+            ast::Command::ForLoop(_) => todo!(),
+            ast::Command::If(_) => todo!(),
+            ast::Command::Bundle(_) => todo!(),
         }
     }
 }
