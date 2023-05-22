@@ -13,13 +13,6 @@ jobs:
           apt-get update
           apt-get install -y z3
 
-      - name: Checkout Calyx latest
-        working-directory: /home/calyx
-        run: |
-          git checkout master
-          git fetch
-          git pull
-
       - name: Checkout commit that triggered run
         uses: actions/checkout@v3
         with:
@@ -39,10 +32,6 @@ jobs:
           fud register filament -p "${GITHUB_WORKSPACE}/fud/filament.py"
           fud config stages.filament.exec "${GITHUB_WORKSPACE}/target/debug/filament"
           fud config stages.filament.library "${GITHUB_WORKSPACE}"
-
-      - name: Fixup Calyx location
-        run: |
-          sed -i 's|../calyx/calyx|/home/calyx/calyx|' ${GITHUB_WORKSPACE}/Cargo.toml
 
       - name: Build Filament
         uses: actions-rs/cargo@v1
