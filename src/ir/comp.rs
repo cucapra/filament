@@ -1,25 +1,24 @@
 use super::{
-    Ctx, Event, EventIdx, Expr, ExprIdx, Fact, Indexed, InstIdx, Instance,
-    InvIdx, Invoke, Param, ParamIdx, Port, PortIdx, Prop, SmallIndexed, Time,
+    Ctx, Event, EventIdx, Expr, ExprIdx, Fact, IndexStore, InstIdx, Instance,
+    Interned, InvIdx, Invoke, Param, ParamIdx, Port, PortIdx, Prop, Time,
     TimeIdx,
 };
 use crate::utils::Idx;
 
 #[derive(Default)]
 pub struct Component {
-    // Component defined values. Once created, we don't expect too many of these
-    // to be created.
+    // Component defined values.
     /// Ports and bundles defined by the component.
-    pub(super) ports: SmallIndexed<Port>,
+    pub(super) ports: IndexStore<Port>,
     /// Parameters defined the component
-    pub(super) params: SmallIndexed<Param>,
+    pub(super) params: IndexStore<Param>,
     /// Events defined by the component
-    pub(super) events: SmallIndexed<Event>,
+    pub(super) events: IndexStore<Event>,
 
     /// Instances defined by the component
-    pub(super) instances: SmallIndexed<Instance>,
+    pub(super) instances: IndexStore<Instance>,
     /// Invocations defined by the component
-    pub(super) invocations: SmallIndexed<Invoke>,
+    pub(super) invocations: IndexStore<Invoke>,
 
     /// Facts in the component.
     /// All nested facts are hoisted out to the top context by adding the path
@@ -29,17 +28,17 @@ pub struct Component {
     // Interned data. We store this on a per-component basis because events with the
     // same identifiers in different components are not equal.
     /// Interned expressions
-    pub(super) exprs: Indexed<Expr>,
+    pub(super) exprs: Interned<Expr>,
     /// Interned times
-    pub(super) times: Indexed<Time>,
+    pub(super) times: Interned<Time>,
     /// Interned propositions
-    pub(super) props: Indexed<Prop>,
+    pub(super) props: Interned<Prop>,
 }
 
 impl Component {
     /// Add a number to the context and get handle to it.
     pub fn num(&mut self, n: u64) -> ExprIdx {
-        self.exprs.add(Expr::Concrete(n))
+        self.exprs.intern(Expr::Concrete(n))
     }
 }
 
@@ -95,7 +94,7 @@ impl Ctx<Invoke> for Component {
 
 impl Ctx<Expr> for Component {
     fn add(&mut self, val: Expr) -> ExprIdx {
-        self.exprs.add(val)
+        self.exprs.intern(val)
     }
 
     fn get(&self, idx: ExprIdx) -> &Expr {
@@ -105,7 +104,7 @@ impl Ctx<Expr> for Component {
 
 impl Ctx<Time> for Component {
     fn add(&mut self, val: Time) -> TimeIdx {
-        self.times.add(val)
+        self.times.intern(val)
     }
 
     fn get(&self, idx: TimeIdx) -> &Time {
@@ -115,7 +114,7 @@ impl Ctx<Time> for Component {
 
 impl Ctx<Prop> for Component {
     fn add(&mut self, val: Prop) -> Idx<Prop> {
-        self.props.add(val)
+        self.props.intern(val)
     }
 
     fn get(&self, idx: Idx<Prop>) -> &Prop {
