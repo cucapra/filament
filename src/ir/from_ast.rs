@@ -76,7 +76,8 @@ struct Sig {
     facts: Vec<ast::Fact>,
 }
 
-/// Track the defined signature in the current scope.
+/// Track the defined signatures in the current scope.
+/// Mapping from names of component to [Sig].
 struct SigMap {
     map: HashMap<Id, Sig>,
 }
@@ -430,7 +431,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let Some(ports) = ports else {
             unreachable!("Low-level invokes not supported")
         };
-        // The input ports
+        // The inputs
         let inputs = ports
             .into_iter()
             .map(|p| self.get_port(p.take(), ir::Direction::Out))

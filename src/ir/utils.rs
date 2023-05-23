@@ -1,5 +1,5 @@
 use crate::utils::Idx;
-use std::collections::HashMap;
+use std::{collections::HashMap, marker::PhantomData};
 
 /// An indexed storage for an interned type. Keeps a HashMap to provide faster reverse mapping
 /// from the value to the index.
@@ -108,5 +108,39 @@ impl<T> Ctx<T> for IndexStore<T> {
 
     fn get(&self, idx: Idx<T>) -> &T {
         self.get(idx)
+    }
+}
+
+/// A map that stores information of type [V] and is indexed by
+/// [Idx<T>] types.
+///
+/// This is essentially a type-safe way of storing information about value of type [T].
+pub struct DenseIndexInfo<T, V> {
+    store: Vec<V>,
+    key_typ: PhantomData<T>,
+}
+
+impl<T, V> Default for DenseIndexInfo<T, V> {
+    fn default() -> Self {
+        Self {
+            store: Vec::new(),
+            key_typ: PhantomData,
+        }
+    }
+}
+
+impl<T, V> DenseIndexInfo<T, V> {
+    /// Add a new value to the map and return the index.
+    pub fn add(&mut self, key: Idx<T>, val: V) {
+        // Resize the store if it is not large enough to hold the key
+        if self.store.len() <= key.get() {
+            self.store.reserve(key.get() + 1);
+        }
+        self.store[key.get()] = val;
+    }
+
+    /// Get the value associated with the index.
+    pub fn get(&self, idx: Idx<T>) -> &V {
+        &self.store[idx.get()]
     }
 }

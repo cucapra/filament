@@ -22,4 +22,4 @@ pub use structure::{
 };
 pub use subst::{Bind, Foldable, Subst};
 pub use time::{Time, TimeSub};
-pub use utils::{Ctx, IndexStore, Interned};
+pub use utils::{Ctx, DenseIndexInfo, IndexStore, Interned};
