@@ -73,23 +73,20 @@ impl<V> std::ops::Index<&Id> for ScopeMap<V> {
 struct Sig {
     params: Vec<ast::Id>,
     ports: Vec<ast::PortDef>,
-    facts: Vec<ast::Fact>,
+    facts: Vec<ast::OrderConstraint<ast::Expr>>,
 }
 
+#[derive(Default)]
 /// Track the defined signatures in the current scope.
 /// Mapping from names of component to [Sig].
 struct SigMap {
     map: HashMap<Id, Sig>,
 }
 impl SigMap {
-    fn new() -> Self {
-        Self {
-            map: HashMap::new(),
-        }
-    }
     fn insert(&mut self, id: Id, sig: Sig) {
         self.map.insert(id, sig);
     }
+
     fn get(&self, id: &Id) -> Option<&Sig> {
         self.map.get(id)
     }
@@ -402,8 +399,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 .zip(bindings.clone().into_iter().map(|b| b.take())),
         );
         let facts = comp.facts.into_iter().map(|f| {
-            let p = f.cons.take().resolve_expr(&binding);
-            let prop = self.implication(p);
+            let p = f.resolve_expr(&binding);
+            let prop = self.expr_cons(p);
             // This is a checked fact because the calling component needs to
             // honor it.
             ir::Fact::assert(prop)
@@ -529,9 +526,36 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             }
         }
     }
+
+    fn comp(sigs: &'prog SigMap, comp: ast::Component) -> ir::Component {
+        let mut ir_comp = ir::Component::default();
+        let mut builder = BuildCtx::new(&mut ir_comp, sigs);
+        builder.sig(comp.sig);
+        builder.commands(comp.body);
+        ir_comp
+    }
 }
 
-fn comp(comp: ast::Component) -> ir::Component {
-    let mut comp = ir::Component::default();
-    todo!()
+fn comp(ns: ast::Namespace) -> ir::Context {
+    let mut sig_map = SigMap::default();
+    // Walk over sigs and build a SigMap
+    for (_, sig) in ns.signatures() {
+        let summary = Sig {
+            params: sig.params.iter().map(|p| p.copy()).collect(),
+            ports: sig.ports.iter().map(|p| p.clone().take()).collect(),
+            facts: sig
+                .param_constraints
+                .iter()
+                .map(|f| f.clone().take())
+                .collect(),
+        };
+        sig_map.insert(sig.name.copy(), summary);
+    }
+
+    let mut ctx = ir::Context::default();
+    for comp in ns.components {
+        let ir_comp = BuildCtx::comp(&sig_map, comp);
+        ctx.comps.push(ir_comp);
+    }
+    ctx
 }

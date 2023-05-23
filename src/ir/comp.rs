@@ -1,9 +1,14 @@
 use super::{
-    Ctx, Event, EventIdx, Expr, ExprIdx, Fact, IndexStore, InstIdx, Instance,
+    Ctx, Event, EventIdx, Expr, ExprIdx, IndexStore, InstIdx, Instance,
     Interned, InvIdx, Invoke, Param, ParamIdx, Port, PortIdx, Prop, Time,
     TimeIdx,
 };
 use crate::utils::Idx;
+
+#[derive(Default)]
+pub struct Context {
+    pub(super) comps: Vec<Component>,
+}
 
 #[derive(Default)]
 pub struct Component {

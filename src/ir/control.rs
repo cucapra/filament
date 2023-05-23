@@ -1,4 +1,6 @@
-use super::{Access, ExprIdx, Fact, InstIdx, InvIdx, ParamIdx, TimeIdx};
+use super::{
+    Access, ExprIdx, Fact, InstIdx, InvIdx, ParamIdx, PropIdx, TimeIdx,
+};
 
 #[derive(Clone, PartialEq, Eq)]
 /// A flattened and minimized representation of the control flow graph.

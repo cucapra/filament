@@ -1,6 +1,6 @@
 use super::{
-    Command, Component, Connect, Ctx, Event, Expr, If, Instance, Invoke, Loop,
-    Param, Port, Prop, Time,
+    Command, Component, Ctx, Event, Expr, Instance, Invoke, Param, Port, Prop,
+    Time,
 };
 use crate::define_idx;
 

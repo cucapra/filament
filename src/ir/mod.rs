@@ -9,7 +9,7 @@ mod subst;
 mod time;
 mod utils;
 
-pub use comp::Component;
+pub use comp::{Component, Context};
 pub use control::{Command, Connect, If, Instance, Invoke, Loop};
 pub use expr::Expr;
 pub use fact::{Cmp, Fact, Prop};
