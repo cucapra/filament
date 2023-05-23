@@ -1,7 +1,8 @@
 //! Convert the frontend AST to the IR.
 use super::{
-    Bind, Cmp, Component, Ctx, Event, ExprIdx, InstIdx, Instance, InvIdx,
-    Invoke, Param, ParamIdx, Port, PortIdx, PropIdx, Subst, TimeIdx,
+    Bind, Cmp, Component, Ctx, DenseIndexInfo, Event, ExprIdx, InstIdx,
+    Instance, InvIdx, Invoke, Param, ParamIdx, Port, PortIdx, PropIdx, Subst,
+    TimeIdx,
 };
 use crate::{
     ast::{self, Id},
@@ -110,6 +111,9 @@ struct BuildCtx<'ctx, 'prog> {
     comp: &'ctx mut ir::Component,
     sigs: &'prog SigMap,
 
+    // Mapping from
+    inst_to_sig: DenseIndexInfo<Instance, Id>,
+
     // Mapping from names to IR nodes.
     param_map: ScopeMap<Param>,
     event_map: ScopeMap<Event>,
@@ -128,6 +132,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             port_map: ScopeMap::new(),
             inst_map: ScopeMap::new(),
             inv_map: ScopeMap::new(),
+            inst_to_sig: DenseIndexInfo::default(),
         }
     }
 
@@ -410,7 +415,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 .collect_vec()
                 .into_boxed_slice(),
         };
-        self.comp.add(inst)
+        let idx = self.comp.add(inst);
+        // Track the component binding for this instance
+        self.inst_to_sig.add(idx, *component);
+        idx
     }
 
     /// Compiling an invocation generates multiple commands because we separate
@@ -436,6 +444,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .into_iter()
             .map(|p| self.get_port(p.take(), ir::Direction::Out))
             .collect_vec();
+        let sig = self.inst_to_sig.get(inst);
         todo!()
     }
 
