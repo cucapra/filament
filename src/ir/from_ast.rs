@@ -10,7 +10,7 @@ use crate::{
     utils::{Binding, Idx},
 };
 use itertools::Itertools;
-use std::collections::HashMap;
+use std::{collections::HashMap, iter};
 
 /// Structure to track name bindings through scopes
 struct ScopeMap<V, K = Id>
@@ -73,7 +73,7 @@ impl<V> std::ops::Index<&Id> for ScopeMap<V> {
 /// the signature.
 struct Sig {
     params: Vec<ast::Id>,
-    ports: Vec<ast::Port>,
+    ports: Vec<ast::PortDef>,
     facts: Vec<ast::Fact>,
 }
 
@@ -263,8 +263,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         ir::Range { start, end }
     }
 
-    fn port(&mut self, pd: ast::PortDef, owner: ir::PortOwner) {
-        match pd {
+    fn port(&mut self, pd: ast::PortDef, owner: ir::PortOwner) -> PortIdx {
+        let (name, port, owner) = match pd {
             ast::PortDef::Port {
                 name,
                 liveness,
@@ -284,8 +284,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     owner: owner.clone(),
                     live,
                 };
-                let idx = self.comp.add(p);
-                self.port_map.insert((owner, *name), idx);
+                (name, p, owner)
             }
             ast::PortDef::Bundle(ast::Bundle {
                 name,
@@ -309,10 +308,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     owner: owner.clone(),
                     live,
                 };
-                let idx = self.comp.add(p);
-                self.port_map.insert((owner, name.take()), idx);
+                (name, p, owner)
             }
-        }
+        };
+        let idx = self.comp.add(port);
+        self.port_map.insert((owner, *name), idx);
+        idx
     }
 
     /// Transforms an access into (start, end)
@@ -431,21 +432,45 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             ports,
         } = inv;
         let inst = *self.inst_map.get(&instance).unwrap();
-        let abs = abstract_vars
+        let events = abstract_vars
             .into_iter()
             .map(|v| self.time(v.take()))
             .collect_vec()
             .into_boxed_slice();
+        let inv = self.comp.add(ir::Invoke { inst, events });
+        self.inv_map.insert(name.copy(), inv);
+
         let Some(ports) = ports else {
             unreachable!("Low-level invokes not supported")
         };
+
         // The inputs
-        let inputs = ports
+        let srcs = ports
             .into_iter()
             .map(|p| self.get_port(p.take(), ir::Direction::Out))
             .collect_vec();
-        let sig = self.inst_to_sig.get(inst);
-        todo!()
+        let sig = self.sigs.get(self.inst_to_sig.get(inst)).unwrap();
+
+        let connects =
+            sig.ports.clone().into_iter().zip(srcs).map(|(p, src)| {
+                let owner = ir::PortOwner::Inv {
+                    inv,
+                    dir: ir::Direction::In,
+                };
+                // Add the port to the component
+                let pidx = self.port(p, owner);
+                let end = self.comp[pidx].live.len;
+                let dst = ir::Access {
+                    port: pidx,
+                    start: self.comp.num(0),
+                    end,
+                };
+                ir::Connect { src, dst }.into()
+            });
+
+        iter::once(ir::Command::from(inv))
+            .chain(connects)
+            .collect_vec()
     }
 
     fn commands(&mut self, cmds: Vec<ast::Command>) {

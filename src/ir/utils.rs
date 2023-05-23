@@ -73,6 +73,7 @@ impl<T> IndexStore<T> {
         idx
     }
 
+    /// Get the value associated with the index.
     pub fn get(&self, idx: Idx<T>) -> &T {
         &self.store[idx.get()]
     }
@@ -150,6 +151,7 @@ where
             self.store.push(val);
             return;
         }
+
         if len < key.get() {
             self.store.reserve(key.get() + 1);
             let diff = key.get() - len + 1;
