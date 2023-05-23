@@ -9,7 +9,7 @@ use crate::{
     utils::{Binding, Idx},
 };
 use itertools::Itertools;
-use std::{collections::HashMap, iter};
+use std::{collections::HashMap, iter, rc::Rc};
 
 /// Structure to track name bindings through scopes
 struct ScopeMap<V, K = Id>
@@ -72,6 +72,7 @@ impl<V> std::ops::Index<&Id> for ScopeMap<V> {
 /// the signature.
 struct Sig {
     params: Vec<ast::Id>,
+    events: Vec<ast::Id>,
     ports: Vec<ast::PortDef>,
     facts: Vec<ast::OrderConstraint<ast::Expr>>,
 }
@@ -107,8 +108,10 @@ struct BuildCtx<'ctx, 'prog> {
     comp: &'ctx mut ir::Component,
     sigs: &'prog SigMap,
 
-    // Mapping from
-    inst_to_sig: DenseIndexInfo<ir::Instance, Id>,
+    // Mapping from names of instance to (<parameter bindings>, <component name>).
+    // We keep around the parameter bindings as [ast::Expr] because we need to resolve
+    // port definition in invokes using them.
+    inst_to_sig: DenseIndexInfo<ir::Instance, (Rc<Binding<ast::Expr>>, Id)>,
 
     // Mapping from names to IR nodes.
     param_map: ScopeMap<ir::Param>,
@@ -414,7 +417,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         };
         let idx = self.comp.add(inst);
         // Track the component binding for this instance
-        self.inst_to_sig.add(idx, *component);
+        self.inst_to_sig.add(idx, (Rc::new(binding), *component));
         idx
     }
 
@@ -429,8 +432,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         } = inv;
         let inst = *self.inst_map.get(&instance).unwrap();
         let events = abstract_vars
-            .into_iter()
-            .map(|v| self.time(v.take()))
+            .iter()
+            .map(|v| self.time(v.clone().take()))
             .collect_vec()
             .into_boxed_slice();
         let inv = self.comp.add(ir::Invoke { inst, events });
@@ -445,16 +448,28 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .into_iter()
             .map(|p| self.get_port(p.take(), ir::Direction::Out))
             .collect_vec();
-        let sig = self.sigs.get(self.inst_to_sig.get(inst)).unwrap();
+        let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
+        let sig = self.sigs.get(&comp).unwrap();
+
+        // Event bindings
+        let event_binding = Binding::new(
+            sig.events
+                .iter()
+                .zip(abstract_vars.iter())
+                .map(|(e, t)| (*e, t.clone().take())),
+        );
 
         let connects =
             sig.ports.clone().into_iter().zip(srcs).map(|(p, src)| {
+                let resolved = p
+                    .resolve_exprs(&param_binding)
+                    .resolve_event(&event_binding);
                 let owner = ir::PortOwner::Inv {
                     inv,
                     dir: ir::Direction::In,
                 };
                 // Add the port to the component
-                let pidx = self.port(p, owner);
+                let pidx = self.port(resolved, owner);
                 let end = self.comp[pidx].live.len;
                 let dst = ir::Access {
                     port: pidx,
@@ -536,13 +551,14 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 }
 
-fn comp(ns: ast::Namespace) -> ir::Context {
+fn transform(ns: ast::Namespace) -> ir::Context {
     let mut sig_map = SigMap::default();
     // Walk over sigs and build a SigMap
     for (_, sig) in ns.signatures() {
         let summary = Sig {
             params: sig.params.iter().map(|p| p.copy()).collect(),
             ports: sig.ports.iter().map(|p| p.clone().take()).collect(),
+            events: sig.events.iter().map(|e| e.event.copy()).collect(),
             facts: sig
                 .param_constraints
                 .iter()
