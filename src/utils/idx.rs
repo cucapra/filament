@@ -11,7 +11,7 @@ macro_rules! idx {
 macro_rules! define_idx {
     ($name:ident, $st:ty, $pre:expr) => {
         pub type $name = $crate::utils::Idx<$st>;
-        impl ::std::fmt::Debug for $name {
+        impl ::std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 // We love MLIR
                 write!(f, concat!("%", $pre, "{}"), self.get())

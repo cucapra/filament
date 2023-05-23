@@ -1,7 +1,9 @@
+use std::fmt::Display;
+
 use super::{Ctx, ExprIdx, ParamIdx};
 use crate::ast;
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 pub enum Expr {
     Param(ParamIdx),
     Concrete(u64),
@@ -14,6 +16,24 @@ pub enum Expr {
         op: ast::UnFn,
         args: Box<[ExprIdx]>,
     },
+}
+
+impl Display for Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Expr::Param(p) => write!(f, "{}", p),
+            Expr::Concrete(c) => write!(f, "{}", c),
+            Expr::Bin { op, lhs, rhs } => write!(f, "({} {} {})", lhs, op, rhs),
+            Expr::Fn { op, args } => {
+                let args = args
+                    .iter()
+                    .map(|arg| format!("{}", arg))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "{}({})", op, args)
+            }
+        }
+    }
 }
 
 impl ExprIdx {

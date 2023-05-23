@@ -1,5 +1,5 @@
 use crate::utils::Idx;
-use std::{collections::HashMap, marker::PhantomData};
+use std::{collections::HashMap, fmt::Display, marker::PhantomData};
 
 /// An indexed storage for an interned type. Keeps a HashMap to provide faster reverse mapping
 /// from the value to the index.
@@ -51,6 +51,25 @@ where
         let pointer = self.store[idx.get()];
         unsafe { pointer.as_ref().unwrap() }
     }
+
+    pub(super) fn iter(&self) -> impl Iterator<Item = (usize, &T)> {
+        self.store
+            .iter()
+            .enumerate()
+            .map(|(idx, ptr)| (idx, unsafe { ptr.as_ref().unwrap() }))
+    }
+}
+
+impl<T> Display for Interned<T>
+where
+    T: Eq + std::hash::Hash + Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (idx, val) in self.iter() {
+            writeln!(f, "{idx}={}", *val)?;
+        }
+        Ok(())
+    }
 }
 
 /// An indexed store for a type. Unlike [Interned], this data structure does not deduplicate values.
@@ -76,6 +95,19 @@ impl<T> IndexStore<T> {
     /// Get the value associated with the index.
     pub fn get(&self, idx: Idx<T>) -> &T {
         &self.store[idx.get()]
+    }
+
+    pub(super) fn iter(&self) -> impl Iterator<Item = (usize, &T)> {
+        self.store.iter().enumerate()
+    }
+}
+
+impl<T: Display> Display for IndexStore<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (idx, val) in self.store.iter().enumerate() {
+            writeln!(f, "{idx}={val}")?;
+        }
+        Ok(())
     }
 }
 

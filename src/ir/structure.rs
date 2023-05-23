@@ -1,12 +1,17 @@
-use super::{
-    Ctx, EventIdx, Expr, ExprIdx, InvIdx, ParamIdx, PortIdx, TimeIdx, TimeSub,
-};
+use super::{Ctx, Expr, ExprIdx, InvIdx, ParamIdx, PortIdx, TimeIdx, TimeSub};
+use std::fmt;
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 /// An interval of time
 pub struct Range {
     pub start: TimeIdx,
     pub end: TimeIdx,
+}
+
+impl fmt::Display for Range {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "@[{}, {}]", self.start, self.end)
+    }
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -57,8 +62,16 @@ pub enum Direction {
     /// Output port
     Out,
 }
+impl fmt::Display for Direction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Direction::In => write!(f, "in"),
+            Direction::Out => write!(f, "out"),
+        }
+    }
+}
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 /// Duration when the port caries a meaningful value.
 /// Equivalent to the bundle type:
 /// ```
@@ -70,6 +83,16 @@ pub struct Liveness {
     pub range: Range,
 }
 
+impl fmt::Display for Liveness {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "for<{}> @[{}, {}]",
+            self.idx, self.range.start, self.range.end
+        )
+    }
+}
+
 #[derive(PartialEq, Eq, Hash, Clone)]
 /// A port tracks its definition and liveness.
 /// A port in the IR generalizes both bundles and normal ports.
@@ -77,6 +100,21 @@ pub struct Port {
     pub owner: PortOwner,
     pub width: ExprIdx,
     pub live: Liveness,
+}
+impl fmt::Display for Port {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.owner {
+            PortOwner::Sig { dir } => {
+                write!(f, "{} {} {}", dir, self.live, self.width)
+            }
+            PortOwner::Inv { inv, dir } => {
+                write!(f, "{} {} {} {}", dir, inv, self.live, self.width)
+            }
+            PortOwner::Local => {
+                write!(f, "{} {}", self.live, self.width)
+            }
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -113,20 +151,19 @@ impl Access {
         }
     }
 }
-
-#[derive(Default, PartialEq, Eq, Hash, Clone, Debug)]
-/// Parameters with an optional initial value
-pub struct Param {
-    // XXX(rachit): Should we have default values at this level or should they be
-    // compiled away by the time we generate the IR.
-    pub default: Option<ExprIdx>,
+impl fmt::Display for Access {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}[{}..{})", self.port, self.start, self.end)
+    }
 }
-impl Param {
-    /// Construct a parameter with a default value.
-    pub fn with_default(default: ExprIdx) -> Self {
-        Self {
-            default: Some(default),
-        }
+
+#[derive(Default, PartialEq, Eq, Hash, Clone)]
+/// Parameters with an optional initial value
+pub struct Param;
+
+impl fmt::Display for Param {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "()")
     }
 }
 
@@ -135,4 +172,13 @@ impl Param {
 pub struct Event {
     pub delay: TimeSub,
     pub default: Option<TimeIdx>,
+}
+
+impl fmt::Display for Event {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(default) = self.default {
+            write!(f, "{} ", default)?;
+        }
+        write!(f, "delay {}", self.delay)
+    }
 }

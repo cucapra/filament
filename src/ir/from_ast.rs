@@ -1,7 +1,6 @@
 //! Convert the frontend AST to the IR.
 use super::{
-    Cmp, Ctx, DenseIndexInfo, ExprIdx, InstIdx, ParamIdx, PortIdx, PropIdx,
-    TimeIdx,
+    Cmp, Ctx, DenseIndexInfo, ExprIdx, ParamIdx, PortIdx, PropIdx, TimeIdx,
 };
 use crate::{
     ast::{self, Id},
@@ -386,7 +385,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
-    fn instance(&mut self, inst: ast::Instance) -> InstIdx {
+    fn instance(&mut self, inst: ast::Instance) -> Vec<ir::Command> {
         let ast::Instance {
             name,
             component,
@@ -401,13 +400,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 .copied()
                 .zip(bindings.clone().into_iter().map(|b| b.take())),
         );
-        let facts = comp.facts.into_iter().map(|f| {
-            let p = f.resolve_expr(&binding);
-            let prop = self.expr_cons(p);
-            // This is a checked fact because the calling component needs to
-            // honor it.
-            ir::Fact::assert(prop)
-        });
+        let facts = comp
+            .facts
+            .into_iter()
+            .map(|f| {
+                let p = f.resolve_expr(&binding);
+                let prop = self.expr_cons(p);
+                // This is a checked fact because the calling component needs to
+                // honor it.
+                ir::Fact::assert(prop).into()
+            })
+            .collect_vec();
         let inst = ir::Instance {
             params: bindings
                 .into_iter()
@@ -416,9 +419,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 .into_boxed_slice(),
         };
         let idx = self.comp.add(inst);
+        self.inst_map.insert(name.copy(), idx);
         // Track the component binding for this instance
         self.inst_to_sig.add(idx, (Rc::new(binding), *component));
-        idx
+        iter::once(ir::Command::from(idx))
+            .chain(facts.into_iter())
+            .collect_vec()
     }
 
     /// Compiling an invocation generates multiple commands because we separate
@@ -491,7 +497,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     fn command(&mut self, cmd: ast::Command) -> Vec<ir::Command> {
         match cmd {
             ast::Command::Invoke(inv) => self.invoke(inv),
-            ast::Command::Instance(inst) => vec![self.instance(inst).into()],
+            ast::Command::Instance(inst) => self.instance(inst),
             ast::Command::Fact(ast::Fact { cons, checked }) => {
                 let prop = self.implication(cons.take());
                 let fact = if checked {
@@ -551,7 +557,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 }
 
-fn transform(ns: ast::Namespace) -> ir::Context {
+pub fn transform(ns: ast::Namespace) -> ir::Context {
     let mut sig_map = SigMap::default();
     // Walk over sigs and build a SigMap
     for (_, sig) in ns.signatures() {

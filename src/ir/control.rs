@@ -1,3 +1,5 @@
+use std::fmt;
+
 use super::{
     Access, ExprIdx, Fact, InstIdx, InvIdx, ParamIdx, PropIdx, TimeIdx,
 };
@@ -52,11 +54,29 @@ pub struct Instance {
     pub params: Box<[ExprIdx]>,
 }
 
+impl fmt::Display for Instance {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "inst(")?;
+        for (i, param) in self.params.iter().enumerate() {
+            if i != 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", param)?;
+        }
+        write!(f, ")")
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 /// A connection between two ports
 pub struct Connect {
     pub src: Access,
     pub dst: Access,
+}
+impl fmt::Display for Connect {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} = {}", self.dst, self.src)
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -67,6 +87,18 @@ pub struct Connect {
 pub struct Invoke {
     pub inst: InstIdx,
     pub events: Box<[TimeIdx]>,
+}
+impl fmt::Display for Invoke {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}<", self.inst)?;
+        for (i, event) in self.events.iter().enumerate() {
+            if i != 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", event)?;
+        }
+        write!(f, ">")
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]

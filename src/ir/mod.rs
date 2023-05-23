@@ -4,6 +4,7 @@ mod expr;
 mod fact;
 mod from_ast;
 mod idxs;
+mod printer;
 mod structure;
 mod subst;
 mod time;
@@ -13,10 +14,12 @@ pub use comp::{Component, Context};
 pub use control::{Command, Connect, If, Instance, Invoke, Loop};
 pub use expr::Expr;
 pub use fact::{Cmp, Fact, Prop};
+pub use from_ast::transform;
 pub use idxs::{
     CmdIdx, EventIdx, ExprIdx, InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx,
     TimeIdx,
 };
+pub use printer::Printer;
 pub use structure::{
     Access, Direction, Event, Liveness, Param, Port, PortOwner, Range,
 };

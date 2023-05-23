@@ -1,4 +1,5 @@
 use super::{idxs::PropIdx, Component, Ctx, ExprIdx, Foldable, ParamIdx};
+use std::fmt;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 /// Comparison operators
@@ -6,6 +7,17 @@ pub enum Cmp {
     Gt,
     Gte,
     Eq,
+}
+
+impl fmt::Display for Cmp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let op = match self {
+            Cmp::Gt => ">",
+            Cmp::Eq => "=",
+            Cmp::Gte => ">=",
+        };
+        write!(f, "{}", op)
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -22,6 +34,19 @@ pub enum Prop {
     And(PropIdx, PropIdx),
     Or(PropIdx, PropIdx),
     Implies(PropIdx, PropIdx),
+}
+
+impl fmt::Display for Prop {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Prop::True => write!(f, "true"),
+            Prop::Cmp { op, lhs, rhs } => write!(f, "{} {} {}", lhs, op, rhs),
+            Prop::Not(p) => write!(f, "!{}", p),
+            Prop::And(l, r) => write!(f, "({} & {})", l, r),
+            Prop::Or(l, r) => write!(f, "({} | {})", l, r),
+            Prop::Implies(l, r) => write!(f, "({} => {})", l, r),
+        }
+    }
 }
 
 impl PropIdx {

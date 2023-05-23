@@ -1,10 +1,17 @@
 use super::{Ctx, EventIdx, Expr, ExprIdx, TimeIdx};
+use std::fmt::{self, Display};
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 /// A temporal event. Represents an offset from the start of the event.
 pub struct Time {
     pub event: EventIdx,
     pub offset: ExprIdx,
+}
+
+impl Display for Time {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}+{}", self.offset, self.event)
+    }
 }
 
 impl TimeIdx {
@@ -30,4 +37,13 @@ pub enum TimeSub {
     Unit(ExprIdx),
     /// Symbolic difference between two time expressions
     Sym { l: TimeIdx, r: TimeIdx },
+}
+
+impl Display for TimeSub {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TimeSub::Unit(e) => write!(f, "{}", e),
+            TimeSub::Sym { l, r } => write!(f, "{}-{}", l, r),
+        }
+    }
 }
