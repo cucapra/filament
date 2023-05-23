@@ -1,4 +1,6 @@
-use super::{EventIdx, ExprIdx, InvIdx, ParamIdx, TimeIdx, TimeSub};
+use super::{
+    Ctx, EventIdx, Expr, ExprIdx, InvIdx, ParamIdx, PortIdx, TimeIdx, TimeSub,
+};
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 /// An interval of time
@@ -75,6 +77,41 @@ pub struct Port {
     pub owner: PortOwner,
     pub width: ExprIdx,
     pub live: Liveness,
+}
+
+#[derive(PartialEq, Eq, Hash, Clone)]
+/// Represents a port access in bundle syntax since the IR desugars all ports to
+/// bundles.
+pub struct Access {
+    pub port: PortIdx,
+    /// The start of the access range (inclusive)
+    pub start: ExprIdx,
+    /// The end of the access range (exclusive)
+    pub end: ExprIdx,
+}
+impl Access {
+    /// Construct an access on a simple port (i.e. not a bundle)
+    /// The access only indexes into the first element of the port.
+    pub fn port(port: PortIdx, ctx: &mut impl Ctx<Expr>) -> Self {
+        let zero = ctx.add(Expr::Concrete(0));
+        let one = ctx.add(Expr::Concrete(1));
+        Self {
+            port,
+            start: zero,
+            end: one,
+        }
+    }
+
+    /// Check if this is a simple port access
+    pub fn is_port(&self, ctx: &impl Ctx<Expr>) -> bool {
+        if let (Some(s), Some(e)) =
+            (self.start.as_concrete(ctx), self.end.as_concrete(ctx))
+        {
+            s == 0 && e == 1
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Default, PartialEq, Eq, Hash, Clone, Debug)]

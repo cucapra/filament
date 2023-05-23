@@ -29,8 +29,5 @@ define_idx!(PropIdx, Prop, "prop");
 define_idx!(CmdIdx, Command, "cmd");
 define_idx!(InstIdx, Instance, "inst");
 define_idx!(InvIdx, Invoke, "inv");
-define_idx!(ConIdx, Connect, "con");
-define_idx!(IfIdx, If, "if");
-define_idx!(LoopIdx, Loop, "loop");
 
 define_idx!(CompIdx, Component, "comp");

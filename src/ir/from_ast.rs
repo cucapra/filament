@@ -1,7 +1,7 @@
 //! Convert the frontend AST to the IR.
 use super::{
-    Bind, Component, Ctx, Event, ExprIdx, Fact, IndexStore, Instance, Invoke,
-    Param, ParamIdx, Port, Subst, TimeIdx,
+    Bind, Cmp, Component, Ctx, Event, ExprIdx, InstIdx, Instance, InvIdx,
+    Invoke, Param, ParamIdx, Port, PortIdx, PropIdx, Subst, TimeIdx,
 };
 use crate::{
     ast::{self, Id},
@@ -12,10 +12,16 @@ use itertools::Itertools;
 use std::collections::HashMap;
 
 /// Structure to track name bindings through scopes
-struct ScopeMap<V> {
-    map: Vec<HashMap<Id, Idx<V>>>,
+struct ScopeMap<V, K = Id>
+where
+    K: Eq + std::hash::Hash,
+{
+    map: Vec<HashMap<K, Idx<V>>>,
 }
-impl<V> ScopeMap<V> {
+impl<V, K> ScopeMap<V, K>
+where
+    K: Eq + std::hash::Hash,
+{
     fn new() -> Self {
         Self {
             map: vec![HashMap::new()],
@@ -36,12 +42,12 @@ impl<V> ScopeMap<V> {
     }
 
     /// Insert binding into the scope level
-    fn insert(&mut self, id: Id, idx: Idx<V>) {
+    fn insert(&mut self, id: K, idx: Idx<V>) {
         self.map.last_mut().unwrap().insert(id, idx);
     }
 
     /// Return the value by searching through the scope levels
-    fn get(&self, id: &Id) -> Option<&Idx<V>> {
+    fn get(&self, id: &K) -> Option<&Idx<V>> {
         for scope in self.map.iter().rev() {
             if let Some(val) = scope.get(id) {
                 return Some(val);
@@ -95,6 +101,9 @@ impl std::ops::Index<&Id> for SigMap {
     }
 }
 
+/// The canonical name of a port defined by (inv, port).
+type InvPort = (ir::PortOwner, Id);
+
 /// Context used while building the IR.
 struct BuildCtx<'ctx, 'prog> {
     comp: &'ctx mut ir::Component,
@@ -103,7 +112,7 @@ struct BuildCtx<'ctx, 'prog> {
     // Mapping from names to IR nodes.
     param_map: ScopeMap<Param>,
     event_map: ScopeMap<Event>,
-    port_map: ScopeMap<Port>,
+    port_map: ScopeMap<Port, InvPort>,
     inst_map: ScopeMap<Instance>,
     inv_map: ScopeMap<Invoke>,
 }
@@ -185,6 +194,27 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
+    fn expr_cons(&mut self, cons: ast::OrderConstraint<ast::Expr>) -> PropIdx {
+        let lhs = self.expr(cons.left);
+        let rhs = self.expr(cons.right);
+        let op = match cons.op {
+            ast::OrderOp::Gt => Cmp::Gt,
+            ast::OrderOp::Gte => Cmp::Gte,
+            ast::OrderOp::Eq => Cmp::Eq,
+        };
+        self.comp.add(ir::Prop::Cmp { lhs, op, rhs })
+    }
+
+    fn implication(&mut self, i: ast::Implication<ast::Expr>) -> PropIdx {
+        let cons = self.expr_cons(i.cons);
+        if let Some(ante) = i.guard {
+            let ante = self.expr_cons(ante);
+            ante.implies(cons, self.comp)
+        } else {
+            cons
+        }
+    }
+
     /// Add a parameter to the component.
     fn param(&mut self, param: ast::Id) -> ParamIdx {
         // TODO(rachit): Parameters do not have default values yet.
@@ -245,11 +275,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
                 let p = ir::Port {
                     width: self.expr(bitwidth.take()),
-                    owner,
+                    owner: owner.clone(),
                     live,
                 };
                 let idx = self.comp.add(p);
-                self.port_map.insert(*name, idx);
+                self.port_map.insert((owner, *name), idx);
             }
             ast::PortDef::Bundle(ast::Bundle {
                 name,
@@ -270,12 +300,65 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
                 let p = ir::Port {
                     width: self.expr(bitwidth.take()),
-                    owner,
+                    owner: owner.clone(),
                     live,
                 };
                 let idx = self.comp.add(p);
-                self.port_map.insert(name.take(), idx);
+                self.port_map.insert((owner, name.take()), idx);
             }
+        }
+    }
+
+    /// Transforms an access into (start, end)
+    fn access(&mut self, access: ast::Access) -> (ir::ExprIdx, ir::ExprIdx) {
+        match access {
+            ast::Access::Index(n) => {
+                let n = self.expr(n);
+                (n, n.add(self.comp.num(1), self.comp))
+            }
+            ast::Access::Range { start, end } => {
+                (self.expr(start), self.expr(end))
+            }
+        }
+    }
+
+    /// Get the index associated with an AST port. The port must have been
+    /// previously defined.
+    fn get_port(&mut self, port: ast::Port, dir: ir::Direction) -> ir::Access {
+        match port {
+            ast::Port::This(n) => {
+                let owner = ir::PortOwner::Sig { dir };
+                ir::Access::port(
+                    *self.port_map.get(&(owner, n.copy())).unwrap(),
+                    self.comp,
+                )
+            }
+            ast::Port::InvPort { invoke, name } => {
+                let inv = *self.inv_map.get(&invoke.copy()).unwrap();
+                let owner = ir::PortOwner::Inv { inv, dir };
+                ir::Access::port(
+                    *self.port_map.get(&(owner, name.copy())).unwrap(),
+                    self.comp,
+                )
+            }
+            ast::Port::Bundle { name, access } => {
+                let owner = ir::PortOwner::Sig { dir };
+                let port = *self.port_map.get(&(owner, name.copy())).unwrap();
+                let (start, end) = self.access(access.take());
+                ir::Access { port, start, end }
+            }
+            ast::Port::InvBundle {
+                invoke,
+                port,
+                access,
+            } => {
+                let inv = *self.inv_map.get(&invoke.copy()).unwrap();
+                let owner = ir::PortOwner::Inv { inv, dir };
+                let port = *self.port_map.get(&(owner, port.copy())).unwrap();
+                let (start, end) = self.access(access.take());
+                ir::Access { port, start, end }
+            }
+            ast::Port::Constant(_) => todo!("Constant ports"),
         }
     }
 
@@ -297,7 +380,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
-    fn instance(&mut self, inst: ast::Instance) {
+    fn instance(&mut self, inst: ast::Instance) -> InstIdx {
         let ast::Instance {
             name,
             component,
@@ -309,26 +392,49 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let binding = Binding::new(
             comp.params
                 .iter()
-                .map(|p| *p)
-                .zip(bindings.into_iter().map(|b| b.take())),
+                .copied()
+                .zip(bindings.clone().into_iter().map(|b| b.take())),
         );
         let facts = comp.facts.into_iter().map(|f| {
-            let p = f.cons.resolve_expr(&binding);
-            let cons = self.expr(p);
-            ir::Fact {
-                cons,
-                checked: true,
-            }
+            let p = f.cons.take().resolve_expr(&binding);
+            let prop = self.implication(p);
+            // This is a checked fact because the calling component needs to
+            // honor it.
+            ir::Fact::assert(prop)
         });
+        let inst = ir::Instance {
+            params: bindings
+                .into_iter()
+                .map(|b| self.expr(b.take()))
+                .collect_vec()
+                .into_boxed_slice(),
+        };
+        self.comp.add(inst)
     }
 
-    fn invoke(&mut self, inv: ast::Invoke) {
+    /// Compiling an invocation generates multiple commands because we separate
+    /// out the invocation from the connections it implies.
+    fn invoke(&mut self, inv: ast::Invoke) -> Vec<ir::Command> {
         let ast::Invoke {
             name,
             instance,
             abstract_vars,
             ports,
         } = inv;
+        let inst = *self.inst_map.get(&instance).unwrap();
+        let abs = abstract_vars
+            .into_iter()
+            .map(|v| self.time(v.take()))
+            .collect_vec()
+            .into_boxed_slice();
+        let Some(ports) = ports else {
+            unreachable!("Low-level invokes not supported")
+        };
+        // The input ports
+        let inputs = ports
+            .into_iter()
+            .map(|p| self.get_port(p.take(), ir::Direction::Out))
+            .collect_vec();
         todo!()
     }
 
@@ -338,10 +444,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
-    fn command(&mut self, cmd: ast::Command) {
+    fn command(&mut self, cmd: ast::Command) -> Vec<ir::Command> {
         match cmd {
             ast::Command::Invoke(inv) => self.invoke(inv),
-            ast::Command::Instance(inst) => self.instance(inst),
+            ast::Command::Instance(inst) => vec![self.instance(inst).into()],
             ast::Command::Fact(_) => todo!(),
             ast::Command::Connect(_) => todo!(),
             ast::Command::ForLoop(_) => todo!(),

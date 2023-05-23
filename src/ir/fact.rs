@@ -90,6 +90,21 @@ impl PropIdx {
         };
         ctx.add(Prop::Or(l, r))
     }
+
+    pub fn implies(self, cons: PropIdx, ctx: &mut impl Ctx<Prop>) -> PropIdx {
+        // If the proposition is false, then the implication is trivially true
+        if self.is_false(ctx) {
+            // Warning because its not clear if this is ever expected behavior
+            log::warn!("A false proposition was created");
+            return ctx.add(Prop::True);
+        } else if cons.is_true(ctx) {
+            return ctx.add(Prop::True);
+        } else if self.is_true(ctx) {
+            return cons;
+        }
+
+        ctx.add(Prop::Implies(self, cons))
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -101,6 +116,24 @@ pub struct Fact {
     checked: bool,
 }
 
+impl Fact {
+    /// An assertion which is required to be statically proved
+    pub fn assert(prop: PropIdx) -> Self {
+        Self {
+            prop,
+            checked: true,
+        }
+    }
+
+    /// An assumption which is not checked
+    pub fn assume(prop: PropIdx) -> Self {
+        Self {
+            prop,
+            checked: false,
+        }
+    }
+}
+
 impl Foldable<ParamIdx, ExprIdx> for PropIdx {
     type Context = Component;
 
@@ -108,9 +141,9 @@ impl Foldable<ParamIdx, ExprIdx> for PropIdx {
     where
         F: FnMut(ParamIdx) -> Option<ExprIdx>,
     {
-        match ctx.get(*self) {
+        match ctx.get(*self).clone() {
             Prop::True => *self,
-            &Prop::Cmp { op, lhs, rhs } => {
+            Prop::Cmp { op, lhs, rhs } => {
                 let lhs = lhs.fold_with(ctx, subst_fn);
                 let rhs = rhs.fold_with(ctx, subst_fn);
                 ctx.add(Prop::Cmp { op, lhs, rhs })
@@ -132,7 +165,7 @@ impl Foldable<ParamIdx, ExprIdx> for PropIdx {
             Prop::Implies(a, c) => {
                 let a = a.fold_with(ctx, subst_fn);
                 let c = c.fold_with(ctx, subst_fn);
-                ctx.add(Prop::Implies(a, c))
+                a.implies(c, ctx)
             }
         }
     }

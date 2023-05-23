@@ -12,13 +12,13 @@ mod utils;
 pub use comp::Component;
 pub use control::{Command, Connect, If, Instance, Invoke, Loop};
 pub use expr::Expr;
-pub use fact::{Fact, Prop};
+pub use fact::{Cmp, Fact, Prop};
 pub use idxs::{
-    CmdIdx, ConIdx, EventIdx, ExprIdx, IfIdx, InstIdx, InvIdx, LoopIdx,
-    ParamIdx, PortIdx, TimeIdx,
+    CmdIdx, EventIdx, ExprIdx, InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx,
+    TimeIdx,
 };
 pub use structure::{
-    Direction, Event, Liveness, Param, Port, PortOwner, Range,
+    Access, Direction, Event, Liveness, Param, Port, PortOwner, Range,
 };
 pub use subst::{Bind, Foldable, Subst};
 pub use time::{Time, TimeSub};
