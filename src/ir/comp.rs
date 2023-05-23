@@ -20,11 +20,6 @@ pub struct Component {
     /// Invocations defined by the component
     pub(super) invocations: IndexStore<Invoke>,
 
-    /// Facts in the component.
-    /// All nested facts are hoisted out to the top context by adding the path
-    /// condition as the antecedant.
-    pub(super) facts: Vec<Fact>,
-
     // Interned data. We store this on a per-component basis because events with the
     // same identifiers in different components are not equal.
     /// Interned expressions

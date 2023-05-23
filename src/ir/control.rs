@@ -1,6 +1,4 @@
-use super::{
-    Access, CmdIdx, ExprIdx, InstIdx, InvIdx, ParamIdx, PortIdx, TimeIdx,
-};
+use super::{Access, ExprIdx, Fact, InstIdx, InvIdx, ParamIdx, TimeIdx};
 
 #[derive(Clone, PartialEq, Eq)]
 /// A flattened and minimized representation of the control flow graph.
@@ -11,6 +9,7 @@ pub enum Command {
     Connect(Connect),
     ForLoop(Loop),
     If(If),
+    Fact(Fact),
 }
 impl From<InstIdx> for Command {
     fn from(idx: InstIdx) -> Self {
@@ -35,6 +34,11 @@ impl From<Loop> for Command {
 impl From<If> for Command {
     fn from(if_: If) -> Self {
         Command::If(if_)
+    }
+}
+impl From<Fact> for Command {
+    fn from(fact: Fact) -> Self {
+        Command::Fact(fact)
     }
 }
 
@@ -66,16 +70,16 @@ pub struct Invoke {
 #[derive(Clone, PartialEq, Eq)]
 /// A loop over a range of numbers
 pub struct Loop {
-    index: ParamIdx,
-    start: ExprIdx,
-    end: ExprIdx,
-    body: Box<[CmdIdx]>,
+    pub index: ParamIdx,
+    pub start: ExprIdx,
+    pub end: ExprIdx,
+    pub body: Vec<Command>,
 }
 
 #[derive(Clone, PartialEq, Eq)]
 /// A conditional statement
 pub struct If {
-    cond: ExprIdx,
-    then: Box<[CmdIdx]>,
-    alt: Box<[CmdIdx]>,
+    pub cond: PropIdx,
+    pub then: Vec<Command>,
+    pub alt: Vec<Command>,
 }

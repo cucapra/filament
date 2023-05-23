@@ -1,7 +1,6 @@
 //! Convert the frontend AST to the IR.
 use super::{
-    Bind, Cmp, Component, Ctx, DenseIndexInfo, Event, ExprIdx, InstIdx,
-    Instance, InvIdx, Invoke, Param, ParamIdx, Port, PortIdx, PropIdx, Subst,
+    Cmp, Ctx, DenseIndexInfo, ExprIdx, InstIdx, ParamIdx, PortIdx, PropIdx,
     TimeIdx,
 };
 use crate::{
@@ -112,14 +111,14 @@ struct BuildCtx<'ctx, 'prog> {
     sigs: &'prog SigMap,
 
     // Mapping from
-    inst_to_sig: DenseIndexInfo<Instance, Id>,
+    inst_to_sig: DenseIndexInfo<ir::Instance, Id>,
 
     // Mapping from names to IR nodes.
-    param_map: ScopeMap<Param>,
-    event_map: ScopeMap<Event>,
-    port_map: ScopeMap<Port, InvPort>,
-    inst_map: ScopeMap<Instance>,
-    inv_map: ScopeMap<Invoke>,
+    param_map: ScopeMap<ir::Param>,
+    event_map: ScopeMap<ir::Event>,
+    port_map: ScopeMap<ir::Port, InvPort>,
+    inst_map: ScopeMap<ir::Instance>,
+    inv_map: ScopeMap<ir::Invoke>,
 }
 
 impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
@@ -224,7 +223,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     /// Add a parameter to the component.
     fn param(&mut self, param: ast::Id) -> ParamIdx {
         // TODO(rachit): Parameters do not have default values yet.
-        let idx = self.comp.add(Param::default());
+        let idx = self.comp.add(ir::Param::default());
         self.param_map.insert(param, idx);
         idx
     }
@@ -473,21 +472,61 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .collect_vec()
     }
 
-    fn commands(&mut self, cmds: Vec<ast::Command>) {
-        for cmd in cmds {
-            self.command(cmd);
-        }
+    fn commands(&mut self, cmds: Vec<ast::Command>) -> Vec<ir::Command> {
+        cmds.into_iter().flat_map(|c| self.command(c)).collect_vec()
     }
 
     fn command(&mut self, cmd: ast::Command) -> Vec<ir::Command> {
         match cmd {
             ast::Command::Invoke(inv) => self.invoke(inv),
             ast::Command::Instance(inst) => vec![self.instance(inst).into()],
-            ast::Command::Fact(_) => todo!(),
-            ast::Command::Connect(_) => todo!(),
-            ast::Command::ForLoop(_) => todo!(),
-            ast::Command::If(_) => todo!(),
-            ast::Command::Bundle(_) => todo!(),
+            ast::Command::Fact(ast::Fact { cons, checked }) => {
+                let prop = self.implication(cons.take());
+                let fact = if checked {
+                    ir::Fact::assert(prop)
+                } else {
+                    ir::Fact::assume(prop)
+                };
+                vec![fact.into()]
+            }
+            ast::Command::Connect(ast::Connect { src, dst, guard }) => {
+                assert!(guard.is_none(), "Guards are not supported");
+                let src = self.get_port(src.take(), ir::Direction::Out);
+                let dst = self.get_port(dst.take(), ir::Direction::In);
+                vec![ir::Connect { src, dst }.into()]
+            }
+            ast::Command::ForLoop(ast::ForLoop {
+                idx,
+                start,
+                end,
+                body,
+            }) => {
+                let start = self.expr(start);
+                let end = self.expr(end);
+                // Compile the body in a new scope
+                let (index, body) = self.with_scope(|this| {
+                    let idx = this.param(idx.take());
+                    (idx, this.commands(body))
+                });
+                let l = ir::Loop {
+                    index,
+                    start,
+                    end,
+                    body,
+                };
+                vec![l.into()]
+            }
+            ast::Command::If(ast::If { cond, then, alt }) => {
+                let cond = self.expr_cons(cond);
+                let then = self.commands(then);
+                let alt = self.commands(alt);
+                vec![ir::If { cond, then, alt }.into()]
+            }
+            ast::Command::Bundle(bun) => {
+                // Add the bundle to the current scope
+                self.port(ast::PortDef::Bundle(bun), ir::PortOwner::Local);
+                vec![]
+            }
         }
     }
 }
