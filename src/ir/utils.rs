@@ -148,18 +148,12 @@ impl<T> Ctx<T> for IndexStore<T> {
 /// [Idx<T>] types.
 ///
 /// This is essentially a type-safe way of storing information about value of type [T].
-pub struct DenseIndexInfo<T, V>
-where
-    V: Default,
-{
+pub struct DenseIndexInfo<T, V> {
     store: Vec<V>,
     key_typ: PhantomData<T>,
 }
 
-impl<T, V> Default for DenseIndexInfo<T, V>
-where
-    V: Default,
-{
+impl<T, V> Default for DenseIndexInfo<T, V> {
     fn default() -> Self {
         Self {
             store: Vec::new(),
@@ -168,31 +162,12 @@ where
     }
 }
 
-impl<T, V> DenseIndexInfo<T, V>
-where
-    V: Default,
-{
+impl<T, V> DenseIndexInfo<T, V> {
     /// Add a new value to the map and return the index.
-    pub fn add(&mut self, key: Idx<T>, val: V) {
-        // Resize the store if it is not large enough to hold the key
-        let len = self.store.len();
-        // if the index is exactly the length of the store, we need to add one
-        // more element so use `push` otherwise, we need to reserve space and
-        // fill the newly added space with default values
-        if len == key.get() {
-            self.store.push(val);
-            return;
-        }
-
-        if len < key.get() {
-            self.store.reserve(key.get() + 1);
-            let diff = key.get() - len + 1;
-            // Fill the newly added space with default values
-            for _ in 0..diff {
-                self.store.push(V::default());
-            }
-        }
-        self.store[key.get()] = val;
+    /// Panics if the index is not the next index in the sequence.
+    pub fn push(&mut self, key: Idx<T>, val: V) {
+        assert!(self.store.len() == key.get());
+        self.store.push(val);
     }
 
     /// Get the value associated with the index.

@@ -421,7 +421,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let idx = self.comp.add(inst);
         self.inst_map.insert(name.copy(), idx);
         // Track the component binding for this instance
-        self.inst_to_sig.add(idx, (Rc::new(binding), *component));
+        self.inst_to_sig.push(idx, (Rc::new(binding), *component));
         iter::once(ir::Command::from(idx))
             .chain(facts.into_iter())
             .collect_vec()
