@@ -52,17 +52,18 @@ where
         unsafe { pointer.as_ref().unwrap() }
     }
 
-    pub(super) fn iter(&self) -> impl Iterator<Item = (usize, &T)> {
+    pub(super) fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
         self.store
             .iter()
             .enumerate()
-            .map(|(idx, ptr)| (idx, unsafe { ptr.as_ref().unwrap() }))
+            .map(|(idx, ptr)| (Idx::new(idx), unsafe { ptr.as_ref().unwrap() }))
     }
 }
 
 impl<T> Display for Interned<T>
 where
     T: Eq + std::hash::Hash + Display,
+    Idx<T>: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (idx, val) in self.iter() {
@@ -97,8 +98,11 @@ impl<T> IndexStore<T> {
         &self.store[idx.get()]
     }
 
-    pub(super) fn iter(&self) -> impl Iterator<Item = (usize, &T)> {
-        self.store.iter().enumerate()
+    pub(super) fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
+        self.store
+            .iter()
+            .enumerate()
+            .map(|(idx, val)| (Idx::new(idx), val))
     }
 }
 

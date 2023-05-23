@@ -137,8 +137,8 @@ impl PropIdx {
 /// If `checked` is true, then this represents an assertion that needs to be
 /// checked. Otherwise, it is an assumption.
 pub struct Fact {
-    prop: PropIdx,
-    checked: bool,
+    pub prop: PropIdx,
+    pub checked: bool,
 }
 
 impl Fact {

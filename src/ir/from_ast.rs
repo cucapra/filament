@@ -552,7 +552,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let mut ir_comp = ir::Component::default();
         let mut builder = BuildCtx::new(&mut ir_comp, sigs);
         builder.sig(comp.sig);
-        builder.commands(comp.body);
+        let cmds = builder.commands(comp.body);
+        ir_comp.cmds = cmds;
         ir_comp
     }
 }

@@ -1,7 +1,7 @@
 use super::{
-    Ctx, Event, EventIdx, Expr, ExprIdx, IndexStore, InstIdx, Instance,
-    Interned, InvIdx, Invoke, Param, ParamIdx, Port, PortIdx, Prop, Time,
-    TimeIdx,
+    Command, Ctx, Event, EventIdx, Expr, ExprIdx, IndexStore, InstIdx,
+    Instance, Interned, InvIdx, Invoke, Param, ParamIdx, Port, PortIdx, Prop,
+    Time, TimeIdx,
 };
 use crate::utils::Idx;
 
@@ -33,6 +33,9 @@ pub struct Component {
     pub(super) times: Interned<Time>,
     /// Interned propositions
     pub(super) props: Interned<Prop>,
+
+    /// Commands in the component
+    pub cmds: Vec<Command>,
 }
 
 impl Component {
