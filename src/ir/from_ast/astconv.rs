@@ -1,170 +1,15 @@
 //! Convert the frontend AST to the IR.
-use super::{
-    Cmp, Ctx, DenseIndexInfo, ExprIdx, ParamIdx, PortIdx, PropIdx, TimeIdx,
-};
+use super::{BuildCtx, Sig, SigMap};
+use crate::ir::{Cmp, Ctx, ExprIdx, ParamIdx, PortIdx, PropIdx, TimeIdx};
 use crate::{
     ast::{self, Id},
     ir,
-    utils::{Binding, Idx},
+    utils::Binding,
 };
 use itertools::Itertools;
-use std::{collections::HashMap, iter, rc::Rc};
-
-/// Structure to track name bindings through scopes
-struct ScopeMap<V, K = Id>
-where
-    K: Eq + std::hash::Hash,
-{
-    map: Vec<HashMap<K, Idx<V>>>,
-}
-impl<V, K> ScopeMap<V, K>
-where
-    K: Eq + std::hash::Hash,
-{
-    fn new() -> Self {
-        Self {
-            map: vec![HashMap::new()],
-        }
-    }
-
-    #[inline]
-    /// Push a new scope level
-    fn push(&mut self) {
-        self.map.push(HashMap::new());
-    }
-
-    #[inline]
-    /// Pop the last scope level
-    fn pop(&mut self) {
-        self.map.pop();
-        assert!(!self.map.is_empty(), "Cannot pop last scope level");
-    }
-
-    /// Insert binding into the scope level
-    fn insert(&mut self, id: K, idx: Idx<V>) {
-        self.map.last_mut().unwrap().insert(id, idx);
-    }
-
-    /// Return the value by searching through the scope levels
-    fn get(&self, id: &K) -> Option<&Idx<V>> {
-        for scope in self.map.iter().rev() {
-            if let Some(val) = scope.get(id) {
-                return Some(val);
-            }
-        }
-        None
-    }
-}
-
-impl<V> std::ops::Index<&Id> for ScopeMap<V> {
-    type Output = Idx<V>;
-
-    fn index(&self, id: &Id) -> &Self::Output {
-        self.get(id).unwrap()
-    }
-}
-
-#[derive(Clone)]
-/// The signature of component.
-///
-/// A signature defines the ports which are added to the component instantiating
-/// the signature.
-struct Sig {
-    params: Vec<ast::Id>,
-    events: Vec<ast::Id>,
-    ports: Vec<ast::PortDef>,
-    facts: Vec<ast::OrderConstraint<ast::Expr>>,
-}
-
-#[derive(Default)]
-/// Track the defined signatures in the current scope.
-/// Mapping from names of component to [Sig].
-struct SigMap {
-    map: HashMap<Id, Sig>,
-}
-impl SigMap {
-    fn insert(&mut self, id: Id, sig: Sig) {
-        self.map.insert(id, sig);
-    }
-
-    fn get(&self, id: &Id) -> Option<&Sig> {
-        self.map.get(id)
-    }
-}
-impl std::ops::Index<&Id> for SigMap {
-    type Output = Sig;
-
-    fn index(&self, id: &Id) -> &Self::Output {
-        self.get(id).unwrap()
-    }
-}
-
-/// The canonical name of a port defined by (inv, port).
-type InvPort = (ir::PortOwner, Id);
-
-/// Context used while building the IR.
-struct BuildCtx<'ctx, 'prog> {
-    comp: &'ctx mut ir::Component,
-    sigs: &'prog SigMap,
-
-    // Mapping from names of instance to (<parameter bindings>, <component name>).
-    // We keep around the parameter bindings as [ast::Expr] because we need to resolve
-    // port definition in invokes using them.
-    inst_to_sig: DenseIndexInfo<ir::Instance, (Rc<Binding<ast::Expr>>, Id)>,
-
-    // Mapping from names to IR nodes.
-    param_map: ScopeMap<ir::Param>,
-    event_map: ScopeMap<ir::Event>,
-    port_map: ScopeMap<ir::Port, InvPort>,
-    inst_map: ScopeMap<ir::Instance>,
-    inv_map: ScopeMap<ir::Invoke>,
-}
+use std::{iter, rc::Rc};
 
 impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
-    fn new(comp: &'ctx mut ir::Component, sigs: &'prog SigMap) -> Self {
-        Self {
-            comp,
-            sigs,
-            param_map: ScopeMap::new(),
-            event_map: ScopeMap::new(),
-            port_map: ScopeMap::new(),
-            inst_map: ScopeMap::new(),
-            inv_map: ScopeMap::new(),
-            inst_to_sig: DenseIndexInfo::default(),
-        }
-    }
-
-    /// Push a new scope level
-    #[inline]
-    fn push(&mut self) {
-        self.param_map.push();
-        self.event_map.push();
-        self.port_map.push();
-        self.inst_map.push();
-        self.inv_map.push();
-    }
-
-    /// Pop the last scope level
-    #[inline]
-    fn pop(&mut self) {
-        self.param_map.pop();
-        self.event_map.pop();
-        self.port_map.pop();
-        self.inst_map.pop();
-        self.inv_map.pop();
-    }
-
-    /// Perform some action within a new scope
-    fn with_scope<T, F>(&mut self, f: F) -> T
-    where
-        F: FnOnce(&mut Self) -> T,
-    {
-        self.push();
-        let out = f(self);
-        self.pop();
-        out
-    }
-
     fn expr(&mut self, expr: ast::Expr) -> ExprIdx {
         match expr {
             ast::Expr::Abstract(p) => {
@@ -229,7 +74,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     fn time(&mut self, t: ast::Time) -> TimeIdx {
         let Some(event) = self.event_map.get(&t.event).copied() else {
-            unreachable!("Event {} not found", t.event)
+            unreachable!("Event {} not found. Map:\n{}", t.event, self.event_map)
         };
         let offset = self.expr(t.offset);
         self.comp.add(ir::Time { event, offset })
@@ -272,7 +117,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 // We don't need to push a new scope because this type is does not
                 // bind any new parameters.
                 let live = self.with_scope(|ctx| ir::Liveness {
-                    idx: ParamIdx::UNKNOWN,
+                    idx: ctx.param(Id::default()), // This parameter is unused
                     len: ctx.comp.num(1),
                     range: ctx.range(liveness.take()),
                 });
@@ -310,7 +155,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             }
         };
         let idx = self.comp.add(port);
-        self.port_map.insert((owner, *name), idx);
+        self.add_port(*name, owner, idx);
         idx
     }
 
@@ -329,26 +174,32 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     /// Get the index associated with an AST port. The port must have been
     /// previously defined.
-    fn get_port(&mut self, port: ast::Port, dir: ir::Direction) -> ir::Access {
+    fn get_access(
+        &mut self,
+        port: ast::Port,
+        dir: ir::Direction,
+    ) -> ir::Access {
         match port {
             ast::Port::This(n) => {
                 let owner = ir::PortOwner::Sig { dir };
-                ir::Access::port(
-                    *self.port_map.get(&(owner, n.copy())).unwrap(),
-                    self.comp,
-                )
+                ir::Access::port(self.get_port(n.copy(), owner), self.comp)
             }
             ast::Port::InvPort { invoke, name } => {
                 let inv = *self.inv_map.get(&invoke.copy()).unwrap();
                 let owner = ir::PortOwner::Inv { inv, dir };
-                ir::Access::port(
-                    *self.port_map.get(&(owner, name.copy())).unwrap(),
-                    self.comp,
-                )
+                ir::Access::port(self.get_port(name.copy(), owner), self.comp)
             }
             ast::Port::Bundle { name, access } => {
+                // NOTE(rachit): The AST does not distinguish between bundles
+                // defined by the signature and locally defined bundles so we
+                // must search both.
                 let owner = ir::PortOwner::Sig { dir };
-                let port = *self.port_map.get(&(owner, name.copy())).unwrap();
+                let port = if let Some(p) = self.find_port(name.copy(), owner) {
+                    p
+                } else {
+                    let owner = ir::PortOwner::Local;
+                    self.get_port(name.copy(), owner)
+                };
                 let (start, end) = self.access(access.take());
                 ir::Access { port, start, end }
             }
@@ -359,7 +210,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             } => {
                 let inv = *self.inv_map.get(&invoke.copy()).unwrap();
                 let owner = ir::PortOwner::Inv { inv, dir };
-                let port = *self.port_map.get(&(owner, port.copy())).unwrap();
+                let port = self.get_port(port.copy(), owner);
                 let (start, end) = self.access(access.take());
                 ir::Access { port, start, end }
             }
@@ -368,20 +219,20 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     fn sig(&mut self, sig: ast::Signature) {
-        for port in sig.inputs() {
-            // XXX(rachit): Unnecessary clone.
-            self.port(port.inner().clone(), ir::PortOwner::sig_in());
+        for param in &sig.params {
+            self.param(param.copy());
         }
-        for port in sig.outputs() {
+        for event in &sig.events {
+            // XXX(rachit): Unnecessary clone.
+            self.event(event.clone().take());
+        }
+        for port in sig.inputs() {
             // XXX(rachit): Unnecessary clone.
             self.port(port.inner().clone(), ir::PortOwner::sig_out());
         }
-
-        for param in sig.params {
-            self.param(param.copy());
-        }
-        for event in sig.events {
-            self.event(event.take());
+        for port in sig.outputs() {
+            // XXX(rachit): Unnecessary clone.
+            self.port(port.inner().clone(), ir::PortOwner::sig_in());
         }
     }
 
@@ -452,7 +303,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         // The inputs
         let srcs = ports
             .into_iter()
-            .map(|p| self.get_port(p.take(), ir::Direction::Out))
+            .map(|p| self.get_access(p.take(), ir::Direction::Out))
             .collect_vec();
         let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
         let sig = self.sigs.get(&comp).unwrap();
@@ -465,6 +316,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 .map(|(e, t)| (*e, t.clone().take())),
         );
 
+        assert!(
+            sig.ports.len() == srcs.len(),
+            "signature defined {} inputs but provided {} arguments",
+            sig.ports.len(),
+            srcs.len()
+        );
         let connects =
             sig.ports.clone().into_iter().zip(srcs).map(|(p, src)| {
                 let resolved = p
@@ -509,8 +366,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             }
             ast::Command::Connect(ast::Connect { src, dst, guard }) => {
                 assert!(guard.is_none(), "Guards are not supported");
-                let src = self.get_port(src.take(), ir::Direction::Out);
-                let dst = self.get_port(dst.take(), ir::Direction::In);
+                let src = self.get_access(src.take(), ir::Direction::Out);
+                let dst = self.get_access(dst.take(), ir::Direction::In);
                 vec![ir::Connect { src, dst }.into()]
             }
             ast::Command::ForLoop(ast::ForLoop {

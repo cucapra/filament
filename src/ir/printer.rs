@@ -6,6 +6,7 @@ pub struct Printer;
 impl Printer {
     fn interned<T>(
         store: &ir::Interned<T>,
+        op: &str,
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()>
@@ -14,13 +15,14 @@ impl Printer {
         Idx<T>: Display,
     {
         for (i, v) in store.iter() {
-            writeln!(f, "{:indent$}{i} = {v}", "")?;
+            writeln!(f, "{:indent$}{i} = {op} {v};", "")?;
         }
         Ok(())
     }
 
     fn index_store<T>(
         store: &ir::IndexStore<T>,
+        op: &str,
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()>
@@ -29,7 +31,7 @@ impl Printer {
         Idx<T>: Display,
     {
         for (i, v) in store.iter() {
-            writeln!(f, "{:indent$}{i} = {v}", "")?;
+            writeln!(f, "{:indent$}{i} = {op} {v};", "")?;
         }
         Ok(())
     }
@@ -78,7 +80,7 @@ impl Printer {
                 if fact.checked {
                     writeln!(f, "{:indent$}assert {}", "", fact.prop)
                 } else {
-                    writeln!(f, "{:indent$}assume {}", "", fact.prop)
+                    writeln!(f, "{:indent$}assume {}ctx", "", fact.prop)
                 }
             }
         }
@@ -97,18 +99,24 @@ impl Printer {
             cmds,
         } = &c;
         writeln!(f, "component {{")?;
-        Printer::interned(exprs, 2, f)?;
-        Printer::interned(times, 2, f)?;
-        Printer::interned(props, 2, f)?;
-        Printer::index_store(ports, 2, f)?;
-        Printer::index_store(params, 2, f)?;
-        Printer::index_store(events, 2, f)?;
-        Printer::index_store(instances, 2, f)?;
-        Printer::index_store(invocations, 2, f)?;
+        Printer::index_store(params, "param", 2, f)?;
+        Printer::interned(exprs, "expr", 2, f)?;
+        Printer::interned(times, "time", 2, f)?;
+        Printer::interned(props, "prop", 2, f)?;
+        Printer::index_store(ports, "port", 2, f)?;
+        Printer::index_store(events, "event", 2, f)?;
+        Printer::index_store(instances, "instance", 2, f)?;
+        Printer::index_store(invocations, "invoke", 2, f)?;
         for cmd in cmds {
             Printer::command(cmd, 2, f)?;
         }
         writeln!(f, "}}")
+    }
+
+    pub fn comp_str(c: &ir::Component) -> String {
+        let mut buf = Vec::new();
+        Printer::comp(c, &mut buf).unwrap();
+        String::from_utf8(buf).unwrap()
     }
 
     pub fn context(

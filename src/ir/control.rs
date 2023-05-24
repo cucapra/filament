@@ -56,14 +56,14 @@ pub struct Instance {
 
 impl fmt::Display for Instance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "inst(")?;
+        write!(f, "inst[")?;
         for (i, param) in self.params.iter().enumerate() {
             if i != 0 {
                 write!(f, ", ")?;
             }
             write!(f, "{}", param)?;
         }
-        write!(f, ")")
+        write!(f, "]")
     }
 }
 

@@ -14,7 +14,7 @@ pub use comp::{Component, Context};
 pub use control::{Command, Connect, If, Instance, Invoke, Loop};
 pub use expr::Expr;
 pub use fact::{Cmp, Fact, Prop};
-pub use from_ast::transform;
+pub use from_ast::astconv::transform;
 pub use idxs::{
     CmdIdx, EventIdx, ExprIdx, InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx,
     TimeIdx,

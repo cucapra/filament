@@ -25,6 +25,17 @@ pub enum PortOwner {
     /// It does not have a direction because both reading and writing to it is allowed.
     Local,
 }
+
+impl fmt::Display for PortOwner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Sig { dir } => write!(f, "sig({})", dir),
+            Self::Inv { inv, dir } => write!(f, "{}({})", inv, dir),
+            Self::Local => write!(f, "local"),
+        }
+    }
+}
+
 impl PortOwner {
     /// Input on the signature
     pub const fn sig_in() -> Self {

@@ -1,5 +1,5 @@
 use crate::utils::Idx;
-use std::{collections::HashMap, fmt::Display, marker::PhantomData};
+use std::{collections::HashMap, fmt::Display, marker::PhantomData, rc::Rc};
 
 /// An indexed storage for an interned type. Keeps a HashMap to provide faster reverse mapping
 /// from the value to the index.
@@ -13,8 +13,8 @@ pub struct Interned<T>
 where
     T: Eq + std::hash::Hash,
 {
-    store: Vec<*const T>,
-    map: HashMap<T, Idx<T>>,
+    store: Vec<Rc<T>>,
+    map: HashMap<Rc<T>, Idx<T>>,
 }
 
 impl<T> Default for Interned<T>
@@ -36,27 +36,27 @@ where
     /// Intern a value into the store and return the index.
     /// If the value is already in the store, return the existing index.
     pub fn intern(&mut self, val: T) -> Idx<T> {
-        if let Some(idx) = self.map.get(&val) {
+        let v = Rc::new(val);
+        if let Some(idx) = self.map.get(&v) {
             return *idx;
         }
         // Otherwise, add the value to the store and map
         let idx = Idx::new(self.store.len());
-        self.store.push(&val);
-        self.map.insert(val, idx);
+        self.store.push(v.clone());
+        self.map.insert(v, idx);
         idx
     }
 
     /// Get the value associated with the index.
     pub fn get(&self, idx: Idx<T>) -> &T {
-        let pointer = self.store[idx.get()];
-        unsafe { pointer.as_ref().unwrap() }
+        &self.store[idx.get()]
     }
 
     pub(super) fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
         self.store
             .iter()
             .enumerate()
-            .map(|(idx, ptr)| (Idx::new(idx), unsafe { ptr.as_ref().unwrap() }))
+            .map(|(idx, ptr)| (Idx::new(idx), &**ptr))
     }
 }
 
