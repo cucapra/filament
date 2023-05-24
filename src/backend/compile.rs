@@ -181,6 +181,8 @@ fn define_fsm_component(states: u64, ctx: &mut Context) {
         ir::Id::from(format!("fsm_{}", states)),
         ports,
         false,
+        false,
+        None,
     );
     comp.attributes.insert(ir::BoolAttr::NoInterface, 1);
     let mut builder = ir::Builder::new(&mut comp, ctx.lib).not_generated();
@@ -351,7 +353,7 @@ fn compile_component(
     let ports =
         as_port_defs(&comp.sig, port_transform, concrete_transform, true);
     let mut component =
-        ir::Component::new(comp.sig.name.as_ref(), ports, false);
+        ir::Component::new(comp.sig.name.as_ref(), ports, false, false, None);
     component.attributes.insert(ir::BoolAttr::NoInterface, 1);
     let builder = ir::Builder::new(&mut component, lib).not_generated();
     let mut ctx = Context::new(sigs, builder, lib);
@@ -477,6 +479,7 @@ fn compile_signature(sig: &ast::Signature) -> ir::Primitive {
         is_comb: false,
         attributes: ir::Attributes::default(),
         body: None,
+        latency: None,
     }
 }
 
@@ -494,7 +497,7 @@ fn init_calyx(
     }));
 
     // define a fake main component
-    let main = frontend::ast::ComponentDef::new("main", false, vec![]);
+    let main = frontend::ast::ComponentDef::new("main", false, None, vec![]);
     ws.components.push(main);
     let mut ctx = ir::from_ast::ast_to_ir(ws)?;
     ctx.components.retain(|c| c.name != "main");
