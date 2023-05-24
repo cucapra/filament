@@ -28,7 +28,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
 
     if opts.show_ir {
         let ir = ir::transform(ns);
-        ir::Printer::context(&ir, &mut std::io::stdout()).unwrap_err();
+        ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
         return Ok(());
     }
 
