@@ -278,8 +278,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .collect_vec()
     }
 
-    /// Compiling an invocation generates multiple commands because we separate
-    /// out the invocation from the connections it implies.
+    /// Invokes are the most complicated construct to compile. This function:
+    /// 1. Creates a new invoke in the component with the time bindings.
+    /// 2. Resolves output ports and defines them in the component
+    /// 3. Generates connections implied by the arguments to the invoke.
     fn invoke(&mut self, inv: ast::Invoke) -> Vec<ir::Command> {
         let ast::Invoke {
             name,
@@ -316,14 +318,26 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 .map(|(e, t)| (*e, t.clone().take())),
         );
 
+        // Define the output port from the invoke
+        for p in sig.outputs.clone() {
+            let resolved = p
+                .resolve_exprs(&param_binding)
+                .resolve_event(&event_binding);
+            let owner = ir::PortOwner::Inv {
+                inv,
+                dir: ir::Direction::Out,
+            };
+            self.port(resolved, owner);
+        }
+
         assert!(
-            sig.ports.len() == srcs.len(),
+            sig.inputs.len() == srcs.len(),
             "signature defined {} inputs but provided {} arguments",
-            sig.ports.len(),
+            sig.inputs.len(),
             srcs.len()
         );
         let connects =
-            sig.ports.clone().into_iter().zip(srcs).map(|(p, src)| {
+            sig.inputs.clone().into_iter().zip(srcs).map(|(p, src)| {
                 let resolved = p
                     .resolve_exprs(&param_binding)
                     .resolve_event(&event_binding);
@@ -419,17 +433,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     let mut sig_map = SigMap::default();
     // Walk over sigs and build a SigMap
     for (_, sig) in ns.signatures() {
-        let summary = Sig {
-            params: sig.params.iter().map(|p| p.copy()).collect(),
-            ports: sig.ports.iter().map(|p| p.clone().take()).collect(),
-            events: sig.events.iter().map(|e| e.event.copy()).collect(),
-            facts: sig
-                .param_constraints
-                .iter()
-                .map(|f| f.clone().take())
-                .collect(),
-        };
-        sig_map.insert(sig.name.copy(), summary);
+        sig_map.insert(sig.name.copy(), Sig::from(sig));
     }
 
     let mut ctx = ir::Context::default();

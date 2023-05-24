@@ -13,8 +13,25 @@ use std::rc::Rc;
 pub struct Sig {
     pub params: Vec<ast::Id>,
     pub events: Vec<ast::Id>,
-    pub ports: Vec<ast::PortDef>,
+    pub inputs: Vec<ast::PortDef>,
+    pub outputs: Vec<ast::PortDef>,
     pub facts: Vec<ast::OrderConstraint<ast::Expr>>,
+}
+
+impl From<&ast::Signature> for Sig {
+    fn from(sig: &ast::Signature) -> Self {
+        Sig {
+            params: sig.params.iter().map(|p| p.copy()).collect(),
+            inputs: sig.inputs().map(|p| p.clone().take()).collect(),
+            outputs: sig.outputs().map(|p| p.clone().take()).collect(),
+            events: sig.events.iter().map(|e| e.event.copy()).collect(),
+            facts: sig
+                .param_constraints
+                .iter()
+                .map(|f| f.clone().take())
+                .collect(),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -23,6 +40,7 @@ pub struct Sig {
 pub struct SigMap {
     map: HashMap<Id, Sig>,
 }
+
 impl SigMap {
     pub fn insert(&mut self, id: Id, sig: Sig) {
         self.map.insert(id, sig);
@@ -32,6 +50,7 @@ impl SigMap {
         self.map.get(id)
     }
 }
+
 impl std::ops::Index<&Id> for SigMap {
     type Output = Sig;
 
