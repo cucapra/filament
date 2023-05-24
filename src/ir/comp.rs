@@ -1,5 +1,5 @@
 use super::{
-    Command, Ctx, Event, EventIdx, Expr, ExprIdx, IndexStore, InstIdx,
+    Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, IndexStore, InstIdx,
     Instance, Interned, InvIdx, Invoke, Param, ParamIdx, Port, PortIdx, Prop,
     Time, TimeIdx,
 };
@@ -10,8 +10,8 @@ pub struct Context {
     pub(super) comps: Vec<Component>,
 }
 
-#[derive(Default)]
 pub struct Component {
+    pub idx: CompIdx,
     // Component defined values.
     /// Ports and bundles defined by the component.
     pub(super) ports: IndexStore<Port>,
@@ -39,6 +39,21 @@ pub struct Component {
 }
 
 impl Component {
+    pub fn new(idx: CompIdx) -> Self {
+        Self {
+            idx,
+            ports: IndexStore::default(),
+            params: IndexStore::default(),
+            events: IndexStore::default(),
+            instances: IndexStore::default(),
+            invocations: IndexStore::default(),
+            exprs: Interned::default(),
+            times: Interned::default(),
+            props: Interned::default(),
+            cmds: Vec::default(),
+        }
+    }
+
     /// Add a number to the context and get handle to it.
     pub fn num(&mut self, n: u64) -> ExprIdx {
         self.exprs.intern(Expr::Concrete(n))

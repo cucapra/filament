@@ -94,6 +94,7 @@ impl Printer {
 
     pub fn comp(c: &ir::Component, f: &mut impl io::Write) -> io::Result<()> {
         let ir::Component {
+            idx,
             exprs,
             times,
             props,
@@ -104,7 +105,7 @@ impl Printer {
             invocations,
             cmds,
         } = &c;
-        writeln!(f, "component {{")?;
+        writeln!(f, "component {idx} {{")?;
         Printer::index_store(params, "param", 2, f)?;
         Printer::interned(exprs, "expr", 2, f)?;
         Printer::interned(times, "time", 2, f)?;

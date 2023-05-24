@@ -16,8 +16,8 @@ pub use expr::Expr;
 pub use fact::{Cmp, Fact, Prop};
 pub use from_ast::astconv::transform;
 pub use idxs::{
-    CmdIdx, EventIdx, ExprIdx, InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx,
-    TimeIdx,
+    CmdIdx, CompIdx, EventIdx, ExprIdx, InstIdx, InvIdx, ParamIdx, PortIdx,
+    PropIdx, TimeIdx,
 };
 pub use printer::Printer;
 pub use structure::{

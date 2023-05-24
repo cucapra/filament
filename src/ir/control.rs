@@ -1,7 +1,7 @@
 use std::fmt;
 
 use super::{
-    Access, ExprIdx, Fact, InstIdx, InvIdx, ParamIdx, PropIdx, TimeIdx,
+    Access, CompIdx, ExprIdx, Fact, InstIdx, InvIdx, ParamIdx, PropIdx, TimeIdx,
 };
 
 #[derive(Clone, PartialEq, Eq)]
@@ -49,14 +49,13 @@ impl From<Fact> for Command {
 #[derive(Clone, PartialEq, Eq)]
 /// An instantiated component
 pub struct Instance {
-    // NOTE(rachit): We'll probably need this some day.
-    // comp: CompIdx,
+    pub comp: CompIdx,
     pub params: Box<[ExprIdx]>,
 }
 
 impl fmt::Display for Instance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "inst[")?;
+        write!(f, "{}[", self.comp)?;
         for (i, param) in self.params.iter().enumerate() {
             if i != 0 {
                 write!(f, ", ")?;

@@ -1,6 +1,6 @@
 use super::ScopeMap;
 use crate::ast::{self, Id};
-use crate::ir::{self, DenseIndexInfo, PortIdx};
+use crate::ir::{self, CompIdx, DenseIndexInfo, PortIdx};
 use crate::utils;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -11,6 +11,7 @@ use std::rc::Rc;
 /// A signature defines the ports which are added to the component instantiating
 /// the signature.
 pub struct Sig {
+    pub idx: CompIdx,
     pub params: Vec<ast::Id>,
     pub events: Vec<ast::Id>,
     pub inputs: Vec<ast::PortDef>,
@@ -18,9 +19,10 @@ pub struct Sig {
     pub facts: Vec<ast::OrderConstraint<ast::Expr>>,
 }
 
-impl From<&ast::Signature> for Sig {
-    fn from(sig: &ast::Signature) -> Self {
+impl From<(&ast::Signature, usize)> for Sig {
+    fn from((sig, idx): (&ast::Signature, usize)) -> Self {
         Sig {
+            idx: CompIdx::new(idx),
             params: sig.params.iter().map(|p| p.copy()).collect(),
             inputs: sig.inputs().map(|p| p.clone().take()).collect(),
             outputs: sig.outputs().map(|p| p.clone().take()).collect(),

@@ -91,4 +91,18 @@ impl<T> Idx<T> {
         );
         (self.idx.get() - 1) as usize
     }
+
+    /// Transform this index into an index for something else.
+    /// This is generally very, very unsafe to do because there is no guaratee
+    /// that the index actually points to valid data in the datatype being indexed.
+    ///
+    /// # Safety
+    /// This is only safe to use when you know that the same index will be added
+    /// to the datatype being indexed by this.
+    pub unsafe fn transmute<U>(self) -> Idx<U> {
+        Idx {
+            idx: self.idx,
+            _phantom: PhantomData,
+        }
+    }
 }

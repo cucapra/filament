@@ -1,6 +1,8 @@
 //! Convert the frontend AST to the IR.
 use super::{BuildCtx, Sig, SigMap};
-use crate::ir::{Cmp, Ctx, ExprIdx, ParamIdx, PortIdx, PropIdx, TimeIdx};
+use crate::ir::{
+    Cmp, CompIdx, Ctx, ExprIdx, ParamIdx, PortIdx, PropIdx, TimeIdx,
+};
 use crate::{
     ast::{self, Id},
     ir,
@@ -263,6 +265,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             })
             .collect_vec();
         let inst = ir::Instance {
+            comp: comp.idx,
             params: bindings
                 .into_iter()
                 .map(|b| self.expr(b.take()))
@@ -419,8 +422,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
-    fn comp(sigs: &'prog SigMap, comp: ast::Component) -> ir::Component {
-        let mut ir_comp = ir::Component::default();
+    fn comp(
+        comp: ast::Component,
+        idx: CompIdx,
+        sigs: &'prog SigMap,
+    ) -> ir::Component {
+        let mut ir_comp = ir::Component::new(idx);
         let mut builder = BuildCtx::new(&mut ir_comp, sigs);
         builder.sig(comp.sig);
         let cmds = builder.commands(comp.body);
@@ -432,13 +439,14 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 pub fn transform(ns: ast::Namespace) -> ir::Context {
     let mut sig_map = SigMap::default();
     // Walk over sigs and build a SigMap
-    for (_, sig) in ns.signatures() {
-        sig_map.insert(sig.name.copy(), Sig::from(sig));
+    for (idx, (_, sig)) in ns.signatures().enumerate() {
+        sig_map.insert(sig.name.copy(), Sig::from((sig, idx)));
     }
 
     let mut ctx = ir::Context::default();
     for comp in ns.components {
-        let ir_comp = BuildCtx::comp(&sig_map, comp);
+        let idx = sig_map.get(&comp.sig.name).unwrap().idx;
+        let ir_comp = BuildCtx::comp(comp, idx, &sig_map);
         ctx.comps.push(ir_comp);
     }
     ctx
