@@ -13,7 +13,10 @@ pub struct Implication<T> {
     cons: OrderConstraint<T>,
 }
 
-impl<T> Implication<T> {
+impl<T> Implication<T>
+where
+    T: Clone,
+{
     /// Creates an [Implication] `guard => cons`
     pub fn implies(
         guard: OrderConstraint<T>,
@@ -25,6 +28,17 @@ impl<T> Implication<T> {
     /// Creates an [Implication] with no guard, something that must always be true
     pub fn fact(cons: OrderConstraint<T>) -> Self {
         Implication::new_opt(None, cons)
+    }
+
+    /// Creates a pair of [Implication]s representing an iff (`a <=> b`) clause
+    pub fn iff(
+        left: OrderConstraint<T>,
+        right: OrderConstraint<T>,
+    ) -> [Self; 2] {
+        [
+            Implication::implies(left.clone(), right.clone()),
+            Implication::implies(right, left),
+        ]
     }
 
     /// Creates a new [Implication] with an optional guard
@@ -102,7 +116,10 @@ where
     }
 }
 
-impl<T> From<OrderConstraint<T>> for Implication<T> {
+impl<T> From<OrderConstraint<T>> for Implication<T>
+where
+    T: Clone,
+{
     fn from(cons: OrderConstraint<T>) -> Self {
         Implication::fact(cons)
     }
