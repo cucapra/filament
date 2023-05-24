@@ -23,7 +23,7 @@ impl Display for Expr {
         match self {
             Expr::Param(p) => write!(f, "{}", p),
             Expr::Concrete(c) => write!(f, "{}", c),
-            Expr::Bin { op, lhs, rhs } => write!(f, "({} {} {})", lhs, op, rhs),
+            Expr::Bin { op, lhs, rhs } => write!(f, "{} {} {}", lhs, op, rhs),
             Expr::Fn { op, args } => {
                 let args = args
                     .iter()

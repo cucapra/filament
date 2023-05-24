@@ -168,13 +168,41 @@ impl fmt::Display for Access {
     }
 }
 
-#[derive(Default, PartialEq, Eq, Hash, Clone)]
+#[derive(PartialEq, Eq, Hash, Clone)]
+/// Construct that defines the parameter
+pub enum ParamOwner {
+    /// The parameter is defined in the signature
+    Sig,
+    /// The parameter is defined by a bundle
+    Bundle,
+    /// The parametber is defined in the component body
+    Local,
+}
+impl fmt::Display for ParamOwner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Sig => write!(f, "sig"),
+            Self::Bundle => write!(f, "bundle"),
+            Self::Local => write!(f, "local"),
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Clone)]
 /// Parameters with an optional initial value
-pub struct Param;
+pub struct Param {
+    owner: ParamOwner,
+}
+
+impl Param {
+    pub fn new(owner: ParamOwner) -> Self {
+        Self { owner }
+    }
+}
 
 impl fmt::Display for Param {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "()")
+        write!(f, "{}", self.owner)
     }
 }
 

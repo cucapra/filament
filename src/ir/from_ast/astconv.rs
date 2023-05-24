@@ -67,9 +67,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     /// Add a parameter to the component.
-    fn param(&mut self, param: ast::Id) -> ParamIdx {
+    fn param(&mut self, param: ast::Id, owner: ir::ParamOwner) -> ParamIdx {
         // TODO(rachit): Parameters do not have default values yet.
-        let idx = self.comp.add(ir::Param::default());
+        let idx = self.comp.add(ir::Param::new(owner));
         self.param_map.insert(param, idx);
         idx
     }
@@ -119,7 +119,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 // We don't need to push a new scope because this type is does not
                 // bind any new parameters.
                 let live = self.with_scope(|ctx| ir::Liveness {
-                    idx: ctx.param(Id::default()), // This parameter is unused
+                    idx: ctx.param(Id::default(), ir::ParamOwner::Bundle), // This parameter is unused
                     len: ctx.comp.num(1),
                     range: ctx.range(liveness.take()),
                 });
@@ -143,7 +143,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             }) => {
                 // Construct the bundle type in a new scope.
                 let live = self.with_scope(|ctx| ir::Liveness {
-                    idx: ctx.param(*idx),
+                    idx: ctx.param(*idx, ir::ParamOwner::Bundle),
                     len: ctx.expr(len.take()),
                     range: ctx.range(liveness.take()),
                 });
@@ -222,7 +222,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     fn sig(&mut self, sig: ast::Signature) {
         for param in &sig.params {
-            self.param(param.copy());
+            self.param(param.copy(), ir::ParamOwner::Sig);
         }
         for event in &sig.events {
             // XXX(rachit): Unnecessary clone.
@@ -397,7 +397,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 let end = self.expr(end);
                 // Compile the body in a new scope
                 let (index, body) = self.with_scope(|this| {
-                    let idx = this.param(idx.take());
+                    let idx = this.param(idx.take(), ir::ParamOwner::Local);
                     (idx, this.commands(body))
                 });
                 let l = ir::Loop {
