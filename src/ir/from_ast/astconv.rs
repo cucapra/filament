@@ -187,7 +187,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 ir::Access::port(self.get_port(n.copy(), owner), self.comp)
             }
             ast::Port::InvPort { invoke, name } => {
-                let inv = *self.inv_map.get(&invoke.copy()).unwrap();
+                let inv = self.get_inv(invoke.copy());
                 let owner = ir::PortOwner::Inv { inv, dir };
                 ir::Access::port(self.get_port(name.copy(), owner), self.comp)
             }
@@ -210,7 +210,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 port,
                 access,
             } => {
-                let inv = *self.inv_map.get(&invoke.copy()).unwrap();
+                let inv = self.get_inv(invoke.copy());
                 let owner = ir::PortOwner::Inv { inv, dir };
                 let port = self.get_port(port.copy(), owner);
                 let (start, end) = self.access(access.take());
@@ -284,6 +284,47 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .collect_vec()
     }
 
+    /// Construct an event binding from this Signature's events and the given
+    /// arguments.
+    /// Fills in the missing arguments with default values
+    pub fn event_binding(
+        &self,
+        events: &[ast::EventBind],
+        args: impl IntoIterator<Item = ast::Time>,
+    ) -> Binding<ast::Time> {
+        let args = args.into_iter().collect_vec();
+        assert!(
+            events.iter().take_while(|ev| ev.default.is_none()).count()
+                <= args.len(),
+            "Insuffient events for component invocation.",
+        );
+
+        let mut partial_map = Binding::new(
+            events
+                .iter()
+                .map(|eb| eb.event.inner())
+                .cloned()
+                .zip(args.iter().cloned()),
+        );
+        // Skip the events that have been bound
+        let remaining = events
+            .iter()
+            .skip(args.len())
+            .map(|eb| {
+                let bind = eb
+                    .default
+                    .as_ref()
+                    .unwrap()
+                    .clone()
+                    .resolve_event(&partial_map);
+                (*eb.event.inner(), bind)
+            })
+            .collect();
+
+        partial_map.extend(remaining);
+        partial_map
+    }
+
     /// Invokes are the most complicated construct to compile. This function:
     /// 1. Creates a new invoke in the component with the time bindings.
     /// 2. Resolves output ports and defines them in the component
@@ -306,7 +347,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             events,
             ports: Box::new([]), // Filled in later
         });
-        self.inv_map.insert(name.copy(), inv);
+        self.add_inv(name.copy(), inv);
 
         let Some(ports) = ports else {
             unreachable!("Low-level invokes not supported")
@@ -323,11 +364,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let sig = self.sigs.get(&comp).unwrap();
 
         // Event bindings
-        let event_binding = Binding::new(
-            sig.events
-                .iter()
-                .zip(abstract_vars.iter())
-                .map(|(e, t)| (*e, t.clone().take())),
+        let event_binding = self.event_binding(
+            &sig.events,
+            abstract_vars.iter().map(|v| v.inner().clone()),
         );
 
         // Define the output port from the invoke

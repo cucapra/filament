@@ -13,7 +13,7 @@ use std::rc::Rc;
 pub struct Sig {
     pub idx: CompIdx,
     pub params: Vec<ast::Id>,
-    pub events: Vec<ast::Id>,
+    pub events: Vec<ast::EventBind>,
     pub inputs: Vec<ast::PortDef>,
     pub outputs: Vec<ast::PortDef>,
     pub facts: Vec<ast::OrderConstraint<ast::Expr>>,
@@ -26,7 +26,7 @@ impl From<(&ast::Signature, usize)> for Sig {
             params: sig.params.iter().map(|p| p.copy()).collect(),
             inputs: sig.inputs().map(|p| p.clone().take()).collect(),
             outputs: sig.outputs().map(|p| p.clone().take()).collect(),
-            events: sig.events.iter().map(|e| e.event.copy()).collect(),
+            events: sig.events.iter().map(|e| e.clone().take()).collect(),
             facts: sig
                 .param_constraints
                 .iter()
@@ -79,8 +79,8 @@ pub struct BuildCtx<'ctx, 'prog> {
     pub param_map: ScopeMap<ir::Param>,
     pub event_map: ScopeMap<ir::Event>,
     pub inst_map: ScopeMap<ir::Instance>,
-    pub inv_map: ScopeMap<ir::Invoke>,
 
+    inv_map: ScopeMap<ir::Invoke>,
     port_map: ScopeMap<ir::Port, InvPort>,
 }
 impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
@@ -128,10 +128,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         out
     }
 
+    /// Add a new port to the ctx
     pub fn add_port(&mut self, name: Id, owner: ir::PortOwner, port: PortIdx) {
         self.port_map.insert((owner, name), port);
     }
 
+    /// Find a port and return None if it is not found
     pub fn find_port(
         &mut self,
         name: Id,
@@ -140,6 +142,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         self.port_map.get(&(owner, name)).copied()
     }
 
+    /// Get a port and panic out if it is not found
     pub fn get_port(&mut self, name: Id, owner: ir::PortOwner) -> PortIdx {
         // Clone here because we use owner in the error message below
         if let Some(idx) = self.find_port(name, owner.clone()) {
@@ -164,5 +167,19 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             comp = ir::Printer::comp_str(self.comp)
         ));
         unreachable!("{msg}")
+    }
+
+    pub fn add_inv(&mut self, name: Id, inv: ir::InvIdx) {
+        self.inv_map.insert(name, inv);
+    }
+
+    pub fn get_inv(&mut self, name: Id) -> ir::InvIdx {
+        *self.inv_map.get(&name).unwrap_or_else(|| {
+            unreachable!(
+                "Invoke `{name}' not found. Component:\n{comp}",
+                name = name,
+                comp = ir::Printer::comp_str(self.comp)
+            )
+        })
     }
 }

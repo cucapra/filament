@@ -96,11 +96,7 @@ pub struct Liveness {
 
 impl fmt::Display for Liveness {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "for<{}> @[{}, {}]",
-            self.idx, self.range.start, self.range.end
-        )
+        write!(f, "for<{}: {}> {}", self.idx, self.len, self.range)
     }
 }
 
