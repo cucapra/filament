@@ -85,9 +85,9 @@ impl Printer {
             }
             ir::Command::Fact(fact) => {
                 if fact.checked {
-                    writeln!(f, "{:indent$}assert {}", "", fact.prop)
+                    write!(f, "{:indent$}assert {};", "", fact.prop)
                 } else {
-                    writeln!(f, "{:indent$}assume {}ctx", "", fact.prop)
+                    write!(f, "{:indent$}assume {};", "", fact.prop)
                 }
             }
         }
