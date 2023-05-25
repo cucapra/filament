@@ -98,6 +98,11 @@ impl<T> IndexStore<T> {
         &self.store[idx.get()]
     }
 
+    /// Get a mutable reference to the value associated with the index.
+    pub fn get_mut(&mut self, idx: Idx<T>) -> &mut T {
+        &mut self.store[idx.get()]
+    }
+
     pub(super) fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
         self.store
             .iter()

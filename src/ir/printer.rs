@@ -174,44 +174,60 @@ impl Printer {
         writeln!(f, ") {{")
     }
 
-    fn print_local_params(
-        params: &ir::IndexStore<ir::Param>,
+    fn local_param(
+        idx: ir::ParamIdx,
+        param: &ir::Param,
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
-        for (idx, param) in params.iter() {
-            if !param.is_sig_owned() {
-                writeln!(f, "{:indent$}{idx} = param {param};", "",)?;
-            }
+        if !param.is_sig_owned() {
+            writeln!(f, "{:indent$}{idx} = param {param};", "",)?;
         }
         Ok(())
     }
 
-    fn print_local_ports(
-        ports: &ir::IndexStore<ir::Port>,
+    fn local_port(
+        idx: ir::PortIdx,
+        port: &ir::Port,
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
-        for (idx, port) in ports.iter() {
-            let ir::Port { owner, width, live } = port;
-            match &owner {
-                ir::PortOwner::Sig { .. } => continue,
-                ir::PortOwner::Inv { inv, dir } => {
-                    writeln!(
-                        f,
-                        "{:indent$}{inv}.{idx} = bundle({dir}) {live} {width};",
-                        "",
-                    )?;
-                }
-                ir::PortOwner::Local => {
-                    writeln!(
-                        f,
-                        "{:indent$}{idx} = bundle {live} {width};",
-                        "",
-                    )?;
-                }
+        let ir::Port { owner, width, live } = port;
+        match &owner {
+            ir::PortOwner::Sig { .. } => Ok(()),
+            ir::PortOwner::Inv { dir, .. } => {
+                writeln!(
+                    f,
+                    "{:indent$}{idx}: bundle({dir}) {live} {width};",
+                    "",
+                )
+            }
+            ir::PortOwner::Local => {
+                writeln!(f, "{:indent$}{idx} = bundle {live} {width};", "",)
             }
         }
+    }
+
+    pub fn invoke(
+        idx: ir::InvIdx,
+        c: &ir::Invoke,
+        indent: usize,
+        f: &mut impl io::Write,
+    ) -> io::Result<()> {
+        let ir::Invoke {
+            inst,
+            events,
+            ports,
+        } = c;
+
+        writeln!(
+            f,
+            "{:indent$}{idx}, {ports} = invoke {inst}<{events}>;",
+            "",
+            ports = ports.iter().map(|p| format!("{p}")).join(", "),
+            events = events.iter().map(|e| format!("{e}")).join(", "),
+        )?;
+
         Ok(())
     }
 
@@ -229,13 +245,19 @@ impl Printer {
             cmds,
         } = &c;
         Printer::sig(*idx, params, events, ports, 0, f)?;
-        Printer::print_local_params(params, 2, f)?;
+        for (idx, param) in params.iter() {
+            Printer::local_param(idx, param, 2, f)?;
+        }
         Printer::interned(exprs, "expr", 2, f)?;
         Printer::interned(times, "time", 2, f)?;
         Printer::interned(props, "prop", 2, f)?;
-        Printer::print_local_ports(ports, 2, f)?;
+        for (idx, port) in ports.iter() {
+            Printer::local_port(idx, port, 2, f)?;
+        }
         Printer::index_store(instances, "instance", 2, f)?;
-        Printer::index_store(invocations, "invoke", 2, f)?;
+        for (idx, invoke) in invocations.iter() {
+            Printer::invoke(idx, invoke, 2, f)?;
+        }
         writeln!(f, "control:")?;
         Printer::commands(cmds, 2, f)?;
         writeln!(f, "}}")

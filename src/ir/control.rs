@@ -1,7 +1,8 @@
 use std::fmt;
 
 use super::{
-    Access, CompIdx, ExprIdx, Fact, InstIdx, InvIdx, ParamIdx, PropIdx, TimeIdx,
+    Access, CompIdx, ExprIdx, Fact, InstIdx, InvIdx, ParamIdx, PortIdx,
+    PropIdx, TimeIdx,
 };
 
 #[derive(Clone, PartialEq, Eq)]
@@ -49,7 +50,9 @@ impl From<Fact> for Command {
 #[derive(Clone, PartialEq, Eq)]
 /// An instantiated component
 pub struct Instance {
+    /// The component being instantiated
     pub comp: CompIdx,
+    /// The parameters used in the binding of this instance
     pub params: Box<[ExprIdx]>,
 }
 
@@ -84,8 +87,12 @@ impl fmt::Display for Connect {
 /// ports.
 /// The ports are represented as connections.
 pub struct Invoke {
+    /// The instance being invoked
     pub inst: InstIdx,
+    /// The events used in this invocation's binding
     pub events: Box<[TimeIdx]>,
+    // The ports defined by this invocation
+    pub ports: Box<[PortIdx]>,
 }
 impl fmt::Display for Invoke {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

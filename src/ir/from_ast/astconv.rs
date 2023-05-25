@@ -298,12 +298,18 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .map(|v| self.time(v.clone().take()))
             .collect_vec()
             .into_boxed_slice();
-        let inv = self.comp.add(ir::Invoke { inst, events });
+        let inv = self.comp.add(ir::Invoke {
+            inst,
+            events,
+            ports: Box::new([]), // Filled in later
+        });
         self.inv_map.insert(name.copy(), inv);
 
         let Some(ports) = ports else {
             unreachable!("Low-level invokes not supported")
         };
+
+        let mut def_ports = vec![];
 
         // The inputs
         let srcs = ports
@@ -330,7 +336,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 inv,
                 dir: ir::Direction::Out,
             };
-            self.port(resolved, owner);
+            def_ports.push(self.port(resolved, owner));
         }
 
         assert!(
@@ -339,8 +345,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             sig.inputs.len(),
             srcs.len()
         );
-        let connects =
-            sig.inputs.clone().into_iter().zip(srcs).map(|(p, src)| {
+        let connects = sig
+            .inputs
+            .clone()
+            .into_iter()
+            .zip(srcs)
+            .map(|(p, src)| {
                 let resolved = p
                     .resolve_exprs(&param_binding)
                     .resolve_event(&event_binding);
@@ -350,6 +360,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 };
                 // Add the port to the component
                 let pidx = self.port(resolved, owner);
+                def_ports.push(pidx);
                 let end = self.comp[pidx].live.len;
                 let dst = ir::Access {
                     port: pidx,
@@ -357,7 +368,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     end,
                 };
                 ir::Connect { src, dst }.into()
-            });
+            })
+            .collect_vec();
+
+        // Update the ports in the invoke
+        self.comp.invocations.get_mut(inv).ports = def_ports.into_boxed_slice();
 
         iter::once(ir::Command::from(inv))
             .chain(connects)
