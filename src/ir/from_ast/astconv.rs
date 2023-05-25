@@ -236,6 +236,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             // XXX(rachit): Unnecessary clone.
             self.port(port.inner().clone(), ir::PortOwner::sig_in());
         }
+        for expr_cons in sig.param_constraints {
+            self.expr_cons(expr_cons.take());
+        }
     }
 
     fn instance(&mut self, inst: ast::Instance) -> Vec<ir::Command> {
@@ -437,6 +440,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
+    fn external(idx: CompIdx, sig: ast::Signature) -> ir::External {
+        ir::External { idx, sig }
+    }
+
     fn comp(
         comp: ast::Component,
         idx: CompIdx,
@@ -459,10 +466,18 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     }
 
     let mut ctx = ir::Context::default();
+    for (_, exts) in ns.externs {
+        for ext in exts {
+            let idx = sig_map.get(&ext.name).unwrap().idx;
+            let ir_ext = BuildCtx::external(idx, ext);
+            ctx.comps.checked_add(idx, ir::CompOrExt::Ext(ir_ext));
+        }
+    }
+
     for comp in ns.components {
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
         let ir_comp = BuildCtx::comp(comp, idx, &sig_map);
-        ctx.comps.checked_add(idx, ir_comp);
+        ctx.comps.checked_add(idx, ir::CompOrExt::Comp(ir_comp));
     }
     ctx
 }

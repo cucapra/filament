@@ -263,6 +263,13 @@ impl Printer {
         writeln!(f, "}}")
     }
 
+    pub fn external(
+        ext: &ir::External,
+        f: &mut impl io::Write,
+    ) -> io::Result<()> {
+        writeln!(f, "external comp {};", ext.idx)
+    }
+
     pub fn comp_str(c: &ir::Component) -> String {
         let mut buf = Vec::new();
         Printer::comp(c, &mut buf).unwrap();
@@ -274,7 +281,10 @@ impl Printer {
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         for (_, comp) in ctx.comps.iter() {
-            Printer::comp(comp, f)?;
+            match comp {
+                ir::CompOrExt::Comp(comp) => Printer::comp(comp, f)?,
+                ir::CompOrExt::Ext(ext) => Printer::external(ext, f)?,
+            }
         }
         Ok(())
     }

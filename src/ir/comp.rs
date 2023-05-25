@@ -3,21 +3,32 @@ use super::{
     Instance, Interned, InvIdx, Invoke, Param, ParamIdx, Port, PortIdx, Prop,
     Time, TimeIdx,
 };
-use crate::utils::Idx;
+use crate::{ast, utils::Idx};
 
 #[derive(Default)]
 pub struct Context {
-    pub(super) comps: IndexStore<Component>,
+    pub(super) comps: IndexStore<CompOrExt>,
 }
 
-impl Ctx<Component> for Context {
-    fn add(&mut self, val: Component) -> Idx<Component> {
+impl Ctx<CompOrExt> for Context {
+    fn add(&mut self, val: CompOrExt) -> Idx<CompOrExt> {
         self.comps.add(val)
     }
 
-    fn get(&self, idx: Idx<Component>) -> &Component {
+    fn get(&self, idx: Idx<CompOrExt>) -> &CompOrExt {
         self.comps.get(idx)
     }
+}
+
+pub enum CompOrExt {
+    Comp(Component),
+    Ext(External),
+}
+
+/// An external component.
+pub struct External {
+    pub idx: CompIdx,
+    pub sig: ast::Signature,
 }
 
 pub struct Component {
