@@ -92,7 +92,7 @@ pub struct Invoke {
     /// The events used in this invocation's binding
     pub events: Box<[TimeIdx]>,
     // The ports defined by this invocation
-    pub ports: Box<[PortIdx]>,
+    pub ports: Vec<PortIdx>,
 }
 impl fmt::Display for Invoke {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -241,23 +241,44 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
-    fn instance(&mut self, inst: ast::Instance) -> Vec<ir::Command> {
+    fn declare_inst(&mut self, inst: &ast::Instance) {
         let ast::Instance {
             name,
             component,
             bindings,
         } = inst;
-        // Add the facts defined by the instance as assertions in the
-        // component.
-        let comp = self.sigs.get(&component).unwrap().clone();
+        let comp = self.sigs.get(component).unwrap();
         let binding = Binding::new(
             comp.params
                 .iter()
                 .copied()
                 .zip(bindings.clone().into_iter().map(|b| b.take())),
         );
-        let facts = comp
+        let inst = ir::Instance {
+            comp: comp.idx,
+            params: bindings
+                .iter()
+                .map(|b| self.expr(b.clone().take()))
+                .collect_vec()
+                .into_boxed_slice(),
+        };
+        let idx = self.comp.add(inst);
+        self.inst_map.insert(name.copy(), idx);
+        // Track the component binding for this instance
+        self.inst_to_sig.push(idx, (Rc::new(binding), **component));
+    }
+
+    fn instance(&mut self, inst: ast::Instance) -> Vec<ir::Command> {
+        // Add the facts defined by the instance as assertions in the
+        // component.
+        let idx = *self.inst_map.get(&inst.name).unwrap();
+        let (binding, component) = self.inst_to_sig.get(idx).clone();
+        let facts = self
+            .sigs
+            .get(&component)
+            .unwrap()
             .facts
+            .clone()
             .into_iter()
             .map(|f| {
                 let p = f.resolve_expr(&binding);
@@ -267,18 +288,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 ir::Fact::assert(prop).into()
             })
             .collect_vec();
-        let inst = ir::Instance {
-            comp: comp.idx,
-            params: bindings
-                .into_iter()
-                .map(|b| self.expr(b.take()))
-                .collect_vec()
-                .into_boxed_slice(),
-        };
-        let idx = self.comp.add(inst);
-        self.inst_map.insert(name.copy(), idx);
-        // Track the component binding for this instance
-        self.inst_to_sig.push(idx, (Rc::new(binding), *component));
         iter::once(ir::Command::from(idx))
             .chain(facts.into_iter())
             .collect_vec()
@@ -325,41 +334,20 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         partial_map
     }
 
-    /// Invokes are the most complicated construct to compile. This function:
-    /// 1. Creates a new invoke in the component with the time bindings.
-    /// 2. Resolves output ports and defines them in the component
-    /// 3. Generates connections implied by the arguments to the invoke.
+    /// This function is called during the second pass of the conversion and
+    /// generates the connections implied by the arguments to the invoke.
     fn invoke(&mut self, inv: ast::Invoke) -> Vec<ir::Command> {
         let ast::Invoke {
             name,
-            instance,
             abstract_vars,
             ports,
+            ..
         } = inv;
-        let inst = *self.inst_map.get(&instance).unwrap();
-        let events = abstract_vars
-            .iter()
-            .map(|v| self.time(v.clone().take()))
-            .collect_vec()
-            .into_boxed_slice();
-        let inv = self.comp.add(ir::Invoke {
-            inst,
-            events,
-            ports: Box::new([]), // Filled in later
-        });
-        self.add_inv(name.copy(), inv);
-
         let Some(ports) = ports else {
-            unreachable!("Low-level invokes not supported")
+            unreachable!("No ports provided for invocation {}", name)
         };
-
-        let mut def_ports = vec![];
-
-        // The inputs
-        let srcs = ports
-            .into_iter()
-            .map(|p| self.get_access(p.take(), ir::Direction::Out))
-            .collect_vec();
+        let inv = self.get_inv(name.copy());
+        let inst = self.comp[inv].inst;
         let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
         let sig = self.sigs.get(&comp).unwrap();
 
@@ -369,26 +357,18 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             abstract_vars.iter().map(|v| v.inner().clone()),
         );
 
-        // Define the output port from the invoke
-        for p in sig.outputs.clone() {
-            let resolved = p
-                .resolve_exprs(&param_binding)
-                .resolve_event(&event_binding);
-            let owner = ir::PortOwner::Inv {
-                inv,
-                dir: ir::Direction::Out,
-            };
-            def_ports.push(self.port(resolved, owner));
-        }
-
+        let srcs = ports
+            .into_iter()
+            .map(|p| self.get_access(p.take(), ir::Direction::Out))
+            .collect_vec();
         assert!(
             sig.inputs.len() == srcs.len(),
             "signature defined {} inputs but provided {} arguments",
             sig.inputs.len(),
             srcs.len()
         );
-        let connects = sig
-            .inputs
+
+        sig.inputs
             .clone()
             .into_iter()
             .zip(srcs)
@@ -402,7 +382,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 };
                 // Add the port to the component
                 let pidx = self.port(resolved, owner);
-                def_ports.push(pidx);
                 let end = self.comp[pidx].live.len;
                 let dst = ir::Access {
                     port: pidx,
@@ -411,13 +390,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 };
                 ir::Connect { src, dst }.into()
             })
-            .collect_vec();
-
-        // Update the ports in the invoke
-        self.comp.invocations.get_mut(inv).ports = def_ports.into_boxed_slice();
-
-        iter::once(ir::Command::from(inv))
-            .chain(connects)
+            .chain(Some(ir::Command::from(inv)))
             .collect_vec()
     }
 
@@ -479,6 +452,89 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
+    /// Invokes are the most complicated construct to compile. This function:
+    /// 1. Creates a new invoke in the component with the time bindings.
+    /// 2. Resolves output ports and defines them in the component
+    fn declare_inv(&mut self, inv: &ast::Invoke) {
+        let ast::Invoke {
+            name,
+            instance,
+            abstract_vars,
+            ..
+        } = inv;
+
+        let inst = *self.inst_map.get(instance).unwrap();
+        let events = abstract_vars
+            .iter()
+            .map(|v| self.time(v.clone().take()))
+            .collect_vec()
+            .into_boxed_slice();
+        let inv = self.comp.add(ir::Invoke {
+            inst,
+            events,
+            ports: vec![], // Filled in later
+        });
+        self.add_inv(name.copy(), inv);
+
+        let mut def_ports = vec![];
+
+        // The inputs
+        let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
+        let sig = self.sigs.get(&comp).unwrap();
+
+        // Event bindings
+        let event_binding = self.event_binding(
+            &sig.events,
+            abstract_vars.iter().map(|v| v.inner().clone()),
+        );
+
+        // Define the output port from the invoke
+        for p in sig.outputs.clone() {
+            let resolved = p
+                .resolve_exprs(&param_binding)
+                .resolve_event(&event_binding);
+            let owner = ir::PortOwner::Inv {
+                inv,
+                dir: ir::Direction::Out,
+            };
+            def_ports.push(self.port(resolved, owner));
+        }
+
+        // Add the inputs from the invoke. The outputs are added in the second
+        // pass using [Self::add_invoke_connects].
+        self.comp.invocations.get_mut(inv).ports = def_ports;
+    }
+
+    /// Walk over the component and declare all instances, invocations, and all outputs defined by invocations.
+    /// This is needed because invocations are not required to be declared before they are used.
+    fn declare_cmd(&mut self, cmd: &ast::Command) {
+        match cmd {
+            ast::Command::Instance(inst) => {
+                self.declare_inst(inst);
+            }
+            ast::Command::Invoke(inv) => {
+                self.declare_inv(inv);
+            }
+            ast::Command::ForLoop(ast::ForLoop { idx, body, .. }) => {
+                self.param(idx.copy(), ir::ParamOwner::Local);
+                self.declare_cmds(body);
+            }
+            ast::Command::If(ast::If { then, alt, .. }) => {
+                self.declare_cmds(then);
+                self.declare_cmds(alt);
+            }
+            ast::Command::Fact(_)
+            | ast::Command::Connect(_)
+            | ast::Command::Bundle(_) => { /* Handled in second pass */ }
+        }
+    }
+
+    fn declare_cmds(&mut self, cmds: &[ast::Command]) {
+        for cmd in cmds {
+            self.declare_cmd(cmd);
+        }
+    }
+
     fn external(idx: CompIdx, sig: ast::Signature) -> ir::External {
         ir::External { idx, sig }
     }
@@ -491,6 +547,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let mut ir_comp = ir::Component::new(idx);
         let mut builder = BuildCtx::new(&mut ir_comp, sigs);
         builder.sig(comp.sig);
+        builder.declare_cmds(&comp.body);
         let cmds = builder.commands(comp.body);
         ir_comp.cmds = cmds;
         ir_comp
