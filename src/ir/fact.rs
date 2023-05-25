@@ -138,7 +138,7 @@ impl PropIdx {
 /// checked. Otherwise, it is an assumption.
 pub struct Fact {
     pub prop: PropIdx,
-    pub checked: bool,
+    pub(super) checked: bool,
 }
 
 impl Fact {
@@ -156,6 +156,16 @@ impl Fact {
             prop,
             checked: false,
         }
+    }
+
+    /// Is this an assumption?
+    pub fn is_assume(&self) -> bool {
+        !self.checked
+    }
+
+    /// Is this an assertion?
+    pub fn is_assert(&self) -> bool {
+        self.checked
     }
 }
 

@@ -1,6 +1,7 @@
 use crate::ir::{self, Ctx};
 
 #[must_use]
+#[derive(PartialEq, Eq)]
 /// Action performed by the visitor
 pub enum Action {
     /// Stop visiting the CFG
@@ -30,22 +31,26 @@ impl Action {
 pub trait Visitor {
     /// Executed before the visitor starts visiting the commands.
     /// The commands are still attached to the component
-    fn start(&mut self, comp: &mut ir::Component) {}
+    fn start(&mut self, _comp: &mut ir::Component) {}
 
     fn end(&mut self) {}
 
-    fn invoke(&mut self, _: ir::InvIdx, comp: &mut ir::Component) -> Action {
+    fn invoke(&mut self, _: ir::InvIdx, _comp: &mut ir::Component) -> Action {
         Action::Continue
     }
 
-    fn instance(&mut self, _: ir::InstIdx, comp: &mut ir::Component) -> Action {
+    fn instance(
+        &mut self,
+        _: ir::InstIdx,
+        _comp: &mut ir::Component,
+    ) -> Action {
         Action::Continue
     }
 
     fn connect(
         &mut self,
         _: &mut ir::Connect,
-        comp: &mut ir::Component,
+        _comp: &mut ir::Component,
     ) -> Action {
         Action::Continue
     }
@@ -54,7 +59,7 @@ pub trait Visitor {
     fn start_loop(
         &mut self,
         _: &mut ir::Loop,
-        comp: &mut ir::Component,
+        _comp: &mut ir::Component,
     ) -> Action {
         Action::Continue
     }
@@ -62,21 +67,33 @@ pub trait Visitor {
     fn end_loop(
         &mut self,
         _: &mut ir::Loop,
-        comp: &mut ir::Component,
+        _comp: &mut ir::Component,
     ) -> Action {
         Action::Continue
     }
 
     /// Executed before the branches of the if is visited
-    fn start_if(&mut self, _: &mut ir::If, comp: &mut ir::Component) -> Action {
+    fn start_if(
+        &mut self,
+        _: &mut ir::If,
+        _comp: &mut ir::Component,
+    ) -> Action {
         Action::Continue
     }
     /// Executed after the branches of the if is visited
-    fn end_if(&mut self, _: &mut ir::If, comp: &mut ir::Component) -> Action {
+    fn end_if(&mut self, _: &mut ir::If, _comp: &mut ir::Component) -> Action {
         Action::Continue
     }
+    /// Traverse for `if` statements.
+    /// Overriding this requires explicit traversal over the body.
+    fn do_if(&mut self, i: &mut ir::If, comp: &mut ir::Component) -> Action {
+        self.start_if(i, comp)
+            .and_then(|| self.visit_cmds(&mut i.then, comp))
+            .and_then(|| self.visit_cmds(&mut i.alt, comp))
+            .and_then(|| self.end_if(i, comp))
+    }
 
-    fn fact(&mut self, _: &mut ir::Fact, comp: &mut ir::Component) -> Action {
+    fn fact(&mut self, _: &mut ir::Fact, _comp: &mut ir::Component) -> Action {
         Action::Continue
     }
 
@@ -93,11 +110,7 @@ pub trait Visitor {
                 .start_loop(l, comp)
                 .and_then(|| self.visit_cmds(&mut l.body, comp))
                 .and_then(|| self.end_loop(l, comp)),
-            ir::Command::If(i) => self
-                .start_if(i, comp)
-                .and_then(|| self.visit_cmds(&mut i.then, comp))
-                .and_then(|| self.visit_cmds(&mut i.alt, comp))
-                .and_then(|| self.end_if(i, comp)),
+            ir::Command::If(i) => self.do_if(i, comp),
             ir::Command::Fact(f) => self.fact(f, comp),
         }
     }
@@ -161,6 +174,8 @@ pub struct HoistFacts<'a> {
     stack: Vec<usize>,
     /// The current path condition
     path_cond: Vec<ir::PropIdx>,
+    /// Facts to be hoisted
+    facts: Vec<ir::Fact>,
 }
 
 impl<'a> From<&'a mut ir::Component> for HoistFacts<'a> {
@@ -169,6 +184,7 @@ impl<'a> From<&'a mut ir::Component> for HoistFacts<'a> {
             comp,
             stack: vec![],
             path_cond: vec![],
+            facts: vec![],
         }
     }
 }
@@ -206,4 +222,70 @@ impl HoistFacts<'_> {
     }
 }
 
-impl Visitor for HoistFacts<'_> {}
+impl Visitor for HoistFacts<'_> {
+    fn fact(
+        &mut self,
+        fact: &mut ir::Fact,
+        comp: &mut ir::Component,
+    ) -> Action {
+        if fact.is_assume() {
+            self.insert(fact.prop);
+        } else {
+            // Otherwise this is a checked assertion that needs to be hoisted.
+            // Generate prop = path_cond -> fact.prop
+            let cond = self.path_cond(comp).implies(fact.prop, comp);
+            self.facts.push(ir::Fact::assert(cond));
+        }
+        Action::Change(vec![])
+    }
+
+    fn do_if(&mut self, i: &mut ir::If, comp: &mut ir::Component) -> Action {
+        self.push();
+        self.insert(i.cond);
+        let ac = self.visit_cmds(&mut i.then, comp);
+        assert!(ac == Action::Continue);
+        self.pop();
+
+        self.push();
+        self.insert(i.cond.not(comp));
+        let ac = self.visit_cmds(&mut i.alt, comp);
+        assert!(ac == Action::Continue);
+        self.pop();
+
+        Action::Continue
+    }
+
+    fn start_loop(
+        &mut self,
+        l: &mut ir::Loop,
+        comp: &mut ir::Component,
+    ) -> Action {
+        self.push();
+        let ir::Loop {
+            index, start, end, ..
+        } = l;
+        let idx = index.expr(comp);
+        let start = idx.gte(*start, comp);
+        let end = idx.lt(*end, comp);
+        self.insert(start.and(end, comp));
+
+        Action::Continue
+    }
+
+    fn end_loop(&mut self, _l: &mut ir::Loop, _: &mut ir::Component) -> Action {
+        self.pop();
+
+        Action::Continue
+    }
+
+    fn end(&mut self) {
+        // Insert the asserts to the start of the component cmds
+        let cmds = std::mem::take(&mut self.comp.cmds);
+        let facts = std::mem::take(&mut self.facts);
+        self.comp.cmds = facts
+            .into_iter()
+            .map(ir::Command::Fact)
+            .chain(cmds.into_iter())
+            .collect();
+    }
+}
