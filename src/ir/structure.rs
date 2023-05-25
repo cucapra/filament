@@ -112,19 +112,27 @@ pub struct Port {
     pub width: ExprIdx,
     pub live: Liveness,
 }
+impl Port {
+    /// Check if this is an input port on the signature
+    pub fn is_sig_in(&self) -> bool {
+        // We check the direction is `out` because the port direction is flipped
+        matches!(
+            self.owner,
+            PortOwner::Sig {
+                dir: Direction::Out
+            }
+        )
+    }
+
+    /// Check if this is an output port on the signature
+    pub fn is_sig_out(&self) -> bool {
+        // We check the direction is `in` because the port direction is flipped
+        matches!(self.owner, PortOwner::Sig { dir: Direction::In })
+    }
+}
 impl fmt::Display for Port {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.owner {
-            PortOwner::Sig { dir } => {
-                write!(f, "{} {} {}", dir, self.live, self.width)
-            }
-            PortOwner::Inv { inv, dir } => {
-                write!(f, "{} {} {} {}", dir, inv, self.live, self.width)
-            }
-            PortOwner::Local => {
-                write!(f, "{} {}", self.live, self.width)
-            }
-        }
+        write!(f, "{} {} {}", self.owner, self.live, self.width)
     }
 }
 
@@ -191,12 +199,20 @@ impl fmt::Display for ParamOwner {
 #[derive(PartialEq, Eq, Hash, Clone)]
 /// Parameters with an optional initial value
 pub struct Param {
-    owner: ParamOwner,
+    pub owner: ParamOwner,
 }
 
 impl Param {
     pub fn new(owner: ParamOwner) -> Self {
         Self { owner }
+    }
+
+    pub fn is_sig_owned(&self) -> bool {
+        matches!(self.owner, ParamOwner::Sig)
+    }
+
+    pub fn is_local(&self) -> bool {
+        matches!(self.owner, ParamOwner::Local)
     }
 }
 
