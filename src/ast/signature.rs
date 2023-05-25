@@ -76,7 +76,7 @@ pub struct Signature {
     /// Constraints over events in the signature
     pub event_constraints: Vec<Loc<OrderConstraint<Time>>>,
     /// All the input/output ports.
-    ports: Vec<Loc<PortDef>>,
+    pub ports: Vec<Loc<PortDef>>,
     /// Index of the first output port in the ports vector
     outputs_idx: usize,
 }

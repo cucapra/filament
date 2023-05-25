@@ -8,7 +8,7 @@ pub struct Time {
     /// The event for the time expression
     pub event: Id,
     /// The offsets for the time expression
-    offset: Expr,
+    pub offset: Expr,
 }
 
 impl Time {

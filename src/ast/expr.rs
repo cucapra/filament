@@ -7,7 +7,7 @@ use itertools::Itertools;
 use std::{fmt::Display, mem, sync};
 
 /// Binary operation over expressions
-#[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd)]
 pub enum Op {
     Add,
     Sub,
@@ -116,7 +116,7 @@ impl FnAssume {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd)]
 /// A unary uninterpreted function over integers.
 pub enum UnFn {
     /// The `pow2` function

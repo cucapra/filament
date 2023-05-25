@@ -3,6 +3,7 @@ pub mod binding;
 pub mod cmdline;
 pub mod diagnostics;
 pub mod frontend;
+pub mod ir;
 pub mod passes;
 pub mod resolver;
 pub mod utils;
