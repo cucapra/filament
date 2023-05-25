@@ -462,7 +462,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     for comp in ns.components {
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
         let ir_comp = BuildCtx::comp(comp, idx, &sig_map);
-        ctx.comps.push(ir_comp);
+        ctx.comps.checked_add(idx, ir_comp);
     }
     ctx
 }

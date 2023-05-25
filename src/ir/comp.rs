@@ -7,7 +7,17 @@ use crate::utils::Idx;
 
 #[derive(Default)]
 pub struct Context {
-    pub(super) comps: Vec<Component>,
+    pub(super) comps: IndexStore<Component>,
+}
+
+impl Ctx<Component> for Context {
+    fn add(&mut self, val: Component) -> Idx<Component> {
+        self.comps.add(val)
+    }
+
+    fn get(&self, idx: Idx<Component>) -> &Component {
+        self.comps.get(idx)
+    }
 }
 
 pub struct Component {

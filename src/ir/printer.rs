@@ -273,7 +273,7 @@ impl Printer {
         ctx: &ir::Context,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
-        for comp in &ctx.comps {
+        for (_, comp) in ctx.comps.iter() {
             Printer::comp(comp, f)?;
         }
         Ok(())

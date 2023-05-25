@@ -103,6 +103,16 @@ impl<T> IndexStore<T> {
         &mut self.store[idx.get()]
     }
 
+    pub(super) fn checked_add(&mut self, idx: Idx<T>, val: T) {
+        assert!(
+            idx.get() == self.store.len(),
+            "Attempting to add index {} but next index is {}",
+            idx.get(),
+            self.store.len()
+        );
+        self.add(val);
+    }
+
     pub(super) fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
         self.store
             .iter()
