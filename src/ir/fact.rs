@@ -1,4 +1,6 @@
-use super::{idxs::PropIdx, Component, Ctx, ExprIdx, Foldable, ParamIdx};
+use super::{
+    idxs::PropIdx, Component, Ctx, ExprIdx, Foldable, ParamIdx, TimeIdx,
+};
 use std::fmt;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -31,6 +33,12 @@ pub enum Prop {
         lhs: ExprIdx,
         rhs: ExprIdx,
     },
+    /// Comparison between time expressions
+    TimeCmp {
+        op: Cmp,
+        lhs: TimeIdx,
+        rhs: TimeIdx,
+    },
     Not(PropIdx),
     And(PropIdx, PropIdx),
     Or(PropIdx, PropIdx),
@@ -42,11 +50,14 @@ impl fmt::Display for Prop {
         match self {
             Prop::True => write!(f, "true"),
             Prop::False => write!(f, "false"),
-            Prop::Cmp { op, lhs, rhs } => write!(f, "{} {} {}", lhs, op, rhs),
-            Prop::Not(p) => write!(f, "!{}", p),
-            Prop::And(l, r) => write!(f, "({} & {})", l, r),
-            Prop::Or(l, r) => write!(f, "({} | {})", l, r),
-            Prop::Implies(l, r) => write!(f, "({} => {})", l, r),
+            Prop::Cmp { op, lhs, rhs } => write!(f, "{lhs} {op} {rhs}"),
+            Prop::TimeCmp { op, lhs, rhs } => {
+                write!(f, "{lhs} {op} {rhs}")
+            }
+            Prop::Not(p) => write!(f, "!{p}"),
+            Prop::And(l, r) => write!(f, "{l} & {r}"),
+            Prop::Or(l, r) => write!(f, "{l} | {r}"),
+            Prop::Implies(l, r) => write!(f, "{l} => {r}"),
         }
     }
 }
@@ -202,6 +213,11 @@ impl Foldable<ParamIdx, ExprIdx> for PropIdx {
                 let lhs = lhs.fold_with(ctx, subst_fn);
                 let rhs = rhs.fold_with(ctx, subst_fn);
                 ctx.add(Prop::Cmp { op, lhs, rhs })
+            }
+            Prop::TimeCmp { op, lhs, rhs } => {
+                let lhs = lhs.fold_with(ctx, subst_fn);
+                let rhs = rhs.fold_with(ctx, subst_fn);
+                ctx.add(Prop::TimeCmp { op, lhs, rhs })
             }
             Prop::Not(p) => {
                 let p = p.fold_with(ctx, subst_fn);

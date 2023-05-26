@@ -56,6 +56,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         self.comp.add(ir::Prop::Cmp { lhs, op, rhs })
     }
 
+    fn event_cons(&mut self, cons: ast::OrderConstraint<ast::Time>) -> PropIdx {
+        let lhs = self.time(cons.left);
+        let rhs = self.time(cons.right);
+        let op = match cons.op {
+            ast::OrderOp::Gt => Cmp::Gt,
+            ast::OrderOp::Gte => Cmp::Gte,
+            ast::OrderOp::Eq => Cmp::Eq,
+        };
+        self.comp.add(ir::Prop::TimeCmp { lhs, op, rhs })
+    }
+
     fn implication(&mut self, i: ast::Implication<ast::Expr>) -> PropIdx {
         let cons = self.expr_cons(i.cons);
         if let Some(ante) = i.guard {
@@ -236,13 +247,19 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             // XXX(rachit): Unnecessary clone.
             self.port(port.inner().clone(), ir::PortOwner::sig_in());
         }
-        sig.param_constraints
-            .into_iter()
-            .map(|expr_cons| {
-                let prop = self.expr_cons(expr_cons.take());
-                ir::Fact::assume(prop).into()
-            })
-            .collect()
+
+        // Constraints defined by the signature
+        let mut cons = Vec::with_capacity(
+            sig.param_constraints.len() + sig.event_constraints.len(),
+        );
+        for ec in sig.event_constraints {
+            cons.push(ir::Fact::assume(self.event_cons(ec.take())).into());
+        }
+        for pc in sig.param_constraints {
+            cons.push(ir::Fact::assume(self.expr_cons(pc.take())).into());
+        }
+
+        cons
     }
 
     fn declare_inst(&mut self, inst: &ast::Instance) {
@@ -281,7 +298,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .sigs
             .get(&component)
             .unwrap()
-            .facts
+            .param_cons
             .clone()
             .into_iter()
             .map(|f| {

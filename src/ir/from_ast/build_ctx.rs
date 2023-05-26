@@ -16,7 +16,8 @@ pub struct Sig {
     pub events: Vec<ast::EventBind>,
     pub inputs: Vec<ast::PortDef>,
     pub outputs: Vec<ast::PortDef>,
-    pub facts: Vec<ast::OrderConstraint<ast::Expr>>,
+    pub param_cons: Vec<ast::OrderConstraint<ast::Expr>>,
+    pub event_cons: Vec<ast::OrderConstraint<ast::Time>>,
 }
 
 impl From<(&ast::Signature, usize)> for Sig {
@@ -27,8 +28,13 @@ impl From<(&ast::Signature, usize)> for Sig {
             inputs: sig.inputs().map(|p| p.clone().take()).collect(),
             outputs: sig.outputs().map(|p| p.clone().take()).collect(),
             events: sig.events.iter().map(|e| e.clone().take()).collect(),
-            facts: sig
+            param_cons: sig
                 .param_constraints
+                .iter()
+                .map(|f| f.clone().take())
+                .collect(),
+            event_cons: sig
+                .event_constraints
                 .iter()
                 .map(|f| f.clone().take())
                 .collect(),
