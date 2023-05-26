@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use super::{Ctx, ExprIdx, ParamIdx};
+use super::{Cmp, Ctx, ExprIdx, ParamIdx, Prop, PropIdx};
 use crate::ast;
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -191,5 +191,83 @@ impl ExprIdx {
                 args: Box::new([self]),
             }),
         }
+    }
+
+    /// The proposition `self > other`
+    pub fn gt<C>(&self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: Ctx<Expr> + Ctx<Prop>,
+    {
+        if let (Some(l), Some(r)) =
+            (self.as_concrete(ctx), other.as_concrete(ctx))
+        {
+            if l > r {
+                ctx.add(Prop::True)
+            } else {
+                ctx.add(Prop::True).not(ctx)
+            }
+        } else {
+            ctx.add(Prop::Cmp {
+                op: Cmp::Gt,
+                lhs: *self,
+                rhs: other,
+            })
+        }
+    }
+
+    pub fn gte<C>(&self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: Ctx<Expr> + Ctx<Prop>,
+    {
+        if let (Some(l), Some(r)) =
+            (self.as_concrete(ctx), other.as_concrete(ctx))
+        {
+            if l >= r {
+                ctx.add(Prop::True)
+            } else {
+                ctx.add(Prop::True).not(ctx)
+            }
+        } else {
+            ctx.add(Prop::Cmp {
+                op: Cmp::Gte,
+                lhs: *self,
+                rhs: other,
+            })
+        }
+    }
+
+    pub fn equal<C>(&self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: Ctx<Expr> + Ctx<Prop>,
+    {
+        if let (Some(l), Some(r)) =
+            (self.as_concrete(ctx), other.as_concrete(ctx))
+        {
+            if l == r {
+                ctx.add(Prop::True)
+            } else {
+                ctx.add(Prop::True).not(ctx)
+            }
+        } else {
+            ctx.add(Prop::Cmp {
+                op: Cmp::Eq,
+                lhs: *self,
+                rhs: other,
+            })
+        }
+    }
+
+    pub fn lt<C>(self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: Ctx<Expr> + Ctx<Prop>,
+    {
+        other.gt(self, ctx)
+    }
+
+    pub fn lte<C>(self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: Ctx<Expr> + Ctx<Prop>,
+    {
+        other.gte(self, ctx)
     }
 }

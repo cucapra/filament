@@ -24,10 +24,10 @@ external comp %comp22;
 external comp %comp23;
 external comp %comp24;
 external comp %comp25;
-comp %comp26[%pr0, %pr1]<%ev0: %e0>(
-  %p0: for<%pr2: %e0> @[%t0, %t1] %e2
+comp %comp26[%pr0, %pr1]<%ev0: %e1>(
+  %p0: for<%pr2: %e1> @[%t0, %t1] %e2
 ) -> (
-  %p1: for<%pr3: %e0> @[%t2, %t3] %e2
+  %p1: for<%pr3: %e1> @[%t2, %t3] %e2
 ) {
   %pr2 = param bundle;
   %pr3 = param bundle;
@@ -36,22 +36,22 @@ comp %comp26[%pr0, %pr1]<%ev0: %e0>(
   %pr6 = param bundle;
   %pr7 = param local;
   %pr8 = param bundle;
-  %e0 = expr 1;
-  %e1 = expr 0;
+  %e0 = expr 0;
+  %e1 = expr 1;
   %e2 = expr %pr0;
   %e3 = expr %pr1;
-  %e4 = expr %e0 + %e3;
+  %e4 = expr %e1 + %e3;
   %e5 = expr %pr4;
-  %e6 = expr %e0 + %e5;
+  %e6 = expr %e1 + %e5;
   %e7 = expr 2;
   %e8 = expr %e5 + %e7;
   %e9 = expr %pr6;
-  %e10 = expr %e0 + %e9;
+  %e10 = expr %e1 + %e9;
   %e11 = expr %pr7;
-  %e12 = expr %e0 + %e11;
-  %e13 = expr %e0 + %e12;
-  %t0 = time %ev0+%e1;
-  %t1 = time %ev0+%e0;
+  %e12 = expr %e1 + %e11;
+  %e13 = expr %e1 + %e12;
+  %t0 = time %ev0+%e0;
+  %t1 = time %ev0+%e1;
   %t2 = time %ev0+%e3;
   %t3 = time %ev0+%e4;
   %t4 = time %ev0+%e5;
@@ -61,25 +61,30 @@ comp %comp26[%pr0, %pr1]<%ev0: %e0>(
   %t8 = time %ev0+%e10;
   %t9 = time %ev0+%e11;
   %t10 = time %ev0+%e12;
-  %p2: bundle(out) for<%pr5: %e0> @[%t5, %t6] %e2;
+  %prop0 = prop false;
+  %prop1 = prop true;
+  %prop2 = prop %e11 >= %e0;
+  %prop3 = prop %e3 > %e11;
+  %prop4 = prop (%prop2 & %prop3);
+  %p2: bundle(out) for<%pr5: %e1> @[%t5, %t6] %e2;
   %p3 = bundle for<%pr6: %e4> @[%t7, %t8] %e2;
-  %p4: bundle(in) for<%pr8: %e0> @[%t9, %t10] %e2;
+  %p4: bundle(in) for<%pr8: %e1> @[%t9, %t10] %e2;
   %inst0 = instance %comp23[%e2];
   %inv0, %p2 = invoke %inst0<%t4>;
 control:
-  %p3[%e1..%e0) = %p0[%e1..%e0)
-  for %pr7 in %e1..%e3 {
+  %p3[%e0..%e1) = %p0[%e0..%e1)
+  for %pr7 in %e0..%e3 {
     %inst0;
-    %p4[%e1..%e0) = %p3[%e11..%e12)
+    %p4[%e0..%e1) = %p3[%e11..%e12)
     %inv0;
-    %p3[%e12..%e13) = %p2[%e1..%e0)
+    %p3[%e12..%e13) = %p2[%e0..%e1)
   }
-  %p1[%e1..%e0) = %p3[%e3..%e4)
+  %p1[%e0..%e1) = %p3[%e3..%e4)
 }
-comp %comp27[%pr0, %pr1, %pr2]<%ev0: %e0>(
-  %p0: for<%pr3: %e1> @[%t0, %t1] %e3
+comp %comp27[%pr0, %pr1, %pr2]<%ev0: %e1>(
+  %p0: for<%pr3: %e2> @[%t0, %t1] %e3
 ) -> (
-  %p1: for<%pr4: %e0> @[%t2, %t3] %e3
+  %p1: for<%pr4: %e1> @[%t2, %t3] %e3
 ) {
   %pr3 = param bundle;
   %pr4 = param bundle;
@@ -92,48 +97,63 @@ comp %comp27[%pr0, %pr1, %pr2]<%ev0: %e0>(
   %pr11 = param bundle;
   %pr12 = param bundle;
   %pr13 = param bundle;
-  %e0 = expr 1;
-  %e1 = expr %pr1;
-  %e2 = expr 0;
+  %e0 = expr 0;
+  %e1 = expr 1;
+  %e2 = expr %pr1;
   %e3 = expr %pr0;
   %e4 = expr %pr2;
-  %e5 = expr %e0 + %e4;
+  %e5 = expr %e1 + %e4;
   %e6 = expr pow2(%e4);
   %e7 = expr 2;
-  %e8 = expr %e1 / %e7;
-  %e9 = expr %e4 - %e0;
-  %e10 = expr %e0 + %e9;
+  %e8 = expr %e2 / %e7;
+  %e9 = expr %e4 - %e1;
+  %e10 = expr %e1 + %e9;
   %e11 = expr %e7 + %e9;
   %e12 = expr pow2(%e9);
-  %e13 = expr %e1 - %e8;
-  %t0 = time %ev0+%e2;
-  %t1 = time %ev0+%e0;
+  %e13 = expr %e2 - %e8;
+  %t0 = time %ev0+%e0;
+  %t1 = time %ev0+%e1;
   %t2 = time %ev0+%e4;
   %t3 = time %ev0+%e5;
   %t4 = time %ev0+%e9;
   %t5 = time %ev0+%e10;
   %t6 = time %ev0+%e11;
-  %prop0 = prop %e3 > %e0;
-  %prop1 = prop %e1 >= %e0;
-  %prop2 = prop %e1 = %e6;
-  %prop3 = prop %e4 >= %e2;
-  %prop4 = prop %e4 = %e2;
-  %prop5 = prop %e12 = %e8;
-  %prop6 = prop %e1 >= %e7;
-  %prop7 = prop %e13 = %e8;
-  %prop8 = prop %e8 >= %e0;
-  %prop9 = prop %e8 = %e12;
-  %prop10 = prop %e9 >= %e2;
-  %prop11 = prop %e3 > %e2;
-  %p2: bundle(out) for<%pr5: %e0> @[%t4, %t5] %e3;
-  %p3: bundle(out) for<%pr6: %e0> @[%t4, %t5] %e3;
-  %p4: bundle(out) for<%pr7: %e0> @[%t4, %t5] %e3;
-  %p5: bundle(out) for<%pr8: %e0> @[%t5, %t6] %e3;
+  %prop0 = prop false;
+  %prop1 = prop true;
+  %prop2 = prop %e3 > %e1;
+  %prop3 = prop %e2 >= %e1;
+  %prop4 = prop %e2 = %e6;
+  %prop5 = prop %e4 >= %e0;
+  %prop6 = prop %e4 = %e0;
+  %prop7 = prop %e12 = %e8;
+  %prop8 = prop %e2 >= %e7;
+  %prop9 = prop %e13 = %e8;
+  %prop10 = prop %e8 >= %e1;
+  %prop11 = prop %e8 = %e12;
+  %prop12 = prop %e9 >= %e0;
+  %prop13 = prop %e3 > %e0;
+  %prop14 = prop !%prop6;
+  %prop15 = prop (%prop2 & %prop3);
+  %prop16 = prop (%prop4 & %prop15);
+  %prop17 = prop (%prop5 & %prop16);
+  %prop18 = prop (%prop14 & %prop17);
+  %prop19 = prop (%prop18 => %prop7);
+  %prop20 = prop (%prop18 => %prop8);
+  %prop21 = prop (%prop18 => %prop9);
+  %prop22 = prop (%prop18 => %prop2);
+  %prop23 = prop (%prop18 => %prop10);
+  %prop24 = prop (%prop18 => %prop11);
+  %prop25 = prop (%prop18 => %prop12);
+  %prop26 = prop (%prop18 => %prop13);
+  %p2: bundle(out) for<%pr5: %e1> @[%t4, %t5] %e3;
+  %p3: bundle(out) for<%pr6: %e1> @[%t4, %t5] %e3;
+  %p4: bundle(out) for<%pr7: %e1> @[%t4, %t5] %e3;
+  %p5: bundle(out) for<%pr8: %e1> @[%t5, %t6] %e3;
   %p6: bundle(in) for<%pr9: %e8> @[%t0, %t1] %e3;
   %p7: bundle(in) for<%pr10: %e8> @[%t0, %t1] %e3;
-  %p8: bundle(in) for<%pr11: %e0> @[%t4, %t5] %e3;
-  %p9: bundle(in) for<%pr12: %e0> @[%t4, %t5] %e3;
-  %p10: bundle(in) for<%pr13: %e0> @[%t4, %t5] %e3;
+  %p8: bundle(in) for<%pr11: %e1> @[%t4, %t5] %e3;
+  %p9: bundle(in) for<%pr12: %e1> @[%t4, %t5] %e3;
+  %p10: bundle(in) for<%pr13: %e1> @[%t4, %t5] %e3;
   %inst0 = instance %comp27[%e3, %e8, %e9];
   %inst1 = instance %comp27[%e3, %e8, %e9];
   %inst2 = instance %comp1[%e3];
@@ -143,44 +163,40 @@ comp %comp27[%pr0, %pr1, %pr2]<%ev0: %e0>(
   %inv2, %p4 = invoke %inst2<%t4>;
   %inv3, %p5 = invoke %inst3<%t4>;
 control:
-  if %prop4 {
-    %p1[%e2..%e0) = %p0[%e2..%e0)
+  assert %prop19;
+  assert %prop20;
+  assert %prop21;
+  assert %prop22;
+  assert %prop23;
+  assert %prop24;
+  assert %prop25;
+  assert %prop26;
+  if %prop6 {
+    %p1[%e0..%e1) = %p0[%e0..%e1)
   }
   else {
-    assert %prop5;
-    assert %prop6;
-    assert %prop7;
     %inst0;
-    assert %prop0;
-    assert %prop8;
-    assert %prop9;
-    assert %prop10;
-    %p6[%e2..%e8) = %p0[%e2..%e8)
+    %p6[%e0..%e8) = %p0[%e0..%e8)
     %inv0;
     %inst1;
-    assert %prop0;
-    assert %prop8;
-    assert %prop9;
-    assert %prop10;
-    %p7[%e2..%e8) = %p0[%e8..%e1)
+    %p7[%e0..%e8) = %p0[%e8..%e2)
     %inv1;
     %inst2;
-    assert %prop11;
-    %p8[%e2..%e0) = %p2[%e2..%e0)
-    %p9[%e2..%e0) = %p3[%e2..%e0)
+    %p8[%e0..%e1) = %p2[%e0..%e1)
+    %p9[%e0..%e1) = %p3[%e0..%e1)
     %inv2;
     %inst3;
-    %p10[%e2..%e0) = %p4[%e2..%e0)
+    %p10[%e0..%e1) = %p4[%e0..%e1)
     %inv3;
-    %p1[%e2..%e0) = %p5[%e2..%e0)
+    %p1[%e0..%e1) = %p5[%e0..%e1)
   }
 
 }
-comp %comp28[%pr0]<%ev0: %e0>(
-  %p0: for<%pr1: %e0> @[%t0, %t1] %e2,
-  %p1: for<%pr2: %e0> @[%t0, %t1] %e2
+comp %comp28[%pr0]<%ev0: %e1>(
+  %p0: for<%pr1: %e1> @[%t0, %t1] %e2,
+  %p1: for<%pr2: %e1> @[%t0, %t1] %e2
 ) -> (
-  %p2: for<%pr3: %e0> @[%t2, %t3] %e2
+  %p2: for<%pr3: %e1> @[%t2, %t3] %e2
 ) {
   %pr1 = param bundle;
   %pr2 = param bundle;
@@ -196,29 +212,32 @@ comp %comp28[%pr0]<%ev0: %e0>(
   %pr12 = param bundle;
   %pr13 = param bundle;
   %pr14 = param bundle;
-  %e0 = expr 1;
-  %e1 = expr 0;
+  %e0 = expr 0;
+  %e1 = expr 1;
   %e2 = expr %pr0;
   %e3 = expr 3;
   %e4 = expr 4;
   %e5 = expr 2;
-  %t0 = time %ev0+%e1;
-  %t1 = time %ev0+%e0;
+  %t0 = time %ev0+%e0;
+  %t1 = time %ev0+%e1;
   %t2 = time %ev0+%e3;
   %t3 = time %ev0+%e4;
   %t4 = time %ev0+%e5;
-  %prop0 = prop %e2 > %e1;
-  %p3: bundle(out) for<%pr4: %e0> @[%t1, %t4] %e2;
-  %p4: bundle(out) for<%pr5: %e0> @[%t1, %t4] %e2;
-  %p5: bundle(out) for<%pr6: %e0> @[%t1, %t4] %e2;
-  %p6: bundle(out) for<%pr7: %e0> @[%t4, %t2] %e2;
-  %p7: bundle(out) for<%pr8: %e0> @[%t2, %t3] %e2;
-  %p8: bundle(in) for<%pr9: %e0> @[%t0, %t1] %e2;
-  %p9: bundle(in) for<%pr10: %e0> @[%t0, %t1] %e2;
-  %p10: bundle(in) for<%pr11: %e0> @[%t1, %t4] %e2;
-  %p11: bundle(in) for<%pr12: %e0> @[%t1, %t4] %e2;
-  %p12: bundle(in) for<%pr13: %e0> @[%t1, %t4] %e2;
-  %p13: bundle(in) for<%pr14: %e0> @[%t4, %t2] %e2;
+  %prop0 = prop false;
+  %prop1 = prop true;
+  %prop2 = prop %e2 > %e0;
+  %prop3 = prop (%prop2 => %prop2);
+  %p3: bundle(out) for<%pr4: %e1> @[%t1, %t4] %e2;
+  %p4: bundle(out) for<%pr5: %e1> @[%t1, %t4] %e2;
+  %p5: bundle(out) for<%pr6: %e1> @[%t1, %t4] %e2;
+  %p6: bundle(out) for<%pr7: %e1> @[%t4, %t2] %e2;
+  %p7: bundle(out) for<%pr8: %e1> @[%t2, %t3] %e2;
+  %p8: bundle(in) for<%pr9: %e1> @[%t0, %t1] %e2;
+  %p9: bundle(in) for<%pr10: %e1> @[%t0, %t1] %e2;
+  %p10: bundle(in) for<%pr11: %e1> @[%t1, %t4] %e2;
+  %p11: bundle(in) for<%pr12: %e1> @[%t1, %t4] %e2;
+  %p12: bundle(in) for<%pr13: %e1> @[%t1, %t4] %e2;
+  %p13: bundle(in) for<%pr14: %e1> @[%t4, %t2] %e2;
   %inst0 = instance %comp23[%e2];
   %inst1 = instance %comp23[%e2];
   %inst2 = instance %comp3[%e2];
@@ -230,30 +249,30 @@ comp %comp28[%pr0]<%ev0: %e0>(
   %inv3, %p6 = invoke %inst3<%t1>;
   %inv4, %p7 = invoke %inst4<%t4>;
 control:
+  assert %prop3;
   %inst0;
-  %p8[%e1..%e0) = %p0[%e1..%e0)
+  %p8[%e0..%e1) = %p0[%e0..%e1)
   %inv0;
   %inst1;
-  %p9[%e1..%e0) = %p1[%e1..%e0)
+  %p9[%e0..%e1) = %p1[%e0..%e1)
   %inv1;
   %inst2;
-  assert %prop0;
-  %p10[%e1..%e0) = %p3[%e1..%e0)
-  %p11[%e1..%e0) = %p4[%e1..%e0)
+  %p10[%e0..%e1) = %p3[%e0..%e1)
+  %p11[%e0..%e1) = %p4[%e0..%e1)
   %inv2;
   %inst3;
-  %p12[%e1..%e0) = %p5[%e1..%e0)
+  %p12[%e0..%e1) = %p5[%e0..%e1)
   %inv3;
   %inst4;
-  %p13[%e1..%e0) = %p6[%e1..%e0)
+  %p13[%e0..%e1) = %p6[%e0..%e1)
   %inv4;
-  %p2[%e1..%e0) = %p7[%e1..%e0)
+  %p2[%e0..%e1) = %p7[%e0..%e1)
 }
-comp %comp29[%pr0]<%ev0: %e0>(
-  %p0: for<%pr1: %e0> @[%t0, %t1] %e2
+comp %comp29[%pr0]<%ev0: %e1>(
+  %p0: for<%pr1: %e1> @[%t0, %t1] %e2
 ) -> (
-  %p1: for<%pr2: %e0> @[%t0, %t1] %e3,
-  %p2: for<%pr3: %e0> @[%t0, %t1] %e2
+  %p1: for<%pr2: %e1> @[%t0, %t1] %e3,
+  %p2: for<%pr3: %e1> @[%t0, %t1] %e2
 ) {
   %pr1 = param bundle;
   %pr2 = param bundle;
@@ -268,88 +287,93 @@ comp %comp29[%pr0]<%ev0: %e0>(
   %pr11 = param bundle;
   %pr12 = param bundle;
   %pr13 = param bundle;
-  %e0 = expr 1;
-  %e1 = expr 0;
+  %e0 = expr 0;
+  %e1 = expr 1;
   %e2 = expr %pr0;
-  %e3 = expr %e0 + %e2;
+  %e3 = expr %e1 + %e2;
   %e4 = expr 2;
   %e5 = expr %e2 * %e4;
-  %e6 = expr %e0 + %e5;
-  %t0 = time %ev0+%e1;
-  %t1 = time %ev0+%e0;
-  %prop0 = prop %e2 > %e1;
-  %prop1 = prop %e0 > %e1;
-  %prop2 = prop %e3 = %e3;
-  %prop3 = prop %e3 > %e1;
-  %prop4 = prop %e6 > %e1;
-  %prop5 = prop %e6 > %e3;
-  %prop6 = prop %e6 > %e5;
-  %prop7 = prop %e6 > %e2;
-  %prop8 = prop %e5 >= %e2;
-  %prop9 = prop %e2 >= %e1;
-  %p3: bundle(out) for<%pr4: %e0> @[%t0, %t1] %e0;
-  %p4: bundle(out) for<%pr5: %e0> @[%t0, %t1] %e3;
-  %p5: bundle(out) for<%pr6: %e0> @[%t0, %t1] %e6;
-  %p6: bundle(out) for<%pr7: %e0> @[%t0, %t1] %e3;
-  %p7: bundle(out) for<%pr8: %e0> @[%t0, %t1] %e2;
-  %p8: bundle(in) for<%pr9: %e0> @[%t0, %t1] %e2;
-  %p9: bundle(in) for<%pr10: %e0> @[%t0, %t1] %e0;
-  %p10: bundle(in) for<%pr11: %e0> @[%t0, %t1] %e3;
-  %p11: bundle(in) for<%pr12: %e0> @[%t0, %t1] %e6;
-  %p12: bundle(in) for<%pr13: %e0> @[%t0, %t1] %e6;
-  %inst0 = instance %comp0[%e0, %e1];
-  %inst1 = instance %comp14[%e2, %e0, %e3];
+  %e6 = expr %e1 + %e5;
+  %t0 = time %ev0+%e0;
+  %t1 = time %ev0+%e1;
+  %prop0 = prop false;
+  %prop1 = prop true;
+  %prop2 = prop %e2 > %e0;
+  %prop3 = prop %e1 > %e0;
+  %prop4 = prop %e3 = %e3;
+  %prop5 = prop %e3 > %e0;
+  %prop6 = prop %e6 > %e0;
+  %prop7 = prop %e6 > %e3;
+  %prop8 = prop %e6 > %e5;
+  %prop9 = prop %e6 > %e2;
+  %prop10 = prop %e5 >= %e2;
+  %prop11 = prop %e2 >= %e0;
+  %prop12 = prop (%prop2 => %prop3);
+  %prop13 = prop (%prop2 => %prop2);
+  %prop14 = prop (%prop2 => %prop4);
+  %prop15 = prop (%prop2 => %prop5);
+  %prop16 = prop (%prop2 => %prop6);
+  %prop17 = prop (%prop2 => %prop7);
+  %prop18 = prop (%prop2 => %prop8);
+  %prop19 = prop (%prop2 => %prop9);
+  %prop20 = prop (%prop2 => %prop10);
+  %prop21 = prop (%prop2 => %prop11);
+  %p3: bundle(out) for<%pr4: %e1> @[%t0, %t1] %e1;
+  %p4: bundle(out) for<%pr5: %e1> @[%t0, %t1] %e3;
+  %p5: bundle(out) for<%pr6: %e1> @[%t0, %t1] %e6;
+  %p6: bundle(out) for<%pr7: %e1> @[%t0, %t1] %e3;
+  %p7: bundle(out) for<%pr8: %e1> @[%t0, %t1] %e2;
+  %p8: bundle(in) for<%pr9: %e1> @[%t0, %t1] %e2;
+  %p9: bundle(in) for<%pr10: %e1> @[%t0, %t1] %e1;
+  %p10: bundle(in) for<%pr11: %e1> @[%t0, %t1] %e3;
+  %p11: bundle(in) for<%pr12: %e1> @[%t0, %t1] %e6;
+  %p12: bundle(in) for<%pr13: %e1> @[%t0, %t1] %e6;
+  %inst0 = instance %comp0[%e1, %e0];
+  %inst1 = instance %comp14[%e2, %e1, %e3];
   %inst2 = instance %comp13[%e3, %e6];
   %inst3 = instance %comp16[%e6, %e5, %e2, %e3];
-  %inst4 = instance %comp16[%e6, %e2, %e1, %e2];
+  %inst4 = instance %comp16[%e6, %e2, %e0, %e2];
   %inv0, %p3 = invoke %inst0<%t0>;
   %inv1, %p4 = invoke %inst1<%t0>;
   %inv2, %p5 = invoke %inst2<%t0>;
   %inv3, %p6 = invoke %inst3<%t0>;
   %inv4, %p7 = invoke %inst4<%t0>;
 control:
+  assert %prop12;
+  assert %prop14;
+  assert %prop17;
+  assert %prop15;
+  assert %prop18;
+  assert %prop20;
+  assert %prop13;
+  assert %prop19;
+  assert %prop16;
+  assert %prop21;
   %inst0;
-  assert %prop1;
   %inv0;
   %inst1;
-  assert %prop0;
-  assert %prop1;
-  assert %prop2;
-  %p8[%e1..%e0) = %p0[%e1..%e0)
-  %p9[%e1..%e0) = %p3[%e1..%e0)
+  %p8[%e0..%e1) = %p0[%e0..%e1)
+  %p9[%e0..%e1) = %p3[%e0..%e1)
   %inv1;
   %inst2;
-  assert %prop3;
-  assert %prop4;
-  assert %prop5;
-  %p10[%e1..%e0) = %p4[%e1..%e0)
+  %p10[%e0..%e1) = %p4[%e0..%e1)
   %inv2;
   %inst3;
-  assert %prop4;
-  assert %prop3;
-  assert %prop6;
-  assert %prop7;
-  assert %prop8;
-  %p11[%e1..%e0) = %p5[%e1..%e0)
+  %p11[%e0..%e1) = %p5[%e0..%e1)
   %inv3;
   %inst4;
-  assert %prop4;
-  assert %prop0;
-  assert %prop7;
-  assert %prop4;
-  assert %prop9;
-  %p12[%e1..%e0) = %p5[%e1..%e0)
+  %p12[%e0..%e1) = %p5[%e0..%e1)
   %inv4;
-  %p1[%e1..%e0) = %p6[%e1..%e0)
-  %p2[%e1..%e0) = %p7[%e1..%e0)
+  %p1[%e0..%e1) = %p6[%e0..%e1)
+  %p2[%e0..%e1) = %p7[%e0..%e1)
 }
-comp %comp30[%pr0]<%ev0: %e0>(
-  %p0: for<%pr1: %e0> @[%t0, %t1] %e3,
-  %p1: for<%pr2: %e0> @[%t0, %t1] %e2,
-  %p2: for<%pr3: %e0> @[%t0, %t1] %e2
+comp %comp30[%pr0]<%ev0: %e1>(
+  %p0: for<%pr1: %e1> @[%t0, %t1] %e3,
+  %p1: for<%pr2: %e1> @[%t0, %t1] %e2,
+  %p2: for<%pr3: %e1> @[%t0, %t1] %e2
 ) -> (
-  %p3: for<%pr4: %e0> @[%t0, %t1] %e3,
-  %p4: for<%pr5: %e0> @[%t0, %t1] %e2
+  %p3: for<%pr4: %e1> @[%t0, %t1] %e3,
+  %p4: for<%pr5: %e1> @[%t0, %t1] %e2
 ) {
   %pr1 = param bundle;
   %pr2 = param bundle;
@@ -388,75 +412,90 @@ comp %comp30[%pr0]<%ev0: %e0>(
   %pr35 = param bundle;
   %pr36 = param bundle;
   %pr37 = param bundle;
-  %e0 = expr 1;
-  %e1 = expr 0;
+  %e0 = expr 0;
+  %e1 = expr 1;
   %e2 = expr %pr0;
-  %e3 = expr %e0 + %e2;
-  %e4 = expr %e2 - %e0;
+  %e3 = expr %e1 + %e2;
+  %e4 = expr %e2 - %e1;
   %e5 = expr 2;
   %e6 = expr %e2 * %e5;
-  %e7 = expr %e0 + %e6;
+  %e7 = expr %e1 + %e6;
   %e8 = expr %e2 + %e3;
-  %t0 = time %ev0+%e1;
-  %t1 = time %ev0+%e0;
-  %prop0 = prop %e2 > %e1;
-  %prop1 = prop %e3 > %e1;
-  %prop2 = prop %e3 > %e2;
-  %prop3 = prop %e3 > %e4;
-  %prop4 = prop %e4 >= %e1;
-  %prop5 = prop %e0 > %e1;
-  %prop6 = prop %e3 = %e3;
-  %prop7 = prop %e7 = %e8;
-  %prop8 = prop %e7 > %e1;
-  %prop9 = prop %e7 > %e6;
-  %prop10 = prop %e7 > %e2;
-  %prop11 = prop %e6 >= %e2;
-  %prop12 = prop %e2 >= %e1;
-  %p5: bundle(out) for<%pr6: %e0> @[%t0, %t1] %e3;
-  %p6: bundle(out) for<%pr7: %e0> @[%t0, %t1] %e0;
-  %p7: bundle(out) for<%pr8: %e0> @[%t0, %t1] %e3;
-  %p8: bundle(out) for<%pr9: %e0> @[%t0, %t1] %e2;
-  %p9: bundle(out) for<%pr10: %e0> @[%t0, %t1] %e0;
-  %p10: bundle(out) for<%pr11: %e0> @[%t0, %t1] %e3;
-  %p11: bundle(out) for<%pr12: %e0> @[%t0, %t1] %e7;
-  %p12: bundle(out) for<%pr13: %e0> @[%t0, %t1] %e7;
-  %p13: bundle(out) for<%pr14: %e0> @[%t0, %t1] %e7;
-  %p14: bundle(out) for<%pr15: %e0> @[%t0, %t1] %e7;
-  %p15: bundle(out) for<%pr16: %e0> @[%t0, %t1] %e7;
-  %p16: bundle(out) for<%pr17: %e0> @[%t0, %t1] %e3;
-  %p17: bundle(out) for<%pr18: %e0> @[%t0, %t1] %e2;
-  %p18: bundle(in) for<%pr19: %e0> @[%t0, %t1] %e2;
-  %p19: bundle(in) for<%pr20: %e0> @[%t0, %t1] %e3;
-  %p20: bundle(in) for<%pr21: %e0> @[%t0, %t1] %e3;
-  %p21: bundle(in) for<%pr22: %e0> @[%t0, %t1] %e3;
-  %p22: bundle(in) for<%pr23: %e0> @[%t0, %t1] %e3;
-  %p23: bundle(in) for<%pr24: %e0> @[%t0, %t1] %e3;
-  %p24: bundle(in) for<%pr25: %e0> @[%t0, %t1] %e2;
-  %p25: bundle(in) for<%pr26: %e0> @[%t0, %t1] %e0;
-  %p26: bundle(in) for<%pr27: %e0> @[%t0, %t1] %e2;
-  %p27: bundle(in) for<%pr28: %e0> @[%t0, %t1] %e3;
-  %p28: bundle(in) for<%pr29: %e0> @[%t0, %t1] %e3;
-  %p29: bundle(in) for<%pr30: %e0> @[%t0, %t1] %e2;
-  %p30: bundle(in) for<%pr31: %e0> @[%t0, %t1] %e7;
-  %p31: bundle(in) for<%pr32: %e0> @[%t0, %t1] %e7;
-  %p32: bundle(in) for<%pr33: %e0> @[%t0, %t1] %e0;
-  %p33: bundle(in) for<%pr34: %e0> @[%t0, %t1] %e7;
-  %p34: bundle(in) for<%pr35: %e0> @[%t0, %t1] %e7;
-  %p35: bundle(in) for<%pr36: %e0> @[%t0, %t1] %e7;
-  %p36: bundle(in) for<%pr37: %e0> @[%t0, %t1] %e7;
+  %t0 = time %ev0+%e0;
+  %t1 = time %ev0+%e1;
+  %prop0 = prop false;
+  %prop1 = prop true;
+  %prop2 = prop %e2 > %e0;
+  %prop3 = prop %e3 > %e0;
+  %prop4 = prop %e3 > %e2;
+  %prop5 = prop %e3 > %e4;
+  %prop6 = prop %e4 >= %e0;
+  %prop7 = prop %e1 > %e0;
+  %prop8 = prop %e3 = %e3;
+  %prop9 = prop %e7 = %e8;
+  %prop10 = prop %e7 > %e0;
+  %prop11 = prop %e7 > %e6;
+  %prop12 = prop %e7 > %e2;
+  %prop13 = prop %e6 >= %e2;
+  %prop14 = prop %e2 >= %e0;
+  %prop15 = prop (%prop2 => %prop2);
+  %prop16 = prop (%prop2 => %prop3);
+  %prop17 = prop (%prop2 => %prop4);
+  %prop18 = prop (%prop2 => %prop5);
+  %prop19 = prop (%prop2 => %prop6);
+  %prop20 = prop (%prop2 => %prop7);
+  %prop21 = prop (%prop2 => %prop8);
+  %prop22 = prop (%prop2 => %prop9);
+  %prop23 = prop (%prop2 => %prop10);
+  %prop24 = prop (%prop2 => %prop11);
+  %prop25 = prop (%prop2 => %prop12);
+  %prop26 = prop (%prop2 => %prop13);
+  %prop27 = prop (%prop2 => %prop14);
+  %p5: bundle(out) for<%pr6: %e1> @[%t0, %t1] %e3;
+  %p6: bundle(out) for<%pr7: %e1> @[%t0, %t1] %e1;
+  %p7: bundle(out) for<%pr8: %e1> @[%t0, %t1] %e3;
+  %p8: bundle(out) for<%pr9: %e1> @[%t0, %t1] %e2;
+  %p9: bundle(out) for<%pr10: %e1> @[%t0, %t1] %e1;
+  %p10: bundle(out) for<%pr11: %e1> @[%t0, %t1] %e3;
+  %p11: bundle(out) for<%pr12: %e1> @[%t0, %t1] %e7;
+  %p12: bundle(out) for<%pr13: %e1> @[%t0, %t1] %e7;
+  %p13: bundle(out) for<%pr14: %e1> @[%t0, %t1] %e7;
+  %p14: bundle(out) for<%pr15: %e1> @[%t0, %t1] %e7;
+  %p15: bundle(out) for<%pr16: %e1> @[%t0, %t1] %e7;
+  %p16: bundle(out) for<%pr17: %e1> @[%t0, %t1] %e3;
+  %p17: bundle(out) for<%pr18: %e1> @[%t0, %t1] %e2;
+  %p18: bundle(in) for<%pr19: %e1> @[%t0, %t1] %e2;
+  %p19: bundle(in) for<%pr20: %e1> @[%t0, %t1] %e3;
+  %p20: bundle(in) for<%pr21: %e1> @[%t0, %t1] %e3;
+  %p21: bundle(in) for<%pr22: %e1> @[%t0, %t1] %e3;
+  %p22: bundle(in) for<%pr23: %e1> @[%t0, %t1] %e3;
+  %p23: bundle(in) for<%pr24: %e1> @[%t0, %t1] %e3;
+  %p24: bundle(in) for<%pr25: %e1> @[%t0, %t1] %e2;
+  %p25: bundle(in) for<%pr26: %e1> @[%t0, %t1] %e1;
+  %p26: bundle(in) for<%pr27: %e1> @[%t0, %t1] %e2;
+  %p27: bundle(in) for<%pr28: %e1> @[%t0, %t1] %e3;
+  %p28: bundle(in) for<%pr29: %e1> @[%t0, %t1] %e3;
+  %p29: bundle(in) for<%pr30: %e1> @[%t0, %t1] %e2;
+  %p30: bundle(in) for<%pr31: %e1> @[%t0, %t1] %e7;
+  %p31: bundle(in) for<%pr32: %e1> @[%t0, %t1] %e7;
+  %p32: bundle(in) for<%pr33: %e1> @[%t0, %t1] %e1;
+  %p33: bundle(in) for<%pr34: %e1> @[%t0, %t1] %e7;
+  %p34: bundle(in) for<%pr35: %e1> @[%t0, %t1] %e7;
+  %p35: bundle(in) for<%pr36: %e1> @[%t0, %t1] %e7;
+  %p36: bundle(in) for<%pr37: %e1> @[%t0, %t1] %e7;
   %inst0 = instance %comp13[%e2, %e3];
   %inst1 = instance %comp12[%e3];
   %inst2 = instance %comp2[%e3];
-  %inst3 = instance %comp16[%e3, %e4, %e1, %e2];
-  %inst4 = instance %comp0[%e0, %e0];
-  %inst5 = instance %comp14[%e2, %e0, %e3];
+  %inst3 = instance %comp16[%e3, %e4, %e0, %e2];
+  %inst4 = instance %comp0[%e1, %e1];
+  %inst5 = instance %comp14[%e2, %e1, %e3];
   %inst6 = instance %comp14[%e2, %e3, %e7];
   %inst7 = instance %comp14[%e3, %e2, %e7];
-  %inst8 = instance %comp0[%e7, %e0];
+  %inst8 = instance %comp0[%e7, %e1];
   %inst9 = instance %comp19[%e7];
   %inst10 = instance %comp21[%e7];
   %inst11 = instance %comp16[%e7, %e6, %e2, %e3];
-  %inst12 = instance %comp16[%e7, %e2, %e1, %e2];
+  %inst12 = instance %comp16[%e7, %e2, %e0, %e2];
   %inv0, %p5 = invoke %inst0<%t0>;
   %inv1, %p6 = invoke %inst1<%t0>;
   %inv2, %p7 = invoke %inst2<%t0>;
@@ -471,88 +510,68 @@ comp %comp30[%pr0]<%ev0: %e0>(
   %inv11, %p16 = invoke %inst11<%t0>;
   %inv12, %p17 = invoke %inst12<%t0>;
 control:
+  assert %prop17;
+  assert %prop18;
+  assert %prop19;
+  assert %prop20;
+  assert %prop21;
+  assert %prop22;
+  assert %prop16;
+  assert %prop24;
+  assert %prop26;
+  assert %prop15;
+  assert %prop25;
+  assert %prop23;
+  assert %prop27;
   %inst0;
-  assert %prop0;
-  assert %prop1;
-  assert %prop2;
-  %p18[%e1..%e0) = %p1[%e1..%e0)
+  %p18[%e0..%e1) = %p1[%e0..%e1)
   %inv0;
   %inst1;
-  assert %prop1;
-  %p19[%e1..%e0) = %p0[%e1..%e0)
-  %p20[%e1..%e0) = %p5[%e1..%e0)
+  %p19[%e0..%e1) = %p0[%e0..%e1)
+  %p20[%e0..%e1) = %p5[%e0..%e1)
   %inv1;
   %inst2;
-  assert %prop1;
-  %p21[%e1..%e0) = %p0[%e1..%e0)
-  %p22[%e1..%e0) = %p5[%e1..%e0)
+  %p21[%e0..%e1) = %p0[%e0..%e1)
+  %p22[%e0..%e1) = %p5[%e0..%e1)
   %inv2;
   %inst3;
-  assert %prop1;
-  assert %prop0;
-  assert %prop3;
-  assert %prop1;
-  assert %prop4;
-  %p23[%e1..%e0) = %p7[%e1..%e0)
+  %p23[%e0..%e1) = %p7[%e0..%e1)
   %inv3;
   %inst4;
-  assert %prop5;
   %inv4;
   %inst5;
-  assert %prop0;
-  assert %prop5;
-  assert %prop6;
-  %p24[%e1..%e0) = %p2[%e1..%e0)
-  %p25[%e1..%e0) = %p9[%e1..%e0)
+  %p24[%e0..%e1) = %p2[%e0..%e1)
+  %p25[%e0..%e1) = %p9[%e0..%e1)
   %inv5;
   %inst6;
-  assert %prop0;
-  assert %prop1;
-  assert %prop7;
-  %p26[%e1..%e0) = %p8[%e1..%e0)
-  %p27[%e1..%e0) = %p10[%e1..%e0)
+  %p26[%e0..%e1) = %p8[%e0..%e1)
+  %p27[%e0..%e1) = %p10[%e0..%e1)
   %inv6;
   %inst7;
-  assert %prop1;
-  assert %prop0;
-  assert %prop7;
-  %p28[%e1..%e0) = %p0[%e1..%e0)
-  %p29[%e1..%e0) = %p2[%e1..%e0)
+  %p28[%e0..%e1) = %p0[%e0..%e1)
+  %p29[%e0..%e1) = %p2[%e0..%e1)
   %inv7;
   %inst8;
-  assert %prop8;
   %inv8;
   %inst9;
-  assert %prop8;
-  %p30[%e1..%e0) = %p12[%e1..%e0)
-  %p31[%e1..%e0) = %p13[%e1..%e0)
+  %p30[%e0..%e1) = %p12[%e0..%e1)
+  %p31[%e0..%e1) = %p13[%e0..%e1)
   %inv9;
   %inst10;
-  assert %prop8;
-  %p32[%e1..%e0) = %p6[%e1..%e0)
-  %p33[%e1..%e0) = %p11[%e1..%e0)
-  %p34[%e1..%e0) = %p14[%e1..%e0)
+  %p32[%e0..%e1) = %p6[%e0..%e1)
+  %p33[%e0..%e1) = %p11[%e0..%e1)
+  %p34[%e0..%e1) = %p14[%e0..%e1)
   %inv10;
   %inst11;
-  assert %prop8;
-  assert %prop1;
-  assert %prop9;
-  assert %prop10;
-  assert %prop11;
-  %p35[%e1..%e0) = %p15[%e1..%e0)
+  %p35[%e0..%e1) = %p15[%e0..%e1)
   %inv11;
   %inst12;
-  assert %prop8;
-  assert %prop0;
-  assert %prop10;
-  assert %prop8;
-  assert %prop12;
-  %p36[%e1..%e0) = %p15[%e1..%e0)
+  %p36[%e0..%e1) = %p15[%e0..%e1)
   %inv12;
-  %p4[%e1..%e0) = %p17[%e1..%e0)
-  %p3[%e1..%e0) = %p16[%e1..%e0)
+  %p4[%e0..%e1) = %p17[%e0..%e1)
+  %p3[%e0..%e1) = %p16[%e0..%e1)
 }
-comp %comp31[%pr0, %pr1, %pr2]<%ev0: %e0>(
+comp %comp31[%pr0, %pr1, %pr2]<%ev0: %e2>(
   %p0: for<%pr3: %e1> @[%t0, %t1] %e3,
   %p1: for<%pr4: %e1> @[%t0, %t1] %e3
 ) -> (
@@ -585,15 +604,15 @@ comp %comp31[%pr0, %pr1, %pr2]<%ev0: %e0>(
   %pr27 = param bundle;
   %pr28 = param bundle;
   %pr29 = param bundle;
-  %e0 = expr %pr2;
+  %e0 = expr 0;
   %e1 = expr 1;
-  %e2 = expr 0;
+  %e2 = expr %pr2;
   %e3 = expr %pr0;
   %e4 = expr %e1 + %e3;
   %e5 = expr %pr1;
-  %e6 = expr %e0 * %e5;
+  %e6 = expr %e2 * %e5;
   %e7 = expr %pr8;
-  %e8 = expr %e0 * %e7;
+  %e8 = expr %e2 * %e7;
   %e9 = expr %pr9;
   %e10 = expr %e8 + %e9;
   %e11 = expr %e1 + %e10;
@@ -601,17 +620,17 @@ comp %comp31[%pr0, %pr1, %pr2]<%ev0: %e0>(
   %e13 = expr %e10 + %e12;
   %e14 = expr %e1 + %e5;
   %e15 = expr %pr15;
-  %e16 = expr %e0 * %e15;
+  %e16 = expr %e2 * %e15;
   %e17 = expr %e1 + %e16;
   %e18 = expr %pr16;
-  %e19 = expr %e0 * %e18;
+  %e19 = expr %e2 * %e18;
   %e20 = expr %e1 + %e19;
   %e21 = expr %pr17;
-  %e22 = expr %e0 * %e21;
+  %e22 = expr %e2 * %e21;
   %e23 = expr %e1 + %e22;
-  %e24 = expr %e0 + %e1;
+  %e24 = expr %e1 + %e2;
   %e25 = expr %pr19;
-  %e26 = expr %e0 * %e25;
+  %e26 = expr %e2 * %e25;
   %e27 = expr %pr20;
   %e28 = expr %e26 + %e27;
   %e29 = expr %e1 + %e28;
@@ -628,7 +647,7 @@ comp %comp31[%pr0, %pr1, %pr2]<%ev0: %e0>(
   %e40 = expr %e1 + %e39;
   %e41 = expr %e1 + %e38;
   %e42 = expr %e1 + %e36;
-  %t0 = time %ev0+%e2;
+  %t0 = time %ev0+%e0;
   %t1 = time %ev0+%e1;
   %t2 = time %ev0+%e3;
   %t3 = time %ev0+%e4;
@@ -649,10 +668,23 @@ comp %comp31[%pr0, %pr1, %pr2]<%ev0: %e0>(
   %t18 = time %ev0+%e35;
   %t19 = time %ev0+%e39;
   %t20 = time %ev0+%e40;
-  %prop0 = prop %e5 > %e2;
-  %prop1 = prop %e0 > %e2;
-  %prop2 = prop %e3 = %e6;
-  %prop3 = prop %e3 > %e2;
+  %prop0 = prop false;
+  %prop1 = prop true;
+  %prop2 = prop %e5 > %e0;
+  %prop3 = prop %e2 > %e0;
+  %prop4 = prop %e3 = %e6;
+  %prop5 = prop %e3 > %e0;
+  %prop6 = prop (%prop2 & %prop3);
+  %prop7 = prop (%prop4 & %prop6);
+  %prop8 = prop (%prop7 => %prop5);
+  %prop9 = prop %e25 >= %e0;
+  %prop10 = prop %e5 > %e25;
+  %prop11 = prop (%prop9 & %prop10);
+  %prop12 = prop (%prop7 & %prop11);
+  %prop13 = prop (%prop12 => %prop5);
+  %prop14 = prop %e37 >= %e0;
+  %prop15 = prop %e2 > %e37;
+  %prop16 = prop (%prop14 & %prop15);
   %p3: bundle(out) for<%pr6: %e1> @[%t0, %t1] %e4;
   %p4: bundle(out) for<%pr7: %e1> @[%t0, %t1] %e3;
   %p5: bundle(out) for<%pr10: %e1> @[%t4, %t5] %e4;
@@ -684,50 +716,50 @@ comp %comp31[%pr0, %pr1, %pr2]<%ev0: %e0>(
   %inv3, %p8 = invoke %inst3<%t4>;
   %inv4, %p9 = invoke %inst4<%t4>;
 control:
+  assert %prop8;
+  assert %prop13;
   %inst0;
-  assert %prop3;
-  %p13[%e2..%e1) = %p0[%e2..%e1)
+  %p13[%e0..%e1) = %p0[%e0..%e1)
   %inv0;
-  %p10[%e2..%e1) = %p3[%e2..%e1)
-  %p11[%e2..%e1) = %p4[%e2..%e1)
-  %p12[%e2..%e1) = %p1[%e2..%e1)
-  for %pr19 in %e2..%e5 {
+  %p10[%e0..%e1) = %p3[%e0..%e1)
+  %p11[%e0..%e1) = %p4[%e0..%e1)
+  %p12[%e0..%e1) = %p1[%e0..%e1)
+  for %pr19 in %e0..%e5 {
     %inst1;
-    assert %prop3;
     %inst2;
     %inst3;
     %inst4;
-    %p14[%e2..%e1) = %p10[%e25..%e36)
-    %p15[%e2..%e1) = %p11[%e25..%e36)
-    %p16[%e2..%e1) = %p12[%e25..%e36)
-    for %pr23 in %e2..%e0 {
-      %p17[%e2..%e1) = %p14[%e37..%e38)
-      %p18[%e2..%e1) = %p16[%e37..%e38)
-      %p19[%e2..%e1) = %p15[%e37..%e38)
+    %p14[%e0..%e1) = %p10[%e25..%e36)
+    %p15[%e0..%e1) = %p11[%e25..%e36)
+    %p16[%e0..%e1) = %p12[%e25..%e36)
+    for %pr23 in %e0..%e2 {
+      %p17[%e0..%e1) = %p14[%e37..%e38)
+      %p18[%e0..%e1) = %p16[%e37..%e38)
+      %p19[%e0..%e1) = %p15[%e37..%e38)
       %inv1;
-      %p20[%e2..%e1) = %p5[%e2..%e1)
+      %p20[%e0..%e1) = %p5[%e0..%e1)
       %inv2;
-      %p21[%e2..%e1) = %p6[%e2..%e1)
+      %p21[%e0..%e1) = %p6[%e0..%e1)
       %inv3;
-      %p22[%e2..%e1) = %p16[%e37..%e38)
+      %p22[%e0..%e1) = %p16[%e37..%e38)
       %inv4;
-      %p14[%e38..%e41) = %p7[%e2..%e1)
-      %p15[%e38..%e41) = %p8[%e2..%e1)
-      %p16[%e38..%e41) = %p9[%e2..%e1)
+      %p14[%e38..%e41) = %p7[%e0..%e1)
+      %p15[%e38..%e41) = %p8[%e0..%e1)
+      %p16[%e38..%e41) = %p9[%e0..%e1)
     }
-    %p10[%e36..%e42) = %p14[%e0..%e24)
-    %p11[%e36..%e42) = %p15[%e0..%e24)
-    %p12[%e36..%e42) = %p16[%e0..%e24)
+    %p10[%e36..%e42) = %p14[%e2..%e24)
+    %p11[%e36..%e42) = %p15[%e2..%e24)
+    %p12[%e36..%e42) = %p16[%e2..%e24)
   }
-  %p2[%e2..%e1) = %p11[%e5..%e14)
+  %p2[%e0..%e1) = %p11[%e5..%e14)
 }
-comp %comp32[]<%ev0: %e0>(
-  %p0: for<%pr0: %e0> @[%t0, %t1] %e2,
-  %p1: for<%pr1: %e0> @[%t0, %t1] %e2,
-  %p2: for<%pr2: %e0> @[%t0, %t1] %e2,
-  %p3: for<%pr3: %e0> @[%t0, %t1] %e2
+comp %comp32[]<%ev0: %e1>(
+  %p0: for<%pr0: %e1> @[%t0, %t1] %e2,
+  %p1: for<%pr1: %e1> @[%t0, %t1] %e2,
+  %p2: for<%pr2: %e1> @[%t0, %t1] %e2,
+  %p3: for<%pr3: %e1> @[%t0, %t1] %e2
 ) -> (
-  %p4: for<%pr4: %e0> @[%t2, %t3] %e2
+  %p4: for<%pr4: %e1> @[%t2, %t3] %e2
 ) {
   %pr0 = param bundle;
   %pr1 = param bundle;
@@ -737,36 +769,38 @@ comp %comp32[]<%ev0: %e0>(
   %pr5 = param bundle;
   %pr6 = param bundle;
   %pr7 = param bundle;
-  %e0 = expr 1;
-  %e1 = expr 0;
+  %e0 = expr 0;
+  %e1 = expr 1;
   %e2 = expr 32;
   %e3 = expr 2;
   %e4 = expr 3;
   %e5 = expr 4;
-  %t0 = time %ev0+%e1;
-  %t1 = time %ev0+%e0;
+  %t0 = time %ev0+%e0;
+  %t1 = time %ev0+%e1;
   %t2 = time %ev0+%e3;
   %t3 = time %ev0+%e4;
-  %prop0 = prop %e2 > %e0;
-  %prop1 = prop %e5 >= %e0;
-  %prop2 = prop %e5 = %e5;
-  %prop3 = prop %e3 >= %e1;
-  %p5: bundle(out) for<%pr5: %e0> @[%t2, %t3] %e2;
+  %prop0 = prop false;
+  %prop1 = prop true;
+  %prop2 = prop %e2 > %e1;
+  %prop3 = prop %e5 >= %e1;
+  %prop4 = prop %e5 = %e5;
+  %prop5 = prop %e3 >= %e0;
+  %p5: bundle(out) for<%pr5: %e1> @[%t2, %t3] %e2;
   %p6 = bundle for<%pr6: %e5> @[%t0, %t1] %e2;
   %p7: bundle(in) for<%pr7: %e5> @[%t0, %t1] %e2;
   %inst0 = instance %comp27[%e2, %e5, %e3];
   %inv0, %p5 = invoke %inst0<%t0>;
 control:
-  %p6[%e1..%e0) = %p0[%e1..%e0)
-  %p6[%e0..%e3) = %p1[%e1..%e0)
-  %p6[%e3..%e4) = %p2[%e1..%e0)
-  %p6[%e4..%e5) = %p3[%e1..%e0)
-  %inst0;
-  assert %prop0;
-  assert %prop1;
   assert %prop2;
   assert %prop3;
-  %p7[%e1..%e5) = %p6[%e1..%e5)
+  assert %prop4;
+  assert %prop5;
+  %p6[%e0..%e1) = %p0[%e0..%e1)
+  %p6[%e1..%e3) = %p1[%e0..%e1)
+  %p6[%e3..%e4) = %p2[%e0..%e1)
+  %p6[%e4..%e5) = %p3[%e0..%e1)
+  %inst0;
+  %p7[%e0..%e5) = %p6[%e0..%e5)
   %inv0;
-  %p4[%e1..%e0) = %p5[%e1..%e0)
+  %p4[%e0..%e1) = %p5[%e0..%e1)
 }

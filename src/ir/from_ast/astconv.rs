@@ -220,7 +220,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
-    fn sig(&mut self, sig: ast::Signature) {
+    fn sig(&mut self, sig: ast::Signature) -> Vec<ir::Command> {
         for param in &sig.params {
             self.param(param.copy(), ir::ParamOwner::Sig);
         }
@@ -236,9 +236,13 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             // XXX(rachit): Unnecessary clone.
             self.port(port.inner().clone(), ir::PortOwner::sig_in());
         }
-        for expr_cons in sig.param_constraints {
-            self.expr_cons(expr_cons.take());
-        }
+        sig.param_constraints
+            .into_iter()
+            .map(|expr_cons| {
+                let prop = self.expr_cons(expr_cons.take());
+                ir::Fact::assume(prop).into()
+            })
+            .collect()
     }
 
     fn declare_inst(&mut self, inst: &ast::Instance) {
@@ -546,9 +550,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     ) -> ir::Component {
         let mut ir_comp = ir::Component::new(idx);
         let mut builder = BuildCtx::new(&mut ir_comp, sigs);
-        builder.sig(comp.sig);
+        let mut cmds = builder.sig(comp.sig);
         builder.declare_cmds(&comp.body);
-        let cmds = builder.commands(comp.body);
+        let body_cmds = builder.commands(comp.body);
+        cmds.extend(body_cmds);
         ir_comp.cmds = cmds;
         ir_comp
     }
