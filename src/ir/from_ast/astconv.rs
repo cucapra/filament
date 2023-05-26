@@ -365,7 +365,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             ..
         } = inv;
         let Some(ports) = ports else {
-            unreachable!("No ports provided for invocation {}", name)
+            unreachable!("No ports provided for invocation {name}")
         };
         let inv = self.get_inv(name.copy());
         let inst = self.comp[inv].inst;
@@ -388,6 +388,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             sig.inputs.len(),
             srcs.len()
         );
+
+        // Constraints on the events from the signature
+        let cons: Vec<ir::Command> = sig
+            .event_cons
+            .clone()
+            .into_iter()
+            .map(|ec| {
+                let ec = ec.resolve_event(&event_binding);
+                ir::Fact::assert(self.event_cons(ec)).into()
+            })
+            .collect();
 
         sig.inputs
             .clone()
@@ -412,6 +423,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 ir::Connect { src, dst }.into()
             })
             .chain(Some(ir::Command::from(inv)))
+            .chain(cons)
             .collect_vec()
     }
 
