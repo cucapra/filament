@@ -161,7 +161,8 @@ pub struct Fact {
 
 impl Fact {
     /// An assertion which is required to be statically proved
-    pub fn assert(prop: PropIdx) -> Self {
+    /// Outside the IR library, use [Component::assert] instead.
+    pub(super) fn assert(prop: PropIdx) -> Self {
         Self {
             prop,
             checked: true,
@@ -169,7 +170,8 @@ impl Fact {
     }
 
     /// An assumption which is not checked
-    pub fn assume(prop: PropIdx) -> Self {
+    /// Outside the IR library, use [Component::assume] instead.
+    pub(super) fn assume(prop: PropIdx) -> Self {
         Self {
             prop,
             checked: false,

@@ -204,7 +204,7 @@ impl ExprIdx {
             if l > r {
                 ctx.add(Prop::True)
             } else {
-                ctx.add(Prop::True).not(ctx)
+                ctx.add(Prop::False)
             }
         } else {
             ctx.add(Prop::Cmp {
@@ -225,7 +225,7 @@ impl ExprIdx {
             if l >= r {
                 ctx.add(Prop::True)
             } else {
-                ctx.add(Prop::True).not(ctx)
+                ctx.add(Prop::False)
             }
         } else {
             ctx.add(Prop::Cmp {
@@ -246,8 +246,10 @@ impl ExprIdx {
             if l == r {
                 ctx.add(Prop::True)
             } else {
-                ctx.add(Prop::True).not(ctx)
+                ctx.add(Prop::False)
             }
+        } else if self == &other {
+            return ctx.add(Prop::True);
         } else {
             ctx.add(Prop::Cmp {
                 op: Cmp::Eq,
