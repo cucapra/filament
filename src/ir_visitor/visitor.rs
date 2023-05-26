@@ -8,6 +8,8 @@ pub enum Action {
     Stop,
     /// Continue visiting the CFG
     Continue,
+    /// Add commands after this command
+    AddBefore(Vec<ir::Command>),
     /// Change the current command with other commands
     Change(Vec<ir::Command>),
 }
@@ -22,7 +24,7 @@ impl Action {
     {
         match self {
             Action::Continue => next(),
-            Action::Change(_) | Action::Stop => self,
+            Action::Change(_) | Action::AddBefore(_) | Action::Stop => self,
         }
     }
 }
@@ -140,6 +142,10 @@ where
                 Action::Change(cmds) => {
                     n_cmds.extend(cmds.into_iter());
                 }
+                Action::AddBefore(cmds) => {
+                    n_cmds.extend(cmds.into_iter());
+                    n_cmds.push(cmd);
+                }
             }
         }
         n_cmds.extend(iter);
@@ -159,7 +165,7 @@ where
         let mut cmds = std::mem::take(&mut comp.cmds);
         match self.visit_cmds(&mut cmds, comp) {
             Action::Stop | Action::Continue => (),
-            Action::Change(_) => {
+            Action::Change(_) | Action::AddBefore(_) => {
                 unreachable!("visit_cmds should not attempt to change IR nodes")
             }
         }

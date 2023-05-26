@@ -1,7 +1,7 @@
 use super::{
-    Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, IndexStore, InstIdx,
-    Instance, Interned, InvIdx, Invoke, Param, ParamIdx, Port, PortIdx, Prop,
-    Time, TimeIdx,
+    Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact, IndexStore,
+    InstIdx, Instance, Interned, InvIdx, Invoke, Param, ParamIdx, Port,
+    PortIdx, Prop, PropIdx, Time, TimeIdx,
 };
 use crate::{ast, utils::Idx};
 
@@ -84,6 +84,24 @@ impl Component {
     /// Add a number to the context and get handle to it.
     pub fn num(&mut self, n: u64) -> ExprIdx {
         self.exprs.intern(Expr::Concrete(n))
+    }
+
+    /// Generate a asserted fact.
+    /// Panics if the asserted fact is false.
+    pub fn assert(&self, prop: PropIdx) -> Fact {
+        if prop.is_false(self) {
+            panic!("Attempted to assert false");
+        }
+        Fact::assert(prop)
+    }
+
+    /// Generate an assumed fact.
+    /// Panics if the assumed fact is false.
+    pub fn assume(&self, prop: PropIdx) -> Fact {
+        if prop.is_false(self) {
+            panic!("Attempted to assume false");
+        }
+        Fact::assume(prop)
     }
 }
 
