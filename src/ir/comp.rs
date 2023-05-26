@@ -7,7 +7,7 @@ use crate::{ast, utils::Idx};
 
 #[derive(Default)]
 pub struct Context {
-    pub(super) comps: IndexStore<CompOrExt>,
+    pub comps: IndexStore<CompOrExt>,
 }
 
 impl Ctx<CompOrExt> for Context {
@@ -61,7 +61,7 @@ pub struct Component {
 
 impl Component {
     pub fn new(idx: CompIdx) -> Self {
-        Self {
+        let mut comp = Self {
             idx,
             ports: IndexStore::default(),
             params: IndexStore::default(),
@@ -72,7 +72,13 @@ impl Component {
             times: Interned::default(),
             props: Interned::default(),
             cmds: Vec::default(),
-        }
+        };
+        // Allocate numbers and props now so we get reasonable indices.
+        comp.num(0);
+        comp.num(1);
+        comp.add(Prop::False);
+        comp.add(Prop::True);
+        comp
     }
 
     /// Add a number to the context and get handle to it.

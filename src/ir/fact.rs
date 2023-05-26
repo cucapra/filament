@@ -24,6 +24,7 @@ impl fmt::Display for Cmp {
 /// A proposition
 pub enum Prop {
     True,
+    False,
     /// A comparison between two expressions
     Cmp {
         op: Cmp,
@@ -40,6 +41,7 @@ impl fmt::Display for Prop {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Prop::True => write!(f, "true"),
+            Prop::False => write!(f, "false"),
             Prop::Cmp { op, lhs, rhs } => write!(f, "{} {} {}", lhs, op, rhs),
             Prop::Not(p) => write!(f, "!{}", p),
             Prop::And(l, r) => write!(f, "({} & {})", l, r),
@@ -50,7 +52,7 @@ impl fmt::Display for Prop {
 }
 
 impl PropIdx {
-    #[inline]
+    #[inline(always)]
     /// Returns true of this proposition is definitely true.
     /// This is a purely syntactic check, and does not attempt to reduce the
     /// proposition.
@@ -58,28 +60,44 @@ impl PropIdx {
         matches!(ctx.get(*self), Prop::True)
     }
 
-    #[inline]
+    #[inline(always)]
     /// Returns true of this proposition is definitely false.
     /// This is a purely syntactic check, and does not attempt to reduce the
     /// proposition.
     pub fn is_false(&self, ctx: &impl Ctx<Prop>) -> bool {
-        matches!(
-            ctx.get(*self), Prop::Not(p)
-            if matches!(ctx.get(*p), Prop::True)
-        )
+        matches!(ctx.get(*self), Prop::False)
     }
 
     /// Negation of a proposition
     pub fn not(self, ctx: &mut impl Ctx<Prop>) -> PropIdx {
         if self.is_false(ctx) {
-            return ctx.add(Prop::True);
+            ctx.add(Prop::True)
+        } else if self.is_true(ctx) {
+            ctx.add(Prop::False)
+        } else if let Prop::Not(p) = ctx.get(self) {
+            *p
+        } else {
+            ctx.add(Prop::Not(self))
         }
-
-        ctx.add(Prop::Not(self))
     }
 
     /// Conjunction of two propositions
     pub fn and(self, other: PropIdx, ctx: &mut impl Ctx<Prop>) -> PropIdx {
+        /*match (ctx.get(self), ctx.get(other)) {
+            (Prop::True, _) | (_, Prop::True) => return other,
+            (Prop::False, _) | (_, Prop::False) => return ctx.add(Prop::False),
+            (Prop::Not(p), _) => {
+                if *p == other {
+                    return ctx.add(Prop::False);
+                }
+            }
+            (_, Prop::Not(p)) => {
+                if *p == self {
+                    return ctx.add(Prop::False);
+                }
+            }
+            _ => (),
+        }*/
         if self == other {
             return self;
         } else if self.is_true(ctx) {
@@ -177,7 +195,7 @@ impl Foldable<ParamIdx, ExprIdx> for PropIdx {
         F: FnMut(ParamIdx) -> Option<ExprIdx>,
     {
         match ctx.get(*self).clone() {
-            Prop::True => *self,
+            Prop::True | Prop::False => *self,
             Prop::Cmp { op, lhs, rhs } => {
                 let lhs = lhs.fold_with(ctx, subst_fn);
                 let rhs = rhs.fold_with(ctx, subst_fn);

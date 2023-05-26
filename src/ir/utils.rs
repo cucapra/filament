@@ -103,6 +103,20 @@ impl<T> IndexStore<T> {
         &mut self.store[idx.get()]
     }
 
+    pub fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
+        self.store
+            .iter()
+            .enumerate()
+            .map(|(idx, val)| (Idx::new(idx), val))
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Idx<T>, &mut T)> {
+        self.store
+            .iter_mut()
+            .enumerate()
+            .map(|(idx, val)| (Idx::new(idx), val))
+    }
+
     pub(super) fn checked_add(&mut self, idx: Idx<T>, val: T) {
         assert!(
             idx.get() == self.store.len(),
@@ -111,13 +125,6 @@ impl<T> IndexStore<T> {
             self.store.len()
         );
         self.add(val);
-    }
-
-    pub(super) fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
-        self.store
-            .iter()
-            .enumerate()
-            .map(|(idx, val)| (Idx::new(idx), val))
     }
 }
 
