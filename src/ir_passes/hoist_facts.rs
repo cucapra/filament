@@ -63,20 +63,17 @@ impl Visitor for HoistFacts {
     }
 
     fn do_if(&mut self, i: &mut ir::If, comp: &mut ir::Component) -> Action {
-        log::warn!("Before then: {}", self.path_cond.len());
         self.push();
         self.insert(i.cond);
         let ac = self.visit_cmds(&mut i.then, comp);
         assert!(ac == Action::Continue);
         self.pop();
-        log::warn!("After then: {}", self.path_cond.len());
 
         self.push();
         self.insert(i.cond.not(comp));
         let ac = self.visit_cmds(&mut i.alt, comp);
         assert!(ac == Action::Continue);
         self.pop();
-        log::warn!("After else: {}", self.path_cond.len());
 
         Action::Continue
     }
