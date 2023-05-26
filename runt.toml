@@ -26,7 +26,7 @@ paths = [
 ]
 expect_dir = "tests/compile/ir/"
 cmd = """
-./target/debug/filament {} --show-ir
+./target/debug/filament {} --show-ir > /dev/null
 """
 
 [[tests]]
