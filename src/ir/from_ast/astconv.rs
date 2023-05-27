@@ -463,13 +463,22 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     let idx = this.param(idx.take(), ir::ParamOwner::Local);
                     (idx, this.commands(body))
                 });
-                let l = ir::Loop {
+                let mut cmds: Vec<ir::Command> = vec![ir::Loop {
                     index,
                     start,
                     end,
                     body,
-                };
-                vec![l.into()]
+                }
+                .into()];
+                // Assumption that the index is within range
+                let index = index.expr(self.comp);
+                let idx_start = index.gte(start, self.comp);
+                let idx_end = index.lt(end, self.comp);
+                cmds.extend([
+                    self.comp.assume(idx_start).into(),
+                    self.comp.assume(idx_end).into(),
+                ]);
+                cmds
             }
             ast::Command::If(ast::If { cond, then, alt }) => {
                 let cond = self.expr_cons(cond);
