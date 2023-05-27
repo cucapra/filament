@@ -588,9 +588,28 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     ) -> ir::Component {
         let mut ir_comp = ir::Component::new(idx);
         let mut builder = BuildCtx::new(&mut ir_comp, sigs);
+
         let mut cmds = builder.sig(comp.sig);
         builder.declare_cmds(&comp.body);
         let body_cmds = builder.commands(comp.body);
+
+        cmds.reserve(ir_comp.ports.len() * 2);
+        let ports = ir_comp
+            .ports
+            .iter()
+            .map(|(_, p)| (p.live.idx, p.live.len))
+            .collect_vec();
+        // Add assumptions for range of bundle-bound indices
+        for (idx, len) in ports {
+            let idx = idx.expr(&mut ir_comp);
+            let start = idx.gte(ir_comp.num(0), &mut ir_comp);
+            let end = idx.lt(len, &mut ir_comp);
+            cmds.extend([
+                ir_comp.assume(start).into(),
+                ir_comp.assume(end).into(),
+            ])
+        }
+
         cmds.extend(body_cmds);
         ir_comp.cmds = cmds;
         ir_comp
