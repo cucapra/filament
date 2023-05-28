@@ -287,7 +287,7 @@ impl visitor::Checker for IntervalCheck {
 
         // Check that all signatures are well formed
         let t = std::time::Instant::now();
-        for (_, sig) in ns.signatures() {
+        for (_, sig) in ns.externals() {
             log::trace!("===== Signature {} =====", &sig.name);
 
             let constraints = sig

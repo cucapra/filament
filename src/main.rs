@@ -1,5 +1,6 @@
 use filament::{
-    backend, binding, cmdline,
+    backend, binding, cmdline, ir, ir_passes,
+    ir_visitor::Visitor,
     passes::{self, Pass},
     resolver::Resolver,
     visitor::{Checker, Transform},
@@ -25,6 +26,14 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         }
     };
     log::debug!("{ns}");
+
+    if opts.show_ir {
+        let mut ir = ir::transform(ns);
+        ir_passes::TypeCheck::do_pass(&mut ir);
+        ir_passes::HoistFacts::do_pass(&mut ir);
+        ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
+        return Ok(());
+    }
 
     // Add default assumption constraints
     let t = Instant::now();

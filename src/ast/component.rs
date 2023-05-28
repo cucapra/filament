@@ -80,10 +80,18 @@ pub struct Namespace {
 
 impl Namespace {
     /// External signatures associated with the namespace
-    pub fn signatures(&self) -> impl Iterator<Item = (Id, &Signature)> {
+    pub fn externals(&self) -> impl Iterator<Item = (Id, &Signature)> {
         self.externs
             .iter()
             .flat_map(|(_, comps)| comps.iter().map(|s| (*s.name.inner(), s)))
+    }
+
+    pub fn signatures(&self) -> impl Iterator<Item = (Id, &Signature)> {
+        self.externals().chain(
+            self.components
+                .iter()
+                .map(|c| (*c.sig.name.inner(), &c.sig)),
+        )
     }
 
     /// Get the index to the top-level component.

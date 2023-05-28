@@ -20,6 +20,16 @@ fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize
 """
 
 [[tests]]
+name = "ir gen"
+paths = [
+  "tests/compile/*.fil"
+]
+expect_dir = "tests/compile/ir/"
+cmd = """
+./target/debug/filament {} --show-ir > /dev/null
+"""
+
+[[tests]]
 name = "examples"
 paths = [
   "examples/*.fil"

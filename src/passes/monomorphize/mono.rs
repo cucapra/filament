@@ -309,7 +309,7 @@ impl Pass for Monomorphize<'_> {
         // Start the process by monomorphizing the main component
         let main = ns.components.remove(top_idx);
         let externals =
-            ns.signatures().map(|(_, sig)| *sig.name.inner()).collect();
+            ns.externals().map(|(_, sig)| *sig.name.inner()).collect();
         let mut mono = Monomorphize::new(&externals);
         let mut comps = vec![mono.generate_comp(&main, &Binding::new(None))];
 
