@@ -31,6 +31,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         let mut ir = ir::transform(ns);
         ir_passes::TypeCheck::do_pass(&mut ir);
         ir_passes::HoistFacts::do_pass(&mut ir);
+        ir_passes::IntervalCheck::do_pass(&mut ir);
         ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
         return Ok(());
     }
