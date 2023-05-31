@@ -11,7 +11,7 @@ mod time;
 mod utils;
 
 pub use comp::{CompOrExt, Component, Context, External};
-pub use control::{Command, Connect, If, Instance, Invoke, Loop};
+pub use control::{Command, Connect, EventBind, If, Instance, Invoke, Loop};
 pub use expr::Expr;
 pub use fact::{Cmp, Fact, Prop};
 pub use from_ast::astconv::transform;
@@ -21,8 +21,8 @@ pub use idxs::{
 };
 pub use printer::Printer;
 pub use structure::{
-    Access, Direction, Event, Liveness, Param, ParamOwner, Port, PortOwner,
-    Range,
+    Access, Direction, Event, EventOwner, Liveness, Param, ParamOwner, Port,
+    PortOwner, Range,
 };
 pub use subst::{Bind, Foldable, Subst};
 pub use time::{Time, TimeSub};

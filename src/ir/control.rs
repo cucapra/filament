@@ -1,8 +1,8 @@
 use std::fmt;
 
 use super::{
-    Access, CompIdx, ExprIdx, Fact, InstIdx, InvIdx, ParamIdx, PortIdx,
-    PropIdx, TimeIdx,
+    Access, CompIdx, EventIdx, ExprIdx, Fact, InstIdx, InvIdx, ParamIdx,
+    PortIdx, PropIdx, TimeIdx,
 };
 
 #[derive(Clone, PartialEq, Eq)]
@@ -15,6 +15,7 @@ pub enum Command {
     ForLoop(Loop),
     If(If),
     Fact(Fact),
+    EventBind(EventBind),
 }
 impl From<InstIdx> for Command {
     fn from(idx: InstIdx) -> Self {
@@ -29,6 +30,11 @@ impl From<InvIdx> for Command {
 impl From<Connect> for Command {
     fn from(con: Connect) -> Self {
         Command::Connect(con)
+    }
+}
+impl From<EventBind> for Command {
+    fn from(bind: EventBind) -> Self {
+        Command::EventBind(bind)
     }
 }
 impl From<Loop> for Command {
@@ -89,22 +95,8 @@ impl fmt::Display for Connect {
 pub struct Invoke {
     /// The instance being invoked
     pub inst: InstIdx,
-    /// The events used in this invocation's binding
-    pub events: Box<[TimeIdx]>,
     // The ports defined by this invocation
     pub ports: Vec<PortIdx>,
-}
-impl fmt::Display for Invoke {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}<", self.inst)?;
-        for (i, event) in self.events.iter().enumerate() {
-            if i != 0 {
-                write!(f, ", ")?;
-            }
-            write!(f, "{}", event)?;
-        }
-        write!(f, ">")
-    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -122,4 +114,11 @@ pub struct If {
     pub cond: PropIdx,
     pub then: Vec<Command>,
     pub alt: Vec<Command>,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+/// Binding for an event argument of an invocation
+pub struct EventBind {
+    pub event: EventIdx,
+    pub arg: TimeIdx,
 }
