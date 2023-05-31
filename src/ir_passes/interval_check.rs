@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::ir::{self, Ctx};
 use crate::ir_visitor::{Action, Visitor};
 
@@ -18,6 +20,35 @@ use crate::ir_visitor::{Action, Visitor};
 pub struct IntervalCheck;
 
 impl Visitor for IntervalCheck {
+    fn start(&mut self, comp: &mut ir::Component) -> Action {
+        // For each bundle, add an assertion to ensure that availability of the
+        // bundle signal is less than the delay.
+
+        // Extract the ranges first because we cannot borrow comp mutably before this.
+        let ranges = comp
+            .ports
+            .iter()
+            .map(|(_, p)| p.live.range.clone())
+            .collect_vec();
+
+        let mut cmds = Vec::with_capacity(comp.ports.len());
+        for range in ranges {
+            let st_ev = comp[range.start].event;
+            let end_ev = comp[range.end].event;
+            // NOTE(rachit): Not sure if this assertion is necessary because
+            // only the event used in the start time should be bounded but
+            // adding it here nonetheless.
+            assert!(st_ev == end_ev, "Bundle ranges with different events");
+            let len = range.end.sub(range.start, comp);
+            let delay = &comp[st_ev].delay.clone();
+            let prop = comp
+                .add(ir::Prop::TimeSubCmp(ir::CmpOp::gt(delay.clone(), len)));
+            cmds.push(ir::Command::from(comp.assert(prop)));
+        }
+
+        Action::AddBefore(cmds)
+    }
+
     /// For each event binding, we add the constraint that the events uses as arguments
     /// are triggered less often than the delay of the invoked component.
     fn event_binding(
