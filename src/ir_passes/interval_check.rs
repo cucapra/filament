@@ -67,4 +67,13 @@ impl Visitor for IntervalCheck {
         let fact = ir::Command::from(comp.assert(prop));
         Action::AddBefore(vec![fact])
     }
+
+    fn connect(
+        &mut self,
+        _con: &mut ir::Connect,
+        _comp: &mut ir::Component,
+    ) -> Action {
+        // TODO: Check that the signals are alive for as long as needed.
+        Action::Continue
+    }
 }
