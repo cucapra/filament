@@ -47,12 +47,17 @@ where
         idx
     }
 
+    /// Number of interned values in the store.
+    pub fn size(&self) -> usize {
+        self.store.len()
+    }
+
     /// Get the value associated with the index.
     pub fn get(&self, idx: Idx<T>) -> &T {
         &self.store[idx.get()]
     }
 
-    pub(super) fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
+    pub fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
         self.store
             .iter()
             .enumerate()
@@ -199,6 +204,14 @@ impl<T, V> Default for DenseIndexInfo<T, V> {
 }
 
 impl<T, V> DenseIndexInfo<T, V> {
+    /// Construct a new info map with the given capacity.
+    pub fn with_capacity(cap: usize) -> Self {
+        Self {
+            store: Vec::with_capacity(cap),
+            key_typ: PhantomData,
+        }
+    }
+
     /// Add a new value to the map and return the index.
     /// Panics if the index is not the next index in the sequence.
     pub fn push(&mut self, key: Idx<T>, val: V) {
@@ -209,5 +222,13 @@ impl<T, V> DenseIndexInfo<T, V> {
     /// Get the value associated with the index.
     pub fn get(&self, idx: Idx<T>) -> &V {
         &self.store[idx.get()]
+    }
+}
+
+impl<T, V> std::ops::Index<Idx<T>> for DenseIndexInfo<T, V> {
+    type Output = V;
+
+    fn index(&self, idx: Idx<T>) -> &Self::Output {
+        self.get(idx)
     }
 }

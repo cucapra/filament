@@ -26,9 +26,9 @@ impl fmt::Display for Cmp {
 #[derive(Clone, PartialEq, Eq, Hash)]
 /// Comparison between two expressions of type T
 pub struct CmpOp<T> {
-    pub(super) op: Cmp,
-    pub(super) lhs: T,
-    pub(super) rhs: T,
+    pub op: Cmp,
+    pub lhs: T,
+    pub rhs: T,
 }
 
 impl<T> CmpOp<T> {

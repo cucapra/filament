@@ -1,3 +1,4 @@
+mod discharge;
 mod hoist_facts;
 mod interval_check;
 mod type_check;

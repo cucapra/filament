@@ -37,23 +37,23 @@ pub struct Component {
     /// Ports and bundles defined by the component.
     pub ports: IndexStore<Port>,
     /// Parameters defined the component
-    pub(super) params: IndexStore<Param>,
+    pub params: IndexStore<Param>,
     /// Events defined by the component
-    pub(super) events: IndexStore<Event>,
+    pub events: IndexStore<Event>,
 
     /// Instances defined by the component
-    pub(super) instances: IndexStore<Instance>,
+    pub instances: IndexStore<Instance>,
     /// Invocations defined by the component
-    pub(super) invocations: IndexStore<Invoke>,
+    pub invocations: IndexStore<Invoke>,
 
     // Interned data. We store this on a per-component basis because events with the
     // same identifiers in different components are not equal.
     /// Interned expressions
-    pub(super) exprs: Interned<Expr>,
+    pub exprs: Interned<Expr>,
     /// Interned times
-    pub(super) times: Interned<Time>,
+    pub times: Interned<Time>,
     /// Interned propositions
-    pub(super) props: Interned<Prop>,
+    pub props: Interned<Prop>,
 
     /// Commands in the component
     pub cmds: Vec<Command>,
