@@ -42,7 +42,7 @@ impl Visitor for IntervalCheck {
             let len = range.end.sub(range.start, comp);
             let delay = &comp[st_ev].delay.clone();
             let prop = comp
-                .add(ir::Prop::TimeSubCmp(ir::CmpOp::gt(delay.clone(), len)));
+                .add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(delay.clone(), len)));
             cmds.push(ir::Command::from(comp.assert(prop)));
         }
 
@@ -60,7 +60,7 @@ impl Visitor for IntervalCheck {
         let inv_ev = &comp[*event];
         let this_ev = &comp[comp[*arg].event];
         // Ensure that this event's delay is greater than invoked component's event's delay.
-        let prop = comp.add(ir::Prop::TimeSubCmp(ir::CmpOp::gt(
+        let prop = comp.add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(
             this_ev.delay.clone(),
             inv_ev.delay.clone(),
         )));
