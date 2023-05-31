@@ -1,4 +1,6 @@
-use super::{Ctx, EventIdx, Expr, ExprIdx, TimeIdx};
+use super::{
+    Component, Ctx, EventIdx, Expr, ExprIdx, Foldable, ParamIdx, TimeIdx,
+};
 use std::fmt::{self, Display};
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -44,6 +46,23 @@ impl Display for TimeSub {
         match self {
             TimeSub::Unit(e) => write!(f, "{}", e),
             TimeSub::Sym { l, r } => write!(f, "{}-{}", l, r),
+        }
+    }
+}
+
+impl Foldable<ParamIdx, ExprIdx> for TimeSub {
+    type Context = Component;
+
+    fn fold_with<F>(&self, ctx: &mut Self::Context, subst_fn: &mut F) -> Self
+    where
+        F: FnMut(ParamIdx) -> Option<ExprIdx>,
+    {
+        match self {
+            TimeSub::Unit(e) => TimeSub::Unit(e.fold_with(ctx, subst_fn)),
+            TimeSub::Sym { l, r } => TimeSub::Sym {
+                l: l.fold_with(ctx, subst_fn),
+                r: r.fold_with(ctx, subst_fn),
+            },
         }
     }
 }

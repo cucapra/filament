@@ -13,7 +13,7 @@ mod utils;
 pub use comp::{CompOrExt, Component, Context, External};
 pub use control::{Command, Connect, EventBind, If, Instance, Invoke, Loop};
 pub use expr::Expr;
-pub use fact::{Cmp, Fact, Prop};
+pub use fact::{Cmp, CmpOp, Fact, Prop};
 pub use from_ast::astconv::transform;
 pub use idxs::{
     CmdIdx, CompIdx, EventIdx, ExprIdx, InstIdx, InvIdx, ParamIdx, PortIdx,

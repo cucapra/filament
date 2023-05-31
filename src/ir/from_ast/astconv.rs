@@ -53,7 +53,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             ast::OrderOp::Gte => Cmp::Gte,
             ast::OrderOp::Eq => Cmp::Eq,
         };
-        self.comp.add(ir::Prop::Cmp { lhs, op, rhs })
+        self.comp.add(ir::Prop::Cmp(ir::CmpOp { lhs, op, rhs }))
     }
 
     fn event_cons(&mut self, cons: ast::OrderConstraint<ast::Time>) -> PropIdx {
@@ -64,7 +64,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             ast::OrderOp::Gte => Cmp::Gte,
             ast::OrderOp::Eq => Cmp::Eq,
         };
-        self.comp.add(ir::Prop::TimeCmp { lhs, op, rhs })
+        self.comp.add(ir::Prop::TimeCmp(ir::CmpOp { lhs, op, rhs }))
     }
 
     fn implication(&mut self, i: ast::Implication<ast::Expr>) -> PropIdx {
