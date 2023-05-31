@@ -36,7 +36,9 @@ where
 {
     /// Executed before the visitor starts visiting the commands.
     /// The commands are still attached to the component
-    fn start(&mut self, _comp: &mut ir::Component) {}
+    fn start(&mut self, _comp: &mut ir::Component) -> Action {
+        Action::Continue
+    }
 
     fn end(&mut self, _: &mut ir::Component) {}
 
@@ -55,6 +57,14 @@ where
     fn connect(
         &mut self,
         _: &mut ir::Connect,
+        _comp: &mut ir::Component,
+    ) -> Action {
+        Action::Continue
+    }
+
+    fn event_binding(
+        &mut self,
+        _: &mut ir::EventBind,
         _comp: &mut ir::Component,
     ) -> Action {
         Action::Continue
@@ -117,6 +127,7 @@ where
                 .and_then(|| self.end_loop(l, comp)),
             ir::Command::If(i) => self.do_if(i, comp),
             ir::Command::Fact(f) => self.fact(f, comp),
+            ir::Command::EventBind(eb) => self.event_binding(eb, comp),
         }
     }
 
@@ -159,7 +170,14 @@ where
     }
 
     fn visit(&mut self, comp: &mut ir::Component) {
-        self.start(comp);
+        let pre_cmds = match self.start(comp) {
+            Action::Stop => return,
+            Action::Continue => None,
+            Action::AddBefore(cmds) => Some(cmds),
+            Action::Change(_) => {
+                unreachable!("start should not change IR")
+            }
+        };
 
         // Traverse the commands
         let mut cmds = std::mem::take(&mut comp.cmds);
@@ -169,7 +187,10 @@ where
                 unreachable!("visit_cmds should not attempt to change IR nodes")
             }
         }
-        comp.cmds = cmds;
+        if let Some(pre_cmds) = pre_cmds {
+            comp.cmds = pre_cmds;
+        }
+        comp.cmds.extend(cmds);
 
         self.end(comp);
     }

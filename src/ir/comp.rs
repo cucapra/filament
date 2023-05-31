@@ -35,7 +35,7 @@ pub struct Component {
     pub idx: CompIdx,
     // Component defined values.
     /// Ports and bundles defined by the component.
-    pub(super) ports: IndexStore<Port>,
+    pub ports: IndexStore<Port>,
     /// Parameters defined the component
     pub(super) params: IndexStore<Param>,
     /// Events defined by the component

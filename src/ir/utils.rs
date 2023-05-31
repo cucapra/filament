@@ -103,6 +103,16 @@ impl<T> IndexStore<T> {
         &mut self.store[idx.get()]
     }
 
+    /// Number of elements in the store
+    pub fn len(&self) -> usize {
+        self.store.len()
+    }
+
+    /// Check if the store is empty
+    pub fn is_empty(&self) -> bool {
+        self.store.is_empty()
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
         self.store
             .iter()

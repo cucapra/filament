@@ -62,6 +62,9 @@ impl Printer {
                 write!(f, "{:indent$}{inv};", "")
             }
             ir::Command::Connect(con) => write!(f, "{:indent$}{con}", ""),
+            ir::Command::EventBind(ir::EventBind { event, arg }) => {
+                write!(f, "{:indent$}bind {} to {}", "", event, arg)
+            }
             ir::Command::ForLoop(ir::Loop {
                 index,
                 start,
@@ -119,7 +122,11 @@ impl Printer {
         }
         write!(f, "]<")?;
         // All events are defined by the signature
-        for pos in events.iter().with_position() {
+        for pos in events
+            .iter()
+            .filter(|(_, eb)| matches!(eb.owner, ir::EventOwner::Sig))
+            .with_position()
+        {
             match pos {
                 Position::First((idx, ev)) | Position::Middle((idx, ev)) => {
                     write!(f, "{idx}: {}, ", ev.delay)?
@@ -208,24 +215,38 @@ impl Printer {
         }
     }
 
+    fn event(
+        idx: ir::EventIdx,
+        event: &ir::Event,
+        indent: usize,
+        f: &mut impl io::Write,
+    ) -> io::Result<()> {
+        let ir::Event { owner, delay, .. } = event;
+        match owner {
+            ir::EventOwner::Sig => Ok(()),
+            ir::EventOwner::Inv { inv } => {
+                writeln!(
+                    f,
+                    "{:indent$}{idx} = event({inv}), delay: {delay};",
+                    "",
+                )
+            }
+        }
+    }
+
     pub fn invoke(
         idx: ir::InvIdx,
         c: &ir::Invoke,
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
-        let ir::Invoke {
-            inst,
-            events,
-            ports,
-        } = c;
+        let ir::Invoke { inst, ports } = c;
 
         writeln!(
             f,
-            "{:indent$}{idx}, {ports} = invoke {inst}<{events}>;",
+            "{:indent$}{idx}, {ports} = invoke {inst};",
             "",
             ports = ports.iter().map(|p| format!("{p}")).join(", "),
-            events = events.iter().map(|e| format!("{e}")).join(", "),
         )?;
 
         Ok(())
@@ -249,6 +270,9 @@ impl Printer {
             Printer::local_param(idx, param, 2, f)?;
         }
         Printer::interned(exprs, "expr", 2, f)?;
+        for (idx, event) in events.iter() {
+            Printer::event(idx, event, 2, f)?;
+        }
         Printer::interned(times, "time", 2, f)?;
         Printer::interned(props, "prop", 2, f)?;
         for (idx, port) in ports.iter() {
