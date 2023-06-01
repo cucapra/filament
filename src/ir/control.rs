@@ -1,9 +1,8 @@
-use std::fmt;
-
 use super::{
-    Access, CompIdx, EventIdx, ExprIdx, Fact, InstIdx, InvIdx, ParamIdx,
-    PortIdx, PropIdx, TimeIdx,
+    Access, CompIdx, EventIdx, ExprIdx, Fact, InfoIdx, InstIdx, InvIdx,
+    ParamIdx, PortIdx, PropIdx, TimeIdx,
 };
+use std::fmt;
 
 #[derive(Clone, PartialEq, Eq)]
 /// A flattened and minimized representation of the control flow graph.
@@ -80,6 +79,7 @@ impl fmt::Display for Instance {
 pub struct Connect {
     pub src: Access,
     pub dst: Access,
+    pub info: InfoIdx,
 }
 impl fmt::Display for Connect {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

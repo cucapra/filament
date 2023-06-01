@@ -4,6 +4,7 @@ mod expr;
 mod fact;
 mod from_ast;
 mod idxs;
+mod info;
 mod printer;
 mod structure;
 mod subst;
@@ -16,9 +17,10 @@ pub use expr::Expr;
 pub use fact::{Cmp, CmpOp, Fact, Prop};
 pub use from_ast::astconv::transform;
 pub use idxs::{
-    CmdIdx, CompIdx, EventIdx, ExprIdx, InstIdx, InvIdx, ParamIdx, PortIdx,
-    PropIdx, TimeIdx,
+    CmdIdx, CompIdx, EventIdx, ExprIdx, InfoIdx, InstIdx, InvIdx, ParamIdx,
+    PortIdx, PropIdx, TimeIdx,
 };
+pub use info::{AssertReason, Info};
 pub use printer::Printer;
 pub use structure::{
     Access, Direction, Event, EventOwner, Liveness, Param, ParamOwner, Port,

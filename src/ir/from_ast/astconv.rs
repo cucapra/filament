@@ -3,6 +3,7 @@ use super::{BuildCtx, Sig, SigMap};
 use crate::ir::{
     Cmp, CompIdx, Ctx, EventIdx, ExprIdx, ParamIdx, PortIdx, PropIdx, TimeIdx,
 };
+use crate::utils::GPosIdx;
 use crate::{
     ast::{self, Id},
     ir,
@@ -78,9 +79,15 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     /// Add a parameter to the component.
-    fn param(&mut self, param: ast::Id, owner: ir::ParamOwner) -> ParamIdx {
+    fn param(
+        &mut self,
+        param: ast::Id,
+        owner: ir::ParamOwner,
+        pos: GPosIdx,
+    ) -> ParamIdx {
+        let info = self.comp.add(ir::Info::param(param, pos));
         // TODO(rachit): Parameters do not have default values yet.
-        let idx = self.comp.add(ir::Param::new(owner));
+        let idx = self.comp.add(ir::Param::new(owner, info));
         self.param_map.insert(param, idx);
         idx
     }
@@ -126,11 +133,16 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 liveness,
                 bitwidth,
             } => {
+                let p_name = Id::from("__FAKE_BUNDLE_PARAM");
                 // The bundle type uses a fake bundle index and has a length of 1.
                 // We don't need to push a new scope because this type is does not
                 // bind any new parameters.
                 let live = self.with_scope(|ctx| ir::Liveness {
-                    idx: ctx.param(Id::default(), ir::ParamOwner::Bundle), // This parameter is unused
+                    idx: ctx.param(
+                        p_name,
+                        ir::ParamOwner::Bundle,
+                        GPosIdx::UNKNOWN,
+                    ), // This parameter is unused
                     len: ctx.comp.num(1),
                     range: ctx.range(liveness.take()),
                 });
@@ -154,7 +166,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             }) => {
                 // Construct the bundle type in a new scope.
                 let live = self.with_scope(|ctx| ir::Liveness {
-                    idx: ctx.param(*idx, ir::ParamOwner::Bundle),
+                    idx: ctx.param(*idx, ir::ParamOwner::Bundle, idx.pos()),
                     len: ctx.expr(len.take()),
                     range: ctx.range(liveness.take()),
                 });
@@ -233,7 +245,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     fn sig(&mut self, sig: ast::Signature) -> Vec<ir::Command> {
         for param in &sig.params {
-            self.param(param.copy(), ir::ParamOwner::Sig);
+            self.param(param.copy(), ir::ParamOwner::Sig, param.pos());
         }
         for event in &sig.events {
             // XXX(rachit): Unnecessary clone.
@@ -380,7 +392,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
         let srcs = ports
             .into_iter()
-            .map(|p| self.get_access(p.take(), ir::Direction::Out))
+            .map(|p| p.map(|p| self.get_access(p, ir::Direction::Out)))
             .collect_vec();
         assert!(
             sig.inputs.len() == srcs.len(),
@@ -419,15 +431,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let mut connects = Vec::with_capacity(sig.inputs.len());
 
         for (p, src) in sig.inputs.clone().into_iter().zip(srcs) {
-            let resolved = p
-                .resolve_exprs(&param_binding)
-                .resolve_event(&event_binding);
+            let info = self.comp.add(ir::Info::connect(p.pos(), src.pos()));
+            let resolved = p.map(|p| {
+                p.resolve_exprs(&param_binding)
+                    .resolve_event(&event_binding)
+            });
             let owner = ir::PortOwner::Inv {
                 inv,
                 dir: ir::Direction::In,
             };
             // Add the port to the invoke
-            let pidx = self.port(resolved, owner);
+            let pidx = self.port(resolved.take(), owner);
             self.comp.invocations.get_mut(inv).ports.push(pidx);
 
             let end = self.comp[pidx].live.len;
@@ -436,7 +450,14 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 start: self.comp.num(0),
                 end,
             };
-            connects.push(ir::Connect { src, dst }.into())
+            connects.push(
+                ir::Connect {
+                    src: src.take(),
+                    dst,
+                    info,
+                }
+                .into(),
+            )
         }
 
         connects
@@ -466,9 +487,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             }
             ast::Command::Connect(ast::Connect { src, dst, guard }) => {
                 assert!(guard.is_none(), "Guards are not supported");
+                let info =
+                    self.comp.add(ir::Info::connect(dst.pos(), src.pos()));
                 let src = self.get_access(src.take(), ir::Direction::Out);
                 let dst = self.get_access(dst.take(), ir::Direction::In);
-                vec![ir::Connect { src, dst }.into()]
+                vec![ir::Connect { src, dst, info }.into()]
             }
             ast::Command::ForLoop(ast::ForLoop {
                 idx,
@@ -480,7 +503,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 let end = self.expr(end);
                 // Compile the body in a new scope
                 let (index, body) = self.with_scope(|this| {
-                    let idx = this.param(idx.take(), ir::ParamOwner::Local);
+                    let pos = idx.pos();
+                    let idx =
+                        this.param(idx.take(), ir::ParamOwner::Local, pos);
                     (idx, this.commands(body))
                 });
                 let l = ir::Loop {
@@ -573,7 +598,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 self.declare_inv(inv);
             }
             ast::Command::ForLoop(ast::ForLoop { idx, body, .. }) => {
-                self.param(idx.copy(), ir::ParamOwner::Local);
+                self.param(idx.copy(), ir::ParamOwner::Local, idx.pos());
                 self.declare_cmds(body);
             }
             ast::Command::If(ast::If { then, alt, .. }) => {

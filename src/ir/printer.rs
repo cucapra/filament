@@ -264,6 +264,7 @@ impl Printer {
             instances,
             invocations,
             cmds,
+            info: _,
         } = &c;
         Printer::sig(*idx, params, events, ports, 0, f)?;
         for (idx, param) in params.iter() {

@@ -31,7 +31,7 @@ impl Visitor for TypeCheck {
         c: &mut ir::Connect,
         comp: &mut ir::Component,
     ) -> Action {
-        let ir::Connect { src, dst } = &c;
+        let ir::Connect { src, dst, .. } = &c;
         let mut cons = vec![];
 
         // Range accesses are well-formed

@@ -1,7 +1,7 @@
 use super::{
     CmpOp, Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
-    IndexStore, InstIdx, Instance, Interned, InvIdx, Invoke, Param, ParamIdx,
-    Port, PortIdx, Prop, PropIdx, Time, TimeIdx, TimeSub,
+    IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke,
+    Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeIdx, TimeSub,
 };
 use crate::{ast, utils::Idx};
 use itertools::Itertools;
@@ -42,10 +42,14 @@ pub struct Component {
     /// Events defined by the component
     pub events: IndexStore<Event>,
 
+    // Control flow entities
     /// Instances defined by the component
     pub instances: IndexStore<Instance>,
     /// Invocations defined by the component
     pub invocations: IndexStore<Invoke>,
+
+    /// Information tracked by the component
+    pub info: IndexStore<Info>,
 
     // Interned data. We store this on a per-component basis because events with the
     // same identifiers in different components are not equal.
@@ -69,6 +73,7 @@ impl Component {
             events: IndexStore::default(),
             instances: IndexStore::default(),
             invocations: IndexStore::default(),
+            info: IndexStore::default(),
             exprs: Interned::default(),
             times: Interned::default(),
             props: Interned::default(),
@@ -377,6 +382,16 @@ impl Ctx<Prop> for Component {
 
     fn get(&self, idx: Idx<Prop>) -> &Prop {
         self.props.get(idx)
+    }
+}
+
+impl Ctx<Info> for Component {
+    fn add(&mut self, val: Info) -> InfoIdx {
+        self.info.add(val)
+    }
+
+    fn get(&self, idx: InfoIdx) -> &Info {
+        self.info.get(idx)
     }
 }
 
