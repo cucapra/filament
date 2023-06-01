@@ -8,6 +8,8 @@ use easy_smt as smt;
 /// top-level.
 pub struct Discharge {
     sol: smt::Context,
+    /// Are we in a scoped context?
+    scoped: bool,
     // Defined names
     param_map: ir::DenseIndexInfo<ir::Param, smt::SExpr>,
     ev_map: ir::DenseIndexInfo<ir::Event, smt::SExpr>,
@@ -27,6 +29,7 @@ impl Default for Discharge {
         // sol.set_option(":produce-models", "true").unwrap();
         Self {
             sol,
+            scoped: false,
             param_map: Default::default(),
             prop_map: Default::default(),
             time_map: Default::default(),
@@ -55,6 +58,21 @@ impl Discharge {
 
     fn fmt_time(time: ir::TimeIdx) -> String {
         format!("t{}", time.get())
+    }
+
+    /// Check whether the proposition is valid
+    fn check_valid(&mut self, prop: ir::PropIdx) -> Option<bool> {
+        self.sol.push().unwrap();
+        let prop = self.prop_map[prop];
+        self.sol.assert(self.sol.not(prop)).unwrap();
+        let res = self.sol.check().unwrap();
+        let out = match res {
+            smt::Response::Sat => Some(false),
+            smt::Response::Unsat => Some(true),
+            smt::Response::Unknown => None,
+        };
+        self.sol.pop().unwrap();
+        out
     }
 
     /// Generate constraint: `l <=> r`
@@ -147,9 +165,6 @@ impl Visitor for Discharge {
             .build()
             .unwrap();
 
-        // Track mapping from proposition to SMT variable
-        let mut prop_map = ir::DenseIndexInfo::with_capacity(comp.props.size());
-
         // Declare all parameters
         let int = sol.int_sort();
         for (idx, _) in comp.params.iter() {
@@ -191,9 +206,56 @@ impl Visitor for Discharge {
             let assign = self.prop_to_sexp(prop);
             let is_eq = self.iff(sexp, assign);
             self.sol.assert(is_eq).unwrap();
-            prop_map.push(idx, sexp);
+            self.prop_map.push(idx, sexp);
         }
         // Pass does not need to traverse the control program.
         Action::Stop
+    }
+
+    fn fact(&mut self, f: &mut ir::Fact, comp: &mut ir::Component) -> Action {
+        if self.scoped {
+            panic!("scoped facts not supported. Run `hoist-facts` before this pass");
+        }
+
+        if f.is_assume() {
+            panic!(
+                "assumptions should have been eliminated by `hoist-facts` pass"
+            )
+        }
+
+        match self.check_valid(f.prop) {
+            Some(true) => Action::Change(vec![comp.assume(f.prop).into()]),
+            Some(false) => {
+                log::warn!("fact `{}` is not valid", f.prop);
+                Action::Continue
+            }
+            None => {
+                panic!("Unknown returned")
+            }
+        }
+    }
+
+    fn do_if(&mut self, i: &mut ir::If, comp: &mut ir::Component) -> Action {
+        let orig = self.scoped;
+        self.scoped = true;
+        let out = self
+            .visit_cmds(&mut i.then, comp)
+            .and_then(|| self.visit_cmds(&mut i.alt, comp));
+        self.scoped = orig;
+        out
+    }
+
+    fn do_loop(
+        &mut self,
+        l: &mut ir::Loop,
+        comp: &mut ir::Component,
+    ) -> Action {
+        let orig = self.scoped;
+        self.scoped = true;
+        let out = self
+            .start_loop(l, comp)
+            .and_then(|| self.visit_cmds(&mut l.body, comp));
+        self.scoped = orig;
+        out
     }
 }
