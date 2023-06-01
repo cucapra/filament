@@ -60,6 +60,13 @@ extern "comb.sv" {
     @[G, L] out: 1,
   ) where L > G, #WIDTH > 0;
 
+  comp Neq[#WIDTH]<G: L-(G), ?L: 1=G+1>(
+    @[G, L] left: #WIDTH,
+    @[G, L] right: #WIDTH,
+  ) -> (
+    @[G, L] out: 1,
+  ) where L > G, #WIDTH > 0;
+
   comp Gt[#WIDTH]<G: L-(G), ?L: 1=G+1>(
     @[G, L] left: #WIDTH,
     @[G, L] right: #WIDTH,
@@ -87,6 +94,12 @@ extern "comb.sv" {
   ) -> (
     @[G, L] out: 1,
   ) where L > G, #WIDTH > 0;
+
+  comp SignExtend[#IN_WIDTH, #OUT_WIDTH]<G: L-(G), ?L: 1=G+1>(
+    @[G, L] in: #IN_WIDTH,
+  ) -> (
+    @[G, L] out: #OUT_WIDTH,
+  ) where L > G, #IN_WIDTH > 0, #OUT_WIDTH > 0, #OUT_WIDTH > #IN_WIDTH;
 
   comp ZeroExtend[#IN_WIDTH, #OUT_WIDTH]<G: L-(G), ?L: 1=G+1>(
     @[G, L] in: #IN_WIDTH,
