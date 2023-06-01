@@ -234,8 +234,8 @@ pub enum EventOwner {
 /// Events must have a delay and an optional default value
 pub struct Event {
     pub delay: TimeSub,
-    // pub default: Option<TimeIdx>,
     pub owner: EventOwner,
+    pub info: InfoIdx,
 }
 
 impl fmt::Display for Event {

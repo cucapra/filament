@@ -113,8 +113,13 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     /// Add an event to the component.
     fn event(&mut self, eb: ast::EventBind, owner: ir::EventOwner) -> EventIdx {
+        let info = self.comp.add(ir::Info::event(
+            eb.event.copy(),
+            eb.event.pos(),
+            eb.delay.pos(),
+        ));
         let delay = self.timesub(eb.delay.take());
-        let e = ir::Event { delay, owner };
+        let e = ir::Event { delay, owner, info };
         let idx = self.comp.add(e);
         self.event_map.insert(*eb.event, idx);
         idx
