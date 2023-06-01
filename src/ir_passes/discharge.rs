@@ -160,27 +160,22 @@ impl Discharge {
 
 impl Visitor for Discharge {
     fn start(&mut self, comp: &mut ir::Component) -> Action {
-        let mut sol = smt::ContextBuilder::new()
-            .solver("z3", ["-smt2", "-in"])
-            .build()
-            .unwrap();
-
         // Declare all parameters
-        let int = sol.int_sort();
+        let int = self.sol.int_sort();
         for (idx, _) in comp.params.iter() {
-            let sexp = sol.declare(Self::fmt_param(idx), int).unwrap();
+            let sexp = self.sol.declare(Self::fmt_param(idx), int).unwrap();
             self.param_map.push(idx, sexp);
         }
 
         // Declare all events
         for (idx, _) in comp.events.iter() {
-            let sexp = sol.declare(Self::fmt_event(idx), int).unwrap();
+            let sexp = self.sol.declare(Self::fmt_event(idx), int).unwrap();
             self.ev_map.push(idx, sexp);
         }
 
         // Declare all expressions
         for (idx, expr) in comp.exprs.iter() {
-            let sexp = sol.declare(Self::fmt_expr(idx), int).unwrap();
+            let sexp = self.sol.declare(Self::fmt_expr(idx), int).unwrap();
             let assign = self.expr_to_sexp(expr);
             let is_eq = self.sol.eq(sexp, assign);
             self.sol.assert(is_eq).unwrap();
@@ -189,19 +184,19 @@ impl Visitor for Discharge {
 
         // Declare all time expressions
         for (idx, ir::Time { event, offset }) in comp.times.iter() {
-            let sexp = sol.declare(Self::fmt_time(idx), int).unwrap();
+            let sexp = self.sol.declare(Self::fmt_time(idx), int).unwrap();
             let ev = self.ev_map[*event];
             let off = self.expr_map[*offset];
-            let assign = sol.plus(ev, off);
+            let assign = self.sol.plus(ev, off);
             let is_eq = self.sol.eq(sexp, assign);
             self.sol.assert(is_eq).unwrap();
             self.time_map.push(idx, sexp);
         }
 
         // Declare all propositions
-        let bs = sol.bool_sort();
+        let bs = self.sol.bool_sort();
         for (idx, prop) in comp.props.iter() {
-            let sexp = sol.declare(Discharge::fmt_prop(idx), bs).unwrap();
+            let sexp = self.sol.declare(Discharge::fmt_prop(idx), bs).unwrap();
             // Define assertion equating the proposition to its assignment
             let assign = self.prop_to_sexp(prop);
             let is_eq = self.iff(sexp, assign);
@@ -209,7 +204,7 @@ impl Visitor for Discharge {
             self.prop_map.push(idx, sexp);
         }
         // Pass does not need to traverse the control program.
-        Action::Stop
+        Action::Continue
     }
 
     fn fact(&mut self, f: &mut ir::Fact, comp: &mut ir::Component) -> Action {
