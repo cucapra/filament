@@ -1,5 +1,3 @@
-use linked_hash_set::LinkedHashSet;
-
 use crate::{
     ir::{self, Ctx},
     ir_visitor::{Action, Visitor},
@@ -14,7 +12,7 @@ pub struct HoistFacts {
     /// The current path condition
     path_cond: Vec<ir::PropIdx>,
     /// Facts to be hoisted
-    facts: LinkedHashSet<ir::Fact>,
+    facts: Vec<ir::Fact>,
 }
 
 impl HoistFacts {
@@ -57,7 +55,7 @@ impl Visitor for HoistFacts {
             // Otherwise this is a checked assertion that needs to be hoisted.
             // Generate prop = path_cond -> fact.prop
             let cond = self.path_cond(comp).implies(fact.prop, comp);
-            self.facts.insert(comp.assert(cond));
+            self.facts.push(comp.assert(cond));
         }
         Action::Change(vec![])
     }
