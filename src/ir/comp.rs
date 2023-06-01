@@ -1,9 +1,10 @@
 use super::{
-    Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact, IndexStore,
-    InstIdx, Instance, Interned, InvIdx, Invoke, Param, ParamIdx, Port,
-    PortIdx, Prop, PropIdx, Time, TimeIdx,
+    CmpOp, Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
+    IndexStore, InstIdx, Instance, Interned, InvIdx, Invoke, Param, ParamIdx,
+    Port, PortIdx, Prop, PropIdx, Time, TimeIdx, TimeSub,
 };
 use crate::{ast, utils::Idx};
+use itertools::Itertools;
 
 #[derive(Default)]
 pub struct Context {
@@ -102,6 +103,110 @@ impl Component {
             panic!("Attempted to assume false");
         }
         Fact::assume(prop)
+    }
+}
+
+/// Implement methods to display various values bound by the component
+impl Component {
+    /// Display an expression by recursively displaying its subexpressions.
+    pub fn display_expr(&self, expr: ExprIdx) -> String {
+        match self.get(expr) {
+            Expr::Param(p) => format!("{p}"),
+            Expr::Concrete(n) => format!("{n}"),
+            Expr::Bin { op, lhs, rhs } => {
+                let op_str = match op {
+                    ast::Op::Add => "+",
+                    ast::Op::Sub => "-",
+                    ast::Op::Mul => "*",
+                    ast::Op::Div => "/",
+                    ast::Op::Mod => "%",
+                };
+                format!(
+                    "({l} {op} {r})",
+                    l = self.display_expr(*lhs),
+                    op = op_str,
+                    r = self.display_expr(*rhs)
+                )
+            }
+            Expr::Fn { op, args } => {
+                let fn_str = match op {
+                    ast::UnFn::Pow2 => "pow2",
+                    ast::UnFn::Log2 => "log2",
+                };
+                format!(
+                    "({fn_str} {args})",
+                    args =
+                        args.iter().map(|a| self.display_expr(*a)).join(", ")
+                )
+            }
+        }
+    }
+
+    fn display_cmp<T>(
+        &self,
+        cmp: &CmpOp<T>,
+        print_base: impl Fn(T) -> String,
+    ) -> String
+    where
+        T: Clone,
+    {
+        let CmpOp { op, lhs, rhs } = cmp;
+        let op_str = match op {
+            super::Cmp::Gt => ">",
+            super::Cmp::Gte => ">=",
+            super::Cmp::Eq => "=",
+        };
+        format!(
+            "({l} {op} {r})",
+            l = print_base(lhs.clone()),
+            op = op_str,
+            r = print_base(rhs.clone())
+        )
+    }
+
+    pub fn display_time(&self, time: TimeIdx) -> String {
+        let Time { event, offset } = self.get(time);
+        format!("{event} + {}", self.display_expr(*offset))
+    }
+
+    fn display_time_sub(&self, ts: TimeSub) -> String {
+        match ts {
+            TimeSub::Unit(e) => self.display_expr(e),
+            TimeSub::Sym { l, r } => {
+                format!("({} - {})", self.display_time(l), self.display_time(r))
+            }
+        }
+    }
+
+    /// Display a proposition by recursively displaying its subexpressions.
+    pub fn display_prop(&self, prop: PropIdx) -> String {
+        match self.get(prop) {
+            Prop::True => "true".to_string(),
+            Prop::False => "false".to_string(),
+            Prop::Cmp(c) => self.display_cmp(c, |e| self.display_expr(e)),
+            Prop::TimeCmp(cmp) => {
+                self.display_cmp(cmp, |t| self.display_time(t))
+            }
+            Prop::TimeSubCmp(cmp) => {
+                self.display_cmp(cmp, |t| self.display_time_sub(t))
+            }
+            Prop::Not(p) => format!("!{}", self.display_prop(*p)),
+            Prop::And(l, r) => format!(
+                "({} & {})",
+                self.display_prop(*l),
+                self.display_prop(*r)
+            ),
+            Prop::Or(l, r) => format!(
+                "({} | {})",
+                self.display_prop(*l),
+                self.display_prop(*r)
+            ),
+            Prop::Implies(l, r) => format!(
+                "({} => {})",
+                self.display_prop(*l),
+                self.display_prop(*r)
+            ),
+        }
     }
 }
 
