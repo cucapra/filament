@@ -106,27 +106,47 @@ impl Component {
     }
 }
 
+/// Queries over interned entities
+impl Component {
+    fn expr_params_acc(&self, expr: ExprIdx, acc: &mut Vec<ParamIdx>) {
+        match self.get(expr) {
+            Expr::Param(p) => acc.push(*p),
+            Expr::Concrete(_) => (),
+            Expr::Bin { lhs, rhs, .. } => {
+                self.expr_params_acc(*lhs, acc);
+                self.expr_params_acc(*rhs, acc);
+            }
+            Expr::Fn { args, .. } => {
+                for arg in args.iter() {
+                    self.expr_params_acc(*arg, acc);
+                }
+            }
+        }
+    }
+
+    /// Parameters mentioned within an expression
+    pub fn expr_params(&self, expr: ExprIdx) -> Vec<ParamIdx> {
+        let mut acc = Vec::new();
+        self.expr_params_acc(expr, &mut acc);
+        acc
+    }
+}
+
 /// Implement methods to display various values bound by the component
 impl Component {
-    /// Display an expression by recursively displaying its subexpressions.
-    pub fn display_expr(&self, expr: ExprIdx) -> String {
+    fn display_expr_helper(&self, expr: ExprIdx, ctx: ECtx) -> String {
         match self.get(expr) {
             Expr::Param(p) => format!("{p}"),
             Expr::Concrete(n) => format!("{n}"),
             Expr::Bin { op, lhs, rhs } => {
-                let op_str = match op {
-                    ast::Op::Add => "+",
-                    ast::Op::Sub => "-",
-                    ast::Op::Mul => "*",
-                    ast::Op::Div => "/",
-                    ast::Op::Mod => "%",
-                };
-                format!(
-                    "({l} {op} {r})",
-                    l = self.display_expr(*lhs),
-                    op = op_str,
-                    r = self.display_expr(*rhs)
-                )
+                let inner = ECtx::from(*op);
+                let left = self.display_expr_helper(*lhs, inner);
+                let right = self.display_expr_helper(*rhs, inner);
+                if inner < ctx {
+                    format!("({}{}{})", left, op, right)
+                } else {
+                    format!("{}{}{}", left, op, right)
+                }
             }
             Expr::Fn { op, args } => {
                 let fn_str = match op {
@@ -135,11 +155,18 @@ impl Component {
                 };
                 format!(
                     "({fn_str} {args})",
-                    args =
-                        args.iter().map(|a| self.display_expr(*a)).join(", ")
+                    args = args
+                        .iter()
+                        .map(|a| self.display_expr_helper(*a, ECtx::Func))
+                        .join(", ")
                 )
             }
         }
+    }
+
+    /// Display an expression by recursively displaying its subexpressions.
+    pub fn display_expr(&self, expr: ExprIdx) -> String {
+        self.display_expr_helper(expr, ECtx::Func)
     }
 
     fn display_cmp<T>(
@@ -151,22 +178,16 @@ impl Component {
         T: Clone,
     {
         let CmpOp { op, lhs, rhs } = cmp;
-        let op_str = match op {
-            super::Cmp::Gt => ">",
-            super::Cmp::Gte => ">=",
-            super::Cmp::Eq => "=",
-        };
         format!(
-            "({l} {op} {r})",
+            "{l} {op} {r}",
             l = print_base(lhs.clone()),
-            op = op_str,
             r = print_base(rhs.clone())
         )
     }
 
     pub fn display_time(&self, time: TimeIdx) -> String {
         let Time { event, offset } = self.get(time);
-        format!("{event} + {}", self.display_expr(*offset))
+        format!("{event}+{}", self.display_expr(*offset))
     }
 
     fn display_time_sub(&self, ts: TimeSub) -> String {
@@ -180,6 +201,10 @@ impl Component {
 
     /// Display a proposition by recursively displaying its subexpressions.
     pub fn display_prop(&self, prop: PropIdx) -> String {
+        self.display_prop_helper(prop, PCtx::And)
+    }
+
+    fn display_prop_helper(&self, prop: PropIdx, ctx: PCtx) -> String {
         match self.get(prop) {
             Prop::True => "true".to_string(),
             Prop::False => "false".to_string(),
@@ -190,22 +215,39 @@ impl Component {
             Prop::TimeSubCmp(cmp) => {
                 self.display_cmp(cmp, |t| self.display_time_sub(t))
             }
-            Prop::Not(p) => format!("!{}", self.display_prop(*p)),
-            Prop::And(l, r) => format!(
-                "({} & {})",
-                self.display_prop(*l),
-                self.display_prop(*r)
-            ),
-            Prop::Or(l, r) => format!(
-                "({} | {})",
-                self.display_prop(*l),
-                self.display_prop(*r)
-            ),
-            Prop::Implies(l, r) => format!(
-                "({} => {})",
-                self.display_prop(*l),
-                self.display_prop(*r)
-            ),
+            Prop::Not(p) => {
+                format!("!{}", self.display_prop_helper(*p, PCtx::Not))
+            }
+            Prop::And(l, r) => {
+                let inner = PCtx::And;
+                let l = self.display_prop_helper(*l, inner);
+                let r = self.display_prop_helper(*r, inner);
+                if inner < ctx {
+                    format!("({} & {})", l, r)
+                } else {
+                    format!("{} & {}", l, r)
+                }
+            }
+            Prop::Or(l, r) => {
+                let inner = PCtx::Or;
+                let l = self.display_prop_helper(*l, inner);
+                let r = self.display_prop_helper(*r, inner);
+                if inner < ctx {
+                    format!("({} | {})", l, r)
+                } else {
+                    format!("{} | {}", l, r)
+                }
+            }
+            Prop::Implies(l, r) => {
+                let inner = PCtx::Implies;
+                let l = self.display_prop_helper(*l, inner);
+                let r = self.display_prop_helper(*r, inner);
+                if inner < ctx {
+                    format!("({} => {})", l, r)
+                } else {
+                    format!("{} => {}", l, r)
+                }
+            }
         }
     }
 }
@@ -299,5 +341,93 @@ where
 
     fn index(&self, index: Idx<K>) -> &Self::Output {
         self.get(index)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// Track the current context within an expression for pretty printing
+enum ECtx {
+    /// Inside an addition priority expression (+ or -)
+    Add,
+    /// Inside an multiplication priority expression (* or / or %)
+    Mul,
+    /// Inside a function application
+    Func,
+}
+
+impl From<ast::Op> for ECtx {
+    fn from(op: ast::Op) -> Self {
+        match op {
+            ast::Op::Add | ast::Op::Sub => ECtx::Add,
+            ast::Op::Mul | ast::Op::Div | ast::Op::Mod => ECtx::Mul,
+        }
+    }
+}
+
+// Ordering for expression printing context. If other is less than this,
+// then we are in a tightly binding context and need to add parens.
+impl Ord for ECtx {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        use std::cmp::Ordering::*;
+        match (self, other) {
+            // Functions are the tightest
+            (ECtx::Func, ECtx::Func) => Equal,
+            (ECtx::Func, _) => Greater,
+            // Mults are next
+            (ECtx::Mul, ECtx::Mul) => Equal,
+            (ECtx::Mul, ECtx::Func) => Less,
+            (ECtx::Mul, _) => Greater,
+            // Adds are last
+            (ECtx::Add, ECtx::Add) => Equal,
+            (ECtx::Add, _) => Less,
+        }
+    }
+}
+
+impl PartialOrd for ECtx {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// Context to track proposition bindings
+enum PCtx {
+    /// Inside a negation
+    Not,
+    /// Inside a conjunction
+    And,
+    /// Inside a disjunction
+    Or,
+    /// Inside an implication
+    Implies,
+}
+
+impl Ord for PCtx {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        use std::cmp::Ordering::*;
+        use PCtx::*;
+        match (self, other) {
+            // Negations
+            (Not, Not) => Equal,
+            (Not, _) => Greater,
+            // Conjunctions
+            (And, And) => Equal,
+            (And, Not) => Less,
+            (And, _) => Greater,
+            // Disjunctions
+            (Or, Or) => Equal,
+            (Or, Not | And) => Less,
+            (Or, _) => Greater,
+            // Implications
+            (Implies, Implies) => Equal,
+            (Implies, _) => Less,
+        }
+    }
+}
+
+impl PartialOrd for PCtx {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }

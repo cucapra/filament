@@ -256,7 +256,7 @@ impl Visitor for Discharge {
         match self.check_valid(f.prop) {
             true => Action::Change(vec![comp.assume(f.prop).into()]),
             false => {
-                log::warn!("fact `{}` is not valid", f.prop);
+                log::warn!("fact `{}` is not valid", comp.display_prop(f.prop));
                 Action::Continue
             }
         }
