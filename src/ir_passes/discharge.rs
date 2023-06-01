@@ -23,10 +23,10 @@ pub struct Discharge {
 impl Default for Discharge {
     fn default() -> Self {
         let sol = smt::ContextBuilder::new()
+            .replay_file(Some(std::fs::File::create("model.smt").unwrap()))
             .solver("z3", ["-smt2", "-in"])
             .build()
             .unwrap();
-        // sol.set_option(":produce-models", "true").unwrap();
         Self {
             sol,
             scoped: false,
@@ -92,7 +92,8 @@ impl Discharge {
                     ast::Op::Add => sol.plus(l, r),
                     ast::Op::Sub => sol.sub(l, r),
                     ast::Op::Mul => sol.times(l, r),
-                    ast::Op::Div | ast::Op::Mod => todo!(),
+                    ast::Op::Div => sol.div(l, r),
+                    ast::Op::Mod => sol.modulo(l, r),
                 }
             }
             ir::Expr::Fn { .. } => todo!(),
