@@ -1,6 +1,9 @@
 use crate::ir_visitor::{Action, Visitor};
 use crate::{ast, ir};
 use easy_smt as smt;
+use itertools::Itertools;
+use std::collections::HashMap;
+use std::iter;
 
 /// Pass to discharge top-level `assert` statements in the IR and turn them into
 /// `assume` if they are true. Any assertions within the body are left as-is.
@@ -10,6 +13,8 @@ pub struct Discharge {
     sol: smt::Context,
     /// Are we in a scoped context?
     scoped: bool,
+    /// Defined functions
+    func_map: HashMap<ast::UnFn, smt::SExpr>,
     // Defined names
     param_map: ir::DenseIndexInfo<ir::Param, smt::SExpr>,
     ev_map: ir::DenseIndexInfo<ir::Event, smt::SExpr>,
@@ -18,6 +23,8 @@ pub struct Discharge {
     time_map: ir::DenseIndexInfo<ir::Time, smt::SExpr>,
     // Propositions
     prop_map: ir::DenseIndexInfo<ir::Prop, smt::SExpr>,
+    // Propositions that have already been checked
+    checked: HashMap<ir::PropIdx, bool>,
 }
 
 impl Default for Discharge {
@@ -27,15 +34,21 @@ impl Default for Discharge {
             .solver("z3", ["-smt2", "-in"])
             .build()
             .unwrap();
-        Self {
+
+        let mut out = Self {
             sol,
             scoped: false,
+            func_map: Default::default(),
             param_map: Default::default(),
             prop_map: Default::default(),
             time_map: Default::default(),
             ev_map: Default::default(),
             expr_map: Default::default(),
-        }
+            checked: Default::default(),
+        };
+
+        out.define_funcs();
+        out
     }
 }
 
@@ -60,18 +73,37 @@ impl Discharge {
         format!("t{}", time.get())
     }
 
+    /// Defines primitive functions used in the encoding like `pow` and `log`
+    fn define_funcs(&mut self) {
+        let int_sort = self.sol.int_sort();
+        let pow2 = self
+            .sol
+            .declare_fun("pow2", vec![int_sort], int_sort)
+            .unwrap();
+        let log = self
+            .sol
+            .declare_fun("log2", vec![int_sort], int_sort)
+            .unwrap();
+        self.func_map = vec![(ast::UnFn::Pow2, pow2), (ast::UnFn::Log2, log)]
+            .into_iter()
+            .collect();
+    }
+
     /// Check whether the proposition is valid
-    fn check_valid(&mut self, prop: ir::PropIdx) -> Option<bool> {
+    fn check_valid(&mut self, prop: ir::PropIdx) -> bool {
+        if self.checked.contains_key(&prop) {
+            return self.checked[&prop];
+        }
         self.sol.push().unwrap();
-        let prop = self.prop_map[prop];
-        self.sol.assert(self.sol.not(prop)).unwrap();
+        self.sol.assert(self.sol.not(self.prop_map[prop])).unwrap();
         let res = self.sol.check().unwrap();
         let out = match res {
-            smt::Response::Sat => Some(false),
-            smt::Response::Unsat => Some(true),
-            smt::Response::Unknown => None,
+            smt::Response::Sat => false,
+            smt::Response::Unsat => true,
+            smt::Response::Unknown => panic!("Solver returned unknown"),
         };
         self.sol.pop().unwrap();
+        self.checked.insert(prop, out);
         out
     }
 
@@ -91,7 +123,12 @@ impl Discharge {
                     ast::Op::Mod => sol.modulo(l, r),
                 }
             }
-            ir::Expr::Fn { .. } => todo!(),
+            ir::Expr::Fn { op, args } => {
+                let args = args.iter().map(|e| self.expr_map[*e]);
+                self.sol.list(
+                    iter::once(self.func_map[op]).chain(args).collect_vec(),
+                )
+            }
         }
     }
 
@@ -217,13 +254,10 @@ impl Visitor for Discharge {
         }
 
         match self.check_valid(f.prop) {
-            Some(true) => Action::Change(vec![comp.assume(f.prop).into()]),
-            Some(false) => {
+            true => Action::Change(vec![comp.assume(f.prop).into()]),
+            false => {
                 log::warn!("fact `{}` is not valid", f.prop);
                 Action::Continue
-            }
-            None => {
-                panic!("Unknown returned")
             }
         }
     }
