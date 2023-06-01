@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 import shutil
 import logging as log
+import json
 
 from fud import errors
 from fud.stages import Stage, SourceType, Source
@@ -97,6 +98,36 @@ class CocotbExecBase(Stage):
         return save(stream, dir)
 
     def _define_steps(self, input, builder, config) -> Source:
+        
+        def transform_data(data) -> SourceType.Path:
+            """
+            Transform data from having binary/hex encoding into decimal
+            Creates a new file in the same directory as data
+            """
+            file_orig = open(data)
+            file_new = open(data[:-5] + "_upd" + data[-5:],"w")
+            data_dict = json.load(file_orig)
+            for key in data_dict:
+                for i in range(len(data_dict[key])):
+                    val = data_dict[key][i]
+                    if isinstance(val,str):
+                        if val[:2] == '0b': # binary format
+                            binary_data = val[2:]
+                            conv = int(binary_data,2)
+                        elif val[:2] == '0x': # hex format
+                            binary_data = val[2:]
+                            conv = int(binary_data,16)
+                        else:
+                            # throw unsupported data format error
+                            return
+                    else:
+                        conv = val
+                    data_dict[key][i] = conv
+            json_obj = json.dumps(data_dict,indent=4)
+            file_new.write(json_obj)
+            # print("\n" + file_new.name)
+            return Path(file_new.name).resolve()
+        
         @builder.step()
         def get_data() -> SourceType.Path:
             """Get data for execution"""
@@ -104,8 +135,11 @@ class CocotbExecBase(Stage):
             data = config.get(name)
             if data is None:
                 raise errors.MissingDynamicConfiguration(".".join(name))
+            # transform binary string into decimal
+            data_new = transform_data(data)
+            
             # return absolute path to the file
-            return Path(data).resolve()
+            return data_new
 
         @builder.step()
         def copy_file(
@@ -243,6 +277,7 @@ class CocotbExecBase(Stage):
 
         # Run the program
         out = run(dir, interface_path, data)
+        
         if self.out == CocotbOutput.VCD:
             return read_vcd(dir)
         else:
