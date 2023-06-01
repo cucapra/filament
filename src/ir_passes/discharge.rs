@@ -75,11 +75,6 @@ impl Discharge {
         out
     }
 
-    /// Generate constraint: `l <=> r`
-    fn iff(&mut self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
-        self.sol.and(self.sol.imp(l, r), self.sol.imp(r, l))
-    }
-
     fn expr_to_sexp(&mut self, expr: &ir::Expr) -> smt::SExpr {
         let sol = &mut self.sol;
         match expr {
@@ -176,32 +171,34 @@ impl Visitor for Discharge {
 
         // Declare all expressions
         for (idx, expr) in comp.exprs.iter() {
-            let sexp = self.sol.declare(Self::fmt_expr(idx), int).unwrap();
             let assign = self.expr_to_sexp(expr);
-            let is_eq = self.sol.eq(sexp, assign);
-            self.sol.assert(is_eq).unwrap();
+            let sexp = self
+                .sol
+                .define_const(Self::fmt_expr(idx), int, assign)
+                .unwrap();
             self.expr_map.push(idx, sexp);
         }
 
         // Declare all time expressions
         for (idx, ir::Time { event, offset }) in comp.times.iter() {
-            let sexp = self.sol.declare(Self::fmt_time(idx), int).unwrap();
-            let ev = self.ev_map[*event];
-            let off = self.expr_map[*offset];
-            let assign = self.sol.plus(ev, off);
-            let is_eq = self.sol.eq(sexp, assign);
-            self.sol.assert(is_eq).unwrap();
+            let assign =
+                self.sol.plus(self.ev_map[*event], self.expr_map[*offset]);
+            let sexp = self
+                .sol
+                .define_const(Self::fmt_time(idx), int, assign)
+                .unwrap();
             self.time_map.push(idx, sexp);
         }
 
         // Declare all propositions
         let bs = self.sol.bool_sort();
         for (idx, prop) in comp.props.iter() {
-            let sexp = self.sol.declare(Discharge::fmt_prop(idx), bs).unwrap();
             // Define assertion equating the proposition to its assignment
             let assign = self.prop_to_sexp(prop);
-            let is_eq = self.iff(sexp, assign);
-            self.sol.assert(is_eq).unwrap();
+            let sexp = self
+                .sol
+                .define_const(Discharge::fmt_prop(idx), bs, assign)
+                .unwrap();
             self.prop_map.push(idx, sexp);
         }
         // Pass does not need to traverse the control program.
