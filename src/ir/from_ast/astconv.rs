@@ -416,28 +416,31 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             })
             .collect();
 
-        sig.inputs
-            .clone()
+        let mut connects = Vec::with_capacity(sig.inputs.len());
+
+        for (p, src) in sig.inputs.clone().into_iter().zip(srcs) {
+            let resolved = p
+                .resolve_exprs(&param_binding)
+                .resolve_event(&event_binding);
+            let owner = ir::PortOwner::Inv {
+                inv,
+                dir: ir::Direction::In,
+            };
+            // Add the port to the invoke
+            let pidx = self.port(resolved, owner);
+            self.comp.invocations.get_mut(inv).ports.push(pidx);
+
+            let end = self.comp[pidx].live.len;
+            let dst = ir::Access {
+                port: pidx,
+                start: self.comp.num(0),
+                end,
+            };
+            connects.push(ir::Connect { src, dst }.into())
+        }
+
+        connects
             .into_iter()
-            .zip(srcs)
-            .map(|(p, src)| {
-                let resolved = p
-                    .resolve_exprs(&param_binding)
-                    .resolve_event(&event_binding);
-                let owner = ir::PortOwner::Inv {
-                    inv,
-                    dir: ir::Direction::In,
-                };
-                // Add the port to the component
-                let pidx = self.port(resolved, owner);
-                let end = self.comp[pidx].live.len;
-                let dst = ir::Access {
-                    port: pidx,
-                    start: self.comp.num(0),
-                    end,
-                };
-                ir::Connect { src, dst }.into()
-            })
             .chain(Some(ir::Command::from(inv)))
             .chain(ebs)
             .chain(cons)
@@ -556,7 +559,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
         // Add the inputs from the invoke. The outputs are added in the second
         // pass using [Self::add_invoke_connects].
-        self.comp.invocations.get_mut(inv).ports = def_ports;
+        self.comp.invocations.get_mut(inv).ports.extend(def_ports);
     }
 
     /// Walk over the component and declare all instances, invocations, and all outputs defined by invocations.
