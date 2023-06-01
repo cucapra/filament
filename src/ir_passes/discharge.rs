@@ -5,6 +5,8 @@ use itertools::Itertools;
 use std::collections::HashMap;
 use std::iter;
 
+type Assign = Vec<(ir::ParamIdx, String)>;
+
 /// Pass to discharge top-level `assert` statements in the IR and turn them into
 /// `assume` if they are true. Any assertions within the body are left as-is.
 /// Run [super::HoistFacts] before this pass to ensure that all facts are
@@ -24,7 +26,7 @@ pub struct Discharge {
     // Propositions
     prop_map: ir::DenseIndexInfo<ir::Prop, smt::SExpr>,
     // Propositions that have already been checked
-    checked: HashMap<ir::PropIdx, bool>,
+    checked: HashMap<ir::PropIdx, Option<Assign>>,
 }
 
 impl Default for Discharge {
@@ -89,22 +91,54 @@ impl Discharge {
             .collect();
     }
 
-    /// Check whether the proposition is valid
-    fn check_valid(&mut self, prop: ir::PropIdx) -> bool {
-        if self.checked.contains_key(&prop) {
-            return self.checked[&prop];
+    /// Get bindings for the provided parameters in a model.
+    fn get_assignments(&mut self, relevant_vars: Vec<ir::ParamIdx>) -> Assign {
+        let mut rev_map = HashMap::with_capacity(relevant_vars.len());
+        // SExprs corresponding to the paramters
+        let sexps = relevant_vars
+            .iter()
+            .unique()
+            .map(|p| {
+                let s = self.param_map[*p];
+                rev_map.insert(s, *p);
+                s
+            })
+            .collect_vec();
+
+        self.sol
+            .get_value(sexps)
+            .unwrap()
+            .into_iter()
+            .map(|(p, v)| {
+                let p = rev_map[&p];
+                (p, self.sol.display(v).to_string())
+            })
+            .collect_vec()
+    }
+
+    /// Check whether the proposition is valid.
+    /// Returns a set of assignments if the proposition is not valid.
+    fn check_valid(
+        &mut self,
+        prop: ir::PropIdx,
+        ctx: &ir::Component,
+    ) -> &Option<Assign> {
+        #[allow(clippy::map_entry)]
+        if !self.checked.contains_key(&prop) {
+            self.sol.push().unwrap();
+            self.sol.assert(self.sol.not(self.prop_map[prop])).unwrap();
+            let res = self.sol.check().unwrap();
+            let out = match res {
+                smt::Response::Sat => {
+                    Some(self.get_assignments(ctx.prop_params(prop)))
+                }
+                smt::Response::Unsat => None,
+                smt::Response::Unknown => panic!("Solver returned unknown"),
+            };
+            self.sol.pop().unwrap();
+            self.checked.insert(prop, out);
         }
-        self.sol.push().unwrap();
-        self.sol.assert(self.sol.not(self.prop_map[prop])).unwrap();
-        let res = self.sol.check().unwrap();
-        let out = match res {
-            smt::Response::Sat => false,
-            smt::Response::Unsat => true,
-            smt::Response::Unknown => panic!("Solver returned unknown"),
-        };
-        self.sol.pop().unwrap();
-        self.checked.insert(prop, out);
-        out
+        &self.checked[&prop]
     }
 
     fn expr_to_sexp(&mut self, expr: &ir::Expr) -> smt::SExpr {
@@ -253,10 +287,18 @@ impl Visitor for Discharge {
             )
         }
 
-        match self.check_valid(f.prop) {
-            true => Action::Change(vec![comp.assume(f.prop).into()]),
-            false => {
-                log::warn!("fact `{}` is not valid", comp.display_prop(f.prop));
+        match self.check_valid(f.prop, comp) {
+            None => Action::Change(vec![comp.assume(f.prop).into()]),
+            Some(assign) => {
+                log::error!(
+                    "fact `{}` is not valid. Assignment: {}",
+                    comp.display_prop(f.prop.consequent(comp)),
+                    assign
+                        .iter()
+                        .map(|(k, v)| format!("{k}={v}",))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
                 Action::Continue
             }
         }

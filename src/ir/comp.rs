@@ -130,6 +130,51 @@ impl Component {
         self.expr_params_acc(expr, &mut acc);
         acc
     }
+
+    fn cmp_params_acc<T, F>(
+        &self,
+        cmp: &CmpOp<T>,
+        acc: &mut Vec<ParamIdx>,
+        add: F,
+    ) where
+        F: Fn(&T, &mut Vec<ParamIdx>),
+    {
+        let CmpOp { lhs, rhs, .. } = cmp;
+        add(lhs, acc);
+        add(rhs, acc);
+    }
+
+    /// Parameters mentioned within an expression
+    pub fn prop_params(&self, prop: PropIdx) -> Vec<ParamIdx> {
+        let mut acc = Vec::new();
+        self.prop_params_acc(prop, &mut acc);
+        acc
+    }
+
+    fn prop_params_acc(&self, prop: PropIdx, acc: &mut Vec<ParamIdx>) {
+        match self.get(prop) {
+            Prop::True | Prop::False => (),
+            Prop::Cmp(c) => self
+                .cmp_params_acc(c, acc, |e, acc| self.expr_params_acc(*e, acc)),
+            Prop::TimeCmp(c) => self.cmp_params_acc(c, acc, |t, acc| {
+                self.expr_params_acc(self.get(*t).offset, acc)
+            }),
+            Prop::TimeSubCmp(c) => {
+                self.cmp_params_acc(c, acc, |t, acc| match t {
+                    TimeSub::Unit(e) => self.expr_params_acc(*e, acc),
+                    TimeSub::Sym { l, r } => {
+                        self.expr_params_acc(self.get(*l).offset, acc);
+                        self.expr_params_acc(self.get(*r).offset, acc);
+                    }
+                })
+            }
+            Prop::Not(p) => self.prop_params_acc(*p, acc),
+            Prop::And(l, r) | Prop::Or(l, r) | Prop::Implies(l, r) => {
+                self.prop_params_acc(*l, acc);
+                self.prop_params_acc(*r, acc);
+            }
+        }
+    }
 }
 
 /// Implement methods to display various values bound by the component
@@ -154,10 +199,10 @@ impl Component {
                     ast::UnFn::Log2 => "log2",
                 };
                 format!(
-                    "({fn_str} {args})",
+                    "{fn_str}({args})",
                     args = args
                         .iter()
-                        .map(|a| self.display_expr_helper(*a, ECtx::Func))
+                        .map(|a| self.display_expr_helper(*a, ECtx::Add))
                         .join(", ")
                 )
             }
@@ -166,23 +211,26 @@ impl Component {
 
     /// Display an expression by recursively displaying its subexpressions.
     pub fn display_expr(&self, expr: ExprIdx) -> String {
-        self.display_expr_helper(expr, ECtx::Func)
+        self.display_expr_helper(expr, ECtx::Add)
     }
 
     fn display_cmp<T>(
         &self,
         cmp: &CmpOp<T>,
+        ctx: PCtx,
         print_base: impl Fn(T) -> String,
     ) -> String
     where
         T: Clone,
     {
         let CmpOp { op, lhs, rhs } = cmp;
-        format!(
-            "{l} {op} {r}",
-            l = print_base(lhs.clone()),
-            r = print_base(rhs.clone())
-        )
+        let l = print_base(lhs.clone());
+        let r = print_base(rhs.clone());
+        if ctx > PCtx::Cmp {
+            format!("({} {} {})", l, op, r)
+        } else {
+            format!("{} {} {}", l, op, r)
+        }
     }
 
     pub fn display_time(&self, time: TimeIdx) -> String {
@@ -201,19 +249,19 @@ impl Component {
 
     /// Display a proposition by recursively displaying its subexpressions.
     pub fn display_prop(&self, prop: PropIdx) -> String {
-        self.display_prop_helper(prop, PCtx::And)
+        self.display_prop_helper(prop, PCtx::Implies)
     }
 
     fn display_prop_helper(&self, prop: PropIdx, ctx: PCtx) -> String {
         match self.get(prop) {
             Prop::True => "true".to_string(),
             Prop::False => "false".to_string(),
-            Prop::Cmp(c) => self.display_cmp(c, |e| self.display_expr(e)),
+            Prop::Cmp(c) => self.display_cmp(c, ctx, |e| self.display_expr(e)),
             Prop::TimeCmp(cmp) => {
-                self.display_cmp(cmp, |t| self.display_time(t))
+                self.display_cmp(cmp, ctx, |t| self.display_time(t))
             }
             Prop::TimeSubCmp(cmp) => {
-                self.display_cmp(cmp, |t| self.display_time_sub(t))
+                self.display_cmp(cmp, ctx, |t| self.display_time_sub(t))
             }
             Prop::Not(p) => {
                 format!("!{}", self.display_prop_helper(*p, PCtx::Not))
@@ -393,13 +441,10 @@ impl PartialOrd for ECtx {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// Context to track proposition bindings
 enum PCtx {
-    /// Inside a negation
     Not,
-    /// Inside a conjunction
+    Cmp,
     And,
-    /// Inside a disjunction
     Or,
-    /// Inside an implication
     Implies,
 }
 
@@ -411,13 +456,17 @@ impl Ord for PCtx {
             // Negations
             (Not, Not) => Equal,
             (Not, _) => Greater,
+            // Comparisons
+            (Cmp, Cmp) => Equal,
+            (Cmp, Not) => Less,
+            (Cmp, _) => Greater,
             // Conjunctions
             (And, And) => Equal,
-            (And, Not) => Less,
+            (And, Not | Cmp) => Less,
             (And, _) => Greater,
             // Disjunctions
             (Or, Or) => Equal,
-            (Or, Not | And) => Less,
+            (Or, Not | And | Cmp) => Less,
             (Or, _) => Greater,
             // Implications
             (Implies, Implies) => Equal,

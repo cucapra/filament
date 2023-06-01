@@ -112,6 +112,7 @@ impl fmt::Display for Prop {
     }
 }
 
+/// Constructors for propositions
 impl PropIdx {
     #[inline(always)]
     /// Returns true of this proposition is definitely true.
@@ -208,6 +209,18 @@ impl PropIdx {
         }
 
         ctx.add(Prop::Implies(self, cons))
+    }
+}
+
+/// Queries over propositions
+impl PropIdx {
+    /// Returns the consequent of an implication, if this proposition is an
+    /// implication. Otherwise, returns the proposition itself.
+    pub fn consequent(self, ctx: &impl Ctx<Prop>) -> PropIdx {
+        match ctx.get(self) {
+            Prop::Implies(_, cons) => *cons,
+            _ => self,
+        }
     }
 }
 
