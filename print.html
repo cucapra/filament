@@ -153,8 +153,15 @@
 <h3 id="minimal-build"><a class="header" href="#minimal-build">Minimal Build</a></h3>
 <p>The following commands are sufficient to build the Filament compiler and have it generate <a href="https://calyxir.org">Calyx IR</a>. First, we need to configure the Calyx compiler which acts as the backend for Filament.</p>
 <ul>
-<li>Clone the <a href="https://github.com/cucapra/calyx">Calyx repository</a>: <code>git clone https://github.com/cucapra/calyx.git</code> and build the <code>Calyx</code> compiler <code>cd calyx &amp;&amp; cargo build</code></li>
-<li>Clone this repository: <code>git clone https://github.com/cucapra/filament.git</code></li>
+<li>Clone the <a href="https://github.com/cucapra/calyx">Calyx repository</a>:
+<pre><code>git clone https://github.com/cucapra/calyx.git --depth 1 --branch v0.2.0
+</code></pre>
+</li>
+<li>Build the Calyx compiler:
+<pre><code>cd calyx &amp;&amp; cargo build
+</code></pre>
+</li>
+<li>Clone <a href="https://github.com/cucapra/filament">this repository</a>: <code>git clone https://github.com/cucapra/filament.git</code></li>
 </ul>
 <p>Next, we can install the dependencies for the Filament compiler:</p>
 <ul>
@@ -212,7 +219,7 @@
 </ul>
 <p>For a sanity check, run <code>fud check</code>. It should report that <code>iverilog</code>, <code>jq</code>, <code>filament</code>, <code>futil</code>, <code>cocotb</code> are correctly installed.</p>
 <p>Once all tools are installed, running the following command should print out the test report:</p>
-<pre><code>runt -j 1
+<pre><code>runt -j 1 -o fail -d
 </code></pre>
 <h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
 <p>Now that we have installed the Filament compiler and accompanying tools, we can start using Filament. Use the following links to learn more about Filament:</p>
@@ -234,7 +241,7 @@
 <div style="break-before: page; page-break-before: always;"></div><h1 id="hardware-design-for-the-curious-developer"><a class="header" href="#hardware-design-for-the-curious-developer">Hardware Design for the Curious Developer</a></h1>
 <p>Filament is a low-level hardware description language. This means that it does not have a lot of primitive constructs and essentially requires us to build up our hardware from scratch. However, Filament's type system helps us build small reusable components and guarantees that composing them generated efficient and correct hardware.</p>
 <blockquote>
-<p>This tutorial is written for folks with no hardware design background. If you're familiar with hardware design, head to our &quot;Introduction to Filament for Cool Architects&quot; (<strong>TK</strong>).</p>
+<p>This tutorial does not assume familiarity with hardware design concepts.</p>
 </blockquote>
 <h2 id="building-an-arithmetic-logic-unit"><a class="header" href="#building-an-arithmetic-logic-unit">Building an Arithmetic Logic Unit</a></h2>
 <p>Arithmetic Logic Units (ALUs) are a key component of most processors. In a nutshell, they perform various arithmetic operations based on a given op code. We will implement a simple ALU that either performs an addition or multiplication based on the <code>op</code> boolean. At a high-level, we want to build a circuit that performs the same computation as this python program:</p>
