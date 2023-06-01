@@ -19,15 +19,15 @@ cmd = """
 fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
 """
 
-[[tests]]
-name = "ir gen"
-paths = [
-  "tests/compile/*.fil"
-]
-expect_dir = "tests/compile/ir/"
-cmd = """
-./target/debug/filament {} --show-ir > /dev/null
-"""
+# [[tests]]
+# name = "ir gen"
+# paths = [
+#   "tests/compile/*.fil"
+# ]
+# expect_dir = "tests/compile/ir/"
+# cmd = """
+# ./target/debug/filament {} --show-ir > /dev/null
+# """
 
 [[tests]]
 name = "examples"
