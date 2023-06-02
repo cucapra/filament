@@ -1,14 +1,13 @@
----CODE---
-1
 ---STDERR---
-error: delay must be longer than the length of the signal
-  ┌─ tests/errors/invalid-interface-input.fil:6:5
+error: bundle's availability is greater than the delay of the event
+  ┌─ tests/errors/invalid-interface-input.fil:5:3
   │
-2 │   comp Main<G: 3, L: 1>(
-  │                   - interface allows event to trigger every 1 cycle(s)
+1 │ comp main<G: 3, L: 1>(
+  │                    - event's delay
   ·
-6 │     @[L, L+2] in2: 32,
-  │     ^^^^^^^^^ signal lasts for 2 cycle(s)
+5 │   @[L, L+2] in2: 32,
+  │   ^^^^^^^^^ available for 2 cycles
+  │
+  = Cannot prove constraint: 1 >= 2
 
-Compilation failed with 1 errors.
-Run with --show-models to generate assignments for failing constraints.
+Compilation failed with 1 errors

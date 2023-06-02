@@ -337,7 +337,7 @@ impl Reason {
                 param_range,
             } => {
                 let wire = bundle_range_loc.primary().with_message(format!(
-                    "available for {}",
+                    "available for {} cycles",
                     ctx.display_timesub(bundle_live)
                 ));
                 let event =

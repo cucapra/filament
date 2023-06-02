@@ -8,6 +8,10 @@ pub struct Opts {
     #[argh(positional)]
     pub input: PathBuf,
 
+    /// enable IR-based compilation
+    #[argh(switch, long = "ir")]
+    pub ir: bool,
+
     /// print out the IR
     #[argh(switch, long = "show-ir")]
     pub show_ir: bool,

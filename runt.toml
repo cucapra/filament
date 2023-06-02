@@ -15,7 +15,7 @@ paths = [
   "tests/errors/*.fil",
 ]
 cmd = """
-./target/debug/filament {} --show-ir
+./target/debug/filament {} --ir
 """
 
 [[tests]]
