@@ -1,0 +1,18 @@
+import "primitives/core.fil";
+import "primitives.sequential.fil";
+
+// decoder for rv32i instruction set
+
+comp decode<G:1> (
+  @[G, G+1] instr:32
+) -> (
+  @[G, G+1] ld:1,
+  @[G, G+1] rs1:5,
+  @[G, G+1] rs2:5,
+  @[G, G+1] rd:5,
+  @[G, G+1] funct:10,
+  @[G, G+1] imm:20,
+  @[G, G+1] optype:6
+) {
+  
+}
