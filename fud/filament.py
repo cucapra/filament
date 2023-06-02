@@ -113,15 +113,14 @@ class CocotbExecBase(Stage):
                 for i in range(len(data_dict[key])):
                     val = data_dict[key][i]
                     if isinstance(val,str):
-                        if val[:2] == '0b': # binary format
+                        if val.startswith('0b'): # binary format
                             binary_data = val[2:]
                             conv = int(binary_data,2)
-                        elif val[:2] == '0x': # hex format
+                        elif val.startswith('0x'): # hex format
                             binary_data = val[2:]
                             conv = int(binary_data,16)
                         else:
-                            # throw unsupported data format error
-                            return
+                            raise errors.InvalidNumericType("\"" + str(val) + "\"" + " in " + data)
                     else:
                         conv = val
                     data_dict[key][i] = conv
