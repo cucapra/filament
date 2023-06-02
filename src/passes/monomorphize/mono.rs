@@ -328,9 +328,8 @@ impl Pass for Monomorphize<'_> {
             // Generate binding for the component
             let binding = Binding::new(
                 comp.sig
-                    .params
-                    .iter()
-                    .map(|p| p.copy())
+                    .params()
+                    .map(|p| p.take())
                     .zip(params.into_iter().map(|v| v.into())),
             );
             comps.push(mono.generate_comp(comp, &binding));

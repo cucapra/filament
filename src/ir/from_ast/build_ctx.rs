@@ -12,7 +12,7 @@ use std::rc::Rc;
 /// the signature.
 pub struct Sig {
     pub idx: CompIdx,
-    pub params: Vec<ast::Id>,
+    pub params: Vec<ast::ParamBind>,
     pub events: Vec<ast::EventBind>,
     pub inputs: Vec<ast::PortDef>,
     pub outputs: Vec<ast::PortDef>,
@@ -23,7 +23,7 @@ impl From<(&ast::Signature, usize)> for Sig {
     fn from((sig, idx): (&ast::Signature, usize)) -> Self {
         Sig {
             idx: CompIdx::new(idx),
-            params: sig.params.iter().map(|p| p.copy()).collect(),
+            params: sig.params.iter().map(|p| p.clone().take()).collect(),
             inputs: sig.inputs().map(|p| p.clone().take()).collect(),
             outputs: sig.outputs().map(|p| p.clone().take()).collect(),
             events: sig.events.iter().map(|e| e.clone().take()).collect(),

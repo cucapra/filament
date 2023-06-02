@@ -9,6 +9,7 @@ use crate::{
     visitor::{self, Traverse},
 };
 use itertools::Itertools;
+use std::iter;
 
 #[derive(Default)]
 pub struct BindCheck {
@@ -24,14 +25,14 @@ pub struct BindCheck {
 
 impl BindCheck {
     /// Push a new set of bound variables and return the number of variables added
-    fn add_global_params(&mut self, vars: &[Loc<ast::Id>]) {
-        self.params.extend_from_slice(vars);
+    fn add_global_params(&mut self, vars: impl Iterator<Item = Loc<ast::Id>>) {
+        self.params.extend(vars);
     }
 
-    fn push_bundle_params(&mut self, vars: &[Loc<ast::Id>]) -> usize {
+    fn push_bundle_params(&mut self, vars: impl Iterator<Item = Loc<ast::Id>>) -> usize {
         let len = self.params.len();
         self.add_global_params(vars);
-        self.bundle_params.extend_from_slice(vars);
+        self.bundle_params.extend(vars);
         len
     }
 
@@ -112,7 +113,7 @@ impl visitor::Checker for BindCheck {
             liveness,
             bitwidth,
         } = &bun.typ;
-        let n = self.push_bundle_params(&[idx.clone()]);
+        let n = self.push_bundle_params(iter::once(idx.clone()));
         for time in liveness.time_exprs() {
             self.time(time, liveness.pos());
         }
@@ -126,7 +127,7 @@ impl visitor::Checker for BindCheck {
     /// Check the binding of a component
     fn signature(&mut self, sig: &ast::Signature) -> Traverse {
         let events = sig.events().collect_vec();
-        let params = &sig.params;
+        let params = sig.params();
         self.add_global_params(params);
         self.events.extend(events.iter().map(|ev| *ev.inner()));
         // Check all the definitions only use bound events and parameters
@@ -190,7 +191,7 @@ impl visitor::Checker for BindCheck {
         l: &ast::ForLoop,
         ctx: &binding::CompBinding,
     ) -> Traverse {
-        self.add_global_params(&[l.idx.clone()]);
+        self.add_global_params(iter::once(l.idx));
         for cmd in &l.body {
             self.command(cmd, ctx);
         }

@@ -67,10 +67,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     /// Add a parameter to the component.
-    fn param(&mut self, param: ast::Id, owner: ir::ParamOwner) -> ParamIdx {
+    fn param(&mut self, param: ast::ParamBind, owner: ir::ParamOwner) -> ParamIdx {
         // TODO(rachit): Parameters do not have default values yet.
-        let idx = self.comp.add(ir::Param::new(owner));
-        self.param_map.insert(param, idx);
+        let default = param.default.map(|e| self.expr(e));
+        let p = ir::Param::new(owner, default);
+        let idx = self.comp.add(p);
+        self.param_map.insert(*param.param, idx);
         idx
     }
 
@@ -222,7 +224,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     fn sig(&mut self, sig: ast::Signature) -> Vec<ir::Command> {
         for param in &sig.params {
-            self.param(param.copy(), ir::ParamOwner::Sig);
+            // XXX(rachit): Unnecessary clone.
+            self.param(param.clone().take(), ir::ParamOwner::Sig);
         }
         for event in &sig.events {
             // XXX(rachit): Unnecessary clone.
@@ -252,11 +255,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             bindings,
         } = inst;
         let comp = self.sigs.get(component).unwrap();
-        let binding = Binding::new(
-            comp.params
-                .iter()
-                .copied()
-                .zip(bindings.clone().into_iter().map(|b| b.take())),
+        let binding = self.param_binding(
+            comp.params, 
+            bindings.clone().into_iter().map(|b| b.take())
         );
         let inst = ir::Instance {
             comp: comp.idx,
@@ -302,26 +303,26 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     /// Fills in the missing arguments with default values
     pub fn event_binding(
         &self,
-        events: &[ast::EventBind],
+        events: impl IntoIterator<Item = ast::EventBind>,
         args: impl IntoIterator<Item = ast::Time>,
     ) -> Binding<ast::Time> {
         let args = args.into_iter().collect_vec();
         assert!(
-            events.iter().take_while(|ev| ev.default.is_none()).count()
+            events.into_iter().take_while(|ev| ev.default.is_none()).count()
                 <= args.len(),
             "Insuffient events for component invocation.",
         );
 
         let mut partial_map = Binding::new(
             events
-                .iter()
+                .into_iter()
                 .map(|eb| eb.event.inner())
                 .cloned()
                 .zip(args.iter().cloned()),
         );
         // Skip the events that have been bound
         let remaining = events
-            .iter()
+            .into_iter()
             .skip(args.len())
             .map(|eb| {
                 let bind = eb
@@ -331,6 +332,47 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     .clone()
                     .resolve_event(&partial_map);
                 (*eb.event.inner(), bind)
+            })
+            .collect();
+
+        partial_map.extend(remaining);
+        partial_map
+    }
+
+    /// Construct a param binding from this Signature's parameters and the given
+    /// arguments.
+    /// Fills in the missing arguments with default values
+    pub fn param_binding(
+        &self,
+        params: impl IntoIterator<Item = ast::ParamBind>,
+        args: impl IntoIterator<Item = ast::Expr>,
+    ) -> Binding<ast::Expr> {
+        let args = args.into_iter().collect_vec();
+        assert!(
+            params.into_iter().take_while(|ev| ev.default.is_none()).count()
+                <= args.len(),
+            "Insuffient params for component invocation.",
+        );
+
+        let mut partial_map = Binding::new(
+            params
+                .into_iter()
+                .map(|eb| eb.param.inner())
+                .cloned()
+                .zip(args.iter().cloned()),
+        );
+        // Skip the events that have been bound
+        let remaining = params
+            .into_iter()
+            .skip(args.len())
+            .map(|pb| {
+                let bind = pb
+                    .default
+                    .as_ref()
+                    .unwrap()
+                    .clone()
+                    .resolve(&partial_map);
+                (*pb.param.inner(), bind)
             })
             .collect();
 
@@ -357,7 +399,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
         // Event bindings
         let event_binding = self.event_binding(
-            &sig.events,
+            sig.events,
             abstract_vars.iter().map(|v| v.inner().clone()),
         );
 
@@ -488,7 +530,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
         // Event bindings
         let event_binding = self.event_binding(
-            &sig.events,
+            sig.events,
             abstract_vars.iter().map(|v| v.inner().clone()),
         );
 

@@ -196,11 +196,12 @@ impl fmt::Display for ParamOwner {
 /// Parameters with an optional initial value
 pub struct Param {
     pub owner: ParamOwner,
+    pub default: Option<ExprIdx>
 }
 
 impl Param {
-    pub fn new(owner: ParamOwner) -> Self {
-        Self { owner }
+    pub fn new(owner: ParamOwner, default: Option<ExprIdx>) -> Self {
+        Self { owner, default }
     }
 
     pub fn is_sig_owned(&self) -> bool {
@@ -214,6 +215,9 @@ impl Param {
 
 impl fmt::Display for Param {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(default) = self.default {
+            write!(f, "{} ", default)?;
+        }
         write!(f, "{}", self.owner)
     }
 }
