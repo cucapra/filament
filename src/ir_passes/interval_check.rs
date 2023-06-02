@@ -35,13 +35,37 @@ impl IntervalCheck {
             .add(ir::Reason::well_formed_interval(loc, (start, end)).into());
         comp.assert(prop, reason).into()
     }
+
+    /// Check that event delays are greater than zero
+    fn delay_wf(
+        &mut self,
+        event: ir::EventIdx,
+        comp: &mut ir::Component,
+    ) -> ir::Command {
+        let zero = comp.num(0).into();
+        let ir::Event { delay, info, .. } = &comp[event];
+        let ir::Info::Event { delay_loc, .. } = comp[*info] else {
+            unreachable!("expected event info")
+        };
+        let prop = delay.clone().gt(zero, comp);
+        let reason = comp.add(
+            ir::Reason::misc("delay must be greater than zero", delay_loc)
+                .into(),
+        );
+        comp.assert(prop, reason).into()
+    }
 }
 
 impl Visitor for IntervalCheck {
     fn start(&mut self, comp: &mut ir::Component) -> Action {
+        // Ensure that delays are greater than zero
+        let mut cmds = Vec::with_capacity(comp.ports.len() + comp.events.len());
+        for idx in comp.events.idx_iter() {
+            cmds.push(self.delay_wf(idx, comp));
+        }
+
         // For each bundle, add an assertion to ensure that availability of the
         // bundle signal is less than the delay.
-
         // Extract the ranges first because we cannot borrow comp mutably before this.
         let ranges = comp
             .ports
@@ -49,7 +73,6 @@ impl Visitor for IntervalCheck {
             .map(|(_, p)| (p.live.clone(), p.info))
             .collect_vec();
 
-        let mut cmds = Vec::with_capacity(comp.ports.len());
         for (live, info) in ranges {
             let ir::Info::Port { live_loc, .. } = comp[info] else {
                 unreachable!("expected port info")
@@ -120,7 +143,7 @@ impl Visitor for IntervalCheck {
         let ir::Connect { src, dst, info } = con;
         let src_t = src.bundle_typ(comp);
         let dst_t = dst.bundle_typ(comp);
-        // Assuming that the lengths are equal, check the constraint.
+        // Assuming that the lengths are equal and parameters are in-range, check the constraint.
         let len_eq = src_t.len.equal(dst_t.len, comp);
         let contains = src_t
             .range

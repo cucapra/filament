@@ -118,6 +118,12 @@ impl<T> IndexStore<T> {
         self.store.is_empty()
     }
 
+    /// Iterate over the indices in the store.
+    /// This can be useful because it allows us to mutably borrow the containing struct.
+    pub fn idx_iter(&self) -> impl Iterator<Item = Idx<T>> {
+        (0..self.store.len()).map(Idx::new)
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
         self.store
             .iter()

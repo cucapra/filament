@@ -100,6 +100,24 @@ pub enum TimeSub {
     Sym { l: TimeIdx, r: TimeIdx },
 }
 
+impl TimeSub {
+    pub fn gt(self, other: TimeSub, ctx: &mut Component) -> PropIdx {
+        ctx.add(Prop::TimeSubCmp(CmpOp::gt(self, other)))
+    }
+
+    pub fn gte(self, other: TimeSub, ctx: &mut Component) -> PropIdx {
+        ctx.add(Prop::TimeSubCmp(CmpOp::gte(self, other)))
+    }
+
+    pub fn lt(self, other: TimeSub, ctx: &mut Component) -> PropIdx {
+        ctx.add(Prop::TimeSubCmp(CmpOp::lt(self, other)))
+    }
+
+    pub fn lte(self, other: TimeSub, ctx: &mut Component) -> PropIdx {
+        ctx.add(Prop::TimeSubCmp(CmpOp::lte(self, other)))
+    }
+}
+
 impl From<ExprIdx> for TimeSub {
     fn from(e: ExprIdx) -> Self {
         TimeSub::Unit(e)
