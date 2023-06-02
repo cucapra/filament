@@ -99,13 +99,15 @@ class CocotbExecBase(Stage):
 
     def _define_steps(self, input, builder, config) -> Source:
         
-        def transform_data(data) -> SourceType.Path:
+        def transform_data(data_path, dir):
             """
             Transform data from having binary/hex encoding into decimal
-            Creates a new file in the same directory as data
+            Creates a new file inside dir, which should be a temp directory
             """
+            data = str(data_path)
+            
             file_orig = open(data)
-            file_new = open(data[:-5] + "_upd" + data[-5:],"w")
+            file_new = open((Path(dir.name) / Path(data).stem).name + ".json","w")
             data_dict = json.load(file_orig)
             for key in data_dict:
                 for i in range(len(data_dict[key])):
@@ -125,7 +127,6 @@ class CocotbExecBase(Stage):
                     data_dict[key][i] = conv
             json_obj = json.dumps(data_dict,indent=4)
             file_new.write(json_obj)
-            # print("\n" + file_new.name)
             return Path(file_new.name).resolve()
         
         @builder.step()
@@ -135,11 +136,9 @@ class CocotbExecBase(Stage):
             data = config.get(name)
             if data is None:
                 raise errors.MissingDynamicConfiguration(".".join(name))
-            # transform binary string into decimal
-            data_new = transform_data(data)
-            
+
             # return absolute path to the file
-            return data_new
+            return Path(data).resolve()
 
         @builder.step()
         def copy_file(
@@ -154,6 +153,20 @@ class CocotbExecBase(Stage):
         def mktmp() -> SourceType.Directory:
             """Make a temporary directory"""
             return TmpDir()
+
+        @builder.step()
+        def data_gen(file: SourceType.Path, dir: SourceType.Directory) -> SourceType.Stream:
+            """
+            Generate data file with binary/hex converted to decimal
+            """
+            data_transformed = transform_data(file, dir)
+            cmd = " ".join(
+                [
+                    "cat ",
+                    "{path}"
+                ]
+            )
+            return shell(cmd.format(path = data_transformed))
 
         @builder.step()
         def interface_gen(file: SourceType.Path) -> SourceType.Stream:
@@ -233,7 +246,7 @@ class CocotbExecBase(Stage):
                     "-B",
                     # XXX(rachit): we shouldn't need this .data here
                     f"INTERFACE={interface.data}",
-                    f"DATA_FILE={data}",
+                    f"DATA_FILE={data.data}",
                     f"RANDOMIZE={int(randomize)}" if randomize is not None else "",
                     f"RESET_CYCLES={reset_cycles}" if reset_cycles is not None else "",
                 ]
@@ -275,8 +288,11 @@ class CocotbExecBase(Stage):
             builder, interface_stream, dir, "interface.json"
         )
 
+        data_stream = data_gen(data, dir)
+        data_path = self.save_file(builder,data_stream,dir,"data_1.json")
+
         # Run the program
-        out = run(dir, interface_path, data)
+        out = run(dir, interface_path, data_path)
         
         if self.out == CocotbOutput.VCD:
             return read_vcd(dir)
