@@ -111,6 +111,29 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
+    /// Forward declare an event without adding its delay. We need to do this
+    /// since delays of events may mention the event itself.
+    fn declare_event(
+        &mut self,
+        eb: &ast::EventBind,
+        owner: ir::EventOwner,
+    ) -> EventIdx {
+        let info = self.comp.add(ir::Info::event(
+            eb.event.copy(),
+            eb.event.pos(),
+            eb.delay.pos(),
+        ));
+        // Add a fake delay of 0.
+        let e = ir::Event {
+            delay: self.comp.num(0).into(),
+            owner,
+            info,
+        };
+        let idx = self.comp.add(e);
+        self.event_map.insert(*eb.event, idx);
+        idx
+    }
+
     /// Add an event to the component.
     fn event(&mut self, eb: ast::EventBind, owner: ir::EventOwner) -> EventIdx {
         let info = self.comp.add(ir::Info::event(
@@ -265,9 +288,15 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         for param in &sig.params {
             self.param(param.copy(), ir::ParamOwner::Sig, param.pos());
         }
+        // Declare the events first
         for event in &sig.events {
-            // XXX(rachit): Unnecessary clone.
-            self.event(event.clone().take(), ir::EventOwner::Sig);
+            self.declare_event(event.inner(), ir::EventOwner::Sig);
+        }
+        // Then define their delays correctly
+        for event in &sig.events {
+            let delay = self.timesub(event.inner().delay.inner().clone());
+            let idx = self.event_map.get(&event.inner().event).unwrap();
+            self.comp.events.get_mut(*idx).delay = delay;
         }
         for port in sig.inputs() {
             // XXX(rachit): Unnecessary clone.

@@ -100,6 +100,12 @@ pub enum TimeSub {
     Sym { l: TimeIdx, r: TimeIdx },
 }
 
+impl From<ExprIdx> for TimeSub {
+    fn from(e: ExprIdx) -> Self {
+        TimeSub::Unit(e)
+    }
+}
+
 impl Display for TimeSub {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
