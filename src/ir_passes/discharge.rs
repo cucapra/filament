@@ -1,9 +1,24 @@
+use crate::ir::Ctx;
 use crate::ir_visitor::{Action, Visitor};
-use crate::{ast, ir};
+use crate::utils::GlobalPositionTable;
+use crate::{ast, ir, utils};
+use codespan_reporting::{diagnostic as cr, term};
 use easy_smt as smt;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::iter;
+use term::termcolor::{ColorChoice, StandardStream};
+
+pub struct Assign(Vec<(ir::ParamIdx, String)>);
+
+impl Assign {
+    fn display(&self, ctx: &ir::Component) -> String {
+        self.0
+            .iter()
+            .map(|(k, v)| format!("{} = {v}", ctx.display_param(*k),))
+            .join(", ")
+    }
+}
 
 /// Pass to discharge top-level `assert` statements in the IR and turn them into
 /// `assume` if they are true. Any assertions within the body are left as-is.
@@ -24,7 +39,9 @@ pub struct Discharge {
     // Propositions
     prop_map: ir::DenseIndexInfo<ir::Prop, smt::SExpr>,
     // Propositions that have already been checked
-    checked: HashMap<ir::PropIdx, bool>,
+    checked: HashMap<ir::PropIdx, Option<Assign>>,
+    // Diagnostics to be reported
+    diagnostics: Vec<cr::Diagnostic<usize>>,
 }
 
 impl Default for Discharge {
@@ -45,6 +62,7 @@ impl Default for Discharge {
             ev_map: Default::default(),
             expr_map: Default::default(),
             checked: Default::default(),
+            diagnostics: Default::default(),
         };
 
         out.define_funcs();
@@ -89,22 +107,56 @@ impl Discharge {
             .collect();
     }
 
-    /// Check whether the proposition is valid
-    fn check_valid(&mut self, prop: ir::PropIdx) -> bool {
-        if self.checked.contains_key(&prop) {
-            return self.checked[&prop];
+    /// Get bindings for the provided parameters in a model.
+    fn get_assignments(&mut self, relevant_vars: Vec<ir::ParamIdx>) -> Assign {
+        let mut rev_map = HashMap::with_capacity(relevant_vars.len());
+        // SExprs corresponding to the paramters
+        let sexps = relevant_vars
+            .iter()
+            .unique()
+            .map(|p| {
+                let s = self.param_map[*p];
+                rev_map.insert(s, *p);
+                s
+            })
+            .collect_vec();
+
+        Assign(
+            self.sol
+                .get_value(sexps)
+                .unwrap()
+                .into_iter()
+                .map(|(p, v)| {
+                    let p = rev_map[&p];
+                    (p, self.sol.display(v).to_string())
+                })
+                .collect_vec(),
+        )
+    }
+
+    /// Check whether the proposition is valid.
+    /// Returns a set of assignments if the proposition is not valid.
+    fn check_valid(
+        &mut self,
+        prop: ir::PropIdx,
+        ctx: &ir::Component,
+    ) -> &Option<Assign> {
+        #[allow(clippy::map_entry)]
+        if !self.checked.contains_key(&prop) {
+            self.sol.push().unwrap();
+            self.sol.assert(self.sol.not(self.prop_map[prop])).unwrap();
+            let res = self.sol.check().unwrap();
+            let out = match res {
+                smt::Response::Sat => Some(
+                    self.get_assignments(ctx.prop_params(prop.consequent(ctx))),
+                ),
+                smt::Response::Unsat => None,
+                smt::Response::Unknown => panic!("Solver returned unknown"),
+            };
+            self.sol.pop().unwrap();
+            self.checked.insert(prop, out);
         }
-        self.sol.push().unwrap();
-        self.sol.assert(self.sol.not(self.prop_map[prop])).unwrap();
-        let res = self.sol.check().unwrap();
-        let out = match res {
-            smt::Response::Sat => false,
-            smt::Response::Unsat => true,
-            smt::Response::Unknown => panic!("Solver returned unknown"),
-        };
-        self.sol.pop().unwrap();
-        self.checked.insert(prop, out);
-        out
+        &self.checked[&prop]
     }
 
     fn expr_to_sexp(&mut self, expr: &ir::Expr) -> smt::SExpr {
@@ -253,10 +305,30 @@ impl Visitor for Discharge {
             )
         }
 
-        match self.check_valid(f.prop) {
-            true => Action::Change(vec![comp.assume(f.prop).into()]),
-            false => {
-                log::warn!("fact `{}` is not valid", f.prop);
+        match self.check_valid(f.prop, comp) {
+            None => {
+                let reason = comp.add(
+                    ir::Reason::misc(
+                        "Discharged assumption",
+                        utils::GPosIdx::UNKNOWN,
+                    )
+                    .into(),
+                );
+                Action::Change(vec![comp.assume(f.prop, reason).into()])
+            }
+            Some(assign) => {
+                let ir::Info::Assert(reason) = comp.get(f.reason) else {
+                    unreachable!("expected assert reason")
+                };
+                let mut diag = reason.diag(comp);
+                diag = diag.with_notes(vec![
+                    format!(
+                        "Cannot prove constraint {}",
+                        comp.display_prop(f.prop.consequent(comp))
+                    ),
+                    format!("Counterexample: {}", assign.display(comp)),
+                ]);
+                self.diagnostics.push(diag);
                 Action::Continue
             }
         }
@@ -284,5 +356,26 @@ impl Visitor for Discharge {
             .and_then(|| self.visit_cmds(&mut l.body, comp));
         self.scoped = orig;
         out
+    }
+
+    fn end(&mut self, _: &mut ir::Component) {
+        assert!(!self.scoped, "unbalanced scopes");
+        // Report all the errors
+        let is_tty = atty::is(atty::Stream::Stderr);
+        let writer = StandardStream::stderr(if is_tty {
+            ColorChoice::Always
+        } else {
+            ColorChoice::Never
+        });
+        let table = GlobalPositionTable::as_ref();
+        for diag in &self.diagnostics {
+            term::emit(
+                &mut writer.lock(),
+                &term::Config::default(),
+                table.files(),
+                diag,
+            )
+            .unwrap()
+        }
     }
 }

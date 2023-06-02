@@ -1,6 +1,6 @@
 use super::{
-    idxs::PropIdx, Component, Ctx, ExprIdx, Foldable, ParamIdx, TimeIdx,
-    TimeSub,
+    idxs::PropIdx, Component, Ctx, ExprIdx, Foldable, InfoIdx, ParamIdx,
+    TimeIdx, TimeSub,
 };
 use std::fmt::{self, Display};
 
@@ -112,6 +112,7 @@ impl fmt::Display for Prop {
     }
 }
 
+/// Constructors for propositions
 impl PropIdx {
     #[inline(always)]
     /// Returns true of this proposition is definitely true.
@@ -211,30 +212,44 @@ impl PropIdx {
     }
 }
 
+/// Queries over propositions
+impl PropIdx {
+    /// Returns the consequent of an implication, if this proposition is an
+    /// implication. Otherwise, returns the proposition itself.
+    pub fn consequent(self, ctx: &impl Ctx<Prop>) -> PropIdx {
+        match ctx.get(self) {
+            Prop::Implies(_, cons) => *cons,
+            _ => self,
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash)]
 /// A fact in the program.
 /// If `checked` is true, then this represents an assertion that needs to be
 /// checked. Otherwise, it is an assumption.
 pub struct Fact {
     pub prop: PropIdx,
+    pub reason: InfoIdx,
     pub(super) checked: bool,
 }
 
 impl Fact {
     /// An assertion which is required to be statically proved
-    /// Outside the IR library, use [Component::assert] instead.
-    pub(super) fn assert(prop: PropIdx) -> Self {
+    pub fn assert(prop: PropIdx, reason: InfoIdx) -> Self {
         Self {
             prop,
+            reason,
             checked: true,
         }
     }
 
     /// An assumption which is not checked
     /// Outside the IR library, use [Component::assume] instead.
-    pub(super) fn assume(prop: PropIdx) -> Self {
+    pub(super) fn assume(prop: PropIdx, reason: InfoIdx) -> Self {
         Self {
             prop,
+            reason,
             checked: false,
         }
     }

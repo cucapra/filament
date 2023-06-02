@@ -1,4 +1,6 @@
-use super::{Ctx, Expr, ExprIdx, InvIdx, ParamIdx, PortIdx, TimeIdx, TimeSub};
+use super::{
+    Ctx, Expr, ExprIdx, InfoIdx, InvIdx, ParamIdx, PortIdx, TimeIdx, TimeSub,
+};
 use std::fmt;
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -107,6 +109,7 @@ pub struct Port {
     pub owner: PortOwner,
     pub width: ExprIdx,
     pub live: Liveness,
+    pub info: InfoIdx,
 }
 impl Port {
     /// Check if this is an input port on the signature
@@ -196,11 +199,12 @@ impl fmt::Display for ParamOwner {
 /// Parameters with an optional initial value
 pub struct Param {
     pub owner: ParamOwner,
+    pub info: InfoIdx,
 }
 
 impl Param {
-    pub fn new(owner: ParamOwner) -> Self {
-        Self { owner }
+    pub fn new(owner: ParamOwner, info: InfoIdx) -> Self {
+        Self { owner, info }
     }
 
     pub fn is_sig_owned(&self) -> bool {
@@ -231,8 +235,8 @@ pub enum EventOwner {
 /// Events must have a delay and an optional default value
 pub struct Event {
     pub delay: TimeSub,
-    // pub default: Option<TimeIdx>,
     pub owner: EventOwner,
+    pub info: InfoIdx,
 }
 
 impl fmt::Display for Event {

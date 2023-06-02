@@ -3,6 +3,7 @@ use super::{BuildCtx, Sig, SigMap};
 use crate::ir::{
     Cmp, CompIdx, Ctx, EventIdx, ExprIdx, ParamIdx, PortIdx, PropIdx, TimeIdx,
 };
+use crate::utils::GPosIdx;
 use crate::{
     ast::{self, Id},
     ir,
@@ -78,9 +79,15 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     /// Add a parameter to the component.
-    fn param(&mut self, param: ast::Id, owner: ir::ParamOwner) -> ParamIdx {
+    fn param(
+        &mut self,
+        param: ast::Id,
+        owner: ir::ParamOwner,
+        pos: GPosIdx,
+    ) -> ParamIdx {
+        let info = self.comp.add(ir::Info::param(param, pos));
         // TODO(rachit): Parameters do not have default values yet.
-        let idx = self.comp.add(ir::Param::new(owner));
+        let idx = self.comp.add(ir::Param::new(owner, info));
         self.param_map.insert(param, idx);
         idx
     }
@@ -106,8 +113,13 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     /// Add an event to the component.
     fn event(&mut self, eb: ast::EventBind, owner: ir::EventOwner) -> EventIdx {
+        let info = self.comp.add(ir::Info::event(
+            eb.event.copy(),
+            eb.event.pos(),
+            eb.delay.pos(),
+        ));
         let delay = self.timesub(eb.delay.take());
-        let e = ir::Event { delay, owner };
+        let e = ir::Event { delay, owner, info };
         let idx = self.comp.add(e);
         self.event_map.insert(*eb.event, idx);
         idx
@@ -126,19 +138,31 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 liveness,
                 bitwidth,
             } => {
+                let info = self.comp.add(ir::Info::port(
+                    name.copy(),
+                    name.pos(),
+                    bitwidth.pos(),
+                    liveness.pos(),
+                ));
+
                 // The bundle type uses a fake bundle index and has a length of 1.
                 // We don't need to push a new scope because this type is does not
                 // bind any new parameters.
+                let p_name = Id::from("__FAKE_BUNDLE_PARAM");
                 let live = self.with_scope(|ctx| ir::Liveness {
-                    idx: ctx.param(Id::default(), ir::ParamOwner::Bundle), // This parameter is unused
+                    idx: ctx.param(
+                        p_name,
+                        ir::ParamOwner::Bundle,
+                        GPosIdx::UNKNOWN,
+                    ), // This parameter is unused
                     len: ctx.comp.num(1),
                     range: ctx.range(liveness.take()),
                 });
-
                 let p = ir::Port {
                     width: self.expr(bitwidth.take()),
                     owner: owner.clone(),
                     live,
+                    info,
                 };
                 (name, p, owner)
             }
@@ -152,17 +176,23 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                         bitwidth,
                     },
             }) => {
+                let info = self.comp.add(ir::Info::port(
+                    name.copy(),
+                    name.pos(),
+                    bitwidth.pos(),
+                    liveness.pos(),
+                ));
                 // Construct the bundle type in a new scope.
                 let live = self.with_scope(|ctx| ir::Liveness {
-                    idx: ctx.param(*idx, ir::ParamOwner::Bundle),
+                    idx: ctx.param(*idx, ir::ParamOwner::Bundle, idx.pos()),
                     len: ctx.expr(len.take()),
                     range: ctx.range(liveness.take()),
                 });
-
                 let p = ir::Port {
                     width: self.expr(bitwidth.take()),
                     owner: owner.clone(),
                     live,
+                    info,
                 };
                 (name, p, owner)
             }
@@ -233,7 +263,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     fn sig(&mut self, sig: ast::Signature) -> Vec<ir::Command> {
         for param in &sig.params {
-            self.param(param.copy(), ir::ParamOwner::Sig);
+            self.param(param.copy(), ir::ParamOwner::Sig, param.pos());
         }
         for event in &sig.events {
             // XXX(rachit): Unnecessary clone.
@@ -253,10 +283,20 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             sig.param_constraints.len() + sig.event_constraints.len(),
         );
         for ec in sig.event_constraints {
-            cons.push(ir::Fact::assume(self.event_cons(ec.take())).into());
+            let info = self.comp.add(ir::Info::assert(ir::Reason::misc(
+                "Signature assumption",
+                ec.pos(),
+            )));
+            cons.push(
+                ir::Fact::assume(self.event_cons(ec.take()), info).into(),
+            );
         }
         for pc in sig.param_constraints {
-            cons.push(ir::Fact::assume(self.expr_cons(pc.take())).into());
+            let info = self.comp.add(ir::Info::assert(ir::Reason::misc(
+                "Signature assumption",
+                pc.pos(),
+            )));
+            cons.push(ir::Fact::assume(self.expr_cons(pc.take()), info).into());
         }
 
         cons
@@ -302,13 +342,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .clone()
             .into_iter()
             .map(|f| {
-                let p = f.resolve_expr(&binding);
+                let reason = self.comp.add(
+                    ir::Reason::misc("Parameter constraint", f.pos()).into(),
+                );
+                let p = f.take().resolve_expr(&binding);
                 let prop = self.expr_cons(p);
                 // This is a checked fact because the calling component needs to
                 // honor it.
-                ir::Fact::assert(prop).into()
+                self.comp.assert(prop, reason).into()
             })
             .collect_vec();
+
         iter::once(ir::Command::from(idx))
             .chain(facts.into_iter())
             .collect_vec()
@@ -380,7 +424,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
         let srcs = ports
             .into_iter()
-            .map(|p| self.get_access(p.take(), ir::Direction::Out))
+            .map(|p| p.map(|p| self.get_access(p, ir::Direction::Out)))
             .collect_vec();
         assert!(
             sig.inputs.len() == srcs.len(),
@@ -411,23 +455,31 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .clone()
             .into_iter()
             .map(|ec| {
-                let ec = ec.resolve_event(&event_binding);
-                ir::Fact::assert(self.event_cons(ec)).into()
+                let reason = self
+                    .comp
+                    .add(ir::Reason::misc("Event constraint", ec.pos()).into());
+                let ec = ec.take().resolve_event(&event_binding);
+                let prop = self.event_cons(ec);
+                self.comp.assert(prop, reason).into()
             })
             .collect();
 
         let mut connects = Vec::with_capacity(sig.inputs.len());
 
         for (p, src) in sig.inputs.clone().into_iter().zip(srcs) {
-            let resolved = p
-                .resolve_exprs(&param_binding)
-                .resolve_event(&event_binding);
+            let info = self
+                .comp
+                .add(ir::Info::connect(p.inner().name().pos(), src.pos()));
+            let resolved = p.map(|p| {
+                p.resolve_exprs(&param_binding)
+                    .resolve_event(&event_binding)
+            });
             let owner = ir::PortOwner::Inv {
                 inv,
                 dir: ir::Direction::In,
             };
             // Add the port to the invoke
-            let pidx = self.port(resolved, owner);
+            let pidx = self.port(resolved.take(), owner);
             self.comp.invocations.get_mut(inv).ports.push(pidx);
 
             let end = self.comp[pidx].live.len;
@@ -436,7 +488,14 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 start: self.comp.num(0),
                 end,
             };
-            connects.push(ir::Connect { src, dst }.into())
+            connects.push(
+                ir::Connect {
+                    src: src.take(),
+                    dst,
+                    info,
+                }
+                .into(),
+            )
         }
 
         connects
@@ -456,19 +515,24 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             ast::Command::Invoke(inv) => self.invoke(inv),
             ast::Command::Instance(inst) => self.instance(inst),
             ast::Command::Fact(ast::Fact { cons, checked }) => {
+                let reason = self.comp.add(
+                    ir::Reason::misc("Source-level fact", cons.pos()).into(),
+                );
                 let prop = self.implication(cons.take());
                 let fact = if checked {
-                    ir::Fact::assert(prop)
+                    self.comp.assert(prop, reason)
                 } else {
-                    ir::Fact::assume(prop)
+                    self.comp.assume(prop, reason)
                 };
                 vec![fact.into()]
             }
             ast::Command::Connect(ast::Connect { src, dst, guard }) => {
                 assert!(guard.is_none(), "Guards are not supported");
+                let info =
+                    self.comp.add(ir::Info::connect(dst.pos(), src.pos()));
                 let src = self.get_access(src.take(), ir::Direction::Out);
                 let dst = self.get_access(dst.take(), ir::Direction::In);
-                vec![ir::Connect { src, dst }.into()]
+                vec![ir::Connect { src, dst, info }.into()]
             }
             ast::Command::ForLoop(ast::ForLoop {
                 idx,
@@ -480,7 +544,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 let end = self.expr(end);
                 // Compile the body in a new scope
                 let (index, body) = self.with_scope(|this| {
-                    let idx = this.param(idx.take(), ir::ParamOwner::Local);
+                    let pos = idx.pos();
+                    let idx =
+                        this.param(idx.copy(), ir::ParamOwner::Local, pos);
                     (idx, this.commands(body))
                 });
                 let l = ir::Loop {
@@ -491,12 +557,16 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 }
                 .into();
                 // Assumption that the index is within range
+                let reason = self.comp.add(
+                    ir::Reason::misc("loop index is within range", idx.pos())
+                        .into(),
+                );
                 let index = index.expr(self.comp);
                 let idx_start = index.gte(start, self.comp);
                 let idx_end = index.lt(end, self.comp);
                 let cmds = vec![
-                    self.comp.assume(idx_start).into(),
-                    self.comp.assume(idx_end).into(),
+                    self.comp.assume(idx_start, reason).into(),
+                    self.comp.assume(idx_end, reason).into(),
                     l,
                 ];
                 cmds
@@ -573,7 +643,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 self.declare_inv(inv);
             }
             ast::Command::ForLoop(ast::ForLoop { idx, body, .. }) => {
-                self.param(idx.copy(), ir::ParamOwner::Local);
+                self.param(idx.copy(), ir::ParamOwner::Local, idx.pos());
                 self.declare_cmds(body);
             }
             ast::Command::If(ast::If { then, alt, .. }) => {
@@ -615,13 +685,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .map(|(_, p)| (p.live.idx, p.live.len))
             .collect_vec();
         // Add assumptions for range of bundle-bound indices
+        let reason = ir_comp.add(
+            ir::Reason::misc("bundle index is within range", GPosIdx::UNKNOWN)
+                .into(),
+        );
         for (idx, len) in ports {
             let idx = idx.expr(&mut ir_comp);
             let start = idx.gte(ir_comp.num(0), &mut ir_comp);
             let end = idx.lt(len, &mut ir_comp);
             cmds.extend([
-                ir_comp.assume(start).into(),
-                ir_comp.assume(end).into(),
+                ir_comp.assume(start, reason).into(),
+                ir_comp.assume(end, reason).into(),
             ])
         }
 

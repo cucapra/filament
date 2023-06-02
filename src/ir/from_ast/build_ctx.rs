@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use super::ScopeMap;
 use crate::ast::{self, Id};
 use crate::ir::{self, CompIdx, DenseIndexInfo, PortIdx};
@@ -14,10 +16,10 @@ pub struct Sig {
     pub idx: CompIdx,
     pub params: Vec<ast::Id>,
     pub events: Vec<ast::EventBind>,
-    pub inputs: Vec<ast::PortDef>,
+    pub inputs: Vec<ast::Loc<ast::PortDef>>,
     pub outputs: Vec<ast::PortDef>,
-    pub param_cons: Vec<ast::OrderConstraint<ast::Expr>>,
-    pub event_cons: Vec<ast::OrderConstraint<ast::Time>>,
+    pub param_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Expr>>>,
+    pub event_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Time>>>,
 }
 
 impl From<(&ast::Signature, usize)> for Sig {
@@ -25,19 +27,11 @@ impl From<(&ast::Signature, usize)> for Sig {
         Sig {
             idx: CompIdx::new(idx),
             params: sig.params.iter().map(|p| p.copy()).collect(),
-            inputs: sig.inputs().map(|p| p.clone().take()).collect(),
+            inputs: sig.inputs().cloned().collect_vec(),
             outputs: sig.outputs().map(|p| p.clone().take()).collect(),
             events: sig.events.iter().map(|e| e.clone().take()).collect(),
-            param_cons: sig
-                .param_constraints
-                .iter()
-                .map(|f| f.clone().take())
-                .collect(),
-            event_cons: sig
-                .event_constraints
-                .iter()
-                .map(|f| f.clone().take())
-                .collect(),
+            param_cons: sig.param_constraints.clone(),
+            event_cons: sig.event_constraints.clone(),
         }
     }
 }
