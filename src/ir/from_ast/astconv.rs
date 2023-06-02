@@ -270,10 +270,20 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             sig.param_constraints.len() + sig.event_constraints.len(),
         );
         for ec in sig.event_constraints {
-            cons.push(ir::Fact::assume(self.event_cons(ec.take())).into());
+            let info = self.comp.add(ir::Info::assert(ir::Reason::misc(
+                "Signature assumption",
+                ec.pos(),
+            )));
+            cons.push(
+                ir::Fact::assume(self.event_cons(ec.take()), info).into(),
+            );
         }
         for pc in sig.param_constraints {
-            cons.push(ir::Fact::assume(self.expr_cons(pc.take())).into());
+            let info = self.comp.add(ir::Info::assert(ir::Reason::misc(
+                "Signature assumption",
+                pc.pos(),
+            )));
+            cons.push(ir::Fact::assume(self.expr_cons(pc.take()), info).into());
         }
 
         cons
@@ -319,13 +329,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .clone()
             .into_iter()
             .map(|f| {
-                let p = f.resolve_expr(&binding);
+                let reason = self.comp.add(
+                    ir::Reason::misc("Parameter constraint", f.pos()).into(),
+                );
+                let p = f.take().resolve_expr(&binding);
                 let prop = self.expr_cons(p);
                 // This is a checked fact because the calling component needs to
                 // honor it.
-                ir::Fact::assert(prop).into()
+                self.comp.assert(prop, reason).into()
             })
             .collect_vec();
+
         iter::once(ir::Command::from(idx))
             .chain(facts.into_iter())
             .collect_vec()
@@ -428,8 +442,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .clone()
             .into_iter()
             .map(|ec| {
-                let ec = ec.resolve_event(&event_binding);
-                ir::Fact::assert(self.event_cons(ec)).into()
+                let reason = self
+                    .comp
+                    .add(ir::Reason::misc("Event constraint", ec.pos()).into());
+                let ec = ec.take().resolve_event(&event_binding);
+                let prop = self.event_cons(ec);
+                self.comp.assert(prop, reason).into()
             })
             .collect();
 
@@ -482,11 +500,14 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             ast::Command::Invoke(inv) => self.invoke(inv),
             ast::Command::Instance(inst) => self.instance(inst),
             ast::Command::Fact(ast::Fact { cons, checked }) => {
+                let reason = self.comp.add(
+                    ir::Reason::misc("Source-level fact", cons.pos()).into(),
+                );
                 let prop = self.implication(cons.take());
                 let fact = if checked {
-                    ir::Fact::assert(prop)
+                    self.comp.assert(prop, reason)
                 } else {
-                    ir::Fact::assume(prop)
+                    self.comp.assume(prop, reason)
                 };
                 vec![fact.into()]
             }
@@ -510,7 +531,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 let (index, body) = self.with_scope(|this| {
                     let pos = idx.pos();
                     let idx =
-                        this.param(idx.take(), ir::ParamOwner::Local, pos);
+                        this.param(idx.copy(), ir::ParamOwner::Local, pos);
                     (idx, this.commands(body))
                 });
                 let l = ir::Loop {
@@ -521,12 +542,16 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 }
                 .into();
                 // Assumption that the index is within range
+                let reason = self.comp.add(
+                    ir::Reason::misc("loop index is within range", idx.pos())
+                        .into(),
+                );
                 let index = index.expr(self.comp);
                 let idx_start = index.gte(start, self.comp);
                 let idx_end = index.lt(end, self.comp);
                 let cmds = vec![
-                    self.comp.assume(idx_start).into(),
-                    self.comp.assume(idx_end).into(),
+                    self.comp.assume(idx_start, reason).into(),
+                    self.comp.assume(idx_end, reason).into(),
                     l,
                 ];
                 cmds
@@ -645,13 +670,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .map(|(_, p)| (p.live.idx, p.live.len))
             .collect_vec();
         // Add assumptions for range of bundle-bound indices
+        let reason = ir_comp.add(
+            ir::Reason::misc("bundle index is within range", GPosIdx::UNKNOWN)
+                .into(),
+        );
         for (idx, len) in ports {
             let idx = idx.expr(&mut ir_comp);
             let start = idx.gte(ir_comp.num(0), &mut ir_comp);
             let end = idx.lt(len, &mut ir_comp);
             cmds.extend([
-                ir_comp.assume(start).into(),
-                ir_comp.assume(end).into(),
+                ir_comp.assume(start, reason).into(),
+                ir_comp.assume(end, reason).into(),
             ])
         }
 

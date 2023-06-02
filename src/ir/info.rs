@@ -1,4 +1,4 @@
-use super::Range;
+use super::{ExprIdx, Range};
 use crate::{ast, utils::GPosIdx};
 
 #[derive(Default)]
@@ -8,43 +8,53 @@ pub enum Info {
     /// An absence of information is still information
     Empty,
     /// Assertion information
-    Assert(AssertReason),
-    /// Parameter information
+    Assert(Reason),
+    /// For [super::Param]
     Param {
         /// Surface-level name of the parameter
         name: ast::Id,
         bind_loc: GPosIdx,
     },
-    /// Event Information
+    /// For [super::Event]
     Event {
         /// Surface-level name of the event
         name: ast::Id,
         bind_loc: GPosIdx,
         delay_loc: GPosIdx,
     },
-    /// Information for an instance
+    /// For [super::Instance]
     Instance {
         name_loc: GPosIdx,
         comp_loc: GPosIdx,
         bind_loc: GPosIdx,
     },
-    /// Information for an invocation
+    /// For [super::Invoke]
     Invoke {
         name_loc: GPosIdx,
         inst_loc: GPosIdx,
         bind_loc: GPosIdx,
     },
-    /// Information for Connection
+    /// For [super::Connect]
     Connect { dst_loc: GPosIdx, src_loc: GPosIdx },
+    /// For [super::Port]
+    Port {
+        /// Surface-level name
+        name: ast::Id,
+        bind_loc: GPosIdx,
+        width_loc: GPosIdx,
+        live_loc: GPosIdx,
+    },
 }
 
 impl Info {
-    /// Construct information about a parameter
+    pub fn assert(reason: Reason) -> Self {
+        Self::Assert(reason)
+    }
+
     pub fn param(name: ast::Id, bind_loc: GPosIdx) -> Self {
         Self::Param { name, bind_loc }
     }
 
-    /// Construct information about an event
     pub fn event(name: ast::Id, bind_loc: GPosIdx, delay_loc: GPosIdx) -> Self {
         Self::Event {
             name,
@@ -53,7 +63,6 @@ impl Info {
         }
     }
 
-    /// Construct information about an instance
     pub fn instance(
         name_loc: GPosIdx,
         comp_loc: GPosIdx,
@@ -66,14 +75,28 @@ impl Info {
         }
     }
 
-    /// Construct information about an invocation
     pub fn connect(dst_loc: GPosIdx, src_loc: GPosIdx) -> Self {
         Self::Connect { dst_loc, src_loc }
     }
+
+    pub fn port(
+        name: ast::Id,
+        bind_loc: GPosIdx,
+        width_loc: GPosIdx,
+        live_loc: GPosIdx,
+    ) -> Self {
+        Self::Port {
+            name,
+            bind_loc,
+            width_loc,
+            live_loc,
+        }
+    }
 }
 
+#[derive(Clone, PartialEq, Eq)]
 /// Why was an assertion created?
-pub enum AssertReason {
+pub enum Reason {
     /// Assertion representing constraint on a parameter
     ParamConstraint {
         /// Location of parameter definition
@@ -100,4 +123,52 @@ pub enum AssertReason {
         dst_liveness: Range,
         src_liveness: Range,
     },
+    /// Require that bitwidths of ports match
+    BitwidthMatch {
+        dst_loc: GPosIdx,
+        src_loc: GPosIdx,
+        dst_width: ExprIdx,
+        src_width: ExprIdx,
+    },
+    /// A simple reason
+    Misc { reason: String, def_loc: GPosIdx },
+}
+
+impl Reason {
+    pub fn misc<S: ToString>(r: S, def_loc: GPosIdx) -> Self {
+        Self::Misc {
+            reason: r.to_string(),
+            def_loc,
+        }
+    }
+
+    pub fn param_cons(
+        param_def_loc: GPosIdx,
+        bind_loc: GPosIdx,
+        constraint_loc: GPosIdx,
+    ) -> Self {
+        Self::ParamConstraint {
+            param_def_loc,
+            bind_loc,
+            constraint_loc,
+        }
+    }
+
+    pub fn event_cons(
+        event_def_loc: GPosIdx,
+        bind_loc: GPosIdx,
+        constraint_loc: GPosIdx,
+    ) -> Self {
+        Self::EventConstraint {
+            event_def_loc,
+            bind_loc,
+            constraint_loc,
+        }
+    }
+}
+
+impl From<Reason> for Info {
+    fn from(r: Reason) -> Self {
+        Self::Assert(r)
+    }
 }

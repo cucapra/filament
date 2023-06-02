@@ -20,7 +20,7 @@ pub use idxs::{
     CmdIdx, CompIdx, EventIdx, ExprIdx, InfoIdx, InstIdx, InvIdx, ParamIdx,
     PortIdx, PropIdx, TimeIdx,
 };
-pub use info::{AssertReason, Info};
+pub use info::{Info, Reason};
 pub use printer::Printer;
 pub use structure::{
     Access, Direction, Event, EventOwner, Liveness, Param, ParamOwner, Port,

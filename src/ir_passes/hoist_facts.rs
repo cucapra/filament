@@ -55,7 +55,7 @@ impl Visitor for HoistFacts {
             // Otherwise this is a checked assertion that needs to be hoisted.
             // Generate prop = path_cond -> fact.prop
             let cond = self.path_cond(comp).implies(fact.prop, comp);
-            self.facts.push(comp.assert(cond));
+            self.facts.push(ir::Fact::assert(cond, fact.reason));
         }
         Action::Change(vec![])
     }

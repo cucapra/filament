@@ -1,5 +1,6 @@
+use crate::ir::Ctx;
 use crate::ir_visitor::{Action, Visitor};
-use crate::{ast, ir};
+use crate::{ast, ir, utils};
 use easy_smt as smt;
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -288,7 +289,16 @@ impl Visitor for Discharge {
         }
 
         match self.check_valid(f.prop, comp) {
-            None => Action::Change(vec![comp.assume(f.prop).into()]),
+            None => {
+                let reason = comp.add(
+                    ir::Reason::misc(
+                        "Discharged assumption",
+                        utils::GPosIdx::UNKNOWN,
+                    )
+                    .into(),
+                );
+                Action::Change(vec![comp.assume(f.prop, reason).into()])
+            }
             Some(assign) => {
                 log::error!(
                     "fact `{}` is not valid. Assignment: {}",

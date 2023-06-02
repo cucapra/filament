@@ -1,6 +1,7 @@
 use crate::{
     ir::{self, Ctx},
     ir_visitor::{Action, Visitor},
+    utils::GPosIdx,
 };
 
 #[derive(Default)]
@@ -17,11 +18,32 @@ impl TypeCheck {
         &mut self,
         access: &ir::Access,
         comp: &mut ir::Component,
-    ) -> [ir::PropIdx; 3] {
+    ) -> [ir::Fact; 3] {
         let &ir::Access { port, start, end } = access;
         let port = comp.get(port);
         let len = port.live.len;
-        [end.gt(start, comp), start.lt(len, comp), end.lte(len, comp)]
+        let wf = comp.add(
+            ir::Reason::misc(
+                "port access must be well-formed",
+                GPosIdx::UNKNOWN,
+            )
+            .into(),
+        );
+        let wf_prop = end.gt(start, comp);
+        let within_bounds = comp.add(
+            ir::Reason::misc(
+                "port access must be within bounds",
+                GPosIdx::UNKNOWN,
+            )
+            .into(),
+        );
+        let start = start.lt(len, comp);
+        let end = end.lte(len, comp);
+        [
+            comp.assert(wf_prop, wf),
+            comp.assert(start, within_bounds),
+            comp.assert(end, within_bounds),
+        ]
     }
 }
 
@@ -41,15 +63,29 @@ impl Visitor for TypeCheck {
         // Ensure that the bitwidths of the ports are the same
         let src_w = comp.get(src.port).width;
         let dst_w = comp.get(dst.port).width;
-        cons.push(src_w.equal(dst_w, comp));
+        let reason = comp.add(
+            ir::Reason::misc(
+                "connected ports must have the same bitwidth",
+                GPosIdx::UNKNOWN,
+            )
+            .into(),
+        );
+        let prop = src_w.equal(dst_w, comp);
+        cons.push(comp.assert(prop, reason));
 
         // Ensure that the sizes are the same
+        let reason = comp.add(
+            ir::Reason::misc(
+                "connected ports must have the same size",
+                GPosIdx::UNKNOWN,
+            )
+            .into(),
+        );
         let src_size = src.end.sub(src.start, comp);
         let dst_size = dst.end.sub(dst.start, comp);
-        cons.push(src_size.equal(dst_size, comp));
+        let prop = src_size.equal(dst_size, comp);
+        cons.push(comp.assert(prop, reason));
 
-        Action::AddBefore(
-            cons.into_iter().map(|p| comp.assert(p).into()).collect(),
-        )
+        Action::AddBefore(cons.into_iter().map(|f| f.into()).collect())
     }
 }
