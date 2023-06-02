@@ -113,9 +113,6 @@ impl Component {
     /// Generate a asserted fact.
     /// Panics if the asserted fact is false.
     pub fn assert(&mut self, prop: PropIdx, info: InfoIdx) -> Fact {
-        if prop.is_false(self) {
-            panic!("Attempted to assert false");
-        }
         Fact::assert(prop, info)
     }
 
@@ -420,6 +417,11 @@ impl Ctx<Time> for Component {
 
     fn display(&self, idx: Idx<Time>) -> String {
         let &Time { event, offset } = self.get(idx);
+        if let Some(off) = offset.as_concrete(self) {
+            if off == 0 {
+                return self.display(event);
+            }
+        }
         format!("{}+{}", self.display(event), self.display(offset))
     }
 }

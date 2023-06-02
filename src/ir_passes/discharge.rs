@@ -12,6 +12,10 @@ use term::termcolor::{ColorChoice, StandardStream};
 pub struct Assign(Vec<(ir::ParamIdx, String)>);
 
 impl Assign {
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     fn display(&self, ctx: &ir::Component) -> String {
         self.0
             .iter()
@@ -323,14 +327,16 @@ impl Visitor for Discharge {
                 let ir::Info::Assert(reason) = comp.get(f.reason) else {
                     unreachable!("expected assert reason")
                 };
-                let mut diag = reason.diag(comp);
-                diag = diag.with_notes(vec![
-                    format!(
-                        "Cannot prove constraint {}",
-                        comp.display(f.prop.consequent(comp))
-                    ),
-                    format!("Counterexample: {}", assign.display(comp)),
-                ]);
+                let mut diag = reason.diag(comp).with_notes(vec![format!(
+                    "Cannot prove constraint: {}",
+                    comp.display(f.prop.consequent(comp))
+                )]);
+                if !assign.is_empty() {
+                    diag = diag.with_notes(vec![format!(
+                        "Counterexample: {}",
+                        assign.display(comp)
+                    )]);
+                }
                 self.diagnostics.push(diag);
                 Action::Continue
             }

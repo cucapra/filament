@@ -28,12 +28,12 @@ impl IntervalCheck {
         range: &ir::Range,
         loc: GPosIdx,
         comp: &mut ir::Component,
-    ) {
+    ) -> ir::Command {
         let &ir::Range { start, end } = range;
         let prop = end.gt(start, comp);
         let reason = comp
             .add(ir::Reason::well_formed_interval(loc, (start, end)).into());
-        comp.assert(prop, reason);
+        comp.assert(prop, reason).into()
     }
 }
 
@@ -56,7 +56,7 @@ impl Visitor for IntervalCheck {
             };
             let range = live.range;
             // Require that the range is well-formed
-            self.range_wf(&range, live_loc, comp);
+            cmds.push(self.range_wf(&range, live_loc, comp));
 
             // We only constraint the event mentioned in the start of the range.
             let st_ev = comp[range.start].event;
