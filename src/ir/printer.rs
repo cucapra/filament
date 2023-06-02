@@ -199,7 +199,9 @@ impl Printer {
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
-        let ir::Port { owner, width, live } = port;
+        let ir::Port {
+            owner, width, live, ..
+        } = port;
         match &owner {
             ir::PortOwner::Sig { .. } => Ok(()),
             ir::PortOwner::Inv { dir, .. } => {

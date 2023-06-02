@@ -138,10 +138,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 liveness,
                 bitwidth,
             } => {
-                let p_name = Id::from("__FAKE_BUNDLE_PARAM");
+                let info = self.comp.add(ir::Info::port(
+                    name.copy(),
+                    name.pos(),
+                    bitwidth.pos(),
+                    liveness.pos(),
+                ));
+
                 // The bundle type uses a fake bundle index and has a length of 1.
                 // We don't need to push a new scope because this type is does not
                 // bind any new parameters.
+                let p_name = Id::from("__FAKE_BUNDLE_PARAM");
                 let live = self.with_scope(|ctx| ir::Liveness {
                     idx: ctx.param(
                         p_name,
@@ -151,11 +158,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     len: ctx.comp.num(1),
                     range: ctx.range(liveness.take()),
                 });
-
                 let p = ir::Port {
                     width: self.expr(bitwidth.take()),
                     owner: owner.clone(),
                     live,
+                    info,
                 };
                 (name, p, owner)
             }
@@ -169,17 +176,23 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                         bitwidth,
                     },
             }) => {
+                let info = self.comp.add(ir::Info::port(
+                    name.copy(),
+                    name.pos(),
+                    bitwidth.pos(),
+                    liveness.pos(),
+                ));
                 // Construct the bundle type in a new scope.
                 let live = self.with_scope(|ctx| ir::Liveness {
                     idx: ctx.param(*idx, ir::ParamOwner::Bundle, idx.pos()),
                     len: ctx.expr(len.take()),
                     range: ctx.range(liveness.take()),
                 });
-
                 let p = ir::Port {
                     width: self.expr(bitwidth.take()),
                     owner: owner.clone(),
                     live,
+                    info,
                 };
                 (name, p, owner)
             }

@@ -109,6 +109,7 @@ pub struct Port {
     pub owner: PortOwner,
     pub width: ExprIdx,
     pub live: Liveness,
+    pub info: InfoIdx,
 }
 impl Port {
     /// Check if this is an input port on the signature

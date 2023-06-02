@@ -17,26 +17,29 @@ impl TypeCheck {
     fn port_access(
         &mut self,
         access: &ir::Access,
+        loc: GPosIdx,
         comp: &mut ir::Component,
     ) -> [ir::Fact; 3] {
         let &ir::Access { port, start, end } = access;
-        let port = comp.get(port);
-        let len = port.live.len;
+        let &ir::Port {
+            live: ir::Liveness { len, .. },
+            info,
+            ..
+        } = comp.get(port);
+
+        let &ir::Info::Port {
+            bind_loc, ..
+        } = comp.get(info) else {
+            unreachable!("Expected port info")
+        };
+
         let wf = comp.add(
-            ir::Reason::misc(
-                "port access must be well-formed",
-                GPosIdx::UNKNOWN,
-            )
-            .into(),
+            ir::Reason::misc("port access must be well-formed", loc).into(),
         );
+
         let wf_prop = end.gt(start, comp);
-        let within_bounds = comp.add(
-            ir::Reason::misc(
-                "port access must be within bounds",
-                GPosIdx::UNKNOWN,
-            )
-            .into(),
-        );
+        let within_bounds =
+            comp.add(ir::Reason::in_bounds_access(bind_loc, loc, len).into());
         let start = start.lt(len, comp);
         let end = end.lte(len, comp);
         [
@@ -53,12 +56,15 @@ impl Visitor for TypeCheck {
         c: &mut ir::Connect,
         comp: &mut ir::Component,
     ) -> Action {
-        let ir::Connect { src, dst, .. } = &c;
+        let ir::Connect { src, dst, info } = &c;
+        let &ir::Info::Connect { dst_loc, src_loc } = comp.get(*info) else {
+            unreachable!("Expected connect info")
+        };
         let mut cons = vec![];
 
         // Range accesses are well-formed
-        cons.extend(self.port_access(src, comp));
-        cons.extend(self.port_access(dst, comp));
+        cons.extend(self.port_access(src, src_loc, comp));
+        cons.extend(self.port_access(dst, dst_loc, comp));
 
         // Ensure that the bitwidths of the ports are the same
         let src_w = comp.get(src.port).width;

@@ -184,9 +184,16 @@ impl Component {
 
 /// Implement methods to display various values bound by the component
 impl Component {
+    pub fn display_param(&self, param: ParamIdx) -> String {
+        let Info::Param { name, .. } = self.get(self.get(param).info) else {
+            unreachable!("Expected param info");
+        };
+        format!("#{name}")
+    }
+
     fn display_expr_helper(&self, expr: ExprIdx, ctx: ECtx) -> String {
         match self.get(expr) {
-            Expr::Param(p) => format!("{p}"),
+            Expr::Param(p) => self.display_param(*p),
             Expr::Concrete(n) => format!("{n}"),
             Expr::Bin { op, lhs, rhs } => {
                 let inner = ECtx::from(*op);

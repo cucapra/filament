@@ -1,9 +1,6 @@
-use super::{ExprIdx, Range};
-use crate::{
-    ast,
-    utils::{GPosIdx, GlobalPositionTable},
-};
-use codespan_reporting::diagnostic::{Diagnostic, Label, LabelStyle};
+use super::{Component, ExprIdx, Range};
+use crate::{ast, utils::GPosIdx};
+use codespan_reporting::diagnostic::Diagnostic;
 
 #[derive(Default)]
 /// Information associated with the IR.
@@ -134,6 +131,14 @@ pub enum Reason {
         dst_width: ExprIdx,
         src_width: ExprIdx,
     },
+    InBoundsAccess {
+        // Defining location for the port
+        def_loc: GPosIdx,
+        /// Location of the access
+        access_loc: GPosIdx,
+        /// Length of the bundle
+        bundle_len: ExprIdx,
+    },
     /// A simple reason
     Misc { reason: String, def_loc: GPosIdx },
 }
@@ -169,6 +174,18 @@ impl Reason {
             constraint_loc,
         }
     }
+
+    pub fn in_bounds_access(
+        def_loc: GPosIdx,
+        access_loc: GPosIdx,
+        bundle_len: ExprIdx,
+    ) -> Self {
+        Self::InBoundsAccess {
+            def_loc,
+            access_loc,
+            bundle_len,
+        }
+    }
 }
 
 impl From<Reason> for Info {
@@ -177,21 +194,30 @@ impl From<Reason> for Info {
     }
 }
 
-impl<'a> From<&'a Reason> for Diagnostic<usize> {
-    fn from(r: &'a Reason) -> Self {
-        let table = GlobalPositionTable::as_ref();
-        match r {
+impl Reason {
+    /// Convert this reason into a diagnostic message
+    pub fn diag(&self, ctx: &Component) -> Diagnostic<usize> {
+        match self {
             Reason::Misc { reason, def_loc } => {
-                let pos = table.get_pos(def_loc.0);
-                let label = Label::new(
-                    LabelStyle::Primary,
-                    pos.file.get(),
-                    pos.start..pos.end,
-                )
-                .with_message(reason.clone());
+                let label = def_loc.primary().with_message(reason.clone());
                 Diagnostic::error()
                     .with_message(reason)
                     .with_labels(vec![label])
+            }
+            Reason::InBoundsAccess {
+                def_loc,
+                access_loc,
+                bundle_len,
+            } => {
+                let access =
+                    access_loc.primary().with_message("out of bounds access");
+                let def = def_loc.secondary().with_message(format!(
+                    "bundle's length is {}",
+                    ctx.display_expr(*bundle_len)
+                ));
+                Diagnostic::error()
+                    .with_message("out of bounds access of bundle")
+                    .with_labels(vec![access, def])
             }
             _ => todo!(),
         }

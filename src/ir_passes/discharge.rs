@@ -9,7 +9,16 @@ use std::collections::HashMap;
 use std::iter;
 use term::termcolor::{ColorChoice, StandardStream};
 
-type Assign = Vec<(ir::ParamIdx, String)>;
+pub struct Assign(Vec<(ir::ParamIdx, String)>);
+
+impl Assign {
+    fn display(&self, ctx: &ir::Component) -> String {
+        self.0
+            .iter()
+            .map(|(k, v)| format!("{} = {v}", ctx.display_param(*k),))
+            .join(", ")
+    }
+}
 
 /// Pass to discharge top-level `assert` statements in the IR and turn them into
 /// `assume` if they are true. Any assertions within the body are left as-is.
@@ -112,15 +121,17 @@ impl Discharge {
             })
             .collect_vec();
 
-        self.sol
-            .get_value(sexps)
-            .unwrap()
-            .into_iter()
-            .map(|(p, v)| {
-                let p = rev_map[&p];
-                (p, self.sol.display(v).to_string())
-            })
-            .collect_vec()
+        Assign(
+            self.sol
+                .get_value(sexps)
+                .unwrap()
+                .into_iter()
+                .map(|(p, v)| {
+                    let p = rev_map[&p];
+                    (p, self.sol.display(v).to_string())
+                })
+                .collect_vec(),
+        )
     }
 
     /// Check whether the proposition is valid.
@@ -305,11 +316,19 @@ impl Visitor for Discharge {
                 );
                 Action::Change(vec![comp.assume(f.prop, reason).into()])
             }
-            Some(_) => {
+            Some(assign) => {
                 let ir::Info::Assert(reason) = comp.get(f.reason) else {
                     unreachable!("expected assert reason")
                 };
-                self.diagnostics.push(reason.into());
+                let mut diag = reason.diag(comp);
+                diag = diag.with_notes(vec![
+                    format!(
+                        "Cannot prove constraint {}",
+                        comp.display_prop(f.prop.consequent(comp))
+                    ),
+                    format!("Counterexample: {}", assign.display(comp)),
+                ]);
+                self.diagnostics.push(diag);
                 Action::Continue
             }
         }
