@@ -92,6 +92,19 @@ impl Component {
         self.exprs.intern(Expr::Concrete(n))
     }
 
+    /// Generates the propositions representing `a \subseteq b`
+    pub fn subset_eq(
+        &mut self,
+        a: (ExprIdx, ExprIdx),
+        b: (ExprIdx, ExprIdx),
+    ) -> [PropIdx; 2] {
+        let (a_lo, a_hi) = a;
+        let (b_lo, b_hi) = b;
+        let lo = a_lo.lte(b_lo, self);
+        let hi = a_hi.gte(b_hi, self);
+        [lo, hi]
+    }
+
     /// Generate a asserted fact.
     /// Panics if the asserted fact is false.
     pub fn assert(&mut self, prop: PropIdx, info: InfoIdx) -> Fact {
@@ -184,6 +197,7 @@ impl Component {
 
 /// Implement methods to display various values bound by the component
 impl Component {
+    /// Display a parameter by printing its source-level name (if available)
     pub fn display_param(&self, param: ParamIdx) -> String {
         let Info::Param { name, .. } = self.get(self.get(param).info) else {
             unreachable!("Expected param info");

@@ -368,6 +368,7 @@ impl Visitor for Discharge {
             ColorChoice::Never
         });
         let table = GlobalPositionTable::as_ref();
+        let mut count = 0;
         for diag in &self.diagnostics {
             term::emit(
                 &mut writer.lock(),
@@ -375,7 +376,9 @@ impl Visitor for Discharge {
                 table.files(),
                 diag,
             )
-            .unwrap()
+            .unwrap();
+            count += 1;
         }
+        eprintln!("Program has {count} errors")
     }
 }

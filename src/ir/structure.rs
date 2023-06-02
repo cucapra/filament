@@ -1,5 +1,6 @@
 use super::{
-    Ctx, Expr, ExprIdx, InfoIdx, InvIdx, ParamIdx, PortIdx, TimeIdx, TimeSub,
+    Bind, Component, Ctx, Expr, ExprIdx, Foldable, InfoIdx, InvIdx, ParamIdx,
+    PortIdx, Subst, TimeIdx, TimeSub,
 };
 use std::fmt;
 
@@ -13,6 +14,20 @@ pub struct Range {
 impl fmt::Display for Range {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "@[{}, {}]", self.start, self.end)
+    }
+}
+
+impl Foldable<ParamIdx, ExprIdx> for Range {
+    type Context = Component;
+
+    fn fold_with<F>(&self, ctx: &mut Self::Context, subst_fn: &mut F) -> Self
+    where
+        F: FnMut(ParamIdx) -> Option<ExprIdx>,
+    {
+        Range {
+            start: self.start.fold_with(ctx, subst_fn),
+            end: self.end.fold_with(ctx, subst_fn),
+        }
     }
 }
 
@@ -166,6 +181,21 @@ impl Access {
             s == 0 && e == 1
         } else {
             false
+        }
+    }
+
+    /// Return the bundle type associated with this access
+    pub fn bundle_typ(&self, ctx: &mut Component) -> Liveness {
+        let live = ctx.get(self.port).live.clone();
+        // Shrink the bundle type based on the access
+        let len = self.end.sub(self.start, ctx);
+        // Remap `#i` to `#i+start`
+        let binding = [(live.idx, live.idx.expr(ctx).add(self.start, ctx))];
+        let range = Subst::new(live.range, &Bind::new(&binding)).apply(ctx);
+        Liveness {
+            idx: live.idx,
+            len,
+            range,
         }
     }
 }

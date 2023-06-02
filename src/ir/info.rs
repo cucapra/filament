@@ -152,6 +152,20 @@ impl Reason {
         }
     }
 
+    pub fn liveness(
+        dst_loc: GPosIdx,
+        src_loc: GPosIdx,
+        dst_liveness: Range,
+        src_liveness: Range,
+    ) -> Self {
+        Self::Liveness {
+            dst_loc,
+            src_loc,
+            dst_liveness,
+            src_liveness,
+        }
+    }
+
     pub fn param_cons(
         param_def_loc: GPosIdx,
         bind_loc: GPosIdx,
@@ -251,6 +265,24 @@ impl Reason {
                 Diagnostic::error()
                     .with_message(format!("mismatched bundle lengths: required bundle of size `{dw}' but found bundle of size `{sw}'"))
                     .with_labels(vec![src, dst])
+            }
+            Reason::Liveness {
+                dst_loc,
+                src_loc,
+                dst_liveness,
+                src_liveness,
+            } => {
+                let sl = src_loc.primary().with_message(format!(
+                    "source is available for {}",
+                    src_liveness
+                ));
+                let dl = dst_loc.secondary().with_message(format!(
+                    "requires value for {}",
+                    dst_liveness
+                ));
+                Diagnostic::error()
+                    .with_message("source port does not provide value for as long as destination requires")
+                    .with_labels(vec![sl, dl])
             }
             _ => todo!(),
         }

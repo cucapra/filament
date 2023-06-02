@@ -82,10 +82,29 @@ impl Visitor for IntervalCheck {
 
     fn connect(
         &mut self,
-        _con: &mut ir::Connect,
-        _comp: &mut ir::Component,
+        con: &mut ir::Connect,
+        comp: &mut ir::Component,
     ) -> Action {
-        // TODO: Check that the signals are alive for as long as needed.
-        Action::Continue
+        let ir::Connect { src, dst, info } = con;
+        let src_t = src.bundle_typ(comp);
+        let dst_t = dst.bundle_typ(comp);
+        // Assuming that the lengths are equal, check the constraint.
+        let len_eq = src_t.len.equal(dst_t.len, comp);
+        let contains = src_t
+            .range
+            .start
+            .lte(dst_t.range.start, comp)
+            .and(src_t.range.end.gte(dst_t.range.end, comp), comp);
+
+        let ir::Info::Connect { dst_loc, src_loc } = comp.get(*info) else {
+            unreachable!("Expected connect info")
+        };
+        let reason = comp.add(
+            ir::Reason::liveness(*dst_loc, *src_loc, dst_t.range, src_t.range)
+                .into(),
+        );
+
+        let prop = len_eq.implies(contains, comp);
+        Action::AddBefore(vec![comp.assert(prop, reason).into()])
     }
 }
