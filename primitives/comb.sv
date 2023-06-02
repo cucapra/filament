@@ -231,3 +231,13 @@ module Mux #(
 );
   assign out = sel ? in0 : in1;
 endmodule
+
+module Extend #(
+  parameter IN_WIDTH = 32,
+  parameter OUT_WIDTH = 32
+) (
+  input wire logic [IN_WIDTH-1:0] in
+  output wire logic [OUT_WIDTH-1:0] out
+);
+  assign out = {OUT_WIDTH{in}};
+endmodule

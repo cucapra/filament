@@ -151,4 +151,10 @@ extern "comb.sv" {
   ) -> (
     @[G, L] out: #WIDTH,
   ) where L > G, #WIDTH > 0;
+
+  comp Extend[#IN_WIDTH, #OUT_WIDTH]<G: L-(G), ?L: 1=G+1>(
+    @[G,L] in: #IN_WIDTH
+  ) -> (
+    @[G,L] out: #OUT_WIDTH
+  ) where L > G, #IN_WIDTH > 0, #OUT_WIDTH > 0;
 }
