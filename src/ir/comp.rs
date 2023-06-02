@@ -421,6 +421,7 @@ enum ECtx {
     Add,
     /// Inside an multiplication priority expression (* or / or %)
     Mul,
+    #[allow(dead_code)]
     /// Inside a function application
     Func,
 }
