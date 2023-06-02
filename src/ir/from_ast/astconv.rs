@@ -68,7 +68,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     /// Add a parameter to the component.
     fn param(&mut self, param: ast::ParamBind, owner: ir::ParamOwner) -> ParamIdx {
-        // TODO(rachit): Parameters do not have default values yet.
         let default = param.default.map(|e| self.expr(e));
         let p = ir::Param::new(owner, default);
         let idx = self.comp.add(p);
@@ -121,7 +120,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 // We don't need to push a new scope because this type is does not
                 // bind any new parameters.
                 let live = self.with_scope(|ctx| ir::Liveness {
-                    idx: ctx.param(Id::default(), ir::ParamOwner::Bundle), // This parameter is unused
+                    idx: ctx.param(ast::ParamBind::new(ast::Loc::unknown(Id::default()), None), ir::ParamOwner::Bundle), // This parameter is unused
                     len: ctx.comp.num(1),
                     range: ctx.range(liveness.take()),
                 });
@@ -145,7 +144,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             }) => {
                 // Construct the bundle type in a new scope.
                 let live = self.with_scope(|ctx| ir::Liveness {
-                    idx: ctx.param(*idx, ir::ParamOwner::Bundle),
+                    idx: ctx.param(ast::ParamBind::new(idx, None), ir::ParamOwner::Bundle),
                     len: ctx.expr(len.take()),
                     range: ctx.range(liveness.take()),
                 });
@@ -256,7 +255,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         } = inst;
         let comp = self.sigs.get(component).unwrap();
         let binding = self.param_binding(
-            comp.params, 
+            comp.params.iter().cloned(), 
             bindings.clone().into_iter().map(|b| b.take())
         );
         let inst = ir::Instance {
@@ -307,22 +306,23 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         args: impl IntoIterator<Item = ast::Time>,
     ) -> Binding<ast::Time> {
         let args = args.into_iter().collect_vec();
+        let events = events.into_iter().collect_vec();
         assert!(
-            events.into_iter().take_while(|ev| ev.default.is_none()).count()
+            events.iter().take_while(|ev| ev.default.is_none()).count()
                 <= args.len(),
             "Insuffient events for component invocation.",
         );
 
         let mut partial_map = Binding::new(
             events
-                .into_iter()
+                .iter()
                 .map(|eb| eb.event.inner())
                 .cloned()
                 .zip(args.iter().cloned()),
         );
         // Skip the events that have been bound
         let remaining = events
-            .into_iter()
+            .iter()
             .skip(args.len())
             .map(|eb| {
                 let bind = eb
@@ -348,22 +348,23 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         args: impl IntoIterator<Item = ast::Expr>,
     ) -> Binding<ast::Expr> {
         let args = args.into_iter().collect_vec();
+        let params = params.into_iter().collect_vec();
         assert!(
-            params.into_iter().take_while(|ev| ev.default.is_none()).count()
+            params.iter().take_while(|ev| ev.default.is_none()).count()
                 <= args.len(),
             "Insuffient params for component invocation.",
         );
 
         let mut partial_map = Binding::new(
             params
-                .into_iter()
-                .map(|eb| eb.param.inner())
+                .iter()
+                .map(|pb| pb.param.inner())
                 .cloned()
                 .zip(args.iter().cloned()),
         );
         // Skip the events that have been bound
         let remaining = params
-            .into_iter()
+            .iter()
             .skip(args.len())
             .map(|pb| {
                 let bind = pb
@@ -399,7 +400,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
         // Event bindings
         let event_binding = self.event_binding(
-            sig.events,
+            sig.events.iter().cloned(),
             abstract_vars.iter().map(|v| v.inner().clone()),
         );
 
@@ -473,7 +474,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 let end = self.expr(end);
                 // Compile the body in a new scope
                 let (index, body) = self.with_scope(|this| {
-                    let idx = this.param(idx.take(), ir::ParamOwner::Local);
+                    let idx = this.param(ast::ParamBind::new(idx, None), ir::ParamOwner::Local);
                     (idx, this.commands(body))
                 });
                 let l = ir::Loop {
@@ -530,7 +531,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
         // Event bindings
         let event_binding = self.event_binding(
-            sig.events,
+            sig.events.iter().cloned(),
             abstract_vars.iter().map(|v| v.inner().clone()),
         );
 
@@ -562,7 +563,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 self.declare_inv(inv);
             }
             ast::Command::ForLoop(ast::ForLoop { idx, body, .. }) => {
-                self.param(idx.copy(), ir::ParamOwner::Local);
+                self.param(ast::ParamBind::new(idx.clone(), None), ir::ParamOwner::Local);
                 self.declare_cmds(body);
             }
             ast::Command::If(ast::If { then, alt, .. }) => {

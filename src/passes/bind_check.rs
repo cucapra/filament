@@ -31,7 +31,8 @@ impl BindCheck {
 
     fn push_bundle_params(&mut self, vars: impl Iterator<Item = Loc<ast::Id>>) -> usize {
         let len = self.params.len();
-        self.add_global_params(vars);
+        let vars = vars.collect_vec().into_iter();
+        self.add_global_params(vars.clone());
         self.bundle_params.extend(vars);
         len
     }
@@ -191,7 +192,7 @@ impl visitor::Checker for BindCheck {
         l: &ast::ForLoop,
         ctx: &binding::CompBinding,
     ) -> Traverse {
-        self.add_global_params(iter::once(l.idx));
+        self.add_global_params(iter::once(l.idx.clone()));
         for cmd in &l.body {
             self.command(cmd, ctx);
         }
@@ -204,17 +205,34 @@ impl visitor::Checker for BindCheck {
         ctx: &binding::CompBinding,
     ) -> Traverse {
         let bound = ctx.get_instance(&inst.name);
-        let param_len = ctx.prog[bound.sig].params.len();
         for param in &inst.bindings {
             self.expr(param, param.pos());
         }
 
-        if param_len != inst.bindings.len() {
+        let sig = &ctx.prog[bound.sig];
+        let min_formals = sig
+            .params
+            .iter()
+            .take_while(|pb| pb.default.is_none())
+            .count();
+        let max_formals = sig.params.len();
+        let actuals = inst.bindings.len();
+        if min_formals > actuals {
             let msg = format!(
-                "`{}' requires {} parameters but {} were provided",
+                "`{}' requires at least {} parameters but {} were provided",
                 inst.component,
-                param_len,
-                inst.bindings.len(),
+                min_formals,
+                actuals,
+            );
+            let err = Error::malformed(msg.clone())
+                .add_note(self.diag.add_info(msg, inst.component.pos()));
+            self.diag.add_error(err);
+        } else if actuals > max_formals {
+            let msg = format!(
+                "`{}' requires at most {} parameters but {} were provided",
+                inst.component,
+                max_formals,
+                actuals,
             );
             let err = Error::malformed(msg.clone())
                 .add_note(self.diag.add_info(msg, inst.component.pos()));
