@@ -54,6 +54,16 @@ impl IntervalCheck {
         );
         comp.assert(prop, reason).into()
     }
+
+    /// Proposition that ensures that the given parameter is in range
+    fn in_range(live: &ir::Liveness, comp: &mut ir::Component) -> ir::PropIdx {
+        let &ir::Liveness { idx, len, .. } = live;
+        let zero = comp.num(0);
+        let idx = idx.expr(comp);
+        let lo = idx.gte(zero, comp);
+        let hi = idx.lt(len, comp);
+        lo.and(hi, comp)
+    }
 }
 
 impl Visitor for IntervalCheck {
@@ -143,23 +153,31 @@ impl Visitor for IntervalCheck {
         let ir::Connect { src, dst, info } = con;
         let src_t = src.bundle_typ(comp);
         let dst_t = dst.bundle_typ(comp);
-        // Assuming that the lengths are equal and parameters are in-range, check the constraint.
-        let len_eq = src_t.len.equal(dst_t.len, comp);
+        let in_range = Self::in_range(&dst_t, comp)
+            .and(Self::in_range(&src_t, comp), comp);
+
+        // Substitute the parameter used in source with that in dst
+        let binding = [(src_t.idx, dst_t.idx.expr(comp))];
+        let dst_range =
+            ir::Subst::new(dst_t.range, &ir::Bind::new(&binding)).apply(comp);
+
+        // Assuming that lengths are equal
+        let pre_req = src_t.len.equal(dst_t.len, comp).and(in_range, comp);
         let contains = src_t
             .range
             .start
-            .lte(dst_t.range.start, comp)
-            .and(src_t.range.end.gte(dst_t.range.end, comp), comp);
+            .lte(dst_range.start, comp)
+            .and(src_t.range.end.gte(dst_range.end, comp), comp);
 
         let ir::Info::Connect { dst_loc, src_loc } = comp.get(*info) else {
             unreachable!("Expected connect info")
         };
         let reason = comp.add(
-            ir::Reason::liveness(*dst_loc, *src_loc, dst_t.range, src_t.range)
+            ir::Reason::liveness(*dst_loc, *src_loc, dst_range, src_t.range)
                 .into(),
         );
 
-        let prop = len_eq.implies(contains, comp);
+        let prop = pre_req.implies(contains, comp);
         Action::AddBefore(vec![comp.assert(prop, reason).into()])
     }
 }

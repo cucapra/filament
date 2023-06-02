@@ -171,7 +171,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 // The bundle type uses a fake bundle index and has a length of 1.
                 // We don't need to push a new scope because this type is does not
                 // bind any new parameters.
-                let p_name = Id::from("__FAKE_BUNDLE_PARAM");
+                let p_name = Id::from("_");
                 let live = self.with_scope(|ctx| ir::Liveness {
                     idx: ctx.param(
                         p_name,
