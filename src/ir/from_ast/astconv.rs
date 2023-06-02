@@ -467,7 +467,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let mut connects = Vec::with_capacity(sig.inputs.len());
 
         for (p, src) in sig.inputs.clone().into_iter().zip(srcs) {
-            let info = self.comp.add(ir::Info::connect(p.pos(), src.pos()));
+            let info = self
+                .comp
+                .add(ir::Info::connect(p.inner().name().pos(), src.pos()));
             let resolved = p.map(|p| {
                 p.resolve_exprs(&param_binding)
                     .resolve_event(&event_binding)

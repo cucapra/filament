@@ -34,7 +34,11 @@ impl TypeCheck {
         };
 
         let wf = comp.add(
-            ir::Reason::misc("port access must be well-formed", loc).into(),
+            ir::Reason::misc(
+                "end of port access must greater than the start",
+                loc,
+            )
+            .into(),
         );
 
         let wf_prop = end.gt(start, comp);
@@ -80,15 +84,12 @@ impl Visitor for TypeCheck {
         cons.push(comp.assert(prop, reason));
 
         // Ensure that the sizes are the same
-        let reason = comp.add(
-            ir::Reason::misc(
-                "connected ports must have the same size",
-                GPosIdx::UNKNOWN,
-            )
-            .into(),
-        );
         let src_size = src.end.sub(src.start, comp);
         let dst_size = dst.end.sub(dst.start, comp);
+        let reason = comp.add(
+            ir::Reason::bundle_len_match(dst_loc, src_loc, dst_size, src_size)
+                .into(),
+        );
         let prop = src_size.equal(dst_size, comp);
         cons.push(comp.assert(prop, reason));
 

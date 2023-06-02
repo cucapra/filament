@@ -124,13 +124,14 @@ pub enum Reason {
         dst_liveness: Range,
         src_liveness: Range,
     },
-    /// Require that bitwidths of ports match
-    BitwidthMatch {
+    /// Require that lengths of bundles match
+    BundleLenMatch {
         dst_loc: GPosIdx,
         src_loc: GPosIdx,
         dst_width: ExprIdx,
         src_width: ExprIdx,
     },
+    /// An access is within bounds
     InBoundsAccess {
         // Defining location for the port
         def_loc: GPosIdx,
@@ -186,6 +187,20 @@ impl Reason {
             bundle_len,
         }
     }
+
+    pub fn bundle_len_match(
+        dst_loc: GPosIdx,
+        src_loc: GPosIdx,
+        dst_width: ExprIdx,
+        src_width: ExprIdx,
+    ) -> Self {
+        Self::BundleLenMatch {
+            dst_loc,
+            src_loc,
+            dst_width,
+            src_width,
+        }
+    }
 }
 
 impl From<Reason> for Info {
@@ -218,6 +233,24 @@ impl Reason {
                 Diagnostic::error()
                     .with_message("out of bounds access of bundle")
                     .with_labels(vec![access, def])
+            }
+            Reason::BundleLenMatch {
+                dst_loc,
+                src_loc,
+                dst_width,
+                src_width,
+            } => {
+                let sw = ctx.display_expr(*src_width);
+                let dw = ctx.display_expr(*dst_width);
+                let src = src_loc
+                    .secondary()
+                    .with_message(format!("source's length is {sw}",));
+                let dst = dst_loc
+                    .primary()
+                    .with_message(format!("destination's length is {dw}",));
+                Diagnostic::error()
+                    .with_message(format!("mismatched bundle lengths: required bundle of size `{dw}' but found bundle of size `{sw}'"))
+                    .with_labels(vec![src, dst])
             }
             _ => todo!(),
         }

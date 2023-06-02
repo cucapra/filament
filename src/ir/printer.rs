@@ -1,3 +1,4 @@
+use super::Ctx;
 use crate::{ir, utils::Idx};
 use itertools::{Itertools, Position};
 use std::{fmt::Display, io};
@@ -185,10 +186,15 @@ impl Printer {
         idx: ir::ParamIdx,
         param: &ir::Param,
         indent: usize,
+        c: &ir::Component,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         if !param.is_sig_owned() {
-            writeln!(f, "{:indent$}{idx} = param {param};", "",)?;
+            let &ir::Param { info, .. } = c.get(idx);
+            let ir::Info::Param { name, .. } = c.get(info) else {
+                unreachable!("Expected param info");
+            };
+            writeln!(f, "{:indent$}{idx} = param {param}; // {name}", "",)?;
         }
         Ok(())
     }
@@ -270,7 +276,7 @@ impl Printer {
         } = &c;
         Printer::sig(*idx, params, events, ports, 0, f)?;
         for (idx, param) in params.iter() {
-            Printer::local_param(idx, param, 2, f)?;
+            Printer::local_param(idx, param, 2, c, f)?;
         }
         Printer::interned(exprs, "expr", 2, f)?;
         for (idx, event) in events.iter() {
