@@ -379,6 +379,8 @@ impl Visitor for Discharge {
             .unwrap();
             count += 1;
         }
-        eprintln!("Program has {count} errors")
+        if count > 0 {
+            eprintln!("Compilation failed with {count} errors")
+        }
     }
 }
