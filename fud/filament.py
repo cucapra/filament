@@ -101,17 +101,21 @@ class CocotbExecBase(Stage):
         
         def transform_data(data_path, dir):
             """
-            Transform data from having binary/hex encoding into decimal
-            Creates a new file inside dir, which should be a temp directory
+            Transform data in data_path from having binary/hex encoding into decimal.
+            Creates a new file inside dir, which should be a temp directory.
             """
             data = str(data_path)
             
             file_orig = open(data)
             file_new = open((Path(dir.name) / Path(data).stem).name + ".json","w")
             data_dict = json.load(file_orig)
+
+            # iterate through data
             for key in data_dict:
+                # for each item in the json object, check if it needs to be transformed
                 for i in range(len(data_dict[key])):
                     val = data_dict[key][i]
+                    # if it is a string, check if it is in binary or hex
                     if isinstance(val,str):
                         if val.startswith('0b'): # binary format
                             binary_data = val[2:]
@@ -119,10 +123,11 @@ class CocotbExecBase(Stage):
                         elif val.startswith('0x'): # hex format
                             binary_data = val[2:]
                             conv = int(binary_data,16)
-                        else:
+                        else: # none of the above -> unsupported
                             raise errors.InvalidNumericType("\"" + str(val) + "\"" + " in " + data)
-                    else:
+                    else: # already in decimal
                         conv = val
+                    # update info in json
                     data_dict[key][i] = conv
             json_obj = json.dumps(data_dict,indent=4)
             file_new.write(json_obj)
@@ -156,7 +161,7 @@ class CocotbExecBase(Stage):
         @builder.step()
         def data_gen(file: SourceType.Path, dir: SourceType.Directory) -> SourceType.Stream:
             """
-            Generate data file with binary/hex converted to decimal
+            Generate data file in dir with binary/hex converted to decimal
             """
             data_transformed = transform_data(file, dir)
             cmd = " ".join(
@@ -287,6 +292,7 @@ class CocotbExecBase(Stage):
             builder, interface_stream, dir, "interface.json"
         )
 
+        # Generate modified data file
         data_stream = data_gen(data, dir)
         data_path = self.save_file(builder,data_stream,dir,"data_1.json")
 
