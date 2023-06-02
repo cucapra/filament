@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 import shutil
 import logging as log
+import json
 
 from fud import errors
 from fud.stages import Stage, SourceType, Source
@@ -97,6 +98,46 @@ class CocotbExecBase(Stage):
         return save(stream, dir)
 
     def _define_steps(self, input, builder, config) -> Source:
+        
+        def transform_data(data_path, dir):
+            """
+            Transform data in data_path from having binary/hex encoding into decimal.
+            Creates a new file inside dir, which should be a temp directory.
+            """
+            data = str(data_path)
+            file_orig = open(data)
+            file_new = open(dir.name + Path(data).stem + ".json", "w")
+            data_dict = json.load(file_orig)
+
+            # iterate through data
+            for key in data_dict:
+                # for each item in the json object, check if it needs to be transformed
+                for i in range(len(data_dict[key])):
+                    val = data_dict[key][i]
+                    # if it is a string, check if it is in binary or hex
+                    if isinstance(val,str):
+                        if val.startswith('0b'): # binary format
+                            binary_data = val[2:]
+                            try:
+                                conv = int(binary_data,2)
+                            except ValueError:
+                                raise errors.InvalidNumericType("\"" + str(val) + "\"" + " in " + data)
+                        elif val.startswith('0x'): # hex format
+                            binary_data = val[2:]
+                            try: 
+                                conv = int(binary_data,16)
+                            except ValueError:
+                                raise errors.InvalidNumericType("\"" + str(val) + "\"" + " in " + data)
+                        else: # none of the above -> unsupported
+                            raise errors.InvalidNumericType("\"" + str(val) + "\"" + " in " + data)
+                    else: # already in decimal
+                        conv = val
+                    # update info in json
+                    data_dict[key][i] = conv
+            json_obj = json.dumps(data_dict,indent=4)
+            file_new.write(json_obj)
+            return Path(file_new.name).resolve()
+        
         @builder.step()
         def get_data() -> SourceType.Path:
             """Get data for execution"""
@@ -104,6 +145,7 @@ class CocotbExecBase(Stage):
             data = config.get(name)
             if data is None:
                 raise errors.MissingDynamicConfiguration(".".join(name))
+
             # return absolute path to the file
             return Path(data).resolve()
 
@@ -120,6 +162,20 @@ class CocotbExecBase(Stage):
         def mktmp() -> SourceType.Directory:
             """Make a temporary directory"""
             return TmpDir()
+
+        @builder.step()
+        def data_gen(file: SourceType.Path, dir: SourceType.Directory) -> SourceType.Stream:
+            """
+            Generate data file in dir with binary/hex converted to decimal
+            """
+            data_transformed = transform_data(file, dir)
+            cmd = " ".join(
+                [
+                    "cat ",
+                    "{path}"
+                ]
+            )
+            return shell(cmd.format(path = data_transformed))
 
         @builder.step()
         def interface_gen(file: SourceType.Path) -> SourceType.Stream:
@@ -199,7 +255,7 @@ class CocotbExecBase(Stage):
                     "-B",
                     # XXX(rachit): we shouldn't need this .data here
                     f"INTERFACE={interface.data}",
-                    f"DATA_FILE={data}",
+                    f"DATA_FILE={data.data}",
                     f"RANDOMIZE={int(randomize)}" if randomize is not None else "",
                     f"RESET_CYCLES={reset_cycles}" if reset_cycles is not None else "",
                 ]
@@ -241,8 +297,13 @@ class CocotbExecBase(Stage):
             builder, interface_stream, dir, "interface.json"
         )
 
+        # Generate modified data file
+        data_stream = data_gen(data, dir)
+        data_path = self.save_file(builder,data_stream,dir,"data_1.json")
+
         # Run the program
-        out = run(dir, interface_path, data)
+        out = run(dir, interface_path, data_path)
+        
         if self.out == CocotbOutput.VCD:
             return read_vcd(dir)
         else:
