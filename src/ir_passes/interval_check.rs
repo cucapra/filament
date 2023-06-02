@@ -2,6 +2,7 @@ use itertools::Itertools;
 
 use crate::ir::{self, Ctx};
 use crate::ir_visitor::{Action, Visitor};
+use crate::utils;
 
 #[derive(Default)]
 /// Filament's core interval checking algorithm. At a high-level it ensures that:
@@ -41,9 +42,16 @@ impl Visitor for IntervalCheck {
             assert!(st_ev == end_ev, "Bundle ranges with different events");
             let len = range.end.sub(range.start, comp);
             let delay = &comp[st_ev].delay.clone();
+            let reason = comp.add(
+                ir::Reason::misc(
+                    "bundle liveness must be less than delay",
+                    utils::GPosIdx::UNKNOWN,
+                )
+                .into(),
+            );
             let prop = comp
                 .add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(delay.clone(), len)));
-            cmds.push(ir::Command::from(comp.assert(prop)));
+            cmds.push(ir::Command::from(comp.assert(prop, reason)));
         }
 
         Action::AddBefore(cmds)
@@ -64,7 +72,11 @@ impl Visitor for IntervalCheck {
             this_ev.delay.clone(),
             inv_ev.delay.clone(),
         )));
-        let fact = ir::Command::from(comp.assert(prop));
+        let reason = comp.add(ir::Reason::misc(
+            "invoked component's delay must be less or equal to than this event's delay",
+            utils::GPosIdx::UNKNOWN,
+        ).into());
+        let fact = ir::Command::from(comp.assert(prop, reason));
         Action::AddBefore(vec![fact])
     }
 

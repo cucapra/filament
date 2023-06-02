@@ -18,7 +18,7 @@ impl Action {
     /// Run the traversal specified by `next` if this traversal succeeds.
     /// If the result of this traversal is not `Action::Continue`, do not
     /// run `next()`.
-    pub(super) fn and_then<F>(self, mut next: F) -> Action
+    pub fn and_then<F>(self, mut next: F) -> Action
     where
         F: FnMut() -> Action,
     {
@@ -86,6 +86,17 @@ where
     ) -> Action {
         Action::Continue
     }
+    /// Traverse for `for` loops.
+    /// Overriding this requires explicit traversal over the body.
+    fn do_loop(
+        &mut self,
+        l: &mut ir::Loop,
+        comp: &mut ir::Component,
+    ) -> Action {
+        self.start_loop(l, comp)
+            .and_then(|| self.visit_cmds(&mut l.body, comp))
+            .and_then(|| self.end_loop(l, comp))
+    }
 
     /// Executed before the branches of the if is visited
     fn start_if(
@@ -121,10 +132,7 @@ where
             ir::Command::Instance(idx) => self.instance(*idx, comp),
             ir::Command::Invoke(idx) => self.invoke(*idx, comp),
             ir::Command::Connect(con) => self.connect(con, comp),
-            ir::Command::ForLoop(l) => self
-                .start_loop(l, comp)
-                .and_then(|| self.visit_cmds(&mut l.body, comp))
-                .and_then(|| self.end_loop(l, comp)),
+            ir::Command::ForLoop(l) => self.do_loop(l, comp),
             ir::Command::If(i) => self.do_if(i, comp),
             ir::Command::Fact(f) => self.fact(f, comp),
             ir::Command::EventBind(eb) => self.event_binding(eb, comp),
