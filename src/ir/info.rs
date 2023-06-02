@@ -342,14 +342,21 @@ impl Reason {
                 ));
                 let event =
                     event_delay_loc.secondary().with_message("event's delay");
-                let param = param_loc.secondary().with_message(format!(
-                    "takes values in [{}, {})",
-                    ctx.display(param_range.0),
-                    ctx.display(param_range.1)
-                ));
+                let mut labels = vec![wire, event];
+
+                // If the parameter location is not defined, we do not report its location
+                if let Some(loc) = param_loc.into_option() {
+                    let param = loc.secondary().with_message(format!(
+                        "takes values in [{}, {})",
+                        ctx.display(param_range.0),
+                        ctx.display(param_range.1)
+                    ));
+                    labels.push(param);
+                }
+
                 Diagnostic::error()
                     .with_message("bundle's availability is greater than the delay of the event")
-                    .with_labels(vec![wire, event, param])
+                    .with_labels(labels)
             }
             Reason::WellFormedInterval {
                 range_loc,

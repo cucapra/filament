@@ -149,6 +149,10 @@ impl GPosIdx {
 
     /// Convert this into a Primary label
     pub fn primary(self) -> Label<usize> {
+        assert!(
+            self != Self::UNKNOWN,
+            "unknown position cannot be converted into label"
+        );
         let table = GlobalPositionTable::as_ref();
         let pos = table.get_pos(self.0);
         Label::primary(pos.file.get(), pos.start..pos.end)
@@ -156,6 +160,10 @@ impl GPosIdx {
 
     /// Convert this into a Secondary label
     pub fn secondary(self) -> Label<usize> {
+        assert!(
+            self != Self::UNKNOWN,
+            "unknown position cannot be converted into label"
+        );
         let table = GlobalPositionTable::as_ref();
         let pos = table.get_pos(self.0);
         Label::secondary(pos.file.get(), pos.start..pos.end)

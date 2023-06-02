@@ -109,6 +109,9 @@ impl Discharge {
 
     /// Get bindings for the provided parameters in a model.
     fn get_assignments(&mut self, relevant_vars: Vec<ir::ParamIdx>) -> Assign {
+        if relevant_vars.is_empty() {
+            return Assign(vec![]);
+        }
         let mut rev_map = HashMap::with_capacity(relevant_vars.len());
         // SExprs corresponding to the paramters
         let sexps = relevant_vars

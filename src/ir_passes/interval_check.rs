@@ -58,13 +58,8 @@ impl Visitor for IntervalCheck {
             // Require that the range is well-formed
             self.range_wf(&range, live_loc, comp);
 
+            // We only constraint the event mentioned in the start of the range.
             let st_ev = comp[range.start].event;
-            let end_ev = comp[range.end].event;
-            // NOTE(rachit): Not sure if this assertion is necessary because
-            // only the event used in the start time should be bounded but
-            // adding it here nonetheless.
-            assert!(st_ev == end_ev, "Bundle ranges with different events");
-
             let len = range.end.sub(range.start, comp);
             let ev = &comp[st_ev];
             let delay = ev.delay.clone();
