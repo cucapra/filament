@@ -19,6 +19,10 @@ impl Ctx<CompOrExt> for Context {
     fn get(&self, idx: Idx<CompOrExt>) -> &CompOrExt {
         self.comps.get(idx)
     }
+
+    fn display(&self, _: Idx<CompOrExt>) -> String {
+        todo!("displaying CompOrExt")
+    }
 }
 
 pub enum CompOrExt {
@@ -197,17 +201,9 @@ impl Component {
 
 /// Implement methods to display various values bound by the component
 impl Component {
-    /// Display a parameter by printing its source-level name (if available)
-    pub fn display_param(&self, param: ParamIdx) -> String {
-        let Info::Param { name, .. } = self.get(self.get(param).info) else {
-            unreachable!("Expected param info");
-        };
-        format!("#{name}")
-    }
-
     fn display_expr_helper(&self, expr: ExprIdx, ctx: ECtx) -> String {
         match self.get(expr) {
-            Expr::Param(p) => self.display_param(*p),
+            Expr::Param(p) => self.display(*p),
             Expr::Concrete(n) => format!("{n}"),
             Expr::Bin { op, lhs, rhs } => {
                 let inner = ECtx::from(*op);
@@ -235,11 +231,6 @@ impl Component {
         }
     }
 
-    /// Display an expression by recursively displaying its subexpressions.
-    pub fn display_expr(&self, expr: ExprIdx) -> String {
-        self.display_expr_helper(expr, ECtx::Add)
-    }
-
     fn display_cmp<T>(
         &self,
         cmp: &CmpOp<T>,
@@ -261,28 +252,23 @@ impl Component {
 
     pub fn display_time(&self, time: TimeIdx) -> String {
         let Time { event, offset } = self.get(time);
-        format!("{event}+{}", self.display_expr(*offset))
+        format!("{event}+{}", self.display(*offset))
     }
 
     fn display_time_sub(&self, ts: TimeSub) -> String {
         match ts {
-            TimeSub::Unit(e) => self.display_expr(e),
+            TimeSub::Unit(e) => self.display(e),
             TimeSub::Sym { l, r } => {
                 format!("({} - {})", self.display_time(l), self.display_time(r))
             }
         }
     }
 
-    /// Display a proposition by recursively displaying its subexpressions.
-    pub fn display_prop(&self, prop: PropIdx) -> String {
-        self.display_prop_helper(prop, PCtx::Implies)
-    }
-
     fn display_prop_helper(&self, prop: PropIdx, ctx: PCtx) -> String {
         match self.get(prop) {
             Prop::True => "true".to_string(),
             Prop::False => "false".to_string(),
-            Prop::Cmp(c) => self.display_cmp(c, ctx, |e| self.display_expr(e)),
+            Prop::Cmp(c) => self.display_cmp(c, ctx, |e| self.display(e)),
             Prop::TimeCmp(cmp) => {
                 self.display_cmp(cmp, ctx, |t| self.display_time(t))
             }
@@ -334,6 +320,14 @@ impl Ctx<Port> for Component {
     fn get(&self, idx: PortIdx) -> &Port {
         self.ports.get(idx)
     }
+
+    fn display(&self, idx: PortIdx) -> String {
+        let port = self.get(idx);
+        let Info::Port { name, .. } = self.get(port.info) else {
+            unreachable!("Expected port info")
+        };
+        name.to_string()
+    }
 }
 
 impl Ctx<Param> for Component {
@@ -343,6 +337,13 @@ impl Ctx<Param> for Component {
 
     fn get(&self, idx: ParamIdx) -> &Param {
         self.params.get(idx)
+    }
+
+    fn display(&self, idx: ParamIdx) -> String {
+        let Info::Param { name, .. } = self.get(self.get(idx).info) else {
+            unreachable!("Expected param info");
+        };
+        format!("#{name}")
     }
 }
 
@@ -354,6 +355,14 @@ impl Ctx<Event> for Component {
     fn get(&self, idx: EventIdx) -> &Event {
         self.events.get(idx)
     }
+
+    fn display(&self, idx: Idx<Event>) -> String {
+        let ev = self.get(idx);
+        let Info::Event { name, .. } = self.get(ev.info) else {
+            unreachable!("Expccted event info")
+        };
+        name.to_string()
+    }
 }
 
 impl Ctx<Instance> for Component {
@@ -363,6 +372,10 @@ impl Ctx<Instance> for Component {
 
     fn get(&self, idx: InstIdx) -> &Instance {
         self.instances.get(idx)
+    }
+
+    fn display(&self, _: Idx<Instance>) -> String {
+        todo!("displaying instances")
     }
 }
 
@@ -374,6 +387,10 @@ impl Ctx<Invoke> for Component {
     fn get(&self, idx: InvIdx) -> &Invoke {
         self.invocations.get(idx)
     }
+
+    fn display(&self, _: Idx<Invoke>) -> String {
+        todo!("displaying invocations")
+    }
 }
 
 impl Ctx<Expr> for Component {
@@ -383,6 +400,10 @@ impl Ctx<Expr> for Component {
 
     fn get(&self, idx: ExprIdx) -> &Expr {
         self.exprs.get(idx)
+    }
+
+    fn display(&self, idx: Idx<Expr>) -> String {
+        self.display_expr_helper(idx, ECtx::Add)
     }
 }
 
@@ -394,6 +415,11 @@ impl Ctx<Time> for Component {
     fn get(&self, idx: TimeIdx) -> &Time {
         self.times.get(idx)
     }
+
+    fn display(&self, idx: Idx<Time>) -> String {
+        let &Time { event, offset } = self.get(idx);
+        format!("{}+{}", self.display(event), self.display(offset))
+    }
 }
 
 impl Ctx<Prop> for Component {
@@ -404,6 +430,10 @@ impl Ctx<Prop> for Component {
     fn get(&self, idx: Idx<Prop>) -> &Prop {
         self.props.get(idx)
     }
+
+    fn display(&self, idx: Idx<Prop>) -> String {
+        self.display_prop_helper(idx, PCtx::Implies)
+    }
 }
 
 impl Ctx<Info> for Component {
@@ -413,6 +443,10 @@ impl Ctx<Info> for Component {
 
     fn get(&self, idx: InfoIdx) -> &Info {
         self.info.get(idx)
+    }
+
+    fn display(&self, _: Idx<Info>) -> String {
+        unreachable!("info objects cannot be displayed")
     }
 }
 

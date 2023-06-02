@@ -156,33 +156,12 @@ impl<T: Display> Display for IndexStore<T> {
 /// In addition to adding and getting values, the context also supports applying
 /// a substitution to a value.
 pub trait Ctx<T> {
-    /// Add a new, interned value to the context
+    /// Add a new value to the context
     fn add(&mut self, val: T) -> Idx<T>;
     /// Get the information associated with a value
     fn get(&self, idx: Idx<T>) -> &T;
-}
-
-impl<T> Ctx<T> for Interned<T>
-where
-    T: Eq + std::hash::Hash,
-{
-    fn add(&mut self, val: T) -> Idx<T> {
-        self.intern(val)
-    }
-
-    fn get(&self, idx: Idx<T>) -> &T {
-        self.get(idx)
-    }
-}
-
-impl<T> Ctx<T> for IndexStore<T> {
-    fn add(&mut self, val: T) -> Idx<T> {
-        self.add(val)
-    }
-
-    fn get(&self, idx: Idx<T>) -> &T {
-        self.get(idx)
-    }
+    /// Display the value
+    fn display(&self, idx: Idx<T>) -> String;
 }
 
 /// A map that stores information of type [V] and is indexed by

@@ -15,7 +15,7 @@ impl Assign {
     fn display(&self, ctx: &ir::Component) -> String {
         self.0
             .iter()
-            .map(|(k, v)| format!("{} = {v}", ctx.display_param(*k),))
+            .map(|(k, v)| format!("{} = {v}", ctx.display(*k),))
             .join(", ")
     }
 }
@@ -324,7 +324,7 @@ impl Visitor for Discharge {
                 diag = diag.with_notes(vec![
                     format!(
                         "Cannot prove constraint {}",
-                        comp.display_prop(f.prop.consequent(comp))
+                        comp.display(f.prop.consequent(comp))
                     ),
                     format!("Counterexample: {}", assign.display(comp)),
                 ]);

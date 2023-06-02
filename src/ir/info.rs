@@ -1,4 +1,4 @@
-use super::{Component, ExprIdx, Range};
+use super::{Component, Ctx, ExprIdx, Range};
 use crate::{ast, utils::GPosIdx};
 use codespan_reporting::diagnostic::Diagnostic;
 
@@ -242,7 +242,7 @@ impl Reason {
                     access_loc.primary().with_message("out of bounds access");
                 let def = def_loc.secondary().with_message(format!(
                     "bundle's length is {}",
-                    ctx.display_expr(*bundle_len)
+                    ctx.display(*bundle_len)
                 ));
                 Diagnostic::error()
                     .with_message("out of bounds access of bundle")
@@ -254,8 +254,8 @@ impl Reason {
                 dst_width,
                 src_width,
             } => {
-                let sw = ctx.display_expr(*src_width);
-                let dw = ctx.display_expr(*dst_width);
+                let sw = ctx.display(*src_width);
+                let dw = ctx.display(*dst_width);
                 let src = src_loc
                     .secondary()
                     .with_message(format!("source's length is {sw}",));
