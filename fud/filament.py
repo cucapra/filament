@@ -119,10 +119,16 @@ class CocotbExecBase(Stage):
                     if isinstance(val,str):
                         if val.startswith('0b'): # binary format
                             binary_data = val[2:]
-                            conv = int(binary_data,2)
+                            try:
+                                conv = int(binary_data,2)
+                            except ValueError:
+                                raise errors.InvalidNumericType("\"" + str(val) + "\"" + " in " + data)
                         elif val.startswith('0x'): # hex format
                             binary_data = val[2:]
-                            conv = int(binary_data,16)
+                            try: 
+                                conv = int(binary_data,16)
+                            except ValueError:
+                                raise errors.InvalidNumericType("\"" + str(val) + "\"" + " in " + data)
                         else: # none of the above -> unsupported
                             raise errors.InvalidNumericType("\"" + str(val) + "\"" + " in " + data)
                     else: # already in decimal
