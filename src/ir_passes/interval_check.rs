@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::ir::{self, Ctx};
 use crate::ir_visitor::{Action, Visitor};
-use crate::utils;
+use crate::utils::{self, GPosIdx};
 
 #[derive(Default)]
 /// Filament's core interval checking algorithm. At a high-level it ensures that:
@@ -20,6 +20,23 @@ use crate::utils;
 /// It is the job of a latter pass to ensure that the assertions are discharged.
 pub struct IntervalCheck;
 
+impl IntervalCheck {
+    /// Constraints to ensure that the range is well-formed, i.e., the end of
+    /// the range is strictly greater than the start.
+    fn range_wf(
+        &mut self,
+        range: &ir::Range,
+        loc: GPosIdx,
+        comp: &mut ir::Component,
+    ) {
+        let &ir::Range { start, end } = range;
+        let prop = end.gt(start, comp);
+        let reason = comp
+            .add(ir::Reason::well_formed_interval(loc, (start, end)).into());
+        comp.assert(prop, reason);
+    }
+}
+
 impl Visitor for IntervalCheck {
     fn start(&mut self, comp: &mut ir::Component) -> Action {
         // For each bundle, add an assertion to ensure that availability of the
@@ -29,23 +46,43 @@ impl Visitor for IntervalCheck {
         let ranges = comp
             .ports
             .iter()
-            .map(|(_, p)| p.live.range.clone())
+            .map(|(_, p)| (p.live.clone(), p.info))
             .collect_vec();
 
         let mut cmds = Vec::with_capacity(comp.ports.len());
-        for range in ranges {
+        for (live, info) in ranges {
+            let ir::Info::Port { live_loc, .. } = comp[info] else {
+                unreachable!("expected port info")
+            };
+            let range = live.range;
+            // Require that the range is well-formed
+            self.range_wf(&range, live_loc, comp);
+
             let st_ev = comp[range.start].event;
             let end_ev = comp[range.end].event;
             // NOTE(rachit): Not sure if this assertion is necessary because
             // only the event used in the start time should be bounded but
             // adding it here nonetheless.
             assert!(st_ev == end_ev, "Bundle ranges with different events");
+
             let len = range.end.sub(range.start, comp);
-            let delay = &comp[st_ev].delay.clone();
+            let ev = &comp[st_ev];
+            let delay = ev.delay.clone();
+            let ir::Info::Event { delay_loc, .. } = comp[ev.info] else {
+                unreachable!("expected event info")
+            };
+            let param = comp.get(live.idx);
+            let ir::Info::Param { bind_loc, .. } = comp[param.info] else {
+                unreachable!("expected param info")
+            };
+            let zero = comp.num(0);
             let reason = comp.add(
-                ir::Reason::misc(
-                    "bundle liveness must be less than delay",
-                    utils::GPosIdx::UNKNOWN,
+                ir::Reason::bundle_delay(
+                    delay_loc,
+                    live_loc,
+                    len.clone(),
+                    bind_loc,
+                    (zero, live.len),
                 )
                 .into(),
             );

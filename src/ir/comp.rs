@@ -251,15 +251,6 @@ impl Component {
         }
     }
 
-    fn display_time_sub(&self, ts: TimeSub) -> String {
-        match ts {
-            TimeSub::Unit(e) => self.display(e),
-            TimeSub::Sym { l, r } => {
-                format!("({} - {})", self.display(l), self.display(r))
-            }
-        }
-    }
-
     fn display_prop_helper(&self, prop: PropIdx, ctx: PCtx) -> String {
         match self.get(prop) {
             Prop::True => "true".to_string(),
@@ -269,7 +260,7 @@ impl Component {
                 self.display_cmp(cmp, ctx, |t| self.display(t))
             }
             Prop::TimeSubCmp(cmp) => {
-                self.display_cmp(cmp, ctx, |t| self.display_time_sub(t))
+                self.display_cmp(cmp, ctx, |t| self.display_timesub(&t))
             }
             Prop::Not(p) => {
                 format!("!{}", self.display_prop_helper(*p, PCtx::Not))
@@ -303,6 +294,16 @@ impl Component {
                 } else {
                     format!("{} => {}", l, r)
                 }
+            }
+        }
+    }
+
+    /// Display a [super::TimeSub] expression in surface-level syntax
+    pub fn display_timesub(&self, ts: &TimeSub) -> String {
+        match ts {
+            TimeSub::Unit(e) => self.display(*e),
+            TimeSub::Sym { l, r } => {
+                format!("|{} - {}|", self.display(*l), self.display(*r))
             }
         }
     }

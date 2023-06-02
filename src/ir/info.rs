@@ -1,4 +1,4 @@
-use super::{Component, Ctx, ExprIdx, Range};
+use super::{Component, Ctx, ExprIdx, Range, TimeIdx, TimeSub};
 use crate::{ast, utils::GPosIdx};
 use codespan_reporting::diagnostic::Diagnostic;
 
@@ -116,14 +116,8 @@ pub enum Reason {
         /// Location of the constraint
         constraint_loc: GPosIdx,
     },
-    /// Assertion requiring that the source is available for at least as long as
-    /// the destination requires
-    Liveness {
-        dst_loc: GPosIdx,
-        src_loc: GPosIdx,
-        dst_liveness: Range,
-        src_liveness: Range,
-    },
+
+    // ============ Constraints from type checking ==============
     /// Require that lengths of bundles match
     BundleLenMatch {
         dst_loc: GPosIdx,
@@ -140,6 +134,34 @@ pub enum Reason {
         /// Length of the bundle
         bundle_len: ExprIdx,
     },
+
+    // ========== Constraints from interval checking ============
+    /// Assertion requiring that the source is available for at least as long as
+    /// the destination requires
+    Liveness {
+        dst_loc: GPosIdx,
+        src_loc: GPosIdx,
+        dst_liveness: Range,
+        src_liveness: Range,
+    },
+    /// Bundle's delay must be less than the event's
+    BundleDelay {
+        event_delay_loc: GPosIdx,
+        bundle_range_loc: GPosIdx,
+        bundle_live: TimeSub,
+        /// The bundle paramemter's binding location
+        param_loc: GPosIdx,
+        /// The start and end of index's range
+        param_range: (ExprIdx, ExprIdx),
+    },
+    /// Well formed time interval
+    WellFormedInterval {
+        /// The range's location
+        range_loc: GPosIdx,
+        /// The range's start and end
+        range: (TimeIdx, TimeIdx),
+    },
+    // =============== Generic Constraints =======================
     /// A simple reason
     Misc { reason: String, def_loc: GPosIdx },
 }
@@ -149,6 +171,22 @@ impl Reason {
         Self::Misc {
             reason: r.to_string(),
             def_loc,
+        }
+    }
+
+    pub fn bundle_delay(
+        event_delay_loc: GPosIdx,
+        bundle_range_loc: GPosIdx,
+        bundle_live: TimeSub,
+        param_loc: GPosIdx,
+        param_range: (ExprIdx, ExprIdx),
+    ) -> Self {
+        Self::BundleDelay {
+            event_delay_loc,
+            bundle_range_loc,
+            bundle_live,
+            param_loc,
+            param_range,
         }
     }
 
@@ -214,6 +252,13 @@ impl Reason {
             dst_width,
             src_width,
         }
+    }
+
+    pub fn well_formed_interval(
+        range_loc: GPosIdx,
+        range: (TimeIdx, TimeIdx),
+    ) -> Self {
+        Self::WellFormedInterval { range_loc, range }
     }
 }
 
@@ -283,6 +328,41 @@ impl Reason {
                 Diagnostic::error()
                     .with_message("source port does not provide value for as long as destination requires")
                     .with_labels(vec![sl, dl])
+            }
+            Reason::BundleDelay {
+                event_delay_loc,
+                bundle_range_loc,
+                bundle_live,
+                param_loc,
+                param_range,
+            } => {
+                let wire = bundle_range_loc.primary().with_message(format!(
+                    "available for {}",
+                    ctx.display_timesub(bundle_live)
+                ));
+                let event =
+                    event_delay_loc.secondary().with_message("event's delay");
+                let param = param_loc.secondary().with_message(format!(
+                    "takes values in [{}, {})",
+                    ctx.display(param_range.0),
+                    ctx.display(param_range.1)
+                ));
+                Diagnostic::error()
+                    .with_message("bundle's availability is greater than the delay of the event")
+                    .with_labels(vec![wire, event, param])
+            }
+            Reason::WellFormedInterval {
+                range_loc,
+                range: (start, end),
+            } => {
+                let label = range_loc
+                    .primary()
+                    .with_message(format!("interval's end `{}' is not strictly greater than the start `{}", ctx.display(*end), ctx.display(*start)));
+                Diagnostic::error()
+                    .with_message(
+                        "interval's must be strictly greater than the start",
+                    )
+                    .with_labels(vec![label])
             }
             _ => todo!(),
         }
