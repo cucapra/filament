@@ -105,9 +105,10 @@ class CocotbExecBase(Stage):
             Creates a new file inside dir, which should be a temp directory.
             """
             data = str(data_path)
-            
+            print("\ndir name: " + dir.name)
             file_orig = open(data)
-            file_new = open((Path(dir.name) / Path(data).stem).name + ".json","w")
+            print("\nfile_new: " + dir.name + Path(data).stem + ".json")
+            file_new = open(dir.name + Path(data).stem + ".json", "w")
             data_dict = json.load(file_orig)
 
             # iterate through data
