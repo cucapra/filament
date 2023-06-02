@@ -1,5 +1,9 @@
 use super::{ExprIdx, Range};
-use crate::{ast, utils::GPosIdx};
+use crate::{
+    ast,
+    utils::{GPosIdx, GlobalPositionTable},
+};
+use codespan_reporting::diagnostic::{Diagnostic, Label, LabelStyle};
 
 #[derive(Default)]
 /// Information associated with the IR.
@@ -170,5 +174,26 @@ impl Reason {
 impl From<Reason> for Info {
     fn from(r: Reason) -> Self {
         Self::Assert(r)
+    }
+}
+
+impl<'a> From<&'a Reason> for Diagnostic<usize> {
+    fn from(r: &'a Reason) -> Self {
+        let table = GlobalPositionTable::as_ref();
+        match r {
+            Reason::Misc { reason, def_loc } => {
+                let pos = table.get_pos(def_loc.0);
+                let label = Label::new(
+                    LabelStyle::Primary,
+                    pos.file.get(),
+                    pos.start..pos.end,
+                )
+                .with_message(reason.clone());
+                Diagnostic::error()
+                    .with_message(reason)
+                    .with_labels(vec![label])
+            }
+            _ => todo!(),
+        }
     }
 }

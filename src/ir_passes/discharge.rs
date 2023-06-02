@@ -1,10 +1,13 @@
 use crate::ir::Ctx;
 use crate::ir_visitor::{Action, Visitor};
+use crate::utils::GlobalPositionTable;
 use crate::{ast, ir, utils};
+use codespan_reporting::{diagnostic as cr, term};
 use easy_smt as smt;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::iter;
+use term::termcolor::{ColorChoice, StandardStream};
 
 type Assign = Vec<(ir::ParamIdx, String)>;
 
@@ -28,6 +31,8 @@ pub struct Discharge {
     prop_map: ir::DenseIndexInfo<ir::Prop, smt::SExpr>,
     // Propositions that have already been checked
     checked: HashMap<ir::PropIdx, Option<Assign>>,
+    // Diagnostics to be reported
+    diagnostics: Vec<cr::Diagnostic<usize>>,
 }
 
 impl Default for Discharge {
@@ -48,6 +53,7 @@ impl Default for Discharge {
             ev_map: Default::default(),
             expr_map: Default::default(),
             checked: Default::default(),
+            diagnostics: Default::default(),
         };
 
         out.define_funcs();
@@ -299,16 +305,11 @@ impl Visitor for Discharge {
                 );
                 Action::Change(vec![comp.assume(f.prop, reason).into()])
             }
-            Some(assign) => {
-                log::error!(
-                    "fact `{}` is not valid. Assignment: {}",
-                    comp.display_prop(f.prop.consequent(comp)),
-                    assign
-                        .iter()
-                        .map(|(k, v)| format!("{k}={v}",))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                );
+            Some(_) => {
+                let ir::Info::Assert(reason) = comp.get(f.reason) else {
+                    unreachable!("expected assert reason")
+                };
+                self.diagnostics.push(reason.into());
                 Action::Continue
             }
         }
@@ -336,5 +337,26 @@ impl Visitor for Discharge {
             .and_then(|| self.visit_cmds(&mut l.body, comp));
         self.scoped = orig;
         out
+    }
+
+    fn end(&mut self, _: &mut ir::Component) {
+        assert!(!self.scoped, "unbalanced scopes");
+        // Report all the errors
+        let is_tty = atty::is(atty::Stream::Stderr);
+        let writer = StandardStream::stderr(if is_tty {
+            ColorChoice::Always
+        } else {
+            ColorChoice::Never
+        });
+        let table = GlobalPositionTable::as_ref();
+        for diag in &self.diagnostics {
+            term::emit(
+                &mut writer.lock(),
+                &term::Config::default(),
+                table.files(),
+                diag,
+            )
+            .unwrap()
+        }
     }
 }
