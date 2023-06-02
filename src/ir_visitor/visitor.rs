@@ -139,11 +139,16 @@ where
         }
     }
 
+    /// Perform action before visiting a sequence of commands which represent a scope.
+    fn start_cmds(&mut self, _: &mut Vec<ir::Command>, _: &mut ir::Component) {}
+
     fn visit_cmds(
         &mut self,
         cmds: &mut Vec<ir::Command>,
         comp: &mut ir::Component,
     ) -> Action {
+        self.start_cmds(cmds, comp);
+
         let cs = std::mem::take(cmds);
         let mut n_cmds = Vec::with_capacity(cs.len());
         let mut iter = cs.into_iter();

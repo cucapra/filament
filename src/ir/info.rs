@@ -367,7 +367,7 @@ impl Reason {
                     .with_message(format!("interval's end `{}' is not strictly greater than the start `{}", ctx.display(*end), ctx.display(*start)));
                 Diagnostic::error()
                     .with_message(
-                        "interval's must be strictly greater than the start",
+                        "interval's end must be strictly greater than the start",
                     )
                     .with_labels(vec![label])
             }

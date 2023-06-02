@@ -1,34 +1,38 @@
----CODE---
-1
 ---STDERR---
-error: length of bundle wire availability must be less than event's delay
+error: bundle's availability is greater than the delay of the event
   ┌─ tests/errors/bundle-delay.fil:2:20
   │
 1 │ comp Bar[#P, #K]<G:1>(
   │                    - event's delay
 2 │    in[#K]: for<#j> @[G+#j, G+#K] 16,
-  │                 -  ^^^^^^^^^^^^^ bundle's liveness is |#K-#j|
+  │                 -  ^^^^^^^^^^^^^ available for #K-#j
   │                 │   
-  │                 parameter ranges from 0 to #K-1
+  │                 takes values in [0, #K)
+  │
+  = Cannot prove constraint: 1 >= #K-#j
+  = Counterexample: #K = 2, #j = 0
 
-error: length of bundle wire availability must be less than event's delay
+error: interval's end must be strictly greater than the start
+  ┌─ tests/errors/bundle-delay.fil:6:29
+  │
+6 │     bundle f[#P+1]: for<#k> @[G+#k, G+#P] 16;
+  │                             ^^^^^^^^^^^^^ interval's end `G+#P' is not strictly greater than the start `G+#k
+  │
+  = Cannot prove constraint: #P > #k
+  = Counterexample: #P = 0, #k = 0
+
+error: bundle's availability is greater than the delay of the event
   ┌─ tests/errors/bundle-delay.fil:6:29
   │
 1 │ comp Bar[#P, #K]<G:1>(
   │                    - event's delay
   ·
 6 │     bundle f[#P+1]: for<#k> @[G+#k, G+#P] 16;
-  │                          -  ^^^^^^^^^^^^^ bundle's liveness is |#P-#k|
+  │                          -  ^^^^^^^^^^^^^ available for #P-#k
   │                          │   
-  │                          parameter ranges from 0 to #P+1-1
-
-error: bundle's liveness interval is malformed: end is not strictly greater than start
-  ┌─ tests/errors/bundle-delay.fil:6:29
+  │                          takes values in [0, 1+#P)
   │
-6 │     bundle f[#P+1]: for<#k> @[G+#k, G+#P] 16;
-  │                          -  ^^^^^^^^^^^^^ bundle's liveness is |#P-#k|
-  │                          │   
-  │                          parameter ranges from 0 to #P+1-1
+  = Cannot prove constraint: 1 >= #P-#k
+  = Counterexample: #P = 2, #k = 0
 
-Compilation failed with 3 errors.
-Run with --show-models to generate assignments for failing constraints.
+Compilation failed with 3 errors
