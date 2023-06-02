@@ -263,7 +263,7 @@ impl Reason {
                     .primary()
                     .with_message(format!("destination's length is {dw}",));
                 Diagnostic::error()
-                    .with_message(format!("mismatched bundle lengths: required bundle of size `{dw}' but found bundle of size `{sw}'"))
+                    .with_message(format!("required bundle of size `{dw}' but found bundle of size `{sw}'"))
                     .with_labels(vec![src, dst])
             }
             Reason::Liveness {
@@ -274,11 +274,11 @@ impl Reason {
             } => {
                 let sl = src_loc.primary().with_message(format!(
                     "source is available for {}",
-                    src_liveness
+                    ctx.display_range(src_liveness)
                 ));
                 let dl = dst_loc.secondary().with_message(format!(
                     "requires value for {}",
-                    dst_liveness
+                    ctx.display_range(dst_liveness)
                 ));
                 Diagnostic::error()
                     .with_message("source port does not provide value for as long as destination requires")

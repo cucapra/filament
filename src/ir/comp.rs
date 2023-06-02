@@ -1,7 +1,8 @@
 use super::{
     CmpOp, Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
     IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke,
-    Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeIdx, TimeSub,
+    Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Range, Time, TimeIdx,
+    TimeSub,
 };
 use crate::{ast, utils::Idx};
 use itertools::Itertools;
@@ -250,16 +251,11 @@ impl Component {
         }
     }
 
-    pub fn display_time(&self, time: TimeIdx) -> String {
-        let Time { event, offset } = self.get(time);
-        format!("{event}+{}", self.display(*offset))
-    }
-
     fn display_time_sub(&self, ts: TimeSub) -> String {
         match ts {
             TimeSub::Unit(e) => self.display(e),
             TimeSub::Sym { l, r } => {
-                format!("({} - {})", self.display_time(l), self.display_time(r))
+                format!("({} - {})", self.display(l), self.display(r))
             }
         }
     }
@@ -270,7 +266,7 @@ impl Component {
             Prop::False => "false".to_string(),
             Prop::Cmp(c) => self.display_cmp(c, ctx, |e| self.display(e)),
             Prop::TimeCmp(cmp) => {
-                self.display_cmp(cmp, ctx, |t| self.display_time(t))
+                self.display_cmp(cmp, ctx, |t| self.display(t))
             }
             Prop::TimeSubCmp(cmp) => {
                 self.display_cmp(cmp, ctx, |t| self.display_time_sub(t))
@@ -309,6 +305,11 @@ impl Component {
                 }
             }
         }
+    }
+
+    /// Surface-level visualization for a range
+    pub fn display_range(&self, r: &Range) -> String {
+        format!("@[{}, {}]", self.display(r.start), self.display(r.end))
     }
 }
 
