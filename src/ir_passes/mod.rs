@@ -1,6 +1,7 @@
 mod discharge;
 mod hoist_facts;
 mod interval_check;
+mod prop_simplify;
 mod type_check;
 
 pub use discharge::Discharge;

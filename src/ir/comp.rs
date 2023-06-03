@@ -207,7 +207,9 @@ impl Component {
                 let inner = ECtx::from(*op);
                 let left = self.display_expr_helper(*lhs, inner);
                 let right = self.display_expr_helper(*rhs, inner);
-                if inner < ctx {
+                // If context binds more tightly than the inner operator,
+                // wrap the inner expression in parens.
+                if ctx > inner {
                     format!("({}{}{})", left, op, right)
                 } else {
                     format!("{}{}{}", left, op, right)
@@ -222,7 +224,7 @@ impl Component {
                     "{fn_str}({args})",
                     args = args
                         .iter()
-                        .map(|a| self.display_expr_helper(*a, ECtx::Add))
+                        .map(|a| self.display_expr_helper(*a, ECtx::default()))
                         .join(", ")
                 )
             }
@@ -402,7 +404,7 @@ impl Ctx<Expr> for Component {
     }
 
     fn display(&self, idx: Idx<Expr>) -> String {
-        self.display_expr_helper(idx, ECtx::Add)
+        self.display_expr_helper(idx, ECtx::default())
     }
 }
 
@@ -466,40 +468,41 @@ where
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 /// Track the current context within an expression for pretty printing
 enum ECtx {
+    #[default]
     /// Inside an addition priority expression (+ or -)
     Add,
+    /// Substraction priority expression (-)
+    Sub,
     /// Inside an multiplication priority expression (* or / or %)
     Mul,
-    #[allow(dead_code)]
-    /// Inside a function application
-    Func,
 }
 
 impl From<ast::Op> for ECtx {
     fn from(op: ast::Op) -> Self {
         match op {
-            ast::Op::Add | ast::Op::Sub => ECtx::Add,
+            ast::Op::Add => ECtx::Add,
+            ast::Op::Sub => ECtx::Sub,
             ast::Op::Mul | ast::Op::Div | ast::Op::Mod => ECtx::Mul,
         }
     }
 }
 
-// Ordering for expression printing context. If other is less than this,
-// then we are in a tightly binding context and need to add parens.
+// Ordering for expression printing context.
+// If `self > other`, then that means that `self` binds tigher than `other`.
 impl Ord for ECtx {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         use std::cmp::Ordering::*;
         match (self, other) {
-            // Functions are the tightest
-            (ECtx::Func, ECtx::Func) => Equal,
-            (ECtx::Func, _) => Greater,
             // Mults are next
             (ECtx::Mul, ECtx::Mul) => Equal,
-            (ECtx::Mul, ECtx::Func) => Less,
             (ECtx::Mul, _) => Greater,
+            // Subs are next
+            (ECtx::Sub, ECtx::Sub) => Equal,
+            (ECtx::Sub, ECtx::Mul) => Less,
+            (ECtx::Sub, _) => Greater,
             // Adds are last
             (ECtx::Add, ECtx::Add) => Equal,
             (ECtx::Add, _) => Less,

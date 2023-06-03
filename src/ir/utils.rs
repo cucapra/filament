@@ -208,6 +208,11 @@ impl<T, V> DenseIndexInfo<T, V> {
     pub fn get(&self, idx: Idx<T>) -> &V {
         &self.store[idx.get()]
     }
+
+    /// Check if the map contains the given index.
+    pub fn contains(&self, idx: Idx<T>) -> bool {
+        idx.get() < self.store.len()
+    }
 }
 
 impl<T, V> std::ops::Index<Idx<T>> for DenseIndexInfo<T, V> {
