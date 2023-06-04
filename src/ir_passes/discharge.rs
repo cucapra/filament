@@ -19,7 +19,13 @@ impl Assign {
     fn display(&self, ctx: &ir::Component) -> String {
         self.0
             .iter()
-            .map(|(k, v)| format!("{} = {v}", ctx.display(*k),))
+            .filter_map(|(k, v)| {
+                // Attempt to parse value as a number
+                match v.parse::<u64>() {
+                    Ok(v) if v == 0 => None,
+                    _ => Some(format!("{} = {v}", ctx.display(*k))),
+                }
+            })
             .join(", ")
     }
 }
@@ -333,7 +339,7 @@ impl Visitor for Discharge {
                 )]);
                 if !assign.is_empty() {
                     diag = diag.with_notes(vec![format!(
-                        "Counterexample: {}",
+                        "Counterexample: {} (unmentioned parameters are 0)",
                         assign.display(comp)
                     )]);
                 }

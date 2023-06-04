@@ -31,7 +31,7 @@ impl Foldable<ParamIdx, ExprIdx> for Range {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 /// The context in which a port was defined.
 pub enum PortOwner {
     /// The port is defined in the signature

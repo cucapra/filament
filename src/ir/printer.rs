@@ -278,7 +278,6 @@ impl Printer {
         for (idx, param) in params.iter() {
             Printer::local_param(idx, param, 2, c, f)?;
         }
-        /*
         Printer::interned(exprs, "expr", 2, f)?;
         for (idx, event) in events.iter() {
             Printer::event(idx, event, 2, f)?;
@@ -288,7 +287,6 @@ impl Printer {
         for (idx, port) in ports.iter() {
             Printer::local_port(idx, port, 2, f)?;
         }
-        */
         Printer::index_store(instances, "instance", 2, f)?;
         for (idx, invoke) in invocations.iter() {
             Printer::invoke(idx, invoke, 2, f)?;

@@ -359,11 +359,12 @@ impl Ctx<Event> for Component {
     }
 
     fn display(&self, idx: Idx<Event>) -> String {
-        let ev = self.get(idx);
-        let Info::Event { name, .. } = self.get(ev.info) else {
-            unreachable!("Expccted event info")
-        };
-        name.to_string()
+        format!("{idx}")
+        // let ev = self.get(idx);
+        // let Info::Event { name, .. } = self.get(ev.info) else {
+        //     unreachable!("Expccted event info")
+        // };
+        // name.to_string()
     }
 }
 

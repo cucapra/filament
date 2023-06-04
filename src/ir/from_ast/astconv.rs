@@ -1,5 +1,5 @@
 //! Convert the frontend AST to the IR.
-use super::{BuildCtx, ScopeVal, Sig, SigMap};
+use super::{BuildCtx, Sig, SigMap};
 use crate::ir::{
     Cmp, CompIdx, Ctx, EventIdx, ExprIdx, ParamIdx, PortIdx, PropIdx, TimeIdx,
 };
@@ -98,8 +98,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         self.comp.invocations.get_mut(inv).ports.extend(def_ports);
     }
 
-    /// Walk over the component and declare all instances, invocations, and all outputs defined by invocations.
-    /// This is needed because invocations are not required to be declared before they are used.
+    /// Declare the instances and invokes in the current scope.
+    /// This does not burrow into inner scopes.
     fn declare_cmd(&mut self, cmd: &ast::Command) {
         match cmd {
             ast::Command::Instance(inst) => {
@@ -108,19 +108,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             ast::Command::Invoke(inv) => {
                 self.declare_inv(inv);
             }
-            ast::Command::ForLoop(ast::ForLoop { idx, body, .. }) => self
-                .with_scope(|ctx| {
-                    let idx =
-                        ctx.param(idx.copy(), ir::ParamOwner::Local, idx.pos());
-                    ctx.declare_cmds(body);
-                }),
-            ast::Command::If(ast::If { then, alt, .. }) => {
-                self.declare_cmds(then);
-                self.declare_cmds(alt);
-            }
-            ast::Command::Fact(_)
+            ast::Command::ForLoop(_)
+            | ast::Command::If(_)
+            | ast::Command::Fact(_)
             | ast::Command::Connect(_)
-            | ast::Command::Bundle(_) => { /* Handled in second pass */ }
+            | ast::Command::Bundle(_) => {}
         }
     }
 
@@ -555,22 +547,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             srcs.len()
         );
 
-        // Events defined by the invoke
-        let ebs: Vec<ir::Command> = sig
-            .events
-            .iter()
-            .zip(abstract_vars.iter())
-            .map(|(event, arg)| {
-                let resolved = event
-                    .clone()
-                    .resolve_exprs(&param_binding)
-                    .resolve_event(&event_binding);
-                let arg = self.time(arg.inner().clone());
-                let event = self.event(resolved, ir::EventOwner::Inv { inv });
-                ir::EventBind { event, arg }.into()
-            })
-            .collect();
-
         // Constraints on the events from the signature
         let cons: Vec<ir::Command> = sig
             .event_cons
@@ -621,6 +597,22 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             )
         }
 
+        // Events defined by the invoke
+        let ebs: Vec<ir::Command> = sig
+            .events
+            .iter()
+            .zip(abstract_vars.iter())
+            .map(|(event, arg)| {
+                let resolved = event
+                    .clone()
+                    .resolve_exprs(&param_binding)
+                    .resolve_event(&event_binding);
+                let arg = self.time(arg.inner().clone());
+                let event = self.event(resolved, ir::EventOwner::Inv { inv });
+                ir::EventBind { event, arg }.into()
+            })
+            .collect();
+
         connects
             .into_iter()
             .chain(Some(ir::Command::from(inv)))
@@ -630,6 +622,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     fn commands(&mut self, cmds: Vec<ast::Command>) -> Vec<ir::Command> {
+        self.declare_cmds(&cmds);
         cmds.into_iter().flat_map(|c| self.command(c)).collect_vec()
     }
 
@@ -687,11 +680,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 let index = index.expr(self.comp);
                 let idx_start = index.gte(start, self.comp);
                 let idx_end = index.lt(end, self.comp);
-                let cmds = vec![
-                    self.comp.assume(idx_start, reason).into(),
-                    self.comp.assume(idx_end, reason).into(),
-                    l,
-                ];
+                let in_range = idx_start.and(idx_end, self.comp);
+                let cmds = vec![self.comp.assume(in_range, reason).into(), l];
                 cmds
             }
             ast::Command::If(ast::If { cond, then, alt }) => {
@@ -722,7 +712,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
         // First we declare all the ports
         let mut cmds = builder.sig(comp.sig);
-        builder.declare_cmds(&comp.body);
         let body_cmds = builder.commands(comp.body);
 
         cmds.reserve(ir_comp.ports.len() * 2);

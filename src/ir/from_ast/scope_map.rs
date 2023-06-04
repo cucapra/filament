@@ -2,24 +2,6 @@ use crate::{ast::Id, utils::Idx};
 use itertools::Itertools;
 use std::{collections::HashMap, fmt};
 
-/// A value stored in a particular scope level of a [ScopeMap]
-pub struct ScopeVal<V, K = Id> {
-    /// The scope-level with which this value is ascoiated
-    scope_level: u32,
-    name: K,
-    val: Idx<V>,
-}
-
-impl<V, K> ScopeVal<V, K> {
-    pub fn new(scope_level: u32, name: K, val: Idx<V>) -> Self {
-        Self {
-            scope_level,
-            name,
-            val,
-        }
-    }
-}
-
 /// Structure to track name bindings through scopes
 //
 // TODO(rachit): This can be redesigned to be a simple, arena-style vector along with another one to track the scope levels
@@ -46,21 +28,6 @@ where
         }
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.map.len() == 1 && self.map[0].is_empty()
-    }
-
-    /// Reset the scope map to the initial state
-    pub fn reset(&mut self) {
-        self.scope_level = 0;
-        self.map = vec![HashMap::new()];
-    }
-
-    /// Return the current scope level
-    pub fn scope_level(&self) -> u32 {
-        self.scope_level
-    }
-
     #[inline]
     /// Push a new scope level
     pub fn push(&mut self) {
@@ -76,17 +43,15 @@ where
     }
 
     /// Insert binding into the scope level and return the [ScopeIdx] value for it
-    pub fn insert(&mut self, id: K, idx: Idx<V>) -> ScopeVal<V, K> {
+    pub fn insert(&mut self, id: K, idx: Idx<V>)
+    where
+        K: std::fmt::Debug,
+    {
         let scope = self.map.last_mut().unwrap();
         if scope.contains_key(&id) {
-            panic!("key already in scope map");
+            panic!("key `{id:?}' already in scope map");
         }
-        scope.insert(id.clone(), idx);
-        ScopeVal {
-            scope_level: self.scope_level,
-            name: id,
-            val: idx,
-        }
+        scope.insert(id, idx);
     }
 
     /// Return the value by searching through the scope levels

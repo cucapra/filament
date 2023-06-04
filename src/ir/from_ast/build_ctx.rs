@@ -1,10 +1,8 @@
-use itertools::Itertools;
-
-use super::scope_map::ScopeVal;
 use super::ScopeMap;
 use crate::ast::{self, Id};
 use crate::ir::{self, CompIdx, DenseIndexInfo, PortIdx};
 use crate::utils;
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -82,13 +80,7 @@ pub(super) struct BuildCtx<'ctx, 'prog> {
 
     inv_map: ScopeMap<ir::Invoke>,
     port_map: ScopeMap<ir::Port, InvPort>,
-
-    // Parameters are declared during the first pass of the AST and used in both passes.
-    // The first pass manipulates the [param_map] and stores the parameters in [decl_param].
-    // Before the second pass, we "freeze" the param map and use [decl_param] to reassociate
-    // the parameter names with the correct ir::ParamIdx.
     param_map: ScopeMap<ir::Param>,
-    decl_param: Vec<ScopeVal<ir::Param>>,
 
     /// Index for generating unique names
     name_idx: u32,
@@ -99,7 +91,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             comp,
             sigs,
             name_idx: 0,
-            decl_param: Default::default(),
             param_map: ScopeMap::new(),
             event_map: ScopeMap::new(),
             port_map: ScopeMap::new(),
@@ -148,7 +139,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     pub fn get_param(&mut self, name: &Id) -> Option<ir::ParamIdx> {
-        self.param_map.get(&name).copied()
+        self.param_map.get(name).copied()
     }
 
     pub fn add_param(&mut self, name: Id, param: ir::ParamIdx) {
