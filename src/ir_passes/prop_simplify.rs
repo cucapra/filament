@@ -1,31 +1,44 @@
-use itertools::Itertools;
+use crate::{
+    ir::{self, Ctx},
+    ir_visitor::{Action, Visitor},
+};
 use linked_hash_set::LinkedHashSet;
 
-use crate::ir::{self, Ctx};
-/// Simplify proposition in a component
-pub struct PropSimplify {
+#[derive(Default)]
+/// Simplify propositions and expressions in a component
+pub struct Simplify {
     /// Simplified version of each proposition
     prop_map: ir::DenseIndexInfo<ir::Prop, ir::PropIdx>,
 }
 
-impl PropSimplify {
+/// Simplify propositions
+impl Simplify {
+    /// Get the simplified version of a proposition if present.
+    fn get_simpl(&self, prop: ir::PropIdx) -> ir::PropIdx {
+        if self.prop_map.contains(prop) {
+            self.prop_map[prop]
+        } else {
+            prop
+        }
+    }
+
     /// Get all the unique conjuncts of a proposition
     fn conjuncts(
         &self,
         prop: ir::PropIdx,
         c: &impl ir::Ctx<ir::Prop>,
-        acc: &mut LinkedHashSet<ir::PropIdx>,
+        acc: &mut Vec<ir::PropIdx>,
     ) {
         match c.get(prop) {
             ir::Prop::And(l, r) => {
-                // The subterms are guaranteed to exist in the prop_map because
-                // we simplify smaller terms before larger ones
-                self.conjuncts(self.prop_map[*l], c, acc);
-                self.conjuncts(self.prop_map[*r], c, acc);
+                // get_simpl call here because the constituent might have already
+                // simplified
+                self.conjuncts(self.get_simpl(*l), c, acc);
+                self.conjuncts(self.get_simpl(*r), c, acc);
             }
             ir::Prop::True => (),
             _ => {
-                acc.insert(prop);
+                acc.push(prop);
             }
         }
     }
@@ -39,8 +52,8 @@ impl PropSimplify {
     ) {
         match c.get(prop) {
             ir::Prop::Or(l, r) => {
-                self.disjuncts(self.prop_map[*l], c, acc);
-                self.disjuncts(self.prop_map[*r], c, acc);
+                self.disjuncts(self.get_simpl(*l), c, acc);
+                self.disjuncts(self.get_simpl(*r), c, acc);
             }
             ir::Prop::False => (),
             _ => {
@@ -56,7 +69,7 @@ impl PropSimplify {
         // Negative atoms we've already seen
         let mut neg = LinkedHashSet::new();
         let mut acc = ctx.add(ir::Prop::True);
-        for c in conj.into_iter().sorted() {
+        for c in conj.into_iter() {
             match ctx.get(c) {
                 ir::Prop::False => return c,
                 ir::Prop::Not(p) => {
@@ -81,7 +94,7 @@ impl PropSimplify {
         // Negative atoms we've already seen
         let mut neg = LinkedHashSet::new();
         let mut acc = ctx.add(ir::Prop::False);
-        for d in disj.into_iter().sorted() {
+        for d in disj.into_iter() {
             match ctx.get(d) {
                 ir::Prop::True => return d,
                 ir::Prop::Not(p) => {
@@ -99,22 +112,30 @@ impl PropSimplify {
         acc
     }
 
-    fn simplify(
+    fn simplify_prop(
         &mut self,
         prop: ir::PropIdx,
         ctx: &mut ir::Component,
     ) -> ir::PropIdx {
         if !self.prop_map.contains(prop) {
             let out = match ctx.get(prop).clone() {
-                ir::Prop::True | ir::Prop::False => prop,
-                ir::Prop::Cmp(_) => todo!(),
-                ir::Prop::TimeCmp(_) => todo!(),
-                ir::Prop::TimeSubCmp(_) => todo!(),
-                ir::Prop::Not(p) => self.simplify(p, ctx).not(ctx),
+                ir::Prop::True
+                | ir::Prop::False
+                | ir::Prop::Cmp(_)
+                | ir::Prop::TimeCmp(_)
+                | ir::Prop::TimeSubCmp(_) => prop,
+                ir::Prop::Not(p) => self.simplify_prop(p, ctx).not(ctx),
                 ir::Prop::And(_, _) => {
-                    let mut conj = LinkedHashSet::new();
+                    let mut conj = Vec::new();
                     self.conjuncts(prop, ctx, &mut conj);
-                    Self::prop_from_conjuncts(conj, ctx)
+                    let conj_len = conj.len();
+                    let set: LinkedHashSet<_> = conj.into_iter().collect();
+                    // Only perform the simplification if there are duplicates
+                    if set.len() == conj_len {
+                        prop
+                    } else {
+                        Self::prop_from_conjuncts(set, ctx)
+                    }
                 }
                 ir::Prop::Or(_, _) => {
                     let mut disj = LinkedHashSet::new();
@@ -124,21 +145,57 @@ impl PropSimplify {
                 ir::Prop::Implies(a, c) => {
                     // Compute the conjuncts for the antecedant and consequent and eliminate terms in the consequent that are in the antecedant
                     // NOTE(rachit): The simplification of `a` would already have computed the conjuncts so we're wasting some work here.
-                    let mut conj_a = LinkedHashSet::new();
+                    let mut conj_a = Vec::new();
                     self.conjuncts(a, ctx, &mut conj_a);
+                    let set_a = conj_a.into_iter().collect();
 
-                    let mut conj_c = LinkedHashSet::new();
+                    let mut conj_c = Vec::new();
                     self.conjuncts(c, ctx, &mut conj_c);
-                    let new_c = Self::prop_from_conjuncts(
-                        conj_c.difference(&conj_a).copied().collect(),
-                        ctx,
-                    );
+                    let set_c: LinkedHashSet<_> = conj_c.into_iter().collect();
 
-                    self.simplify(a, ctx).implies(new_c, ctx)
+                    let diff: LinkedHashSet<_> =
+                        set_c.difference(&set_a).copied().collect();
+                    if diff.len() == set_c.len() {
+                        prop
+                    } else {
+                        let new_c = Self::prop_from_conjuncts(diff, ctx);
+                        self.simplify_prop(a, ctx).implies(new_c, ctx)
+                    }
                 }
             };
             self.prop_map.push(prop, out)
         }
         self.prop_map[prop]
+    }
+}
+
+impl Visitor for Simplify {
+    fn start(&mut self, comp: &mut ir::Component) -> Action {
+        let old_len = comp.props.size();
+        // Populate the prop_map with the simplified version of each proposition.
+        for prop in comp.props.idx_iter() {
+            // Only simplify the old propositions
+            if prop.get() >= old_len {
+                break;
+            }
+
+            let out = self.simplify_prop(prop, comp);
+            if prop != out {
+                log::info!("{prop} ==> {out}");
+            } else {
+                log::debug!("{prop} unchanged");
+            }
+        }
+        Action::Continue
+    }
+
+    fn fact(
+        &mut self,
+        fact: &mut ir::Fact,
+        comp: &mut ir::Component,
+    ) -> Action {
+        // Simplify the proposition in the fact
+        fact.prop = self.simplify_prop(fact.prop, comp);
+        Action::Continue
     }
 }

@@ -1,5 +1,6 @@
 use itertools::Itertools;
 
+use super::scope_map::ScopeVal;
 use super::ScopeMap;
 use crate::ast::{self, Id};
 use crate::ir::{self, CompIdx, DenseIndexInfo, PortIdx};
@@ -65,7 +66,7 @@ impl std::ops::Index<&Id> for SigMap {
 type InvPort = (ir::PortOwner, Id);
 
 /// Context used while building the IR.
-pub struct BuildCtx<'ctx, 'prog> {
+pub(super) struct BuildCtx<'ctx, 'prog> {
     pub comp: &'ctx mut ir::Component,
     pub sigs: &'prog SigMap,
 
@@ -76,18 +77,29 @@ pub struct BuildCtx<'ctx, 'prog> {
         DenseIndexInfo<ir::Instance, (Rc<utils::Binding<ast::Expr>>, Id)>,
 
     // Mapping from names to IR nodes.
-    pub param_map: ScopeMap<ir::Param>,
     pub event_map: ScopeMap<ir::Event>,
     pub inst_map: ScopeMap<ir::Instance>,
 
     inv_map: ScopeMap<ir::Invoke>,
     port_map: ScopeMap<ir::Port, InvPort>,
+
+    // Parameters are declared during the first pass of the AST and used in both passes.
+    // The first pass manipulates the [param_map] and stores the parameters in [decl_param].
+    // Before the second pass, we "freeze" the param map and use [decl_param] to reassociate
+    // the parameter names with the correct ir::ParamIdx.
+    param_map: ScopeMap<ir::Param>,
+    decl_param: Vec<ScopeVal<ir::Param>>,
+
+    /// Index for generating unique names
+    name_idx: u32,
 }
 impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     pub fn new(comp: &'ctx mut ir::Component, sigs: &'prog SigMap) -> Self {
         Self {
             comp,
             sigs,
+            name_idx: 0,
+            decl_param: Default::default(),
             param_map: ScopeMap::new(),
             event_map: ScopeMap::new(),
             port_map: ScopeMap::new(),
@@ -95,6 +107,13 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             inv_map: ScopeMap::new(),
             inst_to_sig: DenseIndexInfo::default(),
         }
+    }
+
+    /// Generate a unique, new name for unused parameters
+    pub fn gen_name(&mut self) -> Id {
+        let name = format!("_{}", self.name_idx);
+        self.name_idx += 1;
+        Id::from(name)
     }
 
     /// Push a new scope level
@@ -126,6 +145,14 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let out = f(self);
         self.pop();
         out
+    }
+
+    pub fn get_param(&mut self, name: &Id) -> Option<ir::ParamIdx> {
+        self.param_map.get(&name).copied()
+    }
+
+    pub fn add_param(&mut self, name: Id, param: ir::ParamIdx) {
+        self.param_map.insert(name, param);
     }
 
     /// Add a new port to the ctx

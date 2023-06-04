@@ -341,10 +341,11 @@ impl Ctx<Param> for Component {
     }
 
     fn display(&self, idx: ParamIdx) -> String {
-        let Info::Param { name, .. } = self.get(self.get(idx).info) else {
-            unreachable!("Expected param info");
-        };
-        format!("#{name}")
+        format!("{idx}")
+        // let Info::Param { name, .. } = self.get(self.get(idx).info) else {
+        //     unreachable!("Expected param info");
+        // };
+        // format!("#{name}")
     }
 }
 

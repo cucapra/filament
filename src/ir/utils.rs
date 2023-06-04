@@ -57,11 +57,18 @@ where
         &self.store[idx.get()]
     }
 
+    /// Iterator over the interned values.
     pub fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
         self.store
             .iter()
             .enumerate()
             .map(|(idx, ptr)| (Idx::new(idx), &**ptr))
+    }
+
+    /// Iterator over indices of the interned values.
+    /// Useful since it does not take ownership of self.
+    pub fn idx_iter(&self) -> impl Iterator<Item = Idx<T>> {
+        (0..self.store.len()).map(Idx::new)
     }
 }
 
@@ -124,6 +131,7 @@ impl<T> IndexStore<T> {
         (0..self.store.len()).map(Idx::new)
     }
 
+    /// Iterate over the indices and the values in the store.
     pub fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
         self.store
             .iter()

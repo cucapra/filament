@@ -41,6 +41,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ir_passes::TypeCheck::do_pass(&mut ir);
         ir_passes::IntervalCheck::do_pass(&mut ir);
         ir_passes::HoistFacts::do_pass(&mut ir);
+        ir_passes::Simplify::do_pass(&mut ir);
         if opts.show_ir {
             ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
         }

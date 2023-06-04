@@ -1,22 +1,141 @@
 //! Convert the frontend AST to the IR.
-use super::{BuildCtx, Sig, SigMap};
+use super::{BuildCtx, ScopeVal, Sig, SigMap};
 use crate::ir::{
     Cmp, CompIdx, Ctx, EventIdx, ExprIdx, ParamIdx, PortIdx, PropIdx, TimeIdx,
 };
 use crate::utils::GPosIdx;
-use crate::{
-    ast::{self, Id},
-    ir,
-    utils::Binding,
-};
+use crate::{ast, ir, utils::Binding};
 use itertools::Itertools;
 use std::{iter, rc::Rc};
+
+/// # Declare phase
+/// This is the first pass over the AST and responsible for forward declaring names defined by invocations.
+/// We do this because invocation ports can be used before their definition:
+/// ```
+/// p = new Prev[32]<G>(add.out);
+/// add = new Add[32]<G>(p.out, 1);
+/// ```
+///
+/// At a high-level, it does the following:
+/// * Define all the locally-bound parameters, specifically those defined by loops.
+///   This is needed to correctly resolve the instances which may use parameters.
+/// * For each instance in the program, compute the partially resolved component
+///   signature which substitutes all parameters in the signature.
+/// * For each invocation, compute the fully resolved signature (where events are correctly substituted)
+///   and define all the parameters.
+impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
+    fn declare_inst(&mut self, inst: &ast::Instance) {
+        let ast::Instance {
+            name,
+            component,
+            bindings,
+        } = inst;
+        let comp = self.sigs.get(component).unwrap();
+        let binding = Binding::new(
+            comp.params
+                .iter()
+                .copied()
+                .zip(bindings.clone().into_iter().map(|b| b.take())),
+        );
+        let inst = ir::Instance {
+            comp: comp.idx,
+            params: bindings
+                .iter()
+                .map(|b| self.expr(b.clone().take()))
+                .collect_vec()
+                .into_boxed_slice(),
+        };
+        let idx = self.comp.add(inst);
+        self.inst_map.insert(name.copy(), idx);
+        // Track the component binding for this instance
+        self.inst_to_sig.push(idx, (Rc::new(binding), **component));
+    }
+
+    /// Invokes are the most complicated construct to compile. This function:
+    /// 1. Creates a new invoke in the component with the time bindings.
+    /// 2. Resolves output ports and defines them in the component
+    fn declare_inv(&mut self, inv: &ast::Invoke) {
+        let ast::Invoke {
+            name,
+            instance,
+            abstract_vars,
+            ..
+        } = inv;
+
+        let inst = *self.inst_map.get(instance).unwrap();
+        let inv = self.comp.add(ir::Invoke {
+            inst,
+            ports: vec![], // Filled in later
+        });
+        self.add_inv(name.copy(), inv);
+
+        let mut def_ports = vec![];
+
+        // The inputs
+        let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
+        let sig = self.sigs.get(&comp).unwrap();
+
+        // Event bindings
+        let event_binding = self.event_binding(
+            &sig.events,
+            abstract_vars.iter().map(|v| v.inner().clone()),
+        );
+
+        // Define the output port from the invoke
+        for p in sig.outputs.clone() {
+            let resolved = p
+                .resolve_exprs(&param_binding)
+                .resolve_event(&event_binding);
+            let owner = ir::PortOwner::Inv {
+                inv,
+                dir: ir::Direction::Out,
+            };
+            def_ports.push(self.port(resolved, owner));
+        }
+
+        // Add the inputs from the invoke. The outputs are added in the second
+        // pass over the AST.
+        self.comp.invocations.get_mut(inv).ports.extend(def_ports);
+    }
+
+    /// Walk over the component and declare all instances, invocations, and all outputs defined by invocations.
+    /// This is needed because invocations are not required to be declared before they are used.
+    fn declare_cmd(&mut self, cmd: &ast::Command) {
+        match cmd {
+            ast::Command::Instance(inst) => {
+                self.declare_inst(inst);
+            }
+            ast::Command::Invoke(inv) => {
+                self.declare_inv(inv);
+            }
+            ast::Command::ForLoop(ast::ForLoop { idx, body, .. }) => self
+                .with_scope(|ctx| {
+                    let idx =
+                        ctx.param(idx.copy(), ir::ParamOwner::Local, idx.pos());
+                    ctx.declare_cmds(body);
+                }),
+            ast::Command::If(ast::If { then, alt, .. }) => {
+                self.declare_cmds(then);
+                self.declare_cmds(alt);
+            }
+            ast::Command::Fact(_)
+            | ast::Command::Connect(_)
+            | ast::Command::Bundle(_) => { /* Handled in second pass */ }
+        }
+    }
+
+    fn declare_cmds(&mut self, cmds: &[ast::Command]) {
+        for cmd in cmds {
+            self.declare_cmd(cmd);
+        }
+    }
+}
 
 impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     fn expr(&mut self, expr: ast::Expr) -> ExprIdx {
         match expr {
             ast::Expr::Abstract(p) => {
-                let Some(&pidx) = self.param_map.get(&p) else {
+                let Some(pidx) = self.get_param(&p) else {
                     unreachable!("Parameter {p} not found")
                 };
                 self.comp.add(ir::Expr::Param(pidx))
@@ -86,9 +205,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         pos: GPosIdx,
     ) -> ParamIdx {
         let info = self.comp.add(ir::Info::param(param, pos));
-        // TODO(rachit): Parameters do not have default values yet.
         let idx = self.comp.add(ir::Param::new(owner, info));
-        self.param_map.insert(param, idx);
+        self.add_param(param, idx);
         idx
     }
 
@@ -171,7 +289,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 // The bundle type uses a fake bundle index and has a length of 1.
                 // We don't need to push a new scope because this type is does not
                 // bind any new parameters.
-                let p_name = Id::from("_");
+                let p_name = self.gen_name();
                 let live = self.with_scope(|ctx| ir::Liveness {
                     idx: ctx.param(
                         p_name,
@@ -331,33 +449,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         cons
     }
 
-    fn declare_inst(&mut self, inst: &ast::Instance) {
-        let ast::Instance {
-            name,
-            component,
-            bindings,
-        } = inst;
-        let comp = self.sigs.get(component).unwrap();
-        let binding = Binding::new(
-            comp.params
-                .iter()
-                .copied()
-                .zip(bindings.clone().into_iter().map(|b| b.take())),
-        );
-        let inst = ir::Instance {
-            comp: comp.idx,
-            params: bindings
-                .iter()
-                .map(|b| self.expr(b.clone().take()))
-                .collect_vec()
-                .into_boxed_slice(),
-        };
-        let idx = self.comp.add(inst);
-        self.inst_map.insert(name.copy(), idx);
-        // Track the component binding for this instance
-        self.inst_to_sig.push(idx, (Rc::new(binding), **component));
-    }
-
     fn instance(&mut self, inst: ast::Instance) -> Vec<ir::Command> {
         // Add the facts defined by the instance as assertions in the
         // component.
@@ -428,8 +519,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         partial_map
     }
 
-    /// This function is called during the second pass of the conversion and
-    /// generates the connections and event bindings implied by the arguments to the invoke
+    /// This function is called during the second pass of the conversion and does the following:
+    /// * Defines the input ports of the invocation
+    /// * Generate event bindings implied by the invocation
+    /// * Generates the connections implied by the arguments to the invoke
     fn invoke(&mut self, inv: ast::Invoke) -> Vec<ir::Command> {
         let ast::Invoke {
             name,
@@ -507,7 +600,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 inv,
                 dir: ir::Direction::In,
             };
-            // Add the port to the invoke
+
+            // Define port and add it to the invocation
             let pidx = self.port(resolved.take(), owner);
             self.comp.invocations.get_mut(inv).ports.push(pidx);
 
@@ -545,7 +639,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             ast::Command::Instance(inst) => self.instance(inst),
             ast::Command::Fact(ast::Fact { cons, checked }) => {
                 let reason = self.comp.add(
-                    ir::Reason::misc("Source-level fact", cons.pos()).into(),
+                    ir::Reason::misc("source-level fact", cons.pos()).into(),
                 );
                 let prop = self.implication(cons.take());
                 let fact = if checked {
@@ -614,83 +708,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
-    /// Invokes are the most complicated construct to compile. This function:
-    /// 1. Creates a new invoke in the component with the time bindings.
-    /// 2. Resolves output ports and defines them in the component
-    fn declare_inv(&mut self, inv: &ast::Invoke) {
-        let ast::Invoke {
-            name,
-            instance,
-            abstract_vars,
-            ..
-        } = inv;
-
-        let inst = *self.inst_map.get(instance).unwrap();
-        let inv = self.comp.add(ir::Invoke {
-            inst,
-            ports: vec![], // Filled in later
-        });
-        self.add_inv(name.copy(), inv);
-
-        let mut def_ports = vec![];
-
-        // The inputs
-        let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
-        let sig = self.sigs.get(&comp).unwrap();
-
-        // Event bindings
-        let event_binding = self.event_binding(
-            &sig.events,
-            abstract_vars.iter().map(|v| v.inner().clone()),
-        );
-
-        // Define the output port from the invoke
-        for p in sig.outputs.clone() {
-            let resolved = p
-                .resolve_exprs(&param_binding)
-                .resolve_event(&event_binding);
-            let owner = ir::PortOwner::Inv {
-                inv,
-                dir: ir::Direction::Out,
-            };
-            def_ports.push(self.port(resolved, owner));
-        }
-
-        // Add the inputs from the invoke. The outputs are added in the second
-        // pass using [Self::add_invoke_connects].
-        self.comp.invocations.get_mut(inv).ports.extend(def_ports);
-    }
-
-    /// Walk over the component and declare all instances, invocations, and all outputs defined by invocations.
-    /// This is needed because invocations are not required to be declared before they are used.
-    fn declare_cmd(&mut self, cmd: &ast::Command) {
-        match cmd {
-            ast::Command::Instance(inst) => {
-                self.declare_inst(inst);
-            }
-            ast::Command::Invoke(inv) => {
-                self.declare_inv(inv);
-            }
-            ast::Command::ForLoop(ast::ForLoop { idx, body, .. }) => {
-                self.param(idx.copy(), ir::ParamOwner::Local, idx.pos());
-                self.declare_cmds(body);
-            }
-            ast::Command::If(ast::If { then, alt, .. }) => {
-                self.declare_cmds(then);
-                self.declare_cmds(alt);
-            }
-            ast::Command::Fact(_)
-            | ast::Command::Connect(_)
-            | ast::Command::Bundle(_) => { /* Handled in second pass */ }
-        }
-    }
-
-    fn declare_cmds(&mut self, cmds: &[ast::Command]) {
-        for cmd in cmds {
-            self.declare_cmd(cmd);
-        }
-    }
-
     fn external(idx: CompIdx, sig: ast::Signature) -> ir::External {
         ir::External { idx, sig }
     }
@@ -703,6 +720,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let mut ir_comp = ir::Component::new(idx);
         let mut builder = BuildCtx::new(&mut ir_comp, sigs);
 
+        // First we declare all the ports
         let mut cmds = builder.sig(comp.sig);
         builder.declare_cmds(&comp.body);
         let body_cmds = builder.commands(comp.body);
