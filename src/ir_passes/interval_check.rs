@@ -69,8 +69,9 @@ impl IntervalCheck {
 impl Visitor for IntervalCheck {
     fn start(&mut self, comp: &mut ir::Component) -> Action {
         // Ensure that delays are greater than zero
-        let mut cmds = Vec::with_capacity(comp.ports.len() + comp.events.len());
-        for idx in comp.events.idx_iter() {
+        let mut cmds =
+            Vec::with_capacity(comp.ports().len() + comp.events().len());
+        for idx in comp.events().idx_iter() {
             let ev = &comp[idx];
             if ev.owner.is_sig() {
                 cmds.push(self.delay_wf(idx, comp));
@@ -81,7 +82,7 @@ impl Visitor for IntervalCheck {
         // bundle signal is less than the delay.
         // Extract the ranges first because we cannot borrow comp mutably before this.
         let ranges = comp
-            .ports
+            .ports()
             .iter()
             .filter_map(|(_, p)| {
                 // Ignore ports on invokes

@@ -1,7 +1,8 @@
 //! Convert the frontend AST to the IR.
 use super::{BuildCtx, Sig, SigMap};
 use crate::ir::{
-    Cmp, CompIdx, Ctx, EventIdx, ExprIdx, ParamIdx, PortIdx, PropIdx, TimeIdx,
+    Cmp, CompIdx, Ctx, EventIdx, ExprIdx, MutCtx, ParamIdx, PortIdx, PropIdx,
+    TimeIdx,
 };
 use crate::utils::GPosIdx;
 use crate::{ast, ir, utils::Binding};
@@ -95,7 +96,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
         // Add the inputs from the invoke. The outputs are added in the second
         // pass over the AST.
-        self.comp.invocations.get_mut(inv).ports.extend(def_ports);
+        self.comp.get_mut(inv).ports.extend(def_ports);
     }
 
     /// Declare the instances and invokes in the current scope.
@@ -341,7 +342,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let idx = self.comp.add(p);
         // Fixup the liveness index parameter's owner
         let p = self.comp.get(idx);
-        let param = self.comp.params.get_mut(p.live.idx);
+        let param = self.comp.get_mut(p.live.idx);
         param.owner = ir::ParamOwner::bundle(idx);
 
         // Add the port to the current scope
@@ -420,7 +421,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         for event in &sig.events {
             let delay = self.timesub(event.inner().delay.inner().clone());
             let idx = self.event_map.get(&event.inner().event).unwrap();
-            self.comp.events.get_mut(*idx).delay = delay;
+            self.comp.get_mut(*idx).delay = delay;
         }
         for port in sig.inputs() {
             // XXX(rachit): Unnecessary clone.
@@ -593,7 +594,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
             // Define port and add it to the invocation
             let pidx = self.port(resolved.take(), owner);
-            self.comp.invocations.get_mut(inv).ports.push(pidx);
+            self.comp.get_mut(inv).ports.push(pidx);
 
             let end = self.comp[pidx].live.len;
             let dst = ir::Access {
@@ -727,9 +728,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let mut cmds = builder.sig(comp.sig);
         let body_cmds = builder.commands(comp.body);
 
-        cmds.reserve(ir_comp.ports.len() * 2);
+        cmds.reserve(ir_comp.ports().len() * 2);
         let ports = ir_comp
-            .ports
+            .ports()
             .iter()
             .map(|(_, p)| (p.live.idx, p.live.len))
             .collect_vec();

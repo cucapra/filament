@@ -1,4 +1,4 @@
-use crate::ir::Ctx;
+use crate::ir::{Ctx, DisplayCtx};
 use crate::ir_visitor::{Action, Visitor};
 use crate::utils::GlobalPositionTable;
 use crate::{ast, ir, utils};
@@ -260,19 +260,19 @@ impl Visitor for Discharge {
     fn start(&mut self, comp: &mut ir::Component) -> Action {
         // Declare all parameters
         let int = self.sol.int_sort();
-        for (idx, _) in comp.params.iter() {
+        for (idx, _) in comp.params().iter() {
             let sexp = self.sol.declare(Self::fmt_param(idx), int).unwrap();
             self.param_map.push(idx, sexp);
         }
 
         // Declare all events
-        for (idx, _) in comp.events.iter() {
+        for (idx, _) in comp.events().iter() {
             let sexp = self.sol.declare(Self::fmt_event(idx), int).unwrap();
             self.ev_map.push(idx, sexp);
         }
 
         // Declare all expressions
-        for (idx, expr) in comp.exprs.iter() {
+        for (idx, expr) in comp.exprs().iter() {
             let assign = self.expr_to_sexp(expr);
             let sexp = self
                 .sol
@@ -282,7 +282,7 @@ impl Visitor for Discharge {
         }
 
         // Declare all time expressions
-        for (idx, ir::Time { event, offset }) in comp.times.iter() {
+        for (idx, ir::Time { event, offset }) in comp.times().iter() {
             let assign =
                 self.sol.plus(self.ev_map[*event], self.expr_map[*offset]);
             let sexp = self
@@ -294,7 +294,7 @@ impl Visitor for Discharge {
 
         // Declare all propositions
         let bs = self.sol.bool_sort();
-        for (idx, prop) in comp.props.iter() {
+        for (idx, prop) in comp.props().iter() {
             // Define assertion equating the proposition to its assignment
             let assign = self.prop_to_sexp(prop);
             let sexp = self

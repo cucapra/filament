@@ -1,16 +1,10 @@
-use std::env;
-
 use super::{
-    CmpOp, Command, CompIdx, Ctx, Event, EventIdx, EventOwner, Expr, ExprIdx,
-    Fact, IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx,
-    Invoke, Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Range, Time,
-    TimeIdx, TimeSub,
+    CmpOp, Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
+    IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke,
+    MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeIdx,
+    TimeSub,
 };
 use crate::{ast, utils::Idx};
-use itertools::Itertools;
-
-/// Prints out variables using IR-level names instead of source-level names.
-const IR_DISPLAY: &str = "IR_DISPLAY";
 
 #[derive(Default)]
 pub struct Context {
@@ -24,10 +18,6 @@ impl Ctx<CompOrExt> for Context {
 
     fn get(&self, idx: Idx<CompOrExt>) -> &CompOrExt {
         self.comps.get(idx)
-    }
-
-    fn display(&self, _: Idx<CompOrExt>) -> String {
-        todo!("displaying CompOrExt")
     }
 }
 
@@ -43,32 +33,33 @@ pub struct External {
 }
 
 pub struct Component {
-    pub idx: CompIdx,
+    idx: CompIdx,
+
     // Component defined values.
     /// Ports and bundles defined by the component.
-    pub ports: IndexStore<Port>,
+    ports: IndexStore<Port>,
     /// Parameters defined the component
-    pub params: IndexStore<Param>,
+    params: IndexStore<Param>,
     /// Events defined by the component
-    pub events: IndexStore<Event>,
+    events: IndexStore<Event>,
 
     // Control flow entities
     /// Instances defined by the component
-    pub instances: IndexStore<Instance>,
+    instances: IndexStore<Instance>,
     /// Invocations defined by the component
-    pub invocations: IndexStore<Invoke>,
+    invocations: IndexStore<Invoke>,
 
     /// Information tracked by the component
-    pub info: IndexStore<Info>,
+    info: IndexStore<Info>,
 
     // Interned data. We store this on a per-component basis because events with the
     // same identifiers in different components are not equal.
     /// Interned expressions
-    pub exprs: Interned<Expr>,
+    exprs: Interned<Expr>,
     /// Interned times
-    pub times: Interned<Time>,
+    times: Interned<Time>,
     /// Interned propositions
-    pub props: Interned<Prop>,
+    props: Interned<Prop>,
 
     /// Commands in the component
     pub cmds: Vec<Command>,
@@ -131,6 +122,45 @@ impl Component {
     }
 }
 
+/// Accessor methods
+impl Component {
+    pub fn idx(&self) -> CompIdx {
+        self.idx
+    }
+
+    pub fn events(&self) -> &IndexStore<Event> {
+        &self.events
+    }
+
+    pub fn ports(&self) -> &IndexStore<Port> {
+        &self.ports
+    }
+
+    pub fn params(&self) -> &IndexStore<Param> {
+        &self.params
+    }
+
+    pub fn invocations(&self) -> &IndexStore<Invoke> {
+        &self.invocations
+    }
+
+    pub fn instances(&self) -> &IndexStore<Instance> {
+        &self.instances
+    }
+
+    pub fn exprs(&self) -> &Interned<Expr> {
+        &self.exprs
+    }
+
+    pub fn times(&self) -> &Interned<Time> {
+        &self.times
+    }
+
+    pub fn props(&self) -> &Interned<Prop> {
+        &self.props
+    }
+}
+
 /// Queries over interned entities
 impl Component {
     fn expr_params_acc(&self, expr: ExprIdx, acc: &mut Vec<ParamIdx>) {
@@ -149,13 +179,6 @@ impl Component {
         }
     }
 
-    /// Parameters mentioned within an expression
-    pub fn expr_params(&self, expr: ExprIdx) -> Vec<ParamIdx> {
-        let mut acc = Vec::new();
-        self.expr_params_acc(expr, &mut acc);
-        acc
-    }
-
     fn cmp_params_acc<T, F>(
         &self,
         cmp: &CmpOp<T>,
@@ -167,13 +190,6 @@ impl Component {
         let CmpOp { lhs, rhs, .. } = cmp;
         add(lhs, acc);
         add(rhs, acc);
-    }
-
-    /// Parameters mentioned within an expression
-    pub fn prop_params(&self, prop: PropIdx) -> Vec<ParamIdx> {
-        let mut acc = Vec::new();
-        self.prop_params_acc(prop, &mut acc);
-        acc
     }
 
     fn prop_params_acc(&self, prop: PropIdx, acc: &mut Vec<ParamIdx>) {
@@ -200,123 +216,22 @@ impl Component {
             }
         }
     }
-}
 
-/// Implement methods to display various values bound by the component
-impl Component {
-    fn display_expr_helper(&self, expr: ExprIdx, ctx: ECtx) -> String {
-        match self.get(expr) {
-            Expr::Param(p) => self.display(*p),
-            Expr::Concrete(n) => format!("{n}"),
-            Expr::Bin { op, lhs, rhs } => {
-                let inner = ECtx::from(*op);
-                let left = self.display_expr_helper(*lhs, inner);
-                let right = self.display_expr_helper(*rhs, inner);
-                // If context binds more tightly than the inner operator,
-                // wrap the inner expression in parens.
-                if ctx > inner {
-                    format!("({}{}{})", left, op, right)
-                } else {
-                    format!("{}{}{}", left, op, right)
-                }
-            }
-            Expr::Fn { op, args } => {
-                let fn_str = match op {
-                    ast::UnFn::Pow2 => "pow2",
-                    ast::UnFn::Log2 => "log2",
-                };
-                format!(
-                    "{fn_str}({args})",
-                    args = args
-                        .iter()
-                        .map(|a| self.display_expr_helper(*a, ECtx::default()))
-                        .join(", ")
-                )
-            }
-        }
+    /// Parameters mentioned within an expression
+    pub fn expr_params(&self, expr: ExprIdx) -> Vec<ParamIdx> {
+        let mut acc = Vec::new();
+        self.expr_params_acc(expr, &mut acc);
+        acc
     }
-
-    fn display_cmp<T>(
-        &self,
-        cmp: &CmpOp<T>,
-        ctx: PCtx,
-        print_base: impl Fn(T) -> String,
-    ) -> String
-    where
-        T: Clone,
-    {
-        let CmpOp { op, lhs, rhs } = cmp;
-        let l = print_base(lhs.clone());
-        let r = print_base(rhs.clone());
-        if ctx > PCtx::Cmp {
-            format!("({} {} {})", l, op, r)
-        } else {
-            format!("{} {} {}", l, op, r)
-        }
-    }
-
-    fn display_prop_helper(&self, prop: PropIdx, ctx: PCtx) -> String {
-        match self.get(prop) {
-            Prop::True => "true".to_string(),
-            Prop::False => "false".to_string(),
-            Prop::Cmp(c) => self.display_cmp(c, ctx, |e| self.display(e)),
-            Prop::TimeCmp(cmp) => {
-                self.display_cmp(cmp, ctx, |t| self.display(t))
-            }
-            Prop::TimeSubCmp(cmp) => {
-                self.display_cmp(cmp, ctx, |t| self.display_timesub(&t))
-            }
-            Prop::Not(p) => {
-                format!("!{}", self.display_prop_helper(*p, PCtx::Not))
-            }
-            Prop::And(l, r) => {
-                let inner = PCtx::And;
-                let l = self.display_prop_helper(*l, inner);
-                let r = self.display_prop_helper(*r, inner);
-                if inner < ctx {
-                    format!("({} & {})", l, r)
-                } else {
-                    format!("{} & {}", l, r)
-                }
-            }
-            Prop::Or(l, r) => {
-                let inner = PCtx::Or;
-                let l = self.display_prop_helper(*l, inner);
-                let r = self.display_prop_helper(*r, inner);
-                if inner < ctx {
-                    format!("({} | {})", l, r)
-                } else {
-                    format!("{} | {}", l, r)
-                }
-            }
-            Prop::Implies(l, r) => {
-                let inner = PCtx::Implies;
-                let l = self.display_prop_helper(*l, inner);
-                let r = self.display_prop_helper(*r, inner);
-                if inner < ctx {
-                    format!("({} => {})", l, r)
-                } else {
-                    format!("{} => {}", l, r)
-                }
-            }
-        }
-    }
-
-    /// Display a [super::TimeSub] expression in surface-level syntax
-    pub fn display_timesub(&self, ts: &TimeSub) -> String {
-        match ts {
-            TimeSub::Unit(e) => self.display(*e),
-            TimeSub::Sym { l, r } => {
-                format!("|{} - {}|", self.display(*l), self.display(*r))
-            }
-        }
-    }
-
-    /// Surface-level visualization for a range
-    pub fn display_range(&self, r: &Range) -> String {
-        format!("@[{}, {}]", self.display(r.start), self.display(r.end))
+    /// Parameters mentioned within an expression
+    pub fn prop_params(&self, prop: PropIdx) -> Vec<ParamIdx> {
+        let mut acc = Vec::new();
+        self.prop_params_acc(prop, &mut acc);
+        acc
     }
 }
+
+// =========== Context accessors for each type ===========
 
 impl Ctx<Port> for Component {
     fn add(&mut self, val: Port) -> PortIdx {
@@ -325,14 +240,6 @@ impl Ctx<Port> for Component {
 
     fn get(&self, idx: PortIdx) -> &Port {
         self.ports.get(idx)
-    }
-
-    fn display(&self, idx: PortIdx) -> String {
-        let port = self.get(idx);
-        let Info::Port { name, .. } = self.get(port.info) else {
-            unreachable!("Expected port info")
-        };
-        name.to_string()
     }
 }
 
@@ -344,18 +251,6 @@ impl Ctx<Param> for Component {
     fn get(&self, idx: ParamIdx) -> &Param {
         self.params.get(idx)
     }
-
-    fn display(&self, idx: ParamIdx) -> String {
-        if env::var(IR_DISPLAY).is_ok() {
-            format!("{idx}")
-        } else {
-            let param = self.get(idx);
-            let Info::Param { name, .. } = self.get(param.info) else {
-                unreachable!("Expected param info");
-            };
-            format!("#{name}")
-        }
-    }
 }
 
 impl Ctx<Event> for Component {
@@ -365,23 +260,6 @@ impl Ctx<Event> for Component {
 
     fn get(&self, idx: EventIdx) -> &Event {
         self.events.get(idx)
-    }
-
-    fn display(&self, idx: Idx<Event>) -> String {
-        if env::var(IR_DISPLAY).is_ok() {
-            format!("{idx}")
-        } else {
-            let ev = self.get(idx);
-            let Info::Event { name, .. } = self.get(ev.info) else {
-                unreachable!("Expccted event info")
-            };
-            match ev.owner {
-                EventOwner::Sig => name.to_string(),
-                EventOwner::Inv { inv } => {
-                    format!("{}.{name}", self.display(inv))
-                }
-            }
-        }
     }
 }
 
@@ -393,10 +271,6 @@ impl Ctx<Instance> for Component {
     fn get(&self, idx: InstIdx) -> &Instance {
         self.instances.get(idx)
     }
-
-    fn display(&self, _: Idx<Instance>) -> String {
-        todo!("displaying instances")
-    }
 }
 
 impl Ctx<Invoke> for Component {
@@ -406,10 +280,6 @@ impl Ctx<Invoke> for Component {
 
     fn get(&self, idx: InvIdx) -> &Invoke {
         self.invocations.get(idx)
-    }
-
-    fn display(&self, _: Idx<Invoke>) -> String {
-        todo!("displaying invocations")
     }
 }
 
@@ -421,10 +291,6 @@ impl Ctx<Expr> for Component {
     fn get(&self, idx: ExprIdx) -> &Expr {
         self.exprs.get(idx)
     }
-
-    fn display(&self, idx: Idx<Expr>) -> String {
-        self.display_expr_helper(idx, ECtx::default())
-    }
 }
 
 impl Ctx<Time> for Component {
@@ -434,16 +300,6 @@ impl Ctx<Time> for Component {
 
     fn get(&self, idx: TimeIdx) -> &Time {
         self.times.get(idx)
-    }
-
-    fn display(&self, idx: Idx<Time>) -> String {
-        let &Time { event, offset } = self.get(idx);
-        if let Some(off) = offset.as_concrete(self) {
-            if off == 0 {
-                return self.display(event);
-            }
-        }
-        format!("{}+{}", self.display(event), self.display(offset))
     }
 }
 
@@ -455,10 +311,6 @@ impl Ctx<Prop> for Component {
     fn get(&self, idx: Idx<Prop>) -> &Prop {
         self.props.get(idx)
     }
-
-    fn display(&self, idx: Idx<Prop>) -> String {
-        self.display_prop_helper(idx, PCtx::Implies)
-    }
 }
 
 impl Ctx<Info> for Component {
@@ -469,111 +321,34 @@ impl Ctx<Info> for Component {
     fn get(&self, idx: InfoIdx) -> &Info {
         self.info.get(idx)
     }
+}
 
-    fn display(&self, _: Idx<Info>) -> String {
-        unreachable!("info objects cannot be displayed")
+impl MutCtx<Port> for Component {
+    fn get_mut(&mut self, idx: PortIdx) -> &mut Port {
+        self.ports.get_mut(idx)
     }
 }
 
-// We can use indexing syntax for all values in the context for which it is a Ctx.
-impl<K> std::ops::Index<Idx<K>> for Component
-where
-    Component: Ctx<K>,
-{
-    type Output = K;
-
-    fn index(&self, index: Idx<K>) -> &Self::Output {
-        self.get(index)
+impl MutCtx<Event> for Component {
+    fn get_mut(&mut self, idx: EventIdx) -> &mut Event {
+        self.events.get_mut(idx)
     }
 }
 
-#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
-/// Track the current context within an expression for pretty printing
-enum ECtx {
-    #[default]
-    /// Inside an addition priority expression (+ or -)
-    Add,
-    /// Substraction priority expression (-)
-    Sub,
-    /// Inside an multiplication priority expression (* or / or %)
-    Mul,
-}
-
-impl From<ast::Op> for ECtx {
-    fn from(op: ast::Op) -> Self {
-        match op {
-            ast::Op::Add => ECtx::Add,
-            ast::Op::Sub => ECtx::Sub,
-            ast::Op::Mul | ast::Op::Div | ast::Op::Mod => ECtx::Mul,
-        }
+impl MutCtx<Param> for Component {
+    fn get_mut(&mut self, idx: ParamIdx) -> &mut Param {
+        self.params.get_mut(idx)
     }
 }
 
-// Ordering for expression printing context.
-// If `self > other`, then that means that `self` binds tigher than `other`.
-impl Ord for ECtx {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        use std::cmp::Ordering::*;
-        match (self, other) {
-            // Mults are next
-            (ECtx::Mul, ECtx::Mul) => Equal,
-            (ECtx::Mul, _) => Greater,
-            // Subs are next
-            (ECtx::Sub, ECtx::Sub) => Equal,
-            (ECtx::Sub, ECtx::Mul) => Less,
-            (ECtx::Sub, _) => Greater,
-            // Adds are last
-            (ECtx::Add, ECtx::Add) => Equal,
-            (ECtx::Add, _) => Less,
-        }
+impl MutCtx<Invoke> for Component {
+    fn get_mut(&mut self, idx: InvIdx) -> &mut Invoke {
+        self.invocations.get_mut(idx)
     }
 }
 
-impl PartialOrd for ECtx {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-/// Context to track proposition bindings
-enum PCtx {
-    Not,
-    Cmp,
-    And,
-    Or,
-    Implies,
-}
-
-impl Ord for PCtx {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        use std::cmp::Ordering::*;
-        use PCtx::*;
-        match (self, other) {
-            // Negations
-            (Not, Not) => Equal,
-            (Not, _) => Greater,
-            // Comparisons
-            (Cmp, Cmp) => Equal,
-            (Cmp, Not) => Less,
-            (Cmp, _) => Greater,
-            // Conjunctions
-            (And, And) => Equal,
-            (And, Not | Cmp) => Less,
-            (And, _) => Greater,
-            // Disjunctions
-            (Or, Or) => Equal,
-            (Or, Not | And | Cmp) => Less,
-            (Or, _) => Greater,
-            // Implications
-            (Implies, Implies) => Equal,
-            (Implies, _) => Less,
-        }
-    }
-}
-
-impl PartialOrd for PCtx {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
+impl MutCtx<Instance> for Component {
+    fn get_mut(&mut self, idx: InstIdx) -> &mut Instance {
+        self.instances.get_mut(idx)
     }
 }

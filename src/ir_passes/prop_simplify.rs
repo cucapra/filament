@@ -171,9 +171,9 @@ impl Simplify {
 
 impl Visitor for Simplify {
     fn start(&mut self, comp: &mut ir::Component) -> Action {
-        let old_len = comp.props.size();
+        let old_len = comp.props().size();
         // Populate the prop_map with the simplified version of each proposition.
-        for prop in comp.props.idx_iter() {
+        for prop in comp.props().idx_iter() {
             // Only simplify the old propositions
             if prop.get() >= old_len {
                 break;

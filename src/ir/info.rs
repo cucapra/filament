@@ -1,4 +1,4 @@
-use super::{Component, Ctx, ExprIdx, Range, TimeIdx, TimeSub};
+use super::{Component, DisplayCtx, ExprIdx, Range, TimeIdx, TimeSub};
 use crate::{ast, utils::GPosIdx};
 use codespan_reporting::diagnostic::Diagnostic;
 

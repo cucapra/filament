@@ -1,5 +1,6 @@
 mod comp;
 mod control;
+mod ctx;
 mod expr;
 mod fact;
 mod from_ast;
@@ -13,6 +14,7 @@ mod utils;
 
 pub use comp::{CompOrExt, Component, Context, External};
 pub use control::{Command, Connect, EventBind, If, Instance, Invoke, Loop};
+pub use ctx::{Ctx, MutCtx};
 pub use expr::Expr;
 pub use fact::{Cmp, CmpOp, Fact, Prop};
 pub use from_ast::astconv::transform;
@@ -21,11 +23,11 @@ pub use idxs::{
     PortIdx, PropIdx, TimeIdx,
 };
 pub use info::{Info, Reason};
-pub use printer::Printer;
+pub use printer::{DisplayCtx, Printer};
 pub use structure::{
     Access, Direction, Event, EventOwner, Liveness, Param, ParamOwner, Port,
     PortOwner, Range,
 };
 pub use subst::{Bind, Foldable, Subst};
 pub use time::{Time, TimeSub};
-pub use utils::{Ctx, DenseIndexInfo, IndexStore, Interned};
+pub use utils::{DenseIndexInfo, IndexStore, Interned};
