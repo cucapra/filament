@@ -1,11 +1,16 @@
+use std::env;
+
 use super::{
-    CmpOp, Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
-    IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke,
-    Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Range, Time, TimeIdx,
-    TimeSub,
+    CmpOp, Command, CompIdx, Ctx, Event, EventIdx, EventOwner, Expr, ExprIdx,
+    Fact, IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx,
+    Invoke, Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Range, Time,
+    TimeIdx, TimeSub,
 };
 use crate::{ast, utils::Idx};
 use itertools::Itertools;
+
+/// Prints out variables using IR-level names instead of source-level names.
+const IR_DISPLAY: &str = "IR_DISPLAY";
 
 #[derive(Default)]
 pub struct Context {
@@ -341,11 +346,15 @@ impl Ctx<Param> for Component {
     }
 
     fn display(&self, idx: ParamIdx) -> String {
-        format!("{idx}")
-        // let Info::Param { name, .. } = self.get(self.get(idx).info) else {
-        //     unreachable!("Expected param info");
-        // };
-        // format!("#{name}")
+        if env::var(IR_DISPLAY).is_ok() {
+            format!("{idx}")
+        } else {
+            let param = self.get(idx);
+            let Info::Param { name, .. } = self.get(param.info) else {
+                unreachable!("Expected param info");
+            };
+            format!("#{name}")
+        }
     }
 }
 
@@ -359,12 +368,20 @@ impl Ctx<Event> for Component {
     }
 
     fn display(&self, idx: Idx<Event>) -> String {
-        format!("{idx}")
-        // let ev = self.get(idx);
-        // let Info::Event { name, .. } = self.get(ev.info) else {
-        //     unreachable!("Expccted event info")
-        // };
-        // name.to_string()
+        if env::var(IR_DISPLAY).is_ok() {
+            format!("{idx}")
+        } else {
+            let ev = self.get(idx);
+            let Info::Event { name, .. } = self.get(ev.info) else {
+                unreachable!("Expccted event info")
+            };
+            match ev.owner {
+                EventOwner::Sig => name.to_string(),
+                EventOwner::Inv { inv } => {
+                    format!("{}.{name}", self.display(inv))
+                }
+            }
+        }
     }
 }
 

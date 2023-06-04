@@ -71,7 +71,10 @@ impl Visitor for IntervalCheck {
         // Ensure that delays are greater than zero
         let mut cmds = Vec::with_capacity(comp.ports.len() + comp.events.len());
         for idx in comp.events.idx_iter() {
-            cmds.push(self.delay_wf(idx, comp));
+            let ev = &comp[idx];
+            if ev.owner.is_sig() {
+                cmds.push(self.delay_wf(idx, comp));
+            }
         }
 
         // For each bundle, add an assertion to ensure that availability of the
@@ -80,7 +83,14 @@ impl Visitor for IntervalCheck {
         let ranges = comp
             .ports
             .iter()
-            .map(|(_, p)| (p.live.clone(), p.info))
+            .filter_map(|(_, p)| {
+                // Ignore ports on invokes
+                if !matches!(p.owner, ir::PortOwner::Inv { .. }) {
+                    Some((p.live.clone(), p.info))
+                } else {
+                    None
+                }
+            })
             .collect_vec();
 
         for (live, info) in ranges {
@@ -157,7 +167,7 @@ impl Visitor for IntervalCheck {
             .and(Self::in_range(&src_t, comp), comp);
 
         // Substitute the parameter used in source with that in dst
-        let binding = [(src_t.idx, dst_t.idx.expr(comp))];
+        let binding = [(dst_t.idx, src_t.idx.expr(comp))];
         let dst_range =
             ir::Subst::new(dst_t.range, &ir::Bind::new(&binding)).apply(comp);
 

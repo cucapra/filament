@@ -160,9 +160,9 @@ impl Discharge {
             self.sol.assert(self.sol.not(self.prop_map[prop])).unwrap();
             let res = self.sol.check().unwrap();
             let out = match res {
-                smt::Response::Sat => {
-                    Some(self.get_assignments(ctx.prop_params(prop)))
-                }
+                smt::Response::Sat => Some(
+                    self.get_assignments(ctx.prop_params(prop.consequent(ctx))),
+                ),
                 smt::Response::Unsat => None,
                 smt::Response::Unknown => panic!("Solver returned unknown"),
             };
@@ -335,7 +335,7 @@ impl Visitor for Discharge {
                 };
                 let mut diag = reason.diag(comp).with_notes(vec![format!(
                     "Cannot prove constraint: {}",
-                    comp.display(f.prop)
+                    comp.display(f.prop.consequent(comp))
                 )]);
                 if !assign.is_empty() {
                     diag = diag.with_notes(vec![format!(

@@ -3,9 +3,12 @@ use crate::{ir, utils::Idx};
 use itertools::{Itertools, Position};
 use std::{fmt::Display, io};
 
-pub struct Printer;
+pub struct Printer<'a> {
+    /// The component being printed. Used to resolve interned values like expressions.
+    ctx: &'a ir::Component,
+}
 
-impl Printer {
+impl Printer<'_> {
     fn interned<T>(
         store: &ir::Interned<T>,
         op: &str,
@@ -38,19 +41,39 @@ impl Printer {
         Ok(())
     }
 
+    fn expr(&self, e: ir::ExprIdx) -> String {
+        self.ctx.display(e)
+    }
+
+    fn time(&self, t: ir::TimeIdx) -> String {
+        self.ctx.display(t)
+    }
+
+    fn range(&self, r: &ir::Range) -> String {
+        let ir::Range { start, end } = r;
+        format!("@[{}, {}]", self.time(*start), self.time(*end))
+    }
+
+    fn liveness(&self, l: &ir::Liveness) -> String {
+        let ir::Liveness { idx, len, range } = l;
+        format!("for<{idx}: {}> {}", self.expr(*len), self.range(range))
+    }
+
     fn commands(
+        &self,
         cmds: &[ir::Command],
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         for cmd in cmds {
-            Printer::command(cmd, indent, f)?;
+            self.command(cmd, indent, f)?;
             writeln!(f)?;
         }
         Ok(())
     }
 
     pub fn command(
+        &self,
         c: &ir::Command,
         indent: usize,
         f: &mut impl io::Write,
@@ -64,7 +87,7 @@ impl Printer {
             }
             ir::Command::Connect(con) => write!(f, "{:indent$}{con}", ""),
             ir::Command::EventBind(ir::EventBind { event, arg }) => {
-                write!(f, "{:indent$}bind {} to {}", "", event, arg)
+                write!(f, "{:indent$}bind {} to {}", "", event, self.time(*arg))
             }
             ir::Command::ForLoop(ir::Loop {
                 index,
@@ -72,17 +95,23 @@ impl Printer {
                 end,
                 body,
             }) => {
-                writeln!(f, "{:indent$}for {index} in {start}..{end} {{", "")?;
-                Printer::commands(body, indent + 2, f)?;
+                writeln!(
+                    f,
+                    "{:indent$}for {index} in {}..{} {{",
+                    "",
+                    self.expr(*start),
+                    self.expr(*end)
+                )?;
+                self.commands(body, indent + 2, f)?;
                 write!(f, "{:indent$}}}", "")
             }
             ir::Command::If(c) => {
                 writeln!(f, "{:indent$}if {} {{", "", c.cond)?;
-                Printer::commands(&c.then, indent + 2, f)?;
+                self.commands(&c.then, indent + 2, f)?;
                 writeln!(f, "{:indent$}}}", "")?;
                 if !c.alt.is_empty() {
                     writeln!(f, "{:indent$}else {{", "")?;
-                    Printer::commands(&c.alt, indent + 2, f)?;
+                    self.commands(&c.alt, indent + 2, f)?;
                     writeln!(f, "{:indent$}}}", "")?;
                 }
                 Ok(())
@@ -98,6 +127,7 @@ impl Printer {
     }
 
     fn sig<F: io::Write>(
+        &self,
         comp: ir::CompIdx,
         params: &ir::IndexStore<ir::Param>,
         events: &ir::IndexStore<ir::Event>,
@@ -145,8 +175,8 @@ impl Printer {
                     f,
                     "{:indent$}{idx}: {} {},",
                     "",
-                    port.live,
-                    port.width,
+                    self.liveness(&port.live),
+                    self.expr(port.width),
                     indent = indent + 2
                 )
             }
@@ -155,8 +185,8 @@ impl Printer {
                     f,
                     "{:indent$}{idx}: {} {}",
                     "",
-                    port.live,
-                    port.width,
+                    self.liveness(&port.live),
+                    self.expr(port.width),
                     indent = indent + 2
                 )
             }
@@ -200,6 +230,7 @@ impl Printer {
     }
 
     fn local_port(
+        &self,
         idx: ir::PortIdx,
         port: &ir::Port,
         indent: usize,
@@ -213,12 +244,20 @@ impl Printer {
             ir::PortOwner::Inv { dir, .. } => {
                 writeln!(
                     f,
-                    "{:indent$}{idx}: bundle({dir}) {live} {width};",
+                    "{:indent$}{idx}: bundle({dir}) {} {};",
                     "",
+                    self.liveness(live),
+                    self.expr(*width),
                 )
             }
             ir::PortOwner::Local => {
-                writeln!(f, "{:indent$}{idx} = bundle {live} {width};", "",)
+                writeln!(
+                    f,
+                    "{:indent$}{idx} = bundle {} {};",
+                    "",
+                    self.liveness(live),
+                    self.expr(*width),
+                )
             }
         }
     }
@@ -261,6 +300,7 @@ impl Printer {
     }
 
     pub fn comp(c: &ir::Component, f: &mut impl io::Write) -> io::Result<()> {
+        let printer = ir::Printer { ctx: c };
         let ir::Component {
             idx,
             exprs,
@@ -274,25 +314,25 @@ impl Printer {
             cmds,
             info: _,
         } = &c;
-        Printer::sig(*idx, params, events, ports, 0, f)?;
+        printer.sig(*idx, params, events, ports, 0, f)?;
         for (idx, param) in params.iter() {
             Printer::local_param(idx, param, 2, c, f)?;
         }
-        Printer::interned(exprs, "expr", 2, f)?;
+        // Printer::interned(exprs, "expr", 2, f)?;
         for (idx, event) in events.iter() {
             Printer::event(idx, event, 2, f)?;
         }
-        Printer::interned(times, "time", 2, f)?;
-        Printer::interned(props, "prop", 2, f)?;
+        // Printer::interned(times, "time", 2, f)?;
+        // Printer::interned(props, "prop", 2, f)?;
         for (idx, port) in ports.iter() {
-            Printer::local_port(idx, port, 2, f)?;
+            printer.local_port(idx, port, 2, f)?;
         }
         Printer::index_store(instances, "instance", 2, f)?;
         for (idx, invoke) in invocations.iter() {
             Printer::invoke(idx, invoke, 2, f)?;
         }
         writeln!(f, "control:")?;
-        Printer::commands(cmds, 2, f)?;
+        printer.commands(cmds, 2, f)?;
         writeln!(f, "}}")
     }
 

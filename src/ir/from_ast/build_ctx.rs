@@ -1,6 +1,6 @@
 use super::ScopeMap;
 use crate::ast::{self, Id};
-use crate::ir::{self, CompIdx, DenseIndexInfo, PortIdx};
+use crate::ir::{self, CompIdx, Ctx, DenseIndexInfo, PortIdx};
 use crate::utils;
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -147,7 +147,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     /// Add a new port to the ctx
-    pub fn add_port(&mut self, name: Id, owner: ir::PortOwner, port: PortIdx) {
+    pub fn add_port(&mut self, name: Id, port: PortIdx) {
+        let owner = self.comp.get(port).owner.clone();
         self.port_map.insert((owner, name), port);
     }
 

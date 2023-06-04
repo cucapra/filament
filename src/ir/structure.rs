@@ -208,19 +208,26 @@ impl fmt::Display for Access {
 #[derive(PartialEq, Eq, Hash, Clone)]
 /// Construct that defines the parameter
 pub enum ParamOwner {
-    /// The parameter is defined in the signature
+    /// Defined by the signature
     Sig,
-    /// The parameter is defined by a bundle
-    Bundle,
-    /// The parametber is defined in the component body
-    Local,
+    /// Defined by a bundle
+    Bundle(PortIdx),
+    /// Loop indexing parameter
+    Loop,
 }
+
+impl ParamOwner {
+    pub fn bundle(port: PortIdx) -> Self {
+        Self::Bundle(port)
+    }
+}
+
 impl fmt::Display for ParamOwner {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Sig => write!(f, "sig"),
-            Self::Bundle => write!(f, "bundle"),
-            Self::Local => write!(f, "local"),
+            Self::Bundle(p) => write!(f, "bundle({p})"),
+            Self::Loop => write!(f, "loop"),
         }
     }
 }
@@ -242,7 +249,7 @@ impl Param {
     }
 
     pub fn is_local(&self) -> bool {
-        matches!(self.owner, ParamOwner::Local)
+        matches!(self.owner, ParamOwner::Loop)
     }
 }
 
@@ -259,6 +266,12 @@ pub enum EventOwner {
     Sig,
     /// The event is defined by an invocation
     Inv { inv: InvIdx },
+}
+
+impl EventOwner {
+    pub fn is_sig(&self) -> bool {
+        matches!(self, Self::Sig)
+    }
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]

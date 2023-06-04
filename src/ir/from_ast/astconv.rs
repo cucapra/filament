@@ -240,11 +240,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             info,
         };
         let idx = self.comp.add(e);
+        log::info!("Added event {} as {idx}", eb.event);
         self.event_map.insert(*eb.event, idx);
         idx
     }
 
-    /// Add an event to the component.
+    /// Add an event to the component without adding it the current scope.
     fn event(&mut self, eb: ast::EventBind, owner: ir::EventOwner) -> EventIdx {
         let info = self.comp.add(ir::Info::event(
             eb.event.copy(),
@@ -254,7 +255,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let delay = self.timesub(eb.delay.take());
         let e = ir::Event { delay, owner, info };
         let idx = self.comp.add(e);
-        self.event_map.insert(*eb.event, idx);
+        log::info!("Added event {} as {idx}", eb.event);
+        // self.event_map.insert(*eb.event, idx);
         idx
     }
 
@@ -265,7 +267,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     fn port(&mut self, pd: ast::PortDef, owner: ir::PortOwner) -> PortIdx {
-        let (name, port, owner) = match pd {
+        let (name, p) = match pd {
             ast::PortDef::Port {
                 name,
                 liveness,
@@ -285,7 +287,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 let live = self.with_scope(|ctx| ir::Liveness {
                     idx: ctx.param(
                         p_name,
-                        ir::ParamOwner::Bundle,
+                        // Updated after the port is constructed
+                        ir::ParamOwner::bundle(ir::PortIdx::UNKNOWN),
                         GPosIdx::UNKNOWN,
                     ), // This parameter is unused
                     len: ctx.comp.num(1),
@@ -293,11 +296,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 });
                 let p = ir::Port {
                     width: self.expr(bitwidth.take()),
-                    owner: owner.clone(),
+                    owner,
                     live,
                     info,
                 };
-                (name, p, owner)
+                (name, p)
             }
             ast::PortDef::Bundle(ast::Bundle {
                 name,
@@ -317,21 +320,32 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 ));
                 // Construct the bundle type in a new scope.
                 let live = self.with_scope(|ctx| ir::Liveness {
-                    idx: ctx.param(*idx, ir::ParamOwner::Bundle, idx.pos()),
+                    idx: ctx.param(
+                        *idx,
+                        // Updated after the port is constructed
+                        ir::ParamOwner::bundle(PortIdx::UNKNOWN),
+                        idx.pos(),
+                    ),
                     len: ctx.expr(len.take()),
                     range: ctx.range(liveness.take()),
                 });
                 let p = ir::Port {
                     width: self.expr(bitwidth.take()),
-                    owner: owner.clone(),
+                    owner,
                     live,
                     info,
                 };
-                (name, p, owner)
+                (name, p)
             }
         };
-        let idx = self.comp.add(port);
-        self.add_port(*name, owner, idx);
+        let idx = self.comp.add(p);
+        // Fixup the liveness index parameter's owner
+        let p = self.comp.get(idx);
+        let param = self.comp.params.get_mut(p.live.idx);
+        param.owner = ir::ParamOwner::bundle(idx);
+
+        // Add the port to the current scope
+        self.add_port(*name, idx);
         idx
     }
 
@@ -661,8 +675,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 // Compile the body in a new scope
                 let (index, body) = self.with_scope(|this| {
                     let pos = idx.pos();
-                    let idx =
-                        this.param(idx.copy(), ir::ParamOwner::Local, pos);
+                    let idx = this.param(idx.copy(), ir::ParamOwner::Loop, pos);
                     (idx, this.commands(body))
                 });
                 let l = ir::Loop {
