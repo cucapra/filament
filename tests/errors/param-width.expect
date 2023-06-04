@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: required bundle of width `32' but found bundle of width `#W'
+error: source and destination widths must match
   ┌─ tests/errors/param-width.fil:5:16
   │
 5 │     a0 := A<G>(a, a);
@@ -12,7 +12,7 @@ error: required bundle of width `32' but found bundle of width `#W'
 9 │     @[G, L] left: #WIDTH,
   │             ---- destination has width 32
 
-error: required bundle of width `32' but found bundle of width `#W'
+error: source and destination widths must match
    ┌─ tests/errors/param-width.fil:5:19
    │
  5 │     a0 := A<G>(a, a);

@@ -1,39 +1,33 @@
 ---CODE---
 1
 ---STDERR---
-error: delay must be greater than zero
-  ┌─ tests/errors/unprovable-cons.fil:5:14
-  │
-5 │ comp Main<G: L-(G), L: 1>(
-  │              ^^^^^ delay must be greater than zero
-
-error: bundle's availability is greater than the delay of the event
+error: delay must be longer than the length of the signal
   ┌─ tests/errors/unprovable-cons.fil:8:3
   │
 5 │ comp Main<G: L-(G), L: 1>(
-  │              ----- event's delay
+  │           - interface allows event to trigger every |L - G| cycle(s)
   ·
 8 │   @[G, G+1] left: 32,
-  │   ^^^^^^^^^ available for 1 cycles
+  │   ^^^^^^^^^ signal lasts for 1 cycle(s)
 
-error: invocation violates event constraint
+error: invocation violates component's constraint
    ┌─ ./primitives/./state.fil:11:11
    │
 11 │   ) where L > G+1;
    │           ^^^^^^^ constraint was violated
    │
-   ┌─ tests/errors/unprovable-cons.fil:14:9
+   ┌─ tests/errors/unprovable-cons.fil:14:3
    │
 14 │   l0 := L<G, L+1>(left);
-   │         - invocation occurs here
+   │   -- invocation violates component's constraint
 
-error: source port does not provide value for as long as destination requires
+error: source port must be available longer than the destination port requires
    ┌─ tests/errors/unprovable-cons.fil:15:9
    │
 15 │   out = l0.out;
    │   ----  ^^^^^^ source is available for @[G+1, L+1]
    │   │      
-   │   requires value for @[L+2, L+3]
+   │   destination's requirement @[L+2, L+3]
 
-Compilation failed with 4 errors.
+Compilation failed with 3 errors.
 Run with --show-models to generate assignments for failing constraints.

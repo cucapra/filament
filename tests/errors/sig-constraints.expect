@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: instantiation violates paraemter constraint
+error: instantiation violates component's constraint
   ┌─ tests/errors/sig-constraints.fil:1:34
   │
 1 │ comp Foo[#W]<G: 1>() -> () where #W > 1 {}

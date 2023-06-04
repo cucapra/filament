@@ -1,8 +1,10 @@
-comp main<G: 3, L: 1>(
-  @interface[G] go_G: 1,
-  @interface[L] go_L: 1,
-  @[G, G+1] in1: 32,
-  @[L, L+2] in2: 32,
-) -> (
-  @[G+2, G+3] out: 1,
-) {}
+extern "dummy.sv" {
+  comp Main<G: 3, L: 1>(
+    @interface[G] go_G: 1,
+    @interface[L] go_L: 1,
+    @[G, G+1] in1: 32,
+    @[L, L+2] in2: 32,
+  ) -> (
+    @[G+2, G+3] out: 1,
+  );
+}
