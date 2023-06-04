@@ -1,41 +1,46 @@
 ---CODE---
 1
 ---STDERR---
-error: bundle index must be less than bundle length
-   ┌─ tests/errors/bundle.fil:10:6
+error: out of bounds access of bundle
+   ┌─ tests/errors/bundle.fil:10:5
    │
+ 9 │     bundle f[#N]: for<#k> @[G+#k, G+#k+1] #W;
+   │            - bundle's length is #N
 10 │     f{1} = input;
-   │      ^^^ cannot prove within-bounds bundle access: index 1 greater than bundle length #N
+   │     ^^^^ out of bounds access
 
-error: source port must be available longer than the destination port requires
+error: source port does not provide value for as long as destination requires
    ┌─ tests/errors/bundle.fil:10:12
    │
 10 │     f{1} = input;
    │     ----   ^^^^^ source is available for @[G, G+1]
    │     │       
-   │     destination's requirement @[G+1, G+2]
+   │     requires value for @[G+1, G+1+1]
 
-error: source port must be available longer than the destination port requires
+error: source port does not provide value for as long as destination requires
    ┌─ tests/errors/bundle.fil:13:17
    │
 13 │         f{#i} = d.out;
-   │         -----   ^^^^^ source is available for @[G+#i+1, G+#i+2]
+   │         -----   ^^^^^ source is available for @[G+1+#i, G+2+#i]
    │         │        
-   │         destination's requirement @[G+#i, G+#i+1]
+   │         requires value for @[G+#i, G+1+#i]
 
-error: bundle index must be less than bundle length
-   ┌─ tests/errors/bundle.fil:15:12
+error: out of bounds access of bundle
+   ┌─ tests/errors/bundle.fil:15:11
    │
+ 9 │     bundle f[#N]: for<#k> @[G+#k, G+#k+1] #W;
+   │            - bundle's length is #N
+   ·
 15 │     out = f{#N+1};
-   │            ^^^^^^ cannot prove within-bounds bundle access: index #N+1 greater than bundle length #N
+   │           ^^^^^^^ out of bounds access
 
-error: source port must be available longer than the destination port requires
+error: source port does not provide value for as long as destination requires
    ┌─ tests/errors/bundle.fil:15:11
    │
 15 │     out = f{#N+1};
-   │     ----  ^^^^^^^ source is available for @[G+#N+1, G+#N+1+1]
+   │     ----  ^^^^^^^ source is available for @[G+1+#N, G+1+1+#N]
    │     │      
-   │     destination's requirement @[G+#N, G+#N+1]
+   │     requires value for @[G+#N, G+1+#N]
 
 Compilation failed with 5 errors.
 Run with --show-models to generate assignments for failing constraints.

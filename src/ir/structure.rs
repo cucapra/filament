@@ -1,3 +1,5 @@
+use crate::ast::Op;
+
 use super::{
     Bind, Component, Ctx, Expr, ExprIdx, Foldable, InfoIdx, InvIdx, ParamIdx,
     PortIdx, Subst, TimeIdx, TimeSub,
@@ -173,25 +175,45 @@ impl Access {
         }
     }
 
-    /// Check if this is a simple port access
-    pub fn is_port(&self, ctx: &impl Ctx<Expr>) -> bool {
-        if let (Some(s), Some(e)) =
-            (self.start.as_concrete(ctx), self.end.as_concrete(ctx))
-        {
-            s == 0 && e == 1
-        } else {
-            false
+    /// Check if this is guaranteed a simple port access, i.e., an access that
+    /// produces one port.
+    /// The check is syntactic and therefore conservative.
+    pub fn is_port(&self, ctx: &mut impl Ctx<Expr>) -> bool {
+        let one = ctx.add(Expr::Concrete(1));
+        match ctx.get(self.end) {
+            Expr::Bin {
+                op: Op::Add,
+                lhs,
+                rhs,
+            } => {
+                *rhs == one && self.start == *lhs
+                    || *lhs == one && self.start == *rhs
+            }
+            Expr::Concrete(e) => {
+                if let Some(s) = self.start.as_concrete(ctx) {
+                    *e == s + 1
+                } else {
+                    false
+                }
+            }
+            _ => false,
         }
     }
 
     /// Return the bundle type associated with this access
     pub fn bundle_typ(&self, ctx: &mut Component) -> Liveness {
         let live = ctx.get(self.port).live.clone();
+        let binding = if self.is_port(ctx) {
+            // If this access produces exactly one port, then remap `#idx` to `start`.
+            [(live.idx, self.start)]
+        } else {
+            // Remap `#idx` to `#idx+start
+            [(live.idx, live.idx.expr(ctx).add(self.start, ctx))]
+        };
+
+        let range = Subst::new(live.range, &Bind::new(&binding)).apply(ctx);
         // Shrink the bundle type based on the access
         let len = self.end.sub(self.start, ctx);
-        // Remap `#i` to `#i+start`
-        let binding = [(live.idx, live.idx.expr(ctx).add(self.start, ctx))];
-        let range = Subst::new(live.range, &Bind::new(&binding)).apply(ctx);
         Liveness {
             idx: live.idx,
             len,

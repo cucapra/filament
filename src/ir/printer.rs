@@ -148,6 +148,27 @@ impl Printer<'_> {
         Ok(())
     }
 
+    fn access(&self, a: &ir::Access) -> String {
+        let &ir::Access { port, start, end } = a;
+        format!("{port}[{}..{})", self.expr(start), self.expr(end))
+    }
+
+    fn connect(
+        &self,
+        c: &ir::Connect,
+        indent: usize,
+        f: &mut impl io::Write,
+    ) -> io::Result<()> {
+        let ir::Connect { src, dst, .. } = c;
+        writeln!(
+            f,
+            "{:indent$}{} = {};",
+            "",
+            self.access(src),
+            self.access(dst)
+        )
+    }
+
     pub fn command(
         &self,
         c: &ir::Command,
@@ -161,7 +182,7 @@ impl Printer<'_> {
             ir::Command::Invoke(inv) => {
                 write!(f, "{:indent$}{inv};", "")
             }
-            ir::Command::Connect(con) => write!(f, "{:indent$}{con}", ""),
+            ir::Command::Connect(con) => self.connect(con, indent, f),
             ir::Command::EventBind(ir::EventBind { event, arg }) => {
                 write!(f, "{:indent$}bind {} to {}", "", event, self.time(*arg))
             }
