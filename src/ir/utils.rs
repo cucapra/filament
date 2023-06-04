@@ -193,6 +193,11 @@ impl<T, V> DenseIndexInfo<T, V> {
         }
     }
 
+    /// Remove all values from the map.
+    pub fn clear(&mut self) {
+        self.store.clear();
+    }
+
     /// Add a new value to the map and return the index.
     /// Panics if the index is not the next index in the sequence.
     pub fn push(&mut self, key: Idx<T>, val: V) {

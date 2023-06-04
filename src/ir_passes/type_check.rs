@@ -19,7 +19,7 @@ impl TypeCheck {
         access: &ir::Access,
         loc: GPosIdx,
         comp: &mut ir::Component,
-    ) -> [ir::Fact; 3] {
+    ) -> [ir::Fact; 2] {
         let &ir::Access { port, start, end } = access;
         let &ir::Port {
             live: ir::Liveness { len, .. },
@@ -46,10 +46,10 @@ impl TypeCheck {
             comp.add(ir::Reason::in_bounds_access(bind_loc, loc, len).into());
         let start = start.lt(len, comp);
         let end = end.lte(len, comp);
+        let in_range = start.and(end, comp);
         [
             comp.assert(wf_prop, wf),
-            comp.assert(start, within_bounds),
-            comp.assert(end, within_bounds),
+            comp.assert(in_range, within_bounds),
         ]
     }
 }
@@ -74,11 +74,8 @@ impl Visitor for TypeCheck {
         let src_w = comp.get(src.port).width;
         let dst_w = comp.get(dst.port).width;
         let reason = comp.add(
-            ir::Reason::misc(
-                "connected ports must have the same bitwidth",
-                GPosIdx::UNKNOWN,
-            )
-            .into(),
+            ir::Reason::bundle_width_match(dst_loc, src_loc, dst_w, src_w)
+                .into(),
         );
         let prop = src_w.equal(dst_w, comp);
         cons.push(comp.assert(prop, reason));

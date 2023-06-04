@@ -100,8 +100,6 @@ impl Info {
 pub enum Reason {
     /// Assertion representing constraint on a parameter
     ParamConstraint {
-        /// Location of parameter definition
-        param_def_loc: GPosIdx,
         /// Location of the binding
         bind_loc: GPosIdx,
         /// Location of the constraint
@@ -109,8 +107,6 @@ pub enum Reason {
     },
     /// Assertion representing constraint on an event
     EventConstraint {
-        /// Location of event definition
-        event_def_loc: GPosIdx,
         /// Location of the binding
         bind_loc: GPosIdx,
         /// Location of the constraint
@@ -120,6 +116,12 @@ pub enum Reason {
     // ============ Constraints from type checking ==============
     /// Require that lengths of bundles match
     BundleLenMatch {
+        dst_loc: GPosIdx,
+        src_loc: GPosIdx,
+        dst_len: ExprIdx,
+        src_len: ExprIdx,
+    },
+    BundleWidthMatch {
         dst_loc: GPosIdx,
         src_loc: GPosIdx,
         dst_width: ExprIdx,
@@ -204,25 +206,15 @@ impl Reason {
         }
     }
 
-    pub fn param_cons(
-        param_def_loc: GPosIdx,
-        bind_loc: GPosIdx,
-        constraint_loc: GPosIdx,
-    ) -> Self {
+    pub fn param_cons(bind_loc: GPosIdx, constraint_loc: GPosIdx) -> Self {
         Self::ParamConstraint {
-            param_def_loc,
             bind_loc,
             constraint_loc,
         }
     }
 
-    pub fn event_cons(
-        event_def_loc: GPosIdx,
-        bind_loc: GPosIdx,
-        constraint_loc: GPosIdx,
-    ) -> Self {
+    pub fn event_cons(bind_loc: GPosIdx, constraint_loc: GPosIdx) -> Self {
         Self::EventConstraint {
-            event_def_loc,
             bind_loc,
             constraint_loc,
         }
@@ -249,6 +241,20 @@ impl Reason {
         Self::BundleLenMatch {
             dst_loc,
             src_loc,
+            dst_len: dst_width,
+            src_len: src_width,
+        }
+    }
+
+    pub fn bundle_width_match(
+        dst_loc: GPosIdx,
+        src_loc: GPosIdx,
+        dst_width: ExprIdx,
+        src_width: ExprIdx,
+    ) -> Self {
+        Self::BundleWidthMatch {
+            dst_loc,
+            src_loc,
             dst_width,
             src_width,
         }
@@ -273,10 +279,40 @@ impl Reason {
     pub fn diag(&self, ctx: &Component) -> Diagnostic<usize> {
         match self {
             Reason::Misc { reason, def_loc } => {
-                let label = def_loc.primary().with_message(reason.clone());
+                let err = Diagnostic::error().with_message(reason);
+                if let Some(loc) = def_loc.into_option() {
+                    let label = loc.primary().with_message(reason.clone());
+                    err.with_labels(vec![label])
+                } else {
+                    err
+                }
+            }
+            Reason::ParamConstraint {
+                bind_loc,
+                constraint_loc,
+            } => {
+                let con = constraint_loc
+                    .primary()
+                    .with_message("constraint was violated");
+                let inst = bind_loc
+                    .secondary()
+                    .with_message("instantiation occurs here");
                 Diagnostic::error()
-                    .with_message(reason)
-                    .with_labels(vec![label])
+                    .with_message("instantiation violates paraemter constraint")
+                    .with_labels(vec![con, inst])
+            }
+            Reason::EventConstraint {
+                bind_loc,
+                constraint_loc,
+            } => {
+                let con = constraint_loc
+                    .primary()
+                    .with_message("constraint was violated");
+                let inst =
+                    bind_loc.secondary().with_message("invocation occurs here");
+                Diagnostic::error()
+                    .with_message("invocation violates event constraint")
+                    .with_labels(vec![con, inst])
             }
             Reason::InBoundsAccess {
                 def_loc,
@@ -296,8 +332,8 @@ impl Reason {
             Reason::BundleLenMatch {
                 dst_loc,
                 src_loc,
-                dst_width,
-                src_width,
+                dst_len: dst_width,
+                src_len: src_width,
             } => {
                 let sw = ctx.display(*src_width);
                 let dw = ctx.display(*dst_width);
@@ -309,6 +345,24 @@ impl Reason {
                     .with_message(format!("length of bunle is {dw}",));
                 Diagnostic::error()
                     .with_message(format!("required bundle of size `{dw}' but found bundle of size `{sw}'"))
+                    .with_labels(vec![src, dst])
+            }
+            Reason::BundleWidthMatch {
+                dst_loc,
+                src_loc,
+                dst_width,
+                src_width,
+            } => {
+                let sw = ctx.display(*src_width);
+                let dw = ctx.display(*dst_width);
+                let src = src_loc
+                    .primary()
+                    .with_message(format!("source has width {sw}",));
+                let dst = dst_loc
+                    .secondary()
+                    .with_message(format!("destination has width {dw}",));
+                Diagnostic::error()
+                    .with_message(format!("required bundle of width `{dw}' but found bundle of width `{sw}'"))
                     .with_labels(vec![src, dst])
             }
             Reason::Liveness {
@@ -371,7 +425,6 @@ impl Reason {
                     )
                     .with_labels(vec![label])
             }
-            _ => todo!(),
         }
     }
 }

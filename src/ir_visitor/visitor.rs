@@ -1,4 +1,4 @@
-use crate::ir;
+use crate::{cmdline, ir};
 
 #[must_use]
 #[derive(PartialEq, Eq)]
@@ -29,17 +29,42 @@ impl Action {
     }
 }
 
+/// Construct a visitor
+pub trait Construct {
+    fn from(opts: &cmdline::Opts, ctx: &ir::Context) -> Self;
+
+    /// Clear data before the next component has been visited
+    fn clear_data(&mut self);
+}
+
+impl<T: Default> Construct for T {
+    fn from(_: &cmdline::Opts, _: &ir::Context) -> Self {
+        Self::default()
+    }
+
+    fn clear_data(&mut self) {
+        *self = Self::default();
+    }
+}
+
 /// A visitor for the commands by detaching them from the underlying component.
 pub trait Visitor
 where
-    Self: Sized + Default,
+    Self: Sized + Construct,
 {
+    /// Executed after the visitor has visited all the components.
+    /// If the return value is `Some`, the number is treated as an error code.
+    fn after_traversal(&mut self) -> Option<u32> {
+        None
+    }
+
     /// Executed before the visitor starts visiting the commands.
     /// The commands are still attached to the component
     fn start(&mut self, _comp: &mut ir::Component) -> Action {
         Action::Continue
     }
 
+    /// Executed after the visitor has visited all the commands.
     fn end(&mut self, _: &mut ir::Component) {}
 
     fn invoke(&mut self, _: ir::InvIdx, _comp: &mut ir::Component) -> Action {
@@ -209,12 +234,17 @@ where
     }
 
     /// Apply the pass to all components in the context
-    fn do_pass(ctx: &mut ir::Context) {
+    fn do_pass(opts: &cmdline::Opts, ctx: &mut ir::Context) -> Result<(), u32> {
+        let mut visitor = Self::from(opts, ctx);
         for (_, c) in ctx.comps.iter_mut() {
             if let ir::CompOrExt::Comp(comp) = c {
-                let mut visitor = Self::default();
+                visitor.clear_data();
                 visitor.visit(comp);
             }
+        }
+        match visitor.after_traversal() {
+            Some(n) => Err(n),
+            None => Ok(()),
         }
     }
 }

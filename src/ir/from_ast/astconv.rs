@@ -457,6 +457,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     fn instance(&mut self, inst: ast::Instance) -> Vec<ir::Command> {
+        let comp_loc = inst.component.pos();
         // Add the facts defined by the instance as assertions in the
         // component.
         let idx = *self.inst_map.get(&inst.name).unwrap();
@@ -469,9 +470,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .clone()
             .into_iter()
             .map(|f| {
-                let reason = self.comp.add(
-                    ir::Reason::misc("Parameter constraint", f.pos()).into(),
-                );
+                let reason = self
+                    .comp
+                    .add(ir::Reason::param_cons(comp_loc, f.pos()).into());
                 let p = f.take().resolve_expr(&binding);
                 let prop = self.expr_cons(p);
                 // This is a checked fact because the calling component needs to
@@ -535,7 +536,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             name,
             abstract_vars,
             ports,
-            ..
+            instance,
         } = inv;
         let Some(ports) = ports else {
             unreachable!("No ports provided for invocation {name}")
@@ -568,9 +569,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .clone()
             .into_iter()
             .map(|ec| {
-                let reason = self
-                    .comp
-                    .add(ir::Reason::misc("Event constraint", ec.pos()).into());
+                let reason = self.comp.add(
+                    ir::Reason::event_cons(instance.pos(), ec.pos()).into(),
+                );
                 let ec = ec.take().resolve_event(&event_binding);
                 let prop = self.event_cons(ec);
                 self.comp.assert(prop, reason).into()

@@ -1,12 +1,11 @@
+---CODE---
+1
 ---STDERR---
 error: end of port access must greater than the start
   ┌─ tests/errors/bundle-mismatch.fil:8:26
   │
 8 │     f0 := new Foo[#P]<T>(f{1..#P});
   │                          ^^^^^^^^ end of port access must greater than the start
-  │
-  = Cannot prove constraint: #P > 1
-  = Counterexample: #P = 1 (unmentioned parameters are 0)
 
 error: out of bounds access of bundle
   ┌─ tests/errors/bundle-mismatch.fil:8:26
@@ -16,9 +15,6 @@ error: out of bounds access of bundle
 7 │ 
 8 │     f0 := new Foo[#P]<T>(f{1..#P});
   │                          ^^^^^^^^ out of bounds access
-  │
-  = Cannot prove constraint: #P > 1
-  = Counterexample: #P = 1 (unmentioned parameters are 0)
 
 error: required bundle of size `#P' but found bundle of size `#P-1'
   ┌─ tests/errors/bundle-mismatch.fil:2:5
@@ -28,9 +24,6 @@ error: required bundle of size `#P' but found bundle of size `#P-1'
   ·
 8 │     f0 := new Foo[#P]<T>(f{1..#P});
   │                          -------- length of bundle is #P-1
-  │
-  = Cannot prove constraint: #P-1 = #P
-  = Counterexample: #P = 1 (unmentioned parameters are 0)
 
 error: source port does not provide value for as long as destination requires
   ┌─ tests/errors/bundle-mismatch.fil:9:28
@@ -40,8 +33,6 @@ error: source port does not provide value for as long as destination requires
   ·
 9 │     f1 := new Foo[#P]<T+1>(f{0..#P});
   │                            ^^^^^^^^ source is available for @[T+#k, T+1+#k]
-  │
-  = Cannot prove constraint: #i >= 0 & #P > #i & #k >= 0 & #P > #k => 1+#k >= #k & 1+#k >= 1+1+#k
-  = Counterexample: #P = 1 (unmentioned parameters are 0)
 
-Compilation failed with 4 errors
+Compilation failed with 4 errors.
+Run with --show-models to generate assignments for failing constraints.
