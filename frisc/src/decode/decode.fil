@@ -2,6 +2,43 @@ import "primitives/core.fil";
 
 // decoder for rv32i instruction set
 
+comp main<G:1> (
+  @[G,G+1] instr:32
+) -> (
+  @[G, G+1] isLoad:1,
+  @[G, G+1] isStore:1,
+  @[G, G+1] isALUImm:1,
+  @[G, G+1] isALUReg:1,
+  @[G, G+1] isLUI:1,
+  @[G, G+1] isJAL:1,
+  @[G, G+1] isJALR:1,
+  @[G, G+1] isBranch:1,
+  @[G, G+1] isSys:1,
+  @[G, G+1] isAUIPC:1,
+  @[G, G+1] Uimm:32,
+  @[G, G+1] Iimm:32,
+  @[G, G+1] Simm:32,
+  @[G, G+1] Bimm:32,
+  @[G, G+1] Jimm:32
+) {
+  decoder := new decode<G>(instr);
+  isLoad = decoder.isLoad;
+  isStore = decoder.isStore;
+  isALUImm = decoder.isALUImm;
+  isALUReg = decoder.isALUReg;
+  isLUI = decoder.isLUI;
+  isJAL = decoder.isJAL;
+  isJALR = decoder.isJALR;
+  isBranch = decoder.isBranch;
+  isSys = decoder.isSys;
+  isAUIPC = decoder.isAUIPC;
+  Uimm = decoder.Uimm;
+  Iimm = decoder.Iimm;
+  Simm = decoder.Simm;
+  Bimm = decoder.Bimm;
+  Jimm = decoder.Jimm;
+}
+
 comp decode<G:1> (
   @[G, G+1] instr:32
 ) -> (
