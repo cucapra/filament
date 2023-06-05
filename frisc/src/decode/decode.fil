@@ -110,12 +110,14 @@ comp decode<G:1> (
   auiEq := new Eq[5]<G>(opcode.out, auiConst.out);
   isAUIPC = auiEq.out;
 
+  zeroConst := new Const[1,0]<G>();
+
   // Uimm
   instr0 := new Select[32,0]<G>(instr);
   instr31 := new Select[32,31]<G>(instr);
   instr30_20 := new Slice[32,30,20,11]<G>(instr);
   instr19_12 := new Slice[32,19,12,8]<G>(instr);
-  uimm11_0 := new Extend[1,12]<G>(instr0.out);
+  uimm11_0 := new Extend[1,12]<G>(zeroConst.out);
 
   uimm31_20 := new Concat[1,11,12]<G>(instr31.out, instr30_20.out);
   uimm19_0 := new Concat[8,12,20]<G>(instr19_12.out, uimm11_0.out);
@@ -127,7 +129,6 @@ comp decode<G:1> (
   instr20 := new Select[32,20]<G>(instr);
   instr30_25 := new Slice[32,30,25,6]<G>(instr);
   instr24_21 := new Slice[32,24,21,4]<G>(instr);
-  zeroConst := new Const[1,0]<G>();
 
   jimm31_12 := new Concat[12,8,20]<G>(jimm31_20.out, instr19_12.out);
   jimm11_5 := new Concat[1,6,7]<G>(instr20.out, instr30_25.out);
@@ -151,6 +152,7 @@ comp decode<G:1> (
   bimm10_1 := new Concat[6,4,10]<G>(instr30_25.out, instr11_8.out);
   bimm31_1 := new Concat[21,10,31]<G>(bimm31_11.out, bimm10_1.out);
   bimm31_0 := new Concat[31,1,32]<G>(bimm31_1.out, zeroConst.out);
+  Bimm = bimm31_0.out;
 
   // Iimm
   iimm31_11 := new Extend[1,21]<G>(instr31.out);
