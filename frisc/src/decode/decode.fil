@@ -99,4 +99,27 @@ comp decode<G:1> (
   jimm31_0 := new Concat[27,5,32]<G>(jimm31_5.out, jimm4_0.out);
   Jimm = jimm31_0.out;
 
+  // Simm
+  instr11_8 := new Slice[32,11,8,4]<G>(instr);
+  instr7 := new Select[32,7]<G>(instr);
+  simm31_11 := new Extend[1,21]<G>(instr31.out);
+  simm31_5 := new Concat[21,6,27]<G>(simm31_11.out,instr30_25.out);
+  simm4_0 := new Concat[4,1,5]<G>(instr11_8.out,instr7.out);
+  simm31_0 := new Concat[27,5,32]<G>(simm31_5.out, simm4_0.out);
+  Simm = simm31_0.out;
+
+  // Bimm
+  bimm31_12 := new Extend[1,20]<G>(instr31.out);
+  bimm31_11 := new Concat[20,1,21]<G>(bimm31_12.out, instr7.out);
+  bimm10_1 := new Concat[6,4,10]<G>(instr30_25.out, instr11_8.out);
+  bimm31_1 := new Concat[21,10,31]<G>(bimm31_11.out, bimm10_1.out);
+  bimm31_0 := new Concat[31,1,32]<G>(bimm31_1.out, zeroConst.out);
+
+  // Iimm
+  iimm31_11 := new Extend[1,21]<G>(instr31.out);
+  iimm31_5 := new Concat[21,6,27]<G>(iimm31_11.out, instr30_25.out);
+  iimm4_0 := new Concat[4,1,5]<G>(instr24_21.out, instr20.out);
+  iimm31_0 := new Concat[27,5,32]<G>(iimm31_5.out, iimm4_0.out);
+  Iimm = iimm31_0.out;
+
 }
