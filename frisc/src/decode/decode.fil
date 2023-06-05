@@ -2,66 +2,67 @@ import "primitives/core.fil";
 
 // decoder for rv32i instruction set
 
-comp main<G:1> (
-  @[G,G+1] instr:32
-) -> (
-  @[G, G+1] isLoad:1,
-  @[G, G+1] isStore:1,
-  @[G, G+1] isALUImm:1,
-  @[G, G+1] isALUReg:1,
-  @[G, G+1] isLUI:1,
-  @[G, G+1] isJAL:1,
-  @[G, G+1] isJALR:1,
-  @[G, G+1] isBranch:1,
-  @[G, G+1] isSys:1,
-  @[G, G+1] isAUIPC:1,
-  @[G, G+1] Uimm:32,
-  @[G, G+1] Iimm:32,
-  @[G, G+1] Simm:32,
-  @[G, G+1] Bimm:32,
-  @[G, G+1] Jimm:32,
-  @[G, G+1] funct:8
-) {
-  decoder := new decode<G>(instr);
-  isLoad = decoder.isLoad;
-  isStore = decoder.isStore;
-  isALUImm = decoder.isALUImm;
-  isALUReg = decoder.isALUReg;
-  isLUI = decoder.isLUI;
-  isJAL = decoder.isJAL;
-  isJALR = decoder.isJALR;
-  isBranch = decoder.isBranch;
-  isSys = decoder.isSys;
-  isAUIPC = decoder.isAUIPC;
-  Uimm = decoder.Uimm;
-  Iimm = decoder.Iimm;
-  Simm = decoder.Simm;
-  Bimm = decoder.Bimm;
-  Jimm = decoder.Jimm;
-  funct = decoder.funct;
-}
+// comp main<G:1> (
+//   @[G,G+1] instr:32
+// ) -> (
+//   @[G, G+1] isLoad:1,
+//   @[G, G+1] isStore:1,
+//   @[G, G+1] isALUImm:1,
+//   @[G, G+1] isALUReg:1,
+//   @[G, G+1] isLUI:1,
+//   @[G, G+1] isJAL:1,
+//   @[G, G+1] isJALR:1,
+//   @[G, G+1] isBranch:1,
+//   @[G, G+1] isSys:1,
+//   @[G, G+1] isAUIPC:1,
+//   @[G, G+1] Uimm:32,
+//   @[G, G+1] Iimm:32,
+//   @[G, G+1] Simm:32,
+//   @[G, G+1] Bimm:32,
+//   @[G, G+1] Jimm:32,
+//   @[G, G+1] funct:8
+// ) {
+//   decoder := new decode<G>(instr);
+//   isLoad = decoder.isLoad;
+//   isStore = decoder.isStore;
+//   isALUImm = decoder.isALUImm;
+//   isALUReg = decoder.isALUReg;
+//   isLUI = decoder.isLUI;
+//   isJAL = decoder.isJAL;
+//   isJALR = decoder.isJALR;
+//   isBranch = decoder.isBranch;
+//   isSys = decoder.isSys;
+//   isAUIPC = decoder.isAUIPC;
+//   Uimm = decoder.Uimm;
+//   Iimm = decoder.Iimm;
+//   Simm = decoder.Simm;
+//   Bimm = decoder.Bimm;
+//   Jimm = decoder.Jimm;
+//   funct = decoder.funct;
+// }
 
-comp decode<G:1> (
+comp decode<G: L-(G), ?L: 1=G+1> (
   @[G, G+1] instr:32
 ) -> (
-  @[G, G+1] isLoad:1,
-  @[G, G+1] isStore:1,
-  @[G, G+1] isALUImm:1,
-  @[G, G+1] isALUReg:1,
-  @[G, G+1] isLUI:1,
-  @[G, G+1] isJAL:1,
-  @[G, G+1] isJALR:1,
-  @[G, G+1] isBranch:1,
-  @[G, G+1] isSys:1,
-  @[G, G+1] isAUIPC:1,
-  @[G, G+1] Uimm:32,
-  @[G, G+1] Iimm:32,
-  @[G, G+1] Simm:32,
-  @[G, G+1] Bimm:32,
-  @[G, G+1] Jimm:32,
-  @[G, G+1] funct:8,
-  @[G, G+1] isAdd:1,   // 1 if add, 0 if sub
-  @[G, G+1] isArith:1, // 1 if arith, 0 if log
+  @[G, L] isLoad:1,
+  @[G, L] isStore:1,
+  @[G, L] isALUImm:1,
+  @[G, L] isALUReg:1,
+  @[G, L] isLUI:1,
+  @[G, L] isJAL:1,
+  @[G, L] isJALR:1,
+  @[G, L] isBranch:1,
+  @[G, L] isSys:1,
+  @[G, L] isAUIPC:1,
+  @[G, L] Uimm:32,
+  @[G, L] Iimm:32,
+  @[G, L] Simm:32,
+  @[G, L] Bimm:32,
+  @[G, L] Jimm:32,
+  @[G, L] funct:8,
+  @[G, L] isAdd:1,   // 1 if add, 0 if sub
+  @[G, L] isArith:1, // 1 if arith, 0 if log
+  @[G, L] rf_write:1
 ) {
   opcode := new Slice[32,6,2,5]<G>(instr); // the important bits
 
@@ -69,12 +70,13 @@ comp decode<G:1> (
   instr5 := new Select[32,5]<G>(instr);
   isSub := new And[1]<G>(instr30.out, instr5.out);
   notSub := new Not[1]<G>(isSub.out);
-  isAdd := notSub.out;
-  isArith := instr30.out;
+  isAdd = notSub.out;
+  isArith = instr30.out;
 
   instr14_12 := new Slice[32,14,12,3]<G>(instr);
+  instr14_12ext := new ZeroExtend[3,8]<G>(instr14_12.out);
   oneConst := new Const[8,1]<G>();
-  shift := new ShiftLeft[32]<G>(oneConst.out, instr14_12.out);
+  shift := new ShiftLeft[8]<G>(oneConst.out, instr14_12ext.out);
   funct = shift.out;
 
   // if it is a load, the opcode is 5'b00000
@@ -126,6 +128,10 @@ comp decode<G:1> (
   auiConst := new Const[5,5]<G>();
   auiEq := new Eq[5]<G>(opcode.out, auiConst.out);
   isAUIPC = auiEq.out;
+
+  branchOrStore := new Or[1]<G>(branchEq.out, storeEq.out);
+  notBranchOrStore := new Not[1]<G>(branchOrStore.out);
+  rf_write = notBranchOrStore.out;
 
   zeroConst := new Const[1,0]<G>();
 

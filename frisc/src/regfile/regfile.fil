@@ -2,22 +2,22 @@ import "primitives/core.fil";
 
 // register file
 
-comp main<G:2>(
-  clk:1,
-  reset:1,
-  @[G,G+1] en:1,
-  @[G,G+1] rd:5, 
-  @[G,G+1] data:32,
-  @[G,G+1] rin1:5,
-  @[G,G+1] rin2:5
-) -> (
-  @[G+1,G+2] rs1:32,
-  @[G+1,G+2] rs2:32
-) {
-  rf := new regfile<G,G+2>(en,rd,data,rin1,rin2);
-  rs1 = rf.rs1;
-  rs2 = rf.rs2;
-}
+// comp main<G:2>(
+//   clk:1,
+//   reset:1,
+//   @[G,G+1] en:1,
+//   @[G,G+1] rd:5, 
+//   @[G,G+1] data:32,
+//   @[G,G+1] rin1:5,
+//   @[G,G+1] rin2:5
+// ) -> (
+//   @[G+1,G+2] rs1:32,
+//   @[G+1,G+2] rs2:32
+// ) {
+//   rf := new regfile<G,G+2>(en,rd,data,rin1,rin2);
+//   rs1 = rf.rs1;
+//   rs2 = rf.rs2;
+// }
 
 extern "regfile.sv" {
   comp regfile<G: L-(G+1), L: 1> (

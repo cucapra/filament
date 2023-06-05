@@ -2,27 +2,27 @@ import "primitives/core.fil";
 
 // ALU
 
-comp main<G:1> (
-  @[G,G+1] inA:32,
-  @[G,G+1] inB:32,
-  @[G,G+1] funct:8,
-  @[G,G+1] isAdd:1,
-  @[G,G+1] isArith:1
-) -> (
-  @[G,G+1] out:32
-) {
-  alu := new alu<G>(inA, inB, funct, isAdd, isArith);
-  out = alu.out;
-}
+// comp main<G:1> (
+//   @[G,G+1] inA:32,
+//   @[G,G+1] inB:32,
+//   @[G,G+1] funct:8,
+//   @[G,G+1] isAdd:1,
+//   @[G,G+1] isArith:1
+// ) -> (
+//   @[G,G+1] out:32
+// ) {
+//   alu := new alu<G>(inA, inB, funct, isAdd, isArith);
+//   out = alu.out;
+// }
 
-comp alu<G:1> (
+comp alu<G: L-(G), ?L: 1=G+1> (
   @[G,G+1] inA:32,
   @[G,G+1] inB:32,
   @[G,G+1] funct:8, // one-hot encoding
   @[G,G+1] isAdd:1, // 1 if add, 0 if sub
   @[G,G+1] isArith:1, // 0 if log, 1 if arith
 ) -> (
-  @[G,G+1] out:32
+  @[G,L] out:32
 ) {
   oneConst_1b := new Const[1,1]<G>();
   oneConst_33b := new Const[33,1]<G>();

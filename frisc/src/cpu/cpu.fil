@@ -2,8 +2,16 @@ import "frisc/src/alu/alu.fil";
 import "frisc/src/decode/decode.fil";
 import "frisc/src/regfile/regfile.fil";
 
-comp cpu<G:1> (
+comp cpu<G:2> (
+  clk:1,
+  reset:1,
   @[G,G+1] instr:32
 ) -> () {
+  rd := new Slice[32,11,7,5]<G>(instr);
+  rs1 := new Slice[32,19,15,5]<G>(instr);
+  rs2 := new Slice[32,24,20,5]<G>(instr);
+
   decoder := new decode<G>(instr);
+  rf := new regfile<G,G+2>(decoder.rf_write, rd.out, alu.out, rs1.out, rs2.out);
+  alu := new alu<G>(rf.rs1, rf.rs2, decoder.funct, decoder.isAdd, decoder.isArith);
 }
