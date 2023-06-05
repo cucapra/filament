@@ -27,8 +27,15 @@ impl InstIdx {
         ctx: &CompBinding,
     ) -> ast::Signature {
         let inst = &ctx[*self];
+        let param_b = 
+            ctx.prog[inst.sig].param_binding(
+                inst.params.iter().map(|p| p.clone().take()).collect_vec()
+            );
         let binds: Vec<ast::Expr> =
-            inst.params.iter().map(|p| p.clone().take()).collect_vec();
+            ctx.prog[inst.sig]
+                .params()
+                .map(|pid| param_b.get(&pid).clone())
+                .collect_vec();
         ctx.prog[inst.sig].clone().resolve_exprs(binds)
     }
 }

@@ -307,7 +307,8 @@ impl Signature {
         partial_map
     }
 
-    /// Construct a parameter binding from this Signature's parameters and the
+    /// Construct a parameter binding from this Signature's parameters and the given
+    /// arguments
     pub fn param_binding(&self, args: Vec<Expr>) -> Binding<Expr> {
         debug_assert!(
             self.params
