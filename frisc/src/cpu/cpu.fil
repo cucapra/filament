@@ -1,0 +1,9 @@
+import "frisc/src/alu/alu.fil";
+import "frisc/src/decode/decode.fil";
+import "frisc/src/regfile/regfile.fil";
+
+comp cpu<G:1> (
+  @[G,G+1] instr:32
+) -> () {
+  decoder := new decode<G>(instr);
+}

@@ -73,6 +73,7 @@ comp decode<G:1> (
   instr14_12 := new Slice[32,14,12,3]<G>(instr);
   oneConst := new Const[8,1]<G>();
   shift := new ShiftLeft[32]<G>(oneConst.out, instr14_12.out);
+  funct = shift.out;
 
   // if it is a load, the opcode is 5'b00000
   loadConst := new Const[5,0]<G>();
