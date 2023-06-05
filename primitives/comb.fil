@@ -37,7 +37,7 @@ extern "comb.sv" {
     @[G, L] left: #WIDTH,
     @[G, L] right: #WIDTH,
   ) -> (
-    @[G, L] out: 1,
+    @[G, L] out: #WIDTH,
   ) where L > G, #WIDTH > 0;
 
   comp Xor[#WIDTH]<G: L-(G), ?L: 1=G+1>(

@@ -45,7 +45,7 @@ comp alu<G:1> (
   selAddSub := new Ternary[32]<G>(isAdd, add.out, sub.out);
   
   xor := new Xor[32]<G>(inA, inB);
-  or := new Xor[32]<G>(inA, inB);
+  or := new Or[32]<G>(inA, inB);
   and := new And[32]<G>(inA, inB);
   sr := new rightshifter[32]<G>(inA, inB, isArith);
   sll := new ShiftLeft[32]<G>(inA, inB);
