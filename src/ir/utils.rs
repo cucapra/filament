@@ -57,11 +57,18 @@ where
         &self.store[idx.get()]
     }
 
+    /// Iterator over the interned values.
     pub fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
         self.store
             .iter()
             .enumerate()
             .map(|(idx, ptr)| (Idx::new(idx), &**ptr))
+    }
+
+    /// Iterator over indices of the interned values.
+    /// Useful since it does not take ownership of self.
+    pub fn idx_iter(&self) -> impl Iterator<Item = Idx<T>> {
+        (0..self.store.len()).map(Idx::new)
     }
 }
 
@@ -118,6 +125,13 @@ impl<T> IndexStore<T> {
         self.store.is_empty()
     }
 
+    /// Iterate over the indices in the store.
+    /// This can be useful because it allows us to mutably borrow the containing struct.
+    pub fn idx_iter(&self) -> impl Iterator<Item = Idx<T>> {
+        (0..self.store.len()).map(Idx::new)
+    }
+
+    /// Iterate over the indices and the values in the store.
     pub fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
         self.store
             .iter()
@@ -152,39 +166,6 @@ impl<T: Display> Display for IndexStore<T> {
     }
 }
 
-/// A context for storing values with their indices.
-/// In addition to adding and getting values, the context also supports applying
-/// a substitution to a value.
-pub trait Ctx<T> {
-    /// Add a new, interned value to the context
-    fn add(&mut self, val: T) -> Idx<T>;
-    /// Get the information associated with a value
-    fn get(&self, idx: Idx<T>) -> &T;
-}
-
-impl<T> Ctx<T> for Interned<T>
-where
-    T: Eq + std::hash::Hash,
-{
-    fn add(&mut self, val: T) -> Idx<T> {
-        self.intern(val)
-    }
-
-    fn get(&self, idx: Idx<T>) -> &T {
-        self.get(idx)
-    }
-}
-
-impl<T> Ctx<T> for IndexStore<T> {
-    fn add(&mut self, val: T) -> Idx<T> {
-        self.add(val)
-    }
-
-    fn get(&self, idx: Idx<T>) -> &T {
-        self.get(idx)
-    }
-}
-
 /// A map that stores information of type [V] and is indexed by
 /// [Idx<T>] types.
 ///
@@ -212,6 +193,11 @@ impl<T, V> DenseIndexInfo<T, V> {
         }
     }
 
+    /// Remove all values from the map.
+    pub fn clear(&mut self) {
+        self.store.clear();
+    }
+
     /// Add a new value to the map and return the index.
     /// Panics if the index is not the next index in the sequence.
     pub fn push(&mut self, key: Idx<T>, val: V) {
@@ -222,6 +208,11 @@ impl<T, V> DenseIndexInfo<T, V> {
     /// Get the value associated with the index.
     pub fn get(&self, idx: Idx<T>) -> &V {
         &self.store[idx.get()]
+    }
+
+    /// Check if the map contains the given index.
+    pub fn contains(&self, idx: Idx<T>) -> bool {
+        idx.get() < self.store.len()
     }
 }
 

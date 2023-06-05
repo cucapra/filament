@@ -1,7 +1,7 @@
-use crate::ir::Ctx;
-use crate::ir_visitor::{Action, Visitor};
+use crate::ir::{Ctx, DisplayCtx};
+use crate::ir_visitor::{Action, Construct, Visitor};
 use crate::utils::GlobalPositionTable;
-use crate::{ast, ir, utils};
+use crate::{ast, cmdline, ir, utils};
 use codespan_reporting::{diagnostic as cr, term};
 use easy_smt as smt;
 use itertools::Itertools;
@@ -9,13 +9,24 @@ use std::collections::HashMap;
 use std::iter;
 use term::termcolor::{ColorChoice, StandardStream};
 
+#[derive(Default)]
 pub struct Assign(Vec<(ir::ParamIdx, String)>);
 
 impl Assign {
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     fn display(&self, ctx: &ir::Component) -> String {
         self.0
             .iter()
-            .map(|(k, v)| format!("{} = {v}", ctx.display_param(*k),))
+            .filter_map(|(k, v)| {
+                // Attempt to parse value as a number
+                match v.parse::<u64>() {
+                    Ok(v) if v == 0 => None,
+                    _ => Some(format!("{} = {v}", ctx.display(*k))),
+                }
+            })
             .join(", ")
     }
 }
@@ -40,12 +51,18 @@ pub struct Discharge {
     prop_map: ir::DenseIndexInfo<ir::Prop, smt::SExpr>,
     // Propositions that have already been checked
     checked: HashMap<ir::PropIdx, Option<Assign>>,
+
+    /// Report the unsatisfied constraint and generate a model
+    show_models: bool,
+
     // Diagnostics to be reported
     diagnostics: Vec<cr::Diagnostic<usize>>,
+    /// Number of errors encountered
+    error_count: u32,
 }
 
-impl Default for Discharge {
-    fn default() -> Self {
+impl Construct for Discharge {
+    fn from(opts: &cmdline::Opts, _: &ir::Context) -> Self {
         let sol = smt::ContextBuilder::new()
             .replay_file(Some(std::fs::File::create("model.smt").unwrap()))
             .solver("z3", ["-smt2", "-in"])
@@ -55,6 +72,8 @@ impl Default for Discharge {
         let mut out = Self {
             sol,
             scoped: false,
+            error_count: 0,
+            show_models: opts.show_models,
             func_map: Default::default(),
             param_map: Default::default(),
             prop_map: Default::default(),
@@ -66,7 +85,22 @@ impl Default for Discharge {
         };
 
         out.define_funcs();
+        out.sol.push().unwrap();
         out
+    }
+
+    fn clear_data(&mut self) {
+        self.param_map.clear();
+        self.prop_map.clear();
+        self.time_map.clear();
+        self.ev_map.clear();
+        self.expr_map.clear();
+        self.checked.clear();
+        self.diagnostics.clear();
+
+        // Create a new solver context
+        self.sol.pop().unwrap();
+        self.sol.push().unwrap();
     }
 }
 
@@ -109,6 +143,9 @@ impl Discharge {
 
     /// Get bindings for the provided parameters in a model.
     fn get_assignments(&mut self, relevant_vars: Vec<ir::ParamIdx>) -> Assign {
+        if relevant_vars.is_empty() {
+            return Assign(vec![]);
+        }
         let mut rev_map = HashMap::with_capacity(relevant_vars.len());
         // SExprs corresponding to the paramters
         let sexps = relevant_vars
@@ -147,9 +184,15 @@ impl Discharge {
             self.sol.assert(self.sol.not(self.prop_map[prop])).unwrap();
             let res = self.sol.check().unwrap();
             let out = match res {
-                smt::Response::Sat => Some(
-                    self.get_assignments(ctx.prop_params(prop.consequent(ctx))),
-                ),
+                smt::Response::Sat => {
+                    if self.show_models {
+                        Some(self.get_assignments(
+                            ctx.prop_params(prop.consequent(ctx)),
+                        ))
+                    } else {
+                        Some(Assign::default())
+                    }
+                }
                 smt::Response::Unsat => None,
                 smt::Response::Unknown => panic!("Solver returned unknown"),
             };
@@ -247,19 +290,19 @@ impl Visitor for Discharge {
     fn start(&mut self, comp: &mut ir::Component) -> Action {
         // Declare all parameters
         let int = self.sol.int_sort();
-        for (idx, _) in comp.params.iter() {
+        for (idx, _) in comp.params().iter() {
             let sexp = self.sol.declare(Self::fmt_param(idx), int).unwrap();
             self.param_map.push(idx, sexp);
         }
 
         // Declare all events
-        for (idx, _) in comp.events.iter() {
+        for (idx, _) in comp.events().iter() {
             let sexp = self.sol.declare(Self::fmt_event(idx), int).unwrap();
             self.ev_map.push(idx, sexp);
         }
 
         // Declare all expressions
-        for (idx, expr) in comp.exprs.iter() {
+        for (idx, expr) in comp.exprs().iter() {
             let assign = self.expr_to_sexp(expr);
             let sexp = self
                 .sol
@@ -269,7 +312,7 @@ impl Visitor for Discharge {
         }
 
         // Declare all time expressions
-        for (idx, ir::Time { event, offset }) in comp.times.iter() {
+        for (idx, ir::Time { event, offset }) in comp.times().iter() {
             let assign =
                 self.sol.plus(self.ev_map[*event], self.expr_map[*offset]);
             let sexp = self
@@ -281,7 +324,7 @@ impl Visitor for Discharge {
 
         // Declare all propositions
         let bs = self.sol.bool_sort();
-        for (idx, prop) in comp.props.iter() {
+        for (idx, prop) in comp.props().iter() {
             // Define assertion equating the proposition to its assignment
             let assign = self.prop_to_sexp(prop);
             let sexp = self
@@ -305,6 +348,7 @@ impl Visitor for Discharge {
             )
         }
 
+        let show_models = self.show_models;
         match self.check_valid(f.prop, comp) {
             None => {
                 let reason = comp.add(
@@ -321,13 +365,18 @@ impl Visitor for Discharge {
                     unreachable!("expected assert reason")
                 };
                 let mut diag = reason.diag(comp);
-                diag = diag.with_notes(vec![
-                    format!(
-                        "Cannot prove constraint {}",
-                        comp.display_prop(f.prop.consequent(comp))
-                    ),
-                    format!("Counterexample: {}", assign.display(comp)),
-                ]);
+                if show_models {
+                    diag = reason.diag(comp).with_notes(vec![format!(
+                        "Cannot prove constraint: {}",
+                        comp.display(f.prop.consequent(comp))
+                    )]);
+                    if !assign.is_empty() {
+                        diag = diag.with_notes(vec![format!(
+                            "Counterexample: {} (unmentioned parameters are 0)",
+                            assign.display(comp)
+                        )]);
+                    }
+                }
                 self.diagnostics.push(diag);
                 Action::Continue
             }
@@ -375,7 +424,16 @@ impl Visitor for Discharge {
                 table.files(),
                 diag,
             )
-            .unwrap()
+            .unwrap();
+            self.error_count += 1;
+        }
+    }
+
+    fn after_traversal(&mut self) -> Option<u32> {
+        if self.error_count > 0 {
+            Some(self.error_count)
+        } else {
+            None
         }
     }
 }

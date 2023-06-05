@@ -1,5 +1,6 @@
 use super::{
-    Component, Ctx, EventIdx, Expr, ExprIdx, Foldable, ParamIdx, TimeIdx,
+    CmpOp, Component, Ctx, EventIdx, Expr, ExprIdx, Foldable, ParamIdx, Prop,
+    PropIdx, TimeIdx,
 };
 use std::fmt::{self, Display};
 
@@ -32,6 +33,64 @@ impl TimeIdx {
     }
 }
 
+impl TimeIdx {
+    pub fn lte<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
+    where
+        C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,
+    {
+        let l = ctx.get(self);
+        let r = ctx.get(other);
+        if l.event == r.event {
+            l.offset.lte(r.offset, ctx)
+        } else {
+            ctx.add(Prop::TimeCmp(CmpOp::lte(self, other)))
+        }
+    }
+
+    pub fn lt<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
+    where
+        C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,
+    {
+        let l = ctx.get(self);
+        let r = ctx.get(other);
+        if l.event == r.event {
+            l.offset.lt(r.offset, ctx)
+        } else {
+            ctx.add(Prop::TimeCmp(CmpOp::lt(self, other)))
+        }
+    }
+
+    pub fn gt<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
+    where
+        C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,
+    {
+        let l = ctx.get(self);
+        let r = ctx.get(other);
+        if l.event == r.event {
+            let l = l.offset;
+            let r = r.offset;
+            l.gt(r, ctx)
+        } else {
+            ctx.add(Prop::TimeCmp(CmpOp::gt(self, other)))
+        }
+    }
+
+    pub fn gte<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
+    where
+        C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,
+    {
+        let l = ctx.get(self);
+        let r = ctx.get(other);
+        if l.event == r.event {
+            let l = l.offset;
+            let r = r.offset;
+            l.gte(r, ctx)
+        } else {
+            ctx.add(Prop::TimeCmp(CmpOp::gte(self, other)))
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Hash, Clone)]
 /// Represents the difference between two events.
 pub enum TimeSub {
@@ -39,6 +98,30 @@ pub enum TimeSub {
     Unit(ExprIdx),
     /// Symbolic difference between two time expressions
     Sym { l: TimeIdx, r: TimeIdx },
+}
+
+impl TimeSub {
+    pub fn gt(self, other: TimeSub, ctx: &mut Component) -> PropIdx {
+        ctx.add(Prop::TimeSubCmp(CmpOp::gt(self, other)))
+    }
+
+    pub fn gte(self, other: TimeSub, ctx: &mut Component) -> PropIdx {
+        ctx.add(Prop::TimeSubCmp(CmpOp::gte(self, other)))
+    }
+
+    pub fn lt(self, other: TimeSub, ctx: &mut Component) -> PropIdx {
+        ctx.add(Prop::TimeSubCmp(CmpOp::lt(self, other)))
+    }
+
+    pub fn lte(self, other: TimeSub, ctx: &mut Component) -> PropIdx {
+        ctx.add(Prop::TimeSubCmp(CmpOp::lte(self, other)))
+    }
+}
+
+impl From<ExprIdx> for TimeSub {
+    fn from(e: ExprIdx) -> Self {
+        TimeSub::Unit(e)
+    }
 }
 
 impl Display for TimeSub {

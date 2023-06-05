@@ -121,4 +121,11 @@ pub struct If {
 pub struct EventBind {
     pub event: EventIdx,
     pub arg: TimeIdx,
+    pub info: InfoIdx,
+}
+
+impl EventBind {
+    pub fn new(event: EventIdx, arg: TimeIdx, info: InfoIdx) -> Self {
+        Self { event, arg, info }
+    }
 }

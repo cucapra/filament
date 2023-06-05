@@ -145,21 +145,6 @@ impl PropIdx {
 
     /// Conjunction of two propositions
     pub fn and(self, other: PropIdx, ctx: &mut impl Ctx<Prop>) -> PropIdx {
-        /*match (ctx.get(self), ctx.get(other)) {
-            (Prop::True, _) | (_, Prop::True) => return other,
-            (Prop::False, _) | (_, Prop::False) => return ctx.add(Prop::False),
-            (Prop::Not(p), _) => {
-                if *p == other {
-                    return ctx.add(Prop::False);
-                }
-            }
-            (_, Prop::Not(p)) => {
-                if *p == self {
-                    return ctx.add(Prop::False);
-                }
-            }
-            _ => (),
-        }*/
         if self == other {
             return self;
         } else if self.is_true(ctx) {
