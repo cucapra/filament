@@ -210,7 +210,7 @@ module ShiftLeft #(
   assign out = in << shift;
 endmodule
 
-module ShiftRight #(
+module ShiftRightLogical #(
   parameter WIDTH = 32
 ) (
   input wire logic [WIDTH-1:0] in,
@@ -218,6 +218,16 @@ module ShiftRight #(
   output wire logic [WIDTH-1:0] out
 );
   assign out = in >> shift;
+endmodule
+
+module ShiftRightArith #(
+  parameter WIDTH = 32
+) (
+  input wire logic [WIDTH-1:0] in,
+  input wire logic [WIDTH-1:0] shift,
+  output wire logic [WIDTH-1:0] out
+); 
+  assign out = in >>> shift;
 endmodule
 
 
