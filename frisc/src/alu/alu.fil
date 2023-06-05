@@ -28,15 +28,7 @@ comp alu<G:1> (
   oneConst_33b := new Const[33,1]<G>();
   zeroConst_1b := new Const[1,0]<G>();
 
-  // used for adds and subs
-  add := new Add[32]<G>(inA, inB);
-  
-  xor := new Xor[32]<G>(inA, inB);
-  or := new Xor[32]<G>(inA, inB);
-  and := new And[32]<G>(inA, inB);
-  sr := new rightshifter[32]<G>(inA, inB, isArith);
-  sll := new ShiftLeft[32]<G>(inA, inB);
-
+  // add / sub
   notInB := new Not[32]<G>(inB);
   concat0 := new Concat[1,32,33]<G>(oneConst_1b.out, notInB.out);
   concat1 := new Concat[1,32,33]<G>(zeroConst_1b.out, inA);
@@ -47,6 +39,17 @@ comp alu<G:1> (
 
   add0 := new Add[33]<G>(concat0.out, concat1.out);
   aluMinus := new Add[33]<G>(add0.out, oneConst_33b.out);
+  sub := new Slice[33,31,0,32]<G>(aluMinus.out);
+  add := new Add[32]<G>(inA, inB);
+
+  selAddSub := new Ternary[32]<G>(isAdd, add.out, sub.out);
+  
+  xor := new Xor[32]<G>(inA, inB);
+  or := new Xor[32]<G>(inA, inB);
+  and := new And[32]<G>(inA, inB);
+  sr := new rightshifter[32]<G>(inA, inB, isArith);
+  sll := new ShiftLeft[32]<G>(inA, inB);
+
   aluMinus32 := new Select[33,32]<G>(aluMinus.out);
   
   ltguard := new Xor[1]<G>(inA31.out, inB31.out);
@@ -54,7 +57,7 @@ comp alu<G:1> (
   lt := new ZeroExtend[1,32]<G>(ltTernary.out);
   ltu := new ZeroExtend[1,32]<G>(aluMinus32.out);
 
-  mux := new onehotmux[32]<G>(funct, add.out, lt.out, ltu.out, xor.out, or.out, and.out, sll.out, sr.out);
+  mux := new onehotmux[32]<G>(funct, selAddSub.out, lt.out, ltu.out, xor.out, or.out, and.out, sll.out, sr.out);
   out = mux.out;
 }
 

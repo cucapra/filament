@@ -33,24 +33,12 @@ module rightshifter #(
   input wire logic [WIDTH-1:0] in,
   input wire logic [WIDTH-1:0] shamt,
   input wire logic isArith, // 0 for logical, 1 for arithmetic
-  output wire logic [WIDTH-1:0] out
+  output logic [WIDTH-1:0] out
 );
   always @(*) begin
     if (isArith) out = in >>> shamt; // arithmetic
     else out = in >> shamt;      // logical
   end
-endmodule
-
-module addsub #(
-  parameter WIDTH = 32
-) (
-  input wire logic [WIDTH-1:0] inA,
-  input wire logic [WIDTH-1:0] inB,
-  input wire logic isAdd,
-  output wire logic [WIDTH-1:0] out;
-);
-  if (isAdd) out = inA + inB;
-  else out = inA - inB;
 endmodule
 
 module Ternary #(

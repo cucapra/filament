@@ -66,8 +66,10 @@ comp decode<G:1> (
   opcode := new Slice[32,6,2,5]<G>(instr); // the important bits
 
   instr30 := new Select[32,30]<G>(instr); // instr[30] is 1 for sub and arith, 0 for add and logical
-  notinstr30 := new Not[1]<G>(instr30.out);
-  isAdd := notinstr30.out;
+  instr5 := new Select[32,5]<G>(instr);
+  isSub := new And[1]<G>(instr30.out, instr5.out);
+  notSub := new Not[1]<G>(isSub.out);
+  isAdd := notSub.out;
   isArith := instr30.out;
 
   instr14_12 := new Slice[32,14,12,3]<G>(instr);
