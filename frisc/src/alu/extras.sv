@@ -52,3 +52,14 @@ module addsub #(
   if (isAdd) out = inA + inB;
   else out = inA - inB;
 endmodule
+
+module Ternary #(
+  parameter WIDTH = 32
+) (
+  input wire logic guard,
+  input wire logic [WIDTH-1:0] opTrue,
+  input wire logic [WIDTH-1:0] opFalse,
+  output wire logic [WIDTH-1:0] out
+);
+  assign out = guard ? opTrue : opFalse;
+endmodule;
