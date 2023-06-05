@@ -183,7 +183,7 @@ impl Printer<'_> {
                 write!(f, "{:indent$}{inv};", "")
             }
             ir::Command::Connect(con) => self.connect(con, indent, f),
-            ir::Command::EventBind(ir::EventBind { event, arg }) => {
+            ir::Command::EventBind(ir::EventBind { event, arg, .. }) => {
                 write!(f, "{:indent$}bind {} to {}", "", event, self.time(*arg))
             }
             ir::Command::ForLoop(ir::Loop {

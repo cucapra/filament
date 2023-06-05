@@ -23,6 +23,8 @@ pub enum Info {
         bind_loc: GPosIdx,
         delay_loc: GPosIdx,
     },
+    /// For [super::EventBind]
+    EventBind { bind_loc: GPosIdx },
     /// For [super::Instance]
     Instance {
         name_loc: GPosIdx,
@@ -62,6 +64,10 @@ impl Info {
             bind_loc,
             delay_loc,
         }
+    }
+
+    pub fn event_bind(bind_loc: GPosIdx) -> Self {
+        Self::EventBind { bind_loc }
     }
 
     pub fn instance(
@@ -163,6 +169,16 @@ pub enum Reason {
         /// The range's start and end
         range: (TimeIdx, TimeIdx),
     },
+    EventTrig {
+        /// Delay of event of component being triggered
+        ev_delay_loc: GPosIdx,
+        ev_delay: TimeSub,
+        /// Delay of event in containing component
+        comp_ev: GPosIdx,
+        delay: TimeSub,
+        /// Location of the binding
+        time_expr_loc: GPosIdx,
+    },
     // =============== Generic Constraints =======================
     /// A simple reason
     Misc { reason: String, def_loc: GPosIdx },
@@ -217,6 +233,22 @@ impl Reason {
         Self::EventConstraint {
             bind_loc,
             constraint_loc,
+        }
+    }
+
+    pub fn event_trig(
+        ev_delay_loc: GPosIdx,
+        ev_delay: TimeSub,
+        comp_ev: GPosIdx,
+        delay: TimeSub,
+        time_expr_loc: GPosIdx,
+    ) -> Self {
+        Self::EventTrig {
+            ev_delay_loc,
+            ev_delay,
+            comp_ev,
+            delay,
+            time_expr_loc,
         }
     }
 
@@ -424,6 +456,28 @@ impl Reason {
                         "interval's end must be strictly greater than the start",
                     )
                     .with_labels(vec![label])
+            }
+            Reason::EventTrig {
+                ev_delay_loc,
+                ev_delay,
+                comp_ev,
+                delay,
+                time_expr_loc,
+            } => {
+                let bind = time_expr_loc.primary().with_message(
+                    "event provided to invoke triggers too often",
+                );
+                let ev = ev_delay_loc.secondary().with_message(format!(
+                    "invocation's event is allowed to trigger every {} cycles",
+                    ctx.display_timesub(ev_delay)
+                ));
+                let comp = comp_ev.secondary().with_message(format!(
+                    "this event triggers every {} cycles",
+                    ctx.display_timesub(delay)
+                ));
+                Diagnostic::error()
+                    .with_message("event provided to invocation triggers more often that invocation's event's delay allows")
+                    .with_labels(vec![bind, ev, comp])
             }
         }
     }

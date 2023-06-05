@@ -623,9 +623,13 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     .clone()
                     .resolve_exprs(&param_binding)
                     .resolve_event(&event_binding);
+
+                let pos = arg.pos();
+                let info = self.comp.add(ir::Info::event_bind(pos));
+
                 let arg = self.time(arg.inner().clone());
                 let event = self.event(resolved, ir::EventOwner::Inv { inv });
-                ir::EventBind { event, arg }.into()
+                ir::EventBind::new(event, arg, info).into()
             })
             .collect();
 

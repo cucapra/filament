@@ -1,0 +1,13 @@
+---STDERR---
+error: bundle's availability is greater than the delay of the event
+  ┌─ tests/errors/invalid-interface-input.fil:5:3
+  │
+1 │ comp main<G: 3, L: 1>(
+  │                    - event's delay
+  ·
+5 │   @[L, L+2] in2: 32,
+  │   ^^^^^^^^^ available for 2 cycles
+  │
+  = Cannot prove constraint: 1 >= 2
+
+Compilation failed with 1 errors

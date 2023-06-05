@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::ir::{self, Ctx};
 use crate::ir_visitor::{Action, Visitor};
-use crate::utils::{self, GPosIdx};
+use crate::utils::GPosIdx;
 
 #[derive(Default)]
 /// Filament's core interval checking algorithm. At a high-level it ensures that:
@@ -140,18 +140,37 @@ impl Visitor for IntervalCheck {
         eb: &mut ir::EventBind,
         comp: &mut ir::Component,
     ) -> Action {
-        let ir::EventBind { event, arg } = &eb;
+        let ir::EventBind { event, arg, info } = &eb;
+        let ir::Info::EventBind { bind_loc } = comp[*info] else {
+            unreachable!("expected event bind info")
+        };
+
         let inv_ev = &comp[*event];
+        let inv_delay = inv_ev.delay.clone();
+        let ir::Info::Event { delay_loc: inv_del_loc, .. } = comp[inv_ev.info] else {
+            unreachable!("expected event info")
+        };
+
         let this_ev = &comp[comp[*arg].event];
+        let this_delay = this_ev.delay.clone();
+        let ir::Info::Event { delay_loc: ev_del_loc, .. } = comp[this_ev.info] else {
+            unreachable!("expected event info")
+        };
+
+        let reason = comp.add(
+            ir::Reason::event_trig(
+                inv_del_loc,
+                inv_delay.clone(),
+                ev_del_loc,
+                this_delay.clone(),
+                bind_loc,
+            )
+            .into(),
+        );
+
         // Ensure that this event's delay is greater than invoked component's event's delay.
-        let prop = comp.add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(
-            this_ev.delay.clone(),
-            inv_ev.delay.clone(),
-        )));
-        let reason = comp.add(ir::Reason::misc(
-            "invoked component's delay must be less or equal to than this event's delay",
-            utils::GPosIdx::UNKNOWN,
-        ).into());
+        let prop = comp
+            .add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(this_delay, inv_delay)));
         let fact = ir::Command::from(comp.assert(prop, reason));
         Action::AddBefore(vec![fact])
     }
