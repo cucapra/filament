@@ -101,22 +101,6 @@ impl Printer<'_> {
         Ok(())
     }
 
-    fn index_store<T>(
-        store: &ir::IndexStore<T>,
-        op: &str,
-        indent: usize,
-        f: &mut impl io::Write,
-    ) -> io::Result<()>
-    where
-        T: Display,
-        Idx<T>: Display,
-    {
-        for (i, v) in store.iter() {
-            writeln!(f, "{:indent$}{i} = {op} {v};", "")?;
-        }
-        Ok(())
-    }
-
     fn expr(&self, e: ir::ExprIdx) -> String {
         self.ctx.display(e)
     }
@@ -441,7 +425,6 @@ impl Printer<'_> {
         for (idx, port) in ctx.ports().iter() {
             printer.local_port(idx, port, 2, f)?;
         }
-        //Printer::index_store(ctx.instances(), "instance", 2, f)?;
         for (idx, instance) in ctx.instances().iter() {
             Printer::instance(ctx,idx,instance,2,f)?;
         }
