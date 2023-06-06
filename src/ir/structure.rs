@@ -196,7 +196,7 @@ impl fmt::Display for ParamOwner {
 /// Parameters with an optional initial value
 pub struct Param {
     pub owner: ParamOwner,
-    pub default: Option<ExprIdx>
+    pub default: Option<ExprIdx>,
 }
 
 impl Param {

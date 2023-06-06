@@ -29,7 +29,10 @@ impl BindCheck {
         self.params.extend(vars);
     }
 
-    fn push_bundle_params(&mut self, vars: impl Iterator<Item = Loc<ast::Id>>) -> usize {
+    fn push_bundle_params(
+        &mut self,
+        vars: impl Iterator<Item = Loc<ast::Id>>,
+    ) -> usize {
         let len = self.params.len();
         let vars = vars.collect_vec().into_iter();
         self.add_global_params(vars.clone());
@@ -220,9 +223,7 @@ impl visitor::Checker for BindCheck {
         if min_formals > actuals {
             let msg = format!(
                 "`{}' requires at least {} parameters but {} were provided",
-                inst.component,
-                min_formals,
-                actuals,
+                inst.component, min_formals, actuals,
             );
             let err = Error::malformed(msg.clone())
                 .add_note(self.diag.add_info(msg, inst.component.pos()));
@@ -230,9 +231,7 @@ impl visitor::Checker for BindCheck {
         } else if actuals > max_formals {
             let msg = format!(
                 "`{}' requires at most {} parameters but {} were provided",
-                inst.component,
-                max_formals,
-                actuals,
+                inst.component, max_formals, actuals,
             );
             let err = Error::malformed(msg.clone())
                 .add_note(self.diag.add_info(msg, inst.component.pos()));

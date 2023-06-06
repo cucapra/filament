@@ -67,7 +67,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     /// Add a parameter to the component.
-    fn param(&mut self, param: ast::ParamBind, owner: ir::ParamOwner) -> ParamIdx {
+    fn param(
+        &mut self,
+        param: ast::ParamBind,
+        owner: ir::ParamOwner,
+    ) -> ParamIdx {
         let default = param.default.map(|e| self.expr(e));
         let p = ir::Param::new(owner, default);
         let idx = self.comp.add(p);
@@ -120,7 +124,13 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 // We don't need to push a new scope because this type is does not
                 // bind any new parameters.
                 let live = self.with_scope(|ctx| ir::Liveness {
-                    idx: ctx.param(ast::ParamBind::new(ast::Loc::unknown(Id::default()), None), ir::ParamOwner::Bundle), // This parameter is unused
+                    idx: ctx.param(
+                        ast::ParamBind::new(
+                            ast::Loc::unknown(Id::default()),
+                            None,
+                        ),
+                        ir::ParamOwner::Bundle,
+                    ), // This parameter is unused
                     len: ctx.comp.num(1),
                     range: ctx.range(liveness.take()),
                 });
@@ -144,7 +154,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             }) => {
                 // Construct the bundle type in a new scope.
                 let live = self.with_scope(|ctx| ir::Liveness {
-                    idx: ctx.param(ast::ParamBind::new(idx, None), ir::ParamOwner::Bundle),
+                    idx: ctx.param(
+                        ast::ParamBind::new(idx, None),
+                        ir::ParamOwner::Bundle,
+                    ),
                     len: ctx.expr(len.take()),
                     range: ctx.range(liveness.take()),
                 });
@@ -255,8 +268,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         } = inst;
         let comp = self.sigs.get(component).unwrap();
         let binding = self.param_binding(
-            comp.params.iter().cloned(), 
-            bindings.clone().into_iter().map(|b| b.take())
+            comp.params.iter().cloned(),
+            bindings.clone().into_iter().map(|b| b.take()),
         );
         let inst = ir::Instance {
             comp: comp.idx,
@@ -367,12 +380,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .iter()
             .skip(args.len())
             .map(|pb| {
-                let bind = pb
-                    .default
-                    .as_ref()
-                    .unwrap()
-                    .clone()
-                    .resolve(&partial_map);
+                let bind =
+                    pb.default.as_ref().unwrap().clone().resolve(&partial_map);
                 (*pb.param.inner(), bind)
             })
             .collect();
@@ -474,7 +483,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 let end = self.expr(end);
                 // Compile the body in a new scope
                 let (index, body) = self.with_scope(|this| {
-                    let idx = this.param(ast::ParamBind::new(idx, None), ir::ParamOwner::Local);
+                    let idx = this.param(
+                        ast::ParamBind::new(idx, None),
+                        ir::ParamOwner::Local,
+                    );
                     (idx, this.commands(body))
                 });
                 let l = ir::Loop {
@@ -563,7 +575,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 self.declare_inv(inv);
             }
             ast::Command::ForLoop(ast::ForLoop { idx, body, .. }) => {
-                self.param(ast::ParamBind::new(idx.clone(), None), ir::ParamOwner::Local);
+                self.param(
+                    ast::ParamBind::new(idx.clone(), None),
+                    ir::ParamOwner::Local,
+                );
                 self.declare_cmds(body);
             }
             ast::Command::If(ast::If { then, alt, .. }) => {

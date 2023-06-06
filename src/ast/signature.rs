@@ -61,18 +61,12 @@ impl Display for EventBind {
 /// A parameter bound in the signature
 pub struct ParamBind {
     pub param: Loc<Id>,
-    pub default: Option<Expr>
+    pub default: Option<Expr>,
 }
 
 impl ParamBind {
-    pub fn new(
-        param: Loc<Id>,
-        default: Option<Expr>
-    ) -> Self {
-        Self {
-            param,
-            default
-        }
+    pub fn new(param: Loc<Id>, default: Option<Expr>) -> Self {
+        Self { param, default }
     }
 }
 
@@ -338,12 +332,8 @@ impl Signature {
             .iter()
             .skip(args.len())
             .map(|eb| {
-                let bind = eb
-                    .default
-                    .as_ref()
-                    .unwrap()
-                    .clone()
-                    .resolve(&partial_map);
+                let bind =
+                    eb.default.as_ref().unwrap().clone().resolve(&partial_map);
                 (*eb.param.inner(), bind)
             })
             .collect();

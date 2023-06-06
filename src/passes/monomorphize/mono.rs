@@ -7,7 +7,7 @@ use crate::{
 };
 use itertools::Itertools;
 use linked_hash_set::LinkedHashSet;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// Monomorphize the Filament program
 pub struct Monomorphize<'e> {
@@ -17,14 +17,20 @@ pub struct Monomorphize<'e> {
     queue: LinkedHashSet<(ast::Id, Vec<u64>)>,
     /// Names of external components
     externals: &'e HashSet<ast::Id>,
+    /// References to component signatures indexed by Id, used to coerce parameters.
+    signatures: &'e HashMap<ast::Id, &'e ast::Signature>,
 }
 
 impl<'e> Monomorphize<'e> {
-    fn new(externals: &'e HashSet<ast::Id>) -> Self {
+    fn new(
+        externals: &'e HashSet<ast::Id>,
+        signatures: &'e HashMap<ast::Id, &'e ast::Signature>,
+    ) -> Self {
         Self {
             queue: LinkedHashSet::new(),
             processed: HashSet::new(),
             externals,
+            signatures,
         }
     }
 
@@ -36,10 +42,14 @@ impl<'e> Monomorphize<'e> {
 
     /// Coerce a list of expressions into a list of concrete values.
     fn coerce_params<'a>(
+        &self,
+        sig: &ast::Signature,
         params: impl IntoIterator<Item = &'a ast::Expr>,
     ) -> Vec<u64> {
-        params
-            .into_iter()
+        let binding = sig.param_binding(params.into_iter().cloned().collect());
+
+        sig.params()
+            .map(|param| binding.get(param.inner()))
             .map(|p| {
                 u64::try_from(p).unwrap_or_else(|_| {
                     panic!("Parameter must be concrete but was {p}")
@@ -60,7 +70,12 @@ impl<'e> Monomorphize<'e> {
         comp: ast::Id,
         params: impl IntoIterator<Item = &'a ast::Expr>,
     ) -> ast::Id {
-        let conc = Self::coerce_params(params);
+        let sig = self
+            .signatures
+            .get(&comp)
+            .expect(&format!("Component {comp} not found in scope"));
+
+        let conc = self.coerce_params(sig, params);
         if self.processed.contains(&(comp, conc.clone())) {
             return self.get_name(comp, &conc);
         }
@@ -85,7 +100,7 @@ impl<'e> Monomorphize<'e> {
         binding: Vec<ast::Expr>,
     ) -> ast::Signature {
         let name = self
-            .get_name(sig.name.copy(), &Self::coerce_params(binding.iter()))
+            .get_name(sig.name.copy(), &self.coerce_params(sig, binding.iter()))
             .into();
         let mut nsig = sig.clone().resolve_exprs(binding);
         nsig.name = name;
@@ -310,7 +325,8 @@ impl Pass for Monomorphize<'_> {
         let main = ns.components.remove(top_idx);
         let externals =
             ns.externals().map(|(_, sig)| *sig.name.inner()).collect();
-        let mut mono = Monomorphize::new(&externals);
+        let signatures = ns.signatures().collect();
+        let mut mono = Monomorphize::new(&externals, &signatures);
         let mut comps = vec![mono.generate_comp(&main, &Binding::new(None))];
 
         while let Some((name, params)) = mono.process_instance() {
