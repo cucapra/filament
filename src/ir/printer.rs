@@ -378,6 +378,25 @@ impl Printer<'_> {
         }
     }
 
+    pub fn instance(
+        ctx: &ir::Component,
+        idx: ir::InstIdx,
+        inst: &ir::Instance,
+        indent: usize,
+        f: &mut impl io::Write
+    ) -> io::Result<()> {
+        write!(f, "{:indent$}{idx} = instance ","")?;
+        let ir::Instance {comp, params} = inst;
+        write!(f, "{}[", comp)?;
+        for (i, param) in params.iter().enumerate() {
+            if i != 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", ctx.display(*param))?;
+        }
+        writeln!(f, "]")
+    }
+
     pub fn invoke(
         idx: ir::InvIdx,
         c: &ir::Invoke,
@@ -422,7 +441,10 @@ impl Printer<'_> {
         for (idx, port) in ctx.ports().iter() {
             printer.local_port(idx, port, 2, f)?;
         }
-        Printer::index_store(ctx.instances(), "instance", 2, f)?;
+        //Printer::index_store(ctx.instances(), "instance", 2, f)?;
+        for (idx, instance) in ctx.instances().iter() {
+            Printer::instance(ctx,idx,instance,2,f)?;
+        }
         for (idx, invoke) in ctx.invocations().iter() {
             Printer::invoke(idx, invoke, 2, f)?;
         }
