@@ -394,7 +394,7 @@ impl Printer<'_> {
             }
             write!(f, "{}", ctx.display(*param))?;
         }
-        writeln!(f, "]")
+        writeln!(f, "];")
     }
 
     pub fn invoke(
