@@ -160,12 +160,12 @@ impl Printer<'_> {
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         let ir::Connect { src, dst, .. } = c;
-        writeln!(
+        write!(
             f,
             "{:indent$}{} = {};",
             "",
+            self.access(dst),
             self.access(src),
-            self.access(dst)
         )
     }
 
