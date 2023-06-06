@@ -367,10 +367,10 @@ impl Printer<'_> {
         idx: ir::InstIdx,
         inst: &ir::Instance,
         indent: usize,
-        f: &mut impl io::Write
+        f: &mut impl io::Write,
     ) -> io::Result<()> {
-        write!(f, "{:indent$}{idx} = instance ","")?;
-        let ir::Instance {comp, params} = inst;
+        write!(f, "{:indent$}{idx} = instance ", "")?;
+        let ir::Instance { comp, params } = inst;
         write!(f, "{}[", comp)?;
         for (i, param) in params.iter().enumerate() {
             if i != 0 {
@@ -426,7 +426,7 @@ impl Printer<'_> {
             printer.local_port(idx, port, 2, f)?;
         }
         for (idx, instance) in ctx.instances().iter() {
-            Printer::instance(ctx,idx,instance,2,f)?;
+            Printer::instance(ctx, idx, instance, 2, f)?;
         }
         for (idx, invoke) in ctx.invocations().iter() {
             Printer::invoke(idx, invoke, 2, f)?;
