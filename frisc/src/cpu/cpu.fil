@@ -11,7 +11,7 @@ comp cpu<G:2> (
   rs1 := new Slice[32,19,15,5]<G>(instr);
   rs2 := new Slice[32,24,20,5]<G>(instr);
 
-  decoder := new decode<G>(instr);
+  decoder := new decode<G,G+2>(instr);
   rf := new regfile<G,G+2>(decoder.rf_write, rd.out, alu.out, rs1.out, rs2.out);
-  alu := new alu<G>(rf.rs1, rf.rs2, decoder.funct, decoder.isAdd, decoder.isArith);
+  alu := new alu<G+1>(rf.rs1, rf.rs2, decoder.funct, decoder.isAdd, decoder.isArith);
 }
