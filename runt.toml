@@ -11,6 +11,17 @@ cmd = """
 """
 
 [[tests]]
+name = "ir-errors"
+paths = [
+  "tests/errors/*.fil",
+  "primitives/*.fil",
+]
+expect_dir = "tests/ir_check/"
+cmd = """
+./target/debug/filament {} --ir
+"""
+
+[[tests]]
 name = "compile"
 paths = [
   "tests/compile/*.fil"

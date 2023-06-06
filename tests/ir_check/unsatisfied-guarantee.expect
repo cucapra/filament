@@ -1,0 +1,13 @@
+---CODE---
+1
+---STDERR---
+error: source port does not provide value for as long as destination requires
+   ┌─ tests/errors/unsatisfied-guarantee.fil:12:9
+   │
+12 │   out = m0.out;
+   │   ----  ^^^^^^ source is available for @[G, G+1]
+   │   │      
+   │   requires value for @[G+3, G+4]
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

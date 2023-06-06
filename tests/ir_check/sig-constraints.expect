@@ -1,0 +1,14 @@
+---CODE---
+1
+---STDERR---
+error: instantiation violates paraemter constraint
+  ┌─ tests/errors/sig-constraints.fil:1:34
+  │
+1 │ comp Foo[#W]<G: 1>() -> () where #W > 1 {}
+  │                                  ^^^^^^^ constraint was violated
+2 │ comp main<G: 1>() -> () {
+3 │     F := new Foo[1];
+  │              --- instantiation occurs here
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.
