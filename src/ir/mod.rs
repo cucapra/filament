@@ -12,15 +12,15 @@ mod subst;
 mod time;
 mod utils;
 
-pub use comp::{CompOrExt, Component, Context, External};
+pub use comp::{Component, Context};
 pub use control::{Command, Connect, EventBind, If, Instance, Invoke, Loop};
 pub use ctx::{Ctx, MutCtx};
 pub use expr::Expr;
 pub use fact::{Cmp, CmpOp, Fact, Prop};
 pub use from_ast::astconv::transform;
 pub use idxs::{
-    CmdIdx, CompIdx, EventIdx, ExprIdx, InfoIdx, InstIdx, InvIdx, ParamIdx,
-    PortIdx, PropIdx, TimeIdx,
+    CompIdx, EventIdx, ExprIdx, InfoIdx, InstIdx, InvIdx, ParamIdx, PortIdx,
+    PropIdx, TimeIdx,
 };
 pub use info::{Info, Reason};
 pub use printer::{DisplayCtx, Printer};

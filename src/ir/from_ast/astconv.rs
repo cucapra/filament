@@ -717,8 +717,40 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
-    fn external(idx: CompIdx, sig: ast::Signature) -> ir::External {
-        ir::External { idx, sig }
+    /// Adds assumptions about the ports in the component
+    fn port_assumptions(&mut self) -> Vec<ir::Command> {
+        let mut cmds = Vec::with_capacity(self.comp.ports().len() * 2);
+        let ports = self
+            .comp
+            .ports()
+            .iter()
+            .map(|(_, p)| (p.live.idx, p.live.len))
+            .collect_vec();
+        // Add assumptions for range of bundle-bound indices
+        let reason = self.comp.add(
+            ir::Reason::misc("bundle index is within range", GPosIdx::UNKNOWN)
+                .into(),
+        );
+        for (idx, len) in ports {
+            let idx = idx.expr(self.comp);
+            let start = idx.gte(self.comp.num(0), self.comp);
+            let end = idx.lt(len, self.comp);
+            let in_range = start.and(end, self.comp);
+            cmds.extend([self.comp.assume(in_range, reason).into()])
+        }
+        cmds
+    }
+
+    fn external(idx: CompIdx, sig: ast::Signature) -> ir::Component {
+        let mut ir_comp = ir::Component::new(idx, false);
+        let binding = SigMap::default();
+        let mut builder = BuildCtx::new(&mut ir_comp, &binding);
+
+        // First we declare all the ports
+        let mut cmds = builder.sig(sig);
+        cmds.extend(builder.port_assumptions());
+        ir_comp.cmds = cmds;
+        ir_comp
     }
 
     fn comp(
@@ -726,34 +758,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         idx: CompIdx,
         sigs: &'prog SigMap,
     ) -> ir::Component {
-        let mut ir_comp = ir::Component::new(idx);
+        let mut ir_comp = ir::Component::new(idx, false);
         let mut builder = BuildCtx::new(&mut ir_comp, sigs);
 
-        // First we declare all the ports
         let mut cmds = builder.sig(comp.sig);
         let body_cmds = builder.commands(comp.body);
-
-        cmds.reserve(ir_comp.ports().len() * 2);
-        let ports = ir_comp
-            .ports()
-            .iter()
-            .map(|(_, p)| (p.live.idx, p.live.len))
-            .collect_vec();
-        // Add assumptions for range of bundle-bound indices
-        let reason = ir_comp.add(
-            ir::Reason::misc("bundle index is within range", GPosIdx::UNKNOWN)
-                .into(),
-        );
-        for (idx, len) in ports {
-            let idx = idx.expr(&mut ir_comp);
-            let start = idx.gte(ir_comp.num(0), &mut ir_comp);
-            let end = idx.lt(len, &mut ir_comp);
-            cmds.extend([
-                ir_comp.assume(start, reason).into(),
-                ir_comp.assume(end, reason).into(),
-            ])
-        }
-
+        cmds.extend(builder.port_assumptions());
         cmds.extend(body_cmds);
         ir_comp.cmds = cmds;
         ir_comp
@@ -772,14 +782,14 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         for ext in exts {
             let idx = sig_map.get(&ext.name).unwrap().idx;
             let ir_ext = BuildCtx::external(idx, ext);
-            ctx.comps.checked_add(idx, ir::CompOrExt::Ext(ir_ext));
+            ctx.comps.checked_add(idx, ir_ext);
         }
     }
 
     for comp in ns.components {
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
         let ir_comp = BuildCtx::comp(comp, idx, &sig_map);
-        ctx.comps.checked_add(idx, ir::CompOrExt::Comp(ir_comp));
+        ctx.comps.checked_add(idx, ir_comp);
     }
     ctx
 }

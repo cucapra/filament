@@ -237,10 +237,8 @@ where
     fn do_pass(opts: &cmdline::Opts, ctx: &mut ir::Context) -> Result<(), u32> {
         let mut visitor = Self::from(opts, ctx);
         for (_, c) in ctx.comps.iter_mut() {
-            if let ir::CompOrExt::Comp(comp) = c {
-                visitor.clear_data();
-                visitor.visit(comp);
-            }
+            visitor.clear_data();
+            visitor.visit(c);
         }
         match visitor.after_traversal() {
             Some(n) => Err(n),

@@ -4,36 +4,26 @@ use super::{
     MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeIdx,
     TimeSub,
 };
-use crate::{ast, utils::Idx};
+use crate::utils::Idx;
 
 #[derive(Default)]
 pub struct Context {
-    pub comps: IndexStore<CompOrExt>,
+    pub comps: IndexStore<Component>,
 }
 
-impl Ctx<CompOrExt> for Context {
-    fn add(&mut self, val: CompOrExt) -> Idx<CompOrExt> {
-        self.comps.add(val)
-    }
-
-    fn get(&self, idx: Idx<CompOrExt>) -> &CompOrExt {
-        self.comps.get(idx)
-    }
-}
-
-pub enum CompOrExt {
-    Comp(Component),
-    Ext(External),
-}
-
-/// An external component.
-pub struct External {
-    pub idx: CompIdx,
-    pub sig: ast::Signature,
-}
-
+/// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
+    /// Identifier for the component
     idx: CompIdx,
+
+    // Interned data. We store this on a per-component basis because events with the
+    // same identifiers in different components are not equal.
+    /// Interned expressions
+    exprs: Interned<Expr>,
+    /// Interned times
+    times: Interned<Time>,
+    /// Interned propositions
+    props: Interned<Prop>,
 
     // Component defined values.
     /// Ports and bundles defined by the component.
@@ -49,26 +39,20 @@ pub struct Component {
     /// Invocations defined by the component
     invocations: IndexStore<Invoke>,
 
-    /// Information tracked by the component
-    info: IndexStore<Info>,
-
-    // Interned data. We store this on a per-component basis because events with the
-    // same identifiers in different components are not equal.
-    /// Interned expressions
-    exprs: Interned<Expr>,
-    /// Interned times
-    times: Interned<Time>,
-    /// Interned propositions
-    props: Interned<Prop>,
-
     /// Commands in the component
     pub cmds: Vec<Command>,
+
+    /// Information tracked by the component
+    info: IndexStore<Info>,
+    /// Is this an external component
+    pub is_ext: bool,
 }
 
 impl Component {
-    pub fn new(idx: CompIdx) -> Self {
+    pub fn new(idx: CompIdx, is_ext: bool) -> Self {
         let mut comp = Self {
             idx,
+            is_ext,
             ports: IndexStore::default(),
             params: IndexStore::default(),
             events: IndexStore::default(),

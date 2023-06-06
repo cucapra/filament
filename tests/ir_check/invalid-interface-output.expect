@@ -1,0 +1,14 @@
+---CODE---
+1
+---STDERR---
+error: bundle's availability is greater than the delay of the event
+  ┌─ tests/errors/invalid-interface-output.fil:6:5
+  │
+2 │   comp Main<G: 1, L: 1>(
+  │                - event's delay
+  ·
+6 │     @[G+2, G+4] out: 1,
+  │     ^^^^^^^^^^^ available for 2 cycles
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

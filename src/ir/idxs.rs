@@ -1,6 +1,6 @@
 use super::{
-    Command, CompOrExt, Ctx, Event, Expr, Info, Instance, Invoke, Param, Port,
-    Prop, Time,
+    Component, Ctx, Event, Expr, Info, Instance, Invoke, Param, Port, Prop,
+    Time,
 };
 use crate::define_idx;
 
@@ -33,8 +33,7 @@ impl PortIdx {
 define_idx!(PropIdx, Prop, "prop");
 define_idx!(InfoIdx, Info, "info");
 
-define_idx!(CmdIdx, Command, "cmd");
 define_idx!(InstIdx, Instance, "inst");
 define_idx!(InvIdx, Invoke, "inv");
 
-define_idx!(CompIdx, CompOrExt, "comp");
+define_idx!(CompIdx, Component, "comp");

@@ -225,15 +225,16 @@ impl Printer<'_> {
 
     fn sig<F: io::Write>(
         &self,
-        comp: ir::CompIdx,
-        params: &ir::IndexStore<ir::Param>,
-        events: &ir::IndexStore<ir::Event>,
-        ports: &ir::IndexStore<ir::Port>,
+        comp: &ir::Component,
         indent: usize,
         f: &mut F,
     ) -> io::Result<()> {
-        write!(f, "comp {comp}[")?;
-        for pos in params
+        if comp.is_ext {
+            write!(f, "ext ")?;
+        }
+        write!(f, "comp {}[", comp.idx())?;
+        for pos in comp
+            .params()
             .iter()
             .filter(|(_, p)| p.is_sig_owned())
             .map(|(idx, _)| idx)
@@ -250,7 +251,8 @@ impl Printer<'_> {
         }
         write!(f, "]<")?;
         // All events are defined by the signature
-        for pos in events
+        for pos in comp
+            .events()
             .iter()
             .filter(|(_, eb)| matches!(eb.owner, ir::EventOwner::Sig))
             .with_position()
@@ -290,7 +292,8 @@ impl Printer<'_> {
         };
         // Print input ports first. The direction is reversed when they are
         // bound in the body.
-        for pos in ports
+        for pos in comp
+            .ports()
             .iter()
             .filter(|(_, port)| port.is_sig_in())
             .with_position()
@@ -299,7 +302,8 @@ impl Printer<'_> {
         }
 
         writeln!(f, ") -> (")?;
-        for pos in ports
+        for pos in comp
+            .ports()
             .iter()
             .filter(|(_, port)| port.is_sig_out())
             .with_position()
@@ -398,14 +402,7 @@ impl Printer<'_> {
 
     pub fn comp(ctx: &ir::Component, f: &mut impl io::Write) -> io::Result<()> {
         let printer = ir::Printer { ctx };
-        printer.sig(
-            ctx.idx(),
-            ctx.params(),
-            ctx.events(),
-            ctx.ports(),
-            0,
-            f,
-        )?;
+        printer.sig(ctx, 0, f)?;
         for (idx, param) in ctx.params().iter() {
             Printer::local_param(idx, param, 2, ctx, f)?;
         }
@@ -431,13 +428,6 @@ impl Printer<'_> {
         writeln!(f, "}}")
     }
 
-    pub fn external(
-        ext: &ir::External,
-        f: &mut impl io::Write,
-    ) -> io::Result<()> {
-        writeln!(f, "external comp {};", ext.idx)
-    }
-
     /// Get a string representation of a component
     pub fn comp_str(c: &ir::Component) -> String {
         let mut buf = Vec::new();
@@ -450,10 +440,7 @@ impl Printer<'_> {
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         for (_, comp) in ctx.comps.iter() {
-            match comp {
-                ir::CompOrExt::Comp(comp) => Printer::comp(comp, f)?,
-                ir::CompOrExt::Ext(ext) => Printer::external(ext, f)?,
-            }
+            Printer::comp(comp, f)?
         }
         Ok(())
     }
