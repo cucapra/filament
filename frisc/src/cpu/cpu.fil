@@ -1,17 +1,61 @@
 import "frisc/src/alu/alu.fil";
 import "frisc/src/decode/decode.fil";
 import "frisc/src/regfile/regfile.fil";
+import "frisc/src/extras/extras.fil";
+
+comp main<G:1> (
+  clk:1,
+  reset:1,
+  @[G,G+1] instr:32
+) -> (
+  @[G,G+1] out:32,
+  // @[G,G+1] rd:5,
+  @[G,G+1] aluInA:32,
+  @[G,G+1] aluInB:32,
+  // @[G,G+1] rf_write:1,
+  // @[G,G+1] rs1Data:32,
+  // @[G,G+1] rs2Data:32
+) {
+  cpu := new cpu<G>(instr);
+  out = cpu.out;
+  // rd = cpu.rd;
+  aluInA = cpu.aluInA;
+  aluInB = cpu.aluInB;
+  // rf_write = cpu.rf_write;
+  // rs1Data = cpu.rs1Data;
+  // rs2Data = cpu.rs2Data;
+}
 
 comp cpu<G:1> (
   clk:1,
   reset:1,
   @[G,G+1] instr:32
-) -> () {
+) -> (
+  @[G,G+1] out:32,
+  // @[G,G+1] rd:5,
+  @[G,G+1] aluInA:32,
+  @[G,G+1] aluInB:32,
+  // @[G,G+1] rf_write:1,
+  // @[G,G+1] rs1Data:32,
+  // @[G,G+1] rs2Data:32
+) {
   rd := new Slice[32,11,7,5]<G>(instr);
   rs1 := new Slice[32,19,15,5]<G>(instr);
   rs2 := new Slice[32,24,20,5]<G>(instr);
 
   decoder := new decode<G>(instr);
   rf := new regfile<G>(decoder.rf_write, rd.out, alu.out, rs1.out, rs2.out);
-  alu := new alu<G>(rf.rs1, rf.rs2, decoder.funct, decoder.isAdd, decoder.isArith);
+
+  aluInBGuard := new Or[1]<G>(decoder.isBranch, decoder.isALUReg);
+  aluInB := new Ternary[32]<G>(aluInBGuard.out, rf.rs2, decoder.Iimm);
+
+  alu := new alu<G>(rf.rs1, decoder.Iimm, decoder.funct, decoder.isAdd, decoder.isArith);
+
+  out = alu.out;
+  // rd = rd.out;
+  aluInA = rf.rs1;
+  aluInB = aluInB.out;
+  // rf_write = decoder.rf_write;
+  // rs1Data = rf.rs1;
+  // rs2Data = rf.rs2;
 }

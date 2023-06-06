@@ -4,7 +4,7 @@ import "primitives/core.fil";
 // be available until the next cycle
 // outputs available in same cycle as inputs
 
-// comp main<G:2>(
+// comp main<G:1>(
 //   clk:1,
 //   reset:1,
 //   @[G,G+1] en:1,

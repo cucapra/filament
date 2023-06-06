@@ -1,4 +1,5 @@
 import "primitives/core.fil";
+import "frisc/src/extras/extras.fil";
 
 // ALU
 
@@ -59,45 +60,4 @@ comp alu<G:1> (
 
   mux := new onehotmux[32]<G>(funct, selAddSub.out, lt.out, ltu.out, xor.out, or.out, and.out, sll.out, sr.out);
   out = mux.out;
-}
-
-// extra components to make ALU simpler to write
-extern "extras.sv" {
-  comp onehotmux[#WIDTH]<G:L-(G),?L:1=G+1>(
-    @[G,L] sel:8,
-    @[G,L] in0: #WIDTH,
-    @[G,L] in1: #WIDTH,
-    @[G,L] in2: #WIDTH,
-    @[G,L] in3: #WIDTH,
-    @[G,L] in4: #WIDTH,
-    @[G,L] in5: #WIDTH,
-    @[G,L] in6: #WIDTH,
-    @[G,L] in7: #WIDTH
-  ) -> (
-    @[G,L] out: #WIDTH
-  ) where L > G, #WIDTH > 0;
-
-  comp rightshifter[#WIDTH]<G:L-(G),?L:1=G+1>(
-    @[G,L] in: #WIDTH,
-    @[G,L] shamt: #WIDTH,
-    @[G,L] isArith:1
-  ) -> (
-    @[G,L] out:#WIDTH
-  ) where L > G, #WIDTH > 0;
-
-  comp addsub[#WIDTH]<G:L-(G),?L:1=G+1>(
-    @[G,L] inA: #WIDTH,
-    @[G,L] inB: #WIDTH,
-    @[G,L] isAdd:1, // 1 if add, 0 if sub
-  ) -> (
-    @[G,L] out: #WIDTH
-  ) where L > G, #WIDTH > 0;
-
-  comp Ternary[#WIDTH]<G:L-(G),?L:1=G+1>(
-    @[G,L] guard:1,
-    @[G,L] opTrue: #WIDTH,
-    @[G,L] opFalse: #WIDTH
-  ) -> (
-    @[G,L] out: #WIDTH
-  ) where L > G, #WIDTH > 0;
 }
