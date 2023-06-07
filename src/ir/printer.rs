@@ -101,22 +101,6 @@ impl Printer<'_> {
         Ok(())
     }
 
-    fn index_store<T>(
-        store: &ir::IndexStore<T>,
-        op: &str,
-        indent: usize,
-        f: &mut impl io::Write,
-    ) -> io::Result<()>
-    where
-        T: Display,
-        Idx<T>: Display,
-    {
-        for (i, v) in store.iter() {
-            writeln!(f, "{:indent$}{i} = {op} {v};", "")?;
-        }
-        Ok(())
-    }
-
     fn expr(&self, e: ir::ExprIdx) -> String {
         self.ctx.display(e)
     }
@@ -259,10 +243,14 @@ impl Printer<'_> {
         {
             match pos {
                 Position::First((idx, ev)) | Position::Middle((idx, ev)) => {
-                    write!(f, "{idx}: {}, ", ev.delay)?
+                    write!(
+                        f,
+                        "{idx}: {}, ",
+                        self.ctx.display_timesub(&ev.delay)
+                    )?
                 }
                 Position::Only((idx, ev)) | Position::Last((idx, ev)) => {
-                    write!(f, "{idx}: {}", ev.delay)?
+                    write!(f, "{idx}: {}", self.ctx.display_timesub(&ev.delay))?
                 }
             }
         }
@@ -364,6 +352,7 @@ impl Printer<'_> {
     }
 
     fn event(
+        ctx: &ir::Component,
         idx: ir::EventIdx,
         event: &ir::Event,
         indent: usize,
@@ -375,11 +364,31 @@ impl Printer<'_> {
             ir::EventOwner::Inv { inv } => {
                 writeln!(
                     f,
-                    "{:indent$}{idx} = event({inv}), delay: {delay};",
+                    "{:indent$}{idx} = event({inv}), delay: {};",
                     "",
+                    ctx.display_timesub(delay)
                 )
             }
         }
+    }
+
+    pub fn instance(
+        ctx: &ir::Component,
+        idx: ir::InstIdx,
+        inst: &ir::Instance,
+        indent: usize,
+        f: &mut impl io::Write,
+    ) -> io::Result<()> {
+        write!(f, "{:indent$}{idx} = instance ", "")?;
+        let ir::Instance { comp, params } = inst;
+        write!(f, "{}[", comp)?;
+        for (i, param) in params.iter().enumerate() {
+            if i != 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", ctx.display(*param))?;
+        }
+        writeln!(f, "];")
     }
 
     pub fn invoke(
@@ -407,7 +416,7 @@ impl Printer<'_> {
             Printer::local_param(idx, param, 2, ctx, f)?;
         }
         for (idx, event) in ctx.events().iter() {
-            Printer::event(idx, event, 2, f)?;
+            Printer::event(ctx, idx, event, 2, f)?;
         }
         // If debugging is enabled, show the low-level representation of the
         // component's interned values.
@@ -419,7 +428,9 @@ impl Printer<'_> {
         for (idx, port) in ctx.ports().iter() {
             printer.local_port(idx, port, 2, f)?;
         }
-        Printer::index_store(ctx.instances(), "instance", 2, f)?;
+        for (idx, instance) in ctx.instances().iter() {
+            Printer::instance(ctx, idx, instance, 2, f)?;
+        }
         for (idx, invoke) in ctx.invocations().iter() {
             Printer::invoke(idx, invoke, 2, f)?;
         }
