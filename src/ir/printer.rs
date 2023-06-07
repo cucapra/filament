@@ -241,10 +241,10 @@ impl Printer<'_> {
         {
             match pos {
                 Position::First((idx, ev)) | Position::Middle((idx, ev)) => {
-                    write!(f, "{idx}: {}, ", ev.delay)?
+                    write!(f, "{idx}: {}, ", self.ctx.display_timesub(&ev.delay))?
                 }
                 Position::Only((idx, ev)) | Position::Last((idx, ev)) => {
-                    write!(f, "{idx}: {}", ev.delay)?
+                    write!(f, "{idx}: {}", self.ctx.display_timesub(&ev.delay))?
                 }
             }
         }
@@ -344,6 +344,7 @@ impl Printer<'_> {
     }
 
     fn event(
+        ctx: &ir::Component,
         idx: ir::EventIdx,
         event: &ir::Event,
         indent: usize,
@@ -355,8 +356,8 @@ impl Printer<'_> {
             ir::EventOwner::Inv { inv } => {
                 writeln!(
                     f,
-                    "{:indent$}{idx} = event({inv}), delay: {delay};",
-                    "",
+                    "{:indent$}{idx} = event({inv}), delay: {};",
+                    "", ctx.display_timesub(delay)
                 )
             }
         }
@@ -413,7 +414,7 @@ impl Printer<'_> {
             Printer::local_param(idx, param, 2, ctx, f)?;
         }
         for (idx, event) in ctx.events().iter() {
-            Printer::event(idx, event, 2, f)?;
+            Printer::event(ctx, idx, event, 2, f)?;
         }
         // If debugging is enabled, show the low-level representation of the
         // component's interned values.
