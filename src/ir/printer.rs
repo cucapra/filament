@@ -101,22 +101,6 @@ impl Printer<'_> {
         Ok(())
     }
 
-    fn index_store<T>(
-        store: &ir::IndexStore<T>,
-        op: &str,
-        indent: usize,
-        f: &mut impl io::Write,
-    ) -> io::Result<()>
-    where
-        T: Display,
-        Idx<T>: Display,
-    {
-        for (i, v) in store.iter() {
-            writeln!(f, "{:indent$}{i} = {op} {v};", "")?;
-        }
-        Ok(())
-    }
-
     fn expr(&self, e: ir::ExprIdx) -> String {
         self.ctx.display(e)
     }
@@ -225,15 +209,16 @@ impl Printer<'_> {
 
     fn sig<F: io::Write>(
         &self,
-        comp: ir::CompIdx,
-        params: &ir::IndexStore<ir::Param>,
-        events: &ir::IndexStore<ir::Event>,
-        ports: &ir::IndexStore<ir::Port>,
+        comp: &ir::Component,
         indent: usize,
         f: &mut F,
     ) -> io::Result<()> {
-        write!(f, "comp {comp}[")?;
-        for pos in params
+        if comp.is_ext {
+            write!(f, "ext ")?;
+        }
+        write!(f, "comp {}[", comp.idx())?;
+        for pos in comp
+            .params()
             .iter()
             .filter(|(_, p)| p.is_sig_owned())
             .map(|(idx, _)| idx)
@@ -250,17 +235,22 @@ impl Printer<'_> {
         }
         write!(f, "]<")?;
         // All events are defined by the signature
-        for pos in events
+        for pos in comp
+            .events()
             .iter()
             .filter(|(_, eb)| matches!(eb.owner, ir::EventOwner::Sig))
             .with_position()
         {
             match pos {
                 Position::First((idx, ev)) | Position::Middle((idx, ev)) => {
-                    write!(f, "{idx}: {}, ", ev.delay)?
+                    write!(
+                        f,
+                        "{idx}: {}, ",
+                        self.ctx.display_timesub(&ev.delay)
+                    )?
                 }
                 Position::Only((idx, ev)) | Position::Last((idx, ev)) => {
-                    write!(f, "{idx}: {}", ev.delay)?
+                    write!(f, "{idx}: {}", self.ctx.display_timesub(&ev.delay))?
                 }
             }
         }
@@ -290,7 +280,8 @@ impl Printer<'_> {
         };
         // Print input ports first. The direction is reversed when they are
         // bound in the body.
-        for pos in ports
+        for pos in comp
+            .ports()
             .iter()
             .filter(|(_, port)| port.is_sig_in())
             .with_position()
@@ -299,7 +290,8 @@ impl Printer<'_> {
         }
 
         writeln!(f, ") -> (")?;
-        for pos in ports
+        for pos in comp
+            .ports()
             .iter()
             .filter(|(_, port)| port.is_sig_out())
             .with_position()
@@ -360,6 +352,7 @@ impl Printer<'_> {
     }
 
     fn event(
+        ctx: &ir::Component,
         idx: ir::EventIdx,
         event: &ir::Event,
         indent: usize,
@@ -371,11 +364,31 @@ impl Printer<'_> {
             ir::EventOwner::Inv { inv } => {
                 writeln!(
                     f,
-                    "{:indent$}{idx} = event({inv}), delay: {delay};",
+                    "{:indent$}{idx} = event({inv}), delay: {};",
                     "",
+                    ctx.display_timesub(delay)
                 )
             }
         }
+    }
+
+    pub fn instance(
+        ctx: &ir::Component,
+        idx: ir::InstIdx,
+        inst: &ir::Instance,
+        indent: usize,
+        f: &mut impl io::Write,
+    ) -> io::Result<()> {
+        write!(f, "{:indent$}{idx} = instance ", "")?;
+        let ir::Instance { comp, params } = inst;
+        write!(f, "{}[", comp)?;
+        for (i, param) in params.iter().enumerate() {
+            if i != 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", ctx.display(*param))?;
+        }
+        writeln!(f, "];")
     }
 
     pub fn invoke(
@@ -398,19 +411,12 @@ impl Printer<'_> {
 
     pub fn comp(ctx: &ir::Component, f: &mut impl io::Write) -> io::Result<()> {
         let printer = ir::Printer { ctx };
-        printer.sig(
-            ctx.idx(),
-            ctx.params(),
-            ctx.events(),
-            ctx.ports(),
-            0,
-            f,
-        )?;
+        printer.sig(ctx, 0, f)?;
         for (idx, param) in ctx.params().iter() {
             Printer::local_param(idx, param, 2, ctx, f)?;
         }
         for (idx, event) in ctx.events().iter() {
-            Printer::event(idx, event, 2, f)?;
+            Printer::event(ctx, idx, event, 2, f)?;
         }
         // If debugging is enabled, show the low-level representation of the
         // component's interned values.
@@ -422,20 +428,15 @@ impl Printer<'_> {
         for (idx, port) in ctx.ports().iter() {
             printer.local_port(idx, port, 2, f)?;
         }
-        Printer::index_store(ctx.instances(), "instance", 2, f)?;
+        for (idx, instance) in ctx.instances().iter() {
+            Printer::instance(ctx, idx, instance, 2, f)?;
+        }
         for (idx, invoke) in ctx.invocations().iter() {
             Printer::invoke(idx, invoke, 2, f)?;
         }
         writeln!(f, "control:")?;
         printer.commands(&ctx.cmds, 2, f)?;
         writeln!(f, "}}")
-    }
-
-    pub fn external(
-        ext: &ir::External,
-        f: &mut impl io::Write,
-    ) -> io::Result<()> {
-        writeln!(f, "external comp {};", ext.idx)
     }
 
     /// Get a string representation of a component
@@ -450,10 +451,7 @@ impl Printer<'_> {
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         for (_, comp) in ctx.comps.iter() {
-            match comp {
-                ir::CompOrExt::Comp(comp) => Printer::comp(comp, f)?,
-                ir::CompOrExt::Ext(ext) => Printer::external(ext, f)?,
-            }
+            Printer::comp(comp, f)?
         }
         Ok(())
     }
