@@ -241,10 +241,18 @@ impl Printer<'_> {
         {
             match pos {
                 Position::First((idx, ev)) | Position::Middle((idx, ev)) => {
-                    write!(f, "{idx}: {}, ", self.ctx.display_timesub(&ev.delay))?
+                    write!(
+                        f, 
+                        "{idx}: {}, ", 
+                        self.ctx.display_timesub(&ev.delay)
+                    )?
                 }
                 Position::Only((idx, ev)) | Position::Last((idx, ev)) => {
-                    write!(f, "{idx}: {}", self.ctx.display_timesub(&ev.delay))?
+                    write!(
+                        f, 
+                        "{idx}: {}", 
+                        self.ctx.display_timesub(&ev.delay)
+                    )?
                 }
             }
         }
@@ -357,7 +365,8 @@ impl Printer<'_> {
                 writeln!(
                     f,
                     "{:indent$}{idx} = event({inv}), delay: {};",
-                    "", ctx.display_timesub(delay)
+                    "", 
+                    ctx.display_timesub(delay)
                 )
             }
         }
