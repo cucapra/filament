@@ -19,6 +19,8 @@ module regfile (
       for (i = 0; i < 32; i = i+1) begin rf[i] <= 32'd0; end
     end else if (en) begin
       rf[rd] <= data;
+    end else begin
+      rf[rd] <= rf[rd];
     end
   end
 endmodule
