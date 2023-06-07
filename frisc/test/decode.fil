@@ -1,0 +1,46 @@
+import "frisc/src/decode/decode.fil";
+
+comp main<G:1> (
+  @[G,G+1] instr:32
+) -> (
+  @[G, G+1] isLoad:1,
+  @[G, G+1] isStore:1,
+  @[G, G+1] isALUImm:1,
+  @[G, G+1] isALUReg:1,
+  @[G, G+1] isLUI:1,
+  @[G, G+1] isJAL:1,
+  @[G, G+1] isJALR:1,
+  @[G, G+1] isBranch:1,
+  @[G, G+1] isSys:1,
+  @[G, G+1] isAUIPC:1,
+  @[G, G+1] Uimm:32,
+  @[G, G+1] Iimm:32,
+  @[G, G+1] Simm:32,
+  @[G, G+1] Bimm:32,
+  @[G, G+1] Jimm:32,
+  @[G, G+1] funct:8,
+  @[G, G+1] isAdd:1,   // 1 if add, 0 if sub
+  @[G, G+1] isArith:1, // 1 if arith, 0 if log
+  @[G, G+1] rf_write:1
+) {
+  decoder := new decode<G>(instr);
+  isLoad = decoder.isLoad;
+  isStore = decoder.isStore;
+  isALUImm = decoder.isALUImm;
+  isALUReg = decoder.isALUReg;
+  isLUI = decoder.isLUI;
+  isJAL = decoder.isJAL;
+  isJALR = decoder.isJALR;
+  isBranch = decoder.isBranch;
+  isSys = decoder.isSys;
+  isAUIPC = decoder.isAUIPC;
+  Uimm = decoder.Uimm;
+  Iimm = decoder.Iimm;
+  Simm = decoder.Simm;
+  Bimm = decoder.Bimm;
+  Jimm = decoder.Jimm;
+  funct = decoder.funct;
+  isAdd = decoder.isAdd;
+  isArith = decoder.isArith;
+  rf_write = decoder.rf_write;
+}

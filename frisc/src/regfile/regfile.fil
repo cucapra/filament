@@ -4,23 +4,6 @@ import "primitives/core.fil";
 // be available until the next cycle
 // outputs available in same cycle as inputs
 
-// comp main<G:1>(
-//   clk:1,
-//   reset:1,
-//   @[G,G+1] en:1,
-//   @[G,G+1] rd:5, 
-//   @[G,G+1] data:32,
-//   @[G,G+1] rin1:5,
-//   @[G,G+1] rin2:5
-// ) -> (
-//   @[G,G+1] rs1:32,
-//   @[G,G+1] rs2:32
-// ) {
-//   rf := new regfile<G>(en,rd,data,rin1,rin2);
-//   rs1 = rf.rs1;
-//   rs2 = rf.rs2;
-// }
-
 extern "regfile.sv" {
   comp regfile<G:1> (
     clk:1,

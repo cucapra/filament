@@ -107,3 +107,13 @@ cmd = """
 dir=$(dirname {}) && \
 ./reticle/check.sh $dir 100
 """
+
+# frisc
+[[tests]]
+name = "frisc tests"
+paths = [
+  "frisc/test/*.fil"
+]
+cmd = """
+fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
+"""
