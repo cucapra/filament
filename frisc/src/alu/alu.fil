@@ -45,6 +45,6 @@ comp alu<G:1> (
   lt := new ZeroExtend[1,32]<G>(ltTernary.out);
   ltu := new ZeroExtend[1,32]<G>(aluMinus32.out);
 
-  mux := new onehotmux[32]<G>(funct, selAddSub.out, lt.out, ltu.out, xor.out, or.out, and.out, sll.out, sr.out);
+  mux := new onehotmux[32]<G>(funct, selAddSub.out, sll.out, lt.out, ltu.out, xor.out, sr.out, or.out, and.out);
   out = mux.out;
 }

@@ -2,7 +2,7 @@ import "frisc/src/cpu/cpu.fil";
 
 comp main<G:1> (
   clk:1,
-  reset:1,
+  @[G,G+1] reset:1,
   @[G,G+1] instr:32
 ) -> (
   @[G,G+1] out:32,
@@ -13,7 +13,7 @@ comp main<G:1> (
   // @[G,G+1] rs1Data:32,
   // @[G,G+1] rs2Data:32
 ) {
-  cpu := new cpu<G>(instr);
+  cpu := new cpu<G>(reset, instr);
   out = cpu.out;
   // rd = cpu.rd;
   aluInA = cpu.aluInA;

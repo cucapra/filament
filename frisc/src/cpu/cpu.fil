@@ -5,7 +5,7 @@ import "frisc/src/extras/extras.fil";
 
 comp cpu<G:1> (
   clk:1,
-  reset:1,
+  @[G,G+1] reset:1,
   @[G,G+1] instr:32
 ) -> (
   @[G,G+1] out:32,
@@ -21,7 +21,7 @@ comp cpu<G:1> (
   rs2 := new Slice[32,24,20,5]<G>(instr);
 
   decoder := new decode<G>(instr);
-  rf := new regfile<G>(decoder.rf_write, rd.out, alu.out, rs1.out, rs2.out);
+  rf := new regfile<G>(reset, decoder.rf_write, rd.out, alu.out, rs1.out, rs2.out);
 
   aluInBGuard := new Or[1]<G>(decoder.isBranch, decoder.isALUReg);
   aluInB := new Ternary[32]<G>(aluInBGuard.out, rf.rs2, decoder.Iimm);

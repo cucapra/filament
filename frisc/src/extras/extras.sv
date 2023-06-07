@@ -35,10 +35,7 @@ module rightshifter #(
   input wire logic isArith, // 0 for logical, 1 for arithmetic
   output logic [WIDTH-1:0] out
 );
-  always @(*) begin
-    if (isArith) out = in >>> shamt; // arithmetic
-    else out = in >> shamt;      // logical
-  end
+  assign out = isArith ? in >>> shamt : in >> shamt;
 endmodule
 
 module Ternary #(

@@ -7,7 +7,7 @@ import "primitives/core.fil";
 extern "regfile.sv" {
   comp regfile<G:1> (
     clk:1,
-    reset:1,
+    @[G,G+1] reset:1,
     @[G,G+1] en:1,    // write enable
     @[G,G+1] rd:5,    // destination reg
     @[G,G+1] data:32, // data in
