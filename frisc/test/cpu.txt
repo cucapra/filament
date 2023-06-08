@@ -1,0 +1,17 @@
+JSON files don't like when you put comments there, so the test cases are explained here. 
+The start of a new test case is indicated by the reset signal going high.
+
+Test 1:
+addi x1, x1, 6
+addi x2, x1, 2
+addi x2, 1
+
+Test 2:
+addi x7, x7, 16
+addi x1, x1, 1
+sll x7, x7, x1
+
+Test 3:
+addi x3, x3, 32
+addi x20, x20, 3
+sra x3, x3, x20

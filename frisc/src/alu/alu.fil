@@ -31,11 +31,13 @@ comp alu<G:1> (
   add := new Add[32]<G>(inA, inB);
 
   selAddSub := new Ternary[32]<G>(isAdd, add.out, sub.out);
+
+  shamt := new Slice[32,4,0,5]<G>(inB);
   
   xor := new Xor[32]<G>(inA, inB);
   or := new Or[32]<G>(inA, inB);
   and := new And[32]<G>(inA, inB);
-  sr := new rightshifter[32]<G>(inA, inB, isArith);
+  sr := new rightshifter[32]<G>(inA, shamt.out, isArith);
   sll := new ShiftLeft[32]<G>(inA, inB);
 
   aluMinus32 := new Select[33,32]<G>(aluMinus.out);

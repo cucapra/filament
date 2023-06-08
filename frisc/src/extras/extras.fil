@@ -16,7 +16,7 @@ extern "extras.sv" {
 
   comp rightshifter[#WIDTH]<G:L-(G),?L:1=G+1>(
     @[G,L] in: #WIDTH,
-    @[G,L] shamt: #WIDTH,
+    @[G,L] shamt: 5,
     @[G,L] isArith:1
   ) -> (
     @[G,L] out:#WIDTH

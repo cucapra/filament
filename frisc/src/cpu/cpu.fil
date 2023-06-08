@@ -12,6 +12,7 @@ comp cpu<G:1> (
   // @[G,G+1] rd:5,
   @[G,G+1] aluInA:32,
   @[G,G+1] aluInB:32,
+  @[G,G+1] funct:8
   // @[G,G+1] rf_write:1,
   // @[G,G+1] rs1Data:32,
   // @[G,G+1] rs2Data:32
@@ -32,7 +33,5 @@ comp cpu<G:1> (
   // rd = rd.out;
   aluInA = rf.rs1;
   aluInB = aluInB.out;
-  // rf_write = decoder.rf_write;
-  // rs1Data = rf.rs1;
-  // rs2Data = rf.rs2;
+  funct = decoder.funct;
 }
