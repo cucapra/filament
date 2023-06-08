@@ -30,10 +30,10 @@ endmodule
 module rightshifter #(
   parameter WIDTH = 32
 ) (
-  input wire logic [WIDTH-1:0] in,
+  input wire logic signed [WIDTH-1:0] in,
   input wire logic [WIDTH-1:0] shamt,
   input wire logic isArith, // 0 for logical, 1 for arithmetic
-  output logic [WIDTH-1:0] out
+  output logic signed [WIDTH-1:0] out
 );
   assign out = isArith ? in >>> shamt : in >> shamt;
 endmodule
