@@ -233,7 +233,7 @@ endmodule
 module ShiftRightArith #(
   parameter WIDTH = 32
 ) (
-  input wire logic [WIDTH-1:0] in,
+  input wire logic signed [WIDTH-1:0] in,
   input wire logic [WIDTH-1:0] shift,
   output wire logic [WIDTH-1:0] out
 ); 
