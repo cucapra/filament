@@ -12,7 +12,7 @@ pub struct HoistFacts {
     /// The current path condition
     path_cond: Vec<ir::PropIdx>,
     /// Facts to be hoisted
-    facts: Vec<ir::Fact>,
+    facts: Vec<ir::Command>,
 }
 
 impl HoistFacts {
@@ -68,7 +68,7 @@ impl Visitor for HoistFacts {
             // Otherwise this is a checked assertion that needs to be hoisted.
             // Generate prop = path_cond -> fact.prop
             let cond = self.path_cond(comp).implies(fact.prop, comp);
-            self.facts.push(ir::Fact::assert(cond, fact.reason));
+            self.facts.extend(comp.assert(cond, fact.reason));
         }
         Action::Change(vec![])
     }
@@ -116,10 +116,6 @@ impl Visitor for HoistFacts {
         // Insert the asserts to the start of the component cmds
         let cmds = std::mem::take(&mut comp.cmds);
         let facts = std::mem::take(&mut self.facts);
-        comp.cmds = facts
-            .into_iter()
-            .map(ir::Command::Fact)
-            .chain(cmds.into_iter())
-            .collect();
+        comp.cmds = facts.into_iter().chain(cmds.into_iter()).collect();
     }
 }

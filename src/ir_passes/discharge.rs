@@ -358,7 +358,9 @@ impl Visitor for Discharge {
                     )
                     .into(),
                 );
-                Action::Change(vec![comp.assume(f.prop, reason).into()])
+                Action::Change(
+                    comp.assume(f.prop, reason).into_iter().collect(),
+                )
             }
             Some(assign) => {
                 let ir::Info::Assert(reason) = comp.get(f.reason) else {
