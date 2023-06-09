@@ -1,5 +1,6 @@
 JSON files don't like when you put comments there, so the test cases are explained here. 
 The start of a new test case is indicated by the reset signal going high.
+The way tests are verified now is that the output of the ALU is wired to the output of the CPU, so we can inspect that.
 
 Test 1:
 addi x1, x1, 6
@@ -15,3 +16,8 @@ Test 3:
 addi x3, x3, 32
 addi x19, x19, 2
 sra x4, x3, x19
+
+Test 4:
+addi x3, x3, -64
+addi x5, x5, 2
+sra x4, x3, x5
