@@ -3,11 +3,14 @@ use crate::{
     ast::{self, EvalBool},
     errors::Error,
     passes::Pass,
-    utils::Binding,
+    utils::{Binding, GPosIdx},
 };
 use itertools::Itertools;
 use linked_hash_set::LinkedHashSet;
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    iter,
+};
 
 /// Monomorphize the Filament program
 pub struct Monomorphize<'e> {
@@ -16,14 +19,14 @@ pub struct Monomorphize<'e> {
     /// Instances that need to be generated
     queue: LinkedHashSet<(ast::Id, Vec<u64>)>,
     /// Names of external components
-    externals: &'e HashSet<ast::Id>,
+    externals: &'e HashMap<ast::Id, &'e ast::Signature>,
     /// References to component signatures indexed by Id, used to coerce parameters.
     signatures: &'e HashMap<ast::Id, &'e ast::Signature>,
 }
 
 impl<'e> Monomorphize<'e> {
     fn new(
-        externals: &'e HashSet<ast::Id>,
+        externals: &'e HashMap<ast::Id, &'e ast::Signature>,
         signatures: &'e HashMap<ast::Id, &'e ast::Signature>,
     ) -> Self {
         Self {
@@ -70,10 +73,10 @@ impl<'e> Monomorphize<'e> {
         comp: ast::Id,
         params: impl IntoIterator<Item = &'a ast::Expr>,
     ) -> ast::Id {
-        let sig = self
-            .signatures
-            .get(&comp)
-            .expect(&format!("Component {comp} not found in scope"));
+        let sig = match self.signatures.get(&comp) {
+            None => unreachable!("Component {comp} not found in scope"),
+            Some(x) => x,
+        };
 
         let conc = self.coerce_params(sig, params);
         if self.processed.contains(&(comp, conc.clone())) {
@@ -202,28 +205,48 @@ impl<'e> Monomorphize<'e> {
 
                     let resolved = bindings
                         .into_iter()
-                        .map(|p| p.map(|p| p.resolve(param_binding)))
-                        .collect();
+                        .map(|p| p.map(|p| p.resolve(param_binding)));
 
-                    if self.externals.contains(&component) {
-                        n_cmds.push(
-                            ast::Instance::new(name, component, resolved)
-                                .into(),
-                        );
-                    } else {
-                        // If this is a component, replace the instance name with the monomorphized version
-                        let new_name = self
-                            .add_instance(
-                                component.copy(),
-                                resolved
-                                    .iter()
-                                    .map(|p| p.inner())
-                                    .collect_vec(),
-                            )
-                            .into();
-                        n_cmds.push(
-                            ast::Instance::new(name, new_name, vec![]).into(),
-                        );
+                    match self.externals.get(&component) {
+                        Some(sig) => {
+                            let (args, mut pos): (Vec<_>, Vec<_>) =
+                                resolved.map(|e| e.split()).unzip();
+                            let args = self.coerce_params(sig, args.iter());
+                            pos.extend(
+                                iter::repeat(GPosIdx::UNKNOWN)
+                                    .take(args.len() - pos.len()),
+                            );
+
+                            debug_assert!(pos.len() == args.len());
+
+                            let resolved = args
+                                .into_iter()
+                                .map(ast::Expr::concrete)
+                                .zip(pos.into_iter()) // add position data back in
+                                .map(|(inner, pos)| ast::Loc::new(inner, pos))
+                                .collect();
+
+                            n_cmds.push(
+                                ast::Instance::new(name, component, resolved)
+                                    .into(),
+                            );
+                        }
+                        None => {
+                            // If this is a component, replace the instance name with the monomorphized version
+                            let new_name = self
+                                .add_instance(
+                                    component.copy(),
+                                    resolved
+                                        .collect_vec().iter()
+                                        .map(|p| p.inner())
+                                        .collect_vec(),
+                                )
+                                .into();
+                            n_cmds.push(
+                                ast::Instance::new(name, new_name, vec![])
+                                    .into(),
+                            );
+                        }
                     }
                 }
                 ast::Command::If(ast::If { cond, then, alt }) => {
@@ -323,8 +346,7 @@ impl Pass for Monomorphize<'_> {
 
         // Start the process by monomorphizing the main component
         let main = ns.components.remove(top_idx);
-        let externals =
-            ns.externals().map(|(_, sig)| *sig.name.inner()).collect();
+        let externals = ns.externals().collect();
         let signatures = ns.signatures().collect();
         let mut mono = Monomorphize::new(&externals, &signatures);
         let mut comps = vec![mono.generate_comp(&main, &Binding::new(None))];
