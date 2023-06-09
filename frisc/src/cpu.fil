@@ -9,13 +9,8 @@ comp cpu<G:1> (
   @[G,G+1] instr:32
 ) -> (
   @[G,G+1] out:32,
-  // @[G,G+1] rd:5,
   @[G,G+1] aluInA:32,
   @[G,G+1] aluInB:32,
-  @[G,G+1] funct:8
-  // @[G,G+1] rf_write:1,
-  // @[G,G+1] rs1Data:32,
-  // @[G,G+1] rs2Data:32
 ) {
   rd := new Slice[32,11,7,5]<G>(instr);
   rs1 := new Slice[32,19,15,5]<G>(instr);
@@ -30,8 +25,6 @@ comp cpu<G:1> (
   alu := new alu<G>(rf.rs1, aluInB.out, decoder.funct, decoder.isAdd, decoder.isArith);
 
   out = alu.out;
-  // rd = rd.out;
   aluInA = rf.rs1;
   aluInB = aluInB.out;
-  funct = decoder.funct;
 }

@@ -6,15 +6,11 @@ comp main<G:1> (
   @[G,G+1] instr:32
 ) -> (
   @[G,G+1] out:32,
-  // @[G,G+1] rd:5,
   @[G,G+1] aluInA:32,
   @[G,G+1] aluInB:32,
-  @[G,G+1] funct:8
 ) {
   cpu := new cpu<G>(reset, instr);
   out = cpu.out;
-  // rd = cpu.rd;
   aluInA = cpu.aluInA;
   aluInB = cpu.aluInB;
-  funct = cpu.funct;
 }
