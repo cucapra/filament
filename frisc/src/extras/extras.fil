@@ -24,21 +24,3 @@ extern "extras.sv" {
     @[G,L] out:#WIDTH
   ) where L > G, #WIDTH > 0;
 }
-
-comp Ternary[#WIDTH]<G:1>(
-  @[G,G+1] guard:1,
-  @[G,G+1] opTrue: #WIDTH,
-  @[G,G+1] opFalse: #WIDTH
-) -> (
-  @[G,G+1] out: #WIDTH
-) where #WIDTH > 0 {
-  guardExt := new Extend[1, #WIDTH]<G>(guard);
-  notGuardExt := new Not[#WIDTH]<G>(guardExt.out);
-
-  // guard is 1 -> opTrue
-  // guard is 0 -> opFalse
-  and0 := new And[#WIDTH]<G>(opTrue, guardExt.out);
-  and1 := new And[#WIDTH]<G>(opFalse, notGuardExt.out);
-  or0 := new Or[#WIDTH]<G>(and0.out, and1.out);
-  out = or0.out;
-}

@@ -20,7 +20,7 @@ comp CPU<G:1> (
   rf := new RegFile<G>(reset, decoder.rf_write, rd.out, alu.out, rs1.out, rs2.out);
 
   aluInBGuard := new Or[1]<G>(decoder.isBranch, decoder.isALUReg);
-  aluInB := new Ternary[32]<G>(aluInBGuard.out, rf.rs2, decoder.Iimm);
+  aluInB := new Mux[32]<G>(aluInBGuard.out, rf.rs2, decoder.Iimm);
 
   alu := new ALU<G>(rf.rs1, aluInB.out, decoder.funct, decoder.isAdd, decoder.isArith);
 

@@ -29,7 +29,7 @@ comp ALU<G:1> (
   sub := new Slice[33,31,0,32]<G>(aluMinus.out);
   add := new Add[32]<G>(inA, inB);
 
-  selAddSub := new Ternary[32]<G>(isAdd, add.out, sub.out);
+  selAddSub := new Mux[32]<G>(isAdd, add.out, sub.out);
 
   shamt := new Slice[32,4,0,5]<G>(inB);
   
@@ -42,7 +42,7 @@ comp ALU<G:1> (
   aluMinus32 := new Select[33,32]<G>(aluMinus.out);
   
   ltguard := new Xor[1]<G>(inA31.out, inB31.out);
-  ltTernary := new Ternary[1]<G>(ltguard.out, inA31.out, aluMinus32.out);
+  ltTernary := new Mux[1]<G>(ltguard.out, inA31.out, aluMinus32.out);
   lt := new ZeroExtend[1,32]<G>(ltTernary.out);
   ltu := new ZeroExtend[1,32]<G>(aluMinus32.out);
 
