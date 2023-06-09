@@ -6,11 +6,11 @@ module regfile (
   input wire logic [4:0] rin2,
   input wire logic [4:0] rd,
   input wire logic [31:0] data,
-  output reg [31:0] rs1,
-  output reg [31:0] rs2
+  output logic [31:0] rs1,
+  output logic [31:0] rs2
 );
   integer i;
-  reg [31:0] rf [31:0];
+  logic [31:0] rf [31:0];
   assign rs1 = rf[rin1];
   assign rs2 = rf[rin2];
 
