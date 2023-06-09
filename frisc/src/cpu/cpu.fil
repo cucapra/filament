@@ -27,7 +27,7 @@ comp cpu<G:1> (
   aluInBGuard := new Or[1]<G>(decoder.isBranch, decoder.isALUReg);
   aluInB := new Ternary[32]<G>(aluInBGuard.out, rf.rs2, decoder.Iimm);
 
-  alu := new alu<G>(rf.rs1, decoder.Iimm, decoder.funct, decoder.isAdd, decoder.isArith);
+  alu := new alu<G>(rf.rs1, aluInB.out, decoder.funct, decoder.isAdd, decoder.isArith);
 
   out = alu.out;
   // rd = rd.out;

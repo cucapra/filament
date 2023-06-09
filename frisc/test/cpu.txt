@@ -13,5 +13,5 @@ sll x7, x7, x1
 
 Test 3:
 addi x3, x3, 32
-addi x20, x20, 3
-sra x3, x3, x20
+addi x19, x19, 2
+sra x4, x3, x19
