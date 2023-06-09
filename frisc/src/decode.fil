@@ -2,7 +2,7 @@ import "primitives/core.fil";
 
 // decoder for rv32i instruction set
 
-comp decode<G:1> (
+comp Decode<G:1> (
   @[G, G+1] instr:32
 ) -> (
   @[G, G+1] isLoad:1,

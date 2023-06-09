@@ -9,6 +9,6 @@ comp main<G:1> (
 ) -> (
   @[G,G+1] out:32
 ) {
-  alu := new alu<G>(inA, inB, funct, isAdd, isArith);
+  alu := new ALU<G>(inA, inB, funct, isAdd, isArith);
   out = alu.out;
 }

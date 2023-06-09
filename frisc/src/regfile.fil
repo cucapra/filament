@@ -5,7 +5,7 @@ import "primitives/core.fil";
 // outputs available in same cycle as inputs
 
 extern "regfile.sv" {
-  comp regfile<G:1> (
+  comp RegFile<G:1> (
     clk:1,
     @[G,G+1] reset:1,
     @[G,G+1] en:1,    // write enable

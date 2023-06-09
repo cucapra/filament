@@ -23,7 +23,7 @@ comp main<G:1> (
   @[G, G+1] isArith:1, // 1 if arith, 0 if log
   @[G, G+1] rf_write:1
 ) {
-  decoder := new decode<G>(instr);
+  decoder := new Decode<G>(instr);
   isLoad = decoder.isLoad;
   isStore = decoder.isStore;
   isALUImm = decoder.isALUImm;

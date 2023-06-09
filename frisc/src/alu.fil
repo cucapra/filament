@@ -3,7 +3,7 @@ import "frisc/src/extras/extras.fil";
 
 // ALU
 
-comp alu<G:1> (
+comp ALU<G:1> (
   @[G,G+1] inA:32,
   @[G,G+1] inB:32,
   @[G,G+1] funct:8, // one-hot encoding
@@ -24,7 +24,6 @@ comp alu<G:1> (
   inB31 := new Select[32,31]<G>(inB);
 
   // use a 33 bit subtract to compute comparisons
-
   add0 := new Add[33]<G>(concat0.out, concat1.out);
   aluMinus := new Add[33]<G>(add0.out, oneConst_33b.out);
   sub := new Slice[33,31,0,32]<G>(aluMinus.out);
@@ -37,7 +36,7 @@ comp alu<G:1> (
   xor := new Xor[32]<G>(inA, inB);
   or := new Or[32]<G>(inA, inB);
   and := new And[32]<G>(inA, inB);
-  sr := new rightshifter[32]<G>(inA, shamt.out, isArith);
+  sr := new RightShifter[32]<G>(inA, shamt.out, isArith);
   sll := new ShiftLeft[32]<G>(inA, inB);
 
   aluMinus32 := new Select[33,32]<G>(aluMinus.out);
@@ -47,6 +46,6 @@ comp alu<G:1> (
   lt := new ZeroExtend[1,32]<G>(ltTernary.out);
   ltu := new ZeroExtend[1,32]<G>(aluMinus32.out);
 
-  mux := new onehotmux[32]<G>(funct, selAddSub.out, sll.out, lt.out, ltu.out, xor.out, sr.out, or.out, and.out);
+  mux := new OneHotMux[32]<G>(funct, selAddSub.out, sll.out, lt.out, ltu.out, xor.out, sr.out, or.out, and.out);
   out = mux.out;
 }

@@ -1,4 +1,4 @@
-module onehotmux #(
+module OneHotMux #(
   parameter WIDTH = 32
 ) (
   input wire logic [7:0] sel,
@@ -27,7 +27,7 @@ module onehotmux #(
   end
 endmodule
 
-module rightshifter #(
+module RightShifter #(
   parameter WIDTH = 32
 ) (
   input wire logic signed [WIDTH-1:0] in,

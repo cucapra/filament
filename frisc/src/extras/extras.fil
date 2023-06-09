@@ -1,6 +1,8 @@
+import "primitives/core.fil";
+
 // extra components to make things simpler to write
 extern "extras.sv" {
-  comp onehotmux[#WIDTH]<G:L-(G),?L:1=G+1>(
+  comp OneHotMux[#WIDTH]<G:L-(G),?L:1=G+1>(
     @[G,L] sel:8,
     @[G,L] in0: #WIDTH,
     @[G,L] in1: #WIDTH,
@@ -14,27 +16,29 @@ extern "extras.sv" {
     @[G,L] out: #WIDTH
   ) where L > G, #WIDTH > 0;
 
-  comp rightshifter[#WIDTH]<G:L-(G),?L:1=G+1>(
+  comp RightShifter[#WIDTH]<G:L-(G),?L:1=G+1>(
     @[G,L] in: #WIDTH,
     @[G,L] shamt: 5,
     @[G,L] isArith:1
   ) -> (
     @[G,L] out:#WIDTH
   ) where L > G, #WIDTH > 0;
+}
 
-  comp addsub[#WIDTH]<G:L-(G),?L:1=G+1>(
-    @[G,L] inA: #WIDTH,
-    @[G,L] inB: #WIDTH,
-    @[G,L] isAdd:1, // 1 if add, 0 if sub
-  ) -> (
-    @[G,L] out: #WIDTH
-  ) where L > G, #WIDTH > 0;
+comp Ternary[#WIDTH]<G:1>(
+  @[G,G+1] guard:1,
+  @[G,G+1] opTrue: #WIDTH,
+  @[G,G+1] opFalse: #WIDTH
+) -> (
+  @[G,G+1] out: #WIDTH
+) where #WIDTH > 0 {
+  guardExt := new Extend[1, #WIDTH]<G>(guard);
+  notGuardExt := new Not[#WIDTH]<G>(guardExt.out);
 
-  comp Ternary[#WIDTH]<G:L-(G),?L:1=G+1>(
-    @[G,L] guard:1,
-    @[G,L] opTrue: #WIDTH,
-    @[G,L] opFalse: #WIDTH
-  ) -> (
-    @[G,L] out: #WIDTH
-  ) where L > G, #WIDTH > 0;
+  // guard is 1 -> opTrue
+  // guard is 0 -> opFalse
+  and0 := new And[#WIDTH]<G>(opTrue, guardExt.out);
+  and1 := new And[#WIDTH]<G>(opFalse, notGuardExt.out);
+  or0 := new Or[#WIDTH]<G>(and0.out, and1.out);
+  out = or0.out;
 }

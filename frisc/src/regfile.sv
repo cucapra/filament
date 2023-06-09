@@ -1,4 +1,4 @@
-module regfile (
+module RegFile (
   input wire clk,
   input wire reset,
   input wire logic en,
