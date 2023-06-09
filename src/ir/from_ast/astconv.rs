@@ -441,16 +441,16 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 "Signature assumption",
                 ec.pos(),
             )));
-            cons.push(
-                ir::Fact::assume(self.event_cons(ec.take()), info).into(),
-            );
+            let prop = self.event_cons(ec.take());
+            cons.extend(self.comp.assume(prop, info));
         }
         for pc in sig.param_constraints {
             let info = self.comp.add(ir::Info::assert(ir::Reason::misc(
                 "Signature assumption",
                 pc.pos(),
             )));
-            cons.push(ir::Fact::assume(self.expr_cons(pc.take()), info).into());
+            let prop = self.expr_cons(pc.take());
+            cons.extend(self.comp.assume(prop, info));
         }
 
         cons
@@ -469,7 +469,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .param_cons
             .clone()
             .into_iter()
-            .map(|f| {
+            .flat_map(|f| {
                 let reason = self
                     .comp
                     .add(ir::Reason::param_cons(comp_loc, f.pos()).into());
@@ -477,7 +477,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 let prop = self.expr_cons(p);
                 // This is a checked fact because the calling component needs to
                 // honor it.
-                self.comp.assert(prop, reason).into()
+                self.comp.assert(prop, reason)
             })
             .collect_vec();
 
@@ -568,13 +568,13 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .event_cons
             .clone()
             .into_iter()
-            .map(|ec| {
+            .flat_map(|ec| {
                 let reason = self.comp.add(
                     ir::Reason::event_cons(instance.pos(), ec.pos()).into(),
                 );
                 let ec = ec.take().resolve_event(&event_binding);
                 let prop = self.event_cons(ec);
-                self.comp.assert(prop, reason).into()
+                self.comp.assert(prop, reason)
             })
             .collect();
 
@@ -660,7 +660,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 } else {
                     self.comp.assume(prop, reason)
                 };
-                vec![fact.into()]
+                fact.into_iter().collect()
             }
             ast::Command::Connect(ast::Connect { src, dst, guard }) => {
                 assert!(guard.is_none(), "Guards are not supported");
@@ -700,8 +700,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 let idx_start = index.gte(start, self.comp);
                 let idx_end = index.lt(end, self.comp);
                 let in_range = idx_start.and(idx_end, self.comp);
-                let cmds = vec![self.comp.assume(in_range, reason).into(), l];
-                cmds
+                iter::once(l)
+                    .chain(self.comp.assume(in_range, reason))
+                    .collect()
             }
             ast::Command::If(ast::If { cond, then, alt }) => {
                 let cond = self.expr_cons(cond);
@@ -736,7 +737,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             let start = idx.gte(self.comp.num(0), self.comp);
             let end = idx.lt(len, self.comp);
             let in_range = start.and(end, self.comp);
-            cmds.extend([self.comp.assume(in_range, reason).into()])
+            cmds.extend(self.comp.assume(in_range, reason))
         }
         cmds
     }

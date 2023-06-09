@@ -28,12 +28,12 @@ impl IntervalCheck {
         range: &ir::Range,
         loc: GPosIdx,
         comp: &mut ir::Component,
-    ) -> ir::Command {
+    ) -> Option<ir::Command> {
         let &ir::Range { start, end } = range;
         let prop = end.gt(start, comp);
         let reason = comp
             .add(ir::Reason::well_formed_interval(loc, (start, end)).into());
-        comp.assert(prop, reason).into()
+        comp.assert(prop, reason)
     }
 
     /// Check that event delays are greater than zero
@@ -41,7 +41,7 @@ impl IntervalCheck {
         &mut self,
         event: ir::EventIdx,
         comp: &mut ir::Component,
-    ) -> ir::Command {
+    ) -> Option<ir::Command> {
         let zero = comp.num(0).into();
         let ir::Event { delay, info, .. } = &comp[event];
         let ir::Info::Event { delay_loc, .. } = comp[*info] else {
@@ -52,7 +52,7 @@ impl IntervalCheck {
             ir::Reason::misc("delay must be greater than zero", delay_loc)
                 .into(),
         );
-        comp.assert(prop, reason).into()
+        comp.assert(prop, reason)
     }
 
     /// Proposition that ensures that the given parameter is in range
@@ -69,12 +69,12 @@ impl IntervalCheck {
 impl Visitor for IntervalCheck {
     fn start(&mut self, comp: &mut ir::Component) -> Action {
         // Ensure that delays are greater than zero
-        let mut cmds =
+        let mut cmds: Vec<ir::Command> =
             Vec::with_capacity(comp.ports().len() + comp.events().len());
         for idx in comp.events().idx_iter() {
             let ev = &comp[idx];
             if ev.owner.is_sig() {
-                cmds.push(self.delay_wf(idx, comp));
+                cmds.extend(self.delay_wf(idx, comp));
             }
         }
 
@@ -100,7 +100,7 @@ impl Visitor for IntervalCheck {
             };
             let range = live.range;
             // Require that the range is well-formed
-            cmds.push(self.range_wf(&range, live_loc, comp));
+            cmds.extend(self.range_wf(&range, live_loc, comp));
 
             // We only constraint the event mentioned in the start of the range.
             let st_ev = comp[range.start].event;
@@ -127,7 +127,7 @@ impl Visitor for IntervalCheck {
             );
             let prop = comp
                 .add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(delay.clone(), len)));
-            cmds.push(ir::Command::from(comp.assert(prop, reason)));
+            cmds.extend(comp.assert(prop, reason));
         }
 
         Action::AddBefore(cmds)
@@ -171,8 +171,12 @@ impl Visitor for IntervalCheck {
         // Ensure that this event's delay is greater than invoked component's event's delay.
         let prop = comp
             .add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(this_delay, inv_delay)));
-        let fact = ir::Command::from(comp.assert(prop, reason));
-        Action::AddBefore(vec![fact])
+        let fact = comp.assert(prop, reason);
+        if let Some(c) = fact {
+            Action::AddBefore(vec![c])
+        } else {
+            Action::Continue
+        }
     }
 
     fn connect(
@@ -208,6 +212,11 @@ impl Visitor for IntervalCheck {
         );
 
         let prop = pre_req.implies(contains, comp);
-        Action::AddBefore(vec![comp.assert(prop, reason).into()])
+        let f = comp.assert(prop, reason);
+        if let Some(c) = f {
+            Action::AddBefore(vec![c])
+        } else {
+            Action::Continue
+        }
     }
 }

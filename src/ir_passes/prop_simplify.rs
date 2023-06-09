@@ -195,7 +195,12 @@ impl Visitor for Simplify {
         comp: &mut ir::Component,
     ) -> Action {
         // Simplify the proposition in the fact
-        fact.prop = self.simplify_prop(fact.prop, comp);
-        Action::Continue
+        let simpl = self.simplify_prop(fact.prop, comp);
+        if simpl.is_true(comp) {
+            Action::Change(vec![])
+        } else {
+            fact.prop = simpl;
+            Action::Continue
+        }
     }
 }

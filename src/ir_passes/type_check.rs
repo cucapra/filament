@@ -19,7 +19,7 @@ impl TypeCheck {
         access: &ir::Access,
         loc: GPosIdx,
         comp: &mut ir::Component,
-    ) -> [ir::Fact; 2] {
+    ) -> impl Iterator<Item = ir::Command> {
         let &ir::Access { port, start, end } = access;
         let &ir::Port {
             live: ir::Liveness { len, .. },
@@ -47,10 +47,12 @@ impl TypeCheck {
         let start = start.lt(len, comp);
         let end = end.lte(len, comp);
         let in_range = start.and(end, comp);
-        [
+        vec![
             comp.assert(wf_prop, wf),
             comp.assert(in_range, within_bounds),
         ]
+        .into_iter()
+        .flatten()
     }
 }
 
@@ -78,7 +80,7 @@ impl Visitor for TypeCheck {
                 .into(),
         );
         let prop = src_w.equal(dst_w, comp);
-        cons.push(comp.assert(prop, reason));
+        cons.extend(comp.assert(prop, reason));
 
         // Ensure that the sizes are the same
         let src_size = src.end.sub(src.start, comp);
@@ -88,8 +90,8 @@ impl Visitor for TypeCheck {
                 .into(),
         );
         let prop = src_size.equal(dst_size, comp);
-        cons.push(comp.assert(prop, reason));
+        cons.extend(comp.assert(prop, reason));
 
-        Action::AddBefore(cons.into_iter().map(|f| f.into()).collect())
+        Action::AddBefore(cons)
     }
 }
