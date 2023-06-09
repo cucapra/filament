@@ -1,4 +1,4 @@
-import "frisc/src/regfile/regfile.fil";
+import "frisc/src/regfile.fil";
 
 comp main<G:1>(
   clk:1,
