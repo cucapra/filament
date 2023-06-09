@@ -1,4 +1,4 @@
-import "frisc/src/decode/decode.fil";
+import "frisc/src/decode.fil";
 
 comp main<G:1> (
   @[G,G+1] instr:32

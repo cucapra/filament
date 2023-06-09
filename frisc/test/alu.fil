@@ -1,4 +1,4 @@
-import "frisc/src/alu/alu.fil";
+import "frisc/src/alu.fil";
 
 comp main<G:1> (
   @[G,G+1] inA:32,
