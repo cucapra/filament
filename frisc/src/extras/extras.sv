@@ -47,4 +47,4 @@ module Ternary #(
   output wire logic [WIDTH-1:0] out
 );
   assign out = guard ? opTrue : opFalse;
-endmodule;
+endmodule

@@ -240,7 +240,6 @@ module ShiftRightArith #(
   assign out = in >>> shift;
 endmodule
 
-
 module Mux #(
   parameter WIDTH = 32
 ) (
