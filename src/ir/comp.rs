@@ -92,17 +92,24 @@ impl Component {
 
     /// Generate a asserted fact.
     /// Panics if the asserted fact is false.
-    pub fn assert(&mut self, prop: PropIdx, info: InfoIdx) -> Fact {
-        Fact::assert(prop, info)
+    pub fn assert(&mut self, prop: PropIdx, info: InfoIdx) -> Option<Command> {
+        if prop.is_true(self) {
+            None
+        } else {
+            Some(Fact::assert(prop, info).into())
+        }
     }
 
     /// Generate an assumed fact.
     /// Panics if the assumed fact is false.
-    pub fn assume(&mut self, prop: PropIdx, info: InfoIdx) -> Fact {
+    pub fn assume(&mut self, prop: PropIdx, info: InfoIdx) -> Option<Command> {
         if prop.is_false(self) {
             panic!("Attempted to assume false");
+        } else if prop.is_true(self) {
+            None
+        } else {
+            Some(Fact::assume(prop, info).into())
         }
-        Fact::assume(prop, info)
     }
 }
 
