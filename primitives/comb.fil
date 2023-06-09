@@ -99,13 +99,13 @@ extern "comb.sv" {
     @[G, L] in: #IN_WIDTH,
   ) -> (
     @[G, L] out: #OUT_WIDTH,
-  ) where L > G, #IN_WIDTH > 0, #OUT_WIDTH > 0, #OUT_WIDTH > #IN_WIDTH;
+  ) where L > G, #IN_WIDTH > 0, #OUT_WIDTH > 0, #OUT_WIDTH >= #IN_WIDTH;
 
   comp ZeroExtend[#IN_WIDTH, #OUT_WIDTH]<G: L-(G), ?L: 1=G+1>(
     @[G, L] in: #IN_WIDTH,
   ) -> (
     @[G, L] out: #OUT_WIDTH,
-  ) where L > G, #IN_WIDTH > 0, #OUT_WIDTH > 0, #OUT_WIDTH > #IN_WIDTH;
+  ) where L > G, #IN_WIDTH > 0, #OUT_WIDTH > 0, #OUT_WIDTH >= #IN_WIDTH;
 
   comp Concat[#LEFT, #RIGHT, #OUT]<G: L-(G), ?L: 1=G+1>(
     @[G, L] left: #LEFT,
