@@ -230,7 +230,7 @@ module ShiftRight #(
   assign out = in >> shift;
 endmodule
 
-module ShiftRightArith #(
+module ArithShiftRight #(
   parameter WIDTH = 32
 ) (
   input wire logic signed [WIDTH-1:0] in,

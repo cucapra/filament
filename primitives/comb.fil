@@ -144,7 +144,7 @@ extern "comb.sv" {
     @[G, L] out: #WIDTH,
   ) where L > G, #WIDTH > 0;
 
-  comp ShiftRightArith[#WIDTH]<G: L-(G), ?L: 1=G+1>(
+  comp ArithShiftRight[#WIDTH]<G: L-(G), ?L: 1=G+1>(
     @[G, L] in: #WIDTH,
     @[G, L] shift: #WIDTH,
   ) -> (

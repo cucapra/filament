@@ -1,8 +1,6 @@
 import "primitives/core.fil";
 import "frisc/src/extras/extras.fil";
 
-// ALU
-
 comp ALU<G:1> (
   @[G,G+1] inA:32,
   @[G,G+1] inB:32,
@@ -32,11 +30,12 @@ comp ALU<G:1> (
   selAddSub := new Mux[32]<G>(isAdd, add.out, sub.out);
 
   shamt := new Slice[32,4,0,5]<G>(inB);
+  shamt_ext := new ZeroExtend[5,32]<G>(shamt.out);
   
   xor := new Xor[32]<G>(inA, inB);
   or := new Or[32]<G>(inA, inB);
   and := new And[32]<G>(inA, inB);
-  sr := new RightShifter[32]<G>(inA, shamt.out, isArith);
+  sr := new RightShifter[32]<G>(inA, shamt_ext.out, isArith);
   sll := new ShiftLeft[32]<G>(inA, inB);
 
   aluMinus32 := new Select[33,32]<G>(aluMinus.out);

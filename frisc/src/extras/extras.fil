@@ -15,12 +15,17 @@ extern "extras.sv" {
   ) -> (
     @[G,L] out: #WIDTH
   ) where L > G, #WIDTH > 0;
+}
 
-  comp RightShifter[#WIDTH]<G:L-(G),?L:1=G+1>(
-    @[G,L] in: #WIDTH,
-    @[G,L] shamt: 5,
-    @[G,L] isArith:1
-  ) -> (
-    @[G,L] out:#WIDTH
-  ) where L > G, #WIDTH > 0;
+comp RightShifter[#WIDTH]<G:1>(
+  @[G,G+1] in: #WIDTH,
+  @[G,G+1] shamt: #WIDTH,
+  @[G,G+1] isArith:1
+) -> (
+  @[G,G+1] out: #WIDTH
+) where #WIDTH > 0 {
+  sra := new ArithShiftRight[#WIDTH]<G>(in, shamt);
+  srl := new ShiftRight[#WIDTH]<G>(in, shamt);
+  mux := new Mux[#WIDTH]<G>(isArith, sra.out, srl.out);
+  out = mux.out;
 }
