@@ -1,0 +1,14 @@
+import "frisc/src/alu.fil";
+
+comp main<G:1> (
+  @[G,G+1] inA:32,
+  @[G,G+1] inB:32,
+  @[G,G+1] funct:8,
+  @[G,G+1] isAdd:1,
+  @[G,G+1] isArith:1
+) -> (
+  @[G,G+1] out:32
+) {
+  alu := new ALU<G>(inA, inB, funct, isAdd, isArith);
+  out = alu.out;
+}

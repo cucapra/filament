@@ -7,9 +7,9 @@ error: source port must be available longer than the destination port requires
  19 │     mx := new Mux[32]<G+2>(op, r0.out, m0.out);
     │                            ^^ source is available for @[G, G+1]
     │
-    ┌─ ./primitives/./comb.fil:148:13
+    ┌─ ./primitives/./comb.fil:155:13
     │
-148 │     @[G, L] sel: 1,
+155 │     @[G, L] sel: 1,
     │             --- destination's requirement @[G+2, G+3]
 
 error: source port must be available longer than the destination port requires
