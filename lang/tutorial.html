@@ -242,9 +242,9 @@ Save the file as <code>alu.fil</code> and run the following command from the Fil
  17 │     mx := new Mux[32]&lt;G&gt;(op, a0.out, m0.out);
     │                                      ^^^^^^ source is available for @[G+2, G+3]
     │
-    ┌─ ./primitives/./comb.fil:150:13
+    ┌─ ./primitives/./comb.fil:157:13
     │
-150 │     @[G, L] in1: #WIDTH,
+157 │     @[G, L] in1: #WIDTH,
     │             --- destination's requirement @[G, G+1]
 
 Compilation failed with 1 errors.
@@ -306,9 +306,9 @@ comp main&lt;G: 3&gt;(
  19 │     mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
     │                            ^^ source is available for @[G, G+1]
     │
-    ┌─ ./primitives/./comb.fil:148:13
+    ┌─ ./primitives/./comb.fil:155:13
     │
-148 │     @[G, L] sel: 1,
+155 │     @[G, L] sel: 1,
     │             --- destination's requirement @[G+2, G+3]
 
 error: source port must be available longer than the destination port requires
