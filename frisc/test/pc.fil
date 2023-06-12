@@ -1,0 +1,20 @@
+import "frisc/src/pc.fil";
+
+comp main<G:2> (
+  clk:1,
+  //@interface[G] go:1,
+  @[G,G+1] pcin:32,
+  @[G,G+1] reset:1,
+  @[G,G+1] isJAL:1,
+  @[G,G+1] isAUIPC:1,
+  @[G,G+1] Jimm:32,
+  @[G,G+1] Uimm:32,
+  @[G,G+1] Bimm:32
+) -> (
+  @[G,G+1] outImm:32,
+  @[G,G+1] out4:32
+) {
+  pc := new PC<G>(pcin, reset, isJAL, isAUIPC, Jimm, Uimm, Bimm);
+  outImm = pc.outImm;
+  out4 = pc.out4;
+}

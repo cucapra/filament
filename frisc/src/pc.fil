@@ -3,7 +3,7 @@ import "primitives/core.fil";
 
 comp PC<G:2> (
   clk:1,
-  @interface[G] go:1,
+  //@interface[G] go:1,
   @[G,G+1] pcin:32,
   @[G,G+1] reset:1,
   @[G,G+1] isJAL:1,
@@ -12,8 +12,8 @@ comp PC<G:2> (
   @[G,G+1] Uimm:32,
   @[G,G+1] Bimm:32
 ) -> (
-  @[G+1,G+2] outImm:32,
-  @[G+1,G+2] out4:32
+  @[G,G+1] outImm:32,
+  @[G,G+1] out4:32
 ) {
   // for jumps
   pcAdderImm := new Add[32];
@@ -32,9 +32,9 @@ comp PC<G:2> (
   pcPlusImm := pcAdderImm<G>(pcin, t1.out);
   pcPlus4 := pcAdder<G>(pcin, const4.out);
 
-  pcRegImm := new Register[32]<G,G+2>(pcPlusImm.out);
-  pcReg4 := new Register[32]<G,G+2>(pcPlus4.out);
+  //pcRegImm := new Register[32]<G,G+2>(pcPlusImm.out);
+  //pcReg4 := new Register[32]<G,G+2>(pcPlus4.out);
 
-  outImm = pcRegImm.out;
-  out4 = pcReg4.out;
+  outImm = pcPlusImm.out;
+  out4 = pcPlus4.out;
 }
