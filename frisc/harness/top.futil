@@ -1,0 +1,65 @@
+import "../filament/frisc/harness/cpu.futil";
+import "primitives/core.futil";
+import "primitives/memories.futil";
+
+component main () -> (out:32) {
+  cells {
+    @external(1) iram = seq_mem_d1(32,5,32);
+    @external(1) res = std_mem_d1(32,5,32);
+    cpu = CPU();
+
+    pc = std_reg(32);
+    pc_adder = std_add(32);
+
+    lt_cond = std_lt(32);
+    add_cond = std_add(32);
+  }
+  wires {
+    group init {
+      cpu.reset = 1'd1;
+      pc.in = 32'd0;
+      pc.write_en = 1'd1;
+      init[done] = pc.done;
+    }
+
+    group read_iram {
+      iram.addr0 = pc.out;
+      iram.read_en = 1'b1;
+      cpu.instr = iram.read_data;
+      read_iram[done] = iram.read_done;
+    }
+
+    group inc_counter {
+      add_cond.left = pc.out;
+      add_cond.right = 32'd1;
+      pc.in = add_cond.out;
+      pc.write_en = 1'd1;
+      inc_counter[done] = pc.done ? 1'd1;
+    }
+
+    comb group cond {
+      lt_cond.left = pc.out;
+      lt_cond.right = 32'd5;
+    }
+
+    group write_res {
+      res.addr0 = pc.out;
+      res.write_data = cpu.out;
+      res.write_en = 1'b1;
+      write_res[done] = res.done ? 1'd1;
+    }
+
+  }
+  control {
+    seq {
+      init;
+      while lt_cond.out with cond {
+        seq {
+          read_iram;
+          write_res;
+          inc_counter;
+        }
+      }
+    }
+  }
+}

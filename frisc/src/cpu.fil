@@ -5,6 +5,7 @@ import "frisc/src/extras/extras.fil";
 
 comp CPU<G:1> (
   clk:1,
+  //@interface[G] go:1,
   @[G,G+1] reset:1,
   @[G,G+1] instr:32
 ) -> (
