@@ -4,9 +4,9 @@ import "primitives/memories.futil";
 
 component main () -> (out:32) {
   cells {
-    @external(1) iram = seq_mem_d1(32,5,32);
-    @external(1) res = std_mem_d1(32,5,32);
-    cpu = CPU();
+    @external iram = seq_mem_d1(32,5,32);
+    @external res = seq_mem_d1(32,5,32);
+    @data cpu = CPU();
 
     pc = std_reg(32);
     pc_adder = std_add(32);
@@ -16,7 +16,6 @@ component main () -> (out:32) {
   }
   wires {
     group init {
-      cpu.reset = 1'd1;
       pc.in = 32'd0;
       pc.write_en = 1'd1;
       init[done] = pc.done;
@@ -26,7 +25,7 @@ component main () -> (out:32) {
       iram.addr0 = pc.out;
       iram.read_en = 1'b1;
       cpu.instr = iram.read_data;
-      read_iram[done] = iram.read_done;
+      read_iram[done] = iram.read_done ? 1'b1;
     }
 
     group inc_counter {
@@ -46,7 +45,7 @@ component main () -> (out:32) {
       res.addr0 = pc.out;
       res.write_data = cpu.out;
       res.write_en = 1'b1;
-      write_res[done] = res.done ? 1'd1;
+      write_res[done] = res.write_done ? 1'd1;
     }
 
   }
