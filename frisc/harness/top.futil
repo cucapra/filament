@@ -15,45 +15,36 @@ component main () -> (out:32) {
     add_cond = std_add(32);
   }
   wires {
-    group init {
+    static<1> group init {
       pc.in = 32'd0;
       pc.write_en = 1'd1;
-      init[done] = pc.done;
     }
 
-    group read_iram {
+    static<1> group read_iram {
       iram.addr0 = pc.out;
       iram.read_en = 1'b1;
       cpu.instr = iram.read_data;
-      read_iram[done] = iram.read_done ? 1'b1;
     }
 
-    group inc_counter {
+    static<1> group inc_counter {
       add_cond.left = pc.out;
       add_cond.right = 32'd1;
       pc.in = add_cond.out;
       pc.write_en = 1'd1;
-      inc_counter[done] = pc.done ? 1'd1;
     }
 
-    comb group cond {
-      lt_cond.left = pc.out;
-      lt_cond.right = 32'd5;
-    }
-
-    group write_res {
+    static<1> group write_res {
       res.addr0 = pc.out;
       res.write_data = cpu.out;
-      res.write_en = 1'b1;
-      write_res[done] = res.write_done ? 1'd1;
+      res.write_en = %0 ? 1'd1;
     }
 
   }
   control {
-    seq {
+    static seq {
       init;
-      while lt_cond.out with cond {
-        seq {
+      static repeat 5 {
+        static par {
           read_iram;
           write_res;
           inc_counter;
