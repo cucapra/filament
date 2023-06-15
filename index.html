@@ -1,288 +1,210 @@
-<!DOCTYPE HTML>
-<html lang="en" class="sidebar-visible no-js light">
-    <head>
-        <!-- Book generated using mdBook -->
-        <meta charset="UTF-8">
-        <title>Getting Started - Filament</title>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="author" content="Rachit Nigam">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filament | Fearless Hardware Design </title>
+
+  <!-- <link rel="icon" href="https://filamenthdl.com/img/logo.svg" type="image/svg+xml"> -->
+
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://filamenthdl.com/css/normalize.css">
+  <link rel="stylesheet" href="https://filamenthdl.com/css/default.css">
+  <link rel="stylesheet" type="text/css" href="https://filamenthdl.com/css/prism.css">
+  <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/academicons/1.9.1/css/academicons.min.css" integrity="sha512-b1ASx0WHgVFL5ZQhTgiPWX+68KjS38Jk87jg7pe+qC7q9YkEtFq0z7xCglv7qGIs/68d3mAp+StfC8WKC5SSAg==" crossorigin="anonymous"/>
+
+  
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="https://filamenthdl.com/post/atom.xml">
+  
+
+</head>
+
+<body>
+    <script src=https://filamenthdl.com/js/prism.js></script>
+    <script src=https://filamenthdl.com/js/prism-futil.js></script>
+    <header>
+      <!-- <a class="unstyled-link" href="https://filamenthdl.com">
+        <img class="main-logo" src="https://filamenthdl.com/img/logo-text.svg" alt="Calyx" />
+    </a> -->
+    <h1>Filament</h1>
+    <h3>
+    A Compiler Infrastructure for Accelerator Generators
+    </h3>
+    <hr/>
+    <nav>
+      <a class="nav-item" href="https://rachit.pl/files/pubs/filament.pdf">Paper</a>
+      <a class="nav-item" href="https://github.com/cucapra/filament">Code</a>
+      <a class="nav-item" href="/docs">Documentation </a>
+      <a class="nav-item" href="https://github.com/cucapra/calyx/discussions">Discussions</a>
+    </nav>
+    </header>
+  <section class="section">
+    <div class="container">
+      
+
+<!-- Introduction -->
+<div class="intro">
+<p>Filament is a hardware description language (HDL) that uses types to ensure that your hardware pipelines are composed correctly.
+Filament’s type system is very different from <a rel="noopener nofollow noreferrer" target="_blank" href="https://bluespec.com/">every</a> <a rel="noopener nofollow noreferrer" target="_blank" href="https://www.chisel-lang.org/">other</a> <a rel="noopener nofollow noreferrer" target="_blank" href="https://clash-lang.org/">typed HDL</a>: it uses a substructural (like Rust) to reason about structural hazards in your designs and eliminates them <em>at compile-time</em>.</p>
+
+</div>
 
 
-        <!-- Custom HTML head -->
-        
-        <meta name="description" content="">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#ffffff" />
+<!-- Features -->
+<section>
+    <h1>Features</h1>
 
-        <link rel="icon" href="favicon.svg">
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
-        <link rel="stylesheet" href="css/print.css" media="print">
-
-        <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        <link rel="stylesheet" href="fonts/fonts.css">
-
-        <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
-
-        <!-- Custom theme stylesheets -->
-
-        <!-- MathJax -->
-        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    </head>
-    <body>
-    <div id="body-container">
-        <!-- Provide site root to javascript -->
-        <script>
-            var path_to_root = "";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
-        </script>
-
-        <!-- Work around some values being stored in localStorage wrapped in quotes -->
-        <script>
-            try {
-                var theme = localStorage.getItem('mdbook-theme');
-                var sidebar = localStorage.getItem('mdbook-sidebar');
-
-                if (theme.startsWith('"') && theme.endsWith('"')) {
-                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
-                }
-
-                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
-                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
-                }
-            } catch (e) { }
-        </script>
-
-        <!-- Set the theme before any content is loaded, prevents flash -->
-        <script>
-            var theme;
-            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
-            if (theme === null || theme === undefined) { theme = default_theme; }
-            var html = document.querySelector('html');
-            html.classList.remove('no-js')
-            html.classList.remove('light')
-            html.classList.add(theme);
-            html.classList.add('js');
-        </script>
-
-        <!-- Hide / unhide sidebar before it is displayed -->
-        <script>
-            var html = document.querySelector('html');
-            var sidebar = null;
-            if (document.body.clientWidth >= 1080) {
-                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
-                sidebar = sidebar || 'visible';
-            } else {
-                sidebar = 'hidden';
-            }
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
-        </script>
-
-        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="start.html" class="active"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li class="chapter-item expanded affix "><li class="part-title">The Filament Language</li><li class="chapter-item expanded "><a href="lang/tutorial.html"><strong aria-hidden="true">2.</strong> Your First Filament Program</a></li><li class="chapter-item expanded "><a href="lang/run.html"><strong aria-hidden="true">3.</strong> Running Filament Designs</a></li><li class="chapter-item expanded "><a href="lang/pipelining.html"><strong aria-hidden="true">4.</strong> Pipelining with Filament</a></li><li class="chapter-item expanded "><a href="lang/external.html"><strong aria-hidden="true">5.</strong> Using Verilog Modules in Filament</a></li><li class="chapter-item expanded affix "><li class="part-title">Metaprogramming with Filament</li><li class="chapter-item expanded "><a href="meta/overview.html"><strong aria-hidden="true">6.</strong> Metaprogramming Overview</a></li><li class="chapter-item expanded "><a href="meta/loops-and-bundles.html"><strong aria-hidden="true">7.</strong> Loops and Bundles</a></li></ol>
+    <div class="frontends">
+        <div class="frontend">
+            <div class="content">
+                <h2>Composable</h3>
+                Filament uses a new kind of type system to ensure that when you use a module to perform a computation,
+                it's timing constraints, like latency and initiation interval are correct. When there are errors, it
+                generates helpful error messages to explain what is wrong with the design!
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
-        </nav>
-
-        <div id="page-wrapper" class="page-wrapper">
-
-            <div class="page">
-                                <div id="menu-bar-hover-placeholder"></div>
-                <div id="menu-bar" class="menu-bar sticky bordered">
-                    <div class="left-buttons">
-                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
-                            <i class="fa fa-bars"></i>
-                        </button>
-                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
-                            <i class="fa fa-paint-brush"></i>
-                        </button>
-                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
-                        </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
-                            <i class="fa fa-search"></i>
-                        </button>
-                    </div>
-
-                    <h1 class="menu-title">Filament</h1>
-
-                    <div class="right-buttons">
-                        <a href="print.html" title="Print this book" aria-label="Print this book">
-                            <i id="print-button" class="fa fa-print"></i>
-                        </a>
-
-                    </div>
-                </div>
-
-                <div id="search-wrapper" class="hidden">
-                    <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
-                    </form>
-                    <div id="searchresults-outer" class="searchresults-outer hidden">
-                        <div id="searchresults-header" class="searchresults-header"></div>
-                        <ul id="searchresults">
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
-                <script>
-                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
-                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
-                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
-                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
-                    });
-                </script>
-
-                <div id="content" class="content">
-                    <main>
-                        <h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
-<p>Filament is a programming language for Fearless Hardware Design. It aims to enable software programmers without much hardware background to start designing performant hardware. At its heart, Filament uses a type system to encode properties important for designing efficient hardware. This guide helps you install the various tools to make Filament work.</p>
-<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
-<h3 id="minimal-build"><a class="header" href="#minimal-build">Minimal Build</a></h3>
-<p>The following commands are sufficient to build the Filament compiler and have it generate <a href="https://calyxir.org">Calyx IR</a>. First, we need to configure the Calyx compiler which acts as the backend for Filament.</p>
-<ul>
-<li>Clone the <a href="https://github.com/cucapra/calyx">Calyx repository</a>:
-<pre><code>git clone https://github.com/cucapra/calyx.git --depth 1 --branch v0.2.0
-</code></pre>
-</li>
-<li>Build the Calyx compiler:
-<pre><code>cd calyx &amp;&amp; cargo build
-</code></pre>
-</li>
-<li>Clone <a href="https://github.com/cucapra/filament">this repository</a>: <code>git clone https://github.com/cucapra/filament.git</code></li>
-</ul>
-<p>Next, we can install the dependencies for the Filament compiler:</p>
-<ul>
-<li><a href="https://www.rust-lang.org/tools/install">Install Rust</a> which will configure the <code>cargo</code> tool.</li>
-<li>Install <a href="https://github.com/Z3Prover/z3">z3</a>.
-<ul>
-<li>On Mac OS: <code>brew install z3</code>.</li>
-<li>On Ubuntu: <code>apt install z3</code></li>
-</ul>
-</li>
-<li>Build the compiler by running: <code>cargo build</code> in the root of the folder.</li>
-</ul>
-<p>To check that the compiler works, run the following command:</p>
-<pre><code>cargo run -- tests/compile/par.fil
-</code></pre>
-<p>Which should generate the Calyx IR for the program.</p>
-<h3 id="full-build"><a class="header" href="#full-build">Full Build</a></h3>
-<p>In order to generate Verilog, run the test suite, and simulate Filament programs, we need a couple more tools:</p>
-<ul>
-<li>Install <a href="https://docs.calyxir.org/fud/index.html"><code>fud</code></a> which manages hardware tools and makes it easy to test Filament programs.
-<ul>
-<li>Install <a href="https://flit.pypa.io/en/stable/">flit</a>: <code>python3 -m pip install flit</code></li>
-<li>Install <a href="https://docs.calyxir.org/fud/index.html">fud</a>: <code>cd calyx/fud &amp;&amp; flit install -s</code></li>
-<li>Check <code>fud</code> was installed: <code>fud check</code>. It will report some tools are missing. This is expected.</li>
-</ul>
-</li>
-<li>Configure the <code>fud</code> to use an absolute path for the Calyx compiler:
-<ul>
-<li>Run the following command from the Calyx repository: <code>cargo build &amp;&amp; fud config stages.futil.exec &quot;$(pwd)/target/debug/futil&quot;</code></li>
-<li>Run <code>fud check</code>. It should report that the <code>futil</code> is installed correctly.</li>
-</ul>
-</li>
-<li>Install <a href="https://iverilog.fandom.com/wiki/Installation_Guide">Icarus Verilog</a> and <a href="https://docs.calyxir.org/fud/index.html#icarus-verilog">configure <code>fud</code> to use it</a>.
-<ul>
-<li>Running <code>fud check</code> again should report that <code>icarus-verilog</code> was installed correctly.</li>
-</ul>
-</li>
-<li>Install <a href="https://www.cocotb.org/">cocotb</a>: <code>python3 -m pip install cocotb</code>.
-<ul>
-<li>Cocotb install can often fail. Check it was installed correctly by running <code>python3 -c &quot;import cocotb; print(cocotb.__version__)&quot;</code>. If this command fails, see <a href="#debugging-cocotb-installation">Debugging Cocotb Installation</a>.</li>
-</ul>
-</li>
-<li>Register Filament's fud stages by running the command in the filament repository: <code>fud register -p fud/filament.py filament</code>
-<ul>
-<li>Run <code>fud check</code> to make sure that the filament stages are correctly installed.</li>
-</ul>
-</li>
-<li>Install <a href="https://github.com/cucapra/runt"><code>runt</code></a>: <code>cargo install runt</code></li>
-<li>Install <a href="https://stedolan.github.io/jq/"><code>jq</code></a>
-<ul>
-<li>On Mac OS: <code>brew install jq</code></li>
-<li>On Ubuntu: <code>apt install jq</code></li>
-</ul>
-</li>
-</ul>
-<p>For a sanity check, run <code>fud check</code>. It should report that <code>iverilog</code>, <code>jq</code>, <code>filament</code>, <code>futil</code>, <code>cocotb</code> are correctly installed.</p>
-<p>Once all tools are installed, running the following command should print out the test report:</p>
-<pre><code>runt -j 1 -o fail -d
-</code></pre>
-<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
-<p>Now that we have installed the Filament compiler and accompanying tools, we can start using Filament. Use the following links to learn more about Filament:</p>
-<ul>
-<li>Writing your <a href="./lang/tutorial.html">first Filament Program</a>.</li>
-<li><a href="./lang/external.html">How do I integrate black-box Verilog with Filament</a>?</li>
-</ul>
-<h2 id="debugging-cocotb-installation"><a class="header" href="#debugging-cocotb-installation">Debugging Cocotb Installation</a></h2>
-<p>Cocotb requires the python shared library <code>libpython.so</code>/<code>libpython.dylib</code> (Mac OS) to work correctly. A common reason for a cocotb installation not working is when this library is missing.</p>
-<p>To check if cocotb is able to find the shared library install <code>find_libpython</code>: <code>python3 -m pip install find_libpython</code>.</p>
-<p>Next, run the following:</p>
-<pre><code>python3 -c &quot;import find_libpython; print(find_libpython.find())&quot;
-</code></pre>
-<p>If the above command does not print out anything, that means that the python library was not found and the python installation needs to be rebuilt.</p>
-<p>If you use <a href="https://github.com/pyenv/pyenv"><code>pyenv</code></a>, the following command will install a python version with the shared library:</p>
-<pre><code>env PYTHON_CONFIGURE_OPTS=&quot;--enable-shared&quot; pyenv install 3.10
-</code></pre>
-<p>Rerun the command to check that <code>libpython</code> was found after installing a new python version.</p>
-
-                    </main>
-
-                    <nav class="nav-wrapper" aria-label="Page navigation">
-                        <!-- Mobile navigation buttons -->
-
-                            <a rel="next" href="lang/tutorial.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
-                            </a>
-
-                        <div style="clear: both"></div>
-                    </nav>
-                </div>
-            </div>
-
-            <nav class="nav-wide-wrapper" aria-label="Page navigation">
-
-                    <a rel="next" href="lang/tutorial.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
-                    </a>
-            </nav>
-
         </div>
 
+        <div class="frontend">
+            <div class="content">
+                <h2>Efficient</h3>
+                Filament's type system does the heavy lifting to ensure that your modules compose correctly.
+                After that, the compiler erases the types and generates Verilog that is as efficient as hand-written code.
+            </div>
+        </div>
 
+        <div class="frontend">
+            <div class="content">
+                <h2>Integrable</h3>
+                Filament makes it easy to integrate black-box Verilog module:
+                just give them a type signature and the compiler will ensure
+                that they are used correctly!
+                Similarly, Filament is easy to integrate in Verilog projects;
+                the compiler generates clean SystemVerilog code that compiles with
+                open-source and commercial tools.
+            </div>
+        </div>
 
+    </div>
+</section>
 
-        <script>
-            window.playground_copyable = true;
-        </script>
+<section>
+    <h1>Language</h1>
 
+    <div class="lang-examples">
 
-        <script src="elasticlunr.min.js"></script>
-        <script src="mark.min.js"></script>
-        <script src="searcher.js"></script>
+        <div class="example">
+            <div class="summary">
+                <h2>Events & Availability Intervals</h2>
+                <p>
+                    Filament's modules are parameterized by <i>events</i> which denote particular clock cycles.
+                    Events are used to define the <i>availability intervals</i> of the module's inputs and outputs.
+                </p>
+            </div>
+            <div class="code language-futil">
+<pre><code>comp Add&lt;G&gt;(
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32
+) -> (@[G, G+1] out: 32) {...}</pre></code>
+            </div>
+        </div>
 
-        <script src="clipboard.min.js"></script>
-        <script src="highlight.js"></script>
-        <script src="book.js"></script>
+        <div class="example">
+            <div class="summary">
+                <h2>
+                    Invocations
+                </h2>
+                <p>
+                  In addition to instantiation hardware modules (using the <code>new</code> keyword), Filament uses <em>invocations</em> to
+                  to denote when an instance performs some computation. This slight addition enables Filament's powerful type system to reason
+                  about structural hazards and imbalanced pipeline paths.
+                </p>
+            </div>
+            <div class="code language-futil">
+<pre data-line="5-6"><code>comp main&lt;G&gt;(
+  @[G, G+1] x: 32, @[G, G+1] y: 32
+) -> () {
+  A := new Add[32]; // 32-bit adder
+  a0 := A&lt;G&gt;(x, x); // 1st use
+  b0 := A&lt;G+2&gt;(a0.out, y); // 2nd use
+}</pre></code>
+            </div>
+        </div>
 
-        <!-- Custom JS scripts -->
-        <script src="mermaid.min.js"></script>
-        <script src="mermaid-init.js"></script>
-        <script src="static/custom-highlight.js"></script>
+        <div class="example">
+            <div class="summary">
+                <h2>Event Delays</h2>
+                <p>
+                  Each event is associated with a <em>delay</em> that corresponds to the pipeline's initiation interval (II)&#8212;the minimum number of clock cycles before the pipeline can process new inputs.
+                  Filament's type system <em>checks the implementation</em> of the component and ensures that the delay is correct.
+                  This means that your components support the II they promise!
+                </p>
+            </div>
+            <div class="code language-futil">
+<pre data-line="1"><code>// Processes new inputs every cycle
+comp Add&lt;G:1&gt;(
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32
+) -> (@[G, G+1] out: 32) {...}</pre></code>
+            </div>
+        </div>
+
+        <div class="example">
+            <div class="summary">
+                <h2>
+                    Generative Programming
+                </h2>
+                <p>
+                  Filament's guarantees extend to <em>generative programs</em> that generate hardware based on parameters. <code>for</code> loops and <code>if</code> statements can be used to generate hardware and Filament's type system ensures that <em>all valid parameters</em> generate correctly pipelined hardware. This is a really strong property because once your program type checks, you know that <em>all</em> possible instantiations of the program will work!
+                </p>
+            </div>
+            <div class="code language-futil">
+<pre><code>/* A parameteric shift register */
+comp Shift[W, N]&lt;G:1&gt;(
+  @[G, G+1] in: W
+) -> (
+  // delay the signal by N cycles
+  @[G+N, G+N+1] out: W
+) {
+  // Tracks the wires b/w registers
+  bundle f[N+1]: for&lt;k&gt; @[G+k, G+k+1] W;
+  f{0} = in;
+  for i in 0..N {
+      d := new Delay[W]<G+i>(f{i});
+      f{i+1} = d.out;
+  }
+  out = f{N};
+}</pre></code>
+            </div>
+        </div>
+
+</section>
+
+<section>
+<h2>Authors</h2>
+Filament is being actively developed by
+<a href="https://rachitnigam.com">Rachit Nigam</a> and the <a href="https://capra.cs.cornell.edu">CAPRA group at Cornell University</a>.
+If you're interested on using or contributing to Calyx, please
+<a href="https://github.com/cucapra/filament/discussions">
+let us know!
+</a>
+</div>
+</section>
 
 
     </div>
-    </body>
+  </section>
+
+<footer>
+  &copy;&nbsp;2021
+<a href="https://docs.calyxir.org/contributors.html">
+The Calyx Team
+</a>
+&middot; Built using <a href="https://www.getzola.org/">Zola</a>
+</footer>
+</body>
+
 </html>
