@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="author" content="Rachit Nigam">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filament | Fearless Hardware Design </title>
+
+  <!-- <link rel="icon" href="{{ get_url(path="img/logo.svg") | safe }}" type="image/svg+xml"> -->
+
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ get_url(path="css/normalize.css") | safe}}">
+  <link rel="stylesheet" href="{{ get_url(path="css/default.css") | safe }}">
+  <link rel="stylesheet" type="text/css" href="{{ get_url(path="css/prism.css") | safe }}">
+  <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/academicons/1.9.1/css/academicons.min.css" integrity="sha512-b1ASx0WHgVFL5ZQhTgiPWX+68KjS38Jk87jg7pe+qC7q9YkEtFq0z7xCglv7qGIs/68d3mAp+StfC8WKC5SSAg==" crossorigin="anonymous"/>
+
+  {% block rss %}
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="{{ get_url(path="post/atom.xml", trailing_slash=false) | safe }}">
+  {% endblock %}
+
+</head>
+
+<body>
+    <script src={{ get_url(path="js/prism.js") }}></script>
+    <script src={{ get_url(path="js/prism-futil.js") }}></script>
+    <header>
+      <!-- <a class="unstyled-link" href="{{ get_url(path="/") | safe }}">
+        <img class="main-logo" src="{{ get_url(path="img/logo-text.svg") | safe }}" alt="Calyx" />
+    </a> -->
+    <h1>Filament</h1>
+    <h3>
+    A Compiler Infrastructure for Accelerator Generators
+    </h3>
+    <hr/>
+    <nav>
+      <a class="nav-item" href="https://rachit.pl/files/pubs/filament.pdf">Paper</a>
+      <a class="nav-item" href="https://github.com/cucapra/filament">Code</a>
+      <a class="nav-item" href="https://example.com">Documentation </a>
+      <a class="nav-item" href="https://github.com/cucapra/calyx/discussions">Discussions</a>
+    </nav>
+    </header>
+  <section class="section">
+    <div class="container">
+      {% block content %}
+      {% endblock %}
+    </div>
+  </section>
+
+<footer>
+  &copy;&nbsp;2021
+<a href="https://docs.calyxir.org/contributors.html">
+The Calyx Team
+</a>
+&middot; Built using <a href="https://www.getzola.org/">Zola</a>
+</footer>
+</body>
+
+</html>
