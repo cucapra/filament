@@ -136,12 +136,13 @@ comp FAdd[#WIDTH, #EXPONENT, #MANTISSA]<G: 1, ?L: 1=G+1> (
     _final_mantissa := new ShiftLeft[#MANTISSA+1, #WIDTH]<G, G+1>(add_mant.out, shift_amts{#MANTISSA});
     final_mantissa := new Slice[#MANTISSA+1, #MANTISSA, 1, #MANTISSA]<G, G+1>(_final_mantissa.out);
 
-    _fsign_1_cond := new Gt[#MANTISSA]<G, G+1>(left.mantissa, right.mantissa);
-    _fsign_2_cond := new Gt[#EXPONENT]<G, G+1>(left.exponent, right.exponent);
-    _fsign_3_cond := new Eq[1]<G, G+1>(left.sign, right.sign);
-    _fsign_cb_1_cond := new Or[1]<G, G+1>(_fsign_1_cond.out, _fsign_2_cond.out);
-    _fsign_cb_2_cond := new Or[1]<G, G+1>(_fsign_cb_1_cond.out, _fsign_3_cond.out);
-    final_sign := new Mux[1]<G, G+1>(_fsign_cb_2_cond.out, left.sign, right.sign); 
+    l_signless := new Slice[#WIDTH, #WIDTH-2, 0, #WIDTH-1]<G, G+1>(left);
+    r_signless := new Slice[#WIDTH, #WIDTH-2, 0, #WIDTH-1]<G, G+1>(right);
+
+    _fsign_1_cond := new Gt[#WIDTH-1]<G, G+1>(l_signless.out, r_signless.out);
+    _fsign_2_cond := new Eq[1]<G, G+1>(left.sign, right.sign);
+    _fsign_cb_cond := new Or[1]<G, G+1>(_fsign_1_cond.out, _fsign_2_cond.out);
+    final_sign := new Mux[1]<G, G+1>(_fsign_cb_cond.out, left.sign, right.sign); 
 
     res := new _FCompose[#WIDTH, #EXPONENT, #MANTISSA]<G, G+1>(final_sign.out, final_exp.out, final_mantissa.out);
     out = res.out;
