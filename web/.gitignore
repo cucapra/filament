@@ -1,0 +1,17 @@
+*.swp
+GPATH
+GRTAGS
+GTAGS
+.DS_Store
+_cache
+_site
+
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+public/
+docs/
