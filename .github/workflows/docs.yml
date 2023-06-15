@@ -33,7 +33,7 @@ jobs:
           mv ./doc/book/ public/
       - name: Create CNAME file
         run: |
-          echo 'filamenthdl.com' > ./doc/book/CNAME
+          echo 'filamenthdl.com' > ./public/CNAME
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
