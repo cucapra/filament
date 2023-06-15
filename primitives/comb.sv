@@ -235,21 +235,25 @@ endmodule
 
 /// ========== Shift Operations ============
 module ShiftLeft #(
-  parameter WIDTH = 32
+  parameter WIDTH = 32,
+  parameter SHIFT_WIDTH = 32,
+  parameter OUT_WIDTH = 32
 ) (
   input wire logic [WIDTH-1:0] in,
-  input wire logic [WIDTH-1:0] shift,
-  output wire logic [WIDTH-1:0] out
+  input wire logic [SHIFT_WIDTH-1:0] shift,
+  output wire logic [OUT_WIDTH-1:0] out
 );
   assign out = in << shift;
 endmodule
 
 module ShiftRight #(
-  parameter WIDTH = 32
+  parameter WIDTH = 32,
+  parameter SHIFT_WIDTH = 32,
+  parameter OUT_WIDTH = 32
 ) (
   input wire logic [WIDTH-1:0] in,
-  input wire logic [WIDTH-1:0] shift,
-  output wire logic [WIDTH-1:0] out
+  input wire logic [SHIFT_WIDTH-1:0] shift,
+  output wire logic [OUT_WIDTH-1:0] out
 );
   assign out = in >> shift;
 endmodule
