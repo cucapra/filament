@@ -1,7 +1,7 @@
-import "../filament/frisc/harness/cpu.futil";
 import "primitives/core.futil";
 import "primitives/memories.futil";
 import "primitives/binary_operators.futil";
+import "frisc/harness/frisc.futil";
 
 component main () -> (out:32) {
   cells {
