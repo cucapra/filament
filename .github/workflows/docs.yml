@@ -1,9 +1,9 @@
 name: Docs website
 
-on:
-  push:
-    branches:
-      - main
+on: [push]
+  # push:
+  #   branches:
+  #     - main
 
 jobs:
   playground:
@@ -24,6 +24,13 @@ jobs:
           mdbook-mermaid install doc
       - name: mdbook
         run: mdbook build doc/
+      - name: Install and Run Zola
+        run: |
+          sudo snap install --edge zola
+          zola -r web/ build -o public/
+      - name: Add docs to website
+        run: |
+          mv ./doc/book/ public/
       - name: Create CNAME file
         run: |
           echo 'filamenthdl.com' > ./doc/book/CNAME
@@ -31,4 +38,4 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./doc/book
+          publish_dir: public/
