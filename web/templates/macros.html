@@ -1,0 +1,77 @@
+{# Heading with anchor link #}
+{% macro anchor_heading(content, size="2") %}
+<h{{size}} id="{{ content | slugify }}">
+{{ content }}
+</h{{size}}>
+{% endmacro anchor_heading %}
+
+{# Contact list item #}
+{% macro contact(classes, link) %}
+
+<a class="unstyled-link"
+   itemprop="sameAs"
+   href="{{ link }}"
+   target="_blank"
+   rel="noopener">
+  <i class="{{ classes }} contact-link-item big-icon"></i>
+</a>
+
+{% endmacro contact %}
+
+{# Styling for authors in publication list #}
+{% macro author(name) %}
+
+{%- if name == "Rachit Nigam" -%}
+  <span class="publication-highlight">{{ name }}</span>
+{%- else -%}
+
+  {% set_global link = "" %}
+  {% for author in config.extra.author %}
+  {% if author.name == name %}
+    {% set_global link = author.link %}
+  {% endif %}
+  {% endfor %}
+
+  {%- if link != "" -%}
+  <!-- Link in author website if present -->
+  <a href="{{ link }}">
+  {%- endif -%}
+  {{ name }}
+  {%- if link != "" -%}
+  </a>
+  {%- endif -%}
+
+{%- endif -%}
+
+{% endmacro author %}
+
+
+{# Styling for Posts #}
+{% macro generate_post(post) %}
+<div class="blurb">
+  <div class="date">{{ post.date | date(format="%b ’%y") }}</div>
+  <div class="description">
+    {% if post.extra.external %}
+    <a href="{{ post.extra.external | safe }}">
+    {% else %}
+    <a href="{{ post.permalink | safe }}">
+    {% endif %}
+    {{ post.title | safe }}
+    </a><br/>
+   <div class="post-tease">
+    {{ post.extra.summary }}
+   </div>
+ </div>
+</div>
+{% endmacro post %}
+
+
+{# Styling for News items #}
+{% macro generate_news(post) %}
+<div class="blurb">
+  <div class="date">{{ post.date | date(format="%b ’%y") }}</div>
+  <div class="description">
+    {{ post.content | safe }}
+ </div>
+</div>
+{% endmacro post %}
