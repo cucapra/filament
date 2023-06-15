@@ -30,7 +30,7 @@ jobs:
           zola -r web/ build -o public/
       - name: Add docs to website
         run: |
-          mv ./doc/book/ public/
+          mv ./doc/book/ public/docs
       - name: Create CNAME file
         run: |
           echo 'filamenthdl.com' > ./public/CNAME
