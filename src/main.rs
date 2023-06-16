@@ -22,7 +22,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         Ok(mut ns) => {
             ns.toplevel = opts.toplevel.clone();
             ns
-        },
+        }
         Err(e) => {
             eprintln!("Error: {e:?}");
             return Err(1);
