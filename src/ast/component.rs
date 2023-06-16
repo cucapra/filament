@@ -2,7 +2,6 @@ use super::{Command, Fsm, Id, Invoke, Signature};
 use crate::errors::{Error, FilamentResult};
 use std::fmt::Display;
 
-
 /// A component in Filament
 pub struct Component {
     // Signature of this component
