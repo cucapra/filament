@@ -1,7 +1,5 @@
-import "primitives/core.futil";
 import "primitives/memories.futil";
-import "primitives/binary_operators.futil";
-import "frisc/harness/frisc.futil";
+import "frisc.futil";
 
 component main () -> (out:32) {
   cells {
@@ -13,8 +11,7 @@ component main () -> (out:32) {
     pc1 = std_reg(32);
     pc_adder = std_add(32);
 
-    lt_cond = std_lt(32);
-    add_cond = std_sadd(32);
+    add_cond = std_add(32);
   }
   wires {
     static<1> group init {

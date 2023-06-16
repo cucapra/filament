@@ -1,6 +1,7 @@
 use super::{Command, Fsm, Id, Invoke, Signature};
 use crate::errors::{Error, FilamentResult};
-use std::fmt::Display;
+use std::{fmt::Display};
+
 
 /// A component in Filament
 pub struct Component {
@@ -76,6 +77,8 @@ pub struct Namespace {
     pub externs: Vec<(String, Vec<Signature>)>,
     /// Components defined in this file
     pub components: Vec<Component>,
+    /// Top-level component id
+    pub toplevel: String
 }
 
 impl Namespace {
@@ -99,7 +102,7 @@ impl Namespace {
     pub fn main_idx(&self) -> Option<usize> {
         self.components
             .iter()
-            .position(|c| c.sig.name.inner() == "main")
+            .position(|c| c.sig.name.inner() == &Id::from(self.toplevel.clone()))
     }
 }
 

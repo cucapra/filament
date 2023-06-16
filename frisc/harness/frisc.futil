@@ -1,4 +1,4 @@
-extern "../src/extras/extras.sv" {
+extern "../../frisc/src/extras/extras.sv" {
   primitive OneHotMux[WIDTH](@data sel: 8, @data in0: WIDTH, @data in1: WIDTH, @data in2: WIDTH, @data in3: WIDTH, @data in4: WIDTH, @data in5: WIDTH, @data in6: WIDTH, @data in7: WIDTH) -> (@data out: WIDTH);
 }
 extern "../../primitives/state.sv" {
@@ -33,10 +33,32 @@ extern "../../primitives/comb.sv" {
   primitive Mux[WIDTH](@data sel: 1, @data in0: WIDTH, @data in1: WIDTH) -> (@data out: WIDTH);
   primitive Extend[IN_WIDTH, OUT_WIDTH](@data in: IN_WIDTH) -> (@data out: OUT_WIDTH);
 }
-extern "../src/regfile.sv" {
+extern "../../frisc/src/regfile.sv" {
   primitive RegFile(@reset @data reset: 1, @data en: 1, @data rd: 5, @data data: 32, @data rin1: 5, @data rin2: 5, @clk clk: 1) -> (@data rs1: 32, @data rs2: 32);
 }
-
+  primitive undef<"share"=1>[WIDTH]() -> (out: WIDTH){ 
+    assign out = 'x;
+ };
+  comb primitive std_const<"share"=1>[WIDTH, VALUE]() -> (out: WIDTH){ 
+    assign out = VALUE;
+ };
+  comb primitive std_wire<"share"=1>[WIDTH](@data in: WIDTH) -> (out: WIDTH){ 
+    assign out = in;
+ };
+  comb primitive std_add<"share"=1>[WIDTH](@data left: WIDTH, @data right: WIDTH) -> (out: WIDTH){ 
+  assign out = left + right;
+ };
+  primitive std_reg<"state_share"=1>[WIDTH](@write_together @data in: WIDTH, @write_together @static @go write_en: 1, @clk clk: 1, @reset reset: 1) -> (@stable out: WIDTH, @done done: 1){ 
+  always_ff @(posedge clk) begin
+    if (reset) begin
+       out <= 0;
+       done <= 0;
+    end else if (write_en) begin
+      out <= in;
+      done <= 1'd1;
+    end else done <= 1'd0;
+  end
+ };
 component RightShifter_32<"nointerface"=1>(@data in: 32, @data shamt: 32, @data isArith: 1, @clk clk: 1, @reset reset: 1) -> (@data out: 32) {
   cells {
     @data SRA = ArithShiftRight(32);
@@ -56,7 +78,89 @@ component RightShifter_32<"nointerface"=1>(@data in: 32, @data shamt: 32, @data 
 
   control {}
 }
-component Decode<"nointerface"=1>(@data instr: 32, @clk clk: 1, @reset reset: 1) -> (@data isLoad: 1, @data isStore: 1, @data isALUImm: 1, @data isALUReg: 1, @data isLUI: 1, @data isJAL: 1, @data isJALR: 1, @data isBranch: 1, @data isSys: 1, @data isAUIPC: 1, @data Uimm: 32, @data Iimm: 32, @data Simm: 32, @data Bimm: 32, @data Jimm: 32, @data funct: 8, @data isAdd: 1, @data isArith: 1, @data rf_write: 1) {
+component ALU<"nointerface"=1>(@data inA: 32, @data inB: 32, @data funct: 8, @data isAdd: 1, @data isArith: 1, @reset reset: 1, @clk clk: 1) -> (@data out: 32) {
+  cells {
+    @data ONECONST_1B = Const(1, 1);
+    @data ONECONST_33B = Const(33, 1);
+    @data ZEROCONST_1B = Const(1, 0);
+    @data NOTINB = Not(32);
+    @data CONCAT0 = Concat(1, 32, 33);
+    @data CONCAT1 = Concat(1, 32, 33);
+    @data INA31 = Select(32, 31);
+    @data INB31 = Select(32, 31);
+    @data ADD0 = Add(33);
+    @data ALUMINUS = Add(33);
+    @data SUB = Slice(33, 31, 0, 32);
+    @data ADD = Add(32);
+    @data SELADDSUB = Mux(32);
+    @data SHAMT = Slice(32, 4, 0, 5);
+    @data SHAMT_EXT = ZeroExtend(5, 32);
+    @data XOR = Xor(32);
+    @data OR = Or(32);
+    @data AND = And(32);
+    @data SR = RightShifter_32();
+    @data SLL = ShiftLeft(32);
+    @data ALUMINUS32 = Select(33, 32);
+    @data LTGUARD = Xor(1);
+    @data LTTERNARY = Mux(1);
+    @data LT = ZeroExtend(1, 32);
+    @data LTU = ZeroExtend(1, 32);
+    @data MUX = OneHotMux(32);
+  }
+  wires {
+    NOTINB.in = inB;
+    CONCAT0.left = ONECONST_1B.out;
+    CONCAT0.right = NOTINB.out;
+    CONCAT1.left = ZEROCONST_1B.out;
+    CONCAT1.right = inA;
+    INA31.in = inA;
+    INB31.in = inB;
+    ADD0.left = CONCAT0.out;
+    ADD0.right = CONCAT1.out;
+    ALUMINUS.left = ADD0.out;
+    ALUMINUS.right = ONECONST_33B.out;
+    SUB.in = ALUMINUS.out;
+    ADD.left = inA;
+    ADD.right = inB;
+    SELADDSUB.sel = isAdd;
+    SELADDSUB.in0 = ADD.out;
+    SELADDSUB.in1 = SUB.out;
+    SHAMT.in = inB;
+    SHAMT_EXT.in = SHAMT.out;
+    XOR.left = inA;
+    XOR.right = inB;
+    OR.left = inA;
+    OR.right = inB;
+    AND.left = inA;
+    AND.right = inB;
+    SR.in = inA;
+    SR.shamt = SHAMT_EXT.out;
+    SR.isArith = isArith;
+    SLL.in = inA;
+    SLL.shift = inB;
+    ALUMINUS32.in = ALUMINUS.out;
+    LTGUARD.left = INA31.out;
+    LTGUARD.right = INB31.out;
+    LTTERNARY.sel = LTGUARD.out;
+    LTTERNARY.in0 = INA31.out;
+    LTTERNARY.in1 = ALUMINUS32.out;
+    LT.in = LTTERNARY.out;
+    LTU.in = ALUMINUS32.out;
+    MUX.sel = funct;
+    MUX.in0 = SELADDSUB.out;
+    MUX.in1 = SLL.out;
+    MUX.in2 = LT.out;
+    MUX.in3 = LTU.out;
+    MUX.in4 = XOR.out;
+    MUX.in5 = SR.out;
+    MUX.in6 = OR.out;
+    MUX.in7 = AND.out;
+    out = MUX.out;
+  }
+
+  control {}
+}
+component Decode<"nointerface"=1>(@data instr: 32, @reset reset: 1, @clk clk: 1) -> (@data isLoad: 1, @data isStore: 1, @data isALUImm: 1, @data isALUReg: 1, @data isLUI: 1, @data isJAL: 1, @data isJALR: 1, @data isBranch: 1, @data isSys: 1, @data isAUIPC: 1, @data Uimm: 32, @data Iimm: 32, @data Simm: 32, @data Bimm: 32, @data Jimm: 32, @data funct: 8, @data isAdd: 1, @data isArith: 1, @data rf_write: 1) {
   cells {
     @data OPCODE = Slice(32, 6, 2, 5);
     @data INSTR30 = Select(32, 30);
@@ -230,88 +334,6 @@ component Decode<"nointerface"=1>(@data instr: 32, @clk clk: 1, @reset reset: 1)
 
   control {}
 }
-component ALU<"nointerface"=1>(@data inA: 32, @data inB: 32, @data funct: 8, @data isAdd: 1, @data isArith: 1, @clk clk: 1, @reset reset: 1) -> (@data out: 32) {
-  cells {
-    @data ONECONST_1B = Const(1, 1);
-    @data ONECONST_33B = Const(33, 1);
-    @data ZEROCONST_1B = Const(1, 0);
-    @data NOTINB = Not(32);
-    @data CONCAT0 = Concat(1, 32, 33);
-    @data CONCAT1 = Concat(1, 32, 33);
-    @data INA31 = Select(32, 31);
-    @data INB31 = Select(32, 31);
-    @data ADD0 = Add(33);
-    @data ALUMINUS = Add(33);
-    @data SUB = Slice(33, 31, 0, 32);
-    @data ADD = Add(32);
-    @data SELADDSUB = Mux(32);
-    @data SHAMT = Slice(32, 4, 0, 5);
-    @data SHAMT_EXT = ZeroExtend(5, 32);
-    @data XOR = Xor(32);
-    @data OR = Or(32);
-    @data AND = And(32);
-    @data SR = RightShifter_32();
-    @data SLL = ShiftLeft(32);
-    @data ALUMINUS32 = Select(33, 32);
-    @data LTGUARD = Xor(1);
-    @data LTTERNARY = Mux(1);
-    @data LT = ZeroExtend(1, 32);
-    @data LTU = ZeroExtend(1, 32);
-    @data MUX = OneHotMux(32);
-  }
-  wires {
-    NOTINB.in = inB;
-    CONCAT0.left = ONECONST_1B.out;
-    CONCAT0.right = NOTINB.out;
-    CONCAT1.left = ZEROCONST_1B.out;
-    CONCAT1.right = inA;
-    INA31.in = inA;
-    INB31.in = inB;
-    ADD0.left = CONCAT0.out;
-    ADD0.right = CONCAT1.out;
-    ALUMINUS.left = ADD0.out;
-    ALUMINUS.right = ONECONST_33B.out;
-    SUB.in = ALUMINUS.out;
-    ADD.left = inA;
-    ADD.right = inB;
-    SELADDSUB.sel = isAdd;
-    SELADDSUB.in0 = ADD.out;
-    SELADDSUB.in1 = SUB.out;
-    SHAMT.in = inB;
-    SHAMT_EXT.in = SHAMT.out;
-    XOR.left = inA;
-    XOR.right = inB;
-    OR.left = inA;
-    OR.right = inB;
-    AND.left = inA;
-    AND.right = inB;
-    SR.in = inA;
-    SR.shamt = SHAMT_EXT.out;
-    SR.isArith = isArith;
-    SLL.in = inA;
-    SLL.shift = inB;
-    ALUMINUS32.in = ALUMINUS.out;
-    LTGUARD.left = INA31.out;
-    LTGUARD.right = INB31.out;
-    LTTERNARY.sel = LTGUARD.out;
-    LTTERNARY.in0 = INA31.out;
-    LTTERNARY.in1 = ALUMINUS32.out;
-    LT.in = LTTERNARY.out;
-    LTU.in = ALUMINUS32.out;
-    MUX.sel = funct;
-    MUX.in0 = SELADDSUB.out;
-    MUX.in1 = SLL.out;
-    MUX.in2 = LT.out;
-    MUX.in3 = LTU.out;
-    MUX.in4 = XOR.out;
-    MUX.in5 = SR.out;
-    MUX.in6 = OR.out;
-    MUX.in7 = AND.out;
-    out = MUX.out;
-  }
-
-  control {}
-}
 component CPU<"nointerface"=1>(@reset @data reset: 1, @data instr: 32, @clk clk: 1) -> (@data out: 32, @data aluInA: 32, @data aluInB: 32) {
   cells {
     @data RD = Slice(32, 11, 7, 5);
@@ -351,4 +373,17 @@ component CPU<"nointerface"=1>(@reset @data reset: 1, @data instr: 32, @clk clk:
 
   control {}
 }
+component main<"nointerface"=1>(@reset @data reset: 1, @data instr: 32, @clk clk: 1) -> (@data out: 32, @data aluInA: 32, @data aluInB: 32) {
+  cells {
+    @data CPU = CPU();
+  }
+  wires {
+    CPU.reset = reset;
+    CPU.instr = instr;
+    out = CPU.out;
+    aluInA = CPU.aluInA;
+    aluInB = CPU.aluInB;
+  }
 
+  control {}
+}

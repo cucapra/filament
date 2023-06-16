@@ -1,9 +1,8 @@
 import "frisc/src/extras/extras.fil";
 import "primitives/core.fil";
 
-comp PC<G:2> (
+comp PC<G:1> (
   clk:1,
-  //@interface[G] go:1,
   @[G,G+1] pcin:32,
   @[G,G+1] reset:1,
   @[G,G+1] isJAL:1,
@@ -31,9 +30,6 @@ comp PC<G:2> (
 
   pcPlusImm := pcAdderImm<G>(pcin, t1.out);
   pcPlus4 := pcAdder<G>(pcin, const4.out);
-
-  //pcRegImm := new Register[32]<G,G+2>(pcPlusImm.out);
-  //pcReg4 := new Register[32]<G,G+2>(pcPlus4.out);
 
   outImm = pcPlusImm.out;
   out4 = pcPlus4.out;
