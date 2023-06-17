@@ -35,7 +35,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let binding = self.param_binding(
             comp.params.clone(),
             bindings
-                .into_iter()
+                .iter()
                 .map(|e| e.inner())
                 .cloned()
                 .collect_vec(),

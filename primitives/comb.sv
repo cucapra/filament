@@ -253,5 +253,3 @@ module Mux #(
 );
   assign out = sel ? in0 : in1;
 endmodule
-
-git s
