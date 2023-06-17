@@ -3,7 +3,7 @@ use super::{
     TimeSub,
 };
 use crate::diagnostics::Diagnostics;
-use crate::utils::{self, Binding};
+use crate::utils::{self, Binding, GPosIdx};
 use itertools::Itertools;
 use std::{collections::HashMap, fmt::Display};
 
@@ -60,13 +60,21 @@ impl Display for EventBind {
 #[derive(Clone)]
 /// A parameter bound in the signature
 pub struct ParamBind {
-    pub param: Loc<Id>,
+    param: Loc<Id>,
     pub default: Option<Expr>,
 }
 
 impl ParamBind {
     pub fn new(param: Loc<Id>, default: Option<Expr>) -> Self {
         Self { param, default }
+    }
+
+    pub fn name(&self) -> Id {
+        self.param.copy()
+    }
+
+    pub fn pos(&self) -> GPosIdx {
+        self.param.pos()
     }
 }
 
@@ -77,6 +85,18 @@ impl Display for ParamBind {
         } else {
             write!(f, "{}", self.param)
         }
+    }
+}
+
+impl From<Loc<Id>> for ParamBind {
+    fn from(value: Loc<Id>) -> Self {
+        ParamBind::new(value, None)
+    }
+}
+
+impl From<Id> for ParamBind {
+    fn from(value: Id) -> Self {
+        ParamBind::from(Loc::unknown(value))
     }
 }
 
