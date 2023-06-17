@@ -32,7 +32,14 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             bindings,
         } = inst;
         let comp = self.sigs.get(component).unwrap();
-        let binding = self.param_binding(comp.params.clone(), bindings.into_iter().map(|e| e.inner()).cloned().collect_vec());
+        let binding = self.param_binding(
+            comp.params.clone(),
+            bindings
+                .into_iter()
+                .map(|e| e.inner())
+                .cloned()
+                .collect_vec(),
+        );
         let inst = ir::Instance {
             comp: comp.idx,
             params: bindings
@@ -189,7 +196,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     fn param(
         &mut self,
         param: &ast::ParamBind,
-        owner: ir::ParamOwner
+        owner: ir::ParamOwner,
     ) -> ParamIdx {
         let default = param.default.as_ref().map(|e| self.expr(e.clone()));
         let info = self.comp.add(ir::Info::param(param.name(), param.pos()));
@@ -538,10 +545,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         );
 
         let mut partial_map = Binding::new(
-            params
-                .iter()
-                .map(|pb| pb.name())
-                .zip(args.iter().cloned()),
+            params.iter().map(|pb| pb.name()).zip(args.iter().cloned()),
         );
         // Skip the events that have been bound
         let remaining = params
@@ -717,7 +721,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
                 // Compile the body in a new scope
                 let (index, body) = self.with_scope(|this| {
-                    let idx = this.param(&ast::ParamBind::from(idx), ir::ParamOwner::Loop);
+                    let idx = this.param(
+                        &ast::ParamBind::from(idx),
+                        ir::ParamOwner::Loop,
+                    );
                     (idx, this.commands(body))
                 });
                 let l = ir::Loop {

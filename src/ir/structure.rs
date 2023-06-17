@@ -263,8 +263,16 @@ pub struct Param {
 }
 
 impl Param {
-    pub fn new(owner: ParamOwner, info: InfoIdx, default: Option<ExprIdx>) -> Self {
-        Self { owner, info, default }
+    pub fn new(
+        owner: ParamOwner,
+        info: InfoIdx,
+        default: Option<ExprIdx>,
+    ) -> Self {
+        Self {
+            owner,
+            info,
+            default,
+        }
     }
 
     pub fn is_sig_owned(&self) -> bool {

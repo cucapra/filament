@@ -237,7 +237,8 @@ impl<'e> Monomorphize<'e> {
                                 .add_instance(
                                     component.copy(),
                                     resolved
-                                        .collect_vec().iter()
+                                        .collect_vec()
+                                        .iter()
                                         .map(|p| p.inner())
                                         .collect_vec(),
                                 )
