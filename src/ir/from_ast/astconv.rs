@@ -34,11 +34,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let comp = self.sigs.get(component).unwrap();
         let binding = self.param_binding(
             comp.params.clone(),
-            bindings
-                .iter()
-                .map(|e| e.inner())
-                .cloned()
-                .collect_vec(),
+            bindings.iter().map(|e| e.inner()).cloned().collect_vec(),
         );
         let inst = ir::Instance {
             comp: comp.idx,
