@@ -1,21 +1,129 @@
 //! Convert the frontend AST to the IR.
 use super::{BuildCtx, Sig, SigMap};
 use crate::ir::{
-    Cmp, CompIdx, Ctx, ExprIdx, ParamIdx, PortIdx, PropIdx, TimeIdx,
+    Cmp, CompIdx, Ctx, EventIdx, ExprIdx, MutCtx, ParamIdx, PortIdx, PropIdx,
+    TimeIdx,
 };
-use crate::{
-    ast::{self, Id},
-    ir,
-    utils::Binding,
-};
+use crate::utils::GPosIdx;
+use crate::{ast, ir, utils::Binding};
 use itertools::Itertools;
 use std::{iter, rc::Rc};
+
+/// # Declare phase
+/// This is the first pass over the AST and responsible for forward declaring names defined by invocations.
+/// We do this because invocation ports can be used before their definition:
+/// ```
+/// p = new Prev[32]<G>(add.out);
+/// add = new Add[32]<G>(p.out, 1);
+/// ```
+///
+/// At a high-level, it does the following:
+/// * Define all the locally-bound parameters, specifically those defined by loops.
+///   This is needed to correctly resolve the instances which may use parameters.
+/// * For each instance in the program, compute the partially resolved component
+///   signature which substitutes all parameters in the signature.
+/// * For each invocation, compute the fully resolved signature (where events are correctly substituted)
+///   and define all the parameters.
+impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
+    fn declare_inst(&mut self, inst: &ast::Instance) {
+        let ast::Instance {
+            name,
+            component,
+            bindings,
+        } = inst;
+        let comp = self.sigs.get(component).unwrap();
+        let binding = self.param_binding(comp.params.clone(), bindings.into_iter().map(|e| e.inner()).cloned().collect_vec());
+        let inst = ir::Instance {
+            comp: comp.idx,
+            params: bindings
+                .iter()
+                .map(|b| self.expr(b.clone().take()))
+                .collect_vec()
+                .into_boxed_slice(),
+        };
+        let idx = self.comp.add(inst);
+        self.inst_map.insert(name.copy(), idx);
+        // Track the component binding for this instance
+        self.inst_to_sig.push(idx, (Rc::new(binding), **component));
+    }
+
+    /// Invokes are the most complicated construct to compile. This function:
+    /// 1. Creates a new invoke in the component with the time bindings.
+    /// 2. Resolves output ports and defines them in the component
+    fn declare_inv(&mut self, inv: &ast::Invoke) {
+        let ast::Invoke {
+            name,
+            instance,
+            abstract_vars,
+            ..
+        } = inv;
+
+        let inst = *self.inst_map.get(instance).unwrap();
+        let inv = self.comp.add(ir::Invoke {
+            inst,
+            ports: vec![], // Filled in later
+        });
+        self.add_inv(name.copy(), inv);
+
+        let mut def_ports = vec![];
+
+        // The inputs
+        let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
+        let sig = self.sigs.get(&comp).unwrap();
+
+        // Event bindings
+        let event_binding = self.event_binding(
+            sig.events.clone(),
+            abstract_vars.iter().map(|v| v.inner().clone()),
+        );
+
+        // Define the output port from the invoke
+        for p in sig.outputs.clone() {
+            let resolved = p
+                .resolve_exprs(&param_binding)
+                .resolve_event(&event_binding);
+            let owner = ir::PortOwner::Inv {
+                inv,
+                dir: ir::Direction::Out,
+            };
+            def_ports.push(self.port(resolved, owner));
+        }
+
+        // Add the inputs from the invoke. The outputs are added in the second
+        // pass over the AST.
+        self.comp.get_mut(inv).ports.extend(def_ports);
+    }
+
+    /// Declare the instances and invokes in the current scope.
+    /// This does not burrow into inner scopes.
+    fn declare_cmd(&mut self, cmd: &ast::Command) {
+        match cmd {
+            ast::Command::Instance(inst) => {
+                self.declare_inst(inst);
+            }
+            ast::Command::Invoke(inv) => {
+                self.declare_inv(inv);
+            }
+            ast::Command::ForLoop(_)
+            | ast::Command::If(_)
+            | ast::Command::Fact(_)
+            | ast::Command::Connect(_)
+            | ast::Command::Bundle(_) => {}
+        }
+    }
+
+    fn declare_cmds(&mut self, cmds: &[ast::Command]) {
+        for cmd in cmds {
+            self.declare_cmd(cmd);
+        }
+    }
+}
 
 impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     fn expr(&mut self, expr: ast::Expr) -> ExprIdx {
         match expr {
             ast::Expr::Abstract(p) => {
-                let Some(&pidx) = self.param_map.get(&p) else {
+                let Some(pidx) = self.get_param(&p) else {
                     unreachable!("Parameter {p} not found")
                 };
                 self.comp.add(ir::Expr::Param(pidx))
@@ -53,7 +161,18 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             ast::OrderOp::Gte => Cmp::Gte,
             ast::OrderOp::Eq => Cmp::Eq,
         };
-        self.comp.add(ir::Prop::Cmp { lhs, op, rhs })
+        self.comp.add(ir::Prop::Cmp(ir::CmpOp { lhs, op, rhs }))
+    }
+
+    fn event_cons(&mut self, cons: ast::OrderConstraint<ast::Time>) -> PropIdx {
+        let lhs = self.time(cons.left);
+        let rhs = self.time(cons.right);
+        let op = match cons.op {
+            ast::OrderOp::Gt => Cmp::Gt,
+            ast::OrderOp::Gte => Cmp::Gte,
+            ast::OrderOp::Eq => Cmp::Eq,
+        };
+        self.comp.add(ir::Prop::TimeCmp(ir::CmpOp { lhs, op, rhs }))
     }
 
     fn implication(&mut self, i: ast::Implication<ast::Expr>) -> PropIdx {
@@ -69,13 +188,13 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     /// Add a parameter to the component.
     fn param(
         &mut self,
-        param: ast::ParamBind,
-        owner: ir::ParamOwner,
+        param: &ast::ParamBind,
+        owner: ir::ParamOwner
     ) -> ParamIdx {
-        let default = param.default.map(|e| self.expr(e));
-        let p = ir::Param::new(owner, default);
-        let idx = self.comp.add(p);
-        self.param_map.insert(*param.param, idx);
+        let default = param.default.as_ref().map(|e| self.expr(e.clone()));
+        let info = self.comp.add(ir::Info::param(param.name(), param.pos()));
+        let idx = self.comp.add(ir::Param::new(owner, info, default));
+        self.add_param(param.name(), idx);
         idx
     }
 
@@ -98,13 +217,43 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
-    /// Add an event to the component.
-    fn event(&mut self, eb: ast::EventBind) {
-        let delay = self.timesub(eb.delay.take());
-        let default = eb.default.map(|t| self.time(t));
-        let e = ir::Event { delay, default };
+    /// Forward declare an event without adding its delay. We need to do this
+    /// since delays of events may mention the event itself.
+    fn declare_event(
+        &mut self,
+        eb: &ast::EventBind,
+        owner: ir::EventOwner,
+    ) -> EventIdx {
+        let info = self.comp.add(ir::Info::event(
+            eb.event.copy(),
+            eb.event.pos(),
+            eb.delay.pos(),
+        ));
+        // Add a fake delay of 0.
+        let e = ir::Event {
+            delay: self.comp.num(0).into(),
+            owner,
+            info,
+        };
         let idx = self.comp.add(e);
+        log::info!("Added event {} as {idx}", eb.event);
         self.event_map.insert(*eb.event, idx);
+        idx
+    }
+
+    /// Add an event to the component without adding it the current scope.
+    fn event(&mut self, eb: ast::EventBind, owner: ir::EventOwner) -> EventIdx {
+        let info = self.comp.add(ir::Info::event(
+            eb.event.copy(),
+            eb.event.pos(),
+            eb.delay.pos(),
+        ));
+        let delay = self.timesub(eb.delay.take());
+        let e = ir::Event { delay, owner, info };
+        let idx = self.comp.add(e);
+        log::info!("Added event {} as {idx}", eb.event);
+        // self.event_map.insert(*eb.event, idx);
+        idx
     }
 
     fn range(&mut self, r: ast::Range) -> ir::Range {
@@ -114,33 +263,39 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     fn port(&mut self, pd: ast::PortDef, owner: ir::PortOwner) -> PortIdx {
-        let (name, port, owner) = match pd {
+        let (name, p) = match pd {
             ast::PortDef::Port {
                 name,
                 liveness,
                 bitwidth,
             } => {
+                let info = self.comp.add(ir::Info::port(
+                    name.copy(),
+                    name.pos(),
+                    bitwidth.pos(),
+                    liveness.pos(),
+                ));
+
                 // The bundle type uses a fake bundle index and has a length of 1.
                 // We don't need to push a new scope because this type is does not
                 // bind any new parameters.
+                let p_name = self.gen_name();
                 let live = self.with_scope(|ctx| ir::Liveness {
                     idx: ctx.param(
-                        ast::ParamBind::new(
-                            ast::Loc::unknown(Id::default()),
-                            None,
-                        ),
-                        ir::ParamOwner::Bundle,
+                        &ast::ParamBind::from(p_name),
+                        // Updated after the port is constructed
+                        ir::ParamOwner::bundle(ir::PortIdx::UNKNOWN),
                     ), // This parameter is unused
                     len: ctx.comp.num(1),
                     range: ctx.range(liveness.take()),
                 });
-
                 let p = ir::Port {
                     width: self.expr(bitwidth.take()),
-                    owner: owner.clone(),
+                    owner,
                     live,
+                    info,
                 };
-                (name, p, owner)
+                (name, p)
             }
             ast::PortDef::Bundle(ast::Bundle {
                 name,
@@ -152,26 +307,39 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                         bitwidth,
                     },
             }) => {
+                let info = self.comp.add(ir::Info::port(
+                    name.copy(),
+                    name.pos(),
+                    bitwidth.pos(),
+                    liveness.pos(),
+                ));
                 // Construct the bundle type in a new scope.
                 let live = self.with_scope(|ctx| ir::Liveness {
                     idx: ctx.param(
-                        ast::ParamBind::new(idx, None),
-                        ir::ParamOwner::Bundle,
+                        // Updated after the port is constructed
+                        &ast::ParamBind::from(idx),
+                        ir::ParamOwner::bundle(PortIdx::UNKNOWN),
                     ),
                     len: ctx.expr(len.take()),
                     range: ctx.range(liveness.take()),
                 });
-
                 let p = ir::Port {
                     width: self.expr(bitwidth.take()),
-                    owner: owner.clone(),
+                    owner,
                     live,
+                    info,
                 };
-                (name, p, owner)
+                (name, p)
             }
         };
-        let idx = self.comp.add(port);
-        self.add_port(*name, owner, idx);
+        let idx = self.comp.add(p);
+        // Fixup the liveness index parameter's owner
+        let p = self.comp.get(idx);
+        let param = self.comp.get_mut(p.live.idx);
+        param.owner = ir::ParamOwner::bundle(idx);
+
+        // Add the port to the current scope
+        self.add_port(*name, idx);
         idx
     }
 
@@ -236,12 +404,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     fn sig(&mut self, sig: ast::Signature) -> Vec<ir::Command> {
         for param in &sig.params {
-            // XXX(rachit): Unnecessary clone.
-            self.param(param.clone().take(), ir::ParamOwner::Sig);
+            self.param(param.inner(), ir::ParamOwner::Sig);
         }
+        // Declare the events first
         for event in &sig.events {
-            // XXX(rachit): Unnecessary clone.
-            self.event(event.clone().take());
+            self.declare_event(event.inner(), ir::EventOwner::Sig);
+        }
+        // Then define their delays correctly
+        for event in &sig.events {
+            let delay = self.timesub(event.inner().delay.inner().clone());
+            let idx = self.event_map.get(&event.inner().event).unwrap();
+            self.comp.get_mut(*idx).delay = delay;
         }
         for port in sig.inputs() {
             // XXX(rachit): Unnecessary clone.
@@ -251,41 +424,33 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             // XXX(rachit): Unnecessary clone.
             self.port(port.inner().clone(), ir::PortOwner::sig_in());
         }
-        sig.param_constraints
-            .into_iter()
-            .map(|expr_cons| {
-                let prop = self.expr_cons(expr_cons.take());
-                ir::Fact::assume(prop).into()
-            })
-            .collect()
-    }
 
-    fn declare_inst(&mut self, inst: &ast::Instance) {
-        let ast::Instance {
-            name,
-            component,
-            bindings,
-        } = inst;
-        let comp = self.sigs.get(component).unwrap();
-        let binding = self.param_binding(
-            comp.params.iter().cloned(),
-            bindings.clone().into_iter().map(|b| b.take()),
+        // Constraints defined by the signature
+        let mut cons = Vec::with_capacity(
+            sig.param_constraints.len() + sig.event_constraints.len(),
         );
-        let inst = ir::Instance {
-            comp: comp.idx,
-            params: bindings
-                .iter()
-                .map(|b| self.expr(b.clone().take()))
-                .collect_vec()
-                .into_boxed_slice(),
-        };
-        let idx = self.comp.add(inst);
-        self.inst_map.insert(name.copy(), idx);
-        // Track the component binding for this instance
-        self.inst_to_sig.push(idx, (Rc::new(binding), **component));
+        for ec in sig.event_constraints {
+            let info = self.comp.add(ir::Info::assert(ir::Reason::misc(
+                "Signature assumption",
+                ec.pos(),
+            )));
+            let prop = self.event_cons(ec.take());
+            cons.extend(self.comp.assume(prop, info));
+        }
+        for pc in sig.param_constraints {
+            let info = self.comp.add(ir::Info::assert(ir::Reason::misc(
+                "Signature assumption",
+                pc.pos(),
+            )));
+            let prop = self.expr_cons(pc.take());
+            cons.extend(self.comp.assume(prop, info));
+        }
+
+        cons
     }
 
     fn instance(&mut self, inst: ast::Instance) -> Vec<ir::Command> {
+        let comp_loc = inst.component.pos();
         // Add the facts defined by the instance as assertions in the
         // component.
         let idx = *self.inst_map.get(&inst.name).unwrap();
@@ -294,17 +459,21 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .sigs
             .get(&component)
             .unwrap()
-            .facts
+            .param_cons
             .clone()
             .into_iter()
-            .map(|f| {
-                let p = f.resolve_expr(&binding);
+            .flat_map(|f| {
+                let reason = self
+                    .comp
+                    .add(ir::Reason::param_cons(comp_loc, f.pos()).into());
+                let p = f.take().resolve_expr(&binding);
                 let prop = self.expr_cons(p);
                 // This is a checked fact because the calling component needs to
                 // honor it.
-                ir::Fact::assert(prop).into()
+                self.comp.assert(prop, reason)
             })
             .collect_vec();
+
         iter::once(ir::Command::from(idx))
             .chain(facts.into_iter())
             .collect_vec()
@@ -371,8 +540,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let mut partial_map = Binding::new(
             params
                 .iter()
-                .map(|pb| pb.param.inner())
-                .cloned()
+                .map(|pb| pb.name())
                 .zip(args.iter().cloned()),
         );
         // Skip the events that have been bound
@@ -382,7 +550,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .map(|pb| {
                 let bind =
                     pb.default.as_ref().unwrap().clone().resolve(&partial_map);
-                (*pb.param.inner(), bind)
+                (pb.name(), bind)
             })
             .collect();
 
@@ -390,17 +558,19 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         partial_map
     }
 
-    /// This function is called during the second pass of the conversion and
-    /// generates the connections implied by the arguments to the invoke.
+    /// This function is called during the second pass of the conversion and does the following:
+    /// * Defines the input ports of the invocation
+    /// * Generate event bindings implied by the invocation
+    /// * Generates the connections implied by the arguments to the invoke
     fn invoke(&mut self, inv: ast::Invoke) -> Vec<ir::Command> {
         let ast::Invoke {
             name,
             abstract_vars,
             ports,
-            ..
+            instance,
         } = inv;
         let Some(ports) = ports else {
-            unreachable!("No ports provided for invocation {}", name)
+            unreachable!("No ports provided for invocation {name}")
         };
         let inv = self.get_inv(name.copy());
         let inst = self.comp[inv].inst;
@@ -415,7 +585,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
         let srcs = ports
             .into_iter()
-            .map(|p| self.get_access(p.take(), ir::Direction::Out))
+            .map(|p| p.map(|p| self.get_access(p, ir::Direction::Out)))
             .collect_vec();
         assert!(
             sig.inputs.len() == srcs.len(),
@@ -424,33 +594,86 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             srcs.len()
         );
 
-        sig.inputs
+        // Constraints on the events from the signature
+        let cons: Vec<ir::Command> = sig
+            .event_cons
             .clone()
             .into_iter()
-            .zip(srcs)
-            .map(|(p, src)| {
-                let resolved = p
+            .flat_map(|ec| {
+                let reason = self.comp.add(
+                    ir::Reason::event_cons(instance.pos(), ec.pos()).into(),
+                );
+                let ec = ec.take().resolve_event(&event_binding);
+                let prop = self.event_cons(ec);
+                self.comp.assert(prop, reason)
+            })
+            .collect();
+
+        let mut connects = Vec::with_capacity(sig.inputs.len());
+
+        for (p, src) in sig.inputs.clone().into_iter().zip(srcs) {
+            let info = self
+                .comp
+                .add(ir::Info::connect(p.inner().name().pos(), src.pos()));
+            let resolved = p.map(|p| {
+                p.resolve_exprs(&param_binding)
+                    .resolve_event(&event_binding)
+            });
+            let owner = ir::PortOwner::Inv {
+                inv,
+                dir: ir::Direction::In,
+            };
+
+            // Define port and add it to the invocation
+            let pidx = self.port(resolved.take(), owner);
+            self.comp.get_mut(inv).ports.push(pidx);
+
+            let end = self.comp[pidx].live.len;
+            let dst = ir::Access {
+                port: pidx,
+                start: self.comp.num(0),
+                end,
+            };
+            connects.push(
+                ir::Connect {
+                    src: src.take(),
+                    dst,
+                    info,
+                }
+                .into(),
+            )
+        }
+
+        // Events defined by the invoke
+        let ebs: Vec<ir::Command> = sig
+            .events
+            .iter()
+            .zip(abstract_vars.iter())
+            .map(|(event, arg)| {
+                let resolved = event
+                    .clone()
                     .resolve_exprs(&param_binding)
                     .resolve_event(&event_binding);
-                let owner = ir::PortOwner::Inv {
-                    inv,
-                    dir: ir::Direction::In,
-                };
-                // Add the port to the component
-                let pidx = self.port(resolved, owner);
-                let end = self.comp[pidx].live.len;
-                let dst = ir::Access {
-                    port: pidx,
-                    start: self.comp.num(0),
-                    end,
-                };
-                ir::Connect { src, dst }.into()
+
+                let pos = arg.pos();
+                let info = self.comp.add(ir::Info::event_bind(pos));
+
+                let arg = self.time(arg.inner().clone());
+                let event = self.event(resolved, ir::EventOwner::Inv { inv });
+                ir::EventBind::new(event, arg, info).into()
             })
+            .collect();
+
+        connects
+            .into_iter()
             .chain(Some(ir::Command::from(inv)))
+            .chain(ebs)
+            .chain(cons)
             .collect_vec()
     }
 
     fn commands(&mut self, cmds: Vec<ast::Command>) -> Vec<ir::Command> {
+        self.declare_cmds(&cmds);
         cmds.into_iter().flat_map(|c| self.command(c)).collect_vec()
     }
 
@@ -459,19 +682,24 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             ast::Command::Invoke(inv) => self.invoke(inv),
             ast::Command::Instance(inst) => self.instance(inst),
             ast::Command::Fact(ast::Fact { cons, checked }) => {
+                let reason = self.comp.add(
+                    ir::Reason::misc("source-level fact", cons.pos()).into(),
+                );
                 let prop = self.implication(cons.take());
                 let fact = if checked {
-                    ir::Fact::assert(prop)
+                    self.comp.assert(prop, reason)
                 } else {
-                    ir::Fact::assume(prop)
+                    self.comp.assume(prop, reason)
                 };
-                vec![fact.into()]
+                fact.into_iter().collect()
             }
             ast::Command::Connect(ast::Connect { src, dst, guard }) => {
                 assert!(guard.is_none(), "Guards are not supported");
+                let info =
+                    self.comp.add(ir::Info::connect(dst.pos(), src.pos()));
                 let src = self.get_access(src.take(), ir::Direction::Out);
                 let dst = self.get_access(dst.take(), ir::Direction::In);
-                vec![ir::Connect { src, dst }.into()]
+                vec![ir::Connect { src, dst, info }.into()]
             }
             ast::Command::ForLoop(ast::ForLoop {
                 idx,
@@ -481,12 +709,15 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             }) => {
                 let start = self.expr(start);
                 let end = self.expr(end);
+                // Assumption that the index is within range
+                let reason = self.comp.add(
+                    ir::Reason::misc("loop index is within range", idx.pos())
+                        .into(),
+                );
+
                 // Compile the body in a new scope
                 let (index, body) = self.with_scope(|this| {
-                    let idx = this.param(
-                        ast::ParamBind::new(idx, None),
-                        ir::ParamOwner::Local,
-                    );
+                    let idx = this.param(&ast::ParamBind::from(idx), ir::ParamOwner::Loop);
                     (idx, this.commands(body))
                 });
                 let l = ir::Loop {
@@ -494,8 +725,15 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     start,
                     end,
                     body,
-                };
-                vec![l.into()]
+                }
+                .into();
+                let index = index.expr(self.comp);
+                let idx_start = index.gte(start, self.comp);
+                let idx_end = index.lt(end, self.comp);
+                let in_range = idx_start.and(idx_end, self.comp);
+                iter::once(l)
+                    .chain(self.comp.assume(in_range, reason))
+                    .collect()
             }
             ast::Command::If(ast::If { cond, then, alt }) => {
                 let cond = self.expr_cons(cond);
@@ -511,94 +749,40 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
-    /// Invokes are the most complicated construct to compile. This function:
-    /// 1. Creates a new invoke in the component with the time bindings.
-    /// 2. Resolves output ports and defines them in the component
-    fn declare_inv(&mut self, inv: &ast::Invoke) {
-        let ast::Invoke {
-            name,
-            instance,
-            abstract_vars,
-            ..
-        } = inv;
-
-        let inst = *self.inst_map.get(instance).unwrap();
-        let events = abstract_vars
+    /// Adds assumptions about the ports in the component
+    fn port_assumptions(&mut self) -> Vec<ir::Command> {
+        let mut cmds = Vec::with_capacity(self.comp.ports().len() * 2);
+        let ports = self
+            .comp
+            .ports()
             .iter()
-            .map(|v| self.time(v.clone().take()))
-            .collect_vec()
-            .into_boxed_slice();
-        let inv = self.comp.add(ir::Invoke {
-            inst,
-            events,
-            ports: vec![], // Filled in later
-        });
-        self.add_inv(name.copy(), inv);
-
-        let mut def_ports = vec![];
-
-        // The inputs
-        let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
-        let sig = self.sigs.get(&comp).unwrap();
-
-        // Event bindings
-        let event_binding = self.event_binding(
-            sig.events.iter().cloned(),
-            abstract_vars.iter().map(|v| v.inner().clone()),
+            .map(|(_, p)| (p.live.idx, p.live.len))
+            .collect_vec();
+        // Add assumptions for range of bundle-bound indices
+        let reason = self.comp.add(
+            ir::Reason::misc("bundle index is within range", GPosIdx::UNKNOWN)
+                .into(),
         );
-
-        // Define the output port from the invoke
-        for p in sig.outputs.clone() {
-            let resolved = p
-                .resolve_exprs(&param_binding)
-                .resolve_event(&event_binding);
-            let owner = ir::PortOwner::Inv {
-                inv,
-                dir: ir::Direction::Out,
-            };
-            def_ports.push(self.port(resolved, owner));
+        for (idx, len) in ports {
+            let idx = idx.expr(self.comp);
+            let start = idx.gte(self.comp.num(0), self.comp);
+            let end = idx.lt(len, self.comp);
+            let in_range = start.and(end, self.comp);
+            cmds.extend(self.comp.assume(in_range, reason))
         }
-
-        // Add the inputs from the invoke. The outputs are added in the second
-        // pass using [Self::add_invoke_connects].
-        self.comp.invocations.get_mut(inv).ports = def_ports;
+        cmds
     }
 
-    /// Walk over the component and declare all instances, invocations, and all outputs defined by invocations.
-    /// This is needed because invocations are not required to be declared before they are used.
-    fn declare_cmd(&mut self, cmd: &ast::Command) {
-        match cmd {
-            ast::Command::Instance(inst) => {
-                self.declare_inst(inst);
-            }
-            ast::Command::Invoke(inv) => {
-                self.declare_inv(inv);
-            }
-            ast::Command::ForLoop(ast::ForLoop { idx, body, .. }) => {
-                self.param(
-                    ast::ParamBind::new(idx.clone(), None),
-                    ir::ParamOwner::Local,
-                );
-                self.declare_cmds(body);
-            }
-            ast::Command::If(ast::If { then, alt, .. }) => {
-                self.declare_cmds(then);
-                self.declare_cmds(alt);
-            }
-            ast::Command::Fact(_)
-            | ast::Command::Connect(_)
-            | ast::Command::Bundle(_) => { /* Handled in second pass */ }
-        }
-    }
+    fn external(idx: CompIdx, sig: ast::Signature) -> ir::Component {
+        let mut ir_comp = ir::Component::new(idx, false);
+        let binding = SigMap::default();
+        let mut builder = BuildCtx::new(&mut ir_comp, &binding);
 
-    fn declare_cmds(&mut self, cmds: &[ast::Command]) {
-        for cmd in cmds {
-            self.declare_cmd(cmd);
-        }
-    }
-
-    fn external(idx: CompIdx, sig: ast::Signature) -> ir::External {
-        ir::External { idx, sig }
+        // First we declare all the ports
+        let mut cmds = builder.sig(sig);
+        cmds.extend(builder.port_assumptions());
+        ir_comp.cmds = cmds;
+        ir_comp
     }
 
     fn comp(
@@ -606,11 +790,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         idx: CompIdx,
         sigs: &'prog SigMap,
     ) -> ir::Component {
-        let mut ir_comp = ir::Component::new(idx);
+        let mut ir_comp = ir::Component::new(idx, false);
         let mut builder = BuildCtx::new(&mut ir_comp, sigs);
+
         let mut cmds = builder.sig(comp.sig);
-        builder.declare_cmds(&comp.body);
         let body_cmds = builder.commands(comp.body);
+        cmds.extend(builder.port_assumptions());
         cmds.extend(body_cmds);
         ir_comp.cmds = cmds;
         ir_comp
@@ -629,14 +814,14 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         for ext in exts {
             let idx = sig_map.get(&ext.name).unwrap().idx;
             let ir_ext = BuildCtx::external(idx, ext);
-            ctx.comps.checked_add(idx, ir::CompOrExt::Ext(ir_ext));
+            ctx.comps.checked_add(idx, ir_ext);
         }
     }
 
     for comp in ns.components {
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
         let ir_comp = BuildCtx::comp(comp, idx, &sig_map);
-        ctx.comps.checked_add(idx, ir::CompOrExt::Comp(ir_comp));
+        ctx.comps.checked_add(idx, ir_comp);
     }
     ctx
 }

@@ -1,73 +1,64 @@
 use super::{
-    Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact, IndexStore,
-    InstIdx, Instance, Interned, InvIdx, Invoke, Param, ParamIdx, Port,
-    PortIdx, Prop, PropIdx, Time, TimeIdx,
+    CmpOp, Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
+    IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke,
+    MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeIdx,
+    TimeSub,
 };
-use crate::{ast, utils::Idx};
+use crate::utils::Idx;
 
 #[derive(Default)]
 pub struct Context {
-    pub comps: IndexStore<CompOrExt>,
+    pub comps: IndexStore<Component>,
 }
 
-impl Ctx<CompOrExt> for Context {
-    fn add(&mut self, val: CompOrExt) -> Idx<CompOrExt> {
-        self.comps.add(val)
-    }
-
-    fn get(&self, idx: Idx<CompOrExt>) -> &CompOrExt {
-        self.comps.get(idx)
-    }
-}
-
-pub enum CompOrExt {
-    Comp(Component),
-    Ext(External),
-}
-
-/// An external component.
-pub struct External {
-    pub idx: CompIdx,
-    pub sig: ast::Signature,
-}
-
+/// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
-    pub idx: CompIdx,
-    // Component defined values.
-    /// Ports and bundles defined by the component.
-    pub(super) ports: IndexStore<Port>,
-    /// Parameters defined the component
-    pub(super) params: IndexStore<Param>,
-    /// Events defined by the component
-    pub(super) events: IndexStore<Event>,
-
-    /// Instances defined by the component
-    pub(super) instances: IndexStore<Instance>,
-    /// Invocations defined by the component
-    pub(super) invocations: IndexStore<Invoke>,
+    /// Identifier for the component
+    idx: CompIdx,
 
     // Interned data. We store this on a per-component basis because events with the
     // same identifiers in different components are not equal.
     /// Interned expressions
-    pub(super) exprs: Interned<Expr>,
+    exprs: Interned<Expr>,
     /// Interned times
-    pub(super) times: Interned<Time>,
+    times: Interned<Time>,
     /// Interned propositions
-    pub(super) props: Interned<Prop>,
+    props: Interned<Prop>,
+
+    // Component defined values.
+    /// Ports and bundles defined by the component.
+    ports: IndexStore<Port>,
+    /// Parameters defined the component
+    params: IndexStore<Param>,
+    /// Events defined by the component
+    events: IndexStore<Event>,
+
+    // Control flow entities
+    /// Instances defined by the component
+    instances: IndexStore<Instance>,
+    /// Invocations defined by the component
+    invocations: IndexStore<Invoke>,
 
     /// Commands in the component
     pub cmds: Vec<Command>,
+
+    /// Information tracked by the component
+    info: IndexStore<Info>,
+    /// Is this an external component
+    pub is_ext: bool,
 }
 
 impl Component {
-    pub fn new(idx: CompIdx) -> Self {
+    pub fn new(idx: CompIdx, is_ext: bool) -> Self {
         let mut comp = Self {
             idx,
+            is_ext,
             ports: IndexStore::default(),
             params: IndexStore::default(),
             events: IndexStore::default(),
             instances: IndexStore::default(),
             invocations: IndexStore::default(),
+            info: IndexStore::default(),
             exprs: Interned::default(),
             times: Interned::default(),
             props: Interned::default(),
@@ -86,24 +77,152 @@ impl Component {
         self.exprs.intern(Expr::Concrete(n))
     }
 
+    /// Generates the propositions representing `a \subseteq b`
+    pub fn subset_eq(
+        &mut self,
+        a: (ExprIdx, ExprIdx),
+        b: (ExprIdx, ExprIdx),
+    ) -> [PropIdx; 2] {
+        let (a_lo, a_hi) = a;
+        let (b_lo, b_hi) = b;
+        let lo = a_lo.lte(b_lo, self);
+        let hi = a_hi.gte(b_hi, self);
+        [lo, hi]
+    }
+
     /// Generate a asserted fact.
     /// Panics if the asserted fact is false.
-    pub fn assert(&self, prop: PropIdx) -> Fact {
-        if prop.is_false(self) {
-            panic!("Attempted to assert false");
+    pub fn assert(&mut self, prop: PropIdx, info: InfoIdx) -> Option<Command> {
+        if prop.is_true(self) {
+            None
+        } else {
+            Some(Fact::assert(prop, info).into())
         }
-        Fact::assert(prop)
     }
 
     /// Generate an assumed fact.
     /// Panics if the assumed fact is false.
-    pub fn assume(&self, prop: PropIdx) -> Fact {
+    pub fn assume(&mut self, prop: PropIdx, info: InfoIdx) -> Option<Command> {
         if prop.is_false(self) {
             panic!("Attempted to assume false");
+        } else if prop.is_true(self) {
+            None
+        } else {
+            Some(Fact::assume(prop, info).into())
         }
-        Fact::assume(prop)
     }
 }
+
+/// Accessor methods
+impl Component {
+    pub fn idx(&self) -> CompIdx {
+        self.idx
+    }
+
+    pub fn events(&self) -> &IndexStore<Event> {
+        &self.events
+    }
+
+    pub fn ports(&self) -> &IndexStore<Port> {
+        &self.ports
+    }
+
+    pub fn params(&self) -> &IndexStore<Param> {
+        &self.params
+    }
+
+    pub fn invocations(&self) -> &IndexStore<Invoke> {
+        &self.invocations
+    }
+
+    pub fn instances(&self) -> &IndexStore<Instance> {
+        &self.instances
+    }
+
+    pub fn exprs(&self) -> &Interned<Expr> {
+        &self.exprs
+    }
+
+    pub fn times(&self) -> &Interned<Time> {
+        &self.times
+    }
+
+    pub fn props(&self) -> &Interned<Prop> {
+        &self.props
+    }
+}
+
+/// Queries over interned entities
+impl Component {
+    fn expr_params_acc(&self, expr: ExprIdx, acc: &mut Vec<ParamIdx>) {
+        match self.get(expr) {
+            Expr::Param(p) => acc.push(*p),
+            Expr::Concrete(_) => (),
+            Expr::Bin { lhs, rhs, .. } => {
+                self.expr_params_acc(*lhs, acc);
+                self.expr_params_acc(*rhs, acc);
+            }
+            Expr::Fn { args, .. } => {
+                for arg in args.iter() {
+                    self.expr_params_acc(*arg, acc);
+                }
+            }
+        }
+    }
+
+    fn cmp_params_acc<T, F>(
+        &self,
+        cmp: &CmpOp<T>,
+        acc: &mut Vec<ParamIdx>,
+        add: F,
+    ) where
+        F: Fn(&T, &mut Vec<ParamIdx>),
+    {
+        let CmpOp { lhs, rhs, .. } = cmp;
+        add(lhs, acc);
+        add(rhs, acc);
+    }
+
+    fn prop_params_acc(&self, prop: PropIdx, acc: &mut Vec<ParamIdx>) {
+        match self.get(prop) {
+            Prop::True | Prop::False => (),
+            Prop::Cmp(c) => self
+                .cmp_params_acc(c, acc, |e, acc| self.expr_params_acc(*e, acc)),
+            Prop::TimeCmp(c) => self.cmp_params_acc(c, acc, |t, acc| {
+                self.expr_params_acc(self.get(*t).offset, acc)
+            }),
+            Prop::TimeSubCmp(c) => {
+                self.cmp_params_acc(c, acc, |t, acc| match t {
+                    TimeSub::Unit(e) => self.expr_params_acc(*e, acc),
+                    TimeSub::Sym { l, r } => {
+                        self.expr_params_acc(self.get(*l).offset, acc);
+                        self.expr_params_acc(self.get(*r).offset, acc);
+                    }
+                })
+            }
+            Prop::Not(p) => self.prop_params_acc(*p, acc),
+            Prop::And(l, r) | Prop::Or(l, r) | Prop::Implies(l, r) => {
+                self.prop_params_acc(*l, acc);
+                self.prop_params_acc(*r, acc);
+            }
+        }
+    }
+
+    /// Parameters mentioned within an expression
+    pub fn expr_params(&self, expr: ExprIdx) -> Vec<ParamIdx> {
+        let mut acc = Vec::new();
+        self.expr_params_acc(expr, &mut acc);
+        acc
+    }
+    /// Parameters mentioned within an expression
+    pub fn prop_params(&self, prop: PropIdx) -> Vec<ParamIdx> {
+        let mut acc = Vec::new();
+        self.prop_params_acc(prop, &mut acc);
+        acc
+    }
+}
+
+// =========== Context accessors for each type ===========
 
 impl Ctx<Port> for Component {
     fn add(&mut self, val: Port) -> PortIdx {
@@ -185,14 +304,42 @@ impl Ctx<Prop> for Component {
     }
 }
 
-// We can use indexing syntax for all values in the context for which it is a Ctx.
-impl<K> std::ops::Index<Idx<K>> for Component
-where
-    Component: Ctx<K>,
-{
-    type Output = K;
+impl Ctx<Info> for Component {
+    fn add(&mut self, val: Info) -> InfoIdx {
+        self.info.add(val)
+    }
 
-    fn index(&self, index: Idx<K>) -> &Self::Output {
-        self.get(index)
+    fn get(&self, idx: InfoIdx) -> &Info {
+        self.info.get(idx)
+    }
+}
+
+impl MutCtx<Port> for Component {
+    fn get_mut(&mut self, idx: PortIdx) -> &mut Port {
+        self.ports.get_mut(idx)
+    }
+}
+
+impl MutCtx<Event> for Component {
+    fn get_mut(&mut self, idx: EventIdx) -> &mut Event {
+        self.events.get_mut(idx)
+    }
+}
+
+impl MutCtx<Param> for Component {
+    fn get_mut(&mut self, idx: ParamIdx) -> &mut Param {
+        self.params.get_mut(idx)
+    }
+}
+
+impl MutCtx<Invoke> for Component {
+    fn get_mut(&mut self, idx: InvIdx) -> &mut Invoke {
+        self.invocations.get_mut(idx)
+    }
+}
+
+impl MutCtx<Instance> for Component {
+    fn get_mut(&mut self, idx: InstIdx) -> &mut Instance {
+        self.instances.get_mut(idx)
     }
 }

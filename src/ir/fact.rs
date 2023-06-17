@@ -1,5 +1,8 @@
-use super::{idxs::PropIdx, Component, Ctx, ExprIdx, Foldable, ParamIdx};
-use std::fmt;
+use super::{
+    idxs::PropIdx, Component, Ctx, ExprIdx, Foldable, InfoIdx, ParamIdx,
+    TimeIdx, TimeSub,
+};
+use std::fmt::{self, Display};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 /// Comparison operators
@@ -21,16 +24,72 @@ impl fmt::Display for Cmp {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
+/// Comparison between two expressions of type T
+pub struct CmpOp<T> {
+    pub op: Cmp,
+    pub lhs: T,
+    pub rhs: T,
+}
+
+impl<T> CmpOp<T> {
+    pub fn gt(lhs: T, rhs: T) -> Self {
+        Self {
+            op: Cmp::Gt,
+            lhs,
+            rhs,
+        }
+    }
+
+    pub fn gte(lhs: T, rhs: T) -> Self {
+        Self {
+            op: Cmp::Gte,
+            lhs,
+            rhs,
+        }
+    }
+
+    pub fn eq(lhs: T, rhs: T) -> Self {
+        Self {
+            op: Cmp::Eq,
+            lhs,
+            rhs,
+        }
+    }
+
+    pub fn lt(lhs: T, rhs: T) -> Self {
+        Self {
+            op: Cmp::Gt,
+            lhs: rhs,
+            rhs: lhs,
+        }
+    }
+
+    pub fn lte(lhs: T, rhs: T) -> Self {
+        Self {
+            op: Cmp::Gte,
+            lhs: rhs,
+            rhs: lhs,
+        }
+    }
+}
+
+impl<T: Display> fmt::Display for CmpOp<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {} {}", self.lhs, self.op, self.rhs)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
 /// A proposition
 pub enum Prop {
     True,
     False,
     /// A comparison between two expressions
-    Cmp {
-        op: Cmp,
-        lhs: ExprIdx,
-        rhs: ExprIdx,
-    },
+    Cmp(CmpOp<ExprIdx>),
+    /// Comparison between time expressions
+    TimeCmp(CmpOp<TimeIdx>),
+    /// Comparison between time-sub expressions
+    TimeSubCmp(CmpOp<TimeSub>),
     Not(PropIdx),
     And(PropIdx, PropIdx),
     Or(PropIdx, PropIdx),
@@ -42,15 +101,18 @@ impl fmt::Display for Prop {
         match self {
             Prop::True => write!(f, "true"),
             Prop::False => write!(f, "false"),
-            Prop::Cmp { op, lhs, rhs } => write!(f, "{} {} {}", lhs, op, rhs),
-            Prop::Not(p) => write!(f, "!{}", p),
-            Prop::And(l, r) => write!(f, "({} & {})", l, r),
-            Prop::Or(l, r) => write!(f, "({} | {})", l, r),
-            Prop::Implies(l, r) => write!(f, "({} => {})", l, r),
+            Prop::Cmp(cmp) => write!(f, "{cmp}"),
+            Prop::TimeCmp(cmp) => write!(f, "{cmp}"),
+            Prop::TimeSubCmp(cmp) => write!(f, "{cmp}"),
+            Prop::Not(p) => write!(f, "!{p}"),
+            Prop::And(l, r) => write!(f, "{l} & {r}"),
+            Prop::Or(l, r) => write!(f, "{l} | {r}"),
+            Prop::Implies(l, r) => write!(f, "{l} => {r}"),
         }
     }
 }
 
+/// Constructors for propositions
 impl PropIdx {
     #[inline(always)]
     /// Returns true of this proposition is definitely true.
@@ -83,21 +145,6 @@ impl PropIdx {
 
     /// Conjunction of two propositions
     pub fn and(self, other: PropIdx, ctx: &mut impl Ctx<Prop>) -> PropIdx {
-        /*match (ctx.get(self), ctx.get(other)) {
-            (Prop::True, _) | (_, Prop::True) => return other,
-            (Prop::False, _) | (_, Prop::False) => return ctx.add(Prop::False),
-            (Prop::Not(p), _) => {
-                if *p == other {
-                    return ctx.add(Prop::False);
-                }
-            }
-            (_, Prop::Not(p)) => {
-                if *p == self {
-                    return ctx.add(Prop::False);
-                }
-            }
-            _ => (),
-        }*/
         if self == other {
             return self;
         } else if self.is_true(ctx) {
@@ -150,30 +197,44 @@ impl PropIdx {
     }
 }
 
+/// Queries over propositions
+impl PropIdx {
+    /// Returns the consequent of an implication, if this proposition is an
+    /// implication. Otherwise, returns the proposition itself.
+    pub fn consequent(self, ctx: &impl Ctx<Prop>) -> PropIdx {
+        match ctx.get(self) {
+            Prop::Implies(_, cons) => *cons,
+            _ => self,
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash)]
 /// A fact in the program.
 /// If `checked` is true, then this represents an assertion that needs to be
 /// checked. Otherwise, it is an assumption.
 pub struct Fact {
     pub prop: PropIdx,
+    pub reason: InfoIdx,
     pub(super) checked: bool,
 }
 
 impl Fact {
     /// An assertion which is required to be statically proved
-    /// Outside the IR library, use [Component::assert] instead.
-    pub(super) fn assert(prop: PropIdx) -> Self {
+    pub fn assert(prop: PropIdx, reason: InfoIdx) -> Self {
         Self {
             prop,
+            reason,
             checked: true,
         }
     }
 
     /// An assumption which is not checked
     /// Outside the IR library, use [Component::assume] instead.
-    pub(super) fn assume(prop: PropIdx) -> Self {
+    pub(super) fn assume(prop: PropIdx, reason: InfoIdx) -> Self {
         Self {
             prop,
+            reason,
             checked: false,
         }
     }
@@ -198,10 +259,20 @@ impl Foldable<ParamIdx, ExprIdx> for PropIdx {
     {
         match ctx.get(*self).clone() {
             Prop::True | Prop::False => *self,
-            Prop::Cmp { op, lhs, rhs } => {
+            Prop::Cmp(CmpOp { op, lhs, rhs }) => {
                 let lhs = lhs.fold_with(ctx, subst_fn);
                 let rhs = rhs.fold_with(ctx, subst_fn);
-                ctx.add(Prop::Cmp { op, lhs, rhs })
+                ctx.add(Prop::Cmp(CmpOp { op, lhs, rhs }))
+            }
+            Prop::TimeCmp(CmpOp { op, lhs, rhs }) => {
+                let lhs = lhs.fold_with(ctx, subst_fn);
+                let rhs = rhs.fold_with(ctx, subst_fn);
+                ctx.add(Prop::TimeCmp(CmpOp { op, lhs, rhs }))
+            }
+            Prop::TimeSubCmp(CmpOp { op, lhs, rhs }) => {
+                let lhs = lhs.fold_with(ctx, subst_fn);
+                let rhs = rhs.fold_with(ctx, subst_fn);
+                ctx.add(Prop::TimeSubCmp(CmpOp { op, lhs, rhs }))
             }
             Prop::Not(p) => {
                 let p = p.fold_with(ctx, subst_fn);

@@ -1,0 +1,13 @@
+---CODE---
+1
+---STDERR---
+error: required bundle of width `16' but found bundle of width `32'
+  ┌─ tests/errors/port-mismatch.fil:2:11
+  │
+2 │     out = in;
+  │     ----  ^^ source has width 32
+  │     │      
+  │     destination has width 16
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

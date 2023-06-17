@@ -17,6 +17,11 @@ macro_rules! define_idx {
                 write!(f, concat!("%", $pre, "{}"), self.get())
             }
         }
+        impl ::std::fmt::Debug for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self)
+            }
+        }
     };
 }
 

@@ -1,4 +1,9 @@
-use super::{Ctx, Expr, ExprIdx, InvIdx, ParamIdx, PortIdx, TimeIdx, TimeSub};
+use crate::ast::Op;
+
+use super::{
+    Bind, Component, Ctx, Expr, ExprIdx, Foldable, InfoIdx, InvIdx, ParamIdx,
+    PortIdx, Subst, TimeIdx, TimeSub,
+};
 use std::fmt;
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -14,7 +19,21 @@ impl fmt::Display for Range {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Clone)]
+impl Foldable<ParamIdx, ExprIdx> for Range {
+    type Context = Component;
+
+    fn fold_with<F>(&self, ctx: &mut Self::Context, subst_fn: &mut F) -> Self
+    where
+        F: FnMut(ParamIdx) -> Option<ExprIdx>,
+    {
+        Range {
+            start: self.start.fold_with(ctx, subst_fn),
+            end: self.end.fold_with(ctx, subst_fn),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 /// The context in which a port was defined.
 pub enum PortOwner {
     /// The port is defined in the signature
@@ -107,6 +126,7 @@ pub struct Port {
     pub owner: PortOwner,
     pub width: ExprIdx,
     pub live: Liveness,
+    pub info: InfoIdx,
 }
 impl Port {
     /// Check if this is an input port on the signature
@@ -155,14 +175,49 @@ impl Access {
         }
     }
 
-    /// Check if this is a simple port access
-    pub fn is_port(&self, ctx: &impl Ctx<Expr>) -> bool {
-        if let (Some(s), Some(e)) =
-            (self.start.as_concrete(ctx), self.end.as_concrete(ctx))
-        {
-            s == 0 && e == 1
+    /// Check if this is guaranteed a simple port access, i.e., an access that
+    /// produces one port.
+    /// The check is syntactic and therefore conservative.
+    pub fn is_port(&self, ctx: &mut impl Ctx<Expr>) -> bool {
+        let one = ctx.add(Expr::Concrete(1));
+        match ctx.get(self.end) {
+            Expr::Bin {
+                op: Op::Add,
+                lhs,
+                rhs,
+            } => {
+                *rhs == one && self.start == *lhs
+                    || *lhs == one && self.start == *rhs
+            }
+            Expr::Concrete(e) => {
+                if let Some(s) = self.start.as_concrete(ctx) {
+                    *e == s + 1
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        }
+    }
+
+    /// Return the bundle type associated with this access
+    pub fn bundle_typ(&self, ctx: &mut Component) -> Liveness {
+        let live = ctx.get(self.port).live.clone();
+        let binding = if self.is_port(ctx) {
+            // If this access produces exactly one port, then remap `#idx` to `start`.
+            [(live.idx, self.start)]
         } else {
-            false
+            // Remap `#idx` to `#idx+start
+            [(live.idx, live.idx.expr(ctx).add(self.start, ctx))]
+        };
+
+        let range = Subst::new(live.range, &Bind::new(&binding)).apply(ctx);
+        // Shrink the bundle type based on the access
+        let len = self.end.sub(self.start, ctx);
+        Liveness {
+            idx: live.idx,
+            len,
+            range,
         }
     }
 }
@@ -175,19 +230,26 @@ impl fmt::Display for Access {
 #[derive(PartialEq, Eq, Hash, Clone)]
 /// Construct that defines the parameter
 pub enum ParamOwner {
-    /// The parameter is defined in the signature
+    /// Defined by the signature
     Sig,
-    /// The parameter is defined by a bundle
-    Bundle,
-    /// The parametber is defined in the component body
-    Local,
+    /// Defined by a bundle
+    Bundle(PortIdx),
+    /// Loop indexing parameter
+    Loop,
 }
+
+impl ParamOwner {
+    pub fn bundle(port: PortIdx) -> Self {
+        Self::Bundle(port)
+    }
+}
+
 impl fmt::Display for ParamOwner {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Sig => write!(f, "sig"),
-            Self::Bundle => write!(f, "bundle"),
-            Self::Local => write!(f, "local"),
+            Self::Bundle(p) => write!(f, "bundle({p})"),
+            Self::Loop => write!(f, "loop"),
         }
     }
 }
@@ -196,12 +258,13 @@ impl fmt::Display for ParamOwner {
 /// Parameters with an optional initial value
 pub struct Param {
     pub owner: ParamOwner,
+    pub info: InfoIdx,
     pub default: Option<ExprIdx>,
 }
 
 impl Param {
-    pub fn new(owner: ParamOwner, default: Option<ExprIdx>) -> Self {
-        Self { owner, default }
+    pub fn new(owner: ParamOwner, info: InfoIdx, default: Option<ExprIdx>) -> Self {
+        Self { owner, info, default }
     }
 
     pub fn is_sig_owned(&self) -> bool {
@@ -209,7 +272,7 @@ impl Param {
     }
 
     pub fn is_local(&self) -> bool {
-        matches!(self.owner, ParamOwner::Local)
+        matches!(self.owner, ParamOwner::Loop)
     }
 }
 
@@ -223,17 +286,30 @@ impl fmt::Display for Param {
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]
+/// The construct that defines an event
+pub enum EventOwner {
+    /// The event is defined by a signature
+    Sig,
+    /// The event is defined by an invocation
+    Inv { inv: InvIdx },
+}
+
+impl EventOwner {
+    pub fn is_sig(&self) -> bool {
+        matches!(self, Self::Sig)
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Clone)]
 /// Events must have a delay and an optional default value
 pub struct Event {
     pub delay: TimeSub,
-    pub default: Option<TimeIdx>,
+    pub owner: EventOwner,
+    pub info: InfoIdx,
 }
 
 impl fmt::Display for Event {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(default) = self.default {
-            write!(f, "{} ", default)?;
-        }
         write!(f, "delay {}", self.delay)
     }
 }

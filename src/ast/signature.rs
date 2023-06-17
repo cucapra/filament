@@ -16,7 +16,7 @@ pub struct EventBind {
 }
 
 impl EventBind {
-    fn resolve_event(self, bindings: &Binding<Time>) -> Self {
+    pub fn resolve_event(self, bindings: &Binding<Time>) -> Self {
         Self {
             delay: self.delay.map(|e| e.resolve_event(bindings)),
             default: self.default.map(|d| d.resolve_event(bindings)),
@@ -24,7 +24,7 @@ impl EventBind {
         }
     }
 
-    fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
+    pub fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
         Self {
             delay: self.delay.map(|e| e.resolve_expr(bindings)),
             default: self.default.map(|d| d.resolve_expr(bindings)),

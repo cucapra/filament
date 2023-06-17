@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use super::{Cmp, Ctx, ExprIdx, ParamIdx, Prop, PropIdx};
+use super::{Cmp, CmpOp, Ctx, ExprIdx, ParamIdx, Prop, PropIdx};
 use crate::ast;
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -207,11 +207,11 @@ impl ExprIdx {
                 ctx.add(Prop::False)
             }
         } else {
-            ctx.add(Prop::Cmp {
+            ctx.add(Prop::Cmp(CmpOp {
                 op: Cmp::Gt,
                 lhs: *self,
                 rhs: other,
-            })
+            }))
         }
     }
 
@@ -228,11 +228,11 @@ impl ExprIdx {
                 ctx.add(Prop::False)
             }
         } else {
-            ctx.add(Prop::Cmp {
+            ctx.add(Prop::Cmp(CmpOp {
                 op: Cmp::Gte,
                 lhs: *self,
                 rhs: other,
-            })
+            }))
         }
     }
 
@@ -251,11 +251,11 @@ impl ExprIdx {
         } else if self == &other {
             return ctx.add(Prop::True);
         } else {
-            ctx.add(Prop::Cmp {
+            ctx.add(Prop::Cmp(CmpOp {
                 op: Cmp::Eq,
                 lhs: *self,
                 rhs: other,
-            })
+            }))
         }
     }
 

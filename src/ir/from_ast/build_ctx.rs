@@ -1,6 +1,6 @@
 use super::ScopeMap;
 use crate::ast::{self, Id};
-use crate::ir::{self, CompIdx, DenseIndexInfo, PortIdx};
+use crate::ir::{self, CompIdx, Ctx, DenseIndexInfo, PortIdx};
 use crate::utils;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -14,9 +14,10 @@ pub struct Sig {
     pub idx: CompIdx,
     pub params: Vec<ast::ParamBind>,
     pub events: Vec<ast::EventBind>,
-    pub inputs: Vec<ast::PortDef>,
+    pub inputs: Vec<ast::Loc<ast::PortDef>>,
     pub outputs: Vec<ast::PortDef>,
-    pub facts: Vec<ast::OrderConstraint<ast::Expr>>,
+    pub param_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Expr>>>,
+    pub event_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Time>>>,
 }
 
 impl From<(&ast::Signature, usize)> for Sig {
@@ -24,14 +25,11 @@ impl From<(&ast::Signature, usize)> for Sig {
         Sig {
             idx: CompIdx::new(idx),
             params: sig.params.iter().map(|p| p.clone().take()).collect(),
-            inputs: sig.inputs().map(|p| p.clone().take()).collect(),
+            inputs: sig.inputs().cloned().collect(),
             outputs: sig.outputs().map(|p| p.clone().take()).collect(),
             events: sig.events.iter().map(|e| e.clone().take()).collect(),
-            facts: sig
-                .param_constraints
-                .iter()
-                .map(|f| f.clone().take())
-                .collect(),
+            param_cons: sig.param_constraints.clone(),
+            event_cons: sig.event_constraints.clone(),
         }
     }
 }
@@ -65,7 +63,7 @@ impl std::ops::Index<&Id> for SigMap {
 type InvPort = (ir::PortOwner, Id);
 
 /// Context used while building the IR.
-pub struct BuildCtx<'ctx, 'prog> {
+pub(super) struct BuildCtx<'ctx, 'prog> {
     pub comp: &'ctx mut ir::Component,
     pub sigs: &'prog SigMap,
 
@@ -76,18 +74,22 @@ pub struct BuildCtx<'ctx, 'prog> {
         DenseIndexInfo<ir::Instance, (Rc<utils::Binding<ast::Expr>>, Id)>,
 
     // Mapping from names to IR nodes.
-    pub param_map: ScopeMap<ir::Param>,
     pub event_map: ScopeMap<ir::Event>,
     pub inst_map: ScopeMap<ir::Instance>,
 
     inv_map: ScopeMap<ir::Invoke>,
     port_map: ScopeMap<ir::Port, InvPort>,
+    param_map: ScopeMap<ir::Param>,
+
+    /// Index for generating unique names
+    name_idx: u32,
 }
 impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     pub fn new(comp: &'ctx mut ir::Component, sigs: &'prog SigMap) -> Self {
         Self {
             comp,
             sigs,
+            name_idx: 0,
             param_map: ScopeMap::new(),
             event_map: ScopeMap::new(),
             port_map: ScopeMap::new(),
@@ -95,6 +97,13 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             inv_map: ScopeMap::new(),
             inst_to_sig: DenseIndexInfo::default(),
         }
+    }
+
+    /// Generate a unique, new name for unused parameters
+    pub fn gen_name(&mut self) -> Id {
+        let name = format!("_{}", self.name_idx);
+        self.name_idx += 1;
+        Id::from(name)
     }
 
     /// Push a new scope level
@@ -128,8 +137,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         out
     }
 
+    pub fn get_param(&mut self, name: &Id) -> Option<ir::ParamIdx> {
+        self.param_map.get(name).copied()
+    }
+
+    pub fn add_param(&mut self, name: Id, param: ir::ParamIdx) {
+        self.param_map.insert(name, param);
+    }
+
     /// Add a new port to the ctx
-    pub fn add_port(&mut self, name: Id, owner: ir::PortOwner, port: PortIdx) {
+    pub fn add_port(&mut self, name: Id, port: PortIdx) {
+        let owner = self.comp.get(port).owner.clone();
         self.port_map.insert((owner, name), port);
     }
 

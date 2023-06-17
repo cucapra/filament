@@ -37,7 +37,7 @@ extern "comb.sv" {
     @[G, L] left: #WIDTH,
     @[G, L] right: #WIDTH,
   ) -> (
-    @[G, L] out: 1,
+    @[G, L] out: #WIDTH,
   ) where L > G, #WIDTH > 0;
 
   comp Xor[#WIDTH]<G: L-(G), ?L: 1=G+1>(
@@ -144,6 +144,13 @@ extern "comb.sv" {
     @[G, L] out: #WIDTH,
   ) where L > G, #WIDTH > 0;
 
+  comp ArithShiftRight[#WIDTH]<G: L-(G), ?L: 1=G+1>(
+    @[G, L] in: #WIDTH,
+    @[G, L] shift: #WIDTH,
+  ) -> (
+    @[G, L] out: #WIDTH,
+  ) where L > G, #WIDTH > 0;
+
   comp Mux[#WIDTH]<G: L-(G), ?L: 1=G+1>(
     @[G, L] sel: 1,
     @[G, L] in0: #WIDTH,
@@ -151,4 +158,10 @@ extern "comb.sv" {
   ) -> (
     @[G, L] out: #WIDTH,
   ) where L > G, #WIDTH > 0;
+
+  comp Extend[#IN_WIDTH, #OUT_WIDTH]<G: L-(G), ?L: 1=G+1>(
+    @[G,L] in: #IN_WIDTH
+  ) -> (
+    @[G,L] out: #OUT_WIDTH
+  ) where L > G, #IN_WIDTH > 0, #OUT_WIDTH > 0;
 }

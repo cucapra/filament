@@ -1,6 +1,7 @@
 use crate::{
     ir::{self, Ctx},
     ir_visitor::{Action, Visitor},
+    utils::GPosIdx,
 };
 
 #[derive(Default)]
@@ -16,12 +17,42 @@ impl TypeCheck {
     fn port_access(
         &mut self,
         access: &ir::Access,
+        loc: GPosIdx,
         comp: &mut ir::Component,
-    ) -> [ir::PropIdx; 3] {
+    ) -> impl Iterator<Item = ir::Command> {
         let &ir::Access { port, start, end } = access;
-        let port = comp.get(port);
-        let len = port.live.len;
-        [end.gt(start, comp), start.lt(len, comp), end.lte(len, comp)]
+        let &ir::Port {
+            live: ir::Liveness { len, .. },
+            info,
+            ..
+        } = comp.get(port);
+
+        let &ir::Info::Port {
+            bind_loc, ..
+        } = comp.get(info) else {
+            unreachable!("Expected port info")
+        };
+
+        let wf = comp.add(
+            ir::Reason::misc(
+                "end of port access must greater than the start",
+                loc,
+            )
+            .into(),
+        );
+
+        let wf_prop = end.gt(start, comp);
+        let within_bounds =
+            comp.add(ir::Reason::in_bounds_access(bind_loc, loc, len).into());
+        let start = start.lt(len, comp);
+        let end = end.lte(len, comp);
+        let in_range = start.and(end, comp);
+        vec![
+            comp.assert(wf_prop, wf),
+            comp.assert(in_range, within_bounds),
+        ]
+        .into_iter()
+        .flatten()
     }
 }
 
@@ -31,25 +62,36 @@ impl Visitor for TypeCheck {
         c: &mut ir::Connect,
         comp: &mut ir::Component,
     ) -> Action {
-        let ir::Connect { src, dst } = &c;
+        let ir::Connect { src, dst, info } = &c;
+        let &ir::Info::Connect { dst_loc, src_loc } = comp.get(*info) else {
+            unreachable!("Expected connect info")
+        };
         let mut cons = vec![];
 
         // Range accesses are well-formed
-        cons.extend(self.port_access(src, comp));
-        cons.extend(self.port_access(dst, comp));
+        cons.extend(self.port_access(src, src_loc, comp));
+        cons.extend(self.port_access(dst, dst_loc, comp));
 
         // Ensure that the bitwidths of the ports are the same
         let src_w = comp.get(src.port).width;
         let dst_w = comp.get(dst.port).width;
-        cons.push(src_w.equal(dst_w, comp));
+        let reason = comp.add(
+            ir::Reason::bundle_width_match(dst_loc, src_loc, dst_w, src_w)
+                .into(),
+        );
+        let prop = src_w.equal(dst_w, comp);
+        cons.extend(comp.assert(prop, reason));
 
         // Ensure that the sizes are the same
         let src_size = src.end.sub(src.start, comp);
         let dst_size = dst.end.sub(dst.start, comp);
-        cons.push(src_size.equal(dst_size, comp));
+        let reason = comp.add(
+            ir::Reason::bundle_len_match(dst_loc, src_loc, dst_size, src_size)
+                .into(),
+        );
+        let prop = src_size.equal(dst_size, comp);
+        cons.extend(comp.assert(prop, reason));
 
-        Action::AddBefore(
-            cons.into_iter().map(|p| comp.assert(p).into()).collect(),
-        )
+        Action::AddBefore(cons)
     }
 }

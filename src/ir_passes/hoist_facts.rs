@@ -1,5 +1,3 @@
-use linked_hash_set::LinkedHashSet;
-
 use crate::{
     ir::{self, Ctx},
     ir_visitor::{Action, Visitor},
@@ -14,29 +12,29 @@ pub struct HoistFacts {
     /// The current path condition
     path_cond: Vec<ir::PropIdx>,
     /// Facts to be hoisted
-    facts: LinkedHashSet<ir::Fact>,
+    facts: Vec<ir::Command>,
 }
 
 impl HoistFacts {
     /// Push a new stack frame by tracking the number of added path conditions
-    pub fn push(&mut self) {
+    fn push(&mut self) {
         let len = self.path_cond.len();
         self.stack.push(len);
     }
 
     /// Pop the current stack frame
-    pub fn pop(&mut self) {
+    fn pop(&mut self) {
         let props = self.stack.pop().unwrap();
         self.path_cond.truncate(props);
     }
 
     /// Insert a new path condition
-    pub fn insert(&mut self, prop: ir::PropIdx) {
+    fn insert(&mut self, prop: ir::PropIdx) {
         self.path_cond.push(prop);
     }
 
     /// Return the current path condition
-    pub fn path_cond(&mut self, comp: &mut ir::Component) -> ir::PropIdx {
+    fn path_cond(&mut self, comp: &mut ir::Component) -> ir::PropIdx {
         let mut pc = comp.add(ir::Prop::True);
         for prop in self.path_cond.iter().copied() {
             pc = pc.and(prop, comp);
@@ -46,18 +44,31 @@ impl HoistFacts {
 }
 
 impl Visitor for HoistFacts {
+    /// Collect all assumptions in a given scope and add them to the path condition.
+    /// We do this so that all asserts in a scope are affected by all assumes.
+    fn start_cmds(
+        &mut self,
+        cmds: &mut Vec<ir::Command>,
+        _: &mut ir::Component,
+    ) {
+        cmds.iter().for_each(|cmd| match cmd {
+            ir::Command::Fact(fact) if fact.is_assume() => {
+                self.insert(fact.prop)
+            }
+            _ => (),
+        })
+    }
+
     fn fact(
         &mut self,
         fact: &mut ir::Fact,
         comp: &mut ir::Component,
     ) -> Action {
-        if fact.is_assume() {
-            self.insert(fact.prop);
-        } else {
+        if fact.is_assert() {
             // Otherwise this is a checked assertion that needs to be hoisted.
             // Generate prop = path_cond -> fact.prop
             let cond = self.path_cond(comp).implies(fact.prop, comp);
-            self.facts.insert(comp.assert(cond));
+            self.facts.extend(comp.assert(cond, fact.reason));
         }
         Action::Change(vec![])
     }
@@ -105,10 +116,6 @@ impl Visitor for HoistFacts {
         // Insert the asserts to the start of the component cmds
         let cmds = std::mem::take(&mut comp.cmds);
         let facts = std::mem::take(&mut self.facts);
-        comp.cmds = facts
-            .into_iter()
-            .map(ir::Command::Fact)
-            .chain(cmds.into_iter())
-            .collect();
+        comp.cmds = facts.into_iter().chain(cmds.into_iter()).collect();
     }
 }

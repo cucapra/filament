@@ -2,7 +2,7 @@
 
 Filament is a low-level hardware description language. This means that it does not have a lot of primitive constructs and essentially requires us to build up our hardware from scratch. However, Filament's type system helps us build small reusable components and guarantees that composing them generated efficient and correct hardware.
 
-> This tutorial is written for folks with no hardware design background. If you're familiar with hardware design, head to our "Introduction to Filament for Cool Architects" (**TK**).
+> This tutorial does not assume familiarity with hardware design concepts.
 
 ## Building an Arithmetic Logic Unit
 
