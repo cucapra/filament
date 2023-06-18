@@ -165,7 +165,7 @@ impl Assume {
 
 impl Visitor for Assume {
     fn fact(&mut self, f: &mut ir::Fact, comp: &mut ir::Component) -> Action {
-        if f.is_assert() {
+        if f.is_assume() {
             self.prop(f.prop, f.reason, comp)
         } else {
             Action::Continue
