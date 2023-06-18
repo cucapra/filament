@@ -41,7 +41,11 @@ constraints = {
 }
 
 params = {
-  ("[" ~ param_var ~ ("," ~ param_var)* ~ "]")?
+  ("[" ~ param_bind ~ ("," ~ param_bind)* ~ "]")?
+}
+param_bind = {
+  "?" ~ param_var ~ "=" ~ expr |
+  param_var
 }
 signature = {
   identifier ~ params ~ abstract_var? ~ io ~ constraints

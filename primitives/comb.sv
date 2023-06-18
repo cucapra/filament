@@ -10,31 +10,34 @@ endmodule
 //// =========== Computation ============
 
 module Add #(
-  parameter WIDTH = 32
+  parameter IN_WIDTH = 32,
+  parameter OUT_WIDTH = 32
 ) (
-  input wire logic [WIDTH-1:0] left,
-  input wire logic [WIDTH-1:0] right,
-  output wire logic [WIDTH-1:0] out
+  input wire logic [IN_WIDTH-1:0] left,
+  input wire logic [IN_WIDTH-1:0] right,
+  output wire logic [OUT_WIDTH-1:0] out
 );
   assign out = left + right;
 endmodule
 
 module Sub #(
-  parameter WIDTH = 32
+  parameter IN_WIDTH = 32,
+  parameter OUT_WIDTH = 32
 ) (
-  input wire logic [WIDTH-1:0] left,
-  input wire logic [WIDTH-1:0] right,
-  output wire logic [WIDTH-1:0] out
+  input wire logic [IN_WIDTH-1:0] left,
+  input wire logic [IN_WIDTH-1:0] right,
+  output wire logic [OUT_WIDTH-1:0] out
 );
   assign out = left - right;
 endmodule
 
 module MultComb #(
-  parameter WIDTH = 32
+  parameter IN_WIDTH = 32,
+  parameter OUT_WIDTH = 32
 ) (
-  input wire logic [WIDTH-1:0] left,
-  input wire logic [WIDTH-1:0] right,
-  output wire logic [WIDTH-1:0] out
+  input wire logic [IN_WIDTH-1:0] left,
+  input wire logic [IN_WIDTH-1:0] right,
+  output wire logic [OUT_WIDTH-1:0] out
 );
   assign out = left * right;
 endmodule
@@ -250,4 +253,3 @@ module Mux #(
 );
   assign out = sel ? in0 : in1;
 endmodule
-
