@@ -78,62 +78,95 @@ impl ir::Component {
     }
 }
 
-impl Visitor for Assume {
-    fn fact(&mut self, f: &mut ir::Fact, comp: &mut ir::Component) -> Action {
-        let props = comp.props();
-        if f.is_assert() {
-            match props.get(f.prop) {
-                ir::Prop::Cmp(ir::CmpOp {
-                    op: ir::Cmp::Eq,
-                    lhs,
-                    rhs,
-                }) => {
-                    let exprs = comp.exprs();
-                    let funcmatch = match (exprs.get(*lhs), exprs.get(*rhs)) {
-                        (ir::Expr::Fn { op, args }, _) => {
-                            debug_assert!(args.len() == 1, "Currently Unimplemented: {} requires {} arguments, automatic assumptions only implemented for single argument functions.", op, args.len());
-                            Some((
-                                op,
-                                Binding::new(vec![
-                                    (FnAssume::left(), *rhs),
-                                    (FnAssume::right(), args[0]),
-                                ]),
-                            ))
-                        }
-                        (_, ir::Expr::Fn { op, args }) => {
-                            debug_assert!(args.len() == 1, "Currently Unimplemented: {} requires {} arguments, automatic assumptions only implemented for single argument functions.", op, args.len());
-                            Some((
-                                op,
-                                Binding::new(vec![
-                                    (FnAssume::left(), *lhs),
-                                    (FnAssume::right(), args[0]),
-                                ]),
-                            ))
-                        }
-                        _ => None,
-                    };
+impl Assume {
+    fn prop(
+        &mut self,
+        p: ir::PropIdx,
+        info: ir::InfoIdx,
+        comp: &mut ir::Component,
+    ) -> Action {
+        log::debug!("Checking assumptions for {p}");
+        let p = comp.get(p);
+        match p {
+            ir::Prop::Cmp(ir::CmpOp {
+                op: ir::Cmp::Eq,
+                lhs,
+                rhs,
+            }) => {
+                let exprs = comp.exprs();
+                let funcmatch = match (exprs.get(*lhs), exprs.get(*rhs)) {
+                    (ir::Expr::Fn { op, args }, _) => {
+                        debug_assert!(args.len() == 1, "Currently Unimplemented: {} requires {} arguments, automatic assumptions only implemented for single argument functions.", op, args.len());
+                        Some((
+                            op,
+                            Binding::new(vec![
+                                (FnAssume::left(), *rhs),
+                                (FnAssume::right(), args[0]),
+                            ]),
+                        ))
+                    }
+                    (_, ir::Expr::Fn { op, args }) => {
+                        debug_assert!(args.len() == 1, "Currently Unimplemented: {} requires {} arguments, automatic assumptions only implemented for single argument functions.", op, args.len());
+                        Some((
+                            op,
+                            Binding::new(vec![
+                                (FnAssume::left(), *lhs),
+                                (FnAssume::right(), args[0]),
+                            ]),
+                        ))
+                    }
+                    _ => None,
+                };
 
-                    match funcmatch {
-                        None => Action::Continue,
-                        Some((op, binding)) => Action::AddBefore(
+                match funcmatch {
+                    None => Action::Continue,
+                    Some((op, binding)) => {
+                        log::debug!("Matched function");
+                        Action::AddBefore(
                             FnAssume::from(op.clone())
                                 .assumptions
                                 .into_iter()
                                 .filter_map(|assumption| {
-                                    let imp = comp.add_implication(
-                                        assumption, &binding,
-                                    );
-                                    comp.assert(
-                                        imp,
-                                        f.reason,
-                                    )
+                                    let imp = comp
+                                        .add_implication(assumption, &binding);
+                                    log::debug!("Assuming {}", imp);
+                                    comp.assume(imp, info)
                                 })
                                 .collect(),
-                        ),
+                        )
                     }
                 }
-                _ => Action::Continue,
             }
+            ir::Prop::And(lhs, rhs) => {
+                let (lhs, rhs) = (*lhs, *rhs);
+                let laction = self.prop(lhs, info, comp);
+                match laction {
+                    Action::AddBefore(cmds) => {
+                        match self.prop(rhs, info, comp) {
+                            Action::AddBefore(rcmds) => Action::AddBefore(cmds.into_iter().chain(rcmds.into_iter()).collect()),
+                            Action::Continue => Action::AddBefore(cmds),
+                            Action::Stop => unreachable!("Processing assumption generation returned stop action"),
+                            Action::Change(_) => unreachable!("Processing assumption generation returned change action")
+                        }
+                    }
+                    Action::Continue => self.prop(rhs, info, comp),
+                    Action::Stop => unreachable!(
+                        "Processing assumption generation returned stop action"
+                    ),
+                    Action::Change(_) => unreachable!(
+                    "Processing assumption generation returned change action"
+                ),
+                }
+            }
+            _ => Action::Continue,
+        }
+    }
+}
+
+impl Visitor for Assume {
+    fn fact(&mut self, f: &mut ir::Fact, comp: &mut ir::Component) -> Action {
+        if f.is_assert() {
+            self.prop(f.prop, f.reason, comp)
         } else {
             Action::Continue
         }

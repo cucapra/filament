@@ -1,5 +1,5 @@
 use super::Component;
-use crate::{utils::Idx};
+use crate::utils::Idx;
 
 /// A context for storing values with their indices.
 /// The context is indexed by [Idx<T>].
