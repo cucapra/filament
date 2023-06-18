@@ -17,9 +17,13 @@ impl ir::Component {
     ) -> ExprIdx {
         match expr {
             ast::Expr::Concrete(v) => self.add(ir::Expr::Concrete(v)),
-            ast::Expr::Abstract(id) => *binding.find(&id).expect(&format!(
-                "Missing binding for {id} while interning expression."
-            )),
+            ast::Expr::Abstract(id) => {
+                *binding.find(&id).unwrap_or_else(|| {
+                    panic!(
+                        "Missing binding for {id} while interning expression."
+                    )
+                })
+            }
             ast::Expr::Op { op, left, right } => {
                 let l = self.add_expr(*left, binding);
                 let r = self.add_expr(*right, binding);
@@ -46,17 +50,14 @@ impl ir::Component {
         prop: ast::OrderConstraint<ast::Expr>,
         binding: &Binding<ExprIdx>,
     ) -> PropIdx {
-        match prop {
-            ast::OrderConstraint { left, right, op } => {
-                let lhs = self.add_expr(left, binding);
-                let rhs = self.add_expr(right, binding);
-                self.add(ir::Prop::Cmp(match op {
-                    ast::OrderOp::Eq => ir::CmpOp::eq(lhs, rhs),
-                    ast::OrderOp::Gt => ir::CmpOp::gt(lhs, rhs),
-                    ast::OrderOp::Gte => ir::CmpOp::gte(lhs, rhs),
-                }))
-            }
-        }
+        let ast::OrderConstraint { left, right, op } = prop;
+        let lhs = self.add_expr(left, binding);
+        let rhs = self.add_expr(right, binding);
+        self.add(ir::Prop::Cmp(match op {
+            ast::OrderOp::Eq => ir::CmpOp::eq(lhs, rhs),
+            ast::OrderOp::Gt => ir::CmpOp::gt(lhs, rhs),
+            ast::OrderOp::Gte => ir::CmpOp::gte(lhs, rhs),
+        }))
     }
 
     fn add_implication(
@@ -80,7 +81,6 @@ impl ir::Component {
 
 impl Assume {
     fn prop(
-        &mut self,
         p: ir::PropIdx,
         info: ir::InfoIdx,
         comp: &mut ir::Component,
@@ -139,17 +139,17 @@ impl Assume {
             }
             ir::Prop::And(lhs, rhs) => {
                 let (lhs, rhs) = (*lhs, *rhs);
-                let laction = self.prop(lhs, info, comp);
+                let laction = Assume::prop(lhs, info, comp);
                 match laction {
                     Action::AddBefore(cmds) => {
-                        match self.prop(rhs, info, comp) {
+                        match Assume::prop(rhs, info, comp) {
                             Action::AddBefore(rcmds) => Action::AddBefore(cmds.into_iter().chain(rcmds.into_iter()).collect()),
                             Action::Continue => Action::AddBefore(cmds),
                             Action::Stop => unreachable!("Processing assumption generation returned stop action"),
                             Action::Change(_) => unreachable!("Processing assumption generation returned change action")
                         }
                     }
-                    Action::Continue => self.prop(rhs, info, comp),
+                    Action::Continue => Assume::prop(rhs, info, comp),
                     Action::Stop => unreachable!(
                         "Processing assumption generation returned stop action"
                     ),
@@ -166,7 +166,7 @@ impl Assume {
 impl Visitor for Assume {
     fn fact(&mut self, f: &mut ir::Fact, comp: &mut ir::Component) -> Action {
         if f.is_assume() {
-            self.prop(f.prop, f.reason, comp)
+            Assume::prop(f.prop, f.reason, comp)
         } else {
             Action::Continue
         }
