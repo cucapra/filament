@@ -1,4 +1,5 @@
 import "fp-mul.fil";
+import "primitives/float.fil";
 
 extern "fp-mult-nopipe.sv" {
   comp FP_Mult_NoPipe<G: 1>(
@@ -19,10 +20,13 @@ comp main<G: 1>(
 ) -> (
   @[G, G+1] out: 32,
   @[G, G+1] verilog_nopipe: 32,
+  @[G, G+1] filament_lib: 32
 ) {
   np := new FP_Mult_NoPipe<G>(left, right);
   f := new FPMult<G>(left, right);
+  prim := new FMult[32, 8, 23]<G>(left, right);
 
   verilog_nopipe = np.res;
   out = f.out;
+  filament_lib = prim.out;
 }
