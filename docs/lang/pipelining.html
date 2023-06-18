@@ -274,9 +274,9 @@ comp main&lt;G: 1&gt;(
  18 │     mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
     │                                        ^^^^^^ source is available for @[G+3, G+4]
     │
-    ┌─ ./primitives/./comb.fil:157:13
+    ┌─ ./primitives/./comb.fil:170:13
     │
-157 │     @[G, L] in1: #WIDTH,
+170 │     @[G, L] in1: #WIDTH,
     │             --- destination's requirement @[G+2, G+3]
 </code></pre>
 <p>Filament tells us that <code>FastMult</code>'s <code>out</code> port is available in the interval [G+3, G+4) instead of [G+2, G+3) for <code>Mult</code>, i.e., the latency of <code>FastMult</code> is different from the latency of <code>Mult</code>.</p>
