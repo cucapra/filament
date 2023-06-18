@@ -42,7 +42,7 @@ impl From<Op> for utils::SExp {
 
 /// A struct representing the assumptions necessary to validate custom functions
 pub struct FnAssume {
-    assumptions: Vec<Implication<Expr>>,
+    pub assumptions: Vec<Implication<Expr>>,
 }
 
 impl FnAssume {
@@ -68,12 +68,12 @@ impl FnAssume {
     }
 
     /// Get a reference to the left id
-    fn left() -> Id {
+    pub fn left() -> Id {
         FnAssume::replaceable_ids().0
     }
 
     /// Get a reference to the right id
-    fn right() -> Id {
+    pub fn right() -> Id {
         FnAssume::replaceable_ids().1
     }
 
