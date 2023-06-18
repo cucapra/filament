@@ -31,7 +31,7 @@ fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize
 """
 
 # [[tests]]
-# name = "ir gen"
+# name = "ir-gen"
 # paths = [
 #   "tests/compile/*.fil"
 # ]
