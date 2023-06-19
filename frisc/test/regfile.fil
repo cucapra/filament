@@ -12,7 +12,7 @@ comp main<G:1>(
   @[G,G+1] rs1:32,
   @[G,G+1] rs2:32
 ) {
-  rf := new RegFile<G>(reset,en,rd,data,rin1,rin2);
+  rf := new RegFile<G>(reset, en,rd,data,rin1,rin2);
   rs1 = rf.rs1;
   rs2 = rf.rs2;
 }
