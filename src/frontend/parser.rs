@@ -734,7 +734,7 @@ impl FilamentParser {
                     imports: imps,
                     externs: vec![],
                     components: vec![],
-                    toplevel: "".to_string(),
+                    toplevel: "main".to_string(),
                 };
                 for m in mixed {
                     match m {
