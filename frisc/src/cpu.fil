@@ -8,7 +8,7 @@ import "primitives/core.fil";
 comp CPU<G:1> (
   clk:1,
   @[G,G+1] reset:1,
-  @[G,G+1] instr:32
+  @[G,G+1] instr:32,
 ) -> (
   @[G,G+1] pc:32,
   @[G,G+1] isLoad:1,
@@ -29,6 +29,8 @@ comp CPU<G:1> (
 
  /* ================ PC ======================= */
 
+  const1 := new Const[1,1]<G>();
+  //r0 := new Register[32]<G,G+2>(nextPC.out);
   pc := new PC<G>(reset, nextPC.out);
 
   // nextPC = isJAL ? Jimm : isAUIPC ? Uimm : Bimm
