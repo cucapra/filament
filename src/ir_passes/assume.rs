@@ -5,11 +5,12 @@ use crate::{
     utils::Binding,
 };
 
+/// Generates default assumptions to the Filament program for assumptions using custom functions
 #[derive(Default)]
 pub struct Assume;
 
 impl ir::Component {
-    /// Interns a new [ir::Expr] from an [ast::Expr] given a binding on [ir::ExprIdx]
+    /// Interns new [ir::Expr]s generated from an [ast::Expr] given a binding on [ir::ExprIdx]
     fn add_expr(
         &mut self,
         expr: ast::Expr,
@@ -45,6 +46,7 @@ impl ir::Component {
         }
     }
 
+    /// Interns a new [ir::Prop] from an [ast::OrderConstraint].
     fn add_orderconstraint(
         &mut self,
         prop: ast::OrderConstraint<ast::Expr>,
@@ -60,6 +62,7 @@ impl ir::Component {
         }))
     }
 
+    /// Interns a new [ir::Prop] from an [ast::Implication].
     fn add_implication(
         &mut self,
         prop: ast::Implication<ast::Expr>,
@@ -80,12 +83,10 @@ impl ir::Component {
 }
 
 impl Assume {
-    fn prop(
-        p: ir::PropIdx,
-        info: ir::InfoIdx,
-        comp: &mut ir::Component,
-    ) -> Action {
-        log::debug!("Checking assumptions for {p}");
+    /// Checks a proposition for whether it matches the form `#l = f(#r)` for some custom function `f`. Additionally recurses on `&` chains.
+    /// Generates the assumptions associated with each [ast::UnFn] and returns a list of [ir::Prop]s for each.
+    /// TODO: Implement assumption generation for functions taking more than one argument.
+    fn prop(p: ir::PropIdx, comp: &mut ir::Component) -> Vec<PropIdx> {
         let p = comp.get(p);
         match p {
             ir::Prop::Cmp(ir::CmpOp {
@@ -93,72 +94,56 @@ impl Assume {
                 lhs,
                 rhs,
             }) => {
-                let exprs = comp.exprs();
-                let funcmatch = match (exprs.get(*lhs), exprs.get(*rhs)) {
+                // Matches over the cases `op(args) = rhs` and `lhs = op(args)` to
+                // define the `op`, `left`, and `right` for the equivalent equation `left = op(right)`
+                if let Some((op, left, right)) = match (
+                    comp.get(*lhs),
+                    comp.get(*rhs),
+                ) {
                     (ir::Expr::Fn { op, args }, _) => {
-                        debug_assert!(args.len() == 1, "Currently Unimplemented: {} requires {} arguments, automatic assumptions only implemented for single argument functions.", op, args.len());
-                        Some((
-                            op,
-                            Binding::new(vec![
-                                (FnAssume::left(), *rhs),
-                                (FnAssume::right(), args[0]),
-                            ]),
-                        ))
+                        assert!(
+                            args.len() == 1,
+                            "Currently Unimplemented: {} requires {} arguments, automatic assumptions only implemented for single argument functions.",
+                            op, args.len()
+                        );
+                        Some((op, *rhs, args[0]))
                     }
                     (_, ir::Expr::Fn { op, args }) => {
-                        debug_assert!(args.len() == 1, "Currently Unimplemented: {} requires {} arguments, automatic assumptions only implemented for single argument functions.", op, args.len());
-                        Some((
-                            op,
-                            Binding::new(vec![
-                                (FnAssume::left(), *lhs),
-                                (FnAssume::right(), args[0]),
-                            ]),
-                        ))
+                        assert!(
+                            args.len() == 1,
+                            "Currently Unimplemented: {} requires {} arguments, automatic assumptions only implemented for single argument functions.",
+                            op, args.len()
+                        );
+                        Some((op, *lhs, args[0]))
                     }
                     _ => None,
-                };
-
-                match funcmatch {
-                    None => Action::Continue,
-                    Some((op, binding)) => {
-                        log::debug!("Matched function");
-                        Action::AddBefore(
-                            FnAssume::from(op.clone())
-                                .assumptions
-                                .into_iter()
-                                .filter_map(|assumption| {
-                                    let imp = comp
-                                        .add_implication(assumption, &binding);
-                                    log::debug!("Assuming {}", imp);
-                                    comp.assume(imp, info)
-                                })
-                                .collect(),
-                        )
-                    }
+                } {
+                    log::debug!("Generating default assumptions for {p}");
+                    // Creates the binding for the left and right [ExprIdx]s
+                    let binding = Binding::new(vec![
+                        (FnAssume::left(), left),
+                        (FnAssume::right(), right),
+                    ]);
+                    FnAssume::from(op.clone())
+                        .assumptions
+                        .into_iter()
+                        .map(|assumption| {
+                            comp.add_implication(assumption, &binding)
+                        })
+                        .collect()
+                } else {
+                    vec![]
                 }
             }
+            // Recurse on both the left and right subexpressions if the proposition is of the form `l & r`
             ir::Prop::And(lhs, rhs) => {
                 let (lhs, rhs) = (*lhs, *rhs);
-                let laction = Assume::prop(lhs, info, comp);
-                match laction {
-                    Action::AddBefore(cmds) => {
-                        match Assume::prop(rhs, info, comp) {
-                            Action::AddBefore(rcmds) => Action::AddBefore(cmds.into_iter().chain(rcmds.into_iter()).collect()),
-                            Action::Continue => Action::AddBefore(cmds),
-                            Action::Stop => unreachable!("Processing assumption generation returned stop action"),
-                            Action::Change(_) => unreachable!("Processing assumption generation returned change action")
-                        }
-                    }
-                    Action::Continue => Assume::prop(rhs, info, comp),
-                    Action::Stop => unreachable!(
-                        "Processing assumption generation returned stop action"
-                    ),
-                    Action::Change(_) => unreachable!(
-                    "Processing assumption generation returned change action"
-                ),
-                }
+                Assume::prop(lhs, comp)
+                    .into_iter()
+                    .chain(Assume::prop(rhs, comp).into_iter())
+                    .collect()
             }
-            _ => Action::Continue,
+            _ => vec![],
         }
     }
 }
@@ -166,7 +151,12 @@ impl Assume {
 impl Visitor for Assume {
     fn fact(&mut self, f: &mut ir::Fact, comp: &mut ir::Component) -> Action {
         if f.is_assume() {
-            Assume::prop(f.prop, f.reason, comp)
+            Action::AddBefore(
+                Assume::prop(f.prop, comp)
+                    .into_iter()
+                    .filter_map(|prop| comp.assume(prop, f.reason))
+                    .collect(),
+            )
         } else {
             Action::Continue
         }
