@@ -5,8 +5,12 @@ comp main<G:1> (
   @[G,G+1] reset:1,
   @[G,G+1] instr:32
 ) -> (
+  @[G,G+1] pc:32,
+  @[G,G+1] isLoad:1,
+  @[G,G+1] isStore:1,
   @[G,G+1] out:32,
 ) {
   cpu := new CPU<G>(reset, instr);
   out = cpu.out;
+  pc = cpu.pc;
 }

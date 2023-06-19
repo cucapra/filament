@@ -2,6 +2,8 @@ import "frisc/src/alu.fil";
 import "frisc/src/decode.fil";
 import "frisc/src/regfile.fil";
 import "frisc/src/extras/extras.fil";
+import "frisc/src/pc.fil";
+import "primitives/core.fil";
 
 comp CPU<G:1> (
   clk:1,
@@ -25,9 +27,35 @@ comp CPU<G:1> (
 
   alu := new ALU<G>(rf.rs1, aluInB.out, decoder.funct, decoder.isAdd, decoder.isArith);
 
-  //pc := new PC<G>
+ /* ================ PC ======================= */
+
+  pc := new PC<G>(reset, nextPC.out);
+
+  // nextPC = isJAL ? Jimm : isAUIPC ? Uimm : Bimm
+  // for jumps
+  pcAdderImm := new Add[32];
+
+  // not jumps
+  pcAdder := new Add[32];
+
+  // Compute what we add to PC
+  // isJAL ? Jimm : isAUIPC ? Uimm : Bimm
+  t0 := new Mux[32]<G>(decoder.isAUIPC, decoder.Uimm, decoder.Bimm);
+  t1 := new Mux[32]<G>(decoder.isJAL, decoder.Jimm, t0.out);
+
+  // No jumps - add 4
+  const4 := new Const[32,4]<G>();
+
+  // compute nextPC
+  pcPlusImm := pcAdderImm<G>(pc.pc, t1.out);
+  pcPlus4 := pcAdder<G>(pc.pc, const4.out);
+
+  // isBranch || isJAL || isAUIPC
+  branchJmp := new Or[1]<G>(decoder.isBranch, decoder.isJAL);
+  branchJmpAUIPC := new Or[1]<G>(branchJmp.out, decoder.isAUIPC);
+
+  nextPC := new Mux[32]<G>(branchJmpAUIPC.out, pcPlusImm.out, pcPlus4.out);
 
   out = alu.out;
-  // aluInA = rf.rs1;
-  // aluInB = aluInB.out;
+  pc = pc.pc;
 }
