@@ -9,7 +9,7 @@ error: source port must be available longer than the destination port requires
    │
    ┌─ ./primitives/./comb.fil:23:13
    │
-23 │     @[G, L] left: #WIDTH,
+23 │     @[G, L] left: #IN_WIDTH,
    │             ---- destination's requirement @[G+1, G+2]
 
 error: source port must be available longer than the destination port requires

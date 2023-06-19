@@ -28,15 +28,13 @@ module FP_Mult_NoPipe (
   assign round = |product_normalised[22:0];  // Last 22 bits are ORed for rounding off purpose
   assign product_mantissa = product_normalised[46:24] + (product_normalised[23] & round); 					// Mantissa
 
-  assign zero = exception ? 1'b0 :
-                (product_mantissa == 23'd0) ? 1'b1 :
-                1'b0;
+  assign zero = exception | (product_mantissa == 23'd0) ;
 
   assign sum_exponent = a[30:23] + b[30:23];
   assign exp_norm = sum_exponent - 8'd127;
   assign exponent = exp_norm + normalised;
-  assign overflow = ((exponent[8] & !exponent[7]) & !zero) ; 									// Overall exponent is greater than 255 then Overflow
-  assign underflow = ((exponent[8] & exponent[7]) & !zero) ? 1'b1 : 1'b0; 							// Sum of exponents is less than 255 then Underflow
+  assign overflow = (exponent[8] & !zero & !exponent[7]) ; 									// Overall exponent is greater than 255 then Overflow
+  assign underflow = (exponent[8] & !zero & exponent[7]) ; 							// Sum of exponents is less than 255 then Underflow
   assign res = exception ? 32'd0 :
                zero ? {sign,31'd0} :
                overflow ? {sign,8'hFF,23'd0} :

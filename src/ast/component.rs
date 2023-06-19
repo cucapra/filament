@@ -86,6 +86,7 @@ impl Namespace {
             .flat_map(|(_, comps)| comps.iter().map(|s| (*s.name.inner(), s)))
     }
 
+    /// Creates an iterator over the signatures associated with the namespace
     pub fn signatures(&self) -> impl Iterator<Item = (Id, &Signature)> {
         self.externals().chain(
             self.components

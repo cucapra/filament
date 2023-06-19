@@ -96,6 +96,7 @@ def check(args):
         fd = sys.stdin
     else:
         fd = open(args.file, 'r')
+    
     j = json.load(fd)
     for k in j[args.fields[0]].keys():
         vals = [j[f][k] for f in args.fields]
@@ -153,7 +154,7 @@ if __name__ == '__main__':
     check_parser.add_argument(
         "-f", "--file", help="JSON file to be checked")
     check_parser.add_argument(
-        "--fields", nargs='+', default=["gold", "verilog_nopipe", "out", "verilog_pipe"])
+        "--fields", nargs='+', default=["gold", "verilog_nopipe", "out", "verilog_pipe", "filament_lib"])
     check_parser.set_defaults(func=check)
 
     args = parser.parse_args()

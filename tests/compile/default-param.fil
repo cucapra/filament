@@ -1,0 +1,16 @@
+import "primitives/core.fil";
+
+comp main<G: 1>(
+    @interface[G] en: 1,
+    @[G, G+1] left: 32,
+    @[G, G+1] right: 32,
+) -> (
+    @[G, G+1] out0: 32,
+    @[G, G+1] out1: 64
+) {
+    m0 := new MultComb[32]<G>(left, right);
+    m1 := new MultComb[32, 64]<G>(left, right);
+
+    out0 = m0.out;
+    out1 = m1.out;
+}
