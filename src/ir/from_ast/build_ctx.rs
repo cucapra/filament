@@ -2,7 +2,6 @@ use super::ScopeMap;
 use crate::ast::{self, Id};
 use crate::ir::{self, CompIdx, Ctx, DenseIndexInfo, PortIdx};
 use crate::utils;
-use itertools::Itertools;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -13,7 +12,7 @@ use std::rc::Rc;
 /// the signature.
 pub struct Sig {
     pub idx: CompIdx,
-    pub params: Vec<ast::Id>,
+    pub params: Vec<ast::ParamBind>,
     pub events: Vec<ast::EventBind>,
     pub inputs: Vec<ast::Loc<ast::PortDef>>,
     pub outputs: Vec<ast::PortDef>,
@@ -25,8 +24,8 @@ impl From<(&ast::Signature, usize)> for Sig {
     fn from((sig, idx): (&ast::Signature, usize)) -> Self {
         Sig {
             idx: CompIdx::new(idx),
-            params: sig.params.iter().map(|p| p.copy()).collect(),
-            inputs: sig.inputs().cloned().collect_vec(),
+            params: sig.params.iter().map(|p| p.clone().take()).collect(),
+            inputs: sig.inputs().cloned().collect(),
             outputs: sig.outputs().map(|p| p.clone().take()).collect(),
             events: sig.events.iter().map(|e| e.clone().take()).collect(),
             param_cons: sig.param_constraints.clone(),

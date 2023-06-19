@@ -9,7 +9,7 @@ error: source port does not provide value for as long as destination requires
    │
    ┌─ ./primitives/./comb.fil:23:13
    │
-23 │     @[G, L] left: #WIDTH,
+23 │     @[G, L] left: #IN_WIDTH,
    │             ---- requires value for @[G+1, G+2]
 
 error: source port does not provide value for as long as destination requires

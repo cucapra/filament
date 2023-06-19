@@ -32,11 +32,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             bindings,
         } = inst;
         let comp = self.sigs.get(component).unwrap();
-        let binding = Binding::new(
-            comp.params
-                .iter()
-                .copied()
-                .zip(bindings.clone().into_iter().map(|b| b.take())),
+        let binding = self.param_binding(
+            comp.params.clone(),
+            bindings.iter().map(|e| e.inner()).cloned().collect_vec(),
         );
         let inst = ir::Instance {
             comp: comp.idx,
@@ -78,7 +76,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
         // Event bindings
         let event_binding = self.event_binding(
-            &sig.events,
+            sig.events.clone(),
             abstract_vars.iter().map(|v| v.inner().clone()),
         );
 
@@ -193,13 +191,13 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     /// Add a parameter to the component.
     fn param(
         &mut self,
-        param: ast::Id,
+        param: &ast::ParamBind,
         owner: ir::ParamOwner,
-        pos: GPosIdx,
     ) -> ParamIdx {
-        let info = self.comp.add(ir::Info::param(param, pos));
-        let idx = self.comp.add(ir::Param::new(owner, info));
-        self.add_param(param, idx);
+        let default = param.default.as_ref().map(|e| self.expr(e.clone()));
+        let info = self.comp.add(ir::Info::param(param.name(), param.pos()));
+        let idx = self.comp.add(ir::Param::new(owner, info, default));
+        self.add_param(param.name(), idx);
         idx
     }
 
@@ -287,10 +285,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 let p_name = self.gen_name();
                 let live = self.with_scope(|ctx| ir::Liveness {
                     idx: ctx.param(
-                        p_name,
+                        &ast::ParamBind::from(p_name),
                         // Updated after the port is constructed
                         ir::ParamOwner::bundle(ir::PortIdx::UNKNOWN),
-                        GPosIdx::UNKNOWN,
                     ), // This parameter is unused
                     len: ctx.comp.num(1),
                     range: ctx.range(liveness.take()),
@@ -322,10 +319,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 // Construct the bundle type in a new scope.
                 let live = self.with_scope(|ctx| ir::Liveness {
                     idx: ctx.param(
-                        *idx,
                         // Updated after the port is constructed
+                        &ast::ParamBind::from(idx),
                         ir::ParamOwner::bundle(PortIdx::UNKNOWN),
-                        idx.pos(),
                     ),
                     len: ctx.expr(len.take()),
                     range: ctx.range(liveness.take()),
@@ -411,7 +407,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     fn sig(&mut self, sig: ast::Signature) -> Vec<ir::Command> {
         for param in &sig.params {
-            self.param(param.copy(), ir::ParamOwner::Sig, param.pos());
+            self.param(param.inner(), ir::ParamOwner::Sig);
         }
         // Declare the events first
         for event in &sig.events {
@@ -491,10 +487,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     /// Fills in the missing arguments with default values
     pub fn event_binding(
         &self,
-        events: &[ast::EventBind],
+        events: impl IntoIterator<Item = ast::EventBind>,
         args: impl IntoIterator<Item = ast::Time>,
     ) -> Binding<ast::Time> {
         let args = args.into_iter().collect_vec();
+        let events = events.into_iter().collect_vec();
         assert!(
             events.iter().take_while(|ev| ev.default.is_none()).count()
                 <= args.len(),
@@ -527,6 +524,40 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         partial_map
     }
 
+    /// Construct a param binding from this Signature's parameters and the given
+    /// arguments.
+    /// Fills in the missing arguments with default values
+    pub fn param_binding(
+        &self,
+        params: impl IntoIterator<Item = ast::ParamBind>,
+        args: impl IntoIterator<Item = ast::Expr>,
+    ) -> Binding<ast::Expr> {
+        let args = args.into_iter().collect_vec();
+        let params = params.into_iter().collect_vec();
+        assert!(
+            params.iter().take_while(|ev| ev.default.is_none()).count()
+                <= args.len(),
+            "Insuffient params for component invocation.",
+        );
+
+        let mut partial_map = Binding::new(
+            params.iter().map(|pb| pb.name()).zip(args.iter().cloned()),
+        );
+        // Skip the events that have been bound
+        let remaining = params
+            .iter()
+            .skip(args.len())
+            .map(|pb| {
+                let bind =
+                    pb.default.as_ref().unwrap().clone().resolve(&partial_map);
+                (pb.name(), bind)
+            })
+            .collect();
+
+        partial_map.extend(remaining);
+        partial_map
+    }
+
     /// This function is called during the second pass of the conversion and does the following:
     /// * Defines the input ports of the invocation
     /// * Generate event bindings implied by the invocation
@@ -548,7 +579,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
         // Event bindings
         let event_binding = self.event_binding(
-            &sig.events,
+            sig.events.iter().cloned(),
             abstract_vars.iter().map(|v| v.inner().clone()),
         );
 
@@ -678,10 +709,18 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             }) => {
                 let start = self.expr(start);
                 let end = self.expr(end);
+                // Assumption that the index is within range
+                let reason = self.comp.add(
+                    ir::Reason::misc("loop index is within range", idx.pos())
+                        .into(),
+                );
+
                 // Compile the body in a new scope
                 let (index, body) = self.with_scope(|this| {
-                    let pos = idx.pos();
-                    let idx = this.param(idx.copy(), ir::ParamOwner::Loop, pos);
+                    let idx = this.param(
+                        &ast::ParamBind::from(idx),
+                        ir::ParamOwner::Loop,
+                    );
                     (idx, this.commands(body))
                 });
                 let l = ir::Loop {
@@ -691,11 +730,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     body,
                 }
                 .into();
-                // Assumption that the index is within range
-                let reason = self.comp.add(
-                    ir::Reason::misc("loop index is within range", idx.pos())
-                        .into(),
-                );
                 let index = index.expr(self.comp);
                 let idx_start = index.gte(start, self.comp);
                 let idx_end = index.lt(end, self.comp);
