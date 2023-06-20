@@ -7,19 +7,13 @@ component main () -> (out:32) {
     @external res = seq_mem_d1(32,5,32);
     cpu = CPU();
 
-    pc = std_reg(32);
-    pc1 = std_reg(32);
-    pc_adder = std_add(32);
-
-    add_cond = std_add(32);
+    pc_reg = std_reg(32);
   }
   wires {
-    // static<1> group init {
-    //   pc.in = 32'd0;
-    //   pc.write_en = 1'd1;
-    //   pc1.in = 32'd0;
-    //   pc1.write_en = 1'd1;
-    // }
+    static<1> group init {
+      pc_reg.in = 32'd0;
+      pc_reg.write_en = 1'b1;
+    }
 
     static<1> group read_iram {
       iram.addr0 = cpu.pc;
@@ -27,26 +21,28 @@ component main () -> (out:32) {
       cpu.instr = iram.read_data;
     }
 
-    // static<1> group inc_counter {
-    //   add_cond.left = pc.out;
-    //   add_cond.right = 32'd1;
-    //   pc.in = add_cond.out;
-    //   pc.write_en = %0 ? 1'd1;
-    //   pc1.in = pc.out;
-    //   pc1.write_en = %0 ? 1'd1;
-    // }
-
     static<1> group write_res {
-      res.addr0 = cpu.pc;
+      res.addr0 = pc_reg.out;
       res.write_data = cpu.out;
       res.write_en = %0 ? 1'd1;
     }
+
+    static<1> group reg_pc {
+      pc_reg.in = cpu.pc;
+      pc_reg.write_en = 1'd1;
+    }
+
+    cpu.pcin = cpu.nextpc;
   }
   control {
-    static repeat 6 {
-      static par {
-        read_iram;
-        write_res;
+    static seq {
+      init;
+      static repeat 6 {
+        static par {
+          read_iram;
+          write_res;
+          reg_pc;
+        } 
       }
     }
   }

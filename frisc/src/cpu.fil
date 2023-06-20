@@ -9,8 +9,10 @@ comp CPU<G:1> (
   clk:1,
   @[G,G+1] reset:1,
   @[G,G+1] instr:32,
+  @[G,G+1] pcin:32,
 ) -> (
   @[G,G+1] pc:32,
+  @[G,G+1] nextpc:32,
   @[G,G+1] isLoad:1,
   @[G,G+1] isStore:1,
   @[G,G+1] out:32,
@@ -29,9 +31,7 @@ comp CPU<G:1> (
 
  /* ================ PC ======================= */
 
-  const1 := new Const[1,1]<G>();
-  //r0 := new Register[32]<G,G+2>(nextPC.out);
-  pc := new PC<G>(reset, nextPC.out);
+  pc := new PC<G>(reset, pcin);
 
   // nextPC = isJAL ? Jimm : isAUIPC ? Uimm : Bimm
   // for jumps
@@ -45,19 +45,20 @@ comp CPU<G:1> (
   t0 := new Mux[32]<G>(decoder.isAUIPC, decoder.Uimm, decoder.Bimm);
   t1 := new Mux[32]<G>(decoder.isJAL, decoder.Jimm, t0.out);
 
-  // No jumps - add 4
-  const4 := new Const[32,4]<G>();
+  // No jumps - next instr
+  const1 := new Const[32,1]<G>();
 
   // compute nextPC
   pcPlusImm := pcAdderImm<G>(pc.pc, t1.out);
-  pcPlus4 := pcAdder<G>(pc.pc, const4.out);
+  pcPlus4 := pcAdder<G>(pc.pc, const1.out);
 
   // isBranch || isJAL || isAUIPC
   branchJmp := new Or[1]<G>(decoder.isBranch, decoder.isJAL);
-  branchJmpAUIPC := new Or[1]<G>(branchJmp.out, decoder.isAUIPC);
+  useImm := new Or[1]<G>(branchJmp.out, decoder.isAUIPC);
 
-  nextPC := new Mux[32]<G>(branchJmpAUIPC.out, pcPlusImm.out, pcPlus4.out);
+  nextPC := new Mux[32]<G>(useImm.out, pcPlusImm.out, pcPlus4.out);
 
   out = alu.out;
+  nextpc = nextPC.out;
   pc = pc.pc;
 }
