@@ -16,14 +16,17 @@ impl ir::Component {
         lhs: ExprIdx,
         rhs: ExprIdx,
     ) -> Vec<PropIdx> {
+        // Define constant expressions used
         let zero = self.add(ir::Expr::Concrete(0));
         let one = self.add(ir::Expr::Concrete(1));
         let two = self.add(ir::Expr::Concrete(2));
 
         match f {
             ast::UnFn::Pow2 => vec![
+                // #l * 2 = pow2(#r + 1)
                 lhs.mul(two, self)
                     .equal(rhs.add(one, self).pow2(self), self),
+                // #r >= 1 => #l = pow2(#r - 1)*2
                 rhs.gte(one, self).implies(
                     lhs.equal(
                         rhs.sub(one, self).pow2(self).mul(two, self),
@@ -31,18 +34,24 @@ impl ir::Component {
                     ),
                     self,
                 ),
+                // #l = 1 => #r = 0
                 lhs.equal(one, self).implies(rhs.equal(zero, self), self),
+                // #r = 0 => #l = 1
                 rhs.equal(zero, self).implies(lhs.equal(one, self), self),
             ],
             ast::UnFn::Log2 => vec![
+                // #l + 1 = log2(#r * 2)
                 lhs.add(one, self)
                     .equal(rhs.mul(two, self).log2(self), self),
+                // #l >= 1 => #l - 1 = log2(#r / 2)
                 lhs.gte(one, self).implies(
                     lhs.sub(one, self)
                         .equal(rhs.div(two, self).log2(self), self),
                     self,
                 ),
+                // #l = 0 => #r = 1
                 lhs.equal(zero, self).implies(rhs.equal(one, self), self),
+                // #r = 1 => #l = 0
                 rhs.equal(one, self).implies(lhs.equal(zero, self), self),
             ],
         }
