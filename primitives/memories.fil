@@ -1,0 +1,11 @@
+extern "memories.sv" {
+  comp StdMem1D[#DATA_WIDTH, #SIZE, #ADDR_WIDTH]<G: 1>(
+    clk:1,
+    reset:1,
+    @[G,G+1] addr0: #ADDR_WIDTH,
+    @[G,G+1] write_data: #DATA_WIDTH,
+    @[G,G+1] write_en:1
+  ) -> (
+    @[G,G+1] read_data: #DATA_WIDTH,
+  );
+}
