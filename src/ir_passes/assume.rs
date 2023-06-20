@@ -1,8 +1,7 @@
 use crate::{
-    ast::{self, FnAssume},
+    ast,
     ir::{self, Ctx, ExprIdx, PropIdx},
     ir_visitor::{Action, Visitor},
-    utils::Binding,
 };
 
 /// Generates default assumptions to the Filament program for assumptions using custom functions
@@ -10,74 +9,42 @@ use crate::{
 pub struct Assume;
 
 impl ir::Component {
-    /// Interns new [ir::Expr]s generated from an [ast::Expr] given a binding on [ir::ExprIdx]
-    fn add_expr(
+    /// Adds the assumptions associated with a proposition of the form `#l = f(#r)` to the component.
+    fn add_assumptions(
         &mut self,
-        expr: ast::Expr,
-        binding: &Binding<ExprIdx>,
-    ) -> ExprIdx {
-        match expr {
-            ast::Expr::Concrete(v) => self.add(ir::Expr::Concrete(v)),
-            ast::Expr::Abstract(id) => {
-                *binding.find(&id).unwrap_or_else(|| {
-                    panic!(
-                        "Missing binding for {id} while interning expression."
-                    )
-                })
-            }
-            ast::Expr::Op { op, left, right } => {
-                let l = self.add_expr(*left, binding);
-                let r = self.add_expr(*right, binding);
-                match op {
-                    ast::Op::Add => l.add(r, self),
-                    ast::Op::Mul => l.mul(r, self),
-                    ast::Op::Sub => l.sub(r, self),
-                    ast::Op::Div => l.div(r, self),
-                    ast::Op::Mod => l.rem(r, self),
-                }
-            }
-            ast::Expr::App { func, arg } => {
-                let arg = self.add_expr(*arg, binding);
-                match func {
-                    ast::UnFn::Pow2 => arg.pow2(self),
-                    ast::UnFn::Log2 => arg.log2(self),
-                }
-            }
-        }
-    }
+        f: ast::UnFn,
+        lhs: ExprIdx,
+        rhs: ExprIdx,
+    ) -> Vec<PropIdx> {
+        let zero = self.add(ir::Expr::Concrete(0));
+        let one = self.add(ir::Expr::Concrete(1));
+        let two = self.add(ir::Expr::Concrete(2));
 
-    /// Interns a new [ir::Prop] from an [ast::OrderConstraint].
-    fn add_orderconstraint(
-        &mut self,
-        prop: ast::OrderConstraint<ast::Expr>,
-        binding: &Binding<ExprIdx>,
-    ) -> PropIdx {
-        let ast::OrderConstraint { left, right, op } = prop;
-        let lhs = self.add_expr(left, binding);
-        let rhs = self.add_expr(right, binding);
-        self.add(ir::Prop::Cmp(match op {
-            ast::OrderOp::Eq => ir::CmpOp::eq(lhs, rhs),
-            ast::OrderOp::Gt => ir::CmpOp::gt(lhs, rhs),
-            ast::OrderOp::Gte => ir::CmpOp::gte(lhs, rhs),
-        }))
-    }
-
-    /// Interns a new [ir::Prop] from an [ast::Implication].
-    fn add_implication(
-        &mut self,
-        prop: ast::Implication<ast::Expr>,
-        binding: &Binding<ExprIdx>,
-    ) -> PropIdx {
-        match prop {
-            ast::Implication { guard: None, cons } => {
-                self.add_orderconstraint(cons, binding)
-            }
-            ast::Implication {
-                guard: Some(g),
-                cons,
-            } => self
-                .add_orderconstraint(g, binding)
-                .implies(self.add_orderconstraint(cons, binding), self),
+        match f {
+            ast::UnFn::Pow2 => vec![
+                lhs.mul(two, self)
+                    .equal(rhs.add(one, self).pow2(self), self),
+                rhs.gte(one, self).implies(
+                    lhs.equal(
+                        rhs.sub(one, self).pow2(self).mul(two, self),
+                        self,
+                    ),
+                    self,
+                ),
+                lhs.equal(one, self).implies(rhs.equal(zero, self), self),
+                rhs.equal(zero, self).implies(lhs.equal(one, self), self),
+            ],
+            ast::UnFn::Log2 => vec![
+                lhs.add(one, self)
+                    .equal(rhs.mul(two, self).log2(self), self),
+                lhs.gte(one, self).implies(
+                    lhs.sub(one, self)
+                        .equal(rhs.div(two, self).log2(self), self),
+                    self,
+                ),
+                lhs.equal(zero, self).implies(rhs.equal(one, self), self),
+                rhs.equal(one, self).implies(lhs.equal(zero, self), self),
+            ],
         }
     }
 }
@@ -96,7 +63,7 @@ impl Assume {
             }) => {
                 // Matches over the cases `op(args) = rhs` and `lhs = op(args)` to
                 // define the `op`, `left`, and `right` for the equivalent equation `left = op(right)`
-                if let Some((op, left, right)) = match (
+                if let Some((op, lhs, rhs)) = match (
                     comp.get(*lhs),
                     comp.get(*rhs),
                 ) {
@@ -106,7 +73,7 @@ impl Assume {
                             "Currently Unimplemented: {} requires {} arguments, automatic assumptions only implemented for single argument functions.",
                             op, args.len()
                         );
-                        Some((op, *rhs, args[0]))
+                        Some((*op, *rhs, args[0]))
                     }
                     (_, ir::Expr::Fn { op, args }) => {
                         assert!(
@@ -114,23 +81,12 @@ impl Assume {
                             "Currently Unimplemented: {} requires {} arguments, automatic assumptions only implemented for single argument functions.",
                             op, args.len()
                         );
-                        Some((op, *lhs, args[0]))
+                        Some((*op, *lhs, args[0]))
                     }
                     _ => None,
                 } {
                     log::debug!("Generating default assumptions for {p}");
-                    // Creates the binding for the left and right [ExprIdx]s
-                    let binding = Binding::new(vec![
-                        (FnAssume::left(), left),
-                        (FnAssume::right(), right),
-                    ]);
-                    FnAssume::from(op.clone())
-                        .assumptions
-                        .into_iter()
-                        .map(|assumption| {
-                            comp.add_implication(assumption, &binding)
-                        })
-                        .collect()
+                    comp.add_assumptions(op, lhs, rhs)
                 } else {
                     vec![]
                 }

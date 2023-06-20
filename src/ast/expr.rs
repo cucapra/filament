@@ -103,12 +103,8 @@ impl FnAssume {
                 left,
                 right,
             } => match (left, right) {
-                (_, Expr::App { func, arg: right }) => {
-                    func.clone().assume(left, right)
-                }
-                (Expr::App { func, arg: left }, _) => {
-                    func.clone().assume(right, left)
-                }
+                (_, Expr::App { func, arg: right }) => func.assume(left, right),
+                (Expr::App { func, arg: left }, _) => func.assume(right, left),
                 _ => Vec::new(),
             },
             _ => Vec::new(),
@@ -116,7 +112,7 @@ impl FnAssume {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd)]
 /// A unary uninterpreted function over integers.
 pub enum UnFn {
     /// The `pow2` function
@@ -168,7 +164,7 @@ impl From<UnFn> for FnAssume {
                             Expr::abs(FnAssume::left()),
                             Expr::concrete(2),
                         ),
-                        func.clone().apply(Expr::op(
+                        func.apply(Expr::op(
                             Op::Add,
                             Expr::abs(FnAssume::right()),
                             Expr::concrete(1),
@@ -220,7 +216,7 @@ impl From<UnFn> for FnAssume {
                             Expr::abs(FnAssume::left()),
                             Expr::concrete(1),
                         ),
-                        func.clone().apply(Expr::op(
+                        func.apply(Expr::op(
                             Op::Mul,
                             Expr::abs(FnAssume::right()),
                             Expr::concrete(2),
