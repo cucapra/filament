@@ -43,10 +43,14 @@ impl ir::Component {
                 // #l + 1 = log2(#r * 2)
                 lhs.add(one, self)
                     .equal(rhs.mul(two, self).log2(self), self),
-                // #l >= 1 => #l - 1 = log2(#r / 2)
+                // #l >= 1 => (#l - 1 = log2(#r / 2)) & ((#r / 2) * 2 = #r)
                 lhs.gte(one, self).implies(
                     lhs.sub(one, self)
-                        .equal(rhs.div(two, self).log2(self), self),
+                        .equal(rhs.div(two, self).log2(self), self)
+                        .and(
+                            rhs.div(two, self).mul(two, self).equal(rhs, self),
+                            self,
+                        ),
                     self,
                 ),
                 // #l = 0 => #r = 1

@@ -242,6 +242,25 @@ impl From<UnFn> for FnAssume {
                             )),
                         ),
                     ),
+                    // assume #l >= 1 => #r/2*2 = #r;
+                    Implication::implies(
+                        OrderConstraint::gte(
+                            Expr::abs(FnAssume::left()),
+                            Expr::concrete(1),
+                        ),
+                        OrderConstraint::eq(
+                            Expr::op(
+                                Op::Mul,
+                                Expr::op(
+                                    Op::Div,
+                                    Expr::abs(FnAssume::right()),
+                                    Expr::concrete(2),
+                                ),
+                                Expr::concrete(2),
+                            ),
+                            Expr::abs(FnAssume::right()),
+                        ),
+                    ),
                 ]
                 .into_iter()
                 .chain(
