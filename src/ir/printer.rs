@@ -213,9 +213,10 @@ impl Printer<'_> {
         indent: usize,
         f: &mut F,
     ) -> io::Result<()> {
-        if comp.is_ext {
-            write!(f, "ext ")?;
-        }
+        match &comp.src_ext {
+            Some((file, name)) => write!(f, "ext {}::{} ", file, name)?,
+            None => (),
+        };
         write!(f, "comp {}[", comp.idx())?;
         for pos in comp
             .params()

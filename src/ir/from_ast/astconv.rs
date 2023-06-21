@@ -776,8 +776,13 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         cmds
     }
 
-    fn external(idx: CompIdx, sig: ast::Signature) -> ir::Component {
-        let mut ir_comp = ir::Component::new(idx, false);
+    fn external(
+        idx: CompIdx,
+        file: String,
+        sig: ast::Signature,
+    ) -> ir::Component {
+        let mut ir_comp =
+            ir::Component::new(idx, Some((file, *sig.name.inner())));
         let binding = SigMap::default();
         let mut builder = BuildCtx::new(&mut ir_comp, &binding);
 
@@ -793,7 +798,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         idx: CompIdx,
         sigs: &'prog SigMap,
     ) -> ir::Component {
-        let mut ir_comp = ir::Component::new(idx, false);
+        let mut ir_comp = ir::Component::new(idx, None);
         let mut builder = BuildCtx::new(&mut ir_comp, sigs);
 
         let mut cmds = builder.sig(comp.sig);
@@ -813,10 +818,10 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     }
 
     let mut ctx = ir::Context::default();
-    for (_, exts) in ns.externs {
+    for (file, exts) in ns.externs {
         for ext in exts {
             let idx = sig_map.get(&ext.name).unwrap().idx;
-            let ir_ext = BuildCtx::external(idx, ext);
+            let ir_ext = BuildCtx::external(idx, file.clone(), ext);
             ctx.comps.checked_add(idx, ir_ext);
         }
     }

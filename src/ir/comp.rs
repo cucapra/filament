@@ -4,7 +4,7 @@ use super::{
     MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeIdx,
     TimeSub,
 };
-use crate::utils::Idx;
+use crate::{ast, utils::Idx};
 
 #[derive(Default)]
 pub struct Context {
@@ -44,15 +44,15 @@ pub struct Component {
 
     /// Information tracked by the component
     info: IndexStore<Info>,
-    /// Is this an external component
-    pub is_ext: bool,
+    /// `Some(filename, componentname)` if this is an external component, `None` otherwise.
+    pub src_ext: Option<(String, ast::Id)>,
 }
 
 impl Component {
-    pub fn new(idx: CompIdx, is_ext: bool) -> Self {
+    pub fn new(idx: CompIdx, src_ext: Option<(String, ast::Id)>) -> Self {
         let mut comp = Self {
             idx,
-            is_ext,
+            src_ext,
             ports: IndexStore::default(),
             params: IndexStore::default(),
             events: IndexStore::default(),
