@@ -17,14 +17,14 @@ module StdMem1D #(
   /* verilator lint_off WIDTH */
   assign read_data = mem[addr0];
 
-  always_ff @(posedge clk) begin
-    if (reset)
-      done <= '0;
-    else if (write_en)
-      done <= '1;
-    else
-      done <= '0;
-  end
+  // always_ff @(posedge clk) begin
+  //   if (reset)
+  //     done <= '0;
+  //   else if (write_en)
+  //     done <= '1;
+  //   else
+  //     done <= '0;
+  // end
 
   always_ff @(posedge clk) begin
     if (!reset && write_en)

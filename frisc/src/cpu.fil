@@ -18,6 +18,7 @@ comp CPU<G:1> (
   @[G,G+1] isStore:1,
   @[G,G+1] out:32,
   @[G,G+1] memAddr:32,
+  @[G,G+1] memData:32,
 ) {
 
   /* ============================================================ */
@@ -56,7 +57,7 @@ comp CPU<G:1> (
   rfData := new OneHotMux[32]<G>(dInSel.out, dataMem.read_data, pcPlus4.out, pcPlusImm.out, alu.out, 
     decoder.Uimm, const0.out, const0.out, const0.out);
 
-  rf := new RegFile<G>(reset, decoder.rf_write, rd.out, alu.out, rs1.out, rs2.out);
+  rf := new RegFile<G>(reset, decoder.rf_write, rd.out, rfData.out, rs1.out, rs2.out);
 
   /* ============================================================ */
   /*  LOAD/STORE
@@ -70,7 +71,7 @@ comp CPU<G:1> (
   /*  DATA MEMORY
   /* ============================================================ */
 
-  dataMem := new StdMem1D[32, 256, 32]<G>(loadStoreAddr.out, rf.rs2, decoder.isStore);
+  dataMem := new StdMem1D[32, 256, 32]<G>(reset, loadStoreAddr.out, rf.rs2, decoder.isStore);
 
   /* ============================================================ */
   /*  ALU
@@ -122,4 +123,5 @@ comp CPU<G:1> (
   memAddr = loadStoreAddr.out;
   isLoad = decoder.isLoad;
   isStore = decoder.isStore;
+  memData = rfData.out;
 }
