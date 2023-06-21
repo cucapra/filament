@@ -3,9 +3,8 @@ import "frisc.futil";
 
 component main () -> (out:32) {
   cells {
-    @external iram = seq_mem_d1(32,5,32);
-    @external res = seq_mem_d1(32,5,32);
-    @external dram = seq_mem_d1(32,5,32);
+    @external iram = seq_mem_d1(32,6,32);
+    @external res = seq_mem_d1(32,6,32);
     cpu = CPU();
 
     pc_reg = std_reg(32);
@@ -20,13 +19,6 @@ component main () -> (out:32) {
       iram.addr0 = cpu.pc;
       iram.read_en = 1'b1;
       cpu.instr = iram.read_data;
-    }
-    
-    static<1> group access_dram {
-      dram.addr0 = cpu.memAddr;
-      dram.write_data = cpu.memDataOut; // for a store
-      dram.read_en = cpu.isLoad;
-      dram.write_en = cpu.isStore;
     }
 
     static<1> group write_res {
@@ -48,7 +40,6 @@ component main () -> (out:32) {
       static repeat 6 {
         static par {
           read_iram;
-          access_dram;
           write_res;
           reg_pc;
         } 

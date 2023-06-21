@@ -1,6 +1,6 @@
 {
   "iram": {
-    "data": [1074823347,41091,1114387,1114387,1114387],
+    "data": [1074823347,17858835,2138147,1114387,41091,2130067],
     "format": {
       "numeric_type": "bitnum",
       "is_signed": false,
@@ -8,19 +8,11 @@
     }
   },
   "res": {
-    "data": [9999,9999,9999,9999,9999],
+    "data": [9999,9999,9999,9999,9999,9999],
     "format": {
       "numeric_type": "bitnum",
       "is_signed": false,
       "width": 32
-    }
-  },
-  "dram": {
-    "data": [48,0,0,0,0],
-    "format": {
-      "numeric_type":"bitnum",
-      "is_signed":false,
-      "width":32
     }
   }
 }
