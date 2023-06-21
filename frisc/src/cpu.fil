@@ -36,7 +36,7 @@ comp CPU<G:1> (
   /* ============================================================ */
 
   // Set register file data in - use 1-hot encoding bc why not
-  // {isLUI, isALU, isAUIPC, isJ, isLoad}
+  // {0, 0, 0, isLUI, isALU, isAUIPC, isJ, isLoad}
 
   // 00000001 -> isLoad, so use memDataIn
   // 00000010 -> isJ, so use pcPlus4
@@ -54,7 +54,7 @@ comp CPU<G:1> (
   c3 := new Concat[2,3,5]<G>(c0.out, c2.out);
   dInSel := new ZeroExtend[5,8]<G>(c3.out);
 
-  rfData := new OneHotMux[32]<G>(dInSel.out, dataIn, pcPlus4.out, pcPlusImm.out, alu.out, 
+  rfData := new OneHotMux[32]<G>(dInSel.out, loadData.out, pcPlus4.out, pcPlusImm.out, alu.out, 
     decoder.Uimm, const0.out, const0.out, const0.out);
 
   rf := new RegFile<G>(reset, decoder.rf_write, rd.out, rfData.out, rs1.out, rs2.out);
@@ -62,6 +62,37 @@ comp CPU<G:1> (
   /* ============================================================ */
   /*  LOAD/STORE
   /* ============================================================ */
+
+  instr13_12 := new Slice[32,13,12,2]<G>(instr);
+  instr14 := new Select[32,14]<G>(instr);
+  byteAccess := new Eq[2]<G>(instr13_12.out, const0.out);
+  hwAccess := new Eq[2]<G>(instr13_12.out, const1.out);
+
+  hwSign := new Select[16,15]<G>(hw.out);
+  bSign := new Select[8,7]<G>(byte.out);
+
+  accessSign := new Mux[1]<G>(byteAccess.out, bSign.out, hwSign.out);
+  not14 := new Not[1]<G>(instr14.out);
+  loadSign := new And[1]<G>(not14.out, accessSign.out);
+
+  loadByteSign := new Extend[1,24]<G>(loadSign.out);
+  loadHWSign := new Extend[1,16]<G>(loadSign.out);
+
+  loadHW := new Concat[16,16,32]<G>(loadHWSign.out, hw);
+  loadByte := new Concat[24,8,32]<G>(loadByteSign.out, byte);
+
+  hwOrW := new Mux[32]<G>(hwAccess.out, loadHW.out, dataIn);
+  loadData := new Mux[32]<G>(byteAccess.out, loadByte.out, hwOrW.out);
+
+  addr1 := new Select[32,1]<G>(loadStoreAddr.out);
+  dataInUpper := new Slice[32,31,16,16]<G>(dataIn);
+  dataInLower := new Slice[32,15,0,16]<G>(dataIn);
+  hw := new Mux[32]<G>(addr1.out, dataInUpper.out, dataInLower.out);
+
+  addr0 := new Select[32,0]<G>(loadStoreAddr.out);
+  loadHUpper := new Slice[16,15,8,8]<G>(loadH.out);
+  loadHLower := new Slice[16,7,0,8]<G>(loadH.out);
+  byte := new Mux[32]<G>(addr0.out, loadHUpper.out, loadHLower.out);
 
   addrAdder := new Add[32];
   addrImm := new Mux[32]<G>(decoder.isStore, decoder.Simm, decoder.Iimm);
