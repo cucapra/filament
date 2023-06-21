@@ -8,6 +8,6 @@ cargo run -- ../src/cpu.fil --library ../.. --toplevel CPU > frisc.futil
 fud exec top.futil --to dat --through icarus-verilog -s verilog.data top.json \
   --from futil
 
-#rm frisc.futil
+rm frisc.futil
 
 rm model.smt
