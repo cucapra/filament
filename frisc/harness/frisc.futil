@@ -1,0 +1,450 @@
+extern "../../primitives/memories.sv" {
+  primitive StdMem1D[DATA_WIDTH, SIZE, ADDR_WIDTH](@reset @data reset: 1, @data addr0: ADDR_WIDTH, @data write_data: DATA_WIDTH, @data write_en: 1, @clk clk: 1) -> (@data read_data: DATA_WIDTH);
+}
+extern "../../frisc/src/pc.sv" {
+  primitive PC(@reset @data reset: 1, @data nextpc: 32, @clk clk: 1) -> (@data pc: 32);
+}
+extern "../../primitives/state.sv" {
+  primitive Register[WIDTH](@data in: WIDTH, @fil_event write_en: 1, @clk clk: 1, @reset reset: 1) -> (@data out: WIDTH);
+  primitive Delay[WIDTH](@data in: WIDTH, @clk clk: 1, @reset reset: 1) -> (@data out: WIDTH);
+  primitive Prev[WIDTH, SAFE](@data in: WIDTH, @fil_event write_en: 1, @clk clk: 1, @reset reset: 1) -> (@data prev: WIDTH);
+  primitive ContPrev[WIDTH, SAFE](@data in: WIDTH, @clk clk: 1, @reset reset: 1) -> (@data prev: WIDTH);
+}
+extern "../../primitives/comb.sv" {
+  primitive Const[WIDTH, VALUE]() -> (@data out: WIDTH);
+  primitive Add[WIDTH](@data left: WIDTH, @data right: WIDTH) -> (@data out: WIDTH);
+  primitive Sub[WIDTH](@data left: WIDTH, @data right: WIDTH) -> (@data out: WIDTH);
+  primitive MultComb[WIDTH](@data left: WIDTH, @data right: WIDTH) -> (@data out: WIDTH);
+  primitive And[WIDTH](@data left: WIDTH, @data right: WIDTH) -> (@data out: WIDTH);
+  primitive Or[WIDTH](@data left: WIDTH, @data right: WIDTH) -> (@data out: WIDTH);
+  primitive Xor[WIDTH](@data left: WIDTH, @data right: WIDTH) -> (@data out: WIDTH);
+  primitive Not[WIDTH](@data in: WIDTH) -> (@data out: WIDTH);
+  primitive Eq[WIDTH](@data left: WIDTH, @data right: WIDTH) -> (@data out: 1);
+  primitive Gt[WIDTH](@data left: WIDTH, @data right: WIDTH) -> (@data out: 1);
+  primitive Lt[WIDTH](@data left: WIDTH, @data right: WIDTH) -> (@data out: 1);
+  primitive Lte[WIDTH](@data left: WIDTH, @data right: WIDTH) -> (@data out: 1);
+  primitive Gte[WIDTH](@data left: WIDTH, @data right: WIDTH) -> (@data out: 1);
+  primitive ZeroExtend[IN_WIDTH, OUT_WIDTH](@data in: IN_WIDTH) -> (@data out: OUT_WIDTH);
+  primitive Concat[LEFT, RIGHT, OUT](@data left: LEFT, @data right: RIGHT) -> (@data out: OUT);
+  primitive Select[WIDTH, POS](@data in: WIDTH) -> (@data out: 1);
+  primitive Slice[IN_WIDTH, MSB, LSB, OUT_WIDTH](@data in: IN_WIDTH) -> (@data out: OUT_WIDTH);
+  primitive ReduceAnd[WIDTH](@data in: WIDTH) -> (@data out: 1);
+  primitive ReduceOr[WIDTH](@data in: WIDTH) -> (@data out: 1);
+  primitive ShiftLeft[WIDTH](@data in: WIDTH, @data shift: WIDTH) -> (@data out: WIDTH);
+  primitive ShiftRight[WIDTH](@data in: WIDTH, @data shift: WIDTH) -> (@data out: WIDTH);
+  primitive ArithShiftRight[WIDTH](@data in: WIDTH, @data shift: WIDTH) -> (@data out: WIDTH);
+  primitive Mux[WIDTH](@data sel: 1, @data in0: WIDTH, @data in1: WIDTH) -> (@data out: WIDTH);
+  primitive Extend[IN_WIDTH, OUT_WIDTH](@data in: IN_WIDTH) -> (@data out: OUT_WIDTH);
+}
+extern "../../frisc/src/extras/extras.sv" {
+  primitive OneHotMux[WIDTH](@data sel: 8, @data in0: WIDTH, @data in1: WIDTH, @data in2: WIDTH, @data in3: WIDTH, @data in4: WIDTH, @data in5: WIDTH, @data in6: WIDTH, @data in7: WIDTH) -> (@data out: WIDTH);
+}
+extern "../../frisc/src/regfile.sv" {
+  primitive RegFile(@reset @data reset: 1, @data en: 1, @data rd: 5, @data data: 32, @data rin1: 5, @data rin2: 5, @clk clk: 1) -> (@data rs1: 32, @data rs2: 32);
+}
+  primitive undef<"share"=1>[WIDTH]() -> (out: WIDTH){ 
+    assign out = 'x;
+ };
+  comb primitive std_const<"share"=1>[WIDTH, VALUE]() -> (out: WIDTH){ 
+    assign out = VALUE;
+ };
+  comb primitive std_wire<"share"=1>[WIDTH](@data in: WIDTH) -> (out: WIDTH){ 
+    assign out = in;
+ };
+  comb primitive std_add<"share"=1>[WIDTH](@data left: WIDTH, @data right: WIDTH) -> (out: WIDTH){ 
+  assign out = left + right;
+ };
+  primitive std_reg<"state_share"=1>[WIDTH](@write_together @data in: WIDTH, @write_together @static @go write_en: 1, @clk clk: 1, @reset reset: 1) -> (@stable out: WIDTH, @done done: 1){ 
+  always_ff @(posedge clk) begin
+    if (reset) begin
+       out <= 0;
+       done <= 0;
+    end else if (write_en) begin
+      out <= in;
+      done <= 1'd1;
+    end else done <= 1'd0;
+  end
+ };
+component RightShifter_32<"nointerface"=1>(@data in: 32, @data shamt: 32, @data isArith: 1, @reset reset: 1, @clk clk: 1) -> (@data out: 32) {
+  cells {
+    @data SRA = ArithShiftRight(32);
+    @data SRL = ShiftRight(32);
+    @data MUX = Mux(32);
+  }
+  wires {
+    SRA.in = in;
+    SRA.shift = shamt;
+    SRL.in = in;
+    SRL.shift = shamt;
+    MUX.sel = isArith;
+    MUX.in0 = SRA.out;
+    MUX.in1 = SRL.out;
+    out = MUX.out;
+  }
+
+  control {}
+}
+component Decode<"nointerface"=1>(@data instr: 32, @clk clk: 1, @reset reset: 1) -> (@data isLoad: 1, @data isStore: 1, @data isALUImm: 1, @data isALUReg: 1, @data isLUI: 1, @data isJAL: 1, @data isJALR: 1, @data isBranch: 1, @data isSys: 1, @data isAUIPC: 1, @data Uimm: 32, @data Iimm: 32, @data Simm: 32, @data Bimm: 32, @data Jimm: 32, @data funct: 8, @data isAdd: 1, @data isArith: 1, @data rf_write: 1) {
+  cells {
+    @data OPCODE = Slice(32, 6, 2, 5);
+    @data INSTR30 = Select(32, 30);
+    @data INSTR5 = Select(32, 5);
+    @data ISSUB = And(1);
+    @data NOTSUB = Not(1);
+    @data INSTR14_12 = Slice(32, 14, 12, 3);
+    @data INSTR14_12EXT = ZeroExtend(3, 8);
+    @data ONECONST = Const(8, 1);
+    @data SHIFT = ShiftLeft(8);
+    @data LOADCONST = Const(5, 0);
+    @data LOADEQ = Eq(5);
+    @data STORECONST = Const(5, 8);
+    @data STOREEQ = Eq(5);
+    @data ALUIMMCONST = Const(5, 4);
+    @data ALUIMMEQ = Eq(5);
+    @data ALUREGCONST = Const(5, 12);
+    @data ALUREGEQ = Eq(5);
+    @data LUICONST = Const(5, 13);
+    @data LUIEQ = Eq(5);
+    @data JALCONST = Const(5, 27);
+    @data JALEQ = Eq(5);
+    @data JALRCONST = Const(5, 25);
+    @data JALREQ = Eq(5);
+    @data BRANCHCONST = Const(5, 24);
+    @data BRANCHEQ = Eq(5);
+    @data SYSCONST = Const(5, 28);
+    @data SYSEQ = Eq(5);
+    @data AUICONST = Const(5, 5);
+    @data AUIEQ = Eq(5);
+    @data BRANCHORSTORE = Or(1);
+    @data NOTBRANCHORSTORE = Not(1);
+    @data ZEROCONST = Const(1, 0);
+    @data INSTR0 = Select(32, 0);
+    @data INSTR31 = Select(32, 31);
+    @data INSTR30_20 = Slice(32, 30, 20, 11);
+    @data INSTR19_12 = Slice(32, 19, 12, 8);
+    @data UIMM11_0 = Extend(1, 12);
+    @data UIMM31_20 = Concat(1, 11, 12);
+    @data UIMM19_0 = Concat(8, 12, 20);
+    @data UIMM31_0 = Concat(12, 20, 32);
+    @data JIMM31_20 = Extend(1, 12);
+    @data INSTR20 = Select(32, 20);
+    @data INSTR30_25 = Slice(32, 30, 25, 6);
+    @data INSTR24_21 = Slice(32, 24, 21, 4);
+    @data JIMM31_12 = Concat(12, 8, 20);
+    @data JIMM11_5 = Concat(1, 6, 7);
+    @data JIMM4_0 = Concat(4, 1, 5);
+    @data JIMM31_5 = Concat(20, 7, 27);
+    @data JIMM31_0 = Concat(27, 5, 32);
+    @data INSTR11_8 = Slice(32, 11, 8, 4);
+    @data INSTR7 = Select(32, 7);
+    @data SIMM31_11 = Extend(1, 21);
+    @data SIMM31_5 = Concat(21, 6, 27);
+    @data SIMM4_0 = Concat(4, 1, 5);
+    @data SIMM31_0 = Concat(27, 5, 32);
+    @data BIMM31_12 = Extend(1, 20);
+    @data BIMM31_11 = Concat(20, 1, 21);
+    @data BIMM10_1 = Concat(6, 4, 10);
+    @data BIMM31_1 = Concat(21, 10, 31);
+    @data BIMM31_0 = Concat(31, 1, 32);
+    @data IIMM31_11 = Extend(1, 21);
+    @data IIMM31_5 = Concat(21, 6, 27);
+    @data IIMM4_0 = Concat(4, 1, 5);
+    @data IIMM31_0 = Concat(27, 5, 32);
+  }
+  wires {
+    OPCODE.in = instr;
+    INSTR30.in = instr;
+    INSTR5.in = instr;
+    ISSUB.left = INSTR30.out;
+    ISSUB.right = INSTR5.out;
+    NOTSUB.in = ISSUB.out;
+    isAdd = NOTSUB.out;
+    isArith = INSTR30.out;
+    INSTR14_12.in = instr;
+    INSTR14_12EXT.in = INSTR14_12.out;
+    SHIFT.in = ONECONST.out;
+    SHIFT.shift = INSTR14_12EXT.out;
+    funct = SHIFT.out;
+    LOADEQ.left = OPCODE.out;
+    LOADEQ.right = LOADCONST.out;
+    isLoad = LOADEQ.out;
+    STOREEQ.left = OPCODE.out;
+    STOREEQ.right = STORECONST.out;
+    isStore = STOREEQ.out;
+    ALUIMMEQ.left = OPCODE.out;
+    ALUIMMEQ.right = ALUIMMCONST.out;
+    isALUImm = ALUIMMEQ.out;
+    ALUREGEQ.left = OPCODE.out;
+    ALUREGEQ.right = ALUREGCONST.out;
+    isALUReg = ALUREGEQ.out;
+    LUIEQ.left = OPCODE.out;
+    LUIEQ.right = LUICONST.out;
+    isLUI = LUIEQ.out;
+    JALEQ.left = OPCODE.out;
+    JALEQ.right = JALCONST.out;
+    isJAL = JALEQ.out;
+    JALREQ.left = OPCODE.out;
+    JALREQ.right = JALRCONST.out;
+    isJALR = JALREQ.out;
+    BRANCHEQ.left = OPCODE.out;
+    BRANCHEQ.right = BRANCHCONST.out;
+    isBranch = BRANCHEQ.out;
+    SYSEQ.left = OPCODE.out;
+    SYSEQ.right = SYSCONST.out;
+    isSys = SYSEQ.out;
+    AUIEQ.left = OPCODE.out;
+    AUIEQ.right = AUICONST.out;
+    isAUIPC = AUIEQ.out;
+    BRANCHORSTORE.left = BRANCHEQ.out;
+    BRANCHORSTORE.right = STOREEQ.out;
+    NOTBRANCHORSTORE.in = BRANCHORSTORE.out;
+    rf_write = NOTBRANCHORSTORE.out;
+    INSTR0.in = instr;
+    INSTR31.in = instr;
+    INSTR30_20.in = instr;
+    INSTR19_12.in = instr;
+    UIMM11_0.in = ZEROCONST.out;
+    UIMM31_20.left = INSTR31.out;
+    UIMM31_20.right = INSTR30_20.out;
+    UIMM19_0.left = INSTR19_12.out;
+    UIMM19_0.right = UIMM11_0.out;
+    UIMM31_0.left = UIMM31_20.out;
+    UIMM31_0.right = UIMM19_0.out;
+    Uimm = UIMM31_0.out;
+    JIMM31_20.in = INSTR31.out;
+    INSTR20.in = instr;
+    INSTR30_25.in = instr;
+    INSTR24_21.in = instr;
+    JIMM31_12.left = JIMM31_20.out;
+    JIMM31_12.right = INSTR19_12.out;
+    JIMM11_5.left = INSTR20.out;
+    JIMM11_5.right = INSTR30_25.out;
+    JIMM4_0.left = INSTR24_21.out;
+    JIMM4_0.right = ZEROCONST.out;
+    JIMM31_5.left = JIMM31_12.out;
+    JIMM31_5.right = JIMM11_5.out;
+    JIMM31_0.left = JIMM31_5.out;
+    JIMM31_0.right = JIMM4_0.out;
+    Jimm = JIMM31_0.out;
+    INSTR11_8.in = instr;
+    INSTR7.in = instr;
+    SIMM31_11.in = INSTR31.out;
+    SIMM31_5.left = SIMM31_11.out;
+    SIMM31_5.right = INSTR30_25.out;
+    SIMM4_0.left = INSTR11_8.out;
+    SIMM4_0.right = INSTR7.out;
+    SIMM31_0.left = SIMM31_5.out;
+    SIMM31_0.right = SIMM4_0.out;
+    Simm = SIMM31_0.out;
+    BIMM31_12.in = INSTR31.out;
+    BIMM31_11.left = BIMM31_12.out;
+    BIMM31_11.right = INSTR7.out;
+    BIMM10_1.left = INSTR30_25.out;
+    BIMM10_1.right = INSTR11_8.out;
+    BIMM31_1.left = BIMM31_11.out;
+    BIMM31_1.right = BIMM10_1.out;
+    BIMM31_0.left = BIMM31_1.out;
+    BIMM31_0.right = ZEROCONST.out;
+    Bimm = BIMM31_0.out;
+    IIMM31_11.in = INSTR31.out;
+    IIMM31_5.left = IIMM31_11.out;
+    IIMM31_5.right = INSTR30_25.out;
+    IIMM4_0.left = INSTR24_21.out;
+    IIMM4_0.right = INSTR20.out;
+    IIMM31_0.left = IIMM31_5.out;
+    IIMM31_0.right = IIMM4_0.out;
+    Iimm = IIMM31_0.out;
+  }
+
+  control {}
+}
+component ALU<"nointerface"=1>(@data inA: 32, @data inB: 32, @data funct: 8, @data isAdd: 1, @data isArith: 1, @clk clk: 1, @reset reset: 1) -> (@data out: 32) {
+  cells {
+    @data ONECONST_1B = Const(1, 1);
+    @data ONECONST_33B = Const(33, 1);
+    @data ZEROCONST_1B = Const(1, 0);
+    @data NOTINB = Not(32);
+    @data CONCAT0 = Concat(1, 32, 33);
+    @data CONCAT1 = Concat(1, 32, 33);
+    @data INA31 = Select(32, 31);
+    @data INB31 = Select(32, 31);
+    @data ADD0 = Add(33);
+    @data ALUMINUS = Add(33);
+    @data SUB = Slice(33, 31, 0, 32);
+    @data ADD = Add(32);
+    @data SELADDSUB = Mux(32);
+    @data SHAMT = Slice(32, 4, 0, 5);
+    @data SHAMT_EXT = ZeroExtend(5, 32);
+    @data XOR = Xor(32);
+    @data OR = Or(32);
+    @data AND = And(32);
+    @data SR = RightShifter_32();
+    @data SLL = ShiftLeft(32);
+    @data ALUMINUS32 = Select(33, 32);
+    @data LTGUARD = Xor(1);
+    @data LTTERNARY = Mux(1);
+    @data LT = ZeroExtend(1, 32);
+    @data LTU = ZeroExtend(1, 32);
+    @data MUX = OneHotMux(32);
+  }
+  wires {
+    NOTINB.in = inB;
+    CONCAT0.left = ONECONST_1B.out;
+    CONCAT0.right = NOTINB.out;
+    CONCAT1.left = ZEROCONST_1B.out;
+    CONCAT1.right = inA;
+    INA31.in = inA;
+    INB31.in = inB;
+    ADD0.left = CONCAT0.out;
+    ADD0.right = CONCAT1.out;
+    ALUMINUS.left = ADD0.out;
+    ALUMINUS.right = ONECONST_33B.out;
+    SUB.in = ALUMINUS.out;
+    ADD.left = inA;
+    ADD.right = inB;
+    SELADDSUB.sel = isAdd;
+    SELADDSUB.in0 = ADD.out;
+    SELADDSUB.in1 = SUB.out;
+    SHAMT.in = inB;
+    SHAMT_EXT.in = SHAMT.out;
+    XOR.left = inA;
+    XOR.right = inB;
+    OR.left = inA;
+    OR.right = inB;
+    AND.left = inA;
+    AND.right = inB;
+    SR.in = inA;
+    SR.shamt = SHAMT_EXT.out;
+    SR.isArith = isArith;
+    SLL.in = inA;
+    SLL.shift = inB;
+    ALUMINUS32.in = ALUMINUS.out;
+    LTGUARD.left = INA31.out;
+    LTGUARD.right = INB31.out;
+    LTTERNARY.sel = LTGUARD.out;
+    LTTERNARY.in0 = INA31.out;
+    LTTERNARY.in1 = ALUMINUS32.out;
+    LT.in = LTTERNARY.out;
+    LTU.in = ALUMINUS32.out;
+    MUX.sel = funct;
+    MUX.in0 = SELADDSUB.out;
+    MUX.in1 = SLL.out;
+    MUX.in2 = LT.out;
+    MUX.in3 = LTU.out;
+    MUX.in4 = XOR.out;
+    MUX.in5 = SR.out;
+    MUX.in6 = OR.out;
+    MUX.in7 = AND.out;
+    out = MUX.out;
+  }
+
+  control {}
+}
+component CPU<"nointerface"=1>(@reset @data reset: 1, @data instr: 32, @data pcin: 32, @data dataIn: 32, @clk clk: 1) -> (@data pc: 32, @data nextpc: 32, @data isStore: 1, @data out: 32, @data memAddr: 32, @data memData: 32) {
+  cells {
+    @data RD = Slice(32, 11, 7, 5);
+    @data RS1 = Slice(32, 19, 15, 5);
+    @data RS2 = Slice(32, 24, 20, 5);
+    @data DECODER = Decode();
+    @data CONST0 = Const(32, 0);
+    @data ISALU = Or(1);
+    @data ISJ = Or(1);
+    @data C0 = Concat(1, 1, 2);
+    @data C1 = Concat(1, 1, 2);
+    @data C2 = Concat(2, 1, 3);
+    @data C3 = Concat(2, 3, 5);
+    @data DINSEL = ZeroExtend(5, 8);
+    @data RFDATA = OneHotMux(32);
+    @data RF = RegFile();
+    @data addrAdder = Add(32);
+    @data ADDRIMM = Mux(32);
+    @data ALUINBGUARD = Or(1);
+    @data ALUINB = Mux(32);
+    @data ALU = ALU();
+    @data PC = PC();
+    @data pcAdderImm = Add(32);
+    @data pcAdder = Add(32);
+    @data T0 = Mux(32);
+    @data T1 = Mux(32);
+    @data CONST1 = Const(32, 1);
+    @data BRANCHJMP = Or(1);
+    @data USEIMM = Or(1);
+    @data NEXTPC = Mux(32);
+  }
+  wires {
+    RD.in = instr;
+    RS1.in = instr;
+    RS2.in = instr;
+    DECODER.instr = instr;
+    ISALU.left = DECODER.isALUImm;
+    ISALU.right = DECODER.isALUReg;
+    ISJ.left = DECODER.isJALR;
+    ISJ.right = DECODER.isJAL;
+    C0.left = DECODER.isLUI;
+    C0.right = ISALU.out;
+    C1.left = DECODER.isAUIPC;
+    C1.right = ISJ.out;
+    C2.left = C1.out;
+    C2.right = DECODER.isLoad;
+    C3.left = C0.out;
+    C3.right = C2.out;
+    DINSEL.in = C3.out;
+    RFDATA.sel = DINSEL.out;
+    RFDATA.in0 = dataIn;
+    RFDATA.in1 = pcAdder.out;
+    RFDATA.in2 = pcAdderImm.out;
+    RFDATA.in3 = ALU.out;
+    RFDATA.in4 = DECODER.Uimm;
+    RFDATA.in5 = CONST0.out;
+    RFDATA.in6 = CONST0.out;
+    RFDATA.in7 = CONST0.out;
+    RF.reset = reset;
+    RF.en = DECODER.rf_write;
+    RF.rd = RD.out;
+    RF.data = RFDATA.out;
+    RF.rin1 = RS1.out;
+    RF.rin2 = RS2.out;
+    ADDRIMM.sel = DECODER.isStore;
+    ADDRIMM.in0 = DECODER.Simm;
+    ADDRIMM.in1 = DECODER.Iimm;
+    addrAdder.left = RF.rs1;
+    addrAdder.right = ADDRIMM.out;
+    ALUINBGUARD.left = DECODER.isBranch;
+    ALUINBGUARD.right = DECODER.isALUReg;
+    ALUINB.sel = ALUINBGUARD.out;
+    ALUINB.in0 = RF.rs2;
+    ALUINB.in1 = DECODER.Iimm;
+    ALU.inA = RF.rs1;
+    ALU.inB = ALUINB.out;
+    ALU.funct = DECODER.funct;
+    ALU.isAdd = DECODER.isAdd;
+    ALU.isArith = DECODER.isArith;
+    PC.reset = reset;
+    PC.nextpc = pcin;
+    T0.sel = DECODER.isAUIPC;
+    T0.in0 = DECODER.Uimm;
+    T0.in1 = DECODER.Bimm;
+    T1.sel = DECODER.isJAL;
+    T1.in0 = DECODER.Jimm;
+    T1.in1 = T0.out;
+    pcAdderImm.left = PC.pc;
+    pcAdderImm.right = T1.out;
+    pcAdder.left = PC.pc;
+    pcAdder.right = CONST1.out;
+    BRANCHJMP.left = DECODER.isBranch;
+    BRANCHJMP.right = DECODER.isJAL;
+    USEIMM.left = BRANCHJMP.out;
+    USEIMM.right = DECODER.isAUIPC;
+    NEXTPC.sel = USEIMM.out;
+    NEXTPC.in0 = pcAdderImm.out;
+    NEXTPC.in1 = pcAdder.out;
+    out = ALU.out;
+    nextpc = NEXTPC.out;
+    pc = PC.pc;
+    memAddr = addrAdder.out;
+    isStore = DECODER.isStore;
+    memData = RF.rs2;
+  }
+
+  control {}
+}

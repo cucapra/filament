@@ -4,17 +4,17 @@ import "frisc/src/regfile.fil";
 import "frisc/src/extras/extras.fil";
 import "frisc/src/pc.fil";
 import "primitives/memories.fil";
-import "primitives/core.fil";
+//import "primitives/core.fil";
 
 comp CPU<G:1> (
   clk:1,
   @[G,G+1] reset:1,
   @[G,G+1] instr:32,
   @[G,G+1] pcin:32,
+  @[G,G+1] dataIn:32,
 ) -> (
   @[G,G+1] pc:32,
   @[G,G+1] nextpc:32,
-  @[G,G+1] isLoad:1,
   @[G,G+1] isStore:1,
   @[G,G+1] out:32,
   @[G,G+1] memAddr:32,
@@ -54,7 +54,7 @@ comp CPU<G:1> (
   c3 := new Concat[2,3,5]<G>(c0.out, c2.out);
   dInSel := new ZeroExtend[5,8]<G>(c3.out);
 
-  rfData := new OneHotMux[32]<G>(dInSel.out, dataMem.read_data, pcPlus4.out, pcPlusImm.out, alu.out, 
+  rfData := new OneHotMux[32]<G>(dInSel.out, dataIn, pcPlus4.out, pcPlusImm.out, alu.out, 
     decoder.Uimm, const0.out, const0.out, const0.out);
 
   rf := new RegFile<G>(reset, decoder.rf_write, rd.out, rfData.out, rs1.out, rs2.out);
@@ -71,7 +71,7 @@ comp CPU<G:1> (
   /*  DATA MEMORY
   /* ============================================================ */
 
-  dataMem := new StdMem1D[32, 256, 32]<G>(reset, loadStoreAddr.out, rf.rs2, decoder.isStore);
+  //dataMem := new StdMem1D[32, 256, 32]<G>(reset, loadStoreAddr.out, rf.rs2, decoder.isStore);
 
   /* ============================================================ */
   /*  ALU
@@ -121,7 +121,6 @@ comp CPU<G:1> (
   nextpc = nextPC.out;
   pc = pc.pc;
   memAddr = loadStoreAddr.out;
-  isLoad = decoder.isLoad;
   isStore = decoder.isStore;
-  memData = rfData.out;
+  memData = rf.rs2;
 }

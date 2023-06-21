@@ -1,11 +1,12 @@
-import "primitives/memories.futil";
 import "frisc.futil";
+import "primitives/memories.futil";
 
 component main () -> (out:32) {
   cells {
     @external iram = seq_mem_d1(32,6,32);
     @external res = seq_mem_d1(32,6,32);
     cpu = CPU();
+    dram = StdMem1D(32,256,32);
 
     pc_reg = std_reg(32);
   }
@@ -19,6 +20,10 @@ component main () -> (out:32) {
       iram.addr0 = cpu.pc;
       iram.read_en = 1'b1;
       cpu.instr = iram.read_data;
+      cpu.dataIn = dram.read_data;
+      dram.addr0 = cpu.memAddr;
+      dram.write_data = cpu.memData;
+      dram.write_en = cpu.isStore;
     }
 
     static<1> group write_res {
