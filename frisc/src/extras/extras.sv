@@ -30,13 +30,13 @@ endmodule
 // byte addressable memory
 module ByteAccess1D #(
   parameter SIZE = 16,
-  parameter ADDR_WIDTH = 32,
+  parameter ADDR_WIDTH = 32
 ) (
   input wire logic clk,
   input wire logic reset,
   input wire logic [ADDR_WIDTH-1:0] addr0,
   input wire logic [31:0] write_data,
-  input wire logic write_en,
+  input wire logic [3:0] write_mask,
   output logic [31:0] read_data
 );
 
@@ -50,9 +50,9 @@ module ByteAccess1D #(
 
   // writes, byte by byte based on write mask
   always_ff @(posedge clk) begin
-    if (write_en[0]) mem[addr0] <= write_data[7:0];
-    if (write_en[1]) mem[addr0+1] <= write_data[15:8];
-    if (write_en[2]) mem[addr0+2] <= write_data[23:16];
-    if (write_en[3]) mem[addr0+3] <= write_data[31:24];
+    if (write_mask[0]) begin mem[addr0] <= write_data[7:0]; end
+    if (write_mask[1]) mem[addr0+1] <= write_data[15:8];
+    if (write_mask[2]) mem[addr0+2] <= write_data[23:16];
+    if (write_mask[3]) mem[addr0+3] <= write_data[31:24];
   end
 endmodule

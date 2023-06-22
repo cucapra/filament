@@ -19,11 +19,13 @@ component main () -> (out:32) {
     static<1> group read_iram {
       iram.addr0 = cpu.pc;
       iram.read_en = 1'b1;
+
       cpu.instr = iram.read_data;
       cpu.dataIn = dram.read_data;
+
       dram.addr0 = cpu.memAddr;
       dram.write_data = cpu.memData;
-      dram.write_en = cpu.isStore;
+      dram.write_mask = cpu.memWriteMask;
     }
 
     static<1> group write_res {
@@ -38,6 +40,7 @@ component main () -> (out:32) {
     }
 
     cpu.pcin = cpu.nextpc;
+    cpu.rfDataIn = cpu.rfDataOut;
   }
   control {
     static seq {

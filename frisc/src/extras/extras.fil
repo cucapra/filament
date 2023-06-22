@@ -24,7 +24,7 @@ extern "extras.sv" {
     @[G,G+1] write_mask:4
   ) -> (
     @[G,G+1] read_data:32
-  )
+  );
 }
 
 comp RightShifter[#WIDTH]<G:1>(
