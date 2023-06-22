@@ -3,7 +3,7 @@ import "frisc/src/decode.fil";
 import "frisc/src/regfile.fil";
 import "frisc/src/extras/extras.fil";
 import "frisc/src/pc.fil";
-import "primitives/memories.fil";
+//import "primitives/memories.fil";
 //import "primitives/core.fil";
 
 comp CPU<G:1> (
@@ -13,12 +13,12 @@ comp CPU<G:1> (
   @[G,G+1] pcin:32,
   @[G,G+1] dataIn:32,
 ) -> (
-  @[G,G+1] pc:32,
-  @[G,G+1] nextpc:32,
-  @[G,G+1] isStore:1,
-  @[G,G+1] out:32,
-  @[G,G+1] memAddr:32,
-  @[G,G+1] memData:32,
+  @[G,G+1] pc:32,         // current instr
+  @[G,G+1] nextpc:32,     // next instr to fetch
+  @[G,G+1] out:32,        // output of ALU
+  @[G,G+1] memAddr:32,    // memory address
+  @[G,G+1] memData:32,    // data to write to mem
+  @[G,G+1] memWriteMask:4 // 4 bytes in a word
 ) {
 
   /* ============================================================ */
@@ -63,6 +63,8 @@ comp CPU<G:1> (
   /*  LOAD/STORE
   /* ============================================================ */
 
+  // LOADS
+
   instr13_12 := new Slice[32,13,12,2]<G>(instr);
   instr14 := new Select[32,14]<G>(instr);
   byteAccess := new Eq[2]<G>(instr13_12.out, const0.out);
@@ -97,6 +99,47 @@ comp CPU<G:1> (
   addrAdder := new Add[32];
   addrImm := new Mux[32]<G>(decoder.isStore, decoder.Simm, decoder.Iimm);
   loadStoreAddr := addrAdder<G>(rf.rs1, addrImm.out);
+
+  // STORES
+  rs2_7_0 := new Slice[32,7,0,8]<G>(rf.rs2);
+  rs2_15_8 := new Slice[32,15,8,8]<G>(rf.rs2);
+  rs2_23_16 := new Slice[32,23,16,8]<G>(rf.rs2);
+  rs2_31_24 := new Slice[32,31,24,8]<G>(rf.rs2);
+
+  memAddr_0 := new Select[32,0]<G>(loadStoreAddr.out);
+  memAddr_1 := new Select[32,1]<G>(loadStoreAddr.out);
+
+  memData_15_8 := new Mux[8]<G>(memAddr_0.out,rs2_7_0.out, rs2_15_8.out);
+  memData_23_16 := new Mux[8]<G>(memAddr_1.out, rs2_7_0.out, rs2_23_16.out);
+
+  _mux0 := new Mux[8]<G>(memAddr_1.out, rs2_15_8.out, rs2_31_24.out);
+  memData_31_24 := new Mux[8]<G>(memAddr_0.out, rs2_7_0.out, _mux0.out);
+
+  memData_31_16 := new Concat[8,8,16]<G>(memData_31_24.out, memData_23_16.out);
+  memData_15_0 := new Concat[8,8,16]<G>(memData_15_8.out, rs2_7_0.out);
+  memData_31_0 := new Concat[16,16,32]<G>(memData_31_16.out, memData_15_0.out);
+
+  // WRITE MASK
+  // 1111                   -> write a whole word
+  // 0011 or 1100           -> write a halfword
+  // 0001, 0010, 0100, 1000 -> write a byte
+
+  maskWord := new Const[4,15]<G>();  // 1111
+  maskHWUp := new Const[4, 12]<G>(); // 1100
+  maskHWLow := new Const[4,3]<G>();  // 0011
+  maskByte0 := new Const[4,1]<G>();  // 0001
+  maskByte1 := new Const[4,2]<G>();  // 0010
+  maskByte2 := new Const[4,4]<G>();  // 0100
+  maskByte3 := new Const[4,8]<G>();  // 1000
+
+  _muxHW_HL := new Mux[4]<G>(memAddr_1.out, maskHWUp.out, maskHWLow.out);
+  _muxHW := new Mux[4]<G>(hwAccess.out, _muxHW_HL.out, maskWord.out);
+
+  _muxB_3_2 := new Mux[4]<G>(memAddr_0.out, maskByte3.out, maskByte2.out);
+  _muxB_1_0 := new Mux[4]<G>(memAddr_0.out, maskByte1.out, maskByte0.out);
+  _muxB_HL := new Mux[4]<G>(memAddr_1.out, _muxB_3_2.out, _muxB_1_0.out);
+
+  writeMask := new Mux[4]<G>(byteAccess.out, _muxB_HL.out, _muxHW.out);
 
   /* ============================================================ */
   /*  DATA MEMORY
@@ -152,6 +195,6 @@ comp CPU<G:1> (
   nextpc = nextPC.out;
   pc = pc.pc;
   memAddr = loadStoreAddr.out;
-  isStore = decoder.isStore;
-  memData = rf.rs2;
+  memData = memData_31_0.out;
+  memWriteMask = writeMask.out;
 }

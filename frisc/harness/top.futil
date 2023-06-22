@@ -6,7 +6,7 @@ component main () -> (out:32) {
     @external iram = seq_mem_d1(32,6,32);
     @external res = seq_mem_d1(32,6,32);
     cpu = CPU();
-    dram = StdMem1D(32,256,32);
+    dram = ByteAccess1D(256,32);
 
     pc_reg = std_reg(32);
   }
