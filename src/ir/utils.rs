@@ -6,7 +6,7 @@ use std::{
     marker::PhantomData, rc::Rc,
 };
 
-use super::{Context, CompIdx, Command, Component};
+use super::{Command, CompIdx, Context};
 
 /// An indexed storage for an interned type. Keeps a HashMap to provide faster reverse mapping
 /// from the value to the index.
@@ -280,27 +280,25 @@ impl From<Context> for Traversal {
 }
 
 impl Traversal {
-    /// Apply a mutable function to each component in a post-order traversal.
-    pub fn apply_post_order<F>(&mut self, mut upd: F)
+    /// Apply a function to each component in a post-order traversal.
+    pub fn apply_post_order<F>(self, mut f: F)
     where
-        F: FnMut(&mut Component),
+        F: FnMut(&Context, CompIdx),
     {
         for idx in self.order.clone() {
-            let comp = &mut self.ctx.comps.get(idx);
             log::trace!("Post-order: {}", idx);
-            upd(comp)
+            f(&self.ctx, idx)
         }
     }
 
     /// Apply a function to each component in a pre-order traversal.
-    pub fn apply_pre_order<F>(&mut self, mut upd: F)
+    pub fn apply_pre_order<F>(self, mut f: F)
     where
-        F: FnMut(&mut Component),
+        F: FnMut(&Context, CompIdx),
     {
         for &idx in self.order.iter().rev() {
-            let comp = &mut self.ctx.comps.get(idx);
             log::trace!("Pre-order: {}", idx);
-            upd(comp)
+            f(&self.ctx, idx)
         }
     }
 
@@ -310,7 +308,7 @@ impl Traversal {
     }
 
     fn process_cmd(
-        ctx: &Context, 
+        ctx: &Context,
         comp: CompIdx,
         cmd: &Command,
         ts: &mut TopologicalSort<CompIdx>,
@@ -319,7 +317,7 @@ impl Traversal {
             Command::Instance(inst) => {
                 let inst = ctx.comps.get(comp).instances().get(*inst);
                 // If the instance is not an external, add a dependency edge
-                if ctx.comps.get(inst.comp).src_ext == None {
+                if ctx.comps.get(inst.comp).src_ext.is_none() {
                     ts.add_dependency(comp, inst.comp);
                 }
             }

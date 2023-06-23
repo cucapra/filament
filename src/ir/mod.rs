@@ -30,4 +30,4 @@ pub use structure::{
 };
 pub use subst::{Bind, Foldable, Subst};
 pub use time::{Time, TimeSub};
-pub use utils::{DenseIndexInfo, IndexStore, Interned};
+pub use utils::{DenseIndexInfo, IndexStore, Interned, Traversal};
