@@ -1,5 +1,12 @@
+use topological_sort::TopologicalSort;
+
 use crate::utils::Idx;
-use std::{collections::HashMap, fmt::Display, marker::PhantomData, rc::Rc};
+use std::{
+    collections::HashMap, fmt::Display, iter::IntoIterator,
+    marker::PhantomData, rc::Rc,
+};
+
+use super::{Context, CompIdx, Command, Component};
 
 /// An indexed storage for an interned type. Keeps a HashMap to provide faster reverse mapping
 /// from the value to the index.
@@ -157,6 +164,22 @@ impl<T> IndexStore<T> {
     }
 }
 
+impl<T> IntoIterator for IndexStore<T> {
+    type Item = T;
+
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.store.into_iter()
+    }
+}
+
+impl<T> From<IndexStore<T>> for Vec<T> {
+    fn from(value: IndexStore<T>) -> Self {
+        value.store
+    }
+}
+
 impl<T: Display> Display for IndexStore<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (idx, val) in self.store.iter().enumerate() {
@@ -221,5 +244,102 @@ impl<T, V> std::ops::Index<Idx<T>> for DenseIndexInfo<T, V> {
 
     fn index(&self, idx: Idx<T>) -> &Self::Output {
         self.get(idx)
+    }
+}
+
+pub struct Traversal {
+    ctx: Context,
+    order: Vec<CompIdx>,
+}
+
+impl From<Context> for Traversal {
+    /// Construct a post-order traversal over a [Context].
+    fn from(ctx: Context) -> Self {
+        let mut ts = TopologicalSort::<CompIdx>::new();
+
+        for idx in ctx.comps.idx_iter() {
+            ts.insert(idx);
+        }
+
+        for (idx, comp) in ctx.comps.iter() {
+            for cmd in &comp.cmds {
+                Traversal::process_cmd(&ctx, idx, cmd, &mut ts);
+            }
+        }
+
+        let order: Vec<_> = ts.collect();
+        debug_assert!(
+            order.len() == ctx.comps.len(),
+            "Ordering contains {} elements but context has {} components",
+            order.len(),
+            ctx.comps.len()
+        );
+
+        Self { ctx, order }
+    }
+}
+
+impl Traversal {
+    /// Apply a mutable function to each component in a post-order traversal.
+    pub fn apply_post_order<F>(&mut self, mut upd: F)
+    where
+        F: FnMut(&mut Component),
+    {
+        for idx in self.order.clone() {
+            let comp = &mut self.ctx.comps.get(idx);
+            log::trace!("Post-order: {}", idx);
+            upd(comp)
+        }
+    }
+
+    /// Apply a function to each component in a pre-order traversal.
+    pub fn apply_pre_order<F>(&mut self, mut upd: F)
+    where
+        F: FnMut(&mut Component),
+    {
+        for &idx in self.order.iter().rev() {
+            let comp = &mut self.ctx.comps.get(idx);
+            log::trace!("Pre-order: {}", idx);
+            upd(comp)
+        }
+    }
+
+    /// Take the [Context] from the post order structure.
+    pub fn take(self) -> Context {
+        self.ctx
+    }
+
+    fn process_cmd(
+        ctx: &Context, 
+        comp: CompIdx,
+        cmd: &Command,
+        ts: &mut TopologicalSort<CompIdx>,
+    ) {
+        match cmd {
+            Command::Instance(inst) => {
+                let inst = ctx.comps.get(comp).instances().get(*inst);
+                // If the instance is not an external, add a dependency edge
+                if ctx.comps.get(inst.comp).src_ext == None {
+                    ts.add_dependency(comp, inst.comp);
+                }
+            }
+            Command::ForLoop(fl) => {
+                for cmd in &fl.body {
+                    Traversal::process_cmd(ctx, comp, cmd, ts);
+                }
+            }
+            Command::If(i) => {
+                for cmd in &i.then {
+                    Traversal::process_cmd(ctx, comp, cmd, ts);
+                }
+                for cmd in &i.alt {
+                    Traversal::process_cmd(ctx, comp, cmd, ts);
+                }
+            }
+            Command::Connect(_)
+            | Command::Invoke(_)
+            | Command::Fact(_)
+            | Command::EventBind(_) => (),
+        }
     }
 }

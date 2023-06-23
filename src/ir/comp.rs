@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::{
     CmpOp, Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
     IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke,
@@ -9,6 +11,8 @@ use crate::{ast, utils::Idx};
 #[derive(Default)]
 pub struct Context {
     pub comps: IndexStore<Component>,
+    // Contains external components grouped by file name.
+    pub externals: HashMap<String, Vec<CompIdx>>,
 }
 
 /// A IR component. If `is_ext` is true then this is an external component.
@@ -45,11 +49,11 @@ pub struct Component {
     /// Information tracked by the component
     info: IndexStore<Info>,
     /// `Some(filename, componentname)` if this is an external component, `None` otherwise.
-    pub src_ext: Option<(String, ast::Id)>,
+    pub src_ext: Option<ast::Id>,
 }
 
 impl Component {
-    pub fn new(idx: CompIdx, src_ext: Option<(String, ast::Id)>) -> Self {
+    pub fn new(idx: CompIdx, src_ext: Option<ast::Id>) -> Self {
         let mut comp = Self {
             idx,
             src_ext,

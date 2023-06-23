@@ -214,7 +214,7 @@ impl Printer<'_> {
         f: &mut F,
     ) -> io::Result<()> {
         match &comp.src_ext {
-            Some((file, name)) => write!(f, "ext {}::{} ", file, name)?,
+            Some(name) => write!(f, "ext {} ", name)?,
             None => (),
         };
         write!(f, "comp {}[", comp.idx())?;
