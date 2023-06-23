@@ -2,7 +2,7 @@ import "frisc/src/cpu.fil";
 
 comp main<G:1> (
   clk:1,
-  @[G,G+1] reset:1,
+  reset:1,
   @[G,G+1] instr:32,
   @[G,G+1] pcin:32,
 ) -> (
@@ -14,7 +14,7 @@ comp main<G:1> (
   @[G,G+1] memAddr:32,
   @[G,G+1] memData:32,
 ) {
-  cpu := new CPU<G>(reset, instr, pcin);
+  cpu := new CPU<G>(instr, pcin);
   out = cpu.out;
   pc = cpu.pc;
   nextpc = cpu.nextpc;

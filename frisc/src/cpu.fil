@@ -8,7 +8,7 @@ import "frisc/src/pc.fil";
 
 comp CPU<G:1> (
   clk:1,
-  @[G,G+1] reset:1,
+  reset:1,
   @[G,G+1] instr:32,
   @[G,G+1] pcin:32,
   @[G,G+1] dataIn:32,
@@ -59,7 +59,7 @@ comp CPU<G:1> (
   rfData := new OneHotMux[32]<G>(dInSel.out, loadData.out, pcPlus4.out, pcPlusImm.out, alu.out, 
     decoder.Uimm, const0.out, const0.out, const0.out);
 
-  rf := new RegFile<G>(reset, decoder.rf_write, rd.out, rfDataIn, rs1.out, rs2.out);
+  rf := new RegFile<G>(decoder.rf_write, rd.out, rfDataIn, rs1.out, rs2.out);
 
   /* ============================================================ */
   /*  LOAD/STORE
@@ -164,7 +164,7 @@ comp CPU<G:1> (
   /*  PROGRAM COUNTER
   /* ============================================================ */
 
-  pc := new PC<G>(reset, pcin);
+  pc := new PC<G>(pcin);
 
   // nextPC = isJAL ? Jimm : isAUIPC ? Uimm : Bimm
   // for jumps

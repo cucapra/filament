@@ -18,7 +18,7 @@ extern "extras.sv" {
 
   comp ByteAccess1D[#SIZE, #ADDR_WIDTH]<G:1>(
     clk:1,
-    @[G,G+1] reset:1,
+    reset:1,
     @[G,G+1] addr0:#ADDR_WIDTH,
     @[G,G+1] write_data:32,
     @[G,G+1] write_mask:4
