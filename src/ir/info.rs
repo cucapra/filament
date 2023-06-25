@@ -47,6 +47,12 @@ pub enum Info {
         width_loc: GPosIdx,
         live_loc: GPosIdx,
     },
+    /// Represents an interface port
+    InterfacePort {
+        /// Surface-level name
+        name: ast::Id,
+        bind_loc: GPosIdx,
+    },
 }
 
 impl Info {
@@ -98,6 +104,10 @@ impl Info {
             width_loc,
             live_loc,
         }
+    }
+
+    pub fn interface_port(name: ast::Id, bind_loc: GPosIdx) -> Self {
+        Self::InterfacePort { name, bind_loc }
     }
 }
 

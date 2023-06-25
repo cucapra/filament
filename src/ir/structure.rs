@@ -314,6 +314,7 @@ pub struct Event {
     pub delay: TimeSub,
     pub owner: EventOwner,
     pub info: InfoIdx,
+    pub interface_port: Option<InfoIdx>,
 }
 
 impl fmt::Display for Event {
