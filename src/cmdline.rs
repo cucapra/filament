@@ -35,4 +35,8 @@ pub struct Opts {
     /// set log level
     #[argh(option, long = "log", default = "log::LevelFilter::Warn")]
     pub log_level: log::LevelFilter,
+
+    /// set toplevel
+    #[argh(option, long = "toplevel", default = "\"main\".into()")]
+    pub toplevel: String,
 }
