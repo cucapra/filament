@@ -442,6 +442,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
             event.interface_port = Some(info);
         }
+        for (name, width) in sig.unannotated_ports {
+            self.comp.add(ir::Info::unannotated_port(name, width));
+        }
         // Constraints defined by the signature
         let mut cons = Vec::with_capacity(
             sig.param_constraints.len() + sig.event_constraints.len(),
