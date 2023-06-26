@@ -1,4 +1,8 @@
-use std::{collections::HashMap, path::PathBuf, rc::Rc};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+    rc::Rc,
+};
 
 use crate::{
     ast,
@@ -9,16 +13,20 @@ use calyx_frontend as frontend;
 use calyx_ir::{self as calyx, RRC};
 use calyx_utils::CalyxResult;
 
-const INTERFACE_PORTS: [(calyx::BoolAttr, (&str, u64, calyx::Direction)); 2] = [
-    (calyx::BoolAttr::Clk, ("clk", 1, calyx::Direction::Input)),
+type AttrPair = (calyx::Attribute, u64);
+const INTERFACE_PORTS: [(AttrPair, (&str, u64, calyx::Direction)); 2] = [
     (
-        calyx::BoolAttr::Reset,
+        (calyx::Attribute::Bool(calyx::BoolAttr::Clk), 1),
+        ("clk", 1, calyx::Direction::Input),
+    ),
+    (
+        (calyx::Attribute::Bool(calyx::BoolAttr::Reset), 1),
         ("reset", 1, calyx::Direction::Input),
     ),
 ];
 
 /// Compiles Filament into Calyx
-/// Generates FSMs for each
+/// Generates FSMs for each event
 #[derive(Default)]
 pub struct Compile;
 
@@ -66,6 +74,81 @@ impl Compile {
         }
     }
 
+    fn width_u64(value: u64) -> calyx::Width {
+        calyx::Width::Const { value }
+    }
+
+    fn ports<CW, WFU, WT>(
+        comp: &ir::Component,
+        wfu: WFU, // Function that returns a CW type from a u64
+        width_transform: WT,
+    ) -> Vec<calyx::PortDef<CW>>
+    where
+        WFU: Fn(u64) -> CW,
+        WT: Fn(&ir::Component, ir::PortIdx) -> CW,
+    {
+        let mut ports: Vec<calyx::PortDef<CW>> = comp
+            .ports()
+            .idx_iter()
+            .map(|port| Compile::port_def(comp, port, &width_transform))
+            .chain(comp.interface_ports().into_iter().map(|name| {
+                calyx::PortDef {
+                    name: name.as_ref().into(),
+                    width: wfu(1),
+                    direction: calyx::Direction::Input,
+                    attributes: vec![(
+                        calyx::Attribute::Unknown("fil_event".into()),
+                        1,
+                    )]
+                    .try_into()
+                    .unwrap(),
+                }
+            }))
+            .chain(comp.unannotated_ports().into_iter().map(|(name, width)| {
+                calyx::PortDef {
+                    name: name.as_ref().into(),
+                    width: wfu(width),
+                    direction: calyx::Direction::Input,
+                    attributes: calyx::Attributes::default(),
+                }
+            }))
+            .collect();
+
+        let mut interface_ports =
+            INTERFACE_PORTS.iter().collect::<HashSet<_>>();
+
+        // add interface port attributes if necessary
+        for pd in &mut ports {
+            if let Some(pair) = INTERFACE_PORTS
+                .iter()
+                .find(|(_, (n, _, _))| *n == pd.name.as_ref())
+            {
+                assert!(
+                    pair.1 .2 == pd.direction,
+                    "Expected {} to be an {:?} port, got {:?} port.",
+                    pair.1 .0,
+                    pair.1 .2,
+                    pd.direction
+                );
+                // TODO: Assert width equality
+                interface_ports.remove(pair);
+                pd.attributes.insert(pair.0 .0, pair.0 .1);
+            }
+        }
+
+        // add remaining interface ports if not found
+        for (attr, (name, width, dir)) in interface_ports {
+            ports.push(calyx::PortDef {
+                name: (*name).into(),
+                width: wfu(*width),
+                direction: dir.clone(),
+                attributes: vec![*attr].try_into().unwrap(),
+            });
+        }
+
+        ports
+    }
+
     fn primitive(comp: &ir::Component) -> calyx::Primitive {
         calyx::Primitive {
             name: match comp.src_ext {
@@ -82,10 +165,7 @@ impl Compile {
                         unreachable!("Incorrect info type for parameter");
                     }
                 }).collect(),
-            signature: comp.ports().idx_iter()
-                .map(|port| {
-                    Compile::port_def(comp, port, Compile::width)
-                }).collect(),
+            signature: Compile::ports(comp, Compile::width_u64, Compile::width),
             attributes: todo!(),
             is_comb: todo!(),
             body: todo!(),
