@@ -1,7 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
-    rc::Rc,
+    rc::Rc, convert::identity, iter,
 };
 
 use crate::{
@@ -9,9 +9,11 @@ use crate::{
     errors::FilamentResult,
     ir::{self, Ctx, Traversal},
 };
+use calyx::structure;
 use calyx_frontend as frontend;
 use calyx_ir::{self as calyx, RRC};
 use calyx_utils::CalyxResult;
+use itertools::Itertools;
 
 type AttrPair = (calyx::Attribute, u64);
 const INTERFACE_PORTS: [(AttrPair, (&str, u64, calyx::Direction)); 2] = [
@@ -37,7 +39,7 @@ impl Compile {
         width_transform: WT,
     ) -> calyx::PortDef<CW>
     where
-        WT: Fn(&ir::Component, ir::PortIdx) -> CW,
+        WT: Fn(&ir::Component, ir::ExprIdx) -> CW,
     {
         let raw_port = comp.get(port);
         if let ir::Info::Port { name, .. } = comp.get(raw_port.info) {
@@ -45,7 +47,7 @@ impl Compile {
             attributes.insert(calyx::BoolAttr::Data, 1);
             calyx::PortDef {
                 name: name.as_ref().into(),
-                width: width_transform(comp, port),
+                width: width_transform(comp, comp.get(port).width),
                 direction: calyx::Direction::from(&raw_port.owner),
                 attributes,
             }
@@ -54,8 +56,10 @@ impl Compile {
         }
     }
 
-    fn width(comp: &ir::Component, port: ir::PortIdx) -> calyx::Width {
-        match comp.get(comp.get(port).width) {
+    /// Converts an [ir::ExprIdx] into a [calyx::Width].
+    /// Expects the [ir::ExprIdx] to either be a singular constant or an abstract variable.
+    fn width(comp: &ir::Component, expr: ir::ExprIdx) -> calyx::Width {
+        match comp.get(expr) {
             ir::Expr::Param(p) => {
                 if let ir::Info::Param { name, .. } =
                     comp.get(comp.get(*p).info)
@@ -74,8 +78,15 @@ impl Compile {
         }
     }
 
-    fn width_u64(value: u64) -> calyx::Width {
-        calyx::Width::Const { value }
+    /// Compiles an [ir::ExprIdx] into a [u64].
+    /// Expects the [ir::ExprIdx] to be a single constant value
+    fn u64(comp: &ir::Component, expr: ir::ExprIdx) -> u64 {
+        match comp.get(expr) {
+            ir::Expr::Concrete(val) => *val,
+            ir::Expr::Param(..) | ir::Expr::Bin { .. } | ir::Expr::Fn { .. } => {
+                panic!("Port width must be a constant.")
+            }
+        }
     }
 
     fn ports<CW, WFU, WT>(
@@ -85,7 +96,7 @@ impl Compile {
     ) -> Vec<calyx::PortDef<CW>>
     where
         WFU: Fn(u64) -> CW,
-        WT: Fn(&ir::Component, ir::PortIdx) -> CW,
+        WT: Fn(&ir::Component, ir::ExprIdx) -> CW,
     {
         let mut ports: Vec<calyx::PortDef<CW>> = comp
             .ports()
@@ -149,14 +160,20 @@ impl Compile {
         ports
     }
 
-    fn primitive(comp: &ir::Component) -> calyx::Primitive {
+    /// Gets the component name given an [ir::Context] and an [ir::CompIdx]
+    fn comp_name(ctx: &ir::Context, idx: ir::CompIdx) -> calyx::Id {
+        let comp = ctx.comps.get(idx);
+        match comp.src_ext {
+            // component is non-external, generate name from CompIdx
+            None => idx.get().to_string().into(),
+            Some(id) => id.as_ref().into()
+        }
+    }
+
+    fn primitive(ctx: &ir::Context, idx: ir::CompIdx) -> calyx::Primitive {
+        let comp = ctx.comps.get(idx);
         calyx::Primitive {
-            name: match comp.src_ext {
-                None => unreachable!(
-                    "Attempting to generate primitive from non-external component."
-                ),
-                Some(id) => id.as_ref().into()
-            },
+            name: Compile::comp_name(ctx, idx),
             params: comp.params().iter()
                 .map(|(_, p)| {
                     if let ir::Info::Param {name, ..} = comp.get(p.info) {
@@ -166,29 +183,37 @@ impl Compile {
                     }
                 }).collect(),
             signature: Compile::ports(comp, Compile::width_u64, Compile::width),
-            attributes: todo!(),
-            is_comb: todo!(),
-            body: todo!(),
+            attributes: calyx::Attributes::default(),
+            is_comb: false,
+            body: None,
         }
     }
 
     fn component(
-        comp: &ir::Component,
+        ctx: &ir::Context,
+        idx: ir::CompIdx,
         sigs: &mut Binding,
         lib: &calyx::LibrarySignatures,
     ) -> FilamentResult<calyx::Component> {
-        todo!()
+        let comp = ctx.comps.get(idx);
+        let ports = Compile::ports(comp, identity, Compile::u64);
+        let mut component = calyx::Component::new(Compile::comp_name(ctx, idx), ports, false);
+        component.attributes.insert(calyx::BoolAttr::NoInterface, 1);
+
+        let builder = calyx::Builder::new(&mut component, lib).not_generated();
+        let mut ctx = Context::new(sigs, builder, lib);
     }
 
     fn init(
-        externs: Vec<(&String, Vec<&ir::Component>)>,
+        ctx: &ir::Context,
+        externs: Vec<(&String, Vec<ir::CompIdx>)>,
     ) -> CalyxResult<calyx::Context> {
         let mut ws = frontend::Workspace::from_compile_lib()?;
         // Add externals
         ws.externs.extend(externs.into_iter().map(|(file, comps)| {
             (
                 Some(PathBuf::from(file)),
-                comps.into_iter().map(Compile::primitive).collect(),
+                comps.into_iter().map(|idx| Compile::primitive(ctx, idx)).collect(),
             )
         }));
 
@@ -205,10 +230,10 @@ impl Compile {
             .externals
             .iter()
             .map(|(k, v)| {
-                (k, v.iter().map(|idx| ctx.comps.get(*idx)).collect())
+                (k, *v)
             })
             .collect();
-        let mut calyx_ctx = Compile::init(externals).unwrap_or_else(|e| {
+        let mut calyx_ctx = Compile::init(&ctx, externals).unwrap_or_else(|e| {
             panic!("Error initializing calyx context: {:?}", e);
         });
 
@@ -217,8 +242,7 @@ impl Compile {
         let po = Traversal::from(ctx);
 
         po.apply_pre_order(|ctx, comp| {
-            let comp = ctx.comps.get(comp);
-            let comp = Compile::component(comp, &mut bindings, &calyx_ctx.lib)
+            let comp = Compile::component(ctx, comp, &mut bindings, &calyx_ctx.lib)
                 .unwrap_or_else(|e| {
                     panic!("Error compiling component: {:?}", e);
                 });
@@ -258,14 +282,99 @@ impl From<&ir::PortOwner> for calyx::Direction {
     }
 }
 
-impl From<ir::Expr> for calyx::Width {
-    fn from(value: ir::Expr) -> Self {
-        match value {
-            ir::Expr::Param(p) => todo!(),
-            ir::Expr::Concrete(_) => todo!(),
-            ir::Expr::Bin { op, lhs, rhs } => todo!(),
-            ir::Expr::Fn { op, args } => todo!(),
+/// Helper functions for type conversion, etc.
+impl Compile {
+    /// Converts a [u64] into a [calyx::Width]
+    fn width_u64(value: u64) -> calyx::Width {
+        calyx::Width::Const { value }
+    }
+}
+
+impl Compile {
+    /// Creates a [calyx::Component] representing an FSM with a certain number of states to bind to each event.
+    fn create_fsm(ctx: &Context, states: u64) -> calyx::Component {
+        let ports: Vec<calyx::PortDef<u64>> = (0..states)
+            .map(|n| {
+                (calyx::Id::from(format!("_{n}")), 1, calyx::Direction::Output).into()
+            })
+            .chain(INTERFACE_PORTS.iter().map(|(attr, pd)| {
+                calyx::PortDef {
+                    name: pd.0.into(),
+                    width: pd.1,
+                    direction: pd.2,
+                    attributes: vec![*attr].try_into().unwrap(),
+                }
+            }))
+            .chain(iter::once(
+                (calyx::Id::from("go"), 1, calyx::Direction::Input).into(),
+            ))
+            .collect();
+        let mut comp = calyx::Component::new(
+            calyx::Id::from(format!("fsm_{}", states)),
+            ports,
+            false,
+        );
+        comp.attributes.insert(calyx::BoolAttr::NoInterface, 1);
+        let mut builder = calyx::Builder::new(&mut comp, ctx.lib).not_generated();
+
+        // Add n-1 registers
+        let regs = (0..states - 1)
+            .map(|_| builder.add_primitive("r", "std_reg", &[1]))
+            .collect_vec();
+
+        // Constant signal
+        structure!(builder;
+            let signal_on = constant(1, 1);
+        );
+        // This component's interface
+        let this = builder.component.signature.borrow();
+
+        // _0 = go;
+        let assign = builder.build_assignment(
+            this.get("_0"),
+            this.get("go"),
+            calyx::Guard::True,
+        );
+        builder.component.continuous_assignments.push(assign);
+
+        // For each register, add the following assignments:
+        // rn.write_en = 1'd1;
+        // rn.in = r{n-1}.out;
+        // _n = rn.out;
+        for idx in 0..states - 1 {
+            let cell = regs[idx as usize].borrow();
+            let write_assign = if idx == 0 {
+                builder.build_assignment(
+                    cell.get("in"),
+                    this.get("go"),
+                    calyx::Guard::True,
+                )
+            } else {
+                let prev_cell = regs[(idx - 1) as usize].borrow();
+                builder.build_assignment(
+                    cell.get("in"),
+                    prev_cell.get("out"),
+                    calyx::Guard::True,
+                )
+            };
+            let enable = builder.build_assignment(
+                cell.get("write_en"),
+                signal_on.borrow().get("out"),
+                calyx::Guard::True,
+            );
+            let out = builder.build_assignment(
+                this.get(format!("_{}", idx + 1)),
+                cell.get("out"),
+                calyx::Guard::True,
+            );
+            builder.component.continuous_assignments.extend([
+                write_assign,
+                enable,
+                out,
+            ]);
         }
+        drop(this);
+        comp
     }
 }
 
@@ -275,17 +384,39 @@ struct Binding {
     // Component signatures
     comps: HashMap<ast::Id, RRC<calyx::Cell>>,
     /// Mapping to the component representing FSM with particular number of states
-    pub fsm_comps: HashMap<u64, calyx::Component>,
+    fsm_comps: HashMap<u64, calyx::Component>,
 }
 
 impl Binding {
     pub fn insert_comp(&mut self, name: ast::Id, sig: RRC<calyx::Cell>) {
         self.comps.insert(name, sig);
     }
+
+    /// Tries to get an fsm with a certain number of states.
+    pub fn get_fsm(&self, states: u64) -> &calyx::Component{
+        self.fsm_comps.entry(states).or_insert(
+            Compile::create_fsm(states)
+        )
+    }
 }
 
 struct Context<'a> {
     builder: calyx::Builder<'a>,
     lib: &'a calyx::LibrarySignatures,
-    bindings: Binding,
+    binding: &'a mut Binding,
+}
+
+
+impl<'a> Context<'a> {
+    fn new(
+        binding: &'a mut Binding,
+        builder: calyx::Builder<'a>,
+        lib: &'a calyx::LibrarySignatures,
+    ) -> Self {
+        Context {
+            binding,
+            builder,
+            lib
+        }
+    }
 }

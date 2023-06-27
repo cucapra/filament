@@ -2,7 +2,7 @@ use super::Component;
 use crate::utils::Idx;
 
 /// A context for storing values with their indices.
-/// The context is indexed by [Idx<T>].
+/// The context is indexed by [`Idx<T>`].
 pub trait Ctx<T> {
     /// Add a new value to the context
     fn add(&mut self, val: T) -> Idx<T>;
@@ -10,13 +10,13 @@ pub trait Ctx<T> {
     fn get(&self, idx: Idx<T>) -> &T;
 }
 
-/// A context that provides mutable access to values using [Idx<T>] indices.
+/// A context that provides mutable access to values using [`Idx<T>`] indices.
 pub trait MutCtx<T> {
     /// Get a mutable reference to the value associated with the index.
     fn get_mut(&mut self, idx: Idx<T>) -> &mut T;
 }
 
-// We can use indexing syntax for all values in the context for which it is a Ctx.
+/// We can use indexing syntax for all values in the context for which it is a [`Ctx<K>`].
 impl<K> std::ops::Index<Idx<K>> for Component
 where
     Component: Ctx<K>,

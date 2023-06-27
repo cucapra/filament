@@ -3,7 +3,7 @@ use crate::{ast, ir, utils::Idx};
 use itertools::{Itertools, Position};
 use std::{fmt::Display, io};
 
-/// A context capable of displaying [Idx<T>] values.
+/// A context capable of displaying [`Idx<T>`] values.
 pub trait DisplayCtx<T>
 where
     Self: Ctx<T>,
