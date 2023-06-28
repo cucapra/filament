@@ -202,6 +202,7 @@ impl Compile {
 
         let builder = calyx::Builder::new(&mut component, lib).not_generated();
         let mut ctx = Context::new(sigs, builder, lib);
+        todo!()
     }
 
     fn init(
@@ -230,7 +231,7 @@ impl Compile {
             .externals
             .iter()
             .map(|(k, v)| {
-                (k, *v)
+                (k, v.clone())
             })
             .collect();
         let mut calyx_ctx = Compile::init(&ctx, externals).unwrap_or_else(|e| {
@@ -290,9 +291,48 @@ impl Compile {
     }
 }
 
-impl Compile {
+/// Bindings associated with the current compilation context
+#[derive(Default)]
+struct Binding {
+    // Component signatures
+    comps: HashMap<ast::Id, RRC<calyx::Cell>>,
+    /// Mapping to the component representing FSM with particular number of states
+    fsm_comps: HashMap<u64, calyx::Component>,
+}
+
+impl Binding {
+    pub fn insert_comp(&mut self, name: ast::Id, sig: RRC<calyx::Cell>) {
+        self.comps.insert(name, sig);
+    }
+
+    /// Tries to get an fsm with a certain number of states.
+    pub fn get_fsm(&self, states: &u64) -> &calyx::Component{
+        self.fsm_comps.get(states).unwrap()
+    }
+}
+
+struct Context<'a> {
+    builder: calyx::Builder<'a>,
+    lib: &'a calyx::LibrarySignatures,
+    binding: &'a mut Binding,
+}
+
+
+impl<'a> Context<'a> {
+    fn new(
+        binding: &'a mut Binding,
+        builder: calyx::Builder<'a>,
+        lib: &'a calyx::LibrarySignatures,
+    ) -> Self {
+        Context {
+            binding,
+            builder,
+            lib
+        }
+    }
+
     /// Creates a [calyx::Component] representing an FSM with a certain number of states to bind to each event.
-    fn create_fsm(ctx: &Context, states: u64) -> calyx::Component {
+    fn create_fsm(&mut self, states: u64) {
         let ports: Vec<calyx::PortDef<u64>> = (0..states)
             .map(|n| {
                 (calyx::Id::from(format!("_{n}")), 1, calyx::Direction::Output).into()
@@ -301,7 +341,7 @@ impl Compile {
                 calyx::PortDef {
                     name: pd.0.into(),
                     width: pd.1,
-                    direction: pd.2,
+                    direction: pd.2.clone(),
                     attributes: vec![*attr].try_into().unwrap(),
                 }
             }))
@@ -315,7 +355,7 @@ impl Compile {
             false,
         );
         comp.attributes.insert(calyx::BoolAttr::NoInterface, 1);
-        let mut builder = calyx::Builder::new(&mut comp, ctx.lib).not_generated();
+        let mut builder = calyx::Builder::new(&mut comp, self.lib).not_generated();
 
         // Add n-1 registers
         let regs = (0..states - 1)
@@ -374,49 +414,6 @@ impl Compile {
             ]);
         }
         drop(this);
-        comp
-    }
-}
-
-/// Bindings associated with the current compilation context
-#[derive(Default)]
-struct Binding {
-    // Component signatures
-    comps: HashMap<ast::Id, RRC<calyx::Cell>>,
-    /// Mapping to the component representing FSM with particular number of states
-    fsm_comps: HashMap<u64, calyx::Component>,
-}
-
-impl Binding {
-    pub fn insert_comp(&mut self, name: ast::Id, sig: RRC<calyx::Cell>) {
-        self.comps.insert(name, sig);
-    }
-
-    /// Tries to get an fsm with a certain number of states.
-    pub fn get_fsm(&self, states: u64) -> &calyx::Component{
-        self.fsm_comps.entry(states).or_insert(
-            Compile::create_fsm(states)
-        )
-    }
-}
-
-struct Context<'a> {
-    builder: calyx::Builder<'a>,
-    lib: &'a calyx::LibrarySignatures,
-    binding: &'a mut Binding,
-}
-
-
-impl<'a> Context<'a> {
-    fn new(
-        binding: &'a mut Binding,
-        builder: calyx::Builder<'a>,
-        lib: &'a calyx::LibrarySignatures,
-    ) -> Self {
-        Context {
-            binding,
-            builder,
-            lib
-        }
+        self.binding.fsm_comps.insert(states, comp);
     }
 }
