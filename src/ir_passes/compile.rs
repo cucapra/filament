@@ -1,7 +1,10 @@
 use std::{
+    cmp::max,
     collections::{HashMap, HashSet},
+    convert::identity,
+    iter,
     path::PathBuf,
-    rc::Rc, convert::identity, iter,
+    rc::Rc,
 };
 
 use crate::{
@@ -83,7 +86,9 @@ impl Compile {
     fn u64(comp: &ir::Component, expr: ir::ExprIdx) -> u64 {
         match comp.get(expr) {
             ir::Expr::Concrete(val) => *val,
-            ir::Expr::Param(..) | ir::Expr::Bin { .. } | ir::Expr::Fn { .. } => {
+            ir::Expr::Param(..)
+            | ir::Expr::Bin { .. }
+            | ir::Expr::Fn { .. } => {
                 panic!("Port width must be a constant.")
             }
         }
@@ -166,7 +171,7 @@ impl Compile {
         match comp.src_ext {
             // component is non-external, generate name from CompIdx
             None => idx.get().to_string().into(),
-            Some(id) => id.as_ref().into()
+            Some(id) => id.as_ref().into(),
         }
     }
 
@@ -174,19 +179,75 @@ impl Compile {
         let comp = ctx.comps.get(idx);
         calyx::Primitive {
             name: Compile::comp_name(ctx, idx),
-            params: comp.params().iter()
+            params: comp
+                .params()
+                .iter()
                 .map(|(_, p)| {
-                    if let ir::Info::Param {name, ..} = comp.get(p.info) {
+                    if let ir::Info::Param { name, .. } = comp.get(p.info) {
                         name.as_ref().into()
                     } else {
                         unreachable!("Incorrect info type for parameter");
                     }
-                }).collect(),
+                })
+                .collect(),
             signature: Compile::ports(comp, Compile::width_u64, Compile::width),
             attributes: calyx::Attributes::default(),
             is_comb: false,
             body: None,
         }
+    }
+
+    fn max_state_from_liveness(
+        comp: &ir::Component,
+        live: &ir::Liveness,
+        event_map: &mut HashMap<ir::EventIdx, u64>,
+    ) {
+        assert!(
+            &ir::Expr::Concrete(1) == comp.get(live.len),
+            "Port bundles should have been compiled away."
+        );
+        for time in [live.range.start, live.range.end] {
+            let time = comp.get(time);
+            let v = event_map.get_mut(&time.event).unwrap();
+            *v = max(Compile::u64(comp, time.offset), *v);
+        }
+    }
+
+    /// Gets the maximum states for each event with an interface port in the component
+    fn max_states(comp: &ir::Component) -> HashMap<ir::EventIdx, u64> {
+        let mut event_map = comp
+            .events()
+            .idx_iter()
+            .map(|eb| (eb, 0))
+            .collect::<HashMap<_, _>>();
+
+        comp.ports()
+            .idx_iter()
+            .filter_map(|port| match comp.get(port) {
+                ir::Port {
+                    owner:
+                        ir::PortOwner::Sig {
+                            dir: ir::Direction::In,
+                        },
+                    live,
+                    ..
+                }
+                | ir::Port {
+                    owner:
+                        ir::PortOwner::Inv {
+                            dir: ir::Direction::Out,
+                            ..
+                        },
+                    live,
+                    ..
+                } => Some(live),
+                _ => None,
+            })
+            .for_each(|port| {
+                Compile::max_state_from_liveness(comp, port, &mut event_map);
+            });
+
+        event_map
     }
 
     fn component(
@@ -197,11 +258,31 @@ impl Compile {
     ) -> FilamentResult<calyx::Component> {
         let comp = ctx.comps.get(idx);
         let ports = Compile::ports(comp, identity, Compile::u64);
-        let mut component = calyx::Component::new(Compile::comp_name(ctx, idx), ports, false);
+        let mut component =
+            calyx::Component::new(Compile::comp_name(ctx, idx), ports, false);
         component.attributes.insert(calyx::BoolAttr::NoInterface, 1);
 
         let builder = calyx::Builder::new(&mut component, lib).not_generated();
-        let mut ctx = Context::new(sigs, builder, lib);
+        let mut ctx =
+            Context::new(sigs, builder, lib, Compile::max_states(comp));
+
+        for cmd in &comp.cmds {
+            match cmd {
+                ir::Command::Instance(_) => todo!(),
+                ir::Command::Invoke(_) => todo!(),
+                ir::Command::Connect(_) => todo!(),
+                ir::Command::ForLoop(_) => {
+                    unreachable!("For loops should have been compiled away.")
+                }
+                ir::Command::If(_) => {
+                    unreachable!("Ifs should have been compiled away.")
+                }
+                ir::Command::Fact(_) => {
+                    unreachable!("Assumptions should have been compiled away.")
+                }
+                ir::Command::EventBind(_) => todo!(),
+            }
+        }
         todo!()
     }
 
@@ -214,7 +295,10 @@ impl Compile {
         ws.externs.extend(externs.into_iter().map(|(file, comps)| {
             (
                 Some(PathBuf::from(file)),
-                comps.into_iter().map(|idx| Compile::primitive(ctx, idx)).collect(),
+                comps
+                    .into_iter()
+                    .map(|idx| Compile::primitive(ctx, idx))
+                    .collect(),
             )
         }));
 
@@ -227,26 +311,23 @@ impl Compile {
     }
 
     pub fn compile(ctx: ir::Context) {
-        let externals = ctx
-            .externals
-            .iter()
-            .map(|(k, v)| {
-                (k, v.clone())
-            })
-            .collect();
-        let mut calyx_ctx = Compile::init(&ctx, externals).unwrap_or_else(|e| {
-            panic!("Error initializing calyx context: {:?}", e);
-        });
+        let externals =
+            ctx.externals.iter().map(|(k, v)| (k, v.clone())).collect();
+        let mut calyx_ctx =
+            Compile::init(&ctx, externals).unwrap_or_else(|e| {
+                panic!("Error initializing calyx context: {:?}", e);
+            });
 
         let mut bindings = Binding::default();
 
         let po = Traversal::from(ctx);
 
         po.apply_pre_order(|ctx, comp| {
-            let comp = Compile::component(ctx, comp, &mut bindings, &calyx_ctx.lib)
-                .unwrap_or_else(|e| {
-                    panic!("Error compiling component: {:?}", e);
-                });
+            let comp =
+                Compile::component(ctx, comp, &mut bindings, &calyx_ctx.lib)
+                    .unwrap_or_else(|e| {
+                        panic!("Error compiling component: {:?}", e);
+                    });
             bindings.insert_comp(
                 ast::Id::from(comp.name.id.as_str()),
                 Rc::clone(&comp.signature),
@@ -306,7 +387,7 @@ impl Binding {
     }
 
     /// Tries to get an fsm with a certain number of states.
-    pub fn get_fsm(&self, states: &u64) -> &calyx::Component{
+    pub fn get_fsm(&self, states: &u64) -> &calyx::Component {
         self.fsm_comps.get(states).unwrap()
     }
 }
@@ -315,19 +396,21 @@ struct Context<'a> {
     builder: calyx::Builder<'a>,
     lib: &'a calyx::LibrarySignatures,
     binding: &'a mut Binding,
+    fsm_states: HashMap<ir::EventIdx, u64>,
 }
-
 
 impl<'a> Context<'a> {
     fn new(
         binding: &'a mut Binding,
         builder: calyx::Builder<'a>,
         lib: &'a calyx::LibrarySignatures,
+        fsm_states: HashMap<ir::EventIdx, u64>,
     ) -> Self {
         Context {
             binding,
             builder,
-            lib
+            lib,
+            fsm_states,
         }
     }
 
@@ -335,15 +418,18 @@ impl<'a> Context<'a> {
     fn create_fsm(&mut self, states: u64) {
         let ports: Vec<calyx::PortDef<u64>> = (0..states)
             .map(|n| {
-                (calyx::Id::from(format!("_{n}")), 1, calyx::Direction::Output).into()
+                (
+                    calyx::Id::from(format!("_{n}")),
+                    1,
+                    calyx::Direction::Output,
+                )
+                    .into()
             })
-            .chain(INTERFACE_PORTS.iter().map(|(attr, pd)| {
-                calyx::PortDef {
-                    name: pd.0.into(),
-                    width: pd.1,
-                    direction: pd.2.clone(),
-                    attributes: vec![*attr].try_into().unwrap(),
-                }
+            .chain(INTERFACE_PORTS.iter().map(|(attr, pd)| calyx::PortDef {
+                name: pd.0.into(),
+                width: pd.1,
+                direction: pd.2.clone(),
+                attributes: vec![*attr].try_into().unwrap(),
             }))
             .chain(iter::once(
                 (calyx::Id::from("go"), 1, calyx::Direction::Input).into(),
@@ -355,7 +441,8 @@ impl<'a> Context<'a> {
             false,
         );
         comp.attributes.insert(calyx::BoolAttr::NoInterface, 1);
-        let mut builder = calyx::Builder::new(&mut comp, self.lib).not_generated();
+        let mut builder =
+            calyx::Builder::new(&mut comp, self.lib).not_generated();
 
         // Add n-1 registers
         let regs = (0..states - 1)
