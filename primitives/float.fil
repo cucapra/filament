@@ -6,7 +6,7 @@ import "./signed.fil";
 
 /// Extracts the sign bit, exponent bits, and mantissa from a floating point number.
 /// Asserts that #WIDTH = #EXPONENT+#MANTISSA+1
-comp _FDecompose[#WIDTH, #EXPONENT, #MANTISSA]<G: 1, ?L: 1=G+1> (
+comp _FDecompose[#WIDTH, #EXPONENT, #MANTISSA]<G: 1> (
     @[G, G+1] in: #WIDTH
 ) -> (
     @[G, G+1] sign: 1,
@@ -26,7 +26,7 @@ comp _FDecompose[#WIDTH, #EXPONENT, #MANTISSA]<G: 1, ?L: 1=G+1> (
 }
 
 /// Combines components into a single float
-comp _FCompose[#WIDTH, #EXPONENT, #MANTISSA]<G: 1, ?L: 1=G+1> (
+comp _FCompose[#WIDTH, #EXPONENT, #MANTISSA]<G: 1> (
     @[G, G+1] sign: 1,
     @[G, G+1] exponent: #EXPONENT,
     @[G, G+1] mantissa: #MANTISSA
@@ -43,7 +43,7 @@ comp _FCompose[#WIDTH, #EXPONENT, #MANTISSA]<G: 1, ?L: 1=G+1> (
 }
 
 /// Adds two floating point numbers
-comp FAdd[#WIDTH, #EXPONENT, #MANTISSA]<G: 1, ?L: 1=G+1> (
+comp FAdd[#WIDTH, #EXPONENT, #MANTISSA]<G: 1> (
     @[G, G+1] left: #WIDTH,
     @[G, G+1] right: #WIDTH,
 ) -> (
@@ -54,8 +54,8 @@ comp FAdd[#WIDTH, #EXPONENT, #MANTISSA]<G: 1, ?L: 1=G+1> (
     #MANTISSA > 1
 {
      //// comb stage 1 ////
-    left := new _FDecompose[#WIDTH, #EXPONENT, #MANTISSA]<G, G+1>(left);
-    right := new _FDecompose[#WIDTH, #EXPONENT, #MANTISSA]<G, G+1>(right);
+    left := new _FDecompose[#WIDTH, #EXPONENT, #MANTISSA]<G>(left);
+    right := new _FDecompose[#WIDTH, #EXPONENT, #MANTISSA]<G>(right);
 
     _one := new Const[1, 1]<G, G+1>();
 
@@ -142,13 +142,13 @@ comp FAdd[#WIDTH, #EXPONENT, #MANTISSA]<G: 1, ?L: 1=G+1> (
     _fsign_1_cond := new Gt[#WIDTH-1]<G, G+1>(l_signless.out, r_signless.out);
     _fsign_2_cond := new Eq[1]<G, G+1>(left.sign, right.sign);
     _fsign_cb_cond := new Or[1]<G, G+1>(_fsign_1_cond.out, _fsign_2_cond.out);
-    final_sign := new Mux[1]<G, G+1>(_fsign_cb_cond.out, left.sign, right.sign); 
+    final_sign := new Mux[1]<G, G+1>(_fsign_cb_cond.out, left.sign, right.sign);
 
-    res := new _FCompose[#WIDTH, #EXPONENT, #MANTISSA]<G, G+1>(final_sign.out, final_exp.out, final_mantissa.out);
+    res := new _FCompose[#WIDTH, #EXPONENT, #MANTISSA]<G>(final_sign.out, final_exp.out, final_mantissa.out);
     out = res.out;
 }
 
-comp FMult[#WIDTH, #EXPONENT, #MANTISSA]<G: 1, ?L: 1=G+1> (
+comp FMult[#WIDTH, #EXPONENT, #MANTISSA]<G: 1> (
     @[G, G+1] left: #WIDTH,
     @[G, G+1] right: #WIDTH,
 ) -> (
@@ -159,8 +159,8 @@ comp FMult[#WIDTH, #EXPONENT, #MANTISSA]<G: 1, ?L: 1=G+1> (
     #MANTISSA > 1
 {
      //// comb stage 1 ////
-    left := new _FDecompose[#WIDTH, #EXPONENT, #MANTISSA]<G, G+1>(left);
-    right := new _FDecompose[#WIDTH, #EXPONENT, #MANTISSA]<G, G+1>(right);
+    left := new _FDecompose[#WIDTH, #EXPONENT, #MANTISSA]<G>(left);
+    right := new _FDecompose[#WIDTH, #EXPONENT, #MANTISSA]<G>(right);
 
     _zero_sign := new Const[1, 0]<G, G+1>();
     _zero_exp := new Const[#EXPONENT, 0]<G, G+1>();
@@ -202,7 +202,7 @@ comp FMult[#WIDTH, #EXPONENT, #MANTISSA]<G: 1, ?L: 1=G+1> (
     exp_norm := new Sub[#EXPONENT+1]<G, G+1>(sum_exponent.out, _exp_m_1_neg_1.out);
     _normalised_ext_exp := new ZeroExtend[1, #EXPONENT+1]<G, G+1>(normalised.out);
     exponent := new Add[#EXPONENT+1]<G, G+1>(exp_norm.out, _normalised_ext_exp.out);
-    
+
     _exp_8 := new Select[#EXPONENT+1, #EXPONENT]<G, G+1>(exponent.out);
     _exp_7 := new Select[#EXPONENT+1, #EXPONENT-1]<G, G+1>(exponent.out);
     _n_exp_7 := new Not[1]<G, G+1>(_exp_7.out);
@@ -211,14 +211,14 @@ comp FMult[#WIDTH, #EXPONENT, #MANTISSA]<G: 1, ?L: 1=G+1> (
     _ouflow_tmp := new And[1]<G, G+1>(_exp_8.out, nzero.out);
     overflow := new And[1]<G, G+1>(_ouflow_tmp.out, _n_exp_7.out);
     underflow := new And[1]<G, G+1>(_ouflow_tmp.out, _exp_7.out);
-    
+
     _zero_width := new Const[#WIDTH, 0]<G, G+1>();
     _neg_1_exp := new NegConst[#EXPONENT, 1]<G, G+1>();
     _exp_cut := new Slice[#EXPONENT+1, #EXPONENT-1, 0, #EXPONENT]<G, G+1>(exponent.out);
-    _res_0_init := new _FCompose[#WIDTH, #EXPONENT, #MANTISSA]<G, G+1>(final_sign.out, _exp_cut.out, product_mantissa.out);
-    _res_sign_only := new _FCompose[#WIDTH, #EXPONENT, #MANTISSA]<G, G+1>(final_sign.out, _zero_exp.out, _zero_mant.out);
-    _res_sign_maxexp := new _FCompose[#WIDTH, #EXPONENT, #MANTISSA]<G, G+1>(final_sign.out, _neg_1_exp.out, _zero_mant.out);
-    
+    _res_0_init := new _FCompose[#WIDTH, #EXPONENT, #MANTISSA]<G>(final_sign.out, _exp_cut.out, product_mantissa.out);
+    _res_sign_only := new _FCompose[#WIDTH, #EXPONENT, #MANTISSA]<G>(final_sign.out, _zero_exp.out, _zero_mant.out);
+    _res_sign_maxexp := new _FCompose[#WIDTH, #EXPONENT, #MANTISSA]<G>(final_sign.out, _neg_1_exp.out, _zero_mant.out);
+
     _res_0 := new Mux[#WIDTH]<G, G+1>(underflow.out, _res_sign_only.out, _res_0_init.out);
     _res_1 := new Mux[#WIDTH]<G, G+1>(overflow.out, _res_sign_maxexp.out, _res_0.out);
     _res_2 := new Mux[#WIDTH]<G, G+1>(zero.out, _res_sign_only.out, _res_1.out);
