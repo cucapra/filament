@@ -1,9 +1,0 @@
-extern "aes.v" {
-  comp top<G>(
-    clk: 1,
-    @[G, G+1] state_words: 128,
-    @[G, G+1] keys: 1280,
-  ) -> (
-    @[G+18, G+19] out_words: 128
-  )
-}
