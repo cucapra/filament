@@ -1,0 +1,48 @@
+import "./state.fil";
+
+/**
+Defines a 2D sqaure window over a 2D matrix.
+*/
+comp Stencil_2d[#N, #M, #W]<G: 1>(
+    @[G, G+1] in: #W
+) -> (
+    out[#N*#N]: for<#l> @[G, G+1] #W
+) where #M >= #N, #N > 0 {
+    // The bundles that track the wires between the rows of the window.
+    bundle col[#N]: for<#l> @[G, G+1] #W;
+    col{0} = in;
+
+    // The first N-1 rows of the window which need additional registers to shift
+    // through the window
+    for #i in 0..#N-1 {
+        // Wires between the registers in a particular row.
+        bundle row[#M+1]: for<#l> @[G, G+1] #W;
+        row{0} = col{#i};
+
+        for #j in 0..#M {
+            p := new ContPrev[#W, 0]<G>(row{#j});
+            row{#j+1} = p.prev;
+            if #j < #N {
+                out{#i*#N+#j} = p.prev;
+            } else {}
+        }
+
+        col{#i+1} = row{#M-1};
+    }
+
+    // The last row of the window. Does not need additional registers
+    bundle last_row[#N]: for<#l> @[G, G+1] #W;
+    last_row{0} = col{#N-1};
+    for #k in 0..#N {
+        px := new ContPrev[#W, 0]<G>(last_row{#k});
+        out{(#N-1)*#N+#k} = px.prev;
+        if #k == #N-1 {
+        } else {
+            last_row{#k+1} = px.prev;
+        }
+    }
+}
+
+comp main<G: 1>(@[G, G+1] in: 32) -> () {
+    s := new Stencil_2d[3, 4, 32]<G>(in);
+}
