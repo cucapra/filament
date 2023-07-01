@@ -19,7 +19,8 @@ use calyx_utils::CalyxResult;
 use itertools::Itertools;
 
 type AttrPair = (calyx::Attribute, u64);
-const INTERFACE_PORTS: [(AttrPair, (&str, u64, calyx::Direction)); 2] = [
+/// A set of interface ports that are required for all components.
+pub const INTERFACE_PORTS: [(AttrPair, (&str, u64, calyx::Direction)); 2] = [
     (
         (calyx::Attribute::Bool(calyx::BoolAttr::Clk), 1),
         ("clk", 1, calyx::Direction::Input),
@@ -166,19 +167,19 @@ impl Compile {
     }
 
     /// Gets the component name given an [ir::Context] and an [ir::CompIdx]
-    fn comp_name(ctx: &ir::Context, idx: ir::CompIdx) -> calyx::Id {
+    fn comp_name(ctx: &ir::Context, idx: ir::CompIdx) -> String {
         let comp = ctx.comps.get(idx);
         match comp.src_ext {
             // component is non-external, generate name from CompIdx
-            None => idx.get().to_string().into(),
-            Some(id) => id.as_ref().into(),
+            None => idx.to_string(),
+            Some(id) => id.to_string(),
         }
     }
 
     fn primitive(ctx: &ir::Context, idx: ir::CompIdx) -> calyx::Primitive {
         let comp = ctx.comps.get(idx);
         calyx::Primitive {
-            name: Compile::comp_name(ctx, idx),
+            name: Compile::comp_name(ctx, idx).into(),
             params: comp
                 .params()
                 .iter()
@@ -253,7 +254,7 @@ impl Compile {
     fn component(
         ctx: &ir::Context,
         idx: ir::CompIdx,
-        sigs: &mut Binding,
+        bind: &mut Binding,
         lib: &calyx::LibrarySignatures,
     ) -> FilamentResult<calyx::Component> {
         let comp = ctx.comps.get(idx);
@@ -263,14 +264,26 @@ impl Compile {
         component.attributes.insert(calyx::BoolAttr::NoInterface, 1);
 
         let builder = calyx::Builder::new(&mut component, lib).not_generated();
-        let mut ctx =
-            Context::new(sigs, builder, lib, Compile::max_states(comp));
+        let mut ctx = Context::new(ctx, idx, bind, builder, lib);
+
+        // Construct all the FSMs
+        Compile::max_states(comp)
+            .values()
+            .cloned()
+            .collect_vec() // collect to avoid borrowing issues
+            .into_iter()
+            .for_each(|states| ctx.declare_fsm(states));
 
         for cmd in &comp.cmds {
             match cmd {
-                ir::Command::Instance(_) => todo!(),
-                ir::Command::Invoke(_) => todo!(),
-                ir::Command::Connect(_) => todo!(),
+                ir::Command::Instance(idx) => ctx.add_instance(*idx),
+                ir::Command::Invoke(idx) => ctx.add_invoke(*idx),
+                ir::Command::Connect(connect) => ctx.compile_connect(connect),
+                ir::Command::EventBind(_) => {
+                    unreachable!(
+                        "Event bindings should have been compiled away."
+                    )
+                }
                 ir::Command::ForLoop(_) => {
                     unreachable!("For loops should have been compiled away.")
                 }
@@ -280,7 +293,6 @@ impl Compile {
                 ir::Command::Fact(_) => {
                     unreachable!("Assumptions should have been compiled away.")
                 }
-                ir::Command::EventBind(_) => todo!(),
             }
         }
         todo!()
@@ -322,16 +334,13 @@ impl Compile {
 
         let po = Traversal::from(ctx);
 
-        po.apply_pre_order(|ctx, comp| {
+        po.apply_pre_order(|ctx, idx| {
             let comp =
-                Compile::component(ctx, comp, &mut bindings, &calyx_ctx.lib)
+                Compile::component(ctx, idx, &mut bindings, &calyx_ctx.lib)
                     .unwrap_or_else(|e| {
                         panic!("Error compiling component: {:?}", e);
                     });
-            bindings.insert_comp(
-                ast::Id::from(comp.name.id.as_str()),
-                Rc::clone(&comp.signature),
-            );
+            bindings.insert(idx, Rc::clone(&comp.signature));
             calyx_ctx.components.push(comp);
         });
 
@@ -376,46 +385,186 @@ impl Compile {
 #[derive(Default)]
 struct Binding {
     // Component signatures
-    comps: HashMap<ast::Id, RRC<calyx::Cell>>,
+    comps: HashMap<ir::CompIdx, RRC<calyx::Cell>>,
     /// Mapping to the component representing FSM with particular number of states
     fsm_comps: HashMap<u64, calyx::Component>,
 }
 
 impl Binding {
-    pub fn insert_comp(&mut self, name: ast::Id, sig: RRC<calyx::Cell>) {
+    /// Inserts a [calyx::Cell] into the binding
+    pub fn insert(&mut self, name: ir::CompIdx, sig: RRC<calyx::Cell>) {
         self.comps.insert(name, sig);
+    }
+
+    /// Gets a [calyx::Cell]'s signature from an [ir::CompIdx]
+    pub fn get(&self, idx: &ir::CompIdx) -> Option<Vec<calyx::PortDef<u64>>> {
+        self.comps.get(idx).map(Self::cell_to_port_def)
     }
 
     /// Tries to get an fsm with a certain number of states.
     pub fn get_fsm(&self, states: &u64) -> &calyx::Component {
         self.fsm_comps.get(states).unwrap()
     }
+
+    /// Converts a cell to a list of port definitions
+    pub fn cell_to_port_def(cr: &RRC<calyx::Cell>) -> Vec<calyx::PortDef<u64>> {
+        let cell = cr.borrow();
+        cell.ports()
+            .iter()
+            .map(|pr| {
+                let port = pr.borrow();
+                // Reverse port direction because signature refers to internal interface.
+                (port.name, port.width, port.direction.reverse()).into()
+            })
+            .collect()
+    }
 }
 
 struct Context<'a> {
+    ctx: &'a ir::Context,
+    idx: ir::CompIdx,
+    comp: &'a ir::Component,
     builder: calyx::Builder<'a>,
     lib: &'a calyx::LibrarySignatures,
     binding: &'a mut Binding,
-    fsm_states: HashMap<ir::EventIdx, u64>,
+    fsms: HashMap<ir::EventIdx, Fsm>,
+    /// Mapping from instances to cells
+    instances: HashMap<ir::InstIdx, RRC<calyx::Cell>>,
+    /// Mapping from invocation name to instance
+    invokes: HashMap<ir::InvIdx, RRC<calyx::Cell>>,
 }
 
 impl<'a> Context<'a> {
     fn new(
+        ctx: &'a ir::Context,
+        idx: ir::CompIdx,
         binding: &'a mut Binding,
         builder: calyx::Builder<'a>,
         lib: &'a calyx::LibrarySignatures,
-        fsm_states: HashMap<ir::EventIdx, u64>,
     ) -> Self {
+        let comp = ctx.comps.get(idx);
         Context {
+            ctx,
+            idx,
+            comp,
             binding,
             builder,
             lib,
-            fsm_states,
+            instances: HashMap::new(),
+            invokes: HashMap::new(),
+            fsms: HashMap::new(),
         }
     }
 
+    /// Converts an interval to a guard expression with the appropriate FSM
+    fn compile_range(
+        &mut self,
+        range: &ir::Range,
+    ) -> Option<calyx::Guard<calyx::Nothing>> {
+        let start = self.comp.get(range.start);
+        let end = self.comp.get(range.end);
+
+        assert!(
+            start.event == end.event,
+            "Range `{range}` cannot be represented as a simple offset"
+        );
+
+        let ev = start.event;
+
+        let fsm = self.fsms.get(&ev).unwrap();
+        let guard = (Compile::u64(self.comp, start.offset)
+            ..Compile::u64(self.comp, end.offset))
+            .map(|st| fsm.get_port(st).into())
+            .reduce(calyx::Guard::or)
+            .unwrap();
+        Some(guard)
+    }
+
+    fn compile_connect(&mut self, con: &ir::Connect) {
+        let ir::Connect { dst, src, .. } = con;
+
+        assert!(
+            Compile::u64(self.comp, src.start) == 0
+                && Compile::u64(self.comp, src.end) == 1,
+            "Port bundles should have been compiled away."
+        );
+
+        assert!(
+            Compile::u64(self.comp, dst.start) == 0
+                && Compile::u64(self.comp, dst.end) == 1,
+            "Port bundles should have been compiled away."
+        );
+
+        let dst = self.get_port(dst.port);
+        let src = self.get_port(src.port);
+        let assign =
+            self.builder.build_assignment(dst, src, calyx::Guard::True);
+        self.builder.component.continuous_assignments.push(assign);
+    }
+
+    pub fn get_port(&mut self, idx: ir::PortIdx) -> RRC<calyx::Port> {
+        let port = self.comp.get(idx);
+        let cell = match port.owner {
+            ir::PortOwner::Sig { .. } => {
+                self.builder.component.signature.borrow()
+            }
+            ir::PortOwner::Inv { inv, .. } => self.invokes[&inv].borrow(),
+            ir::PortOwner::Local => {
+                unreachable!("Local ports should have been eliminated.")
+            }
+        };
+        cell.get(idx.to_string())
+    }
+
+    /// Compiles an [ast::Id] port name to a [calyx::Port] reference
+    pub fn get_port_name(&mut self, id: &ast::Id) -> RRC<calyx::Port> {
+        self.builder.component.signature.borrow().get(id.as_ref())
+    }
+
+    fn add_invoke(&mut self, idx: ir::InvIdx) {
+        let inv = self.comp.get(idx);
+        let cell = &self
+            .instances
+            .get(&inv.inst)
+            .unwrap_or_else(|| panic!("Unknown instance: {}", inv.inst));
+        self.invokes.insert(idx, Rc::clone(cell));
+    }
+
+    fn add_instance(&mut self, idx: ir::InstIdx) {
+        let inst = self.comp.get(idx);
+        let inst_name = inst.to_string();
+        let comp_name = Compile::comp_name(self.ctx, inst.comp);
+        let cell = if let Some(sig) = self.get_sig(&inst.comp) {
+            self.builder.add_component(
+                inst_name, // non-primitive component
+                comp_name, sig,
+            )
+        } else {
+            let conc_bind = inst
+                .params
+                .iter()
+                .map(|v| Compile::u64(self.comp, *v))
+                .collect_vec();
+            self.builder.add_primitive(inst_name, comp_name, &conc_bind)
+        };
+
+        cell.borrow_mut()
+            .attributes
+            .insert(calyx::BoolAttr::Data, 1);
+        self.instances.insert(idx, cell);
+    }
+
+    fn get_sig(&self, comp: &ir::CompIdx) -> Option<Vec<calyx::PortDef<u64>>> {
+        self.binding.get(comp)
+    }
+
     /// Creates a [calyx::Component] representing an FSM with a certain number of states to bind to each event.
-    fn create_fsm(&mut self, states: u64) {
+    /// Adds component to the [Binding] held by this component.
+    fn declare_fsm(&mut self, states: u64) {
+        if self.binding.fsm_comps.contains_key(&states) {
+            return;
+        }
+
         let ports: Vec<calyx::PortDef<u64>> = (0..states)
             .map(|n| {
                 (
@@ -501,6 +650,50 @@ impl<'a> Context<'a> {
             ]);
         }
         drop(this);
+
         self.binding.fsm_comps.insert(states, comp);
+    }
+}
+
+/// A wrapper for a [calyx::Component] representing a finite state machine.
+struct Fsm {
+    /// The number of states in this [Fsm].
+    states: u64,
+    /// The [calyx::Component] representing this fsm.
+    cell: RRC<calyx::Cell>,
+}
+
+impl Fsm {
+    fn new(event: ir::EventIdx, states: u64, ctx: &mut Context) -> Self {
+        let event = ctx.comp.get(event);
+        let comp = ctx.binding.get_fsm(&states);
+        let cell = ctx.builder.add_component(
+            format!("{event}"),
+            comp.name.to_string(),
+            Binding::cell_to_port_def(&comp.signature),
+        );
+
+        if let ir::Info::InterfacePort { name, .. } =
+            ctx.comp.get(event.interface_port.unwrap())
+        {
+            // gets the trigger port from the signature
+            let sig = ctx.builder.component.signature.borrow();
+            let trigger = sig.get(name.as_ref());
+
+            // Connect the trigger port to the instance
+            let go_assign = ctx.builder.build_assignment(
+                cell.borrow().get("go"),
+                trigger,
+                calyx::Guard::True,
+            );
+            ctx.builder.component.continuous_assignments.push(go_assign);
+            Fsm { states, cell }
+        } else {
+            unreachable!("Info should be an interface port");
+        }
+    }
+
+    fn get_port(&self, state: u64) -> RRC<calyx::Port> {
+        self.cell.borrow().get(format!("_{}", state))
     }
 }
