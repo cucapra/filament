@@ -267,23 +267,16 @@ impl Compile {
         let mut ctx = Context::new(ctx, idx, bind, builder, lib);
 
         // Construct all the FSMs
-        Compile::max_states(comp)
-            .values()
-            .cloned()
-            .collect_vec() // collect to avoid borrowing issues
-            .into_iter()
-            .for_each(|states| ctx.declare_fsm(states));
+        for (event, states) in Compile::max_states(comp) {
+            ctx.insert_fsm(event, states);
+        }
 
         for cmd in &comp.cmds {
             match cmd {
                 ir::Command::Instance(idx) => ctx.add_instance(*idx),
                 ir::Command::Invoke(idx) => ctx.add_invoke(*idx),
                 ir::Command::Connect(connect) => ctx.compile_connect(connect),
-                ir::Command::EventBind(_) => {
-                    unreachable!(
-                        "Event bindings should have been compiled away."
-                    )
-                }
+                ir::Command::EventBind(eb) => ctx.compile_eventbind(eb),
                 ir::Command::ForLoop(_) => {
                     unreachable!("For loops should have been compiled away.")
                 }
@@ -401,11 +394,6 @@ impl Binding {
         self.comps.get(idx).map(Self::cell_to_port_def)
     }
 
-    /// Tries to get an fsm with a certain number of states.
-    pub fn get_fsm(&self, states: &u64) -> &calyx::Component {
-        self.fsm_comps.get(states).unwrap()
-    }
-
     /// Converts a cell to a list of port definitions
     pub fn cell_to_port_def(cr: &RRC<calyx::Cell>) -> Vec<calyx::PortDef<u64>> {
         let cell = cr.borrow();
@@ -422,7 +410,6 @@ impl Binding {
 
 struct Context<'a> {
     ctx: &'a ir::Context,
-    idx: ir::CompIdx,
     comp: &'a ir::Component,
     builder: calyx::Builder<'a>,
     lib: &'a calyx::LibrarySignatures,
@@ -432,6 +419,8 @@ struct Context<'a> {
     instances: HashMap<ir::InstIdx, RRC<calyx::Cell>>,
     /// Mapping from invocation name to instance
     invokes: HashMap<ir::InvIdx, RRC<calyx::Cell>>,
+    /// Binds events to the [calyx::Port] that they are connected to, used to connect interface ports.
+    eventbinds: HashMap<ir::EventIdx, RRC<calyx::Port>>,
 }
 
 impl<'a> Context<'a> {
@@ -442,25 +431,34 @@ impl<'a> Context<'a> {
         builder: calyx::Builder<'a>,
         lib: &'a calyx::LibrarySignatures,
     ) -> Self {
-        let comp = ctx.comps.get(idx);
         Context {
             ctx,
-            idx,
-            comp,
+            comp: ctx.comps.get(idx),
             binding,
             builder,
             lib,
             instances: HashMap::new(),
             invokes: HashMap::new(),
             fsms: HashMap::new(),
+            eventbinds: HashMap::new(),
         }
+    }
+
+    /// Attempts to declare an fsm (if not already declared) in the [Binding] stored by this [Context]
+    /// and creates an [Fsm] from this [calyx::Component] FSM and stores it in the [Context]
+    pub fn insert_fsm(&mut self, event: ir::EventIdx, states: u64) {
+        self.declare_fsm(states);
+
+        // Construct the FSM
+        let fsm = Fsm::new(event, states, self);
+        self.fsms.insert(event, fsm);
     }
 
     /// Converts an interval to a guard expression with the appropriate FSM
     fn compile_range(
         &mut self,
         range: &ir::Range,
-    ) -> Option<calyx::Guard<calyx::Nothing>> {
+    ) -> calyx::Guard<calyx::Nothing> {
         let start = self.comp.get(range.start);
         let end = self.comp.get(range.end);
 
@@ -472,12 +470,15 @@ impl<'a> Context<'a> {
         let ev = start.event;
 
         let fsm = self.fsms.get(&ev).unwrap();
-        let guard = (Compile::u64(self.comp, start.offset)
+        (Compile::u64(self.comp, start.offset)
             ..Compile::u64(self.comp, end.offset))
             .map(|st| fsm.get_port(st).into())
             .reduce(calyx::Guard::or)
-            .unwrap();
-        Some(guard)
+            .unwrap()
+    }
+
+    fn compile_eventbind(&mut self, eb: &ir::EventBind) {
+        todo!()
     }
 
     fn compile_connect(&mut self, con: &ir::Connect) {
@@ -495,15 +496,18 @@ impl<'a> Context<'a> {
             "Port bundles should have been compiled away."
         );
 
-        let dst = self.get_port(dst.port);
-        let src = self.get_port(src.port);
+        let (dst, g) = self.compile_port(dst.port);
+        assert!(!g.is_true(), "Destination port cannot have a guard.");
+        let (src, g) = self.compile_port(src.port);
         let assign =
-            self.builder.build_assignment(dst, src, calyx::Guard::True);
+            self.builder.build_assignment(dst, src, g);
         self.builder.component.continuous_assignments.push(assign);
     }
 
-    pub fn get_port(&mut self, idx: ir::PortIdx) -> RRC<calyx::Port> {
+    pub fn compile_port(&mut self, idx: ir::PortIdx) -> (RRC<calyx::Port>, calyx::Guard<calyx::Nothing>) {
         let port = self.comp.get(idx);
+
+        let guard = self.compile_range(&port.live.range);
         let cell = match port.owner {
             ir::PortOwner::Sig { .. } => {
                 self.builder.component.signature.borrow()
@@ -513,7 +517,7 @@ impl<'a> Context<'a> {
                 unreachable!("Local ports should have been eliminated.")
             }
         };
-        cell.get(idx.to_string())
+        (cell.get(idx.to_string()), guard)
     }
 
     /// Compiles an [ast::Id] port name to a [calyx::Port] reference
@@ -523,6 +527,29 @@ impl<'a> Context<'a> {
 
     fn add_invoke(&mut self, idx: ir::InvIdx) {
         let inv = self.comp.get(idx);
+        let comp = self.ctx.comps.get(self.comp.get(inv.inst).comp);
+        let inst = self.instances.get(&inv.inst).unwrap().borrow();
+
+        // Generate the assignment for each interface port
+        for (evt, name) in comp.events()
+            .iter()
+            .filter_map(|(i, e)| 
+                e.interface_port.map(|p| {
+                    if let ir::Info::InterfacePort { name, .. } = comp.get(p) {
+                        (i, name)
+                    } else {
+                        unreachable!("Interface port had incorrect info type.");
+                    }
+                })
+            ) {
+
+            let dst = inst.get(name.as_ref());
+            let src = self.eventbinds.get(&evt).unwrap().clone();
+
+            let assign = self.builder.build_assignment(dst, src, calyx::Guard::True);
+            self.builder.component.continuous_assignments.push(assign);
+        }
+
         let cell = &self
             .instances
             .get(&inv.inst)
@@ -657,8 +684,6 @@ impl<'a> Context<'a> {
 
 /// A wrapper for a [calyx::Component] representing a finite state machine.
 struct Fsm {
-    /// The number of states in this [Fsm].
-    states: u64,
     /// The [calyx::Component] representing this fsm.
     cell: RRC<calyx::Cell>,
 }
@@ -666,7 +691,7 @@ struct Fsm {
 impl Fsm {
     fn new(event: ir::EventIdx, states: u64, ctx: &mut Context) -> Self {
         let event = ctx.comp.get(event);
-        let comp = ctx.binding.get_fsm(&states);
+        let comp = ctx.binding.fsm_comps.get(&states).unwrap();
         let cell = ctx.builder.add_component(
             format!("{event}"),
             comp.name.to_string(),
@@ -687,7 +712,7 @@ impl Fsm {
                 calyx::Guard::True,
             );
             ctx.builder.component.continuous_assignments.push(go_assign);
-            Fsm { states, cell }
+            Fsm { cell }
         } else {
             unreachable!("Info should be an interface port");
         }
