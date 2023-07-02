@@ -454,6 +454,17 @@ impl<'a> Context<'a> {
         self.fsms.insert(event, fsm);
     }
 
+    /// Gets the interface port connected to an event
+    /// Panics if the event is not connected to an interface port
+    fn get_interface_port(&self, event: ir::EventIdx) -> RRC<calyx::Port> {
+        let info = self.comp.get(event).interface_port.unwrap();
+        if let ir::Info::InterfacePort { name, .. } = self.comp.get(info) {
+            self.get_port_name(name)
+        } else {
+            unreachable!("Interface port had incorrect info type.")
+        }
+    }
+
     /// Converts an interval to a guard expression with the appropriate FSM
     fn compile_range(
         &mut self,
@@ -478,7 +489,20 @@ impl<'a> Context<'a> {
     }
 
     fn compile_eventbind(&mut self, eb: &ir::EventBind) {
-        todo!()
+        let ir::EventBind {
+            event: dst,
+            arg: time,
+            ..
+        } = eb;
+        let time = self.comp.get(*time);
+        let dst = self.get_interface_port(*dst);
+
+        let offset = Compile::u64(self.comp, time.offset);
+        let src = self.fsms.get(&time.event).unwrap().get_port(offset);
+
+        let assign =
+            self.builder.build_assignment(dst, src, calyx::Guard::True);
+        self.builder.component.continuous_assignments.push(assign);
     }
 
     fn compile_connect(&mut self, con: &ir::Connect) {
@@ -499,12 +523,14 @@ impl<'a> Context<'a> {
         let (dst, g) = self.compile_port(dst.port);
         assert!(!g.is_true(), "Destination port cannot have a guard.");
         let (src, g) = self.compile_port(src.port);
-        let assign =
-            self.builder.build_assignment(dst, src, g);
+        let assign = self.builder.build_assignment(dst, src, g);
         self.builder.component.continuous_assignments.push(assign);
     }
 
-    pub fn compile_port(&mut self, idx: ir::PortIdx) -> (RRC<calyx::Port>, calyx::Guard<calyx::Nothing>) {
+    pub fn compile_port(
+        &mut self,
+        idx: ir::PortIdx,
+    ) -> (RRC<calyx::Port>, calyx::Guard<calyx::Nothing>) {
         let port = self.comp.get(idx);
 
         let guard = self.compile_range(&port.live.range);
@@ -521,8 +547,9 @@ impl<'a> Context<'a> {
     }
 
     /// Compiles an [ast::Id] port name to a [calyx::Port] reference
-    pub fn get_port_name(&mut self, id: &ast::Id) -> RRC<calyx::Port> {
-        self.builder.component.signature.borrow().get(id.as_ref())
+    pub fn get_port_name(&self, id: &ast::Id) -> RRC<calyx::Port> {
+        let cell = self.builder.component.signature.borrow();
+        cell.get(id.as_ref())
     }
 
     fn add_invoke(&mut self, idx: ir::InvIdx) {
@@ -531,22 +558,20 @@ impl<'a> Context<'a> {
         let inst = self.instances.get(&inv.inst).unwrap().borrow();
 
         // Generate the assignment for each interface port
-        for (evt, name) in comp.events()
-            .iter()
-            .filter_map(|(i, e)| 
-                e.interface_port.map(|p| {
-                    if let ir::Info::InterfacePort { name, .. } = comp.get(p) {
-                        (i, name)
-                    } else {
-                        unreachable!("Interface port had incorrect info type.");
-                    }
-                })
-            ) {
-
+        for (evt, name) in comp.events().iter().filter_map(|(i, e)| {
+            e.interface_port.map(|p| {
+                if let ir::Info::InterfacePort { name, .. } = comp.get(p) {
+                    (i, name)
+                } else {
+                    unreachable!("Interface port had incorrect info type.");
+                }
+            })
+        }) {
             let dst = inst.get(name.as_ref());
             let src = self.eventbinds.get(&evt).unwrap().clone();
 
-            let assign = self.builder.build_assignment(dst, src, calyx::Guard::True);
+            let assign =
+                self.builder.build_assignment(dst, src, calyx::Guard::True);
             self.builder.component.continuous_assignments.push(assign);
         }
 
