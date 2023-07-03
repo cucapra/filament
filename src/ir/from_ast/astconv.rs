@@ -237,6 +237,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             delay: self.comp.num(0).into(),
             owner,
             info,
+            interface_port: None,
         };
         let idx = self.comp.add(e);
         log::info!("Added event {} as {idx}", eb.event);
@@ -252,7 +253,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             eb.delay.pos(),
         ));
         let delay = self.timesub(eb.delay.take());
-        let e = ir::Event { delay, owner, info };
+        let e = ir::Event {
+            delay,
+            owner,
+            info,
+            interface_port: None,
+        };
         let idx = self.comp.add(e);
         log::info!("Added event {} as {idx}", eb.event);
         // self.event_map.insert(*eb.event, idx);
@@ -427,7 +433,18 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             // XXX(rachit): Unnecessary clone.
             self.port(port.inner().clone(), ir::PortOwner::sig_in());
         }
+        for ast::InterfaceDef { name, event } in sig.interface_signals {
+            let (name, bind_loc) = name.split();
+            let info = self.comp.add(ir::Info::interface_port(name, bind_loc));
 
+            let event = *self.event_map.get(&event).unwrap();
+            let event = self.comp.get_mut(event);
+
+            event.interface_port = Some(info);
+        }
+        for (name, width) in sig.unannotated_ports {
+            self.comp.add(ir::Info::unannotated_port(name, width));
+        }
         // Constraints defined by the signature
         let mut cons = Vec::with_capacity(
             sig.param_constraints.len() + sig.event_constraints.len(),
