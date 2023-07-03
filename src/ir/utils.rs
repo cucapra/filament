@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use topological_sort::TopologicalSort;
 
 use crate::utils::Idx;
@@ -257,22 +258,26 @@ impl From<Context> for Traversal {
     fn from(ctx: Context) -> Self {
         let mut ts = TopologicalSort::<CompIdx>::new();
 
-        for idx in ctx.comps.idx_iter() {
-            ts.insert(idx);
+        // Gets all components that are not primitives.
+        let comps = 
+            ctx.comps.iter().filter(|(_, comp)| comp.src_ext.is_none()).collect_vec();
+
+        for (idx, _) in comps.iter() {
+            ts.insert(*idx);
         }
 
-        for (idx, comp) in ctx.comps.iter() {
+        for (idx, comp) in comps.iter() {
             for cmd in &comp.cmds {
-                Traversal::process_cmd(&ctx, idx, cmd, &mut ts);
+                Traversal::process_cmd(&ctx, *idx, cmd, &mut ts);
             }
         }
 
         let order: Vec<_> = ts.collect();
         debug_assert!(
-            order.len() == ctx.comps.len(),
+            order.len() == comps.len(),
             "Ordering contains {} elements but context has {} components",
             order.len(),
-            ctx.comps.len()
+            comps.len()
         );
 
         Self { ctx, order }

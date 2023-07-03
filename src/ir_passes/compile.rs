@@ -232,15 +232,6 @@ impl Compile {
                         },
                     live,
                     ..
-                }
-                | ir::Port {
-                    owner:
-                        ir::PortOwner::Inv {
-                            dir: ir::Direction::Out,
-                            ..
-                        },
-                    live,
-                    ..
                 } => Some(live),
                 _ => None,
             })
@@ -257,6 +248,7 @@ impl Compile {
         bind: &mut Binding,
         lib: &calyx::LibrarySignatures,
     ) -> FilamentResult<calyx::Component> {
+        log::info!("Compiling component {idx}");
         let comp = ctx.comps.get(idx);
         let ports = Compile::ports(comp, identity, Compile::u64);
         let mut component =
@@ -268,6 +260,7 @@ impl Compile {
 
         // Construct all the FSMs
         for (event, states) in Compile::max_states(comp) {
+            log::info!("Compiling event {event} with {states} states.");
             ctx.insert_fsm(event, states);
         }
 
