@@ -648,17 +648,29 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let ebs: Vec<ir::Command> = sig
             .events
             .iter()
-            .zip(abstract_vars.iter())
-            .map(|(event, arg)| {
+            .zip_longest(abstract_vars.iter())
+            .map(|pair| match pair {
+                itertools::EitherOrBoth::Both(evt, t) => {
+                    (evt, t.inner(), t.pos())
+                }
+                itertools::EitherOrBoth::Left(evt) => (
+                    evt,
+                    event_binding.get(evt.event.inner()),
+                    GPosIdx::UNKNOWN,
+                ),
+                itertools::EitherOrBoth::Right(_) => {
+                    unreachable!("More arguments than events.")
+                }
+            })
+            .map(|(event, time, pos)| {
                 let resolved = event
                     .clone()
                     .resolve_exprs(&param_binding)
                     .resolve_event(&event_binding);
 
-                let pos = arg.pos();
                 let info = self.comp.add(ir::Info::event_bind(pos));
 
-                let arg = self.time(arg.inner().clone());
+                let arg = self.time(time.clone());
                 let event = self.event(resolved, ir::EventOwner::Inv { inv });
                 ir::EventBind::new(event, arg, info).into()
             })
