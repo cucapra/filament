@@ -1,4 +1,4 @@
-import "primitives/core.fil";
+import "primitives/comb.fil";
 
 comp main<G:1>(
   @interface[G] go: 1,

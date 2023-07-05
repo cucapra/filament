@@ -9,6 +9,7 @@ use std::{
 use crate::{
     ast,
     ir::{self, Ctx, Traversal},
+    utils,
 };
 use calyx::structure;
 use calyx_frontend as frontend;
@@ -40,19 +41,23 @@ impl Compile {
         comp: &ir::Component,
         port: ir::PortIdx,
         width_transform: WT,
-    ) -> calyx::PortDef<CW>
+    ) -> Option<calyx::PortDef<CW>>
     where
         WT: Fn(&ir::Component, ir::ExprIdx) -> CW,
     {
         let raw_port = comp.get(port);
-        let name = Compile::port_name(ctx, comp, port);
-        let mut attributes = calyx::Attributes::default();
-        attributes.insert(calyx::BoolAttr::Data, 1);
-        calyx::PortDef {
-            name: name.into(),
-            width: width_transform(comp, comp.get(port).width),
-            direction: calyx::Direction::from(&raw_port.owner),
-            attributes,
+        if let ir::PortOwner::Sig { dir, .. } = &raw_port.owner {
+            let name = Compile::port_name(ctx, comp, port);
+            let mut attributes = calyx::Attributes::default();
+            attributes.insert(calyx::BoolAttr::Data, 1);
+            Some(calyx::PortDef {
+                name: name.into(),
+                width: width_transform(comp, comp.get(port).width),
+                direction: calyx::Direction::from(dir).reverse(),
+                attributes,
+            })
+        } else {
+            None
         }
     }
 
@@ -104,7 +109,9 @@ impl Compile {
         let mut ports: Vec<calyx::PortDef<CW>> = comp
             .ports()
             .idx_iter()
-            .map(|port| Compile::port_def(ctx, comp, port, &width_transform))
+            .filter_map(|port| {
+                Compile::port_def(ctx, comp, port, &width_transform)
+            })
             .chain(comp.interface_ports().into_iter().map(|name| {
                 calyx::PortDef {
                     name: name.as_ref().into(),
@@ -168,23 +175,28 @@ impl Compile {
         let comp = ctx.comps.get(idx);
         match comp.src_ext {
             // component is non-external, generate name from CompIdx
-            None => idx.to_string(),
+            None => format!("comp{}", idx.get().to_string()),
             Some(id) => id.to_string(),
         }
     }
 
-    fn port_name(ctx: &ir::Context, comp: &ir::Component, idx: ir::PortIdx) -> String {
+    fn port_name(
+        ctx: &ir::Context,
+        comp: &ir::Component,
+        idx: ir::PortIdx,
+    ) -> String {
         let p = comp.get(idx);
-        
+
         let is_primitive = match p.owner {
             ir::PortOwner::Inv { inv, .. } => {
                 let inv = comp.get(inv);
                 let inst = comp.get(inv.inst);
                 ctx.comps.get(inst.comp)
-            },
-            ir::PortOwner::Sig { .. }
-            | ir::PortOwner::Local => comp,
-        }.src_ext.is_some();
+            }
+            ir::PortOwner::Sig { .. } | ir::PortOwner::Local => comp,
+        }
+        .src_ext
+        .is_some();
 
         if is_primitive {
             if let ir::Info::Port { name, .. } = comp.get(p.info) {
@@ -193,7 +205,7 @@ impl Compile {
                 unreachable!("Incorrect info type for parameter");
             }
         } else {
-            idx.to_string()
+            format!("p{}", idx.get().to_string())
         }
     }
 
@@ -213,7 +225,12 @@ impl Compile {
                     }
                 })
                 .collect(),
-            signature: Compile::ports(ctx, comp, Compile::width_u64, Compile::width),
+            signature: Compile::ports(
+                ctx,
+                comp,
+                Compile::width_u64,
+                Compile::width,
+            ),
             attributes: calyx::Attributes::default(),
             is_comb: false,
             body: None,
@@ -310,9 +327,7 @@ impl Compile {
             }
         }
 
-        cons.into_iter().for_each(
-            |con| ctx.compile_connect(con)
-        );
+        cons.into_iter().for_each(|con| ctx.compile_connect(con));
         component
     }
 
@@ -373,17 +388,6 @@ impl From<&ir::Direction> for calyx::Direction {
         match value {
             ir::Direction::In => calyx::Direction::Input,
             ir::Direction::Out => calyx::Direction::Output,
-        }
-    }
-}
-
-impl From<&ir::PortOwner> for calyx::Direction {
-    fn from(value: &ir::PortOwner) -> Self {
-        match value {
-            ir::PortOwner::Local => calyx::Direction::Inout,
-            ir::PortOwner::Sig { dir } | ir::PortOwner::Inv { dir, .. } => {
-                calyx::Direction::from(dir)
-            }
         }
     }
 }
@@ -478,7 +482,10 @@ impl<'a> Context<'a> {
 
     /// Gets the interface port connected to an event
     /// Panics if the event is not connected to an interface port
-    fn get_interface_port(&self, event: ir::EventIdx) -> Option<RRC<calyx::Port>> {
+    fn get_interface_port(
+        &self,
+        event: ir::EventIdx,
+    ) -> Option<RRC<calyx::Port>> {
         let info = self.comp.get(event).interface_port?;
         if let ir::Info::InterfacePort { name, .. } = self.comp.get(info) {
             Some(self.get_port_name(name))
@@ -546,7 +553,7 @@ impl<'a> Context<'a> {
         let (dst, g) = self.compile_port(dst.port);
         assert!(!g.is_true(), "Destination port cannot have a guard.");
         let (src, g) = self.compile_port(src.port);
-        let assign = self.builder.build_assignment(src, dst, g);
+        let assign = self.builder.build_assignment(dst, src, g);
         self.builder.component.continuous_assignments.push(assign);
     }
 
@@ -566,7 +573,10 @@ impl<'a> Context<'a> {
                 unreachable!("Local ports should have been eliminated.")
             }
         };
-        (cell.get(Compile::port_name(self.ctx, self.comp, idx)), guard)
+        (
+            cell.get(Compile::port_name(self.ctx, self.comp, idx)),
+            guard,
+        )
     }
 
     /// Compiles an [ast::Id] port name to a [calyx::Port] reference
@@ -607,7 +617,7 @@ impl<'a> Context<'a> {
 
     fn add_instance(&mut self, idx: ir::InstIdx) {
         let inst = self.comp.get(idx);
-        let inst_name = inst.to_string();
+        let inst_name = self.idx_name(idx);
         let comp_name = Compile::comp_name(self.ctx, inst.comp);
         let cell = if let Some(sig) = self.get_sig(&inst.comp) {
             self.builder.add_component(
@@ -631,6 +641,14 @@ impl<'a> Context<'a> {
 
     fn get_sig(&self, comp: &ir::CompIdx) -> Option<Vec<calyx::PortDef<u64>>> {
         self.binding.get(comp)
+    }
+
+    fn idx_name<T>(&self, idx: utils::Idx<T>) -> String
+    where
+        ir::Component: Ctx<T>,
+        utils::Idx<T>: std::fmt::Display,
+    {
+        format!("{}{}", Compile::comp_name(self.ctx, self.comp.idx()), idx)
     }
 
     /// Creates a [calyx::Component] representing an FSM with a certain number of states to bind to each event.
@@ -737,11 +755,11 @@ struct Fsm {
 }
 
 impl Fsm {
-    fn new(event: ir::EventIdx, states: u64, ctx: &mut Context) -> Self {
-        let event = ctx.comp.get(event);
+    fn new(idx: ir::EventIdx, states: u64, ctx: &mut Context) -> Self {
+        let event = ctx.comp.get(idx);
         let comp = ctx.binding.fsm_comps.get(&states).unwrap();
         let cell = ctx.builder.add_component(
-            format!("{event}"),
+            ctx.idx_name(idx),
             comp.name.to_string(),
             Binding::cell_to_port_def(&comp.signature),
         );
