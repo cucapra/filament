@@ -1,13 +1,13 @@
-mod compile;
 mod assume;
+mod compile;
 mod discharge;
 mod hoist_facts;
 mod interval_check;
 mod prop_simplify;
 mod type_check;
 
-pub use compile::Compile;
 pub use assume::Assume;
+pub use compile::Compile;
 pub use discharge::Discharge;
 pub use hoist_facts::HoistFacts;
 pub use interval_check::IntervalCheck;

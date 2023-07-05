@@ -259,8 +259,11 @@ impl From<Context> for Traversal {
         let mut ts = TopologicalSort::<CompIdx>::new();
 
         // Gets all components that are not primitives.
-        let comps = 
-            ctx.comps.iter().filter(|(_, comp)| comp.src_ext.is_none()).collect_vec();
+        let comps = ctx
+            .comps
+            .iter()
+            .filter(|(_, comp)| comp.src_ext.is_none())
+            .collect_vec();
 
         for (idx, _) in comps.iter() {
             ts.insert(*idx);

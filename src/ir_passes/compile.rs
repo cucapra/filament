@@ -1,5 +1,4 @@
 use std::{
-    cmp::max,
     collections::{HashMap, HashSet},
     convert::identity,
     iter,
@@ -209,18 +208,16 @@ impl Compile {
         );
         for time in [live.range.start, live.range.end] {
             let time = comp.get(time);
-            let v = event_map.get_mut(&time.event).unwrap();
-            *v = max(Compile::u64(comp, time.offset), *v);
+            let nv = Compile::u64(comp, time.offset);
+            if nv > *event_map.get(&time.event).unwrap_or(&0) {
+                event_map.insert(time.event, nv);
+            }
         }
     }
 
     /// Gets the maximum states for each event with an interface port in the component
     fn max_states(comp: &ir::Component) -> HashMap<ir::EventIdx, u64> {
-        let mut event_map = comp
-            .events()
-            .idx_iter()
-            .map(|eb| (eb, 0))
-            .collect::<HashMap<_, _>>();
+        let mut event_map = HashMap::new();
 
         comp.ports()
             .idx_iter()
@@ -285,9 +282,7 @@ impl Compile {
                 ir::Command::If(_) => {
                     unreachable!("Ifs should have been compiled away.")
                 }
-                ir::Command::Fact(_) => {
-                    unreachable!("Assumptions should have been compiled away.")
-                }
+                ir::Command::Fact(_) => (),
             }
         }
         todo!()
