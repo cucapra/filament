@@ -353,7 +353,7 @@ impl Reason {
                     .secondary()
                     .with_message("instantiation occurs here");
                 Diagnostic::error()
-                    .with_message("instantiation violates paraemter constraint")
+                    .with_message("instantiation violates parameter constraint")
                     .with_labels(vec![con, inst])
             }
             Reason::EventConstraint {

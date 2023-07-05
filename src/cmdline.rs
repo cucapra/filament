@@ -16,7 +16,7 @@ pub struct Opts {
     #[argh(switch, long = "show-ir")]
     pub show_ir: bool,
 
-    /// print out assignments that falisfy the constraints
+    /// print out assignments that falsify the constraints
     #[argh(switch, long = "show-models")]
     pub show_models: bool,
 

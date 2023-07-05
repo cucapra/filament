@@ -5,6 +5,6 @@ Filament reasons about the *timing* of a design, allowing the compiler to automa
 
 Get started with Filament by reading the [tutorial](https://filamenthdl.com).
 
-Filament's design is based on the paper ["Modular Hardware Design with Timeline Types"][filament-paper].
+Filament's design is based on the paper ["Modular Hardware Design with Timeline Types"][filament-paper] although it has evolved significantly since then.
 
-[filament-paper]: https://rachitnigam.com/files/pubs/filament.pdf
+[filament-paper]: https://rachit.pl/files/pubs/filament.pdf

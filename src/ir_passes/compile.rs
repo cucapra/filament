@@ -232,6 +232,15 @@ impl Compile {
                         },
                     live,
                     ..
+                }
+                | ir::Port {
+                    owner:
+                        ir::PortOwner::Inv {
+                            dir: ir::Direction::Out,
+                            ..
+                        },
+                    live,
+                    ..
                 } => Some(live),
                 _ => None,
             })
