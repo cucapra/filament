@@ -182,6 +182,7 @@ impl Compile {
             params: comp
                 .params()
                 .iter()
+                .filter(|(_, p)| ir::ParamOwner::Sig == p.owner)
                 .map(|(_, p)| {
                     if let ir::Info::Param { name, .. } = comp.get(p.info) {
                         name.as_ref().into()
@@ -270,12 +271,14 @@ impl Compile {
             ctx.insert_fsm(event, states);
         }
 
+        let mut cons = vec![];
+
         for cmd in &comp.cmds {
             match cmd {
                 ir::Command::Instance(idx) => ctx.add_instance(*idx),
                 ir::Command::Invoke(idx) => ctx.add_invoke(*idx),
-                ir::Command::Connect(connect) => ctx.compile_connect(connect),
                 ir::Command::EventBind(eb) => ctx.compile_eventbind(eb),
+                ir::Command::Connect(connect) => cons.push(connect), // connects will be compiled later
                 ir::Command::ForLoop(_) => {
                     unreachable!("For loops should have been compiled away.")
                 }
@@ -285,7 +288,11 @@ impl Compile {
                 ir::Command::Fact(_) => (),
             }
         }
-        todo!()
+
+        cons.into_iter().for_each(
+            |con| ctx.compile_connect(con)
+        );
+        todo!();
     }
 
     fn init(
@@ -453,10 +460,10 @@ impl<'a> Context<'a> {
 
     /// Gets the interface port connected to an event
     /// Panics if the event is not connected to an interface port
-    fn get_interface_port(&self, event: ir::EventIdx) -> RRC<calyx::Port> {
-        let info = self.comp.get(event).interface_port.unwrap();
+    fn get_interface_port(&self, event: ir::EventIdx) -> Option<RRC<calyx::Port>> {
+        let info = self.comp.get(event).interface_port?;
         if let ir::Info::InterfacePort { name, .. } = self.comp.get(info) {
-            self.get_port_name(name)
+            Some(self.get_port_name(name))
         } else {
             unreachable!("Interface port had incorrect info type.")
         }
@@ -492,14 +499,15 @@ impl<'a> Context<'a> {
             ..
         } = eb;
         let time = self.comp.get(*time);
-        let dst = self.get_interface_port(*dst);
+        // If there is no interface port, no binding necessary
+        if let Some(dst) = self.get_interface_port(*dst) {
+            let offset = Compile::u64(self.comp, time.offset);
+            let src = self.fsms.get(&time.event).unwrap().get_port(offset);
 
-        let offset = Compile::u64(self.comp, time.offset);
-        let src = self.fsms.get(&time.event).unwrap().get_port(offset);
-
-        let assign =
-            self.builder.build_assignment(dst, src, calyx::Guard::True);
-        self.builder.component.continuous_assignments.push(assign);
+            let assign =
+                self.builder.build_assignment(dst, src, calyx::Guard::True);
+            self.builder.component.continuous_assignments.push(assign);
+        }
     }
 
     fn compile_connect(&mut self, con: &ir::Connect) {
