@@ -15,7 +15,7 @@ impl From<ast::Namespace> for Traversal {
     /// Construct a post-order traversal over a namespace.
     fn from(ns: ast::Namespace) -> Self {
         let externs: HashSet<_> =
-            ns.signatures().map(|(_, sig)| *sig.name.inner()).collect();
+            ns.externals().map(|(_, sig)| *sig.name.inner()).collect();
 
         let mut ts = TopologicalSort::<usize>::new();
         let rev_map: HashMap<ast::Id, usize> = ns

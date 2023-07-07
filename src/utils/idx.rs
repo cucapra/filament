@@ -7,7 +7,24 @@ macro_rules! idx {
     };
 }
 
-#[derive(Eq, Debug)]
+#[macro_export]
+macro_rules! define_idx {
+    ($name:ident, $st:ty, $pre:expr) => {
+        pub type $name = $crate::utils::Idx<$st>;
+        impl ::std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                // We love MLIR
+                write!(f, concat!("%", $pre, "{}"), self.get())
+            }
+        }
+        impl ::std::fmt::Debug for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self)
+            }
+        }
+    };
+}
+
 /// Wrapper around a newtyped index associated with a type-level tag.
 /// Since the type does not contain a value of type T, it is always copy.
 pub struct Idx<T> {
@@ -21,12 +38,32 @@ impl<T> PartialEq for Idx<T> {
     }
 }
 
+impl<T> Eq for Idx<T> {}
+
+impl<T> std::hash::Hash for Idx<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.idx.hash(state)
+    }
+}
+
 impl<T> Clone for Idx<T> {
     fn clone(&self) -> Self {
         Self {
             idx: self.idx,
             _phantom: PhantomData,
         }
+    }
+}
+
+impl<T> PartialOrd for Idx<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.idx.partial_cmp(&other.idx)
+    }
+}
+
+impl<T> Ord for Idx<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.idx.cmp(&other.idx)
     }
 }
 
@@ -40,6 +77,7 @@ impl<T> Idx<T> {
         _phantom: PhantomData,
     };
 
+    #[inline]
     /// Create a new index
     pub fn new(idx: usize) -> Self {
         Self {
@@ -48,6 +86,7 @@ impl<T> Idx<T> {
         }
     }
 
+    #[inline]
     /// Get the index
     pub fn get(self) -> usize {
         debug_assert!(
@@ -56,5 +95,19 @@ impl<T> Idx<T> {
             std::any::type_name::<T>(),
         );
         (self.idx.get() - 1) as usize
+    }
+
+    /// Transform this index into an index for something else.
+    /// This is generally very, very unsafe to do because there is no guaratee
+    /// that the index actually points to valid data in the datatype being indexed.
+    ///
+    /// # Safety
+    /// This is only safe to use when you know that the same index will be added
+    /// to the datatype being indexed by this.
+    pub unsafe fn transmute<U>(self) -> Idx<U> {
+        Idx {
+            idx: self.idx,
+            _phantom: PhantomData,
+        }
     }
 }

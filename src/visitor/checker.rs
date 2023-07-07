@@ -140,7 +140,7 @@ where
     ) -> Result<Self, u64> {
         let mut pass = Self::new(opts, ns);
 
-        for (_, ext) in ns.signatures() {
+        for (_, ext) in ns.externals() {
             // Ignore the return value from traversal because we don't need to
             // abort anything from it.
             pass.external(ext);

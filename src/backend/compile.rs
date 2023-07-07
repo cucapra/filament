@@ -474,7 +474,7 @@ fn prim_as_port_defs(sig: &ast::Signature) -> Vec<ir::PortDef<ir::Width>> {
 fn compile_signature(sig: &ast::Signature) -> ir::Primitive {
     ir::Primitive {
         name: sig.name.as_ref().into(),
-        params: sig.params.iter().map(|p| p.as_ref().into()).collect(),
+        params: sig.params().map(|p| p.as_ref().into()).collect(),
         signature: prim_as_port_defs(sig),
         is_comb: false,
         attributes: ir::Attributes::default(),

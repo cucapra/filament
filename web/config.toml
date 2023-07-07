@@ -1,0 +1,22 @@
+# The URL the site will be built for
+base_url = "https://filamenthdl.com"
+
+# Whether to automatically compile all Sass files in the sass directory
+compile_sass = false
+
+# Whether to build a search index to be used later on by a JavaScript library
+build_search_index = false
+
+[markdown]
+external_links_target_blank = true
+external_links_no_follow = true
+external_links_no_referrer = true
+smart_punctuation = true
+
+[link_checker]
+skip_prefixes = [
+  "https://twitter.com/",
+]
+
+[extra]
+news_items = 5

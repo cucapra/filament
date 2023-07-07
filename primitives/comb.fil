@@ -5,26 +5,26 @@ extern "comb.sv" {
     @[G, L] out: #WIDTH,
   ) where L > G, #WIDTH > 0;
 
-  comp Add[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH,
+  comp Add[#IN_WIDTH, ?#OUT_WIDTH=#IN_WIDTH]<G: L-(G), ?L: 1=G+1>(
+    @[G, L] left: #IN_WIDTH,
+    @[G, L] right: #IN_WIDTH,
   ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+    @[G, L] out: #OUT_WIDTH
+  ) where L > G, #IN_WIDTH <= #OUT_WIDTH, #IN_WIDTH > 0, #OUT_WIDTH > 0;
 
-  comp Sub[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH,
+  comp Sub[#IN_WIDTH, ?#OUT_WIDTH=#IN_WIDTH]<G: L-(G), ?L: 1=G+1>(
+    @[G, L] left: #IN_WIDTH,
+    @[G, L] right: #IN_WIDTH,
   ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+    @[G, L] out: #OUT_WIDTH
+  ) where L > G, #IN_WIDTH <= #OUT_WIDTH, #IN_WIDTH > 0, #OUT_WIDTH > 0;
 
-  comp MultComb[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH,
+  comp MultComb[#IN_WIDTH, ?#OUT_WIDTH=#IN_WIDTH]<G: L-(G), ?L: 1=G+1>(
+    @[G, L] left: #IN_WIDTH,
+    @[G, L] right: #IN_WIDTH,
   ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+    @[G, L] out: #OUT_WIDTH,
+  ) where L > G, #IN_WIDTH <= #OUT_WIDTH, #IN_WIDTH > 0, #OUT_WIDTH > 0;
 
   comp And[#WIDTH]<G: L-(G), ?L: 1=G+1>(
     @[G, L] left: #WIDTH,
@@ -37,7 +37,7 @@ extern "comb.sv" {
     @[G, L] left: #WIDTH,
     @[G, L] right: #WIDTH,
   ) -> (
-    @[G, L] out: 1,
+    @[G, L] out: #WIDTH,
   ) where L > G, #WIDTH > 0;
 
   comp Xor[#WIDTH]<G: L-(G), ?L: 1=G+1>(
@@ -54,6 +54,13 @@ extern "comb.sv" {
   ) where L > G, #WIDTH > 0;
 
   comp Eq[#WIDTH]<G: L-(G), ?L: 1=G+1>(
+    @[G, L] left: #WIDTH,
+    @[G, L] right: #WIDTH,
+  ) -> (
+    @[G, L] out: 1,
+  ) where L > G, #WIDTH > 0;
+
+  comp Neq[#WIDTH]<G: L-(G), ?L: 1=G+1>(
     @[G, L] left: #WIDTH,
     @[G, L] right: #WIDTH,
   ) -> (
@@ -88,11 +95,17 @@ extern "comb.sv" {
     @[G, L] out: 1,
   ) where L > G, #WIDTH > 0;
 
+  comp SignExtend[#IN_WIDTH, #OUT_WIDTH]<G: L-(G), ?L: 1=G+1>(
+    @[G, L] in: #IN_WIDTH,
+  ) -> (
+    @[G, L] out: #OUT_WIDTH,
+  ) where L > G, #IN_WIDTH > 0, #OUT_WIDTH > 0, #OUT_WIDTH >= #IN_WIDTH;
+
   comp ZeroExtend[#IN_WIDTH, #OUT_WIDTH]<G: L-(G), ?L: 1=G+1>(
     @[G, L] in: #IN_WIDTH,
   ) -> (
     @[G, L] out: #OUT_WIDTH,
-  ) where L > G, #IN_WIDTH > 0, #OUT_WIDTH > 0, #OUT_WIDTH > #IN_WIDTH;
+  ) where L > G, #IN_WIDTH > 0, #OUT_WIDTH > 0, #OUT_WIDTH >= #IN_WIDTH;
 
   comp Concat[#LEFT, #RIGHT, #OUT]<G: L-(G), ?L: 1=G+1>(
     @[G, L] left: #LEFT,
@@ -130,14 +143,21 @@ extern "comb.sv" {
     @[G, L] out: 1,
   ) where L > G, #WIDTH > 0;
 
-  comp ShiftLeft[#WIDTH]<G: L-(G), ?L: 1=G+1>(
+  comp ShiftLeft[#WIDTH, ?#SHIFT_WIDTH=#WIDTH, ?#OUT_WIDTH=#WIDTH]<G: L-(G), ?L: 1=G+1>(
     @[G, L] in: #WIDTH,
-    @[G, L] shift: #WIDTH,
+    @[G, L] shift: #SHIFT_WIDTH,
   ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+    @[G, L] out: #OUT_WIDTH,
+  ) where L > G, #WIDTH > 0, #SHIFT_WIDTH > 0, #OUT_WIDTH > 0;
 
-  comp ShiftRight[#WIDTH]<G: L-(G), ?L: 1=G+1>(
+  comp ShiftRight[#WIDTH, ?#SHIFT_WIDTH=#WIDTH, ?#OUT_WIDTH=#WIDTH]<G: L-(G), ?L: 1=G+1>(
+    @[G, L] in: #WIDTH,
+    @[G, L] shift: #SHIFT_WIDTH,
+  ) -> (
+    @[G, L] out: #OUT_WIDTH,
+  ) where L > G, #WIDTH > 0, #SHIFT_WIDTH > 0, #OUT_WIDTH > 0;
+
+  comp ArithShiftRight[#WIDTH]<G: L-(G), ?L: 1=G+1>(
     @[G, L] in: #WIDTH,
     @[G, L] shift: #WIDTH,
   ) -> (
@@ -151,4 +171,10 @@ extern "comb.sv" {
   ) -> (
     @[G, L] out: #WIDTH,
   ) where L > G, #WIDTH > 0;
+
+  comp Extend[#IN_WIDTH, #OUT_WIDTH]<G: L-(G), ?L: 1=G+1>(
+    @[G,L] in: #IN_WIDTH
+  ) -> (
+    @[G,L] out: #OUT_WIDTH
+  ) where L > G, #IN_WIDTH > 0, #OUT_WIDTH > 0;
 }

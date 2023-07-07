@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% import "macros.html" as m %}
+
+{% block content %}
+
+<!-- Introduction -->
+<div class="intro">
+{{ section.content | safe }}
+</div>
+
+
+<!-- Features -->
+<section>
+    <h1>Features</h1>
+
+    <div class="frontends">
+        <div class="frontend">
+            <div class="content">
+                <h2>Composable</h3>
+                Filament uses a new kind of type system to ensure that when you use a module to perform a computation,
+                it's timing constraints, like latency and initiation interval are correct. When there are errors, it
+                generates helpful error messages to explain what is wrong with the design!
+            </div>
+        </div>
+
+        <div class="frontend">
+            <div class="content">
+                <h2>Efficient</h3>
+                Filament's type system does the heavy lifting to ensure that your modules compose correctly.
+                After that, the compiler erases the types and generates Verilog that is as efficient as hand-written code.
+            </div>
+        </div>
+
+        <div class="frontend">
+            <div class="content">
+                <h2>Integrable</h3>
+                Filament makes it easy to integrate black-box Verilog module:
+                just give them a type signature and the compiler will ensure
+                that they are used correctly!
+                Similarly, Filament is easy to integrate in Verilog projects;
+                the compiler generates clean SystemVerilog code that compiles with
+                open-source and commercial tools.
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<section>
+    <h1>Language</h1>
+
+    <div class="lang-examples">
+
+        <div class="example">
+            <div class="summary">
+                <h2>Events & Availability Intervals</h2>
+                <p>
+                    Filament's modules are parameterized by <i>events</i> which denote particular clock cycles.
+                    Events are used to define the <i>availability intervals</i> of the module's inputs and outputs.
+                </p>
+            </div>
+            <div class="code language-futil">
+<pre><code>comp Add&lt;G&gt;(
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32
+) -> (@[G, G+1] out: 32) {...}</pre></code>
+            </div>
+        </div>
+
+        <div class="example">
+            <div class="summary">
+                <h2>
+                    Invocations
+                </h2>
+                <p>
+                  In addition to instantiation hardware modules (using the <code>new</code> keyword), Filament uses <em>invocations</em> to
+                  to denote when an instance performs some computation. This slight addition enables Filament's powerful type system to reason
+                  about structural hazards and imbalanced pipeline paths.
+                </p>
+            </div>
+            <div class="code language-futil">
+<pre data-line="5-6"><code>comp main&lt;G&gt;(
+  @[G, G+1] x: 32, @[G, G+1] y: 32
+) -> () {
+  A := new Add[32]; // 32-bit adder
+  a0 := A&lt;G&gt;(x, x); // 1st use
+  b0 := A&lt;G+2&gt;(a0.out, y); // 2nd use
+}</pre></code>
+            </div>
+        </div>
+
+        <div class="example">
+            <div class="summary">
+                <h2>Event Delays</h2>
+                <p>
+                  Each event is associated with a <em>delay</em> that corresponds to the pipeline's initiation interval (II)&#8212;the minimum number of clock cycles before the pipeline can process new inputs.
+                  Filament's type system <em>checks the implementation</em> of the component and ensures that the delay is correct.
+                  This means that your components support the II they promise!
+                </p>
+            </div>
+            <div class="code language-futil">
+<pre data-line="1"><code>// Processes new inputs every cycle
+comp Add&lt;G:1&gt;(
+  @[G, G+1] left: 32,
+  @[G, G+1] right: 32
+) -> (@[G, G+1] out: 32) {...}</pre></code>
+            </div>
+        </div>
+
+        <div class="example">
+            <div class="summary">
+                <h2>
+                    Generative Programming
+                </h2>
+                <p>
+                  Filament's guarantees extend to <em>generative programs</em> that generate hardware based on parameters. <code>for</code> loops and <code>if</code> statements can be used to generate hardware and Filament's type system ensures that <em>all valid parameters</em> generate correctly pipelined hardware. This is a really strong property because once your program type checks, you know that <em>all</em> possible instantiations of the program will work!
+                </p>
+            </div>
+            <div class="code language-futil">
+<pre><code>/* A parameteric shift register */
+comp Shift[W, N]&lt;G:1&gt;(
+  @[G, G+1] in: W
+) -> (
+  // delay the signal by N cycles
+  @[G+N, G+N+1] out: W
+) {
+  // Tracks the wires b/w registers
+  bundle f[N+1]: for&lt;k&gt; @[G+k, G+k+1] W;
+  f{0} = in;
+  for i in 0..N {
+      d := new Delay[W]<G+i>(f{i});
+      f{i+1} = d.out;
+  }
+  out = f{N};
+}</pre></code>
+            </div>
+        </div>
+
+</section>
+
+<section>
+<h1>Showcase</h1>
+Using its type system, Filament has enabled us to build reusable, efficient library and designs. Some highlights:
+<ul>
+<li><a href="https://github.com/cucapra/filament/tree/main/frisc"><code>frisc</code>: A RISC-V processor in Filament</a></li>
+<li><a href="https://github.com/cucapra/filament/blob/main/primitives/reshape.fil">Reshape: A library for reshaping data strems</a></li>
+</ul>
+
+If you're building something with Filament, please let us know!
+</section>
+
+<section>
+<h2>Authors</h2>
+Filament is being actively developed by
+<a href="https://rachitnigam.com">Rachit Nigam</a> and the <a href="https://capra.cs.cornell.edu">CAPRA group at Cornell University</a>.
+If you're interested on using or contributing to Filament, please
+<a href="https://github.com/cucapra/filament/discussions">
+let us know!
+</a>
+</div>
+</section>
+
+{% endblock content %}

@@ -287,7 +287,7 @@ impl visitor::Checker for IntervalCheck {
 
         // Check that all signatures are well formed
         let t = std::time::Instant::now();
-        for (_, sig) in ns.signatures() {
+        for (_, sig) in ns.externals() {
             log::trace!("===== Signature {} =====", &sig.name);
 
             let constraints = sig
@@ -304,7 +304,7 @@ impl visitor::Checker for IntervalCheck {
             solver.prove(
                 sig.events()
                     .map(|e| e.take())
-                    .chain(sig.params.iter().map(|p| p.copy())),
+                    .chain(sig.params().map(|p| p.take())),
                 constraints,
                 sig.well_formed(&mut diagnostics).into_iter().collect(),
                 vec![],
@@ -664,7 +664,7 @@ impl visitor::Checker for IntervalCheck {
             .sig
             .events()
             .map(|e| e.take())
-            .chain(comp.sig.params.iter().map(|p| p.copy()))
+            .chain(comp.sig.params().map(|p| p.take()))
             .chain(self.vars())
             .collect_vec();
 

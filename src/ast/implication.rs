@@ -9,8 +9,8 @@ use std::fmt::Display;
 /// A type representing the expression a => b
 #[derive(Clone)]
 pub struct Implication<T> {
-    guard: Option<OrderConstraint<T>>,
-    cons: OrderConstraint<T>,
+    pub guard: Option<OrderConstraint<T>>,
+    pub cons: OrderConstraint<T>,
 }
 
 impl<T> Implication<T>

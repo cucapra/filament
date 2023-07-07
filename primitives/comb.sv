@@ -10,31 +10,34 @@ endmodule
 //// =========== Computation ============
 
 module Add #(
-  parameter WIDTH = 32
+  parameter IN_WIDTH = 32,
+  parameter OUT_WIDTH = 32
 ) (
-  input wire logic [WIDTH-1:0] left,
-  input wire logic [WIDTH-1:0] right,
-  output wire logic [WIDTH-1:0] out
+  input wire logic [IN_WIDTH-1:0] left,
+  input wire logic [IN_WIDTH-1:0] right,
+  output wire logic [OUT_WIDTH-1:0] out
 );
   assign out = left + right;
 endmodule
 
 module Sub #(
-  parameter WIDTH = 32
+  parameter IN_WIDTH = 32,
+  parameter OUT_WIDTH = 32
 ) (
-  input wire logic [WIDTH-1:0] left,
-  input wire logic [WIDTH-1:0] right,
-  output wire logic [WIDTH-1:0] out
+  input wire logic [IN_WIDTH-1:0] left,
+  input wire logic [IN_WIDTH-1:0] right,
+  output wire logic [OUT_WIDTH-1:0] out
 );
   assign out = left - right;
 endmodule
 
 module MultComb #(
-  parameter WIDTH = 32
+  parameter IN_WIDTH = 32,
+  parameter OUT_WIDTH = 32
 ) (
-  input wire logic [WIDTH-1:0] left,
-  input wire logic [WIDTH-1:0] right,
-  output wire logic [WIDTH-1:0] out
+  input wire logic [IN_WIDTH-1:0] left,
+  input wire logic [IN_WIDTH-1:0] right,
+  output wire logic [OUT_WIDTH-1:0] out
 );
   assign out = left * right;
 endmodule
@@ -102,6 +105,16 @@ module Eq #(
   assign out = left == right;
 endmodule
 
+module Neq #(
+  parameter WIDTH = 32
+) (
+  input wire logic  [WIDTH-1:0] left,
+  input wire logic  [WIDTH-1:0] right,
+  output wire logic out
+);
+  assign out = left != right;
+endmodule
+
 module Lt #(
   parameter WIDTH = 32
 ) (
@@ -134,6 +147,17 @@ endmodule
 
 //// =========== Extension ============
 
+module SignExtend #(
+  parameter IN_WIDTH = 32,
+  parameter OUT_WIDTH = 32
+) (
+  input wire logic [IN_WIDTH-1:0] in,
+  output wire logic [OUT_WIDTH-1:0] out
+);
+  parameter EXTEND = OUT_WIDTH - IN_WIDTH;
+  assign out = {{EXTEND{in[IN_WIDTH-1]}}, in};
+endmodule
+
 module ZeroExtend #(
   parameter IN_WIDTH = 32,
   parameter OUT_WIDTH = 32
@@ -143,6 +167,16 @@ module ZeroExtend #(
 );
   parameter EXTEND = OUT_WIDTH - IN_WIDTH;
   assign out = {{EXTEND{1'b0}}, in};
+endmodule
+
+module Extend #(
+  parameter IN_WIDTH = 32,
+  parameter OUT_WIDTH = 32
+) (
+  input wire logic [IN_WIDTH-1:0] in,
+  output wire logic [OUT_WIDTH-1:0] out
+);
+  assign out = {OUT_WIDTH{in}};
 endmodule
 
 module Concat #(
@@ -201,25 +235,38 @@ endmodule
 
 /// ========== Shift Operations ============
 module ShiftLeft #(
-  parameter WIDTH = 32
+  parameter WIDTH = 32,
+  parameter SHIFT_WIDTH = 32,
+  parameter OUT_WIDTH = 32
 ) (
   input wire logic [WIDTH-1:0] in,
-  input wire logic [WIDTH-1:0] shift,
-  output wire logic [WIDTH-1:0] out
+  input wire logic [SHIFT_WIDTH-1:0] shift,
+  output wire logic [OUT_WIDTH-1:0] out
 );
   assign out = in << shift;
 endmodule
 
 module ShiftRight #(
-  parameter WIDTH = 32
+  parameter WIDTH = 32,
+  parameter SHIFT_WIDTH = 32,
+  parameter OUT_WIDTH = 32
 ) (
   input wire logic [WIDTH-1:0] in,
-  input wire logic [WIDTH-1:0] shift,
-  output wire logic [WIDTH-1:0] out
+  input wire logic [SHIFT_WIDTH-1:0] shift,
+  output wire logic [OUT_WIDTH-1:0] out
 );
   assign out = in >> shift;
 endmodule
 
+module ArithShiftRight #(
+  parameter WIDTH = 32
+) (
+  input wire logic signed [WIDTH-1:0] in,
+  input wire logic [WIDTH-1:0] shift,
+  output wire logic [WIDTH-1:0] out
+); 
+  assign out = in >>> shift;
+endmodule
 
 module Mux #(
   parameter WIDTH = 32

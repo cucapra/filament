@@ -9,7 +9,7 @@ pub struct Binding<T> {
     map: LinkedHashMap<Id, T>,
 }
 
-impl<T> Binding<T> {
+impl<T: Display> Binding<T> {
     pub fn new(map: impl IntoIterator<Item = (Id, T)>) -> Self {
         Self {
             map: map.into_iter().collect(),
@@ -28,7 +28,9 @@ impl<T> Binding<T> {
 
     /// Return binding for n, or panic if it doesn't exist
     pub fn get(&self, n: &Id) -> &T {
-        self.find(n).unwrap_or_else(|| panic!("No binding for {n}"))
+        self.find(n).unwrap_or_else(|| {
+            panic!("No binding for `{n}'. Binding: {self:?}")
+        })
     }
 
     /// Iterate over the values of the binding
@@ -52,7 +54,7 @@ impl<T> Binding<T> {
     }
 }
 
-impl<T> std::ops::Index<&Id> for Binding<T> {
+impl<T: Display> std::ops::Index<&Id> for Binding<T> {
     type Output = T;
 
     fn index(&self, n: &Id) -> &Self::Output {

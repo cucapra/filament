@@ -8,7 +8,15 @@ pub struct Opts {
     #[argh(positional)]
     pub input: PathBuf,
 
-    /// print out assignments that falisfy the constraints
+    /// enable IR-based compilation
+    #[argh(switch, long = "ir")]
+    pub ir: bool,
+
+    /// print out the IR
+    #[argh(switch, long = "show-ir")]
+    pub show_ir: bool,
+
+    /// print out assignments that falsify the constraints
     #[argh(switch, long = "show-models")]
     pub show_models: bool,
 
@@ -27,4 +35,8 @@ pub struct Opts {
     /// set log level
     #[argh(option, long = "log", default = "log::LevelFilter::Warn")]
     pub log_level: log::LevelFilter,
+
+    /// set toplevel
+    #[argh(option, long = "toplevel", default = "\"main\".into()")]
+    pub toplevel: String,
 }

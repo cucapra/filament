@@ -1,0 +1,57 @@
+import "primitives/memories.futil";
+import "frisc.futil";
+
+component main () -> (out:32) {
+  cells {
+    @external iram = seq_mem_d1(32,5,32);
+    @external res = seq_mem_d1(32,5,32);
+    cpu = CPU();
+
+    pc = std_reg(32);
+    pc1 = std_reg(32);
+    pc_adder = std_add(32);
+
+    add_cond = std_add(32);
+  }
+  wires {
+    static<1> group init {
+      pc.in = 32'd0;
+      pc.write_en = 1'd1;
+      pc1.in = 32'd0;
+      pc1.write_en = 1'd1;
+    }
+
+    static<1> group read_iram {
+      iram.addr0 = pc.out;
+      iram.read_en = 1'b1;
+      cpu.instr = iram.read_data;
+    }
+
+    static<1> group inc_counter {
+      add_cond.left = pc.out;
+      add_cond.right = 32'd1;
+      pc.in = add_cond.out;
+      pc.write_en = %0 ? 1'd1;
+      pc1.in = pc.out;
+      pc1.write_en = %0 ? 1'd1;
+    }
+
+    static<1> group write_res {
+      res.addr0 = pc1.out;
+      res.write_data = cpu.out;
+      res.write_en = %0 ? 1'd1;
+    }
+  }
+  control {
+    static seq {
+      init;
+      static repeat 6 {
+        static par {
+          read_iram;
+          write_res;
+          inc_counter;
+        }
+      }
+    }
+  }
+}
