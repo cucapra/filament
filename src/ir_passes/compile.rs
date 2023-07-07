@@ -46,8 +46,9 @@ impl Compile {
         WT: Fn(&ir::Component, ir::ExprIdx) -> CW,
     {
         let raw_port = comp.get(port);
+
         if let ir::PortOwner::Sig { dir, .. } = &raw_port.owner {
-            let name = Compile::port_name(ctx, comp, port);
+            let name = Compile::port_name(comp, port);
             let mut attributes = calyx::Attributes::default();
             attributes.insert(calyx::BoolAttr::Data, 1);
             Some(calyx::PortDef {
@@ -181,31 +182,15 @@ impl Compile {
     }
 
     fn port_name(
-        ctx: &ir::Context,
         comp: &ir::Component,
         idx: ir::PortIdx,
     ) -> String {
         let p = comp.get(idx);
 
-        let is_primitive = match p.owner {
-            ir::PortOwner::Inv { inv, .. } => {
-                let inv = comp.get(inv);
-                let inst = comp.get(inv.inst);
-                ctx.comps.get(inst.comp)
-            }
-            ir::PortOwner::Sig { .. } | ir::PortOwner::Local => comp,
-        }
-        .src_ext
-        .is_some();
-
-        if is_primitive {
-            if let ir::Info::Port { name, .. } = comp.get(p.info) {
-                name.as_ref().into()
-            } else {
-                unreachable!("Incorrect info type for parameter");
-            }
+        if let ir::Info::Port { name, .. } = comp.get(p.info) {
+            name.as_ref().into()
         } else {
-            format!("p{}", idx.get().to_string())
+            unreachable!("Incorrect info type for parameter");
         }
     }
 
@@ -473,11 +458,14 @@ impl<'a> Context<'a> {
     /// Attempts to declare an fsm (if not already declared) in the [Binding] stored by this [Context]
     /// and creates an [Fsm] from this [calyx::Component] FSM and stores it in the [Context]
     pub fn insert_fsm(&mut self, event: ir::EventIdx, states: u64) {
-        self.declare_fsm(states);
+        // Construct an fsm iff the event is connected to an interface port
+        if self.comp.get(event).interface_port.is_some() {
+            self.declare_fsm(states);
 
-        // Construct the FSM
-        let fsm = Fsm::new(event, states, self);
-        self.fsms.insert(event, fsm);
+            // Construct the FSM
+            let fsm = Fsm::new(event, states, self);
+            self.fsms.insert(event, fsm);
+        }
     }
 
     /// Gets the interface port connected to an event
@@ -495,6 +483,7 @@ impl<'a> Context<'a> {
     }
 
     /// Converts an interval to a guard expression with the appropriate FSM
+    /// Returns no guard if the related event has no interface port.
     fn compile_range(
         &mut self,
         range: &ir::Range,
@@ -509,12 +498,17 @@ impl<'a> Context<'a> {
 
         let ev = start.event;
 
-        let fsm = self.fsms.get(&ev).unwrap();
-        (Compile::u64(self.comp, start.offset)
-            ..Compile::u64(self.comp, end.offset))
-            .map(|st| fsm.get_port(st).into())
-            .reduce(calyx::Guard::or)
-            .unwrap()
+        // return no guard the interface port does not exist.
+        if self.comp.get(ev).interface_port.is_none() {
+            calyx::Guard::True
+        } else {
+            let fsm = self.fsms.get(&ev).unwrap();
+            (Compile::u64(self.comp, start.offset)
+                ..Compile::u64(self.comp, end.offset))
+                .map(|st| fsm.get_port(st).into())
+                .reduce(calyx::Guard::or)
+                .unwrap()
+        }
     }
 
     fn compile_eventbind(&mut self, eb: &ir::EventBind) {
@@ -550,8 +544,10 @@ impl<'a> Context<'a> {
             "Port bundles should have been compiled away."
         );
 
-        let (dst, g) = self.compile_port(dst.port);
-        assert!(!g.is_true(), "Destination port cannot have a guard.");
+        log::debug!("Compiling connect: {}", con);
+
+        let (dst, _) = self.compile_port(dst.port);
+        // assert!(!g.is_true(), "Destination port cannot have a guard.");
         let (src, g) = self.compile_port(src.port);
         let assign = self.builder.build_assignment(dst, src, g);
         self.builder.component.continuous_assignments.push(assign);
@@ -574,7 +570,7 @@ impl<'a> Context<'a> {
             }
         };
         (
-            cell.get(Compile::port_name(self.ctx, self.comp, idx)),
+            cell.get(Compile::port_name(self.comp, idx)),
             guard,
         )
     }
