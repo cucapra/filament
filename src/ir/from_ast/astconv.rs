@@ -860,8 +860,9 @@ fn connect(ctx: &mut ir::Context) {
         HashMap<ast::Id, EventIdx>,
     > = DenseIndexInfo::default();
 
-    // Build a map of all the ports in the component
+    // Build a map of all the ports and events in the component
     for (idx, comp) in ctx.comps.iter() {
+        // Adds all signature ports into the mapping by name
         port_map.push(
             idx,
             comp.ports()
@@ -880,6 +881,7 @@ fn connect(ctx: &mut ir::Context) {
                 })
                 .collect(),
         );
+        // Adds all signature events into the mapping by name
         event_map.push(
             idx,
             comp.events()
@@ -907,6 +909,7 @@ fn connect(ctx: &mut ir::Context) {
         for inv in comp.invocations().idx_iter() {
             let inv = comp.get(inv);
 
+            // builds the new port mapping
             let nports: HashMap<_, _> = inv
                 .ports
                 .iter()
@@ -922,12 +925,13 @@ fn connect(ctx: &mut ir::Context) {
                 })
                 .collect();
 
+            // builds the new event mapping
             let nevents: HashMap<_, _> = inv
                 .events
                 .iter()
                 .map(|idx| {
                     let event = comp.get(*idx);
-                    // gets the other port from the other component and inserts into port info
+                    // gets the other event from the other component and inserts into event info
                     if let ir::Info::Event { name, .. } = comp.get(event.info) {
                         let inst = comp.get(inv.inst);
                         (*idx, *event_map.get(inst.comp).get(name).unwrap())
