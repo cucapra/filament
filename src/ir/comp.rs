@@ -371,3 +371,9 @@ impl MutCtx<Instance> for Component {
         self.instances.get_mut(idx)
     }
 }
+
+impl MutCtx<Info> for Component {
+    fn get_mut(&mut self, idx: InfoIdx) -> &mut Info {
+        self.info.get_mut(idx)
+    }
+}

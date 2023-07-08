@@ -10,7 +10,7 @@ Before that, however, let's run the design and see how it performs:
 ```bash
 fud e --to cocotb-out examples/tut-seq.fil \
       -s cocotb.data examples/data.json \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 ```
 
 Which generates the following output:
@@ -115,7 +115,7 @@ Now to the moment of truth: let's run the design and see how it performs:
 ```bash
 fud e --to cocotb-out examples/tut-pipe.fil \
       -s cocotb.data examples/data.json \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 ```
 
 We get the following output which shows that the design took only 7 cycles to process 4 inputs:
