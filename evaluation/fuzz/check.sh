@@ -19,7 +19,7 @@ width=$"$dir/width"
 
 ./"$script_dir/gen_float.py" gen --width $(cat $width) "$count" > "$data"
 
-(fud e -s cocotb.data "$data" --to cocotb-out "$dir/harness.fil" -s futil.flags ' -d canonicalize' -q | \
+(fud e -s cocotb.data "$data" --to cocotb-out "$dir/harness.fil" -s calyx.flags ' -d canonicalize' -q | \
   ./"$script_dir/gen_float.py" check --fields $(cat $fields) && \
   echo "No counterexamples with $count data points" && rm "$data") || \
   cat "$data"

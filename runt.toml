@@ -27,7 +27,7 @@ paths = [
   "tests/compile/*.fil"
 ]
 cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
+fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
 """
 
 # [[tests]]
@@ -57,7 +57,7 @@ paths = [
 ]
 expect_dir = "examples/run/"
 cmd = """
-fud e -s cocotb.data examples/data.json --to cocotb-out {} -s futil.flags ' -d canonicalize' -q
+fud e -s cocotb.data examples/data.json --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q
 """
 
 # Compile directories within the tests/compile directory. All *.fil files in the
@@ -72,7 +72,7 @@ dir=$(dirname {}) && \
 fud e -s cocotb.data "$dir/data.json" \
       --to cocotb-out {} \
       -s filament.flags ' --show-models' \
-      -s futil.flags ' -d canonicalize' -q
+      -s calyx.flags ' -d canonicalize' -q
 """
 
 # Evaluation examples
@@ -94,7 +94,7 @@ paths = [
 ]
 cmd = """
 dir=$(dirname {}) && \
-fud e -s cocotb.data "$dir/data.json" --to cocotb-out {} -s futil.flags ' -d canonicalize' -q | jq
+fud e -s cocotb.data "$dir/data.json" --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q | jq
 """
 
 # Reticle Evaluation
@@ -115,5 +115,5 @@ paths = [
   "frisc/test/*.fil"
 ]
 cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
+fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
 """

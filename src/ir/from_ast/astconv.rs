@@ -40,9 +40,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         );
         let inst = ir::Instance {
             comp: comp.idx,
-            params: bindings
+            params: binding
                 .iter()
-                .map(|b| self.expr(b.clone().take()))
+                .map(|(_, b)| self.expr(b.clone()))
                 .collect_vec()
                 .into_boxed_slice(),
             info: self.comp.add(ir::Info::instance(
