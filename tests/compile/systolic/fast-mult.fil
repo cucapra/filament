@@ -2,11 +2,11 @@ import "primitives/core.fil";
 
 /// Implementation of a multiplier with initiation interval 1 and latency 3
 comp FastMult<G: 1>(
-  @interface[G] go_G: 1,
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32,
+  go_G: interface[G],
+   left: [G, G+1] 32,
+   right: [G, G+1] 32,
 ) -> (
-  @[G+3, G+4] out: 32,
+   out: [G+3, G+4] 32,
 ) {
   // First stage, register the inputs
   l := new Register[32]<G, G+2>(left);
@@ -25,11 +25,11 @@ comp FastMult<G: 1>(
 
 
 comp Process<G: 1>(
-  @interface[G] go: 1,
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32,
+  go: interface[G],
+   left: [G, G+1] 32,
+   right: [G, G+1] 32,
 ) -> (
-  @[G+3, G+4] out: 32,
+   out: [G+3, G+4] 32,
 ) {
   // Track the go signal and forward it by four cycles
   v := new Prev[1, 1]<G>(go);
@@ -48,16 +48,16 @@ comp Process<G: 1>(
 }
 
 comp main<G: 1>(
-  @interface[G] go: 1,
-  @[G, G+1] l0: 32,
-  @[G, G+1] l1: 32,
-  @[G, G+1] t0: 32,
-  @[G, G+1] t1: 32,
+  go: interface[G],
+   l0: [G, G+1] 32,
+   l1: [G, G+1] 32,
+   t0: [G, G+1] 32,
+   t1: [G, G+1] 32,
 ) -> (
-  @[G+3, G+4] out00: 32,
-  @[G+3, G+4] out01: 32,
-  @[G+3, G+4] out10: 32,
-  @[G+3, G+4] out11: 32,
+   out00: [G+3, G+4] 32,
+   out01: [G+3, G+4] 32,
+   out10: [G+3, G+4] 32,
+   out11: [G+3, G+4] 32,
 ) {
   // Systolic registers that go from left to right
   r00_01 := new Prev[32, 1]<G>(l0);

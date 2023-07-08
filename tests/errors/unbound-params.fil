@@ -1,9 +1,9 @@
 comp Add[#W, #L]<G: 1>(
-    @[G, G+#W] a: #W,
+     a: [G, G+#W] #W,
 ) -> () {}
 
 comp main[#W, #L]<G: #M>(
-    @[G, G+#K] a: #P,
+     a: [G, G+#K] #P,
 ) -> () where #W+#N+L > L+1 {
     a := new Add[#W, #J]<L+#N>(a);
 }

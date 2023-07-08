@@ -3,26 +3,26 @@ import "primitives/core.fil";
 // extra components to make things simpler to write
 extern "extras.sv" {
   comp OneHotMux[#WIDTH]<G:L-(G),?L:1=G+1>(
-    @[G,L] sel:8,
-    @[G,L] in0: #WIDTH,
-    @[G,L] in1: #WIDTH,
-    @[G,L] in2: #WIDTH,
-    @[G,L] in3: #WIDTH,
-    @[G,L] in4: #WIDTH,
-    @[G,L] in5: #WIDTH,
-    @[G,L] in6: #WIDTH,
-    @[G,L] in7: #WIDTH
+     sel: [G,L] 8,
+     in0: [G,L] #WIDTH,
+     in1: [G,L] #WIDTH,
+     in2: [G,L] #WIDTH,
+     in3: [G,L] #WIDTH,
+     in4: [G,L] #WIDTH,
+     in5: [G,L] #WIDTH,
+     in6: [G,L] #WIDTH,
+     in7: [G,L] #WIDTH
   ) -> (
-    @[G,L] out: #WIDTH
+     out: [G,L] #WIDTH
   ) where L > G, #WIDTH > 0;
 }
 
 comp RightShifter[#WIDTH]<G:1>(
-  @[G,G+1] in: #WIDTH,
-  @[G,G+1] shamt: #WIDTH,
-  @[G,G+1] isArith:1
+   in: [G,G+1] #WIDTH,
+   shamt: [G,G+1] #WIDTH,
+   isArith: [G,G+1] 1
 ) -> (
-  @[G,G+1] out: #WIDTH
+   out: [G,G+1] #WIDTH
 ) where #WIDTH > 0 {
   sra := new ArithShiftRight[#WIDTH]<G>(in, shamt);
   srl := new ShiftRight[#WIDTH]<G>(in, shamt);

@@ -1,5 +1,5 @@
 comp Add[#W, #L]<G: 1>(
-    @[G, G+#W] a: #W,
+     a: [G, G+#W] #W,
 ) -> () {
     M := new Mult;
     a := B<G>(20, 30);

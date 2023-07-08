@@ -2,11 +2,11 @@ import "primitives/core.fil";
 
 /// Implementation of a multiplier with initiation interval 1 and latency 3
 comp main<G: 1>(
-  @interface[G] go_G: 1,
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32,
+  go_G: interface[G],
+   left: [G, G+1] 32,
+   right: [G, G+1] 32,
 ) -> (
-  @[G+3, G+4] out: 32,
+   out: [G+3, G+4] 32,
 ) {
   // First stage, register the inputs
   l := new Register[32]<G, G+2>(left);

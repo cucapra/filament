@@ -1,17 +1,17 @@
 extern "dummy.sv" {
   comp Identity[#A, #B, ?#C=#A+#B]<G: 1>(
-    @interface[G] go: 1,
-    @[G, G+1] in: 32,
+    go: interface[G],
+     in: [G, G+1] 32,
   ) -> (
-    @[G, G+1] out: 32,
+     out: [G, G+1] 32,
   );
 }
 
 comp main<G: 1>(
-    @interface[G] go: 1,
-    @[G, G+1] in: 32,
+    go: interface[G],
+     in: [G, G+1] 32,
 ) -> (
-    @[G, G+1] out: 32
+     out: [G, G+1] 32
 ) {
     valid1 := new Identity[1, 2]<G>(in);
     valid2 := new Identity[1, 2, 4]<G>(valid1.out);

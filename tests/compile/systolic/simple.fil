@@ -1,11 +1,11 @@
 import "primitives/core.fil";
 
 comp Process<G: 1>(
-  @interface[G] go: 1,
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32,
+  go: interface[G],
+   left: [G, G+1] 32,
+   right: [G, G+1] 32,
 ) -> (
-  @[G, G+1] out: 32,
+   out: [G, G+1] 32,
 ) {
   // If acc does not contain a valid value, use 0
   acc := new Prev[32, 0]<G>(add.out);
@@ -19,16 +19,16 @@ comp Process<G: 1>(
 }
 
 comp main<G: 1>(
-  @interface[G] go: 1,
-  @[G, G+1] l0: 32,
-  @[G, G+1] l1: 32,
-  @[G, G+1] t0: 32,
-  @[G, G+1] t1: 32,
+  go: interface[G],
+   l0: [G, G+1] 32,
+   l1: [G, G+1] 32,
+   t0: [G, G+1] 32,
+   t1: [G, G+1] 32,
 ) -> (
-  @[G, G+1] out00: 32,
-  @[G, G+1] out01: 32,
-  @[G, G+1] out10: 32,
-  @[G, G+1] out11: 32,
+   out00: [G, G+1] 32,
+   out01: [G, G+1] 32,
+   out10: [G, G+1] 32,
+   out11: [G, G+1] 32,
 ) {
   // Systolic registers that go from left to right
   r00_01 := new Prev[32, 1]<G>(l0);
