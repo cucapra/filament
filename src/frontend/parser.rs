@@ -250,11 +250,8 @@ impl FilamentParser {
             [identifier(name), interface(time_var)] => {
                 Ok(Port::Int(ast::InterfaceDef::new(name, time_var)))
             },
-            [identifier(name), expr(bitwidth)] => {
-                match (&bitwidth.take()).try_into() {
-                    Ok(n) => Ok(Port::Un((name.take(), n))),
-                    Err(n) => Err(input.error(format!("port width must be concrete: {}", n.kind))),
-                }
+            [identifier(name), bitwidth(n)] => {
+                Ok(Port::Un((name.take(), n)))
             },
             [bundle_def(bd)] => {
                 Ok(Port::Pd(Loc::new(bd.into(), sp)))

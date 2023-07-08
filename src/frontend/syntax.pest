@@ -131,8 +131,9 @@ bundle_def = {
 
 // Ports
 port_def = {
+  identifier ~ ":" ~ bitwidth
   // A port that is possibly a bundle port
-  bundle_def
+  | bundle_def
   // An interface port
   | identifier ~ ":" ~ interface
 }
