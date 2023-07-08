@@ -29,13 +29,13 @@ pub enum Info {
     },
     /// For [super::Instance]
     Instance {
-        name_loc: GPosIdx,
+        name: ast::Id,
         comp_loc: GPosIdx,
         bind_loc: GPosIdx,
     },
     /// For [super::Invoke]
     Invoke {
-        name_loc: GPosIdx,
+        name: ast::Id,
         inst_loc: GPosIdx,
         bind_loc: GPosIdx,
     },
@@ -86,13 +86,21 @@ impl Info {
     }
 
     pub fn instance(
-        name_loc: GPosIdx,
+        name: ast::Id,
         comp_loc: GPosIdx,
         bind_loc: GPosIdx,
     ) -> Self {
         Self::Instance {
-            name_loc,
+            name,
             comp_loc,
+            bind_loc,
+        }
+    }
+
+    pub fn invoke(name: ast::Id, inst_loc: GPosIdx, bind_loc: GPosIdx) -> Info {
+        Self::Invoke {
+            name,
+            inst_loc,
             bind_loc,
         }
     }

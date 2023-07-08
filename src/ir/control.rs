@@ -59,6 +59,8 @@ pub struct Instance {
     pub comp: CompIdx,
     /// The parameters used in the binding of this instance
     pub params: Box<[ExprIdx]>,
+    /// The information associated with this instance
+    pub info: InfoIdx,
 }
 
 impl fmt::Display for Instance {
@@ -97,6 +99,8 @@ pub struct Invoke {
     pub inst: InstIdx,
     // The ports defined by this invocation
     pub ports: Vec<PortIdx>,
+    // The information associated with this invocation
+    pub info: InfoIdx,
 }
 
 #[derive(Clone, PartialEq, Eq)]

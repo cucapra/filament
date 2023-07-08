@@ -380,7 +380,7 @@ impl Printer<'_> {
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         write!(f, "{:indent$}{idx} = instance ", "")?;
-        let ir::Instance { comp, params } = inst;
+        let ir::Instance { comp, params, .. } = inst;
         write!(f, "{}[", comp)?;
         for (i, param) in params.iter().enumerate() {
             if i != 0 {
@@ -397,7 +397,7 @@ impl Printer<'_> {
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
-        let ir::Invoke { inst, ports } = c;
+        let ir::Invoke { inst, ports, .. } = c;
 
         writeln!(
             f,
