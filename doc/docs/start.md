@@ -9,7 +9,7 @@ Filament is a programming language for Fearless Hardware Design. It aims to enab
 The following commands are sufficient to build the Filament compiler and have it generate [Calyx IR](https://calyxir.org). First, we need to configure the Calyx compiler which acts as the backend for Filament.
 - Clone the [Calyx repository][calyx-repo]:
   ```
-  git clone https://github.com/cucapra/calyx.git --depth 1 --branch v0.2.0
+  git clone https://github.com/cucapra/calyx.git --depth 1 --branch v0.3.0
   ```
 - Build the Calyx compiler:
   ```
