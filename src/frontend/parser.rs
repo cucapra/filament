@@ -247,7 +247,7 @@ impl FilamentParser {
         let sp = Self::get_span(&input);
         match_nodes!(
             input.clone().into_children();
-            [interface(time_var), identifier(name), expr(_)] => {
+            [identifier(name), interface(time_var)] => {
                 Ok(Port::Int(ast::InterfaceDef::new(name, time_var)))
             },
             [identifier(name), expr(bitwidth)] => {
@@ -256,12 +256,9 @@ impl FilamentParser {
                     Err(n) => Err(input.error(format!("port width must be concrete: {}", n.kind))),
                 }
             },
-            [interval_range(range), identifier(name), expr(bitwidth)] => {
-                Ok(Port::Pd(Loc::new(ast::PortDef::port(name, range, bitwidth), sp)))
+            [bundle_def(bd)] => {
+                Ok(Port::Pd(Loc::new(bd.into(), sp)))
             },
-            [identifier(name), expr(len), bundle_typ((idx, live, width))] => {
-                Ok(Port::Pd(Loc::new(ast::Bundle::new(name, ast::BundleType::new(idx, len, live, width)).into(), sp)))
-            }
         )
     }
 
@@ -627,9 +624,8 @@ impl FilamentParser {
     fn if_stmt(input: Node) -> ParseResult<ast::If> {
         Ok(match_nodes!(
             input.into_children();
-            [expr_cmp(cond), commands(then), commands(else_)] => {
-                ast::If::new(cond, then, else_)
-            }
+            [expr_cmp(cond), commands(then), commands(else_)] => ast::If::new(cond, then, else_),
+            [expr_cmp(cond), commands(then)] => ast::If::new(cond, then, vec![])
         ))
     }
 
@@ -642,19 +638,32 @@ impl FilamentParser {
         ))
     }
 
+    fn bundle_def(input: Node) -> ParseResult<ast::Bundle> {
+        Ok(match_nodes!(
+            input.into_children();
+            [identifier(name), expr(size), bundle_typ((param, range, width))] => ast::Bundle::new(name, ast::BundleType::new(param, size, range, width)),
+            // This is bundle with size 1, i.e., a port.
+            [identifier(name), bundle_typ((param, range, width))] => ast::Bundle::new(
+                name,
+                ast::BundleType::new(param, ast::Expr::concrete(1).into(), range, width)
+            ),
+        ))
+    }
+
     fn bundle_typ(
         input: Node,
     ) -> ParseResult<(Loc<ast::Id>, Loc<ast::Range>, Loc<ast::Expr>)> {
         Ok(match_nodes!(
             input.into_children();
             [param_var(param), interval_range(range), expr(width)] => (param, range, width),
+            [interval_range(range), expr(width)] => (Loc::unknown(ast::Id::from("_")), range, width),
         ))
     }
 
     fn bundle(input: Node) -> ParseResult<ast::Bundle> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(name), expr(size), bundle_typ((param, range, width))] => ast::Bundle::new(name, ast::BundleType::new(param, size, range, width)),
+            [bundle_def(bd)] => bd
         ))
     }
 
