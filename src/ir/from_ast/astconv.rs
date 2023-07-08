@@ -1,12 +1,14 @@
 //! Convert the frontend AST to the IR.
 use super::{BuildCtx, Sig, SigMap};
 use crate::ir::{
-    Cmp, CompIdx, Ctx, EventIdx, ExprIdx, MutCtx, ParamIdx, PortIdx, PropIdx,
-    TimeIdx,
+    Cmp, CompIdx, Ctx, DenseIndexInfo, EventIdx, ExprIdx, MutCtx, ParamIdx,
+    PortIdx, PropIdx, TimeIdx,
 };
 use crate::utils::GPosIdx;
 use crate::{ast, ir, utils::Binding};
 use itertools::Itertools;
+use std::collections::HashMap;
+use std::mem;
 use std::{iter, rc::Rc};
 
 /// # Declare phase
@@ -70,10 +72,13 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             name.copy(),
             instance.pos(),
             name.pos(),
+            HashMap::new(),
+            HashMap::new(),
         ));
         let inv = self.comp.add(ir::Invoke {
             inst,
-            ports: vec![], // Filled in later
+            ports: vec![],  // Filled in later
+            events: vec![], // Filled in later
             info,
         });
         self.add_inv(name.copy(), inv);
@@ -699,6 +704,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
                 let arg = self.time(time.clone());
                 let event = self.event(resolved, ir::EventOwner::Inv { inv });
+                // add this event to the invocation
+                self.comp.get_mut(inv).events.push(event);
                 ir::EventBind::new(event, arg, info).into()
             })
             .collect();
@@ -844,6 +851,105 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 }
 
+/// Build connect info between invokes and components
+fn connect(ctx: &mut ir::Context) {
+    let mut port_map: DenseIndexInfo<ir::Component, HashMap<ast::Id, PortIdx>> =
+        DenseIndexInfo::default();
+    let mut event_map: DenseIndexInfo<
+        ir::Component,
+        HashMap<ast::Id, EventIdx>,
+    > = DenseIndexInfo::default();
+
+    // Build a map of all the ports in the component
+    for (idx, comp) in ctx.comps.iter() {
+        port_map.push(
+            idx,
+            comp.ports()
+                .iter()
+                .filter_map(|(idx, port)| {
+                    if let ir::PortOwner::Sig { .. } = port.owner {
+                        if let ir::Info::Port { name, .. } = comp.get(port.info)
+                        {
+                            Some((*name, idx))
+                        } else {
+                            unreachable!("Incorrect info type for port")
+                        }
+                    } else {
+                        None
+                    }
+                })
+                .collect(),
+        );
+        event_map.push(
+            idx,
+            comp.events()
+                .iter()
+                .filter_map(|(idx, event)| {
+                    if let ir::EventOwner::Sig { .. } = event.owner {
+                        if let ir::Info::Event { name, .. } =
+                            comp.get(event.info)
+                        {
+                            Some((*name, idx))
+                        } else {
+                            unreachable!("Incorrect info type for event")
+                        }
+                    } else {
+                        None
+                    }
+                })
+                .collect(),
+        );
+    }
+
+    for comp in ctx.comps.idx_iter() {
+        let comp = ctx.comps.get_mut(comp);
+
+        for inv in comp.invocations().idx_iter() {
+            let inv = comp.get(inv);
+
+            let nports: HashMap<_, _> = inv
+                .ports
+                .iter()
+                .map(|idx| {
+                    let port = comp.get(*idx);
+                    // gets the other port from the other component and inserts into port info
+                    if let ir::Info::Port { name, .. } = comp.get(port.info) {
+                        let inst = comp.get(inv.inst);
+                        (*idx, *port_map.get(inst.comp).get(name).unwrap())
+                    } else {
+                        unreachable!("Incorrect info type for port")
+                    }
+                })
+                .collect();
+
+            let nevents: HashMap<_, _> = inv
+                .events
+                .iter()
+                .map(|idx| {
+                    let event = comp.get(*idx);
+                    // gets the other port from the other component and inserts into port info
+                    if let ir::Info::Event { name, .. } = comp.get(event.info) {
+                        let inst = comp.get(inv.inst);
+                        (*idx, *event_map.get(inst.comp).get(name).unwrap())
+                    } else {
+                        unreachable!("Incorrect info type for event")
+                    }
+                })
+                .collect();
+
+            if let ir::Info::Invoke { ports, events, .. } =
+                comp.get_mut(inv.info)
+            {
+                // match ports together
+                let _ = mem::replace(ports, nports);
+                let _ = mem::replace(events, nevents);
+            } else {
+                unreachable!("Incorrect info type for invocation")
+            }
+        }
+    }
+}
+
 pub fn transform(ns: ast::Namespace) -> ir::Context {
     let mut sig_map = SigMap::default();
     // Walk over sigs and build a SigMap
@@ -865,5 +971,8 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         let ir_comp = BuildCtx::comp(comp, idx, &sig_map);
         ctx.comps.checked_add(idx, ir_comp);
     }
+
+    connect(&mut ctx);
+
     ctx
 }

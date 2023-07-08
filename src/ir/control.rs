@@ -99,6 +99,8 @@ pub struct Invoke {
     pub inst: InstIdx,
     // The ports defined by this invocation
     pub ports: Vec<PortIdx>,
+    // The events defined by this invocation
+    pub events: Vec<EventIdx>,
     // The information associated with this invocation
     pub info: InfoIdx,
 }
