@@ -196,7 +196,7 @@ For example, the first transaction sends the inputs <code>op[0]</code>, <code>le
 <p>Running the design is straightforward, assuming you've <a href="./start.html#full-build">configured <code>fud</code></a> already:</p>
 <pre><code class="language-sh">fud e --to cocotb-out examples/tut-seq.fil \
       -s cocotb.data examples/data.json \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 </code></pre>
 <p>This instructs <code>fud</code> to compile the design to Verilog, setup the test harness, and run the simulation.
 The output captures the values on the <code>out</code> port of the ALU for each transaction in the data file and tells us how many cycles it took to run the design:</p>
@@ -205,7 +205,7 @@ The output captures the values on the <code>out</code> port of the ALU for each 
 <p>In general, the command to run designs is:</p>
 <pre><code class="language-sh">fud e --to cocotb-out &lt;filament-file&gt; \
       -s cocotb.data &lt;data-file&gt; \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 </code></pre>
 <h2 id="under-the-hood"><a class="header" href="#under-the-hood">Under the Hood</a></h2>
 <blockquote>
@@ -224,7 +224,7 @@ Our <code>fud</code>-based harness provides a way to randomize the timing of tra
 <pre><code class="language-sh">fud e --to cocotb-out examples/tut-seq.fil \
       -s cocotb.data examples/data.json \
       -s cocotb.randomize 10 \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 </code></pre>
 <p>The <code>-s cocotb.randomize 10</code> flag adds a random delay of up to 10 cycles between transactions.</p>
 <blockquote>

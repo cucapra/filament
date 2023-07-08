@@ -176,7 +176,7 @@
 <p>The following commands are sufficient to build the Filament compiler and have it generate <a href="https://calyxir.org">Calyx IR</a>. First, we need to configure the Calyx compiler which acts as the backend for Filament.</p>
 <ul>
 <li>Clone the <a href="https://github.com/cucapra/calyx">Calyx repository</a>:
-<pre><code>git clone https://github.com/cucapra/calyx.git --depth 1 --branch v0.2.0
+<pre><code>git clone https://github.com/cucapra/calyx.git --depth 1 --branch v0.3.0
 </code></pre>
 </li>
 <li>Build the Calyx compiler:
@@ -499,7 +499,7 @@ For example, the first transaction sends the inputs <code>op[0]</code>, <code>le
 <p>Running the design is straightforward, assuming you've <a href="lang/./start.html#full-build">configured <code>fud</code></a> already:</p>
 <pre><code class="language-sh">fud e --to cocotb-out examples/tut-seq.fil \
       -s cocotb.data examples/data.json \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 </code></pre>
 <p>This instructs <code>fud</code> to compile the design to Verilog, setup the test harness, and run the simulation.
 The output captures the values on the <code>out</code> port of the ALU for each transaction in the data file and tells us how many cycles it took to run the design:</p>
@@ -508,7 +508,7 @@ The output captures the values on the <code>out</code> port of the ALU for each 
 <p>In general, the command to run designs is:</p>
 <pre><code class="language-sh">fud e --to cocotb-out &lt;filament-file&gt; \
       -s cocotb.data &lt;data-file&gt; \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 </code></pre>
 <h2 id="under-the-hood"><a class="header" href="#under-the-hood">Under the Hood</a></h2>
 <blockquote>
@@ -527,7 +527,7 @@ Our <code>fud</code>-based harness provides a way to randomize the timing of tra
 <pre><code class="language-sh">fud e --to cocotb-out examples/tut-seq.fil \
       -s cocotb.data examples/data.json \
       -s cocotb.randomize 10 \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 </code></pre>
 <p>The <code>-s cocotb.randomize 10</code> flag adds a random delay of up to 10 cycles between transactions.</p>
 <blockquote>
@@ -542,7 +542,7 @@ We'll take our <a href="lang/./tutorial.html#a-correct-implementation">sequentia
 Before that, however, let's run the design and see how it performs:</p>
 <pre><code class="language-bash">fud e --to cocotb-out examples/tut-seq.fil \
       -s cocotb.data examples/data.json \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 </code></pre>
 <p>Which generates the following output:</p>
 <pre><code>{&quot;out&quot;: {&quot;0&quot;: [28], &quot;1&quot;: [10], &quot;2&quot;: [66], &quot;3&quot;: [16]}, &quot;cycles&quot;: 12}
@@ -739,7 +739,7 @@ comp main&lt;G: 1&gt;(
 <p>Now to the moment of truth: let's run the design and see how it performs:</p>
 <pre><code class="language-bash">fud e --to cocotb-out examples/tut-pipe.fil \
       -s cocotb.data examples/data.json \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 </code></pre>
 <p>We get the following output which shows that the design took only 7 cycles to process 4 inputs:</p>
 <pre><code>{&quot;out&quot;: {&quot;0&quot;: [28], &quot;1&quot;: [10], &quot;2&quot;: [66], &quot;3&quot;: [16]}, &quot;cycles&quot;: 7}
