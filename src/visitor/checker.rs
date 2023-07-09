@@ -64,6 +64,10 @@ where
     ) -> Traverse {
         Traverse::Continue(())
     }
+    #[inline]
+    fn param_let(&mut self, _: &ast::ParamLet, _ctx: &CompBinding) -> Traverse {
+        Traverse::Continue(())
+    }
 
     #[inline]
     fn signature(&mut self, _: &ast::Signature) -> Traverse {
@@ -109,7 +113,7 @@ where
             ast::Command::Connect(con) => self.connect(con, ctx),
             ast::Command::ForLoop(l) => self.forloop(l, ctx),
             ast::Command::If(i) => self.if_(i, ctx),
-            ast::Command::ParamLet(_) => todo!(),
+            ast::Command::ParamLet(l) => self.param_let(l, ctx),
         }
     }
 

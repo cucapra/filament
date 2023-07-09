@@ -682,6 +682,13 @@ impl FilamentParser {
         ))
     }
 
+    fn param_let(input: Node) -> ParseResult<ast::ParamLet> {
+        Ok(match_nodes!(
+            input.into_children();
+            [param_var(name), expr(expr)] => ast::ParamLet { name, expr: expr.take() }
+        ))
+    }
+
     fn command(input: Node) -> ParseResult<Vec<ast::Command>> {
         Ok(match_nodes!(
             input.into_children();
@@ -691,6 +698,7 @@ impl FilamentParser {
             [for_loop(l)] => vec![ast::Command::ForLoop(l)],
             [bundle(bl)] => vec![bl.into()],
             [if_stmt(if_)] => vec![if_.into()],
+            [param_let(l)] => vec![l.into()],
             [fact(a)] => vec![a.into()]
         ))
     }
