@@ -129,12 +129,19 @@ impl<'prog> BuildCtx<'prog> {
             ast::Command::Invoke(inv) => {
                 self.declare_inv(inv);
             }
+            ast::Command::ParamLet(ast::ParamLet { name, .. }) => {
+                // Declare the parameter since it may be used in instance or
+                // invocation definitions.
+                self.param(
+                    &ast::ParamBind::new(name.clone(), None),
+                    ir::ParamOwner::Let,
+                );
+            }
             ast::Command::ForLoop(_)
             | ast::Command::If(_)
             | ast::Command::Fact(_)
             | ast::Command::Connect(_)
-            | ast::Command::Bundle(_)
-            | ast::Command::ParamLet(_) => {}
+            | ast::Command::Bundle(_) => {}
         }
     }
 
@@ -150,7 +157,8 @@ impl<'prog> BuildCtx<'prog> {
         match expr {
             ast::Expr::Abstract(p) => {
                 let Some(pidx) = self.get_param(&p) else {
-                    unreachable!("Parameter {p} not found")
+                    let cmp_st = ir::Printer::comp_str(self.comp);
+                    unreachable!("Parameter {p} not found. Component state:\n{cmp_st}")
                 };
                 self.comp().add(ir::Expr::Param(pidx))
             }
@@ -775,10 +783,12 @@ impl<'prog> BuildCtx<'prog> {
                 vec![ir::Connect { src, dst, info }.into()]
             }
             ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
-                let param = self.param(
-                    &ast::ParamBind::new(name, None),
-                    ir::ParamOwner::Let,
-                );
+                /* Declared by [[declare_cmds]]. This has the unfortunate effect
+                 * of making it seem like all parameters are hoisted to the top
+                 * of the scope. */
+                let Some(param) = self.get_param(name.inner()) else {
+                    unreachable!("Parameter {name} should be declared")
+                };
                 let expr = self.expr(expr);
                 vec![ir::Let { param, expr }.into()]
             }

@@ -105,6 +105,15 @@ impl visitor::Checker for BindCheck {
         Traverse::Continue(())
     }
 
+    fn param_let(
+        &mut self,
+        l: &ast::ParamLet,
+        _ctx: &binding::CompBinding,
+    ) -> Traverse {
+        self.add_global_params(vec![l.name.clone()].into_iter());
+        Traverse::Continue(())
+    }
+
     fn bundle(
         &mut self,
         _is_port: bool,
