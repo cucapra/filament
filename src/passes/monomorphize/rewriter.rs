@@ -68,6 +68,7 @@ impl Rewriter {
                     )
                 }
                 ast::Command::Connect(_) | ast::Command::Fact(_) => {}
+                ast::Command::ParamLet(_) => todo!(),
             }
         }
         let mut n_cmds = Vec::with_capacity(cmds.len());
@@ -127,6 +128,7 @@ impl Rewriter {
                 ast::Command::If(_)
                 | ast::Command::ForLoop(_)
                 | ast::Command::Fact(_) => unreachable!(),
+                ast::Command::ParamLet(_) => todo!(),
             };
             n_cmds.push(out);
         }

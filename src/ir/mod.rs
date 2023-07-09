@@ -13,7 +13,9 @@ mod time;
 mod utils;
 
 pub use comp::{Component, Context};
-pub use control::{Command, Connect, EventBind, If, Instance, Invoke, Loop};
+pub use control::{
+    Command, Connect, EventBind, If, Instance, Invoke, Let, Loop,
+};
 pub use ctx::{Ctx, MutCtx};
 pub use expr::Expr;
 pub use fact::{Cmp, CmpOp, Fact, Prop};

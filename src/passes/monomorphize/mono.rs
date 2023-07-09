@@ -305,6 +305,7 @@ impl<'e> Monomorphize<'e> {
                         n_cmds.extend(rw.rewrite(ncmds));
                     }
                 }
+                ast::Command::ParamLet(_) => todo!(),
             }
         }
         n_cmds

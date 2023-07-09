@@ -428,6 +428,9 @@ fn compile_component(
             ast::Command::Fact(a) => {
                 unreachable!("Assumption `{a}' should have been compiled away.")
             }
+            ast::Command::ParamLet(_) => {
+                unreachable!("Let binding should be compiled away")
+            }
         };
     }
     // Compile commands

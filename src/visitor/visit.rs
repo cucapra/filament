@@ -144,6 +144,7 @@ where
                     ast::Command::If(_) => unreachable!(
                         "Visitor does not support transforming if statements"
                     ),
+                    ast::Command::ParamLet(_) => todo!(),
                 };
                 n_cmds.extend(cmds);
             }

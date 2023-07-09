@@ -40,7 +40,8 @@ impl Component {
                 | Command::Fact(_)
                 | Command::Bundle(_)
                 | Command::If(_)
-                | Command::ForLoop(_) => (),
+                | Command::ForLoop(_)
+                | Command::ParamLet(_) => (),
             }
         }
 

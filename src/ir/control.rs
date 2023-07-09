@@ -15,6 +15,12 @@ pub enum Command {
     If(If),
     Fact(Fact),
     EventBind(EventBind),
+    Let(Let),
+}
+impl From<Let> for Command {
+    fn from(value: Let) -> Self {
+        Command::Let(value)
+    }
 }
 impl From<InstIdx> for Command {
     fn from(idx: InstIdx) -> Self {
@@ -128,4 +134,11 @@ impl EventBind {
     pub fn new(event: EventIdx, arg: TimeIdx, info: InfoIdx) -> Self {
         Self { event, arg, info }
     }
+}
+
+/// A let-bound parameter in the program
+#[derive(Clone, PartialEq, Eq)]
+pub struct Let {
+    pub param: ParamIdx,
+    pub expr: ExprIdx,
 }

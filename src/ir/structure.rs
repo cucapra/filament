@@ -236,6 +236,8 @@ pub enum ParamOwner {
     Bundle(PortIdx),
     /// Loop indexing parameter
     Loop,
+    /// A let-bound parameter`
+    Let,
 }
 
 impl ParamOwner {
@@ -250,6 +252,7 @@ impl fmt::Display for ParamOwner {
             Self::Sig => write!(f, "sig"),
             Self::Bundle(p) => write!(f, "bundle({p})"),
             Self::Loop => write!(f, "loop"),
+            Self::Let => write!(f, "let"),
         }
     }
 }
@@ -258,8 +261,9 @@ impl fmt::Display for ParamOwner {
 /// Parameters with an optional initial value
 pub struct Param {
     pub owner: ParamOwner,
-    pub info: InfoIdx,
+    /// The default value for this parameter
     pub default: Option<ExprIdx>,
+    pub info: InfoIdx,
 }
 
 impl Param {

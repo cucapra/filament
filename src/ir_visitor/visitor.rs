@@ -148,6 +148,14 @@ where
         Action::Continue
     }
 
+    fn param_let(
+        &mut self,
+        _: &mut ir::Let,
+        _comp: &mut ir::Component,
+    ) -> Action {
+        Action::Continue
+    }
+
     fn visit_cmd(
         &mut self,
         cmd: &mut ir::Command,
@@ -161,6 +169,7 @@ where
             ir::Command::If(i) => self.do_if(i, comp),
             ir::Command::Fact(f) => self.fact(f, comp),
             ir::Command::EventBind(eb) => self.event_binding(eb, comp),
+            ir::Command::Let(l) => self.param_let(l, comp),
         }
     }
 

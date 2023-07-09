@@ -111,7 +111,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             | ast::Command::If(_)
             | ast::Command::Fact(_)
             | ast::Command::Connect(_)
-            | ast::Command::Bundle(_) => {}
+            | ast::Command::Bundle(_)
+            | ast::Command::ParamLet(_) => {}
         }
     }
 
@@ -729,6 +730,14 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 let src = self.get_access(src.take(), ir::Direction::Out);
                 let dst = self.get_access(dst.take(), ir::Direction::In);
                 vec![ir::Connect { src, dst, info }.into()]
+            }
+            ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
+                let param = self.param(
+                    &ast::ParamBind::new(name, None),
+                    ir::ParamOwner::Let,
+                );
+                let expr = self.expr(expr);
+                vec![ir::Let { param, expr }.into()]
             }
             ast::Command::ForLoop(ast::ForLoop {
                 idx,

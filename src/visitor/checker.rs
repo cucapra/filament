@@ -109,6 +109,7 @@ where
             ast::Command::Connect(con) => self.connect(con, ctx),
             ast::Command::ForLoop(l) => self.forloop(l, ctx),
             ast::Command::If(i) => self.if_(i, ctx),
+            ast::Command::ParamLet(_) => todo!(),
         }
     }
 
