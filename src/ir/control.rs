@@ -13,6 +13,7 @@ pub enum Command {
     ForLoop(Loop),
     If(If),
     Fact(Fact),
+    Let(Let),
 }
 impl Command {
     pub fn is_loop(&self) -> bool {
@@ -51,6 +52,11 @@ impl From<If> for Command {
 impl From<Fact> for Command {
     fn from(fact: Fact) -> Self {
         Command::Fact(fact)
+    }
+}
+impl From<Let> for Command {
+    fn from(let_: Let) -> Self {
+        Command::Let(let_)
     }
 }
 
@@ -158,4 +164,11 @@ impl EventBind {
             base,
         }
     }
+}
+
+/// A let-bound parameter in the program
+#[derive(Clone, PartialEq, Eq)]
+pub struct Let {
+    pub param: ParamIdx,
+    pub expr: ExprIdx,
 }
