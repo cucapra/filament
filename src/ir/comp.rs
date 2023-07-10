@@ -13,6 +13,7 @@ pub struct Context {
     pub comps: IndexStore<Component>,
     // Contains external components grouped by file name.
     pub externals: HashMap<String, Vec<CompIdx>>,
+    pub entrypoint: Option<CompIdx>,
 }
 
 /// A IR component. If `is_ext` is true then this is an external component.
