@@ -7,7 +7,6 @@ use std::{
 };
 
 use crate::{
-    ast,
     ir::{self, Ctx, Traversal},
     utils,
 };
@@ -97,11 +96,10 @@ impl Compile {
     }
 
     fn ports<CW, WFU, WT>(
-        ctx: &ir::Context,
         comp: &ir::Component,
         wfu: WFU, // Function that returns a CW type from a u64
         width_transform: WT,
-        add_interface: bool,
+        is_comp: bool,
     ) -> Vec<calyx::PortDef<CW>>
     where
         WFU: Fn(u64) -> CW,
@@ -134,29 +132,29 @@ impl Compile {
             }))
             .collect();
 
-        if add_interface {
-            let mut interface_ports =
-                INTERFACE_PORTS.iter().collect::<HashSet<_>>();
+        let mut interface_ports =
+            INTERFACE_PORTS.iter().collect::<HashSet<_>>();
 
-            // add interface port attributes if necessary
-            for pd in &mut ports {
-                if let Some(pair) = INTERFACE_PORTS
-                    .iter()
-                    .find(|(_, (n, _, _))| *n == pd.name.as_ref())
-                {
-                    assert!(
-                        pair.1 .2 == pd.direction,
-                        "Expected {} to be an {:?} port, got {:?} port.",
-                        pair.1 .0,
-                        pair.1 .2,
-                        pd.direction
-                    );
-                    // TODO: Assert width equality
-                    interface_ports.remove(pair);
-                    pd.attributes.insert(pair.0 .0, pair.0 .1);
-                }
+        // add interface port attributes if necessary
+        for pd in &mut ports {
+            if let Some(pair) = INTERFACE_PORTS
+                .iter()
+                .find(|(_, (n, _, _))| *n == pd.name.as_ref())
+            {
+                assert!(
+                    pair.1 .2 == pd.direction,
+                    "Expected {} to be an {:?} port, got {:?} port.",
+                    pair.1 .0,
+                    pair.1 .2,
+                    pd.direction
+                );
+                // TODO: Assert width equality
+                interface_ports.remove(pair);
+                pd.attributes.insert(pair.0 .0, pair.0 .1);
             }
+        }
 
+        if is_comp {
             // add remaining interface ports if not found
             for (attr, (name, width, dir)) in interface_ports {
                 ports.push(calyx::PortDef {
@@ -180,7 +178,7 @@ impl Compile {
             let comp = ctx.comps.get(idx);
             match comp.src_ext {
                 // component is non-external, generate name from CompIdx
-                None => format!("comp{}", idx.get().to_string()),
+                None => format!("comp{}", idx.get()),
                 Some(id) => id.to_string(),
             }
         }
@@ -213,7 +211,6 @@ impl Compile {
                 })
                 .collect(),
             signature: Compile::ports(
-                ctx,
                 comp,
                 Compile::width_u64,
                 Compile::width,
@@ -247,7 +244,7 @@ impl Compile {
     ) -> calyx::Component {
         log::debug!("Compiling component {idx}");
         let comp = ctx.comps.get(idx);
-        let ports = Compile::ports(ctx, comp, identity, Compile::u64, true);
+        let ports = Compile::ports(comp, identity, Compile::u64, true);
         let mut component = calyx::Component::new(
             Compile::comp_name(ctx, idx),
             ports,
@@ -520,8 +517,13 @@ impl<'a> Context<'a> {
             let offset = Compile::u64(self.comp, time.offset);
             let src = self.fsms.get(&time.event).unwrap().get_port(offset);
 
-            let assign =
-                self.builder.build_assignment(dst, src, calyx::Guard::True);
+            let c = self.builder.add_constant(1, 1);
+
+            let assign = self.builder.build_assignment(
+                dst,
+                c.borrow().get("out"),
+                calyx::Guard::Port(src),
+            );
             self.builder.component.continuous_assignments.push(assign);
         }
     }
@@ -567,12 +569,6 @@ impl<'a> Context<'a> {
             }
         };
         (cell.get(name), guard)
-    }
-
-    /// Compiles an [ast::Id] port name to a [calyx::Port] reference
-    pub fn get_port_name(&self, id: &ast::Id) -> RRC<calyx::Port> {
-        let cell = self.builder.component.signature.borrow();
-        cell.get(id.as_ref())
     }
 
     fn add_invoke(&mut self, idx: ir::InvIdx) {
