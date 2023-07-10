@@ -22,7 +22,17 @@ macro_rules! define_idx {
                 write!(f, "{}", self)
             }
         }
+        impl $crate::utils::IdxPre for $crate::utils::Idx<$st> {
+            fn prefix() -> &'static str {
+                $pre
+            }
+        }
     };
+}
+
+/// Helper trait used to get the prefix of an idx.
+pub trait IdxPre {
+    fn prefix() -> &'static str;
 }
 
 /// Wrapper around a newtyped index associated with a type-level tag.

@@ -37,7 +37,6 @@ pub struct Compile;
 
 impl Compile {
     fn port_def<CW, WT>(
-        ctx: &ir::Context,
         comp: &ir::Component,
         port: ir::PortIdx,
         width_transform: WT,
@@ -111,7 +110,7 @@ impl Compile {
             .ports()
             .idx_iter()
             .filter_map(|port| {
-                Compile::port_def(ctx, comp, port, &width_transform)
+                Compile::port_def(comp, port, &width_transform)
             })
             .chain(comp.interface_ports().into_iter().map(|name| {
                 calyx::PortDef {
@@ -181,10 +180,7 @@ impl Compile {
         }
     }
 
-    fn port_name(
-        comp: &ir::Component,
-        idx: ir::PortIdx,
-    ) -> String {
+    fn port_name(comp: &ir::Component, idx: ir::PortIdx) -> String {
         let p = comp.get(idx);
 
         if let ir::Info::Port { name, .. } = comp.get(p.info) {
@@ -219,55 +215,20 @@ impl Compile {
             attributes: calyx::Attributes::default(),
             is_comb: false,
             body: None,
+            latency: None,
         }
     }
-
-    fn max_state_from_liveness(
-        comp: &ir::Component,
-        live: &ir::Liveness,
-        event_map: &mut HashMap<ir::EventIdx, u64>,
-    ) {
-        assert!(
-            &ir::Expr::Concrete(1) == comp.get(live.len),
-            "Port bundles should have been compiled away."
-        );
-        for time in [live.range.start, live.range.end] {
-            let time = comp.get(time);
-            let nv = Compile::u64(comp, time.offset);
-            if nv > *event_map.get(&time.event).unwrap_or(&0) {
-                event_map.insert(time.event, nv);
-            }
-        }
-    }
-
     /// Gets the maximum states for each event with an interface port in the component
     fn max_states(comp: &ir::Component) -> HashMap<ir::EventIdx, u64> {
         let mut event_map = HashMap::new();
 
-        comp.ports()
-            .idx_iter()
-            .filter_map(|port| match comp.get(port) {
-                ir::Port {
-                    owner:
-                        ir::PortOwner::Sig {
-                            dir: ir::Direction::In,
-                        },
-                    live,
-                    ..
+        comp.times()
+            .iter()
+            .for_each(|(_, time)| {
+                let nv = Compile::u64(comp, time.offset);
+                if nv > *event_map.get(&time.event).unwrap_or(&0) {
+                    event_map.insert(time.event, nv);
                 }
-                | ir::Port {
-                    owner:
-                        ir::PortOwner::Inv {
-                            dir: ir::Direction::Out,
-                            ..
-                        },
-                    live,
-                    ..
-                } => Some(live),
-                _ => None,
-            })
-            .for_each(|port| {
-                Compile::max_state_from_liveness(comp, port, &mut event_map);
             });
 
         event_map
@@ -282,8 +243,13 @@ impl Compile {
         log::debug!("Compiling component {idx}");
         let comp = ctx.comps.get(idx);
         let ports = Compile::ports(ctx, comp, identity, Compile::u64);
-        let mut component =
-            calyx::Component::new(Compile::comp_name(ctx, idx), ports, false);
+        let mut component = calyx::Component::new(
+            Compile::comp_name(ctx, idx),
+            ports,
+            false,
+            false,
+            None,
+        );
         component.attributes.insert(calyx::BoolAttr::NoInterface, 1);
 
         let builder = calyx::Builder::new(&mut component, lib).not_generated();
@@ -333,7 +299,8 @@ impl Compile {
         }));
 
         // define a fake main component
-        let main = frontend::ast::ComponentDef::new("main", false, vec![]);
+        let main =
+            frontend::ast::ComponentDef::new("main", false, None, vec![]);
         ws.components.push(main);
         let mut ctx = calyx::from_ast::ast_to_ir(ws)?;
         ctx.components.retain(|c| c.name != "main");
@@ -430,8 +397,6 @@ struct Context<'a> {
     instances: HashMap<ir::InstIdx, RRC<calyx::Cell>>,
     /// Mapping from invocation name to instance
     invokes: HashMap<ir::InvIdx, RRC<calyx::Cell>>,
-    /// Binds events to the [calyx::Port] that they are connected to, used to connect interface ports.
-    eventbinds: HashMap<ir::EventIdx, RRC<calyx::Port>>,
 }
 
 impl<'a> Context<'a> {
@@ -451,7 +416,6 @@ impl<'a> Context<'a> {
             instances: HashMap::new(),
             invokes: HashMap::new(),
             fsms: HashMap::new(),
-            eventbinds: HashMap::new(),
         }
     }
 
@@ -474,9 +438,27 @@ impl<'a> Context<'a> {
         &self,
         event: ir::EventIdx,
     ) -> Option<RRC<calyx::Port>> {
-        let info = self.comp.get(event).interface_port?;
-        if let ir::Info::InterfacePort { name, .. } = self.comp.get(info) {
-            Some(self.get_port_name(name))
+        let (info, comp, cell) = match self.comp.get(event).owner {
+            ir::EventOwner::Sig => {
+                (self.comp.get(event).interface_port?, self.comp, self.builder.component.signature.borrow())
+            }
+            ir::EventOwner::Inv { inv: idx } => {
+                let inv = self.comp.get(idx);
+                if let ir::Info::Invoke { events, .. } = self.comp.get(inv.info) {
+                    let cidx = self.comp.get(inv.inst).comp;
+                    let comp = self.ctx.comps.get(cidx);
+
+                    log::debug!("Getting interface port for event: {} ({} in component {}): {}", event, events.get(&event).unwrap(), cidx, comp.get(*events.get(&event).unwrap()).interface_port?);
+
+                    (comp.get(*events.get(&event).unwrap()).interface_port?, comp, self.invokes[&idx].borrow())
+                } else {
+                    unreachable!("Invoke had incorrect info type.")
+                }
+            },
+        };
+
+        if let ir::Info::InterfacePort { name, .. } = comp.get(info) {
+            Some(cell.get(name.as_ref()))
         } else {
             unreachable!("Interface port had incorrect info type.")
         }
@@ -518,11 +500,13 @@ impl<'a> Context<'a> {
             ..
         } = eb;
         let time = self.comp.get(*time);
+        log::debug!("Eventbind {} {}", dst, time);
         // If there is no interface port, no binding necessary
         if let Some(dst) = self.get_interface_port(*dst) {
             let offset = Compile::u64(self.comp, time.offset);
             let src = self.fsms.get(&time.event).unwrap().get_port(offset);
 
+            log::debug!("Binding {:?} to {:?}", src, dst);
             let assign =
                 self.builder.build_assignment(dst, src, calyx::Guard::True);
             self.builder.component.continuous_assignments.push(assign);
@@ -559,6 +543,8 @@ impl<'a> Context<'a> {
     ) -> (RRC<calyx::Port>, calyx::Guard<calyx::Nothing>) {
         let port = self.comp.get(idx);
 
+        let name = Compile::port_name(self.comp, idx);
+
         let guard = self.compile_range(&port.live.range);
         let cell = match port.owner {
             ir::PortOwner::Sig { .. } => {
@@ -569,10 +555,7 @@ impl<'a> Context<'a> {
                 unreachable!("Local ports should have been eliminated.")
             }
         };
-        (
-            cell.get(Compile::port_name(self.comp, idx)),
-            guard,
-        )
+        (cell.get(name), guard)
     }
 
     /// Compiles an [ast::Id] port name to a [calyx::Port] reference
@@ -583,26 +566,6 @@ impl<'a> Context<'a> {
 
     fn add_invoke(&mut self, idx: ir::InvIdx) {
         let inv = self.comp.get(idx);
-        let comp = self.ctx.comps.get(self.comp.get(inv.inst).comp);
-        let inst = self.instances.get(&inv.inst).unwrap().borrow();
-
-        // Generate the assignment for each interface port
-        for (evt, name) in comp.events().iter().filter_map(|(i, e)| {
-            e.interface_port.map(|p| {
-                if let ir::Info::InterfacePort { name, .. } = comp.get(p) {
-                    (i, name)
-                } else {
-                    unreachable!("Interface port had incorrect info type.");
-                }
-            })
-        }) {
-            let dst = inst.get(name.as_ref());
-            let src = self.eventbinds.get(&evt).unwrap().clone();
-
-            let assign =
-                self.builder.build_assignment(dst, src, calyx::Guard::True);
-            self.builder.component.continuous_assignments.push(assign);
-        }
 
         let cell = &self
             .instances
@@ -615,6 +578,7 @@ impl<'a> Context<'a> {
         let inst = self.comp.get(idx);
         let inst_name = self.idx_name(idx);
         let comp_name = Compile::comp_name(self.ctx, inst.comp);
+
         let cell = if let Some(sig) = self.get_sig(&inst.comp) {
             self.builder.add_component(
                 inst_name, // non-primitive component
@@ -642,9 +606,9 @@ impl<'a> Context<'a> {
     fn idx_name<T>(&self, idx: utils::Idx<T>) -> String
     where
         ir::Component: Ctx<T>,
-        utils::Idx<T>: std::fmt::Display,
+        utils::Idx<T>: utils::IdxPre,
     {
-        format!("{}{}", Compile::comp_name(self.ctx, self.comp.idx()), idx)
+        format!("{}_{}{}", Compile::comp_name(self.ctx, self.comp.idx()), <utils::Idx::<T> as utils::IdxPre>::prefix(), idx.get())
     }
 
     /// Creates a [calyx::Component] representing an FSM with a certain number of states to bind to each event.
@@ -677,6 +641,8 @@ impl<'a> Context<'a> {
             calyx::Id::from(format!("fsm_{}", states)),
             ports,
             false,
+            false,
+            None,
         );
         comp.attributes.insert(calyx::BoolAttr::NoInterface, 1);
         let mut builder =
