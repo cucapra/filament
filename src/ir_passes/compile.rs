@@ -101,17 +101,24 @@ impl Compile {
         comp: &ir::Component,
         wfu: WFU, // Function that returns a CW type from a u64
         width_transform: WT,
+        add_interface: bool,
     ) -> Vec<calyx::PortDef<CW>>
     where
         WFU: Fn(u64) -> CW,
         WT: Fn(&ir::Component, ir::ExprIdx) -> CW,
     {
-        let mut ports: Vec<calyx::PortDef<CW>> = comp
+        let mut ports: Vec<_> = comp
             .ports()
             .idx_iter()
-            .filter_map(|port| {
-                Compile::port_def(comp, port, &width_transform)
-            })
+            .filter_map(|port| Compile::port_def(comp, port, &width_transform))
+            .chain(comp.unannotated_ports().into_iter().map(|(name, width)| {
+                calyx::PortDef {
+                    name: name.as_ref().into(),
+                    width: wfu(width),
+                    direction: calyx::Direction::Input,
+                    attributes: calyx::Attributes::default(),
+                }
+            }))
             .chain(comp.interface_ports().into_iter().map(|name| {
                 calyx::PortDef {
                     name: name.as_ref().into(),
@@ -125,46 +132,40 @@ impl Compile {
                     .unwrap(),
                 }
             }))
-            .chain(comp.unannotated_ports().into_iter().map(|(name, width)| {
-                calyx::PortDef {
-                    name: name.as_ref().into(),
-                    width: wfu(width),
-                    direction: calyx::Direction::Input,
-                    attributes: calyx::Attributes::default(),
-                }
-            }))
             .collect();
 
-        let mut interface_ports =
-            INTERFACE_PORTS.iter().collect::<HashSet<_>>();
+        if add_interface {
+            let mut interface_ports =
+                INTERFACE_PORTS.iter().collect::<HashSet<_>>();
 
-        // add interface port attributes if necessary
-        for pd in &mut ports {
-            if let Some(pair) = INTERFACE_PORTS
-                .iter()
-                .find(|(_, (n, _, _))| *n == pd.name.as_ref())
-            {
-                assert!(
-                    pair.1 .2 == pd.direction,
-                    "Expected {} to be an {:?} port, got {:?} port.",
-                    pair.1 .0,
-                    pair.1 .2,
-                    pd.direction
-                );
-                // TODO: Assert width equality
-                interface_ports.remove(pair);
-                pd.attributes.insert(pair.0 .0, pair.0 .1);
+            // add interface port attributes if necessary
+            for pd in &mut ports {
+                if let Some(pair) = INTERFACE_PORTS
+                    .iter()
+                    .find(|(_, (n, _, _))| *n == pd.name.as_ref())
+                {
+                    assert!(
+                        pair.1 .2 == pd.direction,
+                        "Expected {} to be an {:?} port, got {:?} port.",
+                        pair.1 .0,
+                        pair.1 .2,
+                        pd.direction
+                    );
+                    // TODO: Assert width equality
+                    interface_ports.remove(pair);
+                    pd.attributes.insert(pair.0 .0, pair.0 .1);
+                }
             }
-        }
 
-        // add remaining interface ports if not found
-        for (attr, (name, width, dir)) in interface_ports {
-            ports.push(calyx::PortDef {
-                name: (*name).into(),
-                width: wfu(*width),
-                direction: dir.clone(),
-                attributes: vec![*attr].try_into().unwrap(),
-            });
+            // add remaining interface ports if not found
+            for (attr, (name, width, dir)) in interface_ports {
+                ports.push(calyx::PortDef {
+                    name: (*name).into(),
+                    width: wfu(*width),
+                    direction: dir.clone(),
+                    attributes: vec![*attr].try_into().unwrap(),
+                });
+            }
         }
 
         ports
@@ -172,11 +173,16 @@ impl Compile {
 
     /// Gets the component name given an [ir::Context] and an [ir::CompIdx]
     fn comp_name(ctx: &ir::Context, idx: ir::CompIdx) -> String {
-        let comp = ctx.comps.get(idx);
-        match comp.src_ext {
-            // component is non-external, generate name from CompIdx
-            None => format!("comp{}", idx.get().to_string()),
-            Some(id) => id.to_string(),
+        // main component
+        if Some(idx) == ctx.entrypoint {
+            "main".to_string()
+        } else {
+            let comp = ctx.comps.get(idx);
+            match comp.src_ext {
+                // component is non-external, generate name from CompIdx
+                None => format!("comp{}", idx.get().to_string()),
+                Some(id) => id.to_string(),
+            }
         }
     }
 
@@ -211,6 +217,7 @@ impl Compile {
                 comp,
                 Compile::width_u64,
                 Compile::width,
+                false,
             ),
             attributes: calyx::Attributes::default(),
             is_comb: false,
@@ -222,14 +229,12 @@ impl Compile {
     fn max_states(comp: &ir::Component) -> HashMap<ir::EventIdx, u64> {
         let mut event_map = HashMap::new();
 
-        comp.times()
-            .iter()
-            .for_each(|(_, time)| {
-                let nv = Compile::u64(comp, time.offset);
-                if nv > *event_map.get(&time.event).unwrap_or(&0) {
-                    event_map.insert(time.event, nv);
-                }
-            });
+        comp.times().iter().for_each(|(_, time)| {
+            let nv = Compile::u64(comp, time.offset);
+            if nv > *event_map.get(&time.event).unwrap_or(&0) {
+                event_map.insert(time.event, nv);
+            }
+        });
 
         event_map
     }
@@ -242,7 +247,7 @@ impl Compile {
     ) -> calyx::Component {
         log::debug!("Compiling component {idx}");
         let comp = ctx.comps.get(idx);
-        let ports = Compile::ports(ctx, comp, identity, Compile::u64);
+        let ports = Compile::ports(ctx, comp, identity, Compile::u64, true);
         let mut component = calyx::Component::new(
             Compile::comp_name(ctx, idx),
             ports,
@@ -251,6 +256,11 @@ impl Compile {
             None,
         );
         component.attributes.insert(calyx::BoolAttr::NoInterface, 1);
+        // main component
+        if Some(idx) == ctx.entrypoint {
+            log::debug!("Defining main component {idx}");
+            component.attributes.insert(calyx::BoolAttr::TopLevel, 1);
+        }
 
         let builder = calyx::Builder::new(&mut component, lib).not_generated();
         let mut ctx = Context::new(ctx, idx, bind, builder, lib);
@@ -439,22 +449,27 @@ impl<'a> Context<'a> {
         event: ir::EventIdx,
     ) -> Option<RRC<calyx::Port>> {
         let (info, comp, cell) = match self.comp.get(event).owner {
-            ir::EventOwner::Sig => {
-                (self.comp.get(event).interface_port?, self.comp, self.builder.component.signature.borrow())
-            }
+            ir::EventOwner::Sig => (
+                self.comp.get(event).interface_port?,
+                self.comp,
+                self.builder.component.signature.borrow(),
+            ),
             ir::EventOwner::Inv { inv: idx } => {
                 let inv = self.comp.get(idx);
-                if let ir::Info::Invoke { events, .. } = self.comp.get(inv.info) {
+                if let ir::Info::Invoke { events, .. } = self.comp.get(inv.info)
+                {
                     let cidx = self.comp.get(inv.inst).comp;
                     let comp = self.ctx.comps.get(cidx);
 
-                    log::debug!("Getting interface port for event: {} ({} in component {}): {}", event, events.get(&event).unwrap(), cidx, comp.get(*events.get(&event).unwrap()).interface_port?);
-
-                    (comp.get(*events.get(&event).unwrap()).interface_port?, comp, self.invokes[&idx].borrow())
+                    (
+                        comp.get(*events.get(&event).unwrap()).interface_port?,
+                        comp,
+                        self.invokes[&idx].borrow(),
+                    )
                 } else {
                     unreachable!("Invoke had incorrect info type.")
                 }
-            },
+            }
         };
 
         if let ir::Info::InterfacePort { name, .. } = comp.get(info) {
@@ -500,13 +515,11 @@ impl<'a> Context<'a> {
             ..
         } = eb;
         let time = self.comp.get(*time);
-        log::debug!("Eventbind {} {}", dst, time);
         // If there is no interface port, no binding necessary
         if let Some(dst) = self.get_interface_port(*dst) {
             let offset = Compile::u64(self.comp, time.offset);
             let src = self.fsms.get(&time.event).unwrap().get_port(offset);
 
-            log::debug!("Binding {:?} to {:?}", src, dst);
             let assign =
                 self.builder.build_assignment(dst, src, calyx::Guard::True);
             self.builder.component.continuous_assignments.push(assign);
@@ -527,8 +540,6 @@ impl<'a> Context<'a> {
                 && Compile::u64(self.comp, dst.end) == 1,
             "Port bundles should have been compiled away."
         );
-
-        log::debug!("Compiling connect: {}", con);
 
         let (dst, _) = self.compile_port(dst.port);
         // assert!(!g.is_true(), "Destination port cannot have a guard.");
@@ -608,7 +619,12 @@ impl<'a> Context<'a> {
         ir::Component: Ctx<T>,
         utils::Idx<T>: utils::IdxPre,
     {
-        format!("{}_{}{}", Compile::comp_name(self.ctx, self.comp.idx()), <utils::Idx::<T> as utils::IdxPre>::prefix(), idx.get())
+        format!(
+            "{}_{}{}",
+            Compile::comp_name(self.ctx, self.comp.idx()),
+            <utils::Idx::<T> as utils::IdxPre>::prefix(),
+            idx.get()
+        )
     }
 
     /// Creates a [calyx::Component] representing an FSM with a certain number of states to bind to each event.

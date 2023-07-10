@@ -244,12 +244,13 @@ impl Printer<'_> {
         {
             let interface_port = |eb: &ir::Event| match eb.interface_port {
                 Some(info) => {
-                    if let ir::Info::InterfacePort { name, .. } = comp.get(info) {
+                    if let ir::Info::InterfacePort { name, .. } = comp.get(info)
+                    {
                         format!(" (@int {})", name)
                     } else {
                         unreachable!("incorrect interface port info")
                     }
-                },
+                }
                 None => "".to_string(),
             };
             match pos {
@@ -257,11 +258,17 @@ impl Printer<'_> {
                     write!(
                         f,
                         "{idx}: {}{}, ",
-                        self.ctx.display_timesub(&ev.delay), interface_port(ev)
+                        self.ctx.display_timesub(&ev.delay),
+                        interface_port(ev)
                     )?
                 }
                 Position::Only((idx, ev)) | Position::Last((idx, ev)) => {
-                    write!(f, "{idx}: {}{}", self.ctx.display_timesub(&ev.delay), interface_port(ev))?
+                    write!(
+                        f,
+                        "{idx}: {}{}",
+                        self.ctx.display_timesub(&ev.delay),
+                        interface_port(ev)
+                    )?
                 }
             }
         }
