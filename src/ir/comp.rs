@@ -9,6 +9,7 @@ use crate::utils::Idx;
 #[derive(Default)]
 pub struct Context {
     pub comps: IndexStore<Component>,
+    pub entrypoint: Option<CompIdx>,
 }
 
 /// A IR component. If `is_ext` is true then this is an external component.

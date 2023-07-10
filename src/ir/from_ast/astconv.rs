@@ -850,9 +850,12 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         }
     }
 
-    for comp in ns.components {
+    for (cidx, comp) in ns.components.into_iter().enumerate() {
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
         let ir_comp = BuildCtx::comp(comp, idx, &sig_map);
+        if Some(cidx) == ns.main_idx() {
+            ctx.entrypoint = Some(idx);
+        }
         ctx.comps.checked_add(idx, ir_comp);
     }
     ctx
