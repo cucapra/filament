@@ -49,7 +49,7 @@ pub struct Component {
 
     /// Information tracked by the component
     info: IndexStore<Info>,
-    /// `Some(filename, componentname)` if this is an external component, `None` otherwise.
+    /// `Some(name)` if this is an external component, `None` otherwise.
     pub src_ext: Option<ast::Id>,
 }
 
@@ -115,6 +115,12 @@ impl Component {
         } else {
             Some(Fact::assume(prop, info).into())
         }
+    }
+
+    #[inline]
+    /// Returns true if the component is a primitive
+    pub fn is_primitive(&self) -> bool {
+        self.src_ext.is_some()
     }
 }
 

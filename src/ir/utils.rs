@@ -262,7 +262,7 @@ impl From<Context> for Traversal {
         let comps = ctx
             .comps
             .iter()
-            .filter(|(_, comp)| comp.src_ext.is_none())
+            .filter(|(_, comp)| !comp.is_primitive())
             .collect_vec();
 
         for (idx, _) in comps.iter() {
@@ -325,7 +325,7 @@ impl Traversal {
             Command::Instance(inst) => {
                 let inst = ctx.comps.get(comp).instances().get(*inst);
                 // If the instance is not an external, add a dependency edge
-                if ctx.comps.get(inst.comp).src_ext.is_none() {
+                if !ctx.comps.get(inst.comp).is_primitive() {
                     ts.add_dependency(comp, inst.comp);
                 }
             }
