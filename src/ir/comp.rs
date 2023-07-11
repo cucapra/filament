@@ -14,7 +14,7 @@ pub struct Context {
 
 impl Context {
     pub fn is_main(&self, idx: CompIdx) -> bool {
-        return Some(idx) == self.entrypoint
+        Some(idx) == self.entrypoint
     }
 }
 
