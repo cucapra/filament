@@ -9,6 +9,13 @@ use crate::utils::Idx;
 #[derive(Default)]
 pub struct Context {
     pub comps: IndexStore<Component>,
+    pub entrypoint: Option<CompIdx>,
+}
+
+impl Context {
+    pub fn is_main(&self, idx: CompIdx) -> bool {
+        Some(idx) == self.entrypoint
+    }
 }
 
 /// A IR component. If `is_ext` is true then this is an external component.
