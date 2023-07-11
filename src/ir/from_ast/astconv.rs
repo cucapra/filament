@@ -851,7 +851,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 }
 
-/// Build connect info between invokes and components
+/// Build connect info between [ir::Invoke]s and [ir::Component]s.
+/// For every [ir::Invoke] in every [ir::Component]:
+/// Maps the [EventIdx]s and [PortIdx]s defined in an [ir::Invoke] to the corresponding [EventIdx]s and [PortIdx]s in the [ir::Component] it is invoking,
+/// and adds this information to the [ir::Info] of the [ir::Invoke]
+/// This is a necessary alternative to searching [ir::Port]s and [ir::Event]s by name, as newly added [ir::Port]s or [ir::Event]s may no longer have unique names.
 fn connect(ctx: &mut ir::Context) {
     let mut port_map: DenseIndexInfo<ir::Component, HashMap<ast::Id, PortIdx>> =
         DenseIndexInfo::default();
@@ -868,16 +872,14 @@ fn connect(ctx: &mut ir::Context) {
             comp.ports()
                 .iter()
                 .filter_map(|(idx, port)| {
-                    if let ir::PortOwner::Sig { .. } = port.owner {
-                        if let ir::Info::Port { name, .. } = comp.get(port.info)
-                        {
-                            Some((*name, idx))
-                        } else {
+                    let ir::PortOwner::Sig { .. } = port.owner else {
+                        return None
+                    };
+                    let ir::Info::Port { name, .. } =
+                        comp.get(port.info) else {
                             unreachable!("Incorrect info type for port")
-                        }
-                    } else {
-                        None
-                    }
+                        };
+                    Some((*name, idx))
                 })
                 .collect(),
         );
@@ -887,17 +889,14 @@ fn connect(ctx: &mut ir::Context) {
             comp.events()
                 .iter()
                 .filter_map(|(idx, event)| {
-                    if let ir::EventOwner::Sig { .. } = event.owner {
-                        if let ir::Info::Event { name, .. } =
-                            comp.get(event.info)
-                        {
-                            Some((*name, idx))
-                        } else {
+                    let ir::EventOwner::Sig { .. } = event.owner else {
+                        return None
+                    };
+                    let ir::Info::Event { name, .. } =
+                        comp.get(event.info) else {
                             unreachable!("Incorrect info type for event")
-                        }
-                    } else {
-                        None
-                    }
+                        };
+                    Some((*name, idx))
                 })
                 .collect(),
         );
