@@ -110,7 +110,9 @@ impl Compile {
         let mut ports: Vec<_> = comp
             .ports()
             .idx_iter()
-            .filter_map(|port| Compile::port_def(ctx, comp, port, &width_transform))
+            .filter_map(|port| {
+                Compile::port_def(ctx, comp, port, &width_transform)
+            })
             .chain(comp.unannotated_ports().into_iter().map(|(name, width)| {
                 calyx::PortDef {
                     name: name.as_ref().into(),
@@ -186,12 +188,16 @@ impl Compile {
         }
     }
 
-    fn port_name(ctx: &ir::Context, comp: &ir::Component, idx: ir::PortIdx) -> String {
+    fn port_name(
+        ctx: &ir::Context,
+        comp: &ir::Component,
+        idx: ir::PortIdx,
+    ) -> String {
         let p = comp.get(idx);
 
         match &p.owner {
             ir::PortOwner::Sig { .. } => {
-                if ctx.is_main(comp.idx()) {
+                if ctx.is_main(comp.idx()) || comp.is_primitive() {
                     if let ir::Info::Port { name, .. } = comp.get(p.info) {
                         name.as_ref().into()
                     } else {
@@ -200,15 +206,19 @@ impl Compile {
                 } else {
                     format!("p{}", idx.get())
                 }
-            },
-            ir::PortOwner::Inv { inv, ..} => {
+            }
+            ir::PortOwner::Inv { inv, .. } => {
                 let inv = comp.get(*inv);
                 let ir::Info::Invoke { ports, .. } = comp.get(inv.info) else {
                     unreachable!("Incorrect info type for invoke");
                 };
                 let pidx = ports.get(&idx).unwrap();
-                Compile::port_name(ctx, ctx.comps.get(comp.get(inv.inst).comp), *pidx)
-            },
+                Compile::port_name(
+                    ctx,
+                    ctx.comps.get(comp.get(inv.inst).comp),
+                    *pidx,
+                )
+            }
             ir::PortOwner::Local => format!("p{}", idx.get()),
         }
     }
