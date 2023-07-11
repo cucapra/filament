@@ -11,6 +11,7 @@ mod structure;
 mod subst;
 mod time;
 mod utils;
+mod validate;
 
 pub use comp::{Component, Context};
 pub use control::{Command, Connect, EventBind, If, Instance, Invoke, Loop};
