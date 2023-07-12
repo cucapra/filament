@@ -1,4 +1,6 @@
 use crate::{ir, ir::Ctx};
+
+use super::IndexStore;
 /// Implements validation checks for IR data structures.
 /// If calling the methods in this does not result in a panic, then the corresponding IR structure is valid.
 /// The validity condition for each structure is defined in the corresponding method.
@@ -6,7 +8,7 @@ pub struct Validate<'a> {
     /// The component being validated.
     comp: &'a ir::Component,
     /// The context for the program being evaluated
-    ctx: &'a ir::Context,
+    ctx: &'a IndexStore<ir::Component>,
 }
 
 impl<'a> Validate<'a> {
@@ -288,7 +290,6 @@ impl<'a> Validate<'a> {
         // check (3) and (4)
         let comp_params = self
             .ctx
-            .comps
             .get(*comp)
             .params()
             .iter()
