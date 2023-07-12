@@ -61,28 +61,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             ..
         } = inv;
 
-        let mut events = Vec::new();
-        // create a bunch of EventBinds - an event (done) and a time
-        // Time has an event (we have this) and offset (expr)
-        for time in abstract_vars.iter() {
-            let ast::Time { event, .. } = time.inner();
-            let time_idx = self.time(time.inner().clone());
-            let info_idx = self.comp.add(ir::Info::EventBind {
-                bind_loc: time.clone().pos(),
-            });
-            let ev = self.event_map.get(event).unwrap();
-            events.push(ir::EventBind {
-                event: *ev,
-                arg: time_idx,
-                info: info_idx,
-            });
-        }
-
         let inst = *self.inst_map.get(instance).unwrap();
         let inv = self.comp.add(ir::Invoke {
             inst,
             ports: vec![], // Filled in later
-            events,
+            events: vec![], // Filled in later
         });
         self.add_inv(name.copy(), inv);
 
@@ -707,7 +690,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
                 let arg = self.time(time.clone());
                 let event = self.event(resolved, ir::EventOwner::Inv { inv });
-                ir::EventBind::new(event, arg, info).into()
+                let eb: ir::EventBind = ir::EventBind::new(event, arg, info).into();
+                let invoke = self.comp.get_mut(inv);
+                invoke.events.push(eb.clone());
+                ir::Command::EventBind(eb)
             })
             .collect();
 
