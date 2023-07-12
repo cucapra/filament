@@ -397,7 +397,7 @@ impl Printer<'_> {
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
-        let ir::Invoke { inst, ports } = c;
+        let ir::Invoke { inst, ports , events} = c;
 
         writeln!(
             f,

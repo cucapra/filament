@@ -10,11 +10,25 @@ pub struct Validate<'a> {
 impl<'a> Validate<'a> {
     /// Validate the entire component
     pub fn comp(&self) {
+        // Validate params
+        for (pidx, _) in self.comp.params().iter() {
+            self.param(pidx);
+        }
 
         // Validate ports
         for (pidx, _) in self.comp.ports().iter() {
             self.port(pidx);
         }
+
+        // Validate times
+        for (tidx, _) in self.comp.times().iter() {
+            self.time(tidx);
+        }
+
+        for (iidx, _) in self.comp.invocations().iter() {
+            self.invoke(iidx);
+        }
+        
     }
 
     /// A port is valid if:
@@ -86,7 +100,7 @@ impl<'a> Validate<'a> {
     /// (1) Its owner is defined in the component and says it owns the event
     /// (2) Its delay is valid
     pub fn event(&self, evidx: ir::EventIdx) {
-        let ir::Event {delay, owner, ..} = self.comp.get(evidx);
+        let ir::Event {delay, owner, ..} = &self.comp[evidx];
 
         // check (1)
         match owner {
@@ -94,10 +108,49 @@ impl<'a> Validate<'a> {
                 /* Can't check because the sig does not contain this info */
             }
             ir::EventOwner::Inv {inv: iidx} => {
-                let inv = &self.comp[*iidx];
-                // TODO: merge in changes where Invokes track events
+                let ir::Invoke {inst, ports, events} = &self.comp[*iidx];
+                // if none of the EventBinds in an invoke's events use evidx, then error
+                let Some(_) = events
+                    .iter()
+                    .find(|ir::EventBind{event, ..}| *event == evidx) else {
+                        self.comp.internal_error(
+                            format!("{evidx} claims to be owned by {iidx}, but {iidx} does not define it")
+                        );
+                };
             }
         }
+
+        // check (2)
+        self.timesub(delay.clone());
+    }
+
+    /// A TimeSub is valid if:
+    /// (1) Its fields are all well-formed, i.e.
+    ///     i. If it is a Unit, its expr exists in the component
+    ///     ii. If it is a Sym, both of its times are well-formed
+    pub fn timesub(&self, ts: ir::TimeSub) {
+        // check (1)
+        match ts {
+            ir::TimeSub::Unit(expr) => {
+                let _ = &self.comp[expr]; // check that expr is defined
+            }
+            ir::TimeSub::Sym {l: t1_idx, r: t2_idx} => {
+                self.time(t1_idx);
+                self.time(t2_idx);
+            }
+        }
+    }
+
+    /// A Time is valid if:
+    /// (1) It is defined in the component
+    /// (2) Its fields are defined in the component
+    pub fn time(&self, tidx: ir::TimeIdx) {
+        // check (1)
+        let ir::Time {event, offset} = &self.comp[tidx];
+
+        // check (2)
+        self.event(*event);
+        let _ = &self.comp[*offset];
     }
 
     /// A param is valid if:
@@ -108,7 +161,7 @@ impl<'a> Validate<'a> {
         // check (1) - this will panic if param not defined
         let ir::Param {owner, ..} = &self.comp.get(pidx);
 
-        // check (2)
+        // check (2) and (3)
         match owner {
             ir::ParamOwner::Sig | ir::ParamOwner::Loop => {
                 /* Nothing to check */
@@ -119,7 +172,7 @@ impl<'a> Validate<'a> {
                     width,
                     live,
                     info
-                } = &self.comp.get(*port_idx); // this will panic if portt not defined
+                } = &self.comp.get(*port_idx); // (2) this will panic if port not defined
             }
         }
     }
@@ -130,7 +183,7 @@ impl<'a> Validate<'a> {
     ///     i.  port() checks that the invoke owns the port
     ///         invoke() checks that the ports an invoke defines are owned by it
     fn invoke(&self, iidx: ir::InvIdx) {
-        let ir::Invoke {inst, ports} = &self.comp.get(iidx);
+        let ir::Invoke {inst: _, ports, ..} = &self.comp.get(iidx);
 
         // check (1) and (2)
         for pidx in ports {
