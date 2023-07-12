@@ -5,6 +5,8 @@ use crate::{ir, ir::Ctx};
 pub struct Validate<'a> {
     /// The component being validated.
     comp: &'a ir::Component,
+    /// The context for the program being evaluated
+    ctx: &'a ir::Context,
 }
 
 impl<'a> Validate<'a> {
@@ -30,8 +32,14 @@ impl<'a> Validate<'a> {
             self.time(tidx);
         }
 
+        // Validate invokes
         for (iidx, _) in self.comp.invocations().iter() {
             self.invoke(iidx);
+        }
+
+        // Validate instances
+        for (iidx, _) in self.comp.instances().iter() {
+            self.instance(iidx);
         }
     }
 
@@ -256,6 +264,37 @@ impl<'a> Validate<'a> {
                     }
                 }
             }
+        }
+    }
+
+    /// An instance is valid if:
+    /// (1) It is defined in the component
+    /// (2) Its params are defined in the component
+    /// (3) The component it's instantiating is defined in the context
+    /// (4) The number of params passed in matches the amount present
+    ///     in the component signature
+    fn instance(&self, iidx: ir::InstIdx) {
+        // check (1)
+        let ir::Instance { comp, params } = &self.comp[iidx];
+        for expr in params.iter() {
+            // check (2)
+            self.expr(*expr);
+        }
+        // check (3) and (4)
+        let comp_params: Vec<_> = self
+            .ctx
+            .comps
+            .get(*comp)
+            .params()
+            .iter()
+            .filter(|(_idx, param)| param.is_sig_owned())
+            .collect();
+        let comp_len = comp_params.len();
+        let inst_len = params.len();
+        if comp_len != inst_len {
+            self.comp.internal_error(
+                format!("{comp} takes {comp_len} params, but {inst_len} were passed by {iidx}")
+            )
         }
     }
 }
