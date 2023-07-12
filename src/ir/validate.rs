@@ -19,9 +19,14 @@ impl<'a> Validate<'a> {
             self.expr(eidx);
         }
 
-        // Validate params
-        for (pidx, _) in self.comp.params().iter() {
-            self.param(pidx);
+        // Validate times
+        for (tidx, _) in self.comp.times().iter() {
+            self.time(tidx);
+        }
+
+        // Validate props
+        for (pidx, _) in self.comp.props().iter() {
+            self.prop(pidx);
         }
 
         // Validate ports
@@ -29,9 +34,14 @@ impl<'a> Validate<'a> {
             self.port(pidx);
         }
 
-        // Validate times
-        for (tidx, _) in self.comp.times().iter() {
-            self.time(tidx);
+        // Validate params
+        for (pidx, _) in self.comp.params().iter() {
+            self.param(pidx);
+        }
+
+        // Validate events
+        for (evidx, _) in self.comp.events().iter() {
+            self.event(evidx);
         }
 
         // Validate invokes
