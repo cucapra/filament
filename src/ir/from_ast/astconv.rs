@@ -690,8 +690,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
                 let arg = self.time(time.clone());
                 let event = self.event(resolved, ir::EventOwner::Inv { inv });
-                let eb: ir::EventBind =
-                    ir::EventBind::new(event, arg, info).into();
+                let eb = ir::EventBind::new(event, arg, info);
                 let invoke = self.comp.get_mut(inv);
                 invoke.events.push(eb.clone());
                 ir::Command::EventBind(eb)
