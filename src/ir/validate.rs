@@ -41,6 +41,11 @@ impl<'a> Validate<'a> {
         for (iidx, _) in self.comp.instances().iter() {
             self.instance(iidx);
         }
+
+        // Validate commands
+        for cmd in self.comp.cmds.iter() {
+            self.command(cmd.clone());
+        }
     }
 
     /// An Expr is valid if:
@@ -152,8 +157,8 @@ impl<'a> Validate<'a> {
             }
             ir::EventOwner::Inv { inv: iidx } => {
                 let ir::Invoke {
-                    inst,
-                    ports,
+                    inst: _,
+                    ports: _,
                     events,
                 } = &self.comp[*iidx];
                 // if none of the EventBinds in an invoke's events use evidx, then error
@@ -226,10 +231,10 @@ impl<'a> Validate<'a> {
             }
             ir::ParamOwner::Bundle(port_idx) => {
                 let ir::Port {
-                    owner,
-                    width,
-                    live,
-                    info,
+                    owner: _,
+                    width: _,
+                    live: _,
+                    info: _,
                 } = &self.comp.get(*port_idx); // (2) this will panic if port not defined
             }
         }
@@ -296,5 +301,141 @@ impl<'a> Validate<'a> {
                 format!("{comp} takes {comp_len} params, but {inst_len} were passed by {iidx}")
             )
         }
+    }
+
+    /// A command is valid if:
+    /// (1) The structures that it contains are valid
+    fn command(&self, cmd: ir::Command) {
+        match cmd {
+            ir::Command::Instance(iidx) => {
+                self.instance(iidx);
+            }
+            ir::Command::Invoke(iidx) => {
+                self.invoke(iidx);
+            }
+            ir::Command::Connect(con) => {
+                self.connect(con);
+            }
+            ir::Command::ForLoop(lp) => {
+                self.forloop(lp);
+            }
+            ir::Command::If(cond) => {
+                self.if_stmt(cond);
+            }
+            ir::Command::Fact(fact) => {
+                self.fact(fact);
+            }
+            ir::Command::EventBind(eb) => {
+                self.eventbind(eb);
+            }
+        }
+    }
+
+    /// A prop is valid if:
+    /// (1) It is defined in the component
+    /// (2) The structures its made of are valid
+    fn prop(&self, pidx: ir::PropIdx) {
+        let prop = &self.comp[pidx];
+        match prop {
+            ir::Prop::True | ir::Prop::False => { /* Nothing to do */ }
+            ir::Prop::Cmp(cmp) => {
+                let ir::CmpOp { op: _, lhs, rhs } = cmp;
+                self.expr(*lhs);
+                self.expr(*rhs);
+            }
+            ir::Prop::TimeCmp(tcmp) => {
+                let ir::CmpOp { op: _, lhs, rhs } = tcmp;
+                self.time(*lhs);
+                self.time(*rhs);
+            }
+            ir::Prop::TimeSubCmp(tscmp) => {
+                let ir::CmpOp { op: _, lhs, rhs } = tscmp;
+                self.timesub(lhs.clone());
+                self.timesub(rhs.clone());
+            }
+            ir::Prop::Not(pidx) => {
+                self.prop(*pidx);
+            }
+            ir::Prop::And(pidx1, pidx2) => {
+                self.prop(*pidx1);
+                self.prop(*pidx2);
+            }
+            ir::Prop::Or(pidx1, pidx2) => {
+                self.prop(*pidx1);
+                self.prop(*pidx2);
+            }
+            ir::Prop::Implies(pidx1, pidx2) => {
+                self.prop(*pidx1);
+                self.prop(*pidx2);
+            }
+        }
+    }
+
+    /// A connect is valid if:
+    /// (1) Both of the accesses it makes are valid
+    /// NOTE(ethan): harder to check, maybe not worth it?
+    /// Would have to resolve the start/end exprs, which requires a binding...
+    /// (2) The range of the src and dst accesses match
+    fn connect(&self, connect: ir::Connect) {
+        let ir::Connect { src, dst, .. } = connect;
+        self.access(src);
+        self.access(dst);
+    }
+
+    /// An access is valid if:
+    /// (1) The port being accessed is valid
+    /// (2) Its start and end exprs are defined in the comp
+    fn access(&self, access: ir::Access) {
+        let ir::Access { port, start, end } = access;
+        self.port(port);
+        self.expr(start);
+        self.expr(end);
+    }
+
+    /// A loop is valid if:
+    /// (1) Its index is valid
+    /// (2) Its start/end is valid
+    /// (3) Everything in its body is valid
+    fn forloop(&self, lp: ir::Loop) {
+        let ir::Loop {
+            index,
+            start,
+            end,
+            body,
+        } = lp;
+        self.param(index);
+        self.expr(start);
+        self.expr(end);
+        for cmd in body.iter() {
+            self.command(cmd.clone());
+        }
+    }
+
+    /// An if-statement is valid if:
+    /// (1) Its condition is valid
+    /// (2) Everything in its then-branch is valid
+    /// (3) Everything in its alt-branch is valid
+    fn if_stmt(&self, if_stmt: ir::If) {
+        let ir::If { cond, then, alt } = if_stmt;
+        self.prop(cond);
+        for cmd in then.iter() {
+            self.command(cmd.clone());
+        }
+        for cmd in alt.iter() {
+            self.command(cmd.clone());
+        }
+    }
+
+    /// A fact is valid if:
+    /// (1) Its prop is valid
+    fn fact(&self, fact: ir::Fact) {
+        let ir::Fact { prop, .. } = fact;
+        self.prop(prop);
+    }
+
+    fn eventbind(&self, eb: ir::EventBind) {
+        let ir::EventBind { event, arg, .. } = eb;
+        self.event(event);
+        self.time(arg);
     }
 }

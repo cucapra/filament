@@ -62,7 +62,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         } = inv;
 
         let mut events = Vec::new();
-        // create a bunch of EventBinds - an event (done) and a Time
+        // create a bunch of EventBinds - an event (done) and a time
         // Time has an event (we have this) and offset (expr)
         for time in abstract_vars.iter() {
             let ast::Time { event, .. } = time.inner();
