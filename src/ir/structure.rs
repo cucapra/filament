@@ -130,7 +130,7 @@ pub struct Port {
 }
 impl Port {
     pub fn is_inv(&self) -> bool {
-        matches!(self.owner, PortOwner::Inv {..})
+        matches!(self.owner, PortOwner::Inv { .. })
     }
     /// Check if this is an input port on the signature
     pub fn is_sig_in(&self) -> bool {
