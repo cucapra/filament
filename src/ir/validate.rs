@@ -286,19 +286,18 @@ impl<'a> Validate<'a> {
             self.expr(*expr);
         }
         // check (3) and (4)
-        let comp_params: Vec<_> = self
+        let comp_params = self
             .ctx
             .comps
             .get(*comp)
             .params()
             .iter()
             .filter(|(_idx, param)| param.is_sig_owned())
-            .collect();
-        let comp_len = comp_params.len();
+            .count();
         let inst_len = params.len();
-        if comp_len != inst_len {
+        if comp_params != inst_len {
             self.comp.internal_error(
-                format!("{comp} takes {comp_len} params, but {inst_len} were passed by {iidx}")
+                format!("{comp} takes {comp_params} params, but {inst_len} were passed by {iidx}")
             )
         }
     }
