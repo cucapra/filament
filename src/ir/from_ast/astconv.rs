@@ -137,22 +137,18 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 self.comp.add(e)
             }
             ast::Expr::Op { op, left, right } => {
-                let l = self.expr(*left);
-                let r = self.expr(*right);
-                match op {
-                    ast::Op::Add => l.add(r, self.comp),
-                    ast::Op::Mul => l.mul(r, self.comp),
-                    ast::Op::Sub => l.sub(r, self.comp),
-                    ast::Op::Div => l.div(r, self.comp),
-                    ast::Op::Mod => l.rem(r, self.comp),
-                }
+                let lhs = self.expr(*left);
+                let rhs = self.expr(*right);
+                // The .add call simplifies the expression if possible
+                self.comp.add(ir::Expr::Bin { op, lhs, rhs })
             }
             ast::Expr::App { func, arg } => {
                 let arg = self.expr(*arg);
-                match func {
-                    ast::UnFn::Pow2 => arg.pow2(self.comp),
-                    ast::UnFn::Log2 => arg.log2(self.comp),
-                }
+                // The .add call simplifies the expression if possible
+                self.comp.add(ir::Expr::Fn {
+                    op: func,
+                    args: Box::new([arg]),
+                })
             }
         }
     }
@@ -809,7 +805,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     fn external(idx: CompIdx, sig: ast::Signature) -> ir::Component {
-        let mut ir_comp = ir::Component::new(idx, false);
+        let mut ir_comp = ir::Component::new(false);
         let binding = SigMap::default();
         let mut builder = BuildCtx::new(&mut ir_comp, &binding);
 
@@ -825,7 +821,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         idx: CompIdx,
         sigs: &'prog SigMap,
     ) -> ir::Component {
-        let mut ir_comp = ir::Component::new(idx, false);
+        let mut ir_comp = ir::Component::new(false);
         let mut builder = BuildCtx::new(&mut ir_comp, sigs);
 
         let mut cmds = builder.sig(comp.sig);
@@ -840,6 +836,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 pub fn transform(ns: ast::Namespace) -> ir::Context {
     let mut sig_map = SigMap::default();
     // Walk over sigs and build a SigMap
+    // We do extremely sketchy stuff here: the Sig::from method creates a CompIdx out of thin air.
+    // The invariant is that when we create the ir::Context, we're going to add all the components in the same
+    // order and therefore the index is guaranteed to be valid.
     for (idx, (_, sig)) in ns.signatures().enumerate() {
         sig_map.insert(sig.name.copy(), Sig::from((sig, idx)));
     }
@@ -855,6 +854,8 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     }
 
     for (cidx, comp) in ns.components.into_iter().enumerate() {
+        // This is the where we use the CompIdx generated in Sig::from.
+        // We use the `checked_add` method to panic if we add components in the wrong order.
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
         let ir_comp = BuildCtx::comp(comp, idx, &sig_map);
         if Some(cidx) == main_idx {

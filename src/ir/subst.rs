@@ -1,20 +1,14 @@
 use super::{Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Time, TimeIdx};
 
-pub struct Bind<'a, K: Eq, V>(&'a [(K, V)]);
+pub struct Bind<K: Eq, V>(Vec<(K, V)>);
 
-impl<'a, K: Eq, V> Bind<'a, K, V> {
-    pub fn new(bind: &'a [(K, V)]) -> Self {
+impl<K: Eq, V> Bind<K, V> {
+    pub fn new(bind: Vec<(K, V)>) -> Self {
         Self(bind)
     }
 }
 
-impl<K: Eq, V> Clone for Bind<'_, K, V> {
-    fn clone(&self) -> Self {
-        Bind(self.0)
-    }
-}
-
-impl<K, V> Bind<'_, K, V>
+impl<K, V> Bind<K, V>
 where
     K: Eq,
 {
@@ -33,14 +27,14 @@ where
     K: Eq,
 {
     base: T,
-    bind: &'a Bind<'a, K, V>,
+    bind: &'a Bind<K, V>,
 }
 
 impl<'a, T, K, V> Subst<'a, T, K, V>
 where
     K: Eq,
 {
-    pub fn new(base: T, bind: &'a Bind<'a, K, V>) -> Self {
+    pub fn new(base: T, bind: &'a Bind<K, V>) -> Self {
         Self { base, bind }
     }
 

@@ -4,7 +4,7 @@ use super::{
     MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeIdx,
     TimeSub,
 };
-use crate::utils::Idx;
+use crate::{ast, utils::Idx};
 
 #[derive(Default)]
 pub struct Context {
@@ -16,13 +16,32 @@ impl Context {
     pub fn is_main(&self, idx: CompIdx) -> bool {
         Some(idx) == self.entrypoint
     }
+
+    /// Add a new component to the context
+    pub fn comp(&mut self, is_ext: bool) -> CompIdx {
+        let comp = Component::new(is_ext);
+        self.comps.add(comp)
+    }
 }
 
+impl Ctx<Component> for Context {
+    fn add(&mut self, val: Component) -> Idx<Component> {
+        self.comps.add(val)
+    }
+
+    fn get(&self, idx: Idx<Component>) -> &Component {
+        self.comps.get(idx)
+    }
+}
+impl MutCtx<Component> for Context {
+    fn get_mut(&mut self, idx: Idx<Component>) -> &mut Component {
+        self.comps.get_mut(idx)
+    }
+}
+
+#[derive(Clone, Default)]
 /// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
-    /// Identifier for the component
-    idx: CompIdx,
-
     // Interned data. We store this on a per-component basis because events with the
     // same identifiers in different components are not equal.
     /// Interned expressions
@@ -56,9 +75,8 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn new(idx: CompIdx, is_ext: bool) -> Self {
+    pub fn new(is_ext: bool) -> Self {
         let mut comp = Self {
-            idx,
             is_ext,
             ports: IndexStore::default(),
             params: IndexStore::default(),
@@ -128,10 +146,6 @@ impl Component {
 
 /// Accessor methods
 impl Component {
-    pub fn idx(&self) -> CompIdx {
-        self.idx
-    }
-
     pub fn events(&self) -> &IndexStore<Event> {
         &self.events
     }
@@ -162,6 +176,14 @@ impl Component {
 
     pub fn props(&self) -> &Interned<Prop> {
         &self.props
+    }
+}
+
+/// Queries over the component as a semantic entity
+impl Component {
+    /// The parameters in the signature of the component in the order they appear in the source
+    pub fn sig_params(&self) -> Vec<ParamIdx> {
+        todo!()
     }
 }
 
@@ -289,7 +311,29 @@ impl Ctx<Invoke> for Component {
 
 impl Ctx<Expr> for Component {
     fn add(&mut self, val: Expr) -> ExprIdx {
-        self.exprs.intern(val)
+        match val {
+            Expr::Param(_) | Expr::Concrete(_) => self.exprs.intern(val),
+            Expr::Bin { op, lhs: l, rhs: r } => match op {
+                ast::Op::Add => l.add(r, self),
+                ast::Op::Mul => l.mul(r, self),
+                ast::Op::Sub => l.sub(r, self),
+                ast::Op::Div => l.div(r, self),
+                ast::Op::Mod => l.rem(r, self),
+            },
+            Expr::Fn { op, args } => {
+                if args.len() != 1 {
+                    self.internal_error(format!(
+                        "pow2 has {} arguments",
+                        args.len()
+                    ))
+                }
+                let arg = args[0];
+                match op {
+                    ast::UnFn::Pow2 => arg.pow2(self),
+                    ast::UnFn::Log2 => arg.log2(self),
+                }
+            }
+        }
     }
 
     fn get(&self, idx: ExprIdx) -> &Expr {

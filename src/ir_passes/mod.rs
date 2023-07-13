@@ -2,6 +2,7 @@ mod assume;
 mod discharge;
 mod hoist_facts;
 mod interval_check;
+mod new_mono;
 mod prop_simplify;
 mod type_check;
 

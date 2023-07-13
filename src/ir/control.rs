@@ -16,6 +16,11 @@ pub enum Command {
     Fact(Fact),
     EventBind(EventBind),
 }
+impl Command {
+    pub fn is_loop(&self) -> bool {
+        matches!(self, Command::ForLoop(_loop))
+    }
+}
 impl From<InstIdx> for Command {
     fn from(idx: InstIdx) -> Self {
         Command::Instance(idx)
