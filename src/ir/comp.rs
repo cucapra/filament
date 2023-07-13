@@ -39,7 +39,7 @@ impl MutCtx<Component> for Context {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Default)]
 /// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
     // Interned data. We store this on a per-component basis because events with the
@@ -78,16 +78,7 @@ impl Component {
     pub fn new(is_ext: bool) -> Self {
         let mut comp = Self {
             is_ext,
-            ports: IndexStore::default(),
-            params: IndexStore::default(),
-            events: IndexStore::default(),
-            instances: IndexStore::default(),
-            invocations: IndexStore::default(),
-            info: IndexStore::default(),
-            exprs: Interned::default(),
-            times: Interned::default(),
-            props: Interned::default(),
-            cmds: Vec::default(),
+            ..Default::default()
         };
         // Allocate numbers and props now so we get reasonable indices.
         comp.num(0);
