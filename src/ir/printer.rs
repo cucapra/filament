@@ -403,17 +403,12 @@ impl Printer<'_> {
             events,
         } = c;
 
-        let evs = &events
-            .iter()
-            .map(|ir::EventBind { event, .. }| *event)
-            .collect_vec();
-
         writeln!(
             f,
-            "{:indent$}{idx}, {ports}, {evs} = invoke {inst};",
+            "{:indent$}{idx}, {ports}, {events} = invoke {inst};",
             "",
             ports = ports.iter().map(|p| format!("{p}")).join(", "),
-            evs = evs.iter().map(|ev| format!("{ev}")).join(", ")
+            events = events.iter().map(|e| format!("{e}")).join(", ")
         )?;
 
         Ok(())

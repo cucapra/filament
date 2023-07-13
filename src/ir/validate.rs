@@ -55,8 +55,8 @@ impl<'a> Validate<'a> {
         }
 
         // Validate commands
-        for cmd in self.comp.cmds.iter() {
-            self.command(cmd.clone());
+        for cmd in &self.comp.cmds {
+            self.command(cmd);
         }
     }
 
@@ -149,11 +149,6 @@ impl<'a> Validate<'a> {
 
         // check (3)
         self.expr(*width);
-
-        // let p: for<#i> [G+#N, G+i+1]
-        // let p: for<%pr1> [G+%pr2, G+%pr1+1]
-        // let p0: for<%pr3> [G+%pr2, G+%pr1+1] %pr1 -> %pr3
-        // %pr1: owned by port p
     }
 
     /// An event is valid if:
@@ -168,15 +163,11 @@ impl<'a> Validate<'a> {
                 /* Can't check because the sig does not contain this info */
             }
             ir::EventOwner::Inv { inv: iidx } => {
-                let ir::Invoke {
-                    inst: _,
-                    ports: _,
-                    events,
-                } = &self.comp[*iidx];
+                let ir::Invoke { events, .. } = &self.comp[*iidx];
                 // if none of the EventBinds in an invoke's events use evidx, then error
                 let Some(_) = events
                     .iter()
-                    .find(|ir::EventBind{event, ..}| *event == evidx) else {
+                    .find(|event| **event == evidx) else {
                         self.comp.internal_error(
                             format!("{evidx} claims to be owned by {iidx}, but {iidx} does not define it")
                         );
@@ -185,25 +176,25 @@ impl<'a> Validate<'a> {
         }
 
         // check (2)
-        self.timesub(delay.clone());
+        self.timesub(delay);
     }
 
     /// A TimeSub is valid if:
     /// (1) Its fields are all well-formed, i.e.
     ///     i. If it is a Unit, its expr exists in the component
     ///     ii. If it is a Sym, both of its times are well-formed
-    pub fn timesub(&self, ts: ir::TimeSub) {
+    pub fn timesub(&self, ts: &ir::TimeSub) {
         // check (1)
         match ts {
             ir::TimeSub::Unit(expr) => {
-                self.expr(expr);
+                self.expr(*expr);
             }
             ir::TimeSub::Sym {
                 l: t1_idx,
                 r: t2_idx,
             } => {
-                self.time(t1_idx);
-                self.time(t2_idx);
+                self.time(*t1_idx);
+                self.time(*t2_idx);
             }
         }
     }
@@ -231,7 +222,7 @@ impl<'a> Validate<'a> {
     /// A param is valid if:
     /// (1) It is defined in the component
     /// (2) Its owner is defined in the component
-    /// (3?) Its owner points to it?
+    /// (3) Its owner points to it?
     pub fn param(&self, pidx: ir::ParamIdx) {
         // check (1) - this will panic if param not defined
         let ir::Param { owner, .. } = &self.comp.get(pidx);
@@ -242,12 +233,15 @@ impl<'a> Validate<'a> {
                 /* Nothing to check */
             }
             ir::ParamOwner::Bundle(port_idx) => {
-                let ir::Port {
-                    owner: _,
-                    width: _,
-                    live: _,
-                    info: _,
-                } = &self.comp.get(*port_idx); // (2) this will panic if port not defined
+                let ir::Port { live, .. } = &self.comp.get(*port_idx); // (2) this will panic if port not defined
+
+                // check (3)
+                let ir::Liveness { idx, .. } = live;
+                if *idx != pidx {
+                    self.comp.internal_error(
+                        format!("{pidx} points to {port_idx} as its owner, but {port_idx} uses {idx}")
+                    )
+                }
             }
         }
     }
@@ -257,14 +251,16 @@ impl<'a> Validate<'a> {
     /// (2) Ports defined by invoke point to it
     ///     i.  port() checks that the invoke owns the port
     ///         invoke() checks that the ports an invoke defines are owned by it
+    /// (3) Its events are valid
+    /// (4) Its events point to the invoke as their owner
     fn invoke(&self, iidx: ir::InvIdx) {
-        let ir::Invoke { inst: _, ports, .. } = &self.comp.get(iidx);
+        let ir::Invoke { ports, events, .. } = &self.comp.get(iidx);
 
         // check (1) and (2)
         for pidx in ports {
             // (1) looking up the port will error if it doesn't exist
-            let ir::Port { owner, .. } = &self.comp.get(*pidx);
-            match owner {
+            let port = self.comp.get(*pidx);
+            match port.owner {
                 ir::PortOwner::Sig { .. } | ir::PortOwner::Local => {
                     self.comp.internal_error(
                         format!("{iidx} defines {pidx}, but {pidx} does not point to {iidx} as its owner")
@@ -274,10 +270,29 @@ impl<'a> Validate<'a> {
                 ir::PortOwner::Inv {
                     inv: iidx_lookup, ..
                 } => {
-                    if iidx != *iidx_lookup {
+                    if iidx != iidx_lookup {
                         self.comp.internal_error(
                             format!("{iidx} defines {pidx}, but {pidx} points to {iidx_lookup} as its owner")
                         );
+                    }
+                }
+            }
+        }
+
+        // check(3) and (4)
+        for evidx in events {
+            // (3) looking up the port will error if it doesn't exist
+            let event = self.comp.get(*evidx);
+            // (4) check that each event's owner is this inv
+            match event.owner {
+                ir::EventOwner::Sig => self.comp.internal_error(format!(
+                    "{iidx} claims to define {evidx} but {evidx} is sig-owned"
+                )),
+                ir::EventOwner::Inv { inv } => {
+                    if inv != iidx {
+                        self.comp.internal_error(
+                            format!("{iidx} claims to define {evidx} but {evidx} is owned by {inv}")
+                        )
                     }
                 }
             }
@@ -303,7 +318,7 @@ impl<'a> Validate<'a> {
             .get(*comp)
             .params()
             .iter()
-            .filter(|(_idx, param)| param.is_sig_owned())
+            .filter(|(_, param)| param.is_sig_owned())
             .count();
         let inst_len = params.len();
         if comp_params != inst_len {
@@ -315,13 +330,13 @@ impl<'a> Validate<'a> {
 
     /// A command is valid if:
     /// (1) The structures that it contains are valid
-    fn command(&self, cmd: ir::Command) {
+    fn command(&self, cmd: &ir::Command) {
         match cmd {
             ir::Command::Instance(iidx) => {
-                self.instance(iidx);
+                self.instance(*iidx);
             }
             ir::Command::Invoke(iidx) => {
-                self.invoke(iidx);
+                self.invoke(*iidx);
             }
             ir::Command::Connect(con) => {
                 self.connect(con);
@@ -360,8 +375,8 @@ impl<'a> Validate<'a> {
             }
             ir::Prop::TimeSubCmp(tscmp) => {
                 let ir::CmpOp { op: _, lhs, rhs } = tscmp;
-                self.timesub(lhs.clone());
-                self.timesub(rhs.clone());
+                self.timesub(lhs);
+                self.timesub(rhs);
             }
             ir::Prop::Not(pidx) => {
                 self.prop(*pidx);
@@ -386,7 +401,7 @@ impl<'a> Validate<'a> {
     /// NOTE(ethan): harder to check, maybe not worth it?
     /// Would have to resolve the start/end exprs, which requires a binding...
     /// (2) The range of the src and dst accesses match
-    fn connect(&self, connect: ir::Connect) {
+    fn connect(&self, connect: &ir::Connect) {
         let ir::Connect { src, dst, .. } = connect;
         self.access(src);
         self.access(dst);
@@ -395,8 +410,8 @@ impl<'a> Validate<'a> {
     /// An access is valid if:
     /// (1) The port being accessed is valid
     /// (2) Its start and end exprs are defined in the comp
-    fn access(&self, access: ir::Access) {
-        let ir::Access { port, start, end } = access;
+    fn access(&self, access: &ir::Access) {
+        let ir::Access { port, start, end } = *access;
         self.port(port);
         self.expr(start);
         self.expr(end);
@@ -406,18 +421,18 @@ impl<'a> Validate<'a> {
     /// (1) Its index is valid
     /// (2) Its start/end is valid
     /// (3) Everything in its body is valid
-    fn forloop(&self, lp: ir::Loop) {
+    fn forloop(&self, lp: &ir::Loop) {
         let ir::Loop {
             index,
             start,
             end,
             body,
         } = lp;
-        self.param(index);
-        self.expr(start);
-        self.expr(end);
-        for cmd in body.iter() {
-            self.command(cmd.clone());
+        self.param(*index);
+        self.expr(*start);
+        self.expr(*end);
+        for cmd in body {
+            self.command(cmd);
         }
     }
 
@@ -425,26 +440,26 @@ impl<'a> Validate<'a> {
     /// (1) Its condition is valid
     /// (2) Everything in its then-branch is valid
     /// (3) Everything in its alt-branch is valid
-    fn if_stmt(&self, if_stmt: ir::If) {
+    fn if_stmt(&self, if_stmt: &ir::If) {
         let ir::If { cond, then, alt } = if_stmt;
-        self.prop(cond);
-        for cmd in then.iter() {
-            self.command(cmd.clone());
+        self.prop(*cond);
+        for cmd in then {
+            self.command(cmd);
         }
-        for cmd in alt.iter() {
-            self.command(cmd.clone());
+        for cmd in alt {
+            self.command(cmd);
         }
     }
 
     /// A fact is valid if:
     /// (1) Its prop is valid
-    fn fact(&self, fact: ir::Fact) {
-        let ir::Fact { prop, .. } = fact;
+    fn fact(&self, fact: &ir::Fact) {
+        let ir::Fact { prop, .. } = *fact;
         self.prop(prop);
     }
 
-    fn eventbind(&self, eb: ir::EventBind) {
-        let ir::EventBind { event, arg, .. } = eb;
+    fn eventbind(&self, eb: &ir::EventBind) {
+        let ir::EventBind { event, arg, .. } = *eb;
         self.event(event);
         self.time(arg);
     }
