@@ -62,24 +62,8 @@ impl<'a> Validate<'a> {
 
     /// An Expr is valid if:
     /// (1) It is bound in the component
-    /// (2) All the exprs it uses are also bound
     pub fn expr(&self, eidx: ir::ExprIdx) {
-        let expr = &self.comp[eidx];
-        match expr {
-            ir::Expr::Param(pidx) => {
-                self.param(*pidx);
-            }
-            ir::Expr::Concrete(_) => { /* Nothing to check */ }
-            ir::Expr::Bin { op: _, lhs, rhs } => {
-                self.expr(*lhs);
-                self.expr(*rhs);
-            }
-            ir::Expr::Fn { op: _, args } => {
-                for expr in args.iter() {
-                    self.expr(*expr);
-                }
-            }
-        }
+        let _ = &self.comp[eidx];
     }
 
     /// A Port is valid if:
