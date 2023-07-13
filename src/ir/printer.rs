@@ -397,13 +397,18 @@ impl Printer<'_> {
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
-        let ir::Invoke { inst, ports } = c;
+        let ir::Invoke {
+            inst,
+            ports,
+            events,
+        } = c;
 
         writeln!(
             f,
-            "{:indent$}{idx}, {ports} = invoke {inst};",
+            "{:indent$}{idx}, {ports}, {events} = invoke {inst};",
             "",
             ports = ports.iter().map(|p| format!("{p}")).join(", "),
+            events = events.iter().map(|e| format!("{e}")).join(", ")
         )?;
 
         Ok(())

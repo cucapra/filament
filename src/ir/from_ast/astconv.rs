@@ -64,7 +64,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let inst = *self.inst_map.get(instance).unwrap();
         let inv = self.comp.add(ir::Invoke {
             inst,
-            ports: vec![], // Filled in later
+            ports: vec![],  // Filled in later
+            events: vec![], // Filled in later
         });
         self.add_inv(name.copy(), inv);
 
@@ -689,6 +690,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
                 let arg = self.time(time.clone());
                 let event = self.event(resolved, ir::EventOwner::Inv { inv });
+                let invoke = self.comp.get_mut(inv);
+                invoke.events.push(event);
                 ir::EventBind::new(event, arg, info).into()
             })
             .collect();

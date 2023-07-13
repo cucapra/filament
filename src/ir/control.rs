@@ -97,6 +97,8 @@ pub struct Invoke {
     pub inst: InstIdx,
     // The ports defined by this invocation
     pub ports: Vec<PortIdx>,
+    /// The events the invocation uses
+    pub events: Vec<EventIdx>,
 }
 
 #[derive(Clone, PartialEq, Eq)]

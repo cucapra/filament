@@ -129,6 +129,9 @@ pub struct Port {
     pub info: InfoIdx,
 }
 impl Port {
+    pub fn is_inv(&self) -> bool {
+        matches!(self.owner, PortOwner::Inv { .. })
+    }
     /// Check if this is an input port on the signature
     pub fn is_sig_in(&self) -> bool {
         // We check the direction is `out` because the port direction is flipped
