@@ -86,6 +86,22 @@ dir=$(dirname {}) && \
 ./evaluation/fuzz/check.sh $dir 100
 """
 
+# Evaluation edge cases
+[[tests]]
+name = "evaluation-edge"
+paths = [
+  "evaluation/**/harness.fil"
+]
+expect_dir = "evaluation/edge/"
+cmd = """
+dir=$(dirname {}) && \
+test -f "$dir/edge.json" && \
+((fud e -s cocotb.data "$dir/edge.json" --to cocotb-out "$dir/harness.fil" -s calyx.flags ' -d canonicalize' -q | \
+./evaluation/fuzz/gen_float.py check --fields $(cat "$dir/fields") && \
+  echo "No counterexamples") || cat "$dir/edge.json") \
+  || echo "No counterexamples"
+"""
+
 # Aetherling evaluation
 [[tests]]
 name = "aetherling evaluation"
