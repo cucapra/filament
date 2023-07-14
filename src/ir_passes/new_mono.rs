@@ -266,11 +266,87 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         }
     }
 
+    fn prop(&mut self, prop: ir::PropIdx) -> ir::PropIdx {
+        todo!()
+    }
+
+    fn access(&mut self, acc: &ir::Access) -> ir::Access {
+        let ir::Access {port, start, end} = acc;
+
+        todo!();
+    }
+
+    fn connect(&mut self, con: &ir::Connect) -> ir::Connect {
+        let ir::Connect {src, dst, info} = con;
+
+        let mono_src = self.access(src);
+        let mono_dst = self.access(dst);
+
+        ir::Connect {
+            src: mono_src,
+            dst: mono_dst,
+            info: info.clone()
+        }
+    }
+
+    fn forloop(&mut self, lp: &ir::Loop) -> ir::Loop {
+        let ir::Loop {index, start, end, body} = lp;
+
+        let mono_index = self.param(*index);
+        let mono_start = self.expr(*start);
+        let mono_end = self.expr(*end);
+        let mono_body = body.iter().map(|cmd| self.command(cmd)).collect_vec();
+
+        ir::Loop {
+            index: mono_index,
+            start: mono_start,
+            end: mono_end,
+            body: mono_body
+        }
+    }
+
+    fn if_stmt(&mut self, if_stmt: &ir::If) -> ir::If {
+        let ir::If {cond, then, alt} = if_stmt;
+
+        let cond = self.prop(*cond);
+        let then = then.iter().map(|cmd| self.command(cmd)).collect_vec();
+        let alt = alt.iter().map(|cmd| self.command(cmd)).collect_vec();
+
+        ir::If {
+            cond,
+            then,
+            alt
+        }
+    }
+
+    fn fact(&mut self, fact: &ir::Fact) -> ir::Fact {
+        let ir::Fact {prop, reason, ..} = fact;
+
+        let prop = self.prop(*prop);
+        ir::Fact::assert(prop, reason.clone())
+    }
+
+    fn eventbind(&mut self, eb: &ir::EventBind) -> ir::EventBind {
+        let ir::EventBind {event, arg, info} = eb;
+
+        let event = self.event(*event);
+        let arg = self.time(*arg);
+        let info = info.clone();
+
+        ir::EventBind {
+            event, arg, info
+        }
+    }
+
     fn command(&mut self, cmd: &ir::Command) -> ir::Command {
         match cmd {
             ir::Command::Instance(idx) => self.instance(*idx).into(),
             ir::Command::Invoke(idx) => self.invoke(*idx).into(),
-            _ => todo!(),
+            ir::Command::Connect(con) => self.connect(con).into(),
+            ir::Command::ForLoop(lp) => self.forloop(lp).into(),
+            ir::Command::If(if_stmt) => self.if_stmt(if_stmt).into(),
+            ir::Command::Fact(fact) => self.fact(fact).into(),
+            ir::Command::EventBind(eb) => self.eventbind(eb).into(),
         }
     }
 }
@@ -387,11 +463,17 @@ impl Monomorphize<'_> {
     /// Monomorphize the context by tracing starting from the top-level component.
     /// Returns an empty context if there is no top-level component.
     pub fn transform(ctx: ir::Context) -> ir::Context {
-        if let Some(entrypoint) = ctx.entrypoint {
-            let mono = Monomorphize::new(&ctx);
-        } else {
-
+        let Some(entrypoint) = ctx.entrypoint else {
+            log::warn!("program has no entrypoint! result will be empty");
+            return ir::Context {
+                comps: IndexStore::default(),
+                entrypoint: None
+            }
         };
+        // Monomorphize the entrypoint
+        let main = ctx.get(entrypoint);
+        let mut mono = Monomorphize::new(&ctx);
+        let mut comps: Vec<ir::Component> = vec![];
 
         todo!()
     }
