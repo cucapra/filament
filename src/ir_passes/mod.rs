@@ -12,3 +12,4 @@ pub use hoist_facts::HoistFacts;
 pub use interval_check::IntervalCheck;
 pub use prop_simplify::Simplify;
 pub use type_check::TypeCheck;
+pub use new_mono::Monomorphize;

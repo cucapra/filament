@@ -18,6 +18,10 @@ where
             .iter()
             .find_map(|(k, v)| if k == key { Some(v) } else { None })
     }
+
+    pub fn insert(&mut self, key: K, value: V) {
+        self.0.push((key, value));
+    }
 }
 
 /// A substitution for a type `T` that contains type `K` inside it.

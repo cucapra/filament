@@ -1,4 +1,4 @@
-use crate::ir::{self, Ctx, MutCtx};
+use crate::ir::{self, Ctx, MutCtx, IndexStore};
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
@@ -9,16 +9,57 @@ struct MonoDeferred<'a, 'pass: 'a> {
     base: ir::Component,
     /// The underlying component to be monomorphized
     underlying: &'a ir::Component,
-    /// Mapping from parameters in the underlying component to their constant bindings.
+    /// Mapping from sig-owned parameters in the underlying component to their constant bindings.
     binding: ir::Bind<ir::ParamIdx, u64>,
+    /// Mapping from non-sig-owned params in the underlying component to the parameters in the new component
+    /// that they've been replaced with
+    par_binding: ir::Bind<ir::ParamIdx, ir::ParamIdx>,
 
     /// Underlying pointer
     pass: &'a mut Monomorphize<'pass>,
+
+    /// Mapping of underlying invokes (and how many times we've seen it) to base invokes
+    inv_map: HashMap<(ir::InvIdx, u32), ir::InvIdx>,
+    /// Mapping from underlying invokes to how many times we've seen it so far
+    inv_counter: HashMap<ir::InvIdx, u32>,
+    /// Hold onto the current PortIdx being handled
+    curr_port: Option<ir::PortIdx>,
 }
 
 impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
+    /// Translates a ParamIdx defined by `underlying` to corresponding one in `base`
+    /// Assumes that `param` is not sig-owned, because then it would be defined in the binding
     fn param(&mut self, param: ir::ParamIdx) -> ir::ParamIdx {
-        todo!()
+        let ir::Param { owner, .. } = self.underlying.get(param);
+
+        match owner {
+            ir::ParamOwner::Bundle(_) => {
+                // this port idx is meaningful in self.underlying
+                self.bundle_param(param)
+            }
+            ir::ParamOwner::Loop => {
+                todo!()
+            }
+            ir::ParamOwner::Sig => {
+                unreachable!("If a param is sig-owned, it should be resolved in the binding!")
+            }
+        }
+    }
+
+    /// Takes a self.underlying-owned param that is known to be bundle-owned and a port index owned by self.base,
+    /// creates a new param that points to the port index, and adds the param to self.base. Returns the
+    /// corresponding index
+    fn bundle_param(&mut self, param: ir::ParamIdx) -> ir::ParamIdx {
+        let ir::Param { info, .. } = self.underlying.get(param);
+
+        let mono_owner = ir::ParamOwner::Bundle(self.curr_port.unwrap());
+        let mono_param = ir::Param {
+            owner: mono_owner,
+            info: *info,
+            default: None,
+        };
+
+        self.base.add(mono_param)
     }
 
     /// Translates an ExprIdx defined by `underlying` to correponding one in `base`.
@@ -54,9 +95,181 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         self.base.add(new_inst)
     }
 
+    /// Monomorphize the port (owned by self.underlying) and add it to `self.base`, and return the corresponding index
+    fn port(&mut self, port: ir::PortIdx) -> ir::PortIdx {
+        let ir::Port {
+            owner,
+            width,
+            live,
+            info,
+        } = self.underlying.get(port);
+
+        let ir::Liveness {
+            idx: underlying_idx,
+            ..
+        } = live;
+
+        // Find the new port owner
+        let mono_owner = self.find_new_portowner(owner);
+
+        // Add the new port so we can use its index in defining the correct Liveness
+        let new_port = self.base.add(ir::Port {
+            owner: mono_owner,
+            width: *width,      // placeholder
+            live: live.clone(), // placeholder
+            info: info.clone(),
+        });
+
+        let mut mono_liveness = self.liveness(live, new_port);
+        let base_idx = mono_liveness.idx;
+
+        // Create a binding from old param -> new param
+        self.par_binding.insert(*underlying_idx, base_idx);
+
+        // After making the new binding, re-monomorphize other parts of len in case they contained
+        // the param we replaced
+        let mono_width = self.expr(*width);
+        mono_liveness.len = self.expr(mono_liveness.len);
+        mono_liveness.range = self.range(&mono_liveness.range);
+
+        let port = self.base.get_mut(new_port);
+        port.live = mono_liveness; // update
+        port.width = mono_width;   // update
+
+        new_port
+    }
+
+    /// Given a Liveness owned by underlying and a PortIdx meaningful in base, returns a Liveness that is meaningful in base
+    fn liveness(
+        &mut self,
+        live: &ir::Liveness,
+        port: ir::PortIdx,
+    ) -> ir::Liveness {
+        let ir::Liveness { idx, len, range } = live;
+        let mono_idx = self.param(*idx);
+        let mono_len = self.expr(*len);
+        let mono_range = self.range(range);
+
+        ir::Liveness {
+            idx: mono_idx,
+            len: mono_len,
+            range: mono_range,
+        }
+    }
+
+    /// Given a Range owned by underlying, returns a Range that is meaningful in base
+    fn range(&mut self, range: &ir::Range) -> ir::Range {
+        let ir::Range { start, end } = range;
+        ir::Range {
+            start: self.time(*start),
+            end: self.time(*end),
+        }
+    }
+
+    /// Given an underlying PortOwner, returns the corresponding base PortOwner
+    fn find_new_portowner(&mut self, owner: &ir::PortOwner) -> ir::PortOwner {
+        match owner {
+            ir::PortOwner::Sig { .. } | ir::PortOwner::Local => owner.clone(),
+            ir::PortOwner::Inv { inv, dir } => {
+                // inv is only meaningful in the underlying component
+                let inv_occurrences = self.inv_counter.get(&inv).unwrap();
+                let base_inv =
+                    self.inv_map.get(&(*inv, *inv_occurrences)).unwrap();
+                ir::PortOwner::Inv {
+                    inv: *base_inv,
+                    dir: dir.clone(),
+                }
+            }
+        }
+    }
+
+    /// Monomorphize the event (owned by self.underlying) and add it to `self.base`, and return the corresponding index
+    fn event(&mut self, event: ir::EventIdx) -> ir::EventIdx {
+        // Need to monomorphize all parts
+        let ir::Event {
+            delay,
+            owner,
+            info,
+            interface_port,
+        } = self.underlying.get(event);
+
+        todo!()
+    }
+
+    /// Monomorphize the time (owned by self.underlying) and add it to `self.base`, and return the corresponding index
+    fn time(&mut self, time: ir::TimeIdx) -> ir::TimeIdx {
+        let ir::Time { event, offset } = self.underlying.get(time);
+
+        let mono_time = ir::Time {
+            event: self.event(*event),
+            offset: self.expr(*offset),
+        };
+
+        self.base.add(mono_time)
+    }
+
+    /// Monomorphize the delay (owned by self.underlying) and return one that is meaningful in `self.base`
+    fn delay(&mut self, delay: ir::TimeSub) -> ir::TimeSub {
+        match delay {
+            ir::TimeSub::Unit(expr) => ir::TimeSub::Unit(self.expr(expr)),
+            ir::TimeSub::Sym { l, r } => ir::TimeSub::Sym {
+                l: self.time(l),
+                r: self.time(r),
+            },
+        }
+    }
+
+    /// Monomorphize the `inv` (owned by self.underlying) and add it to `self.base`, and return the corresponding index
+    fn invoke(&mut self, inv: ir::InvIdx) -> ir::InvIdx {
+        // Count another time that we've seen inv
+        self.insert_inv(inv);
+
+        // Need to monomorphize all parts of the invoke
+        let ir::Invoke {
+            inst,
+            ports,
+            events,
+        } = self.underlying.get(inv);
+
+        // Instance - replace the instance owned by self.underlying with one owned by self.base
+
+        // Ports
+        let mono_ports = ports.iter().map(|p| self.port(*p)).collect_vec();
+
+        // Events
+        let mono_events = events.iter().map(|e| self.event(*e)).collect_vec();
+
+        // Build the new invoke, add it to self.base
+        let mono_inv = self.base.add(ir::Invoke {
+            inst: *inst, // PLACEHOLDER
+            ports: mono_ports,
+            events: mono_events,
+        });
+
+        // Update the mapping from underlying invokes to base invokes
+
+        // just unwrap because we maintain that inv will always be present in the mapping
+        let inv_occurrences = self.inv_counter.get(&inv).unwrap();
+        self.inv_map.insert((inv, *inv_occurrences), mono_inv);
+
+        mono_inv
+    }
+
+    /// Update the mapping of how many times we've seen each invoke in the underlying component.
+    /// If the given invoke does not exist in the mapping, add it with a counter of 0
+    /// If it does exist, increment the counter by 1
+    fn insert_inv(&mut self, inv: ir::InvIdx) {
+        if let Some(n) = self.inv_counter.get(&inv) {
+            self.inv_counter.insert(inv, *n + 1);
+        } else {
+            self.inv_counter.insert(inv, 0);
+        }
+    }
+
     fn command(&mut self, cmd: &ir::Command) -> ir::Command {
         match cmd {
             ir::Command::Instance(idx) => self.instance(*idx).into(),
+            ir::Command::Invoke(idx) => self.invoke(*idx).into(),
             _ => todo!(),
         }
     }
@@ -78,6 +291,22 @@ pub struct Monomorphize<'a> {
     queue: LinkedHashMap<(ir::CompIdx, Vec<u64>), ir::CompIdx>,
 }
 
+impl<'a> Monomorphize<'a> {
+    fn new(old: &'a ir::Context) -> Self {
+        Monomorphize {
+            ctx: ir::Context {
+                comps: IndexStore::default(),
+                entrypoint: None
+            },
+            old: &old,
+            externals: vec![],
+            processed: HashMap::new(),
+            queue: LinkedHashMap::new()
+
+        }
+    }
+}
+
 impl Monomorphize<'_> {
     /// Queue an instance for processing by the pass.
     /// The processing happens at a later point but, if needed, the pass immediately allocates a new [ir::Component] and returns information to construct a new instance.
@@ -86,8 +315,13 @@ impl Monomorphize<'_> {
         comp: ir::CompIdx,
         params: Vec<u64>,
     ) -> (ir::CompIdx, Vec<u64>) {
+        // If it is an external, add it to externals
+        if self.old.get(comp).is_ext {
+            self.externals.push(comp);
+        }
+
         // If this component doesn't need monomorphization, return the comp index.
-        if self.externals.contains(&comp) || !Self::needs_monomorphize(comp) {
+        if self.externals.contains(&comp) || !self.needs_monomorphize(comp) {
             return (comp, params);
         }
         let key = (comp, params);
@@ -120,16 +354,32 @@ impl Monomorphize<'_> {
             base,
             underlying,
             binding: ir::Bind::new(binding),
+            par_binding: ir::Bind::new(vec![]),
             pass: self,
+            inv_map: HashMap::new(),
+            inv_counter: HashMap::new(),
+            curr_port: None,
         };
         todo!()
     }
 
     /// Checks if a component needs to be monomorphized. This is the case if:
-    /// - It has ANY parameters
+    /// - It has ANY parameters, or
     /// - If it uses loops, conditionals, or any other control constructs
-    fn needs_monomorphize(comp: ir::CompIdx) -> bool {
-        todo!()
+    fn needs_monomorphize(&self, comp: ir::CompIdx) -> bool {
+        let underlying = self.ctx.get(comp);
+
+        let has_params = underlying
+            .params()
+            .iter()
+            .fold(false, |acc, (_, param)| acc | param.is_sig_owned());
+
+        let has_control = underlying
+            .cmds
+            .iter()
+            .fold(false, |acc, cmd| acc | cmd.is_loop() | cmd.is_if());
+
+        has_params | has_control
     }
 }
 
@@ -137,6 +387,12 @@ impl Monomorphize<'_> {
     /// Monomorphize the context by tracing starting from the top-level component.
     /// Returns an empty context if there is no top-level component.
     pub fn transform(ctx: ir::Context) -> ir::Context {
+        if let Some(entrypoint) = ctx.entrypoint {
+            let mono = Monomorphize::new(&ctx);
+        } else {
+
+        };
+
         todo!()
     }
 }
