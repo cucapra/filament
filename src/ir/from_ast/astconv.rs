@@ -241,25 +241,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         idx
     }
 
-    /// Add an event to the component without adding it the current scope.
-    fn event(&mut self, eb: ast::EventBind) -> EventIdx {
-        let info = self.comp.add(ir::Info::event(
-            eb.event.copy(),
-            eb.event.pos(),
-            eb.delay.pos(),
-        ));
-        let delay = self.timesub(eb.delay.take());
-        let e = ir::Event {
-            delay,
-            info,
-            interface_port: None,
-        };
-        let idx = self.comp.add(e);
-        log::info!("Added event {} as {idx}", eb.event);
-        // self.event_map.insert(*eb.event, idx);
-        idx
-    }
-
     fn range(&mut self, r: ast::Range) -> ir::Range {
         let start = self.time(r.start);
         let end = self.time(r.end);
