@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use super::{Component, DisplayCtx, ExprIdx, Range, TimeIdx, TimeSub};
 use crate::{ast, utils::GPosIdx};
 use codespan_reporting::diagnostic::Diagnostic;
@@ -40,10 +38,6 @@ pub enum Info {
         name: ast::Id,
         inst_loc: GPosIdx,
         bind_loc: GPosIdx,
-        // mapping from the invoke port to the corresponding component port
-        ports: HashMap<super::PortIdx, super::PortIdx>,
-        // mapping from the invoke event to the corresponding component event
-        events: HashMap<super::EventIdx, super::EventIdx>,
     },
     /// For [super::Connect]
     Connect {
@@ -103,19 +97,11 @@ impl Info {
         }
     }
 
-    pub fn invoke(
-        name: ast::Id,
-        inst_loc: GPosIdx,
-        bind_loc: GPosIdx,
-        ports: HashMap<super::PortIdx, super::PortIdx>,
-        events: HashMap<super::EventIdx, super::EventIdx>,
-    ) -> Info {
+    pub fn invoke(name: ast::Id, inst_loc: GPosIdx, bind_loc: GPosIdx) -> Info {
         Self::Invoke {
             name,
             inst_loc,
             bind_loc,
-            ports,
-            events,
         }
     }
 
