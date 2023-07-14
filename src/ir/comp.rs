@@ -9,6 +9,13 @@ use crate::utils::Idx;
 #[derive(Default)]
 pub struct Context {
     pub comps: IndexStore<Component>,
+    pub entrypoint: Option<CompIdx>,
+}
+
+impl Context {
+    pub fn is_main(&self, idx: CompIdx) -> bool {
+        Some(idx) == self.entrypoint
+    }
 }
 
 /// A IR component. If `is_ext` is true then this is an external component.
@@ -110,6 +117,12 @@ impl Component {
         } else {
             Some(Fact::assume(prop, info).into())
         }
+    }
+
+    /// Panic with an error message and display the current state of the Component. Prefer this over `panic!` when possible.
+    pub fn internal_error<S: ToString>(&self, msg: S) -> ! {
+        let comp = super::Printer::comp_str(self);
+        panic!("{}\n{comp}", msg.to_string())
     }
 }
 

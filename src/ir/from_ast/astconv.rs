@@ -233,11 +233,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     /// Forward declare an event without adding its delay. We need to do this
     /// since delays of events may mention the event itself.
-    fn declare_event(
-        &mut self,
-        eb: &ast::EventBind,
-        owner: ir::EventOwner,
-    ) -> EventIdx {
+    fn declare_event(&mut self, eb: &ast::EventBind) -> EventIdx {
         let info = self.comp.add(ir::Info::event(
             eb.event.copy(),
             eb.event.pos(),
@@ -246,33 +242,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         // Add a fake delay of 0.
         let e = ir::Event {
             delay: self.comp.num(0).into(),
-            owner,
             info,
             interface_port: None,
         };
         let idx = self.comp.add(e);
         log::info!("Added event {} as {idx}", eb.event);
         self.event_map.insert(*eb.event, idx);
-        idx
-    }
-
-    /// Add an event to the component without adding it the current scope.
-    fn event(&mut self, eb: ast::EventBind, owner: ir::EventOwner) -> EventIdx {
-        let info = self.comp.add(ir::Info::event(
-            eb.event.copy(),
-            eb.event.pos(),
-            eb.delay.pos(),
-        ));
-        let delay = self.timesub(eb.delay.take());
-        let e = ir::Event {
-            delay,
-            owner,
-            info,
-            interface_port: None,
-        };
-        let idx = self.comp.add(e);
-        log::info!("Added event {} as {idx}", eb.event);
-        // self.event_map.insert(*eb.event, idx);
         idx
     }
 
@@ -428,7 +403,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
         // Declare the events first
         for event in &sig.events {
-            self.declare_event(event.inner(), ir::EventOwner::Sig);
+            self.declare_event(event.inner());
         }
         // Then define their delays correctly
         for event in &sig.events {
@@ -673,8 +648,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
 
         // Events defined by the invoke
-        let ebs: Vec<ir::Command> = sig
-            .events
+        sig.events
             .iter()
             .zip_longest(abstract_vars.iter())
             .map(|pair| match pair {
@@ -690,26 +664,25 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     unreachable!("More arguments than events.")
                 }
             })
-            .map(|(event, time, pos)| {
+            .for_each(|(event, time, pos)| {
+                let ev_delay_loc = event.delay.pos();
                 let resolved = event
                     .clone()
                     .resolve_exprs(&param_binding)
                     .resolve_event(&event_binding);
 
-                let info = self.comp.add(ir::Info::event_bind(pos));
-
+                let info =
+                    self.comp.add(ir::Info::event_bind(ev_delay_loc, pos));
                 let arg = self.time(time.clone());
-                let event = self.event(resolved, ir::EventOwner::Inv { inv });
-                // add this event to the invocation
-                self.comp.get_mut(inv).events.push(event);
-                ir::EventBind::new(event, arg, info).into()
-            })
-            .collect();
+                let event = self.timesub(resolved.delay.take());
+                let eb = ir::EventBind::new(event, arg, info);
+                let invoke = self.comp.get_mut(inv);
+                invoke.events.push(eb);
+            });
 
         connects
             .into_iter()
             .chain(Some(ir::Command::from(inv)))
-            .chain(ebs)
             .chain(cons)
             .collect_vec()
     }
@@ -854,6 +827,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         sig_map.insert(sig.name.copy(), Sig::from((sig, idx)));
     }
 
+    let main_idx = ns.main_idx();
     let mut ctx = ir::Context::default();
     for (_, exts) in ns.externs {
         for ext in exts {
@@ -863,9 +837,12 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         }
     }
 
-    for comp in ns.components {
+    for (cidx, comp) in ns.components.into_iter().enumerate() {
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
         let ir_comp = BuildCtx::comp(comp, idx, &sig_map);
+        if Some(cidx) == main_idx {
+            ctx.entrypoint = Some(idx);
+        }
         ctx.comps.checked_add(idx, ir_comp);
     }
 

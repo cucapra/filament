@@ -129,6 +129,9 @@ pub struct Port {
     pub info: InfoIdx,
 }
 impl Port {
+    pub fn is_inv(&self) -> bool {
+        matches!(self.owner, PortOwner::Inv { .. })
+    }
     /// Check if this is an input port on the signature
     pub fn is_sig_in(&self) -> bool {
         // We check the direction is `out` because the port direction is flipped
@@ -294,25 +297,9 @@ impl fmt::Display for Param {
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]
-/// The construct that defines an event
-pub enum EventOwner {
-    /// The event is defined by a signature
-    Sig,
-    /// The event is defined by an invocation
-    Inv { inv: InvIdx },
-}
-
-impl EventOwner {
-    pub fn is_sig(&self) -> bool {
-        matches!(self, Self::Sig)
-    }
-}
-
-#[derive(PartialEq, Eq, Hash, Clone)]
 /// Events must have a delay and an optional default value
 pub struct Event {
     pub delay: TimeSub,
-    pub owner: EventOwner,
     pub info: InfoIdx,
     pub interface_port: Option<InfoIdx>,
 }
