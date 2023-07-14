@@ -29,4 +29,5 @@ comp main<G: 1>(
   verilog_nopipe = np.res;
   out = f.out;
   filament_lib = prim.out;
+  expected = ans;
 }
