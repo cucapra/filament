@@ -297,25 +297,9 @@ impl fmt::Display for Param {
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]
-/// The construct that defines an event
-pub enum EventOwner {
-    /// The event is defined by a signature
-    Sig,
-    /// The event is defined by an invocation
-    Inv { inv: InvIdx },
-}
-
-impl EventOwner {
-    pub fn is_sig(&self) -> bool {
-        matches!(self, Self::Sig)
-    }
-}
-
-#[derive(PartialEq, Eq, Hash, Clone)]
 /// Events must have a delay and an optional default value
 pub struct Event {
     pub delay: TimeSub,
-    pub owner: EventOwner,
     pub info: InfoIdx,
     pub interface_port: Option<InfoIdx>,
 }

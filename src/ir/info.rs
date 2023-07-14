@@ -25,6 +25,9 @@ pub enum Info {
     },
     /// For [super::EventBind]
     EventBind {
+        /// Location for the delay of the event
+        ev_delay_loc: GPosIdx,
+        /// Location of the time expression provided as the binding
         bind_loc: GPosIdx,
     },
     /// For [super::Instance]
@@ -81,8 +84,11 @@ impl Info {
         }
     }
 
-    pub fn event_bind(bind_loc: GPosIdx) -> Self {
-        Self::EventBind { bind_loc }
+    pub fn event_bind(ev_delay_loc: GPosIdx, bind_loc: GPosIdx) -> Self {
+        Self::EventBind {
+            ev_delay_loc,
+            bind_loc,
+        }
     }
 
     pub fn instance(
