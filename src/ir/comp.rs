@@ -128,6 +128,12 @@ impl Component {
     pub fn is_primitive(&self) -> bool {
         self.src_ext.is_some()
     }
+
+    /// Panic with an error message and display the current state of the Component. Prefer this over `panic!` when possible.
+    pub fn internal_error<S: ToString>(&self, msg: S) -> ! {
+        let comp = super::Printer::comp_str(self);
+        panic!("{}\n{comp}", msg.to_string())
+    }
 }
 
 /// Accessor methods

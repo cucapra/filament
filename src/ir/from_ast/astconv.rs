@@ -1,14 +1,12 @@
 //! Convert the frontend AST to the IR.
 use super::{BuildCtx, Sig, SigMap};
 use crate::ir::{
-    Cmp, CompIdx, Ctx, DenseIndexInfo, EventIdx, ExprIdx, MutCtx, ParamIdx,
-    PortIdx, PropIdx, TimeIdx,
+    Cmp, CompIdx, Ctx, EventIdx, ExprIdx, MutCtx, ParamIdx, PortIdx, PropIdx,
+    TimeIdx,
 };
 use crate::utils::GPosIdx;
 use crate::{ast, ir, utils::Binding};
 use itertools::Itertools;
-use std::collections::HashMap;
-use std::mem;
 use std::{iter, rc::Rc};
 
 /// # Declare phase
@@ -72,8 +70,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             name.copy(),
             instance.pos(),
             name.pos(),
-            HashMap::new(),
-            HashMap::new(),
         ));
         let inv = self.comp.add(ir::Invoke {
             inst,
@@ -237,11 +233,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     /// Forward declare an event without adding its delay. We need to do this
     /// since delays of events may mention the event itself.
-    fn declare_event(
-        &mut self,
-        eb: &ast::EventBind,
-        owner: ir::EventOwner,
-    ) -> EventIdx {
+    fn declare_event(&mut self, eb: &ast::EventBind) -> EventIdx {
         let info = self.comp.add(ir::Info::event(
             eb.event.copy(),
             eb.event.pos(),
@@ -250,33 +242,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         // Add a fake delay of 0.
         let e = ir::Event {
             delay: self.comp.num(0).into(),
-            owner,
             info,
             interface_port: None,
         };
         let idx = self.comp.add(e);
         log::info!("Added event {} as {idx}", eb.event);
         self.event_map.insert(*eb.event, idx);
-        idx
-    }
-
-    /// Add an event to the component without adding it the current scope.
-    fn event(&mut self, eb: ast::EventBind, owner: ir::EventOwner) -> EventIdx {
-        let info = self.comp.add(ir::Info::event(
-            eb.event.copy(),
-            eb.event.pos(),
-            eb.delay.pos(),
-        ));
-        let delay = self.timesub(eb.delay.take());
-        let e = ir::Event {
-            delay,
-            owner,
-            info,
-            interface_port: None,
-        };
-        let idx = self.comp.add(e);
-        log::info!("Added event {} as {idx}", eb.event);
-        // self.event_map.insert(*eb.event, idx);
         idx
     }
 
@@ -432,7 +403,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
         // Declare the events first
         for event in &sig.events {
-            self.declare_event(event.inner(), ir::EventOwner::Sig);
+            self.declare_event(event.inner());
         }
         // Then define their delays correctly
         for event in &sig.events {
@@ -677,8 +648,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
 
         // Events defined by the invoke
-        let ebs: Vec<ir::Command> = sig
-            .events
+        sig.events
             .iter()
             .zip_longest(abstract_vars.iter())
             .map(|pair| match pair {
@@ -694,26 +664,25 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     unreachable!("More arguments than events.")
                 }
             })
-            .map(|(event, time, pos)| {
+            .for_each(|(event, time, pos)| {
+                let ev_delay_loc = event.delay.pos();
                 let resolved = event
                     .clone()
                     .resolve_exprs(&param_binding)
                     .resolve_event(&event_binding);
 
-                let info = self.comp.add(ir::Info::event_bind(pos));
-
+                let info =
+                    self.comp.add(ir::Info::event_bind(ev_delay_loc, pos));
                 let arg = self.time(time.clone());
-                let event = self.event(resolved, ir::EventOwner::Inv { inv });
-                // add this event to the invocation
-                self.comp.get_mut(inv).events.push(event);
-                ir::EventBind::new(event, arg, info).into()
-            })
-            .collect();
+                let event = self.timesub(resolved.delay.take());
+                let eb = ir::EventBind::new(event, arg, info);
+                let invoke = self.comp.get_mut(inv);
+                invoke.events.push(eb);
+            });
 
         connects
             .into_iter()
             .chain(Some(ir::Command::from(inv)))
-            .chain(ebs)
             .chain(cons)
             .collect_vec()
     }
@@ -850,109 +819,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 }
 
-/// Build connect info between invokes and components
-fn connect(ctx: &mut ir::Context) {
-    let mut port_map: DenseIndexInfo<ir::Component, HashMap<ast::Id, PortIdx>> =
-        DenseIndexInfo::default();
-    let mut event_map: DenseIndexInfo<
-        ir::Component,
-        HashMap<ast::Id, EventIdx>,
-    > = DenseIndexInfo::default();
-
-    // Build a map of all the ports and events in the component
-    for (idx, comp) in ctx.comps.iter() {
-        // Adds all signature ports into the mapping by name
-        port_map.push(
-            idx,
-            comp.ports()
-                .iter()
-                .filter_map(|(idx, port)| {
-                    if let ir::PortOwner::Sig { .. } = port.owner {
-                        if let ir::Info::Port { name, .. } = comp.get(port.info)
-                        {
-                            Some((*name, idx))
-                        } else {
-                            unreachable!("Incorrect info type for port")
-                        }
-                    } else {
-                        None
-                    }
-                })
-                .collect(),
-        );
-        // Adds all signature events into the mapping by name
-        event_map.push(
-            idx,
-            comp.events()
-                .iter()
-                .filter_map(|(idx, event)| {
-                    if let ir::EventOwner::Sig { .. } = event.owner {
-                        if let ir::Info::Event { name, .. } =
-                            comp.get(event.info)
-                        {
-                            Some((*name, idx))
-                        } else {
-                            unreachable!("Incorrect info type for event")
-                        }
-                    } else {
-                        None
-                    }
-                })
-                .collect(),
-        );
-    }
-
-    for comp in ctx.comps.idx_iter() {
-        let comp = ctx.comps.get_mut(comp);
-
-        for inv in comp.invocations().idx_iter() {
-            let inv = comp.get(inv);
-
-            // builds the new port mapping
-            let nports: HashMap<_, _> = inv
-                .ports
-                .iter()
-                .map(|idx| {
-                    let port = comp.get(*idx);
-                    // gets the other port from the other component and inserts into port info
-                    if let ir::Info::Port { name, .. } = comp.get(port.info) {
-                        let inst = comp.get(inv.inst);
-                        (*idx, *port_map.get(inst.comp).get(name).unwrap())
-                    } else {
-                        unreachable!("Incorrect info type for port")
-                    }
-                })
-                .collect();
-
-            // builds the new event mapping
-            let nevents: HashMap<_, _> = inv
-                .events
-                .iter()
-                .map(|idx| {
-                    let event = comp.get(*idx);
-                    // gets the other event from the other component and inserts into event info
-                    if let ir::Info::Event { name, .. } = comp.get(event.info) {
-                        let inst = comp.get(inv.inst);
-                        (*idx, *event_map.get(inst.comp).get(name).unwrap())
-                    } else {
-                        unreachable!("Incorrect info type for event")
-                    }
-                })
-                .collect();
-
-            if let ir::Info::Invoke { ports, events, .. } =
-                comp.get_mut(inv.info)
-            {
-                // match ports together
-                let _ = mem::replace(ports, nports);
-                let _ = mem::replace(events, nevents);
-            } else {
-                unreachable!("Incorrect info type for invocation")
-            }
-        }
-    }
-}
-
 pub fn transform(ns: ast::Namespace) -> ir::Context {
     let mut sig_map = SigMap::default();
     // Walk over sigs and build a SigMap
@@ -979,8 +845,6 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         }
         ctx.comps.checked_add(idx, ir_comp);
     }
-
-    connect(&mut ctx);
 
     ctx
 }
