@@ -22,6 +22,7 @@ pub enum Info {
         name: ast::Id,
         bind_loc: GPosIdx,
         delay_loc: GPosIdx,
+        interface_port: Option<super::InfoIdx>,
     },
     /// For [super::EventBind]
     EventBind {
@@ -76,11 +77,17 @@ impl Info {
         Self::Param { name, bind_loc }
     }
 
-    pub fn event(name: ast::Id, bind_loc: GPosIdx, delay_loc: GPosIdx) -> Self {
+    pub fn event(
+        name: ast::Id,
+        bind_loc: GPosIdx,
+        delay_loc: GPosIdx,
+        interface_port: Option<super::InfoIdx>,
+    ) -> Self {
         Self::Event {
             name,
             bind_loc,
             delay_loc,
+            interface_port,
         }
     }
 

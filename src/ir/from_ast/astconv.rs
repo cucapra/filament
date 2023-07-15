@@ -7,6 +7,7 @@ use crate::ir::{
 use crate::utils::GPosIdx;
 use crate::{ast, ir, utils::Binding};
 use itertools::Itertools;
+use std::collections::HashMap;
 use std::{iter, rc::Rc};
 
 /// # Declare phase
@@ -233,17 +234,23 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     /// Forward declare an event without adding its delay. We need to do this
     /// since delays of events may mention the event itself.
-    fn declare_event(&mut self, eb: &ast::EventBind) -> EventIdx {
+    /// `interface_port` is the optional interface port associated with this event.
+    fn declare_event(
+        &mut self,
+        eb: &ast::EventBind,
+        interface_port: Option<ir::InfoIdx>,
+    ) -> EventIdx {
         let info = self.comp.add(ir::Info::event(
             eb.event.copy(),
             eb.event.pos(),
             eb.delay.pos(),
+            interface_port,
         ));
         // Add a fake delay of 0.
         let e = ir::Event {
             delay: self.comp.num(0).into(),
             info,
-            interface_port: None,
+            has_interface: true,
         };
         let idx = self.comp.add(e);
         log::info!("Added event {} as {idx}", eb.event);
@@ -401,9 +408,22 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         for param in &sig.params {
             self.param(param.inner(), ir::ParamOwner::Sig);
         }
+        let mut interface_signals: HashMap<_, _> = sig
+            .interface_signals
+            .iter()
+            .cloned()
+            .map(|ast::InterfaceDef { name, event }| {
+                let (name, bind_loc) = name.split();
+                let info =
+                    self.comp.add(ir::Info::interface_port(name, bind_loc));
+                (event, info)
+            })
+            .collect();
         // Declare the events first
         for event in &sig.events {
-            self.declare_event(event.inner());
+            // can remove here as each interface signal should only be used once
+            let interface = interface_signals.remove(event.event.inner());
+            self.declare_event(event.inner(), interface);
         }
         // Then define their delays correctly
         for event in &sig.events {
@@ -418,15 +438,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         for port in sig.outputs() {
             // XXX(rachit): Unnecessary clone.
             self.port(port.inner().clone(), ir::PortOwner::sig_in());
-        }
-        for ast::InterfaceDef { name, event } in sig.interface_signals {
-            let (name, bind_loc) = name.split();
-            let info = self.comp.add(ir::Info::interface_port(name, bind_loc));
-
-            let event = *self.event_map.get(&event).unwrap();
-            let event = self.comp.get_mut(event);
-
-            event.interface_port = Some(info);
         }
         for (name, width) in sig.unannotated_ports {
             self.comp.add(ir::Info::unannotated_port(name, width));
