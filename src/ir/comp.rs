@@ -22,6 +22,47 @@ impl Context {
     }
 }
 
+/// Queries corresponding signature [Event]s and [Port]s for their invoke counterparts
+impl Context {
+    /// Gets the [PortIdx] of the signature port of the invoked component corresponding
+    /// to the given [PortIdx] in the invocation.
+    pub fn get_component_port(&self, comp: Component, idx: PortIdx) -> PortIdx {
+        let port = comp.get(idx);
+        let super::PortOwner::Inv { inv, dir } = &port.owner else {
+            unreachable!("port owner is not an invocation");
+        };
+        let inv = comp.get(*inv);
+        // finds the index of the port in the invocation
+        let idx = inv.ports.iter()
+            .filter(|&&p|
+                matches!(&comp.get(p).owner, super::PortOwner::Inv { dir: d, .. } if d == dir)
+            )
+            .position(|&p| p == idx).unwrap();
+
+        // get the foreign component
+        let foreign = self.comps.get(comp.get(inv.inst).comp);
+
+        foreign.ports().iter().filter(|(_, port)| {
+            matches!(&port.owner, super::PortOwner::Sig { dir: d } if d == dir)
+        }).take(idx).last().unwrap().0
+    }
+
+    /// Gets the [EventIdx] of the event in the invoked component corresponding
+    /// to the given [EventBind] in the invocation.
+    pub fn get_component_event(
+        &self,
+        comp: Component,
+        inv: InvIdx,
+        idx: usize,
+    ) -> EventIdx {
+        let inv = comp.get(inv);
+        // get the foreign component
+        let foreign = self.comps.get(comp.get(inv.inst).comp);
+
+        foreign.events().idx_iter().take(idx).last().unwrap()
+    }
+}
+
 /// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
     /// Identifier for the component
