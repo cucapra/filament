@@ -30,7 +30,7 @@ impl Context {
         let inv = comp.get(*inv);
         // finds the index of the port in the invocation
         let idx = inv.ports.iter()
-            .filter(|&&p| 
+            .filter(|&&p|
                 matches!(&comp.get(p).owner, super::PortOwner::Inv { dir: d, .. } if d == dir)
             )
             .position(|&p| p == idx).unwrap();
@@ -45,7 +45,12 @@ impl Context {
 
     /// Gets the [EventIdx] of the event in the invoked component corresponding
     /// to the given [EventBind] in the invocation.
-    pub fn get_component_event(&self, comp: Component, inv: InvIdx, idx: usize) -> EventIdx {
+    pub fn get_component_event(
+        &self,
+        comp: Component,
+        inv: InvIdx,
+        idx: usize,
+    ) -> EventIdx {
         let inv = comp.get(inv);
         // get the foreign component
         let foreign = self.comps.get(comp.get(inv.inst).comp);
