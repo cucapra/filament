@@ -26,7 +26,11 @@ impl Context {
 impl Context {
     /// Gets the [PortIdx] of the signature port of the invoked component corresponding
     /// to the given [PortIdx] in the invocation.
-    pub fn get_component_port(&self, comp: Component, idx: PortIdx) -> PortIdx {
+    pub fn get_component_port(
+        &self,
+        comp: &Component,
+        idx: PortIdx,
+    ) -> PortIdx {
         let port = comp.get(idx);
         let super::PortOwner::Inv { inv, dir } = &port.owner else {
             unreachable!("port owner is not an invocation");
@@ -51,7 +55,7 @@ impl Context {
     /// to the given [EventBind] in the invocation.
     pub fn get_component_event(
         &self,
-        comp: Component,
+        comp: &Component,
         inv: InvIdx,
         idx: usize,
     ) -> EventIdx {
