@@ -98,11 +98,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 .resolve_event(&event_binding);
 
             // foreign component being invoked
-            let foreign_comp = self.ctx.comps.get(self.comp.get(inst).comp);
+            let foreign_comp = self.comp.get(inst).comp;
 
             let base = ir::Foreign::new(
-                foreign_comp.outputs().nth(idx).unwrap().0,
-                foreign_comp.idx(),
+                self.ctx
+                    .comps
+                    .get(foreign_comp)
+                    .outputs()
+                    .nth(idx)
+                    .unwrap()
+                    .0,
+                foreign_comp,
             );
 
             let owner = ir::PortOwner::Inv {
@@ -589,6 +595,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let inst = self.comp[inv].inst;
         let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
         let sig = self.sigs.get(&comp).unwrap();
+        // foreign component being invoked
+        let foreign_comp = self.comp.get(inst).comp;
 
         // Event bindings
         let event_binding = self.event_binding(
@@ -635,12 +643,15 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     .resolve_event(&event_binding)
             });
 
-            // foreign component being invoked
-            let foreign_comp = self.ctx.comps.get(self.comp.get(inst).comp);
-
             let base = ir::Foreign::new(
-                foreign_comp.inputs().nth(idx).unwrap().0,
-                foreign_comp.idx(),
+                self.ctx
+                    .comps
+                    .get(foreign_comp)
+                    .inputs()
+                    .nth(idx)
+                    .unwrap()
+                    .0,
+                foreign_comp,
             );
 
             let owner = ir::PortOwner::Inv {
@@ -686,7 +697,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     unreachable!("More arguments than events.")
                 }
             })
-            .for_each(|(event, time, pos)| {
+            .enumerate()
+            .for_each(|(idx, (event, time, pos))| {
                 let ev_delay_loc = event.delay.pos();
                 let resolved = event
                     .clone()
@@ -697,7 +709,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     self.comp.add(ir::Info::event_bind(ev_delay_loc, pos));
                 let arg = self.time(time.clone());
                 let event = self.timesub(resolved.delay.take());
-                let eb = ir::EventBind::new(event, arg, info);
+                let base = ir::Foreign::new(
+                    self.ctx
+                        .comps
+                        .get(foreign_comp)
+                        .events()
+                        .idx_iter()
+                        .nth(idx)
+                        .unwrap(),
+                    foreign_comp,
+                );
+                let eb = ir::EventBind::new(event, arg, info, base);
                 let invoke = self.comp.get_mut(inv);
                 invoke.events.push(eb);
             });
@@ -826,7 +848,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     fn comp(
-        ctx: &ir::Context, 
+        ctx: &ir::Context,
         comp: ast::Component,
         sigs: &'prog SigMap,
     ) -> ir::Component {
@@ -855,7 +877,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     for (_, exts) in ns.externs {
         for ext in exts {
             let idx = sig_map.get(&ext.name).unwrap().idx;
-            let ir_ext = BuildCtx::external(idx, ext);
+            let ir_ext = BuildCtx::external(&ctx, ext);
             ctx.comps.checked_add(idx, ir_ext);
         }
     }
@@ -863,7 +885,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     for cidx in order.into_iter() {
         let comp = std::mem::take(&mut ns.components[cidx]);
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
-        let ir_comp = BuildCtx::comp(comp, idx, &sig_map);
+        let ir_comp = BuildCtx::comp(&ctx, comp, &sig_map);
         if Some(cidx) == main_idx {
             ctx.entrypoint = Some(idx);
         }

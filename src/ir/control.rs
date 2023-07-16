@@ -1,6 +1,6 @@
 use super::{
-    Access, CompIdx, ExprIdx, Fact, InfoIdx, InstIdx, InvIdx, ParamIdx,
-    PortIdx, PropIdx, TimeIdx, TimeSub,
+    Access, CompIdx, Component, Event, ExprIdx, Fact, Foreign, InfoIdx,
+    InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx, TimeIdx, TimeSub,
 };
 use std::fmt;
 
@@ -125,10 +125,22 @@ pub struct EventBind {
     pub arg: TimeIdx,
     /// Information for the event
     pub info: InfoIdx,
+    /// The event for which we provide the binding.
+    pub base: Foreign<Event, Component>,
 }
 
 impl EventBind {
-    pub fn new(delay: TimeSub, arg: TimeIdx, info: InfoIdx) -> Self {
-        Self { delay, arg, info }
+    pub fn new(
+        delay: TimeSub,
+        arg: TimeIdx,
+        info: InfoIdx,
+        base: Foreign<Event, Component>,
+    ) -> Self {
+        Self {
+            delay,
+            arg,
+            info,
+            base,
+        }
     }
 }
