@@ -1,5 +1,5 @@
 use super::{
-    Access, CompIdx, Component, Event, ExprIdx, Fact, Foreign, InfoIdx,
+    Access, CompIdx, Component, Ctx, Event, ExprIdx, Fact, Foreign, InfoIdx,
     InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx, TimeIdx, TimeSub,
 };
 use std::fmt;
@@ -70,6 +70,14 @@ impl fmt::Display for Instance {
     }
 }
 
+impl InstIdx {
+    /// Gets the component being instantiated
+    pub fn comp(self, ctx: &impl Ctx<Instance>) -> CompIdx {
+        let inst = ctx.get(self);
+        inst.comp
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 /// A connection between two ports
 pub struct Connect {
@@ -97,6 +105,23 @@ pub struct Invoke {
     pub ports: Vec<PortIdx>,
     // The information associated with this invocation
     pub info: InfoIdx,
+}
+
+impl InvIdx {
+    /// The instance being invoked
+    pub fn inst(self, ctx: &impl Ctx<Invoke>) -> InstIdx {
+        let inv = ctx.get(self);
+        inv.inst
+    }
+
+    /// Get the component being invoked
+    pub fn comp<C>(self, ctx: &C) -> CompIdx
+    where
+        C: Ctx<Instance> + Ctx<Invoke>,
+    {
+        let inst = self.inst(ctx);
+        inst.comp(ctx)
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]

@@ -77,6 +77,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             events: vec![], // Filled in later
             info,
         });
+        // foreign component being invoked
+        let foreign_comp = inv.comp(self.comp);
         self.add_inv(name.copy(), inv);
 
         let mut def_ports = vec![];
@@ -96,9 +98,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             let resolved = p
                 .resolve_exprs(&param_binding)
                 .resolve_event(&event_binding);
-
-            // foreign component being invoked
-            let foreign_comp = self.comp.get(inst).comp;
 
             let base = ir::Foreign::new(
                 self.ctx
@@ -592,11 +591,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             unreachable!("No ports provided for invocation {name}")
         };
         let inv = self.get_inv(name.copy());
-        let inst = self.comp[inv].inst;
+        let inst = inv.inst(self.comp);
         let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
         let sig = self.sigs.get(&comp).unwrap();
         // foreign component being invoked
-        let foreign_comp = self.comp.get(inst).comp;
+        let foreign_comp = inv.comp(self.comp);
 
         // Event bindings
         let event_binding = self.event_binding(
