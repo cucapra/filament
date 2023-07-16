@@ -39,7 +39,7 @@ impl Context {
         // finds the index of the port in the invocation
         let idx = inv.ports.iter()
             .filter(|&&p|
-                matches!(&comp.get(p).owner, super::PortOwner::Inv { dir: d, .. } if d == dir)
+                matches!(&comp.get(p).owner, super::PortOwner::Inv { dir: d, .. } if d == &dir.reverse())
             )
             .position(|&p| p == idx).unwrap();
 
@@ -47,8 +47,8 @@ impl Context {
         let foreign = self.comps.get(comp.get(inv.inst).comp);
 
         foreign.ports().iter().filter(|(_, port)| {
-            matches!(&port.owner, super::PortOwner::Sig { dir: d } if d == dir)
-        }).take(idx).last().unwrap().0
+            matches!(&port.owner, super::PortOwner::Sig { dir: d } if d == &dir.reverse())
+        }).nth(idx).unwrap().0
     }
 
     /// Gets the [EventIdx] of the event in the invoked component corresponding
@@ -63,7 +63,7 @@ impl Context {
         // get the foreign component
         let foreign = self.comps.get(comp.get(inv.inst).comp);
 
-        foreign.events().idx_iter().take(idx).last().unwrap()
+        foreign.events().idx_iter().nth(idx).unwrap()
     }
 }
 
@@ -282,6 +282,7 @@ impl Component {
         self.expr_params_acc(expr, &mut acc);
         acc
     }
+
     /// Parameters mentioned within an expression
     pub fn prop_params(&self, prop: PropIdx) -> Vec<ParamIdx> {
         let mut acc = Vec::new();
