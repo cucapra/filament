@@ -18,6 +18,21 @@ impl Context {
     }
 }
 
+impl Ctx<Component> for Context {
+    fn add(&mut self, val: Component) -> Idx<Component> {
+        self.comps.add(val)
+    }
+
+    fn get(&self, idx: Idx<Component>) -> &Component {
+        self.comps.get(idx)
+    }
+}
+impl MutCtx<Component> for Context {
+    fn get_mut(&mut self, idx: Idx<Component>) -> &mut Component {
+        self.comps.get_mut(idx)
+    }
+}
+
 /// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
     /// Identifier for the component
