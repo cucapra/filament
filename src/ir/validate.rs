@@ -139,25 +139,7 @@ impl<'a> Validate<'a> {
     /// (1) Its owner is defined in the component and says it owns the event
     /// (2) Its delay is valid
     pub fn event(&self, evidx: ir::EventIdx) {
-        let ir::Event { delay, owner, .. } = &self.comp[evidx];
-
-        // check (1)
-        match owner {
-            ir::EventOwner::Sig => {
-                /* Can't check because the sig does not contain this info */
-            }
-            ir::EventOwner::Inv { inv: iidx } => {
-                let ir::Invoke { events, .. } = &self.comp[*iidx];
-                // if none of the EventBinds in an invoke's events use evidx, then error
-                let Some(_) = events
-                    .iter()
-                    .find(|event| **event == evidx) else {
-                        self.comp.internal_error(
-                            format!("{evidx} claims to be owned by {iidx}, but {iidx} does not define it")
-                        );
-                };
-            }
-        }
+        let ir::Event { delay, .. } = &self.comp[evidx];
 
         // check (2)
         self.timesub(delay);
@@ -238,7 +220,7 @@ impl<'a> Validate<'a> {
     /// (3) Its events are valid
     /// (4) Its events point to the invoke as their owner
     fn invoke(&self, iidx: ir::InvIdx) {
-        let ir::Invoke { ports, events, .. } = &self.comp.get(iidx);
+        let ir::Invoke { ports, .. } = &self.comp.get(iidx);
 
         // check (1) and (2)
         for pidx in ports {
@@ -262,25 +244,6 @@ impl<'a> Validate<'a> {
                 }
             }
         }
-
-        // check(3) and (4)
-        for evidx in events {
-            // (3) looking up the port will error if it doesn't exist
-            let event = self.comp.get(*evidx);
-            // (4) check that each event's owner is this inv
-            match event.owner {
-                ir::EventOwner::Sig => self.comp.internal_error(format!(
-                    "{iidx} claims to define {evidx} but {evidx} is sig-owned"
-                )),
-                ir::EventOwner::Inv { inv } => {
-                    if inv != iidx {
-                        self.comp.internal_error(
-                            format!("{iidx} claims to define {evidx} but {evidx} is owned by {inv}")
-                        )
-                    }
-                }
-            }
-        }
     }
 
     /// An instance is valid if:
@@ -291,7 +254,7 @@ impl<'a> Validate<'a> {
     ///     in the component signature
     fn instance(&self, iidx: ir::InstIdx) {
         // check (1)
-        let ir::Instance { comp, params } = &self.comp[iidx];
+        let ir::Instance { comp, params, .. } = &self.comp[iidx];
         for expr in params.iter() {
             // check (2)
             self.expr(*expr);
@@ -333,9 +296,6 @@ impl<'a> Validate<'a> {
             }
             ir::Command::Fact(fact) => {
                 self.fact(fact);
-            }
-            ir::Command::EventBind(eb) => {
-                self.eventbind(eb);
             }
         }
     }
@@ -440,11 +400,5 @@ impl<'a> Validate<'a> {
     fn fact(&self, fact: &ir::Fact) {
         let ir::Fact { prop, .. } = *fact;
         self.prop(prop);
-    }
-
-    fn eventbind(&self, eb: &ir::EventBind) {
-        let ir::EventBind { event, arg, .. } = *eb;
-        self.event(event);
-        self.time(arg);
     }
 }

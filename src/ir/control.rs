@@ -1,6 +1,6 @@
 use super::{
-    Access, CompIdx, EventIdx, ExprIdx, Fact, InfoIdx, InstIdx, InvIdx,
-    ParamIdx, PortIdx, PropIdx, TimeIdx,
+    Access, CompIdx, ExprIdx, Fact, InfoIdx, InstIdx, InvIdx, ParamIdx,
+    PortIdx, PropIdx, TimeIdx, TimeSub,
 };
 use std::fmt;
 
@@ -14,7 +14,6 @@ pub enum Command {
     ForLoop(Loop),
     If(If),
     Fact(Fact),
-    EventBind(EventBind),
 }
 impl Command {
     pub fn is_loop(&self) -> bool {
@@ -40,11 +39,6 @@ impl From<Connect> for Command {
         Command::Connect(con)
     }
 }
-impl From<EventBind> for Command {
-    fn from(bind: EventBind) -> Self {
-        Command::EventBind(bind)
-    }
-}
 impl From<Loop> for Command {
     fn from(loop_: Loop) -> Self {
         Command::ForLoop(loop_)
@@ -68,6 +62,8 @@ pub struct Instance {
     pub comp: CompIdx,
     /// The parameters used in the binding of this instance
     pub params: Box<[ExprIdx]>,
+    /// The information associated with this instance
+    pub info: InfoIdx,
 }
 
 impl fmt::Display for Instance {
@@ -104,10 +100,12 @@ impl fmt::Display for Connect {
 pub struct Invoke {
     /// The instance being invoked
     pub inst: InstIdx,
+    /// The event bindings defined by the invocation
+    pub events: Vec<EventBind>,
     // The ports defined by this invocation
     pub ports: Vec<PortIdx>,
-    /// The events the invocation uses
-    pub events: Vec<EventIdx>,
+    // The information associated with this invocation
+    pub info: InfoIdx,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -130,13 +128,16 @@ pub struct If {
 #[derive(Clone, PartialEq, Eq)]
 /// Binding for an event argument of an invocation
 pub struct EventBind {
-    pub event: EventIdx,
+    /// The delay of the event being provided for the binding
+    pub delay: TimeSub,
+    /// The binding for the event
     pub arg: TimeIdx,
+    /// Information for the event
     pub info: InfoIdx,
 }
 
 impl EventBind {
-    pub fn new(event: EventIdx, arg: TimeIdx, info: InfoIdx) -> Self {
-        Self { event, arg, info }
+    pub fn new(delay: TimeSub, arg: TimeIdx, info: InfoIdx) -> Self {
+        Self { delay, arg, info }
     }
 }

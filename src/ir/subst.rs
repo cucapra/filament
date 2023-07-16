@@ -3,8 +3,8 @@ use super::{Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Time, TimeIdx};
 pub struct Bind<K: Eq, V>(Vec<(K, V)>);
 
 impl<K: Eq, V> Bind<K, V> {
-    pub fn new(bind: Vec<(K, V)>) -> Self {
-        Self(bind)
+    pub fn new(bind: impl IntoIterator<Item = (K, V)>) -> Self {
+        Self(bind.into_iter().collect())
     }
 }
 

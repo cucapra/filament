@@ -45,12 +45,7 @@ impl DisplayCtx<ir::Event> for ir::Component {
             let ir::Info::Event { name, .. } = self.get(ev.info) else {
                 unreachable!("Expccted event info")
             };
-            match ev.owner {
-                ir::EventOwner::Sig => name.to_string(),
-                ir::EventOwner::Inv { inv } => {
-                    format!("{}.{name}", inv)
-                }
-            }
+            name.to_string()
         }
     }
 }
@@ -167,9 +162,6 @@ impl Printer<'_> {
                 write!(f, "{:indent$}{inv};", "")
             }
             ir::Command::Connect(con) => self.connect(con, indent, f),
-            ir::Command::EventBind(ir::EventBind { event, arg, .. }) => {
-                write!(f, "{:indent$}bind {} to {}", "", event, self.time(*arg))
-            }
             ir::Command::ForLoop(ir::Loop {
                 index,
                 start,
@@ -240,12 +232,7 @@ impl Printer<'_> {
         }
         write!(f, "]<")?;
         // All events are defined by the signature
-        for pos in comp
-            .events()
-            .iter()
-            .filter(|(_, eb)| matches!(eb.owner, ir::EventOwner::Sig))
-            .with_position()
-        {
+        for pos in comp.events().iter().with_position() {
             match pos {
                 Position::First((idx, ev)) | Position::Middle((idx, ev)) => {
                     write!(
@@ -356,27 +343,6 @@ impl Printer<'_> {
         }
     }
 
-    fn event(
-        ctx: &ir::Component,
-        idx: ir::EventIdx,
-        event: &ir::Event,
-        indent: usize,
-        f: &mut impl io::Write,
-    ) -> io::Result<()> {
-        let ir::Event { owner, delay, .. } = event;
-        match owner {
-            ir::EventOwner::Sig => Ok(()),
-            ir::EventOwner::Inv { inv } => {
-                writeln!(
-                    f,
-                    "{:indent$}{idx} = event({inv}), delay: {};",
-                    "",
-                    ctx.display_timesub(delay)
-                )
-            }
-        }
-    }
-
     pub fn instance(
         ctx: &ir::Component,
         idx: ir::InstIdx,
@@ -385,7 +351,7 @@ impl Printer<'_> {
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         write!(f, "{:indent$}{idx} = instance ", "")?;
-        let ir::Instance { comp, params } = inst;
+        let ir::Instance { comp, params, .. } = inst;
         write!(f, "{}[", comp)?;
         for (i, param) in params.iter().enumerate() {
             if i != 0 {
@@ -406,14 +372,15 @@ impl Printer<'_> {
             inst,
             ports,
             events,
+            ..
         } = c;
 
         writeln!(
             f,
-            "{:indent$}{idx}, {ports}, {events} = invoke {inst};",
+            "{:indent$}{idx}, {ports} = invoke {inst}<{events}>;",
             "",
             ports = ports.iter().map(|p| format!("{p}")).join(", "),
-            events = events.iter().map(|e| format!("{e}")).join(", ")
+            events = events.iter().map(|e| format!("{}", e.delay)).join(", ")
         )?;
 
         Ok(())
@@ -428,9 +395,6 @@ impl Printer<'_> {
         printer.sig(ctx, idx, 0, f)?;
         for (idx, param) in ctx.params().iter() {
             Printer::local_param(idx, param, 2, ctx, f)?;
-        }
-        for (idx, event) in ctx.events().iter() {
-            Printer::event(ctx, idx, event, 2, f)?;
         }
         // If debugging is enabled, show the low-level representation of the
         // component's interned values.

@@ -64,6 +64,47 @@ impl IntervalCheck {
         let hi = idx.lt(len, comp);
         lo.and(hi, comp)
     }
+
+    /// For each event binding, we add the constraint that the events uses as arguments
+    /// are triggered less often than the delay of the invoked component.
+    fn event_binding(
+        &mut self,
+        eb: ir::EventBind,
+        comp: &mut ir::Component,
+    ) -> Option<ir::Command> {
+        let ir::EventBind {
+            delay: inv_delay,
+            arg,
+            info,
+        } = &eb;
+        let ir::Info::EventBind { ev_delay_loc, bind_loc } = comp[*info] else {
+            unreachable!("expected event bind info")
+        };
+
+        let this_ev = &comp[comp[*arg].event];
+        let this_delay = this_ev.delay.clone();
+        let ir::Info::Event { delay_loc: ev_del_loc, .. } = comp[this_ev.info] else {
+            unreachable!("expected event info")
+        };
+
+        let reason = comp.add(
+            ir::Reason::event_trig(
+                ev_delay_loc,
+                inv_delay.clone(),
+                ev_del_loc,
+                this_delay.clone(),
+                bind_loc,
+            )
+            .into(),
+        );
+
+        // Ensure that this event's delay is greater than invoked component's event's delay.
+        let prop = comp.add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(
+            this_delay,
+            inv_delay.clone(),
+        )));
+        comp.assert(prop, reason)
+    }
 }
 
 impl Visitor for IntervalCheck {
@@ -72,10 +113,7 @@ impl Visitor for IntervalCheck {
         let mut cmds: Vec<ir::Command> =
             Vec::with_capacity(comp.ports().len() + comp.events().len());
         for idx in comp.events().idx_iter() {
-            let ev = &comp[idx];
-            if ev.owner.is_sig() {
-                cmds.extend(self.delay_wf(idx, comp));
-            }
+            cmds.extend(self.delay_wf(idx, comp));
         }
 
         // For each bundle, add an assertion to ensure that availability of the
@@ -130,53 +168,17 @@ impl Visitor for IntervalCheck {
             cmds.extend(comp.assert(prop, reason));
         }
 
-        Action::AddBefore(cmds)
-    }
-
-    /// For each event binding, we add the constraint that the events uses as arguments
-    /// are triggered less often than the delay of the invoked component.
-    fn event_binding(
-        &mut self,
-        eb: &mut ir::EventBind,
-        comp: &mut ir::Component,
-    ) -> Action {
-        let ir::EventBind { event, arg, info } = &eb;
-        let ir::Info::EventBind { bind_loc } = comp[*info] else {
-            unreachable!("expected event bind info")
-        };
-
-        let inv_ev = &comp[*event];
-        let inv_delay = inv_ev.delay.clone();
-        let ir::Info::Event { delay_loc: inv_del_loc, .. } = comp[inv_ev.info] else {
-            unreachable!("expected event info")
-        };
-
-        let this_ev = &comp[comp[*arg].event];
-        let this_delay = this_ev.delay.clone();
-        let ir::Info::Event { delay_loc: ev_del_loc, .. } = comp[this_ev.info] else {
-            unreachable!("expected event info")
-        };
-
-        let reason = comp.add(
-            ir::Reason::event_trig(
-                inv_del_loc,
-                inv_delay.clone(),
-                ev_del_loc,
-                this_delay.clone(),
-                bind_loc,
-            )
-            .into(),
-        );
-
-        // Ensure that this event's delay is greater than invoked component's event's delay.
-        let prop = comp
-            .add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(this_delay, inv_delay)));
-        let fact = comp.assert(prop, reason);
-        if let Some(c) = fact {
-            Action::AddBefore(vec![c])
-        } else {
-            Action::Continue
+        // For each invoke, check the event bindings are well-formed
+        for idx in comp.invocations().idx_iter() {
+            // Clone here because we need to pass mutable ownership of the component
+            for eb in comp[idx].events.clone() {
+                if let Some(assert) = self.event_binding(eb, comp) {
+                    cmds.push(assert)
+                }
+            }
         }
+
+        Action::AddBefore(cmds)
     }
 
     fn connect(
