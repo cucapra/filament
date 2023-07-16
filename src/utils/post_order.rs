@@ -107,8 +107,9 @@ impl Traversal {
         }
     }
 
-    /// Take the namespace from the post order structure.
-    pub fn take(self) -> ast::Namespace {
-        self.ns
+    /// Take the namespace from the post order structure,
+    /// and returns the ordering of the components
+    pub fn take(self) -> (ast::Namespace, Vec<usize>) {
+        (self.ns, self.order)
     }
 }
