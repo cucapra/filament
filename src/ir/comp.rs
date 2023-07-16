@@ -289,7 +289,29 @@ impl Ctx<Invoke> for Component {
 
 impl Ctx<Expr> for Component {
     fn add(&mut self, val: Expr) -> ExprIdx {
-        self.exprs.intern(val)
+        match val {
+            Expr::Param(_) | Expr::Concrete(_) => self.exprs.intern(val),
+            Expr::Bin { op, lhs: l, rhs: r } => match op {
+                ast::Op::Add => l.add(r, self),
+                ast::Op::Mul => l.mul(r, self),
+                ast::Op::Sub => l.sub(r, self),
+                ast::Op::Div => l.div(r, self),
+                ast::Op::Mod => l.rem(r, self),
+            },
+            Expr::Fn { op, args } => {
+                if args.len() != 1 {
+                    self.internal_error(format!(
+                        "pow2 has {} arguments",
+                        args.len()
+                    ))
+                }
+                let arg = args[0];
+                match op {
+                    ast::UnFn::Pow2 => arg.pow2(self),
+                    ast::UnFn::Log2 => arg.log2(self),
+                }
+            }
+        }
     }
 
     fn get(&self, idx: ExprIdx) -> &Expr {
