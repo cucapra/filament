@@ -121,19 +121,23 @@ impl Compile {
                     attributes: calyx::Attributes::default(),
                 }
             }))
-            .chain(comp.interface_ports().into_iter().map(|name| {
-                calyx::PortDef {
-                    name: name.as_ref().into(),
-                    width: wfu(1),
-                    direction: calyx::Direction::Input,
-                    attributes: vec![(
-                        calyx::Attribute::Unknown("fil_event".into()),
-                        1,
-                    )]
-                    .try_into()
-                    .unwrap(),
-                }
-            }))
+            .chain(
+                comp.events()
+                    .idx_iter()
+                    .filter_map(|idx| Compile::interface_port_name(comp, idx))
+                    .into_iter()
+                    .map(|name| calyx::PortDef {
+                        name: name.into(),
+                        width: wfu(1),
+                        direction: calyx::Direction::Input,
+                        attributes: vec![(
+                            calyx::Attribute::Unknown("fil_event".into()),
+                            1,
+                        )]
+                        .try_into()
+                        .unwrap(),
+                    }),
+            )
             .collect();
 
         let mut interface_ports =
@@ -207,19 +211,34 @@ impl Compile {
                     format!("p{}", idx.get())
                 }
             }
-            ir::PortOwner::Inv { inv, .. } => {
-                let inv = comp.get(*inv);
-                let ir::Info::Invoke { ports, .. } = comp.get(inv.info) else {
-                    unreachable!("Incorrect info type for invoke");
-                };
-                let pidx = ports.get(&idx).unwrap();
-                Compile::port_name(
-                    ctx,
-                    ctx.comps.get(comp.get(inv.inst).comp),
-                    *pidx,
-                )
-            }
+            ir::PortOwner::Inv { inv, .. } => Compile::port_name(
+                ctx,
+                ctx.comps.get(comp.get(comp.get(*inv).inst).comp),
+                ctx.get_component_port(comp, idx),
+            ),
             ir::PortOwner::Local => format!("p{}", idx.get()),
+        }
+    }
+
+    // Gets the name associated with an event's interface port if it exists.
+    fn interface_port_name(
+        comp: &ir::Component,
+        event: ir::EventIdx,
+    ) -> Option<String> {
+        let event = comp.get(event);
+
+        if event.has_interface {
+            let ir::Info::Event { interface_port: Some(interface_info), .. } = comp.get(event.info) else {
+                unreachable!("Event has incorrect info.")
+            };
+
+            let ir::Info::InterfacePort { name, .. } = comp.get(*interface_info) else {
+                unreachable!("Interface port had incorrect info type.")
+            };
+
+            Some(name.as_ref().into())
+        } else {
+            None
         }
     }
 
@@ -252,6 +271,7 @@ impl Compile {
             latency: None,
         }
     }
+
     /// Gets the maximum states for each event with an interface port in the component
     fn max_states(comp: &ir::Component) -> HashMap<ir::EventIdx, u64> {
         let mut event_map = HashMap::new();
@@ -303,7 +323,6 @@ impl Compile {
             match cmd {
                 ir::Command::Instance(idx) => ctx.add_instance(*idx),
                 ir::Command::Invoke(idx) => ctx.add_invoke(*idx),
-                ir::Command::EventBind(eb) => ctx.compile_eventbind(eb),
                 ir::Command::Connect(connect) => cons.push(connect), // connects will be compiled later
                 ir::Command::ForLoop(_) => {
                     unreachable!("For loops should have been compiled away.")
@@ -460,49 +479,12 @@ impl<'a> Context<'a> {
     /// and creates an [Fsm] from this [calyx::Component] FSM and stores it in the [Context]
     pub fn insert_fsm(&mut self, event: ir::EventIdx, states: u64) {
         // Construct an fsm iff the event is connected to an interface port
-        if self.comp.get(event).interface_port.is_some() {
+        if self.comp.get(event).has_interface {
             self.declare_fsm(states);
 
             // Construct the FSM
             let fsm = Fsm::new(event, states, self);
             self.fsms.insert(event, fsm);
-        }
-    }
-
-    /// Gets the interface port connected to an event
-    /// Panics if the event is not connected to an interface port
-    fn get_interface_port(
-        &self,
-        event: ir::EventIdx,
-    ) -> Option<RRC<calyx::Port>> {
-        let (info, comp, cell) = match self.comp.get(event).owner {
-            ir::EventOwner::Sig => (
-                self.comp.get(event).interface_port?,
-                self.comp,
-                self.builder.component.signature.borrow(),
-            ),
-            ir::EventOwner::Inv { inv: idx } => {
-                let inv = self.comp.get(idx);
-                if let ir::Info::Invoke { events, .. } = self.comp.get(inv.info)
-                {
-                    let cidx = self.comp.get(inv.inst).comp;
-                    let comp = self.ctx.comps.get(cidx);
-
-                    (
-                        comp.get(*events.get(&event).unwrap()).interface_port?,
-                        comp,
-                        self.invokes[&idx].borrow(),
-                    )
-                } else {
-                    unreachable!("Invoke had incorrect info type.")
-                }
-            }
-        };
-
-        if let ir::Info::InterfacePort { name, .. } = comp.get(info) {
-            Some(cell.get(name.as_ref()))
-        } else {
-            unreachable!("Interface port had incorrect info type.")
         }
     }
 
@@ -523,38 +505,15 @@ impl<'a> Context<'a> {
         let ev = start.event;
 
         // return no guard the interface port does not exist.
-        if self.comp.get(ev).interface_port.is_none() {
-            calyx::Guard::True
-        } else {
+        if self.comp.get(ev).has_interface {
             let fsm = self.fsms.get(&ev).unwrap();
             (Compile::u64(self.comp, start.offset)
                 ..Compile::u64(self.comp, end.offset))
                 .map(|st| fsm.get_port(st).into())
                 .reduce(calyx::Guard::or)
                 .unwrap()
-        }
-    }
-
-    fn compile_eventbind(&mut self, eb: &ir::EventBind) {
-        let ir::EventBind {
-            event: dst,
-            arg: time,
-            ..
-        } = eb;
-        let time = self.comp.get(*time);
-        // If there is no interface port, no binding necessary
-        if let Some(dst) = self.get_interface_port(*dst) {
-            let offset = Compile::u64(self.comp, time.offset);
-            let src = self.fsms.get(&time.event).unwrap().get_port(offset);
-
-            let c = self.builder.add_constant(1, 1);
-
-            let assign = self.builder.build_assignment(
-                dst,
-                c.borrow().get("out"),
-                calyx::Guard::Port(src),
-            );
-            self.builder.component.continuous_assignments.push(assign);
+        } else {
+            calyx::Guard::True
         }
     }
 
@@ -572,6 +531,8 @@ impl<'a> Context<'a> {
                 && Compile::u64(self.comp, dst.end) == 1,
             "Port bundles should have been compiled away."
         );
+        
+        log::debug!("Compiling connect: {}", con);
 
         let (dst, _) = self.compile_port(dst.port);
         // assert!(!g.is_true(), "Destination port cannot have a guard.");
@@ -601,14 +562,43 @@ impl<'a> Context<'a> {
         (cell.get(name), guard)
     }
 
-    fn add_invoke(&mut self, idx: ir::InvIdx) {
-        let inv = self.comp.get(idx);
+    fn add_invoke(&mut self, invidx: ir::InvIdx) {
+        let inv = self.comp.get(invidx);
 
         let cell = &self
             .instances
             .get(&inv.inst)
             .unwrap_or_else(|| panic!("Unknown instance: {}", inv.inst));
-        self.invokes.insert(idx, Rc::clone(cell));
+
+        // the component that is being invoked
+        let cidx = self.comp.get(inv.inst).comp;
+        let comp = self.ctx.comps.get(cidx);
+
+        for (idx, eb) in inv.events.iter().enumerate() {
+            let dst = self.ctx.get_component_event(self.comp, invidx, idx);
+
+            // If there is no interface port, no binding necessary
+            if let Some(dst) = Compile::interface_port_name(comp, dst) {
+                let ir::EventBind { arg: time, .. } = eb;
+
+                let dst = cell.borrow().get(dst);
+
+                let time = self.comp.get(*time);
+                let offset = Compile::u64(self.comp, time.offset);
+                let src = self.fsms.get(&time.event).unwrap().get_port(offset);
+
+                let c = self.builder.add_constant(1, 1);
+
+                let assign = self.builder.build_assignment(
+                    dst,
+                    c.borrow().get("out"),
+                    calyx::Guard::Port(src),
+                );
+                self.builder.component.continuous_assignments.push(assign);
+            }
+        }
+
+        self.invokes.insert(invidx, Rc::clone(cell));
     }
 
     fn add_instance(&mut self, idx: ir::InstIdx) {
@@ -759,21 +749,18 @@ struct Fsm {
 }
 
 impl Fsm {
-    fn new(idx: ir::EventIdx, states: u64, ctx: &mut Context) -> Self {
-        let event = ctx.comp.get(idx);
+    fn new(event: ir::EventIdx, states: u64, ctx: &mut Context) -> Self {
         let comp = ctx.binding.fsm_comps.get(&states).unwrap();
         let cell = ctx.builder.add_component(
-            ctx.idx_name(idx),
+            ctx.idx_name(event),
             comp.name.to_string(),
             Binding::cell_to_port_def(&comp.signature),
         );
 
-        if let ir::Info::InterfacePort { name, .. } =
-            ctx.comp.get(event.interface_port.unwrap())
-        {
+        if let Some(name) = Compile::interface_port_name(ctx.comp, event) {
             // gets the trigger port from the signature
             let sig = ctx.builder.component.signature.borrow();
-            let trigger = sig.get(name.as_ref());
+            let trigger = sig.get(name);
 
             // Connect the trigger port to the instance
             let go_assign = ctx.builder.build_assignment(
