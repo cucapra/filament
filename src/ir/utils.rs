@@ -342,9 +342,7 @@ impl Traversal {
                     Traversal::process_cmd(ctx, comp, cmd, ts);
                 }
             }
-            Command::Connect(_)
-            | Command::Invoke(_)
-            | Command::Fact(_) => (),
+            Command::Connect(_) | Command::Invoke(_) | Command::Fact(_) => (),
         }
     }
 }
