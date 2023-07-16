@@ -1,4 +1,5 @@
 //! Convert the frontend AST to the IR.
+use super::build_ctx::InvPort;
 use super::{BuildCtx, Sig, SigMap};
 use crate::ir::{
     Cmp, CompIdx, Ctx, EventIdx, ExprIdx, MutCtx, ParamIdx, PortIdx, PropIdx,
@@ -92,13 +93,23 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         );
 
         // Define the output port from the invoke
-        for p in sig.outputs.clone() {
+        for (idx, p) in sig.outputs.clone().into_iter().enumerate() {
             let resolved = p
                 .resolve_exprs(&param_binding)
                 .resolve_event(&event_binding);
+
+            // foreign component being invoked
+            let foreign_comp = self.ctx.comps.get(self.comp.get(inst).comp);
+
+            let base = ir::Foreign::new(
+                foreign_comp.outputs().nth(idx).unwrap().0,
+                foreign_comp.idx(),
+            );
+
             let owner = ir::PortOwner::Inv {
                 inv,
                 dir: ir::Direction::Out,
+                base,
             };
             def_ports.push(self.port(resolved, owner));
         }
@@ -360,24 +371,24 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     ) -> ir::Access {
         match port {
             ast::Port::This(n) => {
-                let owner = ir::PortOwner::Sig { dir };
-                ir::Access::port(self.get_port(n.copy(), owner), self.comp)
+                let owner = InvPort::Sig(dir, n.copy());
+                ir::Access::port(self.get_port(&owner), self.comp)
             }
             ast::Port::InvPort { invoke, name } => {
                 let inv = self.get_inv(invoke.copy());
-                let owner = ir::PortOwner::Inv { inv, dir };
-                ir::Access::port(self.get_port(name.copy(), owner), self.comp)
+                let owner = InvPort::Inv(inv, dir, name.copy());
+                ir::Access::port(self.get_port(&owner), self.comp)
             }
             ast::Port::Bundle { name, access } => {
                 // NOTE(rachit): The AST does not distinguish between bundles
                 // defined by the signature and locally defined bundles so we
                 // must search both.
-                let owner = ir::PortOwner::Sig { dir };
-                let port = if let Some(p) = self.find_port(name.copy(), owner) {
+                let owner = InvPort::Sig(dir, name.copy());
+                let port = if let Some(p) = self.find_port(&owner) {
                     p
                 } else {
-                    let owner = ir::PortOwner::Local;
-                    self.get_port(name.copy(), owner)
+                    let owner = InvPort::Local(name.copy());
+                    self.get_port(&owner)
                 };
                 let (start, end) = self.access(access.take());
                 ir::Access { port, start, end }
@@ -388,8 +399,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 access,
             } => {
                 let inv = self.get_inv(invoke.copy());
-                let owner = ir::PortOwner::Inv { inv, dir };
-                let port = self.get_port(port.copy(), owner);
+                let owner = InvPort::Inv(inv, dir, port.copy());
+                let port = self.get_port(&owner);
                 let (start, end) = self.access(access.take());
                 ir::Access { port, start, end }
             }
@@ -614,7 +625,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
         let mut connects = Vec::with_capacity(sig.inputs.len());
 
-        for (p, src) in sig.inputs.clone().into_iter().zip(srcs) {
+        for (idx, (p, src)) in
+            sig.inputs.clone().into_iter().zip(srcs).enumerate()
+        {
             let info = self
                 .comp
                 .add(ir::Info::connect(p.inner().name().pos(), src.pos()));
@@ -622,9 +635,19 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 p.resolve_exprs(&param_binding)
                     .resolve_event(&event_binding)
             });
+
+            // foreign component being invoked
+            let foreign_comp = self.ctx.comps.get(self.comp.get(inst).comp);
+
+            let base = ir::Foreign::new(
+                foreign_comp.inputs().nth(idx).unwrap().0,
+                foreign_comp.idx(),
+            );
+
             let owner = ir::PortOwner::Inv {
                 inv,
                 dir: ir::Direction::In,
+                base,
             };
 
             // Define port and add it to the invocation
@@ -791,10 +814,14 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         cmds
     }
 
-    fn external(idx: CompIdx, sig: ast::Signature) -> ir::Component {
+    fn external(
+        ctx: &ir::Context,
+        idx: CompIdx,
+        sig: ast::Signature,
+    ) -> ir::Component {
         let mut ir_comp = ir::Component::new(idx, false);
         let binding = SigMap::default();
-        let mut builder = BuildCtx::new(&mut ir_comp, &binding);
+        let mut builder = BuildCtx::new(ctx, &mut ir_comp, &binding);
 
         // First we declare all the ports
         let mut cmds = builder.sig(sig);
@@ -804,12 +831,13 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     fn comp(
+        ctx: &ir::Context,
         comp: ast::Component,
         idx: CompIdx,
         sigs: &'prog SigMap,
     ) -> ir::Component {
         let mut ir_comp = ir::Component::new(idx, false);
-        let mut builder = BuildCtx::new(&mut ir_comp, sigs);
+        let mut builder = BuildCtx::new(ctx, &mut ir_comp, sigs);
 
         let mut cmds = builder.sig(comp.sig);
         let body_cmds = builder.commands(comp.body);
@@ -827,19 +855,21 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         sig_map.insert(sig.name.copy(), Sig::from((sig, idx)));
     }
 
+    let (mut ns, order) = crate::utils::Traversal::from(ns).take();
     let main_idx = ns.main_idx();
     let mut ctx = ir::Context::default();
     for (_, exts) in ns.externs {
         for ext in exts {
             let idx = sig_map.get(&ext.name).unwrap().idx;
-            let ir_ext = BuildCtx::external(idx, ext);
+            let ir_ext = BuildCtx::external(&ctx, idx, ext);
             ctx.comps.checked_add(idx, ir_ext);
         }
     }
 
-    for (cidx, comp) in ns.components.into_iter().enumerate() {
+    for cidx in order.into_iter() {
+        let comp = std::mem::take(&mut ns.components[cidx]);
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
-        let ir_comp = BuildCtx::comp(comp, idx, &sig_map);
+        let ir_comp = BuildCtx::comp(&ctx, comp, idx, &sig_map);
         if Some(cidx) == main_idx {
             ctx.entrypoint = Some(idx);
         }
