@@ -33,11 +33,9 @@ impl MutCtx<Component> for Context {
     }
 }
 
+#[derive(Default)]
 /// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
-    /// Identifier for the component
-    idx: CompIdx,
-
     // Interned data. We store this on a per-component basis because events with the
     // same identifiers in different components are not equal.
     /// Interned expressions
@@ -71,20 +69,10 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn new(idx: CompIdx, is_ext: bool) -> Self {
+    pub fn new(is_ext: bool) -> Self {
         let mut comp = Self {
-            idx,
             is_ext,
-            ports: IndexStore::default(),
-            params: IndexStore::default(),
-            events: IndexStore::default(),
-            instances: IndexStore::default(),
-            invocations: IndexStore::default(),
-            info: IndexStore::default(),
-            exprs: Interned::default(),
-            times: Interned::default(),
-            props: Interned::default(),
-            cmds: Vec::default(),
+            ..Default::default()
         };
         // Allocate numbers and props now so we get reasonable indices.
         comp.num(0);
@@ -143,10 +131,6 @@ impl Component {
 
 /// Accessor methods
 impl Component {
-    pub fn idx(&self) -> CompIdx {
-        self.idx
-    }
-
     pub fn events(&self) -> &IndexStore<Event> {
         &self.events
     }
