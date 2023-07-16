@@ -4,7 +4,7 @@ use super::{
     MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeIdx,
     TimeSub,
 };
-use crate::utils::Idx;
+use crate::{ast, utils::Idx};
 
 #[derive(Default)]
 pub struct Context {
