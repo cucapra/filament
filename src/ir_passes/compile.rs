@@ -531,7 +531,7 @@ impl<'a> Context<'a> {
                 && Compile::u64(self.comp, dst.end) == 1,
             "Port bundles should have been compiled away."
         );
-        
+
         log::debug!("Compiling connect: {}", con);
 
         let (dst, _) = self.compile_port(dst.port);
