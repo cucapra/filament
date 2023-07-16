@@ -250,7 +250,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let e = ir::Event {
             delay: self.comp.num(0).into(),
             info,
-            has_interface: true,
+            has_interface: interface_port.is_some(),
         };
         let idx = self.comp.add(e);
         log::info!("Added event {} as {idx}", eb.event);
