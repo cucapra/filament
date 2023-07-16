@@ -289,20 +289,7 @@ impl Component {
         self.prop_params_acc(prop, &mut acc);
         acc
     }
-    /// Interface Ports in the component
-    pub fn interface_ports(&self) -> Vec<&ast::Id> {
-        self.events
-            .iter()
-            .filter_map(|(_, event)| event.interface_port)
-            .map(|info| {
-                if let Info::InterfacePort { name, .. } = self.get(info) {
-                    name
-                } else {
-                    unreachable!("Interface port contained incorrect info type")
-                }
-            })
-            .collect()
-    }
+
     /// Unannotated Ports in the component
     pub fn unannotated_ports(&self) -> Vec<(&ast::Id, u64)> {
         self.info
