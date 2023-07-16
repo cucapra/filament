@@ -254,7 +254,7 @@ impl<'a> Validate<'a> {
     ///     in the component signature
     fn instance(&self, iidx: ir::InstIdx) {
         // check (1)
-        let ir::Instance { comp, params } = &self.comp[iidx];
+        let ir::Instance { comp, params, .. } = &self.comp[iidx];
         for expr in params.iter() {
             // check (2)
             self.expr(*expr);

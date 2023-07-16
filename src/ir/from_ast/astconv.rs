@@ -43,6 +43,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 .map(|(_, b)| self.expr(b.clone()))
                 .collect_vec()
                 .into_boxed_slice(),
+            info: self.comp.add(ir::Info::instance(
+                name.copy(),
+                component.pos(),
+                name.pos(),
+            )),
         };
         let idx = self.comp.add(inst);
         self.inst_map.insert(name.copy(), idx);
@@ -60,12 +65,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             abstract_vars,
             ..
         } = inv;
-
         let inst = *self.inst_map.get(instance).unwrap();
+        let info = self.comp.add(ir::Info::invoke(
+            name.copy(),
+            instance.pos(),
+            name.pos(),
+        ));
         let inv = self.comp.add(ir::Invoke {
             inst,
             ports: vec![],  // Filled in later
             events: vec![], // Filled in later
+            info,
         });
         self.add_inv(name.copy(), inv);
 
@@ -835,5 +845,6 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         }
         ctx.comps.checked_add(idx, ir_comp);
     }
+
     ctx
 }
