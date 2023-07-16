@@ -39,7 +39,7 @@ impl Context {
         // finds the index of the port in the invocation
         let idx = inv.ports.iter()
             .filter(|&&p|
-                matches!(&comp.get(p).owner, super::PortOwner::Inv { dir: d, .. } if d == &dir.reverse())
+                matches!(&comp.get(p).owner, super::PortOwner::Inv { dir: d, .. } if d == dir)
             )
             .position(|&p| p == idx).unwrap();
 
