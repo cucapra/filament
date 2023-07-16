@@ -92,6 +92,16 @@ pub enum Direction {
     /// Output port
     Out,
 }
+
+impl Direction {
+    pub fn reverse(&self) -> Self {
+        match self {
+            Direction::In => Direction::Out,
+            Direction::Out => Direction::In,
+        }
+    }
+}
+
 impl fmt::Display for Direction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
