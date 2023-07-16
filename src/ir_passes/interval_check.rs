@@ -195,7 +195,7 @@ impl Visitor for IntervalCheck {
         // Substitute the parameter used in source with that in dst
         let binding = [(dst_t.idx, src_t.idx.expr(comp))];
         let dst_range =
-            ir::Subst::new(dst_t.range, &ir::Bind::new(&binding)).apply(comp);
+            ir::Subst::new(dst_t.range, &ir::Bind::new(binding)).apply(comp);
 
         // Assuming that lengths are equal
         let pre_req = src_t.len.equal(dst_t.len, comp).and(in_range, comp);

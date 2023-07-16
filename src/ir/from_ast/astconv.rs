@@ -2,8 +2,7 @@
 use super::build_ctx::InvPort;
 use super::{BuildCtx, Sig, SigMap};
 use crate::ir::{
-    Cmp, CompIdx, Ctx, EventIdx, ExprIdx, MutCtx, ParamIdx, PortIdx, PropIdx,
-    TimeIdx,
+    Cmp, Ctx, EventIdx, ExprIdx, MutCtx, ParamIdx, PortIdx, PropIdx, TimeIdx,
 };
 use crate::utils::GPosIdx;
 use crate::{ast, ir, utils::Binding};
@@ -814,12 +813,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         cmds
     }
 
-    fn external(
-        ctx: &ir::Context,
-        idx: CompIdx,
-        sig: ast::Signature,
-    ) -> ir::Component {
-        let mut ir_comp = ir::Component::new(idx, false);
+    fn external(ctx: &ir::Context, sig: ast::Signature) -> ir::Component {
+        let mut ir_comp = ir::Component::new(true);
         let binding = SigMap::default();
         let mut builder = BuildCtx::new(ctx, &mut ir_comp, &binding);
 
@@ -831,12 +826,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     fn comp(
-        ctx: &ir::Context,
+        ctx: &ir::Context, 
         comp: ast::Component,
-        idx: CompIdx,
         sigs: &'prog SigMap,
     ) -> ir::Component {
-        let mut ir_comp = ir::Component::new(idx, false);
+        let mut ir_comp = ir::Component::new(false);
         let mut builder = BuildCtx::new(ctx, &mut ir_comp, sigs);
 
         let mut cmds = builder.sig(comp.sig);
@@ -861,7 +855,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     for (_, exts) in ns.externs {
         for ext in exts {
             let idx = sig_map.get(&ext.name).unwrap().idx;
-            let ir_ext = BuildCtx::external(&ctx, idx, ext);
+            let ir_ext = BuildCtx::external(idx, ext);
             ctx.comps.checked_add(idx, ir_ext);
         }
     }
@@ -869,7 +863,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     for cidx in order.into_iter() {
         let comp = std::mem::take(&mut ns.components[cidx]);
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
-        let ir_comp = BuildCtx::comp(&ctx, comp, idx, &sig_map);
+        let ir_comp = BuildCtx::comp(comp, idx, &sig_map);
         if Some(cidx) == main_idx {
             ctx.entrypoint = Some(idx);
         }
