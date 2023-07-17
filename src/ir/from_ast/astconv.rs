@@ -208,8 +208,18 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     ) -> ParamIdx {
         let default = param.default.as_ref().map(|e| self.expr(e.clone()));
         let info = self.comp.add(ir::Info::param(param.name(), param.pos()));
+        let is_sig_param = ir::ParamOwner::Sig == owner;
         let idx = self.comp.add(ir::Param::new(owner, info, default));
         self.add_param(param.name(), idx);
+
+        // only add information if this is a signature defined parameter
+        if is_sig_param {
+            // If the component is expecting interface information, add it.
+            if let Some(src) = &mut self.comp.src_info {
+                src.params.insert(idx, param.name());
+            }
+        }
+
         idx
     }
 
@@ -253,6 +263,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             has_interface: interface_port.is_some(),
         };
         let idx = self.comp.add(e);
+
+        // If the component is expecting interface information and there is an interface port, add it.
+        if let (Some((name, _)), Some(src)) = (interface_port, &mut self.comp.src_info) {
+            src.interface_ports.insert(idx, name);
+        }
+
         log::info!("Added event {} as {idx}", eb.event);
         self.event_map.insert(*eb.event, idx);
         idx
@@ -265,6 +281,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     fn port(&mut self, pd: ast::PortDef, owner: ir::PortOwner) -> PortIdx {
+        let is_sig_port = matches!(owner, ir::PortOwner::Sig { .. });
         let (name, p) = match pd {
             ast::PortDef::Port {
                 name,
@@ -340,8 +357,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let param = self.comp.get_mut(p.live.idx);
         param.owner = ir::ParamOwner::bundle(idx);
 
+        // If this is a signature port, try adding it to the component's external interface
+        if is_sig_port {
+            // If the component is expecting interface information, add it.
+            if let Some(src) = &mut self.comp.src_info {
+                src.ports.insert(idx, name.copy());
+            }
+        }
+
         // Add the port to the current scope
         self.add_port(*name, idx);
+
         idx
     }
 
@@ -797,7 +823,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         cmds
     }
     fn external(idx: CompIdx, sig: ast::Signature) -> ir::Component {
-        let mut ir_comp = ir::Component::new(idx, Some(*sig.name.inner()));
+        let mut ir_comp = ir::Component::new(idx, true);
+        ir_comp.src_info = Some(ir::InterfaceSrc::new(sig.name.copy()));
         let binding = SigMap::default();
         let mut builder = BuildCtx::new(&mut ir_comp, &binding);
 
@@ -812,8 +839,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         comp: ast::Component,
         idx: CompIdx,
         sigs: &'prog SigMap,
+        src_name: Option<ast::Id>,
     ) -> ir::Component {
-        let mut ir_comp = ir::Component::new(idx, None);
+        let mut ir_comp = ir::Component::new(idx, false);
+        ir_comp.src_info = src_name.map(ir::InterfaceSrc::new);
         let mut builder = BuildCtx::new(&mut ir_comp, sigs);
 
         let mut cmds = builder.sig(comp.sig);
@@ -845,10 +874,13 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
 
     for (cidx, comp) in ns.components.into_iter().enumerate() {
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
-        let ir_comp = BuildCtx::comp(comp, idx, &sig_map);
-        if Some(cidx) == main_idx {
+        let src_name = if Some(cidx) == main_idx {
             ctx.entrypoint = Some(idx);
-        }
+            Some(comp.sig.name.copy())
+        } else {
+            None
+        };
+        let ir_comp = BuildCtx::comp(comp, idx, &sig_map, src_name);
         ctx.comps.checked_add(idx, ir_comp);
     }
 

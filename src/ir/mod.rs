@@ -13,7 +13,7 @@ mod time;
 mod utils;
 mod validate;
 
-pub use comp::{Component, Context};
+pub use comp::{Component, Context, InterfaceSrc};
 pub use control::{Command, Connect, EventBind, If, Instance, Invoke, Loop};
 pub use ctx::{Ctx, MutCtx};
 pub use expr::Expr;

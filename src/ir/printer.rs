@@ -205,11 +205,14 @@ impl Printer<'_> {
         indent: usize,
         f: &mut F,
     ) -> io::Result<()> {
-        match &comp.src_ext {
-            Some(name) => write!(f, "ext {} ", name)?,
-            None => (),
+        if comp.is_ext {
+            write!(f, "ext ")?;
         };
-        write!(f, "comp {}[", comp.idx())?;
+        write!(f, "comp {}", comp.idx())?;
+        if let Some(info) = &comp.src_info {
+            write!(f, " ({})", info.name)?
+        }
+        write!(f, "[")?;
         for pos in comp
             .params()
             .iter()

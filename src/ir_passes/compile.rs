@@ -65,17 +65,9 @@ impl Compile {
     /// Expects the [ir::ExprIdx] to either be a singular constant or an abstract variable.
     fn width(comp: &ir::Component, expr: ir::ExprIdx) -> calyx::Width {
         match comp.get(expr) {
-            ir::Expr::Param(p) => {
-                if let ir::Info::Param { name, .. } =
-                    comp.get(comp.get(*p).info)
-                {
-                    calyx::Width::Param {
-                        value: name.as_ref().into(),
-                    }
-                } else {
-                    unreachable!("Incorrect info type for param")
-                }
-            }
+            ir::Expr::Param(p) => calyx::Width::Param {
+                value: Compile::param_name(comp, *p).into(),
+            },
             ir::Expr::Concrete(val) => calyx::Width::Const { value: *val },
             ir::Expr::Bin { .. } | ir::Expr::Fn { .. } => {
                 panic!("Port width must be a parameter or constant.")
@@ -179,16 +171,9 @@ impl Compile {
 
     /// Gets the component name given an [ir::Context] and an [ir::CompIdx]
     fn comp_name(ctx: &ir::Context, idx: ir::CompIdx) -> String {
-        // main component
-        if Some(idx) == ctx.entrypoint {
-            "main".to_string()
-        } else {
-            let comp = ctx.comps.get(idx);
-            match comp.src_ext {
-                // component is non-external, generate name from CompIdx
-                None => format!("comp{}", idx.get()),
-                Some(id) => id.to_string(),
-            }
+        match &ctx.comps.get(idx).src_info {
+            Some(src_info) => src_info.name.to_string(),
+            None => format!("comp{}", idx.get()),
         }
     }
 
@@ -201,12 +186,8 @@ impl Compile {
 
         match &p.owner {
             ir::PortOwner::Sig { .. } => {
-                if ctx.is_main(comp.idx()) || comp.is_primitive() {
-                    if let ir::Info::Port { name, .. } = comp.get(p.info) {
-                        name.as_ref().into()
-                    } else {
-                        unreachable!("Incorrect info type for parameter");
-                    }
+                if let Some(src) = &comp.src_info {
+                    src.ports.get(&idx).unwrap().to_string()
                 } else {
                     format!("p{}", idx.get())
                 }
@@ -220,19 +201,25 @@ impl Compile {
         }
     }
 
+    fn param_name(comp: &ir::Component, idx: ir::ParamIdx) -> String {
+        if let Some(src) = &comp.src_info {
+            src.params.get(&idx).unwrap().to_string()
+        } else {
+            format!("pr{}", idx.get())
+        }
+    }
+
     // Gets the name associated with an event's interface port if it exists.
     fn interface_port_name(
         comp: &ir::Component,
-        event: ir::EventIdx,
+        idx: ir::EventIdx,
     ) -> Option<String> {
-        let event = comp.get(event);
-
-        if event.has_interface {
-            let ir::Info::Event { interface_name: Some(name), .. } = comp.get(event.info) else {
-                unreachable!("Event has incorrect info.")
-            };
-
-            Some(name.as_ref().into())
+        if comp.get(idx).has_interface {
+            Some(if let Some(src) = &comp.src_info {
+                src.interface_ports.get(&idx).unwrap().to_string()
+            } else {
+                format!("ev{}", idx.get())
+            })
         } else {
             None
         }
@@ -246,13 +233,7 @@ impl Compile {
                 .params()
                 .iter()
                 .filter(|(_, p)| ir::ParamOwner::Sig == p.owner)
-                .map(|(_, p)| {
-                    if let ir::Info::Param { name, .. } = comp.get(p.info) {
-                        name.as_ref().into()
-                    } else {
-                        unreachable!("Incorrect info type for parameter");
-                    }
-                })
+                .map(|(idx, _)| Compile::param_name(comp, idx).into())
                 .collect(),
             signature: Compile::ports(
                 ctx,

@@ -67,6 +67,25 @@ impl Context {
     }
 }
 
+/// Externally facing interface name information for components.
+pub struct InterfaceSrc {
+    pub name: ast::Id,
+    pub ports: HashMap<PortIdx, ast::Id>,
+    pub params: HashMap<ParamIdx, ast::Id>,
+    pub interface_ports: HashMap<EventIdx, ast::Id>,
+}
+
+impl InterfaceSrc {
+    pub fn new(name: ast::Id) -> Self {
+        Self {
+            name,
+            ports: HashMap::new(),
+            params: HashMap::new(),
+            interface_ports: HashMap::new(),
+        }
+    }
+}
+
 /// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
     /// Identifier for the component
@@ -100,15 +119,18 @@ pub struct Component {
 
     /// Information tracked by the component
     info: IndexStore<Info>,
-    /// `Some(name)` if this is an external component, `None` otherwise.
-    pub src_ext: Option<ast::Id>,
+    /// Is this an external component
+    pub is_ext: bool,
+    /// Externally facing interface information, used to preserve interface in compilation.
+    /// Must be `Some` for toplevel components and externals.
+    pub src_info: Option<InterfaceSrc>,
 }
 
 impl Component {
-    pub fn new(idx: CompIdx, src_ext: Option<ast::Id>) -> Self {
+    pub fn new(idx: CompIdx, is_ext: bool) -> Self {
         let mut comp = Self {
             idx,
-            src_ext,
+            is_ext,
             ports: IndexStore::default(),
             params: IndexStore::default(),
             events: IndexStore::default(),
@@ -119,6 +141,7 @@ impl Component {
             times: Interned::default(),
             props: Interned::default(),
             cmds: Vec::default(),
+            src_info: None,
         };
         // Allocate numbers and props now so we get reasonable indices.
         comp.num(0);
@@ -166,12 +189,6 @@ impl Component {
         } else {
             Some(Fact::assume(prop, info).into())
         }
-    }
-
-    #[inline]
-    /// Returns true if the component is a primitive
-    pub fn is_primitive(&self) -> bool {
-        self.src_ext.is_some()
     }
 
     /// Panic with an error message and display the current state of the Component. Prefer this over `panic!` when possible.
