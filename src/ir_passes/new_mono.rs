@@ -1,4 +1,4 @@
-use crate::ir::{self, Ctx, MutCtx, IndexStore};
+use crate::ir::{self, Ctx, IndexStore, MutCtx};
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
@@ -88,7 +88,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
     /// Monomorphize the `inst` (owned by self.underlying) and add it to `self.base`, and return the corresponding index
     fn instance(&mut self, inst: ir::InstIdx) -> ir::InstIdx {
-        let ir::Instance { comp, params } = self.underlying.get(inst);
+        let ir::Instance { comp, params, info } = self.underlying.get(inst);
         let conc_params = params
             .iter()
             .map(|p| self.expr(*p).as_concrete(&self.base).unwrap())
@@ -97,6 +97,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let new_inst = ir::Instance {
             comp,
             params: params.into_iter().map(|n| self.base.num(n)).collect(),
+            info: *info,
         };
         self.base.add(new_inst)
     }
@@ -140,7 +141,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let port = self.base.get_mut(new_port);
         port.live = mono_liveness; // update
-        port.width = mono_width;   // update
+        port.width = mono_width; // update
 
         new_port
     }
@@ -194,7 +195,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         // Need to monomorphize all parts
         let ir::Event {
             delay,
-            owner,
             info,
             interface_port,
         } = self.underlying.get(event);
@@ -212,6 +212,16 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         };
 
         self.base.add(mono_time)
+    }
+
+    fn timesub(&mut self, timesub: &ir::TimeSub) -> ir::TimeSub {
+        match timesub {
+            ir::TimeSub::Unit(expr) => ir::TimeSub::Unit(self.expr(*expr)),
+            ir::TimeSub::Sym { l, r } => ir::TimeSub::Sym {
+                l: self.time(*l),
+                r: self.time(*r),
+            },
+        }
     }
 
     /// Monomorphize the delay (owned by self.underlying) and return one that is meaningful in `self.base`
@@ -235,6 +245,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             inst,
             ports,
             events,
+            info,
         } = self.underlying.get(inv);
 
         // Instance - replace the instance owned by self.underlying with one owned by self.base
@@ -243,13 +254,15 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let mono_ports = ports.iter().map(|p| self.port(*p)).collect_vec();
 
         // Events
-        let mono_events = events.iter().map(|e| self.event(*e)).collect_vec();
+        let mono_events =
+            events.iter().map(|e| self.eventbind(e)).collect_vec();
 
         // Build the new invoke, add it to self.base
         let mono_inv = self.base.add(ir::Invoke {
             inst: *inst, // PLACEHOLDER
             ports: mono_ports,
             events: mono_events,
+            info: *info,
         });
 
         // Update the mapping from underlying invokes to base invokes
@@ -277,13 +290,13 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     }
 
     fn access(&mut self, acc: &ir::Access) -> ir::Access {
-        let ir::Access {port, start, end} = acc;
+        let ir::Access { port, start, end } = acc;
 
         todo!();
     }
 
     fn connect(&mut self, con: &ir::Connect) -> ir::Connect {
-        let ir::Connect {src, dst, info} = con;
+        let ir::Connect { src, dst, info } = con;
 
         let mono_src = self.access(src);
         let mono_dst = self.access(dst);
@@ -291,12 +304,17 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         ir::Connect {
             src: mono_src,
             dst: mono_dst,
-            info: info.clone()
+            info: info.clone(),
         }
     }
 
     fn forloop(&mut self, lp: &ir::Loop) -> ir::Loop {
-        let ir::Loop {index, start, end, body} = lp;
+        let ir::Loop {
+            index,
+            start,
+            end,
+            body,
+        } = lp;
 
         let mono_index = self.param(*index);
         let mono_start = self.expr(*start);
@@ -307,41 +325,35 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             index: mono_index,
             start: mono_start,
             end: mono_end,
-            body: mono_body
+            body: mono_body,
         }
     }
 
     fn if_stmt(&mut self, if_stmt: &ir::If) -> ir::If {
-        let ir::If {cond, then, alt} = if_stmt;
+        let ir::If { cond, then, alt } = if_stmt;
 
         let cond = self.prop(*cond);
         let then = then.iter().map(|cmd| self.command(cmd)).collect_vec();
         let alt = alt.iter().map(|cmd| self.command(cmd)).collect_vec();
 
-        ir::If {
-            cond,
-            then,
-            alt
-        }
+        ir::If { cond, then, alt }
     }
 
     fn fact(&mut self, fact: &ir::Fact) -> ir::Fact {
-        let ir::Fact {prop, reason, ..} = fact;
+        let ir::Fact { prop, reason, .. } = fact;
 
         let prop = self.prop(*prop);
         ir::Fact::assert(prop, reason.clone())
     }
 
     fn eventbind(&mut self, eb: &ir::EventBind) -> ir::EventBind {
-        let ir::EventBind {event, arg, info} = eb;
+        let ir::EventBind { arg, info, delay } = eb;
 
-        let event = self.event(*event);
+        let delay = self.timesub(delay);
         let arg = self.time(*arg);
         let info = info.clone();
 
-        ir::EventBind {
-            event, arg, info
-        }
+        ir::EventBind { arg, info, delay }
     }
 
     fn command(&mut self, cmd: &ir::Command) -> ir::Command {
@@ -352,7 +364,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             ir::Command::ForLoop(lp) => self.forloop(lp).into(),
             ir::Command::If(if_stmt) => self.if_stmt(if_stmt).into(),
             ir::Command::Fact(fact) => self.fact(fact).into(),
-            ir::Command::EventBind(eb) => self.eventbind(eb).into(),
         }
     }
 
@@ -380,13 +391,12 @@ impl<'a> Monomorphize<'a> {
         Monomorphize {
             ctx: ir::Context {
                 comps: IndexStore::default(),
-                entrypoint: None
+                entrypoint: None,
             },
             old: &old,
             externals: vec![],
             processed: HashMap::new(),
-            queue: LinkedHashMap::new()
-
+            queue: LinkedHashMap::new(),
         }
     }
 }

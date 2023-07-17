@@ -1,8 +1,7 @@
 //! Convert the frontend AST to the IR.
 use super::{BuildCtx, Sig, SigMap};
 use crate::ir::{
-    Cmp, CompIdx, Ctx, EventIdx, ExprIdx, MutCtx, ParamIdx, PortIdx, PropIdx,
-    TimeIdx,
+    Cmp, Ctx, EventIdx, ExprIdx, MutCtx, ParamIdx, PortIdx, PropIdx, TimeIdx,
 };
 use crate::utils::GPosIdx;
 use crate::{ast, ir, utils::Binding};
@@ -43,6 +42,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 .map(|(_, b)| self.expr(b.clone()))
                 .collect_vec()
                 .into_boxed_slice(),
+            info: self.comp.add(ir::Info::instance(
+                name.copy(),
+                component.pos(),
+                name.pos(),
+            )),
         };
         let idx = self.comp.add(inst);
         self.inst_map.insert(name.copy(), idx);
@@ -60,12 +64,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             abstract_vars,
             ..
         } = inv;
-
         let inst = *self.inst_map.get(instance).unwrap();
+        let info = self.comp.add(ir::Info::invoke(
+            name.copy(),
+            instance.pos(),
+            name.pos(),
+        ));
         let inv = self.comp.add(ir::Invoke {
             inst,
             ports: vec![],  // Filled in later
             events: vec![], // Filled in later
+            info,
         });
         self.add_inv(name.copy(), inv);
 
@@ -219,11 +228,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     /// Forward declare an event without adding its delay. We need to do this
     /// since delays of events may mention the event itself.
-    fn declare_event(
-        &mut self,
-        eb: &ast::EventBind,
-        owner: ir::EventOwner,
-    ) -> EventIdx {
+    fn declare_event(&mut self, eb: &ast::EventBind) -> EventIdx {
         let info = self.comp.add(ir::Info::event(
             eb.event.copy(),
             eb.event.pos(),
@@ -232,33 +237,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         // Add a fake delay of 0.
         let e = ir::Event {
             delay: self.comp.num(0).into(),
-            owner,
             info,
             interface_port: None,
         };
         let idx = self.comp.add(e);
         log::info!("Added event {} as {idx}", eb.event);
         self.event_map.insert(*eb.event, idx);
-        idx
-    }
-
-    /// Add an event to the component without adding it the current scope.
-    fn event(&mut self, eb: ast::EventBind, owner: ir::EventOwner) -> EventIdx {
-        let info = self.comp.add(ir::Info::event(
-            eb.event.copy(),
-            eb.event.pos(),
-            eb.delay.pos(),
-        ));
-        let delay = self.timesub(eb.delay.take());
-        let e = ir::Event {
-            delay,
-            owner,
-            info,
-            interface_port: None,
-        };
-        let idx = self.comp.add(e);
-        log::info!("Added event {} as {idx}", eb.event);
-        // self.event_map.insert(*eb.event, idx);
         idx
     }
 
@@ -414,7 +398,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
         // Declare the events first
         for event in &sig.events {
-            self.declare_event(event.inner(), ir::EventOwner::Sig);
+            self.declare_event(event.inner());
         }
         // Then define their delays correctly
         for event in &sig.events {
@@ -659,8 +643,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
 
         // Events defined by the invoke
-        let ebs: Vec<ir::Command> = sig
-            .events
+        sig.events
             .iter()
             .zip_longest(abstract_vars.iter())
             .map(|pair| match pair {
@@ -676,26 +659,25 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     unreachable!("More arguments than events.")
                 }
             })
-            .map(|(event, time, pos)| {
+            .for_each(|(event, time, pos)| {
+                let ev_delay_loc = event.delay.pos();
                 let resolved = event
                     .clone()
                     .resolve_exprs(&param_binding)
                     .resolve_event(&event_binding);
 
-                let info = self.comp.add(ir::Info::event_bind(pos));
-
+                let info =
+                    self.comp.add(ir::Info::event_bind(ev_delay_loc, pos));
                 let arg = self.time(time.clone());
-                let event = self.event(resolved, ir::EventOwner::Inv { inv });
+                let event = self.timesub(resolved.delay.take());
+                let eb = ir::EventBind::new(event, arg, info);
                 let invoke = self.comp.get_mut(inv);
-                invoke.events.push(event);
-                ir::EventBind::new(event, arg, info).into()
-            })
-            .collect();
+                invoke.events.push(eb);
+            });
 
         connects
             .into_iter()
             .chain(Some(ir::Command::from(inv)))
-            .chain(ebs)
             .chain(cons)
             .collect_vec()
     }
@@ -804,8 +786,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         cmds
     }
 
-    fn external(idx: CompIdx, sig: ast::Signature) -> ir::Component {
-        let mut ir_comp = ir::Component::new(false);
+    fn external(sig: ast::Signature) -> ir::Component {
+        let mut ir_comp = ir::Component::new(true);
         let binding = SigMap::default();
         let mut builder = BuildCtx::new(&mut ir_comp, &binding);
 
@@ -816,11 +798,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         ir_comp
     }
 
-    fn comp(
-        comp: ast::Component,
-        idx: CompIdx,
-        sigs: &'prog SigMap,
-    ) -> ir::Component {
+    fn comp(comp: ast::Component, sigs: &'prog SigMap) -> ir::Component {
         let mut ir_comp = ir::Component::new(false);
         let mut builder = BuildCtx::new(&mut ir_comp, sigs);
 
@@ -848,7 +826,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     for (_, exts) in ns.externs {
         for ext in exts {
             let idx = sig_map.get(&ext.name).unwrap().idx;
-            let ir_ext = BuildCtx::external(idx, ext);
+            let ir_ext = BuildCtx::external(ext);
             ctx.comps.checked_add(idx, ir_ext);
         }
     }
@@ -857,11 +835,12 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         // This is the where we use the CompIdx generated in Sig::from.
         // We use the `checked_add` method to panic if we add components in the wrong order.
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
-        let ir_comp = BuildCtx::comp(comp, idx, &sig_map);
+        let ir_comp = BuildCtx::comp(comp, &sig_map);
         if Some(cidx) == main_idx {
             ctx.entrypoint = Some(idx);
         }
         ctx.comps.checked_add(idx, ir_comp);
     }
+
     ctx
 }

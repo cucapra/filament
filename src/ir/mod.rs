@@ -26,8 +26,8 @@ pub use idxs::{
 pub use info::{Info, Reason};
 pub use printer::{DisplayCtx, Printer};
 pub use structure::{
-    Access, Direction, Event, EventOwner, Liveness, Param, ParamOwner, Port,
-    PortOwner, Range,
+    Access, Direction, Event, Liveness, Param, ParamOwner, Port, PortOwner,
+    Range,
 };
 pub use subst::{Bind, Foldable, Subst};
 pub use time::{Time, TimeSub};

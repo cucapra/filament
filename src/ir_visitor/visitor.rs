@@ -87,14 +87,6 @@ where
         Action::Continue
     }
 
-    fn event_binding(
-        &mut self,
-        _: &mut ir::EventBind,
-        _comp: &mut ir::Component,
-    ) -> Action {
-        Action::Continue
-    }
-
     /// Executed before the body of the loop is visited
     fn start_loop(
         &mut self,
@@ -160,7 +152,6 @@ where
             ir::Command::ForLoop(l) => self.do_loop(l, comp),
             ir::Command::If(i) => self.do_if(i, comp),
             ir::Command::Fact(f) => self.fact(f, comp),
-            ir::Command::EventBind(eb) => self.event_binding(eb, comp),
         }
     }
 
