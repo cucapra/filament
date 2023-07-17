@@ -27,6 +27,12 @@ struct MonoDeferred<'a, 'pass: 'a> {
 }
 
 impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
+    fn gen_comp(&mut self) {
+        for cmd in &self.underlying.cmds {
+            self.command(&cmd);
+        }
+    }
+
     /// Translates a ParamIdx defined by `underlying` to corresponding one in `base`
     /// Assumes that `param` is not sig-owned, because then it would be defined in the binding
     fn param(&mut self, param: ir::ParamIdx) -> ir::ParamIdx {
@@ -349,6 +355,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             ir::Command::EventBind(eb) => self.eventbind(eb).into(),
         }
     }
+
+
 }
 
 /// Monomorphize the Filament program
@@ -426,7 +434,7 @@ impl Monomorphize<'_> {
             .zip(params)
             .collect_vec();
         let base = std::mem::take(self.ctx.get_mut(base));
-        MonoDeferred {
+        let mono = MonoDeferred {
             base,
             underlying,
             binding: ir::Bind::new(binding),
