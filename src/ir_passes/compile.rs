@@ -228,12 +228,8 @@ impl Compile {
         let event = comp.get(event);
 
         if event.has_interface {
-            let ir::Info::Event { interface_port: Some(interface_info), .. } = comp.get(event.info) else {
+            let ir::Info::Event { interface_name: Some(name), .. } = comp.get(event.info) else {
                 unreachable!("Event has incorrect info.")
-            };
-
-            let ir::Info::InterfacePort { name, .. } = comp.get(*interface_info) else {
-                unreachable!("Interface port had incorrect info type.")
             };
 
             Some(name.as_ref().into())
