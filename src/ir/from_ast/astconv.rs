@@ -265,7 +265,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let idx = self.comp.add(e);
 
         // If the component is expecting interface information and there is an interface port, add it.
-        if let (Some((name, _)), Some(src)) = (interface_port, &mut self.comp.src_info) {
+        if let (Some((name, _)), Some(src)) =
+            (interface_port, &mut self.comp.src_info)
+        {
             src.interface_ports.insert(idx, name);
         }
 
