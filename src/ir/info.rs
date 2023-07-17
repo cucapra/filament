@@ -22,7 +22,9 @@ pub enum Info {
         name: ast::Id,
         bind_loc: GPosIdx,
         delay_loc: GPosIdx,
-        interface_port: Option<super::InfoIdx>,
+        /// interface port information
+        interface_name: Option<ast::Id>,
+        interface_bind_loc: Option<GPosIdx>,
     },
     /// For [super::EventBind]
     EventBind {
@@ -56,12 +58,6 @@ pub enum Info {
         width_loc: GPosIdx,
         live_loc: GPosIdx,
     },
-    /// Represents an interface port
-    InterfacePort {
-        /// Surface-level name
-        name: ast::Id,
-        bind_loc: GPosIdx,
-    },
     UnannotatedPort {
         name: ast::Id,
         width: u64,
@@ -81,13 +77,14 @@ impl Info {
         name: ast::Id,
         bind_loc: GPosIdx,
         delay_loc: GPosIdx,
-        interface_port: Option<super::InfoIdx>,
+        interface_port: Option<(ast::Id, GPosIdx)>,
     ) -> Self {
         Self::Event {
             name,
             bind_loc,
             delay_loc,
-            interface_port,
+            interface_name: interface_port.map(|(n, _)| n),
+            interface_bind_loc: interface_port.map(|(_, l)| l),
         }
     }
 
@@ -134,10 +131,6 @@ impl Info {
             width_loc,
             live_loc,
         }
-    }
-
-    pub fn interface_port(name: ast::Id, bind_loc: GPosIdx) -> Self {
-        Self::InterfacePort { name, bind_loc }
     }
 
     pub fn unannotated_port(name: ast::Id, width: u64) -> Self {
