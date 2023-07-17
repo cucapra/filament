@@ -226,7 +226,7 @@ impl Access {
             [(live.idx, live.idx.expr(ctx).add(self.start, ctx))]
         };
 
-        let range = Subst::new(live.range, &Bind::new(&binding)).apply(ctx);
+        let range = Subst::new(live.range, &Bind::new(binding)).apply(ctx);
         // Shrink the bundle type based on the access
         let len = self.end.sub(self.start, ctx);
         Liveness {

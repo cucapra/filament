@@ -202,13 +202,18 @@ impl Printer<'_> {
     fn sig<F: io::Write>(
         &self,
         comp: &ir::Component,
+        idx: Option<ir::CompIdx>,
         indent: usize,
         f: &mut F,
     ) -> io::Result<()> {
         if comp.is_ext {
             write!(f, "ext ")?;
         };
-        write!(f, "comp {}", comp.idx())?;
+        if let Some(idx) = idx {
+            write!(f, "comp {}", idx)?;
+        } else {
+            write!(f, "comp")?;
+        }
         if let Some(info) = &comp.src_info {
             write!(f, " ({})", info.name)?
         }
@@ -385,9 +390,13 @@ impl Printer<'_> {
         Ok(())
     }
 
-    pub fn comp(ctx: &ir::Component, f: &mut impl io::Write) -> io::Result<()> {
+    pub fn comp(
+        ctx: &ir::Component,
+        idx: Option<ir::CompIdx>,
+        f: &mut impl io::Write,
+    ) -> io::Result<()> {
         let printer = ir::Printer { ctx };
-        printer.sig(ctx, 0, f)?;
+        printer.sig(ctx, idx, 0, f)?;
         for (idx, param) in ctx.params().iter() {
             Printer::local_param(idx, param, 2, ctx, f)?;
         }
@@ -415,7 +424,7 @@ impl Printer<'_> {
     /// Get a string representation of a component
     pub fn comp_str(c: &ir::Component) -> String {
         let mut buf = Vec::new();
-        Printer::comp(c, &mut buf).unwrap();
+        Printer::comp(c, None, &mut buf).unwrap();
         String::from_utf8(buf).unwrap()
     }
 
@@ -423,8 +432,8 @@ impl Printer<'_> {
         ctx: &ir::Context,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
-        for (_, comp) in ctx.comps.iter() {
-            Printer::comp(comp, f)?
+        for (idx, comp) in ctx.comps.iter() {
+            Printer::comp(comp, Some(idx), f)?
         }
         Ok(())
     }

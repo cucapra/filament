@@ -421,6 +421,7 @@ impl Binding {
 
 struct Context<'a> {
     ctx: &'a ir::Context,
+    cidx: ir::CompIdx,
     comp: &'a ir::Component,
     builder: calyx::Builder<'a>,
     lib: &'a calyx::LibrarySignatures,
@@ -442,6 +443,7 @@ impl<'a> Context<'a> {
     ) -> Self {
         Context {
             ctx,
+            cidx: idx,
             comp: ctx.comps.get(idx),
             binding,
             builder,
@@ -614,7 +616,7 @@ impl<'a> Context<'a> {
     {
         format!(
             "{}_{}{}",
-            Compile::comp_name(self.ctx, self.comp.idx()),
+            Compile::comp_name(self.ctx, self.cidx),
             <utils::Idx::<T> as utils::IdxPre>::prefix(),
             idx.get()
         )

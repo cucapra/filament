@@ -1,8 +1,7 @@
 //! Convert the frontend AST to the IR.
 use super::{BuildCtx, Sig, SigMap};
 use crate::ir::{
-    Cmp, CompIdx, Ctx, EventIdx, ExprIdx, MutCtx, ParamIdx, PortIdx, PropIdx,
-    TimeIdx,
+    Cmp, Ctx, EventIdx, ExprIdx, MutCtx, ParamIdx, PortIdx, PropIdx, TimeIdx,
 };
 use crate::utils::GPosIdx;
 use crate::{ast, ir, utils::Binding};
@@ -824,8 +823,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
         cmds
     }
-    fn external(idx: CompIdx, sig: ast::Signature) -> ir::Component {
-        let mut ir_comp = ir::Component::new(idx, true);
+
+    fn external(sig: ast::Signature) -> ir::Component {
+        let mut ir_comp = ir::Component::new(true);
         ir_comp.src_info = Some(ir::InterfaceSrc::new(sig.name.copy()));
         let binding = SigMap::default();
         let mut builder = BuildCtx::new(&mut ir_comp, &binding);
@@ -839,11 +839,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     fn comp(
         comp: ast::Component,
-        idx: CompIdx,
         sigs: &'prog SigMap,
         src_name: Option<ast::Id>,
     ) -> ir::Component {
-        let mut ir_comp = ir::Component::new(idx, false);
+        let mut ir_comp = ir::Component::new(false);
         ir_comp.src_info = src_name.map(ir::InterfaceSrc::new);
         let mut builder = BuildCtx::new(&mut ir_comp, sigs);
 
@@ -868,7 +867,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     for (file, exts) in ns.externs {
         for ext in exts {
             let idx = sig_map.get(&ext.name).unwrap().idx;
-            let ir_ext = BuildCtx::external(idx, ext);
+            let ir_ext = BuildCtx::external(ext);
             ctx.comps.checked_add(idx, ir_ext);
             ctx.externals.entry(file.clone()).or_default().push(idx);
         }
@@ -882,7 +881,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         } else {
             None
         };
-        let ir_comp = BuildCtx::comp(comp, idx, &sig_map, src_name);
+        let ir_comp = BuildCtx::comp(comp, &sig_map, src_name);
         ctx.comps.checked_add(idx, ir_comp);
     }
 
