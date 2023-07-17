@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use topological_sort::TopologicalSort;
 
+use super::Ctx;
 use crate::utils::Idx;
 use std::{
     collections::HashMap, fmt::Display, iter::IntoIterator,
@@ -344,5 +345,60 @@ impl Traversal {
             }
             Command::Connect(_) | Command::Invoke(_) | Command::Fact(_) => (),
         }
+    }
+}
+
+#[derive(Copy)]
+/// A reference to a foreign key and its owner.
+/// On its own, a foreign key is not very useful. We need provide it with a context
+/// that can resolve the owner which can then resolve the underlying type.
+/// However, we do not provide a way to extract the underyling `T`.
+pub struct Foreign<T, C> {
+    /// A reference to the underlying value.
+    key: Idx<T>,
+    /// A reference to the owner of the foreign key.
+    owner: Idx<C>,
+}
+
+impl<T, C> Foreign<T, C> {
+    pub fn new(key: Idx<T>, owner: Idx<C>) -> Self {
+        Self { key, owner }
+    }
+
+    /// Map over the foreign key using the given context.
+    /// We require a context to resolve the owner of the foreign key.
+    pub fn map<X, F>(&self, mut f: F, ctx: impl Ctx<C>) -> Foreign<X, C>
+    where
+        F: FnMut(Idx<T>, &C) -> Idx<X>,
+    {
+        let c_resolved = ctx.get(self.owner);
+        Foreign {
+            key: f(self.key, c_resolved),
+            owner: self.owner,
+        }
+    }
+}
+
+impl<T, C> Clone for Foreign<T, C> {
+    fn clone(&self) -> Self {
+        Self {
+            key: self.key,
+            owner: self.owner,
+        }
+    }
+}
+
+impl<T, C> PartialEq for Foreign<T, C> {
+    fn eq(&self, other: &Self) -> bool {
+        self.key == other.key && self.owner == other.owner
+    }
+}
+
+impl<T, C> Eq for Foreign<T, C> {}
+
+impl<T, C> std::hash::Hash for Foreign<T, C> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.key.hash(state);
+        self.owner.hash(state);
     }
 }

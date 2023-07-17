@@ -32,7 +32,7 @@ impl Context {
         idx: PortIdx,
     ) -> PortIdx {
         let port = comp.get(idx);
-        let super::PortOwner::Inv { inv, dir } = &port.owner else {
+        let super::PortOwner::Inv { inv, dir, .. } = &port.owner else {
             unreachable!("port owner is not an invocation");
         };
         let inv = comp.get(*inv);
@@ -232,6 +232,14 @@ impl Component {
 
     pub fn props(&self) -> &Interned<Prop> {
         &self.props
+    }
+
+    pub fn inputs(&self) -> impl Iterator<Item = (PortIdx, &Port)> {
+        self.ports.iter().filter(|(_, p)| p.is_sig_in())
+    }
+
+    pub fn outputs(&self) -> impl Iterator<Item = (PortIdx, &Port)> {
+        self.ports.iter().filter(|(_, p)| p.is_sig_out())
     }
 }
 

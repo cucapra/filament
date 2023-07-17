@@ -31,5 +31,5 @@ pub use structure::{
 };
 pub use subst::{Bind, Foldable, Subst};
 pub use time::{Time, TimeSub};
-pub use utils::{DenseIndexInfo, IndexStore, Interned, Traversal};
+pub use utils::{DenseIndexInfo, Foreign, IndexStore, Interned, Traversal};
 pub use validate::Validate;
