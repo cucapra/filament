@@ -59,11 +59,36 @@ impl std::ops::Index<&Id> for SigMap {
     }
 }
 
-/// The canonical name of a port defined by (inv, port).
-type InvPort = (ir::PortOwner, Id);
+#[derive(Eq, PartialEq, Hash, Clone, Debug)]
+/// A custom struct used to index ports
+pub(super) enum InvPort {
+    Sig(ir::Direction, Id),
+    Inv(ir::InvIdx, ir::Direction, Id),
+    Local(Id),
+}
+
+impl InvPort {
+    fn name(&self) -> &Id {
+        match self {
+            Self::Sig(_, id) | Self::Inv(_, _, id) | Self::Local(id) => id,
+        }
+    }
+}
+
+impl std::fmt::Display for InvPort {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Sig(dir, id) => write!(f, "{}({})", dir, id),
+            Self::Inv(inv, dir, id) => write!(f, "{}({} in {})", dir, id, inv),
+            Self::Local(id) => write!(f, "{}", id),
+        }
+    }
+}
 
 /// Context used while building the IR.
 pub(super) struct BuildCtx<'ctx, 'prog> {
+    /// Unfinished context
+    pub ctx: &'ctx ir::Context,
     pub comp: &'ctx mut ir::Component,
     pub sigs: &'prog SigMap,
 
@@ -85,8 +110,13 @@ pub(super) struct BuildCtx<'ctx, 'prog> {
     name_idx: u32,
 }
 impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
-    pub fn new(comp: &'ctx mut ir::Component, sigs: &'prog SigMap) -> Self {
+    pub fn new(
+        ctx: &'ctx ir::Context,
+        comp: &'ctx mut ir::Component,
+        sigs: &'prog SigMap,
+    ) -> Self {
         Self {
+            ctx,
             comp,
             sigs,
             name_idx: 0,
@@ -148,24 +178,27 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     /// Add a new port to the ctx
     pub fn add_port(&mut self, name: Id, port: PortIdx) {
         let owner = self.comp.get(port).owner.clone();
-        self.port_map.insert((owner, name), port);
+        let owner = match owner {
+            ir::PortOwner::Sig { dir } => InvPort::Sig(dir, name),
+            ir::PortOwner::Inv { inv, dir, .. } => InvPort::Inv(inv, dir, name),
+            ir::PortOwner::Local => InvPort::Local(name),
+        };
+        self.port_map.insert(owner, port);
     }
 
     /// Find a port and return None if it is not found
-    pub fn find_port(
-        &mut self,
-        name: Id,
-        owner: ir::PortOwner,
-    ) -> Option<PortIdx> {
-        self.port_map.get(&(owner, name)).copied()
+    pub fn find_port(&mut self, port: &InvPort) -> Option<PortIdx> {
+        self.port_map.get(port).copied()
     }
 
     /// Get a port and panic out if it is not found
-    pub fn get_port(&mut self, name: Id, owner: ir::PortOwner) -> PortIdx {
+    pub fn get_port(&mut self, port: &InvPort) -> PortIdx {
         // Clone here because we use owner in the error message below
-        if let Some(idx) = self.find_port(name, owner.clone()) {
+        if let Some(idx) = self.find_port(port) {
             return idx;
         }
+
+        let name = port.name();
 
         // We are going to error out anyways so attempt to find the scope for
         // *any* port with the same name but a different port owner.
@@ -173,11 +206,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .port_map
             .as_flat_vec()
             .into_iter()
-            .find_map(|((o, p), _)| if p == name { Some(o) } else { None });
-        let mut msg = format!("Port `{name}' not found with owner `{owner}'");
-        if let Some(owner) = other {
+            .find_map(|(p, _)| if p.name() == name { Some(p) } else { None });
+        let mut msg = format!("Port `{port}' not found");
+        if let Some(port) = other {
             msg.push_str(&format!(
-                ". However, a port with the same name exists with owner `{owner}'",
+                ". However, a port with the same name exists: `{port}'",
             ));
         }
         msg.push_str(&format!(

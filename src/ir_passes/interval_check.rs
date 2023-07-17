@@ -76,6 +76,7 @@ impl IntervalCheck {
             delay: inv_delay,
             arg,
             info,
+            ..
         } = &eb;
         let ir::Info::EventBind { ev_delay_loc, bind_loc } = comp[*info] else {
             unreachable!("expected event bind info")

@@ -59,7 +59,7 @@ fn process_cmd(
             // If the instance is not an external, add a dependency edge
             if !externs.contains(&inst.component) {
                 let src = rev_map[&inst.component];
-                ts.add_dependency(idx, src);
+                ts.add_dependency(src, idx);
             }
         }
         ast::Command::ForLoop(fl) => {
@@ -107,8 +107,9 @@ impl Traversal {
         }
     }
 
-    /// Take the namespace from the post order structure.
-    pub fn take(self) -> ast::Namespace {
-        self.ns
+    /// Take the namespace from the post order structure,
+    /// and returns the ordering of the components
+    pub fn take(self) -> (ast::Namespace, Vec<usize>) {
+        (self.ns, self.order)
     }
 }

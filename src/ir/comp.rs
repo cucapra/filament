@@ -162,6 +162,14 @@ impl Component {
     pub fn props(&self) -> &Interned<Prop> {
         &self.props
     }
+
+    pub fn inputs(&self) -> impl Iterator<Item = (PortIdx, &Port)> {
+        self.ports.iter().filter(|(_, p)| p.is_sig_in())
+    }
+
+    pub fn outputs(&self) -> impl Iterator<Item = (PortIdx, &Port)> {
+        self.ports.iter().filter(|(_, p)| p.is_sig_out())
+    }
 }
 
 /// Queries over interned entities

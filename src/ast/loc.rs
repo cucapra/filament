@@ -9,6 +9,12 @@ pub struct Loc<T: Clone> {
     pos: GPosIdx,
 }
 
+impl<T: Default + Clone> Default for Loc<T> {
+    fn default() -> Self {
+        Loc::unknown(T::default())
+    }
+}
+
 impl<T: Clone> Loc<T> {
     /// Construct a new `Loc` with the given inner value and no positions.
     pub fn new(inner: T, pos: GPosIdx) -> Self {
