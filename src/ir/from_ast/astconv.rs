@@ -865,12 +865,22 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
 pub fn transform(ns: ast::Namespace) -> ir::Context {
     let mut sig_map = SigMap::default();
-    // Walk over sigs and build a SigMap
-    for (idx, (_, sig)) in ns.signatures().enumerate() {
+    let (mut ns, order) = crate::utils::Traversal::from(ns).take();
+    // Extract components in order
+    let components = order.into_iter().map(|cidx| {
+        (cidx, std::mem::take(&mut ns.components[cidx]))
+    }).collect_vec();
+    // chains external signatures and component signatures (in post-order) to get all signatures associated with this namespace
+    let signatures = ns.externals().map(|(_, sig)| sig)
+        .chain(
+            components.iter().map(|(_, c)| &c.sig)
+        );
+    // Walk over signatures and build a SigMap
+    for (idx, sig) in signatures
+        .enumerate() {
         sig_map.insert(sig.name.copy(), Sig::from((sig, idx)));
     }
 
-    let (mut ns, order) = crate::utils::Traversal::from(ns).take();
     let main_idx = ns.main_idx();
     let mut ctx = ir::Context::default();
     for (_, exts) in ns.externs {
@@ -881,8 +891,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         }
     }
 
-    for cidx in order.into_iter() {
-        let comp = std::mem::take(&mut ns.components[cidx]);
+    for (cidx, comp) in components {
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
         let ir_comp = BuildCtx::comp(&ctx, comp, &sig_map);
         if Some(cidx) == main_idx {
