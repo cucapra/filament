@@ -301,7 +301,7 @@ impl fmt::Display for Param {
 pub struct Event {
     pub delay: TimeSub,
     pub info: InfoIdx,
-    pub interface_port: Option<InfoIdx>,
+    pub has_interface: bool,
 }
 
 impl fmt::Display for Event {
