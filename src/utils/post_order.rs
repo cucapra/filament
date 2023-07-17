@@ -59,7 +59,7 @@ fn process_cmd(
             // If the instance is not an external, add a dependency edge
             if !externs.contains(&inst.component) {
                 let src = rev_map[&inst.component];
-                ts.add_dependency(idx, src);
+                ts.add_dependency(src, idx);
             }
         }
         ast::Command::ForLoop(fl) => {

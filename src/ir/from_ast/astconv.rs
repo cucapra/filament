@@ -261,7 +261,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             interface_port: None,
         };
         let idx = self.comp.add(e);
-        log::info!("Added event {} as {idx}", eb.event);
+        log::trace!("Added event {} as {idx}", eb.event);
         self.event_map.insert(*eb.event, idx);
         idx
     }
@@ -867,17 +867,17 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     let mut sig_map = SigMap::default();
     let (mut ns, order) = crate::utils::Traversal::from(ns).take();
     // Extract components in order
-    let components = order.into_iter().map(|cidx| {
-        (cidx, std::mem::take(&mut ns.components[cidx]))
-    }).collect_vec();
+    let components = order
+        .into_iter()
+        .map(|cidx| (cidx, std::mem::take(&mut ns.components[cidx])))
+        .collect_vec();
     // chains external signatures and component signatures (in post-order) to get all signatures associated with this namespace
-    let signatures = ns.externals().map(|(_, sig)| sig)
-        .chain(
-            components.iter().map(|(_, c)| &c.sig)
-        );
+    let signatures = ns
+        .externals()
+        .map(|(_, sig)| sig)
+        .chain(components.iter().map(|(_, c)| &c.sig));
     // Walk over signatures and build a SigMap
-    for (idx, sig) in signatures
-        .enumerate() {
+    for (idx, sig) in signatures.enumerate() {
         sig_map.insert(sig.name.copy(), Sig::from((sig, idx)));
     }
 
@@ -886,12 +886,14 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     for (_, exts) in ns.externs {
         for ext in exts {
             let idx = sig_map.get(&ext.name).unwrap().idx;
+            log::debug!("Compiling external {}: {}", ext.name, idx);
             let ir_ext = BuildCtx::external(&ctx, ext);
             ctx.comps.checked_add(idx, ir_ext);
         }
     }
 
     for (cidx, comp) in components {
+        log::debug!("Compiling component {}", comp.sig.name);
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
         let ir_comp = BuildCtx::comp(&ctx, comp, &sig_map);
         if Some(cidx) == main_idx {
