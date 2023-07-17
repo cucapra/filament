@@ -22,51 +22,6 @@ impl Context {
     }
 }
 
-/// Queries corresponding signature [Event]s and [Port]s for their invoke counterparts
-impl Context {
-    /// Gets the [PortIdx] of the signature port of the invoked component corresponding
-    /// to the given [PortIdx] in the invocation.
-    pub fn get_component_port(
-        &self,
-        comp: &Component,
-        idx: PortIdx,
-    ) -> PortIdx {
-        let port = comp.get(idx);
-        let super::PortOwner::Inv { inv, dir, .. } = &port.owner else {
-            unreachable!("port owner is not an invocation");
-        };
-        let inv = comp.get(*inv);
-        // finds the index of the port in the invocation
-        let idx = inv.ports.iter()
-            .filter(|&&p|
-                matches!(&comp.get(p).owner, super::PortOwner::Inv { dir: d, .. } if d == dir)
-            )
-            .position(|&p| p == idx).unwrap();
-
-        // get the foreign component
-        let foreign = self.comps.get(comp.get(inv.inst).comp);
-
-        foreign.ports().iter().filter(|(_, port)| {
-            matches!(&port.owner, super::PortOwner::Sig { dir: d } if d == &dir.reverse())
-        }).nth(idx).unwrap().0
-    }
-
-    /// Gets the [EventIdx] of the event in the invoked component corresponding
-    /// to the given [EventBind] in the invocation.
-    pub fn get_component_event(
-        &self,
-        comp: &Component,
-        inv: InvIdx,
-        idx: usize,
-    ) -> EventIdx {
-        let inv = comp.get(inv);
-        // get the foreign component
-        let foreign = self.comps.get(comp.get(inv.inst).comp);
-
-        foreign.events().idx_iter().nth(idx).unwrap()
-    }
-}
-
 impl Ctx<Component> for Context {
     fn add(&mut self, val: Component) -> Idx<Component> {
         self.comps.add(val)
@@ -76,6 +31,7 @@ impl Ctx<Component> for Context {
         self.comps.get(idx)
     }
 }
+
 impl MutCtx<Component> for Context {
     fn get_mut(&mut self, idx: Idx<Component>) -> &mut Component {
         self.comps.get_mut(idx)

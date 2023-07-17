@@ -367,15 +367,24 @@ impl<T, C> Foreign<T, C> {
 
     /// Map over the foreign key using the given context.
     /// We require a context to resolve the owner of the foreign key.
-    pub fn map<X, F>(&self, mut f: F, ctx: impl Ctx<C>) -> Foreign<X, C>
+    pub fn map<X, F>(&self, ctx: &impl Ctx<C>, mut f: F) -> Foreign<X, C>
     where
-        F: FnMut(Idx<T>, &C) -> Idx<X>,
+        F: FnMut(&C, Idx<T>) -> Idx<X>,
     {
         let c_resolved = ctx.get(self.owner);
         Foreign {
-            key: f(self.key, c_resolved),
+            key: f(c_resolved, self.key),
             owner: self.owner,
         }
+    }
+
+    /// Runs a function used to unwrap the foreign type into a different type.
+    pub fn unwrap<F, X>(&self, ctx: &impl Ctx<C>, mut f: F) -> X
+    where
+        F: FnMut(&C, Idx<T>) -> X,
+    {
+        let c_resolved = ctx.get(self.owner);
+        f(c_resolved, self.key)
     }
 }
 

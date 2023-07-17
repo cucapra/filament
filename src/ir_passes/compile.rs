@@ -192,11 +192,9 @@ impl Compile {
                     format!("p{}", idx.get())
                 }
             }
-            ir::PortOwner::Inv { inv, .. } => Compile::port_name(
-                ctx,
-                ctx.comps.get(comp.get(comp.get(*inv).inst).comp),
-                ctx.get_component_port(comp, idx),
-            ),
+            ir::PortOwner::Inv { base, .. } => {
+                base.unwrap(ctx, |c, p| Compile::port_name(ctx, c, p))
+            }
             ir::PortOwner::Local => format!("p{}", idx.get()),
         }
     }
@@ -549,15 +547,11 @@ impl<'a> Context<'a> {
             .get(&inv.inst)
             .unwrap_or_else(|| panic!("Unknown instance: {}", inv.inst));
 
-        // the component that is being invoked
-        let cidx = self.comp.get(inv.inst).comp;
-        let comp = self.ctx.comps.get(cidx);
-
-        for (idx, eb) in inv.events.iter().enumerate() {
-            let dst = self.ctx.get_component_event(self.comp, invidx, idx);
-
+        for eb in inv.events.iter() {
             // If there is no interface port, no binding necessary
-            if let Some(dst) = Compile::interface_port_name(comp, dst) {
+            if let Some(dst) =
+                eb.base.unwrap(self.ctx, Compile::interface_port_name)
+            {
                 let ir::EventBind { arg: time, .. } = eb;
 
                 let dst = cell.borrow().get(dst);
