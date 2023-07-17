@@ -1,5 +1,6 @@
 use filament::{
-    backend, binding, cmdline, ir, ir_passes,
+    backend, binding, cmdline, ir,
+    ir_passes::{self, Monomorphize},
     ir_visitor::Visitor,
     passes::{self, Pass},
     resolver::Resolver,
@@ -46,6 +47,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ir_passes::Assume::do_pass(opts, &mut ir)?;
         ir_passes::HoistFacts::do_pass(opts, &mut ir)?;
         ir_passes::Simplify::do_pass(opts, &mut ir)?;
+        ir = ir_passes::Monomorphize::transform(&ir);
         if opts.show_ir {
             ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
         }

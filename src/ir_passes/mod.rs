@@ -10,6 +10,6 @@ pub use assume::Assume;
 pub use discharge::Discharge;
 pub use hoist_facts::HoistFacts;
 pub use interval_check::IntervalCheck;
+pub use new_mono::Monomorphize;
 pub use prop_simplify::Simplify;
 pub use type_check::TypeCheck;
-pub use new_mono::Monomorphize;

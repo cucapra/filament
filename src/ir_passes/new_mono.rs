@@ -24,10 +24,23 @@ struct MonoDeferred<'a, 'pass: 'a> {
     inv_counter: HashMap<ir::InvIdx, u32>,
     /// Hold onto the current PortIdx being handled
     curr_port: Option<ir::PortIdx>,
+    /// Accesses
+    connects: Vec<ir::Connect>,
+
+    // Keep track of things that have been monomorphized already
+    /// Events
+    event_map: HashMap<ir::EventIdx, ir::EventIdx>,
+    /// Times
+    time_map: HashMap<ir::TimeIdx, ir::TimeIdx>,
 }
 
 impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     fn gen_comp(&mut self) {
+        for (idx, port) in self.underlying.ports().iter() {
+            if port.is_sig_in() || port.is_sig_out() {
+                self.port(idx);
+            }
+        }
         for cmd in &self.underlying.cmds {
             self.command(&cmd);
         }
@@ -119,25 +132,45 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         // Find the new port owner
         let mono_owner = self.find_new_portowner(owner);
 
+        let info = info.clone();
+        let info: ir::Info = self.underlying.get(info);
+        let info_idx = self.base.add(info);
+
         // Add the new port so we can use its index in defining the correct Liveness
         let new_port = self.base.add(ir::Port {
             owner: mono_owner,
             width: *width,      // placeholder
             live: live.clone(), // placeholder
-            info: info.clone(),
+            info: info_idx
         });
 
-        let mut mono_liveness = self.liveness(live, new_port);
-        let base_idx = mono_liveness.idx;
+        self.curr_port = Some(new_port);
+
+        let ir::Liveness {
+            idx,
+            len,
+            range
+        } = live;
+        
+
+        let mono_liveness_idx = self.param(*idx);
+
+        let mut mono_liveness = ir::Liveness {
+            idx: mono_liveness_idx,
+            len: len.clone(), // placeholder
+            range: range.clone() // placeholder
+        };
+
+        //let mut mono_liveness = self.liveness(live, new_port);
 
         // Create a binding from old param -> new param
-        self.par_binding.insert(*underlying_idx, base_idx);
+        self.par_binding.insert(*underlying_idx, mono_liveness_idx);
 
         // After making the new binding, re-monomorphize other parts of len in case they contained
         // the param we replaced
         let mono_width = self.expr(*width);
         mono_liveness.len = self.expr(mono_liveness.len);
-        mono_liveness.range = self.range(&mono_liveness.range);
+        mono_liveness.range = self.range(&mono_liveness.range); // calling this is making us lookup nonexistent things
 
         let port = self.base.get_mut(new_port);
         port.live = mono_liveness; // update
@@ -167,9 +200,11 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     /// Given a Range owned by underlying, returns a Range that is meaningful in base
     fn range(&mut self, range: &ir::Range) -> ir::Range {
         let ir::Range { start, end } = range;
+        let start = self.time(*start);
+        let end = self.time(*end);
         ir::Range {
-            start: self.time(*start),
-            end: self.time(*end),
+            start,
+            end
         }
     }
 
@@ -180,8 +215,14 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             ir::PortOwner::Inv { inv, dir } => {
                 // inv is only meaningful in the underlying component
                 let inv_occurrences = self.inv_counter.get(&inv).unwrap();
-                let base_inv =
-                    self.inv_map.get(&(*inv, *inv_occurrences)).unwrap();
+                let base_inv = match
+                    self.inv_map.get(&(*inv, *inv_occurrences)) {
+                        Some(n) => n,
+                        None => {
+                            println!("tried to get ({}, {}) in invmap", inv, inv_occurrences);
+                            inv
+                        }
+                    };
                 ir::PortOwner::Inv {
                     inv: *base_inv,
                     dir: dir.clone(),
@@ -192,6 +233,10 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
     /// Monomorphize the event (owned by self.underlying) and add it to `self.base`, and return the corresponding index
     fn event(&mut self, event: ir::EventIdx) -> ir::EventIdx {
+        if let Some(idx) = self.event_map.get(&event) {
+            return *idx
+        };
+
         // Need to monomorphize all parts
         let ir::Event {
             delay,
@@ -199,11 +244,27 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             interface_port,
         } = self.underlying.get(event);
 
-        todo!()
+        let delay = self.delay(delay);
+        let info = info.clone();
+        let interface_port = match interface_port {
+            Some(info) => Some(info.clone()),
+            None => None
+        };
+
+        let idx = self.base.add(ir::Event {
+            delay,
+            info,interface_port
+        });
+        self.event_map.insert(event, idx);
+        idx
     }
 
     /// Monomorphize the time (owned by self.underlying) and add it to `self.base`, and return the corresponding index
     fn time(&mut self, time: ir::TimeIdx) -> ir::TimeIdx {
+        if let Some(idx) = self.time_map.get(&time) {
+            return *idx
+        };
+
         let ir::Time { event, offset } = self.underlying.get(time);
 
         let mono_time = ir::Time {
@@ -211,7 +272,9 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             offset: self.expr(*offset),
         };
 
-        self.base.add(mono_time)
+        let idx = self.base.add(mono_time);
+        self.time_map.insert(time, idx);
+        idx
     }
 
     fn timesub(&mut self, timesub: &ir::TimeSub) -> ir::TimeSub {
@@ -225,12 +288,12 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     }
 
     /// Monomorphize the delay (owned by self.underlying) and return one that is meaningful in `self.base`
-    fn delay(&mut self, delay: ir::TimeSub) -> ir::TimeSub {
+    fn delay(&mut self, delay: &ir::TimeSub) -> ir::TimeSub {
         match delay {
-            ir::TimeSub::Unit(expr) => ir::TimeSub::Unit(self.expr(expr)),
+            ir::TimeSub::Unit(expr) => ir::TimeSub::Unit(self.expr(*expr)),
             ir::TimeSub::Sym { l, r } => ir::TimeSub::Sym {
-                l: self.time(l),
-                r: self.time(r),
+                l: self.time(*l),
+                r: self.time(*r),
             },
         }
     }
@@ -239,6 +302,14 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     fn invoke(&mut self, inv: ir::InvIdx) -> ir::InvIdx {
         // Count another time that we've seen inv
         self.insert_inv(inv);
+        println!("inserted {} into counter", inv);
+        
+
+        // Handle connects we just saw:
+        let connects = self.connects.clone();
+        for con in connects.iter() {
+            self.connect(con);
+        }
 
         // Need to monomorphize all parts of the invoke
         let ir::Invoke {
@@ -248,30 +319,37 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             info,
         } = self.underlying.get(inv);
 
+        // PLACEHOLDER, just want the index
+        let mono_inv_idx = self.base.add(ir::Invoke {
+            inst: *inst,
+            ports: ports.clone(),
+            events: events.clone(),
+            info: *info
+        });
+
+        // Update the mapping from underlying invokes to base invokes
+        // just unwrap because we maintain that inv will always be present in the mapping
+        let inv_occurrences = self.inv_counter.get(&inv).unwrap();
+        self.inv_map.insert((inv, *inv_occurrences), mono_inv_idx);
+
         // Instance - replace the instance owned by self.underlying with one owned by self.base
 
         // Ports
-        let mono_ports = ports.iter().map(|p| self.port(*p)).collect_vec();
+        let mono_ports = ports.iter().map(|p| { println!("{}", p); self.port(*p)}).collect_vec();
 
         // Events
         let mono_events =
             events.iter().map(|e| self.eventbind(e)).collect_vec();
 
         // Build the new invoke, add it to self.base
-        let mono_inv = self.base.add(ir::Invoke {
-            inst: *inst, // PLACEHOLDER
-            ports: mono_ports,
-            events: mono_events,
-            info: *info,
-        });
+        let mut mono_inv = self.base.get_mut(mono_inv_idx);
 
-        // Update the mapping from underlying invokes to base invokes
+        mono_inv.ports = mono_ports;
+        mono_inv.events = mono_events;
+        
+        //println!("inserted ({}, {}) -> {} to invmap", inv, inv_occurrences, mono_inv_idx);
 
-        // just unwrap because we maintain that inv will always be present in the mapping
-        let inv_occurrences = self.inv_counter.get(&inv).unwrap();
-        self.inv_map.insert((inv, *inv_occurrences), mono_inv);
-
-        mono_inv
+        mono_inv_idx
     }
 
     /// Update the mapping of how many times we've seen each invoke in the underlying component.
@@ -286,13 +364,18 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     }
 
     fn prop(&mut self, prop: ir::PropIdx) -> ir::PropIdx {
-        todo!()
+        let prop = self.underlying.get(prop);
+        self.base.add(prop.clone())
     }
 
     fn access(&mut self, acc: &ir::Access) -> ir::Access {
         let ir::Access { port, start, end } = acc;
 
-        todo!();
+        let port = self.port(*port);
+        let start = self.expr(*start);
+        let end = self.expr(*end);
+
+        ir::Access {port,start,end}
     }
 
     fn connect(&mut self, con: &ir::Connect) -> ir::Connect {
@@ -319,7 +402,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let mono_index = self.param(*index);
         let mono_start = self.expr(*start);
         let mono_end = self.expr(*end);
-        let mono_body = body.iter().map(|cmd| self.command(cmd)).collect_vec();
+        let mono_body = body.iter().map(|cmd| self.command(cmd)).filter(|c| c.is_some()).map(|c| c.unwrap()).collect_vec();
 
         ir::Loop {
             index: mono_index,
@@ -333,8 +416,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let ir::If { cond, then, alt } = if_stmt;
 
         let cond = self.prop(*cond);
-        let then = then.iter().map(|cmd| self.command(cmd)).collect_vec();
-        let alt = alt.iter().map(|cmd| self.command(cmd)).collect_vec();
+        let then = then.iter().map(|cmd| self.command(cmd)).filter(|c| c.is_some()).map(|c| c.unwrap()).collect_vec();
+        let alt = alt.iter().map(|cmd| self.command(cmd)).filter(|c| c.is_some()).map(|c| c.unwrap()).collect_vec();
 
         ir::If { cond, then, alt }
     }
@@ -356,18 +439,20 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         ir::EventBind { arg, info, delay }
     }
 
-    fn command(&mut self, cmd: &ir::Command) -> ir::Command {
+    fn command(&mut self, cmd: &ir::Command) -> Option<ir::Command> {
         match cmd {
-            ir::Command::Instance(idx) => self.instance(*idx).into(),
-            ir::Command::Invoke(idx) => self.invoke(*idx).into(),
-            ir::Command::Connect(con) => self.connect(con).into(),
-            ir::Command::ForLoop(lp) => self.forloop(lp).into(),
-            ir::Command::If(if_stmt) => self.if_stmt(if_stmt).into(),
-            ir::Command::Fact(fact) => self.fact(fact).into(),
+            ir::Command::Instance(idx) => Some(self.instance(*idx).into()),
+            ir::Command::Invoke(idx) => Some(self.invoke(*idx).into()),
+            ir::Command::Connect(con) => { self.connects.push(con.clone()); None },
+            ir::Command::ForLoop(lp) => Some(self.forloop(lp).into()),
+            ir::Command::If(if_stmt) => Some(self.if_stmt(if_stmt).into()),
+            ir::Command::Fact(fact) => Some(self.fact(fact).into()),
         }
     }
 
-
+    fn take(self) -> ir::Component {
+        self.base
+    }
 }
 
 /// Monomorphize the Filament program
@@ -401,7 +486,7 @@ impl<'a> Monomorphize<'a> {
     }
 }
 
-impl Monomorphize<'_> {
+impl<'ctx> Monomorphize<'ctx> {
     /// Queue an instance for processing by the pass.
     /// The processing happens at a later point but, if needed, the pass immediately allocates a new [ir::Component] and returns information to construct a new instance.
     fn should_process(
@@ -416,6 +501,7 @@ impl Monomorphize<'_> {
 
         // If this component doesn't need monomorphization, return the comp index.
         if self.externals.contains(&comp) || !self.needs_monomorphize(comp) {
+            println!("{} doesn't need mono", comp);
             return (comp, params);
         }
         let key = (comp, params);
@@ -430,11 +516,14 @@ impl Monomorphize<'_> {
         // Otherwise, construct a new component and add it to the processing queue
         let new_comp = self.ctx.comp(false);
         self.queue.insert(key, new_comp);
+        println!("put {} into queue; will generate {}", comp, new_comp);
         (new_comp, vec![])
     }
 
-    fn next(&mut self) -> Option<MonoDeferred> {
+    fn next<'a>(&'a mut self) -> Option<ir::Component> {
+        //Option<MonoDeferred<'ctx, 'a>> {
         let Some(((underlying, params), base)) = self.queue.pop_front() else {
+            println!("returning None - nothing in queue");
             return None;
         };
         let underlying = self.old.get(underlying);
@@ -444,7 +533,7 @@ impl Monomorphize<'_> {
             .zip(params)
             .collect_vec();
         let base = std::mem::take(self.ctx.get_mut(base));
-        let mono = MonoDeferred {
+        let mut mono = MonoDeferred {
             base,
             underlying,
             binding: ir::Bind::new(binding),
@@ -453,15 +542,19 @@ impl Monomorphize<'_> {
             inv_map: HashMap::new(),
             inv_counter: HashMap::new(),
             curr_port: None,
+            connects: vec![],
+            event_map: HashMap::new(),
+            time_map: HashMap::new(),
         };
-        todo!()
+        mono.gen_comp();
+        Some(mono.base)
     }
 
     /// Checks if a component needs to be monomorphized. This is the case if:
     /// - It has ANY parameters, or
     /// - If it uses loops, conditionals, or any other control constructs
     fn needs_monomorphize(&self, comp: ir::CompIdx) -> bool {
-        let underlying = self.ctx.get(comp);
+        let underlying = self.old.get(comp);
 
         let has_params = underlying
             .params()
@@ -473,14 +566,19 @@ impl Monomorphize<'_> {
             .iter()
             .fold(false, |acc, cmd| acc | cmd.is_loop() | cmd.is_if());
 
-        has_params | has_control
+        let has_insts = underlying
+            .instances()
+            .iter()
+            .fold(false, |acc, (_, inst)| acc | (inst.params.len() != 0));
+
+        has_params | has_control | has_insts
     }
 }
 
 impl Monomorphize<'_> {
     /// Monomorphize the context by tracing starting from the top-level component.
     /// Returns an empty context if there is no top-level component.
-    pub fn transform(ctx: ir::Context) -> ir::Context {
+    pub fn transform(ctx: &ir::Context) -> ir::Context {
         let Some(entrypoint) = ctx.entrypoint else {
             log::warn!("program has no entrypoint! result will be empty");
             return ir::Context {
@@ -489,10 +587,14 @@ impl Monomorphize<'_> {
             }
         };
         // Monomorphize the entrypoint
-        let main = ctx.get(entrypoint);
-        let mut mono = Monomorphize::new(&ctx);
-        let mut comps: Vec<ir::Component> = vec![];
+        let mut mono = Monomorphize::new(ctx);
+        mono.should_process(entrypoint, vec![]);
 
-        todo!()
+        // Build a new context
+        while let Some(comp) = mono.next() {
+            let compidx = mono.ctx.add(comp);
+            println!("added {} to ctx", compidx);
+        }
+        mono.ctx
     }
 }

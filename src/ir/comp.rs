@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use super::{
     CmpOp, Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
     IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke,
@@ -174,7 +176,14 @@ impl Component {
 impl Component {
     /// The parameters in the signature of the component in the order they appear in the source
     pub fn sig_params(&self) -> Vec<ParamIdx> {
-        todo!()
+        let sig_params = self
+            .params()
+            .iter()
+            .filter(|(idx, param)| param.is_sig_owned())
+            .map(|(idx, _)| idx)
+            .collect_vec();
+
+        sig_params
     }
 }
 
