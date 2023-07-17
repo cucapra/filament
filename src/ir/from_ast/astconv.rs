@@ -228,7 +228,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     fn declare_event(
         &mut self,
         eb: &ast::EventBind,
-        interface_port: Option<ir::InfoIdx>,
+        interface_port: Option<(ast::Id, GPosIdx)>,
     ) -> EventIdx {
         let info = self.comp.add(ir::Info::event(
             eb.event.copy(),
@@ -402,12 +402,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .interface_signals
             .iter()
             .cloned()
-            .map(|ast::InterfaceDef { name, event }| {
-                let (name, bind_loc) = name.split();
-                let info =
-                    self.comp.add(ir::Info::interface_port(name, bind_loc));
-                (event, info)
-            })
+            .map(|ast::InterfaceDef { name, event }| (event, name.split()))
             .collect();
         // Declare the events first
         for event in &sig.events {
