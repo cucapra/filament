@@ -1,6 +1,6 @@
 use filament::{
     backend, binding, cmdline, ir,
-    ir_passes::{self, Monomorphize},
+    ir_passes::{self},
     ir_visitor::Visitor,
     passes::{self, Pass},
     resolver::Resolver,

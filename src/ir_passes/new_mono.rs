@@ -64,7 +64,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         if let Some(idx) = self.param_map.get(&param) {
             return *idx;
         };
-        let ir::Param { owner, .. } = self.underlying.get(param);
+        let ir::Param { owner, info, .. } = self.underlying.get(param);
 
         match owner {
             ir::ParamOwner::Bundle(_) => {
@@ -74,7 +74,10 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 new_idx
             }
             ir::ParamOwner::Loop => {
-                todo!()
+                let new_param = ir::Param {owner: owner.clone(), info: self.info(info), default: None};
+                let new_idx = self.base.add(new_param);
+                self.param_map.insert(param, new_idx);
+                new_idx
             }
             ir::ParamOwner::Sig => {
                 unreachable!("If a param is sig-owned, it should be resolved in the binding!")
@@ -204,24 +207,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         new_port
     }
 
-    /// Given a Liveness owned by underlying and a PortIdx meaningful in base, returns a Liveness that is meaningful in base
-    fn liveness(
-        &mut self,
-        live: &ir::Liveness,
-        port: ir::PortIdx,
-    ) -> ir::Liveness {
-        let ir::Liveness { idx, len, range } = live;
-        let mono_idx = self.param(*idx);
-        let mono_len = self.expr(*len);
-        let mono_range = self.range(range);
-
-        ir::Liveness {
-            idx: mono_idx,
-            len: mono_len,
-            range: mono_range,
-        }
-    }
-
     fn info(&mut self, info: &ir::InfoIdx) -> ir::InfoIdx {
         let info = self.underlying.get(*info);
         self.base.add(info.clone())
@@ -333,7 +318,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     fn invoke(&mut self, inv: ir::InvIdx) -> ir::InvIdx {
         // Count another time that we've seen inv
         self.insert_inv(inv);
-        println!("inserted {} into counter", inv);
 
         // Need to monomorphize all parts of the invoke
         let ir::Invoke {
@@ -357,10 +341,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         // just unwrap because we maintain that inv will always be present in the mapping
         let inv_occurrences = self.inv_counter.get(&inv).unwrap();
         self.inv_map.insert((inv, *inv_occurrences), mono_inv_idx);
-        println!(
-            "inserted ({}, {}) -> {} to inv_map",
-            inv, inv_occurrences, mono_inv_idx
-        );
 
         // Handle connects we just saw:
         let connects = self.connects.clone();
@@ -382,8 +362,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         mono_inv.ports = mono_ports;
         mono_inv.events = mono_events;
-
-        //println!("inserted ({}, {}) -> {} to invmap", inv, inv_occurrences, mono_inv_idx);
 
         mono_inv_idx
     }
@@ -506,7 +484,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         }
     }
 
-    fn forloop(&mut self, lp: &ir::Loop) -> ir::Loop {
+    fn forloop(&mut self, lp: &ir::Loop) {
         let ir::Loop {
             index,
             start,
@@ -514,21 +492,26 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             body,
         } = lp;
 
-        let mono_index = self.param(*index);
+        //let mono_index = self.param(*index);
         let mono_start = self.expr(*start);
         let mono_end = self.expr(*end);
-        let mono_body = body
-            .iter()
-            .map(|cmd| self.command(cmd))
-            .fold(&mut vec![], |acc, cvec| { acc.extend(cvec); acc})
-            .to_vec();
+        // let mono_body = body
+        //     .iter()
+        //     .map(|cmd| self.command(cmd))
+        //     .fold(&mut vec![], |acc, cvec| { acc.extend(cvec); acc})
+        //     .to_vec();
 
         let mut i = mono_start.as_concrete(&self.base).unwrap();
         let bound = mono_end.as_concrete(&self.base).unwrap();
 
-        while i < bound {}
-
-        todo!()
+        while i < bound {
+            self.binding.insert(*index, i);
+            for cmd in body.iter() {
+                let cmd = self.command(cmd);
+                self.base.cmds.extend(cmd);
+            }
+            i += 1;
+        }
     }
 
     fn if_stmt(&mut self, if_stmt: &ir::If) -> ir::If {
@@ -642,21 +625,18 @@ impl<'ctx> Monomorphize<'ctx> {
         if let Some(&name) =
             self.processed.get(&key).or_else(|| self.queue.get(&key))
         {
-            println!("already processed {}, returning {}", comp, name);
             return (name, vec![]);
         }
 
         // Otherwise, construct a new component and add it to the processing queue
         let new_comp = self.ctx.comp(false);
         self.queue.insert(key, new_comp);
-        println!("put {} into queue; will generate {}", comp, new_comp);
         (new_comp, vec![])
     }
 
     fn next<'a>(&'a mut self) -> Option<(ir::Component, ir::CompIdx)> {
         //Option<MonoDeferred<'ctx, 'a>> {
         let Some(((underlying_idx, params), base_idx)) = self.queue.pop_front() else {
-            println!("returning None - nothing in queue");
             return None;
         };
         self.processed
