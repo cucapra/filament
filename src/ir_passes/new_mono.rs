@@ -22,6 +22,10 @@ struct MonoDeferred<'a, 'pass: 'a> {
     inv_map: HashMap<(ir::InvIdx, u32), ir::InvIdx>,
     /// Mapping from underlying invokes to how many times we've seen it so far
     inv_counter: HashMap<ir::InvIdx, u32>,
+    /// Mapping of underlying instances (and how many times we've seen it) to base instances
+    inst_map: HashMap<(ir::InstIdx, u32), ir::InstIdx>,
+    /// Maapping from underlying instances to how many times we've seen it so far
+    inst_counter: HashMap<ir::InstIdx, u32>,
     /// Hold onto the current PortIdx being handled
     curr_port: Option<ir::PortIdx>,
     /// Accesses
@@ -134,6 +138,9 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
     /// Monomorphize the `inst` (owned by self.underlying) and add it to `self.base`, and return the corresponding index
     fn instance(&mut self, inst: ir::InstIdx) -> ir::InstIdx {
+        // Count another time we've seen the instance
+        self.insert_inst(inst);
+
         let ir::Instance { comp, params, info } = self.underlying.get(inst);
         let conc_params = params
             .iter()
@@ -145,7 +152,12 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             params: params.into_iter().map(|n| self.base.num(n)).collect(),
             info: self.info(info),
         };
-        self.base.add(new_inst)
+
+        let new_idx = self.base.add(new_inst);
+
+        let inst_occurrences = self.inst_counter.get(&inst).unwrap();
+        self.inst_map.insert((inst, *inst_occurrences), new_idx);
+        new_idx
     }
 
     /// Monomorphize the port (owned by self.underlying) and add it to `self.base`, and return the corresponding index
@@ -329,7 +341,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let info = self.info(info);
 
-        // PLACEHOLDER, just want the index
+        // PLACEHOLDER, just want the index when we add it to base
         let mono_inv_idx = self.base.add(ir::Invoke {
             inst: *inst,
             ports: ports.clone(),
@@ -349,6 +361,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         }
 
         // Instance - replace the instance owned by self.underlying with one owned by self.base
+        let inst_occurrences = self.inst_counter.get(inst).unwrap();
+        let base_inst = self.inst_map.get(&(*inst, *inst_occurrences)).unwrap().clone();
 
         // Ports
         let mono_ports = ports.iter().map(|p| self.port(*p)).collect_vec();
@@ -360,6 +374,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         // Build the new invoke, add it to self.base
         let mut mono_inv = self.base.get_mut(mono_inv_idx);
 
+        mono_inv.inst = base_inst;
         mono_inv.ports = mono_ports;
         mono_inv.events = mono_events;
 
@@ -374,6 +389,14 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             self.inv_counter.insert(inv, *n + 1);
         } else {
             self.inv_counter.insert(inv, 0);
+        }
+    }
+
+    fn insert_inst(&mut self, inst: ir::InstIdx) {
+        if let Some(n) = self.inst_counter.get(&inst) {
+            self.inst_counter.insert(inst, *n + 1);
+        } else {
+            self.inst_counter.insert(inst, 0);
         }
     }
 
@@ -660,6 +683,8 @@ impl<'ctx> Monomorphize<'ctx> {
             pass: self,
             inv_map: HashMap::new(),
             inv_counter: HashMap::new(),
+            inst_map: HashMap::new(),
+            inst_counter: HashMap::new(),
             curr_port: None,
             connects: vec![],
             event_map: HashMap::new(),
