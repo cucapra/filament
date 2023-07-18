@@ -193,7 +193,7 @@ impl Compile {
                 }
             }
             ir::PortOwner::Inv { base, .. } => {
-                base.unwrap(ctx, |c, p| Compile::port_name(ctx, c, p))
+                base.apply(ctx, |c, p| Compile::port_name(ctx, c, p))
             }
             ir::PortOwner::Local => format!("p{}", idx.get()),
         }
@@ -550,7 +550,7 @@ impl<'a> Context<'a> {
         for eb in inv.events.iter() {
             // If there is no interface port, no binding necessary
             if let Some(dst) =
-                eb.base.unwrap(self.ctx, Compile::interface_port_name)
+                eb.base.apply(self.ctx, Compile::interface_port_name)
             {
                 let ir::EventBind { arg: time, .. } = eb;
 

@@ -353,14 +353,20 @@ impl Traversal {
 /// On its own, a foreign key is not very useful. We need provide it with a context
 /// that can resolve the owner which can then resolve the underlying type.
 /// However, we do not provide a way to extract the underyling `T`.
-pub struct Foreign<T, C> {
+pub struct Foreign<T, C>
+where
+    C: Ctx<T>,
+{
     /// A reference to the underlying value.
     key: Idx<T>,
     /// A reference to the owner of the foreign key.
     owner: Idx<C>,
 }
 
-impl<T, C> Foreign<T, C> {
+impl<T, C> Foreign<T, C>
+where
+    C: Ctx<T>,
+{
     pub fn new(key: Idx<T>, owner: Idx<C>) -> Self {
         Self { key, owner }
     }
@@ -370,6 +376,7 @@ impl<T, C> Foreign<T, C> {
     pub fn map<X, F>(&self, ctx: &impl Ctx<C>, mut f: F) -> Foreign<X, C>
     where
         F: FnMut(&C, Idx<T>) -> Idx<X>,
+        C: Ctx<X>,
     {
         let c_resolved = ctx.get(self.owner);
         Foreign {
@@ -379,7 +386,7 @@ impl<T, C> Foreign<T, C> {
     }
 
     /// Runs a function used to unwrap the foreign type into a different type.
-    pub fn unwrap<F, X>(&self, ctx: &impl Ctx<C>, mut f: F) -> X
+    pub fn apply<F, X>(&self, ctx: &impl Ctx<C>, mut f: F) -> X
     where
         F: FnMut(&C, Idx<T>) -> X,
     {
@@ -388,7 +395,10 @@ impl<T, C> Foreign<T, C> {
     }
 }
 
-impl<T, C> Clone for Foreign<T, C> {
+impl<T, C> Clone for Foreign<T, C>
+where
+    C: Ctx<T>,
+{
     fn clone(&self) -> Self {
         Self {
             key: self.key,
@@ -397,15 +407,21 @@ impl<T, C> Clone for Foreign<T, C> {
     }
 }
 
-impl<T, C> PartialEq for Foreign<T, C> {
+impl<T, C> PartialEq for Foreign<T, C>
+where
+    C: Ctx<T>,
+{
     fn eq(&self, other: &Self) -> bool {
         self.key == other.key && self.owner == other.owner
     }
 }
 
-impl<T, C> Eq for Foreign<T, C> {}
+impl<T, C> Eq for Foreign<T, C> where C: Ctx<T> {}
 
-impl<T, C> std::hash::Hash for Foreign<T, C> {
+impl<T, C> std::hash::Hash for Foreign<T, C>
+where
+    C: Ctx<T>,
+{
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.key.hash(state);
         self.owner.hash(state);
