@@ -2,7 +2,7 @@ use super::{Component, DisplayCtx, ExprIdx, Range, TimeIdx, TimeSub};
 use crate::{ast, utils::GPosIdx};
 use codespan_reporting::diagnostic::Diagnostic;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 /// Information associated with the IR.
 pub enum Info {
     #[default]
