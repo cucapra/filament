@@ -388,6 +388,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             let cmd = self.connect(con);
             self.base.cmds.push(cmd.into());
         }
+        self.connects.clear();
 
         // Instance - replace the instance owned by self.underlying with one owned by self.base
         let inst_occurrences = self.inst_counter.get(inst).unwrap();
@@ -621,14 +622,21 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     fn handle_connect(&mut self, con: &ir::Connect) -> Vec<ir::Command> {
         let src_port_owner = &self.underlying.get(con.src.port).owner;
         let dst_port_owner = &self.underlying.get(con.dst.port).owner;
+        // We can elide the directions because at this point in the compiler they've already been verified to be correct,
+        // basically we won't see anything wacky like sig.in <- inv.out
         match src_port_owner {
-            ir::PortOwner::Inv { dir, .. } => {
-                if dir.is_out() {
-                    let cmd = self.connect(con);
-                    vec![cmd.into()]
-                } else {
-                    self.connects.push(con.clone());
-                    vec![]
+            ir::PortOwner::Inv { .. } => {
+                match dst_port_owner {
+                    ir::PortOwner::Inv { .. } => {
+                        // handle later
+                        self.connects.push(con.clone());
+                        vec![]
+                    }
+                    ir::PortOwner::Sig { .. } => {
+                        let cmd = self.connect(con);
+                        vec![cmd.into()]
+                    }
+                    ir::PortOwner::Local => panic!("aaaah"),
                 }
             }
             ir::PortOwner::Sig { .. } => match dst_port_owner {
