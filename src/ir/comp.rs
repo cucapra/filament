@@ -317,9 +317,9 @@ impl Component {
             Expr::Concrete(_) => expr,
             Expr::Bin {..} => self.bin(expr),
             Expr::Param(_) => {
-                self.internal_error(format!(
-                    "When evaluating a function expression, there should not be any parameters in it"
-                ))
+                self.internal_error(
+                    "When evaluating a function expression, there should not be any parameters in it".to_string()
+                )
             }
             Expr::Fn {op, args} => {
                 let args = args.iter().map(|arg| self.bin(self.get(*arg).clone())).collect_vec();
@@ -365,9 +365,9 @@ impl Component {
                 }
             },
             Expr::Param(_) => {
-                self.internal_error(format!(
-                    "When evaluating a binop expression, there should not be any parameters in it"
-                ))
+                self.internal_error(
+                    "When evaluating a binop expression, there should not be any parameters in it".to_string()
+                )
             },
             Expr::Fn {..} => {
                 self.func(expr)

@@ -54,7 +54,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             }
         }
         for cmd in &self.underlying.cmds {
-            let cmd = self.command(&cmd);
+            let cmd = self.command(cmd);
             self.base.cmds.extend(cmd);
         }
         for (idx, _) in self.underlying.props().iter() {
@@ -213,7 +213,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let mut mono_liveness = ir::Liveness {
             idx: mono_liveness_idx,
-            len: len.clone(),     // placeholder
+            len: *len,            // placeholder
             range: range.clone(), // placeholder
         };
 
@@ -254,7 +254,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             ir::PortOwner::Sig { .. } | ir::PortOwner::Local => owner.clone(),
             ir::PortOwner::Inv { inv, dir } => {
                 // inv is only meaningful in the underlying component
-                let inv_occurrences = self.inv_counter.get(&inv).unwrap();
+                let inv_occurrences = self.inv_counter.get(inv).unwrap();
                 let base_inv = match self.inv_map.get(&(*inv, *inv_occurrences))
                 {
                     Some(n) => n,
@@ -289,10 +289,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let delay = self.delay(delay);
         let info = self.info(info);
-        let interface_port = match interface_port {
-            Some(info) => Some(self.info(info)),
-            None => None,
-        };
+        let interface_port =
+            interface_port.as_ref().map(|info| self.info(info));
 
         let idx = self.base.add(ir::Event {
             delay,
@@ -378,11 +376,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         // Instance - replace the instance owned by self.underlying with one owned by self.base
         let inst_occurrences = self.inst_counter.get(inst).unwrap();
-        let base_inst = self
-            .inst_map
-            .get(&(*inst, *inst_occurrences))
-            .unwrap()
-            .clone();
+        let base_inst =
+            *self.inst_map.get(&(*inst, *inst_occurrences)).unwrap();
 
         // Ports
         let mono_ports = ports.iter().map(|p| self.port(*p)).collect_vec();
@@ -579,7 +574,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let ir::Fact { prop, reason, .. } = fact;
 
         let prop = self.prop(*prop);
-        ir::Fact::assert(prop, reason.clone())
+        ir::Fact::assert(prop, *reason)
     }
 
     fn eventbind(&mut self, eb: &ir::EventBind) -> ir::EventBind {
@@ -633,7 +628,7 @@ impl<'a> Monomorphize<'a> {
                 comps: IndexStore::default(),
                 entrypoint: None,
             },
-            old: &old,
+            old,
             externals: vec![],
             processed: HashMap::new(),
             queue: LinkedHashMap::new(),
@@ -673,7 +668,7 @@ impl<'ctx> Monomorphize<'ctx> {
         (new_comp, vec![])
     }
 
-    fn next<'a>(&'a mut self) -> Option<(ir::Component, ir::CompIdx)> {
+    fn next(&mut self) -> Option<(ir::Component, ir::CompIdx)> {
         //Option<MonoDeferred<'ctx, 'a>> {
         let Some(((underlying_idx, params), base_idx)) = self.queue.pop_front() else {
             return None;
