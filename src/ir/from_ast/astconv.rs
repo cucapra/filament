@@ -929,7 +929,8 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         let mut ir_comp = ir::Component::new(false);
         if Some(cidx) == main_idx {
             ctx.entrypoint = Some(idx);
-            ir_comp.src_info = Some(ir::InterfaceSrc::new(comp.sig.name.copy()));
+            ir_comp.src_info =
+                Some(ir::InterfaceSrc::new(comp.sig.name.copy()));
         }
         ctx.comps.checked_add(idx, ir_comp);
         if Some(cidx) == main_idx {
