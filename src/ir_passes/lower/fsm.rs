@@ -10,6 +10,7 @@ pub(super) struct Fsm {
 }
 
 impl Fsm {
+    // Create a new [Fsm] for an [ir::EventIdx] with the given number of `states`.
     pub fn new(event: ir::EventIdx, states: u64, ctx: &mut BuildCtx) -> Self {
         let comp = ctx.binding.fsm_comps.get(&states).unwrap();
 
@@ -17,6 +18,7 @@ impl Fsm {
             unreachable!("Info should be an interface port");
         };
 
+        // Creates a new component for the FSM.
         let cell = ctx.builder.add_component(
             name.clone(),
             comp.name.to_string(),
@@ -37,6 +39,7 @@ impl Fsm {
         Fsm { cell }
     }
 
+    /// Returns the [calyx::Port] that represents the given `state`.
     pub fn get_port(&self, state: u64) -> RRC<calyx::Port> {
         self.cell.borrow().get(format!("_{}", state))
     }

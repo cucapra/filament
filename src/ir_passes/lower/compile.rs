@@ -15,44 +15,47 @@ use super::{
     utils::INTERFACE_PORTS,
 };
 
-/// Compiles Filament into Calyx
-/// Generates FSMs for each event
+/// Compiles Filament directly into Calyx
+/// Generates FSMs for each event (with an interface port)
 #[derive(Default)]
 pub struct Compile;
 
 impl Compile {
+    /// Compiles a port into a [calyx::PortDef].
+    /// Panics if the port is not a signature port.
     fn port_def<CW, WT>(
         ctx: &ir::Context,
         comp: &ir::Component,
         port: ir::PortIdx,
-        width_transform: WT,
-    ) -> Option<calyx::PortDef<CW>>
+        width_transform: WT, // Function thattransforms an [ir::ExprIdx] into a [CW] type
+    ) -> calyx::PortDef<CW>
     where
         WT: Fn(&ir::Component, ir::ExprIdx) -> CW,
     {
         let raw_port = comp.get(port);
 
-        if let ir::PortOwner::Sig { dir, .. } = &raw_port.owner {
-            let name = port.name(ctx, comp);
-            let mut attributes = calyx::Attributes::default();
-            attributes.insert(calyx::BoolAttr::Data, 1);
-            Some(calyx::PortDef {
-                name: name.into(),
-                width: width_transform(comp, comp.get(port).width),
-                direction: calyx::Direction::from(dir).reverse(),
-                attributes,
-            })
-        } else {
-            None
+        let ir::PortOwner::Sig { dir, .. } = &raw_port.owner else {
+            unreachable!("Attempting to compile non-signature port as port definition.")
+        };
+
+        // adds the `@data` attribute to the port
+        let mut attributes = calyx::Attributes::default();
+        attributes.insert(calyx::BoolAttr::Data, 1);
+
+        calyx::PortDef {
+            name: port.name(ctx, comp).into(),
+            width: width_transform(comp, comp.get(port).width),
+            direction: calyx::Direction::from(dir).reverse(),
+            attributes,
         }
     }
 
+    /// Compiles a list of ports into a [calyx::PortDef].
     fn ports<CW, WFU, WT>(
         ctx: &ir::Context,
         comp: &ir::Component,
         width_from_u64: WFU, // Function that returns a CW type from a u64
-        width_transform: WT,
-        is_comp: bool,
+        width_transform: WT, // Function that transforms an [ir::ExprIdx] into a [CW] type
     ) -> Vec<calyx::PortDef<CW>>
     where
         WFU: Fn(u64) -> CW,
@@ -62,9 +65,8 @@ impl Compile {
             // the initial list of ports.
             .ports()
             .idx_iter()
-            .filter_map(|port| {
-                Compile::port_def(ctx, comp, port, &width_transform)
-            })
+            .filter(|idx| comp.get(*idx).is_sig())
+            .map(|port| Compile::port_def(ctx, comp, port, &width_transform))
             .chain(
                 // adds unannotated ports to the list of ports
                 comp.unannotated_ports().into_iter().map(|(name, width)| {
@@ -86,6 +88,7 @@ impl Compile {
                         name: name.into(),
                         width: width_from_u64(1),
                         direction: calyx::Direction::Input,
+                        // adds the `@fil_event` attribute to the port
                         attributes: vec![(
                             calyx::Attribute::Unknown("fil_event".into()),
                             1,
@@ -116,13 +119,16 @@ impl Compile {
                 // TODO: should also assert that the width of the matching port is the same as what we expect
                 // We'd also need an equality function on `CW` types to do this, which we don't have at the moment
                 // for [calyx::Width].
+
+                // Removes this interface port from the list so it is not added later on.
                 interface_ports.remove(pair);
                 pd.attributes.insert(*attr, *value);
             }
         }
 
-        if is_comp {
-            // add remaining interface ports if not found
+        // if this component is external, don't add new interface ports, as we must keep the signature the same
+        if !comp.is_ext {
+            // add remaining interface ports if not found (found ports already removed above)
             for (attr, (name, width, dir)) in interface_ports {
                 ports.push(calyx::PortDef {
                     name: (*name).into(),
@@ -136,8 +142,15 @@ impl Compile {
         ports
     }
 
+    /// Compiles a primitive component into a [calyx::Primitive]
     fn primitive(ctx: &ir::Context, idx: ir::CompIdx) -> calyx::Primitive {
         let comp = ctx.get(idx);
+
+        assert!(
+            comp.is_ext,
+            "Attempting to compile non-primitive component as primitive."
+        );
+
         calyx::Primitive {
             name: idx.name(ctx).into(),
             params: comp
@@ -151,7 +164,6 @@ impl Compile {
                 comp,
                 |value| calyx::Width::Const { value },
                 |comp, expr| expr.as_width(comp),
-                false,
             ),
             attributes: calyx::Attributes::default(),
             is_comb: false,
@@ -160,20 +172,7 @@ impl Compile {
         }
     }
 
-    /// Gets the maximum states for each event with an interface port in the component
-    fn max_states(comp: &ir::Component) -> HashMap<ir::EventIdx, u64> {
-        let mut event_map = HashMap::new();
-
-        comp.times().iter().for_each(|(_, time)| {
-            let nv = time.offset.as_u64(comp);
-            if nv > *event_map.get(&time.event).unwrap_or(&0) {
-                event_map.insert(time.event, nv);
-            }
-        });
-
-        event_map
-    }
-
+    /// Compiles an [ir::Component] into a [calyx::Component]
     fn component(
         ctx: &ir::Context,
         idx: ir::CompIdx,
@@ -182,17 +181,19 @@ impl Compile {
     ) -> calyx::Component {
         log::debug!("Compiling component {idx}");
         let comp = ctx.get(idx);
-        let ports = Compile::ports(
-            ctx,
-            comp,
-            identity,
-            |comp, expr| expr.as_u64(comp),
-            true,
+
+        assert!(
+            !comp.is_ext,
+            "Attempting to compile primitive component as non-primitive."
         );
+
+        let ports =
+            Compile::ports(ctx, comp, identity, |comp, expr| expr.as_u64(comp));
         let mut component =
             calyx::Component::new(idx.name(ctx), ports, false, false, None);
         component.attributes.insert(calyx::BoolAttr::NoInterface, 1);
-        // main component
+
+        // If this is the main component, give it a `@top_level` attribute
         if Some(idx) == ctx.entrypoint {
             log::debug!("Defining main component {idx}");
             component.attributes.insert(calyx::BoolAttr::TopLevel, 1);
@@ -201,8 +202,19 @@ impl Compile {
         let builder = calyx::Builder::new(&mut component, lib).not_generated();
         let mut ctx = BuildCtx::new(ctx, idx, bind, builder, lib);
 
+        // Calculate the max states needed for each FSM for every event.
+        // Done by finding the furthest offset referenced in any [Time] in the component.
+        let mut max_states = HashMap::new();
+
+        comp.times().iter().for_each(|(_, time)| {
+            let nv = time.offset.as_u64(comp);
+            if nv > *max_states.get(&time.event).unwrap_or(&0) {
+                max_states.insert(time.event, nv);
+            }
+        });
+
         // Construct all the FSMs
-        for (event, states) in Compile::max_states(comp) {
+        for (event, states) in max_states {
             ctx.insert_fsm(event, states);
         }
 
@@ -223,6 +235,8 @@ impl Compile {
             }
         }
 
+        // Compile the connects last because they require all the invokes and instances to be added first,
+        // so all ports exist and can be properly connected.
         cons.into_iter().for_each(|con| ctx.compile_connect(con));
         component
     }
@@ -243,7 +257,7 @@ impl Compile {
             )
         }));
 
-        // define a fake main component
+        // define a fake main component (needed to generate the ir calyx context)
         let main =
             frontend::ast::ComponentDef::new("main", false, None, vec![]);
         ws.components.push(main);
@@ -252,9 +266,12 @@ impl Compile {
         Ok(ctx)
     }
 
+    /// Compiles filament into calyx
     pub fn compile(ctx: ir::Context) {
+        // Creates a map between the file name and the external components defined in that file
         let externals =
             ctx.externals.iter().map(|(k, v)| (k, v.clone())).collect();
+
         let mut calyx_ctx =
             Compile::init(&ctx, externals).unwrap_or_else(|e| {
                 panic!("Error initializing calyx context: {:?}", e);
@@ -264,6 +281,7 @@ impl Compile {
 
         let po = Traversal::from(ctx);
 
+        // Compile the components in post-order.
         po.apply_pre_order(|ctx, idx| {
             let comp =
                 Compile::component(ctx, idx, &mut bindings, &calyx_ctx.lib);
@@ -271,6 +289,7 @@ impl Compile {
             calyx_ctx.components.push(comp);
         });
 
+        // add the fsm components to the calyx context
         calyx_ctx
             .components
             .extend(bindings.fsm_comps.into_values());

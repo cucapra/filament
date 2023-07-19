@@ -81,14 +81,17 @@ impl<'a> BuildCtx<'a> {
         }
     }
 
+    /// Adds an invocation to the component
     pub fn add_invoke(&mut self, invidx: ir::InvIdx) {
         let inv = self.comp.get(invidx);
 
+        // Gets a reference to the instance being invoked
         let cell = &self
             .instances
             .get(&inv.inst)
             .unwrap_or_else(|| panic!("Unknown instance: {}", inv.inst));
 
+        // loop through the event bindings defined in the instance and connect them to the corresponding fsms.
         for eb in inv.events.iter() {
             // If there is no interface port, no binding necessary
             if let Some(dst) = eb
@@ -97,14 +100,17 @@ impl<'a> BuildCtx<'a> {
             {
                 let ir::EventBind { arg: time, .. } = eb;
 
+                // gets the interface port from the signature of the instance
                 let dst = cell.borrow().get(dst);
 
                 let time = self.comp.get(*time);
                 let offset = time.offset.as_u64(self.comp);
+                // finds the corresponding port on the fsm of the referenced event
                 let src = self.fsms.get(&time.event).unwrap().get_port(offset);
 
                 let c = self.builder.add_constant(1, 1);
 
+                // builds the assignment `dst = src ? 1'd1;`
                 let assign = self.builder.build_assignment(
                     dst,
                     c.borrow().get("out"),
