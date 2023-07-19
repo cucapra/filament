@@ -179,7 +179,7 @@ impl Component {
         let sig_params = self
             .params()
             .iter()
-            .filter(|(idx, param)| param.is_sig_owned())
+            .filter(|(_, param)| param.is_sig_owned())
             .map(|(idx, _)| idx)
             .collect_vec();
 
@@ -336,7 +336,7 @@ impl Component {
         }
     }
 
-    /// Evaluates a binary operation, assuming that all params have been substituted for 
+    /// Evaluates a binary operation, assuming that all params have been substituted for
     /// concrete expressions in monomorphization
     pub fn bin(&mut self, expr: Expr) -> Expr {
         match expr {

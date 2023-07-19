@@ -124,10 +124,11 @@ impl Foldable<ParamIdx, ExprIdx> for ExprIdx {
                 ctx.add(Expr::Bin { op, lhs, rhs })
             }
             Expr::Fn { op, args } => {
-                let args = Box::new(args
-                    .iter()
-                    .map(|arg| arg.fold_with(ctx, subst_fn))
-                    .collect_vec());
+                let args = Box::new(
+                    args.iter()
+                        .map(|arg| arg.fold_with(ctx, subst_fn))
+                        .collect_vec(),
+                );
                 ctx.add(Expr::Fn { op, args })
             }
         }

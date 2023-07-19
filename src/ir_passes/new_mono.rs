@@ -1,4 +1,4 @@
-use crate::ir::{self, Ctx, IndexStore, Info, MutCtx};
+use crate::ir::{self, Ctx, IndexStore, MutCtx};
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
@@ -139,11 +139,14 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             }
             ir::Expr::Fn { op, args } => {
                 let args = args.iter().map(|idx| self.expr(*idx)).collect_vec();
-                let new_expr = self.base.func(ir::Expr::Fn {op, args: Box::new(args)});
+                let new_expr = self.base.func(ir::Expr::Fn {
+                    op,
+                    args: Box::new(args),
+                });
                 let new_idx = self.base.add(new_expr);
                 self.expr_map.insert(expr, new_idx);
                 new_idx
-            },
+            }
         }
     }
 
