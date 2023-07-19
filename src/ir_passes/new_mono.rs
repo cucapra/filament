@@ -77,7 +77,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 // self.param_map.insert(param, new_idx);
                 // new_idx
                 if let Some(idx) = self.param_map.get(&param) {
-                    return *idx
+                    return *idx;
                 };
                 let p = self.underlying.get(param);
                 let new_idx = self.base.add(p.clone());
@@ -115,7 +115,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             new_param.info = mono_info;
             new_param.default = None;
 
-            return *new_param_idx
+            return *new_param_idx;
         };
 
         let mono_param = ir::Param {
@@ -126,9 +126,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let new_idx = self.base.add(mono_param);
         self.param_map.insert(param, new_idx);
-        println!("bundle param {} new owner is {}", new_idx, self.curr_port.unwrap());
         new_idx
-        
     }
 
     /// Translates an ExprIdx defined by `underlying` to correponding one in `base`.
@@ -225,13 +223,12 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         // Find the new port owner
         let mono_owner = self.find_new_portowner(owner);
-        
+
         self.port_map.insert(port, new_port);
 
         let ir::Liveness { idx, len, range } = live;
 
         self.curr_port = Some(new_port);
-        println!("set curr port to {}", new_port);
         let mono_liveness_idx = self.bundle_param(*idx);
 
         let mut mono_liveness = ir::Liveness {
@@ -251,8 +248,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let port = self.base.get_mut(new_port);
         port.live = mono_liveness; // update
-        port.width = mono_width;   // update
-        port.owner = mono_owner;   // update
+        port.width = mono_width; // update
+        port.owner = mono_owner; // update
 
         new_port
     }
@@ -279,17 +276,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             ir::PortOwner::Inv { inv, dir } => {
                 // inv is only meaningful in the underlying component
                 let inv_occurrences = self.inv_counter.get(inv).unwrap();
-                let base_inv = match self.inv_map.get(&(*inv, *inv_occurrences))
-                {
-                    Some(n) => n,
-                    None => {
-                        println!(
-                            "tried to get ({}, {}) in invmap",
-                            inv, inv_occurrences
-                        );
-                        inv
-                    }
-                };
+                let base_inv =
+                    self.inv_map.get(&(*inv, *inv_occurrences)).unwrap();
                 ir::PortOwner::Inv {
                     inv: *base_inv,
                     dir: dir.clone(),
@@ -781,7 +769,10 @@ impl Monomorphize<'_> {
         while let Some((mut comp, idx)) = mono.next() {
             let default = mono.ctx.get_mut(idx);
             std::mem::swap(&mut comp, default);
-            let val = ir::Validate {comp: &comp, ctx: &mono.ctx.comps};
+            let val = ir::Validate {
+                comp: &comp,
+                ctx: &mono.ctx.comps,
+            };
             val.comp();
         }
         mono.ctx
