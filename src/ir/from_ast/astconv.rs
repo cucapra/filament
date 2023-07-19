@@ -909,7 +909,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         let comp = std::mem::take(&mut ns.components[cidx]);
         log::debug!("Compiling component {}", comp.sig.name);
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
-        
+
         std::mem::swap(ctx.get_mut(idx), &mut dummy);
         BuildCtx::comp(&ctx, &mut dummy, comp, &sig_map);
         // swap the component back into place
