@@ -73,7 +73,14 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         match owner {
             ir::ParamOwner::Bundle(_) => {
                 // this port idx is meaningful in self.underlying
-                let new_idx = self.bundle_param(param);
+                // let new_idx = self.bundle_param(param);
+                // self.param_map.insert(param, new_idx);
+                // new_idx
+                if let Some(idx) = self.param_map.get(&param) {
+                    return *idx
+                };
+                let p = self.underlying.get(param);
+                let new_idx = self.base.add(p.clone());
                 self.param_map.insert(param, new_idx);
                 new_idx
             }
@@ -98,15 +105,30 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     /// corresponding index
     fn bundle_param(&mut self, param: ir::ParamIdx) -> ir::ParamIdx {
         let ir::Param { info, .. } = self.underlying.get(param);
-
+        let mono_info = self.info(info);
         let mono_owner = ir::ParamOwner::Bundle(self.curr_port.unwrap());
+
+        if let Some(new_param_idx) = self.param_map.get(&param) {
+            let mut new_param = self.base.get_mut(*new_param_idx);
+
+            new_param.owner = mono_owner;
+            new_param.info = mono_info;
+            new_param.default = None;
+
+            return *new_param_idx
+        };
+
         let mono_param = ir::Param {
             owner: mono_owner,
             info: self.info(info),
             default: None,
         };
 
-        self.base.add(mono_param)
+        let new_idx = self.base.add(mono_param);
+        self.param_map.insert(param, new_idx);
+        println!("bundle param {} new owner is {}", new_idx, self.curr_port.unwrap());
+        new_idx
+        
     }
 
     /// Translates an ExprIdx defined by `underlying` to correponding one in `base`.
@@ -191,25 +213,26 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             ..
         } = live;
 
-        // Find the new port owner
-        let mono_owner = self.find_new_portowner(owner);
-
         let info = self.info(info);
 
         // Add the new port so we can use its index in defining the correct Liveness
         let new_port = self.base.add(ir::Port {
-            owner: mono_owner,
+            owner: owner.clone(),
             width: *width,      // placeholder
             live: live.clone(), // placeholder
             info,
         });
 
-        self.curr_port = Some(new_port);
+        // Find the new port owner
+        let mono_owner = self.find_new_portowner(owner);
+        
         self.port_map.insert(port, new_port);
 
         let ir::Liveness { idx, len, range } = live;
 
-        let mono_liveness_idx = self.param(*idx);
+        self.curr_port = Some(new_port);
+        println!("set curr port to {}", new_port);
+        let mono_liveness_idx = self.bundle_param(*idx);
 
         let mut mono_liveness = ir::Liveness {
             idx: mono_liveness_idx,
@@ -228,7 +251,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let port = self.base.get_mut(new_port);
         port.live = mono_liveness; // update
-        port.width = mono_width; // update
+        port.width = mono_width;   // update
+        port.owner = mono_owner;   // update
 
         new_port
     }
@@ -757,6 +781,8 @@ impl Monomorphize<'_> {
         while let Some((mut comp, idx)) = mono.next() {
             let default = mono.ctx.get_mut(idx);
             std::mem::swap(&mut comp, default);
+            let val = ir::Validate {comp: &comp, ctx: &mono.ctx.comps};
+            val.comp();
         }
         mono.ctx
     }
