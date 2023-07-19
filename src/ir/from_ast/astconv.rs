@@ -883,20 +883,17 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     fn comp(
         ctx: &ir::Context,
+        ir_comp: &mut ir::Component,
         comp: ast::Component,
         sigs: &'prog SigMap,
-        src_name: Option<ast::Id>,
-    ) -> ir::Component {
-        let mut ir_comp = ir::Component::new(false);
-        ir_comp.src_info = src_name.map(ir::InterfaceSrc::new);
-        let mut builder = BuildCtx::new(ctx, &mut ir_comp, sigs);
+    ) {
+        let mut builder = BuildCtx::new(ctx, ir_comp, sigs);
 
         let mut cmds = builder.sig(comp.sig);
         let body_cmds = builder.commands(comp.body);
         cmds.extend(builder.port_assumptions());
         cmds.extend(body_cmds);
         ir_comp.cmds = cmds;
-        ir_comp
     }
 }
 
@@ -904,18 +901,13 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     let mut sig_map = SigMap::default();
     let main_idx = ns.main_idx();
     let (mut ns, order) = crate::utils::Traversal::from(ns).take();
-    // Extract components in order
-    let components = order
-        .into_iter()
-        .map(|cidx| (cidx, std::mem::take(&mut ns.components[cidx])))
-        .collect_vec();
     // chains external signatures and component signatures (in post-order) to get all signatures associated with this namespace
-    let signatures = ns
-        .externals()
-        .map(|(_, sig)| sig)
-        .chain(components.iter().map(|(_, c)| &c.sig));
+    // let signatures = ns
+    //     .externals()
+    //     .map(|(_, sig)| sig)
+    //     .chain(components.iter().map(|(_, c)| &c.sig));
     // Walk over signatures and build a SigMap
-    for (idx, sig) in signatures.enumerate() {
+    for (idx, sig) in ns.signatures().map(|(_, sig)| sig).enumerate() {
         sig_map.insert(sig.name.copy(), Sig::from((sig, idx)));
     }
 
@@ -930,17 +922,32 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         }
     }
 
-    for (cidx, comp) in components {
-        log::debug!("Converting component {}", comp.sig.name);
+    // declare all components
+    for (cidx, comp) in ns.components.iter().enumerate() {
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
-        let src_name = if Some(cidx) == main_idx {
+
+        let mut ir_comp = ir::Component::new(false);
+        if Some(cidx) == main_idx {
             ctx.entrypoint = Some(idx);
-            Some(comp.sig.name.copy())
-        } else {
-            None
-        };
-        let ir_comp = BuildCtx::comp(&ctx, comp, &sig_map, src_name);
+            ir_comp.src_info = Some(ir::InterfaceSrc::new(comp.sig.name.copy()));
+        }
         ctx.comps.checked_add(idx, ir_comp);
+        if Some(cidx) == main_idx {
+            ctx.entrypoint = Some(idx);
+        }
+    }
+
+    // create a dummy component to be swapped into the context
+    let mut dummy = ir::Component::new(false);
+    for cidx in order {
+        let comp = std::mem::take(&mut ns.components[cidx]);
+        log::debug!("Compiling component {}", comp.sig.name);
+        let idx = sig_map.get(&comp.sig.name).unwrap().idx;
+
+        std::mem::swap(ctx.get_mut(idx), &mut dummy);
+        BuildCtx::comp(&ctx, &mut dummy, comp, &sig_map);
+        // swap the component back into place
+        std::mem::swap(ctx.get_mut(idx), &mut dummy);
     }
 
     ctx
