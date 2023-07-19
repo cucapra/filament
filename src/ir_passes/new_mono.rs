@@ -197,6 +197,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     /// Monomorphize the port (owned by self.underlying) and add it to `self.base`, and return the corresponding index
     fn port(&mut self, port: ir::PortIdx) -> ir::PortIdx {
         if let Some(idx) = self.port_map.get(&port) {
+            println!("found {} -> {} in port_map", port, idx);
             return *idx;
         };
         let ir::Port {
@@ -221,10 +222,11 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             info,
         });
 
+        self.port_map.insert(port, new_port);
+        println!("inserted {} -> {} into port_map", port, new_port);
+
         // Find the new port owner
         let mono_owner = self.find_new_portowner(owner);
-
-        self.port_map.insert(port, new_port);
 
         let ir::Liveness { idx, len, range } = live;
 
@@ -383,7 +385,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         // Handle connects we just saw:
         let connects = self.connects.clone();
         for con in connects.iter() {
-            self.connect(con);
+            let cmd = self.connect(con);
+            self.base.cmds.push(cmd.into());
         }
 
         // Instance - replace the instance owned by self.underlying with one owned by self.base
@@ -558,10 +561,12 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         }
     }
 
-    fn if_stmt(&mut self, if_stmt: &ir::If) -> ir::If {
+    fn if_stmt(&mut self, if_stmt: &ir::If) {
         let ir::If { cond, then, alt } = if_stmt;
 
         let cond = self.prop(*cond);
+        let cond = self.base.resolve_prop(self.base.get(cond).clone());
+
         let then = then
             .iter()
             .map(|cmd| self.command(cmd))
@@ -579,14 +584,23 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             })
             .to_vec();
 
-        ir::If { cond, then, alt }
+        match cond {
+            ir::Prop::True => self.base.cmds.extend(then),
+            ir::Prop::False => self.base.cmds.extend(alt),
+            _ => panic!("couldnt resolve prop"),
+        }
     }
 
-    fn fact(&mut self, fact: &ir::Fact) -> ir::Fact {
+    fn fact(&mut self, fact: &ir::Fact) -> Option<ir::Command> {
         let ir::Fact { prop, reason, .. } = fact;
 
         let prop = self.prop(*prop);
-        ir::Fact::assert(prop, *reason)
+        let reason = self.info(reason);
+        if fact.is_assert() {
+            self.base.assert(prop, reason)
+        } else {
+            self.base.assume(prop, reason)
+        }
     }
 
     fn eventbind(&mut self, eb: &ir::EventBind) -> ir::EventBind {
@@ -599,20 +613,59 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         ir::EventBind { arg, info, delay }
     }
 
+    /// Either queues a connect to be handled later, or handles it now.
+    /// A connect gets handled later if the destination port is owned by an invoke, because we don't
+    /// generate the ports until we generate the invoke (and the way commands are laid out, connects come before invokes).
+    /// We handle a connect now if the source port is owned by an invoke
+    /// NOTE: what to do if it is inv1 <- inv0?
+    fn handle_connect(&mut self, con: &ir::Connect) -> Vec<ir::Command> {
+        let src_port_owner = &self.underlying.get(con.src.port).owner;
+        let dst_port_owner = &self.underlying.get(con.dst.port).owner;
+        match src_port_owner {
+            ir::PortOwner::Inv { dir, .. } => {
+                if dir.is_out() {
+                    let cmd = self.connect(con);
+                    vec![cmd.into()]
+                } else {
+                    self.connects.push(con.clone());
+                    vec![]
+                }
+            }
+            ir::PortOwner::Sig { .. } => match dst_port_owner {
+                ir::PortOwner::Inv { .. } => {
+                    self.connects.push(con.clone());
+                    vec![]
+                }
+                ir::PortOwner::Sig { .. } => {
+                    let cmd = self.connect(con);
+                    vec![cmd.into()]
+                }
+                ir::PortOwner::Local => panic!("aaaah"),
+            },
+            _ => panic!("ahhh"),
+        }
+    }
+
     fn command(&mut self, cmd: &ir::Command) -> Vec<ir::Command> {
         match cmd {
             ir::Command::Instance(idx) => vec![self.instance(*idx).into()],
             ir::Command::Invoke(idx) => vec![self.invoke(*idx).into()],
-            ir::Command::Connect(con) => {
-                self.connects.push(con.clone());
-                vec![]
-            }
+            ir::Command::Connect(con) => self.handle_connect(con),
             ir::Command::ForLoop(lp) => {
                 self.forloop(lp);
                 vec![]
             }
-            ir::Command::If(if_stmt) => vec![self.if_stmt(if_stmt).into()],
-            ir::Command::Fact(fact) => vec![self.fact(fact).into()],
+            ir::Command::If(if_stmt) => {
+                self.if_stmt(if_stmt);
+                vec![]
+            }
+            ir::Command::Fact(fact) => {
+                if let Some(cmd) = self.fact(fact) {
+                    vec![cmd]
+                } else {
+                    vec![]
+                }
+            }
         }
     }
 }

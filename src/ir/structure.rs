@@ -85,6 +85,18 @@ impl PortOwner {
     }
 }
 
+impl PortOwner {
+    pub fn is_inv_in(&self) -> bool {
+        matches!(
+            self,
+            PortOwner::Inv {
+                inv: _,
+                dir: Direction::In
+            }
+        )
+    }
+}
+
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum Direction {
     /// Input port
@@ -92,6 +104,17 @@ pub enum Direction {
     /// Output port
     Out,
 }
+
+impl Direction {
+    pub fn is_out(&self) -> bool {
+        matches!(self, Direction::Out)
+    }
+
+    pub fn is_in(&self) -> bool {
+        matches!(self, Direction::In)
+    }
+}
+
 impl fmt::Display for Direction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

@@ -6,7 +6,7 @@ use super::{
     MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeIdx,
     TimeSub,
 };
-use crate::{ast, utils::Idx};
+use crate::{ast, ir::Cmp, utils::Idx};
 
 #[derive(Default)]
 pub struct Context {
@@ -310,6 +310,113 @@ impl Ctx<Invoke> for Component {
 }
 
 impl Component {
+    pub fn resolve_prop(&self, prop: Prop) -> Prop {
+        match prop {
+            Prop::Cmp(cmp) => {
+                let CmpOp { op, lhs, rhs } = cmp;
+                let lhs = lhs.as_concrete(self).unwrap();
+                let rhs = rhs.as_concrete(self).unwrap();
+                match op {
+                    Cmp::Gt => {
+                        if lhs > rhs {
+                            Prop::True
+                        } else {
+                            Prop::False
+                        }
+                    }
+                    Cmp::Eq => {
+                        if lhs == rhs {
+                            Prop::True
+                        } else {
+                            Prop::False
+                        }
+                    }
+                    Cmp::Gte => {
+                        if lhs >= rhs {
+                            Prop::True
+                        } else {
+                            Prop::False
+                        }
+                    }
+                }
+            }
+            Prop::TimeCmp(_)
+            | Prop::TimeSubCmp(_)
+            | Prop::Implies(_, _)
+            | Prop::True
+            | Prop::False => prop,
+            Prop::And(l, r) => {
+                let l = self.resolve_prop(self.get(l).clone());
+                let r = self.resolve_prop(self.get(r).clone());
+                match (l.as_concrete(), r.as_concrete()) {
+                    (Some(l), Some(r)) => {
+                        if l && r {
+                            Prop::True
+                        } else {
+                            Prop::False
+                        }
+                    }
+                    (Some(l), None) => {
+                        if l {
+                            r
+                        } else {
+                            Prop::False
+                        }
+                    }
+                    (None, Some(r)) => {
+                        if r {
+                            l
+                        } else {
+                            Prop::False
+                        }
+                    }
+                    (None, None) => prop,
+                }
+            }
+            Prop::Or(l, r) => {
+                let l = self.resolve_prop(self.get(l).clone());
+                let r = self.resolve_prop(self.get(r).clone());
+                match (l.as_concrete(), r.as_concrete()) {
+                    (Some(l), Some(r)) => {
+                        if l || r {
+                            Prop::True
+                        } else {
+                            Prop::False
+                        }
+                    }
+                    (Some(l), None) => {
+                        if l {
+                            Prop::True
+                        } else {
+                            r
+                        }
+                    }
+                    (None, Some(r)) => {
+                        if r {
+                            Prop::True
+                        } else {
+                            l
+                        }
+                    }
+                    (None, None) => prop,
+                }
+            }
+            Prop::Not(p) => {
+                let p = self.resolve_prop(self.get(p).clone());
+                match p.as_concrete() {
+                    Some(p) => {
+                        if p {
+                            Prop::True
+                        } else {
+                            Prop::False
+                        }
+                    }
+                    None => prop,
+                }
+            }
+        }
+    }
+
     /// Evaluates a function, assuming that all parms have been substituted for
     /// concrete expressions in monomorphization
     pub fn func(&mut self, expr: Expr) -> Expr {
