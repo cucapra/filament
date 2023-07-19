@@ -249,6 +249,9 @@ impl<T, V> std::ops::Index<Idx<T>> for DenseIndexInfo<T, V> {
     }
 }
 
+/// Defines a traversal of the components.
+/// Equivalent to the ast traversal except works over IR components.
+/// There is an edge between src -> dst if `src` instantiates an instance of `dst`
 pub struct Traversal {
     ctx: Context,
     order: Vec<CompIdx>,
@@ -386,6 +389,7 @@ where
     }
 
     /// Runs a function used to unwrap the foreign type into a different type.
+    /// Shouldn't be used if `X` is an `Idx<T>` as this index will be unsafe.
     pub fn apply<F, X>(&self, ctx: &impl Ctx<C>, mut f: F) -> X
     where
         F: FnMut(&C, Idx<T>) -> X,

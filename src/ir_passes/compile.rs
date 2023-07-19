@@ -69,29 +69,23 @@ impl Compile {
                 value: Compile::param_name(comp, *p).into(),
             },
             ir::Expr::Concrete(val) => calyx::Width::Const { value: *val },
-            ir::Expr::Bin { .. } | ir::Expr::Fn { .. } => {
-                panic!("Port width must be a parameter or constant.")
-            }
+            ir::Expr::Bin { .. } | ir::Expr::Fn { .. } => comp
+                .internal_error("Port width must be a parameter or constant."),
         }
     }
 
     /// Compiles an [ir::ExprIdx] into a [u64].
-    /// Expects the [ir::ExprIdx] to be a single constant value
+    /// Expects the [ir::ExprIdx] to be a single constant value, and panics if this isn't the case
     fn u64(comp: &ir::Component, expr: ir::ExprIdx) -> u64 {
-        match comp.get(expr) {
-            ir::Expr::Concrete(val) => *val,
-            ir::Expr::Param(..)
-            | ir::Expr::Bin { .. }
-            | ir::Expr::Fn { .. } => {
-                panic!("Port width must be a constant.")
-            }
-        }
+        expr.as_concrete(comp).unwrap_or_else(|| {
+            comp.internal_error("Expression must be a constant.")
+        })
     }
 
     fn ports<CW, WFU, WT>(
         ctx: &ir::Context,
         comp: &ir::Component,
-        wfu: WFU, // Function that returns a CW type from a u64
+        width_from_u64: WFU, // Function that returns a CW type from a u64
         width_transform: WT,
         is_comp: bool,
     ) -> Vec<calyx::PortDef<CW>>
@@ -100,27 +94,32 @@ impl Compile {
         WT: Fn(&ir::Component, ir::ExprIdx) -> CW,
     {
         let mut ports: Vec<_> = comp
+            // the initial list of ports.
             .ports()
             .idx_iter()
             .filter_map(|port| {
                 Compile::port_def(ctx, comp, port, &width_transform)
             })
-            .chain(comp.unannotated_ports().into_iter().map(|(name, width)| {
-                calyx::PortDef {
-                    name: name.as_ref().into(),
-                    width: wfu(width),
-                    direction: calyx::Direction::Input,
-                    attributes: calyx::Attributes::default(),
-                }
-            }))
             .chain(
+                // adds unannotated ports to the list of ports
+                comp.unannotated_ports().into_iter().map(|(name, width)| {
+                    calyx::PortDef {
+                        name: name.as_ref().into(),
+                        width: width_from_u64(width),
+                        direction: calyx::Direction::Input,
+                        attributes: calyx::Attributes::default(),
+                    }
+                }),
+            )
+            .chain(
+                // adds interface ports to the list of ports
                 comp.events()
                     .idx_iter()
                     .filter_map(|idx| Compile::interface_port_name(comp, idx))
                     .into_iter()
                     .map(|name| calyx::PortDef {
                         name: name.into(),
-                        width: wfu(1),
+                        width: width_from_u64(1),
                         direction: calyx::Direction::Input,
                         attributes: vec![(
                             calyx::Attribute::Unknown("fil_event".into()),
@@ -137,20 +136,23 @@ impl Compile {
 
         // add interface port attributes if necessary
         for pd in &mut ports {
-            if let Some(pair) = INTERFACE_PORTS
-                .iter()
-                .find(|(_, (n, _, _))| *n == pd.name.as_ref())
+            if let Some(pair @ ((attr, value), (name, _, dir))) =
+                INTERFACE_PORTS
+                    .iter()
+                    .find(|(_, (n, _, _))| *n == pd.name.as_ref())
             {
                 assert!(
-                    pair.1 .2 == pd.direction,
+                    dir == &pd.direction,
                     "Expected {} to be an {:?} port, got {:?} port.",
-                    pair.1 .0,
-                    pair.1 .2,
+                    name,
+                    dir,
                     pd.direction
                 );
-                // TODO: Assert width equality
+                // TODO: should also assert that the width of the matching port is the same as what we expect
+                // We'd also need an equality function on `CW` types to do this, which we don't have at the moment
+                // for [calyx::Width].
                 interface_ports.remove(pair);
-                pd.attributes.insert(pair.0 .0, pair.0 .1);
+                pd.attributes.insert(*attr, *value);
             }
         }
 
@@ -159,7 +161,7 @@ impl Compile {
             for (attr, (name, width, dir)) in interface_ports {
                 ports.push(calyx::PortDef {
                     name: (*name).into(),
-                    width: wfu(*width),
+                    width: width_from_u64(*width),
                     direction: dir.clone(),
                     attributes: vec![*attr].try_into().unwrap(),
                 });
@@ -169,9 +171,9 @@ impl Compile {
         ports
     }
 
-    /// Gets the component name given an [ir::Context] and an [ir::CompIdx]
+    /// Gets the cocomps.comps.mponent name given an [ir::Context] and an [ir::CompIdx]
     fn comp_name(ctx: &ir::Context, idx: ir::CompIdx) -> String {
-        match &ctx.comps.get(idx).src_info {
+        match &ctx.get(idx).src_info {
             Some(src_info) => src_info.name.to_string(),
             None => format!("comp{}", idx.get()),
         }
@@ -212,19 +214,19 @@ impl Compile {
         comp: &ir::Component,
         idx: ir::EventIdx,
     ) -> Option<String> {
-        if comp.get(idx).has_interface {
-            Some(if let Some(src) = &comp.src_info {
-                src.interface_ports.get(&idx).unwrap().to_string()
-            } else {
-                format!("ev{}", idx.get())
-            })
-        } else {
-            None
+        if !comp.get(idx).has_interface {
+            return None;
         }
+
+        Some(if let Some(src) = &comp.src_info {
+            src.interface_ports.get(&idx).unwrap().to_string()
+        } else {
+            format!("ev{}", idx.get())
+        })
     }
 
     fn primitive(ctx: &ir::Context, idx: ir::CompIdx) -> calyx::Primitive {
-        let comp = ctx.comps.get(idx);
+        let comp = ctx.get(idx);
         calyx::Primitive {
             name: Compile::comp_name(ctx, idx).into(),
             params: comp
@@ -268,7 +270,7 @@ impl Compile {
         lib: &calyx::LibrarySignatures,
     ) -> calyx::Component {
         log::debug!("Compiling component {idx}");
-        let comp = ctx.comps.get(idx);
+        let comp = ctx.get(idx);
         let ports = Compile::ports(ctx, comp, identity, Compile::u64, true);
         let mut component = calyx::Component::new(
             Compile::comp_name(ctx, idx),
@@ -417,6 +419,7 @@ impl Binding {
     }
 }
 
+/// Contains the context needed to compile a component.
 struct Context<'a> {
     ctx: &'a ir::Context,
     cidx: ir::CompIdx,
@@ -442,7 +445,7 @@ impl<'a> Context<'a> {
         Context {
             ctx,
             cidx: idx,
-            comp: ctx.comps.get(idx),
+            comp: ctx.get(idx),
             binding,
             builder,
             lib,
@@ -579,7 +582,7 @@ impl<'a> Context<'a> {
         let inst_name = self.idx_name(idx);
         let comp_name = Compile::comp_name(self.ctx, inst.comp);
 
-        let cell = if let Some(sig) = self.get_sig(&inst.comp) {
+        let cell = if let Some(sig) = self.binding.get(&inst.comp) {
             self.builder.add_component(
                 inst_name, // non-primitive component
                 comp_name, sig,
@@ -599,10 +602,7 @@ impl<'a> Context<'a> {
         self.instances.insert(idx, cell);
     }
 
-    fn get_sig(&self, comp: &ir::CompIdx) -> Option<Vec<calyx::PortDef<u64>>> {
-        self.binding.get(comp)
-    }
-
+    /// Creates a name from an [utils::Idx<T>] provided it has a prefix defined in the [utils::IdxPre] trait.
     fn idx_name<T>(&self, idx: utils::Idx<T>) -> String
     where
         ir::Component: Ctx<T>,
