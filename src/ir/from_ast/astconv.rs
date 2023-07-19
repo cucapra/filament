@@ -871,11 +871,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 pub fn transform(ns: ast::Namespace) -> ir::Context {
     let mut sig_map = SigMap::default();
     let (mut ns, order) = crate::utils::Traversal::from(ns).take();
-    // chains external signatures and component signatures (in post-order) to get all signatures associated with this namespace
-    // let signatures = ns
-    //     .externals()
-    //     .map(|(_, sig)| sig)
-    //     .chain(components.iter().map(|(_, c)| &c.sig));
+
     // Walk over signatures and build a SigMap
     for (idx, sig) in ns.signatures().map(|(_, sig)| sig).enumerate() {
         sig_map.insert(sig.name.copy(), Sig::from((sig, idx)));
@@ -892,7 +888,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         }
     }
 
-    // declare all components
+    // declare all components in the proper order
     for (cidx, comp) in ns.components.iter().enumerate() {
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
 
