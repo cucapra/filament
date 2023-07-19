@@ -78,7 +78,11 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 new_idx
             }
             ir::ParamOwner::Loop => {
-                let new_param = ir::Param {owner: owner.clone(), info: self.info(info), default: None};
+                let new_param = ir::Param {
+                    owner: owner.clone(),
+                    info: self.info(info),
+                    default: None,
+                };
                 let new_idx = self.base.add(new_param);
                 self.param_map.insert(param, new_idx);
                 new_idx
@@ -113,26 +117,33 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         match self.underlying.get(expr).clone() {
             ir::Expr::Param(p) => {
                 let new_idx = self
-                .binding
-                .get(&p)
-                .map(|n| self.base.num(*n))
-                .unwrap_or_else(|| self.param(p).expr(&mut self.base));
+                    .binding
+                    .get(&p)
+                    .map(|n| self.base.num(*n))
+                    .unwrap_or_else(|| self.param(p).expr(&mut self.base));
                 self.expr_map.insert(expr, new_idx);
                 new_idx
-            },
+            }
             ir::Expr::Concrete(n) => {
                 let new_idx = self.base.num(n);
                 self.expr_map.insert(expr, new_idx);
                 new_idx
-            },
+            }
             ir::Expr::Bin { op, lhs, rhs } => {
                 let lhs = self.expr(lhs);
                 let rhs = self.expr(rhs);
-                let new_idx = self.base.add(ir::Expr::Bin { op, lhs, rhs });
+                let new_expr = self.base.bin(ir::Expr::Bin { op, lhs, rhs });
+                let new_idx = self.base.add(new_expr);
                 self.expr_map.insert(expr, new_idx);
                 new_idx
             }
-            ir::Expr::Fn { op, args } => todo!(),
+            ir::Expr::Fn { op, args } => {
+                let args = args.iter().map(|idx| self.expr(*idx)).collect_vec();
+                let new_expr = self.base.func(ir::Expr::Fn {op, args: Box::new(args)});
+                let new_idx = self.base.add(new_expr);
+                self.expr_map.insert(expr, new_idx);
+                new_idx
+            },
         }
     }
 
@@ -219,6 +230,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         new_port
     }
 
+    /// Add `self.underlying`'s info to `self.base`. Nothing else needs to be done because all the constructs
+    /// we generate and add to `self.base` map to the same source-level info that they did in `self.underlying`
     fn info(&mut self, info: &ir::InfoIdx) -> ir::InfoIdx {
         let info = self.underlying.get(*info);
         self.base.add(info.clone())
@@ -362,7 +375,11 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         // Instance - replace the instance owned by self.underlying with one owned by self.base
         let inst_occurrences = self.inst_counter.get(inst).unwrap();
-        let base_inst = self.inst_map.get(&(*inst, *inst_occurrences)).unwrap().clone();
+        let base_inst = self
+            .inst_map
+            .get(&(*inst, *inst_occurrences))
+            .unwrap()
+            .clone();
 
         // Ports
         let mono_ports = ports.iter().map(|p| self.port(*p)).collect_vec();
@@ -411,73 +428,67 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 let new_idx = self.base.add(prop.clone());
                 self.prop_map.insert(pidx, new_idx);
                 new_idx
-            },
+            }
             ir::Prop::Cmp(cmp) => {
-                let ir::CmpOp {op, lhs, rhs} = cmp;
+                let ir::CmpOp { op, lhs, rhs } = cmp;
                 let lhs = self.expr(*lhs);
                 let rhs = self.expr(*rhs);
-                let new_idx = self.base.add(ir::Prop::Cmp(
-                    ir::CmpOp {
-                        op: op.clone(),
-                        lhs,
-                        rhs
-                    }
-                ));
+                let new_idx = self.base.add(ir::Prop::Cmp(ir::CmpOp {
+                    op: op.clone(),
+                    lhs,
+                    rhs,
+                }));
                 self.prop_map.insert(pidx, new_idx);
                 new_idx
-            },
+            }
             ir::Prop::TimeCmp(tcmp) => {
-                let ir::CmpOp {op, lhs, rhs} = tcmp;
+                let ir::CmpOp { op, lhs, rhs } = tcmp;
                 let lhs = self.time(*lhs);
                 let rhs = self.time(*rhs);
-                let new_idx = self.base.add(ir::Prop::TimeCmp(
-                    ir::CmpOp {
-                        op: op.clone(),
-                        lhs,
-                        rhs
-                    }
-                ));
+                let new_idx = self.base.add(ir::Prop::TimeCmp(ir::CmpOp {
+                    op: op.clone(),
+                    lhs,
+                    rhs,
+                }));
                 self.prop_map.insert(pidx, new_idx);
                 new_idx
-            },
+            }
             ir::Prop::TimeSubCmp(tscmp) => {
-                let ir::CmpOp {op, lhs, rhs} = tscmp;
+                let ir::CmpOp { op, lhs, rhs } = tscmp;
                 let lhs = self.timesub(lhs);
                 let rhs = self.timesub(rhs);
-                let new_idx = self.base.add(ir::Prop::TimeSubCmp(
-                    ir::CmpOp {
-                        op: op.clone(),
-                        lhs,
-                        rhs
-                    }
-                ));
+                let new_idx = self.base.add(ir::Prop::TimeSubCmp(ir::CmpOp {
+                    op: op.clone(),
+                    lhs,
+                    rhs,
+                }));
                 self.prop_map.insert(pidx, new_idx);
                 new_idx
-            },
+            }
             ir::Prop::Not(p) => {
                 let new_p = self.prop(*p);
                 let new_idx = self.base.add(ir::Prop::Not(new_p));
                 self.prop_map.insert(pidx, new_idx);
                 new_idx
-            },
+            }
             ir::Prop::And(l, r) => {
                 let l = self.prop(*l);
                 let r = self.prop(*r);
-                let new_idx = self.base.add(ir::Prop::And(l,r));
+                let new_idx = self.base.add(ir::Prop::And(l, r));
                 self.prop_map.insert(pidx, new_idx);
                 new_idx
-            },
+            }
             ir::Prop::Or(l, r) => {
                 let l = self.prop(*l);
                 let r = self.prop(*r);
-                let new_idx = self.base.add(ir::Prop::Or(l,r));
+                let new_idx = self.base.add(ir::Prop::Or(l, r));
                 self.prop_map.insert(pidx, new_idx);
                 new_idx
-            },
+            }
             ir::Prop::Implies(l, r) => {
                 let l = self.prop(*l);
                 let r = self.prop(*r);
-                let new_idx = self.base.add(ir::Prop::Implies(l,r));
+                let new_idx = self.base.add(ir::Prop::Implies(l, r));
                 self.prop_map.insert(pidx, new_idx);
                 new_idx
             }
@@ -544,12 +555,18 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let then = then
             .iter()
             .map(|cmd| self.command(cmd))
-            .fold(&mut vec![], |acc, cvec| { acc.extend(cvec); acc})
+            .fold(&mut vec![], |acc, cvec| {
+                acc.extend(cvec);
+                acc
+            })
             .to_vec();
         let alt = alt
             .iter()
             .map(|cmd| self.command(cmd))
-            .fold(&mut vec![], |acc, cvec| { acc.extend(cvec); acc})
+            .fold(&mut vec![], |acc, cvec| {
+                acc.extend(cvec);
+                acc
+            })
             .to_vec();
 
         ir::If { cond, then, alt }
@@ -583,14 +600,10 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             ir::Command::ForLoop(lp) => {
                 self.forloop(lp);
                 vec![]
-            },
+            }
             ir::Command::If(if_stmt) => vec![self.if_stmt(if_stmt).into()],
             ir::Command::Fact(fact) => vec![self.fact(fact).into()],
         }
-    }
-
-    fn take(self) -> ir::Component {
-        self.base
     }
 }
 
@@ -695,6 +708,8 @@ impl<'ctx> Monomorphize<'ctx> {
             param_map: HashMap::new(),
         };
         mono.gen_comp();
+        // At this point, base_idx will be pointing to a default component
+        // Return the idx so that we can swap them afterwards
         Some((mono.base, base_idx))
     }
 
@@ -714,6 +729,8 @@ impl<'ctx> Monomorphize<'ctx> {
             .iter()
             .fold(false, |acc, cmd| acc | cmd.is_loop() | cmd.is_if());
 
+        // for entrypoints that don't have parameters or control flow, but still need to be monomorphized
+        // because they instantiate things that need to be monomorphized
         let has_insts = underlying
             .instances()
             .iter()

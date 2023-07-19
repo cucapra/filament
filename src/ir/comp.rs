@@ -309,31 +309,76 @@ impl Ctx<Invoke> for Component {
     }
 }
 
-impl Ctx<Expr> for Component {
-    fn add(&mut self, val: Expr) -> ExprIdx {
-        match val {
-            Expr::Param(_) | Expr::Concrete(_) => self.exprs.intern(val),
-            Expr::Bin { op, lhs: l, rhs: r } => match op {
-                ast::Op::Add => l.add(r, self),
-                ast::Op::Mul => l.mul(r, self),
-                ast::Op::Sub => l.sub(r, self),
-                ast::Op::Div => l.div(r, self),
-                ast::Op::Mod => l.rem(r, self),
-            },
-            Expr::Fn { op, args } => {
-                if args.len() != 1 {
-                    self.internal_error(format!(
-                        "pow2 has {} arguments",
-                        args.len()
-                    ))
-                }
-                let arg = args[0];
+impl Component {
+    /// Evaluates a function, assuming that all parms have been substituted for
+    /// concrete expressions in monomorphization
+    pub fn func(&mut self, expr: Expr) -> Expr {
+        match expr {
+            Expr::Concrete(_) => expr,
+            Expr::Bin {..} => self.bin(expr),
+            Expr::Param(_) => {
+                self.internal_error(format!(
+                    "When evaluating a function expression, there should not be any parameters in it"
+                ))
+            }
+            Expr::Fn {op, args} => {
+                let args = args.iter().map(|arg| self.bin(self.get(*arg).clone())).collect_vec();
+                let arg = args.get(0).unwrap().as_concrete().unwrap();
                 match op {
-                    ast::UnFn::Pow2 => arg.pow2(self),
-                    ast::UnFn::Log2 => arg.log2(self),
+                    ast::UnFn::Pow2 => {
+                        Expr::Concrete(2u64.pow(arg as u32))
+                    }
+                    ast::UnFn::Log2 => {
+                        Expr::Concrete((arg as f64).log2().ceil() as u64)
+                    }
                 }
             }
         }
+    }
+
+    /// Evaluates a binary operation, assuming that all params have been substituted for 
+    /// concrete expressions in monomorphization
+    pub fn bin(&mut self, expr: Expr) -> Expr {
+        match expr {
+            Expr::Concrete(_) => expr,
+            Expr::Bin {op, lhs, rhs} => {
+                let lhs = self.get(lhs);
+                let lhs = self.bin(lhs.clone()).as_concrete().unwrap();
+                let rhs = self.get(rhs);
+                let rhs = self.bin(rhs.clone()).as_concrete().unwrap();
+                match op {
+                    ast::Op::Add => {
+                        Expr::Concrete(lhs + rhs)
+                    },
+                    ast::Op::Mul => {
+                        Expr::Concrete(lhs * rhs)
+                    },
+                    ast::Op::Sub => {
+                        Expr::Concrete(lhs - rhs)
+                    },
+                    ast::Op::Div => {
+                        Expr::Concrete(lhs / rhs)
+                    },
+                    ast::Op::Mod => {
+                        Expr::Concrete(lhs % rhs)
+                    },
+                }
+            },
+            Expr::Param(_) => {
+                self.internal_error(format!(
+                    "When evaluating a binop expression, there should not be any parameters in it"
+                ))
+            },
+            Expr::Fn {..} => {
+                self.func(expr)
+            }
+        }
+    }
+}
+
+impl Ctx<Expr> for Component {
+    fn add(&mut self, val: Expr) -> ExprIdx {
+        self.exprs.intern(val)
     }
 
     fn get(&self, idx: ExprIdx) -> &Expr {

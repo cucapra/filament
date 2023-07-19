@@ -156,7 +156,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 // The .add call simplifies the expression if possible
                 self.comp.add(ir::Expr::Fn {
                     op: func,
-                    args: Box::new([arg]),
+                    args: Box::new(vec![arg]),
                 })
             }
         }
