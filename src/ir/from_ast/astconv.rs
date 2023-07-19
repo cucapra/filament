@@ -349,6 +349,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 (name, p)
             }
         };
+
         let idx = self.comp.add(p);
         // Fixup the liveness index parameter's owner
         let p = self.comp.get(idx);
@@ -888,6 +889,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         }
     }
 
+    // TODO: Need to handle recursive components as well as mutually recursive components by adding signature ports first in declaration, so that foreign keys can be resolved
     // declare all components in the proper order
     for (cidx, comp) in ns.components.iter().enumerate() {
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
@@ -900,16 +902,18 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     }
 
     // create a dummy component to be swapped into the context
-    let mut dummy = ir::Component::new(false);
+    let mut curr_comp = ir::Component::new(false);
     for cidx in order {
         let comp = std::mem::take(&mut ns.components[cidx]);
         log::debug!("Compiling component {}", comp.sig.name);
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
 
-        std::mem::swap(ctx.get_mut(idx), &mut dummy);
-        BuildCtx::comp(&ctx, &mut dummy, comp, &sig_map);
+        // Needs to swap here because we have to own the current component while leaving the context immutable.
+        // TODO: Find a solution here that will still allow us to properly generate Foreign keys in recursive components.
+        std::mem::swap(ctx.get_mut(idx), &mut curr_comp);
+        BuildCtx::comp(&ctx, &mut curr_comp, comp, &sig_map);
         // swap the component back into place
-        std::mem::swap(ctx.get_mut(idx), &mut dummy);
+        std::mem::swap(ctx.get_mut(idx), &mut curr_comp);
     }
 
     ctx
