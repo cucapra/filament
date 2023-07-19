@@ -223,8 +223,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     ) -> ParamIdx {
         let default = param.default.as_ref().map(|e| self.expr(e.clone()));
         let info = self.comp.add(ir::Info::param(param.name(), param.pos()));
-        let is_sig_param = ir::ParamOwner::Sig == owner;
-        let idx = self.comp.add(ir::Param::new(owner, info, default));
+
+        let ir_param = ir::Param::new(owner, info, default);
+        let is_sig_param = ir_param.is_sig_owned();
+
+        let idx = self.comp.add(ir_param);
         self.add_param(param.name(), idx);
 
         // only add information if this is a signature defined parameter
@@ -298,7 +301,6 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 
     fn port(&mut self, pd: ast::PortDef, owner: ir::PortOwner) -> PortIdx {
-        let is_sig_port = matches!(owner, ir::PortOwner::Sig { .. });
         let (name, p) = match pd {
             ast::PortDef::Port {
                 name,
@@ -369,6 +371,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             }
         };
 
+        // Defines helper variable here due to lifetime issues
+        let is_sig_port = p.is_sig();
         let idx = self.comp.add(p);
         // Fixup the liveness index parameter's owner
         let p = self.comp.get(idx);
