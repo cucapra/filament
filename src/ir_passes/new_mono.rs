@@ -1,4 +1,4 @@
-use crate::ir::{self, Ctx, IndexStore, MutCtx};
+use crate::ir::{self, Ctx, Foreign, IndexStore, MutCtx};
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
@@ -60,6 +60,13 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         for (idx, _) in self.underlying.props().iter() {
             self.prop(idx);
         }
+    }
+
+    fn foreign<T>(
+        &mut self,
+        _foreign: &Foreign<T, ir::Component>,
+    ) -> Foreign<T, ir::Component> {
+        todo!()
     }
 
     /// Translates a ParamIdx defined by `underlying` to corresponding one in `base`
@@ -275,14 +282,16 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     fn find_new_portowner(&mut self, owner: &ir::PortOwner) -> ir::PortOwner {
         match owner {
             ir::PortOwner::Sig { .. } | ir::PortOwner::Local => owner.clone(),
-            ir::PortOwner::Inv { inv, dir } => {
+            ir::PortOwner::Inv { inv, dir, base } => {
                 // inv is only meaningful in the underlying component
+                let base = self.foreign(base);
                 let inv_occurrences = self.inv_counter.get(inv).unwrap();
                 let base_inv =
                     self.inv_map.get(&(*inv, *inv_occurrences)).unwrap();
                 ir::PortOwner::Inv {
                     inv: *base_inv,
                     dir: dir.clone(),
+                    base,
                 }
             }
         }
@@ -298,18 +307,16 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let ir::Event {
             delay,
             info,
-            interface_port,
+            has_interface,
         } = self.underlying.get(event);
 
         let delay = self.delay(delay);
         let info = self.info(info);
-        let interface_port =
-            interface_port.as_ref().map(|info| self.info(info));
 
         let idx = self.base.add(ir::Event {
             delay,
             info,
-            interface_port,
+            has_interface: *has_interface,
         });
         self.event_map.insert(event, idx);
         idx
@@ -605,18 +612,29 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     }
 
     fn eventbind(&mut self, eb: &ir::EventBind) -> ir::EventBind {
-        let ir::EventBind { arg, info, delay } = eb;
+        let ir::EventBind {
+            arg,
+            info,
+            delay,
+            base,
+        } = eb;
 
         let delay = self.timesub(delay);
         let arg = self.time(*arg);
         let info = self.info(info);
+        let base = self.foreign(base);
 
-        ir::EventBind { arg, info, delay }
+        ir::EventBind {
+            arg,
+            info,
+            delay,
+            base,
+        }
     }
 
     /// Either queues a connect to be handled later, or handles it now.
-    /// A connect gets handled later if: 
-    /// (1) The source port is invoke-owned and the destination port is also invoke-owned, or 
+    /// A connect gets handled later if:
+    /// (1) The source port is invoke-owned and the destination port is also invoke-owned, or
     /// (2) The source port is sig-owned and the destination port is invoke-owned
     /// A connect gets handled now if:
     /// (1) The source port is invoke-owned and the destination port is sig-owned

@@ -97,7 +97,8 @@ impl PortOwner {
             self,
             PortOwner::Inv {
                 inv: _,
-                dir: Direction::In
+                dir: Direction::In,
+                base: _
             }
         )
     }
