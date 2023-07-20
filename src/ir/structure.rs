@@ -98,6 +98,16 @@ pub enum Direction {
     /// Output port
     Out,
 }
+
+impl Direction {
+    pub fn reverse(&self) -> Self {
+        match self {
+            Direction::In => Direction::Out,
+            Direction::Out => Direction::In,
+        }
+    }
+}
+
 impl fmt::Display for Direction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -135,9 +145,16 @@ pub struct Port {
     pub info: InfoIdx,
 }
 impl Port {
+    /// Check if this is an invoke defined port
     pub fn is_inv(&self) -> bool {
         matches!(self.owner, PortOwner::Inv { .. })
     }
+
+    /// Check if this is a signature port
+    pub fn is_sig(&self) -> bool {
+        matches!(self.owner, PortOwner::Sig { .. })
+    }
+
     /// Check if this is an input port on the signature
     pub fn is_sig_in(&self) -> bool {
         // We check the direction is `out` because the port direction is flipped

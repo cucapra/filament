@@ -1,8 +1,15 @@
 use bitvec::vec::BitVec;
+use itertools::Itertools;
+use topological_sort::TopologicalSort;
 
 use super::Ctx;
 use crate::utils::Idx;
-use std::{collections::HashMap, fmt::Display, marker::PhantomData, rc::Rc};
+use std::{
+    collections::HashMap, fmt::Display, iter::IntoIterator,
+    marker::PhantomData, rc::Rc,
+};
+
+use super::{Command, CompIdx, Context};
 
 /// An indexed storage for an interned type. Keeps a HashMap to provide faster reverse mapping
 /// from the value to the index.
@@ -153,12 +160,15 @@ impl<T> IndexStore<T> {
         self.store.is_empty()
     }
 
-    /// Iterate over the indices in the store along with their validity.
+    /// Iterate over the valid indices in the store.
     /// This can be useful because it allows mutable borrows of the owners of the store.
-    pub fn idx_iter(&self) -> impl Iterator<Item = (Idx<T>, bool)> {
-        (0..self.store.len())
-            .map(Idx::new)
-            .zip(self.valid.clone().into_iter())
+    pub fn idx_iter(&self) -> impl Iterator<Item = Idx<T>> {
+        self.valid
+            .clone()
+            .into_iter()
+            .enumerate()
+            .filter(|(_, valid)| *valid)
+            .map(|(idx, _)| Idx::new(idx))
     }
 
     /// Iterate over the indices and the values in the store.
@@ -187,6 +197,22 @@ impl<T> IndexStore<T> {
             self.store.len()
         );
         self.add(val);
+    }
+}
+
+impl<T> IntoIterator for IndexStore<T> {
+    type Item = T;
+
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.store.into_iter()
+    }
+}
+
+impl<T> From<IndexStore<T>> for Vec<T> {
+    fn from(value: IndexStore<T>) -> Self {
+        value.store
     }
 }
 
@@ -261,28 +287,137 @@ impl<T, V> std::ops::Index<Idx<T>> for DenseIndexInfo<T, V> {
     }
 }
 
+/// Defines a traversal of the components.
+/// Equivalent to the ast traversal except works over IR components.
+/// There is an edge between src -> dst if `src` instantiates an instance of `dst`
+pub struct Traversal {
+    ctx: Context,
+    order: Vec<CompIdx>,
+}
+
+impl From<Context> for Traversal {
+    /// Construct a post-order traversal over a [Context].
+    fn from(ctx: Context) -> Self {
+        let mut ts = TopologicalSort::<CompIdx>::new();
+
+        // Gets all components that are not primitives.
+        let comps = ctx
+            .comps
+            .iter()
+            .filter(|(_, comp)| !comp.is_ext)
+            .collect_vec();
+
+        for (idx, _) in comps.iter() {
+            ts.insert(*idx);
+        }
+
+        for (idx, comp) in comps.iter() {
+            for cmd in &comp.cmds {
+                Traversal::process_cmd(&ctx, *idx, cmd, &mut ts);
+            }
+        }
+
+        let order: Vec<_> = ts.collect();
+        assert!(
+            order.len() == comps.len(),
+            "Ordering contains {} elements but context has {} components",
+            order.len(),
+            comps.len()
+        );
+
+        Self { ctx, order }
+    }
+}
+
+impl Traversal {
+    /// Apply a function to each component in a post-order traversal.
+    pub fn apply_post_order<F>(self, mut f: F)
+    where
+        F: FnMut(&Context, CompIdx),
+    {
+        for idx in self.order.clone() {
+            log::trace!("Post-order: {}", idx);
+            f(&self.ctx, idx)
+        }
+    }
+
+    /// Apply a function to each component in a pre-order traversal.
+    pub fn apply_pre_order<F>(self, mut f: F)
+    where
+        F: FnMut(&Context, CompIdx),
+    {
+        for &idx in self.order.iter().rev() {
+            log::trace!("Pre-order: {}", idx);
+            f(&self.ctx, idx)
+        }
+    }
+
+    /// Take the [Context] from the post order structure.
+    pub fn take(self) -> Context {
+        self.ctx
+    }
+
+    fn process_cmd(
+        ctx: &Context,
+        comp: CompIdx,
+        cmd: &Command,
+        ts: &mut TopologicalSort<CompIdx>,
+    ) {
+        match cmd {
+            Command::Instance(inst) => {
+                let inst = ctx.comps.get(comp).instances().get(*inst);
+                // If the instance is not an external, add a dependency edge
+                if !ctx.comps.get(inst.comp).is_ext {
+                    ts.add_dependency(comp, inst.comp);
+                }
+            }
+            Command::ForLoop(fl) => {
+                for cmd in &fl.body {
+                    Traversal::process_cmd(ctx, comp, cmd, ts);
+                }
+            }
+            Command::If(i) => {
+                for cmd in &i.then {
+                    Traversal::process_cmd(ctx, comp, cmd, ts);
+                }
+                for cmd in &i.alt {
+                    Traversal::process_cmd(ctx, comp, cmd, ts);
+                }
+            }
+            Command::Connect(_) | Command::Invoke(_) | Command::Fact(_) => (),
+        }
+    }
+}
+
 #[derive(Copy)]
 /// A reference to a foreign key and its owner.
 /// On its own, a foreign key is not very useful. We need provide it with a context
 /// that can resolve the owner which can then resolve the underlying type.
 /// However, we do not provide a way to extract the underyling `T`.
-pub struct Foreign<T, C> {
+pub struct Foreign<T, C>
+where
+    C: Ctx<T>,
+{
     /// A reference to the underlying value.
     key: Idx<T>,
     /// A reference to the owner of the foreign key.
     owner: Idx<C>,
 }
 
-impl<T, C> Foreign<T, C> {
+impl<T, C> Foreign<T, C>
+where
+    C: Ctx<T>,
+{
     pub fn new(key: Idx<T>, owner: Idx<C>) -> Self {
         Self { key, owner }
     }
 
     /// Map over the foreign key using the given context.
     /// We require a context to resolve the owner of the foreign key.
-    pub fn map<X, F>(&self, mut f: F, ctx: impl Ctx<C>) -> Foreign<X, C>
+    pub fn map<X, F>(&self, mut f: F, ctx: &impl Ctx<C>) -> Foreign<X, C>
     where
         F: FnMut(Idx<T>, &C) -> Idx<X>,
+        C: Ctx<X>,
     {
         let c_resolved = ctx.get(self.owner);
         Foreign {
@@ -290,9 +425,22 @@ impl<T, C> Foreign<T, C> {
             owner: self.owner,
         }
     }
+
+    /// Runs a function used to unwrap the foreign type into a different type.
+    /// Shouldn't be used if `X` is an `Idx<T>` as this index will be unsafe.
+    pub fn apply<F, X>(&self, mut f: F, ctx: &impl Ctx<C>) -> X
+    where
+        F: FnMut(Idx<T>, &C) -> X,
+    {
+        let c_resolved = ctx.get(self.owner);
+        f(self.key, c_resolved)
+    }
 }
 
-impl<T, C> Clone for Foreign<T, C> {
+impl<T, C> Clone for Foreign<T, C>
+where
+    C: Ctx<T>,
+{
     fn clone(&self) -> Self {
         Self {
             key: self.key,
@@ -301,15 +449,21 @@ impl<T, C> Clone for Foreign<T, C> {
     }
 }
 
-impl<T, C> PartialEq for Foreign<T, C> {
+impl<T, C> PartialEq for Foreign<T, C>
+where
+    C: Ctx<T>,
+{
     fn eq(&self, other: &Self) -> bool {
         self.key == other.key && self.owner == other.owner
     }
 }
 
-impl<T, C> Eq for Foreign<T, C> {}
+impl<T, C> Eq for Foreign<T, C> where C: Ctx<T> {}
 
-impl<T, C> std::hash::Hash for Foreign<T, C> {
+impl<T, C> std::hash::Hash for Foreign<T, C>
+where
+    C: Ctx<T>,
+{
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.key.hash(state);
         self.owner.hash(state);

@@ -1,3 +1,5 @@
+import "primitives/comb.fil";
+
 extern "./common/mult.sv" {
   comp Mult<T: 2>(
     clk: 1,
@@ -22,7 +24,9 @@ comp main<G: 2>(
   M0 := new Mult;
   M1 := new Mult;
 
+  ten := new Const[32, 10]<G+2, G+4>();
+
   m0 := M0<G>(left, right);
-  m1 := M1<G+2>(10, m0.out);
+  m1 := M1<G+2>(ten.out, m0.out);
   out = m1.out;
 }

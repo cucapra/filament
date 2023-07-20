@@ -14,7 +14,6 @@ cmd = """
 name = "ir-errors"
 paths = [
   "tests/errors/*.fil",
-  "primitives/*.fil",
 ]
 expect_dir = "tests/ir_check/"
 cmd = """
@@ -24,10 +23,20 @@ cmd = """
 [[tests]]
 name = "compile"
 paths = [
-  "tests/compile/*.fil"
+  "tests/compile/*.fil",
+  "tests/monomorphic/*.fil"
 ]
 cmd = """
 fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
+"""
+
+[[tests]]
+name = "ir-compile"
+paths = [
+  "tests/monomorphic/*.fil",
+]
+cmd = """
+fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models --ir' -q
 """
 
 # [[tests]]

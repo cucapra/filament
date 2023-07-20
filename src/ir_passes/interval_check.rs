@@ -113,10 +113,8 @@ impl Visitor for IntervalCheck {
         // Ensure that delays are greater than zero
         let mut cmds: Vec<ir::Command> =
             Vec::with_capacity(comp.ports().len() + comp.events().len());
-        for (idx, is_valid) in comp.events().idx_iter() {
-            if is_valid {
-                cmds.extend(self.delay_wf(idx, comp));
-            }
+        for idx in comp.events().idx_iter() {
+            cmds.extend(self.delay_wf(idx, comp));
         }
 
         // For each bundle, add an assertion to ensure that availability of the
@@ -172,10 +170,7 @@ impl Visitor for IntervalCheck {
         }
 
         // For each invoke, check the event bindings are well-formed
-        for (idx, is_valid) in comp.invocations().idx_iter() {
-            if !is_valid {
-                continue;
-            }
+        for idx in comp.invocations().idx_iter() {
             // Clone here because we need to pass mutable ownership of the component
             for eb in comp[idx].events.clone() {
                 if let Some(assert) = self.event_binding(eb, comp) {
