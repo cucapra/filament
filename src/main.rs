@@ -50,6 +50,10 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
             ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
         }
         ir_passes::Discharge::do_pass(opts, &mut ir)?;
+        // Return early if we're asked to dump the interface
+        if opts.check {
+            return Ok(());
+        }
         ir_passes::Compile::compile(ir);
         return Ok(());
     }
