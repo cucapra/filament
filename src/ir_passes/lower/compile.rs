@@ -64,9 +64,9 @@ impl Compile {
         let mut ports: Vec<_> = comp
             // the initial list of ports.
             .ports()
-            .idx_iter()
-            .filter(|idx| comp.get(*idx).is_sig())
-            .map(|port| Compile::port_def(ctx, comp, port, &width_transform))
+            .iter()
+            .filter(|(idx, _)| comp.get(*idx).is_sig())
+            .map(|(idx, _)| Compile::port_def(ctx, comp, idx, &width_transform))
             .chain(
                 // adds unannotated ports to the list of ports
                 comp.unannotated_ports().into_iter().map(|(name, width)| {
@@ -81,8 +81,8 @@ impl Compile {
             .chain(
                 // adds interface ports to the list of ports
                 comp.events()
-                    .idx_iter()
-                    .filter_map(|idx| idx.interface_name(comp))
+                    .iter()
+                    .filter_map(|(idx, _)| idx.interface_name(comp))
                     .into_iter()
                     .map(|name| calyx::PortDef {
                         name: name.into(),

@@ -1,3 +1,4 @@
+use bitvec::vec::BitVec;
 use itertools::Itertools;
 use topological_sort::TopologicalSort;
 
@@ -94,14 +95,20 @@ where
     }
 }
 
-/// An indexed store for a type. Unlike [Interned], this data structure does not deduplicate values.
+/// An indexed store for a type.
+/// Unlike [Interned], this data structure does not deduplicate values and supports mutation of values and removal of indices.
 pub struct IndexStore<T> {
     store: Vec<T>,
+    /// Tracks which indices have been marked invalid.
+    valid: BitVec,
 }
 
 impl<T> Default for IndexStore<T> {
     fn default() -> Self {
-        Self { store: Vec::new() }
+        Self {
+            store: Vec::new(),
+            valid: BitVec::new(),
+        }
     }
 }
 
@@ -111,17 +118,36 @@ impl<T> IndexStore<T> {
         // Add the value to the store and return index
         let idx = Idx::new(self.store.len());
         self.store.push(val);
+        self.valid.push(true);
         idx
+    }
+
+    /// Mark an index as invalid.
+    /// The underlying data structure does not actually deallocate or reuse the value associated with the index.
+    pub fn delete(&mut self, idx: Idx<T>) {
+        let i = idx.get();
+        // Should not attempt to remove an index that has already been removed
+        assert!(self.valid[i], "Attempted to delete invalid index {i}.");
+        self.valid.set(i, false);
+    }
+
+    /// Returns true iff the index is valid.
+    pub fn is_valid(&self, idx: Idx<T>) -> bool {
+        self.valid[idx.get()]
     }
 
     /// Get the value associated with the index.
     pub fn get(&self, idx: Idx<T>) -> &T {
-        &self.store[idx.get()]
+        let i = idx.get();
+        assert!(self.valid[i], "Attempted to get invalid index {i}.");
+        &self.store[i]
     }
 
     /// Get a mutable reference to the value associated with the index.
     pub fn get_mut(&mut self, idx: Idx<T>) -> &mut T {
-        &mut self.store[idx.get()]
+        let i = idx.get();
+        assert!(self.valid[i], "Attempted to get invalid index {i}.");
+        &mut self.store[i]
     }
 
     /// Number of elements in the store
@@ -134,24 +160,29 @@ impl<T> IndexStore<T> {
         self.store.is_empty()
     }
 
-    /// Iterate over the indices in the store.
-    /// This can be useful because it allows us to mutably borrow the containing struct.
-    pub fn idx_iter(&self) -> impl Iterator<Item = Idx<T>> {
-        (0..self.store.len()).map(Idx::new)
+    /// Iterate over the indices in the store along with their validity.
+    /// This can be useful because it allows mutable borrows of the owners of the store.
+    pub fn idx_iter(&self) -> impl Iterator<Item = (Idx<T>, bool)> {
+        (0..self.store.len())
+            .map(Idx::new)
+            .zip(self.valid.clone().into_iter())
     }
 
     /// Iterate over the indices and the values in the store.
-    pub fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
+    pub fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> + '_ {
         self.store
             .iter()
             .enumerate()
+            .filter(|(idx, _)| self.valid[*idx])
             .map(|(idx, val)| (Idx::new(idx), val))
     }
 
+    /// Mutable iteration over the valid indices and the values in the store.
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (Idx<T>, &mut T)> {
         self.store
             .iter_mut()
             .enumerate()
+            .filter(|(idx, _)| self.valid[*idx])
             .map(|(idx, val)| (Idx::new(idx), val))
     }
 
@@ -195,6 +226,10 @@ impl<T: Display> Display for IndexStore<T> {
 /// [Idx<T>] types.
 ///
 /// This is essentially a type-safe way of storing information about value of type [T].
+///
+/// Note: This data structure has no way to track which indices are valid so it
+/// is up to the user to ensure that the indices are valid by calling [IndexStore::is_valid]
+/// on a valid index.
 pub struct DenseIndexInfo<T, V> {
     store: Vec<V>,
     key_typ: PhantomData<T>,

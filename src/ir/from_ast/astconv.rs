@@ -754,7 +754,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                         .events()
                         .idx_iter()
                         .nth(idx)
-                        .unwrap(),
+                        .unwrap()
+                        .0,
                     foreign_comp,
                 );
                 let eb = ir::EventBind::new(event, arg, info, base);
@@ -935,9 +936,6 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
                 Some(ir::InterfaceSrc::new(comp.sig.name.copy()));
         }
         ctx.comps.checked_add(idx, ir_comp);
-        if Some(cidx) == main_idx {
-            ctx.entrypoint = Some(idx);
-        }
     }
 
     // create a dummy component to be swapped into the context
