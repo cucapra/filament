@@ -865,9 +865,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 }
 
-pub fn transform(ns: ast::Namespace) -> ir::Context {
+pub fn transform(namespace: ast::Namespace) -> ir::Context {
     let mut sig_map = SigMap::default();
-    let (mut ns, order) = crate::utils::Traversal::from(ns).take();
+    let main_idx = namespace.main_idx();
+    let (mut ns, order) = crate::utils::Traversal::from(namespace).take();
     // Extract components in order
     let components = order
         .into_iter()
@@ -883,7 +884,6 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         sig_map.insert(sig.name.copy(), Sig::from((sig, idx)));
     }
 
-    let main_idx = ns.main_idx();
     let mut ctx = ir::Context::default();
     for (_, exts) in ns.externs {
         for ext in exts {

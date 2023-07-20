@@ -232,9 +232,9 @@ impl<T, V> std::ops::Index<Idx<T>> for DenseIndexInfo<T, V> {
 /// However, we do not provide a way to extract the underyling `T`.
 pub struct Foreign<T, C> {
     /// A reference to the underlying value.
-    key: Idx<T>,
+    pub key: Idx<T>,
     /// A reference to the owner of the foreign key.
-    owner: Idx<C>,
+    pub owner: Idx<C>,
 }
 
 impl<T, C> Foreign<T, C> {

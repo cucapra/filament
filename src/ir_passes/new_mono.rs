@@ -62,10 +62,38 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         }
     }
 
+    fn foreign_port(
+        &mut self,
+        foreign: &Foreign<ir::Port, ir::Component>, // underlying
+        inv: &ir::InvIdx // underlying
+    ) -> Foreign<ir::Port, ir::Component> {
+        // key and owner are meaningful in underlying
+        let Foreign {key, owner} = foreign;
+
+        let inst = self.underlying.get(self.underlying.get(*inv).inst);
+        let inst_comp = inst.comp;
+        let inst_params = &inst.params;
+        let conc_params = inst_params
+            .iter()
+            .map(|p| self.expr(*p).as_concrete(&self.base).unwrap())
+            .collect_vec();
+
+        let mono_compidx = self.pass.queue.get(&(inst_comp, conc_params)).unwrap();
+        println!("found {}", mono_compidx);
+
+        todo!()
+    }
+
     fn foreign<T>(
         &mut self,
-        _foreign: &Foreign<T, ir::Component>,
+        foreign: &Foreign<T, ir::Component>,
     ) -> Foreign<T, ir::Component> {
+        let Foreign {key, owner} = foreign;
+        // `key` is only meaningful in `owner`
+        // need to update `key` to be the monomorphized index and update `owner` to be 
+        // the monomorphized component
+        
+
         todo!()
     }
 
@@ -284,7 +312,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             ir::PortOwner::Sig { .. } | ir::PortOwner::Local => owner.clone(),
             ir::PortOwner::Inv { inv, dir, base } => {
                 // inv is only meaningful in the underlying component
-                let base = self.foreign(base);
+                let base = self.foreign_port(base, inv);
                 let inv_occurrences = self.inv_counter.get(inv).unwrap();
                 let base_inv =
                     self.inv_map.get(&(*inv, *inv_occurrences)).unwrap();
