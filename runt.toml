@@ -37,7 +37,7 @@ fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize
 # ]
 # expect_dir = "tests/compile/ir/"
 # cmd = """
-# ./target/debug/filament {} --show-ir > /dev/null
+# ./target/debug/filament {} --ir --show-ir > /dev/null
 # """
 
 [[tests]]

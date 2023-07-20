@@ -28,7 +28,7 @@ struct MonoDeferred<'a, 'pass: 'a> {
     inst_counter: HashMap<ir::InstIdx, u32>,
     /// Hold onto the current PortIdx being handled
     curr_port: Option<ir::PortIdx>,
-    /// Accesses
+    /// Queue of connects to be handled when we see their associated invoke
     connects: Vec<ir::Connect>,
 
     // Keep track of things that have been monomorphized already
@@ -615,10 +615,16 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     }
 
     /// Either queues a connect to be handled later, or handles it now.
-    /// A connect gets handled later if the destination port is owned by an invoke, because we don't
-    /// generate the ports until we generate the invoke (and the way commands are laid out, connects come before invokes).
-    /// We handle a connect now if the source port is owned by an invoke
-    /// NOTE: what to do if it is inv1 <- inv0?
+    /// A connect gets handled later if: 
+    /// (1) The source port is invoke-owned and the destination port is also invoke-owned, or 
+    /// (2) The source port is sig-owned and the destination port is invoke-owned
+    /// A connect gets handled now if:
+    /// (1) The source port is invoke-owned and the destination port is sig-owned
+    /// (2) The source port is sig-owned and the destination port is also sig-owned
+    /// The reasoning for this is that we see connects where the destination port is invoke-owned before
+    /// we see the actual invoke, so we have to put them in a queue to be handled when we see the invoke
+    /// If the destination port is not invoke owned, then we can handle it now because we've already created
+    /// the monomorphized ports
     fn handle_connect(&mut self, con: &ir::Connect) -> Vec<ir::Command> {
         let src_port_owner = &self.underlying.get(con.src.port).owner;
         let dst_port_owner = &self.underlying.get(con.dst.port).owner;
@@ -633,6 +639,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                         vec![]
                     }
                     ir::PortOwner::Sig { .. } => {
+                        // handle now
                         let cmd = self.connect(con);
                         vec![cmd.into()]
                     }
@@ -641,10 +648,12 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             }
             ir::PortOwner::Sig { .. } => match dst_port_owner {
                 ir::PortOwner::Inv { .. } => {
+                    // handle later
                     self.connects.push(con.clone());
                     vec![]
                 }
                 ir::PortOwner::Sig { .. } => {
+                    // handle now
                     let cmd = self.connect(con);
                     vec![cmd.into()]
                 }
