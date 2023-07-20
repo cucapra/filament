@@ -160,12 +160,15 @@ impl<T> IndexStore<T> {
         self.store.is_empty()
     }
 
-    /// Iterate over the indices in the store along with their validity.
+    /// Iterate over the valid indices in the store.
     /// This can be useful because it allows mutable borrows of the owners of the store.
-    pub fn idx_iter(&self) -> impl Iterator<Item = (Idx<T>, bool)> {
-        (0..self.store.len())
-            .map(Idx::new)
-            .zip(self.valid.clone().into_iter())
+    pub fn idx_iter(&self) -> impl Iterator<Item = Idx<T>> {
+        self.valid
+            .clone()
+            .into_iter()
+            .enumerate()
+            .filter(|(_, valid)| *valid)
+            .map(|(idx, _)| Idx::new(idx))
     }
 
     /// Iterate over the indices and the values in the store.

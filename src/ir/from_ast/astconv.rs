@@ -747,17 +747,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     self.comp.add(ir::Info::event_bind(ev_delay_loc, pos));
                 let arg = self.time(time.clone());
                 let event = self.timesub(resolved.delay.take());
-                let base = ir::Foreign::new(
-                    self.ctx
-                        .comps
-                        .get(foreign_comp)
-                        .events()
-                        .idx_iter()
-                        .nth(idx)
-                        .unwrap()
-                        .0,
-                    foreign_comp,
-                );
+                let base = ir::Foreign::new(EventIdx::new(idx), foreign_comp);
                 let eb = ir::EventBind::new(event, arg, info, base);
                 let invoke = self.comp.get_mut(inv);
                 invoke.events.push(eb);
