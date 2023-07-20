@@ -1,6 +1,6 @@
 use super::{
-    Access, CompIdx, ExprIdx, Fact, InfoIdx, InstIdx, InvIdx, ParamIdx,
-    PortIdx, PropIdx, TimeIdx, TimeSub,
+    Access, CompIdx, Component, Ctx, Event, ExprIdx, Fact, Foreign, InfoIdx,
+    InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx, TimeIdx, TimeSub,
 };
 use std::fmt;
 
@@ -79,6 +79,14 @@ impl fmt::Display for Instance {
     }
 }
 
+impl InstIdx {
+    /// Gets the component being instantiated
+    pub fn comp(self, ctx: &impl Ctx<Instance>) -> CompIdx {
+        let inst = ctx.get(self);
+        inst.comp
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 /// A connection between two ports
 pub struct Connect {
@@ -108,6 +116,23 @@ pub struct Invoke {
     pub info: InfoIdx,
 }
 
+impl InvIdx {
+    /// The instance being invoked
+    pub fn inst(self, ctx: &impl Ctx<Invoke>) -> InstIdx {
+        let inv = ctx.get(self);
+        inv.inst
+    }
+
+    /// Get the component being invoked
+    pub fn comp<C>(self, ctx: &C) -> CompIdx
+    where
+        C: Ctx<Instance> + Ctx<Invoke>,
+    {
+        let inst = self.inst(ctx);
+        inst.comp(ctx)
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 /// A loop over a range of numbers
 pub struct Loop {
@@ -134,10 +159,22 @@ pub struct EventBind {
     pub arg: TimeIdx,
     /// Information for the event
     pub info: InfoIdx,
+    /// The event for which we provide the binding.
+    pub base: Foreign<Event, Component>,
 }
 
 impl EventBind {
-    pub fn new(delay: TimeSub, arg: TimeIdx, info: InfoIdx) -> Self {
-        Self { delay, arg, info }
+    pub fn new(
+        delay: TimeSub,
+        arg: TimeIdx,
+        info: InfoIdx,
+        base: Foreign<Event, Component>,
+    ) -> Self {
+        Self {
+            delay,
+            arg,
+            info,
+            base,
+        }
     }
 }

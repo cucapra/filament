@@ -1,8 +1,8 @@
 use crate::ast::Op;
 
 use super::{
-    Bind, Component, Ctx, Expr, ExprIdx, Foldable, InfoIdx, InvIdx, ParamIdx,
-    PortIdx, Subst, TimeIdx, TimeSub,
+    utils::Foreign, Bind, Component, Ctx, Expr, ExprIdx, Foldable, InfoIdx,
+    InvIdx, ParamIdx, PortIdx, Subst, TimeIdx, TimeSub,
 };
 use std::fmt;
 
@@ -33,13 +33,17 @@ impl Foldable<ParamIdx, ExprIdx> for Range {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 /// The context in which a port was defined.
 pub enum PortOwner {
     /// The port is defined in the signature
     Sig { dir: Direction },
     /// The port is defined by an invocation
-    Inv { inv: InvIdx, dir: Direction },
+    Inv {
+        inv: InvIdx,
+        dir: Direction,
+        base: Foreign<Port, Component>,
+    },
     /// The port is defined locally.
     /// It does not have a direction because both reading and writing to it is allowed.
     Local,
@@ -49,7 +53,7 @@ impl fmt::Display for PortOwner {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Sig { dir } => write!(f, "sig({})", dir),
-            Self::Inv { inv, dir } => write!(f, "{}({})", inv, dir),
+            Self::Inv { inv, dir, .. } => write!(f, "{}({})", inv, dir),
             Self::Local => write!(f, "local"),
         }
     }
@@ -69,18 +73,20 @@ impl PortOwner {
     }
 
     /// An input port created by an invocation
-    pub const fn inv_in(inv: InvIdx) -> Self {
+    pub const fn inv_in(inv: InvIdx, base: Foreign<Port, Component>) -> Self {
         Self::Inv {
             inv,
             dir: Direction::In,
+            base,
         }
     }
 
     /// An output port created by an invocation
-    pub const fn inv_out(inv: InvIdx) -> Self {
+    pub const fn inv_out(inv: InvIdx, base: Foreign<Port, Component>) -> Self {
         Self::Inv {
             inv,
             dir: Direction::Out,
+            base,
         }
     }
 }
@@ -324,7 +330,7 @@ impl fmt::Display for Param {
 pub struct Event {
     pub delay: TimeSub,
     pub info: InfoIdx,
-    pub interface_port: Option<InfoIdx>,
+    pub has_interface: bool,
 }
 
 impl fmt::Display for Event {

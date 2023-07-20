@@ -513,7 +513,7 @@ pub fn compile(ns: ast::Namespace) {
 
     let mut po = Traversal::from(ns);
 
-    po.apply_pre_order(|comp| {
+    po.apply_post_order(|comp| {
         let comp = compile_component(comp, &mut bindings, &calyx_ctx.lib)
             .unwrap_or_else(|e| {
                 panic!("Error compiling component: {:?}", e);

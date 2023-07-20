@@ -101,7 +101,7 @@ impl From<Id> for ParamBind {
 }
 
 /// The signature of a component definition
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct Signature {
     /// Name of the component
     pub name: Loc<Id>,
