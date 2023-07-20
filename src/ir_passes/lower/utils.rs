@@ -22,11 +22,12 @@ impl ir::EventIdx {
             return None;
         }
 
-        Some(if let Some(src) = &comp.src_info {
-            src.interface_ports.get(&self).unwrap().to_string()
-        } else {
-            format!("ev{}", self.get())
-        })
+        Some(
+            comp.src_info
+                .as_ref()
+                .map(|src| src.interface_ports.get(&self).unwrap().to_string())
+                .unwrap_or_else(|| format!("ev{}", self.get())),
+        )
     }
 }
 
@@ -56,11 +57,10 @@ impl ir::ExprIdx {
 impl ir::ParamIdx {
     /// Returns the name of this parameter.
     pub fn name(self, comp: &ir::Component) -> String {
-        if let Some(src) = &comp.src_info {
-            src.params.get(&self).unwrap().to_string()
-        } else {
-            format!("pr{}", self.get())
-        }
+        comp.src_info
+            .as_ref()
+            .map(|src| src.params.get(&self).unwrap().to_string())
+            .unwrap_or_else(|| format!("pr{}", self.get()))
     }
 }
 
@@ -70,13 +70,11 @@ impl ir::PortIdx {
         let p = comp.get(self);
 
         match &p.owner {
-            ir::PortOwner::Sig { .. } => {
-                if let Some(src) = &comp.src_info {
-                    src.ports.get(&self).unwrap().to_string()
-                } else {
-                    format!("p{}", self.get())
-                }
-            }
+            ir::PortOwner::Sig { .. } => comp
+                .src_info
+                .as_ref()
+                .map(|src| src.ports.get(&self).unwrap().to_string())
+                .unwrap_or_else(|| format!("p{}", self.get())),
             ir::PortOwner::Inv { base, .. } => {
                 base.apply(ctx, |c, p| p.name(ctx, c))
             }
@@ -88,10 +86,11 @@ impl ir::PortIdx {
 impl ir::CompIdx {
     /// Gets the name of this component
     pub fn name(self, ctx: &impl Ctx<ir::Component>) -> String {
-        match &ctx.get(self).src_info {
-            Some(src_info) => src_info.name.to_string(),
-            None => format!("comp{}", self.get()),
-        }
+        ctx.get(self)
+            .src_info
+            .as_ref()
+            .map(|src| src.name.to_string())
+            .unwrap_or_else(|| format!("comp{}", self.get()))
     }
 }
 
