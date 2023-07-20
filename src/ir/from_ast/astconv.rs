@@ -721,7 +721,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                         .events()
                         .idx_iter()
                         .nth(idx)
-                        .unwrap(),
+                        .unwrap()
+                        .0,
                     foreign_comp,
                 );
                 let eb = ir::EventBind::new(event, arg, info, base);
