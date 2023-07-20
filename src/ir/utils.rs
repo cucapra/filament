@@ -318,7 +318,7 @@ impl From<Context> for Traversal {
         }
 
         let order: Vec<_> = ts.collect();
-        debug_assert!(
+        assert!(
             order.len() == comps.len(),
             "Ordering contains {} elements but context has {} components",
             order.len(),
@@ -414,26 +414,26 @@ where
 
     /// Map over the foreign key using the given context.
     /// We require a context to resolve the owner of the foreign key.
-    pub fn map<X, F>(&self, ctx: &impl Ctx<C>, mut f: F) -> Foreign<X, C>
+    pub fn map<X, F>(&self, mut f: F, ctx: &impl Ctx<C>) -> Foreign<X, C>
     where
-        F: FnMut(&C, Idx<T>) -> Idx<X>,
+        F: FnMut(Idx<T>, &C) -> Idx<X>,
         C: Ctx<X>,
     {
         let c_resolved = ctx.get(self.owner);
         Foreign {
-            key: f(c_resolved, self.key),
+            key: f(self.key, c_resolved),
             owner: self.owner,
         }
     }
 
     /// Runs a function used to unwrap the foreign type into a different type.
     /// Shouldn't be used if `X` is an `Idx<T>` as this index will be unsafe.
-    pub fn apply<F, X>(&self, ctx: &impl Ctx<C>, mut f: F) -> X
+    pub fn apply<F, X>(&self, mut f: F, ctx: &impl Ctx<C>) -> X
     where
-        F: FnMut(&C, Idx<T>) -> X,
+        F: FnMut(Idx<T>, &C) -> X,
     {
         let c_resolved = ctx.get(self.owner);
-        f(c_resolved, self.key)
+        f(self.key, c_resolved)
     }
 }
 

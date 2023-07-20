@@ -1,4 +1,7 @@
-use crate::ir::{self, Ctx};
+use crate::ir::{
+    self, CompIdx, Component, Context, Ctx, EventIdx, ExprIdx, ParamIdx,
+    PortIdx,
+};
 use calyx_ir as calyx;
 
 type AttrPair = (calyx::Attribute, u64);
@@ -15,90 +18,79 @@ pub(super) const INTERFACE_PORTS: [(AttrPair, (&str, u64, calyx::Direction));
     ),
 ];
 
-impl ir::EventIdx {
-    /// Returns the name of this interface port.
-    pub fn interface_name(self, comp: &ir::Component) -> Option<String> {
-        if !comp.get(self).has_interface {
-            return None;
-        }
-
-        Some(
-            comp.src_info
-                .as_ref()
-                .map(|src| src.interface_ports.get(&self).unwrap().to_string())
-                .unwrap_or_else(|| format!("ev{}", self.get())),
-        )
-    }
-}
-
-impl ir::ExprIdx {
-    /// Compiles an [ir::ExprIdx] into a [u64].
-    /// Expects the [ir::ExprIdx] to be a single constant value, and panics if this isn't the case
-    pub fn as_u64(self, comp: &ir::Component) -> u64 {
-        self.as_concrete(comp).unwrap_or_else(|| {
-            comp.internal_error("Expression must be a constant.")
-        })
+/// Gets the name of the interface port associated with an event, if it exists.
+pub(super) fn interface_name(
+    idx: EventIdx,
+    comp: &Component,
+) -> Option<String> {
+    if !comp.get(idx).has_interface {
+        return None;
     }
 
-    /// Converts an [ir::ExprIdx] into a [calyx::Width].
-    /// Expects the [ir::ExprIdx] to either be a singular constant or an abstract variable.
-    pub fn as_width(self, comp: &ir::Component) -> calyx::Width {
-        match comp.get(self) {
-            ir::Expr::Param(p) => calyx::Width::Param {
-                value: p.name(comp).into(),
-            },
-            ir::Expr::Concrete(val) => calyx::Width::Const { value: *val },
-            ir::Expr::Bin { .. } | ir::Expr::Fn { .. } => comp
-                .internal_error("Port width must be a parameter or constant."),
-        }
-    }
-}
-
-impl ir::ParamIdx {
-    /// Returns the name of this parameter.
-    pub fn name(self, comp: &ir::Component) -> String {
+    Some(
         comp.src_info
             .as_ref()
-            .map(|src| src.params.get(&self).unwrap().to_string())
-            .unwrap_or_else(|| format!("pr{}", self.get()))
-    }
+            .map(|src| src.interface_ports.get(&idx).unwrap().to_string())
+            .unwrap_or_else(|| format!("ev{}", idx.get())),
+    )
 }
 
-impl ir::PortIdx {
-    /// Returns the name of this port.
-    pub fn name(self, ctx: &ir::Context, comp: &ir::Component) -> String {
-        let p = comp.get(self);
+/// Compiles an [ExprIdx] into a [u64].
+/// Expects the [ExprIdx] to be a single constant value, and panics if this isn't the case
+pub(super) fn expr_u64(idx: ExprIdx, comp: &Component) -> u64 {
+    idx.as_concrete(comp).unwrap_or_else(|| {
+        comp.internal_error("Expression must be a constant.")
+    })
+}
 
-        match &p.owner {
-            ir::PortOwner::Sig { .. } => comp
-                .src_info
-                .as_ref()
-                .map(|src| src.ports.get(&self).unwrap().to_string())
-                .unwrap_or_else(|| format!("p{}", self.get())),
-            ir::PortOwner::Inv { base, .. } => {
-                base.apply(ctx, |c, p| p.name(ctx, c))
-            }
-            ir::PortOwner::Local => format!("p{}", self.get()),
+/// Converts an [ir::ExprIdx] into a [calyx::Width].
+/// Expects the [ir::ExprIdx] to either be a singular constant or an abstract variable.
+pub(super) fn expr_width(idx: ExprIdx, comp: &Component) -> calyx::Width {
+    match comp.get(idx) {
+        ir::Expr::Param(p) => calyx::Width::Param {
+            value: param_name(*p, comp).into(),
+        },
+        ir::Expr::Concrete(val) => calyx::Width::Const { value: *val },
+        ir::Expr::Bin { .. } | ir::Expr::Fn { .. } => {
+            comp.internal_error("Port width must be a parameter or constant.")
         }
     }
 }
 
-impl ir::CompIdx {
-    /// Gets the name of this component
-    pub fn name(self, ctx: &impl Ctx<ir::Component>) -> String {
-        ctx.get(self)
+/// Returns the name of an [ir::Param].
+pub(super) fn param_name(idx: ParamIdx, comp: &Component) -> String {
+    comp.src_info
+        .as_ref()
+        .map(|src| src.params.get(&idx).unwrap().to_string())
+        .unwrap_or_else(|| format!("pr{}", idx.get()))
+}
+
+/// Returns the name of an [ir::Port]
+pub(super) fn port_name(
+    idx: PortIdx,
+    ctx: &Context,
+    comp: &Component,
+) -> String {
+    let p = comp.get(idx);
+
+    match &p.owner {
+        ir::PortOwner::Sig { .. } => comp
             .src_info
             .as_ref()
-            .map(|src| src.name.to_string())
-            .unwrap_or_else(|| format!("comp{}", self.get()))
+            .map(|src| src.ports.get(&idx).unwrap().to_string())
+            .unwrap_or_else(|| format!("p{}", idx.get())),
+        ir::PortOwner::Inv { base, .. } => {
+            base.apply(|p, c| port_name(p, ctx, c), ctx)
+        }
+        ir::PortOwner::Local => format!("p{}", idx.get()),
     }
 }
 
-impl From<&ir::Direction> for calyx::Direction {
-    fn from(value: &ir::Direction) -> Self {
-        match value {
-            ir::Direction::In => calyx::Direction::Input,
-            ir::Direction::Out => calyx::Direction::Output,
-        }
-    }
+/// Returns the name of an [ir::Component]
+pub(super) fn comp_name(idx: CompIdx, ctx: &impl Ctx<Component>) -> String {
+    ctx.get(idx)
+        .src_info
+        .as_ref()
+        .map(|src| src.name.to_string())
+        .unwrap_or_else(|| format!("comp{}", idx.get()))
 }

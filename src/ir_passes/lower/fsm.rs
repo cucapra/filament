@@ -1,7 +1,6 @@
+use super::{utils::interface_name, Binding, BuildCtx};
 use crate::ir;
 use calyx_ir::{self as calyx, RRC};
-
-use super::{Binding, BuildCtx};
 
 /// A wrapper for a [calyx::Component] representing a finite state machine.
 pub(super) struct Fsm {
@@ -14,7 +13,7 @@ impl Fsm {
     pub fn new(event: ir::EventIdx, states: u64, ctx: &mut BuildCtx) -> Self {
         let comp = ctx.binding.fsm_comps.get(&states).unwrap();
 
-        let Some(name) = event.interface_name(ctx.comp) else {
+        let Some(name) = interface_name(event, ctx.comp) else {
             unreachable!("Info should be an interface port");
         };
 

@@ -1,12 +1,12 @@
-use std::{collections::HashMap, iter, rc::Rc};
-
+use super::utils::{comp_name, expr_u64, interface_name, port_name};
+use super::Fsm;
+use crate::ir::DenseIndexInfo;
 use crate::ir::{self, Ctx};
+use crate::ir_passes::lower::utils::INTERFACE_PORTS;
 use calyx::structure;
 use calyx_ir::{self as calyx, RRC};
 use itertools::Itertools;
-
-use super::utils as compile_utils;
-use super::Fsm;
+use std::{collections::HashMap, iter, rc::Rc};
 
 /// Bindings associated with the current compilation context
 #[derive(Default)]
@@ -51,9 +51,9 @@ pub(super) struct BuildCtx<'a> {
     lib: &'a calyx::LibrarySignatures,
     fsms: HashMap<ir::EventIdx, Fsm>,
     /// Mapping from [ir::InstIdx]s to the calyx cell instantiated.
-    instances: HashMap<ir::InstIdx, RRC<calyx::Cell>>,
+    instances: DenseIndexInfo<ir::Instance, RRC<calyx::Cell>>,
     /// Mapping from [ir::InstIdx]s to a reference of the calyx cell instantiated/invoked
-    invokes: HashMap<ir::InvIdx, RRC<calyx::Cell>>,
+    invokes: DenseIndexInfo<ir::Invoke, RRC<calyx::Cell>>,
 }
 
 impl<'a> BuildCtx<'a> {
@@ -70,8 +70,8 @@ impl<'a> BuildCtx<'a> {
             binding,
             builder,
             lib,
-            instances: HashMap::new(),
-            invokes: HashMap::new(),
+            instances: DenseIndexInfo::default(),
+            invokes: DenseIndexInfo::default(),
             fsms: HashMap::new(),
         }
     }
@@ -81,7 +81,7 @@ impl<'a> BuildCtx<'a> {
         let inst = self.comp.get(idx);
         // generate a unique name for this instance
         let inst_name = format!("inst{}", idx.get());
-        let comp_name = inst.comp.name(self.ctx);
+        let comp_name = comp_name(inst.comp, self.ctx);
 
         let cell = if let Some(sig) = self.binding.get(&inst.comp) {
             // this component has is in the binding signature (it has been compiled and is non-primitive)
@@ -96,7 +96,7 @@ impl<'a> BuildCtx<'a> {
             let conc_bind = inst
                 .params
                 .iter()
-                .map(|v| v.as_u64(self.comp))
+                .map(|v| expr_u64(*v, self.comp))
                 .collect_vec();
             self.builder.add_primitive(inst_name, comp_name, &conc_bind)
         };
@@ -106,7 +106,7 @@ impl<'a> BuildCtx<'a> {
             .insert(calyx::BoolAttr::Data, 1);
 
         // add this instance to the instance mapping
-        self.instances.insert(idx, cell);
+        self.instances.push(idx, cell);
     }
 
     /// Adds an invocation to the component
@@ -114,25 +114,19 @@ impl<'a> BuildCtx<'a> {
         let inv = self.comp.get(invidx);
 
         // Gets a reference to the instance being invoked
-        let cell = &self
-            .instances
-            .get(&inv.inst)
-            .unwrap_or_else(|| panic!("Unknown instance: {}", inv.inst));
+        let cell = &self.instances[inv.inst];
 
         // loop through the event bindings defined in the instance and connect them to the corresponding fsms.
         for eb in inv.events.iter() {
             // If there is no interface port, no binding necessary
-            if let Some(dst) = eb
-                .base
-                .apply(self.ctx, |comp, evt| evt.interface_name(comp))
-            {
+            if let Some(dst) = eb.base.apply(interface_name, self.ctx) {
                 let ir::EventBind { arg: time, .. } = eb;
 
                 // gets the interface port from the signature of the instance
                 let dst = cell.borrow().get(dst);
 
                 let time = self.comp.get(*time);
-                let offset = time.offset.as_u64(self.comp);
+                let offset = expr_u64(time.offset, self.comp);
                 // finds the corresponding port on the fsm of the referenced event
                 let src = self.fsms.get(&time.event).unwrap().get_port(offset);
 
@@ -149,7 +143,7 @@ impl<'a> BuildCtx<'a> {
         }
 
         // add a copy of the instance pointer to the invoke mapping
-        self.invokes.insert(invidx, Rc::clone(cell));
+        self.invokes.push(invidx, Rc::clone(cell));
     }
 
     /// Converts an interval to a guard expression with the appropriate FSM
@@ -175,7 +169,7 @@ impl<'a> BuildCtx<'a> {
 
         // return a guard that is active whenever from for all states from `start..end`
         let fsm = self.fsms.get(&ev).unwrap();
-        (start.offset.as_u64(self.comp)..end.offset.as_u64(self.comp))
+        (expr_u64(start.offset, self.comp)..expr_u64(end.offset, self.comp))
             .map(|st| fsm.get_port(st).into())
             .reduce(calyx::Guard::or)
             .unwrap()
@@ -188,14 +182,14 @@ impl<'a> BuildCtx<'a> {
     ) -> (RRC<calyx::Port>, calyx::Guard<calyx::Nothing>) {
         let port = self.comp.get(idx);
 
-        let name = idx.name(self.ctx, self.comp);
+        let name = port_name(idx, self.ctx, self.comp);
 
         let guard = self.compile_range(&port.live.range);
         let cell = match port.owner {
             ir::PortOwner::Sig { .. } => {
                 self.builder.component.signature.borrow()
             }
-            ir::PortOwner::Inv { inv, .. } => self.invokes[&inv].borrow(),
+            ir::PortOwner::Inv { inv, .. } => self.invokes[inv].borrow(),
             ir::PortOwner::Local => {
                 unreachable!("Local ports should have been eliminated.")
             }
@@ -208,12 +202,14 @@ impl<'a> BuildCtx<'a> {
         let ir::Connect { dst, src, .. } = con;
 
         assert!(
-            src.start.as_u64(self.comp) == 0 && src.end.as_u64(self.comp) == 1,
+            expr_u64(src.start, self.comp) == 0
+                && expr_u64(src.end, self.comp) == 1,
             "Port bundles should have been compiled away."
         );
 
         assert!(
-            dst.start.as_u64(self.comp) == 0 && dst.end.as_u64(self.comp) == 1,
+            expr_u64(dst.start, self.comp) == 0
+                && expr_u64(dst.end, self.comp) == 1,
             "Port bundles should have been compiled away."
         );
 
@@ -258,13 +254,11 @@ impl<'a> BuildCtx<'a> {
                     .into()
             })
             // adds the `clk` and `reset` ports to the interface
-            .chain(compile_utils::INTERFACE_PORTS.iter().map(|(attr, pd)| {
-                calyx::PortDef {
-                    name: pd.0.into(),
-                    width: pd.1,
-                    direction: pd.2.clone(),
-                    attributes: vec![*attr].try_into().unwrap(),
-                }
+            .chain(INTERFACE_PORTS.iter().map(|(attr, pd)| calyx::PortDef {
+                name: pd.0.into(),
+                width: pd.1,
+                direction: pd.2.clone(),
+                attributes: vec![*attr].try_into().unwrap(),
             }))
             // adds a `go` port
             .chain(iter::once(

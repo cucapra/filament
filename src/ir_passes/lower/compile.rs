@@ -1,18 +1,19 @@
+use super::{
+    build_ctx::{Binding, BuildCtx},
+    utils::{interface_name, port_name, INTERFACE_PORTS},
+};
+use crate::{
+    ir::{self, Ctx, Traversal},
+    ir_passes::lower::utils::{comp_name, expr_u64, expr_width, param_name},
+};
+use calyx_frontend as frontend;
+use calyx_ir as calyx;
+use calyx_utils::CalyxResult;
 use std::{
     collections::{HashMap, HashSet},
     convert::identity,
     path::PathBuf,
     rc::Rc,
-};
-
-use crate::ir::{self, Ctx, Traversal};
-use calyx_frontend as frontend;
-use calyx_ir as calyx;
-use calyx_utils::CalyxResult;
-
-use super::{
-    build_ctx::{Binding, BuildCtx},
-    utils::INTERFACE_PORTS,
 };
 
 /// Compiles Filament directly into Calyx
@@ -30,7 +31,7 @@ impl Compile {
         width_transform: WT, // Function thattransforms an [ir::ExprIdx] into a [CW] type
     ) -> calyx::PortDef<CW>
     where
-        WT: Fn(&ir::Component, ir::ExprIdx) -> CW,
+        WT: Fn(ir::ExprIdx, &ir::Component) -> CW,
     {
         let raw_port = comp.get(port);
 
@@ -43,9 +44,12 @@ impl Compile {
         attributes.insert(calyx::BoolAttr::Data, 1);
 
         calyx::PortDef {
-            name: port.name(ctx, comp).into(),
-            width: width_transform(comp, comp.get(port).width),
-            direction: calyx::Direction::from(dir).reverse(),
+            name: port_name(port, ctx, comp).into(),
+            width: width_transform(comp.get(port).width, comp),
+            direction: match dir.reverse() {
+                ir::Direction::In => calyx::Direction::Input,
+                ir::Direction::Out => calyx::Direction::Output,
+            },
             attributes,
         }
     }
@@ -59,7 +63,7 @@ impl Compile {
     ) -> Vec<calyx::PortDef<CW>>
     where
         WFU: Fn(u64) -> CW,
-        WT: Fn(&ir::Component, ir::ExprIdx) -> CW,
+        WT: Fn(ir::ExprIdx, &ir::Component) -> CW,
     {
         let mut ports: Vec<_> = comp
             // the initial list of ports.
@@ -82,7 +86,7 @@ impl Compile {
                 // adds interface ports to the list of ports
                 comp.events()
                     .idx_iter()
-                    .filter_map(|idx| idx.interface_name(comp))
+                    .filter_map(|idx| interface_name(idx, comp))
                     .into_iter()
                     .map(|name| calyx::PortDef {
                         name: name.into(),
@@ -152,18 +156,18 @@ impl Compile {
         );
 
         calyx::Primitive {
-            name: idx.name(ctx).into(),
+            name: comp_name(idx, ctx).into(),
             params: comp
                 .params()
                 .iter()
                 .filter(|(_, p)| ir::ParamOwner::Sig == p.owner)
-                .map(|(idx, _)| idx.name(comp).into())
+                .map(|(idx, _)| param_name(idx, comp).into())
                 .collect(),
             signature: Compile::ports(
                 ctx,
                 comp,
                 |value| calyx::Width::Const { value },
-                |comp, expr| expr.as_width(comp),
+                expr_width,
             ),
             attributes: calyx::Attributes::default(),
             is_comb: false,
@@ -187,10 +191,14 @@ impl Compile {
             "Attempting to compile primitive component as non-primitive."
         );
 
-        let ports =
-            Compile::ports(ctx, comp, identity, |comp, expr| expr.as_u64(comp));
-        let mut component =
-            calyx::Component::new(idx.name(ctx), ports, false, false, None);
+        let ports = Compile::ports(ctx, comp, identity, expr_u64);
+        let mut component = calyx::Component::new(
+            comp_name(idx, ctx),
+            ports,
+            false,
+            false,
+            None,
+        );
         component.attributes.insert(calyx::BoolAttr::NoInterface, 1);
 
         // If this is the main component, give it a `@top_level` attribute
@@ -207,7 +215,7 @@ impl Compile {
         let mut max_states = HashMap::new();
 
         comp.times().iter().for_each(|(_, time)| {
-            let nv = time.offset.as_u64(comp);
+            let nv = expr_u64(time.offset, comp);
             if nv > *max_states.get(&time.event).unwrap_or(&0) {
                 max_states.insert(time.event, nv);
             }
@@ -218,26 +226,29 @@ impl Compile {
             ctx.insert_fsm(event, states);
         }
 
-        let mut cons = vec![];
+        for inst in comp.instances().idx_iter() {
+            ctx.add_instance(inst);
+        }
+
+        for inv in comp.invocations().idx_iter() {
+            ctx.add_invoke(inv);
+        }
 
         for cmd in &comp.cmds {
             match cmd {
-                ir::Command::Instance(idx) => ctx.add_instance(*idx),
-                ir::Command::Invoke(idx) => ctx.add_invoke(*idx),
-                ir::Command::Connect(connect) => cons.push(connect), // connects will be compiled later
+                ir::Command::Connect(connect) => ctx.compile_connect(connect),
                 ir::Command::ForLoop(_) => {
                     unreachable!("For loops should have been compiled away.")
                 }
                 ir::Command::If(_) => {
                     unreachable!("Ifs should have been compiled away.")
                 }
-                ir::Command::Fact(_) => (),
+                ir::Command::Instance(_) // ignore instances and invokes as these are compiled first
+                | ir::Command::Invoke(_)
+                | ir::Command::Fact(_) => (),
             }
         }
 
-        // Compile the connects last because they require all the invokes and instances to be added first,
-        // so all ports exist and can be properly connected.
-        cons.into_iter().for_each(|con| ctx.compile_connect(con));
         component
     }
 

@@ -10,7 +10,7 @@ mod solver;
 
 pub use bind_map::Binding;
 pub use gsym::GSym;
-pub use idx::{Idx, IdxPre};
+pub use idx::Idx;
 pub use namegenerator::NameGenerator;
 pub use obligation::Obligation;
 pub use position::{FileIdx, GPosIdx, GlobalPositionTable, PosData};
