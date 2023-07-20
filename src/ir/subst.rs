@@ -26,6 +26,18 @@ where
     }
 }
 
+impl<K, V> Bind<K, V>
+where
+    K: Eq,
+    K: Clone,
+    V: Clone,
+{
+    pub fn inner(&self) -> Vec<(K, V)> {
+        let Bind(v) = self;
+        v.to_vec()
+    }
+}
+
 /// A substitution for a type `T` that contains type `K` inside it.
 /// Substitutions cannot be applied with a type that implements [Ctx].
 pub struct Subst<'a, T, K, V>
