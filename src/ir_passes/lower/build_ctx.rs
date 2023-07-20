@@ -1,9 +1,6 @@
 use std::{collections::HashMap, iter, rc::Rc};
 
-use crate::{
-    ir::{self, Ctx},
-    utils,
-};
+use crate::ir::{self, Ctx};
 use calyx::structure;
 use calyx_ir::{self as calyx, RRC};
 use itertools::Itertools;
@@ -51,12 +48,11 @@ pub(super) struct BuildCtx<'a> {
     pub binding: &'a mut Binding,
     pub comp: &'a ir::Component,
     ctx: &'a ir::Context,
-    cidx: ir::CompIdx,
     lib: &'a calyx::LibrarySignatures,
     fsms: HashMap<ir::EventIdx, Fsm>,
-    /// Mapping from instances to cells
+    /// Mapping from [ir::InstIdx]s to the calyx cell instantiated.
     instances: HashMap<ir::InstIdx, RRC<calyx::Cell>>,
-    /// Mapping from invocation name to instance
+    /// Mapping from [ir::InstIdx]s to a reference of the calyx cell instantiated/invoked
     invokes: HashMap<ir::InvIdx, RRC<calyx::Cell>>,
 }
 
@@ -70,7 +66,6 @@ impl<'a> BuildCtx<'a> {
     ) -> Self {
         BuildCtx {
             ctx,
-            cidx: idx,
             comp: ctx.get(idx),
             binding,
             builder,
@@ -79,6 +74,39 @@ impl<'a> BuildCtx<'a> {
             invokes: HashMap::new(),
             fsms: HashMap::new(),
         }
+    }
+
+    /// Adds an instance to the component
+    pub fn add_instance(&mut self, idx: ir::InstIdx) {
+        let inst = self.comp.get(idx);
+        // generate a unique name for this instance
+        let inst_name = format!("inst{}", idx.get());
+        let comp_name = inst.comp.name(self.ctx);
+
+        let cell = if let Some(sig) = self.binding.get(&inst.comp) {
+            // this component has is in the binding signature (it has been compiled and is non-primitive)
+            self.builder.add_component(
+                inst_name, // non-primitive component
+                comp_name, sig,
+            )
+        } else {
+            // this instance must be referring to a primitive, so we add one to the component
+
+            // gets the parameters of this instance as concrete numbers
+            let conc_bind = inst
+                .params
+                .iter()
+                .map(|v| v.as_u64(self.comp))
+                .collect_vec();
+            self.builder.add_primitive(inst_name, comp_name, &conc_bind)
+        };
+
+        cell.borrow_mut()
+            .attributes
+            .insert(calyx::BoolAttr::Data, 1);
+
+        // add this instance to the instance mapping
+        self.instances.insert(idx, cell);
     }
 
     /// Adds an invocation to the component
@@ -120,32 +148,8 @@ impl<'a> BuildCtx<'a> {
             }
         }
 
+        // add a copy of the instance pointer to the invoke mapping
         self.invokes.insert(invidx, Rc::clone(cell));
-    }
-
-    pub fn add_instance(&mut self, idx: ir::InstIdx) {
-        let inst = self.comp.get(idx);
-        let inst_name = self.idx_name(idx);
-        let comp_name = inst.comp.name(self.ctx);
-
-        let cell = if let Some(sig) = self.binding.get(&inst.comp) {
-            self.builder.add_component(
-                inst_name, // non-primitive component
-                comp_name, sig,
-            )
-        } else {
-            let conc_bind = inst
-                .params
-                .iter()
-                .map(|v| v.as_u64(self.comp))
-                .collect_vec();
-            self.builder.add_primitive(inst_name, comp_name, &conc_bind)
-        };
-
-        cell.borrow_mut()
-            .attributes
-            .insert(calyx::BoolAttr::Data, 1);
-        self.instances.insert(idx, cell);
     }
 
     /// Converts an interval to a guard expression with the appropriate FSM
@@ -164,40 +168,20 @@ impl<'a> BuildCtx<'a> {
 
         let ev = start.event;
 
-        // return no guard the interface port does not exist.
-        if self.comp.get(ev).has_interface {
-            let fsm = self.fsms.get(&ev).unwrap();
-            (start.offset.as_u64(self.comp)..end.offset.as_u64(self.comp))
-                .map(|st| fsm.get_port(st).into())
-                .reduce(calyx::Guard::or)
-                .unwrap()
-        } else {
-            calyx::Guard::True
+        // Don't generate a guard if there is no interface port
+        if !self.comp.get(ev).has_interface {
+            return calyx::Guard::True;
         }
+
+        // return a guard that is active whenever from for all states from `start..end`
+        let fsm = self.fsms.get(&ev).unwrap();
+        (start.offset.as_u64(self.comp)..end.offset.as_u64(self.comp))
+            .map(|st| fsm.get_port(st).into())
+            .reduce(calyx::Guard::or)
+            .unwrap()
     }
 
-    pub fn compile_connect(&mut self, con: &ir::Connect) {
-        let ir::Connect { dst, src, .. } = con;
-
-        assert!(
-            src.start.as_u64(self.comp) == 0 && src.end.as_u64(self.comp) == 1,
-            "Port bundles should have been compiled away."
-        );
-
-        assert!(
-            dst.start.as_u64(self.comp) == 0 && dst.end.as_u64(self.comp) == 1,
-            "Port bundles should have been compiled away."
-        );
-
-        log::debug!("Compiling connect: {}", con);
-
-        let (dst, _) = self.compile_port(dst.port);
-        // assert!(!g.is_true(), "Destination port cannot have a guard.");
-        let (src, g) = self.compile_port(src.port);
-        let assign = self.builder.build_assignment(dst, src, g);
-        self.builder.component.continuous_assignments.push(assign);
-    }
-
+    /// Compiles an [ir::Port], returning the proper guard if present.
     pub fn compile_port(
         &mut self,
         idx: ir::PortIdx,
@@ -219,8 +203,31 @@ impl<'a> BuildCtx<'a> {
         (cell.get(name), guard)
     }
 
-    /// Attempts to declare an fsm (if not already declared) in the [Binding] stored by this [Context]
-    /// and creates an [Fsm] from this [calyx::Component] FSM and stores it in the [Context]
+    /// Compiles an [ir::Connect] by building the port assignments in calyx
+    pub fn compile_connect(&mut self, con: &ir::Connect) {
+        let ir::Connect { dst, src, .. } = con;
+
+        assert!(
+            src.start.as_u64(self.comp) == 0 && src.end.as_u64(self.comp) == 1,
+            "Port bundles should have been compiled away."
+        );
+
+        assert!(
+            dst.start.as_u64(self.comp) == 0 && dst.end.as_u64(self.comp) == 1,
+            "Port bundles should have been compiled away."
+        );
+
+        log::debug!("Compiling connect: {}", con);
+
+        // ignores the guard of the destination (bind check already verifies that it is available for at least as long as src)
+        let (dst, _) = self.compile_port(dst.port);
+        let (src, g) = self.compile_port(src.port);
+        let assign = self.builder.build_assignment(dst, src, g);
+        self.builder.component.continuous_assignments.push(assign);
+    }
+
+    /// Attempts to declare an fsm component (if not already declared) in the [Binding] stored by this [BuildCtx]
+    /// and creates an [Fsm] from this [calyx::Component] FSM and stores it in the [BuildCtx]
     pub fn insert_fsm(&mut self, event: ir::EventIdx, states: u64) {
         // Construct an fsm iff the event is connected to an interface port
         if self.comp.get(event).has_interface {
@@ -232,28 +239,16 @@ impl<'a> BuildCtx<'a> {
         }
     }
 
-    /// Creates a name from an [utils::Idx<T>] provided it has a prefix defined in the [utils::IdxPre] trait.
-    fn idx_name<T>(&self, idx: utils::Idx<T>) -> String
-    where
-        ir::Component: Ctx<T>,
-        utils::Idx<T>: utils::IdxPre,
-    {
-        format!(
-            "{}_{}{}",
-            self.cidx.name(self.ctx),
-            <utils::Idx::<T> as utils::IdxPre>::prefix(),
-            idx.get()
-        )
-    }
-
     /// Creates a [calyx::Component] representing an FSM with a certain number of states to bind to each event.
     /// Adds component to the [Binding] held by this component.
     fn declare_fsm(&mut self, states: u64) {
+        // If this fsm is already declared, just return.
         if self.binding.fsm_comps.contains_key(&states) {
             return;
         }
 
         let ports: Vec<calyx::PortDef<u64>> = (0..states)
+            // create the state ports in the format `_state`.
             .map(|n| {
                 (
                     calyx::Id::from(format!("_{n}")),
@@ -262,6 +257,7 @@ impl<'a> BuildCtx<'a> {
                 )
                     .into()
             })
+            // adds the `clk` and `reset` ports to the interface
             .chain(compile_utils::INTERFACE_PORTS.iter().map(|(attr, pd)| {
                 calyx::PortDef {
                     name: pd.0.into(),
@@ -270,10 +266,12 @@ impl<'a> BuildCtx<'a> {
                     attributes: vec![*attr].try_into().unwrap(),
                 }
             }))
+            // adds a `go` port
             .chain(iter::once(
                 (calyx::Id::from("go"), 1, calyx::Direction::Input).into(),
             ))
             .collect();
+
         let mut comp = calyx::Component::new(
             calyx::Id::from(format!("fsm_{}", states)),
             ports,
@@ -281,6 +279,7 @@ impl<'a> BuildCtx<'a> {
             false,
             None,
         );
+
         comp.attributes.insert(calyx::BoolAttr::NoInterface, 1);
         let mut builder =
             calyx::Builder::new(&mut comp, self.lib).not_generated();
