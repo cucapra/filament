@@ -277,6 +277,15 @@ impl<T, V> DenseIndexInfo<T, V> {
     pub fn contains(&self, idx: Idx<T>) -> bool {
         idx.get() < self.store.len()
     }
+
+    /// Get the value associated with the index if present, otherwise return None.
+    pub fn find(&self, idx: Idx<T>) -> Option<&V> {
+        if self.contains(idx) {
+            Some(self.get(idx))
+        } else {
+            None
+        }
+    }
 }
 
 impl<T, V> std::ops::Index<Idx<T>> for DenseIndexInfo<T, V> {
