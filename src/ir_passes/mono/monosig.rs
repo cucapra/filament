@@ -261,7 +261,7 @@ impl MonoSig {
         let ir::Time { event, offset } = underlying.get(time);
 
         let mono_time = ir::Time {
-            event: self.event(underlying, pass, *event),
+            event: self.event(pass, *event),
             offset: self.expr(underlying, *offset),
         };
 
@@ -271,7 +271,7 @@ impl MonoSig {
     }
 
     /// Monomorphize the delay (owned by self.underlying) and return one that is meaningful in `self.base`
-    fn delay(
+    pub fn delay(
         &mut self,
         underlying: &ir::Component,
         pass: &mut Monomorphize,
@@ -288,48 +288,75 @@ impl MonoSig {
         }
     }
 
+    pub fn event_no_check(
+        &mut self,
+        underlying: &ir::Component,
+        pass: &mut Monomorphize,
+        event: ir::EventIdx,
+        new_event: ir::EventIdx,
+    ) -> ir::EventIdx {
+        let ir::Event { delay, info, .. } = underlying.get(event);
+
+        let delay = self.delay(underlying, pass, delay);
+        let info = self.info(underlying, info);
+
+        let new_ev = self.base.get_mut(new_event);
+        new_ev.delay = delay;
+        new_ev.info = info;
+
+        //pass.event_map.insert((self.underlying_idx, conc_params, event), new_event);
+
+        new_event
+    }
+
+    pub fn interface(&mut self, interface: &Option<ir::InterfaceSrc>) {
+        let interface = match interface {
+            None => None,
+            Some(ir::InterfaceSrc {
+                name,
+                ports,
+                interface_ports,
+                params,
+            }) => {
+                let mut new_ports = HashMap::new();
+                for (port, id) in ports.iter() {
+                    let new_port = self
+                        .port_map
+                        .get(&(self.underlying_idx, *port))
+                        .unwrap();
+                    new_ports.insert(*new_port, *id);
+                }
+
+                let mut new_events = HashMap::new();
+                for (event, id) in interface_ports.iter() {
+                    let new_event = self.event_map.get(event).unwrap();
+                    new_events.insert(*new_event, *id);
+                }
+
+                Some(ir::InterfaceSrc {
+                    name: *name,
+                    ports: new_ports,
+                    interface_ports: new_events,
+                    params: params.clone(),
+                })
+            }
+        };
+        self.base.src_info = interface;
+    }
+
     /// Monomorphize the event (owned by self.underlying) and add it to `self.base`, and return the corresponding index
     pub fn event(
         &mut self,
-        underlying: &ir::Component,
         pass: &mut Monomorphize,
         event: ir::EventIdx,
     ) -> ir::EventIdx {
         let binding = self.binding.inner();
         let conc_params = binding.iter().map(|(_, n)| *n).collect_vec();
 
-        if let Some(idx) = self.event_map.get(&event) {
-            println!(
-                "inserted ({}, {:?}, {}) -> {}",
-                self.underlying_idx, conc_params, event, idx
-            );
-            pass.event_map
-                .insert((self.underlying_idx, conc_params, event), *idx);
-            return *idx;
-        };
-
-        // Need to monomorphize all parts
-        let ir::Event {
-            delay,
-            info,
-            has_interface,
-        } = underlying.get(event);
-
-        let delay = self.delay(underlying, pass, delay);
-        let info = self.info(underlying, info);
-
-        let idx = self.base.add(ir::Event {
-            delay,
-            info,
-            has_interface: *has_interface,
-        });
-        // local event map
-        self.event_map.insert(event, idx);
-
-        // pass event map
+        let new_event = self.event_map.get(&event).unwrap();
         pass.event_map
-            .insert((self.underlying_idx, conc_params, event), idx);
-        idx
+            .insert((self.underlying_idx, conc_params, event), *new_event);
+        *new_event
     }
 
     /// Takes a self.underlying-owned param that is known to be bundle-owned and a port index owned by self.base,
@@ -391,10 +418,6 @@ impl MonoSig {
         let conc_params = binding.iter().map(|(_, n)| *n).collect_vec();
 
         if let Some(idx) = self.port_map.get(&(comp_owner, port)) {
-            // println!(
-            //     "inserted ({}, [{:?}], {}) -> {} into pass.port_map",
-            //     comp_owner, conc_params, port, *idx
-            // );
             pass.port_map.insert((comp_owner, conc_params, port), *idx);
             return *idx;
         };
@@ -418,10 +441,6 @@ impl MonoSig {
         self.port_map.insert((comp_owner, port), new_port);
 
         // pass port map
-        // println!(
-        //     "inserted ({}, [{:?}], {}) -> {} into pass.port_map",
-        //     comp_owner, conc_params, port, new_port
-        // );
         pass.port_map
             .insert((comp_owner, conc_params, port), new_port);
 

@@ -18,21 +18,27 @@ impl MonoDeferred<'_, '_> {
         underlying: &ir::Component,
         pass: &mut Monomorphize,
     ) {
-        println!("processing the sig of {}", monosig.underlying_idx);
-        for idx in underlying.events().idx_iter() {
-            monosig.event(underlying, pass, idx);
+        for (idx, event) in underlying.events().iter() {
+            let new_idx = monosig.base.add(event.clone());
+            monosig.event_map.insert(idx, new_idx);
         }
+
         for (idx, port) in underlying.ports().iter() {
             if port.is_sig_in() || port.is_sig_out() {
                 monosig.port(underlying, pass, idx);
             }
         }
+
+        for (old, new) in monosig.event_map.clone().iter() {
+            monosig.event_no_check(underlying, pass, *old, *new);
+        }
+
+        monosig.interface(&underlying.src_info);
     }
 }
 
 impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     pub fn gen_comp(&mut self) {
-        println!("generating a new comp for {}", self.monosig.underlying_idx);
         for cmd in &self.underlying.cmds {
             let cmd = self.command(cmd);
             self.monosig.base.cmds.extend(cmd);
@@ -67,16 +73,11 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let conc_params_copy = conc_params.clone();
 
-        println!(
-            "looking up ({}, {:?}, {})",
-            inst_comp, conc_params_copy, key
-        );
         let new_event = self
             .pass
             .event_map
             .get(&(inst_comp, conc_params, *key))
             .unwrap();
-        println!("got {}", new_event);
 
         let new_owner = if let Some((mono_compidx, _)) =
             self.pass.queue.get(&(inst_comp, conc_params_copy))

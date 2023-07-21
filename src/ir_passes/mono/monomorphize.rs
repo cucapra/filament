@@ -26,6 +26,8 @@ pub struct Monomorphize<'a> {
     pub port_map: HashMap<(ir::CompIdx, Vec<u64>, ir::PortIdx), ir::PortIdx>,
     /// Mapping from old events to new events, for resolving Foreigns
     pub event_map: HashMap<(ir::CompIdx, Vec<u64>, ir::EventIdx), ir::EventIdx>,
+
+    pub ext_map: HashMap<String, Vec<ir::CompIdx>>,
 }
 
 impl<'a> Monomorphize<'a> {
@@ -42,6 +44,7 @@ impl<'a> Monomorphize<'a> {
             queue: LinkedHashMap::new(),
             port_map: HashMap::new(),
             event_map: HashMap::new(),
+            ext_map: HashMap::new(),
         }
     }
 }
@@ -54,12 +57,13 @@ impl<'ctx> Monomorphize<'ctx> {
         comp: ir::CompIdx,
         params: Vec<u64>,
     ) -> (ir::CompIdx, Vec<u64>) {
+        let underlying = self.old.get(comp);
+
         // If it is an external, add it to externals
-        if self.old.get(comp).is_ext {
+        if underlying.is_ext {
             self.externals.push(comp);
         }
 
-        let underlying = self.old.get(comp);
         let key = (comp, params.clone());
 
         // If we've already processed this or queued this for processing, return the component
@@ -72,7 +76,18 @@ impl<'ctx> Monomorphize<'ctx> {
         }
 
         // Otherwise, construct a new component and add it to the processing queue
-        let new_comp = self.ctx.comp(underlying.is_ext);
+        let new_comp = self.ctx.comp(underlying.is_ext, &underlying.filename);
+        if underlying.filename.is_some() {
+            let filename = underlying.filename.clone().unwrap();
+            if let Some(exts) = self.ext_map.get(&filename) {
+                let mut exts = exts.clone();
+                exts.push(new_comp);
+
+                self.ext_map.insert(filename, exts);
+            } else {
+                self.ext_map.insert(filename, vec![new_comp]);
+            }
+        }
 
         let base = self.ctx.get_mut(new_comp);
 
@@ -141,6 +156,9 @@ impl Monomorphize<'_> {
             };
             val.comp();
         }
+        let new_entrypoint = mono.processed.get(&(entrypoint, vec![])).unwrap();
+        mono.ctx.entrypoint = Some(*new_entrypoint);
+        mono.ctx.externals = mono.ext_map;
         mono.ctx
     }
 }

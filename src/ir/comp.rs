@@ -22,8 +22,8 @@ impl Context {
     }
 
     /// Add a new component to the context
-    pub fn comp(&mut self, is_ext: bool) -> CompIdx {
-        let comp = Component::new(is_ext);
+    pub fn comp(&mut self, is_ext: bool, filename: &Option<String>) -> CompIdx {
+        let comp = Component::new(is_ext, filename);
         self.add(comp)
     }
 }
@@ -99,12 +99,16 @@ pub struct Component {
     /// Externally facing interface information, used to preserve interface in compilation.
     /// Must be `Some` for toplevel components and externals.
     pub src_info: Option<InterfaceSrc>,
+    /// The file that this component came from.
+    /// Must be `Some` for externals
+    pub filename: Option<String>,
 }
 
 impl Component {
-    pub fn new(is_ext: bool) -> Self {
+    pub fn new(is_ext: bool, filename: &Option<String>) -> Self {
         let mut comp = Self {
             is_ext,
+            filename: filename.clone(),
             ..Default::default()
         };
         // Allocate numbers and props now so we get reasonable indices.
@@ -492,6 +496,7 @@ impl Component {
     /// Evaluates a binary operation, assuming that all params have been substituted for
     /// concrete expressions in monomorphization
     pub fn bin(&mut self, expr: Expr) -> ExprIdx {
+        println!("calling bin");
         match expr {
             Expr::Concrete(_) => self.add(expr),
             Expr::Bin {op, lhs, rhs} => {
