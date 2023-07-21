@@ -97,8 +97,7 @@ impl<'ctx> Monomorphize<'ctx> {
             return None;
         };
 
-        self.processed
-            .insert((underlying_idx, params), base_idx);
+        self.processed.insert((underlying_idx, params), base_idx);
 
         let underlying = self.old.get(underlying_idx);
         let mut mono = MonoDeferred {
