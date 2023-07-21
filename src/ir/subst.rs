@@ -1,5 +1,5 @@
-use itertools::Itertools;
 use super::{Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Time, TimeIdx};
+use itertools::Itertools;
 
 pub struct Bind<K: Eq, V>(Vec<(K, V)>);
 

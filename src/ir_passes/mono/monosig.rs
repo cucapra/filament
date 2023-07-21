@@ -1,4 +1,4 @@
-use crate::ir::{self, Ctx, DenseIndexInfo, Foreign, MutCtx};
+use crate::ir::{self, Ctx, Foreign, MutCtx};
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -151,7 +151,7 @@ impl MonoSig {
         underlying: &ir::Component,
         iidx: &ir::InfoIdx,
     ) -> ir::InfoIdx {
-        if let Some(idx) = self.info_map.get(&iidx) {
+        if let Some(idx) = self.info_map.get(iidx) {
             return *idx;
         };
         let info = underlying.get(*iidx);
@@ -208,26 +208,19 @@ impl MonoSig {
             return *idx;
         };
         let new_idx = match underlying.get(expr).clone() {
-            ir::Expr::Param(p) => {
-                self
-                    .binding
-                    .get(&p)
-                    .map(|n| self.base.num(*n))
-                    .unwrap_or_else(|| {
-                        self.param(underlying, p).expr(&mut self.base)
-                    })
-                
-            }
-            ir::Expr::Concrete(n) => {
-                self.base.num(n)
-                
-            }
+            ir::Expr::Param(p) => self
+                .binding
+                .get(&p)
+                .map(|n| self.base.num(*n))
+                .unwrap_or_else(|| {
+                    self.param(underlying, p).expr(&mut self.base)
+                }),
+            ir::Expr::Concrete(n) => self.base.num(n),
             ir::Expr::Bin { op, lhs, rhs } => {
                 let lhs = self.expr(underlying, lhs);
                 let rhs = self.expr(underlying, rhs);
                 let binop = ir::Expr::Bin { op, lhs, rhs };
                 self.base.bin(binop)
-                
             }
             ir::Expr::Fn { op, args } => {
                 let args = args
@@ -235,7 +228,7 @@ impl MonoSig {
                     .map(|idx| self.expr(underlying, *idx))
                     .collect_vec();
                 let func = ir::Expr::Fn { op, args };
-                self.base.func(func)    
+                self.base.func(func)
             }
         };
         self.expr_map.insert(expr, new_idx);

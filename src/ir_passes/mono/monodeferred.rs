@@ -79,11 +79,12 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         println!("got {}", new_event);
 
         let new_owner = if let Some((mono_compidx, _)) =
-            self.pass.queue.get(&(inst_comp, conc_params_copy)) {
-                *mono_compidx
-            } else {
-                self.monosig.underlying_idx
-            };
+            self.pass.queue.get(&(inst_comp, conc_params_copy))
+        {
+            *mono_compidx
+        } else {
+            self.monosig.underlying_idx
+        };
 
         ir::Foreign {
             key: *new_event,
@@ -383,7 +384,10 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         match cond {
             ir::Prop::True => self.monosig.base.cmds.extend(then),
             ir::Prop::False => self.monosig.base.cmds.extend(alt),
-            _ => self.monosig.base.internal_error(format!("couldn't resolve {}", cond)),
+            _ => self
+                .monosig
+                .base
+                .internal_error(format!("couldn't resolve {}", cond)),
         }
     }
 

@@ -6,7 +6,7 @@ use super::{
 };
 use crate::{ast, ir::Cmp, utils::Idx};
 use itertools::Itertools;
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct Context {
