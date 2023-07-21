@@ -36,3 +36,7 @@ features = ["ascii-only"]
 [dependencies.string-interner]
 version = "0.14"
 features = ["backends", "std", "inline-more"]
+
+[dependencies.bitvec]
+version = "1.0.1"
+features = ["alloc"]

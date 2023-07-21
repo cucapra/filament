@@ -3,7 +3,7 @@ use crate::{ast, ir, utils::Idx};
 use itertools::{Itertools, Position};
 use std::{fmt::Display, io};
 
-/// A context capable of displaying [Idx<T>] values.
+/// A context capable of displaying [`Idx<T>`] values.
 pub trait DisplayCtx<T>
 where
     Self: Ctx<T>,
@@ -208,12 +208,16 @@ impl Printer<'_> {
     ) -> io::Result<()> {
         if comp.is_ext {
             write!(f, "ext ")?;
-        }
+        };
         if let Some(idx) = idx {
-            write!(f, "comp {}[", idx)?;
+            write!(f, "comp {}", idx)?;
         } else {
-            write!(f, "comp[")?;
+            write!(f, "comp")?;
         }
+        if let Some(info) = &comp.src_info {
+            write!(f, " ({})", info.name)?
+        }
+        write!(f, "[")?;
         for pos in comp
             .params()
             .iter()

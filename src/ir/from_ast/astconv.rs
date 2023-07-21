@@ -219,8 +219,21 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     ) -> ParamIdx {
         let default = param.default.as_ref().map(|e| self.expr(e.clone()));
         let info = self.comp.add(ir::Info::param(param.name(), param.pos()));
-        let idx = self.comp.add(ir::Param::new(owner, info, default));
+
+        let ir_param = ir::Param::new(owner, info, default);
+        let is_sig_param = ir_param.is_sig_owned();
+
+        let idx = self.comp.add(ir_param);
         self.add_param(param.name(), idx);
+
+        // only add information if this is a signature defined parameter
+        if is_sig_param {
+            // If the component is expecting interface information, add it.
+            if let Some(src) = &mut self.comp.src_info {
+                src.params.insert(idx, param.name());
+            }
+        }
+
         idx
     }
 
@@ -264,6 +277,14 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             has_interface: interface_port.is_some(),
         };
         let idx = self.comp.add(e);
+
+        // If the component is expecting interface information and there is an interface port, add it.
+        if let (Some((name, _)), Some(src)) =
+            (interface_port, &mut self.comp.src_info)
+        {
+            src.interface_ports.insert(idx, name);
+        }
+
         log::trace!("Added event {} as {idx}", eb.event);
         self.event_map.insert(*eb.event, idx);
         idx
@@ -345,14 +366,26 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 (name, p)
             }
         };
+
+        // Defines helper variable here due to lifetime issues
+        let is_sig_port = p.is_sig();
         let idx = self.comp.add(p);
         // Fixup the liveness index parameter's owner
         let p = self.comp.get(idx);
         let param = self.comp.get_mut(p.live.idx);
         param.owner = ir::ParamOwner::bundle(idx);
 
+        // If this is a signature port, try adding it to the component's external interface
+        if is_sig_port {
+            // If the component is expecting interface information, add it.
+            if let Some(src) = &mut self.comp.src_info {
+                src.ports.insert(idx, name.copy());
+            }
+        }
+
         // Add the port to the current scope
         self.add_port(*name, idx);
+
         idx
     }
 
@@ -710,16 +743,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     self.comp.add(ir::Info::event_bind(ev_delay_loc, pos));
                 let arg = self.time(time.clone());
                 let event = self.timesub(resolved.delay.take());
-                let base = ir::Foreign::new(
-                    self.ctx
-                        .comps
-                        .get(foreign_comp)
-                        .events()
-                        .idx_iter()
-                        .nth(idx)
-                        .unwrap(),
-                    foreign_comp,
-                );
+                let base = ir::Foreign::new(EventIdx::new(idx), foreign_comp);
                 let eb = ir::EventBind::new(event, arg, info, base);
                 let invoke = self.comp.get_mut(inv);
                 invoke.events.push(eb);
@@ -838,6 +862,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     fn external(ctx: &ir::Context, sig: ast::Signature) -> ir::Component {
         let mut ir_comp = ir::Component::new(true);
+        ir_comp.src_info = Some(ir::InterfaceSrc::new(sig.name.copy()));
         let binding = SigMap::default();
         let mut builder = BuildCtx::new(ctx, &mut ir_comp, &binding);
 
@@ -850,58 +875,67 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
 
     fn comp(
         ctx: &ir::Context,
+        ir_comp: &mut ir::Component,
         comp: ast::Component,
         sigs: &'prog SigMap,
-    ) -> ir::Component {
-        let mut ir_comp = ir::Component::new(false);
-        let mut builder = BuildCtx::new(ctx, &mut ir_comp, sigs);
+    ) {
+        let mut builder = BuildCtx::new(ctx, ir_comp, sigs);
 
         let mut cmds = builder.sig(comp.sig);
         let body_cmds = builder.commands(comp.body);
         cmds.extend(builder.port_assumptions());
         cmds.extend(body_cmds);
         ir_comp.cmds = cmds;
-        ir_comp
     }
 }
 
-pub fn transform(namespace: ast::Namespace) -> ir::Context {
+pub fn transform(ns: ast::Namespace) -> ir::Context {
     let mut sig_map = SigMap::default();
-    let main_idx = namespace.main_idx();
-    let (mut ns, order) = crate::utils::Traversal::from(namespace).take();
-    // Extract components in order
-    let components = order
-        .into_iter()
-        .map(|cidx| (cidx, std::mem::take(&mut ns.components[cidx])))
-        .collect_vec();
-    // chains external signatures and component signatures (in post-order) to get all signatures associated with this namespace
-    let signatures = ns
-        .externals()
-        .map(|(_, sig)| sig)
-        .chain(components.iter().map(|(_, c)| &c.sig));
+    let main_idx = ns.main_idx();
+    let (mut ns, order) = crate::utils::Traversal::from(ns).take();
     // Walk over signatures and build a SigMap
-    for (idx, sig) in signatures.enumerate() {
+    for (idx, sig) in ns.signatures().map(|(_, sig)| sig).enumerate() {
         sig_map.insert(sig.name.copy(), Sig::from((sig, idx)));
     }
 
     let mut ctx = ir::Context::default();
-    for (_, exts) in ns.externs {
+    for (file, exts) in ns.externs {
         for ext in exts {
             let idx = sig_map.get(&ext.name).unwrap().idx;
-            log::debug!("Compiling external {}: {}", ext.name, idx);
+            log::debug!("Converting external {}: {}", ext.name, idx);
             let ir_ext = BuildCtx::external(&ctx, ext);
             ctx.comps.checked_add(idx, ir_ext);
+            ctx.externals.entry(file.clone()).or_default().push(idx);
         }
     }
 
-    for (cidx, comp) in components {
-        log::debug!("Compiling component {}", comp.sig.name);
+    // TODO: Need to handle recursive components as well as mutually recursive components by adding signature ports first in declaration, so that foreign keys can be resolved
+    // declare all components in the proper order
+    for (cidx, comp) in ns.components.iter().enumerate() {
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
-        let ir_comp = BuildCtx::comp(&ctx, comp, &sig_map);
+
+        let mut ir_comp = ir::Component::new(false);
         if Some(cidx) == main_idx {
             ctx.entrypoint = Some(idx);
+            ir_comp.src_info =
+                Some(ir::InterfaceSrc::new(comp.sig.name.copy()));
         }
         ctx.comps.checked_add(idx, ir_comp);
+    }
+
+    // create a dummy component to be swapped into the context
+    let mut curr_comp = ir::Component::new(false);
+    for cidx in order {
+        let comp = std::mem::take(&mut ns.components[cidx]);
+        log::debug!("Compiling component {}", comp.sig.name);
+        let idx = sig_map.get(&comp.sig.name).unwrap().idx;
+
+        // Needs to swap here because we have to own the current component while leaving the context immutable.
+        // TODO: Find a solution here that will still allow us to properly generate Foreign keys in recursive components.
+        std::mem::swap(ctx.get_mut(idx), &mut curr_comp);
+        BuildCtx::comp(&ctx, &mut curr_comp, comp, &sig_map);
+        // swap the component back into place
+        std::mem::swap(ctx.get_mut(idx), &mut curr_comp);
     }
 
     ctx

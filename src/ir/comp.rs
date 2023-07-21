@@ -1,5 +1,5 @@
 use itertools::Itertools;
-
+use std::collections::HashMap;
 use super::{
     CmpOp, Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
     IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke,
@@ -7,10 +7,13 @@ use super::{
     TimeSub,
 };
 use crate::{ast, ir::Cmp, utils::Idx};
+use crate::{ast, utils::Idx};
 
 #[derive(Default)]
 pub struct Context {
     pub comps: IndexStore<Component>,
+    // Contains external components grouped by file name.
+    pub externals: HashMap<String, Vec<CompIdx>>,
     pub entrypoint: Option<CompIdx>,
 }
 
@@ -35,9 +38,29 @@ impl Ctx<Component> for Context {
         self.comps.get(idx)
     }
 }
+
 impl MutCtx<Component> for Context {
     fn get_mut(&mut self, idx: Idx<Component>) -> &mut Component {
         self.comps.get_mut(idx)
+    }
+}
+
+/// Externally facing interface name information for components.
+pub struct InterfaceSrc {
+    pub name: ast::Id,
+    pub ports: HashMap<PortIdx, ast::Id>,
+    pub params: HashMap<ParamIdx, ast::Id>,
+    pub interface_ports: HashMap<EventIdx, ast::Id>,
+}
+
+impl InterfaceSrc {
+    pub fn new(name: ast::Id) -> Self {
+        Self {
+            name,
+            ports: HashMap::new(),
+            params: HashMap::new(),
+            interface_ports: HashMap::new(),
+        }
     }
 }
 
@@ -74,6 +97,9 @@ pub struct Component {
     info: IndexStore<Info>,
     /// Is this an external component
     pub is_ext: bool,
+    /// Externally facing interface information, used to preserve interface in compilation.
+    /// Must be `Some` for toplevel components and externals.
+    pub src_info: Option<InterfaceSrc>,
 }
 
 impl Component {
@@ -257,11 +283,23 @@ impl Component {
         self.expr_params_acc(expr, &mut acc);
         acc
     }
+
     /// Parameters mentioned within an expression
     pub fn prop_params(&self, prop: PropIdx) -> Vec<ParamIdx> {
         let mut acc = Vec::new();
         self.prop_params_acc(prop, &mut acc);
         acc
+    }
+
+    /// Unannotated Ports in the component
+    pub fn unannotated_ports(&self) -> Vec<(&ast::Id, u64)> {
+        self.info
+            .iter()
+            .filter_map(|(_, info)| match info {
+                Info::UnannotatedPort { name, width } => Some((name, *width)),
+                _ => None,
+            })
+            .collect()
     }
 }
 
