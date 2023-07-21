@@ -35,6 +35,7 @@ impl<'a> Monomorphize<'a> {
             ctx: ir::Context {
                 comps: IndexStore::default(),
                 entrypoint: None,
+                externals: HashMap::new(),
             },
             old,
             externals: vec![],
@@ -163,7 +164,8 @@ impl Monomorphize<'_> {
             log::warn!("program has no entrypoint! result will be empty");
             return ir::Context {
                 comps: IndexStore::default(),
-                entrypoint: None
+                entrypoint: None,
+                externals: HashMap::new()
             }
         };
         // Monomorphize the entrypoint

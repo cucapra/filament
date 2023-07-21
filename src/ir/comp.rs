@@ -7,7 +7,6 @@ use super::{
     TimeSub,
 };
 use crate::{ast, ir::Cmp, utils::Idx};
-use crate::{ast, utils::Idx};
 
 #[derive(Default)]
 pub struct Context {

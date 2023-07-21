@@ -249,7 +249,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     }
 
     fn prop(&mut self, pidx: ir::PropIdx) -> ir::PropIdx {
-        if let Some(idx) = self.monosig.prop_map.get(&pidx) {
+        if let Some(idx) = self.monosig.prop_map.find(pidx) {
             return *idx;
         };
 
@@ -257,7 +257,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         match self.underlying.get(pidx) {
             ir::Prop::True | ir::Prop::False => {
                 let new_idx = self.monosig.base.add(prop.clone());
-                self.monosig.prop_map.insert(pidx, new_idx);
+                self.monosig.prop_map.push(pidx, new_idx);
                 new_idx
             }
             ir::Prop::Cmp(cmp) => {
@@ -269,7 +269,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                     lhs,
                     rhs,
                 }));
-                self.monosig.prop_map.insert(pidx, new_idx);
+                self.monosig.prop_map.push(pidx, new_idx);
                 new_idx
             }
             ir::Prop::TimeCmp(tcmp) => {
@@ -282,7 +282,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                         lhs,
                         rhs,
                     }));
-                self.monosig.prop_map.insert(pidx, new_idx);
+                self.monosig.prop_map.push(pidx, new_idx);
                 new_idx
             }
             ir::Prop::TimeSubCmp(tscmp) => {
@@ -295,34 +295,34 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                         lhs,
                         rhs,
                     }));
-                self.monosig.prop_map.insert(pidx, new_idx);
+                self.monosig.prop_map.push(pidx, new_idx);
                 new_idx
             }
             ir::Prop::Not(p) => {
                 let new_p = self.prop(*p);
                 let new_idx = self.monosig.base.add(ir::Prop::Not(new_p));
-                self.monosig.prop_map.insert(pidx, new_idx);
+                self.monosig.prop_map.push(pidx, new_idx);
                 new_idx
             }
             ir::Prop::And(l, r) => {
                 let l = self.prop(*l);
                 let r = self.prop(*r);
                 let new_idx = self.monosig.base.add(ir::Prop::And(l, r));
-                self.monosig.prop_map.insert(pidx, new_idx);
+                self.monosig.prop_map.push(pidx, new_idx);
                 new_idx
             }
             ir::Prop::Or(l, r) => {
                 let l = self.prop(*l);
                 let r = self.prop(*r);
                 let new_idx = self.monosig.base.add(ir::Prop::Or(l, r));
-                self.monosig.prop_map.insert(pidx, new_idx);
+                self.monosig.prop_map.push(pidx, new_idx);
                 new_idx
             }
             ir::Prop::Implies(l, r) => {
                 let l = self.prop(*l);
                 let r = self.prop(*r);
                 let new_idx = self.monosig.base.add(ir::Prop::Implies(l, r));
-                self.monosig.prop_map.insert(pidx, new_idx);
+                self.monosig.prop_map.push(pidx, new_idx);
                 new_idx
             }
         }

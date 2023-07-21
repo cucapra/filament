@@ -37,7 +37,7 @@ pub struct MonoSig {
     /// Times
     pub time_map: DenseIndexInfo<ir::Time, ir::TimeIdx>,
     /// Ports
-    pub port_map: DenseIndexInfo<(ir::Comp, ir::PortIdx), ir::PortIdx>,
+    pub port_map: HashMap<(ir::CompIdx, ir::PortIdx), ir::PortIdx>,
     /// Exprs
     pub expr_map: DenseIndexInfo<ir::Expr, ir::ExprIdx>,
     /// Props
@@ -65,7 +65,7 @@ impl MonoSig {
             connects: vec![],
             event_map: DenseIndexInfo::default(),
             time_map: DenseIndexInfo::default(),
-            port_map: DenseIndexInfo::default(),
+            port_map: HashMap::default(),
             expr_map: DenseIndexInfo::default(),
             prop_map: DenseIndexInfo::default(),
             param_map: DenseIndexInfo::default(),
@@ -154,7 +154,7 @@ impl MonoSig {
         underlying: &ir::Component,
         param: ir::ParamIdx,
     ) -> ir::ParamIdx {
-        if let Some(idx) = self.param_map.get(param) {
+        if let Some(idx) = self.param_map.find(param) {
             return *idx;
         };
         let ir::Param { owner, info, .. } = underlying.get(param);
@@ -165,12 +165,12 @@ impl MonoSig {
                 // let new_idx = self.bundle_param(param);
                 // self.param_map.insert(param, new_idx);
                 // new_idx
-                if let Some(idx) = self.param_map.get(&param) {
+                if let Some(idx) = self.param_map.find(param) {
                     return *idx;
                 };
                 let p = underlying.get(param);
                 let new_idx = self.base.add(p.clone());
-                self.param_map.insert(param, new_idx);
+                self.param_map.push(param, new_idx);
                 new_idx
             }
             ir::ParamOwner::Loop => {
@@ -180,7 +180,7 @@ impl MonoSig {
                     default: None,
                 };
                 let new_idx = self.base.add(new_param);
-                self.param_map.insert(param, new_idx);
+                self.param_map.push(param, new_idx);
                 new_idx
             }
             ir::ParamOwner::Sig => {
@@ -195,7 +195,7 @@ impl MonoSig {
         underlying: &ir::Component,
         expr: ir::ExprIdx,
     ) -> ir::ExprIdx {
-        if let Some(idx) = self.expr_map.get(&expr) {
+        if let Some(idx) = self.expr_map.find(expr) {
             return *idx;
         };
         match underlying.get(expr).clone() {
@@ -207,12 +207,12 @@ impl MonoSig {
                     .unwrap_or_else(|| {
                         self.param(underlying, p).expr(&mut self.base)
                     });
-                self.expr_map.insert(expr, new_idx);
+                self.expr_map.push(expr, new_idx);
                 new_idx
             }
             ir::Expr::Concrete(n) => {
                 let new_idx = self.base.num(n);
-                self.expr_map.insert(expr, new_idx);
+                self.expr_map.push(expr, new_idx);
                 new_idx
             }
             ir::Expr::Bin { op, lhs, rhs } => {
@@ -220,7 +220,7 @@ impl MonoSig {
                 let rhs = self.expr(underlying, rhs);
                 let new_expr = self.base.bin(ir::Expr::Bin { op, lhs, rhs });
                 let new_idx = self.base.add(new_expr);
-                self.expr_map.insert(expr, new_idx);
+                self.expr_map.push(expr, new_idx);
                 new_idx
             }
             ir::Expr::Fn { op, args } => {
@@ -233,7 +233,7 @@ impl MonoSig {
                     args: Box::new(args),
                 });
                 let new_idx = self.base.add(new_expr);
-                self.expr_map.insert(expr, new_idx);
+                self.expr_map.push(expr, new_idx);
                 new_idx
             }
         }
@@ -258,7 +258,7 @@ impl MonoSig {
         pass: &mut Monomorphize,
         time: ir::TimeIdx,
     ) -> ir::TimeIdx {
-        if let Some(idx) = self.time_map.get(&time) {
+        if let Some(idx) = self.time_map.find(time) {
             return *idx;
         };
 
@@ -270,7 +270,7 @@ impl MonoSig {
         };
 
         let idx = self.base.add(mono_time);
-        self.time_map.insert(time, idx);
+        self.time_map.push(time, idx);
         idx
     }
 
@@ -302,7 +302,7 @@ impl MonoSig {
         let binding = self.binding.inner();
         let conc_params = binding.iter().map(|(_, n)| *n).collect_vec();
 
-        if let Some(idx) = self.event_map.get(&event) {
+        if let Some(idx) = self.event_map.find(event) {
             pass.event_map
                 .insert((self.underlying_idx, conc_params, event), *idx);
             return *idx;
@@ -324,7 +324,7 @@ impl MonoSig {
             has_interface: *has_interface,
         });
         // local event map
-        self.event_map.insert(event, idx);
+        self.event_map.push(event, idx);
 
         // pass event map
         pass.event_map
@@ -344,7 +344,7 @@ impl MonoSig {
         let mono_info = self.info(underlying, info);
         let mono_owner = ir::ParamOwner::Bundle(self.curr_port.unwrap());
 
-        if let Some(new_param_idx) = self.param_map.get(&param) {
+        if let Some(new_param_idx) = self.param_map.find(param) {
             let mut new_param = self.base.get_mut(*new_param_idx);
 
             new_param.owner = mono_owner;
@@ -361,7 +361,7 @@ impl MonoSig {
         };
 
         let new_idx = self.base.add(mono_param);
-        self.param_map.insert(param, new_idx);
+        self.param_map.push(param, new_idx);
         new_idx
     }
 
