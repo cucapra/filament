@@ -381,7 +381,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             })
             .to_vec();
 
-        match cond {
+        match self.monosig.base.get(cond) {
             ir::Prop::True => self.monosig.base.cmds.extend(then),
             ir::Prop::False => self.monosig.base.cmds.extend(alt),
             _ => self

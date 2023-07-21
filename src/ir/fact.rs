@@ -140,6 +140,14 @@ impl PropIdx {
         matches!(ctx.get(*self), Prop::False)
     }
 
+    pub fn as_concrete(&self, ctx: &impl Ctx<Prop>) -> Option<bool> {
+        match ctx.get(*self) {
+            Prop::True => Some(true),
+            Prop::False => Some(false),
+            _ => None,
+        }
+    }
+
     /// Negation of a proposition
     pub fn not(self, ctx: &mut impl Ctx<Prop>) -> PropIdx {
         if self.is_false(ctx) {

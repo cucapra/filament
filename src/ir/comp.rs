@@ -355,7 +355,7 @@ impl Ctx<Invoke> for Component {
 }
 
 impl Component {
-    pub fn resolve_prop(&self, prop: Prop) -> Prop {
+    pub fn resolve_prop(&mut self, prop: Prop) -> PropIdx {
         match prop {
             Prop::Cmp(cmp) => {
                 let CmpOp { op, lhs, rhs } = cmp;
@@ -364,23 +364,23 @@ impl Component {
                 match op {
                     Cmp::Gt => {
                         if lhs > rhs {
-                            Prop::True
+                            self.add(Prop::True)
                         } else {
-                            Prop::False
+                            self.add(Prop::False)
                         }
                     }
                     Cmp::Eq => {
                         if lhs == rhs {
-                            Prop::True
+                            self.add(Prop::True)
                         } else {
-                            Prop::False
+                            self.add(Prop::False)
                         }
                     }
                     Cmp::Gte => {
                         if lhs >= rhs {
-                            Prop::True
+                            self.add(Prop::True)
                         } else {
-                            Prop::False
+                            self.add(Prop::False)
                         }
                     }
                 }
@@ -389,74 +389,74 @@ impl Component {
             | Prop::TimeSubCmp(_)
             | Prop::Implies(_, _)
             | Prop::True
-            | Prop::False => prop,
+            | Prop::False => self.add(prop),
             Prop::And(l, r) => {
                 let l = self.resolve_prop(self.get(l).clone());
                 let r = self.resolve_prop(self.get(r).clone());
-                match (l.as_concrete(), r.as_concrete()) {
+                match (l.as_concrete(self), r.as_concrete(self)) {
                     (Some(l), Some(r)) => {
                         if l && r {
-                            Prop::True
+                            self.add(Prop::True)
                         } else {
-                            Prop::False
+                            self.add(Prop::False)
                         }
                     }
                     (Some(l), None) => {
                         if l {
                             r
                         } else {
-                            Prop::False
+                            self.add(Prop::False)
                         }
                     }
                     (None, Some(r)) => {
                         if r {
                             l
                         } else {
-                            Prop::False
+                            self.add(Prop::False)
                         }
                     }
-                    (None, None) => prop,
+                    (None, None) => self.add(prop),
                 }
             }
             Prop::Or(l, r) => {
                 let l = self.resolve_prop(self.get(l).clone());
                 let r = self.resolve_prop(self.get(r).clone());
-                match (l.as_concrete(), r.as_concrete()) {
+                match (l.as_concrete(self), r.as_concrete(self)) {
                     (Some(l), Some(r)) => {
                         if l || r {
-                            Prop::True
+                            self.add(Prop::True)
                         } else {
-                            Prop::False
+                            self.add(Prop::False)
                         }
                     }
                     (Some(l), None) => {
                         if l {
-                            Prop::True
+                            self.add(Prop::True)
                         } else {
                             r
                         }
                     }
                     (None, Some(r)) => {
                         if r {
-                            Prop::True
+                            self.add(Prop::True)
                         } else {
                             l
                         }
                     }
-                    (None, None) => prop,
+                    (None, None) => self.add(prop),
                 }
             }
             Prop::Not(p) => {
                 let p = self.resolve_prop(self.get(p).clone());
-                match p.as_concrete() {
+                match p.as_concrete(self) {
                     Some(p) => {
                         if p {
-                            Prop::True
+                            self.add(Prop::True)
                         } else {
-                            Prop::False
+                            self.add(Prop::False)
                         }
                     }
-                    None => prop,
+                    None => self.add(prop),
                 }
             }
         }
@@ -475,7 +475,6 @@ impl Component {
                 )
             }
             Expr::Fn {op, args} => {
-                let op = op.clone();
                 let args = args.iter().map(|arg| { let arg = self.get(*arg); self.func(arg.clone()) }).collect_vec();
                 let arg = args.get(0).unwrap().as_concrete(self).unwrap();
                 match op {
@@ -493,14 +492,9 @@ impl Component {
     /// Evaluates a binary operation, assuming that all params have been substituted for
     /// concrete expressions in monomorphization
     pub fn bin(&mut self, expr: Expr) -> ExprIdx {
-        //let expr = self.get(eidx);
         match expr {
             Expr::Concrete(_) => self.add(expr),
             Expr::Bin {op, lhs, rhs} => {
-                //let lhs = self.get(*lhs);
-                // let op = op.clone();
-                // let lhs = lhs.clone();
-                // let rhs = rhs.clone();
                 let lhs = self.bin(self.get(lhs).clone());
                 let lhs = lhs.as_concrete(self).unwrap();
                 let rhs = self.bin(self.get(rhs).clone());

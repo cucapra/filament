@@ -1,6 +1,6 @@
-mod mono;
 mod monodeferred;
+mod monomorphize;
 mod monosig;
 
-pub use mono::Monomorphize;
 pub use monodeferred::MonoDeferred;
+pub use monomorphize::Monomorphize;
