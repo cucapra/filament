@@ -1,4 +1,4 @@
-use crate::ir::{self, Ctx, Foreign, MutCtx};
+use crate::ir::{self, Ctx, Foreign, MutCtx, DenseIndexInfo};
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -33,17 +33,17 @@ pub struct MonoSig {
 
     // Keep track of things that have been monomorphized already
     /// Events
-    pub event_map: HashMap<ir::EventIdx, ir::EventIdx>,
+    pub event_map: DenseIndexInfo<ir::Event, ir::EventIdx>,
     /// Times
-    pub time_map: HashMap<ir::TimeIdx, ir::TimeIdx>,
+    pub time_map: DenseIndexInfo<ir::Time, ir::TimeIdx>,
     /// Ports
-    pub port_map: HashMap<(ir::CompIdx, ir::PortIdx), ir::PortIdx>,
+    pub port_map: DenseIndexInfo<(ir::Comp, ir::PortIdx), ir::PortIdx>,
     /// Exprs
-    pub expr_map: HashMap<ir::ExprIdx, ir::ExprIdx>,
+    pub expr_map: DenseIndexInfo<ir::Expr, ir::ExprIdx>,
     /// Props
-    pub prop_map: HashMap<ir::PropIdx, ir::PropIdx>,
+    pub prop_map: DenseIndexInfo<ir::Prop, ir::PropIdx>,
     /// Params
-    pub param_map: HashMap<ir::ParamIdx, ir::ParamIdx>,
+    pub param_map: DenseIndexInfo<ir::Param, ir::ParamIdx>,
 }
 
 impl MonoSig {
@@ -63,12 +63,12 @@ impl MonoSig {
             inst_counter: HashMap::new(),
             curr_port: None,
             connects: vec![],
-            event_map: HashMap::new(),
-            time_map: HashMap::new(),
-            port_map: HashMap::new(),
-            expr_map: HashMap::new(),
-            prop_map: HashMap::new(),
-            param_map: HashMap::new(),
+            event_map: DenseIndexInfo::default(),
+            time_map: DenseIndexInfo::default(),
+            port_map: DenseIndexInfo::default(),
+            expr_map: DenseIndexInfo::default(),
+            prop_map: DenseIndexInfo::default(),
+            param_map: DenseIndexInfo::default(),
         }
     }
 }
@@ -154,7 +154,7 @@ impl MonoSig {
         underlying: &ir::Component,
         param: ir::ParamIdx,
     ) -> ir::ParamIdx {
-        if let Some(idx) = self.param_map.get(&param) {
+        if let Some(idx) = self.param_map.get(param) {
             return *idx;
         };
         let ir::Param { owner, info, .. } = underlying.get(param);

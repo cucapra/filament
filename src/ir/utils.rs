@@ -208,7 +208,7 @@ impl<T, V> DenseIndexInfo<T, V> {
 
     /// Get the value associated with the index.
     pub fn get(&self, idx: Idx<T>) -> &V {
-        &self.store[idx.get()]
+        &self.store.get(idx.get())
     }
 
     /// Check if the map contains the given index.
