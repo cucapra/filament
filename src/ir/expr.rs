@@ -14,18 +14,8 @@ pub enum Expr {
     },
     Fn {
         op: ast::UnFn,
-        args: Box<Vec<ExprIdx>>,
+        args: Vec<ExprIdx>,
     },
-}
-
-impl Expr {
-    pub fn as_concrete(&self) -> Option<u64> {
-        if let Expr::Concrete(n) = self {
-            Some(*n)
-        } else {
-            None
-        }
-    }
 }
 
 impl Display for Expr {
@@ -186,7 +176,7 @@ impl ExprIdx {
             Some(l) => ctx.add(Expr::Concrete(1 << l)),
             _ => ctx.add(Expr::Fn {
                 op: ast::UnFn::Pow2,
-                args: Box::new(vec![self]),
+                args: vec![self],
             }),
         }
     }
@@ -198,7 +188,7 @@ impl ExprIdx {
             Some(l) => ctx.add(Expr::Concrete(l.trailing_zeros() as u64)),
             _ => ctx.add(Expr::Fn {
                 op: ast::UnFn::Log2,
-                args: Box::new(vec![self]),
+                args: vec![self],
             }),
         }
     }

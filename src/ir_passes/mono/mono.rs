@@ -1,5 +1,5 @@
 use crate::{
-    ir::{self, Ctx, Foreign, IndexStore, MutCtx},
+    ir::{self, Ctx, IndexStore, MutCtx},
     ir_passes::mono::monosig::MonoSig,
 };
 use itertools::Itertools;
@@ -60,10 +60,7 @@ impl<'ctx> Monomorphize<'ctx> {
             self.externals.push(comp);
         }
 
-        // If this component doesn't need monomorphization, return the comp index.
-        if self.externals.contains(&comp) || !self.needs_monomorphize(comp) {
-            return (comp, params);
-        }
+        let underlying = self.old.get(comp);
         let key = (comp, params.clone());
 
         // If we've already processed this or queued this for processing, return the component
@@ -71,25 +68,30 @@ impl<'ctx> Monomorphize<'ctx> {
             return (name, vec![]);
         }
 
-        if let Some((name, mono)) = self.queue.get(&key) {
+        if let Some((name, _)) = self.queue.get(&key) {
             return (*name, vec![]);
         }
 
-        // Otherwise, construct a new component and add it to the processing queue
-        let new_comp = self.ctx.comp(false);
 
-        // Stuff needed to construct a MonoSig
-        let base = std::mem::take(self.ctx.get_mut(new_comp));
-        let underlying = self.old.get(comp);
-        let binding = underlying
-            .sig_params()
-            .into_iter()
-            .zip(params)
-            .collect_vec();
+        // Otherwise, construct a new component and add it to the processing queue
+        let new_comp = self.ctx.comp(underlying.is_ext);
+
+        // // If this component doesn't need monomorphization, return the comp index. Still need to visit the signature
+        // // though.
+        // if self.externals.contains(&comp) || !self.needs_monomorphize(comp) {
+        //     // for evidx in self.old.get(comp).events().idx_iter() {
+        //     //     self.event_map.insert((new_comp, vec![], evidx), evidx);
+        //     // }
+        //     self.queue.insert(key, (new_comp, None));
+        //     return (new_comp, params);
+        // }
+
+        let base = self.ctx.get_mut(new_comp);
 
         // make a MonoSig
-        let mut monosig = MonoSig::new(base, comp, ir::Bind::new(binding));
+        let mut monosig = MonoSig::new(base, underlying, comp, params.clone());
 
+        // the component whose signature we want to monomorphize
         let underlying = self.old.get(comp);
 
         // Monomorphize the sig
@@ -103,26 +105,28 @@ impl<'ctx> Monomorphize<'ctx> {
     }
 
     fn next(&mut self) -> Option<(ir::Component, ir::CompIdx)> {
-        //Option<MonoDeferred<'ctx, 'a>> {
         let Some(((underlying_idx, params), (base_idx, monosig))) = self.queue.pop_front() else {
             return None;
         };
+
+
+        // let Some(monosig) = monosig else {
+        //     // if no monosig was passed in, then we just need to copy everything in the original component over to the new one
+        //     println!("copying {}", underlying_idx);
+        //     let mut base = ir::Component::default();
+        //     base.clone(underlying);
+        //     return Some((base, base_idx));
+        // };
+
         self.processed
             .insert((underlying_idx, params.clone()), base_idx);
 
         let underlying = self.old.get(underlying_idx);
+        let mut mono = MonoDeferred {underlying, pass: self, monosig };
 
-        // after take(), idx will point to default component
-        //let base = std::mem::take(self.ctx.get_mut(base_idx));
-
-        let mut mono = MonoDeferred {
-            underlying,
-            pass: self,
-            monosig,
-        };
-        println!("generating {}", base_idx);
         mono.gen_comp();
         let base = mono.monosig.base;
+        
 
         // At this point, base_idx will be pointing to a default component
         // Return the idx so that we can swap them afterwards
@@ -185,5 +189,3 @@ impl Monomorphize<'_> {
         mono.ctx
     }
 }
-
-// static method on monodeferred?

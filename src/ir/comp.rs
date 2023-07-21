@@ -1,5 +1,3 @@
-use itertools::Itertools;
-use std::collections::HashMap;
 use super::{
     CmpOp, Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
     IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke,
@@ -7,6 +5,8 @@ use super::{
     TimeSub,
 };
 use crate::{ast, ir::Cmp, utils::Idx};
+use itertools::Itertools;
+use std::{collections::HashMap, rc::Rc};
 
 #[derive(Default)]
 pub struct Context {
@@ -24,7 +24,7 @@ impl Context {
     /// Add a new component to the context
     pub fn comp(&mut self, is_ext: bool) -> CompIdx {
         let comp = Component::new(is_ext);
-        self.comps.add(comp)
+        self.add(comp)
     }
 }
 
@@ -464,9 +464,10 @@ impl Component {
 
     /// Evaluates a function, assuming that all parms have been substituted for
     /// concrete expressions in monomorphization
-    pub fn func(&mut self, expr: Expr) -> Expr {
+    pub fn func(&mut self, expr: Expr) -> ExprIdx {
+        //let expr = self.get(eidx);
         match expr {
-            Expr::Concrete(_) => expr,
+            Expr::Concrete(_) => self.add(expr),
             Expr::Bin {..} => self.bin(expr),
             Expr::Param(_) => {
                 self.internal_error(
@@ -474,14 +475,15 @@ impl Component {
                 )
             }
             Expr::Fn {op, args} => {
-                let args = args.iter().map(|arg| self.bin(self.get(*arg).clone())).collect_vec();
-                let arg = args.get(0).unwrap().as_concrete().unwrap();
+                let op = op.clone();
+                let args = args.iter().map(|arg| { let arg = self.get(*arg); self.func(arg.clone()) }).collect_vec();
+                let arg = args.get(0).unwrap().as_concrete(self).unwrap();
                 match op {
                     ast::UnFn::Pow2 => {
-                        Expr::Concrete(2u64.pow(arg as u32))
+                        self.add(Expr::Concrete(2u64.pow(arg as u32)))
                     }
                     ast::UnFn::Log2 => {
-                        Expr::Concrete((arg as f64).log2().ceil() as u64)
+                        self.add(Expr::Concrete((arg as f64).log2().ceil() as u64))
                     }
                 }
             }
@@ -490,29 +492,34 @@ impl Component {
 
     /// Evaluates a binary operation, assuming that all params have been substituted for
     /// concrete expressions in monomorphization
-    pub fn bin(&mut self, expr: Expr) -> Expr {
+    pub fn bin(&mut self, expr: Expr) -> ExprIdx {
+        //let expr = self.get(eidx);
         match expr {
-            Expr::Concrete(_) => expr,
+            Expr::Concrete(_) => self.add(expr),
             Expr::Bin {op, lhs, rhs} => {
-                let lhs = self.get(lhs);
-                let lhs = self.bin(lhs.clone()).as_concrete().unwrap();
-                let rhs = self.get(rhs);
-                let rhs = self.bin(rhs.clone()).as_concrete().unwrap();
+                //let lhs = self.get(*lhs);
+                // let op = op.clone();
+                // let lhs = lhs.clone();
+                // let rhs = rhs.clone();
+                let lhs = self.bin(self.get(lhs).clone());
+                let lhs = lhs.as_concrete(self).unwrap();
+                let rhs = self.bin(self.get(rhs).clone());
+                let rhs = rhs.as_concrete(self).unwrap();
                 match op {
                     ast::Op::Add => {
-                        Expr::Concrete(lhs + rhs)
+                        self.add(Expr::Concrete(lhs + rhs))
                     },
                     ast::Op::Mul => {
-                        Expr::Concrete(lhs * rhs)
+                        self.add(Expr::Concrete(lhs * rhs))
                     },
                     ast::Op::Sub => {
-                        Expr::Concrete(lhs - rhs)
+                        self.add(Expr::Concrete(lhs - rhs))
                     },
                     ast::Op::Div => {
-                        Expr::Concrete(lhs / rhs)
+                        self.add(Expr::Concrete(lhs / rhs))
                     },
                     ast::Op::Mod => {
-                        Expr::Concrete(lhs % rhs)
+                        self.add(Expr::Concrete(lhs % rhs))
                     },
                 }
             },

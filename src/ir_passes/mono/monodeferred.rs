@@ -1,50 +1,14 @@
+use super::{monosig::MonoSig, Monomorphize};
 use crate::ir::{self, Ctx, Foreign, MutCtx};
 use itertools::Itertools;
-use std::collections::HashMap;
-
-use super::{monosig::MonoSig, Monomorphize};
 
 pub struct MonoDeferred<'a, 'pass: 'a> {
-    // /// The name of the monomorphized component
-    // pub base: ir::Component,
     /// The underlying component to be monomorphized
     pub underlying: &'a ir::Component,
-    // /// The underlying component's idx
-    // pub underlying_idx: ir::CompIdx,
-    // /// Mapping from sig-owned parameters in the underlying component to their constant bindings.
-    // pub binding: ir::Bind<ir::ParamIdx, u64>,
-    // /// Mapping from non-sig-owned params in the underlying component to the parameters in the new component
-    // /// that they've been replaced with
-    // pub par_binding: ir::Bind<ir::ParamIdx, ir::ParamIdx>,
     /// Underlying pointer
     pub pass: &'a mut Monomorphize<'pass>,
-
-    /// Mapping of underlying invokes (and how many times we've seen it) to base invokes
-    // pub inv_map: HashMap<(ir::InvIdx, u32), ir::InvIdx>,
-    // /// Mapping from underlying invokes to how many times we've seen it so far
-    // pub inv_counter: HashMap<ir::InvIdx, u32>,
-    // /// Mapping of underlying instances (and how many times we've seen it) to base instances
-    // pub inst_map: HashMap<(ir::InstIdx, u32), ir::InstIdx>,
-    // /// Maapping from underlying instances to how many times we've seen it so far
-    // pub inst_counter: HashMap<ir::InstIdx, u32>,
-    // /// Hold onto the current PortIdx being handled
-    // pub curr_port: Option<ir::PortIdx>,
-    // /// Queue of connects to be handled when we see their associated invoke
-    // pub connects: Vec<ir::Connect>,
-
-    // Keep track of things that have been monomorphized already
-    /// Events
-    // pub event_map: HashMap<ir::EventIdx, ir::EventIdx>,
-    // /// Times
-    // pub time_map: HashMap<ir::TimeIdx, ir::TimeIdx>,
-    // /// Ports
-    // pub port_map: HashMap<(ir::CompIdx, ir::PortIdx), ir::PortIdx>,
-    // /// Exprs
-    // pub expr_map: HashMap<ir::ExprIdx, ir::ExprIdx>,
-    // /// Props
-    // pub prop_map: HashMap<ir::PropIdx, ir::PropIdx>,
-    // /// Params
-    // pub param_map: HashMap<ir::ParamIdx, ir::ParamIdx>,
+    /// Struct to keep track of all the mapping information from things owned by
+    /// `underlying` to things owned by `base`
     pub monosig: MonoSig,
 }
 
@@ -54,6 +18,10 @@ impl MonoDeferred<'_, '_> {
         underlying: &ir::Component,
         pass: &mut Monomorphize,
     ) {
+        println!("processing the sig of {}", monosig.underlying_idx);
+        for idx in underlying.events().idx_iter() {
+            monosig.event(underlying, pass, idx);
+        }
         for (idx, port) in underlying.ports().iter() {
             if port.is_sig_in() || port.is_sig_out() {
                 monosig.port(underlying, pass, idx);
@@ -64,16 +32,12 @@ impl MonoDeferred<'_, '_> {
 
 impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     pub fn gen_comp(&mut self) {
-        // for (idx, port) in self.underlying.ports().iter() {
-        //     if port.is_sig_in() || port.is_sig_out() {
-        //         self.port(idx);
-        //     }
-        // }
+        println!("generating a new comp for {}", self.monosig.underlying_idx);
         for cmd in &self.underlying.cmds {
             let cmd = self.command(cmd);
             self.monosig.base.cmds.extend(cmd);
         }
-        for (idx, _) in self.underlying.props().iter() {
+        for idx in self.underlying.props().idx_iter() {
             self.prop(idx);
         }
     }
@@ -103,18 +67,27 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let conc_params_copy = conc_params.clone();
 
+        println!(
+            "looking up ({}, {:?}, {})",
+            inst_comp, conc_params_copy, key
+        );
         let new_event = self
             .pass
             .event_map
             .get(&(inst_comp, conc_params, *key))
             .unwrap();
+        println!("got {}", new_event);
 
-        let (mono_compidx, _) =
-            self.pass.queue.get(&(inst_comp, conc_params_copy)).unwrap();
+        let new_owner = if let Some((mono_compidx, _)) =
+            self.pass.queue.get(&(inst_comp, conc_params_copy)) {
+                *mono_compidx
+            } else {
+                self.monosig.underlying_idx
+            };
 
         ir::Foreign {
             key: *new_event,
-            owner: *mono_compidx,
+            owner: new_owner,
         }
     }
 
@@ -249,7 +222,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     }
 
     fn prop(&mut self, pidx: ir::PropIdx) -> ir::PropIdx {
-        if let Some(idx) = self.monosig.prop_map.find(pidx) {
+        if let Some(idx) = self.monosig.prop_map.get(&pidx) {
             return *idx;
         };
 
@@ -257,7 +230,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         match self.underlying.get(pidx) {
             ir::Prop::True | ir::Prop::False => {
                 let new_idx = self.monosig.base.add(prop.clone());
-                self.monosig.prop_map.push(pidx, new_idx);
+                self.monosig.prop_map.insert(pidx, new_idx);
                 new_idx
             }
             ir::Prop::Cmp(cmp) => {
@@ -269,7 +242,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                     lhs,
                     rhs,
                 }));
-                self.monosig.prop_map.push(pidx, new_idx);
+                self.monosig.prop_map.insert(pidx, new_idx);
                 new_idx
             }
             ir::Prop::TimeCmp(tcmp) => {
@@ -282,7 +255,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                         lhs,
                         rhs,
                     }));
-                self.monosig.prop_map.push(pidx, new_idx);
+                self.monosig.prop_map.insert(pidx, new_idx);
                 new_idx
             }
             ir::Prop::TimeSubCmp(tscmp) => {
@@ -295,34 +268,34 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                         lhs,
                         rhs,
                     }));
-                self.monosig.prop_map.push(pidx, new_idx);
+                self.monosig.prop_map.insert(pidx, new_idx);
                 new_idx
             }
             ir::Prop::Not(p) => {
                 let new_p = self.prop(*p);
                 let new_idx = self.monosig.base.add(ir::Prop::Not(new_p));
-                self.monosig.prop_map.push(pidx, new_idx);
+                self.monosig.prop_map.insert(pidx, new_idx);
                 new_idx
             }
             ir::Prop::And(l, r) => {
                 let l = self.prop(*l);
                 let r = self.prop(*r);
                 let new_idx = self.monosig.base.add(ir::Prop::And(l, r));
-                self.monosig.prop_map.push(pidx, new_idx);
+                self.monosig.prop_map.insert(pidx, new_idx);
                 new_idx
             }
             ir::Prop::Or(l, r) => {
                 let l = self.prop(*l);
                 let r = self.prop(*r);
                 let new_idx = self.monosig.base.add(ir::Prop::Or(l, r));
-                self.monosig.prop_map.push(pidx, new_idx);
+                self.monosig.prop_map.insert(pidx, new_idx);
                 new_idx
             }
             ir::Prop::Implies(l, r) => {
                 let l = self.prop(*l);
                 let r = self.prop(*r);
                 let new_idx = self.monosig.base.add(ir::Prop::Implies(l, r));
-                self.monosig.prop_map.push(pidx, new_idx);
+                self.monosig.prop_map.insert(pidx, new_idx);
                 new_idx
             }
         }
@@ -410,7 +383,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         match cond {
             ir::Prop::True => self.monosig.base.cmds.extend(then),
             ir::Prop::False => self.monosig.base.cmds.extend(alt),
-            _ => panic!("couldnt resolve prop"),
+            _ => self.monosig.base.internal_error(format!("couldn't resolve {}", cond)),
         }
     }
 
@@ -438,10 +411,10 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             base,
         } = eb;
 
+        let base = self.foreign_event(base, inv);
         let delay = self.timesub(delay);
         let arg = self.monosig.time(self.underlying, self.pass, *arg);
         let info = self.monosig.info(self.underlying, info);
-        let base = self.foreign_event(base, inv);
 
         ir::EventBind {
             arg,

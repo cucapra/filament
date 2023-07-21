@@ -1,5 +1,4 @@
 use itertools::Itertools;
-
 use super::{Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Time, TimeIdx};
 
 pub struct Bind<K: Eq, V>(Vec<(K, V)>);
@@ -141,7 +140,7 @@ impl Foldable<ParamIdx, ExprIdx> for ExprIdx {
                         .map(|arg| arg.fold_with(ctx, subst_fn))
                         .collect_vec(),
                 );
-                ctx.add(Expr::Fn { op, args })
+                ctx.add(Expr::Fn { op, args: *args })
             }
         }
     }
