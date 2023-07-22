@@ -752,9 +752,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 invoke.events.push(eb);
             });
 
-        connects
-            .into_iter()
-            .chain(Some(ir::Command::from(inv)))
+        std::iter::once(ir::Command::from(inv))
+            .chain(connects)
             .chain(cons)
             .collect_vec()
     }
