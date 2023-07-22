@@ -384,10 +384,7 @@ impl Printer<'_> {
             "{:indent$}{idx}, {ports} = invoke {inst}<{events}>;",
             "",
             ports = ports.iter().map(|p| format!("{p}")).join(", "),
-            events = events
-                .iter()
-                .map(|e| self.ctx.display_timesub(&e.delay))
-                .join(", ")
+            events = events.iter().map(|e| self.ctx.display(e.arg)).join(", ")
         )?;
 
         Ok(())
