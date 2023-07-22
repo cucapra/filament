@@ -155,12 +155,8 @@ impl Printer<'_> {
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         match c {
-            ir::Command::Instance(inst) => {
-                write!(f, "{:indent$}{inst};", "")
-            }
-            ir::Command::Invoke(inv) => {
-                write!(f, "{:indent$}{inv};", "")
-            }
+            ir::Command::Instance(inst) => self.instance(*inst, indent, f),
+            ir::Command::Invoke(inv) => self.invoke(*inv, indent, f),
             ir::Command::Connect(con) => self.connect(con, indent, f),
             ir::Command::ForLoop(ir::Loop {
                 index,
@@ -347,27 +343,26 @@ impl Printer<'_> {
     }
 
     pub fn instance(
-        ctx: &ir::Component,
+        &self,
         idx: ir::InstIdx,
-        inst: &ir::Instance,
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         write!(f, "{:indent$}{idx} = instance ", "")?;
-        let ir::Instance { comp, params, .. } = inst;
+        let ir::Instance { comp, params, .. } = self.ctx.get(idx);
         write!(f, "{}[", comp)?;
         for (i, param) in params.iter().enumerate() {
             if i != 0 {
                 write!(f, ", ")?;
             }
-            write!(f, "{}", ctx.display(*param))?;
+            write!(f, "{}", self.ctx.display(*param))?;
         }
-        writeln!(f, "];")
+        write!(f, "];")
     }
 
     pub fn invoke(
+        &self,
         idx: ir::InvIdx,
-        c: &ir::Invoke,
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
@@ -376,14 +371,17 @@ impl Printer<'_> {
             ports,
             events,
             ..
-        } = c;
+        } = self.ctx.get(idx);
 
-        writeln!(
+        write!(
             f,
             "{:indent$}{idx}, {ports} = invoke {inst}<{events}>;",
             "",
             ports = ports.iter().map(|p| format!("{p}")).join(", "),
-            events = events.iter().map(|e| format!("{}", e.delay)).join(", ")
+            events = events
+                .iter()
+                .map(|e| self.ctx.display_timesub(&e.delay))
+                .join(", ")
         )?;
 
         Ok(())
@@ -408,12 +406,6 @@ impl Printer<'_> {
         }
         for (idx, port) in ctx.ports().iter() {
             printer.local_port(idx, port, 2, f)?;
-        }
-        for (idx, instance) in ctx.instances().iter() {
-            Printer::instance(ctx, idx, instance, 2, f)?;
-        }
-        for (idx, invoke) in ctx.invocations().iter() {
-            Printer::invoke(idx, invoke, 2, f)?;
         }
         writeln!(f, "control:")?;
         printer.commands(&ctx.cmds, 2, f)?;
