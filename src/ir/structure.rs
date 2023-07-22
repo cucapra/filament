@@ -204,8 +204,10 @@ impl Access {
     /// Check if this is guaranteed a simple port access, i.e., an access that
     /// produces one port.
     /// The check is syntactic and therefore conservative.
-    pub fn is_port(&self, ctx: &mut impl Ctx<Expr>) -> bool {
-        let one = ctx.add(Expr::Concrete(1));
+    pub fn is_port(&self, ctx: &Component) -> bool {
+        let Some(one) = ctx.exprs().find(&Expr::Concrete(1)) else {
+            ctx.internal_error("Constant 1 not found in component")
+        };
         match ctx.get(self.end) {
             Expr::Bin {
                 op: Op::Add,
