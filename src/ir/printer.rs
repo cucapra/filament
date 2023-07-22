@@ -209,13 +209,12 @@ impl Printer<'_> {
         if comp.is_ext {
             write!(f, "ext ")?;
         };
-        if let Some(idx) = idx {
+        if let Some(info) = &comp.src_info {
+            write!(f, "comp {}", info.name)?
+        } else if let Some(idx) = idx {
             write!(f, "comp {}", idx)?;
         } else {
             write!(f, "comp")?;
-        }
-        if let Some(info) = &comp.src_info {
-            write!(f, " ({})", info.name)?
         }
         write!(f, "[")?;
         for pos in comp
