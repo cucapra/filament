@@ -43,7 +43,7 @@ impl DisplayCtx<ir::Event> for ir::Component {
         } else {
             let ev = self.get(idx);
             let ir::Info::Event { name, .. } = self.get(ev.info) else {
-                unreachable!("Expccted event info")
+                unreachable!("Expected event info")
             };
             name.to_string()
         }
@@ -106,7 +106,7 @@ impl Printer<'_> {
 
     fn range(&self, r: &ir::Range) -> String {
         let ir::Range { start, end } = r;
-        format!("@[{}, {}]", self.time(*start), self.time(*end))
+        format!("[{}, {}]", self.time(*start), self.time(*end))
     }
 
     fn liveness(&self, l: &ir::Liveness) -> String {
@@ -222,10 +222,10 @@ impl Printer<'_> {
         {
             match pos {
                 Position::First(idx) | Position::Middle(idx) => {
-                    write!(f, "{idx}, ")?
+                    write!(f, "{}, ", self.ctx.display(idx))?
                 }
                 Position::Only(idx) | Position::Last(idx) => {
-                    write!(f, "{idx}")?
+                    write!(f, "{}", self.ctx.display(idx))?
                 }
             }
         }
@@ -236,12 +236,18 @@ impl Printer<'_> {
                 Position::First((idx, ev)) | Position::Middle((idx, ev)) => {
                     write!(
                         f,
-                        "{idx}: {}, ",
+                        "{}: {}, ",
+                        self.ctx.display(idx),
                         self.ctx.display_timesub(&ev.delay)
                     )?
                 }
                 Position::Only((idx, ev)) | Position::Last((idx, ev)) => {
-                    write!(f, "{idx}: {}", self.ctx.display_timesub(&ev.delay))?
+                    write!(
+                        f,
+                        "{}: {}",
+                        self.ctx.display(idx),
+                        self.ctx.display_timesub(&ev.delay)
+                    )?
                 }
             }
         }
@@ -635,6 +641,6 @@ impl ir::Component {
 
     /// Surface-level visualization for a range
     pub fn display_range(&self, r: &ir::Range) -> String {
-        format!("@[{}, {}]", self.display(r.start), self.display(r.end))
+        format!("[{}, {}]", self.display(r.start), self.display(r.end))
     }
 }
