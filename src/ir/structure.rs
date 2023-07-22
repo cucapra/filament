@@ -285,20 +285,11 @@ impl fmt::Display for ParamOwner {
 pub struct Param {
     pub owner: ParamOwner,
     pub info: InfoIdx,
-    pub default: Option<ExprIdx>,
 }
 
 impl Param {
-    pub fn new(
-        owner: ParamOwner,
-        info: InfoIdx,
-        default: Option<ExprIdx>,
-    ) -> Self {
-        Self {
-            owner,
-            info,
-            default,
-        }
+    pub fn new(owner: ParamOwner, info: InfoIdx) -> Self {
+        Self { owner, info }
     }
 
     pub fn is_sig_owned(&self) -> bool {
@@ -312,9 +303,6 @@ impl Param {
 
 impl fmt::Display for Param {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(default) = self.default {
-            write!(f, "{} ", default)?;
-        }
         write!(f, "{}", self.owner)
     }
 }
