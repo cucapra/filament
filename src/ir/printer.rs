@@ -684,6 +684,6 @@ impl ir::Component {
 
     /// Surface-level visualization for a range
     pub fn display_range(&self, r: &ir::Range) -> String {
-        format!("[{}, {}]", self.display(r.start), self.display(r.end))
+        format!("@[{}, {}]", self.display(r.start), self.display(r.end))
     }
 }
