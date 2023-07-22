@@ -79,7 +79,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             info,
         });
         // foreign component being invoked
-        let foreign_comp = inv.comp(self.comp);
+        let foreign_comp = inv.comp(&self.comp);
         self.add_inv(name.copy(), inv);
 
         let mut def_ports = vec![];
@@ -101,13 +101,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 .resolve_event(&event_binding);
 
             let base = ir::Foreign::new(
-                self.ctx
-                    .comps
-                    .get(foreign_comp)
-                    .outputs()
-                    .nth(idx)
-                    .unwrap()
-                    .0,
+                self.ctx.get(foreign_comp).outputs().nth(idx).unwrap().0,
                 foreign_comp,
             );
 
@@ -166,18 +160,18 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 let l = self.expr(*left);
                 let r = self.expr(*right);
                 match op {
-                    ast::Op::Add => l.add(r, self.comp),
-                    ast::Op::Mul => l.mul(r, self.comp),
-                    ast::Op::Sub => l.sub(r, self.comp),
-                    ast::Op::Div => l.div(r, self.comp),
-                    ast::Op::Mod => l.rem(r, self.comp),
+                    ast::Op::Add => l.add(r, &mut self.comp),
+                    ast::Op::Mul => l.mul(r, &mut self.comp),
+                    ast::Op::Sub => l.sub(r, &mut self.comp),
+                    ast::Op::Div => l.div(r, &mut self.comp),
+                    ast::Op::Mod => l.rem(r, &mut self.comp),
                 }
             }
             ast::Expr::App { func, arg } => {
                 let arg = self.expr(*arg);
                 match func {
-                    ast::UnFn::Pow2 => arg.pow2(self.comp),
-                    ast::UnFn::Log2 => arg.log2(self.comp),
+                    ast::UnFn::Pow2 => arg.pow2(&mut self.comp),
+                    ast::UnFn::Log2 => arg.log2(&mut self.comp),
                 }
             }
         }
@@ -209,7 +203,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let cons = self.expr_cons(i.cons);
         if let Some(ante) = i.guard {
             let ante = self.expr_cons(ante);
-            ante.implies(cons, self.comp)
+            ante.implies(cons, &mut self.comp)
         } else {
             cons
         }
@@ -255,7 +249,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             ast::TimeSub::Sym { l, r } => {
                 let l = self.time(l);
                 let r = self.time(r);
-                l.sub(r, self.comp)
+                l.sub(r, &mut self.comp)
             }
         }
     }
@@ -398,7 +392,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         match access {
             ast::Access::Index(n) => {
                 let n = self.expr(n);
-                (n, n.add(self.comp.num(1), self.comp))
+                (n, n.add(self.comp.num(1), &mut self.comp))
             }
             ast::Access::Range { start, end } => {
                 (self.expr(start), self.expr(end))
@@ -416,12 +410,12 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         match port {
             ast::Port::This(n) => {
                 let owner = InvPort::Sig(dir, n.copy());
-                ir::Access::port(self.get_port(&owner), self.comp)
+                ir::Access::port(self.get_port(&owner), &mut self.comp)
             }
             ast::Port::InvPort { invoke, name } => {
                 let inv = self.get_inv(invoke.copy());
                 let owner = InvPort::Inv(inv, dir, name.copy());
-                ir::Access::port(self.get_port(&owner), self.comp)
+                ir::Access::port(self.get_port(&owner), &mut self.comp)
             }
             ast::Port::Bundle { name, access } => {
                 // NOTE(rachit): The AST does not distinguish between bundles
@@ -630,11 +624,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             unreachable!("No ports provided for invocation {name}")
         };
         let inv = self.get_inv(name.copy());
-        let inst = inv.inst(self.comp);
+        let inst = inv.inst(&self.comp);
         let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
         let sig = self.sigs.get(&comp).unwrap();
         // foreign component being invoked
-        let foreign_comp = inv.comp(self.comp);
+        let foreign_comp = inv.comp(&self.comp);
 
         // Event bindings
         let event_binding = self.event_binding(
@@ -818,10 +812,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                     body,
                 }
                 .into();
-                let index = index.expr(self.comp);
-                let idx_start = index.gte(start, self.comp);
-                let idx_end = index.lt(end, self.comp);
-                let in_range = idx_start.and(idx_end, self.comp);
+                let index = index.expr(&mut self.comp);
+                let idx_start = index.gte(start, &mut self.comp);
+                let idx_end = index.lt(end, &mut self.comp);
+                let in_range = idx_start.and(idx_end, &mut self.comp);
                 iter::once(l)
                     .chain(self.comp.assume(in_range, reason))
                     .collect()
@@ -855,10 +849,10 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 .into(),
         );
         for (idx, len) in ports {
-            let idx = idx.expr(self.comp);
-            let start = idx.gte(self.comp.num(0), self.comp);
-            let end = idx.lt(len, self.comp);
-            let in_range = start.and(end, self.comp);
+            let idx = idx.expr(&mut self.comp);
+            let start = idx.gte(self.comp.num(0), &mut self.comp);
+            let end = idx.lt(len, &mut self.comp);
+            let in_range = start.and(end, &mut self.comp);
             cmds.extend(self.comp.assume(in_range, reason))
         }
         cmds
@@ -868,42 +862,49 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         let mut ir_comp = ir::Component::new(true);
         ir_comp.src_info = Some(ir::InterfaceSrc::new(sig.name.copy()));
         let binding = SigMap::default();
-        let mut builder = BuildCtx::new(ctx, &mut ir_comp, &binding);
+        let mut builder = BuildCtx::new(ctx, ir_comp, &binding);
 
         // First we declare all the ports
         let mut cmds = builder.sig(sig);
         cmds.extend(builder.port_assumptions());
-        ir_comp.cmds = cmds;
-        ir_comp
+        builder.comp.cmds = cmds;
+        builder.comp
     }
 
-    fn comp(
-        ctx: &ir::Context,
-        ir_comp: &mut ir::Component,
+    fn declare_comp(
+        ctx: &'ctx ir::Context,
         comp: ast::Component,
         sigs: &'prog SigMap,
-    ) {
+        preserve_interface: bool,
+    ) -> (BuildCtx<'ctx, 'prog>, Vec<ast::Command>) {
+        let mut ir_comp = ir::Component::new(false);
+        if preserve_interface {
+            ir_comp.src_info =
+                Some(ir::InterfaceSrc::new(comp.sig.name.copy()));
+        }
         let mut builder = BuildCtx::new(ctx, ir_comp, sigs);
 
+        // declare only the ports
         let mut cmds = builder.sig(comp.sig);
-        let body_cmds = builder.commands(comp.body);
         cmds.extend(builder.port_assumptions());
-        cmds.extend(body_cmds);
-        ir_comp.cmds = cmds;
+        builder.comp.cmds = cmds;
+        (builder, comp.body)
     }
 }
 
 pub fn transform(ns: ast::Namespace) -> ir::Context {
     let mut sig_map = SigMap::default();
-    let main_idx = ns.main_idx();
-    let (mut ns, order) = crate::utils::Traversal::from(ns).take();
 
     // Walk over signatures and build a SigMap
     for (idx, sig) in ns.signatures().map(|(_, sig)| sig).enumerate() {
         sig_map.insert(sig.name.copy(), Sig::from((sig, idx)));
     }
 
-    let mut ctx = ir::Context::default();
+    let mut ctx = ir::Context {
+        entrypoint: ns.main_idx().map(crate::utils::Idx::new),
+        ..Default::default()
+    };
+    // assumes that components are inserted in definition order here.
     for (file, exts) in ns.externs {
         for ext in exts {
             let idx = sig_map.get(&ext.name).unwrap().idx;
@@ -914,33 +915,40 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         }
     }
 
-    // TODO: Need to handle recursive components as well as mutually recursive components by adding signature ports first in declaration, so that foreign keys can be resolved
-    // declare all components in the proper order
-    for (cidx, comp) in ns.components.iter().enumerate() {
-        let idx = sig_map.get(&comp.sig.name).unwrap().idx;
+    // First, define the signature of every component
+    let builders = ns
+        .components
+        .into_iter()
+        .enumerate()
+        .map(|(cidx, comp)| {
+            let idx = sig_map.get(&comp.sig.name).unwrap().idx;
 
-        let mut ir_comp = ir::Component::new(false);
-        if Some(cidx) == main_idx {
-            ctx.entrypoint = Some(idx);
-            ir_comp.src_info =
-                Some(ir::InterfaceSrc::new(comp.sig.name.copy()));
-        }
-        ctx.comps.checked_add(idx, ir_comp);
-    }
+            let (builder, cmds) = BuildCtx::declare_comp(
+                &ctx,
+                comp,
+                &sig_map,
+                ctx.entrypoint.map(|idx| cidx == idx.get()).unwrap_or(false),
+            );
 
-    // create a dummy component to be swapped into the context
-    let mut curr_comp = ir::Component::new(false);
-    for cidx in order {
-        let comp = std::mem::take(&mut ns.components[cidx]);
-        log::debug!("Compiling component {}", comp.sig.name);
-        let idx = sig_map.get(&comp.sig.name).unwrap().idx;
+            (idx, builder, cmds)
+        })
+        .collect_vec();
 
-        // Needs to swap here because we have to own the current component while leaving the context immutable.
-        // TODO: Find a solution here that will still allow us to properly generate Foreign keys in recursive components.
-        std::mem::swap(ctx.get_mut(idx), &mut curr_comp);
-        BuildCtx::comp(&ctx, &mut curr_comp, comp, &sig_map);
-        // swap the component back into place
-        std::mem::swap(ctx.get_mut(idx), &mut curr_comp);
+    // Compiles and adds all the commands here
+    // Need to do this before adding all the components because each builder borrows the context immutably
+    let comps = builders
+        .into_iter()
+        .map(|(idx, mut builder, cmds)| {
+            let cmds = builder.commands(cmds);
+            let mut comp = builder.comp;
+            comp.cmds.extend(cmds);
+            (idx, comp)
+        })
+        .collect_vec();
+
+    // finally, add all the components to the context
+    for (idx, comp) in comps {
+        ctx.comps.checked_add(idx, comp);
     }
 
     ctx

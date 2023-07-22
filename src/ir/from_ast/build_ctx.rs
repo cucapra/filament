@@ -89,7 +89,7 @@ impl std::fmt::Display for InvPort {
 pub(super) struct BuildCtx<'ctx, 'prog> {
     /// Unfinished context
     pub ctx: &'ctx ir::Context,
-    pub comp: &'ctx mut ir::Component,
+    pub comp: ir::Component,
     pub sigs: &'prog SigMap,
 
     // Mapping from names of instance to (<parameter bindings>, <component name>).
@@ -112,7 +112,7 @@ pub(super) struct BuildCtx<'ctx, 'prog> {
 impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     pub fn new(
         ctx: &'ctx ir::Context,
-        comp: &'ctx mut ir::Component,
+        comp: ir::Component,
         sigs: &'prog SigMap,
     ) -> Self {
         Self {
@@ -215,7 +215,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
         msg.push_str(&format!(
             ". Component:\n{comp}",
-            comp = ir::Printer::comp_str(self.comp)
+            comp = ir::Printer::comp_str(&self.comp)
         ));
         unreachable!("{msg}")
     }
@@ -229,7 +229,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             unreachable!(
                 "Invoke `{name}' not found. Component:\n{comp}",
                 name = name,
-                comp = ir::Printer::comp_str(self.comp)
+                comp = ir::Printer::comp_str(&self.comp)
             )
         })
     }
