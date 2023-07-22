@@ -114,7 +114,11 @@ pub struct Printer<'a> {
     ctx: &'a ir::Component,
 }
 
-impl Printer<'_> {
+impl<'a> Printer<'a> {
+    pub fn new(ctx: &'a ir::Component) -> Self {
+        Self { ctx }
+    }
+
     fn interned<T>(
         store: &ir::Interned<T>,
         op: &str,
@@ -190,6 +194,12 @@ impl Printer<'_> {
             self.access(dst),
             self.access(src),
         )
+    }
+
+    pub fn connect_str(&self, c: &ir::Connect) -> String {
+        let mut buf = Vec::new();
+        self.connect(c, 0, &mut buf).unwrap();
+        String::from_utf8(buf).unwrap()
     }
 
     pub fn command(
@@ -345,18 +355,24 @@ impl Printer<'_> {
     }
 
     fn local_param(
+        &self,
         idx: ir::ParamIdx,
-        param: &ir::Param,
         indent: usize,
         c: &ir::Component,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
+        let param = self.ctx.get(idx);
         if !param.is_sig_owned() {
             let &ir::Param { info, .. } = c.get(idx);
             let ir::Info::Param { name, .. } = c.get(info) else {
                 unreachable!("Expected param info");
             };
-            writeln!(f, "{:indent$}{idx} = param {param}; // {name}", "",)?;
+            writeln!(
+                f,
+                "{:indent$}{idx} = param {param}; // {name}",
+                "",
+                param = self.ctx.display(idx)
+            )?;
         }
         Ok(())
     }
@@ -447,8 +463,8 @@ impl Printer<'_> {
     ) -> io::Result<()> {
         let printer = ir::Printer { ctx };
         printer.sig(ctx, idx, 0, f)?;
-        for (idx, param) in ctx.params().iter() {
-            Printer::local_param(idx, param, 2, ctx, f)?;
+        for idx in ctx.params().idx_iter() {
+            printer.local_param(idx, 2, ctx, f)?;
         }
         // If debugging is enabled, show the low-level representation of the
         // component's interned values.

@@ -1,9 +1,8 @@
-use crate::ast::Op;
-
 use super::{
     utils::Foreign, Bind, Component, Ctx, Expr, ExprIdx, Foldable, InfoIdx,
     InvIdx, ParamIdx, PortIdx, Subst, TimeIdx, TimeSub,
 };
+use crate::ast::Op;
 use std::fmt;
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -11,12 +10,6 @@ use std::fmt;
 pub struct Range {
     pub start: TimeIdx,
     pub end: TimeIdx,
-}
-
-impl fmt::Display for Range {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "@[{}, {}]", self.start, self.end)
-    }
 }
 
 impl Foldable<ParamIdx, ExprIdx> for Range {
@@ -47,16 +40,6 @@ pub enum PortOwner {
     /// The port is defined locally.
     /// It does not have a direction because both reading and writing to it is allowed.
     Local,
-}
-
-impl fmt::Display for PortOwner {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Sig { dir } => write!(f, "sig({})", dir),
-            Self::Inv { inv, dir, .. } => write!(f, "{}({})", inv, dir),
-            Self::Local => write!(f, "local"),
-        }
-    }
 }
 
 impl PortOwner {
@@ -129,12 +112,6 @@ pub struct Liveness {
     pub range: Range,
 }
 
-impl fmt::Display for Liveness {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "for<{}: {}> {}", self.idx, self.len, self.range)
-    }
-}
-
 #[derive(PartialEq, Eq, Hash, Clone)]
 /// A port tracks its definition and liveness.
 /// A port in the IR generalizes both bundles and normal ports.
@@ -170,11 +147,6 @@ impl Port {
     pub fn is_sig_out(&self) -> bool {
         // We check the direction is `in` because the port direction is flipped
         matches!(self.owner, PortOwner::Sig { dir: Direction::In })
-    }
-}
-impl fmt::Display for Port {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {} {}", self.owner, self.live, self.width)
     }
 }
 
@@ -249,11 +221,6 @@ impl Access {
         }
     }
 }
-impl fmt::Display for Access {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}[{}..{})", self.port, self.start, self.end)
-    }
-}
 
 #[derive(PartialEq, Eq, Hash, Clone)]
 /// Construct that defines the parameter
@@ -269,16 +236,6 @@ pub enum ParamOwner {
 impl ParamOwner {
     pub fn bundle(port: PortIdx) -> Self {
         Self::Bundle(port)
-    }
-}
-
-impl fmt::Display for ParamOwner {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Sig => write!(f, "sig"),
-            Self::Bundle(p) => write!(f, "bundle({p})"),
-            Self::Loop => write!(f, "loop"),
-        }
     }
 }
 
@@ -303,22 +260,10 @@ impl Param {
     }
 }
 
-impl fmt::Display for Param {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.owner)
-    }
-}
-
 #[derive(PartialEq, Eq, Hash, Clone)]
 /// Events must have a delay and an optional default value
 pub struct Event {
     pub delay: TimeSub,
     pub info: InfoIdx,
     pub has_interface: bool,
-}
-
-impl fmt::Display for Event {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "delay {}", self.delay)
-    }
 }
