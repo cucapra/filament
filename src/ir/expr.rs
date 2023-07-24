@@ -50,10 +50,13 @@ impl ExprIdx {
     pub fn resolve(
         self,
         ctx: &mut impl Ctx<Expr>,
-        binding: HashMap<ParamIdx, u64>,
+        binding: &HashMap<ParamIdx, u64>,
     ) -> ExprIdx {
-        match ctx.get(self) {
-            Expr::Param(p) => ctx.add(Expr::Concrete(*binding.get(p).unwrap())),
+        let expr = ctx.get(self).clone();
+        match expr {
+            Expr::Param(p) => {
+                ctx.add(Expr::Concrete(*binding.get(&p).unwrap()))
+            }
             Expr::Concrete(_) => self,
             Expr::Bin { op, lhs, rhs } => {
                 let lhs = lhs.resolve(ctx, binding);
