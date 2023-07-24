@@ -408,9 +408,9 @@ where
     C: Ctx<T>,
 {
     /// A reference to the underlying value.
-    key: Idx<T>,
+    pub key: Idx<T>,
     /// A reference to the owner of the foreign key.
-    owner: Idx<C>,
+    pub owner: Idx<C>,
 }
 
 impl<T, C> Foreign<T, C>
