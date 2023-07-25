@@ -2,12 +2,10 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 
-use crate::{
-    cmdline,
-    ir::{
-        CompIdx, Component, Context, Ctx, DenseIndexInfo, Expr, Foreign,
-        InvIdx, Invoke, Liveness, MutCtx, Port, PortIdx, Range, Time,
-    },
+use crate::ir::{
+    Access, Command, CompIdx, Component, Connect, Context, Ctx, DenseIndexInfo,
+    Expr, Foreign, InvIdx, Invoke, Liveness, MutCtx, Port, PortIdx, Range,
+    Time,
 };
 
 #[derive(Default)]
@@ -91,18 +89,13 @@ impl BundleElim {
         ports
     }
 
-    // ignored because of false positive
-    #[allow(clippy::needless_collect)]
     /// Compiles the signature of a component and adds the new ports to the context mapping.
     fn sig(&self, comp: &mut Component) -> HashMap<PortIdx, Vec<PortIdx>> {
         // need to collect here because of ownership issues.
-        let ports: Vec<_> = comp
-            .ports()
+        comp.ports()
             .idx_iter()
             .filter(|p| comp.get(*p).is_sig())
-            .collect();
-
-        ports
+            .collect_vec() // collect here to avoid ownership issues
             .into_iter()
             .map(|idx| (idx, self.port(idx, comp)))
             .collect()
@@ -129,30 +122,94 @@ impl BundleElim {
         mappings.into_iter().collect()
     }
 
+    fn connect(
+        &self,
+        connect: &Connect,
+        cidx: CompIdx,
+        ctx: &mut Context,
+    ) -> Vec<Command> {
+        let comp = ctx.get_mut(cidx);
+        let mapping = self.context.get(cidx);
+
+        let Connect { src, dst, info } = connect;
+
+        let start = src.start.as_concrete(comp).unwrap() as usize;
+        let end = src.end.as_concrete(comp).unwrap() as usize;
+        let src = mapping.get(&src.port).unwrap()[start..end].to_vec();
+
+        let start = dst.start.as_concrete(comp).unwrap() as usize;
+        let end = dst.end.as_concrete(comp).unwrap() as usize;
+        let dst = mapping.get(&dst.port).unwrap()[start..end].to_vec();
+
+        assert!(
+            src.len() == dst.len(),
+            "Mismatched access lengths for connect `{}`",
+            connect
+        );
+
+        src.into_iter()
+            .zip(dst.into_iter())
+            .map(|(src, dst)| {
+                (Access::port(src, comp), Access::port(dst, comp))
+            })
+            .map(|(src, dst)| {
+                Command::Connect(Connect {
+                    src,
+                    dst,
+                    info: *info,
+                })
+            })
+            .collect()
+    }
+
     /// Compiles the body of a component and replaces all ports with their expanded versions.
     fn comp(&mut self, cidx: CompIdx, ctx: &mut Context) {
         let comp = ctx.get_mut(cidx);
+        // compile invocations
         for idx in comp.invocations().idx_iter() {
-            self.context.push(cidx, self.inv(idx, comp));
+            let pl = self.inv(idx, comp);
+            self.context.get_mut(cidx).extend(pl);
         }
 
-        for cmd in &comp.cmds {
-            match cmd {
-                crate::ir::Command::Connect(c) => todo!(),
+        // compile local ports
+        for idx in comp
+            .ports()
+            .iter()
+            .filter(|(_, port)| port.is_local())
+            .map(|(idx, _)| idx)
+            .collect_vec()
+        {
+            let pl = self.port(idx, comp);
+            self.context.get_mut(cidx).insert(idx, pl);
+        }
+
+        let cmds = comp
+            .cmds
+            .drain(..)
+            .collect_vec() // collect here to avoid ownership issues
+            .into_iter()
+            .flat_map(|cmd| match cmd {
+                crate::ir::Command::Connect(con) => {
+                    self.connect(&con, cidx, ctx)
+                }
+                crate::ir::Command::Instance(_)
+                | crate::ir::Command::Invoke(_)
+                | crate::ir::Command::Fact(_) => vec![cmd],
                 crate::ir::Command::ForLoop(_) => {
                     unreachable!("For Loops should have been compiled away.")
                 }
                 crate::ir::Command::If(_) => {
                     unreachable!("Ifs should have been compiled away.")
                 }
-                crate::ir::Command::Instance(_)
-                | crate::ir::Command::Invoke(_)
-                | crate::ir::Command::Fact(_) => (),
-            }
-        }
+            })
+            .collect_vec();
+
+        // need to get here again because component is mutated above.
+        let comp = ctx.get_mut(cidx);
+        comp.cmds = cmds;
     }
 
-    fn do_pass(opts: &cmdline::Opts, ctx: &mut Context) {
+    pub fn do_pass(ctx: &mut Context) {
         let mut visitor = Self::default();
         for (idx, c) in ctx.comps.iter_mut() {
             visitor.context.push(idx, visitor.sig(c));

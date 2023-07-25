@@ -273,6 +273,11 @@ impl<T, V> DenseIndexInfo<T, V> {
         &self.store[idx.get()]
     }
 
+    /// Get a mutable reference to the value associated with the index.
+    pub fn get_mut(&mut self, idx: Idx<T>) -> &mut V {
+        &mut self.store[idx.get()]
+    }
+
     /// Check if the map contains the given index.
     pub fn contains(&self, idx: Idx<T>) -> bool {
         idx.get() < self.store.len()

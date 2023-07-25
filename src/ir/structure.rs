@@ -171,6 +171,11 @@ impl Port {
         // We check the direction is `in` because the port direction is flipped
         matches!(self.owner, PortOwner::Sig { dir: Direction::In })
     }
+
+    /// Check if this is a local port
+    pub fn is_local(&self) -> bool {
+        matches!(self.owner, PortOwner::Local)
+    }
 }
 impl fmt::Display for Port {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
