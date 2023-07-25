@@ -1,7 +1,6 @@
-use std::fmt::Display;
-
 use super::{Cmp, CmpOp, Ctx, ExprIdx, ParamIdx, Prop, PropIdx};
 use crate::ast;
+use std::fmt::Display;
 
 #[derive(PartialEq, Eq, Hash, Clone)]
 pub enum Expr {

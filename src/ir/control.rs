@@ -2,7 +2,6 @@ use super::{
     Access, CompIdx, Component, Ctx, Event, ExprIdx, Fact, Foreign, InfoIdx,
     InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx, TimeIdx, TimeSub,
 };
-use std::fmt;
 
 #[derive(Clone, PartialEq, Eq)]
 /// A flattened and minimized representation of the control flow graph.
@@ -66,19 +65,6 @@ pub struct Instance {
     pub info: InfoIdx,
 }
 
-impl fmt::Display for Instance {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}[", self.comp)?;
-        for (i, param) in self.params.iter().enumerate() {
-            if i != 0 {
-                write!(f, ", ")?;
-            }
-            write!(f, "{}", param)?;
-        }
-        write!(f, "]")
-    }
-}
-
 impl InstIdx {
     /// Gets the component being instantiated
     pub fn comp(self, ctx: &impl Ctx<Instance>) -> CompIdx {
@@ -93,11 +79,6 @@ pub struct Connect {
     pub src: Access,
     pub dst: Access,
     pub info: InfoIdx,
-}
-impl fmt::Display for Connect {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} = {}", self.dst, self.src)
-    }
 }
 
 #[derive(Clone, PartialEq, Eq)]

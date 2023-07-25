@@ -157,7 +157,8 @@ impl<'a> BuildCtx<'a> {
 
         assert!(
             start.event == end.event,
-            "Range `{range}` cannot be represented as a simple offset"
+            "Range `{}` cannot be represented as a simple offset",
+            self.comp.display_range(range)
         );
 
         let ev = start.event;
@@ -213,7 +214,10 @@ impl<'a> BuildCtx<'a> {
             "Port bundles should have been compiled away."
         );
 
-        log::debug!("Compiling connect: {}", con);
+        log::debug!(
+            "Compiling connect: {}",
+            ir::Printer::new(self.comp).connect_str(con)
+        );
 
         // ignores the guard of the destination (bind check already verifies that it is available for at least as long as src)
         let (dst, _) = self.compile_port(dst.port);

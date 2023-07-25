@@ -57,6 +57,11 @@ where
         idx
     }
 
+    /// Return the index of the value if it is in the store
+    pub fn find(&self, val: &T) -> Option<Idx<T>> {
+        self.map.get(val).copied()
+    }
+
     /// Number of interned values in the store.
     pub fn size(&self) -> usize {
         self.store.len()

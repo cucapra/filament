@@ -87,7 +87,6 @@ impl Compile {
                 comp.events()
                     .idx_iter()
                     .filter_map(|idx| interface_name(idx, comp))
-                    .into_iter()
                     .map(|name| calyx::PortDef {
                         name: name.into(),
                         width: width_from_u64(1),
