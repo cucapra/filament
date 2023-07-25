@@ -95,6 +95,8 @@ impl BundleElim {
             .collect();
         // delete the original port
         comp.delete(pidx);
+        // delete the corresponding parameter
+        comp.delete(idx);
         ports
     }
 
