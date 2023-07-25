@@ -496,7 +496,6 @@ impl Component {
     /// Evaluates a binary operation, assuming that all params have been substituted for
     /// concrete expressions in monomorphization
     pub fn bin(&mut self, expr: Expr) -> ExprIdx {
-        println!("calling bin");
         match expr {
             Expr::Concrete(_) => self.add(expr),
             Expr::Bin {op, lhs, rhs} => {
@@ -522,9 +521,10 @@ impl Component {
                     },
                 }
             },
-            Expr::Param(_) => {
-                self.internal_error(
-                    "When evaluating a binop expression, there should not be any parameters in it".to_string()
+            Expr::Param(pidx) => {
+                //self.add(expr)
+                self.internal_error(format!(
+                    "When evaluating a binop expression, there should not be any parameters in it; found {pidx}")
                 )
             },
             Expr::Fn {..} => {
