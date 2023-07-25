@@ -25,30 +25,39 @@ impl BundleElim {
 
         let Liveness { idx, len, range } = live;
 
-        let start = comp.get(range.start);
-        let end = comp.get(range.end);
-
-        assert!(
-            start.event == end.event,
-            "Range `{range}` cannot be represented as a simple offset"
-        );
-
-        let event = start.event;
-
-        let start = start.offset;
-        let end = end.offset;
+        let start = comp.get(range.start).clone();
+        let end = comp.get(range.end).clone();
 
         let len = len.as_concrete(comp).unwrap();
+
+        // if we need to preserve external interface information, we can't have bundle ports in the signature.
+        if comp.src_info.is_some()
+            && matches!(owner, crate::ir::PortOwner::Sig { .. })
+        {
+            assert!(
+                len == 1,
+                "Bundle ports in the signature are not supported."
+            );
+
+            // need to preserve the original portidx here to save the source information.
+            return vec![pidx];
+        }
 
         let ports = (0..len)
             .map(|i| {
                 let binding: HashMap<_, _> = [(idx, i)].into();
 
-                let offset = start.resolve(comp, &binding);
-                let start = comp.add(Time { event, offset });
+                let offset = start.offset.resolve(comp, &binding);
+                let start = comp.add(Time {
+                    event: start.event,
+                    offset,
+                });
 
-                let offset = end.resolve(comp, &binding);
-                let end = comp.add(Time { event, offset });
+                let offset = end.offset.resolve(comp, &binding);
+                let end = comp.add(Time {
+                    event: end.event,
+                    offset,
+                });
                 let live = Liveness {
                     idx,
                     len: one,
