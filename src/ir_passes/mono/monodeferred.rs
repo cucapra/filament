@@ -18,15 +18,22 @@ impl MonoDeferred<'_, '_> {
         underlying: &ir::Component,
         pass: &mut Monomorphize,
     ) {
-        println!("starting sig");
+        // println!("starting sig");
         // Events can be recursive, so do a pass over them to generate the new idxs now
         // and then fill them in later
         let binding = monosig.binding.inner();
-        let conc_params = binding.iter().filter(|(p, n)| underlying.get(*p).is_sig_owned()).map(|(_, n)| *n).collect_vec();
+        let conc_params = binding
+            .iter()
+            .filter(|(p, n)| underlying.get(*p).is_sig_owned())
+            .map(|(_, n)| *n)
+            .collect_vec();
         for (idx, event) in underlying.events().iter() {
             let new_idx = monosig.base.add(event.clone());
             monosig.event_map.insert(idx, new_idx);
-            pass.event_map.insert((monosig.underlying_idx, conc_params.clone(), idx), new_idx);
+            pass.event_map.insert(
+                (monosig.underlying_idx, conc_params.clone(), idx),
+                new_idx,
+            );
         }
 
         for (idx, port) in underlying.ports().iter() {
@@ -40,7 +47,7 @@ impl MonoDeferred<'_, '_> {
         }
 
         monosig.interface(&underlying.src_info);
-        println!("finished sig");
+        // println!("finished sig");
     }
 }
 
@@ -140,9 +147,11 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
     fn timesub(&mut self, timesub: &ir::TimeSub) -> ir::TimeSub {
         match timesub {
-            ir::TimeSub::Unit(expr) => {
-                ir::TimeSub::Unit(self.monosig.expr(self.underlying, self.pass, *expr))
-            }
+            ir::TimeSub::Unit(expr) => ir::TimeSub::Unit(self.monosig.expr(
+                self.underlying,
+                self.pass,
+                *expr,
+            )),
             ir::TimeSub::Sym { l, r } => ir::TimeSub::Sym {
                 l: self.monosig.time(self.underlying, self.pass, *l),
                 r: self.monosig.time(self.underlying, self.pass, *r),
@@ -151,7 +160,10 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     }
     /// Monomorphize the `inv` (owned by self.underlying) and add it to `self.base`, and return the corresponding index
     fn invoke(&mut self, inv: ir::InvIdx) -> ir::InvIdx {
-        println!("handling {inv} for underlying {}", self.monosig.underlying_idx);
+        // println!(
+        //     "handling {inv} for underlying {}",
+        //     self.monosig.underlying_idx
+        // );
         // Count another time that we've seen inv
         self.insert_inv(inv);
 
@@ -175,18 +187,14 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         // Update the mapping from underlying invokes to base invokes
         // just unwrap because we maintain that inv will always be present in the mapping
-        let inv_occurrences = self.monosig.inv_counter.get(&inv).unwrap();
+        let inv_occurrences = self.monosig.inv_counter[&inv];
         self.monosig
             .inv_map
-            .insert((inv, *inv_occurrences), mono_inv_idx);
+            .insert((inv, inv_occurrences), mono_inv_idx);
 
         // Instance - replace the instance owned by self.underlying with one owned by self.base
-        let inst_occurrences = self.monosig.inst_counter.get(inst).unwrap();
-        let base_inst = *self
-            .monosig
-            .inst_map
-            .get(&(*inst, *inst_occurrences))
-            .unwrap();
+        let inst_occurrences = self.monosig.inst_counter[inst];
+        let base_inst = self.monosig.inst_map[&(*inst, inst_occurrences)];
 
         // Ports
         let mono_ports = ports
@@ -197,12 +205,12 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         // Events
         let mono_events =
             events.iter().map(|e| self.eventbind(e, inv)).collect_vec();
-    
+
         for ev in mono_events.clone() {
-            let ir::EventBind {arg, ..} = ev;
-            println!("{mono_inv_idx} has arg {arg}");
-            let ir::Time {event, offset} = self.monosig.base.get(arg);
-            println!("{arg} has {event} + {offset}");
+            let ir::EventBind { arg, .. } = ev;
+            // println!("{mono_inv_idx} has arg {arg}");
+            let ir::Time { event, offset } = self.monosig.base.get(arg);
+            // println!("{arg} has {event} + {offset}");
         }
 
         // Build the new invoke, add it to self.base
@@ -211,7 +219,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         mono_inv.inst = base_inst;
         mono_inv.ports = mono_ports;
         mono_inv.events = mono_events;
-        
 
         mono_inv_idx
     }
@@ -346,7 +353,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             body,
         } = lp;
 
-        //let mono_index = self.monosig.param(self.underlying, self.pass, *index);
+        // let mono_index = self.monosig.param(self.underlying, self.pass, *index);
         let mono_start = self.monosig.expr(self.underlying, self.pass, *start);
         let mono_end = self.monosig.expr(self.underlying, self.pass, *end);
 
@@ -355,16 +362,14 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         while i < bound {
             self.monosig.binding.insert(*index, i);
-            println!("curr binding:");
-            for (k,v) in self.monosig.binding.inner() {
-                println!("{k} -> {v}");
-            }
+            println!("========================");
+            println!("curr binding: {:?}", self.monosig.binding);
             for cmd in body.iter() {
                 let cmd = self.command(cmd);
                 self.monosig.base.cmds.extend(cmd);
             }
-            i += 1;
             self.monosig.binding.pop();
+            i += 1;
         }
     }
 
