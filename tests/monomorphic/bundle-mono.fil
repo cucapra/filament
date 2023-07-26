@@ -1,0 +1,34 @@
+comp Bundle<G: 3>(
+    in[3]: for<#j> @[G, G+3] 32,
+) -> (
+    out[3]: for<#j> @[G+#j, G+#j+1] 32,
+) {
+    bundle a[3]: for<#k> @[G, G+3] 32;
+    a{0} = in{1};
+    a{1} = in{2};
+    a{2} = in{0};
+    out{0} = a{1};
+    out{1} = a{2};
+    out{2} = a{0};
+}
+
+comp main<G:3>(
+  @interface[G] go: 1,
+  @[G, G+3] ia: 32,
+  @[G, G+3] ib: 32,
+  @[G, G+3] ic: 32,
+) -> (
+  @[G,G+1] a: 32,
+  @[G+1,G+2] b: 32,
+  @[G+2,G+3] c: 32
+) {
+    bundle f[3]: for<#i> @[G, G+3] 32;
+    f{0} = ia;
+    f{1} = ib;
+    f{2} = ic;
+    bun := new Bundle<G>(f{0..3});
+
+    a = bun.out{0};
+    b = bun.out{1};
+    c = bun.out{2};
+}
