@@ -158,8 +158,6 @@ impl BundleElim {
     /// Also eliminates local ports by storing their source bindings in the pass.
     fn connect(
         &self,
-        // holds a mapping between a local port index and its source.
-        local_ports: &mut HashMap<PortIdx, PortIdx>,
         connect: &Connect,
         cidx: CompIdx,
         ctx: &mut Context,
@@ -182,27 +180,12 @@ impl BundleElim {
         // are defined before connects accessing the local port (I.E. assignments are in proper order).
         src.into_iter()
             .zip(dst.into_iter())
-            .filter_map(|(src, dst)| {
-                // if the source port is a local port, get its real source from the mapping.
-                let (src, dst) = match comp.get(src).owner {
-                    PortOwner::Sig { .. } | PortOwner::Inv { .. } => (src, dst),
-                    PortOwner::Local => (*local_ports.get(&src).unwrap(), dst),
-                };
-                // if the destination port is a local port, don't add the connect, instead add it to the local port mapping.
-                match comp.get(dst).owner {
-                    PortOwner::Sig { .. } | PortOwner::Inv { .. } => {
-                        Some(Command::Connect(Connect {
-                            src: Access::port(src, comp),
-                            dst: Access::port(dst, comp),
-                            info: *info,
-                        }))
-                    }
-                    PortOwner::Local => {
-                        // if this is a local port, instead add it to the mapping.
-                        local_ports.insert(dst, src);
-                        None
-                    }
-                }
+            .map(|(src, dst)| {
+                Command::Connect(Connect {
+                    src: Access::port(src, comp),
+                    dst: Access::port(dst, comp),
+                    info: *info,
+                })
             })
             .collect()
     }
@@ -228,9 +211,6 @@ impl BundleElim {
             self.context.get_mut(cidx).insert(idx, pl);
         }
 
-        // mutable local port mapping used while compiling connects.
-        let mut local_ports = HashMap::new();
-
         let cmds = comp
             .cmds
             .drain(..)
@@ -238,7 +218,7 @@ impl BundleElim {
             .into_iter()
             .flat_map(|cmd| match cmd {
                 Command::Connect(con) => {
-                    self.connect(&mut local_ports, &con, cidx, ctx) // compile connect into simple connects
+                    self.connect(&con, cidx, ctx) // compile connect into simple connects
                 }
                 Command::Instance(_)
                 | Command::Invoke(_)
