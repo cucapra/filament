@@ -5,7 +5,7 @@ use itertools::Itertools;
 use crate::ir::{
     Access, Bind, Command, CompIdx, Component, Connect, Context, Ctx,
     DenseIndexInfo, Expr, Foreign, InvIdx, Invoke, Liveness, MutCtx, Port,
-    PortIdx, Range, Subst, Time,
+    PortIdx, PortOwner, Range, Subst, Time,
 };
 
 #[derive(Default)]
@@ -31,9 +31,7 @@ impl BundleElim {
         let len = len.as_concrete(comp).unwrap();
 
         // if we need to preserve external interface information, we can't have bundle ports in the signature.
-        if comp.src_info.is_some()
-            && matches!(owner, crate::ir::PortOwner::Sig { .. })
-        {
+        if comp.src_info.is_some() && matches!(owner, PortOwner::Sig { .. }) {
             assert!(
                 len == 1,
                 "Bundle ports in the signature are not supported."
@@ -65,24 +63,23 @@ impl BundleElim {
                 };
 
                 let owner = match &owner {
-                    crate::ir::PortOwner::Sig { dir } => {
-                        crate::ir::PortOwner::Sig { dir: dir.clone() }
+                    PortOwner::Sig { dir } => {
+                        PortOwner::Sig { dir: dir.clone() }
                     }
-                    crate::ir::PortOwner::Inv { inv, dir, base } => {
-                        crate::ir::PortOwner::Inv {
+                    PortOwner::Inv { inv, dir, base } => {
+                        let (key, owner) = base.take();
+                        PortOwner::Inv {
                             inv: *inv,
                             dir: dir.clone(),
                             base: Foreign::new(
-                                self.context
-                                    .get(base.owner)
-                                    .get(&base.key)
-                                    .unwrap()[i as usize],
-                                base.owner,
+                                self.context.get(owner).get(&key).unwrap()
+                                    [i as usize],
+                                owner,
                             ),
                         }
                     }
 
-                    crate::ir::PortOwner::Local => crate::ir::PortOwner::Local,
+                    PortOwner::Local => PortOwner::Local,
                 };
 
                 comp.add(Port {
@@ -102,13 +99,11 @@ impl BundleElim {
 
     /// Compiles the signature of a component and adds the new ports to the context mapping.
     fn sig(&self, comp: &mut Component) -> HashMap<PortIdx, Vec<PortIdx>> {
-        // need to collect here because of ownership issues.
         comp.ports()
             .idx_iter()
-            .filter(|p| comp.get(*p).is_sig())
-            .collect_vec() // collect here to avoid ownership issues
-            .into_iter()
-            .map(|idx| (idx, self.port(idx, comp)))
+            .filter_map(|idx| {
+                comp.get(idx).is_sig().then(|| (idx, self.port(idx, comp)))
+            })
             .collect()
     }
 
@@ -167,23 +162,19 @@ impl BundleElim {
             .filter_map(|(src, dst)| {
                 // if the source port is a local port, get its real source from the mapping.
                 let (src, dst) = match comp.get(src).owner {
-                    crate::ir::PortOwner::Sig { .. }
-                    | crate::ir::PortOwner::Inv { .. } => (src, dst),
-                    crate::ir::PortOwner::Local => {
-                        (*local_ports.get(&src).unwrap(), dst)
-                    }
+                    PortOwner::Sig { .. } | PortOwner::Inv { .. } => (src, dst),
+                    PortOwner::Local => (*local_ports.get(&src).unwrap(), dst),
                 };
                 // if the destination port is a local port, don't add the connect, instead add it to the local port mapping.
                 match comp.get(dst).owner {
-                    crate::ir::PortOwner::Sig { .. }
-                    | crate::ir::PortOwner::Inv { .. } => {
+                    PortOwner::Sig { .. } | PortOwner::Inv { .. } => {
                         Some(Command::Connect(Connect {
                             src: Access::port(src, comp),
                             dst: Access::port(dst, comp),
                             info: *info,
                         }))
                     }
-                    crate::ir::PortOwner::Local => {
+                    PortOwner::Local => {
                         // if this is a local port, instead add it to the mapping.
                         local_ports.insert(dst, src);
                         None
@@ -222,16 +213,16 @@ impl BundleElim {
             .collect_vec() // collect here to avoid ownership issues
             .into_iter()
             .flat_map(|cmd| match cmd {
-                crate::ir::Command::Connect(con) => {
+                Command::Connect(con) => {
                     self.connect(&mut local_ports, &con, cidx, ctx)
                 }
-                crate::ir::Command::Instance(_)
-                | crate::ir::Command::Invoke(_)
-                | crate::ir::Command::Fact(_) => vec![cmd],
-                crate::ir::Command::ForLoop(_) => {
+                Command::Instance(_)
+                | Command::Invoke(_)
+                | Command::Fact(_) => vec![cmd],
+                Command::ForLoop(_) => {
                     unreachable!("For Loops should have been compiled away.")
                 }
-                crate::ir::Command::If(_) => {
+                Command::If(_) => {
                     unreachable!("Ifs should have been compiled away.")
                 }
             })

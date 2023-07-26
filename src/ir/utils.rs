@@ -413,9 +413,9 @@ where
     C: Ctx<T>,
 {
     /// A reference to the underlying value.
-    pub key: Idx<T>,
+    key: Idx<T>,
     /// A reference to the owner of the foreign key.
-    pub owner: Idx<C>,
+    owner: Idx<C>,
 }
 
 impl<T, C> Foreign<T, C>
@@ -448,6 +448,11 @@ where
     {
         let c_resolved = ctx.get(self.owner);
         f(self.key, c_resolved)
+    }
+
+    /// Returns the underlying key and owner.
+    pub fn take(&self) -> (Idx<T>, Idx<C>) {
+        (self.key, self.owner)
     }
 }
 
