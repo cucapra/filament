@@ -14,7 +14,7 @@ where
 {
     /// Get the binding associated with a particular key
     pub fn get(&self, key: &K) -> Option<&V> {
-        self.0.iter().find_map(|(k, v)| (k == key).then(|| v))
+        self.0.iter().find_map(|(k, v)| (k == key).then_some(v))
     }
 }
 

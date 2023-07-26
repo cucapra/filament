@@ -80,7 +80,7 @@ impl BundleElim {
 
                 // creates a new liveness with the new start and end times and length one
                 let live = Liveness {
-                    idx, // this should technically be some null parameter, but it doesn't matter.
+                    idx, // this should technically be some null parameter, as it will refer to a deleted parameter now.
                     len: one,
                     range: Range { start, end },
                 };
