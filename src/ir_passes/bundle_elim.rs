@@ -141,15 +141,15 @@ impl BundleElim {
         comp: &mut Component,
     ) -> HashMap<PortIdx, Vec<PortIdx>> {
         let Invoke { ports, .. } = comp.get_mut(idx);
-        let mappings = ports.drain(..).collect_vec();
-        let mappings = mappings
+        // first take all the old ports and split them up
+        let mappings = std::mem::take(ports)
             .into_iter()
             .map(|p| (p, self.port(p, comp)))
             .collect_vec();
 
-        comp.get_mut(idx)
-            .ports
-            .extend(mappings.iter().flat_map(|(_, v)| v));
+        // add them back to the invoke (need to get mutably again because comp is mutated above)
+        comp.get_mut(idx).ports =
+            mappings.iter().flat_map(|(_, v)| v).copied().collect();
 
         mappings.into_iter().collect()
     }
