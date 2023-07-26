@@ -9,6 +9,7 @@ use crate::ir::{
 };
 
 #[derive(Default)]
+// Eliminates bundle ports by breaking them into multiple len-1 ports, and eliminates local ports altogether.
 pub struct BundleElim {
     context: DenseIndexInfo<Component, HashMap<PortIdx, Vec<PortIdx>>>,
 }
