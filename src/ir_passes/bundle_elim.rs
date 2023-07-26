@@ -14,6 +14,23 @@ pub struct BundleElim {
 }
 
 impl BundleElim {
+    /// Gets corresponding ports from the context given a component and a port access.
+    fn get(
+        &self,
+        access: &Access,
+        cidx: CompIdx,
+        ctx: &Context,
+    ) -> Vec<PortIdx> {
+        let comp = ctx.get(cidx);
+
+        let Access { port, start, end } = access;
+
+        let start = start.as_concrete(comp).unwrap() as usize;
+        let end = end.as_concrete(comp).unwrap() as usize;
+        self.context[cidx][port][start..end].to_vec()
+    }
+
+    /// Compiles a port by breaking it into multiple len-1 ports.
     fn port(&self, pidx: PortIdx, comp: &mut Component) -> Vec<PortIdx> {
         let one = comp.add(Expr::Concrete(1));
         let Port {
@@ -34,17 +51,20 @@ impl BundleElim {
         if comp.src_info.is_some() && matches!(owner, PortOwner::Sig { .. }) {
             assert!(
                 len == 1,
-                "Bundle ports in the signature are not supported."
+                "Bundle ports in the signature are not supported when external interface must be preserved."
             );
 
             // need to preserve the original portidx here to save the source information.
             return vec![pidx];
         }
 
+        // create a single port for each element in the bundle.
         let ports = (0..len)
             .map(|i| {
+                // binds the index parameter to the current bundle index
                 let binding: Bind<_, _> = Bind::new([(idx, i)]);
 
+                // calculates the offsets based on this binding and generates new start and end times.
                 let offset = Subst::new(start.offset, &binding).resolve(comp);
                 let start = comp.add(Time {
                     event: start.event,
@@ -56,12 +76,15 @@ impl BundleElim {
                     event: end.event,
                     offset,
                 });
+
+                // creates a new liveness with the new start and end times and length one
                 let live = Liveness {
-                    idx,
+                    idx, // this should technically be some null parameter, but it doesn't matter.
                     len: one,
                     range: Range { start, end },
                 };
 
+                // creates a new portowner based on the original owner
                 let owner = match &owner {
                     PortOwner::Sig { dir } => {
                         PortOwner::Sig { dir: dir.clone() }
@@ -72,16 +95,17 @@ impl BundleElim {
                             inv: *inv,
                             dir: dir.clone(),
                             base: Foreign::new(
-                                self.context.get(owner).get(&key).unwrap()
-                                    [i as usize],
+                                // maps the foreign to the corresponding single port
+                                // this works because all signature ports are compiled first.
+                                self.context[owner][&key][i as usize],
                                 owner,
                             ),
                         }
                     }
-
                     PortOwner::Local => PortOwner::Local,
                 };
 
+                // adds the new port to the component and return its index
                 comp.add(Port {
                     live,
                     owner,
@@ -99,6 +123,7 @@ impl BundleElim {
 
     /// Compiles the signature of a component and adds the new ports to the context mapping.
     fn sig(&self, comp: &mut Component) -> HashMap<PortIdx, Vec<PortIdx>> {
+        // loop through signature ports and compile them
         comp.ports()
             .idx_iter()
             .filter_map(|idx| {
@@ -138,18 +163,11 @@ impl BundleElim {
         cidx: CompIdx,
         ctx: &mut Context,
     ) -> Vec<Command> {
-        let comp = ctx.get_mut(cidx);
-        let mapping = self.context.get(cidx);
-
         let Connect { src, dst, info } = connect;
 
-        let start = src.start.as_concrete(comp).unwrap() as usize;
-        let end = src.end.as_concrete(comp).unwrap() as usize;
-        let src = mapping.get(&src.port).unwrap()[start..end].to_vec();
-
-        let start = dst.start.as_concrete(comp).unwrap() as usize;
-        let end = dst.end.as_concrete(comp).unwrap() as usize;
-        let dst = mapping.get(&dst.port).unwrap()[start..end].to_vec();
+        // get the list of ports associated with each access in the connect.
+        let src = self.get(src, cidx, ctx);
+        let dst = self.get(dst, cidx, ctx);
 
         assert!(
             src.len() == dst.len(),
@@ -157,6 +175,10 @@ impl BundleElim {
             connect
         );
 
+        // split this single connects into `n` separate connects each with individual ports.
+        // the local mapping optimization here works because it assumes that connects assigning to the local port
+        // are defined before connects accessing the local port (I.E. assignments are in proper order).
+        let comp = ctx.get_mut(cidx);
         src.into_iter()
             .zip(dst.into_iter())
             .filter_map(|(src, dst)| {
@@ -193,7 +215,7 @@ impl BundleElim {
             self.context.get_mut(cidx).extend(pl);
         }
 
-        // compile local ports
+        // compile local ports and adds them to the context
         for idx in comp
             .ports()
             .iter()
@@ -205,6 +227,7 @@ impl BundleElim {
             self.context.get_mut(cidx).insert(idx, pl);
         }
 
+        // mutable local port mapping used while compiling connects.
         let mut local_ports = HashMap::new();
 
         let cmds = comp
@@ -214,11 +237,11 @@ impl BundleElim {
             .into_iter()
             .flat_map(|cmd| match cmd {
                 Command::Connect(con) => {
-                    self.connect(&mut local_ports, &con, cidx, ctx)
+                    self.connect(&mut local_ports, &con, cidx, ctx) // compile connect into simple connects
                 }
                 Command::Instance(_)
                 | Command::Invoke(_)
-                | Command::Fact(_) => vec![cmd],
+                | Command::Fact(_) => vec![cmd], // keeps these commands unchanged
                 Command::ForLoop(_) => {
                     unreachable!("For Loops should have been compiled away.")
                 }
@@ -235,10 +258,12 @@ impl BundleElim {
 
     pub fn do_pass(ctx: &mut Context) {
         let mut visitor = Self::default();
+        // compiles signature ports and adds them to the context
         for (idx, c) in ctx.comps.iter_mut() {
             visitor.context.push(idx, visitor.sig(c));
         }
 
+        // second pass to compile all the other ports and actually split the connects.
         for idx in ctx.comps.idx_iter() {
             visitor.comp(idx, ctx);
         }
