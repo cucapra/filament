@@ -5,12 +5,14 @@ use crate::{
     ir_visitor::{Action, Visitor},
 };
 
+/// Eliminates local ports from the IR.
 #[derive(Default)]
 pub struct LocalPortElim {
     port_map: HashMap<PortIdx, PortIdx>,
 }
 
 impl Visitor for LocalPortElim {
+    /// loops over connect commands and adds local port connects to the mapping.
     fn start(&mut self, comp: &mut Component) -> Action {
         for (src, dst) in comp.cmds.iter().filter_map(|cmd| match cmd {
             Command::Connect(Connect { src, dst, .. }) => {
