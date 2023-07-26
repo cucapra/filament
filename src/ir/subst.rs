@@ -26,9 +26,7 @@ where
 {
     /// Get the binding associated with a particular key
     pub fn get(&self, key: &K) -> Option<&V> {
-        self.0
-            .iter()
-            .find_map(|(k, v)| if k == key { Some(v) } else { None })
+        self.0.iter().find_map(|(k, v)| (k == key).then_some(v))
     }
 
     pub fn insert(&mut self, key: K, value: V) {
@@ -84,10 +82,10 @@ where
     /// base may return results that themselves need to be substituted.
     pub fn map<F, U>(self, mut f: F) -> Subst<'a, U, K, V>
     where
-        F: FnMut(T) -> U,
+        F: FnMut(T, &'a Bind<K, V>) -> U,
     {
         Subst {
-            base: f(self.base),
+            base: f(self.base, self.bind),
             bind: self.bind,
         }
     }

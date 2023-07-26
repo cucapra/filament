@@ -42,6 +42,10 @@ impl MutCtx<Component> for Context {
     fn get_mut(&mut self, idx: Idx<Component>) -> &mut Component {
         self.comps.get_mut(idx)
     }
+
+    fn delete(&mut self, idx: Idx<Component>) {
+        self.comps.delete(idx)
+    }
 }
 
 /// Externally facing interface name information for components.
@@ -578,11 +582,19 @@ impl MutCtx<Port> for Component {
     fn get_mut(&mut self, idx: PortIdx) -> &mut Port {
         self.ports.get_mut(idx)
     }
+
+    fn delete(&mut self, idx: PortIdx) {
+        self.ports.delete(idx)
+    }
 }
 
 impl MutCtx<Event> for Component {
     fn get_mut(&mut self, idx: EventIdx) -> &mut Event {
         self.events.get_mut(idx)
+    }
+
+    fn delete(&mut self, idx: EventIdx) {
+        self.events.delete(idx)
     }
 }
 
@@ -590,16 +602,28 @@ impl MutCtx<Param> for Component {
     fn get_mut(&mut self, idx: ParamIdx) -> &mut Param {
         self.params.get_mut(idx)
     }
+
+    fn delete(&mut self, idx: ParamIdx) {
+        self.params.delete(idx)
+    }
 }
 
 impl MutCtx<Invoke> for Component {
     fn get_mut(&mut self, idx: InvIdx) -> &mut Invoke {
         self.invocations.get_mut(idx)
     }
+
+    fn delete(&mut self, idx: InvIdx) {
+        self.invocations.delete(idx)
+    }
 }
 
 impl MutCtx<Instance> for Component {
     fn get_mut(&mut self, idx: InstIdx) -> &mut Instance {
         self.instances.get_mut(idx)
+    }
+
+    fn delete(&mut self, idx: InstIdx) {
+        self.instances.delete(idx)
     }
 }

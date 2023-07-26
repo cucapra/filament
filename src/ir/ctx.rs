@@ -14,6 +14,8 @@ pub trait Ctx<T> {
 pub trait MutCtx<T> {
     /// Get a mutable reference to the value associated with the index.
     fn get_mut(&mut self, idx: Idx<T>) -> &mut T;
+    /// Delete the value associated with the index.
+    fn delete(&mut self, idx: Idx<T>);
 }
 
 /// We can use indexing syntax for all values in the context for which it is a [`Ctx<K>`].
