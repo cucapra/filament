@@ -4,8 +4,8 @@ use itertools::Itertools;
 
 use crate::ir::{
     Access, Command, CompIdx, Component, Connect, Context, Ctx, DenseIndexInfo,
-    Expr, Foreign, InfoIdx, InvIdx, Invoke, Liveness, MutCtx, Port, PortIdx,
-    Range, Time,
+    Expr, Foreign, InvIdx, Invoke, Liveness, MutCtx, Port, PortIdx, Range,
+    Time,
 };
 
 #[derive(Default)]
@@ -137,10 +137,12 @@ impl BundleElim {
     /// Also eliminates local ports by storing their source bindings in the pass.
     fn connect(
         &self,
+        // holds a mapping between a local port index and its source.
+        local_ports: &mut HashMap<PortIdx, PortIdx>,
         connect: &Connect,
         cidx: CompIdx,
         ctx: &mut Context,
-    ) -> Vec<(PortIdx, PortIdx, InfoIdx)> {
+    ) -> Vec<Command> {
         let comp = ctx.get_mut(cidx);
         let mapping = self.context.get(cidx);
 
@@ -162,45 +164,33 @@ impl BundleElim {
 
         src.into_iter()
             .zip(dst.into_iter())
-            .map(|(src, dst)| (src, dst, *info))
-            .collect()
-    }
-
-    fn elim_local(
-        connects: Vec<(PortIdx, PortIdx, InfoIdx)>,
-        comp: &mut Component,
-    ) -> Vec<Connect> {
-        // holds a mapping between a local port index and its source.
-        let mut local_ports = HashMap::new();
-
-        for (src, dst, _) in &connects {
-            if comp.get(*dst).is_local() {
-                local_ports.insert(*dst, *src);
-            }
-        }
-
-        connects
-            .into_iter()
-            .filter_map(|(src, dst, info)| {
-                if !comp.get(dst).is_local() {
-                    // loop back until we hit the original source port
-                    let mut src = src;
-                    let src = loop {
-                        if !comp.get(src).is_local() {
-                            break src;
-                        }
-                        src = *local_ports.get(&src).unwrap();
-                    };
-                    Some(Connect {
-                        src: Access::port(src, comp),
-                        dst: Access::port(dst, comp),
-                        info,
-                    })
-                } else {
-                    None
+            .filter_map(|(src, dst)| {
+                // if the source port is a local port, get its real source from the mapping.
+                let (src, dst) = match comp.get(src).owner {
+                    crate::ir::PortOwner::Sig { .. }
+                    | crate::ir::PortOwner::Inv { .. } => (src, dst),
+                    crate::ir::PortOwner::Local => {
+                        (*local_ports.get(&src).unwrap(), dst)
+                    }
+                };
+                // if the destination port is a local port, don't add the connect, instead add it to the local port mapping.
+                match comp.get(dst).owner {
+                    crate::ir::PortOwner::Sig { .. }
+                    | crate::ir::PortOwner::Inv { .. } => {
+                        Some(Command::Connect(Connect {
+                            src: Access::port(src, comp),
+                            dst: Access::port(dst, comp),
+                            info: *info,
+                        }))
+                    }
+                    crate::ir::PortOwner::Local => {
+                        // if this is a local port, instead add it to the mapping.
+                        local_ports.insert(dst, src);
+                        None
+                    }
                 }
             })
-            .collect_vec()
+            .collect()
     }
 
     /// Compiles the body of a component and replaces all ports with their expanded versions.
@@ -224,23 +214,20 @@ impl BundleElim {
             self.context.get_mut(cidx).insert(idx, pl);
         }
 
-        // mutable list of connections
-        let mut connects = Vec::new();
+        let mut local_ports = HashMap::new();
 
-        // saves non-connect commands
-        let mut cmds = comp
+        let cmds = comp
             .cmds
             .drain(..)
             .collect_vec() // collect here to avoid ownership issues
             .into_iter()
-            .filter_map(|cmd| match cmd {
+            .flat_map(|cmd| match cmd {
                 crate::ir::Command::Connect(con) => {
-                    connects.extend(self.connect(&con, cidx, ctx));
-                    None
+                    self.connect(&mut local_ports, &con, cidx, ctx)
                 }
                 crate::ir::Command::Instance(_)
                 | crate::ir::Command::Invoke(_)
-                | crate::ir::Command::Fact(_) => Some(cmd),
+                | crate::ir::Command::Fact(_) => vec![cmd],
                 crate::ir::Command::ForLoop(_) => {
                     unreachable!("For Loops should have been compiled away.")
                 }
@@ -252,12 +239,6 @@ impl BundleElim {
 
         // need to get here again because component is mutated above.
         let comp = ctx.get_mut(cidx);
-        cmds.extend(
-            Self::elim_local(connects, comp)
-                .into_iter()
-                .map(Command::Connect),
-        );
-
         comp.cmds = cmds;
     }
 
