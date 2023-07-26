@@ -4,8 +4,8 @@ use itertools::Itertools;
 
 use crate::ir::{
     Access, Bind, Command, CompIdx, Component, Connect, Context, Ctx,
-    DenseIndexInfo, Expr, Foreign, InvIdx, Invoke, Liveness, MutCtx, Port,
-    PortIdx, PortOwner, Printer, Range, Subst, Time,
+    DenseIndexInfo, Expr, Foreign, Info, InvIdx, Invoke, Liveness, MutCtx,
+    Port, PortIdx, PortOwner, Printer, Range, Subst, Time,
 };
 
 #[derive(Default)]
@@ -35,10 +35,7 @@ impl BundleElim {
     fn port(&self, pidx: PortIdx, comp: &mut Component) -> Vec<PortIdx> {
         let one = comp.add(Expr::Concrete(1));
         let Port {
-            owner,
-            width,
-            live,
-            info,
+            owner, width, live, ..
         } = comp.get(pidx).clone();
 
         let Liveness { idx, len, range } = live;
@@ -58,6 +55,9 @@ impl BundleElim {
             // need to preserve the original portidx here to save the source information.
             return vec![pidx];
         }
+
+        // creates an empty info struct for these new ports
+        let info = comp.add(Info::Empty);
 
         // create a single port for each element in the bundle.
         let ports = (0..len)
@@ -162,7 +162,7 @@ impl BundleElim {
         cidx: CompIdx,
         ctx: &mut Context,
     ) -> Vec<Command> {
-        let Connect { src, dst, info } = connect;
+        let Connect { src, dst, .. } = connect;
 
         // get the list of ports associated with each access in the connect.
         let src = self.get(src, cidx, ctx);
@@ -184,7 +184,7 @@ impl BundleElim {
                 Command::Connect(Connect {
                     src: Access::port(src, comp),
                     dst: Access::port(dst, comp),
-                    info: *info,
+                    info: comp.add(Info::Empty),
                 })
             })
             .collect()

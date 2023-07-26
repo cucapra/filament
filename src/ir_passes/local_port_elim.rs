@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    ir::{Access, Command, Component, Connect, Ctx, PortIdx},
+    ir::{Access, Command, Component, Connect, Ctx, Info, PortIdx},
     ir_visitor::{Action, Visitor},
 };
 
@@ -36,7 +36,7 @@ impl Visitor for LocalPortElim {
         let Connect {
             src: Access { port: src, .. },
             dst: Access { port: dst, .. },
-            info,
+            ..
         } = &connect;
 
         // Throw away this connect if it assigns to a local port.
@@ -57,7 +57,7 @@ impl Visitor for LocalPortElim {
         Action::Change(vec![Command::Connect(Connect {
             src: Access::port(src, comp),
             dst: Access::port(*dst, comp),
-            info: *info,
+            info: comp.add(Info::Empty),
         })])
     }
 }
