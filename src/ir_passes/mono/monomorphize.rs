@@ -78,7 +78,6 @@ impl<'ctx> Monomorphize<'ctx> {
         // Otherwise, construct a new component and add it to the processing queue
         let new_comp = self.ctx.comp(underlying.is_ext, &underlying.filename);
         if underlying.filename.is_some() {
-            println!("comp {} has a filename", comp);
             let filename = underlying.filename.clone().unwrap();
             if let Some(exts) = self.ext_map.get(&filename) {
                 let mut exts = exts.clone();
@@ -101,7 +100,6 @@ impl<'ctx> Monomorphize<'ctx> {
         MonoDeferred::sig(&mut monosig, underlying, self);
 
         // Insert into queue, with monosig so we can pick up where we left off when ready
-        println!("inserted {} -> {} into queue", comp, new_comp);
         self.queue.insert(key, (new_comp, monosig));
 
         // return the `base` index so we can update the instance

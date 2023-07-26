@@ -18,7 +18,7 @@ impl MonoDeferred<'_, '_> {
         underlying: &ir::Component,
         pass: &mut Monomorphize,
     ) {
-        println!("generating sig for {}", monosig.underlying_idx);
+        println!("starting sig");
         // Events can be recursive, so do a pass over them to generate the new idxs now
         // and then fill them in later
         let binding = monosig.binding.inner();
@@ -36,17 +36,16 @@ impl MonoDeferred<'_, '_> {
         }
 
         for (old, new) in monosig.event_map.clone().iter() {
-            monosig.event_no_check(underlying, pass, *old, *new);
+            monosig.event_second(underlying, pass, *old, *new);
         }
 
         monosig.interface(&underlying.src_info);
-        println!("finished generating sig for {}", monosig.underlying_idx);
+        println!("finished sig");
     }
 }
 
 impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     pub fn gen_comp(&mut self) {
-        println!("generating base for underlying {}", self.monosig.underlying_idx);
         for cmd in &self.underlying.cmds {
             let cmd = self.command(cmd);
             self.monosig.base.cmds.extend(cmd);
@@ -54,7 +53,10 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         for idx in self.underlying.props().idx_iter() {
             self.prop(idx);
         }
-        println!("generating base for underlying {}", self.monosig.underlying_idx);
+
+        for (idx, expr) in self.underlying.exprs().iter() {
+            self.monosig.expr(self.underlying, self.pass, idx);
+        }
     }
 
     fn foreign_event(
@@ -149,6 +151,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     }
     /// Monomorphize the `inv` (owned by self.underlying) and add it to `self.base`, and return the corresponding index
     fn invoke(&mut self, inv: ir::InvIdx) -> ir::InvIdx {
+        println!("handling {inv} for underlying {}", self.monosig.underlying_idx);
         // Count another time that we've seen inv
         self.insert_inv(inv);
 
@@ -177,14 +180,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             .inv_map
             .insert((inv, *inv_occurrences), mono_inv_idx);
 
-        // Handle connects we just saw:
-        let connects = self.monosig.connects.clone();
-        for con in connects.iter() {
-            let cmd = self.connect(con);
-            self.monosig.base.cmds.push(cmd.into());
-        }
-        self.monosig.connects.clear();
-
         // Instance - replace the instance owned by self.underlying with one owned by self.base
         let inst_occurrences = self.monosig.inst_counter.get(inst).unwrap();
         let base_inst = *self
@@ -194,7 +189,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             .unwrap();
 
         // Ports
-        println!("monomorphizing ports - invoke");
         let mono_ports = ports
             .iter()
             .map(|p| self.monosig.port(self.underlying, self.pass, *p))
@@ -203,6 +197,13 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         // Events
         let mono_events =
             events.iter().map(|e| self.eventbind(e, inv)).collect_vec();
+    
+        for ev in mono_events.clone() {
+            let ir::EventBind {arg, ..} = ev;
+            println!("{mono_inv_idx} has arg {arg}");
+            let ir::Time {event, offset} = self.monosig.base.get(arg);
+            println!("{arg} has {event} + {offset}");
+        }
 
         // Build the new invoke, add it to self.base
         let mut mono_inv = self.monosig.base.get_mut(mono_inv_idx);
@@ -210,6 +211,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         mono_inv.inst = base_inst;
         mono_inv.ports = mono_ports;
         mono_inv.events = mono_events;
+        
 
         mono_inv_idx
     }
@@ -247,7 +249,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             }
             ir::Prop::Cmp(cmp) => {
                 let ir::CmpOp { op, lhs, rhs } = cmp;
-                // println!("underlying cmp: {} {} {}", op, lhs, rhs);
                 let lhs = self.monosig.expr(self.underlying, self.pass, *lhs);
                 let rhs = self.monosig.expr(self.underlying, self.pass, *rhs);
                 let new_idx = self.monosig.base.add(ir::Prop::Cmp(ir::CmpOp {
@@ -317,7 +318,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     fn access(&mut self, acc: &ir::Access) -> ir::Access {
         let ir::Access { port, start, end } = acc;
 
-        println!("monomorphizing ports - access");
         let port = self.monosig.port(self.underlying, self.pass, *port);
         let start = self.monosig.expr(self.underlying, self.pass, *start);
         let end = self.monosig.expr(self.underlying, self.pass, *end);
@@ -346,7 +346,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             body,
         } = lp;
 
-        let mono_index = self.monosig.param(self.underlying, self.pass, *index);
+        //let mono_index = self.monosig.param(self.underlying, self.pass, *index);
         let mono_start = self.monosig.expr(self.underlying, self.pass, *start);
         let mono_end = self.monosig.expr(self.underlying, self.pass, *end);
 
@@ -354,13 +354,17 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let bound = mono_end.as_concrete(&self.monosig.base).unwrap();
 
         while i < bound {
-            self.monosig.binding.insert(mono_index, i);
-            println!("binding {mono_index} to {i}");
+            self.monosig.binding.insert(*index, i);
+            println!("curr binding:");
+            for (k,v) in self.monosig.binding.inner() {
+                println!("{k} -> {v}");
+            }
             for cmd in body.iter() {
                 let cmd = self.command(cmd);
                 self.monosig.base.cmds.extend(cmd);
             }
             i += 1;
+            self.monosig.binding.pop();
         }
     }
 
@@ -402,7 +406,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
     fn fact(&mut self, fact: &ir::Fact) -> Option<ir::Command> {
         let ir::Fact { prop, reason, .. } = fact;
-
         let prop = self.prop(*prop);
         let reason = self.monosig.info(self.underlying, reason);
         if fact.is_assert() {
@@ -437,40 +440,11 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         }
     }
 
-    /// Either queues a connect to be handled later, or handles it now.
-    /// A connect gets handled later if:
-    /// (1) The source port is invoke-owned and the destination port is also invoke-owned, or
-    /// (2) The source port is sig-owned and the destination port is invoke-owned
-    /// A connect gets handled now if:
-    /// (1) The source port is invoke-owned and the destination port is sig-owned
-    /// (2) The source port is sig-owned and the destination port is also sig-owned
-    /// The reasoning for this is that we see connects where the destination port is invoke-owned before
-    /// we see the actual invoke, so we have to put them in a queue to be handled when we see the invoke
-    /// If the destination port is not invoke owned, then we can handle it now because we've already created
-    /// the monomorphized ports
-    fn handle_connect(&mut self, con: &ir::Connect) -> Vec<ir::Command> {
-        let dst_port_owner = &self.underlying.get(con.dst.port).owner;
-        // We can elide the directions because at this point in the compiler they've already been verified to be correct,
-        // basically we won't see anything wacky like sig.in <- inv.out
-        match dst_port_owner {
-            ir::PortOwner::Inv {..} => {
-                // handle later
-                self.monosig.connects.push(con.clone());
-                vec![]
-            }
-            ir::PortOwner::Sig {..} | ir::PortOwner::Local => {
-                // handle now
-                let cmd = self.connect(con);
-                vec![cmd.into()]
-            }
-        }
-    }
-
     fn command(&mut self, cmd: &ir::Command) -> Vec<ir::Command> {
         match cmd {
             ir::Command::Instance(idx) => vec![self.instance(*idx).into()],
             ir::Command::Invoke(idx) => vec![self.invoke(*idx).into()],
-            ir::Command::Connect(con) => self.handle_connect(con),
+            ir::Command::Connect(con) => vec![self.connect(con).into()],
             ir::Command::ForLoop(lp) => {
                 self.forloop(lp);
                 vec![]
