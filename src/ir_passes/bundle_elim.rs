@@ -4,8 +4,8 @@ use itertools::Itertools;
 
 use crate::ir::{
     Access, Command, CompIdx, Component, Connect, Context, Ctx, DenseIndexInfo,
-    Expr, Foreign, InvIdx, Invoke, Liveness, MutCtx, Port, PortIdx, Range,
-    Time,
+    Expr, Foreign, InfoIdx, InvIdx, Invoke, Liveness, MutCtx, Port, PortIdx,
+    Range, Time,
 };
 
 #[derive(Default)]
@@ -133,12 +133,14 @@ impl BundleElim {
         mappings.into_iter().collect()
     }
 
+    /// Compiles a connect command by breaking it into multiple simple connect commands
+    /// Also eliminates local ports by storing their source bindings in the pass.
     fn connect(
         &self,
         connect: &Connect,
         cidx: CompIdx,
         ctx: &mut Context,
-    ) -> Vec<Command> {
+    ) -> Vec<(PortIdx, PortIdx, InfoIdx)> {
         let comp = ctx.get_mut(cidx);
         let mapping = self.context.get(cidx);
 
@@ -160,17 +162,45 @@ impl BundleElim {
 
         src.into_iter()
             .zip(dst.into_iter())
-            .map(|(src, dst)| {
-                (Access::port(src, comp), Access::port(dst, comp))
-            })
-            .map(|(src, dst)| {
-                Command::Connect(Connect {
-                    src,
-                    dst,
-                    info: *info,
-                })
-            })
+            .map(|(src, dst)| (src, dst, *info))
             .collect()
+    }
+
+    fn elim_local(
+        connects: Vec<(PortIdx, PortIdx, InfoIdx)>,
+        comp: &mut Component,
+    ) -> Vec<Connect> {
+        // holds a mapping between a local port index and its source.
+        let mut local_ports = HashMap::new();
+
+        for (src, dst, _) in &connects {
+            if comp.get(*dst).is_local() {
+                local_ports.insert(*dst, *src);
+            }
+        }
+
+        connects
+            .into_iter()
+            .filter_map(|(src, dst, info)| {
+                if !comp.get(dst).is_local() {
+                    // loop back until we hit the original source port
+                    let mut src = src;
+                    let src = loop {
+                        if !comp.get(src).is_local() {
+                            break src;
+                        }
+                        src = *local_ports.get(&src).unwrap();
+                    };
+                    Some(Connect {
+                        src: Access::port(src, comp),
+                        dst: Access::port(dst, comp),
+                        info,
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect_vec()
     }
 
     /// Compiles the body of a component and replaces all ports with their expanded versions.
@@ -194,18 +224,23 @@ impl BundleElim {
             self.context.get_mut(cidx).insert(idx, pl);
         }
 
-        let cmds = comp
+        // mutable list of connections
+        let mut connects = Vec::new();
+
+        // saves non-connect commands
+        let mut cmds = comp
             .cmds
             .drain(..)
             .collect_vec() // collect here to avoid ownership issues
             .into_iter()
-            .flat_map(|cmd| match cmd {
+            .filter_map(|cmd| match cmd {
                 crate::ir::Command::Connect(con) => {
-                    self.connect(&con, cidx, ctx)
+                    connects.extend(self.connect(&con, cidx, ctx));
+                    None
                 }
                 crate::ir::Command::Instance(_)
                 | crate::ir::Command::Invoke(_)
-                | crate::ir::Command::Fact(_) => vec![cmd],
+                | crate::ir::Command::Fact(_) => Some(cmd),
                 crate::ir::Command::ForLoop(_) => {
                     unreachable!("For Loops should have been compiled away.")
                 }
@@ -217,6 +252,12 @@ impl BundleElim {
 
         // need to get here again because component is mutated above.
         let comp = ctx.get_mut(cidx);
+        cmds.extend(
+            Self::elim_local(connects, comp)
+                .into_iter()
+                .map(Command::Connect),
+        );
+
         comp.cmds = cmds;
     }
 
