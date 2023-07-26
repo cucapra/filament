@@ -1,6 +1,6 @@
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 
-use super::{Cmp, CmpOp, Ctx, ExprIdx, ParamIdx, Prop, PropIdx};
+use super::{Cmp, CmpOp, Ctx, ExprIdx, ParamIdx, Prop, PropIdx, Subst};
 use crate::ast;
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -36,6 +36,43 @@ impl Display for Expr {
     }
 }
 
+impl<'a> Subst<'a, ExprIdx, ParamIdx, u64> {
+    /// Resolves an expression with a binding.
+    pub fn resolve(self, ctx: &mut impl Ctx<Expr>) -> ExprIdx {
+        self.map(|idx, binding| {
+            let expr = ctx.get(idx).clone();
+            match expr {
+                Expr::Param(p) => {
+                    ctx.add(Expr::Concrete(*binding.get(&p).unwrap()))
+                }
+                Expr::Concrete(_) => idx,
+                Expr::Bin { op, lhs, rhs } => {
+                    let lhs = Subst::new(lhs, binding).resolve(ctx);
+                    let rhs = Subst::new(rhs, binding).resolve(ctx);
+                    match op {
+                        ast::Op::Add => lhs.add(rhs, ctx),
+                        ast::Op::Sub => lhs.sub(rhs, ctx),
+                        ast::Op::Mul => lhs.mul(rhs, ctx),
+                        ast::Op::Div => lhs.div(rhs, ctx),
+                        ast::Op::Mod => lhs.rem(rhs, ctx),
+                    }
+                }
+                Expr::Fn { op, args } => {
+                    let args = args
+                        .iter()
+                        .map(|arg| Subst::new(*arg, binding).resolve(ctx))
+                        .collect::<Vec<_>>();
+                    match op {
+                        ast::UnFn::Pow2 => args[0].pow2(ctx),
+                        ast::UnFn::Log2 => args[0].log2(ctx),
+                    }
+                }
+            }
+        })
+        .take_without_apply()
+    }
+}
+
 impl ExprIdx {
     #[inline]
     /// Attempts to convert this expression into a concrete value.
@@ -44,41 +81,6 @@ impl ExprIdx {
             Some(*c)
         } else {
             None
-        }
-    }
-
-    pub fn resolve(
-        self,
-        ctx: &mut impl Ctx<Expr>,
-        binding: &HashMap<ParamIdx, u64>,
-    ) -> ExprIdx {
-        let expr = ctx.get(self).clone();
-        match expr {
-            Expr::Param(p) => {
-                ctx.add(Expr::Concrete(*binding.get(&p).unwrap()))
-            }
-            Expr::Concrete(_) => self,
-            Expr::Bin { op, lhs, rhs } => {
-                let lhs = lhs.resolve(ctx, binding);
-                let rhs = rhs.resolve(ctx, binding);
-                match op {
-                    ast::Op::Add => lhs.add(rhs, ctx),
-                    ast::Op::Sub => lhs.sub(rhs, ctx),
-                    ast::Op::Mul => lhs.mul(rhs, ctx),
-                    ast::Op::Div => lhs.div(rhs, ctx),
-                    ast::Op::Mod => lhs.rem(rhs, ctx),
-                }
-            }
-            Expr::Fn { op, args } => {
-                let args = args
-                    .iter()
-                    .map(|arg| arg.resolve(ctx, binding))
-                    .collect::<Vec<_>>();
-                match op {
-                    ast::UnFn::Pow2 => args[0].pow2(ctx),
-                    ast::UnFn::Log2 => args[0].log2(ctx),
-                }
-            }
         }
     }
 

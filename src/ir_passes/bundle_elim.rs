@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use itertools::Itertools;
 
 use crate::ir::{
-    Access, Command, CompIdx, Component, Connect, Context, Ctx, DenseIndexInfo,
-    Expr, Foreign, InvIdx, Invoke, Liveness, MutCtx, Port, PortIdx, Range,
-    Time,
+    Access, Bind, Command, CompIdx, Component, Connect, Context, Ctx,
+    DenseIndexInfo, Expr, Foreign, InvIdx, Invoke, Liveness, MutCtx, Port,
+    PortIdx, Range, Subst, Time,
 };
 
 #[derive(Default)]
@@ -45,15 +45,15 @@ impl BundleElim {
 
         let ports = (0..len)
             .map(|i| {
-                let binding: HashMap<_, _> = [(idx, i)].into();
+                let binding: Bind<_, _> = Bind::new([(idx, i)]);
 
-                let offset = start.offset.resolve(comp, &binding);
+                let offset = Subst::new(start.offset, &binding).resolve(comp);
                 let start = comp.add(Time {
                     event: start.event,
                     offset,
                 });
 
-                let offset = end.offset.resolve(comp, &binding);
+                let offset = Subst::new(end.offset, &binding).resolve(comp);
                 let end = comp.add(Time {
                     event: end.event,
                     offset,

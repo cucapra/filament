@@ -52,10 +52,10 @@ where
     /// base may return results that themselves need to be substituted.
     pub fn map<F, U>(self, mut f: F) -> Subst<'a, U, K, V>
     where
-        F: FnMut(T) -> U,
+        F: FnMut(T, &'a Bind<K, V>) -> U,
     {
         Subst {
-            base: f(self.base),
+            base: f(self.base, self.bind),
             bind: self.bind,
         }
     }
