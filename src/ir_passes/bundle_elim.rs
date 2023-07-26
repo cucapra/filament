@@ -5,7 +5,7 @@ use itertools::Itertools;
 use crate::ir::{
     Access, Bind, Command, CompIdx, Component, Connect, Context, Ctx,
     DenseIndexInfo, Expr, Foreign, InvIdx, Invoke, Liveness, MutCtx, Port,
-    PortIdx, PortOwner, Range, Subst, Time,
+    PortIdx, PortOwner, Printer, Range, Subst, Time,
 };
 
 #[derive(Default)]
@@ -170,16 +170,16 @@ impl BundleElim {
         let src = self.get(src, cidx, ctx);
         let dst = self.get(dst, cidx, ctx);
 
+        let comp = ctx.get_mut(cidx);
         assert!(
             src.len() == dst.len(),
             "Mismatched access lengths for connect `{}`",
-            connect
+            Printer::new(comp).connect_str(connect)
         );
 
         // split this single connects into `n` separate connects each with individual ports.
         // the local mapping optimization here works because it assumes that connects assigning to the local port
         // are defined before connects accessing the local port (I.E. assignments are in proper order).
-        let comp = ctx.get_mut(cidx);
         src.into_iter()
             .zip(dst.into_iter())
             .filter_map(|(src, dst)| {
