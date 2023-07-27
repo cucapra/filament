@@ -63,16 +63,17 @@ impl BundleElim {
         let ports = (0..len)
             .map(|i| {
                 // binds the index parameter to the current bundle index
-                let binding: Bind<_, _> = Bind::new([(idx, i)]);
+                let binding: Bind<_, _> =
+                    Bind::new([(idx, comp.add(Expr::Concrete(i)))]);
 
                 // calculates the offsets based on this binding and generates new start and end times.
-                let offset = Subst::new(start.offset, &binding).resolve(comp);
+                let offset = Subst::new(start.offset, &binding).apply(comp);
                 let start = comp.add(Time {
                     event: start.event,
                     offset,
                 });
 
-                let offset = Subst::new(end.offset, &binding).resolve(comp);
+                let offset = Subst::new(end.offset, &binding).apply(comp);
                 let end = comp.add(Time {
                     event: end.event,
                     offset,

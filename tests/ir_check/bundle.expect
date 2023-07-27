@@ -15,7 +15,7 @@ error: source port does not provide value for as long as destination requires
 10 │     f{1} = input;
    │     ----   ^^^^^ source is available for @[G, G+1]
    │     │       
-   │     requires value for @[G+1, G+1+1]
+   │     requires value for @[G+1, G+2]
 
 error: source port does not provide value for as long as destination requires
    ┌─ tests/errors/bundle.fil:13:17

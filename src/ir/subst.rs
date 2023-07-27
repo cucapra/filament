@@ -1,3 +1,5 @@
+use crate::ast;
+
 use super::{Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Time, TimeIdx};
 use itertools::Itertools;
 
@@ -82,10 +84,10 @@ where
     /// base may return results that themselves need to be substituted.
     pub fn map<F, U>(self, mut f: F) -> Subst<'a, U, K, V>
     where
-        F: FnMut(T, &'a Bind<K, V>) -> U,
+        F: FnMut(T) -> U,
     {
         Subst {
-            base: f(self.base, self.bind),
+            base: f(self.base),
             bind: self.bind,
         }
     }
@@ -145,15 +147,23 @@ impl Foldable<ParamIdx, ExprIdx> for ExprIdx {
             Expr::Bin { op, lhs, rhs } => {
                 let lhs = lhs.fold_with(ctx, subst_fn);
                 let rhs = rhs.fold_with(ctx, subst_fn);
-                ctx.add(Expr::Bin { op, lhs, rhs })
+                match op {
+                    ast::Op::Add => lhs.add(rhs, ctx),
+                    ast::Op::Sub => lhs.sub(rhs, ctx),
+                    ast::Op::Mul => lhs.mul(rhs, ctx),
+                    ast::Op::Div => lhs.div(rhs, ctx),
+                    ast::Op::Mod => lhs.rem(rhs, ctx),
+                }
             }
             Expr::Fn { op, args } => {
-                let args = Box::new(
-                    args.iter()
-                        .map(|arg| arg.fold_with(ctx, subst_fn))
-                        .collect_vec(),
-                );
-                ctx.add(Expr::Fn { op, args: *args })
+                let args: Vec<_> = args
+                    .iter()
+                    .map(|arg| arg.fold_with(ctx, subst_fn))
+                    .collect();
+                match op {
+                    ast::UnFn::Pow2 => args[0].pow2(ctx),
+                    ast::UnFn::Log2 => args[0].log2(ctx),
+                }
             }
         }
     }
