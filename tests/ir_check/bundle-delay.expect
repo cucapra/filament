@@ -26,7 +26,7 @@ error: bundle's availability is greater than the delay of the event
 6 │     bundle f[#P+1]: for<#k> @[G+#k, G+#P] 16;
   │                          -  ^^^^^^^^^^^^^ available for #P-#k cycles
   │                          │   
-  │                          takes values in [0, 1+#P)
+  │                          takes values in [0, #P+1)
 
 Compilation failed with 3 errors.
 Run with --show-models to generate assignments for failing constraints.
