@@ -168,16 +168,16 @@ impl<'a> Printer<'a> {
 
     fn access(&self, a: &ir::Access) -> String {
         let &ir::Access { port, start, end } = a;
-        if a.is_port(self.ctx) {
-            self.ctx.display(port)
-        } else {
+        // if a.is_port(self.ctx) {
+        //     self.ctx.display(port)
+        // } else {
             format!(
                 "{}[{}..{})",
                 self.ctx.display(port),
                 self.expr(start),
                 self.expr(end)
             )
-        }
+        //}
     }
 
     fn connect(

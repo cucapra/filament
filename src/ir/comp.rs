@@ -526,10 +526,10 @@ impl Component {
                 }
             },
             Expr::Param(pidx) => {
-                //self.add(expr)
-                self.internal_error(format!(
-                    "When evaluating a binop expression, there should not be any parameters in it; found {pidx}")
-                )
+                self.add(expr)
+                // self.internal_error(format!(
+                //     "When evaluating a binop expression, there should not be any parameters in it; found {pidx}")
+                // )
             },
             Expr::Fn {..} => {
                 self.func(expr)

@@ -133,7 +133,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 .into_iter()
                 .map(|n| self.monosig.base.num(n))
                 .collect(),
-            info: self.monosig.info(self.underlying, info),
+            info: self.monosig.info(self.underlying, self.pass, info),
         };
 
         let new_idx = self.monosig.base.add(new_inst);
@@ -175,7 +175,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             info,
         } = self.underlying.get(inv);
 
-        let info = self.monosig.info(self.underlying, info);
+        let info = self.monosig.info(self.underlying, self.pass, info);
 
         // PLACEHOLDER, just want the index when we add it to base
         let mono_inv_idx = self.monosig.base.add(ir::Invoke {
@@ -325,9 +325,19 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     fn access(&mut self, acc: &ir::Access) -> ir::Access {
         let ir::Access { port, start, end } = acc;
 
+        // println!("Access start: {:?} binding: {:?}", start, self.monosig.binding);
+        // println!("Access end: {:?} binding: {:?}", end, self.monosig.binding);
+
         let port = self.monosig.port(self.underlying, self.pass, *port);
-        let start = self.monosig.expr(self.underlying, self.pass, *start);
+
+        // generate end expression
         let end = self.monosig.expr(self.underlying, self.pass, *end);
+        // convert to concrete value
+        let end = self.monosig.base.bin(self.monosig.base.get(end).clone());
+        // generate start expression
+        let start = self.monosig.expr(self.underlying, self.pass, *start);
+        // convert to concrete value
+        let start = self.monosig.base.bin(self.monosig.base.get(start).clone());
 
         ir::Access { port, start, end }
     }
@@ -341,7 +351,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         ir::Connect {
             src: mono_src,
             dst: mono_dst,
-            info: self.monosig.info(self.underlying, info),
+            info: self.monosig.info(self.underlying, self.pass, info),
         }
     }
 
@@ -362,8 +372,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         while i < bound {
             self.monosig.binding.insert(*index, i);
-            println!("========================");
-            println!("curr binding: {:?}", self.monosig.binding);
+            // println!("========================");
+            // println!("curr binding: {:?}", self.monosig.binding);
             for cmd in body.iter() {
                 let cmd = self.command(cmd);
                 self.monosig.base.cmds.extend(cmd);
@@ -412,7 +422,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     fn fact(&mut self, fact: &ir::Fact) -> Option<ir::Command> {
         let ir::Fact { prop, reason, .. } = fact;
         let prop = self.prop(*prop);
-        let reason = self.monosig.info(self.underlying, reason);
+        let reason = self.monosig.info(self.underlying, self.pass, reason);
         if fact.is_assert() {
             self.monosig.base.assert(prop, reason)
         } else {
@@ -435,7 +445,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let base = self.foreign_event(base, inv);
         let delay = self.timesub(delay);
         let arg = self.monosig.time(self.underlying, self.pass, *arg);
-        let info = self.monosig.info(self.underlying, info);
+        let info = self.monosig.info(self.underlying, self.pass, info);
 
         ir::EventBind {
             arg,
