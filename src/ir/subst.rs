@@ -1,3 +1,5 @@
+use crate::ast;
+
 use super::{Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Time, TimeIdx};
 
 pub struct Bind<K: Eq, V>(Vec<(K, V)>);
@@ -14,9 +16,7 @@ where
 {
     /// Get the binding associated with a particular key
     pub fn get(&self, key: &K) -> Option<&V> {
-        self.0
-            .iter()
-            .find_map(|(k, v)| if k == key { Some(v) } else { None })
+        self.0.iter().find_map(|(k, v)| (k == key).then_some(v))
     }
 }
 
@@ -115,14 +115,23 @@ impl Foldable<ParamIdx, ExprIdx> for ExprIdx {
             Expr::Bin { op, lhs, rhs } => {
                 let lhs = lhs.fold_with(ctx, subst_fn);
                 let rhs = rhs.fold_with(ctx, subst_fn);
-                ctx.add(Expr::Bin { op, lhs, rhs })
+                match op {
+                    ast::Op::Add => lhs.add(rhs, ctx),
+                    ast::Op::Sub => lhs.sub(rhs, ctx),
+                    ast::Op::Mul => lhs.mul(rhs, ctx),
+                    ast::Op::Div => lhs.div(rhs, ctx),
+                    ast::Op::Mod => lhs.rem(rhs, ctx),
+                }
             }
             Expr::Fn { op, args } => {
-                let args = args
+                let args: Vec<_> = args
                     .iter()
                     .map(|arg| arg.fold_with(ctx, subst_fn))
                     .collect();
-                ctx.add(Expr::Fn { op, args })
+                match op {
+                    ast::UnFn::Pow2 => args[0].pow2(ctx),
+                    ast::UnFn::Log2 => args[0].log2(ctx),
+                }
             }
         }
     }

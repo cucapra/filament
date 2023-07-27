@@ -43,7 +43,7 @@ impl DisplayCtx<ir::Event> for ir::Component {
         } else {
             let ev = self.get(idx);
             let ir::Info::Event { name, .. } = self.get(ev.info) else {
-                unreachable!("Expccted event info")
+                unreachable!("Expected event info")
             };
             name.to_string()
         }
@@ -64,13 +64,48 @@ impl DisplayCtx<ir::Param> for ir::Component {
     }
 }
 
+impl DisplayCtx<ir::Invoke> for ir::Component {
+    fn display(&self, idx: ir::InvIdx) -> String {
+        if log::log_enabled!(log::Level::Debug) {
+            format!("{idx}")
+        } else {
+            let inv = self.get(idx);
+            let ir::Info::Invoke { name, .. } = self.get(inv.info) else {
+                unreachable!("Expected invoke info");
+            };
+            format!("{name}")
+        }
+    }
+}
+
+impl DisplayCtx<ir::Instance> for ir::Component {
+    fn display(&self, idx: ir::InstIdx) -> String {
+        if log::log_enabled!(log::Level::Debug) {
+            format!("{idx}")
+        } else {
+            let inst = self.get(idx);
+            let ir::Info::Instance { name, .. } = self.get(inst.info) else {
+                unreachable!("Expected instance info");
+            };
+            format!("{name}")
+        }
+    }
+}
+
 impl DisplayCtx<ir::Port> for ir::Component {
     fn display(&self, idx: ir::PortIdx) -> String {
         let port = self.get(idx);
         let ir::Info::Port { name, .. } = self.get(port.info) else {
             unreachable!("Expected port info")
         };
-        name.to_string()
+        match port.owner {
+            ir::PortOwner::Local | ir::PortOwner::Sig { .. } => {
+                name.to_string()
+            }
+            ir::PortOwner::Inv { inv, .. } => {
+                format!("{}.{}", self.display(inv), name)
+            }
+        }
     }
 }
 
@@ -79,7 +114,11 @@ pub struct Printer<'a> {
     ctx: &'a ir::Component,
 }
 
-impl Printer<'_> {
+impl<'a> Printer<'a> {
+    pub fn new(ctx: &'a ir::Component) -> Self {
+        Self { ctx }
+    }
+
     fn interned<T>(
         store: &ir::Interned<T>,
         op: &str,
@@ -129,7 +168,16 @@ impl Printer<'_> {
 
     fn access(&self, a: &ir::Access) -> String {
         let &ir::Access { port, start, end } = a;
-        format!("{port}[{}..{})", self.expr(start), self.expr(end))
+        if a.is_port(self.ctx) {
+            self.ctx.display(port)
+        } else {
+            format!(
+                "{}[{}..{})",
+                self.ctx.display(port),
+                self.expr(start),
+                self.expr(end)
+            )
+        }
     }
 
     fn connect(
@@ -148,6 +196,12 @@ impl Printer<'_> {
         )
     }
 
+    pub fn connect_str(&self, c: &ir::Connect) -> String {
+        let mut buf = Vec::new();
+        self.connect(c, 0, &mut buf).unwrap();
+        String::from_utf8(buf).unwrap()
+    }
+
     pub fn command(
         &self,
         c: &ir::Command,
@@ -155,12 +209,8 @@ impl Printer<'_> {
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         match c {
-            ir::Command::Instance(inst) => {
-                write!(f, "{:indent$}{inst};", "")
-            }
-            ir::Command::Invoke(inv) => {
-                write!(f, "{:indent$}{inv};", "")
-            }
+            ir::Command::Instance(inst) => self.instance(*inst, indent, f),
+            ir::Command::Invoke(inv) => self.invoke(*inv, indent, f),
             ir::Command::Connect(con) => self.connect(con, indent, f),
             ir::Command::ForLoop(ir::Loop {
                 index,
@@ -209,13 +259,12 @@ impl Printer<'_> {
         if comp.is_ext {
             write!(f, "ext ")?;
         };
-        if let Some(idx) = idx {
+        if let Some(info) = &comp.src_info {
+            write!(f, "comp {}", info.name)?
+        } else if let Some(idx) = idx {
             write!(f, "comp {}", idx)?;
         } else {
             write!(f, "comp")?;
-        }
-        if let Some(info) = &comp.src_info {
-            write!(f, " ({})", info.name)?
         }
         write!(f, "[")?;
         for pos in comp
@@ -227,10 +276,10 @@ impl Printer<'_> {
         {
             match pos {
                 Position::First(idx) | Position::Middle(idx) => {
-                    write!(f, "{idx}, ")?
+                    write!(f, "{}, ", self.ctx.display(idx))?
                 }
                 Position::Only(idx) | Position::Last(idx) => {
-                    write!(f, "{idx}")?
+                    write!(f, "{}", self.ctx.display(idx))?
                 }
             }
         }
@@ -241,12 +290,18 @@ impl Printer<'_> {
                 Position::First((idx, ev)) | Position::Middle((idx, ev)) => {
                     write!(
                         f,
-                        "{idx}: {}, ",
+                        "{}: {}, ",
+                        self.ctx.display(idx),
                         self.ctx.display_timesub(&ev.delay)
                     )?
                 }
                 Position::Only((idx, ev)) | Position::Last((idx, ev)) => {
-                    write!(f, "{idx}: {}", self.ctx.display_timesub(&ev.delay))?
+                    write!(
+                        f,
+                        "{}: {}",
+                        self.ctx.display(idx),
+                        self.ctx.display_timesub(&ev.delay)
+                    )?
                 }
             }
         }
@@ -256,8 +311,9 @@ impl Printer<'_> {
             Position::First((idx, port)) | Position::Middle((idx, port)) => {
                 writeln!(
                     f,
-                    "{:indent$}{idx}: {} {},",
+                    "{:indent$}{}: {} {},",
                     "",
+                    self.ctx.display(*idx),
                     self.liveness(&port.live),
                     self.expr(port.width),
                     indent = indent + 2
@@ -266,8 +322,9 @@ impl Printer<'_> {
             Position::Only((idx, port)) | Position::Last((idx, port)) => {
                 writeln!(
                     f,
-                    "{:indent$}{idx}: {} {}",
+                    "{:indent$}{}: {} {}",
                     "",
+                    self.ctx.display(*idx),
                     self.liveness(&port.live),
                     self.expr(port.width),
                     indent = indent + 2
@@ -298,18 +355,24 @@ impl Printer<'_> {
     }
 
     fn local_param(
+        &self,
         idx: ir::ParamIdx,
-        param: &ir::Param,
         indent: usize,
         c: &ir::Component,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
+        let param = self.ctx.get(idx);
         if !param.is_sig_owned() {
             let &ir::Param { info, .. } = c.get(idx);
             let ir::Info::Param { name, .. } = c.get(info) else {
                 unreachable!("Expected param info");
             };
-            writeln!(f, "{:indent$}{idx} = param {param}; // {name}", "",)?;
+            writeln!(
+                f,
+                "{:indent$}{idx} = param {param}; // {name}",
+                "",
+                param = self.ctx.display(idx)
+            )?;
         }
         Ok(())
     }
@@ -329,8 +392,9 @@ impl Printer<'_> {
             ir::PortOwner::Inv { dir, .. } => {
                 writeln!(
                     f,
-                    "{:indent$}{idx}: bundle({dir}) {} {};",
+                    "{:indent$}{}: bundle({dir}) {} {};",
                     "",
+                    self.ctx.display(idx),
                     self.liveness(live),
                     self.expr(*width),
                 )
@@ -338,8 +402,9 @@ impl Printer<'_> {
             ir::PortOwner::Local => {
                 writeln!(
                     f,
-                    "{:indent$}{idx} = bundle {} {};",
+                    "{:indent$}{} = bundle {} {};",
                     "",
+                    self.ctx.display(idx),
                     self.liveness(live),
                     self.expr(*width),
                 )
@@ -348,27 +413,26 @@ impl Printer<'_> {
     }
 
     pub fn instance(
-        ctx: &ir::Component,
+        &self,
         idx: ir::InstIdx,
-        inst: &ir::Instance,
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
-        write!(f, "{:indent$}{idx} = instance ", "")?;
-        let ir::Instance { comp, params, .. } = inst;
+        write!(f, "{:indent$}{} = instance ", "", self.ctx.display(idx))?;
+        let ir::Instance { comp, params, .. } = self.ctx.get(idx);
         write!(f, "{}[", comp)?;
         for (i, param) in params.iter().enumerate() {
             if i != 0 {
                 write!(f, ", ")?;
             }
-            write!(f, "{}", ctx.display(*param))?;
+            write!(f, "{}", self.ctx.display(*param))?;
         }
-        writeln!(f, "];")
+        write!(f, "];")
     }
 
     pub fn invoke(
+        &self,
         idx: ir::InvIdx,
-        c: &ir::Invoke,
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
@@ -377,14 +441,16 @@ impl Printer<'_> {
             ports,
             events,
             ..
-        } = c;
+        } = self.ctx.get(idx);
 
-        writeln!(
+        write!(
             f,
-            "{:indent$}{idx}, {ports} = invoke {inst}<{events}>;",
+            "{:indent$}{inv}, {ports} = invoke {inst}<{events}>;",
             "",
-            ports = ports.iter().map(|p| format!("{p}")).join(", "),
-            events = events.iter().map(|e| format!("{}", e.delay)).join(", ")
+            inv = self.ctx.display(idx),
+            ports = ports.iter().map(|p| self.ctx.display(*p)).join(", "),
+            inst = self.ctx.display(*inst),
+            events = events.iter().map(|e| self.ctx.display(e.arg)).join(", ")
         )?;
 
         Ok(())
@@ -397,8 +463,8 @@ impl Printer<'_> {
     ) -> io::Result<()> {
         let printer = ir::Printer { ctx };
         printer.sig(ctx, idx, 0, f)?;
-        for (idx, param) in ctx.params().iter() {
-            Printer::local_param(idx, param, 2, ctx, f)?;
+        for idx in ctx.params().idx_iter() {
+            printer.local_param(idx, 2, ctx, f)?;
         }
         // If debugging is enabled, show the low-level representation of the
         // component's interned values.
@@ -409,12 +475,6 @@ impl Printer<'_> {
         }
         for (idx, port) in ctx.ports().iter() {
             printer.local_port(idx, port, 2, f)?;
-        }
-        for (idx, instance) in ctx.instances().iter() {
-            Printer::instance(ctx, idx, instance, 2, f)?;
-        }
-        for (idx, invoke) in ctx.invocations().iter() {
-            Printer::invoke(idx, invoke, 2, f)?;
         }
         writeln!(f, "control:")?;
         printer.commands(&ctx.cmds, 2, f)?;

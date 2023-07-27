@@ -87,7 +87,6 @@ impl Compile {
                 comp.events()
                     .idx_iter()
                     .filter_map(|idx| interface_name(idx, comp))
-                    .into_iter()
                     .map(|name| calyx::PortDef {
                         name: name.into(),
                         width: width_from_u64(1),
@@ -214,12 +213,25 @@ impl Compile {
         // Done by finding the furthest offset referenced in any [Time] in the component.
         let mut max_states = HashMap::new();
 
-        comp.times().iter().for_each(|(_, time)| {
-            let nv = expr_u64(time.offset, comp);
-            if nv > *max_states.get(&time.event).unwrap_or(&0) {
-                max_states.insert(time.event, nv);
-            }
-        });
+        comp.ports()
+            .iter()
+            .map(|(_, port)| {
+                let live = &port.live;
+                assert!(
+                    live.len.as_concrete(comp) == Some(1),
+                    "Bundles should have been compiled away."
+                );
+
+                // need only the end here as ends follow starts and all ranges should be represented by a simple offset.
+                live.range.end
+            })
+            .for_each(|idx| {
+                let time = comp.get(idx);
+                let nv = expr_u64(time.offset, comp);
+                if nv > *max_states.get(&time.event).unwrap_or(&0) {
+                    max_states.insert(time.event, nv);
+                }
+            });
 
         // Construct all the FSMs
         for (event, states) in max_states {

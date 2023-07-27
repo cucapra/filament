@@ -215,10 +215,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         param: &ast::ParamBind,
         owner: ir::ParamOwner,
     ) -> ParamIdx {
-        let default = param.default.as_ref().map(|e| self.expr(e.clone()));
         let info = self.comp.add(ir::Info::param(param.name(), param.pos()));
 
-        let ir_param = ir::Param::new(owner, info, default);
+        let ir_param = ir::Param::new(owner, info);
         let is_sig_param = ir_param.is_sig_owned();
 
         let idx = self.comp.add(ir_param);
@@ -747,9 +746,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 invoke.events.push(eb);
             });
 
-        connects
-            .into_iter()
-            .chain(Some(ir::Command::from(inv)))
+        std::iter::once(ir::Command::from(inv))
+            .chain(connects)
             .chain(cons)
             .collect_vec()
     }
