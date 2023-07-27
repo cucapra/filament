@@ -14,16 +14,21 @@ pub struct LocalPortElim {
 impl Visitor for LocalPortElim {
     /// loops over connect commands and adds local port connects to the mapping.
     fn start(&mut self, comp: &mut Component) -> Action {
-        for (src, dst) in comp.cmds.iter().filter_map(|cmd| match cmd {
-            Command::Connect(Connect { src, dst, .. }) => {
-                Some((src.port, dst.port))
-            }
-            _ => None,
-        }) {
-            if comp.get(dst).is_local() {
-                self.port_map.insert(dst, src);
-            }
-        }
+        comp.cmds
+            .iter()
+            // filter all connect commands out
+            .filter_map(|cmd| match cmd {
+                Command::Connect(Connect { src, dst, .. }) => {
+                    Some((src.port, dst.port))
+                }
+                _ => None,
+            })
+            // insert them to the local mapping
+            .for_each(|(src, dst)| {
+                if comp.get(dst).is_local() {
+                    self.port_map.insert(dst, src);
+                }
+            });
 
         Action::Continue
     }
