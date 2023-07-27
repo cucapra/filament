@@ -154,8 +154,8 @@ macro_rules! info_cast {
             }
         }
 
-        impl From<Info> for $class {
-            fn from(info: Info) -> Self {
+        impl<'a> From<&'a Info> for &'a $class {
+            fn from(info: &'a Info) -> Self {
                 if let Info::$class(v) = info {
                     v
                 } else {
@@ -167,16 +167,9 @@ macro_rules! info_cast {
             }
         }
 
-        impl<'a> From<&'a Info> for &'a $class {
+        impl<'a> From<&'a Info> for Option<&'a $class> {
             fn from(info: &'a Info) -> Self {
-                if let Info::$class(v) = info {
-                    v
-                } else {
-                    unreachable!(
-                        "Incorrect info type for {}.",
-                        stringify!($class)
-                    );
-                }
+                info.$name()
             }
         }
     };
