@@ -345,8 +345,6 @@ impl Ctx<Expr> for Component {
                 let l = lhs.as_concrete(self);
                 let r = rhs.as_concrete(self);
                 let e = match (l, r) {
-                    (Some(0), Some(r)) => Expr::Concrete(r),
-                    (Some(l), Some(0)) => Expr::Concrete(l),
                     (Some(0), None) => return *rhs,
                     (None, Some(0)) => return *lhs,
                     (Some(l), None) => {
