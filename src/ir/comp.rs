@@ -97,6 +97,8 @@ pub struct Component {
     /// Externally facing interface information, used to preserve interface in compilation.
     /// Must be `Some` for toplevel components and externals.
     pub src_info: Option<InterfaceSrc>,
+    /// unannotated ports associated with this component
+    pub unannotated_ports: Box<Vec<(ast::Id, u64)>>,
 }
 
 impl Component {
@@ -271,17 +273,6 @@ impl Component {
         let mut acc = Vec::new();
         self.prop_params_acc(prop, &mut acc);
         acc
-    }
-
-    /// Unannotated Ports in the component
-    pub fn unannotated_ports(&self) -> Vec<(&ast::Id, u64)> {
-        self.info
-            .iter()
-            .filter_map(|(_, info)| match info {
-                Info::UnannotatedPort { name, width } => Some((name, *width)),
-                _ => None,
-            })
-            .collect()
     }
 }
 

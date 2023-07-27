@@ -42,9 +42,7 @@ impl DisplayCtx<ir::Event> for ir::Component {
             format!("{idx}")
         } else {
             let ev = self.get(idx);
-            let ir::Info::Event { name, .. } = self.get(ev.info) else {
-                unreachable!("Expected event info")
-            };
+            let &ir::info::Event { ref name, .. } = self.get(ev.info).into();
             name.to_string()
         }
     }
@@ -55,10 +53,8 @@ impl DisplayCtx<ir::Param> for ir::Component {
         if log::log_enabled!(log::Level::Debug) {
             format!("{idx}")
         } else {
-            let param = self.get(idx);
-            let ir::Info::Param { name, .. } = self.get(param.info) else {
-                unreachable!("Expected param info");
-            };
+            let param: &ir::Param = self.get(idx);
+            let &ir::info::Param { ref name, .. } = self.get(param.info).into();
             format!("#{name}")
         }
     }
@@ -70,9 +66,7 @@ impl DisplayCtx<ir::Invoke> for ir::Component {
             format!("{idx}")
         } else {
             let inv = self.get(idx);
-            let ir::Info::Invoke { name, .. } = self.get(inv.info) else {
-                unreachable!("Expected invoke info");
-            };
+            let &ir::info::Invoke { ref name, .. } = self.get(inv.info).into();
             format!("{name}")
         }
     }
@@ -84,9 +78,8 @@ impl DisplayCtx<ir::Instance> for ir::Component {
             format!("{idx}")
         } else {
             let inst = self.get(idx);
-            let ir::Info::Instance { name, .. } = self.get(inst.info) else {
-                unreachable!("Expected instance info");
-            };
+            let &ir::info::Instance { ref name, .. } =
+                self.get(inst.info).into();
             format!("{name}")
         }
     }
@@ -95,9 +88,7 @@ impl DisplayCtx<ir::Instance> for ir::Component {
 impl DisplayCtx<ir::Port> for ir::Component {
     fn display(&self, idx: ir::PortIdx) -> String {
         let port = self.get(idx);
-        let ir::Info::Port { name, .. } = self.get(port.info) else {
-            unreachable!("Expected port info")
-        };
+        let &ir::info::Port { ref name, .. } = self.get(port.info).into();
         match port.owner {
             ir::PortOwner::Local | ir::PortOwner::Sig { .. } => {
                 name.to_string()
@@ -364,9 +355,7 @@ impl<'a> Printer<'a> {
         let param = self.ctx.get(idx);
         if !param.is_sig_owned() {
             let &ir::Param { info, .. } = c.get(idx);
-            let ir::Info::Param { name, .. } = c.get(info) else {
-                unreachable!("Expected param info");
-            };
+            let &ir::info::Param { name, .. } = c.get(info).into();
             writeln!(
                 f,
                 "{:indent$}{idx} = param {param}; // {name}",
