@@ -202,7 +202,6 @@ impl MonoSig {
         param: ir::ParamIdx,
     ) -> ir::ParamIdx {
         if let Some(idx) = self.param_map.get(&param) {
-            let lookup = self.binding.get(idx);
             return *idx;
         };
         let ir::Param { owner, info, .. } = underlying.get(param);
