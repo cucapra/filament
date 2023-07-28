@@ -1,6 +1,8 @@
 use super::ScopeMap;
 use crate::ast::{self, Id};
-use crate::ir::{self, CompIdx, Ctx, DenseIndexInfo, PortIdx};
+use crate::ir::{
+    self, CompIdx, Component, Ctx, DenseIndexInfo, EventIdx, ParamIdx, PortIdx,
+};
 use crate::utils;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -12,24 +14,20 @@ use std::rc::Rc;
 /// the signature.
 pub struct Sig {
     pub idx: CompIdx,
-    pub params: Vec<ast::ParamBind>,
-    pub events: Vec<ast::EventBind>,
-    pub inputs: Vec<ast::Loc<ast::PortDef>>,
-    pub outputs: Vec<ast::PortDef>,
-    pub param_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Expr>>>,
-    pub event_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Time>>>,
+    pub params: Vec<ParamIdx>,
+    pub events: Vec<EventIdx>,
+    pub inputs: Vec<PortIdx>,
+    pub outputs: Vec<PortIdx>,
 }
 
-impl From<(&ast::Signature, usize)> for Sig {
-    fn from((sig, idx): (&ast::Signature, usize)) -> Self {
-        Sig {
+impl From<(usize, &Component)> for Sig {
+    fn from((idx, comp): (usize, &Component)) -> Self {
+        Self {
             idx: CompIdx::new(idx),
-            params: sig.params.iter().map(|p| p.clone().take()).collect(),
-            inputs: sig.inputs().cloned().collect(),
-            outputs: sig.outputs().map(|p| p.clone().take()).collect(),
-            events: sig.events.iter().map(|e| e.clone().take()).collect(),
-            param_cons: sig.param_constraints.clone(),
-            event_cons: sig.event_constraints.clone(),
+            params: comp.params().idx_iter().collect(),
+            events: comp.events().idx_iter().collect(),
+            inputs: comp.inputs().map(|(idx, _)| idx).collect(),
+            outputs: comp.outputs().map(|(idx, _)| idx).collect(),
         }
     }
 }
@@ -42,10 +40,6 @@ pub struct SigMap {
 }
 
 impl SigMap {
-    pub fn insert(&mut self, id: Id, sig: Sig) {
-        self.map.insert(id, sig);
-    }
-
     pub fn get(&self, id: &Id) -> Option<&Sig> {
         self.map.get(id)
     }
@@ -56,6 +50,14 @@ impl std::ops::Index<&Id> for SigMap {
 
     fn index(&self, id: &Id) -> &Self::Output {
         self.get(id).unwrap()
+    }
+}
+
+impl std::iter::FromIterator<(Id, Sig)> for SigMap {
+    fn from_iter<T: IntoIterator<Item = (Id, Sig)>>(iter: T) -> Self {
+        Self {
+            map: iter.into_iter().collect(),
+        }
     }
 }
 
@@ -86,11 +88,9 @@ impl std::fmt::Display for InvPort {
 }
 
 /// Context used while building the IR.
-pub(super) struct BuildCtx<'ctx, 'prog> {
-    /// Unfinished context
-    pub ctx: &'ctx ir::Context,
+pub(super) struct BuildCtx<'prog> {
     pub comp: ir::Component,
-    pub sigs: &'prog SigMap,
+    pub sigs: Option<&'prog SigMap>,
 
     // Mapping from names of instance to (<parameter bindings>, <component name>).
     // We keep around the parameter bindings as [ast::Expr] because we need to resolve
@@ -109,16 +109,12 @@ pub(super) struct BuildCtx<'ctx, 'prog> {
     /// Index for generating unique names
     name_idx: u32,
 }
-impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
-    pub fn new(
-        ctx: &'ctx ir::Context,
-        comp: ir::Component,
-        sigs: &'prog SigMap,
-    ) -> Self {
+
+impl<'prog> BuildCtx<'prog> {
+    pub fn new(comp: ir::Component) -> Self {
         Self {
-            ctx,
             comp,
-            sigs,
+            sigs: None,
             name_idx: 0,
             param_map: ScopeMap::new(),
             event_map: ScopeMap::new(),

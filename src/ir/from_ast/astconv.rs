@@ -25,7 +25,7 @@ use std::{iter, rc::Rc};
 ///   signature which substitutes all parameters in the signature.
 /// * For each invocation, compute the fully resolved signature (where events are correctly substituted)
 ///   and define all the parameters.
-impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
+impl<'prog> BuildCtx<'prog> {
     fn declare_inst(&mut self, inst: &ast::Instance) {
         let ast::Instance {
             name,
@@ -143,7 +143,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
     }
 }
 
-impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
+impl<'prog> BuildCtx<'prog> {
     fn expr(&mut self, expr: ast::Expr) -> ExprIdx {
         match expr {
             ast::Expr::Abstract(p) => {
@@ -445,7 +445,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
     }
 
-    fn sig(&mut self, sig: ast::Signature) -> Vec<ir::Command> {
+    fn sig(&mut self, sig: &ast::Signature) -> Vec<ir::Command> {
         for param in &sig.params {
             self.param(param.inner(), ir::ParamOwner::Sig);
         }
@@ -855,48 +855,29 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
         cmds
     }
-
-    fn external(ctx: &ir::Context, sig: ast::Signature) -> ir::Component {
-        let mut ir_comp = ir::Component::new(true);
-        ir_comp.src_info = Some(ir::InterfaceSrc::new(sig.name.copy()));
-        let binding = SigMap::default();
-        let mut builder = BuildCtx::new(ctx, ir_comp, &binding);
-
-        // First we declare all the ports
-        let mut cmds = builder.sig(sig);
-        cmds.extend(builder.port_assumptions());
-        builder.comp.cmds = cmds;
-        builder.comp
-    }
-
-    fn declare_comp(
-        ctx: &'ctx ir::Context,
-        comp: ast::Component,
-        sigs: &'prog SigMap,
-        preserve_interface: bool,
-    ) -> (BuildCtx<'ctx, 'prog>, Vec<ast::Command>) {
-        let mut ir_comp = ir::Component::new(false);
-        if preserve_interface {
-            ir_comp.src_info =
-                Some(ir::InterfaceSrc::new(comp.sig.name.copy()));
-        }
-        let mut builder = BuildCtx::new(ctx, ir_comp, sigs);
-
-        // declare only the ports
-        let mut cmds = builder.sig(comp.sig);
-        cmds.extend(builder.port_assumptions());
-        builder.comp.cmds = cmds;
-        (builder, comp.body)
-    }
 }
 
 pub fn transform(ns: ast::Namespace) -> ir::Context {
-    let mut sig_map = SigMap::default();
+    // Walk over signatures and compile signatures to build a SigMap
+    let (builders, sig_map) = ns
+        .externals()
+        .map(|(_, sig)| (sig, true))
+        .chain(ns.components.iter().map(|comp| (&comp.sig, false)))
+        .enumerate()
+        .map(|(idx, (sig, is_ext))| {
+            let builder = BuildCtx::new(ir::Component::new(true));
+            let mut cmds = builder.sig(sig);
+            cmds.extend(builder.port_assumptions());
+            builder.comp.cmds = cmds;
+            (builder, (sig.name, (idx, builder.comp.into())))
+        })
+        .unzip();
 
-    // Walk over signatures and build a SigMap
-    for (idx, sig) in ns.signatures().map(|(_, sig)| sig).enumerate() {
-        sig_map.insert(sig.name.copy(), Sig::from((sig, idx)));
-    }
+    let sig_map: SigMap = sig_map.collect();
+
+    let builders = builders.for_each(|mut builder| {
+        builder.sigs = &sig_map;
+    });
 
     let mut ctx = ir::Context {
         entrypoint: ns.main_idx().map(crate::utils::Idx::new),
