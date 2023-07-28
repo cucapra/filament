@@ -29,8 +29,7 @@ error: source port does not provide value for as long as destination requires
   ┌─ tests/errors/bundle-mismatch.fil:9:28
   │
 2 │     in[#N]: for<#i> @[G+#i, G+#i+1] 32
-  │     -- requires value for @[T+1+#k, T+1+#k+1]
-  ·
+  │     -- requires value for @[T+#k+1, T+#k+1+1]
 9 │     f1 := new Foo[#P]<T+1>(f{0..#P});
   │                            ^^^^^^^^ source is available for @[T+#k, T+#k+1]
 
