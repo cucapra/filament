@@ -118,6 +118,7 @@ impl<'ctx> Monomorphize<'ctx> {
             underlying,
             pass: self,
             monosig,
+            fact_queue: vec![],
         };
 
         mono.gen_comp();

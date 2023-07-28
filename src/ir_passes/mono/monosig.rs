@@ -13,6 +13,8 @@ pub struct MonoSig {
     pub underlying_idx: ir::CompIdx,
     /// Mapping from parameters in the underlying component to their constant bindings.
     pub binding: ir::Bind<ir::ParamIdx, u64>,
+    /// Queue of facts to monomorphize
+    pub fact_queue: Vec<ir::Fact>,
 
     /// Mapping of underlying invokes (and how many times we've seen it) to base invokes
     pub inv_map: HashMap<(ir::InvIdx, u32), ir::InvIdx>,
@@ -67,6 +69,7 @@ impl MonoSig {
             base,
             underlying_idx,
             binding,
+            fact_queue: vec![],
             inv_map: HashMap::new(),
             inv_counter: HashMap::new(),
             inst_map: HashMap::new(),
@@ -80,8 +83,6 @@ impl MonoSig {
             param_map: HashMap::new(),
             bundle_param_map: HashMap::new(),
             info_map: HashMap::new(),
-            // port_counter: HashMap::new(),
-            // port_counter_map: HashMap::new(),
         }
     }
 }
@@ -218,9 +219,11 @@ impl MonoSig {
 
         match owner {
             ir::ParamOwner::Bundle(port) => {
-                //let new_port = self.port_map.get(&(None, *port)).unwrap();
-                let new_idx = self.bundle_param(underlying, pass, param, *port); // fix this, need to look up port
-                new_idx
+                // println!("called bundle_param() on {param}, with underlying {port}");
+                // let new_idx = self.bundle_param(underlying, pass, param, *port); // fix this, need to look up port
+                // println!("generated {new_idx}");
+                // new_idx
+                panic!("aaah")
             }
             ir::ParamOwner::Loop => {
                 let new_param = ir::Param {
@@ -292,7 +295,7 @@ impl MonoSig {
     }
 
     /// Given a Range owned by underlying, returns a Range that is meaningful in base
-    fn range(
+    pub fn range(
         &mut self,
         underlying: &ir::Component,
         pass: &mut Monomorphize,

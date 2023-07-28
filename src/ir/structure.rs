@@ -260,7 +260,7 @@ pub enum ParamOwner {
 }
 
 impl fmt::Display for ParamOwner {
-    fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ParamOwner::Sig => {
                 write!(f, "sig")

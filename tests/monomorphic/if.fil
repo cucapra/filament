@@ -1,0 +1,22 @@
+comp main<G:1>(
+    @[G, G+1] in0:32,
+    @[G, G+1] in1:32,
+) -> (
+    @[G, G+1] out:32
+) {
+    f0 := new Foo[32, 900]<G>(in0, in1);
+    out = f0.out;
+}
+
+comp Foo[#W, #K]<G:1>(
+    @[G, G+1] in0: #W,
+    @[G, G+1] in1: #W
+) -> (
+    @[G, G+1] out: #W
+) {
+    if #K > 10 {
+        out = in0;
+    } else {
+        out = in1;
+    }
+}

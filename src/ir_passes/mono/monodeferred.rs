@@ -10,6 +10,7 @@ pub struct MonoDeferred<'a, 'pass: 'a> {
     /// Struct to keep track of all the mapping information from things owned by
     /// `underlying` to things owned by `base`
     pub monosig: MonoSig,
+    pub fact_queue: Vec<&'a ir::Fact>,
 }
 
 impl MonoDeferred<'_, '_> {
@@ -57,12 +58,13 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             let cmd = self.command(cmd);
             self.monosig.base.cmds.extend(cmd);
         }
-        for idx in self.underlying.props().idx_iter() {
-            self.prop(idx);
+        for fact in self.monosig.fact_queue.clone() {
+            if let Some(cmd) = self.fact(&fact) {
+                self.monosig.base.cmds.push(cmd);
+            }
         }
-
-        for (idx, expr) in self.underlying.exprs().iter() {
-            self.monosig.expr(self.underlying, self.pass, idx);
+        for (idx, prop) in self.underlying.props().iter() {
+            self.prop(idx);
         }
     }
 
@@ -462,11 +464,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 vec![]
             }
             ir::Command::Fact(fact) => {
-                if let Some(cmd) = self.fact(fact) {
-                    vec![cmd]
-                } else {
-                    vec![]
-                }
+                self.monosig.fact_queue.push(fact.clone());
+                vec![]
             }
         }
     }

@@ -39,7 +39,7 @@ pub(super) fn interface_name(
 /// Expects the [ExprIdx] to be a single constant value, and panics if this isn't the case
 pub(super) fn expr_u64(idx: ExprIdx, comp: &Component) -> u64 {
     idx.as_concrete(comp).unwrap_or_else(|| {
-        comp.internal_error("Expression must be a constant.")
+        comp.internal_error(format!("Expression {idx} must be a constant."))
     })
 }
 
