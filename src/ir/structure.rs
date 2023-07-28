@@ -259,6 +259,22 @@ pub enum ParamOwner {
     Loop,
 }
 
+impl fmt::Display for ParamOwner {
+    fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ParamOwner::Sig => {
+                write!(f, "sig")
+            }
+            ParamOwner::Loop => {
+                write!(f, "loop")
+            }
+            ParamOwner::Bundle(idx) => {
+                write!(f, "{idx}")
+            }
+        }
+    }
+}
+
 impl ParamOwner {
     pub fn bundle(port: PortIdx) -> Self {
         Self::Bundle(port)

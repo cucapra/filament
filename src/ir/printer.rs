@@ -171,12 +171,12 @@ impl<'a> Printer<'a> {
         // if a.is_port(self.ctx) {
         //     self.ctx.display(port)
         // } else {
-            format!(
-                "{}[{}..{})",
-                self.ctx.display(port),
-                self.expr(start),
-                self.expr(end)
-            )
+        format!(
+            "{}[{}..{})",
+            self.ctx.display(port),
+            self.expr(start),
+            self.expr(end)
+        )
         //}
     }
 
@@ -363,13 +363,13 @@ impl<'a> Printer<'a> {
     ) -> io::Result<()> {
         let param = self.ctx.get(idx);
         if !param.is_sig_owned() {
-            let &ir::Param { info, .. } = c.get(idx);
-            let ir::Info::Param { name, .. } = c.get(info) else {
+            let ir::Param { info, owner } = c.get(idx);
+            let ir::Info::Param { name, .. } = c.get(*info) else {
                 unreachable!("Expected param info");
             };
             writeln!(
                 f,
-                "{:indent$}{idx} = param {param}; // {name}",
+                "{:indent$}{idx} = param {param}, owner {owner}; // {name}",
                 "",
                 param = self.ctx.display(idx)
             )?;
@@ -392,7 +392,7 @@ impl<'a> Printer<'a> {
             ir::PortOwner::Inv { dir, .. } => {
                 writeln!(
                     f,
-                    "{:indent$}{}: bundle({dir}) {} {};",
+                    "{:indent$}{} ({idx}): bundle({dir}) {} {};",
                     "",
                     self.ctx.display(idx),
                     self.liveness(live),
@@ -402,7 +402,7 @@ impl<'a> Printer<'a> {
             ir::PortOwner::Local => {
                 writeln!(
                     f,
-                    "{:indent$}{} = bundle {} {};",
+                    "{:indent$}{} ({idx}) = bundle {} {};",
                     "",
                     self.ctx.display(idx),
                     self.liveness(live),

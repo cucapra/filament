@@ -179,17 +179,27 @@ impl MonoSig {
         &mut self,
         underlying: &ir::Component,
         pass: &mut Monomorphize,
-        reason: &ir::Reason
+        reason: &ir::Reason,
     ) -> ir::Reason {
         match reason {
-            ir::Reason::Liveness {dst_loc, src_loc, dst_liveness, src_liveness} => {
+            ir::Reason::Liveness {
+                dst_loc,
+                src_loc,
+                dst_liveness,
+                src_liveness,
+            } => {
                 let dst_loc = dst_loc.clone();
                 let src_loc = src_loc.clone();
-                let dst_liveness = self.range(underlying,pass, dst_liveness);
+                let dst_liveness = self.range(underlying, pass, dst_liveness);
                 let src_liveness = self.range(underlying, pass, src_liveness);
-                ir::Reason::Liveness {dst_loc, src_loc, dst_liveness, src_liveness}
-            },
-            _ => reason.clone()
+                ir::Reason::Liveness {
+                    dst_loc,
+                    src_loc,
+                    dst_liveness,
+                    src_liveness,
+                }
+            }
+            _ => reason.clone(),
         }
     }
 
@@ -210,11 +220,7 @@ impl MonoSig {
             ir::ParamOwner::Bundle(port) => {
                 //let new_port = self.port_map.get(&(None, *port)).unwrap();
                 let new_idx = self.bundle_param(underlying, pass, param, *port); // fix this, need to look up port
-                //println!("generated {new_idx} from param owned by underling port {port}");
                 new_idx
-                // let ir::Param {owner, info} = underlying.get(param);
-                // let info = self.info(underlying, info);
-                // self.base.add(ir::Param {owner: owner.clone(), info})
             }
             ir::ParamOwner::Loop => {
                 let new_param = ir::Param {
@@ -264,15 +270,13 @@ impl MonoSig {
                 //println!("underlying param {p}");
                 self.param(underlying, pass, p).expr(&mut self.base)
             }
-            ir::Expr::Concrete(n) => {
-                self.base.num(n)
-            },
+            ir::Expr::Concrete(n) => self.base.num(n),
             ir::Expr::Bin { op, lhs, rhs } => {
                 let lhs = self.expr(underlying, pass, lhs);
                 let rhs = self.expr(underlying, pass, rhs);
                 let binop = ir::Expr::Bin { op, lhs, rhs };
                 self.base.add(binop)
-            },
+            }
             ir::Expr::Fn { op, args } => {
                 let args = args
                     .iter()
@@ -534,7 +538,8 @@ impl MonoSig {
 
         let ir::Liveness { idx, len, range } = live;
 
-        let mono_liveness_idx = self.bundle_param(underlying, pass, *idx, new_port);
+        let mono_liveness_idx =
+            self.bundle_param(underlying, pass, *idx, new_port);
 
         let mut mono_liveness = ir::Liveness {
             idx: mono_liveness_idx,
@@ -548,7 +553,8 @@ impl MonoSig {
         // the param we replaced
         let mono_width = self.expr(underlying, pass, *width);
         mono_liveness.len = self.expr(underlying, pass, mono_liveness.len);
-        mono_liveness.len = self.base.bin(self.base.get(mono_liveness.len).clone());
+        mono_liveness.len =
+            self.base.bin(self.base.get(mono_liveness.len).clone());
         mono_liveness.range =
             self.range(underlying, pass, &mono_liveness.range);
 

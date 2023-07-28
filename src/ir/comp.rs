@@ -502,38 +502,26 @@ impl Component {
     pub fn bin(&mut self, expr: Expr) -> ExprIdx {
         match expr {
             Expr::Concrete(_) => self.add(expr),
-            Expr::Bin {op, lhs, rhs} => {
+            Expr::Bin { op, lhs, rhs } => {
                 let lhs = self.bin(self.get(lhs).clone());
                 let lhs = lhs.as_concrete(self).unwrap();
                 let rhs = self.bin(self.get(rhs).clone());
                 let rhs = rhs.as_concrete(self).unwrap();
                 match op {
-                    ast::Op::Add => {
-                        self.add(Expr::Concrete(lhs + rhs))
-                    },
-                    ast::Op::Mul => {
-                        self.add(Expr::Concrete(lhs * rhs))
-                    },
-                    ast::Op::Sub => {
-                        self.add(Expr::Concrete(lhs - rhs))
-                    },
-                    ast::Op::Div => {
-                        self.add(Expr::Concrete(lhs / rhs))
-                    },
-                    ast::Op::Mod => {
-                        self.add(Expr::Concrete(lhs % rhs))
-                    },
+                    ast::Op::Add => self.add(Expr::Concrete(lhs + rhs)),
+                    ast::Op::Mul => self.add(Expr::Concrete(lhs * rhs)),
+                    ast::Op::Sub => self.add(Expr::Concrete(lhs - rhs)),
+                    ast::Op::Div => self.add(Expr::Concrete(lhs / rhs)),
+                    ast::Op::Mod => self.add(Expr::Concrete(lhs % rhs)),
                 }
-            },
+            }
             Expr::Param(pidx) => {
                 self.add(expr)
                 // self.internal_error(format!(
                 //     "When evaluating a binop expression, there should not be any parameters in it; found {pidx}")
                 // )
-            },
-            Expr::Fn {..} => {
-                self.func(expr)
             }
+            Expr::Fn { .. } => self.func(expr),
         }
     }
 }

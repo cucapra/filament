@@ -104,7 +104,6 @@ impl ExprIdx {
     }
 
     pub fn pow2(self, ctx: &mut impl Ctx<Expr>) -> Self {
-
         ctx.add(Expr::Fn {
             op: ast::UnFn::Pow2,
             args: vec![self],

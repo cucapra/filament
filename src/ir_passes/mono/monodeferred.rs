@@ -206,13 +206,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let mono_events =
             events.iter().map(|e| self.eventbind(e, inv)).collect_vec();
 
-        for ev in mono_events.clone() {
-            let ir::EventBind { arg, .. } = ev;
-            // println!("{mono_inv_idx} has arg {arg}");
-            let ir::Time { event, offset } = self.monosig.base.get(arg);
-            // println!("{arg} has {event} + {offset}");
-        }
-
         // Build the new invoke, add it to self.base
         let mut mono_inv = self.monosig.base.get_mut(mono_inv_idx);
 
