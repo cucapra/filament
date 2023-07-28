@@ -1,5 +1,5 @@
 use super::Monomorphize;
-use crate::ir::{self, Ctx, Foreign, MutCtx, Subst};
+use crate::ir::{self, Ctx, Foreign, MutCtx};
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -20,10 +20,6 @@ pub struct MonoSig {
     pub inv_map: HashMap<(ir::InvIdx, u32), ir::InvIdx>,
     /// Mapping from underlying invokes to how many times we've seen it so far
     pub inv_counter: HashMap<ir::InvIdx, u32>,
-    // /// Mapping of underlying ports (and how many times we've seen it) to base invokes
-    // pub port_counter_map :HashMap<(ir::PortIdx, u32), ir::PortIdx>,
-    // /// Makking from underlying ports to how many times we've seen it so far
-    // pub port_counter: HashMap<ir::PortIdx, u32>,
     /// Mapping of underlying instances (and how many times we've seen it) to base instances
     pub inst_map: HashMap<(ir::InstIdx, u32), ir::InstIdx>,
     /// Maapping from underlying instances to how many times we've seen it so far
@@ -36,13 +32,13 @@ pub struct MonoSig {
     pub event_map: HashMap<ir::EventIdx, ir::EventIdx>,
     /// Times
     pub time_map: HashMap<ir::TimeIdx, ir::TimeIdx>,
-    /// Ports - base inv, underlying port to new port
+    /// Ports - (base inv, underlying port) -> base port
     pub port_map: HashMap<(Option<ir::InvIdx>, ir::PortIdx), ir::PortIdx>,
     /// Exprs
     pub expr_map: HashMap<ir::ExprIdx, ir::ExprIdx>,
     /// Props
     pub prop_map: HashMap<ir::PropIdx, ir::PropIdx>,
-    /// Params - underlying param to new param
+    /// Params - underlying param -> new Param
     pub param_map: HashMap<ir::ParamIdx, ir::ParamIdx>,
     /// Bundle params - new port to new param
     pub bundle_param_map: HashMap<ir::PortIdx, ir::ParamIdx>,
@@ -189,8 +185,8 @@ impl MonoSig {
                 dst_liveness,
                 src_liveness,
             } => {
-                let dst_loc = dst_loc.clone();
-                let src_loc = src_loc.clone();
+                let dst_loc = *dst_loc;
+                let src_loc = *src_loc;
                 let dst_liveness = self.range(underlying, pass, dst_liveness);
                 let src_liveness = self.range(underlying, pass, src_liveness);
                 ir::Reason::Liveness {
@@ -218,12 +214,8 @@ impl MonoSig {
         let ir::Param { owner, info, .. } = underlying.get(param);
 
         match owner {
-            ir::ParamOwner::Bundle(port) => {
-                // println!("called bundle_param() on {param}, with underlying {port}");
-                // let new_idx = self.bundle_param(underlying, pass, param, *port); // fix this, need to look up port
-                // println!("generated {new_idx}");
-                // new_idx
-                panic!("aaah")
+            ir::ParamOwner::Bundle(_) => {
+                unreachable!("Bundle params should only be generated when visiting ports")
             }
             ir::ParamOwner::Loop => {
                 let new_param = ir::Param {
@@ -255,22 +247,18 @@ impl MonoSig {
         // return its binding
         let e = underlying.get(expr);
         if let ir::Expr::Param(p) = e {
-            //println!("looking up underlying {p}, in underlying {expr}");
             if let Some(n) = self.binding.get(p) {
-                //println!("got {n}");
                 let new_idx = self.base.num(*n);
                 return new_idx;
             }
         };
         // Check if we've already rewritten this expression
-        // println!("looking up {expr} in underlying now");
         // if let Some(idx) = self.expr_map.get(&expr) {
         //     return *idx;
         // };
         // The expression is neither bound nor rewritten, so we need to rewrite it
         let new_idx = match e.clone() {
             ir::Expr::Param(p) => {
-                //println!("underlying param {p}");
                 self.param(underlying, pass, p).expr(&mut self.base)
             }
             ir::Expr::Concrete(n) => self.base.num(n),
@@ -289,7 +277,6 @@ impl MonoSig {
                 self.base.func(func)
             }
         };
-        //println!("inserted {expr} -> {new_idx} in expr_map");
         self.expr_map.insert(expr, new_idx);
         new_idx
     }
@@ -302,7 +289,6 @@ impl MonoSig {
         range: &ir::Range,
     ) -> ir::Range {
         let ir::Range { start, end } = range;
-        //println!("Range: [{start}, {end}] binding: {:?}", self.binding);
         let start = self.time(underlying, pass, *start);
         let end = self.time(underlying, pass, *end);
         ir::Range { start, end }
@@ -314,10 +300,9 @@ impl MonoSig {
         pass: &mut Monomorphize,
         time: ir::TimeIdx,
     ) -> ir::TimeIdx {
-        // if let Some(idx) = self.time_map.get(&time) {
-        //     return *idx;
-        // };
-        //println!("Time: {:?} binding: {:?}", time, self.binding);
+        if let Some(idx) = self.time_map.get(&time) {
+            return *idx;
+        };
 
         let ir::Time { event, offset } = underlying.get(time);
 
@@ -506,13 +491,7 @@ impl MonoSig {
         };
 
         if let Some(idx) = self.port_map.get(&(inv, port)) {
-            // if inv.is_some() {
-            //     println!("found ({}, {port}) -> {idx} in port_map", inv.unwrap());
-            // } else {
-            //     println!("found (None, {port}) -> {idx} in port_map");
-            // }
-            pass.port_map
-                .insert((comp, conc_params.clone(), port), *idx);
+            pass.port_map.insert((comp, conc_params, port), *idx);
             return *idx;
         };
 
@@ -526,15 +505,11 @@ impl MonoSig {
             info,
         });
 
-        // let port_occurrences = self.port_counter.get(&port).unwrap();
-        // self.port_counter_map.insert((port, *port_occurrences), new_port);
-
         // local port map
         self.port_map.insert((inv, port), new_port);
 
         // pass port map
-        pass.port_map
-            .insert((comp, conc_params.clone(), port), new_port);
+        pass.port_map.insert((comp, conc_params, port), new_port);
 
         // Find the new port owner
         let mono_owner = self.find_new_portowner(underlying, pass, owner);
@@ -551,9 +526,6 @@ impl MonoSig {
         };
 
         self.bundle_param_map.insert(new_port, mono_liveness_idx);
-
-        // After making the new binding, re-monomorphize other parts of len in case they contained
-        // the param we replaced
         let mono_width = self.expr(underlying, pass, *width);
         mono_liveness.len = self.expr(underlying, pass, mono_liveness.len);
         mono_liveness.len =

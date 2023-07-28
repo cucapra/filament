@@ -19,13 +19,12 @@ impl MonoDeferred<'_, '_> {
         underlying: &ir::Component,
         pass: &mut Monomorphize,
     ) {
-        // println!("starting sig");
         // Events can be recursive, so do a pass over them to generate the new idxs now
         // and then fill them in later
         let binding = monosig.binding.inner();
         let conc_params = binding
             .iter()
-            .filter(|(p, n)| underlying.get(*p).is_sig_owned())
+            .filter(|(p, _)| underlying.get(*p).is_sig_owned())
             .map(|(_, n)| *n)
             .collect_vec();
         for (idx, event) in underlying.events().iter() {
@@ -48,7 +47,6 @@ impl MonoDeferred<'_, '_> {
         }
 
         monosig.interface(&underlying.src_info);
-        // println!("finished sig");
     }
 }
 
@@ -63,7 +61,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 self.monosig.base.cmds.push(cmd);
             }
         }
-        for (idx, prop) in self.underlying.props().iter() {
+        for idx in self.underlying.props().idx_iter() {
             self.prop(idx);
         }
     }
@@ -162,11 +160,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     }
     /// Monomorphize the `inv` (owned by self.underlying) and add it to `self.base`, and return the corresponding index
     fn invoke(&mut self, inv: ir::InvIdx) -> ir::InvIdx {
-        // println!(
-        //     "handling {inv} for underlying {}",
-        //     self.monosig.underlying_idx
-        // );
-        // Count another time that we've seen inv
+        // Count another time that we've seen the underlying invoke
         self.insert_inv(inv);
 
         // Need to monomorphize all parts of the invoke
@@ -320,9 +314,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     fn access(&mut self, acc: &ir::Access) -> ir::Access {
         let ir::Access { port, start, end } = acc;
 
-        // println!("Access start: {:?} binding: {:?}", start, self.monosig.binding);
-        // println!("Access end: {:?} binding: {:?}", end, self.monosig.binding);
-
         let port = self.monosig.port(self.underlying, self.pass, *port);
 
         // generate end expression
@@ -367,8 +358,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         while i < bound {
             self.monosig.binding.insert(*index, i);
-            // println!("========================");
-            // println!("curr binding: {:?}", self.monosig.binding);
             for cmd in body.iter() {
                 let cmd = self.command(cmd);
                 self.monosig.base.cmds.extend(cmd);

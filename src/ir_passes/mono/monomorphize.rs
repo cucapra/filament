@@ -91,7 +91,7 @@ impl<'ctx> Monomorphize<'ctx> {
         let base = self.ctx.get_mut(new_comp);
 
         // make a MonoSig
-        let mut monosig = MonoSig::new(base, underlying, comp, params.clone());
+        let mut monosig = MonoSig::new(base, underlying, comp, params);
 
         // the component whose signature we want to monomorphize
         let underlying = self.old.get(comp);
