@@ -1,0 +1,10 @@
+import "primitives/core.fil";
+
+comp main<G:4>(
+    @[G, G+3] in:32,
+) -> (
+    @[G+3, G+4] out:32
+) {
+    shift := new Shift[32, 3]<G>(in);
+    out = shift.out;
+}
