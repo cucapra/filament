@@ -146,10 +146,13 @@ macro_rules! info_cast {
     ($class:tt, $name:ident) => {
         impl Info {
             pub fn $name(&self) -> Option<&$class> {
-                if let Self::$class(v) = self {
-                    Some(v)
-                } else {
-                    None
+                match self {
+                    Self::$class(v) => Some(v),
+                    Self::Empty(_) => None,
+                    _ => unreachable!(
+                        "Incorrect info type for {}.",
+                        stringify!($class)
+                    ),
                 }
             }
         }
