@@ -352,7 +352,7 @@ impl Visitor for Discharge {
         match self.check_valid(f.prop, comp) {
             None => {
                 let reason = comp.add(
-                    ir::Reason::misc(
+                    ir::info::Reason::misc(
                         "Discharged assumption",
                         utils::GPosIdx::UNKNOWN,
                     )
@@ -363,9 +363,7 @@ impl Visitor for Discharge {
                 )
             }
             Some(assign) => {
-                let ir::Info::Assert(reason) = comp.get(f.reason) else {
-                    unreachable!("expected assert reason")
-                };
+                let &ir::info::Assert(ref reason) = comp.get(f.reason).into();
                 let mut diag = reason.diag(comp);
                 if show_models {
                     diag = reason.diag(comp).with_notes(vec![format!(

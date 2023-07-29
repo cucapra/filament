@@ -71,22 +71,23 @@ impl BundleElim {
         }
 
         // creates an empty info struct for these new ports
-        let info = comp.add(Info::Empty);
+        let info = comp.add(Info::empty());
 
         // create a single port for each element in the bundle.
         let ports = (0..len)
             .map(|i| {
                 // binds the index parameter to the current bundle index
-                let binding: Bind<_, _> = Bind::new([(idx, i)]);
+                let binding: Bind<_, _> =
+                    Bind::new([(idx, comp.add(Expr::Concrete(i)))]);
 
                 // calculates the offsets based on this binding and generates new start and end times.
-                let offset = Subst::new(start.offset, &binding).resolve(comp);
+                let offset = Subst::new(start.offset, &binding).apply(comp);
                 let start = comp.add(Time {
                     event: start.event,
                     offset,
                 });
 
-                let offset = Subst::new(end.offset, &binding).resolve(comp);
+                let offset = Subst::new(end.offset, &binding).apply(comp);
                 let end = comp.add(Time {
                     event: end.event,
                     offset,
@@ -203,7 +204,7 @@ impl BundleElim {
                 Command::Connect(Connect {
                     src: Access::port(src, comp),
                     dst: Access::port(dst, comp),
-                    info: comp.add(Info::Empty),
+                    info: comp.add(Info::empty()),
                 })
             })
             .collect()
