@@ -98,10 +98,10 @@ impl DisplayCtx<ir::Port> for ir::Component {
         let ir::Info::Port { name, .. } = self.get(port.info) else {
             unreachable!("Expected port info")
         };
+
+        let name = format!("{idx}({name})");
         match port.owner {
-            ir::PortOwner::Local | ir::PortOwner::Sig { .. } => {
-                name.to_string()
-            }
+            ir::PortOwner::Local | ir::PortOwner::Sig { .. } => name,
             ir::PortOwner::Inv { inv, .. } => {
                 format!("{}.{}", self.display(inv), name)
             }

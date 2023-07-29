@@ -12,6 +12,7 @@ use crate::ir::{
 // Eliminates bundle ports by breaking them into multiple len-1 ports, and eliminates local ports altogether.
 pub struct BundleElim {
     context: DenseIndexInfo<Component, HashMap<PortIdx, Vec<PortIdx>>>,
+    local_map: HashMap<(PortIdx, usize), (PortIdx, usize)>,
 }
 
 impl BundleElim {
@@ -25,10 +26,23 @@ impl BundleElim {
         let comp = ctx.get(cidx);
 
         let Access { port, start, end } = access;
-
         let start = start.as_concrete(comp).unwrap() as usize;
         let end = end.as_concrete(comp).unwrap() as usize;
-        self.context[cidx][port][start..end].to_vec()
+
+        log::debug!("Getting port {}[{}..{}) from context.", port, start, end);
+
+        (start..end)
+            .map(|idx| {
+                let mut group = (*port, idx);
+                let (port, idx) = loop {
+                    match self.local_map.get(&group) {
+                        Some(&g) => group = g,
+                        None => break group,
+                    }
+                };
+                self.context[cidx][&port][idx]
+            })
+            .collect()
     }
 
     /// Compiles a port by breaking it into multiple len-1 ports.
@@ -164,6 +178,11 @@ impl BundleElim {
     ) -> Vec<Command> {
         let Connect { src, dst, .. } = connect;
 
+        if !self.context.get(cidx).contains_key(&dst.port) {
+            // we are writing to a local port here.
+            return vec![];
+        }
+
         // get the list of ports associated with each access in the connect.
         let src = self.get(src, cidx, ctx);
         let dst = self.get(dst, cidx, ctx);
@@ -199,17 +218,50 @@ impl BundleElim {
             self.context.get_mut(cidx).extend(pl);
         }
 
-        // compile local ports and adds them to the context
-        for idx in comp
-            .ports()
+        self.local_map = comp
+            .cmds
+            .iter()
+            .filter_map(|cmd| {
+                let Command::Connect(con) = cmd else { return None };
+                let Connect { src, dst, .. } = con;
+
+                // need to check validity here because already deleted ports are still in the connect commands
+                if comp.ports().is_valid(dst.port)
+                    && comp.get(dst.port).is_local()
+                {
+                    let dst_start =
+                        dst.start.as_concrete(comp).unwrap() as usize;
+                    let dst_end = dst.end.as_concrete(comp).unwrap() as usize;
+                    let src_start =
+                        src.start.as_concrete(comp).unwrap() as usize;
+                    let src_end = src.end.as_concrete(comp).unwrap() as usize;
+                    assert!(
+                        dst_end - dst_start == src_end - src_start,
+                        "Mismatched access lengths for connect `{}`",
+                        Printer::new(comp).connect_str(con)
+                    );
+
+                    Some(
+                        (dst_start..dst_end)
+                            .zip(src_start..src_end)
+                            .map(|(d, s)| ((dst.port, d), (src.port, s))),
+                    )
+                } else {
+                    None
+                }
+            })
+            .flatten()
+            .collect();
+
+        log::debug!("Local Map: {:?}", self.local_map);
+
+        comp.ports()
             .iter()
             .filter(|(_, port)| port.is_local())
             .map(|(idx, _)| idx)
-            .collect_vec()
-        {
-            let pl = self.port(idx, comp);
-            self.context.get_mut(cidx).insert(idx, pl);
-        }
+            .collect_vec() // collect here to remove ownership problems
+            .into_iter()
+            .for_each(|idx| comp.delete(idx)); // invalidate these ports
 
         let cmds = comp
             .cmds
