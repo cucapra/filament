@@ -510,6 +510,7 @@ impl<'prog> BuildCtx<'prog> {
         let (binding, component) = self.inst_to_sig.get(idx).clone();
         let facts = self
             .sigs
+            .unwrap()
             .get(&component)
             .unwrap()
             .param_cons
@@ -625,7 +626,7 @@ impl<'prog> BuildCtx<'prog> {
         let inv = self.get_inv(name.copy());
         let inst = inv.inst(&self.comp);
         let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
-        let sig = self.sigs.get(&comp).unwrap();
+        let sig = self.sigs.unwrap().get(&comp).unwrap();
         // foreign component being invoked
         let foreign_comp = inv.comp(&self.comp);
 
@@ -675,7 +676,8 @@ impl<'prog> BuildCtx<'prog> {
             });
 
             let base = ir::Foreign::new(
-                self.ctx
+                self.sigs
+                    .unwrap()
                     .comps
                     .get(foreign_comp)
                     .inputs()
@@ -859,7 +861,7 @@ impl<'prog> BuildCtx<'prog> {
 
 pub fn transform(ns: ast::Namespace) -> ir::Context {
     // Walk over signatures and compile signatures to build a SigMap
-    let (builders, sig_map) = ns
+    let (builders, sig_map): (Vec<BuildCtx>, SigMap) = ns
         .externals()
         .map(|(_, sig)| (sig, true))
         .chain(ns.components.iter().map(|comp| (&comp.sig, false)))
@@ -869,14 +871,13 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
             let mut cmds = builder.sig(sig);
             cmds.extend(builder.port_assumptions());
             builder.comp.cmds = cmds;
-            (builder, (sig.name, (idx, builder.comp.into())))
+            (builder, (*sig.name, Sig::new(idx, &builder.comp, sig)))
         })
         .unzip();
 
-    let sig_map: SigMap = sig_map.collect();
-
-    let builders = builders.for_each(|mut builder| {
-        builder.sigs = &sig_map;
+    // Add the signature map to each builder
+    builders.iter_mut().for_each(|mut builder| {
+        builder.sigs = Some(&sig_map);
     });
 
     let mut ctx = ir::Context {

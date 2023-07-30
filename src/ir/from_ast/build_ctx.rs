@@ -1,10 +1,11 @@
 use super::ScopeMap;
-use crate::ast::{self, Id};
+use crate::ast::{self, Id, Signature};
 use crate::ir::{
     self, CompIdx, Component, Ctx, DenseIndexInfo, EventIdx, ParamIdx, PortIdx,
 };
 use crate::utils;
 use std::collections::HashMap;
+use std::default;
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -14,20 +15,32 @@ use std::rc::Rc;
 /// the signature.
 pub struct Sig {
     pub idx: CompIdx,
-    pub params: Vec<ParamIdx>,
-    pub events: Vec<EventIdx>,
-    pub inputs: Vec<PortIdx>,
-    pub outputs: Vec<PortIdx>,
+    pub idx_params: Vec<ParamIdx>,
+    pub idx_events: Vec<EventIdx>,
+    pub idx_inputs: Vec<PortIdx>,
+    pub idx_outputs: Vec<PortIdx>,
+    pub params: Vec<ast::ParamBind>,
+    pub events: Vec<ast::EventBind>,
+    pub inputs: Vec<ast::Loc<ast::PortDef>>,
+    pub outputs: Vec<ast::PortDef>,
+    pub param_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Expr>>>,
+    pub event_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Time>>>,
 }
 
-impl From<(usize, &Component)> for Sig {
-    fn from((idx, comp): (usize, &Component)) -> Self {
+impl Sig {
+    pub fn new(idx: usize, comp: &Component, sig: &Signature) -> Self {
         Self {
             idx: CompIdx::new(idx),
-            params: comp.params().idx_iter().collect(),
-            events: comp.events().idx_iter().collect(),
-            inputs: comp.inputs().map(|(idx, _)| idx).collect(),
-            outputs: comp.outputs().map(|(idx, _)| idx).collect(),
+            idx_params: comp.params().idx_iter().collect(),
+            idx_events: comp.events().idx_iter().collect(),
+            idx_inputs: comp.inputs().map(|(idx, _)| idx).collect(),
+            idx_outputs: comp.outputs().map(|(idx, _)| idx).collect(),
+            params: sig.params.iter().map(|p| p.clone().take()).collect(),
+            inputs: sig.inputs().cloned().collect(),
+            outputs: sig.outputs().map(|p| p.clone().take()).collect(),
+            events: sig.events.iter().map(|e| e.clone().take()).collect(),
+            param_cons: sig.param_constraints.clone(),
+            event_cons: sig.event_constraints.clone(),
         }
     }
 }
@@ -37,6 +50,7 @@ impl From<(usize, &Component)> for Sig {
 /// Mapping from names of component to [Sig].
 pub struct SigMap {
     map: HashMap<Id, Sig>,
+    rev_map: DenseIndexInfo<Component, Id>,
 }
 
 impl SigMap {
@@ -55,9 +69,20 @@ impl std::ops::Index<&Id> for SigMap {
 
 impl std::iter::FromIterator<(Id, Sig)> for SigMap {
     fn from_iter<T: IntoIterator<Item = (Id, Sig)>>(iter: T) -> Self {
-        Self {
-            map: iter.into_iter().collect(),
+        let mut default = Self::default();
+
+        for (id, sig) in iter.into_iter() {
+            default.rev_map.insert(sig.idx, id.clone());
+            default.map.insert(id, sig);
         }
+
+        default
+    }
+}
+
+impl std::iter::Extend<(Id, Sig)> for SigMap {
+    fn extend<I: IntoIterator<Item = (Id, Sig)>>(&mut self, iter: I) {
+        self.map.extend(iter);
     }
 }
 
