@@ -29,8 +29,6 @@ impl BundleElim {
         let start = start.as_concrete(comp).unwrap() as usize;
         let end = end.as_concrete(comp).unwrap() as usize;
 
-        log::debug!("Getting port {}[{}..{}) from context.", port, start, end);
-
         (start..end)
             .map(|idx| {
                 let mut group = (*port, idx);
@@ -219,6 +217,7 @@ impl BundleElim {
             self.context.get_mut(cidx).extend(pl);
         }
 
+        // generates the local map for this component
         self.local_map = comp
             .cmds
             .iter()
@@ -256,6 +255,7 @@ impl BundleElim {
 
         log::debug!("Local Map: {:?}", self.local_map);
 
+        // delete local ports
         comp.ports()
             .iter()
             .filter(|(_, port)| port.is_local())
