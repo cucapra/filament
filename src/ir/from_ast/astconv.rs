@@ -865,7 +865,10 @@ impl<'prog> BuildCtx<'prog> {
 pub fn transform(ns: ast::Namespace) -> ir::Context {
     // creates an empty context with the main index.
     let mut ctx = ir::Context {
-        entrypoint: ns.main_idx().map(crate::utils::Idx::new),
+        entrypoint: ns
+            .main_idx()
+            // index main component after all externals
+            .map(|idx| crate::utils::Idx::new(ns.externals().count() + idx)),
         ..Default::default()
     };
 
