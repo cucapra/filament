@@ -94,7 +94,7 @@ impl DisplayCtx<ir::Port> for ir::Component {
         let name = self
             .get(port.info)
             .as_port()
-            .map_or(format!("{idx}"), |p| format!("{idx}({})", p.name));
+            .map_or(format!("{idx}"), |p| format!("{}", p.name));
         match port.owner {
             ir::PortOwner::Local | ir::PortOwner::Sig { .. } => name,
             ir::PortOwner::Inv { inv, .. } => {
