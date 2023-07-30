@@ -4,8 +4,8 @@ use itertools::Itertools;
 
 use crate::ir::{
     Access, Bind, Command, CompIdx, Component, Connect, Context, Ctx,
-    DenseIndexInfo, Expr, Foreign, InvIdx, Invoke, Liveness, MutCtx, Port,
-    PortIdx, PortOwner, Printer, Range, Subst, Time,
+    DenseIndexInfo, DisplayCtx, Expr, Foreign, InvIdx, Invoke, Liveness,
+    MutCtx, Port, PortIdx, PortOwner, Printer, Range, Subst, Time,
 };
 
 #[derive(Default)]
@@ -42,6 +42,8 @@ impl BundleElim {
         } = comp.get(pidx).clone();
 
         let Liveness { idx, len, range } = live;
+
+        log::debug!("Compiling {}", comp.display(pidx));
 
         let start = comp.get(range.start).clone();
         let end = comp.get(range.end).clone();

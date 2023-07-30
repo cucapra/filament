@@ -2,7 +2,8 @@
 use super::build_ctx::InvPort;
 use super::{BuildCtx, Sig, SigMap};
 use crate::ir::{
-    Cmp, Ctx, EventIdx, ExprIdx, MutCtx, ParamIdx, PortIdx, PropIdx, TimeIdx,
+    Cmp, Ctx, EventIdx, ExprIdx, InterfaceSrc, MutCtx, ParamIdx, PortIdx,
+    PropIdx, TimeIdx,
 };
 use crate::utils::GPosIdx;
 use crate::{ast, ir, utils::Binding};
@@ -32,9 +33,9 @@ impl<'prog> BuildCtx<'prog> {
             component,
             bindings,
         } = inst;
-        let comp = self.sigs.get(component).unwrap();
+        let comp = self.sigs.unwrap().get(component).unwrap();
         let binding = self.param_binding(
-            comp.params.clone(),
+            comp.raw_params.clone(),
             bindings.iter().map(|e| e.inner()).cloned().collect_vec(),
         );
         let inst = ir::Instance {
@@ -86,22 +87,22 @@ impl<'prog> BuildCtx<'prog> {
 
         // The inputs
         let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
-        let sig = self.sigs.get(&comp).unwrap();
+        let sig = self.sigs.unwrap().get(&comp).unwrap();
 
         // Event bindings
         let event_binding = self.event_binding(
-            sig.events.clone(),
+            sig.raw_events.clone(),
             abstract_vars.iter().map(|v| v.inner().clone()),
         );
 
         // Define the output port from the invoke
-        for (idx, p) in sig.outputs.clone().into_iter().enumerate() {
+        for (idx, p) in sig.raw_outputs.clone().into_iter().enumerate() {
             let resolved = p
                 .resolve_exprs(&param_binding)
                 .resolve_event(&event_binding);
 
             let base = ir::Foreign::new(
-                self.ctx.get(foreign_comp).outputs().nth(idx).unwrap().0,
+                self.sigs.unwrap().get_idx(foreign_comp).unwrap().outputs[idx],
                 foreign_comp,
             );
 
@@ -475,27 +476,27 @@ impl<'prog> BuildCtx<'prog> {
             // XXX(rachit): Unnecessary clone.
             self.port(port.inner().clone(), ir::PortOwner::sig_in());
         }
-        for (name, width) in sig.unannotated_ports {
-            self.comp.add(ir::Info::unannotated_port(name, width));
+        for (name, width) in &sig.unannotated_ports {
+            self.comp.add(ir::Info::unannotated_port(*name, *width));
         }
         // Constraints defined by the signature
         let mut cons = Vec::with_capacity(
             sig.param_constraints.len() + sig.event_constraints.len(),
         );
-        for ec in sig.event_constraints {
+        for ec in &sig.event_constraints {
             let info = self.comp.add(ir::Info::assert(ir::Reason::misc(
                 "Signature assumption",
                 ec.pos(),
             )));
-            let prop = self.event_cons(ec.take());
+            let prop = self.event_cons(ec.inner().clone());
             cons.extend(self.comp.assume(prop, info));
         }
-        for pc in sig.param_constraints {
+        for pc in &sig.param_constraints {
             let info = self.comp.add(ir::Info::assert(ir::Reason::misc(
                 "Signature assumption",
                 pc.pos(),
             )));
-            let prop = self.expr_cons(pc.take());
+            let prop = self.expr_cons(pc.inner().clone());
             cons.extend(self.comp.assume(prop, info));
         }
 
@@ -632,7 +633,7 @@ impl<'prog> BuildCtx<'prog> {
 
         // Event bindings
         let event_binding = self.event_binding(
-            sig.events.iter().cloned(),
+            sig.raw_events.iter().cloned(),
             abstract_vars.iter().map(|v| v.inner().clone()),
         );
 
@@ -665,7 +666,7 @@ impl<'prog> BuildCtx<'prog> {
         let mut connects = Vec::with_capacity(sig.inputs.len());
 
         for (idx, (p, src)) in
-            sig.inputs.clone().into_iter().zip(srcs).enumerate()
+            sig.raw_inputs.clone().into_iter().zip(srcs).enumerate()
         {
             let info = self
                 .comp
@@ -676,14 +677,7 @@ impl<'prog> BuildCtx<'prog> {
             });
 
             let base = ir::Foreign::new(
-                self.sigs
-                    .unwrap()
-                    .comps
-                    .get(foreign_comp)
-                    .inputs()
-                    .nth(idx)
-                    .unwrap()
-                    .0,
+                self.sigs.unwrap().get_idx(foreign_comp).unwrap().inputs[idx],
                 foreign_comp,
             );
 
@@ -714,7 +708,7 @@ impl<'prog> BuildCtx<'prog> {
         }
 
         // Events defined by the invoke
-        sig.events
+        sig.raw_events
             .iter()
             .zip_longest(abstract_vars.iter())
             .map(|pair| match pair {
@@ -848,6 +842,7 @@ impl<'prog> BuildCtx<'prog> {
             ir::Reason::misc("bundle index is within range", GPosIdx::UNKNOWN)
                 .into(),
         );
+
         for (idx, len) in ports {
             let idx = idx.expr(&mut self.comp);
             let start = idx.gte(self.comp.num(0), &mut self.comp);
@@ -860,76 +855,65 @@ impl<'prog> BuildCtx<'prog> {
 }
 
 pub fn transform(ns: ast::Namespace) -> ir::Context {
-    // Walk over signatures and compile signatures to build a SigMap
-    let (builders, sig_map): (Vec<BuildCtx>, SigMap) = ns
-        .externals()
-        .map(|(_, sig)| (sig, true))
-        .chain(ns.components.iter().map(|comp| (&comp.sig, false)))
-        .enumerate()
-        .map(|(idx, (sig, is_ext))| {
-            let builder = BuildCtx::new(ir::Component::new(true));
-            let mut cmds = builder.sig(sig);
-            cmds.extend(builder.port_assumptions());
-            builder.comp.cmds = cmds;
-            (builder, (*sig.name, Sig::new(idx, &builder.comp, sig)))
-        })
-        .unzip();
-
-    // Add the signature map to each builder
-    builders.iter_mut().for_each(|mut builder| {
-        builder.sigs = Some(&sig_map);
-    });
-
+    // creates an empty context with the main index.
     let mut ctx = ir::Context {
         entrypoint: ns.main_idx().map(crate::utils::Idx::new),
         ..Default::default()
     };
-    // assumes that components are inserted in definition order here.
-    for (file, exts) in ns.externs {
-        for ext in exts {
-            let idx = sig_map.get(&ext.name).unwrap().idx;
-            log::debug!("Converting external {}: {}", ext.name, idx);
-            let ir_ext = BuildCtx::external(&ctx, ext);
-            ctx.comps.checked_add(idx, ir_ext);
-            ctx.externals.entry(file.clone()).or_default().push(idx);
-        }
-    }
 
-    // First, define the signature of every component
-    let builders = ns
-        .components
+    // Walk over signatures and compile signatures to build a SigMap
+    let (mut builders, sig_map): (Vec<_>, SigMap) = ns
+        // pull signatures out of externals
+        .externs
         .into_iter()
-        .enumerate()
-        .map(|(cidx, comp)| {
-            let idx = sig_map.get(&comp.sig.name).unwrap().idx;
-
-            let (builder, cmds) = BuildCtx::declare_comp(
-                &ctx,
-                comp,
-                &sig_map,
-                ctx.entrypoint.map(|idx| cidx == idx.get()).unwrap_or(false),
-            );
-
-            (idx, builder, cmds)
+        .flat_map(|(name, comps)| {
+            comps.into_iter().map(move |comp| (name.clone(), comp))
         })
-        .collect_vec();
+        .map(|(name, sig)| (Some(name), sig, None))
+        // add signatures of components as well as their command bodies
+        .chain(
+            ns.components
+                .into_iter()
+                .map(|comp| (None, comp.sig, Some(comp.body))),
+        )
+        .enumerate()
+        .map(|(idx, (file, sig, body))| {
+            let idx = ir::CompIdx::new(idx);
+            let mut builder = BuildCtx::new(ir::Component::new(body.is_none()));
+            // enable source information saving if this is main or an external.
+            if body.is_none() || Some(idx) == ctx.entrypoint {
+                builder.comp.src_info = Some(InterfaceSrc::new(sig.name.copy()))
+            }
+            // add the file to the externals map if it exists
+            if let Some(file) = file {
+                ctx.externals.entry(file).or_default().push(idx);
+            }
+
+            // compile the signature
+            let mut cmds = builder.sig(&sig);
+            cmds.extend(builder.port_assumptions());
+            builder.comp.cmds = cmds;
+
+            let irsig = Sig::new(idx, &builder.comp, &sig);
+            ((idx, builder, body), (sig.name.take(), irsig))
+        })
+        .unzip();
+
+    // Add the signature map to each builder
+    builders.iter_mut().for_each(|(_, builder, _)| {
+        builder.sigs = Some(&sig_map);
+    });
 
     // Compiles and adds all the commands here
     // Need to do this before adding all the components because each builder borrows the context immutably
-    let comps = builders
-        .into_iter()
-        .map(|(idx, mut builder, cmds)| {
+    builders.into_iter().for_each(|(idx, mut builder, cmds)| {
+        if let Some(cmds) = cmds {
             let cmds = builder.commands(cmds);
-            let mut comp = builder.comp;
-            comp.cmds.extend(cmds);
-            (idx, comp)
-        })
-        .collect_vec();
-
-    // finally, add all the components to the context
-    for (idx, comp) in comps {
-        ctx.comps.checked_add(idx, comp);
-    }
+            builder.comp.cmds.extend(cmds);
+        }
+        log::debug!("Adding component: {}", idx);
+        ctx.comps.checked_add(idx, builder.comp)
+    });
 
     ctx
 }
