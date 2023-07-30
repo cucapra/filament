@@ -50,14 +50,11 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         if opts.show_ir {
             ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
         }
-        ir_passes::BundleElim::do_pass(&mut ir);
-        if opts.show_ir {
-            ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
-        }
         // Return early if we're asked to dump the interface
         if opts.check {
             return Ok(());
         }
+        ir_passes::BundleElim::do_pass(&mut ir);
         ir_passes::Compile::compile(ir);
         return Ok(());
     }

@@ -5,7 +5,7 @@ mod expr;
 mod fact;
 mod from_ast;
 mod idxs;
-mod info;
+pub mod info;
 mod printer;
 mod structure;
 mod subst;
@@ -23,7 +23,7 @@ pub use idxs::{
     CompIdx, EventIdx, ExprIdx, InfoIdx, InstIdx, InvIdx, ParamIdx, PortIdx,
     PropIdx, TimeIdx,
 };
-pub use info::{Info, Reason};
+pub use info::Info;
 pub use printer::{DisplayCtx, Printer};
 pub use structure::{
     Access, Direction, Event, Liveness, Param, ParamOwner, Port, PortOwner,

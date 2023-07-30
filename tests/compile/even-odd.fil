@@ -1,5 +1,5 @@
 // Test for mutual recursion.
-import "primitives/core.fil";
+import "primitives/comb.fil";
 
 comp IsEven[#VALUE]<G: 1>() -> (
     @[G, G+1] out: 1
