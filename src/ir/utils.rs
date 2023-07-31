@@ -298,6 +298,20 @@ impl<T, V> DenseIndexInfo<T, V> {
     }
 }
 
+impl<T, V: Default> DenseIndexInfo<T, V> {
+    pub fn update_at(&mut self, key: Idx<T>, val: V) {
+        if self.store.len() > key.get() {
+            // idx is already in the store, need to update it
+            self.store[key.get()] = val;
+        } else {
+            while self.store.len() < key.get() {
+                self.store.push(V::default());
+            }
+            self.push(key, val);
+        }
+    }
+}
+
 impl<T, V> std::ops::Index<Idx<T>> for DenseIndexInfo<T, V> {
     type Output = V;
 
