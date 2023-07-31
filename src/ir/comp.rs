@@ -330,7 +330,48 @@ impl Ctx<Invoke> for Component {
 
 impl Ctx<Expr> for Component {
     fn add(&mut self, val: Expr) -> ExprIdx {
-        self.exprs.intern(val)
+        match &val {
+            Expr::Param(_) | Expr::Concrete(_) => self.exprs.intern(val),
+            Expr::Bin { op, lhs, rhs } => {
+                let l = lhs.as_concrete(self);
+                let r = rhs.as_concrete(self);
+                let e = match (l, r) {
+                    (Some(0), None) => return *rhs,
+                    (None, Some(0)) => return *lhs,
+                    (Some(l), None) => {
+                        if matches!(op, ast::Op::Add | ast::Op::Mul) {
+                            // moves all constants to the right side of non-ordered expressions
+                            Expr::Bin {
+                                op: *op,
+                                lhs: *rhs,
+                                rhs: self.exprs.intern(Expr::Concrete(l)),
+                            }
+                        } else {
+                            val
+                        }
+                    }
+                    (Some(l), Some(r)) => Expr::Concrete(match op {
+                        ast::Op::Add => l + r,
+                        ast::Op::Sub => l - r,
+                        ast::Op::Mul => l * r,
+                        ast::Op::Div => l / r,
+                        ast::Op::Mod => l % r,
+                    }),
+                    _ => val,
+                };
+                self.exprs.intern(e)
+            }
+            Expr::Fn { op, args } => self.exprs.intern(
+                args.iter()
+                    .map(|arg| arg.as_concrete(self))
+                    .collect::<Option<Vec<_>>>()
+                    .map(|args| match op {
+                        ast::UnFn::Pow2 => 1u64 << args[0],
+                        ast::UnFn::Log2 => args[0].trailing_zeros() as u64,
+                    })
+                    .map_or(val, Expr::Concrete),
+            ),
+        }
     }
 
     fn get(&self, idx: ExprIdx) -> &Expr {
