@@ -1,19 +1,54 @@
 ver = "0.4.0"
 
-[[tests]]
-name = "type checker"
-paths = ["tests/check/*.fil", "tests/errors/*.fil"]
-cmd = """
-./target/debug/filament {} --check
-"""
+# =============== IR Tests ===============
 
 [[tests]]
-name = "ir-errors"
+name = "[IR] errors"
 paths = ["tests/errors/*.fil"]
 expect_dir = "tests/ir_check/"
 cmd = """
 ./target/debug/filament {} --ir -c
 """
+
+[[tests]]
+name = "[IR] compile"
+paths = ["tests/compile/*.fil", "tests/monomorphic/*.fil"]
+cmd = """
+fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models --ir' -q
+"""
+
+# Compile directories within the tests/compile directory. All *.fil files in the
+# use the same input and must produce the same output
+[[tests]]
+name = "[IR] compile multi"
+paths = ["tests/compile/*/*.fil"]
+cmd = """
+dir=$(dirname {}) && \
+fud e -s cocotb.data "$dir/data.json" \
+      --to cocotb-out {} \
+      -s filament.flags ' --ir --show-models' \
+      -s calyx.flags ' -d canonicalize' -q
+"""
+
+# Aetherling evaluation
+[[tests]]
+name = "[IR] aetherling evaluation"
+paths = ["aetherling/**/harness.fil"]
+cmd = """
+dir=$(dirname {}) && \
+fud e -s cocotb.data "$dir/data.json" --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --ir' -q | jq
+"""
+
+# frisc
+[[tests]]
+name = "[IR] frisc tests"
+paths = ["frisc/test/*.fil"]
+cmd = """
+fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --ir' -q
+"""
+
+
+# =========== Old Flow Tests ===========
 
 [[tests]]
 name = "compile"
@@ -22,22 +57,13 @@ cmd = """
 fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
 """
 
-[[tests]]
-name = "ir-compile"
-paths = ["tests/compile/*.fil", "tests/monomorphic/*.fil"]
-cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models --ir' -q
-"""
 
-# [[tests]]
-# name = "ir-gen"
-# paths = [
-#   "tests/compile/*.fil"
-# ]
-# expect_dir = "tests/compile/ir/"
-# cmd = """
-# ./target/debug/filament {} --ir --show-ir > /dev/null
-# """
+[[tests]]
+name = "type checker"
+paths = ["tests/check/*.fil", "tests/errors/*.fil"]
+cmd = """
+./target/debug/filament {} --check
+"""
 
 [[tests]]
 name = "examples"
