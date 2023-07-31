@@ -1,5 +1,5 @@
 use super::{monosig::MonoSig, Monomorphize};
-use crate::ir::{self, Ctx, Foreign, MutCtx};
+use crate::ir::{self, Ctx};
 use itertools::Itertools;
 
 pub struct MonoDeferred<'a, 'pass: 'a> {
@@ -64,8 +64,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             self.prop(idx);
         }
     }
-
-    
 
     fn prop(&mut self, pidx: ir::PropIdx) -> ir::PropIdx {
         if let Some(idx) = self.monosig.prop_map.get(&pidx) {
@@ -254,24 +252,40 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
     fn command(&mut self, cmd: &ir::Command) -> Vec<ir::Command> {
         match cmd {
-            ir::Command::Instance(idx) => { 
+            ir::Command::Instance(idx) => {
                 if self.monosig.handled_instances.contains(idx) {
-                    let inst_occurrences = self.monosig.inst_counter.get(idx).unwrap();
-                    let base_inst = *self.monosig.inst_map.get(&(*idx, *inst_occurrences)).unwrap();
+                    let inst_occurrences =
+                        self.monosig.inst_counter.get(idx).unwrap();
+                    let base_inst = *self
+                        .monosig
+                        .inst_map
+                        .get(&(*idx, *inst_occurrences))
+                        .unwrap();
                     vec![base_inst.into()]
                 } else {
-                    vec![self.monosig.instance(self.underlying, self.pass, *idx).into()] 
+                    vec![self
+                        .monosig
+                        .instance(self.underlying, self.pass, *idx)
+                        .into()]
                 }
-            },
+            }
             ir::Command::Invoke(idx) => {
                 if self.monosig.handled_invokes.contains(idx) {
-                    let inv_occurrences = self.monosig.inv_counter.get(idx).unwrap();
-                    let base_inv = *self.monosig.inv_map.get(&(*idx, *inv_occurrences)).unwrap();
+                    let inv_occurrences =
+                        self.monosig.inv_counter.get(idx).unwrap();
+                    let base_inv = *self
+                        .monosig
+                        .inv_map
+                        .get(&(*idx, *inv_occurrences))
+                        .unwrap();
                     vec![base_inv.into()]
                 } else {
-                    vec![self.monosig.invoke(self.underlying, self.pass, *idx).into()]
+                    vec![self
+                        .monosig
+                        .invoke(self.underlying, self.pass, *idx)
+                        .into()]
                 }
-            },
+            }
             ir::Command::Connect(con) => vec![self.connect(con).into()],
             ir::Command::ForLoop(lp) => {
                 self.forloop(lp);

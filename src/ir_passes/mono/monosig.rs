@@ -449,7 +449,7 @@ impl MonoSig {
         &mut self,
         underlying: &ir::Component,
         pass: &mut Monomorphize,
-        inv: ir::InvIdx
+        inv: ir::InvIdx,
     ) -> ir::InvIdx {
         // Count another time that we've seen the underlying invoke
         self.insert_inv(inv);
@@ -475,9 +475,7 @@ impl MonoSig {
         // Update the mapping from underlying invokes to base invokes
         // just unwrap because we maintain that inv will always be present in the mapping
         let inv_occurrences = self.inv_counter[&inv];
-        self
-            .inv_map
-            .insert((inv, inv_occurrences), mono_inv_idx);
+        self.inv_map.insert((inv, inv_occurrences), mono_inv_idx);
 
         // Instance - replace the instance owned by self.underlying with one owned by self.base
         let inst_occurrences = self.inst_counter[inst];
@@ -490,8 +488,10 @@ impl MonoSig {
             .collect_vec();
 
         // Events
-        let mono_events =
-            events.iter().map(|e| self.eventbind(e, underlying, pass, inv)).collect_vec();
+        let mono_events = events
+            .iter()
+            .map(|e| self.eventbind(e, underlying, pass, inv))
+            .collect_vec();
 
         // Build the new invoke, add it to self.base
         let mut mono_inv = self.base.get_mut(mono_inv_idx);
@@ -536,14 +536,12 @@ impl MonoSig {
         &mut self,
         underlying: &ir::Component,
         pass: &mut Monomorphize,
-        timesub: &ir::TimeSub
+        timesub: &ir::TimeSub,
     ) -> ir::TimeSub {
         match timesub {
-            ir::TimeSub::Unit(expr) => ir::TimeSub::Unit(self.expr(
-                underlying,
-                pass,
-                *expr,
-            )),
+            ir::TimeSub::Unit(expr) => {
+                ir::TimeSub::Unit(self.expr(underlying, pass, *expr))
+            }
             ir::TimeSub::Sym { l, r } => ir::TimeSub::Sym {
                 l: self.time(underlying, pass, *l),
                 r: self.time(underlying, pass, *r),
@@ -569,8 +567,7 @@ impl MonoSig {
         let conc_params = inst_params
             .iter()
             .map(|p| {
-                self
-                    .expr(underlying, pass, *p)
+                self.expr(underlying, pass, *p)
                     .as_concrete(&self.base)
                     .unwrap()
             })
@@ -578,10 +575,8 @@ impl MonoSig {
 
         let conc_params_copy = conc_params.clone();
 
-        let new_event = pass
-            .event_map
-            .get(&(inst_comp, conc_params, *key))
-            .unwrap();
+        let new_event =
+            pass.event_map.get(&(inst_comp, conc_params, *key)).unwrap();
 
         let new_owner = if let Some((mono_compidx, _)) =
             pass.queue.get(&(inst_comp, conc_params_copy))
@@ -621,7 +616,7 @@ impl MonoSig {
         &mut self,
         underlying: &ir::Component,
         pass: &mut Monomorphize,
-        inst: ir::InstIdx
+        inst: ir::InstIdx,
     ) -> ir::InstIdx {
         // Count another time we've seen the instance
         self.insert_inst(inst);
@@ -630,8 +625,7 @@ impl MonoSig {
         let conc_params = params
             .iter()
             .map(|p| {
-                self
-                    .expr(underlying, pass, *p)
+                self.expr(underlying, pass, *p)
                     .as_concrete(&self.base)
                     .unwrap()
             })
@@ -639,19 +633,14 @@ impl MonoSig {
         let (comp, params) = pass.should_process(*comp, conc_params);
         let new_inst = ir::Instance {
             comp,
-            params: params
-                .into_iter()
-                .map(|n| self.base.num(n))
-                .collect(),
+            params: params.into_iter().map(|n| self.base.num(n)).collect(),
             info: self.info(underlying, pass, info),
         };
 
         let new_idx = self.base.add(new_inst);
 
         let inst_occurrences = self.inst_counter.get(&inst).unwrap();
-        self
-            .inst_map
-            .insert((inst, *inst_occurrences), new_idx);
+        self.inst_map.insert((inst, *inst_occurrences), new_idx);
         self.handled_instances.push(inst);
         new_idx
     }
