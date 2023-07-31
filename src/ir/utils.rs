@@ -298,7 +298,7 @@ impl<T, V> DenseIndexInfo<T, V> {
     }
 }
 
-impl<T, V:Default> DenseIndexInfo<T,V> {
+impl<T, V: Default> DenseIndexInfo<T, V> {
     fn push_unordered(&mut self, key: Idx<T>, val: V) {
         while self.store.len() < key.get() {
             self.store.push(V::default());
