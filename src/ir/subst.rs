@@ -1,5 +1,3 @@
-use crate::ast;
-
 use super::{
     CmpOp, Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Prop, PropIdx,
     Time, TimeIdx,
@@ -121,14 +119,11 @@ impl Foldable<ParamIdx, ExprIdx> for ExprIdx {
                 ctx.add(Expr::Bin { op, lhs, rhs })
             }
             Expr::Fn { op, args } => {
-                let args: Vec<_> = args
+                let args = args
                     .iter()
                     .map(|arg| arg.fold_with(ctx, subst_fn))
                     .collect();
-                match op {
-                    ast::UnFn::Pow2 => args[0].pow2(ctx),
-                    ast::UnFn::Log2 => args[0].log2(ctx),
-                }
+                ctx.add(Expr::Fn { op, args })
             }
         }
     }

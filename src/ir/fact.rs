@@ -1,7 +1,4 @@
-use super::{
-    idxs::PropIdx, Component, Ctx, ExprIdx, Foldable, InfoIdx, ParamIdx,
-    TimeIdx, TimeSub,
-};
+use super::{idxs::PropIdx, Ctx, ExprIdx, InfoIdx, TimeIdx, TimeSub};
 use std::fmt::{self, Display};
 
 #[derive(Clone, PartialEq, Eq, Hash)]

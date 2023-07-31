@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use super::{
     Cmp, CmpOp, Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
     IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke,
@@ -7,6 +5,7 @@ use super::{
     TimeSub,
 };
 use crate::{ast, utils::Idx};
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct Context {
