@@ -26,6 +26,10 @@ pub struct MonoSig {
     pub inst_counter: HashMap<ir::InstIdx, u32>,
     /// Hold onto the current PortIdx being handled
     pub curr_port: Option<ir::PortIdx>,
+    /// Invokes we've already handled, such as when we see an invoke's port before the actual invoke
+    /// so we don't create duplicates
+    pub handled_invokes: Vec<ir::InvIdx>,
+    pub handled_instances: Vec<ir::InstIdx>,
 
     // Keep track of things that have benen moonmorphized already
     /// Events
@@ -79,6 +83,8 @@ impl MonoSig {
             param_map: HashMap::new(),
             bundle_param_map: HashMap::new(),
             info_map: HashMap::new(),
+            handled_invokes: vec![],
+            handled_instances: vec![],
         }
     }
 }
@@ -438,13 +444,217 @@ impl MonoSig {
         new_idx
     }
 
-    // fn insert_port(&mut self, port: ir::PortIdx) {
-    //     if let Some(n) = self.port_counter.get(&port) {
-    //         self.port_counter.insert(port, *n + 1);
-    //     } else {
-    //         self.port_counter.insert(port, 0);
-    //     }
-    // }
+    /// Monomorphize the `inv` (owned by self.underlying) and add it to `self.base`, and return the corresponding index
+    pub fn invoke(
+        &mut self,
+        underlying: &ir::Component,
+        pass: &mut Monomorphize,
+        inv: ir::InvIdx
+    ) -> ir::InvIdx {
+        // Count another time that we've seen the underlying invoke
+        self.insert_inv(inv);
+
+        // Need to monomorphize all parts of the invoke
+        let ir::Invoke {
+            inst,
+            ports,
+            events,
+            info,
+        } = underlying.get(inv);
+
+        let info = self.info(underlying, pass, info);
+
+        // PLACEHOLDER, just want the index when we add it to base
+        let mono_inv_idx = self.base.add(ir::Invoke {
+            inst: *inst,
+            ports: ports.clone(),
+            events: events.clone(),
+            info,
+        });
+
+        // Update the mapping from underlying invokes to base invokes
+        // just unwrap because we maintain that inv will always be present in the mapping
+        let inv_occurrences = self.inv_counter[&inv];
+        self
+            .inv_map
+            .insert((inv, inv_occurrences), mono_inv_idx);
+
+        // Instance - replace the instance owned by self.underlying with one owned by self.base
+        let inst_occurrences = self.inst_counter[inst];
+        let base_inst = self.inst_map[&(*inst, inst_occurrences)];
+
+        // Ports
+        let mono_ports = ports
+            .iter()
+            .map(|p| self.port(underlying, pass, *p))
+            .collect_vec();
+
+        // Events
+        let mono_events =
+            events.iter().map(|e| self.eventbind(e, underlying, pass, inv)).collect_vec();
+
+        // Build the new invoke, add it to self.base
+        let mut mono_inv = self.base.get_mut(mono_inv_idx);
+
+        mono_inv.inst = base_inst;
+        mono_inv.ports = mono_ports;
+        mono_inv.events = mono_events;
+
+        self.handled_invokes.push(inv);
+
+        mono_inv_idx
+    }
+
+    fn eventbind(
+        &mut self,
+        eb: &ir::EventBind,
+        underlying: &ir::Component,
+        pass: &mut Monomorphize,
+        inv: ir::InvIdx,
+    ) -> ir::EventBind {
+        let ir::EventBind {
+            arg,
+            info,
+            delay,
+            base,
+        } = eb;
+
+        let base = self.foreign_event(underlying, pass, base, inv);
+        let delay = self.timesub(underlying, pass, delay);
+        let arg = self.time(underlying, pass, *arg);
+        let info = self.info(underlying, pass, info);
+
+        ir::EventBind {
+            arg,
+            info,
+            delay,
+            base,
+        }
+    }
+
+    pub fn timesub(
+        &mut self,
+        underlying: &ir::Component,
+        pass: &mut Monomorphize,
+        timesub: &ir::TimeSub
+    ) -> ir::TimeSub {
+        match timesub {
+            ir::TimeSub::Unit(expr) => ir::TimeSub::Unit(self.expr(
+                underlying,
+                pass,
+                *expr,
+            )),
+            ir::TimeSub::Sym { l, r } => ir::TimeSub::Sym {
+                l: self.time(underlying, pass, *l),
+                r: self.time(underlying, pass, *r),
+            },
+        }
+    }
+
+    fn foreign_event(
+        &mut self,
+        underlying: &ir::Component,
+        pass: &mut Monomorphize,
+        foreign: &Foreign<ir::Event, ir::Component>,
+        inv: ir::InvIdx, // underlying
+    ) -> Foreign<ir::Event, ir::Component> {
+        let Foreign { key, .. } = foreign;
+        // `key` is only meaningful in `owner`
+        // need to map `key` to be the monomorphized index and update `owner` to be
+        // the monomorphized component
+
+        let inst = underlying.get(underlying.get(inv).inst);
+        let inst_comp = inst.comp;
+        let inst_params = &inst.params;
+        let conc_params = inst_params
+            .iter()
+            .map(|p| {
+                self
+                    .expr(underlying, pass, *p)
+                    .as_concrete(&self.base)
+                    .unwrap()
+            })
+            .collect_vec();
+
+        let conc_params_copy = conc_params.clone();
+
+        let new_event = pass
+            .event_map
+            .get(&(inst_comp, conc_params, *key))
+            .unwrap();
+
+        let new_owner = if let Some((mono_compidx, _)) =
+            pass.queue.get(&(inst_comp, conc_params_copy))
+        {
+            *mono_compidx
+        } else {
+            self.underlying_idx
+        };
+
+        ir::Foreign {
+            key: *new_event,
+            owner: new_owner,
+        }
+    }
+
+    /// Update the mapping of how many times we've seen each invoke in the underlying component.
+    /// If the given invoke does not exist in the mapping, add it with a counter of 0
+    /// If it does exist, increment the counter by 1
+    fn insert_inv(&mut self, inv: ir::InvIdx) {
+        if let Some(n) = self.inv_counter.get(&inv) {
+            self.inv_counter.insert(inv, *n + 1);
+        } else {
+            self.inv_counter.insert(inv, 0);
+        }
+    }
+
+    pub fn insert_inst(&mut self, inst: ir::InstIdx) {
+        if let Some(n) = self.inst_counter.get(&inst) {
+            self.inst_counter.insert(inst, *n + 1);
+        } else {
+            self.inst_counter.insert(inst, 0);
+        }
+    }
+
+    /// Monomorphize the `inst` (owned by self.underlying) and add it to `self.base`, and return the corresponding index
+    pub fn instance(
+        &mut self,
+        underlying: &ir::Component,
+        pass: &mut Monomorphize,
+        inst: ir::InstIdx
+    ) -> ir::InstIdx {
+        // Count another time we've seen the instance
+        self.insert_inst(inst);
+
+        let ir::Instance { comp, params, info } = underlying.get(inst);
+        let conc_params = params
+            .iter()
+            .map(|p| {
+                self
+                    .expr(underlying, pass, *p)
+                    .as_concrete(&self.base)
+                    .unwrap()
+            })
+            .collect_vec();
+        let (comp, params) = pass.should_process(*comp, conc_params);
+        let new_inst = ir::Instance {
+            comp,
+            params: params
+                .into_iter()
+                .map(|n| self.base.num(n))
+                .collect(),
+            info: self.info(underlying, pass, info),
+        };
+
+        let new_idx = self.base.add(new_inst);
+
+        let inst_occurrences = self.inst_counter.get(&inst).unwrap();
+        self
+            .inst_map
+            .insert((inst, *inst_occurrences), new_idx);
+        self.handled_instances.push(inst);
+        new_idx
+    }
 
     /// Monomorphize the port (owned by self.underlying) and add it to `self.base`, and return the corresponding index
     pub fn port(
@@ -473,7 +683,22 @@ impl MonoSig {
                 (None, self.underlying_idx, cparams)
             }
             ir::PortOwner::Inv { inv, .. } => {
+                let inst_idx = underlying.get(*inv).inst;
                 let inst = underlying.get(underlying.get(*inv).inst);
+
+                // its possible we haven't generated the new instance/invoke that this port belongs to
+                // if inst_counter.get(inst).is_none() -> call instance
+                if self.inst_counter.get(&inst_idx).is_none() {
+                    self.instance(underlying, pass, inst_idx);
+                };
+                // if inv_counter.get(inv).is_none() -> call inv
+                let base_inv = if self.inv_counter.get(inv).is_none() {
+                    self.invoke(underlying, pass, *inv)
+                } else {
+                    let inv_occurrences = self.inv_counter.get(inv).unwrap();
+                    *self.inv_map.get(&(*inv, *inv_occurrences)).unwrap()
+                };
+
                 let conc_params = inst
                     .params
                     .iter()
@@ -483,10 +708,10 @@ impl MonoSig {
                             .unwrap()
                     })
                     .collect_vec();
-                let inv_occurrences = self.inv_counter.get(inv).unwrap();
-                let base_inv =
-                    self.inv_map.get(&(*inv, *inv_occurrences)).unwrap();
-                (Some(*base_inv), inst.comp, conc_params)
+                // let inv_occurrences = self.inv_counter.get(inv).unwrap();
+                // let base_inv =
+                //     self.inv_map.get(&(*inv, *inv_occurrences)).unwrap();
+                (Some(base_inv), inst.comp, conc_params)
             }
         };
 

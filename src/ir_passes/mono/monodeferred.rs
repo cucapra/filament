@@ -65,170 +65,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         }
     }
 
-    fn foreign_event(
-        &mut self,
-        foreign: &Foreign<ir::Event, ir::Component>,
-        inv: ir::InvIdx, // underlying
-    ) -> Foreign<ir::Event, ir::Component> {
-        let Foreign { key, .. } = foreign;
-        // `key` is only meaningful in `owner`
-        // need to map `key` to be the monomorphized index and update `owner` to be
-        // the monomorphized component
-
-        let inst = self.underlying.get(self.underlying.get(inv).inst);
-        let inst_comp = inst.comp;
-        let inst_params = &inst.params;
-        let conc_params = inst_params
-            .iter()
-            .map(|p| {
-                self.monosig
-                    .expr(self.underlying, self.pass, *p)
-                    .as_concrete(&self.monosig.base)
-                    .unwrap()
-            })
-            .collect_vec();
-
-        let conc_params_copy = conc_params.clone();
-
-        let new_event = self
-            .pass
-            .event_map
-            .get(&(inst_comp, conc_params, *key))
-            .unwrap();
-
-        let new_owner = if let Some((mono_compidx, _)) =
-            self.pass.queue.get(&(inst_comp, conc_params_copy))
-        {
-            *mono_compidx
-        } else {
-            self.monosig.underlying_idx
-        };
-
-        ir::Foreign {
-            key: *new_event,
-            owner: new_owner,
-        }
-    }
-
-    /// Monomorphize the `inst` (owned by self.underlying) and add it to `self.base`, and return the corresponding index
-    fn instance(&mut self, inst: ir::InstIdx) -> ir::InstIdx {
-        // Count another time we've seen the instance
-        self.insert_inst(inst);
-
-        let ir::Instance { comp, params, info } = self.underlying.get(inst);
-        let conc_params = params
-            .iter()
-            .map(|p| {
-                self.monosig
-                    .expr(self.underlying, self.pass, *p)
-                    .as_concrete(&self.monosig.base)
-                    .unwrap()
-            })
-            .collect_vec();
-        let (comp, params) = self.pass.should_process(*comp, conc_params);
-        let new_inst = ir::Instance {
-            comp,
-            params: params
-                .into_iter()
-                .map(|n| self.monosig.base.num(n))
-                .collect(),
-            info: self.monosig.info(self.underlying, self.pass, info),
-        };
-
-        let new_idx = self.monosig.base.add(new_inst);
-
-        let inst_occurrences = self.monosig.inst_counter.get(&inst).unwrap();
-        self.monosig
-            .inst_map
-            .insert((inst, *inst_occurrences), new_idx);
-        new_idx
-    }
-
-    fn timesub(&mut self, timesub: &ir::TimeSub) -> ir::TimeSub {
-        match timesub {
-            ir::TimeSub::Unit(expr) => ir::TimeSub::Unit(self.monosig.expr(
-                self.underlying,
-                self.pass,
-                *expr,
-            )),
-            ir::TimeSub::Sym { l, r } => ir::TimeSub::Sym {
-                l: self.monosig.time(self.underlying, self.pass, *l),
-                r: self.monosig.time(self.underlying, self.pass, *r),
-            },
-        }
-    }
-    /// Monomorphize the `inv` (owned by self.underlying) and add it to `self.base`, and return the corresponding index
-    fn invoke(&mut self, inv: ir::InvIdx) -> ir::InvIdx {
-        // Count another time that we've seen the underlying invoke
-        self.insert_inv(inv);
-
-        // Need to monomorphize all parts of the invoke
-        let ir::Invoke {
-            inst,
-            ports,
-            events,
-            info,
-        } = self.underlying.get(inv);
-
-        let info = self.monosig.info(self.underlying, self.pass, info);
-
-        // PLACEHOLDER, just want the index when we add it to base
-        let mono_inv_idx = self.monosig.base.add(ir::Invoke {
-            inst: *inst,
-            ports: ports.clone(),
-            events: events.clone(),
-            info,
-        });
-
-        // Update the mapping from underlying invokes to base invokes
-        // just unwrap because we maintain that inv will always be present in the mapping
-        let inv_occurrences = self.monosig.inv_counter[&inv];
-        self.monosig
-            .inv_map
-            .insert((inv, inv_occurrences), mono_inv_idx);
-
-        // Instance - replace the instance owned by self.underlying with one owned by self.base
-        let inst_occurrences = self.monosig.inst_counter[inst];
-        let base_inst = self.monosig.inst_map[&(*inst, inst_occurrences)];
-
-        // Ports
-        let mono_ports = ports
-            .iter()
-            .map(|p| self.monosig.port(self.underlying, self.pass, *p))
-            .collect_vec();
-
-        // Events
-        let mono_events =
-            events.iter().map(|e| self.eventbind(e, inv)).collect_vec();
-
-        // Build the new invoke, add it to self.base
-        let mut mono_inv = self.monosig.base.get_mut(mono_inv_idx);
-
-        mono_inv.inst = base_inst;
-        mono_inv.ports = mono_ports;
-        mono_inv.events = mono_events;
-
-        mono_inv_idx
-    }
-
-    /// Update the mapping of how many times we've seen each invoke in the underlying component.
-    /// If the given invoke does not exist in the mapping, add it with a counter of 0
-    /// If it does exist, increment the counter by 1
-    fn insert_inv(&mut self, inv: ir::InvIdx) {
-        if let Some(n) = self.monosig.inv_counter.get(&inv) {
-            self.monosig.inv_counter.insert(inv, *n + 1);
-        } else {
-            self.monosig.inv_counter.insert(inv, 0);
-        }
-    }
-
-    fn insert_inst(&mut self, inst: ir::InstIdx) {
-        if let Some(n) = self.monosig.inst_counter.get(&inst) {
-            self.monosig.inst_counter.insert(inst, *n + 1);
-        } else {
-            self.monosig.inst_counter.insert(inst, 0);
-        }
-    }
+    
 
     fn prop(&mut self, pidx: ir::PropIdx) -> ir::PropIdx {
         if let Some(idx) = self.monosig.prop_map.get(&pidx) {
@@ -269,8 +106,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             }
             ir::Prop::TimeSubCmp(tscmp) => {
                 let ir::CmpOp { op, lhs, rhs } = tscmp;
-                let lhs = self.timesub(lhs);
-                let rhs = self.timesub(rhs);
+                let lhs = self.monosig.timesub(self.underlying, self.pass, lhs);
+                let rhs = self.monosig.timesub(self.underlying, self.pass, rhs);
                 let new_idx =
                     self.monosig.base.add(ir::Prop::TimeSubCmp(ir::CmpOp {
                         op: op.clone(),
@@ -356,6 +193,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let bound = mono_end.as_concrete(&self.monosig.base).unwrap();
 
         while i < bound {
+            self.monosig.handled_instances.clear();
+            self.monosig.handled_invokes.clear();
             self.monosig.binding.insert(*index, i);
             for cmd in body.iter() {
                 let cmd = self.command(cmd);
@@ -413,35 +252,26 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         }
     }
 
-    fn eventbind(
-        &mut self,
-        eb: &ir::EventBind,
-        inv: ir::InvIdx,
-    ) -> ir::EventBind {
-        let ir::EventBind {
-            arg,
-            info,
-            delay,
-            base,
-        } = eb;
-
-        let base = self.foreign_event(base, inv);
-        let delay = self.timesub(delay);
-        let arg = self.monosig.time(self.underlying, self.pass, *arg);
-        let info = self.monosig.info(self.underlying, self.pass, info);
-
-        ir::EventBind {
-            arg,
-            info,
-            delay,
-            base,
-        }
-    }
-
     fn command(&mut self, cmd: &ir::Command) -> Vec<ir::Command> {
         match cmd {
-            ir::Command::Instance(idx) => vec![self.instance(*idx).into()],
-            ir::Command::Invoke(idx) => vec![self.invoke(*idx).into()],
+            ir::Command::Instance(idx) => { 
+                if self.monosig.handled_instances.contains(idx) {
+                    let inst_occurrences = self.monosig.inst_counter.get(idx).unwrap();
+                    let base_inst = *self.monosig.inst_map.get(&(*idx, *inst_occurrences)).unwrap();
+                    vec![base_inst.into()]
+                } else {
+                    vec![self.monosig.instance(self.underlying, self.pass, *idx).into()] 
+                }
+            },
+            ir::Command::Invoke(idx) => {
+                if self.monosig.handled_invokes.contains(idx) {
+                    let inv_occurrences = self.monosig.inv_counter.get(idx).unwrap();
+                    let base_inv = *self.monosig.inv_map.get(&(*idx, *inv_occurrences)).unwrap();
+                    vec![base_inv.into()]
+                } else {
+                    vec![self.monosig.invoke(self.underlying, self.pass, *idx).into()]
+                }
+            },
             ir::Command::Connect(con) => vec![self.connect(con).into()],
             ir::Command::ForLoop(lp) => {
                 self.forloop(lp);
