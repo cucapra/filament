@@ -3,46 +3,61 @@ use crate::{ast, utils::GPosIdx};
 use codespan_reporting::diagnostic::Diagnostic;
 use struct_variant::struct_variant;
 
+/// An absence of information is still information
 pub struct Empty;
 
+/// Assertion information
 pub struct Assert(pub Reason);
 
+/// For [super::Param]
 pub struct Param {
+    /// Surface-level name of the parameter
     pub name: ast::Id,
     pub bind_loc: GPosIdx,
 }
 
+/// For [super::Event]
 pub struct Event {
+    /// Surface-level name of the event
     pub name: ast::Id,
     pub bind_loc: GPosIdx,
     pub delay_loc: GPosIdx,
+    /// interface port information
     pub interface_name: Option<ast::Id>,
     pub interface_bind_loc: Option<GPosIdx>,
 }
 
+/// For [super::EventBind]
 pub struct EventBind {
+    /// Location for the delay of the event
     pub ev_delay_loc: GPosIdx,
+    /// Location of the time expression provided as the binding
     pub bind_loc: GPosIdx,
 }
 
+/// For [super::Instance]
 pub struct Instance {
     pub name: ast::Id,
     pub comp_loc: GPosIdx,
     pub bind_loc: GPosIdx,
 }
 
+/// For [super::Invoke]
 pub struct Invoke {
     pub name: ast::Id,
     pub inst_loc: GPosIdx,
     pub bind_loc: GPosIdx,
 }
 
+/// For [super::Connect]
 pub struct Connect {
     pub dst_loc: GPosIdx,
     pub src_loc: GPosIdx,
 }
 
+/// For [super::Port]
 pub struct Port {
+    /// Surface-level name
     pub name: ast::Id,
     pub bind_loc: GPosIdx,
     pub width_loc: GPosIdx,
@@ -142,6 +157,13 @@ impl Info {
     }
 }
 
+/// Generates two functions for casting `Info` to a specific variant.
+///
+/// `as_{name}` returns `Some()` if the info is of the correct variant,
+/// `None` if the info was empty, and panics if the info was an incorrect variant.
+///
+/// Also defines a `From<&Info> for &{name}` implementation that panics if the info was not the right variant,
+/// and a `From<&Info> for Option<&{name}>` implementation that mirrors `as_{name}`.
 macro_rules! info_cast {
     ($class:tt, $name:ident) => {
         impl Info {
