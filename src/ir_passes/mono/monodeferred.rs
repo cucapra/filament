@@ -35,6 +35,14 @@ impl MonoDeferred<'_, '_> {
             );
         }
 
+        if underlying.is_ext {
+            for (_, param) in underlying.params().iter() {
+                if param.is_sig_owned() {
+                    monosig.base.add(param.clone());
+                }
+            }
+        }
+
         for (idx, port) in underlying.ports().iter() {
             if port.is_sig_in() || port.is_sig_out() {
                 monosig.port(underlying, pass, idx);
@@ -46,7 +54,9 @@ impl MonoDeferred<'_, '_> {
         }
 
         monosig.interface(&underlying.src_info);
+        println!("{} has unannotated ports {:?}", monosig.underlying_idx, underlying.unannotated_ports);
         monosig.base.unannotated_ports = underlying.unannotated_ports.clone();
+        println!("base has unannotated ports {:?}", monosig.base.unannotated_ports);
     }
 }
 

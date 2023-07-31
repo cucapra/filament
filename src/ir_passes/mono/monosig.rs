@@ -38,8 +38,6 @@ pub struct MonoSig {
     pub time_map: HashMap<ir::TimeIdx, ir::TimeIdx>,
     /// Ports - (base inv, underlying port) -> base port
     pub port_map: HashMap<(Option<ir::InvIdx>, ir::PortIdx), ir::PortIdx>,
-    /// Exprs
-    pub expr_map: HashMap<ir::ExprIdx, ir::ExprIdx>,
     /// Props
     pub prop_map: HashMap<ir::PropIdx, ir::PropIdx>,
     /// Params - underlying param -> new Param
@@ -78,7 +76,6 @@ impl MonoSig {
             event_map: HashMap::new(),
             time_map: HashMap::new(),
             port_map: HashMap::new(),
-            expr_map: HashMap::new(),
             prop_map: HashMap::new(),
             param_map: HashMap::new(),
             bundle_param_map: HashMap::new(),
@@ -259,10 +256,6 @@ impl MonoSig {
                 return new_idx;
             }
         };
-        // Check if we've already rewritten this expression
-        // if let Some(idx) = self.expr_map.get(&expr) {
-        //     return *idx;
-        // };
         // The expression is neither bound nor rewritten, so we need to rewrite it
         let new_idx = match e.clone() {
             ir::Expr::Param(p) => {
@@ -284,7 +277,6 @@ impl MonoSig {
                 self.base.func(func)
             }
         };
-        self.expr_map.insert(expr, new_idx);
         new_idx
     }
 
@@ -370,15 +362,6 @@ impl MonoSig {
                 interface_ports,
                 params,
             }) => {
-                // let mut new_ports = HashMap::new();
-                // for (port, id) in ports.iter() {
-                //     let new_port = self
-                //         .port_map
-                //         .get(&(self.underlying_idx, *port))
-                //         .unwrap();
-                //     new_ports.insert(*new_port, *id);
-                // }
-
                 let mut new_events = HashMap::new();
                 for (event, id) in interface_ports.iter() {
                     let new_event = self.event_map.get(event).unwrap();
