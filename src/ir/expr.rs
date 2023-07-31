@@ -64,132 +64,57 @@ impl ExprIdx {
 
     /// Adds two expressions together.
     pub fn add(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
-        let l = self.as_concrete(ctx);
-        let r = other.as_concrete(ctx);
-
-        match (l, r) {
-            (Some(l), Some(r)) => ctx.add(Expr::Concrete(l + r)),
-            (None, Some(0)) => self,
-            (Some(0), None) => other,
-            _ => {
-                // Sort the operands to canonicalize the expression
-                let (lhs, rhs) = if self < other {
-                    (self, other)
-                } else {
-                    (other, self)
-                };
-                ctx.add(Expr::Bin {
-                    op: ast::Op::Add,
-                    lhs,
-                    rhs,
-                })
-            }
-        }
+        ctx.add(Expr::Bin {
+            op: ast::Op::Add,
+            lhs: self,
+            rhs: other,
+        })
     }
 
     pub fn mul(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
-        let l = self.as_concrete(ctx);
-        let r = other.as_concrete(ctx);
-
-        match (l, r) {
-            (Some(l), Some(r)) => ctx.add(Expr::Concrete(l * r)),
-            (None, Some(0)) | (Some(0), None) => ctx.add(Expr::Concrete(0)),
-            (None, Some(1)) => self,
-            (Some(1), None) => other,
-            _ => {
-                // Sort the operands to canonicalize the expression
-                let (lhs, rhs) = if self < other {
-                    (self, other)
-                } else {
-                    (other, self)
-                };
-                ctx.add(Expr::Bin {
-                    op: ast::Op::Mul,
-                    lhs,
-                    rhs,
-                })
-            }
-        }
+        ctx.add(Expr::Bin {
+            op: ast::Op::Mul,
+            lhs: self,
+            rhs: other,
+        })
     }
 
     pub fn sub(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
-        if self == other {
-            return ctx.add(Expr::Concrete(0));
-        }
-        let l = self.as_concrete(ctx);
-        let r = other.as_concrete(ctx);
-
-        match (l, r) {
-            (Some(l), Some(r)) if l > r => ctx.add(Expr::Concrete(l - r)),
-            (None, Some(0)) => self,
-            _ => ctx.add(Expr::Bin {
-                op: ast::Op::Sub,
-                lhs: self,
-                rhs: other,
-            }),
-        }
+        ctx.add(Expr::Bin {
+            op: ast::Op::Sub,
+            lhs: self,
+            rhs: other,
+        })
     }
 
     pub fn div(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
-        if self == other {
-            return ctx.add(Expr::Concrete(1));
-        }
-
-        let l = self.as_concrete(ctx);
-        let r = other.as_concrete(ctx);
-
-        match (l, r) {
-            (Some(l), Some(r)) => ctx.add(Expr::Concrete(l / r)),
-            (None, Some(1)) => self,
-            _ => ctx.add(Expr::Bin {
-                op: ast::Op::Div,
-                lhs: self,
-                rhs: other,
-            }),
-        }
+        ctx.add(Expr::Bin {
+            op: ast::Op::Div,
+            lhs: self,
+            rhs: other,
+        })
     }
 
     pub fn rem(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
-        if self == other {
-            return ctx.add(Expr::Concrete(0));
-        }
-
-        let l = self.as_concrete(ctx);
-        let r = other.as_concrete(ctx);
-
-        match (l, r) {
-            (Some(l), Some(r)) => ctx.add(Expr::Concrete(l % r)),
-            (None, Some(1)) => ctx.add(Expr::Concrete(0)),
-            _ => ctx.add(Expr::Bin {
-                op: ast::Op::Mod,
-                lhs: self,
-                rhs: other,
-            }),
-        }
+        ctx.add(Expr::Bin {
+            op: ast::Op::Mod,
+            lhs: self,
+            rhs: other,
+        })
     }
 
     pub fn pow2(self, ctx: &mut impl Ctx<Expr>) -> Self {
-        let l = self.as_concrete(ctx);
-
-        match l {
-            Some(l) => ctx.add(Expr::Concrete(1 << l)),
-            _ => ctx.add(Expr::Fn {
-                op: ast::UnFn::Pow2,
-                args: Box::new([self]),
-            }),
-        }
+        ctx.add(Expr::Fn {
+            op: ast::UnFn::Pow2,
+            args: Box::new([self]),
+        })
     }
 
     pub fn log2(self, ctx: &mut impl Ctx<Expr>) -> Self {
-        let l = self.as_concrete(ctx);
-
-        match l {
-            Some(l) => ctx.add(Expr::Concrete(l.trailing_zeros() as u64)),
-            _ => ctx.add(Expr::Fn {
-                op: ast::UnFn::Log2,
-                args: Box::new([self]),
-            }),
-        }
+        ctx.add(Expr::Fn {
+            op: ast::UnFn::Log2,
+            args: Box::new([self]),
+        })
     }
 
     /// The proposition `self > other`
