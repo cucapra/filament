@@ -162,8 +162,8 @@ impl Info {
 /// `as_{name}` returns `Some()` if the info is of the correct variant,
 /// `None` if the info was empty, and panics if the info was an incorrect variant.
 ///
-/// Also defines a `From<&Info> for &{name}` implementation that panics if the info was not the right variant,
-/// and a `From<&Info> for Option<&{name}>` implementation that mirrors `as_{name}`.
+/// Also defines a `From<&Info> for &{class}` implementation that panics if the info was not the right variant,
+/// and a `From<&Info> for Option<&{class}>` implementation that mirrors `as_{name}`.
 macro_rules! info_cast {
     ($class:tt, $name:ident) => {
         impl Info {
