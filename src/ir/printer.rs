@@ -42,10 +42,9 @@ impl DisplayCtx<ir::Event> for ir::Component {
             format!("{idx}")
         } else {
             let ev = self.get(idx);
-            let ir::Info::Event { name, .. } = self.get(ev.info) else {
-                unreachable!("Expected event info")
-            };
-            name.to_string()
+            self.get(ev.info)
+                .as_event()
+                .map_or(format!("{idx}"), |e| format!("{}", e.name))
         }
     }
 }
@@ -55,11 +54,10 @@ impl DisplayCtx<ir::Param> for ir::Component {
         if log::log_enabled!(log::Level::Debug) {
             format!("{idx}")
         } else {
-            let param = self.get(idx);
-            let ir::Info::Param { name, .. } = self.get(param.info) else {
-                unreachable!("Expected param info");
-            };
-            format!("#{name}")
+            let param: &ir::Param = self.get(idx);
+            self.get(param.info)
+                .as_param()
+                .map_or(format!("{idx}"), |p| format!("#{}", p.name))
         }
     }
 }
@@ -70,10 +68,9 @@ impl DisplayCtx<ir::Invoke> for ir::Component {
             format!("{idx}")
         } else {
             let inv = self.get(idx);
-            let ir::Info::Invoke { name, .. } = self.get(inv.info) else {
-                unreachable!("Expected invoke info");
-            };
-            format!("{name}")
+            self.get(inv.info)
+                .as_invoke()
+                .map_or(format!("{idx}"), |inv| format!("{}", inv.name))
         }
     }
 }
@@ -84,10 +81,9 @@ impl DisplayCtx<ir::Instance> for ir::Component {
             format!("{idx}")
         } else {
             let inst = self.get(idx);
-            let ir::Info::Instance { name, .. } = self.get(inst.info) else {
-                unreachable!("Expected instance info");
-            };
-            format!("{name}")
+            self.get(inst.info)
+                .as_instance()
+                .map_or(format!("{idx}"), |inst| format!("{}", inst.name))
         }
     }
 }
@@ -95,13 +91,12 @@ impl DisplayCtx<ir::Instance> for ir::Component {
 impl DisplayCtx<ir::Port> for ir::Component {
     fn display(&self, idx: ir::PortIdx) -> String {
         let port = self.get(idx);
-        let ir::Info::Port { name, .. } = self.get(port.info) else {
-            unreachable!("Expected port info")
-        };
+        let name = self
+            .get(port.info)
+            .as_port()
+            .map_or(format!("{idx}"), |p| format!("{}", p.name));
         match port.owner {
-            ir::PortOwner::Local | ir::PortOwner::Sig { .. } => {
-                name.to_string()
-            }
+            ir::PortOwner::Local | ir::PortOwner::Sig { .. } => name,
             ir::PortOwner::Inv { inv, .. } => {
                 format!("{}.{}", self.display(inv), name)
             }
@@ -364,14 +359,15 @@ impl<'a> Printer<'a> {
         let param = self.ctx.get(idx);
         if !param.is_sig_owned() {
             let &ir::Param { info, .. } = c.get(idx);
-            let ir::Info::Param { name, .. } = c.get(info) else {
-                unreachable!("Expected param info");
-            };
             writeln!(
                 f,
-                "{:indent$}{idx} = param {param}; // {name}",
+                "{:indent$}{idx} = param {param};{comment}",
                 "",
-                param = self.ctx.display(idx)
+                param = self.ctx.display(idx),
+                comment = c
+                    .get(info)
+                    .as_param()
+                    .map_or("".to_string(), |p| format!(" // {}", p.name)),
             )?;
         }
         Ok(())
