@@ -901,9 +901,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
             }
 
             // compile the signature
-            let mut cmds = builder.sig(&sig);
-            cmds.extend(builder.port_assumptions());
-            builder.comp.cmds = cmds;
+            builder.comp.cmds = builder.sig(&sig);
 
             let irsig = Sig::new(idx, &builder.comp, &sig);
             ((idx, builder, body), (sig.name.take(), irsig))
@@ -918,10 +916,10 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     // Compiles and adds all the commands here
     // Need to do this before adding all the components because each builder borrows the context immutably
     builders.into_iter().for_each(|(idx, mut builder, cmds)| {
-        if let Some(cmds) = cmds {
-            let cmds = builder.commands(cmds);
-            builder.comp.cmds.extend(cmds);
-        }
+        let body_cmds = cmds.map_or(vec![], |cmds| builder.commands(cmds));
+        let mut cmds = builder.port_assumptions();
+        cmds.extend(body_cmds);
+        builder.comp.cmds.extend(cmds);
         log::debug!("Adding component: {}", idx);
         ctx.comps.checked_add(idx, builder.comp)
     });
