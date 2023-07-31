@@ -10,7 +10,6 @@ pub struct MonoDeferred<'a, 'pass: 'a> {
     /// Struct to keep track of all the mapping information from things owned by
     /// `underlying` to things owned by `base`
     pub monosig: MonoSig,
-    pub fact_queue: Vec<&'a ir::Fact>,
 }
 
 impl MonoDeferred<'_, '_> {
