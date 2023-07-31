@@ -299,11 +299,20 @@ impl<T, V> DenseIndexInfo<T, V> {
 }
 
 impl<T, V: Default> DenseIndexInfo<T, V> {
-    fn push_unordered(&mut self, key: Idx<T>, val: V) {
-        while self.store.len() < key.get() {
-            self.store.push(V::default());
+    pub fn update_at(&mut self, key: Idx<T>, val: V) {
+        if self.store.len() > key.get() {
+            // idx is already in the store, need to update it
+            self.store[key.get()] = val;
+        } else if self.store.len() < key.get() {
+            // idx is greater than len, fill with default
+            while self.store.len() < key.get() {
+                self.store.push(V::default());
+            }
+            self.store.push(val)
+        } else {
+            // idx is the next thing in the store, push normally
+            self.push(key, val);
         }
-        self.store.push(val)
     }
 }
 
