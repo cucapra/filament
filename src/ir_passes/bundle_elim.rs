@@ -187,11 +187,12 @@ impl BundleElim {
         let dst = self.get(dst, cidx, ctx);
 
         let comp = ctx.get_mut(cidx);
-        assert!(
-            src.len() == dst.len(),
-            "Mismatched access lengths for connect `{}`",
-            Printer::new(comp).connect_str(connect)
-        );
+        if src.len() != dst.len() {
+            comp.internal_error(format!(
+                "Mismatched access lengths for connect `{}`",
+                Printer::new(comp).connect_str(connect)
+            ))
+        }
 
         // split this single connects into `n` separate connects each with individual ports.
         // the local mapping optimization here works because it assumes that connects assigning to the local port
