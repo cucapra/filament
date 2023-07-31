@@ -27,14 +27,10 @@ impl TypeCheck {
             ..
         } = comp.get(port);
 
-        let &ir::Info::Port {
-            bind_loc, ..
-        } = comp.get(info) else {
-            unreachable!("Expected port info")
-        };
+        let &ir::info::Port { bind_loc, .. } = comp.get(info).into();
 
         let wf = comp.add(
-            ir::Reason::misc(
+            ir::info::Reason::misc(
                 "end of port access must greater than the start",
                 loc,
             )
@@ -42,8 +38,8 @@ impl TypeCheck {
         );
 
         let wf_prop = end.gt(start, comp);
-        let within_bounds =
-            comp.add(ir::Reason::in_bounds_access(bind_loc, loc, len).into());
+        let within_bounds = comp
+            .add(ir::info::Reason::in_bounds_access(bind_loc, loc, len).into());
         let start = start.lt(len, comp);
         let end = end.lte(len, comp);
         let in_range = start.and(end, comp);
@@ -63,9 +59,7 @@ impl Visitor for TypeCheck {
         comp: &mut ir::Component,
     ) -> Action {
         let ir::Connect { src, dst, info } = &c;
-        let &ir::Info::Connect { dst_loc, src_loc } = comp.get(*info) else {
-            unreachable!("Expected connect info")
-        };
+        let &ir::info::Connect { dst_loc, src_loc } = comp.get(*info).into();
         let mut cons = vec![];
 
         // Range accesses are well-formed
@@ -76,8 +70,10 @@ impl Visitor for TypeCheck {
         let src_w = comp.get(src.port).width;
         let dst_w = comp.get(dst.port).width;
         let reason = comp.add(
-            ir::Reason::bundle_width_match(dst_loc, src_loc, dst_w, src_w)
-                .into(),
+            ir::info::Reason::bundle_width_match(
+                dst_loc, src_loc, dst_w, src_w,
+            )
+            .into(),
         );
         let prop = src_w.equal(dst_w, comp);
         cons.extend(comp.assert(prop, reason));
@@ -86,8 +82,10 @@ impl Visitor for TypeCheck {
         let src_size = src.end.sub(src.start, comp);
         let dst_size = dst.end.sub(dst.start, comp);
         let reason = comp.add(
-            ir::Reason::bundle_len_match(dst_loc, src_loc, dst_size, src_size)
-                .into(),
+            ir::info::Reason::bundle_len_match(
+                dst_loc, src_loc, dst_size, src_size,
+            )
+            .into(),
         );
         let prop = src_size.equal(dst_size, comp);
         cons.extend(comp.assert(prop, reason));

@@ -106,6 +106,8 @@ pub struct Component {
     /// The file that this component came from.
     /// Must be `Some` for externals
     pub filename: Option<String>,
+    /// unannotated ports associated with this component
+    pub unannotated_ports: Box<Vec<(ast::Id, u64)>>,
 }
 
 impl Component {
@@ -296,17 +298,6 @@ impl Component {
         let mut acc = Vec::new();
         self.prop_params_acc(prop, &mut acc);
         acc
-    }
-
-    /// Unannotated Ports in the component
-    pub fn unannotated_ports(&self) -> Vec<(&ast::Id, u64)> {
-        self.info
-            .iter()
-            .filter_map(|(_, info)| match info {
-                Info::UnannotatedPort { name, width } => Some((name, *width)),
-                _ => None,
-            })
-            .collect()
     }
 }
 

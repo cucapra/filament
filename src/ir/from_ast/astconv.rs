@@ -478,14 +478,14 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             self.port(port.inner().clone(), ir::PortOwner::sig_in());
         }
         for (name, width) in sig.unannotated_ports {
-            self.comp.add(ir::Info::unannotated_port(name, width));
+            self.comp.unannotated_ports.push((name, width));
         }
         // Constraints defined by the signature
         let mut cons = Vec::with_capacity(
             sig.param_constraints.len() + sig.event_constraints.len(),
         );
         for ec in sig.event_constraints {
-            let info = self.comp.add(ir::Info::assert(ir::Reason::misc(
+            let info = self.comp.add(ir::Info::assert(ir::info::Reason::misc(
                 "Signature assumption",
                 ec.pos(),
             )));
@@ -493,7 +493,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             cons.extend(self.comp.assume(prop, info));
         }
         for pc in sig.param_constraints {
-            let info = self.comp.add(ir::Info::assert(ir::Reason::misc(
+            let info = self.comp.add(ir::Info::assert(ir::info::Reason::misc(
                 "Signature assumption",
                 pc.pos(),
             )));
@@ -518,9 +518,9 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .clone()
             .into_iter()
             .flat_map(|f| {
-                let reason = self
-                    .comp
-                    .add(ir::Reason::param_cons(comp_loc, f.pos()).into());
+                let reason = self.comp.add(
+                    ir::info::Reason::param_cons(comp_loc, f.pos()).into(),
+                );
                 let p = f.take().resolve_expr(&binding);
                 let prop = self.expr_cons(p);
                 // This is a checked fact because the calling component needs to
@@ -655,7 +655,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .into_iter()
             .flat_map(|ec| {
                 let reason = self.comp.add(
-                    ir::Reason::event_cons(instance.pos(), ec.pos()).into(),
+                    ir::info::Reason::event_cons(instance.pos(), ec.pos())
+                        .into(),
                 );
                 let ec = ec.take().resolve_event(&event_binding);
                 let prop = self.event_cons(ec);
@@ -765,7 +766,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             ast::Command::Instance(inst) => self.instance(inst),
             ast::Command::Fact(ast::Fact { cons, checked }) => {
                 let reason = self.comp.add(
-                    ir::Reason::misc("source-level fact", cons.pos()).into(),
+                    ir::info::Reason::misc("source-level fact", cons.pos())
+                        .into(),
                 );
                 let prop = self.implication(cons.take());
                 let fact = if checked {
@@ -793,8 +795,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
                 let end = self.expr(end);
                 // Assumption that the index is within range
                 let reason = self.comp.add(
-                    ir::Reason::misc("loop index is within range", idx.pos())
-                        .into(),
+                    ir::info::Reason::misc(
+                        "loop index is within range",
+                        idx.pos(),
+                    )
+                    .into(),
                 );
 
                 // Compile the body in a new scope
@@ -845,8 +850,11 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             .collect_vec();
         // Add assumptions for range of bundle-bound indices
         let reason = self.comp.add(
-            ir::Reason::misc("bundle index is within range", GPosIdx::UNKNOWN)
-                .into(),
+            ir::info::Reason::misc(
+                "bundle index is within range",
+                GPosIdx::UNKNOWN,
+            )
+            .into(),
         );
         for (idx, len) in ports {
             let idx = idx.expr(self.comp);

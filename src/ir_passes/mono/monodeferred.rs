@@ -46,6 +46,7 @@ impl MonoDeferred<'_, '_> {
         }
 
         monosig.interface(&underlying.src_info);
+        monosig.base.unannotated_ports = underlying.unannotated_ports.clone();
     }
 }
 

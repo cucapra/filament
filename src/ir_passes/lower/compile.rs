@@ -73,10 +73,10 @@ impl Compile {
             .map(|idx| Compile::port_def(ctx, comp, idx, &width_transform))
             .chain(
                 // adds unannotated ports to the list of ports
-                comp.unannotated_ports().into_iter().map(|(name, width)| {
+                comp.unannotated_ports.iter().map(|(name, width)| {
                     calyx::PortDef {
                         name: name.as_ref().into(),
-                        width: width_from_u64(width),
+                        width: width_from_u64(*width),
                         direction: calyx::Direction::Input,
                         attributes: calyx::Attributes::default(),
                     }

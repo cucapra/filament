@@ -167,10 +167,11 @@ impl MonoSig {
             //     let param_size = self.param_counter;
             //     ir::Info::Param {name: ast::Id::new(format!("#_{param_size}")), bind_loc: bind_loc.clone()}
             // }
-            ir::Info::Assert(reason) => {
-                ir::Info::Assert(self.reason(underlying, pass, reason))
-            }
-            _ => info.clone(),
+            ir::info::Info::Assert(reason) => {
+                let ir::info::Assert(reason) = reason;
+                ir::Info::assert(self.reason(underlying, pass, reason))
+            },
+            _ => ir::Info::empty(),
         };
 
         let new_idx = self.base.add(info);
@@ -182,10 +183,10 @@ impl MonoSig {
         &mut self,
         underlying: &ir::Component,
         pass: &mut Monomorphize,
-        reason: &ir::Reason,
-    ) -> ir::Reason {
+        reason: &ir::info::Reason,
+    ) -> ir::info::Reason {
         match reason {
-            ir::Reason::Liveness {
+            ir::info::Reason::Liveness {
                 dst_loc,
                 src_loc,
                 dst_liveness,
@@ -195,7 +196,7 @@ impl MonoSig {
                 let src_loc = *src_loc;
                 let dst_liveness = self.range(underlying, pass, dst_liveness);
                 let src_liveness = self.range(underlying, pass, src_liveness);
-                ir::Reason::Liveness {
+                ir::info::Reason::Liveness {
                     dst_loc,
                     src_loc,
                     dst_liveness,

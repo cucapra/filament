@@ -1,76 +1,94 @@
 use super::{Component, DisplayCtx, ExprIdx, Range, TimeIdx, TimeSub};
 use crate::{ast, utils::GPosIdx};
 use codespan_reporting::diagnostic::Diagnostic;
+use struct_variant::struct_variant;
 
-#[derive(Default, Clone)]
+/// An absence of information is still information
+pub struct Empty;
+
+/// Assertion information
+pub struct Assert(pub Reason);
+
+/// For [super::Param]
+pub struct Param {
+    /// Surface-level name of the parameter
+    pub name: ast::Id,
+    pub bind_loc: GPosIdx,
+}
+
+/// For [super::Event]
+pub struct Event {
+    /// Surface-level name of the event
+    pub name: ast::Id,
+    pub bind_loc: GPosIdx,
+    pub delay_loc: GPosIdx,
+    /// interface port information
+    pub interface_name: Option<ast::Id>,
+    pub interface_bind_loc: Option<GPosIdx>,
+}
+
+/// For [super::EventBind]
+pub struct EventBind {
+    /// Location for the delay of the event
+    pub ev_delay_loc: GPosIdx,
+    /// Location of the time expression provided as the binding
+    pub bind_loc: GPosIdx,
+}
+
+/// For [super::Instance]
+pub struct Instance {
+    pub name: ast::Id,
+    pub comp_loc: GPosIdx,
+    pub bind_loc: GPosIdx,
+}
+
+/// For [super::Invoke]
+pub struct Invoke {
+    pub name: ast::Id,
+    pub inst_loc: GPosIdx,
+    pub bind_loc: GPosIdx,
+}
+
+/// For [super::Connect]
+pub struct Connect {
+    pub dst_loc: GPosIdx,
+    pub src_loc: GPosIdx,
+}
+
+/// For [super::Port]
+pub struct Port {
+    /// Surface-level name
+    pub name: ast::Id,
+    pub bind_loc: GPosIdx,
+    pub width_loc: GPosIdx,
+    pub live_loc: GPosIdx,
+}
+
 /// Information associated with the IR.
+#[struct_variant()]
 pub enum Info {
-    #[default]
-    /// An absence of information is still information
     Empty,
-    /// Assertion information
-    Assert(Reason),
-    /// For [super::Param]
-    Param {
-        /// Surface-level name of the parameter
-        name: ast::Id,
-        bind_loc: GPosIdx,
-    },
-    /// For [super::Event]
-    Event {
-        /// Surface-level name of the event
-        name: ast::Id,
-        bind_loc: GPosIdx,
-        delay_loc: GPosIdx,
-        /// interface port information
-        interface_name: Option<ast::Id>,
-        interface_bind_loc: Option<GPosIdx>,
-    },
-    /// For [super::EventBind]
-    EventBind {
-        /// Location for the delay of the event
-        ev_delay_loc: GPosIdx,
-        /// Location of the time expression provided as the binding
-        bind_loc: GPosIdx,
-    },
-    /// For [super::Instance]
-    Instance {
-        name: ast::Id,
-        comp_loc: GPosIdx,
-        bind_loc: GPosIdx,
-    },
-    /// For [super::Invoke]
-    Invoke {
-        name: ast::Id,
-        inst_loc: GPosIdx,
-        bind_loc: GPosIdx,
-    },
-    /// For [super::Connect]
-    Connect {
-        dst_loc: GPosIdx,
-        src_loc: GPosIdx,
-    },
-    /// For [super::Port]
-    Port {
-        /// Surface-level name
-        name: ast::Id,
-        bind_loc: GPosIdx,
-        width_loc: GPosIdx,
-        live_loc: GPosIdx,
-    },
-    UnannotatedPort {
-        name: ast::Id,
-        width: u64,
-    },
+    Assert,
+    Param,
+    Event,
+    EventBind,
+    Instance,
+    Invoke,
+    Connect,
+    Port,
 }
 
 impl Info {
+    pub fn empty() -> Self {
+        Self::Empty(Empty)
+    }
+
     pub fn assert(reason: Reason) -> Self {
-        Self::Assert(reason)
+        Assert(reason).into()
     }
 
     pub fn param(name: ast::Id, bind_loc: GPosIdx) -> Self {
-        Self::Param { name, bind_loc }
+        Param { name, bind_loc }.into()
     }
 
     pub fn event(
@@ -79,20 +97,22 @@ impl Info {
         delay_loc: GPosIdx,
         interface_port: Option<(ast::Id, GPosIdx)>,
     ) -> Self {
-        Self::Event {
+        Event {
             name,
             bind_loc,
             delay_loc,
             interface_name: interface_port.map(|(n, _)| n),
             interface_bind_loc: interface_port.map(|(_, l)| l),
         }
+        .into()
     }
 
     pub fn event_bind(ev_delay_loc: GPosIdx, bind_loc: GPosIdx) -> Self {
-        Self::EventBind {
+        EventBind {
             ev_delay_loc,
             bind_loc,
         }
+        .into()
     }
 
     pub fn instance(
@@ -100,23 +120,25 @@ impl Info {
         comp_loc: GPosIdx,
         bind_loc: GPosIdx,
     ) -> Self {
-        Self::Instance {
+        Instance {
             name,
             comp_loc,
             bind_loc,
         }
+        .into()
     }
 
     pub fn invoke(name: ast::Id, inst_loc: GPosIdx, bind_loc: GPosIdx) -> Info {
-        Self::Invoke {
+        Invoke {
             name,
             inst_loc,
             bind_loc,
         }
+        .into()
     }
 
     pub fn connect(dst_loc: GPosIdx, src_loc: GPosIdx) -> Self {
-        Self::Connect { dst_loc, src_loc }
+        Connect { dst_loc, src_loc }.into()
     }
 
     pub fn port(
@@ -125,18 +147,67 @@ impl Info {
         width_loc: GPosIdx,
         live_loc: GPosIdx,
     ) -> Self {
-        Self::Port {
+        Port {
             name,
             bind_loc,
             width_loc,
             live_loc,
         }
-    }
-
-    pub fn unannotated_port(name: ast::Id, width: u64) -> Self {
-        Self::UnannotatedPort { name, width }
+        .into()
     }
 }
+
+/// Generates two functions for casting `Info` to a specific variant.
+///
+/// `as_{name}` returns `Some()` if the info is of the correct variant,
+/// `None` if the info was empty, and panics if the info was an incorrect variant.
+///
+/// Also defines a `From<&Info> for &{class}` implementation that panics if the info was not the right variant,
+/// and a `From<&Info> for Option<&{class}>` implementation that mirrors `as_{name}`.
+macro_rules! info_cast {
+    ($class:tt, $name:ident) => {
+        impl Info {
+            pub fn $name(&self) -> Option<&$class> {
+                match self {
+                    Self::$class(v) => Some(v),
+                    Self::Empty(_) => None,
+                    _ => unreachable!(
+                        "Incorrect info type for {}.",
+                        stringify!($class)
+                    ),
+                }
+            }
+        }
+
+        impl<'a> From<&'a Info> for &'a $class {
+            fn from(info: &'a Info) -> Self {
+                if let Info::$class(v) = info {
+                    v
+                } else {
+                    unreachable!(
+                        "Incorrect info type for {}.",
+                        stringify!($class)
+                    );
+                }
+            }
+        }
+
+        impl<'a> From<&'a Info> for Option<&'a $class> {
+            fn from(info: &'a Info) -> Self {
+                info.$name()
+            }
+        }
+    };
+}
+
+info_cast!(Assert, as_assert);
+info_cast!(Param, as_param);
+info_cast!(Event, as_event);
+info_cast!(EventBind, as_event_bind);
+info_cast!(Instance, as_instance);
+info_cast!(Invoke, as_invoke);
+info_cast!(Connect, as_connect);
+info_cast!(Port, as_port);
 
 #[derive(Clone, PartialEq, Eq)]
 /// Why was an assertion created?
@@ -339,7 +410,7 @@ impl Reason {
 
 impl From<Reason> for Info {
     fn from(r: Reason) -> Self {
-        Self::Assert(r)
+        Self::assert(r)
     }
 }
 

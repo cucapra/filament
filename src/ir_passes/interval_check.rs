@@ -31,8 +31,9 @@ impl IntervalCheck {
     ) -> Option<ir::Command> {
         let &ir::Range { start, end } = range;
         let prop = end.gt(start, comp);
-        let reason = comp
-            .add(ir::Reason::well_formed_interval(loc, (start, end)).into());
+        let reason = comp.add(
+            ir::info::Reason::well_formed_interval(loc, (start, end)).into(),
+        );
         comp.assert(prop, reason)
     }
 
@@ -44,13 +45,14 @@ impl IntervalCheck {
     ) -> Option<ir::Command> {
         let zero = comp.num(0).into();
         let ir::Event { delay, info, .. } = &comp[event];
-        let ir::Info::Event { delay_loc, .. } = comp[*info] else {
-            unreachable!("expected event info")
-        };
+        let &ir::info::Event { delay_loc, .. } = comp.get(*info).into();
         let prop = delay.clone().gt(zero, comp);
         let reason = comp.add(
-            ir::Reason::misc("delay must be greater than zero", delay_loc)
-                .into(),
+            ir::info::Reason::misc(
+                "delay must be greater than zero",
+                delay_loc,
+            )
+            .into(),
         );
         comp.assert(prop, reason)
     }
@@ -78,18 +80,20 @@ impl IntervalCheck {
             info,
             ..
         } = &eb;
-        let ir::Info::EventBind { ev_delay_loc, bind_loc } = comp[*info] else {
-            unreachable!("expected event bind info")
-        };
+        let &ir::info::EventBind {
+            ev_delay_loc,
+            bind_loc,
+        } = comp.get(*info).into();
 
         let this_ev = &comp[comp[*arg].event];
         let this_delay = this_ev.delay.clone();
-        let ir::Info::Event { delay_loc: ev_del_loc, .. } = comp[this_ev.info] else {
-            unreachable!("expected event info")
-        };
+        let &ir::info::Event {
+            delay_loc: ev_del_loc,
+            ..
+        } = comp.get(this_ev.info).into();
 
         let reason = comp.add(
-            ir::Reason::event_trig(
+            ir::info::Reason::event_trig(
                 ev_delay_loc,
                 inv_delay.clone(),
                 ev_del_loc,
@@ -134,9 +138,7 @@ impl Visitor for IntervalCheck {
             .collect_vec();
 
         for (live, info) in ranges {
-            let ir::Info::Port { live_loc, .. } = comp[info] else {
-                unreachable!("expected port info")
-            };
+            let &ir::info::Port { live_loc, .. } = comp.get(info).into();
             let range = live.range;
             // Require that the range is well-formed
             cmds.extend(self.range_wf(&range, live_loc, comp));
@@ -146,16 +148,12 @@ impl Visitor for IntervalCheck {
             let len = range.end.sub(range.start, comp);
             let ev = &comp[st_ev];
             let delay = ev.delay.clone();
-            let ir::Info::Event { delay_loc, .. } = comp[ev.info] else {
-                unreachable!("expected event info")
-            };
+            let &ir::info::Event { delay_loc, .. } = comp.get(ev.info).into();
             let param = comp.get(live.idx);
-            let ir::Info::Param { bind_loc, .. } = comp[param.info] else {
-                unreachable!("expected param info")
-            };
+            let &ir::info::Param { bind_loc, .. } = comp.get(param.info).into();
             let zero = comp.num(0);
             let reason = comp.add(
-                ir::Reason::bundle_delay(
+                ir::info::Reason::bundle_delay(
                     delay_loc,
                     live_loc,
                     len.clone(),
@@ -206,12 +204,15 @@ impl Visitor for IntervalCheck {
             .lte(dst_range.start, comp)
             .and(src_t.range.end.gte(dst_range.end, comp), comp);
 
-        let ir::Info::Connect { dst_loc, src_loc } = comp.get(*info) else {
-            unreachable!("Expected connect info")
-        };
+        let &ir::info::Connect { dst_loc, src_loc } = comp.get(*info).into();
         let reason = comp.add(
-            ir::Reason::liveness(*dst_loc, *src_loc, dst_range, src_t.range)
-                .into(),
+            ir::info::Reason::liveness(
+                dst_loc,
+                src_loc,
+                dst_range,
+                src_t.range,
+            )
+            .into(),
         );
 
         let prop = pre_req.implies(contains, comp);
