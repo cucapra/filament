@@ -298,16 +298,16 @@ impl<T, V> DenseIndexInfo<T, V> {
     }
 }
 
-impl<T, V: Default> DenseIndexInfo<T, V> {
-    pub fn update_at(&mut self, key: Idx<T>, val: V) {
+impl<T, V: Default + Clone> DenseIndexInfo<T, V> {
+    pub fn insert(&mut self, key: Idx<T>, mut val: V) -> Option<V> {
         if self.store.len() > key.get() {
             // idx is already in the store, need to update it
-            self.store[key.get()] = val;
+            std::mem::swap(self.get_mut(key), &mut val);
+            Some(val)
         } else {
-            while self.store.len() < key.get() {
-                self.store.push(V::default());
-            }
+            self.store.resize(key.get(), V::default());
             self.push(key, val);
+            None
         }
     }
 }
