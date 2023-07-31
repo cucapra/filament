@@ -167,7 +167,7 @@ impl MonoSig {
             ir::info::Info::Assert(reason) => {
                 let ir::info::Assert(reason) = reason;
                 ir::Info::assert(self.reason(underlying, pass, reason))
-            },
+            }
             _ => ir::Info::empty(),
         };
 
@@ -606,6 +606,7 @@ impl MonoSig {
         self.insert_inst(inst);
 
         let ir::Instance { comp, params, info } = underlying.get(inst);
+        let is_ext = pass.old.get(*comp).is_ext;
         let conc_params = params
             .iter()
             .map(|p| {
@@ -614,11 +615,22 @@ impl MonoSig {
                     .unwrap()
             })
             .collect_vec();
-        let (comp, params) = pass.should_process(*comp, conc_params);
-        let new_inst = ir::Instance {
-            comp,
-            params: params.into_iter().map(|n| self.base.num(n)).collect(),
-            info: self.info(underlying, pass, info),
+        let (comp, new_params) = pass.should_process(*comp, conc_params);
+        let new_inst = if !is_ext {
+            ir::Instance {
+                comp,
+                params: new_params
+                    .into_iter()
+                    .map(|n| self.base.num(n))
+                    .collect(),
+                info: self.info(underlying, pass, info),
+            }
+        } else {
+            ir::Instance {
+                comp,
+                params: params.clone(),
+                info: self.info(underlying, pass, info),
+            }
         };
 
         let new_idx = self.base.add(new_inst);
