@@ -170,17 +170,15 @@ impl<'a> Printer<'a> {
                 self.expr(start),
                 self.expr(end)
             )
+        } else if a.is_port(self.ctx) {
+            self.ctx.display(port)
         } else {
-            if a.is_port(self.ctx) {
-                self.ctx.display(port)
-            } else {
-                format!(
-                    "{}[{}..{})",
-                    self.ctx.display(port),
-                    self.expr(start),
-                    self.expr(end)
-                )
-            }
+            format!(
+                "{}[{}..{})",
+                self.ctx.display(port),
+                self.expr(start),
+                self.expr(end)
+            )
         }
     }
 
@@ -435,7 +433,6 @@ impl<'a> Printer<'a> {
                         self.expr(*width),
                     )
                 }
-                
             }
         }
     }

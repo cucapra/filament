@@ -76,9 +76,11 @@ impl<'ctx> Monomorphize<'ctx> {
         }
 
         // Otherwise, construct a new component and add it to the processing queue
-        let new_comp = self.ctx.comp(underlying.is_ext, &underlying.filename);
-        if underlying.filename.is_some() {
-            let filename = underlying.filename.clone().unwrap();
+        let new_comp = self.ctx.comp(underlying.is_ext);
+
+        // `Some` if an extern, `None` if not
+        let filename = self.old.get_filename(comp);
+        if let Some(filename) = filename {
             if let Some(exts) = self.ext_map.get(&filename) {
                 let mut exts = exts.clone();
                 exts.push(new_comp);

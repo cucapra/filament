@@ -866,12 +866,8 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         cmds
     }
 
-    fn external(
-        ctx: &ir::Context,
-        sig: ast::Signature,
-        filename: Option<String>,
-    ) -> ir::Component {
-        let mut ir_comp = ir::Component::new(true, &filename);
+    fn external(ctx: &ir::Context, sig: ast::Signature) -> ir::Component {
+        let mut ir_comp = ir::Component::new(true);
         ir_comp.src_info = Some(ir::InterfaceSrc::new(sig.name.copy()));
         let binding = SigMap::default();
         let mut builder = BuildCtx::new(ctx, &mut ir_comp, &binding);
@@ -913,7 +909,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         for ext in exts {
             let idx = sig_map.get(&ext.name).unwrap().idx;
             log::debug!("Converting external {}: {}", ext.name, idx);
-            let ir_ext = BuildCtx::external(&ctx, ext, Some(file.clone()));
+            let ir_ext = BuildCtx::external(&ctx, ext);
             ctx.comps.checked_add(idx, ir_ext);
             ctx.externals.entry(file.clone()).or_default().push(idx);
         }
@@ -924,7 +920,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     for (cidx, comp) in ns.components.iter().enumerate() {
         let idx = sig_map.get(&comp.sig.name).unwrap().idx;
 
-        let mut ir_comp = ir::Component::new(false, &None);
+        let mut ir_comp = ir::Component::new(false);
         if Some(cidx) == main_idx {
             ctx.entrypoint = Some(idx);
             ir_comp.src_info =
@@ -934,7 +930,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     }
 
     // create a dummy component to be swapped into the context
-    let mut curr_comp = ir::Component::new(false, &None);
+    let mut curr_comp = ir::Component::new(false);
     for cidx in order {
         let comp = std::mem::take(&mut ns.components[cidx]);
         log::debug!("Compiling component {}", comp.sig.name);

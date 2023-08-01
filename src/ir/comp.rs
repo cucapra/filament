@@ -22,9 +22,28 @@ impl Context {
     }
 
     /// Add a new component to the context
-    pub fn comp(&mut self, is_ext: bool, filename: &Option<String>) -> CompIdx {
-        let comp = Component::new(is_ext, filename);
+    pub fn comp(&mut self, is_ext: bool) -> CompIdx {
+        let comp = Component::new(is_ext);
         self.add(comp)
+    }
+
+    pub fn get_filename(&self, idx: CompIdx) -> Option<String> {
+        let name = self
+            .externals
+            .iter()
+            .filter_map(|(filename, comps)| {
+                if comps.contains(&idx) {
+                    Some(filename)
+                } else {
+                    None
+                }
+            })
+            .collect_vec();
+        if name.get(0).is_some() {
+            Some(name.get(0).unwrap().to_string())
+        } else {
+            None
+        }
     }
 }
 
@@ -103,18 +122,14 @@ pub struct Component {
     /// Externally facing interface information, used to preserve interface in compilation.
     /// Must be `Some` for toplevel components and externals.
     pub src_info: Option<InterfaceSrc>,
-    /// The file that this component came from.
-    /// Must be `Some` for externals
-    pub filename: Option<String>,
     /// unannotated ports associated with this component
     pub unannotated_ports: Box<Vec<(ast::Id, u64)>>,
 }
 
 impl Component {
-    pub fn new(is_ext: bool, filename: &Option<String>) -> Self {
+    pub fn new(is_ext: bool) -> Self {
         let mut comp = Self {
             is_ext,
-            filename: filename.clone(),
             ..Default::default()
         };
         // Allocate numbers and props now so we get reasonable indices.

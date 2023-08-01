@@ -161,9 +161,9 @@ impl MonoSig {
 
         let info = match info {
             ir::info::Info::Param(param) => {
-                let ir::info::Param {name, bind_loc} = param;
+                let ir::info::Param { name, bind_loc } = param;
                 ir::Info::param(*name, *bind_loc)
-            },
+            }
             ir::info::Info::Assert(reason) => {
                 let ir::info::Assert(reason) = reason;
                 ir::Info::assert(self.reason(underlying, pass, reason))
