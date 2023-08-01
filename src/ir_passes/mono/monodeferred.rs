@@ -261,13 +261,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         match cmd {
             ir::Command::Instance(idx) => {
                 if self.monosig.handled_instances.contains(idx) {
-                    let inst_occurrences =
-                        self.monosig.inst_counter.get(idx).unwrap();
-                    let base_inst = *self
-                        .monosig
-                        .inst_map
-                        .get(&(*idx, *inst_occurrences))
-                        .unwrap();
+                    let base_inst = *self.monosig.instance_map.get(idx).unwrap();
                     vec![base_inst.into()]
                 } else {
                     vec![self
@@ -278,13 +272,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             }
             ir::Command::Invoke(idx) => {
                 if self.monosig.handled_invokes.contains(idx) {
-                    let inv_occurrences =
-                        self.monosig.inv_counter.get(idx).unwrap();
-                    let base_inv = *self
-                        .monosig
-                        .inv_map
-                        .get(&(*idx, *inv_occurrences))
-                        .unwrap();
+                    let base_inv = *self.monosig.invoke_map.get(idx).unwrap();
                     vec![base_inv.into()]
                 } else {
                     vec![self
