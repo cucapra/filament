@@ -8,7 +8,7 @@ dir="$1"
 count="$2"
 # Whether to use the ir or not
 fil_flags=""
-if [[ $3 ]]; then
+if [[ ${3-} ]]; then
   fil_flags="--ir"
 fi
 
