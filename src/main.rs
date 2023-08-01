@@ -47,6 +47,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ir_passes::Assume::do_pass(opts, &mut ir)?;
         ir_passes::HoistFacts::do_pass(opts, &mut ir)?;
         ir_passes::Simplify::do_pass(opts, &mut ir)?;
+        ir_passes::Discharge::do_pass(opts, &mut ir)?;
         if opts.show_ir {
             println!("before mono");
             println!("====================================================");
@@ -62,7 +63,6 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
             ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
             println!("====================================================");
         }
-        ir_passes::Discharge::do_pass(opts, &mut ir)?;
         ir_passes::BundleElim::do_pass(&mut ir);
         if opts.show_ir {
             println!("after bundle-elim");
