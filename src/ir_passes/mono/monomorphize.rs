@@ -5,7 +5,7 @@ use crate::{
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
 
-use super::MonoDeferred;
+use super::monodeferred::MonoDeferred;
 
 /// Monomorphize the Filament program
 pub struct Monomorphize<'a> {
@@ -149,10 +149,7 @@ impl Monomorphize<'_> {
         while let Some((mut comp, idx)) = mono.next() {
             let default = mono.ctx.get_mut(idx);
             std::mem::swap(&mut comp, default);
-            let val = ir::Validate {
-                comp: &comp,
-                ctx: &mono.ctx.comps,
-            };
+            let val = ir::Validate::new(&comp, &mono.ctx.comps);
             val.comp();
         }
         let new_entrypoint = mono.processed.get(&(entrypoint, vec![])).unwrap();

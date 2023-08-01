@@ -2,7 +2,7 @@ use super::{monosig::MonoSig, Monomorphize};
 use crate::ir::{self, Ctx};
 use itertools::Itertools;
 
-pub struct MonoDeferred<'a, 'pass: 'a> {
+pub(super) struct MonoDeferred<'a, 'pass: 'a> {
     /// The underlying component to be monomorphized
     pub underlying: &'a ir::Component,
     /// Underlying pointer

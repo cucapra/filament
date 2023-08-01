@@ -6,9 +6,21 @@ use super::IndexStore;
 /// The validity condition for each structure is defined in the corresponding method.
 pub struct Validate<'a> {
     /// The component being validated.
-    pub comp: &'a ir::Component,
+    comp: &'a ir::Component,
     /// The context for the program being evaluated
-    pub ctx: &'a IndexStore<ir::Component>,
+    ctx: &'a IndexStore<ir::Component>,
+}
+
+impl<'a> Validate<'a> {
+    pub fn new(
+        comp: &'a ir::Component,
+        ctx: &'a IndexStore<ir::Component>
+    ) -> Self {
+        Self {
+            comp,
+            ctx
+        }
+    }
 }
 
 impl<'a> Validate<'a> {

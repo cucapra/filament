@@ -112,16 +112,6 @@ impl fmt::Display for Prop {
     }
 }
 
-impl Prop {
-    pub fn as_concrete(&self) -> Option<bool> {
-        match self {
-            Prop::True => Some(true),
-            Prop::False => Some(false),
-            _ => None,
-        }
-    }
-}
-
 /// Constructors for propositions
 impl PropIdx {
     #[inline(always)]

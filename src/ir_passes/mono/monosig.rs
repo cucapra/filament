@@ -160,10 +160,10 @@ impl MonoSig {
         let info = underlying.get(*iidx);
 
         let info = match info {
-            // ir::Info::Param {name, bind_loc} => {
-            //     let param_size = self.param_counter;
-            //     ir::Info::Param {name: ast::Id::new(format!("#_{param_size}")), bind_loc: bind_loc.clone()}
-            // }
+            ir::info::Info::Param(param) => {
+                let ir::info::Param {name, bind_loc} = param;
+                ir::Info::param(*name, *bind_loc)
+            },
             ir::info::Info::Assert(reason) => {
                 let ir::info::Assert(reason) = reason;
                 ir::Info::assert(self.reason(underlying, pass, reason))
