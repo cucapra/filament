@@ -1,10 +1,10 @@
 use super::{
-    CmpOp, Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
+    Cmp, CmpOp, Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
     IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke,
     MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeIdx,
     TimeSub,
 };
-use crate::{ast, ir::Cmp, utils::Idx};
+use crate::{ast, utils::Idx};
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -594,7 +594,102 @@ impl Ctx<Time> for Component {
 
 impl Ctx<Prop> for Component {
     fn add(&mut self, val: Prop) -> Idx<Prop> {
-        self.props.intern(val)
+        match val {
+            Prop::True | Prop::False => self.props.intern(val),
+            Prop::Not(p) => self.props.intern(if p.is_false(self) {
+                Prop::True
+            } else if p.is_true(self) {
+                Prop::False
+            } else if let Prop::Not(p) = self.get(p) {
+                return *p;
+            } else {
+                Prop::Not(p)
+            }),
+            Prop::And(l, r) => {
+                if l == r {
+                    l
+                } else if l.is_true(self) {
+                    r
+                } else if l.is_false(self) {
+                    self.props.intern(Prop::False)
+                } else if r.is_true(self) {
+                    l
+                } else if r.is_false(self) {
+                    self.props.intern(Prop::False)
+                } else {
+                    let (l, r) = if l < r { (l, r) } else { (r, l) };
+                    self.props.intern(Prop::And(l, r))
+                }
+            }
+            Prop::Or(l, r) => {
+                if l == r {
+                    l
+                } else if l.is_false(self) {
+                    r
+                } else if l.is_true(self) {
+                    self.props.intern(Prop::True)
+                } else if r.is_false(self) {
+                    l
+                } else if r.is_true(self) {
+                    self.props.intern(Prop::True)
+                } else {
+                    let (l, r) = if l < r { (l, r) } else { (r, l) };
+                    self.props.intern(Prop::Or(l, r))
+                }
+            }
+            Prop::Implies(l, r) => {
+                // If the proposition is false, then the implication is trivially true
+                if l.is_false(self) {
+                    // Warning because its not clear if this is ever expected behavior
+                    log::warn!("A false proposition was created");
+                    self.props.intern(Prop::True)
+                } else if r.is_true(self) {
+                    self.props.intern(Prop::True)
+                } else if l.is_true(self) {
+                    r
+                } else {
+                    self.props.intern(Prop::Implies(l, r))
+                }
+            }
+            Prop::Cmp(CmpOp { op, lhs, rhs }) => self.props.intern(
+                match (lhs.as_concrete(self), rhs.as_concrete(self)) {
+                    (Some(l), Some(r)) => {
+                        if match op {
+                            Cmp::Gt => l > r,
+                            Cmp::Gte => l >= r,
+                            Cmp::Eq => l == r,
+                        } {
+                            Prop::True
+                        } else {
+                            Prop::False
+                        }
+                    }
+                    _ => Prop::Cmp(CmpOp { op, lhs, rhs }),
+                },
+            ),
+            Prop::TimeCmp(CmpOp { op, lhs, rhs }) => {
+                let l = self.get(lhs);
+                let r = self.get(rhs);
+
+                if l.event == r.event {
+                    self.add(Prop::Cmp(CmpOp {
+                        op,
+                        lhs: l.offset,
+                        rhs: r.offset,
+                    }))
+                } else {
+                    self.props.intern(Prop::TimeCmp(CmpOp { op, lhs, rhs }))
+                }
+            }
+            Prop::TimeSubCmp(CmpOp { op, lhs, rhs }) => match (lhs, rhs) {
+                (TimeSub::Unit(l), TimeSub::Unit(r)) => {
+                    self.add(Prop::Cmp(CmpOp { op, lhs: l, rhs: r }))
+                }
+                (lhs, rhs) => {
+                    self.props.intern(Prop::TimeSubCmp(CmpOp { op, lhs, rhs }))
+                }
+            },
+        }
     }
 
     fn get(&self, idx: Idx<Prop>) -> &Prop {
