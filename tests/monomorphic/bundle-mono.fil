@@ -3,8 +3,11 @@ comp Bundle<G: 3>(
 ) -> (
     out[3]: for<#j> @[G+#j, G+#j+1] 32,
 ) {
-    bundle a[3]: for<#k> @[G, G+3] 32;
-    a{0} = in{1};
+    bundle a[6]: for<#k> @[G, G+3] 32;
+    a{3} = in{1};
+    a{4} = a{3};
+    a{5} = a{4};
+    a{0} = a{5};
     a{1} = in{2};
     a{2} = in{0};
     out{0} = a{1};

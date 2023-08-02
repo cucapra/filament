@@ -1,0 +1,13 @@
+---CODE---
+1
+---STDERR---
+error: Port a{0} assigned multiple times
+   ┌─ tests/errors/already-assigned.fil:10:5
+   │
+10 │     a{0} = a{1};
+   │     ---- assigned here
+11 │     a{0} = a{2};
+   │     ---- assigned here
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.
