@@ -262,7 +262,10 @@ impl<'a> Printer<'a> {
             write!(f, "ext ")?;
         };
         if let Some(info) = &comp.src_info {
-            write!(f, "comp {}", info.name)?
+            write!(f, "comp {}", info.name)?;
+            if let Some(idx) = idx {
+                write!(f, " {idx}")?;
+            }
         } else if let Some(idx) = idx {
             write!(f, "comp {}", idx)?;
         } else {

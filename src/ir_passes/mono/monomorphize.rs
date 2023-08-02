@@ -64,7 +64,7 @@ impl<'ctx> Monomorphize<'ctx> {
             self.externals.push(comp);
         }
 
-        let key = (comp, params.clone());
+        let key = if underlying.is_ext { (comp, vec![]) } else { (comp, params.clone()) };
 
         // If we've already processed this or queued this for processing, return the component
         if let Some(&name) = self.processed.get(&key) {

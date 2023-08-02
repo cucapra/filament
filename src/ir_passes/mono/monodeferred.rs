@@ -21,11 +21,11 @@ impl MonoDeferred<'_, '_> {
         // Events can be recursive, so do a pass over them to generate the new idxs now
         // and then fill them in later
         let binding = monosig.binding.inner();
-        let conc_params = binding
+        let conc_params = if underlying.is_ext {vec![]} else { binding
             .iter()
             .filter(|(p, _)| underlying.get(*p).is_sig_owned())
             .map(|(_, n)| *n)
-            .collect_vec();
+            .collect_vec() };
         for (idx, event) in underlying.events().iter() {
             let new_idx = monosig.base.add(event.clone());
             monosig.event_map.insert(idx, new_idx);
@@ -41,9 +41,17 @@ impl MonoDeferred<'_, '_> {
             }
         }
 
-        for (idx, port) in underlying.ports().iter() {
-            if port.is_sig_in() || port.is_sig_out() {
-                monosig.port(underlying, pass, idx);
+        if underlying.is_ext {
+            for (idx, port) in underlying.ports().iter() {
+                if port.is_sig() {
+                    monosig.ext_port(underlying, pass, idx);
+                }
+            }
+        } else {
+            for (idx, port) in underlying.ports().iter() {
+                if port.is_sig() {
+                    monosig.port(underlying, pass, idx);
+                }
             }
         }
 
