@@ -1,6 +1,7 @@
-use crate::ast;
-
-use super::{Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Time, TimeIdx};
+use super::{
+    CmpOp, Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Prop, PropIdx,
+    Time, TimeIdx,
+};
 
 pub struct Bind<K: Eq, V>(Vec<(K, V)>);
 
@@ -115,23 +116,61 @@ impl Foldable<ParamIdx, ExprIdx> for ExprIdx {
             Expr::Bin { op, lhs, rhs } => {
                 let lhs = lhs.fold_with(ctx, subst_fn);
                 let rhs = rhs.fold_with(ctx, subst_fn);
-                match op {
-                    ast::Op::Add => lhs.add(rhs, ctx),
-                    ast::Op::Sub => lhs.sub(rhs, ctx),
-                    ast::Op::Mul => lhs.mul(rhs, ctx),
-                    ast::Op::Div => lhs.div(rhs, ctx),
-                    ast::Op::Mod => lhs.rem(rhs, ctx),
-                }
+                ctx.add(Expr::Bin { op, lhs, rhs })
             }
             Expr::Fn { op, args } => {
-                let args: Vec<_> = args
+                let args = args
                     .iter()
                     .map(|arg| arg.fold_with(ctx, subst_fn))
                     .collect();
-                match op {
-                    ast::UnFn::Pow2 => args[0].pow2(ctx),
-                    ast::UnFn::Log2 => args[0].log2(ctx),
-                }
+                ctx.add(Expr::Fn { op, args })
+            }
+        }
+    }
+}
+
+impl Foldable<ParamIdx, ExprIdx> for PropIdx {
+    type Context = Component;
+
+    fn fold_with<F>(&self, ctx: &mut Self::Context, subst_fn: &mut F) -> Self
+    where
+        F: FnMut(ParamIdx) -> Option<ExprIdx>,
+    {
+        match ctx.get(*self).clone() {
+            Prop::True | Prop::False => *self,
+            Prop::Cmp(CmpOp { op, lhs, rhs }) => {
+                let lhs = lhs.fold_with(ctx, subst_fn);
+                let rhs = rhs.fold_with(ctx, subst_fn);
+                ctx.add(Prop::Cmp(CmpOp { op, lhs, rhs }))
+            }
+            Prop::TimeCmp(CmpOp { op, lhs, rhs }) => {
+                let lhs = lhs.fold_with(ctx, subst_fn);
+                let rhs = rhs.fold_with(ctx, subst_fn);
+                ctx.add(Prop::TimeCmp(CmpOp { op, lhs, rhs }))
+            }
+            Prop::TimeSubCmp(CmpOp { op, lhs, rhs }) => {
+                let lhs = lhs.fold_with(ctx, subst_fn);
+                let rhs = rhs.fold_with(ctx, subst_fn);
+                ctx.add(Prop::TimeSubCmp(CmpOp { op, lhs, rhs }))
+            }
+            Prop::Not(p) => {
+                let p = p.fold_with(ctx, subst_fn);
+                p.not(ctx)
+            }
+            Prop::And(l, r) => {
+                let l = l.fold_with(ctx, subst_fn);
+                let r = r.fold_with(ctx, subst_fn);
+                l.and(r, ctx)
+            }
+            Prop::Or(l, r) => {
+                let l = l.fold_with(ctx, subst_fn);
+                let r = r.fold_with(ctx, subst_fn);
+                l.or(r, ctx)
+            }
+            Prop::Implies(a, c) => {
+                let a = a.fold_with(ctx, subst_fn);
+                let c = c.fold_with(ctx, subst_fn);
+                a.implies(c, ctx)
             }
         }
     }
