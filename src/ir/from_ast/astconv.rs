@@ -873,7 +873,11 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     };
 
     // Walk over signatures and compile signatures to build a SigMap
-    let (mut builders, sig_map): (Vec<_>, SigMap) = ns
+    // Contains a tuple containing three necessary bits of information:
+    // 1. The (optional) name of the component (if it is an external)
+    // 2. The signature of the component
+    // 3. The (optional) body of the component (if it is not an external)
+    let comps = ns
         // pull signatures out of externals
         .externs
         .into_iter()
@@ -887,7 +891,10 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
                 .into_iter()
                 .map(|comp| (None, comp.sig, Some(comp.body))),
         )
-        .enumerate()
+        .enumerate();
+
+    // uses the information above to compile the signatures of components and create their builders.
+    let (mut builders, sig_map): (Vec<_>, SigMap) = comps
         .map(|(idx, (file, sig, body))| {
             let idx = ir::CompIdx::new(idx);
             let mut builder = BuildCtx::new(ir::Component::new(body.is_none()));
@@ -915,14 +922,14 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
 
     // Compiles and adds all the commands here
     // Need to do this before adding all the components because each builder borrows the context immutably
-    builders.into_iter().for_each(|(idx, mut builder, cmds)| {
+    for (idx, mut builder, cmds) in builders {
         let body_cmds = cmds.map_or(vec![], |cmds| builder.commands(cmds));
         let mut cmds = builder.port_assumptions();
         cmds.extend(body_cmds);
         builder.comp.cmds.extend(cmds);
         log::debug!("Adding component: {}", idx);
         ctx.comps.checked_add(idx, builder.comp)
-    });
+    }
 
     ctx
 }
