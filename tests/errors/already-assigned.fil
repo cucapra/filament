@@ -4,7 +4,7 @@ comp main<G: 1>(
 ) -> (
     @[G, G+1] out: 32
 ) {
-    bundle a[3]: for<#k> @[G, G+1] 32;
+    bundle a[4]: for<#k> @[G, G+1] 32;
     a{1} = in1;
     a{2} = in2;
     a{0} = a{1};

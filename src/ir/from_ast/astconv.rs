@@ -5,7 +5,7 @@ use crate::ir::{
     Cmp, Ctx, EventIdx, ExprIdx, InterfaceSrc, MutCtx, ParamIdx, PortIdx,
     PropIdx, TimeIdx,
 };
-use crate::utils::GPosIdx;
+use crate::utils::{GPosIdx, Idx};
 use crate::{ast, ir, utils::Binding};
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -868,7 +868,7 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         entrypoint: ns
             .main_idx()
             // index main component after all externals
-            .map(|idx| crate::utils::Idx::new(ns.externals().count() + idx)),
+            .map(|idx| Idx::new(ns.externals().count() + idx)),
         ..Default::default()
     };
 
