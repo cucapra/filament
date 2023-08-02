@@ -16,8 +16,10 @@ data=$"$dir/data.json"
 fields=$"$dir/fields"
 # Width file
 width=$"$dir/width"
+# Operator file
+op=$"$dir/op"
 
-./"$script_dir/gen_float.py" gen --width $(cat $width) "$count" > "$data"
+./"$script_dir/gen_float.py" gen --width $(cat $width) --op $(cat $op) "$count" > "$data"
 
 (fud e -s cocotb.data "$data" --to cocotb-out "$dir/harness.fil" -s calyx.flags ' -d canonicalize' -q | \
   ./"$script_dir/gen_float.py" check --fields $(cat $fields) && \

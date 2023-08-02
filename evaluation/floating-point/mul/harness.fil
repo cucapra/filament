@@ -17,10 +17,12 @@ comp main<G: 1>(
   @interface[G] go: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,
+  @[G, G+1] expecting: 32
 ) -> (
   @[G, G+1] out: 32,
   @[G, G+1] verilog_nopipe: 32,
   @[G, G+1] filament_lib: 32
+  @[G, G+1] expected: 32
 ) {
   np := new FP_Mult_NoPipe<G>(left, right);
   f := new FPMult<G>(left, right);
@@ -29,5 +31,5 @@ comp main<G: 1>(
   verilog_nopipe = np.res;
   out = f.out;
   filament_lib = prim.out;
-  expected = ans;
+  expected = expecting;
 }

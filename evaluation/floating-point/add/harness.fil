@@ -29,13 +29,13 @@ comp main<G: 1>(
   @interface[G] go: 1,
   @[G, G+1] left: 32,
   @[G, G+1] right: 32,
-  @[G, G+1] ans: 32,
+  @[G, G+1] expecting: 32
 ) -> (
   @[G+4, G+5] out: 32,
   @[G+4, G+5] verilog_pipe: 32,
   @[G, G+1] verilog_nopipe: 32,
   @[G, G+1] filament_lib: 32,
-  @[G, G+1] expected: 32,
+  @[G, G+1] expected: 32
 ) {
   fil := new FPAdd<G>(left, right);
   ver := new IEEE_SP_FP_ADDER<G>(left, right);
@@ -46,5 +46,5 @@ comp main<G: 1>(
   verilog_pipe = ver.Result;
   verilog_nopipe = ver_np.Result;
   filament_lib = prim.out;
-  expected = ans;
+  expected = expecting;
 }

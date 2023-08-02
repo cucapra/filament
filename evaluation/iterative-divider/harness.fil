@@ -38,12 +38,14 @@ comp main<G: 11>(
   @interface[G] go: 1,
   @[G, G+1] left: 8,
   @[G, G+9] right: 8,
+  @[G, G+1] expecting: 8
 ) -> (
   @[G, G+1] comb_noshare: 8,
   @[G+9, G+10] verilog: 8,
   @[G+8, G+9] share: 8,
   @[G+8, G+9] pipe: 8,
   @[G+8, G+9] tradeoff: 8,
+  @[G, G+1] expected: 8
 ) {
   d := new DiffTest[8]<G>(left, right);
   td := new TradeoffDiv[8, 4, 2]<G>(left, right);
@@ -52,4 +54,5 @@ comp main<G: 11>(
   share = d.share;
   pipe = d.pipe;
   tradeoff = td.out;
+  expected = expecting;
 }
