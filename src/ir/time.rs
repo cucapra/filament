@@ -38,56 +38,28 @@ impl TimeIdx {
     where
         C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,
     {
-        let l = ctx.get(self);
-        let r = ctx.get(other);
-        if l.event == r.event {
-            l.offset.lte(r.offset, ctx)
-        } else {
-            ctx.add(Prop::TimeCmp(CmpOp::lte(self, other)))
-        }
+        ctx.add(Prop::TimeCmp(CmpOp::lte(self, other)))
     }
 
     pub fn lt<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
     where
         C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,
     {
-        let l = ctx.get(self);
-        let r = ctx.get(other);
-        if l.event == r.event {
-            l.offset.lt(r.offset, ctx)
-        } else {
-            ctx.add(Prop::TimeCmp(CmpOp::lt(self, other)))
-        }
+        ctx.add(Prop::TimeCmp(CmpOp::lt(self, other)))
     }
 
     pub fn gt<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
     where
         C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,
     {
-        let l = ctx.get(self);
-        let r = ctx.get(other);
-        if l.event == r.event {
-            let l = l.offset;
-            let r = r.offset;
-            l.gt(r, ctx)
-        } else {
-            ctx.add(Prop::TimeCmp(CmpOp::gt(self, other)))
-        }
+        ctx.add(Prop::TimeCmp(CmpOp::gt(self, other)))
     }
 
     pub fn gte<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
     where
         C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,
     {
-        let l = ctx.get(self);
-        let r = ctx.get(other);
-        if l.event == r.event {
-            let l = l.offset;
-            let r = r.offset;
-            l.gte(r, ctx)
-        } else {
-            ctx.add(Prop::TimeCmp(CmpOp::gte(self, other)))
-        }
+        ctx.add(Prop::TimeCmp(CmpOp::gte(self, other)))
     }
 }
 

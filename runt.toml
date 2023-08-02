@@ -30,6 +30,15 @@ fud e -s cocotb.data "$dir/data.json" \
       -s calyx.flags ' -d canonicalize' -q
 """
 
+# Evaluation examples
+[[tests]]
+name = "[IR] evaluation"
+paths = ["evaluation/**/harness.fil"]
+cmd = """
+dir=$(dirname {}) && \
+./evaluation/fuzz/check.sh $dir 100 ir
+"""
+
 # Aetherling evaluation
 [[tests]]
 name = "[IR] aetherling evaluation"
@@ -45,8 +54,7 @@ name = "[IR] frisc tests"
 paths = ["frisc/test/*.fil"]
 cmd = """
 fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --ir' -q
-"""
-
+""" 
 
 # =========== Old Flow Tests ===========
 
