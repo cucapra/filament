@@ -29,18 +29,21 @@ impl BundleElim {
         let start = start.as_concrete(comp).unwrap() as usize;
         let end = end.as_concrete(comp).unwrap() as usize;
 
-        (start..end)
-            .map(|idx| {
-                let mut group = (*port, idx);
-                let (port, idx) = loop {
-                    match self.local_map.get(&group) {
-                        Some(&g) => group = g,
-                        None => break group,
-                    }
-                };
-                self.context[cidx][&port][idx]
-            })
-            .collect()
+        let mut ports = Vec::with_capacity(end - start);
+
+        for idx in start..end {
+            let mut group = (*port, idx);
+            // loops until the non-local source of this port is found
+            let (port, idx) = loop {
+                match self.local_map.get(&group) {
+                    Some(&g) => group = g,
+                    None => break group,
+                }
+            };
+            ports.push(self.context[cidx][&port][idx]);
+        }
+
+        ports
     }
 
     /// Compiles a port by breaking it into multiple len-1 ports.
@@ -187,11 +190,12 @@ impl BundleElim {
         let dst = self.get(dst, cidx, ctx);
 
         let comp = ctx.get_mut(cidx);
-        assert!(
-            src.len() == dst.len(),
-            "Mismatched access lengths for connect `{}`",
-            Printer::new(comp).connect_str(connect)
-        );
+        if src.len() != dst.len() {
+            comp.internal_error(format!(
+                "Mismatched access lengths for connect `{}`",
+                Printer::new(comp).connect_str(connect)
+            ))
+        }
 
         // split this single connects into `n` separate connects each with individual ports.
         // the local mapping optimization here works because it assumes that connects assigning to the local port

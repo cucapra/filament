@@ -1,5 +1,8 @@
-use std::collections::HashMap;
-
+use crate::{
+    ir::{Component, Connect, Ctx, DisplayCtx, PortIdx},
+    ir_visitor::{Action, Visitor},
+    utils::{GPosIdx, GlobalPositionTable},
+};
 use codespan_reporting::{
     diagnostic::Diagnostic,
     term::{
@@ -8,19 +11,14 @@ use codespan_reporting::{
     },
 };
 use itertools::Itertools;
-
-use crate::{
-    ir::{Component, Connect, Ctx, DisplayCtx, PortIdx},
-    ir_visitor::{Action, Visitor},
-    utils::{GPosIdx, GlobalPositionTable},
-};
+use std::collections::HashMap;
 
 #[derive(Default)]
 /// Makes sure each index in a port is only written to at most once
 /// Must occur after monomorphization.
 pub struct AssignCheck {
     ports: HashMap<(PortIdx, usize), Vec<Option<GPosIdx>>>,
-    diagnostics: Vec<Diagnostic<usize>>,
+    diagnostic_count: u32,
 }
 
 impl Visitor for AssignCheck {
@@ -40,6 +38,15 @@ impl Visitor for AssignCheck {
     }
 
     fn end(&mut self, comp: &mut Component) {
+        // Report all the errors
+        let is_tty = atty::is(atty::Stream::Stderr);
+        let writer = StandardStream::stderr(if is_tty {
+            ColorChoice::Always
+        } else {
+            ColorChoice::Never
+        });
+        let table = GlobalPositionTable::as_ref();
+
         for ((port, idx), connects) in self.ports.drain() {
             let l = connects.len();
             // assigned only once, no problems
@@ -77,32 +84,21 @@ impl Visitor for AssignCheck {
                 )]),
             };
 
-            self.diagnostics.push(diag);
-        }
-    }
-
-    fn after_traversal(&mut self) -> Option<u32> {
-        let err_count = self.diagnostics.len() as u32;
-        // Report all the errors
-        let is_tty = atty::is(atty::Stream::Stderr);
-        let writer = StandardStream::stderr(if is_tty {
-            ColorChoice::Always
-        } else {
-            ColorChoice::Never
-        });
-        let table = GlobalPositionTable::as_ref();
-        for diag in &self.diagnostics {
             term::emit(
                 &mut writer.lock(),
                 &term::Config::default(),
                 table.files(),
-                diag,
+                &diag,
             )
             .unwrap();
-        }
 
-        if err_count > 0 {
-            Some(err_count)
+            self.diagnostic_count += 1;
+        }
+    }
+
+    fn after_traversal(&mut self) -> Option<u32> {
+        if self.diagnostic_count > 0 {
+            Some(self.diagnostic_count)
         } else {
             None
         }
