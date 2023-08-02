@@ -93,13 +93,17 @@ impl BundleElim {
                     }
                     PortOwner::Inv { inv, dir, base } => {
                         let (key, owner) = base.take();
+                        let map = &self.context[owner];
+                        log::debug!("trying to look up {key} in hashmap");
+                        let ports = &map[&key];
+                        let port = ports[i as usize];
                         PortOwner::Inv {
                             inv: *inv,
                             dir: dir.clone(),
                             base: Foreign::new(
                                 // maps the foreign to the corresponding single port
                                 // this works because all signature ports are compiled first.
-                                self.context[owner][&key][i as usize],
+                                port,
                                 owner,
                             ),
                         }
@@ -210,6 +214,7 @@ impl BundleElim {
 
     /// Compiles the body of a component and replaces all ports with their expanded versions.
     fn comp(&mut self, cidx: CompIdx, ctx: &mut Context) {
+        log::debug!("running bundle-elim for {cidx}");
         let comp = ctx.get_mut(cidx);
         // compile invocations
         for idx in comp.invocations().idx_iter() {
