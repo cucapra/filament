@@ -33,7 +33,7 @@ impl<'prog> BuildCtx<'prog> {
             component,
             bindings,
         } = inst;
-        let comp = self.sigs.unwrap().get(component).unwrap();
+        let comp = self.sigs.get(component).unwrap();
         let binding = self.param_binding(
             comp.raw_params.clone(),
             bindings.iter().map(|e| e.inner()).cloned().collect_vec(),
@@ -45,13 +45,13 @@ impl<'prog> BuildCtx<'prog> {
                 .map(|(_, b)| self.expr(b.clone()))
                 .collect_vec()
                 .into_boxed_slice(),
-            info: self.comp.add(ir::Info::instance(
+            info: self.comp().add(ir::Info::instance(
                 name.copy(),
                 component.pos(),
                 name.pos(),
             )),
         };
-        let idx = self.comp.add(inst);
+        let idx = self.comp().add(inst);
         self.inst_map.insert(name.copy(), idx);
         // Track the component binding for this instance
         self.inst_to_sig.push(idx, (Rc::new(binding), **component));
@@ -68,26 +68,26 @@ impl<'prog> BuildCtx<'prog> {
             ..
         } = inv;
         let inst = *self.inst_map.get(instance).unwrap();
-        let info = self.comp.add(ir::Info::invoke(
+        let info = self.comp().add(ir::Info::invoke(
             name.copy(),
             instance.pos(),
             name.pos(),
         ));
-        let inv = self.comp.add(ir::Invoke {
+        let inv = self.comp().add(ir::Invoke {
             inst,
             ports: vec![],  // Filled in later
             events: vec![], // Filled in later
             info,
         });
         // foreign component being invoked
-        let foreign_comp = inv.comp(&self.comp);
+        let foreign_comp = inv.comp(self.comp());
         self.add_inv(name.copy(), inv);
 
         let mut def_ports = vec![];
 
         // The inputs
         let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
-        let sig = self.sigs.unwrap().get(&comp).unwrap();
+        let sig = self.sigs.get(&comp).unwrap();
 
         // Event bindings
         let event_binding = self.event_binding(
@@ -102,7 +102,7 @@ impl<'prog> BuildCtx<'prog> {
                 .resolve_event(&event_binding);
 
             let base = ir::Foreign::new(
-                self.sigs.unwrap().get_idx(foreign_comp).unwrap().outputs[idx],
+                self.sigs.get_idx(foreign_comp).unwrap().outputs[idx],
                 foreign_comp,
             );
 
@@ -116,7 +116,7 @@ impl<'prog> BuildCtx<'prog> {
 
         // Add the inputs from the invoke. The outputs are added in the second
         // pass over the AST.
-        self.comp.get_mut(inv).ports.extend(def_ports);
+        self.comp().get_mut(inv).ports.extend(def_ports);
     }
 
     /// Declare the instances and invokes in the current scope.
@@ -151,28 +151,28 @@ impl<'prog> BuildCtx<'prog> {
                 let Some(pidx) = self.get_param(&p) else {
                     unreachable!("Parameter {p} not found")
                 };
-                self.comp.add(ir::Expr::Param(pidx))
+                self.comp().add(ir::Expr::Param(pidx))
             }
             ast::Expr::Concrete(n) => {
                 let e = ir::Expr::Concrete(n);
-                self.comp.add(e)
+                self.comp().add(e)
             }
             ast::Expr::Op { op, left, right } => {
                 let l = self.expr(*left);
                 let r = self.expr(*right);
                 match op {
-                    ast::Op::Add => l.add(r, &mut self.comp),
-                    ast::Op::Mul => l.mul(r, &mut self.comp),
-                    ast::Op::Sub => l.sub(r, &mut self.comp),
-                    ast::Op::Div => l.div(r, &mut self.comp),
-                    ast::Op::Mod => l.rem(r, &mut self.comp),
+                    ast::Op::Add => l.add(r, self.comp()),
+                    ast::Op::Mul => l.mul(r, self.comp()),
+                    ast::Op::Sub => l.sub(r, self.comp()),
+                    ast::Op::Div => l.div(r, self.comp()),
+                    ast::Op::Mod => l.rem(r, self.comp()),
                 }
             }
             ast::Expr::App { func, arg } => {
                 let arg = self.expr(*arg);
                 match func {
-                    ast::UnFn::Pow2 => arg.pow2(&mut self.comp),
-                    ast::UnFn::Log2 => arg.log2(&mut self.comp),
+                    ast::UnFn::Pow2 => arg.pow2(self.comp()),
+                    ast::UnFn::Log2 => arg.log2(self.comp()),
                 }
             }
         }
@@ -186,7 +186,7 @@ impl<'prog> BuildCtx<'prog> {
             ast::OrderOp::Gte => Cmp::Gte,
             ast::OrderOp::Eq => Cmp::Eq,
         };
-        self.comp.add(ir::Prop::Cmp(ir::CmpOp { lhs, op, rhs }))
+        self.comp().add(ir::Prop::Cmp(ir::CmpOp { lhs, op, rhs }))
     }
 
     fn event_cons(&mut self, cons: ast::OrderConstraint<ast::Time>) -> PropIdx {
@@ -197,14 +197,14 @@ impl<'prog> BuildCtx<'prog> {
             ast::OrderOp::Gte => Cmp::Gte,
             ast::OrderOp::Eq => Cmp::Eq,
         };
-        self.comp.add(ir::Prop::TimeCmp(ir::CmpOp { lhs, op, rhs }))
+        self.comp().add(ir::Prop::TimeCmp(ir::CmpOp { lhs, op, rhs }))
     }
 
     fn implication(&mut self, i: ast::Implication<ast::Expr>) -> PropIdx {
         let cons = self.expr_cons(i.cons);
         if let Some(ante) = i.guard {
             let ante = self.expr_cons(ante);
-            ante.implies(cons, &mut self.comp)
+            ante.implies(cons, self.comp())
         } else {
             cons
         }
@@ -216,18 +216,18 @@ impl<'prog> BuildCtx<'prog> {
         param: &ast::ParamBind,
         owner: ir::ParamOwner,
     ) -> ParamIdx {
-        let info = self.comp.add(ir::Info::param(param.name(), param.pos()));
+        let info = self.comp().add(ir::Info::param(param.name(), param.pos()));
 
         let ir_param = ir::Param::new(owner, info);
         let is_sig_param = ir_param.is_sig_owned();
 
-        let idx = self.comp.add(ir_param);
+        let idx = self.comp().add(ir_param);
         self.add_param(param.name(), idx);
 
         // only add information if this is a signature defined parameter
         if is_sig_param {
             // If the component is expecting interface information, add it.
-            if let Some(src) = &mut self.comp.src_info {
+            if let Some(src) = &mut self.comp().src_info {
                 src.params.insert(idx, param.name());
             }
         }
@@ -240,7 +240,7 @@ impl<'prog> BuildCtx<'prog> {
             unreachable!("Event {} not found. Map:\n{}", t.event, self.event_map)
         };
         let offset = self.expr(t.offset);
-        self.comp.add(ir::Time { event, offset })
+        self.comp().add(ir::Time { event, offset })
     }
 
     fn timesub(&mut self, ts: ast::TimeSub) -> ir::TimeSub {
@@ -249,7 +249,7 @@ impl<'prog> BuildCtx<'prog> {
             ast::TimeSub::Sym { l, r } => {
                 let l = self.time(l);
                 let r = self.time(r);
-                l.sub(r, &mut self.comp)
+                l.sub(r, self.comp())
             }
         }
     }
@@ -262,7 +262,7 @@ impl<'prog> BuildCtx<'prog> {
         eb: &ast::EventBind,
         interface_port: Option<(ast::Id, GPosIdx)>,
     ) -> EventIdx {
-        let info = self.comp.add(ir::Info::event(
+        let info = self.comp().add(ir::Info::event(
             eb.event.copy(),
             eb.event.pos(),
             eb.delay.pos(),
@@ -270,15 +270,15 @@ impl<'prog> BuildCtx<'prog> {
         ));
         // Add a fake delay of 0.
         let e = ir::Event {
-            delay: self.comp.num(0).into(),
+            delay: self.comp().num(0).into(),
             info,
             has_interface: interface_port.is_some(),
         };
-        let idx = self.comp.add(e);
+        let idx = self.comp().add(e);
 
         // If the component is expecting interface information and there is an interface port, add it.
         if let (Some((name, _)), Some(src)) =
-            (interface_port, &mut self.comp.src_info)
+            (interface_port, &mut self.comp().src_info)
         {
             src.interface_ports.insert(idx, name);
         }
@@ -301,7 +301,7 @@ impl<'prog> BuildCtx<'prog> {
                 liveness,
                 bitwidth,
             } => {
-                let info = self.comp.add(ir::Info::port(
+                let info = self.comp().add(ir::Info::port(
                     name.copy(),
                     name.pos(),
                     bitwidth.pos(),
@@ -318,7 +318,7 @@ impl<'prog> BuildCtx<'prog> {
                         // Updated after the port is constructed
                         ir::ParamOwner::bundle(ir::PortIdx::UNKNOWN),
                     ), // This parameter is unused
-                    len: ctx.comp.num(1),
+                    len: ctx.comp().num(1),
                     range: ctx.range(liveness.take()),
                 });
                 let p = ir::Port {
@@ -339,7 +339,7 @@ impl<'prog> BuildCtx<'prog> {
                         bitwidth,
                     },
             }) => {
-                let info = self.comp.add(ir::Info::port(
+                let info = self.comp().add(ir::Info::port(
                     name.copy(),
                     name.pos(),
                     bitwidth.pos(),
@@ -367,16 +367,16 @@ impl<'prog> BuildCtx<'prog> {
 
         // Defines helper variable here due to lifetime issues
         let is_sig_port = p.is_sig();
-        let idx = self.comp.add(p);
+        let idx = self.comp().add(p);
         // Fixup the liveness index parameter's owner
-        let p = self.comp.get(idx);
-        let param = self.comp.get_mut(p.live.idx);
+        let p = self.comp().get(idx).live.idx;
+        let param = self.comp().get_mut(p);
         param.owner = ir::ParamOwner::bundle(idx);
 
         // If this is a signature port, try adding it to the component's external interface
         if is_sig_port {
             // If the component is expecting interface information, add it.
-            if let Some(src) = &mut self.comp.src_info {
+            if let Some(src) = &mut self.comp().src_info {
                 src.ports.insert(idx, name.copy());
             }
         }
@@ -392,7 +392,7 @@ impl<'prog> BuildCtx<'prog> {
         match access {
             ast::Access::Index(n) => {
                 let n = self.expr(n);
-                (n, n.add(self.comp.num(1), &mut self.comp))
+                (n, n.add(self.comp().num(1), self.comp()))
             }
             ast::Access::Range { start, end } => {
                 (self.expr(start), self.expr(end))
@@ -410,12 +410,12 @@ impl<'prog> BuildCtx<'prog> {
         match port {
             ast::Port::This(n) => {
                 let owner = InvPort::Sig(dir, n.copy());
-                ir::Access::port(self.get_port(&owner), &mut self.comp)
+                ir::Access::port(self.get_port(&owner), self.comp())
             }
             ast::Port::InvPort { invoke, name } => {
                 let inv = self.get_inv(invoke.copy());
                 let owner = InvPort::Inv(inv, dir, name.copy());
-                ir::Access::port(self.get_port(&owner), &mut self.comp)
+                ir::Access::port(self.get_port(&owner), self.comp())
             }
             ast::Port::Bundle { name, access } => {
                 // NOTE(rachit): The AST does not distinguish between bundles
@@ -465,8 +465,8 @@ impl<'prog> BuildCtx<'prog> {
         // Then define their delays correctly
         for event in &sig.events {
             let delay = self.timesub(event.inner().delay.inner().clone());
-            let idx = self.event_map.get(&event.inner().event).unwrap();
-            self.comp.get_mut(*idx).delay = delay;
+            let idx = *self.event_map.get(&event.inner().event).unwrap();
+            self.comp().get_mut(idx).delay = delay;
         }
         for port in sig.inputs() {
             // XXX(rachit): Unnecessary clone.
@@ -477,27 +477,27 @@ impl<'prog> BuildCtx<'prog> {
             self.port(port.inner().clone(), ir::PortOwner::sig_in());
         }
         for (name, width) in &sig.unannotated_ports {
-            self.comp.unannotated_ports.push((*name, *width));
+            self.comp().unannotated_ports.push((*name, *width));
         }
         // Constraints defined by the signature
         let mut cons = Vec::with_capacity(
             sig.param_constraints.len() + sig.event_constraints.len(),
         );
         for ec in &sig.event_constraints {
-            let info = self.comp.add(ir::Info::assert(ir::info::Reason::misc(
+            let info = self.comp().add(ir::Info::assert(ir::info::Reason::misc(
                 "Signature assumption",
                 ec.pos(),
             )));
             let prop = self.event_cons(ec.inner().clone());
-            cons.extend(self.comp.assume(prop, info));
+            cons.extend(self.comp().assume(prop, info));
         }
         for pc in &sig.param_constraints {
-            let info = self.comp.add(ir::Info::assert(ir::info::Reason::misc(
+            let info = self.comp().add(ir::Info::assert(ir::info::Reason::misc(
                 "Signature assumption",
                 pc.pos(),
             )));
             let prop = self.expr_cons(pc.inner().clone());
-            cons.extend(self.comp.assume(prop, info));
+            cons.extend(self.comp().assume(prop, info));
         }
 
         cons
@@ -511,21 +511,20 @@ impl<'prog> BuildCtx<'prog> {
         let (binding, component) = self.inst_to_sig.get(idx).clone();
         let facts = self
             .sigs
-            .unwrap()
             .get(&component)
             .unwrap()
             .param_cons
             .clone()
             .into_iter()
             .flat_map(|f| {
-                let reason = self.comp.add(
+                let reason = self.comp().add(
                     ir::info::Reason::param_cons(comp_loc, f.pos()).into(),
                 );
                 let p = f.take().resolve_expr(&binding);
                 let prop = self.expr_cons(p);
                 // This is a checked fact because the calling component needs to
                 // honor it.
-                self.comp.assert(prop, reason)
+                self.comp().assert(prop, reason)
             })
             .collect_vec();
 
@@ -625,11 +624,11 @@ impl<'prog> BuildCtx<'prog> {
             unreachable!("No ports provided for invocation {name}")
         };
         let inv = self.get_inv(name.copy());
-        let inst = inv.inst(&self.comp);
+        let inst = inv.inst(self.comp());
         let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
-        let sig = self.sigs.unwrap().get(&comp).unwrap();
+        let sig = self.sigs.get(&comp).unwrap();
         // foreign component being invoked
-        let foreign_comp = inv.comp(&self.comp);
+        let foreign_comp = inv.comp(self.comp());
 
         // Event bindings
         let event_binding = self.event_binding(
@@ -654,13 +653,13 @@ impl<'prog> BuildCtx<'prog> {
             .clone()
             .into_iter()
             .flat_map(|ec| {
-                let reason = self.comp.add(
+                let reason = self.comp().add(
                     ir::info::Reason::event_cons(instance.pos(), ec.pos())
                         .into(),
                 );
                 let ec = ec.take().resolve_event(&event_binding);
                 let prop = self.event_cons(ec);
-                self.comp.assert(prop, reason)
+                self.comp().assert(prop, reason)
             })
             .collect();
 
@@ -670,7 +669,7 @@ impl<'prog> BuildCtx<'prog> {
             sig.raw_inputs.clone().into_iter().zip(srcs).enumerate()
         {
             let info = self
-                .comp
+                .comp()
                 .add(ir::Info::connect(p.inner().name().pos(), src.pos()));
             let resolved = p.map(|p| {
                 p.resolve_exprs(&param_binding)
@@ -678,7 +677,7 @@ impl<'prog> BuildCtx<'prog> {
             });
 
             let base = ir::Foreign::new(
-                self.sigs.unwrap().get_idx(foreign_comp).unwrap().inputs[idx],
+                self.sigs.get_idx(foreign_comp).unwrap().inputs[idx],
                 foreign_comp,
             );
 
@@ -690,12 +689,12 @@ impl<'prog> BuildCtx<'prog> {
 
             // Define port and add it to the invocation
             let pidx = self.port(resolved.take(), owner);
-            self.comp.get_mut(inv).ports.push(pidx);
+            self.comp().get_mut(inv).ports.push(pidx);
 
-            let end = self.comp[pidx].live.len;
+            let end = self.comp()[pidx].live.len;
             let dst = ir::Access {
                 port: pidx,
-                start: self.comp.num(0),
+                start: self.comp().num(0),
                 end,
             };
             connects.push(
@@ -734,12 +733,12 @@ impl<'prog> BuildCtx<'prog> {
                     .resolve_event(&event_binding);
 
                 let info =
-                    self.comp.add(ir::Info::event_bind(ev_delay_loc, pos));
+                    self.comp().add(ir::Info::event_bind(ev_delay_loc, pos));
                 let arg = self.time(time.clone());
                 let event = self.timesub(resolved.delay.take());
                 let base = ir::Foreign::new(EventIdx::new(idx), foreign_comp);
                 let eb = ir::EventBind::new(event, arg, info, base);
-                let invoke = self.comp.get_mut(inv);
+                let invoke = self.comp().get_mut(inv);
                 invoke.events.push(eb);
             });
 
@@ -759,22 +758,22 @@ impl<'prog> BuildCtx<'prog> {
             ast::Command::Invoke(inv) => self.invoke(inv),
             ast::Command::Instance(inst) => self.instance(inst),
             ast::Command::Fact(ast::Fact { cons, checked }) => {
-                let reason = self.comp.add(
+                let reason = self.comp().add(
                     ir::info::Reason::misc("source-level fact", cons.pos())
                         .into(),
                 );
                 let prop = self.implication(cons.take());
                 let fact = if checked {
-                    self.comp.assert(prop, reason)
+                    self.comp().assert(prop, reason)
                 } else {
-                    self.comp.assume(prop, reason)
+                    self.comp().assume(prop, reason)
                 };
                 fact.into_iter().collect()
             }
             ast::Command::Connect(ast::Connect { src, dst, guard }) => {
                 assert!(guard.is_none(), "Guards are not supported");
                 let info =
-                    self.comp.add(ir::Info::connect(dst.pos(), src.pos()));
+                    self.comp().add(ir::Info::connect(dst.pos(), src.pos()));
                 let src = self.get_access(src.take(), ir::Direction::Out);
                 let dst = self.get_access(dst.take(), ir::Direction::In);
                 vec![ir::Connect { src, dst, info }.into()]
@@ -788,7 +787,7 @@ impl<'prog> BuildCtx<'prog> {
                 let start = self.expr(start);
                 let end = self.expr(end);
                 // Assumption that the index is within range
-                let reason = self.comp.add(
+                let reason = self.comp().add(
                     ir::info::Reason::misc(
                         "loop index is within range",
                         idx.pos(),
@@ -811,12 +810,12 @@ impl<'prog> BuildCtx<'prog> {
                     body,
                 }
                 .into();
-                let index = index.expr(&mut self.comp);
-                let idx_start = index.gte(start, &mut self.comp);
-                let idx_end = index.lt(end, &mut self.comp);
-                let in_range = idx_start.and(idx_end, &mut self.comp);
+                let index = index.expr(self.comp());
+                let idx_start = index.gte(start, self.comp());
+                let idx_end = index.lt(end, self.comp());
+                let in_range = idx_start.and(idx_end, self.comp());
                 iter::once(l)
-                    .chain(self.comp.assume(in_range, reason))
+                    .chain(self.comp().assume(in_range, reason))
                     .collect()
             }
             ast::Command::If(ast::If { cond, then, alt }) => {
@@ -835,15 +834,15 @@ impl<'prog> BuildCtx<'prog> {
 
     /// Adds assumptions about the ports in the component
     fn port_assumptions(&mut self) -> Vec<ir::Command> {
-        let mut cmds = Vec::with_capacity(self.comp.ports().len() * 2);
+        let mut cmds = Vec::with_capacity(self.comp().ports().len() * 2);
         let ports = self
-            .comp
+            .comp()
             .ports()
             .iter()
             .map(|(_, p)| (p.live.idx, p.live.len))
             .collect_vec();
         // Add assumptions for range of bundle-bound indices
-        let reason = self.comp.add(
+        let reason = self.comp().add(
             ir::info::Reason::misc(
                 "bundle index is within range",
                 GPosIdx::UNKNOWN,
@@ -852,11 +851,11 @@ impl<'prog> BuildCtx<'prog> {
         );
 
         for (idx, len) in ports {
-            let idx = idx.expr(&mut self.comp);
-            let start = idx.gte(self.comp.num(0), &mut self.comp);
-            let end = idx.lt(len, &mut self.comp);
-            let in_range = start.and(end, &mut self.comp);
-            cmds.extend(self.comp.assume(in_range, reason))
+            let idx = idx.expr(self.comp());
+            let start = idx.gte(self.comp().num(0), self.comp());
+            let end = idx.lt(len, self.comp());
+            let in_range = start.and(end, self.comp());
+            cmds.extend(self.comp().assume(in_range, reason))
         }
         cmds
     }
@@ -893,14 +892,17 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         )
         .enumerate();
 
+    // used in the beginning so signatures of components can be built without any information
+    let sig_map = SigMap::default();
+
     // uses the information above to compile the signatures of components and create their builders.
     let (mut builders, sig_map): (Vec<_>, SigMap) = comps
         .map(|(idx, (file, sig, body))| {
             let idx = ir::CompIdx::new(idx);
-            let mut builder = BuildCtx::new(ir::Component::new(body.is_none()));
+            let mut builder = BuildCtx::new(ir::Component::new(body.is_none()), &sig_map);
             // enable source information saving if this is main or an external.
             if body.is_none() || Some(idx) == ctx.entrypoint {
-                builder.comp.src_info = Some(InterfaceSrc::new(sig.name.copy()))
+                builder.comp().src_info = Some(InterfaceSrc::new(sig.name.copy()))
             }
             // add the file to the externals map if it exists
             if let Some(file) = file {
@@ -908,16 +910,16 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
             }
 
             // compile the signature
-            builder.comp.cmds = builder.sig(&sig);
+            builder.comp().cmds = builder.sig(&sig);
 
-            let irsig = Sig::new(idx, &builder.comp, &sig);
+            let irsig = Sig::new(idx, builder.comp(), &sig);
             ((idx, builder, body), (sig.name.take(), irsig))
         })
         .unzip();
 
     // Add the signature map to each builder
     builders.iter_mut().for_each(|(_, builder, _)| {
-        builder.sigs = Some(&sig_map);
+        builder.sigs = &sig_map;
     });
 
     // Compiles and adds all the commands here
@@ -926,9 +928,9 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
         let body_cmds = cmds.map_or(vec![], |cmds| builder.commands(cmds));
         let mut cmds = builder.port_assumptions();
         cmds.extend(body_cmds);
-        builder.comp.cmds.extend(cmds);
+        builder.comp().cmds.extend(cmds);
         log::debug!("Adding component: {}", idx);
-        ctx.comps.checked_add(idx, builder.comp)
+        ctx.comps.checked_add(idx, builder.take())
     }
 
     ctx

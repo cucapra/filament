@@ -68,7 +68,7 @@ impl std::ops::Index<&Id> for SigMap {
     }
 }
 
-impl std::iter::FromIterator<(Id, Sig)> for SigMap {
+impl FromIterator<(Id, Sig)> for SigMap {
     fn from_iter<T: IntoIterator<Item = (Id, Sig)>>(iter: T) -> Self {
         let mut default = Self::default();
 
@@ -117,8 +117,8 @@ impl std::fmt::Display for InvPort {
 
 /// Context used while building the IR.
 pub(super) struct BuildCtx<'prog> {
-    pub comp: ir::Component,
-    pub sigs: Option<&'prog SigMap>,
+    comp: ir::Component,
+    pub sigs: &'prog SigMap,
 
     // Mapping from names of instance to (<parameter bindings>, <component name>).
     // We keep around the parameter bindings as [ast::Expr] because we need to resolve
@@ -139,10 +139,10 @@ pub(super) struct BuildCtx<'prog> {
 }
 
 impl<'prog> BuildCtx<'prog> {
-    pub fn new(comp: ir::Component) -> Self {
+    pub fn new(comp: ir::Component, sigs: &'prog SigMap) -> Self {
         Self {
             comp,
-            sigs: None,
+            sigs,
             name_idx: 0,
             param_map: ScopeMap::new(),
             event_map: ScopeMap::new(),
@@ -151,6 +151,18 @@ impl<'prog> BuildCtx<'prog> {
             inv_map: ScopeMap::new(),
             inst_to_sig: DenseIndexInfo::default(),
         }
+    }
+
+    #[inline]
+    /// Get a mutable reference to current component
+    pub fn comp(&mut self) -> &mut ir::Component {
+        &mut self.comp
+    }
+
+    #[inline]
+    // takes the component from the builder
+    pub fn take(self) -> ir::Component {
+        self.comp
     }
 
     /// Generate a unique, new name for unused parameters

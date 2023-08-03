@@ -23,6 +23,11 @@ pub struct AssignCheck {
 
 impl Visitor for AssignCheck {
     fn start(&mut self, comp: &mut Component) -> Action {
+        // skip externals
+        if comp.is_ext {
+            return Action::Stop;
+        }
+
         for (idx, port) in comp.ports().iter() {
             // input ports and invoke output ports are the only ports that don't have to be written to
             if port.is_sig_in() || port.is_inv_out() {
