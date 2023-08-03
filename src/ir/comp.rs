@@ -28,22 +28,9 @@ impl Context {
     }
 
     pub fn get_filename(&self, idx: CompIdx) -> Option<String> {
-        let name = self
-            .externals
-            .iter()
-            .filter_map(|(filename, comps)| {
-                if comps.contains(&idx) {
-                    Some(filename)
-                } else {
-                    None
-                }
-            })
-            .collect_vec();
-        if name.get(0).is_some() {
-            Some(name.get(0).unwrap().to_string())
-        } else {
-            None
-        }
+        self.externals.iter().find_map(|(filename, comps)| {
+            comps.contains(&idx).then_some(filename.to_string())
+        })
     }
 }
 
