@@ -166,37 +166,37 @@ impl MonoSig {
         let info = underlying.get(*iidx);
 
         let info = match info {
-            ir::info::Info::Param(param) => {
-                let ir::info::Param { name, bind_loc } = param;
-                ir::Info::param(*name, *bind_loc)
-            }
-            ir::info::Info::Assert(reason) => {
-                let ir::info::Assert(reason) = reason;
-                ir::Info::assert(self.reason(underlying, pass, reason))
-            }
-            ir::Info::Instance(instance) => {
-                let ir::info::Instance {name, comp_loc, bind_loc} = instance;
-                ir::Info::instance(*name, *comp_loc, *bind_loc)
-            }
-            ir::Info::Invoke(invoke) => {
-                let ir::info::Invoke {name, inst_loc, bind_loc} = invoke;
-                ir::Info::invoke(*name, *inst_loc, *bind_loc)
-            }
-            ir::Info::Connect(connect) => {
-                let ir::info::Connect {src_loc, dst_loc} = connect;
-                ir::Info::connect(*dst_loc, *src_loc)
-            }
-            ir::Info::Port(port) => {
-                let ir::info::Port {name, bind_loc, width_loc, live_loc} = port;
-                ir::Info::port(*name, *bind_loc, *width_loc, *live_loc)
-            }
-            ir::Info::Empty(_) => {
-                ir::Info::empty()
-            }
-            ir::Info::EventBind(eventbind) => {
-                let ir::info::EventBind {ev_delay_loc, bind_loc} = eventbind;
-                ir::Info::event_bind(*ev_delay_loc, *bind_loc)
-            }
+            // ir::info::Info::Param(param) => {
+            //     let ir::info::Param { name, bind_loc } = param;
+            //     ir::Info::param(*name, *bind_loc)
+            // }
+            // ir::info::Info::Assert(reason) => {
+            //     let ir::info::Assert(reason) = reason;
+            //     ir::Info::assert(self.reason(underlying, pass, reason))
+            // }
+            // ir::Info::Instance(instance) => {
+            //     let ir::info::Instance {name, comp_loc, bind_loc} = instance;
+            //     ir::Info::instance(*name, *comp_loc, *bind_loc)
+            // }
+            // ir::Info::Invoke(invoke) => {
+            //     let ir::info::Invoke {name, inst_loc, bind_loc} = invoke;
+            //     ir::Info::invoke(*name, *inst_loc, *bind_loc)
+            // }
+            // ir::Info::Connect(connect) => {
+            //     let ir::info::Connect {src_loc, dst_loc} = connect;
+            //     ir::Info::connect(*dst_loc, *src_loc)
+            // }
+            // ir::Info::Port(port) => {
+            //     let ir::info::Port {name, bind_loc, width_loc, live_loc} = port;
+            //     ir::Info::port(*name, *bind_loc, *width_loc, *live_loc)
+            // }
+            // ir::Info::Empty(_) => {
+            //     ir::Info::empty()
+            // }
+            // ir::Info::EventBind(eventbind) => {
+            //     let ir::info::EventBind {ev_delay_loc, bind_loc} = eventbind;
+            //     ir::Info::event_bind(*ev_delay_loc, *bind_loc)
+            // }
             _ => ir::Info::empty()
         };
 
