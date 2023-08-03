@@ -197,7 +197,8 @@ impl<'prog> BuildCtx<'prog> {
             ast::OrderOp::Gte => Cmp::Gte,
             ast::OrderOp::Eq => Cmp::Eq,
         };
-        self.comp().add(ir::Prop::TimeCmp(ir::CmpOp { lhs, op, rhs }))
+        self.comp()
+            .add(ir::Prop::TimeCmp(ir::CmpOp { lhs, op, rhs }))
     }
 
     fn implication(&mut self, i: ast::Implication<ast::Expr>) -> PropIdx {
@@ -484,18 +485,16 @@ impl<'prog> BuildCtx<'prog> {
             sig.param_constraints.len() + sig.event_constraints.len(),
         );
         for ec in &sig.event_constraints {
-            let info = self.comp().add(ir::Info::assert(ir::info::Reason::misc(
-                "Signature assumption",
-                ec.pos(),
-            )));
+            let info = self.comp().add(ir::Info::assert(
+                ir::info::Reason::misc("Signature assumption", ec.pos()),
+            ));
             let prop = self.event_cons(ec.inner().clone());
             cons.extend(self.comp().assume(prop, info));
         }
         for pc in &sig.param_constraints {
-            let info = self.comp().add(ir::Info::assert(ir::info::Reason::misc(
-                "Signature assumption",
-                pc.pos(),
-            )));
+            let info = self.comp().add(ir::Info::assert(
+                ir::info::Reason::misc("Signature assumption", pc.pos()),
+            ));
             let prop = self.expr_cons(pc.inner().clone());
             cons.extend(self.comp().assume(prop, info));
         }
@@ -899,10 +898,12 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     let (mut builders, sig_map): (Vec<_>, SigMap) = comps
         .map(|(idx, (file, sig, body))| {
             let idx = ir::CompIdx::new(idx);
-            let mut builder = BuildCtx::new(ir::Component::new(body.is_none()), &sig_map);
+            let mut builder =
+                BuildCtx::new(ir::Component::new(body.is_none()), &sig_map);
             // enable source information saving if this is main or an external.
             if body.is_none() || Some(idx) == ctx.entrypoint {
-                builder.comp().src_info = Some(InterfaceSrc::new(sig.name.copy()))
+                builder.comp().src_info =
+                    Some(InterfaceSrc::new(sig.name.copy()))
             }
             // add the file to the externals map if it exists
             if let Some(file) = file {
