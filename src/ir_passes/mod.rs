@@ -1,3 +1,4 @@
+mod assignment_check;
 mod assume;
 mod bundle_elim;
 mod discharge;
@@ -8,6 +9,7 @@ mod mono;
 mod prop_simplify;
 mod type_check;
 
+pub use assignment_check::AssignCheck;
 pub use assume::Assume;
 pub use bundle_elim::BundleElim;
 pub use discharge::Discharge;
