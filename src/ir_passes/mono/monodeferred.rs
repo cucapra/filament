@@ -78,6 +78,10 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         for idx in self.underlying.props().idx_iter() {
             self.prop(idx);
         }
+
+        for idx in self.underlying.info().idx_iter() {
+            self.monosig.info(self.underlying, self.pass, &idx);
+        }
     }
 
     fn prop(&mut self, pidx: ir::PropIdx) -> ir::PropIdx {

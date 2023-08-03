@@ -134,10 +134,7 @@ impl MonoSig {
         let new_port =
             pass.port_map.get(&(inst_comp, conc_params_copy.clone(), *key)).unwrap();
 
-        // this will be the new Foreign's `owner`
-        // let (mono_compidx, _) =
-        //     pass.queue.get(&(inst_comp, conc_params_copy)).unwrap();
-
+        log::debug!("looked up ({inst_comp}, {:?}, {key} in pass.port_map, got {new_port}", conc_params_copy);
 
         let mono_compidx = 
             if let None = pass.queue.get(&(inst_comp, conc_params_copy.clone())) {
@@ -145,6 +142,8 @@ impl MonoSig {
             } else {
                 &pass.queue.get(&(inst_comp, conc_params_copy)).unwrap().0
             };
+
+        // println!("new foreign port is {mono_compidx}'s {new_port}");    
 
         ir::Foreign {
             key: *new_port,
@@ -167,37 +166,37 @@ impl MonoSig {
         let info = underlying.get(*iidx);
 
         let info = match info {
-            // ir::info::Info::Param(param) => {
-            //     let ir::info::Param { name, bind_loc } = param;
-            //     ir::Info::param(*name, *bind_loc)
-            // }
-            // ir::info::Info::Assert(reason) => {
-            //     let ir::info::Assert(reason) = reason;
-            //     ir::Info::assert(self.reason(underlying, pass, reason))
-            // }
-            // ir::Info::Instance(instance) => {
-            //     let ir::info::Instance {name, comp_loc, bind_loc} = instance;
-            //     ir::Info::instance(*name, *comp_loc, *bind_loc)
-            // }
-            // ir::Info::Invoke(invoke) => {
-            //     let ir::info::Invoke {name, inst_loc, bind_loc} = invoke;
-            //     ir::Info::invoke(*name, *inst_loc, *bind_loc)
-            // }
-            // ir::Info::Connect(connect) => {
-            //     let ir::info::Connect {src_loc, dst_loc} = connect;
-            //     ir::Info::connect(*dst_loc, *src_loc)
-            // }
-            // ir::Info::Port(port) => {
-            //     let ir::info::Port {name, bind_loc, width_loc, live_loc} = port;
-            //     ir::Info::port(*name, *bind_loc, *width_loc, *live_loc)
-            // }
-            // ir::Info::Empty(_) => {
-            //     ir::Info::empty()
-            // }
-            // ir::Info::EventBind(eventbind) => {
-            //     let ir::info::EventBind {ev_delay_loc, bind_loc} = eventbind;
-            //     ir::Info::event_bind(*ev_delay_loc, *bind_loc)
-            // }
+            ir::info::Info::Param(param) => {
+                let ir::info::Param { name, bind_loc } = param;
+                ir::Info::param(*name, *bind_loc)
+            }
+            ir::info::Info::Assert(reason) => {
+                let ir::info::Assert(reason) = reason;
+                ir::Info::assert(self.reason(underlying, pass, reason))
+            }
+            ir::Info::Instance(instance) => {
+                let ir::info::Instance {name, comp_loc, bind_loc} = instance;
+                ir::Info::instance(*name, *comp_loc, *bind_loc)
+            }
+            ir::Info::Invoke(invoke) => {
+                let ir::info::Invoke {name, inst_loc, bind_loc} = invoke;
+                ir::Info::invoke(*name, *inst_loc, *bind_loc)
+            }
+            ir::Info::Connect(connect) => {
+                let ir::info::Connect {src_loc, dst_loc} = connect;
+                ir::Info::connect(*dst_loc, *src_loc)
+            }
+            ir::Info::Port(port) => {
+                let ir::info::Port {name, bind_loc, width_loc, live_loc} = port;
+                ir::Info::port(*name, *bind_loc, *width_loc, *live_loc)
+            }
+            ir::Info::Empty(_) => {
+                ir::Info::empty()
+            }
+            ir::Info::EventBind(eventbind) => {
+                let ir::info::EventBind {ev_delay_loc, bind_loc} = eventbind;
+                ir::Info::event_bind(*ev_delay_loc, *bind_loc)
+            }
             _ => ir::Info::empty()
         };
 
@@ -690,7 +689,11 @@ impl MonoSig {
             .collect_vec() };
 
         if let Some(idx) = self.port_map.get(&(inv, port)) {
-            pass.port_map.insert((comp, cparams, port), *idx);
+            if !pass.port_map.contains_key(&(comp, cparams.clone(), port)) {
+                log::debug!("(ext_port) inserted ({comp}, {:?}, {port}) -> {idx} into pass.port_map, found in local port_map", cparams);
+                pass.port_map.insert((comp, cparams, port), *idx);
+            }
+            
             return *idx;
         };
 
@@ -707,7 +710,10 @@ impl MonoSig {
         self.port_map.insert((inv, port), new_port);
 
         // pass port map
-        pass.port_map.insert((comp, cparams, port), new_port);
+        if !pass.port_map.contains_key(&(comp, cparams.clone(), port)) {
+            log::debug!("(ext_port) inserted ({comp}, {:?}, {port}) -> {new_port} into pass.port_map, not in local port_map", cparams);
+            pass.port_map.insert((comp, cparams, port), new_port);
+        };
 
         // Find the new port owner
         let mono_owner = self.find_new_portowner(underlying, pass, owner);
@@ -809,7 +815,10 @@ impl MonoSig {
         };
 
         if let Some(idx) = self.port_map.get(&(inv, port)) {
-            pass.port_map.insert((comp, conc_params, port), *idx);
+            if !pass.port_map.contains_key(&(comp, conc_params.clone(), port)) {
+                pass.port_map.insert((comp, conc_params.clone(), port), *idx);
+                log::debug!("inserted ({comp}, {:?}, {port}) -> {idx} into pass.port_map, found in local port_map", conc_params);
+            }
             return *idx;
         };
 
@@ -827,7 +836,10 @@ impl MonoSig {
         self.port_map.insert((inv, port), new_port);
 
         // pass port map
-        pass.port_map.insert((comp, conc_params, port), new_port);
+        if !pass.port_map.contains_key(&(comp, conc_params.clone(), port)) {
+            pass.port_map.insert((comp, conc_params.clone(), port), new_port);
+            log::debug!("inserted ({comp}, {:?}, {port}) -> {new_port} into pass.port_map, not in local port_map", conc_params);
+        };
 
         // Find the new port owner
         let mono_owner = self.find_new_portowner(underlying, pass, owner);
