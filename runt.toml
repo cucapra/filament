@@ -7,7 +7,7 @@ name = "[IR] errors"
 paths = ["tests/errors/*.fil"]
 expect_dir = "tests/ir_check/"
 cmd = """
-./target/debug/filament {} --ir -c
+./target/debug/filament {} --ir
 """
 
 [[tests]]
