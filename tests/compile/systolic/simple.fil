@@ -8,12 +8,9 @@ comp Process<G: 1>(
   @[G, G+1] out: 32,
 ) {
   // If acc does not contain a valid value, use 0
-  acc := new Prev[32, 0]<G>(add.out);
-  go_prev := new Prev[1, 1]<G>(go);
-  mux := new Mux[32]<G>(go_prev.prev, acc.prev, 0);
-
+  acc := new Prev[32, 1]<G>(add.out);
   mul := new MultComb[32]<G>(left, right);
-  add := new Add[32]<G>(mux.out, mul.out);
+  add := new Add[32]<G>(acc.prev, mul.out);
 
   out = add.out;
 }

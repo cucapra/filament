@@ -113,6 +113,10 @@ impl IntervalCheck {
 }
 
 impl Visitor for IntervalCheck {
+    fn name() -> &'static str {
+        "interval_check"
+    }
+
     fn start(&mut self, comp: &mut ir::Component) -> Action {
         // Ensure that delays are greater than zero
         let mut cmds: Vec<ir::Command> =
@@ -192,7 +196,7 @@ impl Visitor for IntervalCheck {
             .and(Self::in_range(&src_t, comp), comp);
 
         // Substitute the parameter used in source with that in dst
-        let binding = [(dst_t.idx, src_t.idx.expr(comp))];
+        let binding = vec![(dst_t.idx, src_t.idx.expr(comp))];
         let dst_range =
             ir::Subst::new(dst_t.range.clone(), &ir::Bind::new(binding))
                 .apply(comp);

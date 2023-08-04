@@ -52,6 +52,9 @@ pub trait Visitor
 where
     Self: Sized + Construct,
 {
+    /// The user visible name for the pass
+    fn name() -> &'static str;
+
     /// Executed after the visitor has visited all the components.
     /// If the return value is `Some`, the number is treated as an error code.
     fn after_traversal(&mut self) -> Option<u32> {
@@ -95,6 +98,7 @@ where
     ) -> Action {
         Action::Continue
     }
+
     /// Executed after the body of the loop is visited
     fn end_loop(
         &mut self,
@@ -158,6 +162,9 @@ where
     /// Perform action before visiting a sequence of commands which represent a scope.
     fn start_cmds(&mut self, _: &mut Vec<ir::Command>, _: &mut ir::Component) {}
 
+    /// Perform action after visiting a sequence of commands representing a scope.
+    fn end_cmds(&mut self, _: &mut Vec<ir::Command>, _: &mut ir::Component) {}
+
     fn visit_cmds(
         &mut self,
         cmds: &mut Vec<ir::Command>,
@@ -194,6 +201,7 @@ where
         if stopped {
             Action::Stop
         } else {
+            self.end_cmds(cmds, comp);
             Action::Continue
         }
     }

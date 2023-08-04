@@ -74,6 +74,19 @@ impl PortOwner {
     }
 }
 
+impl PortOwner {
+    pub fn is_inv_in(&self) -> bool {
+        matches!(
+            self,
+            PortOwner::Inv {
+                inv: _,
+                dir: Direction::In,
+                base: _
+            }
+        )
+    }
+}
+
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum Direction {
     /// Input port
@@ -83,6 +96,14 @@ pub enum Direction {
 }
 
 impl Direction {
+    pub fn is_out(&self) -> bool {
+        matches!(self, Direction::Out)
+    }
+
+    pub fn is_in(&self) -> bool {
+        matches!(self, Direction::In)
+    }
+
     pub fn reverse(&self) -> Self {
         match self {
             Direction::In => Direction::Out,
@@ -258,6 +279,22 @@ pub enum ParamOwner {
     Bundle(PortIdx),
     /// Loop indexing parameter
     Loop,
+}
+
+impl fmt::Display for ParamOwner {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ParamOwner::Sig => {
+                write!(f, "sig")
+            }
+            ParamOwner::Loop => {
+                write!(f, "loop")
+            }
+            ParamOwner::Bundle(idx) => {
+                write!(f, "{idx}")
+            }
+        }
+    }
 }
 
 impl ParamOwner {

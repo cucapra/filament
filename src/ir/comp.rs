@@ -5,6 +5,7 @@ use super::{
     TimeSub,
 };
 use crate::{ast, utils::Idx};
+use itertools::Itertools;
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -18,6 +19,18 @@ pub struct Context {
 impl Context {
     pub fn is_main(&self, idx: CompIdx) -> bool {
         Some(idx) == self.entrypoint
+    }
+
+    /// Add a new component to the context
+    pub fn comp(&mut self, is_ext: bool) -> CompIdx {
+        let comp = Component::new(is_ext);
+        self.add(comp)
+    }
+
+    pub fn get_filename(&self, idx: CompIdx) -> Option<String> {
+        self.externals.iter().find_map(|(filename, comps)| {
+            comps.contains(&idx).then_some(filename.to_string())
+        })
     }
 }
 
@@ -204,6 +217,21 @@ impl Component {
     }
 }
 
+/// Queries over the component as a semantic entity
+impl Component {
+    /// The parameters in the signature of the component in the order they appear in the source
+    pub fn sig_params(&self) -> Vec<ParamIdx> {
+        let sig_params = self
+            .params()
+            .iter()
+            .filter(|(_, param)| param.is_sig_owned())
+            .map(|(idx, _)| idx)
+            .collect_vec();
+
+        sig_params
+    }
+}
+
 /// Queries over interned entities
 impl Component {
     fn expr_params_acc(&self, expr: ExprIdx, acc: &mut Vec<ParamIdx>) {
@@ -324,6 +352,169 @@ impl Ctx<Invoke> for Component {
 
     fn get(&self, idx: InvIdx) -> &Invoke {
         self.invocations.get(idx)
+    }
+}
+
+impl Component {
+    pub fn resolve_prop(&mut self, prop: Prop) -> PropIdx {
+        match prop {
+            Prop::Cmp(cmp) => {
+                let CmpOp { op, lhs, rhs } = cmp;
+                let lhs = lhs.as_concrete(self).unwrap();
+                let rhs = rhs.as_concrete(self).unwrap();
+                match op {
+                    Cmp::Gt => {
+                        if lhs > rhs {
+                            self.add(Prop::True)
+                        } else {
+                            self.add(Prop::False)
+                        }
+                    }
+                    Cmp::Eq => {
+                        if lhs == rhs {
+                            self.add(Prop::True)
+                        } else {
+                            self.add(Prop::False)
+                        }
+                    }
+                    Cmp::Gte => {
+                        if lhs >= rhs {
+                            self.add(Prop::True)
+                        } else {
+                            self.add(Prop::False)
+                        }
+                    }
+                }
+            }
+            Prop::TimeCmp(_)
+            | Prop::TimeSubCmp(_)
+            | Prop::Implies(_, _)
+            | Prop::True
+            | Prop::False => self.add(prop),
+            Prop::And(l, r) => {
+                let l = self.resolve_prop(self.get(l).clone());
+                let r = self.resolve_prop(self.get(r).clone());
+                match (l.as_concrete(self), r.as_concrete(self)) {
+                    (Some(l), Some(r)) => {
+                        if l && r {
+                            self.add(Prop::True)
+                        } else {
+                            self.add(Prop::False)
+                        }
+                    }
+                    (Some(l), None) => {
+                        if l {
+                            r
+                        } else {
+                            self.add(Prop::False)
+                        }
+                    }
+                    (None, Some(r)) => {
+                        if r {
+                            l
+                        } else {
+                            self.add(Prop::False)
+                        }
+                    }
+                    (None, None) => self.add(prop),
+                }
+            }
+            Prop::Or(l, r) => {
+                let l = self.resolve_prop(self.get(l).clone());
+                let r = self.resolve_prop(self.get(r).clone());
+                match (l.as_concrete(self), r.as_concrete(self)) {
+                    (Some(l), Some(r)) => {
+                        if l || r {
+                            self.add(Prop::True)
+                        } else {
+                            self.add(Prop::False)
+                        }
+                    }
+                    (Some(l), None) => {
+                        if l {
+                            self.add(Prop::True)
+                        } else {
+                            r
+                        }
+                    }
+                    (None, Some(r)) => {
+                        if r {
+                            self.add(Prop::True)
+                        } else {
+                            l
+                        }
+                    }
+                    (None, None) => self.add(prop),
+                }
+            }
+            Prop::Not(p) => {
+                let p = self.resolve_prop(self.get(p).clone());
+                match p.as_concrete(self) {
+                    Some(p) => {
+                        if p {
+                            self.add(Prop::True)
+                        } else {
+                            self.add(Prop::False)
+                        }
+                    }
+                    None => self.add(prop),
+                }
+            }
+        }
+    }
+
+    /// Evaluates a function, assuming that all parms have been substituted for
+    /// concrete expressions in monomorphization
+    pub fn func(&mut self, expr: Expr) -> ExprIdx {
+        //let expr = self.get(eidx);
+        match expr {
+            Expr::Concrete(_) => self.add(expr),
+            Expr::Bin {..} => self.bin(expr),
+            Expr::Param(_) => {
+                self.internal_error(
+                    "When evaluating a function expression, there should not be any parameters in it".to_string()
+                )
+            }
+            Expr::Fn {op, args} => {
+                let args = args.iter().map(|arg| { let arg = self.get(*arg); self.func(arg.clone()) }).collect_vec();
+                let arg = args.get(0).unwrap().as_concrete(self).unwrap();
+                match op {
+                    ast::UnFn::Pow2 => {
+                        self.add(Expr::Concrete(2u64.pow(arg as u32)))
+                    }
+                    ast::UnFn::Log2 => {
+                        self.add(Expr::Concrete((arg as f64).log2().ceil() as u64))
+                    }
+                }
+            }
+        }
+    }
+
+    /// Evaluates a binary operation, assuming that all params have been substituted for
+    /// concrete expressions in monomorphization
+    pub fn bin(&mut self, expr: Expr) -> ExprIdx {
+        match expr {
+            Expr::Concrete(_) => self.add(expr),
+            Expr::Bin { op, lhs, rhs } => {
+                let lhs = self.bin(self.get(lhs).clone());
+                let lhs = lhs.as_concrete(self).unwrap();
+                let rhs = self.bin(self.get(rhs).clone());
+                let rhs = rhs.as_concrete(self).unwrap();
+                match op {
+                    ast::Op::Add => self.add(Expr::Concrete(lhs + rhs)),
+                    ast::Op::Mul => self.add(Expr::Concrete(lhs * rhs)),
+                    ast::Op::Sub => self.add(Expr::Concrete(lhs - rhs)),
+                    ast::Op::Div => self.add(Expr::Concrete(lhs / rhs)),
+                    ast::Op::Mod => self.add(Expr::Concrete(lhs % rhs)),
+                }
+            }
+            Expr::Param(pidx) => {
+                self.internal_error(format!(
+                    "When evaluating a binop expression, there should not be any parameters in it; found {pidx}")
+                )
+            }
+            Expr::Fn { .. } => self.func(expr),
+        }
     }
 }
 

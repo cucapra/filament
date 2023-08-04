@@ -26,5 +26,5 @@ width=$"$dir/width"
 
 (fud e -s cocotb.data "$data" --to cocotb-out "$dir/harness.fil" -s calyx.flags ' -d canonicalize' -s filament.flags " $fil_flags"  -q | \
   ./"$script_dir/gen_float.py" check --fields $(cat $fields) && \
-  echo "No counterexamples with $count data points" && rm "$data") || \
+  echo "No counterexamples with $count data points" && rm -f "$data") || \
   cat "$data"

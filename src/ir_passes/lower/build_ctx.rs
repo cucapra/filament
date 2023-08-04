@@ -1,4 +1,4 @@
-use super::utils::{comp_name, expr_u64, interface_name, port_name};
+use super::utils::{comp_name, interface_name, port_name};
 use super::Fsm;
 use crate::ir::DenseIndexInfo;
 use crate::ir::{self, Ctx};
@@ -96,7 +96,7 @@ impl<'a> BuildCtx<'a> {
             let conc_bind = inst
                 .params
                 .iter()
-                .map(|v| expr_u64(*v, self.comp))
+                .map(|v| v.concrete(self.comp))
                 .collect_vec();
             self.builder.add_primitive(inst_name, comp_name, &conc_bind)
         };
@@ -126,7 +126,7 @@ impl<'a> BuildCtx<'a> {
                 let dst = cell.borrow().get(dst);
 
                 let time = self.comp.get(*time);
-                let offset = expr_u64(time.offset, self.comp);
+                let offset = time.offset.concrete(self.comp);
                 // finds the corresponding port on the fsm of the referenced event
                 let src = self.fsms.get(&time.event).unwrap().get_port(offset);
 
@@ -170,7 +170,7 @@ impl<'a> BuildCtx<'a> {
 
         // return a guard that is active whenever from for all states from `start..end`
         let fsm = self.fsms.get(&ev).unwrap();
-        (expr_u64(start.offset, self.comp)..expr_u64(end.offset, self.comp))
+        (start.offset.concrete(self.comp)..end.offset.concrete(self.comp))
             .map(|st| fsm.get_port(st).into())
             .reduce(calyx::Guard::or)
             .unwrap()
@@ -203,15 +203,13 @@ impl<'a> BuildCtx<'a> {
         let ir::Connect { dst, src, .. } = con;
 
         assert!(
-            expr_u64(src.start, self.comp) == 0
-                && expr_u64(src.end, self.comp) == 1,
-            "Port bundles should have been compiled away."
+            src.is_port(self.comp),
+            "Bundles should have been compiled away."
         );
 
         assert!(
-            expr_u64(dst.start, self.comp) == 0
-                && expr_u64(dst.end, self.comp) == 1,
-            "Port bundles should have been compiled away."
+            dst.is_port(self.comp),
+            "Bundles should have been compiled away."
         );
 
         log::debug!(

@@ -1,6 +1,5 @@
 use filament::{
-    backend, binding, cmdline, ir, ir_passes,
-    ir_visitor::Visitor,
+    backend, binding, cmdline, ir, ir_passes as ip, log_time, pass_pipeline,
     passes::{self, Pass},
     resolver::Resolver,
     visitor::{Checker, Transform},
@@ -41,26 +40,26 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
 
     if opts.ir {
         let mut ir = ir::transform(ns);
-        if opts.show_ir {
-            ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
-        }
-        ir_passes::TypeCheck::do_pass(opts, &mut ir)?;
-        ir_passes::IntervalCheck::do_pass(opts, &mut ir)?;
-        ir_passes::Assume::do_pass(opts, &mut ir)?;
-        ir_passes::HoistFacts::do_pass(opts, &mut ir)?;
-        ir_passes::Simplify::do_pass(opts, &mut ir)?;
-        ir_passes::Discharge::do_pass(opts, &mut ir)?;
-        if opts.show_ir {
-            ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
+        pass_pipeline! {opts, ir;
+            ip::BuildDomination,
+            ip::TypeCheck,
+            ip::IntervalCheck,
+            ip::Assume,
+            ip::HoistFacts,
+            ip::Simplify,
+            ip::Discharge
         }
         // Return early if we're asked to dump the interface
         if opts.check {
             return Ok(());
         }
-        ir_passes::AssignCheck::do_pass(opts, &mut ir)?;
-        ir_passes::BundleElim::do_pass(&mut ir);
-        ir_passes::AssignCheck::do_pass(opts, &mut ir)?;
-        ir_passes::Compile::compile(ir);
+        // TODO(rachit): Once `BundleElim` implements `Visitor`, we can collapse this into
+        // one call to `pass_pipeline!`.
+        ir = log_time!(ip::Monomorphize::transform(&ir), "monomophization");
+        pass_pipeline! {opts, ir; ip::AssignCheck }
+        log_time!(ip::BundleElim::do_pass(&mut ir), "bundle-elim");
+        pass_pipeline! {opts, ir; ip::AssignCheck }
+        log_time!(ip::Compile::compile(ir), "compile");
         return Ok(());
     }
 

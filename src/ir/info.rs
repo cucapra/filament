@@ -107,6 +107,23 @@ impl Info {
         .into()
     }
 
+    pub fn event_explicit(
+        name: ast::Id,
+        bind_loc: GPosIdx,
+        delay_loc: GPosIdx,
+        interface_name: Option<ast::Id>,
+        interface_bind_loc: Option<GPosIdx>,
+    ) -> Self {
+        Event {
+            name,
+            bind_loc,
+            delay_loc,
+            interface_name,
+            interface_bind_loc,
+        }
+        .into()
+    }
+
     pub fn event_bind(ev_delay_loc: GPosIdx, bind_loc: GPosIdx) -> Self {
         EventBind {
             ev_delay_loc,

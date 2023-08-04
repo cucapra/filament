@@ -12,6 +12,15 @@ pub struct Validate<'a> {
 }
 
 impl<'a> Validate<'a> {
+    pub fn new(
+        comp: &'a ir::Component,
+        ctx: &'a IndexStore<ir::Component>,
+    ) -> Self {
+        Self { comp, ctx }
+    }
+}
+
+impl<'a> Validate<'a> {
     /// Validate the entire component
     pub fn comp(&self) {
         // Validate exprs

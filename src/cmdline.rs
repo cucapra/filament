@@ -13,8 +13,8 @@ pub struct Opts {
     pub ir: bool,
 
     /// print out the IR
-    #[argh(switch, long = "show-ir")]
-    pub show_ir: bool,
+    #[argh(option, long = "dump-after")]
+    pub dump_after: Vec<String>,
 
     /// print out assignments that falsify the constraints
     #[argh(switch, long = "show-models")]
