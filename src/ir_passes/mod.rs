@@ -1,5 +1,6 @@
 mod assignment_check;
 mod assume;
+mod build_domination;
 mod bundle_elim;
 mod discharge;
 mod hoist_facts;
@@ -10,6 +11,7 @@ mod type_check;
 
 pub use assignment_check::AssignCheck;
 pub use assume::Assume;
+pub use build_domination::BuildDomination;
 pub use bundle_elim::BundleElim;
 pub use discharge::Discharge;
 pub use hoist_facts::HoistFacts;
