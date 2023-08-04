@@ -1,4 +1,7 @@
-use crate::{cmdline, ir};
+use crate::{
+    cmdline,
+    ir::{self, MutCtx},
+};
 
 #[must_use]
 #[derive(PartialEq, Eq)]
@@ -60,21 +63,27 @@ where
 
     /// Executed before the visitor starts visiting the commands.
     /// The commands are still attached to the component
-    fn start(&mut self, _comp: &mut ir::Component) -> Action {
+    fn start(&mut self, _idx: ir::CompIdx, _ctx: &mut ir::Context) -> Action {
         Action::Continue
     }
 
     /// Executed after the visitor has visited all the commands.
-    fn end(&mut self, _: &mut ir::Component) {}
+    fn end(&mut self, _idx: ir::CompIdx, _ctx: &mut ir::Context) {}
 
-    fn invoke(&mut self, _: ir::InvIdx, _comp: &mut ir::Component) -> Action {
+    fn invoke(
+        &mut self,
+        _: ir::InvIdx,
+        _idx: ir::CompIdx,
+        _ctx: &mut ir::Context,
+    ) -> Action {
         Action::Continue
     }
 
     fn instance(
         &mut self,
         _: ir::InstIdx,
-        _comp: &mut ir::Component,
+        _idx: ir::CompIdx,
+        _ctx: &mut ir::Context,
     ) -> Action {
         Action::Continue
     }
@@ -82,7 +91,8 @@ where
     fn connect(
         &mut self,
         _: &mut ir::Connect,
-        _comp: &mut ir::Component,
+        _idx: ir::CompIdx,
+        _ctx: &mut ir::Context,
     ) -> Action {
         Action::Continue
     }
@@ -91,7 +101,8 @@ where
     fn start_loop(
         &mut self,
         _: &mut ir::Loop,
-        _comp: &mut ir::Component,
+        _idx: ir::CompIdx,
+        _ctx: &mut ir::Context,
     ) -> Action {
         Action::Continue
     }
@@ -99,7 +110,8 @@ where
     fn end_loop(
         &mut self,
         _: &mut ir::Loop,
-        _comp: &mut ir::Component,
+        _idx: ir::CompIdx,
+        _ctx: &mut ir::Context,
     ) -> Action {
         Action::Continue
     }
@@ -108,62 +120,87 @@ where
     fn do_loop(
         &mut self,
         l: &mut ir::Loop,
-        comp: &mut ir::Component,
+        idx: ir::CompIdx,
+        ctx: &mut ir::Context,
     ) -> Action {
-        self.start_loop(l, comp)
-            .and_then(|| self.visit_cmds(&mut l.body, comp))
-            .and_then(|| self.end_loop(l, comp))
+        self.start_loop(l, idx, ctx)
+            .and_then(|| self.visit_cmds(&mut l.body, idx, ctx))
+            .and_then(|| self.end_loop(l, idx, ctx))
     }
 
     /// Executed before the branches of the if is visited
     fn start_if(
         &mut self,
         _: &mut ir::If,
-        _comp: &mut ir::Component,
+        _idx: ir::CompIdx,
+        _ctx: &mut ir::Context,
     ) -> Action {
         Action::Continue
     }
     /// Executed after the branches of the if is visited
-    fn end_if(&mut self, _: &mut ir::If, _comp: &mut ir::Component) -> Action {
+    fn end_if(
+        &mut self,
+        _: &mut ir::If,
+        _idx: ir::CompIdx,
+        _ctx: &mut ir::Context,
+    ) -> Action {
         Action::Continue
     }
     /// Traverse for `if` statements.
     /// Overriding this requires explicit traversal over the body.
-    fn do_if(&mut self, i: &mut ir::If, comp: &mut ir::Component) -> Action {
-        self.start_if(i, comp)
-            .and_then(|| self.visit_cmds(&mut i.then, comp))
-            .and_then(|| self.visit_cmds(&mut i.alt, comp))
-            .and_then(|| self.end_if(i, comp))
+    fn do_if(
+        &mut self,
+        i: &mut ir::If,
+        idx: ir::CompIdx,
+        ctx: &mut ir::Context,
+    ) -> Action {
+        self.start_if(i, idx, ctx)
+            .and_then(|| self.visit_cmds(&mut i.then, idx, ctx))
+            .and_then(|| self.visit_cmds(&mut i.alt, idx, ctx))
+            .and_then(|| self.end_if(i, idx, ctx))
     }
 
-    fn fact(&mut self, _: &mut ir::Fact, _comp: &mut ir::Component) -> Action {
+    fn fact(
+        &mut self,
+        _: &mut ir::Fact,
+        _idx: ir::CompIdx,
+        _ctx: &mut ir::Context,
+    ) -> Action {
         Action::Continue
     }
 
     fn visit_cmd(
         &mut self,
         cmd: &mut ir::Command,
-        comp: &mut ir::Component,
+        cidx: ir::CompIdx,
+        ctx: &mut ir::Context,
     ) -> Action {
         match cmd {
-            ir::Command::Instance(idx) => self.instance(*idx, comp),
-            ir::Command::Invoke(idx) => self.invoke(*idx, comp),
-            ir::Command::Connect(con) => self.connect(con, comp),
-            ir::Command::ForLoop(l) => self.do_loop(l, comp),
-            ir::Command::If(i) => self.do_if(i, comp),
-            ir::Command::Fact(f) => self.fact(f, comp),
+            ir::Command::Instance(idx) => self.instance(*idx, cidx, ctx),
+            ir::Command::Invoke(idx) => self.invoke(*idx, cidx, ctx),
+            ir::Command::Connect(con) => self.connect(con, cidx, ctx),
+            ir::Command::ForLoop(l) => self.do_loop(l, cidx, ctx),
+            ir::Command::If(i) => self.do_if(i, cidx, ctx),
+            ir::Command::Fact(f) => self.fact(f, cidx, ctx),
         }
     }
 
     /// Perform action before visiting a sequence of commands which represent a scope.
-    fn start_cmds(&mut self, _: &mut Vec<ir::Command>, _: &mut ir::Component) {}
+    fn start_cmds(
+        &mut self,
+        _: &mut Vec<ir::Command>,
+        _: ir::CompIdx,
+        _: &mut ir::Context,
+    ) {
+    }
 
     fn visit_cmds(
         &mut self,
         cmds: &mut Vec<ir::Command>,
-        comp: &mut ir::Component,
+        idx: ir::CompIdx,
+        ctx: &mut ir::Context,
     ) -> Action {
-        self.start_cmds(cmds, comp);
+        self.start_cmds(cmds, idx, ctx);
 
         let cs = std::mem::take(cmds);
         let mut n_cmds = Vec::with_capacity(cs.len());
@@ -171,7 +208,7 @@ where
 
         let mut stopped = false;
         for mut cmd in iter.by_ref() {
-            match self.visit_cmd(&mut cmd, comp) {
+            match self.visit_cmd(&mut cmd, idx, ctx) {
                 Action::Stop => {
                     stopped = true;
                     break;
@@ -198,8 +235,8 @@ where
         }
     }
 
-    fn visit(&mut self, comp: &mut ir::Component) {
-        let pre_cmds = match self.start(comp) {
+    fn visit(&mut self, idx: ir::CompIdx, ctx: &mut ir::Context) {
+        let pre_cmds = match self.start(idx, ctx) {
             Action::Stop => return,
             Action::Continue => None,
             Action::AddBefore(cmds) => Some(cmds),
@@ -209,27 +246,29 @@ where
         };
 
         // Traverse the commands
-        let mut cmds = std::mem::take(&mut comp.cmds);
-        match self.visit_cmds(&mut cmds, comp) {
+        let mut cmds = std::mem::take(&mut ctx.get_mut(idx).cmds);
+        match self.visit_cmds(&mut cmds, idx, ctx) {
             Action::Stop | Action::Continue => (),
             Action::Change(_) | Action::AddBefore(_) => {
                 unreachable!("visit_cmds should not attempt to change IR nodes")
             }
         }
+
+        let comp = ctx.get_mut(idx);
         if let Some(pre_cmds) = pre_cmds {
             comp.cmds = pre_cmds;
         }
         comp.cmds.extend(cmds);
 
-        self.end(comp);
+        self.end(idx, ctx);
     }
 
     /// Apply the pass to all components in the context
     fn do_pass(opts: &cmdline::Opts, ctx: &mut ir::Context) -> Result<(), u32> {
         let mut visitor = Self::from(opts, ctx);
-        for (_, c) in ctx.comps.iter_mut() {
+        for idx in ctx.comps.idx_iter() {
             visitor.clear_data();
-            visitor.visit(c);
+            visitor.visit(idx, ctx);
         }
         match visitor.after_traversal() {
             Some(n) => Err(n),

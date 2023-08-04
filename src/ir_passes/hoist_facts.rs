@@ -1,5 +1,5 @@
 use crate::{
-    ir::{self, Ctx},
+    ir::{self, Ctx, MutCtx},
     ir_visitor::{Action, Visitor},
 };
 
@@ -49,7 +49,8 @@ impl Visitor for HoistFacts {
     fn start_cmds(
         &mut self,
         cmds: &mut Vec<ir::Command>,
-        _: &mut ir::Component,
+        _: ir::CompIdx,
+        _: &mut ir::Context,
     ) {
         cmds.iter().for_each(|cmd| match cmd {
             ir::Command::Fact(fact) if fact.is_assume() => {
@@ -62,8 +63,10 @@ impl Visitor for HoistFacts {
     fn fact(
         &mut self,
         fact: &mut ir::Fact,
-        comp: &mut ir::Component,
+        idx: ir::CompIdx,
+        ctx: &mut ir::Context,
     ) -> Action {
+        let comp = ctx.get_mut(idx);
         if fact.is_assert() {
             // Otherwise this is a checked assertion that needs to be hoisted.
             // Generate prop = path_cond -> fact.prop
@@ -73,16 +76,21 @@ impl Visitor for HoistFacts {
         Action::Change(vec![])
     }
 
-    fn do_if(&mut self, i: &mut ir::If, comp: &mut ir::Component) -> Action {
+    fn do_if(
+        &mut self,
+        i: &mut ir::If,
+        idx: ir::CompIdx,
+        ctx: &mut ir::Context,
+    ) -> Action {
         self.push();
         self.insert(i.cond);
-        let ac = self.visit_cmds(&mut i.then, comp);
+        let ac = self.visit_cmds(&mut i.then, idx, ctx);
         assert!(ac == Action::Continue);
         self.pop();
 
         self.push();
-        self.insert(i.cond.not(comp));
-        let ac = self.visit_cmds(&mut i.alt, comp);
+        self.insert(i.cond.not(ctx.get_mut(idx)));
+        let ac = self.visit_cmds(&mut i.alt, idx, ctx);
         assert!(ac == Action::Continue);
         self.pop();
 
@@ -92,8 +100,10 @@ impl Visitor for HoistFacts {
     fn start_loop(
         &mut self,
         l: &mut ir::Loop,
-        comp: &mut ir::Component,
+        idx: ir::CompIdx,
+        ctx: &mut ir::Context,
     ) -> Action {
+        let comp = ctx.get_mut(idx);
         self.push();
         let ir::Loop {
             index, start, end, ..
@@ -106,13 +116,19 @@ impl Visitor for HoistFacts {
         Action::Continue
     }
 
-    fn end_loop(&mut self, _l: &mut ir::Loop, _: &mut ir::Component) -> Action {
+    fn end_loop(
+        &mut self,
+        _: &mut ir::Loop,
+        _: ir::CompIdx,
+        _: &mut ir::Context,
+    ) -> Action {
         self.pop();
 
         Action::Continue
     }
 
-    fn end(&mut self, comp: &mut ir::Component) {
+    fn end(&mut self, idx: ir::CompIdx, ctx: &mut ir::Context) {
+        let comp = ctx.get_mut(idx);
         // Insert the asserts to the start of the component cmds
         let cmds = std::mem::take(&mut comp.cmds);
         let facts = std::mem::take(&mut self.facts);

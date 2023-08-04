@@ -1,5 +1,5 @@
 use crate::{
-    ir::{Component, Connect, Ctx, DisplayCtx, PortIdx},
+    ir::{CompIdx, Component, Connect, Context, Ctx, DisplayCtx, PortIdx},
     ir_visitor::{Action, Visitor},
     utils::{GPosIdx, GlobalPositionTable},
 };
@@ -22,7 +22,8 @@ pub struct AssignCheck {
 }
 
 impl Visitor for AssignCheck {
-    fn start(&mut self, comp: &mut Component) -> Action {
+    fn start(&mut self, idx: CompIdx, ctx: &mut Context) -> Action {
+        let comp = ctx.get(idx);
         // skip externals
         if comp.is_ext {
             return Action::Stop;
@@ -44,7 +45,13 @@ impl Visitor for AssignCheck {
         Action::Continue
     }
 
-    fn connect(&mut self, con: &mut Connect, comp: &mut Component) -> Action {
+    fn connect(
+        &mut self,
+        con: &mut Connect,
+        idx: CompIdx,
+        ctx: &mut Context,
+    ) -> Action {
+        let comp = ctx.get(idx);
         let Connect { dst, info, .. } = con;
 
         let start = dst.start.as_concrete(comp).unwrap() as usize;
@@ -59,7 +66,8 @@ impl Visitor for AssignCheck {
         Action::Continue
     }
 
-    fn end(&mut self, comp: &mut Component) {
+    fn end(&mut self, idx: CompIdx, ctx: &mut Context) {
+        let comp = ctx.get(idx);
         // Report all the errors
         let is_tty = atty::is(atty::Stream::Stderr);
         let writer = StandardStream::stderr(if is_tty {

@@ -1,4 +1,4 @@
-use crate::ir::{Ctx, DisplayCtx};
+use crate::ir::{Ctx, DisplayCtx, MutCtx};
 use crate::ir_visitor::{Action, Construct, Visitor};
 use crate::utils::GlobalPositionTable;
 use crate::{ast, cmdline, ir, utils};
@@ -287,7 +287,8 @@ impl Discharge {
 }
 
 impl Visitor for Discharge {
-    fn start(&mut self, comp: &mut ir::Component) -> Action {
+    fn start(&mut self, idx: ir::CompIdx, ctx: &mut ir::Context) -> Action {
+        let comp = ctx.get(idx);
         // Declare all parameters
         let int = self.sol.int_sort();
         for (idx, _) in comp.params().iter() {
@@ -337,7 +338,13 @@ impl Visitor for Discharge {
         Action::Continue
     }
 
-    fn fact(&mut self, f: &mut ir::Fact, comp: &mut ir::Component) -> Action {
+    fn fact(
+        &mut self,
+        f: &mut ir::Fact,
+        idx: ir::CompIdx,
+        ctx: &mut ir::Context,
+    ) -> Action {
+        let comp = ctx.get_mut(idx);
         if self.scoped {
             panic!("scoped facts not supported. Run `hoist-facts` before this pass");
         }
@@ -383,12 +390,17 @@ impl Visitor for Discharge {
         }
     }
 
-    fn do_if(&mut self, i: &mut ir::If, comp: &mut ir::Component) -> Action {
+    fn do_if(
+        &mut self,
+        i: &mut ir::If,
+        idx: ir::CompIdx,
+        ctx: &mut ir::Context,
+    ) -> Action {
         let orig = self.scoped;
         self.scoped = true;
         let out = self
-            .visit_cmds(&mut i.then, comp)
-            .and_then(|| self.visit_cmds(&mut i.alt, comp));
+            .visit_cmds(&mut i.then, idx, ctx)
+            .and_then(|| self.visit_cmds(&mut i.alt, idx, ctx));
         self.scoped = orig;
         out
     }
@@ -396,18 +408,19 @@ impl Visitor for Discharge {
     fn do_loop(
         &mut self,
         l: &mut ir::Loop,
-        comp: &mut ir::Component,
+        idx: ir::CompIdx,
+        ctx: &mut ir::Context,
     ) -> Action {
         let orig = self.scoped;
         self.scoped = true;
         let out = self
-            .start_loop(l, comp)
-            .and_then(|| self.visit_cmds(&mut l.body, comp));
+            .start_loop(l, idx, ctx)
+            .and_then(|| self.visit_cmds(&mut l.body, idx, ctx));
         self.scoped = orig;
         out
     }
 
-    fn end(&mut self, _: &mut ir::Component) {
+    fn end(&mut self, _: ir::CompIdx, _: &mut ir::Context) {
         assert!(!self.scoped, "unbalanced scopes");
         // Report all the errors
         let is_tty = atty::is(atty::Stream::Stderr);

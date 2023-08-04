@@ -1,6 +1,6 @@
 use crate::{
     ast,
-    ir::{self, Ctx, ExprIdx, PropIdx},
+    ir::{self, Ctx, ExprIdx, MutCtx, PropIdx},
     ir_visitor::{Action, Visitor},
 };
 
@@ -118,7 +118,13 @@ impl Assume {
 }
 
 impl Visitor for Assume {
-    fn fact(&mut self, f: &mut ir::Fact, comp: &mut ir::Component) -> Action {
+    fn fact(
+        &mut self,
+        f: &mut ir::Fact,
+        idx: ir::CompIdx,
+        ctx: &mut ir::Context,
+    ) -> Action {
+        let comp = ctx.get_mut(idx);
         if f.is_assume() {
             Action::AddBefore(
                 Assume::prop(f.prop, comp)

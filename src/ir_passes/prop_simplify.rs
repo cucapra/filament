@@ -1,5 +1,5 @@
 use crate::{
-    ir::{self, Ctx},
+    ir::{self, Ctx, MutCtx},
     ir_visitor::{Action, Visitor},
 };
 use linked_hash_set::LinkedHashSet;
@@ -170,7 +170,8 @@ impl Simplify {
 }
 
 impl Visitor for Simplify {
-    fn start(&mut self, comp: &mut ir::Component) -> Action {
+    fn start(&mut self, idx: ir::CompIdx, ctx: &mut ir::Context) -> Action {
+        let comp = ctx.get_mut(idx);
         let old_len = comp.props().size();
         // Populate the prop_map with the simplified version of each proposition.
         for prop in comp.props().idx_iter() {
@@ -192,8 +193,10 @@ impl Visitor for Simplify {
     fn fact(
         &mut self,
         fact: &mut ir::Fact,
-        comp: &mut ir::Component,
+        idx: ir::CompIdx,
+        ctx: &mut ir::Context,
     ) -> Action {
+        let comp = ctx.get_mut(idx);
         // Simplify the proposition in the fact
         let simpl = self.simplify_prop(fact.prop, comp);
         if simpl.is_true(comp) {

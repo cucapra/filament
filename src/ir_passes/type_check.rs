@@ -1,5 +1,5 @@
 use crate::{
-    ir::{self, Ctx},
+    ir::{self, Ctx, MutCtx},
     ir_visitor::{Action, Visitor},
     utils::GPosIdx,
 };
@@ -56,8 +56,10 @@ impl Visitor for TypeCheck {
     fn connect(
         &mut self,
         c: &mut ir::Connect,
-        comp: &mut ir::Component,
+        idx: ir::CompIdx,
+        ctx: &mut ir::Context,
     ) -> Action {
+        let comp = ctx.get_mut(idx);
         let ir::Connect { src, dst, info } = &c;
         let &ir::info::Connect { dst_loc, src_loc } = comp.get(*info).into();
         let mut cons = vec![];
