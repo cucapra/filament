@@ -181,7 +181,7 @@ impl Visitor for Simplify {
 
             let out = self.simplify_prop(prop, comp);
             if prop != out {
-                log::info!("{prop} ==> {out}");
+                log::debug!("{prop} ==> {out}");
             } else {
                 log::debug!("{prop} unchanged");
             }

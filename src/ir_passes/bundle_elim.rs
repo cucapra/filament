@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-
-use itertools::Itertools;
-
 use crate::ir::{
     Access, Bind, Command, CompIdx, Component, Connect, Context, Ctx,
     DenseIndexInfo, Expr, Foreign, Info, InvIdx, Invoke, Liveness, MutCtx,
     Port, PortIdx, PortOwner, Printer, Range, Subst, Time,
 };
+use itertools::Itertools;
+use std::collections::HashMap;
 
 #[derive(Default)]
 // Eliminates bundle ports by breaking them into multiple len-1 ports, and eliminates local ports altogether.
