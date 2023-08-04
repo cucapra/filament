@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   compiler:
-    name: Non-IR Flow
+    name: Test Compiler
     runs-on: ubuntu-latest
     container: ghcr.io/cucapra/calyx:0.3.0
     steps:
