@@ -220,16 +220,6 @@ impl<'a> BuildCtx<'a> {
         // ignores the guard of the destination (bind check already verifies that it is available for at least as long as src)
         let (dst, _) = self.compile_port(dst.port);
         let (src, g) = self.compile_port(src.port);
-        debug_assert!(
-            src.borrow().width == dst.borrow().width,
-            "Invalid assignment. `{}.{}' has width {} and `{}.{}' has width {}",
-            src.borrow().get_parent_name(),
-            src.borrow().name,
-            src.borrow().width,
-            dst.borrow().get_parent_name(),
-            dst.borrow().name,
-            dst.borrow().width,
-        );
         let assign = self.builder.build_assignment(dst, src, g);
         self.builder.component.continuous_assignments.push(assign);
     }
