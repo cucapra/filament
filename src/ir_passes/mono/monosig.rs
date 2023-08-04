@@ -237,7 +237,14 @@ impl MonoSig {
                     constraint_loc,
                 }
             }
-            _ => reason.clone(),
+            ir::info::Reason::EventConstraint { .. }
+            | ir::info::Reason::BundleLenMatch { .. }
+            | ir::info::Reason::BundleWidthMatch { .. }
+            | ir::info::Reason::InBoundsAccess { .. }
+            | ir::info::Reason::BundleDelay { .. }
+            | ir::info::Reason::WellFormedInterval { .. }
+            | ir::info::Reason::EventTrig { .. }
+            | ir::info::Reason::Misc { .. } => reason.clone(),
         }
     }
 
