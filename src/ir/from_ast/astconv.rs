@@ -158,22 +158,18 @@ impl<'prog> BuildCtx<'prog> {
                 self.comp().add(e)
             }
             ast::Expr::Op { op, left, right } => {
-                let l = self.expr(*left);
-                let r = self.expr(*right);
-                match op {
-                    ast::Op::Add => l.add(r, self.comp()),
-                    ast::Op::Mul => l.mul(r, self.comp()),
-                    ast::Op::Sub => l.sub(r, self.comp()),
-                    ast::Op::Div => l.div(r, self.comp()),
-                    ast::Op::Mod => l.rem(r, self.comp()),
-                }
+                let lhs = self.expr(*left);
+                let rhs = self.expr(*right);
+                // The .add call simplifies the expression if possible
+                self.comp().add(ir::Expr::Bin { op, lhs, rhs })
             }
             ast::Expr::App { func, arg } => {
                 let arg = self.expr(*arg);
-                match func {
-                    ast::UnFn::Pow2 => arg.pow2(self.comp()),
-                    ast::UnFn::Log2 => arg.log2(self.comp()),
-                }
+                // The .add call simplifies the expression if possible
+                self.comp().add(ir::Expr::Fn {
+                    op: func,
+                    args: vec![arg],
+                })
             }
         }
     }

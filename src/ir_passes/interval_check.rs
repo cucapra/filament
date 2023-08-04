@@ -196,7 +196,7 @@ impl Visitor for IntervalCheck {
             .and(Self::in_range(&src_t, comp), comp);
 
         // Substitute the parameter used in source with that in dst
-        let binding = [(dst_t.idx, src_t.idx.expr(comp))];
+        let binding = vec![(dst_t.idx, src_t.idx.expr(comp))];
         let dst_range =
             ir::Subst::new(dst_t.range, &ir::Bind::new(binding)).apply(comp);
 

@@ -161,7 +161,14 @@ impl<'a> Printer<'a> {
 
     fn access(&self, a: &ir::Access) -> String {
         let &ir::Access { port, start, end } = a;
-        if a.is_port(self.ctx) {
+        if log::log_enabled!(log::Level::Debug) {
+            format!(
+                "{}[{}..{})",
+                self.ctx.display(port),
+                self.expr(start),
+                self.expr(end)
+            )
+        } else if a.is_port(self.ctx) {
             self.ctx.display(port)
         } else {
             format!(
@@ -253,7 +260,12 @@ impl<'a> Printer<'a> {
             write!(f, "ext ")?;
         };
         if let Some(info) = &comp.src_info {
-            write!(f, "comp {}", info.name)?
+            write!(f, "comp {}", info.name)?;
+            if log::log_enabled!(log::Level::Debug) {
+                if let Some(idx) = idx {
+                    write!(f, " {idx}")?;
+                }
+            }
         } else if let Some(idx) = idx {
             write!(f, "comp {}", idx)?;
         } else {
@@ -384,24 +396,46 @@ impl<'a> Printer<'a> {
         match &owner {
             ir::PortOwner::Sig { .. } => Ok(()),
             ir::PortOwner::Inv { dir, .. } => {
-                writeln!(
-                    f,
-                    "{:indent$}{}: bundle({dir}) {} {};",
-                    "",
-                    self.ctx.display(idx),
-                    self.liveness(live),
-                    self.expr(*width),
-                )
+                if log::log_enabled!(log::Level::Debug) {
+                    writeln!(
+                        f,
+                        "{:indent$}{} ({idx}): bundle({dir}) {} {};",
+                        "",
+                        self.ctx.display(idx),
+                        self.liveness(live),
+                        self.expr(*width),
+                    )
+                } else {
+                    writeln!(
+                        f,
+                        "{:indent$}{}: bundle({dir}) {} {};",
+                        "",
+                        self.ctx.display(idx),
+                        self.liveness(live),
+                        self.expr(*width),
+                    )
+                }
             }
             ir::PortOwner::Local => {
-                writeln!(
-                    f,
-                    "{:indent$}{} = bundle {} {};",
-                    "",
-                    self.ctx.display(idx),
-                    self.liveness(live),
-                    self.expr(*width),
-                )
+                if log::log_enabled!(log::Level::Debug) {
+                    writeln!(
+                        f,
+                        "{:indent$}{} ({idx}) = bundle {} {};",
+                        "",
+                        self.ctx.display(idx),
+                        self.liveness(live),
+                        self.expr(*width),
+                    )
+                } else {
+                    writeln!(
+                        f,
+                        "{:indent$}{} = bundle {} {};",
+                        "",
+                        self.ctx.display(idx),
+                        self.liveness(live),
+                        self.expr(*width),
+                    )
+                }
             }
         }
     }

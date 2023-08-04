@@ -151,7 +151,7 @@ impl Compile {
 
         assert!(
             comp.is_ext,
-            "Attempting to compile non-primitive component as primitive."
+            "Attempting to compile {idx} non-primitive component as primitive.",
         );
 
         calyx::Primitive {
