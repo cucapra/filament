@@ -34,7 +34,7 @@ impl Visitor for AssignCheck {
                 continue;
             }
 
-            let len = port.live.len.as_concrete(comp).unwrap() as usize;
+            let len = port.live.len.concrete(comp) as usize;
 
             for i in 0..len {
                 self.ports.insert((idx, i), Vec::new());
@@ -47,8 +47,8 @@ impl Visitor for AssignCheck {
     fn connect(&mut self, con: &mut Connect, comp: &mut Component) -> Action {
         let Connect { dst, info, .. } = con;
 
-        let start = dst.start.as_concrete(comp).unwrap() as usize;
-        let end = dst.end.as_concrete(comp).unwrap() as usize;
+        let start = dst.start.concrete(comp) as usize;
+        let end = dst.end.concrete(comp) as usize;
 
         for i in start..end {
             self.ports
