@@ -40,10 +40,11 @@ macro_rules! log_time {
 macro_rules! pass_pipeline {
     ($opts:ident, $ir:ident; $($pass:path),*) => {
         $(
-            $crate::log_time!(<$pass as $crate::ir_visitor::Visitor>::do_pass($opts, &mut $ir)?, stringify!($pass));
-            // if $opts.print_after.contains(stringify!($pass)) {
-            //     log::debug!("{ir}");
-            // }
+            let name = <$pass as $crate::ir_visitor::Visitor>::name();
+            $crate::log_time!(<$pass as $crate::ir_visitor::Visitor>::do_pass($opts, &mut $ir)?, name);
+            if $opts.dump_after.contains(&name.to_string()) {
+                $crate::ir::Printer::context(& $ir, &mut std::io::stdout()).unwrap()
+            }
         )*
     };
 }
