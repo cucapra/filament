@@ -11,17 +11,39 @@ use codespan_reporting::{
     },
 };
 use itertools::Itertools;
-use std::collections::HashMap;
+use linked_hash_map::LinkedHashMap;
 
 #[derive(Default)]
 /// Makes sure each index in a port is only written to at most once
 /// Must occur after monomorphization.
 pub struct AssignCheck {
-    ports: HashMap<(PortIdx, usize), Vec<Option<GPosIdx>>>,
+    ports: LinkedHashMap<(PortIdx, usize), Vec<Option<GPosIdx>>>,
     diagnostic_count: u32,
 }
 
 impl Visitor for AssignCheck {
+    fn start(&mut self, comp: &mut Component) -> Action {
+        // skip externals
+        if comp.is_ext {
+            return Action::Stop;
+        }
+
+        for (idx, port) in comp.ports().iter() {
+            // input ports and invoke output ports are the only ports that don't have to be written to
+            if port.is_sig_in() || port.is_inv_out() {
+                continue;
+            }
+
+            let len = port.live.len.as_concrete(comp).unwrap() as usize;
+
+            for i in 0..len {
+                self.ports.insert((idx, i), Vec::new());
+            }
+        }
+
+        Action::Continue
+    }
+
     fn connect(&mut self, con: &mut Connect, comp: &mut Component) -> Action {
         let Connect { dst, info, .. } = con;
 
@@ -49,30 +71,47 @@ impl Visitor for AssignCheck {
 
         for ((port, idx), connects) in self.ports.drain() {
             let l = connects.len();
-            // assigned only once, no problems
-            if l <= 1 {
+            if l == 1 {
                 continue;
             }
+            let p = comp.get(port);
+            let info = comp.get(p.info).as_port();
 
+            // generate the base error message
+            let diag = Diagnostic::error().with_message(format!(
+                "Port {}{{{}}} {}",
+                comp.display(port),
+                idx,
+                if l == 0 {
+                    "is never assigned to."
+                } else {
+                    "is assigned to multiple times."
+                }
+            ));
+
+            // add the location of the port definition
+            let diag = match info {
+                None => diag,
+                Some(info) => diag.with_labels(vec![info
+                    .bind_loc
+                    .secondary()
+                    .with_message("defined here")]),
+            };
+
+            // filter the assignments that have bind location information
             let filtered_cons = connects.into_iter().flatten().collect_vec();
-
+            // count the number of assignments that don't have bind location information
             let missing_info = l - filtered_cons.len();
 
-            let diag = Diagnostic::error()
-                .with_message(format!(
-                    "Port {}{{{}}} assigned multiple times",
-                    comp.display(port),
-                    idx
-                ))
-                .with_labels(
-                    filtered_cons
-                        .into_iter()
-                        .map(|idx| {
-                            idx.secondary().with_message("assigned here")
-                        })
-                        .collect(),
-                );
+            // add the locations of the assignments
+            let diag = diag.with_labels(
+                filtered_cons
+                    .into_iter()
+                    .map(|idx| idx.primary().with_message("assigned here"))
+                    .collect(),
+            );
 
+            // add a note about the number of assignments that don't have bind location information
             let diag = match missing_info {
                 0 => diag,
                 1 => diag.with_notes(vec![
