@@ -169,7 +169,7 @@ impl<'a> Printer<'a> {
                 self.expr(end)
             )
         } else if a.is_port(self.ctx) {
-            self.ctx.display(port)
+            format!("{}[{}]", self.ctx.display(port), self.expr(start))
         } else {
             format!(
                 "{}[{}..{})",
