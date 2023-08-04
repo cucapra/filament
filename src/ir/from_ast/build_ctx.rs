@@ -1,6 +1,8 @@
 use super::ScopeMap;
-use crate::ast::{self, Id};
-use crate::ir::{self, CompIdx, Ctx, DenseIndexInfo, PortIdx};
+use crate::ast::{self, Id, Signature};
+use crate::ir::{
+    self, CompIdx, Component, Ctx, DenseIndexInfo, EventIdx, PortIdx,
+};
 use crate::utils;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -12,22 +14,28 @@ use std::rc::Rc;
 /// the signature.
 pub struct Sig {
     pub idx: CompIdx,
-    pub params: Vec<ast::ParamBind>,
-    pub events: Vec<ast::EventBind>,
-    pub inputs: Vec<ast::Loc<ast::PortDef>>,
-    pub outputs: Vec<ast::PortDef>,
+    pub events: Vec<EventIdx>,
+    pub inputs: Vec<PortIdx>,
+    pub outputs: Vec<PortIdx>,
+    pub raw_params: Vec<ast::ParamBind>,
+    pub raw_events: Vec<ast::EventBind>,
+    pub raw_inputs: Vec<ast::Loc<ast::PortDef>>,
+    pub raw_outputs: Vec<ast::PortDef>,
     pub param_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Expr>>>,
     pub event_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Time>>>,
 }
 
-impl From<(&ast::Signature, usize)> for Sig {
-    fn from((sig, idx): (&ast::Signature, usize)) -> Self {
-        Sig {
-            idx: CompIdx::new(idx),
-            params: sig.params.iter().map(|p| p.clone().take()).collect(),
-            inputs: sig.inputs().cloned().collect(),
-            outputs: sig.outputs().map(|p| p.clone().take()).collect(),
-            events: sig.events.iter().map(|e| e.clone().take()).collect(),
+impl Sig {
+    pub fn new(idx: CompIdx, comp: &Component, sig: &Signature) -> Self {
+        Self {
+            idx,
+            events: comp.events().idx_iter().collect(),
+            inputs: comp.inputs().map(|(idx, _)| idx).collect(),
+            outputs: comp.outputs().map(|(idx, _)| idx).collect(),
+            raw_params: sig.params.iter().map(|p| p.clone().take()).collect(),
+            raw_inputs: sig.inputs().cloned().collect(),
+            raw_outputs: sig.outputs().map(|p| p.clone().take()).collect(),
+            raw_events: sig.events.iter().map(|e| e.clone().take()).collect(),
             param_cons: sig.param_constraints.clone(),
             event_cons: sig.event_constraints.clone(),
         }
@@ -39,15 +47,16 @@ impl From<(&ast::Signature, usize)> for Sig {
 /// Mapping from names of component to [Sig].
 pub struct SigMap {
     map: HashMap<Id, Sig>,
+    rev_map: HashMap<CompIdx, Id>,
 }
 
 impl SigMap {
-    pub fn insert(&mut self, id: Id, sig: Sig) {
-        self.map.insert(id, sig);
-    }
-
     pub fn get(&self, id: &Id) -> Option<&Sig> {
         self.map.get(id)
+    }
+
+    pub fn get_idx(&self, idx: CompIdx) -> Option<&Sig> {
+        self.rev_map.get(&idx).and_then(|id| self.get(id))
     }
 }
 
@@ -56,6 +65,27 @@ impl std::ops::Index<&Id> for SigMap {
 
     fn index(&self, id: &Id) -> &Self::Output {
         self.get(id).unwrap()
+    }
+}
+
+impl FromIterator<(Id, Sig)> for SigMap {
+    fn from_iter<T: IntoIterator<Item = (Id, Sig)>>(iter: T) -> Self {
+        let mut default = Self::default();
+
+        for (id, sig) in iter.into_iter() {
+            default.rev_map.insert(sig.idx, id);
+            default.map.insert(id, sig);
+        }
+
+        default
+    }
+}
+
+impl std::iter::Extend<(Id, Sig)> for SigMap {
+    fn extend<I: IntoIterator<Item = (Id, Sig)>>(&mut self, iter: I) {
+        let sm: SigMap = iter.into_iter().collect();
+        self.rev_map.extend(sm.rev_map);
+        self.map.extend(sm.map);
     }
 }
 
@@ -86,10 +116,8 @@ impl std::fmt::Display for InvPort {
 }
 
 /// Context used while building the IR.
-pub(super) struct BuildCtx<'ctx, 'prog> {
-    /// Unfinished context
-    pub ctx: &'ctx ir::Context,
-    pub comp: &'ctx mut ir::Component,
+pub(super) struct BuildCtx<'prog> {
+    comp: ir::Component,
     pub sigs: &'prog SigMap,
 
     // Mapping from names of instance to (<parameter bindings>, <component name>).
@@ -109,14 +137,10 @@ pub(super) struct BuildCtx<'ctx, 'prog> {
     /// Index for generating unique names
     name_idx: u32,
 }
-impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
-    pub fn new(
-        ctx: &'ctx ir::Context,
-        comp: &'ctx mut ir::Component,
-        sigs: &'prog SigMap,
-    ) -> Self {
+
+impl<'prog> BuildCtx<'prog> {
+    pub fn new(comp: ir::Component, sigs: &'prog SigMap) -> Self {
         Self {
-            ctx,
             comp,
             sigs,
             name_idx: 0,
@@ -127,6 +151,18 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             inv_map: ScopeMap::new(),
             inst_to_sig: DenseIndexInfo::default(),
         }
+    }
+
+    #[inline]
+    /// Get a mutable reference to current component
+    pub fn comp(&mut self) -> &mut ir::Component {
+        &mut self.comp
+    }
+
+    #[inline]
+    // takes the component from the builder
+    pub fn take(self) -> ir::Component {
+        self.comp
     }
 
     /// Generate a unique, new name for unused parameters
@@ -215,7 +251,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
         }
         msg.push_str(&format!(
             ". Component:\n{comp}",
-            comp = ir::Printer::comp_str(self.comp)
+            comp = ir::Printer::comp_str(&self.comp)
         ));
         unreachable!("{msg}")
     }
@@ -229,7 +265,7 @@ impl<'ctx, 'prog> BuildCtx<'ctx, 'prog> {
             unreachable!(
                 "Invoke `{name}' not found. Component:\n{comp}",
                 name = name,
-                comp = ir::Printer::comp_str(self.comp)
+                comp = ir::Printer::comp_str(&self.comp)
             )
         })
     }

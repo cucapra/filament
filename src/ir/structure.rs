@@ -148,6 +148,28 @@ impl Port {
         matches!(self.owner, PortOwner::Inv { .. })
     }
 
+    /// Check if this is an invoke defined port
+    pub fn is_inv_in(&self) -> bool {
+        matches!(
+            self.owner,
+            PortOwner::Inv {
+                dir: Direction::In,
+                ..
+            }
+        )
+    }
+
+    /// Check if this is an invoke defined port
+    pub fn is_inv_out(&self) -> bool {
+        matches!(
+            self.owner,
+            PortOwner::Inv {
+                dir: Direction::Out,
+                ..
+            }
+        )
+    }
+
     /// Check if this is a signature port
     pub fn is_sig(&self) -> bool {
         matches!(self.owner, PortOwner::Sig { .. })

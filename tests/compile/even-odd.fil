@@ -1,0 +1,40 @@
+// Test for mutual recursion.
+import "primitives/comb.fil";
+
+comp IsEven[#VALUE]<G: 1>() -> (
+    @[G, G+1] out: 1
+) where #VALUE >= 0{
+    if #VALUE == 0 {
+        const := new Const[1, 1]<G>();
+        out = const.out;
+    } else {
+        assert #VALUE > 0;
+        is_odd := new IsOdd[#VALUE-1]<G>();
+        out = is_odd.out;
+    }
+}
+
+comp IsOdd[#VALUE]<G: 1>() -> (
+    @[G, G+1] out: 1
+) where #VALUE >= 0{
+    if #VALUE == 0 {
+        const := new Const[1, 0]<G>();
+        out = const.out;
+    } else {
+        assert #VALUE > 0;
+        is_even := new IsEven[#VALUE-1]<G>();
+        out = is_even.out;
+    }
+}
+
+comp main<G:1>(
+    @[G, G+1] dummy: 1
+) -> (
+    @[G, G+1] even: 1,
+    @[G, G+1] odd: 1,
+) {
+    is_even := new IsEven[10]<G>();
+    is_odd := new IsOdd[10]<G>();
+    even = is_even.out;
+    odd = is_odd.out;
+}
