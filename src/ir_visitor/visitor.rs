@@ -34,14 +34,14 @@ impl Action {
 
 /// Construct a visitor
 pub trait Construct {
-    fn from(opts: &cmdline::Opts, ctx: &ir::Context) -> Self;
+    fn from(opts: &cmdline::Opts, ctx: &mut ir::Context) -> Self;
 
     /// Clear data before the next component has been visited
     fn clear_data(&mut self);
 }
 
 impl<T: Default> Construct for T {
-    fn from(_: &cmdline::Opts, _: &ir::Context) -> Self {
+    fn from(_: &cmdline::Opts, _: &mut ir::Context) -> Self {
         Self::default()
     }
 

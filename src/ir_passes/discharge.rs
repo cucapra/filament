@@ -62,7 +62,7 @@ pub struct Discharge {
 }
 
 impl Construct for Discharge {
-    fn from(opts: &cmdline::Opts, _: &ir::Context) -> Self {
+    fn from(opts: &cmdline::Opts, _: &mut ir::Context) -> Self {
         let sol = smt::ContextBuilder::new()
             .replay_file(Some(std::fs::File::create("model.smt").unwrap()))
             .solver("z3", ["-smt2", "-in"])
