@@ -441,6 +441,14 @@ impl<T, C> Foreign<T, C>
 where
     C: Ctx<T>,
 {
+    pub fn key(&self) -> Idx<T> {
+        self.key
+    }
+
+    pub fn owner(&self) -> Idx<C> {
+        self.owner
+    }
+
     pub fn new(key: Idx<T>, owner: Idx<C>) -> Self {
         Self { key, owner }
     }

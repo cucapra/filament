@@ -287,6 +287,10 @@ impl Discharge {
 }
 
 impl Visitor for Discharge {
+    fn name() -> &'static str {
+        "discharge"
+    }
+
     fn start(&mut self, idx: ir::CompIdx, ctx: &mut ir::Context) -> Action {
         let comp = ctx.get(idx);
         // Declare all parameters

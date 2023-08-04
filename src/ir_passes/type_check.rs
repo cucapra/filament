@@ -53,6 +53,10 @@ impl TypeCheck {
 }
 
 impl Visitor for TypeCheck {
+    fn name() -> &'static str {
+        "type-check"
+    }
+
     fn connect(
         &mut self,
         c: &mut ir::Connect,

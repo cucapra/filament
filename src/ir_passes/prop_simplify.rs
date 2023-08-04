@@ -170,6 +170,10 @@ impl Simplify {
 }
 
 impl Visitor for Simplify {
+    fn name() -> &'static str {
+        "simplify"
+    }
+
     fn start(&mut self, idx: ir::CompIdx, ctx: &mut ir::Context) -> Action {
         let comp = ctx.get_mut(idx);
         let old_len = comp.props().size();
@@ -182,7 +186,7 @@ impl Visitor for Simplify {
 
             let out = self.simplify_prop(prop, comp);
             if prop != out {
-                log::info!("{prop} ==> {out}");
+                log::debug!("{prop} ==> {out}");
             } else {
                 log::debug!("{prop} unchanged");
             }

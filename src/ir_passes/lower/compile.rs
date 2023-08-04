@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     ir::{self, Ctx, Traversal},
-    ir_passes::lower::utils::{comp_name, expr_u64, expr_width, param_name},
+    ir_passes::lower::utils::{comp_name, expr_width, param_name},
 };
 use calyx_frontend as frontend;
 use calyx_ir as calyx;
@@ -151,7 +151,7 @@ impl Compile {
 
         assert!(
             comp.is_ext,
-            "Attempting to compile non-primitive component as primitive."
+            "Attempting to compile {idx} non-primitive component as primitive.",
         );
 
         calyx::Primitive {
@@ -190,7 +190,8 @@ impl Compile {
             "Attempting to compile primitive component as non-primitive."
         );
 
-        let ports = Compile::ports(ctx, comp, identity, expr_u64);
+        let ports =
+            Compile::ports(ctx, comp, identity, |e, comp| e.concrete(comp));
         let mut component = calyx::Component::new(
             comp_name(idx, ctx),
             ports,
@@ -218,7 +219,7 @@ impl Compile {
             .map(|(_, port)| {
                 let live = &port.live;
                 assert!(
-                    live.len.as_concrete(comp) == Some(1),
+                    live.len.is_const(comp, 1),
                     "Bundles should have been compiled away."
                 );
 
@@ -227,7 +228,7 @@ impl Compile {
             })
             .for_each(|idx| {
                 let time = comp.get(idx);
-                let nv = expr_u64(time.offset, comp);
+                let nv = time.offset.concrete(comp);
                 if nv > *max_states.get(&time.event).unwrap_or(&0) {
                     max_states.insert(time.event, nv);
                 }

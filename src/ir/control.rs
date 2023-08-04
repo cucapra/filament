@@ -14,6 +14,15 @@ pub enum Command {
     If(If),
     Fact(Fact),
 }
+impl Command {
+    pub fn is_loop(&self) -> bool {
+        matches!(self, Command::ForLoop(_loop))
+    }
+
+    pub fn is_if(&self) -> bool {
+        matches!(self, Command::If(_if))
+    }
+}
 impl From<InstIdx> for Command {
     fn from(idx: InstIdx) -> Self {
         Command::Instance(idx)

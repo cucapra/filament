@@ -11,6 +11,17 @@ impl<K: Eq, V> Bind<K, V> {
     }
 }
 
+impl<K: Eq + std::fmt::Debug, V: std::fmt::Debug> std::fmt::Debug
+    for Bind<K, V>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (k, v) in self.0.iter() {
+            write!(f, "{:?} -> {:?}, ", k, v)?;
+        }
+        Ok(())
+    }
+}
+
 impl<K, V> Bind<K, V>
 where
     K: Eq,
@@ -18,6 +29,26 @@ where
     /// Get the binding associated with a particular key
     pub fn get(&self, key: &K) -> Option<&V> {
         self.0.iter().find_map(|(k, v)| (k == key).then_some(v))
+    }
+
+    pub fn insert(&mut self, key: K, value: V) {
+        self.0.push((key, value));
+    }
+
+    pub fn pop(&mut self) -> Option<(K, V)> {
+        self.0.pop()
+    }
+}
+
+impl<K, V> Bind<K, V>
+where
+    K: Eq,
+    K: Clone,
+    V: Clone,
+{
+    pub fn inner(&self) -> Vec<(K, V)> {
+        let Bind(v) = self;
+        v.to_vec()
     }
 }
 

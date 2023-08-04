@@ -1,5 +1,5 @@
 use crate::{
-    ir::{CompIdx, Component, Connect, Context, Ctx, DisplayCtx, PortIdx},
+    ir::{CompIdx, Connect, Context, Ctx, DisplayCtx, PortIdx},
     ir_visitor::{Action, Visitor},
     utils::{GPosIdx, GlobalPositionTable},
 };
@@ -22,6 +22,10 @@ pub struct AssignCheck {
 }
 
 impl Visitor for AssignCheck {
+    fn name() -> &'static str {
+        "assign-check"
+    }
+
     fn start(&mut self, idx: CompIdx, ctx: &mut Context) -> Action {
         let comp = ctx.get(idx);
         // skip externals
@@ -35,7 +39,7 @@ impl Visitor for AssignCheck {
                 continue;
             }
 
-            let len = port.live.len.as_concrete(comp).unwrap() as usize;
+            let len = port.live.len.concrete(comp) as usize;
 
             for i in 0..len {
                 self.ports.insert((idx, i), Vec::new());
@@ -54,8 +58,8 @@ impl Visitor for AssignCheck {
         let comp = ctx.get(idx);
         let Connect { dst, info, .. } = con;
 
-        let start = dst.start.as_concrete(comp).unwrap() as usize;
-        let end = dst.end.as_concrete(comp).unwrap() as usize;
+        let start = dst.start.concrete(comp) as usize;
+        let end = dst.end.concrete(comp) as usize;
 
         for i in start..end {
             self.ports
