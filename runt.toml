@@ -74,6 +74,48 @@ cmd = """
 """
 
 [[tests]]
+<<<<<<< HEAD
+=======
+name = "ir-errors"
+paths = [
+  "tests/errors/*.fil",
+]
+expect_dir = "tests/ir_check/"
+cmd = """
+./target/debug/filament {} --ir
+"""
+
+[[tests]]
+name = "compile"
+paths = [
+  "tests/compile/*.fil",
+  "tests/monomorphic/*.fil"
+]
+cmd = """
+fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
+"""
+
+[[tests]]
+name = "ir-compile"
+paths = [
+  "tests/monomorphic/*.fil",
+]
+cmd = """
+fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models --ir' -q
+"""
+
+[[tests]]
+name = "ir-check"
+paths = [
+  "tests/compile/*.fil"
+]
+expect_dir = "tests/compile/ir/"
+cmd = """
+./target/debug/filament {} --ir --check > /dev/null
+"""
+
+[[tests]]
+>>>>>>> main
 name = "examples"
 paths = ["examples/*.fil"]
 cmd = """

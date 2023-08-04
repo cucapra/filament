@@ -42,6 +42,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
 
     if opts.ir {
         let mut ir = ir::transform(ns);
+        ir_passes::BuildDomination::do_pass(opts, &mut ir)?;
         if opts.show_ir {
             ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
         }
@@ -67,6 +68,10 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
             println!("====================================================");
             ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
             println!("====================================================");
+        }
+        // Return early if we're asked to dump the interface
+        if opts.check {
+            return Ok(());
         }
         ir_passes::AssignCheck::do_pass(opts, &mut ir)?;
         ir_passes::BundleElim::do_pass(&mut ir);
