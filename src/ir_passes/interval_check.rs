@@ -113,6 +113,10 @@ impl IntervalCheck {
 }
 
 impl Visitor for IntervalCheck {
+    fn name() -> &'static str {
+        "interval_check"
+    }
+
     fn start(&mut self, comp: &mut ir::Component) -> Action {
         // Ensure that delays are greater than zero
         let mut cmds: Vec<ir::Command> =

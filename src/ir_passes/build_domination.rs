@@ -45,6 +45,10 @@ impl BuildDomination {
 }
 
 impl Visitor for BuildDomination {
+    fn name() -> &'static str {
+        "build-domination"
+    }
+
     fn invoke(&mut self, inv: ir::InvIdx, _: &mut ir::Component) -> Action {
         self.add_inv(inv);
         // Remove the invocation

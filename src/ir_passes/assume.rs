@@ -118,6 +118,10 @@ impl Assume {
 }
 
 impl Visitor for Assume {
+    fn name() -> &'static str {
+        "add-assume"
+    }
+
     fn fact(&mut self, f: &mut ir::Fact, comp: &mut ir::Component) -> Action {
         if f.is_assume() {
             Action::AddBefore(

@@ -22,6 +22,10 @@ pub struct AssignCheck {
 }
 
 impl Visitor for AssignCheck {
+    fn name() -> &'static str {
+        "assign-check"
+    }
+
     fn start(&mut self, comp: &mut Component) -> Action {
         // skip externals
         if comp.is_ext {

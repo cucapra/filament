@@ -52,6 +52,9 @@ pub trait Visitor
 where
     Self: Sized + Construct,
 {
+    /// The user visible name for the pass
+    fn name() -> &'static str;
+
     /// Executed after the visitor has visited all the components.
     /// If the return value is `Some`, the number is treated as an error code.
     fn after_traversal(&mut self) -> Option<u32> {

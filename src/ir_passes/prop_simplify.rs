@@ -170,6 +170,10 @@ impl Simplify {
 }
 
 impl Visitor for Simplify {
+    fn name() -> &'static str {
+        "simplify"
+    }
+
     fn start(&mut self, comp: &mut ir::Component) -> Action {
         let old_len = comp.props().size();
         // Populate the prop_map with the simplified version of each proposition.

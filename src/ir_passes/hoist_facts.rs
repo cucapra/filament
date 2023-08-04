@@ -44,6 +44,10 @@ impl HoistFacts {
 }
 
 impl Visitor for HoistFacts {
+    fn name() -> &'static str {
+        "hoist-facts"
+    }
+
     /// Collect all assumptions in a given scope and add them to the path condition.
     /// We do this so that all asserts in a scope are affected by all assumes.
     fn start_cmds(
