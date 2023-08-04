@@ -206,25 +206,23 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             .base
             .resolve_prop(self.monosig.base.get(cond).clone());
 
-        let body = match self.monosig.base.get(cond) {
-            ir::Prop::True => then
-                .iter()
-                .map(|cmd| self.command(cmd))
-                .fold(&mut vec![], |acc, cvec| {
-                    acc.extend(cvec);
-                    acc
-                })
-                .to_vec(),
-            ir::Prop::False => alt
-                .iter()
-                .map(|cmd| self.command(cmd))
-                .fold(&mut vec![], |acc, cvec| {
-                    acc.extend(cvec);
-                    acc
-                })
-                .to_vec(),
-            _ => panic!("couldnt resolve cond"),
+        let branch = match self.monosig.base.get(cond) {
+            ir::Prop::True => then,
+            ir::Prop::False => alt,
+            cond => self
+                .monosig
+                .base
+                .internal_error(format!("Non-bool condition: {cond}")),
         };
+
+        let body = branch
+            .iter()
+            .map(|cmd| self.command(cmd))
+            .fold(&mut vec![], |acc, cvec| {
+                acc.extend(cvec);
+                acc
+            })
+            .to_vec();
 
         self.monosig.base.cmds.extend(body);
     }
