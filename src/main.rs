@@ -41,6 +41,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
 
     if opts.ir {
         let mut ir = ir::transform(ns);
+        ir_passes::BuildDomination::do_pass(opts, &mut ir)?;
         if opts.show_ir {
             ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
         }
