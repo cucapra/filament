@@ -38,6 +38,7 @@ impl Display for Expr {
 impl ExprIdx {
     #[inline]
     /// Attempts to convert this expression into a concrete value.
+    /// If the coercion should panic on failure, use [Self::concrete] instead.
     pub fn as_concrete(&self, comp: &Component) -> Option<u64> {
         if let Expr::Concrete(c) = comp.get(*self) {
             Some(*c)
@@ -48,14 +49,12 @@ impl ExprIdx {
 
     #[inline]
     /// Returns the concrete value represented by this expression or errors out.
-    pub fn concrete<Num>(&self, comp: &Component) -> Num
-    where
-        Num: From<u64>,
-    {
+    /// If an optional value is desired, use [Self::as_concrete] instead.
+    pub fn concrete(&self, comp: &Component) -> u64 {
         let Some(c) = self.as_concrete(comp) else {
             comp.internal_error(format!("{} is not a concrete number", self))
         };
-        Num::from(c)
+        c
     }
 
     /// Returns true if this expression is a constant.

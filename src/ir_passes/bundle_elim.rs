@@ -26,8 +26,8 @@ impl BundleElim {
         let comp = ctx.get(cidx);
 
         let Access { port, start, end } = access;
-        let start = start.as_concrete(comp).unwrap() as usize;
-        let end = end.as_concrete(comp).unwrap() as usize;
+        let start = start.concrete(comp) as usize;
+        let end = end.concrete(comp) as usize;
 
         let mut ports = Vec::with_capacity(end - start);
 
@@ -58,7 +58,7 @@ impl BundleElim {
         let start = comp.get(range.start).clone();
         let end = comp.get(range.end).clone();
 
-        let len = len.as_concrete(comp).unwrap();
+        let len = len.concrete(comp);
 
         // if we need to preserve external interface information, we can't have bundle ports in the signature.
         if comp.src_info.is_some() && matches!(owner, PortOwner::Sig { .. }) {
@@ -233,12 +233,10 @@ impl BundleElim {
                 if comp.ports().is_valid(dst.port)
                     && comp.get(dst.port).is_local()
                 {
-                    let dst_start =
-                        dst.start.as_concrete(comp).unwrap() as usize;
-                    let dst_end = dst.end.as_concrete(comp).unwrap() as usize;
-                    let src_start =
-                        src.start.as_concrete(comp).unwrap() as usize;
-                    let src_end = src.end.as_concrete(comp).unwrap() as usize;
+                    let dst_start = dst.start.concrete(comp) as usize;
+                    let dst_end = dst.end.concrete(comp) as usize;
+                    let src_start = src.start.concrete(comp) as usize;
+                    let src_end = src.end.concrete(comp) as usize;
                     assert!(
                         dst_end - dst_start == src_end - src_start,
                         "Mismatched access lengths for connect `{}`",

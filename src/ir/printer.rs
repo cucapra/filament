@@ -27,10 +27,8 @@ impl DisplayCtx<ir::Prop> for ir::Component {
 impl DisplayCtx<ir::Time> for ir::Component {
     fn display(&self, idx: Idx<ir::Time>) -> String {
         let &ir::Time { event, offset } = self.get(idx);
-        if let Some(off) = offset.as_concrete(self) {
-            if off == 0 {
-                return self.display(event);
-            }
+        if offset.is_const(self, 0) {
+            return self.display(event);
         }
         format!("{}+{}", self.display(event), self.display(offset))
     }
