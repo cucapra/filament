@@ -13,15 +13,6 @@ pub struct MonoSig {
     pub underlying_idx: ir::CompIdx,
     /// Mapping from parameters in the underlying component to their constant bindings.
     pub binding: ir::Bind<ir::ParamIdx, u64>,
-    /// Queue of facts to monomorphize
-    pub fact_queue: Vec<ir::Fact>,
-
-    /// Hold onto the current PortIdx being handled
-    pub curr_port: Option<ir::PortIdx>,
-    /// Invokes we've already handled, such as when we see an invoke's port before the actual invoke
-    /// so we don't create duplicates
-    pub handled_invokes: Vec<ir::InvIdx>,
-    pub handled_instances: Vec<ir::InstIdx>,
 
     pub invoke_map: HashMap<ir::InvIdx, ir::InvIdx>,
     pub instance_map: HashMap<ir::InstIdx, ir::InstIdx>,
@@ -29,18 +20,12 @@ pub struct MonoSig {
     // Keep track of things that have benen moonmorphized already
     /// Events
     pub event_map: HashMap<ir::EventIdx, ir::EventIdx>,
-    /// Times
-    pub time_map: HashMap<ir::TimeIdx, ir::TimeIdx>,
     /// Ports - (base inv, underlying port) -> base port
     pub port_map: HashMap<(Option<ir::InvIdx>, ir::PortIdx), ir::PortIdx>,
-    /// Props
-    pub prop_map: HashMap<ir::PropIdx, ir::PropIdx>,
     /// Params - underlying param -> new Param
     pub param_map: HashMap<ir::ParamIdx, ir::ParamIdx>,
     /// Bundle params - new port to new param
     pub bundle_param_map: HashMap<ir::PortIdx, ir::ParamIdx>,
-    /// Info
-    pub info_map: HashMap<ir::InfoIdx, ir::InfoIdx>,
 }
 
 impl MonoSig {
@@ -62,17 +47,10 @@ impl MonoSig {
             base,
             underlying_idx,
             binding,
-            fact_queue: vec![],
-            curr_port: None,
             event_map: HashMap::new(),
-            time_map: HashMap::new(),
             port_map: HashMap::new(),
-            prop_map: HashMap::new(),
             param_map: HashMap::new(),
             bundle_param_map: HashMap::new(),
-            info_map: HashMap::new(),
-            handled_invokes: vec![],
-            handled_instances: vec![],
             invoke_map: HashMap::new(),
             instance_map: HashMap::new(),
         }
@@ -368,8 +346,7 @@ impl MonoSig {
             offset: self.expr(underlying, pass, *offset),
         };
 
-        let idx = self.base.add(mono_time);
-        idx
+        self.base.add(mono_time)
     }
 
     /// Monomorphize the delay (owned by self.underlying) and return one that is meaningful in `self.base`
@@ -553,8 +530,6 @@ impl MonoSig {
         mono_inv.ports = mono_ports;
         mono_inv.events = mono_events;
 
-        self.handled_invokes.push(inv);
-
         mono_inv_idx
     }
 
@@ -693,8 +668,6 @@ impl MonoSig {
 
         let new_idx = self.base.add(new_inst);
         self.instance_map.insert(inst, new_idx);
-        self.handled_instances.push(inst);
-
         new_idx
     }
 
@@ -826,21 +799,10 @@ impl MonoSig {
                 (None, self.underlying_idx, cparams)
             }
             ir::PortOwner::Inv { inv, .. } => {
-                let inst_idx = underlying.get(*inv).inst;
                 let inst = underlying.get(underlying.get(*inv).inst);
                 let inst_comp = pass.old.get(inst.comp);
 
-                // its possible we haven't generated the new instance/invoke that this port belongs to
-                // if inst_counter.get(inst).is_none() -> call instance
-                if self.instance_map.get(&inst_idx).is_none() {
-                    self.instance(underlying, pass, inst_idx);
-                };
-                // if inv_counter.get(inv).is_none() -> call inv
-                let base_inv = if self.invoke_map.get(inv).is_none() {
-                    self.invoke(underlying, pass, *inv)
-                } else {
-                    *self.invoke_map.get(inv).unwrap()
-                };
+                let base_inv = *self.invoke_map.get(inv).unwrap();
 
                 let conc_params = if inst_comp.is_ext {
                     vec![]

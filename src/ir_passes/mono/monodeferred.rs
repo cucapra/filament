@@ -86,74 +86,56 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let prop = self.underlying.get(pidx);
         match self.underlying.get(pidx) {
             ir::Prop::True | ir::Prop::False => {
-                let new_idx = self.monosig.base.add(prop.clone());
-                self.monosig.prop_map.insert(pidx, new_idx);
-                new_idx
+                self.monosig.base.add(prop.clone())
             }
             ir::Prop::Cmp(cmp) => {
                 let ir::CmpOp { op, lhs, rhs } = cmp;
                 let lhs = self.monosig.expr(self.underlying, self.pass, *lhs);
                 let rhs = self.monosig.expr(self.underlying, self.pass, *rhs);
-                let new_idx = self.monosig.base.add(ir::Prop::Cmp(ir::CmpOp {
+                self.monosig.base.add(ir::Prop::Cmp(ir::CmpOp {
                     op: op.clone(),
                     lhs,
                     rhs,
-                }));
-                self.monosig.prop_map.insert(pidx, new_idx);
-                new_idx
+                }))
             }
             ir::Prop::TimeCmp(tcmp) => {
                 let ir::CmpOp { op, lhs, rhs } = tcmp;
                 let lhs = self.monosig.time(self.underlying, self.pass, *lhs);
                 let rhs = self.monosig.time(self.underlying, self.pass, *rhs);
-                let new_idx =
-                    self.monosig.base.add(ir::Prop::TimeCmp(ir::CmpOp {
-                        op: op.clone(),
-                        lhs,
-                        rhs,
-                    }));
-                self.monosig.prop_map.insert(pidx, new_idx);
-                new_idx
+                self.monosig.base.add(ir::Prop::TimeCmp(ir::CmpOp {
+                    op: op.clone(),
+                    lhs,
+                    rhs,
+                }))
             }
             ir::Prop::TimeSubCmp(tscmp) => {
                 let ir::CmpOp { op, lhs, rhs } = tscmp;
                 let lhs = self.monosig.timesub(self.underlying, self.pass, lhs);
                 let rhs = self.monosig.timesub(self.underlying, self.pass, rhs);
-                let new_idx =
-                    self.monosig.base.add(ir::Prop::TimeSubCmp(ir::CmpOp {
-                        op: op.clone(),
-                        lhs,
-                        rhs,
-                    }));
-                self.monosig.prop_map.insert(pidx, new_idx);
-                new_idx
+                self.monosig.base.add(ir::Prop::TimeSubCmp(ir::CmpOp {
+                    op: op.clone(),
+                    lhs,
+                    rhs,
+                }))
             }
             ir::Prop::Not(p) => {
                 let new_p = self.prop(*p);
-                let new_idx = self.monosig.base.add(ir::Prop::Not(new_p));
-                self.monosig.prop_map.insert(pidx, new_idx);
-                new_idx
+                self.monosig.base.add(ir::Prop::Not(new_p))
             }
             ir::Prop::And(l, r) => {
                 let l = self.prop(*l);
                 let r = self.prop(*r);
-                let new_idx = self.monosig.base.add(ir::Prop::And(l, r));
-                self.monosig.prop_map.insert(pidx, new_idx);
-                new_idx
+                self.monosig.base.add(ir::Prop::And(l, r))
             }
             ir::Prop::Or(l, r) => {
                 let l = self.prop(*l);
                 let r = self.prop(*r);
-                let new_idx = self.monosig.base.add(ir::Prop::Or(l, r));
-                self.monosig.prop_map.insert(pidx, new_idx);
-                new_idx
+                self.monosig.base.add(ir::Prop::Or(l, r))
             }
             ir::Prop::Implies(l, r) => {
                 let l = self.prop(*l);
                 let r = self.prop(*r);
-                let new_idx = self.monosig.base.add(ir::Prop::Implies(l, r));
-                self.monosig.prop_map.insert(pidx, new_idx);
-                new_idx
+                self.monosig.base.add(ir::Prop::Implies(l, r))
             }
         }
     }
@@ -204,8 +186,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let bound = mono_end.as_concrete(&self.monosig.base).unwrap();
 
         while i < bound {
-            self.monosig.handled_instances.clear();
-            self.monosig.handled_invokes.clear();
             self.monosig.binding.insert(*index, i);
             log::debug!("binding {index} to {i}");
             for cmd in body.iter() {
@@ -252,27 +232,16 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     fn command(&mut self, cmd: &ir::Command) -> Vec<ir::Command> {
         match cmd {
             ir::Command::Instance(idx) => {
-                if self.monosig.handled_instances.contains(idx) {
-                    let base_inst =
-                        *self.monosig.instance_map.get(idx).unwrap();
-                    vec![base_inst.into()]
-                } else {
-                    vec![self
-                        .monosig
-                        .instance(self.underlying, self.pass, *idx)
-                        .into()]
-                }
+                vec![self
+                    .monosig
+                    .instance(self.underlying, self.pass, *idx)
+                    .into()]
             }
             ir::Command::Invoke(idx) => {
-                if self.monosig.handled_invokes.contains(idx) {
-                    let base_inv = *self.monosig.invoke_map.get(idx).unwrap();
-                    vec![base_inv.into()]
-                } else {
-                    vec![self
-                        .monosig
-                        .invoke(self.underlying, self.pass, *idx)
-                        .into()]
-                }
+                vec![self
+                    .monosig
+                    .invoke(self.underlying, self.pass, *idx)
+                    .into()]
             }
             ir::Command::Connect(con) => vec![self.connect(con).into()],
             ir::Command::ForLoop(lp) => {
@@ -283,8 +252,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 self.if_stmt(if_stmt);
                 vec![]
             }
-            ir::Command::Fact(fact) => {
-                self.monosig.fact_queue.push(fact.clone());
+            ir::Command::Fact(_) => {
                 vec![]
             }
         }
