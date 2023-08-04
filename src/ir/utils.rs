@@ -432,15 +432,23 @@ where
     C: Ctx<T>,
 {
     /// A reference to the underlying value.
-    pub key: Idx<T>,
+    key: Idx<T>,
     /// A reference to the owner of the foreign key.
-    pub owner: Idx<C>,
+    owner: Idx<C>,
 }
 
 impl<T, C> Foreign<T, C>
 where
     C: Ctx<T>,
 {
+    pub fn key(&self) -> Idx<T> {
+        self.key
+    }
+
+    pub fn owner(&self) -> Idx<C> {
+        self.owner
+    }
+
     pub fn new(key: Idx<T>, owner: Idx<C>) -> Self {
         Self { key, owner }
     }

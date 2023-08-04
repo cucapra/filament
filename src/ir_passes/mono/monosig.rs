@@ -88,7 +88,7 @@ impl MonoSig {
         inv: &ir::InvIdx, // underlying
     ) -> Foreign<ir::Port, ir::Component> {
         // key is meaningful in underlying
-        let Foreign { key, .. } = foreign;
+        let key = foreign.key();
 
         let inst = underlying.get(underlying.get(*inv).inst);
         let inst_comp = inst.comp;
@@ -112,7 +112,7 @@ impl MonoSig {
         // now need to find the mapping from old portidx and the old instance to new port
         let new_port = pass
             .port_map
-            .get(&(inst_comp, conc_params.clone(), *key))
+            .get(&(inst_comp, conc_params.clone(), key))
             .unwrap();
 
         let mono_compidx =
@@ -122,10 +122,7 @@ impl MonoSig {
                 &pass.queue.get(&(inst_comp, conc_params)).unwrap().0
             };
 
-        ir::Foreign {
-            key: *new_port,
-            owner: *mono_compidx,
-        }
+        ir::Foreign::new(*new_port, *mono_compidx)
     }
 
     /// Add `self.underlying`'s info to `self.base`. Nothing else needs to be done because all the constructs
@@ -584,7 +581,7 @@ impl MonoSig {
         foreign: &Foreign<ir::Event, ir::Component>,
         inv: ir::InvIdx, // underlying
     ) -> Foreign<ir::Event, ir::Component> {
-        let Foreign { key, .. } = foreign;
+        let key = foreign.key();
         // `key` is only meaningful in `owner`
         // need to map `key` to be the monomorphized index and update `owner` to be
         // the monomorphized component
@@ -609,7 +606,7 @@ impl MonoSig {
 
         let new_event = pass
             .event_map
-            .get(&(inst_comp, conc_params.clone(), *key))
+            .get(&(inst_comp, conc_params.clone(), key))
             .unwrap();
 
         let new_owner =
@@ -619,10 +616,7 @@ impl MonoSig {
                 &pass.queue.get(&(inst_comp, conc_params)).unwrap().0
             };
 
-        ir::Foreign {
-            key: *new_event,
-            owner: *new_owner,
-        }
+        ir::Foreign::new(*new_event, *new_owner)
     }
 
     /// Monomorphize the `inst` (owned by self.underlying) and add it to `self.base`, and return the corresponding index
