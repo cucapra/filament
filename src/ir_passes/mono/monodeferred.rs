@@ -250,6 +250,9 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 self.if_stmt(if_stmt);
                 vec![]
             }
+            // XXX(rachit): We completely get rid of facts in the program here.
+            // If we want to do this long term, this should be done in a
+            // separate pass and monomorphization should fail on facts.
             ir::Command::Fact(_) => {
                 vec![]
             }
