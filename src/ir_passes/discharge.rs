@@ -287,6 +287,10 @@ impl Discharge {
 }
 
 impl Visitor for Discharge {
+    fn name() -> &'static str {
+        "discharge"
+    }
+
     fn start(&mut self, comp: &mut ir::Component) -> Action {
         // Declare all parameters
         let int = self.sol.int_sort();

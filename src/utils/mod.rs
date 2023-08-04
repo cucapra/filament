@@ -2,6 +2,7 @@ mod bind_map;
 mod global_sym;
 mod gsym;
 mod idx;
+mod macros;
 mod namegenerator;
 mod obligation;
 mod position;
