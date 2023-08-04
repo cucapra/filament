@@ -208,10 +208,6 @@ impl Component {
         &self.props
     }
 
-    pub fn info(&self) -> &IndexStore<Info> {
-        &self.info
-    }
-
     pub fn inputs(&self) -> impl Iterator<Item = (PortIdx, &Port)> {
         self.ports.iter().filter(|(_, p)| p.is_sig_in())
     }

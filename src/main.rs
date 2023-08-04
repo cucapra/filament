@@ -76,9 +76,6 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
             ir::Printer::context(&ir, &mut std::io::stdout()).unwrap();
             println!("====================================================");
         }
-        //ir_passes::AssignCheck::do_pass(opts, &mut ir)?;
-        //ir_passes::BundleElim::do_pass(&mut ir);
-        //ir_passes::AssignCheck::do_pass(opts, &mut ir)?;
         ir_passes::Compile::compile(ir);
         return Ok(());
     }

@@ -263,8 +263,10 @@ impl<'a> Printer<'a> {
         };
         if let Some(info) = &comp.src_info {
             write!(f, "comp {}", info.name)?;
-            if let Some(idx) = idx {
-                write!(f, " {idx}")?;
+            if log::log_enabled!(log::Level::Debug) {
+                if let Some(idx) = idx {
+                    write!(f, " {idx}")?;
+                }
             }
         } else if let Some(idx) = idx {
             write!(f, "comp {}", idx)?;

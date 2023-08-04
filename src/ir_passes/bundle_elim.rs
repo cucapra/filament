@@ -144,7 +144,10 @@ impl BundleElim {
         comp.ports()
             .idx_iter()
             .filter_map(|idx| {
-                comp.get(idx).is_sig().then(||  { log::debug!("{idx} is sig"); (idx, self.port(idx, comp)) })
+                comp.get(idx).is_sig().then(|| {
+                    log::debug!("{idx} is sig");
+                    (idx, self.port(idx, comp))
+                })
             })
             .collect()
     }

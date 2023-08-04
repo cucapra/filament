@@ -21,11 +21,15 @@ impl MonoDeferred<'_, '_> {
         // Events can be recursive, so do a pass over them to generate the new idxs now
         // and then fill them in later
         let binding = monosig.binding.inner();
-        let conc_params = if underlying.is_ext {vec![]} else { binding
-            .iter()
-            .filter(|(p, _)| underlying.get(*p).is_sig_owned())
-            .map(|(_, n)| *n)
-            .collect_vec() };
+        let conc_params = if underlying.is_ext {
+            vec![]
+        } else {
+            binding
+                .iter()
+                .filter(|(p, _)| underlying.get(*p).is_sig_owned())
+                .map(|(_, n)| *n)
+                .collect_vec()
+        };
         for (idx, event) in underlying.events().iter() {
             let new_idx = monosig.base.add(event.clone());
             monosig.event_map.insert(idx, new_idx);
@@ -36,8 +40,14 @@ impl MonoDeferred<'_, '_> {
         }
 
         if underlying.is_ext {
-            for (_, param) in underlying.params().iter() {
-                monosig.base.add(param.clone());
+            for (idx, param) in underlying.params().iter() {
+                let ir::Param { owner, info } = param;
+                let param = ir::Param {
+                    owner: owner.clone(),
+                    info: monosig.info(underlying, pass, info),
+                };
+                let new_idx = monosig.base.add(param);
+                monosig.param_map.insert(idx, new_idx);
             }
         }
 
@@ -59,7 +69,7 @@ impl MonoDeferred<'_, '_> {
             monosig.event_second(underlying, pass, *old, *new);
         }
 
-        monosig.interface(&underlying.src_info);
+        monosig.interface(underlying, &underlying.src_info);
         monosig.base.unannotated_ports = underlying.unannotated_ports.clone();
     }
 }
@@ -70,25 +80,9 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             let cmd = self.command(cmd);
             self.monosig.base.cmds.extend(cmd);
         }
-        for fact in self.monosig.fact_queue.clone() {
-            if let Some(cmd) = self.fact(&fact) {
-                self.monosig.base.cmds.push(cmd);
-            }
-        }
-        for idx in self.underlying.props().idx_iter() {
-            self.prop(idx);
-        }
-
-        for idx in self.underlying.info().idx_iter() {
-            self.monosig.info(self.underlying, self.pass, &idx);
-        }
     }
 
     fn prop(&mut self, pidx: ir::PropIdx) -> ir::PropIdx {
-        if let Some(idx) = self.monosig.prop_map.get(&pidx) {
-            return *idx;
-        };
-
         let prop = self.underlying.get(pidx);
         match self.underlying.get(pidx) {
             ir::Prop::True | ir::Prop::False => {
@@ -213,6 +207,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             self.monosig.handled_instances.clear();
             self.monosig.handled_invokes.clear();
             self.monosig.binding.insert(*index, i);
+            log::debug!("binding {index} to {i}");
             for cmd in body.iter() {
                 let cmd = self.command(cmd);
                 self.monosig.base.cmds.extend(cmd);
@@ -231,49 +226,35 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             .base
             .resolve_prop(self.monosig.base.get(cond).clone());
 
-        let then = then
-            .iter()
-            .map(|cmd| self.command(cmd))
-            .fold(&mut vec![], |acc, cvec| {
-                acc.extend(cvec);
-                acc
-            })
-            .to_vec();
-        let alt = alt
-            .iter()
-            .map(|cmd| self.command(cmd))
-            .fold(&mut vec![], |acc, cvec| {
-                acc.extend(cvec);
-                acc
-            })
-            .to_vec();
+        let body = match self.monosig.base.get(cond) {
+            ir::Prop::True => then
+                .iter()
+                .map(|cmd| self.command(cmd))
+                .fold(&mut vec![], |acc, cvec| {
+                    acc.extend(cvec);
+                    acc
+                })
+                .to_vec(),
+            ir::Prop::False => alt
+                .iter()
+                .map(|cmd| self.command(cmd))
+                .fold(&mut vec![], |acc, cvec| {
+                    acc.extend(cvec);
+                    acc
+                })
+                .to_vec(),
+            _ => panic!("couldnt resolve cond"),
+        };
 
-        match self.monosig.base.get(cond) {
-            ir::Prop::True => self.monosig.base.cmds.extend(then),
-            ir::Prop::False => self.monosig.base.cmds.extend(alt),
-            _ => self
-                .monosig
-                .base
-                .internal_error(format!("couldn't resolve {}", cond)),
-        }
-    }
-
-    fn fact(&mut self, fact: &ir::Fact) -> Option<ir::Command> {
-        let ir::Fact { prop, reason, .. } = fact;
-        let prop = self.prop(*prop);
-        let reason = self.monosig.info(self.underlying, self.pass, reason);
-        if fact.is_assert() {
-            self.monosig.base.assert(prop, reason)
-        } else {
-            self.monosig.base.assume(prop, reason)
-        }
+        self.monosig.base.cmds.extend(body);
     }
 
     fn command(&mut self, cmd: &ir::Command) -> Vec<ir::Command> {
         match cmd {
             ir::Command::Instance(idx) => {
                 if self.monosig.handled_instances.contains(idx) {
-                    let base_inst = *self.monosig.instance_map.get(idx).unwrap();
+                    let base_inst =
+                        *self.monosig.instance_map.get(idx).unwrap();
                     vec![base_inst.into()]
                 } else {
                     vec![self

@@ -125,25 +125,24 @@ impl MonoSig {
             })
             .collect_vec();
 
-        let conc_params_copy = conc_params.clone();
-        let conc_params_copy = if pass.old.get(inst_comp).is_ext { vec![] } else {
-            conc_params_copy
+        let conc_params = if pass.old.get(inst_comp).is_ext {
+            vec![]
+        } else {
+            conc_params
         };
 
         // now need to find the mapping from old portidx and the old instance to new port
-        let new_port =
-            pass.port_map.get(&(inst_comp, conc_params_copy.clone(), *key)).unwrap();
+        let new_port = pass
+            .port_map
+            .get(&(inst_comp, conc_params.clone(), *key))
+            .unwrap();
 
-        log::debug!("looked up ({inst_comp}, {:?}, {key} in pass.port_map, got {new_port}", conc_params_copy);
-
-        let mono_compidx = 
-            if let None = pass.queue.get(&(inst_comp, conc_params_copy.clone())) {
-                pass.processed.get(&(inst_comp, conc_params_copy)).unwrap()
+        let mono_compidx =
+            if pass.queue.get(&(inst_comp, conc_params.clone())).is_none() {
+                pass.processed.get(&(inst_comp, conc_params)).unwrap()
             } else {
-                &pass.queue.get(&(inst_comp, conc_params_copy)).unwrap().0
+                &pass.queue.get(&(inst_comp, conc_params)).unwrap().0
             };
-
-        // println!("new foreign port is {mono_compidx}'s {new_port}");    
 
         ir::Foreign {
             key: *new_port,
@@ -159,50 +158,73 @@ impl MonoSig {
         pass: &mut Monomorphize,
         iidx: &ir::InfoIdx,
     ) -> ir::InfoIdx {
-        if let Some(idx) = self.info_map.get(iidx) {
-            return *idx;
-        }
-
         let info = underlying.get(*iidx);
 
         let info = match info {
-            // ir::info::Info::Param(param) => {
-            //     let ir::info::Param { name, bind_loc } = param;
-            //     ir::Info::param(*name, *bind_loc)
-            // }
-            // ir::info::Info::Assert(reason) => {
-            //     let ir::info::Assert(reason) = reason;
-            //     ir::Info::assert(self.reason(underlying, pass, reason))
-            // }
-            // ir::Info::Instance(instance) => {
-            //     let ir::info::Instance {name, comp_loc, bind_loc} = instance;
-            //     ir::Info::instance(*name, *comp_loc, *bind_loc)
-            // }
-            // ir::Info::Invoke(invoke) => {
-            //     let ir::info::Invoke {name, inst_loc, bind_loc} = invoke;
-            //     ir::Info::invoke(*name, *inst_loc, *bind_loc)
-            // }
-            // ir::Info::Connect(connect) => {
-            //     let ir::info::Connect {src_loc, dst_loc} = connect;
-            //     ir::Info::connect(*dst_loc, *src_loc)
-            // }
-            // ir::Info::Port(port) => {
-            //     let ir::info::Port {name, bind_loc, width_loc, live_loc} = port;
-            //     ir::Info::port(*name, *bind_loc, *width_loc, *live_loc)
-            // }
-            // ir::Info::Empty(_) => {
-            //     ir::Info::empty()
-            // }
-            // ir::Info::EventBind(eventbind) => {
-            //     let ir::info::EventBind {ev_delay_loc, bind_loc} = eventbind;
-            //     ir::Info::event_bind(*ev_delay_loc, *bind_loc)
-            // }
-            _ => ir::Info::empty()
+            ir::info::Info::Param(param) => {
+                let ir::info::Param { name, bind_loc } = param;
+                ir::Info::param(*name, *bind_loc)
+            }
+            ir::info::Info::Assert(reason) => {
+                let ir::info::Assert(reason) = reason;
+                ir::Info::assert(self.reason(underlying, pass, reason))
+            }
+            ir::Info::Instance(instance) => {
+                let ir::info::Instance {
+                    name,
+                    comp_loc,
+                    bind_loc,
+                } = instance;
+                ir::Info::instance(*name, *comp_loc, *bind_loc)
+            }
+            ir::Info::Invoke(invoke) => {
+                let ir::info::Invoke {
+                    name,
+                    inst_loc,
+                    bind_loc,
+                } = invoke;
+                ir::Info::invoke(*name, *inst_loc, *bind_loc)
+            }
+            ir::Info::Connect(connect) => {
+                let ir::info::Connect { src_loc, dst_loc } = connect;
+                ir::Info::connect(*dst_loc, *src_loc)
+            }
+            ir::Info::Port(port) => {
+                let ir::info::Port {
+                    name,
+                    bind_loc,
+                    width_loc,
+                    live_loc,
+                } = port;
+                ir::Info::port(*name, *bind_loc, *width_loc, *live_loc)
+            }
+            ir::Info::EventBind(eventbind) => {
+                let ir::info::EventBind {
+                    ev_delay_loc,
+                    bind_loc,
+                } = eventbind;
+                ir::Info::event_bind(*ev_delay_loc, *bind_loc)
+            }
+            ir::Info::Event(event) => {
+                let ir::info::Event {
+                    name,
+                    bind_loc,
+                    delay_loc,
+                    interface_name,
+                    interface_bind_loc,
+                } = event;
+                ir::Info::event_explicit(
+                    *name,
+                    *bind_loc,
+                    *delay_loc,
+                    *interface_name,
+                    *interface_bind_loc,
+                )
+            }
+            ir::Info::Empty(_) => ir::Info::empty(),
         };
 
-        let new_idx = self.base.add(info);
-        self.info_map.insert(*iidx, new_idx);
-        new_idx
+        self.base.add(info)
     }
 
     pub fn reason(
@@ -229,10 +251,16 @@ impl MonoSig {
                     src_liveness,
                 }
             }
-            ir::info::Reason::ParamConstraint { bind_loc, constraint_loc } => {
+            ir::info::Reason::ParamConstraint {
+                bind_loc,
+                constraint_loc,
+            } => {
                 let bind_loc = *bind_loc;
                 let constraint_loc = *constraint_loc;
-                ir::info::Reason::ParamConstraint {bind_loc, constraint_loc}
+                ir::info::Reason::ParamConstraint {
+                    bind_loc,
+                    constraint_loc,
+                }
             }
             _ => reason.clone(),
         }
@@ -333,10 +361,6 @@ impl MonoSig {
         pass: &mut Monomorphize,
         time: ir::TimeIdx,
     ) -> ir::TimeIdx {
-        if let Some(idx) = self.time_map.get(&time) {
-            return *idx;
-        };
-
         let ir::Time { event, offset } = underlying.get(time);
 
         let mono_time = ir::Time {
@@ -345,8 +369,6 @@ impl MonoSig {
         };
 
         let idx = self.base.add(mono_time);
-        self.time_map.insert(time, idx);
-
         idx
     }
 
@@ -387,7 +409,11 @@ impl MonoSig {
         new_event
     }
 
-    pub fn interface(&mut self, interface: &Option<ir::InterfaceSrc>) {
+    pub fn interface(
+        &mut self,
+        underlying: &ir::Component,
+        interface: &Option<ir::InterfaceSrc>,
+    ) {
         let interface = match interface {
             None => None,
             Some(ir::InterfaceSrc {
@@ -402,11 +428,25 @@ impl MonoSig {
                     new_events.insert(*new_event, *id);
                 }
 
+                let mut new_params = HashMap::new();
+                for (param, id) in params.iter() {
+                    if underlying.is_ext {
+                        let new_param = self.param_map.get(param).unwrap();
+                        new_params.insert(*new_param, *id);
+                    }
+                }
+
+                let params = if underlying.is_ext {
+                    new_params
+                } else {
+                    params.clone()
+                };
+
                 Some(ir::InterfaceSrc {
                     name: *name,
                     ports: ports.clone(),
                     interface_ports: new_events,
-                    params: params.clone(),
+                    params,
                 })
             }
         };
@@ -469,7 +509,6 @@ impl MonoSig {
         pass: &mut Monomorphize,
         inv: ir::InvIdx,
     ) -> ir::InvIdx {
-
         // Need to monomorphize all parts of the invoke
         let ir::Invoke {
             inst,
@@ -587,28 +626,22 @@ impl MonoSig {
             })
             .collect_vec();
 
-        let conc_params_copy = conc_params.clone();
-        let conc_params_copy = if pass.old.get(inst_comp).is_ext { vec![] } else {
-            conc_params_copy
+        let conc_params = if pass.old.get(inst_comp).is_ext {
+            vec![]
+        } else {
+            conc_params
         };
 
-        let new_event =
-            pass.event_map.get(&(inst_comp, conc_params_copy.clone(), *key)).unwrap();
+        let new_event = pass
+            .event_map
+            .get(&(inst_comp, conc_params.clone(), *key))
+            .unwrap();
 
-        // let new_owner = if let Some((mono_compidx, _)) =
-        //     pass.queue.get(&(inst_comp, conc_params_copy))
-        // {
-        //     *mono_compidx
-        // } else {
-        //     println!("didn't find in pass queue -> giving {}", self.underlying_idx);
-        //     self.underlying_idx
-        // };
-
-        let new_owner = 
-            if let None = pass.queue.get(&(inst_comp, conc_params_copy.clone())) {
-                pass.processed.get(&(inst_comp, conc_params_copy)).unwrap()
+        let new_owner =
+            if pass.queue.get(&(inst_comp, conc_params.clone())).is_none() {
+                pass.processed.get(&(inst_comp, conc_params)).unwrap()
             } else {
-                &pass.queue.get(&(inst_comp, conc_params_copy)).unwrap().0
+                &pass.queue.get(&(inst_comp, conc_params)).unwrap().0
             };
 
         ir::Foreign {
@@ -624,7 +657,6 @@ impl MonoSig {
         pass: &mut Monomorphize,
         inst: ir::InstIdx,
     ) -> ir::InstIdx {
-
         let ir::Instance { comp, params, info } = underlying.get(inst);
         let is_ext = pass.old.get(*comp).is_ext;
         let conc_params = params
@@ -636,7 +668,7 @@ impl MonoSig {
             })
             .collect_vec();
         let (comp, new_params) = pass.should_process(*comp, conc_params);
-        
+
         let new_inst = if !is_ext {
             ir::Instance {
                 comp,
@@ -646,10 +678,12 @@ impl MonoSig {
                     .collect(),
                 info: self.info(underlying, pass, info),
             }
-        } else { // this is an extern, so keep the params - need to get them into the new component though
-            let ext_params = params.iter().map(|p| {
-                self.expr(underlying, pass, *p)
-            }).collect_vec();
+        } else {
+            // this is an extern, so keep the params - need to get them into the new component though
+            let ext_params = params
+                .iter()
+                .map(|p| self.expr(underlying, pass, *p))
+                .collect_vec();
             ir::Instance {
                 comp,
                 params: ext_params.into(),
@@ -682,18 +716,21 @@ impl MonoSig {
         let comp = self.underlying_idx;
 
         let binding = &self.binding.inner();
-        let cparams = if underlying.is_ext {vec![]} else { binding
-            .iter()
-            .filter(|(p, _)| underlying.get(*p).is_sig_owned())
-            .map(|(_, n)| *n)
-            .collect_vec() };
+        let cparams = if underlying.is_ext {
+            vec![]
+        } else {
+            binding
+                .iter()
+                .filter(|(p, _)| underlying.get(*p).is_sig_owned())
+                .map(|(_, n)| *n)
+                .collect_vec()
+        };
 
         if let Some(idx) = self.port_map.get(&(inv, port)) {
             if !pass.port_map.contains_key(&(comp, cparams.clone(), port)) {
-                log::debug!("(ext_port) inserted ({comp}, {:?}, {port}) -> {idx} into pass.port_map, found in local port_map", cparams);
                 pass.port_map.insert((comp, cparams, port), *idx);
             }
-            
+
             return *idx;
         };
 
@@ -711,7 +748,6 @@ impl MonoSig {
 
         // pass port map
         if !pass.port_map.contains_key(&(comp, cparams.clone(), port)) {
-            log::debug!("(ext_port) inserted ({comp}, {:?}, {port}) -> {new_port} into pass.port_map, not in local port_map", cparams);
             pass.port_map.insert((comp, cparams, port), new_port);
         };
 
@@ -731,24 +767,25 @@ impl MonoSig {
 
         // if there's parameters, we don't want to replace them for handling externs
         let mono_width = self.base.add(underlying.get(*width).clone());
-        mono_liveness.len = self.base.add(underlying.get(mono_liveness.len).clone());
-        
-        let ir::Range {start, end} = mono_liveness.range;
-        let ir::Time {event, offset} = underlying.get(start);
+        mono_liveness.len =
+            self.base.add(underlying.get(mono_liveness.len).clone());
+
+        let ir::Range { start, end } = mono_liveness.range;
+        let ir::Time { event, offset } = underlying.get(start);
         let start = ir::Time {
             event: self.event(pass, *event),
             offset: self.base.add(underlying.get(*offset).clone()),
         };
         let start = self.base.add(start);
 
-        let ir::Time {event, offset} = underlying.get(end);
+        let ir::Time { event, offset } = underlying.get(end);
         let end = ir::Time {
             event: self.event(pass, *event),
             offset: self.base.add(underlying.get(*offset).clone()),
         };
         let end = self.base.add(end);
 
-        mono_liveness.range = ir::Range {start, end};
+        mono_liveness.range = ir::Range { start, end };
 
         let port = self.base.get_mut(new_port);
         port.live = mono_liveness;
@@ -777,11 +814,15 @@ impl MonoSig {
         let (inv, comp, conc_params) = match owner {
             ir::PortOwner::Sig { .. } | ir::PortOwner::Local => {
                 let binding = &self.binding.inner();
-                let cparams = if underlying.is_ext {vec![]} else { binding
-                    .iter()
-                    .filter(|(p, _)| underlying.get(*p).is_sig_owned())
-                    .map(|(_, n)| *n)
-                    .collect_vec() };
+                let cparams = if underlying.is_ext {
+                    vec![]
+                } else {
+                    binding
+                        .iter()
+                        .filter(|(p, _)| underlying.get(*p).is_sig_owned())
+                        .map(|(_, n)| *n)
+                        .collect_vec()
+                };
                 (None, self.underlying_idx, cparams)
             }
             ir::PortOwner::Inv { inv, .. } => {
@@ -801,24 +842,26 @@ impl MonoSig {
                     *self.invoke_map.get(inv).unwrap()
                 };
 
-                let conc_params = if inst_comp.is_ext { vec![] } else { inst
-                    .params
-                    .iter()
-                    .map(|p| {
-                        self.expr(underlying, pass, *p)
-                            .as_concrete(&self.base)
-                            .unwrap()
-                    })
-                    .collect_vec() };
+                let conc_params = if inst_comp.is_ext {
+                    vec![]
+                } else {
+                    inst.params
+                        .iter()
+                        .map(|p| {
+                            self.expr(underlying, pass, *p)
+                                .as_concrete(&self.base)
+                                .unwrap()
+                        })
+                        .collect_vec()
+                };
                 (Some(base_inv), inst.comp, conc_params)
             }
         };
 
         if let Some(idx) = self.port_map.get(&(inv, port)) {
-            if !pass.port_map.contains_key(&(comp, conc_params.clone(), port)) {
-                pass.port_map.insert((comp, conc_params.clone(), port), *idx);
-                log::debug!("inserted ({comp}, {:?}, {port}) -> {idx} into pass.port_map, found in local port_map", conc_params);
-            }
+            pass.port_map
+                .entry((comp, conc_params, port))
+                .or_insert(port);
             return *idx;
         };
 
@@ -836,10 +879,9 @@ impl MonoSig {
         self.port_map.insert((inv, port), new_port);
 
         // pass port map
-        if !pass.port_map.contains_key(&(comp, conc_params.clone(), port)) {
-            pass.port_map.insert((comp, conc_params.clone(), port), new_port);
-            log::debug!("inserted ({comp}, {:?}, {port}) -> {new_port} into pass.port_map, not in local port_map", conc_params);
-        };
+        pass.port_map
+            .entry((comp, conc_params, port))
+            .or_insert(new_port);
 
         // Find the new port owner
         let mono_owner = self.find_new_portowner(underlying, pass, owner);
