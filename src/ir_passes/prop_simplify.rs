@@ -170,6 +170,10 @@ impl Simplify {
 }
 
 impl Visitor for Simplify {
+    fn name() -> &'static str {
+        "simplify"
+    }
+
     fn start(&mut self, comp: &mut ir::Component) -> Action {
         let old_len = comp.props().size();
         // Populate the prop_map with the simplified version of each proposition.
@@ -181,7 +185,7 @@ impl Visitor for Simplify {
 
             let out = self.simplify_prop(prop, comp);
             if prop != out {
-                log::info!("{prop} ==> {out}");
+                log::debug!("{prop} ==> {out}");
             } else {
                 log::debug!("{prop} unchanged");
             }

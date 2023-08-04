@@ -35,14 +35,6 @@ pub(super) fn interface_name(
     )
 }
 
-/// Compiles an [ExprIdx] into a [u64].
-/// Expects the [ExprIdx] to be a single constant value, and panics if this isn't the case
-pub(super) fn expr_u64(idx: ExprIdx, comp: &Component) -> u64 {
-    idx.as_concrete(comp).unwrap_or_else(|| {
-        comp.internal_error(format!("Expression {idx} must be a constant."))
-    })
-}
-
 /// Converts an [ir::ExprIdx] into a [calyx::Width].
 /// Expects the [ir::ExprIdx] to either be a singular constant or an abstract variable.
 pub(super) fn expr_width(idx: ExprIdx, comp: &Component) -> calyx::Width {
