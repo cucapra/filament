@@ -525,22 +525,20 @@ impl Ctx<Expr> for Component {
             Expr::Bin { op, lhs, rhs } => {
                 let l = lhs.as_concrete(self);
                 let r = rhs.as_concrete(self);
-                let e = match (l, r) {
-                    (Some(0), None) => return *rhs,
-                    (None, Some(0)) => return *lhs,
-                    (Some(l), None) => {
-                        if matches!(op, ast::Op::Add | ast::Op::Mul) {
-                            // moves all constants to the right side of non-ordered expressions
-                            Expr::Bin {
-                                op: *op,
-                                lhs: *rhs,
-                                rhs: self.exprs.intern(Expr::Concrete(l)),
-                            }
-                        } else {
-                            val
-                        }
-                    }
-                    (Some(l), Some(r)) => Expr::Concrete(match op {
+                let e = match (op, l, r) {
+                    (ast::Op::Add, Some(0), None) => return *rhs,
+                    (ast::Op::Add, None, Some(0))
+                    | (ast::Op::Sub, None, Some(0)) => return *lhs,
+                    (ast::Op::Mul, Some(0), None)
+                    | (ast::Op::Div, Some(0), None)
+                    | (ast::Op::Mul, None, Some(0)) => Expr::Concrete(0),
+                    (ast::Op::Add, Some(l), None)
+                    | (ast::Op::Mul, Some(l), None) => Expr::Bin {
+                        op: *op,
+                        lhs: *rhs,
+                        rhs: self.exprs.intern(Expr::Concrete(l)),
+                    },
+                    (op, Some(l), Some(r)) => Expr::Concrete(match op {
                         ast::Op::Add => l + r,
                         ast::Op::Sub => l - r,
                         ast::Op::Mul => l * r,
