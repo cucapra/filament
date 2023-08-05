@@ -15,6 +15,10 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         .target(env_logger::Target::Stderr)
         .init();
 
+    if opts.dump_interface {
+        todo!("dump interface")
+    }
+
     let ns = match Resolver::from(opts).parse_namespace() {
         Ok(mut ns) => {
             ns.toplevel = opts.toplevel.clone();
