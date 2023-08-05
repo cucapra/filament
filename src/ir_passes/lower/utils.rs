@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 use crate::ir::{
-    self, CompIdx, Component, Context, Ctx, DenseIndexInfo, Event, EventIdx,
-    ExprIdx, ParamIdx, Port, PortIdx,
+    self, CompIdx, Component, Context, Ctx, DenseIndexInfo, EventIdx, ExprIdx,
+    ParamIdx, PortIdx,
 };
 use calyx_ir as calyx;
 use linked_hash_map::LinkedHashMap;
