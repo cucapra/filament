@@ -1,8 +1,6 @@
 use filament::{
-    backend, binding, cmdline, ir, ir_passes as ip, log_time, pass_pipeline,
-    passes::{self, Pass},
-    resolver::Resolver,
-    visitor::{Checker, Transform},
+    binding, cmdline, ir, ir_passes as ip, log_time, pass_pipeline, passes,
+    resolver::Resolver, visitor::Checker,
 };
 use std::time::Instant;
 
@@ -16,6 +14,10 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         .filter_level(opts.log_level)
         .target(env_logger::Target::Stderr)
         .init();
+
+    if opts.dump_interface {
+        todo!("dump interface")
+    }
 
     let ns = match Resolver::from(opts).parse_namespace() {
         Ok(mut ns) => {
@@ -38,99 +40,25 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     log::info!("Parameteric Bind check: {}ms", t.elapsed().as_millis());
     drop(bind);
 
-    if opts.ir {
-        let mut ir = ir::transform(ns);
-        pass_pipeline! {opts, ir;
-            ip::BuildDomination,
-            ip::TypeCheck,
-            ip::IntervalCheck,
-            ip::Assume,
-            ip::HoistFacts,
-            ip::Simplify,
-            ip::Discharge
-        }
-        // Return early if we're asked to dump the interface
-        if opts.check {
-            return Ok(());
-        }
-        // TODO(rachit): Once `BundleElim` implements `Visitor`, we can collapse this into
-        // one call to `pass_pipeline!`.
-        ir = log_time!(ip::Monomorphize::transform(&ir), "monomophization");
-        pass_pipeline! {opts, ir; ip::AssignCheck, ip::BundleElim, ip::AssignCheck }
-        log_time!(ip::Compile::compile(ir), "compile");
-        return Ok(());
+    let mut ir = ir::transform(ns);
+    pass_pipeline! {opts, ir;
+        ip::BuildDomination,
+        ip::TypeCheck,
+        ip::IntervalCheck,
+        ip::Assume,
+        ip::HoistFacts,
+        ip::Simplify,
+        ip::Discharge
     }
-
-    // Add default assumption constraints
-    let t = Instant::now();
-    let ns = passes::Assume::transform(ns);
-    log::info!("Assume: {}ms", t.elapsed().as_millis());
-    log::debug!("{ns}");
-
-    // Construct a binding
-    let bind = binding::ProgBinding::try_from(&ns)?;
-
-    // Interval checking
-    let t = Instant::now();
-    passes::IntervalCheck::check(opts, &ns, &bind)?;
-    log::info!("Interval check: {}ms", t.elapsed().as_millis());
-
-    // User-level @phantom ports
-    let t = Instant::now();
-    passes::PhantomCheck::check(opts, &ns, &bind)?;
-    log::info!("Phantom check: {}ms", t.elapsed().as_millis());
-
-    // Monomorphize the program.
-    let t = Instant::now();
-    let ns = passes::Monomorphize::transform(ns);
-    log::info!("Monomorphize: {}ms", t.elapsed().as_millis());
-    log::debug!("{ns}");
-
-    // Bundle elimination
-    let t = Instant::now();
-    let ns = passes::BundleElim::transform(ns);
-    log::info!("Bundle elimination: {}ms", t.elapsed().as_millis());
-    log::debug!("{ns}");
-
-    // Rebuild the binding
-    let bind = binding::ProgBinding::try_from(&ns)?;
-
-    // Monomorphic Bind check
-    let t = Instant::now();
-    passes::BindCheck::check(opts, &ns, &bind)?;
-    log::info!("Monomorphoic Bind check: {}ms", t.elapsed().as_millis());
-
-    // Monomorphic Interval checking
-    let t = Instant::now();
-    passes::IntervalCheck::check(opts, &ns, &bind)?;
-    log::info!("Monomorphoic Interval check: {}ms", t.elapsed().as_millis());
-
-    // Max state calculation
-    let states = passes::MaxStates::check(opts, &ns, &bind)?;
-
-    if opts.dump_interface {
-        passes::DumpInterface::print(&ns, &states.max_states);
-        return Ok(());
-    }
-
     // Return early if we're asked to dump the interface
     if opts.check {
         return Ok(());
     }
-    // Lowering
-    let t = Instant::now();
-    let Some(ns) =
-        passes::Lower::transform_unwrap(ns, states.max_states) else {
-            return Err(1);
-        };
-    log::info!("Lowering: {}ms", t.elapsed().as_millis());
-    log::debug!("{ns}");
-
-    // Compilation
-    let t = Instant::now();
-    backend::compile(ns);
-    log::info!("Compilation: {}ms", t.elapsed().as_millis());
-
+    // TODO(rachit): Once `BundleElim` implements `Visitor`, we can collapse this into
+    // one call to `pass_pipeline!`.
+    ir = log_time!(ip::Monomorphize::transform(&ir), "monomophization");
+    pass_pipeline! {opts, ir; ip::AssignCheck, ip::BundleElim, ip::AssignCheck }
+    log_time!(ip::Compile::compile(ir), "compile");
     Ok(())
 }
 

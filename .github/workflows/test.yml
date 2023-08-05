@@ -40,4 +40,4 @@ jobs:
 
       - name: Original test suite
         run:
-          runt -d -o fail -j 1 --max-futures 10 -x 'IR'
+          runt -d -o fail -j 1 --max-futures 10
