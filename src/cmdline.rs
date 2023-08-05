@@ -8,10 +8,6 @@ pub struct Opts {
     #[argh(positional)]
     pub input: PathBuf,
 
-    /// enable IR-based compilation
-    #[argh(switch, long = "ir")]
-    pub ir: bool,
-
     /// print out the IR
     #[argh(option, long = "dump-after")]
     pub dump_after: Vec<String>,

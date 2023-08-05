@@ -3,82 +3,11 @@ ver = "0.4.0"
 # =============== IR Tests ===============
 
 [[tests]]
-name = "[IR] errors"
+name = "errors"
 paths = ["tests/errors/*.fil"]
 expect_dir = "tests/ir_check/"
 cmd = """
-./target/debug/filament {} --ir
-"""
-
-[[tests]]
-name = "[IR] compile"
-paths = ["tests/compile/*.fil", "tests/monomorphic/*.fil"]
-cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models --ir' -q
-"""
-
-# Compile directories within the tests/compile directory. All *.fil files in the
-# use the same input and must produce the same output
-[[tests]]
-name = "[IR] compile multi"
-paths = ["tests/compile/*/*.fil"]
-cmd = """
-dir=$(dirname {}) && \
-fud e -s cocotb.data "$dir/data.json" \
-      --to cocotb-out {} \
-      -s filament.flags ' --ir --show-models' \
-      -s calyx.flags ' -d canonicalize' -q
-"""
-
-# Evaluation examples
-[[tests]]
-name = "[IR] evaluation"
-paths = ["evaluation/**/harness.fil"]
-cmd = """
-dir=$(dirname {}) && \
-./evaluation/fuzz/check.sh $dir 100 ir
-"""
-
-# Aetherling evaluation
-[[tests]]
-name = "[IR] aetherling evaluation"
-paths = ["aetherling/**/harness.fil"]
-cmd = """
-dir=$(dirname {}) && \
-fud e -s cocotb.data "$dir/data.json" --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --ir' -q | jq
-"""
-
-# frisc
-[[tests]]
-name = "[IR] frisc tests"
-paths = ["frisc/test/*.fil"]
-cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --ir' -q
-"""
-
-# =========== Old Flow Tests ===========
-
-[[tests]]
-name = "compile"
-paths = ["tests/compile/*.fil", "tests/monomorphic/*.fil"]
-cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
-"""
-
-
-[[tests]]
-name = "type checker"
-paths = ["tests/check/*.fil", "tests/errors/*.fil"]
-cmd = """
-./target/debug/filament {} --check
-"""
-
-[[tests]]
-name = "ir-errors"
-paths = ["tests/errors/*.fil"]
-expect_dir = "tests/ir_check/"
-cmd = """
-./target/debug/filament {} --ir
+./target/debug/filament {}
 """
 
 [[tests]]
@@ -86,36 +15,6 @@ name = "compile"
 paths = ["tests/compile/*.fil", "tests/monomorphic/*.fil"]
 cmd = """
 fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
-"""
-
-[[tests]]
-name = "ir-compile"
-paths = ["tests/monomorphic/*.fil"]
-cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models --ir' -q
-"""
-
-[[tests]]
-name = "ir-check"
-paths = ["tests/compile/*.fil"]
-expect_dir = "tests/compile/ir/"
-cmd = """
-./target/debug/filament {} --ir --check > /dev/null
-"""
-
-[[tests]]
-name = "examples"
-paths = ["examples/*.fil"]
-cmd = """
-./target/debug/filament {} --check
-"""
-
-[[tests]]
-name = "run examples"
-paths = ["examples/tut-seq.fil", "examples/tut-pipe.fil"]
-expect_dir = "examples/run/"
-cmd = """
-fud e -s cocotb.data examples/data.json --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q
 """
 
 # Compile directories within the tests/compile directory. All *.fil files in the
@@ -137,7 +36,7 @@ name = "evaluation"
 paths = ["evaluation/**/harness.fil"]
 cmd = """
 dir=$(dirname {}) && \
-./evaluation/fuzz/check.sh $dir 100
+./evaluation/fuzz/check.sh $dir 100 ir
 """
 
 # Aetherling evaluation
@@ -149,19 +48,10 @@ dir=$(dirname {}) && \
 fud e -s cocotb.data "$dir/data.json" --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q | jq
 """
 
-# Reticle Evaluation
-[[tests]]
-name = "reticle evaluation"
-paths = ["reticle/harness.fil"]
-cmd = """
-dir=$(dirname {}) && \
-./reticle/check.sh $dir 100
-"""
-
 # frisc
 [[tests]]
 name = "frisc tests"
 paths = ["frisc/test/*.fil"]
 cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
+fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q
 """
