@@ -283,7 +283,10 @@ impl BundleElim {
                     unreachable!("For Loops should have been compiled away.")
                 }
                 Command::If(_) => {
-                    unreachable!("Ifs should have been compiled away.")
+                    unreachable!("If should have been compiled away.")
+                }
+                Command::Let(_) => {
+                    unreachable!("Let should have been compiled away.")
                 }
             })
             .collect_vec();
