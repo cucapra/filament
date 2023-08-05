@@ -177,7 +177,6 @@ impl Compile {
         idx: ir::CompIdx,
         bind: &mut Binding,
         lib: &calyx::LibrarySignatures,
-        max_states: impl IntoIterator<Item = (ir::EventIdx, u64)>,
     ) -> calyx::Component {
         log::debug!("Compiling component {idx}");
         let comp = ctx.get(idx);
@@ -205,24 +204,24 @@ impl Compile {
         }
 
         let builder = calyx::Builder::new(&mut component, lib).not_generated();
-        let mut ctx = BuildCtx::new(ctx, idx, bind, builder, lib);
+        let mut buildctx = BuildCtx::new(ctx, idx, bind, builder, lib);
 
         // Construct all the FSMs
-        for (event, states) in max_states.into_iter() {
-            ctx.insert_fsm(event, states);
+        for (event, states) in max_states(idx, ctx) {
+            buildctx.insert_fsm(event, states);
         }
 
         for inst in comp.instances().idx_iter() {
-            ctx.add_instance(inst);
+            buildctx.add_instance(inst);
         }
 
         for inv in comp.invocations().idx_iter() {
-            ctx.add_invoke(inv);
+            buildctx.add_invoke(inv);
         }
 
         for cmd in &comp.cmds {
             match cmd {
-                ir::Command::Connect(connect) => ctx.compile_connect(connect),
+                ir::Command::Connect(connect) => buildctx.compile_connect(connect),
                 ir::Command::ForLoop(_) => {
                     unreachable!("For loops should have been compiled away.")
                 }
@@ -276,20 +275,12 @@ impl Compile {
 
         let mut bindings = Binding::default();
 
-        // calculate the max states for every event
-        let mut max_states = max_states(&ctx);
-
         let po = Traversal::from(ctx);
 
         // Compile the components in post-order.
         po.apply_pre_order(|ctx, idx| {
-            let comp = Compile::component(
-                ctx,
-                idx,
-                &mut bindings,
-                &calyx_ctx.lib,
-                max_states.take(idx).unwrap(),
-            );
+            let comp =
+                Compile::component(ctx, idx, &mut bindings, &calyx_ctx.lib);
             bindings.insert(idx, Rc::clone(&comp.signature));
             calyx_ctx.components.push(comp);
         });

@@ -1,6 +1,6 @@
 use crate::ir::{
-    self, CompIdx, Component, Context, Ctx, DenseIndexInfo, EventIdx, ExprIdx,
-    ParamIdx, PortIdx,
+    self, CompIdx, Component, Context, Ctx, EventIdx, ExprIdx, ParamIdx,
+    PortIdx,
 };
 use calyx_ir as calyx;
 use linked_hash_map::LinkedHashMap;
@@ -89,33 +89,29 @@ pub(super) fn comp_name(idx: CompIdx, ctx: &impl Ctx<Component>) -> String {
 }
 
 /// Calculates the max states used for every fsm.
-pub fn max_states(
-    ctx: &Context,
-) -> DenseIndexInfo<Component, LinkedHashMap<ir::EventIdx, u64>> {
-    ctx.comps
-        .iter()
-        .map(|(idx, comp)| {
-            let mut max_states = LinkedHashMap::new();
-            comp.ports()
-                .iter()
-                .map(|(_, port)| {
-                    let live = &port.live;
-                    assert!(
-                        live.len.is_const(comp, 1),
-                        "Bundles should have been compiled away."
-                    );
+pub fn max_states(idx: CompIdx, ctx: &Context) -> LinkedHashMap<EventIdx, u64> {
+    let comp = ctx.get(idx);
+    let mut max_states = LinkedHashMap::new();
 
-                    // need only the end here as ends follow starts and all ranges should be represented by a simple offset.
-                    live.range.end
-                })
-                .for_each(|idx| {
-                    let time = comp.get(idx);
-                    let nv = time.offset.concrete(comp);
-                    if nv > *max_states.get(&time.event).unwrap_or(&0) {
-                        max_states.insert(time.event, nv);
-                    }
-                });
-            (idx, max_states)
+    comp.ports()
+        .iter()
+        .map(|(_, port)| {
+            let live = &port.live;
+            assert!(
+                live.len.is_const(comp, 1),
+                "Bundles should have been compiled away."
+            );
+
+            // need only the end here as ends follow starts and all ranges should be represented by a simple offset.
+            live.range.end
         })
-        .collect()
+        .for_each(|idx| {
+            let time = comp.get(idx);
+            let nv = time.offset.concrete(comp);
+            if nv > *max_states.get(&time.event).unwrap_or(&0) {
+                max_states.insert(time.event, nv);
+            }
+        });
+
+    max_states
 }

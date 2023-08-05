@@ -15,10 +15,6 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         .target(env_logger::Target::Stderr)
         .init();
 
-    if opts.dump_interface {
-        todo!("dump interface")
-    }
-
     let ns = match Resolver::from(opts).parse_namespace() {
         Ok(mut ns) => {
             ns.toplevel = opts.toplevel.clone();
@@ -60,6 +56,9 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     pass_pipeline! {opts, ir; ip::AssignCheck }
     log_time!(ip::BundleElim::do_pass(&mut ir), "bundle-elim");
     pass_pipeline! {opts, ir; ip::AssignCheck }
+    if opts.dump_interface {
+        ip::DumpInterface::print(&ir);
+    }
     log_time!(ip::Compile::compile(ir), "compile");
     Ok(())
 }
