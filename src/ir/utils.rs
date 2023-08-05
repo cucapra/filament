@@ -298,6 +298,27 @@ impl<T, V> DenseIndexInfo<T, V> {
     }
 }
 
+impl<T, V> FromIterator<(Idx<T>, V)> for DenseIndexInfo<T, V> {
+    fn from_iter<I: IntoIterator<Item = (Idx<T>, V)>>(iter: I) -> Self {
+        let mut store = Self::default();
+        for (idx, val) in iter {
+            store.push(idx, val);
+        }
+        store
+    }
+}
+
+impl<T, V: Default> DenseIndexInfo<T, V> {
+    pub fn take(&mut self, key: Idx<T>) -> Option<V> {
+        if self.store.len() > key.get() {
+            // idx is already in the store, take it
+            Some(std::mem::take(self.get_mut(key)))
+        } else {
+            None
+        }
+    }
+}
+
 impl<T, V: Default + Clone> DenseIndexInfo<T, V> {
     pub fn insert(&mut self, key: Idx<T>, mut val: V) -> Option<V> {
         if self.store.len() > key.get() {

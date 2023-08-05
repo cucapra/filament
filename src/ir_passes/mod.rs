@@ -17,7 +17,7 @@ pub use bundle_elim::BundleElim;
 pub use discharge::Discharge;
 pub use hoist_facts::HoistFacts;
 pub use interval_check::IntervalCheck;
-pub use lower::Compile;
+pub use lower::{max_states, Compile};
 pub use mono::Monomorphize;
 pub use prop_simplify::Simplify;
 pub use type_check::TypeCheck;

@@ -1,5 +1,6 @@
 use super::{
     build_ctx::{Binding, BuildCtx},
+    max_states,
     utils::{interface_name, port_name, INTERFACE_PORTS},
 };
 use crate::{
@@ -9,12 +10,7 @@ use crate::{
 use calyx_frontend as frontend;
 use calyx_ir as calyx;
 use calyx_utils::CalyxResult;
-use std::{
-    collections::{HashMap, HashSet},
-    convert::identity,
-    path::PathBuf,
-    rc::Rc,
-};
+use std::{collections::HashSet, convert::identity, path::PathBuf, rc::Rc};
 
 /// Compiles Filament directly into Calyx
 /// Generates FSMs for each event (with an interface port)
@@ -181,6 +177,7 @@ impl Compile {
         idx: ir::CompIdx,
         bind: &mut Binding,
         lib: &calyx::LibrarySignatures,
+        max_states: impl IntoIterator<Item = (ir::EventIdx, u64)>,
     ) -> calyx::Component {
         log::debug!("Compiling component {idx}");
         let comp = ctx.get(idx);
@@ -210,32 +207,8 @@ impl Compile {
         let builder = calyx::Builder::new(&mut component, lib).not_generated();
         let mut ctx = BuildCtx::new(ctx, idx, bind, builder, lib);
 
-        // Calculate the max states needed for each FSM for every event.
-        // Done by finding the furthest offset referenced in any [Time] in the component.
-        let mut max_states = HashMap::new();
-
-        comp.ports()
-            .iter()
-            .map(|(_, port)| {
-                let live = &port.live;
-                assert!(
-                    live.len.is_const(comp, 1),
-                    "Bundles should have been compiled away."
-                );
-
-                // need only the end here as ends follow starts and all ranges should be represented by a simple offset.
-                live.range.end
-            })
-            .for_each(|idx| {
-                let time = comp.get(idx);
-                let nv = time.offset.concrete(comp);
-                if nv > *max_states.get(&time.event).unwrap_or(&0) {
-                    max_states.insert(time.event, nv);
-                }
-            });
-
         // Construct all the FSMs
-        for (event, states) in max_states {
+        for (event, states) in max_states.into_iter() {
             ctx.insert_fsm(event, states);
         }
 
@@ -303,12 +276,20 @@ impl Compile {
 
         let mut bindings = Binding::default();
 
+        // calculate the max states for every event
+        let mut max_states = max_states(&ctx);
+
         let po = Traversal::from(ctx);
 
         // Compile the components in post-order.
         po.apply_pre_order(|ctx, idx| {
-            let comp =
-                Compile::component(ctx, idx, &mut bindings, &calyx_ctx.lib);
+            let comp = Compile::component(
+                ctx,
+                idx,
+                &mut bindings,
+                &calyx_ctx.lib,
+                max_states.take(idx).unwrap(),
+            );
             bindings.insert(idx, Rc::clone(&comp.signature));
             calyx_ctx.components.push(comp);
         });

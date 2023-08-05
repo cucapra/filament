@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use crate::ir::{
-    self, CompIdx, Component, Context, Ctx, EventIdx, ExprIdx, ParamIdx,
-    PortIdx,
+    self, CompIdx, Component, Context, Ctx, DenseIndexInfo, Event, EventIdx,
+    ExprIdx, ParamIdx, Port, PortIdx,
 };
 use calyx_ir as calyx;
+use linked_hash_map::LinkedHashMap;
 
 type AttrPair = (calyx::Attribute, u64);
 /// A set of interface ports that are required for all components.
@@ -78,11 +81,43 @@ pub(super) fn port_name(
     }
 }
 
-/// Returns the name of an [ir::Component]
+/// Returns the name of an [Component]
 pub(super) fn comp_name(idx: CompIdx, ctx: &impl Ctx<Component>) -> String {
     ctx.get(idx)
         .src_info
         .as_ref()
         .map(|src| src.name.to_string())
         .unwrap_or_else(|| format!("comp{}", idx.get()))
+}
+
+/// Calculates the max states used for every fsm.
+pub fn max_states(
+    ctx: &Context,
+) -> DenseIndexInfo<Component, LinkedHashMap<ir::EventIdx, u64>> {
+    ctx.comps
+        .iter()
+        .map(|(idx, comp)| {
+            let mut max_states = LinkedHashMap::new();
+            comp.ports()
+                .iter()
+                .map(|(_, port)| {
+                    let live = &port.live;
+                    assert!(
+                        live.len.is_const(comp, 1),
+                        "Bundles should have been compiled away."
+                    );
+
+                    // need only the end here as ends follow starts and all ranges should be represented by a simple offset.
+                    live.range.end
+                })
+                .for_each(|idx| {
+                    let time = comp.get(idx);
+                    let nv = time.offset.concrete(comp);
+                    if nv > *max_states.get(&time.event).unwrap_or(&0) {
+                        max_states.insert(time.event, nv);
+                    }
+                });
+            (idx, max_states)
+        })
+        .collect()
 }
