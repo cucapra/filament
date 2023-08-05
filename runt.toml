@@ -1,6 +1,19 @@
 ver = "0.4.0"
 
-# =============== IR Tests ===============
+[[tests]]
+name = "examples"
+paths = ["examples/*.fil"]
+cmd = """
+./target/debug/filament {} --check
+"""
+
+[[tests]]
+name = "run examples"
+paths = ["examples/tut-seq.fil", "examples/tut-pipe.fil"]
+expect_dir = "examples/run/"
+cmd = """
+fud e -s cocotb.data examples/data.json --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q
+"""
 
 [[tests]]
 name = "errors"
