@@ -1,14 +1,14 @@
 ---CODE---
 1
 ---STDERR---
-error: delay must be longer than the length of the signal
+error: bundle's availability is greater than the delay of the event
   ┌─ examples/tut-pipe-wrong-1.fil:8:5
   │
 5 │ comp main<G: 1>(
-  │           - interface allows event to trigger every 1 cycle(s)
+  │              - event's delay
   ·
 8 │     @[G, G+3] op: 1,
-  │     ^^^^^^^^^ signal lasts for 3 cycle(s)
+  │     ^^^^^^^^^ available for 3 cycles
 
 error: event provided to invocation triggers more often that invocation's event's delay allows
    ┌─ examples/tut-pipe-wrong-1.fil:15:13
