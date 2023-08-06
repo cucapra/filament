@@ -15,7 +15,7 @@ error: event provided to invocation triggers more often that invocation's event'
  4 │   comp Register[#WIDTH]<G: L-(G+1), L: 1>(
    │                            ------- invocation's event is allowed to trigger every 2 cycles
 
-error: source port must be available longer than the destination port requires
+error: source port does not provide value for as long as destination requires
     ┌─ examples/tut-pipe-wrong-2.fil:18:40
     │
  18 │     mx := new Mux[32]<G+2>(op, r0.out, m0.out);
@@ -24,7 +24,7 @@ error: source port must be available longer than the destination port requires
     ┌─ ./primitives/./comb.fil:170:13
     │
 170 │     @[G, L] in1: #WIDTH,
-    │             --- destination's requirement @[G+2, G+3]
+    │             --- requires value for @[G+2, G+3]
 
 Compilation failed with 2 errors.
 Run with --show-models to generate assignments for failing constraints.
