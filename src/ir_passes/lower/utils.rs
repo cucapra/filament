@@ -95,10 +95,10 @@ pub fn max_states(idx: CompIdx, ctx: &Context) -> LinkedHashMap<EventIdx, u64> {
 
     comp.ports()
         .iter()
-        .map(|(_, port)| {
+        .map(|(idx, port)| {
             let live = &port.live;
             assert!(
-                live.len.is_const(comp, 1),
+                idx.is_not_bundle(comp),
                 "Bundles should have been compiled away."
             );
 

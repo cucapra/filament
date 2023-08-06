@@ -37,6 +37,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     drop(bind);
 
     let mut ir = ir::transform(ns);
+
     pass_pipeline! {opts, ir;
         ip::BuildDomination,
         ip::TypeCheck,
@@ -46,18 +47,21 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::Simplify,
         ip::Discharge
     }
-    // Return early if we're asked to dump the interface
-    if opts.check {
-        return Ok(());
-    }
     // TODO(rachit): Once `BundleElim` implements `Visitor`, we can collapse this into
     // one call to `pass_pipeline!`.
     ir = log_time!(ip::Monomorphize::transform(&ir), "monomophization");
     pass_pipeline! {opts, ir; ip::AssignCheck }
     log_time!(ip::BundleElim::do_pass(&mut ir), "bundle-elim");
     pass_pipeline! {opts, ir; ip::AssignCheck }
+    // Return early if we're asked to dump the interface
     if opts.dump_interface {
         ip::DumpInterface::print(&ir);
+        return Ok(());
+    }
+
+    // Return if we are only checking
+    if opts.check {
+        return Ok(());
     }
     log_time!(ip::Compile::compile(ir), "compile");
     Ok(())

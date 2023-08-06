@@ -43,7 +43,7 @@ impl DumpInterface {
                 format!(
                     "{{\"name\": {}, \"event\": \"{}\", \"delay\": {}, \"states\": {}, \"phantom\": {} }}",
                     id,
-                    main.display(idx),
+                    src_info.events.get(&idx).unwrap(),
                     delay,
                     states[&idx],
                     phantom
@@ -79,7 +79,7 @@ impl DumpInterface {
 
             format!(
                 "{{ \"event\": \"{event}\", \"name\": \"{name}\", \"width\": {w} , \"start\": {st}, \"end\": {end} }}",
-                event = start.event,
+                event = src_info.events.get(&start.event).unwrap(),
                 name = src_info.ports.get(&idx).unwrap(),
                 st = start.offset.as_concrete(main).unwrap(),
                 end = end.offset.as_concrete(main).unwrap(),

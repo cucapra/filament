@@ -395,43 +395,38 @@ impl MonoSig {
         underlying: &ir::Component,
         interface: &Option<ir::InterfaceSrc>,
     ) {
-        let interface = match interface {
-            None => None,
-            Some(ir::InterfaceSrc {
-                name,
-                ports,
-                interface_ports,
-                params,
-            }) => {
-                let mut new_events = HashMap::new();
-                for (event, id) in interface_ports.iter() {
-                    let new_event = self.event_map.get(event).unwrap();
-                    new_events.insert(*new_event, *id);
+        self.base.src_info = interface.clone().map(
+            |ir::InterfaceSrc {
+                 name,
+                 ports,
+                 interface_ports,
+                 params,
+                 events,
+             }| {
+                ir::InterfaceSrc {
+                    name,
+                    ports,
+                    interface_ports: interface_ports
+                        .into_iter()
+                        .map(|(ev, id)| (*self.event_map.get(&ev).unwrap(), id))
+                        .collect(),
+                    params: if underlying.is_ext {
+                        params
+                            .into_iter()
+                            .map(|(p, id)| {
+                                (*self.param_map.get(&p).unwrap(), id)
+                            })
+                            .collect()
+                    } else {
+                        params
+                    },
+                    events: events
+                        .into_iter()
+                        .map(|(ev, id)| (*self.event_map.get(&ev).unwrap(), id))
+                        .collect(),
                 }
-
-                let mut new_params = HashMap::new();
-                for (param, id) in params.iter() {
-                    if underlying.is_ext {
-                        let new_param = self.param_map.get(param).unwrap();
-                        new_params.insert(*new_param, *id);
-                    }
-                }
-
-                let params = if underlying.is_ext {
-                    new_params
-                } else {
-                    params.clone()
-                };
-
-                Some(ir::InterfaceSrc {
-                    name: *name,
-                    ports: ports.clone(),
-                    interface_ports: new_events,
-                    params,
-                })
-            }
-        };
-        self.base.src_info = interface;
+            },
+        );
     }
 
     /// Monomorphize the event (owned by self.underlying) and add it to `self.base`, and return the corresponding index
