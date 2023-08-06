@@ -63,6 +63,10 @@ impl DumpInterface {
         // },
         let pd_to_info = |(idx, p): (ir::PortIdx, &ir::Port)| {
             let w = p.width.as_concrete(main).unwrap();
+            assert!(
+                idx.is_not_bundle(main),
+                "Main component cannot have bundle ports in signature."
+            );
             let ir::Liveness { range, .. } = &p.live;
             let start = main.get(range.start);
             let end = main.get(range.end);
