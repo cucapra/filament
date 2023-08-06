@@ -1,6 +1,6 @@
 use crate::{
-    ir::{self, Ctx, MutCtx},
-    ir_visitor::{Action, Visitor},
+    ir::{self, Ctx},
+    ir_visitor::{Action, Visitor, VisitorData},
 };
 use linked_hash_set::LinkedHashSet;
 
@@ -174,17 +174,16 @@ impl Visitor for Simplify {
         "simplify"
     }
 
-    fn start(&mut self, idx: ir::CompIdx, ctx: &mut ir::Context) -> Action {
-        let comp = ctx.get_mut(idx);
-        let old_len = comp.props().size();
+    fn start(&mut self, data: &mut VisitorData) -> Action {
+        let old_len = data.comp.props().size();
         // Populate the prop_map with the simplified version of each proposition.
-        for prop in comp.props().idx_iter() {
+        for prop in data.comp.props().idx_iter() {
             // Only simplify the old propositions
             if prop.get() >= old_len {
                 break;
             }
 
-            let out = self.simplify_prop(prop, comp);
+            let out = self.simplify_prop(prop, &mut data.comp);
             if prop != out {
                 log::debug!("{prop} ==> {out}");
             } else {
@@ -194,16 +193,10 @@ impl Visitor for Simplify {
         Action::Continue
     }
 
-    fn fact(
-        &mut self,
-        fact: &mut ir::Fact,
-        idx: ir::CompIdx,
-        ctx: &mut ir::Context,
-    ) -> Action {
-        let comp = ctx.get_mut(idx);
+    fn fact(&mut self, fact: &mut ir::Fact, data: &mut VisitorData) -> Action {
         // Simplify the proposition in the fact
-        let simpl = self.simplify_prop(fact.prop, comp);
-        if simpl.is_true(comp) {
+        let simpl = self.simplify_prop(fact.prop, &mut data.comp);
+        if simpl.is_true(&data.comp) {
             Action::Change(vec![])
         } else {
             fact.prop = simpl;

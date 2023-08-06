@@ -1,7 +1,7 @@
 use crate::{
     ast,
-    ir::{self, Ctx, ExprIdx, MutCtx, PropIdx},
-    ir_visitor::{Action, Visitor},
+    ir::{self, Ctx, ExprIdx, PropIdx},
+    ir_visitor::{Action, Visitor, VisitorData},
 };
 
 /// Generates default assumptions to the Filament program for assumptions using custom functions
@@ -122,18 +122,12 @@ impl Visitor for Assume {
         "add-assume"
     }
 
-    fn fact(
-        &mut self,
-        f: &mut ir::Fact,
-        idx: ir::CompIdx,
-        ctx: &mut ir::Context,
-    ) -> Action {
-        let comp = ctx.get_mut(idx);
+    fn fact(&mut self, f: &mut ir::Fact, data: &mut VisitorData) -> Action {
         if f.is_assume() {
             Action::AddBefore(
-                Assume::prop(f.prop, comp)
+                Assume::prop(f.prop, &mut data.comp)
                     .into_iter()
-                    .filter_map(|prop| comp.assume(prop, f.reason))
+                    .filter_map(|prop| data.comp.assume(prop, f.reason))
                     .collect(),
             )
         } else {

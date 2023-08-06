@@ -1,11 +1,11 @@
 use crate::{
     cmdline,
     ir::{
-        Access, Bind, Command, CompIdx, Component, Connect, Context, Ctx,
+        Access, Bind, Command, Component, Connect, Context, Ctx,
         DenseIndexInfo, Expr, Foreign, Info, InvIdx, Invoke, Liveness, MutCtx,
         Port, PortIdx, PortOwner, Printer, Range, Subst, Time,
     },
-    ir_visitor::{Action, Construct, Visitor},
+    ir_visitor::{Action, Construct, Visitor, VisitorData},
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -18,17 +18,10 @@ pub struct BundleElim {
 
 impl BundleElim {
     /// Gets corresponding ports from the context given a component and a port access.
-    fn get(
-        &self,
-        access: &Access,
-        cidx: CompIdx,
-        ctx: &Context,
-    ) -> Vec<PortIdx> {
-        let comp = ctx.get(cidx);
-
+    fn get(&self, access: &Access, data: &mut VisitorData) -> Vec<PortIdx> {
         let Access { port, start, end } = access;
-        let start = start.concrete(comp) as usize;
-        let end = end.concrete(comp) as usize;
+        let start = start.concrete(&data.comp) as usize;
+        let end = end.concrete(&data.comp) as usize;
 
         let mut ports = Vec::with_capacity(end - start);
 
@@ -41,7 +34,7 @@ impl BundleElim {
                     None => break group,
                 }
             };
-            ports.push(self.context[cidx][&port][idx]);
+            ports.push(self.context[data.idx][&port][idx]);
         }
 
         ports
@@ -204,25 +197,23 @@ impl Visitor for BundleElim {
     fn connect(
         &mut self,
         connect: &mut Connect,
-        idx: CompIdx,
-        ctx: &mut Context,
+        data: &mut VisitorData,
     ) -> Action {
         let Connect { src, dst, .. } = connect;
 
-        if !self.context.get(idx).contains_key(&dst.port) {
+        if !self.context.get(data.idx).contains_key(&dst.port) {
             // we are writing to a local port here.
             return Action::Change(vec![]);
         }
 
         // get the list of ports associated with each access in the connect.
-        let src = self.get(src, idx, ctx);
-        let dst = self.get(dst, idx, ctx);
+        let src = self.get(src, data);
+        let dst = self.get(dst, data);
 
-        let comp = ctx.get_mut(idx);
         if src.len() != dst.len() {
-            comp.internal_error(format!(
+            data.comp.internal_error(format!(
                 "Mismatched access lengths for connect `{}`",
-                Printer::new(comp).connect_str(connect)
+                Printer::new(&data.comp).connect_str(connect)
             ))
         }
 
@@ -234,9 +225,9 @@ impl Visitor for BundleElim {
                 .zip(dst.into_iter())
                 .map(|(src, dst)| {
                     Command::Connect(Connect {
-                        src: Access::port(src, comp),
-                        dst: Access::port(dst, comp),
-                        info: comp.add(Info::empty()),
+                        src: Access::port(src, &mut data.comp),
+                        dst: Access::port(dst, &mut data.comp),
+                        info: data.comp.add(Info::empty()),
                     })
                 })
                 .collect(),
@@ -244,12 +235,12 @@ impl Visitor for BundleElim {
     }
 
     /// Compiles the body of a component and replaces all ports with their expanded versions.
-    fn start(&mut self, cidx: CompIdx, ctx: &mut Context) -> Action {
-        let comp = ctx.get_mut(cidx);
+    fn start(&mut self, data: &mut VisitorData) -> Action {
+        let comp = &mut data.comp;
         // compile invocations
         for idx in comp.invocations().idx_iter() {
             let pl = self.inv(idx, comp);
-            self.context.get_mut(cidx).extend(pl);
+            self.context.get_mut(data.idx).extend(pl);
         }
 
         // generates the local map for this component

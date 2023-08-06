@@ -1,6 +1,6 @@
 use crate::{
-    ir::{CompIdx, Connect, Context, Ctx, DisplayCtx, PortIdx},
-    ir_visitor::{Action, Visitor},
+    ir::{Connect, Ctx, DisplayCtx, PortIdx},
+    ir_visitor::{Action, Visitor, VisitorData},
     utils::{GPosIdx, GlobalPositionTable},
 };
 use codespan_reporting::{
@@ -26,20 +26,19 @@ impl Visitor for AssignCheck {
         "assign-check"
     }
 
-    fn start(&mut self, idx: CompIdx, ctx: &mut Context) -> Action {
-        let comp = ctx.get(idx);
+    fn start(&mut self, data: &mut VisitorData) -> Action {
         // skip externals
-        if comp.is_ext {
+        if data.comp.is_ext {
             return Action::Stop;
         }
 
-        for (idx, port) in comp.ports().iter() {
+        for (idx, port) in data.comp.ports().iter() {
             // input ports and invoke output ports are the only ports that don't have to be written to
             if port.is_sig_in() || port.is_inv_out() {
                 continue;
             }
 
-            let len = port.live.len.concrete(comp) as usize;
+            let len = port.live.len.concrete(&data.comp) as usize;
 
             for i in 0..len {
                 self.ports.insert((idx, i), Vec::new());
@@ -49,29 +48,22 @@ impl Visitor for AssignCheck {
         Action::Continue
     }
 
-    fn connect(
-        &mut self,
-        con: &mut Connect,
-        idx: CompIdx,
-        ctx: &mut Context,
-    ) -> Action {
-        let comp = ctx.get(idx);
+    fn connect(&mut self, con: &mut Connect, data: &mut VisitorData) -> Action {
         let Connect { dst, info, .. } = con;
 
-        let start = dst.start.concrete(comp) as usize;
-        let end = dst.end.concrete(comp) as usize;
+        let start = dst.start.concrete(&data.comp) as usize;
+        let end = dst.end.concrete(&data.comp) as usize;
 
         for i in start..end {
             self.ports
                 .entry((dst.port, i))
                 .or_default()
-                .push(comp.get(*info).as_connect().map(|c| c.dst_loc));
+                .push(data.comp.get(*info).as_connect().map(|c| c.dst_loc));
         }
         Action::Continue
     }
 
-    fn end(&mut self, idx: CompIdx, ctx: &mut Context) {
-        let comp = ctx.get(idx);
+    fn end(&mut self, data: &mut VisitorData) {
         // Report all the errors
         let is_tty = atty::is(atty::Stream::Stderr);
         let writer = StandardStream::stderr(if is_tty {
@@ -86,13 +78,13 @@ impl Visitor for AssignCheck {
             if l == 1 {
                 continue;
             }
-            let p = comp.get(port);
-            let info = comp.get(p.info).as_port();
+            let p = data.comp.get(port);
+            let info = data.comp.get(p.info).as_port();
 
             // generate the base error message
             let diag = Diagnostic::error().with_message(format!(
                 "Port {}{{{}}} {}",
-                comp.display(port),
+                data.comp.display(port),
                 idx,
                 if l == 0 {
                     "is never assigned to."

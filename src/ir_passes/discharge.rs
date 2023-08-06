@@ -1,5 +1,5 @@
-use crate::ir::{Ctx, DisplayCtx, MutCtx};
-use crate::ir_visitor::{Action, Construct, Visitor};
+use crate::ir::{Ctx, DisplayCtx};
+use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
 use crate::utils::GlobalPositionTable;
 use crate::{ast, cmdline, ir, utils};
 use codespan_reporting::{diagnostic as cr, term};
@@ -291,23 +291,22 @@ impl Visitor for Discharge {
         "discharge"
     }
 
-    fn start(&mut self, idx: ir::CompIdx, ctx: &mut ir::Context) -> Action {
-        let comp = ctx.get(idx);
+    fn start(&mut self, data: &mut VisitorData) -> Action {
         // Declare all parameters
         let int = self.sol.int_sort();
-        for (idx, _) in comp.params().iter() {
+        for (idx, _) in data.comp.params().iter() {
             let sexp = self.sol.declare(Self::fmt_param(idx), int).unwrap();
             self.param_map.push(idx, sexp);
         }
 
         // Declare all events
-        for (idx, _) in comp.events().iter() {
+        for (idx, _) in data.comp.events().iter() {
             let sexp = self.sol.declare(Self::fmt_event(idx), int).unwrap();
             self.ev_map.push(idx, sexp);
         }
 
         // Declare all expressions
-        for (idx, expr) in comp.exprs().iter() {
+        for (idx, expr) in data.comp.exprs().iter() {
             let assign = self.expr_to_sexp(expr);
             let sexp = self
                 .sol
@@ -317,7 +316,7 @@ impl Visitor for Discharge {
         }
 
         // Declare all time expressions
-        for (idx, ir::Time { event, offset }) in comp.times().iter() {
+        for (idx, ir::Time { event, offset }) in data.comp.times().iter() {
             let assign =
                 self.sol.plus(self.ev_map[*event], self.expr_map[*offset]);
             let sexp = self
@@ -329,7 +328,7 @@ impl Visitor for Discharge {
 
         // Declare all propositions
         let bs = self.sol.bool_sort();
-        for (idx, prop) in comp.props().iter() {
+        for (idx, prop) in data.comp.props().iter() {
             // Define assertion equating the proposition to its assignment
             let assign = self.prop_to_sexp(prop);
             let sexp = self
@@ -342,13 +341,8 @@ impl Visitor for Discharge {
         Action::Continue
     }
 
-    fn fact(
-        &mut self,
-        f: &mut ir::Fact,
-        idx: ir::CompIdx,
-        ctx: &mut ir::Context,
-    ) -> Action {
-        let comp = ctx.get_mut(idx);
+    fn fact(&mut self, f: &mut ir::Fact, data: &mut VisitorData) -> Action {
+        let comp = &mut data.comp;
         if self.scoped {
             panic!("scoped facts not supported. Run `hoist-facts` before this pass");
         }
@@ -394,37 +388,27 @@ impl Visitor for Discharge {
         }
     }
 
-    fn do_if(
-        &mut self,
-        i: &mut ir::If,
-        idx: ir::CompIdx,
-        ctx: &mut ir::Context,
-    ) -> Action {
+    fn do_if(&mut self, i: &mut ir::If, data: &mut VisitorData) -> Action {
         let orig = self.scoped;
         self.scoped = true;
         let out = self
-            .visit_cmds(&mut i.then, idx, ctx)
-            .and_then(|| self.visit_cmds(&mut i.alt, idx, ctx));
+            .visit_cmds(&mut i.then, data)
+            .and_then(|| self.visit_cmds(&mut i.alt, data));
         self.scoped = orig;
         out
     }
 
-    fn do_loop(
-        &mut self,
-        l: &mut ir::Loop,
-        idx: ir::CompIdx,
-        ctx: &mut ir::Context,
-    ) -> Action {
+    fn do_loop(&mut self, l: &mut ir::Loop, data: &mut VisitorData) -> Action {
         let orig = self.scoped;
         self.scoped = true;
         let out = self
-            .start_loop(l, idx, ctx)
-            .and_then(|| self.visit_cmds(&mut l.body, idx, ctx));
+            .start_loop(l, data)
+            .and_then(|| self.visit_cmds(&mut l.body, data));
         self.scoped = orig;
         out
     }
 
-    fn end(&mut self, _: ir::CompIdx, _: &mut ir::Context) {
+    fn end(&mut self, _: &mut VisitorData) {
         assert!(!self.scoped, "unbalanced scopes");
         // Report all the errors
         let is_tty = atty::is(atty::Stream::Stderr);

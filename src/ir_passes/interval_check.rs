@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
-use crate::ir::{self, Ctx, MutCtx};
-use crate::ir_visitor::{Action, Visitor};
+use crate::ir::{self, Ctx};
+use crate::ir_visitor::{Action, Visitor, VisitorData};
 use crate::utils::GPosIdx;
 
 #[derive(Default)]
@@ -117,8 +117,8 @@ impl Visitor for IntervalCheck {
         "interval_check"
     }
 
-    fn start(&mut self, idx: ir::CompIdx, ctx: &mut ir::Context) -> Action {
-        let comp = ctx.get_mut(idx);
+    fn start(&mut self, data: &mut VisitorData) -> Action {
+        let comp = &mut data.comp;
         // Ensure that delays are greater than zero
         let mut cmds: Vec<ir::Command> =
             Vec::with_capacity(comp.ports().len() + comp.events().len());
@@ -188,10 +188,9 @@ impl Visitor for IntervalCheck {
     fn connect(
         &mut self,
         con: &mut ir::Connect,
-        idx: ir::CompIdx,
-        ctx: &mut ir::Context,
+        data: &mut VisitorData,
     ) -> Action {
-        let comp = ctx.get_mut(idx);
+        let comp = &mut data.comp;
         let ir::Connect { src, dst, info } = con;
         let src_t = src.bundle_typ(comp);
         let dst_t = dst.bundle_typ(comp);
