@@ -41,7 +41,7 @@ impl DumpInterface {
                 let delay = delay.as_concrete(main).unwrap();
 
                 format!(
-                    "{{\"name\": {}, \"event\": \"{}\", \"delay\": {}, \"states\": {}, \"phantom\": {} }}",
+                    "{{\"name\": \"{}\", \"event\": \"{}\", \"delay\": {}, \"states\": {}, \"phantom\": {} }}",
                     id,
                     src_info.events.get(&idx).unwrap(),
                     delay,
