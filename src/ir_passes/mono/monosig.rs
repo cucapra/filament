@@ -6,6 +6,8 @@ use crate::ir::{self, Ctx, Foreign, MutCtx};
 use itertools::Itertools;
 use std::collections::HashMap;
 
+type PortKey = (Option<Base<ir::Invoke>>, Underlying<ir::Port>);
+
 /// Used for monomorphizing a component's signature when we add it to the queue.
 /// Any functions needed for monomorphizing the signature are located here - the rest are
 /// in MonoDeferred.
@@ -24,10 +26,7 @@ pub struct MonoSig {
     /// Events
     pub event_map: HashMap<Underlying<ir::Event>, Base<ir::Event>>,
     /// Ports - (base inv, underlying port) -> base port
-    pub port_map: HashMap<
-        (Option<Base<ir::Invoke>>, Underlying<ir::Port>),
-        Base<ir::Port>,
-    >,
+    pub port_map: HashMap<PortKey, Base<ir::Port>>,
     /// Params - underlying param -> new Param
     pub param_map: HashMap<Underlying<ir::Param>, Base<ir::Param>>,
     /// Bundle params - new port to new param
