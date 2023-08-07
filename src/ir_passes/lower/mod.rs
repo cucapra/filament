@@ -7,3 +7,4 @@ use build_ctx::{Binding, BuildCtx};
 use fsm::Fsm;
 
 pub use compile::Compile;
+pub use utils::max_states;

@@ -140,7 +140,7 @@ impl Monomorphize<'_> {
     /// Returns an empty context if there is no top-level component.
     pub fn transform(ctx: &ir::Context) -> ir::Context {
         let Some(entrypoint) = ctx.entrypoint else {
-            log::warn!("program has no entrypoint! result will be empty");
+            log::warn!("Program has no entrypoint. Result will be empty.");
             return ir::Context {
                 comps: IndexStore::default(),
                 entrypoint: None,
