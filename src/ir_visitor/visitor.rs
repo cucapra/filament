@@ -32,17 +32,40 @@ impl Action {
     }
 }
 
-/// Contains information passed to visitor functions
+/// Contains information passed to visitor functions.
+/// This is re-generated when beginning to visit each component.
 pub struct VisitorData<'comp> {
-    pub ctx: &'comp ir::Context,
+    /// The current component being visited
     pub comp: ir::Component,
+    /// The idx of the current component.
     pub idx: ir::CompIdx,
+    /// mutable context reference, held to prevent another
+    /// function from mutating the context as it is currently invalid.
+    mut_ctx: &'comp mut ir::Context,
+}
+
+impl<'comp> VisitorData<'comp> {
+    /// Get an immutable reference to the current [ir::Context].
+    pub fn ctx(&'comp mut self) -> &'comp ir::Context {
+        self.mut_ctx
+    }
 }
 
 impl<'comp> From<(ir::CompIdx, &'comp mut ir::Context)> for VisitorData<'comp> {
     fn from((idx, ctx): (ir::CompIdx, &'comp mut ir::Context)) -> Self {
         let comp = std::mem::take(ctx.get_mut(idx));
-        Self { ctx, comp, idx }
+        Self {
+            comp,
+            idx,
+            mut_ctx: ctx,
+        }
+    }
+}
+
+impl Drop for VisitorData<'_> {
+    fn drop(&mut self) {
+        // swaps the component back into the context when this visitordata is no longer used.
+        std::mem::swap(self.mut_ctx.get_mut(self.idx), &mut self.comp);
     }
 }
 
