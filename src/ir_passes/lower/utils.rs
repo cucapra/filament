@@ -3,6 +3,7 @@ use crate::ir::{
     PortIdx,
 };
 use calyx_ir as calyx;
+use linked_hash_map::LinkedHashMap;
 
 type AttrPair = (calyx::Attribute, u64);
 /// A set of interface ports that are required for all components.
@@ -78,11 +79,38 @@ pub(super) fn port_name(
     }
 }
 
-/// Returns the name of an [ir::Component]
+/// Returns the name of an [Component]
 pub(super) fn comp_name(idx: CompIdx, ctx: &impl Ctx<Component>) -> String {
     ctx.get(idx)
         .src_info
         .as_ref()
         .map(|src| src.name.to_string())
         .unwrap_or_else(|| format!("comp{}", idx.get()))
+}
+
+/// Calculates the max states used for every fsm for the given component.
+pub fn max_states(comp: &Component) -> LinkedHashMap<EventIdx, u64> {
+    let mut max_states = LinkedHashMap::new();
+
+    comp.ports()
+        .iter()
+        .map(|(idx, port)| {
+            let live = &port.live;
+            assert!(
+                idx.is_not_bundle(comp),
+                "Bundles should have been compiled away."
+            );
+
+            // need only the end here as ends follow starts and all ranges should be represented by a simple offset.
+            live.range.end
+        })
+        .for_each(|idx| {
+            let time = comp.get(idx);
+            let nv = time.offset.concrete(comp);
+            if nv > *max_states.get(&time.event).unwrap_or(&0) {
+                max_states.insert(time.event, nv);
+            }
+        });
+
+    max_states
 }
