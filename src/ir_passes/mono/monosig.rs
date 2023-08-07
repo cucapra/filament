@@ -405,7 +405,7 @@ impl MonoSig {
                 let params = if underlying.is_ext {
                     params
                         .into_iter()
-                        .map(|(p, id)| (*self.param_map.get(&p).unwrap(), id))
+                        .map(|(p, id)| (self.param_map.get(&Underlying::new(p)).unwrap().idx(), id))
                         .collect()
                 } else {
                     params
@@ -416,12 +416,12 @@ impl MonoSig {
                     ports,
                     interface_ports: interface_ports
                         .into_iter()
-                        .map(|(ev, id)| (*self.event_map.get(&ev).unwrap(), id))
+                        .map(|(ev, id)| (self.event_map.get(&Underlying::new(ev)).unwrap().idx(), id))
                         .collect(),
                     params,
                     events: events
                         .into_iter()
-                        .map(|(ev, id)| (*self.event_map.get(&ev).unwrap(), id))
+                        .map(|(ev, id)| (self.event_map.get(&Underlying::new(ev)).unwrap().idx(), id))
                         .collect(),
                 }
             },
