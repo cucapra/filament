@@ -207,7 +207,7 @@ impl Compile {
         let mut buildctx = BuildCtx::new(ctx, idx, bind, builder, lib);
 
         // Construct all the FSMs
-        for (event, states) in max_states(idx, ctx) {
+        for (event, states) in max_states(comp) {
             buildctx.insert_fsm(event, states);
         }
 

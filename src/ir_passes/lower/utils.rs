@@ -88,9 +88,8 @@ pub(super) fn comp_name(idx: CompIdx, ctx: &impl Ctx<Component>) -> String {
         .unwrap_or_else(|| format!("comp{}", idx.get()))
 }
 
-/// Calculates the max states used for every fsm.
-pub fn max_states(idx: CompIdx, ctx: &Context) -> LinkedHashMap<EventIdx, u64> {
-    let comp = ctx.get(idx);
+/// Calculates the max states used for every fsm for the given component.
+pub fn max_states(comp: &Component) -> LinkedHashMap<EventIdx, u64> {
     let mut max_states = LinkedHashMap::new();
 
     comp.ports()

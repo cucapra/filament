@@ -403,6 +403,15 @@ impl MonoSig {
                  params,
                  events,
              }| {
+                let params = if underlying.is_ext {
+                    params
+                        .into_iter()
+                        .map(|(p, id)| (*self.param_map.get(&p).unwrap(), id))
+                        .collect()
+                } else {
+                    params
+                };
+
                 ir::InterfaceSrc {
                     name,
                     ports,
@@ -410,16 +419,7 @@ impl MonoSig {
                         .into_iter()
                         .map(|(ev, id)| (*self.event_map.get(&ev).unwrap(), id))
                         .collect(),
-                    params: if underlying.is_ext {
-                        params
-                            .into_iter()
-                            .map(|(p, id)| {
-                                (*self.param_map.get(&p).unwrap(), id)
-                            })
-                            .collect()
-                    } else {
-                        params
-                    },
+                    params,
                     events: events
                         .into_iter()
                         .map(|(ev, id)| (*self.event_map.get(&ev).unwrap(), id))

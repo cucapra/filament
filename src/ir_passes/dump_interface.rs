@@ -28,7 +28,7 @@ impl DumpInterface {
         //   "states": 2,
         //   "phantom": false
         // }
-        let states = max_states(entrypoint, ctx);
+        let states = max_states(main);
         let interfaces = main
             .events()
             .iter()
