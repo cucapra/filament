@@ -54,11 +54,13 @@ impl MutCtx<Component> for Context {
     }
 }
 
+#[derive(Clone)]
 /// Externally facing interface name information for components.
 pub struct InterfaceSrc {
     pub name: ast::Id,
     pub ports: HashMap<PortIdx, ast::Id>,
     pub params: HashMap<ParamIdx, ast::Id>,
+    pub events: HashMap<EventIdx, ast::Id>,
     pub interface_ports: HashMap<EventIdx, ast::Id>,
 }
 
@@ -69,6 +71,7 @@ impl InterfaceSrc {
             ports: HashMap::new(),
             params: HashMap::new(),
             interface_ports: HashMap::new(),
+            events: HashMap::new(),
         }
     }
 }
