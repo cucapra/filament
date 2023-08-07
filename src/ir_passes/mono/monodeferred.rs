@@ -1,4 +1,4 @@
-use super::{monosig::MonoSig, Monomorphize};
+use super::{monosig::MonoSig, Monomorphize, utils::{Base, Underlying}};
 use crate::ir::{self, Ctx};
 use itertools::Itertools;
 
@@ -26,15 +26,15 @@ impl MonoDeferred<'_, '_> {
         } else {
             binding
                 .iter()
-                .filter(|(p, _)| underlying.get(*p).is_sig_owned())
+                .filter(|(p, _)| underlying.get(p.idx()).is_sig_owned())
                 .map(|(_, n)| *n)
                 .collect_vec()
         };
         for (idx, event) in underlying.events().iter() {
-            let new_idx = monosig.base.add(event.clone());
-            monosig.event_map.insert(idx, new_idx);
+            let new_idx = Base::new(monosig.base.add(event.clone()));
+            monosig.event_map.insert(Underlying::new(idx), new_idx);
             pass.event_map.insert(
-                (monosig.underlying_idx, conc_params.clone(), idx),
+                (Underlying::new(monosig.underlying_idx), conc_params.clone(), Underlying::new(idx)),
                 new_idx,
             );
         }
@@ -47,26 +47,26 @@ impl MonoDeferred<'_, '_> {
                     info: monosig.info(underlying, pass, info),
                 };
                 let new_idx = monosig.base.add(param);
-                monosig.param_map.insert(idx, new_idx);
+                monosig.param_map.insert(Underlying::new(idx), Base::new(new_idx));
             }
         }
 
         if underlying.is_ext {
             for (idx, port) in underlying.ports().iter() {
                 if port.is_sig() {
-                    monosig.ext_port(underlying, pass, idx);
+                    monosig.ext_port(underlying, pass, Underlying::new(idx));
                 }
             }
         } else {
             for (idx, port) in underlying.ports().iter() {
                 if port.is_sig() {
-                    monosig.port(underlying, pass, idx);
+                    monosig.port(underlying, pass, Underlying::new(idx));
                 }
             }
         }
 
         for (old, new) in monosig.event_map.clone().iter() {
-            monosig.event_second(underlying, pass, *old, *new);
+            monosig.event_second(underlying, pass, old.clone(), new.clone());
         }
 
         monosig.interface(underlying, &underlying.src_info);
@@ -90,8 +90,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             }
             ir::Prop::Cmp(cmp) => {
                 let ir::CmpOp { op, lhs, rhs } = cmp;
-                let lhs = self.monosig.expr(self.underlying, self.pass, *lhs);
-                let rhs = self.monosig.expr(self.underlying, self.pass, *rhs);
+                let lhs = self.monosig.expr(self.underlying, self.pass, Underlying::new(*lhs)).idx();
+                let rhs = self.monosig.expr(self.underlying, self.pass, Underlying::new(*rhs)).idx();
                 self.monosig.base.add(ir::Prop::Cmp(ir::CmpOp {
                     op: op.clone(),
                     lhs,
@@ -143,16 +143,16 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     fn access(&mut self, acc: &ir::Access) -> ir::Access {
         let ir::Access { port, start, end } = acc;
 
-        let port = self.monosig.port(self.underlying, self.pass, *port);
+        let port = self.monosig.port(self.underlying, self.pass, Underlying::new(*port)).idx();
 
         // generate end expression
-        let end = self.monosig.expr(self.underlying, self.pass, *end);
+        let end = self.monosig.expr(self.underlying, self.pass, Underlying::new(*end));
         // convert to concrete value
-        let end = self.monosig.base.bin(self.monosig.base.get(end).clone());
+        let end = self.monosig.base.bin(self.monosig.base.get(end.idx()).clone());
         // generate start expression
-        let start = self.monosig.expr(self.underlying, self.pass, *start);
+        let start = self.monosig.expr(self.underlying, self.pass, Underlying::new(*start));
         // convert to concrete value
-        let start = self.monosig.base.bin(self.monosig.base.get(start).clone());
+        let start = self.monosig.base.bin(self.monosig.base.get(start.idx()).clone());
 
         ir::Access { port, start, end }
     }
@@ -179,15 +179,15 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         } = lp;
 
         // let mono_index = self.monosig.param(self.underlying, self.pass, *index);
-        let mono_start = self.monosig.expr(self.underlying, self.pass, *start);
-        let mono_end = self.monosig.expr(self.underlying, self.pass, *end);
+        let mono_start = self.monosig.expr(self.underlying, self.pass, Underlying::new(*start)).idx();
+        let mono_end = self.monosig.expr(self.underlying, self.pass, Underlying::new(*end)).idx();
 
         let mut i = mono_start.as_concrete(&self.monosig.base).unwrap();
         let bound = mono_end.as_concrete(&self.monosig.base).unwrap();
 
         while i < bound {
-            self.monosig.binding.insert(*index, i);
-            log::debug!("binding {index} to {i}");
+            let index = Underlying::new(*index);
+            self.monosig.binding.insert(index, i);
             for cmd in body.iter() {
                 let cmd = self.command(cmd);
                 self.monosig.base.cmds.extend(cmd);
@@ -232,13 +232,13 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             ir::Command::Instance(idx) => {
                 vec![self
                     .monosig
-                    .instance(self.underlying, self.pass, *idx)
+                    .instance(self.underlying, self.pass, Underlying::new(*idx)).idx()
                     .into()]
             }
             ir::Command::Invoke(idx) => {
                 vec![self
                     .monosig
-                    .invoke(self.underlying, self.pass, *idx)
+                    .invoke(self.underlying, self.pass, Underlying::new(*idx)).idx()
                     .into()]
             }
             ir::Command::Connect(con) => vec![self.connect(con).into()],
