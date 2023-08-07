@@ -1,6 +1,6 @@
 use crate::{
     ir,
-    ir_visitor::{Action, Visitor},
+    ir_visitor::{Action, Visitor, VisitorData},
 };
 
 #[derive(Default)]
@@ -49,27 +49,23 @@ impl Visitor for BuildDomination {
         "build-domination"
     }
 
-    fn invoke(&mut self, inv: ir::InvIdx, _: &mut ir::Component) -> Action {
+    fn invoke(&mut self, inv: ir::InvIdx, _: &mut VisitorData) -> Action {
         self.add_inv(inv);
         // Remove the invocation
         Action::Change(vec![])
     }
 
-    fn instance(
-        &mut self,
-        inst: ir::InstIdx,
-        _comp: &mut ir::Component,
-    ) -> Action {
+    fn instance(&mut self, inst: ir::InstIdx, _: &mut VisitorData) -> Action {
         self.add_inst(inst);
         // Remove the instance
         Action::Change(vec![])
     }
 
-    fn start_cmds(&mut self, _: &mut Vec<ir::Command>, _: &mut ir::Component) {
+    fn start_cmds(&mut self, _: &mut Vec<ir::Command>, _: &mut VisitorData) {
         self.start_scope();
     }
 
-    fn end_cmds(&mut self, cmds: &mut Vec<ir::Command>, _: &mut ir::Component) {
+    fn end_cmds(&mut self, cmds: &mut Vec<ir::Command>, _: &mut VisitorData) {
         let (inst, invs) = self.end_scope();
         // Insert instances and then invocations to the start of the scope.
         *cmds = inst
@@ -79,7 +75,7 @@ impl Visitor for BuildDomination {
             .collect();
     }
 
-    fn end(&mut self, _: &mut ir::Component) {
+    fn end(&mut self, _: &mut VisitorData) {
         assert!(self.insts.is_empty());
         assert!(self.invs.is_empty());
     }
