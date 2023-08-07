@@ -1,6 +1,6 @@
 use crate::{
     ir::{self, Ctx},
-    ir_visitor::{Action, Visitor},
+    ir_visitor::{Action, Visitor, VisitorData},
 };
 
 #[derive(Default)]
@@ -50,11 +50,7 @@ impl Visitor for HoistFacts {
 
     /// Collect all assumptions in a given scope and add them to the path condition.
     /// We do this so that all asserts in a scope are affected by all assumes.
-    fn start_cmds(
-        &mut self,
-        cmds: &mut Vec<ir::Command>,
-        _: &mut ir::Component,
-    ) {
+    fn start_cmds(&mut self, cmds: &mut Vec<ir::Command>, _: &mut VisitorData) {
         cmds.iter().for_each(|cmd| match cmd {
             ir::Command::Fact(fact) if fact.is_assume() => {
                 self.insert(fact.prop)
@@ -63,30 +59,28 @@ impl Visitor for HoistFacts {
         })
     }
 
-    fn fact(
-        &mut self,
-        fact: &mut ir::Fact,
-        comp: &mut ir::Component,
-    ) -> Action {
+    fn fact(&mut self, fact: &mut ir::Fact, data: &mut VisitorData) -> Action {
         if fact.is_assert() {
             // Otherwise this is a checked assertion that needs to be hoisted.
             // Generate prop = path_cond -> fact.prop
-            let cond = self.path_cond(comp).implies(fact.prop, comp);
-            self.facts.extend(comp.assert(cond, fact.reason));
+            let cond = self
+                .path_cond(&mut data.comp)
+                .implies(fact.prop, &mut data.comp);
+            self.facts.extend(data.comp.assert(cond, fact.reason));
         }
         Action::Change(vec![])
     }
 
-    fn do_if(&mut self, i: &mut ir::If, comp: &mut ir::Component) -> Action {
+    fn do_if(&mut self, i: &mut ir::If, data: &mut VisitorData) -> Action {
         self.push();
         self.insert(i.cond);
-        let ac = self.visit_cmds(&mut i.then, comp);
+        let ac = self.visit_cmds(&mut i.then, data);
         assert!(ac == Action::Continue);
         self.pop();
 
         self.push();
-        self.insert(i.cond.not(comp));
-        let ac = self.visit_cmds(&mut i.alt, comp);
+        self.insert(i.cond.not(&mut data.comp));
+        let ac = self.visit_cmds(&mut i.alt, data);
         assert!(ac == Action::Continue);
         self.pop();
 
@@ -96,8 +90,9 @@ impl Visitor for HoistFacts {
     fn start_loop(
         &mut self,
         l: &mut ir::Loop,
-        comp: &mut ir::Component,
+        data: &mut VisitorData,
     ) -> Action {
+        let comp = &mut data.comp;
         self.push();
         let ir::Loop {
             index, start, end, ..
@@ -110,16 +105,16 @@ impl Visitor for HoistFacts {
         Action::Continue
     }
 
-    fn end_loop(&mut self, _l: &mut ir::Loop, _: &mut ir::Component) -> Action {
+    fn end_loop(&mut self, _: &mut ir::Loop, _: &mut VisitorData) -> Action {
         self.pop();
 
         Action::Continue
     }
 
-    fn end(&mut self, comp: &mut ir::Component) {
+    fn end(&mut self, data: &mut VisitorData) {
         // Insert the asserts to the start of the component cmds
-        let cmds = std::mem::take(&mut comp.cmds);
+        let cmds = std::mem::take(&mut data.comp.cmds);
         let facts = std::mem::take(&mut self.facts);
-        comp.cmds = facts.into_iter().chain(cmds.into_iter()).collect();
+        data.comp.cmds = facts.into_iter().chain(cmds.into_iter()).collect();
     }
 }
