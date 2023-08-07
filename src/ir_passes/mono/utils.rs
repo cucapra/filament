@@ -2,7 +2,7 @@ use crate::utils::Idx;
 
 /// Wraps an Idx that is meaningful in the base component
 pub struct Base<T> {
-    idx: Idx<T>
+    idx: Idx<T>,
 }
 
 impl<T> Base<T> {
@@ -37,7 +37,7 @@ impl<T> Copy for Base<T> {}
 
 /// Wraps an Idx that is meaningful in the underlying component
 pub struct Underlying<T> {
-    idx: Idx<T>
+    idx: Idx<T>,
 }
 
 impl<T> Underlying<T> {

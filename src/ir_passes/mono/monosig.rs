@@ -1,4 +1,7 @@
-use super::{Monomorphize, utils::{Base, Underlying}};
+use super::{
+    utils::{Base, Underlying},
+    Monomorphize,
+};
 use crate::ir::{self, Ctx, Foreign, MutCtx};
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -21,7 +24,10 @@ pub struct MonoSig {
     /// Events
     pub event_map: HashMap<Underlying<ir::Event>, Base<ir::Event>>,
     /// Ports - (base inv, underlying port) -> base port
-    pub port_map: HashMap<(Option<Base<ir::Invoke>>, Underlying<ir::Port>), Base<ir::Port>>,
+    pub port_map: HashMap<
+        (Option<Base<ir::Invoke>>, Underlying<ir::Port>),
+        Base<ir::Port>,
+    >,
     /// Params - underlying param -> new Param
     pub param_map: HashMap<Underlying<ir::Param>, Base<ir::Param>>,
     /// Bundle params - new port to new param
@@ -40,7 +46,7 @@ impl MonoSig {
             underlying
                 .sig_params()
                 .into_iter()
-                .map(|p| Underlying::new(p))
+                .map(Underlying::new)
                 .zip(params)
                 .collect_vec(),
         );
@@ -71,7 +77,8 @@ impl MonoSig {
             ir::PortOwner::Inv { inv, dir, base } => {
                 // inv is only meaningful in the underlying component
                 let base = self.foreign_port(base, underlying, pass, inv);
-                let base_inv = self.invoke_map.get(&Underlying::new(*inv)).unwrap().idx();
+                let base_inv =
+                    self.invoke_map.get(&Underlying::new(*inv)).unwrap().idx();
                 ir::PortOwner::Inv {
                     inv: base_inv,
                     dir: dir.clone(),
@@ -98,7 +105,8 @@ impl MonoSig {
         let conc_params = inst_params
             .iter()
             .map(|p| {
-                self.expr(underlying, pass, Underlying::new(*p)).idx()
+                self.expr(underlying, pass, Underlying::new(*p))
+                    .idx()
                     .as_concrete(&self.base)
                     .unwrap()
             })
@@ -303,20 +311,25 @@ impl MonoSig {
         };
         // The expression is neither bound nor rewritten, so we need to rewrite it
         let new_idx = match e.clone() {
-            ir::Expr::Param(p) => {
-                self.param(underlying, pass, Underlying::new(p)).idx().expr(&mut self.base)
-            }
+            ir::Expr::Param(p) => self
+                .param(underlying, pass, Underlying::new(p))
+                .idx()
+                .expr(&mut self.base),
             ir::Expr::Concrete(n) => self.base.num(n),
             ir::Expr::Bin { op, lhs, rhs } => {
-                let lhs = self.expr(underlying, pass, Underlying::new(lhs)).idx();
-                let rhs = self.expr(underlying, pass, Underlying::new(rhs)).idx();
+                let lhs =
+                    self.expr(underlying, pass, Underlying::new(lhs)).idx();
+                let rhs =
+                    self.expr(underlying, pass, Underlying::new(rhs)).idx();
                 let binop = ir::Expr::Bin { op, lhs, rhs };
                 self.base.add(binop)
             }
             ir::Expr::Fn { op, args } => {
                 let args = args
                     .iter()
-                    .map(|idx| self.expr(underlying, pass, Underlying::new(*idx)).idx())
+                    .map(|idx| {
+                        self.expr(underlying, pass, Underlying::new(*idx)).idx()
+                    })
                     .collect_vec();
                 let func = ir::Expr::Fn { op, args };
                 self.base.func(func)
@@ -362,9 +375,9 @@ impl MonoSig {
         delay: &ir::TimeSub,
     ) -> ir::TimeSub {
         match delay {
-            ir::TimeSub::Unit(expr) => {
-                ir::TimeSub::Unit(self.expr(underlying, pass, Underlying::new(*expr)).idx())
-            }
+            ir::TimeSub::Unit(expr) => ir::TimeSub::Unit(
+                self.expr(underlying, pass, Underlying::new(*expr)).idx(),
+            ),
             ir::TimeSub::Sym { l, r } => ir::TimeSub::Sym {
                 l: self.time(underlying, pass, *l),
                 r: self.time(underlying, pass, *r),
@@ -405,7 +418,15 @@ impl MonoSig {
                 let params = if underlying.is_ext {
                     params
                         .into_iter()
-                        .map(|(p, id)| (self.param_map.get(&Underlying::new(p)).unwrap().idx(), id))
+                        .map(|(p, id)| {
+                            (
+                                self.param_map
+                                    .get(&Underlying::new(p))
+                                    .unwrap()
+                                    .idx(),
+                                id,
+                            )
+                        })
                         .collect()
                 } else {
                     params
@@ -416,12 +437,28 @@ impl MonoSig {
                     ports,
                     interface_ports: interface_ports
                         .into_iter()
-                        .map(|(ev, id)| (self.event_map.get(&Underlying::new(ev)).unwrap().idx(), id))
+                        .map(|(ev, id)| {
+                            (
+                                self.event_map
+                                    .get(&Underlying::new(ev))
+                                    .unwrap()
+                                    .idx(),
+                                id,
+                            )
+                        })
                         .collect(),
                     params,
                     events: events
                         .into_iter()
-                        .map(|(ev, id)| (self.event_map.get(&Underlying::new(ev)).unwrap().idx(), id))
+                        .map(|(ev, id)| {
+                            (
+                                self.event_map
+                                    .get(&Underlying::new(ev))
+                                    .unwrap()
+                                    .idx(),
+                                id,
+                            )
+                        })
                         .collect(),
                 }
             },
@@ -438,8 +475,10 @@ impl MonoSig {
         let conc_params = binding.iter().map(|(_, n)| *n).collect_vec();
 
         let new_event = self.event_map.get(&event).unwrap();
-        pass.event_map
-            .insert((Underlying::new(self.underlying_idx), conc_params, event), *new_event);
+        pass.event_map.insert(
+            (Underlying::new(self.underlying_idx), conc_params, event),
+            *new_event,
+        );
         *new_event
     }
 
@@ -507,7 +546,8 @@ impl MonoSig {
         self.invoke_map.insert(inv, mono_inv_idx);
 
         // Instance - replace the instance owned by self.underlying with one owned by self.base
-        let base_inst = *self.instance_map.get(&Underlying::new(*inst)).unwrap();
+        let base_inst =
+            *self.instance_map.get(&Underlying::new(*inst)).unwrap();
 
         // Ports
         let mono_ports = ports
@@ -565,9 +605,9 @@ impl MonoSig {
         timesub: &ir::TimeSub,
     ) -> ir::TimeSub {
         match timesub {
-            ir::TimeSub::Unit(expr) => {
-                ir::TimeSub::Unit(self.expr(underlying, pass, Underlying::new(*expr)).idx())
-            }
+            ir::TimeSub::Unit(expr) => ir::TimeSub::Unit(
+                self.expr(underlying, pass, Underlying::new(*expr)).idx(),
+            ),
             ir::TimeSub::Sym { l, r } => ir::TimeSub::Sym {
                 l: self.time(underlying, pass, *l),
                 r: self.time(underlying, pass, *r),
@@ -593,7 +633,8 @@ impl MonoSig {
         let conc_params = inst_params
             .iter()
             .map(|p| {
-                self.expr(underlying, pass, Underlying::new(*p)).idx()
+                self.expr(underlying, pass, Underlying::new(*p))
+                    .idx()
                     .as_concrete(&self.base)
                     .unwrap()
             })
@@ -632,12 +673,14 @@ impl MonoSig {
         let conc_params = params
             .iter()
             .map(|p| {
-                self.expr(underlying, pass, Underlying::new(*p)).idx()
+                self.expr(underlying, pass, Underlying::new(*p))
+                    .idx()
                     .as_concrete(&self.base)
                     .unwrap()
             })
             .collect_vec();
-        let (comp, new_params) = pass.should_process(Underlying::new(*comp), conc_params);
+        let (comp, new_params) =
+            pass.should_process(Underlying::new(*comp), conc_params);
 
         let new_inst = if !is_ext {
             ir::Instance {
@@ -723,8 +766,9 @@ impl MonoSig {
 
         let ir::Liveness { idx, len, range } = live;
 
-        let mono_liveness_idx =
-            self.bundle_param(underlying, pass, Underlying::new(*idx), new_port).idx();
+        let mono_liveness_idx = self
+            .bundle_param(underlying, pass, Underlying::new(*idx), new_port)
+            .idx();
 
         let mut mono_liveness = ir::Liveness {
             idx: mono_liveness_idx,
@@ -794,7 +838,8 @@ impl MonoSig {
                 let inst = underlying.get(underlying.get(*inv).inst);
                 let inst_comp = pass.old.get(inst.comp);
 
-                let base_inv = *self.invoke_map.get(&Underlying::new(*inv)).unwrap();
+                let base_inv =
+                    *self.invoke_map.get(&Underlying::new(*inv)).unwrap();
 
                 let conc_params = if inst_comp.is_ext {
                     vec![]
@@ -802,7 +847,8 @@ impl MonoSig {
                     inst.params
                         .iter()
                         .map(|p| {
-                            self.expr(underlying, pass, Underlying::new(*p)).idx()
+                            self.expr(underlying, pass, Underlying::new(*p))
+                                .idx()
                                 .as_concrete(&self.base)
                                 .unwrap()
                         })
@@ -842,8 +888,12 @@ impl MonoSig {
 
         let ir::Liveness { idx, len, range } = live;
 
-        let mono_liveness_idx =
-            self.bundle_param(underlying, pass, Underlying::new(*idx), new_port);
+        let mono_liveness_idx = self.bundle_param(
+            underlying,
+            pass,
+            Underlying::new(*idx),
+            new_port,
+        );
 
         let mut mono_liveness = ir::Liveness {
             idx: mono_liveness_idx.idx(),
@@ -853,7 +903,9 @@ impl MonoSig {
 
         self.bundle_param_map.insert(new_port, mono_liveness_idx);
         let mono_width = self.expr(underlying, pass, Underlying::new(*width));
-        mono_liveness.len = self.expr(underlying, pass, Underlying::new(mono_liveness.len)).idx();
+        mono_liveness.len = self
+            .expr(underlying, pass, Underlying::new(mono_liveness.len))
+            .idx();
         mono_liveness.len =
             self.base.bin(self.base.get(mono_liveness.len).clone());
         mono_liveness.range =

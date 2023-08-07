@@ -5,7 +5,10 @@ use crate::{
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
 
-use super::{monodeferred::MonoDeferred, utils::{Underlying, Base}};
+use super::{
+    monodeferred::MonoDeferred,
+    utils::{Base, Underlying},
+};
 
 /// Monomorphize the Filament program
 pub struct Monomorphize<'a> {
@@ -18,14 +21,24 @@ pub struct Monomorphize<'a> {
     pub externals: Vec<ir::CompIdx>,
 
     /// Instances that have already been processed. Tracks the name of the generated component
-    pub processed: HashMap<(Underlying<ir::Component>, Vec<u64>), Base<ir::Component>>,
+    pub processed:
+        HashMap<(Underlying<ir::Component>, Vec<u64>), Base<ir::Component>>,
     /// Instances that need to be generated
-    pub queue: LinkedHashMap<(Underlying<ir::Component>, Vec<u64>), (Base<ir::Component>, MonoSig)>,
+    pub queue: LinkedHashMap<
+        (Underlying<ir::Component>, Vec<u64>),
+        (Base<ir::Component>, MonoSig),
+    >,
 
     /// Mapping from old ports to new ports, for resolving Foreigns
-    pub port_map: HashMap<(Underlying<ir::Component>, Vec<u64>, Underlying<ir::Port>), Base<ir::Port>>,
+    pub port_map: HashMap<
+        (Underlying<ir::Component>, Vec<u64>, Underlying<ir::Port>),
+        Base<ir::Port>,
+    >,
     /// Mapping from old events to new events, for resolving Foreigns
-    pub event_map: HashMap<(Underlying<ir::Component>, Vec<u64>, Underlying<ir::Event>), Base<ir::Event>>,
+    pub event_map: HashMap<
+        (Underlying<ir::Component>, Vec<u64>, Underlying<ir::Event>),
+        Base<ir::Event>,
+    >,
 
     pub ext_map: HashMap<String, Vec<ir::CompIdx>>,
 }
