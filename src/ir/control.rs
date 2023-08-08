@@ -104,9 +104,9 @@ impl InvIdx {
         inv.inst
     }
 
-    pub fn times(self, ctx: &impl Ctx<Invoke>) -> Vec<TimeIdx> {
+    pub fn times(self, ctx: &impl Ctx<Invoke>) -> Vec<(TimeIdx, InfoIdx)> {
         let inv = ctx.get(self);
-        inv.events.iter().map(|eb| eb.arg).collect()
+        inv.events.iter().map(|eb| (eb.arg, eb.info)).collect()
     }
 
     /// Get the component being invoked

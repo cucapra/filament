@@ -241,7 +241,7 @@ impl Component {
         if let Some(info) = &self.src_info {
             info.interface_ports.iter().find(|(ev, _)| **ev == event)
         } else {
-            self.internal_error("Not a top-level component!")
+            None
         }
     }
 
