@@ -144,67 +144,17 @@ impl MonoSig {
         let info = underlying.get(*iidx);
 
         let info = match info {
-            ir::info::Info::Param(param) => {
-                let ir::info::Param { name, bind_loc } = param;
-                ir::Info::param(*name, *bind_loc)
-            }
-            ir::info::Info::Assert(reason) => {
-                let ir::info::Assert(reason) = reason;
+            ir::info::Info::Assert(ir::info::Assert(reason)) => {
                 ir::Info::assert(self.reason(underlying, pass, reason))
             }
-            ir::Info::Instance(instance) => {
-                let ir::info::Instance {
-                    name,
-                    comp_loc,
-                    bind_loc,
-                } = instance;
-                ir::Info::instance(*name, *comp_loc, *bind_loc)
-            }
-            ir::Info::Invoke(invoke) => {
-                let ir::info::Invoke {
-                    name,
-                    inst_loc,
-                    bind_loc,
-                } = invoke;
-                ir::Info::invoke(*name, *inst_loc, *bind_loc)
-            }
-            ir::Info::Connect(connect) => {
-                let ir::info::Connect { src_loc, dst_loc } = connect;
-                ir::Info::connect(*dst_loc, *src_loc)
-            }
-            ir::Info::Port(port) => {
-                let ir::info::Port {
-                    name,
-                    bind_loc,
-                    width_loc,
-                    live_loc,
-                } = port;
-                ir::Info::port(*name, *bind_loc, *width_loc, *live_loc)
-            }
-            ir::Info::EventBind(eventbind) => {
-                let ir::info::EventBind {
-                    ev_delay_loc,
-                    bind_loc,
-                } = eventbind;
-                ir::Info::event_bind(*ev_delay_loc, *bind_loc)
-            }
-            ir::Info::Event(event) => {
-                let ir::info::Event {
-                    name,
-                    bind_loc,
-                    delay_loc,
-                    interface_name,
-                    interface_bind_loc,
-                } = event;
-                ir::Info::event_explicit(
-                    *name,
-                    *bind_loc,
-                    *delay_loc,
-                    *interface_name,
-                    *interface_bind_loc,
-                )
-            }
-            ir::Info::Empty(_) => ir::Info::empty(),
+            ir::info::Info::Param(_)
+            | ir::Info::Instance(_)
+            | ir::Info::Invoke(_)
+            | ir::Info::Connect(_)
+            | ir::Info::Port(_)
+            | ir::Info::EventBind(_)
+            | ir::Info::Event(_)
+            | ir::Info::Empty(_) => info.clone(),
         };
 
         self.base.add(info)
@@ -222,30 +172,14 @@ impl MonoSig {
                 src_loc,
                 dst_liveness,
                 src_liveness,
-            } => {
-                let dst_loc = *dst_loc;
-                let src_loc = *src_loc;
-                let dst_liveness = self.range(underlying, pass, dst_liveness);
-                let src_liveness = self.range(underlying, pass, src_liveness);
-                ir::info::Reason::Liveness {
-                    dst_loc,
-                    src_loc,
-                    dst_liveness,
-                    src_liveness,
-                }
-            }
-            ir::info::Reason::ParamConstraint {
-                bind_loc,
-                constraint_loc,
-            } => {
-                let bind_loc = *bind_loc;
-                let constraint_loc = *constraint_loc;
-                ir::info::Reason::ParamConstraint {
-                    bind_loc,
-                    constraint_loc,
-                }
-            }
-            ir::info::Reason::EventConstraint { .. }
+            } => ir::info::Reason::Liveness {
+                dst_loc: *dst_loc,
+                src_loc: *src_loc,
+                dst_liveness: self.range(underlying, pass, dst_liveness),
+                src_liveness: self.range(underlying, pass, src_liveness),
+            },
+            ir::info::Reason::ParamConstraint { .. }
+            | ir::info::Reason::EventConstraint { .. }
             | ir::info::Reason::BundleLenMatch { .. }
             | ir::info::Reason::BundleWidthMatch { .. }
             | ir::info::Reason::InBoundsAccess { .. }
@@ -273,7 +207,7 @@ impl MonoSig {
             ir::ParamOwner::Bundle(_) => {
                 unreachable!("Bundle params should only be generated when visiting ports")
             }
-            ir::ParamOwner::Loop => {
+            ir::ParamOwner::Let | ir::ParamOwner::Loop => {
                 let new_param = ir::Param {
                     owner: owner.clone(),
                     info: self.info(underlying, pass, info),
@@ -285,7 +219,6 @@ impl MonoSig {
             ir::ParamOwner::Sig => {
                 unreachable!("If a param is sig-owned, it should be resolved in the binding!")
             }
-            ir::ParamOwner::Let => todo!(),
         }
     }
 

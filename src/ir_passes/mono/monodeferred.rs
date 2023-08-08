@@ -266,6 +266,26 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         self.monosig.base.cmds.extend(body);
     }
 
+    fn p_let(&mut self, l: &ir::Let) {
+        let ir::Let { param, expr } = *l;
+
+        let expr = self.monosig.expr(
+            self.underlying,
+            self.pass,
+            Underlying::new(expr),
+        );
+
+        // Inserts this param into the binding.
+        self.monosig.binding.insert(
+            Underlying::new(param),
+            self.monosig
+                .base
+                .bin(self.monosig.base.get(expr.idx()).clone())
+                .as_concrete(&self.monosig.base)
+                .unwrap(),
+        );
+    }
+
     fn command(&mut self, cmd: &ir::Command) -> Vec<ir::Command> {
         match cmd {
             ir::Command::Instance(idx) => {
@@ -291,13 +311,16 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 self.if_stmt(if_stmt);
                 vec![]
             }
+            ir::Command::Let(l) => {
+                self.p_let(l);
+                vec![]
+            }
             // XXX(rachit): We completely get rid of facts in the program here.
             // If we want to do this long term, this should be done in a
             // separate pass and monomorphization should fail on facts.
             ir::Command::Fact(_) => {
                 vec![]
             }
-            ir::Command::Let(_) => todo!(),
         }
     }
 }
