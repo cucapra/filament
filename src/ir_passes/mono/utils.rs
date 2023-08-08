@@ -1,6 +1,12 @@
 use crate::utils::Idx;
 
-/// Wraps an Idx that is meaningful in the base component
+/// Wraps an Idx that is meaningful in the base component, which are the new components
+/// that we build during monomorphization. As we visit parts of the underlying (pre-mono)
+/// component, we need to build new monomorphized structures and add them to the new component.
+/// In many cases, we keep these new Idxs around (to keep track of what's been monomorphized
+/// already, as well as to maintain information between ports/invokes, for example). The point
+/// of this wrapper is to make it clear that this Idx is meaningful only in the new component
+/// we are constructing.
 pub struct Base<T> {
     idx: Idx<T>,
 }
@@ -35,7 +41,9 @@ impl<T> Clone for Base<T> {
 
 impl<T> Copy for Base<T> {}
 
-/// Wraps an Idx that is meaningful in the underlying component
+/// Wraps an Idx that is meaningful in the underlying component, which are the existing pre-monomorphization
+/// components. These Idxs get passed around between a lot of functions and mappings during monomorphization,
+/// so it becomes hard to keep track of which Idx belongs where. This wrapper makes it distinct from base Idxs.
 pub struct Underlying<T> {
     idx: Idx<T>,
 }
