@@ -1,7 +1,9 @@
+use itertools::Itertools;
+
 use crate::{
     diagnostics,
     errors::Error,
-    ir::{self, Ctx},
+    ir::{self, Context, Ctx},
     ir_visitor::{Action, Construct, Visitor, VisitorData},
 };
 use std::collections::HashSet;
@@ -35,13 +37,13 @@ impl Visitor for PhantomCheck {
 
     fn invoke(&mut self, inv: ir::InvIdx, data: &mut VisitorData) -> Action {
         // Check if the instance has already been used
-        let inst = data.comp.get(inv).inst;
+        let comp = &data.comp;
+        let ctx = data.ctx();
+        let inst = comp.get(inv).inst;
         if let Some(prev_use) = self.instance_used.get(&inst) {
-            for time in inv.times(&data.comp) {
-                if let Some(e) = self
-                    .phantom_events
-                    .iter()
-                    .find(|e| time.event(&data.comp) == **e)
+            for time in inv.times(comp) {
+                if let Some(e) =
+                    self.phantom_events.iter().find(|e| time.event(comp) == **e)
                 {
                     let err =
                         Error::malformed("reuses phantom event for scheduling");
@@ -50,6 +52,14 @@ impl Visitor for PhantomCheck {
             }
         }
         self.instance_used.insert(inst);
+
+        // For each binding provided to a non-phantom port, check that the
+        // mentioned events are not non-phantom
+        let inst_comp = ctx.get(comp.get(inst).comp);
+        let inst_phantoms = inst_comp.phantom_events().collect_vec();
+        for (event, bind) in
+            inst_comp.events().iter().zip(inv.times(comp).iter())
+        {}
 
         Action::Continue
     }

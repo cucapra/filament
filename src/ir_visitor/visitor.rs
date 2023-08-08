@@ -41,12 +41,12 @@ pub struct VisitorData<'comp> {
     pub idx: ir::CompIdx,
     /// mutable context reference, held to prevent another
     /// function from mutating the context as it is currently invalid.
-    mut_ctx: &'comp mut ir::Context,
+    pub mut_ctx: &'comp mut ir::Context,
 }
 
 impl<'comp> VisitorData<'comp> {
     /// Get an immutable reference to the current [ir::Context].
-    pub fn ctx(&'comp mut self) -> &'comp ir::Context {
+    pub fn ctx(&'comp self) -> &'comp ir::Context {
         self.mut_ctx
     }
 }
