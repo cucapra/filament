@@ -18,6 +18,13 @@ impl Display for Time {
 }
 
 impl TimeIdx {
+    pub fn event(self, ctx: &impl Ctx<Time>) -> EventIdx {
+        let time = ctx.get(self);
+        time.event
+    }
+}
+
+impl TimeIdx {
     /// Construct a [TimeSub] by subtracting two time expressions
     pub fn sub<C>(self, other: TimeIdx, ctx: &mut C) -> TimeSub
     where

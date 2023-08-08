@@ -234,7 +234,10 @@ impl Component {
         sig_params
     }
 
-    pub fn get_interface(&self, event: EventIdx) -> Option<(&EventIdx, &ast::Id)> {
+    pub fn get_interface(
+        &self,
+        event: EventIdx,
+    ) -> Option<(&EventIdx, &ast::Id)> {
         if let Some(info) = &self.src_info {
             info.interface_ports.iter().find(|(ev, _)| **ev == event)
         } else {
@@ -243,7 +246,9 @@ impl Component {
     }
 
     pub fn phantom_events(&self) -> impl Iterator<Item = EventIdx> + '_ {
-        self.events().idx_iter().filter(move |event| self.get_interface(*event).is_none())
+        self.events()
+            .idx_iter()
+            .filter(move |event| self.get_interface(*event).is_none())
     }
 }
 

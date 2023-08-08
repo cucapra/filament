@@ -1,5 +1,7 @@
 use crate::{
-    diagnostics, ir::{self, Ctx},
+    diagnostics,
+    errors::Error,
+    ir::{self, Ctx},
     ir_visitor::{Action, Construct, Visitor, VisitorData},
 };
 use std::collections::HashSet;
@@ -32,10 +34,22 @@ impl Visitor for PhantomCheck {
     }
 
     fn invoke(&mut self, inv: ir::InvIdx, data: &mut VisitorData) -> Action {
+        // Check if the instance has already been used
         let inst = data.comp.get(inv).inst;
         if let Some(prev_use) = self.instance_used.get(&inst) {
-
+            for time in inv.times(&data.comp) {
+                if let Some(e) = self
+                    .phantom_events
+                    .iter()
+                    .find(|e| time.event(&data.comp) == **e)
+                {
+                    let err =
+                        Error::malformed("reuses phantom event for scheduling");
+                    self.diag.add_error(err);
+                }
+            }
         }
+        self.instance_used.insert(inst);
 
         Action::Continue
     }
