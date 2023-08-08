@@ -1,5 +1,5 @@
 use crate::{
-    diagnostics, ir,
+    diagnostics, ir::{self, Ctx},
     ir_visitor::{Action, Construct, Visitor, VisitorData},
 };
 use std::collections::HashSet;
@@ -23,6 +23,19 @@ impl Visitor for PhantomCheck {
 
     fn start(&mut self, data: &mut VisitorData) -> Action {
         let comp = &data.comp;
+        self.phantom_events = comp.phantom_events().collect();
+        if self.phantom_events.is_empty() {
+            Action::Stop
+        } else {
+            Action::Continue
+        }
+    }
+
+    fn invoke(&mut self, inv: ir::InvIdx, data: &mut VisitorData) -> Action {
+        let inst = data.comp.get(inv).inst;
+        if let Some(prev_use) = self.instance_used.get(&inst) {
+
+        }
 
         Action::Continue
     }
