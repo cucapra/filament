@@ -282,11 +282,14 @@ impl<'prog> BuildCtx<'prog> {
         };
         let idx = self.comp().add(e);
 
-        // If the component is expecting interface information and there is an interface port, add it.
-        if let (Some((name, _)), Some(src)) =
-            (interface_port, &mut self.comp().src_info)
-        {
-            src.interface_ports.insert(idx, name);
+        // If the component is expecting interface information, add it
+        if let Some(src) = &mut self.comp().src_info {
+            // add interface port if exists
+            if let Some((name, _)) = interface_port {
+                src.interface_ports.insert(idx, name);
+            }
+            // add event name (used by dump_interface)
+            src.events.insert(idx, *eb.event);
         }
 
         log::trace!("Added event {} as {idx}", eb.event);

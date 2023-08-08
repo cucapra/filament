@@ -21,7 +21,7 @@ define_idx!(PortIdx, Port, "p");
 impl PortIdx {
     /// Return true if this port is definitely not a bundle.
     /// This is the case if we can statically prove that the port has a length of 1.
-    pub fn is_not_bundle<C>(&self, ctx: &Component) -> bool {
+    pub fn is_not_bundle(&self, ctx: &Component) -> bool {
         let port = ctx.get(*self);
         port.live.len.is_const(ctx, 1)
     }

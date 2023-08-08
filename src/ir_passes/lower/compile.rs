@@ -1,5 +1,6 @@
 use super::{
     build_ctx::{Binding, BuildCtx},
+    max_states,
     utils::{interface_name, port_name, INTERFACE_PORTS},
 };
 use crate::{
@@ -9,12 +10,7 @@ use crate::{
 use calyx_frontend as frontend;
 use calyx_ir as calyx;
 use calyx_utils::CalyxResult;
-use std::{
-    collections::{HashMap, HashSet},
-    convert::identity,
-    path::PathBuf,
-    rc::Rc,
-};
+use std::{collections::HashSet, convert::identity, path::PathBuf, rc::Rc};
 
 /// Compiles Filament directly into Calyx
 /// Generates FSMs for each event (with an interface port)
@@ -208,48 +204,24 @@ impl Compile {
         }
 
         let builder = calyx::Builder::new(&mut component, lib).not_generated();
-        let mut ctx = BuildCtx::new(ctx, idx, bind, builder, lib);
-
-        // Calculate the max states needed for each FSM for every event.
-        // Done by finding the furthest offset referenced in any [Time] in the component.
-        let mut max_states = HashMap::new();
-
-        comp.ports()
-            .iter()
-            .map(|(_, port)| {
-                let live = &port.live;
-                assert!(
-                    live.len.is_const(comp, 1),
-                    "Bundles should have been compiled away."
-                );
-
-                // need only the end here as ends follow starts and all ranges should be represented by a simple offset.
-                live.range.end
-            })
-            .for_each(|idx| {
-                let time = comp.get(idx);
-                let nv = time.offset.concrete(comp);
-                if nv > *max_states.get(&time.event).unwrap_or(&0) {
-                    max_states.insert(time.event, nv);
-                }
-            });
+        let mut buildctx = BuildCtx::new(ctx, idx, bind, builder, lib);
 
         // Construct all the FSMs
-        for (event, states) in max_states {
-            ctx.insert_fsm(event, states);
+        for (event, states) in max_states(comp) {
+            buildctx.insert_fsm(event, states);
         }
 
         for inst in comp.instances().idx_iter() {
-            ctx.add_instance(inst);
+            buildctx.add_instance(inst);
         }
 
         for inv in comp.invocations().idx_iter() {
-            ctx.add_invoke(inv);
+            buildctx.add_invoke(inv);
         }
 
         for cmd in &comp.cmds {
             match cmd {
-                ir::Command::Connect(connect) => ctx.compile_connect(connect),
+                ir::Command::Connect(connect) => buildctx.compile_connect(connect),
                 ir::Command::ForLoop(_) => {
                     unreachable!("for loops should have been compiled away.")
                 }

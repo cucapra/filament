@@ -49,7 +49,7 @@ name = "evaluation"
 paths = ["evaluation/**/harness.fil"]
 cmd = """
 dir=$(dirname {}) && \
-./evaluation/fuzz/check.sh $dir 100 ir
+./evaluation/fuzz/check.sh $dir 100
 """
 
 # Aetherling evaluation

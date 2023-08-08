@@ -6,11 +6,6 @@ set -euf -o pipefail
 dir="$1"
 # Number of data points to test out
 count="$2"
-# Whether to use the ir or not
-fil_flags=""
-if [[ ${3-} ]]; then
-  fil_flags="--ir"
-fi
 
 # Directory that contains this script
 script_dir="${BASH_SOURCE%/*}"
@@ -24,7 +19,7 @@ width=$"$dir/width"
 
 ./"$script_dir/gen_float.py" gen --width $(cat $width) "$count" > "$data"
 
-(fud e -s cocotb.data "$data" --to cocotb-out "$dir/harness.fil" -s calyx.flags ' -d canonicalize' -s filament.flags " $fil_flags"  -q | \
+(fud e -s cocotb.data "$data" --to cocotb-out "$dir/harness.fil" -s calyx.flags ' -d canonicalize' -q | \
   ./"$script_dir/gen_float.py" check --fields $(cat $fields) && \
   echo "No counterexamples with $count data points" && rm -f "$data") || \
   cat "$data"
