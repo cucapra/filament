@@ -157,7 +157,7 @@ impl<'prog> BuildCtx<'prog> {
         match expr {
             ast::Expr::Abstract(p) => {
                 let Some(pidx) = self.get_param(&p) else {
-                    let cmp_st = ir::Printer::comp_str(self.comp);
+                    let cmp_st = ir::Printer::comp_str(self.comp());
                     unreachable!("Parameter {p} not found. Component state:\n{cmp_st}")
                 };
                 self.comp().add(ir::Expr::Param(pidx))

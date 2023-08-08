@@ -1,12 +1,15 @@
-use crate::ir::{
-    Access, Bind, Command, CompIdx, Component, Connect, Context, Ctx,
-    DenseIndexInfo, Expr, Foreign, Info, InvIdx, Invoke, Liveness, MutCtx,
-    Port, PortIdx, PortOwner, Printer, Range, Subst, Time,
+use crate::{
+    cmdline,
+    ir::{
+        Access, Bind, Command, Component, Connect, Context, Ctx,
+        DenseIndexInfo, Expr, Foreign, Info, InvIdx, Invoke, Liveness, MutCtx,
+        Port, PortIdx, PortOwner, Printer, Range, Subst, Time,
+    },
+    ir_visitor::{Action, Construct, Visitor, VisitorData},
 };
 use itertools::Itertools;
 use std::collections::HashMap;
 
-#[derive(Default)]
 // Eliminates bundle ports by breaking them into multiple len-1 ports, and eliminates local ports altogether.
 pub struct BundleElim {
     context: DenseIndexInfo<Component, HashMap<PortIdx, Vec<PortIdx>>>,
@@ -15,17 +18,10 @@ pub struct BundleElim {
 
 impl BundleElim {
     /// Gets corresponding ports from the context given a component and a port access.
-    fn get(
-        &self,
-        access: &Access,
-        cidx: CompIdx,
-        ctx: &Context,
-    ) -> Vec<PortIdx> {
-        let comp = ctx.get(cidx);
-
+    fn get(&self, access: &Access, data: &mut VisitorData) -> Vec<PortIdx> {
         let Access { port, start, end } = access;
-        let start = start.concrete(comp) as usize;
-        let end = end.concrete(comp) as usize;
+        let start = start.concrete(&data.comp) as usize;
+        let end = end.concrete(&data.comp) as usize;
 
         let mut ports = Vec::with_capacity(end - start);
 
@@ -38,7 +34,7 @@ impl BundleElim {
                     None => break group,
                 }
             };
-            ports.push(self.context[cidx][&port][idx]);
+            ports.push(self.context[data.idx][&port][idx]);
         }
 
         ports
@@ -170,56 +166,81 @@ impl BundleElim {
 
         mappings.into_iter().collect()
     }
+}
+
+impl Construct for BundleElim {
+    fn from(_opts: &cmdline::Opts, ctx: &mut Context) -> Self {
+        let mut visitor = Self {
+            context: DenseIndexInfo::default(),
+            local_map: HashMap::new(),
+        };
+        // compiles signature ports and adds them to the context
+        for (idx, c) in ctx.comps.iter_mut() {
+            visitor.context.push(idx, visitor.sig(c));
+        }
+
+        visitor
+    }
+
+    fn clear_data(&mut self) {
+        self.local_map.clear();
+    }
+}
+
+impl Visitor for BundleElim {
+    fn name() -> &'static str {
+        "bundle-elim"
+    }
 
     /// Compiles a connect command by breaking it into multiple simple connect commands
     /// Also eliminates local ports by storing their source bindings in the pass.
     fn connect(
-        &self,
-        connect: &Connect,
-        cidx: CompIdx,
-        ctx: &mut Context,
-    ) -> Vec<Command> {
+        &mut self,
+        connect: &mut Connect,
+        data: &mut VisitorData,
+    ) -> Action {
         let Connect { src, dst, .. } = connect;
 
-        if !self.context.get(cidx).contains_key(&dst.port) {
+        if !self.context.get(data.idx).contains_key(&dst.port) {
             // we are writing to a local port here.
-            return vec![];
+            return Action::Change(vec![]);
         }
 
         // get the list of ports associated with each access in the connect.
-        let src = self.get(src, cidx, ctx);
-        let dst = self.get(dst, cidx, ctx);
+        let src = self.get(src, data);
+        let dst = self.get(dst, data);
 
-        let comp = ctx.get_mut(cidx);
         if src.len() != dst.len() {
-            comp.internal_error(format!(
+            data.comp.internal_error(format!(
                 "Mismatched access lengths for connect `{}`",
-                Printer::new(comp).connect_str(connect)
+                Printer::new(&data.comp).connect_str(connect)
             ))
         }
 
         // split this single connects into `n` separate connects each with individual ports.
         // the local mapping optimization here works because it assumes that connects assigning to the local port
         // are defined before connects accessing the local port (I.E. assignments are in proper order).
-        src.into_iter()
-            .zip(dst.into_iter())
-            .map(|(src, dst)| {
-                Command::Connect(Connect {
-                    src: Access::port(src, comp),
-                    dst: Access::port(dst, comp),
-                    info: comp.add(Info::empty()),
+        Action::Change(
+            src.into_iter()
+                .zip(dst.into_iter())
+                .map(|(src, dst)| {
+                    Command::Connect(Connect {
+                        src: Access::port(src, &mut data.comp),
+                        dst: Access::port(dst, &mut data.comp),
+                        info: data.comp.add(Info::empty()),
+                    })
                 })
-            })
-            .collect()
+                .collect(),
+        )
     }
 
     /// Compiles the body of a component and replaces all ports with their expanded versions.
-    fn comp(&mut self, cidx: CompIdx, ctx: &mut Context) {
-        let comp = ctx.get_mut(cidx);
+    fn start(&mut self, data: &mut VisitorData) -> Action {
+        let comp = &mut data.comp;
         // compile invocations
         for idx in comp.invocations().idx_iter() {
             let pl = self.inv(idx, comp);
-            self.context.get_mut(cidx).extend(pl);
+            self.context.get_mut(data.idx).extend(pl);
         }
 
         // generates the local map for this component
@@ -256,8 +277,6 @@ impl BundleElim {
             .flatten()
             .collect();
 
-        log::debug!("Local Map: {:?}", self.local_map);
-
         // delete local ports
         comp.ports()
             .iter()
@@ -267,45 +286,6 @@ impl BundleElim {
             .into_iter()
             .for_each(|idx| comp.delete(idx)); // invalidate these ports
 
-        let cmds = comp
-            .cmds
-            .drain(..)
-            .collect_vec() // collect here to avoid ownership issues
-            .into_iter()
-            .flat_map(|cmd| match cmd {
-                Command::Connect(con) => {
-                    self.connect(&con, cidx, ctx) // compile connect into simple connects
-                }
-                Command::Instance(_)
-                | Command::Invoke(_)
-                | Command::Fact(_) => vec![cmd], // keeps these commands unchanged
-                Command::ForLoop(_) => {
-                    unreachable!("For Loops should have been compiled away.")
-                }
-                Command::If(_) => {
-                    unreachable!("If should have been compiled away.")
-                }
-                Command::Let(_) => {
-                    unreachable!("Let should have been compiled away.")
-                }
-            })
-            .collect_vec();
-
-        // need to get here again because component is mutated above.
-        let comp = ctx.get_mut(cidx);
-        comp.cmds = cmds;
-    }
-
-    pub fn do_pass(ctx: &mut Context) {
-        let mut visitor = Self::default();
-        // compiles signature ports and adds them to the context
-        for (idx, c) in ctx.comps.iter_mut() {
-            visitor.context.push(idx, visitor.sig(c));
-        }
-
-        // second pass to compile all the other ports and actually split the connects.
-        for idx in ctx.comps.idx_iter() {
-            visitor.comp(idx, ctx);
-        }
+        Action::Continue
     }
 }

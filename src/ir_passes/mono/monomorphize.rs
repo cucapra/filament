@@ -5,7 +5,14 @@ use crate::{
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
 
-use super::monodeferred::MonoDeferred;
+use super::{
+    monodeferred::MonoDeferred,
+    utils::{Base, Underlying},
+};
+
+type InstKey = (Underlying<ir::Component>, Vec<u64>);
+type PortKey = (Underlying<ir::Component>, Vec<u64>, Underlying<ir::Port>);
+type EventKey = (Underlying<ir::Component>, Vec<u64>, Underlying<ir::Event>);
 
 /// Monomorphize the Filament program
 pub struct Monomorphize<'a> {
@@ -18,14 +25,14 @@ pub struct Monomorphize<'a> {
     pub externals: Vec<ir::CompIdx>,
 
     /// Instances that have already been processed. Tracks the name of the generated component
-    pub processed: HashMap<(ir::CompIdx, Vec<u64>), ir::CompIdx>,
+    pub processed: HashMap<InstKey, Base<ir::Component>>,
     /// Instances that need to be generated
-    pub queue: LinkedHashMap<(ir::CompIdx, Vec<u64>), (ir::CompIdx, MonoSig)>,
+    pub queue: LinkedHashMap<InstKey, (Base<ir::Component>, MonoSig)>,
 
     /// Mapping from old ports to new ports, for resolving Foreigns
-    pub port_map: HashMap<(ir::CompIdx, Vec<u64>, ir::PortIdx), ir::PortIdx>,
+    pub port_map: HashMap<PortKey, Base<ir::Port>>,
     /// Mapping from old events to new events, for resolving Foreigns
-    pub event_map: HashMap<(ir::CompIdx, Vec<u64>, ir::EventIdx), ir::EventIdx>,
+    pub event_map: HashMap<EventKey, Base<ir::Event>>,
 
     pub ext_map: HashMap<String, Vec<ir::CompIdx>>,
 }
@@ -54,14 +61,14 @@ impl<'ctx> Monomorphize<'ctx> {
     /// The processing happens at a later point but, if needed, the pass immediately allocates a new [ir::Component] and returns information to construct a new instance.
     pub fn should_process(
         &mut self,
-        comp: ir::CompIdx,
+        comp: Underlying<ir::Component>,
         params: Vec<u64>,
-    ) -> (ir::CompIdx, Vec<u64>) {
-        let underlying = self.old.get(comp);
+    ) -> (Base<ir::Component>, Vec<u64>) {
+        let underlying = self.old.get(comp.idx());
 
         // If it is an external, add it to externals
         if underlying.is_ext {
-            self.externals.push(comp);
+            self.externals.push(comp.idx());
         }
 
         let key = if underlying.is_ext {
@@ -80,27 +87,27 @@ impl<'ctx> Monomorphize<'ctx> {
         }
 
         // Otherwise, construct a new component and add it to the processing queue
-        let new_comp = self.ctx.comp(underlying.is_ext);
+        let new_comp = Base::new(self.ctx.comp(underlying.is_ext));
 
         // `Some` if an extern, `None` if not
-        let filename = self.old.get_filename(comp);
+        let filename = self.old.get_filename(comp.idx());
         if let Some(filename) = filename {
             if let Some(exts) = self.ext_map.get(&filename) {
                 let mut exts = exts.clone();
-                exts.push(new_comp);
-                self.ext_map.insert(filename, exts);
+                exts.push(new_comp.idx());
+                self.ext_map.insert(filename, exts.to_vec());
             } else {
-                self.ext_map.insert(filename, vec![new_comp]);
+                self.ext_map.insert(filename, vec![new_comp.idx()]);
             }
         }
 
-        let base = self.ctx.get_mut(new_comp);
+        let base = self.ctx.get_mut(new_comp.idx());
 
         // make a MonoSig
-        let mut monosig = MonoSig::new(base, underlying, comp, params);
+        let mut monosig = MonoSig::new(base, underlying, comp.idx(), params);
 
         // the component whose signature we want to monomorphize
-        let underlying = self.old.get(comp);
+        let underlying = self.old.get(comp.idx());
 
         // Monomorphize the sig
         MonoDeferred::sig(&mut monosig, underlying, self);
@@ -112,14 +119,14 @@ impl<'ctx> Monomorphize<'ctx> {
         (new_comp, vec![])
     }
 
-    fn next(&mut self) -> Option<(ir::Component, ir::CompIdx)> {
+    fn next(&mut self) -> Option<(ir::Component, Base<ir::Component>)> {
         let Some(((underlying_idx, params), (base_idx, monosig))) = self.queue.pop_front() else {
             return None;
         };
 
         self.processed.insert((underlying_idx, params), base_idx);
 
-        let underlying = self.old.get(underlying_idx);
+        let underlying = self.old.get(underlying_idx.idx());
         let mut mono = MonoDeferred {
             underlying,
             pass: self,
@@ -147,19 +154,20 @@ impl Monomorphize<'_> {
                 externals: HashMap::new()
             }
         };
+        let entrypoint = Underlying::new(entrypoint);
         // Monomorphize the entrypoint
         let mut mono = Monomorphize::new(ctx);
         mono.should_process(entrypoint, vec![]);
 
         // Build a new context
         while let Some((mut comp, idx)) = mono.next() {
-            let default = mono.ctx.get_mut(idx);
+            let default = mono.ctx.get_mut(idx.idx());
             std::mem::swap(&mut comp, default);
             let val = ir::Validate::new(&comp, &mono.ctx.comps);
             val.comp();
         }
         let new_entrypoint = mono.processed.get(&(entrypoint, vec![])).unwrap();
-        mono.ctx.entrypoint = Some(*new_entrypoint);
+        mono.ctx.entrypoint = Some(new_entrypoint.idx());
         mono.ctx.externals = mono.ext_map;
         mono.ctx
     }

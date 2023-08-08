@@ -105,6 +105,7 @@ impl<'a> Validate<'a> {
                         format!("{par_idx} should be owned by {pidx} but is owned by {port_idx}"))
                 }
             }
+            ir::ParamOwner::Let => todo!(),
         }
         // validate liveness length
         self.expr(*len);
@@ -218,6 +219,7 @@ impl<'a> Validate<'a> {
                     )
                 }
             }
+            ir::ParamOwner::Let => todo!(),
         }
     }
 
@@ -306,6 +308,7 @@ impl<'a> Validate<'a> {
             ir::Command::Fact(fact) => {
                 self.fact(fact);
             }
+            ir::Command::Let(_l) => todo!(),
         }
     }
 
