@@ -120,13 +120,13 @@ pub(super) struct BuildCtx<'prog> {
     comp: ir::Component,
     pub sigs: &'prog SigMap,
 
-    // Mapping from names of instance to (<parameter bindings>, <component name>).
-    // We keep around the parameter bindings as [ast::Expr] because we need to resolve
-    // port definition in invokes using them.
+    /// Mapping from names of instance to (<parameter bindings>, <component name>).
+    /// We keep around the parameter bindings as [ast::Expr] because we need to resolve
+    /// port definition in invokes using them.
     pub inst_to_sig:
         DenseIndexInfo<ir::Instance, (Rc<utils::Binding<ast::Expr>>, Id)>,
 
-    // Mapping from names to IR nodes.
+    /// Mapping from names to IR nodes.
     pub event_map: ScopeMap<ir::Event>,
     pub inst_map: ScopeMap<ir::Instance>,
 

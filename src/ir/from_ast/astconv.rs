@@ -141,7 +141,8 @@ impl<'prog> BuildCtx<'prog> {
             | ast::Command::If(_)
             | ast::Command::Fact(_)
             | ast::Command::Connect(_)
-            | ast::Command::Bundle(_) => {}
+            | ast::Command::Bundle(_)
+            | ast::Command::PortLet(_) => {}
         }
     }
 
@@ -418,8 +419,18 @@ impl<'prog> BuildCtx<'prog> {
     ) -> ir::Access {
         match port {
             ast::Port::This(n) => {
+                // NOTE: The AST does not distinguish between ports
+                // defined by the signature and locally defined ports so we
+                // must search both.
                 let owner = InvPort::Sig(dir, n.copy());
-                ir::Access::port(self.get_port(&owner), self.comp())
+                let port = if let Some(port) = self.find_port(&owner) {
+                    port
+                } else {
+                    let owner = InvPort::Local(n.copy());
+                    self.get_port(&owner)
+                };
+
+                ir::Access::port(port, self.comp())
             }
             ast::Port::InvPort { invoke, name } => {
                 let inv = self.get_inv(invoke.copy());
@@ -840,6 +851,18 @@ impl<'prog> BuildCtx<'prog> {
                 let then = self.commands(then);
                 let alt = self.commands(alt);
                 vec![ir::If { cond, then, alt }.into()]
+            }
+            ast::Command::PortLet(ast::PortLet {
+                name,
+                range,
+                bitwidth,
+            }) => {
+                self.port(
+                    ast::PortDef::port(name, range, bitwidth),
+                    ir::PortOwner::Local,
+                );
+
+                vec![]
             }
             ast::Command::Bundle(bun) => {
                 // Add the bundle to the current scope

@@ -42,6 +42,7 @@ impl Component {
                 | Command::Bundle(_)
                 | Command::If(_)
                 | Command::ForLoop(_)
+                | Command::PortLet(_)
                 | Command::ParamLet(_) => (),
             }
         }

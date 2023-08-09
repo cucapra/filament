@@ -55,13 +55,17 @@ impl std::fmt::Display for Access {
 pub enum Port {
     /// A port on this component
     This(Loc<Id>),
-    /// A constant
     Constant(u64),
     /// A port on an invoke
-    InvPort { invoke: Loc<Id>, name: Loc<Id> },
-
+    InvPort {
+        invoke: Loc<Id>,
+        name: Loc<Id>,
+    },
     /// A port represented by an index into a bundle
-    Bundle { name: Loc<Id>, access: Loc<Access> },
+    Bundle {
+        name: Loc<Id>,
+        access: Loc<Access>,
+    },
     /// A bundle port on an invocation
     InvBundle {
         invoke: Loc<Id>,
@@ -162,6 +166,13 @@ pub enum Command {
     ParamLet(ParamLet),
     If(If),
     Bundle(Bundle),
+    PortLet(PortLet),
+}
+
+impl From<PortLet> for Command {
+    fn from(v: PortLet) -> Self {
+        Self::PortLet(v)
+    }
 }
 
 impl From<ParamLet> for Command {
@@ -210,6 +221,7 @@ impl Display for Command {
             Command::Bundle(b) => write!(f, "{b}"),
             Command::Fact(a) => write!(f, "{a}"),
             Command::ParamLet(l) => write!(f, "{l}"),
+            Command::PortLet(pl) => write!(f, "{pl}"),
         }
     }
 }
@@ -703,5 +715,29 @@ pub struct ParamLet {
 impl Display for ParamLet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "let {} = {};", self.name, self.expr)
+    }
+}
+
+/// A let-bound port
+#[derive(Clone)]
+pub struct PortLet {
+    pub name: Loc<Id>,
+    pub range: Loc<Range>,
+    pub bitwidth: Loc<Expr>,
+}
+
+impl PortLet {
+    pub fn access(&self) -> PortDef {
+        PortDef::port(
+            self.name.clone(),
+            self.range.clone(),
+            self.bitwidth.clone(),
+        )
+    }
+}
+
+impl Display for PortLet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "let {}: {} {};", self.name, self.range, self.bitwidth)
     }
 }

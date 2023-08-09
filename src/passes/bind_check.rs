@@ -56,7 +56,7 @@ impl BindCheck {
         if !self.events.contains(ev) {
             let err =
                 Error::undefined(*ev, "event").add_note(self.diag.add_info(
-                    format!("event `{ev}' is not defined in the signature"),
+                    format!("event `{ev}' is not defined in the component"),
                     pos,
                 ));
             self.diag.add_error(err);

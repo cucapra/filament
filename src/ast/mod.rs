@@ -14,7 +14,7 @@ pub use component::{Component, Namespace};
 pub use constraint::{Constraint, OrderConstraint, OrderOp};
 pub use control::{
     Access, Bundle, BundleType, Command, Connect, Fact, ForLoop, Fsm, Guard,
-    If, Instance, Invoke, ParamLet, Port,
+    If, Instance, Invoke, ParamLet, Port, PortLet,
 };
 pub use expr::{EvalBool, Expr, FnAssume, Op, UnFn};
 pub use id::Id;

@@ -11,6 +11,7 @@ use itertools::Itertools;
 use std::collections::HashMap;
 
 pub type BundleIdx = idx!(ast::Bundle);
+pub type PortIdx = idx!(ast::PortLet);
 
 pub struct BoundComponent {
     /// Signature associated with this component
@@ -21,12 +22,16 @@ pub struct BoundComponent {
     invocations: Vec<BoundInvoke>,
     /// Bundles bound in the component
     bundles: Vec<ast::Bundle>,
+    /// let-bound ports bound in the component
+    ports: Vec<ast::PortLet>,
     /// Mapping from name of instance to its index
     inst_map: HashMap<Id, InstIdx>,
     /// Mapping from name of invocation to its index
     inv_map: HashMap<Id, InvIdx>,
     /// Mapping from name of bundle to its index
     bundle_map: HashMap<Id, BundleIdx>,
+    /// Mapping from name of a let bound port to its index
+    port_map: HashMap<Id, PortIdx>,
     /// Error was encountered while binding this component
     is_err: bool,
 }
@@ -38,9 +43,11 @@ impl From<SigIdx> for BoundComponent {
             instances: Vec::new(),
             invocations: Vec::new(),
             bundles: Vec::new(),
+            ports: Vec::new(),
             inst_map: HashMap::new(),
             inv_map: HashMap::new(),
             bundle_map: HashMap::new(),
+            port_map: HashMap::new(),
             is_err: false,
         }
     }
@@ -87,6 +94,14 @@ impl BoundComponent {
         let idx = BundleIdx::new(self.bundles.len());
         self.bundle_map.insert(*bundle.name.inner(), idx);
         self.bundles.push(bundle);
+        idx
+    }
+
+    /// Add a new let-bound port to this binding.
+    pub fn add_port(&mut self, port: ast::PortLet) -> PortIdx {
+        let idx = PortIdx::new(self.ports.len());
+        self.port_map.insert(*port.name.inner(), idx);
+        self.ports.push(port);
         idx
     }
 
@@ -192,7 +207,8 @@ impl BoundComponent {
                 }
                 ast::Command::Connect(_)
                 | ast::Command::Fact(_)
-                | ast::Command::ParamLet(_) => (),
+                | ast::Command::ParamLet(_)
+                | ast::Command::PortLet(_) => (),
             }
         }
     }
@@ -304,10 +320,14 @@ impl BoundComponent {
                                 diag.add_error(err)
                             }
                         } else if let ast::Port::This(p) = &port {
-                            if !prog[self.sig]
+                            if
+                            // search sig ports
+                            !prog[self.sig]
                                 .ports()
                                 .iter()
                                 .any(|pd| pd.name() == p)
+                                // search local ports
+                                && !self.ports.iter().any(|pl| &pl.name == p)
                             {
                                 let err = Error::undefined(*p.inner(), "port")
                                     .add_note(
@@ -329,6 +349,9 @@ impl BoundComponent {
                 }
                 ast::Command::Bundle(bl) => {
                     self.add_bundle(bl.clone());
+                }
+                ast::Command::PortLet(name) => {
+                    self.add_port(name.clone());
                 }
                 ast::Command::Fact(_) | ast::Command::ParamLet(_) => (),
             }
@@ -356,6 +379,13 @@ impl std::ops::Index<BundleIdx> for BoundComponent {
     type Output = ast::Bundle;
     fn index(&self, idx: BundleIdx) -> &Self::Output {
         &self.bundles[idx.get()]
+    }
+}
+
+impl std::ops::Index<PortIdx> for BoundComponent {
+    type Output = ast::PortLet;
+    fn index(&self, idx: PortIdx) -> &Self::Output {
+        &self.ports[idx.get()]
     }
 }
 
@@ -439,6 +469,21 @@ impl<'c, 'p> CompBinding<'c, 'p> {
         })
     }
 
+    /// Get the port associated with a given port name
+    pub fn get_local_idx(&self, name: &Id) -> PortIdx {
+        *self.comp.port_map.get(name).unwrap_or_else(|| {
+            panic!(
+                "Unknown port: {name}. Known port: [{}]",
+                self.comp
+                    .port_map
+                    .keys()
+                    .map(|id| id.to_string())
+                    .collect_vec()
+                    .join(", ")
+            )
+        })
+    }
+
     fn bundle_access(mut bun: ast::Bundle, acc: &ast::Access) -> ast::PortDef {
         match acc {
             ast::Access::Index(idx) => bun.index(idx.clone()),
@@ -453,7 +498,15 @@ impl<'c, 'p> CompBinding<'c, 'p> {
     /// Returns `None` if and only if the given port is a constant.
     pub fn get_resolved_port(&self, port: &ast::Port) -> Option<ast::PortDef> {
         match &port {
-            ast::Port::This(p) => Some(self.this().get_port(p.inner()).take()),
+            ast::Port::This(p) => {
+                Some(self.this().find_port(p.inner()).map_or_else(
+                    || {
+                        let idx = self.get_local_idx(p);
+                        self[idx].access()
+                    },
+                    |p| p.take(),
+                ))
+            }
             ast::Port::InvPort { invoke, name } => {
                 Some(self.get_invoke_idx(invoke).resolved_inv_port(self, name))
             }
@@ -497,6 +550,13 @@ impl<'c, 'p> std::ops::Index<InvIdx> for CompBinding<'c, 'p> {
 impl<'c, 'p> std::ops::Index<BundleIdx> for CompBinding<'c, 'p> {
     type Output = ast::Bundle;
     fn index(&self, idx: BundleIdx) -> &Self::Output {
+        &self.comp[idx]
+    }
+}
+
+impl<'c, 'p> std::ops::Index<PortIdx> for CompBinding<'c, 'p> {
+    type Output = ast::PortLet;
+    fn index(&self, idx: PortIdx) -> &Self::Output {
         &self.comp[idx]
     }
 }
