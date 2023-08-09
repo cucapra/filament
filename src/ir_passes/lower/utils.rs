@@ -67,11 +67,18 @@ pub(super) fn port_name(
     let p = comp.get(idx);
 
     match &p.owner {
-        ir::PortOwner::Sig { .. } => comp
-            .src_info
-            .as_ref()
-            .map(|src| src.ports.get(&idx).unwrap().to_string())
-            .unwrap_or_else(|| format!("p{}", idx.get())),
+        ir::PortOwner::Sig { .. } => {
+            if comp.is_ext || comp.is_entry {
+                comp.src_info.as_ref().unwrap().ports.get(&idx).unwrap().to_string()
+            } else {
+                format!("p{}", idx.get())
+            }
+        // comp
+        //     .src_info
+        //     .as_ref()
+        //     .map(|src| src.ports.get(&idx).unwrap().to_string())
+        //     .unwrap_or_else(|| format!("p{}", idx.get()))
+        },
         ir::PortOwner::Inv { base, .. } => {
             base.apply(|p, c| port_name(p, ctx, c), ctx)
         }
@@ -80,12 +87,19 @@ pub(super) fn port_name(
 }
 
 /// Returns the name of an [Component]
-pub(super) fn comp_name(idx: CompIdx, ctx: &impl Ctx<Component>) -> String {
-    ctx.get(idx)
-        .src_info
-        .as_ref()
-        .map(|src| src.name.to_string())
-        .unwrap_or_else(|| format!("comp{}", idx.get()))
+pub(super) fn comp_name(idx: CompIdx, ctx: &ir::Context) -> String {
+    let comp = ctx.get(idx);
+    if comp.is_entry || comp.is_ext {
+        comp.src_info.as_ref().unwrap().name.to_string()
+    } else {
+        format!("comp{}", idx.get())
+    }
+
+    // ctx.get(idx)
+    //     .src_info
+    //     .as_ref()
+    //     .map(|src| src.name.to_string())
+    //     .unwrap_or_else(|| format!("comp{}", idx.get()))
 }
 
 /// Calculates the max states used for every fsm for the given component.

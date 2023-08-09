@@ -55,7 +55,7 @@ impl BundleElim {
         let len = len.concrete(comp);
 
         // if we need to preserve external interface information, we can't have bundle ports in the signature.
-        if comp.src_info.is_some() && matches!(owner, PortOwner::Sig { .. }) {
+        if (comp.is_ext || comp.is_entry) && matches!(owner, PortOwner::Sig { .. }) {
             assert!(
                 len == 1,
                 "Bundle ports in the signature are not supported when external interface must be preserved."

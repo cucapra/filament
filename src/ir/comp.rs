@@ -22,8 +22,8 @@ impl Context {
     }
 
     /// Add a new component to the context
-    pub fn comp(&mut self, is_ext: bool) -> CompIdx {
-        let comp = Component::new(is_ext);
+    pub fn comp(&mut self, is_ext: bool, is_entry: bool) -> CompIdx {
+        let comp = Component::new(is_ext, is_entry);
         self.add(comp)
     }
 
@@ -109,6 +109,8 @@ pub struct Component {
     info: IndexStore<Info>,
     /// Is this an external component
     pub is_ext: bool,
+    /// Is this the toplevel component in the context
+    pub is_entry: bool,
     /// Externally facing interface information, used to preserve interface in compilation.
     /// Must be `Some` for toplevel components and externals.
     pub src_info: Option<InterfaceSrc>,
@@ -117,9 +119,10 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn new(is_ext: bool) -> Self {
+    pub fn new(is_ext: bool, is_entry: bool) -> Self {
         let mut comp = Self {
             is_ext,
+            is_entry,
             ..Default::default()
         };
         // Allocate numbers and props now so we get reasonable indices.
@@ -248,7 +251,7 @@ impl Component {
     pub fn phantom_events(&self) -> impl Iterator<Item = EventIdx> + '_ {
         self.events()
             .idx_iter()
-            .filter(move |event| self.get_interface(*event).is_none())
+            .filter(|event| self.get_interface(*event).is_none())
     }
 }
 
