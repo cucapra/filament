@@ -862,8 +862,8 @@ impl<'prog> BuildCtx<'prog> {
 pub fn transform(ns: ast::Namespace) -> ir::Context {
     // creates an empty context with the main index.
     let mut ctx = ir::Context {
-        entrypoint:
-            ns.main_idx()
+        entrypoint: ns
+            .main_idx()
             // index main component after all externals
             .map(|idx| Idx::new(ns.externals().count() + idx)),
         ..Default::default()
@@ -897,8 +897,13 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     let (mut builders, sig_map): (Vec<_>, SigMap) = comps
         .map(|(idx, (file, sig, body))| {
             let idx = ir::CompIdx::new(idx);
-            let mut builder =
-                BuildCtx::new(ir::Component::new(body.is_none(), *sig.name.inner() == ast::Id::from(ns.toplevel.clone())), &sig_map);
+            let mut builder = BuildCtx::new(
+                ir::Component::new(
+                    body.is_none(),
+                    *sig.name.inner() == ast::Id::from(ns.toplevel.clone()),
+                ),
+                &sig_map,
+            );
             // enable source information saving if this is main or an external.
             if body.is_some() || body.is_none() || Some(idx) == ctx.entrypoint {
                 builder.comp().src_info =

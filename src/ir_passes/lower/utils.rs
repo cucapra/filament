@@ -69,16 +69,22 @@ pub(super) fn port_name(
     match &p.owner {
         ir::PortOwner::Sig { .. } => {
             if comp.is_ext || comp.is_entry {
-                comp.src_info.as_ref().unwrap().ports.get(&idx).unwrap().to_string()
+                comp.src_info
+                    .as_ref()
+                    .unwrap()
+                    .ports
+                    .get(&idx)
+                    .unwrap()
+                    .to_string()
             } else {
                 format!("p{}", idx.get())
             }
-        // comp
-        //     .src_info
-        //     .as_ref()
-        //     .map(|src| src.ports.get(&idx).unwrap().to_string())
-        //     .unwrap_or_else(|| format!("p{}", idx.get()))
-        },
+            // comp
+            //     .src_info
+            //     .as_ref()
+            //     .map(|src| src.ports.get(&idx).unwrap().to_string())
+            //     .unwrap_or_else(|| format!("p{}", idx.get()))
+        }
         ir::PortOwner::Inv { base, .. } => {
             base.apply(|p, c| port_name(p, ctx, c), ctx)
         }
