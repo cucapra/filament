@@ -112,7 +112,6 @@ pub struct Component {
     /// Is this the toplevel component in the context
     pub is_entry: bool,
     /// Externally facing interface information, used to preserve interface in compilation.
-    /// Must be `Some` for toplevel components and externals.
     pub src_info: Option<InterfaceSrc>,
     /// unannotated ports associated with this component
     pub unannotated_ports: Box<Vec<(ast::Id, u64)>>,

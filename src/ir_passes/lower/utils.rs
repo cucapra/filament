@@ -28,12 +28,14 @@ pub(super) fn interface_name(
         return None;
     }
 
-    Some(
+    Some(if comp.is_ext || comp.is_entry {
         comp.src_info
             .as_ref()
             .map(|src| src.interface_ports.get(&idx).unwrap().to_string())
-            .unwrap_or_else(|| format!("ev{}", idx.get())),
-    )
+            .unwrap()
+    } else {
+        format!("ev{}", idx.get())
+    })
 }
 
 /// Converts an [ir::ExprIdx] into a [calyx::Width].
@@ -52,10 +54,14 @@ pub(super) fn expr_width(idx: ExprIdx, comp: &Component) -> calyx::Width {
 
 /// Returns the name of an [ir::Param].
 pub(super) fn param_name(idx: ParamIdx, comp: &Component) -> String {
-    comp.src_info
-        .as_ref()
-        .map(|src| src.params.get(&idx).unwrap().to_string())
-        .unwrap_or_else(|| format!("pr{}", idx.get()))
+    if comp.is_entry || comp.is_ext {
+        comp.src_info
+            .as_ref()
+            .map(|src| src.params.get(&idx).unwrap().to_string())
+            .unwrap()
+    } else {
+        format!("pr{}", idx.get())
+    }
 }
 
 /// Returns the name of an [ir::Port]
@@ -79,11 +85,6 @@ pub(super) fn port_name(
             } else {
                 format!("p{}", idx.get())
             }
-            // comp
-            //     .src_info
-            //     .as_ref()
-            //     .map(|src| src.ports.get(&idx).unwrap().to_string())
-            //     .unwrap_or_else(|| format!("p{}", idx.get()))
         }
         ir::PortOwner::Inv { base, .. } => {
             base.apply(|p, c| port_name(p, ctx, c), ctx)

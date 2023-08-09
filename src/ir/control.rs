@@ -104,6 +104,7 @@ impl InvIdx {
         inv.inst
     }
 
+    /// The times the invoke uses, along with the EventBind infos
     pub fn times(self, ctx: &impl Ctx<Invoke>) -> Vec<(TimeIdx, InfoIdx)> {
         let inv = ctx.get(self);
         inv.events.iter().map(|eb| (eb.arg, eb.info)).collect()
