@@ -206,6 +206,9 @@ impl Signature {
     pub fn ports(&self) -> &Vec<Loc<PortDef>> {
         &self.ports
     }
+    pub fn sig_bindings(&self) -> impl Iterator<Item = Loc<Id>> + '_ {
+        self.sig_bindings.iter().map(|p| &p.param).cloned()
+    }
 
     /// Replace the ports of this component by iterating over the ports and applying the function to get other ports.
     /// The function is passed the port and a boolean indicating if the port is an input port.
@@ -539,6 +542,9 @@ impl Display for Signature {
                 .join(", "),
             self.outputs().map(|pd| format!("{pd}")).join(", "),
         )?;
+        if !self.sig_bindings.is_empty() {
+            
+        }
         if !self.event_constraints.is_empty()
             || !self.param_constraints.is_empty()
         {

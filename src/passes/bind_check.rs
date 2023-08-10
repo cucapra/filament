@@ -132,7 +132,9 @@ impl visitor::Checker for BindCheck {
     fn signature(&mut self, sig: &ast::Signature) -> Traverse {
         let events = sig.events().collect_vec();
         let params = sig.params();
+        let sig_binds = sig.sig_bindings();
         self.add_global_params(params);
+        self.add_global_params(sig_binds);
         self.events.extend(events.iter().map(|ev| *ev.inner()));
         // Check all the definitions only use bound events and parameters
         for pd in sig.ports() {
