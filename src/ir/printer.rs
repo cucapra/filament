@@ -367,19 +367,41 @@ impl<'a> Printer<'a> {
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         let param = self.ctx.get(idx);
-        if !param.is_sig_owned() {
-            let &ir::Param { info, .. } = c.get(idx);
-            writeln!(
-                f,
-                "{:indent$}{idx} = param {param};{comment}",
-                "",
-                param = self.ctx.display(idx),
-                comment = c
-                    .get(info)
-                    .as_param()
-                    .map_or("".to_string(), |p| format!(" // {}", p.name)),
-            )?;
+        match param.owner {
+            ir::ParamOwner::Sig => {},
+            ir::ParamOwner::SigBinding => {
+                writeln!(
+                    f,
+                    "{:indent$}{idx} = {expr};{comment}",
+                    "",
+                    expr = c.sig_binding.get(&idx).unwrap(),
+                    comment = c.get(param.info).as_param().map_or("".to_string(), |p| format!(" // {}", p.name))
+                )?;
+            },
+            ir::ParamOwner::Bundle(_) | ir::ParamOwner::Loop => {
+                writeln!(
+                    f,
+                    "{:indent$}{idx} = param {param};{comment}",
+                    "",
+                    param = self.ctx.display(idx),
+                    comment = c.get(param.info).as_param().map_or("".to_string(), |p| format!(" // {}", p.name))
+                )?;
+            }
         }
+
+        // if !param.is_sig_owned() {
+        //     let &ir::Param { info, .. } = c.get(idx);
+        //     writeln!(
+        //         f,
+        //         "{:indent$}{idx} = param {param};{comment}",
+        //         "",
+        //         param = self.ctx.display(idx),
+        //         comment = c
+        //             .get(info)
+        //             .as_param()
+        //             .map_or("".to_string(), |p| format!(" // {}", p.name)),
+        //     )?;
+        // }
         Ok(())
     }
 

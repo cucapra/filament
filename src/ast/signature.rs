@@ -83,7 +83,7 @@ impl SigBind {
 
 impl Display for SigBind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "let {} = {};", self.param, self.value)
+        writeln!(f, "let #{} = {};", self.param, self.value)
     }
 }
 
@@ -543,7 +543,11 @@ impl Display for Signature {
             self.outputs().map(|pd| format!("{pd}")).join(", "),
         )?;
         if !self.sig_bindings.is_empty() {
-            
+            write!(
+                f,
+                " with {{ {} }}",
+                self.sig_bindings.iter().map(|sb| format!("{sb}")).join("\n"),
+            )?;
         }
         if !self.event_constraints.is_empty()
             || !self.param_constraints.is_empty()

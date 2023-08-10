@@ -232,6 +232,27 @@ impl<'prog> BuildCtx<'prog> {
         idx
     }
 
+    fn sig_bind(
+        &mut self,
+        param: &ast::SigBind,
+        owner: ir::ParamOwner,
+    ) -> ParamIdx {
+        let info = self.comp().add(ir::Info::param(param.name(), param.pos()));
+
+        let ir_param = ir::Param::new(owner, info);
+        let ir_expr = self.expr(param.value());
+        let idx = self.comp().add(ir_param);
+        self.comp().sig_binding.insert(idx, ir_expr);
+
+        self.add_param(param.name(), idx);
+
+        if let Some(src) = &mut self.comp().src_info {
+            src.params.insert(idx, param.name());
+        }
+
+        idx
+    }
+
     fn time(&mut self, t: ast::Time) -> TimeIdx {
         let Some(event) = self.event_map.get(&t.event).copied() else {
             unreachable!("Event {} not found. Map:\n{}", t.event, self.event_map)
@@ -449,6 +470,9 @@ impl<'prog> BuildCtx<'prog> {
     fn sig(&mut self, sig: &ast::Signature) -> Vec<ir::Command> {
         for param in &sig.params {
             self.param(param.inner(), ir::ParamOwner::Sig);
+        }
+        for param in &sig.sig_bindings {
+            self.sig_bind(param.inner(), ir::ParamOwner::SigBinding);
         }
         let mut interface_signals: HashMap<_, _> = sig
             .interface_signals
