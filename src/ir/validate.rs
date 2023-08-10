@@ -207,9 +207,9 @@ impl<'a> Validate<'a> {
 
         // check (2) and (3)
         match owner {
-            ir::ParamOwner::Sig | ir::ParamOwner::Loop | ir::ParamOwner::SigBinding => {
-                /* Nothing to check */
-            }
+            ir::ParamOwner::Sig
+            | ir::ParamOwner::Loop
+            | ir::ParamOwner::SigBinding => { /* Nothing to check */ }
             ir::ParamOwner::Bundle(port_idx) => {
                 let ir::Port { live, .. } = &self.comp.get(*port_idx); // (2) this will panic if port not defined
 

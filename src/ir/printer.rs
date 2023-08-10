@@ -368,23 +368,29 @@ impl<'a> Printer<'a> {
     ) -> io::Result<()> {
         let param = self.ctx.get(idx);
         match param.owner {
-            ir::ParamOwner::Sig => {},
+            ir::ParamOwner::Sig => {}
             ir::ParamOwner::SigBinding => {
                 writeln!(
                     f,
                     "{:indent$}{idx} = {expr};{comment}",
                     "",
                     expr = c.sig_binding.get(&idx).unwrap(),
-                    comment = c.get(param.info).as_param().map_or("".to_string(), |p| format!(" // {}", p.name))
+                    comment = c
+                        .get(param.info)
+                        .as_param()
+                        .map_or("".to_string(), |p| format!(" // {}", p.name))
                 )?;
-            },
+            }
             ir::ParamOwner::Bundle(_) | ir::ParamOwner::Loop => {
                 writeln!(
                     f,
                     "{:indent$}{idx} = param {param};{comment}",
                     "",
                     param = self.ctx.display(idx),
-                    comment = c.get(param.info).as_param().map_or("".to_string(), |p| format!(" // {}", p.name))
+                    comment = c
+                        .get(param.info)
+                        .as_param()
+                        .map_or("".to_string(), |p| format!(" // {}", p.name))
                 )?;
             }
         }

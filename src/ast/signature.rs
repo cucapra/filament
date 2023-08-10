@@ -546,7 +546,10 @@ impl Display for Signature {
             write!(
                 f,
                 " with {{ {} }}",
-                self.sig_bindings.iter().map(|sb| format!("{sb}")).join("\n"),
+                self.sig_bindings
+                    .iter()
+                    .map(|sb| format!("{sb}"))
+                    .join("\n"),
             )?;
         }
         if !self.event_constraints.is_empty()
