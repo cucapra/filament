@@ -33,15 +33,6 @@ pub(super) fn interface_name(
     } else {
         format!("ev{}", idx.get())
     })
-
-    // Some(if comp.is_ext || comp.is_entry {
-    //     comp.src_info
-    //         .as_ref()
-    //         .map(|src| src.interface_ports.get(&idx).unwrap().to_string())
-    //         .unwrap()
-    // } else {
-    //     format!("ev{}", idx.get())
-    // })
 }
 
 /// Converts an [ir::ExprIdx] into a [calyx::Width].
@@ -65,15 +56,6 @@ pub(super) fn param_name(idx: ParamIdx, comp: &Component) -> String {
     } else {
         format!("pr{}", idx.get())
     }
-
-    // if comp.is_entry || comp.is_ext {
-    //     comp.src_info
-    //         .as_ref()
-    //         .map(|src| src.params.get(&idx).unwrap().to_string())
-    //         .unwrap()
-    // } else {
-    //     format!("pr{}", idx.get())
-    // }
 }
 
 /// Returns the name of an [ir::Port]
@@ -91,17 +73,6 @@ pub(super) fn port_name(
             } else {
                 format!("p{}", idx.get())
             }
-            // if comp.is_ext || comp.is_entry {
-            //     comp.src_info
-            //         .as_ref()
-            //         .unwrap()
-            //         .ports
-            //         .get(&idx)
-            //         .unwrap()
-            //         .to_string()
-            // } else {
-            //     format!("p{}", idx.get())
-            // }
         }
         ir::PortOwner::Inv { base, .. } => {
             base.apply(|p, c| port_name(p, ctx, c), ctx)
@@ -118,12 +89,6 @@ pub(super) fn comp_name(idx: CompIdx, ctx: &ir::Context) -> String {
     } else {
         format!("comp{}", idx.get())
     }
-
-    // ctx.get(idx)
-    //     .src_info
-    //     .as_ref()
-    //     .map(|src| src.name.to_string())
-    //     .unwrap_or_else(|| format!("comp{}", idx.get()))
 }
 
 /// Calculates the max states used for every fsm for the given component.
