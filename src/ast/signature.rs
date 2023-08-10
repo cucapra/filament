@@ -69,7 +69,7 @@ impl SigBind {
 
 impl std::fmt::Display for SigBind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "let {} = {};", self.param, self.value)
+        writeln!(f, "let #{} = {};", self.param, self.value)
     }
 }
 

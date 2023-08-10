@@ -256,6 +256,27 @@ impl<'prog> BuildCtx<'prog> {
         idx
     }
 
+    fn sig_bind(
+        &mut self,
+        param: &ast::SigBind,
+        owner: ir::ParamOwner,
+    ) -> BuildRes<ParamIdx> {
+        let info = self.comp().add(ir::Info::param(param.name(), param.pos()));
+
+        let ir_param = ir::Param::new(owner, info);
+        let ir_expr = self.expr(param.value())?;
+        let idx = self.comp().add(ir_param);
+        self.comp().sig_binding.insert(idx, ir_expr);
+
+        self.add_param(param.name(), idx);
+
+        if let Some(src) = &mut self.comp().src_info {
+            src.params.insert(idx, param.name());
+        }
+
+        Ok(idx)
+    }
+
     fn time(&mut self, t: ast::Time) -> BuildRes<TimeIdx> {
         let event = self.get_event(&t.event)?;
         let offset = self.expr(t.offset)?;
@@ -487,6 +508,9 @@ impl<'prog> BuildCtx<'prog> {
         for param in &sig.params {
             self.param(param.inner(), ir::ParamOwner::Sig);
         }
+        for param in &sig.sig_bindings {
+            self.sig_bind(param.inner(), ir::ParamOwner::SigBinding)?;
+        }
         let mut interface_signals: HashMap<_, _> = sig
             .interface_signals
             .iter()
@@ -563,7 +587,7 @@ impl<'prog> BuildCtx<'prog> {
             .flatten();
 
         Ok(iter::once(ir::Command::from(idx))
-            .chain(facts.into_iter())
+            .chain(facts)
             .collect_vec())
     }
 

@@ -216,6 +216,9 @@ impl MonoSig {
                 ir::ParamOwner::Sig => {
                     unreachable!("If a param is sig-owned, it should be resolved in the binding!")
                 }
+                ir::ParamOwner::SigBinding => {
+                    todo!()
+                }
             }
         }
     }
