@@ -182,4 +182,8 @@ impl Signature {
     pub fn ports(&self) -> &Vec<Loc<PortDef>> {
         &self.ports
     }
+
+    pub fn sig_bindings(&self) -> impl Iterator<Item = Loc<Id>> + '_ {
+        self.sig_bindings.iter().map(|p| &p.param).cloned()
+    }
 }
