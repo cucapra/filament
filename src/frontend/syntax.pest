@@ -40,6 +40,13 @@ constraints = {
   ("where" ~ (constraint ~ ("," ~ constraint)*))?
 }
 
+sig_bind = {
+  "let" ~ param_var ~ "=" ~ expr ~ ";"
+}
+sig_bindings = {
+  ("with {" ~ (sig_bind)* ~ "}")?
+}
+
 params = {
   ("[" ~ param_bind ~ ("," ~ param_bind)* ~ "]")?
 }
@@ -48,7 +55,7 @@ param_bind = {
   param_var
 }
 signature = {
-  identifier ~ params ~ abstract_var? ~ io ~ constraints
+  identifier ~ params ~ abstract_var? ~ io ~ sig_bindings ~ constraints
 }
 component = {
   "comp" ~ signature ~ "{" ~ command* ~ "}"
