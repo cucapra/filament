@@ -14,8 +14,6 @@ impl DumpInterface {
             .unwrap_or_else(|| panic!("No entrypoint found."));
         let main = ctx.get(entrypoint);
         let src_info = &main.src_info;
-        // .as_ref()
-        // .unwrap_or_else(|| panic!("No source info found for main."));
 
         // For an interface port like this:
         //      @interface[G, G+5] go_G
