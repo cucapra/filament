@@ -240,11 +240,6 @@ impl Component {
         &self,
         event: EventIdx,
     ) -> Option<(&EventIdx, &ast::Id)> {
-        // if let Some(info) = &self.src_info {
-        //     info.interface_ports.iter().find(|(ev, _)| **ev == event)
-        // } else {
-        //     None
-        // }
         self.src_info
             .interface_ports
             .iter()

@@ -224,9 +224,6 @@ impl<'prog> BuildCtx<'prog> {
         // only add information if this is a signature defined parameter
         if is_sig_param {
             // If the component is expecting interface information, add it.
-            // if let Some(src) = &mut self.comp().src_info {
-            //     src.params.insert(idx, param.name());
-            // }
             self.comp().src_info.params.insert(idx, param.name());
         }
 
@@ -275,14 +272,6 @@ impl<'prog> BuildCtx<'prog> {
         let idx = self.comp().add(e);
 
         // If the component is expecting interface information, add it
-        // if let Some(src) = &mut self.comp().src_info {
-        //     // add interface port if exists
-        //     if let Some((name, _)) = interface_port {
-        //         src.interface_ports.insert(idx, name);
-        //     }
-        //     // add event name (used by dump_interface)
-        //     src.events.insert(idx, *eb.event);
-        // }
         if let Some((name, _)) = interface_port {
             self.comp().src_info.interface_ports.insert(idx, name);
         }
@@ -380,10 +369,6 @@ impl<'prog> BuildCtx<'prog> {
 
         // If this is a signature port, try adding it to the component's external interface
         if is_sig_port {
-            // If the component is expecting interface information, add it.
-            // if let Some(src) = &mut self.comp().src_info {
-            //     src.ports.insert(idx, name.copy());
-            // }
             self.comp().src_info.ports.insert(idx, name.copy());
         }
 
