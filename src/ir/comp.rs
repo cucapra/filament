@@ -54,7 +54,7 @@ impl MutCtx<Component> for Context {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 /// Externally facing interface name information for components.
 pub struct InterfaceSrc {
     pub name: ast::Id,
@@ -112,7 +112,7 @@ pub struct Component {
     /// Is this the toplevel component in the context
     pub is_entry: bool,
     /// Externally facing interface information, used to preserve interface in compilation.
-    pub src_info: Option<InterfaceSrc>,
+    pub src_info: InterfaceSrc,
     /// unannotated ports associated with this component
     pub unannotated_ports: Box<Vec<(ast::Id, u64)>>,
 }
@@ -240,11 +240,15 @@ impl Component {
         &self,
         event: EventIdx,
     ) -> Option<(&EventIdx, &ast::Id)> {
-        if let Some(info) = &self.src_info {
-            info.interface_ports.iter().find(|(ev, _)| **ev == event)
-        } else {
-            None
-        }
+        // if let Some(info) = &self.src_info {
+        //     info.interface_ports.iter().find(|(ev, _)| **ev == event)
+        // } else {
+        //     None
+        // }
+        self.src_info
+            .interface_ports
+            .iter()
+            .find(|(ev, _)| **ev == event)
     }
 
     pub fn phantom_events(&self) -> impl Iterator<Item = EventIdx> + '_ {

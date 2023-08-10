@@ -29,13 +29,19 @@ pub(super) fn interface_name(
     }
 
     Some(if comp.is_ext || comp.is_entry {
-        comp.src_info
-            .as_ref()
-            .map(|src| src.interface_ports.get(&idx).unwrap().to_string())
-            .unwrap()
+        comp.src_info.interface_ports.get(&idx).unwrap().to_string()
     } else {
         format!("ev{}", idx.get())
     })
+
+    // Some(if comp.is_ext || comp.is_entry {
+    //     comp.src_info
+    //         .as_ref()
+    //         .map(|src| src.interface_ports.get(&idx).unwrap().to_string())
+    //         .unwrap()
+    // } else {
+    //     format!("ev{}", idx.get())
+    // })
 }
 
 /// Converts an [ir::ExprIdx] into a [calyx::Width].
@@ -55,13 +61,19 @@ pub(super) fn expr_width(idx: ExprIdx, comp: &Component) -> calyx::Width {
 /// Returns the name of an [ir::Param].
 pub(super) fn param_name(idx: ParamIdx, comp: &Component) -> String {
     if comp.is_entry || comp.is_ext {
-        comp.src_info
-            .as_ref()
-            .map(|src| src.params.get(&idx).unwrap().to_string())
-            .unwrap()
+        comp.src_info.params.get(&idx).unwrap().to_string()
     } else {
         format!("pr{}", idx.get())
     }
+
+    // if comp.is_entry || comp.is_ext {
+    //     comp.src_info
+    //         .as_ref()
+    //         .map(|src| src.params.get(&idx).unwrap().to_string())
+    //         .unwrap()
+    // } else {
+    //     format!("pr{}", idx.get())
+    // }
 }
 
 /// Returns the name of an [ir::Port]
@@ -75,16 +87,21 @@ pub(super) fn port_name(
     match &p.owner {
         ir::PortOwner::Sig { .. } => {
             if comp.is_ext || comp.is_entry {
-                comp.src_info
-                    .as_ref()
-                    .unwrap()
-                    .ports
-                    .get(&idx)
-                    .unwrap()
-                    .to_string()
+                comp.src_info.ports.get(&idx).unwrap().to_string()
             } else {
                 format!("p{}", idx.get())
             }
+            // if comp.is_ext || comp.is_entry {
+            //     comp.src_info
+            //         .as_ref()
+            //         .unwrap()
+            //         .ports
+            //         .get(&idx)
+            //         .unwrap()
+            //         .to_string()
+            // } else {
+            //     format!("p{}", idx.get())
+            // }
         }
         ir::PortOwner::Inv { base, .. } => {
             base.apply(|p, c| port_name(p, ctx, c), ctx)
@@ -97,7 +114,7 @@ pub(super) fn port_name(
 pub(super) fn comp_name(idx: CompIdx, ctx: &ir::Context) -> String {
     let comp = ctx.get(idx);
     if comp.is_entry || comp.is_ext {
-        comp.src_info.as_ref().unwrap().name.to_string()
+        comp.src_info.name.to_string()
     } else {
         format!("comp{}", idx.get())
     }

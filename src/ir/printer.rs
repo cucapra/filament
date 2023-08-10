@@ -260,7 +260,7 @@ impl<'a> Printer<'a> {
             write!(f, "ext ")?;
         };
         if comp.is_entry || comp.is_ext {
-            write!(f, "comp {}", comp.src_info.as_ref().unwrap().name)?;
+            write!(f, "comp {}", comp.src_info.name)?;
             if log::log_enabled!(log::Level::Debug) {
                 if let Some(idx) = idx {
                     write!(f, " {idx}")?;
