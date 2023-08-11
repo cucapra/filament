@@ -23,7 +23,7 @@ error: undefined event name: L
   ┌─ tests/errors/unbound-params.fil:7:15
   │
 7 │ ) -> () where #W+#N+L > L+1 {
-  │               ^^^^^^^^^^^^^^ event `L' is not defined in the signature
+  │               ^^^^^^^^^^^^^^ event `L' is not defined in the component
 
 error: undefined parameter name: N
   ┌─ tests/errors/unbound-params.fil:7:15
@@ -41,7 +41,7 @@ error: undefined event name: L
   ┌─ tests/errors/unbound-params.fil:8:26
   │
 8 │     a := new Add[#W, #J]<L+#N>(a);
-  │                          ^^^^ event `L' is not defined in the signature
+  │                          ^^^^ event `L' is not defined in the component
 
 error: undefined parameter name: N
   ┌─ tests/errors/unbound-params.fil:8:26
