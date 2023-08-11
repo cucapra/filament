@@ -148,6 +148,7 @@ impl<'prog> BuildCtx<'prog> {
     fn expr(&mut self, expr: ast::Expr) -> ExprIdx {
         match expr {
             ast::Expr::Abstract(p) => {
+                println!("trying to get param {p}");
                 let Some(pidx) = self.get_param(&p) else {
                     unreachable!("Parameter {p} not found")
                 };
@@ -243,6 +244,7 @@ impl<'prog> BuildCtx<'prog> {
         let ir_expr = self.expr(param.value());
         let idx = self.comp().add(ir_param);
         self.comp().sig_binding.insert(idx, ir_expr);
+        println!("inserted {idx} into comp's sig binding");
 
         self.add_param(param.name(), idx);
 

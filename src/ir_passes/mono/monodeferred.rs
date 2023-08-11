@@ -59,6 +59,17 @@ impl MonoDeferred<'_, '_> {
                     .param_map
                     .insert(Underlying::new(idx), Base::new(new_idx));
             }
+        } else {
+            for (param, expr) in &underlying.sig_binding {
+                let new_expr =
+                    monosig.expr(underlying, pass, Underlying::new(*expr));
+                let new_expr = monosig
+                    .base
+                    .bin(monosig.base.get(new_expr.idx()).clone())
+                    .as_concrete(&monosig.base)
+                    .unwrap();
+                monosig.binding.insert(Underlying::new(*param), new_expr);
+            }
         }
 
         if underlying.is_ext {

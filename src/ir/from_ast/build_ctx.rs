@@ -135,7 +135,7 @@ pub(super) struct BuildCtx<'prog> {
     param_map: ScopeMap<ir::Param>,
 
     /// Index for generating unique names
-    name_idx: u32,
+    pub name_idx: u32,
 }
 
 impl<'prog> BuildCtx<'prog> {
@@ -175,6 +175,7 @@ impl<'prog> BuildCtx<'prog> {
     /// Push a new scope level
     #[inline]
     fn push(&mut self) {
+        //println!("called push");
         self.param_map.push();
         self.event_map.push();
         self.port_map.push();
@@ -185,6 +186,7 @@ impl<'prog> BuildCtx<'prog> {
     /// Pop the last scope level
     #[inline]
     fn pop(&mut self) {
+        //println!("called pop");
         self.param_map.pop();
         self.event_map.pop();
         self.port_map.pop();
