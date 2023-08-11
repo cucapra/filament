@@ -28,11 +28,12 @@ pub(super) fn interface_name(
         return None;
     }
 
-    Some(if let Some(info) = &comp.src_info {
-        info.interface_ports.get(&idx).unwrap().to_string()
-    } else {
-        format!("ev{}", idx.get())
-    })
+    Some(
+        comp.src_info
+            .as_ref()
+            .map(|src| src.interface_ports.get(&idx).unwrap().to_string())
+            .unwrap_or_else(|| format!("ev{}", idx.get())),
+    )
 }
 
 /// Converts an [ir::ExprIdx] into a [calyx::Width].
@@ -51,11 +52,10 @@ pub(super) fn expr_width(idx: ExprIdx, comp: &Component) -> calyx::Width {
 
 /// Returns the name of an [ir::Param].
 pub(super) fn param_name(idx: ParamIdx, comp: &Component) -> String {
-    if let Some(info) = &comp.src_info {
-        info.params.get(&idx).unwrap().to_string()
-    } else {
-        format!("pr{}", idx.get())
-    }
+    comp.src_info
+        .as_ref()
+        .map(|src| src.params.get(&idx).unwrap().to_string())
+        .unwrap_or_else(|| format!("pr{}", idx.get()))
 }
 
 /// Returns the name of an [ir::Port]
@@ -67,13 +67,12 @@ pub(super) fn port_name(
     let p = comp.get(idx);
 
     match &p.owner {
-        ir::PortOwner::Sig { .. } => {
-            if let Some(info) = &comp.src_info {
-                info.ports.get(&idx).unwrap().to_string()
-            } else {
-                format!("p{}", idx.get())
-            }
-        }
+        ir::PortOwner::Sig { .. } => comp
+            .src_info
+            .as_ref()
+            .map(|src| src.ports.get(&idx).unwrap().to_string())
+            .unwrap_or_else(|| format!("p{}", idx.get())),
+
         ir::PortOwner::Inv { base, .. } => {
             base.apply(|p, c| port_name(p, ctx, c), ctx)
         }
@@ -83,12 +82,11 @@ pub(super) fn port_name(
 
 /// Returns the name of an [Component]
 pub(super) fn comp_name(idx: CompIdx, ctx: &ir::Context) -> String {
-    let comp = ctx.get(idx);
-    if let Some(info) = &comp.src_info {
-        info.name.to_string()
-    } else {
-        format!("comp{}", idx.get())
-    }
+    ctx.get(idx)
+        .src_info
+        .as_ref()
+        .map(|src| src.name.to_string())
+        .unwrap_or_else(|| format!("comp{}", idx.get()))
 }
 
 /// Calculates the max states used for every fsm for the given component.
