@@ -25,7 +25,10 @@ trait BaseCtx<T> {
     fn add(&mut self, val: T) -> Base<T>;
 }
 
-impl<T> BaseCtx<T> for BaseComp where ir::Component: Ctx<T> {
+impl<T> BaseCtx<T> for BaseComp
+where
+    ir::Component: Ctx<T>,
+{
     fn get(&self, k: Base<T>) -> &T {
         self.0.get(k.idx())
     }
