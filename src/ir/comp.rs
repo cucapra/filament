@@ -110,6 +110,7 @@ pub struct Component {
     /// Is this an external component
     pub is_ext: bool,
     /// Externally facing interface information, used to preserve interface in compilation.
+    /// Must be `Some` for toplevel components and externals.
     pub src_info: Option<InterfaceSrc>,
     /// unannotated ports associated with this component
     pub unannotated_ports: Box<Vec<(ast::Id, u64)>>,
