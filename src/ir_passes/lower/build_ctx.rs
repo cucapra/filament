@@ -2,11 +2,9 @@ use super::utils::{comp_name, interface_name, port_name};
 use super::Fsm;
 use crate::ir::DenseIndexInfo;
 use crate::ir::{self, Ctx};
-use crate::ir_passes::lower::utils::INTERFACE_PORTS;
-use calyx::structure;
 use calyx_ir::{self as calyx, RRC};
 use itertools::Itertools;
-use std::{collections::HashMap, iter, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 
 /// Bindings associated with the current compilation context
 #[derive(Default)]
@@ -245,99 +243,8 @@ impl<'a> BuildCtx<'a> {
             return;
         }
 
-        let ports: Vec<calyx::PortDef<u64>> = (0..states)
-            // create the state ports in the format `_state`.
-            .map(|n| {
-                (
-                    calyx::Id::from(format!("_{n}")),
-                    1,
-                    calyx::Direction::Output,
-                )
-                    .into()
-            })
-            // adds the `clk` and `reset` ports to the interface
-            .chain(INTERFACE_PORTS.iter().map(|(attr, pd)| calyx::PortDef {
-                name: pd.0.into(),
-                width: pd.1,
-                direction: pd.2.clone(),
-                attributes: vec![*attr].try_into().unwrap(),
-            }))
-            // adds a `go` port
-            .chain(iter::once(
-                (calyx::Id::from("go"), 1, calyx::Direction::Input).into(),
-            ))
-            .collect();
-
-        let mut comp = calyx::Component::new(
-            calyx::Id::from(format!("fsm_{}", states)),
-            ports,
-            false,
-            false,
-            None,
-        );
-
-        comp.attributes.insert(calyx::BoolAttr::NoInterface, 1);
-        let mut builder =
-            calyx::Builder::new(&mut comp, self.lib).not_generated();
-
-        // Add n-1 registers
-        let regs = (0..states - 1)
-            .map(|_| builder.add_primitive("r", "std_reg", &[1]))
-            .collect_vec();
-
-        // Constant signal
-        structure!(builder;
-            let signal_on = constant(1, 1);
-        );
-        // This component's interface
-        let this = builder.component.signature.borrow();
-
-        // _0 = go;
-        let assign = builder.build_assignment(
-            this.get("_0"),
-            this.get("go"),
-            calyx::Guard::True,
-        );
-        builder.component.continuous_assignments.push(assign);
-
-        // For each register, add the following assignments:
-        // rn.write_en = 1'd1;
-        // rn.in = r{n-1}.out;
-        // _n = rn.out;
-        for idx in 0..states - 1 {
-            let cell = regs[idx as usize].borrow();
-            let write_assign = if idx == 0 {
-                builder.build_assignment(
-                    cell.get("in"),
-                    this.get("go"),
-                    calyx::Guard::True,
-                )
-            } else {
-                let prev_cell = regs[(idx - 1) as usize].borrow();
-                builder.build_assignment(
-                    cell.get("in"),
-                    prev_cell.get("out"),
-                    calyx::Guard::True,
-                )
-            };
-            let enable = builder.build_assignment(
-                cell.get("write_en"),
-                signal_on.borrow().get("out"),
-                calyx::Guard::True,
-            );
-            let out = builder.build_assignment(
-                this.get(format!("_{}", idx + 1)),
-                cell.get("out"),
-                calyx::Guard::True,
-            );
-            builder.component.continuous_assignments.extend([
-                write_assign,
-                enable,
-                out,
-            ]);
-        }
-        drop(this);
-
-        self.binding.fsm_comps.insert(states, comp);
+        self.binding
+            .fsm_comps
+            .insert(states, Fsm::simple(states, self.lib));
     }
 }
