@@ -79,7 +79,6 @@ fn process_cmd(
         | ast::Command::Invoke(_)
         | ast::Command::Bundle(_)
         | ast::Command::Fact(_)
-        | ast::Command::PortLet(_)
         | ast::Command::ParamLet(_) => (),
     }
 }

@@ -66,11 +66,6 @@ where
     }
 
     #[inline]
-    fn port_let(&mut self, _: &ast::PortLet, _ctx: &CompBinding) -> Traverse {
-        Traverse::Continue(())
-    }
-
-    #[inline]
     fn param_let(&mut self, _: &ast::ParamLet, _ctx: &CompBinding) -> Traverse {
         Traverse::Continue(())
     }
@@ -119,7 +114,6 @@ where
             ast::Command::Connect(con) => self.connect(con, ctx),
             ast::Command::ForLoop(l) => self.forloop(l, ctx),
             ast::Command::If(i) => self.if_(i, ctx),
-            ast::Command::PortLet(l) => self.port_let(l, ctx),
             ast::Command::ParamLet(l) => self.param_let(l, ctx),
         }
     }

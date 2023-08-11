@@ -215,11 +215,6 @@ bundle = {
   "bundle" ~ identifier ~ "[" ~ expr ~ "]" ~ ":" ~ bundle_typ ~ ";"
 }
 
-port_let = {
-  "let" ~ identifier ~ ":" ~ interval_range ~ expr ~ ";"
-  | "let" ~ identifier ~ ":" ~ interval_range ~ expr ~ "=" ~ port ~ ";"
-}
-
 /// ===== Assumptions ==========
 implication = {
   (expr_cmp ~ "=>")? ~ expr_cmp
@@ -233,7 +228,7 @@ fact = {
 
 // ========== Commands ==========
 command = {
-  bundle | instance | invocation | connect | for_loop | if_stmt | fact | param_let | port_let
+  bundle | instance | invocation | connect | for_loop | if_stmt | fact | param_let
 }
 
 commands = { command* }

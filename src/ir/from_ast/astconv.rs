@@ -141,8 +141,7 @@ impl<'prog> BuildCtx<'prog> {
             | ast::Command::If(_)
             | ast::Command::Fact(_)
             | ast::Command::Connect(_)
-            | ast::Command::Bundle(_)
-            | ast::Command::PortLet(_) => {}
+            | ast::Command::Bundle(_) => {}
         }
     }
 
@@ -866,18 +865,6 @@ impl<'prog> BuildCtx<'prog> {
                 let then = self.commands(then);
                 let alt = self.commands(alt);
                 vec![ir::If { cond, then, alt }.into()]
-            }
-            ast::Command::PortLet(ast::PortLet {
-                name,
-                range,
-                bitwidth,
-            }) => {
-                self.port(
-                    ast::PortDef::port(name, range, bitwidth),
-                    ir::PortOwner::Local,
-                );
-
-                vec![]
             }
             ast::Command::Bundle(bun) => {
                 // Add the bundle to the current scope

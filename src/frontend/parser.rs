@@ -658,33 +658,6 @@ impl FilamentParser {
         ))
     }
 
-    fn port_let(
-        input: Node,
-    ) -> ParseResult<(ast::PortLet, Option<ast::Connect>)> {
-        let (name, range, bitwidth, assignment) = match_nodes!(
-            input.into_children();
-            [identifier(name), interval_range(range), expr(bitwidth)] => (name, range, bitwidth, None),
-            [identifier(name), interval_range(range), expr(bitwidth), port(assignment)] => (name, range, bitwidth, Some(assignment))
-        );
-
-        let port = ast::PortLet {
-            name: name.clone(),
-            range,
-            bitwidth,
-        };
-
-        Ok((
-            port,
-            assignment.map(|assignment| {
-                ast::Connect::new(
-                    Loc::new(ast::Port::this(name.clone()), name.pos()),
-                    assignment,
-                    None,
-                )
-            }),
-        ))
-    }
-
     fn implication(input: Node) -> ParseResult<ast::Implication<ast::Expr>> {
         Ok(match_nodes!(
             input.into_children();
@@ -727,7 +700,6 @@ impl FilamentParser {
             [if_stmt(if_)] => vec![if_.into()],
             [param_let(l)] => vec![l.into()],
             [fact(a)] => vec![a.into()],
-            [port_let((bl, con))] => vec![Some(bl.into()), con.map(ast::Command::Connect)].into_iter().flatten().collect(),
         ))
     }
 

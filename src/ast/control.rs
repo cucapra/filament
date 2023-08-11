@@ -166,13 +166,6 @@ pub enum Command {
     ParamLet(ParamLet),
     If(If),
     Bundle(Bundle),
-    PortLet(PortLet),
-}
-
-impl From<PortLet> for Command {
-    fn from(v: PortLet) -> Self {
-        Self::PortLet(v)
-    }
 }
 
 impl From<ParamLet> for Command {
@@ -221,7 +214,6 @@ impl Display for Command {
             Command::Bundle(b) => write!(f, "{b}"),
             Command::Fact(a) => write!(f, "{a}"),
             Command::ParamLet(l) => write!(f, "{l}"),
-            Command::PortLet(pl) => write!(f, "{pl}"),
         }
     }
 }
@@ -715,29 +707,5 @@ pub struct ParamLet {
 impl Display for ParamLet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "let {} = {}", self.name, self.expr)
-    }
-}
-
-/// A let-bound port
-#[derive(Clone)]
-pub struct PortLet {
-    pub name: Loc<Id>,
-    pub range: Loc<Range>,
-    pub bitwidth: Loc<Expr>,
-}
-
-impl PortLet {
-    pub fn access(&self) -> PortDef {
-        PortDef::port(
-            self.name.clone(),
-            self.range.clone(),
-            self.bitwidth.clone(),
-        )
-    }
-}
-
-impl Display for PortLet {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "let {}: {} {}", self.name, self.range, self.bitwidth)
     }
 }
