@@ -714,7 +714,7 @@ pub struct ParamLet {
 
 impl Display for ParamLet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "let {} = {};", self.name, self.expr)
+        write!(f, "let {} = {}", self.name, self.expr)
     }
 }
 
@@ -738,6 +738,6 @@ impl PortLet {
 
 impl Display for PortLet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "let {}: {} {};", self.name, self.range, self.bitwidth)
+        write!(f, "let {}: {} {}", self.name, self.range, self.bitwidth)
     }
 }

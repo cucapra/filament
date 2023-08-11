@@ -804,7 +804,22 @@ impl<'prog> BuildCtx<'prog> {
                     unreachable!("Parameter {name} should be declared")
                 };
                 let expr = self.expr(expr);
-                vec![ir::Let { param, expr }.into()]
+
+                let pexpr = self.comp().add(ir::Expr::Param(param));
+
+                let prop =
+                    self.comp().add(ir::Prop::Cmp(ir::CmpOp::eq(pexpr, expr)));
+
+                let info = self.comp().add(ir::Info::assert(
+                    ir::info::Reason::misc("Let-bound parameter", name.pos()),
+                ));
+
+                log::debug!("Assuming {}", prop);
+
+                vec![
+                    ir::Let { param, expr }.into(),
+                    self.comp().assume(prop, info).unwrap(),
+                ]
             }
             ast::Command::ForLoop(ast::ForLoop {
                 idx,

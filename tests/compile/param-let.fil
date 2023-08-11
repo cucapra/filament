@@ -4,11 +4,11 @@ comp Let[#WIDTH]<G: 1>(
     @[G, G+1] in: #WIDTH,
 ) -> (
     @[G, G+1] out: #WIDTH+1,
-) {
+) where
+#WIDTH > 0 {
     let #OUT = #WIDTH+1;
     extended := new ZeroExtend[#WIDTH, #OUT]<G>(in);
-    let ext: @[G, G+1] #OUT = extended.out;
-    out = ext;
+    out = extended.out;
 }
 
 comp main<G: 1>(
@@ -17,4 +17,5 @@ comp main<G: 1>(
     @[G, G+1] out: 33,
 ) {
     lp := new Let[32]<G>(in);
+    out = lp.out;
 }

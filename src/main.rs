@@ -38,6 +38,10 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
 
     let mut ir = ir::transform(ns);
 
+    if opts.dump_after.contains(&"ast-conv".to_string()) {
+        ir::Printer::context(&ir, &mut std::io::stdout()).unwrap()
+    }
+
     pass_pipeline! {opts, ir;
         ip::BuildDomination,
         ip::TypeCheck,

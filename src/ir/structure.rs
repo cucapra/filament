@@ -279,7 +279,7 @@ pub enum ParamOwner {
     Bundle(PortIdx),
     /// Loop indexing parameter
     Loop,
-    /// A let-bound parameter`
+    /// A let-bound parameter
     Let,
 }
 
