@@ -28,8 +28,8 @@ pub(super) fn interface_name(
         return None;
     }
 
-    Some(if comp.is_ext || comp.is_entry {
-        comp.src_info.interface_ports.get(&idx).unwrap().to_string()
+    Some(if let Some(info) = &comp.src_info {
+        info.interface_ports.get(&idx).unwrap().to_string()
     } else {
         format!("ev{}", idx.get())
     })
@@ -51,8 +51,8 @@ pub(super) fn expr_width(idx: ExprIdx, comp: &Component) -> calyx::Width {
 
 /// Returns the name of an [ir::Param].
 pub(super) fn param_name(idx: ParamIdx, comp: &Component) -> String {
-    if comp.is_entry || comp.is_ext {
-        comp.src_info.params.get(&idx).unwrap().to_string()
+    if let Some(info) = &comp.src_info {
+        info.params.get(&idx).unwrap().to_string()
     } else {
         format!("pr{}", idx.get())
     }
@@ -68,8 +68,8 @@ pub(super) fn port_name(
 
     match &p.owner {
         ir::PortOwner::Sig { .. } => {
-            if comp.is_ext || comp.is_entry {
-                comp.src_info.ports.get(&idx).unwrap().to_string()
+            if let Some(info) = &comp.src_info {
+                info.ports.get(&idx).unwrap().to_string()
             } else {
                 format!("p{}", idx.get())
             }
@@ -84,8 +84,8 @@ pub(super) fn port_name(
 /// Returns the name of an [Component]
 pub(super) fn comp_name(idx: CompIdx, ctx: &ir::Context) -> String {
     let comp = ctx.get(idx);
-    if comp.is_entry || comp.is_ext {
-        comp.src_info.name.to_string()
+    if let Some(info) = &comp.src_info {
+        info.name.to_string()
     } else {
         format!("comp{}", idx.get())
     }

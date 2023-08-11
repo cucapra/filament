@@ -112,7 +112,7 @@ pub struct Component {
     /// Is this the toplevel component in the context
     pub is_entry: bool,
     /// Externally facing interface information, used to preserve interface in compilation.
-    pub src_info: InterfaceSrc,
+    pub src_info: Option<InterfaceSrc>,
     /// unannotated ports associated with this component
     pub unannotated_ports: Box<Vec<(ast::Id, u64)>>,
 }
@@ -240,16 +240,17 @@ impl Component {
         &self,
         event: EventIdx,
     ) -> Option<(&EventIdx, &ast::Id)> {
-        self.src_info
-            .interface_ports
-            .iter()
-            .find(|(ev, _)| **ev == event)
+        if let Some(info) = &self.src_info {
+            info.interface_ports.iter().find(|(ev, _)| **ev == event)
+        } else {
+            None
+        }
     }
 
     pub fn phantom_events(&self) -> impl Iterator<Item = EventIdx> + '_ {
         self.events()
             .idx_iter()
-            .filter(|event| self.get_interface(*event).is_none())
+            .filter(|idx| !self.get(*idx).has_interface)
     }
 }
 

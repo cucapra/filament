@@ -224,7 +224,9 @@ impl<'prog> BuildCtx<'prog> {
         // only add information if this is a signature defined parameter
         if is_sig_param {
             // If the component is expecting interface information, add it.
-            self.comp().src_info.params.insert(idx, param.name());
+            if let Some(src) = &mut self.comp().src_info {
+                src.params.insert(idx, param.name());
+            }
         }
 
         idx
@@ -272,10 +274,14 @@ impl<'prog> BuildCtx<'prog> {
         let idx = self.comp().add(e);
 
         // If the component is expecting interface information, add it
-        if let Some((name, _)) = interface_port {
-            self.comp().src_info.interface_ports.insert(idx, name);
+        if let Some(src) = &mut self.comp().src_info {
+            // add interface port if exists
+            if let Some((name, _)) = interface_port {
+                src.interface_ports.insert(idx, name);
+            }
+            // add event name (used by dump_interface)
+            src.events.insert(idx, *eb.event);
         }
-        self.comp().src_info.events.insert(idx, *eb.event);
 
         log::trace!("Added event {} as {idx}", eb.event);
         self.event_map.insert(*eb.event, idx);
@@ -369,7 +375,9 @@ impl<'prog> BuildCtx<'prog> {
 
         // If this is a signature port, try adding it to the component's external interface
         if is_sig_port {
-            self.comp().src_info.ports.insert(idx, name.copy());
+            if let Some(src) = &mut self.comp().src_info {
+                src.ports.insert(idx, name.copy());
+            }
         }
 
         // Add the port to the current scope
@@ -896,10 +904,9 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
                 &sig_map,
             );
             // enable source information saving if this is main or an external.
-            if body.is_some() || body.is_none() || Some(idx) == ctx.entrypoint {
+            if body.is_none() || Some(idx) == ctx.entrypoint {
                 builder.comp().src_info =
-                    // Some(InterfaceSrc::new(sig.name.copy()))
-                    InterfaceSrc::new(sig.name.copy())
+                    Some(InterfaceSrc::new(sig.name.copy()))
             }
             // add the file to the externals map if it exists
             if let Some(file) = file {

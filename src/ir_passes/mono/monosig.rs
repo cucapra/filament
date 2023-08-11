@@ -2,10 +2,7 @@ use super::{
     utils::{Base, Underlying},
     Monomorphize,
 };
-use crate::{
-    ast,
-    ir::{self, Ctx, Foreign, InterfaceSrc, MutCtx},
-};
+use crate::ir::{self, Ctx, Foreign, MutCtx};
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -407,47 +404,64 @@ impl MonoSig {
     pub fn interface(
         &mut self,
         underlying: &ir::Component,
-        interface: &ir::InterfaceSrc,
+        interface: &Option<ir::InterfaceSrc>,
     ) {
-        let InterfaceSrc {
-            name,
-            ports,
-            params,
-            events,
-            interface_ports,
-        } = interface.clone();
-        let params = if underlying.is_ext {
-            params
-                .into_iter()
-                .map(|(p, id)| {
-                    (self.param_map.get(&Underlying::new(p)).unwrap().idx(), id)
-                })
-                .collect()
-        } else {
-            params
-        };
+        self.base.src_info = interface.clone().map(
+            |ir::InterfaceSrc {
+                 name,
+                 ports,
+                 interface_ports,
+                 params,
+                 events,
+             }| {
+                let params = if underlying.is_ext {
+                    params
+                        .into_iter()
+                        .map(|(p, id)| {
+                            (
+                                self.param_map
+                                    .get(&Underlying::new(p))
+                                    .unwrap()
+                                    .idx(),
+                                id,
+                            )
+                        })
+                        .collect()
+                } else {
+                    params
+                };
 
-        let interface_ports: HashMap<ir::EventIdx, ast::Id> = interface_ports
-            .into_iter()
-            .map(|(ev, id)| {
-                (self.event_map.get(&Underlying::new(ev)).unwrap().idx(), id)
-            })
-            .collect();
-
-        let events: HashMap<ir::EventIdx, ast::Id> = events
-            .into_iter()
-            .map(|(ev, id)| {
-                (self.event_map.get(&Underlying::new(ev)).unwrap().idx(), id)
-            })
-            .collect();
-
-        self.base.src_info = InterfaceSrc {
-            name,
-            ports,
-            params,
-            interface_ports,
-            events,
-        };
+                ir::InterfaceSrc {
+                    name,
+                    ports,
+                    interface_ports: interface_ports
+                        .into_iter()
+                        .map(|(ev, id)| {
+                            (
+                                self.event_map
+                                    .get(&Underlying::new(ev))
+                                    .unwrap()
+                                    .idx(),
+                                id,
+                            )
+                        })
+                        .collect(),
+                    params,
+                    events: events
+                        .into_iter()
+                        .map(|(ev, id)| {
+                            (
+                                self.event_map
+                                    .get(&Underlying::new(ev))
+                                    .unwrap()
+                                    .idx(),
+                                id,
+                            )
+                        })
+                        .collect(),
+                }
+            },
+        );
     }
 
     /// Monomorphize the event (owned by self.underlying) and add it to `self.base`, and return the corresponding index
