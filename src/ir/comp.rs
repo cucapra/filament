@@ -22,8 +22,8 @@ impl Context {
     }
 
     /// Add a new component to the context
-    pub fn comp(&mut self, is_ext: bool, is_entry: bool) -> CompIdx {
-        let comp = Component::new(is_ext, is_entry);
+    pub fn comp(&mut self, is_ext: bool) -> CompIdx {
+        let comp = Component::new(is_ext);
         self.add(comp)
     }
 
@@ -109,8 +109,6 @@ pub struct Component {
     info: IndexStore<Info>,
     /// Is this an external component
     pub is_ext: bool,
-    /// Is this the toplevel component in the context
-    pub is_entry: bool,
     /// Externally facing interface information, used to preserve interface in compilation.
     pub src_info: Option<InterfaceSrc>,
     /// unannotated ports associated with this component
@@ -118,10 +116,9 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn new(is_ext: bool, is_entry: bool) -> Self {
+    pub fn new(is_ext: bool) -> Self {
         let mut comp = Self {
             is_ext,
-            is_entry,
             ..Default::default()
         };
         // Allocate numbers and props now so we get reasonable indices.

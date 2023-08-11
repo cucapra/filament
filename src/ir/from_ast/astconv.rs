@@ -896,13 +896,8 @@ pub fn transform(ns: ast::Namespace) -> ir::Context {
     let (mut builders, sig_map): (Vec<_>, SigMap) = comps
         .map(|(idx, (file, sig, body))| {
             let idx = ir::CompIdx::new(idx);
-            let mut builder = BuildCtx::new(
-                ir::Component::new(
-                    body.is_none(),
-                    *sig.name.inner() == ast::Id::from(ns.toplevel.clone()),
-                ),
-                &sig_map,
-            );
+            let mut builder =
+                BuildCtx::new(ir::Component::new(body.is_none()), &sig_map);
             // enable source information saving if this is main or an external.
             if body.is_none() || Some(idx) == ctx.entrypoint {
                 builder.comp().src_info =
