@@ -54,7 +54,7 @@ impl MutCtx<Component> for Context {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 /// Externally facing interface name information for components.
 pub struct InterfaceSrc {
     pub name: ast::Id,
