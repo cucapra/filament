@@ -170,17 +170,20 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             self.pass,
             Underlying::new(*end),
         );
+
         // convert to concrete value
         let end = self
             .monosig
             .base
             .bin(self.monosig.base.get(end.idx()).clone());
+
         // generate start expression
         let start = self.monosig.expr(
             self.underlying,
             self.pass,
             Underlying::new(*start),
         );
+
         // convert to concrete value
         let start = self
             .monosig
@@ -227,11 +230,17 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         while i < bound {
             let index = Underlying::new(*index);
             self.monosig.binding.insert(index, i);
+            let mut nlets: u32 = 0; // count p_lets as they generate assignments we have to pop later.
             for cmd in body.iter() {
+                nlets += matches!(&cmd, ir::Command::Let(_)) as u32;
                 let cmd = self.command(cmd);
                 self.monosig.base.cmds.extend(cmd);
             }
-            self.monosig.binding.pop();
+            for _ in 0..nlets {
+                // pop the let assignments
+                self.monosig.binding.pop();
+            }
+            self.monosig.binding.pop(); // pop the index
             i += 1;
         }
     }

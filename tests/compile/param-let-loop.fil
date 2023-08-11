@@ -1,0 +1,25 @@
+import "primitives/core.fil";
+
+comp Let[#WIDTH]<G: 1>(
+    @[G, G+1] in: #WIDTH,
+) -> (
+    @[G, G+1] out: #WIDTH,
+) where
+#WIDTH > 0 {
+    bundle f[6]: for<#a> @[G, G+1] #WIDTH;
+    f{0} = in;
+    for #i in 0..5 {
+        let #next = #i + 1;
+        f{#next} = f{#i};
+    }
+    out = f{5};
+}
+
+comp main<G: 1>(
+    @[G, G+1] in: 32
+) -> (
+    @[G, G+1] out: 32
+) {
+    lp := new Let[32]<G>(in);
+    out = lp.out;
+}
