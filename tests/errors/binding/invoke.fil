@@ -1,0 +1,3 @@
+comp main<G:1>() -> (@[G, G+1] out: 32) {
+    out = add.out;
+}
