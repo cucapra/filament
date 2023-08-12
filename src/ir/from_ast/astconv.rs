@@ -1,7 +1,9 @@
 //! Convert the frontend AST to the IR.
 use super::build_ctx::InvPort;
 use super::{BuildCtx, Sig, SigMap};
+use crate::ast::Id;
 use crate::diagnostics;
+use crate::errors::Error;
 use crate::ir::{
     Cmp, Ctx, EventIdx, ExprIdx, InterfaceSrc, MutCtx, ParamIdx, PortIdx,
     PropIdx, TimeIdx,
@@ -40,7 +42,8 @@ impl<'prog> BuildCtx<'prog> {
         let binding = self.param_binding(
             comp.raw_params.clone(),
             bindings.iter().map(|e| e.inner()).cloned().collect_vec(),
-        );
+            component.clone(),
+        )?;
         let inst = ir::Instance {
             comp: comp.idx,
             params: binding
@@ -600,17 +603,31 @@ impl<'prog> BuildCtx<'prog> {
     /// arguments.
     /// Fills in the missing arguments with default values
     pub fn param_binding(
-        &self,
+        &mut self,
         params: impl IntoIterator<Item = ast::ParamBind>,
         args: impl IntoIterator<Item = ast::Expr>,
-    ) -> Binding<ast::Expr> {
+        comp: ast::Loc<Id>,
+    ) -> BuildRes<Binding<ast::Expr>> {
         let args = args.into_iter().collect_vec();
         let params = params.into_iter().collect_vec();
-        assert!(
-            params.iter().take_while(|ev| ev.default.is_none()).count()
-                <= args.len(),
-            "Insuffient params for component invocation.",
-        );
+        let min_args =
+            params.iter().take_while(|ev| ev.default.is_none()).count();
+        let arg_len = args.len();
+        if min_args > arg_len {
+            let err = Error::malformed(
+                format!(
+                    "`{}' requires at least {min_args} parameters but {arg_len} were provided",
+                    comp.inner(),
+                ),
+            );
+            let err = err.add_note(
+                self.diag().add_info(format!(
+                    "`{}' requires at least {min_args} parameters but {arg_len} were provided",
+                    comp.inner()
+                ), comp.pos()));
+            self.diag().add_error(err);
+            return Err(std::mem::take(self.diag()));
+        }
 
         let mut partial_map = Binding::new(
             params.iter().map(|pb| pb.name()).zip(args.iter().cloned()),
@@ -627,7 +644,7 @@ impl<'prog> BuildCtx<'prog> {
             .collect();
 
         partial_map.extend(remaining);
-        partial_map
+        Ok(partial_map)
     }
 
     /// This function is called during the second pass of the conversion and does the following:

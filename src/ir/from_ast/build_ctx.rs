@@ -78,6 +78,10 @@ impl<'prog> BuildCtx<'prog> {
         }
     }
 
+    pub fn diag(&mut self) -> &mut diagnostics::Diagnostics {
+        &mut self.diag
+    }
+
     #[inline]
     /// Get a mutable reference to current component
     pub fn comp(&mut self) -> &mut ir::Component {
