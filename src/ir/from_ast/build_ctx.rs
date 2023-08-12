@@ -1,93 +1,10 @@
-use super::ScopeMap;
-use crate::ast::{self, Id, Signature};
-use crate::ir::{
-    self, CompIdx, Component, Ctx, DenseIndexInfo, EventIdx, PortIdx,
-};
-use crate::utils;
-use std::collections::HashMap;
+use super::sig_map::Sig;
+use super::{BuildRes, ScopeMap, SigMap};
+use crate::ast::{self, Id};
+use crate::errors::Error;
+use crate::ir::{self, Ctx, DenseIndexInfo, PortIdx};
+use crate::{diagnostics, utils};
 use std::rc::Rc;
-
-#[derive(Clone)]
-/// The signature of component.
-///
-/// A signature defines the ports which are added to the component instantiating
-/// the signature.
-pub struct Sig {
-    pub idx: CompIdx,
-    pub events: Vec<EventIdx>,
-    pub inputs: Vec<PortIdx>,
-    pub outputs: Vec<PortIdx>,
-    pub raw_params: Vec<ast::ParamBind>,
-    pub raw_events: Vec<ast::EventBind>,
-    pub raw_inputs: Vec<ast::Loc<ast::PortDef>>,
-    pub raw_outputs: Vec<ast::PortDef>,
-    pub param_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Expr>>>,
-    pub event_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Time>>>,
-}
-
-impl Sig {
-    pub fn new(idx: CompIdx, comp: &Component, sig: &Signature) -> Self {
-        Self {
-            idx,
-            events: comp.events().idx_iter().collect(),
-            inputs: comp.inputs().map(|(idx, _)| idx).collect(),
-            outputs: comp.outputs().map(|(idx, _)| idx).collect(),
-            raw_params: sig.params.iter().map(|p| p.clone().take()).collect(),
-            raw_inputs: sig.inputs().cloned().collect(),
-            raw_outputs: sig.outputs().map(|p| p.clone().take()).collect(),
-            raw_events: sig.events.iter().map(|e| e.clone().take()).collect(),
-            param_cons: sig.param_constraints.clone(),
-            event_cons: sig.event_constraints.clone(),
-        }
-    }
-}
-
-#[derive(Default)]
-/// Track the defined signatures in the current scope.
-/// Mapping from names of component to [Sig].
-pub struct SigMap {
-    map: HashMap<Id, Sig>,
-    rev_map: HashMap<CompIdx, Id>,
-}
-
-impl SigMap {
-    pub fn get(&self, id: &Id) -> Option<&Sig> {
-        self.map.get(id)
-    }
-
-    pub fn get_idx(&self, idx: CompIdx) -> Option<&Sig> {
-        self.rev_map.get(&idx).and_then(|id| self.get(id))
-    }
-}
-
-impl std::ops::Index<&Id> for SigMap {
-    type Output = Sig;
-
-    fn index(&self, id: &Id) -> &Self::Output {
-        self.get(id).unwrap()
-    }
-}
-
-impl FromIterator<(Id, Sig)> for SigMap {
-    fn from_iter<T: IntoIterator<Item = (Id, Sig)>>(iter: T) -> Self {
-        let mut default = Self::default();
-
-        for (id, sig) in iter.into_iter() {
-            default.rev_map.insert(sig.idx, id);
-            default.map.insert(id, sig);
-        }
-
-        default
-    }
-}
-
-impl std::iter::Extend<(Id, Sig)> for SigMap {
-    fn extend<I: IntoIterator<Item = (Id, Sig)>>(&mut self, iter: I) {
-        let sm: SigMap = iter.into_iter().collect();
-        self.rev_map.extend(sm.rev_map);
-        self.map.extend(sm.map);
-    }
-}
 
 #[derive(Eq, PartialEq, Hash, Clone, Debug)]
 /// A custom struct used to index ports
@@ -117,19 +34,26 @@ impl std::fmt::Display for InvPort {
 
 /// Context used while building the IR.
 pub(super) struct BuildCtx<'prog> {
-    comp: ir::Component,
-    pub sigs: &'prog SigMap,
-
     // Mapping from names of instance to (<parameter bindings>, <component name>).
     // We keep around the parameter bindings as [ast::Expr] because we need to resolve
     // port definition in invokes using them.
-    pub inst_to_sig:
-        DenseIndexInfo<ir::Instance, (Rc<utils::Binding<ast::Expr>>, Id)>,
+    pub inst_to_sig: DenseIndexInfo<
+        ir::Instance,
+        (Rc<utils::Binding<ast::Expr>>, ast::Loc<Id>),
+    >,
+
+    /// The current component we're building up
+    comp: ir::Component,
+
+    /// Current diagnostics context
+    diag: diagnostics::Diagnostics,
+
+    /// Map of currently defined signatures
+    sigs: &'prog SigMap,
 
     // Mapping from names to IR nodes.
-    pub event_map: ScopeMap<ir::Event>,
-    pub inst_map: ScopeMap<ir::Instance>,
-
+    event_map: ScopeMap<ir::Event>,
+    inst_map: ScopeMap<ir::Instance>,
     inv_map: ScopeMap<ir::Invoke>,
     port_map: ScopeMap<ir::Port, InvPort>,
     param_map: ScopeMap<ir::Param>,
@@ -143,6 +67,7 @@ impl<'prog> BuildCtx<'prog> {
         Self {
             comp,
             sigs,
+            diag: diagnostics::Diagnostics::default(),
             name_idx: 0,
             param_map: ScopeMap::new(),
             event_map: ScopeMap::new(),
@@ -192,15 +117,42 @@ impl<'prog> BuildCtx<'prog> {
         self.inv_map.pop();
     }
 
-    /// Perform some action within a new scope
-    pub fn with_scope<T, F>(&mut self, f: F) -> T
+    pub fn try_with_scope<T, F>(&mut self, f: F) -> BuildRes<T>
     where
-        F: FnOnce(&mut Self) -> T,
+        F: FnOnce(&mut Self) -> BuildRes<T>,
     {
         self.push();
         let out = f(self);
         self.pop();
         out
+    }
+
+    /// Get the signature if bound or return an error
+    pub fn get_sig(&mut self, id: &ast::Loc<Id>) -> BuildRes<&'prog Sig> {
+        let name = id.inner();
+        match self.sigs.get(name) {
+            Some(s) => Ok(s),
+            None => {
+                let diag = &mut self.diag;
+                let undef = Error::undefined(*name, "signature").add_note(
+                    diag.add_info(
+                        format!("signature `{id}' is not defined"),
+                        id.pos(),
+                    ),
+                );
+                diag.add_error(undef);
+                Err(())
+            }
+        }
+    }
+
+    /// Get a signature from the component index and panic if its not found.
+    pub fn sig_from_idx(&self, idx: ir::CompIdx) -> &Sig {
+        self.sigs.get_idx(idx).unwrap()
+    }
+
+    pub fn set_sig_map(&mut self, sigs: &'prog SigMap) {
+        self.sigs = sigs;
     }
 
     pub fn get_param(&mut self, name: &Id) -> Option<ir::ParamIdx> {
@@ -256,17 +208,67 @@ impl<'prog> BuildCtx<'prog> {
         unreachable!("{msg}")
     }
 
+    pub fn add_inst(&mut self, name: Id, inst: ir::InstIdx) {
+        self.inst_map.insert(name, inst);
+    }
+
+    pub fn get_inst(&mut self, id: &ast::Loc<Id>) -> BuildRes<ir::InstIdx> {
+        let name = *id.inner();
+        match self.inst_map.get(&name) {
+            Some(idx) => Ok(*idx),
+            None => {
+                let diag = &mut self.diag;
+                let undef =
+                    Error::undefined(name, "instance").add_note(diag.add_info(
+                        format!("instance `{name}' is not defined"),
+                        id.pos(),
+                    ));
+                diag.add_error(undef);
+                Err(())
+            }
+        }
+    }
+
     pub fn add_inv(&mut self, name: Id, inv: ir::InvIdx) {
         self.inv_map.insert(name, inv);
     }
 
-    pub fn get_inv(&mut self, name: Id) -> ir::InvIdx {
-        *self.inv_map.get(&name).unwrap_or_else(|| {
-            unreachable!(
-                "Invoke `{name}' not found. Component:\n{comp}",
-                name = name,
-                comp = ir::Printer::comp_str(&self.comp)
-            )
-        })
+    pub fn get_inv(&mut self, id: &ast::Loc<Id>) -> BuildRes<ir::InvIdx> {
+        let name = *id.inner();
+        match self.inv_map.get(&name) {
+            Some(idx) => Ok(*idx),
+            None => {
+                let diag = &mut self.diag;
+                let undef = Error::undefined(name, "invocation").add_note(
+                    diag.add_info(
+                        format!("invocation `{name}' is not defined"),
+                        id.pos(),
+                    ),
+                );
+                diag.add_error(undef);
+                Err(())
+            }
+        }
+    }
+
+    pub fn add_event(&mut self, name: Id, event: ir::EventIdx) {
+        self.event_map.insert(name, event);
+    }
+
+    pub fn get_event(&mut self, id: &Id) -> BuildRes<ir::EventIdx> {
+        let name = *id;
+        match self.event_map.get(&name) {
+            Some(idx) => Ok(*idx),
+            None => {
+                let diag = &mut self.diag;
+                let undef = Error::undefined(name, "event");
+                // .add_note(diag.add_info(
+                //     format!("event `{name}' is not defined"),
+                //     id.pos(),
+                // ));
+                diag.add_error(undef);
+                Err(())
+            }
+        }
     }
 }
