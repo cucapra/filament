@@ -2,7 +2,7 @@ import "primitives/state.fil";
 import "primitives/core.fil";
 
 comp Window[#N, #W]<G: 1>(
-     in: [G, G+1] #W,
+    in: [G, G+1] #W,
 ) -> (
     out[#N+1]: for<#k> [G, G+1] #W
 ) {
@@ -21,7 +21,7 @@ comp Window[#N, #W]<G: 1>(
 comp CombReduceTree[#N, #W]<G: 1>(
     in[#N]: for<#k> [G, G+1] #W
 ) -> (
-     out: [G, G+1] #W
+    out: [G, G+1] #W
 ) where #W > 0 {
     // Track the output from each adder
     bundle o[#N]: for<#k> [G, G+1] #W;
@@ -34,16 +34,16 @@ comp CombReduceTree[#N, #W]<G: 1>(
 }
 
 comp MovingSum[#N, #W]<G: 1>(
-     in: [G, G+1] #W
+    in: [G, G+1] #W
 ) -> (
-     out: [G, G+1] #W
+    out: [G, G+1] #W
 ) where #W > 0 {
     w := new Window[#N, #W]<G>(in);
     r := new CombReduceTree[#N, #W]<G>(w.out{1..#N+1});
     out = r.out;
 }
 
-comp main<G: 1>( out5: [G, G+1] in: 32) -> ([G, G+1] out2: 32,  out3: [G, G+1] 32, @[G, G+1] 32) {
+comp main<G: 1>(in: [G, G+1] 32) -> (out2: [G, G+1] 32, out3: [G, G+1]  32, out5: [G, G+1] 32) {
     avg2 := new MovingSum[2, 32]<G>(in);
     out2 = avg2.out;
 
