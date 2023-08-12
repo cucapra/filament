@@ -46,7 +46,7 @@ impl<'prog> BuildCtx<'prog> {
             params: binding
                 .iter()
                 .map(|(_, b)| self.expr(b.clone()))
-                .collect_vec()
+                .collect::<BuildRes<Vec<_>>>()?
                 .into_boxed_slice(),
             info: self.comp().add(ir::Info::instance(
                 name.copy(),
@@ -148,12 +148,10 @@ impl<'prog> BuildCtx<'prog> {
 }
 
 impl<'prog> BuildCtx<'prog> {
-    fn expr(&mut self, expr: ast::Expr) -> ExprIdx {
-        match expr {
+    fn expr(&mut self, expr: ast::Expr) -> BuildRes<ExprIdx> {
+        let expr = match expr {
             ast::Expr::Abstract(p) => {
-                let Some(pidx) = self.get_param(&p) else {
-                    unreachable!("Parameter {p} not found")
-                };
+                let pidx = self.get_param(&p)?;
                 self.comp().add(ir::Expr::Param(pidx))
             }
             ast::Expr::Concrete(n) => {
@@ -161,31 +159,35 @@ impl<'prog> BuildCtx<'prog> {
                 self.comp().add(e)
             }
             ast::Expr::Op { op, left, right } => {
-                let lhs = self.expr(*left);
-                let rhs = self.expr(*right);
+                let lhs = self.expr(*left)?;
+                let rhs = self.expr(*right)?;
                 // The .add call simplifies the expression if possible
                 self.comp().add(ir::Expr::Bin { op, lhs, rhs })
             }
             ast::Expr::App { func, arg } => {
-                let arg = self.expr(*arg);
+                let arg = self.expr(*arg)?;
                 // The .add call simplifies the expression if possible
                 self.comp().add(ir::Expr::Fn {
                     op: func,
                     args: vec![arg],
                 })
             }
-        }
+        };
+        Ok(expr)
     }
 
-    fn expr_cons(&mut self, cons: ast::OrderConstraint<ast::Expr>) -> PropIdx {
-        let lhs = self.expr(cons.left);
-        let rhs = self.expr(cons.right);
+    fn expr_cons(
+        &mut self,
+        cons: ast::OrderConstraint<ast::Expr>,
+    ) -> BuildRes<PropIdx> {
+        let lhs = self.expr(cons.left)?;
+        let rhs = self.expr(cons.right)?;
         let op = match cons.op {
             ast::OrderOp::Gt => Cmp::Gt,
             ast::OrderOp::Gte => Cmp::Gte,
             ast::OrderOp::Eq => Cmp::Eq,
         };
-        self.comp().add(ir::Prop::Cmp(ir::CmpOp { lhs, op, rhs }))
+        Ok(self.comp().add(ir::Prop::Cmp(ir::CmpOp { lhs, op, rhs })))
     }
 
     fn event_cons(
@@ -204,13 +206,16 @@ impl<'prog> BuildCtx<'prog> {
             .add(ir::Prop::TimeCmp(ir::CmpOp { lhs, op, rhs })))
     }
 
-    fn implication(&mut self, i: ast::Implication<ast::Expr>) -> PropIdx {
-        let cons = self.expr_cons(i.cons);
+    fn implication(
+        &mut self,
+        i: ast::Implication<ast::Expr>,
+    ) -> BuildRes<PropIdx> {
+        let cons = self.expr_cons(i.cons)?;
         if let Some(ante) = i.guard {
-            let ante = self.expr_cons(ante);
-            ante.implies(cons, self.comp())
+            let ante = self.expr_cons(ante)?;
+            Ok(ante.implies(cons, self.comp()))
         } else {
-            cons
+            Ok(cons)
         }
     }
 
@@ -241,13 +246,13 @@ impl<'prog> BuildCtx<'prog> {
 
     fn time(&mut self, t: ast::Time) -> BuildRes<TimeIdx> {
         let event = self.get_event(&t.event)?;
-        let offset = self.expr(t.offset);
+        let offset = self.expr(t.offset)?;
         Ok(self.comp().add(ir::Time { event, offset }))
     }
 
     fn timesub(&mut self, ts: ast::TimeSub) -> BuildRes<ir::TimeSub> {
         let ts = match ts {
-            ast::TimeSub::Unit(e) => ir::TimeSub::Unit(self.expr(e)),
+            ast::TimeSub::Unit(e) => ir::TimeSub::Unit(self.expr(e)?),
             ast::TimeSub::Sym { l, r } => {
                 let l = self.time(l)?;
                 let r = self.time(r)?;
@@ -334,7 +339,7 @@ impl<'prog> BuildCtx<'prog> {
                     })
                 })?;
                 let p = ir::Port {
-                    width: self.expr(bitwidth.take()),
+                    width: self.expr(bitwidth.take())?,
                     owner,
                     live,
                     info,
@@ -365,12 +370,12 @@ impl<'prog> BuildCtx<'prog> {
                             &ast::ParamBind::from(idx),
                             ir::ParamOwner::bundle(PortIdx::UNKNOWN),
                         ),
-                        len: ctx.expr(len.take()),
+                        len: ctx.expr(len.take())?,
                         range: ctx.range(liveness.take())?,
                     })
                 })?;
                 let p = ir::Port {
-                    width: self.expr(bitwidth.take()),
+                    width: self.expr(bitwidth.take())?,
                     owner,
                     live,
                     info,
@@ -402,16 +407,20 @@ impl<'prog> BuildCtx<'prog> {
     }
 
     /// Transforms an access into (start, end)
-    fn access(&mut self, access: ast::Access) -> (ir::ExprIdx, ir::ExprIdx) {
-        match access {
+    fn access(
+        &mut self,
+        access: ast::Access,
+    ) -> BuildRes<(ir::ExprIdx, ir::ExprIdx)> {
+        let r = match access {
             ast::Access::Index(n) => {
-                let n = self.expr(n);
+                let n = self.expr(n)?;
                 (n, n.add(self.comp().num(1), self.comp()))
             }
             ast::Access::Range { start, end } => {
-                (self.expr(start), self.expr(end))
+                (self.expr(start)?, self.expr(end)?)
             }
-        }
+        };
+        Ok(r)
     }
 
     /// Get the index associated with an AST port. The port must have been
@@ -442,7 +451,7 @@ impl<'prog> BuildCtx<'prog> {
                     let owner = InvPort::Local(name.copy());
                     self.get_port(&owner)
                 };
-                let (start, end) = self.access(access.take());
+                let (start, end) = self.access(access.take())?;
                 ir::Access { port, start, end }
             }
             ast::Port::InvBundle {
@@ -453,7 +462,7 @@ impl<'prog> BuildCtx<'prog> {
                 let inv = self.get_inv(&invoke)?;
                 let owner = InvPort::Inv(inv, dir, port.copy());
                 let port = self.get_port(&owner);
-                let (start, end) = self.access(access.take());
+                let (start, end) = self.access(access.take())?;
                 ir::Access { port, start, end }
             }
             ast::Port::Constant(_) => todo!("Constant ports"),
@@ -509,7 +518,7 @@ impl<'prog> BuildCtx<'prog> {
             let info = self.comp().add(ir::Info::assert(
                 ir::info::Reason::misc("Signature assumption", pc.pos()),
             ));
-            let prop = self.expr_cons(pc.inner().clone());
+            let prop = self.expr_cons(pc.inner().clone())?;
             cons.extend(self.comp().assume(prop, info));
         }
 
@@ -527,17 +536,18 @@ impl<'prog> BuildCtx<'prog> {
             .param_cons
             .clone()
             .into_iter()
-            .flat_map(|f| {
+            .map(|f| {
                 let reason = self.comp().add(
                     ir::info::Reason::param_cons(comp_loc, f.pos()).into(),
                 );
                 let p = f.take().resolve_expr(&binding);
-                let prop = self.expr_cons(p);
                 // This is a checked fact because the calling component needs to
                 // honor it.
-                self.comp().assert(prop, reason)
+                self.expr_cons(p).map(|p| self.comp().assert(p, reason))
             })
-            .collect_vec();
+            .collect::<BuildRes<Vec<_>>>()?
+            .into_iter()
+            .flatten();
 
         Ok(iter::once(ir::Command::from(idx))
             .chain(facts.into_iter())
@@ -786,7 +796,7 @@ impl<'prog> BuildCtx<'prog> {
                     ir::info::Reason::misc("source-level fact", cons.pos())
                         .into(),
                 );
-                let prop = self.implication(cons.take());
+                let prop = self.implication(cons.take())?;
                 let fact = if checked {
                     self.comp().assert(prop, reason)
                 } else {
@@ -808,8 +818,8 @@ impl<'prog> BuildCtx<'prog> {
                 end,
                 body,
             }) => {
-                let start = self.expr(start);
-                let end = self.expr(end);
+                let start = self.expr(start)?;
+                let end = self.expr(end)?;
                 // Assumption that the index is within range
                 let reason = self.comp().add(
                     ir::info::Reason::misc(
@@ -843,7 +853,7 @@ impl<'prog> BuildCtx<'prog> {
                     .collect()
             }
             ast::Command::If(ast::If { cond, then, alt }) => {
-                let cond = self.expr_cons(cond);
+                let cond = self.expr_cons(cond)?;
                 let then = self.commands(then)?;
                 let alt = self.commands(alt)?;
                 vec![ir::If { cond, then, alt }.into()]

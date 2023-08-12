@@ -155,8 +155,23 @@ impl<'prog> BuildCtx<'prog> {
         self.sigs = sigs;
     }
 
-    pub fn get_param(&mut self, name: &Id) -> Option<ir::ParamIdx> {
-        self.param_map.get(name).copied()
+    pub fn get_param(&mut self, id: &Id) -> BuildRes<ir::ParamIdx> {
+        let name = id;
+        match self.param_map.get(name) {
+            Some(p) => Ok(*p),
+            None => {
+                let diag = &mut self.diag;
+                let undef = Error::undefined(*name, "parameter");
+                // .add_note(
+                //     diag.add_info(
+                //         format!("parameter `{id}' is not defined"),
+                //         id.pos(),
+                //     ),
+                // );
+                diag.add_error(undef);
+                Err(std::mem::take(diag))
+            }
+        }
     }
 
     pub fn add_param(&mut self, name: Id, param: ir::ParamIdx) {
