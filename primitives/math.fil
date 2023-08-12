@@ -14,9 +14,9 @@ import "./comb.fil";
 /// NOTE(rachit): Once we have default parameters, we can provide a default
 /// binding fot `#K` based on `#N`.
 comp ReduceAdd[#W, #N, #K]<G:1>(
-    in[#N]: for<#i> @[G, G+1] #W
+    in[#N]: for<#i> [G, G+1] #W
 ) -> (
-    @[G+#K, G+#K+1] out: #W
+     out: [G+#K, G+#K+1] #W
 ) where #W > 1,
         #N >= 1,
         #N == pow2(#K),
@@ -45,10 +45,10 @@ comp ReduceAdd[#W, #N, #K]<G:1>(
 /// Implementation of a multiplier with initiation interval 1 and latency 3.
 /// Written in a way to allow Vivado to infer a DSP.
 comp FastMult[#W]<G: 1>(
-  @[G, G+1] left: #W,
-  @[G, G+1] right: #W,
+   left: [G, G+1] #W,
+   right: [G, G+1] #W,
 ) -> (
-  @[G+3, G+4] out: #W,
+   out: [G+3, G+4] #W,
 ) where #W > 0
 /// ANCHOR_END: fastmult
 {
@@ -72,10 +72,10 @@ comp FastMult[#W]<G: 1>(
 /// Initializes the restoring divider.
 /// NOTE(rachit): This should be a private module.
 comp Id_Init[#W]<G: 1>(
-  @[G, G+1] left: #W,
+   left: [G, G+1] #W,
 ) -> (
-  @[G, G+1] acc: #W+1,
-  @[G, G+1] quotient: #W,
+   acc: [G, G+1] #W+1,
+   quotient: [G, G+1] #W,
 ) where #W > 0 {
   zero_one := new Const[1, 0]<G>();
   c := new Concat[#W, 1, #W+1]<G>(left, zero_one.out);
@@ -91,12 +91,12 @@ comp Id_Init[#W]<G: 1>(
 /// Implements one step of the iterative division algorithm over #W-bit numbers.
 /// NOTE(rachit): This should be a private module.
 comp Id_Next[#W]<G: 1>(
-  @[G, G+1] acc: #W+1,
-  @[G, G+1] right: #W,
-  @[G, G+1] quotient: #W,
+   acc: [G, G+1] #W+1,
+   right: [G, G+1] #W,
+   quotient: [G, G+1] #W,
 ) -> (
-  @[G, G+1] acc_next: #W+1,
-  @[G, G+1] quotient_next: #W,
+   acc_next: [G, G+1] #W+1,
+   quotient_next: [G, G+1] #W,
 ) where #W > 0 {
 
   right_ext := new ZeroExtend[#W, #W+1]<G>(right);
@@ -138,11 +138,11 @@ comp Id_Next[#W]<G: 1>(
 /// NOTE(rachit): Once we have default parameters, we should provide a default value for `#K`
 /// using `#I`.
 comp TradeoffDiv[#W, #I, #K]<G: #K>(
-  @interface[G] go: 1,
-  @[G, G+1] left: #W,
-  @[G, G+1] right: #W,
+  go: interface[G],
+   left: [G, G+1] #W,
+   right: [G, G+1] #W,
 ) -> (
-  @[G+#W, G+#W+1] out: #W,
+   out: [G+#W, G+#W+1] #W,
 ) where
   #I > 0,
   #K > 0,
@@ -153,9 +153,9 @@ comp TradeoffDiv[#W, #I, #K]<G: #K>(
     //  2. Bundles that track the "inner" signals which "loop back" the signals into the reused instances.
 
     // Bundles that track the "outer" signals which connect each reused instance in the circuit.
-    bundle o_acc[#I+1]: for<#a> @[G+#a*#K, G+#a*#K+1] #W+1;
-    bundle o_qn [#I+1]: for<#a> @[G+#a*#K, G+#a*#K+1] #W;
-    bundle o_r  [#I+1]: for<#a> @[G+#a*#K, G+#a*#K+1] #W;
+    bundle o_acc[#I+1]: for<#a> [G+#a*#K, G+#a*#K+1] #W+1;
+    bundle o_qn [#I+1]: for<#a> [G+#a*#K, G+#a*#K+1] #W;
+    bundle o_r  [#I+1]: for<#a> [G+#a*#K, G+#a*#K+1] #W;
 
     i := new Id_Init[#W]<G>(left);
     o_acc{0} = i.acc;
@@ -172,9 +172,9 @@ comp TradeoffDiv[#W, #I, #K]<G: #K>(
         // Bundles to forward data
         // Each bundle starts at time #K*#i which represents the previous
         // computations that have already occurred.
-        bundle acc[#K+1]: for<#a> @[G+(#K*#i)+#a, G+(#K*#i)+#a+1] #W+1;
-        bundle qn [#K+1]: for<#a> @[G+(#K*#i)+#a, G+(#K*#i)+#a+1] #W;
-        bundle r  [#K+1]: for<#a> @[G+(#K*#i)+#a, G+(#K*#i)+#a+1] #W;
+        bundle acc[#K+1]: for<#a> [G+(#K*#i)+#a, G+(#K*#i)+#a+1] #W+1;
+        bundle qn [#K+1]: for<#a> [G+(#K*#i)+#a, G+(#K*#i)+#a+1] #W;
+        bundle r  [#K+1]: for<#a> [G+(#K*#i)+#a, G+(#K*#i)+#a+1] #W;
 
         acc{0} = o_acc{#i};
         qn{0} = o_qn{#i};

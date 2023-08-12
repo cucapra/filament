@@ -3,24 +3,24 @@ import "primitives/float.fil";
 
 extern "fp-mult-nopipe.sv" {
   comp FP_Mult_NoPipe<G: 1>(
-      @[G, G+1] a: 32,
-      @[G, G+1] b: 32,
+       a: [G, G+1] 32,
+       b: [G, G+1] 32,
   ) -> (
-      @[G, G+1] exception: 1,
-      @[G, G+1] overflow: 1,
-      @[G, G+1] underflow: 1,
-      @[G, G+1] res: 32,
+       exception: [G, G+1] 1,
+       overflow: [G, G+1] 1,
+       underflow: [G, G+1] 1,
+       res: [G, G+1] 32,
   );
 }
 
 comp main<G: 1>(
-  @interface[G] go: 1,
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32,
+  go: interface[G],
+   left: [G, G+1] 32,
+   right: [G, G+1] 32,
 ) -> (
-  @[G, G+1] out: 32,
-  @[G, G+1] verilog_nopipe: 32,
-  @[G, G+1] filament_lib: 32
+   out: [G, G+1] 32,
+   verilog_nopipe: [G, G+1] 32,
+   filament_lib: [G, G+1] 32
 ) {
   np := new FP_Mult_NoPipe<G>(left, right);
   f := new FPMult<G>(left, right);

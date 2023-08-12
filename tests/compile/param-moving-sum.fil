@@ -2,11 +2,11 @@ import "primitives/state.fil";
 import "primitives/core.fil";
 
 comp Window[#N, #W]<G: 1>(
-    @[G, G+1] in: #W,
+     in: [G, G+1] #W,
 ) -> (
-    out[#N+1]: for<#k> @[G, G+1] #W
+    out[#N+1]: for<#k> [G, G+1] #W
 ) {
-    bundle f[#N+1]: for<#k> @[G, G+1] #W;
+    bundle f[#N+1]: for<#k> [G, G+1] #W;
 
     f{0} = in;
     out{0} = f{0};
@@ -19,12 +19,12 @@ comp Window[#N, #W]<G: 1>(
 
 /// Combinationally add up numbers
 comp CombReduceTree[#N, #W]<G: 1>(
-    in[#N]: for<#k> @[G, G+1] #W
+    in[#N]: for<#k> [G, G+1] #W
 ) -> (
-    @[G, G+1] out: #W
+     out: [G, G+1] #W
 ) where #W > 0 {
     // Track the output from each adder
-    bundle o[#N]: for<#k> @[G, G+1] #W;
+    bundle o[#N]: for<#k> [G, G+1] #W;
     o{0} = in{0};
     for #i in 1..#N {
         a := new Add[#W]<G>(o{#i-1}, in{#i});
@@ -34,16 +34,16 @@ comp CombReduceTree[#N, #W]<G: 1>(
 }
 
 comp MovingSum[#N, #W]<G: 1>(
-    @[G, G+1] in: #W
+     in: [G, G+1] #W
 ) -> (
-    @[G, G+1] out: #W
+     out: [G, G+1] #W
 ) where #W > 0 {
     w := new Window[#N, #W]<G>(in);
     r := new CombReduceTree[#N, #W]<G>(w.out{1..#N+1});
     out = r.out;
 }
 
-comp main<G: 1>(@[G, G+1] in: 32) -> (@[G, G+1] out2: 32, @[G, G+1] out3: 32, @[G, G+1] out5: 32) {
+comp main<G: 1>( out5: [G, G+1] in: 32) -> ([G, G+1] out2: 32, @[G, G+1] out3: 32, @[G, G+1] 32) {
     avg2 := new MovingSum[2, 32]<G>(in);
     out2 = avg2.out;
 

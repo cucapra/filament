@@ -1,25 +1,25 @@
 import "primitives/reshape.fil";
 
 comp main<G:12>(
-    @interface[G] go: 1,
-    @[G, G+6] i0: 32,
-    @[G, G+6] i1: 32,
-    @[G, G+6] i2: 32,
-    @[G, G+6] i3: 32,
-    @[G, G+6] i4: 32,
-    @[G, G+6] i5: 32,
+    go: interface[G],
+     i0: [G, G+6] 32,
+     i1: [G, G+6] 32,
+     i2: [G, G+6] 32,
+     i3: [G, G+6] 32,
+     i4: [G, G+6] 32,
+     i5: [G, G+6] 32,
 ) -> (
     // First bundle
-    @[G+0, G+6] o0: 32,
-    @[G+0, G+6] o1: 32,
+     o0: [G+0, G+6] 32,
+     o1: [G+0, G+6] 32,
     // Second bundle
-    @[G+3, G+9] o2: 32,
-    @[G+3, G+9] o3: 32,
+     o2: [G+3, G+9] 32,
+     o3: [G+3, G+9] 32,
     // Third bundle
-    @[G+6, G+12] o4: 32,
-    @[G+6, G+12] o5: 32,
+     o4: [G+6, G+12] 32,
+     o5: [G+6, G+12] 32,
 ) {
-    bundle in[6]: for<#i> @[G, G+6] 32;
+    bundle in[6]: for<#i> [G, G+6] 32;
     in{0} = i0; in{1} = i1; in{2} = i2;
     in{3} = i3; in{4} = i4; in{5} = i5;
 
