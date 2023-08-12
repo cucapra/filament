@@ -286,9 +286,7 @@ impl Compile {
         });
 
         // add the fsm components to the calyx context
-        calyx_ctx
-            .components
-            .extend(bindings.fsm_comps.into_values());
+        calyx_ctx.components.extend(bindings.fsm_comps.take());
 
         let mut out = &mut std::io::stdout();
         calyx::Printer::write_context(&calyx_ctx, false, &mut out).unwrap();

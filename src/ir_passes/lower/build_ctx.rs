@@ -1,3 +1,4 @@
+use super::fsm::FsmBind;
 use super::utils::{comp_name, interface_name, port_name};
 use super::Fsm;
 use crate::ir::DenseIndexInfo;
@@ -12,7 +13,7 @@ pub(super) struct Binding {
     // Component signatures
     comps: HashMap<ir::CompIdx, RRC<calyx::Cell>>,
     /// Mapping to the component representing FSM with particular number of states
-    pub fsm_comps: HashMap<u64, calyx::Component>,
+    pub fsm_comps: FsmBind,
 }
 
 impl Binding {
@@ -239,12 +240,6 @@ impl<'a> BuildCtx<'a> {
     /// Adds component to the [Binding] held by this component.
     fn declare_fsm(&mut self, states: u64) {
         // If this fsm is already declared, just return.
-        if self.binding.fsm_comps.contains_key(&states) {
-            return;
-        }
-
-        self.binding
-            .fsm_comps
-            .insert(states, Fsm::simple(states, self.lib));
+        self.binding.fsm_comps.add_simple(states, self.lib);
     }
 }
