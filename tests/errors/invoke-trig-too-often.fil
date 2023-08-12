@@ -4,7 +4,7 @@ extern "dummy.sv" {
   ) -> ();
 }
 
-comp Main<T: 3>(go_T: interface[T]
+comp Main<T: 3>(go_T: interface[T]) -> () {
   M := new Mult;
   m0 := M<T+1>();
 }

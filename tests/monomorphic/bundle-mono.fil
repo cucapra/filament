@@ -17,13 +17,13 @@ comp Bundle<G: 3>(
 
 comp main<G:3>(
   @interface[G] go: 1,
-  @[G, G+3] ia: 32,
-  @[G, G+3] ib: 32,
-  @[G, G+3] ic: 32,
+   ia: [G, G+3] 32,
+   ib: [G, G+3] 32,
+   ic: [G, G+3] 32,
 ) -> (
-  @[G,G+1] a: 32,
-  @[G+1,G+2] b: 32,
-  @[G+2,G+3] c: 32
+   a: [G,G+1] 32,
+   b: [G+1,G+2] 32,
+   c: [G+2,G+3] 32
 ) {
     bundle f[3]: for<#i> @[G, G+3] 32;
     f{0} = ia;

@@ -7,7 +7,7 @@ error: event provided to invocation triggers more often that invocation's event'
 2 │   comp Mult<G: 5>(
   │                - invocation's event is allowed to trigger every 5 cycles
   ·
-7 │ comp Main<T: 3>(@interface[T] go_T: 1) -> () {
+7 │ comp Main<T: 3>(go_T: interface[T]) -> () {
   │              - this event triggers every 3 cycles
 8 │   M := new Mult;
 9 │   m0 := M<T+1>();
