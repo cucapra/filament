@@ -17,8 +17,7 @@ fud e -s cocotb.data examples/data.json --to cocotb-out {} -s calyx.flags ' -d c
 
 [[tests]]
 name = "errors"
-paths = ["tests/errors/*.fil"]
-expect_dir = "tests/ir_check/"
+paths = ["tests/errors/**/*.fil"]
 cmd = """
 ./target/debug/filament {}
 """
