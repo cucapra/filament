@@ -165,7 +165,8 @@ impl<'prog> BuildCtx<'prog> {
             Some(p) => Ok(*p),
             None => {
                 let diag = &mut self.diag;
-                let undef = Error::undefined(*name, "parameter");
+                let undef =
+                    Error::undefined(format!("#{}", *name).into(), "parameter");
                 // .add_note(
                 //     diag.add_info(
                 //         format!("parameter `{id}' is not defined"),
