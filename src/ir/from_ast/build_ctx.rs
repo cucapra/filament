@@ -9,15 +9,25 @@ use std::rc::Rc;
 #[derive(Eq, PartialEq, Hash, Clone, Debug)]
 /// A custom struct used to index ports
 pub(super) enum InvPort {
-    Sig(ir::Direction, Id),
-    Inv(ir::InvIdx, ir::Direction, Id),
-    Local(Id),
+    Sig(ir::Direction, ast::Loc<Id>),
+    Inv(ir::InvIdx, ir::Direction, ast::Loc<Id>),
+    Local(ast::Loc<Id>),
 }
 
 impl InvPort {
-    fn name(&self) -> &Id {
+    fn name(&self) -> Id {
         match self {
-            Self::Sig(_, id) | Self::Inv(_, _, id) | Self::Local(id) => id,
+            Self::Sig(_, id) | Self::Inv(_, _, id) | Self::Local(id) => {
+                *id.inner()
+            }
+        }
+    }
+
+    fn pos(&self) -> utils::GPosIdx {
+        match self {
+            Self::Sig(_, id) | Self::Inv(_, _, id) | Self::Local(id) => {
+                id.pos()
+            }
         }
     }
 }
@@ -184,7 +194,7 @@ impl<'prog> BuildCtx<'prog> {
     }
 
     /// Add a new port to the ctx
-    pub fn add_port(&mut self, name: Id, port: PortIdx) {
+    pub fn add_port(&mut self, name: ast::Loc<Id>, port: PortIdx) {
         let owner = self.comp.get(port).owner.clone();
         let owner = match owner {
             ir::PortOwner::Sig { dir } => InvPort::Sig(dir, name),
@@ -200,32 +210,33 @@ impl<'prog> BuildCtx<'prog> {
     }
 
     /// Get a port and panic out if it is not found
-    pub fn get_port(&mut self, port: &InvPort) -> PortIdx {
-        // Clone here because we use owner in the error message below
+    pub fn get_port(&mut self, port: &InvPort) -> BuildRes<PortIdx> {
         if let Some(idx) = self.find_port(port) {
-            return idx;
+            return Ok(idx);
         }
-
-        let name = port.name();
 
         // We are going to error out anyways so attempt to find the scope for
         // *any* port with the same name but a different port owner.
+        let name = port.name();
         let other = self
             .port_map
             .as_flat_vec()
             .into_iter()
             .find_map(|(p, _)| if p.name() == name { Some(p) } else { None });
-        let mut msg = format!("Port `{port}' not found");
+        let mut err = Error::undefined(name, "port");
+        err =
+            err.add_note(self.diag.add_info(
+                format!("`{}' is not a defined port", name),
+                port.pos(),
+            ));
         if let Some(port) = other {
-            msg.push_str(&format!(
-                ". However, a port with the same name exists: `{port}'",
+            err = err.add_note(self.diag.add_info(
+                "however, a port with the same name exists",
+                port.pos(),
             ));
         }
-        msg.push_str(&format!(
-            ". Component:\n{comp}",
-            comp = ir::Printer::comp_str(&self.comp)
-        ));
-        unreachable!("{msg}")
+        self.diag.add_error(err);
+        Err(std::mem::take(&mut self.diag))
     }
 
     pub fn add_inst(&mut self, name: Id, inst: ir::InstIdx) {

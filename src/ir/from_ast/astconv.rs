@@ -404,7 +404,7 @@ impl<'prog> BuildCtx<'prog> {
         }
 
         // Add the port to the current scope
-        self.add_port(*name, idx);
+        self.add_port(name, idx);
 
         Ok(idx)
     }
@@ -435,24 +435,24 @@ impl<'prog> BuildCtx<'prog> {
     ) -> BuildRes<ir::Access> {
         let acc = match port {
             ast::Port::This(n) => {
-                let owner = InvPort::Sig(dir, n.copy());
-                ir::Access::port(self.get_port(&owner), self.comp())
+                let owner = InvPort::Sig(dir, n);
+                ir::Access::port(self.get_port(&owner)?, self.comp())
             }
             ast::Port::InvPort { invoke, name } => {
                 let inv = self.get_inv(&invoke)?;
-                let owner = InvPort::Inv(inv, dir, name.copy());
-                ir::Access::port(self.get_port(&owner), self.comp())
+                let owner = InvPort::Inv(inv, dir, name);
+                ir::Access::port(self.get_port(&owner)?, self.comp())
             }
             ast::Port::Bundle { name, access } => {
                 // NOTE(rachit): The AST does not distinguish between bundles
                 // defined by the signature and locally defined bundles so we
                 // must search both.
-                let owner = InvPort::Sig(dir, name.copy());
+                let owner = InvPort::Sig(dir, name.clone());
                 let port = if let Some(p) = self.find_port(&owner) {
                     p
                 } else {
-                    let owner = InvPort::Local(name.copy());
-                    self.get_port(&owner)
+                    let owner = InvPort::Local(name);
+                    self.get_port(&owner)?
                 };
                 let (start, end) = self.access(access.take())?;
                 ir::Access { port, start, end }
@@ -463,8 +463,8 @@ impl<'prog> BuildCtx<'prog> {
                 access,
             } => {
                 let inv = self.get_inv(&invoke)?;
-                let owner = InvPort::Inv(inv, dir, port.copy());
-                let port = self.get_port(&owner);
+                let owner = InvPort::Inv(inv, dir, port);
+                let port = self.get_port(&owner)?;
                 let (start, end) = self.access(access.take())?;
                 ir::Access { port, start, end }
             }
