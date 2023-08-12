@@ -141,7 +141,7 @@ impl<'prog> BuildCtx<'prog> {
                     ),
                 );
                 diag.add_error(undef);
-                Err(())
+                Err(std::mem::take(diag))
             }
         }
     }
@@ -224,7 +224,7 @@ impl<'prog> BuildCtx<'prog> {
                         id.pos(),
                     ));
                 diag.add_error(undef);
-                Err(())
+                Err(std::mem::take(diag))
             }
         }
     }
@@ -246,7 +246,7 @@ impl<'prog> BuildCtx<'prog> {
                     ),
                 );
                 diag.add_error(undef);
-                Err(())
+                Err(std::mem::take(diag))
             }
         }
     }
@@ -267,7 +267,7 @@ impl<'prog> BuildCtx<'prog> {
                 //     id.pos(),
                 // ));
                 diag.add_error(undef);
-                Err(())
+                Err(std::mem::take(diag))
             }
         }
     }

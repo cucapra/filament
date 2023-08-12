@@ -1,6 +1,7 @@
 //! Convert the frontend AST to the IR.
 use super::build_ctx::InvPort;
 use super::{BuildCtx, Sig, SigMap};
+use crate::diagnostics;
 use crate::ir::{
     Cmp, Ctx, EventIdx, ExprIdx, InterfaceSrc, MutCtx, ParamIdx, PortIdx,
     PropIdx, TimeIdx,
@@ -11,7 +12,7 @@ use itertools::Itertools;
 use std::collections::HashMap;
 use std::{iter, rc::Rc};
 
-pub type BuildRes<T> = Result<T, ()>;
+pub type BuildRes<T> = Result<T, diagnostics::Diagnostics>;
 
 /// # Declare phase
 /// This is the first pass over the AST and responsible for forward declaring names defined by invocations.
@@ -967,6 +968,9 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
     Ok(ctx)
 }
 
-pub fn transform(ns: ast::Namespace) -> ir::Context {
-    try_transform(ns).unwrap()
+pub fn transform(ns: ast::Namespace) -> Result<ir::Context, u64> {
+    match try_transform(ns) {
+        Ok(ctx) => Ok(ctx),
+        Err(mut e) => Err(e.report_all().unwrap()),
+    }
 }

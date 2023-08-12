@@ -25,7 +25,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     log::debug!("{ns}");
 
     // Convert AST to IR
-    let mut ir = ir::transform(ns);
+    let mut ir = ir::transform(ns)?;
     pass_pipeline! {opts, ir;
         ip::BuildDomination,
         ip::TypeCheck,
