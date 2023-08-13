@@ -234,6 +234,8 @@ impl Component {
         sig_params
     }
 
+    /// Returns all the phantom events in this component.
+    /// A phantom event is an event without an interface port
     pub fn phantom_events(&self) -> impl Iterator<Item = EventIdx> + '_ {
         self.events()
             .idx_iter()

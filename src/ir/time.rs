@@ -36,9 +36,7 @@ impl TimeIdx {
         let time = ctx.get(self);
         time.event
     }
-}
 
-impl TimeIdx {
     pub fn lte<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
     where
         C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,

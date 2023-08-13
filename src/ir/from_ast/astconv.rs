@@ -397,6 +397,7 @@ impl<'prog> BuildCtx<'prog> {
 
         // If this is a signature port, try adding it to the component's external interface
         if is_sig_port {
+            // If the component is expecting interface information, add it.
             if let Some(src) = &mut self.comp().src_info {
                 src.ports.insert(idx, name.copy());
             }

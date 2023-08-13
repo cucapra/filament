@@ -72,7 +72,6 @@ pub(super) fn port_name(
             .as_ref()
             .map(|src| src.ports.get(&idx).unwrap().to_string())
             .unwrap_or_else(|| format!("p{}", idx.get())),
-
         ir::PortOwner::Inv { base, .. } => {
             base.apply(|p, c| port_name(p, ctx, c), ctx)
         }
@@ -81,7 +80,7 @@ pub(super) fn port_name(
 }
 
 /// Returns the name of an [Component]
-pub(super) fn comp_name(idx: CompIdx, ctx: &ir::Context) -> String {
+pub(super) fn comp_name(idx: CompIdx, ctx: &impl Ctx<Component>) -> String {
     ctx.get(idx)
         .src_info
         .as_ref()
