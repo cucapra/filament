@@ -173,6 +173,14 @@ where
         Action::Continue
     }
 
+    fn param_let(
+        &mut self,
+        _: &mut ir::Let,
+        _data: &mut VisitorData,
+    ) -> Action {
+        Action::Continue
+    }
+
     fn visit_cmd(
         &mut self,
         cmd: &mut ir::Command,
@@ -185,6 +193,7 @@ where
             ir::Command::ForLoop(l) => self.do_loop(l, data),
             ir::Command::If(i) => self.do_if(i, data),
             ir::Command::Fact(f) => self.fact(f, data),
+            ir::Command::Let(f) => self.param_let(f, data),
         }
     }
 

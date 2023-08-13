@@ -55,13 +55,17 @@ impl std::fmt::Display for Access {
 pub enum Port {
     /// A port on this component
     This(Loc<Id>),
-    /// A constant
     Constant(u64),
     /// A port on an invoke
-    InvPort { invoke: Loc<Id>, name: Loc<Id> },
-
+    InvPort {
+        invoke: Loc<Id>,
+        name: Loc<Id>,
+    },
     /// A port represented by an index into a bundle
-    Bundle { name: Loc<Id>, access: Loc<Access> },
+    Bundle {
+        name: Loc<Id>,
+        access: Loc<Access>,
+    },
     /// A bundle port on an invocation
     InvBundle {
         invoke: Loc<Id>,
@@ -159,8 +163,15 @@ pub enum Command {
     Fact(Fact),
     Connect(Connect),
     ForLoop(ForLoop),
+    ParamLet(ParamLet),
     If(If),
     Bundle(Bundle),
+}
+
+impl From<ParamLet> for Command {
+    fn from(v: ParamLet) -> Self {
+        Self::ParamLet(v)
+    }
 }
 
 impl From<Connect> for Command {
@@ -202,6 +213,7 @@ impl Display for Command {
             Command::If(l) => write!(f, "{}", l),
             Command::Bundle(b) => write!(f, "{b}"),
             Command::Fact(a) => write!(f, "{a}"),
+            Command::ParamLet(l) => write!(f, "{l}"),
         }
     }
 }
@@ -681,5 +693,19 @@ impl Display for Bundle {
             "for<#{}> {} {};",
             self.typ.idx, self.typ.liveness, self.typ.bitwidth
         )
+    }
+}
+
+/// A let-bound parameter
+#[derive(Clone)]
+pub struct ParamLet {
+    pub name: Loc<Id>,
+    /// The expression for the parameter binding
+    pub expr: Expr,
+}
+
+impl Display for ParamLet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "let {} = {}", self.name, self.expr)
     }
 }

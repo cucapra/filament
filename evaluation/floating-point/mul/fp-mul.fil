@@ -104,5 +104,8 @@ comp FPMult<G: 1>(
   res_3 := new Mux[32]<G>(zero.out, under_res.out, res_2.out);
   res := new Mux[32]<G>(exception.out, zero_32.out, res_3.out);
 
+  underflow = underflow.out;
+  overflow = overflow.out;
+  exception = exception.out;
   out = res.out;
 }

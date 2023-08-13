@@ -24,8 +24,12 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     };
     log::debug!("{ns}");
 
-    // Convert AST to IR
+    // Transform AST to IR
     let mut ir = ir::transform(ns)?;
+    if opts.dump_after.contains(&"ast-conv".to_string()) {
+        ir::Printer::context(&ir, &mut std::io::stdout()).unwrap()
+    }
+
     pass_pipeline! {opts, ir;
         ip::BuildDomination,
         ip::TypeCheck,
@@ -38,7 +42,10 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     }
     // TODO(rachit): Once `BundleElim` implements `Visitor`, we can collapse this into
     // one call to `pass_pipeline!`.
-    ir = log_time!(ip::Monomorphize::transform(&ir), "monomophization");
+    ir = log_time!(ip::Monomorphize::transform(&ir), "monomorphization");
+    if opts.dump_after.contains(&"monomorphization".to_string()) {
+        ir::Printer::context(&ir, &mut std::io::stdout()).unwrap()
+    }
     pass_pipeline! {opts, ir; ip::AssignCheck, ip::BundleElim, ip::AssignCheck }
     // Return early if we're asked to dump the interface
     if opts.dump_interface {
