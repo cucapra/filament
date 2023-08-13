@@ -1,11 +1,11 @@
 import "../../examples/sequential.fil";
 
 comp Main<G: 10>(
-  @interface[G] go_G: 1,
-  @[G, G+1] l0: 32,
-  @[G, G+1] r0: 32,
-  @[G+9, G+10] l1: 32,
-  @[G+9, G+10] r1: 32,
+  go_G: interface[G],
+   l0: [G, G+1] 32,
+   r0: [G, G+1] 32,
+   l1: [G+9, G+10] 32,
+   r1: [G+9, G+10] 32,
 ) -> () {
   M := new Mult[32];
 

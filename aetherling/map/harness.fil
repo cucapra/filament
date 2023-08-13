@@ -3,21 +3,21 @@ extern "map_200.v" {
     comp Top<G: 1>(
         clk: 1,
         reset: 1,
-        @interface[G] valid_up: 1,
-        @[G, G+1] I: 8,
+        valid_up: interface[G],
+         I: [G, G+1] 8,
     ) -> (
-        @[G+4, G+5] valid_down: 1,
-        @[G+4, G+5] O: 8
+         valid_down: [G+4, G+5] 1,
+         O: [G+4, G+5] 8
     );
 // KERNEL_END=Map_200
 }
 
 comp main<G: 1>(
-    @interface[G] valid_up: 1,
-    @[G, G+1] in: 8
+    valid_up: interface[G],
+     in: [G, G+1] 8
 ) -> (
-    @[G+4, G+5] out: 8,
-    @[G+4, G+5] valid_down: 1
+     out: [G+4, G+5] 8,
+     valid_down: [G+4, G+5] 1
 ) {
     m := new Top<G>(in);
     out = m.O;

@@ -1,14 +1,14 @@
 extern "unsynthesizable.sv" {
     comp Modulo[#WIDTH]<G>(
-        @[G, G+1] left: #WIDTH,
-        @[G, G+1] right: #WIDTH,
+         left: [G, G+1] #WIDTH,
+         right: [G, G+1] #WIDTH,
     ) -> (
-        @[G, G+1] out: #WIDTH,
+         out: [G, G+1] #WIDTH,
     );
     comp Div[#WIDTH]<G>(
-        @[G, G+1] left: #WIDTH,
-        @[G, G+1] right: #WIDTH,
+         left: [G, G+1] #WIDTH,
+         right: [G, G+1] #WIDTH,
     ) -> (
-        @[G, G+1] out: #WIDTH,
+         out: [G, G+1] #WIDTH,
     );
 }

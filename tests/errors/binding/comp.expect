@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+error: undefined signature name: Add
+  ┌─ tests/errors/binding/comp.fil:2:14
+  │
+2 │     A := new Add;
+  │              ^^^ signature `Add' is not defined
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

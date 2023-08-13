@@ -7,11 +7,11 @@ import "./signed.fil";
 /// Extracts the sign bit, exponent bits, and mantissa from a floating point number.
 /// Asserts that #WIDTH = #EXPONENT+#MANTISSA+1
 comp _FDecompose[#WIDTH, #EXPONENT, #MANTISSA]<G: 1> (
-    @[G, G+1] in: #WIDTH
+     in: [G, G+1] #WIDTH
 ) -> (
-    @[G, G+1] sign: 1,
-    @[G, G+1] exponent: #EXPONENT,
-    @[G, G+1] mantissa: #MANTISSA
+     sign: [G, G+1] 1,
+     exponent: [G, G+1] #EXPONENT,
+     mantissa: [G, G+1] #MANTISSA
 ) where
     #WIDTH == #EXPONENT + #MANTISSA + 1,
     #EXPONENT > 1,
@@ -27,11 +27,11 @@ comp _FDecompose[#WIDTH, #EXPONENT, #MANTISSA]<G: 1> (
 
 /// Combines components into a single float
 comp _FCompose[#WIDTH, #EXPONENT, #MANTISSA]<G: 1> (
-    @[G, G+1] sign: 1,
-    @[G, G+1] exponent: #EXPONENT,
-    @[G, G+1] mantissa: #MANTISSA
+     sign: [G, G+1] 1,
+     exponent: [G, G+1] #EXPONENT,
+     mantissa: [G, G+1] #MANTISSA
 ) -> (
-    @[G, G+1] out: #WIDTH
+     out: [G, G+1] #WIDTH
 ) where
     #WIDTH == #EXPONENT + #MANTISSA + 1,
     #EXPONENT > 1,
@@ -44,10 +44,10 @@ comp _FCompose[#WIDTH, #EXPONENT, #MANTISSA]<G: 1> (
 
 /// Adds two floating point numbers
 comp FAdd[#WIDTH, #EXPONENT, #MANTISSA]<G: 1> (
-    @[G, G+1] left: #WIDTH,
-    @[G, G+1] right: #WIDTH,
+     left: [G, G+1] #WIDTH,
+     right: [G, G+1] #WIDTH,
 ) -> (
-    @[G, G+1] out: #WIDTH
+     out: [G, G+1] #WIDTH
 ) where
     #WIDTH == #EXPONENT + #MANTISSA + 1,
     #EXPONENT > 1,
@@ -101,14 +101,14 @@ comp FAdd[#WIDTH, #EXPONENT, #MANTISSA]<G: 1> (
     add_mant := new Mux[#MANTISSA+1]<G, G+1>(_control_2.out, _add_mant.out, _l_mantissa_3_ext.out);
 
     // renormalization
-    bundle shift_amts[#MANTISSA+1]: for<#i> @[G, G+1] #WIDTH;
+    bundle shift_amts[#MANTISSA+1]: for<#i> [G, G+1] #WIDTH;
     _mant_1_const := new Const[#WIDTH, #MANTISSA+2]<G, G+1>(); // constant value set if all mantissa bits are 0
     _shift_max_const := new Const[#WIDTH, #MANTISSA+1]<G, G+1>();
     _shift_max_sel := new Select[#MANTISSA+1, 0]<G, G+1>(add_mant.out);
     _shift_max_mux := new Mux[#WIDTH]<G, G+1>(_shift_max_sel.out, _shift_max_const.out, _mant_1_const.out);
     shift_amts{0} = _shift_max_mux.out;
 
-    bundle exp_amts[#MANTISSA+1]: for<#i> @[G, G+1] #EXPONENT;
+    bundle exp_amts[#MANTISSA+1]: for<#i> [G, G+1] #EXPONENT;
     _exp_1_const := new NegConst[#EXPONENT, #MANTISSA]<G, G+1>();
     _exp_max_const := new NegConst[#EXPONENT, #MANTISSA-1]<G, G+1>();
     _exp_max_mux := new Mux[#EXPONENT]<G, G+1>(_shift_max_sel.out, _exp_max_const.out, _exp_1_const.out);
@@ -149,10 +149,10 @@ comp FAdd[#WIDTH, #EXPONENT, #MANTISSA]<G: 1> (
 }
 
 comp FMult[#WIDTH, #EXPONENT, #MANTISSA]<G: 1> (
-    @[G, G+1] left: #WIDTH,
-    @[G, G+1] right: #WIDTH,
+     left: [G, G+1] #WIDTH,
+     right: [G, G+1] #WIDTH,
 ) -> (
-    @[G, G+1] out: #WIDTH
+     out: [G, G+1] #WIDTH
 ) where
     #WIDTH == #EXPONENT + #MANTISSA + 1,
     #EXPONENT > 1,

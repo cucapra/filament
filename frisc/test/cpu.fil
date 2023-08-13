@@ -2,13 +2,13 @@ import "frisc/src/cpu.fil";
 
 comp main<G:1> (
   clk:1,
-  //@interface[G] go:1,
-  @[G,G+1] reset:1,
-  @[G,G+1] instr:32
+  //go: interface[G],
+   reset: [G,G+1] 1,
+   instr: [G,G+1] 32
 ) -> (
-  @[G,G+1] out:32,
-  @[G,G+1] aluInA:32,
-  @[G,G+1] aluInB:32,
+   out: [G,G+1] 32,
+   aluInA: [G,G+1] 32,
+   aluInB: [G,G+1] 32,
 ) {
   cpu := new CPU<G>(reset, instr);
   out = cpu.out;

@@ -71,6 +71,17 @@ impl<T: Clone> Loc<T> {
         }
     }
 
+    /// Map over the inner value, returning an error if the function fails.
+    pub fn try_map<U: Clone, E, F>(self, mut f: F) -> Result<Loc<U>, E>
+    where
+        F: FnMut(T) -> Result<U, E>,
+    {
+        Ok(Loc {
+            inner: f(self.inner)?,
+            pos: self.pos,
+        })
+    }
+
     pub fn map_into<B>(self) -> Loc<B>
     where
         T: Into<B>,

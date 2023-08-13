@@ -1,43 +1,43 @@
 ---CODE---
 1
 ---STDERR---
-error: source port must be available longer than the destination port requires
+error: source port does not provide value for as long as destination requires
    ┌─ tests/errors/poly-mismatch.fil:12:28
    │
 12 │     a := new Add[#W]<G+#W>(s.out, acc);
-   │                            ^^^^^ source is available for @[G+#N, G+#N+1]
+   │                            ^^^^^ source is available for [G+#N, G+#N+1]
    │
-   ┌─ ./primitives/./comb.fil:9:13
+   ┌─ ./primitives/./comb.fil:9:6
    │
- 9 │     @[G, L] left: #IN_WIDTH,
-   │             ---- destination's requirement @[G+#W, G+#W+1]
+ 9 │      left: [G, L] #IN_WIDTH,
+   │      ---- requires value for [G+#W, G+#W+1]
 
-error: source port must be available longer than the destination port requires
+error: source port does not provide value for as long as destination requires
    ┌─ tests/errors/poly-mismatch.fil:12:35
    │
 12 │     a := new Add[#W]<G+#W>(s.out, acc);
-   │                                   ^^^ source is available for @[G+#N, G+#N+1]
+   │                                   ^^^ source is available for [G+#N, G+#N+1]
    │
-   ┌─ ./primitives/./comb.fil:10:13
+   ┌─ ./primitives/./comb.fil:10:6
    │
-10 │     @[G, L] right: #IN_WIDTH,
-   │             ----- destination's requirement @[G+#W, G+#W+1]
+10 │      right: [G, L] #IN_WIDTH,
+   │      ----- requires value for [G+#W, G+#W+1]
 
-error: source port must be available longer than the destination port requires
+error: source port does not provide value for as long as destination requires
    ┌─ tests/errors/poly-mismatch.fil:13:11
    │
 13 │     out = a.out;
-   │     ----  ^^^^^ source is available for @[G+#W, G+#W+1]
+   │     ----  ^^^^^ source is available for [G+#W, G+#W+1]
    │     │      
-   │     destination's requirement @[G+#N, G+#N+1]
+   │     requires value for [G+#N, G+#N+1]
 
-error: source port must be available longer than the destination port requires
+error: source port does not provide value for as long as destination requires
    ┌─ tests/errors/poly-mismatch.fil:20:11
    │
 20 │     out = s.out;
-   │     ----  ^^^^^ source is available for @[G+2, G+3]
+   │     ----  ^^^^^ source is available for [G+2, G+3]
    │     │      
-   │     destination's requirement @[G+4, G+5]
+   │     requires value for [G+4, G+5]
 
 Compilation failed with 4 errors.
 Run with --show-models to generate assignments for failing constraints.

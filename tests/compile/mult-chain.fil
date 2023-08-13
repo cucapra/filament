@@ -5,21 +5,21 @@ extern "./common/mult.sv" {
     clk: 1,
     reset: 1,
     // Explicit interface signal that shows evidence for event "T".
-    @interface[T] go_T: 1,
+    go_T: interface[T],
     // ---------
-    @[T, T+2] left: 32,
-    @[T, T+1] right: 32
+     left: [T, T+2] 32,
+     right: [T, T+1] 32
   ) -> (
-    @[T+2, T+3] out: 32,
+     out: [T+2, T+3] 32,
   );
 }
 
 comp main<G: 2>(
-  @interface[G] go_G: 1,
-  @[G, G+2] left: 32,
-  @[G, G+1] right: 32,
+  go_G: interface[G],
+   left: [G, G+2] 32,
+   right: [G, G+1] 32,
 ) -> (
-  @[G+4, G+5] out: 32,
+   out: [G+4, G+5] 32,
 ) {
   M0 := new Mult;
   M1 := new Mult;
