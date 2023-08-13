@@ -1,13 +1,5 @@
 ---CODE---
-1
+101
 ---STDERR---
-error: name `A' is already bound by instance
-  ┌─ tests/errors/already-bound.fil:5:5
-  │
-4 │     A := new Add[32];
-  │     - previous binding
-5 │     A := new Add[16];
-  │     ^ name is already bound
-
-Compilation failed with 1 errors.
-Run with --show-models to generate assignments for failing constraints.
+thread 'main' panicked at 'key `A' already in scope map', src/ir/from_ast/scope_map.rs:52:13
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

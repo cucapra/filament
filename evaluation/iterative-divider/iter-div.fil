@@ -2,14 +2,14 @@ import "primitives/core.fil";
 import "primitives/math.fil";
 
 comp CombNoShareIterDiv[#W]<G: 1>(
-  @interface[G] go: 1,
-  @[G, G+1] left: #W,
-  @[G, G+1] right: #W,
+  go: interface[G],
+   left: [G, G+1] #W,
+   right: [G, G+1] #W,
 ) -> (
-  @[G, G+1] quotient: #W
+   quotient: [G, G+1] #W
 ) where #W > 0 {
-  bundle acc[#W+1]: for<#k> @[G, G+1] #W+1;
-  bundle quotient_next[#W+1]: for<#k> @[G, G+1] #W;
+  bundle acc[#W+1]: for<#k> [G, G+1] #W+1;
+  bundle quotient_next[#W+1]: for<#k> [G, G+1] #W;
 
   // Initialize the accumulator and quotient
   init := new Id_Init[#W]<G>(left);
@@ -27,11 +27,11 @@ comp CombNoShareIterDiv[#W]<G: 1>(
 
 /// An iterative divider that uses exactly one `Id_Next` circuit and shares it over W cycles.
 comp ShareIterDiv[#W]<G: #W>(
-  @interface[G] go: 1,
-  @[G, G+1] left: #W,
-  @[G, G+1] right: #W,
+  go: interface[G],
+   left: [G, G+1] #W,
+   right: [G, G+1] #W,
 ) -> (
-  @[G+#W, G+#W+1] quotient: #W
+   quotient: [G+#W, G+#W+1] #W
 ) where #W > 0 {
   td := new TradeoffDiv[#W, 1, #W]<G>(left, right);
   quotient = td.out;
@@ -39,11 +39,11 @@ comp ShareIterDiv[#W]<G: #W>(
 
 /// An iterative divider that uses W `Id_Next` circuits and does not share them.
 comp PipeIterDiv[#W]<G: 1>(
-  @interface[G] go: 1,
-  @[G, G+1] left: #W,
-  @[G, G+1] right: #W,
+  go: interface[G],
+   left: [G, G+1] #W,
+   right: [G, G+1] #W,
 ) -> (
-  @[G+#W, G+#W+1] quotient: #W
+   quotient: [G+#W, G+#W+1] #W
 ) where #W > 0 {
   td := new TradeoffDiv[#W, #W, 1]<G>(left, right);
   quotient = td.out;

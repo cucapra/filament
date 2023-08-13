@@ -1,7 +1,7 @@
 import "../../examples/sequential.fil";
 
 comp Main<G: 3>(
-  @interface[G] go_G: 1,
+  go_G: interface[G],
 ) -> () {
   M := new Mult[32];
   m0 := M<G>(10, 20);

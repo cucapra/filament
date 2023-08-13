@@ -3,10 +3,10 @@ import "primitives/core.fil";
 // Sums up the last last two values observed by the comp.
 // Produces zero when the register doesn't contain a valid value.
 comp main<G: 1>(
-  @interface[G] go: 1,
-  @[G, G+1] in: 32
+  go: interface[G],
+   in: [G, G+1] 32
 ) -> (
-  @[G, G+1] out: 32
+   out: [G, G+1] 32
 ) {
   // define constants
   zero := new Const[32, 0]<G>();

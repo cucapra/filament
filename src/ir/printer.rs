@@ -138,7 +138,7 @@ impl<'a> Printer<'a> {
 
     fn range(&self, r: &ir::Range) -> String {
         let ir::Range { start, end } = r;
-        format!("@[{}, {}]", self.time(*start), self.time(*end))
+        format!("[{}, {}]", self.time(*start), self.time(*end))
     }
 
     fn liveness(&self, l: &ir::Liveness) -> String {
@@ -735,6 +735,6 @@ impl ir::Component {
 
     /// Surface-level visualization for a range
     pub fn display_range(&self, r: &ir::Range) -> String {
-        format!("@[{}, {}]", self.display(r.start), self.display(r.end))
+        format!("[{}, {}]", self.display(r.start), self.display(r.end))
     }
 }

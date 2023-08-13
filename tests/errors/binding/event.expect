@@ -1,0 +1,7 @@
+---CODE---
+1
+---STDERR---
+error: undefined event name: T
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

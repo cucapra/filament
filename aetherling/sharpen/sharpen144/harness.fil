@@ -2,18 +2,18 @@ extern "sharpen144.v" {
 /* KERNEL_START=Sharpen_144 */
     comp Sharpen<G: 9>(
         clk: 1,
-        @[G, G+7] I: 8,
+         I: [G, G+7] 8,
     ) -> (
-        @[G+22, G+23] O: 8,
+         O: [G+22, G+23] 8,
     );
 /* KERNEL_END=Sharpen_144 */
 }
 
 comp main<G: 9>(
-    @interface[G] go: 1,
-    @[G, G+7] in: 8,
+    go: interface[G],
+     in: [G, G+7] 8,
 ) -> (
-    @[G+22, G+23] out: 8,
+     out: [G+22, G+23] 8,
 ) {
     s := new Sharpen<G>(in);
     out = s.O;

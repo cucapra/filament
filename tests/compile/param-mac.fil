@@ -2,11 +2,11 @@ import "primitives/core.fil";
 import "primitives/state.fil";
 
 comp Mac[#W, #N]<G: 1>(
-    @[G, G+1] left: #W,
-    @[G, G+1] right: #W,
-    @[G+#N, G+#N+1] acc: #W,
+     left: [G, G+1] #W,
+     right: [G, G+1] #W,
+     acc: [G+#N, G+#N+1] #W,
 ) -> (
-    @[G+#N, G+#N+1] out: #W,
+     out: [G+#N, G+#N+1] #W,
 ) where #W > 0 {
     m := new MultComb[#W]<G>(left, right);
     s := new Shift[#W, #N]<G>(m.out);
@@ -15,12 +15,12 @@ comp Mac[#W, #N]<G: 1>(
 }
 
 comp main<G: 1>(
-    @interface[G] en: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
+    en: interface[G],
+     left: [G, G+1] 32,
+     right: [G, G+1] 32,
 ) -> (
-    @[G+4, G+5] out0: 32,
-    @[G+10, G+11] out1: 32
+     out0: [G+4, G+5] 32,
+     out1: [G+10, G+11] 32
 ) {
     p0 := new Prev[32, 1]<G+4>(s0.out);
     s0 := new Mac[32, 4]<G>(left, right, p0.prev);
