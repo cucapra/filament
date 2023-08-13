@@ -840,8 +840,7 @@ impl<'prog> BuildCtx<'prog> {
                 };
                 fact.into_iter().collect()
             }
-            ast::Command::Connect(ast::Connect { src, dst, guard }) => {
-                assert!(guard.is_none(), "Guards are not supported");
+            ast::Command::Connect(ast::Connect { src, dst }) => {
                 let info =
                     self.comp().add(ir::Info::connect(dst.pos(), src.pos()));
                 let src = self.get_access(src.take(), ir::Direction::Out)?;

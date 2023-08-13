@@ -13,10 +13,10 @@ mod time;
 pub use component::{Component, Namespace};
 pub use constraint::{Constraint, OrderConstraint, OrderOp};
 pub use control::{
-    Access, Bundle, BundleType, Command, Connect, Fact, ForLoop, Fsm, Guard,
-    If, Instance, Invoke, ParamLet, Port,
+    Access, Bundle, BundleType, Command, Connect, Fact, ForLoop, If, Instance,
+    Invoke, ParamLet, Port,
 };
-pub use expr::{EvalBool, Expr, FnAssume, Op, UnFn};
+pub use expr::{EvalBool, Expr, Op, UnFn};
 pub use id::Id;
 pub use implication::Implication;
 pub use interval::Range;

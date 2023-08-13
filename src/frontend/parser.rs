@@ -585,23 +585,10 @@ impl FilamentParser {
         ))
     }
 
-    fn guard(input: Node) -> ParseResult<ast::Guard> {
-        Ok(match_nodes!(
-            input.into_children();
-            [port(p)] => p.take().into(),
-            [port(p), guard(g)] => {
-                ast::Guard::or(p.take().into(), g)
-            }
-        ))
-    }
-
     fn connect(input: Node) -> ParseResult<ast::Connect> {
         Ok(match_nodes!(
             input.into_children();
-            [port(dst), port(src)] => ast::Connect::new(dst, src, None),
-            [port(dst), guard(guard), port(src)] => {
-                ast::Connect::new(dst, src, Some(guard))
-            }
+            [port(dst), port(src)] => ast::Connect::new(dst, src),
         ))
     }
 

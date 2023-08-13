@@ -2,8 +2,6 @@ use super::{
     Expr, Id, InterfaceDef, Loc, OrderConstraint, PortDef, Time, TimeSub,
 };
 use crate::utils::{Binding, GPosIdx};
-use itertools::Itertools;
-use std::fmt::Display;
 
 #[derive(Clone)]
 /// An event variable bound in the signature
@@ -45,16 +43,6 @@ impl EventBind {
     }
 }
 
-impl Display for EventBind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(default) = &self.default {
-            write!(f, "?{}: {}={}", self.event, self.delay, default)
-        } else {
-            write!(f, "{}: {}", self.event, self.delay)
-        }
-    }
-}
-
 #[derive(Clone)]
 /// A parameter bound in the signature
 pub struct ParamBind {
@@ -73,16 +61,6 @@ impl ParamBind {
 
     pub fn pos(&self) -> GPosIdx {
         self.param.pos()
-    }
-}
-
-impl Display for ParamBind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(default) = &self.default {
-            write!(f, "?{}={}", self.param, default)
-        } else {
-            write!(f, "{}", self.param)
-        }
     }
 }
 
@@ -169,54 +147,5 @@ impl Signature {
     /// Iterator over all the ports of this signature
     pub fn ports(&self) -> &Vec<Loc<PortDef>> {
         &self.ports
-    }
-}
-
-impl Display for Signature {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "comp {}{}<{}>({}) -> ({})",
-            self.name,
-            if self.params.is_empty() {
-                "".to_string()
-            } else {
-                format!(
-                    "[{}]",
-                    self.params.iter().map(|p| format!("#{p}")).join(", ")
-                )
-            },
-            self.events.iter().map(|id| id.to_string()).join(", "),
-            self.unannotated_ports
-                .iter()
-                .map(|(n, bw)| format!("{n}: {bw}"))
-                .chain(self.interface_signals.iter().map(|pd| format!("{pd}")))
-                .chain(self.inputs().map(|pd| format!("{pd}")))
-                .join(", "),
-            self.outputs().map(|pd| format!("{pd}")).join(", "),
-        )?;
-        if !self.event_constraints.is_empty()
-            || !self.param_constraints.is_empty()
-        {
-            write!(
-                f,
-                " where {}",
-                self.event_constraints
-                    .iter()
-                    .map(|cons| format!("{cons}"))
-                    .chain(
-                        self.param_constraints
-                            .iter()
-                            .map(|cons| format!("{cons}"))
-                    )
-                    .join(", "),
-            )?;
-        }
-        Ok(())
-    }
-}
-impl std::fmt::Debug for Signature {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self}")
     }
 }

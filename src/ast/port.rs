@@ -1,6 +1,5 @@
 use super::{Bundle, Expr, Id, Loc, Range, Time};
 use crate::utils::Binding;
-use std::fmt::Display;
 
 /// A port definition in a [super::Signature].
 #[derive(Clone)]
@@ -42,20 +41,6 @@ impl PortDef {
         match &self {
             PortDef::Port { name, .. } => name,
             PortDef::Bundle(b) => &b.name,
-        }
-    }
-}
-impl Display for PortDef {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self {
-            PortDef::Port {
-                name,
-                liveness,
-                bitwidth,
-            } => {
-                write!(f, "{} {}: {}", *liveness, name, *bitwidth,)
-            }
-            PortDef::Bundle(b) => write!(f, "{b}"),
         }
     }
 }
@@ -107,12 +92,6 @@ pub struct InterfaceDef {
     /// Event that this port is an evidence of
     pub event: Id,
 }
-impl Display for InterfaceDef {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "@interface[{}] {}: 1", self.event, self.name)
-    }
-}
-
 impl InterfaceDef {
     pub fn new(name: Loc<Id>, event: Id) -> Self {
         Self { name, event }
