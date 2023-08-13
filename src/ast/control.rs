@@ -3,32 +3,30 @@ use crate::utils::Binding;
 
 #[derive(Clone)]
 /// Access into a bundle
-pub enum Access {
-    /// Index into the bundle
-    Index(Expr),
-    /// Range over a bundle
-    Range { start: Expr, end: Expr },
+pub struct Access {
+    pub start: Expr,
+    pub end: Expr,
 }
 
 impl Access {
     pub fn range(start: Expr, end: Expr) -> Self {
-        Access::Range { start, end }
+        Access { start, end }
     }
 
     pub fn resolve(self, binds: &Binding<Expr>) -> Self {
-        match self {
-            Access::Index(e) => Access::Index(e.resolve(binds)),
-            Access::Range { start, end } => Access::Range {
-                start: start.resolve(binds),
-                end: end.resolve(binds),
-            },
+        Access {
+            start: self.start.resolve(binds),
+            end: self.end.resolve(binds),
         }
     }
 }
 
 impl From<Expr> for Access {
     fn from(e: Expr) -> Self {
-        Access::Index(e)
+        Access {
+            start: e.clone(),
+            end: e + Expr::concrete(1),
+        }
     }
 }
 
