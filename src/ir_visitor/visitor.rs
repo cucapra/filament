@@ -95,9 +95,10 @@ where
     /// The user visible name for the pass
     fn name() -> &'static str;
 
+    #[must_use]
     /// Executed after the visitor has visited all the components.
     /// If the return value is `Some`, the number is treated as an error code.
-    fn after_traversal(&mut self) -> Option<u32> {
+    fn after_traversal(&mut self) -> Option<u64> {
         None
     }
 
@@ -267,7 +268,7 @@ where
     }
 
     /// Apply the pass to all components in the context
-    fn do_pass(opts: &cmdline::Opts, ctx: &mut ir::Context) -> Result<(), u32> {
+    fn do_pass(opts: &cmdline::Opts, ctx: &mut ir::Context) -> Result<(), u64> {
         let mut visitor = Self::from(opts, ctx);
         for idx in ctx.comps.idx_iter() {
             visitor.clear_data();

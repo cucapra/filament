@@ -1,0 +1,6 @@
+comp Foo<G:1>() -> () {}
+comp main<G:1>() -> () {
+    for #i in 0..3 {
+        f := new Foo<G>();
+    }
+}

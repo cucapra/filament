@@ -105,9 +105,12 @@ impl InvIdx {
     }
 
     /// The times the invoke uses, along with the EventBind infos
-    pub fn times(self, ctx: &impl Ctx<Invoke>) -> Vec<(TimeIdx, InfoIdx)> {
+    pub fn times(
+        self,
+        ctx: &impl Ctx<Invoke>,
+    ) -> impl Iterator<Item = (TimeIdx, InfoIdx)> + '_ {
         let inv = ctx.get(self);
-        inv.events.iter().map(|eb| (eb.arg, eb.info)).collect()
+        inv.events.iter().map(|eb| (eb.arg, eb.info))
     }
 
     /// Get the component being invoked

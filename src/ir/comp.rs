@@ -177,6 +177,21 @@ impl Component {
     }
 }
 
+/// Complex queries
+impl Component {
+    /// Returns an iterator over instances and the invocations that invoke them.
+    pub fn inst_invoke_map(
+        &self,
+    ) -> impl Iterator<Item = (InstIdx, Vec<InvIdx>)> {
+        self.invocations
+            .iter()
+            .map(|(idx, inv)| (inv.inst, idx))
+            .into_group_map()
+            .into_iter()
+            .map(|(inst, invs)| (inst, invs.into_iter().collect()))
+    }
+}
+
 /// Accessor methods
 impl Component {
     pub fn events(&self) -> &IndexStore<Event> {
