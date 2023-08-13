@@ -1,20 +1,20 @@
 import "primitives/core.fil";
 
-comp Let[#WIDTH]<G: 1>(
-    @[G, G+1] in: #WIDTH,
+comp Let[#W]<G: 1>(
+    in: [G, G+1] #W,
 ) -> (
-    @[G, G+1] out: #WIDTH+1,
+    out: [G, G+1] #W+1,
 ) where
-#WIDTH > 0 {
-    let #OUT = #WIDTH+1;
-    extended := new ZeroExtend[#WIDTH, #OUT]<G>(in);
+#W > 0 {
+    let #OUT = #W+1;
+    extended := new ZeroExtend[#W, #OUT]<G>(in);
     out = extended.out;
 }
 
 comp main<G: 1>(
-    @[G, G+1] in: 32,
+    in: [G, G+1] 32,
 ) -> (
-    @[G, G+1] out: 33,
+    out: [G, G+1] 33,
 ) {
     lp := new Let[32]<G>(in);
     out = lp.out;
