@@ -2,6 +2,7 @@ use crate::ir::{
     self, CompIdx, Component, Context, Ctx, EventIdx, ExprIdx, ParamIdx,
     PortIdx,
 };
+use calyx::RRC;
 use calyx_ir as calyx;
 use linked_hash_map::LinkedHashMap;
 
@@ -113,4 +114,17 @@ pub fn max_states(comp: &Component) -> LinkedHashMap<EventIdx, u64> {
         });
 
     max_states
+}
+
+/// Converts a cell to a list of port definitions
+pub fn cell_to_port_def(cr: &RRC<calyx::Cell>) -> Vec<calyx::PortDef<u64>> {
+    let cell = cr.borrow();
+    cell.ports()
+        .iter()
+        .map(|pr| {
+            let port = pr.borrow();
+            // Reverse port direction because signature refers to internal interface.
+            (port.name, port.width, port.direction.reverse()).into()
+        })
+        .collect()
 }

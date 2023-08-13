@@ -1,5 +1,5 @@
 use super::fsm::FsmBind;
-use super::utils::{comp_name, interface_name, port_name};
+use super::utils::{cell_to_port_def, comp_name, interface_name, port_name};
 use super::Fsm;
 use crate::ir::DenseIndexInfo;
 use crate::ir::{self, Ctx};
@@ -24,20 +24,7 @@ impl Binding {
 
     /// Gets a [calyx::Cell]'s signature from an [ir::CompIdx]
     pub fn get(&self, idx: &ir::CompIdx) -> Option<Vec<calyx::PortDef<u64>>> {
-        self.comps.get(idx).map(Self::cell_to_port_def)
-    }
-
-    /// Converts a cell to a list of port definitions
-    pub fn cell_to_port_def(cr: &RRC<calyx::Cell>) -> Vec<calyx::PortDef<u64>> {
-        let cell = cr.borrow();
-        cell.ports()
-            .iter()
-            .map(|pr| {
-                let port = pr.borrow();
-                // Reverse port direction because signature refers to internal interface.
-                (port.name, port.width, port.direction.reverse()).into()
-            })
-            .collect()
+        self.comps.get(idx).map(cell_to_port_def)
     }
 }
 
@@ -226,20 +213,25 @@ impl<'a> BuildCtx<'a> {
     /// Attempts to declare an fsm component (if not already declared) in the [Binding] stored by this [BuildCtx]
     /// and creates an [Fsm] from this [calyx::Component] FSM and stores it in the [BuildCtx]
     pub fn insert_fsm(&mut self, event: ir::EventIdx, states: u64) {
+        let evt = self.comp.get(event);
         // Construct an fsm iff the event is connected to an interface port
-        if self.comp.get(event).has_interface {
-            self.declare_fsm(states);
+        if evt.has_interface {
+            let ir::TimeSub::Unit(delay) = evt.delay else {
+                unreachable!("Non-unit delays should have been compiled away.");
+            };
+            let delay = delay.concrete(self.comp);
+            self.declare_fsm(states, delay);
 
             // Construct the FSM
-            let fsm = Fsm::new(event, states, self);
+            let fsm = Fsm::new(event, states, delay, self);
             self.fsms.insert(event, fsm);
         }
     }
 
     /// Creates a [calyx::Component] representing an FSM with a certain number of states to bind to each event.
     /// Adds component to the [Binding] held by this component.
-    fn declare_fsm(&mut self, states: u64) {
+    fn declare_fsm(&mut self, states: u64, delay: u64) {
         // If this fsm is already declared, just return.
-        self.binding.fsm_comps.add_simple(states, self.lib);
+        self.binding.fsm_comps.add(states, delay, self.lib);
     }
 }

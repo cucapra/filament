@@ -3,7 +3,7 @@ mod compile;
 mod fsm;
 mod utils;
 
-use build_ctx::{Binding, BuildCtx};
+use build_ctx::BuildCtx;
 use fsm::Fsm;
 
 pub use compile::Compile;
