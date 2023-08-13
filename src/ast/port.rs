@@ -44,20 +44,6 @@ impl PortDef {
             PortDef::Bundle(b) => &b.name,
         }
     }
-
-    pub fn bitwidth(&self) -> &Loc<Expr> {
-        match &self {
-            PortDef::Port { bitwidth, .. } => bitwidth,
-            PortDef::Bundle(b) => &b.typ.bitwidth,
-        }
-    }
-
-    pub fn liveness(&self) -> &Loc<Range> {
-        match &self {
-            PortDef::Port { liveness, .. } => liveness,
-            PortDef::Bundle(b) => &b.typ.liveness,
-        }
-    }
 }
 impl Display for PortDef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -130,17 +116,5 @@ impl Display for InterfaceDef {
 impl InterfaceDef {
     pub fn new(name: Loc<Id>, event: Id) -> Self {
         Self { name, event }
-    }
-}
-
-impl From<InterfaceDef> for PortDef {
-    fn from(id: InterfaceDef) -> Self {
-        let start = Time::from(id.event);
-        let end = start.clone().increment(1.into());
-        PortDef::port(
-            id.name,
-            Loc::unknown(Range::new(start, end)),
-            Loc::unknown(Expr::from(1)),
-        )
     }
 }

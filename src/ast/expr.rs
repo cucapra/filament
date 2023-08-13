@@ -373,23 +373,6 @@ impl Expr {
             }
         }
     }
-
-    /// Check if this TimeSum is equal to 0
-    pub fn is_zero(&self) -> bool {
-        matches!(self, Expr::Concrete(0))
-    }
-
-    /// Get all the abstract variables in this expression
-    pub fn exprs(&self) -> Box<dyn Iterator<Item = &Id> + '_> {
-        match self {
-            Expr::Concrete(_) => Box::new(std::iter::empty()),
-            Expr::Abstract(id) => Box::new(std::iter::once(id)),
-            Expr::App { arg, .. } => Box::new(arg.exprs()),
-            Expr::Op { left, right, .. } => {
-                Box::new(left.exprs().chain(right.exprs()))
-            }
-        }
-    }
 }
 
 impl std::ops::Add for Expr {

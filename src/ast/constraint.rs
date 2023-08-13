@@ -207,33 +207,6 @@ impl Constraint {
         }
     }
 
-    pub fn events(&self) -> Vec<&Time> {
-        match self {
-            Constraint::Base { base } => {
-                vec![&base.left, &base.right]
-            }
-            Constraint::Sub { base } => {
-                let mut evs = base.left.events();
-                evs.append(&mut base.right.events());
-                evs
-            }
-        }
-    }
-
-    /// All expressions used in this constraint
-    pub fn exprs(&self) -> Vec<&Expr> {
-        match self {
-            Constraint::Base { base } => {
-                vec![base.left.offset(), base.right.offset()]
-            }
-            Constraint::Sub { base } => {
-                let mut evs = base.left.exprs();
-                evs.extend(base.right.exprs().into_iter());
-                evs
-            }
-        }
-    }
-
     pub fn resolve_event(self, binding: &Binding<Time>) -> Constraint {
         match self {
             Constraint::Base { base } => Constraint::Base {
