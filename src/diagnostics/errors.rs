@@ -108,9 +108,3 @@ impl From<std::io::Error> for Error {
         Error::write_error("IO Error".to_string())
     }
 }
-
-impl From<rsmt2::errors::Error> for Error {
-    fn from(e: rsmt2::errors::Error) -> Self {
-        Error::misc(format!("SMT Error: {}", e))
-    }
-}

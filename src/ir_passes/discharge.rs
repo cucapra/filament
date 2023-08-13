@@ -52,6 +52,9 @@ pub struct Discharge {
     // Propositions that have already been checked
     checked: HashMap<ir::PropIdx, Option<Assign>>,
 
+    // counter for activation literals generated
+    act_lit_count: u32,
+
     /// Report the unsatisfied constraint and generate a model
     show_models: bool,
 
@@ -73,6 +76,7 @@ impl Construct for Discharge {
             sol,
             scoped: false,
             error_count: 0,
+            act_lit_count: 0,
             show_models: opts.show_models,
             func_map: Default::default(),
             param_map: Default::default(),
@@ -97,6 +101,7 @@ impl Construct for Discharge {
         self.expr_map.clear();
         self.checked.clear();
         self.diagnostics.clear();
+        self.act_lit_count = 0;
 
         // Create a new solver context
         self.sol.pop().unwrap();
@@ -123,6 +128,16 @@ impl Discharge {
 
     fn fmt_time(time: ir::TimeIdx) -> String {
         format!("t{}", time.get())
+    }
+
+    fn new_act_lit(&mut self) -> smt::SExpr {
+        self.act_lit_count += 1;
+        self.sol
+            .declare_const(
+                format!("act_lit{}", self.act_lit_count),
+                self.sol.bool_sort(),
+            )
+            .unwrap()
     }
 
     /// Defines primitive functions used in the encoding like `pow` and `log`
@@ -180,9 +195,12 @@ impl Discharge {
     ) -> &Option<Assign> {
         #[allow(clippy::map_entry)]
         if !self.checked.contains_key(&prop) {
-            self.sol.push().unwrap();
-            self.sol.assert(self.sol.not(self.prop_map[prop])).unwrap();
-            let res = self.sol.check().unwrap();
+            let actlit = self.new_act_lit();
+            let imp = self.sol.imp(actlit, self.sol.not(self.prop_map[prop]));
+            self.sol.assert(imp).unwrap();
+            // Disable the activation literal
+            let res = self.sol.check_assuming([actlit]).unwrap();
+            self.sol.assert(self.sol.not(actlit)).unwrap();
             let out = match res {
                 smt::Response::Sat => {
                     if self.show_models {
@@ -196,7 +214,6 @@ impl Discharge {
                 smt::Response::Unsat => None,
                 smt::Response::Unknown => panic!("Solver returned unknown"),
             };
-            self.sol.pop().unwrap();
             self.checked.insert(prop, out);
         }
         &self.checked[&prop]
