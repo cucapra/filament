@@ -143,7 +143,12 @@ impl<'a> Printer<'a> {
 
     fn liveness(&self, l: &ir::Liveness) -> String {
         let ir::Liveness { idx, len, range } = l;
-        format!("for<{idx}: {}> {}", self.expr(*len), self.range(range))
+        format!(
+            "for<{}: {}> {}",
+            self.ctx.display(*idx),
+            self.expr(*len),
+            self.range(range)
+        )
     }
 
     fn commands(
