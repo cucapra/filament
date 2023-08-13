@@ -1,6 +1,4 @@
-use super::{Command, Fsm, Id, Invoke, Signature};
-use crate::errors::{Error, FilamentResult};
-use std::fmt::Display;
+use super::{Command, Id, Signature};
 
 #[derive(Default)]
 /// A component in Filament
@@ -9,64 +7,11 @@ pub struct Component {
     pub sig: Signature,
     /// Model for this component
     pub body: Vec<Command>,
-    /// FSMs associated with this component
-    pub fsms: Vec<Fsm>,
 }
 
 impl Component {
-    pub fn validate(body: &[Command]) -> FilamentResult<()> {
-        let mut is_low: Option<bool> = None;
-
-        for con in body {
-            match con {
-                Command::Invoke(Invoke { ports, .. }) => match is_low {
-                    Some(true) => {
-                        if ports.is_some() {
-                            return Err(Error::malformed(
-                                "Malformed low-level component: Low-level component cannot use invoke with ports",
-                            ));
-                        }
-                    }
-                    Some(false) => {
-                        if ports.is_none() {
-                            return Err(Error::malformed(
-                                "Malformed High-level component: Invokes must specify all ports",
-                            ));
-                        }
-                    }
-                    None => is_low = Some(ports.is_none()),
-                },
-                Command::Instance(_)
-                | Command::Connect(_)
-                | Command::Fact(_)
-                | Command::Bundle(_)
-                | Command::If(_)
-                | Command::ForLoop(_)
-                | Command::ParamLet(_) => (),
-            }
-        }
-
-        Ok(())
-    }
-
     pub fn new(sig: Signature, body: Vec<Command>) -> Self {
-        Self {
-            sig,
-            body,
-            fsms: Vec::new(),
-        }
-    }
-}
-impl Display for Component {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{} {{", self.sig)?;
-        for fsm in &self.fsms {
-            writeln!(f, "  {}", fsm)?;
-        }
-        for com in &self.body {
-            writeln!(f, "  {};", com)?;
-        }
-        writeln!(f, "}}")
+        Self { sig, body }
     }
 }
 
@@ -90,39 +35,11 @@ impl Namespace {
             .flat_map(|(_, comps)| comps.iter().map(|s| (*s.name.inner(), s)))
     }
 
-    /// Creates an iterator over the signatures associated with the namespace
-    pub fn signatures(&self) -> impl Iterator<Item = (Id, &Signature)> {
-        self.externals().chain(
-            self.components
-                .iter()
-                .map(|c| (*c.sig.name.inner(), &c.sig)),
-        )
-    }
-
     /// Get the index to the top-level component.
     /// Currently, this is the distinguished "main" component
     pub fn main_idx(&self) -> Option<usize> {
         self.components.iter().position(|c| {
             c.sig.name.inner() == &Id::from(self.toplevel.clone())
         })
-    }
-}
-
-impl Display for Namespace {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for imp in &self.imports {
-            writeln!(f, "import \"{}\";", imp)?;
-        }
-        for (path, sigs) in &self.externs {
-            writeln!(f, "extern \"{}\" {{", path)?;
-            for sig in sigs {
-                writeln!(f, "  {};", sig)?;
-            }
-            writeln!(f, "}}")?;
-        }
-        for comp in &self.components {
-            writeln!(f, "{}", comp)?;
-        }
-        Ok(())
     }
 }

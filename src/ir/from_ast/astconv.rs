@@ -423,16 +423,7 @@ impl<'prog> BuildCtx<'prog> {
         &mut self,
         access: ast::Access,
     ) -> BuildRes<(ir::ExprIdx, ir::ExprIdx)> {
-        let r = match access {
-            ast::Access::Index(n) => {
-                let n = self.expr(n)?;
-                (n, n.add(self.comp().num(1), self.comp()))
-            }
-            ast::Access::Range { start, end } => {
-                (self.expr(start)?, self.expr(end)?)
-            }
-        };
-        Ok(r)
+        Ok((self.expr(access.start)?, self.expr(access.end)?))
     }
 
     /// Get the index associated with an AST port. The port must have been
@@ -840,8 +831,7 @@ impl<'prog> BuildCtx<'prog> {
                 };
                 fact.into_iter().collect()
             }
-            ast::Command::Connect(ast::Connect { src, dst, guard }) => {
-                assert!(guard.is_none(), "Guards are not supported");
+            ast::Command::Connect(ast::Connect { src, dst }) => {
                 let info =
                     self.comp().add(ir::Info::connect(dst.pos(), src.pos()));
                 let src = self.get_access(src.take(), ir::Direction::Out)?;

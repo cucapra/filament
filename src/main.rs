@@ -22,7 +22,6 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
             return Err(1);
         }
     };
-    log::debug!("{ns}");
 
     // Transform AST to IR
     let mut ir = ir::transform(ns)?;
