@@ -134,6 +134,15 @@ impl<'prog> BuildCtx<'prog> {
         match cmd {
             ast::Command::Instance(inst) => self.declare_inst(inst),
             ast::Command::Invoke(inv) => self.declare_inv(inv),
+            ast::Command::ParamLet(ast::ParamLet { name, .. }) => {
+                // Declare the parameter since it may be used in instance or
+                // invocation definitions.
+                self.param(
+                    &ast::ParamBind::new(name.clone(), None),
+                    ir::ParamOwner::Let,
+                );
+                Ok(())
+            }
             ast::Command::ForLoop(_)
             | ast::Command::If(_)
             | ast::Command::Fact(_)
@@ -435,8 +444,18 @@ impl<'prog> BuildCtx<'prog> {
     ) -> BuildRes<ir::Access> {
         let acc = match port {
             ast::Port::This(n) => {
-                let owner = InvPort::Sig(dir, n);
-                ir::Access::port(self.get_port(&owner)?, self.comp())
+                // NOTE: The AST does not distinguish between ports
+                // defined by the signature and locally defined ports so we
+                // must search both.
+                let owner = InvPort::Sig(dir, n.clone());
+                let port = if let Some(port) = self.find_port(&owner) {
+                    port
+                } else {
+                    let owner = InvPort::Local(n);
+                    self.get_port(&owner)?
+                };
+
+                ir::Access::port(port, self.comp())
             }
             ast::Port::InvPort { invoke, name } => {
                 let inv = self.get_inv(&invoke)?;
@@ -828,6 +847,29 @@ impl<'prog> BuildCtx<'prog> {
                 let src = self.get_access(src.take(), ir::Direction::Out)?;
                 let dst = self.get_access(dst.take(), ir::Direction::In)?;
                 vec![ir::Connect { src, dst, info }.into()]
+            }
+            ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
+                /* Declared by [[declare_cmds]]. This has the unfortunate effect
+                 * of making it seem like all parameters are hoisted to the top
+                 * of the scope. */
+                let param = self.get_param(name.inner())?;
+                let expr = self.expr(expr)?;
+
+                let pexpr = self.comp().add(ir::Expr::Param(param));
+
+                let prop =
+                    self.comp().add(ir::Prop::Cmp(ir::CmpOp::eq(pexpr, expr)));
+
+                let info = self.comp().add(ir::Info::assert(
+                    ir::info::Reason::misc("Let-bound parameter", name.pos()),
+                ));
+
+                log::debug!("Assuming {}", prop);
+
+                vec![
+                    ir::Let { param, expr }.into(),
+                    self.comp().assume(prop, info).unwrap(),
+                ]
             }
             ast::Command::ForLoop(ast::ForLoop {
                 idx,

@@ -279,6 +279,8 @@ pub enum ParamOwner {
     Bundle(PortIdx),
     /// Loop indexing parameter
     Loop,
+    /// A let-bound parameter
+    Let,
 }
 
 impl fmt::Display for ParamOwner {
@@ -293,6 +295,7 @@ impl fmt::Display for ParamOwner {
             ParamOwner::Bundle(idx) => {
                 write!(f, "{idx}")
             }
+            ParamOwner::Let => write!(f, "let"),
         }
     }
 }

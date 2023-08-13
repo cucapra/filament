@@ -98,6 +98,9 @@ impl<'a> Validate<'a> {
             ir::ParamOwner::Loop => self.comp.internal_error(format!(
                 "{par_idx} should be owned by a bundle but is owned by a loop"
             )),
+            ir::ParamOwner::Let => self.comp.internal_error(format!(
+                "{par_idx} should be owned by a bundle but is owned by a let"
+            )),
             ir::ParamOwner::Bundle(port_idx) => {
                 // Ensure that the bundle-owned param points here
                 if port_idx != pidx {
@@ -204,9 +207,9 @@ impl<'a> Validate<'a> {
 
         // check (2) and (3)
         match owner {
-            ir::ParamOwner::Sig | ir::ParamOwner::Loop => {
-                /* Nothing to check */
-            }
+            ir::ParamOwner::Let
+            | ir::ParamOwner::Sig
+            | ir::ParamOwner::Loop => { /* Nothing to check */ }
             ir::ParamOwner::Bundle(port_idx) => {
                 let ir::Port { live, .. } = &self.comp.get(*port_idx); // (2) this will panic if port not defined
 
@@ -306,6 +309,7 @@ impl<'a> Validate<'a> {
             ir::Command::Fact(fact) => {
                 self.fact(fact);
             }
+            ir::Command::Let(l) => self.p_let(l),
         }
     }
 
@@ -409,5 +413,14 @@ impl<'a> Validate<'a> {
     fn fact(&self, fact: &ir::Fact) {
         let ir::Fact { prop, .. } = *fact;
         self.prop(prop);
+    }
+
+    /// A let-bound parameter is valid if:
+    /// (1) Its param is valid
+    /// (2) Its expr is valid
+    fn p_let(&self, l: &ir::Let) {
+        let ir::Let { param, expr } = *l;
+        self.param(param);
+        self.expr(expr);
     }
 }

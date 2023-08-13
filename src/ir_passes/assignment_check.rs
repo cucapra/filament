@@ -1,6 +1,7 @@
 use crate::{
-    ir::{Connect, Ctx, DisplayCtx, PortIdx},
-    ir_visitor::{Action, Visitor, VisitorData},
+    cmdline,
+    ir::{Connect, Context, Ctx, DisplayCtx, PortIdx},
+    ir_visitor::{Action, Construct, Visitor, VisitorData},
     utils::{GPosIdx, GlobalPositionTable},
 };
 use codespan_reporting::{
@@ -13,12 +14,24 @@ use codespan_reporting::{
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 
-#[derive(Default)]
 /// Makes sure each index in a port is only written to at most once
 /// Must occur after monomorphization.
 pub struct AssignCheck {
     ports: LinkedHashMap<(PortIdx, usize), Vec<Option<GPosIdx>>>,
     diagnostic_count: u32,
+}
+
+impl Construct for AssignCheck {
+    fn from(_: &cmdline::Opts, _: &mut Context) -> Self {
+        Self {
+            ports: LinkedHashMap::new(),
+            diagnostic_count: 0,
+        }
+    }
+
+    fn clear_data(&mut self) {
+        self.ports = LinkedHashMap::new();
+    }
 }
 
 impl Visitor for AssignCheck {

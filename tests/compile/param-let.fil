@@ -1,0 +1,21 @@
+import "primitives/core.fil";
+
+comp Let[#W]<G: 1>(
+    in: [G, G+1] #W,
+) -> (
+    out: [G, G+1] #W+1,
+) where
+#W > 0 {
+    let #OUT = #W+1;
+    extended := new ZeroExtend[#W, #OUT]<G>(in);
+    out = extended.out;
+}
+
+comp main<G: 1>(
+    in: [G, G+1] 32,
+) -> (
+    out: [G, G+1] 33,
+) {
+    lp := new Let[32]<G>(in);
+    out = lp.out;
+}
