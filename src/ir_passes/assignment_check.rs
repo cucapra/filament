@@ -18,7 +18,7 @@ use linked_hash_map::LinkedHashMap;
 /// Must occur after monomorphization.
 pub struct AssignCheck {
     ports: LinkedHashMap<(PortIdx, usize), Vec<Option<GPosIdx>>>,
-    diagnostic_count: u32,
+    diagnostic_count: u64,
 }
 
 impl Construct for AssignCheck {
@@ -152,7 +152,7 @@ impl Visitor for AssignCheck {
         }
     }
 
-    fn after_traversal(&mut self) -> Option<u32> {
+    fn after_traversal(&mut self) -> Option<u64> {
         if self.diagnostic_count > 0 {
             Some(self.diagnostic_count)
         } else {
