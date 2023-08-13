@@ -1,4 +1,3 @@
-pub mod backend;
 pub mod cmdline;
 pub mod diagnostics;
 pub mod frontend;

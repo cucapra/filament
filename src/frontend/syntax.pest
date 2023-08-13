@@ -158,12 +158,8 @@ instance = {
 
 // Connections
 
-guard = {
-  port ~ ("|" ~ guard)?
-}
-
 connect = {
-  port ~ "=" ~ (guard ~ "?")? ~ port ~ ";"
+  port ~ "=" ~ port ~ ";"
 }
 
 // ====== Invocations ==========
