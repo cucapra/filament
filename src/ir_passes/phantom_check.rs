@@ -29,7 +29,7 @@ impl PhantomCheck {
 
     /// Check if we're currently in a loop nest
     fn in_loop(&self) -> bool {
-        !self.defined_insts.is_empty()
+        self.defined_insts.len() != 1
     }
 }
 
@@ -37,14 +37,14 @@ impl Construct for PhantomCheck {
     fn from(_: &cmdline::Opts, _: &mut ir::Context) -> Self {
         PhantomCheck {
             phantom_events: Vec::new(),
-            defined_insts: vec![],
+            defined_insts: vec![Vec::new()],
             diag: diagnostics::Diagnostics::default(),
         }
     }
 
     fn clear_data(&mut self) {
         self.phantom_events.clear();
-        self.defined_insts = vec![];
+        self.defined_insts = vec![Vec::new()];
         /* Diagnostics struct is shared */
     }
 }
