@@ -31,9 +31,12 @@ impl TimeIdx {
             TimeSub::Sym { l: self, r: other }
         }
     }
-}
 
-impl TimeIdx {
+    pub fn event(self, ctx: &impl Ctx<Time>) -> EventIdx {
+        let time = ctx.get(self);
+        time.event
+    }
+
     pub fn lte<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
     where
         C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,

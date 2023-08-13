@@ -58,7 +58,7 @@ pub struct Discharge {
     // Diagnostics to be reported
     diagnostics: Vec<cr::Diagnostic<usize>>,
     /// Number of errors encountered
-    error_count: u32,
+    error_count: u64,
 }
 
 impl Construct for Discharge {
@@ -430,7 +430,7 @@ impl Visitor for Discharge {
         }
     }
 
-    fn after_traversal(&mut self) -> Option<u32> {
+    fn after_traversal(&mut self) -> Option<u64> {
         if self.error_count > 0 {
             Some(self.error_count)
         } else {

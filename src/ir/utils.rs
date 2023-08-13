@@ -176,7 +176,7 @@ impl<T> IndexStore<T> {
             .map(|(idx, _)| Idx::new(idx))
     }
 
-    /// Iterate over the indices and the values in the store.
+    /// Iterate over the valid indices and the values in the store.
     pub fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> + '_ {
         self.store
             .iter()
@@ -320,6 +320,8 @@ impl<T, V: Default> DenseIndexInfo<T, V> {
 }
 
 impl<T, V: Default + Clone> DenseIndexInfo<T, V> {
+    /// Add the value to the map if the index is not already present.
+    /// Unlike [Self::push], this method can add values in any order.
     pub fn insert(&mut self, key: Idx<T>, mut val: V) -> Option<V> {
         if self.store.len() > key.get() {
             // idx is already in the store, need to update it
@@ -329,6 +331,14 @@ impl<T, V: Default + Clone> DenseIndexInfo<T, V> {
             self.store.resize(key.get(), V::default());
             self.push(key, val);
             None
+        }
+    }
+
+    /// Construct a new info map with the given capacity with the default value for each index.
+    pub fn with_default(cap: usize) -> Self {
+        Self {
+            store: vec![V::default(); cap],
+            key_typ: PhantomData,
         }
     }
 }
