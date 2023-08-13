@@ -9,12 +9,12 @@ extern "dummy.sv" {
   // in this function's signature but that is okay because inputs only require
   // signals to be active for at least as long as the requirement
   comp Merge<G: E-(G), L: E-(L), E: 1>(
-    @interface[G] go_G: 1,
-    @interface[L] go_L: 1,
-    @[G, L] in1: 32,
-    @[L, E] in2: 32,
+    go_G: interface[G],
+    go_L: interface[L],
+     in1: [G, L] 32,
+     in2: [L, E] 32,
   ) -> (
-    @[G, E] out: 32,
+     out: [G, E] 32,
   ) where L > G, E > L, E > G;
 }
 
@@ -23,10 +23,10 @@ extern "dummy.sv" {
 // We use a merge unit to forward the input signal in the first cycle and
 // Register the output to make it available for the remaining cycles.
 comp main<G: 3>(
-  @interface[G] go_G: 1,
-  @[G, G+1] in: 32
+  go_G: interface[G],
+   in: [G, G+1] 32
 ) -> (
-  @[G, G+3] out: 32
+   out: [G, G+3] 32
 ) {
   L := new Register[32];
   M := new Merge;

@@ -2,27 +2,27 @@
 1
 ---STDERR---
 error: bundle's availability is greater than the delay of the event
-  ┌─ tests/errors/sig-errors.fil:3:9
+  ┌─ tests/errors/sig-errors.fil:3:14
   │
 2 │     comp Wrong<G: 1, L: 1>(
   │                   - event's delay
-3 │         @[G, G+2] in: 32,
-  │         ^^^^^^^^^ available for 2 cycles
+3 │          in: [G, G+2] 32,
+  │              ^^^^^^^^ available for 2 cycles
 
 error: interval's end must be strictly greater than the start
-  ┌─ tests/errors/sig-errors.fil:5:9
+  ┌─ tests/errors/sig-errors.fil:5:15
   │
-5 │         @[G, L] out: 32,
-  │         ^^^^^^^ interval's end `L' is not strictly greater than the start `G
+5 │          out: [G, L] 32,
+  │               ^^^^^^ interval's end `L' is not strictly greater than the start `G
 
 error: bundle's availability is greater than the delay of the event
-  ┌─ tests/errors/sig-errors.fil:5:9
+  ┌─ tests/errors/sig-errors.fil:5:15
   │
 2 │     comp Wrong<G: 1, L: 1>(
   │                   - event's delay
   ·
-5 │         @[G, L] out: 32,
-  │         ^^^^^^^ available for |L - G| cycles
+5 │          out: [G, L] 32,
+  │               ^^^^^^ available for |L - G| cycles
 
 Compilation failed with 3 errors.
 Run with --show-models to generate assignments for failing constraints.

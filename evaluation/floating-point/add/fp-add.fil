@@ -3,11 +3,11 @@ import "primitives/signed.fil";
 import "../fp-support.fil";
 
 comp FPAdd<G: 1>(
-  @interface[G] go: 1,
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32
+  go: interface[G],
+   left: [G, G+1] 32,
+   right: [G, G+1] 32
 ) -> (
-  @[G+4, G+5] out: 32
+   out: [G+4, G+5] 32
 ) {
   // ---------- Stage 1 ----------
   // left[30:23]

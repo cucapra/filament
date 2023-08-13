@@ -2,10 +2,10 @@ import "primitives/core.fil";
 
 // A Shift register that waits 2^#N cycles.
 comp ShiftExp[#W, #N, #K]<G:#K>(
-    @interface[G] go: 1,
-    @[G, G+1] in: #W
+    go: interface[G],
+     in: [G, G+1] #W
 ) -> (
-    @[G+#K, G+#K+1] out: #W
+     out: [G+#K, G+#K+1] #W
 ) where #W > 1,
         #N >= 0,
         #K == pow2(#N),
@@ -23,10 +23,10 @@ comp ShiftExp[#W, #N, #K]<G:#K>(
 }
 
 comp main<G:16>(
-    @interface[G] go: 1,
-    @[G, G+1] in: 32,
+    go: interface[G],
+     in: [G, G+1] 32,
 ) -> (
-    @[G+16, G+17] out: 32
+     out: [G+16, G+17] 32
 ) {
     reduce := new ShiftExp[32, 4, 16]<G>(in);
     out = reduce.out;

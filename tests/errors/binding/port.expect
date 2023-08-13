@@ -5,7 +5,7 @@ error: undefined port name: out
   ┌─ tests/errors/binding/port.fil:2:5
   │
 2 │     out = in;
-  │     ^^^ out is not a defined port
+  │     ^^^ `out' is not a defined port
 
 Compilation failed with 1 errors.
 Run with --show-models to generate assignments for failing constraints.

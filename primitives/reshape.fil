@@ -23,12 +23,12 @@ import "primitives/state.fil";
 // all. They are most useful when the serializer is providing inputs to
 // a component that is not fully pipelined.
 comp GenSerialize[#W, #N, #B, #C, #H]<G: #C*(#N-1)+#H>(
-    @interface[G] go: 1,
-    in[#N*#B]: for<#p> @[G, G+#H] #W
+    go: interface[G],
+    in[#N*#B]: for<#p> [G, G+#H] #W
 ) -> (
     // The parenthesis are important because we want to perform integer
     // division.
-    out[#N*#B]: for<#p> @[G+#C*(#p/#B), G+#C*(#p/#B)+#H] #W
+    out[#N*#B]: for<#p> [G+#C*(#p/#B), G+#C*(#p/#B)+#H] #W
 ) where #N > 0, #B > 0, #C > 0, #H > 0 {
     for #i in 0..#N {
         for #j in 0..#B {
@@ -47,10 +47,10 @@ comp GenSerialize[#W, #N, #B, #C, #H]<G: #C*(#N-1)+#H>(
 // NOTE(rachit): Once we have default parameters (https://github.com/cucapra/filament/issues/133),
 // We should remove this and change GenSerialize to have #C=1 and #H=1.
 comp Serialize[#W, #N, #B]<G:#N>(
-    @interface[G] go: 1,
-    in[#N*#B]: for<#p> @[G, G+1] #W
+    go: interface[G],
+    in[#N*#B]: for<#p> [G, G+1] #W
 ) -> (
-    out[#N*#B]: for<#p> @[G+#p/#B, G+#p/#B+1] #W
+    out[#N*#B]: for<#p> [G+#p/#B, G+#p/#B+1] #W
 ) where #N > 0, #B > 0 {
     s := new GenSerialize[#W, #N, #B, 1, 1]<G>(in{0..#N*#B});
     out{0..#N*#B} = s.out{0..#N*#B};
@@ -80,10 +80,10 @@ comp Serialize[#W, #N, #B]<G:#N>(
 // all. They are most useful when the deserializer is consuming inputs from
 // a component that is not fully pipelined.
 comp GenDeserialize[#W, #N, #B, #C, #H]<G: #C*#N+#H-2>(
-    @interface[G] go: 1,
-    in[#N*#B]: for<#p> @[G+#C*(#p/#B), G+#C*(#p/#B)+#H] #W
+    go: interface[G],
+    in[#N*#B]: for<#p> [G+#C*(#p/#B), G+#C*(#p/#B)+#H] #W
 ) -> (
-    out[#N*#B]: for<#p> @[G+#C*(#N-1), G+#C*(#N-1)+#H] #W
+    out[#N*#B]: for<#p> [G+#C*(#N-1), G+#C*(#N-1)+#H] #W
 ) where #N > 1, #B > 0, #C > 0, #H > 0 {
     for #i in 0..#N {
         // Accepts #B inputs this cycle and delay them
@@ -103,10 +103,10 @@ comp GenDeserialize[#W, #N, #B, #C, #H]<G: #C*#N+#H-2>(
 // Accepts #K inputs every cycle for #N cycles and produces #N*#K outputs in
 // the last cycle.
 comp Deserialize[#W, #N, #B]<G: #N-1>(
-    @interface[G] go: 1,
-    in[#N*#B]: for<#p> @[G+#p/#B, G+#p/#B+1] #W
+    go: interface[G],
+    in[#N*#B]: for<#p> [G+#p/#B, G+#p/#B+1] #W
 ) -> (
-    out[#N*#B]: for<#p> @[G+#N-1, G+#N] #W
+    out[#N*#B]: for<#p> [G+#N-1, G+#N] #W
 ) where #N > 1, #B > 0 {
     d := new GenDeserialize[#W, #N, #B, 1, 1]<G>(in{0..#N*#B});
     out{0..#N*#B} = d.out{0..#N*#B};
@@ -115,10 +115,10 @@ comp Deserialize[#W, #N, #B]<G: #N-1>(
 /// Take a bundle of length #L that produces values every #N and cycles and make
 /// it produce values every #M cycles where #M > #N.
 comp Downsample[#N, #M, #L, #W]<G: (#M-#N)*#L>(
-    @interface[G] go: 1,
-    in[#L]: for<#p> @[G+#N*#p, G+#N*#p+1] #W
+    go: interface[G],
+    in[#L]: for<#p> [G+#N*#p, G+#N*#p+1] #W
 ) -> (
-    out[#L]: for<#p> @[G+#M*#p, G+#M*#p+1] #W
+    out[#L]: for<#p> [G+#M*#p, G+#M*#p+1] #W
 ) where #N > 0, #M > #N {
     for #i in 0..#L {
         if #i == 0 {

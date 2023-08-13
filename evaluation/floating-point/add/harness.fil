@@ -5,11 +5,11 @@ extern "fp-add.sv" {
   comp IEEE_SP_FP_ADDER<G: 1>(
     clk: 1,
     reset: 1,
-    @interface[G] _go: 1,
-    @[G, G+1] Number1: 32,
-    @[G, G+1] Number2: 32,
+    _go: interface[G],
+     Number1: [G, G+1] 32,
+     Number2: [G, G+1] 32,
   ) -> (
-    @[G+4, G+5] Result: 32,
+     Result: [G+4, G+5] 32,
   );
 }
 
@@ -17,23 +17,23 @@ extern "fp-add-nopipe.sv" {
   comp IEEE_SP_FP_ADDER_NOPIPE<G: 1>(
     clk: 1,
     reset: 1,
-    @interface[G] _go: 1,
-    @[G, G+1] Number1: 32,
-    @[G, G+1] Number2: 32,
+    _go: interface[G],
+     Number1: [G, G+1] 32,
+     Number2: [G, G+1] 32,
   ) -> (
-    @[G, G+1] Result: 32,
+     Result: [G, G+1] 32,
   );
 }
 
 comp main<G: 1>(
-  @interface[G] go: 1,
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32,
+  go: interface[G],
+   left: [G, G+1] 32,
+   right: [G, G+1] 32,
 ) -> (
-  @[G+4, G+5] out: 32,
-  @[G+4, G+5] verilog_pipe: 32,
-  @[G, G+1] verilog_nopipe: 32,
-  @[G, G+1] filament_lib: 32
+   out: [G+4, G+5] 32,
+   verilog_pipe: [G+4, G+5] 32,
+   verilog_nopipe: [G, G+1] 32,
+   filament_lib: [G, G+1] 32
 ) {
   fil := new FPAdd<G>(left, right);
   ver := new IEEE_SP_FP_ADDER<G>(left, right);

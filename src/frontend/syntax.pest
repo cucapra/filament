@@ -67,7 +67,7 @@ comp_or_ext = {
 pound = { "#" }
 param_var = ${ pound ~ identifier }
 interface = {
-  "@interface" ~ "[" ~ identifier ~ "]"
+  "interface" ~ "[" ~ identifier ~ "]"
 }
 op_mul = { "*" }
 op_div = { "/" }
@@ -117,13 +117,25 @@ time = {
 
 // Intervals
 interval_range = {
- "@" ~ "[" ~ time ~ "," ~ time ~ "]"
+ "[" ~ time ~ "," ~ time ~ "]"
+}
+
+bundle_typ = {
+  ("for" ~ "<" ~ param_var ~ ">")? ~ interval_range ~ expr
+}
+
+// Bundle definition
+bundle_def = {
+  identifier ~ ("[" ~ expr ~ "]")? ~ ":" ~ bundle_typ
 }
 
 // Ports
 port_def = {
-  (interval_range | interface)? ~ identifier ~ ":" ~ expr
-  | identifier ~ "[" ~ expr ~ "]" ~ ":" ~ bundle_typ
+  identifier ~ ":" ~ bitwidth
+  // A port that is possibly a bundle port
+  | bundle_def
+  // An interface port
+  | identifier ~ ":" ~ interface
 }
 
 arrow = { "->" }
@@ -201,12 +213,8 @@ for_loop = {
 }
 
 // ====== Wire bundles ==========
-bundle_typ = {
-  "for" ~ "<" ~ param_var ~ ">" ~ interval_range ~ expr
-}
-
 bundle = {
-  "bundle" ~ identifier ~ "[" ~ expr ~ "]" ~ ":" ~ bundle_typ ~ ";"
+  "bundle" ~ bundle_def ~ ";"
 }
 
 /// ===== Assumptions ==========

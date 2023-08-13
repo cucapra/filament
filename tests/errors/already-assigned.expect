@@ -4,7 +4,7 @@
 error: Port a{0} is assigned to multiple times.
    ┌─ tests/errors/already-assigned.fil:10:5
    │
- 7 │     bundle a[4]: for<#k> @[G, G+1] 32;
+ 7 │     bundle a[4]: for<#k> [G, G+1] 32;
    │            - defined here
    ·
 10 │     a{0} = a{1};
@@ -15,7 +15,7 @@ error: Port a{0} is assigned to multiple times.
 error: Port a{3} is never assigned to.
   ┌─ tests/errors/already-assigned.fil:7:12
   │
-7 │     bundle a[4]: for<#k> @[G, G+1] 32;
+7 │     bundle a[4]: for<#k> [G, G+1] 32;
   │            - defined here
 
 Compilation failed with 2 errors.
