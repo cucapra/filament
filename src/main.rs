@@ -36,11 +36,10 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::PhantomCheck,
         ip::Assume,
         ip::HoistFacts,
-        ip::Simplify,
+        // ip::Simplify,
         ip::Discharge
     }
-    // TODO(rachit): Once `BundleElim` implements `Visitor`, we can collapse this into
-    // one call to `pass_pipeline!`.
+
     ir = log_time!(ip::Monomorphize::transform(&ir), "monomorphize");
     if opts.dump_after.contains(&"monomorphize".to_string()) {
         ir::Printer::context(&ir, &mut std::io::stdout()).unwrap()

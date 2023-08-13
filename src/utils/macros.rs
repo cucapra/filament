@@ -23,6 +23,14 @@ macro_rules! log_time {
         log::info!("{}: {}ms", $msg, t.as_millis());
         r
     }};
+    // Variant to log the time with a custom message only when a bound is reached
+    ($e:expr, $msg:expr; $min_time:expr) => {{
+        let (r, t) = $crate::time!($e);
+        if t.as_millis() > $min_time {
+            log::info!("{}: {}ms", $msg, t.as_millis());
+        }
+        r
+    }};
 }
 
 #[macro_export]

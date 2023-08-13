@@ -1,7 +1,7 @@
 use crate::ir::{Ctx, DisplayCtx};
 use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
 use crate::utils::GlobalPositionTable;
-use crate::{ast, cmdline, ir, utils};
+use crate::{ast, cmdline, ir, log_time};
 use codespan_reporting::{diagnostic as cr, term};
 use easy_smt as smt;
 use itertools::Itertools;
@@ -58,6 +58,8 @@ pub struct Discharge {
     /// Report the unsatisfied constraint and generate a model
     show_models: bool,
 
+    to_prove: Vec<ir::Fact>,
+
     // Diagnostics to be reported
     diagnostics: Vec<cr::Diagnostic<usize>>,
     /// Number of errors encountered
@@ -77,6 +79,7 @@ impl Construct for Discharge {
             scoped: false,
             error_count: 0,
             act_lit_count: 0,
+            to_prove: vec![],
             show_models: opts.show_models,
             func_map: Default::default(),
             param_map: Default::default(),
@@ -102,6 +105,7 @@ impl Construct for Discharge {
         self.checked.clear();
         self.diagnostics.clear();
         self.act_lit_count = 0;
+        self.to_prove.clear();
 
         // Create a new solver context
         self.sol.pop().unwrap();
@@ -188,18 +192,20 @@ impl Discharge {
 
     /// Check whether the proposition is valid.
     /// Returns a set of assignments if the proposition is not valid.
-    fn check_valid(
-        &mut self,
-        prop: ir::PropIdx,
-        ctx: &ir::Component,
-    ) -> &Option<Assign> {
+    fn check_valid(&mut self, fact: ir::Fact, ctx: &ir::Component) {
+        let prop = fact.prop;
         #[allow(clippy::map_entry)]
         if !self.checked.contains_key(&prop) {
             let actlit = self.new_act_lit();
-            let imp = self.sol.imp(actlit, self.sol.not(self.prop_map[prop]));
+            let sexp = self.prop_map[prop];
+            let imp = self.sol.imp(actlit, self.sol.not(sexp));
             self.sol.assert(imp).unwrap();
             // Disable the activation literal
-            let res = self.sol.check_assuming([actlit]).unwrap();
+            let res = log_time!(
+                self.sol.check_assuming([actlit]).unwrap(),
+                ctx.display(prop.consequent(ctx));
+                100
+            );
             self.sol.assert(self.sol.not(actlit)).unwrap();
             let out = match res {
                 smt::Response::Sat => {
@@ -216,7 +222,32 @@ impl Discharge {
             };
             self.checked.insert(prop, out);
         }
-        &self.checked[&prop]
+        if let Some(assign) = &self.checked[&prop] {
+            let ir::info::Assert(reason) =
+                ctx.get(fact.reason).as_assert().unwrap();
+            let mut diag = reason.diag(ctx);
+            if self.show_models {
+                diag = reason.diag(ctx).with_notes(vec![format!(
+                    "Cannot prove constraint: {}",
+                    ctx.display(fact.prop.consequent(ctx))
+                )]);
+                if !assign.is_empty() {
+                    diag = diag.with_notes(vec![format!(
+                        "Counterexample: {} (unmentioned parameters are 0)",
+                        assign.display(ctx)
+                    )]);
+                }
+            }
+            self.diagnostics.push(diag);
+        }
+    }
+
+    /// Find the failing facts from the given component and add diagnostics for them
+    fn failing_props(&mut self, comp: &ir::Component) {
+        let props = std::mem::take(&mut self.to_prove);
+        for fact in props {
+            self.check_valid(fact, comp);
+        }
     }
 
     fn expr_to_sexp(&mut self, expr: &ir::Expr) -> smt::SExpr {
@@ -358,8 +389,7 @@ impl Visitor for Discharge {
         Action::Continue
     }
 
-    fn fact(&mut self, f: &mut ir::Fact, data: &mut VisitorData) -> Action {
-        let comp = &mut data.comp;
+    fn fact(&mut self, f: &mut ir::Fact, _: &mut VisitorData) -> Action {
         if self.scoped {
             panic!("scoped facts not supported. Run `hoist-facts` before this pass");
         }
@@ -370,39 +400,9 @@ impl Visitor for Discharge {
             )
         }
 
-        let show_models = self.show_models;
-        match self.check_valid(f.prop, comp) {
-            None => {
-                let reason = comp.add(
-                    ir::info::Reason::misc(
-                        "Discharged assumption",
-                        utils::GPosIdx::UNKNOWN,
-                    )
-                    .into(),
-                );
-                Action::Change(
-                    comp.assume(f.prop, reason).into_iter().collect(),
-                )
-            }
-            Some(assign) => {
-                let &ir::info::Assert(ref reason) = comp.get(f.reason).into();
-                let mut diag = reason.diag(comp);
-                if show_models {
-                    diag = reason.diag(comp).with_notes(vec![format!(
-                        "Cannot prove constraint: {}",
-                        comp.display(f.prop.consequent(comp))
-                    )]);
-                    if !assign.is_empty() {
-                        diag = diag.with_notes(vec![format!(
-                            "Counterexample: {} (unmentioned parameters are 0)",
-                            assign.display(comp)
-                        )]);
-                    }
-                }
-                self.diagnostics.push(diag);
-                Action::Continue
-            }
-        }
+        // Defer proof obligations till the end of the component pass
+        self.to_prove.push(f.clone());
+        Action::Continue
     }
 
     fn do_if(&mut self, i: &mut ir::If, data: &mut VisitorData) -> Action {
@@ -425,8 +425,25 @@ impl Visitor for Discharge {
         out
     }
 
-    fn end(&mut self, _: &mut VisitorData) {
+    fn end(&mut self, data: &mut VisitorData) {
         assert!(!self.scoped, "unbalanced scopes");
+
+        if self.to_prove.is_empty() {
+            return;
+        }
+
+        // Attempt to prove all facts
+        let total_prop = self
+            .sol
+            .and_many(self.to_prove.iter().map(|f| self.prop_map[f.prop]));
+        let total_prop = self.sol.not(total_prop);
+        self.sol.assert(total_prop).unwrap();
+
+        // If there is at least one failing prop, roll back to individually checking the props for error reporting
+        if matches!(self.sol.check().unwrap(), smt::Response::Sat) {
+            self.failing_props(&data.comp);
+        }
+
         // Report all the errors
         let is_tty = atty::is(atty::Stream::Stderr);
         let writer = StandardStream::stderr(if is_tty {
