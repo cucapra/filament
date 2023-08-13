@@ -230,16 +230,16 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         while i < bound {
             let index = Underlying::new(*index);
             self.monosig.binding.insert(index, i);
-            let mut nlets: u32 = 0; // count p_lets as they generate assignments we have to pop later.
+            let mut nlets: usize = 0; // count p_lets as they generate assignments we have to pop later.
             for cmd in body.iter() {
-                nlets += matches!(&cmd, ir::Command::Let(_)) as u32;
+                if matches!(&cmd, ir::Command::Let(_)) {
+                    nlets += 1;
+                }
                 let cmd = self.command(cmd);
                 self.monosig.base.cmds.extend(cmd);
             }
-            for _ in 0..nlets {
-                // pop the let assignments
-                self.monosig.binding.pop();
-            }
+            // Pop all the let bindings
+            self.monosig.binding.pop_n(nlets);
             self.monosig.binding.pop(); // pop the index
             i += 1;
         }
