@@ -1,8 +1,5 @@
-use super::expr::EvalBool;
-use super::{Expr, Range, Time, TimeSub};
-use crate::errors::FilamentResult;
+use super::{Expr, Time, TimeSub};
 use crate::utils::Binding;
-use std::fmt::Display;
 
 /// Ordering operator for constraints
 #[derive(Hash, Eq, PartialEq, Clone)]
@@ -97,19 +94,6 @@ impl OrderConstraint<Expr> {
     }
 }
 
-impl EvalBool for OrderConstraint<Expr> {
-    fn resolve_bool(self, binding: &Binding<Expr>) -> FilamentResult<bool> {
-        let OrderConstraint { left, right, op } = self.resolve_expr(binding);
-        let l: u64 = left.try_into()?;
-        let r: u64 = right.try_into()?;
-        Ok(match op {
-            OrderOp::Gt => l > r,
-            OrderOp::Gte => l >= r,
-            OrderOp::Eq => l == r,
-        })
-    }
-}
-
 impl OrderConstraint<Time> {
     pub fn resolve_event(self, bindings: &Binding<Time>) -> Self {
         OrderConstraint {
@@ -143,39 +127,6 @@ impl OrderConstraint<TimeSub> {
             right: self.right.resolve_expr(bindings),
             ..self
         }
-    }
-}
-
-impl OrderConstraint<Time> {
-    /// Check that the `left` range is equal to `right`
-    pub fn equality(left: Range, right: Range) -> impl Iterator<Item = Self> {
-        log::trace!("{left} = {right}");
-        vec![
-            OrderConstraint::eq(left.start, right.start),
-            OrderConstraint::eq(left.end, right.end),
-        ]
-        .into_iter()
-    }
-
-    /// Check that the `left` range is a subset of `right`
-    /// [ls, le] \subsetof [rs, re] <=> rs <= ls <= le <= re
-    pub fn subset(left: Range, right: Range) -> impl Iterator<Item = Self> {
-        log::trace!("{left} ⊆ {right}");
-        vec![
-            OrderConstraint::lte(right.start, left.start),
-            OrderConstraint::gte(right.end, left.end),
-        ]
-        .into_iter()
-    }
-}
-
-impl<T> Display for OrderConstraint<T>
-where
-    T: Display,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {} {}", self.left, self.op, self.right)?;
-        Ok(())
     }
 }
 

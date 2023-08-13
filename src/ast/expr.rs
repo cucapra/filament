@@ -1,8 +1,5 @@
 use super::Id;
-use crate::{
-    errors,
-    utils::{self, Binding},
-};
+use crate::{errors, utils};
 
 /// Binary operation over expressions
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd)]
@@ -58,13 +55,6 @@ impl UnFn {
             },
         }
     }
-}
-
-/// A trait representing whether an expression type can be evaluated as a boolean
-pub trait EvalBool {
-    /// Resolve self to either true or false given a set of bindings.
-    fn resolve_bool(self, bind: &Binding<Expr>)
-        -> errors::FilamentResult<bool>;
 }
 
 /// An expression containing integers and abstract variables
@@ -335,20 +325,5 @@ impl Ord for ECtx {
 impl PartialOrd for ECtx {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
-    }
-}
-
-impl EvalBool for Expr {
-    fn resolve_bool(
-        self,
-        bind: &Binding<Expr>,
-    ) -> errors::FilamentResult<bool> {
-        match self.resolve(bind) {
-            Expr::Concrete(x) => Ok(x != 0),
-            exp => Err(errors::Error::malformed(format!(
-                "Failed to concretize {} when evaluating to boolean.",
-                exp
-            ))),
-        }
     }
 }

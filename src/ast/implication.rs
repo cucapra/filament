@@ -1,7 +1,6 @@
-use super::{expr::EvalBool, Expr, OrderConstraint};
-use crate::{errors::FilamentResult, utils::Binding};
+use super::{Expr, OrderConstraint};
+use crate::utils::Binding;
 use itertools::Itertools;
-use std::fmt::Display;
 
 /// A type representing the expression a => b
 #[derive(Clone)]
@@ -62,29 +61,6 @@ impl Implication<Expr> {
                 .flatten()
                 .collect_vec(),
             None => self.cons.exprs(),
-        }
-    }
-}
-
-impl EvalBool for Implication<Expr> {
-    fn resolve_bool(self, bind: &Binding<Expr>) -> FilamentResult<bool> {
-        Ok(match self.guard {
-            Some(g) => {
-                !g.resolve_bool(bind)? || self.cons.resolve_bool(bind)?
-            }
-            None => self.cons.resolve_bool(bind)?,
-        })
-    }
-}
-
-impl<T> Display for Implication<T>
-where
-    T: Display,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.guard {
-            Some(g) => write!(f, "{} => {}", g, self.cons),
-            None => write!(f, "{}", self.cons),
         }
     }
 }
