@@ -42,8 +42,8 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     }
     // TODO(rachit): Once `BundleElim` implements `Visitor`, we can collapse this into
     // one call to `pass_pipeline!`.
-    ir = log_time!(ip::Monomorphize::transform(&ir), "monomorphization");
-    if opts.dump_after.contains(&"monomorphization".to_string()) {
+    ir = log_time!(ip::Monomorphize::transform(&ir), "monomorphize");
+    if opts.dump_after.contains(&"monomorphize".to_string()) {
         ir::Printer::context(&ir, &mut std::io::stdout()).unwrap()
     }
     pass_pipeline! {opts, ir; ip::AssignCheck, ip::BundleElim, ip::AssignCheck }
