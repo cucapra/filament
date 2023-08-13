@@ -2,7 +2,7 @@ use super::expr::FnAssume;
 use super::{
     Expr, Id, Implication, Loc, OrderConstraint, PortDef, Range, Time,
 };
-use crate::utils::{self, Binding};
+use crate::utils::Binding;
 use crate::{
     errors::{Error, FilamentResult},
     utils::GPosIdx,
@@ -346,10 +346,6 @@ impl Fact {
 
     pub fn exprs(&self) -> Vec<&Expr> {
         self.cons.inner().exprs()
-    }
-
-    pub fn constraint(self) -> utils::SExp {
-        self.cons.take().into()
     }
 
     /// Resolve expression in the assumption

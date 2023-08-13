@@ -1,7 +1,7 @@
 use super::{Fact, Id, Implication, OrderConstraint, OrderOp};
 use crate::{
     errors,
-    utils::{self, Binding, SExp},
+    utils::{self, Binding},
 };
 use itertools::Itertools;
 use std::{fmt::Display, mem, sync};
@@ -24,18 +24,6 @@ impl Display for Op {
             Op::Mul => write!(f, "*"),
             Op::Div => write!(f, "/"),
             Op::Mod => write!(f, "%"),
-        }
-    }
-}
-
-impl From<Op> for utils::SExp {
-    fn from(value: Op) -> Self {
-        match value {
-            Op::Add => SExp("+".to_string()),
-            Op::Sub => SExp("-".to_string()),
-            Op::Mul => SExp("*".to_string()),
-            Op::Div => SExp("div".to_string()),
-            Op::Mod => SExp("mod".to_string()),
         }
     }
 }
@@ -483,32 +471,6 @@ impl std::ops::Rem for Expr {
 impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", ECtx::default().print(self))
-        // match self {
-        //     Expr::Concrete(n) => write!(f, "{}", n),
-        //     Expr::Abstract(id) => write!(f, "#{}", id),
-        //     Expr::App { func, arg } => write!(f, "{}({})", func, arg),
-        //     Expr::Op { op, left, right } => {
-        //         write!(f, "({left}{op}{right})")
-        //     }
-        // }
-    }
-}
-
-impl From<Expr> for utils::SExp {
-    fn from(value: Expr) -> Self {
-        match value {
-            Expr::Concrete(n) => SExp(format!("{}", n)),
-            Expr::Abstract(id) => SExp(format!("{}", id)),
-            Expr::App { func, arg } => {
-                SExp(format!("({} {})", func, SExp::from(*arg)))
-            }
-            Expr::Op { op, left, right } => SExp(format!(
-                "({} {} {})",
-                SExp::from(op),
-                SExp::from(*left),
-                SExp::from(*right)
-            )),
-        }
     }
 }
 

@@ -1,8 +1,5 @@
 use super::{expr::EvalBool, Expr, OrderConstraint};
-use crate::{
-    errors::FilamentResult,
-    utils::{self, Binding, SExp},
-};
+use crate::{errors::FilamentResult, utils::Binding};
 use itertools::Itertools;
 use std::fmt::Display;
 
@@ -50,15 +47,6 @@ where
     }
 }
 
-impl<T> Implication<T>
-where
-    SExp: From<Implication<T>>,
-{
-    pub fn obligation<S: ToString>(self, reason: S) -> utils::Obligation {
-        utils::Obligation::new(SExp::from(self), reason.to_string())
-    }
-}
-
 impl Implication<Expr> {
     pub fn resolve_expr(self, binding: &Binding<Expr>) -> Self {
         Implication {
@@ -86,21 +74,6 @@ impl EvalBool for Implication<Expr> {
             }
             None => self.cons.resolve_bool(bind)?,
         })
-    }
-}
-
-impl<T> From<Implication<T>> for SExp
-where
-    SExp: From<OrderConstraint<T>>,
-{
-    fn from(c: Implication<T>) -> Self {
-        match c.guard {
-            Some(g) => {
-                SExp(format!("(=> {} {})", SExp::from(g), SExp::from(c.cons)))
-            }
-            // no guard
-            None => SExp::from(c.cons),
-        }
     }
 }
 

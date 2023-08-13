@@ -1,5 +1,5 @@
 use super::{Expr, Id, Range};
-use crate::utils::{self, SExp};
+use crate::utils::{self};
 use std::fmt::Display;
 
 #[derive(Clone, Hash)]
@@ -68,12 +68,6 @@ impl Time {
 impl From<Id> for Time {
     fn from(event: Id) -> Self {
         Time::unit(event, 0)
-    }
-}
-
-impl From<Time> for SExp {
-    fn from(value: Time) -> Self {
-        SExp(format!("(+ {} {})", value.event, SExp::from(value.offset)))
     }
 }
 
@@ -183,17 +177,6 @@ impl Display for TimeSub {
                 n => write!(f, "|{}|", n),
             },
             TimeSub::Sym { l, r } => write!(f, "|{} - {}|", l, r),
-        }
-    }
-}
-
-impl From<TimeSub> for SExp {
-    fn from(ts: TimeSub) -> Self {
-        match ts {
-            TimeSub::Unit(n) => SExp(format!("(abs {})", SExp::from(n))),
-            TimeSub::Sym { l, r } => {
-                SExp(format!("(abs (- {} {}))", SExp::from(l), SExp::from(r)))
-            }
         }
     }
 }

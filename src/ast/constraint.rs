@@ -2,8 +2,6 @@ use super::expr::EvalBool;
 use super::{Expr, Range, Time, TimeSub};
 use crate::errors::FilamentResult;
 use crate::utils::Binding;
-use crate::utils::Obligation;
-use crate::utils::SExp;
 use std::fmt::Display;
 
 /// Ordering operator for constraints
@@ -82,15 +80,6 @@ where
             right: l,
             op: OrderOp::Gte,
         }
-    }
-}
-
-impl<T> OrderConstraint<T>
-where
-    SExp: From<OrderConstraint<T>>,
-{
-    pub fn obligation<S: ToString>(self, reason: S) -> Obligation {
-        Obligation::new(SExp::from(self), reason.to_string())
     }
 }
 
@@ -190,20 +179,6 @@ where
     }
 }
 
-impl<T> From<OrderConstraint<T>> for SExp
-where
-    SExp: From<T>,
-{
-    fn from(c: OrderConstraint<T>) -> Self {
-        SExp(format!(
-            "({} {} {})",
-            c.op,
-            SExp::from(c.left),
-            SExp::from(c.right)
-        ))
-    }
-}
-
 /// A ordering constraint over time expressions or time ranges.
 #[derive(Clone, Hash)]
 pub enum Constraint {
@@ -280,11 +255,6 @@ impl Constraint {
             },
         }
     }
-
-    /// Generate an obligation for this constraint and provide a reason
-    pub fn obligation<S: ToString>(self, reason: S) -> Obligation {
-        Obligation::new(SExp::from(self), reason.to_string())
-    }
 }
 
 impl Display for Constraint {
@@ -292,25 +262,6 @@ impl Display for Constraint {
         match self {
             Constraint::Base { base } => write!(f, "{}", base),
             Constraint::Sub { base } => write!(f, "{}", base),
-        }
-    }
-}
-
-impl From<Constraint> for SExp {
-    fn from(con: Constraint) -> Self {
-        match con {
-            Constraint::Base { base } => SExp(format!(
-                "({} {} {})",
-                base.op,
-                SExp::from(base.left),
-                SExp::from(base.right),
-            )),
-            Constraint::Sub { base } => SExp(format!(
-                "({} {} {})",
-                base.op,
-                SExp::from(base.left),
-                SExp::from(base.right),
-            )),
         }
     }
 }
