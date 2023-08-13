@@ -3,12 +3,12 @@ import "primitives/core.fil";
 // This program should fail type checking because we do not provide evidence
 // that L > G.
 comp Main<G: L-(G), L: 1>(
-  @interface[G] go_G: 1,
-  @interface[L] go_L: 1,
-  @[G, G+1] left: 32,
-  @[L, L+1] right: 32
+  go_G: interface[G],
+  go_L: interface[L],
+   left: [G, G+1] 32,
+   right: [L, L+1] 32
 ) -> (
-  @[L+2, L+3] out: 32
+   out: [L+2, L+3] 32
 ) {
   L := new Register[32];
   l0 := L<G, L+1>(left);

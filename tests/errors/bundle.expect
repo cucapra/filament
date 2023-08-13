@@ -4,7 +4,7 @@
 error: out of bounds access of bundle
    ┌─ tests/errors/bundle.fil:10:5
    │
- 9 │     bundle f[#N]: for<#k> @[G+#k, G+#k+1] #W;
+ 9 │     bundle f[#N]: for<#k> [G+#k, G+#k+1] #W;
    │            - bundle's length is #N
 10 │     f{1} = input;
    │     ^^^^ out of bounds access
@@ -13,22 +13,22 @@ error: source port does not provide value for as long as destination requires
    ┌─ tests/errors/bundle.fil:10:12
    │
 10 │     f{1} = input;
-   │     ----   ^^^^^ source is available for @[G, G+1]
+   │     ----   ^^^^^ source is available for [G, G+1]
    │     │       
-   │     requires value for @[G+1, G+2]
+   │     requires value for [G+1, G+2]
 
 error: source port does not provide value for as long as destination requires
    ┌─ tests/errors/bundle.fil:13:17
    │
 13 │         f{#i} = d.out;
-   │         -----   ^^^^^ source is available for @[G+#i+1, G+#i+2]
+   │         -----   ^^^^^ source is available for [G+#i+1, G+#i+2]
    │         │        
-   │         requires value for @[G+#i, G+#i+1]
+   │         requires value for [G+#i, G+#i+1]
 
 error: out of bounds access of bundle
    ┌─ tests/errors/bundle.fil:15:11
    │
- 9 │     bundle f[#N]: for<#k> @[G+#k, G+#k+1] #W;
+ 9 │     bundle f[#N]: for<#k> [G+#k, G+#k+1] #W;
    │            - bundle's length is #N
    ·
 15 │     out = f{#N+1};
@@ -38,9 +38,9 @@ error: source port does not provide value for as long as destination requires
    ┌─ tests/errors/bundle.fil:15:11
    │
 15 │     out = f{#N+1};
-   │     ----  ^^^^^^^ source is available for @[G+#N+1, G+#N+1+1]
+   │     ----  ^^^^^^^ source is available for [G+#N+1, G+#N+1+1]
    │     │      
-   │     requires value for @[G+#N, G+#N+1]
+   │     requires value for [G+#N, G+#N+1]
 
 Compilation failed with 5 errors.
 Run with --show-models to generate assignments for failing constraints.

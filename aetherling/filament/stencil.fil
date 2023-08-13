@@ -2,17 +2,17 @@ import "primitives/state.fil";
 
 // Produces the a 2d window of 3x3 elements from a stream that represents a 4x4 matrix.
 comp Stencil[#W]<G: 1>(
-    @[G, G+1] in: #W,
+     in: [G, G+1] #W,
 ) -> (
-    @[G, G+1] o1: #W,
-    @[G, G+1] o2: #W,
-    @[G, G+1] o3: #W,
-    @[G, G+1] o4: #W,
-    @[G, G+1] o5: #W,
-    @[G, G+1] o6: #W,
-    @[G, G+1] o7: #W,
-    @[G, G+1] o8: #W,
-    @[G, G+1] o9: #W,
+     o1: [G, G+1] #W,
+     o2: [G, G+1] #W,
+     o3: [G, G+1] #W,
+     o4: [G, G+1] #W,
+     o5: [G, G+1] #W,
+     o6: [G, G+1] #W,
+     o7: [G, G+1] #W,
+     o8: [G, G+1] #W,
+     o9: [G, G+1] #W,
 ) {
     d9 := new ContPrev[#W, 0]<G>(in);
     d8 := new ContPrev[#W, 0]<G>(d9.prev);

@@ -6,16 +6,16 @@ error: bundle's availability is greater than the delay of the event
   │
 1 │ comp Bar[#P, #K]<G:1>(
   │                    - event's delay
-2 │    in[#K]: for<#j> @[G+#j, G+#K] 16,
-  │                 -  ^^^^^^^^^^^^^ available for #K-#j cycles
+2 │    in[#K]: for<#j> [G+#j, G+#K] 16,
+  │                 -  ^^^^^^^^^^^^ available for #K-#j cycles
   │                 │   
   │                 takes values in [0, #K)
 
 error: interval's end must be strictly greater than the start
   ┌─ tests/errors/bundle-delay.fil:6:29
   │
-6 │     bundle f[#P+1]: for<#k> @[G+#k, G+#P] 16;
-  │                             ^^^^^^^^^^^^^ interval's end `G+#P' is not strictly greater than the start `G+#k
+6 │     bundle f[#P+1]: for<#k> [G+#k, G+#P] 16;
+  │                             ^^^^^^^^^^^^ interval's end `G+#P' is not strictly greater than the start `G+#k
 
 error: bundle's availability is greater than the delay of the event
   ┌─ tests/errors/bundle-delay.fil:6:29
@@ -23,8 +23,8 @@ error: bundle's availability is greater than the delay of the event
 1 │ comp Bar[#P, #K]<G:1>(
   │                    - event's delay
   ·
-6 │     bundle f[#P+1]: for<#k> @[G+#k, G+#P] 16;
-  │                          -  ^^^^^^^^^^^^^ available for #P-#k cycles
+6 │     bundle f[#P+1]: for<#k> [G+#k, G+#P] 16;
+  │                          -  ^^^^^^^^^^^^ available for #P-#k cycles
   │                          │   
   │                          takes values in [0, #P+1)
 

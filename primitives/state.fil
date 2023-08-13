@@ -4,10 +4,10 @@ extern "state.sv" {
   comp Register[#WIDTH]<G: L-(G+1), L: 1>(
     clk: 1,
     reset: 1,
-    @interface[G] write_en: 1,
-    @[G, G+1] in: #WIDTH,
+    write_en: interface[G],
+     in: [G, G+1] #WIDTH,
   ) -> (
-    @[G+1, L] out: #WIDTH,
+     out: [G+1, L] #WIDTH,
   ) where L > G+1;
   /// ANCHOR_END: register
 
@@ -17,9 +17,9 @@ extern "state.sv" {
   comp Delay[#WIDTH]<G: 1>(
     clk: 1,
     reset: 1,
-    @[G, G+1] in: #WIDTH,
+     in: [G, G+1] #WIDTH,
   ) -> (
-    @[G+1, G+2] out: #WIDTH,
+     out: [G+1, G+2] #WIDTH,
   );
 
   // A comp that allows access to its previous stored value.
@@ -27,19 +27,19 @@ extern "state.sv" {
   comp Prev[#WIDTH, #SAFE]<G: 1>(
     clk: 1,
     reset: 1,
-    @interface[G] write_en: 1,
-    @[G, G+1] in: #WIDTH,
+    write_en: interface[G],
+     in: [G, G+1] #WIDTH,
   ) -> (
-    @[G, G+1] prev: #WIDTH,
+     prev: [G, G+1] #WIDTH,
   );
 
   // Prev comp that continuously updates its value
   comp ContPrev[#WIDTH, #SAFE]<G: 1>(
     clk: 1,
     reset: 1,
-    @[G, G+1] in: #WIDTH,
+     in: [G, G+1] #WIDTH,
   ) -> (
-    @[G, G+1] prev: #WIDTH,
+     prev: [G, G+1] #WIDTH,
   );
 }
 
@@ -47,11 +47,11 @@ extern "state.sv" {
 // A component that delays `in` by N cycles.
 // Uses the Delay component under the hood.
 comp Shift[#W, #N]<G: 1>(
-    @[G, G+1] in: #W
+     in: [G, G+1] #W
 ) -> (
-    @[G+#N, G+#N+1] out: #W
+     out: [G+#N, G+#N+1] #W
 ) {
-    bundle f[#N+1]: for<#k> @[G+#k, G+#k+1] #W;
+    bundle f[#N+1]: for<#k> [G+#k, G+#k+1] #W;
 
     f{0} = in;
     for #i in 0..#N {
