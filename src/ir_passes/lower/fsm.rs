@@ -59,7 +59,7 @@ impl<'l> FsmBind {
             .collect()
     }
 
-    fn fsm_comp(states: u64) -> calyx::Component {
+    fn fsm_comp(pre: &str, states: u64) -> calyx::Component {
         let ports: Vec<calyx::PortDef<u64>> = (0..states)
             // create the state ports in the format `_state`.
             .map(|n| {
@@ -82,7 +82,7 @@ impl<'l> FsmBind {
             .collect();
 
         let mut comp = calyx::Component::new(
-            calyx::Id::from(format!("counter_{}", states)),
+            calyx::Id::from(format!("{pre}_{}", states)),
             ports,
             false,
             false,
@@ -109,7 +109,8 @@ impl<'l> FsmBind {
         self.counter_chain
             .entry((fsm_num, delay))
             .or_insert_with(|| {
-                let mut comp = FsmBind::fsm_comp(fsm_num * delay);
+                let mut comp =
+                    FsmBind::fsm_comp("counter_chain", fsm_num * delay);
                 let mut builder = calyx::Builder::new(&mut comp, lib.unwrap())
                     .not_generated();
 
@@ -176,7 +177,7 @@ impl<'l> FsmBind {
             // gets the number of bits needed to represent the counter state.
             let bitwidth = (64 - (states - 1).leading_zeros()) as u64;
 
-            let mut comp = FsmBind::fsm_comp(states);
+            let mut comp = FsmBind::fsm_comp("counter", states);
             let mut builder =
                 calyx::Builder::new(&mut comp, lib.unwrap()).not_generated();
 
@@ -187,39 +188,35 @@ impl<'l> FsmBind {
             // Constant signal
             structure!(builder;
                 let signal_on = constant(1, 1);
-                let zero = constant(0, bitwidth);
                 let one = constant(1, bitwidth);
+                let zero = constant(0, bitwidth);
             );
 
-            let zero = zero.borrow();
             let one = one.borrow();
 
             // generates the equality checks for each state output.
-            let state_guards = (0..states)
-                .map(|i| {
-                    let val = builder.add_constant(i, bitwidth);
-
-                    let eq =
-                        builder.add_primitive("ready", "std_eq", &[bitwidth]);
-
-                    // counter is done when state == end.
-                    builder.build_assignment(
-                        eq.borrow().get("left"),
-                        state.borrow().get("out"),
-                        Guard::<Nothing>::True,
-                    );
-
-                    builder.build_assignment(
-                        eq.borrow().get("right"),
-                        val.borrow().get("out"),
-                        Guard::<Nothing>::True,
-                    );
-                    (i, eq)
-                })
+            let consts = (0..states)
+                .map(|i| (i, builder.add_constant(i, bitwidth)))
                 .collect_vec();
 
             // This component's interface
             let this = builder.component.signature.borrow();
+
+            // checks if the counter is currently on the final state.
+            // state == _{n-1}
+            let rst_check: Guard<Nothing> =
+                Guard::Port(state.borrow().get("out")).eq(Guard::Port(
+                    consts[(states - 1) as usize].1.borrow().get("out"),
+                ));
+
+            // check if we should increment the counter.
+            // go || state != 0
+            let go_check: Guard<Nothing> = Guard::Port(this.get("go")).or(
+                Guard::Port(state.borrow().get("out"))
+                    .eq(Guard::Port(zero.borrow().get("out")))
+                    .not(),
+            );
+
             // add base assignments
             builder.component.continuous_assignments.extend([
                 // build assignments for state+1
@@ -237,32 +234,32 @@ impl<'l> FsmBind {
                 builder.build_assignment(
                     state.borrow().get("in"),
                     add.borrow().get("out"),
-                    Guard::<Nothing>::port(
-                        this.get(format!("_{}", states - 1)),
-                    )
-                    .not(),
+                    go_check.clone(),
                 ),
+                // hook up zero when counter finished
                 builder.build_assignment(
                     state.borrow().get("in"),
-                    zero.get("out"),
-                    Guard::<Nothing>::port(
-                        this.get(format!("_{}", states - 1)),
-                    ),
+                    zero.borrow().get("out"),
+                    rst_check.clone(),
                 ),
-                // increment always
+                // always enable register when there is an input
                 builder.build_assignment(
                     state.borrow().get("write_en"),
                     signal_on.borrow().get("out"),
-                    Guard::<Nothing>::True,
+                    rst_check.or(go_check),
                 ),
             ]);
 
-            for (i, eq) in state_guards {
+            for (i, v) in consts {
+                let guard: Guard<Nothing> =
+                    Guard::Port(state.borrow().get("out"))
+                        .eq(Guard::Port(v.borrow().get("out")));
+
                 builder.component.continuous_assignments.push(
                     builder.build_assignment(
                         this.get(format!("_{}", i)),
-                        eq.borrow().get("out"),
-                        Guard::<Nothing>::True,
+                        signal_on.borrow().get("out"),
+                        guard,
                     ),
                 );
             }
@@ -279,7 +276,7 @@ impl<'l> FsmBind {
         lib: Option<&'l calyx::LibrarySignatures>,
     ) -> &'l calyx::Component {
         self.simple.entry(states).or_insert_with(|| {
-            let mut comp = FsmBind::fsm_comp(states);
+            let mut comp = FsmBind::fsm_comp("fsm", states);
             let mut builder =
                 calyx::Builder::new(&mut comp, lib.unwrap()).not_generated();
 
