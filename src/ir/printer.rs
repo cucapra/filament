@@ -246,6 +246,9 @@ impl<'a> Printer<'a> {
                     write!(f, "{:indent$}assume {};", "", fact.prop)
                 }
             }
+            ir::Command::Let(ir::Let { param, expr }) => {
+                write!(f, "{:indent$}let {param} = {};", "", self.expr(*expr))
+            }
         }
     }
 

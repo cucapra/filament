@@ -3,12 +3,15 @@ use crate::{ast, utils::GPosIdx};
 use codespan_reporting::diagnostic::Diagnostic;
 use struct_variant::struct_variant;
 
+#[derive(Clone, Eq, PartialEq)]
 /// An absence of information is still information
 pub struct Empty;
 
+#[derive(Clone, Eq, PartialEq)]
 /// Assertion information
 pub struct Assert(pub Reason);
 
+#[derive(Clone, Eq, PartialEq)]
 /// For [super::Param]
 pub struct Param {
     /// Surface-level name of the parameter
@@ -16,6 +19,7 @@ pub struct Param {
     pub bind_loc: GPosIdx,
 }
 
+#[derive(Clone, Eq, PartialEq)]
 /// For [super::Event]
 pub struct Event {
     /// Surface-level name of the event
@@ -27,6 +31,7 @@ pub struct Event {
     pub interface_bind_loc: Option<GPosIdx>,
 }
 
+#[derive(Clone, Eq, PartialEq)]
 /// For [super::EventBind]
 pub struct EventBind {
     /// Location for the delay of the event
@@ -35,6 +40,7 @@ pub struct EventBind {
     pub bind_loc: GPosIdx,
 }
 
+#[derive(Clone, Eq, PartialEq)]
 /// For [super::Instance]
 pub struct Instance {
     pub name: ast::Id,
@@ -42,6 +48,7 @@ pub struct Instance {
     pub bind_loc: GPosIdx,
 }
 
+#[derive(Clone, Eq, PartialEq)]
 /// For [super::Invoke]
 pub struct Invoke {
     pub name: ast::Id,
@@ -49,12 +56,14 @@ pub struct Invoke {
     pub bind_loc: GPosIdx,
 }
 
+#[derive(Clone, Eq, PartialEq)]
 /// For [super::Connect]
 pub struct Connect {
     pub dst_loc: GPosIdx,
     pub src_loc: GPosIdx,
 }
 
+#[derive(Clone, Eq, PartialEq)]
 /// For [super::Port]
 pub struct Port {
     /// Surface-level name
@@ -171,6 +180,22 @@ impl Info {
             live_loc,
         }
         .into()
+    }
+}
+
+impl Clone for Info {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Assert(x) => Self::Assert(x.clone()),
+            Self::Connect(x) => Self::Connect(x.clone()),
+            Self::Empty(x) => Self::Empty(x.clone()),
+            Self::Event(x) => Self::Event(x.clone()),
+            Self::EventBind(x) => Self::EventBind(x.clone()),
+            Self::Instance(x) => Self::Instance(x.clone()),
+            Self::Invoke(x) => Self::Invoke(x.clone()),
+            Self::Param(x) => Self::Param(x.clone()),
+            Self::Port(x) => Self::Port(x.clone()),
+        }
     }
 }
 

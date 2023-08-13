@@ -44,9 +44,9 @@ impl std::fmt::Display for InvPort {
 
 /// Context used while building the IR.
 pub(super) struct BuildCtx<'prog> {
-    // Mapping from names of instance to (<parameter bindings>, <component name>).
-    // We keep around the parameter bindings as [ast::Expr] because we need to resolve
-    // port definition in invokes using them.
+    /// Mapping from names of instance to (<parameter bindings>, <component name>).
+    /// We keep around the parameter bindings as [ast::Expr] because we need to resolve
+    /// port definition in invokes using them.
     pub inst_to_sig: DenseIndexInfo<
         ir::Instance,
         (Rc<utils::Binding<ast::Expr>>, ast::Loc<Id>),
