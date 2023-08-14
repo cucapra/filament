@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter, ops::Not};
+use std::{collections::HashMap, ops::Not};
 
 use super::{
     utils::{cell_to_port_def, interface_name},
@@ -76,9 +76,10 @@ impl<'l> FsmBind {
                 direction: pd.2.clone(),
                 attributes: vec![*attr].try_into().unwrap(),
             }))
-            .chain(iter::once(
+            .chain([
                 (calyx::Id::from("go"), 1, calyx::Direction::Input).into(),
-            ))
+                (calyx::Id::from("done"), 1, calyx::Direction::Output).into(),
+            ])
             .collect();
 
         let mut comp = calyx::Component::new(
@@ -136,9 +137,7 @@ impl<'l> FsmBind {
                         this.get("go")
                     } else {
                         // start this fsm when the previous one is done.
-                        counters[(fsm - 1) as usize]
-                            .borrow()
-                            .get(format!("_{}", delay - 1))
+                        counters[(fsm - 1) as usize].borrow().get("done")
                     };
 
                     // hook up the end of the last fsm to this one's start.
@@ -161,6 +160,16 @@ impl<'l> FsmBind {
                         );
                     }
                 }
+
+                // done <= _{n-1};
+                // unused at the moment but useful if we want to chain FSMs.
+                builder.component.continuous_assignments.push(
+                    builder.build_assignment(
+                        this.get("done"),
+                        counters[(fsm_num - 1) as usize].borrow().get("done"),
+                        Guard::True,
+                    ),
+                );
 
                 drop(this);
                 comp
@@ -198,6 +207,8 @@ impl<'l> FsmBind {
             let consts = (0..states)
                 .map(|i| (i, builder.add_constant(i, bitwidth)))
                 .collect_vec();
+
+            let done = builder.add_primitive("done", "std_reg", &[1]);
 
             // This component's interface
             let this = builder.component.signature.borrow();
@@ -246,7 +257,7 @@ impl<'l> FsmBind {
                 builder.build_assignment(
                     state.borrow().get("write_en"),
                     signal_on.borrow().get("out"),
-                    rst_check.or(go_check),
+                    rst_check.clone().or(go_check),
                 ),
             ]);
 
@@ -254,6 +265,12 @@ impl<'l> FsmBind {
                 let guard: Guard<Nothing> =
                     Guard::Port(state.borrow().get("out"))
                         .eq(Guard::Port(v.borrow().get("out")));
+
+                let guard = if i == 0 {
+                    Guard::Port(this.get("go")).and(guard)
+                } else {
+                    guard
+                };
 
                 builder.component.continuous_assignments.push(
                     builder.build_assignment(
@@ -263,6 +280,26 @@ impl<'l> FsmBind {
                     ),
                 );
             }
+
+            // done <= _{n-1};
+            // unused at the moment but useful if we want to chain FSMs.
+            builder.component.continuous_assignments.extend([
+                builder.build_assignment(
+                    done.borrow().get("in"),
+                    signal_on.borrow().get("out"),
+                    rst_check,
+                ),
+                builder.build_assignment(
+                    done.borrow().get("write_en"),
+                    signal_on.borrow().get("out"),
+                    Guard::True,
+                ),
+                builder.build_assignment(
+                    this.get("done"),
+                    done.borrow().get("out"),
+                    Guard::True,
+                ),
+            ]);
 
             drop(this);
             comp
@@ -281,7 +318,7 @@ impl<'l> FsmBind {
                 calyx::Builder::new(&mut comp, lib.unwrap()).not_generated();
 
             // Add n-1 registers
-            let regs = (0..states - 1)
+            let regs = (0..states)
                 .map(|_| builder.add_primitive("r", "std_reg", &[1]))
                 .collect_vec();
 
@@ -289,6 +326,7 @@ impl<'l> FsmBind {
             structure!(builder;
                 let signal_on = constant(1, 1);
             );
+
             // This component's interface
             let this = builder.component.signature.borrow();
 
@@ -304,29 +342,34 @@ impl<'l> FsmBind {
             // rn.write_en = 1'd1;
             // rn.in = r{n-1}.out;
             // _n = rn.out;
-            for idx in 0..states - 1 {
+            for idx in 0..states {
                 let cell = regs[idx as usize].borrow();
-                let write_assign = if idx == 0 {
-                    builder.build_assignment(
-                        cell.get("in"),
-                        this.get("go"),
-                        Guard::True,
-                    )
+
+                let prev_done = if idx == 0 {
+                    this.get("go")
                 } else {
                     let prev_cell = regs[(idx - 1) as usize].borrow();
-                    builder.build_assignment(
-                        cell.get("in"),
-                        prev_cell.get("out"),
-                        Guard::True,
-                    )
+                    prev_cell.get("out")
                 };
+
+                let out_port = if idx == states - 1 {
+                    this.get("done")
+                } else {
+                    this.get(format!("_{}", idx + 1))
+                };
+
+                let write_assign = builder.build_assignment(
+                    cell.get("in"),
+                    prev_done,
+                    Guard::True,
+                );
                 let enable = builder.build_assignment(
                     cell.get("write_en"),
                     signal_on.borrow().get("out"),
                     Guard::True,
                 );
                 let out = builder.build_assignment(
-                    this.get(format!("_{}", idx + 1)),
+                    out_port,
                     cell.get("out"),
                     Guard::True,
                 );
