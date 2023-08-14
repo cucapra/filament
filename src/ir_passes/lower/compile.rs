@@ -223,10 +223,13 @@ impl Compile {
             match cmd {
                 ir::Command::Connect(connect) => buildctx.compile_connect(connect),
                 ir::Command::ForLoop(_) => {
-                    unreachable!("For loops should have been compiled away.")
+                    unreachable!("for loops should have been compiled away.")
                 }
                 ir::Command::If(_) => {
-                    unreachable!("Ifs should have been compiled away.")
+                    unreachable!("if should have been compiled away.")
+                }
+                ir::Command::Let(_) => {
+                    unreachable!("let should have been compiled away.")
                 }
                 ir::Command::Instance(_) // ignore instances and invokes as these are compiled first
                 | ir::Command::Invoke(_)

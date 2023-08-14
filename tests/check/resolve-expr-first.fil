@@ -1,10 +1,10 @@
-comp Foo[#K]<G:1>() -> (@[G+#K, G+#K+1] out: 10) {}
+comp Foo[#K]<G:1>() -> ( out: [G+#K, G+#K+1] 10) {}
 
 // A Shift register that waits 2^#N cycles.
 comp ShiftExp[#K]<G:1>(
-    @[G, G+1] in: 32
+     in: [G, G+1] 32
 ) -> (
-    @[G+#K, G+#K+1] out: 10
+     out: [G+#K, G+#K+1] 10
 ) {
     assume #K/2 + #K/2 == #K;
     foo := new Foo[#K/2]<G+#K/2>();

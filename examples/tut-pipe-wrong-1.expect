@@ -2,13 +2,13 @@
 1
 ---STDERR---
 error: bundle's availability is greater than the delay of the event
-  ┌─ examples/tut-pipe-wrong-1.fil:8:5
+  ┌─ examples/tut-pipe-wrong-1.fil:8:10
   │
 5 │ comp main<G: 1>(
   │              - event's delay
   ·
-8 │     @[G, G+3] op: 1,
-  │     ^^^^^^^^^ available for 3 cycles
+8 │      op: [G, G+3] 1,
+  │          ^^^^^^^^ available for 3 cycles
 
 error: event provided to invocation triggers more often that invocation's event's delay allows
    ┌─ examples/tut-pipe-wrong-1.fil:15:13

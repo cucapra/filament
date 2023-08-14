@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: source and destination widths must match
+error: required bundle of width `16' but found bundle of width `32'
   ┌─ tests/errors/port-mismatch.fil:2:11
   │
 2 │     out = in;

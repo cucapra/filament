@@ -1,24 +1,31 @@
 use crate::{
-    ir::{Connect, Ctx, DisplayCtx, PortIdx},
-    ir_visitor::{Action, Visitor, VisitorData},
-    utils::{GPosIdx, GlobalPositionTable},
-};
-use codespan_reporting::{
-    diagnostic::Diagnostic,
-    term::{
-        self,
-        termcolor::{ColorChoice, StandardStream},
-    },
+    cmdline, diagnostics,
+    errors::Error,
+    ir::{Connect, Context, Ctx, DisplayCtx, PortIdx},
+    ir_visitor::{Action, Construct, Visitor, VisitorData},
+    utils::GPosIdx,
 };
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 
-#[derive(Default)]
 /// Makes sure each index in a port is only written to at most once
 /// Must occur after monomorphization.
 pub struct AssignCheck {
     ports: LinkedHashMap<(PortIdx, usize), Vec<Option<GPosIdx>>>,
-    diagnostic_count: u32,
+    diag: diagnostics::Diagnostics,
+}
+
+impl Construct for AssignCheck {
+    fn from(_: &cmdline::Opts, _: &mut Context) -> Self {
+        Self {
+            ports: LinkedHashMap::new(),
+            diag: diagnostics::Diagnostics::default(),
+        }
+    }
+
+    fn clear_data(&mut self) {
+        self.ports = LinkedHashMap::new();
+    }
 }
 
 impl Visitor for AssignCheck {
@@ -64,86 +71,63 @@ impl Visitor for AssignCheck {
     }
 
     fn end(&mut self, data: &mut VisitorData) {
-        // Report all the errors
-        let is_tty = atty::is(atty::Stream::Stderr);
-        let writer = StandardStream::stderr(if is_tty {
-            ColorChoice::Always
-        } else {
-            ColorChoice::Never
-        });
-        let table = GlobalPositionTable::as_ref();
-
+        let diag = &mut self.diag;
+        // Track all the port locations that have no assignment
+        let mut unassigned: LinkedHashMap<PortIdx, Vec<usize>> =
+            LinkedHashMap::new();
         for ((port, idx), connects) in self.ports.drain() {
-            let l = connects.len();
-            if l == 1 {
+            let con_len = connects.len();
+            // If there is exactly one assignment to this location, then it is valid
+            if con_len == 1 {
                 continue;
             }
-            let p = data.comp.get(port);
-            let info = data.comp.get(p.info).as_port();
+            if con_len == 0 {
+                unassigned.entry(port).or_default().push(idx);
+                continue;
+            }
 
             // generate the base error message
-            let diag = Diagnostic::error().with_message(format!(
-                "Port {}{{{}}} {}",
+            let err = Error::malformed(format!(
+                "port `{}{{{}}}' is assigned to {con_len} times",
                 data.comp.display(port),
                 idx,
-                if l == 0 {
-                    "is never assigned to."
-                } else {
-                    "is assigned to multiple times."
-                }
             ));
 
-            // add the location of the port definition
-            let diag = match info {
-                None => diag,
-                Some(info) => diag.with_labels(vec![info
-                    .bind_loc
-                    .secondary()
-                    .with_message("defined here")]),
-            };
+            // Add all assignments with location information
+            let err = connects.into_iter().flatten().fold(err, |err, pos| {
+                err.add_note(diag.add_info("assigned here", pos))
+            });
+            diag.add_error(err)
+        }
 
-            // filter the assignments that have bind location information
-            let filtered_cons = connects.into_iter().flatten().collect_vec();
-            // count the number of assignments that don't have bind location information
-            let missing_info = l - filtered_cons.len();
+        for (port, mut idxs) in unassigned {
+            idxs.sort();
+            let err = Error::malformed(format!(
+                "bundle `{}' has {} unassigned locations",
+                idxs.len(),
+                data.comp.display(port)
+            ));
 
-            // add the locations of the assignments
-            let diag = diag.with_labels(
-                filtered_cons
-                    .into_iter()
-                    .map(|idx| idx.primary().with_message("assigned here"))
-                    .collect(),
-            );
-
-            // add a note about the number of assignments that don't have bind location information
-            let diag = match missing_info {
-                0 => diag,
-                1 => diag.with_notes(vec![
-                    "Also assigned in 1 other location".to_string()
-                ]),
-                _ => diag.with_notes(vec![format!(
-                    "Also assigned in {} other locations",
-                    missing_info
-                )]),
-            };
-
-            term::emit(
-                &mut writer.lock(),
-                &term::Config::default(),
-                table.files(),
-                &diag,
-            )
-            .unwrap();
-
-            self.diagnostic_count += 1;
+            let p = data.comp.get(port);
+            let info = data.comp.get(p.info).as_port();
+            // If there are more than 5 unassigned locations, then we truncate the error message
+            if let Some(info) = info {
+                let mut msg = format!(
+                    "bundle indices are unassigned: {}",
+                    idxs.iter().take(5).map(|i| i.to_string()).join(", ")
+                );
+                if idxs.len() > 5 {
+                    msg.push_str(
+                        format!(", ... and {} others", idxs.len() - 5).as_str(),
+                    );
+                }
+                let err = err.add_note(diag.add_info(msg, info.bind_loc));
+                diag.add_error(err)
+            }
         }
     }
 
-    fn after_traversal(&mut self) -> Option<u32> {
-        if self.diagnostic_count > 0 {
-            Some(self.diagnostic_count)
-        } else {
-            None
-        }
+    fn after_traversal(&mut self) -> Option<u64> {
+        self.diag.report_all()
     }
 }

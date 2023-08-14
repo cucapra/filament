@@ -1,12 +1,12 @@
 extern "signed.sv" {
   comp NegConst[#WIDTH, #VALUE]<G: L-(G), ?L: 1=G+1>() -> (
-    @[G, L] out: #WIDTH,
+     out: [G, L] #WIDTH,
   ) where L > G;
 
   comp SAdd[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH
+     left: [G, L] #WIDTH,
+     right: [G, L] #WIDTH
   ) -> (
-    @[G, L] out: #WIDTH,
+     out: [G, L] #WIDTH,
   ) where L > G;
 }
