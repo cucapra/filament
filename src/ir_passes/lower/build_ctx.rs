@@ -114,7 +114,11 @@ impl<'a> BuildCtx<'a> {
                 let time = self.comp.get(*time);
                 let offset = time.offset.concrete(self.comp);
                 // finds the corresponding port on the fsm of the referenced event
-                let src = self.fsms.get(&time.event).unwrap().get_port(offset);
+                let src = self.fsms.get(&time.event).unwrap().range_guard(
+                    &mut self.builder,
+                    offset,
+                    offset + 1,
+                );
 
                 let c = self.builder.add_constant(1, 1);
 
@@ -122,7 +126,7 @@ impl<'a> BuildCtx<'a> {
                 let assign = self.builder.build_assignment(
                     dst,
                     c.borrow().get("out"),
-                    calyx::Guard::Port(src),
+                    src,
                 );
                 self.builder.component.continuous_assignments.push(assign);
             }
@@ -156,10 +160,11 @@ impl<'a> BuildCtx<'a> {
 
         // return a guard that is active whenever from for all states from `start..end`
         let fsm = self.fsms.get(&ev).unwrap();
-        (start.offset.concrete(self.comp)..end.offset.concrete(self.comp))
-            .map(|st| fsm.get_port(st).into())
-            .reduce(calyx::Guard::or)
-            .unwrap()
+        fsm.range_guard(
+            &mut self.builder,
+            start.offset.concrete(self.comp),
+            end.offset.concrete(self.comp),
+        )
     }
 
     /// Compiles an [ir::Port], returning the proper guard if present.
