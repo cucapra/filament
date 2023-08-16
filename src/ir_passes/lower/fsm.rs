@@ -5,7 +5,7 @@ use super::{
     BuildCtx,
 };
 use crate::{ir, ir_passes::lower::utils::INTERFACE_PORTS};
-use calyx::{build_assignments, structure, Guard, Nothing};
+use calyx::{build_assignments, guard, structure, Guard, Nothing};
 use calyx_ir::{self as calyx, RRC};
 use itertools::Itertools;
 
@@ -39,28 +39,28 @@ impl From<(u64, u64)> for FsmType {
     }
 }
 
-impl<'l> FsmBind {
+impl FsmBind {
     /// Get an fsm with the number of states and minimum delay (II) from the binding
-    pub fn get(&'l mut self, states: u64, delay: u64) -> &'l calyx::Component {
+    pub fn get(&mut self, states: u64, delay: u64) -> &calyx::Component {
         self.add_opt(states, delay, None)
     }
 
     /// Insert an fsm with a number of states and a delay (II) into the binding
     pub fn add(
-        &'l mut self,
+        &mut self,
         states: u64,
         delay: u64,
-        lib: &'l calyx::LibrarySignatures,
-    ) -> &'l calyx::Component {
+        lib: &calyx::LibrarySignatures,
+    ) -> &calyx::Component {
         self.add_opt(states, delay, Some(lib))
     }
 
     fn add_opt(
-        &'l mut self,
+        &mut self,
         states: u64,
         delay: u64,
-        lib: Option<&'l calyx::LibrarySignatures>,
-    ) -> &'l calyx::Component {
+        lib: Option<&calyx::LibrarySignatures>,
+    ) -> &calyx::Component {
         match (states, delay).into() {
             FsmType::Simple(states) => self.add_simple(states, lib),
             FsmType::Counter(states) => self.add_counter(states, lib),
@@ -78,11 +78,11 @@ impl<'l> FsmBind {
 
     /// Helper function that generates a [calyx::Component] for an fsm chaining `states` counters with `delay` states each.
     fn add_counter_chain(
-        &'l mut self,
+        &mut self,
         fsm_num: u64,
         delay: u64,
-        lib: Option<&'l calyx::LibrarySignatures>,
-    ) -> &'l calyx::Component {
+        lib: Option<&calyx::LibrarySignatures>,
+    ) -> &calyx::Component {
         let counter = self.add_counter(delay, lib);
         let (name, sig) = (
             counter.name.to_string(),
@@ -203,10 +203,10 @@ impl<'l> FsmBind {
 
     /// Helper function that generates a [calyx:Component] for a counter with `n` states.
     fn add_counter(
-        &'l mut self,
+        &mut self,
         states: u64,
-        lib: Option<&'l calyx::LibrarySignatures>,
-    ) -> &'l calyx::Component {
+        lib: Option<&calyx::LibrarySignatures>,
+    ) -> &calyx::Component {
         self.fsms
             .entry(FsmType::Counter(states))
             .or_insert_with(|| {
@@ -251,47 +251,35 @@ impl<'l> FsmBind {
                 let mut builder = calyx::Builder::new(&mut comp, lib.unwrap())
                     .not_generated();
 
-                let state =
-                    builder.add_primitive("r_state", "std_reg", &[bitwidth]);
-
-                let add = builder.add_primitive("add", "std_add", &[bitwidth]);
-
                 // Constant signal
                 structure!(builder;
                     let signal_on = constant(1, 1);
                     let one = constant(1, bitwidth);
                     let zero = constant(0, bitwidth);
+                    let add = prim std_add(bitwidth);
+                    let state = prim std_reg(bitwidth);
+                    let done = prim std_reg(1);
+                    let final_state = constant(states-1, bitwidth);
                 );
-
-                let done = builder.add_primitive("r_done", "std_reg", &[1]);
 
                 // This component's interface
                 let this = builder.component.signature.clone();
 
-                let final_state = builder.add_constant(states - 1, bitwidth);
-
                 // checks if the counter is currently on the final state.
                 // state == _{n-1}
-                let rst_check: Guard<Nothing> =
-                    Guard::Port(state.borrow().get("out"))
-                        .eq(Guard::Port(final_state.borrow().get("out")));
+                let rst_check =
+                    guard!(state["out"]).eq(guard!(final_state["out"]));
 
                 // check if we should increment the counter.
                 // go || state != 0
-                let go_check: Guard<Nothing> = Guard::Port(
-                    this.borrow().get("go"),
-                )
-                .or(Guard::Port(state.borrow().get("out"))
-                    .eq(Guard::Port(zero.borrow().get("out")))
-                    .not());
+                let go_check = guard!(this["go"])
+                    .or(guard!(state["out"]).eq(guard!(zero["out"])).not());
 
                 let enable_check = rst_check.clone().or(go_check.clone());
 
                 // go && state == 0
-                let zero_check = Guard::Port(this.borrow().get("go")).and(
-                    Guard::Port(state.borrow().get("out"))
-                        .eq(Guard::Port(zero.borrow().get("out"))),
-                );
+                let zero_check = guard!(this["go"])
+                    .and(guard!(state["out"]).eq(guard!(zero["out"])));
 
                 // add base assignments
                 builder.component.continuous_assignments.extend(
@@ -324,10 +312,10 @@ impl<'l> FsmBind {
 
     /// Helper function that generates a [calyx::Component] for an fsm with `n` states.
     fn add_simple(
-        &'l mut self,
+        &mut self,
         states: u64,
-        lib: Option<&'l calyx::LibrarySignatures>,
-    ) -> &'l calyx::Component {
+        lib: Option<&calyx::LibrarySignatures>,
+    ) -> &calyx::Component {
         self.fsms.entry(FsmType::Simple(states)).or_insert_with(|| {
             let ports: Vec<calyx::PortDef<u64>> = (0..states)
                 // create the state ports in the format `_state`.
@@ -452,7 +440,7 @@ impl<'l> FsmBind {
 
         match ft {
             FsmType::Simple(_) => (start..end)
-                .map(|st| Guard::Port(cell.borrow().get(format!("_{}", st))))
+                .map(|st| guard!(cell[format!("_{}", st)]))
                 .reduce(calyx::Guard::or)
                 .unwrap(),
             FsmType::Counter(states) => {
@@ -460,28 +448,22 @@ impl<'l> FsmBind {
 
                 // if start is zero, we need to use its special port instead
                 let (start, guard) = if start == 0 {
-                    (
-                        start + 1,
-                        Some(Guard::Port(
-                            cell.borrow().get(format!("{}_0", prefix)),
-                        )),
-                    )
+                    (start + 1, Some(guard!(cell[format!("{}_0", prefix)])))
                 } else {
                     (start, None)
                 };
 
-                let state = cell.borrow().get(format!("{}state", prefix));
                 let start = builder.add_constant(start, bitwidth);
                 // create a constant for end - 1 here to make the checks inclusive.
                 // necessary if end is the final state and would require an extra bit to represent.
                 let end = builder.add_constant(end - 1, bitwidth);
 
                 // state >= start && state <= end
-                let g = Guard::Port(state.clone())
-                    .ge(Guard::Port(start.borrow().get("out")))
+                let g = guard!(cell[format!("{}state", prefix)])
+                    .ge(guard!(start["out"]))
                     .and(
-                        Guard::Port(state)
-                            .le(Guard::Port(end.borrow().get("out"))),
+                        guard!(cell[format!("{}state", prefix)])
+                            .le(guard!(end["out"])),
                     );
 
                 // generate the final guard
