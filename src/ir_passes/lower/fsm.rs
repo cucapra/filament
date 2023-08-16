@@ -30,7 +30,7 @@ pub(super) struct FsmBind {
 impl From<(u64, u64)> for FsmType {
     /// Generates an FsmType based on the default heuristic on the number of states and the delay (II).
     fn from((states, delay): (u64, u64)) -> Self {
-        // TODO: Find a better metric to decide which type of fsm to generate.
+        // TODO(UnsignedByte): Find a better metric to decide which type of fsm to generate.
         if delay > 1 {
             FsmType::CounterChain(states, delay)
         } else {
