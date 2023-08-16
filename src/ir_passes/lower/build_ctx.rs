@@ -222,7 +222,7 @@ impl<'a> BuildCtx<'a> {
         // Construct an fsm iff the event is connected to an interface port
         if evt.has_interface {
             let ir::TimeSub::Unit(delay) = evt.delay else {
-                unreachable!("Non-unit delays should have been compiled away.");
+                self.comp.internal_error("Non-unit delays should have been compiled away.");
             };
             let delay = delay.concrete(self.comp);
             self.declare_fsm(states, delay);
