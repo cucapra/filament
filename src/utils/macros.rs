@@ -10,7 +10,6 @@ macro_rules! time {
 
 #[macro_export]
 /// Logs the amount of time it took to run the expression.
-///
 macro_rules! log_time {
     ($e:expr) => {{
         let (r, t) = $crate::time!($e);
@@ -30,6 +29,20 @@ macro_rules! log_time {
             log::info!("{}: {}ms", $msg, t.as_millis());
         }
         r
+    }};
+}
+
+#[macro_export]
+/// Logs the information from running a compiler pass. Unlike [`pass_pipeline`],
+/// this does not require the pass to be a visitor.
+macro_rules! log_pass {
+    ($opts:expr ; $e:expr, $name:expr) => {{
+        let name = $name;
+        let out = $crate::log_time!($e, name);
+        if $opts.dump_after.contains(&name.to_string()) {
+            $crate::ir::Printer::context(&out, &mut std::io::stdout()).unwrap()
+        }
+        out
     }};
 }
 

@@ -1,5 +1,5 @@
 use filament::{cmdline, ir, ir_passes as ip, resolver::Resolver};
-use filament::{log_time, pass_pipeline};
+use filament::{log_pass, log_time, pass_pipeline};
 
 // Prints out the interface for main component in the input program.
 fn run(opts: &cmdline::Opts) -> Result<(), u64> {
@@ -24,11 +24,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     };
 
     // Transform AST to IR
-    let mut ir = ir::transform(ns)?;
-    if opts.dump_after.contains(&"ast-conv".to_string()) {
-        ir::Printer::context(&ir, &mut std::io::stdout()).unwrap()
-    }
-
+    let mut ir = log_pass! { opts; ir::transform(ns)?, "astconv" };
     pass_pipeline! {opts, ir;
         ip::BuildDomination,
         ip::TypeCheck,
@@ -39,12 +35,13 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         // ip::Simplify,
         ip::Discharge
     }
-
-    ir = log_time!(ip::Monomorphize::transform(&ir), "monomorphize");
-    if opts.dump_after.contains(&"monomorphize".to_string()) {
-        ir::Printer::context(&ir, &mut std::io::stdout()).unwrap()
+    ir = log_pass! { opts; ip::Monomorphize::transform(&ir), "monomorphize"};
+    pass_pipeline! { opts, ir;
+        ip::AssignCheck,
+        ip::BundleElim,
+        ip::AssignCheck
     }
-    pass_pipeline! {opts, ir; ip::AssignCheck, ip::BundleElim, ip::AssignCheck }
+
     // Return early if we're asked to dump the interface
     if opts.dump_interface {
         ip::DumpInterface::print(&ir);
