@@ -1,11 +1,12 @@
 use argh::FromArgs;
 use std::{path::PathBuf, str::FromStr};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 /// Solver to use in the pass
 pub enum Solver {
-    Z3,
+    #[default]
     CVC5,
+    Z3,
 }
 
 impl FromStr for Solver {
@@ -62,7 +63,7 @@ pub struct Opts {
 
     // Solver specific configuration
     /// solver to use (default: z3)
-    #[argh(option, long = "solver", default = "Solver::Z3")]
+    #[argh(option, long = "solver", default = "Solver::CVC5")]
     pub solver: Solver,
 
     /// dump interactions with the solver in the given file

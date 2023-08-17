@@ -8,10 +8,12 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/cucapra/calyx:0.3.0
     steps:
-      - name: Install z3
+      - name: Install cvc5
         run: |
-          apt-get update
-          apt-get install -y z3
+          wget https://github.com/cvc5/cvc5/releases/download/cvc5-1.0.6/cvc5-Linux \
+            --output-document cvc5
+          chmod +x cvc5
+          mv cvc5 /usr/local/bin
 
       - name: Checkout commit that triggered run
         uses: actions/checkout@v3

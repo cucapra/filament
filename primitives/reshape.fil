@@ -32,7 +32,7 @@ comp GenSerialize[#W, #N, #B, #C, #H]<G: #C*(#N-1)+#H>(
 ) where #N > 0, #B > 0, #C > 0, #H > 0 {
     for #i in 0..#N {
         for #j in 0..#B {
-            assume (#B*#i+#j)/#B == #i; // Proof hint. Make type checking faster.
+            assert (#B*#i+#j)/#B == #i; // Proof hint. Make type checking faster.
             if #i > 0 {
                 d := new Register[#W]<G, G+#C*#i+#H>(in{#B*#i+#j});
                 out{#B*#i+#j} = d.out;
@@ -88,7 +88,7 @@ comp GenDeserialize[#W, #N, #B, #C, #H]<G: #C*#N+#H-2>(
     for #i in 0..#N {
         // Accepts #B inputs this cycle and delay them
         for #j in 0..#B {
-            assume (#B*#i+#j)/#B == #i; // Proof hint. Make type checking faster.
+            assert (#B*#i+#j)/#B == #i; // Proof hint. Make type checking faster.
             if #i < #N-1 {
                 d := new Register[#W]<G+#C*#i, G+#C*#N+#H-1>(in{#B*#i+#j});
                 out{#B*#i+#j} = d.out;
