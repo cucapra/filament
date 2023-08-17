@@ -6,7 +6,7 @@ use codespan_reporting::{diagnostic as cr, term};
 use easy_smt as smt;
 use itertools::Itertools;
 use std::collections::HashMap;
-use std::iter;
+use std::{fs, iter};
 use term::termcolor::{ColorChoice, StandardStream};
 
 #[derive(Default)]
@@ -66,16 +66,35 @@ pub struct Discharge {
     error_count: u64,
 }
 
+impl Discharge {
+    /// Configure solver to use in this pass
+    fn conf_solver(opts: &cmdline::Opts) -> smt::Context {
+        let (name, s_opts) = match opts.solver {
+            cmdline::Solver::Z3 => {
+                log::debug!("Using z3 solver");
+                ("z3", &["-smt2", "-in"])
+            }
+            cmdline::Solver::CVC5 => {
+                log::debug!("Using cvc5 solver");
+                ("cvc5", &["--incremental", "--force-logic=ALL"])
+            }
+        };
+        smt::ContextBuilder::new()
+            .replay_file(
+                opts.solver_replay_file
+                    .as_ref()
+                    .map(|s| fs::File::create(s).unwrap()),
+            )
+            .solver(name, s_opts)
+            .build()
+            .unwrap()
+    }
+}
+
 impl Construct for Discharge {
     fn from(opts: &cmdline::Opts, _: &mut ir::Context) -> Self {
-        let sol = smt::ContextBuilder::new()
-            .replay_file(Some(std::fs::File::create("model.smt").unwrap()))
-            .solver("z3", ["-smt2", "-in"])
-            .build()
-            .unwrap();
-
         let mut out = Self {
-            sol,
+            sol: Self::conf_solver(opts),
             scoped: false,
             error_count: 0,
             act_lit_count: 0,

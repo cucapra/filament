@@ -31,9 +31,11 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::IntervalCheck,
         ip::PhantomCheck,
         ip::Assume,
-        ip::HoistFacts,
+        ip::HoistFacts
         // ip::Simplify,
-        ip::Discharge
+    }
+    if !opts.unsafe_skip_discharge {
+        pass_pipeline! {opts, ir; ip::Discharge }
     }
     ir = log_pass! { opts; ip::Monomorphize::transform(&ir), "monomorphize"};
     pass_pipeline! { opts, ir;
