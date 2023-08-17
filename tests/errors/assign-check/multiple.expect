@@ -1,0 +1,22 @@
+---CODE---
+1
+---STDERR---
+error: out of bounds access of bundle
+  ┌─ tests/errors/assign-check/multiple.fil:3:12
+  │
+2 │     bundle a[1]: [G, G+1] 32;
+  │            - bundle's length is 1
+3 │     a{0} = a{1};
+  │            ^^^^ out of bounds access
+
+error: out of bounds access of bundle
+  ┌─ tests/errors/assign-check/multiple.fil:4:12
+  │
+2 │     bundle a[1]: [G, G+1] 32;
+  │            - bundle's length is 1
+3 │     a{0} = a{1};
+4 │     a{0} = a{2};
+  │            ^^^^ out of bounds access
+
+Compilation failed with 2 errors.
+Run with --show-models to generate assignments for failing constraints.

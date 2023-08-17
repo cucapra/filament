@@ -62,7 +62,7 @@ pub struct Opts {
     pub unsafe_skip_discharge: bool,
 
     // Solver specific configuration
-    /// solver to use (default: z3)
+    /// solver to use (default: cvc5)
     #[argh(option, long = "solver", default = "Solver::CVC5")]
     pub solver: Solver,
 
