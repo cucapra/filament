@@ -12,6 +12,17 @@ where
     fn display(&self, idx: Idx<T>) -> String;
 }
 
+impl DisplayCtx<ir::Component> for ir::Context {
+    fn display(&self, idx: Idx<ir::Component>) -> String {
+        let comp = self.get(idx);
+        if let Some(ext_info) = &comp.src_info {
+            ext_info.name.to_string()
+        } else {
+            format!("comp{}", idx.get())
+        }
+    }
+}
+
 impl DisplayCtx<ir::Expr> for ir::Component {
     fn display(&self, idx: Idx<ir::Expr>) -> String {
         self.display_expr_helper(idx, ECtx::default())

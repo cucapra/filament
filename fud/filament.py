@@ -424,10 +424,10 @@ class FilamentStage(Stage):
         )
 
         @builder.step(description=cmd)
-        def to_calyx(input_path: SourceType.Path) -> SourceType.Stream:
+        def to_verilog(input_path: SourceType.Path) -> SourceType.Stream:
             return shell(cmd.format(path=input_path))
 
-        return to_calyx(input_data)
+        return to_verilog(input_data)
 
 
 __STAGES__ = [FilamentStage, CocotbOut, CocotbVCD, CleanupCocotb]
