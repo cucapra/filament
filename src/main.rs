@@ -72,8 +72,8 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
 fn gen_verilog(mut ctx: calyx_ir::Context) -> Result<(), calyx_utils::Error> {
     let pm = PassManager::default_passes()?;
     let backend_conf = calyx_ir::BackendConf {
-        synthesis_mode: true,
-        enable_verification: true,
+        synthesis_mode: false,
+        enable_verification: false,
         flat_assign: true,
     };
     ctx.bc = backend_conf;
