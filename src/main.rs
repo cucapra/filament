@@ -1,3 +1,5 @@
+use calyx::backend::traits::Backend;
+use calyx_opt::pass_manager::PassManager;
 use filament::{cmdline, ir, ir_passes as ip, resolver::Resolver};
 use filament::{log_pass, log_time, pass_pipeline};
 
@@ -54,8 +56,35 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     if opts.check {
         return Ok(());
     }
-    log_time!(ip::Compile::compile(ir), "compile");
+    let calyx = log_time!(ip::Compile::compile(ir), "compile");
+    match opts.backend {
+        cmdline::Backend::Verilog => {
+            gen_verilog(calyx).unwrap();
+        }
+        cmdline::Backend::Calyx => {
+            let out = &mut std::io::stdout();
+            calyx_ir::Printer::write_context(&calyx, false, out).unwrap();
+        }
+    }
     Ok(())
+}
+
+fn gen_verilog(mut ctx: calyx_ir::Context) -> Result<(), calyx_utils::Error> {
+    let pm = PassManager::default_passes()?;
+    let backend_conf = calyx_ir::BackendConf {
+        synthesis_mode: true,
+        enable_verification: true,
+        flat_assign: true,
+    };
+    ctx.bc = backend_conf;
+    pm.execute_plan(
+        &mut ctx,
+        &["all".to_string()],
+        &["canonicalize".to_string()],
+        false,
+    )?;
+    let backend = calyx::backend::verilog::VerilogBackend::default();
+    backend.run(ctx, calyx_utils::OutputFile::Stdout)
 }
 
 fn main() {

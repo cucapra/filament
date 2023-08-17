@@ -393,10 +393,10 @@ class FilamentStage(Stage):
     def __init__(self):
         super().__init__(
             src_state="filament",
-            target_state="calyx",
+            target_state="icarus-verilog",
             input_type=SourceType.Path,
             output_type=SourceType.Stream,
-            description="Compile a filament program to calyx",
+            description="Compile a filament program to verilog",
         )
 
     @staticmethod
