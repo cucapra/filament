@@ -2,8 +2,7 @@ use crate::ir::{
     self, CompIdx, Component, Context, Ctx, EventIdx, ExprIdx, ParamIdx,
     PortIdx,
 };
-use calyx::RRC;
-use calyx_ir as calyx;
+use calyx_ir::{self as calyx, RRC};
 use linked_hash_map::LinkedHashMap;
 
 type AttrPair = (calyx::Attribute, u64);
@@ -124,7 +123,12 @@ pub fn cell_to_port_def(cr: &RRC<calyx::Cell>) -> Vec<calyx::PortDef<u64>> {
         .map(|pr| {
             let port = pr.borrow();
             // Reverse port direction because signature refers to internal interface.
-            (port.name, port.width, port.direction.reverse()).into()
+            calyx::PortDef {
+                name: port.name,
+                width: port.width,
+                direction: port.direction.reverse(),
+                attributes: port.attributes.clone(),
+            }
         })
         .collect()
 }

@@ -362,13 +362,19 @@ impl Visitor for Discharge {
         // Declare all parameters
         let int = self.sol.int_sort();
         for (idx, _) in data.comp.params().iter() {
-            let sexp = self.sol.declare(Self::fmt_param(idx), int).unwrap();
+            let sexp = self
+                .sol
+                .declare_fun(Self::fmt_param(idx), vec![], int)
+                .unwrap();
             self.param_map.push(idx, sexp);
         }
 
         // Declare all events
         for (idx, _) in data.comp.events().iter() {
-            let sexp = self.sol.declare(Self::fmt_event(idx), int).unwrap();
+            let sexp = self
+                .sol
+                .declare_fun(Self::fmt_event(idx), vec![], int)
+                .unwrap();
             self.ev_map.push(idx, sexp);
         }
 

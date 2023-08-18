@@ -22,6 +22,26 @@ impl FromStr for Solver {
     }
 }
 
+#[derive(Debug, Default)]
+pub enum Backend {
+    #[default]
+    Verilog,
+    Calyx,
+}
+
+impl FromStr for Backend {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "calyx" => Ok(Backend::Calyx),
+            "verilog" => Ok(Backend::Verilog),
+            _ => Err(format!(
+                "unknown backend: {s}. Known backends are: calyx, verilog"
+            )),
+        }
+    }
+}
+
 #[derive(FromArgs, Debug)]
 /// The Filament pipeline verifier
 pub struct Opts {
@@ -61,8 +81,12 @@ pub struct Opts {
     #[argh(switch, long = "unsafe-skip-discharge")]
     pub unsafe_skip_discharge: bool,
 
+    /// backend to use (default: verilog): calyx, verilog
+    #[argh(option, long = "backend", default = "Backend::Verilog")]
+    pub backend: Backend,
+
     // Solver specific configuration
-    /// solver to use (default: cvc5)
+    /// solver to use (default: cvc5): cvc5, z3
     #[argh(option, long = "solver", default = "Solver::CVC5")]
     pub solver: Solver,
 
