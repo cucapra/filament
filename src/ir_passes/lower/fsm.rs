@@ -5,8 +5,8 @@ use super::{
     BuildCtx,
 };
 use crate::{ir, ir_passes::lower::utils::INTERFACE_PORTS};
-use calyx::{build_assignments, guard, structure, Guard, Nothing};
 use calyx_ir::{self as calyx, RRC};
+use calyx_ir::{build_assignments, guard, structure, Guard, Nothing};
 use itertools::Itertools;
 
 #[derive(Hash, PartialEq, Eq, Debug)]

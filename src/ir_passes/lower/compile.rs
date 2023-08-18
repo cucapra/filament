@@ -245,16 +245,15 @@ impl Compile {
         externs: Vec<(&String, Vec<ir::CompIdx>)>,
     ) -> CalyxResult<calyx::Context> {
         let mut ws = frontend::Workspace::from_compile_lib()?;
-        // Add externals
-        ws.externs.extend(externs.into_iter().map(|(file, comps)| {
-            (
-                Some(PathBuf::from(file)),
-                comps
-                    .into_iter()
-                    .map(|idx| Compile::primitive(ctx, idx))
-                    .collect(),
-            )
-        }));
+        // Add all primitives
+        for (file, prims) in externs {
+            for prim in prims {
+                ws.lib.add_extern_primitive(
+                    PathBuf::from(file),
+                    Compile::primitive(ctx, prim),
+                )
+            }
+        }
 
         // define a fake main component (needed to generate the ir calyx context)
         let main =
@@ -266,7 +265,7 @@ impl Compile {
     }
 
     /// Compiles filament into calyx
-    pub fn compile(ctx: ir::Context) {
+    pub fn compile(ctx: ir::Context) -> calyx::Context {
         // Creates a map between the file name and the external components defined in that file
         let externals =
             ctx.externals.iter().map(|(k, v)| (k, v.clone())).collect();
@@ -291,7 +290,6 @@ impl Compile {
         // add the fsm components to the calyx context
         calyx_ctx.components.extend(bindings.fsm_comps.take());
 
-        let mut out = &mut std::io::stdout();
-        calyx::Printer::write_context(&calyx_ctx, false, &mut out).unwrap();
+        calyx_ctx
     }
 }
