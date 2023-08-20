@@ -1,4 +1,5 @@
-use super::Ctx;
+use super::{Command, CompIdx, Context};
+use super::{Ctx, MutCtx};
 use crate::utils::{self, Idx};
 use bitvec::vec::BitVec;
 use itertools::Itertools;
@@ -7,8 +8,6 @@ use std::{
     marker::PhantomData, rc::Rc,
 };
 use topological_sort::TopologicalSort;
-
-use super::{Command, CompIdx, Context};
 
 /// An indexed storage for an interned type. Keeps a HashMap to provide faster reverse mapping
 /// from the value to the index.
@@ -25,6 +24,19 @@ where
 {
     store: Vec<Rc<T>>,
     map: HashMap<Rc<T>, I>,
+}
+
+impl<T> Ctx<T> for Interned<T>
+where
+    T: Eq + std::hash::Hash,
+{
+    fn add(&mut self, val: T) -> Idx<T> {
+        self.intern(val)
+    }
+
+    fn get(&self, idx: Idx<T>) -> &T {
+        self.get(idx)
+    }
 }
 
 impl<T, I> Default for Interned<T, I>
@@ -595,5 +607,25 @@ where
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.key.hash(state);
         self.owner.hash(state);
+    }
+}
+
+impl<T> Ctx<T> for IndexStore<T> {
+    fn add(&mut self, val: T) -> Idx<T> {
+        self.add(val)
+    }
+
+    fn get(&self, idx: Idx<T>) -> &T {
+        self.get(idx)
+    }
+}
+
+impl<T> MutCtx<T> for IndexStore<T> {
+    fn get_mut(&mut self, idx: Idx<T>) -> &mut T {
+        self.get_mut(idx)
+    }
+
+    fn delete(&mut self, idx: Idx<T>) {
+        self.delete(idx)
     }
 }
