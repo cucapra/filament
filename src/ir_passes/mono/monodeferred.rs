@@ -300,6 +300,12 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                     .get()
                     .into(),
             ),
+            ir::Command::BundleDef(p) => Some(
+                self.monosig
+                    .port(self.underlying, self.pass, Underlying::new(*p))
+                    .get()
+                    .into(),
+            ),
             ir::Command::Connect(con) => Some(self.connect(con).into()),
             ir::Command::ForLoop(lp) => {
                 self.forloop(lp);

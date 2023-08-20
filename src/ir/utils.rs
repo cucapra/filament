@@ -509,6 +509,7 @@ impl Traversal {
                 }
             }
             Command::Connect(_)
+            | Command::BundleDef(_)
             | Command::Invoke(_)
             | Command::Fact(_)
             | Command::Let(_) => (),
