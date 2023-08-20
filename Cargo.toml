@@ -25,6 +25,7 @@ calyx-frontend = { version = "0.4.0" }
 calyx-utils = { version = "0.4.0" }
 calyx-opt = { version = "0.4.0" }
 calyx = { version = "0.4.0" }
+fil-derive = { version = "0.1.0", path = "fil-derive" }
 
 [dependencies.env_logger]
 version = "0.9"
