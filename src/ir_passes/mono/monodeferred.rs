@@ -39,8 +39,11 @@ impl MonoDeferred<'_, '_> {
             monosig.event_map.insert(Underlying::new(idx), new_idx);
             pass.event_map.insert(
                 (
-                    Underlying::new(monosig.underlying_idx),
-                    conc_params.clone(),
+                    (
+                        Underlying::new(monosig.underlying_idx),
+                        conc_params.clone(),
+                    )
+                        .into(),
                     Underlying::new(idx),
                 ),
                 new_idx,
@@ -295,41 +298,44 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         );
     }
 
-    fn command(&mut self, cmd: &ir::Command) -> Vec<ir::Command> {
+    /// Compile the given command and return the generated command if any.
+    fn command(&mut self, cmd: &ir::Command) -> Option<ir::Command> {
         match cmd {
-            ir::Command::Instance(idx) => {
-                vec![self
-                    .monosig
-                    .instance(self.underlying, self.pass, Underlying::new(*idx))
+            ir::Command::Instance(idx) => Some(
+                self.monosig
+                    .inst_def(self.underlying, self.pass, Underlying::new(*idx))
                     .idx()
-                    .into()]
-            }
-            ir::Command::Invoke(idx) => {
-                vec![self
-                    .monosig
-                    .invoke(self.underlying, self.pass, Underlying::new(*idx))
+                    .into(),
+            ),
+            ir::Command::Invoke(idx) => Some(
+                self.monosig
+                    .inv_def(self.underlying, self.pass, Underlying::new(*idx))
+                    .idx()
+                    .into(),
+            ),
+            ir::Command::BundleDef(p) => Some(
+                self.monosig
+                    .port(self.underlying, self.pass, Underlying::new(*p))
                     .idx()
                     .into()]
             }
             ir::Command::Connect(con) => vec![self.connect(con).into()],
             ir::Command::ForLoop(lp) => {
                 self.forloop(lp);
-                vec![]
+                None
             }
             ir::Command::If(if_stmt) => {
                 self.if_stmt(if_stmt);
-                vec![]
+                None
             }
             ir::Command::Let(l) => {
                 self.p_let(l);
-                vec![]
+                None
             }
             // XXX(rachit): We completely get rid of facts in the program here.
             // If we want to do this long term, this should be done in a
             // separate pass and monomorphization should fail on facts.
-            ir::Command::Fact(_) => {
-                vec![]
-            }
+            ir::Command::Fact(_) => None,
         }
     }
 }

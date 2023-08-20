@@ -10,9 +10,25 @@ use super::{
     utils::{Base, Underlying},
 };
 
-type InstKey = (Underlying<ir::Component>, Vec<u64>);
-type PortKey = (Underlying<ir::Component>, Vec<u64>, Underlying<ir::Port>);
-type EventKey = (Underlying<ir::Component>, Vec<u64>, Underlying<ir::Event>);
+#[derive(PartialEq, Eq, Hash, Clone)]
+/// A key defined by a component and all of its parameters.
+pub struct CompKey {
+    pub comp: Underlying<ir::Component>,
+    pub params: Vec<u64>,
+}
+impl CompKey {
+    pub fn new(comp: Underlying<ir::Component>, params: Vec<u64>) -> Self {
+        Self { comp, params }
+    }
+}
+impl From<(Underlying<ir::Component>, Vec<u64>)> for CompKey {
+    fn from((comp, params): (Underlying<ir::Component>, Vec<u64>)) -> Self {
+        Self::new(comp, params)
+    }
+}
+
+type PortKey = (CompKey, Underlying<ir::Port>);
+type EventKey = (CompKey, Underlying<ir::Event>);
 
 /// Monomorphize the Filament program
 pub struct Monomorphize<'a> {
@@ -25,9 +41,9 @@ pub struct Monomorphize<'a> {
     pub externals: Vec<ir::CompIdx>,
 
     /// Instances that have already been processed. Tracks the name of the generated component
-    pub processed: HashMap<InstKey, Base<ir::Component>>,
+    pub processed: HashMap<CompKey, Base<ir::Component>>,
     /// Instances that need to be generated
-    pub queue: LinkedHashMap<InstKey, (Base<ir::Component>, MonoSig)>,
+    pub queue: LinkedHashMap<CompKey, (Base<ir::Component>, MonoSig)>,
 
     /// Mapping from old ports to new ports, for resolving Foreigns
     pub port_map: HashMap<PortKey, Base<ir::Port>>,
@@ -61,9 +77,9 @@ impl<'ctx> Monomorphize<'ctx> {
     /// The processing happens at a later point but, if needed, the pass immediately allocates a new [ir::Component] and returns information to construct a new instance.
     pub fn should_process(
         &mut self,
-        comp: Underlying<ir::Component>,
-        params: Vec<u64>,
+        comp_key: CompKey,
     ) -> (Base<ir::Component>, Vec<u64>) {
+        let CompKey { comp, params } = comp_key;
         let underlying = self.old.get(comp.idx());
 
         // If it is an external, add it to externals
@@ -71,10 +87,10 @@ impl<'ctx> Monomorphize<'ctx> {
             self.externals.push(comp.idx());
         }
 
-        let key = if underlying.is_ext {
-            (comp, vec![])
+        let key: CompKey = if underlying.is_ext {
+            (comp, vec![]).into()
         } else {
-            (comp, params.clone())
+            (comp, params.clone()).into()
         };
 
         // If we've already processed this or queued this for processing, return the component
@@ -120,19 +136,18 @@ impl<'ctx> Monomorphize<'ctx> {
     }
 
     fn next(&mut self) -> Option<(ir::Component, Base<ir::Component>)> {
-        let Some(((underlying_idx, params), (base_idx, monosig))) = self.queue.pop_front() else {
+        let Some((ck, (base_idx, monosig))) = self.queue.pop_front() else {
             return None;
         };
 
-        self.processed.insert((underlying_idx, params), base_idx);
-
-        let underlying = self.old.get(underlying_idx.idx());
+        let underlying = self.old.get(ck.comp.idx());
         let mut mono = MonoDeferred {
             underlying,
             pass: self,
             monosig,
         };
 
+        mono.pass.processed.insert(ck, base_idx);
         mono.gen_comp();
         let base = mono.monosig.base;
 
@@ -157,7 +172,8 @@ impl Monomorphize<'_> {
         let entrypoint = Underlying::new(entrypoint);
         // Monomorphize the entrypoint
         let mut mono = Monomorphize::new(ctx);
-        mono.should_process(entrypoint, vec![]);
+        let ck = CompKey::new(entrypoint, vec![]);
+        mono.should_process(ck.clone());
 
         // Build a new context
         while let Some((mut comp, idx)) = mono.next() {
@@ -166,7 +182,7 @@ impl Monomorphize<'_> {
             let val = ir::Validate::new(&comp, &mono.ctx.comps);
             val.comp();
         }
-        let new_entrypoint = mono.processed.get(&(entrypoint, vec![])).unwrap();
+        let new_entrypoint = mono.processed.get(&ck).unwrap();
         mono.ctx.entrypoint = Some(new_entrypoint.idx());
         mono.ctx.externals = mono.ext_map;
         mono.ctx

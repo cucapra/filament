@@ -6,6 +6,7 @@ use crate::ir::{self, Ctx, Foreign, MutCtx};
 use itertools::Itertools;
 use std::collections::HashMap;
 
+/// The port key is either a invocation port or a local port
 type PortKey = (Option<Base<ir::Invoke>>, Underlying<ir::Port>);
 
 /// Used for monomorphizing a component's signature when we add it to the queue.
@@ -19,7 +20,9 @@ pub struct MonoSig {
     /// Mapping from parameters in the underlying component to their constant bindings.
     pub binding: ir::Bind<Underlying<ir::Param>, u64>,
 
+    /// Map from underlying invokes to base invokes
     pub invoke_map: HashMap<Underlying<ir::Invoke>, Base<ir::Invoke>>,
+    /// Map from underlying instances to base instances
     pub instance_map: HashMap<Underlying<ir::Instance>, Base<ir::Instance>>,
 
     // Keep track of things that have benen moonmorphized already
@@ -117,18 +120,17 @@ impl MonoSig {
             conc_params
         };
 
-        // now need to find the mapping from old portidx and the old instance to new port
-        let new_port = pass
-            .port_map
-            .get(&(inst_comp, conc_params.clone(), key))
-            .unwrap();
+        let comp_k = (inst_comp, conc_params).into();
 
-        let mono_compidx =
-            if pass.queue.get(&(inst_comp, conc_params.clone())).is_none() {
-                pass.processed.get(&(inst_comp, conc_params)).unwrap()
-            } else {
-                &pass.queue.get(&(inst_comp, conc_params)).unwrap().0
-            };
+        let mono_compidx = if pass.queue.get(&comp_k).is_none() {
+            pass.processed[&comp_k]
+        } else {
+            pass.queue[&comp_k].0
+        };
+
+        // now need to find the mapping from old portidx and the old instance to new port
+        let global_port_map_k = (comp_k, key);
+        let new_port = pass.port_map[&global_port_map_k];
 
         ir::Foreign::new(new_port.idx(), mono_compidx.idx())
     }
@@ -408,14 +410,12 @@ impl MonoSig {
         let conc_params = binding.iter().map(|(_, n)| *n).collect_vec();
 
         let new_event = self.event_map.get(&event).unwrap();
-        pass.event_map.insert(
-            (Underlying::new(self.underlying_idx), conc_params, event),
-            *new_event,
-        );
+        let ck = (Underlying::new(self.underlying_idx), conc_params).into();
+        pass.event_map.insert((ck, event), *new_event);
         *new_event
     }
 
-    /// Takes a self.underlying-owned param that is known to be bundle-owned and a port index owned by self.base,
+    /// Takes a underlying-owned param that is known to be bundle-owned and a port index owned by self.base,
     /// creates a new param that points to the port index, and adds the param to self.base. Returns the
     /// corresponding index
     fn bundle_param(
@@ -449,8 +449,9 @@ impl MonoSig {
         new_idx
     }
 
-    /// Monomorphize the `inv` (owned by self.underlying) and add it to `self.base`, and return the corresponding index
-    pub fn invoke(
+    /// Monomorphize the definition of an invoke, add it to the base component,
+    /// and return the corresponding base index
+    pub fn inv_def(
         &mut self,
         underlying: &ir::Component,
         pass: &mut Monomorphize,
@@ -579,23 +580,22 @@ impl MonoSig {
             conc_params
         };
 
-        let new_event = pass
-            .event_map
-            .get(&(inst_comp, conc_params.clone(), key))
-            .unwrap();
+        let ck = (inst_comp, conc_params).into();
 
-        let new_owner =
-            if pass.queue.get(&(inst_comp, conc_params.clone())).is_none() {
-                pass.processed.get(&(inst_comp, conc_params)).unwrap()
-            } else {
-                &pass.queue.get(&(inst_comp, conc_params)).unwrap().0
-            };
+        let new_owner = if pass.queue.get(&ck).is_none() {
+            pass.processed[&ck]
+        } else {
+            pass.queue[&ck].0
+        };
 
+        let global_event_map_k = (ck, key);
+        let new_event = pass.event_map.get(&global_event_map_k).unwrap();
         ir::Foreign::new(new_event.idx(), new_owner.idx())
     }
 
-    /// Monomorphize the `inst` (owned by self.underlying) and add it to `self.base`, and return the corresponding index
-    pub fn instance(
+    /// Monomorphize the definition of an instance and add it to base component,
+    /// and return the corresponding base index.
+    pub fn inst_def(
         &mut self,
         underlying: &ir::Component,
         pass: &mut Monomorphize,
@@ -612,8 +612,8 @@ impl MonoSig {
                     .unwrap()
             })
             .collect_vec();
-        let (comp, new_params) =
-            pass.should_process(Underlying::new(*comp), conc_params);
+        let ck = (Underlying::new(*comp), conc_params).into();
+        let (comp, new_params) = pass.should_process(ck);
 
         let new_inst = if !is_ext {
             ir::Instance {
@@ -669,11 +669,13 @@ impl MonoSig {
                 .collect_vec()
         };
 
-        if let Some(idx) = self.port_map.get(&(None, port)) {
-            if !pass.port_map.contains_key(&(comp, cparams.clone(), port)) {
-                pass.port_map.insert((comp, cparams, port), *idx);
-            }
+        let port_map_k = (None, port);
+        let global_port_map_k = ((comp, cparams).into(), port);
 
+        // If the port has already been added to the base component, then we can
+        // just return the index
+        if let Some(idx) = self.port_map.get(&port_map_k) {
+            pass.port_map.entry(global_port_map_k).or_insert(*idx);
             return *idx;
         };
 
@@ -687,12 +689,10 @@ impl MonoSig {
         }));
 
         // local port map
-        self.port_map.insert((None, port), new_port);
+        self.port_map.insert(port_map_k, new_port);
 
         // pass port map
-        if !pass.port_map.contains_key(&(comp, cparams.clone(), port)) {
-            pass.port_map.insert((comp, cparams, port), new_port);
-        };
+        pass.port_map.entry(global_port_map_k).or_insert(new_port);
 
         // Find the new port owner
         let mono_owner = self.find_new_portowner(underlying, pass, owner);
@@ -739,6 +739,17 @@ impl MonoSig {
         new_port
     }
 
+    /// Monomorphize the definition of a port owned in the underlying component,
+    /// add it to the base component, and return the corresponding index.
+    pub fn port_def(
+        &mut self,
+        underlying: &ir::Component,
+        pass: &mut Monomorphize,
+        port: Underlying<ir::Port>,
+    ) -> Base<ir::Port> {
+        todo!()
+    }
+
     /// Monomorphize the port (owned by self.underlying) and add it to `self.base`, and return the corresponding index
     pub fn port(
         &mut self,
@@ -747,10 +758,7 @@ impl MonoSig {
         port: Underlying<ir::Port>,
     ) -> Base<ir::Port> {
         let ir::Port {
-            owner,
-            width,
-            live,
-            info,
+            owner, width, live, ..
         } = underlying.get(port.idx());
 
         let (inv, comp, conc_params) = match owner {
@@ -791,14 +799,16 @@ impl MonoSig {
             }
         };
 
-        if let Some(idx) = self.port_map.get(&(inv, port)) {
-            pass.port_map
-                .entry((comp, conc_params, port))
-                .or_insert(*idx);
+        let port_map_k = (inv, port);
+        let global_port_map_k = ((comp, conc_params).into(), port);
+
+        // If we already have this key in the port map, we can just return the index
+        if let Some(idx) = self.port_map.get(&port_map_k) {
+            pass.port_map.entry(global_port_map_k).or_insert(*idx);
             return *idx;
         };
 
-        let info = self.info(underlying, pass, info);
+        let info = self.base.add(ir::Info::default());
 
         // Add the new port so we can use its index in defining the correct Liveness
         let new_port = Base::new(self.base.add(ir::Port {
@@ -809,12 +819,10 @@ impl MonoSig {
         }));
 
         // local port map
-        self.port_map.insert((inv, port), new_port);
+        self.port_map.insert(port_map_k, new_port);
 
         // pass port map
-        pass.port_map
-            .entry((comp, conc_params, port))
-            .or_insert(new_port);
+        pass.port_map.entry(global_port_map_k).or_insert(new_port);
 
         // Find the new port owner
         let mono_owner = self.find_new_portowner(underlying, pass, owner);
