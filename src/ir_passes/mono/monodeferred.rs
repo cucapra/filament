@@ -105,11 +105,11 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 let ir::CmpOp { op, lhs, rhs } = cmp;
                 let lhs = self
                     .monosig
-                    .expr(self.underlying, self.pass, Underlying::new(*lhs))
+                    .expr(self.underlying, Underlying::new(*lhs))
                     .get();
                 let rhs = self
                     .monosig
-                    .expr(self.underlying, self.pass, Underlying::new(*rhs))
+                    .expr(self.underlying, Underlying::new(*rhs))
                     .get();
                 self.monosig.base.add(ir::Prop::Cmp(ir::CmpOp {
                     op: op.clone(),
@@ -168,11 +168,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             .get();
 
         // generate end expression
-        let end = self.monosig.expr(
-            self.underlying,
-            self.pass,
-            Underlying::new(*end),
-        );
+        let end = self.monosig.expr(self.underlying, Underlying::new(*end));
 
         // convert to concrete value
         let end = self
@@ -181,11 +177,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             .bin(self.monosig.base.get(end.get()).clone());
 
         // generate start expression
-        let start = self.monosig.expr(
-            self.underlying,
-            self.pass,
-            Underlying::new(*start),
-        );
+        let start = self.monosig.expr(self.underlying, Underlying::new(*start));
 
         // convert to concrete value
         let start = self
@@ -217,14 +209,13 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             body,
         } = lp;
 
-        // let mono_index = self.monosig.param(self.underlying, self.pass, *index);
         let mono_start = self
             .monosig
-            .expr(self.underlying, self.pass, Underlying::new(*start))
+            .expr(self.underlying, Underlying::new(*start))
             .get();
         let mono_end = self
             .monosig
-            .expr(self.underlying, self.pass, Underlying::new(*end))
+            .expr(self.underlying, Underlying::new(*end))
             .get();
 
         let mut i = mono_start.as_concrete(&self.monosig.base).unwrap();
@@ -281,11 +272,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     fn p_let(&mut self, l: &ir::Let) {
         let ir::Let { param, expr } = *l;
 
-        let expr = self.monosig.expr(
-            self.underlying,
-            self.pass,
-            Underlying::new(expr),
-        );
+        let expr = self.monosig.expr(self.underlying, Underlying::new(expr));
 
         // Inserts this param into the binding.
         self.monosig.binding.insert(

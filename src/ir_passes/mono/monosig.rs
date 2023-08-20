@@ -108,7 +108,7 @@ impl MonoSig {
         let conc_params = inst_params
             .iter()
             .map(|p| {
-                self.expr(underlying, pass, Underlying::new(*p))
+                self.expr(underlying, Underlying::new(*p))
                     .get()
                     .as_concrete(&self.base)
                     .unwrap()
@@ -195,32 +195,26 @@ impl MonoSig {
 
     /// Translates a ParamIdx defined by `underlying` to corresponding one in `base`
     /// Assumes that `param` is not sig-owned, because then it would be defined in the binding
-    pub fn param(
+    pub fn param_use(
         &mut self,
         underlying: &ir::Component,
-        pass: &mut Monomorphize,
         param: Underlying<ir::Param>,
     ) -> Base<ir::Param> {
-        if let Some(idx) = self.param_map.get(&param) {
-            return *idx;
-        };
-        let ir::Param { owner, info, .. } = underlying.get(param.idx());
-
-        match owner {
-            ir::ParamOwner::Bundle(_) => {
-                unreachable!("Bundle params should only be generated when visiting ports")
-            }
-            ir::ParamOwner::Let | ir::ParamOwner::Loop => {
-                let new_param = ir::Param {
-                    owner: owner.clone(),
-                    info: self.info(underlying, pass, info),
-                };
-                let new_idx = Base::new(self.base.add(new_param));
-                self.param_map.insert(param, new_idx);
-                new_idx
-            }
-            ir::ParamOwner::Sig => {
-                unreachable!("If a param is sig-owned, it should be resolved in the binding!")
+        if let Some(&idx) = self.param_map.get(&param) {
+            idx
+        } else {
+            // This param is a in a use site and should therefore have been found.
+            let param = underlying.get(param.idx());
+            match param.owner {
+                ir::ParamOwner::Let | ir::ParamOwner::Loop => {
+                    unreachable!("Let and loop params should should be resolved in the binding")
+                }
+                ir::ParamOwner::Bundle(_) => {
+                    unreachable!("Bundle params should only be generated when visiting ports")
+                }
+                ir::ParamOwner::Sig => {
+                    unreachable!("If a param is sig-owned, it should be resolved in the binding!")
+                }
             }
         }
     }
@@ -233,7 +227,6 @@ impl MonoSig {
     pub fn expr(
         &mut self,
         underlying: &ir::Component,
-        pass: &mut Monomorphize,
         expr: Underlying<ir::Expr>,
     ) -> Base<ir::Expr> {
         // If this is a parameter in the underlying component that is bound,
@@ -245,18 +238,17 @@ impl MonoSig {
                 return new_idx;
             }
         };
+
         // The expression is neither bound nor rewritten, so we need to rewrite it
         let new_idx = match e.clone() {
             ir::Expr::Param(p) => self
-                .param(underlying, pass, Underlying::new(p))
+                .param_use(underlying, Underlying::new(p))
                 .get()
                 .expr(&mut self.base),
             ir::Expr::Concrete(n) => self.base.num(n),
             ir::Expr::Bin { op, lhs, rhs } => {
-                let lhs =
-                    self.expr(underlying, pass, Underlying::new(lhs)).get();
-                let rhs =
-                    self.expr(underlying, pass, Underlying::new(rhs)).get();
+                let lhs = self.expr(underlying, Underlying::new(lhs)).get();
+                let rhs = self.expr(underlying, Underlying::new(rhs)).get();
                 let binop = ir::Expr::Bin { op, lhs, rhs };
                 self.base.add(binop)
             }
@@ -264,7 +256,7 @@ impl MonoSig {
                 let args = args
                     .iter()
                     .map(|idx| {
-                        self.expr(underlying, pass, Underlying::new(*idx)).get()
+                        self.expr(underlying, Underlying::new(*idx)).get()
                     })
                     .collect_vec();
                 let func = ir::Expr::Fn { op, args };
@@ -297,7 +289,7 @@ impl MonoSig {
 
         let mono_time = ir::Time {
             event: self.event(pass, Underlying::new(*event)).get(),
-            offset: self.expr(underlying, pass, Underlying::new(*offset)).get(),
+            offset: self.expr(underlying, Underlying::new(*offset)).get(),
         };
 
         self.base.add(mono_time)
@@ -312,7 +304,7 @@ impl MonoSig {
     ) -> ir::TimeSub {
         match delay {
             ir::TimeSub::Unit(expr) => ir::TimeSub::Unit(
-                self.expr(underlying, pass, Underlying::new(*expr)).get(),
+                self.expr(underlying, Underlying::new(*expr)).get(),
             ),
             ir::TimeSub::Sym { l, r } => ir::TimeSub::Sym {
                 l: self.time(underlying, pass, *l),
@@ -522,7 +514,7 @@ impl MonoSig {
     ) -> ir::TimeSub {
         match timesub {
             ir::TimeSub::Unit(expr) => ir::TimeSub::Unit(
-                self.expr(underlying, pass, Underlying::new(*expr)).get(),
+                self.expr(underlying, Underlying::new(*expr)).get(),
             ),
             ir::TimeSub::Sym { l, r } => ir::TimeSub::Sym {
                 l: self.time(underlying, pass, *l),
@@ -549,7 +541,7 @@ impl MonoSig {
         let conc_params = inst_params
             .iter()
             .map(|p| {
-                self.expr(underlying, pass, Underlying::new(*p))
+                self.expr(underlying, Underlying::new(*p))
                     .get()
                     .as_concrete(&self.base)
                     .unwrap()
@@ -588,7 +580,7 @@ impl MonoSig {
         let conc_params = params
             .iter()
             .map(|p| {
-                self.expr(underlying, pass, Underlying::new(*p))
+                self.expr(underlying, Underlying::new(*p))
                     .get()
                     .as_concrete(&self.base)
                     .unwrap()
@@ -610,7 +602,7 @@ impl MonoSig {
             // this is an extern, so keep the params - need to get them into the new component though
             let ext_params = params
                 .iter()
-                .map(|p| self.expr(underlying, pass, Underlying::new(*p)).get())
+                .map(|p| self.expr(underlying, Underlying::new(*p)).get())
                 .collect_vec();
             ir::Instance {
                 comp: comp.get(),
@@ -761,7 +753,7 @@ impl MonoSig {
                     inst.params
                         .iter()
                         .map(|p| {
-                            self.expr(underlying, pass, Underlying::new(*p))
+                            self.expr(underlying, Underlying::new(*p))
                                 .get()
                                 .as_concrete(&self.base)
                                 .unwrap()
@@ -816,9 +808,9 @@ impl MonoSig {
         };
 
         self.bundle_param_map.insert(new_port, mono_liveness_idx);
-        let mono_width = self.expr(underlying, pass, Underlying::new(*width));
+        let mono_width = self.expr(underlying, Underlying::new(*width));
         mono_liveness.len = self
-            .expr(underlying, pass, Underlying::new(mono_liveness.len))
+            .expr(underlying, Underlying::new(mono_liveness.len))
             .get();
         mono_liveness.len =
             self.base.bin(self.base.get(mono_liveness.len).clone());
