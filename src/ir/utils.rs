@@ -2,7 +2,7 @@ use bitvec::vec::BitVec;
 use itertools::Itertools;
 use topological_sort::TopologicalSort;
 
-use super::Ctx;
+use super::{Ctx, MutCtx};
 use crate::utils::Idx;
 use std::{
     collections::HashMap, fmt::Display, iter::IntoIterator,
@@ -25,6 +25,19 @@ where
 {
     store: Vec<Rc<T>>,
     map: HashMap<Rc<T>, Idx<T>>,
+}
+
+impl<T> Ctx<T> for Interned<T>
+where
+    T: Eq + std::hash::Hash,
+{
+    fn add(&mut self, val: T) -> Idx<T> {
+        self.intern(val)
+    }
+
+    fn get(&self, idx: Idx<T>) -> &T {
+        self.get(idx)
+    }
 }
 
 impl<T> Default for Interned<T>
@@ -547,5 +560,25 @@ where
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.key.hash(state);
         self.owner.hash(state);
+    }
+}
+
+impl<T> Ctx<T> for IndexStore<T> {
+    fn add(&mut self, val: T) -> Idx<T> {
+        self.add(val)
+    }
+
+    fn get(&self, idx: Idx<T>) -> &T {
+        self.get(idx)
+    }
+}
+
+impl<T> MutCtx<T> for IndexStore<T> {
+    fn get_mut(&mut self, idx: Idx<T>) -> &mut T {
+        self.get_mut(idx)
+    }
+
+    fn delete(&mut self, idx: Idx<T>) {
+        self.delete(idx)
     }
 }
