@@ -1,5 +1,6 @@
 use calyx::backend::traits::Backend;
 use calyx_opt::pass_manager::PassManager;
+use filament::ir_passes::BuildDomination;
 use filament::{cmdline, ir, ir_passes as ip, resolver::Resolver};
 use filament::{log_pass, log_time, pass_pipeline};
 
@@ -39,6 +40,9 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     if !opts.unsafe_skip_discharge {
         pass_pipeline! {opts, ir; ip::Discharge }
     }
+    pass_pipeline! { opts, ir;
+        BuildDomination
+    };
     ir = log_pass! { opts; ip::Monomorphize::transform(&ir), "monomorphize"};
     pass_pipeline! { opts, ir;
         ip::AssignCheck,

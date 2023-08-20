@@ -31,11 +31,12 @@ impl From<(u64, u64)> for FsmType {
     /// Generates an FsmType based on the default heuristic on the number of states and the delay (II).
     fn from((states, delay): (u64, u64)) -> Self {
         // TODO(UnsignedByte): Find a better metric to decide which type of fsm to generate.
-        if delay > 1 {
-            FsmType::CounterChain(states, delay)
-        } else {
-            FsmType::Simple(states)
-        }
+        FsmType::Simple(states)
+        // if delay > 1 {
+        //     FsmType::CounterChain(states, delay)
+        // } else {
+        //     FsmType::Simple(states)
+        // }
     }
 }
 

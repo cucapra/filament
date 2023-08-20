@@ -3,7 +3,7 @@ use super::{
     utils::{Base, Underlying},
     Monomorphize,
 };
-use crate::ir::{self, Ctx};
+use crate::ir::{self, Ctx, DisplayCtx};
 use itertools::Itertools;
 
 pub(super) struct MonoDeferred<'a, 'pass: 'a> {
@@ -17,13 +17,13 @@ pub(super) struct MonoDeferred<'a, 'pass: 'a> {
 }
 
 impl MonoDeferred<'_, '_> {
+    // XXX(rachit): Why does this function need to do anything to the signature
+    // of external components instead of just wholesale copying them?
     pub fn sig(
         monosig: &mut MonoSig,
         underlying: &ir::Component,
         pass: &mut Monomorphize,
     ) {
-        // Events can be recursive, so do a pass over them to generate the new idxs now
-        // and then fill them in later
         let binding = monosig.binding.inner();
         let conc_params = if underlying.is_ext {
             vec![]
@@ -34,6 +34,8 @@ impl MonoDeferred<'_, '_> {
                 .map(|(_, n)| *n)
                 .collect_vec()
         };
+        // Events can be recursive, so do a pass over them to generate the new idxs now
+        // and then fill them in later
         for (idx, event) in underlying.events().iter() {
             let new_idx = Base::new(monosig.base.add(event.clone()));
             monosig.event_map.insert(Underlying::new(idx), new_idx);
@@ -51,6 +53,13 @@ impl MonoDeferred<'_, '_> {
         }
 
         if underlying.is_ext {
+            // We can copy over the underlying expressions because we're not
+            // going to substitute anything.
+            for (_, expr) in underlying.exprs().iter() {
+                monosig.base.add(expr.clone());
+            }
+
+            // Add all parameters because we're not going to substitute them
             for (idx, param) in underlying.params().iter() {
                 let ir::Param { owner, info } = param;
                 let param = ir::Param {
@@ -62,9 +71,7 @@ impl MonoDeferred<'_, '_> {
                     .param_map
                     .insert(Underlying::new(idx), Base::new(new_idx));
             }
-        }
 
-        if underlying.is_ext {
             for (idx, port) in underlying.ports().iter() {
                 if port.is_sig() {
                     monosig.ext_port(underlying, pass, Underlying::new(idx));
@@ -73,7 +80,22 @@ impl MonoDeferred<'_, '_> {
         } else {
             for (idx, port) in underlying.ports().iter() {
                 if port.is_sig() {
-                    monosig.port(underlying, pass, Underlying::new(idx));
+                    let port = monosig.port_def(
+                        underlying,
+                        pass,
+                        Underlying::new(idx),
+                    );
+                    pass.port_map.insert(
+                        (
+                            (
+                                Underlying::new(monosig.underlying_idx),
+                                conc_params.clone(),
+                            )
+                                .into(),
+                            Underlying::new(idx),
+                        ),
+                        port,
+                    );
                 }
             }
         }
@@ -164,7 +186,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let port = self
             .monosig
-            .port(self.underlying, self.pass, Underlying::new(*port))
+            .port_use(self.underlying, Underlying::new(*port))
             .get();
 
         // generate end expression
@@ -302,7 +324,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             ),
             ir::Command::BundleDef(p) => Some(
                 self.monosig
-                    .port(self.underlying, self.pass, Underlying::new(*p))
+                    .port_def(self.underlying, self.pass, Underlying::new(*p))
                     .get()
                     .into(),
             ),

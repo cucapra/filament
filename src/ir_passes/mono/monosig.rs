@@ -10,6 +10,7 @@ use std::collections::HashMap;
 type PortKey = (Option<Base<ir::Invoke>>, Underlying<ir::Port>);
 
 type DenseMap<T> = DenseIndexInfo<T, Base<T>, Underlying<T>>;
+type SparseMap<T> = HashMap<Underlying<T>, Base<T>>;
 
 /// Used for monomorphizing a component's signature when we add it to the queue.
 /// Any functions needed for monomorphizing the signature are located here - the rest are
@@ -30,8 +31,8 @@ pub struct MonoSig {
     // Keep track of things that have benen monomorphized already
     /// Events
     pub event_map: DenseMap<ir::Event>,
-    /// Params - underlying param -> new Param
-    pub param_map: HashMap<Underlying<ir::Param>, Base<ir::Param>>,
+    /// Params - underlying param -> new Param. Kept in a sparse map because we're going to remove most parameters during monomorphization.
+    pub param_map: SparseMap<ir::Param>,
     /// Bundle params - new port to new param
     pub bundle_param_map: HashMap<Base<ir::Port>, Base<ir::Param>>,
     /// Ports - (base inv, underlying port) -> base port
@@ -462,7 +463,7 @@ impl MonoSig {
         // Ports
         let mono_ports = ports
             .iter()
-            .map(|p| self.port(underlying, pass, Underlying::new(*p)).get())
+            .map(|p| self.port_def(underlying, pass, Underlying::new(*p)).get())
             .collect_vec();
 
         // Events
@@ -715,8 +716,29 @@ impl MonoSig {
         new_port
     }
 
+    /// Return base representation of a port that has already been monomorphized
+    pub fn port_use(
+        &mut self,
+        underlying: &ir::Component,
+        port: Underlying<ir::Port>,
+    ) -> Base<ir::Port> {
+        let inv = match &underlying.get(port.idx()).owner {
+            ir::PortOwner::Sig { .. } | ir::PortOwner::Local => None,
+            ir::PortOwner::Inv { inv, .. } => {
+                let base_inv = *self.invoke_map.get(Underlying::new(*inv));
+                Some(base_inv)
+            }
+        };
+        let port_map_k = (inv, Underlying::new(port.idx()));
+        if let Some(idx) = self.port_map.get(&port_map_k) {
+            *idx
+        } else {
+            unreachable!("port_use called for undefined port");
+        }
+    }
+
     /// Monomorphize the port (owned by self.underlying) and add it to `self.base`, and return the corresponding index
-    pub fn port(
+    pub fn port_def(
         &mut self,
         underlying: &ir::Component,
         pass: &mut Monomorphize,
@@ -729,52 +751,15 @@ impl MonoSig {
             info,
         } = underlying.get(port.idx());
 
-        let (inv, comp, conc_params) = match owner {
-            ir::PortOwner::Sig { .. } | ir::PortOwner::Local => {
-                let binding = &self.binding.inner();
-                let cparams = if underlying.is_ext {
-                    vec![]
-                } else {
-                    binding
-                        .iter()
-                        .filter(|(p, _)| underlying.get(p.idx()).is_sig_owned())
-                        .map(|(_, n)| *n)
-                        .collect_vec()
-                };
-                (None, Underlying::new(self.underlying_idx), cparams)
-            }
+        let inv = match owner {
+            ir::PortOwner::Sig { .. } | ir::PortOwner::Local => None,
             ir::PortOwner::Inv { inv, .. } => {
-                let inst = underlying.get(underlying.get(*inv).inst);
-                let inst_comp = pass.old.get(inst.comp);
-
                 let base_inv = *self.invoke_map.get(Underlying::new(*inv));
-
-                let conc_params = if inst_comp.is_ext {
-                    vec![]
-                } else {
-                    inst.params
-                        .iter()
-                        .map(|p| {
-                            self.expr(underlying, Underlying::new(*p))
-                                .get()
-                                .as_concrete(&self.base)
-                                .unwrap()
-                        })
-                        .collect_vec()
-                };
-                (Some(base_inv), Underlying::new(inst.comp), conc_params)
+                Some(base_inv)
             }
         };
 
         let port_map_k = (inv, port);
-        let global_port_map_k = ((comp, conc_params).into(), port);
-
-        // If we already have this key in the port map, we can just return the index
-        if let Some(idx) = self.port_map.get(&port_map_k) {
-            pass.port_map.entry(global_port_map_k).or_insert(*idx);
-            return *idx;
-        };
-
         let info = self.info(underlying, pass, info);
 
         // Add the new port so we can use its index in defining the correct Liveness
@@ -785,11 +770,9 @@ impl MonoSig {
             info,
         }));
 
-        // local port map
+        // Overwrite the value in the port map if any. This is okay because this
+        // method can be called on local ports defined in iterative scopes.
         self.port_map.insert(port_map_k, new_port);
-
-        // pass port map
-        pass.port_map.entry(global_port_map_k).or_insert(new_port);
 
         // Find the new port owner
         let mono_owner = self.find_new_portowner(underlying, pass, owner);
