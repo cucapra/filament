@@ -220,31 +220,32 @@ impl MonoSig {
     }
 
     /// Translates an ExprIdx defined by `underlying` to correponding one in `base`.
-    /// There are a couple of possibilities here:
-    /// 1. This a parameter bound in the bindings
-    /// 2. This has already been rewritten
-    /// 3. This is the first time we're seen this expression
+    /// If the expression is a parameter bound in the bindings, then we return the bound value.
+    /// Otherwise, we rewrite the expression and return the new index.
+    ///
+    /// We cannot cache the result of this function because the result depends
+    /// on the binding in a particular scope.
     pub fn expr(
         &mut self,
         underlying: &ir::Component,
         expr: Underlying<ir::Expr>,
     ) -> Base<ir::Expr> {
-        // If this is a parameter in the underlying component that is bound,
-        // return its binding
         let e = underlying.get(expr.idx());
-        if let ir::Expr::Param(p) = e {
-            if let Some(n) = self.binding.get(&Underlying::new(*p)) {
-                let new_idx = Base::new(self.base.num(*n));
-                return new_idx;
-            }
-        };
 
         // The expression is neither bound nor rewritten, so we need to rewrite it
         let new_idx = match e.clone() {
-            ir::Expr::Param(p) => self
-                .param_use(underlying, Underlying::new(p))
-                .get()
-                .expr(&mut self.base),
+            ir::Expr::Param(p) => {
+                // If this is a parameter in the underlying component that is bound,
+                // return its binding
+                if let Some(n) = self.binding.get(&Underlying::new(p)) {
+                    let new_idx = Base::new(self.base.num(*n));
+                    return new_idx;
+                } else {
+                    self.param_use(underlying, Underlying::new(p))
+                        .get()
+                        .expr(&mut self.base)
+                }
+            }
             ir::Expr::Concrete(n) => self.base.num(n),
             ir::Expr::Bin { op, lhs, rhs } => {
                 let lhs = self.expr(underlying, Underlying::new(lhs)).get();
@@ -313,6 +314,7 @@ impl MonoSig {
         }
     }
 
+    /// XXX(rachit): What does this method do?
     pub fn event_second(
         &mut self,
         underlying: &ir::Component,
