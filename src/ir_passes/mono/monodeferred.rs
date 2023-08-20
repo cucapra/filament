@@ -313,13 +313,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                     .idx()
                     .into(),
             ),
-            ir::Command::BundleDef(p) => Some(
-                self.monosig
-                    .port(self.underlying, self.pass, Underlying::new(*p))
-                    .idx()
-                    .into()]
-            }
-            ir::Command::Connect(con) => vec![self.connect(con).into()],
+            ir::Command::Connect(con) => Some(self.connect(con).into()),
             ir::Command::ForLoop(lp) => {
                 self.forloop(lp);
                 None

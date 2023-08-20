@@ -739,17 +739,6 @@ impl MonoSig {
         new_port
     }
 
-    /// Monomorphize the definition of a port owned in the underlying component,
-    /// add it to the base component, and return the corresponding index.
-    pub fn port_def(
-        &mut self,
-        underlying: &ir::Component,
-        pass: &mut Monomorphize,
-        port: Underlying<ir::Port>,
-    ) -> Base<ir::Port> {
-        todo!()
-    }
-
     /// Monomorphize the port (owned by self.underlying) and add it to `self.base`, and return the corresponding index
     pub fn port(
         &mut self,
