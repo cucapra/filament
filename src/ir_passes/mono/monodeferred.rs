@@ -79,7 +79,7 @@ impl MonoDeferred<'_, '_> {
         }
 
         for (old, new) in monosig.event_map.clone().iter() {
-            monosig.event_second(underlying, pass, *old, *new);
+            monosig.event_second(underlying, pass, old, *new);
         }
 
         monosig.interface(underlying, &underlying.src_info);
@@ -106,11 +106,11 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 let lhs = self
                     .monosig
                     .expr(self.underlying, self.pass, Underlying::new(*lhs))
-                    .idx();
+                    .get();
                 let rhs = self
                     .monosig
                     .expr(self.underlying, self.pass, Underlying::new(*rhs))
-                    .idx();
+                    .get();
                 self.monosig.base.add(ir::Prop::Cmp(ir::CmpOp {
                     op: op.clone(),
                     lhs,
@@ -164,8 +164,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let port = self
             .monosig
-            .port_use(self.underlying, self.pass, Underlying::new(*port))
-            .idx();
+            .port(self.underlying, self.pass, Underlying::new(*port))
+            .get();
 
         // generate end expression
         let end = self.monosig.expr(
@@ -178,7 +178,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let end = self
             .monosig
             .base
-            .bin(self.monosig.base.get(end.idx()).clone());
+            .bin(self.monosig.base.get(end.get()).clone());
 
         // generate start expression
         let start = self.monosig.expr(
@@ -191,7 +191,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let start = self
             .monosig
             .base
-            .bin(self.monosig.base.get(start.idx()).clone());
+            .bin(self.monosig.base.get(start.get()).clone());
 
         ir::Access { port, start, end }
     }
@@ -221,11 +221,11 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let mono_start = self
             .monosig
             .expr(self.underlying, self.pass, Underlying::new(*start))
-            .idx();
+            .get();
         let mono_end = self
             .monosig
             .expr(self.underlying, self.pass, Underlying::new(*end))
-            .idx();
+            .get();
 
         let mut i = mono_start.as_concrete(&self.monosig.base).unwrap();
         let bound = mono_end.as_concrete(&self.monosig.base).unwrap();
@@ -292,7 +292,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             Underlying::new(param),
             self.monosig
                 .base
-                .bin(self.monosig.base.get(expr.idx()).clone())
+                .bin(self.monosig.base.get(expr.get()).clone())
                 .as_concrete(&self.monosig.base)
                 .unwrap(),
         );
@@ -304,13 +304,13 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             ir::Command::Instance(idx) => Some(
                 self.monosig
                     .inst_def(self.underlying, self.pass, Underlying::new(*idx))
-                    .idx()
+                    .get()
                     .into(),
             ),
             ir::Command::Invoke(idx) => Some(
                 self.monosig
                     .inv_def(self.underlying, self.pass, Underlying::new(*idx))
-                    .idx()
+                    .get()
                     .into(),
             ),
             ir::Command::Connect(con) => Some(self.connect(con).into()),

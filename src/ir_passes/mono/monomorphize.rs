@@ -110,14 +110,14 @@ impl<'ctx> Monomorphize<'ctx> {
         if let Some(filename) = filename {
             if let Some(exts) = self.ext_map.get(&filename) {
                 let mut exts = exts.clone();
-                exts.push(new_comp.idx());
+                exts.push(new_comp.get());
                 self.ext_map.insert(filename, exts.to_vec());
             } else {
-                self.ext_map.insert(filename, vec![new_comp.idx()]);
+                self.ext_map.insert(filename, vec![new_comp.get()]);
             }
         }
 
-        let base = self.ctx.get_mut(new_comp.idx());
+        let base = self.ctx.get_mut(new_comp.get());
 
         // make a MonoSig
         let mut monosig = MonoSig::new(base, underlying, comp.idx(), params);
@@ -177,13 +177,13 @@ impl Monomorphize<'_> {
 
         // Build a new context
         while let Some((mut comp, idx)) = mono.next() {
-            let default = mono.ctx.get_mut(idx.idx());
+            let default = mono.ctx.get_mut(idx.get());
             std::mem::swap(&mut comp, default);
             let val = ir::Validate::new(&comp, &mono.ctx.comps);
             val.comp();
         }
         let new_entrypoint = mono.processed.get(&ck).unwrap();
-        mono.ctx.entrypoint = Some(new_entrypoint.idx());
+        mono.ctx.entrypoint = Some(new_entrypoint.get());
         mono.ctx.externals = mono.ext_map;
         mono.ctx
     }

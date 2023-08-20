@@ -249,19 +249,33 @@ impl<T: Display> Display for IndexStore<T> {
 /// Note: This data structure has no way to track which indices are valid so it
 /// is up to the user to ensure that the indices are valid by calling [IndexStore::is_valid]
 /// on a valid index.
-pub struct DenseIndexInfo<T, V, I = utils::Idx<T>>
+pub struct DenseIndexInfo<T, V, K = utils::Idx<T>>
 where
-    I: utils::IdxLike<T>,
+    K: utils::IdxLike<T>,
 {
     store: Vec<V>,
     _key_typ: PhantomData<T>,
-    _idx_typ: PhantomData<I>,
+    _idx_typ: PhantomData<K>,
 }
 
 impl<T, V, I: utils::IdxLike<T>> Default for DenseIndexInfo<T, V, I> {
     fn default() -> Self {
         Self {
             store: Vec::new(),
+            _key_typ: PhantomData,
+            _idx_typ: PhantomData,
+        }
+    }
+}
+
+impl<T, V, I> Clone for DenseIndexInfo<T, V, I>
+where
+    V: Clone,
+    I: utils::IdxLike<T>,
+{
+    fn clone(&self) -> Self {
+        Self {
+            store: self.store.clone(),
             _key_typ: PhantomData,
             _idx_typ: PhantomData,
         }
@@ -316,6 +330,14 @@ where
             None
         }
     }
+
+    /// Iterator over the values in the map
+    pub fn iter(&self) -> impl Iterator<Item = (I, &V)> + '_ {
+        self.store
+            .iter()
+            .enumerate()
+            .map(|(idx, val)| (I::new(idx), val))
+    }
 }
 
 impl<T, V, Idx: utils::IdxLike<T>> FromIterator<(Idx, V)>
@@ -330,9 +352,9 @@ impl<T, V, Idx: utils::IdxLike<T>> FromIterator<(Idx, V)>
     }
 }
 
-impl<T, V: Default> DenseIndexInfo<T, V> {
+impl<T, V: Default, I: utils::IdxLike<T>> DenseIndexInfo<T, V, I> {
     /// Extract the value at a particular index and replace it with the default value.
-    pub fn take(&mut self, key: utils::Idx<T>) -> Option<V> {
+    pub fn take(&mut self, key: I) -> Option<V> {
         if self.store.len() > key.get() {
             // idx is already in the store, take it
             Some(std::mem::take(self.get_mut(key)))
@@ -342,10 +364,10 @@ impl<T, V: Default> DenseIndexInfo<T, V> {
     }
 }
 
-impl<T, V: Default + Clone> DenseIndexInfo<T, V> {
+impl<T, V: Default + Clone, I: utils::IdxLike<T>> DenseIndexInfo<T, V, I> {
     /// Add the value to the map if the index is not already present.
     /// Unlike [Self::push], this method can add values in any order.
-    pub fn insert(&mut self, key: utils::Idx<T>, mut val: V) -> Option<V> {
+    pub fn insert(&mut self, key: I, mut val: V) -> Option<V> {
         if self.store.len() > key.get() {
             // idx is already in the store, need to update it
             std::mem::swap(self.get_mut(key), &mut val);
