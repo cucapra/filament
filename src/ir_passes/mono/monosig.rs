@@ -747,7 +747,10 @@ impl MonoSig {
         port: Underlying<ir::Port>,
     ) -> Base<ir::Port> {
         let ir::Port {
-            owner, width, live, ..
+            owner,
+            width,
+            live,
+            info,
         } = underlying.get(port.idx());
 
         let (inv, comp, conc_params) = match owner {
@@ -797,7 +800,7 @@ impl MonoSig {
             return *idx;
         };
 
-        let info = self.base.add(ir::Info::default());
+        let info = self.info(underlying, pass, info);
 
         // Add the new port so we can use its index in defining the correct Liveness
         let new_port = Base::new(self.base.add(ir::Port {
