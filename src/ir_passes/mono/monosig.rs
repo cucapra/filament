@@ -25,7 +25,7 @@ pub struct MonoSig {
     /// Map from underlying instances to base instances
     pub instance_map: HashMap<Underlying<ir::Instance>, Base<ir::Instance>>,
 
-    // Keep track of things that have benen moonmorphized already
+    // Keep track of things that have benen monomorphized already
     /// Events
     pub event_map: HashMap<Underlying<ir::Event>, Base<ir::Event>>,
     /// Ports - (base inv, underlying port) -> base port
@@ -737,6 +737,17 @@ impl MonoSig {
         port.owner = mono_owner;
 
         new_port
+    }
+
+    /// Extract the monomorphized representation of the underlying port in the base component.
+    /// We expect this port to already be monomorphized because this is a use location and defines precede uses.
+    pub fn port_use(
+        &mut self,
+        underlying: &ir::Component,
+        pass: &mut Monomorphize,
+        port: Underlying<ir::Port>,
+    ) -> Base<ir::Port> {
+        todo!()
     }
 
     /// Monomorphize the port (owned by self.underlying) and add it to `self.base`, and return the corresponding index

@@ -164,7 +164,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let port = self
             .monosig
-            .port(self.underlying, self.pass, Underlying::new(*port))
+            .port_use(self.underlying, self.pass, Underlying::new(*port))
             .idx();
 
         // generate end expression

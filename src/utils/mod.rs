@@ -7,5 +7,5 @@ mod position;
 
 pub use bind_map::Binding;
 pub use gsym::GSym;
-pub use idx::Idx;
+pub use idx::{Idx, IdxLike};
 pub use position::{FileIdx, GPosIdx, GlobalPositionTable, PosData};
