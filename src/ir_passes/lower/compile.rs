@@ -12,9 +12,9 @@ use calyx_ir as calyx;
 use calyx_utils::CalyxResult;
 use std::{collections::HashSet, convert::identity, path::PathBuf, rc::Rc};
 
+#[derive(Default)]
 /// Compiles Filament directly into Calyx
 /// Generates FSMs for each event (with an interface port)
-#[derive(Default)]
 pub struct Compile;
 
 impl Compile {
@@ -173,6 +173,7 @@ impl Compile {
 
     /// Compiles an [ir::Component] into a [calyx::Component]
     fn component(
+        enable_slow_fsms: bool,
         ctx: &ir::Context,
         idx: ir::CompIdx,
         bind: &mut Binding,
@@ -204,7 +205,8 @@ impl Compile {
         }
 
         let builder = calyx::Builder::new(&mut component, lib).not_generated();
-        let mut buildctx = BuildCtx::new(ctx, idx, bind, builder, lib);
+        let mut buildctx =
+            BuildCtx::new(ctx, idx, bind, enable_slow_fsms, builder, lib);
 
         // Construct all the FSMs
         for (event, states) in max_states(comp) {
@@ -268,7 +270,7 @@ impl Compile {
     }
 
     /// Compiles filament into calyx
-    pub fn compile(ctx: ir::Context) -> calyx::Context {
+    pub fn compile(ctx: ir::Context, enable_slow_fsms: bool) -> calyx::Context {
         // Creates a map between the file name and the external components defined in that file
         let externals =
             ctx.externals.iter().map(|(k, v)| (k, v.clone())).collect();
@@ -284,8 +286,13 @@ impl Compile {
 
         // Compile the components in post-order.
         po.apply_pre_order(|ctx, idx| {
-            let comp =
-                Compile::component(ctx, idx, &mut bindings, &calyx_ctx.lib);
+            let comp = Compile::component(
+                enable_slow_fsms,
+                ctx,
+                idx,
+                &mut bindings,
+                &calyx_ctx.lib,
+            );
             bindings.insert(idx, Rc::clone(&comp.signature));
             calyx_ctx.components.push(comp);
         });
