@@ -20,6 +20,12 @@ where
 
 pub struct BaseComp(ir::Component);
 
+impl BaseComp {
+    pub fn new(comp: ir::Component) -> Self {
+        Self(comp)
+    }
+}
+
 trait BaseCtx<T> {
     fn get(&self, k: Base<T>) -> &T;
     fn add(&mut self, val: T) -> Base<T>;

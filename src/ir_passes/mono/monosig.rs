@@ -50,7 +50,7 @@ impl MonoSig {
                 .collect_vec(),
         );
         Self {
-            base,
+            base: BaseComp::new(base),
             underlying_idx,
             binding,
             event_map: HashMap::new(),
