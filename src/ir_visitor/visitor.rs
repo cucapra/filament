@@ -181,6 +181,14 @@ where
         Action::Continue
     }
 
+    fn bundle_def(
+        &mut self,
+        _: ir::PortIdx,
+        _data: &mut VisitorData,
+    ) -> Action {
+        Action::Continue
+    }
+
     fn visit_cmd(
         &mut self,
         cmd: &mut ir::Command,
@@ -189,6 +197,7 @@ where
         match cmd {
             ir::Command::Instance(idx) => self.instance(*idx, data),
             ir::Command::Invoke(idx) => self.invoke(*idx, data),
+            ir::Command::BundleDef(idx) => self.bundle_def(*idx, data),
             ir::Command::Connect(con) => self.connect(con, data),
             ir::Command::ForLoop(l) => self.do_loop(l, data),
             ir::Command::If(i) => self.do_if(i, data),

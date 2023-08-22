@@ -1,15 +1,13 @@
+use super::{Command, CompIdx, Context};
+use super::{Ctx, MutCtx};
+use crate::utils::{self, Idx};
 use bitvec::vec::BitVec;
 use itertools::Itertools;
-use topological_sort::TopologicalSort;
-
-use super::{Ctx, MutCtx};
-use crate::utils::Idx;
 use std::{
     collections::HashMap, fmt::Display, iter::IntoIterator,
     marker::PhantomData, rc::Rc,
 };
-
-use super::{Command, CompIdx, Context};
+use topological_sort::TopologicalSort;
 
 /// An indexed storage for an interned type. Keeps a HashMap to provide faster reverse mapping
 /// from the value to the index.
@@ -19,12 +17,13 @@ use super::{Command, CompIdx, Context};
 /// The data structure internally stores a pointer to each value stored. This is safe
 /// because we do not allow deletion of keys.
 /// If a key is ever deleted, a call to `get` will return a dangling pointer.
-pub struct Interned<T>
+pub struct Interned<T, I = utils::Idx<T>>
 where
     T: Eq + std::hash::Hash,
+    I: utils::IdxLike<T>,
 {
     store: Vec<Rc<T>>,
-    map: HashMap<Rc<T>, Idx<T>>,
+    map: HashMap<Rc<T>, I>,
 }
 
 impl<T> Ctx<T> for Interned<T>
@@ -40,9 +39,10 @@ where
     }
 }
 
-impl<T> Default for Interned<T>
+impl<T, I> Default for Interned<T, I>
 where
     T: Eq + std::hash::Hash,
+    I: utils::IdxLike<T>,
 {
     fn default() -> Self {
         Self {
@@ -52,26 +52,27 @@ where
     }
 }
 
-impl<T> Interned<T>
+impl<T, I> Interned<T, I>
 where
     T: Eq + std::hash::Hash,
+    I: utils::IdxLike<T>,
 {
     /// Intern a value into the store and return the index.
     /// If the value is already in the store, return the existing index.
-    pub fn intern(&mut self, val: T) -> Idx<T> {
+    pub fn intern(&mut self, val: T) -> I {
         let v = Rc::new(val);
         if let Some(idx) = self.map.get(&v) {
             return *idx;
         }
         // Otherwise, add the value to the store and map
-        let idx = Idx::new(self.store.len());
+        let idx = I::new(self.store.len());
         self.store.push(v.clone());
         self.map.insert(v, idx);
         idx
     }
 
     /// Return the index of the value if it is in the store
-    pub fn find(&self, val: &T) -> Option<Idx<T>> {
+    pub fn find(&self, val: &T) -> Option<I> {
         self.map.get(val).copied()
     }
 
@@ -81,29 +82,29 @@ where
     }
 
     /// Get the value associated with the index.
-    pub fn get(&self, idx: Idx<T>) -> &T {
+    pub fn get(&self, idx: I) -> &T {
         &self.store[idx.get()]
     }
 
     /// Iterator over the interned values.
-    pub fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> {
+    pub fn iter(&self) -> impl Iterator<Item = (I, &T)> {
         self.store
             .iter()
             .enumerate()
-            .map(|(idx, ptr)| (Idx::new(idx), &**ptr))
+            .map(|(idx, ptr)| (I::new(idx), &**ptr))
     }
 
     /// Iterator over indices of the interned values.
     /// Useful since it does not take ownership of self.
-    pub fn idx_iter(&self) -> impl Iterator<Item = Idx<T>> {
-        (0..self.store.len()).map(Idx::new)
+    pub fn idx_iter(&self) -> impl Iterator<Item = I> {
+        (0..self.store.len()).map(I::new)
     }
 }
 
 impl<T> Display for Interned<T>
 where
     T: Eq + std::hash::Hash + Display,
-    Idx<T>: Display,
+    utils::Idx<T>: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (idx, val) in self.iter() {
@@ -115,10 +116,15 @@ where
 
 /// An indexed store for a type.
 /// Unlike [Interned], this data structure does not deduplicate values and supports mutation of values and removal of indices.
-pub struct IndexStore<T> {
+pub struct IndexStore<T, I = utils::Idx<T>>
+where
+    I: utils::IdxLike<T>,
+{
     store: Vec<T>,
     /// Tracks which indices have been marked invalid.
     valid: BitVec,
+    /// The kind of index used to access the store.
+    _type: PhantomData<I>,
 }
 
 impl<T> Default for IndexStore<T> {
@@ -126,15 +132,19 @@ impl<T> Default for IndexStore<T> {
         Self {
             store: Vec::new(),
             valid: BitVec::new(),
+            _type: PhantomData,
         }
     }
 }
 
-impl<T> IndexStore<T> {
+impl<T, I> IndexStore<T, I>
+where
+    I: utils::IdxLike<T>,
+{
     /// A a value to the store and return the index.
-    pub fn add(&mut self, val: T) -> Idx<T> {
+    pub fn add(&mut self, val: T) -> I {
         // Add the value to the store and return index
-        let idx = Idx::new(self.store.len());
+        let idx = I::new(self.store.len());
         self.store.push(val);
         self.valid.push(true);
         idx
@@ -142,7 +152,7 @@ impl<T> IndexStore<T> {
 
     /// Mark an index as invalid.
     /// The underlying data structure does not actually deallocate or reuse the value associated with the index.
-    pub fn delete(&mut self, idx: Idx<T>) {
+    pub fn delete(&mut self, idx: I) {
         let i = idx.get();
         // Should not attempt to remove an index that has already been removed
         assert!(self.valid[i], "Attempted to delete invalid index {i}.");
@@ -150,19 +160,19 @@ impl<T> IndexStore<T> {
     }
 
     /// Returns true iff the index is valid.
-    pub fn is_valid(&self, idx: Idx<T>) -> bool {
+    pub fn is_valid(&self, idx: I) -> bool {
         self.valid[idx.get()]
     }
 
     /// Get the value associated with the index.
-    pub fn get(&self, idx: Idx<T>) -> &T {
+    pub fn get(&self, idx: I) -> &T {
         let i = idx.get();
         assert!(self.valid[i], "Attempted to get invalid index {i}.");
         &self.store[i]
     }
 
     /// Get a mutable reference to the value associated with the index.
-    pub fn get_mut(&mut self, idx: Idx<T>) -> &mut T {
+    pub fn get_mut(&mut self, idx: I) -> &mut T {
         let i = idx.get();
         assert!(self.valid[i], "Attempted to get invalid index {i}.");
         &mut self.store[i]
@@ -180,34 +190,34 @@ impl<T> IndexStore<T> {
 
     /// Iterate over the valid indices in the store.
     /// This can be useful because it allows mutable borrows of the owners of the store.
-    pub fn idx_iter(&self) -> impl Iterator<Item = Idx<T>> {
+    pub fn idx_iter(&self) -> impl Iterator<Item = I> {
         self.valid
             .clone()
             .into_iter()
             .enumerate()
             .filter(|(_, valid)| *valid)
-            .map(|(idx, _)| Idx::new(idx))
+            .map(|(idx, _)| I::new(idx))
     }
 
     /// Iterate over the valid indices and the values in the store.
-    pub fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = (I, &T)> + '_ {
         self.store
             .iter()
             .enumerate()
             .filter(|(idx, _)| self.valid[*idx])
-            .map(|(idx, val)| (Idx::new(idx), val))
+            .map(|(idx, val)| (I::new(idx), val))
     }
 
     /// Mutable iteration over the valid indices and the values in the store.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Idx<T>, &mut T)> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (I, &mut T)> {
         self.store
             .iter_mut()
             .enumerate()
             .filter(|(idx, _)| self.valid[*idx])
-            .map(|(idx, val)| (Idx::new(idx), val))
+            .map(|(idx, val)| (I::new(idx), val))
     }
 
-    pub(super) fn checked_add(&mut self, idx: Idx<T>, val: T) {
+    pub(super) fn checked_add(&mut self, idx: I, val: T) {
         assert!(
             idx.get() == self.store.len(),
             "Attempting to add index {} but next index is {}",
@@ -251,26 +261,49 @@ impl<T: Display> Display for IndexStore<T> {
 /// Note: This data structure has no way to track which indices are valid so it
 /// is up to the user to ensure that the indices are valid by calling [IndexStore::is_valid]
 /// on a valid index.
-pub struct DenseIndexInfo<T, V> {
+pub struct DenseIndexInfo<T, V, K = utils::Idx<T>>
+where
+    K: utils::IdxLike<T>,
+{
     store: Vec<V>,
-    key_typ: PhantomData<T>,
+    _key_typ: PhantomData<T>,
+    _idx_typ: PhantomData<K>,
 }
 
-impl<T, V> Default for DenseIndexInfo<T, V> {
+impl<T, V, I: utils::IdxLike<T>> Default for DenseIndexInfo<T, V, I> {
     fn default() -> Self {
         Self {
             store: Vec::new(),
-            key_typ: PhantomData,
+            _key_typ: PhantomData,
+            _idx_typ: PhantomData,
         }
     }
 }
 
-impl<T, V> DenseIndexInfo<T, V> {
+impl<T, V, I> Clone for DenseIndexInfo<T, V, I>
+where
+    V: Clone,
+    I: utils::IdxLike<T>,
+{
+    fn clone(&self) -> Self {
+        Self {
+            store: self.store.clone(),
+            _key_typ: PhantomData,
+            _idx_typ: PhantomData,
+        }
+    }
+}
+
+impl<T, V, I> DenseIndexInfo<T, V, I>
+where
+    I: utils::IdxLike<T>,
+{
     /// Construct a new info map with the given capacity.
     pub fn with_capacity(cap: usize) -> Self {
         Self {
             store: Vec::with_capacity(cap),
-            key_typ: PhantomData,
+            _key_typ: PhantomData,
+            _idx_typ: PhantomData,
         }
     }
 
@@ -281,38 +314,48 @@ impl<T, V> DenseIndexInfo<T, V> {
 
     /// Add a new value to the map and return the index.
     /// Panics if the index is not the next index in the sequence.
-    pub fn push(&mut self, key: Idx<T>, val: V) {
+    pub fn push(&mut self, key: I, val: V) {
         assert!(self.store.len() == key.get());
         self.store.push(val);
     }
 
     /// Get the value associated with the index.
-    pub fn get(&self, idx: Idx<T>) -> &V {
+    pub fn get(&self, idx: I) -> &V {
         &self.store[idx.get()]
     }
 
     /// Get a mutable reference to the value associated with the index.
-    pub fn get_mut(&mut self, idx: Idx<T>) -> &mut V {
+    pub fn get_mut(&mut self, idx: I) -> &mut V {
         &mut self.store[idx.get()]
     }
 
     /// Check if the map contains the given index.
-    pub fn contains(&self, idx: Idx<T>) -> bool {
+    pub fn contains(&self, idx: I) -> bool {
         idx.get() < self.store.len()
     }
 
     /// Get the value associated with the index if present, otherwise return None.
-    pub fn find(&self, idx: Idx<T>) -> Option<&V> {
+    pub fn find(&self, idx: I) -> Option<&V> {
         if self.contains(idx) {
             Some(self.get(idx))
         } else {
             None
         }
     }
+
+    /// Iterator over the values in the map
+    pub fn iter(&self) -> impl Iterator<Item = (I, &V)> + '_ {
+        self.store
+            .iter()
+            .enumerate()
+            .map(|(idx, val)| (I::new(idx), val))
+    }
 }
 
-impl<T, V> FromIterator<(Idx<T>, V)> for DenseIndexInfo<T, V> {
-    fn from_iter<I: IntoIterator<Item = (Idx<T>, V)>>(iter: I) -> Self {
+impl<T, V, Idx: utils::IdxLike<T>> FromIterator<(Idx, V)>
+    for DenseIndexInfo<T, V, Idx>
+{
+    fn from_iter<Iter: IntoIterator<Item = (Idx, V)>>(iter: Iter) -> Self {
         let mut store = Self::default();
         for (idx, val) in iter {
             store.push(idx, val);
@@ -321,8 +364,9 @@ impl<T, V> FromIterator<(Idx<T>, V)> for DenseIndexInfo<T, V> {
     }
 }
 
-impl<T, V: Default> DenseIndexInfo<T, V> {
-    pub fn take(&mut self, key: Idx<T>) -> Option<V> {
+impl<T, V: Default, I: utils::IdxLike<T>> DenseIndexInfo<T, V, I> {
+    /// Extract the value at a particular index and replace it with the default value.
+    pub fn take(&mut self, key: I) -> Option<V> {
         if self.store.len() > key.get() {
             // idx is already in the store, take it
             Some(std::mem::take(self.get_mut(key)))
@@ -332,10 +376,10 @@ impl<T, V: Default> DenseIndexInfo<T, V> {
     }
 }
 
-impl<T, V: Default + Clone> DenseIndexInfo<T, V> {
+impl<T, V: Default + Clone, I: utils::IdxLike<T>> DenseIndexInfo<T, V, I> {
     /// Add the value to the map if the index is not already present.
     /// Unlike [Self::push], this method can add values in any order.
-    pub fn insert(&mut self, key: Idx<T>, mut val: V) -> Option<V> {
+    pub fn insert(&mut self, key: I, mut val: V) -> Option<V> {
         if self.store.len() > key.get() {
             // idx is already in the store, need to update it
             std::mem::swap(self.get_mut(key), &mut val);
@@ -351,15 +395,18 @@ impl<T, V: Default + Clone> DenseIndexInfo<T, V> {
     pub fn with_default(cap: usize) -> Self {
         Self {
             store: vec![V::default(); cap],
-            key_typ: PhantomData,
+            _key_typ: PhantomData,
+            _idx_typ: PhantomData,
         }
     }
 }
 
-impl<T, V> std::ops::Index<Idx<T>> for DenseIndexInfo<T, V> {
+impl<T, V, I: utils::IdxLike<T>> std::ops::Index<I>
+    for DenseIndexInfo<T, V, I>
+{
     type Output = V;
 
-    fn index(&self, idx: Idx<T>) -> &Self::Output {
+    fn index(&self, idx: I) -> &Self::Output {
         self.get(idx)
     }
 }
@@ -462,6 +509,7 @@ impl Traversal {
                 }
             }
             Command::Connect(_)
+            | Command::BundleDef(_)
             | Command::Invoke(_)
             | Command::Fact(_)
             | Command::Let(_) => (),

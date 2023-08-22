@@ -234,6 +234,15 @@ impl Visitor for BundleElim {
         )
     }
 
+    fn bundle_def(
+        &mut self,
+        _: crate::ir::PortIdx,
+        _data: &mut VisitorData,
+    ) -> Action {
+        // Remove all bundle definitions
+        Action::Change(vec![])
+    }
+
     /// Compiles the body of a component and replaces all ports with their expanded versions.
     fn start(&mut self, data: &mut VisitorData) -> Action {
         let comp = &mut data.comp;
