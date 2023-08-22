@@ -315,7 +315,9 @@ impl MonoSig {
         }
     }
 
-    /// XXX(rachit): What does this method do?
+    /// Second pass over events. When we visit the signature we could see things like G: |L-G|, 
+    /// so we do a first pass in sig to allocate the Idx for it.
+    /// This function does the work of monomorphizing the new event.
     pub fn event_second(
         &mut self,
         underlying: &ir::Component,

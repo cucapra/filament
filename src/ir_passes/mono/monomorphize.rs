@@ -82,11 +82,6 @@ impl<'ctx> Monomorphize<'ctx> {
         let CompKey { comp, params } = comp_key;
         let underlying = self.old.get(comp.idx());
 
-        // If it is an external, add it to externals
-        if underlying.is_ext {
-            self.externals.push(comp.idx());
-        }
-
         let key: CompKey = if underlying.is_ext {
             (comp, vec![]).into()
         } else {
