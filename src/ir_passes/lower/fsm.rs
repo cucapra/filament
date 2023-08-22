@@ -441,41 +441,29 @@ impl FsmBind {
                 .unwrap(),
             FsmType::Counter(states) => {
                 let bitwidth = (64 - (states - 1).leading_zeros()) as u64;
-                if start == end - 1 {
-                    // special case where we are looking for only one state
-                    if start == 0 {
-                        // if start is zero, we need to use its special port instead
-                        guard!(cell[format!("{}_0", prefix)])
-                    } else {
-                        let start = builder.add_constant(start, bitwidth);
-                        let g = guard!(cell[format!("{}state", prefix)])
-                            .eq(guard!(start["out"]));
-                        g
-                    }
+
+                // if start is zero, we need to use its special port instead
+                let (start, guard) = if start == 0 {
+                    (start + 1, Some(guard!(cell[format!("{}_0", prefix)])))
                 } else {
-                    // if start is zero, we need to use its special port instead
-                    let (start, guard) = if start == 0 {
-                        (start + 1, Some(guard!(cell[format!("{}_0", prefix)])))
-                    } else {
-                        (start, None)
-                    };
+                    (start, None)
+                };
 
-                    let start = builder.add_constant(start, bitwidth);
-                    // create a constant for end - 1 here to make the checks inclusive.
-                    // necessary if end is the final state and would require an extra bit to represent.
-                    let end = builder.add_constant(end - 1, bitwidth);
+                let start = builder.add_constant(start, bitwidth);
+                // create a constant for end - 1 here to make the checks inclusive.
+                // necessary if end is the final state and would require an extra bit to represent.
+                let end = builder.add_constant(end - 1, bitwidth);
 
-                    // state >= start && state <= end
-                    let g = guard!(cell[format!("{}state", prefix)])
-                        .ge(guard!(start["out"]))
-                        .and(
-                            guard!(cell[format!("{}state", prefix)])
-                                .le(guard!(end["out"])),
-                        );
+                // state >= start && state <= end
+                let g = guard!(cell[format!("{}state", prefix)])
+                    .ge(guard!(start["out"]))
+                    .and(
+                        guard!(cell[format!("{}state", prefix)])
+                            .le(guard!(end["out"])),
+                    );
 
-                    // generate the final guard
-                    guard.map_or(g.clone(), |gg| gg.or(g))
-                }
+                // generate the final guard
+                guard.map_or(g.clone(), |gg| gg.or(g))
             }
             FsmType::CounterChain(_, delay) => {
                 let fsm_start = start / delay;
