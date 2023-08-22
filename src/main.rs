@@ -61,7 +61,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         return Ok(());
     }
     let calyx =
-        log_time!(ip::Compile::compile(ir, opts.disable_slow_fsms), "compile");
+        log_time!(ip::Compile::compile(ir, opts.enable_slow_fsms), "compile");
     match opts.backend {
         cmdline::Backend::Verilog => {
             gen_verilog(calyx).unwrap();
