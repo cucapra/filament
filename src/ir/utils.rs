@@ -2,7 +2,7 @@ use bitvec::vec::BitVec;
 use itertools::Itertools;
 use topological_sort::TopologicalSort;
 
-use super::Ctx;
+use super::{Ctx, MutCtx};
 use crate::utils::Idx;
 use std::{
     collections::HashMap, fmt::Display, iter::IntoIterator,
@@ -25,6 +25,19 @@ where
 {
     store: Vec<Rc<T>>,
     map: HashMap<Rc<T>, Idx<T>>,
+}
+
+impl<T> Ctx<T> for Interned<T>
+where
+    T: Eq + std::hash::Hash,
+{
+    fn add(&mut self, val: T) -> Idx<T> {
+        self.intern(val)
+    }
+
+    fn get(&self, idx: Idx<T>) -> &T {
+        self.get(idx)
+    }
 }
 
 impl<T> Default for Interned<T>
@@ -176,7 +189,7 @@ impl<T> IndexStore<T> {
             .map(|(idx, _)| Idx::new(idx))
     }
 
-    /// Iterate over the indices and the values in the store.
+    /// Iterate over the valid indices and the values in the store.
     pub fn iter(&self) -> impl Iterator<Item = (Idx<T>, &T)> + '_ {
         self.store
             .iter()
@@ -320,6 +333,8 @@ impl<T, V: Default> DenseIndexInfo<T, V> {
 }
 
 impl<T, V: Default + Clone> DenseIndexInfo<T, V> {
+    /// Add the value to the map if the index is not already present.
+    /// Unlike [Self::push], this method can add values in any order.
     pub fn insert(&mut self, key: Idx<T>, mut val: V) -> Option<V> {
         if self.store.len() > key.get() {
             // idx is already in the store, need to update it
@@ -329,6 +344,14 @@ impl<T, V: Default + Clone> DenseIndexInfo<T, V> {
             self.store.resize(key.get(), V::default());
             self.push(key, val);
             None
+        }
+    }
+
+    /// Construct a new info map with the given capacity with the default value for each index.
+    pub fn with_default(cap: usize) -> Self {
+        Self {
+            store: vec![V::default(); cap],
+            key_typ: PhantomData,
         }
     }
 }
@@ -438,7 +461,10 @@ impl Traversal {
                     Traversal::process_cmd(ctx, comp, cmd, ts);
                 }
             }
-            Command::Connect(_) | Command::Invoke(_) | Command::Fact(_) => (),
+            Command::Connect(_)
+            | Command::Invoke(_)
+            | Command::Fact(_)
+            | Command::Let(_) => (),
         }
     }
 }
@@ -534,5 +560,25 @@ where
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.key.hash(state);
         self.owner.hash(state);
+    }
+}
+
+impl<T> Ctx<T> for IndexStore<T> {
+    fn add(&mut self, val: T) -> Idx<T> {
+        self.add(val)
+    }
+
+    fn get(&self, idx: Idx<T>) -> &T {
+        self.get(idx)
+    }
+}
+
+impl<T> MutCtx<T> for IndexStore<T> {
+    fn get_mut(&mut self, idx: Idx<T>) -> &mut T {
+        self.get_mut(idx)
+    }
+
+    fn delete(&mut self, idx: Idx<T>) {
+        self.delete(idx)
     }
 }

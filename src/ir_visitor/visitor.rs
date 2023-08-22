@@ -41,12 +41,12 @@ pub struct VisitorData<'comp> {
     pub idx: ir::CompIdx,
     /// mutable context reference, held to prevent another
     /// function from mutating the context as it is currently invalid.
-    mut_ctx: &'comp mut ir::Context,
+    pub mut_ctx: &'comp mut ir::Context,
 }
 
 impl<'comp> VisitorData<'comp> {
     /// Get an immutable reference to the current [ir::Context].
-    pub fn ctx(&'comp mut self) -> &'comp ir::Context {
+    pub fn ctx(&'comp self) -> &'comp ir::Context {
         self.mut_ctx
     }
 }
@@ -95,9 +95,10 @@ where
     /// The user visible name for the pass
     fn name() -> &'static str;
 
+    #[must_use]
     /// Executed after the visitor has visited all the components.
     /// If the return value is `Some`, the number is treated as an error code.
-    fn after_traversal(&mut self) -> Option<u32> {
+    fn after_traversal(&mut self) -> Option<u64> {
         None
     }
 
@@ -172,6 +173,14 @@ where
         Action::Continue
     }
 
+    fn param_let(
+        &mut self,
+        _: &mut ir::Let,
+        _data: &mut VisitorData,
+    ) -> Action {
+        Action::Continue
+    }
+
     fn visit_cmd(
         &mut self,
         cmd: &mut ir::Command,
@@ -184,6 +193,7 @@ where
             ir::Command::ForLoop(l) => self.do_loop(l, data),
             ir::Command::If(i) => self.do_if(i, data),
             ir::Command::Fact(f) => self.fact(f, data),
+            ir::Command::Let(f) => self.param_let(f, data),
         }
     }
 
@@ -267,7 +277,7 @@ where
     }
 
     /// Apply the pass to all components in the context
-    fn do_pass(opts: &cmdline::Opts, ctx: &mut ir::Context) -> Result<(), u32> {
+    fn do_pass(opts: &cmdline::Opts, ctx: &mut ir::Context) -> Result<(), u64> {
         let mut visitor = Self::from(opts, ctx);
         for idx in ctx.comps.idx_iter() {
             visitor.clear_data();

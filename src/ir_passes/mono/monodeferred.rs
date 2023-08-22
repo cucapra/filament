@@ -170,17 +170,20 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             self.pass,
             Underlying::new(*end),
         );
+
         // convert to concrete value
         let end = self
             .monosig
             .base
             .bin(self.monosig.base.get(end.idx()).clone());
+
         // generate start expression
         let start = self.monosig.expr(
             self.underlying,
             self.pass,
             Underlying::new(*start),
         );
+
         // convert to concrete value
         let start = self
             .monosig
@@ -227,11 +230,17 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         while i < bound {
             let index = Underlying::new(*index);
             self.monosig.binding.insert(index, i);
+            let mut nlets: usize = 0; // count p_lets as they generate assignments we have to pop later.
             for cmd in body.iter() {
+                if matches!(&cmd, ir::Command::Let(_)) {
+                    nlets += 1;
+                }
                 let cmd = self.command(cmd);
                 self.monosig.base.cmds.extend(cmd);
             }
-            self.monosig.binding.pop();
+            // Pop all the let bindings
+            self.monosig.binding.pop_n(nlets);
+            self.monosig.binding.pop(); // pop the index
             i += 1;
         }
     }
@@ -266,6 +275,26 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         self.monosig.base.cmds.extend(body);
     }
 
+    fn p_let(&mut self, l: &ir::Let) {
+        let ir::Let { param, expr } = *l;
+
+        let expr = self.monosig.expr(
+            self.underlying,
+            self.pass,
+            Underlying::new(expr),
+        );
+
+        // Inserts this param into the binding.
+        self.monosig.binding.insert(
+            Underlying::new(param),
+            self.monosig
+                .base
+                .bin(self.monosig.base.get(expr.idx()).clone())
+                .as_concrete(&self.monosig.base)
+                .unwrap(),
+        );
+    }
+
     fn command(&mut self, cmd: &ir::Command) -> Vec<ir::Command> {
         match cmd {
             ir::Command::Instance(idx) => {
@@ -289,6 +318,10 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             }
             ir::Command::If(if_stmt) => {
                 self.if_stmt(if_stmt);
+                vec![]
+            }
+            ir::Command::Let(l) => {
+                self.p_let(l);
                 vec![]
             }
             // XXX(rachit): We completely get rid of facts in the program here.

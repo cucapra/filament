@@ -1,29 +1,29 @@
 import "primitives/core.fil";
 
 comp GetExp<G: 1>(
-  @[G, G+1] in: 32
+   in: [G, G+1] 32
 ) -> (
-  @[G, G+1] out: 8,
+   out: [G, G+1] 8,
 ) {
   exp := new Slice[32,30,23,8]<G>(in);
   out = exp.out;
 }
 
 comp GetMant<G: 1>(
-  @[G, G+1] in: 32
+   in: [G, G+1] 32
 ) -> (
-  @[G, G+1] out: 23,
+   out: [G, G+1] 23,
 ) {
   exp := new Slice[32,22,0,23]<G>(in);
   out = exp.out;
 }
 
 comp GetResult<G: 1>(
-  @[G, G+1] sign: 1,
-  @[G, G+1] exp: 8,
-  @[G, G+1] mant: 23,
+   sign: [G, G+1] 1,
+   exp: [G, G+1] 8,
+   mant: [G, G+1] 23,
 ) -> (
-  @[G, G+1] out: 32,
+   out: [G, G+1] 32,
 ) {
   sign_exp := new Concat[1, 8, 9]<G>(sign, exp);
   res := new Concat[9, 23, 32]<G>(sign_exp.out, mant);
@@ -31,9 +31,9 @@ comp GetResult<G: 1>(
 }
 
 comp IsOne<G: 1>(
-  @[G, G+1] in: 1,
+   in: [G, G+1] 1,
 ) -> (
-  @[G, G+1] out: 1,
+   out: [G, G+1] 1,
 ) {
   one := new Const[1, 1]<G>();
   eq := new Eq[1]<G>(in, one.out);
@@ -41,10 +41,10 @@ comp IsOne<G: 1>(
 }
 
 comp ShiftRight23<G: 1>(
-  @[G, G+1] in: 23,
-  @[G, G+1] amount: 8,
+   in: [G, G+1] 23,
+   amount: [G, G+1] 8,
 ) -> (
-  @[G, G+1] out: 23,
+   out: [G, G+1] 23,
 ) {
   ext := new ZeroExtend[8, 23]<G>(amount);
   shr := new ShiftRight[23]<G>(in, ext.out);
@@ -52,10 +52,10 @@ comp ShiftRight23<G: 1>(
 }
 
 comp ShiftLeft24<G: 1>(
-  @[G, G+1] in: 24,
-  @[G, G+1] amount: 4,
+   in: [G, G+1] 24,
+   amount: [G, G+1] 4,
 ) -> (
-  @[G, G+1] out: 24,
+   out: [G, G+1] 24,
 ) {
   ext := new ZeroExtend[4, 24]<G>(amount);
   shl := new ShiftLeft[24]<G>(in, ext.out);
@@ -64,9 +64,9 @@ comp ShiftLeft24<G: 1>(
 
 // Computes out = {1'b1,in[22:1]};
 comp NormInp<G: 1>(
-  @[G, G+1] in: 23,
+   in: [G, G+1] 23,
 ) -> (
-  @[G, G+1] out: 23,
+   out: [G, G+1] 23,
 ) {
   sl := new Slice[23, 22, 1, 22]<G>(in);
   one := new Const[1, 1]<G>();

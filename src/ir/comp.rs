@@ -1,58 +1,12 @@
 use super::{
-    Cmp, CmpOp, Command, CompIdx, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
-    IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke,
-    MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeIdx,
-    TimeSub,
+    Cmp, CmpOp, Command, Ctx, Event, EventIdx, Expr, ExprIdx, Fact, IndexStore,
+    Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke, MutCtx, Param,
+    ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeSub,
 };
 use crate::{ast, utils::Idx};
+use fil_derive::Ctx;
 use itertools::Itertools;
 use std::collections::HashMap;
-
-#[derive(Default)]
-pub struct Context {
-    pub comps: IndexStore<Component>,
-    // Contains external components grouped by file name.
-    pub externals: HashMap<String, Vec<CompIdx>>,
-    pub entrypoint: Option<CompIdx>,
-}
-
-impl Context {
-    pub fn is_main(&self, idx: CompIdx) -> bool {
-        Some(idx) == self.entrypoint
-    }
-
-    /// Add a new component to the context
-    pub fn comp(&mut self, is_ext: bool) -> CompIdx {
-        let comp = Component::new(is_ext);
-        self.add(comp)
-    }
-
-    pub fn get_filename(&self, idx: CompIdx) -> Option<String> {
-        self.externals.iter().find_map(|(filename, comps)| {
-            comps.contains(&idx).then_some(filename.to_string())
-        })
-    }
-}
-
-impl Ctx<Component> for Context {
-    fn add(&mut self, val: Component) -> Idx<Component> {
-        self.comps.add(val)
-    }
-
-    fn get(&self, idx: Idx<Component>) -> &Component {
-        self.comps.get(idx)
-    }
-}
-
-impl MutCtx<Component> for Context {
-    fn get_mut(&mut self, idx: Idx<Component>) -> &mut Component {
-        self.comps.get_mut(idx)
-    }
-
-    fn delete(&mut self, idx: Idx<Component>) {
-        self.comps.delete(idx)
-    }
-}
 
 #[derive(Clone)]
 /// Externally facing interface name information for components.
@@ -76,35 +30,47 @@ impl InterfaceSrc {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Ctx)]
 /// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
     // Interned data. We store this on a per-component basis because events with the
     // same identifiers in different components are not equal.
     /// Interned expressions
     exprs: Interned<Expr>,
+    #[ctx(Time)]
     /// Interned times
     times: Interned<Time>,
     /// Interned propositions
     props: Interned<Prop>,
 
     // Component defined values.
+    #[ctx(Port)]
+    #[mut_ctx(Port)]
     /// Ports and bundles defined by the component.
     ports: IndexStore<Port>,
+    #[ctx(Param)]
+    #[mut_ctx(Param)]
     /// Parameters defined the component
     params: IndexStore<Param>,
+    #[ctx(Event)]
+    #[mut_ctx(Event)]
     /// Events defined by the component
     events: IndexStore<Event>,
 
     // Control flow entities
+    #[ctx(Instance)]
+    #[mut_ctx(Instance)]
     /// Instances defined by the component
     instances: IndexStore<Instance>,
+    #[ctx(Invoke)]
+    #[mut_ctx(Invoke)]
     /// Invocations defined by the component
     invocations: IndexStore<Invoke>,
 
     /// Commands in the component
     pub cmds: Vec<Command>,
 
+    #[ctx(Info)]
     /// Information tracked by the component
     info: IndexStore<Info>,
     /// Is this an external component
@@ -177,6 +143,21 @@ impl Component {
     }
 }
 
+/// Complex queries
+impl Component {
+    /// Returns an iterator over instances and the invocations that invoke them.
+    pub fn inst_invoke_map(
+        &self,
+    ) -> impl Iterator<Item = (InstIdx, Vec<InvIdx>)> {
+        self.invocations
+            .iter()
+            .map(|(idx, inv)| (inv.inst, idx))
+            .into_group_map()
+            .into_iter()
+            .map(|(inst, invs)| (inst, invs.into_iter().collect()))
+    }
+}
+
 /// Accessor methods
 impl Component {
     pub fn events(&self) -> &IndexStore<Event> {
@@ -232,6 +213,14 @@ impl Component {
             .collect_vec();
 
         sig_params
+    }
+
+    /// Returns all the phantom events in this component.
+    /// A phantom event is an event without an interface port
+    pub fn phantom_events(&self) -> impl Iterator<Item = EventIdx> + '_ {
+        self.events()
+            .idx_iter()
+            .filter(|idx| !self.get(*idx).has_interface)
     }
 }
 
@@ -307,56 +296,6 @@ impl Component {
 }
 
 // =========== Context accessors for each type ===========
-
-impl Ctx<Port> for Component {
-    fn add(&mut self, val: Port) -> PortIdx {
-        self.ports.add(val)
-    }
-
-    fn get(&self, idx: PortIdx) -> &Port {
-        self.ports.get(idx)
-    }
-}
-
-impl Ctx<Param> for Component {
-    fn add(&mut self, val: Param) -> ParamIdx {
-        self.params.add(val)
-    }
-
-    fn get(&self, idx: ParamIdx) -> &Param {
-        self.params.get(idx)
-    }
-}
-
-impl Ctx<Event> for Component {
-    fn add(&mut self, val: Event) -> EventIdx {
-        self.events.add(val)
-    }
-
-    fn get(&self, idx: EventIdx) -> &Event {
-        self.events.get(idx)
-    }
-}
-
-impl Ctx<Instance> for Component {
-    fn add(&mut self, val: Instance) -> InstIdx {
-        self.instances.add(val)
-    }
-
-    fn get(&self, idx: InstIdx) -> &Instance {
-        self.instances.get(idx)
-    }
-}
-
-impl Ctx<Invoke> for Component {
-    fn add(&mut self, val: Invoke) -> InvIdx {
-        self.invocations.add(val)
-    }
-
-    fn get(&self, idx: InvIdx) -> &Invoke {
-        self.invocations.get(idx)
-    }
-}
 
 impl Component {
     pub fn resolve_prop(&mut self, prop: Prop) -> PropIdx {
@@ -570,16 +509,6 @@ impl Ctx<Expr> for Component {
     }
 }
 
-impl Ctx<Time> for Component {
-    fn add(&mut self, val: Time) -> TimeIdx {
-        self.times.intern(val)
-    }
-
-    fn get(&self, idx: TimeIdx) -> &Time {
-        self.times.get(idx)
-    }
-}
-
 impl Ctx<Prop> for Component {
     fn add(&mut self, val: Prop) -> Idx<Prop> {
         match val {
@@ -682,65 +611,5 @@ impl Ctx<Prop> for Component {
 
     fn get(&self, idx: Idx<Prop>) -> &Prop {
         self.props.get(idx)
-    }
-}
-
-impl Ctx<Info> for Component {
-    fn add(&mut self, val: Info) -> InfoIdx {
-        self.info.add(val)
-    }
-
-    fn get(&self, idx: InfoIdx) -> &Info {
-        self.info.get(idx)
-    }
-}
-
-impl MutCtx<Port> for Component {
-    fn get_mut(&mut self, idx: PortIdx) -> &mut Port {
-        self.ports.get_mut(idx)
-    }
-
-    fn delete(&mut self, idx: PortIdx) {
-        self.ports.delete(idx)
-    }
-}
-
-impl MutCtx<Event> for Component {
-    fn get_mut(&mut self, idx: EventIdx) -> &mut Event {
-        self.events.get_mut(idx)
-    }
-
-    fn delete(&mut self, idx: EventIdx) {
-        self.events.delete(idx)
-    }
-}
-
-impl MutCtx<Param> for Component {
-    fn get_mut(&mut self, idx: ParamIdx) -> &mut Param {
-        self.params.get_mut(idx)
-    }
-
-    fn delete(&mut self, idx: ParamIdx) {
-        self.params.delete(idx)
-    }
-}
-
-impl MutCtx<Invoke> for Component {
-    fn get_mut(&mut self, idx: InvIdx) -> &mut Invoke {
-        self.invocations.get_mut(idx)
-    }
-
-    fn delete(&mut self, idx: InvIdx) {
-        self.invocations.delete(idx)
-    }
-}
-
-impl MutCtx<Instance> for Component {
-    fn get_mut(&mut self, idx: InstIdx) -> &mut Instance {
-        self.instances.get_mut(idx)
-    }
-
-    fn delete(&mut self, idx: InstIdx) {
-        self.instances.delete(idx)
     }
 }

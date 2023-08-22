@@ -8,6 +8,7 @@ mod hoist_facts;
 mod interval_check;
 mod lower;
 mod mono;
+mod phantom_check;
 mod prop_simplify;
 mod type_check;
 
@@ -21,5 +22,6 @@ pub use hoist_facts::HoistFacts;
 pub use interval_check::IntervalCheck;
 pub use lower::Compile;
 pub use mono::Monomorphize;
+pub use phantom_check::PhantomCheck;
 pub use prop_simplify::Simplify;
 pub use type_check::TypeCheck;

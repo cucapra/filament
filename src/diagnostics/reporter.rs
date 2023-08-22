@@ -100,16 +100,12 @@ impl Diagnostics {
         // Deduplicate errors based on the location attached to the error
         let mut error_map = BTreeMap::new();
         for mut error in self.errors.drain(..) {
-            if error.notes.is_empty() {
-                unreachable!(
-                    "Error without any notes. Cannot report this error: {:?}",
-                    error
-                );
+            if !error.notes.is_empty() {
+                // Sort everything except the first element
+                let first = error.notes.remove(0);
+                error.notes.sort();
+                error.notes.insert(0, first);
             }
-            // Sort everything except the first element
-            let first = error.notes.remove(0);
-            error.notes.sort();
-            error.notes.insert(0, first);
 
             error_map
                 .entry(error.notes)
