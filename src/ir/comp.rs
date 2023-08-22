@@ -432,7 +432,7 @@ impl Component {
         }
     }
 
-    /// Evaluates a binary operation, assuming that all params have been substituted for
+    /// Simplifies an expression, assuming that all params have been substituted for
     /// concrete expressions in monomorphization
     pub fn bin(&mut self, expr: Expr) -> ExprIdx {
         match expr {

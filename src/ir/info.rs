@@ -74,7 +74,7 @@ pub struct Port {
 }
 
 /// Information associated with the IR.
-#[struct_variant()]
+#[struct_variant]
 pub enum Info {
     Empty,
     Assert,
@@ -85,6 +85,12 @@ pub enum Info {
     Invoke,
     Connect,
     Port,
+}
+
+impl Default for Info {
+    fn default() -> Self {
+        Self::Empty(Empty)
+    }
 }
 
 impl Info {

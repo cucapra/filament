@@ -287,6 +287,17 @@ impl<'a> Validate<'a> {
         }
     }
 
+    fn bundle_def(&self, b: ir::PortIdx) {
+        // The port in a bundle def must have a local owner
+        let ir::Port { owner, .. } = &self.comp[b];
+        match owner {
+            ir::PortOwner::Local => {}
+            _ => self.comp.internal_error(format!(
+                "{b} is a bundle def, but its owner is not local"
+            )),
+        }
+    }
+
     /// A command is valid if:
     /// (1) The structures that it contains are valid
     fn command(&self, cmd: &ir::Command) {
@@ -308,6 +319,9 @@ impl<'a> Validate<'a> {
             }
             ir::Command::Fact(fact) => {
                 self.fact(fact);
+            }
+            ir::Command::BundleDef(b) => {
+                self.bundle_def(*b);
             }
             ir::Command::Let(l) => self.p_let(l),
         }

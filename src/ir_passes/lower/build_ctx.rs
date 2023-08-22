@@ -1,4 +1,4 @@
-use super::fsm::FsmBind;
+use super::fsm::{FsmBind, FsmType};
 use super::utils::{cell_to_port_def, comp_name, interface_name, port_name};
 use super::Fsm;
 use crate::ir::DenseIndexInfo;
@@ -7,8 +7,8 @@ use calyx_ir::{self as calyx, RRC};
 use itertools::Itertools;
 use std::{collections::HashMap, rc::Rc};
 
-/// Bindings associated with the current compilation context
 #[derive(Default)]
+/// Bindings associated with the current compilation context
 pub(super) struct Binding {
     // Component signatures
     comps: HashMap<ir::CompIdx, RRC<calyx::Cell>>,
@@ -35,6 +35,9 @@ pub(super) struct BuildCtx<'a> {
     pub comp: &'a ir::Component,
     ctx: &'a ir::Context,
     lib: &'a calyx::LibrarySignatures,
+    /// Enable generation of slow FSMs
+    enable_slow_fsms: bool,
+    /// Mapping from events to the FSM that reify them.
     fsms: HashMap<ir::EventIdx, Fsm>,
     /// Mapping from [ir::InstIdx]s to the calyx cell instantiated.
     instances: DenseIndexInfo<ir::Instance, RRC<calyx::Cell>>,
@@ -47,11 +50,13 @@ impl<'a> BuildCtx<'a> {
         ctx: &'a ir::Context,
         idx: ir::CompIdx,
         binding: &'a mut Binding,
+        enable_slow_fsms: bool,
         builder: calyx::Builder<'a>,
         lib: &'a calyx::LibrarySignatures,
     ) -> Self {
         BuildCtx {
             ctx,
+            enable_slow_fsms,
             comp: ctx.get(idx),
             binding,
             builder,
@@ -225,18 +230,18 @@ impl<'a> BuildCtx<'a> {
                 self.comp.internal_error("Non-unit delays should have been compiled away.");
             };
             let delay = delay.concrete(self.comp);
-            self.declare_fsm(states, delay);
+            let typ = FsmType::new(states, delay, self.enable_slow_fsms);
+            self.implement_fsm(&typ);
 
             // Construct the FSM
-            let fsm = Fsm::new(event, states, delay, self);
+            let fsm = Fsm::new(event, typ, self);
             self.fsms.insert(event, fsm);
         }
     }
 
-    /// Creates a [calyx::Component] representing an FSM with a certain number of states to bind to each event.
+    /// Creates a [calyx::Component] representing an FSM that supports a given number of states and delay.
     /// Adds component to the [Binding] held by this component.
-    fn declare_fsm(&mut self, states: u64, delay: u64) {
-        // If this fsm is already declared, just return.
-        self.binding.fsm_comps.add(states, delay, self.lib);
+    fn implement_fsm(&mut self, typ: &super::FsmType) {
+        self.binding.fsm_comps.add(typ, self.lib);
     }
 }
