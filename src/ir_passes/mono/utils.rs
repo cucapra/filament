@@ -1,4 +1,66 @@
-use crate::utils::{self, Idx};
+use crate::{
+    ir::{self, Ctx},
+    utils::{self, Idx},
+};
+
+pub struct UnderlyingComp<'a>(&'a ir::Component);
+
+impl<'a> UnderlyingComp<'a> {
+    pub fn new(comp: &'a ir::Component) -> Self {
+        Self(comp)
+    }
+    pub fn comp(&self) -> &ir::Component {
+        self.0
+    }
+}
+
+pub trait UnderlyingCtx<T> {
+    fn get(&self, k: Underlying<T>) -> &T;
+}
+
+impl<'a, T> UnderlyingCtx<T> for UnderlyingComp<'a>
+where
+    ir::Component: Ctx<T>,
+{
+    fn get(&self, k: Underlying<T>) -> &T {
+        self.0.get(k.idx())
+    }
+}
+
+pub struct BaseComp(ir::Component);
+
+impl BaseComp {
+    pub fn new(comp: ir::Component) -> Self {
+        Self(comp)
+    }
+
+    pub fn comp(&self) -> ir::Component {
+        self.0
+    }
+}
+
+pub trait BaseCtx<T> {
+    fn get(&self, k: Base<T>) -> &T;
+    fn get_mut(&mut self, k: Base<T>) -> &mut T;
+    fn add(&mut self, val: T) -> Base<T>;
+}
+
+impl<T> BaseCtx<T> for BaseComp
+where
+    ir::Component: Ctx<T>,
+{
+    fn get(&self, k: Base<T>) -> &T {
+        self.0.get(k.get())
+    }
+
+    fn get_mut(&mut self, k: Base<T>) -> &mut T {
+        &mut self.0.get(k.get())
+    }
+
+    fn add(&mut self, val: T) -> Base<T> {
+        Base::new(self.0.add(val))
+    }
+}
 
 /// Wraps an Idx that is meaningful in the base component, which are the new components
 /// that we build during monomorphization. As we visit parts of the underlying (pre-mono)

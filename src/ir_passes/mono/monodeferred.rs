@@ -1,6 +1,6 @@
 use super::{
     monosig::MonoSig,
-    utils::{Base, Underlying, UnderlyingComp},
+    utils::{Base, BaseCtx, Underlying, UnderlyingComp, UnderlyingCtx},
     Monomorphize,
 };
 use crate::ir::{self, Ctx};
@@ -21,23 +21,23 @@ impl MonoDeferred<'_, '_> {
     // of external components instead of just wholesale copying them?
     pub fn sig(
         monosig: &mut MonoSig,
-        underlying: &ir::Component,
+        underlying: UnderlyingComp,
         pass: &mut Monomorphize,
     ) {
         let binding = monosig.binding.inner();
-        let conc_params = if underlying.is_ext {
+        let conc_params = if underlying.comp().is_ext {
             vec![]
         } else {
             binding
                 .iter()
-                .filter(|(p, _)| underlying.get(p.idx()).is_sig_owned())
+                .filter(|(p, _)| underlying.get(*p).is_sig_owned())
                 .map(|(_, n)| *n)
                 .collect_vec()
         };
         // Events can be recursive, so do a pass over them to generate the new idxs now
         // and then fill them in later
-        for (idx, event) in underlying.events().iter() {
-            let new_idx = Base::new(monosig.base.add(event.clone()));
+        for (idx, event) in underlying.comp().events().iter() {
+            let new_idx = monosig.base.add(event.clone());
             monosig.event_map.insert(Underlying::new(idx), new_idx);
             pass.event_map.insert(
                 (
@@ -52,33 +52,33 @@ impl MonoDeferred<'_, '_> {
             );
         }
 
-        if underlying.is_ext {
+        if underlying.comp().is_ext {
             // We can copy over the underlying expressions because we're not
             // going to substitute anything.
-            for (_, expr) in underlying.exprs().iter() {
+            for (_, expr) in underlying.comp().exprs().iter() {
                 monosig.base.add(expr.clone());
             }
 
             // Add all parameters because we're not going to substitute them
-            for (idx, param) in underlying.params().iter() {
+            for (idx, param) in underlying.comp().params().iter() {
                 let ir::Param { owner, info } = param;
                 let param = ir::Param {
                     owner: owner.clone(),
-                    info: monosig.info(underlying, pass, info),
+                    info: monosig
+                        .info(underlying, pass, Underlying::new(*info))
+                        .get(),
                 };
                 let new_idx = monosig.base.add(param);
-                monosig
-                    .param_map
-                    .insert(Underlying::new(idx), Base::new(new_idx));
+                monosig.param_map.insert(Underlying::new(idx), new_idx);
             }
 
-            for (idx, port) in underlying.ports().iter() {
+            for (idx, port) in underlying.comp().ports().iter() {
                 if port.is_sig() {
                     monosig.ext_port(underlying, pass, Underlying::new(idx));
                 }
             }
         } else {
-            for (idx, port) in underlying.ports().iter() {
+            for (idx, port) in underlying.comp().ports().iter() {
                 if port.is_sig() {
                     let port = monosig.port_def(
                         underlying,
@@ -104,20 +104,21 @@ impl MonoDeferred<'_, '_> {
             monosig.event_second(underlying, pass, old, *new);
         }
 
-        monosig.interface(underlying, &underlying.src_info);
-        monosig.base.unannotated_ports = underlying.unannotated_ports.clone();
+        monosig.interface(underlying, &underlying.comp().src_info);
+        monosig.base.comp().unannotated_ports =
+            underlying.comp().unannotated_ports.clone();
     }
 }
 
 impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     pub fn gen_comp(&mut self) {
-        for cmd in &self.underlying.cmds {
+        for cmd in &self.underlying.comp().cmds {
             let cmd = self.command(cmd);
-            self.monosig.base.cmds.extend(cmd);
+            self.monosig.base.comp().cmds.extend(cmd);
         }
     }
 
-    fn prop(&mut self, pidx: ir::PropIdx) -> ir::PropIdx {
+    fn prop(&mut self, pidx: Underlying<ir::Prop>) -> Base<ir::Prop> {
         let prop = self.underlying.get(pidx);
         match self.underlying.get(pidx) {
             ir::Prop::True | ir::Prop::False => {
