@@ -3,7 +3,7 @@ use crate::{
     utils::Idx,
 };
 
-struct UnderlyingComp<'a>(&'a ir::Component);
+pub struct UnderlyingComp<'a>(&'a ir::Component);
 
 trait UnderlyingCtx<T> {
     fn get(&self, k: Underlying<T>) -> &T;
@@ -18,7 +18,7 @@ where
     }
 }
 
-struct BaseComp(ir::Component);
+pub struct BaseComp(ir::Component);
 
 trait BaseCtx<T> {
     fn get(&self, k: Base<T>) -> &T;

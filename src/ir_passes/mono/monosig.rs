@@ -1,5 +1,5 @@
 use super::{
-    utils::{Base, Underlying},
+    utils::{Base, BaseComp, Underlying},
     Monomorphize,
 };
 use crate::ir::{self, Ctx, Foreign, MutCtx};
@@ -13,7 +13,7 @@ type PortKey = (Option<Base<ir::Invoke>>, Underlying<ir::Port>);
 /// in MonoDeferred.
 pub struct MonoSig {
     /// The name of the monomorphized component
-    pub base: ir::Component,
+    pub base: BaseComp,
     /// The underlying component's idx
     pub underlying_idx: ir::CompIdx,
     /// Mapping from parameters in the underlying component to their constant bindings.

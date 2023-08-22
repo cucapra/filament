@@ -1,6 +1,6 @@
 use super::{
     monosig::MonoSig,
-    utils::{Base, Underlying},
+    utils::{Base, Underlying, UnderlyingComp},
     Monomorphize,
 };
 use crate::ir::{self, Ctx};
@@ -8,7 +8,7 @@ use itertools::Itertools;
 
 pub(super) struct MonoDeferred<'a, 'pass: 'a> {
     /// The underlying component to be monomorphized
-    pub underlying: &'a ir::Component,
+    pub underlying: UnderlyingComp<'a>,
     /// Underlying pointer
     pub pass: &'a mut Monomorphize<'pass>,
     /// Struct to keep track of all the mapping information from things owned by
