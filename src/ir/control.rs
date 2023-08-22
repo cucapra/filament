@@ -7,12 +7,21 @@ use super::{
 /// A flattened and minimized representation of the control flow graph.
 /// Bundle definitions and facts are removed during the process of compilation to the IR.
 pub enum Command {
+    /// Instance
     Instance(InstIdx),
+    /// Invocation
     Invoke(InvIdx),
+    /// Definition of a bundle
+    BundleDef(PortIdx),
+    /// A wire connection
     Connect(Connect),
+    /// A `for` loop
     ForLoop(Loop),
+    /// An `if` statement
     If(If),
+    /// An `assume` or `assert` fact
     Fact(Fact),
+    /// A `let`-bound parameter
     Let(Let),
 }
 impl Command {
@@ -32,6 +41,11 @@ impl From<InstIdx> for Command {
 impl From<InvIdx> for Command {
     fn from(idx: InvIdx) -> Self {
         Command::Invoke(idx)
+    }
+}
+impl From<PortIdx> for Command {
+    fn from(idx: PortIdx) -> Self {
+        Command::BundleDef(idx)
     }
 }
 impl From<Connect> for Command {

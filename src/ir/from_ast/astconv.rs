@@ -909,8 +909,9 @@ impl<'prog> BuildCtx<'prog> {
             }
             ast::Command::Bundle(bun) => {
                 // Add the bundle to the current scope
-                self.port(ast::PortDef::Bundle(bun), ir::PortOwner::Local)?;
-                vec![]
+                let idx =
+                    self.port(ast::PortDef::Bundle(bun), ir::PortOwner::Local)?;
+                vec![ir::Command::from(idx)]
             }
         };
         Ok(cmds)

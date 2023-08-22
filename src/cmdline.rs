@@ -93,4 +93,8 @@ pub struct Opts {
     /// dump interactions with the solver in the given file
     #[argh(option, long = "dump-solver-log")]
     pub solver_replay_file: Option<String>,
+
+    /// enable generation of slow FSMs in the backend
+    #[argh(switch, long = "enable-slow-fsms")]
+    pub enable_slow_fsms: bool,
 }

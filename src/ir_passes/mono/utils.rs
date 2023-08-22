@@ -1,4 +1,4 @@
-use crate::utils::Idx;
+use crate::utils::{self, Idx};
 
 /// Wraps an Idx that is meaningful in the base component, which are the new components
 /// that we build during monomorphization. As we visit parts of the underlying (pre-mono)
@@ -16,7 +16,7 @@ impl<T> Base<T> {
         Self { idx }
     }
 
-    pub fn idx(&self) -> Idx<T> {
+    pub fn get(&self) -> Idx<T> {
         self.idx
     }
 }
@@ -24,7 +24,7 @@ impl<T> Base<T> {
 impl<T> Eq for Base<T> {}
 impl<T> PartialEq for Base<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.idx() == other.idx()
+        self.get() == other.get()
     }
 }
 impl<T> std::hash::Hash for Base<T> {
@@ -32,14 +32,39 @@ impl<T> std::hash::Hash for Base<T> {
         self.idx.hash(state)
     }
 }
-
 impl<T> Clone for Base<T> {
     fn clone(&self) -> Self {
         Self { idx: self.idx }
     }
 }
+impl<T> PartialOrd for Base<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.idx.partial_cmp(&other.idx)
+    }
+}
+impl<T> Ord for Base<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.idx.cmp(&other.idx)
+    }
+}
+impl<T> Default for Base<T> {
+    fn default() -> Self {
+        Self { idx: Idx::UNKNOWN }
+    }
+}
 
 impl<T> Copy for Base<T> {}
+impl<T> utils::IdxLike<T> for Base<T> {
+    const UNKNOWN: Self = Self { idx: Idx::UNKNOWN };
+
+    fn new(idx: usize) -> Self {
+        Self { idx: Idx::new(idx) }
+    }
+
+    fn get(self) -> usize {
+        self.idx.get()
+    }
+}
 
 /// Wraps an Idx that is meaningful in the underlying component, which are the existing pre-monomorphization
 /// components. These Idxs get passed around between a lot of functions and mappings during monomorphization,
@@ -76,3 +101,25 @@ impl<T> Clone for Underlying<T> {
     }
 }
 impl<T> Copy for Underlying<T> {}
+impl<T> PartialOrd for Underlying<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.idx.partial_cmp(&other.idx)
+    }
+}
+impl<T> Ord for Underlying<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.idx.cmp(&other.idx)
+    }
+}
+
+impl<T> utils::IdxLike<T> for Underlying<T> {
+    const UNKNOWN: Self = Self { idx: Idx::UNKNOWN };
+
+    fn new(idx: usize) -> Self {
+        Self { idx: Idx::new(idx) }
+    }
+
+    fn get(self) -> usize {
+        self.idx.get()
+    }
+}

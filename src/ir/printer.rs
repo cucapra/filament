@@ -228,6 +228,7 @@ impl<'a> Printer<'a> {
             ir::Command::Instance(inst) => self.instance(*inst, indent, f),
             ir::Command::Invoke(inv) => self.invoke(*inv, indent, f),
             ir::Command::Connect(con) => self.connect(con, indent, f),
+            ir::Command::BundleDef(p) => self.local_port(*p, indent, f),
             ir::Command::ForLoop(ir::Loop {
                 index,
                 start,
@@ -405,18 +406,17 @@ impl<'a> Printer<'a> {
     fn local_port(
         &self,
         idx: ir::PortIdx,
-        port: &ir::Port,
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         let ir::Port {
             owner, width, live, ..
-        } = port;
+        } = self.ctx.get(idx);
         match &owner {
             ir::PortOwner::Sig { .. } => Ok(()),
             ir::PortOwner::Inv { dir, .. } => {
                 if log::log_enabled!(log::Level::Debug) {
-                    writeln!(
+                    write!(
                         f,
                         "{:indent$}{} ({idx}): bundle({dir}) {} {};",
                         "",
@@ -425,7 +425,7 @@ impl<'a> Printer<'a> {
                         self.expr(*width),
                     )
                 } else {
-                    writeln!(
+                    write!(
                         f,
                         "{:indent$}{}: bundle({dir}) {} {};",
                         "",
@@ -437,7 +437,7 @@ impl<'a> Printer<'a> {
             }
             ir::PortOwner::Local => {
                 if log::log_enabled!(log::Level::Debug) {
-                    writeln!(
+                    write!(
                         f,
                         "{:indent$}{} ({idx}) = bundle {} {};",
                         "",
@@ -446,7 +446,7 @@ impl<'a> Printer<'a> {
                         self.expr(*width),
                     )
                 } else {
-                    writeln!(
+                    write!(
                         f,
                         "{:indent$}{} = bundle {} {};",
                         "",
@@ -510,20 +510,17 @@ impl<'a> Printer<'a> {
     ) -> io::Result<()> {
         let printer = ir::Printer { ctx };
         printer.sig(ctx, idx, 0, f)?;
-        for idx in ctx.params().idx_iter() {
-            printer.local_param(idx, 2, ctx, f)?;
-        }
         // If debugging is enabled, show the low-level representation of the
-        // component's interned values.
+        // component's interned values and other stores.
         if log::log_enabled!(log::Level::Debug) {
+            for idx in ctx.params().idx_iter() {
+                printer.local_param(idx, 2, ctx, f)?;
+            }
             Printer::interned(ctx.exprs(), "expr", 2, f)?;
             Printer::interned(ctx.times(), "time", 2, f)?;
             Printer::interned(ctx.props(), "prop", 2, f)?;
+            writeln!(f, "control:")?;
         }
-        for (idx, port) in ctx.ports().iter() {
-            printer.local_port(idx, port, 2, f)?;
-        }
-        writeln!(f, "control:")?;
         printer.commands(&ctx.cmds, 2, f)?;
         writeln!(f, "}}")
     }
