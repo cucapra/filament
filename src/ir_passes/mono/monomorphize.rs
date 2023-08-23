@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use super::{
     monodeferred::MonoDeferred,
-    utils::{Base, Underlying, UnderlyingComp},
+    utils::{Base, Underlying},
 };
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -80,9 +80,9 @@ impl<'ctx> Monomorphize<'ctx> {
         comp_key: CompKey,
     ) -> (Base<ir::Component>, Vec<u64>) {
         let CompKey { comp, params } = comp_key;
-        let underlying = UnderlyingComp::new(self.old.get(comp.idx()));
+        let underlying = self.old.get(comp.idx());
 
-        let key: CompKey = if underlying.comp().is_ext {
+        let key: CompKey = if underlying.is_ext {
             (comp, vec![]).into()
         } else {
             (comp, params.clone()).into()
@@ -98,7 +98,7 @@ impl<'ctx> Monomorphize<'ctx> {
         }
 
         // Otherwise, construct a new component and add it to the processing queue
-        let new_comp = Base::new(self.ctx.comp(underlying.comp().is_ext));
+        let new_comp = Base::new(self.ctx.comp(underlying.is_ext));
 
         // `Some` if an extern, `None` if not
         let filename = self.old.get_filename(comp.idx());
@@ -118,7 +118,7 @@ impl<'ctx> Monomorphize<'ctx> {
         let mut monosig = MonoSig::new(base, underlying, comp.idx(), params);
 
         // the component whose signature we want to monomorphize
-        //let underlying = self.old.get(comp.idx());
+        let underlying = self.old.get(comp.idx());
 
         // Monomorphize the sig
         MonoDeferred::sig(&mut monosig, underlying, self);
@@ -135,7 +135,7 @@ impl<'ctx> Monomorphize<'ctx> {
             return None;
         };
 
-        let underlying = UnderlyingComp::new(self.old.get(ck.comp.idx()));
+        let underlying = self.old.get(ck.comp.idx());
         let mut mono = MonoDeferred {
             underlying,
             pass: self,
@@ -144,7 +144,7 @@ impl<'ctx> Monomorphize<'ctx> {
 
         mono.pass.processed.insert(ck, base_idx);
         mono.gen_comp();
-        let base = mono.monosig.base.comp();
+        let base = mono.monosig.base;
 
         // At this point, base_idx will be pointing to a default component
         // Return the idx so that we can swap them afterwards
