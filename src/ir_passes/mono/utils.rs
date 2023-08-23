@@ -12,9 +12,6 @@ impl<'a> UnderlyingComp<'a> {
     pub fn comp(&self) -> &ir::Component {
         self.0
     }
-    pub fn cmds(&self) -> &Vec<ir::Command> {
-        &self.0.cmds
-    }
 }
 
 pub trait UnderlyingCtx<T> {
@@ -37,16 +34,8 @@ impl BaseComp {
         Self(comp)
     }
 
-    pub fn new_mut(comp: &mut ir::Component) -> Self {
-        Self(*comp)
-    }
-
-    pub fn comp(&self) -> &ir::Component {
-        &self.0
-    }
-
-    pub fn extend_cmds(&mut self, other: Option<ir::Command>) {
-        self.0.cmds.extend(other);
+    pub fn comp(&self) -> ir::Component {
+        self.0
     }
 }
 

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use super::{
     monodeferred::MonoDeferred,
-    utils::{Base, Underlying, UnderlyingComp, BaseComp},
+    utils::{Base, Underlying, UnderlyingComp},
 };
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -121,7 +121,7 @@ impl<'ctx> Monomorphize<'ctx> {
         //let underlying = self.old.get(comp.idx());
 
         // Monomorphize the sig
-        MonoDeferred::sig(&mut monosig, &underlying, self);
+        MonoDeferred::sig(&mut monosig, underlying, self);
 
         // Insert into queue, with monosig so we can pick up where we left off when ready
         self.queue.insert(key, (new_comp, monosig));
@@ -130,7 +130,7 @@ impl<'ctx> Monomorphize<'ctx> {
         (new_comp, vec![])
     }
 
-    fn next(&mut self) -> Option<(BaseComp, Base<ir::Component>)> {
+    fn next(&mut self) -> Option<(ir::Component, Base<ir::Component>)> {
         let Some((ck, (base_idx, monosig))) = self.queue.pop_front() else {
             return None;
         };
@@ -144,7 +144,7 @@ impl<'ctx> Monomorphize<'ctx> {
 
         mono.pass.processed.insert(ck, base_idx);
         mono.gen_comp();
-        let base = mono.monosig.base;
+        let base = mono.monosig.base.comp();
 
         // At this point, base_idx will be pointing to a default component
         // Return the idx so that we can swap them afterwards
@@ -172,9 +172,9 @@ impl Monomorphize<'_> {
 
         // Build a new context
         while let Some((mut comp, idx)) = mono.next() {
-            let default = &mut BaseComp::new_mut(mono.ctx.get_mut(idx.get()));
+            let default = mono.ctx.get_mut(idx.get());
             std::mem::swap(&mut comp, default);
-            let val = ir::Validate::new(comp.comp(), &mono.ctx.comps);
+            let val = ir::Validate::new(&comp, &mono.ctx.comps);
             val.comp();
         }
         let new_entrypoint = mono.processed.get(&ck).unwrap();

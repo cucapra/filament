@@ -21,7 +21,7 @@ impl MonoDeferred<'_, '_> {
     // of external components instead of just wholesale copying them?
     pub fn sig(
         monosig: &mut MonoSig,
-        underlying: &UnderlyingComp,
+        underlying: UnderlyingComp,
         pass: &mut Monomorphize,
     ) {
         let binding = monosig.binding.inner();
@@ -112,15 +112,15 @@ impl MonoDeferred<'_, '_> {
 
 impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     pub fn gen_comp(&mut self) {
-        for cmd in self.underlying.cmds() {
-            let cmd = self.command(&cmd);
+        for cmd in &self.underlying.comp().cmds {
+            let cmd = self.command(cmd);
             self.monosig.base.comp().cmds.extend(cmd);
         }
     }
 
     fn prop(&mut self, pidx: Underlying<ir::Prop>) -> Base<ir::Prop> {
         let prop = self.underlying.get(pidx);
-        match prop {
+        match self.underlying.get(pidx) {
             ir::Prop::True | ir::Prop::False => {
                 self.monosig.base.add(prop.clone())
             }
@@ -128,11 +128,11 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 let ir::CmpOp { op, lhs, rhs } = cmp;
                 let lhs = self
                     .monosig
-                    .expr(&self.underlying, Underlying::new(*lhs))
+                    .expr(self.underlying, Underlying::new(*lhs))
                     .get();
                 let rhs = self
                     .monosig
-                    .expr(&self.underlying, Underlying::new(*rhs))
+                    .expr(self.underlying, Underlying::new(*rhs))
                     .get();
                 self.monosig.base.add(ir::Prop::Cmp(ir::CmpOp {
                     op: op.clone(),
@@ -142,18 +142,18 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             }
             ir::Prop::TimeCmp(tcmp) => {
                 let ir::CmpOp { op, lhs, rhs } = tcmp;
-                let lhs = self.monosig.time(&self.underlying, self.pass, Underlying::new(*lhs));
-                let rhs = self.monosig.time(&self.underlying, self.pass, Underlying::new(*rhs));
+                let lhs = self.monosig.time(self.underlying, self.pass, *lhs);
+                let rhs = self.monosig.time(self.underlying, self.pass, *rhs);
                 self.monosig.base.add(ir::Prop::TimeCmp(ir::CmpOp {
                     op: op.clone(),
-                    lhs: lhs.get(),
-                    rhs: rhs.get(),
+                    lhs,
+                    rhs,
                 }))
             }
             ir::Prop::TimeSubCmp(tscmp) => {
                 let ir::CmpOp { op, lhs, rhs } = tscmp;
-                let lhs = self.monosig.timesub(&self.underlying, self.pass, lhs);
-                let rhs = self.monosig.timesub(&self.underlying, self.pass, rhs);
+                let lhs = self.monosig.timesub(self.underlying, self.pass, lhs);
+                let rhs = self.monosig.timesub(self.underlying, self.pass, rhs);
                 self.monosig.base.add(ir::Prop::TimeSubCmp(ir::CmpOp {
                     op: op.clone(),
                     lhs,
@@ -161,23 +161,23 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 }))
             }
             ir::Prop::Not(p) => {
-                let new_p = self.prop(Underlying::new(*p));
-                self.monosig.base.add(ir::Prop::Not(new_p.get()))
+                let new_p = self.prop(*p);
+                self.monosig.base.add(ir::Prop::Not(new_p))
             }
             ir::Prop::And(l, r) => {
-                let l = self.prop(Underlying::new(*l));
-                let r = self.prop(Underlying::new(*r));
-                self.monosig.base.add(ir::Prop::And(l.get(), r.get()))
+                let l = self.prop(*l);
+                let r = self.prop(*r);
+                self.monosig.base.add(ir::Prop::And(l, r))
             }
             ir::Prop::Or(l, r) => {
-                let l = self.prop(Underlying::new(*l));
-                let r = self.prop(Underlying::new(*r));
-                self.monosig.base.add(ir::Prop::Or(l.get(), r.get()))
+                let l = self.prop(*l);
+                let r = self.prop(*r);
+                self.monosig.base.add(ir::Prop::Or(l, r))
             }
             ir::Prop::Implies(l, r) => {
-                let l = self.prop(Underlying::new(*l));
-                let r = self.prop(Underlying::new(*r));
-                self.monosig.base.add(ir::Prop::Implies(l.get(), r.get()))
+                let l = self.prop(*l);
+                let r = self.prop(*r);
+                self.monosig.base.add(ir::Prop::Implies(l, r))
             }
         }
     }
@@ -187,26 +187,26 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let port = self
             .monosig
-            .port_use(&self.underlying, Underlying::new(*port))
+            .port_use(self.underlying, Underlying::new(*port))
             .get();
 
         // generate end expression
-        let end = self.monosig.expr(&self.underlying, Underlying::new(*end));
+        let end = self.monosig.expr(self.underlying, Underlying::new(*end));
 
         // convert to concrete value
         let end = self
             .monosig
-            .base.comp()
-            .bin(self.monosig.base.get(end).clone());
+            .base
+            .bin(self.monosig.base.get(end.get()).clone());
 
         // generate start expression
-        let start = self.monosig.expr(&self.underlying, Underlying::new(*start));
+        let start = self.monosig.expr(self.underlying, Underlying::new(*start));
 
         // convert to concrete value
         let start = self
             .monosig
-            .base.comp()
-            .bin(self.monosig.base.get(start).clone());
+            .base
+            .bin(self.monosig.base.get(start.get()).clone());
 
         ir::Access { port, start, end }
     }
@@ -216,12 +216,11 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let mono_src = self.access(src);
         let mono_dst = self.access(dst);
-        let info = Underlying::new(*info);
 
         ir::Connect {
             src: mono_src,
             dst: mono_dst,
-            info: self.monosig.info(&self.underlying, self.pass, info).get(),
+            info: self.monosig.info(self.underlying, self.pass, info),
         }
     }
 
@@ -235,15 +234,15 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
 
         let mono_start = self
             .monosig
-            .expr(&self.underlying, Underlying::new(*start))
+            .expr(self.underlying, Underlying::new(*start))
             .get();
         let mono_end = self
             .monosig
-            .expr(&self.underlying, Underlying::new(*end))
+            .expr(self.underlying, Underlying::new(*end))
             .get();
 
-        let mut i = mono_start.as_concrete(&self.monosig.base.comp()).unwrap();
-        let bound = mono_end.as_concrete(&self.monosig.base.comp()).unwrap();
+        let mut i = mono_start.as_concrete(&self.monosig.base).unwrap();
+        let bound = mono_end.as_concrete(&self.monosig.base).unwrap();
 
         while i < bound {
             let index = Underlying::new(*index);
@@ -254,7 +253,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                     nlets += 1;
                 }
                 let cmd = self.command(cmd);
-                self.monosig.base.extend_cmds(cmd);
+                self.monosig.base.cmds.extend(cmd);
             }
             // Pop all the let bindings
             self.monosig.binding.pop_n(nlets);
@@ -266,18 +265,18 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
     fn if_stmt(&mut self, if_stmt: &ir::If) {
         let ir::If { cond, then, alt } = if_stmt;
 
-        let cond = self.prop(Underlying::new(*cond));
-        let cond = Base::new(self
+        let cond = self.prop(*cond);
+        let cond = self
             .monosig
-            .base.comp()
-            .resolve_prop(self.monosig.base.get(cond).clone()));
+            .base
+            .resolve_prop(self.monosig.base.get(cond).clone());
 
         let branch = match self.monosig.base.get(cond) {
             ir::Prop::True => then,
             ir::Prop::False => alt,
             cond => self
                 .monosig
-                .base.comp()
+                .base
                 .internal_error(format!("Non-bool condition: {cond}")),
         };
 
@@ -290,21 +289,21 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             })
             .to_vec();
 
-        self.monosig.base.comp().cmds.extend(body);
+        self.monosig.base.cmds.extend(body);
     }
 
     fn p_let(&mut self, l: &ir::Let) {
         let ir::Let { param, expr } = *l;
 
-        let expr = self.monosig.expr(&self.underlying, Underlying::new(expr));
+        let expr = self.monosig.expr(self.underlying, Underlying::new(expr));
 
         // Inserts this param into the binding.
         self.monosig.binding.insert(
             Underlying::new(param),
             self.monosig
-                .base.comp()
-                .bin(self.monosig.base.get(expr).clone())
-                .as_concrete(&self.monosig.base.comp())
+                .base
+                .bin(self.monosig.base.get(expr.get()).clone())
+                .as_concrete(&self.monosig.base)
                 .unwrap(),
         );
     }
@@ -314,19 +313,19 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         match cmd {
             ir::Command::Instance(idx) => Some(
                 self.monosig
-                    .inst_def(&self.underlying, self.pass, Underlying::new(*idx))
+                    .inst_def(self.underlying, self.pass, Underlying::new(*idx))
                     .get()
                     .into(),
             ),
             ir::Command::Invoke(idx) => Some(
                 self.monosig
-                    .inv_def(&self.underlying, self.pass, Underlying::new(*idx))
+                    .inv_def(self.underlying, self.pass, Underlying::new(*idx))
                     .get()
                     .into(),
             ),
             ir::Command::BundleDef(p) => Some(
                 self.monosig
-                    .port_def(&self.underlying, self.pass, Underlying::new(*p))
+                    .port_def(self.underlying, self.pass, Underlying::new(*p))
                     .get()
                     .into(),
             ),
