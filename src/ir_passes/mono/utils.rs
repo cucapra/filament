@@ -1,6 +1,6 @@
 use crate::{
     ast,
-    ir::{self, Ctx, ExprIdx, IndexStore, InterfaceSrc, Interned, MutCtx},
+    ir::{self, Ctx, IndexStore, InterfaceSrc, Interned, MutCtx},
     utils::{self, Idx},
 };
 
@@ -34,7 +34,7 @@ impl<'a> UnderlyingComp<'a> {
     pub fn src_info(&self) -> &Option<InterfaceSrc> {
         &self.0.src_info
     }
-    pub fn unannotated_ports(&self) -> &Box<Vec<(ast::Id, u64)>> {
+    pub fn unannotated_ports(&self) -> &Vec<(ast::Id, u64)> {
         &self.0.unannotated_ports
     }
 }
@@ -63,8 +63,8 @@ impl BaseComp {
         &self.0
     }
 
-    pub fn set_unannotated_ports(&mut self, other: Box<Vec<(ast::Id, u64)>>) {
-        self.0.unannotated_ports = other;
+    pub fn set_unannotated_ports(&mut self, other: Vec<(ast::Id, u64)>) {
+        self.0.unannotated_ports = Box::new(other);
     }
     pub fn set_src_info(&mut self, other: Option<InterfaceSrc>) {
         self.0.src_info = other;
@@ -87,12 +87,6 @@ impl BaseComp {
     }
     pub fn resolve_prop(&mut self, prop: ir::Prop) -> Base<ir::Prop> {
         Base::new(self.0.resolve_prop(prop))
-    }
-}
-
-impl Default for BaseComp {
-    fn default() -> Self {
-        Self(ir::Component::default())
     }
 }
 

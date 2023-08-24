@@ -115,7 +115,7 @@ impl MonoSig {
             .map(|p| {
                 self.expr(underlying, Underlying::new(*p))
                     .get()
-                    .as_concrete(&self.base.comp())
+                    .as_concrete(self.base.comp())
                     .unwrap()
             })
             .collect_vec();
@@ -573,7 +573,7 @@ impl MonoSig {
             .map(|p| {
                 self.expr(underlying, Underlying::new(*p))
                     .get()
-                    .as_concrete(&self.base.comp())
+                    .as_concrete(self.base.comp())
                     .unwrap()
             })
             .collect_vec();
@@ -614,7 +614,7 @@ impl MonoSig {
             .map(|p| {
                 self.expr(underlying, Underlying::new(*p))
                     .get()
-                    .as_concrete(&self.base.comp())
+                    .as_concrete(self.base.comp())
                     .unwrap()
             })
             .collect_vec();

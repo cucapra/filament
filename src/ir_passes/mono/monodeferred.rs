@@ -3,7 +3,7 @@ use super::{
     utils::{Base, BaseCtx, Underlying, UnderlyingComp, UnderlyingCtx},
     Monomorphize,
 };
-use crate::ir::{self, Ctx};
+use crate::ir::{self};
 use itertools::Itertools;
 
 pub(super) struct MonoDeferred<'a, 'pass: 'a> {
@@ -157,9 +157,9 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             ir::Prop::TimeSubCmp(tscmp) => {
                 let ir::CmpOp { op, lhs, rhs } = tscmp;
                 let lhs =
-                    self.monosig.timesub(&self.underlying, self.pass, &lhs);
+                    self.monosig.timesub(&self.underlying, self.pass, lhs);
                 let rhs =
-                    self.monosig.timesub(&self.underlying, self.pass, &rhs);
+                    self.monosig.timesub(&self.underlying, self.pass, rhs);
                 self.monosig.base.add(ir::Prop::TimeSubCmp(ir::CmpOp {
                     op: op.clone(),
                     lhs,
@@ -254,8 +254,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             .expr(&self.underlying, Underlying::new(*end))
             .get();
 
-        let mut i = mono_start.as_concrete(&self.monosig.base.comp()).unwrap();
-        let bound = mono_end.as_concrete(&self.monosig.base.comp()).unwrap();
+        let mut i = mono_start.as_concrete(self.monosig.base.comp()).unwrap();
+        let bound = mono_end.as_concrete(self.monosig.base.comp()).unwrap();
 
         while i < bound {
             let index = Underlying::new(*index);
@@ -319,7 +319,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 .base
                 .bin(self.monosig.base.get(expr).clone())
                 .get()
-                .as_concrete(&self.monosig.base.comp())
+                .as_concrete(self.monosig.base.comp())
                 .unwrap(),
         );
     }
