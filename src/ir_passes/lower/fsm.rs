@@ -23,9 +23,9 @@ pub enum FsmType {
 impl FsmType {
     /// Generates an FsmType based on the default heuristic on the number of states and the delay (II).
     /// If enable_slow_fsms is false, then only simple fsms are generated.
-    pub fn new(states: u64, delay: u64, enable_slow_fsms: bool) -> Self {
+    pub fn new(states: u64, delay: u64, disable_slow_fsms: bool) -> Self {
         // TODO(UnsignedByte): Find a better metric to decide which type of fsm to generate.
-        if enable_slow_fsms && delay > 1 {
+        if !disable_slow_fsms && delay > 1 {
             FsmType::CounterChain(states, delay)
         } else {
             FsmType::Simple(states)
