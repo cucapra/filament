@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use super::{
     monodeferred::MonoDeferred,
-    utils::{Base, Underlying, UnderlyingComp, BaseComp},
+    utils::{Base, BaseComp, Underlying, UnderlyingComp},
 };
 
 #[derive(PartialEq, Eq, Hash, Clone)]

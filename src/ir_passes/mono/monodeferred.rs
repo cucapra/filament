@@ -1,6 +1,6 @@
 use super::{
     monosig::MonoSig,
-    utils::{Base, Underlying, UnderlyingComp, BaseCtx, UnderlyingCtx},
+    utils::{Base, BaseCtx, Underlying, UnderlyingComp, UnderlyingCtx},
     Monomorphize,
 };
 use crate::ir::{self, Ctx};
@@ -68,9 +68,7 @@ impl MonoDeferred<'_, '_> {
                     info: monosig.info(&underlying, pass, info).get(),
                 };
                 let new_idx = monosig.base.add(param);
-                monosig
-                    .param_map
-                    .insert(Underlying::new(idx), new_idx);
+                monosig.param_map.insert(Underlying::new(idx), new_idx);
             }
 
             for (idx, port) in underlying.ports().iter() {
@@ -158,8 +156,10 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             }
             ir::Prop::TimeSubCmp(tscmp) => {
                 let ir::CmpOp { op, lhs, rhs } = tscmp;
-                let lhs = self.monosig.timesub(&self.underlying, self.pass, &lhs);
-                let rhs = self.monosig.timesub(&self.underlying, self.pass, &rhs);
+                let lhs =
+                    self.monosig.timesub(&self.underlying, self.pass, &lhs);
+                let rhs =
+                    self.monosig.timesub(&self.underlying, self.pass, &rhs);
                 self.monosig.base.add(ir::Prop::TimeSubCmp(ir::CmpOp {
                     op: op.clone(),
                     lhs,
@@ -207,21 +207,20 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let end = self.monosig.expr(&self.underlying, Underlying::new(*end));
 
         // convert to concrete value
-        let end = self
-            .monosig
-            .base
-            .bin(self.monosig.base.get(end).clone());
+        let end = self.monosig.base.bin(self.monosig.base.get(end).clone());
 
         // generate start expression
-        let start = self.monosig.expr(&self.underlying, Underlying::new(*start));
+        let start =
+            self.monosig.expr(&self.underlying, Underlying::new(*start));
 
         // convert to concrete value
-        let start = self
-            .monosig
-            .base
-            .bin(self.monosig.base.get(start).clone());
+        let start = self.monosig.base.bin(self.monosig.base.get(start).clone());
 
-        ir::Access { port, start: start.get(), end: end.get() }
+        ir::Access {
+            port,
+            start: start.get(),
+            end: end.get(),
+        }
     }
 
     fn connect(&mut self, con: &ir::Connect) -> ir::Connect {
@@ -291,7 +290,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             ir::Prop::False => alt,
             cond => self
                 .monosig
-                .base.comp()
+                .base
+                .comp()
                 .internal_error(format!("Non-bool condition: {cond}")),
         };
 
@@ -317,7 +317,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             Underlying::new(param),
             self.monosig
                 .base
-                .bin(self.monosig.base.get(expr).clone()).get()
+                .bin(self.monosig.base.get(expr).clone())
+                .get()
                 .as_concrete(&self.monosig.base.comp())
                 .unwrap(),
         );
@@ -328,7 +329,11 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         match cmd {
             ir::Command::Instance(idx) => Some(
                 self.monosig
-                    .inst_def(&self.underlying, self.pass, Underlying::new(*idx))
+                    .inst_def(
+                        &self.underlying,
+                        self.pass,
+                        Underlying::new(*idx),
+                    )
                     .get()
                     .into(),
             ),

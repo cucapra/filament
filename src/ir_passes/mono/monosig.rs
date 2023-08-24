@@ -1,5 +1,8 @@
 use super::{
-    utils::{Base, BaseComp, BaseCtx, Underlying, UnderlyingComp, UnderlyingCtx, MutBaseCtx},
+    utils::{
+        Base, BaseComp, BaseCtx, MutBaseCtx, Underlying, UnderlyingComp,
+        UnderlyingCtx,
+    },
     Monomorphize,
 };
 use crate::ir::{self, Ctx, DenseIndexInfo, Foreign};
@@ -243,8 +246,8 @@ impl MonoSig {
                     let new_idx = self.base.num(*n);
                     return new_idx;
                 } else {
-                    let p = self.param_use(underlying, Underlying::new(p))
-                    .get();
+                    let p =
+                        self.param_use(underlying, Underlying::new(p)).get();
                     self.base.add(ir::Expr::Param(p))
                 }
             }
@@ -281,7 +284,10 @@ impl MonoSig {
         let end = Underlying::new(*end);
         let start = self.time(underlying, pass, start);
         let end = self.time(underlying, pass, end);
-        ir::Range { start: start.get(), end: end.get() }
+        ir::Range {
+            start: start.get(),
+            end: end.get(),
+        }
     }
 
     pub fn time(
@@ -318,7 +324,7 @@ impl MonoSig {
                     l: self.time(underlying, pass, l).get(),
                     r: self.time(underlying, pass, r).get(),
                 }
-            },
+            }
         }
     }
 
@@ -543,7 +549,7 @@ impl MonoSig {
                     l: self.time(underlying, pass, l).get(),
                     r: self.time(underlying, pass, r).get(),
                 }
-            },
+            }
         }
     }
 
@@ -601,7 +607,7 @@ impl MonoSig {
     ) -> Base<ir::Instance> {
         let ir::Instance { comp, params, info } = underlying.get(inst);
         let info = Underlying::new(*info);
-        
+
         let is_ext = pass.old.get(*comp).is_ext;
         let conc_params = params
             .iter()
@@ -713,8 +719,10 @@ impl MonoSig {
         // if there's parameters, we don't want to replace them for handling externs
         let width = Underlying::new(*width);
         let mono_width = self.base.add(underlying.get(width).clone());
-        mono_liveness.len =
-            self.base.add(underlying.get(Underlying::new(mono_liveness.len)).clone()).get();
+        mono_liveness.len = self
+            .base
+            .add(underlying.get(Underlying::new(mono_liveness.len)).clone())
+            .get();
 
         let ir::Range { start, end } = mono_liveness.range;
         let start = Underlying::new(start);
@@ -723,18 +731,27 @@ impl MonoSig {
         let ir::Time { event, offset } = underlying.get(start);
         let start = ir::Time {
             event: self.event(pass, Underlying::new(*event)).get(),
-            offset: self.base.add(underlying.get(Underlying::new(*offset)).clone()).get(),
+            offset: self
+                .base
+                .add(underlying.get(Underlying::new(*offset)).clone())
+                .get(),
         };
         let start = self.base.add(start);
 
         let ir::Time { event, offset } = underlying.get(end);
         let end = ir::Time {
             event: self.event(pass, Underlying::new(*event)).get(),
-            offset: self.base.add(underlying.get(Underlying::new(*offset)).clone()).get(),
+            offset: self
+                .base
+                .add(underlying.get(Underlying::new(*offset)).clone())
+                .get(),
         };
         let end = self.base.add(end);
 
-        mono_liveness.range = ir::Range { start: start.get(), end: end.get() };
+        mono_liveness.range = ir::Range {
+            start: start.get(),
+            end: end.get(),
+        };
 
         let port = self.base.get_mut(new_port);
         port.live = mono_liveness;
@@ -826,8 +843,10 @@ impl MonoSig {
         mono_liveness.len = self
             .expr(underlying, Underlying::new(mono_liveness.len))
             .get();
-        mono_liveness.len =
-            self.base.bin(self.base.get(Base::new(mono_liveness.len)).clone()).get();
+        mono_liveness.len = self
+            .base
+            .bin(self.base.get(Base::new(mono_liveness.len)).clone())
+            .get();
         mono_liveness.range =
             self.range(underlying, pass, &mono_liveness.range);
 

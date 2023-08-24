@@ -1,6 +1,7 @@
 use crate::{
-    ir::{self, Ctx, IndexStore, Interned, InterfaceSrc, ExprIdx, MutCtx},
-    utils::{self, Idx}, ast,
+    ast,
+    ir::{self, Ctx, ExprIdx, IndexStore, InterfaceSrc, Interned, MutCtx},
+    utils::{self, Idx},
 };
 
 pub struct UnderlyingComp<'a>(&'a ir::Component);
@@ -100,7 +101,8 @@ pub trait MutBaseCtx<T> {
 }
 
 impl<T> MutBaseCtx<T> for BaseComp
-where ir::Component: MutCtx<T>
+where
+    ir::Component: MutCtx<T>,
 {
     fn get_mut(&mut self, k: Base<T>) -> &mut T {
         self.0.get_mut(k.get())
