@@ -171,11 +171,11 @@ impl Monomorphize<'_> {
         mono.should_process(ck.clone());
 
         // Build a new context
-        while let Some((mut comp, idx)) = mono.next() {
+        while let Some((comp, idx)) = mono.next() {
             let default = mono.ctx.get_mut(idx.get());
-            let mut default = BaseComp::default();
-            std::mem::swap(&mut comp, &mut default);
-            let val = ir::Validate::new(&comp.comp(), &mono.ctx.comps);
+            let mut comp = comp.comp().clone();
+            std::mem::swap(&mut comp, default);
+            let val = ir::Validate::new(&comp, &mono.ctx.comps);
             val.comp();
         }
         let new_entrypoint = mono.processed.get(&ck).unwrap();

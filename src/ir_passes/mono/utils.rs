@@ -52,7 +52,6 @@ where
     }
 }
 
-#[derive(Default)]
 pub struct BaseComp(pub ir::Component);
 
 impl BaseComp {
@@ -88,6 +87,12 @@ impl BaseComp {
     }
     pub fn resolve_prop(&mut self, prop: ir::Prop) -> Base<ir::Prop> {
         Base::new(self.0.resolve_prop(prop))
+    }
+}
+
+impl Default for BaseComp {
+    fn default() -> Self {
+        Self(ir::Component::default())
     }
 }
 
