@@ -52,7 +52,7 @@ where
     }
 }
 
-pub struct BaseComp(pub ir::Component);
+pub struct BaseComp(ir::Component);
 
 impl BaseComp {
     pub fn new(comp: ir::Component) -> Self {
