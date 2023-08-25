@@ -1,0 +1,15 @@
+comp Foo[#N]<G:1>(
+    @[G, G+1] in: #B
+) -> () with {
+    let #B = 2*#N;
+} {
+}
+
+comp main<G:1>(
+    @[G,G+1] in: 10
+) -> (
+) {
+    F := new Foo[5];
+    f0 := F<G>(in);
+}
+
