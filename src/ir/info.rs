@@ -1,4 +1,6 @@
-use super::{Component, DisplayCtx, ExprIdx, Range, TimeIdx, TimeSub};
+use super::{
+    Component, Ctx, DisplayCtx, ExprIdx, InfoIdx, Range, TimeIdx, TimeSub,
+};
 use crate::{ast, utils::GPosIdx};
 use codespan_reporting::diagnostic::Diagnostic;
 use struct_variant::struct_variant;
@@ -186,6 +188,27 @@ impl Info {
             live_loc,
         }
         .into()
+    }
+
+    /// Gets the name associated with this info (if it exists). Useful for compilation purposes.
+    pub fn get_name(&self) -> Option<String> {
+        match self {
+            Info::Event(Event { name, .. })
+            | Info::Instance(Instance { name, .. })
+            | Info::Invoke(Invoke { name, .. })
+            | Info::Param(Param { name, .. })
+            | Info::Port(Port { name, .. }) => Some(name.to_string()),
+            Info::Connect(_)
+            | Info::EventBind(_)
+            | Info::Empty(_)
+            | Info::Assert(_) => None,
+        }
+    }
+}
+
+impl InfoIdx {
+    pub fn get_name(self, ctx: &impl Ctx<Info>) -> Option<String> {
+        ctx.get(self).get_name()
     }
 }
 

@@ -522,10 +522,15 @@ pub(super) struct Fsm {
 
 impl Fsm {
     // Create a new [Fsm] for an [ir::EventIdx] with the given number of `states`.
-    pub fn new(event: ir::EventIdx, typ: FsmType, ctx: &mut BuildCtx) -> Self {
+    pub fn new(
+        event: ir::EventIdx,
+        typ: FsmType,
+        ctx: &mut BuildCtx,
+        debug: bool,
+    ) -> Self {
         let comp = ctx.binding.fsm_comps.get(&typ);
 
-        let Some(name) = interface_name(event, ctx.comp) else {
+        let Some(name) = interface_name(event, ctx.comp, debug) else {
             unreachable!("Info should be an interface port");
         };
 

@@ -23,25 +23,29 @@ pub(super) const INTERFACE_PORTS: [(AttrPair, (&str, u64, calyx::Direction));
 pub(super) fn interface_name(
     idx: EventIdx,
     comp: &Component,
+    debug: bool,
 ) -> Option<String> {
-    if !comp.get(idx).has_interface {
-        return None;
-    }
+    let ev = comp.get(idx);
 
-    Some(
+    ev.has_interface.then(|| {
         comp.src_info
             .as_ref()
             .map(|src| src.interface_ports.get(&idx).unwrap().to_string())
-            .unwrap_or_else(|| format!("ev{}", idx.get())),
-    )
+            .or_else(|| debug.then(|| ev.info.get_name(comp)).flatten())
+            .unwrap_or_else(|| format!("ev{}", idx.get()))
+    })
 }
 
 /// Converts an [ir::ExprIdx] into a [calyx::Width].
 /// Expects the [ir::ExprIdx] to either be a singular constant or an abstract variable.
-pub(super) fn expr_width(idx: ExprIdx, comp: &Component) -> calyx::Width {
+pub(super) fn expr_width(
+    idx: ExprIdx,
+    comp: &Component,
+    debug: bool,
+) -> calyx::Width {
     match comp.get(idx) {
         ir::Expr::Param(p) => calyx::Width::Param {
-            value: param_name(*p, comp).into(),
+            value: param_name(*p, comp, debug).into(),
         },
         ir::Expr::Concrete(val) => calyx::Width::Const { value: *val },
         ir::Expr::Bin { .. } | ir::Expr::Fn { .. } => {
@@ -51,10 +55,15 @@ pub(super) fn expr_width(idx: ExprIdx, comp: &Component) -> calyx::Width {
 }
 
 /// Returns the name of an [ir::Param].
-pub(super) fn param_name(idx: ParamIdx, comp: &Component) -> String {
+pub(super) fn param_name(
+    idx: ParamIdx,
+    comp: &Component,
+    debug: bool,
+) -> String {
     comp.src_info
         .as_ref()
         .map(|src| src.params.get(&idx).unwrap().to_string())
+        .or_else(|| debug.then(|| comp.get(idx).info.get_name(comp)).flatten())
         .unwrap_or_else(|| format!("pr{}", idx.get()))
 }
 
