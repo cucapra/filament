@@ -25,6 +25,7 @@ impl Compile {
         comp: &ir::Component,
         port: ir::PortIdx,
         width_transform: WT, // Function thattransforms an [ir::ExprIdx] into a [CW] type
+        debug: bool,
     ) -> calyx::PortDef<CW>
     where
         WT: Fn(ir::ExprIdx, &ir::Component) -> CW,
@@ -40,7 +41,7 @@ impl Compile {
         attributes.insert(calyx::BoolAttr::Data, 1);
 
         calyx::PortDef {
-            name: port_name(port, ctx, comp).into(),
+            name: port_name(port, ctx, comp, debug).into(),
             width: width_transform(comp.get(port).width, comp),
             direction: match dir.reverse() {
                 ir::Direction::In => calyx::Direction::Input,
@@ -67,7 +68,9 @@ impl Compile {
             .ports()
             .idx_iter()
             .filter(|idx| comp.get(*idx).is_sig())
-            .map(|idx| Compile::port_def(ctx, comp, idx, &width_transform))
+            .map(|idx| {
+                Compile::port_def(ctx, comp, idx, &width_transform, debug)
+            })
             .chain(
                 // adds unannotated ports to the list of ports
                 comp.unannotated_ports.iter().map(|(name, width)| {
