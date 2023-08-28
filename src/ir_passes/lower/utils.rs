@@ -1,6 +1,6 @@
 use crate::ir::{
-    self, CompIdx, Component, Context, Ctx, EventIdx, ExprIdx, ParamIdx,
-    PortIdx,
+    self, CompIdx, Component, Context, Ctx, EventIdx, ExprIdx, Info, InfoIdx,
+    ParamIdx, PortIdx,
 };
 use calyx_ir::{self as calyx, RRC};
 use linked_hash_map::LinkedHashMap;
@@ -19,6 +19,10 @@ pub(super) const INTERFACE_PORTS: [(AttrPair, (&str, u64, calyx::Direction));
     ),
 ];
 
+fn info_name(idx: InfoIdx, ctx: &impl Ctx<Info>) -> String {
+    format!("{}{}", idx.get_name(ctx).unwrap_or_default(), idx.get())
+}
+
 /// Gets the name of the interface port associated with an event, if it exists.
 pub(super) fn interface_name(
     idx: EventIdx,
@@ -31,7 +35,7 @@ pub(super) fn interface_name(
         comp.src_info
             .as_ref()
             .map(|src| src.interface_ports.get(&idx).unwrap().to_string())
-            .or_else(|| debug.then(|| ev.info.get_name(comp)).flatten())
+            .or_else(|| debug.then(|| info_name(ev.info, comp)))
             .unwrap_or_else(|| format!("ev{}", idx.get()))
     })
 }
@@ -63,7 +67,7 @@ pub(super) fn param_name(
     comp.src_info
         .as_ref()
         .map(|src| src.params.get(&idx).unwrap().to_string())
-        .or_else(|| debug.then(|| comp.get(idx).info.get_name(comp)).flatten())
+        .or_else(|| debug.then(|| info_name(comp.get(idx).info, comp)))
         .unwrap_or_else(|| format!("pr{}", idx.get()))
 }
 
