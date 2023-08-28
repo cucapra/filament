@@ -1,0 +1,47 @@
+// Tests the guards of an fsm.
+
+comp test[#DELAY, #NUM]<G: #DELAY>(
+    in[#NUM]: for<#j> [G+#j*#DELAY, G+#j*#DELAY+#DELAY] 32
+) -> (
+    out[#NUM*#DELAY]: for<#i> [G+#i, G+#i+1] 32
+) where #DELAY > 0, #NUM > 0 {
+    for #ii in 0..#NUM {
+        let #BASE = #ii*#DELAY;
+        for #jj in 0..#DELAY {
+            out{#BASE+#jj} = in{#ii};
+        }
+    }
+}
+
+comp main<G: 3>(
+    in0: [G, G+3] 32,
+    in1: [G+3, G+6] 32,
+    in2: [G+6, G+9] 32
+) -> (
+    out0: [G, G+1] 32,
+    out1: [G+1, G+2] 32,
+    out2: [G+2, G+3] 32,
+    out3: [G+3, G+4] 32,
+    out4: [G+4, G+5] 32,
+    out5: [G+5, G+6] 32,
+    out6: [G+6, G+7] 32,
+    out7: [G+7, G+8] 32,
+    out8: [G+8, G+9] 32
+) {
+    bundle in[3]: for<#i> [G+#i*3, G+#i*3+3] 32;
+    in{0} = in0;
+    in{1} = in1;
+    in{2} = in2;
+
+    tester := new test[3, 3]<G>(in{0..3});
+
+    out0 = tester.out{0};
+    out1 = tester.out{1};
+    out2 = tester.out{2};
+    out3 = tester.out{3};
+    out4 = tester.out{4};
+    out5 = tester.out{5};
+    out6 = tester.out{6};
+    out7 = tester.out{7};
+    out8 = tester.out{8};
+}
