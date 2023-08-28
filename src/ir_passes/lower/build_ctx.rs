@@ -188,7 +188,7 @@ impl<'a> BuildCtx<'a> {
     ) -> (RRC<calyx::Port>, calyx::Guard<calyx::Nothing>) {
         let port = self.comp.get(idx);
 
-        let name = port_name(idx, self.ctx, self.comp);
+        let name = port_name(idx, self.ctx, self.comp, self.debug);
 
         let guard = self.compile_range(&port.live.range);
         let cell = match port.owner {

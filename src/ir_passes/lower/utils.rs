@@ -20,7 +20,7 @@ pub(super) const INTERFACE_PORTS: [(AttrPair, (&str, u64, calyx::Direction));
 ];
 
 fn info_name(idx: InfoIdx, ctx: &impl Ctx<Info>) -> String {
-    format!("{}{}", idx.get_name(ctx).unwrap_or_default(), idx.get())
+    format!("{}_{}", idx.get_name(ctx).unwrap_or_default(), idx.get())
 }
 
 /// Gets the name of the interface port associated with an event, if it exists.
@@ -76,6 +76,7 @@ pub(super) fn port_name(
     idx: PortIdx,
     ctx: &Context,
     comp: &Component,
+    debug: bool,
 ) -> String {
     let p = comp.get(idx);
 
@@ -84,11 +85,14 @@ pub(super) fn port_name(
             .src_info
             .as_ref()
             .map(|src| src.ports.get(&idx).unwrap().to_string())
+            .or_else(|| debug.then(|| info_name(comp.get(idx).info, comp)))
             .unwrap_or_else(|| format!("p{}", idx.get())),
         ir::PortOwner::Inv { base, .. } => {
-            base.apply(|p, c| port_name(p, ctx, c), ctx)
+            base.apply(|p, c| port_name(p, ctx, c, debug), ctx)
         }
-        ir::PortOwner::Local => format!("p{}", idx.get()),
+        ir::PortOwner::Local => debug
+            .then(|| info_name(comp.get(idx).info, comp))
+            .unwrap_or_else(|| format!("p{}", idx.get())),
     }
 }
 
