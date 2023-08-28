@@ -1,5 +1,15 @@
 // Tests the guards of an fsm.
 
+comp test2[#DELAY]<G: #DELAY>(
+    in: [G, G+#DELAY] 32,
+) -> (
+    out[#DELAY]: for<#i> [G+#i, G+#i+1] 32
+) where #DELAY > 0 {
+    for #ii in 0..#DELAY {
+        out{#ii} = in;
+    }
+}
+
 comp test[#DELAY, #NUM]<G: #DELAY>(
     in[#NUM]: for<#j> [G+#j*#DELAY, G+#j*#DELAY+#DELAY] 32
 ) -> (
@@ -7,16 +17,13 @@ comp test[#DELAY, #NUM]<G: #DELAY>(
 ) where #DELAY > 0, #NUM > 0 {
     for #ii in 0..#NUM {
         let #BASE = #ii*#DELAY;
-        for #jj in 0..#DELAY {
-            out{#BASE+#jj} = in{#ii};
-        }
+        con := new test2[#DELAY]<G+#BASE>(in{#ii});
+        out{#BASE..#BASE+#DELAY} = con.out{0..#DELAY};
     }
 }
 
-comp main<G: 3>(
-    in0: [G, G+3] 32,
-    in1: [G+3, G+6] 32,
-    in2: [G+6, G+9] 32
+comp main<G: 9>(
+    in: [G, G+9] 32,
 ) -> (
     out0: [G, G+1] 32,
     out1: [G+1, G+2] 32,
@@ -28,12 +35,12 @@ comp main<G: 3>(
     out7: [G+7, G+8] 32,
     out8: [G+8, G+9] 32
 ) {
-    bundle in[3]: for<#i> [G+#i*3, G+#i*3+3] 32;
-    in{0} = in0;
-    in{1} = in1;
-    in{2} = in2;
+    bundle inb[3]: for<#i> [G+#i*3, G+#i*3+3] 32;
+    inb{0} = in;
+    inb{1} = in;
+    inb{2} = in;
 
-    tester := new test[3, 3]<G>(in{0..3});
+    tester := new test[3, 3]<G>(inb{0..3});
 
     out0 = tester.out{0};
     out1 = tester.out{1};

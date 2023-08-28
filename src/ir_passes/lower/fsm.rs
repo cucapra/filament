@@ -249,6 +249,7 @@ impl FsmBind {
 
                 // Constant signal
                 structure!(builder;
+                    let signal_off = constant(0, 1);
                     let signal_on = constant(1, 1);
                     let one = constant(1, bitwidth);
                     let zero = constant(0, bitwidth);
@@ -277,6 +278,8 @@ impl FsmBind {
                 let zero_check = guard!(this["go"])
                     .and(guard!(state["out"]).eq(guard!(zero["out"])));
 
+                let not_rst = rst_check.clone().not();
+
                 // add base assignments
                 builder.component.continuous_assignments.extend(
                     build_assignments!(builder;
@@ -296,6 +299,7 @@ impl FsmBind {
                         // done <= _{n-1};
                         // unused at the moment but useful if we want to chain FSMs.
                         this["done"] = ? done["out"];
+                        done["in"] = not_rst ? signal_off["out"];
                         done["in"] = rst_check ? signal_on["out"];
                         done["write_en"] = ? signal_on["out"];
                     ),
