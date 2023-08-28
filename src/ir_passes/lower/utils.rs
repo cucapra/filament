@@ -1,6 +1,6 @@
 use crate::ir::{
-    self, CompIdx, Component, Context, Ctx, EventIdx, ExprIdx, ParamIdx,
-    PortIdx,
+    self, CompIdx, Component, Context, Ctx, EventIdx, ExprIdx, Info, InfoIdx,
+    ParamIdx, PortIdx,
 };
 use calyx_ir::{self as calyx, RRC};
 use linked_hash_map::LinkedHashMap;
@@ -19,29 +19,37 @@ pub(super) const INTERFACE_PORTS: [(AttrPair, (&str, u64, calyx::Direction));
     ),
 ];
 
+fn info_name(idx: InfoIdx, ctx: &impl Ctx<Info>) -> String {
+    format!("{}{}", idx.get_name(ctx).unwrap_or_default(), idx.get())
+}
+
 /// Gets the name of the interface port associated with an event, if it exists.
 pub(super) fn interface_name(
     idx: EventIdx,
     comp: &Component,
+    debug: bool,
 ) -> Option<String> {
-    if !comp.get(idx).has_interface {
-        return None;
-    }
+    let ev = comp.get(idx);
 
-    Some(
+    ev.has_interface.then(|| {
         comp.src_info
             .as_ref()
             .map(|src| src.interface_ports.get(&idx).unwrap().to_string())
-            .unwrap_or_else(|| format!("ev{}", idx.get())),
-    )
+            .or_else(|| debug.then(|| info_name(ev.info, comp)))
+            .unwrap_or_else(|| format!("ev{}", idx.get()))
+    })
 }
 
 /// Converts an [ir::ExprIdx] into a [calyx::Width].
 /// Expects the [ir::ExprIdx] to either be a singular constant or an abstract variable.
-pub(super) fn expr_width(idx: ExprIdx, comp: &Component) -> calyx::Width {
+pub(super) fn expr_width(
+    idx: ExprIdx,
+    comp: &Component,
+    debug: bool,
+) -> calyx::Width {
     match comp.get(idx) {
         ir::Expr::Param(p) => calyx::Width::Param {
-            value: param_name(*p, comp).into(),
+            value: param_name(*p, comp, debug).into(),
         },
         ir::Expr::Concrete(val) => calyx::Width::Const { value: *val },
         ir::Expr::Bin { .. } | ir::Expr::Fn { .. } => {
@@ -51,10 +59,15 @@ pub(super) fn expr_width(idx: ExprIdx, comp: &Component) -> calyx::Width {
 }
 
 /// Returns the name of an [ir::Param].
-pub(super) fn param_name(idx: ParamIdx, comp: &Component) -> String {
+pub(super) fn param_name(
+    idx: ParamIdx,
+    comp: &Component,
+    debug: bool,
+) -> String {
     comp.src_info
         .as_ref()
         .map(|src| src.params.get(&idx).unwrap().to_string())
+        .or_else(|| debug.then(|| info_name(comp.get(idx).info, comp)))
         .unwrap_or_else(|| format!("pr{}", idx.get()))
 }
 

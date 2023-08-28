@@ -56,6 +56,7 @@ impl Compile {
         comp: &ir::Component,
         width_from_u64: WFU, // Function that returns a CW type from a u64
         width_transform: WT, // Function that transforms an [ir::ExprIdx] into a [CW] type
+        debug: bool,
     ) -> Vec<calyx::PortDef<CW>>
     where
         WFU: Fn(u64) -> CW,
@@ -82,7 +83,7 @@ impl Compile {
                 // adds interface ports to the list of ports
                 comp.events()
                     .idx_iter()
-                    .filter_map(|idx| interface_name(idx, comp))
+                    .filter_map(|idx| interface_name(idx, comp, debug))
                     .map(|name| calyx::PortDef {
                         name: name.into(),
                         width: width_from_u64(1),
@@ -142,7 +143,11 @@ impl Compile {
     }
 
     /// Compiles a primitive component into a [calyx::Primitive]
-    fn primitive(ctx: &ir::Context, idx: ir::CompIdx) -> calyx::Primitive {
+    fn primitive(
+        ctx: &ir::Context,
+        idx: ir::CompIdx,
+        debug: bool,
+    ) -> calyx::Primitive {
         let comp = ctx.get(idx);
 
         assert!(
@@ -156,13 +161,16 @@ impl Compile {
                 .params()
                 .iter()
                 .filter(|(_, p)| ir::ParamOwner::Sig == p.owner)
-                .map(|(idx, _)| param_name(idx, comp).into())
+                .map(|(idx, _)| param_name(idx, comp, debug).into())
                 .collect(),
             signature: Compile::ports(
                 ctx,
                 comp,
                 |value| calyx::Width::Const { value },
-                expr_width,
+                |idx: ir::ExprIdx, comp: &ir::Component| {
+                    expr_width(idx, comp, debug)
+                },
+                debug,
             ),
             attributes: calyx::Attributes::default(),
             is_comb: false,
@@ -178,6 +186,7 @@ impl Compile {
         idx: ir::CompIdx,
         bind: &mut Binding,
         lib: &calyx::LibrarySignatures,
+        debug: bool,
     ) -> calyx::Component {
         log::debug!("Compiling component {idx}");
         let comp = ctx.get(idx);
@@ -187,8 +196,13 @@ impl Compile {
             "Attempting to compile primitive component as non-primitive."
         );
 
-        let ports =
-            Compile::ports(ctx, comp, identity, |e, comp| e.concrete(comp));
+        let ports = Compile::ports(
+            ctx,
+            comp,
+            identity,
+            |e, comp| e.concrete(comp),
+            debug,
+        );
         let mut component = calyx::Component::new(
             comp_name(idx, ctx),
             ports,
@@ -205,8 +219,15 @@ impl Compile {
         }
 
         let builder = calyx::Builder::new(&mut component, lib).not_generated();
-        let mut buildctx =
-            BuildCtx::new(ctx, idx, bind, disable_slow_fsms, builder, lib);
+        let mut buildctx = BuildCtx::new(
+            ctx,
+            idx,
+            bind,
+            disable_slow_fsms,
+            debug,
+            builder,
+            lib,
+        );
 
         // Construct all the FSMs
         for (event, states) in max_states(comp) {
@@ -248,6 +269,7 @@ impl Compile {
     fn init(
         ctx: &ir::Context,
         externs: Vec<(&String, Vec<ir::CompIdx>)>,
+        debug: bool,
     ) -> CalyxResult<calyx::Context> {
         let mut ws = frontend::Workspace::from_compile_lib()?;
         // Add all primitives
@@ -255,7 +277,7 @@ impl Compile {
             for prim in prims {
                 ws.lib.add_extern_primitive(
                     PathBuf::from(file),
-                    Compile::primitive(ctx, prim),
+                    Compile::primitive(ctx, prim, debug),
                 )
             }
         }
@@ -273,13 +295,14 @@ impl Compile {
     pub fn compile(
         ctx: ir::Context,
         disable_slow_fsms: bool,
+        debug: bool,
     ) -> calyx::Context {
         // Creates a map between the file name and the external components defined in that file
         let externals =
             ctx.externals.iter().map(|(k, v)| (k, v.clone())).collect();
 
-        let mut calyx_ctx =
-            Compile::init(&ctx, externals).unwrap_or_else(|e| {
+        let mut calyx_ctx = Compile::init(&ctx, externals, debug)
+            .unwrap_or_else(|e| {
                 panic!("Error initializing calyx context: {:?}", e);
             });
 
@@ -295,6 +318,7 @@ impl Compile {
                 idx,
                 &mut bindings,
                 &calyx_ctx.lib,
+                debug,
             );
             bindings.insert(idx, Rc::clone(&comp.signature));
             calyx_ctx.components.push(comp);

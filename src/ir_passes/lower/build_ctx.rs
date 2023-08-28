@@ -37,6 +37,8 @@ pub(super) struct BuildCtx<'a> {
     lib: &'a calyx::LibrarySignatures,
     /// Disable generation of slow FSMs
     disable_slow_fsms: bool,
+    /// Enable debug naming generation
+    debug: bool,
     /// Mapping from events to the FSM that reify them.
     fsms: HashMap<ir::EventIdx, Fsm>,
     /// Mapping from [ir::InstIdx]s to the calyx cell instantiated.
@@ -51,12 +53,14 @@ impl<'a> BuildCtx<'a> {
         idx: ir::CompIdx,
         binding: &'a mut Binding,
         disable_slow_fsms: bool,
+        debug: bool,
         builder: calyx::Builder<'a>,
         lib: &'a calyx::LibrarySignatures,
     ) -> Self {
         BuildCtx {
             ctx,
             disable_slow_fsms,
+            debug,
             comp: ctx.get(idx),
             binding,
             builder,
@@ -110,7 +114,12 @@ impl<'a> BuildCtx<'a> {
         // loop through the event bindings defined in the instance and connect them to the corresponding fsms.
         for eb in inv.events.iter() {
             // If there is no interface port, no binding necessary
-            if let Some(dst) = eb.base.apply(interface_name, self.ctx) {
+            if let Some(dst) = eb.base.apply(
+                |ev: ir::EventIdx, comp: &ir::Component| {
+                    interface_name(ev, comp, self.debug)
+                },
+                self.ctx,
+            ) {
                 let ir::EventBind { arg: time, .. } = eb;
 
                 // gets the interface port from the signature of the instance
@@ -234,7 +243,7 @@ impl<'a> BuildCtx<'a> {
             self.implement_fsm(&typ);
 
             // Construct the FSM
-            let fsm = Fsm::new(event, typ, self);
+            let fsm = Fsm::new(event, typ, self, self.debug);
             self.fsms.insert(event, fsm);
         }
     }
