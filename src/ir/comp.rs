@@ -1,7 +1,7 @@
 use super::{
-    Cmp, CmpOp, Command, Ctx, Event, EventIdx, Expr, ExprIdx, Fact, IndexStore,
-    Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke, MutCtx, Param,
-    ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeSub,
+    AddCtx, Cmp, CmpOp, Command, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
+    IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke,
+    MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeSub,
 };
 use crate::{ast, utils::Idx};
 use fil_derive::Ctx;
@@ -33,36 +33,44 @@ impl InterfaceSrc {
 #[derive(Default, Ctx)]
 /// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
+    #[ctx(Expr)]
     // Interned data. We store this on a per-component basis because events with the
     // same identifiers in different components are not equal.
     /// Interned expressions
     exprs: Interned<Expr>,
     #[ctx(Time)]
+    #[add_ctx(Time)]
     /// Interned times
     times: Interned<Time>,
+    #[ctx(Prop)]
     /// Interned propositions
     props: Interned<Prop>,
 
     // Component defined values.
     #[ctx(Port)]
+    #[add_ctx(Port)]
     #[mut_ctx(Port)]
     /// Ports and bundles defined by the component.
     ports: IndexStore<Port>,
     #[ctx(Param)]
+    #[add_ctx(Param)]
     #[mut_ctx(Param)]
     /// Parameters defined the component
     params: IndexStore<Param>,
     #[ctx(Event)]
+    #[add_ctx(Event)]
     #[mut_ctx(Event)]
     /// Events defined by the component
     events: IndexStore<Event>,
 
     // Control flow entities
     #[ctx(Instance)]
+    #[add_ctx(Instance)]
     #[mut_ctx(Instance)]
     /// Instances defined by the component
     instances: IndexStore<Instance>,
     #[ctx(Invoke)]
+    #[add_ctx(Invoke)]
     #[mut_ctx(Invoke)]
     /// Invocations defined by the component
     invocations: IndexStore<Invoke>,
@@ -71,6 +79,7 @@ pub struct Component {
     pub cmds: Vec<Command>,
 
     #[ctx(Info)]
+    #[add_ctx(Info)]
     /// Information tracked by the component
     info: IndexStore<Info>,
     /// Is this an external component
@@ -460,7 +469,7 @@ impl Component {
     }
 }
 
-impl Ctx<Expr> for Component {
+impl AddCtx<Expr> for Component {
     fn add(&mut self, val: Expr) -> ExprIdx {
         match &val {
             Expr::Param(_) | Expr::Concrete(_) => self.exprs.intern(val),
@@ -503,13 +512,9 @@ impl Ctx<Expr> for Component {
             ),
         }
     }
-
-    fn get(&self, idx: ExprIdx) -> &Expr {
-        self.exprs.get(idx)
-    }
 }
 
-impl Ctx<Prop> for Component {
+impl AddCtx<Prop> for Component {
     fn add(&mut self, val: Prop) -> Idx<Prop> {
         match val {
             Prop::True | Prop::False => self.props.intern(val),
@@ -607,9 +612,5 @@ impl Ctx<Prop> for Component {
                 }
             },
         }
-    }
-
-    fn get(&self, idx: Idx<Prop>) -> &Prop {
-        self.props.get(idx)
     }
 }
