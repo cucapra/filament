@@ -1,11 +1,11 @@
 use super::{
     utils::{
-        Base, BaseComp, BaseCtx, MutBaseCtx, Underlying, UnderlyingComp,
+        Base, BaseComp, Underlying, UnderlyingComp,
         UnderlyingCtx,
     },
     Monomorphize,
 };
-use crate::ir::{self, Ctx, DenseIndexInfo, Foreign};
+use crate::ir::{self, Ctx, DenseIndexInfo, Foreign, MutCtx};
 use itertools::Itertools;
 use std::collections::HashMap;
 

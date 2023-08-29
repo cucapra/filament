@@ -99,16 +99,20 @@ pub trait MutBaseCtx<T> {
     fn get_mut(&mut self, k: Base<T>) -> &mut T;
 }
 
-impl<T> MutBaseCtx<T> for BaseComp
+impl<T> MutCtx<T, Base<T>> for BaseComp
 where
     ir::Component: MutCtx<T>,
 {
     fn get_mut(&mut self, k: Base<T>) -> &mut T {
         self.0.get_mut(k.get())
     }
+
+    fn delete(&mut self, k: Base<T>) {
+        self.0.delete(k.get());
+    }
 }
 
-impl<T> BaseCtx<T> for BaseComp
+impl<T> Ctx<T, Base<T>> for BaseComp
 where
     ir::Component: Ctx<T>,
 {

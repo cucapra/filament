@@ -1,9 +1,9 @@
 use super::{
     monosig::MonoSig,
-    utils::{Base, BaseCtx, Underlying, UnderlyingComp, UnderlyingCtx},
+    utils::{Base, Underlying, UnderlyingComp, UnderlyingCtx},
     Monomorphize,
 };
-use crate::ir::{self};
+use crate::ir::{self, Ctx};
 use itertools::Itertools;
 
 pub(super) struct MonoDeferred<'a, 'pass: 'a> {
