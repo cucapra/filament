@@ -1,4 +1,8 @@
-use super::{idxs::PropIdx, Ctx, ExprIdx, InfoIdx, TimeIdx, TimeSub};
+use crate::construct_binop;
+
+use super::{
+    idxs::PropIdx, Ctx, Expr, ExprIdx, InfoIdx, Time, TimeIdx, TimeSub,
+};
 use std::fmt::{self, Display};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -108,6 +112,66 @@ impl fmt::Display for Prop {
         }
     }
 }
+
+/// A more elaborated version of comparison operators used to generate CmpOps.
+enum RawCmp {
+    Gt,
+    Gte,
+    Eq,
+    Lt,
+    Lte,
+}
+
+impl RawCmp {
+    /// Converts a [RawCmp] to a [CmpOp].
+    pub fn cmp_op<T>(&self, lhs: T, rhs: T) -> CmpOp<T> {
+        match self {
+            RawCmp::Gt => CmpOp::gt(lhs, rhs),
+            RawCmp::Gte => CmpOp::gte(lhs, rhs),
+            RawCmp::Eq => CmpOp::eq(lhs, rhs),
+            RawCmp::Lt => CmpOp::lt(lhs, rhs),
+            RawCmp::Lte => CmpOp::lte(lhs, rhs),
+        }
+    }
+}
+
+impl Prop {
+    /// Creates a [Prop::Cmp] from two [ExprIdx]s and a [Cmp].
+    fn cmp(lhs: ExprIdx, rhs: ExprIdx, op: RawCmp) -> Self {
+        Self::Cmp(op.cmp_op(lhs, rhs))
+    }
+
+    /// Creates a [Prop::TimeCmp] from two [TimeIdx]s and a [Cmp].
+    fn timecmp(lhs: TimeIdx, rhs: TimeIdx, op: RawCmp) -> Self {
+        Self::TimeCmp(op.cmp_op(lhs, rhs))
+    }
+
+    /// Creates a [Prop::TimeSubCmp] from two [TimeSub]s and a [Cmp].
+    fn timesubcmp(lhs: TimeSub, rhs: TimeSub, op: RawCmp) -> Self {
+        Self::TimeSubCmp(op.cmp_op(lhs, rhs))
+    }
+}
+
+// helper macro for generating propositions from comparable elements
+macro_rules! construct_props {
+    (<$ctx: ty>($cmp: expr, $in: ty)) => {
+        construct_binop!(
+            <$ctx>($cmp, $in) => Prop;
+            gt = RawCmp::Gt;
+            gte = RawCmp::Gte;
+            equal = RawCmp::Eq;
+            lt = RawCmp::Lt;
+            lte = RawCmp::Lte;
+        );
+    }
+
+}
+// creates the expression comparison constructors for propositions
+construct_props!(<impl Ctx<Expr> + Ctx<Prop>>(Prop::cmp, ExprIdx));
+// creates the time comparison constructors for propositions
+construct_props!(<impl Ctx<Time> + Ctx<Expr> + Ctx<Prop>>(Prop::timecmp, TimeIdx));
+// creates the timesub comparison constructors for propositions
+construct_props!(<impl Ctx<Prop>>(Prop::timesubcmp, TimeSub));
 
 /// Constructors for propositions
 impl PropIdx {
