@@ -3,7 +3,10 @@ use crate::utils::{Idx, IdxLike};
 
 /// A context for storing values with their indices.
 /// The context is indexed by [`Idx<T>`].
-pub trait Ctx<T, K=Idx<T>> where K: IdxLike<T> {
+pub trait Ctx<T, K = Idx<T>>
+where
+    K: IdxLike<T>,
+{
     /// Add a new value to the context
     fn add(&mut self, val: T) -> K;
     /// Get the information associated with a value
@@ -11,7 +14,10 @@ pub trait Ctx<T, K=Idx<T>> where K: IdxLike<T> {
 }
 
 /// A context that provides mutable access to values using [`Idx<T>`] indices.
-pub trait MutCtx<T, K=Idx<T>> where K: IdxLike<T> {
+pub trait MutCtx<T, K = Idx<T>>
+where
+    K: IdxLike<T>,
+{
     /// Get a mutable reference to the value associated with the index.
     fn get_mut(&mut self, idx: K) -> &mut T;
     /// Delete the value associated with the index.

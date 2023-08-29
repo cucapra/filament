@@ -1,8 +1,5 @@
 use super::{
-    utils::{
-        Base, BaseComp, Underlying, UnderlyingComp,
-        UnderlyingCtx,
-    },
+    utils::{Base, BaseComp, Underlying, UnderlyingComp, UnderlyingCtx},
     Monomorphize,
 };
 use crate::ir::{self, Ctx, DenseIndexInfo, Foreign, MutCtx};

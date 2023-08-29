@@ -161,8 +161,8 @@ impl Monomorphize<'_> {
             return ir::Context {
                 comps: IndexStore::default(),
                 entrypoint: None,
-                externals: HashMap::new()
-            }
+                externals: HashMap::new(),
+            };
         };
         let entrypoint = Underlying::new(entrypoint);
         // Monomorphize the entrypoint

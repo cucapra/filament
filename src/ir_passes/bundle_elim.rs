@@ -257,7 +257,9 @@ impl Visitor for BundleElim {
             .cmds
             .iter()
             .filter_map(|cmd| {
-                let Command::Connect(con) = cmd else { return None };
+                let Command::Connect(con) = cmd else {
+                    return None;
+                };
                 let Connect { src, dst, .. } = con;
 
                 // need to check validity here because already deleted ports are still in the connect commands
