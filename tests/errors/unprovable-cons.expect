@@ -2,38 +2,38 @@
 1
 ---STDERR---
 error: delay must be greater than zero
-  ┌─ tests/errors/unprovable-cons.fil:5:14
+  ┌─ tests/errors/unprovable-cons.fil:5:15
   │
-5 │ comp Main<G: L-(G), L: 1>(
-  │              ^^^^^ delay must be greater than zero
+5 │ comp Main<@G: @L-(@G), @L: 1>(
+  │               ^^^^^^^ delay must be greater than zero
 
 error: bundle's availability is greater than the delay of the event
   ┌─ tests/errors/unprovable-cons.fil:8:10
   │
-5 │ comp Main<G: L-(G), L: 1>(
-  │              ----- event's delay
+5 │ comp Main<@G: @L-(@G), @L: 1>(
+  │               ------- event's delay
   ·
-8 │    left: [G, G+1] 32,
-  │          ^^^^^^^^ available for 1 cycles
+8 │    left: [@G, @G+1] 32,
+  │          ^^^^^^^^^^ available for 1 cycles
 
 error: invocation violates event constraint
-   ┌─ ./primitives/./state.fil:11:11
+   ┌─ ./primitives/./state.fil:11:12
    │
-11 │   ) where L > G+1;
-   │           ^^^^^^^ constraint was violated
+11 │    ) where @L > @G+1;
+   │            ^^^^^^^^^ constraint was violated
    │
    ┌─ tests/errors/unprovable-cons.fil:14:9
    │
-14 │   l0 := L<G, L+1>(left);
+14 │   l0 := L<@G, @L+1>(left);
    │         - invocation occurs here
 
 error: source port does not provide value for as long as destination requires
    ┌─ tests/errors/unprovable-cons.fil:15:9
    │
 15 │   out = l0.out;
-   │   ----  ^^^^^^ source is available for [G+1, L+1]
+   │   ----  ^^^^^^ source is available for [@G+1, @L+1]
    │   │      
-   │   requires value for [L+2, L+3]
+   │   requires value for [@L+2, @L+3]
 
 Compilation failed with 4 errors.
 Run with --show-models to generate assignments for failing constraints.

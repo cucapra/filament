@@ -4,7 +4,7 @@
 error: bundle `3' has a unassigned locations
   ┌─ tests/errors/assign-check/missing.fil:2:12
   │
-2 │     bundle a[4]: [G, G+1] 32;
+2 │     bundle a[4]: [@G, @G+1] 32;
   │            ^ bundle indices are unassigned: 1, 2, 3
 
 Compilation failed with 1 errors.

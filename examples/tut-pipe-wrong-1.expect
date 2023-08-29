@@ -4,39 +4,39 @@
 error: bundle's availability is greater than the delay of the event
   ┌─ examples/tut-pipe-wrong-1.fil:8:10
   │
-5 │ comp main<G: 1>(
-  │              - event's delay
+5 │ comp main<@G: 1>(
+  │               - event's delay
   ·
-8 │      op: [G, G+3] 1,
-  │          ^^^^^^^^ available for 3 cycles
+8 │      op: [@G, @G+3] 1,
+  │          ^^^^^^^^^^ available for 3 cycles
 
 error: event provided to invocation triggers more often that invocation's event's delay allows
    ┌─ examples/tut-pipe-wrong-1.fil:15:13
    │
- 5 │ comp main<G: 1>(
-   │              - this event triggers every 1 cycles
+ 5 │ comp main<@G: 1>(
+   │               - this event triggers every 1 cycles
    ·
-15 │     m0 := M<G>(left, right);
-   │             ^ event provided to invoke triggers too often
+15 │     m0 := M<@G>(left, right);
+   │             ^^ event provided to invoke triggers too often
    │
    ┌─ examples/./sequential.fil:3:18
    │
- 3 │ comp Mult[#W]<G: 2>(
+ 3 │ comp Mult[W]<@G: 2>(
    │                  - invocation's event is allowed to trigger every 2 cycles
 
 error: event provided to invocation triggers more often that invocation's event's delay allows
    ┌─ examples/tut-pipe-wrong-1.fil:18:28
    │
- 5 │ comp main<G: 1>(
-   │              - this event triggers every 1 cycles
+ 5 │ comp main<@G: 1>(
+   │               - this event triggers every 1 cycles
    ·
-18 │     r0 := new Register[32]<G, G+3>(a0.out);
-   │                            ^ event provided to invoke triggers too often
+18 │     r0 := new Register[32]<@G, @G+3>(a0.out);
+   │                            ^^ event provided to invoke triggers too often
    │
-   ┌─ ./primitives/./state.fil:4:28
+   ┌─ ./primitives/./state.fil:4:29
    │
- 4 │   comp Register[#WIDTH]<G: L-(G+1), L: 1>(
-   │                            ------- invocation's event is allowed to trigger every 2 cycles
+ 4 │    comp Register[WIDTH]<@G: @L-(@G+1), @L: 1>(
+   │                             --------- invocation's event is allowed to trigger every 2 cycles
 
 Compilation failed with 3 errors.
 Run with --show-models to generate assignments for failing constraints.

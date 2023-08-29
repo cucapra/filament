@@ -1,10 +1,10 @@
 ---CODE---
 1
 ---STDERR---
-Error: error while parsing:  --> 1:25
+Error: error while parsing:  --> 1:27
   |
-1 | comp Main<G: 1>(go: [G, 3] 1) -> () {}
-  |                         ^
+1 | comp Main<@G: 1>(go: [@G, 3] 1) -> () {}
+  |                           ^
   |
   = time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number or sum of parameters: 
 Compilation failed with 1 errors.
