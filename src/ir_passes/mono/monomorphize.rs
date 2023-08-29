@@ -177,7 +177,7 @@ impl Monomorphize<'_> {
             // std::mem::swap(&mut comp, default);
             comp.swap(default);
             let comp = comp.comp();
-            let val = ir::Validate::new(&comp, &mono.ctx.comps);
+            let val = ir::Validate::new(comp, &mono.ctx.comps);
             val.comp();
         }
         let new_entrypoint = mono.processed.get(&ck).unwrap();
