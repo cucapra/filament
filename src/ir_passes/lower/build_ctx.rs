@@ -1,5 +1,7 @@
 use super::fsm::{FsmBind, FsmType};
-use super::utils::{cell_to_port_def, comp_name, interface_name, port_name};
+use super::utils::{
+    cell_to_port_def, comp_name, instance_name, interface_name, port_name,
+};
 use super::Fsm;
 use crate::ir::DenseIndexInfo;
 use crate::ir::{self, Ctx};
@@ -75,7 +77,7 @@ impl<'a> BuildCtx<'a> {
     pub fn add_instance(&mut self, idx: ir::InstIdx) {
         let inst = self.comp.get(idx);
         // generate a unique name for this instance
-        let inst_name = format!("inst{}", idx.get());
+        let inst_name = instance_name(idx, self.comp, self.debug);
         let comp_name = comp_name(inst.comp, self.ctx);
 
         let cell = if let Some(sig) = self.binding.get(&inst.comp) {

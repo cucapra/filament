@@ -1,6 +1,6 @@
 use crate::ir::{
     self, CompIdx, Component, Context, Ctx, EventIdx, ExprIdx, Info, InfoIdx,
-    ParamIdx, PortIdx,
+    InstIdx, Instance, ParamIdx, PortIdx,
 };
 use calyx_ir::{self as calyx, RRC};
 use linked_hash_map::LinkedHashMap;
@@ -94,6 +94,16 @@ pub(super) fn port_name(
             .then(|| info_name(comp.get(idx).info, comp))
             .unwrap_or_else(|| format!("p{}", idx.get())),
     }
+}
+
+pub(super) fn instance_name<C: Ctx<Instance> + Ctx<Info>>(
+    idx: InstIdx,
+    ctx: &C,
+    debug: bool,
+) -> String {
+    debug
+        .then(|| info_name(ctx.get(idx).info, ctx))
+        .unwrap_or_else(|| format!("inst{}", idx.get()))
 }
 
 /// Returns the name of an [Component]
