@@ -268,9 +268,10 @@ impl FsmBind {
                     guard!(state["out"]).eq(guard!(final_state["out"]));
 
                 // check if we should increment the counter.
-                // go || state != 0
+                // (go || state != 0) && !rst_check
                 let go_check = guard!(this["go"])
-                    .or(guard!(state["out"]).eq(guard!(zero["out"])).not());
+                    .or(guard!(state["out"]).eq(guard!(zero["out"])).not())
+                    .and(rst_check.clone().not());
 
                 let enable_check = rst_check.clone().or(go_check.clone());
 
