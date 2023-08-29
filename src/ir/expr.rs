@@ -62,7 +62,7 @@ impl ExprIdx {
     /// Returns true if this expression is a constant.
     /// Note that this process *does not* automatically reduce the expression.
     /// For example, `1 + 1` is not going to be reduced to `2`.
-    pub fn is_const(&self, ctx: &Component, n: u64) -> bool {
+    pub fn is_const(&self, ctx: &impl Ctx<Expr>, n: u64) -> bool {
         self.as_concrete(ctx).map(|c| c == n).unwrap_or(false)
     }
 
@@ -131,11 +131,10 @@ impl ExprIdx {
     }
 
     /// The proposition `self > other`
-    pub fn gt(
-        &self,
-        other: ExprIdx,
-        ctx: &mut (impl AddCtx<Prop> + Ctx<Expr>),
-    ) -> PropIdx {
+    pub fn gt<C>(&self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: AddCtx<Prop> + Ctx<Expr>,
+    {
         if let (Some(l), Some(r)) =
             (self.as_concrete(ctx), other.as_concrete(ctx))
         {
@@ -153,11 +152,10 @@ impl ExprIdx {
         }
     }
 
-    pub fn gte(
-        &self,
-        other: ExprIdx,
-        ctx: &mut (impl AddCtx<Prop> + Ctx<Expr>),
-    ) -> PropIdx {
+    pub fn gte<C>(&self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: AddCtx<Prop> + Ctx<Expr>,
+    {
         if let (Some(l), Some(r)) =
             (self.as_concrete(ctx), other.as_concrete(ctx))
         {
@@ -175,11 +173,10 @@ impl ExprIdx {
         }
     }
 
-    pub fn equal(
-        &self,
-        other: ExprIdx,
-        ctx: &mut (impl AddCtx<Prop> + Ctx<Expr>),
-    ) -> PropIdx {
+    pub fn equal<C>(&self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: AddCtx<Prop> + Ctx<Expr>,
+    {
         if let (Some(l), Some(r)) =
             (self.as_concrete(ctx), other.as_concrete(ctx))
         {
@@ -199,19 +196,17 @@ impl ExprIdx {
         }
     }
 
-    pub fn lt(
-        self,
-        other: ExprIdx,
-        ctx: &mut (impl AddCtx<Prop> + Ctx<Expr>),
-    ) -> PropIdx {
+    pub fn lt<C>(self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: AddCtx<Prop> + Ctx<Expr>,
+    {
         other.gt(self, ctx)
     }
 
-    pub fn lte(
-        self,
-        other: ExprIdx,
-        ctx: &mut (impl AddCtx<Prop> + Ctx<Expr>),
-    ) -> PropIdx {
+    pub fn lte<C>(self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: AddCtx<Prop> + Ctx<Expr>,
+    {
         other.gte(self, ctx)
     }
 }
