@@ -1,21 +1,21 @@
 extern "sharpen16.v" {
 /* KERNEL_START=Sharpen_16 */
-    comp Sharpen<G: 1>(
+    comp Sharpen<@G: 1>(
         clk: 1,
-         I_0: [G, G+1] 8,
+         I_0: [@G, @G+1] 8,
     ) -> (
-         O_0: [G+8, G+9] 8,
-         valid_down: [G+7, G+8] 1,
+         O_0: [@G+8, @G+9] 8,
+         valid_down: [@G+7, @G+8] 1,
     );
 /* KERNEL_END=Sharpen_16 */
 }
 
-comp main<G: 1>(
-    valid_up: interface[G],
-     in: [G, G+1] 8,
+comp main<@G: 1>(
+    valid_up: interface[@G],
+     in: [@G, @G+1] 8,
 ) -> (
-     out: [G+8, G+9] 8,
+     out: [@G+8, @G+9] 8,
 ) {
-    s := new Sharpen<G>(in);
+    s := new Sharpen<@G>(in);
     out = s.O_0;
 }

@@ -1,18 +1,18 @@
 import "frisc/src/extras/extras.fil";
 import "primitives/core.fil";
 
-comp PC<G:1> (
+comp PC<@G:1> (
   clk:1,
-   pcin: [G,G+1] 32,
-   reset: [G,G+1] 1,
-   isJAL: [G,G+1] 1,
-   isAUIPC: [G,G+1] 1,
-   Jimm: [G,G+1] 32,
-   Uimm: [G,G+1] 32,
-   Bimm: [G,G+1] 32
+   pcin: [@G,@G+1] 32,
+   reset: [@G,@G+1] 1,
+   isJAL: [@G,@G+1] 1,
+   isAUIPC: [@G,@G+1] 1,
+   Jimm: [@G,@G+1] 32,
+   Uimm: [@G,@G+1] 32,
+   Bimm: [@G,@G+1] 32
 ) -> (
-   outImm: [G,G+1] 32,
-   out4: [G,G+1] 32
+   outImm: [@G,@G+1] 32,
+   out4: [@G,@G+1] 32
 ) {
   // for jumps
   pcAdderImm := new Add[32];
@@ -22,14 +22,14 @@ comp PC<G:1> (
 
   // Compute what we add to PC
   // isJAL ? Jimm : isAUIPC ? Uimm : Bimm
-  t0 := new Mux[32]<G>(isAUIPC, Uimm, Bimm);
-  t1 := new Mux[32]<G>(isJAL, Jimm, t0.out);
+  t0 := new Mux[32]<@G>(isAUIPC, Uimm, Bimm);
+  t1 := new Mux[32]<@G>(isJAL, Jimm, t0.out);
 
   // No jumps - add 4
-  const4 := new Const[32,4]<G>();
+  const4 := new Const[32,4]<@G>();
 
-  pcPlusImm := pcAdderImm<G>(pcin, t1.out);
-  pcPlus4 := pcAdder<G>(pcin, const4.out);
+  pcPlusImm := pcAdderImm<@G>(pcin, t1.out);
+  pcPlus4 := pcAdder<@G>(pcin, const4.out);
 
   outImm = pcPlusImm.out;
   out4 = pcPlus4.out;

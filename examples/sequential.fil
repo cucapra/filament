@@ -1,39 +1,39 @@
 import "primitives/core.fil";
 
-comp Mult[#W]<G: 2>(
-  go_G: interface[G],
-   left: [G, G+1] #W,
-   right: [G, G+1] #W,
+comp Mult[W]<@G: 2>(
+  go_G: interface[@G],
+   left: [@G, @G+1] W,
+   right: [@G, @G+1] W,
 ) -> (
-   out: [G+2, G+3] #W
-) where #W > 0 {
-  ll := new Register[#W]<G, G+3>(left);
-  lr := new Register[#W]<G, G+3>(right);
-  m := new MultComb[#W]<G+2>(ll.out, lr.out);
+   out: [@G+2, @G+3] W
+) where W > 0 {
+  ll := new Register[W]<@G, @G+3>(left);
+  lr := new Register[W]<@G, @G+3>(right);
+  m := new MultComb[W]<@G+2>(ll.out, lr.out);
   out = m.out;
 }
 
 /// ANCHOR: fastmult
 /// Implementation of a multiplier with initiation interval 1 and latency 3
-comp FastMult[#W]<G: 1>(
-  go_G: interface[G],
-   left: [G, G+1] #W,
-   right: [G, G+1] #W,
+comp FastMult[W]<@G: 1>(
+  go_G: interface[@G],
+   left: [@G, @G+1] W,
+   right: [@G, @G+1] W,
 ) -> (
-   out: [G+3, G+4] #W,
-) where #W > 0
+   out: [@G+3, @G+4] W,
+) where W > 0
 /// ANCHOR_END: fastmult
 {
   // First stage, register the inputs
-  l := new Register[#W]<G, G+2>(left);
-  r := new Register[#W]<G, G+2>(right);
+  l := new Register[W]<@G, @G+2>(left);
+  r := new Register[W]<@G, @G+2>(right);
 
   // Second stage, perform the computation and save it
-  m := new MultComb[#W]<G+1>(l.out, r.out);
-  ot := new Register[#W]<G+1, G+3>(m.out);
+  m := new MultComb[W]<@G+1>(l.out, r.out);
+  ot := new Register[W]<@G+1, @G+3>(m.out);
 
   // Third stage, forward the value from temp out to out register
-  final := new Register[#W]<G+2, G+4>(ot.out);
+  final := new Register[W]<@G+2, @G+4>(ot.out);
 
   // Connect the output to the out register
   out = final.out;

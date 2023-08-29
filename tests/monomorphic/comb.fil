@@ -1,12 +1,12 @@
 import "primitives/comb.fil";
 
-comp main<G: 1>(
-  go: interface[G],
-   left: [G, G+1] 32,
-   right: [G, G+1] 32
+comp main<@G: 1>(
+  go: interface[@G],
+   left: [@G, @G+1] 32,
+   right: [@G, @G+1] 32
 ) -> (
-   out: [G, G+1] 32
+   out: [@G, @G+1] 32
 ) {
-  m0 := new MultComb[32]<G>(left, right);
+  m0 := new MultComb[32]<@G>(left, right);
   out = m0.out;
 }

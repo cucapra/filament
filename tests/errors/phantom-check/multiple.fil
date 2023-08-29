@@ -1,5 +1,5 @@
-comp Foo<G:1>(go: interface[G]) -> () {}
-comp main<G:1>() -> () {
-    f0 := new Foo<G>();
-    f1 := new Foo<G>();
+comp Foo<@G:1>(go: interface[@G]) -> () {}
+comp main<@G:1>() -> () {
+    f0 := new Foo<@G>();
+    f1 := new Foo<@G>();
 }

@@ -1,10 +1,10 @@
 import "primitives/core.fil";
 
-comp main<G: 2>(
-     left: [G, G+1] 32,
-     right: [G+1, G+2] 32,
+comp main<@G: 2>(
+     left: [@G, @G+1] 32,
+     right: [@G+1, @G+2] 32,
 ) -> () {
     A := new Add[32];
-    a0 := A<G>(left, left);
-    a1 := A<G+1>(right, right);
+    a0 := A<@G>(left, left);
+    a1 := A<@G+1>(right, right);
 }

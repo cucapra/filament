@@ -1,7 +1,7 @@
-comp Bar[#P, #K]<G:1>(
-   in[#K]: for<#j> [G+#j, G+#K] 16,
+comp Bar[P, K]<@G:1>(
+   in[K]: for<j> [@G+j, @G+K] 16,
 ) -> () {
-    // f{0} is available during [G, G+#P] so the delay of
-    // G must be P.
-    bundle f[#P+1]: for<#k> [G+#k, G+#P] 16;
+    // f{0} is available during [@G, @G+P] so the delay of
+    // @G must be P.
+    bundle f[P+1]: for<k> [@G+k, @G+P] 16;
 }

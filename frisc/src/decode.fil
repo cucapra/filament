@@ -2,147 +2,147 @@ import "primitives/core.fil";
 
 // decoder for rv32i instruction set
 
-comp Decode<G:1> (
-   instr: [G, G+1] 32
+comp Decode<@G:1> (
+   instr: [@G, @G+1] 32
 ) -> (
-   isLoad: [G, G+1] 1,
-   isStore: [G, G+1] 1,
-   isALUImm: [G, G+1] 1,
-   isALUReg: [G, G+1] 1,
-   isLUI: [G, G+1] 1,
-   isJAL: [G, G+1] 1,
-   isJALR: [G, G+1] 1,
-   isBranch: [G, G+1] 1,
-   isSys: [G, G+1] 1,
-   isAUIPC: [G, G+1] 1,
-   Uimm: [G, G+1] 32,
-   Iimm: [G, G+1] 32,
-   Simm: [G, G+1] 32,
-   Bimm: [G, G+1] 32,
-   Jimm: [G, G+1] 32,
-   funct: [G, G+1] 8,
-   isAdd: [G, G+1] 1,   // 1 if add, 0 if sub
-   isArith: [G, G+1] 1, // 1 if arith, 0 if log
-   rf_write: [G, G+1] 1
+   isLoad: [@G, @G+1] 1,
+   isStore: [@G, @G+1] 1,
+   isALUImm: [@G, @G+1] 1,
+   isALUReg: [@G, @G+1] 1,
+   isLUI: [@G, @G+1] 1,
+   isJAL: [@G, @G+1] 1,
+   isJALR: [@G, @G+1] 1,
+   isBranch: [@G, @G+1] 1,
+   isSys: [@G, @G+1] 1,
+   isAUIPC: [@G, @G+1] 1,
+   Uimm: [@G, @G+1] 32,
+   Iimm: [@G, @G+1] 32,
+   Simm: [@G, @G+1] 32,
+   Bimm: [@G, @G+1] 32,
+   Jimm: [@G, @G+1] 32,
+   funct: [@G, @G+1] 8,
+   isAdd: [@G, @G+1] 1,   // 1 if add, 0 if sub
+   isArith: [@G, @G+1] 1, // 1 if arith, 0 if log
+   rf_write: [@G, @G+1] 1
 ) {
-  opcode := new Slice[32,6,2,5]<G>(instr); // the important bits
+  opcode := new Slice[32,6,2,5]<@G>(instr); // the important bits
 
-  instr30 := new Select[32,30]<G>(instr); // instr[30] is 1 for sub and arith, 0 for add and logical
-  instr5 := new Select[32,5]<G>(instr);
-  isSub := new And[1]<G>(instr30.out, instr5.out);
-  notSub := new Not[1]<G>(isSub.out);
+  instr30 := new Select[32,30]<@G>(instr); // instr[30] is 1 for sub and arith, 0 for add and logical
+  instr5 := new Select[32,5]<@G>(instr);
+  isSub := new And[1]<@G>(instr30.out, instr5.out);
+  notSub := new Not[1]<@G>(isSub.out);
   isAdd = notSub.out;
   isArith = instr30.out;
 
-  instr14_12 := new Slice[32,14,12,3]<G>(instr);
-  instr14_12ext := new ZeroExtend[3,8]<G>(instr14_12.out);
-  oneConst := new Const[8,1]<G>();
-  shift := new ShiftLeft[8]<G>(oneConst.out, instr14_12ext.out);
+  instr14_12 := new Slice[32,14,12,3]<@G>(instr);
+  instr14_12ext := new ZeroExtend[3,8]<@G>(instr14_12.out);
+  oneConst := new Const[8,1]<@G>();
+  shift := new ShiftLeft[8]<@G>(oneConst.out, instr14_12ext.out);
   funct = shift.out;
 
   // if it is a load, the opcode is 5'b00000
-  loadConst := new Const[5,0]<G>();
-  loadEq := new Eq[5]<G>(opcode.out, loadConst.out);
+  loadConst := new Const[5,0]<@G>();
+  loadEq := new Eq[5]<@G>(opcode.out, loadConst.out);
   isLoad = loadEq.out;
 
   // if it is store, the opcode is 5'b01000
-  storeConst := new Const[5,8]<G>();
-  storeEq := new Eq[5]<G>(opcode.out,storeConst.out);
+  storeConst := new Const[5,8]<@G>();
+  storeEq := new Eq[5]<@G>(opcode.out,storeConst.out);
   isStore = storeEq.out;
 
   // if it is alu imm, the opcode is 5'b00100
-  aluImmConst := new Const[5,4]<G>();
-  aluImmEq := new Eq[5]<G>(opcode.out, aluImmConst.out);
+  aluImmConst := new Const[5,4]<@G>();
+  aluImmEq := new Eq[5]<@G>(opcode.out, aluImmConst.out);
   isALUImm = aluImmEq.out;
 
   // if it is alu reg, the opcode is 5'b01100
-  aluRegConst := new Const[5,12]<G>();
-  aluRegEq := new Eq[5]<G>(opcode.out, aluRegConst.out);
+  aluRegConst := new Const[5,12]<@G>();
+  aluRegEq := new Eq[5]<@G>(opcode.out, aluRegConst.out);
   isALUReg = aluRegEq.out;
 
   // if it is lui, opcode is 5'b01101
-  luiConst := new Const[5,13]<G>();
-  luiEq := new Eq[5]<G>(opcode.out, luiConst.out);
+  luiConst := new Const[5,13]<@G>();
+  luiEq := new Eq[5]<@G>(opcode.out, luiConst.out);
   isLUI = luiEq.out;
 
   // if it is jal, opcode is 5'11011
-  jalConst := new Const[5,27]<G>();
-  jalEq := new Eq[5]<G>(opcode.out, jalConst.out);
+  jalConst := new Const[5,27]<@G>();
+  jalEq := new Eq[5]<@G>(opcode.out, jalConst.out);
   isJAL = jalEq.out;
 
   // if it is jalr, opcode is 5'b11001
-  jalrConst := new Const[5,25]<G>();
-  jalrEq := new Eq[5]<G>(opcode.out, jalrConst.out);
+  jalrConst := new Const[5,25]<@G>();
+  jalrEq := new Eq[5]<@G>(opcode.out, jalrConst.out);
   isJALR = jalrEq.out;
 
   // if it is branch, opcode is 5'b11000
-  branchConst := new Const[5,24]<G>();
-  branchEq := new Eq[5]<G>(opcode.out, branchConst.out);
+  branchConst := new Const[5,24]<@G>();
+  branchEq := new Eq[5]<@G>(opcode.out, branchConst.out);
   isBranch = branchEq.out;
 
   // if it a system instr, opcode is 5'b11100
-  sysConst := new Const[5,28]<G>();
-  sysEq := new Eq[5]<G>(opcode.out, sysConst.out);
+  sysConst := new Const[5,28]<@G>();
+  sysEq := new Eq[5]<@G>(opcode.out, sysConst.out);
   isSys = sysEq.out;
 
   // if it is auipc, opcode is 5'00101
-  auiConst := new Const[5,5]<G>();
-  auiEq := new Eq[5]<G>(opcode.out, auiConst.out);
+  auiConst := new Const[5,5]<@G>();
+  auiEq := new Eq[5]<@G>(opcode.out, auiConst.out);
   isAUIPC = auiEq.out;
 
-  branchOrStore := new Or[1]<G>(branchEq.out, storeEq.out);
-  notBranchOrStore := new Not[1]<G>(branchOrStore.out);
+  branchOrStore := new Or[1]<@G>(branchEq.out, storeEq.out);
+  notBranchOrStore := new Not[1]<@G>(branchOrStore.out);
   rf_write = notBranchOrStore.out;
 
-  zeroConst := new Const[1,0]<G>();
+  zeroConst := new Const[1,0]<@G>();
 
   // Uimm
-  instr0 := new Select[32,0]<G>(instr);
-  instr31 := new Select[32,31]<G>(instr);
-  instr30_20 := new Slice[32,30,20,11]<G>(instr);
-  instr19_12 := new Slice[32,19,12,8]<G>(instr);
-  uimm11_0 := new Extend[1,12]<G>(zeroConst.out);
+  instr0 := new Select[32,0]<@G>(instr);
+  instr31 := new Select[32,31]<@G>(instr);
+  instr30_20 := new Slice[32,30,20,11]<@G>(instr);
+  instr19_12 := new Slice[32,19,12,8]<@G>(instr);
+  uimm11_0 := new Extend[1,12]<@G>(zeroConst.out);
 
-  uimm31_20 := new Concat[1,11,12]<G>(instr31.out, instr30_20.out);
-  uimm19_0 := new Concat[8,12,20]<G>(instr19_12.out, uimm11_0.out);
-  uimm31_0 := new Concat[12,20,32]<G>(uimm31_20.out, uimm19_0.out);
+  uimm31_20 := new Concat[1,11,12]<@G>(instr31.out, instr30_20.out);
+  uimm19_0 := new Concat[8,12,20]<@G>(instr19_12.out, uimm11_0.out);
+  uimm31_0 := new Concat[12,20,32]<@G>(uimm31_20.out, uimm19_0.out);
   Uimm = uimm31_0.out;
 
   // Jimm
-  jimm31_20 := new Extend[1,12]<G>(instr31.out);
-  instr20 := new Select[32,20]<G>(instr);
-  instr30_25 := new Slice[32,30,25,6]<G>(instr);
-  instr24_21 := new Slice[32,24,21,4]<G>(instr);
+  jimm31_20 := new Extend[1,12]<@G>(instr31.out);
+  instr20 := new Select[32,20]<@G>(instr);
+  instr30_25 := new Slice[32,30,25,6]<@G>(instr);
+  instr24_21 := new Slice[32,24,21,4]<@G>(instr);
 
-  jimm31_12 := new Concat[12,8,20]<G>(jimm31_20.out, instr19_12.out);
-  jimm11_5 := new Concat[1,6,7]<G>(instr20.out, instr30_25.out);
-  jimm4_0 := new Concat[4,1,5]<G>(instr24_21.out, zeroConst.out);
-  jimm31_5 := new Concat[20,7,27]<G>(jimm31_12.out, jimm11_5.out);
-  jimm31_0 := new Concat[27,5,32]<G>(jimm31_5.out, jimm4_0.out);
+  jimm31_12 := new Concat[12,8,20]<@G>(jimm31_20.out, instr19_12.out);
+  jimm11_5 := new Concat[1,6,7]<@G>(instr20.out, instr30_25.out);
+  jimm4_0 := new Concat[4,1,5]<@G>(instr24_21.out, zeroConst.out);
+  jimm31_5 := new Concat[20,7,27]<@G>(jimm31_12.out, jimm11_5.out);
+  jimm31_0 := new Concat[27,5,32]<@G>(jimm31_5.out, jimm4_0.out);
   Jimm = jimm31_0.out;
 
   // Simm
-  instr11_8 := new Slice[32,11,8,4]<G>(instr);
-  instr7 := new Select[32,7]<G>(instr);
-  simm31_11 := new Extend[1,21]<G>(instr31.out);
-  simm31_5 := new Concat[21,6,27]<G>(simm31_11.out,instr30_25.out);
-  simm4_0 := new Concat[4,1,5]<G>(instr11_8.out,instr7.out);
-  simm31_0 := new Concat[27,5,32]<G>(simm31_5.out, simm4_0.out);
+  instr11_8 := new Slice[32,11,8,4]<@G>(instr);
+  instr7 := new Select[32,7]<@G>(instr);
+  simm31_11 := new Extend[1,21]<@G>(instr31.out);
+  simm31_5 := new Concat[21,6,27]<@G>(simm31_11.out,instr30_25.out);
+  simm4_0 := new Concat[4,1,5]<@G>(instr11_8.out,instr7.out);
+  simm31_0 := new Concat[27,5,32]<@G>(simm31_5.out, simm4_0.out);
   Simm = simm31_0.out;
 
   // Bimm
-  bimm31_12 := new Extend[1,20]<G>(instr31.out);
-  bimm31_11 := new Concat[20,1,21]<G>(bimm31_12.out, instr7.out);
-  bimm10_1 := new Concat[6,4,10]<G>(instr30_25.out, instr11_8.out);
-  bimm31_1 := new Concat[21,10,31]<G>(bimm31_11.out, bimm10_1.out);
-  bimm31_0 := new Concat[31,1,32]<G>(bimm31_1.out, zeroConst.out);
+  bimm31_12 := new Extend[1,20]<@G>(instr31.out);
+  bimm31_11 := new Concat[20,1,21]<@G>(bimm31_12.out, instr7.out);
+  bimm10_1 := new Concat[6,4,10]<@G>(instr30_25.out, instr11_8.out);
+  bimm31_1 := new Concat[21,10,31]<@G>(bimm31_11.out, bimm10_1.out);
+  bimm31_0 := new Concat[31,1,32]<@G>(bimm31_1.out, zeroConst.out);
   Bimm = bimm31_0.out;
 
   // Iimm
-  iimm31_11 := new Extend[1,21]<G>(instr31.out);
-  iimm31_5 := new Concat[21,6,27]<G>(iimm31_11.out, instr30_25.out);
-  iimm4_0 := new Concat[4,1,5]<G>(instr24_21.out, instr20.out);
-  iimm31_0 := new Concat[27,5,32]<G>(iimm31_5.out, iimm4_0.out);
+  iimm31_11 := new Extend[1,21]<@G>(instr31.out);
+  iimm31_5 := new Concat[21,6,27]<@G>(iimm31_11.out, instr30_25.out);
+  iimm4_0 := new Concat[4,1,5]<@G>(instr24_21.out, instr20.out);
+  iimm31_0 := new Concat[27,5,32]<@G>(iimm31_5.out, iimm4_0.out);
   Iimm = iimm31_0.out;
 
 }

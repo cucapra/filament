@@ -1,25 +1,25 @@
 extern "map_200.v" {
 // KERNEL_START=Map_200
-    comp Top<G: 1>(
+    comp Top<@G: 1>(
         clk: 1,
         reset: 1,
-        valid_up: interface[G],
-         I: [G, G+1] 8,
+        valid_up: interface[@G],
+         I: [@G, @G+1] 8,
     ) -> (
-         valid_down: [G+4, G+5] 1,
-         O: [G+4, G+5] 8
+         valid_down: [@G+4, @G+5] 1,
+         O: [@G+4, @G+5] 8
     );
 // KERNEL_END=Map_200
 }
 
-comp main<G: 1>(
-    valid_up: interface[G],
-     in: [G, G+1] 8
+comp main<@G: 1>(
+    valid_up: interface[@G],
+     in: [@G, @G+1] 8
 ) -> (
-     out: [G+4, G+5] 8,
-     valid_down: [G+4, G+5] 1
+     out: [@G+4, @G+5] 8,
+     valid_down: [@G+4, @G+5] 1
 ) {
-    m := new Top<G>(in);
+    m := new Top<@G>(in);
     out = m.O;
     valid_down = m.valid_down;
 }

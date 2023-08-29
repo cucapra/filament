@@ -1,49 +1,49 @@
 extern "sharpen8.v" {
 /* KERNEL_START=Sharpen_8 */
-comp Sharpen<G: 1>(
+comp Sharpen<@G: 1>(
         clk: 1,
-         I_0: [G, G+1] 8,
-         I_1: [G, G+1] 8,
-         I_2: [G, G+1] 8,
-         I_3: [G, G+1] 8,
-         I_4: [G, G+1] 8,
-         I_5: [G, G+1] 8,
-         I_6: [G, G+1] 8,
-         I_7: [G, G+1] 8,
+         I_0: [@G, @G+1] 8,
+         I_1: [@G, @G+1] 8,
+         I_2: [@G, @G+1] 8,
+         I_3: [@G, @G+1] 8,
+         I_4: [@G, @G+1] 8,
+         I_5: [@G, @G+1] 8,
+         I_6: [@G, @G+1] 8,
+         I_7: [@G, @G+1] 8,
     ) -> (
-         O_0: [G+7, G+8] 8,
-         O_1: [G+7, G+8] 8,
-         O_2: [G+7, G+8] 8,
-         O_3: [G+7, G+8] 8,
-         O_4: [G+7, G+8] 8,
-         O_5: [G+7, G+8] 8,
-         O_6: [G+7, G+8] 8,
-         O_7: [G+7, G+8] 8,
+         O_0: [@G+7, @G+8] 8,
+         O_1: [@G+7, @G+8] 8,
+         O_2: [@G+7, @G+8] 8,
+         O_3: [@G+7, @G+8] 8,
+         O_4: [@G+7, @G+8] 8,
+         O_5: [@G+7, @G+8] 8,
+         O_6: [@G+7, @G+8] 8,
+         O_7: [@G+7, @G+8] 8,
     );
 /* KERNEL_END=Sharpen_8 */
 }
 
-comp main<G: 1>(
-    valid_up: interface[G],
-     in0: [G, G+1] 8,
-     in1: [G, G+1] 8,
-     in2: [G, G+1] 8,
-     in3: [G, G+1] 8,
-     in4: [G, G+1] 8,
-     in5: [G, G+1] 8,
-     in6: [G, G+1] 8,
-     in7: [G, G+1] 8,
+comp main<@G: 1>(
+    valid_up: interface[@G],
+     in0: [@G, @G+1] 8,
+     in1: [@G, @G+1] 8,
+     in2: [@G, @G+1] 8,
+     in3: [@G, @G+1] 8,
+     in4: [@G, @G+1] 8,
+     in5: [@G, @G+1] 8,
+     in6: [@G, @G+1] 8,
+     in7: [@G, @G+1] 8,
 ) -> (
-     out0: [G+7, G+8] 8,
-     out1: [G+7, G+8] 8,
-     out2: [G+7, G+8] 8,
-     out3: [G+7, G+8] 8,
-     out4: [G+7, G+8] 8,
-     out5: [G+7, G+8] 8,
-     out6: [G+7, G+8] 8,
-     out7: [G+7, G+8] 8,
+     out0: [@G+7, @G+8] 8,
+     out1: [@G+7, @G+8] 8,
+     out2: [@G+7, @G+8] 8,
+     out3: [@G+7, @G+8] 8,
+     out4: [@G+7, @G+8] 8,
+     out5: [@G+7, @G+8] 8,
+     out6: [@G+7, @G+8] 8,
+     out7: [@G+7, @G+8] 8,
 ) {
-    s := new Sharpen<G>(in0, in1, in2, in3, in4, in5, in6, in7);
+    s := new Sharpen<@G>(in0, in1, in2, in3, in4, in5, in6, in7);
     out0 = s.O_0;
     out1 = s.O_1;
     out2 = s.O_2;

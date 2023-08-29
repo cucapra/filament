@@ -1,9 +1,9 @@
 import "../../examples/sequential.fil";
 
-comp Main<G: 3>(
-  go_G: interface[G],
+comp Main<@G: 3>(
+  go_G: interface[@G],
 ) -> () {
   M := new Mult[32];
-  m0 := M<G>(10, 20);
-  m1 := M<G+1>(30, 40);
+  m0 := M<@G>(10, 20);
+  m1 := M<@G+1>(30, 40);
 }

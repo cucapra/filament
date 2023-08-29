@@ -1,43 +1,43 @@
 import "primitives/core.fil";
 
-comp Process<G: 1>(
-  go: interface[G],
-   left: [G, G+1] 32,
-   right: [G, G+1] 32,
+comp Process<@G: 1>(
+  go: interface[@G],
+   left: [@G, @G+1] 32,
+   right: [@G, @G+1] 32,
 ) -> (
-   out: [G, G+1] 32,
+   out: [@G, @G+1] 32,
 ) {
   // If acc does not contain a valid value, use 0
-  acc := new Prev[32, 1]<G>(add.out);
-  mul := new MultComb[32]<G>(left, right);
-  add := new Add[32]<G>(acc.prev, mul.out);
+  acc := new Prev[32, 1]<@G>(add.out);
+  mul := new MultComb[32]<@G>(left, right);
+  add := new Add[32]<@G>(acc.prev, mul.out);
 
   out = add.out;
 }
 
-comp main<G: 1>(
-  go: interface[G],
-   l0: [G, G+1] 32,
-   l1: [G, G+1] 32,
-   t0: [G, G+1] 32,
-   t1: [G, G+1] 32,
+comp main<@G: 1>(
+  go: interface[@G],
+   l0: [@G, @G+1] 32,
+   l1: [@G, @G+1] 32,
+   t0: [@G, @G+1] 32,
+   t1: [@G, @G+1] 32,
 ) -> (
-   out00: [G, G+1] 32,
-   out01: [G, G+1] 32,
-   out10: [G, G+1] 32,
-   out11: [G, G+1] 32,
+   out00: [@G, @G+1] 32,
+   out01: [@G, @G+1] 32,
+   out10: [@G, @G+1] 32,
+   out11: [@G, @G+1] 32,
 ) {
   // Systolic registers that go from left to right
-  r00_01 := new Prev[32, 1]<G>(l0);
-  r00_10 := new Prev[32, 1]<G>(t0);
-  r10_11 := new Prev[32, 1]<G>(l1);
-  r01_11 := new Prev[32, 1]<G>(t1);
+  r00_01 := new Prev[32, 1]<@G>(l0);
+  r00_10 := new Prev[32, 1]<@G>(t0);
+  r10_11 := new Prev[32, 1]<@G>(l1);
+  r01_11 := new Prev[32, 1]<@G>(t1);
 
   // Connection registers to processing elements
-  pe00 := new Process<G>(l0, t0);
-  pe01 := new Process<G>(r00_01.prev, t1);
-  pe10 := new Process<G>(l1, r00_10.prev);
-  pe11 := new Process<G>(r10_11.prev, r01_11.prev);
+  pe00 := new Process<@G>(l0, t0);
+  pe01 := new Process<@G>(r00_01.prev, t1);
+  pe10 := new Process<@G>(l1, r00_10.prev);
+  pe11 := new Process<@G>(r10_11.prev, r01_11.prev);
 
   out00 = pe00.out;
   out01 = pe01.out;

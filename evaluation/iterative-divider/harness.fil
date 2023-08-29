@@ -1,52 +1,52 @@
 import "./iter-div.fil";
 
 extern "iter-div.sv" {
-  comp IterDiv[#W]<G: #W+1>(
+  comp IterDiv[W]<@G: W+1>(
       clk: 1,
       reset: 1,
-      go: interface[G],
-       left: [G, G+1] #W,
-       right: [G, G+#W+1] #W,
+      go: interface[@G],
+       left: [@G, @G+1] W,
+       right: [@G, @G+W+1] W,
   ) -> (
-       out_remainder: [G+#W+1, G+#W+2] #W,
-       out_quotient: [G+#W+1, G+#W+2] #W,
-       done: [G+#W+1, G+#W+2] 1
-  ) where #W > 0;
+       out_remainder: [@G+W+1, @G+W+2] W,
+       out_quotient: [@G+W+1, @G+W+2] W,
+       done: [@G+W+1, @G+W+2] 1
+  ) where W > 0;
 }
 
-comp DiffTest[#W]<G: #W+1>(
-  go: interface[G],
-   left: [G, G+1] #W,
-   right: [G, G+#W+1] #W,
+comp DiffTest[W]<@G: W+1>(
+  go: interface[@G],
+   left: [@G, @G+1] W,
+   right: [@G, @G+W+1] W,
 ) -> (
-   comb_noshare: [G, G+1] #W,
-   verilog: [G+#W+1, G+#W+2] #W,
-   share: [G+#W, G+#W+1] #W,
-   pipe: [G+#W, G+#W+1] #W,
-) where #W > 0 {
-  d := new IterDiv[#W]<G>(left, right);
-  id := new CombNoShareIterDiv[#W]<G>(left, right);
-  s := new ShareIterDiv[#W]<G>(left, right);
-  pipe := new PipeIterDiv[#W]<G>(left, right);
+   comb_noshare: [@G, @G+1] W,
+   verilog: [@G+W+1, @G+W+2] W,
+   share: [@G+W, @G+W+1] W,
+   pipe: [@G+W, @G+W+1] W,
+) where W > 0 {
+  d := new IterDiv[W]<@G>(left, right);
+  id := new CombNoShareIterDiv[W]<@G>(left, right);
+  s := new ShareIterDiv[W]<@G>(left, right);
+  pipe := new PipeIterDiv[W]<@G>(left, right);
   verilog = d.out_quotient;
   comb_noshare = id.quotient;
   share = s.quotient;
   pipe = pipe.quotient;
 }
 
-comp main<G: 11>(
-  go: interface[G],
-   left: [G, G+1] 8,
-   right: [G, G+9] 8,
+comp main<@G: 11>(
+  go: interface[@G],
+   left: [@G, @G+1] 8,
+   right: [@G, @G+9] 8,
 ) -> (
-   comb_noshare: [G, G+1] 8,
-   verilog: [G+9, G+10] 8,
-   share: [G+8, G+9] 8,
-   pipe: [G+8, G+9] 8,
-   tradeoff: [G+8, G+9] 8,
+   comb_noshare: [@G, @G+1] 8,
+   verilog: [@G+9, @G+10] 8,
+   share: [@G+8, @G+9] 8,
+   pipe: [@G+8, @G+9] 8,
+   tradeoff: [@G+8, @G+9] 8,
 ) {
-  d := new DiffTest[8]<G>(left, right);
-  td := new TradeoffDiv[8, 4, 2]<G>(left, right);
+  d := new DiffTest[8]<@G>(left, right);
+  td := new TradeoffDiv[8, 4, 2]<@G>(left, right);
   verilog = d.verilog;
   comb_noshare = d.comb_noshare;
   share = d.share;

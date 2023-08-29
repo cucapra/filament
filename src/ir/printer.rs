@@ -53,7 +53,7 @@ impl DisplayCtx<ir::Event> for ir::Component {
             let ev = self.get(idx);
             self.get(ev.info)
                 .as_event()
-                .map_or(format!("{idx}"), |e| format!("{}", e.name))
+                .map_or(format!("{idx}"), |e| format!("@{}", e.name))
         }
     }
 }
@@ -66,7 +66,7 @@ impl DisplayCtx<ir::Param> for ir::Component {
             let param: &ir::Param = self.get(idx);
             self.get(param.info)
                 .as_param()
-                .map_or(format!("{idx}"), |p| format!("#{}", p.name))
+                .map_or(format!("{idx}"), |p| format!("{}", p.name))
         }
     }
 }

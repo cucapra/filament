@@ -1,16 +1,16 @@
 import "primitives/core.fil";
 
-comp ShiftReg[#W, #N]<G: 1>(
-    go: interface[G],
-     input: [G, G+1] #W
+comp ShiftReg[W, N]<@G: 1>(
+    go: interface[@G],
+     input: [@G, @G+1] W
 ) -> (
-     out: [G+#N, G+#N+1] #W
+     out: [@G+N, @G+N+1] W
 ) {
-    bundle f[#N]: for<#k> [G+#k, G+#k+1] #W;
+    bundle f[N]: for<k> [@G+k, @G+k+1] W;
     f{1} = input;
-    for #i in 0..#N {
-        d := new Delay[#W]<G+#i>(f{#i});
-        f{#i} = d.out;
+    for i in 0..N {
+        d := new Delay[W]<@G+i>(f{i});
+        f{i} = d.out;
     }
-    out = f{#N+1};
+    out = f{N+1};
 }

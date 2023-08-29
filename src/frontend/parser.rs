@@ -132,10 +132,6 @@ impl FilamentParser {
         Ok(())
     }
 
-    fn pound(_i: Node) -> ParseResult<()> {
-        Ok(())
-    }
-
     // ================ Literals =====================
     fn identifier(input: Node) -> ParseResult<Loc<ast::Id>> {
         let sp = Self::get_span(&input);
@@ -146,7 +142,14 @@ impl FilamentParser {
     fn param_var(input: Node) -> ParseResult<Loc<ast::Id>> {
         Ok(match_nodes!(
             input.into_children();
-            [pound(_), identifier(id)] => id,
+            [identifier(id)] => id,
+        ))
+    }
+
+    fn event(input: Node) -> ParseResult<Loc<ast::Id>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [identifier(id)] => id,
         ))
     }
 
@@ -183,9 +186,9 @@ impl FilamentParser {
         let sp = Self::get_span(&input);
         match_nodes!(
             input.clone().into_children();
-            [identifier(ev), expr(sts)] => Ok(Loc::new(ast::Time::new(ev.take(), sts.take()), sp)),
-            [expr(sts), identifier(ev)] => Ok(Loc::new(ast::Time::new(ev.take(), sts.take()), sp)),
-            [identifier(ev)] => Ok(Loc::new(ast::Time::new(ev.take(), ast::Expr::default()), sp)),
+            [event(ev), expr(sts)] => Ok(Loc::new(ast::Time::new(ev.take(), sts.take()), sp)),
+            [expr(sts), event(ev)] => Ok(Loc::new(ast::Time::new(ev.take(), sts.take()), sp)),
+            [event(ev)] => Ok(Loc::new(ast::Time::new(ev.take(), ast::Expr::default()), sp)),
             [expr(_)] => {
                 Err(input.error("time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number or sum of parameters"))
             }
@@ -204,7 +207,7 @@ impl FilamentParser {
     fn interface(input: Node) -> ParseResult<ast::Id> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(tvar)] => tvar.take(),
+            [event(tvar)] => tvar.take(),
         ))
     }
 
@@ -273,8 +276,8 @@ impl FilamentParser {
         let sp = Self::get_span(&input);
         let out = match_nodes!(
             input.into_children();
-            [identifier(event), delay(d), time(t)] => ast::EventBind::new(event, d, Some(t.take())),
-            [identifier(event), delay(d)] => ast::EventBind::new(event, d, None),
+            [event(event), delay(d), time(t)] => ast::EventBind::new(event, d, Some(t.take())),
+            [event(event), delay(d)] => ast::EventBind::new(event, d, None),
         );
         Ok(Loc::new(out, sp))
     }

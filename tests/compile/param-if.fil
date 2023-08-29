@@ -1,29 +1,29 @@
 import "primitives/core.fil";
 
-comp AddOrSub[#W, #Sel]<G: 1>(
-     left: [G, G+1] #W,
-     right: [G, G+1] #W,
+comp AddOrSub[W, Sel]<@G: 1>(
+     left: [@G, @G+1] W,
+     right: [@G, @G+1] W,
 ) -> (
-     out: [G, G+1] #W,
-) where #W > 0, #Sel < 2 {
-    if #Sel == 0 {
-        a := new Add[#W]<G>(left, right);
+     out: [@G, @G+1] W,
+) where W > 0, Sel < 2 {
+    if Sel == 0 {
+        a := new Add[W]<@G>(left, right);
         out = a.out;
     } else {
-        b := new Sub[#W]<G>(left, right);
+        b := new Sub[W]<@G>(left, right);
         out = b.out;
     }
 }
 
-comp main<G: 1>(
-     left: [G, G+1] 8,
-     right: [G, G+1] 8
+comp main<@G: 1>(
+     left: [@G, @G+1] 8,
+     right: [@G, @G+1] 8
 ) -> (
-     sum: [G, G+1] 8,
-     diff: [G, G+1] 8,
+     sum: [@G, @G+1] 8,
+     diff: [@G, @G+1] 8,
 ) {
-    a := new AddOrSub[8, 0]<G>(left, right);
-    s := new AddOrSub[8, 1]<G>(left, right);
+    a := new AddOrSub[8, 0]<@G>(left, right);
+    s := new AddOrSub[8, 1]<@G>(left, right);
     sum = a.out;
     diff = s.out;
 }

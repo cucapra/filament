@@ -1,25 +1,25 @@
 extern "conv2d_8.v" {
 // KERNEL_START=Conv2d_8
-comp Conv2d<G: 1>(
+comp Conv2d<@G: 1>(
     clk: 1,
-     I_0: [G, G+1] 8,
-     I_1: [G, G+1] 8,
+     I_0: [@G, @G+1] 8,
+     I_1: [@G, @G+1] 8,
 ) -> (
-     O_0: [G+6, G+7] 8,
-     O_1: [G+6, G+7] 8,
+     O_0: [@G+6, @G+7] 8,
+     O_1: [@G+6, @G+7] 8,
 );
 // KERNEL_END=Conv2d_8
 }
 
-comp main<G: 1>(
-    valid_up: interface[G],
-     I_0: [G, G+1] 8,
-     I_1: [G, G+1] 8,
+comp main<@G: 1>(
+    valid_up: interface[@G],
+     I_0: [@G, @G+1] 8,
+     I_1: [@G, @G+1] 8,
 ) -> (
-     O_0: [G+6, G+7] 8,
-     O_1: [G+6, G+7] 8,
+     O_0: [@G+6, @G+7] 8,
+     O_1: [@G+6, @G+7] 8,
 ) {
-    c := new Conv2d<G>(I_0, I_1);
+    c := new Conv2d<@G>(I_0, I_1);
     O_0 = c.O_0;
     O_1 = c.O_1;
 }

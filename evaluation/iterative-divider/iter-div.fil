@@ -1,51 +1,51 @@
 import "primitives/core.fil";
 import "primitives/math.fil";
 
-comp CombNoShareIterDiv[#W]<G: 1>(
-  go: interface[G],
-   left: [G, G+1] #W,
-   right: [G, G+1] #W,
+comp CombNoShareIterDiv[W]<@G: 1>(
+  go: interface[@G],
+   left: [@G, @G+1] W,
+   right: [@G, @G+1] W,
 ) -> (
-   quotient: [G, G+1] #W
-) where #W > 0 {
-  bundle acc[#W+1]: for<#k> [G, G+1] #W+1;
-  bundle quotient_next[#W+1]: for<#k> [G, G+1] #W;
+   quotient: [@G, @G+1] W
+) where W > 0 {
+  bundle acc[W+1]: for<k> [@G, @G+1] W+1;
+  bundle quotient_next[W+1]: for<k> [@G, @G+1] W;
 
   // Initialize the accumulator and quotient
-  init := new Id_Init[#W]<G>(left);
+  init := new Id_Init[W]<@G>(left);
   acc{0} = init.acc;
   quotient_next{0} = init.quotient;
 
-  for #i in 0..#W {
-    s := new Id_Next[#W]<G>(acc{#i}, right, quotient_next{#i});
-    acc{#i+1} = s.acc_next;
-    quotient_next{#i+1} = s.quotient_next;
+  for i in 0..W {
+    s := new Id_Next[W]<@G>(acc{i}, right, quotient_next{i});
+    acc{i+1} = s.acc_next;
+    quotient_next{i+1} = s.quotient_next;
   }
 
-  quotient = quotient_next{#W};
+  quotient = quotient_next{W};
 }
 
 /// An iterative divider that uses exactly one `Id_Next` circuit and shares it over W cycles.
-comp ShareIterDiv[#W]<G: #W>(
-  go: interface[G],
-   left: [G, G+1] #W,
-   right: [G, G+1] #W,
+comp ShareIterDiv[W]<@G: W>(
+  go: interface[@G],
+   left: [@G, @G+1] W,
+   right: [@G, @G+1] W,
 ) -> (
-   quotient: [G+#W, G+#W+1] #W
-) where #W > 0 {
-  td := new TradeoffDiv[#W, 1, #W]<G>(left, right);
+   quotient: [@G+W, @G+W+1] W
+) where W > 0 {
+  td := new TradeoffDiv[W, 1, W]<@G>(left, right);
   quotient = td.out;
 }
 
 /// An iterative divider that uses W `Id_Next` circuits and does not share them.
-comp PipeIterDiv[#W]<G: 1>(
-  go: interface[G],
-   left: [G, G+1] #W,
-   right: [G, G+1] #W,
+comp PipeIterDiv[W]<@G: 1>(
+  go: interface[@G],
+   left: [@G, @G+1] W,
+   right: [@G, @G+1] W,
 ) -> (
-   quotient: [G+#W, G+#W+1] #W
-) where #W > 0 {
-  td := new TradeoffDiv[#W, #W, 1]<G>(left, right);
+   quotient: [@G+W, @G+W+1] W
+) where W > 0 {
+  td := new TradeoffDiv[W, W, 1]<@G>(left, right);
   quotient = td.out;
 }
 
