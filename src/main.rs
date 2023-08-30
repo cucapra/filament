@@ -61,7 +61,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         return Ok(());
     }
     let calyx = log_time!(
-        ip::Compile::compile(ir, opts.enable_slow_fsms, opts.preserve_names),
+        ip::Compile::compile(ir, opts.disable_slow_fsms, opts.preserve_names),
         "compile"
     );
     match opts.backend {

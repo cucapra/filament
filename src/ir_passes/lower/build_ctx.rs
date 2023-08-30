@@ -35,8 +35,8 @@ pub(super) struct BuildCtx<'a> {
     pub comp: &'a ir::Component,
     ctx: &'a ir::Context,
     lib: &'a calyx::LibrarySignatures,
-    /// Enable generation of slow FSMs
-    enable_slow_fsms: bool,
+    /// Disable generation of slow FSMs
+    disable_slow_fsms: bool,
     /// Helper to generate names
     ng: &'a NameGenerator,
     /// Mapping from events to the FSM that reify them.
@@ -52,14 +52,14 @@ impl<'a> BuildCtx<'a> {
         ctx: &'a ir::Context,
         idx: ir::CompIdx,
         binding: &'a mut Binding,
-        enable_slow_fsms: bool,
+        disable_slow_fsms: bool,
         ng: &'a NameGenerator,
         builder: calyx::Builder<'a>,
         lib: &'a calyx::LibrarySignatures,
     ) -> Self {
         BuildCtx {
             ctx,
-            enable_slow_fsms,
+            disable_slow_fsms,
             ng,
             comp: ctx.get(idx),
             binding,
@@ -239,7 +239,7 @@ impl<'a> BuildCtx<'a> {
                 self.comp.internal_error("Non-unit delays should have been compiled away.");
             };
             let delay = delay.concrete(self.comp);
-            let typ = FsmType::new(states, delay, self.enable_slow_fsms);
+            let typ = FsmType::new(states, delay, self.disable_slow_fsms);
             self.implement_fsm(&typ);
 
             // Construct the FSM
