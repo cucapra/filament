@@ -96,15 +96,6 @@ impl BaseComp {
     }
 }
 
-pub trait BaseCtx<T> {
-    fn get(&self, k: Base<T>) -> &T;
-    fn add(&mut self, val: T) -> Base<T>;
-}
-
-pub trait MutBaseCtx<T> {
-    fn get_mut(&mut self, k: Base<T>) -> &mut T;
-}
-
 impl<T> MutCtx<T, Base<T>> for BaseComp
 where
     ir::Component: MutCtx<T>,
