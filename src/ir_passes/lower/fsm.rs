@@ -1,9 +1,7 @@
 use std::{collections::HashMap, iter, ops::Not};
 
-use super::{
-    utils::{cell_to_port_def, interface_name},
-    BuildCtx,
-};
+use super::utils::NameGenerator;
+use super::{utils::cell_to_port_def, BuildCtx};
 use crate::{ir, ir_passes::lower::utils::INTERFACE_PORTS};
 use calyx_ir::{self as calyx, RRC};
 use calyx_ir::{build_assignments, guard, structure, Guard, Nothing};
@@ -531,11 +529,11 @@ impl Fsm {
         event: ir::EventIdx,
         typ: FsmType,
         ctx: &mut BuildCtx,
-        debug: bool,
+        name_gen: &NameGenerator,
     ) -> Self {
         let comp = ctx.binding.fsm_comps.get(&typ);
 
-        let Some(name) = interface_name(event, ctx.comp, debug) else {
+        let Some(name) = name_gen.interface_name(event, ctx.comp) else {
             unreachable!("Info should be an interface port");
         };
 

@@ -1,5 +1,5 @@
 use super::fsm::{FsmBind, FsmType};
-use super::utils::{cell_to_port_def, comp_name, interface_name, port_name};
+use super::utils::{cell_to_port_def, NameGenerator};
 use super::Fsm;
 use crate::ir::DenseIndexInfo;
 use crate::ir::{self, Ctx};
@@ -37,8 +37,8 @@ pub(super) struct BuildCtx<'a> {
     lib: &'a calyx::LibrarySignatures,
     /// Disable generation of slow FSMs
     disable_slow_fsms: bool,
-    /// Enable debug naming generation
-    debug: bool,
+    /// Helper to generate names
+    ng: &'a NameGenerator,
     /// Mapping from events to the FSM that reify them.
     fsms: HashMap<ir::EventIdx, Fsm>,
     /// Mapping from [ir::InstIdx]s to the calyx cell instantiated.
@@ -53,14 +53,14 @@ impl<'a> BuildCtx<'a> {
         idx: ir::CompIdx,
         binding: &'a mut Binding,
         disable_slow_fsms: bool,
-        debug: bool,
+        ng: &'a NameGenerator,
         builder: calyx::Builder<'a>,
         lib: &'a calyx::LibrarySignatures,
     ) -> Self {
         BuildCtx {
             ctx,
             disable_slow_fsms,
-            debug,
+            ng,
             comp: ctx.get(idx),
             binding,
             builder,
@@ -75,8 +75,8 @@ impl<'a> BuildCtx<'a> {
     pub fn add_instance(&mut self, idx: ir::InstIdx) {
         let inst = self.comp.get(idx);
         // generate a unique name for this instance
-        let inst_name = format!("inst{}", idx.get());
-        let comp_name = comp_name(inst.comp, self.ctx);
+        let inst_name = self.ng.instance_name(idx, self.comp);
+        let comp_name = self.ng.comp_name(inst.comp, self.ctx);
 
         let cell = if let Some(sig) = self.binding.get(&inst.comp) {
             // this component has is in the binding signature (it has been compiled and is non-primitive)
@@ -116,7 +116,7 @@ impl<'a> BuildCtx<'a> {
             // If there is no interface port, no binding necessary
             if let Some(dst) = eb.base.apply(
                 |ev: ir::EventIdx, comp: &ir::Component| {
-                    interface_name(ev, comp, self.debug)
+                    self.ng.interface_name(ev, comp)
                 },
                 self.ctx,
             ) {
@@ -188,7 +188,7 @@ impl<'a> BuildCtx<'a> {
     ) -> (RRC<calyx::Port>, calyx::Guard<calyx::Nothing>) {
         let port = self.comp.get(idx);
 
-        let name = port_name(idx, self.ctx, self.comp, self.debug);
+        let name = self.ng.port_name(idx, self.ctx, self.comp);
 
         let guard = self.compile_range(&port.live.range);
         let cell = match port.owner {
@@ -243,7 +243,7 @@ impl<'a> BuildCtx<'a> {
             self.implement_fsm(&typ);
 
             // Construct the FSM
-            let fsm = Fsm::new(event, typ, self, self.debug);
+            let fsm = Fsm::new(event, typ, self, self.ng);
             self.fsms.insert(event, fsm);
         }
     }
