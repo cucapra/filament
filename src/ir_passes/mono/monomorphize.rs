@@ -173,8 +173,6 @@ impl Monomorphize<'_> {
         // Build a new context
         while let Some((mut comp, idx)) = mono.next() {
             let default = mono.ctx.get_mut(idx.get());
-            // let mut comp = comp.comp().clone();
-            // std::mem::swap(&mut comp, default);
             comp.swap(default);
             let comp = comp.comp();
             let val = ir::Validate::new(comp, &mono.ctx.comps);
