@@ -5,8 +5,8 @@ use crate::ast::Id;
 use crate::diagnostics;
 use crate::errors::Error;
 use crate::ir::{
-    Cmp, Ctx, EventIdx, ExprIdx, InterfaceSrc, MutCtx, ParamIdx, PortIdx,
-    PropIdx, TimeIdx,
+    AddCtx, Cmp, Ctx, EventIdx, ExprIdx, InterfaceSrc, MutCtx, ParamIdx,
+    PortIdx, PropIdx, TimeIdx,
 };
 use crate::utils::{GPosIdx, Idx};
 use crate::{ast, ir, utils::Binding};
