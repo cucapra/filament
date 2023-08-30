@@ -181,7 +181,7 @@ impl Compile {
 
     /// Compiles an [ir::Component] into a [calyx::Component]
     fn component(
-        enable_slow_fsms: bool,
+        disable_slow_fsms: bool,
         ctx: &ir::Context,
         idx: ir::CompIdx,
         bind: &mut Binding,
@@ -223,7 +223,7 @@ impl Compile {
             ctx,
             idx,
             bind,
-            enable_slow_fsms,
+            disable_slow_fsms,
             name_gen,
             builder,
             lib,
@@ -294,7 +294,7 @@ impl Compile {
     /// Compiles filament into calyx
     pub fn compile(
         ctx: ir::Context,
-        enable_slow_fsms: bool,
+        disable_slow_fsms: bool,
         debug: bool,
     ) -> calyx::Context {
         // Creates a map between the file name and the external components defined in that file
@@ -315,7 +315,7 @@ impl Compile {
         // Compile the components in post-order.
         po.apply_pre_order(|ctx, idx| {
             let comp = Compile::component(
-                enable_slow_fsms,
+                disable_slow_fsms,
                 ctx,
                 idx,
                 &mut bindings,

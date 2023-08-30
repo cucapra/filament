@@ -21,9 +21,9 @@ pub enum FsmType {
 impl FsmType {
     /// Generates an FsmType based on the default heuristic on the number of states and the delay (II).
     /// If enable_slow_fsms is false, then only simple fsms are generated.
-    pub fn new(states: u64, delay: u64, enable_slow_fsms: bool) -> Self {
+    pub fn new(states: u64, delay: u64, disable_slow_fsms: bool) -> Self {
         // TODO(UnsignedByte): Find a better metric to decide which type of fsm to generate.
-        if enable_slow_fsms && delay > 1 {
+        if !disable_slow_fsms && delay > 1 {
             FsmType::CounterChain(states, delay)
         } else {
             FsmType::Simple(states)
@@ -247,6 +247,7 @@ impl FsmBind {
 
                 // Constant signal
                 structure!(builder;
+                    let signal_off = constant(0, 1);
                     let signal_on = constant(1, 1);
                     let one = constant(1, bitwidth);
                     let zero = constant(0, bitwidth);
@@ -265,15 +266,18 @@ impl FsmBind {
                     guard!(state["out"]).eq(guard!(final_state["out"]));
 
                 // check if we should increment the counter.
-                // go || state != 0
+                // (go || state != 0) && !rst_check
                 let go_check = guard!(this["go"])
-                    .or(guard!(state["out"]).eq(guard!(zero["out"])).not());
+                    .or(guard!(state["out"]).eq(guard!(zero["out"])).not())
+                    .and(rst_check.clone().not());
 
                 let enable_check = rst_check.clone().or(go_check.clone());
 
                 // go && state == 0
                 let zero_check = guard!(this["go"])
                     .and(guard!(state["out"]).eq(guard!(zero["out"])));
+
+                let not_rst = rst_check.clone().not();
 
                 // add base assignments
                 builder.component.continuous_assignments.extend(
@@ -294,6 +298,7 @@ impl FsmBind {
                         // done <= _{n-1};
                         // unused at the moment but useful if we want to chain FSMs.
                         this["done"] = ? done["out"];
+                        done["in"] = not_rst ? signal_off["out"];
                         done["in"] = rst_check ? signal_on["out"];
                         done["write_en"] = ? signal_on["out"];
                     ),
