@@ -1,12 +1,9 @@
 use super::{
     build_ctx::{Binding, BuildCtx},
     max_states,
-    utils::{interface_name, port_name, INTERFACE_PORTS},
+    utils::{NameGenerator, INTERFACE_PORTS},
 };
-use crate::{
-    ir::{self, Ctx, Traversal},
-    ir_passes::lower::utils::{comp_name, expr_width, param_name},
-};
+use crate::ir::{self, Ctx, Traversal};
 use calyx_frontend as frontend;
 use calyx_ir as calyx;
 use calyx_utils::CalyxResult;
@@ -25,7 +22,7 @@ impl Compile {
         comp: &ir::Component,
         port: ir::PortIdx,
         width_transform: WT, // Function thattransforms an [ir::ExprIdx] into a [CW] type
-        debug: bool,
+        name_gen: &NameGenerator,
     ) -> calyx::PortDef<CW>
     where
         WT: Fn(ir::ExprIdx, &ir::Component) -> CW,
@@ -41,7 +38,7 @@ impl Compile {
         attributes.insert(calyx::BoolAttr::Data, 1);
 
         calyx::PortDef {
-            name: port_name(port, ctx, comp, debug).into(),
+            name: name_gen.port_name(port, ctx, comp).into(),
             width: width_transform(comp.get(port).width, comp),
             direction: match dir.reverse() {
                 ir::Direction::In => calyx::Direction::Input,
@@ -57,7 +54,7 @@ impl Compile {
         comp: &ir::Component,
         width_from_u64: WFU, // Function that returns a CW type from a u64
         width_transform: WT, // Function that transforms an [ir::ExprIdx] into a [CW] type
-        debug: bool,
+        name_gen: &NameGenerator,
     ) -> Vec<calyx::PortDef<CW>>
     where
         WFU: Fn(u64) -> CW,
@@ -69,7 +66,7 @@ impl Compile {
             .idx_iter()
             .filter(|idx| comp.get(*idx).is_sig())
             .map(|idx| {
-                Compile::port_def(ctx, comp, idx, &width_transform, debug)
+                Compile::port_def(ctx, comp, idx, &width_transform, name_gen)
             })
             .chain(
                 // adds unannotated ports to the list of ports
@@ -86,7 +83,7 @@ impl Compile {
                 // adds interface ports to the list of ports
                 comp.events()
                     .idx_iter()
-                    .filter_map(|idx| interface_name(idx, comp, debug))
+                    .filter_map(|idx| name_gen.interface_name(idx, comp))
                     .map(|name| calyx::PortDef {
                         name: name.into(),
                         width: width_from_u64(1),
@@ -149,7 +146,7 @@ impl Compile {
     fn primitive(
         ctx: &ir::Context,
         idx: ir::CompIdx,
-        debug: bool,
+        name_gen: &NameGenerator,
     ) -> calyx::Primitive {
         let comp = ctx.get(idx);
 
@@ -159,21 +156,21 @@ impl Compile {
         );
 
         calyx::Primitive {
-            name: comp_name(idx, ctx).into(),
+            name: name_gen.comp_name(idx, ctx).into(),
             params: comp
                 .params()
                 .iter()
                 .filter(|(_, p)| ir::ParamOwner::Sig == p.owner)
-                .map(|(idx, _)| param_name(idx, comp, debug).into())
+                .map(|(idx, _)| name_gen.param_name(idx, comp).into())
                 .collect(),
             signature: Compile::ports(
                 ctx,
                 comp,
                 |value| calyx::Width::Const { value },
                 |idx: ir::ExprIdx, comp: &ir::Component| {
-                    expr_width(idx, comp, debug)
+                    name_gen.expr_width(idx, comp)
                 },
-                debug,
+                name_gen,
             ),
             attributes: calyx::Attributes::default(),
             is_comb: false,
@@ -189,7 +186,7 @@ impl Compile {
         idx: ir::CompIdx,
         bind: &mut Binding,
         lib: &calyx::LibrarySignatures,
-        debug: bool,
+        name_gen: &NameGenerator,
     ) -> calyx::Component {
         log::debug!("Compiling component {idx}");
         let comp = ctx.get(idx);
@@ -204,10 +201,10 @@ impl Compile {
             comp,
             identity,
             |e, comp| e.concrete(comp),
-            debug,
+            name_gen,
         );
         let mut component = calyx::Component::new(
-            comp_name(idx, ctx),
+            name_gen.comp_name(idx, ctx),
             ports,
             false,
             false,
@@ -227,7 +224,7 @@ impl Compile {
             idx,
             bind,
             enable_slow_fsms,
-            debug,
+            name_gen,
             builder,
             lib,
         );
@@ -272,7 +269,7 @@ impl Compile {
     fn init(
         ctx: &ir::Context,
         externs: Vec<(&String, Vec<ir::CompIdx>)>,
-        debug: bool,
+        name_gen: &NameGenerator,
     ) -> CalyxResult<calyx::Context> {
         let mut ws = frontend::Workspace::from_compile_lib()?;
         // Add all primitives
@@ -280,7 +277,7 @@ impl Compile {
             for prim in prims {
                 ws.lib.add_extern_primitive(
                     PathBuf::from(file),
-                    Compile::primitive(ctx, prim, debug),
+                    Compile::primitive(ctx, prim, name_gen),
                 )
             }
         }
@@ -304,7 +301,9 @@ impl Compile {
         let externals =
             ctx.externals.iter().map(|(k, v)| (k, v.clone())).collect();
 
-        let mut calyx_ctx = Compile::init(&ctx, externals, debug)
+        let name_gen = NameGenerator::new(debug);
+
+        let mut calyx_ctx = Compile::init(&ctx, externals, &name_gen)
             .unwrap_or_else(|e| {
                 panic!("Error initializing calyx context: {:?}", e);
             });
@@ -321,7 +320,7 @@ impl Compile {
                 idx,
                 &mut bindings,
                 &calyx_ctx.lib,
-                debug,
+                &name_gen,
             );
             bindings.insert(idx, Rc::clone(&comp.signature));
             calyx_ctx.components.push(comp);
