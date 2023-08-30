@@ -1,6 +1,8 @@
 // Tests the guards of an fsm.
 
-comp test2[#DELAY]<G: #DELAY>(
+// Tests all the guards of a counter fsm with #DELAY states.
+comp counter_test[#DELAY]<G: #DELAY>(
+    go: interface[G],
     in: [G, G+#DELAY] 32,
 ) -> (
     out[#DELAY]: for<#i> [G+#i, G+#i+1] 32
@@ -10,19 +12,23 @@ comp test2[#DELAY]<G: #DELAY>(
     }
 }
 
-comp test[#DELAY, #NUM]<G: #DELAY>(
+// Tests every guard in a counter chain with #DELAY states per counter and #NUM counters.
+comp counter_chain_test[#DELAY, #NUM]<G: #DELAY>(
+    go: interface[G],
     in[#NUM]: for<#j> [G+#j*#DELAY, G+#j*#DELAY+#DELAY] 32
 ) -> (
     out[#NUM*#DELAY]: for<#i> [G+#i, G+#i+1] 32
 ) where #DELAY > 0, #NUM > 0 {
+    C := new counter_test[#DELAY];
     for #ii in 0..#NUM {
         let #BASE = #ii*#DELAY;
-        con := new test2[#DELAY]<G+#BASE>(in{#ii});
+        con := C<G+#BASE>(in{#ii});
         out{#BASE..#BASE+#DELAY} = con.out{0..#DELAY};
     }
 }
 
 comp main<G: 9>(
+    go: interface[G],
     in: [G, G+9] 32,
 ) -> (
     out0: [G, G+1] 32,
@@ -40,7 +46,7 @@ comp main<G: 9>(
     inb{1} = in;
     inb{2} = in;
 
-    tester := new test[3, 3]<G>(inb{0..3});
+    tester := new counter_chain_test[3, 3]<G>(inb{0..3});
 
     out0 = tester.out{0};
     out1 = tester.out{1};
