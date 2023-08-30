@@ -97,4 +97,8 @@ pub struct Opts {
     /// enable generation of slow FSMs in the backend
     #[argh(switch, long = "enable-slow-fsms")]
     pub enable_slow_fsms: bool,
+
+    /// preserves original port names during compilation.
+    #[argh(switch, long = "preserve-names")]
+    pub preserve_names: bool,
 }
