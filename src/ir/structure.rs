@@ -1,6 +1,6 @@
 use super::{
-    utils::Foreign, Bind, Component, Ctx, Expr, ExprIdx, Foldable, InfoIdx,
-    InvIdx, ParamIdx, PortIdx, Subst, TimeIdx, TimeSub,
+    utils::Foreign, AddCtx, Bind, Component, Ctx, Expr, ExprIdx, Foldable,
+    InfoIdx, InvIdx, ParamIdx, PortIdx, Subst, TimeIdx, TimeSub,
 };
 use crate::ast::Op;
 use std::fmt;
@@ -211,7 +211,7 @@ pub struct Access {
 impl Access {
     /// Construct an access on a simple port (i.e. not a bundle)
     /// The access only indexes into the first element of the port.
-    pub fn port(port: PortIdx, ctx: &mut impl Ctx<Expr>) -> Self {
+    pub fn port(port: PortIdx, ctx: &mut impl AddCtx<Expr>) -> Self {
         let zero = ctx.add(Expr::Concrete(0));
         let one = ctx.add(Expr::Concrete(1));
         Self {

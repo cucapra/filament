@@ -1,4 +1,6 @@
-use super::{Cmp, CmpOp, Component, Ctx, ExprIdx, ParamIdx, Prop, PropIdx};
+use super::{
+    AddCtx, Cmp, CmpOp, Component, Ctx, ExprIdx, ParamIdx, Prop, PropIdx,
+};
 use crate::ast;
 use std::fmt::Display;
 
@@ -39,8 +41,8 @@ impl ExprIdx {
     #[inline]
     /// Attempts to convert this expression into a concrete value.
     /// If the coercion should panic on failure, use [Self::concrete] instead.
-    pub fn as_concrete(&self, comp: &Component) -> Option<u64> {
-        if let Expr::Concrete(c) = comp.get(*self) {
+    pub fn as_concrete(&self, ctx: &impl Ctx<Expr>) -> Option<u64> {
+        if let Expr::Concrete(c) = ctx.get(*self) {
             Some(*c)
         } else {
             None
@@ -60,7 +62,7 @@ impl ExprIdx {
     /// Returns true if this expression is a constant.
     /// Note that this process *does not* automatically reduce the expression.
     /// For example, `1 + 1` is not going to be reduced to `2`.
-    pub fn is_const(&self, ctx: &Component, n: u64) -> bool {
+    pub fn is_const(&self, ctx: &impl Ctx<Expr>, n: u64) -> bool {
         self.as_concrete(ctx).map(|c| c == n).unwrap_or(false)
     }
 
@@ -74,7 +76,7 @@ impl ExprIdx {
     }
 
     /// Adds two expressions together.
-    pub fn add(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
+    pub fn add(self, other: ExprIdx, ctx: &mut impl AddCtx<Expr>) -> Self {
         ctx.add(Expr::Bin {
             op: ast::Op::Add,
             lhs: self,
@@ -82,7 +84,7 @@ impl ExprIdx {
         })
     }
 
-    pub fn mul(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
+    pub fn mul(self, other: ExprIdx, ctx: &mut impl AddCtx<Expr>) -> Self {
         ctx.add(Expr::Bin {
             op: ast::Op::Mul,
             lhs: self,
@@ -90,7 +92,7 @@ impl ExprIdx {
         })
     }
 
-    pub fn sub(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
+    pub fn sub(self, other: ExprIdx, ctx: &mut impl AddCtx<Expr>) -> Self {
         ctx.add(Expr::Bin {
             op: ast::Op::Sub,
             lhs: self,
@@ -98,7 +100,7 @@ impl ExprIdx {
         })
     }
 
-    pub fn div(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
+    pub fn div(self, other: ExprIdx, ctx: &mut impl AddCtx<Expr>) -> Self {
         ctx.add(Expr::Bin {
             op: ast::Op::Div,
             lhs: self,
@@ -106,7 +108,7 @@ impl ExprIdx {
         })
     }
 
-    pub fn rem(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
+    pub fn rem(self, other: ExprIdx, ctx: &mut impl AddCtx<Expr>) -> Self {
         ctx.add(Expr::Bin {
             op: ast::Op::Mod,
             lhs: self,
@@ -114,14 +116,14 @@ impl ExprIdx {
         })
     }
 
-    pub fn pow2(self, ctx: &mut impl Ctx<Expr>) -> Self {
+    pub fn pow2(self, ctx: &mut impl AddCtx<Expr>) -> Self {
         ctx.add(Expr::Fn {
             op: ast::UnFn::Pow2,
             args: vec![self],
         })
     }
 
-    pub fn log2(self, ctx: &mut impl Ctx<Expr>) -> Self {
+    pub fn log2(self, ctx: &mut impl AddCtx<Expr>) -> Self {
         ctx.add(Expr::Fn {
             op: ast::UnFn::Log2,
             args: vec![self],
@@ -129,7 +131,10 @@ impl ExprIdx {
     }
 
     /// The proposition `self > other`
-    pub fn gt(&self, other: ExprIdx, ctx: &mut Component) -> PropIdx {
+    pub fn gt<C>(&self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: AddCtx<Prop> + Ctx<Expr>,
+    {
         if let (Some(l), Some(r)) =
             (self.as_concrete(ctx), other.as_concrete(ctx))
         {
@@ -147,7 +152,10 @@ impl ExprIdx {
         }
     }
 
-    pub fn gte(&self, other: ExprIdx, ctx: &mut Component) -> PropIdx {
+    pub fn gte<C>(&self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: AddCtx<Prop> + Ctx<Expr>,
+    {
         if let (Some(l), Some(r)) =
             (self.as_concrete(ctx), other.as_concrete(ctx))
         {
@@ -165,7 +173,10 @@ impl ExprIdx {
         }
     }
 
-    pub fn equal(&self, other: ExprIdx, ctx: &mut Component) -> PropIdx {
+    pub fn equal<C>(&self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: AddCtx<Prop> + Ctx<Expr>,
+    {
         if let (Some(l), Some(r)) =
             (self.as_concrete(ctx), other.as_concrete(ctx))
         {
@@ -185,11 +196,17 @@ impl ExprIdx {
         }
     }
 
-    pub fn lt(self, other: ExprIdx, ctx: &mut Component) -> PropIdx {
+    pub fn lt<C>(self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: AddCtx<Prop> + Ctx<Expr>,
+    {
         other.gt(self, ctx)
     }
 
-    pub fn lte(self, other: ExprIdx, ctx: &mut Component) -> PropIdx {
+    pub fn lte<C>(self, other: ExprIdx, ctx: &mut C) -> PropIdx
+    where
+        C: AddCtx<Prop> + Ctx<Expr>,
+    {
         other.gte(self, ctx)
     }
 }

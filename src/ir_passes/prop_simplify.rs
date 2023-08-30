@@ -1,5 +1,5 @@
 use crate::{
-    ir::{self, Ctx},
+    ir::{self, AddCtx, Ctx},
     ir_visitor::{Action, Visitor, VisitorData},
 };
 use linked_hash_set::LinkedHashSet;
@@ -62,10 +62,13 @@ impl Simplify {
         }
     }
 
-    fn prop_from_conjuncts(
+    fn prop_from_conjuncts<C>(
         conj: LinkedHashSet<ir::PropIdx>,
-        ctx: &mut impl ir::Ctx<ir::Prop>,
-    ) -> ir::PropIdx {
+        ctx: &mut C,
+    ) -> ir::PropIdx
+    where
+        C: Ctx<ir::Prop> + AddCtx<ir::Prop>,
+    {
         // Negative atoms we've already seen
         let mut neg = LinkedHashSet::new();
         let mut acc = ctx.add(ir::Prop::True);
@@ -87,10 +90,13 @@ impl Simplify {
         acc
     }
 
-    fn prop_from_disjuncts(
+    fn prop_from_disjuncts<C>(
         disj: LinkedHashSet<ir::PropIdx>,
-        ctx: &mut impl ir::Ctx<ir::Prop>,
-    ) -> ir::PropIdx {
+        ctx: &mut C,
+    ) -> ir::PropIdx
+    where
+        C: Ctx<ir::Prop> + AddCtx<ir::Prop>,
+    {
         // Negative atoms we've already seen
         let mut neg = LinkedHashSet::new();
         let mut acc = ctx.add(ir::Prop::False);

@@ -1,6 +1,6 @@
 use super::{
-    CmpOp, Component, Ctx, EventIdx, Expr, ExprIdx, Foldable, ParamIdx, Prop,
-    PropIdx, TimeIdx,
+    AddCtx, CmpOp, Component, Ctx, EventIdx, Expr, ExprIdx, Foldable, ParamIdx,
+    Prop, PropIdx, TimeIdx,
 };
 use std::fmt::{self, Display};
 
@@ -21,7 +21,7 @@ impl TimeIdx {
     /// Construct a [TimeSub] by subtracting two time expressions
     pub fn sub<C>(self, other: TimeIdx, ctx: &mut C) -> TimeSub
     where
-        C: Ctx<Time> + Ctx<Expr>,
+        C: Ctx<Time> + AddCtx<Expr>,
     {
         let l = ctx.get(self);
         let r = ctx.get(other);
@@ -39,28 +39,28 @@ impl TimeIdx {
 
     pub fn lte<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
     where
-        C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,
+        C: AddCtx<Expr> + AddCtx<Prop>,
     {
         ctx.add(Prop::TimeCmp(CmpOp::lte(self, other)))
     }
 
     pub fn lt<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
     where
-        C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,
+        C: AddCtx<Expr> + AddCtx<Prop>,
     {
         ctx.add(Prop::TimeCmp(CmpOp::lt(self, other)))
     }
 
     pub fn gt<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
     where
-        C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,
+        C: AddCtx<Expr> + AddCtx<Prop>,
     {
         ctx.add(Prop::TimeCmp(CmpOp::gt(self, other)))
     }
 
     pub fn gte<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
     where
-        C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,
+        C: AddCtx<Expr> + AddCtx<Prop>,
     {
         ctx.add(Prop::TimeCmp(CmpOp::gte(self, other)))
     }
