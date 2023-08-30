@@ -19,7 +19,7 @@ pub use context::Context;
 pub use control::{
     Command, Connect, EventBind, If, Instance, Invoke, Let, Loop,
 };
-pub use ctx::{Ctx, MutCtx};
+pub use ctx::{AddCtx, Ctx, MutCtx};
 pub use expr::Expr;
 pub use fact::{Cmp, CmpOp, Fact, Prop};
 pub use from_ast::astconv::transform;

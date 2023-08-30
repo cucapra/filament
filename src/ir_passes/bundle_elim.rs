@@ -1,7 +1,7 @@
 use crate::{
     cmdline,
     ir::{
-        Access, Bind, Command, Component, Connect, Context, Ctx,
+        Access, AddCtx, Bind, Command, Component, Connect, Context, Ctx,
         DenseIndexInfo, Expr, Foreign, Info, InvIdx, Invoke, Liveness, MutCtx,
         Port, PortIdx, PortOwner, Printer, Range, Subst, Time,
     },

@@ -1,6 +1,6 @@
 use super::{
-    CmpOp, Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Prop, PropIdx,
-    Time, TimeIdx,
+    AddCtx, CmpOp, Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Prop,
+    PropIdx, Time, TimeIdx,
 };
 
 pub struct Bind<K: Eq, V>(Vec<(K, V)>);

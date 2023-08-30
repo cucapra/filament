@@ -1,4 +1,4 @@
-use super::{idxs::PropIdx, Ctx, ExprIdx, InfoIdx, TimeIdx, TimeSub};
+use super::{idxs::PropIdx, AddCtx, Ctx, ExprIdx, InfoIdx, TimeIdx, TimeSub};
 use std::fmt::{self, Display};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -136,21 +136,25 @@ impl PropIdx {
     }
 
     /// Negation of a proposition
-    pub fn not(self, ctx: &mut impl Ctx<Prop>) -> PropIdx {
+    pub fn not(self, ctx: &mut impl AddCtx<Prop>) -> PropIdx {
         ctx.add(Prop::Not(self))
     }
 
     /// Conjunction of two propositions
-    pub fn and(self, other: PropIdx, ctx: &mut impl Ctx<Prop>) -> PropIdx {
+    pub fn and(self, other: PropIdx, ctx: &mut impl AddCtx<Prop>) -> PropIdx {
         ctx.add(Prop::And(self, other))
     }
 
     /// Disjunction of two propositions
-    pub fn or(self, other: PropIdx, ctx: &mut impl Ctx<Prop>) -> PropIdx {
+    pub fn or(self, other: PropIdx, ctx: &mut impl AddCtx<Prop>) -> PropIdx {
         ctx.add(Prop::Or(self, other))
     }
 
-    pub fn implies(self, cons: PropIdx, ctx: &mut impl Ctx<Prop>) -> PropIdx {
+    pub fn implies(
+        self,
+        cons: PropIdx,
+        ctx: &mut impl AddCtx<Prop>,
+    ) -> PropIdx {
         ctx.add(Prop::Implies(self, cons))
     }
 }
