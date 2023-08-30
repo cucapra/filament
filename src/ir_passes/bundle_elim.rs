@@ -44,7 +44,10 @@ impl BundleElim {
     fn port(&self, pidx: PortIdx, comp: &mut Component) -> Vec<PortIdx> {
         let one = comp.add(Expr::Concrete(1));
         let Port {
-            owner, width, live, ..
+            owner,
+            width,
+            live,
+            info,
         } = comp.get(pidx).clone();
 
         let Liveness { idx, len, range } = live;
@@ -65,8 +68,8 @@ impl BundleElim {
             return vec![pidx];
         }
 
-        // creates an empty info struct for these new ports
-        let info = comp.add(Info::empty());
+        // creates the info to be cloned later.
+        let info = comp.get(info).clone();
 
         // create a single port for each element in the bundle.
         let ports = (0..len)
@@ -116,11 +119,13 @@ impl BundleElim {
                     PortOwner::Local => PortOwner::Local,
                 };
 
+                let info = comp.add(info.clone());
+
                 // adds the new port to the component and return its index
                 comp.add(Port {
                     live,
                     owner,
-                    info,
+                    info, // duplicate the info
                     width,
                 })
             })
