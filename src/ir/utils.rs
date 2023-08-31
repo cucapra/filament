@@ -9,6 +9,7 @@ use std::{
 };
 use topological_sort::TopologicalSort;
 
+#[derive(Clone)]
 /// An indexed storage for an interned type. Keeps a HashMap to provide faster reverse mapping
 /// from the value to the index.
 /// Useful for types that are added continuously throughout the compiler's execution.
@@ -119,6 +120,7 @@ where
     }
 }
 
+#[derive(Clone)]
 /// An indexed store for a type.
 /// Unlike [Interned], this data structure does not deduplicate values and supports mutation of values and removal of indices.
 pub struct IndexStore<T, I = utils::Idx<T>>

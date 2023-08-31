@@ -30,7 +30,7 @@ impl InterfaceSrc {
     }
 }
 
-#[derive(Default, Ctx)]
+#[derive(Default, Ctx, Clone)]
 /// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
     #[ctx(Expr)]

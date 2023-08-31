@@ -30,7 +30,9 @@ impl Compile {
         let raw_port = comp.get(port);
 
         let ir::PortOwner::Sig { dir, .. } = &raw_port.owner else {
-            unreachable!("Attempting to compile non-signature port as port definition.")
+            unreachable!(
+                "Attempting to compile non-signature port as port definition."
+            )
         };
 
         // adds the `@data` attribute to the port
