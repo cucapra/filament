@@ -617,10 +617,7 @@ where
     C: Ctx<T>,
 {
     fn clone(&self) -> Self {
-        Self {
-            key: self.key,
-            owner: self.owner,
-        }
+        *self
     }
 }
 

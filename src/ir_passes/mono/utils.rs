@@ -34,7 +34,7 @@ impl<T> std::hash::Hash for Base<T> {
 }
 impl<T> Clone for Base<T> {
     fn clone(&self) -> Self {
-        Self { idx: self.idx }
+        *self
     }
 }
 impl<T> PartialOrd for Base<T> {
@@ -97,7 +97,7 @@ impl<T> std::hash::Hash for Underlying<T> {
 
 impl<T> Clone for Underlying<T> {
     fn clone(&self) -> Self {
-        Self { idx: self.idx }
+        *self
     }
 }
 impl<T> Copy for Underlying<T> {}

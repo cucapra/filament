@@ -92,8 +92,8 @@ impl Visitor for BuildDomination {
         // Insert instances and then invocations to the start of the scope.
         *cmds = plets
             .into_iter()
-            .chain(inst.into_iter())
-            .chain(invs.into_iter())
+            .chain(inst)
+            .chain(invs)
             .chain(cmds.drain(..))
             .collect();
     }

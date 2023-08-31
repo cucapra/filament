@@ -1,12 +1,12 @@
 comp Foo[#N]<G:1>(
-    @[G, G+1] in: #B
+    in: [G, G+1] #B
 ) -> () with {
     let #B = 2*#N;
 } {
 }
 
 comp main<G:1>(
-    @[G,G+1] in: 10
+    in: [G, G+1] 10
 ) -> (
 ) {
     F := new Foo[5];

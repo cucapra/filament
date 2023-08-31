@@ -413,7 +413,7 @@ impl MonoSig {
         let mono_owner = ir::ParamOwner::Bundle(port.get());
 
         if let Some(new_param_idx) = self.bundle_param_map.get(&port) {
-            let mut new_param = self.base.get_mut(new_param_idx.get());
+            let new_param = self.base.get_mut(new_param_idx.get());
 
             new_param.owner = mono_owner;
             new_param.info = mono_info;
@@ -478,7 +478,7 @@ impl MonoSig {
             .collect_vec();
 
         // Build the new invoke, add it to self.base
-        let mut mono_inv = self.base.get_mut(mono_inv_idx.get());
+        let mono_inv = self.base.get_mut(mono_inv_idx.get());
 
         mono_inv.inst = base_inst.get();
         mono_inv.ports = mono_ports;

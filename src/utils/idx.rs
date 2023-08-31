@@ -48,10 +48,7 @@ impl<T> std::hash::Hash for Idx<T> {
 
 impl<T> Clone for Idx<T> {
     fn clone(&self) -> Self {
-        Self {
-            idx: self.idx,
-            _phantom: PhantomData,
-        }
+        *self
     }
 }
 
