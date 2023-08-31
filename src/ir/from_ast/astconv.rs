@@ -480,8 +480,11 @@ impl<'prog> BuildCtx<'prog> {
     }
 
     fn sig(&mut self, sig: &ast::Signature) -> BuildRes<Vec<ir::Command>> {
-        for param in sig.params.iter().chain(&sig.sig_bindings) {
+        for param in &sig.params {
             self.param(param.inner(), ir::ParamOwner::Sig);
+        }
+        for param in &sig.sig_bindings {
+            self.param(param.inner(), ir::ParamOwner::SigBinding);
         }
         let mut interface_signals: HashMap<_, _> = sig
             .interface_signals
