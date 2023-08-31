@@ -2,7 +2,7 @@ use super::{
     utils::{Base, BaseComp, Underlying, UnderlyingComp, UnderlyingCtx},
     Monomorphize,
 };
-use crate::ir::{self, Ctx, DenseIndexInfo, Foreign, MutCtx};
+use crate::ir::{self, AddCtx, Ctx, DenseIndexInfo, Foreign, MutCtx};
 use itertools::Itertools;
 use std::collections::HashMap;
 

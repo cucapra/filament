@@ -1,5 +1,5 @@
 use crate::{
-    ir::{self, Ctx},
+    ir::{self, AddCtx},
     ir_visitor::{Action, Visitor, VisitorData},
 };
 

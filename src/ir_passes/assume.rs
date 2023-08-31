@@ -1,6 +1,6 @@
 use crate::{
     ast,
-    ir::{self, Ctx, ExprIdx, PropIdx},
+    ir::{self, AddCtx, Ctx, ExprIdx, PropIdx},
     ir_visitor::{Action, Visitor, VisitorData},
 };
 

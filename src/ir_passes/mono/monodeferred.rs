@@ -3,7 +3,7 @@ use super::{
     utils::{Base, Underlying, UnderlyingComp, UnderlyingCtx},
     Monomorphize,
 };
-use crate::ir::{self, Ctx};
+use crate::ir::{self, AddCtx, Ctx};
 use itertools::Itertools;
 
 pub(super) struct MonoDeferred<'a, 'pass: 'a> {
