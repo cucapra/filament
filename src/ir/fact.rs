@@ -1,8 +1,5 @@
+use super::{idxs::PropIdx, AddCtx, Ctx, ExprIdx, InfoIdx, TimeIdx, TimeSub};
 use crate::construct_binop;
-
-use super::{
-    idxs::PropIdx, Ctx, Expr, ExprIdx, InfoIdx, Time, TimeIdx, TimeSub,
-};
 use std::fmt::{self, Display};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -167,11 +164,11 @@ macro_rules! construct_props {
 
 }
 // creates the expression comparison constructors for propositions
-construct_props!(<impl Ctx<Expr> + Ctx<Prop>>(Prop::cmp, ExprIdx));
+construct_props!(<impl AddCtx<Prop>>(Prop::cmp, ExprIdx));
 // creates the time comparison constructors for propositions
-construct_props!(<impl Ctx<Time> + Ctx<Expr> + Ctx<Prop>>(Prop::timecmp, TimeIdx));
+construct_props!(<impl AddCtx<Prop>>(Prop::timecmp, TimeIdx));
 // creates the timesub comparison constructors for propositions
-construct_props!(<impl Ctx<Prop>>(Prop::timesubcmp, TimeSub));
+construct_props!(<impl AddCtx<Prop>>(Prop::timesubcmp, TimeSub));
 
 /// Constructors for propositions
 impl PropIdx {
@@ -200,21 +197,25 @@ impl PropIdx {
     }
 
     /// Negation of a proposition
-    pub fn not(self, ctx: &mut impl Ctx<Prop>) -> PropIdx {
+    pub fn not(self, ctx: &mut impl AddCtx<Prop>) -> PropIdx {
         ctx.add(Prop::Not(self))
     }
 
     /// Conjunction of two propositions
-    pub fn and(self, other: PropIdx, ctx: &mut impl Ctx<Prop>) -> PropIdx {
+    pub fn and(self, other: PropIdx, ctx: &mut impl AddCtx<Prop>) -> PropIdx {
         ctx.add(Prop::And(self, other))
     }
 
     /// Disjunction of two propositions
-    pub fn or(self, other: PropIdx, ctx: &mut impl Ctx<Prop>) -> PropIdx {
+    pub fn or(self, other: PropIdx, ctx: &mut impl AddCtx<Prop>) -> PropIdx {
         ctx.add(Prop::Or(self, other))
     }
 
-    pub fn implies(self, cons: PropIdx, ctx: &mut impl Ctx<Prop>) -> PropIdx {
+    pub fn implies(
+        self,
+        cons: PropIdx,
+        ctx: &mut impl AddCtx<Prop>,
+    ) -> PropIdx {
         ctx.add(Prop::Implies(self, cons))
     }
 }

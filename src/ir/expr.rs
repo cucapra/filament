@@ -1,4 +1,4 @@
-use super::{Component, Ctx, ExprIdx, ParamIdx};
+use super::{AddCtx, Component, Ctx, ExprIdx, ParamIdx};
 use crate::{ast, construct_binop};
 use std::fmt::Display;
 
@@ -39,8 +39,8 @@ impl ExprIdx {
     #[inline]
     /// Attempts to convert this expression into a concrete value.
     /// If the coercion should panic on failure, use [Self::concrete] instead.
-    pub fn as_concrete(self, comp: &Component) -> Option<u64> {
-        if let Expr::Concrete(c) = comp.get(self) {
+    pub fn as_concrete(&self, ctx: &impl Ctx<Expr>) -> Option<u64> {
+        if let Expr::Concrete(c) = ctx.get(*self) {
             Some(*c)
         } else {
             None
@@ -60,7 +60,7 @@ impl ExprIdx {
     /// Returns true if this expression is a constant.
     /// Note that this process *does not* automatically reduce the expression.
     /// For example, `1 + 1` is not going to be reduced to `2`.
-    pub fn is_const(self, ctx: &Component, n: u64) -> bool {
+    pub fn is_const(&self, ctx: &impl Ctx<Expr>, n: u64) -> bool {
         self.as_concrete(ctx).map(|c| c == n).unwrap_or(false)
     }
 
@@ -73,14 +73,14 @@ impl ExprIdx {
         }
     }
 
-    pub fn pow2(self, ctx: &mut impl Ctx<Expr>) -> Self {
+    pub fn pow2(self, ctx: &mut impl AddCtx<Expr>) -> Self {
         ctx.add(Expr::Fn {
             op: ast::UnFn::Pow2,
             args: vec![self],
         })
     }
 
-    pub fn log2(self, ctx: &mut impl Ctx<Expr>) -> Self {
+    pub fn log2(self, ctx: &mut impl AddCtx<Expr>) -> Self {
         ctx.add(Expr::Fn {
             op: ast::UnFn::Log2,
             args: vec![self],
@@ -95,7 +95,7 @@ impl ExprIdx {
 
 // creates the binary operator constructors for all [ast::Op] variants.
 construct_binop!(
-    <impl Ctx<Expr>>(ExprIdx::bin, ExprIdx) => Expr;
+    <impl AddCtx<Expr>>(ExprIdx::bin, ExprIdx) => Expr;
     add = ast::Op::Add;
     sub = ast::Op::Sub;
     mul = ast::Op::Mul;

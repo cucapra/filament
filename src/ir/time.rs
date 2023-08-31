@@ -1,5 +1,6 @@
 use super::{
-    Component, Ctx, EventIdx, Expr, ExprIdx, Foldable, ParamIdx, TimeIdx,
+    AddCtx, Component, Ctx, EventIdx, Expr, ExprIdx, Foldable, ParamIdx,
+    TimeIdx,
 };
 use std::fmt::{self, Display};
 
@@ -20,7 +21,7 @@ impl TimeIdx {
     /// Construct a [TimeSub] by subtracting two time expressions
     pub fn sub<C>(self, other: TimeIdx, ctx: &mut C) -> TimeSub
     where
-        C: Ctx<Time> + Ctx<Expr>,
+        C: Ctx<Time> + AddCtx<Expr>,
     {
         let l = ctx.get(self);
         let r = ctx.get(other);

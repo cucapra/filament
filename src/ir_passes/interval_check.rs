@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::ir::{self, Ctx};
+use crate::ir::{self, AddCtx, Ctx};
 use crate::ir_visitor::{Action, Visitor, VisitorData};
 use crate::utils::GPosIdx;
 
