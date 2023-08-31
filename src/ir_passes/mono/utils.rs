@@ -1,6 +1,6 @@
 use crate::{
     ast,
-    ir::{self, Ctx, IndexStore, InterfaceSrc, Interned, MutCtx},
+    ir::{self, AddCtx, Ctx, IndexStore, InterfaceSrc, Interned, MutCtx},
     utils::{self, Idx},
 };
 
@@ -116,7 +116,12 @@ where
     fn get(&self, k: Base<T>) -> &T {
         self.0.get(k.get())
     }
+}
 
+impl<T> AddCtx<T, Base<T>> for BaseComp
+where
+    ir::Component: AddCtx<T>,
+{
     fn add(&mut self, val: T) -> Base<T> {
         Base::new(self.0.add(val))
     }
