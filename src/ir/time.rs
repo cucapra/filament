@@ -1,6 +1,6 @@
 use super::{
-    AddCtx, CmpOp, Component, Ctx, EventIdx, Expr, ExprIdx, Foldable, ParamIdx,
-    Prop, PropIdx, TimeIdx,
+    AddCtx, Component, Ctx, EventIdx, Expr, ExprIdx, Foldable, ParamIdx,
+    TimeIdx,
 };
 use std::fmt::{self, Display};
 
@@ -36,34 +36,6 @@ impl TimeIdx {
         let time = ctx.get(self);
         time.event
     }
-
-    pub fn lte<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
-    where
-        C: AddCtx<Expr> + AddCtx<Prop>,
-    {
-        ctx.add(Prop::TimeCmp(CmpOp::lte(self, other)))
-    }
-
-    pub fn lt<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
-    where
-        C: AddCtx<Expr> + AddCtx<Prop>,
-    {
-        ctx.add(Prop::TimeCmp(CmpOp::lt(self, other)))
-    }
-
-    pub fn gt<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
-    where
-        C: AddCtx<Expr> + AddCtx<Prop>,
-    {
-        ctx.add(Prop::TimeCmp(CmpOp::gt(self, other)))
-    }
-
-    pub fn gte<C>(self, other: TimeIdx, ctx: &mut C) -> PropIdx
-    where
-        C: AddCtx<Expr> + AddCtx<Prop>,
-    {
-        ctx.add(Prop::TimeCmp(CmpOp::gte(self, other)))
-    }
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -73,24 +45,6 @@ pub enum TimeSub {
     Unit(ExprIdx),
     /// Symbolic difference between two time expressions
     Sym { l: TimeIdx, r: TimeIdx },
-}
-
-impl TimeSub {
-    pub fn gt(self, other: TimeSub, ctx: &mut Component) -> PropIdx {
-        ctx.add(Prop::TimeSubCmp(CmpOp::gt(self, other)))
-    }
-
-    pub fn gte(self, other: TimeSub, ctx: &mut Component) -> PropIdx {
-        ctx.add(Prop::TimeSubCmp(CmpOp::gte(self, other)))
-    }
-
-    pub fn lt(self, other: TimeSub, ctx: &mut Component) -> PropIdx {
-        ctx.add(Prop::TimeSubCmp(CmpOp::lt(self, other)))
-    }
-
-    pub fn lte(self, other: TimeSub, ctx: &mut Component) -> PropIdx {
-        ctx.add(Prop::TimeSubCmp(CmpOp::lte(self, other)))
-    }
 }
 
 impl From<ExprIdx> for TimeSub {
