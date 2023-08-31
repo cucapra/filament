@@ -681,7 +681,7 @@ impl<T> MutCtx<T> for IndexStore<T> {
     }
 }
 
-#[macro_export(super)]
+#[macro_export]
 /// Creates a constructor function for a binary operator.
 /// Example: ```
 /// construct_binop!(
