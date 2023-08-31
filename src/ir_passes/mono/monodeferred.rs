@@ -1,6 +1,6 @@
 use super::{
     monosig::MonoSig,
-    utils::{Base, Underlying, UnderlyingComp, UnderlyingCtx},
+    utils::{Base, Underlying, UnderlyingComp},
     Monomorphize,
 };
 use crate::ir::{self, AddCtx, Ctx};

@@ -39,11 +39,7 @@ impl<'a> UnderlyingComp<'a> {
     }
 }
 
-pub trait UnderlyingCtx<T> {
-    fn get(&self, k: Underlying<T>) -> &T;
-}
-
-impl<'a, T> UnderlyingCtx<T> for UnderlyingComp<'a>
+impl<'a, T> Ctx<T, Underlying<T>> for UnderlyingComp<'a>
 where
     ir::Component: Ctx<T>,
 {
