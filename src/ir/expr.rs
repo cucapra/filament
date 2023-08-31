@@ -49,6 +49,14 @@ impl ExprIdx {
         }
     }
 
+    pub fn as_param(&self, ctx: &impl Ctx<Expr>) -> Option<ParamIdx> {
+        if let Expr::Param(pidx) = ctx.get(*self) {
+            Some(*pidx)
+        } else {
+            None
+        }
+    }
+
     #[inline]
     /// Returns the concrete value represented by this expression or errors out.
     /// If an optional value is desired, use [Self::as_concrete] instead.
