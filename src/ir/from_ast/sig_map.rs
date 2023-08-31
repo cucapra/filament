@@ -1,8 +1,15 @@
+use itertools::Itertools;
+
 use crate::{
     ast::{self, Id},
+    diagnostics,
+    errors::Error,
     ir,
+    utils::Binding,
 };
 use std::collections::HashMap;
+
+use super::BuildRes;
 
 #[derive(Clone)]
 /// The signature of component.
@@ -15,6 +22,7 @@ pub struct Sig {
     pub inputs: Vec<ir::PortIdx>,
     pub outputs: Vec<ir::PortIdx>,
     pub raw_params: Vec<ast::ParamBind>,
+    pub sig_binding: Vec<ast::ParamBind>,
     pub raw_events: Vec<ast::EventBind>,
     pub raw_inputs: Vec<ast::Loc<ast::PortDef>>,
     pub raw_outputs: Vec<ast::PortDef>,
@@ -34,12 +42,79 @@ impl Sig {
             inputs: comp.inputs().map(|(idx, _)| idx).collect(),
             outputs: comp.outputs().map(|(idx, _)| idx).collect(),
             raw_params: sig.params.iter().map(|p| p.clone().take()).collect(),
+            sig_binding: sig
+                .sig_bindings
+                .iter()
+                .map(|p| p.inner().clone())
+                .collect(),
             raw_inputs: sig.inputs().cloned().collect(),
             raw_outputs: sig.outputs().map(|p| p.clone().take()).collect(),
             raw_events: sig.events.iter().map(|e| e.clone().take()).collect(),
             param_cons: sig.param_constraints.clone(),
             event_cons: sig.event_constraints.clone(),
         }
+    }
+
+    /// Construct a param binding from this Signature's parameters and the given
+    /// arguments.
+    ///
+    /// Fills in the missing arguments with default values and any parameters
+    /// bound in the sig binding.
+    pub fn param_binding(
+        &self,
+        args: impl IntoIterator<Item = ast::Expr>,
+        comp: ast::Loc<Id>,
+        diag: &mut diagnostics::Diagnostics,
+    ) -> BuildRes<Binding<ast::Expr>> {
+        let args = args.into_iter().collect_vec();
+        let min_args = self
+            .raw_params
+            .iter()
+            .take_while(|ev| ev.default.is_none())
+            .count();
+        let arg_len = args.len();
+
+        // We don't have enough parameters. Generate error.
+        if min_args > arg_len {
+            let err = Error::malformed(
+                format!(
+                    "`{}' requires at least {min_args} parameters but {arg_len} were provided",
+                    comp.inner(),
+                ),
+            );
+            let err = err.add_note(
+                diag.add_info(format!(
+                    "`{}' requires at least {min_args} parameters but {arg_len} were provided",
+                    comp.inner()
+                ), comp.pos()));
+            diag.add_error(err);
+            return Err(std::mem::take(diag));
+        }
+
+        let mut partial_map = Binding::new(
+            self.raw_params
+                .iter()
+                .map(|pb| pb.name())
+                .zip(args.iter().cloned()),
+        );
+
+        // Skip the events that have been bound and fill in the rest with
+        // default values
+        let remaining = self
+            .raw_params
+            .iter()
+            .skip(args.len())
+            .chain(self.sig_binding.iter())
+            .map(|pb| {
+                let bind =
+                    pb.default.as_ref().unwrap().clone().resolve(&partial_map);
+                (pb.name(), bind)
+            })
+            .collect();
+
+        partial_map.extend(remaining);
+
+        Ok(partial_map)
     }
 }
 

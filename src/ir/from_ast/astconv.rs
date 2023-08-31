@@ -1,9 +1,7 @@
 //! Convert the frontend AST to the IR.
 use super::build_ctx::InvPort;
 use super::{BuildCtx, Sig, SigMap};
-use crate::ast::Id;
 use crate::diagnostics;
-use crate::errors::Error;
 use crate::ir::{
     AddCtx, Cmp, Ctx, EventIdx, ExprIdx, InterfaceSrc, MutCtx, ParamIdx,
     PortIdx, PropIdx, TimeIdx,
@@ -39,10 +37,10 @@ impl<'prog> BuildCtx<'prog> {
             bindings,
         } = inst;
         let comp = self.get_sig(component)?;
-        let binding = self.param_binding(
-            comp.raw_params.clone(),
+        let binding = comp.param_binding(
             bindings.iter().map(|e| e.inner()).cloned().collect_vec(),
             component.clone(),
+            self.diag(),
         )?;
         let inst = ir::Instance {
             comp: comp.idx,
@@ -238,15 +236,13 @@ impl<'prog> BuildCtx<'prog> {
         owner: ir::ParamOwner,
     ) -> ParamIdx {
         let info = self.comp().add(ir::Info::param(param.name(), param.pos()));
-
         let ir_param = ir::Param::new(owner, info);
-        let is_sig_param = ir_param.is_sig_owned();
-
+        let is_sig_owned = ir_param.is_sig_owned();
         let idx = self.comp().add(ir_param);
         self.add_param(param.name(), idx);
 
         // only add information if this is a signature defined parameter
-        if is_sig_param {
+        if is_sig_owned {
             // If the component is expecting interface information, add it.
             if let Some(src) = &mut self.comp().src_info {
                 src.params.insert(idx, param.name());
@@ -254,27 +250,6 @@ impl<'prog> BuildCtx<'prog> {
         }
 
         idx
-    }
-
-    fn sig_bind(
-        &mut self,
-        param: &ast::SigBind,
-        owner: ir::ParamOwner,
-    ) -> BuildRes<ParamIdx> {
-        let info = self.comp().add(ir::Info::param(param.name(), param.pos()));
-
-        let ir_param = ir::Param::new(owner, info);
-        let ir_expr = self.expr(param.value())?;
-        let idx = self.comp().add(ir_param);
-        self.comp().sig_binding.insert(idx, ir_expr);
-
-        self.add_param(param.name(), idx);
-
-        if let Some(src) = &mut self.comp().src_info {
-            src.params.insert(idx, param.name());
-        }
-
-        Ok(idx)
     }
 
     fn time(&mut self, t: ast::Time) -> BuildRes<TimeIdx> {
@@ -505,11 +480,8 @@ impl<'prog> BuildCtx<'prog> {
     }
 
     fn sig(&mut self, sig: &ast::Signature) -> BuildRes<Vec<ir::Command>> {
-        for param in &sig.params {
+        for param in sig.params.iter().chain(&sig.sig_bindings) {
             self.param(param.inner(), ir::ParamOwner::Sig);
-        }
-        for param in &sig.sig_bindings {
-            self.sig_bind(param.inner(), ir::ParamOwner::SigBinding)?;
         }
         let mut interface_signals: HashMap<_, _> = sig
             .interface_signals
@@ -631,54 +603,6 @@ impl<'prog> BuildCtx<'prog> {
 
         partial_map.extend(remaining);
         partial_map
-    }
-
-    /// Construct a param binding from this Signature's parameters and the given
-    /// arguments.
-    /// Fills in the missing arguments with default values
-    pub fn param_binding(
-        &mut self,
-        params: impl IntoIterator<Item = ast::ParamBind>,
-        args: impl IntoIterator<Item = ast::Expr>,
-        comp: ast::Loc<Id>,
-    ) -> BuildRes<Binding<ast::Expr>> {
-        let args = args.into_iter().collect_vec();
-        let params = params.into_iter().collect_vec();
-        let min_args =
-            params.iter().take_while(|ev| ev.default.is_none()).count();
-        let arg_len = args.len();
-        if min_args > arg_len {
-            let err = Error::malformed(
-                format!(
-                    "`{}' requires at least {min_args} parameters but {arg_len} were provided",
-                    comp.inner(),
-                ),
-            );
-            let err = err.add_note(
-                self.diag().add_info(format!(
-                    "`{}' requires at least {min_args} parameters but {arg_len} were provided",
-                    comp.inner()
-                ), comp.pos()));
-            self.diag().add_error(err);
-            return Err(std::mem::take(self.diag()));
-        }
-
-        let mut partial_map = Binding::new(
-            params.iter().map(|pb| pb.name()).zip(args.iter().cloned()),
-        );
-        // Skip the events that have been bound
-        let remaining = params
-            .iter()
-            .skip(args.len())
-            .map(|pb| {
-                let bind =
-                    pb.default.as_ref().unwrap().clone().resolve(&partial_map);
-                (pb.name(), bind)
-            })
-            .collect();
-
-        partial_map.extend(remaining);
-        Ok(partial_map)
     }
 
     /// This function is called during the second pass of the conversion and does the following:

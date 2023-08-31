@@ -44,36 +44,6 @@ impl EventBind {
 }
 
 #[derive(Clone)]
-pub struct SigBind {
-    param: Loc<Id>,
-    value: Loc<Expr>,
-}
-
-impl SigBind {
-    pub fn new(param: Loc<Id>, value: Loc<Expr>) -> Self {
-        Self { param, value }
-    }
-
-    pub fn name(&self) -> Id {
-        self.param.copy()
-    }
-
-    pub fn pos(&self) -> GPosIdx {
-        self.param.pos()
-    }
-
-    pub fn value(&self) -> Expr {
-        self.value.inner().clone()
-    }
-}
-
-impl std::fmt::Display for SigBind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "let #{} = {};", self.param, self.value)
-    }
-}
-
-#[derive(Clone)]
 /// A parameter bound in the signature
 pub struct ParamBind {
     param: Loc<Id>,
@@ -113,8 +83,8 @@ pub struct Signature {
     pub name: Loc<Id>,
     /// Parameters for the Signature
     pub params: Vec<Loc<ParamBind>>,
-    /// Parameters bound in the Signature
-    pub sig_bindings: Vec<Loc<SigBind>>,
+    /// Parameters bound in the signature binding. These always have a default value.
+    pub sig_bindings: Vec<Loc<ParamBind>>,
     /// Unannotated ports that are threaded through by the backend
     pub unannotated_ports: Vec<(Id, u64)>,
     /// Mapping from name of signals to the abstract variable they provide
@@ -144,7 +114,7 @@ impl Signature {
         mut outputs: Vec<Loc<PortDef>>,
         param_constraints: Vec<Loc<OrderConstraint<Expr>>>,
         event_constraints: Vec<Loc<OrderConstraint<Time>>>,
-        sig_bindings: Vec<Loc<SigBind>>,
+        sig_bindings: Vec<Loc<ParamBind>>,
     ) -> Self {
         let outputs_idx = inputs.len();
         inputs.append(&mut outputs);
