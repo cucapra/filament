@@ -90,7 +90,7 @@ pub struct Component {
     /// unannotated ports associated with this component
     pub unannotated_ports: Box<Vec<(ast::Id, u64)>>,
     /// Binding from sig-binding-defined params to exprs
-    pub sig_binding: HashMap<ParamIdx, ExprIdx>
+    pub sig_binding: HashMap<ParamIdx, ExprIdx>,
 }
 
 impl Component {

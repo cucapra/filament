@@ -296,7 +296,7 @@ impl fmt::Display for ParamOwner {
             }
             ParamOwner::Bundle(idx) => {
                 write!(f, "{idx}")
-            },
+            }
             ParamOwner::SigBinding => {
                 write!(f, "sig binding")
             }
