@@ -1,10 +1,6 @@
-use super::{expr::EvalBool, Expr, OrderConstraint};
-use crate::{
-    errors::FilamentResult,
-    utils::{self, Binding, SExp},
-};
+use super::{Expr, OrderConstraint};
+use crate::utils::Binding;
 use itertools::Itertools;
-use std::fmt::Display;
 
 /// A type representing the expression a => b
 #[derive(Clone)]
@@ -50,15 +46,6 @@ where
     }
 }
 
-impl<T> Implication<T>
-where
-    SExp: From<Implication<T>>,
-{
-    pub fn obligation<S: ToString>(self, reason: S) -> utils::Obligation {
-        utils::Obligation::new(SExp::from(self), reason.to_string())
-    }
-}
-
 impl Implication<Expr> {
     pub fn resolve_expr(self, binding: &Binding<Expr>) -> Self {
         Implication {
@@ -74,44 +61,6 @@ impl Implication<Expr> {
                 .flatten()
                 .collect_vec(),
             None => self.cons.exprs(),
-        }
-    }
-}
-
-impl EvalBool for Implication<Expr> {
-    fn resolve_bool(self, bind: &Binding<Expr>) -> FilamentResult<bool> {
-        Ok(match self.guard {
-            Some(g) => {
-                !g.resolve_bool(bind)? || self.cons.resolve_bool(bind)?
-            }
-            None => self.cons.resolve_bool(bind)?,
-        })
-    }
-}
-
-impl<T> From<Implication<T>> for SExp
-where
-    SExp: From<OrderConstraint<T>>,
-{
-    fn from(c: Implication<T>) -> Self {
-        match c.guard {
-            Some(g) => {
-                SExp(format!("(=> {} {})", SExp::from(g), SExp::from(c.cons)))
-            }
-            // no guard
-            None => SExp::from(c.cons),
-        }
-    }
-}
-
-impl<T> Display for Implication<T>
-where
-    T: Display,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.guard {
-            Some(g) => write!(f, "{} => {}", g, self.cons),
-            None => write!(f, "{}", self.cons),
         }
     }
 }

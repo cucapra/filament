@@ -1,11 +1,11 @@
 import "primitives/comb.fil";
 
 comp main<G:1>(
-  @interface[G] go: 1,
-  @[G, G+1] left:32,
-  @[G, G+1] right:32
+  go: interface[G],
+   left: [G, G+1] 32,
+   right: [G, G+1] 32
 ) -> (
-  @[G,G+1] out:32
+   out: [G,G+1] 32
 ) {
   a0 := new Add[32]<G>(left, right);
   out = a0.out;

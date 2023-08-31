@@ -1,5 +1,46 @@
 use argh::FromArgs;
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
+
+#[derive(Debug, Default)]
+/// Solver to use in the pass
+pub enum Solver {
+    #[default]
+    CVC5,
+    Z3,
+}
+
+impl FromStr for Solver {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "z3" => Ok(Solver::Z3),
+            "cvc5" => Ok(Solver::CVC5),
+            _ => {
+                Err(format!("unknown solver: {s}. Known solvers are: z3, cvc5"))
+            }
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub enum Backend {
+    #[default]
+    Verilog,
+    Calyx,
+}
+
+impl FromStr for Backend {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "calyx" => Ok(Backend::Calyx),
+            "verilog" => Ok(Backend::Verilog),
+            _ => Err(format!(
+                "unknown backend: {s}. Known backends are: calyx, verilog"
+            )),
+        }
+    }
+}
 
 #[derive(FromArgs, Debug)]
 /// The Filament pipeline verifier
@@ -35,4 +76,29 @@ pub struct Opts {
     /// set toplevel
     #[argh(option, long = "toplevel", default = "\"main\".into()")]
     pub toplevel: String,
+
+    /// skip the discharge pass (unsafe)
+    #[argh(switch, long = "unsafe-skip-discharge")]
+    pub unsafe_skip_discharge: bool,
+
+    /// backend to use (default: verilog): calyx, verilog
+    #[argh(option, long = "backend", default = "Backend::Verilog")]
+    pub backend: Backend,
+
+    // Solver specific configuration
+    /// solver to use (default: cvc5): cvc5, z3
+    #[argh(option, long = "solver", default = "Solver::CVC5")]
+    pub solver: Solver,
+
+    /// dump interactions with the solver in the given file
+    #[argh(option, long = "dump-solver-log")]
+    pub solver_replay_file: Option<String>,
+
+    /// disable generation of slow FSMs in the backend
+    #[argh(switch, long = "disable-slow-fsms")]
+    pub disable_slow_fsms: bool,
+
+    /// preserves original port names during compilation.
+    #[argh(switch, long = "preserve-names")]
+    pub preserve_names: bool,
 }

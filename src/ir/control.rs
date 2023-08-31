@@ -7,12 +7,22 @@ use super::{
 /// A flattened and minimized representation of the control flow graph.
 /// Bundle definitions and facts are removed during the process of compilation to the IR.
 pub enum Command {
+    /// Instance
     Instance(InstIdx),
+    /// Invocation
     Invoke(InvIdx),
+    /// Definition of a bundle
+    BundleDef(PortIdx),
+    /// A wire connection
     Connect(Connect),
+    /// A `for` loop
     ForLoop(Loop),
+    /// An `if` statement
     If(If),
+    /// An `assume` or `assert` fact
     Fact(Fact),
+    /// A `let`-bound parameter
+    Let(Let),
 }
 impl Command {
     pub fn is_loop(&self) -> bool {
@@ -33,6 +43,11 @@ impl From<InvIdx> for Command {
         Command::Invoke(idx)
     }
 }
+impl From<PortIdx> for Command {
+    fn from(idx: PortIdx) -> Self {
+        Command::BundleDef(idx)
+    }
+}
 impl From<Connect> for Command {
     fn from(con: Connect) -> Self {
         Command::Connect(con)
@@ -51,6 +66,11 @@ impl From<If> for Command {
 impl From<Fact> for Command {
     fn from(fact: Fact) -> Self {
         Command::Fact(fact)
+    }
+}
+impl From<Let> for Command {
+    fn from(let_: Let) -> Self {
+        Command::Let(let_)
     }
 }
 
@@ -102,6 +122,15 @@ impl InvIdx {
     pub fn inst(self, ctx: &impl Ctx<Invoke>) -> InstIdx {
         let inv = ctx.get(self);
         inv.inst
+    }
+
+    /// The times the invoke uses, along with the EventBind infos
+    pub fn times(
+        self,
+        ctx: &impl Ctx<Invoke>,
+    ) -> impl Iterator<Item = (TimeIdx, InfoIdx)> + '_ {
+        let inv = ctx.get(self);
+        inv.events.iter().map(|eb| (eb.arg, eb.info))
     }
 
     /// Get the component being invoked
@@ -158,4 +187,11 @@ impl EventBind {
             base,
         }
     }
+}
+
+/// A let-bound parameter in the program
+#[derive(Clone, PartialEq, Eq)]
+pub struct Let {
+    pub param: ParamIdx,
+    pub expr: ExprIdx,
 }

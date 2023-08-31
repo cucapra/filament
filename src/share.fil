@@ -1,0 +1,12 @@
+comp Add<G:1>(@[G, G+1] in: 32) -> () {}
+
+comp main[#W]<G:#W>(
+    @interface[G] go:1,
+    @[G, G+1] in1: 32,
+    @[G+10, G+11] in0: 32
+) -> () {
+    A := new Add in [G, G+#W];
+    for #i in 0..#W {
+        a0 := A<G+#i>(32);
+    }
+}

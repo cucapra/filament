@@ -1,14 +1,19 @@
-use super::{Component, DisplayCtx, ExprIdx, Range, TimeIdx, TimeSub};
+use super::{
+    Component, Ctx, DisplayCtx, ExprIdx, InfoIdx, Range, TimeIdx, TimeSub,
+};
 use crate::{ast, utils::GPosIdx};
 use codespan_reporting::diagnostic::Diagnostic;
 use struct_variant::struct_variant;
 
+#[derive(Clone, Eq, PartialEq)]
 /// An absence of information is still information
 pub struct Empty;
 
+#[derive(Clone, Eq, PartialEq)]
 /// Assertion information
 pub struct Assert(pub Reason);
 
+#[derive(Clone, Eq, PartialEq)]
 /// For [super::Param]
 pub struct Param {
     /// Surface-level name of the parameter
@@ -16,6 +21,7 @@ pub struct Param {
     pub bind_loc: GPosIdx,
 }
 
+#[derive(Clone, Eq, PartialEq)]
 /// For [super::Event]
 pub struct Event {
     /// Surface-level name of the event
@@ -27,6 +33,7 @@ pub struct Event {
     pub interface_bind_loc: Option<GPosIdx>,
 }
 
+#[derive(Clone, Eq, PartialEq)]
 /// For [super::EventBind]
 pub struct EventBind {
     /// Location for the delay of the event
@@ -35,6 +42,7 @@ pub struct EventBind {
     pub bind_loc: GPosIdx,
 }
 
+#[derive(Clone, Eq, PartialEq)]
 /// For [super::Instance]
 pub struct Instance {
     pub name: ast::Id,
@@ -42,6 +50,7 @@ pub struct Instance {
     pub bind_loc: GPosIdx,
 }
 
+#[derive(Clone, Eq, PartialEq)]
 /// For [super::Invoke]
 pub struct Invoke {
     pub name: ast::Id,
@@ -49,12 +58,14 @@ pub struct Invoke {
     pub bind_loc: GPosIdx,
 }
 
+#[derive(Clone, Eq, PartialEq)]
 /// For [super::Connect]
 pub struct Connect {
     pub dst_loc: GPosIdx,
     pub src_loc: GPosIdx,
 }
 
+#[derive(Clone, Eq, PartialEq)]
 /// For [super::Port]
 pub struct Port {
     /// Surface-level name
@@ -65,7 +76,7 @@ pub struct Port {
 }
 
 /// Information associated with the IR.
-#[struct_variant()]
+#[struct_variant]
 pub enum Info {
     Empty,
     Assert,
@@ -76,6 +87,12 @@ pub enum Info {
     Invoke,
     Connect,
     Port,
+}
+
+impl Default for Info {
+    fn default() -> Self {
+        Self::Empty(Empty)
+    }
 }
 
 impl Info {
@@ -171,6 +188,43 @@ impl Info {
             live_loc,
         }
         .into()
+    }
+
+    /// Gets the name associated with this info (if it exists). Useful for compilation purposes.
+    pub fn get_name(&self) -> Option<String> {
+        match self {
+            Info::Event(Event { name, .. })
+            | Info::Instance(Instance { name, .. })
+            | Info::Invoke(Invoke { name, .. })
+            | Info::Param(Param { name, .. })
+            | Info::Port(Port { name, .. }) => Some(name.to_string()),
+            Info::Connect(_)
+            | Info::EventBind(_)
+            | Info::Empty(_)
+            | Info::Assert(_) => None,
+        }
+    }
+}
+
+impl InfoIdx {
+    pub fn get_name(self, ctx: &impl Ctx<Info>) -> Option<String> {
+        ctx.get(self).get_name()
+    }
+}
+
+impl Clone for Info {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Assert(x) => Self::Assert(x.clone()),
+            Self::Connect(x) => Self::Connect(x.clone()),
+            Self::Empty(x) => Self::Empty(x.clone()),
+            Self::Event(x) => Self::Event(x.clone()),
+            Self::EventBind(x) => Self::EventBind(x.clone()),
+            Self::Instance(x) => Self::Instance(x.clone()),
+            Self::Invoke(x) => Self::Invoke(x.clone()),
+            Self::Param(x) => Self::Param(x.clone()),
+            Self::Port(x) => Self::Port(x.clone()),
+        }
     }
 }
 

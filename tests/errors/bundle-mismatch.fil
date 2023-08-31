@@ -1,9 +1,9 @@
 comp Foo[#N]<G:1>(
-    in[#N]: for<#i> @[G+#i, G+#i+1] 32
+    in[#N]: for<#i> [G+#i, G+#i+1] 32
 ) -> () where #N > 0 {}
 
 comp Bar[#P]<T:1>() -> () where #P > 0 {
-    bundle f[#P]: for<#k> @[T+#k, T+#k+1] 32;
+    bundle f[#P]: for<#k> [T+#k, T+#k+1] 32;
 
     f0 := new Foo[#P]<T>(f{1..#P});
     f1 := new Foo[#P]<T+1>(f{0..#P});

@@ -50,6 +50,7 @@ sig_bindings = {
 params = {
   ("[" ~ param_bind ~ ("," ~ param_bind)* ~ "]")?
 }
+
 param_bind = {
   "?" ~ param_var ~ "=" ~ expr |
   param_var
@@ -74,7 +75,7 @@ comp_or_ext = {
 pound = { "#" }
 param_var = ${ pound ~ identifier }
 interface = {
-  "@interface" ~ "[" ~ identifier ~ "]"
+  "interface" ~ "[" ~ identifier ~ "]"
 }
 op_mul = { "*" }
 op_div = { "/" }
@@ -124,13 +125,25 @@ time = {
 
 // Intervals
 interval_range = {
- "@" ~ "[" ~ time ~ "," ~ time ~ "]"
+ "[" ~ time ~ "," ~ time ~ "]"
+}
+
+bundle_typ = {
+  ("for" ~ "<" ~ param_var ~ ">")? ~ interval_range ~ expr
+}
+
+// Bundle definition
+bundle_def = {
+  identifier ~ ("[" ~ expr ~ "]")? ~ ":" ~ bundle_typ
 }
 
 // Ports
 port_def = {
-  (interval_range | interface)? ~ identifier ~ ":" ~ expr
-  | identifier ~ "[" ~ expr ~ "]" ~ ":" ~ bundle_typ
+  identifier ~ ":" ~ bitwidth
+  // A port that is possibly a bundle port
+  | bundle_def
+  // An interface port
+  | identifier ~ ":" ~ interface
 }
 
 arrow = { "->" }
@@ -152,12 +165,8 @@ instance = {
 
 // Connections
 
-guard = {
-  port ~ ("|" ~ guard)?
-}
-
 connect = {
-  port ~ "=" ~ (guard ~ "?")? ~ port ~ ";"
+  port ~ "=" ~ port ~ ";"
 }
 
 // ====== Invocations ==========
@@ -201,6 +210,11 @@ if_stmt = {
   "if" ~ expr_cmp ~ "{" ~ commands ~ "}" ~ ("else" ~ "{" ~ commands ~ "}")?
 }
 
+// ===== let-bound parameters ========
+param_let = {
+  "let" ~ param_var ~ "=" ~ expr ~ ";"
+}
+
 // ====== Loops ==========
 
 for_loop = {
@@ -208,12 +222,8 @@ for_loop = {
 }
 
 // ====== Wire bundles ==========
-bundle_typ = {
-  "for" ~ "<" ~ param_var ~ ">" ~ interval_range ~ expr
-}
-
 bundle = {
-  "bundle" ~ identifier ~ "[" ~ expr ~ "]" ~ ":" ~ bundle_typ ~ ";"
+  "bundle" ~ bundle_def ~ ";"
 }
 
 /// ===== Assumptions ==========
@@ -229,7 +239,7 @@ fact = {
 
 // ========== Commands ==========
 command = {
-  bundle | instance | invocation | connect | for_loop | if_stmt | fact
+  bundle | instance | invocation | connect | for_loop | if_stmt | fact | param_let
 }
 
 commands = { command* }

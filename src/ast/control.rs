@@ -1,51 +1,31 @@
-use super::expr::FnAssume;
-use super::{
-    Expr, Id, Implication, Loc, OrderConstraint, PortDef, Range, Time,
-};
-use crate::utils::{self, Binding};
-use crate::{
-    errors::{Error, FilamentResult},
-    utils::GPosIdx,
-};
-use itertools::Itertools;
-use std::fmt::Display;
+use super::{Expr, Id, Implication, Loc, OrderConstraint, Range, Time};
+use crate::utils::Binding;
 
 #[derive(Clone)]
 /// Access into a bundle
-pub enum Access {
-    /// Index into the bundle
-    Index(Expr),
-    /// Range over a bundle
-    Range { start: Expr, end: Expr },
+pub struct Access {
+    pub start: Expr,
+    pub end: Expr,
 }
 
 impl Access {
     pub fn range(start: Expr, end: Expr) -> Self {
-        Access::Range { start, end }
+        Access { start, end }
     }
 
     pub fn resolve(self, binds: &Binding<Expr>) -> Self {
-        match self {
-            Access::Index(e) => Access::Index(e.resolve(binds)),
-            Access::Range { start, end } => Access::Range {
-                start: start.resolve(binds),
-                end: end.resolve(binds),
-            },
+        Access {
+            start: self.start.resolve(binds),
+            end: self.end.resolve(binds),
         }
     }
 }
 
 impl From<Expr> for Access {
     fn from(e: Expr) -> Self {
-        Access::Index(e)
-    }
-}
-
-impl std::fmt::Display for Access {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Access::Index(e) => write!(f, "{e}"),
-            Access::Range { start, end } => write!(f, "{start}..{end}"),
+        Access {
+            start: e.clone(),
+            end: e + Expr::concrete(1),
         }
     }
 }
@@ -55,13 +35,17 @@ impl std::fmt::Display for Access {
 pub enum Port {
     /// A port on this component
     This(Loc<Id>),
-    /// A constant
     Constant(u64),
     /// A port on an invoke
-    InvPort { invoke: Loc<Id>, name: Loc<Id> },
-
+    InvPort {
+        invoke: Loc<Id>,
+        name: Loc<Id>,
+    },
     /// A port represented by an index into a bundle
-    Bundle { name: Loc<Id>, access: Loc<Access> },
+    Bundle {
+        name: Loc<Id>,
+        access: Loc<Access>,
+    },
     /// A bundle port on an invocation
     InvBundle {
         invoke: Loc<Id>,
@@ -99,16 +83,6 @@ impl Port {
         }
     }
 
-    /// Returns true iff this port represents a ranged access on a bundle
-    pub fn range_access(&self) -> bool {
-        match self {
-            Port::Bundle { access, .. } | Port::InvBundle { access, .. } => {
-                matches!(access.inner(), Access::Range { .. })
-            }
-            _ => false,
-        }
-    }
-
     pub fn resolve_exprs(self, bindings: &Binding<Expr>) -> Self {
         match self {
             Port::Bundle { name, access } => Port::Bundle {
@@ -129,28 +103,6 @@ impl Port {
     }
 }
 
-impl std::fmt::Display for Port {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Port::This(p) => write!(f, "{}", p),
-            Port::InvPort { invoke: comp, name } => {
-                write!(f, "{}.{}", comp, name)
-            }
-            Port::Constant(n) => write!(f, "{}", n),
-            Port::Bundle { name, access } => {
-                write!(f, "{name}{{{access}}}")
-            }
-            Port::InvBundle {
-                invoke,
-                port,
-                access,
-            } => {
-                write!(f, "{invoke}.{port}{{{access}}}")
-            }
-        }
-    }
-}
-
 #[derive(Clone)]
 /// Command in a component
 pub enum Command {
@@ -159,8 +111,15 @@ pub enum Command {
     Fact(Fact),
     Connect(Connect),
     ForLoop(ForLoop),
+    ParamLet(ParamLet),
     If(If),
     Bundle(Bundle),
+}
+
+impl From<ParamLet> for Command {
+    fn from(v: ParamLet) -> Self {
+        Self::ParamLet(v)
+    }
 }
 
 impl From<Connect> for Command {
@@ -192,20 +151,6 @@ impl From<Fact> for Command {
     }
 }
 
-impl Display for Command {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Command::Invoke(inv) => write!(f, "{}", inv),
-            Command::Instance(ins) => write!(f, "{}", ins),
-            Command::Connect(con) => write!(f, "{}", con),
-            Command::ForLoop(l) => write!(f, "{}", l),
-            Command::If(l) => write!(f, "{}", l),
-            Command::Bundle(b) => write!(f, "{b}"),
-            Command::Fact(a) => write!(f, "{a}"),
-        }
-    }
-}
-
 #[derive(Clone)]
 /// A new component instance
 pub struct Instance {
@@ -226,16 +171,6 @@ impl Instance {
             name,
             component,
             bindings,
-        }
-    }
-}
-impl std::fmt::Display for Instance {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} := new {}", self.name, self.component)?;
-        if !self.bindings.is_empty() {
-            write!(f, "[{}]", self.bindings.iter().join(", "))
-        } else {
-            Ok(())
         }
     }
 }
@@ -279,32 +214,6 @@ impl Invoke {
         )
     }
 }
-impl Display for Invoke {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let abs = self
-            .abstract_vars
-            .iter()
-            .map(|it| format!("{}", it))
-            .collect::<Vec<String>>()
-            .join(",");
-        if let Some(ports) = &self.ports {
-            write!(
-                f,
-                "{} := {}<{}>({})",
-                self.name,
-                self.instance,
-                abs,
-                ports
-                    .iter()
-                    .map(|port| port.to_string())
-                    .collect::<Vec<String>>()
-                    .join(",")
-            )
-        } else {
-            write!(f, "{} := invoke {}<{}>", self.name, self.instance, abs)
-        }
-    }
-}
 
 #[derive(Clone)]
 /// An `assert` or `assume` statement.
@@ -336,57 +245,11 @@ impl Fact {
         self.cons.inner().exprs()
     }
 
-    pub fn constraint(self) -> utils::SExp {
-        self.cons.take().into()
-    }
-
     /// Resolve expression in the assumption
     pub fn resolve(self, bind: &Binding<Expr>) -> Self {
         Fact {
             cons: self.cons.map(|c| c.resolve_expr(bind)),
             ..self
-        }
-    }
-
-    /// Get the position of the assumption
-    pub fn pos(&self) -> GPosIdx {
-        self.cons.pos()
-    }
-
-    /// Get a list of function assumptions associated with a constraint
-    pub fn from_constraint(constraint: &OrderConstraint<Expr>) -> Vec<Self> {
-        FnAssume::from_constraint(constraint)
-    }
-}
-
-impl std::fmt::Display for Fact {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "assume {}", self.cons)
-    }
-}
-
-#[derive(Clone)]
-/// A Guard expression
-pub enum Guard {
-    Or(Box<Guard>, Box<Guard>, GPosIdx),
-    Port(Port),
-}
-
-impl From<Port> for Guard {
-    fn from(v: Port) -> Self {
-        Self::Port(v)
-    }
-}
-impl Guard {
-    pub fn or(g1: Guard, g2: Guard) -> Self {
-        Guard::Or(Box::new(g1), Box::new(g2), GPosIdx::UNKNOWN)
-    }
-}
-impl std::fmt::Display for Guard {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Guard::Or(g1, g2, _) => write!(f, "{} | {}", g1, g2),
-            Guard::Port(p) => write!(f, "{}", p),
         }
     }
 }
@@ -398,76 +261,11 @@ pub struct Connect {
     pub dst: Loc<Port>,
     /// Source port
     pub src: Loc<Port>,
-    /// Optional guard expression.
-    pub guard: Option<Guard>,
 }
 
 impl Connect {
-    pub fn new(dst: Loc<Port>, src: Loc<Port>, guard: Option<Guard>) -> Self {
-        Self { dst, src, guard }
-    }
-}
-impl std::fmt::Display for Connect {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(g) = &self.guard {
-            write!(f, "{} = {} ? {}", self.dst, g, self.src)
-        } else {
-            write!(f, "{} = {}", self.dst, self.src)
-        }
-    }
-}
-
-#[derive(Clone)]
-/// Representation of a finite state machine
-pub struct Fsm {
-    /// Name of the FSM
-    pub name: Id,
-    /// Number of states in the FSM
-    pub states: u64,
-    /// Signal that triggers the FSM
-    pub trigger: Port,
-}
-impl Fsm {
-    pub fn new(name: Id, states: u64, trigger: Port) -> Self {
-        Self {
-            name,
-            states,
-            trigger,
-        }
-    }
-
-    /// Returns the state associated with the FSM port
-    pub fn state(port: &Id) -> FilamentResult<u64> {
-        let split = port.as_ref().split('_').collect_vec();
-        if split.len() == 2 {
-            let mb_idx = split[1].parse::<u64>();
-            if let Ok(idx) = mb_idx {
-                return Ok(idx);
-            }
-        }
-        Err(Error::malformed(format!(
-            "PortType cannot be converted into FSM state: {}",
-            port
-        )))
-    }
-
-    /// Return the port associated with the given state
-    pub fn port(&self, state: u64) -> Port {
-        Port::inv_port(
-            Loc::unknown(self.name),
-            Loc::unknown(Id::from(format!("_{}", state))),
-        )
-    }
-}
-
-impl Display for Fsm {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "fsm {}[{}]({})", self.name, self.states, self.trigger)
-    }
-}
-impl std::fmt::Debug for Fsm {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
+    pub fn new(dst: Loc<Port>, src: Loc<Port>) -> Self {
+        Self { dst, src }
     }
 }
 
@@ -503,16 +301,6 @@ impl ForLoop {
     }
 }
 
-impl Display for ForLoop {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "for #{} in {}..{} {{", self.idx, self.start, self.end)?;
-        for cmd in &self.body {
-            writeln!(f, "{};", cmd)?;
-        }
-        write!(f, "}}")
-    }
-}
-
 impl From<ForLoop> for Command {
     fn from(v: ForLoop) -> Self {
         Self::ForLoop(v)
@@ -536,20 +324,6 @@ impl If {
         alt: Vec<Command>,
     ) -> Self {
         Self { cond, then, alt }
-    }
-}
-
-impl Display for If {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "if {} {{", self.cond)?;
-        for cmd in &self.then {
-            writeln!(f, "{}", cmd)?;
-        }
-        writeln!(f, "}} else {{")?;
-        for cmd in &self.alt {
-            writeln!(f, "{}", cmd)?;
-        }
-        write!(f, "}}")
     }
 }
 
@@ -652,18 +426,6 @@ impl Bundle {
         Self { name, typ }
     }
 
-    /// Generate a port definition corresponding to a given index
-    pub fn index(&self, idx: Expr) -> PortDef {
-        let mut bind = Binding::default();
-        bind.insert(*self.typ.idx.inner(), idx);
-        let liveness = self.typ.liveness.clone();
-        PortDef::port(
-            Loc::unknown(Id::from("__FAKE_NAME_SHOULD_NOT_BE_USED")),
-            liveness.map(|r| r.resolve_exprs(&bind)),
-            self.typ.bitwidth.clone(),
-        )
-    }
-
     /// Resolve expressions in the Bundle
     pub fn resolve_exprs(self, binding: &Binding<Expr>) -> Self {
         Self {
@@ -673,13 +435,10 @@ impl Bundle {
     }
 }
 
-impl Display for Bundle {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "bundle {}[{}]: ", self.name, self.typ.len)?;
-        write!(
-            f,
-            "for<#{}> {} {};",
-            self.typ.idx, self.typ.liveness, self.typ.bitwidth
-        )
-    }
+/// A let-bound parameter
+#[derive(Clone)]
+pub struct ParamLet {
+    pub name: Loc<Id>,
+    /// The expression for the parameter binding
+    pub expr: Expr,
 }

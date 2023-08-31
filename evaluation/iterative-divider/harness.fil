@@ -4,25 +4,25 @@ extern "iter-div.sv" {
   comp IterDiv[#W]<G: #W+1>(
       clk: 1,
       reset: 1,
-      @interface[G] go: 1,
-      @[G, G+1] left: #W,
-      @[G, G+#W+1] right: #W,
+      go: interface[G],
+       left: [G, G+1] #W,
+       right: [G, G+#W+1] #W,
   ) -> (
-      @[G+#W+1, G+#W+2] out_remainder: #W,
-      @[G+#W+1, G+#W+2] out_quotient: #W,
-      @[G+#W+1, G+#W+2] done: 1
+       out_remainder: [G+#W+1, G+#W+2] #W,
+       out_quotient: [G+#W+1, G+#W+2] #W,
+       done: [G+#W+1, G+#W+2] 1
   ) where #W > 0;
 }
 
 comp DiffTest[#W]<G: #W+1>(
-  @interface[G] go: 1,
-  @[G, G+1] left: #W,
-  @[G, G+#W+1] right: #W,
+  go: interface[G],
+   left: [G, G+1] #W,
+   right: [G, G+#W+1] #W,
 ) -> (
-  @[G, G+1] comb_noshare: #W,
-  @[G+#W+1, G+#W+2] verilog: #W,
-  @[G+#W, G+#W+1] share: #W,
-  @[G+#W, G+#W+1] pipe: #W,
+   comb_noshare: [G, G+1] #W,
+   verilog: [G+#W+1, G+#W+2] #W,
+   share: [G+#W, G+#W+1] #W,
+   pipe: [G+#W, G+#W+1] #W,
 ) where #W > 0 {
   d := new IterDiv[#W]<G>(left, right);
   id := new CombNoShareIterDiv[#W]<G>(left, right);
@@ -35,15 +35,15 @@ comp DiffTest[#W]<G: #W+1>(
 }
 
 comp main<G: 11>(
-  @interface[G] go: 1,
-  @[G, G+1] left: 8,
-  @[G, G+9] right: 8,
+  go: interface[G],
+   left: [G, G+1] 8,
+   right: [G, G+9] 8,
 ) -> (
-  @[G, G+1] comb_noshare: 8,
-  @[G+9, G+10] verilog: 8,
-  @[G+8, G+9] share: 8,
-  @[G+8, G+9] pipe: 8,
-  @[G+8, G+9] tradeoff: 8,
+   comb_noshare: [G, G+1] 8,
+   verilog: [G+9, G+10] 8,
+   share: [G+8, G+9] 8,
+   pipe: [G+8, G+9] 8,
+   tradeoff: [G+8, G+9] 8,
 ) {
   d := new DiffTest[8]<G>(left, right);
   td := new TradeoffDiv[8, 4, 2]<G>(left, right);

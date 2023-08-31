@@ -19,12 +19,12 @@ error: source port does not provide value for as long as destination requires
     ┌─ examples/tut-pipe-wrong-2.fil:18:40
     │
  18 │     mx := new Mux[32]<G+2>(op, r0.out, m0.out);
-    │                                        ^^^^^^ source is available for @[G+3, G+4]
+    │                                        ^^^^^^ source is available for [G+3, G+4]
     │
-    ┌─ ./primitives/./comb.fil:170:13
+    ┌─ ./primitives/./comb.fil:170:6
     │
-170 │     @[G, L] in1: #WIDTH,
-    │             --- requires value for @[G+2, G+3]
+170 │      in1: [G, L] #WIDTH,
+    │      --- requires value for [G+2, G+3]
 
 Compilation failed with 2 errors.
 Run with --show-models to generate assignments for failing constraints.

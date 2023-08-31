@@ -1,6 +1,6 @@
 use super::{
-    CmpOp, Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Prop, PropIdx,
-    Time, TimeIdx,
+    AddCtx, CmpOp, Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Prop,
+    PropIdx, Time, TimeIdx,
 };
 
 pub struct Bind<K: Eq, V>(Vec<(K, V)>);
@@ -31,12 +31,22 @@ where
         self.0.iter().find_map(|(k, v)| (k == key).then_some(v))
     }
 
+    /// Insert a new binding
     pub fn insert(&mut self, key: K, value: V) {
         self.0.push((key, value));
     }
 
+    /// Remove the last binding and return it
     pub fn pop(&mut self) -> Option<(K, V)> {
         self.0.pop()
+    }
+
+    /// Remove the last n bindings
+    /// Panics if `n` is greater than the number of bindings
+    pub fn pop_n(&mut self, n: usize) {
+        let len = self.0.len();
+        assert!(n <= len);
+        self.0.truncate(len - n);
     }
 }
 

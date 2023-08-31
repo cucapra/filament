@@ -1,11 +1,11 @@
 import "primitives/core.fil";
 
 comp Mult[#W]<G: 2>(
-  @interface[G] go_G: 1,
-  @[G, G+1] left: #W,
-  @[G, G+1] right: #W,
+  go_G: interface[G],
+   left: [G, G+1] #W,
+   right: [G, G+1] #W,
 ) -> (
-  @[G+2, G+3] out: #W
+   out: [G+2, G+3] #W
 ) where #W > 0 {
   ll := new Register[#W]<G, G+3>(left);
   lr := new Register[#W]<G, G+3>(right);
@@ -16,11 +16,11 @@ comp Mult[#W]<G: 2>(
 /// ANCHOR: fastmult
 /// Implementation of a multiplier with initiation interval 1 and latency 3
 comp FastMult[#W]<G: 1>(
-  @interface[G] go_G: 1,
-  @[G, G+1] left: #W,
-  @[G, G+1] right: #W,
+  go_G: interface[G],
+   left: [G, G+1] #W,
+   right: [G, G+1] #W,
 ) -> (
-  @[G+3, G+4] out: #W,
+   out: [G+3, G+4] #W,
 ) where #W > 0
 /// ANCHOR_END: fastmult
 {

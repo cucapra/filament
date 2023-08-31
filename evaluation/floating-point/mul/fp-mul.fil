@@ -4,10 +4,10 @@ import "../fp-support.fil";
 // Computes:
 // out = |in[30:23] ? {1'b1,in[22:0]} : {1'b0,in[22:0]}
 comp ComputeOp<G: 1>(
-  @interface[G] go: 1,
-  @[G, G+1] in: 32
+  go: interface[G],
+   in: [G, G+1] 32
 ) -> (
-  @[G, G+1] out: 24,
+   out: [G, G+1] 24,
 ) {
   exp := new GetExp<G>(in);
   mant := new GetMant<G>(in);
@@ -22,14 +22,14 @@ comp ComputeOp<G: 1>(
 }
 
 comp FPMult<G: 1>(
-  @interface[G] go: 1,
-  @[G, G+1] a: 32,
-  @[G, G+1] b: 32,
+  go: interface[G],
+   a: [G, G+1] 32,
+   b: [G, G+1] 32,
 ) -> (
-  @[G, G+1] exception: 1,
-  @[G, G+1] overflow: 1,
-  @[G, G+1] underflow: 1,
-  @[G, G+1] out: 32,
+   exception: [G, G+1] 1,
+   overflow: [G, G+1] 1,
+   underflow: [G, G+1] 1,
+   out: [G, G+1] 32,
 ) {
   a31 := new Select[32, 31]<G>(a);
   b31 := new Select[32, 31]<G>(b);
@@ -104,5 +104,8 @@ comp FPMult<G: 1>(
   res_3 := new Mux[32]<G>(zero.out, under_res.out, res_2.out);
   res := new Mux[32]<G>(exception.out, zero_32.out, res_3.out);
 
+  underflow = underflow.out;
+  overflow = overflow.out;
+  exception = exception.out;
   out = res.out;
 }

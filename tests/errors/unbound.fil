@@ -1,7 +1,0 @@
-comp Add[#W, #L]<G: 1>(
-    @[G, G+#W] a: #W,
-) -> () {
-    M := new Mult;
-    a := B<G>(20, 30);
-    out = c.out;
-}

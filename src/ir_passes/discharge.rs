@@ -1,12 +1,12 @@
 use crate::ir::{Ctx, DisplayCtx};
 use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
 use crate::utils::GlobalPositionTable;
-use crate::{ast, cmdline, ir, utils};
+use crate::{ast, cmdline, ir, log_time};
 use codespan_reporting::{diagnostic as cr, term};
 use easy_smt as smt;
 use itertools::Itertools;
 use std::collections::HashMap;
-use std::iter;
+use std::{fs, iter};
 use term::termcolor::{ColorChoice, StandardStream};
 
 #[derive(Default)]
@@ -52,27 +52,53 @@ pub struct Discharge {
     // Propositions that have already been checked
     checked: HashMap<ir::PropIdx, Option<Assign>>,
 
+    // counter for activation literals generated
+    act_lit_count: u32,
+
     /// Report the unsatisfied constraint and generate a model
     show_models: bool,
+
+    to_prove: Vec<ir::Fact>,
 
     // Diagnostics to be reported
     diagnostics: Vec<cr::Diagnostic<usize>>,
     /// Number of errors encountered
-    error_count: u32,
+    error_count: u64,
+}
+
+impl Discharge {
+    /// Configure solver to use in this pass
+    fn conf_solver(opts: &cmdline::Opts) -> smt::Context {
+        let (name, s_opts) = match opts.solver {
+            cmdline::Solver::Z3 => {
+                log::debug!("Using z3 solver");
+                ("z3", &["-smt2", "-in"])
+            }
+            cmdline::Solver::CVC5 => {
+                log::debug!("Using cvc5 solver");
+                ("cvc5", &["--incremental", "--force-logic=ALL"])
+            }
+        };
+        smt::ContextBuilder::new()
+            .replay_file(
+                opts.solver_replay_file
+                    .as_ref()
+                    .map(|s| fs::File::create(s).unwrap()),
+            )
+            .solver(name, s_opts)
+            .build()
+            .unwrap()
+    }
 }
 
 impl Construct for Discharge {
     fn from(opts: &cmdline::Opts, _: &mut ir::Context) -> Self {
-        let sol = smt::ContextBuilder::new()
-            .replay_file(Some(std::fs::File::create("model.smt").unwrap()))
-            .solver("z3", ["-smt2", "-in"])
-            .build()
-            .unwrap();
-
         let mut out = Self {
-            sol,
+            sol: Self::conf_solver(opts),
             scoped: false,
             error_count: 0,
+            act_lit_count: 0,
+            to_prove: vec![],
             show_models: opts.show_models,
             func_map: Default::default(),
             param_map: Default::default(),
@@ -97,6 +123,8 @@ impl Construct for Discharge {
         self.expr_map.clear();
         self.checked.clear();
         self.diagnostics.clear();
+        self.act_lit_count = 0;
+        self.to_prove.clear();
 
         // Create a new solver context
         self.sol.pop().unwrap();
@@ -123,6 +151,16 @@ impl Discharge {
 
     fn fmt_time(time: ir::TimeIdx) -> String {
         format!("t{}", time.get())
+    }
+
+    fn new_act_lit(&mut self) -> smt::SExpr {
+        self.act_lit_count += 1;
+        self.sol
+            .declare_const(
+                format!("act_lit{}", self.act_lit_count),
+                self.sol.bool_sort(),
+            )
+            .unwrap()
     }
 
     /// Defines primitive functions used in the encoding like `pow` and `log`
@@ -173,16 +211,21 @@ impl Discharge {
 
     /// Check whether the proposition is valid.
     /// Returns a set of assignments if the proposition is not valid.
-    fn check_valid(
-        &mut self,
-        prop: ir::PropIdx,
-        ctx: &ir::Component,
-    ) -> &Option<Assign> {
+    fn check_valid(&mut self, fact: ir::Fact, ctx: &ir::Component) {
+        let prop = fact.prop;
         #[allow(clippy::map_entry)]
         if !self.checked.contains_key(&prop) {
-            self.sol.push().unwrap();
-            self.sol.assert(self.sol.not(self.prop_map[prop])).unwrap();
-            let res = self.sol.check().unwrap();
+            let actlit = self.new_act_lit();
+            let sexp = self.prop_map[prop];
+            let imp = self.sol.imp(actlit, self.sol.not(sexp));
+            self.sol.assert(imp).unwrap();
+            // Disable the activation literal
+            let res = log_time!(
+                self.sol.check_assuming([actlit]).unwrap(),
+                ctx.display(prop.consequent(ctx));
+                100
+            );
+            self.sol.assert(self.sol.not(actlit)).unwrap();
             let out = match res {
                 smt::Response::Sat => {
                     if self.show_models {
@@ -196,10 +239,34 @@ impl Discharge {
                 smt::Response::Unsat => None,
                 smt::Response::Unknown => panic!("Solver returned unknown"),
             };
-            self.sol.pop().unwrap();
             self.checked.insert(prop, out);
         }
-        &self.checked[&prop]
+        if let Some(assign) = &self.checked[&prop] {
+            let ir::info::Assert(reason) =
+                ctx.get(fact.reason).as_assert().unwrap();
+            let mut diag = reason.diag(ctx);
+            if self.show_models {
+                diag = reason.diag(ctx).with_notes(vec![format!(
+                    "Cannot prove constraint: {}",
+                    ctx.display(fact.prop.consequent(ctx))
+                )]);
+                if !assign.is_empty() {
+                    diag = diag.with_notes(vec![format!(
+                        "Counterexample: {} (unmentioned parameters are 0)",
+                        assign.display(ctx)
+                    )]);
+                }
+            }
+            self.diagnostics.push(diag);
+        }
+    }
+
+    /// Find the failing facts from the given component and add diagnostics for them
+    fn failing_props(&mut self, comp: &ir::Component) {
+        let props = std::mem::take(&mut self.to_prove);
+        for fact in props {
+            self.check_valid(fact, comp);
+        }
     }
 
     fn expr_to_sexp(&mut self, expr: &ir::Expr) -> smt::SExpr {
@@ -295,13 +362,19 @@ impl Visitor for Discharge {
         // Declare all parameters
         let int = self.sol.int_sort();
         for (idx, _) in data.comp.params().iter() {
-            let sexp = self.sol.declare(Self::fmt_param(idx), int).unwrap();
+            let sexp = self
+                .sol
+                .declare_fun(Self::fmt_param(idx), vec![], int)
+                .unwrap();
             self.param_map.push(idx, sexp);
         }
 
         // Declare all events
         for (idx, _) in data.comp.events().iter() {
-            let sexp = self.sol.declare(Self::fmt_event(idx), int).unwrap();
+            let sexp = self
+                .sol
+                .declare_fun(Self::fmt_event(idx), vec![], int)
+                .unwrap();
             self.ev_map.push(idx, sexp);
         }
 
@@ -341,8 +414,7 @@ impl Visitor for Discharge {
         Action::Continue
     }
 
-    fn fact(&mut self, f: &mut ir::Fact, data: &mut VisitorData) -> Action {
-        let comp = &mut data.comp;
+    fn fact(&mut self, f: &mut ir::Fact, _: &mut VisitorData) -> Action {
         if self.scoped {
             panic!("scoped facts not supported. Run `hoist-facts` before this pass");
         }
@@ -353,39 +425,9 @@ impl Visitor for Discharge {
             )
         }
 
-        let show_models = self.show_models;
-        match self.check_valid(f.prop, comp) {
-            None => {
-                let reason = comp.add(
-                    ir::info::Reason::misc(
-                        "Discharged assumption",
-                        utils::GPosIdx::UNKNOWN,
-                    )
-                    .into(),
-                );
-                Action::Change(
-                    comp.assume(f.prop, reason).into_iter().collect(),
-                )
-            }
-            Some(assign) => {
-                let &ir::info::Assert(ref reason) = comp.get(f.reason).into();
-                let mut diag = reason.diag(comp);
-                if show_models {
-                    diag = reason.diag(comp).with_notes(vec![format!(
-                        "Cannot prove constraint: {}",
-                        comp.display(f.prop.consequent(comp))
-                    )]);
-                    if !assign.is_empty() {
-                        diag = diag.with_notes(vec![format!(
-                            "Counterexample: {} (unmentioned parameters are 0)",
-                            assign.display(comp)
-                        )]);
-                    }
-                }
-                self.diagnostics.push(diag);
-                Action::Continue
-            }
-        }
+        // Defer proof obligations till the end of the component pass
+        self.to_prove.push(f.clone());
+        Action::Continue
     }
 
     fn do_if(&mut self, i: &mut ir::If, data: &mut VisitorData) -> Action {
@@ -408,8 +450,25 @@ impl Visitor for Discharge {
         out
     }
 
-    fn end(&mut self, _: &mut VisitorData) {
+    fn end(&mut self, data: &mut VisitorData) {
         assert!(!self.scoped, "unbalanced scopes");
+
+        if self.to_prove.is_empty() {
+            return;
+        }
+
+        // Attempt to prove all facts
+        let total_prop = self
+            .sol
+            .and_many(self.to_prove.iter().map(|f| self.prop_map[f.prop]));
+        let total_prop = self.sol.not(total_prop);
+        self.sol.assert(total_prop).unwrap();
+
+        // If there is at least one failing prop, roll back to individually checking the props for error reporting
+        if matches!(self.sol.check().unwrap(), smt::Response::Sat) {
+            self.failing_props(&data.comp);
+        }
+
         // Report all the errors
         let is_tty = atty::is(atty::Stream::Stderr);
         let writer = StandardStream::stderr(if is_tty {
@@ -430,7 +489,7 @@ impl Visitor for Discharge {
         }
     }
 
-    fn after_traversal(&mut self) -> Option<u32> {
+    fn after_traversal(&mut self) -> Option<u64> {
         if self.error_count > 0 {
             Some(self.error_count)
         } else {
