@@ -78,6 +78,16 @@ impl MonoDeferred<'_, '_> {
                 }
             }
         } else {
+            for (param, expr) in &underlying.sig_binding {
+                let new_expr = monosig.expr(underlying, Underlying::new(*expr));
+                let new_expr = monosig
+                    .base
+                    .bin(monosig.base.get(new_expr.get()).clone())
+                    .as_concrete(&monosig.base)
+                    .unwrap();
+                monosig.binding.insert(Underlying::new(*param), new_expr);
+            }
+
             for (idx, port) in underlying.ports().iter() {
                 if port.is_sig() {
                     let port = monosig.port_def(
