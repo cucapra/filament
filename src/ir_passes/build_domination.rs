@@ -50,10 +50,6 @@ impl BuildDomination {
     fn add_inst(&mut self, inst: ir::InstIdx) {
         self.insts.last_mut().unwrap().push(inst.into());
     }
-
-    fn add_let(&mut self, l: ir::Let) {
-        self.plets.last_mut().unwrap().push(l.into());
-    }
 }
 
 impl Visitor for BuildDomination {
@@ -70,16 +66,6 @@ impl Visitor for BuildDomination {
     fn instance(&mut self, inst: ir::InstIdx, _: &mut VisitorData) -> Action {
         self.add_inst(inst);
         // Remove the instance
-        Action::Change(vec![])
-    }
-
-    fn param_let(
-        &mut self,
-        l: &mut ir::Let,
-        _data: &mut VisitorData,
-    ) -> Action {
-        self.add_let(l.clone());
-        // Remove the param let
         Action::Change(vec![])
     }
 

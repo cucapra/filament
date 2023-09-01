@@ -267,15 +267,6 @@ impl<'a> Printer<'a> {
                     write!(f, "{:indent$}assume {};", "", fact.prop)
                 }
             }
-            ir::Command::Let(ir::Let { param, expr }) => {
-                write!(
-                    f,
-                    "{:indent$}let {} = {};",
-                    "",
-                    self.ctx.display(*param),
-                    self.expr(*expr)
-                )
-            }
         }
     }
 
@@ -398,7 +389,7 @@ impl<'a> Printer<'a> {
     ) -> io::Result<()> {
         let param = self.ctx.get(idx);
         match param.owner {
-            ir::ParamOwner::Sig | ir::ParamOwner::Let => {}
+            ir::ParamOwner::Sig => {}
             ir::ParamOwner::Bundle(_) | ir::ParamOwner::Loop => {
                 writeln!(
                     f,

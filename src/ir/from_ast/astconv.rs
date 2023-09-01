@@ -133,13 +133,11 @@ impl<'prog> BuildCtx<'prog> {
         match cmd {
             ast::Command::Instance(inst) => self.declare_inst(inst),
             ast::Command::Invoke(inv) => self.declare_inv(inv),
-            ast::Command::ParamLet(ast::ParamLet { name, .. }) => {
+            ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
                 // Declare the parameter since it may be used in instance or
                 // invocation definitions.
-                self.param(
-                    &ast::ParamBind::new(name.clone(), None),
-                    ir::ParamOwner::Let,
-                );
+                let expr = self.expr(expr.clone())?;
+                self.add_let_param(name.copy(), expr);
                 Ok(())
             }
             ast::Command::ForLoop(_)
@@ -752,10 +750,8 @@ impl<'prog> BuildCtx<'prog> {
                 let dst = self.get_access(dst.take(), ir::Direction::In)?;
                 vec![ir::Connect { src, dst, info }.into()]
             }
-            ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
-                // Let-bound parameters are completely rewritten
-                let e = self.expr(expr)?;
-                self.add_let_param(name.take(), e);
+            ast::Command::ParamLet(_) => {
+                // The declare phase already added the rewrite for this binding
                 vec![]
             }
             ast::Command::ForLoop(ast::ForLoop {
