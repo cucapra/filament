@@ -240,8 +240,9 @@ impl<'a> Printer<'a> {
             }) => {
                 writeln!(
                     f,
-                    "{:indent$}for {index} in {}..{} {{",
+                    "{:indent$}for {} in {}..{} {{",
                     "",
+                    self.ctx.display(*index),
                     self.expr(*start),
                     self.expr(*end)
                 )?;
