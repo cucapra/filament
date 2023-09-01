@@ -137,14 +137,14 @@ comp Id_Next[#W]<G: 1>(
 ///
 /// NOTE(rachit): Once we have default parameters, we should provide a default value for `#K`
 /// using `#I`.
-comp TradeoffDiv[#W, #K]<G: #K>(
+comp TradeoffDiv[#W, #I]<G: #K>(
   go: interface[G],
    left: [G, G+1] #W,
    right: [G, G+1] #W,
 ) -> (
    out: [G+#W, G+#W+1] #W,
 ) with {
-   let #I = #W / #K;
+   let #K = #W / #I;
 } where
   #I > 0,
   #K > 0,

@@ -1,15 +1,18 @@
 use super::Ctx;
-use crate::{ast, ir, utils::Idx};
+use crate::{
+    ast, ir,
+    utils::{Idx, IdxLike},
+};
 use itertools::{Itertools, Position};
 use std::{fmt::Display, io};
 
 /// A context capable of displaying [`Idx<T>`] values.
-pub trait DisplayCtx<T>
+pub trait DisplayCtx<T, K = Idx<T>>
 where
-    Self: Ctx<T>,
+    K: IdxLike<T>,
 {
     /// Display the value
-    fn display(&self, idx: Idx<T>) -> String;
+    fn display(&self, idx: K) -> String;
 }
 
 impl DisplayCtx<ir::Component> for ir::Context {
@@ -237,8 +240,9 @@ impl<'a> Printer<'a> {
             }) => {
                 writeln!(
                     f,
-                    "{:indent$}for {index} in {}..{} {{",
+                    "{:indent$}for {} in {}..{} {{",
                     "",
+                    self.ctx.display(*index),
                     self.expr(*start),
                     self.expr(*end)
                 )?;
@@ -389,18 +393,6 @@ impl<'a> Printer<'a> {
         let param = self.ctx.get(idx);
         match param.owner {
             ir::ParamOwner::Sig | ir::ParamOwner::Let => {}
-            ir::ParamOwner::SigBinding => {
-                writeln!(
-                    f,
-                    "{:indent$}{idx} = {expr};{comment}",
-                    "",
-                    expr = c.sig_binding.get(&idx).unwrap(),
-                    comment = c
-                        .get(param.info)
-                        .as_param()
-                        .map_or("".to_string(), |p| format!(" // {}", p.name))
-                )?;
-            }
             ir::ParamOwner::Bundle(_) | ir::ParamOwner::Loop => {
                 writeln!(
                     f,

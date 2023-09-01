@@ -6,6 +6,7 @@ use super::{
 use crate::{ast, utils::Idx};
 use fil_derive::Ctx;
 use itertools::Itertools;
+use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -90,7 +91,7 @@ pub struct Component {
     /// unannotated ports associated with this component
     pub unannotated_ports: Box<Vec<(ast::Id, u64)>>,
     /// Binding from sig-binding-defined params to exprs
-    pub sig_binding: HashMap<ParamIdx, ExprIdx>,
+    pub sig_binding: LinkedHashMap<ParamIdx, ExprIdx>,
 }
 
 impl Component {

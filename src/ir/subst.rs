@@ -48,6 +48,11 @@ where
         assert!(n <= len);
         self.0.truncate(len - n);
     }
+
+    /// Iterate over the binding
+    pub fn iter(&self) -> impl Iterator<Item = &(K, V)> {
+        self.0.iter()
+    }
 }
 
 impl<K, V> Bind<K, V>

@@ -67,27 +67,36 @@ impl Sig {
         diag: &mut diagnostics::Diagnostics,
     ) -> BuildRes<Binding<ast::Expr>> {
         let args = args.into_iter().collect_vec();
-        //println!("args: {:?}", args);
+        let arg_len = args.len();
+
+        // We've been given too many arguments
+        if self.raw_params.len() < arg_len {
+            let msg = format!(
+                "`{}' requires at most {} parameters but {} were provided",
+                comp.inner(),
+                self.raw_params.len(),
+                arg_len
+            );
+            let err = Error::malformed(msg.clone());
+            let err = err.add_note(diag.add_info(msg, comp.pos()));
+            diag.add_error(err);
+            return Err(std::mem::take(diag));
+        }
+
         let min_args = self
             .raw_params
             .iter()
             .take_while(|ev| ev.default.is_none())
             .count();
-        let arg_len = args.len();
 
         // We don't have enough parameters. Generate error.
         if min_args > arg_len {
-            let err = Error::malformed(
-                format!(
-                    "`{}' requires at least {min_args} parameters but {arg_len} were provided",
-                    comp.inner(),
-                ),
+            let msg = format!(
+                "`{}' requires at least {min_args} parameters but {arg_len} were provided",
+                comp.inner(),
             );
-            let err = err.add_note(
-                diag.add_info(format!(
-                    "`{}' requires at least {min_args} parameters but {arg_len} were provided",
-                    comp.inner()
-                ), comp.pos()));
+            let err = Error::malformed(msg.clone());
+            let err = err.add_note(diag.add_info(msg, comp.pos()));
             diag.add_error(err);
             return Err(std::mem::take(diag));
         }
@@ -115,6 +124,80 @@ impl Sig {
 
         partial_map.extend(remaining);
         //println!("final map: {:?}", partial_map);
+
+        Ok(partial_map)
+    }
+
+    /// Construct an event binding from this Signature's events and the given
+    /// arguments.
+    /// Fills in the missing arguments with default values
+    pub fn event_binding(
+        &self,
+        args: impl IntoIterator<Item = ast::Time>,
+        inst: &ast::Loc<Id>,
+        diag: &mut diagnostics::Diagnostics,
+    ) -> BuildRes<Binding<ast::Time>> {
+        let args = args.into_iter().collect_vec();
+
+        // Too many arguments for the event
+        if args.len() > self.raw_events.len() {
+            let msg = format!(
+                "`{}' requires at most {} events but {} were provided",
+                inst.inner(),
+                self.raw_events.len(),
+                args.len()
+            );
+            let err = Error::malformed(msg.clone());
+            let err = err.add_note(diag.add_info(msg, inst.pos()));
+            diag.add_error(err);
+            return Err(std::mem::take(diag));
+        }
+
+        let min_args = self
+            .raw_events
+            .iter()
+            .take_while(|ev| ev.default.is_none())
+            .count();
+
+        // To few arguments for the event
+        if min_args <= args.len() {
+            let msg = format!(
+                "`{}' requires at least {} events but {} were provided",
+                inst.inner(),
+                min_args,
+                args.len()
+            );
+            let err = Error::malformed(msg.clone());
+            let err = err.add_note(diag.add_info(msg, inst.pos()));
+            diag.add_error(err);
+            return Err(std::mem::take(diag));
+        }
+
+        let mut partial_map = Binding::new(
+            self.raw_events
+                .iter()
+                .map(|eb| eb.event.inner())
+                .cloned()
+                .zip(args.iter().cloned()),
+        );
+
+        // Skip the events that have been bound
+        let remaining = self
+            .raw_events
+            .iter()
+            .skip(args.len())
+            .map(|eb| {
+                let bind = eb
+                    .default
+                    .as_ref()
+                    .unwrap()
+                    .clone()
+                    .resolve_event(&partial_map);
+                (*eb.event.inner(), bind)
+            })
+            .collect();
+
+        partial_map.extend(remaining);
 
         Ok(partial_map)
     }

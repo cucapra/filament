@@ -107,10 +107,7 @@ impl<'a> Validate<'a> {
                     self.comp.internal_error(
                         format!("{par_idx} should be owned by {pidx} but is owned by {port_idx}"))
                 }
-            },
-            ir::ParamOwner::SigBinding => self.comp.internal_error(format!(
-                "{par_idx} should be owned by a bundle but is defined in the sig binding"
-            ))
+            }
         }
         // validate liveness length
         self.expr(*len);
@@ -212,8 +209,7 @@ impl<'a> Validate<'a> {
         match owner {
             ir::ParamOwner::Let
             | ir::ParamOwner::Sig
-            | ir::ParamOwner::Loop
-            | ir::ParamOwner::SigBinding => { /* Nothing to check */ }
+            | ir::ParamOwner::Loop => { /* Nothing to check */ }
             ir::ParamOwner::Bundle(port_idx) => {
                 let ir::Port { live, .. } = &self.comp.get(*port_idx); // (2) this will panic if port not defined
 

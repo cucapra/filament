@@ -77,8 +77,9 @@ impl MonoDeferred<'_, '_> {
                 }
             }
         } else {
-            for (param, expr) in &underlying.comp().sig_binding {
-                let new_expr = monosig.expr(&underlying, Underlying::new(*expr));
+            for (param, expr) in underlying.sig_binding() {
+                let new_expr =
+                    monosig.expr(&underlying, Underlying::new(*expr));
                 let new_expr = monosig
                     .base
                     .bin(monosig.base.get(new_expr).clone())
