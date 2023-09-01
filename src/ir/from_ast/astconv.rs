@@ -7,7 +7,7 @@ use crate::ir::{
     PortIdx, PropIdx, TimeIdx,
 };
 use crate::utils::{GPosIdx, Idx};
-use crate::{ast, ir, utils::Binding};
+use crate::{ast, ir};
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::{iter, rc::Rc};
@@ -15,7 +15,7 @@ use std::{iter, rc::Rc};
 pub type BuildRes<T> = Result<T, diagnostics::Diagnostics>;
 
 /// # Declare phase
-/// This is the first pass over the AST and responsible for forward declaring names defined by invocations.
+/// This is the first pass over a particular scope and responsible for forward declaring names defined by invocations.
 /// We do this because invocation ports can be used before their definition:
 /// ```
 /// p = new Prev[32]<G>(add.out);
@@ -96,10 +96,11 @@ impl<'prog> BuildCtx<'prog> {
         let sig = self.get_sig(&comp)?;
 
         // Event bindings
-        let event_binding = self.event_binding(
-            sig.raw_events.clone(),
+        let event_binding = sig.event_binding(
             abstract_vars.iter().map(|v| v.inner().clone()),
-        );
+            instance,
+            self.diag(),
+        )?;
 
         // Define the output port from the invoke
         for (idx, p) in sig.raw_outputs.clone().into_iter().enumerate() {
@@ -483,9 +484,6 @@ impl<'prog> BuildCtx<'prog> {
         for param in &sig.params {
             self.param(param.inner(), ir::ParamOwner::Sig);
         }
-        for param in &sig.sig_bindings {
-            self.param(param.inner(), ir::ParamOwner::SigBinding);
-        }
         let mut interface_signals: HashMap<_, _> = sig
             .interface_signals
             .iter()
@@ -566,48 +564,6 @@ impl<'prog> BuildCtx<'prog> {
             .collect_vec())
     }
 
-    /// Construct an event binding from this Signature's events and the given
-    /// arguments.
-    /// Fills in the missing arguments with default values
-    pub fn event_binding(
-        &self,
-        events: impl IntoIterator<Item = ast::EventBind>,
-        args: impl IntoIterator<Item = ast::Time>,
-    ) -> Binding<ast::Time> {
-        let args = args.into_iter().collect_vec();
-        let events = events.into_iter().collect_vec();
-        assert!(
-            events.iter().take_while(|ev| ev.default.is_none()).count()
-                <= args.len(),
-            "Insuffient events for component invocation.",
-        );
-
-        let mut partial_map = Binding::new(
-            events
-                .iter()
-                .map(|eb| eb.event.inner())
-                .cloned()
-                .zip(args.iter().cloned()),
-        );
-        // Skip the events that have been bound
-        let remaining = events
-            .iter()
-            .skip(args.len())
-            .map(|eb| {
-                let bind = eb
-                    .default
-                    .as_ref()
-                    .unwrap()
-                    .clone()
-                    .resolve_event(&partial_map);
-                (*eb.event.inner(), bind)
-            })
-            .collect();
-
-        partial_map.extend(remaining);
-        partial_map
-    }
-
     /// This function is called during the second pass of the conversion and does the following:
     /// * Defines the input ports of the invocation
     /// * Generate event bindings implied by the invocation
@@ -630,10 +586,11 @@ impl<'prog> BuildCtx<'prog> {
         let foreign_comp = inv.comp(self.comp());
 
         // Event bindings
-        let event_binding = self.event_binding(
-            sig.raw_events.iter().cloned(),
+        let event_binding = sig.event_binding(
             abstract_vars.iter().map(|v| v.inner().clone()),
-        );
+            &instance,
+            self.diag(),
+        )?;
 
         let srcs = ports
             .into_iter()

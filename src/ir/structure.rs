@@ -275,8 +275,6 @@ impl Access {
 pub enum ParamOwner {
     /// Defined by the signature (passed in when instantiated)
     Sig,
-    /// Defined by signature binding
-    SigBinding,
     /// Defined by a bundle
     Bundle(PortIdx),
     /// Loop indexing parameter
@@ -296,9 +294,6 @@ impl fmt::Display for ParamOwner {
             }
             ParamOwner::Bundle(idx) => {
                 write!(f, "{idx}")
-            }
-            ParamOwner::SigBinding => {
-                write!(f, "sig binding")
             }
             ParamOwner::Let => write!(f, "let"),
         }

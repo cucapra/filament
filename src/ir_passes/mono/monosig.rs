@@ -220,9 +220,6 @@ impl MonoSig {
                 }
                 ir::ParamOwner::Bundle(_) => "bundle-bound parameter",
                 ir::ParamOwner::Sig => "signature-bound parameter",
-                ir::ParamOwner::SigBinding => {
-                    "parameter bound in signature's with binding"
-                }
             };
             unreachable!(
                 "{} `{}' should have been resolved in the binding but the binding was: {:?}",
