@@ -57,7 +57,7 @@ impl MonoSig {
                 .zip(params)
                 .collect_vec(),
         );
-        
+
         Self {
             base: BaseComp::new(base),
             underlying_idx,
