@@ -16,9 +16,7 @@ mod validate;
 
 pub use comp::{Component, InterfaceSrc};
 pub use context::Context;
-pub use control::{
-    Command, Connect, EventBind, If, Instance, Invoke, Let, Loop,
-};
+pub use control::{Command, Connect, EventBind, If, Instance, Invoke, Loop};
 pub use ctx::{AddCtx, Ctx, MutCtx};
 pub use expr::Expr;
 pub use fact::{Cmp, CmpOp, Fact, Prop};

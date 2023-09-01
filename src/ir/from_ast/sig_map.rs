@@ -160,7 +160,7 @@ impl Sig {
             .count();
 
         // To few arguments for the event
-        if min_args <= args.len() {
+        if min_args > args.len() {
             let msg = format!(
                 "`{}' requires at least {} events but {} were provided",
                 inst.inner(),

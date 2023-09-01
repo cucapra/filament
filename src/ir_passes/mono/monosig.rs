@@ -216,9 +216,7 @@ impl MonoSig {
         } else {
             // This param is a in a use site and should therefore have been found.
             let msg = match ul.get(p_idx).owner {
-                ir::ParamOwner::Let | ir::ParamOwner::Loop => {
-                    "let-bound parameter"
-                }
+                ir::ParamOwner::Loop => "let-bound parameter",
                 ir::ParamOwner::Bundle(_) => "bundle-bound parameter",
                 ir::ParamOwner::Sig => "signature-bound parameter",
             };
