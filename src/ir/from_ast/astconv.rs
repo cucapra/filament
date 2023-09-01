@@ -483,7 +483,6 @@ impl<'prog> BuildCtx<'prog> {
                 let (start, end) = self.access(access.take())?;
                 ir::Access { port, start, end }
             }
-            ast::Port::Constant(_) => todo!("Constant ports"),
         };
         Ok(acc)
     }
