@@ -132,7 +132,7 @@ impl MonoSig {
             conc_params
         };
 
-        let comp_k = (inst_comp, conc_params.clone()).into();
+        let comp_k = (inst_comp, conc_params).into();
 
         let mono_compidx = if pass.queue.get(&comp_k).is_none() {
             pass.processed[&comp_k]
@@ -687,7 +687,7 @@ impl MonoSig {
         };
 
         let port_map_k = (None, port);
-        let global_port_map_k = ((comp, cparams.clone()).into(), port);
+        let global_port_map_k = ((comp, cparams).into(), port);
 
         // If the port has already been added to the base component, then we can
         // just return the index
