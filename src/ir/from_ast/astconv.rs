@@ -58,14 +58,11 @@ impl<'prog> BuildCtx<'prog> {
         };
 
         // Extend the binding with the let-bound parameters in the signature
-        binding.extend(
-            comp.sig_binding
-                .iter()
-                .map(|ast::ParamBind { param, default }| {
-                    let e = default.clone().unwrap().resolve(&binding);
-                    (param.copy(), e)
-                })
-                .collect_vec(),
+        comp.sig_binding.iter().for_each(
+            |ast::ParamBind { param, default }| {
+                let e = default.clone().unwrap().resolve(&binding);
+                binding.extend([(param.copy(), e)])
+            },
         );
 
         //println!("ir inst has bindings {:?}", inst.params);
