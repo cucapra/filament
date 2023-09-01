@@ -67,12 +67,34 @@ impl Sig {
         diag: &mut diagnostics::Diagnostics,
     ) -> BuildRes<Binding<ast::Expr>> {
         let args = args.into_iter().collect_vec();
+        let arg_len = args.len();
+
+        // We've been given too many arguments
+        if self.raw_params.len() < arg_len {
+            let err = Error::malformed(format!(
+                "`{}' requires at most {} parameters but {} were provided",
+                comp.inner(),
+                self.raw_params.len(),
+                arg_len
+            ));
+            let err = err.add_note(diag.add_info(
+                format!(
+                    "`{}' requires at most {} parameters but {} were provided",
+                    comp.inner(),
+                    self.raw_params.len(),
+                    arg_len
+                ),
+                comp.pos(),
+            ));
+            diag.add_error(err);
+            return Err(std::mem::take(diag));
+        }
+
         let min_args = self
             .raw_params
             .iter()
             .take_while(|ev| ev.default.is_none())
             .count();
-        let arg_len = args.len();
 
         // We don't have enough parameters. Generate error.
         if min_args > arg_len {

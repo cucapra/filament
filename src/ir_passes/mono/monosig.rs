@@ -2,7 +2,9 @@ use super::{
     utils::{Base, BaseComp, Underlying, UnderlyingComp},
     Monomorphize,
 };
-use crate::ir::{self, AddCtx, Ctx, DenseIndexInfo, Foreign, MutCtx};
+use crate::ir::{
+    self, AddCtx, Ctx, DenseIndexInfo, DisplayCtx, Foreign, MutCtx,
+};
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -67,9 +69,15 @@ impl MonoSig {
             instance_map: DenseMap::default(),
         }
     }
-}
 
-impl MonoSig {
+    /// String representation for the binding for debug purposes
+    fn binding_rep(&self, ul: &UnderlyingComp<'_>) -> String {
+        self.binding
+            .iter()
+            .map(|(p, e)| format!("{}: {}", ul.display(*p), e))
+            .join(", ")
+    }
+
     /// Given an underlying PortOwner, returns the corresponding base PortOwner
     fn find_new_portowner(
         &mut self,
@@ -205,28 +213,29 @@ impl MonoSig {
     /// Assumes that `param` is not sig-owned, because then it would be defined in the binding
     pub fn param_use(
         &mut self,
-        underlying: &UnderlyingComp,
-        param: Underlying<ir::Param>,
+        ul: &UnderlyingComp,
+        p_idx: Underlying<ir::Param>,
     ) -> Base<ir::Param> {
-        if let Some(&idx) = self.param_map.get(&param) {
+        if let Some(&idx) = self.param_map.get(&p_idx) {
             idx
         } else {
             // This param is a in a use site and should therefore have been found.
-            let param = underlying.get(param);
-            match param.owner {
+            let msg = match ul.get(p_idx).owner {
                 ir::ParamOwner::Let | ir::ParamOwner::Loop => {
-                    unreachable!("Let and loop params should should be resolved in the binding")
+                    "let-bound parameter"
                 }
-                ir::ParamOwner::Bundle(_) => {
-                    unreachable!("Bundle params should only be generated when visiting ports")
-                }
-                ir::ParamOwner::Sig => {
-                    unreachable!("If a param is sig-owned, it should be resolved in the binding!")
-                }
+                ir::ParamOwner::Bundle(_) => "bundle-bound parameter",
+                ir::ParamOwner::Sig => "signature-bound parameter",
                 ir::ParamOwner::SigBinding => {
-                    todo!()
+                    "parameter bound in signature's with binding"
                 }
-            }
+            };
+            unreachable!(
+                "{} `{}' should have been resolved in the binding but the binding was: {:?}",
+                msg,
+                ul.display(p_idx),
+                self.binding_rep(ul),
+            )
         }
     }
 

@@ -1,15 +1,18 @@
 use super::Ctx;
-use crate::{ast, ir, utils::Idx};
+use crate::{
+    ast, ir,
+    utils::{Idx, IdxLike},
+};
 use itertools::{Itertools, Position};
 use std::{fmt::Display, io};
 
 /// A context capable of displaying [`Idx<T>`] values.
-pub trait DisplayCtx<T>
+pub trait DisplayCtx<T, K = Idx<T>>
 where
-    Self: Ctx<T>,
+    K: IdxLike<T>,
 {
     /// Display the value
-    fn display(&self, idx: Idx<T>) -> String;
+    fn display(&self, idx: K) -> String;
 }
 
 impl DisplayCtx<ir::Component> for ir::Context {
