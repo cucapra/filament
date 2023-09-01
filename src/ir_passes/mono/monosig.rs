@@ -142,7 +142,14 @@ impl MonoSig {
 
         // now need to find the mapping from old portidx and the old instance to new port
         let global_port_map_k = (comp_k, key);
-        let new_port = pass.port_map[&global_port_map_k];
+        let new_port =
+            pass.port_map.get(&global_port_map_k).unwrap_or_else(|| {
+                unreachable!(
+                    "port {:?}.{} is missing from global map",
+                    inst_comp.idx(),
+                    pass.old.get(inst_comp.idx()).display(key.idx())
+                )
+            });
 
         ir::Foreign::new(new_port.get(), mono_compidx.get())
     }

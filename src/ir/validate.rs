@@ -1,28 +1,28 @@
 use crate::{ir, ir::Ctx};
-
-use super::IndexStore;
-/// Implements validation checks for IR data structures.
+/// Validate the current context
 /// If calling the methods in this does not result in a panic, then the corresponding IR structure is valid.
 /// The validity condition for each structure is defined in the corresponding method.
 pub struct Validate<'a> {
-    /// The component being validated.
-    comp: &'a ir::Component,
     /// The context for the program being evaluated
-    ctx: &'a IndexStore<ir::Component>,
+    ctx: &'a ir::Context,
+    comp: &'a ir::Component,
 }
 
 impl<'a> Validate<'a> {
-    pub fn new(
-        comp: &'a ir::Component,
-        ctx: &'a IndexStore<ir::Component>,
-    ) -> Self {
-        Self { comp, ctx }
+    /// Check a context
+    pub fn context(ctx: &'a ir::Context) {
+        for (_, comp) in ctx.iter() {
+            Self { ctx, comp }.comp()
+        }
     }
-}
 
-impl<'a> Validate<'a> {
+    /// Check a component
+    pub fn component(ctx: &'a ir::Context, comp: &'a ir::Component) {
+        Self { ctx, comp }.comp()
+    }
+
     /// Validate the entire component
-    pub fn comp(&self) {
+    fn comp(&self) {
         // Validate exprs
         for (eidx, _) in self.comp.exprs().iter() {
             self.expr(eidx);
@@ -71,7 +71,7 @@ impl<'a> Validate<'a> {
 
     /// An Expr is valid if:
     /// (1) It is bound in the component
-    pub fn expr(&self, eidx: ir::ExprIdx) {
+    fn expr(&self, eidx: ir::ExprIdx) {
         let _ = &self.comp[eidx];
     }
 
@@ -81,7 +81,7 @@ impl<'a> Validate<'a> {
     /// NOTE(rachit): A more pedantic check can enforce these in the future:
     /// (3) All time expressions are bound
     /// (4) All parameters mentioned in the range and the width are bound
-    pub fn port(&self, pidx: ir::PortIdx) {
+    fn port(&self, pidx: ir::PortIdx) {
         let ir::Port {
             owner, width, live, ..
         } = self.comp.get(pidx);
@@ -147,7 +147,7 @@ impl<'a> Validate<'a> {
     /// An event is valid if:
     /// (1) Its owner is defined in the component and says it owns the event
     /// (2) Its delay is valid
-    pub fn event(&self, evidx: ir::EventIdx) {
+    fn event(&self, evidx: ir::EventIdx) {
         let ir::Event { delay, .. } = &self.comp[evidx];
 
         // check (2)
@@ -158,7 +158,7 @@ impl<'a> Validate<'a> {
     /// (1) Its fields are all well-formed, i.e.
     ///     i. If it is a Unit, its expr exists in the component
     ///     ii. If it is a Sym, both of its times are well-formed
-    pub fn timesub(&self, ts: &ir::TimeSub) {
+    fn timesub(&self, ts: &ir::TimeSub) {
         // check (1)
         match ts {
             ir::TimeSub::Unit(expr) => {
@@ -177,7 +177,7 @@ impl<'a> Validate<'a> {
     /// A Time is valid if:
     /// (1) It is defined in the component
     /// (2) Its fields are defined in the component
-    pub fn time(&self, tidx: ir::TimeIdx) {
+    fn time(&self, tidx: ir::TimeIdx) {
         // check (1)
         let ir::Time { event, offset } = &self.comp[tidx];
 
@@ -188,7 +188,7 @@ impl<'a> Validate<'a> {
 
     /// A Range is valid if:
     /// (1) Both its start and end times are valid
-    pub fn range(&self, range: ir::Range) {
+    fn range(&self, range: ir::Range) {
         let ir::Range { start, end } = range;
         self.time(start);
         self.time(end);
@@ -198,7 +198,7 @@ impl<'a> Validate<'a> {
     /// (1) It is defined in the component
     /// (2) Its owner is defined in the component
     /// (3) Its owner points to it?
-    pub fn param(&self, pidx: ir::ParamIdx) {
+    fn param(&self, pidx: ir::ParamIdx) {
         // check (1) - this will panic if param not defined
         let ir::Param { owner, .. } = &self.comp.get(pidx);
 
