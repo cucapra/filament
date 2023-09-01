@@ -33,7 +33,7 @@ comp ShareIterDiv[#W]<G: #W>(
 ) -> (
    quotient: [G+#W, G+#W+1] #W
 ) where #W > 0 {
-  td := new TradeoffDiv[#W, 1, #W]<G>(left, right);
+  td := new TradeoffDiv[#W, 1]<G>(left, right);
   quotient = td.out;
 }
 
@@ -45,7 +45,7 @@ comp PipeIterDiv[#W]<G: 1>(
 ) -> (
    quotient: [G+#W, G+#W+1] #W
 ) where #W > 0 {
-  td := new TradeoffDiv[#W, #W, 1]<G>(left, right);
+  td := new TradeoffDiv[#W, #W]<G>(left, right);
   quotient = td.out;
 }
 
