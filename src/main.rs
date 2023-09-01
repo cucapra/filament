@@ -90,7 +90,7 @@ fn gen_verilog(mut ctx: calyx_ir::Context) -> Result<(), calyx_utils::Error> {
         &["canonicalize".to_string()],
         false,
     )?;
-    let backend = calyx::backend::verilog::VerilogBackend::default();
+    let backend = calyx::backend::verilog::VerilogBackend;
     backend.run(ctx, calyx_utils::OutputFile::Stdout)
 }
 

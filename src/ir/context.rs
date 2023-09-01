@@ -30,6 +30,10 @@ impl Context {
             comps.contains(&idx).then_some(filename.to_string())
         })
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (CompIdx, &Component)> + '_ {
+        self.comps.iter()
+    }
 }
 
 impl<T> Ctx<T, Foreign<T, Component>> for Context

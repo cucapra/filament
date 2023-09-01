@@ -44,7 +44,7 @@ impl<T: Display> Binding<T> {
     }
 
     /// Extend the binding
-    pub fn extend(&mut self, other: Vec<(Id, T)>) {
+    pub fn extend(&mut self, other: impl IntoIterator<Item = (Id, T)>) {
         self.map.extend(other);
     }
 

@@ -1,0 +1,17 @@
+import "primitives/core.fil";
+
+comp Foo[#N]<G:1>() -> (
+    out: [G, G+1] 4
+) with {
+    let #B = 2*#N;
+} {
+    const := new Const[4, #B]<G>();
+    out = const.out;
+}
+
+comp main<G:1>() -> (
+    out: [G, G+1] 4
+) {
+    f := new Foo[7]<G>();
+    out = f.out;
+}

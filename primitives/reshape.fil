@@ -24,12 +24,19 @@ import "primitives/state.fil";
 // a component that is not fully pipelined.
 comp Serialize[#W, #N, #B, ?#C=1, ?#H=1]<G: #C*(#N-1)+#H>(
     go: interface[G],
-    in[#N*#B]: for<#p> [G, G+#H] #W
+    in[#Tot]: [G, G+#H] #W
 ) -> (
     // The parenthesis are important because we want to perform integer
     // division.
-    out[#N*#B]: for<#p> [G+#C*(#p/#B), G+#C*(#p/#B)+#H] #W
-) where #N > 0, #B > 0, #C > 0, #H > 0 {
+    out[#Tot]: for<#p> [G+#C*(#p/#B), G+#C*(#p/#B)+#H] #W
+) with {
+    let #Tot = #N*#B;
+} where
+    #N > 0,
+    #B > 0,
+    #C > 0,
+    #H > 0
+{
     for #i in 0..#N {
         for #j in 0..#B {
             let #CurIdx = #B*#i+#j;
@@ -67,21 +74,31 @@ comp Serialize[#W, #N, #B, ?#C=1, ?#H=1]<G: #C*(#N-1)+#H>(
 // In general, you probably don't want to use the #C and #H parameters at
 // all. They are most useful when the deserializer is consuming inputs from
 // a component that is not fully pipelined.
-comp Deserialize[#W, #N, #B, ?#C=1, ?#H=1]<G: #C*#N+#H-2>(
+comp Deserialize[#W, #N, #B, ?#C=1, ?#H=1]<G: #End-1>(
     go: interface[G],
-    in[#N*#B]: for<#p> [G+#C*(#p/#B), G+#C*(#p/#B)+#H] #W
+    in[#Tot]: for<#p> [G+#C*(#p/#B), G+#C*(#p/#B)+#H] #W
 ) -> (
-    out[#N*#B]: for<#p> [G+#C*(#N-1), G+#C*(#N-1)+#H] #W
-) where #N > 1, #B > 0, #C > 0, #H > 0 {
+    out[#Tot]: [G+#Start, G+#Start+#H] #W
+) with {
+    let #Tot = #N*#B;
+    let #Start = #C*(#N-1);
+    let #End = #Start+#H;
+} where
+    #N > 1,
+    #B > 0,
+    #C > 0,
+    #H > 0
+{
     for #i in 0..#N {
         // Accepts #B inputs this cycle and delay them
         for #j in 0..#B {
             let #CurIdx = #B*#i+#j;
             assume #CurIdx/#B == #i; // Proof hint. Make type checking faster.
             if #i < #N-1 {
-                d := new Register[#W]<G+#C*#i, G+#C*#N+#H-1>(in{#CurIdx});
+                d := new Register[#W]<G+#C*#i, G+#End>(in{#CurIdx});
                 out{#CurIdx} = d.out;
             } else {
+                // The last bundle is forwarded combinationally
                 out{#CurIdx} = in{#CurIdx};
             }
         }

@@ -227,7 +227,7 @@ impl Visitor for BundleElim {
         // are defined before connects accessing the local port (I.E. assignments are in proper order).
         Action::Change(
             src.into_iter()
-                .zip(dst.into_iter())
+                .zip(dst)
                 .map(|(src, dst)| {
                     Command::Connect(Connect {
                         src: Access::port(src, &mut data.comp),

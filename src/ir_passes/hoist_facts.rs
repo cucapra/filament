@@ -115,6 +115,6 @@ impl Visitor for HoistFacts {
         // Insert the asserts to the start of the component cmds
         let cmds = std::mem::take(&mut data.comp.cmds);
         let facts = std::mem::take(&mut self.facts);
-        data.comp.cmds = facts.into_iter().chain(cmds.into_iter()).collect();
+        data.comp.cmds = facts.into_iter().chain(cmds).collect();
     }
 }
