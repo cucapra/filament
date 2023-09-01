@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+error: `Foo' requires at most 1 parameters but 2 were provided
+  ┌─ tests/errors/too-many-params.fil:3:12
+  │
+3 │   f := new Foo[10, 15]<G>();
+  │            ^^^ `Foo' requires at most 1 parameters but 2 were provided
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

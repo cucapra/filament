@@ -138,9 +138,6 @@ comp Id_Next[#W]<G: 1>(
 /// ```
 /// The `seq_div` instance has a II=#W and reuses one instance of `Id_Next` `#W` times.
 /// The `pipe_div` instance has a II=1 and reuses `#W` instances of `Id_Next` once each.
-///
-/// NOTE(rachit): Once we have default parameters, we should provide a default value for `#K`
-/// using `#I`.
 comp TradeoffDiv[#W, #I]<G: #K>(
   go: interface[G],
    left: [G, G+1] #W,
