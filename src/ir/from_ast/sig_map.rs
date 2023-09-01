@@ -67,6 +67,7 @@ impl Sig {
         diag: &mut diagnostics::Diagnostics,
     ) -> BuildRes<Binding<ast::Expr>> {
         let args = args.into_iter().collect_vec();
+        //println!("args: {:?}", args);
         let min_args = self
             .raw_params
             .iter()
@@ -113,6 +114,7 @@ impl Sig {
             .collect();
 
         partial_map.extend(remaining);
+        //println!("final map: {:?}", partial_map);
 
         Ok(partial_map)
     }

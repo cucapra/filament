@@ -327,6 +327,10 @@ impl Param {
         matches!(self.owner, ParamOwner::Sig)
     }
 
+    pub fn is_sig_bind(&self) -> bool {
+        matches!(self.owner, ParamOwner::SigBinding)
+    }
+
     pub fn is_local(&self) -> bool {
         matches!(self.owner, ParamOwner::Loop)
     }

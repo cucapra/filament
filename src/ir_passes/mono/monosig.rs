@@ -55,6 +55,7 @@ impl MonoSig {
                 .zip(params)
                 .collect_vec(),
         );
+        
         Self {
             base: BaseComp::new(base),
             underlying_idx,
@@ -133,7 +134,7 @@ impl MonoSig {
 
         // now need to find the mapping from old portidx and the old instance to new port
         let global_port_map_k = (comp_k, key);
-        println!("trying to get (({}, {:?}), {}) in pass.port_map", inst_comp.idx(), conc_params, key.idx());
+
         let new_port = pass.port_map[&global_port_map_k];
 
         ir::Foreign::new(new_port.get(), mono_compidx.get())
@@ -678,7 +679,7 @@ impl MonoSig {
         };
 
         let port_map_k = (None, port);
-        let global_port_map_k = ((comp, cparams).into(), port);
+        let global_port_map_k = ((comp, cparams.clone()).into(), port);
 
         // If the port has already been added to the base component, then we can
         // just return the index

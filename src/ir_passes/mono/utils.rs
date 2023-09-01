@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     ast,
     ir::{self, AddCtx, Ctx, IndexStore, InterfaceSrc, Interned, MutCtx},
@@ -123,6 +125,7 @@ where
     }
 }
 
+#[derive(Debug)]
 /// Wraps an Idx that is meaningful in the base component, which are the new components
 /// that we build during monomorphization. As we visit parts of the underlying (pre-mono)
 /// component, we need to build new monomorphized structures and add them to the new component.
@@ -189,6 +192,7 @@ impl<T> utils::IdxLike<T> for Base<T> {
     }
 }
 
+#[derive(Debug)]
 /// Wraps an Idx that is meaningful in the underlying component, which are the existing pre-monomorphization
 /// components. These Idxs get passed around between a lot of functions and mappings during monomorphization,
 /// so it becomes hard to keep track of which Idx belongs where. This wrapper makes it distinct from base Idxs.

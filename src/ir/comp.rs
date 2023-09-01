@@ -219,7 +219,7 @@ impl Component {
         let sig_params = self
             .params()
             .iter()
-            .filter(|(_, param)| param.is_sig_owned())
+            .filter(|(_, param)| param.is_sig_owned() || param.is_sig_bind())
             .map(|(idx, _)| idx)
             .collect_vec();
 

@@ -30,7 +30,7 @@ impl MonoDeferred<'_, '_> {
         } else {
             binding
                 .iter()
-                .filter(|(p, _)| underlying.get(*p).is_sig_owned())
+                .filter(|(p, _)| underlying.get(*p).is_sig_owned() || underlying.get(*p).is_sig_bind())
                 .map(|(_, n)| *n)
                 .collect_vec()
         };
@@ -77,12 +77,13 @@ impl MonoDeferred<'_, '_> {
                 }
             }
         } else {
-            for (param, expr) in &underlying.sig_binding {
-                let new_expr = monosig.expr(underlying, Underlying::new(*expr));
+            for (param, expr) in &underlying.comp().sig_binding {
+                let new_expr = monosig.expr(&underlying, Underlying::new(*expr));
                 let new_expr = monosig
                     .base
-                    .bin(monosig.base.get(new_expr.get()).clone())
-                    .as_concrete(&monosig.base)
+                    .bin(monosig.base.get(new_expr).clone())
+                    .get()
+                    .as_concrete(monosig.base.comp())
                     .unwrap();
                 monosig.binding.insert(Underlying::new(*param), new_expr);
             }

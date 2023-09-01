@@ -3,7 +3,7 @@ use crate::{
     ir_passes::mono::monosig::MonoSig,
 };
 use linked_hash_map::LinkedHashMap;
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug};
 
 use super::{
     monodeferred::MonoDeferred,
