@@ -40,7 +40,7 @@ comp Conv<G: 1>(
     }
 
     // Add the results
-    sum := new ReduceAdd[16, 8, 3]<G+3>(m{0..8});
+    sum := new ReduceAdd[16, 8]<G+3>(m{0..8});
     acc := new Shift[16, 3]<G+3>(m{8});
     red := new Add[16]<G+6>(sum.out, acc.out);
 

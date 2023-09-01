@@ -10,10 +10,7 @@ import "./comb.fil";
 /// * `#K` is the number of levels in the tree.
 /// The module instantiates registers at every level of the tree resulting in
 /// a latency of `#K`.
-///
-/// NOTE(rachit): Once we have default parameters, we can provide a default
-/// binding fot `#K` based on `#N`.
-comp ReduceAdd[#W, #N, #K]<G:1>(
+comp ReduceAdd[#W, #N, ?#K=log2(#N)]<G:1>(
     in[#N]: for<#i> [G, G+1] #W
 ) -> (
      out: [G+#K, G+#K+1] #W
@@ -140,9 +137,9 @@ comp Id_Next[#W]<G: 1>(
 /// The `seq_div` instance has a II=#W and reuses one instance of `Id_Next` `#W` times.
 /// The `pipe_div` instance has a II=1 and reuses `#W` instances of `Id_Next` once each.
 ///
-/// NOTE(rachit): Once we have default parameters, we should provide a default value for `#K`
-/// using `#I`.
-comp TradeoffDiv[#W, #I, #K]<G: #K>(
+/// NOTE(rachit): Once we have sig bindings, we should define #K as a private
+/// parameter in terms of #W and #I.
+comp TradeoffDiv[#W, #I, ?#K=#W/#I]<G: #K>(
   go: interface[G],
    left: [G, G+1] #W,
    right: [G, G+1] #W,
