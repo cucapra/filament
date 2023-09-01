@@ -2,6 +2,7 @@ comp Foo[#N]<G:1>(
     in: [G, G+1] #B
 ) -> () with {
     let #B = 2*#N;
+    let #C = #B + 1;
 } {
 }
 
