@@ -58,6 +58,8 @@ impl<'prog> BuildCtx<'prog> {
         };
 
         // Extend the binding with the let-bound parameters in the signature
+        // Bindings can mention previous bindings so we add bindings as we
+        // go along.
         comp.sig_binding.iter().for_each(
             |ast::ParamBind { param, default }| {
                 let e = default.clone().unwrap().resolve(&binding);
