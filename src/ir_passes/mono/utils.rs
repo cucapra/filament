@@ -1,5 +1,3 @@
-use linked_hash_map::LinkedHashMap;
-
 use crate::{
     ast,
     ir::{
@@ -41,9 +39,6 @@ impl<'a> UnderlyingComp<'a> {
     }
     pub fn unannotated_ports(&self) -> &Vec<(ast::Id, u64)> {
         &self.0.unannotated_ports
-    }
-    pub fn sig_binding(&self) -> &LinkedHashMap<ir::ParamIdx, ir::ExprIdx> {
-        &self.0.sig_binding
     }
 }
 

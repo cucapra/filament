@@ -37,9 +37,6 @@ impl<'prog> BuildCtx<'prog> {
             bindings,
         } = inst;
 
-        let bindings_print = bindings.iter().map(|e| e.inner()).collect_vec();
-        //println!("inst {} is an inst of {} and has bindings {:?}", name.inner(), component.inner(), bindings_print);
-
         let comp = self.get_sig(component)?;
         let binding = comp.param_binding(
             bindings.iter().map(|e| e.inner()).cloned().collect_vec(),
