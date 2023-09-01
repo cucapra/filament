@@ -264,7 +264,13 @@ impl<'a> Printer<'a> {
                 }
             }
             ir::Command::Let(ir::Let { param, expr }) => {
-                write!(f, "{:indent$}let {param} = {};", "", self.expr(*expr))
+                write!(
+                    f,
+                    "{:indent$}let {} = {};",
+                    "",
+                    self.ctx.display(*param),
+                    self.expr(*expr)
+                )
             }
         }
     }
