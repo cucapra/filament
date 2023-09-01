@@ -15,7 +15,7 @@ where
 {
     /// Unique identifier for each scope level
     scope_level: u32,
-    map: Vec<HashMap<K, Idx<V>>>,
+    map: Vec<HashMap<K, V>>,
 }
 impl<V, K> ScopeMap<V, K>
 where
@@ -43,7 +43,7 @@ where
     }
 
     /// Insert binding into the scope level and return the [ScopeIdx] value for it
-    pub fn insert(&mut self, id: K, idx: Idx<V>)
+    pub fn insert(&mut self, id: K, idx: V)
     where
         K: std::fmt::Debug,
     {
@@ -55,7 +55,7 @@ where
     }
 
     /// Return the value by searching through the scope levels
-    pub fn get(&self, id: &K) -> Option<&Idx<V>> {
+    pub fn get(&self, id: &K) -> Option<&V> {
         for scope in self.map.iter().rev() {
             if let Some(val) = scope.get(id) {
                 return Some(val);
@@ -70,10 +70,10 @@ where
     K: Eq + std::hash::Hash + Clone,
 {
     /// Returns a flattened representation of the scope. This should only be used for reporting errors.
-    pub(super) fn as_flat_vec(&self) -> Vec<(K, Idx<V>)> {
+    pub(super) fn as_flat_vec(&self) -> Vec<(K, &V)> {
         self.map
             .iter()
-            .flat_map(|map| map.iter().map(move |(id, val)| (id.clone(), *val)))
+            .flat_map(|map| map.iter().map(move |(id, val)| (id.clone(), val)))
             .collect_vec()
     }
 }
@@ -82,6 +82,7 @@ impl<V, K> fmt::Display for ScopeMap<V, K>
 where
     Idx<V>: fmt::Display,
     K: Eq + std::hash::Hash + fmt::Display + Clone,
+    V: fmt::Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (scope, map) in self.map.iter().enumerate() {
@@ -102,7 +103,7 @@ impl<V, K> std::ops::Index<&K> for ScopeMap<V, K>
 where
     K: Eq + std::hash::Hash + Clone + std::fmt::Display,
 {
-    type Output = Idx<V>;
+    type Output = V;
 
     fn index(&self, id: &K) -> &Self::Output {
         self.get(id).unwrap()

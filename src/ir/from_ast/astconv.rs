@@ -161,10 +161,7 @@ impl<'prog> BuildCtx<'prog> {
 impl<'prog> BuildCtx<'prog> {
     fn expr(&mut self, expr: ast::Expr) -> BuildRes<ExprIdx> {
         let expr = match expr {
-            ast::Expr::Abstract(p) => {
-                let pidx = self.get_param(&p)?;
-                self.comp().add(ir::Expr::Param(pidx))
-            }
+            ast::Expr::Abstract(p) => self.get_param(&p)?,
             ast::Expr::Concrete(n) => {
                 let e = ir::Expr::Concrete(n);
                 self.comp().add(e)
@@ -484,12 +481,21 @@ impl<'prog> BuildCtx<'prog> {
         for param in &sig.params {
             self.param(param.inner(), ir::ParamOwner::Sig);
         }
+
+        // Binding from let-defined parameters in the signature to their values
+        for pb in &sig.sig_bindings {
+            let ast::ParamBind { default, .. } = pb.inner();
+            let e = self.expr(default.as_ref().unwrap().clone())?;
+            self.add_let_param(pb.name(), e);
+        }
+
         let mut interface_signals: HashMap<_, _> = sig
             .interface_signals
             .iter()
             .cloned()
             .map(|ast::InterfaceDef { name, event }| (event, name.split()))
             .collect();
+
         // Declare the events first
         for event in &sig.events {
             // can remove here as each interface signal should only be used once
@@ -747,27 +753,10 @@ impl<'prog> BuildCtx<'prog> {
                 vec![ir::Connect { src, dst, info }.into()]
             }
             ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
-                /* Declared by [[declare_cmds]]. This has the unfortunate effect
-                 * of making it seem like all parameters are hoisted to the top
-                 * of the scope. */
-                let param = self.get_param(name.inner())?;
-                let expr = self.expr(expr)?;
-
-                let pexpr = self.comp().add(ir::Expr::Param(param));
-
-                let prop =
-                    self.comp().add(ir::Prop::Cmp(ir::CmpOp::eq(pexpr, expr)));
-
-                let info = self.comp().add(ir::Info::assert(
-                    ir::info::Reason::misc("Let-bound parameter", name.pos()),
-                ));
-
-                log::debug!("Assuming {}", prop);
-
-                vec![
-                    ir::Let { param, expr }.into(),
-                    self.comp().assume(prop, info).unwrap(),
-                ]
+                // Let-bound parameters are completely rewritten
+                let e = self.expr(expr)?;
+                self.add_let_param(name.take(), e);
+                vec![]
             }
             ast::Command::ForLoop(ast::ForLoop {
                 idx,
@@ -888,12 +877,20 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
     // used in the beginning so signatures of components can be built without any information
     let sig_map = SigMap::default();
 
+    /// Container to store build information after compiling a signature.
+    struct Builder<'a> {
+        idx: ir::CompIdx,
+        builder: BuildCtx<'a>,
+        body: Option<Vec<ast::Command>>,
+    }
+
     // uses the information above to compile the signatures of components and create their builders.
     let (mut builders, sig_map): (Vec<_>, SigMap) = comps
         .map(|(idx, (file, sig, body))| {
             let idx = ir::CompIdx::new(idx);
             let mut builder =
                 BuildCtx::new(ir::Component::new(body.is_none()), &sig_map);
+
             // enable source information saving if this is main or an external.
             if body.is_none() || Some(idx) == ctx.entrypoint {
                 builder.comp().src_info =
@@ -908,21 +905,26 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
             builder.comp().cmds = builder.sig(&sig)?;
 
             let irsig = Sig::new(idx, builder.comp(), &sig);
-            Ok(((idx, builder, body), (sig.name.take(), irsig)))
+            Ok((Builder { idx, builder, body }, (sig.name.take(), irsig)))
         })
         .collect::<BuildRes<Vec<_>>>()?
         .into_iter()
         .unzip();
 
     // Add the signature map to each builder
-    builders.iter_mut().for_each(|(_, builder, _)| {
+    builders.iter_mut().for_each(|Builder { builder, .. }| {
         builder.set_sig_map(&sig_map);
     });
 
     // Compiles and adds all the commands here
     // Need to do this before adding all the components because each builder borrows the context immutably
-    for (idx, mut builder, cmds) in builders {
-        let body_cmds = match cmds {
+    for Builder {
+        idx,
+        mut builder,
+        body,
+    } in builders
+    {
+        let body_cmds = match body {
             Some(cmds) => builder.commands(cmds)?,
             None => vec![],
         };
