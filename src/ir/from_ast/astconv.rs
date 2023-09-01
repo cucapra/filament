@@ -1,15 +1,13 @@
 //! Convert the frontend AST to the IR.
 use super::build_ctx::InvPort;
 use super::{BuildCtx, Sig, SigMap};
-use crate::ast::Id;
 use crate::diagnostics;
-use crate::errors::Error;
 use crate::ir::{
     AddCtx, Cmp, Ctx, EventIdx, ExprIdx, InterfaceSrc, MutCtx, ParamIdx,
     PortIdx, PropIdx, TimeIdx,
 };
 use crate::utils::{GPosIdx, Idx};
-use crate::{ast, ir, utils::Binding};
+use crate::{ast, ir};
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::{iter, rc::Rc};
@@ -17,7 +15,7 @@ use std::{iter, rc::Rc};
 pub type BuildRes<T> = Result<T, diagnostics::Diagnostics>;
 
 /// # Declare phase
-/// This is the first pass over the AST and responsible for forward declaring names defined by invocations.
+/// This is the first pass over a particular scope and responsible for forward declaring names defined by invocations.
 /// We do this because invocation ports can be used before their definition:
 /// ```
 /// p = new Prev[32]<G>(add.out);
@@ -38,11 +36,12 @@ impl<'prog> BuildCtx<'prog> {
             component,
             bindings,
         } = inst;
+
         let comp = self.get_sig(component)?;
-        let binding = self.param_binding(
-            comp.raw_params.clone(),
+        let mut binding = comp.param_binding(
             bindings.iter().map(|e| e.inner()).cloned().collect_vec(),
             component.clone(),
+            self.diag(),
         )?;
         let inst = ir::Instance {
             comp: comp.idx,
@@ -57,6 +56,18 @@ impl<'prog> BuildCtx<'prog> {
                 name.pos(),
             )),
         };
+
+        // Extend the binding with the let-bound parameters in the signature
+        // Bindings can mention previous bindings so we add bindings as we
+        // go along.
+        comp.sig_binding.iter().for_each(
+            |ast::ParamBind { param, default }| {
+                let e = default.clone().unwrap().resolve(&binding);
+                binding.extend([(param.copy(), e)])
+            },
+        );
+
+        //println!("ir inst has bindings {:?}", inst.params);
         let idx = self.comp().add(inst);
         self.add_inst(name.copy(), idx);
         // Track the component binding for this instance
@@ -98,10 +109,11 @@ impl<'prog> BuildCtx<'prog> {
         let sig = self.get_sig(&comp)?;
 
         // Event bindings
-        let event_binding = self.event_binding(
-            sig.raw_events.clone(),
+        let event_binding = sig.event_binding(
             abstract_vars.iter().map(|v| v.inner().clone()),
-        );
+            instance,
+            self.diag(),
+        )?;
 
         // Define the output port from the invoke
         for (idx, p) in sig.raw_outputs.clone().into_iter().enumerate() {
@@ -134,13 +146,11 @@ impl<'prog> BuildCtx<'prog> {
         match cmd {
             ast::Command::Instance(inst) => self.declare_inst(inst),
             ast::Command::Invoke(inv) => self.declare_inv(inv),
-            ast::Command::ParamLet(ast::ParamLet { name, .. }) => {
+            ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
                 // Declare the parameter since it may be used in instance or
                 // invocation definitions.
-                self.param(
-                    &ast::ParamBind::new(name.clone(), None),
-                    ir::ParamOwner::Let,
-                );
+                let expr = self.expr(expr.clone())?;
+                self.add_let_param(name.copy(), expr);
                 Ok(())
             }
             ast::Command::ForLoop(_)
@@ -162,10 +172,7 @@ impl<'prog> BuildCtx<'prog> {
 impl<'prog> BuildCtx<'prog> {
     fn expr(&mut self, expr: ast::Expr) -> BuildRes<ExprIdx> {
         let expr = match expr {
-            ast::Expr::Abstract(p) => {
-                let pidx = self.get_param(&p)?;
-                self.comp().add(ir::Expr::Param(pidx))
-            }
+            ast::Expr::Abstract(p) => self.get_param(&p)?,
             ast::Expr::Concrete(n) => {
                 let e = ir::Expr::Concrete(n);
                 self.comp().add(e)
@@ -238,15 +245,13 @@ impl<'prog> BuildCtx<'prog> {
         owner: ir::ParamOwner,
     ) -> ParamIdx {
         let info = self.comp().add(ir::Info::param(param.name(), param.pos()));
-
         let ir_param = ir::Param::new(owner, info);
-        let is_sig_param = ir_param.is_sig_owned();
-
+        let is_sig_owned = ir_param.is_sig_owned();
         let idx = self.comp().add(ir_param);
         self.add_param(param.name(), idx);
 
         // only add information if this is a signature defined parameter
-        if is_sig_param {
+        if is_sig_owned {
             // If the component is expecting interface information, add it.
             if let Some(src) = &mut self.comp().src_info {
                 src.params.insert(idx, param.name());
@@ -487,12 +492,21 @@ impl<'prog> BuildCtx<'prog> {
         for param in &sig.params {
             self.param(param.inner(), ir::ParamOwner::Sig);
         }
+
+        // Binding from let-defined parameters in the signature to their values
+        for pb in &sig.sig_bindings {
+            let ast::ParamBind { default, .. } = pb.inner();
+            let e = self.expr(default.as_ref().unwrap().clone())?;
+            self.add_let_param(pb.name(), e);
+        }
+
         let mut interface_signals: HashMap<_, _> = sig
             .interface_signals
             .iter()
             .cloned()
             .map(|ast::InterfaceDef { name, event }| (event, name.split()))
             .collect();
+
         // Declare the events first
         for event in &sig.events {
             // can remove here as each interface signal should only be used once
@@ -563,98 +577,8 @@ impl<'prog> BuildCtx<'prog> {
             .flatten();
 
         Ok(iter::once(ir::Command::from(idx))
-            .chain(facts.into_iter())
+            .chain(facts)
             .collect_vec())
-    }
-
-    /// Construct an event binding from this Signature's events and the given
-    /// arguments.
-    /// Fills in the missing arguments with default values
-    pub fn event_binding(
-        &self,
-        events: impl IntoIterator<Item = ast::EventBind>,
-        args: impl IntoIterator<Item = ast::Time>,
-    ) -> Binding<ast::Time> {
-        let args = args.into_iter().collect_vec();
-        let events = events.into_iter().collect_vec();
-        assert!(
-            events.iter().take_while(|ev| ev.default.is_none()).count()
-                <= args.len(),
-            "Insuffient events for component invocation.",
-        );
-
-        let mut partial_map = Binding::new(
-            events
-                .iter()
-                .map(|eb| eb.event.inner())
-                .cloned()
-                .zip(args.iter().cloned()),
-        );
-        // Skip the events that have been bound
-        let remaining = events
-            .iter()
-            .skip(args.len())
-            .map(|eb| {
-                let bind = eb
-                    .default
-                    .as_ref()
-                    .unwrap()
-                    .clone()
-                    .resolve_event(&partial_map);
-                (*eb.event.inner(), bind)
-            })
-            .collect();
-
-        partial_map.extend(remaining);
-        partial_map
-    }
-
-    /// Construct a param binding from this Signature's parameters and the given
-    /// arguments.
-    /// Fills in the missing arguments with default values
-    pub fn param_binding(
-        &mut self,
-        params: impl IntoIterator<Item = ast::ParamBind>,
-        args: impl IntoIterator<Item = ast::Expr>,
-        comp: ast::Loc<Id>,
-    ) -> BuildRes<Binding<ast::Expr>> {
-        let args = args.into_iter().collect_vec();
-        let params = params.into_iter().collect_vec();
-        let min_args =
-            params.iter().take_while(|ev| ev.default.is_none()).count();
-        let arg_len = args.len();
-        if min_args > arg_len {
-            let err = Error::malformed(
-                format!(
-                    "`{}' requires at least {min_args} parameters but {arg_len} were provided",
-                    comp.inner(),
-                ),
-            );
-            let err = err.add_note(
-                self.diag().add_info(format!(
-                    "`{}' requires at least {min_args} parameters but {arg_len} were provided",
-                    comp.inner()
-                ), comp.pos()));
-            self.diag().add_error(err);
-            return Err(std::mem::take(self.diag()));
-        }
-
-        let mut partial_map = Binding::new(
-            params.iter().map(|pb| pb.name()).zip(args.iter().cloned()),
-        );
-        // Skip the events that have been bound
-        let remaining = params
-            .iter()
-            .skip(args.len())
-            .map(|pb| {
-                let bind =
-                    pb.default.as_ref().unwrap().clone().resolve(&partial_map);
-                (pb.name(), bind)
-            })
-            .collect();
-
-        partial_map.extend(remaining);
-        Ok(partial_map)
     }
 
     /// This function is called during the second pass of the conversion and does the following:
@@ -679,10 +603,11 @@ impl<'prog> BuildCtx<'prog> {
         let foreign_comp = inv.comp(self.comp());
 
         // Event bindings
-        let event_binding = self.event_binding(
-            sig.raw_events.iter().cloned(),
+        let event_binding = sig.event_binding(
             abstract_vars.iter().map(|v| v.inner().clone()),
-        );
+            &instance,
+            self.diag(),
+        )?;
 
         let srcs = ports
             .into_iter()
@@ -838,28 +763,9 @@ impl<'prog> BuildCtx<'prog> {
                 let dst = self.get_access(dst.take(), ir::Direction::In)?;
                 vec![ir::Connect { src, dst, info }.into()]
             }
-            ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
-                /* Declared by [[declare_cmds]]. This has the unfortunate effect
-                 * of making it seem like all parameters are hoisted to the top
-                 * of the scope. */
-                let param = self.get_param(name.inner())?;
-                let expr = self.expr(expr)?;
-
-                let pexpr = self.comp().add(ir::Expr::Param(param));
-
-                let prop =
-                    self.comp().add(ir::Prop::Cmp(ir::CmpOp::eq(pexpr, expr)));
-
-                let info = self.comp().add(ir::Info::assert(
-                    ir::info::Reason::misc("Let-bound parameter", name.pos()),
-                ));
-
-                log::debug!("Assuming {}", prop);
-
-                vec![
-                    ir::Let { param, expr }.into(),
-                    self.comp().assume(prop, info).unwrap(),
-                ]
+            ast::Command::ParamLet(_) => {
+                // The declare phase already added the rewrite for this binding
+                vec![]
             }
             ast::Command::ForLoop(ast::ForLoop {
                 idx,
@@ -980,12 +886,20 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
     // used in the beginning so signatures of components can be built without any information
     let sig_map = SigMap::default();
 
+    /// Container to store build information after compiling a signature.
+    struct Builder<'a> {
+        idx: ir::CompIdx,
+        builder: BuildCtx<'a>,
+        body: Option<Vec<ast::Command>>,
+    }
+
     // uses the information above to compile the signatures of components and create their builders.
     let (mut builders, sig_map): (Vec<_>, SigMap) = comps
         .map(|(idx, (file, sig, body))| {
             let idx = ir::CompIdx::new(idx);
             let mut builder =
                 BuildCtx::new(ir::Component::new(body.is_none()), &sig_map);
+
             // enable source information saving if this is main or an external.
             if body.is_none() || Some(idx) == ctx.entrypoint {
                 builder.comp().src_info =
@@ -1000,21 +914,26 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
             builder.comp().cmds = builder.sig(&sig)?;
 
             let irsig = Sig::new(idx, builder.comp(), &sig);
-            Ok(((idx, builder, body), (sig.name.take(), irsig)))
+            Ok((Builder { idx, builder, body }, (sig.name.take(), irsig)))
         })
         .collect::<BuildRes<Vec<_>>>()?
         .into_iter()
         .unzip();
 
     // Add the signature map to each builder
-    builders.iter_mut().for_each(|(_, builder, _)| {
+    builders.iter_mut().for_each(|Builder { builder, .. }| {
         builder.set_sig_map(&sig_map);
     });
 
     // Compiles and adds all the commands here
     // Need to do this before adding all the components because each builder borrows the context immutably
-    for (idx, mut builder, cmds) in builders {
-        let body_cmds = match cmds {
+    for Builder {
+        idx,
+        mut builder,
+        body,
+    } in builders
+    {
+        let body_cmds = match body {
             Some(cmds) => builder.commands(cmds)?,
             None => vec![],
         };

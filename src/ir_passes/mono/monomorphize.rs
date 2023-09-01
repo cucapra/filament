@@ -175,8 +175,7 @@ impl Monomorphize<'_> {
             let default = mono.ctx.get_mut(idx.get());
             comp.swap(default);
             let comp = comp.comp();
-            let val = ir::Validate::new(comp, &mono.ctx.comps);
-            val.comp();
+            ir::Validate::component(&mono.ctx, comp);
         }
         let new_entrypoint = mono.processed.get(&ck).unwrap();
         mono.ctx.entrypoint = Some(new_entrypoint.get());

@@ -150,6 +150,15 @@ impl FilamentParser {
         ))
     }
 
+    fn sig_bind(input: Node) -> ParseResult<Loc<ast::ParamBind>> {
+        let sp = Self::get_span(&input);
+        let out = match_nodes!(
+            input.into_children();
+            [param_var(param), expr(e)] => ast::ParamBind::new(param, Some(e.take()))
+        );
+        Ok(Loc::new(out, sp))
+    }
+
     fn param_bind(input: Node) -> ParseResult<Loc<ast::ParamBind>> {
         let sp = Self::get_span(&input);
         let out = match_nodes!(
@@ -540,6 +549,14 @@ impl FilamentParser {
             [param_bind(params)..] => params.collect_vec(),
         ))
     }
+    fn sig_bindings(input: Node) -> ParseResult<Vec<Loc<ast::ParamBind>>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [] => vec![],
+            [sig_bind(params)..] => params.collect_vec(),
+        ))
+    }
+
     fn signature(input: Node) -> ParseResult<ast::Signature> {
         Ok(match_nodes!(
             input.into_children();
@@ -548,6 +565,7 @@ impl FilamentParser {
                 params(params),
                 abstract_var(abstract_vars),
                 io(io),
+                sig_bindings(sig_binds),
                 constraints((expr_c, time_c))
             ] => {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
@@ -561,12 +579,14 @@ impl FilamentParser {
                     outputs,
                     expr_c,
                     time_c,
+                    sig_binds,
                  )
             },
             [
                 identifier(name),
                 params(params),
                 io(io),
+                sig_bindings(sig_binds),
                 constraints((expr_c, time_c))
             ] => {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
@@ -579,7 +599,8 @@ impl FilamentParser {
                     inputs,
                     outputs,
                     expr_c,
-                    time_c
+                    time_c,
+                    sig_binds,
                  )
             }
         ))

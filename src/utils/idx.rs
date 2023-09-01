@@ -25,6 +25,7 @@ macro_rules! define_idx {
     };
 }
 
+#[derive(Debug)]
 /// Wrapper around a newtyped index associated with a type-level tag.
 /// Since the type does not contain a value of type T, it is always copy.
 pub struct Idx<T> {
@@ -48,10 +49,7 @@ impl<T> std::hash::Hash for Idx<T> {
 
 impl<T> Clone for Idx<T> {
     fn clone(&self) -> Self {
-        Self {
-            idx: self.idx,
-            _phantom: PhantomData,
-        }
+        *self
     }
 }
 

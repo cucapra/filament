@@ -260,16 +260,11 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         while i < bound {
             let index = Underlying::new(*index);
             self.monosig.binding.insert(index, i);
-            let mut nlets: usize = 0; // count p_lets as they generate assignments we have to pop later.
             for cmd in body.iter() {
-                if matches!(&cmd, ir::Command::Let(_)) {
-                    nlets += 1;
-                }
                 let cmd = self.command(cmd);
                 self.monosig.base.extend_one(cmd);
             }
             // Pop all the let bindings
-            self.monosig.binding.pop_n(nlets);
             self.monosig.binding.pop(); // pop the index
             i += 1;
         }
@@ -307,23 +302,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         self.monosig.base.extend_cmds(body);
     }
 
-    fn p_let(&mut self, l: &ir::Let) {
-        let ir::Let { param, expr } = *l;
-
-        let expr = self.monosig.expr(&self.underlying, Underlying::new(expr));
-
-        // Inserts this param into the binding.
-        self.monosig.binding.insert(
-            Underlying::new(param),
-            self.monosig
-                .base
-                .bin(self.monosig.base.get(expr).clone())
-                .get()
-                .as_concrete(self.monosig.base.comp())
-                .unwrap(),
-        );
-    }
-
     /// Compile the given command and return the generated command if any.
     fn command(&mut self, cmd: &ir::Command) -> Option<ir::Command> {
         match cmd {
@@ -356,10 +334,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             }
             ir::Command::If(if_stmt) => {
                 self.if_stmt(if_stmt);
-                None
-            }
-            ir::Command::Let(l) => {
-                self.p_let(l);
                 None
             }
             // XXX(rachit): We completely get rid of facts in the program here.

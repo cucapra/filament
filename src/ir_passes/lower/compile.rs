@@ -253,9 +253,6 @@ impl Compile {
                 ir::Command::If(_) => {
                     unreachable!("if should have been compiled away.")
                 }
-                ir::Command::Let(_) => {
-                    unreachable!("let should have been compiled away.")
-                }
                 ir::Command::BundleDef(_) => {
                     unreachable!("bundle definitions should have been compiled away.")
                 }

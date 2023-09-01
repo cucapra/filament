@@ -1,6 +1,9 @@
 use crate::{
     ast,
-    ir::{self, AddCtx, Ctx, IndexStore, InterfaceSrc, Interned, MutCtx},
+    ir::{
+        self, AddCtx, Ctx, DisplayCtx, IndexStore, InterfaceSrc, Interned,
+        MutCtx,
+    },
     utils::{self, Idx},
 };
 
@@ -39,12 +42,22 @@ impl<'a> UnderlyingComp<'a> {
     }
 }
 
+// The underlying component is a context for everything that a component is a context for.
 impl<'a, T> Ctx<T, Underlying<T>> for UnderlyingComp<'a>
 where
     ir::Component: Ctx<T>,
 {
     fn get(&self, k: Underlying<T>) -> &T {
         self.0.get(k.idx())
+    }
+}
+
+impl<'a, T> DisplayCtx<T, Underlying<T>> for UnderlyingComp<'a>
+where
+    ir::Component: DisplayCtx<T>,
+{
+    fn display(&self, idx: Underlying<T>) -> String {
+        self.0.display(idx.idx())
     }
 }
 
@@ -123,6 +136,7 @@ where
     }
 }
 
+#[derive(Debug)]
 /// Wraps an Idx that is meaningful in the base component, which are the new components
 /// that we build during monomorphization. As we visit parts of the underlying (pre-mono)
 /// component, we need to build new monomorphized structures and add them to the new component.
@@ -157,7 +171,7 @@ impl<T> std::hash::Hash for Base<T> {
 }
 impl<T> Clone for Base<T> {
     fn clone(&self) -> Self {
-        Self { idx: self.idx }
+        *self
     }
 }
 impl<T> PartialOrd for Base<T> {
@@ -189,6 +203,7 @@ impl<T> utils::IdxLike<T> for Base<T> {
     }
 }
 
+#[derive(Debug)]
 /// Wraps an Idx that is meaningful in the underlying component, which are the existing pre-monomorphization
 /// components. These Idxs get passed around between a lot of functions and mappings during monomorphization,
 /// so it becomes hard to keep track of which Idx belongs where. This wrapper makes it distinct from base Idxs.
@@ -220,7 +235,7 @@ impl<T> std::hash::Hash for Underlying<T> {
 
 impl<T> Clone for Underlying<T> {
     fn clone(&self) -> Self {
-        Self { idx: self.idx }
+        *self
     }
 }
 impl<T> Copy for Underlying<T> {}

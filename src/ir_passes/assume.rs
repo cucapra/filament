@@ -109,7 +109,7 @@ impl Assume {
                 let (lhs, rhs) = (*lhs, *rhs);
                 Assume::prop(lhs, comp)
                     .into_iter()
-                    .chain(Assume::prop(rhs, comp).into_iter())
+                    .chain(Assume::prop(rhs, comp))
                     .collect()
             }
             _ => vec![],

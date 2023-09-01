@@ -46,7 +46,7 @@ impl EventBind {
 #[derive(Clone)]
 /// A parameter bound in the signature
 pub struct ParamBind {
-    param: Loc<Id>,
+    pub param: Loc<Id>,
     pub default: Option<Expr>,
 }
 
@@ -83,6 +83,8 @@ pub struct Signature {
     pub name: Loc<Id>,
     /// Parameters for the Signature
     pub params: Vec<Loc<ParamBind>>,
+    /// Parameters bound in the signature binding. These always have a default value.
+    pub sig_bindings: Vec<Loc<ParamBind>>,
     /// Unannotated ports that are threaded through by the backend
     pub unannotated_ports: Vec<(Id, u64)>,
     /// Mapping from name of signals to the abstract variable they provide
@@ -112,12 +114,14 @@ impl Signature {
         mut outputs: Vec<Loc<PortDef>>,
         param_constraints: Vec<Loc<OrderConstraint<Expr>>>,
         event_constraints: Vec<Loc<OrderConstraint<Time>>>,
+        sig_bindings: Vec<Loc<ParamBind>>,
     ) -> Self {
         let outputs_idx = inputs.len();
         inputs.append(&mut outputs);
         Self {
             name,
             params,
+            sig_bindings,
             events,
             unannotated_ports,
             interface_signals,
@@ -147,5 +151,9 @@ impl Signature {
     /// Iterator over all the ports of this signature
     pub fn ports(&self) -> &Vec<Loc<PortDef>> {
         &self.ports
+    }
+
+    pub fn sig_bindings(&self) -> impl Iterator<Item = Loc<Id>> + '_ {
+        self.sig_bindings.iter().map(|p| &p.param).cloned()
     }
 }

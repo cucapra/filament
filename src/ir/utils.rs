@@ -518,8 +518,7 @@ impl Traversal {
             Command::Connect(_)
             | Command::BundleDef(_)
             | Command::Invoke(_)
-            | Command::Fact(_)
-            | Command::Let(_) => (),
+            | Command::Fact(_) => (),
         }
     }
 }
@@ -619,10 +618,7 @@ where
     C: Ctx<T>,
 {
     fn clone(&self) -> Self {
-        Self {
-            key: self.key,
-            owner: self.owner,
-        }
+        *self
     }
 }
 
