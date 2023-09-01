@@ -30,7 +30,7 @@ impl MonoDeferred<'_, '_> {
         } else {
             binding
                 .iter()
-                .filter(|(p, _)| underlying.get(*p).is_sig_owned() || underlying.get(*p).is_sig_bind())
+                .filter(|(p, _)| underlying.get(*p).is_sig_owned())
                 .map(|(_, n)| *n)
                 .collect_vec()
         };
