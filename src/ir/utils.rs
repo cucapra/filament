@@ -9,6 +9,7 @@ use std::{
 };
 use topological_sort::TopologicalSort;
 
+#[derive(Clone)]
 /// An indexed storage for an interned type. Keeps a HashMap to provide faster reverse mapping
 /// from the value to the index.
 /// Useful for types that are added continuously throughout the compiler's execution.
@@ -119,6 +120,7 @@ where
     }
 }
 
+#[derive(Clone)]
 /// An indexed store for a type.
 /// Unlike [Interned], this data structure does not deduplicate values and supports mutation of values and removal of indices.
 pub struct IndexStore<T, I = utils::Idx<T>>
@@ -674,4 +676,28 @@ impl<T> MutCtx<T> for IndexStore<T> {
     fn delete(&mut self, idx: Idx<T>) {
         self.delete(idx)
     }
+}
+
+#[macro_export]
+/// Creates a constructor function for a binary operator.
+/// Example: ```
+/// construct_binop!(
+/// <impl Ctx<Expr>>(ExprIdx::bin, Expr) => Expr;
+///     add = ast::Op::Add;
+///     mul = ast::Op::Mul;
+///     div = ast::Op::Div;
+///     rem = ast::Op::Mod;
+/// );
+/// ```
+macro_rules! construct_binop {
+    (<$ctx: ty> ($constructor: expr, $in: ty) => $out: ty;
+    $($name:ident = $op: expr);* ;) => {
+        impl $in {
+            $(pub fn $name(self, other: $in, ctx: &mut $ctx) -> $crate::utils::Idx<$out> {
+                ctx.add($constructor(
+                    self, other, $op
+                ))
+            })*
+        }
+    };
 }

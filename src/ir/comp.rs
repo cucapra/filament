@@ -6,6 +6,7 @@ use super::{
 use crate::{ast, utils::Idx};
 use fil_derive::Ctx;
 use itertools::Itertools;
+use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -30,7 +31,7 @@ impl InterfaceSrc {
     }
 }
 
-#[derive(Default, Ctx)]
+#[derive(Default, Ctx, Clone)]
 /// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
     #[ctx(Expr)]
@@ -90,7 +91,7 @@ pub struct Component {
     /// unannotated ports associated with this component
     pub unannotated_ports: Box<Vec<(ast::Id, u64)>>,
     /// Binding from sig-binding-defined params to exprs
-    pub sig_binding: HashMap<ParamIdx, ExprIdx>,
+    pub sig_binding: LinkedHashMap<ParamIdx, ExprIdx>,
 }
 
 impl Component {
