@@ -186,6 +186,7 @@ impl<'a> Validate<'a> {
         self.expr(*offset);
     }
 
+    #[allow(unused)]
     /// A Range is valid if:
     /// (1) Both its start and end times are valid
     fn range(&self, range: ir::Range) {
