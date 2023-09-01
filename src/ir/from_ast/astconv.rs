@@ -38,7 +38,7 @@ impl<'prog> BuildCtx<'prog> {
         } = inst;
 
         let comp = self.get_sig(component)?;
-        let binding = comp.param_binding(
+        let mut binding = comp.param_binding(
             bindings.iter().map(|e| e.inner()).cloned().collect_vec(),
             component.clone(),
             self.diag(),
@@ -56,6 +56,17 @@ impl<'prog> BuildCtx<'prog> {
                 name.pos(),
             )),
         };
+
+        // Extend the binding with the let-bound parameters in the signature
+        binding.extend(
+            comp.sig_binding
+                .iter()
+                .map(|ast::ParamBind { param, default }| {
+                    let e = default.clone().unwrap().resolve(&binding);
+                    (param.copy(), e)
+                })
+                .collect_vec(),
+        );
 
         //println!("ir inst has bindings {:?}", inst.params);
         let idx = self.comp().add(inst);

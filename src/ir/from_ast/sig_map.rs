@@ -114,16 +114,14 @@ impl Sig {
             .raw_params
             .iter()
             .skip(args.len())
-            .chain(self.sig_binding.iter())
             .map(|pb| {
                 let bind =
                     pb.default.as_ref().unwrap().clone().resolve(&partial_map);
                 (pb.name(), bind)
             })
-            .collect();
+            .collect_vec();
 
         partial_map.extend(remaining);
-        //println!("final map: {:?}", partial_map);
 
         Ok(partial_map)
     }
@@ -195,7 +193,7 @@ impl Sig {
                     .resolve_event(&partial_map);
                 (*eb.event.inner(), bind)
             })
-            .collect();
+            .collect_vec();
 
         partial_map.extend(remaining);
 

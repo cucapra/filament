@@ -46,7 +46,7 @@ impl EventBind {
 #[derive(Clone)]
 /// A parameter bound in the signature
 pub struct ParamBind {
-    param: Loc<Id>,
+    pub param: Loc<Id>,
     pub default: Option<Expr>,
 }
 
