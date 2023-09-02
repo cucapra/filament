@@ -1,11 +1,13 @@
+mod dense_info;
 mod foreign;
 mod index_store;
-mod info_map;
 mod interned;
+mod sparse_info;
 mod traversal;
 
+pub use dense_info::DenseIndexInfo;
 pub use foreign::Foreign;
 pub use index_store::IndexStore;
-pub use info_map::DenseIndexInfo;
 pub use interned::Interned;
+pub use sparse_info::SparseInfoMap;
 pub use traversal::Traversal;
