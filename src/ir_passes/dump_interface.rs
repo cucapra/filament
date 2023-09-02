@@ -74,7 +74,7 @@ impl DumpInterface {
             assert!(
                 start.event == end.event,
                 "Range `{}` cannot be represented as a simple offset",
-                main.display_range(range)
+                main.display(range)
             );
 
             format!(
