@@ -73,6 +73,18 @@ where
     }
 }
 
+impl<T, V, Idx: utils::IdxLike<T>> FromIterator<(Idx, V)>
+    for DenseIndexInfo<T, V, Idx>
+{
+    fn from_iter<Iter: IntoIterator<Item = (Idx, V)>>(iter: Iter) -> Self {
+        let mut store = Self::default();
+        for (idx, val) in iter {
+            store.push(idx, val);
+        }
+        store
+    }
+}
+
 impl<T, V: Default, I: utils::IdxLike<T>> DenseIndexInfo<T, V, I> {
     /// Extract the value at a particular index and replace it with the default value.
     pub fn take(&mut self, key: I) -> Option<V> {
@@ -107,18 +119,6 @@ impl<T, V: Default + Clone, I: utils::IdxLike<T>> DenseIndexInfo<T, V, I> {
             _key_typ: PhantomData,
             _idx_typ: PhantomData,
         }
-    }
-}
-
-impl<T, V, Idx: utils::IdxLike<T>> FromIterator<(Idx, V)>
-    for DenseIndexInfo<T, V, Idx>
-{
-    fn from_iter<Iter: IntoIterator<Item = (Idx, V)>>(iter: Iter) -> Self {
-        let mut store = Self::default();
-        for (idx, val) in iter {
-            store.push(idx, val);
-        }
-        store
     }
 }
 
