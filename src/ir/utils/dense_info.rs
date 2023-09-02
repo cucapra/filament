@@ -1,45 +1,18 @@
 use crate::utils;
 use std::marker::PhantomData;
 
-/// A map that stores information of type [V] and is indexed by
-/// [Idx<T>] types.
-///
-/// This is essentially a type-safe way of storing information about value of type [T].
+/// A map that stores information of type [Info] about type [Assoc] indexed by type [Key].
 ///
 /// Note: This data structure has no way to track which indices are valid so it
 /// is up to the user to ensure that the indices are valid by calling [IndexStore::is_valid]
 /// on a valid index.
-pub struct DenseIndexInfo<T, V, K = utils::Idx<T>>
+pub struct DenseIndexInfo<Assoc, Info, Key = utils::Idx<Assoc>>
 where
-    K: utils::IdxLike<T>,
+    Key: utils::IdxLike<Assoc>,
 {
-    store: Vec<V>,
-    _key_typ: PhantomData<T>,
-    _idx_typ: PhantomData<K>,
-}
-
-impl<T, V, I: utils::IdxLike<T>> Default for DenseIndexInfo<T, V, I> {
-    fn default() -> Self {
-        Self {
-            store: Vec::new(),
-            _key_typ: PhantomData,
-            _idx_typ: PhantomData,
-        }
-    }
-}
-
-impl<T, V, I> Clone for DenseIndexInfo<T, V, I>
-where
-    V: Clone,
-    I: utils::IdxLike<T>,
-{
-    fn clone(&self) -> Self {
-        Self {
-            store: self.store.clone(),
-            _key_typ: PhantomData,
-            _idx_typ: PhantomData,
-        }
-    }
+    store: Vec<Info>,
+    _key_typ: PhantomData<Assoc>,
+    _idx_typ: PhantomData<Key>,
 }
 
 impl<T, V, I> DenseIndexInfo<T, V, I>
@@ -100,18 +73,6 @@ where
     }
 }
 
-impl<T, V, Idx: utils::IdxLike<T>> FromIterator<(Idx, V)>
-    for DenseIndexInfo<T, V, Idx>
-{
-    fn from_iter<Iter: IntoIterator<Item = (Idx, V)>>(iter: Iter) -> Self {
-        let mut store = Self::default();
-        for (idx, val) in iter {
-            store.push(idx, val);
-        }
-        store
-    }
-}
-
 impl<T, V: Default, I: utils::IdxLike<T>> DenseIndexInfo<T, V, I> {
     /// Extract the value at a particular index and replace it with the default value.
     pub fn take(&mut self, key: I) -> Option<V> {
@@ -143,6 +104,42 @@ impl<T, V: Default + Clone, I: utils::IdxLike<T>> DenseIndexInfo<T, V, I> {
     pub fn with_default(cap: usize) -> Self {
         Self {
             store: vec![V::default(); cap],
+            _key_typ: PhantomData,
+            _idx_typ: PhantomData,
+        }
+    }
+}
+
+impl<T, V, Idx: utils::IdxLike<T>> FromIterator<(Idx, V)>
+    for DenseIndexInfo<T, V, Idx>
+{
+    fn from_iter<Iter: IntoIterator<Item = (Idx, V)>>(iter: Iter) -> Self {
+        let mut store = Self::default();
+        for (idx, val) in iter {
+            store.push(idx, val);
+        }
+        store
+    }
+}
+
+impl<T, V, I: utils::IdxLike<T>> Default for DenseIndexInfo<T, V, I> {
+    fn default() -> Self {
+        Self {
+            store: Vec::new(),
+            _key_typ: PhantomData,
+            _idx_typ: PhantomData,
+        }
+    }
+}
+
+impl<T, V, I> Clone for DenseIndexInfo<T, V, I>
+where
+    V: Clone,
+    I: utils::IdxLike<T>,
+{
+    fn clone(&self) -> Self {
+        Self {
+            store: self.store.clone(),
             _key_typ: PhantomData,
             _idx_typ: PhantomData,
         }
