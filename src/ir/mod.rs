@@ -8,13 +8,14 @@ mod from_ast;
 mod idxs;
 pub mod info;
 mod printer;
+mod source_info;
 mod structure;
 mod subst;
 mod time;
 mod utils;
 mod validate;
 
-pub use comp::{Component, InterfaceSrc};
+pub use comp::Component;
 pub use context::Context;
 pub use control::{Command, Connect, EventBind, If, Instance, Invoke, Loop};
 pub use ctx::{AddCtx, Ctx, MutCtx};
@@ -27,6 +28,7 @@ pub use idxs::{
 };
 pub use info::Info;
 pub use printer::{DisplayCtx, Printer};
+pub use source_info::InterfaceSrc;
 pub use structure::{
     Access, Direction, Event, Liveness, Param, ParamOwner, Port, PortOwner,
     Range,
