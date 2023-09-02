@@ -62,6 +62,10 @@ impl UnFn {
 pub enum Expr {
     Concrete(u64),
     Abstract(Id),
+    ParamAccess {
+        inst: Id,
+        param: Id,
+    },
     App {
         func: UnFn,
         arg: Box<Expr>,
@@ -137,7 +141,7 @@ impl Expr {
     /// Resolve this expression using the given binding for abstract variables.
     pub fn resolve(self, bind: &utils::Binding<Expr>) -> Self {
         match self {
-            Expr::Concrete(_) => self,
+            Expr::Concrete(_) | Expr::ParamAccess { .. } => self,
             Expr::Abstract(ref id) => bind.find(id).cloned().unwrap_or(self),
             Expr::App { func, arg } => func.apply(arg.resolve(bind)),
             Expr::Op { op, left, right } => {
@@ -275,6 +279,9 @@ impl ECtx {
             }
             Expr::Abstract(v) => {
                 format!("{v}")
+            }
+            Expr::ParamAccess { inst, param } => {
+                format!("{inst}::{param}")
             }
             Expr::App { func, arg } => {
                 format!("{}({})", func, Self::Func.print(arg))

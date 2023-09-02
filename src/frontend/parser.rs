@@ -242,6 +242,7 @@ impl FilamentParser {
     fn expr_base(input: Node) -> ParseResult<ast::Expr> {
         Ok(match_nodes!(
             input.into_children();
+            [identifier(inst), identifier(param)] => ast::Expr::ParamAccess{ inst: *inst, param: *param },
             [param_var(id)] => id.take().into(),
             [bitwidth(c)] => c.into(),
             [un_fn(f), expr(e)] => ast::Expr::func(f, e.take()),
@@ -706,6 +707,13 @@ impl FilamentParser {
         ))
     }
 
+    fn exists(input: Node) -> ParseResult<ast::Exists> {
+        Ok(match_nodes!(
+            input.into_children();
+            [param_var(param), expr(bind)] => ast::Exists { param, bind }
+        ))
+    }
+
     fn command(input: Node) -> ParseResult<Vec<ast::Command>> {
         Ok(match_nodes!(
             input.into_children();
@@ -716,6 +724,7 @@ impl FilamentParser {
             [bundle(bl)] => vec![bl.into()],
             [if_stmt(if_)] => vec![if_.into()],
             [param_let(l)] => vec![l.into()],
+            [exists(e)] => vec![e.into()],
             [fact(a)] => vec![a.into()],
         ))
     }

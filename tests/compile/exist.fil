@@ -1,0 +1,41 @@
+import "primitives/core.fil";
+
+comp Mul[#W]<G:1>(
+    left: [G, G+1] #W,
+    right: [G, G+1] #W
+) -> (
+    out: [G+#L, G+#L+1] #W
+) with {
+    exists #L;
+} where #L > 0 {
+    mult := new MultComb[#W]<G>(left, right);
+    sh := new Shift[#W, 3]<G>(mult.out);
+
+    // This is the hidden value of the quantified parameter. This value is not
+    // visible to callers but is used to typecheck the body.
+    exists #L = 3;
+    out = mult.out;
+}
+
+// The main component is allowed to use existentially quantified variables.
+// These are removed during monomorphization.
+comp main<G:1>(
+    in0: [G, G+1] 32, in1: [G+#F, G+#F+1] 32
+) -> (out: [G+#L, G+#L+1] 32) with {
+    exists #F; // The time when the second multiplication starts.
+    exists #L; // The latency of the module.
+} where #L > 0 {
+    // Explicitly define the instance because we need to access the parameter.
+    M0 := new Mul[32];
+    mul0 := M0<G>(in0, in0);
+
+    // The next invoke is scheduled using the existentially quantified parameter.
+    M1 := new Mul[32];
+    mul1 := M1<G+#F>(mul0.out, in1);
+
+    // This module defines the (hidden) relationship that the latency is the sum of the
+    // the latencies of the two instances.
+    exists #L = M0::L + M1::L;
+    exists #F = M0::L;
+    out = mul1.out;
+}

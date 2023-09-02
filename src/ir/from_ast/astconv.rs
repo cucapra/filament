@@ -154,6 +154,7 @@ impl<'prog> BuildCtx<'prog> {
                 self.add_let_param(name.copy(), expr);
                 Ok(())
             }
+            ast::Command::Exists(_) => todo!(),
             ast::Command::ForLoop(_)
             | ast::Command::If(_)
             | ast::Command::Fact(_)
@@ -174,6 +175,7 @@ impl<'prog> BuildCtx<'prog> {
     fn expr(&mut self, expr: ast::Expr) -> BuildRes<ExprIdx> {
         let expr = match expr {
             ast::Expr::Abstract(p) => self.get_param(&p)?,
+            ast::Expr::ParamAccess { .. } => todo!(),
             ast::Expr::Concrete(n) => {
                 let e = ir::Expr::Concrete(n);
                 self.comp().add(e)
@@ -747,6 +749,7 @@ impl<'prog> BuildCtx<'prog> {
         let cmds = match cmd {
             ast::Command::Invoke(inv) => self.invoke(inv)?,
             ast::Command::Instance(inst) => self.instance(inst)?,
+            ast::Command::Exists(_) => todo!(),
             ast::Command::Fact(ast::Fact { cons, checked }) => {
                 let reason = self.comp().add(
                     ir::info::Reason::misc("source-level fact", cons.pos())

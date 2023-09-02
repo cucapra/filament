@@ -107,6 +107,7 @@ pub enum Command {
     ParamLet,
     If,
     Bundle,
+    Exists,
 }
 
 #[derive(Clone)]
@@ -387,4 +388,13 @@ pub struct ParamLet {
     pub name: Loc<Id>,
     /// The expression for the parameter binding
     pub expr: Expr,
+}
+
+#[derive(Clone)]
+/// Binding for an existentially quantified parameter
+pub struct Exists {
+    /// The existentially quantified parameter
+    pub param: Loc<Id>,
+    /// The binding expression for the parameter
+    pub bind: Loc<Expr>,
 }

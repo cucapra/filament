@@ -95,6 +95,7 @@ expr_base = {
   | "(" ~ expr ~ ")"
   | bitwidth
   | param_var
+  | identifier ~ "::" ~ identifier
 }
 expr = {
   expr_base ~ (operator ~ expr_base)*
@@ -228,6 +229,11 @@ bundle = {
   "bundle" ~ bundle_def ~ ";"
 }
 
+// ====== Existential binding =======
+exists = {
+  "exists" ~ param_var ~ "=" ~ expr ~ ";"
+}
+
 /// ===== Assumptions ==========
 implication = {
   (expr_cmp ~ "=>")? ~ expr_cmp
@@ -241,7 +247,7 @@ fact = {
 
 // ========== Commands ==========
 command = {
-  bundle | instance | invocation | connect | for_loop | if_stmt | fact | param_let
+  bundle | instance | invocation | connect | for_loop | if_stmt | fact | param_let | exists
 }
 
 commands = { command* }
