@@ -157,7 +157,8 @@ impl FilamentParser {
         let sp = Self::get_span(&input);
         let out = match_nodes!(
             input.into_children();
-            [param_var(param), expr(e)] => ast::SigBind::let_(param, e.take())
+            [param_var(param), expr(e)] => ast::SigBind::let_(param, e.take()),
+            [param_var(param)] => ast::SigBind::exists(param)
         );
         Ok(Loc::new(out, sp))
     }

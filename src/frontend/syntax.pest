@@ -42,7 +42,9 @@ constraints = {
 
 sig_bind = {
   "let" ~ param_var ~ "=" ~ expr ~ ";"
+  | "exists" ~ param_var ~ ";"
 }
+
 sig_bindings = {
   ("with {" ~ (sig_bind)* ~ "}")?
 }
