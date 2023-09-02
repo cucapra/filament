@@ -2,8 +2,8 @@ use crate::{
     cmdline,
     ir::{
         Access, AddCtx, Bind, Command, Component, Connect, Context, Ctx,
-        DenseIndexInfo, Expr, Foreign, Info, InvIdx, Invoke, Liveness, MutCtx,
-        Port, PortIdx, PortOwner, Printer, Range, Subst, Time,
+        DenseIndexInfo, DisplayCtx, Expr, Foreign, Info, InvIdx, Invoke,
+        Liveness, MutCtx, Port, PortIdx, PortOwner, Range, Subst, Time,
     },
     ir_visitor::{Action, Construct, Visitor, VisitorData},
 };
@@ -218,7 +218,7 @@ impl Visitor for BundleElim {
         if src.len() != dst.len() {
             data.comp.internal_error(format!(
                 "Mismatched access lengths for connect `{}`",
-                Printer::new(&data.comp).connect_str(connect)
+                data.comp.display(&*connect)
             ))
         }
 
@@ -278,7 +278,7 @@ impl Visitor for BundleElim {
                     assert!(
                         dst_end - dst_start == src_end - src_start,
                         "Mismatched access lengths for connect `{}`",
-                        Printer::new(comp).connect_str(con)
+                        comp.display(con)
                     );
 
                     Some(

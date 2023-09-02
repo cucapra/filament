@@ -52,12 +52,16 @@ where
     }
 }
 
-impl<'a, T> DisplayCtx<T, Underlying<T>> for UnderlyingComp<'a>
+impl<'a, T> DisplayCtx<Underlying<T>> for UnderlyingComp<'a>
 where
-    ir::Component: DisplayCtx<T>,
+    ir::Component: DisplayCtx<Idx<T>>,
 {
-    fn display(&self, idx: Underlying<T>) -> String {
-        self.0.display(idx.idx())
+    fn write(
+        &self,
+        val: Underlying<T>,
+        f: &mut impl std::fmt::Write,
+    ) -> std::fmt::Result {
+        self.0.write(val.idx(), f)
     }
 }
 
