@@ -47,7 +47,7 @@ impl NameGenerator {
         ev.has_interface.then(|| {
             comp.src_info
                 .as_ref()
-                .map(|src| src.interface_ports.get(&idx).unwrap().to_string())
+                .map(|src| src.interface_ports.get(idx).to_string())
                 .or_else(|| self.info_name(ev.info, comp))
                 .unwrap_or_else(|| format!("ev{}", idx.get()))
         })
@@ -70,7 +70,7 @@ impl NameGenerator {
     pub fn param_name(&self, idx: ParamIdx, comp: &Component) -> String {
         comp.src_info
             .as_ref()
-            .map(|src| src.params.get(&idx).unwrap().to_string())
+            .map(|src| src.params.get(idx).to_string())
             .or_else(|| self.info_name(comp.get(idx).info, comp))
             .unwrap_or_else(|| format!("pr{}", idx.get()))
     }
@@ -88,7 +88,7 @@ impl NameGenerator {
             ir::PortOwner::Sig { .. } => comp
                 .src_info
                 .as_ref()
-                .map(|src| src.ports.get(&idx).unwrap().to_string())
+                .map(|src| src.ports.get(idx).to_string())
                 .or_else(|| self.info_name(comp.get(idx).info, comp))
                 .unwrap_or_else(|| format!("p{}", idx.get())),
             ir::PortOwner::Inv { base, .. } => {

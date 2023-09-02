@@ -1,34 +1,12 @@
 use super::{
     AddCtx, Cmp, CmpOp, Command, Ctx, Event, EventIdx, Expr, ExprIdx, Fact,
-    IndexStore, Info, InfoIdx, InstIdx, Instance, Interned, InvIdx, Invoke,
-    MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx, Time, TimeSub,
+    IndexStore, Info, InfoIdx, InstIdx, Instance, InterfaceSrc, Interned,
+    InvIdx, Invoke, MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx,
+    Time, TimeSub,
 };
 use crate::{ast, utils::Idx};
 use fil_derive::Ctx;
 use itertools::Itertools;
-use std::collections::HashMap;
-
-#[derive(Clone)]
-/// Externally facing interface name information for components.
-pub struct InterfaceSrc {
-    pub name: ast::Id,
-    pub ports: HashMap<PortIdx, ast::Id>,
-    pub params: HashMap<ParamIdx, ast::Id>,
-    pub events: HashMap<EventIdx, ast::Id>,
-    pub interface_ports: HashMap<EventIdx, ast::Id>,
-}
-
-impl InterfaceSrc {
-    pub fn new(name: ast::Id) -> Self {
-        Self {
-            name,
-            ports: HashMap::new(),
-            params: HashMap::new(),
-            interface_ports: HashMap::new(),
-            events: HashMap::new(),
-        }
-    }
-}
 
 #[derive(Default, Ctx, Clone)]
 /// A IR component. If `is_ext` is true then this is an external component.
