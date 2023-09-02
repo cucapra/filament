@@ -225,14 +225,21 @@ impl MonoSig {
         } else {
             // This param is a in a use site and should therefore have been found.
             let msg = match ul.get(p_idx).owner {
-                ir::ParamOwner::Loop => "let-bound parameter",
-                ir::ParamOwner::Bundle(_) => "bundle-bound parameter",
-                ir::ParamOwner::Sig => "signature-bound parameter",
-                ir::ParamOwner::Instance(_) => todo!(),
-                ir::ParamOwner::Exists => todo!(),
+                ir::ParamOwner::Loop => "let-bound parameter".to_string(),
+                ir::ParamOwner::Bundle(_) => {
+                    "bundle-bound parameter".to_string()
+                }
+                ir::ParamOwner::Sig => "signature-bound parameter".to_string(),
+                ir::ParamOwner::Instance(inst) => format!(
+                    "parameter defined by instance `{}'",
+                    ul.display(Underlying::new(inst))
+                ),
+                ir::ParamOwner::Exists => {
+                    "existentially quantified parameter".to_string()
+                }
             };
             unreachable!(
-                "{} `{}' should have been resolved in the binding but the binding was: {:?}",
+                "{} `{}' should have been resolved in the binding but the binding was: [{}]",
                 msg,
                 ul.display(p_idx),
                 self.binding_rep(ul),

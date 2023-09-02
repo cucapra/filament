@@ -48,6 +48,20 @@ impl Visitor for HoistFacts {
         "hoist-facts"
     }
 
+    /// Add the assignments to the existentially quantified parameters as
+    /// assumptions to the path condition of the component.
+    fn start(&mut self, data: &mut VisitorData) -> Action {
+        let ctx = &mut data.comp;
+        for (param, val) in ctx.exists_params.clone() {
+            let Some(e) = val else {
+                continue;
+            };
+            let prop = param.expr(ctx).equal(e, ctx);
+            self.insert(prop);
+        }
+        Action::Continue
+    }
+
     /// Collect all assumptions in a given scope and add them to the path condition.
     /// We do this so that all asserts in a scope are affected by all assumes.
     fn start_cmds(&mut self, cmds: &mut Vec<ir::Command>, _: &mut VisitorData) {
