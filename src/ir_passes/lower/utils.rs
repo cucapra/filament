@@ -155,12 +155,12 @@ pub fn cell_to_port_def(cr: &RRC<calyx::Cell>) -> Vec<calyx::PortDef<u64>> {
         .map(|pr| {
             let port = pr.borrow();
             // Reverse port direction because signature refers to internal interface.
-            calyx::PortDef {
-                name: port.name,
-                width: port.width,
-                direction: port.direction.reverse(),
-                attributes: port.attributes.clone(),
-            }
+            calyx::PortDef::new(
+                port.name,
+                port.width,
+                port.direction.reverse(),
+                port.attributes.clone(),
+            )
         })
         .collect()
 }

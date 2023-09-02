@@ -39,15 +39,15 @@ impl Compile {
         let mut attributes = calyx::Attributes::default();
         attributes.insert(calyx::BoolAttr::Data, 1);
 
-        calyx::PortDef {
-            name: name_gen.port_name(port, ctx, comp).into(),
-            width: width_transform(comp.get(port).width, comp),
-            direction: match dir.reverse() {
+        calyx::PortDef::new(
+            name_gen.port_name(port, ctx, comp),
+            width_transform(comp.get(port).width, comp),
+            match dir.reverse() {
                 ir::Direction::In => calyx::Direction::Input,
                 ir::Direction::Out => calyx::Direction::Output,
             },
             attributes,
-        }
+        )
     }
 
     /// Compiles a list of ports into a [calyx::PortDef].
@@ -73,12 +73,12 @@ impl Compile {
             .chain(
                 // adds unannotated ports to the list of ports
                 comp.unannotated_ports.iter().map(|(name, width)| {
-                    calyx::PortDef {
-                        name: name.as_ref().into(),
-                        width: width_from_u64(*width),
-                        direction: calyx::Direction::Input,
-                        attributes: calyx::Attributes::default(),
-                    }
+                    calyx::PortDef::new(
+                        name.as_ref(),
+                        width_from_u64(*width),
+                        calyx::Direction::Input,
+                        calyx::Attributes::default(),
+                    )
                 }),
             )
             .chain(
@@ -86,17 +86,19 @@ impl Compile {
                 comp.events()
                     .idx_iter()
                     .filter_map(|idx| name_gen.interface_name(idx, comp))
-                    .map(|name| calyx::PortDef {
-                        name: name.into(),
-                        width: width_from_u64(1),
-                        direction: calyx::Direction::Input,
-                        // adds the `@fil_event` attribute to the port
-                        attributes: vec![(
-                            calyx::Attribute::Unknown("fil_event".into()),
-                            1,
-                        )]
-                        .try_into()
-                        .unwrap(),
+                    .map(|name| {
+                        calyx::PortDef::new(
+                            name,
+                            width_from_u64(1),
+                            calyx::Direction::Input,
+                            // adds the `@fil_event` attribute to the port
+                            vec![(
+                                calyx::Attribute::Unknown("fil_event".into()),
+                                1,
+                            )]
+                            .try_into()
+                            .unwrap(),
+                        )
                     }),
             )
             .collect();
@@ -109,7 +111,7 @@ impl Compile {
             if let Some(pair @ ((attr, value), (name, _, dir))) =
                 INTERFACE_PORTS
                     .iter()
-                    .find(|(_, (n, _, _))| *n == pd.name.as_ref())
+                    .find(|(_, (n, _, _))| *n == pd.name().as_ref())
             {
                 assert!(
                     dir == &pd.direction,
@@ -132,12 +134,12 @@ impl Compile {
         if !comp.is_ext {
             // add remaining interface ports if not found (found ports already removed above)
             for (attr, (name, width, dir)) in interface_ports {
-                ports.push(calyx::PortDef {
-                    name: (*name).into(),
-                    width: width_from_u64(*width),
-                    direction: dir.clone(),
-                    attributes: vec![*attr].try_into().unwrap(),
-                });
+                ports.push(calyx::PortDef::new(
+                    name.as_ref(),
+                    width_from_u64(*width),
+                    dir.clone(),
+                    vec![*attr].try_into().unwrap(),
+                ));
             }
         }
 

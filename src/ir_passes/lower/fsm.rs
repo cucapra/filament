@@ -97,32 +97,41 @@ impl FsmBind {
                 // create the state ports in the format `_state`.
                 .flat_map(|n| {
                     [
-                        (
+                        calyx::PortDef::new(
                             calyx::Id::from(format!("_{n}state")),
                             bitwidth,
                             calyx::Direction::Output,
-                        )
-                            .into(),
-                        (
+                            calyx::Attributes::default(),
+                        ),
+                        calyx::PortDef::new(
                             calyx::Id::from(format!("_{n}_0")),
                             1,
                             calyx::Direction::Output,
-                        )
-                            .into(),
+                            calyx::Attributes::default(),
+                        ),
                     ]
                 })
                 .chain(INTERFACE_PORTS.iter().map(|(attr, pd)| {
-                    calyx::PortDef {
-                        name: pd.0.into(),
-                        width: pd.1,
-                        direction: pd.2.clone(),
-                        attributes: vec![*attr].try_into().unwrap(),
-                    }
+                    calyx::PortDef::new(
+                        pd.0,
+                        pd.1,
+                        pd.2.clone(),
+                        vec![*attr].try_into().unwrap(),
+                    )
                 }))
                 .chain([
-                    (calyx::Id::from("go"), 1, calyx::Direction::Input).into(),
-                    (calyx::Id::from("done"), 1, calyx::Direction::Output)
-                        .into(),
+                    calyx::PortDef::new(
+                        "go",
+                        1,
+                        calyx::Direction::Input,
+                        calyx::Attributes::default(),
+                    ),
+                    calyx::PortDef::new(
+                        "done",
+                        1,
+                        calyx::Direction::Output,
+                        calyx::Attributes::default(),
+                    ),
                 ])
                 .collect();
 
@@ -209,26 +218,40 @@ impl FsmBind {
 
                 let ports: Vec<calyx::PortDef<u64>> = INTERFACE_PORTS
                     .iter()
-                    .map(|(attr, pd)| calyx::PortDef {
-                        name: pd.0.into(),
-                        width: pd.1,
-                        direction: pd.2.clone(),
-                        attributes: vec![*attr].try_into().unwrap(),
+                    .map(|(attr, pd)| {
+                        calyx::PortDef::new(
+                            pd.0,
+                            pd.1,
+                            pd.2.clone(),
+                            vec![*attr].try_into().unwrap(),
+                        )
                     })
                     .chain([
-                        (
-                            calyx::Id::from("state"),
+                        calyx::PortDef::new(
+                            "state",
                             bitwidth,
                             calyx::Direction::Output,
-                        )
-                            .into(),
+                            calyx::Attributes::default(),
+                        ),
                         // need this port here because the 0 state is equivalent to go && state == 0
-                        (calyx::Id::from("_0"), 1, calyx::Direction::Output)
-                            .into(),
-                        (calyx::Id::from("go"), 1, calyx::Direction::Input)
-                            .into(),
-                        (calyx::Id::from("done"), 1, calyx::Direction::Output)
-                            .into(),
+                        calyx::PortDef::new(
+                            "_0",
+                            1,
+                            calyx::Direction::Output,
+                            calyx::Attributes::default(),
+                        ),
+                        calyx::PortDef::new(
+                            "go",
+                            1,
+                            calyx::Direction::Input,
+                            calyx::Attributes::default(),
+                        ),
+                        calyx::PortDef::new(
+                            "done",
+                            1,
+                            calyx::Direction::Output,
+                            calyx::Attributes::default(),
+                        ),
                     ])
                     .collect();
 
@@ -319,25 +342,34 @@ impl FsmBind {
             let ports: Vec<calyx::PortDef<u64>> = (0..states)
                 // create the state ports in the format `_state`.
                 .map(|n| {
-                    (
+                    calyx::PortDef::new(
                         calyx::Id::from(format!("_{n}")),
                         1,
                         calyx::Direction::Output,
+                        calyx::Attributes::default(),
                     )
-                        .into()
                 })
                 .chain(INTERFACE_PORTS.iter().map(|(attr, pd)| {
-                    calyx::PortDef {
-                        name: pd.0.into(),
-                        width: pd.1,
-                        direction: pd.2.clone(),
-                        attributes: vec![*attr].try_into().unwrap(),
-                    }
+                    calyx::PortDef::new(
+                        pd.0,
+                        pd.1,
+                        pd.2.clone(),
+                        vec![*attr].try_into().unwrap(),
+                    )
                 }))
                 .chain([
-                    (calyx::Id::from("go"), 1, calyx::Direction::Input).into(),
-                    (calyx::Id::from("done"), 1, calyx::Direction::Output)
-                        .into(),
+                    calyx::PortDef::new(
+                        calyx::Id::from("go"),
+                        1,
+                        calyx::Direction::Input,
+                        calyx::Attributes::default(),
+                    ),
+                    calyx::PortDef::new(
+                        calyx::Id::from("done"),
+                        1,
+                        calyx::Direction::Output,
+                        calyx::Attributes::default(),
+                    ),
                 ])
                 .collect();
 
