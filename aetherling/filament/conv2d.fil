@@ -11,12 +11,12 @@ extern "mul.sv" {
     );
 }
 
-comp Filter<G: 1>() -> (
-     out[9]: [G, G+1] 8
+comp Filter<@G: 1>() -> (
+     out[9]: [@G, @G+1] 8
 ) {
-    one := new Const[8, 1]<G>();
-    two := new Const[8, 2]<G>();
-    four := new Const[8, 4]<G>();
+    one := new Const[8, 1]<@G>();
+    two := new Const[8, 2]<@G>();
+    four := new Const[8, 4]<@G>();
 
     out{0} = one.out; out{1} = two.out;  out{2} = one.out;
     out{3} = two.out; out{4} = four.out; out{5} = two.out;
@@ -34,9 +34,9 @@ comp Conv<@G: 1>(
      out: [@G+6, @G+7] 8,
 ) {
     bundle m[9]: [@G+3, @G+4] 16;
-    for #i in 0..9 {
-      mult := new BlackBoxMulUInt8<@G>(in{#i}, w{#i});
-      m{#i} = mult.O;
+    for i in 0..9 {
+      mult := new BlackBoxMulUInt8<@G>(in{i}, w{i});
+      m{i} = mult.O;
     }
 
     // Add the results

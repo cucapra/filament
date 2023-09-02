@@ -2,37 +2,37 @@
 
 import "primitives/state.fil";
 
-comp DoubleShift[#W, #N]<G: 2>(
-    go: interface[G],
-    in0: [G, G+1] #W,
-    in1: [G+1, G+2] #W
+comp DoubleShift[W, N]<@G: 2>(
+    go: interface[@G],
+    in0: [@G, @G+1] W,
+    in1: [@G+1, @G+2] W
 ) -> (
-    out0: [G+#N, G+#N+1] #W,
-    out1: [G+#N+1, G+#N+2] #W
+    out0: [@G+N, @G+N+1] W,
+    out1: [@G+N+1, @G+N+2] W
 ) {
-    D := new Shift[#W, #N];
-    d0 := D<G>(in0);
-    d1 := D<G+1>(in1);
+    D := new Shift[W, N];
+    d0 := D<@G>(in0);
+    d1 := D<@G+1>(in1);
 
     out0 = d0.out;
     out1 = d1.out;
 }
 
-comp main<G: 5>(
-    go: interface[G],
-    in0: [G, G+1] 32,
-    in1: [G+1, G+2] 32,
-    in2: [G+3, G+4] 32,
-    in3: [G+4, G+5] 32
+comp main<@G: 5>(
+    go: interface[@G],
+    in0: [@G, @G+1] 32,
+    in1: [@G+1, @G+2] 32,
+    in2: [@G+3, @G+4] 32,
+    in3: [@G+4, @G+5] 32
 ) -> (
-    out0: [G+3, G+4] 32,
-    out1: [G+4, G+5] 32,
-    out2: [G+6, G+7] 32,
-    out3: [G+7, G+8] 32
+    out0: [@G+3, @G+4] 32,
+    out1: [@G+4, @G+5] 32,
+    out2: [@G+6, @G+7] 32,
+    out3: [@G+7, @G+8] 32
 ) {
     D := new DoubleShift[32, 3];
-    d0 := D<G>(in0, in1);
-    d1 := D<G+3>(in2, in3);
+    d0 := D<@G>(in0, in1);
+    d1 := D<@G+3>(in2, in3);
 
     out0 = d0.out0;
     out1 = d0.out1;

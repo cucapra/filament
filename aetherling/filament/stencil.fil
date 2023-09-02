@@ -4,7 +4,7 @@ import "primitives/state.fil";
 comp Stencil[W]<@G: 1>(
      in: [@G, @G+1] W,
 ) -> (
-     out[9]: [@G, @G+1] #W,
+     out[9]: [@G, @G+1] W,
 ) {
     d9 := new ContPrev[W, 0]<@G>(in);
     d8 := new ContPrev[W, 0]<@G>(d9.prev);

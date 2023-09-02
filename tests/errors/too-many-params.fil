@@ -1,4 +1,4 @@
-comp Foo[#W]<G:1>() -> () {}
-comp Bar<G:1>() -> () {
-  f := new Foo[10, 15]<G>();
+comp Foo[W]<@G:1>() -> () {}
+comp Bar<@G:1>() -> () {
+  f := new Foo[10, 15]<@G>();
 }
