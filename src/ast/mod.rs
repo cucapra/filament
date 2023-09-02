@@ -22,5 +22,5 @@ pub use implication::Implication;
 pub use interval::Range;
 pub use loc::Loc;
 pub use port::{InterfaceDef, PortDef};
-pub use signature::{EventBind, ParamBind, Signature};
+pub use signature::{EventBind, ParamBind, SigBind, Signature};
 pub use time::{Time, TimeSub};

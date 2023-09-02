@@ -153,11 +153,11 @@ impl FilamentParser {
         ))
     }
 
-    fn sig_bind(input: Node) -> ParseResult<Loc<ast::ParamBind>> {
+    fn sig_bind(input: Node) -> ParseResult<Loc<ast::SigBind>> {
         let sp = Self::get_span(&input);
         let out = match_nodes!(
             input.into_children();
-            [param_var(param), expr(e)] => ast::ParamBind::new(param, Some(e.take()))
+            [param_var(param), expr(e)] => ast::SigBind::let_(param, e.take())
         );
         Ok(Loc::new(out, sp))
     }
@@ -551,7 +551,7 @@ impl FilamentParser {
             [param_bind(params)..] => params.collect_vec(),
         ))
     }
-    fn sig_bindings(input: Node) -> ParseResult<Vec<Loc<ast::ParamBind>>> {
+    fn sig_bindings(input: Node) -> ParseResult<Vec<Loc<ast::SigBind>>> {
         Ok(match_nodes!(
             input.into_children();
             [] => vec![],

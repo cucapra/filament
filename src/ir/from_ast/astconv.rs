@@ -60,12 +60,13 @@ impl<'prog> BuildCtx<'prog> {
         // Extend the binding with the let-bound parameters in the signature
         // Bindings can mention previous bindings so we add bindings as we
         // go along.
-        comp.sig_binding.iter().for_each(
-            |ast::ParamBind { param, default }| {
-                let e = default.clone().unwrap().resolve(&binding);
+        comp.sig_binding.iter().for_each(|sb| match sb {
+            ast::SigBind::Let { param, bind } => {
+                let e = bind.clone().resolve(&binding);
                 binding.extend([(param.copy(), e)])
-            },
-        );
+            }
+            ast::SigBind::Exists { .. } => todo!(),
+        });
 
         //println!("ir inst has bindings {:?}", inst.params);
         let idx = self.comp().add(inst);
@@ -493,10 +494,14 @@ impl<'prog> BuildCtx<'prog> {
         }
 
         // Binding from let-defined parameters in the signature to their values
-        for pb in &sig.sig_bindings {
-            let ast::ParamBind { default, .. } = pb.inner();
-            let e = self.expr(default.as_ref().unwrap().clone())?;
-            self.add_let_param(pb.name(), e);
+        for sb in &sig.sig_bindings {
+            match &sb.inner() {
+                ast::SigBind::Let { param, bind } => {
+                    let e = self.expr(bind.clone())?;
+                    self.add_let_param(param.copy(), e);
+                }
+                ast::SigBind::Exists { .. } => todo!(),
+            }
         }
 
         let mut interface_signals: HashMap<_, _> = sig

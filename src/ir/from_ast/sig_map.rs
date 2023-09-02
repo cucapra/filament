@@ -22,7 +22,7 @@ pub struct Sig {
     pub inputs: Vec<ir::PortIdx>,
     pub outputs: Vec<ir::PortIdx>,
     pub raw_params: Vec<ast::ParamBind>,
-    pub sig_binding: Vec<ast::ParamBind>,
+    pub sig_binding: Vec<ast::SigBind>,
     pub raw_events: Vec<ast::EventBind>,
     pub raw_inputs: Vec<ast::Loc<ast::PortDef>>,
     pub raw_outputs: Vec<ast::PortDef>,
