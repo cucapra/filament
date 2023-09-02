@@ -285,22 +285,20 @@ impl FsmBind {
 
                 // checks if the counter is currently on the final state.
                 // state == _{n-1}
-                let rst_check =
-                    guard!(state["out"]).eq(guard!(final_state["out"]));
+                let rst_check = guard!(state["out"] == final_state["out"]);
+                let not_rst = rst_check.clone().not();
 
                 // check if we should increment the counter.
                 // (go || state != 0) && !rst_check
-                let go_check = guard!(this["go"])
-                    .or(guard!(state["out"]).eq(guard!(zero["out"])).not())
-                    .and(rst_check.clone().not());
+                let go_check =
+                    guard!(this["go"] | (state["out"] != zero["out"]))
+                        .and(not_rst.clone());
 
                 let enable_check = rst_check.clone().or(go_check.clone());
 
                 // go && state == 0
-                let zero_check = guard!(this["go"])
-                    .and(guard!(state["out"]).eq(guard!(zero["out"])));
-
-                let not_rst = rst_check.clone().not();
+                let zero_check =
+                    guard!(this["go"] & (state["out"] == zero["out"]));
 
                 // add base assignments
                 builder.component.continuous_assignments.extend(
@@ -471,7 +469,7 @@ impl FsmBind {
 
         match ft {
             FsmType::Simple(_) => (start..end)
-                .map(|st| guard!(cell[format!("_{}", st)]))
+                .map(|st| guard!(cell[format!("_{st}")]))
                 .reduce(calyx::Guard::or)
                 .unwrap(),
             FsmType::Counter(states) => {
@@ -479,7 +477,7 @@ impl FsmBind {
 
                 // if start is zero, we need to use its special port instead
                 let (start, guard) = if start == 0 {
-                    (start + 1, Some(guard!(cell[format!("{}_0", prefix)])))
+                    (start + 1, Some(guard!(cell[format!("{prefix}_0")])))
                 } else {
                     (start, None)
                 };
@@ -490,12 +488,10 @@ impl FsmBind {
                 let end = builder.add_constant(end - 1, bitwidth);
 
                 // state >= start && state <= end
-                let g = guard!(cell[format!("{}state", prefix)])
-                    .ge(guard!(start["out"]))
-                    .and(
-                        guard!(cell[format!("{}state", prefix)])
-                            .le(guard!(end["out"])),
-                    );
+                let g = guard!(
+                    (cell[format!("{prefix}state")] >= start["out"])
+                        & (cell[format!("{prefix}state")] <= end["out"])
+                );
 
                 // generate the final guard
                 guard.map_or(g.clone(), |gg| gg.or(g))
