@@ -217,10 +217,7 @@ impl<'a> BuildCtx<'a> {
             "Bundles should have been compiled away."
         );
 
-        log::debug!(
-            "Compiling connect: {}",
-            ir::Printer::new(self.comp).connect_str(con)
-        );
+        log::debug!("Compiling connect: {}", self.comp.display(con));
 
         // ignores the guard of the destination (bind check already verifies that it is available for at least as long as src)
         let (dst, _) = self.compile_port(dst.port);

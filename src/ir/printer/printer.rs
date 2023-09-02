@@ -46,12 +46,6 @@ impl<'a> Printer<'a> {
         )
     }
 
-    pub fn connect_str(&self, c: &ir::Connect) -> String {
-        let mut buf = Vec::new();
-        self.connect(c, 0, &mut buf).unwrap();
-        String::from_utf8(buf).unwrap()
-    }
-
     pub fn command(
         &self,
         c: &ir::Command,

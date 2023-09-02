@@ -170,3 +170,12 @@ impl<'a> DisplayCtx<&'a ir::Access> for ir::Component {
         }
     }
 }
+
+impl<'a> DisplayCtx<&'a ir::Connect> for ir::Component {
+    fn write(&self, c: &ir::Connect, f: &mut impl Write) -> std::fmt::Result {
+        let ir::Connect { src, dst, .. } = c;
+        self.write(src, f)?;
+        write!(f, " = ")?;
+        self.write(dst, f)
+    }
+}
