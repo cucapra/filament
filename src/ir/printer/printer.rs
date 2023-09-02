@@ -30,50 +30,6 @@ impl<'a> Printer<'a> {
         Ok(())
     }
 
-    fn liveness(&self, l: &ir::Liveness) -> String {
-        let ir::Liveness { idx, len, range } = l;
-        format!(
-            "for<{}: {}> {}",
-            self.ctx.display(*idx),
-            self.ctx.display(*len),
-            self.ctx.display(range)
-        )
-    }
-
-    fn commands(
-        &self,
-        cmds: &[ir::Command],
-        indent: usize,
-        f: &mut impl io::Write,
-    ) -> io::Result<()> {
-        for cmd in cmds {
-            self.command(cmd, indent, f)?;
-            writeln!(f)?;
-        }
-        Ok(())
-    }
-
-    fn access(&self, a: &ir::Access) -> String {
-        let &ir::Access { port, start, end } = a;
-        if log::log_enabled!(log::Level::Debug) {
-            format!(
-                "{}[{}..{})",
-                self.ctx.display(port),
-                self.ctx.display(start),
-                self.ctx.display(end)
-            )
-        } else if a.is_port(self.ctx) {
-            format!("{}[{}]", self.ctx.display(port), self.ctx.display(start))
-        } else {
-            format!(
-                "{}[{}..{})",
-                self.ctx.display(port),
-                self.ctx.display(start),
-                self.ctx.display(end)
-            )
-        }
-    }
-
     fn connect(
         &self,
         c: &ir::Connect,
@@ -85,8 +41,8 @@ impl<'a> Printer<'a> {
             f,
             "{:indent$}{} = {};",
             "",
-            self.access(dst),
-            self.access(src),
+            self.ctx.display(dst),
+            self.ctx.display(src),
         )
     }
 
@@ -153,6 +109,19 @@ impl<'a> Printer<'a> {
                 }
             }
         }
+    }
+
+    fn commands(
+        &self,
+        cmds: &[ir::Command],
+        indent: usize,
+        f: &mut impl io::Write,
+    ) -> io::Result<()> {
+        for cmd in cmds {
+            self.command(cmd, indent, f)?;
+            writeln!(f)?;
+        }
+        Ok(())
     }
 
     fn sig<F: io::Write>(
@@ -225,7 +194,7 @@ impl<'a> Printer<'a> {
                     "{:indent$}{}: {} {},",
                     "",
                     self.ctx.display(*idx),
-                    self.liveness(&port.live),
+                    self.ctx.display(&port.live),
                     self.ctx.display(port.width),
                     indent = indent + 2
                 )
@@ -236,7 +205,7 @@ impl<'a> Printer<'a> {
                     "{:indent$}{}: {} {}",
                     "",
                     self.ctx.display(*idx),
-                    self.liveness(&port.live),
+                    self.ctx.display(&port.live),
                     self.ctx.display(port.width),
                     indent = indent + 2
                 )
@@ -310,7 +279,7 @@ impl<'a> Printer<'a> {
                         "{:indent$}{} ({idx}): bundle({dir}) {} {};",
                         "",
                         self.ctx.display(idx),
-                        self.liveness(live),
+                        self.ctx.display(live),
                         self.ctx.display(*width),
                     )
                 } else {
@@ -319,7 +288,7 @@ impl<'a> Printer<'a> {
                         "{:indent$}{}: bundle({dir}) {} {};",
                         "",
                         self.ctx.display(idx),
-                        self.liveness(live),
+                        self.ctx.display(live),
                         self.ctx.display(*width),
                     )
                 }
@@ -331,7 +300,7 @@ impl<'a> Printer<'a> {
                         "{:indent$}{} ({idx}) = bundle {} {};",
                         "",
                         self.ctx.display(idx),
-                        self.liveness(live),
+                        self.ctx.display(live),
                         self.ctx.display(*width),
                     )
                 } else {
@@ -340,7 +309,7 @@ impl<'a> Printer<'a> {
                         "{:indent$}{} = bundle {} {};",
                         "",
                         self.ctx.display(idx),
-                        self.liveness(live),
+                        self.ctx.display(live),
                         self.ctx.display(*width),
                     )
                 }

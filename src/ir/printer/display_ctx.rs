@@ -145,3 +145,28 @@ impl<'a> DisplayCtx<&'a ir::Range> for ir::Component {
         write!(f, "]")
     }
 }
+
+impl<'a> DisplayCtx<&'a ir::Liveness> for ir::Component {
+    fn write(&self, l: &ir::Liveness, f: &mut impl Write) -> std::fmt::Result {
+        let ir::Liveness { idx, len, range } = l;
+        write!(
+            f,
+            "for<{}: {}> {}",
+            self.display(*idx),
+            self.display(*len),
+            self.display(range)
+        )
+    }
+}
+
+impl<'a> DisplayCtx<&'a ir::Access> for ir::Component {
+    fn write(&self, a: &ir::Access, f: &mut impl Write) -> std::fmt::Result {
+        let &ir::Access { port, start, end } = a;
+        self.write(port, f)?;
+        if a.is_port(self) {
+            write!(f, "[{}]", self.display(start))
+        } else {
+            write!(f, "[{}..{})", self.display(start), self.display(end))
+        }
+    }
+}
