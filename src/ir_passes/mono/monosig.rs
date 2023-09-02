@@ -4,6 +4,7 @@ use super::{
 };
 use crate::ir::{
     self, AddCtx, Ctx, DenseIndexInfo, DisplayCtx, Foreign, MutCtx,
+    SparseInfoMap,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -12,7 +13,7 @@ use std::collections::HashMap;
 type PortKey = (Option<Base<ir::Invoke>>, Underlying<ir::Port>);
 
 type DenseMap<T> = DenseIndexInfo<T, Base<T>, Underlying<T>>;
-type SparseMap<T> = HashMap<Underlying<T>, Base<T>>;
+type SparseMap<T> = SparseInfoMap<T, Base<T>, Underlying<T>>;
 
 /// Used for monomorphizing a component's signature when we add it to the queue.
 /// Any functions needed for monomorphizing the signature are located here - the rest are
@@ -64,7 +65,7 @@ impl MonoSig {
             binding,
             port_map: HashMap::new(),
             bundle_param_map: HashMap::new(),
-            param_map: HashMap::default(),
+            param_map: SparseInfoMap::default(),
             event_map: DenseMap::default(),
             invoke_map: DenseMap::default(),
             instance_map: DenseMap::default(),
@@ -218,7 +219,7 @@ impl MonoSig {
         ul: &UnderlyingComp,
         p_idx: Underlying<ir::Param>,
     ) -> Base<ir::Param> {
-        if let Some(&idx) = self.param_map.get(&p_idx) {
+        if let Some(&idx) = self.param_map.find(p_idx) {
             idx
         } else {
             // This param is a in a use site and should therefore have been found.
@@ -376,9 +377,9 @@ impl MonoSig {
              }| {
                 let params = if underlying.is_ext() {
                     params
-                        .into_iter()
+                        .iter()
                         .map(|(p, id)| {
-                            (self.param_map[&Underlying::new(p)].get(), id)
+                            (self.param_map[Underlying::new(p)].get(), *id)
                         })
                         .collect()
                 } else {
@@ -389,16 +390,16 @@ impl MonoSig {
                     name,
                     ports,
                     interface_ports: interface_ports
-                        .into_iter()
+                        .iter()
                         .map(|(ev, id)| {
-                            (self.event_map.get(Underlying::new(ev)).get(), id)
+                            (self.event_map.get(Underlying::new(ev)).get(), *id)
                         })
                         .collect(),
                     params,
                     events: events
-                        .into_iter()
+                        .iter()
                         .map(|(ev, id)| {
-                            (self.event_map.get(Underlying::new(ev)).get(), id)
+                            (self.event_map.get(Underlying::new(ev)).get(), *id)
                         })
                         .collect(),
                 }
@@ -450,7 +451,7 @@ impl MonoSig {
         };
 
         let new_idx = self.base.add(mono_param);
-        self.param_map.insert(param, new_idx);
+        self.param_map.push(param, new_idx);
         self.bundle_param_map.insert(port, new_idx);
         new_idx
     }

@@ -68,7 +68,7 @@ impl MonoDeferred<'_, '_> {
                     info: monosig.info(&underlying, pass, info).get(),
                 };
                 let new_idx = monosig.base.add(param);
-                monosig.param_map.insert(Underlying::new(idx), new_idx);
+                monosig.param_map.push(Underlying::new(idx), new_idx);
             }
 
             for (idx, port) in underlying.ports().iter() {
