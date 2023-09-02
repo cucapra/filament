@@ -1,6 +1,6 @@
 use super::{
     utils::Foreign, AddCtx, Bind, Component, Ctx, Expr, ExprIdx, Foldable,
-    InfoIdx, InvIdx, ParamIdx, PortIdx, Subst, TimeIdx, TimeSub,
+    InfoIdx, InstIdx, InvIdx, ParamIdx, PortIdx, Subst, TimeIdx, TimeSub,
 };
 use crate::ast::Op;
 use std::fmt;
@@ -275,6 +275,10 @@ impl Access {
 pub enum ParamOwner {
     /// Defined by the signature (passed in when instantiated)
     Sig,
+    /// Owned by an `exists` binding
+    Exists,
+    /// Parameter defined by an instance
+    Instance(InstIdx),
     /// Defined by a bundle
     Bundle(PortIdx),
     /// Loop indexing parameter
@@ -287,10 +291,16 @@ impl fmt::Display for ParamOwner {
             ParamOwner::Sig => {
                 write!(f, "sig")
             }
+            ParamOwner::Exists => {
+                write!(f, "exists")
+            }
             ParamOwner::Loop => {
                 write!(f, "loop")
             }
             ParamOwner::Bundle(idx) => {
+                write!(f, "{idx}")
+            }
+            ParamOwner::Instance(idx) => {
                 write!(f, "{idx}")
             }
         }

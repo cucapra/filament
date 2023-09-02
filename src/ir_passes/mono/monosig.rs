@@ -116,7 +116,7 @@ impl MonoSig {
         let inst = underlying.get(Underlying::new(underlying.get(inv).inst));
         let inst_comp = Underlying::new(inst.comp);
 
-        let inst_params = &inst.params;
+        let inst_params = &inst.args;
         let conc_params = inst_params
             .iter()
             .map(|p| {
@@ -227,6 +227,8 @@ impl MonoSig {
                 ir::ParamOwner::Loop => "let-bound parameter",
                 ir::ParamOwner::Bundle(_) => "bundle-bound parameter",
                 ir::ParamOwner::Sig => "signature-bound parameter",
+                ir::ParamOwner::Instance(_) => todo!(),
+                ir::ParamOwner::Exists => todo!(),
             };
             unreachable!(
                 "{} `{}' should have been resolved in the binding but the binding was: {:?}",
@@ -578,7 +580,7 @@ impl MonoSig {
 
         let inst = underlying.get(Underlying::new(underlying.get(inv).inst));
         let inst_comp = Underlying::new(inst.comp);
-        let inst_params = &inst.params;
+        let inst_params = &inst.args;
         let conc_params = inst_params
             .iter()
             .map(|p| {
@@ -616,11 +618,16 @@ impl MonoSig {
         pass: &mut Monomorphize,
         inst: Underlying<ir::Instance>,
     ) -> Base<ir::Instance> {
-        let ir::Instance { comp, params, info } = underlying.get(inst);
+        let ir::Instance {
+            comp,
+            args,
+            params,
+            info,
+        } = underlying.get(inst);
         let info = Underlying::new(*info);
 
         let is_ext = pass.old.get(*comp).is_ext;
-        let conc_params = params
+        let conc_params = args
             .iter()
             .map(|p| {
                 self.expr(underlying, Underlying::new(*p))
@@ -635,22 +642,24 @@ impl MonoSig {
         let new_inst = if !is_ext {
             ir::Instance {
                 comp: comp.get(),
-                params: new_params
+                args: new_params
                     .into_iter()
                     .map(|n| self.base.num(n).get())
                     .collect(),
                 info: self.info(underlying, pass, info).get(),
+                params: todo!(),
             }
         } else {
             // this is an extern, so keep the params - need to get them into the new component though
-            let ext_params = params
+            let ext_params = args
                 .iter()
                 .map(|p| self.expr(underlying, Underlying::new(*p)).get())
                 .collect_vec();
             ir::Instance {
                 comp: comp.get(),
-                params: ext_params.into(),
+                args: ext_params.into(),
                 info: self.info(underlying, pass, info).get(),
+                params: todo!(),
             }
         };
 

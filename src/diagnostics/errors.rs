@@ -58,11 +58,12 @@ impl Error {
         }
     }
 
-    pub fn undefined<S: ToString>(name: Id, kind: S) -> Self {
+    pub fn undefined<I: ToString, S: ToString>(name: I, kind: S) -> Self {
         Self {
             kind: format!(
-                "undefined {kind} name: {name}",
-                kind = kind.to_string()
+                "undefined {} name: {}",
+                kind.to_string(),
+                name.to_string(),
             ),
             notes: vec![],
         }

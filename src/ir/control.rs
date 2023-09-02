@@ -73,9 +73,11 @@ pub struct Instance {
     /// The component being instantiated
     pub comp: CompIdx,
     /// The parameters used in the binding of this instance
-    pub params: Box<[ExprIdx]>,
+    pub args: Box<[ExprIdx]>,
     /// The information associated with this instance
     pub info: InfoIdx,
+    /// The parameters defined by this instance
+    pub params: Vec<ParamIdx>,
 }
 
 impl InstIdx {

@@ -1,3 +1,4 @@
+use super::DisplayCtx;
 use crate::{ir, ir::Ctx};
 /// Validate the current context
 /// If calling the methods in this does not result in a panic, then the corresponding IR structure is valid.
@@ -93,10 +94,20 @@ impl<'a> Validate<'a> {
         } = live;
         match self.comp.get(*par_idx).owner {
             ir::ParamOwner::Sig => self.comp.internal_error(format!(
-                "{par_idx} should be owned by a bundle but is owned by a sig"
+                "{} should be owned by a bundle but is owned by a sig",
+                self.comp.display(*par_idx)
             )),
             ir::ParamOwner::Loop => self.comp.internal_error(format!(
-                "{par_idx} should be owned by a bundle but is owned by a loop"
+                "{} should be owned by a bundle but is owned by a loop",
+                self.comp.display(*par_idx)
+            )),
+            ir::ParamOwner::Exists => self.comp.internal_error(format!(
+                "{} should be owned by a bundle is an existentially quantified param",
+                self.comp.display(*par_idx)
+            )),
+            ir::ParamOwner::Instance(inst) => self.comp.internal_error(format!(
+                "{} should be owned by a bundle but is owned by instance {inst}",
+                self.comp.display(*par_idx)
             )),
             ir::ParamOwner::Bundle(port_idx) => {
                 // Ensure that the bundle-owned param points here
@@ -205,8 +216,10 @@ impl<'a> Validate<'a> {
 
         // check (2) and (3)
         match owner {
-            ir::ParamOwner::Sig | ir::ParamOwner::Loop => { /* Nothing to check */
-            }
+            ir::ParamOwner::Sig
+            | ir::ParamOwner::Exists
+            | ir::ParamOwner::Loop => { /* Nothing to check */ }
+            ir::ParamOwner::Instance(_) => todo!(),
             ir::ParamOwner::Bundle(port_idx) => {
                 let ir::Port { live, .. } = &self.comp.get(*port_idx); // (2) this will panic if port not defined
 
@@ -263,7 +276,9 @@ impl<'a> Validate<'a> {
     ///     in the component signature
     fn instance(&self, iidx: ir::InstIdx) {
         // check (1)
-        let ir::Instance { comp, params, .. } = &self.comp[iidx];
+        let ir::Instance {
+            comp, args: params, ..
+        } = &self.comp[iidx];
         for expr in params.iter() {
             // check (2)
             self.expr(*expr);

@@ -1,4 +1,4 @@
-use super::Id;
+use super::{Id, Loc};
 use crate::{errors, utils};
 
 /// Binary operation over expressions
@@ -63,7 +63,7 @@ pub enum Expr {
     Concrete(u64),
     Abstract(Id),
     ParamAccess {
-        inst: Id,
+        inst: Loc<Id>,
         param: Id,
     },
     App {

@@ -8,13 +8,13 @@ use std::rc::Rc;
 
 #[derive(Eq, PartialEq, Hash, Clone, Debug)]
 /// A custom struct used to index ports
-pub(super) enum InvPort {
+pub(super) enum OwnedPort {
     Sig(ir::Direction, ast::Loc<Id>),
     Inv(ir::InvIdx, ir::Direction, ast::Loc<Id>),
     Local(ast::Loc<Id>),
 }
 
-impl InvPort {
+impl OwnedPort {
     fn name(&self) -> Id {
         match self {
             Self::Sig(_, id) | Self::Inv(_, _, id) | Self::Local(id) => {
@@ -32,12 +32,50 @@ impl InvPort {
     }
 }
 
-impl std::fmt::Display for InvPort {
+impl std::fmt::Display for OwnedPort {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Sig(dir, id) => write!(f, "{}({})", dir, id),
             Self::Inv(inv, dir, id) => write!(f, "{}({} in {})", dir, id, inv),
             Self::Local(id) => write!(f, "{}", id),
+        }
+    }
+}
+
+#[derive(Eq, PartialEq, Hash, Clone, Debug)]
+pub(super) enum OwnedParam {
+    /// A parameter defiend by an instance.
+    Instance(ir::InstIdx, ast::Id),
+    /// A parameter defined locally in the component (either the signature, a
+    /// let binding, or an exists binding).
+    Local(ast::Id),
+}
+
+impl OwnedParam {
+    pub fn local(id: ast::Id) -> Self {
+        Self::Local(id)
+    }
+
+    pub fn inst(inst: ir::InstIdx, id: ast::Id) -> Self {
+        Self::Instance(inst, id)
+    }
+
+    pub fn param_owner(id: ast::Id, owner: &ir::ParamOwner) -> Self {
+        match owner {
+            ir::ParamOwner::Sig
+            | ir::ParamOwner::Exists
+            | ir::ParamOwner::Bundle(_)
+            | ir::ParamOwner::Loop => Self::Local(id),
+            ir::ParamOwner::Instance(inst) => Self::Instance(*inst, id),
+        }
+    }
+}
+
+impl std::fmt::Display for OwnedParam {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OwnedParam::Instance(inst, name) => write!(f, "{inst}::{name}"),
+            OwnedParam::Local(id) => write!(f, "{}", id),
         }
     }
 }
@@ -65,12 +103,13 @@ pub(super) struct BuildCtx<'prog> {
     event_map: ScopeMap<ir::EventIdx>,
     inst_map: ScopeMap<ir::InstIdx>,
     inv_map: ScopeMap<ir::InvIdx>,
-    port_map: ScopeMap<ir::PortIdx, InvPort>,
-    param_map: ScopeMap<ir::ParamIdx>,
+    // The port map is indexed using an owner representation because they can be
+    // defined by several constructs.
+    port_map: ScopeMap<ir::PortIdx, OwnedPort>,
 
-    // Mapping for parameters that are let-bound.
-    // For example, let #K = #W + 1 will generate the binding: #K -> #W + 1
-    param_rewrite: ScopeMap<ir::ExprIdx>,
+    /// The parameter map returns instead of a [ir::ParamIdx] because let-bound
+    /// parameters are immediately rewritten.
+    param_map: ScopeMap<ir::ExprIdx, OwnedParam>,
 
     /// Index for generating unique names
     name_idx: u32,
@@ -88,7 +127,6 @@ impl<'prog> BuildCtx<'prog> {
             port_map: ScopeMap::new(),
             inst_map: ScopeMap::new(),
             inv_map: ScopeMap::new(),
-            param_rewrite: ScopeMap::new(),
             inst_to_sig: DenseIndexInfo::default(),
         }
     }
@@ -124,7 +162,6 @@ impl<'prog> BuildCtx<'prog> {
         self.port_map.push();
         self.inst_map.push();
         self.inv_map.push();
-        self.param_rewrite.push();
     }
 
     /// Pop the last scope level
@@ -135,7 +172,6 @@ impl<'prog> BuildCtx<'prog> {
         self.port_map.pop();
         self.inst_map.pop();
         self.inv_map.pop();
-        self.param_rewrite.pop();
     }
 
     pub fn try_with_scope<T, F>(&mut self, f: F) -> BuildRes<T>
@@ -172,24 +208,63 @@ impl<'prog> BuildCtx<'prog> {
         self.sigs.get_idx(idx).unwrap()
     }
 
+    /// Update the signature map
     pub fn set_sig_map(&mut self, sigs: &'prog SigMap) {
         self.sigs = sigs;
     }
 
-    /// Add a parameter
+    /// Add a let-bound parameter
     pub fn add_let_param(&mut self, id: Id, expr: ir::ExprIdx) {
-        self.param_rewrite.insert(id, expr);
+        self.param_map.insert(OwnedParam::Local(id), expr);
     }
 
-    pub fn get_param(&mut self, id: &Id) -> BuildRes<ir::ExprIdx> {
-        let name = id;
-        // If this parameter is let-bound, return the rewritten expression instead.
-        if let Some(e) = self.param_rewrite.get(id) {
-            return Ok(*e);
-        }
+    /// Mark a parameter as existentially quantified.
+    pub fn add_exists_param(&mut self, param: ir::ParamIdx) {
+        self.comp.exists_params.push((param, None));
+    }
 
-        match self.param_map.get(name) {
-            Some(p) => Ok(p.expr(self.comp())),
+    /// Provide the binding for an existentially quantified parameter.
+    pub fn set_exists_bind(
+        &mut self,
+        param: ast::Loc<Id>,
+        expr: ir::ExprIdx,
+    ) -> BuildRes<()> {
+        let p_idx = self
+            .get_param(&OwnedParam::local(param.copy()))?
+            .as_param(&self.comp)
+            .unwrap();
+        let diag = &mut self.diag;
+
+        if let Some((_, bind)) = self
+            .comp
+            .exists_params
+            .iter_mut()
+            .find(|(p, _)| *p == p_idx)
+        {
+            // If there is already a binding, then we have a problem
+            if bind.is_some() {
+                let err = Error::malformed(format!(
+                    "existential parameter `{param}' already has a binding",
+                    param = param
+                ));
+                diag.add_error(err);
+                return Err(std::mem::take(diag));
+            }
+            *bind = Some(expr);
+            Ok(())
+        } else {
+            let err = Error::malformed(format!(
+                "parameter `{param}' is not existentially quantified",
+                param = param
+            ));
+            diag.add_error(err);
+            Err(std::mem::take(diag))
+        }
+    }
+
+    pub fn get_param(&mut self, param: &OwnedParam) -> BuildRes<ir::ExprIdx> {
+        match self.param_map.get(param) {
+            Some(p) => Ok(*p),
             None => {
                 let diag = &mut self.diag;
                 let undef =
@@ -206,28 +281,31 @@ impl<'prog> BuildCtx<'prog> {
         }
     }
 
-    pub fn add_param(&mut self, name: Id, param: ir::ParamIdx) {
-        self.param_map.insert(name, param);
+    /// Add a parameter to the current map.
+    pub fn add_param_map(&mut self, owner: OwnedParam, param: ir::ExprIdx) {
+        self.param_map.insert(owner, param);
     }
 
     /// Add a new port to the ctx
     pub fn add_port(&mut self, name: ast::Loc<Id>, port: PortIdx) {
         let owner = self.comp.get(port).owner.clone();
         let owner = match owner {
-            ir::PortOwner::Sig { dir } => InvPort::Sig(dir, name),
-            ir::PortOwner::Inv { inv, dir, .. } => InvPort::Inv(inv, dir, name),
-            ir::PortOwner::Local => InvPort::Local(name),
+            ir::PortOwner::Sig { dir } => OwnedPort::Sig(dir, name),
+            ir::PortOwner::Inv { inv, dir, .. } => {
+                OwnedPort::Inv(inv, dir, name)
+            }
+            ir::PortOwner::Local => OwnedPort::Local(name),
         };
         self.port_map.insert(owner, port);
     }
 
     /// Find a port and return None if it is not found
-    pub fn find_port(&mut self, port: &InvPort) -> Option<PortIdx> {
+    pub fn find_port(&mut self, port: &OwnedPort) -> Option<PortIdx> {
         self.port_map.get(port).copied()
     }
 
     /// Get a port and panic out if it is not found
-    pub fn get_port(&mut self, port: &InvPort) -> BuildRes<PortIdx> {
+    pub fn get_port(&mut self, port: &OwnedPort) -> BuildRes<PortIdx> {
         if let Some(idx) = self.find_port(port) {
             return Ok(idx);
         }

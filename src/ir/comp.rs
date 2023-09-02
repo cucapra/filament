@@ -53,6 +53,9 @@ pub struct Component {
     /// Invocations defined by the component
     invocations: IndexStore<Invoke>,
 
+    /// Existentially quantified parameters and their binding
+    pub exists_params: Vec<(ParamIdx, Option<ExprIdx>)>,
+
     /// Commands in the component
     pub cmds: Vec<Command>,
 
