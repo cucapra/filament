@@ -1,18 +1,18 @@
 import "frisc/src/regfile.fil";
 
-comp main<@G:1>(
+comp main<'G:1>(
   clk:1,
-   reset: [@G,@G+1] 1,
-   en: [@G,@G+1] 1,
-   rd: [@G,@G+1] 5,
-   data: [@G,@G+1] 32,
-   rin1: [@G,@G+1] 5,
-   rin2: [@G,@G+1] 5
+   reset: ['G,'G+1] 1,
+   en: ['G,'G+1] 1,
+   rd: ['G,'G+1] 5,
+   data: ['G,'G+1] 32,
+   rin1: ['G,'G+1] 5,
+   rin2: ['G,'G+1] 5
 ) -> (
-   rs1: [@G,@G+1] 32,
-   rs2: [@G,@G+1] 32
+   rs1: ['G,'G+1] 32,
+   rs2: ['G,'G+1] 32
 ) {
-  rf := new RegFile<@G>(reset,en,rd,data,rin1,rin2);
+  rf := new RegFile<'G>(reset,en,rd,data,rin1,rin2);
   rs1 = rf.rs1;
   rs2 = rf.rs2;
 }

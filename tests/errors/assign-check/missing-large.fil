@@ -1,4 +1,4 @@
-comp main<@G: 1>() -> () {
-    bundle a[100]: for<k> [@G, @G+1] 32;
+comp main<'G: 1>() -> () {
+    bundle a[100]: for<k> ['G, 'G+1] 32;
     a{0} = a{1};
 }

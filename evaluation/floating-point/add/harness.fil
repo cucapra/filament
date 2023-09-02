@@ -2,43 +2,43 @@ import "fp-add.fil";
 import "primitives/float.fil";
 
 extern "fp-add.sv" {
-  comp IEEE_SP_FP_ADDER<@G: 1>(
+  comp IEEE_SP_FP_ADDER<'G: 1>(
     clk: 1,
     reset: 1,
-    _go: interface[@G],
-     Number1: [@G, @G+1] 32,
-     Number2: [@G, @G+1] 32,
+    _go: interface['G],
+     Number1: ['G, 'G+1] 32,
+     Number2: ['G, 'G+1] 32,
   ) -> (
-     Result: [@G+4, @G+5] 32,
+     Result: ['G+4, 'G+5] 32,
   );
 }
 
 extern "fp-add-nopipe.sv" {
-  comp IEEE_SP_FP_ADDER_NOPIPE<@G: 1>(
+  comp IEEE_SP_FP_ADDER_NOPIPE<'G: 1>(
     clk: 1,
     reset: 1,
-    _go: interface[@G],
-     Number1: [@G, @G+1] 32,
-     Number2: [@G, @G+1] 32,
+    _go: interface['G],
+     Number1: ['G, 'G+1] 32,
+     Number2: ['G, 'G+1] 32,
   ) -> (
-     Result: [@G, @G+1] 32,
+     Result: ['G, 'G+1] 32,
   );
 }
 
-comp main<@G: 1>(
-  go: interface[@G],
-   left: [@G, @G+1] 32,
-   right: [@G, @G+1] 32,
+comp main<'G: 1>(
+  go: interface['G],
+   left: ['G, 'G+1] 32,
+   right: ['G, 'G+1] 32,
 ) -> (
-   out: [@G+4, @G+5] 32,
-   verilog_pipe: [@G+4, @G+5] 32,
-   verilog_nopipe: [@G, @G+1] 32,
-   filament_lib: [@G, @G+1] 32
+   out: ['G+4, 'G+5] 32,
+   verilog_pipe: ['G+4, 'G+5] 32,
+   verilog_nopipe: ['G, 'G+1] 32,
+   filament_lib: ['G, 'G+1] 32
 ) {
-  fil := new FPAdd<@G>(left, right);
-  ver := new IEEE_SP_FP_ADDER<@G>(left, right);
-  ver_np := new IEEE_SP_FP_ADDER_NOPIPE<@G>(left, right);
-  prim := new FAdd[32, 8, 23]<@G>(left, right);
+  fil := new FPAdd<'G>(left, right);
+  ver := new IEEE_SP_FP_ADDER<'G>(left, right);
+  ver_np := new IEEE_SP_FP_ADDER_NOPIPE<'G>(left, right);
+  prim := new FAdd[32, 8, 23]<'G>(left, right);
 
   out = fil.out;
   verilog_pipe = ver.Result;

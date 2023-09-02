@@ -7,7 +7,7 @@ error: invocation is within a loop but instance is not
 3 │     F := new Foo;
   │     - instance is not within the same loop
 4 │     for i in 0..3 {
-5 │         f := F<@G>();
+5 │         f := F<'G>();
   │                ^^ invocation uses phantom event
   │
   = invocations within loops will be unrolled an imply instance sharing

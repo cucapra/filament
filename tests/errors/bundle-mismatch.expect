@@ -4,35 +4,35 @@
 error: end of port access must greater than the start
   ┌─ tests/errors/bundle-mismatch.fil:8:26
   │
-8 │     f0 := new Foo[P]<@T>(f{1..P});
+8 │     f0 := new Foo[P]<'T>(f{1..P});
   │                          ^^^^^^^ end of port access must greater than the start
 
 error: out of bounds access of bundle
   ┌─ tests/errors/bundle-mismatch.fil:8:26
   │
-6 │     bundle f[P]: for<k> [@T+k, @T+k+1] 32;
+6 │     bundle f[P]: for<k> ['T+k, 'T+k+1] 32;
   │            - bundle's length is P
 7 │ 
-8 │     f0 := new Foo[P]<@T>(f{1..P});
+8 │     f0 := new Foo[P]<'T>(f{1..P});
   │                          ^^^^^^^ out of bounds access
 
 error: required bundle of size `P' but found bundle of size `P-1'
   ┌─ tests/errors/bundle-mismatch.fil:2:5
   │
-2 │     in[N]: for<i> [@G+i, @G+i+1] 32
+2 │     in[N]: for<i> ['G+i, 'G+i+1] 32
   │     ^^ length of bunle is P
   ·
-8 │     f0 := new Foo[P]<@T>(f{1..P});
+8 │     f0 := new Foo[P]<'T>(f{1..P});
   │                          ------- length of bundle is P-1
 
 error: source port does not provide value for as long as destination requires
   ┌─ tests/errors/bundle-mismatch.fil:9:28
   │
-2 │     in[N]: for<i> [@G+i, @G+i+1] 32
-  │     -- requires value for [@T+i+1, @T+i+1+1]
+2 │     in[N]: for<i> ['G+i, 'G+i+1] 32
+  │     -- requires value for ['T+i+1, 'T+i+1+1]
   ·
-9 │     f1 := new Foo[P]<@T+1>(f{0..P});
-  │                            ^^^^^^^ source is available for [@T+k, @T+k+1]
+9 │     f1 := new Foo[P]<'T+1>(f{0..P});
+  │                            ^^^^^^^ source is available for ['T+k, 'T+k+1]
 
 Compilation failed with 4 errors.
 Run with --show-models to generate assignments for failing constraints.

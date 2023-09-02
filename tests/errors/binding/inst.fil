@@ -1,5 +1,5 @@
-comp Add<@G:1>() -> () {}
-comp main<@G:1>() -> () {
+comp Add<'G:1>() -> () {}
+comp main<'G:1>() -> () {
     A := new Add;
-    a := A0<@G>();
+    a := A0<'G>();
 }

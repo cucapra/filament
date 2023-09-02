@@ -1,1 +1,1 @@
-comp Add<@G:1>() -> () where W > 10 {}
+comp Add<'G:1>() -> () where W > 10 {}

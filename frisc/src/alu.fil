@@ -1,50 +1,50 @@
 import "primitives/core.fil";
 import "frisc/src/extras/extras.fil";
 
-comp ALU<@G:1> (
-   inA: [@G,@G+1] 32,
-   inB: [@G,@G+1] 32,
-   funct: [@G,@G+1] 8, // one-hot encoding
-   isAdd: [@G,@G+1] 1, // 1 if add, 0 if sub
-   isArith: [@G,@G+1] 1, // 0 if log, 1 if arith
+comp ALU<'G:1> (
+   inA: ['G,'G+1] 32,
+   inB: ['G,'G+1] 32,
+   funct: ['G,'G+1] 8, // one-hot encoding
+   isAdd: ['G,'G+1] 1, // 1 if add, 0 if sub
+   isArith: ['G,'G+1] 1, // 0 if log, 1 if arith
 ) -> (
-   out: [@G,@G+1] 32
+   out: ['G,'G+1] 32
 ) {
-  oneConst_1b := new Const[1,1]<@G>();
-  oneConst_33b := new Const[33,1]<@G>();
-  zeroConst_1b := new Const[1,0]<@G>();
+  oneConst_1b := new Const[1,1]<'G>();
+  oneConst_33b := new Const[33,1]<'G>();
+  zeroConst_1b := new Const[1,0]<'G>();
 
   // add / sub
-  notInB := new Not[32]<@G>(inB);
-  concat0 := new Concat[1,32,33]<@G>(oneConst_1b.out, notInB.out);
-  concat1 := new Concat[1,32,33]<@G>(zeroConst_1b.out, inA);
-  inA31 := new Select[32,31]<@G>(inA);
-  inB31 := new Select[32,31]<@G>(inB);
+  notInB := new Not[32]<'G>(inB);
+  concat0 := new Concat[1,32,33]<'G>(oneConst_1b.out, notInB.out);
+  concat1 := new Concat[1,32,33]<'G>(zeroConst_1b.out, inA);
+  inA31 := new Select[32,31]<'G>(inA);
+  inB31 := new Select[32,31]<'G>(inB);
 
   // use a 33 bit subtract to compute comparisons
-  add0 := new Add[33]<@G>(concat0.out, concat1.out);
-  aluMinus := new Add[33]<@G>(add0.out, oneConst_33b.out);
-  sub := new Slice[33,31,0,32]<@G>(aluMinus.out);
-  add := new Add[32]<@G>(inA, inB);
+  add0 := new Add[33]<'G>(concat0.out, concat1.out);
+  aluMinus := new Add[33]<'G>(add0.out, oneConst_33b.out);
+  sub := new Slice[33,31,0,32]<'G>(aluMinus.out);
+  add := new Add[32]<'G>(inA, inB);
 
-  selAddSub := new Mux[32]<@G>(isAdd, add.out, sub.out);
+  selAddSub := new Mux[32]<'G>(isAdd, add.out, sub.out);
 
-  shamt := new Slice[32,4,0,5]<@G>(inB);
-  shamt_ext := new ZeroExtend[5,32]<@G>(shamt.out);
+  shamt := new Slice[32,4,0,5]<'G>(inB);
+  shamt_ext := new ZeroExtend[5,32]<'G>(shamt.out);
 
-  xor := new Xor[32]<@G>(inA, inB);
-  or := new Or[32]<@G>(inA, inB);
-  and := new And[32]<@G>(inA, inB);
-  sr := new RightShifter[32]<@G>(inA, shamt_ext.out, isArith);
-  sll := new ShiftLeft[32]<@G>(inA, inB);
+  xor := new Xor[32]<'G>(inA, inB);
+  or := new Or[32]<'G>(inA, inB);
+  and := new And[32]<'G>(inA, inB);
+  sr := new RightShifter[32]<'G>(inA, shamt_ext.out, isArith);
+  sll := new ShiftLeft[32]<'G>(inA, inB);
 
-  aluMinus32 := new Select[33,32]<@G>(aluMinus.out);
+  aluMinus32 := new Select[33,32]<'G>(aluMinus.out);
 
-  ltguard := new Xor[1]<@G>(inA31.out, inB31.out);
-  ltTernary := new Mux[1]<@G>(ltguard.out, inA31.out, aluMinus32.out);
-  lt := new ZeroExtend[1,32]<@G>(ltTernary.out);
-  ltu := new ZeroExtend[1,32]<@G>(aluMinus32.out);
+  ltguard := new Xor[1]<'G>(inA31.out, inB31.out);
+  ltTernary := new Mux[1]<'G>(ltguard.out, inA31.out, aluMinus32.out);
+  lt := new ZeroExtend[1,32]<'G>(ltTernary.out);
+  ltu := new ZeroExtend[1,32]<'G>(aluMinus32.out);
 
-  mux := new OneHotMux[32]<@G>(funct, selAddSub.out, sll.out, lt.out, ltu.out, xor.out, sr.out, or.out, and.out);
+  mux := new OneHotMux[32]<'G>(funct, selAddSub.out, sll.out, lt.out, ltu.out, xor.out, sr.out, or.out, and.out);
   out = mux.out;
 }

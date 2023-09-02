@@ -4,15 +4,15 @@
 error: event provided to invocation triggers more often that invocation's event's delay allows
    ┌─ examples/tut-pipe-wrong-3.fil:16:28
    │
- 4 │ comp main<@G: 1>(
+ 4 │ comp main<'G: 1>(
    │               - this event triggers every 1 cycles
    ·
-16 │     r0 := new Register[32]<@G, @G+4>(a0.out);
+16 │     r0 := new Register[32]<'G, 'G+4>(a0.out);
    │                            ^^ event provided to invoke triggers too often
    │
    ┌─ ./primitives/./state.fil:4:29
    │
- 4 │    comp Register[WIDTH]<@G: @L-(@G+1), @L: 1>(
+ 4 │    comp Register[WIDTH]<'G: 'L-('G+1), 'L: 1>(
    │                             --------- invocation's event is allowed to trigger every 3 cycles
 
 Compilation failed with 1 errors.

@@ -4,27 +4,27 @@
 error: event provided to invocation triggers more often that invocation's event's delay allows
    ┌─ examples/tut-pipe-wrong-2.fil:16:28
    │
- 4 │ comp main<@G: 1>(
+ 4 │ comp main<'G: 1>(
    │               - this event triggers every 1 cycles
    ·
-16 │     r0 := new Register[32]<@G, @G+3>(a0.out);
+16 │     r0 := new Register[32]<'G, 'G+3>(a0.out);
    │                            ^^ event provided to invoke triggers too often
    │
    ┌─ ./primitives/./state.fil:4:29
    │
- 4 │    comp Register[WIDTH]<@G: @L-(@G+1), @L: 1>(
+ 4 │    comp Register[WIDTH]<'G: 'L-('G+1), 'L: 1>(
    │                             --------- invocation's event is allowed to trigger every 2 cycles
 
 error: source port does not provide value for as long as destination requires
     ┌─ examples/tut-pipe-wrong-2.fil:18:41
     │
- 18 │     mx := new Mux[32]<@G+2>(op, r0.out, m0.out);
-    │                                         ^^^^^^ source is available for [@G+3, @G+4]
+ 18 │     mx := new Mux[32]<'G+2>(op, r0.out, m0.out);
+    │                                         ^^^^^^ source is available for ['G+3, 'G+4]
     │
     ┌─ ./primitives/./comb.fil:170:7
     │
-170 │       in1: [@G, @L] WIDTH,
-    │       --- requires value for [@G+2, @G+3]
+170 │       in1: ['G, 'L] WIDTH,
+    │       --- requires value for ['G+2, 'G+3]
 
 Compilation failed with 2 errors.
 Run with --show-models to generate assignments for failing constraints.

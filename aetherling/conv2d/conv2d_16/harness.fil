@@ -1,20 +1,20 @@
 extern "conv2d_16.v" {
 // KERNEL_START=Conv2d_16
-comp Conv2d<@G: 1>(
+comp Conv2d<'G: 1>(
     clk: 1,
-     I_0: [@G, @G+1] 8,
+     I_0: ['G, 'G+1] 8,
 ) -> (
-     O_0: [@G+7, @G+8] 8,
+     O_0: ['G+7, 'G+8] 8,
 );
 // KERNEL_END=Conv2d_16
 }
 
-comp main<@G: 1>(
-    valid_up: interface[@G],
-     I_0: [@G, @G+1] 8,
+comp main<'G: 1>(
+    valid_up: interface['G],
+     I_0: ['G, 'G+1] 8,
 ) -> (
-     O_0: [@G+7, @G+8] 8,
+     O_0: ['G+7, 'G+8] 8,
 ) {
-    c := new Conv2d<@G>(I_0);
+    c := new Conv2d<'G>(I_0);
     O_0 = c.O_0;
 }

@@ -99,7 +99,7 @@ expr = {
 }
 
 // Event bindings
-event = { "@" ~ identifier }
+event = { "'" ~ identifier }
 delay = {
   expr |
   time ~ "-" ~ "(" ~ time ~ ")"

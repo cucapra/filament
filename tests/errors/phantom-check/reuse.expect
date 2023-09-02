@@ -6,8 +6,8 @@ error: cannot reuse instance using a phantom event
   │
 7 │     A := new Add[32];
   │     ^ instance is invoked 2 times
-8 │     a0 := A<@G>(left, left);
-  │     --      -- event @G is a phantom event
+8 │     a0 := A<'G>(left, left);
+  │     --      -- event 'G is a phantom event
   │     │        
   │     invocation uses phantom event
   │

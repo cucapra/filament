@@ -1,8 +1,8 @@
 // checks a let-bound parameter and a let-bound port with the same names
-comp LetBinding[width]<@G: 1>(
-    in0: [@G, @G+1] width
+comp LetBinding[width]<'G: 1>(
+    in0: ['G, 'G+1] width
 ) -> (
-    out: [@G, @G+1] width
+    out: ['G, 'G+1] width
 ) {
     let in = width;
     let in = in0;
@@ -11,12 +11,12 @@ comp LetBinding[width]<@G: 1>(
 }
 
 
-comp main<@G: 1>(
-    in: [@G, @G+1] 32
+comp main<'G: 1>(
+    in: ['G, 'G+1] 32
 ) -> (
-    out: [@G, @G+1] 32
+    out: ['G, 'G+1] 32
 ) {
-    L := new LetBinding<@G>(in);
+    L := new LetBinding<'G>(in);
 
     out = L.out;
 }

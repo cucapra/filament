@@ -2,29 +2,29 @@ import "fp-mul.fil";
 import "primitives/float.fil";
 
 extern "fp-mult-nopipe.sv" {
-  comp FP_Mult_NoPipe<@G: 1>(
-       a: [@G, @G+1] 32,
-       b: [@G, @G+1] 32,
+  comp FP_Mult_NoPipe<'G: 1>(
+       a: ['G, 'G+1] 32,
+       b: ['G, 'G+1] 32,
   ) -> (
-       exception: [@G, @G+1] 1,
-       overflow: [@G, @G+1] 1,
-       underflow: [@G, @G+1] 1,
-       res: [@G, @G+1] 32,
+       exception: ['G, 'G+1] 1,
+       overflow: ['G, 'G+1] 1,
+       underflow: ['G, 'G+1] 1,
+       res: ['G, 'G+1] 32,
   );
 }
 
-comp main<@G: 1>(
-  go: interface[@G],
-   left: [@G, @G+1] 32,
-   right: [@G, @G+1] 32,
+comp main<'G: 1>(
+  go: interface['G],
+   left: ['G, 'G+1] 32,
+   right: ['G, 'G+1] 32,
 ) -> (
-   out: [@G, @G+1] 32,
-   verilog_nopipe: [@G, @G+1] 32,
-   filament_lib: [@G, @G+1] 32
+   out: ['G, 'G+1] 32,
+   verilog_nopipe: ['G, 'G+1] 32,
+   filament_lib: ['G, 'G+1] 32
 ) {
-  np := new FP_Mult_NoPipe<@G>(left, right);
-  f := new FPMult<@G>(left, right);
-  prim := new FMult[32, 8, 23]<@G>(left, right);
+  np := new FP_Mult_NoPipe<'G>(left, right);
+  f := new FPMult<'G>(left, right);
+  prim := new FMult[32, 8, 23]<'G>(left, right);
 
   verilog_nopipe = np.res;
   out = f.out;

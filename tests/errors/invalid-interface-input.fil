@@ -1,10 +1,10 @@
 extern "dummy.sv" {
-  comp Main<@G: 3, @L: 1>(
-    go_G: interface[@G],
-    go_L: interface[@L],
-     in1: [@G, @G+1] 32,
-     in2: [@L, @L+2] 32,
+  comp Main<'G: 3, 'L: 1>(
+    go_G: interface['G],
+    go_L: interface['L],
+     in1: ['G, 'G+1] 32,
+     in2: ['L, 'L+2] 32,
   ) -> (
-     out: [@G+2, @G+3] 1,
+     out: ['G+2, 'G+3] 1,
   );
 }

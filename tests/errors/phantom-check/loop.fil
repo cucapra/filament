@@ -1,7 +1,7 @@
-comp Foo<@G:1>() -> () {}
-comp main<@G:1>() -> () {
+comp Foo<'G:1>() -> () {}
+comp main<'G:1>() -> () {
     F := new Foo;
     for i in 0..3 {
-        f := F<@G>();
+        f := F<'G>();
     }
 }

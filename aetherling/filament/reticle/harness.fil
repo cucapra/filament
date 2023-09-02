@@ -2,62 +2,62 @@ import "../../../reticle/tdot.fil";
 import "primitives/core.fil";
 import "../stencil.fil";
 
-comp Conv<@G: 1>(
-     in1: [@G, @G+1] 8,
-     in2: [@G+1, @G+2] 8,
-     in3: [@G+2, @G+3] 8,
-     in4: [@G, @G+1] 8,
-     in5: [@G+1, @G+2] 8,
-     in6: [@G+2, @G+3] 8,
-     in7: [@G, @G+1] 8,
-     in8: [@G+1, @G+2] 8,
-     in9: [@G+2, @G+3] 8,
+comp Conv<'G: 1>(
+     in1: ['G, 'G+1] 8,
+     in2: ['G+1, 'G+2] 8,
+     in3: ['G+2, 'G+3] 8,
+     in4: ['G, 'G+1] 8,
+     in5: ['G+1, 'G+2] 8,
+     in6: ['G+2, 'G+3] 8,
+     in7: ['G, 'G+1] 8,
+     in8: ['G+1, 'G+2] 8,
+     in9: ['G+2, 'G+3] 8,
 ) -> (
-     out: [@G+5, @G+6] 8,
+     out: ['G+5, 'G+6] 8,
 ) {
-    one := new Const[8, 1]<@G>();
-    one_2 := new Const[8, 3]<@G+2>();
-    two := new Const[8, 2]<@G>();
-    two_1 := new Const[8, 2]<@G+1>();
-    two_2 := new Const[8, 2]<@G+2>();
-    four := new Const[8, 4]<@G+1>();
-    zero := new Const[8, 0]<@G+2>();
+    one := new Const[8, 1]<'G>();
+    one_2 := new Const[8, 3]<'G+2>();
+    two := new Const[8, 2]<'G>();
+    two_1 := new Const[8, 2]<'G+1>();
+    two_2 := new Const[8, 2]<'G+2>();
+    four := new Const[8, 4]<'G+1>();
+    zero := new Const[8, 0]<'G+2>();
 
     // Multiply by the filter
-    m1 := new Tdot<@G>(in1, in2, in3, one.out, two_1.out, one_2.out, zero.out);
-    m2 := new Tdot<@G>(in4, in5, in6, two.out, four.out, two_2.out, zero.out);
-    m3 := new Tdot<@G>(in7, in8, in9, one.out, two_1.out, one_2.out, zero.out);
+    m1 := new Tdot<'G>(in1, in2, in3, one.out, two_1.out, one_2.out, zero.out);
+    m2 := new Tdot<'G>(in4, in5, in6, two.out, four.out, two_2.out, zero.out);
+    m3 := new Tdot<'G>(in7, in8, in9, one.out, two_1.out, one_2.out, zero.out);
 
     // Add the results
-    a0 := new Add[8]<@G+5>(m1.y, m2.y);
-    a1 := new Add[8]<@G+5>(a0.out, m3.y);
+    a0 := new Add[8]<'G+5>(m1.y, m2.y);
+    a1 := new Add[8]<'G+5>(a0.out, m3.y);
 
     // Divide by 16
-    four_16 := new Const[8, 4]<@G+5>();
-    d := new ShiftRight[8]<@G+5>(a1.out, four_16.out);
+    four_16 := new Const[8, 4]<'G+5>();
+    d := new ShiftRight[8]<'G+5>(a1.out, four_16.out);
 
     out = d.out;
 }
 
 // The comp needs to be run for an extra cycle to flush the last value
-comp main<@G: 1>(
-     in: [@G, @G+1] 8,
+comp main<'G: 1>(
+     in: ['G, 'G+1] 8,
 ) -> (
-     out: [@G+5, @G+6] 8,
+     out: ['G+5, 'G+6] 8,
 ) {
-    s := new Stencil[8]<@G>(in);
-    r2 := new Delay[8]<@G>(s.o2);
-    r5 := new Delay[8]<@G>(s.o5);
-    r8 := new Delay[8]<@G>(s.o8);
+    s := new Stencil[8]<'G>(in);
+    r2 := new Delay[8]<'G>(s.o2);
+    r5 := new Delay[8]<'G>(s.o5);
+    r8 := new Delay[8]<'G>(s.o8);
 
-    r3_0 := new Delay[8]<@G>(s.o3);
-    r3 := new Delay[8]<@G+1>(r3_0.out);
-    r6_0 := new Delay[8]<@G>(s.o6);
-    r6 := new Delay[8]<@G+1>(r6_0.out);
-    r9_0 := new Delay[8]<@G>(s.o9);
-    r9 := new Delay[8]<@G+1>(r9_0.out);
+    r3_0 := new Delay[8]<'G>(s.o3);
+    r3 := new Delay[8]<'G+1>(r3_0.out);
+    r6_0 := new Delay[8]<'G>(s.o6);
+    r6 := new Delay[8]<'G+1>(r6_0.out);
+    r9_0 := new Delay[8]<'G>(s.o9);
+    r9 := new Delay[8]<'G+1>(r9_0.out);
 
-    c := new Conv<@G>(s.o1, r2.out, r3.out,
+    c := new Conv<'G>(s.o1, r2.out, r3.out,
                      s.o4, r5.out, r6.out,
                      s.o7, r8.out, r9.out);
     out = c.out;

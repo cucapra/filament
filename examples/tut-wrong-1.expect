@@ -4,13 +4,13 @@
 error: source port does not provide value for as long as destination requires
     ┌─ examples/tut-wrong-1.fil:17:39
     │
- 17 │     mx := new Mux[32]<@G>(op, a0.out, m0.out);
-    │                                       ^^^^^^ source is available for [@G+2, @G+3]
+ 17 │     mx := new Mux[32]<'G>(op, a0.out, m0.out);
+    │                                       ^^^^^^ source is available for ['G+2, 'G+3]
     │
     ┌─ ./primitives/./comb.fil:170:7
     │
-170 │       in1: [@G, @L] WIDTH,
-    │       --- requires value for [@G, @G+1]
+170 │       in1: ['G, 'L] WIDTH,
+    │       --- requires value for ['G, 'G+1]
 
 Compilation failed with 1 errors.
 Run with --show-models to generate assignments for failing constraints.

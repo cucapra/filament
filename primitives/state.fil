@@ -1,61 +1,61 @@
 extern "state.sv" {
    /// ANCHOR: register
    // A register that can extend the lifetime of a signal to any required length.
-   comp Register[WIDTH]<@G: @L-(@G+1), @L: 1>(
+   comp Register[WIDTH]<'G: 'L-('G+1), 'L: 1>(
       clk: 1,
       reset: 1,
-      write_en: interface[@G],
-      in: [@G, @G+1] WIDTH,
+      write_en: interface['G],
+      in: ['G, 'G+1] WIDTH,
    ) -> (
-      out: [@G+1, @L] WIDTH,
-   ) where @L > @G+1;
+      out: ['G+1, 'L] WIDTH,
+   ) where 'L > 'G+1;
    /// ANCHOR_END: register
 
    // A comp that delays `in` by one cycle. Exactly the same as a register
    // but does not require comp to provide `go` signal. If the comp
    // additionally has no resource sharing, it can elide FSM generation.
-   comp Delay[WIDTH]<@G: 1>(
+   comp Delay[WIDTH]<'G: 1>(
       clk: 1,
       reset: 1,
-      in: [@G, @G+1] WIDTH,
+      in: ['G, 'G+1] WIDTH,
    ) -> (
-      out: [@G+1, @G+2] WIDTH,
+      out: ['G+1, 'G+2] WIDTH,
    );
 
    // A comp that allows access to its previous stored value.
    // Backend by a simple register
-   comp Prev[WIDTH, SAFE]<@G: 1>(
+   comp Prev[WIDTH, SAFE]<'G: 1>(
       clk: 1,
       reset: 1,
-      write_en: interface[@G],
-      in: [@G, @G+1] WIDTH,
+      write_en: interface['G],
+      in: ['G, 'G+1] WIDTH,
    ) -> (
-      prev: [@G, @G+1] WIDTH,
+      prev: ['G, 'G+1] WIDTH,
    );
 
    // Prev comp that continuously updates its value
-   comp ContPrev[WIDTH, SAFE]<@G: 1>(
+   comp ContPrev[WIDTH, SAFE]<'G: 1>(
       clk: 1,
       reset: 1,
-      in: [@G, @G+1] WIDTH,
+      in: ['G, 'G+1] WIDTH,
    ) -> (
-      prev: [@G, @G+1] WIDTH,
+      prev: ['G, 'G+1] WIDTH,
    );
 }
 
 /* ANCHOR: shift */
 // A component that delays `in` by N cycles.
 // Uses the Delay component under the hood.
-comp Shift[W, N]<@G: 1>(
-   in: [@G, @G+1] W
+comp Shift[W, N]<'G: 1>(
+   in: ['G, 'G+1] W
 ) -> (
-   out: [@G+N, @G+N+1] W
+   out: ['G+N, 'G+N+1] W
 ) {
-   bundle f[N+1]: for<k> [@G+k, @G+k+1] W;
+   bundle f[N+1]: for<k> ['G+k, 'G+k+1] W;
 
    f{0} = in;
    for i in 0..N {
-      d := new Delay[W]<@G+i>(f{i});
+      d := new Delay[W]<'G+i>(f{i});
       f{i+1} = d.out;
    }
    out = f{N};

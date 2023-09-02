@@ -2,18 +2,18 @@ import "primitives/core.fil";
 import "./sequential.fil";
 
 /// ANCHOR: signature
-comp main<@G: 3>(
-    go: interface[@G],
-     op: [@G, @G+1] 1,
-     left: [@G, @G+1] 32,
-     right: [@G, @G+1] 32,
-) -> ( out: [@G, @G+1] 32)
+comp main<'G: 3>(
+    go: interface['G],
+     op: ['G, 'G+1] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -> ( out: ['G, 'G+1] 32)
 // ANCHOR_END: signature
 {
     A := new Add[32];
     M := new Mult[32];
-    a0 := A<@G>(left, right);
-    m0 := M<@G>(left, right);
-    mx := new Mux[32]<@G>(op, a0.out, m0.out);
+    a0 := A<'G>(left, right);
+    m0 := M<'G>(left, right);
+    mx := new Mux[32]<'G>(op, a0.out, m0.out);
     out = mx.out;
 }

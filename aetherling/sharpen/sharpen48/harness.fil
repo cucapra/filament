@@ -1,20 +1,20 @@
 extern "sharpen0.3.v" {
 /* KERNEL_START=Sharpen_48 */
-comp Sharpen<@G: 3>(
+comp Sharpen<'G: 3>(
         clk: 1,
-         I_0: [@G, @G+3] 8,
+         I_0: ['G, 'G+3] 8,
     ) -> (
-         O_0: [@G+13, @G+14] 8,
+         O_0: ['G+13, 'G+14] 8,
     );
 /* KERNEL_END=Sharpen_48 */
 }
 
-comp main<@G: 3>(
-    go: interface[@G],
-     in: [@G, @G+3] 8,
+comp main<'G: 3>(
+    go: interface['G],
+     in: ['G, 'G+3] 8,
 ) -> (
-     out: [@G+13, @G+14] 8,
+     out: ['G+13, 'G+14] 8,
 ) {
-    s := new Sharpen<@G>(in);
+    s := new Sharpen<'G>(in);
     out = s.O_0;
 }

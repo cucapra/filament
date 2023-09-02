@@ -13,7 +13,7 @@ import "primitives/state.fil";
 //
 // The number of parameters can be overhelming to here is an example:
 // ```
-// s := new Serialize[8, 2, 32, 1, 1]<@G>(...)
+// s := new Serialize[8, 2, 32, 1, 1]<'G>(...)
 // ```
 // This is a serializer that accepts 16 32-bit inputs in the first cycle
 // and produces 8 bundles of 2 elements each every cycle, and holds each
@@ -22,13 +22,13 @@ import "primitives/state.fil";
 // In general, you probably don't want to use the C and H parameters at
 // all. They are most useful when the serializer is providing inputs to
 // a component that is not fully pipelined.
-comp Serialize[W, N, B, ?C=1, ?H=1]<@G: C*(N-1)+H>(
-    go: interface[@G],
-    in[Tot]: [@G, @G+H] W
+comp Serialize[W, N, B, ?C=1, ?H=1]<'G: C*(N-1)+H>(
+    go: interface['G],
+    in[Tot]: ['G, 'G+H] W
 ) -> (
     // The parenthesis are important because we want to perform integer
     // division.
-    out[Tot]: for<p> [@G+C*(p/B), @G+C*(p/B)+H] W
+    out[Tot]: for<p> ['G+C*(p/B), 'G+C*(p/B)+H] W
 ) with {
     let Tot = N*B;
 } where
@@ -42,7 +42,7 @@ comp Serialize[W, N, B, ?C=1, ?H=1]<@G: C*(N-1)+H>(
             let CurIdx = B*i+j;
             assume CurIdx/B == i; // Proof hint. Make type checking faster.
             if i > 0 {
-                d := new Register[W]<@G, @G+C*i+H>(in{CurIdx});
+                d := new Register[W]<'G, 'G+C*i+H>(in{CurIdx});
                 out{CurIdx} = d.out;
             } else {
                 out{CurIdx} = in{CurIdx};
@@ -65,7 +65,7 @@ comp Serialize[W, N, B, ?C=1, ?H=1]<@G: C*(N-1)+H>(
 //
 // The number of parameters can be overhelming to here is an example:
 // ```
-// s := new Deserialize[8, 2, 32, 1, 1]<@G>(...)
+// s := new Deserialize[8, 2, 32, 1, 1]<'G>(...)
 // ```
 // This is a deserializer that accepts 8 bundles of 2 elements each every cycle,
 // and holds each input for one cycle each. It produces 16 32-bit outputs in the
@@ -74,11 +74,11 @@ comp Serialize[W, N, B, ?C=1, ?H=1]<@G: C*(N-1)+H>(
 // In general, you probably don't want to use the C and H parameters at
 // all. They are most useful when the deserializer is consuming inputs from
 // a component that is not fully pipelined.
-comp Deserialize[W, N, B, ?C=1, ?H=1]<@G: End-1>(
-    go: interface[@G],
-    in[Tot]: for<p> [@G+C*(p/B), @G+C*(p/B)+H] W
+comp Deserialize[W, N, B, ?C=1, ?H=1]<'G: End-1>(
+    go: interface['G],
+    in[Tot]: for<p> ['G+C*(p/B), 'G+C*(p/B)+H] W
 ) -> (
-    out[Tot]: [@G+Start, @G+Start+H] W
+    out[Tot]: ['G+Start, 'G+Start+H] W
 ) with {
     let Tot = N*B;
     let Start = C*(N-1);
@@ -95,7 +95,7 @@ comp Deserialize[W, N, B, ?C=1, ?H=1]<@G: End-1>(
             let CurIdx = B*i+j;
             assume CurIdx/B == i; // Proof hint. Make type checking faster.
             if i < N-1 {
-                d := new Register[W]<@G+C*i, @G+End>(in{CurIdx});
+                d := new Register[W]<'G+C*i, 'G+End>(in{CurIdx});
                 out{CurIdx} = d.out;
             } else {
                 // The last bundle is forwarded combinationally
@@ -107,17 +107,17 @@ comp Deserialize[W, N, B, ?C=1, ?H=1]<@G: End-1>(
 
 /// Take a bundle of length L that produces values every N and cycles and make
 /// it produce values every M cycles where M > N.
-comp Downsample[N, M, L, W]<@G: (M-N)*L>(
-    go: interface[@G],
-    in[L]: for<p> [@G+N*p, @G+N*p+1] W
+comp Downsample[N, M, L, W]<'G: (M-N)*L>(
+    go: interface['G],
+    in[L]: for<p> ['G+N*p, 'G+N*p+1] W
 ) -> (
-    out[L]: for<p> [@G+M*p, @G+M*p+1] W
+    out[L]: for<p> ['G+M*p, 'G+M*p+1] W
 ) where N > 0, M > N {
     for i in 0..L {
         if i == 0 {
             out{i} = in{i};
         } else {
-            d := new Register[W]<@G+N*i, @G+M*i+1>(in{i});
+            d := new Register[W]<'G+N*i, 'G+M*i+1>(in{i});
             out{i} = d.out;
         }
     }

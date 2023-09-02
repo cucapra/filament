@@ -4,11 +4,11 @@
 error: component provided phantom event binding to non-phantom event argument
   ┌─ tests/errors/phantom-check/multiple.fil:3:19
   │
-1 │ comp Foo<@G:1>(go: interface[@G]) -> () {}
+1 │ comp Foo<'G:1>(go: interface['G]) -> () {}
   │           - instance's event is not phantom
-2 │ comp main<@G:1>() -> () {
+2 │ comp main<'G:1>() -> () {
   │            - event is a phantom event
-3 │     f0 := new Foo<@G>();
+3 │     f0 := new Foo<'G>();
   │                   ^^ invoke provides phantom event
   │
   = phantom ports are compiled away and cannot be used by subcomponents
@@ -16,12 +16,12 @@ error: component provided phantom event binding to non-phantom event argument
 error: component provided phantom event binding to non-phantom event argument
   ┌─ tests/errors/phantom-check/multiple.fil:4:19
   │
-1 │ comp Foo<@G:1>(go: interface[@G]) -> () {}
+1 │ comp Foo<'G:1>(go: interface['G]) -> () {}
   │           - instance's event is not phantom
-2 │ comp main<@G:1>() -> () {
+2 │ comp main<'G:1>() -> () {
   │            - event is a phantom event
-3 │     f0 := new Foo<@G>();
-4 │     f1 := new Foo<@G>();
+3 │     f0 := new Foo<'G>();
+4 │     f1 := new Foo<'G>();
   │                   ^^ invoke provides phantom event
   │
   = phantom ports are compiled away and cannot be used by subcomponents

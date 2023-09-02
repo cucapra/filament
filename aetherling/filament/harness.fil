@@ -2,13 +2,13 @@ import "./stencil.fil";
 import "./conv2d.fil";
 
 // The comp needs to be run for an extra cycle to flush the last value
-comp main<@G: 1>(
-     in: [@G, @G+1] 8,
+comp main<'G: 1>(
+     in: ['G, 'G+1] 8,
 ) -> (
-     out: [@G+6, @G+7] 8,
+     out: ['G+6, 'G+7] 8,
 ) {
-    s := new Stencil[8]<@G>(in);
-    w := new Filter<@G>();
-    c := new Conv<@G>(s.out{0..9}, w.out{0..9});
+    s := new Stencil[8]<'G>(in);
+    w := new Filter<'G>();
+    c := new Conv<'G>(s.out{0..9}, w.out{0..9});
     out = c.out;
 }
