@@ -1,5 +1,5 @@
-use super::{Cmp, CmpOp, Component, Ctx, ExprIdx, ParamIdx, Prop, PropIdx};
-use crate::ast;
+use super::{AddCtx, Component, Ctx, ExprIdx, ParamIdx};
+use crate::{ast, construct_binop};
 use std::fmt::Display;
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -39,9 +39,17 @@ impl ExprIdx {
     #[inline]
     /// Attempts to convert this expression into a concrete value.
     /// If the coercion should panic on failure, use [Self::concrete] instead.
-    pub fn as_concrete(&self, comp: &Component) -> Option<u64> {
-        if let Expr::Concrete(c) = comp.get(*self) {
+    pub fn as_concrete(&self, ctx: &impl Ctx<Expr>) -> Option<u64> {
+        if let Expr::Concrete(c) = ctx.get(*self) {
             Some(*c)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_param(&self, ctx: &impl Ctx<Expr>) -> Option<ParamIdx> {
+        if let Expr::Param(pidx) = ctx.get(*self) {
+            Some(*pidx)
         } else {
             None
         }
@@ -50,7 +58,7 @@ impl ExprIdx {
     #[inline]
     /// Returns the concrete value represented by this expression or errors out.
     /// If an optional value is desired, use [Self::as_concrete] instead.
-    pub fn concrete(&self, comp: &Component) -> u64 {
+    pub fn concrete(self, comp: &Component) -> u64 {
         let Some(c) = self.as_concrete(comp) else {
             comp.internal_error(format!("{} is not a concrete number", self))
         };
@@ -60,136 +68,45 @@ impl ExprIdx {
     /// Returns true if this expression is a constant.
     /// Note that this process *does not* automatically reduce the expression.
     /// For example, `1 + 1` is not going to be reduced to `2`.
-    pub fn is_const(&self, ctx: &Component, n: u64) -> bool {
+    pub fn is_const(&self, ctx: &impl Ctx<Expr>, n: u64) -> bool {
         self.as_concrete(ctx).map(|c| c == n).unwrap_or(false)
     }
 
     /// Returns true of the expression is equal to the given parameter.
-    pub fn is_param(&self, ctx: &impl Ctx<Expr>, param: ParamIdx) -> bool {
-        if let Expr::Param(p) = ctx.get(*self) {
+    pub fn is_param(self, ctx: &impl Ctx<Expr>, param: ParamIdx) -> bool {
+        if let Expr::Param(p) = ctx.get(self) {
             *p == param
         } else {
             false
         }
     }
 
-    /// Adds two expressions together.
-    pub fn add(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
-        ctx.add(Expr::Bin {
-            op: ast::Op::Add,
-            lhs: self,
-            rhs: other,
-        })
-    }
-
-    pub fn mul(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
-        ctx.add(Expr::Bin {
-            op: ast::Op::Mul,
-            lhs: self,
-            rhs: other,
-        })
-    }
-
-    pub fn sub(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
-        ctx.add(Expr::Bin {
-            op: ast::Op::Sub,
-            lhs: self,
-            rhs: other,
-        })
-    }
-
-    pub fn div(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
-        ctx.add(Expr::Bin {
-            op: ast::Op::Div,
-            lhs: self,
-            rhs: other,
-        })
-    }
-
-    pub fn rem(self, other: ExprIdx, ctx: &mut impl Ctx<Expr>) -> Self {
-        ctx.add(Expr::Bin {
-            op: ast::Op::Mod,
-            lhs: self,
-            rhs: other,
-        })
-    }
-
-    pub fn pow2(self, ctx: &mut impl Ctx<Expr>) -> Self {
+    pub fn pow2(self, ctx: &mut impl AddCtx<Expr>) -> Self {
         ctx.add(Expr::Fn {
             op: ast::UnFn::Pow2,
             args: vec![self],
         })
     }
 
-    pub fn log2(self, ctx: &mut impl Ctx<Expr>) -> Self {
+    pub fn log2(self, ctx: &mut impl AddCtx<Expr>) -> Self {
         ctx.add(Expr::Fn {
             op: ast::UnFn::Log2,
             args: vec![self],
         })
     }
 
-    /// The proposition `self > other`
-    pub fn gt(&self, other: ExprIdx, ctx: &mut Component) -> PropIdx {
-        if let (Some(l), Some(r)) =
-            (self.as_concrete(ctx), other.as_concrete(ctx))
-        {
-            if l > r {
-                ctx.add(Prop::True)
-            } else {
-                ctx.add(Prop::False)
-            }
-        } else {
-            ctx.add(Prop::Cmp(CmpOp {
-                op: Cmp::Gt,
-                lhs: *self,
-                rhs: other,
-            }))
-        }
-    }
-
-    pub fn gte(&self, other: ExprIdx, ctx: &mut Component) -> PropIdx {
-        if let (Some(l), Some(r)) =
-            (self.as_concrete(ctx), other.as_concrete(ctx))
-        {
-            if l >= r {
-                ctx.add(Prop::True)
-            } else {
-                ctx.add(Prop::False)
-            }
-        } else {
-            ctx.add(Prop::Cmp(CmpOp {
-                op: Cmp::Gte,
-                lhs: *self,
-                rhs: other,
-            }))
-        }
-    }
-
-    pub fn equal(&self, other: ExprIdx, ctx: &mut Component) -> PropIdx {
-        if let (Some(l), Some(r)) =
-            (self.as_concrete(ctx), other.as_concrete(ctx))
-        {
-            if l == r {
-                ctx.add(Prop::True)
-            } else {
-                ctx.add(Prop::False)
-            }
-        } else if self == &other {
-            return ctx.add(Prop::True);
-        } else {
-            ctx.add(Prop::Cmp(CmpOp {
-                op: Cmp::Eq,
-                lhs: *self,
-                rhs: other,
-            }))
-        }
-    }
-
-    pub fn lt(self, other: ExprIdx, ctx: &mut Component) -> PropIdx {
-        other.gt(self, ctx)
-    }
-
-    pub fn lte(self, other: ExprIdx, ctx: &mut Component) -> PropIdx {
-        other.gte(self, ctx)
+    /// creates an [Expr::Bin] given two [ExprIdx]s and an [ast::Op].
+    fn bin(self, rhs: Self, op: ast::Op) -> Expr {
+        Expr::Bin { op, lhs: self, rhs }
     }
 }
+
+// creates the binary operator constructors for all [ast::Op] variants.
+construct_binop!(
+    <impl AddCtx<Expr>>(ExprIdx::bin, ExprIdx) => Expr;
+    add = ast::Op::Add;
+    sub = ast::Op::Sub;
+    mul = ast::Op::Mul;
+    div = ast::Op::Div;
+    rem = ast::Op::Mod;
+);

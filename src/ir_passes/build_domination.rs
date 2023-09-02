@@ -50,10 +50,6 @@ impl BuildDomination {
     fn add_inst(&mut self, inst: ir::InstIdx) {
         self.insts.last_mut().unwrap().push(inst.into());
     }
-
-    fn add_let(&mut self, l: ir::Let) {
-        self.plets.last_mut().unwrap().push(l.into());
-    }
 }
 
 impl Visitor for BuildDomination {
@@ -73,16 +69,6 @@ impl Visitor for BuildDomination {
         Action::Change(vec![])
     }
 
-    fn param_let(
-        &mut self,
-        l: &mut ir::Let,
-        _data: &mut VisitorData,
-    ) -> Action {
-        self.add_let(l.clone());
-        // Remove the param let
-        Action::Change(vec![])
-    }
-
     fn start_cmds(&mut self, _: &mut Vec<ir::Command>, _: &mut VisitorData) {
         self.start_scope();
     }
@@ -92,8 +78,8 @@ impl Visitor for BuildDomination {
         // Insert instances and then invocations to the start of the scope.
         *cmds = plets
             .into_iter()
-            .chain(inst.into_iter())
-            .chain(invs.into_iter())
+            .chain(inst)
+            .chain(invs)
             .chain(cmds.drain(..))
             .collect();
     }

@@ -1,15 +1,18 @@
 use super::Ctx;
-use crate::{ast, ir, utils::Idx};
+use crate::{
+    ast, ir,
+    utils::{Idx, IdxLike},
+};
 use itertools::{Itertools, Position};
 use std::{fmt::Display, io};
 
 /// A context capable of displaying [`Idx<T>`] values.
-pub trait DisplayCtx<T>
+pub trait DisplayCtx<T, K = Idx<T>>
 where
-    Self: Ctx<T>,
+    K: IdxLike<T>,
 {
     /// Display the value
-    fn display(&self, idx: Idx<T>) -> String;
+    fn display(&self, idx: K) -> String;
 }
 
 impl DisplayCtx<ir::Component> for ir::Context {
@@ -237,8 +240,9 @@ impl<'a> Printer<'a> {
             }) => {
                 writeln!(
                     f,
-                    "{:indent$}for {index} in {}..{} {{",
+                    "{:indent$}for {} in {}..{} {{",
                     "",
+                    self.ctx.display(*index),
                     self.expr(*start),
                     self.expr(*end)
                 )?;
@@ -262,9 +266,6 @@ impl<'a> Printer<'a> {
                 } else {
                     write!(f, "{:indent$}assume {};", "", fact.prop)
                 }
-            }
-            ir::Command::Let(ir::Let { param, expr }) => {
-                write!(f, "{:indent$}let {param} = {};", "", self.expr(*expr))
             }
         }
     }
@@ -387,19 +388,22 @@ impl<'a> Printer<'a> {
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         let param = self.ctx.get(idx);
-        if !param.is_sig_owned() {
-            let &ir::Param { info, .. } = c.get(idx);
-            writeln!(
-                f,
-                "{:indent$}{idx} = param {param};{comment}",
-                "",
-                param = self.ctx.display(idx),
-                comment = c
-                    .get(info)
-                    .as_param()
-                    .map_or("".to_string(), |p| format!(" // {}", p.name)),
-            )?;
+        match param.owner {
+            ir::ParamOwner::Sig => {}
+            ir::ParamOwner::Bundle(_) | ir::ParamOwner::Loop => {
+                writeln!(
+                    f,
+                    "{:indent$}{idx} = param {param};{comment}",
+                    "",
+                    param = self.ctx.display(idx),
+                    comment = c
+                        .get(param.info)
+                        .as_param()
+                        .map_or("".to_string(), |p| format!(" // {}", p.name))
+                )?;
+            }
         }
+
         Ok(())
     }
 

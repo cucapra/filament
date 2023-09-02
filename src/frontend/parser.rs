@@ -153,6 +153,15 @@ impl FilamentParser {
         ))
     }
 
+    fn sig_bind(input: Node) -> ParseResult<Loc<ast::ParamBind>> {
+        let sp = Self::get_span(&input);
+        let out = match_nodes!(
+            input.into_children();
+            [param_var(param), expr(e)] => ast::ParamBind::new(param, Some(e.take()))
+        );
+        Ok(Loc::new(out, sp))
+    }
+
     fn param_bind(input: Node) -> ParseResult<Loc<ast::ParamBind>> {
         let sp = Self::get_span(&input);
         let out = match_nodes!(
@@ -402,16 +411,15 @@ impl FilamentParser {
 
     fn port(input: Node) -> ParseResult<Loc<ast::Port>> {
         let sp = Self::get_span(&input);
-        let n = match_nodes!(
-            input.into_children();
-            [bitwidth(constant)] => ast::Port::constant(constant),
-            [identifier(name)] => ast::Port::this(name),
-            [identifier(name), access(range)] => ast::Port::bundle(name, range),
-            [identifier(comp), identifier(name)] => ast::Port::inv_port(comp, name),
-            [identifier(invoke), identifier(port), access(access)] => ast::Port::inv_bundle(invoke, port, access),
-            [identifier(name), expr(idx)] => ast::Port::bundle(name, idx.map(|x| x.into())),
-        );
-        Ok(Loc::new(n, sp))
+        match_nodes!(
+            input.clone().into_children();
+            [bitwidth(_)] => Err(input.error("constant ports are not supported. Use the `Const[Width, Val]' primitive instead.")),
+            [identifier(name)] => Ok(Loc::new(ast::Port::this(name), sp)),
+            [identifier(name), access(range)] => Ok(Loc::new(ast::Port::bundle(name, range), sp)),
+            [identifier(comp), identifier(name)] => Ok(Loc::new(ast::Port::inv_port(comp, name), sp)),
+            [identifier(invoke), identifier(port), access(access)] => Ok(Loc::new(ast::Port::inv_bundle(invoke, port, access), sp)),
+            [identifier(name), expr(idx)] => Ok(Loc::new(ast::Port::bundle(name, idx.map(|x| x.into())), sp)),
+        )
     }
 
     fn arguments(input: Node) -> ParseResult<Vec<Loc<ast::Port>>> {
@@ -543,6 +551,14 @@ impl FilamentParser {
             [param_bind(params)..] => params.collect_vec(),
         ))
     }
+    fn sig_bindings(input: Node) -> ParseResult<Vec<Loc<ast::ParamBind>>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [] => vec![],
+            [sig_bind(params)..] => params.collect_vec(),
+        ))
+    }
+
     fn signature(input: Node) -> ParseResult<ast::Signature> {
         Ok(match_nodes!(
             input.into_children();
@@ -551,6 +567,7 @@ impl FilamentParser {
                 params(params),
                 abstract_var(abstract_vars),
                 io(io),
+                sig_bindings(sig_binds),
                 constraints((expr_c, time_c))
             ] => {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
@@ -564,12 +581,14 @@ impl FilamentParser {
                     outputs,
                     expr_c,
                     time_c,
+                    sig_binds,
                  )
             },
             [
                 identifier(name),
                 params(params),
                 io(io),
+                sig_bindings(sig_binds),
                 constraints((expr_c, time_c))
             ] => {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
@@ -582,7 +601,8 @@ impl FilamentParser {
                     inputs,
                     outputs,
                     expr_c,
-                    time_c
+                    time_c,
+                    sig_binds,
                  )
             }
         ))

@@ -1,4 +1,5 @@
 import "primitives/core.fil";
+import "primitives/math.fil";
 
 extern "mul.sv" {
     comp BlackBoxMulUInt8<@G: 1>(
@@ -10,52 +11,43 @@ extern "mul.sv" {
     );
 }
 
+comp Filter<G: 1>() -> (
+     out[9]: [G, G+1] 8
+) {
+    one := new Const[8, 1]<G>();
+    two := new Const[8, 2]<G>();
+    four := new Const[8, 4]<G>();
+
+    out{0} = one.out; out{1} = two.out;  out{2} = one.out;
+    out{3} = two.out; out{4} = four.out; out{5} = two.out;
+    out{6} = one.out; out{7} = two.out;  out{8} = one.out;
+}
+
 // Performs a 2d convolution on a 3x3 window of elements with the filter:
 // 1 2 1
 // 2 4 2
 // 1 2 1
 comp Conv<@G: 1>(
-     in1: [@G, @G+1] 8,
-     in2: [@G, @G+1] 8,
-     in3: [@G, @G+1] 8,
-     in4: [@G, @G+1] 8,
-     in5: [@G, @G+1] 8,
-     in6: [@G, @G+1] 8,
-     in7: [@G, @G+1] 8,
-     in8: [@G, @G+1] 8,
-     in9: [@G, @G+1] 8,
+     in[9]: [@G, @G+1] 8,
+     w[9]: [@G, @G+1] 8,
 ) -> (
-     out: [@G+3, @G+4] 8,
+     out: [@G+6, @G+7] 8,
 ) {
-    one := new Const[8, 1]<@G>();
-    two := new Const[8, 2]<@G>();
-    four := new Const[8, 4]<@G>();
-
-    // Multiply by the filter
-    m1 := new BlackBoxMulUInt8<@G>(in1, one.out);
-    m2 := new BlackBoxMulUInt8<@G>(in2, two.out);
-    m3 := new BlackBoxMulUInt8<@G>(in3, one.out);
-    m4 := new BlackBoxMulUInt8<@G>(in4, two.out);
-    m5 := new BlackBoxMulUInt8<@G>(in5, four.out);
-    m6 := new BlackBoxMulUInt8<@G>(in6, two.out);
-    m7 := new BlackBoxMulUInt8<@G>(in7, one.out);
-    m8 := new BlackBoxMulUInt8<@G>(in8, two.out);
-    m9 := new BlackBoxMulUInt8<@G>(in9, one.out);
+    bundle m[9]: [@G+3, @G+4] 16;
+    for #i in 0..9 {
+      mult := new BlackBoxMulUInt8<@G>(in{#i}, w{#i});
+      m{#i} = mult.O;
+    }
 
     // Add the results
-    a1 := new Add[16]<@G+3>(m9.O, m8.O);
-    a2 := new Add[16]<@G+3>(m7.O, m6.O);
-    a3 := new Add[16]<@G+3>(m5.O, m4.O);
-    a4 := new Add[16]<@G+3>(m3.O, m2.O);
-    a5 := new Add[16]<@G+3>(a1.out, a2.out);
-    a6 := new Add[16]<@G+3>(a3.out, a4.out);
-    a7 := new Add[16]<@G+3>(a5.out, a6.out);
-    a8 := new Add[16]<@G+3>(a7.out, m1.O);
+    sum := new ReduceAdd[16, 8]<@G+3>(m{0..8});
+    acc := new Shift[16, 3]<@G+3>(m{8});
+    red := new Add[16]<@G+6>(sum.out, acc.out);
 
     // Divide by 16
-    four_16 := new Const[16, 4]<@G+3>();
-    d := new ShiftRight[16]<@G+3>(a8.out, four_16.out);
-    slice := new Slice[16, 7, 0, 8]<@G+3>(d.out);
+    four_16 := new Const[16, 4]<@G+6>();
+    d := new ShiftRight[16]<@G+6>(red.out, four_16.out);
+    slice := new Slice[16, 7, 0, 8]<@G+6>(d.out);
 
     out = slice.out;
 }

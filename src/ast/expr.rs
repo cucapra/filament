@@ -58,7 +58,7 @@ impl UnFn {
 }
 
 /// An expression containing integers and abstract variables
-#[derive(Clone, Hash)]
+#[derive(Clone, Hash, Debug)]
 pub enum Expr {
     Concrete(u64),
     Abstract(Id),

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use super::{
     monodeferred::MonoDeferred,
-    utils::{Base, Underlying},
+    utils::{Base, BaseComp, Underlying, UnderlyingComp},
 };
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -118,7 +118,7 @@ impl<'ctx> Monomorphize<'ctx> {
         let mut monosig = MonoSig::new(base, underlying, comp.idx(), params);
 
         // the component whose signature we want to monomorphize
-        let underlying = self.old.get(comp.idx());
+        let underlying = UnderlyingComp::new(self.old.get(comp.idx()));
 
         // Monomorphize the sig
         MonoDeferred::sig(&mut monosig, underlying, self);
@@ -130,12 +130,12 @@ impl<'ctx> Monomorphize<'ctx> {
         (new_comp, vec![])
     }
 
-    fn next(&mut self) -> Option<(ir::Component, Base<ir::Component>)> {
+    fn next(&mut self) -> Option<(BaseComp, Base<ir::Component>)> {
         let Some((ck, (base_idx, monosig))) = self.queue.pop_front() else {
             return None;
         };
 
-        let underlying = self.old.get(ck.comp.idx());
+        let underlying = UnderlyingComp::new(self.old.get(ck.comp.idx()));
         let mut mono = MonoDeferred {
             underlying,
             pass: self,
@@ -161,8 +161,8 @@ impl Monomorphize<'_> {
             return ir::Context {
                 comps: IndexStore::default(),
                 entrypoint: None,
-                externals: HashMap::new()
-            }
+                externals: HashMap::new(),
+            };
         };
         let entrypoint = Underlying::new(entrypoint);
         // Monomorphize the entrypoint
@@ -173,9 +173,9 @@ impl Monomorphize<'_> {
         // Build a new context
         while let Some((mut comp, idx)) = mono.next() {
             let default = mono.ctx.get_mut(idx.get());
-            std::mem::swap(&mut comp, default);
-            let val = ir::Validate::new(&comp, &mono.ctx.comps);
-            val.comp();
+            comp.swap(default);
+            let comp = comp.comp();
+            ir::Validate::component(&mono.ctx, comp);
         }
         let new_entrypoint = mono.processed.get(&ck).unwrap();
         mono.ctx.entrypoint = Some(new_entrypoint.get());

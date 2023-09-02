@@ -62,11 +62,15 @@ pub(super) struct BuildCtx<'prog> {
     sigs: &'prog SigMap,
 
     // Mapping from names to IR nodes.
-    event_map: ScopeMap<ir::Event>,
-    inst_map: ScopeMap<ir::Instance>,
-    inv_map: ScopeMap<ir::Invoke>,
-    port_map: ScopeMap<ir::Port, InvPort>,
-    param_map: ScopeMap<ir::Param>,
+    event_map: ScopeMap<ir::EventIdx>,
+    inst_map: ScopeMap<ir::InstIdx>,
+    inv_map: ScopeMap<ir::InvIdx>,
+    port_map: ScopeMap<ir::PortIdx, InvPort>,
+    param_map: ScopeMap<ir::ParamIdx>,
+
+    // Mapping for parameters that are let-bound.
+    // For example, let #K = #W + 1 will generate the binding: #K -> #W + 1
+    param_rewrite: ScopeMap<ir::ExprIdx>,
 
     /// Index for generating unique names
     name_idx: u32,
@@ -84,6 +88,7 @@ impl<'prog> BuildCtx<'prog> {
             port_map: ScopeMap::new(),
             inst_map: ScopeMap::new(),
             inv_map: ScopeMap::new(),
+            param_rewrite: ScopeMap::new(),
             inst_to_sig: DenseIndexInfo::default(),
         }
     }
@@ -119,6 +124,7 @@ impl<'prog> BuildCtx<'prog> {
         self.port_map.push();
         self.inst_map.push();
         self.inv_map.push();
+        self.param_rewrite.push();
     }
 
     /// Pop the last scope level
@@ -129,6 +135,7 @@ impl<'prog> BuildCtx<'prog> {
         self.port_map.pop();
         self.inst_map.pop();
         self.inv_map.pop();
+        self.param_rewrite.pop();
     }
 
     pub fn try_with_scope<T, F>(&mut self, f: F) -> BuildRes<T>
@@ -169,10 +176,20 @@ impl<'prog> BuildCtx<'prog> {
         self.sigs = sigs;
     }
 
-    pub fn get_param(&mut self, id: &Id) -> BuildRes<ir::ParamIdx> {
+    /// Add a parameter
+    pub fn add_let_param(&mut self, id: Id, expr: ir::ExprIdx) {
+        self.param_rewrite.insert(id, expr);
+    }
+
+    pub fn get_param(&mut self, id: &Id) -> BuildRes<ir::ExprIdx> {
         let name = id;
+        // If this parameter is let-bound, return the rewritten expression instead.
+        if let Some(e) = self.param_rewrite.get(id) {
+            return Ok(*e);
+        }
+
         match self.param_map.get(name) {
-            Some(p) => Ok(*p),
+            Some(p) => Ok(p.expr(self.comp())),
             None => {
                 let diag = &mut self.diag;
                 let undef =

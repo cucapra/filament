@@ -1,7 +1,7 @@
 use crate::{
     cmdline,
     ir::{
-        Access, Bind, Command, Component, Connect, Context, Ctx,
+        Access, AddCtx, Bind, Command, Component, Connect, Context, Ctx,
         DenseIndexInfo, Expr, Foreign, Info, InvIdx, Invoke, Liveness, MutCtx,
         Port, PortIdx, PortOwner, Printer, Range, Subst, Time,
     },
@@ -44,7 +44,10 @@ impl BundleElim {
     fn port(&self, pidx: PortIdx, comp: &mut Component) -> Vec<PortIdx> {
         let one = comp.add(Expr::Concrete(1));
         let Port {
-            owner, width, live, ..
+            owner,
+            width,
+            live,
+            info,
         } = comp.get(pidx).clone();
 
         let Liveness { idx, len, range } = live;
@@ -65,8 +68,8 @@ impl BundleElim {
             return vec![pidx];
         }
 
-        // creates an empty info struct for these new ports
-        let info = comp.add(Info::empty());
+        // creates the info to be cloned later.
+        let info = comp.get(info).clone();
 
         // create a single port for each element in the bundle.
         let ports = (0..len)
@@ -116,11 +119,13 @@ impl BundleElim {
                     PortOwner::Local => PortOwner::Local,
                 };
 
+                let info = comp.add(info.clone());
+
                 // adds the new port to the component and return its index
                 comp.add(Port {
                     live,
                     owner,
-                    info,
+                    info, // duplicate the info
                     width,
                 })
             })
@@ -222,7 +227,7 @@ impl Visitor for BundleElim {
         // are defined before connects accessing the local port (I.E. assignments are in proper order).
         Action::Change(
             src.into_iter()
-                .zip(dst.into_iter())
+                .zip(dst)
                 .map(|(src, dst)| {
                     Command::Connect(Connect {
                         src: Access::port(src, &mut data.comp),
@@ -257,7 +262,9 @@ impl Visitor for BundleElim {
             .cmds
             .iter()
             .filter_map(|cmd| {
-                let Command::Connect(con) = cmd else { return None };
+                let Command::Connect(con) = cmd else {
+                    return None;
+                };
                 let Connect { src, dst, .. } = con;
 
                 // need to check validity here because already deleted ports are still in the connect commands

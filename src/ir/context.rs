@@ -1,4 +1,4 @@
-use super::{CompIdx, Component, Ctx, IndexStore, MutCtx};
+use super::{AddCtx, CompIdx, Component, Ctx, Foreign, IndexStore, MutCtx};
 use crate::utils::Idx;
 use fil_derive::Ctx;
 use std::collections::HashMap;
@@ -6,6 +6,7 @@ use std::collections::HashMap;
 #[derive(Default, Ctx)]
 pub struct Context {
     #[ctx(Component)]
+    #[add_ctx(Component)]
     #[mut_ctx(Component)]
     pub comps: IndexStore<Component>,
     // Contains external components grouped by file name.
@@ -28,5 +29,20 @@ impl Context {
         self.externals.iter().find_map(|(filename, comps)| {
             comps.contains(&idx).then_some(filename.to_string())
         })
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (CompIdx, &Component)> + '_ {
+        self.comps.iter()
+    }
+}
+
+impl<T> Ctx<T, Foreign<T, Component>> for Context
+where
+    Component: Ctx<T>,
+{
+    fn get(&self, idx: Foreign<T, Component>) -> &T {
+        let (key, owner) = idx.take();
+
+        self.get(owner).get(key)
     }
 }

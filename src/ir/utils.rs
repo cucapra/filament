@@ -1,6 +1,6 @@
-use super::{Command, CompIdx, Context};
+use super::{AddCtx, Command, CompIdx, Context};
 use super::{Ctx, MutCtx};
-use crate::utils::{self, Idx};
+use crate::utils::{self, Idx, IdxLike};
 use bitvec::vec::BitVec;
 use itertools::Itertools;
 use std::{
@@ -9,6 +9,7 @@ use std::{
 };
 use topological_sort::TopologicalSort;
 
+#[derive(Clone)]
 /// An indexed storage for an interned type. Keeps a HashMap to provide faster reverse mapping
 /// from the value to the index.
 /// Useful for types that are added continuously throughout the compiler's execution.
@@ -30,12 +31,17 @@ impl<T> Ctx<T> for Interned<T>
 where
     T: Eq + std::hash::Hash,
 {
-    fn add(&mut self, val: T) -> Idx<T> {
-        self.intern(val)
-    }
-
     fn get(&self, idx: Idx<T>) -> &T {
         self.get(idx)
+    }
+}
+
+impl<T> AddCtx<T> for Interned<T>
+where
+    T: Eq + std::hash::Hash,
+{
+    fn add(&mut self, val: T) -> Idx<T> {
+        self.intern(val)
     }
 }
 
@@ -114,6 +120,7 @@ where
     }
 }
 
+#[derive(Clone)]
 /// An indexed store for a type.
 /// Unlike [Interned], this data structure does not deduplicate values and supports mutation of values and removal of indices.
 pub struct IndexStore<T, I = utils::Idx<T>>
@@ -511,13 +518,11 @@ impl Traversal {
             Command::Connect(_)
             | Command::BundleDef(_)
             | Command::Invoke(_)
-            | Command::Fact(_)
-            | Command::Let(_) => (),
+            | Command::Fact(_) => (),
         }
     }
 }
 
-#[derive(Copy)]
 /// A reference to a foreign key and its owner.
 /// On its own, a foreign key is not very useful. We need provide it with a context
 /// that can resolve the owner which can then resolve the underlying type.
@@ -578,15 +583,54 @@ where
     }
 }
 
+impl<T, C> IdxLike<T> for Foreign<T, C>
+where
+    C: Ctx<T>,
+{
+    const UNKNOWN: Self = Foreign {
+        key: Idx::UNKNOWN,
+        owner: Idx::UNKNOWN,
+    };
+
+    fn new(idx: usize) -> Self {
+        Self {
+            key: Idx::new(idx),
+            owner: Idx::UNKNOWN,
+        }
+    }
+
+    fn get(self) -> usize {
+        self.key.get()
+    }
+}
+
+impl<T, C> Ord for Foreign<T, C>
+where
+    C: Ctx<T>,
+{
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.owner.cmp(&other.owner).then(self.key.cmp(&other.key))
+    }
+}
+
 impl<T, C> Clone for Foreign<T, C>
 where
     C: Ctx<T>,
 {
     fn clone(&self) -> Self {
-        Self {
-            key: self.key,
-            owner: self.owner,
-        }
+        *self
+    }
+}
+
+/// All foreigns are [Copy]
+impl<T, C> Copy for Foreign<T, C> where C: Ctx<T> {}
+
+impl<T, C> PartialOrd for Foreign<T, C>
+where
+    C: Ctx<T>,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -612,12 +656,14 @@ where
 }
 
 impl<T> Ctx<T> for IndexStore<T> {
-    fn add(&mut self, val: T) -> Idx<T> {
-        self.add(val)
-    }
-
     fn get(&self, idx: Idx<T>) -> &T {
         self.get(idx)
+    }
+}
+
+impl<T> AddCtx<T> for IndexStore<T> {
+    fn add(&mut self, val: T) -> Idx<T> {
+        self.add(val)
     }
 }
 
@@ -629,4 +675,28 @@ impl<T> MutCtx<T> for IndexStore<T> {
     fn delete(&mut self, idx: Idx<T>) {
         self.delete(idx)
     }
+}
+
+#[macro_export]
+/// Creates a constructor function for a binary operator.
+/// Example: ```
+/// construct_binop!(
+/// <impl Ctx<Expr>>(ExprIdx::bin, Expr) => Expr;
+///     add = ast::Op::Add;
+///     mul = ast::Op::Mul;
+///     div = ast::Op::Div;
+///     rem = ast::Op::Mod;
+/// );
+/// ```
+macro_rules! construct_binop {
+    (<$ctx: ty> ($constructor: expr, $in: ty) => $out: ty;
+    $($name:ident = $op: expr);* ;) => {
+        impl $in {
+            $(pub fn $name(self, other: $in, ctx: &mut $ctx) -> $crate::utils::Idx<$out> {
+                ctx.add($constructor(
+                    self, other, $op
+                ))
+            })*
+        }
+    };
 }

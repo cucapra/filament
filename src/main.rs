@@ -60,8 +60,10 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     if opts.check {
         return Ok(());
     }
-    let calyx =
-        log_time!(ip::Compile::compile(ir, opts.enable_slow_fsms), "compile");
+    let calyx = log_time!(
+        ip::Compile::compile(ir, opts.disable_slow_fsms, opts.preserve_names),
+        "compile"
+    );
     match opts.backend {
         cmdline::Backend::Verilog => {
             gen_verilog(calyx).unwrap();
@@ -88,7 +90,7 @@ fn gen_verilog(mut ctx: calyx_ir::Context) -> Result<(), calyx_utils::Error> {
         &["canonicalize".to_string()],
         false,
     )?;
-    let backend = calyx::backend::verilog::VerilogBackend::default();
+    let backend = calyx::backend::verilog::VerilogBackend;
     backend.run(ctx, calyx_utils::OutputFile::Stdout)
 }
 

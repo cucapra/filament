@@ -35,17 +35,10 @@ impl From<Expr> for Access {
 pub enum Port {
     /// A port on this component
     This(Loc<Id>),
-    Constant(u64),
     /// A port on an invoke
-    InvPort {
-        invoke: Loc<Id>,
-        name: Loc<Id>,
-    },
+    InvPort { invoke: Loc<Id>, name: Loc<Id> },
     /// A port represented by an index into a bundle
-    Bundle {
-        name: Loc<Id>,
-        access: Loc<Access>,
-    },
+    Bundle { name: Loc<Id>, access: Loc<Access> },
     /// A bundle port on an invocation
     InvBundle {
         invoke: Loc<Id>,
@@ -61,10 +54,6 @@ impl Port {
 
     pub fn this(p: Loc<Id>) -> Self {
         Port::This(p)
-    }
-
-    pub fn constant(v: u64) -> Self {
-        Port::Constant(v)
     }
 
     pub fn bundle(name: Loc<Id>, access: Loc<Access>) -> Self {

@@ -1,6 +1,6 @@
 use super::{
-    CmpOp, Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Prop, PropIdx,
-    Time, TimeIdx,
+    AddCtx, CmpOp, Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Prop,
+    PropIdx, Time, TimeIdx,
 };
 
 pub struct Bind<K: Eq, V>(Vec<(K, V)>);
@@ -47,6 +47,11 @@ where
         let len = self.0.len();
         assert!(n <= len);
         self.0.truncate(len - n);
+    }
+
+    /// Iterate over the binding
+    pub fn iter(&self) -> impl Iterator<Item = &(K, V)> {
+        self.0.iter()
     }
 }
 

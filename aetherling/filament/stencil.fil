@@ -4,15 +4,7 @@ import "primitives/state.fil";
 comp Stencil[W]<@G: 1>(
      in: [@G, @G+1] W,
 ) -> (
-     o1: [@G, @G+1] W,
-     o2: [@G, @G+1] W,
-     o3: [@G, @G+1] W,
-     o4: [@G, @G+1] W,
-     o5: [@G, @G+1] W,
-     o6: [@G, @G+1] W,
-     o7: [@G, @G+1] W,
-     o8: [@G, @G+1] W,
-     o9: [@G, @G+1] W,
+     out[9]: [@G, @G+1] #W,
 ) {
     d9 := new ContPrev[W, 0]<@G>(in);
     d8 := new ContPrev[W, 0]<@G>(d9.prev);
@@ -26,13 +18,13 @@ comp Stencil[W]<@G: 1>(
     d2 := new ContPrev[W, 0]<@G>(d3.prev);
     d1 := new ContPrev[W, 0]<@G>(d2.prev);
 
-    o9 = d9.prev;
-    o8 = d8.prev;
-    o7 = d7.prev;
-    o6 = d6.prev;
-    o5 = d5.prev;
-    o4 = d4.prev;
-    o3 = d3.prev;
-    o2 = d2.prev;
-    o1 = d1.prev;
+    out{8} = d9.prev;
+    out{7} = d8.prev;
+    out{6} = d7.prev;
+    out{5} = d6.prev;
+    out{4} = d5.prev;
+    out{3} = d4.prev;
+    out{2} = d3.prev;
+    out{1} = d2.prev;
+    out{0} = d1.prev;
 }
