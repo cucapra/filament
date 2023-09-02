@@ -7,14 +7,14 @@ comp Mul[#W]<G:1>(
     out: [G+#L, G+#L+1] #W
 ) with {
     exists #L;
-} where #L > 0 {
+} where #L > 0, #W > 0 {
     mult := new MultComb[#W]<G>(left, right);
     sh := new Shift[#W, 3]<G>(mult.out);
 
     // This is the hidden value of the quantified parameter. This value is not
     // visible to callers but is used to typecheck the body.
     exists #L = 3;
-    out = mult.out;
+    out = sh.out;
 }
 
 // The main component is allowed to use existentially quantified variables.
