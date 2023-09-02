@@ -60,7 +60,17 @@ impl DisplayCtx<ir::ParamIdx> for ir::Component {
         let param: &ir::Param = self.get(idx);
         let info = self.get(param.info).as_param();
         let name = info.map_or(format!("{idx}"), |p| format!("{}", p.name));
-        write!(f, "{name}")
+        match param.owner {
+            ir::ParamOwner::Instance(inst) => {
+                let inst = self.get(inst);
+                let inst_name = self
+                    .get(inst.info)
+                    .as_instance()
+                    .map_or(format!("{idx}"), |inst| format!("{}", inst.name));
+                write!(f, "{inst_name}::{name}")
+            }
+            _ => write!(f, "{name}"),
+        }
     }
 }
 
