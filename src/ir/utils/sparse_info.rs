@@ -1,25 +1,26 @@
 use crate::utils::{Idx, IdxLike};
 use std::collections::HashMap;
 
-#[derive(Clone, Default)]
 /// A sparse information map to store information associated with indices.
 /// Implements the same methods as [super::DenseIndexInfo] but is more efficient
 /// when the indices are sparse.
-pub struct SparseInfoMap<V, Key = Idx<V>>
+pub struct SparseInfoMap<Assoc, Info, Key = Idx<Assoc>>
 where
-    Key: IdxLike<V>,
+    Key: IdxLike<Assoc>,
 {
-    map: HashMap<Key, V>,
+    map: HashMap<Key, Info>,
+    _key_typ: std::marker::PhantomData<Assoc>,
 }
 
-impl<V, K> SparseInfoMap<V, K>
+impl<Assoc, Info, Key> SparseInfoMap<Assoc, Info, Key>
 where
-    K: IdxLike<V>,
+    Key: IdxLike<Assoc>,
 {
     /// Construct a new info map with the given capacity.
     pub fn with_capacity(cap: usize) -> Self {
         Self {
             map: HashMap::with_capacity(cap),
+            _key_typ: std::marker::PhantomData,
         }
     }
 
@@ -30,32 +31,77 @@ where
 
     /// Add a new value to the map and return the index.
     /// Panics if the index is not the next index in the sequence.
-    pub fn push(&mut self, key: K, val: V) {
+    pub fn push(&mut self, key: Key, val: Info) {
         self.map.insert(key, val);
     }
 
     /// Get the value associated with the index.
-    pub fn get(&self, idx: K) -> &V {
+    pub fn get(&self, idx: Key) -> &Info {
         &self.map[&idx]
     }
 
     /// Get a mutable reference to the value associated with the index.
-    pub fn get_mut(&mut self, idx: K) -> &mut V {
+    pub fn get_mut(&mut self, idx: Key) -> &mut Info {
         self.map.get_mut(&idx).unwrap()
     }
 
     /// Check if the map contains the given index.
-    pub fn contains(&self, idx: K) -> bool {
+    pub fn contains(&self, idx: Key) -> bool {
         self.map.contains_key(&idx)
     }
 
     /// Get the value associated with the index if present, otherwise return None.
-    pub fn find(&self, idx: K) -> Option<&V> {
+    pub fn find(&self, idx: Key) -> Option<&Info> {
         self.map.get(&idx)
     }
 
     /// Iterator over the values in the map
-    pub fn iter(&self) -> impl Iterator<Item = (K, &V)> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = (Key, &Info)> + '_ {
         self.map.iter().map(|(idx, val)| (*idx, val))
+    }
+}
+
+impl<Assoc, Info, Key> Default for SparseInfoMap<Assoc, Info, Key>
+where
+    Key: IdxLike<Assoc>,
+{
+    fn default() -> Self {
+        Self {
+            map: HashMap::new(),
+            _key_typ: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<Assoc, Info, Key> Clone for SparseInfoMap<Assoc, Info, Key>
+where
+    Info: Clone,
+    Key: IdxLike<Assoc>,
+{
+    fn clone(&self) -> Self {
+        Self {
+            map: self.map.clone(),
+            _key_typ: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T, V, Idx: IdxLike<T>> FromIterator<(Idx, V)>
+    for SparseInfoMap<T, V, Idx>
+{
+    fn from_iter<Iter: IntoIterator<Item = (Idx, V)>>(iter: Iter) -> Self {
+        let mut store = Self::default();
+        for (idx, val) in iter {
+            store.push(idx, val);
+        }
+        store
+    }
+}
+
+impl<T, V, Idx: IdxLike<T>> std::ops::Index<Idx> for SparseInfoMap<T, V, Idx> {
+    type Output = V;
+
+    fn index(&self, index: Idx) -> &Self::Output {
+        self.get(index)
     }
 }
