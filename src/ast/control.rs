@@ -335,25 +335,6 @@ impl BundleType {
         // let resolved = other.resolve_exprs(&binding);
         todo!()
     }
-
-    /// Return the type for a bundle that has been offset by the given expression.
-    /// For example:
-    /// ```
-    /// for<i> ['G+i, 'G+i+1] W
-    /// ```
-    /// offset by `K` becomes
-    /// ```
-    /// for<i> ['G+i+K, 'G+i+1+K] W
-    /// ```
-    pub fn shrink(self, start: Expr, end: Expr) -> Self {
-        // Generate the offset by resolving the index of the bundle type with index+offset
-        let len = end - start.clone();
-        let idx = self.idx.copy();
-        let binding = Binding::new(Some((idx, Expr::abs(idx) + start)));
-        let mut resolved = self.resolve_exprs(&binding);
-        *resolved.len.inner_mut() = len;
-        resolved
-    }
 }
 
 #[derive(Clone)]

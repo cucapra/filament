@@ -61,10 +61,10 @@ impl UnFn {
 #[derive(Clone, Hash, Debug)]
 pub enum Expr {
     Concrete(u64),
-    Abstract(Id),
+    Abstract(Loc<Id>),
     ParamAccess {
         inst: Loc<Id>,
-        param: Id,
+        param: Loc<Id>,
     },
     App {
         func: UnFn,
@@ -111,7 +111,7 @@ impl Expr {
     }
 
     /// Construct a new expression from an abstract variable
-    pub fn abs(id: Id) -> Self {
+    pub fn abs(id: Loc<Id>) -> Self {
         Expr::Abstract(id)
     }
 
@@ -255,7 +255,7 @@ impl From<u64> for Expr {
 
 impl From<Id> for Expr {
     fn from(v: Id) -> Self {
-        Self::Abstract(v)
+        Self::Abstract(Loc::unknown(v))
     }
 }
 

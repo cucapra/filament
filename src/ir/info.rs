@@ -512,7 +512,22 @@ impl Reason {
                     err
                 }
             }
-            Reason::ExistsConstraint { .. } => todo!(),
+            Reason::ExistsConstraint {
+                bind_loc,
+                constraint_loc,
+            } => {
+                let con = constraint_loc
+                    .primary()
+                    .with_message("cannot prove constraint");
+                let param = bind_loc
+                    .secondary()
+                    .with_message("existentially quantified parameter");
+                Diagnostic::error()
+                    .with_message(
+                        "component's body does not satisfy constraint on existentially-quantified parameter",
+                    )
+                    .with_labels(vec![con, param])
+            }
             Reason::ParamConstraint {
                 bind_loc,
                 constraint_loc,

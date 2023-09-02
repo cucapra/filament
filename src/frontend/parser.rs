@@ -248,8 +248,8 @@ impl FilamentParser {
     fn expr_base(input: Node) -> ParseResult<ast::Expr> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(inst), identifier(param)] => ast::Expr::ParamAccess{ inst, param: *param },
-            [param_var(id)] => id.take().into(),
+            [identifier(inst), identifier(param)] => ast::Expr::ParamAccess{ inst, param },
+            [param_var(id)] => ast::Expr::abs(id),
             [bitwidth(c)] => c.into(),
             [un_fn(f), expr(e)] => ast::Expr::func(f, e.take()),
             [expr(e)] => e.take(),

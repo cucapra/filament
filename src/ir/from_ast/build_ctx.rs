@@ -230,7 +230,7 @@ impl<'prog> BuildCtx<'prog> {
         expr: ir::ExprIdx,
     ) -> BuildRes<()> {
         let p_idx = self
-            .get_param(&OwnedParam::local(param.copy()))?
+            .get_param(&OwnedParam::local(param.copy()), param.pos())?
             .as_param(&self.comp)
             .unwrap();
         let diag = &mut self.diag;
@@ -262,19 +262,18 @@ impl<'prog> BuildCtx<'prog> {
         }
     }
 
-    pub fn get_param(&mut self, param: &OwnedParam) -> BuildRes<ir::ExprIdx> {
+    pub fn get_param(
+        &mut self,
+        param: &OwnedParam,
+        pos: utils::GPosIdx,
+    ) -> BuildRes<ir::ExprIdx> {
         match self.param_map.get(param) {
             Some(p) => Ok(*p),
             None => {
                 let diag = &mut self.diag;
                 let undef =
-                    Error::undefined(format!("{}", *name).into(), "parameter");
-                // .add_note(
-                //     diag.add_info(
-                //         format!("parameter `{id}' is not defined"),
-                //         id.pos(),
-                //     ),
-                // );
+                    Error::undefined(format!("#{}", param), "parameter")
+                        .add_note(diag.add_info("unknown parameter", pos));
                 diag.add_error(undef);
                 Err(std::mem::take(diag))
             }

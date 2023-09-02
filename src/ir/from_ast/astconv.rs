@@ -74,9 +74,17 @@ impl<'prog> BuildCtx<'prog> {
                 }
                 ast::SigBind::Exists { param, .. } => {
                     // Define the parameter in the component
-                    let param = self
+                    let p_idx = self
                         .param(param.clone(), ir::ParamOwner::Instance(idx));
-                    Some(param)
+                    // Map this parameter to the instance's version of the parameter.
+                    // This is because we want it to resolve to parameter access
+                    // in the current component.
+                    let e = ast::Expr::ParamAccess {
+                        inst: name.clone(),
+                        param: param.clone(),
+                    };
+                    binding.extend([(param.copy(), e)]);
+                    Some(p_idx)
                 }
             })
             .collect_vec();
@@ -192,10 +200,15 @@ impl<'prog> BuildCtx<'prog> {
 impl<'prog> BuildCtx<'prog> {
     fn expr(&mut self, expr: ast::Expr) -> BuildRes<ExprIdx> {
         let expr = match expr {
-            ast::Expr::Abstract(p) => self.get_param(&OwnedParam::local(p))?,
+            ast::Expr::Abstract(p) => {
+                self.get_param(&OwnedParam::local(p.copy()), p.pos())?
+            }
             ast::Expr::ParamAccess { inst, param } => {
-                let inst = self.get_inst(&inst)?;
-                self.get_param(&OwnedParam::inst(inst, param))?
+                let inst_idx = self.get_inst(&inst)?;
+                self.get_param(
+                    &OwnedParam::inst(inst_idx, param.copy()),
+                    param.pos(),
+                )?
             }
             ast::Expr::Concrete(n) => {
                 let e = ir::Expr::Concrete(n);
@@ -532,15 +545,13 @@ impl<'prog> BuildCtx<'prog> {
                     self.add_let_param(param.copy(), e);
                 }
                 ast::SigBind::Exists { param, cons } => {
-                    let param =
+                    let p_idx =
                         self.param(param.clone(), ir::ParamOwner::Exists);
-                    self.add_exists_param(param);
+                    self.add_exists_param(p_idx);
+                    // Constraints on existentially quantified parameters
                     for pc in cons {
                         let info = self.comp().add(ir::Info::assert(
-                            ir::info::Reason::misc(
-                                "Signature assumption",
-                                pc.pos(),
-                            ),
+                            ir::info::Reason::exist_cons(param.pos(), pc.pos()),
                         ));
                         let prop = self.expr_cons(pc.inner().clone())?;
                         sig_cons.extend(self.comp().assert(prop, info));
