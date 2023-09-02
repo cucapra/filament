@@ -135,7 +135,7 @@ impl Compile {
             // add remaining interface ports if not found (found ports already removed above)
             for (attr, (name, width, dir)) in interface_ports {
                 ports.push(calyx::PortDef::new(
-                    name.as_ref(),
+                    calyx::Id::from(name.to_string()),
                     width_from_u64(*width),
                     dir.clone(),
                     vec![*attr].try_into().unwrap(),
