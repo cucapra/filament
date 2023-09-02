@@ -625,6 +625,10 @@ impl MonoSig {
             params,
             info,
         } = underlying.get(inst);
+        assert!(
+            params.is_empty(),
+            "cannot monomorphize instances with existentially quantified params"
+        );
         let info = Underlying::new(*info);
 
         let is_ext = pass.old.get(*comp).is_ext;
@@ -648,7 +652,7 @@ impl MonoSig {
                     .map(|n| self.base.num(n).get())
                     .collect(),
                 info: self.info(underlying, pass, info).get(),
-                params: todo!(),
+                params: Vec::new(),
             }
         } else {
             // this is an extern, so keep the params - need to get them into the new component though
@@ -660,7 +664,7 @@ impl MonoSig {
                 comp: comp.get(),
                 args: ext_params.into(),
                 info: self.info(underlying, pass, info).get(),
-                params: todo!(),
+                params: Vec::new(),
             }
         };
 
