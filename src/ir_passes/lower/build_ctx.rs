@@ -1,8 +1,8 @@
 use super::fsm::{FsmBind, FsmType};
 use super::utils::{cell_to_port_def, NameGenerator};
 use super::Fsm;
-use crate::ir::DenseIndexInfo;
 use crate::ir::{self, Ctx};
+use crate::ir::{DenseIndexInfo, DisplayCtx};
 use calyx_ir::{self as calyx, RRC};
 use itertools::Itertools;
 use std::{collections::HashMap, rc::Rc};
@@ -162,7 +162,7 @@ impl<'a> BuildCtx<'a> {
         assert!(
             start.event == end.event,
             "Range `{}` cannot be represented as a simple offset",
-            self.comp.display_range(range)
+            self.comp.display(range)
         );
 
         let ev = start.event;

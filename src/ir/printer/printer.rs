@@ -1,120 +1,8 @@
-use super::Ctx;
-use crate::{
-    ast, ir,
-    utils::{Idx, IdxLike},
-};
+use super::DisplayCtx;
+use crate::ir::Ctx;
+use crate::{ir, utils::Idx};
 use itertools::{Itertools, Position};
 use std::{fmt::Display, io};
-
-/// A context capable of displaying [`Idx<T>`] values.
-pub trait DisplayCtx<T, K = Idx<T>>
-where
-    K: IdxLike<T>,
-{
-    /// Display the value
-    fn display(&self, idx: K) -> String;
-}
-
-impl DisplayCtx<ir::Component> for ir::Context {
-    fn display(&self, idx: Idx<ir::Component>) -> String {
-        let comp = self.get(idx);
-        if let Some(ext_info) = &comp.src_info {
-            ext_info.name.to_string()
-        } else {
-            format!("comp{}", idx.get())
-        }
-    }
-}
-
-impl DisplayCtx<ir::Expr> for ir::Component {
-    fn display(&self, idx: Idx<ir::Expr>) -> String {
-        self.display_expr_helper(idx, ECtx::default())
-    }
-}
-
-impl DisplayCtx<ir::Prop> for ir::Component {
-    fn display(&self, idx: Idx<ir::Prop>) -> String {
-        self.display_prop_helper(idx, PCtx::Implies)
-    }
-}
-
-impl DisplayCtx<ir::Time> for ir::Component {
-    fn display(&self, idx: Idx<ir::Time>) -> String {
-        let &ir::Time { event, offset } = self.get(idx);
-        if offset.is_const(self, 0) {
-            return self.display(event);
-        }
-        format!("{}+{}", self.display(event), self.display(offset))
-    }
-}
-
-impl DisplayCtx<ir::Event> for ir::Component {
-    fn display(&self, idx: Idx<ir::Event>) -> String {
-        if log::log_enabled!(log::Level::Debug) {
-            format!("{idx}")
-        } else {
-            let ev = self.get(idx);
-            self.get(ev.info)
-                .as_event()
-                .map_or(format!("{idx}"), |e| format!("{}", e.name))
-        }
-    }
-}
-
-impl DisplayCtx<ir::Param> for ir::Component {
-    fn display(&self, idx: ir::ParamIdx) -> String {
-        if log::log_enabled!(log::Level::Debug) {
-            format!("{idx}")
-        } else {
-            let param: &ir::Param = self.get(idx);
-            self.get(param.info)
-                .as_param()
-                .map_or(format!("{idx}"), |p| format!("#{}", p.name))
-        }
-    }
-}
-
-impl DisplayCtx<ir::Invoke> for ir::Component {
-    fn display(&self, idx: ir::InvIdx) -> String {
-        if log::log_enabled!(log::Level::Debug) {
-            format!("{idx}")
-        } else {
-            let inv = self.get(idx);
-            self.get(inv.info)
-                .as_invoke()
-                .map_or(format!("{idx}"), |inv| format!("{}", inv.name))
-        }
-    }
-}
-
-impl DisplayCtx<ir::Instance> for ir::Component {
-    fn display(&self, idx: ir::InstIdx) -> String {
-        if log::log_enabled!(log::Level::Debug) {
-            format!("{idx}")
-        } else {
-            let inst = self.get(idx);
-            self.get(inst.info)
-                .as_instance()
-                .map_or(format!("{idx}"), |inst| format!("{}", inst.name))
-        }
-    }
-}
-
-impl DisplayCtx<ir::Port> for ir::Component {
-    fn display(&self, idx: ir::PortIdx) -> String {
-        let port = self.get(idx);
-        let name = self
-            .get(port.info)
-            .as_port()
-            .map_or(format!("{idx}"), |p| format!("{}", p.name));
-        match port.owner {
-            ir::PortOwner::Local | ir::PortOwner::Sig { .. } => name,
-            ir::PortOwner::Inv { inv, .. } => {
-                format!("{}.{}", self.display(inv), name)
-            }
-        }
-    }
-}
 
 pub struct Printer<'a> {
     /// The component being printed. Used to resolve interned values like expressions.
@@ -142,26 +30,13 @@ impl<'a> Printer<'a> {
         Ok(())
     }
 
-    fn expr(&self, e: ir::ExprIdx) -> String {
-        self.ctx.display(e)
-    }
-
-    fn time(&self, t: ir::TimeIdx) -> String {
-        self.ctx.display(t)
-    }
-
-    fn range(&self, r: &ir::Range) -> String {
-        let ir::Range { start, end } = r;
-        format!("[{}, {}]", self.time(*start), self.time(*end))
-    }
-
     fn liveness(&self, l: &ir::Liveness) -> String {
         let ir::Liveness { idx, len, range } = l;
         format!(
             "for<{}: {}> {}",
             self.ctx.display(*idx),
-            self.expr(*len),
-            self.range(range)
+            self.ctx.display(*len),
+            self.ctx.display(range)
         )
     }
 
@@ -184,17 +59,17 @@ impl<'a> Printer<'a> {
             format!(
                 "{}[{}..{})",
                 self.ctx.display(port),
-                self.expr(start),
-                self.expr(end)
+                self.ctx.display(start),
+                self.ctx.display(end)
             )
         } else if a.is_port(self.ctx) {
-            format!("{}[{}]", self.ctx.display(port), self.expr(start))
+            format!("{}[{}]", self.ctx.display(port), self.ctx.display(start))
         } else {
             format!(
                 "{}[{}..{})",
                 self.ctx.display(port),
-                self.expr(start),
-                self.expr(end)
+                self.ctx.display(start),
+                self.ctx.display(end)
             )
         }
     }
@@ -243,8 +118,8 @@ impl<'a> Printer<'a> {
                     "{:indent$}for {} in {}..{} {{",
                     "",
                     self.ctx.display(*index),
-                    self.expr(*start),
-                    self.expr(*end)
+                    self.ctx.display(*start),
+                    self.ctx.display(*end)
                 )?;
                 self.commands(body, indent + 2, f)?;
                 write!(f, "{:indent$}}}", "")
@@ -262,9 +137,19 @@ impl<'a> Printer<'a> {
             }
             ir::Command::Fact(fact) => {
                 if fact.checked {
-                    write!(f, "{:indent$}assert {};", "", fact.prop)
+                    write!(
+                        f,
+                        "{:indent$}assert {};",
+                        "",
+                        self.ctx.display(fact.prop)
+                    )
                 } else {
-                    write!(f, "{:indent$}assume {};", "", fact.prop)
+                    write!(
+                        f,
+                        "{:indent$}assume {};",
+                        "",
+                        self.ctx.display(fact.prop)
+                    )
                 }
             }
         }
@@ -318,7 +203,7 @@ impl<'a> Printer<'a> {
                         f,
                         "{}: {}, ",
                         self.ctx.display(idx),
-                        self.ctx.display_timesub(&ev.delay)
+                        self.ctx.display(&ev.delay)
                     )?
                 }
                 Position::Only((idx, ev)) | Position::Last((idx, ev)) => {
@@ -326,7 +211,7 @@ impl<'a> Printer<'a> {
                         f,
                         "{}: {}",
                         self.ctx.display(idx),
-                        self.ctx.display_timesub(&ev.delay)
+                        self.ctx.display(&ev.delay)
                     )?
                 }
             }
@@ -341,7 +226,7 @@ impl<'a> Printer<'a> {
                     "",
                     self.ctx.display(*idx),
                     self.liveness(&port.live),
-                    self.expr(port.width),
+                    self.ctx.display(port.width),
                     indent = indent + 2
                 )
             }
@@ -352,7 +237,7 @@ impl<'a> Printer<'a> {
                     "",
                     self.ctx.display(*idx),
                     self.liveness(&port.live),
-                    self.expr(port.width),
+                    self.ctx.display(port.width),
                     indent = indent + 2
                 )
             }
@@ -426,7 +311,7 @@ impl<'a> Printer<'a> {
                         "",
                         self.ctx.display(idx),
                         self.liveness(live),
-                        self.expr(*width),
+                        self.ctx.display(*width),
                     )
                 } else {
                     write!(
@@ -435,7 +320,7 @@ impl<'a> Printer<'a> {
                         "",
                         self.ctx.display(idx),
                         self.liveness(live),
-                        self.expr(*width),
+                        self.ctx.display(*width),
                     )
                 }
             }
@@ -447,7 +332,7 @@ impl<'a> Printer<'a> {
                         "",
                         self.ctx.display(idx),
                         self.liveness(live),
-                        self.expr(*width),
+                        self.ctx.display(*width),
                     )
                 } else {
                     write!(
@@ -456,7 +341,7 @@ impl<'a> Printer<'a> {
                         "",
                         self.ctx.display(idx),
                         self.liveness(live),
-                        self.expr(*width),
+                        self.ctx.display(*width),
                     )
                 }
             }
@@ -544,214 +429,5 @@ impl<'a> Printer<'a> {
             Printer::comp(comp, Some(idx), f)?
         }
         Ok(())
-    }
-}
-
-// ========= Pretty printing for expressions and propositions =========
-
-#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
-/// Track the current context within an expression for pretty printing
-enum ECtx {
-    #[default]
-    /// Inside an addition priority expression (+ or -)
-    Add,
-    /// Substraction priority expression (-)
-    Sub,
-    /// Inside an multiplication priority expression (* or / or %)
-    Mul,
-}
-
-impl From<ast::Op> for ECtx {
-    fn from(op: ast::Op) -> Self {
-        match op {
-            ast::Op::Add => ECtx::Add,
-            ast::Op::Sub => ECtx::Sub,
-            ast::Op::Mul | ast::Op::Div | ast::Op::Mod => ECtx::Mul,
-        }
-    }
-}
-
-// Ordering for expression printing context.
-// If `self > other`, then that means that `self` binds tigher than `other`.
-impl Ord for ECtx {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        use std::cmp::Ordering::*;
-        match (self, other) {
-            // Mults are next
-            (ECtx::Mul, ECtx::Mul) => Equal,
-            (ECtx::Mul, _) => Greater,
-            // Subs are next
-            (ECtx::Sub, ECtx::Sub) => Equal,
-            (ECtx::Sub, ECtx::Mul) => Less,
-            (ECtx::Sub, _) => Greater,
-            // Adds are last
-            (ECtx::Add, ECtx::Add) => Equal,
-            (ECtx::Add, _) => Less,
-        }
-    }
-}
-
-impl PartialOrd for ECtx {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-/// Context to track proposition bindings
-enum PCtx {
-    Not,
-    Cmp,
-    And,
-    Or,
-    Implies,
-}
-
-impl Ord for PCtx {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        use std::cmp::Ordering::*;
-        use PCtx::*;
-        match (self, other) {
-            // Negations
-            (Not, Not) => Equal,
-            (Not, _) => Greater,
-            // Comparisons
-            (Cmp, Cmp) => Equal,
-            (Cmp, Not) => Less,
-            (Cmp, _) => Greater,
-            // Conjunctions
-            (And, And) => Equal,
-            (And, Not | Cmp) => Less,
-            (And, _) => Greater,
-            // Disjunctions
-            (Or, Or) => Equal,
-            (Or, Not | And | Cmp) => Less,
-            (Or, _) => Greater,
-            // Implications
-            (Implies, Implies) => Equal,
-            (Implies, _) => Less,
-        }
-    }
-}
-
-impl PartialOrd for PCtx {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-/// Implement methods to display various values bound by the component
-impl ir::Component {
-    fn display_expr_helper(&self, expr: ir::ExprIdx, ctx: ECtx) -> String {
-        match self.get(expr) {
-            ir::Expr::Param(p) => self.display(*p),
-            ir::Expr::Concrete(n) => format!("{n}"),
-            ir::Expr::Bin { op, lhs, rhs } => {
-                let inner = ECtx::from(*op);
-                let left = self.display_expr_helper(*lhs, inner);
-                let right = self.display_expr_helper(*rhs, inner);
-                // If context binds more tightly than the inner operator,
-                // wrap the inner expression in parens.
-                if ctx > inner {
-                    format!("({}{}{})", left, op, right)
-                } else {
-                    format!("{}{}{}", left, op, right)
-                }
-            }
-            ir::Expr::Fn { op, args } => {
-                let fn_str = match op {
-                    ast::UnFn::Pow2 => "pow2",
-                    ast::UnFn::Log2 => "log2",
-                };
-                format!(
-                    "{fn_str}({args})",
-                    args = args
-                        .iter()
-                        .map(|a| self.display_expr_helper(*a, ECtx::default()))
-                        .join(", ")
-                )
-            }
-        }
-    }
-
-    fn display_cmp<T>(
-        &self,
-        cmp: &ir::CmpOp<T>,
-        ctx: PCtx,
-        print_base: impl Fn(T) -> String,
-    ) -> String
-    where
-        T: Clone,
-    {
-        let ir::CmpOp { op, lhs, rhs } = cmp;
-        let l = print_base(lhs.clone());
-        let r = print_base(rhs.clone());
-        if ctx > PCtx::Cmp {
-            format!("({} {} {})", l, op, r)
-        } else {
-            format!("{} {} {}", l, op, r)
-        }
-    }
-
-    fn display_prop_helper(&self, prop: ir::PropIdx, ctx: PCtx) -> String {
-        match self.get(prop) {
-            ir::Prop::True => "true".to_string(),
-            ir::Prop::False => "false".to_string(),
-            ir::Prop::Cmp(c) => self.display_cmp(c, ctx, |e| self.display(e)),
-            ir::Prop::TimeCmp(cmp) => {
-                self.display_cmp(cmp, ctx, |t| self.display(t))
-            }
-            ir::Prop::TimeSubCmp(cmp) => {
-                self.display_cmp(cmp, ctx, |t| self.display_timesub(&t))
-            }
-            ir::Prop::Not(p) => {
-                format!("!{}", self.display_prop_helper(*p, PCtx::Not))
-            }
-            ir::Prop::And(l, r) => {
-                let inner = PCtx::And;
-                let l = self.display_prop_helper(*l, inner);
-                let r = self.display_prop_helper(*r, inner);
-                if inner < ctx {
-                    format!("({} & {})", l, r)
-                } else {
-                    format!("{} & {}", l, r)
-                }
-            }
-            ir::Prop::Or(l, r) => {
-                let inner = PCtx::Or;
-                let l = self.display_prop_helper(*l, inner);
-                let r = self.display_prop_helper(*r, inner);
-                if inner < ctx {
-                    format!("({} | {})", l, r)
-                } else {
-                    format!("{} | {}", l, r)
-                }
-            }
-            ir::Prop::Implies(l, r) => {
-                let inner = PCtx::Implies;
-                let l = self.display_prop_helper(*l, inner);
-                let r = self.display_prop_helper(*r, inner);
-                if inner < ctx {
-                    format!("({} => {})", l, r)
-                } else {
-                    format!("{} => {}", l, r)
-                }
-            }
-        }
-    }
-
-    /// Display a [super::TimeSub] expression in surface-level syntax
-    pub fn display_timesub(&self, ts: &ir::TimeSub) -> String {
-        match ts {
-            ir::TimeSub::Unit(e) => self.display(*e),
-            ir::TimeSub::Sym { l, r } => {
-                format!("|{} - {}|", self.display(*l), self.display(*r))
-            }
-        }
-    }
-
-    /// Surface-level visualization for a range
-    pub fn display_range(&self, r: &ir::Range) -> String {
-        format!("[{}, {}]", self.display(r.start), self.display(r.end))
     }
 }
