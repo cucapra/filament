@@ -72,7 +72,7 @@ impl<'prog> BuildCtx<'prog> {
                     binding.extend([(param.copy(), e)]);
                     None
                 }
-                ast::SigBind::Exists { param } => {
+                ast::SigBind::Exists { param, .. } => {
                     // Define the parameter in the component
                     let param = self
                         .param(param.clone(), ir::ParamOwner::Instance(idx));
@@ -515,6 +515,11 @@ impl<'prog> BuildCtx<'prog> {
     }
 
     fn sig(&mut self, sig: &ast::Signature) -> BuildRes<Vec<ir::Command>> {
+        // Constraints defined in the signature of the component
+        let mut sig_cons: Vec<ir::Command> = Vec::with_capacity(
+            sig.param_constraints.len() + sig.event_constraints.len(),
+        );
+
         for pb in &sig.params {
             self.param(pb.param.clone(), ir::ParamOwner::Sig);
         }
@@ -526,10 +531,20 @@ impl<'prog> BuildCtx<'prog> {
                     let e = self.expr(bind.clone())?;
                     self.add_let_param(param.copy(), e);
                 }
-                ast::SigBind::Exists { param } => {
+                ast::SigBind::Exists { param, cons } => {
                     let param =
                         self.param(param.clone(), ir::ParamOwner::Exists);
                     self.add_exists_param(param);
+                    for pc in cons {
+                        let info = self.comp().add(ir::Info::assert(
+                            ir::info::Reason::misc(
+                                "Signature assumption",
+                                pc.pos(),
+                            ),
+                        ));
+                        let prop = self.expr_cons(pc.inner().clone())?;
+                        sig_cons.extend(self.comp().assert(prop, info));
+                    }
                 }
             }
         }
@@ -565,25 +580,22 @@ impl<'prog> BuildCtx<'prog> {
             self.comp().unannotated_ports.push((*name, *width));
         }
         // Constraints defined by the signature
-        let mut cons = Vec::with_capacity(
-            sig.param_constraints.len() + sig.event_constraints.len(),
-        );
         for ec in &sig.event_constraints {
             let info = self.comp().add(ir::Info::assert(
                 ir::info::Reason::misc("Signature assumption", ec.pos()),
             ));
             let prop = self.event_cons(ec.inner().clone())?;
-            cons.extend(self.comp().assume(prop, info));
+            sig_cons.extend(self.comp().assume(prop, info));
         }
         for pc in &sig.param_constraints {
             let info = self.comp().add(ir::Info::assert(
                 ir::info::Reason::misc("Signature assumption", pc.pos()),
             ));
             let prop = self.expr_cons(pc.inner().clone())?;
-            cons.extend(self.comp().assume(prop, info));
+            sig_cons.extend(self.comp().assume(prop, info));
         }
 
-        Ok(cons)
+        Ok(sig_cons)
     }
 
     fn instance(&mut self, inst: ast::Instance) -> BuildRes<Vec<ir::Command>> {
@@ -592,8 +604,8 @@ impl<'prog> BuildCtx<'prog> {
         // component.
         let idx = self.get_inst(&inst.name)?;
         let (binding, component) = self.inst_to_sig.get(idx).clone();
-        let facts = self
-            .get_sig(&component)?
+        let sig = self.get_sig(&component)?;
+        let asserts = sig
             .param_cons
             .clone()
             .into_iter()
@@ -610,8 +622,25 @@ impl<'prog> BuildCtx<'prog> {
             .into_iter()
             .flatten();
 
+        let assumes = sig
+            .exist_cons
+            .clone()
+            .into_iter()
+            .map(|f| {
+                let reason = self.comp().add(
+                    ir::info::Reason::exist_cons(comp_loc, f.pos()).into(),
+                );
+                let p = f.take().resolve_expr(&binding);
+                // This is an assumption because the called component guarantees guarantees it.
+                self.expr_cons(p).map(|p| self.comp().assume(p, reason))
+            })
+            .collect::<BuildRes<Vec<_>>>()?
+            .into_iter()
+            .flatten();
+
         Ok(iter::once(ir::Command::from(idx))
-            .chain(facts)
+            .chain(asserts)
+            .chain(assumes)
             .collect_vec())
     }
 

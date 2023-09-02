@@ -12,8 +12,9 @@ use itertools::Itertools;
 /// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
     #[ctx(Expr)]
-    // Interned data. We store this on a per-component basis because events with the
-    // same identifiers in different components are not equal.
+    // ================ Interned data ====================
+    // We store this on a per-component basis because events with the same
+    // identifiers in different components are not equal.
     /// Interned expressions
     exprs: Interned<Expr>,
     #[ctx(Time)]
@@ -24,7 +25,7 @@ pub struct Component {
     /// Interned propositions
     props: Interned<Prop>,
 
-    // Component defined values.
+    // =============  Component defined values ============
     #[ctx(Port)]
     #[add_ctx(Port)]
     #[mut_ctx(Port)]
@@ -52,6 +53,10 @@ pub struct Component {
     #[mut_ctx(Invoke)]
     /// Invocations defined by the component
     invocations: IndexStore<Invoke>,
+
+    // ============== Component structure ===============
+    /// Facts defined in the component signature
+    pub facts: Vec<Fact>,
 
     /// Existentially quantified parameters and their binding
     pub exists_params: Vec<(ParamIdx, Option<ExprIdx>)>,

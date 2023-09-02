@@ -297,6 +297,13 @@ pub enum Reason {
         /// Location of the constraint
         constraint_loc: GPosIdx,
     },
+    /// Constraint on an existentially quantified parameter
+    ExistsConstraint {
+        /// Location of the binding
+        bind_loc: GPosIdx,
+        /// Location of the constraint
+        constraint_loc: GPosIdx,
+    },
 
     // ============ Constraints from type checking ==============
     /// Require that lengths of bundles match
@@ -415,6 +422,13 @@ impl Reason {
         }
     }
 
+    pub fn exist_cons(bind_loc: GPosIdx, constraint_loc: GPosIdx) -> Self {
+        Self::ExistsConstraint {
+            bind_loc,
+            constraint_loc,
+        }
+    }
+
     pub fn event_trig(
         ev_delay_loc: GPosIdx,
         ev_delay: TimeSub,
@@ -498,6 +512,7 @@ impl Reason {
                     err
                 }
             }
+            Reason::ExistsConstraint { .. } => todo!(),
             Reason::ParamConstraint {
                 bind_loc,
                 constraint_loc,

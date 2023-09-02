@@ -82,14 +82,20 @@ pub enum SigBind {
     /// A let binding
     Let { param: Loc<Id>, bind: Expr },
     /// An existentially quantified type
-    Exists { param: Loc<Id> },
+    Exists {
+        param: Loc<Id>,
+        cons: Vec<Loc<OrderConstraint<Expr>>>,
+    },
 }
 impl SigBind {
     pub fn let_(param: Loc<Id>, bind: Expr) -> Self {
         Self::Let { param, bind }
     }
-    pub fn exists(param: Loc<Id>) -> Self {
-        Self::Exists { param }
+    pub fn exists(
+        param: Loc<Id>,
+        cons: Vec<Loc<OrderConstraint<Expr>>>,
+    ) -> Self {
+        Self::Exists { param, cons }
     }
 }
 

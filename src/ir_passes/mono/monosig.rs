@@ -201,6 +201,7 @@ impl MonoSig {
                 src_liveness: self.range(underlying, pass, src_liveness),
             },
             ir::info::Reason::ParamConstraint { .. }
+            | ir::info::Reason::ExistsConstraint { .. }
             | ir::info::Reason::EventConstraint { .. }
             | ir::info::Reason::BundleLenMatch { .. }
             | ir::info::Reason::BundleWidthMatch { .. }
