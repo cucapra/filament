@@ -824,8 +824,11 @@ impl<'prog> BuildCtx<'prog> {
             }
             ast::Command::Fact(ast::Fact { cons, checked }) => {
                 let reason = self.comp().add(
-                    ir::info::Reason::misc("source-level fact", cons.pos())
-                        .into(),
+                    ir::info::Reason::misc(
+                        "cannot prove source-level fact",
+                        cons.pos(),
+                    )
+                    .into(),
                 );
                 let prop = self.implication(cons.take())?;
                 let fact = if checked {

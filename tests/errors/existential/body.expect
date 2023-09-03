@@ -1,0 +1,13 @@
+---CODE---
+1
+---STDERR---
+error: component's body does not satisfy constraint on existentially-quantified parameter
+  ┌─ tests/errors/existential/body.fil:2:21
+  │
+2 │     exists #L where #L > #W;
+  │             -       ^^^^^^^ cannot prove constraint
+  │             │        
+  │             existentially quantified parameter
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.
