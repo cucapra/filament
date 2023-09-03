@@ -261,7 +261,7 @@ impl Connect {
 #[derive(Clone)]
 /// A generative loop:
 /// ```
-/// for #i in 0..#W { ... }
+/// for i in 0..W { ... }
 /// ```
 pub struct ForLoop {
     /// Index associated with this loop
@@ -325,7 +325,7 @@ impl From<If> for Command {
 #[derive(Clone)]
 /// The type of the bundle:
 /// ```
-/// for<#i> '[G+#i, G+#i+1] #W
+/// for<i> ['G+i, 'G+i+1] W
 /// ```
 pub struct BundleType {
     /// The name of the parameter for the bundle type
@@ -401,7 +401,7 @@ impl BundleType {
 #[derive(Clone)]
 /// Represents a bundle of wires with timing guarantees
 /// ```
-/// bundle f[10]: for<#i> '[G+#i, G+#i+1] #W;
+/// bundle f[10]: for<i> ['G+i, 'G+i+1] W;
 /// ```
 pub struct Bundle {
     /// Name of the bundle
