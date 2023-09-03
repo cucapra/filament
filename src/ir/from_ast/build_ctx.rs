@@ -259,7 +259,7 @@ impl<'prog> BuildCtx<'prog> {
                 "parameter `{param}' is not existentially quantified",
                 param = param
             );
-            let err = Error::malformed(msg.clone()).add_note(diag.add_info(
+            let err = Error::malformed(msg).add_note(diag.add_info(
                 "parameter is not existentially quantified",
                 param.pos(),
             ));
