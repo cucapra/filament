@@ -261,7 +261,7 @@ impl Connect {
 #[derive(Clone)]
 /// A generative loop:
 /// ```
-/// for #i in 0..#W { ... }
+/// for i in 0..W { ... }
 /// ```
 pub struct ForLoop {
     /// Index associated with this loop
@@ -325,7 +325,7 @@ impl From<If> for Command {
 #[derive(Clone)]
 /// The type of the bundle:
 /// ```
-/// for<#i> @[G+#i, G+#i+1] #W
+/// for<i> ['G+i, 'G+i+1] W
 /// ```
 pub struct BundleType {
     /// The name of the parameter for the bundle type
@@ -381,11 +381,11 @@ impl BundleType {
     /// Return the type for a bundle that has been offset by the given expression.
     /// For example:
     /// ```
-    /// for<#i> @[G+#i, G+#i+1] #W
+    /// for<i> ['G+i, 'G+i+1] W
     /// ```
-    /// offset by `#K` becomes
+    /// offset by `K` becomes
     /// ```
-    /// for<#i> @[G+#i+#K, G+#i+1+#K] #W
+    /// for<i> ['G+i+K, 'G+i+1+K] W
     /// ```
     pub fn shrink(self, start: Expr, end: Expr) -> Self {
         // Generate the offset by resolving the index of the bundle type with index+offset
@@ -401,7 +401,7 @@ impl BundleType {
 #[derive(Clone)]
 /// Represents a bundle of wires with timing guarantees
 /// ```
-/// bundle f[10]: for<#i> @[G+#i, G+#i+1] #W;
+/// bundle f[10]: for<i> ['G+i, 'G+i+1] W;
 /// ```
 pub struct Bundle {
     /// Name of the bundle

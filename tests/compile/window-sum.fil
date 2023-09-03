@@ -2,25 +2,25 @@ import "primitives/core.fil";
 
 // Sums up the last last two values observed by the comp.
 // Produces zero when the register doesn't contain a valid value.
-comp main<G: 1>(
-  go: interface[G],
-   in: [G, G+1] 32
+comp main<'G: 1>(
+  go: interface['G],
+   in: ['G, 'G+1] 32
 ) -> (
-   out: [G, G+1] 32
+   out: ['G, 'G+1] 32
 ) {
   // define constants
-  zero := new Const[32, 0]<G>();
-  one := new Const[1, 1]<G>();
+  zero := new Const[32, 0]<'G>();
+  one := new Const[1, 1]<'G>();
 
   // Save the value of this input for the next iteration
-  r0 := new Prev[32, 1]<G>(in);
+  r0 := new Prev[32, 1]<'G>(in);
 
   // If this comp outputs 1, then the previous cycle provided a value and
   // therefore r1 will contain a valid value in this cycle.
-  c0 := new Prev[1, 1]<G>(one.out);
+  c0 := new Prev[1, 1]<'G>(one.out);
 
   // If r1 contains a valid value, then use it for the sum; otherwise, use 0.
-  add := new Add[32]<G>(in, r0.prev);
-  mux := new Mux[32]<G>(c0.prev, add.out, zero.out);
+  add := new Add[32]<'G>(in, r0.prev);
+  mux := new Mux[32]<'G>(c0.prev, add.out, zero.out);
   out = mux.out;
 }

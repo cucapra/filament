@@ -125,7 +125,7 @@ impl fmt::Display for Direction {
 /// Duration when the port caries a meaningful value.
 /// Equivalent to the bundle type:
 /// ```
-/// p[N]: for<#i> @[G, G+i+10]
+/// p[N]: for<i> @['G, 'G+i+10]
 /// ```
 pub struct Liveness {
     pub idx: ParamIdx,

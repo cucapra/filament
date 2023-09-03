@@ -1,7 +1,7 @@
 extern "../../primitives/state.sv" {
-    comp Wrong<G: 1, L: 1>(
-         in: [G, G+2] 32,
+    comp Wrong<'G: 1, 'L: 1>(
+         in: ['G, 'G+2] 32,
     ) -> (
-         out: [G, L] 32,
+         out: ['G, 'L] 32,
     );
 }

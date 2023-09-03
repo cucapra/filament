@@ -1,67 +1,67 @@
 import "primitives/core.fil";
 
 /// Implementation of a multiplier with initiation interval 1 and latency 3
-comp FastMult<G: 1>(
-  go_G: interface[G],
-   left: [G, G+1] 32,
-   right: [G, G+1] 32,
+comp FastMult<'G: 1>(
+  go_G: interface['G],
+  left: ['G, 'G+1] 32,
+  right: ['G, 'G+1] 32,
 ) -> (
-   out: [G+3, G+4] 32,
+  out: ['G+3, 'G+4] 32,
 ) {
   // First stage, register the inputs
-  l := new Register[32]<G, G+2>(left);
-  r := new Register[32]<G, G+2>(right);
+  l := new Register[32]<'G, 'G+2>(left);
+  r := new Register[32]<'G, 'G+2>(right);
 
   // Second stage, perform the computation and save it
-  m := new MultComb[32]<G+1>(l.out, r.out);
-  ot := new Register[32]<G+1, G+3>(m.out);
+  m := new MultComb[32]<'G+1>(l.out, r.out);
+  ot := new Register[32]<'G+1, 'G+3>(m.out);
 
   // Third stage, forward the value from temp out to out register
-  final := new Register[32]<G+2, G+4>(ot.out);
+  final := new Register[32]<'G+2, 'G+4>(ot.out);
 
   // Connect the output to the out register
   out = final.out;
 }
 
 
-comp Process<G: 1>(
-  go: interface[G],
-   left: [G, G+1] 32,
-   right: [G, G+1] 32,
+comp Process<'G: 1>(
+  go: interface['G],
+   left: ['G, 'G+1] 32,
+   right: ['G, 'G+1] 32,
 ) -> (
-   out: [G+3, G+4] 32,
+   out: ['G+3, 'G+4] 32,
 ) {
   // If acc does not contain a valid value, use 0
-  acc := new Prev[32, 1]<G+3>(add.out);
-  mul := new FastMult<G>(left, right);
-  add := new Add[32]<G+3>(acc.prev, mul.out);
+  acc := new Prev[32, 1]<'G+3>(add.out);
+  mul := new FastMult<'G>(left, right);
+  add := new Add[32]<'G+3>(acc.prev, mul.out);
 
   out = add.out;
 }
 
-comp main<G: 1>(
-  go: interface[G],
-   l0: [G, G+1] 32,
-   l1: [G, G+1] 32,
-   t0: [G, G+1] 32,
-   t1: [G, G+1] 32,
+comp main<'G: 1>(
+  go: interface['G],
+   l0: ['G, 'G+1] 32,
+   l1: ['G, 'G+1] 32,
+   t0: ['G, 'G+1] 32,
+   t1: ['G, 'G+1] 32,
 ) -> (
-   out00: [G+3, G+4] 32,
-   out01: [G+3, G+4] 32,
-   out10: [G+3, G+4] 32,
-   out11: [G+3, G+4] 32,
+   out00: ['G+3, 'G+4] 32,
+   out01: ['G+3, 'G+4] 32,
+   out10: ['G+3, 'G+4] 32,
+   out11: ['G+3, 'G+4] 32,
 ) {
   // Systolic registers that go from left to right
-  r00_01 := new Prev[32, 1]<G>(l0);
-  r00_10 := new Prev[32, 1]<G>(t0);
-  r10_11 := new Prev[32, 1]<G>(l1);
-  r01_11 := new Prev[32, 1]<G>(t1);
+  r00_01 := new Prev[32, 1]<'G>(l0);
+  r00_10 := new Prev[32, 1]<'G>(t0);
+  r10_11 := new Prev[32, 1]<'G>(l1);
+  r01_11 := new Prev[32, 1]<'G>(t1);
 
   // Connection registers to processing elements
-  pe00 := new Process<G>(l0, t0);
-  pe01 := new Process<G>(r00_01.prev, t1);
-  pe10 := new Process<G>(l1, r00_10.prev);
-  pe11 := new Process<G>(r10_11.prev, r01_11.prev);
+  pe00 := new Process<'G>(l0, t0);
+  pe01 := new Process<'G>(r00_01.prev, t1);
+  pe10 := new Process<'G>(l1, r00_10.prev);
+  pe11 := new Process<'G>(r10_11.prev, r01_11.prev);
 
   out00 = pe00.out;
   out01 = pe01.out;

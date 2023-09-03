@@ -1,34 +1,34 @@
 import "primitives/core.fil";
 
 /// Implementation of a multiplier with initiation interval 1 and latency 3
-comp FastMult<G: 1>(
-   left: [G, G+1] 32,
-   right: [G, G+1] 32,
+comp FastMult<'G: 1>(
+   left: ['G, 'G+1] 32,
+   right: ['G, 'G+1] 32,
 ) -> (
-   out: [G+3, G+4] 32,
+   out: ['G+3, 'G+4] 32,
 ) {
   // First stage, register the inputs
-  l := new Delay[32]<G>(left);
-  r := new Delay[32]<G>(right);
+  l := new Delay[32]<'G>(left);
+  r := new Delay[32]<'G>(right);
 
   // Second stage, perform the computation and save it
-  m := new MultComb[32]<G+1>(l.out, r.out);
-  ot := new Delay[32]<G+1>(m.out);
+  m := new MultComb[32]<'G+1>(l.out, r.out);
+  ot := new Delay[32]<'G+1>(m.out);
 
   // Third stage, forward the value from temp out to out register
-  final := new Delay[32]<G+2>(ot.out);
+  final := new Delay[32]<'G+2>(ot.out);
 
   // Connect the output to the out register
   out = final.out;
 }
 
 
-comp main<G: 1>(
-   left: [G, G+1] 32,
-   right: [G, G+1] 32,
+comp main<'G: 1>(
+   left: ['G, 'G+1] 32,
+   right: ['G, 'G+1] 32,
 ) -> (
-   out: [G+3, G+4] 32,
+   out: ['G+3, 'G+4] 32,
 ) {
-  m := new FastMult<G>(left, right);
+  m := new FastMult<'G>(left, right);
   out = m.out;
 }
