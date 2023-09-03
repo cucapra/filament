@@ -1,21 +1,21 @@
 import "primitives/core.fil";
 import "./sequential.fil";
 
-comp main<G: 3>(
-    go: interface[G],
-     op: [G, G+1] 1,
-     left: [G, G+1] 32,
-     right: [G, G+1] 32,
+comp main<'G: 3>(
+    go: interface['G],
+     op: ['G, 'G+1] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
 ) -> (
-     out: [G, G+1] 32,
+     out: ['G, 'G+1] 32,
 ) {
     A := new Add[32];
     M := new Mult[32];
-    m0 := M<G>(left, right);
-    a0 := A<G>(left, right);
+    m0 := M<'G>(left, right);
+    a0 := A<'G>(left, right);
     // Use register to hold the adder's value
-    r0 := new Register[32]<G, G+3>(a0.out);
+    r0 := new Register[32]<'G, 'G+3>(a0.out);
     // Use the multiplexer when the mult's output is ready
-    mx := new Mux[32]<G+2>(op, r0.out, m0.out);
+    mx := new Mux[32]<'G+2>(op, r0.out, m0.out);
     out = mx.out;
 }

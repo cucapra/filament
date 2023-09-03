@@ -1,33 +1,33 @@
 import "primitives/core.fil";
 
-// A Shift register that waits 2^#N cycles.
-comp ShiftExp[#W, #N, #K]<G:#K>(
-    go: interface[G],
-     in: [G, G+1] #W
+// A Shift register that waits 2^N cycles.
+comp ShiftExp[W, N, K]<'G:K>(
+    go: interface['G],
+     in: ['G, 'G+1] W
 ) -> (
-     out: [G+#K, G+#K+1] #W
-) where #W > 1,
-        #N >= 0,
-        log2(#K) == #N,
-        #K >= 1
+     out: ['G+K, 'G+K+1] W
+) where W > 1,
+        N >= 0,
+        log2(K) == N,
+        K >= 1
 {
-    if #N == 0 {
-        d := new Delay[#W]<G>(in);
+    if N == 0 {
+        d := new Delay[W]<'G>(in);
         out = d.out;
     } else {
-        shift := new ShiftExp[#W, #N-1, #K/2];
-        first := shift<G>(in);
-        second := shift<G+#K/2>(first.out);
+        shift := new ShiftExp[W, N-1, K/2];
+        first := shift<'G>(in);
+        second := shift<'G+K/2>(first.out);
         out = second.out;
     }
 }
 
-comp main<G:16>(
-    go: interface[G],
-     in: [G, G+1] 32,
+comp main<'G:16>(
+    go: interface['G],
+     in: ['G, 'G+1] 32,
 ) -> (
-     out: [G+16, G+17] 32
+     out: ['G+16, 'G+17] 32
 ) {
-    reduce := new ShiftExp[32, 4, 16]<G>(in);
+    reduce := new ShiftExp[32, 4, 16]<'G>(in);
     out = reduce.out;
 }

@@ -274,7 +274,7 @@ impl ECtx {
                 format!("{n}")
             }
             Expr::Abstract(v) => {
-                format!("#{v}")
+                format!("{v}")
             }
             Expr::App { func, arg } => {
                 format!("{}({})", func, Self::Func.print(arg))

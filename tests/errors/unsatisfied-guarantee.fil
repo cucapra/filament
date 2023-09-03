@@ -1,13 +1,13 @@
 import "primitives/core.fil";
 
-comp Main<G: 3>(
-  go_G: interface[G],
-   left: [G, G+1] 32,
-   right: [G, G+2] 32
+comp Main<'G: 3>(
+  go_G: interface['G],
+   left: ['G, 'G+1] 32,
+   right: ['G, 'G+2] 32
 ) -> (
-   out: [G+3, G+4] 32
+   out: ['G+3, 'G+4] 32
 ) {
   M := new MultComb[32];
-  m0 := M<G>(left, right);
+  m0 := M<'G>(left, right);
   out = m0.out;
 }

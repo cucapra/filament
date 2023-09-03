@@ -72,10 +72,9 @@ comp_or_ext = {
 // ====== Component signature ======
 
 // Expressions
-pound = { "#" }
-param_var = ${ pound ~ identifier }
+param_var = ${ identifier }
 interface = {
-  "interface" ~ "[" ~ identifier ~ "]"
+  "interface" ~ "[" ~ event ~ "]"
 }
 op_mul = { "*" }
 op_div = { "/" }
@@ -100,12 +99,13 @@ expr = {
 }
 
 // Event bindings
+event = { "'" ~ identifier }
 delay = {
   expr |
   time ~ "-" ~ "(" ~ time ~ ")"
 }
 event_with_delay = _{
-  identifier ~ ":" ~ delay
+  event ~ ":" ~ delay
 }
 event_bind = {
   "?" ~ event_with_delay ~ "=" ~ time |
@@ -117,9 +117,9 @@ abstract_var = {
 
 // Time
 time = {
-  identifier ~ "+" ~ expr
-  | expr ~ "+" ~ identifier
-  | identifier
+  event ~ "+" ~ expr
+  | expr ~ "+" ~ event
+  | event
   | expr
 }
 

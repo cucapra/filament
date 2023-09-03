@@ -1,26 +1,26 @@
 import "primitives/state.fil";
 
-comp Parallel[#WIDTH]<A: 1, B: 1>(
-     in0: [A, A+1] #WIDTH,
-     in1: [B, B+1] #WIDTH
+comp Parallel[WIDTH]<'A: 1, 'B: 1>(
+     in0: ['A, 'A+1] WIDTH,
+     in1: ['B, 'B+1] WIDTH
 ) -> (
-     out0: [A+1, A+2] #WIDTH,
-     out1: [B+1, B+2] #WIDTH
-) where #WIDTH > 0 {
-    d0 := new Delay[#WIDTH]<A>(in0);
-    d1 := new Delay[#WIDTH]<B>(in1);
+     out0: ['A+1, 'A+2] WIDTH,
+     out1: ['B+1, 'B+2] WIDTH
+) where WIDTH > 0 {
+    d0 := new Delay[WIDTH]<'A>(in0);
+    d1 := new Delay[WIDTH]<'B>(in1);
     out0 = d0.out;
     out1 = d1.out;
 }
 
-comp main<G: 1>(
-     in0: [G, G+1] 32,
-     in1: [G+1, G+2] 32
+comp main<'G: 1>(
+     in0: ['G, 'G+1] 32,
+     in1: ['G+1, 'G+2] 32
 ) -> (
-     out0: [G+1, G+2] 32,
-     out1: [G+2, G+3] 32
+     out0: ['G+1, 'G+2] 32,
+     out1: ['G+2, 'G+3] 32
 ) {
-    par := new Parallel[32]<G, G+1>(in0, in1);
+    par := new Parallel[32]<'G, 'G+1>(in0, in1);
     out0 = par.out0;
     out1 = par.out1;
 }

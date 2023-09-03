@@ -41,13 +41,13 @@ impl DisplayCtx<ir::TimeIdx> for ir::Component {
 impl DisplayCtx<ir::EventIdx> for ir::Component {
     fn write(&self, idx: ir::EventIdx, f: &mut impl Write) -> std::fmt::Result {
         if log::log_enabled!(log::Level::Debug) {
-            return write!(f, "{idx}");
+            return write!(f, "'{idx}");
         }
         let ev = self.get(idx);
         if let Some(ev) = self.get(ev.info).as_event() {
-            write!(f, "{}", ev.name)
+            write!(f, "'{}", ev.name)
         } else {
-            write!(f, "{idx}")
+            write!(f, "'{idx}")
         }
     }
 }
@@ -60,7 +60,7 @@ impl DisplayCtx<ir::ParamIdx> for ir::Component {
         let param: &ir::Param = self.get(idx);
         let info = self.get(param.info).as_param();
         let name = info.map_or(format!("{idx}"), |p| format!("{}", p.name));
-        write!(f, "#{name}")
+        write!(f, "{name}")
     }
 }
 

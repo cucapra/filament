@@ -4,7 +4,7 @@
 error: bundle `99' has a unassigned locations
   ┌─ tests/errors/assign-check/missing-large.fil:2:12
   │
-2 │     bundle a[100]: for<#k> [G, G+1] 32;
+2 │     bundle a[100]: for<k> ['G, 'G+1] 32;
   │            ^ bundle indices are unassigned: 1, 2, 3, 4, 5, ... and 94 others
 
 Compilation failed with 1 errors.

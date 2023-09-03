@@ -4,14 +4,14 @@
 error: event provided to invocation triggers more often that invocation's event's delay allows
   ┌─ tests/errors/invoke-trig-too-often.fil:9:11
   │
-2 │   comp Mult<G: 5>(
-  │                - invocation's event is allowed to trigger every 5 cycles
+2 │   comp Mult<'G: 5>(
+  │                 - invocation's event is allowed to trigger every 5 cycles
   ·
-7 │ comp Main<T: 3>(go_T: interface[T]) -> () {
-  │              - this event triggers every 3 cycles
+7 │ comp Main<'T: 3>(go_T: interface['T]) -> () {
+  │               - this event triggers every 3 cycles
 8 │   M := new Mult;
-9 │   m0 := M<T+1>();
-  │           ^^^ event provided to invoke triggers too often
+9 │   m0 := M<'T+1>();
+  │           ^^^^ event provided to invoke triggers too often
 
 Compilation failed with 1 errors.
 Run with --show-models to generate assignments for failing constraints.

@@ -1,15 +1,15 @@
 import "primitives/math.fil";
 
-comp main<G:1>(
-     in0: [G, G+1] 32,
-     in1: [G, G+1] 32,
-     in2: [G, G+1] 32,
-     in3: [G, G+1] 32,
+comp main<'G:1>(
+     in0: ['G, 'G+1] 32,
+     in1: ['G, 'G+1] 32,
+     in2: ['G, 'G+1] 32,
+     in3: ['G, 'G+1] 32,
 ) -> (
-     out: [G+2, G+3] 32
+     out: ['G+2, 'G+3] 32
 ) {
-    bundle in[4]: for<#i> [G, G+1] 32;
+    bundle in[4]: for<i> ['G, 'G+1] 32;
     in{0} = in0; in{1} = in1; in{2} = in2; in{3} = in3;
-    reduce := new ReduceAdd[32, 4]<G>(in{0..4});
+    reduce := new ReduceAdd[32, 4]<'G>(in{0..4});
     out = reduce.out;
 }

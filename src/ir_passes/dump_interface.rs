@@ -19,7 +19,7 @@ impl DumpInterface {
             .unwrap_or_else(|| panic!("No source info found for main."));
 
         // For an interface port like this:
-        //      @interface[G, G+5] go_G
+        //      @interface['G, 'G+5] go_G
         // Generate the JSON information:
         // {
         //   "name": "go_G",

@@ -1,18 +1,18 @@
-comp Foo[#K]<G:1>(in: [G+#K, G+#K+1] 32) -> (out: [G+#K, G+#K+1] 32) {
+comp Foo[K]<'G:1>(in: ['G+K, 'G+K+1] 32) -> (out: ['G+K, 'G+K+1] 32) {
     out = in;
 }
 
-// A Shift register that waits 2^#N cycles.
-comp ShiftExp[#K]<G:1>(
-     in: [G+#K, G+#K+1] 32
+// A Shift register that waits 2^N cycles.
+comp ShiftExp[K]<'G:1>(
+     in: ['G+K, 'G+K+1] 32
 ) -> (
-     out: [G+#K, G+#K+1] 32
+     out: ['G+K, 'G+K+1] 32
 ) {
-    assume #K/2 + #K/2 == #K;
-    foo := new Foo[#K/2]<G+#K/2>(in);
+    assume K/2 + K/2 == K;
+    foo := new Foo[K/2]<'G+K/2>(in);
     out = foo.out;
 }
 
-comp main<G:1>(in: [G+10, G+11] 32) -> () {
-    se := new ShiftExp[10]<G>(in);
+comp main<'G:1>(in: ['G+10, 'G+11] 32) -> () {
+    se := new ShiftExp[10]<'G>(in);
 }

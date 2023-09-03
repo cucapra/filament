@@ -4,13 +4,13 @@
 error: reuses instance uses phantom event for scheduling
   ┌─ tests/errors/phantom-reuse.fil:9:13
   │
-3 │ comp main<G: 2>(
-  │           - event is a phantom event
+3 │ comp main<'G: 2>(
+  │            - event is a phantom event
   ·
-8 │     a0 := A<G>(left, left);
+8 │     a0 := A<'G>(left, left);
   │           - previous use
-9 │     a1 := A<G+1>(right, right);
-  │             ^^^ invocation uses phantom event
+9 │     a1 := A<'G+1>(right, right);
+  │             ^^^^ invocation uses phantom event
   │
   = phantom ports are compiled away and cannot be used for resource sharing
 
