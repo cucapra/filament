@@ -33,7 +33,7 @@ impl DumpInterface {
             .events()
             .iter()
             .map(|(idx, ev)| {
-                let id = src_info.interface_ports.get(&idx).map_or("null", |v| v.as_ref());
+                let id = src_info.interface_ports.find(idx).map_or("null", |v| v.as_ref());
                 let phantom = !ev.has_interface;
                 let ir::TimeSub::Unit(delay) = ev.delay else {
                     panic!("Event `{}` has a non-simple delay.", main.display(idx));
@@ -43,7 +43,7 @@ impl DumpInterface {
                 format!(
                     "{{\"name\": \"{}\", \"event\": \"{}\", \"delay\": {}, \"states\": {}, \"phantom\": {} }}",
                     id,
-                    src_info.events.get(&idx).unwrap(),
+                    src_info.events.get(idx),
                     delay,
                     states[&idx],
                     phantom
@@ -74,13 +74,13 @@ impl DumpInterface {
             assert!(
                 start.event == end.event,
                 "Range `{}` cannot be represented as a simple offset",
-                main.display_range(range)
+                main.display(range)
             );
 
             format!(
                 "{{ \"event\": \"{event}\", \"name\": \"{name}\", \"width\": {w} , \"start\": {st}, \"end\": {end} }}",
-                event = src_info.events.get(&start.event).unwrap(),
-                name = src_info.ports.get(&idx).unwrap(),
+                event = src_info.events.get(start.event),
+                name = src_info.ports.get(idx),
                 st = start.offset.as_concrete(main).unwrap(),
                 end = end.offset.as_concrete(main).unwrap(),
             )

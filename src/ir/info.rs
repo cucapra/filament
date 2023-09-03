@@ -584,11 +584,11 @@ impl Reason {
             } => {
                 let sl = src_loc.primary().with_message(format!(
                     "source is available for {}",
-                    ctx.display_range(src_liveness)
+                    ctx.display(src_liveness)
                 ));
                 let dl = dst_loc.secondary().with_message(format!(
                     "requires value for {}",
-                    ctx.display_range(dst_liveness)
+                    ctx.display(dst_liveness)
                 ));
                 Diagnostic::error()
                     .with_message("source port does not provide value for as long as destination requires")
@@ -603,7 +603,7 @@ impl Reason {
             } => {
                 let wire = bundle_range_loc.primary().with_message(format!(
                     "available for {} cycles",
-                    ctx.display_timesub(bundle_live)
+                    ctx.display(bundle_live)
                 ));
                 let event =
                     event_delay_loc.secondary().with_message("event's delay");
@@ -648,11 +648,11 @@ impl Reason {
                 );
                 let ev = ev_delay_loc.secondary().with_message(format!(
                     "invocation's event is allowed to trigger every {} cycles",
-                    ctx.display_timesub(ev_delay)
+                    ctx.display(ev_delay)
                 ));
                 let comp = comp_ev.secondary().with_message(format!(
                     "this event triggers every {} cycles",
-                    ctx.display_timesub(delay)
+                    ctx.display(delay)
                 ));
                 Diagnostic::error()
                     .with_message("event provided to invocation triggers more often that invocation's event's delay allows")

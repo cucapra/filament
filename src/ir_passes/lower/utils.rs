@@ -47,7 +47,7 @@ impl NameGenerator {
         ev.has_interface.then(|| {
             comp.src_info
                 .as_ref()
-                .map(|src| src.interface_ports.get(&idx).unwrap().to_string())
+                .map(|src| src.interface_ports.get(idx).to_string())
                 .or_else(|| self.info_name(ev.info, comp))
                 .unwrap_or_else(|| format!("ev{}", idx.get()))
         })
@@ -70,7 +70,7 @@ impl NameGenerator {
     pub fn param_name(&self, idx: ParamIdx, comp: &Component) -> String {
         comp.src_info
             .as_ref()
-            .map(|src| src.params.get(&idx).unwrap().to_string())
+            .map(|src| src.params.get(idx).to_string())
             .or_else(|| self.info_name(comp.get(idx).info, comp))
             .unwrap_or_else(|| format!("pr{}", idx.get()))
     }
@@ -88,7 +88,7 @@ impl NameGenerator {
             ir::PortOwner::Sig { .. } => comp
                 .src_info
                 .as_ref()
-                .map(|src| src.ports.get(&idx).unwrap().to_string())
+                .map(|src| src.ports.get(idx).to_string())
                 .or_else(|| self.info_name(comp.get(idx).info, comp))
                 .unwrap_or_else(|| format!("p{}", idx.get())),
             ir::PortOwner::Inv { base, .. } => {
@@ -155,12 +155,12 @@ pub fn cell_to_port_def(cr: &RRC<calyx::Cell>) -> Vec<calyx::PortDef<u64>> {
         .map(|pr| {
             let port = pr.borrow();
             // Reverse port direction because signature refers to internal interface.
-            calyx::PortDef {
-                name: port.name,
-                width: port.width,
-                direction: port.direction.reverse(),
-                attributes: port.attributes.clone(),
-            }
+            calyx::PortDef::new(
+                port.name,
+                port.width,
+                port.direction.reverse(),
+                port.attributes.clone(),
+            )
         })
         .collect()
 }

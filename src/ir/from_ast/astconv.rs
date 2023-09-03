@@ -254,7 +254,7 @@ impl<'prog> BuildCtx<'prog> {
         if is_sig_owned {
             // If the component is expecting interface information, add it.
             if let Some(src) = &mut self.comp().src_info {
-                src.params.insert(idx, param.name());
+                src.params.push(idx, param.name());
             }
         }
 
@@ -305,10 +305,10 @@ impl<'prog> BuildCtx<'prog> {
         if let Some(src) = &mut self.comp().src_info {
             // add interface port if exists
             if let Some((name, _)) = interface_port {
-                src.interface_ports.insert(idx, name);
+                src.interface_ports.push(idx, name);
             }
             // add event name (used by dump_interface)
-            src.events.insert(idx, *eb.event);
+            src.events.push(idx, *eb.event);
         }
 
         log::trace!("Added event {} as {idx}", eb.event);
@@ -413,7 +413,7 @@ impl<'prog> BuildCtx<'prog> {
         if is_sig_port {
             // If the component is expecting interface information, add it.
             if let Some(src) = &mut self.comp().src_info {
-                src.ports.insert(idx, name.copy());
+                src.ports.push(idx, name.copy());
             }
         }
 
