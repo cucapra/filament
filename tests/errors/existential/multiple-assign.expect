@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+error: existential parameter `L' already has a binding
+  ┌─ tests/errors/existential/multiple-assign.fil:5:13
+  │
+5 │     exists #L = 10;
+  │             ^ existential parameter `L' already has a binding
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

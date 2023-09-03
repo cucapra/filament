@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+error: parameter `W' is not existentially quantified
+  ┌─ tests/errors/existential/invalid-assign.fil:2:13
+  │
+2 │     exists #W = 10;
+  │             ^ parameter is not existentially quantified
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

@@ -243,19 +243,25 @@ impl<'prog> BuildCtx<'prog> {
         {
             // If there is already a binding, then we have a problem
             if bind.is_some() {
-                let err = Error::malformed(format!(
+                let msg = format!(
                     "existential parameter `{param}' already has a binding",
                     param = param
-                ));
+                );
+                let err = Error::malformed(msg.clone())
+                    .add_note(diag.add_info(msg, param.pos()));
                 diag.add_error(err);
                 return Err(std::mem::take(diag));
             }
             *bind = Some(expr);
             Ok(())
         } else {
-            let err = Error::malformed(format!(
+            let msg = format!(
                 "parameter `{param}' is not existentially quantified",
                 param = param
+            );
+            let err = Error::malformed(msg.clone()).add_note(diag.add_info(
+                "parameter is not existentially quantified",
+                param.pos(),
             ));
             diag.add_error(err);
             Err(std::mem::take(diag))
