@@ -1,6 +1,31 @@
 use proc_macro::{self, TokenStream};
-use quote::quote;
-use syn::{parse_macro_input, punctuated::Punctuated, DeriveInput};
+use proc_macro2 as pm2;
+use quote::{quote, quote_spanned};
+use syn::{
+    parse::Parse, parse_macro_input, punctuated::Punctuated, DeriveInput,
+};
+
+/// An attribute of the form: `#[ctx(Type: add, get, mut)]`.
+struct CtxAttr {
+    typ: pm2::Ident,
+    req_traits: Vec<pm2::Ident>,
+}
+
+impl Parse for CtxAttr {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let typ = input.parse()?;
+        input.parse::<syn::Token![:]>()?;
+        let req_traits =
+            Punctuated::<syn::Ident, syn::Token![,]>::parse_separated_nonempty(
+                input,
+            )?;
+
+        Ok(Self {
+            typ,
+            req_traits: req_traits.into_iter().collect(),
+        })
+    }
+}
 
 /// Define a derive macro for the `filament::ir::Ctx` and `filament::ir::MutCtx`
 /// traits that delegates to particular fields.
@@ -9,10 +34,9 @@ use syn::{parse_macro_input, punctuated::Punctuated, DeriveInput};
 /// ```
 /// #[derive(Ctx)]
 /// struct Foo {
-///     #[ctx(ir::Port)]
-///     #[add_ctx(ir::Port)]
+///     #[ctx(Port: Add, Get)]
 ///     foo: IndexStore<ir::Port>
-///     #[mut_ctx(ir::Param)]
+///     #[ctx(Param: Get, Add, Mut)]
 ///     bar: IndexStore<ir::Param>
 /// }
 /// ```
@@ -20,78 +44,44 @@ use syn::{parse_macro_input, punctuated::Punctuated, DeriveInput};
 /// Note that the fields must already implement the `Ctx`, `AddCtx`, and `MutCtx` traits
 /// for the two attributes.  The macro does not implement the trait for the
 /// structure itself, it simply delegates to the fields.
-#[proc_macro_derive(Ctx, attributes(ctx, add_ctx, mut_ctx))]
+#[proc_macro_derive(Ctx, attributes(ctx))]
 pub fn derive(input: TokenStream) -> TokenStream {
-    let DeriveInput { ident, data, .. } = parse_macro_input!(input);
+    let DeriveInput {
+        ident: struct_name,
+        data,
+        ..
+    } = parse_macro_input!(input);
 
     let output = match data {
         syn::Data::Struct(syn::DataStruct {
             fields: syn::Fields::Named(fields),
             ..
         }) => {
-            let fields = fields.named.iter().flat_map(|field| {
-                let mut impl_ctx = None;
-                let mut impl_add_ctx = None;
-                let mut impl_mut_ctx = None;
-                for attr in &field.attrs {
-                    // We expect the attribute to look like ctx(Type) and extract the type
-                    if attr.path().is_ident("ctx") {
-                        let nested = attr.parse_args_with(Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated).unwrap();
-                        assert!(nested.len() == 1);
-                        impl_ctx = Some(nested[0].path().get_ident().unwrap().clone());
-                    }
-                    if attr.path().is_ident("add_ctx") {
-                        let nested = attr.parse_args_with(Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated).unwrap();
-                        assert!(nested.len() == 1);
-                        impl_add_ctx = Some(nested[0].path().get_ident().unwrap().clone());
-                    }
-                    if attr.path().is_ident("mut_ctx") {
-                        let nested = attr.parse_args_with(Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated).unwrap();
-                        assert!(nested.len() == 1);
-                        impl_mut_ctx = Some(nested[0].path().get_ident().unwrap().clone());
-                    }
-                }
-                if impl_ctx.is_none() && impl_mut_ctx.is_none() && impl_add_ctx.is_none() {
-                    return None;
-                }
-
-                let name = &field.ident;
-                let mut out = quote!();
-                if let Some(typ) = impl_ctx {
-                    let ctx = quote! {
-                        impl Ctx<#typ> for #ident {
-                            fn get(&self, idx: Idx<#typ>) -> &#typ {
-                                Ctx::get(&self.#name, idx)
-                            }
+            let fields: Vec<pm2::TokenStream> = fields
+                .named
+                .iter()
+                .flat_map(|field| {
+                    for attr in &field.attrs {
+                        if attr.path().is_ident("ctx") {
+                            let ctx = match attr.parse_args::<CtxAttr>() {
+                                Ok(ctx_attr) => ctx_attr,
+                                Err(e) => {
+                                    return Some(
+                                        TokenStream::from(e.to_compile_error())
+                                            .into(),
+                                    );
+                                }
+                            };
+                            return Some(generate_impls(
+                                struct_name.clone(),
+                                field.ident.clone().unwrap(),
+                                ctx,
+                            ));
                         }
-                    };
-                    out.extend(ctx);
-                }
-                if let Some(typ) = impl_add_ctx {
-                    let add_ctx = quote! {
-                        impl AddCtx<#typ> for #ident {
-                            fn add(&mut self, val: #typ) -> Idx<#typ> {
-                                AddCtx::add(&mut self.#name, val)
-                            }
-                        }
-                    };
-                    out.extend(add_ctx);
-                }
-                if let Some(typ) = impl_mut_ctx {
-                    let mut_ctx = quote! {
-                        impl MutCtx<#typ> for #ident {
-                            fn get_mut(&mut self, idx: Idx<#typ>) -> &mut #typ {
-                                MutCtx::get_mut(&mut self.#name, idx)
-                            }
-                            fn delete(&mut self, idx: Idx<#typ>) {
-                                MutCtx::delete(&mut self.#name, idx)
-                            }
-                        }
-                    };
-                    out.extend(mut_ctx);
-                }
-                Some(out)
-            });
+                    }
+                    None::<pm2::TokenStream>
+                })
+                .collect::<Vec<_>>();
             quote! {
                 #(#fields)*
             }
@@ -99,4 +89,56 @@ pub fn derive(input: TokenStream) -> TokenStream {
         _ => panic!("Derive Ctx only supported on structs"),
     };
     output.into()
+}
+
+/// Generate the implementation for the requested traits.
+fn generate_impls(
+    struct_name: pm2::Ident,
+    field_name: pm2::Ident,
+    ctxs: CtxAttr,
+) -> pm2::TokenStream {
+    let mut out = quote!();
+    let typ = ctxs.typ;
+    for trait_name in ctxs.req_traits {
+        if trait_name == "Get" {
+            let ctx = quote! {
+                impl Ctx<#typ> for #struct_name {
+                    fn get(&self, idx: Idx<#typ>) -> &#typ {
+                        Ctx::get(&self.#field_name, idx)
+                    }
+                }
+            };
+            out.extend(ctx);
+        } else if trait_name == "Add" {
+            let add_ctx = quote! {
+                impl AddCtx<#typ> for #struct_name {
+                    fn add(&mut self, val: #typ) -> Idx<#typ> {
+                        AddCtx::add(&mut self.#field_name, val)
+                    }
+                }
+            };
+            out.extend(add_ctx);
+        } else if trait_name == "Mut" {
+            let mut_ctx = quote! {
+                impl MutCtx<#typ> for #struct_name {
+                    fn get_mut(&mut self, idx: Idx<#typ>) -> &mut #typ {
+                        MutCtx::get_mut(&mut self.#field_name, idx)
+                    }
+                    fn delete(&mut self, idx: Idx<#typ>) {
+                        MutCtx::delete(&mut self.#field_name, idx)
+                    }
+                }
+            };
+            out.extend(mut_ctx);
+        } else {
+            // Unknown trait name. Generate an error
+            let err = quote_spanned! {
+                trait_name.span() =>
+                compile_error!("unexpected trait name");
+            };
+            out.extend(err);
+        }
+    }
+
+    out
 }

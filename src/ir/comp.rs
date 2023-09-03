@@ -11,53 +11,41 @@ use itertools::Itertools;
 #[derive(Default, Ctx, Clone)]
 /// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
-    #[ctx(Expr)]
+    #[ctx(Expr: Get)]
     // Interned data. We store this on a per-component basis because events with the
     // same identifiers in different components are not equal.
     /// Interned expressions
     exprs: Interned<Expr>,
-    #[ctx(Time)]
-    #[add_ctx(Time)]
+    #[ctx(Time: Get, Add)]
     /// Interned times
     times: Interned<Time>,
-    #[ctx(Prop)]
+    #[ctx(Prop: Get)]
     /// Interned propositions
     props: Interned<Prop>,
 
     // Component defined values.
-    #[ctx(Port)]
-    #[add_ctx(Port)]
-    #[mut_ctx(Port)]
+    #[ctx(Port: Get, Add, Mut)]
     /// Ports and bundles defined by the component.
     ports: IndexStore<Port>,
-    #[ctx(Param)]
-    #[add_ctx(Param)]
-    #[mut_ctx(Param)]
+    #[ctx(Param: Get, Add, Mut)]
     /// Parameters defined the component
     params: IndexStore<Param>,
-    #[ctx(Event)]
-    #[add_ctx(Event)]
-    #[mut_ctx(Event)]
+    #[ctx(Event: Get, Add, Mut)]
     /// Events defined by the component
     events: IndexStore<Event>,
 
     // Control flow entities
-    #[ctx(Instance)]
-    #[add_ctx(Instance)]
-    #[mut_ctx(Instance)]
+    #[ctx(Instance: Get, Add, Mut)]
     /// Instances defined by the component
     instances: IndexStore<Instance>,
-    #[ctx(Invoke)]
-    #[add_ctx(Invoke)]
-    #[mut_ctx(Invoke)]
+    #[ctx(Invoke: Get, Add, Mut)]
     /// Invocations defined by the component
     invocations: IndexStore<Invoke>,
 
     /// Commands in the component
     pub cmds: Vec<Command>,
 
-    #[ctx(Info)]
-    #[add_ctx(Info)]
+    #[ctx(Info: Get, Add)]
     /// Information tracked by the component
     info: IndexStore<Info>,
     /// Is this an external component
