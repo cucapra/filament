@@ -1,4 +1,4 @@
-use calyx::backend::traits::Backend;
+use calyx_backend::Backend;
 use calyx_opt::pass_manager::PassManager;
 use filament::ir_passes::BuildDomination;
 use filament::{cmdline, ir, ir_passes as ip, resolver::Resolver};
@@ -90,7 +90,7 @@ fn gen_verilog(mut ctx: calyx_ir::Context) -> Result<(), calyx_utils::Error> {
         &["canonicalize".to_string()],
         false,
     )?;
-    let backend = calyx::backend::verilog::VerilogBackend;
+    let backend = calyx_backend::VerilogBackend;
     backend.run(ctx, calyx_utils::OutputFile::Stdout)
 }
 
