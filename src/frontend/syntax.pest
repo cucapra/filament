@@ -94,15 +94,19 @@ expr_base = {
   | un_fn ~ "(" ~ expr ~ ")"
   | "(" ~ expr ~ ")"
   | bitwidth
-  | param_var
   | identifier ~ "::" ~ identifier
+  | param_var
 }
 expr = {
   expr_base ~ (operator ~ expr_base)*
 }
 
 // Event bindings
-event = { "'" ~ identifier }
+quote = { "'" }
+event = {
+  quote ~ identifier
+  | identifier      // Parse this to provide a better error message
+}
 delay = {
   expr |
   time ~ "-" ~ "(" ~ time ~ ")"

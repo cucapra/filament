@@ -4,7 +4,7 @@
 error: undefined parameter name: #W
   ┌─ tests/errors/binding/param.fil:1:30
   │
-1 │ comp Add<G:1>() -> () where #W > 10 {}
+1 │ comp Add<'G:1>() -> () where W > 10 {}
   │                              ^ unknown parameter
 
 Compilation failed with 1 errors.

@@ -1,10 +1,10 @@
-comp Foo[#W]<G:1>() -> () with {
-    exists #L where #L > #W;
+comp Foo[W]<'G:1>() -> () with {
+    exists L where L > W;
 } {
-    exists #L = #W + 1;
+    exists L = W + 1;
 }
 
-comp Bar<G:1>() -> () {
+comp Bar<'G:1>() -> () {
     F := new Foo[10];
     // The module guarantees that F::L > 10
     assert F::L < 10;

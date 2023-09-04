@@ -126,9 +126,13 @@ impl FilamentParser {
 
 #[pest_consume::parser]
 impl FilamentParser {
-    #[allow(unused)]
+    #[allow(unused, non_snake_case)]
     // This is used by rust-analzyer doesn't think so
     fn EOI(_input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+
+    fn quote(input: Node) -> ParseResult<()> {
         Ok(())
     }
 
@@ -147,10 +151,11 @@ impl FilamentParser {
     }
 
     fn event(input: Node) -> ParseResult<Loc<ast::Id>> {
-        Ok(match_nodes!(
-            input.into_children();
-            [identifier(id)] => id,
-        ))
+        match_nodes!(
+            input.clone().into_children();
+            [quote(_), identifier(id)] => Ok(id),
+            [identifier(id)] => Err(input.error(format!("try replacing this with '{id}. Event must start with a single quote")))
+        )
     }
 
     fn sig_bind(input: Node) -> ParseResult<Loc<ast::SigBind>> {
