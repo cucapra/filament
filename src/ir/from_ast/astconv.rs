@@ -294,7 +294,7 @@ impl<'prog> BuildCtx<'prog> {
         if is_sig_owned {
             // If the component is expecting interface information, add it.
             if let Some(src) = &mut self.comp().src_info {
-                src.params.push(idx, param.name());
+                src.params.push(idx, name);
             }
         }
 

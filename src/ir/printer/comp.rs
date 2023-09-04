@@ -251,8 +251,10 @@ impl<'a> Printer<'a> {
     ) -> io::Result<()> {
         let param = self.ctx.get(idx);
         match param.owner {
-            ir::ParamOwner::Sig => {}
-            ir::ParamOwner::Bundle(_) | ir::ParamOwner::Loop => {
+            ir::ParamOwner::Sig | ir::ParamOwner::Instance(_) => {}
+            ir::ParamOwner::Bundle(_)
+            | ir::ParamOwner::Loop
+            | ir::ParamOwner::Exists => {
                 writeln!(
                     f,
                     "{:indent$}{idx} = param {param};{comment}",
