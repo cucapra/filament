@@ -103,7 +103,8 @@ impl Traversal {
             ir::Command::Connect(_)
             | ir::Command::BundleDef(_)
             | ir::Command::Invoke(_)
-            | ir::Command::Fact(_) => (),
+            | ir::Command::Fact(_)
+            | ir::Command::Exists(_) => (),
         }
     }
 }

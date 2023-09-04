@@ -3,8 +3,8 @@ use super::build_ctx::{OwnedParam, OwnedPort};
 use super::{BuildCtx, Sig, SigMap};
 use crate::diagnostics;
 use crate::ir::{
-    AddCtx, Cmp, Ctx, EventIdx, ExprIdx, InterfaceSrc, MutCtx, ParamIdx,
-    PortIdx, PropIdx, TimeIdx,
+    AddCtx, Cmp, Ctx, DisplayCtx, EventIdx, ExprIdx, InterfaceSrc, MutCtx,
+    ParamIdx, PortIdx, PropIdx, TimeIdx,
 };
 use crate::utils::{GPosIdx, Idx};
 use crate::{ast, ir};
@@ -545,9 +545,7 @@ impl<'prog> BuildCtx<'prog> {
                     self.add_let_param(param.copy(), e);
                 }
                 ast::SigBind::Exists { param, cons } => {
-                    let p_idx =
-                        self.param(param.clone(), ir::ParamOwner::Exists);
-                    self.add_exists_param(p_idx);
+                    self.param(param.clone(), ir::ParamOwner::Exists);
                     // Constraints on existentially quantified parameters
                     for pc in cons {
                         let info = self.comp().add(ir::Info::assert(
@@ -819,8 +817,15 @@ impl<'prog> BuildCtx<'prog> {
             ast::Command::Instance(inst) => self.instance(inst)?,
             ast::Command::Exists(ast::Exists { param, bind }) => {
                 let expr = self.expr(bind.inner().clone())?;
-                self.set_exists_bind(param, expr)?;
-                vec![]
+                let owner = OwnedParam::Local(param.copy());
+                let param_expr = self.get_param(&owner, param.pos())?;
+                let Some(param) = param_expr.as_param(self.comp()) else {
+                    unreachable!(
+                        "Existing LHS is an expression: {}",
+                        self.comp().display(param_expr)
+                    )
+                };
+                vec![ir::Exists { param, expr }.into()]
             }
             ast::Command::Fact(ast::Fact { cons, checked }) => {
                 let reason = self.comp().add(

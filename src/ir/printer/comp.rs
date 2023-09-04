@@ -75,13 +75,18 @@ impl<'a> Printer<'a> {
                 write!(f, "{:indent$}}}", "")
             }
             ir::Command::If(c) => {
-                writeln!(f, "{:indent$}if {} {{", "", c.cond)?;
+                writeln!(
+                    f,
+                    "{:indent$}if {} {{",
+                    "",
+                    self.ctx.display(c.cond)
+                )?;
                 self.commands(&c.then, indent + 2, f)?;
-                writeln!(f, "{:indent$}}}", "")?;
+                write!(f, "{:indent$}}}", "")?;
                 if !c.alt.is_empty() {
-                    writeln!(f, "{:indent$}else {{", "")?;
+                    writeln!(f, " else {{")?;
                     self.commands(&c.alt, indent + 2, f)?;
-                    writeln!(f, "{:indent$}}}", "")?;
+                    write!(f, "{:indent$}}}", "")?;
                 }
                 Ok(())
             }
@@ -101,6 +106,15 @@ impl<'a> Printer<'a> {
                         self.ctx.display(fact.prop)
                     )
                 }
+            }
+            ir::Command::Exists(ir::Exists { param, expr }) => {
+                write!(
+                    f,
+                    "{:indent$}exists {} = {};",
+                    "",
+                    self.ctx.display(*param),
+                    self.ctx.display(*expr)
+                )
             }
         }
     }

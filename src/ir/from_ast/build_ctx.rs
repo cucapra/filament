@@ -218,56 +218,6 @@ impl<'prog> BuildCtx<'prog> {
         self.param_map.insert(OwnedParam::Local(id), expr);
     }
 
-    /// Mark a parameter as existentially quantified.
-    pub fn add_exists_param(&mut self, param: ir::ParamIdx) {
-        self.comp.exists_params.push((param, None));
-    }
-
-    /// Provide the binding for an existentially quantified parameter.
-    pub fn set_exists_bind(
-        &mut self,
-        param: ast::Loc<Id>,
-        expr: ir::ExprIdx,
-    ) -> BuildRes<()> {
-        let p_idx = self
-            .get_param(&OwnedParam::local(param.copy()), param.pos())?
-            .as_param(&self.comp)
-            .unwrap();
-        let diag = &mut self.diag;
-
-        if let Some((_, bind)) = self
-            .comp
-            .exists_params
-            .iter_mut()
-            .find(|(p, _)| *p == p_idx)
-        {
-            // If there is already a binding, then we have a problem
-            if bind.is_some() {
-                let msg = format!(
-                    "existential parameter `{param}' already has a binding",
-                    param = param
-                );
-                let err = Error::malformed(msg.clone())
-                    .add_note(diag.add_info(msg, param.pos()));
-                diag.add_error(err);
-                return Err(std::mem::take(diag));
-            }
-            *bind = Some(expr);
-            Ok(())
-        } else {
-            let msg = format!(
-                "parameter `{param}' is not existentially quantified",
-                param = param
-            );
-            let err = Error::malformed(msg).add_note(diag.add_info(
-                "parameter is not existentially quantified",
-                param.pos(),
-            ));
-            diag.add_error(err);
-            Err(std::mem::take(diag))
-        }
-    }
-
     pub fn get_param(
         &mut self,
         param: &OwnedParam,

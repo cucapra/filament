@@ -14,7 +14,7 @@ impl fmt::Display for Cmp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let op = match self {
             Cmp::Gt => ">",
-            Cmp::Eq => "=",
+            Cmp::Eq => "==",
             Cmp::Gte => ">=",
         };
         write!(f, "{}", op)

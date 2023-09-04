@@ -21,6 +21,8 @@ pub enum Command {
     If(If),
     /// An `assume` or `assert` fact
     Fact(Fact),
+    /// An `exists` binding
+    Exists(Exists),
 }
 impl Command {
     pub fn is_loop(&self) -> bool {
@@ -64,6 +66,11 @@ impl From<If> for Command {
 impl From<Fact> for Command {
     fn from(fact: Fact) -> Self {
         Command::Fact(fact)
+    }
+}
+impl From<Exists> for Command {
+    fn from(exists: Exists) -> Self {
+        Command::Exists(exists)
     }
 }
 
@@ -182,4 +189,12 @@ impl EventBind {
             base,
         }
     }
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct Exists {
+    /// The existentially quantified parameter
+    pub param: ParamIdx,
+    /// The binding for the parameter
+    pub expr: ExprIdx,
 }

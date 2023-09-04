@@ -58,9 +58,6 @@ pub struct Component {
     /// Facts defined in the component signature
     pub facts: Vec<Fact>,
 
-    /// Existentially quantified parameters and their binding
-    pub exists_params: Vec<(ParamIdx, Option<ExprIdx>)>,
-
     /// Commands in the component
     pub cmds: Vec<Command>,
 
