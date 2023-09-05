@@ -1,12 +1,8 @@
-use super::{IntoBase, IntoUdl, MonoSig};
-use fil_ir::{self as ir, Ctx, IndexStore, MutCtx};
-use linked_hash_map::LinkedHashMap;
-use std::collections::HashMap;
-
 use super::{
-    monodeferred::MonoDeferred,
-    utils::{Base, BaseComp, Underlying, UnderlyingComp},
+    Base, IntoBase, IntoUdl, MonoDeferred, MonoSig, Underlying, UnderlyingComp,
 };
+use fil_ir::{self as ir, Ctx, IndexStore, MutCtx};
+use std::collections::HashMap;
 
 #[derive(PartialEq, Eq, Hash, Clone)]
 /// A key defined by a component and all of its parameters.
@@ -28,7 +24,9 @@ impl From<(Underlying<ir::Component>, Vec<u64>)> for CompKey {
 type PortKey = (CompKey, Underlying<ir::Port>);
 type EventKey = (CompKey, Underlying<ir::Event>);
 
-/// Monomorphize the Filament program
+/// Information generated while monomorphizing a program. This tracks the global
+/// set of information generated during monomorphization while [super::MonoSig]
+/// tracks information generated for a single component.
 pub struct Monomorphize<'a> {
     /// The new context
     pub ctx: ir::Context,
@@ -41,13 +39,15 @@ pub struct Monomorphize<'a> {
     /// Instances that have already been processed. Tracks the name of the generated component
     pub processed: HashMap<CompKey, Base<ir::Component>>,
     /// Instances that need to be generated
-    pub queue: LinkedHashMap<CompKey, (Base<ir::Component>, MonoSig)>,
+    // pub queue: LinkedHashMap<CompKey, (Base<ir::Component>, MonoSig)>,
 
+    // =============== Foreign information ===========================
     /// Mapping from old ports to new ports, for resolving Foreigns
     pub port_map: HashMap<PortKey, Base<ir::Port>>,
     /// Mapping from old events to new events, for resolving Foreigns
     pub event_map: HashMap<EventKey, Base<ir::Event>>,
 
+    /// Tracks which components are defined in which files
     pub ext_map: HashMap<String, Vec<ir::CompIdx>>,
 }
 
@@ -62,7 +62,6 @@ impl<'a> Monomorphize<'a> {
             old,
             externals: vec![],
             processed: HashMap::new(),
-            queue: LinkedHashMap::new(),
             port_map: HashMap::new(),
             event_map: HashMap::new(),
             ext_map: HashMap::new(),
@@ -91,10 +90,6 @@ impl<'ctx> Monomorphize<'ctx> {
             return (name, vec![]);
         }
 
-        if let Some((name, _)) = self.queue.get(&key) {
-            return (*name, vec![]);
-        }
-
         // Otherwise, construct a new component and add it to the processing queue
         let new_comp = self.ctx.comp(underlying.is_ext).base();
 
@@ -119,35 +114,51 @@ impl<'ctx> Monomorphize<'ctx> {
         let underlying = UnderlyingComp::new(self.old.get(comp.idx()));
 
         // Monomorphize the sig
-        MonoDeferred::sig(&mut monosig, underlying, self);
+        log::debug!("Signature of `{}'", comp.idx());
+        MonoDeferred::sig(&mut monosig, underlying.clone(), self);
 
-        // Insert into queue, with monosig so we can pick up where we left off when ready
-        self.queue.insert(key, (new_comp, monosig));
-
-        // return the `base` index so we can update the instance
-        (new_comp, vec![])
-    }
-
-    fn next(&mut self) -> Option<(BaseComp, Base<ir::Component>)> {
-        let Some((ck, (base_idx, monosig))) = self.queue.pop_front() else {
-            return None;
-        };
-
-        let underlying = UnderlyingComp::new(self.old.get(ck.comp.idx()));
         let mut mono = MonoDeferred {
             underlying,
             pass: self,
             monosig,
         };
 
-        mono.pass.processed.insert(ck, base_idx);
+        log::debug!("Body of `{}'", key.comp.idx());
+        mono.pass.processed.insert(key.clone(), new_comp);
         mono.gen_comp();
-        let base = mono.monosig.base;
+        let mut comp = mono.monosig.base;
 
-        // At this point, base_idx will be pointing to a default component
-        // Return the idx so that we can swap them afterwards
-        Some((base, base_idx))
+        let default = self.ctx.get_mut(new_comp.get());
+        comp.swap(default);
+        let comp = comp.comp();
+        ir::Validate::component(&self.ctx, comp);
+
+        // return the `base` index so we can update the instance
+        (new_comp, vec![])
     }
+
+    // /// Monomorphize the next component in the stack.
+    // fn next(&mut self) -> Option<(BaseComp, Base<ir::Component>)> {
+    //     let Some((ck, (base_idx, monosig))) = self.queue.pop_front() else {
+    //         return None;
+    //     };
+
+    //     let underlying = UnderlyingComp::new(self.old.get(ck.comp.idx()));
+    //     let mut mono = MonoDeferred {
+    //         underlying,
+    //         pass: self,
+    //         monosig,
+    //     };
+
+    //     log::debug!("Body of `{}'", ck.comp.idx());
+    //     mono.pass.processed.insert(ck, base_idx);
+    //     mono.gen_comp();
+    //     let base = mono.monosig.base;
+
+    //     // At this point, base_idx will be pointing to a default component
+    //     // Return the idx so that we can swap them afterwards
+    //     Some((base, base_idx))
+    // }
 }
 
 impl Monomorphize<'_> {
@@ -168,13 +179,6 @@ impl Monomorphize<'_> {
         let ck = CompKey::new(entrypoint, vec![]);
         mono.should_process(ck.clone());
 
-        // Build a new context
-        while let Some((mut comp, idx)) = mono.next() {
-            let default = mono.ctx.get_mut(idx.get());
-            comp.swap(default);
-            let comp = comp.comp();
-            ir::Validate::component(&mono.ctx, comp);
-        }
         let new_entrypoint = mono.processed.get(&ck).unwrap();
         mono.ctx.entrypoint = Some(new_entrypoint.get());
         mono.ctx.externals = mono.ext_map;

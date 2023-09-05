@@ -6,14 +6,12 @@ use fil_ir::{
 
 use super::{Base, IntoBase, Underlying};
 
+#[derive(Clone)]
 pub struct UnderlyingComp<'a>(&'a ir::Component);
 
 impl<'a> UnderlyingComp<'a> {
     pub fn new(comp: &'a ir::Component) -> Self {
         Self(comp)
-    }
-    pub fn comp(&self) -> &ir::Component {
-        self.0
     }
     pub fn cmds(&self) -> &Vec<ir::Command> {
         &self.0.cmds
@@ -137,5 +135,18 @@ where
 {
     fn add(&mut self, val: T) -> Base<T> {
         self.0.add(val).base()
+    }
+}
+
+impl<T> DisplayCtx<Base<T>> for BaseComp
+where
+    ir::Component: DisplayCtx<Idx<T>>,
+{
+    fn write(
+        &self,
+        val: Base<T>,
+        f: &mut impl std::fmt::Write,
+    ) -> std::fmt::Result {
+        self.0.write(val.get(), f)
     }
 }

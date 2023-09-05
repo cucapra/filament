@@ -2,7 +2,10 @@ use super::{Base, IntoUdl, MonoSig, Monomorphize, Underlying, UnderlyingComp};
 use fil_ir::{self as ir, AddCtx, Ctx};
 use itertools::Itertools;
 
-pub(super) struct MonoDeferred<'a, 'pass: 'a> {
+/// Defines methods required to monomorphize a component. Most of the updates
+/// happen to the stored [MonoSig] object which keeps all the maps needed while
+/// monomorphizing the component.
+pub struct MonoDeferred<'a, 'pass: 'a> {
     /// The underlying component to be monomorphized
     pub underlying: UnderlyingComp<'a>,
     /// Underlying pointer
