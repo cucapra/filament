@@ -1,4 +1,4 @@
-use super::monosig::MonoSig;
+use super::{IntoBase, MonoSig};
 use fil_ir::{self as ir, Ctx, IndexStore, MutCtx};
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
@@ -96,7 +96,7 @@ impl<'ctx> Monomorphize<'ctx> {
         }
 
         // Otherwise, construct a new component and add it to the processing queue
-        let new_comp = Base::new(self.ctx.comp(underlying.is_ext));
+        let new_comp = self.ctx.comp(underlying.is_ext).base();
 
         // `Some` if an extern, `None` if not
         let filename = self.old.get_filename(comp.idx());

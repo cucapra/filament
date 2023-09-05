@@ -1,8 +1,4 @@
-use super::{
-    monosig::MonoSig,
-    utils::{Base, Underlying, UnderlyingComp},
-    Monomorphize,
-};
+use super::{Base, MonoSig, Monomorphize, Underlying, UnderlyingComp};
 use fil_ir::{self as ir, AddCtx, Ctx};
 use itertools::Itertools;
 
@@ -116,7 +112,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         // is there a way to not clone this?
         for cmd in self.underlying.cmds().clone() {
             let cmd = self.command(&cmd);
-            self.monosig.base.extend_one(cmd);
+            self.monosig.base.extend_cmds(cmd);
         }
     }
 
@@ -262,7 +258,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             self.monosig.binding.insert(index, i);
             for cmd in body.iter() {
                 let cmd = self.command(cmd);
-                self.monosig.base.extend_one(cmd);
+                self.monosig.base.extend_cmds(cmd);
             }
             // Pop all the let bindings
             self.monosig.binding.pop(); // pop the index

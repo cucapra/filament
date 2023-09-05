@@ -1,6 +1,5 @@
 use super::{
-    utils::{Base, BaseComp, Underlying, UnderlyingComp},
-    Monomorphize,
+    Base, BaseComp, IntoBase, Monomorphize, Underlying, UnderlyingComp,
 };
 use fil_ir::{
     self as ir, AddCtx, Ctx, DenseIndexInfo, DisplayCtx, Foreign, MutCtx,
@@ -877,7 +876,7 @@ impl MonoSig {
             .get();
         mono_liveness.len = self
             .base
-            .bin(self.base.get(Base::new(mono_liveness.len)).clone())
+            .bin(self.base.get(mono_liveness.len.base()).clone())
             .get();
         mono_liveness.range =
             self.range(underlying, pass, &mono_liveness.range);
