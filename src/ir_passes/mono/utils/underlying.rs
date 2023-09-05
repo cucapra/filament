@@ -1,5 +1,16 @@
 use fil_ir::{Idx, IdxLike};
 
+/// Wrap something as a Underlying. This is only implemented for [Idx].
+pub trait IntoUdl<T> {
+    fn ul(self) -> Underlying<T>;
+}
+
+impl<T> IntoUdl<T> for Idx<T> {
+    fn ul(self) -> Underlying<T> {
+        Underlying::new(self)
+    }
+}
+
 #[derive(Debug)]
 /// Wraps an Idx that is meaningful in the underlying component, which are the existing pre-monomorphization
 /// components. These Idxs get passed around between a lot of functions and mappings during monomorphization,
@@ -9,7 +20,7 @@ pub struct Underlying<T> {
 }
 
 impl<T> Underlying<T> {
-    pub fn new(idx: Idx<T>) -> Self {
+    fn new(idx: Idx<T>) -> Self {
         Self { idx }
     }
 

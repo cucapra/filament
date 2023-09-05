@@ -1,4 +1,4 @@
-use super::{IntoBase, MonoSig};
+use super::{IntoBase, IntoUdl, MonoSig};
 use fil_ir::{self as ir, Ctx, IndexStore, MutCtx};
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
@@ -162,7 +162,7 @@ impl Monomorphize<'_> {
                 externals: HashMap::new(),
             };
         };
-        let entrypoint = Underlying::new(entrypoint);
+        let entrypoint = entrypoint.ul();
         // Monomorphize the entrypoint
         let mut mono = Monomorphize::new(ctx);
         let ck = CompKey::new(entrypoint, vec![]);
