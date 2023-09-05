@@ -1,8 +1,6 @@
-use crate::{
-    ir::{self, AddCtx, Ctx},
-    ir_visitor::{Action, Visitor, VisitorData},
-    utils::GPosIdx,
-};
+use crate::ir_visitor::{Action, Visitor, VisitorData};
+use fil_ir::{self as ir, AddCtx, Ctx};
+use fil_utils::GPosIdx;
 use itertools::Itertools;
 
 #[derive(Default)]

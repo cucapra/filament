@@ -1,7 +1,8 @@
 use calyx_backend::Backend;
 use calyx_opt::pass_manager::PassManager;
+use fil_ir as ir;
 use filament::ir_passes::BuildDomination;
-use filament::{cmdline, ir, ir_passes as ip, resolver::Resolver};
+use filament::{cmdline, ir_passes as ip, resolver::Resolver};
 use filament::{log_pass, log_time, pass_pipeline};
 
 // Prints out the interface for main component in the input program.

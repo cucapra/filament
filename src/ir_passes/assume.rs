@@ -1,62 +1,55 @@
-use crate::{
-    ast,
-    ir::{self, AddCtx, Ctx, ExprIdx, PropIdx},
-    ir_visitor::{Action, Visitor, VisitorData},
-};
+use crate::ir_visitor::{Action, Visitor, VisitorData};
+use fil_ast as ast;
+use fil_ir::{self as ir, AddCtx, Ctx, ExprIdx, PropIdx};
 
 /// Generates default assumptions to the Filament program for assumptions using custom functions
 #[derive(Default)]
 pub struct Assume;
 
-impl ir::Component {
+impl Assume {
     /// Adds the assumptions associated with a proposition of the form `#l = f(#r)` to the component.
     fn add_assumptions(
-        &mut self,
+        ctx: &mut ir::Component,
         f: ast::UnFn,
         lhs: ExprIdx,
         rhs: ExprIdx,
     ) -> Vec<PropIdx> {
         // Define constant expressions used
-        let zero = self.add(ir::Expr::Concrete(0));
-        let one = self.add(ir::Expr::Concrete(1));
-        let two = self.add(ir::Expr::Concrete(2));
+        let zero = ctx.add(ir::Expr::Concrete(0));
+        let one = ctx.add(ir::Expr::Concrete(1));
+        let two = ctx.add(ir::Expr::Concrete(2));
 
         match f {
             ast::UnFn::Pow2 => vec![
                 // #l * 2 = pow2(#r + 1)
-                lhs.mul(two, self)
-                    .equal(rhs.add(one, self).pow2(self), self),
+                lhs.mul(two, ctx).equal(rhs.add(one, ctx).pow2(ctx), ctx),
                 // #r >= 1 => #l = pow2(#r - 1)*2
-                rhs.gte(one, self).implies(
-                    lhs.equal(
-                        rhs.sub(one, self).pow2(self).mul(two, self),
-                        self,
-                    ),
-                    self,
+                rhs.gte(one, ctx).implies(
+                    lhs.equal(rhs.sub(one, ctx).pow2(ctx).mul(two, ctx), ctx),
+                    ctx,
                 ),
                 // #l = 1 => #r = 0
-                lhs.equal(one, self).implies(rhs.equal(zero, self), self),
+                lhs.equal(one, ctx).implies(rhs.equal(zero, ctx), ctx),
                 // #r = 0 => #l = 1
-                rhs.equal(zero, self).implies(lhs.equal(one, self), self),
+                rhs.equal(zero, ctx).implies(lhs.equal(one, ctx), ctx),
             ],
             ast::UnFn::Log2 => vec![
                 // #l + 1 = log2(#r * 2)
-                lhs.add(one, self)
-                    .equal(rhs.mul(two, self).log2(self), self),
+                lhs.add(one, ctx).equal(rhs.mul(two, ctx).log2(ctx), ctx),
                 // #l >= 1 => (#l - 1 = log2(#r / 2)) & ((#r / 2) * 2 = #r)
-                lhs.gte(one, self).implies(
-                    lhs.sub(one, self)
-                        .equal(rhs.div(two, self).log2(self), self)
+                lhs.gte(one, ctx).implies(
+                    lhs.sub(one, ctx)
+                        .equal(rhs.div(two, ctx).log2(ctx), ctx)
                         .and(
-                            rhs.div(two, self).mul(two, self).equal(rhs, self),
-                            self,
+                            rhs.div(two, ctx).mul(two, ctx).equal(rhs, ctx),
+                            ctx,
                         ),
-                    self,
+                    ctx,
                 ),
                 // #l = 0 => #r = 1
-                lhs.equal(zero, self).implies(rhs.equal(one, self), self),
+                lhs.equal(zero, ctx).implies(rhs.equal(one, ctx), ctx),
                 // #r = 1 => #l = 0
-                rhs.equal(one, self).implies(lhs.equal(zero, self), self),
+                rhs.equal(one, ctx).implies(lhs.equal(zero, ctx), ctx),
             ],
         }
     }
@@ -99,7 +92,7 @@ impl Assume {
                     _ => None,
                 } {
                     log::debug!("Generating default assumptions for {p}");
-                    comp.add_assumptions(op, lhs, rhs)
+                    Self::add_assumptions(comp, op, lhs, rhs)
                 } else {
                     vec![]
                 }

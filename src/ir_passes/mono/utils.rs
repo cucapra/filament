@@ -1,10 +1,7 @@
-use crate::{
-    ast,
-    ir::{
-        self, AddCtx, Ctx, DisplayCtx, IndexStore, InterfaceSrc, Interned,
-        MutCtx,
-    },
-    utils::{self, Idx},
+use fil_ast as ast;
+use fil_ir::{
+    self as ir, AddCtx, Ctx, DisplayCtx, Idx, IndexStore, InterfaceSrc,
+    Interned, MutCtx,
 };
 
 pub struct UnderlyingComp<'a>(&'a ir::Component);
@@ -195,7 +192,7 @@ impl<T> Default for Base<T> {
 }
 
 impl<T> Copy for Base<T> {}
-impl<T> utils::IdxLike<T> for Base<T> {
+impl<T> ir::IdxLike<T> for Base<T> {
     const UNKNOWN: Self = Self { idx: Idx::UNKNOWN };
 
     fn new(idx: usize) -> Self {
@@ -254,7 +251,7 @@ impl<T> Ord for Underlying<T> {
     }
 }
 
-impl<T> utils::IdxLike<T> for Underlying<T> {
+impl<T> ir::IdxLike<T> for Underlying<T> {
     const UNKNOWN: Self = Self { idx: Idx::UNKNOWN };
 
     fn new(idx: usize) -> Self {

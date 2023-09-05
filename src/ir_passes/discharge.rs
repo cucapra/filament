@@ -1,10 +1,12 @@
-use crate::ir::{Ctx, DisplayCtx};
+use crate::cmdline;
 use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
-use crate::utils::GlobalPositionTable;
-use crate::{ast, cmdline, ir, log_time};
+use crate::log_time;
 use codespan_reporting::diagnostic::Diagnostic;
 use codespan_reporting::{diagnostic as cr, term};
 use easy_smt as smt;
+use fil_ast as ast;
+use fil_ir::{self as ir, Ctx, DisplayCtx};
+use fil_utils::GlobalPositionTable;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::{fs, iter};

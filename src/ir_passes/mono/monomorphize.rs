@@ -1,7 +1,5 @@
-use crate::{
-    ir::{self, Ctx, IndexStore, MutCtx},
-    ir_passes::mono::monosig::MonoSig,
-};
+use super::monosig::MonoSig;
+use fil_ir::{self as ir, Ctx, IndexStore, MutCtx};
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
 

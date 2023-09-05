@@ -1,8 +1,8 @@
-use crate::ir::{
-    self, CompIdx, Component, Context, Ctx, EventIdx, ExprIdx, Info, InfoIdx,
-    InstIdx, Instance, ParamIdx, PortIdx,
-};
 use calyx_ir::{self as calyx, RRC};
+use fil_ir::{
+    self as ir, CompIdx, Component, Context, Ctx, EventIdx, ExprIdx, Info,
+    InfoIdx, InstIdx, Instance, ParamIdx, PortIdx,
+};
 use linked_hash_map::LinkedHashMap;
 
 type AttrPair = (calyx::Attribute, u64);

@@ -1,7 +1,5 @@
-use crate::{
-    ir::{self, AddCtx},
-    ir_visitor::{Action, Visitor, VisitorData},
-};
+use crate::ir_visitor::{Action, Visitor, VisitorData};
+use fil_ir::{self as ir, AddCtx};
 
 #[derive(Default)]
 /// Hoist all [ir::Fact] from the control flow graph into the top level by

@@ -3,10 +3,10 @@ use super::{
     max_states,
     utils::{NameGenerator, INTERFACE_PORTS},
 };
-use crate::ir::{self, Ctx, Traversal};
 use calyx_frontend as frontend;
 use calyx_ir as calyx;
 use calyx_utils::CalyxResult;
+use fil_ir::{self as ir, Ctx, Traversal};
 use std::{collections::HashSet, convert::identity, path::PathBuf, rc::Rc};
 
 #[derive(Default)]

@@ -1,7 +1,5 @@
-use crate::{
-    cmdline,
-    ir::{self, MutCtx},
-};
+use crate::cmdline;
+use fil_ir::{self as ir, MutCtx};
 
 #[must_use]
 #[derive(PartialEq, Eq)]
