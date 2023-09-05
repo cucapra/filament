@@ -5,9 +5,7 @@ use std::collections::HashMap;
 
 #[derive(Default, Ctx)]
 pub struct Context {
-    #[ctx(Component)]
-    #[add_ctx(Component)]
-    #[mut_ctx(Component)]
+    #[ctx(Component: Get, Add, Mut)]
     pub comps: IndexStore<Component>,
     // Contains external components grouped by file name.
     pub externals: HashMap<String, Vec<CompIdx>>,
