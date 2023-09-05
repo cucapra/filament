@@ -1,0 +1,9 @@
+comp Bar[W]<'G:1>() -> () with {
+    exists L where L > 10;
+} {
+    if W == 0 {
+        exists L = 5;
+    } else {
+        exists L = 20;
+    }
+}

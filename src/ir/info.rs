@@ -302,7 +302,7 @@ pub enum Reason {
         /// Location of the binding
         bind_loc: GPosIdx,
         /// Location of the constraint
-        constraint_loc: GPosIdx,
+        constraint_loc: Option<GPosIdx>,
     },
 
     // ============ Constraints from type checking ==============
@@ -422,7 +422,10 @@ impl Reason {
         }
     }
 
-    pub fn exist_cons(bind_loc: GPosIdx, constraint_loc: GPosIdx) -> Self {
+    pub fn exist_cons(
+        bind_loc: GPosIdx,
+        constraint_loc: Option<GPosIdx>,
+    ) -> Self {
         Self::ExistsConstraint {
             bind_loc,
             constraint_loc,
@@ -516,17 +519,25 @@ impl Reason {
                 bind_loc,
                 constraint_loc,
             } => {
-                let con = constraint_loc
-                    .primary()
-                    .with_message("cannot prove constraint");
-                let param = bind_loc
-                    .secondary()
-                    .with_message("existentially quantified parameter");
+                let labels = if let Some(con_loc) = constraint_loc {
+                    let con = con_loc
+                        .primary()
+                        .with_message("cannot prove constraint");
+                    let param = bind_loc
+                        .secondary()
+                        .with_message("existentially quantified parameter");
+                    vec![con, param]
+                } else {
+                    let param = bind_loc
+                        .primary()
+                        .with_message("cannot prove constraint on existentially quantified parameter");
+                    vec![param]
+                };
                 Diagnostic::error()
                     .with_message(
                         "component's body does not satisfy constraint on existentially-quantified parameter",
                     )
-                    .with_labels(vec![con, param])
+                    .with_labels(labels)
             }
             Reason::ParamConstraint {
                 bind_loc,

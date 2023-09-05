@@ -44,8 +44,8 @@ pub struct Component {
     invocations: IndexStore<Invoke>,
 
     // ============== Component structure ===============
-    /// Facts defined in the component signature
-    pub facts: Vec<Fact>,
+    /// Assumptions for existential parameters.
+    pub sig_assumes: Vec<(ParamIdx, Vec<PropIdx>)>,
 
     /// Commands in the component
     pub cmds: Vec<Command>,
@@ -120,6 +120,29 @@ impl Component {
     pub fn internal_error<S: ToString>(&self, msg: S) -> ! {
         let comp = super::Printer::comp_str(self);
         panic!("{comp}\n{}", msg.to_string())
+    }
+
+    /// Add assumptions for a parameter
+    pub fn add_sig_assumes(
+        &mut self,
+        param: ParamIdx,
+        assumes: impl IntoIterator<Item = PropIdx>,
+    ) {
+        let existing = self.sig_assumes.iter_mut().find(|(p, _)| *p == param);
+        if let Some(existing) = existing {
+            existing.1.extend(assumes);
+        } else {
+            self.sig_assumes
+                .push((param, assumes.into_iter().collect()));
+        }
+    }
+
+    /// Get the assumptions associated with a parameter
+    pub fn get_sig_assumes(&self, param: ParamIdx) -> Option<Vec<PropIdx>> {
+        self.sig_assumes
+            .iter()
+            .find(|(p, _)| *p == param)
+            .map(|(_, facts)| facts.clone())
     }
 }
 

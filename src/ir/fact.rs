@@ -211,6 +211,7 @@ impl PropIdx {
         ctx.add(Prop::Or(self, other))
     }
 
+    /// Implication from a proposition to another
     pub fn implies(
         self,
         cons: PropIdx,

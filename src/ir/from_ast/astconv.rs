@@ -2,6 +2,7 @@
 use super::build_ctx::{OwnedParam, OwnedPort};
 use super::{BuildCtx, Sig, SigMap};
 use crate::diagnostics;
+use crate::errors::Error;
 use crate::ir::{
     AddCtx, Cmp, Ctx, DisplayCtx, EventIdx, ExprIdx, InterfaceSrc, MutCtx,
     ParamIdx, PortIdx, PropIdx, TimeIdx,
@@ -545,15 +546,14 @@ impl<'prog> BuildCtx<'prog> {
                     self.add_let_param(param.copy(), e);
                 }
                 ast::SigBind::Exists { param, cons } => {
-                    self.param(param.clone(), ir::ParamOwner::Exists);
+                    let p_idx =
+                        self.param(param.clone(), ir::ParamOwner::Exists);
                     // Constraints on existentially quantified parameters
-                    for pc in cons {
-                        let info = self.comp().add(ir::Info::assert(
-                            ir::info::Reason::exist_cons(param.pos(), pc.pos()),
-                        ));
-                        let prop = self.expr_cons(pc.inner().clone())?;
-                        sig_cons.extend(self.comp().assert(prop, info));
-                    }
+                    let assumes = cons
+                        .iter()
+                        .map(|pc| self.expr_cons(pc.inner().clone()))
+                        .collect::<BuildRes<Vec<_>>>()?;
+                    self.comp().add_sig_assumes(p_idx, assumes)
                 }
             }
         }
@@ -637,7 +637,8 @@ impl<'prog> BuildCtx<'prog> {
             .into_iter()
             .map(|f| {
                 let reason = self.comp().add(
-                    ir::info::Reason::exist_cons(comp_loc, f.pos()).into(),
+                    ir::info::Reason::exist_cons(comp_loc, Some(f.pos()))
+                        .into(),
                 );
                 let p = f.take().resolve_expr(&binding);
                 // This is an assumption because the called component guarantees guarantees it.
@@ -819,13 +820,26 @@ impl<'prog> BuildCtx<'prog> {
                 let expr = self.expr(bind.inner().clone())?;
                 let owner = OwnedParam::Local(param.copy());
                 let param_expr = self.get_param(&owner, param.pos())?;
-                let Some(param) = param_expr.as_param(self.comp()) else {
+                let Some(p_idx) = param_expr.as_param(self.comp()) else {
                     unreachable!(
                         "Existing LHS is an expression: {}",
                         self.comp().display(param_expr)
                     )
                 };
-                vec![ir::Exists { param, expr }.into()]
+                // Ensure that the parameter is an existential parameter
+                if !matches!(
+                    self.comp().get(p_idx).owner,
+                    ir::ParamOwner::Exists
+                ) {
+                    let diag = self.diag();
+                    let param_typ = Error::malformed("parameter in exists binding is not existentially quantified").add_note(
+                        diag.add_info("parameter is not existentially quantified", param.pos()),
+                    );
+                    diag.add_error(param_typ);
+                    return Err(std::mem::take(diag));
+                }
+
+                vec![ir::Exists { param: p_idx, expr }.into()]
             }
             ast::Command::Fact(ast::Fact { cons, checked }) => {
                 let reason = self.comp().add(

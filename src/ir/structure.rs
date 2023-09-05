@@ -334,6 +334,13 @@ impl Param {
     }
 }
 
+impl ParamIdx {
+    /// Return an expression that refers to this parameter.
+    pub fn expr<C: AddCtx<Expr>>(self, ctx: &mut C) -> ExprIdx {
+        ctx.add(Expr::Param(self))
+    }
+}
+
 #[derive(PartialEq, Eq, Hash, Clone)]
 /// Events must have a delay and an optional default value
 pub struct Event {

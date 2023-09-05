@@ -2,6 +2,7 @@ use crate::ir::{Ctx, DisplayCtx};
 use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
 use crate::utils::GlobalPositionTable;
 use crate::{ast, cmdline, ir, log_time};
+use codespan_reporting::diagnostic::Diagnostic;
 use codespan_reporting::{diagnostic as cr, term};
 use easy_smt as smt;
 use itertools::Itertools;
@@ -256,8 +257,21 @@ impl Discharge {
             self.checked.insert(prop, out);
         }
         if let Some(assign) = &self.checked[&prop] {
-            let ir::info::Assert(reason) =
-                ctx.get(fact.reason).as_assert().unwrap();
+            let Some(ir::info::Assert(reason)) =
+                ctx.get(fact.reason).as_assert()
+            else {
+                // No information was given on who generated this error
+                let diag = Diagnostic::error().with_notes(vec![
+                    format!(
+                        "Cannot prove constraint: {}",
+                        ctx.display(fact.prop.consequent(ctx))
+                    ),
+                    "No information was given on who generated this error"
+                        .to_string(),
+                ]);
+                self.diagnostics.push(diag);
+                return;
+            };
             let mut diag = reason.diag(ctx);
             if self.show_models {
                 diag = reason.diag(ctx).with_notes(vec![format!(

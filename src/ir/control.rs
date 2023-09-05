@@ -33,6 +33,7 @@ impl Command {
         matches!(self, Command::If(_if))
     }
 }
+
 impl From<InstIdx> for Command {
     fn from(idx: InstIdx) -> Self {
         Command::Instance(idx)

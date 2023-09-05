@@ -1,6 +1,0 @@
-comp Foo[W]<'G:1>() -> () with {
-    exists L where L > W;
-} {
-    exists L = W + 1;
-    exists L = 10;
-}

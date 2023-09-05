@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: parameter `W' is not existentially quantified
+error: parameter in exists binding is not existentially quantified
   ┌─ tests/errors/existential/invalid-assign.fil:2:12
   │
 2 │     exists W = 10;

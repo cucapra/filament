@@ -2,9 +2,9 @@
 1
 ---STDERR---
 error: component's body does not satisfy constraint on existentially-quantified parameter
-  ┌─ tests/errors/existential/body.fil:2:12
+  ┌─ tests/errors/existential/multi-assign.fil:2:12
   │
-2 │     exists L where L > W;
+2 │     exists L where L > 10;
   │            ^ cannot prove constraint on existentially quantified parameter
 
 Compilation failed with 1 errors.
