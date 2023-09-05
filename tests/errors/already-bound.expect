@@ -1,5 +1,5 @@
 ---CODE---
 101
 ---STDERR---
-thread 'main' panicked at 'key `A' already in scope map', src/ir/from_ast/scope_map.rs:52:13
+thread 'main' panicked at 'key `A' already in scope map', fil-ir/src/from_ast/scope_map.rs:53:13
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

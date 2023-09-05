@@ -91,9 +91,8 @@ impl FilamentParser {
         })?;
         let out = FilamentParser::file(input).map_err(|e| {
             utils::Error::misc(format!(
-                "Failed to parse {}: {}",
+                "Failed to parse {}",
                 e.with_path(&path.to_string_lossy()),
-                path.to_string_lossy(),
             ))
         })?;
         log::info!(
