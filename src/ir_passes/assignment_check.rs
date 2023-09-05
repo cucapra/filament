@@ -1,10 +1,9 @@
 use crate::{
-    cmdline, diagnostics,
-    errors::Error,
-    ir::{Connect, Context, Ctx, DisplayCtx, PortIdx},
+    cmdline,
     ir_visitor::{Action, Construct, Visitor, VisitorData},
-    utils::GPosIdx,
 };
+use fil_ir::{Connect, Context, Ctx, DisplayCtx, PortIdx};
+use fil_utils::{Diagnostics, Error, GPosIdx};
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 
@@ -12,14 +11,14 @@ use linked_hash_map::LinkedHashMap;
 /// Must occur after monomorphization.
 pub struct AssignCheck {
     ports: LinkedHashMap<(PortIdx, usize), Vec<Option<GPosIdx>>>,
-    diag: diagnostics::Diagnostics,
+    diag: Diagnostics,
 }
 
 impl Construct for AssignCheck {
     fn from(_: &cmdline::Opts, _: &mut Context) -> Self {
         Self {
             ports: LinkedHashMap::new(),
-            diag: diagnostics::Diagnostics::default(),
+            diag: Diagnostics::default(),
         }
     }
 

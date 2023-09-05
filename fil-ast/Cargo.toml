@@ -1,0 +1,33 @@
+[package]
+name = "fil-ast"
+authors.workspace = true
+license-file.workspace = true
+keywords.workspace = true
+repository.workspace = true
+readme.workspace = true
+description.workspace = true
+categories.workspace = true
+homepage.workspace = true
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log.workspace = true
+linked_hash_set.workspace = true
+itertools.workspace = true
+linked-hash-map.workspace = true
+derivative.workspace = true
+smallvec.workspace = true
+topological-sort.workspace = true
+atty.workspace = true
+lazy_static.workspace = true
+codespan-reporting.workspace = true
+bitvec.workspace = true
+string-interner.workspace = true
+struct-variant.workspace = true
+fil-utils.workspace = true
+pest.workspace = true
+pest_consume.workspace = true

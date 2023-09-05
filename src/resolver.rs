@@ -1,8 +1,6 @@
-use crate::{
-    ast, cmdline,
-    errors::{self, FilamentResult},
-    frontend,
-};
+use crate::cmdline;
+use fil_ast as ast;
+use fil_utils::{Error, FilamentResult};
 use std::{
     collections::HashSet,
     fs,
@@ -47,7 +45,7 @@ impl Resolver {
             let canon_base = fs::canonicalize(cur_base.clone()).unwrap();
             let canon_lib_base = fs::canonicalize(lib_base.clone()).unwrap();
             if canon_base != canon_lib_base {
-                Err(errors::Error::misc(format!(
+                Err(Error::misc(format!(
                 "Refusing to resolve ambiguous import: {}. Conflicting candidates found:\n{}\n{}",
                 imp,
                 fs::canonicalize(lib_base).unwrap().display(),
@@ -61,7 +59,7 @@ impl Resolver {
         } else if lib_base.exists() {
             Ok(lib_base)
         } else {
-            Err(errors::Error::misc(format!(
+            Err(Error::misc(format!(
                 "Could not resolve import path: {}. Neither {} nor {} exist.",
                 imp,
                 lib_base.display(),
@@ -104,7 +102,7 @@ impl Resolver {
 
     pub fn parse_namespace(&mut self) -> FilamentResult<ast::Namespace> {
         // Parse the top-level file
-        let mut ns = frontend::FilamentParser::parse_file(&self.input)?;
+        let mut ns = ast::FilamentParser::parse_file(&self.input)?;
 
         // Extern are resolved to thier absolute path relative to the input file.
         let base = Self::parent(&self.input);
@@ -124,7 +122,7 @@ impl Resolver {
             .collect();
 
         while let Some(path) = imports.pop() {
-            let mut imp = frontend::FilamentParser::parse_file(&path)?;
+            let mut imp = ast::FilamentParser::parse_file(&path)?;
             let base = Self::parent(&path);
             imp.components.append(&mut ns.components);
             ns.components = imp.components;

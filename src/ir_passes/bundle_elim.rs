@@ -1,11 +1,11 @@
 use crate::{
     cmdline,
-    ir::{
-        Access, AddCtx, Bind, Command, Component, Connect, Context, Ctx,
-        DenseIndexInfo, DisplayCtx, Expr, Foreign, Info, InvIdx, Invoke,
-        Liveness, MutCtx, Port, PortIdx, PortOwner, Range, Subst, Time,
-    },
     ir_visitor::{Action, Construct, Visitor, VisitorData},
+};
+use fil_ir::{
+    self as ir, Access, AddCtx, Bind, Command, Component, Connect, Context,
+    Ctx, DenseIndexInfo, DisplayCtx, Expr, Foreign, Info, InvIdx, Invoke,
+    Liveness, MutCtx, Port, PortIdx, PortOwner, Range, Subst, Time,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -241,7 +241,7 @@ impl Visitor for BundleElim {
 
     fn bundle_def(
         &mut self,
-        _: crate::ir::PortIdx,
+        _: ir::PortIdx,
         _data: &mut VisitorData,
     ) -> Action {
         // Remove all bundle definitions

@@ -1,7 +1,5 @@
-use crate::{
-    ir::{self, Ctx, DisplayCtx},
-    ir_passes::lower::max_states,
-};
+use crate::ir_passes::lower::max_states;
+use fil_ir::{self as ir, Ctx, DisplayCtx};
 use itertools::Itertools;
 
 pub struct DumpInterface;

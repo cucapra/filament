@@ -1,12 +1,10 @@
-use itertools::Itertools;
-
 use crate::{
-    cmdline, diagnostics,
-    errors::Error,
-    ir::{self, Ctx, DisplayCtx},
+    cmdline,
     ir_visitor::{Action, Construct, Visitor, VisitorData},
-    utils::GPosIdx,
 };
+use fil_ir::{self as ir, Ctx, DisplayCtx};
+use fil_utils::{Diagnostics, Error, GPosIdx};
+use itertools::Itertools;
 
 /// Checks if a user-level phantom events are valid.
 /// Phantom events are valid iff:
@@ -18,7 +16,7 @@ pub struct PhantomCheck {
     /// Instances defined in each scope
     defined_insts: Vec<Vec<ir::InstIdx>>,
     /// Mapping from instance to the first invoke seen
-    diag: diagnostics::Diagnostics,
+    diag: Diagnostics,
 }
 
 impl PhantomCheck {
@@ -38,7 +36,7 @@ impl Construct for PhantomCheck {
         PhantomCheck {
             phantom_events: Vec::new(),
             defined_insts: vec![Vec::new()],
-            diag: diagnostics::Diagnostics::default(),
+            diag: Diagnostics::default(),
         }
     }
 

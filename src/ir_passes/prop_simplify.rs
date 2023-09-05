@@ -1,7 +1,5 @@
-use crate::{
-    ir::{self, AddCtx, Ctx},
-    ir_visitor::{Action, Visitor, VisitorData},
-};
+use crate::ir_visitor::{Action, Visitor, VisitorData};
+use fil_ir::{self as ir, AddCtx, Ctx};
 use linked_hash_set::LinkedHashSet;
 
 #[derive(Default)]

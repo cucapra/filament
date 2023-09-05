@@ -1,8 +1,7 @@
-use itertools::Itertools;
-
-use crate::ir::{self, AddCtx, Ctx};
 use crate::ir_visitor::{Action, Visitor, VisitorData};
-use crate::utils::GPosIdx;
+use fil_ir::{self as ir, AddCtx, Ctx};
+use fil_utils::GPosIdx;
+use itertools::Itertools;
 
 #[derive(Default)]
 /// Filament's core interval checking algorithm. At a high-level it ensures that:

@@ -1,11 +1,13 @@
-use std::{collections::HashMap, iter, ops::Not};
-
 use super::utils::NameGenerator;
-use super::{utils::cell_to_port_def, BuildCtx};
-use crate::{ir, ir_passes::lower::utils::INTERFACE_PORTS};
+use super::{
+    utils::{cell_to_port_def, INTERFACE_PORTS},
+    BuildCtx,
+};
 use calyx_ir::{self as calyx, RRC};
 use calyx_ir::{build_assignments, guard, structure, Guard, Nothing};
+use fil_ir as ir;
 use itertools::Itertools;
+use std::{collections::HashMap, iter, ops::Not};
 
 #[derive(Hash, PartialEq, Eq, Debug)]
 /// Enum representing the types of fsms that can be generated and their indexing.

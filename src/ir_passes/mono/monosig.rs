@@ -2,8 +2,8 @@ use super::{
     utils::{Base, BaseComp, Underlying, UnderlyingComp},
     Monomorphize,
 };
-use crate::ir::{
-    self, AddCtx, Ctx, DenseIndexInfo, DisplayCtx, Foreign, MutCtx,
+use fil_ir::{
+    self as ir, AddCtx, Ctx, DenseIndexInfo, DisplayCtx, Foreign, MutCtx,
     SparseInfoMap,
 };
 use itertools::Itertools;

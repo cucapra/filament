@@ -1,7 +1,5 @@
-use crate::{
-    ir,
-    ir_visitor::{Action, Visitor, VisitorData},
-};
+use crate::ir_visitor::{Action, Visitor, VisitorData};
+use fil_ir as ir;
 
 #[derive(Default)]
 /// Rewrite the control program so that uses of ports and invocations
