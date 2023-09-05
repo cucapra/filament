@@ -15,14 +15,8 @@ readme.workspace = true
 
 [dependencies]
 log.workspace = true
-linked_hash_set.workspace = true
 itertools.workspace = true
-linked-hash-map.workspace = true
 derivative.workspace = true
-smallvec.workspace = true
-topological-sort.workspace = true
 atty.workspace = true
-lazy_static.workspace = true
 codespan-reporting.workspace = true
-bitvec.workspace = true
 string-interner.workspace = true
