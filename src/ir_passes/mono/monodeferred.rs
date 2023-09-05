@@ -38,13 +38,9 @@ impl MonoDeferred<'_, '_> {
         for (idx, event) in underlying.events().iter() {
             let new_idx = monosig.base.add(event.clone());
             monosig.event_map.insert(idx.ul(), new_idx);
-            pass.event_map.insert(
-                (
-                    (monosig.underlying_idx.ul(), conc_params.clone()).into(),
-                    idx.ul(),
-                ),
-                new_idx,
-            );
+            let comp_k =
+                (monosig.underlying_idx.ul(), conc_params.clone()).into();
+            pass.inst_info_mut(comp_k).add_event(idx.ul(), new_idx);
         }
 
         if underlying.is_ext() {
@@ -75,14 +71,10 @@ impl MonoDeferred<'_, '_> {
             for (idx, port) in underlying.ports().iter() {
                 if port.is_sig() {
                     let port = monosig.port_def(&underlying, pass, idx.ul());
-                    pass.port_map.insert(
-                        (
-                            (monosig.underlying_idx.ul(), conc_params.clone())
-                                .into(),
-                            idx.ul(),
-                        ),
-                        port,
-                    );
+                    let comp_k =
+                        (monosig.underlying_idx.ul(), conc_params.clone())
+                            .into();
+                    pass.inst_info_mut(comp_k).add_port(idx.ul(), port)
                 }
             }
         }

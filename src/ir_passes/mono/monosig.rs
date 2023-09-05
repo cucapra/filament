@@ -151,9 +151,8 @@ impl MonoSig {
         let key = foreign.key().ul();
         let inst_comp = comp_k.comp;
         // now need to find the mapping from old portidx and the old instance to new port
-        let global_port_map_k = (comp_k, key);
         let new_port =
-            pass.port_map.get(&global_port_map_k).unwrap_or_else(|| {
+            pass.inst_info(&comp_k).get_port(key).unwrap_or_else(|| {
                 unreachable!(
                     "port {:?}.{} is missing from global map",
                     inst_comp.idx(),
@@ -432,7 +431,7 @@ impl MonoSig {
 
         let new_event = self.event_map.get(event);
         let ck = (self.underlying_idx.ul(), conc_params).into();
-        pass.event_map.insert((ck, event), *new_event);
+        pass.inst_info_mut(ck).add_event(event, *new_event);
         *new_event
     }
 
@@ -588,8 +587,7 @@ impl MonoSig {
         let (ck, new_owner) = self.foreign_comp(underlying, pass, inv);
 
         let key = foreign.key().ul();
-        let global_event_map_k = (ck, key);
-        let new_event = pass.event_map.get(&global_event_map_k).unwrap();
+        let new_event = pass.inst_info(&ck).get_event(key).unwrap();
         ir::Foreign::new(new_event.get(), new_owner.get())
     }
 
@@ -684,12 +682,12 @@ impl MonoSig {
         };
 
         let port_map_k = (None, port);
-        let global_port_map_k = ((comp, cparams).into(), port);
+        let comp_k = (comp, cparams).into();
 
         // If the port has already been added to the base component, then we can
         // just return the index
         if let Some(idx) = self.port_map.get(&port_map_k) {
-            pass.port_map.entry(global_port_map_k).or_insert(*idx);
+            pass.inst_info_mut(comp_k).add_port(port, *idx);
             return *idx;
         };
 
@@ -705,8 +703,8 @@ impl MonoSig {
         // local port map
         self.port_map.insert(port_map_k, new_port);
 
-        // pass port map
-        pass.port_map.entry(global_port_map_k).or_insert(new_port);
+        // Add port to the global port map
+        pass.inst_info_mut(comp_k).add_port(port, new_port);
 
         // Find the new port owner
         let mono_owner = self.find_new_portowner(underlying, pass, owner);
