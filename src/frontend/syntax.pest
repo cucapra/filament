@@ -42,7 +42,9 @@ constraints = {
 
 sig_bind = {
   "let" ~ param_var ~ "=" ~ expr ~ ";"
+  | "exists" ~ param_var ~ constraints ~ ";"
 }
+
 sig_bindings = {
   ("with {" ~ (sig_bind)* ~ "}")?
 }
@@ -92,6 +94,7 @@ expr_base = {
   | un_fn ~ "(" ~ expr ~ ")"
   | "(" ~ expr ~ ")"
   | bitwidth
+  | identifier ~ "::" ~ identifier
   | param_var
 }
 expr = {
@@ -99,7 +102,11 @@ expr = {
 }
 
 // Event bindings
-event = { "'" ~ identifier }
+quote = { "'" }
+event = {
+  quote ~ identifier
+  | identifier      // Parse this to provide a better error message
+}
 delay = {
   expr |
   time ~ "-" ~ "(" ~ time ~ ")"
@@ -226,6 +233,11 @@ bundle = {
   "bundle" ~ bundle_def ~ ";"
 }
 
+// ====== Existential binding =======
+exists = {
+  "exists" ~ param_var ~ "=" ~ expr ~ ";"
+}
+
 /// ===== Assumptions ==========
 implication = {
   (expr_cmp ~ "=>")? ~ expr_cmp
@@ -239,7 +251,7 @@ fact = {
 
 // ========== Commands ==========
 command = {
-  bundle | instance | invocation | connect | for_loop | if_stmt | fact | param_let
+  bundle | instance | invocation | connect | for_loop | if_stmt | fact | param_let | exists
 }
 
 commands = { command* }

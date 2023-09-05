@@ -89,7 +89,7 @@ impl<'a> BuildCtx<'a> {
 
             // gets the parameters of this instance as concrete numbers
             let conc_bind = inst
-                .params
+                .args
                 .iter()
                 .map(|v| v.concrete(self.comp))
                 .collect_vec();

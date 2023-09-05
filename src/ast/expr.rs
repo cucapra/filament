@@ -1,4 +1,4 @@
-use super::Id;
+use super::{Id, Loc};
 use crate::{errors, utils};
 
 /// Binary operation over expressions
@@ -61,7 +61,11 @@ impl UnFn {
 #[derive(Clone, Hash, Debug)]
 pub enum Expr {
     Concrete(u64),
-    Abstract(Id),
+    Abstract(Loc<Id>),
+    ParamAccess {
+        inst: Loc<Id>,
+        param: Loc<Id>,
+    },
     App {
         func: UnFn,
         arg: Box<Expr>,
@@ -107,7 +111,7 @@ impl Expr {
     }
 
     /// Construct a new expression from an abstract variable
-    pub fn abs(id: Id) -> Self {
+    pub fn abs(id: Loc<Id>) -> Self {
         Expr::Abstract(id)
     }
 
@@ -137,7 +141,7 @@ impl Expr {
     /// Resolve this expression using the given binding for abstract variables.
     pub fn resolve(self, bind: &utils::Binding<Expr>) -> Self {
         match self {
-            Expr::Concrete(_) => self,
+            Expr::Concrete(_) | Expr::ParamAccess { .. } => self,
             Expr::Abstract(ref id) => bind.find(id).cloned().unwrap_or(self),
             Expr::App { func, arg } => func.apply(arg.resolve(bind)),
             Expr::Op { op, left, right } => {
@@ -251,7 +255,7 @@ impl From<u64> for Expr {
 
 impl From<Id> for Expr {
     fn from(v: Id) -> Self {
-        Self::Abstract(v)
+        Self::Abstract(Loc::unknown(v))
     }
 }
 
@@ -275,6 +279,9 @@ impl ECtx {
             }
             Expr::Abstract(v) => {
                 format!("{v}")
+            }
+            Expr::ParamAccess { inst, param } => {
+                format!("{inst}::{param}")
             }
             Expr::App { func, arg } => {
                 format!("{}({})", func, Self::Func.print(arg))

@@ -116,7 +116,7 @@ impl MonoSig {
         let inst = underlying.get(Underlying::new(underlying.get(inv).inst));
         let inst_comp = Underlying::new(inst.comp);
 
-        let inst_params = &inst.params;
+        let inst_params = &inst.args;
         let conc_params = inst_params
             .iter()
             .map(|p| {
@@ -201,6 +201,7 @@ impl MonoSig {
                 src_liveness: self.range(underlying, pass, src_liveness),
             },
             ir::info::Reason::ParamConstraint { .. }
+            | ir::info::Reason::ExistsConstraint { .. }
             | ir::info::Reason::EventConstraint { .. }
             | ir::info::Reason::BundleLenMatch { .. }
             | ir::info::Reason::BundleWidthMatch { .. }
@@ -224,12 +225,21 @@ impl MonoSig {
         } else {
             // This param is a in a use site and should therefore have been found.
             let msg = match ul.get(p_idx).owner {
-                ir::ParamOwner::Loop => "let-bound parameter",
-                ir::ParamOwner::Bundle(_) => "bundle-bound parameter",
-                ir::ParamOwner::Sig => "signature-bound parameter",
+                ir::ParamOwner::Loop => "let-bound parameter".to_string(),
+                ir::ParamOwner::Bundle(_) => {
+                    "bundle-bound parameter".to_string()
+                }
+                ir::ParamOwner::Sig => "signature-bound parameter".to_string(),
+                ir::ParamOwner::Instance(inst) => format!(
+                    "parameter defined by instance `{}'",
+                    ul.display(Underlying::new(inst))
+                ),
+                ir::ParamOwner::Exists => {
+                    "existentially quantified parameter".to_string()
+                }
             };
             unreachable!(
-                "{} `{}' should have been resolved in the binding but the binding was: {:?}",
+                "{} `{}' should have been resolved in the binding but the binding was: [{}]",
                 msg,
                 ul.display(p_idx),
                 self.binding_rep(ul),
@@ -578,7 +588,7 @@ impl MonoSig {
 
         let inst = underlying.get(Underlying::new(underlying.get(inv).inst));
         let inst_comp = Underlying::new(inst.comp);
-        let inst_params = &inst.params;
+        let inst_params = &inst.args;
         let conc_params = inst_params
             .iter()
             .map(|p| {
@@ -616,11 +626,20 @@ impl MonoSig {
         pass: &mut Monomorphize,
         inst: Underlying<ir::Instance>,
     ) -> Base<ir::Instance> {
-        let ir::Instance { comp, params, info } = underlying.get(inst);
+        let ir::Instance {
+            comp,
+            args,
+            params,
+            info,
+        } = underlying.get(inst);
+        assert!(
+            params.is_empty(),
+            "cannot monomorphize instances with existentially quantified params"
+        );
         let info = Underlying::new(*info);
 
         let is_ext = pass.old.get(*comp).is_ext;
-        let conc_params = params
+        let conc_params = args
             .iter()
             .map(|p| {
                 self.expr(underlying, Underlying::new(*p))
@@ -635,22 +654,24 @@ impl MonoSig {
         let new_inst = if !is_ext {
             ir::Instance {
                 comp: comp.get(),
-                params: new_params
+                args: new_params
                     .into_iter()
                     .map(|n| self.base.num(n).get())
                     .collect(),
                 info: self.info(underlying, pass, info).get(),
+                params: Vec::new(),
             }
         } else {
             // this is an extern, so keep the params - need to get them into the new component though
-            let ext_params = params
+            let ext_params = args
                 .iter()
                 .map(|p| self.expr(underlying, Underlying::new(*p)).get())
                 .collect_vec();
             ir::Instance {
                 comp: comp.get(),
-                params: ext_params.into(),
+                args: ext_params.into(),
                 info: self.info(underlying, pass, info).get(),
+                params: Vec::new(),
             }
         };
 

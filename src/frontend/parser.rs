@@ -126,9 +126,13 @@ impl FilamentParser {
 
 #[pest_consume::parser]
 impl FilamentParser {
-    #[allow(unused)]
+    #[allow(unused, non_snake_case)]
     // This is used by rust-analzyer doesn't think so
     fn EOI(_input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+
+    fn quote(input: Node) -> ParseResult<()> {
         Ok(())
     }
 
@@ -147,19 +151,27 @@ impl FilamentParser {
     }
 
     fn event(input: Node) -> ParseResult<Loc<ast::Id>> {
-        Ok(match_nodes!(
-            input.into_children();
-            [identifier(id)] => id,
-        ))
+        match_nodes!(
+            input.clone().into_children();
+            [quote(_), identifier(id)] => Ok(id),
+            [identifier(id)] => Err(input.error(format!("try replacing this with '{id}. Event must start with a single quote")))
+        )
     }
 
-    fn sig_bind(input: Node) -> ParseResult<Loc<ast::ParamBind>> {
+    fn sig_bind(input: Node) -> ParseResult<Loc<ast::SigBind>> {
         let sp = Self::get_span(&input);
-        let out = match_nodes!(
-            input.into_children();
-            [param_var(param), expr(e)] => ast::ParamBind::new(param, Some(e.take()))
-        );
-        Ok(Loc::new(out, sp))
+        match_nodes!(
+            input.clone().into_children();
+            [param_var(param), expr(e)] => Ok(Loc::new(ast::SigBind::let_(param, e.take()), sp)),
+            [param_var(param), constraints(cons)] => {
+                let (expr, ev) = cons;
+                if !ev.is_empty() {
+                    Err(input.error("Cannot specify event constraints in an existential binding"))
+                } else {
+                    Ok(Loc::new(ast::SigBind::exists(param, expr), sp))
+                }
+            }
+        )
     }
 
     fn param_bind(input: Node) -> ParseResult<Loc<ast::ParamBind>> {
@@ -241,7 +253,8 @@ impl FilamentParser {
     fn expr_base(input: Node) -> ParseResult<ast::Expr> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(id)] => id.take().into(),
+            [identifier(inst), identifier(param)] => ast::Expr::ParamAccess{ inst, param },
+            [param_var(id)] => ast::Expr::abs(id),
             [bitwidth(c)] => c.into(),
             [un_fn(f), expr(e)] => ast::Expr::func(f, e.take()),
             [expr(e)] => e.take(),
@@ -551,7 +564,7 @@ impl FilamentParser {
             [param_bind(params)..] => params.collect_vec(),
         ))
     }
-    fn sig_bindings(input: Node) -> ParseResult<Vec<Loc<ast::ParamBind>>> {
+    fn sig_bindings(input: Node) -> ParseResult<Vec<Loc<ast::SigBind>>> {
         Ok(match_nodes!(
             input.into_children();
             [] => vec![],
@@ -705,6 +718,13 @@ impl FilamentParser {
         ))
     }
 
+    fn exists(input: Node) -> ParseResult<ast::Exists> {
+        Ok(match_nodes!(
+            input.into_children();
+            [param_var(param), expr(bind)] => ast::Exists { param, bind }
+        ))
+    }
+
     fn command(input: Node) -> ParseResult<Vec<ast::Command>> {
         Ok(match_nodes!(
             input.into_children();
@@ -715,6 +735,7 @@ impl FilamentParser {
             [bundle(bl)] => vec![bl.into()],
             [if_stmt(if_)] => vec![if_.into()],
             [param_let(l)] => vec![l.into()],
+            [exists(e)] => vec![e.into()],
             [fact(a)] => vec![a.into()],
         ))
     }

@@ -56,7 +56,7 @@
 				},
 				{
 					"name": "keyword.control.filament",
-					"match": "\\b(where|for|if|else|assume|assert)\\b"
+					"match": "\\b(exists|with|where|for|if|else|assume|assert)\\b"
 				}
 			]
 		},

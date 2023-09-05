@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+error: cannot prove source-level fact
+   ┌─ tests/errors/existential/sig.fil:10:5
+   │
+10 │     assert F::L < 10;
+   │     ^^^^^^^^^^^^^^^^^ cannot prove source-level fact
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

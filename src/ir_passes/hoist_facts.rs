@@ -29,7 +29,7 @@ impl HoistFacts {
     }
 
     /// Insert a new path condition
-    fn insert(&mut self, prop: ir::PropIdx) {
+    fn add_to_pc(&mut self, prop: ir::PropIdx) {
         self.path_cond.push(prop);
     }
 
@@ -50,10 +50,19 @@ impl Visitor for HoistFacts {
 
     /// Collect all assumptions in a given scope and add them to the path condition.
     /// We do this so that all asserts in a scope are affected by all assumes.
-    fn start_cmds(&mut self, cmds: &mut Vec<ir::Command>, _: &mut VisitorData) {
+    fn start_cmds(
+        &mut self,
+        cmds: &mut Vec<ir::Command>,
+        data: &mut VisitorData,
+    ) {
+        let ctx = &mut data.comp;
         cmds.iter().for_each(|cmd| match cmd {
             ir::Command::Fact(fact) if fact.is_assume() => {
-                self.insert(fact.prop)
+                self.add_to_pc(fact.prop)
+            }
+            ir::Command::Exists(ir::Exists { param, expr }) => {
+                let prop = param.expr(ctx).equal(*expr, ctx);
+                self.add_to_pc(prop);
             }
             _ => (),
         })
@@ -73,13 +82,13 @@ impl Visitor for HoistFacts {
 
     fn do_if(&mut self, i: &mut ir::If, data: &mut VisitorData) -> Action {
         self.push();
-        self.insert(i.cond);
+        self.add_to_pc(i.cond);
         let ac = self.visit_cmds(&mut i.then, data);
         assert!(ac == Action::Continue);
         self.pop();
 
         self.push();
-        self.insert(i.cond.not(&mut data.comp));
+        self.add_to_pc(i.cond.not(&mut data.comp));
         let ac = self.visit_cmds(&mut i.alt, data);
         assert!(ac == Action::Continue);
         self.pop();
@@ -100,7 +109,7 @@ impl Visitor for HoistFacts {
         let idx = index.expr(comp);
         let start = idx.gte(*start, comp);
         let end = idx.lt(*end, comp);
-        self.insert(start.and(end, comp));
+        self.add_to_pc(start.and(end, comp));
 
         Action::Continue
     }

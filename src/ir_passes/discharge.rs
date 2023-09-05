@@ -2,6 +2,7 @@ use crate::ir::{Ctx, DisplayCtx};
 use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
 use crate::utils::GlobalPositionTable;
 use crate::{ast, cmdline, ir, log_time};
+use codespan_reporting::diagnostic::Diagnostic;
 use codespan_reporting::{diagnostic as cr, term};
 use easy_smt as smt;
 use itertools::Itertools;
@@ -22,7 +23,7 @@ impl Assign {
             .iter()
             .filter_map(|(k, v)| {
                 // Attempt to parse value as a number
-                match v.parse::<u64>() {
+                match v.parse::<i64>() {
                     Ok(v) if v == 0 => None,
                     _ => Some(format!("{} = {v}", ctx.display(*k))),
                 }
@@ -133,12 +134,14 @@ impl Construct for Discharge {
 }
 
 impl Discharge {
-    fn fmt_param(param: ir::ParamIdx) -> String {
-        format!("param{}", param.get())
+    fn fmt_param(param: ir::ParamIdx, ctx: &ir::Component) -> String {
+        format!("|{}@param{}|", ctx.display(param), param.get())
+        // format!("param{}", param.get())
     }
 
-    fn fmt_event(event: ir::EventIdx) -> String {
-        format!("event{}", event.get())
+    fn fmt_event(event: ir::EventIdx, ctx: &ir::Component) -> String {
+        format!("|{}@event{}|", ctx.display(event), event.get())
+        // format!("event{}", event.get())
     }
 
     fn fmt_expr(expr: ir::ExprIdx) -> String {
@@ -191,19 +194,30 @@ impl Discharge {
             .unique()
             .map(|p| {
                 let s = self.param_map[*p];
+                log::debug!("{} -> {}", self.sol.display(s), p);
                 rev_map.insert(s, *p);
                 s
             })
             .collect_vec();
+        let num_vars = sexps.len();
+
+        let model = self.sol.get_value(sexps).unwrap();
+        assert!(model.len() == num_vars,
+            "{num_vars} relevant variables but the model contains assignments for {} variables",
+            model.len()
+        );
 
         Assign(
-            self.sol
-                .get_value(sexps)
-                .unwrap()
+            model
                 .into_iter()
-                .map(|(p, v)| {
-                    let p = rev_map[&p];
-                    (p, self.sol.display(v).to_string())
+                .flat_map(|(p, v)| {
+                    let Some(&p) = rev_map.get(&p) else {
+                        unreachable!(
+                            "missing binding for sexp {}",
+                            self.sol.display(p)
+                        );
+                    };
+                    Some((p, self.sol.display(v).to_string()))
                 })
                 .collect_vec(),
         )
@@ -225,7 +239,6 @@ impl Discharge {
                 ctx.display(prop.consequent(ctx));
                 100
             );
-            self.sol.assert(self.sol.not(actlit)).unwrap();
             let out = match res {
                 smt::Response::Sat => {
                     if self.show_models {
@@ -239,11 +252,26 @@ impl Discharge {
                 smt::Response::Unsat => None,
                 smt::Response::Unknown => panic!("Solver returned unknown"),
             };
+            // Deassert the actlit after the `get-model` call.
+            self.sol.assert(self.sol.not(actlit)).unwrap();
             self.checked.insert(prop, out);
         }
         if let Some(assign) = &self.checked[&prop] {
-            let ir::info::Assert(reason) =
-                ctx.get(fact.reason).as_assert().unwrap();
+            let Some(ir::info::Assert(reason)) =
+                ctx.get(fact.reason).as_assert()
+            else {
+                // No information was given on who generated this error
+                let diag = Diagnostic::error().with_notes(vec![
+                    format!(
+                        "Cannot prove constraint: {}",
+                        ctx.display(fact.prop.consequent(ctx))
+                    ),
+                    "No information was given on who generated this error"
+                        .to_string(),
+                ]);
+                self.diagnostics.push(diag);
+                return;
+            };
             let mut diag = reason.diag(ctx);
             if self.show_models {
                 diag = reason.diag(ctx).with_notes(vec![format!(
@@ -359,12 +387,13 @@ impl Visitor for Discharge {
     }
 
     fn start(&mut self, data: &mut VisitorData) -> Action {
+        let comp = &data.comp;
         // Declare all parameters
         let int = self.sol.int_sort();
         for (idx, _) in data.comp.params().iter() {
             let sexp = self
                 .sol
-                .declare_fun(Self::fmt_param(idx), vec![], int)
+                .declare_fun(Self::fmt_param(idx, comp), vec![], int)
                 .unwrap();
             self.param_map.push(idx, sexp);
         }
@@ -373,7 +402,7 @@ impl Visitor for Discharge {
         for (idx, _) in data.comp.events().iter() {
             let sexp = self
                 .sol
-                .declare_fun(Self::fmt_event(idx), vec![], int)
+                .declare_fun(Self::fmt_event(idx, comp), vec![], int)
                 .unwrap();
             self.ev_map.push(idx, sexp);
         }

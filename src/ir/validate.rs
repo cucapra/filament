@@ -1,3 +1,4 @@
+use super::DisplayCtx;
 use crate::{ir, ir::Ctx};
 /// Validate the current context
 /// If calling the methods in this does not result in a panic, then the corresponding IR structure is valid.
@@ -93,10 +94,20 @@ impl<'a> Validate<'a> {
         } = live;
         match self.comp.get(*par_idx).owner {
             ir::ParamOwner::Sig => self.comp.internal_error(format!(
-                "{par_idx} should be owned by a bundle but is owned by a sig"
+                "{} should be owned by a bundle but is owned by a sig",
+                self.comp.display(*par_idx)
             )),
             ir::ParamOwner::Loop => self.comp.internal_error(format!(
-                "{par_idx} should be owned by a bundle but is owned by a loop"
+                "{} should be owned by a bundle but is owned by a loop",
+                self.comp.display(*par_idx)
+            )),
+            ir::ParamOwner::Exists => self.comp.internal_error(format!(
+                "{} should be owned by a bundle is an existentially quantified param",
+                self.comp.display(*par_idx)
+            )),
+            ir::ParamOwner::Instance(inst) => self.comp.internal_error(format!(
+                "{} should be owned by a bundle but is owned by instance {inst}",
+                self.comp.display(*par_idx)
             )),
             ir::ParamOwner::Bundle(port_idx) => {
                 // Ensure that the bundle-owned param points here
@@ -199,14 +210,16 @@ impl<'a> Validate<'a> {
     /// (1) It is defined in the component
     /// (2) Its owner is defined in the component
     /// (3) Its owner points to it?
-    fn param(&self, pidx: ir::ParamIdx) {
+    fn param(&self, pidx: ir::ParamIdx) -> &ir::Param {
         // check (1) - this will panic if param not defined
-        let ir::Param { owner, .. } = &self.comp.get(pidx);
+        let param = &self.comp.get(pidx);
 
         // check (2) and (3)
-        match owner {
-            ir::ParamOwner::Sig | ir::ParamOwner::Loop => { /* Nothing to check */
-            }
+        match &param.owner {
+            ir::ParamOwner::Sig
+            | ir::ParamOwner::Exists
+            | ir::ParamOwner::Loop => { /* Nothing to check */ }
+            ir::ParamOwner::Instance(_) => todo!(),
             ir::ParamOwner::Bundle(port_idx) => {
                 let ir::Port { live, .. } = &self.comp.get(*port_idx); // (2) this will panic if port not defined
 
@@ -219,6 +232,8 @@ impl<'a> Validate<'a> {
                 }
             }
         }
+
+        param
     }
 
     /// An invoke is valid if:
@@ -263,7 +278,9 @@ impl<'a> Validate<'a> {
     ///     in the component signature
     fn instance(&self, iidx: ir::InstIdx) {
         // check (1)
-        let ir::Instance { comp, params, .. } = &self.comp[iidx];
+        let ir::Instance {
+            comp, args: params, ..
+        } = &self.comp[iidx];
         for expr in params.iter() {
             // check (2)
             self.expr(*expr);
@@ -299,27 +316,14 @@ impl<'a> Validate<'a> {
     /// (1) The structures that it contains are valid
     fn command(&self, cmd: &ir::Command) {
         match cmd {
-            ir::Command::Instance(iidx) => {
-                self.instance(*iidx);
-            }
-            ir::Command::Invoke(iidx) => {
-                self.invoke(*iidx);
-            }
-            ir::Command::Connect(con) => {
-                self.connect(con);
-            }
-            ir::Command::ForLoop(lp) => {
-                self.forloop(lp);
-            }
-            ir::Command::If(cond) => {
-                self.if_stmt(cond);
-            }
-            ir::Command::Fact(fact) => {
-                self.fact(fact);
-            }
-            ir::Command::BundleDef(b) => {
-                self.bundle_def(*b);
-            }
+            ir::Command::Instance(iidx) => self.instance(*iidx),
+            ir::Command::Invoke(iidx) => self.invoke(*iidx),
+            ir::Command::Connect(con) => self.connect(con),
+            ir::Command::ForLoop(lp) => self.forloop(lp),
+            ir::Command::If(cond) => self.if_stmt(cond),
+            ir::Command::Fact(fact) => self.fact(fact),
+            ir::Command::BundleDef(b) => self.bundle_def(*b),
+            ir::Command::Exists(e) => self.exists(e),
         }
     }
 
@@ -423,5 +427,18 @@ impl<'a> Validate<'a> {
     fn fact(&self, fact: &ir::Fact) {
         let ir::Fact { prop, .. } = *fact;
         self.prop(prop);
+    }
+
+    fn exists(&self, exists: &ir::Exists) {
+        let ir::Exists { param: p_idx, expr } = exists;
+        let param = self.param(*p_idx);
+        if !matches!(param.owner, ir::ParamOwner::Exists) {
+            self.comp.internal_error(format!(
+                "{} mentioned in existential binding but owned by {}",
+                self.comp.display(*p_idx),
+                param.owner
+            ))
+        }
+        self.expr(*expr);
     }
 }

@@ -1,10 +1,11 @@
 //! Convert the frontend AST to the IR.
-use super::build_ctx::InvPort;
+use super::build_ctx::{OwnedParam, OwnedPort};
 use super::{BuildCtx, Sig, SigMap};
 use crate::diagnostics;
+use crate::errors::Error;
 use crate::ir::{
-    AddCtx, Cmp, Ctx, EventIdx, ExprIdx, InterfaceSrc, MutCtx, ParamIdx,
-    PortIdx, PropIdx, TimeIdx,
+    AddCtx, Cmp, Ctx, DisplayCtx, EventIdx, ExprIdx, InterfaceSrc, MutCtx,
+    ParamIdx, PortIdx, PropIdx, TimeIdx,
 };
 use crate::utils::{GPosIdx, Idx};
 use crate::{ast, ir};
@@ -45,11 +46,12 @@ impl<'prog> BuildCtx<'prog> {
         )?;
         let inst = ir::Instance {
             comp: comp.idx,
-            params: binding
+            args: binding
                 .iter()
                 .map(|(_, b)| self.expr(b.clone()))
                 .collect::<BuildRes<Vec<_>>>()?
                 .into_boxed_slice(),
+            params: Vec::default(), // Filled in when we iterate over sig_bindings
             info: self.comp().add(ir::Info::instance(
                 name.copy(),
                 component.pos(),
@@ -57,18 +59,40 @@ impl<'prog> BuildCtx<'prog> {
             )),
         };
 
+        let idx = self.comp().add(inst);
+
         // Extend the binding with the let-bound parameters in the signature
         // Bindings can mention previous bindings so we add bindings as we
         // go along.
-        comp.sig_binding.iter().for_each(
-            |ast::ParamBind { param, default }| {
-                let e = default.clone().unwrap().resolve(&binding);
-                binding.extend([(param.copy(), e)])
-            },
-        );
+        let params = comp
+            .sig_binding
+            .iter()
+            .flat_map(|sb| match sb {
+                ast::SigBind::Let { param, bind } => {
+                    let e = bind.clone().resolve(&binding);
+                    binding.extend([(param.copy(), e)]);
+                    None
+                }
+                ast::SigBind::Exists { param, .. } => {
+                    // Define the parameter in the component
+                    let p_idx = self
+                        .param(param.clone(), ir::ParamOwner::Instance(idx));
+                    // Map this parameter to the instance's version of the parameter.
+                    // This is because we want it to resolve to parameter access
+                    // in the current component.
+                    let e = ast::Expr::ParamAccess {
+                        inst: name.clone(),
+                        param: param.clone(),
+                    };
+                    binding.extend([(param.copy(), e)]);
+                    Some(p_idx)
+                }
+            })
+            .collect_vec();
 
-        //println!("ir inst has bindings {:?}", inst.params);
-        let idx = self.comp().add(inst);
+        let inst = self.comp().get_mut(idx);
+        inst.params.extend(params);
+
         self.add_inst(name.copy(), idx);
         // Track the component binding for this instance
         self.inst_to_sig
@@ -153,6 +177,11 @@ impl<'prog> BuildCtx<'prog> {
                 self.add_let_param(name.copy(), expr);
                 Ok(())
             }
+            ast::Command::Exists(_) => {
+                /* The existential parameter is already defined so we can resolve
+                 * this in the second pass */
+                Ok(())
+            }
             ast::Command::ForLoop(_)
             | ast::Command::If(_)
             | ast::Command::Fact(_)
@@ -172,7 +201,16 @@ impl<'prog> BuildCtx<'prog> {
 impl<'prog> BuildCtx<'prog> {
     fn expr(&mut self, expr: ast::Expr) -> BuildRes<ExprIdx> {
         let expr = match expr {
-            ast::Expr::Abstract(p) => self.get_param(&p)?,
+            ast::Expr::Abstract(p) => {
+                self.get_param(&OwnedParam::local(p.copy()), p.pos())?
+            }
+            ast::Expr::ParamAccess { inst, param } => {
+                let inst_idx = self.get_inst(&inst)?;
+                self.get_param(
+                    &OwnedParam::inst(inst_idx, param.copy()),
+                    param.pos(),
+                )?
+            }
             ast::Expr::Concrete(n) => {
                 let e = ir::Expr::Concrete(n);
                 self.comp().add(e)
@@ -241,20 +279,23 @@ impl<'prog> BuildCtx<'prog> {
     /// Add a parameter to the component.
     fn param(
         &mut self,
-        param: &ast::ParamBind,
+        param: ast::Loc<ast::Id>,
         owner: ir::ParamOwner,
     ) -> ParamIdx {
-        let info = self.comp().add(ir::Info::param(param.name(), param.pos()));
+        let (name, pos) = param.split();
+        let info = self.comp().add(ir::Info::param(name, pos));
+        let owned = OwnedParam::param_owner(name, &owner);
         let ir_param = ir::Param::new(owner, info);
         let is_sig_owned = ir_param.is_sig_owned();
         let idx = self.comp().add(ir_param);
-        self.add_param(param.name(), idx);
+        let e_idx = idx.expr(self.comp());
+        self.add_param_map(owned, e_idx);
 
         // only add information if this is a signature defined parameter
         if is_sig_owned {
             // If the component is expecting interface information, add it.
             if let Some(src) = &mut self.comp().src_info {
-                src.params.push(idx, param.name());
+                src.params.push(idx, name);
             }
         }
 
@@ -347,7 +388,7 @@ impl<'prog> BuildCtx<'prog> {
                 let live = self.try_with_scope(|ctx| {
                     Ok(ir::Liveness {
                         idx: ctx.param(
-                            &ast::ParamBind::from(p_name),
+                            p_name.into(),
                             // Updated after the port is constructed
                             ir::ParamOwner::bundle(ir::PortIdx::UNKNOWN),
                         ), // This parameter is unused
@@ -384,7 +425,7 @@ impl<'prog> BuildCtx<'prog> {
                     Ok(ir::Liveness {
                         idx: ctx.param(
                             // Updated after the port is constructed
-                            &ast::ParamBind::from(idx),
+                            idx,
                             ir::ParamOwner::bundle(PortIdx::UNKNOWN),
                         ),
                         len: ctx.expr(len.take())?,
@@ -443,11 +484,11 @@ impl<'prog> BuildCtx<'prog> {
                 // NOTE: The AST does not distinguish between ports
                 // defined by the signature and locally defined ports so we
                 // must search both.
-                let owner = InvPort::Sig(dir, n.clone());
+                let owner = OwnedPort::Sig(dir, n.clone());
                 let port = if let Some(port) = self.find_port(&owner) {
                     port
                 } else {
-                    let owner = InvPort::Local(n);
+                    let owner = OwnedPort::Local(n);
                     self.get_port(&owner)?
                 };
 
@@ -455,18 +496,18 @@ impl<'prog> BuildCtx<'prog> {
             }
             ast::Port::InvPort { invoke, name } => {
                 let inv = self.get_inv(&invoke)?;
-                let owner = InvPort::Inv(inv, dir, name);
+                let owner = OwnedPort::Inv(inv, dir, name);
                 ir::Access::port(self.get_port(&owner)?, self.comp())
             }
             ast::Port::Bundle { name, access } => {
                 // NOTE(rachit): The AST does not distinguish between bundles
                 // defined by the signature and locally defined bundles so we
                 // must search both.
-                let owner = InvPort::Sig(dir, name.clone());
+                let owner = OwnedPort::Sig(dir, name.clone());
                 let port = if let Some(p) = self.find_port(&owner) {
                     p
                 } else {
-                    let owner = InvPort::Local(name);
+                    let owner = OwnedPort::Local(name);
                     self.get_port(&owner)?
                 };
                 let (start, end) = self.access(access.take())?;
@@ -478,7 +519,7 @@ impl<'prog> BuildCtx<'prog> {
                 access,
             } => {
                 let inv = self.get_inv(&invoke)?;
-                let owner = InvPort::Inv(inv, dir, port);
+                let owner = OwnedPort::Inv(inv, dir, port);
                 let port = self.get_port(&owner)?;
                 let (start, end) = self.access(access.take())?;
                 ir::Access { port, start, end }
@@ -488,15 +529,33 @@ impl<'prog> BuildCtx<'prog> {
     }
 
     fn sig(&mut self, sig: &ast::Signature) -> BuildRes<Vec<ir::Command>> {
-        for param in &sig.params {
-            self.param(param.inner(), ir::ParamOwner::Sig);
+        // Constraints defined in the signature of the component
+        let mut sig_cons: Vec<ir::Command> = Vec::with_capacity(
+            sig.param_constraints.len() + sig.event_constraints.len(),
+        );
+
+        for pb in &sig.params {
+            self.param(pb.param.clone(), ir::ParamOwner::Sig);
         }
 
         // Binding from let-defined parameters in the signature to their values
-        for pb in &sig.sig_bindings {
-            let ast::ParamBind { default, .. } = pb.inner();
-            let e = self.expr(default.as_ref().unwrap().clone())?;
-            self.add_let_param(pb.name(), e);
+        for sb in &sig.sig_bindings {
+            match &sb.inner() {
+                ast::SigBind::Let { param, bind } => {
+                    let e = self.expr(bind.clone())?;
+                    self.add_let_param(param.copy(), e);
+                }
+                ast::SigBind::Exists { param, cons } => {
+                    let p_idx =
+                        self.param(param.clone(), ir::ParamOwner::Exists);
+                    // Constraints on existentially quantified parameters
+                    let assumes = cons
+                        .iter()
+                        .map(|pc| self.expr_cons(pc.inner().clone()))
+                        .collect::<BuildRes<Vec<_>>>()?;
+                    self.comp().add_sig_assumes(p_idx, assumes)
+                }
+            }
         }
 
         let mut interface_signals: HashMap<_, _> = sig
@@ -530,25 +589,22 @@ impl<'prog> BuildCtx<'prog> {
             self.comp().unannotated_ports.push((*name, *width));
         }
         // Constraints defined by the signature
-        let mut cons = Vec::with_capacity(
-            sig.param_constraints.len() + sig.event_constraints.len(),
-        );
         for ec in &sig.event_constraints {
             let info = self.comp().add(ir::Info::assert(
                 ir::info::Reason::misc("Signature assumption", ec.pos()),
             ));
             let prop = self.event_cons(ec.inner().clone())?;
-            cons.extend(self.comp().assume(prop, info));
+            sig_cons.extend(self.comp().assume(prop, info));
         }
         for pc in &sig.param_constraints {
             let info = self.comp().add(ir::Info::assert(
                 ir::info::Reason::misc("Signature assumption", pc.pos()),
             ));
             let prop = self.expr_cons(pc.inner().clone())?;
-            cons.extend(self.comp().assume(prop, info));
+            sig_cons.extend(self.comp().assume(prop, info));
         }
 
-        Ok(cons)
+        Ok(sig_cons)
     }
 
     fn instance(&mut self, inst: ast::Instance) -> BuildRes<Vec<ir::Command>> {
@@ -557,8 +613,8 @@ impl<'prog> BuildCtx<'prog> {
         // component.
         let idx = self.get_inst(&inst.name)?;
         let (binding, component) = self.inst_to_sig.get(idx).clone();
-        let facts = self
-            .get_sig(&component)?
+        let sig = self.get_sig(&component)?;
+        let asserts = sig
             .param_cons
             .clone()
             .into_iter()
@@ -575,8 +631,26 @@ impl<'prog> BuildCtx<'prog> {
             .into_iter()
             .flatten();
 
+        let assumes = sig
+            .exist_cons
+            .clone()
+            .into_iter()
+            .map(|f| {
+                let reason = self.comp().add(
+                    ir::info::Reason::exist_cons(comp_loc, Some(f.pos()))
+                        .into(),
+                );
+                let p = f.take().resolve_expr(&binding);
+                // This is an assumption because the called component guarantees guarantees it.
+                self.expr_cons(p).map(|p| self.comp().assume(p, reason))
+            })
+            .collect::<BuildRes<Vec<_>>>()?
+            .into_iter()
+            .flatten();
+
         Ok(iter::once(ir::Command::from(idx))
-            .chain(facts)
+            .chain(asserts)
+            .chain(assumes)
             .collect_vec())
     }
 
@@ -742,10 +816,38 @@ impl<'prog> BuildCtx<'prog> {
         let cmds = match cmd {
             ast::Command::Invoke(inv) => self.invoke(inv)?,
             ast::Command::Instance(inst) => self.instance(inst)?,
+            ast::Command::Exists(ast::Exists { param, bind }) => {
+                let expr = self.expr(bind.inner().clone())?;
+                let owner = OwnedParam::Local(param.copy());
+                let param_expr = self.get_param(&owner, param.pos())?;
+                let Some(p_idx) = param_expr.as_param(self.comp()) else {
+                    unreachable!(
+                        "Existing LHS is an expression: {}",
+                        self.comp().display(param_expr)
+                    )
+                };
+                // Ensure that the parameter is an existential parameter
+                if !matches!(
+                    self.comp().get(p_idx).owner,
+                    ir::ParamOwner::Exists
+                ) {
+                    let diag = self.diag();
+                    let param_typ = Error::malformed("parameter in exists binding is not existentially quantified").add_note(
+                        diag.add_info("parameter is not existentially quantified", param.pos()),
+                    );
+                    diag.add_error(param_typ);
+                    return Err(std::mem::take(diag));
+                }
+
+                vec![ir::Exists { param: p_idx, expr }.into()]
+            }
             ast::Command::Fact(ast::Fact { cons, checked }) => {
                 let reason = self.comp().add(
-                    ir::info::Reason::misc("source-level fact", cons.pos())
-                        .into(),
+                    ir::info::Reason::misc(
+                        "cannot prove source-level fact",
+                        cons.pos(),
+                    )
+                    .into(),
                 );
                 let prop = self.implication(cons.take())?;
                 let fact = if checked {
@@ -785,10 +887,7 @@ impl<'prog> BuildCtx<'prog> {
 
                 // Compile the body in a new scope
                 let (index, body) = self.try_with_scope(|this| {
-                    let idx = this.param(
-                        &ast::ParamBind::from(idx),
-                        ir::ParamOwner::Loop,
-                    );
+                    let idx = this.param(idx, ir::ParamOwner::Loop);
                     Ok((idx, this.commands(body)?))
                 })?;
                 let l = ir::Loop {

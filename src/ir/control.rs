@@ -21,6 +21,8 @@ pub enum Command {
     If(If),
     /// An `assume` or `assert` fact
     Fact(Fact),
+    /// An `exists` binding
+    Exists(Exists),
 }
 impl Command {
     pub fn is_loop(&self) -> bool {
@@ -31,6 +33,7 @@ impl Command {
         matches!(self, Command::If(_if))
     }
 }
+
 impl From<InstIdx> for Command {
     fn from(idx: InstIdx) -> Self {
         Command::Instance(idx)
@@ -66,6 +69,11 @@ impl From<Fact> for Command {
         Command::Fact(fact)
     }
 }
+impl From<Exists> for Command {
+    fn from(exists: Exists) -> Self {
+        Command::Exists(exists)
+    }
+}
 
 #[derive(Clone, PartialEq, Eq)]
 /// An instantiated component
@@ -73,9 +81,11 @@ pub struct Instance {
     /// The component being instantiated
     pub comp: CompIdx,
     /// The parameters used in the binding of this instance
-    pub params: Box<[ExprIdx]>,
+    pub args: Box<[ExprIdx]>,
     /// The information associated with this instance
     pub info: InfoIdx,
+    /// The parameters defined by this instance
+    pub params: Vec<ParamIdx>,
 }
 
 impl InstIdx {
@@ -180,4 +190,12 @@ impl EventBind {
             base,
         }
     }
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct Exists {
+    /// The existentially quantified parameter
+    pub param: ParamIdx,
+    /// The binding for the parameter
+    pub expr: ExprIdx,
 }

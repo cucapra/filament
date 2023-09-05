@@ -1,5 +1,6 @@
 use super::{Expr, Id, Implication, Loc, OrderConstraint, Range, Time};
 use crate::utils::Binding;
+use struct_variant::struct_variant;
 
 #[derive(Clone)]
 /// Access into a bundle
@@ -31,6 +32,8 @@ impl From<Expr> for Access {
 }
 
 /// A port mentioned in the program
+// XXX(rachit): the bundle and non-bundle variants can be unified because
+// astconv treats them the same anyways.
 #[derive(Clone)]
 pub enum Port {
     /// A port on this component
@@ -92,52 +95,19 @@ impl Port {
     }
 }
 
+#[struct_variant]
 #[derive(Clone)]
 /// Command in a component
 pub enum Command {
-    Invoke(Invoke),
-    Instance(Instance),
-    Fact(Fact),
-    Connect(Connect),
-    ForLoop(ForLoop),
-    ParamLet(ParamLet),
-    If(If),
-    Bundle(Bundle),
-}
-
-impl From<ParamLet> for Command {
-    fn from(v: ParamLet) -> Self {
-        Self::ParamLet(v)
-    }
-}
-
-impl From<Connect> for Command {
-    fn from(v: Connect) -> Self {
-        Self::Connect(v)
-    }
-}
-
-impl From<Instance> for Command {
-    fn from(v: Instance) -> Self {
-        Self::Instance(v)
-    }
-}
-
-impl From<Invoke> for Command {
-    fn from(v: Invoke) -> Self {
-        Self::Invoke(v)
-    }
-}
-
-impl From<Bundle> for Command {
-    fn from(v: Bundle) -> Self {
-        Self::Bundle(v)
-    }
-}
-impl From<Fact> for Command {
-    fn from(v: Fact) -> Self {
-        Self::Fact(v)
-    }
+    Invoke,
+    Instance,
+    Fact,
+    Connect,
+    ForLoop,
+    ParamLet,
+    If,
+    Bundle,
+    Exists,
 }
 
 #[derive(Clone)]
@@ -290,12 +260,6 @@ impl ForLoop {
     }
 }
 
-impl From<ForLoop> for Command {
-    fn from(v: ForLoop) -> Self {
-        Self::ForLoop(v)
-    }
-}
-
 #[derive(Clone)]
 /// A conditional statement:
 /// The `then` branch is checked assuming that the condition is true and the `else` branch is checked
@@ -313,12 +277,6 @@ impl If {
         alt: Vec<Command>,
     ) -> Self {
         Self { cond, then, alt }
-    }
-}
-
-impl From<If> for Command {
-    fn from(v: If) -> Self {
-        Self::If(v)
     }
 }
 
@@ -377,25 +335,6 @@ impl BundleType {
         // let resolved = other.resolve_exprs(&binding);
         todo!()
     }
-
-    /// Return the type for a bundle that has been offset by the given expression.
-    /// For example:
-    /// ```
-    /// for<i> ['G+i, 'G+i+1] W
-    /// ```
-    /// offset by `K` becomes
-    /// ```
-    /// for<i> ['G+i+K, 'G+i+1+K] W
-    /// ```
-    pub fn shrink(self, start: Expr, end: Expr) -> Self {
-        // Generate the offset by resolving the index of the bundle type with index+offset
-        let len = end - start.clone();
-        let idx = self.idx.copy();
-        let binding = Binding::new(Some((idx, Expr::abs(idx) + start)));
-        let mut resolved = self.resolve_exprs(&binding);
-        *resolved.len.inner_mut() = len;
-        resolved
-    }
 }
 
 #[derive(Clone)]
@@ -430,4 +369,13 @@ pub struct ParamLet {
     pub name: Loc<Id>,
     /// The expression for the parameter binding
     pub expr: Expr,
+}
+
+#[derive(Clone)]
+/// Binding for an existentially quantified parameter
+pub struct Exists {
+    /// The existentially quantified parameter
+    pub param: Loc<Id>,
+    /// The binding expression for the parameter
+    pub bind: Loc<Expr>,
 }

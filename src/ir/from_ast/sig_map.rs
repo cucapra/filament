@@ -22,11 +22,12 @@ pub struct Sig {
     pub inputs: Vec<ir::PortIdx>,
     pub outputs: Vec<ir::PortIdx>,
     pub raw_params: Vec<ast::ParamBind>,
-    pub sig_binding: Vec<ast::ParamBind>,
+    pub sig_binding: Vec<ast::SigBind>,
     pub raw_events: Vec<ast::EventBind>,
     pub raw_inputs: Vec<ast::Loc<ast::PortDef>>,
     pub raw_outputs: Vec<ast::PortDef>,
     pub param_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Expr>>>,
+    pub exist_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Expr>>>,
     pub event_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Time>>>,
 }
 
@@ -51,6 +52,14 @@ impl Sig {
             raw_outputs: sig.outputs().map(|p| p.clone().take()).collect(),
             raw_events: sig.events.iter().map(|e| e.clone().take()).collect(),
             param_cons: sig.param_constraints.clone(),
+            exist_cons: sig
+                .sig_bindings
+                .iter()
+                .flat_map(|sb| match &sb.inner() {
+                    ast::SigBind::Exists { cons, .. } => cons.clone(),
+                    ast::SigBind::Let { .. } => vec![],
+                })
+                .collect_vec(),
             event_cons: sig.event_constraints.clone(),
         }
     }

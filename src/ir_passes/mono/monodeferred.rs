@@ -340,6 +340,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             // If we want to do this long term, this should be done in a
             // separate pass and monomorphization should fail on facts.
             ir::Command::Fact(_) => None,
+            ir::Command::Exists(_) => todo!("Monomorphizing exist bindings"),
         }
     }
 }

@@ -110,18 +110,6 @@ impl<T, V: Default + Clone, I: utils::IdxLike<T>> DenseIndexInfo<T, V, I> {
     }
 }
 
-impl<T, V, Idx: utils::IdxLike<T>> FromIterator<(Idx, V)>
-    for DenseIndexInfo<T, V, Idx>
-{
-    fn from_iter<Iter: IntoIterator<Item = (Idx, V)>>(iter: Iter) -> Self {
-        let mut store = Self::default();
-        for (idx, val) in iter {
-            store.push(idx, val);
-        }
-        store
-    }
-}
-
 impl<T, V, I: utils::IdxLike<T>> Default for DenseIndexInfo<T, V, I> {
     fn default() -> Self {
         Self {

@@ -76,6 +76,29 @@ impl From<Id> for ParamBind {
     }
 }
 
+#[derive(Clone)]
+/// A binding in the `with` section of a signature.
+pub enum SigBind {
+    /// A let binding
+    Let { param: Loc<Id>, bind: Expr },
+    /// An existentially quantified type
+    Exists {
+        param: Loc<Id>,
+        cons: Vec<Loc<OrderConstraint<Expr>>>,
+    },
+}
+impl SigBind {
+    pub fn let_(param: Loc<Id>, bind: Expr) -> Self {
+        Self::Let { param, bind }
+    }
+    pub fn exists(
+        param: Loc<Id>,
+        cons: Vec<Loc<OrderConstraint<Expr>>>,
+    ) -> Self {
+        Self::Exists { param, cons }
+    }
+}
+
 /// The signature of a component definition
 #[derive(Default, Clone)]
 pub struct Signature {
@@ -84,7 +107,7 @@ pub struct Signature {
     /// Parameters for the Signature
     pub params: Vec<Loc<ParamBind>>,
     /// Parameters bound in the signature binding. These always have a default value.
-    pub sig_bindings: Vec<Loc<ParamBind>>,
+    pub sig_bindings: Vec<Loc<SigBind>>,
     /// Unannotated ports that are threaded through by the backend
     pub unannotated_ports: Vec<(Id, u64)>,
     /// Mapping from name of signals to the abstract variable they provide
@@ -114,7 +137,7 @@ impl Signature {
         mut outputs: Vec<Loc<PortDef>>,
         param_constraints: Vec<Loc<OrderConstraint<Expr>>>,
         event_constraints: Vec<Loc<OrderConstraint<Time>>>,
-        sig_bindings: Vec<Loc<ParamBind>>,
+        sig_bindings: Vec<Loc<SigBind>>,
     ) -> Self {
         let outputs_idx = inputs.len();
         inputs.append(&mut outputs);
@@ -151,9 +174,5 @@ impl Signature {
     /// Iterator over all the ports of this signature
     pub fn ports(&self) -> &Vec<Loc<PortDef>> {
         &self.ports
-    }
-
-    pub fn sig_bindings(&self) -> impl Iterator<Item = Loc<Id>> + '_ {
-        self.sig_bindings.iter().map(|p| &p.param).cloned()
     }
 }

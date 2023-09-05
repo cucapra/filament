@@ -3,6 +3,7 @@ use crate::{
     ir_visitor::{Action, Visitor, VisitorData},
     utils::GPosIdx,
 };
+use itertools::Itertools;
 
 #[derive(Default)]
 /// Implements the type checking algorithm for Filament.
@@ -10,6 +11,7 @@ use crate::{
 /// * Port accesses are in-bounds
 /// * Connections are between ports of same size
 /// * Connected ports have the same bitwidths
+/// * Add constraints on existentially quantified parameters
 pub struct TypeCheck;
 
 impl TypeCheck {
@@ -55,6 +57,29 @@ impl TypeCheck {
 impl Visitor for TypeCheck {
     fn name() -> &'static str {
         "type-check"
+    }
+
+    fn exists(&mut self, e: &mut ir::Exists, data: &mut VisitorData) -> Action {
+        let ctx = &mut data.comp;
+        // Ensure that the parameter is an existentially quantified parameter.
+        // XXX(rachit): This should really be a check in the validate pass but
+        // currently don't run that pass.
+        let Some(assumes) = ctx.get_sig_assumes(e.param) else {
+            return Action::Continue;
+        };
+        let param = ctx.get(e.param);
+        let info = ctx.get(param.info).as_param();
+        let reason: ir::Info = info
+            .map(|p| ir::info::Reason::exist_cons(p.bind_loc, None).into())
+            .unwrap_or_default();
+        let info = ctx.add(reason);
+
+        Action::AddBefore(
+            assumes
+                .iter()
+                .flat_map(|p| data.comp.assert(*p, info))
+                .collect_vec(),
+        )
     }
 
     fn connect(
