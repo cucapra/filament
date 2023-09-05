@@ -1,5 +1,7 @@
 use crate::ir_visitor::{Action, Visitor, VisitorData};
-use fil_ir as ir;
+use fil_ir::{self as ir, Ctx};
+use itertools::Itertools;
+use topological_sort::TopologicalSort;
 
 #[derive(Default)]
 /// Rewrite the control program so that uses of ports and invocations
@@ -24,10 +26,47 @@ impl BuildDomination {
         self.plets.push(Vec::new());
     }
 
+    /// Topologically sort the instances in the current scope.
+    /// Dependency between instances is created when one uses a parameter
+    /// defined by another.
+    fn sort_insts(
+        insts: Vec<ir::Command>,
+        comp: &ir::Component,
+    ) -> Vec<ir::Command> {
+        let insts = insts
+            .into_iter()
+            .map(|i| {
+                let ir::Command::Instance(inst) = i else {
+                    unreachable!("expected instance command")
+                };
+                inst
+            })
+            .collect_vec();
+        let mut topo =
+            TopologicalSort::<ir::InstIdx>::from_iter(insts.iter().cloned());
+
+        for inst in insts {
+            let ir::Instance { args, .. } = comp.get(inst);
+            for arg in args.iter() {
+                let ir::Expr::Param(p_idx) = comp.get(*arg) else {
+                    continue;
+                };
+                let ir::ParamOwner::Instance(parent) = comp.get(*p_idx).owner
+                else {
+                    continue;
+                };
+                topo.add_dependency(parent, inst);
+            }
+        }
+
+        topo.map(|i| i.into()).collect_vec()
+    }
+
     /// End the current scope and return the instances and invocations
     /// in the scope.
     fn end_scope(
         &mut self,
+        comp: &ir::Component,
     ) -> (Vec<ir::Command>, Vec<ir::Command>, Vec<ir::Command>) {
         let Some(insts) = self.insts.pop() else {
             unreachable!("insts stack is empty")
@@ -38,7 +77,7 @@ impl BuildDomination {
         let Some(plets) = self.plets.pop() else {
             unreachable!("plets stack is empty")
         };
-        (insts, invs, plets)
+        (Self::sort_insts(insts, comp), invs, plets)
     }
 
     fn add_inv(&mut self, inv: ir::InvIdx) {
@@ -71,8 +110,8 @@ impl Visitor for BuildDomination {
         self.start_scope();
     }
 
-    fn end_cmds(&mut self, cmds: &mut Vec<ir::Command>, _: &mut VisitorData) {
-        let (inst, invs, plets) = self.end_scope();
+    fn end_cmds(&mut self, cmds: &mut Vec<ir::Command>, d: &mut VisitorData) {
+        let (inst, invs, plets) = self.end_scope(&d.comp);
         // Insert instances and then invocations to the start of the scope.
         *cmds = plets
             .into_iter()
