@@ -628,26 +628,21 @@ impl MonoSig {
             .collect_vec();
         let ck = (comp.ul(), conc_params).into();
         let comp = pass.monomorphize(ck);
-
-        let new_inst = if !is_ext {
-            ir::Instance {
-                comp: comp.get(),
-                args: Box::new([]), // No parameters for a monomorphized component
-                info: self.info(underlying, pass, info).get(),
-                params: Vec::new(),
-            }
-        } else {
-            // this is an extern, so keep the params - need to get them into the new component though
-            let ext_params = args
-                .iter()
+        let conc_params: Box<[ir::ExprIdx]> = if is_ext {
+            args.iter()
                 .map(|p| self.expr(underlying, p.ul()).get())
-                .collect();
-            ir::Instance {
-                comp: comp.get(),
-                args: ext_params,
-                info: self.info(underlying, pass, info).get(),
-                params: Vec::new(),
-            }
+                .collect_vec()
+                .into()
+        } else {
+            Box::new([])
+        };
+
+        // this is an extern, so keep the params - need to get them into the new component though
+        let new_inst = ir::Instance {
+            comp: comp.get(),
+            args: conc_params,
+            info: self.info(underlying, pass, info).get(),
+            params: Vec::new(),
         };
 
         let new_idx = self.base.add(new_inst);
@@ -662,6 +657,11 @@ impl MonoSig {
         pass: &mut Monomorphize,
         port: Underlying<ir::Port>,
     ) -> Base<ir::Port> {
+        assert!(
+            underlying.is_ext(),
+            "ext_port called on non-extern component"
+        );
+
         let ir::Port {
             owner,
             width,
@@ -672,17 +672,7 @@ impl MonoSig {
         let info = info.ul();
         let comp = self.underlying_idx;
 
-        let binding = &self.binding.inner();
-        let cparams = if underlying.is_ext() {
-            vec![]
-        } else {
-            binding
-                .iter()
-                .filter(|(p, _)| underlying.get(*p).is_sig_owned())
-                .map(|(_, n)| *n)
-                .collect_vec()
-        };
-
+        let cparams = vec![];
         let port_map_k = (None, port);
         let comp_k = (comp, cparams).into();
 
