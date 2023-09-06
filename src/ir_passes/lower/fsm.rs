@@ -467,8 +467,6 @@ impl FsmBind {
         start: u64,
         end: u64,
     ) -> Guard<Nothing> {
-        log::info!("{}, {}, {:?}", start, end, ft);
-
         match ft {
             FsmType::Simple(_) => (start..end)
                 .map(|st| guard!(cell[format!("_{st}")]))

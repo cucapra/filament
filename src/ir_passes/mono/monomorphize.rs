@@ -93,24 +93,19 @@ impl<'ctx> Monomorphize<'ctx> {
         let base = self.ctx.get_mut(new_comp.get());
 
         // make a MonoSig
-        let mut monosig = MonoSig::new(base, underlying, comp.idx(), params);
+        let monosig = MonoSig::new(base, underlying, comp.idx(), params);
 
         // the component whose signature we want to monomorphize
-        let underlying = UnderlyingComp::new(self.old.get(comp.idx()));
-
         // Monomorphize the sig
-        log::debug!("Signature of `{}'", comp.idx());
-        MonoDeferred::sig(&mut monosig, underlying.clone(), self);
-
         let mut mono = MonoDeferred {
-            underlying,
+            underlying: UnderlyingComp::new(self.old.get(comp.idx())),
             pass: self,
             monosig,
         };
 
         log::debug!("Body of `{}'", key.comp.idx());
         mono.pass.processed.insert(key.clone(), new_comp);
-        mono.gen_comp();
+        mono.comp();
         let mut comp = mono.monosig.base;
 
         let default = self.ctx.get_mut(new_comp.get());

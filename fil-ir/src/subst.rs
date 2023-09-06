@@ -3,6 +3,7 @@ use super::{
     PropIdx, Time, TimeIdx,
 };
 
+/// A binding from K to V.
 pub struct Bind<K: Eq, V>(Vec<(K, V)>);
 
 impl<K: Eq, V> Bind<K, V> {
@@ -34,6 +35,11 @@ where
     /// Insert a new binding
     pub fn insert(&mut self, key: K, value: V) {
         self.0.push((key, value));
+    }
+
+    /// Extend the binding
+    pub fn extend(&mut self, other: impl Iterator<Item = (K, V)>) {
+        self.0.extend(other);
     }
 
     /// Remove the last binding and return it

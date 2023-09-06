@@ -212,11 +212,13 @@ impl<'prog> BuildCtx<'prog> {
         self.sigs = sigs;
     }
 
-    /// Add a let-bound parameter
+    /// Add a let-bound parameter's as binding as the thing it should resolve to.
+    /// This has the effect of inlining all let-bound parameters.
     pub fn add_let_param(&mut self, id: Id, expr: ir::ExprIdx) {
         self.param_map.insert(OwnedParam::Local(id), expr);
     }
 
+    /// Get the expression binding for a parameter.
     pub fn get_param(
         &mut self,
         param: &OwnedParam,
@@ -226,9 +228,8 @@ impl<'prog> BuildCtx<'prog> {
             Some(p) => Ok(*p),
             None => {
                 let diag = &mut self.diag;
-                let undef =
-                    Error::undefined(format!("#{}", param), "parameter")
-                        .add_note(diag.add_info("unknown parameter", pos));
+                let undef = Error::undefined(format!("{}", param), "parameter")
+                    .add_note(diag.add_info("unknown parameter", pos));
                 diag.add_error(undef);
                 Err(std::mem::take(diag))
             }

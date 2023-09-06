@@ -26,20 +26,20 @@ pub struct MonoSig {
     /// Mapping from parameters in the underlying component to their constant bindings.
     pub binding: ir::Bind<Underlying<ir::Param>, u64>,
 
-    /// Map from underlying invokes to base invokes
-    pub invoke_map: DenseMap<ir::Invoke>,
-    /// Map from underlying instances to base instances
-    pub instance_map: DenseMap<ir::Instance>,
-
     // Keep track of things that have benen monomorphized already
     /// Events
     pub event_map: DenseMap<ir::Event>,
     /// Params - underlying param -> new Param. Kept in a sparse map because we're going to remove most parameters during monomorphization.
     pub param_map: SparseMap<ir::Param>,
-    /// Bundle params - new port to new param
-    pub bundle_param_map: HashMap<Base<ir::Port>, Base<ir::Param>>,
     /// Ports - (base inv, underlying port) -> base port
     pub port_map: HashMap<PortKey, Base<ir::Port>>,
+    /// Bundle params - new port to new param
+    bundle_param_map: HashMap<Base<ir::Port>, Base<ir::Param>>,
+
+    /// Map from underlying invokes to base invokes
+    invoke_map: DenseMap<ir::Invoke>,
+    /// Map from underlying instances to base instances
+    instance_map: DenseMap<ir::Instance>,
 }
 
 impl MonoSig {
@@ -231,6 +231,7 @@ impl MonoSig {
         if let Some(&idx) = self.param_map.find(p_idx) {
             idx
         } else {
+            let p_rep = ul.display(p_idx);
             // This param is a in a use site and should therefore have been found.
             let msg = match ul.get(p_idx).owner {
                 ir::ParamOwner::Loop => "let-bound parameter".to_string(),
@@ -243,13 +244,16 @@ impl MonoSig {
                     ul.display(inst.ul())
                 ),
                 ir::ParamOwner::Exists => {
-                    "existentially quantified parameter".to_string()
+                    unreachable!(
+                        "existential parameter `{}' occurred in a use location",
+                        p_rep
+                    )
                 }
             };
             unreachable!(
                 "{} `{}' should have been resolved in the binding but the binding was: [{}]",
                 msg,
-                ul.display(p_idx),
+                p_rep,
                 self.binding_rep(ul),
             )
         }
@@ -356,10 +360,10 @@ impl MonoSig {
         }
     }
 
-    /// Second pass over events. When we visit the signature we could see things like G: |L-G|,
-    /// so we do a first pass in sig to allocate the Idx for it.
-    /// This function does the work of monomorphizing the new event.
-    pub fn event_second(
+    /// Monomorphize the event delays.
+    /// Event delays may mention other events (G: |L-G|) so first we need to
+    /// monomorphize all the events and then monomorphize their delays.
+    pub fn event_delay(
         &mut self,
         underlying: &UnderlyingComp,
         pass: &mut Monomorphize,
@@ -506,7 +510,7 @@ impl MonoSig {
         // Ports
         let mono_ports = ports
             .iter()
-            .map(|p| self.port_def(underlying, pass, p.ul()).get())
+            .map(|p| self.local_port_def(underlying, pass, p.ul()).get())
             .collect_vec();
 
         // Events
@@ -781,8 +785,20 @@ impl MonoSig {
         }
     }
 
+    /// Monomorphize a local port
+    pub fn local_port_def(
+        &mut self,
+        underlying: &UnderlyingComp,
+        pass: &mut Monomorphize,
+        port: Underlying<ir::Port>,
+    ) -> Base<ir::Port> {
+        let base = self.port_def_partial(underlying, pass, port);
+        self.port_data(underlying, pass, port, base);
+        base
+    }
+
     /// Monomorphize the port (owned by self.underlying) and add it to `self.base`, and return the corresponding index
-    pub fn port_def(
+    pub fn port_def_partial(
         &mut self,
         underlying: &UnderlyingComp,
         pass: &mut Monomorphize,
@@ -819,6 +835,25 @@ impl MonoSig {
         // method can be called on local ports defined in iterative scopes.
         self.port_map.insert(port_map_k, new_port);
 
+        new_port
+    }
+
+    /// Monomorphize [ir::Liveness] and width of a port.
+    /// This is seperate from [port_def] because for signature ports, we need to
+    /// do this after the body has been monomorphized. This is because port
+    /// liveness and widths might mention existentially quantified parameters
+    /// which only get their binding after a component has been monomorphized.
+    pub fn port_data(
+        &mut self,
+        underlying: &UnderlyingComp,
+        pass: &mut Monomorphize,
+        port: Underlying<ir::Port>,
+        new_port: Base<ir::Port>,
+    ) {
+        let ir::Port {
+            owner, width, live, ..
+        } = underlying.get(port);
+
         // Find the new port owner
         let mono_owner = self.find_new_portowner(underlying, pass, owner);
 
@@ -847,7 +882,5 @@ impl MonoSig {
         port.live = mono_liveness; // update
         port.width = mono_width.get(); // update
         port.owner = mono_owner; // update
-
-        new_port
     }
 }

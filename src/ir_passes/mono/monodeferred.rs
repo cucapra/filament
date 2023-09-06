@@ -1,5 +1,8 @@
-use super::{Base, IntoUdl, MonoSig, Monomorphize, Underlying, UnderlyingComp};
+use super::{
+    Base, CompKey, IntoUdl, MonoSig, Monomorphize, Underlying, UnderlyingComp,
+};
 use fil_ir::{self as ir, AddCtx, Ctx};
+use ir::DisplayCtx;
 use itertools::Itertools;
 
 /// Defines methods required to monomorphize a component. Most of the updates
@@ -16,87 +19,112 @@ pub struct MonoDeferred<'a, 'pass: 'a> {
 }
 
 impl MonoDeferred<'_, '_> {
-    // XXX(rachit): Why does this function need to do anything to the signature
-    // of external components instead of just wholesale copying them?
-    pub fn sig(
-        monosig: &mut MonoSig,
-        underlying: UnderlyingComp,
-        pass: &mut Monomorphize,
-    ) {
-        let binding = monosig.binding.inner();
-        let conc_params = if underlying.is_ext() {
+    fn comp_key(&self) -> CompKey {
+        let binding = self.monosig.binding.inner();
+        let conc_params = if self.underlying.is_ext() {
             vec![]
         } else {
             binding
                 .iter()
-                .filter(|(p, _)| underlying.get(*p).is_sig_owned())
+                .filter(|(p, _)| self.underlying.get(*p).is_sig_owned())
                 .map(|(_, n)| *n)
                 .collect_vec()
         };
+
+        (self.monosig.underlying_idx.ul(), conc_params).into()
+    }
+
+    // XXX(rachit): Why does this function need to do anything to the signature
+    // of external components instead of just wholesale copying them?
+    pub fn comp(&mut self) {
         // Events can be recursive, so do a pass over them to generate the new idxs now
         // and then fill them in later
-        for (idx, event) in underlying.events().iter() {
+        let comp_k: CompKey = self.comp_key();
+
+        let monosig = &mut self.monosig;
+        let ul = &self.underlying;
+        let pass = &mut self.pass;
+
+        for (idx, event) in ul.events().iter() {
             let new_idx = monosig.base.add(event.clone());
             monosig.event_map.insert(idx.ul(), new_idx);
-            let comp_k =
-                (monosig.underlying_idx.ul(), conc_params.clone()).into();
-            pass.inst_info_mut(comp_k).add_event(idx.ul(), new_idx);
+            pass.inst_info_mut(comp_k.clone())
+                .add_event(idx.ul(), new_idx);
         }
 
-        if underlying.is_ext() {
+        // Directly add expressions and parameters for external components. For
+        // non-external components, the only parameters that will remain in the
+        // component are the bundle parameters.
+        if ul.is_ext() {
             // We can copy over the underlying expressions because we're not
             // going to substitute anything.
-            for (_, expr) in underlying.exprs().iter() {
+            for (_, expr) in ul.exprs().iter() {
                 monosig.base.add(expr.clone());
             }
 
             // Add all parameters because we're not going to substitute them
-            for (idx, param) in underlying.params().iter() {
+            for (idx, param) in ul.params().iter() {
                 let ir::Param { owner, info } = param;
                 let info = info.ul();
                 let param = ir::Param {
                     owner: owner.clone(),
-                    info: monosig.info(&underlying, pass, info).get(),
+                    info: monosig.info(ul, pass, info).get(),
                 };
                 let new_idx = monosig.base.add(param);
                 monosig.param_map.push(idx.ul(), new_idx);
             }
+        }
 
-            for (idx, port) in underlying.ports().iter() {
+        // Monomorphize port in the signature. Other ports are monomorphized
+        // while traversing commands.
+        if ul.is_ext() {
+            for (idx, port) in ul.ports().iter() {
                 if port.is_sig() {
-                    monosig.ext_port(&underlying, pass, idx.ul());
+                    monosig.ext_port(ul, pass, idx.ul());
                 }
             }
         } else {
-            for (idx, port) in underlying.ports().iter() {
+            for (idx, port) in ul.ports().iter() {
                 if port.is_sig() {
-                    let port = monosig.port_def(&underlying, pass, idx.ul());
-                    let comp_k =
-                        (monosig.underlying_idx.ul(), conc_params.clone())
-                            .into();
-                    pass.inst_info_mut(comp_k).add_port(idx.ul(), port)
+                    // Only monomorphize the definition without the data.
+                    let port = monosig.port_def_partial(ul, pass, idx.ul());
+                    // Add these ports to the global port information for this
+                    // instance because other components need this information
+                    // to resolve foreigns.
+                    pass.inst_info_mut(comp_k.clone()).add_port(idx.ul(), port)
                 }
             }
         }
 
+        // Event delays
         for (old, new) in monosig.event_map.clone().iter() {
-            monosig.event_second(&underlying, pass, old, *new);
+            monosig.event_delay(ul, pass, old, *new);
         }
 
-        let src_info = underlying.src_info();
-        let unannotated_ports = underlying.unannotated_ports().clone();
+        let src_info = ul.src_info();
+        monosig.interface(ul, src_info);
 
-        monosig.interface(&underlying, src_info);
+        let unannotated_ports = ul.unannotated_ports().clone();
         monosig.base.set_unannotated_ports(unannotated_ports);
-    }
-}
 
-impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
-    pub fn gen_comp(&mut self) {
-        // is there a way to not clone this?
+        // Monomorphize the components
         for cmd in self.underlying.cmds().clone() {
             let cmd = self.command(&cmd);
             self.monosig.base.extend_cmds(cmd);
+        }
+
+        // Extend the binding with existential parameters and monomorphize signature port data
+        self.monosig
+            .binding
+            .extend(self.pass.inst_info(&comp_k).iter_exist_vals());
+
+        for (idx, _) in
+            self.underlying.ports().iter().filter(|(_, p)| p.is_sig())
+        {
+            let port_key = (None, idx.ul());
+            let base = self.monosig.port_map[&port_key];
+            self.monosig
+                .port_data(&self.underlying, self.pass, idx.ul(), base);
         }
     }
 
@@ -228,7 +256,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 let cmd = self.command(cmd);
                 self.monosig.base.extend_cmds(cmd);
             }
-            // Pop all the let bindings
             self.monosig.binding.pop(); // pop the index
             i += 1;
         }
@@ -283,7 +310,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             ),
             ir::Command::BundleDef(p) => Some(
                 self.monosig
-                    .port_def(&self.underlying, self.pass, p.ul())
+                    .local_port_def(&self.underlying, self.pass, p.ul())
                     .get()
                     .into(),
             ),
@@ -296,11 +323,26 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
                 self.if_stmt(if_stmt);
                 None
             }
+            ir::Command::Exists(ir::Exists { param, expr }) => {
+                let comp_key = self.comp_key();
+                let e = self.monosig.expr(&self.underlying, expr.ul()).get();
+                let base_comp = self.monosig.base.comp();
+                let Some(v) = e.as_concrete(base_comp) else {
+                    unreachable!(
+                        "exists binding evaluated to: {}",
+                        base_comp.display(e)
+                    )
+                };
+
+                self.pass
+                    .inst_info_mut(comp_key)
+                    .add_exist_val(param.ul(), v);
+                None
+            }
             // XXX(rachit): We completely get rid of facts in the program here.
             // If we want to do this long term, this should be done in a
             // separate pass and monomorphization should fail on facts.
             ir::Command::Fact(_) => None,
-            ir::Command::Exists(_) => todo!("Monomorphizing exist bindings"),
         }
     }
 }
