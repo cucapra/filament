@@ -43,6 +43,7 @@ impl MonoDeferred<'_, '_> {
 
         let monosig = &mut self.monosig;
         let ul = &self.underlying;
+        let is_ext = ul.is_ext();
         let pass = &mut self.pass;
 
         for (idx, event) in ul.events().iter() {
@@ -55,7 +56,7 @@ impl MonoDeferred<'_, '_> {
         // Directly add expressions and parameters for external components. For
         // non-external components, the only parameters that will remain in the
         // component are the bundle parameters.
-        if ul.is_ext() {
+        if is_ext {
             // We can copy over the underlying expressions because we're not
             // going to substitute anything.
             for (_, expr) in ul.exprs().iter() {
@@ -77,7 +78,7 @@ impl MonoDeferred<'_, '_> {
 
         // Monomorphize port in the signature. Other ports are monomorphized
         // while traversing commands.
-        if ul.is_ext() {
+        if is_ext {
             for (idx, port) in ul.ports().iter() {
                 if port.is_sig() {
                     monosig.ext_port(ul, pass, idx.ul());
@@ -113,18 +114,24 @@ impl MonoDeferred<'_, '_> {
             self.monosig.base.extend_cmds(cmd);
         }
 
-        // Extend the binding with existential parameters and monomorphize signature port data
-        self.monosig
-            .binding
-            .extend(self.pass.inst_info(&comp_k).iter_exist_vals());
-
-        for (idx, _) in
-            self.underlying.ports().iter().filter(|(_, p)| p.is_sig())
-        {
-            let port_key = (None, idx.ul());
-            let base = self.monosig.port_map[&port_key];
+        if !is_ext {
+            // Extend the binding with existential parameters and monomorphize signature port data
             self.monosig
-                .port_data(&self.underlying, self.pass, idx.ul(), base);
+                .binding
+                .extend(self.pass.inst_info(&comp_k).iter_exist_vals());
+
+            for (idx, _) in
+                self.underlying.ports().iter().filter(|(_, p)| p.is_sig())
+            {
+                let port_key = (None, idx.ul());
+                let base = self.monosig.port_map[&port_key];
+                self.monosig.port_data(
+                    &self.underlying,
+                    self.pass,
+                    idx.ul(),
+                    base,
+                );
+            }
         }
 
         self.monosig.base.take()

@@ -340,14 +340,24 @@ impl<'a, 'b> Printer<'a, 'b> {
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
-        write!(f, "{:indent$}{} = instance ", "", self.comp.display(idx))?;
-        let ir::Instance { comp, params, .. } = self.comp.get(idx);
+        let ir::Instance {
+            comp, args, params, ..
+        } = self.comp.get(idx);
+        let def_params =
+            params.iter().map(|p| self.comp.display(*p)).join(", ");
+        write!(
+            f,
+            "{:indent$}{}, {} = instance ",
+            "",
+            self.comp.display(idx),
+            def_params,
+        )?;
         if let Some(ctx) = self.ctx {
             write!(f, "{}", ctx.display(*comp))?;
         } else {
             write!(f, "{}", comp)?;
         }
-        let params = params.iter().map(|p| self.comp.display(*p)).join(", ");
+        let params = args.iter().map(|p| self.comp.display(*p)).join(", ");
         if !params.is_empty() {
             write!(f, "[{}]", params)?;
         }

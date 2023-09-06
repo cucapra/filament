@@ -83,7 +83,6 @@ impl<'ctx> Monomorphize<'ctx> {
         }
         .comp();
 
-        ir::Validate::component(&self.ctx, &mono_comp);
         let new_comp = self.ctx.add(mono_comp).base();
         self.processed.insert(key.clone(), new_comp);
 
@@ -124,6 +123,7 @@ impl Monomorphize<'_> {
         let new_entrypoint = mono.processed.get(&ck).unwrap();
         mono.ctx.entrypoint = Some(new_entrypoint.get());
         mono.ctx.externals = mono.ext_map;
+        ir::Validate::context(&mono.ctx);
         mono.ctx
     }
 }
