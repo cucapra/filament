@@ -3,14 +3,20 @@ use crate::{self as ir, Ctx, Idx};
 use itertools::{Itertools, Position};
 use std::{fmt::Display, io};
 
-pub struct Printer<'a> {
+pub struct Printer<'a, 'ctx: 'a> {
     /// The component being printed. Used to resolve interned values like expressions.
-    ctx: &'a ir::Component,
+    comp: &'a ir::Component,
+    ctx: Option<&'ctx ir::Context>,
 }
 
-impl<'a> Printer<'a> {
-    pub fn new(ctx: &'a ir::Component) -> Self {
-        Self { ctx }
+impl<'a, 'b> Printer<'a, 'b> {
+    pub fn new(comp: &'a ir::Component) -> Self {
+        Self { comp, ctx: None }
+    }
+
+    pub fn with_ctx(mut self, ctx: &'b ir::Context) -> Self {
+        self.ctx = Some(ctx);
+        self
     }
 
     fn interned<T>(
@@ -40,8 +46,8 @@ impl<'a> Printer<'a> {
             f,
             "{:indent$}{} = {};",
             "",
-            self.ctx.display(dst),
-            self.ctx.display(src),
+            self.comp.display(dst),
+            self.comp.display(src),
         )
     }
 
@@ -66,9 +72,9 @@ impl<'a> Printer<'a> {
                     f,
                     "{:indent$}for {} in {}..{} {{",
                     "",
-                    self.ctx.display(*index),
-                    self.ctx.display(*start),
-                    self.ctx.display(*end)
+                    self.comp.display(*index),
+                    self.comp.display(*start),
+                    self.comp.display(*end)
                 )?;
                 self.commands(body, indent + 2, f)?;
                 write!(f, "{:indent$}}}", "")
@@ -78,7 +84,7 @@ impl<'a> Printer<'a> {
                     f,
                     "{:indent$}if {} {{",
                     "",
-                    self.ctx.display(c.cond)
+                    self.comp.display(c.cond)
                 )?;
                 self.commands(&c.then, indent + 2, f)?;
                 write!(f, "{:indent$}}}", "")?;
@@ -95,14 +101,14 @@ impl<'a> Printer<'a> {
                         f,
                         "{:indent$}assert {};",
                         "",
-                        self.ctx.display(fact.prop)
+                        self.comp.display(fact.prop)
                     )
                 } else {
                     write!(
                         f,
                         "{:indent$}assume {};",
                         "",
-                        self.ctx.display(fact.prop)
+                        self.comp.display(fact.prop)
                     )
                 }
             }
@@ -111,8 +117,8 @@ impl<'a> Printer<'a> {
                     f,
                     "{:indent$}exists {} = {};",
                     "",
-                    self.ctx.display(*param),
-                    self.ctx.display(*expr)
+                    self.comp.display(*param),
+                    self.comp.display(*expr)
                 )
             }
         }
@@ -133,15 +139,14 @@ impl<'a> Printer<'a> {
 
     fn sig<F: io::Write>(
         &self,
-        comp: &ir::Component,
         idx: Option<ir::CompIdx>,
         indent: usize,
         f: &mut F,
     ) -> io::Result<()> {
-        if comp.is_ext {
+        if self.comp.is_ext {
             write!(f, "ext ")?;
         };
-        if let Some(info) = &comp.src_info {
+        if let Some(info) = &self.comp.src_info {
             write!(f, "comp {}", info.name)?;
             if log::log_enabled!(log::Level::Debug) {
                 if let Some(idx) = idx {
@@ -154,7 +159,8 @@ impl<'a> Printer<'a> {
             write!(f, "comp")?;
         }
         write!(f, "[")?;
-        for pos in comp
+        for pos in self
+            .comp
             .params()
             .iter()
             .filter(|(_, p)| p.is_sig_owned())
@@ -163,31 +169,31 @@ impl<'a> Printer<'a> {
         {
             match pos {
                 Position::First(idx) | Position::Middle(idx) => {
-                    write!(f, "{}, ", self.ctx.display(idx))?
+                    write!(f, "{}, ", self.comp.display(idx))?
                 }
                 Position::Only(idx) | Position::Last(idx) => {
-                    write!(f, "{}", self.ctx.display(idx))?
+                    write!(f, "{}", self.comp.display(idx))?
                 }
             }
         }
         write!(f, "]<")?;
         // All events are defined by the signature
-        for pos in comp.events().iter().with_position() {
+        for pos in self.comp.events().iter().with_position() {
             match pos {
                 Position::First((idx, ev)) | Position::Middle((idx, ev)) => {
                     write!(
                         f,
                         "{}: {}, ",
-                        self.ctx.display(idx),
-                        self.ctx.display(&ev.delay)
+                        self.comp.display(idx),
+                        self.comp.display(&ev.delay)
                     )?
                 }
                 Position::Only((idx, ev)) | Position::Last((idx, ev)) => {
                     write!(
                         f,
                         "{}: {}",
-                        self.ctx.display(idx),
-                        self.ctx.display(&ev.delay)
+                        self.comp.display(idx),
+                        self.comp.display(&ev.delay)
                     )?
                 }
             }
@@ -200,9 +206,9 @@ impl<'a> Printer<'a> {
                     f,
                     "{:indent$}{}: {} {},",
                     "",
-                    self.ctx.display(*idx),
-                    self.ctx.display(&port.live),
-                    self.ctx.display(port.width),
+                    self.comp.display(*idx),
+                    self.comp.display(&port.live),
+                    self.comp.display(port.width),
                     indent = indent + 2
                 )
             }
@@ -211,16 +217,17 @@ impl<'a> Printer<'a> {
                     f,
                     "{:indent$}{}: {} {}",
                     "",
-                    self.ctx.display(*idx),
-                    self.ctx.display(&port.live),
-                    self.ctx.display(port.width),
+                    self.comp.display(*idx),
+                    self.comp.display(&port.live),
+                    self.comp.display(port.width),
                     indent = indent + 2
                 )
             }
         };
         // Print input ports first. The direction is reversed when they are
         // bound in the body.
-        for pos in comp
+        for pos in self
+            .comp
             .ports()
             .iter()
             .filter(|(_, port)| port.is_sig_in())
@@ -230,7 +237,8 @@ impl<'a> Printer<'a> {
         }
 
         writeln!(f, ") -> (")?;
-        for pos in comp
+        for pos in self
+            .comp
             .ports()
             .iter()
             .filter(|(_, port)| port.is_sig_out())
@@ -245,10 +253,9 @@ impl<'a> Printer<'a> {
         &self,
         idx: ir::ParamIdx,
         indent: usize,
-        c: &ir::Component,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
-        let param = self.ctx.get(idx);
+        let param = self.comp.get(idx);
         match param.owner {
             ir::ParamOwner::Sig | ir::ParamOwner::Instance(_) => {}
             ir::ParamOwner::Bundle(_)
@@ -258,8 +265,9 @@ impl<'a> Printer<'a> {
                     f,
                     "{:indent$}{idx} = param {param};{comment}",
                     "",
-                    param = self.ctx.display(idx),
-                    comment = c
+                    param = self.comp.display(idx),
+                    comment = self
+                        .comp
                         .get(param.info)
                         .as_param()
                         .map_or("".to_string(), |p| format!(" // {}", p.name))
@@ -278,7 +286,7 @@ impl<'a> Printer<'a> {
     ) -> io::Result<()> {
         let ir::Port {
             owner, width, live, ..
-        } = self.ctx.get(idx);
+        } = self.comp.get(idx);
         match &owner {
             ir::PortOwner::Sig { .. } => Ok(()),
             ir::PortOwner::Inv { dir, .. } => {
@@ -287,18 +295,18 @@ impl<'a> Printer<'a> {
                         f,
                         "{:indent$}{} ({idx}): bundle({dir}) {} {};",
                         "",
-                        self.ctx.display(idx),
-                        self.ctx.display(live),
-                        self.ctx.display(*width),
+                        self.comp.display(idx),
+                        self.comp.display(live),
+                        self.comp.display(*width),
                     )
                 } else {
                     write!(
                         f,
                         "{:indent$}{}: bundle({dir}) {} {};",
                         "",
-                        self.ctx.display(idx),
-                        self.ctx.display(live),
-                        self.ctx.display(*width),
+                        self.comp.display(idx),
+                        self.comp.display(live),
+                        self.comp.display(*width),
                     )
                 }
             }
@@ -308,18 +316,18 @@ impl<'a> Printer<'a> {
                         f,
                         "{:indent$}{} ({idx}) = bundle {} {};",
                         "",
-                        self.ctx.display(idx),
-                        self.ctx.display(live),
-                        self.ctx.display(*width),
+                        self.comp.display(idx),
+                        self.comp.display(live),
+                        self.comp.display(*width),
                     )
                 } else {
                     write!(
                         f,
                         "{:indent$}{} = bundle {} {};",
                         "",
-                        self.ctx.display(idx),
-                        self.ctx.display(live),
-                        self.ctx.display(*width),
+                        self.comp.display(idx),
+                        self.comp.display(live),
+                        self.comp.display(*width),
                     )
                 }
             }
@@ -332,14 +340,18 @@ impl<'a> Printer<'a> {
         indent: usize,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
-        write!(f, "{:indent$}{} = instance ", "", self.ctx.display(idx))?;
-        let ir::Instance { comp, params, .. } = self.ctx.get(idx);
-        write!(f, "{}[", comp)?;
+        write!(f, "{:indent$}{} = instance ", "", self.comp.display(idx))?;
+        let ir::Instance { comp, params, .. } = self.comp.get(idx);
+        if let Some(ctx) = self.ctx {
+            write!(f, "{}[", ctx.display(*comp))?;
+        } else {
+            write!(f, "{}[", comp)?;
+        }
         for (i, param) in params.iter().enumerate() {
             if i != 0 {
                 write!(f, ", ")?;
             }
-            write!(f, "{}", self.ctx.display(*param))?;
+            write!(f, "{}", self.comp.display(*param))?;
         }
         write!(f, "];")
     }
@@ -355,47 +367,47 @@ impl<'a> Printer<'a> {
             ports,
             events,
             ..
-        } = self.ctx.get(idx);
+        } = self.comp.get(idx);
 
         write!(
             f,
             "{:indent$}{inv}, {ports} = invoke {inst}<{events}>;",
             "",
-            inv = self.ctx.display(idx),
-            ports = ports.iter().map(|p| self.ctx.display(*p)).join(", "),
-            inst = self.ctx.display(*inst),
-            events = events.iter().map(|e| self.ctx.display(e.arg)).join(", ")
+            inv = self.comp.display(idx),
+            ports = ports.iter().map(|p| self.comp.display(*p)).join(", "),
+            inst = self.comp.display(*inst),
+            events = events.iter().map(|e| self.comp.display(e.arg)).join(", ")
         )?;
 
         Ok(())
     }
 
     pub fn comp(
-        ctx: &ir::Component,
+        &self,
         idx: Option<ir::CompIdx>,
         f: &mut impl io::Write,
     ) -> io::Result<()> {
-        let printer = ir::Printer { ctx };
-        printer.sig(ctx, idx, 0, f)?;
+        self.sig(idx, 0, f)?;
         // If debugging is enabled, show the low-level representation of the
         // component's interned values and other stores.
         if log::log_enabled!(log::Level::Debug) {
-            for idx in ctx.params().idx_iter() {
-                printer.local_param(idx, 2, ctx, f)?;
+            for idx in self.comp.params().idx_iter() {
+                self.local_param(idx, 2, f)?;
             }
-            Printer::interned(ctx.exprs(), "expr", 2, f)?;
-            Printer::interned(ctx.times(), "time", 2, f)?;
-            Printer::interned(ctx.props(), "prop", 2, f)?;
+            Printer::interned(self.comp.exprs(), "expr", 2, f)?;
+            Printer::interned(self.comp.times(), "time", 2, f)?;
+            Printer::interned(self.comp.props(), "prop", 2, f)?;
             writeln!(f, "control:")?;
         }
-        printer.commands(&ctx.cmds, 2, f)?;
+        self.commands(&self.comp.cmds, 2, f)?;
         writeln!(f, "}}")
     }
 
     /// Get a string representation of a component
     pub fn comp_str(c: &ir::Component) -> String {
+        let printer = Printer::new(c);
         let mut buf = Vec::new();
-        Printer::comp(c, None, &mut buf).unwrap();
+        printer.comp(None, &mut buf).unwrap();
         String::from_utf8(buf).unwrap()
     }
 
@@ -404,7 +416,7 @@ impl<'a> Printer<'a> {
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         for (idx, comp) in ctx.comps.iter() {
-            Printer::comp(comp, Some(idx), f)?
+            Printer::new(comp).with_ctx(ctx).comp(Some(idx), f)?
         }
         Ok(())
     }
