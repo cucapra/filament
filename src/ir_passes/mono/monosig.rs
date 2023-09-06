@@ -22,7 +22,7 @@ pub struct MonoSig {
     /// The name of the monomorphized component
     pub base: BaseComp,
     /// The underlying component's idx
-    pub underlying_idx: ir::CompIdx,
+    pub underlying_idx: Underlying<ir::Component>,
     /// Mapping from parameters in the underlying component to their constant bindings.
     pub binding: ir::Bind<Underlying<ir::Param>, u64>,
 
@@ -44,12 +44,11 @@ pub struct MonoSig {
 
 impl MonoSig {
     pub fn new(
-        base: &mut ir::Component,
         underlying: &ir::Component,
-        underlying_idx: ir::CompIdx,
+        idx: Underlying<ir::Component>,
+        is_ext: bool,
         params: Vec<u64>,
     ) -> Self {
-        let base = std::mem::take(base);
         let binding = ir::Bind::new(
             underlying
                 .sig_params()
@@ -58,10 +57,12 @@ impl MonoSig {
                 .zip(params)
                 .collect_vec(),
         );
+        let mut comp = ir::Component::default();
+        comp.is_ext = is_ext;
 
         Self {
-            base: BaseComp::new(base),
-            underlying_idx,
+            base: BaseComp::new(comp),
+            underlying_idx: idx,
             binding,
             port_map: HashMap::new(),
             bundle_param_map: HashMap::new(),
@@ -434,7 +435,7 @@ impl MonoSig {
         let conc_params = binding.iter().map(|(_, n)| *n).collect_vec();
 
         let new_event = self.event_map.get(event);
-        let ck = (self.underlying_idx.ul(), conc_params).into();
+        let ck: CompKey = (self.underlying_idx, conc_params).into();
         pass.inst_info_mut(ck).add_event(event, *new_event);
         *new_event
     }
@@ -626,15 +627,12 @@ impl MonoSig {
             })
             .collect_vec();
         let ck = (comp.ul(), conc_params).into();
-        let (comp, new_params) = pass.should_process(ck);
+        let comp = pass.monomorphize(ck);
 
         let new_inst = if !is_ext {
             ir::Instance {
                 comp: comp.get(),
-                args: new_params
-                    .into_iter()
-                    .map(|n| self.base.num(n).get())
-                    .collect(),
+                args: Box::new([]), // No parameters for a monomorphized component
                 info: self.info(underlying, pass, info).get(),
                 params: Vec::new(),
             }
@@ -643,10 +641,10 @@ impl MonoSig {
             let ext_params = args
                 .iter()
                 .map(|p| self.expr(underlying, p.ul()).get())
-                .collect_vec();
+                .collect();
             ir::Instance {
                 comp: comp.get(),
-                args: ext_params.into(),
+                args: ext_params,
                 info: self.info(underlying, pass, info).get(),
                 params: Vec::new(),
             }
@@ -672,7 +670,7 @@ impl MonoSig {
         } = underlying.get(port);
 
         let info = info.ul();
-        let comp = self.underlying_idx.ul();
+        let comp = self.underlying_idx;
 
         let binding = &self.binding.inner();
         let cparams = if underlying.is_ext() {

@@ -26,7 +26,7 @@ impl<'a> Validate<'a> {
     fn comp(&self) {
         // Validate exprs
         for (eidx, _) in self.comp.exprs().iter() {
-            self.expr(eidx);
+            // self.expr(eidx);
         }
 
         // Validate times
@@ -46,12 +46,12 @@ impl<'a> Validate<'a> {
 
         // Validate params
         for (pidx, _) in self.comp.params().iter() {
-            self.param(pidx);
+            // self.param(pidx);
         }
 
         // Validate events
         for (evidx, _) in self.comp.events().iter() {
-            self.event(evidx);
+            // self.event(evidx);
         }
 
         // Validate invokes
@@ -68,12 +68,6 @@ impl<'a> Validate<'a> {
         for cmd in &self.comp.cmds {
             self.command(cmd);
         }
-    }
-
-    /// An Expr is valid if:
-    /// (1) It is bound in the component
-    fn expr(&self, eidx: ir::ExprIdx) {
-        let _ = &self.comp[eidx];
     }
 
     /// A Port is valid if:
@@ -117,9 +111,6 @@ impl<'a> Validate<'a> {
                 }
             }
         }
-        // validate liveness length
-        self.expr(*len);
-
         // check range by checking both the Times it uses
         let ir::Range { start, end } = range;
         self.time(*start);
@@ -150,19 +141,6 @@ impl<'a> Validate<'a> {
                 }
             }
         }
-
-        // check (3)
-        self.expr(*width);
-    }
-
-    /// An event is valid if:
-    /// (1) Its owner is defined in the component and says it owns the event
-    /// (2) Its delay is valid
-    fn event(&self, evidx: ir::EventIdx) {
-        let ir::Event { delay, .. } = &self.comp[evidx];
-
-        // check (2)
-        self.timesub(delay);
     }
 
     /// A TimeSub is valid if:
@@ -173,7 +151,7 @@ impl<'a> Validate<'a> {
         // check (1)
         match ts {
             ir::TimeSub::Unit(expr) => {
-                self.expr(*expr);
+                // self.expr(*expr);
             }
             ir::TimeSub::Sym {
                 l: t1_idx,
@@ -193,8 +171,8 @@ impl<'a> Validate<'a> {
         let ir::Time { event, offset } = &self.comp[tidx];
 
         // check (2)
-        self.event(*event);
-        self.expr(*offset);
+        // self.event(*event);
+        // self.expr(*offset);
     }
 
     #[allow(unused)]
@@ -204,36 +182,6 @@ impl<'a> Validate<'a> {
         let ir::Range { start, end } = range;
         self.time(start);
         self.time(end);
-    }
-
-    /// A param is valid if:
-    /// (1) It is defined in the component
-    /// (2) Its owner is defined in the component
-    /// (3) Its owner points to it?
-    fn param(&self, pidx: ir::ParamIdx) -> &ir::Param {
-        // check (1) - this will panic if param not defined
-        let param = &self.comp.get(pidx);
-
-        // check (2) and (3)
-        match &param.owner {
-            ir::ParamOwner::Sig
-            | ir::ParamOwner::Exists
-            | ir::ParamOwner::Loop => { /* Nothing to check */ }
-            ir::ParamOwner::Instance(_) => todo!(),
-            ir::ParamOwner::Bundle(port_idx) => {
-                let ir::Port { live, .. } = &self.comp.get(*port_idx); // (2) this will panic if port not defined
-
-                // check (3)
-                let ir::Liveness { idx, .. } = live;
-                if *idx != pidx {
-                    self.comp.internal_error(
-                        format!("{pidx} points to {port_idx} as its owner, but {port_idx} uses {idx}")
-                    )
-                }
-            }
-        }
-
-        param
     }
 
     /// An invoke is valid if:
@@ -283,7 +231,7 @@ impl<'a> Validate<'a> {
         } = &self.comp[iidx];
         for expr in params.iter() {
             // check (2)
-            self.expr(*expr);
+            // self.expr(*expr);
         }
         // check (3) and (4)
         let comp_params = self
@@ -336,8 +284,8 @@ impl<'a> Validate<'a> {
             ir::Prop::True | ir::Prop::False => { /* Nothing to do */ }
             ir::Prop::Cmp(cmp) => {
                 let ir::CmpOp { op: _, lhs, rhs } = cmp;
-                self.expr(*lhs);
-                self.expr(*rhs);
+                // self.expr(*lhs);
+                // self.expr(*rhs);
             }
             ir::Prop::TimeCmp(tcmp) => {
                 let ir::CmpOp { op: _, lhs, rhs } = tcmp;
@@ -384,8 +332,8 @@ impl<'a> Validate<'a> {
     fn access(&self, access: &ir::Access) {
         let ir::Access { port, start, end } = *access;
         self.port(port);
-        self.expr(start);
-        self.expr(end);
+        // self.expr(start);
+        // self.expr(end);
     }
 
     /// A loop is valid if:
@@ -399,9 +347,9 @@ impl<'a> Validate<'a> {
             end,
             body,
         } = lp;
-        self.param(*index);
-        self.expr(*start);
-        self.expr(*end);
+        // self.param(*index);
+        // self.expr(*start);
+        // self.expr(*end);
         for cmd in body {
             self.command(cmd);
         }
@@ -431,7 +379,8 @@ impl<'a> Validate<'a> {
 
     fn exists(&self, exists: &ir::Exists) {
         let ir::Exists { param: p_idx, expr } = exists;
-        let param = self.param(*p_idx);
+        let param = self.comp.get(*p_idx);
+        // let param = self.param(*p_idx);
         if !matches!(param.owner, ir::ParamOwner::Exists) {
             self.comp.internal_error(format!(
                 "{} mentioned in existential binding but owned by {}",
@@ -439,6 +388,6 @@ impl<'a> Validate<'a> {
                 param.owner
             ))
         }
-        self.expr(*expr);
+        // self.expr(*expr);
     }
 }

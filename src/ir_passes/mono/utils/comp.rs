@@ -65,12 +65,10 @@ where
 pub struct BaseComp(ir::Component);
 
 impl BaseComp {
-    pub fn swap(&mut self, other: &mut ir::Component) {
-        std::mem::swap(&mut self.0, other);
+    pub fn take(self) -> ir::Component {
+        self.0
     }
-}
 
-impl BaseComp {
     pub fn new(comp: ir::Component) -> Self {
         Self(comp)
     }

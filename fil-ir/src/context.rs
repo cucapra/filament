@@ -18,7 +18,7 @@ impl Context {
         Some(idx) == self.entrypoint
     }
 
-    /// Add a new component to the context
+    /// Add a new component, default to the context
     pub fn comp(&mut self, is_ext: bool) -> CompIdx {
         let comp = Component::new(is_ext);
         self.add(comp)

@@ -31,12 +31,12 @@ impl MonoDeferred<'_, '_> {
                 .collect_vec()
         };
 
-        (self.monosig.underlying_idx.ul(), conc_params).into()
+        (self.monosig.underlying_idx, conc_params).into()
     }
 
     // XXX(rachit): Why does this function need to do anything to the signature
     // of external components instead of just wholesale copying them?
-    pub fn comp(&mut self) {
+    pub fn comp(mut self) -> ir::Component {
         // Events can be recursive, so do a pass over them to generate the new idxs now
         // and then fill them in later
         let comp_k: CompKey = self.comp_key();
@@ -126,6 +126,8 @@ impl MonoDeferred<'_, '_> {
             self.monosig
                 .port_data(&self.underlying, self.pass, idx.ul(), base);
         }
+
+        self.monosig.base.take()
     }
 
     fn prop(&mut self, pidx: Underlying<ir::Prop>) -> Base<ir::Prop> {

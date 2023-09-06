@@ -343,17 +343,15 @@ impl<'a, 'b> Printer<'a, 'b> {
         write!(f, "{:indent$}{} = instance ", "", self.comp.display(idx))?;
         let ir::Instance { comp, params, .. } = self.comp.get(idx);
         if let Some(ctx) = self.ctx {
-            write!(f, "{}[", ctx.display(*comp))?;
+            write!(f, "{}", ctx.display(*comp))?;
         } else {
-            write!(f, "{}[", comp)?;
+            write!(f, "{}", comp)?;
         }
-        for (i, param) in params.iter().enumerate() {
-            if i != 0 {
-                write!(f, ", ")?;
-            }
-            write!(f, "{}", self.comp.display(*param))?;
+        let params = params.iter().map(|p| self.comp.display(*p)).join(", ");
+        if !params.is_empty() {
+            write!(f, "[{}]", params)?;
         }
-        write!(f, "];")
+        write!(f, ";")
     }
 
     pub fn invoke(
