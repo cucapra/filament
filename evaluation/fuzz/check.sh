@@ -12,14 +12,16 @@ script_dir="${BASH_SOURCE%/*}"
 
 # Data file
 data=$"$dir/data.json"
-# Fields file
-fields=$"$dir/fields"
+# Input fields file
+infields=$"$dir/in"
+# Output fields file
+outfields=$"$dir/out"
 # Width file
 width=$"$dir/width"
 
-./"$script_dir/gen_float.py" gen --width $(cat $width) "$count" > "$data"
+./"$script_dir/gen_float.py" gen --width $(cat $width) --fields $(cat $infields) --count "$count" > "$data"
 
 (fud e -s cocotb.data "$data" --to cocotb-out "$dir/harness.fil" -s calyx.flags ' -d canonicalize' -q | \
-  ./"$script_dir/gen_float.py" check --fields $(cat $fields) && \
+  ./"$script_dir/gen_float.py" check --fields $(cat $outfields) && \
   echo "No counterexamples with $count data points" && rm -f "$data") || \
   cat "$data"

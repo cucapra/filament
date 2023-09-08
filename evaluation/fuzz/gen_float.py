@@ -132,7 +132,7 @@ if __name__ == '__main__':
     subparsers.required = True
 
     gen_parser = subparsers.add_parser('gen')
-    gen_parser.add_argument("count", type=int, default=1,
+    gen_parser.add_argument("--count", type=int, default=1,
                             help='Number of random data to generate')
     gen_parser.add_argument("--width", type=int, default=32)
     gen_parser.set_defaults(func=random_data)
