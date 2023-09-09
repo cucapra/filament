@@ -42,12 +42,20 @@ extern "spiral-fft.v" {
 comp main<'G: 1>(
   in: ['G, 'G+1] 32*16 // 8 complex numbers bundled together
 ) -> (
-  spiral: ['G+54, 'G+55] 32*16 // output from spiral
+  spiral: ['G+54, 'G+55] 32*16, // output from spiral
+  filament: ['G, 'G+1] 32*16 // output from filament
 ) 
 {
   // split input into bundle
   split := new SplitWire[32, 16]<'G>(in);
+  
+  // hook up filament fft
+  fil := new FFT8<'G>(split.out{0..16});
 
+  fil_wire := new ConcatBundle[32, 16]<'G>(fil.out{0..16});
+  filament = fil_wire.out;
+
+  // hook up spiral dft
   spdft := new dft_top<'G>(
     split.out{0},
     split.out{1},
