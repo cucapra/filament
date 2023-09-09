@@ -1,4 +1,4 @@
-import "primitives/comb.fil";
+import "primitives/reshape.fil";
 
 // Tests ConcatBundle by concatenating three 3-bit wires into a single 9-bit wire.
 comp main<'G: 1>(
