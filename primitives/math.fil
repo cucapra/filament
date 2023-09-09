@@ -82,7 +82,7 @@ comp Id_Init[W]<'G: 1>(
   let Ext = 2*W+1;
   c_ext := new ZeroExtend[W+1, Ext]<'G>(c.out);
   acc_slice := new Slice[Ext, 2*W, W, W+1]<'G>(c_ext.out);
-  q_slice := new Slice[Ext, W, 0, W]<'G>(c_ext.out);
+  q_slice := new Slice[Ext, W-1, 0, W]<'G>(c_ext.out);
 
   acc = acc_slice.out;
   quotient = q_slice.out;
@@ -121,7 +121,7 @@ comp Id_Next[W]<'G: 1>(
   c := new Mux[Ext]<'G>(check.out, true_con.out, fal_sh.out);
 
   acc_slice := new Slice[Ext, 2*W, W, W+1]<'G>(c.out);
-  q_slice := new Slice[Ext, W, 0, W]<'G>(c.out);
+  q_slice := new Slice[Ext, W-1, 0, W]<'G>(c.out);
 
   quotient_next = q_slice.out;
   acc_next = acc_slice.out;

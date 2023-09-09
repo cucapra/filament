@@ -42,6 +42,23 @@ comp _FCompose[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
     out = second.out;
 }
 
+// Negate the sign of a floating point number
+comp FNeg[W, Exponent, ?Mantissa=W-Exponent-1]<'G: 1> (
+    in: ['G, 'G+1] W
+) -> (
+    out: ['G, 'G+1] W
+) where
+    W == Exponent + Mantissa + 1,
+    Exponent > 1,
+    Mantissa > 1
+{
+    in := new _FDecompose[W, Exponent, Mantissa]<'G>(in);
+    negsign := new Not[1]<'G>(in.sign);
+    res := new _FCompose[W, Exponent, Mantissa]<'G>(negsign.out, in.exponent, in.mantissa);
+
+    out = res.out;
+}
+
 /// Adds two floating point numbers
 comp FAdd[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
      left: ['G, 'G+1] WIDTH,
@@ -145,6 +162,21 @@ comp FAdd[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
     final_sign := new Mux[1]<'G, 'G+1>(_fsign_cb_cond.out, left.sign, right.sign);
 
     res := new _FCompose[WIDTH, EXPONENT, MANTISSA]<'G>(final_sign.out, final_exp.out, final_mantissa.out);
+    out = res.out;
+}
+
+comp FSub[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
+     left: ['G, 'G+1] WIDTH,
+     right: ['G, 'G+1] WIDTH,
+) -> (
+     out: ['G, 'G+1] WIDTH
+) where
+    WIDTH == EXPONENT + MANTISSA + 1,
+    EXPONENT > 1,
+    MANTISSA > 1
+{
+    right_neg := new FNeg[WIDTH, EXPONENT, MANTISSA]<'G>(right);
+    res := new FAdd[WIDTH, EXPONENT, MANTISSA]<'G>(left, right_neg.out);
     out = res.out;
 }
 
