@@ -107,7 +107,7 @@ extern "comb.sv" {
       out: ['G, 'L] OUT_WIDTH,
    ) where 'L > 'G, IN_WIDTH > 0, OUT_WIDTH > 0, OUT_WIDTH >= IN_WIDTH;
 
-   comp Concat[LEFT, RIGHT, OUT]<'G: 'L-('G), ?'L: 1='G+1>(
+   comp Concat[LEFT, RIGHT, ?OUT = LEFT + RIGHT]<'G: 'L-('G), ?'L: 1='G+1>(
       left: ['G, 'L] LEFT,
       right: ['G, 'L] RIGHT,
    ) -> (
@@ -120,7 +120,7 @@ extern "comb.sv" {
       out: ['G, 'L] 1,
    ) where 'L > 'G, WIDTH > 0, POS < WIDTH;
 
-   comp Slice[IN_WIDTH, MSB, LSB, OUT_WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+   comp Slice[IN_WIDTH, MSB, LSB, ?OUT_WIDTH=MSB - LSB + 1]<'G: 'L-('G), ?'L: 1='G+1>(
       in: ['G, 'L] IN_WIDTH,
    ) -> (
       out: ['G, 'L] OUT_WIDTH,
@@ -129,7 +129,8 @@ extern "comb.sv" {
          OUT_WIDTH > 0,
          MSB < IN_WIDTH,
          LSB < IN_WIDTH,
-         MSB >= LSB;
+         MSB >= LSB,
+         OUT_WIDTH == MSB - LSB + 1;
 
    comp ReduceAnd[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
       in: ['G, 'L] WIDTH,
@@ -177,4 +178,42 @@ extern "comb.sv" {
    ) -> (
       out: ['G, 'L] OUT_WIDTH
    ) where 'L > 'G, IN_WIDTH > 0, OUT_WIDTH > 0;
+}
+
+// Reduces a bundle of N wires of size W to a single wire of size W*N
+// {010, 101, 111} -> 010101111
+comp ConcatBundle[W, N]<'G: 1>(
+   in[N]: ['G, 'G + 1] W
+) -> (
+   out: ['G, 'G + 1] W*N
+) where N > 0, W > 0 {
+   if N == 1 {
+      out = in{0};
+   } else {
+      // recursively reduce
+      red := new ConcatBundle[W, N-1]<'G>(in{1..N});
+      c := new Concat[W, W*(N-1)]<'G>(in{0}, red.out);
+      out = c.out;
+   }
+}
+
+// Splits a wire of size W*N into a bundle of N wires of size W
+// 010101111 -> {010, 101, 111}
+comp SplitWire[W, N]<'G: 1>(
+   in: ['G, 'G + 1] W*N
+) -> (
+   out[N]: ['G, 'G + 1] W
+) where N > 0, W > 0 {
+   if N == 1 {
+      out{0} = in;
+   } else {
+      // Take the W most significant bits and put in the left
+      s := new Slice[W*N, W*N-1, W*(N-1)]<'G>(in);
+      out{0} = s.out;
+      // remaining bits
+      rem := new Slice[W*N, W*(N-1)-1, 0]<'G>(in);
+
+      spl := new SplitWire[W, N-1]<'G>(rem.out);
+      out{1..N} = spl.out{0..N-1};
+   }
 }
