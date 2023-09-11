@@ -99,7 +99,7 @@ impl<'a> Validate<'a> {
                 "{} should be owned by a bundle is an existentially quantified param",
                 self.comp.display(*par_idx)
             )),
-            ir::ParamOwner::Instance(inst) => self.comp.internal_error(format!(
+            ir::ParamOwner::Instance{inst, ..} => self.comp.internal_error(format!(
                 "{} should be owned by a bundle but is owned by instance {inst}",
                 self.comp.display(*par_idx)
             )),

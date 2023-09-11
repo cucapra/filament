@@ -196,10 +196,12 @@ impl Component {
         &self.props
     }
 
+    /// Return the input ports in the order that they appear in the source
     pub fn inputs(&self) -> impl Iterator<Item = (PortIdx, &Port)> {
         self.ports.iter().filter(|(_, p)| p.is_sig_in())
     }
 
+    /// Return the output ports in the order that they appear in the source
     pub fn outputs(&self) -> impl Iterator<Item = (PortIdx, &Port)> {
         self.ports.iter().filter(|(_, p)| p.is_sig_out())
     }

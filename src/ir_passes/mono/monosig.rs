@@ -240,7 +240,7 @@ impl MonoSig {
                     "bundle-bound parameter".to_string()
                 }
                 ir::ParamOwner::Sig => "signature-bound parameter".to_string(),
-                ir::ParamOwner::Instance(inst) => format!(
+                ir::ParamOwner::Instance { inst, .. } => format!(
                     "parameter defined by instance `{}'",
                     ul.display(inst.ul())
                 ),

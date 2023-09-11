@@ -257,7 +257,7 @@ impl<'a, 'b> Printer<'a, 'b> {
     ) -> io::Result<()> {
         let param = self.comp.get(idx);
         match param.owner {
-            ir::ParamOwner::Sig | ir::ParamOwner::Instance(_) => {}
+            ir::ParamOwner::Sig | ir::ParamOwner::Instance { .. } => {}
             ir::ParamOwner::Bundle(_)
             | ir::ParamOwner::Loop
             | ir::ParamOwner::Exists => {

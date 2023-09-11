@@ -65,7 +65,7 @@ impl OwnedParam {
             | ir::ParamOwner::Exists
             | ir::ParamOwner::Bundle(_)
             | ir::ParamOwner::Loop => Self::Local(id),
-            ir::ParamOwner::Instance(inst) => Self::Instance(*inst, id),
+            ir::ParamOwner::Instance { inst, .. } => Self::Instance(*inst, id),
         }
     }
 }
@@ -183,21 +183,23 @@ impl<'prog> BuildCtx<'prog> {
         out
     }
 
+    /// Fail the current computation and return the error
+    pub fn fail<T>(&mut self, err: Error) -> BuildRes<T> {
+        self.diag.add_error(err);
+        Err(std::mem::take(&mut self.diag))
+    }
+
     /// Get the signature if bound or return an error
     pub fn get_sig(&mut self, id: &ast::Loc<Id>) -> BuildRes<&'prog Sig> {
         let name = id.inner();
         match self.sigs.get(name) {
             Some(s) => Ok(s),
             None => {
-                let diag = &mut self.diag;
-                let undef = Error::undefined(*name, "signature").add_note(
-                    diag.add_info(
-                        format!("signature `{id}' is not defined"),
-                        id.pos(),
-                    ),
+                let info = self.diag.add_info(
+                    format!("signature `{id}' is not defined"),
+                    id.pos(),
                 );
-                diag.add_error(undef);
-                Err(std::mem::take(diag))
+                self.fail(Error::undefined(*name, "signature").add_note(info))
             }
         }
     }
@@ -227,11 +229,11 @@ impl<'prog> BuildCtx<'prog> {
         match self.param_map.get(param) {
             Some(p) => Ok(*p),
             None => {
-                let diag = &mut self.diag;
-                let undef = Error::undefined(format!("{}", param), "parameter")
-                    .add_note(diag.add_info("unknown parameter", pos));
-                diag.add_error(undef);
-                Err(std::mem::take(diag))
+                let info = self.diag.add_info("unknown parameter", pos);
+                self.fail(
+                    Error::undefined(format!("{}", param), "parameter")
+                        .add_note(info),
+                )
             }
         }
     }
@@ -285,8 +287,7 @@ impl<'prog> BuildCtx<'prog> {
                 port.pos(),
             ));
         }
-        self.diag.add_error(err);
-        Err(std::mem::take(&mut self.diag))
+        self.fail(err)
     }
 
     pub fn add_inst(&mut self, name: Id, inst: ir::InstIdx) {
@@ -298,14 +299,11 @@ impl<'prog> BuildCtx<'prog> {
         match self.inst_map.get(&name) {
             Some(idx) => Ok(*idx),
             None => {
-                let diag = &mut self.diag;
-                let undef =
-                    Error::undefined(name, "instance").add_note(diag.add_info(
-                        format!("instance `{name}' is not defined"),
-                        id.pos(),
-                    ));
-                diag.add_error(undef);
-                Err(std::mem::take(diag))
+                let info = self.diag.add_info(
+                    format!("instance `{name}' is not defined"),
+                    id.pos(),
+                );
+                self.fail(Error::undefined(name, "instance").add_note(info))
             }
         }
     }
@@ -319,15 +317,11 @@ impl<'prog> BuildCtx<'prog> {
         match self.inv_map.get(&name) {
             Some(idx) => Ok(*idx),
             None => {
-                let diag = &mut self.diag;
-                let undef = Error::undefined(name, "invocation").add_note(
-                    diag.add_info(
-                        format!("invocation `{name}' is not defined"),
-                        id.pos(),
-                    ),
+                let info = self.diag.add_info(
+                    format!("invocation `{name}' is not defined"),
+                    id.pos(),
                 );
-                diag.add_error(undef);
-                Err(std::mem::take(diag))
+                self.fail(Error::undefined(name, "invocation").add_note(info))
             }
         }
     }
@@ -341,14 +335,11 @@ impl<'prog> BuildCtx<'prog> {
         match self.event_map.get(&name) {
             Some(idx) => Ok(*idx),
             None => {
-                let diag = &mut self.diag;
-                let undef = Error::undefined(name, "event");
+                self.fail(Error::undefined(name, "event"))
                 // .add_note(diag.add_info(
                 //     format!("event `{name}' is not defined"),
                 //     id.pos(),
                 // ));
-                diag.add_error(undef);
-                Err(std::mem::take(diag))
             }
         }
     }
