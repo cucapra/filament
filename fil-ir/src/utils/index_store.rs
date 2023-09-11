@@ -174,4 +174,8 @@ impl<T> MutCtx<T> for IndexStore<T> {
     fn delete(&mut self, idx: Idx<T>) {
         self.delete(idx)
     }
+
+    fn valid(&self, idx: Idx<T>) -> bool {
+        self.is_valid(idx)
+    }
 }

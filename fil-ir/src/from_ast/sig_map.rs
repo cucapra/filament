@@ -209,19 +209,12 @@ impl Sig {
 /// Mapping from names of component to [Sig].
 pub struct SigMap {
     map: HashMap<Id, Sig>,
-    // XXX(rachit): This can probably be a DenseInfoMap instead
-    rev_map: HashMap<ir::CompIdx, Id>,
 }
 
 impl SigMap {
     /// Gets the signature if bound
     pub fn get(&self, id: &Id) -> Option<&Sig> {
         self.map.get(id)
-    }
-
-    /// Get the signature from a component index
-    pub fn get_idx(&self, idx: ir::CompIdx) -> Option<&Sig> {
-        self.rev_map.get(&idx).and_then(|id| self.get(id))
     }
 }
 
@@ -230,7 +223,6 @@ impl FromIterator<(Id, Sig)> for SigMap {
         let mut default = Self::default();
 
         for (id, sig) in iter.into_iter() {
-            default.rev_map.insert(sig.idx, id);
             default.map.insert(id, sig);
         }
 
@@ -241,7 +233,6 @@ impl FromIterator<(Id, Sig)> for SigMap {
 impl std::iter::Extend<(Id, Sig)> for SigMap {
     fn extend<I: IntoIterator<Item = (Id, Sig)>>(&mut self, iter: I) {
         let sm: SigMap = iter.into_iter().collect();
-        self.rev_map.extend(sm.rev_map);
         self.map.extend(sm.map);
     }
 }

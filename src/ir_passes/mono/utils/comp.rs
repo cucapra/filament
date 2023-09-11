@@ -116,6 +116,10 @@ where
     fn delete(&mut self, k: Base<T>) {
         self.0.delete(k.get());
     }
+
+    fn valid(&self, idx: Base<T>) -> bool {
+        self.0.valid(idx.get())
+    }
 }
 
 impl<T> Ctx<T, Base<T>> for BaseComp

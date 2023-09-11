@@ -610,10 +610,6 @@ impl MonoSig {
             params,
             info,
         } = underlying.get(inst);
-        assert!(
-            params.is_empty(),
-            "cannot monomorphize instances with existentially quantified params"
-        );
         let info = info.ul();
 
         let is_ext = pass.old.get(*comp).is_ext;
@@ -626,13 +622,28 @@ impl MonoSig {
                     .unwrap()
             })
             .collect_vec();
-        let ck = (comp.ul(), conc_params).into();
-        let comp = pass.monomorphize(ck);
+        let ck = CompKey::new(comp.ul(), conc_params);
+        // Monomorphize the component
+        let comp = pass.monomorphize(ck.clone());
+
+        // Binding for parameters defined by this instance
+        self.binding.extend(params.iter().map(|p| {
+            let p = p.ul();
+            let ir::ParamOwner::Instance { base, .. } = underlying.get(p).owner
+            else {
+                unreachable!("param should be owned by instance")
+            };
+            (
+                p,
+                pass.inst_info(&ck).get_exist_val(base.key().ul()).unwrap(),
+            )
+        }));
+
         let conc_params: Box<[ir::ExprIdx]> = if is_ext {
             args.iter()
                 .map(|p| self.expr(underlying, p.ul()).get())
                 .collect_vec()
-                .into()
+                .into_boxed_slice()
         } else {
             Box::new([])
         };
@@ -647,6 +658,7 @@ impl MonoSig {
 
         let new_idx = self.base.add(new_inst);
         self.instance_map.insert(inst, new_idx);
+
         new_idx
     }
 

@@ -4,6 +4,7 @@ use crate::{self as ir, Ctx, DenseIndexInfo, PortIdx};
 use fil_ast as ast;
 use fil_utils::{self as utils, Error, Id};
 use std::rc::Rc;
+use utils::InfoIdx;
 
 #[derive(Eq, PartialEq, Hash, Clone, Debug)]
 /// A custom struct used to index ports
@@ -184,7 +185,15 @@ impl<'prog> BuildCtx<'prog> {
     }
 
     /// Fail the current computation and return the error
-    pub fn fail<T>(&mut self, err: Error) -> BuildRes<T> {
+    pub fn fail<T>(
+        &mut self,
+        err: Error,
+        info: impl IntoIterator<Item = InfoIdx>,
+    ) -> BuildRes<T> {
+        let mut err = err;
+        for info in info.into_iter() {
+            err = err.add_note(info);
+        }
         self.diag.add_error(err);
         Err(std::mem::take(&mut self.diag))
     }
@@ -199,14 +208,9 @@ impl<'prog> BuildCtx<'prog> {
                     format!("signature `{id}' is not defined"),
                     id.pos(),
                 );
-                self.fail(Error::undefined(*name, "signature").add_note(info))
+                self.fail(Error::undefined(*name, "signature"), [info])
             }
         }
-    }
-
-    /// Get a signature from the component index and panic if its not found.
-    pub fn sig_from_idx(&self, idx: ir::CompIdx) -> &Sig {
-        self.sigs.get_idx(idx).unwrap()
     }
 
     /// Update the signature map
@@ -231,8 +235,8 @@ impl<'prog> BuildCtx<'prog> {
             None => {
                 let info = self.diag.add_info("unknown parameter", pos);
                 self.fail(
-                    Error::undefined(format!("{}", param), "parameter")
-                        .add_note(info),
+                    Error::undefined(format!("{}", param), "parameter"),
+                    [info],
                 )
             }
         }
@@ -287,7 +291,7 @@ impl<'prog> BuildCtx<'prog> {
                 port.pos(),
             ));
         }
-        self.fail(err)
+        self.fail(err, [])
     }
 
     pub fn add_inst(&mut self, name: Id, inst: ir::InstIdx) {
@@ -303,7 +307,7 @@ impl<'prog> BuildCtx<'prog> {
                     format!("instance `{name}' is not defined"),
                     id.pos(),
                 );
-                self.fail(Error::undefined(name, "instance").add_note(info))
+                self.fail(Error::undefined(name, "instance"), [info])
             }
         }
     }
@@ -321,7 +325,7 @@ impl<'prog> BuildCtx<'prog> {
                     format!("invocation `{name}' is not defined"),
                     id.pos(),
                 );
-                self.fail(Error::undefined(name, "invocation").add_note(info))
+                self.fail(Error::undefined(name, "invocation"), [info])
             }
         }
     }
@@ -335,7 +339,7 @@ impl<'prog> BuildCtx<'prog> {
         match self.event_map.get(&name) {
             Some(idx) => Ok(*idx),
             None => {
-                self.fail(Error::undefined(name, "event"))
+                self.fail(Error::undefined(name, "event"), [])
                 // .add_note(diag.add_info(
                 //     format!("event `{name}' is not defined"),
                 //     id.pos(),
