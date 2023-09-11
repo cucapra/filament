@@ -107,7 +107,7 @@ extern "comb.sv" {
       out: ['G, 'L] OUT_WIDTH,
    ) where 'L > 'G, IN_WIDTH > 0, OUT_WIDTH > 0, OUT_WIDTH >= IN_WIDTH;
 
-   comp Concat[LEFT, RIGHT, OUT]<'G: 'L-('G), ?'L: 1='G+1>(
+   comp Concat[LEFT, RIGHT, ?OUT = LEFT + RIGHT]<'G: 'L-('G), ?'L: 1='G+1>(
       left: ['G, 'L] LEFT,
       right: ['G, 'L] RIGHT,
    ) -> (
@@ -120,7 +120,7 @@ extern "comb.sv" {
       out: ['G, 'L] 1,
    ) where 'L > 'G, WIDTH > 0, POS < WIDTH;
 
-   comp Slice[IN_WIDTH, MSB, LSB, OUT_WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+   comp Slice[IN_WIDTH, MSB, LSB, ?OUT_WIDTH=MSB - LSB + 1]<'G: 'L-('G), ?'L: 1='G+1>(
       in: ['G, 'L] IN_WIDTH,
    ) -> (
       out: ['G, 'L] OUT_WIDTH,
@@ -129,7 +129,8 @@ extern "comb.sv" {
          OUT_WIDTH > 0,
          MSB < IN_WIDTH,
          LSB < IN_WIDTH,
-         MSB >= LSB;
+         MSB >= LSB,
+         OUT_WIDTH == MSB - LSB + 1;
 
    comp ReduceAnd[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
       in: ['G, 'L] WIDTH,
