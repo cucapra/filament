@@ -1,12 +1,16 @@
-import "primitives/reshape.fil";
+import "primitives/comb.fil";
 import "primitives/float.fil";
 
-// Combinational FFT using 32 bit floats and with 8 points.
-comp FFT8<'G: 1>(
-  in[16]: ['G, 'G+1] 32 // input with [real, imag] pairs
+// Parametrized combinational fft
+comp FFTComb[NPoints, W, E, ?M=W-E-1]<'G: 1>(
+  in[2*NPoints]: ['G, 'G+1] W // input with [real, imag] pairs
 ) -> (
-  out[16]: ['G, 'G+1] 32 // output with [real, imag] pairs
-) {
+  out[2*NPoints]: ['G, 'G+1] W // output with [real, imag] pairs
+) where
+  E > 1,
+  M > 1,
+  W == E + M + 1
+{
   // define the twiddle factors
   // generated using C at the moment to run the sine operations
   // stored in [real, imag] pairs
@@ -31,15 +35,15 @@ comp FFT8<'G: 1>(
   twiddle{8} = TR4.out;
   twiddle{9} = twiddle{12};
 
-  TR5 := new NegConst[32, 1087044365]<'G>();
+  TR5 := new Const[32, 3207922931]<'G>();
   twiddle{10} = TR5.out;
   twiddle{11} = twiddle{14};
 
-  TR6 := new NegConst[32, 1082130432]<'G>();
+  TR6 := new Const[32, 3212836864]<'G>();
   twiddle{12} = TR6.out;
   twiddle{13} = twiddle{0};
 
-  TR7 := new NegConst[32, 1087044365]<'G>();
+  TR7 := new Const[32, 3207922931]<'G>();
   twiddle{14} = TR7.out;
   twiddle{15} = twiddle{2};
 
@@ -65,7 +69,7 @@ comp FFT8<'G: 1>(
   s0{15} = in{15};
 
   // now do the butterfly operations
-  // STAGE 1 butterfly ops (twiddles are all 1)
+  // STAGE 1 butterfly ops
   // stored in pairs of real and imaginary
   bundle s1[16]: ['G, 'G+1] 32;
 
@@ -84,13 +88,13 @@ comp FFT8<'G: 1>(
   s1{12..14} = B13.out0{0..2};
   s1{14..16} = B13.out1{0..2};
 
-  // STAGE 2 butterfly ops (1, w^2)
+  // STAGE 2 butterfly ops
   bundle s2[16]: ['G, 'G+1] 32;
 
   B20 := new Butterfly8<'G>(s1{0..2}, s1{4..6}, twiddle{0..2});
-  B21 := new Butterfly8<'G>(s1{2..4}, s1{6..8}, twiddle{4..6});
+  B21 := new Butterfly8<'G>(s1{2..4}, s1{6..8}, twiddle{0..2});
   B22 := new Butterfly8<'G>(s1{8..10}, s1{12..14}, twiddle{0..2});
-  B23 := new Butterfly8<'G>(s1{10..12}, s1{14..16}, twiddle{4..6});
+  B23 := new Butterfly8<'G>(s1{10..12}, s1{14..16}, twiddle{0..2});
 
   s2{0..2} = B20.out0{0..2};
   s2{2..4} = B21.out0{0..2};
@@ -101,13 +105,13 @@ comp FFT8<'G: 1>(
   s2{12..14} = B22.out1{0..2};
   s2{14..16} = B23.out1{0..2};
 
-  // STAGE 3 butterfly ops (1, w, w^2, w^3)
+  // STAGE 3 butterfly ops
   bundle s3[16]: ['G, 'G+1] 32;
 
   B30 := new Butterfly8<'G>(s2{0..2}, s2{8..10}, twiddle{0..2});
-  B31 := new Butterfly8<'G>(s2{2..4}, s2{10..12}, twiddle{2..4});
-  B32 := new Butterfly8<'G>(s2{4..6}, s2{12..14}, twiddle{4..6});
-  B33 := new Butterfly8<'G>(s2{6..8}, s2{14..16}, twiddle{6..8});
+  B31 := new Butterfly8<'G>(s2{2..4}, s2{10..12}, twiddle{0..2});
+  B32 := new Butterfly8<'G>(s2{4..6}, s2{12..14}, twiddle{0..2});
+  B33 := new Butterfly8<'G>(s2{6..8}, s2{14..16}, twiddle{0..2});
 
   s3{0..2} = B30.out0{0..2};
   s3{2..4} = B31.out0{0..2};
@@ -134,8 +138,8 @@ comp Butterfly8<'G: 1>(
   out0{0..2} = O0.out{0..2};
   
   // multiply by twiddle
-  diff := new ComplexSub<'G>(in0{0..2}, in1{0..2});
-  O1 := new ComplexMult<'G>(diff.out{0..2}, twiddle{0..2});
+  Twid := new ComplexMult<'G>(in1{0..2}, twiddle{0..2});
+  O1 := new ComplexAdd<'G>(in0{0..2}, Twid.out{0..2});
   out1{0..2} = O1.out{0..2};
 }
 
@@ -185,37 +189,4 @@ comp ComplexAdd<'G: 1>(
 
   out{0} = re.out;
   out{1} = im.out;
-}
-
-// negation of a complex number
-comp ComplexNeg<'G: 1>(
-  in[2]: ['G, 'G+1] 32
-) -> (
-  out[2]: ['G, 'G+1] 32
-) {
-
-  let W = 32;
-  let E = 8;
-  let M = 23;
-  assume W == 32;
-  assume E == 8;
-  assume M == 23;
-
-  neg1 := new FNeg[W, E, M]<'G>(in{0});
-  neg2 := new FNeg[W, E, M]<'G>(in{1});
-
-  out{0} = neg1.out;
-  out{1} = neg2.out;
-}
-
-// subtraction of complex numbers
-comp ComplexSub<'G: 1>(
-  left[2]: ['G, 'G+1] 32,
-  right[2]: ['G, 'G+1] 32
-) -> (
-  out[2]: ['G, 'G+1] 32
-) {
-  neg := new ComplexNeg<'G>(right{0..2});
-  add := new ComplexAdd<'G>(left{0..2}, neg.out{0..2});
-  out{0..2} = add.out{0..2};
 }
