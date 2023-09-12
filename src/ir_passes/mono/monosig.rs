@@ -867,7 +867,6 @@ impl MonoSig {
 
         self.bundle_param_map.insert(new_port, mono_liveness_idx);
         let mono_width = self.expr(underlying, width.ul());
-        log::warn!("len: {}", underlying.display(mono_liveness.len.ul()));
         mono_liveness.len = self.expr(underlying, mono_liveness.len.ul()).get();
         mono_liveness.len = self
             .base
