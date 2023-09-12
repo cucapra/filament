@@ -19,6 +19,7 @@ pub struct MonoDeferred<'a, 'pass: 'a> {
 }
 
 impl MonoDeferred<'_, '_> {
+    /// The [CompKey] associated with the underlying component being monomorphized.
     fn comp_key(&self) -> CompKey {
         let binding = self.monosig.binding.inner();
         let conc_params = if self.underlying.is_ext() {

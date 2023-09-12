@@ -18,6 +18,11 @@ impl Context {
         Some(idx) == self.entrypoint
     }
 
+    /// Is this component external?
+    pub fn is_ext(&self, idx: CompIdx) -> bool {
+        self.get(idx).is_ext
+    }
+
     /// Add a new component, default to the context
     pub fn comp(&mut self, is_ext: bool) -> CompIdx {
         let comp = Component::new(is_ext);

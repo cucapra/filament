@@ -113,29 +113,17 @@ impl MonoSig {
         pass: &mut Monomorphize,
         inv: Underlying<ir::Invoke>,
     ) -> (CompKey, Base<ir::Component>) {
-        let inst = underlying.get(underlying.get(inv).inst.ul());
-        let inst_comp = inst.comp.ul();
+        let inst_ul = underlying.get(inv).inst.ul();
+        let ir::Instance { comp, .. } = underlying.get(inst_ul);
 
-        let inst_params = &inst.args;
-        let conc_params = inst_params
-            .iter()
-            .map(|p| {
-                self.expr(underlying, p.ul())
-                    .get()
-                    .as_concrete(self.base.comp())
-                    .unwrap()
-            })
-            .collect_vec();
-
-        let conc_params = if pass.old.get(inst_comp.idx()).is_ext {
-            vec![]
+        let comp_k = if pass.old.is_ext(*comp) {
+            CompKey::new(comp.ul(), vec![])
         } else {
-            conc_params
+            self.comp_key(underlying, inst_ul)
         };
 
-        let comp_k = (inst_comp, conc_params).into();
         let Some(&comp) = pass.processed.get(&comp_k) else {
-            unreachable!("component should have been monomorphized",)
+            unreachable!("component should have been monomorphized")
         };
 
         (comp_k, comp)
@@ -582,6 +570,26 @@ impl MonoSig {
         }
     }
 
+    /// Construct the [CompKey] for a instance in the underlying component
+    fn comp_key(
+        &mut self,
+        underlying: &UnderlyingComp,
+        iidx: Underlying<ir::Instance>,
+    ) -> CompKey {
+        let ir::Instance { comp, args, .. } = underlying.get(iidx);
+
+        let conc_params = args
+            .iter()
+            .map(|p| {
+                self.expr(underlying, p.ul())
+                    .get()
+                    .as_concrete(self.base.comp())
+                    .unwrap()
+            })
+            .collect_vec();
+        CompKey::new(comp.ul(), conc_params)
+    }
+
     fn foreign_event(
         &mut self,
         underlying: &UnderlyingComp,
@@ -610,21 +618,10 @@ impl MonoSig {
             params,
             info,
         } = underlying.get(inst);
-        let info = info.ul();
 
-        let is_ext = pass.old.get(*comp).is_ext;
-        let conc_params = args
-            .iter()
-            .map(|p| {
-                self.expr(underlying, p.ul())
-                    .get()
-                    .as_concrete(self.base.comp())
-                    .unwrap()
-            })
-            .collect_vec();
-        let ck = CompKey::new(comp.ul(), conc_params);
         // Monomorphize the component
-        let comp = pass.monomorphize(ck.clone());
+        let ck = self.comp_key(underlying, inst);
+        let mono_comp = pass.monomorphize(ck.clone());
 
         // Binding for parameters defined by this instance
         self.binding.extend(params.iter().map(|p| {
@@ -639,7 +636,8 @@ impl MonoSig {
             )
         }));
 
-        let conc_params: Box<[ir::ExprIdx]> = if is_ext {
+        // Parameters for the new component. We only preserve them for external calls.
+        let conc_params: Box<[ir::ExprIdx]> = if pass.old.is_ext(*comp) {
             args.iter()
                 .map(|p| self.expr(underlying, p.ul()).get())
                 .collect_vec()
@@ -650,9 +648,9 @@ impl MonoSig {
 
         // this is an extern, so keep the params - need to get them into the new component though
         let new_inst = ir::Instance {
-            comp: comp.get(),
+            comp: mono_comp.get(),
             args: conc_params,
-            info: self.info(underlying, pass, info).get(),
+            info: self.info(underlying, pass, info.ul()).get(),
             params: Vec::new(),
         };
 
