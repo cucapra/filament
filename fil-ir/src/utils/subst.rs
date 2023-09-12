@@ -1,4 +1,4 @@
-use super::{
+use crate::{
     AddCtx, CmpOp, Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Prop,
     PropIdx, Time, TimeIdx,
 };
