@@ -148,9 +148,6 @@ comp ComplexMult<'G: 1>(
   let W = 32;
   let E = 8;
   let M = 23;
-  assume W == 32;
-  assume E == 8;
-  assume M == 23;
 
   // fully combinational
   ac := new FMult[W, E, M]<'G>(left{0}, right{0});
@@ -175,9 +172,6 @@ comp ComplexAdd<'G: 1>(
   let W = 32;
   let E = 8;
   let M = 23;
-  assume W == 32;
-  assume E == 8;
-  assume M == 23;
 
   // fully combinational
   re := new FAdd[W, E, M]<'G>(left{0}, right{0});
@@ -197,9 +191,6 @@ comp ComplexNeg<'G: 1>(
   let W = 32;
   let E = 8;
   let M = 23;
-  assume W == 32;
-  assume E == 8;
-  assume M == 23;
 
   neg1 := new FNeg[W, E, M]<'G>(in{0});
   neg2 := new FNeg[W, E, M]<'G>(in{1});
