@@ -109,7 +109,7 @@ impl MonoDeferred<'_, '_> {
         let unannotated_ports = ul.unannotated_ports().clone();
         monosig.base.set_unannotated_ports(unannotated_ports);
 
-        // Monomorphize the components
+        // Monomorphize the component's body
         for cmd in self.underlying.cmds().clone() {
             let cmd = self.command(&cmd);
             self.monosig.base.extend_cmds(cmd);
@@ -117,9 +117,17 @@ impl MonoDeferred<'_, '_> {
 
         if !is_ext {
             // Extend the binding with existential parameters and monomorphize signature port data
-            self.monosig
-                .binding
-                .extend(self.pass.inst_info(&comp_k).iter_exist_vals());
+            let info = self.pass.inst_info(&comp_k);
+            for param in self.underlying.exist_params() {
+                let param = param.ul();
+                let Some(v) = info.get_exist_val(param) else {
+                    unreachable!(
+                        "No binding for existential parameter `{}'. Is the body missing an `exist` assignment?",
+                        self.underlying.display(param)
+                    )
+                };
+                self.monosig.binding.push(param, v);
+            }
 
             for (idx, _) in
                 self.underlying.ports().iter().filter(|(_, p)| p.is_sig())
@@ -261,12 +269,16 @@ impl MonoDeferred<'_, '_> {
 
         while i < bound {
             let index = index.ul();
-            self.monosig.binding.insert(index, i);
+            let orig_l = self.monosig.binding.len();
+            self.monosig.binding.push(index, i);
             for cmd in body.iter() {
                 let cmd = self.command(cmd);
                 self.monosig.base.extend_cmds(cmd);
             }
-            self.monosig.binding.pop(); // pop the index
+            // Remove all the bindings added in this scope including the index
+            self.monosig
+                .binding
+                .pop_n(self.monosig.binding.len() - orig_l);
             i += 1;
         }
     }

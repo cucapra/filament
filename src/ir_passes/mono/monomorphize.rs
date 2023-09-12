@@ -46,10 +46,14 @@ impl<'a> Monomorphize<'a> {
 }
 
 impl<'ctx> Monomorphize<'ctx> {
+    /// Returns a reference to the instance info for a component.
+    /// **Panics** if the instance does not exist.
     pub fn inst_info(&self, comp_key: &CompKey) -> &InstanceInfo {
         self.inst_info.get(comp_key).unwrap()
     }
 
+    /// Returns a mutable reference to the instance info for a component or a
+    /// default value if it does not exist.
     pub fn inst_info_mut(&mut self, comp_key: CompKey) -> &mut InstanceInfo {
         self.inst_info.entry(comp_key).or_default()
     }

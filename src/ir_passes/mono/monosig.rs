@@ -52,7 +52,6 @@ impl MonoSig {
         let binding = ir::Bind::new(
             underlying
                 .sig_params()
-                .into_iter()
                 .map(|p| p.ul())
                 .zip(params)
                 .collect_vec(),
@@ -74,7 +73,7 @@ impl MonoSig {
     }
 
     /// String representation for the binding for debug purposes
-    fn binding_rep(&self, ul: &UnderlyingComp<'_>) -> String {
+    pub fn binding_rep(&self, ul: &UnderlyingComp<'_>) -> String {
         self.binding
             .iter()
             .map(|(p, e)| format!("{}: {}", ul.display(*p), e))
@@ -868,6 +867,7 @@ impl MonoSig {
 
         self.bundle_param_map.insert(new_port, mono_liveness_idx);
         let mono_width = self.expr(underlying, width.ul());
+        log::warn!("len: {}", underlying.display(mono_liveness.len.ul()));
         mono_liveness.len = self.expr(underlying, mono_liveness.len.ul()).get();
         mono_liveness.len = self
             .base

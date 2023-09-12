@@ -27,13 +27,21 @@ impl<K, V> Bind<K, V>
 where
     K: Eq,
 {
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     /// Get the binding associated with a particular key
     pub fn get(&self, key: &K) -> Option<&V> {
         self.0.iter().find_map(|(k, v)| (k == key).then_some(v))
     }
 
     /// Insert a new binding
-    pub fn insert(&mut self, key: K, value: V) {
+    pub fn push(&mut self, key: K, value: V) {
         self.0.push((key, value));
     }
 

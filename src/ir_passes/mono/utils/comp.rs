@@ -37,6 +37,9 @@ impl<'a> UnderlyingComp<'a> {
     pub fn unannotated_ports(&self) -> &Vec<(ast::Id, u64)> {
         &self.0.unannotated_ports
     }
+    pub fn exist_params(&self) -> impl Iterator<Item = ir::ParamIdx> + '_ {
+        self.0.exist_params()
+    }
 }
 
 // The underlying component is a context for everything that a component is a context for.
