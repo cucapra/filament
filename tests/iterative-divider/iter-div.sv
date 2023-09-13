@@ -1,3 +1,4 @@
+/// Reference implementation for an iterative division algorithm.
 module IterDiv #(
   parameter W = 32
 ) (
