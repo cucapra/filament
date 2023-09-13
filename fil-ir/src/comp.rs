@@ -4,7 +4,7 @@ use super::{
     InvIdx, Invoke, MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx,
     Time, TimeSub,
 };
-use crate::utils::Idx;
+use crate::{utils::Idx, ParamOwner};
 use fil_ast as ast;
 use fil_derive::Ctx;
 use itertools::Itertools;
@@ -196,10 +196,12 @@ impl Component {
         &self.props
     }
 
+    /// Return the input ports in the order that they appear in the source
     pub fn inputs(&self) -> impl Iterator<Item = (PortIdx, &Port)> {
         self.ports.iter().filter(|(_, p)| p.is_sig_in())
     }
 
+    /// Return the output ports in the order that they appear in the source
     pub fn outputs(&self) -> impl Iterator<Item = (PortIdx, &Port)> {
         self.ports.iter().filter(|(_, p)| p.is_sig_out())
     }
@@ -208,15 +210,19 @@ impl Component {
 /// Queries over the component as a semantic entity
 impl Component {
     /// The parameters in the signature of the component in the order they appear in the source
-    pub fn sig_params(&self) -> Vec<ParamIdx> {
-        let sig_params = self
-            .params()
+    pub fn sig_params(&self) -> impl Iterator<Item = ParamIdx> + '_ {
+        self.params()
             .iter()
             .filter(|(_, param)| param.is_sig_owned())
             .map(|(idx, _)| idx)
-            .collect_vec();
+    }
 
-        sig_params
+    /// Returns an iterator over the existentially bound parameters in the component
+    pub fn exist_params(&self) -> impl Iterator<Item = ParamIdx> + '_ {
+        self.params()
+            .iter()
+            .filter(|(_, p)| matches!(p.owner, ParamOwner::Exists))
+            .map(|(idx, _)| idx)
     }
 
     /// Returns all the phantom events in this component.

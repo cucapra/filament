@@ -1,8 +1,9 @@
-use super::{
+use crate::{
     AddCtx, CmpOp, Component, Ctx, EventIdx, Expr, ExprIdx, ParamIdx, Prop,
     PropIdx, Time, TimeIdx,
 };
 
+/// A binding from K to V.
 pub struct Bind<K: Eq, V>(Vec<(K, V)>);
 
 impl<K: Eq, V> Bind<K, V> {
@@ -26,14 +27,27 @@ impl<K, V> Bind<K, V>
 where
     K: Eq,
 {
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     /// Get the binding associated with a particular key
     pub fn get(&self, key: &K) -> Option<&V> {
         self.0.iter().find_map(|(k, v)| (k == key).then_some(v))
     }
 
     /// Insert a new binding
-    pub fn insert(&mut self, key: K, value: V) {
+    pub fn push(&mut self, key: K, value: V) {
         self.0.push((key, value));
+    }
+
+    /// Extend the binding
+    pub fn extend(&mut self, other: impl Iterator<Item = (K, V)>) {
+        self.0.extend(other);
     }
 
     /// Remove the last binding and return it

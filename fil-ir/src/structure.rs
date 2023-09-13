@@ -1,6 +1,6 @@
 use super::{
-    utils::Foreign, AddCtx, Bind, Component, Ctx, Expr, ExprIdx, Foldable,
-    InfoIdx, InstIdx, InvIdx, ParamIdx, PortIdx, Subst, TimeIdx, TimeSub,
+    AddCtx, Bind, Component, Ctx, Expr, ExprIdx, Foldable, Foreign, InfoIdx,
+    InstIdx, InvIdx, ParamIdx, PortIdx, Subst, TimeIdx, TimeSub,
 };
 use fil_ast::Op;
 use std::fmt;
@@ -278,7 +278,10 @@ pub enum ParamOwner {
     /// Owned by an `exists` binding
     Exists,
     /// Parameter defined by an instance
-    Instance(InstIdx),
+    Instance {
+        inst: InstIdx,
+        base: Foreign<Param, Component>,
+    },
     /// Defined by a bundle
     Bundle(PortIdx),
     /// Loop indexing parameter
@@ -300,7 +303,7 @@ impl fmt::Display for ParamOwner {
             ParamOwner::Bundle(idx) => {
                 write!(f, "{idx}")
             }
-            ParamOwner::Instance(idx) => {
+            ParamOwner::Instance { inst: idx, .. } => {
                 write!(f, "{idx}")
             }
         }

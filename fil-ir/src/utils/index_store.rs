@@ -56,6 +56,11 @@ where
     /// Get the value associated with the index.
     pub fn get(&self, idx: I) -> &T {
         let i = idx.get();
+        assert!(
+            self.store.len() > i,
+            "Attempted to get index {i} but store only has {} elements.",
+            self.store.len()
+        );
         assert!(self.valid[i], "Attempted to get invalid index {i}.");
         &self.store[i]
     }
@@ -63,6 +68,11 @@ where
     /// Get a mutable reference to the value associated with the index.
     pub fn get_mut(&mut self, idx: I) -> &mut T {
         let i = idx.get();
+        assert!(
+            self.store.len() > i,
+            "Attempted to get index {i} but store only has {} elements.",
+            self.store.len()
+        );
         assert!(self.valid[i], "Attempted to get invalid index {i}.");
         &mut self.store[i]
     }
@@ -163,5 +173,9 @@ impl<T> MutCtx<T> for IndexStore<T> {
 
     fn delete(&mut self, idx: Idx<T>) {
         self.delete(idx)
+    }
+
+    fn valid(&self, idx: Idx<T>) -> bool {
+        self.is_valid(idx)
     }
 }
