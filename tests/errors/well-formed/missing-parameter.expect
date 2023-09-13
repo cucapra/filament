@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+error: `Identity' requires at least 2 parameters but 1 were provided
+   ┌─ tests/errors/well-formed/missing-parameter.fil:18:20
+   │
+18 │     invalid := new Identity[1]<'G>(valid2.out);
+   │                    ^^^^^^^^ `Identity' requires at least 2 parameters but 1 were provided
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.
