@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-Error: Failed to parse  --> tests/errors/malformed-interval.fil:1:27
+Error: Failed to parse  --> tests/errors/well-formed/malformed-interval.fil:1:27
   |
 1 | comp Main<'G: 1>(go: ['G, 3] 1) -> () {}
   |                           ^

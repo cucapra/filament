@@ -8,6 +8,14 @@ cmd = """
 """
 
 [[tests]]
+name = "check"
+paths = ["tests/check/*.fil", "primitives/*.fil"]
+cmd = """
+./target/debug/filament {} --check
+"""
+expect_dir = "tests/check/"
+
+[[tests]]
 name = "run examples"
 paths = ["examples/tut-seq.fil", "examples/tut-pipe.fil"]
 expect_dir = "examples/run/"

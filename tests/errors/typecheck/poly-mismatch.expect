@@ -2,7 +2,7 @@
 1
 ---STDERR---
 error: source port does not provide value for as long as destination requires
-   ┌─ tests/errors/poly-mismatch.fil:12:27
+   ┌─ tests/errors/typecheck/poly-mismatch.fil:12:27
    │
 12 │     a := new Add[W]<'G+W>(s.out, acc);
    │                           ^^^^^ source is available for ['G+N, 'G+N+1]
@@ -13,7 +13,7 @@ error: source port does not provide value for as long as destination requires
    │       ---- requires value for ['G+W, 'G+W+1]
 
 error: source port does not provide value for as long as destination requires
-   ┌─ tests/errors/poly-mismatch.fil:12:34
+   ┌─ tests/errors/typecheck/poly-mismatch.fil:12:34
    │
 12 │     a := new Add[W]<'G+W>(s.out, acc);
    │                                  ^^^ source is available for ['G+N, 'G+N+1]
@@ -24,7 +24,7 @@ error: source port does not provide value for as long as destination requires
    │       ----- requires value for ['G+W, 'G+W+1]
 
 error: source port does not provide value for as long as destination requires
-   ┌─ tests/errors/poly-mismatch.fil:13:11
+   ┌─ tests/errors/typecheck/poly-mismatch.fil:13:11
    │
 13 │     out = a.out;
    │     ----  ^^^^^ source is available for ['G+W, 'G+W+1]
@@ -32,7 +32,7 @@ error: source port does not provide value for as long as destination requires
    │     requires value for ['G+N, 'G+N+1]
 
 error: source port does not provide value for as long as destination requires
-   ┌─ tests/errors/poly-mismatch.fil:20:11
+   ┌─ tests/errors/typecheck/poly-mismatch.fil:20:11
    │
 20 │     out = s.out;
    │     ----  ^^^^^ source is available for ['G+2, 'G+3]

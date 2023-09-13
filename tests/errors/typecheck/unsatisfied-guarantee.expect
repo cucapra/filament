@@ -2,7 +2,7 @@
 1
 ---STDERR---
 error: source port does not provide value for as long as destination requires
-   ┌─ tests/errors/unsatisfied-guarantee.fil:12:9
+   ┌─ tests/errors/typecheck/unsatisfied-guarantee.fil:12:9
    │
 12 │   out = m0.out;
    │   ----  ^^^^^^ source is available for ['G, 'G+1]

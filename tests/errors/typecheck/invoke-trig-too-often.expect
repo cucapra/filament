@@ -2,7 +2,7 @@
 1
 ---STDERR---
 error: event provided to invocation triggers more often that invocation's event's delay allows
-  ┌─ tests/errors/invoke-trig-too-often.fil:9:11
+  ┌─ tests/errors/typecheck/invoke-trig-too-often.fil:9:11
   │
 2 │   comp Mult<'G: 5>(
   │                 - invocation's event is allowed to trigger every 5 cycles

@@ -2,7 +2,7 @@
 1
 ---STDERR---
 error: `Identity' requires at least 2 parameters but 1 were provided
-   ┌─ tests/errors/missing-parameter.fil:18:20
+   ┌─ tests/errors/well-formed/missing-parameter.fil:18:20
    │
 18 │     invalid := new Identity[1]<'G>(valid2.out);
    │                    ^^^^^^^^ `Identity' requires at least 2 parameters but 1 were provided
