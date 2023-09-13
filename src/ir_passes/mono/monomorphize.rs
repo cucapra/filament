@@ -6,6 +6,49 @@ use fil_ir::{self as ir, Ctx, IndexStore};
 use ir::AddCtx;
 use std::collections::HashMap;
 
+/// The Monomorphize pass.
+///
+/// ## Basic Strategy
+///
+/// The pass recusively monomorphizes all user-level Filament components and
+/// replaces their uses with monomorphic variants. For example, in the program:
+/// ```
+/// comp Foo[A](...) { .. }
+/// comp Bar(...) {
+///     F0 := new Foo[10]
+///     F1 := new Foo[20]
+/// }
+/// ```
+/// will be turned into:
+/// ```
+/// comp Foo_10(...) { .. }
+/// comp Foo_20(...) { .. }
+/// comp Bar() {
+///     F0 := new Foo_10
+///     F1 := new Foo_20
+/// }
+/// ```
+///
+/// Primitive uses are not mormorphized because their parameterization happens
+/// outside of Filament.
+///
+/// ## Existential Parameters
+///
+/// Existential parameters get their bindings from evaluating a component's body.
+/// One way to think about parameters is that normal parameters in the
+/// component's signature are "inputs" while existential parameters are
+/// "outputs".
+///
+/// Because of this, the pass must monomorphize all instances as soon as it sees them:
+/// ```
+/// comp Foo {
+///    B0 := new Bar[10];
+///    B1 := new Baz[B0::Out + 15]; // B0 must be fully monomorphized before we can monomorphize B1
+/// }
+/// ```
+///
+/// ## Struct Information
+///
 /// Information generated while monomorphizing a program. This tracks the global
 /// set of information generated during monomorphization while [super::MonoSig]
 /// tracks information generated for a single component.
