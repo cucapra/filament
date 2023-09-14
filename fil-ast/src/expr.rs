@@ -1,5 +1,6 @@
 use super::{Binding, Id, Loc};
 use fil_utils::Error;
+use itertools::Itertools;
 
 /// Binary operation over expressions
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd)]
@@ -25,33 +26,33 @@ impl std::fmt::Display for Op {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd)]
 /// A unary uninterpreted function over integers.
-pub enum UnFn {
+pub enum Fn {
     /// The `pow2` function
     Pow2,
     /// The `log2` function
     Log2,
 }
-impl std::fmt::Display for UnFn {
+impl std::fmt::Display for Fn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            UnFn::Pow2 => write!(f, "pow2"),
-            UnFn::Log2 => write!(f, "log2"),
+            Fn::Pow2 => write!(f, "pow2"),
+            Fn::Log2 => write!(f, "log2"),
         }
     }
 }
 
-impl UnFn {
-    pub fn apply(self, arg: Expr) -> Expr {
-        match (self, arg) {
-            (UnFn::Pow2, Expr::Concrete(n)) => {
+impl Fn {
+    pub fn apply(self, args: Vec<Expr>) -> Expr {
+        match (self, &*args) {
+            (Fn::Pow2, &[Expr::Concrete(n)]) => {
                 Expr::Concrete(2u64.pow(n as u32))
             }
-            (UnFn::Log2, Expr::Concrete(n)) => {
+            (Fn::Log2, &[Expr::Concrete(n)]) => {
                 Expr::Concrete((n as f64).log2().ceil() as u64)
             }
-            (func, arg) => Expr::App {
+            (func, args) => Expr::App {
                 func,
-                arg: Box::new(arg),
+                args: args.to_vec(),
             },
         }
     }
@@ -67,8 +68,8 @@ pub enum Expr {
         param: Loc<Id>,
     },
     App {
-        func: UnFn,
-        arg: Box<Expr>,
+        func: Fn,
+        args: Vec<Expr>,
     },
     Op {
         op: Op,
@@ -114,8 +115,8 @@ impl Expr {
     }
 
     /// Function application
-    pub fn func(func: UnFn, arg: Expr) -> Self {
-        func.apply(arg)
+    pub fn func(func: Fn, args: Vec<Expr>) -> Self {
+        func.apply(args)
     }
 
     pub fn op(op: Op, l: Expr, r: Expr) -> Self {
@@ -141,7 +142,8 @@ impl Expr {
         match self {
             Expr::Concrete(_) | Expr::ParamAccess { .. } => self,
             Expr::Abstract(ref id) => bind.find(id).cloned().unwrap_or(self),
-            Expr::App { func, arg } => func.apply(arg.resolve(bind)),
+            Expr::App { func, args } => func
+                .apply(args.into_iter().map(|arg| arg.resolve(bind)).collect()),
             Expr::Op { op, left, right } => {
                 let l = left.resolve(bind);
                 let r = right.resolve(bind);
@@ -258,7 +260,7 @@ impl From<Id> for Expr {
 }
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
-/// Track the current context within an expression for pretty printing
+/// Track the current context within an expression for pretty printinga
 enum ECtx {
     #[default]
     /// Inside an addition priority expression (+ or -)
@@ -281,8 +283,14 @@ impl ECtx {
             Expr::ParamAccess { inst, param } => {
                 format!("{inst}::{param}")
             }
-            Expr::App { func, arg } => {
-                format!("{}({})", func, Self::Func.print(arg))
+            Expr::App { func, args } => {
+                format!(
+                    "{}({})",
+                    func,
+                    args.into_iter()
+                        .map(|arg| Self::Func.print(arg))
+                        .join(", ")
+                )
             }
             Expr::Op { op, left, right } => {
                 let inner = Self::from(*op);

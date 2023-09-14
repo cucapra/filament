@@ -18,7 +18,7 @@ pub use control::{
     Access, Bundle, BundleType, Command, Connect, Exists, Fact, ForLoop, If,
     Instance, Invoke, ParamLet, Port,
 };
-pub use expr::{Expr, Op, UnFn};
+pub use expr::{Expr, Op, Fn};
 pub use fil_utils::Id;
 pub use implication::Implication;
 pub use interval::Range;

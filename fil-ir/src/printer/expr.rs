@@ -73,8 +73,8 @@ fn display_expr_helper(
         }
         ir::Expr::Fn { op, args } => {
             let fn_str = match op {
-                ast::UnFn::Pow2 => "pow2",
-                ast::UnFn::Log2 => "log2",
+                ast::Fn::Pow2 => "pow2",
+                ast::Fn::Log2 => "log2",
             };
             format!(
                 "{fn_str}({args})",

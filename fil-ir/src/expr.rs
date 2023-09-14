@@ -13,7 +13,7 @@ pub enum Expr {
         rhs: ExprIdx,
     },
     Fn {
-        op: ast::UnFn,
+        op: ast::Fn,
         args: Vec<ExprIdx>,
     },
 }
@@ -84,14 +84,14 @@ impl ExprIdx {
 
     pub fn pow2(self, ctx: &mut impl AddCtx<Expr>) -> Self {
         ctx.add(Expr::Fn {
-            op: ast::UnFn::Pow2,
+            op: ast::Fn::Pow2,
             args: vec![self],
         })
     }
 
     pub fn log2(self, ctx: &mut impl AddCtx<Expr>) -> Self {
         ctx.add(Expr::Fn {
-            op: ast::UnFn::Log2,
+            op: ast::Fn::Log2,
             args: vec![self],
         })
     }

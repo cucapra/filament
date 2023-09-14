@@ -85,13 +85,15 @@ op_add = { "+" }
 op_sub = { "-" }
 operator = _{ op_mul | op_div | op_add | op_sub | op_mod }
 
-pow2 = { "pow2" }
-log2 = { "log2" }
+builtin_fn = {
+  | "pow2"
+  | "log2"
+}
 unknown_fn = { identifier }
-un_fn = { pow2 | log2 | unknown_fn }
+fn = {builtin_fn | unknown_fn}
 
 expr_base = {
-  | un_fn ~ "(" ~ expr ~ ")"
+  | fn ~ "(" ~ expr ~ ("," ~ expr)* ~ ")"
   | "(" ~ expr ~ ")"
   | bitwidth
   | identifier ~ "::" ~ identifier

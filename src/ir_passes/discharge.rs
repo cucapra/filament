@@ -43,7 +43,7 @@ pub struct Discharge {
     /// Are we in a scoped context?
     scoped: bool,
     /// Defined functions
-    func_map: HashMap<ast::UnFn, smt::SExpr>,
+    func_map: HashMap<ast::Fn, smt::SExpr>,
     // Defined names
     param_map: ir::DenseIndexInfo<ir::Param, smt::SExpr>,
     ev_map: ir::DenseIndexInfo<ir::Event, smt::SExpr>,
@@ -179,7 +179,7 @@ impl Discharge {
             .sol
             .declare_fun("log2", vec![int_sort], int_sort)
             .unwrap();
-        self.func_map = vec![(ast::UnFn::Pow2, pow2), (ast::UnFn::Log2, log)]
+        self.func_map = vec![(ast::Fn::Pow2, pow2), (ast::Fn::Log2, log)]
             .into_iter()
             .collect();
     }
