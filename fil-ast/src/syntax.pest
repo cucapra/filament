@@ -87,7 +87,13 @@ operator = _{ op_mul | op_div | op_add | op_sub | op_mod }
 
 builtin_fn = {
   | "pow2"
-  | "log2"
+  | "clog2"
+  | "pow"
+  | "clog"
+  | "sqrt"
+  | "sin32"
+  | "cos32"
+  | "tan32"
 }
 unknown_fn = { identifier }
 fn = {builtin_fn | unknown_fn}

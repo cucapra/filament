@@ -428,7 +428,7 @@ impl Component {
                     ast::Fn::Pow2 => {
                         self.add(Expr::Concrete(2u64.pow(arg as u32)))
                     }
-                    ast::Fn::Log2 => {
+                    ast::Fn::CLog2 => {
                         self.add(Expr::Concrete((arg as f64).log2().ceil() as u64))
                     }
                 }

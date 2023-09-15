@@ -91,7 +91,7 @@ impl ExprIdx {
 
     pub fn log2(self, ctx: &mut impl AddCtx<Expr>) -> Self {
         ctx.add(Expr::Fn {
-            op: ast::Fn::Log2,
+            op: ast::Fn::CLog2,
             args: vec![self],
         })
     }

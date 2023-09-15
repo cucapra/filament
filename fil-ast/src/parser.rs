@@ -252,8 +252,11 @@ impl FilamentParser {
     fn builtin_fn(input: Node) -> ParseResult<ast::Fn> {
         Ok(match input.as_str() {
             "pow2" => ast::Fn::Pow2,
-            "log2" => ast::Fn::Log2,
-            _ => unreachable!(),
+            "clog2" => ast::Fn::CLog2,
+            "pow" => ast::Fn::Pow,
+            "clog" => ast::Fn::CLog,
+            "sqrt" => ast::Fn::Sqrt,
+            _ => unreachable!("Unknown builtin function"),
         })
     }
     fn unknown_fn(input: Node) -> ParseResult<ast::Fn> {

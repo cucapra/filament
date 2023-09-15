@@ -29,31 +29,55 @@ impl std::fmt::Display for Op {
 pub enum Fn {
     /// The `pow2` function
     Pow2,
-    /// The `log2` function
-    Log2,
+    /// The `clog2` function
+    CLog2,
+    /// The `pow` function
+    Pow,
+    /// The `clog` function
+    CLog,
+    /// The `sqrt` function
+    Sqrt,
 }
 impl std::fmt::Display for Fn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Fn::Pow2 => write!(f, "pow2"),
-            Fn::Log2 => write!(f, "log2"),
+            Fn::CLog2 => write!(f, "log2"),
+            Fn::Pow => write!(f, "pow"),
+            Fn::CLog => write!(f, "log"),
+            Fn::Sqrt => write!(f, "sqrt"),
         }
     }
 }
 
 impl Fn {
-    pub fn apply(self, args: Vec<Expr>) -> Expr {
+    /// Evaluates a Fn given a set of arguments
+    pub fn eval(self, args: Vec<u64>) -> u64 {
         match (self, &*args) {
-            (Fn::Pow2, &[Expr::Concrete(n)]) => {
-                Expr::Concrete(2u64.pow(n as u32))
-            }
-            (Fn::Log2, &[Expr::Concrete(n)]) => {
-                Expr::Concrete((n as f64).log2().ceil() as u64)
-            }
-            (func, args) => Expr::App {
-                func,
-                args: args.to_vec(),
-            },
+            (Fn::Pow2, &[n]) => 2u64.pow(n as u32),
+            (Fn::CLog2, &[n]) => (n as f64).log2().ceil() as u64,
+            (Fn::Pow, &[b, n]) => b.pow(n as u32),
+            (Fn::CLog, &[b, n]) => (n as f64).log(b as f64).ceil() as u64,
+            (Fn::Sqrt, &[n]) => (n as f64).sqrt().to_bits(),
+            _ => unreachable!(
+                "Function {} did not expect {} arguments.",
+                self,
+                args.len()
+            ),
+        }
+    }
+
+    pub fn apply(self, args: Vec<Expr>) -> Expr {
+        match args
+            .iter()
+            .map(|arg| match arg {
+                Expr::Concrete(n) => Some(*n),
+                _ => None,
+            })
+            .collect::<Option<Vec<_>>>()
+        {
+            None => Expr::App { func: self, args },
+            Some(args) => Expr::Concrete(self.eval(args)),
         }
     }
 }
@@ -287,9 +311,7 @@ impl ECtx {
                 format!(
                     "{}({})",
                     func,
-                    args.into_iter()
-                        .map(|arg| Self::Func.print(arg))
-                        .join(", ")
+                    args.iter().map(|arg| Self::Func.print(arg)).join(", ")
                 )
             }
             Expr::Op { op, left, right } => {

@@ -12,15 +12,15 @@ impl Assume {
         ctx: &mut ir::Component,
         f: ast::Fn,
         lhs: ExprIdx,
-        rhs: ExprIdx,
+        args: Vec<ExprIdx>,
     ) -> Vec<PropIdx> {
         // Define constant expressions used
         let zero = ctx.add(ir::Expr::Concrete(0));
         let one = ctx.add(ir::Expr::Concrete(1));
         let two = ctx.add(ir::Expr::Concrete(2));
 
-        match f {
-            ast::Fn::Pow2 => vec![
+        match (f, &*args) {
+            (ast::Fn::Pow2, &[rhs]) => vec![
                 // #l * 2 = pow2(#r + 1)
                 lhs.mul(two, ctx).equal(rhs.add(one, ctx).pow2(ctx), ctx),
                 // #r >= 1 => #l = pow2(#r - 1)*2
@@ -33,7 +33,7 @@ impl Assume {
                 // #r = 0 => #l = 1
                 rhs.equal(zero, ctx).implies(lhs.equal(one, ctx), ctx),
             ],
-            ast::Fn::Log2 => vec![
+            (ast::Fn::Log2, &[rhs]) => vec![
                 // #l + 1 = log2(#r * 2)
                 lhs.add(one, ctx).equal(rhs.mul(two, ctx).log2(ctx), ctx),
                 // #l >= 1 => (#l - 1 = log2(#r / 2)) & ((#r / 2) * 2 = #r)
@@ -51,6 +51,13 @@ impl Assume {
                 // #r = 1 => #l = 0
                 rhs.equal(one, ctx).implies(lhs.equal(zero, ctx), ctx),
             ],
+            (f, args) => {
+                unreachable!(
+                    "Function {} did not expect {} arguments.",
+                    f,
+                    args.len()
+                );
+            }
         }
     }
 }
@@ -58,7 +65,6 @@ impl Assume {
 impl Assume {
     /// Checks a proposition for whether it matches the form `#l = f(#r)` for some custom function `f`. Additionally recurses on `&` chains.
     /// Generates the assumptions associated with each [ast::Fn] and returns a list of [ir::Prop]s for each.
-    /// TODO: Implement assumption generation for functions taking more than one argument.
     fn prop(p: ir::PropIdx, comp: &mut ir::Component) -> Vec<PropIdx> {
         let p = comp.get(p);
         match p {
@@ -67,32 +73,21 @@ impl Assume {
                 lhs,
                 rhs,
             }) => {
-                // Matches over the cases `op(args) = rhs` and `lhs = op(args)` to
-                // define the `op`, `left`, and `right` for the equivalent equation `left = op(right)`
-                if let Some((op, lhs, rhs)) = match (
-                    comp.get(*lhs),
-                    comp.get(*rhs),
-                ) {
-                    (ir::Expr::Fn { op, args }, _) => {
-                        assert!(
-                            args.len() == 1,
-                            "Currently Unimplemented: {} requires {} arguments, automatic assumptions only implemented for single argument functions.",
-                            op, args.len()
-                        );
-                        Some((*op, *rhs, args[0]))
+                // Matches over the cases `op(..args) = rhs` and `lhs = op(..args)` to
+                // define the `op`, `left`, and `args` for the equivalent equation `left = op(args)`
+                if let Some((op, lhs, args)) =
+                    match (comp.get(*lhs), comp.get(*rhs)) {
+                        (ir::Expr::Fn { op, args }, _) => {
+                            Some((*op, *rhs, args))
+                        }
+                        (_, ir::Expr::Fn { op, args }) => {
+                            Some((*op, *lhs, args))
+                        }
+                        _ => None,
                     }
-                    (_, ir::Expr::Fn { op, args }) => {
-                        assert!(
-                            args.len() == 1,
-                            "Currently Unimplemented: {} requires {} arguments, automatic assumptions only implemented for single argument functions.",
-                            op, args.len()
-                        );
-                        Some((*op, *lhs, args[0]))
-                    }
-                    _ => None,
-                } {
+                {
                     log::debug!("Generating default assumptions for {p}");
-                    Self::add_assumptions(comp, op, lhs, rhs)
+                    Self::add_assumptions(comp, op, lhs, args.clone())
                 } else {
                     vec![]
                 }
