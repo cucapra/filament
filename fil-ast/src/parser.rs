@@ -269,6 +269,14 @@ impl FilamentParser {
             "pow" => ast::Fn::Pow,
             "clog" => ast::Fn::CLog,
             "sqrt" => ast::Fn::Sqrt,
+            "sin" => ast::Fn::Sin,
+            "cos" => ast::Fn::Cos,
+            "tan" => ast::Fn::Tan,
+            "float" => ast::Fn::Float,
+            "floor" => ast::Fn::Floor,
+            "ceil" => ast::Fn::Ceil,
+            "f32_bits" => ast::Fn::F32Bits,
+            "f64_bits" => ast::Fn::F64Bits,
             _ => unreachable!("Unknown builtin function"),
         })
     }

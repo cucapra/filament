@@ -196,6 +196,14 @@ pub enum Fn {
     Pow,
     CLog,
     Sqrt,
+    Sin,
+    Cos,
+    Tan,
+    Float,
+    Floor,
+    Ceil,
+    F32Bits,
+    F64Bits,
 }
 
 impl Fn {
@@ -206,6 +214,14 @@ impl Fn {
             (Fn::Pow, &[b, n]) => b.u64().pow(n.u64() as u32).into(),
             (Fn::CLog, &[b, n]) => n.f64().log(b.f64()).ceil().into(),
             (Fn::Sqrt, &[n]) => n.f64().sqrt().into(),
+            (Fn::Sin, &[n]) => n.f64().sin().into(),
+            (Fn::Cos, &[n]) => n.f64().cos().into(),
+            (Fn::Tan, &[n]) => n.f64().tan().into(),
+            (Fn::Float, &[n]) => n.f64().into(),
+            (Fn::Floor, &[n]) => n.f64().floor().into(),
+            (Fn::Ceil, &[n]) => n.f64().ceil().into(),
+            (Fn::F32Bits, &[n]) => ((n.f64() as f32).to_bits() as u64).into(),
+            (Fn::F64Bits, &[n]) => n.f64().to_bits().into(),
             _ => unreachable!(
                 "Function {} did not expect {} arguments.",
                 self,
@@ -223,6 +239,14 @@ impl std::fmt::Display for Fn {
             Fn::Sqrt => write!(f, "sqrt"),
             Fn::CLog2 => write!(f, "clog2"),
             Fn::CLog => write!(f, "clog"),
+            Fn::Sin => write!(f, "sin"),
+            Fn::Cos => write!(f, "cos"),
+            Fn::Tan => write!(f, "tan"),
+            Fn::Float => write!(f, "float"),
+            Fn::Floor => write!(f, "floor"),
+            Fn::Ceil => write!(f, "ceil"),
+            Fn::F32Bits => write!(f, "f32_bits"),
+            Fn::F64Bits => write!(f, "f64_bits"),
         }
     }
 }

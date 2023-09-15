@@ -1,0 +1,13 @@
+import "primitives/comb.fil";
+
+comp main<'G: 1>(
+  in: ['G, 'G+1] 1,
+) -> (
+  out: ['G, 'G+1] 1,
+  floor_test: ['G, 'G+1] 32,
+) {
+  floor := new Const[32, floor(1.5)]<'G>();
+  floor_test = floor.out;
+
+  out = in;
+}

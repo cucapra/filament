@@ -9,7 +9,7 @@ identifier = @{ ("_" | ASCII_ALPHA)+ ~ ("_" | ASCII_ALPHA | ASCII_DIGIT)* }
 // Positive numbers
 uint = @{ ASCII_DIGIT+ }
 float = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
-concrete = { uint | float }
+concrete = { float | uint }
 
 char = { !"\"" ~ ANY }
 string_lit = ${ "\"" ~ char* ~ "\"" }
@@ -93,9 +93,14 @@ builtin_fn = {
   | "pow"
   | "clog"
   | "sqrt"
-  | "sin32"
-  | "cos32"
-  | "tan32"
+  | "sin"
+  | "cos"
+  | "tan"
+  | "float"
+  | "floor"
+  | "ceil"
+  | "f32_bits"
+  | "f64_bits"
 }
 unknown_fn = { identifier }
 fn = {builtin_fn | unknown_fn}
