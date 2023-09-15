@@ -28,7 +28,7 @@ impl DisplayCtx<ir::CompIdx> for ir::Context {
 impl DisplayCtx<ir::TimeIdx> for ir::Component {
     fn write(&self, val: ir::TimeIdx, f: &mut impl Write) -> std::fmt::Result {
         let &ir::Time { event, offset } = self.get(val);
-        if offset.is_const(self, 0) {
+        if offset.is_u64(self, 0) {
             self.write(event, f)
         } else {
             self.write(event, f)?;

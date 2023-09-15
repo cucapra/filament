@@ -42,7 +42,7 @@ impl IntervalCheck {
         event: ir::EventIdx,
         comp: &mut ir::Component,
     ) -> Option<ir::Command> {
-        let zero = comp.num(0).into();
+        let zero = comp.uint(0).into();
         let ir::Event { delay, info, .. } = &comp[event];
         let &ir::info::Event { delay_loc, .. } = comp.get(*info).into();
         let prop = delay.clone().gt(zero, comp);
@@ -59,7 +59,7 @@ impl IntervalCheck {
     /// Proposition that ensures that the given parameter is in range
     fn in_range(live: &ir::Liveness, comp: &mut ir::Component) -> ir::PropIdx {
         let &ir::Liveness { idx, len, .. } = live;
-        let zero = comp.num(0);
+        let zero = comp.uint(0);
         let idx = idx.expr(comp);
         let lo = idx.gte(zero, comp);
         let hi = idx.lt(len, comp);
@@ -155,7 +155,7 @@ impl Visitor for IntervalCheck {
             let &ir::info::Event { delay_loc, .. } = comp.get(ev.info).into();
             let param = comp.get(live.idx);
             let &ir::info::Param { bind_loc, .. } = comp.get(param.info).into();
-            let zero = comp.num(0);
+            let zero = comp.uint(0);
             let reason = comp.add(
                 ir::info::Reason::bundle_delay(
                     delay_loc,

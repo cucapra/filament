@@ -7,7 +7,9 @@ COMMENT = _{ ("//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE) | "/*" ~ (!"*/" ~ ANY)* ~ "*/"
 identifier = @{ ("_" | ASCII_ALPHA)+ ~ ("_" | ASCII_ALPHA | ASCII_DIGIT)* }
 
 // Positive numbers
-bitwidth = @{ ASCII_DIGIT+ }
+uint = @{ ASCII_DIGIT+ }
+float = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
+concrete = { uint | float }
 
 char = { !"\"" ~ ANY }
 string_lit = ${ "\"" ~ char* ~ "\"" }
@@ -101,7 +103,7 @@ fn = {builtin_fn | unknown_fn}
 expr_base = {
   | fn ~ "(" ~ expr ~ ("," ~ expr)* ~ ")"
   | "(" ~ expr ~ ")"
-  | bitwidth
+  | concrete
   | identifier ~ "::" ~ identifier
   | param_var
 }
@@ -154,7 +156,7 @@ bundle_def = {
 
 // Ports
 port_def = {
-  identifier ~ ":" ~ bitwidth
+  identifier ~ ":" ~ uint
   // A port that is possibly a bundle port
   | bundle_def
   // An interface port
@@ -196,7 +198,7 @@ access = {
 port = {
   identifier ~ "." ~ identifier ~ access?
   | identifier ~ access?
-  | bitwidth
+  | concrete
 }
 
 arguments = {

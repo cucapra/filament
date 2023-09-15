@@ -90,7 +90,7 @@ impl<'a> BuildCtx<'a> {
             let conc_bind = inst
                 .args
                 .iter()
-                .map(|v| v.concrete(self.comp))
+                .map(|v| v.concrete(self.comp).u64())
                 .collect_vec();
             self.builder.add_primitive(inst_name, comp_name, &conc_bind)
         };
@@ -125,7 +125,7 @@ impl<'a> BuildCtx<'a> {
                 let dst = cell.borrow().get(dst);
 
                 let time = self.comp.get(*time);
-                let offset = time.offset.concrete(self.comp);
+                let offset = time.offset.concrete(self.comp).u64();
                 // finds the corresponding port on the fsm of the referenced event
                 let src = self.fsms.get(&time.event).unwrap().range_guard(
                     &mut self.builder,
@@ -175,8 +175,8 @@ impl<'a> BuildCtx<'a> {
         let fsm = self.fsms.get(&ev).unwrap();
         fsm.range_guard(
             &mut self.builder,
-            start.offset.concrete(self.comp),
-            end.offset.concrete(self.comp),
+            start.offset.concrete(self.comp).u64(),
+            end.offset.concrete(self.comp).u64(),
         )
     }
 
@@ -236,7 +236,7 @@ impl<'a> BuildCtx<'a> {
                     "Non-unit delays should have been compiled away.",
                 );
             };
-            let delay = delay.concrete(self.comp);
+            let delay = delay.concrete(self.comp).u64();
             let typ = FsmType::new(states, delay, self.disable_slow_fsms);
             self.implement_fsm(&typ);
 

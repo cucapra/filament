@@ -336,7 +336,7 @@ impl<'prog> BuildCtx<'prog> {
         ));
         // Add a fake delay of 0.
         let e = ir::Event {
-            delay: self.comp().num(0).into(),
+            delay: self.comp().uint(0).into(),
             info,
             has_interface: interface_port.is_some(),
         };
@@ -392,7 +392,7 @@ impl<'prog> BuildCtx<'prog> {
                             // Updated after the port is constructed
                             ir::ParamOwner::bundle(ir::PortIdx::UNKNOWN),
                         ), // This parameter is unused
-                        len: ctx.comp().num(1),
+                        len: ctx.comp().uint(1),
                         range: ctx.range(liveness.take())?,
                     })
                 })?;
@@ -744,7 +744,7 @@ impl<'prog> BuildCtx<'prog> {
             let end = self.comp()[pidx].live.len;
             let dst = ir::Access {
                 port: pidx,
-                start: self.comp().num(0),
+                start: self.comp().uint(0),
                 end,
             };
 
@@ -941,7 +941,7 @@ impl<'prog> BuildCtx<'prog> {
 
         for (idx, len) in ports {
             let idx = idx.expr(self.comp());
-            let start = idx.gte(self.comp().num(0), self.comp());
+            let start = idx.gte(self.comp().uint(0), self.comp());
             let end = idx.lt(len, self.comp());
             let in_range = start.and(end, self.comp());
             cmds.extend(self.comp().assume(in_range, reason))

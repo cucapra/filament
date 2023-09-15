@@ -223,8 +223,8 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         let mono_start = self.monosig.expr(&self.underlying, start.ul()).get();
         let mono_end = self.monosig.expr(&self.underlying, end.ul()).get();
 
-        let mut i = mono_start.as_concrete(self.monosig.base.comp()).unwrap();
-        let bound = mono_end.as_concrete(self.monosig.base.comp()).unwrap();
+        let mut i = mono_start.concrete(self.monosig.base.comp()).u64();
+        let bound = mono_end.concrete(self.monosig.base.comp()).u64();
 
         while i < bound {
             let index = index.ul();

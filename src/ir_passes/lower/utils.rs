@@ -60,7 +60,7 @@ impl NameGenerator {
             ir::Expr::Param(p) => calyx::Width::Param {
                 value: self.param_name(*p, comp).into(),
             },
-            ir::Expr::Concrete(val) => calyx::Width::Const { value: *val },
+            ir::Expr::Concrete(val) => calyx::Width::Const { value: val.u64() },
             ir::Expr::Bin { .. } | ir::Expr::Fn { .. } => comp
                 .internal_error("Port width must be a parameter or constant."),
         }
@@ -138,7 +138,7 @@ pub fn max_states(comp: &Component) -> LinkedHashMap<EventIdx, u64> {
         })
         .for_each(|idx| {
             let time = comp.get(idx);
-            let nv = time.offset.concrete(comp);
+            let nv = time.offset.concrete(comp).u64();
             if nv > *max_states.get(&time.event).unwrap_or(&0) {
                 max_states.insert(time.event, nv);
             }

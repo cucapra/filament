@@ -6,7 +6,7 @@ use std::fmt::Display;
 #[derive(PartialEq, Eq, Hash, Clone)]
 pub enum Expr {
     Param(ParamIdx),
-    Concrete(u64),
+    Concrete(ast::Concrete),
     Bin {
         op: ast::Op,
         lhs: ExprIdx,
@@ -16,6 +16,16 @@ pub enum Expr {
         op: ast::Fn,
         args: Vec<ExprIdx>,
     },
+}
+
+impl Expr {
+    pub fn uint(n: u64) -> Self {
+        Expr::Concrete(ast::Concrete::UInt(n))
+    }
+
+    pub fn float(n: f64) -> Self {
+        Expr::Concrete(ast::Concrete::Float(n))
+    }
 }
 
 impl Display for Expr {
@@ -40,7 +50,7 @@ impl ExprIdx {
     #[inline]
     /// Attempts to convert this expression into a concrete value.
     /// If the coercion should panic on failure, use [Self::concrete] instead.
-    pub fn as_concrete(&self, ctx: &impl Ctx<Expr>) -> Option<u64> {
+    pub fn as_concrete(&self, ctx: &impl Ctx<Expr>) -> Option<ast::Concrete> {
         if let Expr::Concrete(c) = ctx.get(*self) {
             Some(*c)
         } else {
@@ -57,20 +67,20 @@ impl ExprIdx {
     }
 
     #[inline]
-    /// Returns the concrete value represented by this expression or errors out.
-    /// If an optional value is desired, use [Self::as_concrete] instead.
-    pub fn concrete(self, comp: &Component) -> u64 {
+    /// Returns the u64 value represented by this expression or errors out.
+    /// If an optional value is desired, use [Self::as_u64] instead.
+    pub fn concrete(self, comp: &Component) -> ast::Concrete {
         let Some(c) = self.as_concrete(comp) else {
             comp.internal_error(format!("{} is not a concrete number", self))
         };
         c
     }
 
-    /// Returns true if this expression is a constant.
+    /// Returns true if this expression is equal to a u64.
     /// Note that this process *does not* automatically reduce the expression.
     /// For example, `1 + 1` is not going to be reduced to `2`.
-    pub fn is_const(&self, ctx: &impl Ctx<Expr>, n: u64) -> bool {
-        self.as_concrete(ctx).map(|c| c == n).unwrap_or(false)
+    pub fn is_u64(&self, ctx: &impl Ctx<Expr>, n: u64) -> bool {
+        self.as_concrete(ctx).map(|c| c.u64() == n).unwrap_or(false)
     }
 
     /// Returns true of the expression is equal to the given parameter.

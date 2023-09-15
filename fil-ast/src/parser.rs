@@ -212,11 +212,24 @@ impl FilamentParser {
         ))
     }
 
-    fn bitwidth(input: Node) -> ParseResult<u64> {
+    fn uint(input: Node) -> ParseResult<u64> {
         input
             .as_str()
             .parse::<u64>()
-            .map_err(|_| input.error("Expected valid bitwidth"))
+            .map_err(|_| input.error("Expected valid uint"))
+    }
+    fn float(input: Node) -> ParseResult<f64> {
+        input
+            .as_str()
+            .parse::<f64>()
+            .map_err(|_| input.error("Expected valid float"))
+    }
+    fn concrete(input: Node) -> ParseResult<ast::Concrete> {
+        Ok(match_nodes!(
+            input.into_children();
+            [uint(n)] => n.into(),
+            [float(n)] => n.into()
+        ))
     }
 
     // ================ Intervals =====================
@@ -275,7 +288,7 @@ impl FilamentParser {
             input.into_children();
             [identifier(inst), identifier(param)] => ast::Expr::ParamAccess{ inst, param },
             [param_var(id)] => ast::Expr::abs(id),
-            [bitwidth(c)] => c.into(),
+            [concrete(c)] => c.into(),
             [r#fn(f), expr(exprs)..] => ast::Expr::func(f, exprs.into_iter().map(|e| e.take()).collect()),
             [expr(e)] => e.take(),
         ))
@@ -295,7 +308,7 @@ impl FilamentParser {
             [identifier(name), interface(time_var)] => {
                 Ok(Port::Int(ast::InterfaceDef::new(name, time_var)))
             },
-            [identifier(name), bitwidth(n)] => {
+            [identifier(name), uint(n)] => {
                 Ok(Port::Un((name.take(), n)))
             },
             [bundle_def(bd)] => {
@@ -446,7 +459,7 @@ impl FilamentParser {
         let sp = Self::get_span(&input);
         match_nodes!(
             input.clone().into_children();
-            [bitwidth(_)] => Err(input.error("constant ports are not supported. Use the `Const[Width, Val]' primitive instead.")),
+            [concrete(_)] => Err(input.error("constant ports are not supported. Use the `Const[Width, Val]' primitive instead.")),
             [identifier(name)] => Ok(Loc::new(ast::Port::this(name), sp)),
             [identifier(name), access(range)] => Ok(Loc::new(ast::Port::bundle(name, range), sp)),
             [identifier(comp), identifier(name)] => Ok(Loc::new(ast::Port::inv_port(comp, name), sp)),
@@ -685,7 +698,7 @@ impl FilamentParser {
             // This is bundle with size 1, i.e., a port.
             [identifier(name), bundle_typ((param, range, width))] => ast::Bundle::new(
                 name,
-                ast::BundleType::new(param, ast::Expr::concrete(1).into(), range, width)
+                ast::BundleType::new(param, ast::Expr::uint(1).into(), range, width)
             ),
         ))
     }

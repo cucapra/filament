@@ -204,7 +204,7 @@ impl Compile {
             ctx,
             comp,
             identity,
-            |e, comp| e.concrete(comp),
+            |e, comp| e.concrete(comp).u64(),
             name_gen,
         );
         let mut component = calyx::Component::new(

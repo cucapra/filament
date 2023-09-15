@@ -27,7 +27,7 @@ impl From<Expr> for Access {
     fn from(e: Expr) -> Self {
         Access {
             start: e.clone(),
-            end: e + Expr::concrete(1),
+            end: e + Expr::uint(1),
         }
     }
 }

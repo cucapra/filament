@@ -19,7 +19,7 @@ impl PortIdx {
         C: Ctx<Port> + Ctx<Expr>,
     {
         let port = ctx.get(*self);
-        port.live.len.is_const(ctx, 1)
+        port.live.len.is_u64(ctx, 1)
     }
 }
 

@@ -24,7 +24,7 @@ impl Time {
     pub fn unit(event: Id, state: u64) -> Self {
         Time {
             event,
-            offset: Expr::concrete(state),
+            offset: Expr::uint(state),
         }
     }
 

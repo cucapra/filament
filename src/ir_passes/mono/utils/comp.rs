@@ -95,15 +95,22 @@ impl BaseComp {
         self.0.cmds.extend(other);
     }
 
-    pub fn num(&mut self, n: u64) -> Base<ir::Expr> {
-        self.0.add(ir::Expr::Concrete(n)).base()
+    pub fn uint(&mut self, n: u64) -> Base<ir::Expr> {
+        self.0.uint(n).base()
     }
+
+    pub fn concrete(&mut self, c: ast::Concrete) -> Base<ir::Expr> {
+        self.0.concrete(c).base()
+    }
+
     pub fn bin(&mut self, expr: ir::Expr) -> Base<ir::Expr> {
         self.0.bin(expr).base()
     }
+
     pub fn func(&mut self, expr: ir::Expr) -> Base<ir::Expr> {
         self.0.func(expr).base()
     }
+
     pub fn resolve_prop(&mut self, prop: ir::Prop) -> Base<ir::Prop> {
         self.0.resolve_prop(prop).base()
     }

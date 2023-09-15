@@ -170,18 +170,21 @@ impl Discharge {
 
     /// Defines primitive functions used in the encoding like `pow` and `log`
     fn define_funcs(&mut self) {
-        let int_sort = self.sol.int_sort();
-        let pow2 = self
-            .sol
-            .declare_fun("pow2", vec![int_sort], int_sort)
-            .unwrap();
-        let log = self
-            .sol
-            .declare_fun("log2", vec![int_sort], int_sort)
-            .unwrap();
-        self.func_map = vec![(ast::Fn::Pow2, pow2), (ast::Fn::Log2, log)]
-            .into_iter()
-            .collect();
+        let is = self.sol.int_sort();
+
+        macro_rules! sol_fn(
+            ($name:tt($($args:ident),*) -> $out:ident) => {
+                self.func_map.insert(ast::Fn::$name, self
+                    .sol
+                    .declare_fun(stringify!($name).to_lowercase(), vec![$($args),*], $out)
+                    .unwrap());
+            }
+        );
+
+        sol_fn!(Pow2(is) -> is);
+        sol_fn!(CLog2(is) -> is);
+        sol_fn!(Pow(is, is) -> is);
+        sol_fn!(CLog(is, is) -> is);
     }
 
     /// Get bindings for the provided parameters in a model.
@@ -303,7 +306,10 @@ impl Discharge {
         let sol = &mut self.sol;
         match expr {
             ir::Expr::Param(p) => self.param_map[*p],
-            ir::Expr::Concrete(n) => sol.numeral(*n),
+            ir::Expr::Concrete(n) => match n {
+                ast::Concrete::Float(f) => sol.decimal(*f),
+                ast::Concrete::UInt(u) => sol.numeral(*u),
+            },
             ir::Expr::Bin { op, lhs, rhs } => {
                 let l = self.expr_map[*lhs];
                 let r = self.expr_map[*rhs];

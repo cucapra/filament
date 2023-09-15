@@ -8,7 +8,7 @@ comp ShiftExp[W, N, K]<'G:K>(
      out: ['G+K, 'G+K+1] W
 ) where W > 1,
         N >= 0,
-        log2(K) == N,
+        clog2(K) == N,
         K >= 1
 {
     if N == 0 {

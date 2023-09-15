@@ -121,8 +121,8 @@ impl MonoSig {
             .map(|p| {
                 self.expr(underlying, p.ul())
                     .get()
-                    .as_concrete(self.base.comp())
-                    .unwrap()
+                    .concrete(self.base.comp())
+                    .u64()
             })
             .collect_vec();
 
@@ -265,14 +265,14 @@ impl MonoSig {
                 // If this is a parameter in the underlying component that is bound,
                 // return its binding
                 if let Some(n) = self.binding.get(&p.ul()) {
-                    let new_idx = self.base.num(*n);
+                    let new_idx = self.base.uint(*n);
                     return new_idx;
                 } else {
                     let p = self.param_use(underlying, p.ul()).get();
                     self.base.add(ir::Expr::Param(p))
                 }
             }
-            ir::Expr::Concrete(n) => self.base.num(n),
+            ir::Expr::Concrete(n) => self.base.concrete(n),
             ir::Expr::Bin { op, lhs, rhs } => {
                 let lhs = self.expr(underlying, lhs.ul()).get();
                 let rhs = self.expr(underlying, rhs.ul()).get();
@@ -588,8 +588,8 @@ impl MonoSig {
             .map(|p| {
                 self.expr(underlying, p.ul())
                     .get()
-                    .as_concrete(self.base.comp())
-                    .unwrap()
+                    .concrete(self.base.comp())
+                    .u64()
             })
             .collect_vec();
 
@@ -638,8 +638,8 @@ impl MonoSig {
             .map(|p| {
                 self.expr(underlying, p.ul())
                     .get()
-                    .as_concrete(self.base.comp())
-                    .unwrap()
+                    .concrete(self.base.comp())
+                    .u64()
             })
             .collect_vec();
         let ck = (comp.ul(), conc_params).into();
@@ -650,7 +650,7 @@ impl MonoSig {
                 comp: comp.get(),
                 args: new_params
                     .into_iter()
-                    .map(|n| self.base.num(n).get())
+                    .map(|n| self.base.uint(n).get())
                     .collect(),
                 info: self.info(underlying, pass, info).get(),
                 params: Vec::new(),

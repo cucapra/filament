@@ -1,6 +1,6 @@
 use crate::ir_visitor::{Action, Visitor, VisitorData};
 use fil_ast as ast;
-use fil_ir::{self as ir, AddCtx, Ctx, ExprIdx, PropIdx};
+use fil_ir::{self as ir, Ctx, ExprIdx, PropIdx};
 
 /// Generates default assumptions to the Filament program for assumptions using custom functions
 #[derive(Default)]
@@ -15,9 +15,9 @@ impl Assume {
         args: Vec<ExprIdx>,
     ) -> Vec<PropIdx> {
         // Define constant expressions used
-        let zero = ctx.add(ir::Expr::Concrete(0));
-        let one = ctx.add(ir::Expr::Concrete(1));
-        let two = ctx.add(ir::Expr::Concrete(2));
+        let zero = ctx.uint(0);
+        let one = ctx.uint(1);
+        let two = ctx.uint(2);
 
         match (f, &*args) {
             (ast::Fn::Pow2, &[rhs]) => vec![
@@ -33,7 +33,7 @@ impl Assume {
                 // #r = 0 => #l = 1
                 rhs.equal(zero, ctx).implies(lhs.equal(one, ctx), ctx),
             ],
-            (ast::Fn::Log2, &[rhs]) => vec![
+            (ast::Fn::CLog2, &[rhs]) => vec![
                 // #l + 1 = log2(#r * 2)
                 lhs.add(one, ctx).equal(rhs.mul(two, ctx).log2(ctx), ctx),
                 // #l >= 1 => (#l - 1 = log2(#r / 2)) & ((#r / 2) * 2 = #r)

@@ -212,8 +212,8 @@ impl Access {
     /// Construct an access on a simple port (i.e. not a bundle)
     /// The access only indexes into the first element of the port.
     pub fn port(port: PortIdx, ctx: &mut impl AddCtx<Expr>) -> Self {
-        let zero = ctx.add(Expr::Concrete(0));
-        let one = ctx.add(Expr::Concrete(1));
+        let zero = ctx.add(Expr::uint(0));
+        let one = ctx.add(Expr::uint(1));
         Self {
             port,
             start: zero,
@@ -225,7 +225,7 @@ impl Access {
     /// produces one port.
     /// The check is syntactic and therefore conservative.
     pub fn is_port(&self, ctx: &Component) -> bool {
-        let Some(one) = ctx.exprs().find(&Expr::Concrete(1)) else {
+        let Some(one) = ctx.exprs().find(&Expr::uint(1)) else {
             ctx.internal_error("Constant 1 not found in component")
         };
         match ctx.get(self.end) {
@@ -239,7 +239,7 @@ impl Access {
             }
             Expr::Concrete(e) => {
                 if let Some(s) = self.start.as_concrete(ctx) {
-                    *e == s + 1
+                    *e == s + 1u64.into()
                 } else {
                     false
                 }

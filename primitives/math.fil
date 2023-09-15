@@ -15,17 +15,17 @@ comp ReduceAdd[W, N]<'G:1>(
 ) -> (
      out: ['G+K, 'G+K+1] W
 ) with {
-   let K = log2(N);
+   let K = clog2(N);
 } where W > 1,
         N >= 1,
-        K == log2(N),
+        K == clog2(N),
         K >= 0
 {
     if N == 1 {
         out = in{0};
     } else {
         // Required to make recursive calls type check.
-        assert K-1 == log2(N/2);
+        assert K-1 == clog2(N/2);
         // This is a corollary of K != 0
         assert N >= 2;
         // This is not true in general for integer division but

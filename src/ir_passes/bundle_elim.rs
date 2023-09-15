@@ -4,8 +4,8 @@ use crate::{
 };
 use fil_ir::{
     self as ir, Access, AddCtx, Bind, Command, Component, Connect, Context,
-    Ctx, DenseIndexInfo, DisplayCtx, Expr, Foreign, Info, InvIdx, Invoke,
-    Liveness, MutCtx, Port, PortIdx, PortOwner, Range, Subst, Time,
+    Ctx, DenseIndexInfo, DisplayCtx, Foreign, Info, InvIdx, Invoke, Liveness,
+    MutCtx, Port, PortIdx, PortOwner, Range, Subst, Time,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -20,8 +20,8 @@ impl BundleElim {
     /// Gets corresponding ports from the context given a component and a port access.
     fn get(&self, access: &Access, data: &mut VisitorData) -> Vec<PortIdx> {
         let Access { port, start, end } = access;
-        let start = start.concrete(&data.comp) as usize;
-        let end = end.concrete(&data.comp) as usize;
+        let start = start.concrete(&data.comp).u64() as usize;
+        let end = end.concrete(&data.comp).u64() as usize;
 
         let mut ports = Vec::with_capacity(end - start);
 
@@ -42,7 +42,7 @@ impl BundleElim {
 
     /// Compiles a port by breaking it into multiple len-1 ports.
     fn port(&self, pidx: PortIdx, comp: &mut Component) -> Vec<PortIdx> {
-        let one = comp.add(Expr::Concrete(1));
+        let one = comp.uint(1);
         let Port {
             owner,
             width,
@@ -55,7 +55,7 @@ impl BundleElim {
         let start = comp.get(range.start).clone();
         let end = comp.get(range.end).clone();
 
-        let len = len.concrete(comp);
+        let len = len.concrete(comp).u64();
 
         // if we need to preserve external interface information, we can't have bundle ports in the signature.
         if comp.src_info.is_some() && matches!(owner, PortOwner::Sig { .. }) {
@@ -75,8 +75,7 @@ impl BundleElim {
         let ports = (0..len)
             .map(|i| {
                 // binds the index parameter to the current bundle index
-                let binding: Bind<_, _> =
-                    Bind::new([(idx, comp.add(Expr::Concrete(i)))]);
+                let binding: Bind<_, _> = Bind::new([(idx, comp.uint(i))]);
 
                 // calculates the offsets based on this binding and generates new start and end times.
                 let offset = Subst::new(start.offset, &binding).apply(comp);
@@ -271,10 +270,10 @@ impl Visitor for BundleElim {
                 if comp.ports().is_valid(dst.port)
                     && comp.get(dst.port).is_local()
                 {
-                    let dst_start = dst.start.concrete(comp) as usize;
-                    let dst_end = dst.end.concrete(comp) as usize;
-                    let src_start = src.start.concrete(comp) as usize;
-                    let src_end = src.end.concrete(comp) as usize;
+                    let dst_start = dst.start.concrete(comp).u64() as usize;
+                    let dst_end = dst.end.concrete(comp).u64() as usize;
+                    let src_start = src.start.concrete(comp).u64() as usize;
+                    let src_end = src.end.concrete(comp).u64() as usize;
                     assert!(
                         dst_end - dst_start == src_end - src_start,
                         "Mismatched access lengths for connect `{}`",

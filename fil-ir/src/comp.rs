@@ -70,15 +70,22 @@ impl Component {
             ..Default::default()
         };
         // Allocate numbers and props now so we get reasonable indices.
-        comp.num(0);
-        comp.num(1);
+        comp.uint(0);
+        comp.uint(1);
         comp.add(Prop::False);
         comp.add(Prop::True);
         comp
     }
 
-    /// Add a number to the context and get handle to it.
-    pub fn num(&mut self, n: u64) -> ExprIdx {
+    #[inline]
+    /// Add a uint to the context and get handle to it.
+    pub fn uint(&mut self, n: u64) -> ExprIdx {
+        self.concrete(n.into())
+    }
+
+    #[inline]
+    /// Add a concrete value to the context and get a handle to it.
+    pub fn concrete(&mut self, n: ast::Concrete) -> ExprIdx {
         self.exprs.intern(Expr::Concrete(n))
     }
 
@@ -422,16 +429,12 @@ impl Component {
                 )
             }
             Expr::Fn {op, args} => {
-                let args = args.iter().map(|arg| { let arg = self.get(*arg); self.func(arg.clone()) }).collect_vec();
-                let arg = args.get(0).unwrap().as_concrete(self).unwrap();
-                match op {
-                    ast::Fn::Pow2 => {
-                        self.add(Expr::Concrete(2u64.pow(arg as u32)))
-                    }
-                    ast::Fn::CLog2 => {
-                        self.add(Expr::Concrete((arg as f64).log2().ceil() as u64))
-                    }
-                }
+                let args = args.iter().map(|arg| {
+                    let arg = self.get(*arg);
+                    let arg = self.func(arg.clone()); // simplify arg
+                    arg.concrete(self)
+                }).collect_vec();
+                self.add(Expr::Concrete(op.eval(args)))
             }
         }
     }
@@ -472,12 +475,18 @@ impl AddCtx<Expr> for Component {
                 let l = lhs.as_concrete(self);
                 let r = rhs.as_concrete(self);
                 let e = match (op, l, r) {
-                    (ast::Op::Add, Some(0), None) => return *rhs,
-                    (ast::Op::Add, None, Some(0))
-                    | (ast::Op::Sub, None, Some(0)) => return *lhs,
-                    (ast::Op::Mul, Some(0), None)
-                    | (ast::Op::Div, Some(0), None)
-                    | (ast::Op::Mul, None, Some(0)) => Expr::Concrete(0),
+                    (ast::Op::Add, Some(ast::Concrete::UInt(0)), None) => {
+                        return *rhs
+                    }
+                    (ast::Op::Add, None, Some(ast::Concrete::UInt(0)))
+                    | (ast::Op::Sub, None, Some(ast::Concrete::UInt(0))) => {
+                        return *lhs
+                    }
+                    (ast::Op::Mul, Some(ast::Concrete::UInt(0)), None)
+                    | (ast::Op::Div, Some(ast::Concrete::UInt(0)), None)
+                    | (ast::Op::Mul, None, Some(ast::Concrete::UInt(0))) => {
+                        Expr::uint(0)
+                    }
                     (ast::Op::Add, Some(l), None)
                     | (ast::Op::Mul, Some(l), None) => Expr::Bin {
                         op: *op,
@@ -499,10 +508,7 @@ impl AddCtx<Expr> for Component {
                 args.iter()
                     .map(|arg| arg.as_concrete(self))
                     .collect::<Option<Vec<_>>>()
-                    .map(|args| match op {
-                        ast::Fn::Pow2 => 1u64 << args[0],
-                        ast::Fn::Log2 => args[0].trailing_zeros() as u64,
-                    })
+                    .map(|args| op.eval(args))
                     .map_or(val, Expr::Concrete),
             ),
         }
