@@ -8,7 +8,7 @@ identifier = @{ ("_" | ASCII_ALPHA)+ ~ ("_" | ASCII_ALPHA | ASCII_DIGIT)* }
 
 // Positive numbers
 uint = @{ ASCII_DIGIT+ }
-float = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
+float = @{ ASCII_DIGIT+ ~ (("." ~ ASCII_DIGIT+) | "f") }
 concrete = { float | uint }
 
 char = { !"\"" ~ ANY }
