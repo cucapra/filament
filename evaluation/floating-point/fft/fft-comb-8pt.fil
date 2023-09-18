@@ -11,57 +11,55 @@ comp FFT8<'G: 1>(
   // generated using C at the moment to run the sine operations
   // stored in [real, imag] pairs
   bundle twiddle[16]: ['G, 'G+1] 32;
-  TR0 := new Const[32, 0]<'G>();
+  TR0 := new Const[32, 1065353216]<'G>();
   twiddle{0} = TR0.out;
-  twiddle{1} = twiddle{4};
+  twiddle{1} = twiddle{12};
 
   TR1 := new Const[32, 1060439283]<'G>();
   twiddle{2} = TR1.out;
-  twiddle{3} = twiddle{6};
+  twiddle{3} = twiddle{14};
 
-  TR2 := new Const[32, 1065353216]<'G>();
+  TR2 := new Const[32, 613232946]<'G>();
   twiddle{4} = TR2.out;
-  twiddle{5} = twiddle{8};
+  twiddle{5} = twiddle{0};
 
-  TR3 := new Const[32, 1060439283]<'G>();
+  TR3 := new NegConst[32, 1087044365]<'G>();
   twiddle{6} = TR3.out;
-  twiddle{7} = twiddle{10};
+  twiddle{7} = twiddle{2};
 
-  TR4 := new Const[32, 621621554]<'G>();
+  TR4 := new NegConst[32, 1082130432]<'G>();
   twiddle{8} = TR4.out;
-  twiddle{9} = twiddle{12};
+  twiddle{9} = twiddle{4};
 
   TR5 := new NegConst[32, 1087044365]<'G>();
   twiddle{10} = TR5.out;
-  twiddle{11} = twiddle{14};
+  twiddle{11} = twiddle{6};
 
-  TR6 := new NegConst[32, 1082130432]<'G>();
+  TR6 := new NegConst[32, 1521235510]<'G>();
   twiddle{12} = TR6.out;
-  twiddle{13} = twiddle{0};
+  twiddle{13} = twiddle{8};
 
-  TR7 := new NegConst[32, 1087044365]<'G>();
+  TR7 := new Const[32, 1060439283]<'G>();
   twiddle{14} = TR7.out;
-  twiddle{15} = twiddle{2};
-
-  zero := new Const[32, 0]<'G>();
+  twiddle{15} = twiddle{10};
 
   // Stage 0 input (bit reversal on pairs)
   bundle s0[16]: ['G, 'G+1] 32;
-  s0{0} = in{0}; // 000 -> 000
+  s0{0} = in{0}; // 000 -> 000 (0 -> 0)
   s0{1} = in{1}; 
-  s0{2} = in{8}; // 001 -> 100
+  s0{2} = in{8}; // 001 -> 100 (1 -> 4)
   s0{3} = in{9};
-  s0{4} = in{4}; // 010 -> 010
+  s0{4} = in{4}; // 010 -> 010 (2 -> 2)
   s0{5} = in{5};
-  s0{6} = in{12}; // 011 -> 110
+  s0{6} = in{12}; // 011 -> 110 (3 -> 6)
   s0{7} = in{13};
-  s0{8} = in{2}; // 100 -> 001
+  s0{8} = in{2}; // 100 -> 001 (4 -> 1)
   s0{9} = in{3};
-  s0{10} = in{10}; // 101 -> 101
+  s0{10} = in{10}; // 101 -> 101 (5 -> 5)
   s0{11} = in{11};
-  s0{12} = in{6}; // 110 -> 011
+  s0{12} = in{6}; // 110 -> 011 (6 -> 3)
   s0{13} = in{7};
-  s0{14} = in{14}; // 111 -> 111
+  s0{14} = in{14}; // 111 -> 111 (7 -> 7)
   s0{15} = in{15};
 
   // now do the butterfly operations
@@ -130,18 +128,18 @@ comp Butterfly8<'G: 1>(
   out0[2]: ['G, 'G+1] 32,
   out1[2]: ['G, 'G+1] 32
 ) {
-  O0 := new ComplexAdd<'G>(in0{0..2}, in1{0..2});
+  t1 := new ComplexMult<'G>(in1{0..2}, twiddle{0..2});
+  O0 := new ComplexAdd<'G>(in0{0..2}, t1.out{0..2});
   out0{0..2} = O0.out{0..2};
   
   // multiply by twiddle
-  diff := new ComplexSub<'G>(in0{0..2}, in1{0..2});
-  O1 := new ComplexMult<'G>(diff.out{0..2}, twiddle{0..2});
+  O1 := new ComplexSub<'G>(in0{0..2}, t1.out{0..2});
   out1{0..2} = O1.out{0..2};
 }
 
 comp ComplexMult<'G: 1>(
-  left[2]: ['G, 'G+1] 32,
-  right[2]: ['G, 'G+1] 32
+  left[2]: ['G, 'G+1] 32, // a + bi
+  right[2]: ['G, 'G+1] 32 // c + di
 ) -> (
   out[2]: ['G, 'G+1] 32
 ) {
@@ -150,22 +148,21 @@ comp ComplexMult<'G: 1>(
   let M = 23;
 
   // fully combinational
-  ac := new FMult[W, E, M]<'G>(left{0}, right{0});
-  bd := new FMult[W, E, M]<'G>(left{1}, right{1});
-  bdn := new FNeg[W, E, M]<'G>(bd.out);
-  re := new FAdd[W, E, M]<'G>(ac.out, bdn.out);
+  ac := new FMult[W, E, M]<'G>(left{0}, right{0}); // ac
+  bd := new FMult[W, E, M]<'G>(left{1}, right{1}); // bd
+  re := new FSub[W, E, M]<'G>(ac.out, bd.out); // ac - bd
 
-  ad := new FMult[W, E, M]<'G>(left{0}, right{1});
-  bc := new FMult[W, E, M]<'G>(left{1}, right{0});
-  im := new FAdd[W, E, M]<'G>(ad.out, bc.out);
+  ad := new FMult[W, E, M]<'G>(left{0}, right{1}); // ad
+  bc := new FMult[W, E, M]<'G>(left{1}, right{0}); // bc
+  im := new FAdd[W, E, M]<'G>(ad.out, bc.out); // ad + bc
 
   out{0} = re.out;
   out{1} = im.out;
 }
 
 comp ComplexAdd<'G: 1>(
-  left[2]: ['G, 'G+1] 32,
-  right[2]: ['G, 'G+1] 32
+  left[2]: ['G, 'G+1] 32, // a + bi
+  right[2]: ['G, 'G+1] 32 // c + di
 ) -> (
   out[2]: ['G, 'G+1] 32
 ) {
@@ -174,8 +171,8 @@ comp ComplexAdd<'G: 1>(
   let M = 23;
 
   // fully combinational
-  re := new FAdd[W, E, M]<'G>(left{0}, right{0});
-  im := new FAdd[W, E, M]<'G>(left{1}, right{1});
+  re := new FAdd[W, E, M]<'G>(left{0}, right{0}); // a + c
+  im := new FAdd[W, E, M]<'G>(left{1}, right{1}); // b + d
 
   out{0} = re.out;
   out{1} = im.out;
@@ -183,7 +180,7 @@ comp ComplexAdd<'G: 1>(
 
 // negation of a complex number
 comp ComplexNeg<'G: 1>(
-  in[2]: ['G, 'G+1] 32
+  in[2]: ['G, 'G+1] 32 // a + bi
 ) -> (
   out[2]: ['G, 'G+1] 32
 ) {
@@ -192,8 +189,8 @@ comp ComplexNeg<'G: 1>(
   let E = 8;
   let M = 23;
 
-  neg1 := new FNeg[W, E, M]<'G>(in{0});
-  neg2 := new FNeg[W, E, M]<'G>(in{1});
+  neg1 := new FNeg[W, E, M]<'G>(in{0}); // -a
+  neg2 := new FNeg[W, E, M]<'G>(in{1}); // -b
 
   out{0} = neg1.out;
   out{1} = neg2.out;

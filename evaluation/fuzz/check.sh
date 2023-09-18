@@ -18,10 +18,14 @@ infields=$"$dir/in"
 outfields=$"$dir/out"
 # Width file
 width=$"$dir/width"
+# Dtype file
+dtype=$"$dir/dtype"
+# Epsilon file
+eps=$"$dir/epsilon"
 
-./"$script_dir/gen_float.py" gen --width $(cat $width) --fields $(cat $infields) --count "$count" > "$data"
+./"$script_dir/gen_float.py" gen --width $(cat $width) --fields $(cat $infields) --dt $(cat $dtype) --count "$count" > "$data"
 
 (fud e -s cocotb.data "$data" --to cocotb-out "$dir/harness.fil" -s calyx.flags ' -d canonicalize' -q | \
-  ./"$script_dir/gen_float.py" check --fields $(cat $outfields) && \
+  ./"$script_dir/gen_float.py" check --fields $(cat $outfields) --dt $(cat $dtype) --epsilon $(cat $eps) --width $(cat $width) && \
   echo "No counterexamples with $count data points" && rm -f "$data") || \
   cat "$data"
