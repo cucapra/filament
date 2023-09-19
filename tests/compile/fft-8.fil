@@ -1,0 +1,12 @@
+import "primitives/float.fil";
+
+comp main<'G: 1>(
+  go: interface['G],
+  in: ['G, 'G+1] 32
+) -> (
+  filament: ['G, 'G+1] 32
+) 
+{
+  fil_wire := new FAdd[32, 8, 23]<'G>(in, in);
+  filament = fil_wire.out;
+}

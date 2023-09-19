@@ -164,7 +164,8 @@ def check(args):
 
     for k in j[args.fields[0]].keys():
         vals = [j[f][k] for f in args.fields]
-        if not all_equal(vals, args.epsilon):
+        # if not all_equal(vals, args.epsilon):
+        if True:
             err += 1
             # Construct dictionary with all values
             out = {f: j[f][k] for f in args.fields}
@@ -189,9 +190,10 @@ def random_data(args):
             if args.dtype == "f32":
                 assert args.width[0] == 32
                 for _ in range(args.width[1]):
-                    v = (v << 32) + f32_as_int(random.random())
+                    v = (v << 32) + f32_as_int(0)
             elif args.dtype == "bits":
-                v = random.randint(0, 2 ** (args.width[0] * args.width[1]) - 1)
+                # v = random.randint(0, 2 ** (args.width[0] * args.width[1]) - 1)
+                v = 0
             fields[k].append(v)
 
     print(json.dumps(fields, indent=2))
