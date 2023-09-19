@@ -20,8 +20,10 @@ module IterDiv #(
 
     assign start = go && !running;
     // NOTE: 0 / 0 returns 0 due to this optimization.
-    // Otherwise, would return (1 << W) - 1
-    assign dividend_is_zero = start && left == 0;
+    // This also means that the delay of the component is non-constant.
+    // Otherwise, would return `(1 << W) - 1` in `W` cycles
+    // assign dividend_is_zero = start && left == 0;
+    assign dividend_is_zero = 0;
     assign finished = idx == ITERATIONS - 1 && running;
 
     always_ff @(posedge clk) begin
