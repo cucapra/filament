@@ -51,7 +51,8 @@ impl BuildDomination {
                 let ir::Expr::Param(p_idx) = comp.get(*arg) else {
                     continue;
                 };
-                let ir::ParamOwner::Instance(parent) = comp.get(*p_idx).owner
+                let ir::ParamOwner::Instance { inst: parent, .. } =
+                    comp.get(*p_idx).owner
                 else {
                     continue;
                 };

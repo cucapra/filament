@@ -1,19 +1,13 @@
 ver = "0.4.0"
 
+
 [[tests]]
-name = "examples"
-paths = ["examples/*.fil", "tests/check/*.fil"]
+name = "check"
+paths = ["tests/check/*.fil", "primitives/*.fil"]
 cmd = """
 ./target/debug/filament {} --check
 """
-
-[[tests]]
-name = "run examples"
-paths = ["examples/tut-seq.fil", "examples/tut-pipe.fil"]
-expect_dir = "examples/run/"
-cmd = """
-fud e -s cocotb.data examples/data.json --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q
-"""
+expect_dir = "tests/check/"
 
 [[tests]]
 name = "errors"
@@ -23,33 +17,51 @@ cmd = """
 """
 
 [[tests]]
-name = "compile"
-paths = ["tests/compile/*.fil", "tests/monomorphic/*.fil"]
+name = "run"
+paths = ["tests/run/*.fil"]
 cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
+fud e -s cocotb.data {}.data --to cocotb-out {} -s filament.flags ' --show-models' -q
 """
+
+# ============= Testing primitive implementations =============
+[[tests]]
+name = "floating point"
+paths = ["tests/floating-point/harness.fil"]
+cmd = """
+dir=$(dirname {}) && \
+./tests/utils/check.sh $dir 100
+"""
+
+[[tests]]
+name = "floating point"
+paths = ["tests/floating-point/harness.fil"]
+cmd = """
+dir=$(dirname {}) && \
+./tests/utils/check.sh $dir 100
+"""
+
+[[tests]]
+name = "divider"
+paths = ["tests/iterative-divider/harness.fil"]
+cmd = """
+dir=$(dirname {}) && \
+./tests/utils/check.sh $dir 100
+"""
+
+# ============ Larger designs in Filament =====================
 
 # Compile directories within the tests/compile directory. All *.fil files in the
 # use the same input and must produce the same output
 [[tests]]
-name = "compile multi"
-paths = ["tests/compile/*/*.fil"]
+name = "systolic array"
+paths = ["tests/systolic/*.fil"]
 cmd = """
 dir=$(dirname {}) && \
 fud e -s cocotb.data "$dir/data.json" \
       --to cocotb-out {} \
-      -s filament.flags ' --show-models' \
-      -s calyx.flags ' -d canonicalize' -q
+      -s filament.flags ' --show-models' -q
 """
 
-# Evaluation examples
-[[tests]]
-name = "evaluation"
-paths = ["evaluation/**/harness.fil"]
-cmd = """
-dir=$(dirname {}) && \
-./evaluation/fuzz/check.sh $dir 100
-"""
 
 # Aetherling evaluation
 [[tests]]
@@ -66,4 +78,20 @@ name = "frisc tests"
 paths = ["frisc/test/*.fil"]
 cmd = """
 fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q
+"""
+
+# ============== Examples in the documentation ============
+[[tests]]
+name = "examples"
+paths = ["examples/*.fil", "tests/check/*.fil"]
+cmd = """
+./target/debug/filament {} --check
+"""
+
+[[tests]]
+name = "run examples"
+paths = ["examples/tut-seq.fil", "examples/tut-pipe.fil"]
+expect_dir = "examples/run/"
+cmd = """
+fud e -s cocotb.data examples/data.json --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q
 """

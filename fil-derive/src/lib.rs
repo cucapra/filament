@@ -127,6 +127,9 @@ fn generate_impls(
                     fn delete(&mut self, idx: Idx<#typ>) {
                         MutCtx::delete(&mut self.#field_name, idx)
                     }
+                    fn valid(&self, idx: Idx<#typ>) -> bool {
+                        MutCtx::valid(&self.#field_name, idx)
+                    }
                 }
             };
             out.extend(mut_ctx);
