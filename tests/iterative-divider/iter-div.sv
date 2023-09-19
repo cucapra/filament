@@ -19,6 +19,8 @@ module IterDiv #(
     logic start, running, finished, dividend_is_zero;
 
     assign start = go && !running;
+    // NOTE: 0 / 0 returns 0 due to this optimization.
+    // Otherwise, would return (1 << W) - 1
     assign dividend_is_zero = start && left == 0;
     assign finished = idx == ITERATIONS - 1 && running;
 
