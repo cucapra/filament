@@ -19,7 +19,12 @@ module IterDiv #(
     logic start, running, finished, dividend_is_zero;
 
     assign start = go && !running;
-    assign dividend_is_zero = start && left == 0;
+    // BUGFIX: 0 / 0 returns 0 due to this optimization.
+    // Also, as this causes values to be returned immediately,
+    // It makes the implementation non-representable by filament.
+    // Otherwise, would return `(1 << W) - 1` in `W` cycles
+    // assign dividend_is_zero = start && left == 0;
+    assign dividend_is_zero = 0;
     assign finished = idx == ITERATIONS - 1 && running;
 
     always_ff @(posedge clk) begin

@@ -140,7 +140,6 @@ def check(args):
     j = json.load(fd)
     if args.dtype == "f32":
         assert args.width[0] == 32
-        print(args.width[1])
 
         def conv(arr):
             return [
@@ -181,6 +180,10 @@ def random_data(args):
     Generate random floating point data and print out as JSON
     """
 
+    # Default bound value
+    if math.isnan(args.bound):
+        args.bound = 2 ** (args.width[0] * args.width[1])
+
     # Dictionary mapping each field to a list of values
     fields = {k: [] for k in args.fields}
     for _ in range(args.count):
@@ -189,9 +192,9 @@ def random_data(args):
             if args.dtype == "f32":
                 assert args.width[0] == 32
                 for _ in range(args.width[1]):
-                    v = (v << 32) + f32_as_int(0)
+                    v = (v << 32) + f32_as_int(random.uniform(-args.bound, args.bound))
             elif args.dtype == "bits":
-                v = random.randint(0, 2 ** (args.width[0] * args.width[1]) - 1)
+                v = random.randint(0, args.bound - 1)
             fields[k].append(v)
 
     print(json.dumps(fields, indent=2))
@@ -211,6 +214,9 @@ if __name__ == "__main__":
     gen_parser.add_argument("--fields", nargs="+", default=["left", "right"])
     gen_parser.add_argument(
         "-dt", "--dtype", default="f32", help="Data type to treat inputs as"
+    )
+    gen_parser.add_argument(
+        "--bound", type=float, default=float("nan"), help="Bound for random data"
     )
 
     to_float_parser = subparsers.add_parser("to_float")
