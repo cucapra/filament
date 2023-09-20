@@ -25,27 +25,35 @@ fud e -s cocotb.data {}.data --to cocotb-out {} -s filament.flags ' --show-model
 
 # ============= Testing primitive implementations =============
 [[tests]]
-name = "floating point"
-paths = ["tests/floating-point/harness.fil"]
+name = "floating point library - random"
+paths = ["tests/floating-point/add/harness.fil", "tests/floating-point/mul/harness.fil"]
 cmd = """
 dir=$(dirname {}) && \
-./tests/utils/check.sh $dir 100
+./tests/utils/rand_check.sh $dir 100
 """
 
 [[tests]]
-name = "floating point"
-paths = ["tests/floating-point/harness.fil"]
+name = "floating point - edge"
+paths = ["tests/floating-point/add/harness.fil", "tests/floating-point/mul/harness.fil"]
 cmd = """
 dir=$(dirname {}) && \
-./tests/utils/check.sh $dir 100
+./tests/utils/check.sh $dir edge
 """
 
 [[tests]]
-name = "divider"
+name = "iterative divider - random"
 paths = ["tests/iterative-divider/harness.fil"]
 cmd = """
 dir=$(dirname {}) && \
-./tests/utils/check.sh $dir 100
+./tests/utils/rand_check.sh $dir 100
+"""
+
+[[tests]]
+name = "iterative divider - edge"
+paths = ["tests/iterative-divider/harness.fil"]
+cmd = """
+dir=$(dirname {}) && \
+./tests/utils/check.sh $dir edge
 """
 
 # ============ Larger designs in Filament =====================
