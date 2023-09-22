@@ -138,32 +138,31 @@ def check(args):
         fd = open(args.file, "r")
 
     j = json.load(fd)
+
+    def unpack(arr):
+        return [
+            [
+                (x >> j * args.width[0]) & ((1 << args.width[0]) - 1)
+                for j in range(args.width[1] - 1, -1, -1)
+            ]
+            for x in arr
+        ]
+
+    j = json_arr_apply(j, unpack)
+
     if args.dtype == "f32":
         assert args.width[0] == 32
 
         def conv(arr):
-            return [
-                [int_as_f32((x >> j * 32) & 0xFFFFFFFF) for j in range(args.width[1])]
-                for x in arr
-            ]
+            return [[int_as_f32(y) for y in x] for x in arr]
 
         j = json_arr_apply(j, conv)
     elif args.dtype == "bits":
-
-        def conv(arr):
-            return [
-                [
-                    (x >> j * args.width[0]) & ((1 << args.width[0]) - 1)
-                    for j in range(args.width[1])
-                ]
-                for x in arr
-            ]
-
-        j = json_arr_apply(j, conv)
+        pass
 
     for k in j[args.fields[0]].keys():
         vals = [j[f][k] for f in args.fields]
-        if not all_equal(vals, args.epsilon):
+        if all_equal(vals, args.epsilon):
             err += 1
             # Construct dictionary with all values
             out = {f: j[f][k] for f in args.fields}

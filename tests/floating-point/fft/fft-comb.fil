@@ -15,37 +15,37 @@ comp FFTComb[NPoints, W, E, ?M=W-E-1]<'G: 1>(
   // generated using C at the moment to run the sine operations
   // stored in [real, imag] pairs
   bundle twiddle[16]: ['G, 'G+1] 32;
-  TR0 := new Const[32, 0]<'G>();
+  TR0 := new Const[32, 1065353216]<'G>();
   twiddle{0} = TR0.out;
-  twiddle{1} = twiddle{4};
+  twiddle{1} = twiddle{12};
 
   TR1 := new Const[32, 1060439283]<'G>();
   twiddle{2} = TR1.out;
-  twiddle{3} = twiddle{6};
+  twiddle{3} = twiddle{14};
 
-  TR2 := new Const[32, 1065353216]<'G>();
+  TR2 := new Const[32, 613232946]<'G>();
   twiddle{4} = TR2.out;
-  twiddle{5} = twiddle{8};
+  twiddle{5} = twiddle{0};
 
-  TR3 := new Const[32, 1060439283]<'G>();
+  TR3 := new NegConst[32, 1087044365]<'G>();
   twiddle{6} = TR3.out;
-  twiddle{7} = twiddle{10};
+  twiddle{7} = twiddle{2};
 
-  TR4 := new Const[32, 621621554]<'G>();
+  TR4 := new NegConst[32, 1082130432]<'G>();
   twiddle{8} = TR4.out;
-  twiddle{9} = twiddle{12};
+  twiddle{9} = twiddle{4};
 
-  TR5 := new Const[32, 3207922931]<'G>();
+  TR5 := new NegConst[32, 1087044365]<'G>();
   twiddle{10} = TR5.out;
-  twiddle{11} = twiddle{14};
+  twiddle{11} = twiddle{6};
 
-  TR6 := new Const[32, 3212836864]<'G>();
+  TR6 := new NegConst[32, 1521235510]<'G>();
   twiddle{12} = TR6.out;
-  twiddle{13} = twiddle{0};
+  twiddle{13} = twiddle{8};
 
-  TR7 := new Const[32, 3207922931]<'G>();
+  TR7 := new Const[32, 1060439283]<'G>();
   twiddle{14} = TR7.out;
-  twiddle{15} = twiddle{2};
+  twiddle{15} = twiddle{10};
 
   zero := new Const[32, 0]<'G>();
 
@@ -92,9 +92,9 @@ comp FFTComb[NPoints, W, E, ?M=W-E-1]<'G: 1>(
   bundle s2[16]: ['G, 'G+1] 32;
 
   B20 := new Butterfly8<'G>(s1{0..2}, s1{4..6}, twiddle{0..2});
-  B21 := new Butterfly8<'G>(s1{2..4}, s1{6..8}, twiddle{0..2});
+  B21 := new Butterfly8<'G>(s1{2..4}, s1{6..8}, twiddle{4..6});
   B22 := new Butterfly8<'G>(s1{8..10}, s1{12..14}, twiddle{0..2});
-  B23 := new Butterfly8<'G>(s1{10..12}, s1{14..16}, twiddle{0..2});
+  B23 := new Butterfly8<'G>(s1{10..12}, s1{14..16}, twiddle{4..6});
 
   s2{0..2} = B20.out0{0..2};
   s2{2..4} = B21.out0{0..2};
@@ -109,9 +109,9 @@ comp FFTComb[NPoints, W, E, ?M=W-E-1]<'G: 1>(
   bundle s3[16]: ['G, 'G+1] 32;
 
   B30 := new Butterfly8<'G>(s2{0..2}, s2{8..10}, twiddle{0..2});
-  B31 := new Butterfly8<'G>(s2{2..4}, s2{10..12}, twiddle{0..2});
-  B32 := new Butterfly8<'G>(s2{4..6}, s2{12..14}, twiddle{0..2});
-  B33 := new Butterfly8<'G>(s2{6..8}, s2{14..16}, twiddle{0..2});
+  B31 := new Butterfly8<'G>(s2{2..4}, s2{10..12}, twiddle{2..4});
+  B32 := new Butterfly8<'G>(s2{4..6}, s2{12..14}, twiddle{4..6});
+  B33 := new Butterfly8<'G>(s2{6..8}, s2{14..16}, twiddle{6..8});
 
   s3{0..2} = B30.out0{0..2};
   s3{2..4} = B31.out0{0..2};
