@@ -130,11 +130,11 @@ comp Butterfly8<'G: 1>(
 ) {
   t1 := new ComplexMult<'G>(in1{0..2}, twiddle{0..2});
   O0 := new ComplexAdd<'G>(in0{0..2}, t1.out{0..2});
-  out0{0..2} = in1{0..2};
+  out0{0..2} = O0.out{0..2};
   
   // multiply by twiddle
   O1 := new ComplexSub<'G>(in0{0..2}, t1.out{0..2});
-  out1{0..2} = t1.out{0..2};
+  out1{0..2} = O1.out{0..2};
 }
 
 comp ComplexMult<'G: 1>(
@@ -156,8 +156,8 @@ comp ComplexMult<'G: 1>(
   bc := new FMult[W, E, M]<'G>(left{1}, right{0}); // bc
   im := new FSub[W, E, M]<'G>(ad.out, bc.out); // ad - bc
 
-  out{0} = ac.out;
-  out{1} = bd.out;
+  out{0} = re.out;
+  out{1} = im.out;
 }
 
 comp ComplexAdd<'G: 1>(

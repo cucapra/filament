@@ -162,7 +162,7 @@ def check(args):
 
     for k in j[args.fields[0]].keys():
         vals = [j[f][k] for f in args.fields]
-        if all_equal(vals, args.epsilon):
+        if not all_equal(vals, args.epsilon):
             err += 1
             # Construct dictionary with all values
             out = {f: j[f][k] for f in args.fields}
