@@ -93,6 +93,16 @@ def all_equal(iterable):
     return next(g, True) and not next(g, False)
 
 
+def f32_as_int(x):
+    bytes = struct.pack(">f", x)
+    return int.from_bytes(bytes, byteorder="big")
+
+
+def int_as_f32(x):
+    bytes = x.to_bytes(length=4, byteorder="big")
+    return struct.unpack(">f", bytes)[0]
+
+
 def check(args):
     err = 0
     if args.file is None:
@@ -122,10 +132,27 @@ def random_data(args):
 
     # Dictionary mapping each field to a list of values
     fields = {k: [] for k in args.fields}
+    if args.op != "unknown":
+        fields["expected"] = []
+
     for _ in range(args.count):
         for k in args.fields:
-            v = random.randint(0, 2**args.width - 1)
-            fields[k].append(v)
+            if args.op.startswith("f32"):
+                v = random.uniform(*args.bounds)
+                fields[k].append(f32_as_int(v))
+            else:
+                v = random.randint(*args.bounds)
+                fields[k].append(v)
+
+        check_fun = all_equal
+        if args.op == "f32_add":
+            l = int_as_f32(fields["left"][-1])
+            r = int_as_f32(fields["right"][-1])
+            fields["expected"][-1] = f32_as_int(np.add(l, r, dtype=np.float32))
+        elif args.op == "f32_mul":
+            l = int_as_f32(fields["left"][-1])
+            r = int_as_f32(fields["right"][-1])
+            fields["expected"][-1] = f32_as_int(np.multiply(l, r, dtype=np.float32))
 
     print(json.dumps(fields, indent=2))
 
@@ -141,7 +168,11 @@ if __name__ == "__main__":
     )
     gen_parser.add_argument("--width", type=int, default=32)
     gen_parser.set_defaults(func=random_data)
-    gen_parser.add_argument("--fields", nargs="+", default=["left", "right"])
+    gen_parser.add_argument(
+        "--fields", nargs="+", default=["left", "right", "expected"]
+    )
+    gen_parser.add_argument("--op", default="unknown", help="Operation being generated")
+    gen_parser.add_argument("--bounds", nargs=2, type=int, default=[0, 2**32 - 1])
 
     to_float_parser = subparsers.add_parser("to_float")
     to_float_parser.add_argument("-f", "--file", help="JSON file to be converted")

@@ -17,10 +17,12 @@ comp main<'G: 1>(
   go: interface['G],
    left: ['G, 'G+1] 32,
    right: ['G, 'G+1] 32,
+   expected: ['G, 'G+1] 32
 ) -> (
    out: ['G, 'G+1] 32,
    verilog_nopipe: ['G, 'G+1] 32,
-   filament_lib: ['G, 'G+1] 32
+   filament_lib: ['G, 'G+1] 32,
+   gold: ['G, 'G+1] 32,
 ) {
   np := new FP_Mult_NoPipe<'G>(left, right);
   f := new FPMult<'G>(left, right);
@@ -29,4 +31,5 @@ comp main<'G: 1>(
   verilog_nopipe = np.res;
   out = f.out;
   filament_lib = prim.out;
+  gold = expected;
 }

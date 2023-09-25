@@ -11,9 +11,9 @@ script_dir="${BASH_SOURCE%/*}"
 # Data file
 data=$"$dir/$2.json"
 # Fields file
-fields=$"$dir/fields"
+fields=$"$dir/params/fields"
 # Width file
-width=$"$dir/width"
+width=$"$dir/params/width"
 
 (fud e -s cocotb.data "$data" --to cocotb-out "$dir/harness.fil" -s calyx.flags ' -d canonicalize' -q | \
   ./"$script_dir/gen_float.py" check --fields $(cat $fields) && \
