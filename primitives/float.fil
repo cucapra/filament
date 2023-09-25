@@ -119,14 +119,14 @@ comp FAdd[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
 
     // renormalization
     bundle shift_amts[MANTISSA+1]: for<i> ['G, 'G+1] WIDTH;
-    _mant_1_const := new Const[WIDTH, MANTISSA+2]<'G, 'G+1>(); // constant value set if all mantissa bits are 0
-    _shift_max_const := new Const[WIDTH, 0]<'G, 'G+1>();
+    _mant_1_const := new Const[WIDTH, 0]<'G, 'G+1>(); // constant value set if all mantissa bits are 0
+    _shift_max_const := new Const[WIDTH, MANTISSA+1]<'G, 'G+1>();
     _shift_max_sel := new Select[MANTISSA+1, 0]<'G, 'G+1>(add_mant.out);
     _shift_max_mux := new Mux[WIDTH]<'G, 'G+1>(_shift_max_sel.out, _shift_max_const.out, _mant_1_const.out);
     shift_amts{0} = _shift_max_mux.out;
 
     bundle exp_amts[MANTISSA+1]: for<i> ['G, 'G+1] EXPONENT;
-    _exp_1_const := new NegConst[EXPONENT, 0]<'G, 'G+1>();
+    _exp_1_const := new Neg[EXPONENT]<'G, 'G+1>(larger_exp.out);
     _exp_max_const := new NegConst[EXPONENT, MANTISSA-1]<'G, 'G+1>();
     _exp_max_mux := new Mux[EXPONENT]<'G, 'G+1>(_shift_max_sel.out, _exp_max_const.out, _exp_1_const.out);
     exp_amts{0} = _exp_max_mux.out;

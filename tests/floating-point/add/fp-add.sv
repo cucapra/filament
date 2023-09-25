@@ -52,10 +52,10 @@ module IEEE_SP_FP_ADDER (
   reg s1_80, s2_80, Final_sign_80, s1_pipe1_80, s1_pipe2_80, s1_pipe3_80, s1_pipe4_80, s1_pipe5_80;
   reg s2_pipe1_80, s2_pipe2_80, s2_pipe3_80, s2_pipe4_80, s2_pipe5_80;
   reg [3:0] renorm_shift_80, renorm_shift_pipe5_80;
-  integer signed   renorm_exp_80, renorm_exp_pipe5_80;
+  integer signed renorm_exp_80, renorm_exp_pipe5_80;
 
   //reg    [3:0]  renorm_exp_80,renorm_exp_pipe5_80;
-  reg    [31:0] Result_80;
+  reg [31:0] Result_80;
 
   assign Result = Result_80;
 
@@ -140,8 +140,11 @@ module IEEE_SP_FP_ADDER (
       renorm_shift_80 = 4'd5;
       renorm_exp_80   = -3;
     end else begin
-      renorm_exp_80 = 0;
       renorm_shift_80 = 0;
+      // BUG: if the first 1 bit is after the 5th bit, normalization isn't performed.
+      // BUG: if there are no zeros in the mantissa, the exponent should be set to zero.
+      // CONFIRMED: left=3212836864, right=1065353216
+      renorm_exp_80   = -Larger_exp_pipe4_80;
     end
     ////// Combinational stage5 //////
     //Shift the mantissa as required; re-normalize exp; determine sign
@@ -162,9 +165,9 @@ module IEEE_SP_FP_ADDER (
       Final_sign_80 = s1_pipe5_80;
     end else if (e1_pipe5_80 > e2_pipe5_80) begin
       Final_sign_80 = s1_pipe5_80;
-    // BUG: uses value from the first pipeline stage.
-    // CONFIRMED: left=3348281187, right=1203616721
-    // end else if (e2_80 > e1_80) begin
+      // BUG: uses value from the first pipeline stage.
+      // CONFIRMED: left=3348281187, right=1203616721
+      // end else if (e2_80 > e1_80) begin
     end else if (e2_pipe5_80 > e1_pipe5_80) begin
       Final_sign_80 = s2_pipe5_80;
     end else if (m1_pipe5_80 > m2_pipe5_80) begin
@@ -263,7 +266,7 @@ module IEEE_SP_FP_ADDER (
       //stage5
       Add_mant_pipe5_80           <= Add_mant_80;
       renorm_shift_pipe5_80       <= renorm_shift_80;
-      renorm_exp_pipe5_80 <= renorm_exp_80;
+      renorm_exp_pipe5_80         <= renorm_exp_80;
     end
   end
 
