@@ -114,7 +114,7 @@ module IEEE_SP_FP_ADDER_NOPIPE (
       renorm_exp_80   = -3;
     end else begin
       renorm_shift_80 = 0;
-      renorm_exp_80 = 0;
+      renorm_exp_80   = -Larger_exp_80;
     end
 
     //stage 5
