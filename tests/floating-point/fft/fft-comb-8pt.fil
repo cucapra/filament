@@ -150,11 +150,11 @@ comp ComplexMult<'G: 1>(
   // fully combinational
   ac := new FMult[W, E, M]<'G>(left{0}, right{0}); // ac
   bd := new FMult[W, E, M]<'G>(left{1}, right{1}); // bd
-  re := new FAdd[W, E, M]<'G>(ac.out, bd.out); // ac + bd
+  re := new FSub[W, E, M]<'G>(ac.out, bd.out); // ac - bd
 
   ad := new FMult[W, E, M]<'G>(left{0}, right{1}); // ad
   bc := new FMult[W, E, M]<'G>(left{1}, right{0}); // bc
-  im := new FSub[W, E, M]<'G>(ad.out, bc.out); // ad - bc
+  im := new FAdd[W, E, M]<'G>(ad.out, bc.out); // ad + bc
 
   out{0} = re.out;
   out{1} = im.out;
