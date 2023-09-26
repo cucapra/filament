@@ -89,14 +89,8 @@ def convert_to_int(args):
     print(json.dumps(j, indent=2))
 
 
-# Returns an exponent scaled by the exponent of x
-def next_after_eps(x, epsilon):
-    (_, e) = math.frexp(x)
-    return math.ldexp(epsilon, e - 1)
-
-
 # Checks if all values in a list of arrays are equal
-def all_equal(vals, calc_eps):
+def all_equal(vals, epsilon):
     for i in range(len(vals[0])):
         for j in range(len(vals[0][i])):
             if not all(
@@ -106,11 +100,7 @@ def all_equal(vals, calc_eps):
                     or math.isnan(vals[x][i][j])
                     or math.isinf(vals[y][i][j])
                     or math.isnan(vals[y][i][j])
-                    or abs(vals[x][i][j] - vals[y][i][j])
-                    <= max(
-                        calc_eps(vals[x][i][j]),
-                        calc_eps(vals[y][i][j]),
-                    )
+                    or abs(vals[x][i][j] - vals[y][i][j]) <= epsilon
                 )
                 for x in range(len(vals))
                 for y in range(x + 1, len(vals))
@@ -162,7 +152,6 @@ def check(args):
             return [[int_as_f32(y) for y in x] for x in arr]
 
         j = json_arr_apply(j, conv)
-        calc_eps = lambda x: next_after_eps(x, args.epsilon)
     elif args.dtype == "fxp32":
         assert args.width[0] == 32
 
@@ -170,14 +159,12 @@ def check(args):
             return [[to_signed_int(y) / (1 << 16) for y in x] for x in arr]
 
         j = json_arr_apply(j, conv)
-        calc_eps = lambda x: args.epsilon
     elif args.dtype == "bits":
-        calc_eps = lambda x: args.epsilon
         pass
 
     for k in j[args.fields[0]].keys():
         vals = [j[f][k] for f in args.fields]
-        if not all_equal(vals, calc_eps):
+        if not all_equal(vals, args.epsilon):
             err += 1
             # Construct dictionary with all values
             out = {f: j[f][k] for f in args.fields}
