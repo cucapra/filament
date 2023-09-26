@@ -1,16 +1,20 @@
 import "../common/conv2d-interface.fil";
 
-extern "../verilog/conv2d_8.v" {
-// KERNEL_START=Conv2d_8
+extern "impl.v" {
+// KERNEL_START=Conv2d_4
 comp Conv2d<'G: 1>(
     clk: 1,
     I_0: ['G, 'G+1] 8,
     I_1: ['G, 'G+1] 8,
+    I_2: ['G, 'G+1] 8,
+    I_3: ['G, 'G+1] 8,
 ) -> (
     O_0: ['G+6, 'G+7] 8,
     O_1: ['G+6, 'G+7] 8,
+    O_2: ['G+6, 'G+7] 8,
+    O_3: ['G+6, 'G+7] 8,
 );
-// KERNEL_END=Conv2d_8
+// KERNEL_END=Conv2d_4
 }
 
 comp Conv2dWrapper<'G:1>(
@@ -20,13 +24,13 @@ comp Conv2dWrapper<'G:1>(
 ) with {
     // We assert the exact value here because otherwise the caller cannot pass data correctly.
     exists L where L == 6;
-    exists N where N == 2;
+    exists N where N == 4;
 } {
-    C := new Conv2d<'G>(I{0}, I{1});
+    C := new Conv2d<'G>(I{0}, I{1}, I{2}, I{3});
 
     // Forward the outputs
-    O{0} = C.O_0; O{1} = C.O_1;
+    O{0} = C.O_0; O{1} = C.O_1; O{2} = C.O_2; O{3} = C.O_3;
 
     exists L = 6;
-    exists N = 2;
+    exists N = 4;
 }

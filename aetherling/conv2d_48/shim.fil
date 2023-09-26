@@ -1,6 +1,6 @@
 import "primitives/reshape.fil";
 
-extern "../verilog/conv2d_48.v" {
+extern "impl.v" {
 // KERNEL_START=Conv2d_48
 comp Conv2d<'G: 3>(
     clk: 1,

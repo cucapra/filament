@@ -65,12 +65,13 @@ fud e -s cocotb.data "$dir/data.json" \
 
 # Aetherling evaluation
 [[tests]]
-name = "aetherling evaluation"
-paths = ["aetherling/**/harness.fil"]
+name = "aetherling parameteric"
+paths = ["aetherling/**/shim.fil"]
 cmd = """
-dir=$(dirname {}) && \
-fud e -s cocotb.data "$dir/data.json" --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q | jq
+fud e -s cocotb.data "aetherling/data.json" --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q |\
+      jq '[ .O_10, .O_11, .O_12, .O_13, .O_14, .O_15 ] | map(.["0"]) | flatten'
 """
+expect_dir = "aetherling/"
 
 # frisc
 [[tests]]

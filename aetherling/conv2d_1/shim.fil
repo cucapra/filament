@@ -1,4 +1,6 @@
-extern "../verilog/conv2d_1.v" {
+import "../common/conv2d-interface.fil";
+
+extern "impl.v" {
 /* KERNEL_START=CONV2d_1 */
 comp Conv2d<'G: 8>(
     clk: 1,
