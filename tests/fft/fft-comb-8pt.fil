@@ -15,35 +15,35 @@ comp FFT8<'G: 1>(
   bundle twiddle[16]: ['G, 'G+1] 32;
   TR0 := new Const[32, 65536]<'G>();
   twiddle{0} = TR0.out;
-  twiddle{1} = twiddle{12};
+  twiddle{1} = twiddle{4};
 
   TR1 := new Const[32, 46340]<'G>();
   twiddle{2} = TR1.out;
-  twiddle{3} = twiddle{14};
+  twiddle{3} = twiddle{6};
 
   TR2 := new Const[32, 0]<'G>();
   twiddle{4} = TR2.out;
-  twiddle{5} = twiddle{0};
+  twiddle{5} = twiddle{8};
 
   TR3 := new NegConst[32, 46340]<'G>();
   twiddle{6} = TR3.out;
-  twiddle{7} = twiddle{2};
+  twiddle{7} = twiddle{10};
 
   TR4 := new NegConst[32, 65536]<'G>();
   twiddle{8} = TR4.out;
-  twiddle{9} = twiddle{4};
+  twiddle{9} = twiddle{12};
 
   TR5 := new NegConst[32, 46340]<'G>();
   twiddle{10} = TR5.out;
-  twiddle{11} = twiddle{6};
+  twiddle{11} = twiddle{14};
 
   TR6 := new Const[32, 0]<'G>();
   twiddle{12} = TR6.out;
-  twiddle{13} = twiddle{8};
+  twiddle{13} = twiddle{0};
 
   TR7 := new Const[32, 46340]<'G>();
   twiddle{14} = TR7.out;
-  twiddle{15} = twiddle{10};
+  twiddle{15} = twiddle{2};
 
   // Stage 0 input (bit reversal on pairs)
   bundle s0[16]: ['G, 'G+1] 32;
@@ -118,7 +118,7 @@ comp FFT8<'G: 1>(
   s3{12..14} = B32.out1{0..2};
   s3{14..16} = B33.out1{0..2};
 
-  out{0..16} = s3{0..16};  
+  out{0..16} = s3{0..16};
 }
 
 // Combinational butterfly using 32 bit floats and with 8 points.
@@ -172,19 +172,6 @@ comp ComplexAdd<'G: 1>(
   out{1} = im.out;
 }
 
-// negation of a complex number
-comp ComplexNeg<'G: 1>(
-  in[2]: ['G, 'G+1] 32 // a + bi
-) -> (
-  out[2]: ['G, 'G+1] 32
-) {
-  neg1 := new Neg[32]<'G>(in{0}); // -a
-  neg2 := new Neg[32]<'G>(in{1}); // -b
-
-  out{0} = neg1.out;
-  out{1} = neg2.out;
-}
-
 // subtraction of complex numbers
 comp ComplexSub<'G: 1>(
   left[2]: ['G, 'G+1] 32,
@@ -192,7 +179,10 @@ comp ComplexSub<'G: 1>(
 ) -> (
   out[2]: ['G, 'G+1] 32
 ) {
-  neg := new ComplexNeg<'G>(right{0..2});
-  add := new ComplexAdd<'G>(left{0..2}, neg.out{0..2});
-  out{0..2} = add.out{0..2};
+  // fully combinational
+  re := new Sub[32]<'G>(left{0}, right{0}); // a - c
+  im := new Sub[32]<'G>(left{1}, right{1}); // b - d
+  
+  out{0} = re.out;
+  out{1} = im.out;
 }

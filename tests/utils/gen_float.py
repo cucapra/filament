@@ -129,6 +129,11 @@ def int_as_f32(x):
     return struct.unpack(">f", bytes)[0]
 
 
+def to_signed_int(n):
+    n = n & 0xFFFFFFFF
+    return n | (-(n & 0x80000000))
+
+
 def check(args):
     err = 0
 
@@ -162,7 +167,7 @@ def check(args):
         assert args.width[0] == 32
 
         def conv(arr):
-            return [[y / (1 << 16) for y in x] for x in arr]
+            return [[to_signed_int(y) / (1 << 16) for y in x] for x in arr]
 
         j = json_arr_apply(j, conv)
         calc_eps = lambda x: args.epsilon
@@ -202,6 +207,12 @@ def random_data(args):
                 assert args.width[0] == 32
                 for _ in range(args.width[1]):
                     v = (v << 32) + f32_as_int(random.uniform(-args.bound, args.bound))
+            elif args.dtype == "fxp32":
+                for _ in range(args.width[1]):
+                    vt = int(random.uniform(-args.bound, args.bound) * (1 << 16))
+                    if vt < 0:
+                        vt += 1 << 32
+                    v = (v << 32) + vt
             elif args.dtype == "bits":
                 v = random.randint(0, args.bound - 1)
             fields[k].append(v)
