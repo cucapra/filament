@@ -1,7 +1,6 @@
-import "primitives/reshape.fil";
+import "../common/conv2d-interface.fil";
 
 extern "../verilog/conv2d_2.v" {
-// KERNEL_START=Conv2d_2
 comp Conv2d<'G: 1>(
     clk: 1,
     I_0: ['G, 'G+1] 8,
@@ -22,33 +21,23 @@ comp Conv2d<'G: 1>(
     O_6: ['G+6, 'G+7] 8,
     O_7: ['G+6, 'G+7] 8,
 );
-// KERNEL_END=Conv2d_2
 }
 
-comp main<'G: 2>(
-    valid_up: interface['G],
-    I[16]: ['G, 'G+1] 8
+comp Conv2dWrapper<'G:1>(
+    I[8]: ['G, 'G+1] 8
 ) -> (
-    O[16]: ['G+7, 'G+8] 8,
-) {
-    // Num bundles = 2
-    // Bundle size = 8
-    ser := new Serialize[8, 2, 8]<'G>(I{0..16});
+    O[8]: ['G+6, 'G+7] 8
+) with {
+    // We assert the exact value here because otherwise the caller cannot pass data correctly.
+    exists L where L == 6;
+    exists N where N == 8;
+} {
+    C := new Conv2d<'G>(I{0}, I{1}, I{2}, I{3}, I{4}, I{5}, I{6}, I{7});
 
-    // Track the outputs of the convolution for deserialization
-    bundle co[16]: for<j> ['G+j/8+6, 'G+j/8+7] 8;
-    // Convolution requires 16 inputs
-    C := new Conv2d;
-    for i in 0..2 {
-        c := C<'G+i>(
-            ser.out{8*i+0}, ser.out{8*i+1}, ser.out{8*i+2}, ser.out{8*i+3},
-            ser.out{8*i+4}, ser.out{8*i+5}, ser.out{8*i+6}, ser.out{8*i+7}
-        );
-        co{8*i+0} = c.O_0; co{8*i+1} = c.O_1; co{8*i+2} = c.O_2; co{8*i+3} = c.O_3;
-        co{8*i+4} = c.O_4; co{8*i+5} = c.O_5; co{8*i+6} = c.O_6; co{8*i+7} = c.O_7;
-    }
+    // Forward the outputs
+    O{0} = C.O_0; O{1} = C.O_1; O{2} = C.O_2; O{3} = C.O_3;
+    O{4} = C.O_4; O{5} = C.O_5; O{6} = C.O_6; O{7} = C.O_7;
 
-    // Deserialize the outputs
-    de := new Deserialize[8, 2, 8]<'G+6>(co{0..16});
-    O{0..16} = de.out{0..16};
+    exists L = 6;
+    exists N = 8;
 }
