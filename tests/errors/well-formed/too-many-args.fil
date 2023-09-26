@@ -1,0 +1,4 @@
+comp Foo<'G:1>() -> () {}
+comp Bar<'G:1>(in: ['G, 'G+1] 32) -> () {
+    f := new Foo<'G>(in);
+}

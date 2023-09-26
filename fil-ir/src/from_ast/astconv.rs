@@ -702,17 +702,23 @@ impl<'prog> BuildCtx<'prog> {
             self.diag(),
         )?;
 
+        if sig.inputs.len() != ports.len() {
+            let msg = format!(
+                "instance `{}' requires {} inputs but provided {} arguments",
+                instance.copy(),
+                sig.inputs.len(),
+                ports.len()
+            );
+            let info = self.diag().add_info(msg.clone(), instance.pos());
+            let err = Error::malformed(msg);
+
+            return self.fail(err, [info]);
+        }
+
         let srcs = ports
             .into_iter()
             .map(|p| p.try_map(|p| self.get_access(p, ir::Direction::Out)))
             .collect::<BuildRes<Vec<_>>>()?;
-
-        assert!(
-            sig.inputs.len() == srcs.len(),
-            "signature defined {} inputs but provided {} arguments",
-            sig.inputs.len(),
-            srcs.len()
-        );
 
         // Constraints on the events from the signature
         let cons: Vec<ir::Command> = sig
