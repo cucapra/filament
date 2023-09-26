@@ -24,9 +24,9 @@ comp Conv2d<'G: 1>(
 }
 
 comp Conv2dWrapper<'G:1>(
-    I[8]: ['G, 'G+1] 8
+    I[N]: ['G, 'G+1] 8
 ) -> (
-    O[8]: ['G+6, 'G+7] 8
+    O[N]: ['G+6, 'G+7] 8
 ) with {
     // We assert the exact value here because otherwise the caller cannot pass data correctly.
     exists L where L == 6;
