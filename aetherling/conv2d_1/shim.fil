@@ -2,7 +2,7 @@ import "../common/conv2d-interface.fil";
 
 extern "impl.v" {
 /* KERNEL_START=CONV2d_1 */
-comp Conv2d<'G: 8>(
+comp Conv2d<'G: 1>(
     clk: 1,
     I_0: ['G, 'G+1] 8,
     I_1: ['G, 'G+1] 8,
@@ -41,7 +41,7 @@ comp Conv2d<'G: 8>(
 /* KERNEL_END=CONV2d_1 */
 }
 
-comp Conv2dWrapper<'G:8>(
+comp Conv2dWrapper<'G:1>(
     I[N]: ['G, 'G+1] 8
 ) -> (
     O[N]: ['G+6, 'G+7] 8
