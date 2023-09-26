@@ -96,7 +96,7 @@ def next_after_eps(x, epsilon):
 
 
 # Checks if all values in a list of arrays are equal
-def all_equal(vals, epsilon):
+def all_equal(vals, calc_eps):
     for i in range(len(vals[0])):
         for j in range(len(vals[0][i])):
             if not all(
@@ -108,8 +108,8 @@ def all_equal(vals, epsilon):
                     or math.isnan(vals[y][i][j])
                     or abs(vals[x][i][j] - vals[y][i][j])
                     <= max(
-                        next_after_eps(vals[x][i][j], epsilon),
-                        next_after_eps(vals[y][i][j], epsilon),
+                        calc_eps(vals[x][i][j]),
+                        calc_eps(vals[y][i][j]),
                     )
                 )
                 for x in range(len(vals))
@@ -157,12 +157,22 @@ def check(args):
             return [[int_as_f32(y) for y in x] for x in arr]
 
         j = json_arr_apply(j, conv)
+        calc_eps = lambda x: next_after_eps(x, args.epsilon)
+    elif args.dtype == "fxp32":
+        assert args.width[0] == 32
+
+        def conv(arr):
+            return [[y / (1 << 16) for y in x] for x in arr]
+
+        j = json_arr_apply(j, conv)
+        calc_eps = lambda x: args.epsilon
     elif args.dtype == "bits":
+        calc_eps = lambda x: args.epsilon
         pass
 
     for k in j[args.fields[0]].keys():
         vals = [j[f][k] for f in args.fields]
-        if not all_equal(vals, args.epsilon):
+        if not all_equal(vals, calc_eps):
             err += 1
             # Construct dictionary with all values
             out = {f: j[f][k] for f in args.fields}

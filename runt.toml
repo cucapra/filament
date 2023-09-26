@@ -25,7 +25,7 @@ fud e -s cocotb.data {}.data --to cocotb-out {} -s filament.flags ' --show-model
 
 # ============= Testing primitive implementations =============
 [[tests]]
-name = "floating point library - random"
+name = "floating point-random"
 paths = ["tests/floating-point/*/harness.fil"]
 cmd = """
 dir=$(dirname {}) && \
@@ -33,7 +33,7 @@ dir=$(dirname {}) && \
 """
 
 [[tests]]
-name = "floating point - edge"
+name = "floating point-edge"
 paths = ["tests/floating-point/*/harness.fil"]
 cmd = """
 dir=$(dirname {}) && \
@@ -41,7 +41,23 @@ dir=$(dirname {}) && \
 """
 
 [[tests]]
-name = "iterative divider - random"
+name = "fft-random"
+paths = ["tests/fft/harness.fil"]
+cmd = """
+dir=$(dirname {}) && \
+./tests/utils/rand_check.sh $dir 100
+"""
+
+[[tests]]
+name = "fft-edge"
+paths = ["tests/fft/harness.fil"]
+cmd = """
+dir=$(dirname {}) && \
+./tests/utils/check.sh $dir edge
+"""
+
+[[tests]]
+name = "iterative divider-random"
 paths = ["tests/iterative-divider/harness.fil"]
 cmd = """
 dir=$(dirname {}) && \
@@ -49,7 +65,7 @@ dir=$(dirname {}) && \
 """
 
 [[tests]]
-name = "iterative divider - edge"
+name = "iterative divider-edge"
 paths = ["tests/iterative-divider/harness.fil"]
 cmd = """
 dir=$(dirname {}) && \

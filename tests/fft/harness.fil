@@ -23,29 +23,29 @@ extern "spiral-fft.v" {
     X14: ['G, 'G+1] 32,
     X15: ['G, 'G+1] 32,
   ) -> (
-    Y0: ['G+54, 'G+55] 32, // outputs happen 54 cycles after inputs
-    Y1: ['G+54, 'G+55] 32,
-    Y2: ['G+54, 'G+55] 32,
-    Y3: ['G+54, 'G+55] 32,
-    Y4: ['G+54, 'G+55] 32,
-    Y5: ['G+54, 'G+55] 32,
-    Y6: ['G+54, 'G+55] 32,
-    Y7: ['G+54, 'G+55] 32,
-    Y8: ['G+54, 'G+55] 32,
-    Y9: ['G+54, 'G+55] 32,
-    Y10: ['G+54, 'G+55] 32,
-    Y11: ['G+54, 'G+55] 32,
-    Y12: ['G+54, 'G+55] 32,
-    Y13: ['G+54, 'G+55] 32,
-    Y14: ['G+54, 'G+55] 32,
-    Y15: ['G+54, 'G+55] 32,
+    Y0: ['G+12, 'G+13] 32, // outputs happen 12 cycles after inputs
+    Y1: ['G+12, 'G+13] 32,
+    Y2: ['G+12, 'G+13] 32,
+    Y3: ['G+12, 'G+13] 32,
+    Y4: ['G+12, 'G+13] 32,
+    Y5: ['G+12, 'G+13] 32,
+    Y6: ['G+12, 'G+13] 32,
+    Y7: ['G+12, 'G+13] 32,
+    Y8: ['G+12, 'G+13] 32,
+    Y9: ['G+12, 'G+13] 32,
+    Y10: ['G+12, 'G+13] 32,
+    Y11: ['G+12, 'G+13] 32,
+    Y12: ['G+12, 'G+13] 32,
+    Y13: ['G+12, 'G+13] 32,
+    Y14: ['G+12, 'G+13] 32,
+    Y15: ['G+12, 'G+13] 32,
   );
 }
 
 comp main<'G: 1>(
   in: ['G, 'G+1] 32*16 // 8 complex numbers bundled together
 ) -> (
-  spiral: ['G+54, 'G+55] 32*16, // output from spiral
+  spiral: ['G+12, 'G+13] 32*16, // output from spiral
   filament: ['G, 'G+1] 32*16 // output from filament
 ) 
 {
@@ -78,7 +78,7 @@ comp main<'G: 1>(
     split.out{15}
   );
 
-  bundle spiral_bundle[16]: ['G+54, 'G+55] 32;
+  bundle spiral_bundle[16]: ['G+12, 'G+13] 32;
   spiral_bundle{0} = spdft.Y0;
   spiral_bundle{1} = spdft.Y1;
   spiral_bundle{2} = spdft.Y2;
@@ -96,6 +96,6 @@ comp main<'G: 1>(
   spiral_bundle{14} = spdft.Y14;
   spiral_bundle{15} = spdft.Y15;
 
-  spiral_wire := new ConcatBundle[32, 16]<'G+54>(spiral_bundle{0..16});
+  spiral_wire := new ConcatBundle[32, 16]<'G+12>(spiral_bundle{0..16});
   spiral = spiral_wire.out;
 }

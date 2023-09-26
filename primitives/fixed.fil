@@ -1,0 +1,12 @@
+/**
+ * Defines combinational fixed point math operations
+ */
+
+extern "fixed.sv" {
+  comp FXPMult[W, ?D=W/2]<'G: 'L-('G), ?'L: 1='G+1>(
+    left: ['G, 'L] W,
+    right: ['G, 'L] W,
+  ) -> (
+    out: ['G, 'L] W
+  ) where 'L > 'G, D < W, W > 0;
+}
