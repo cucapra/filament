@@ -1,4 +1,4 @@
-import "../common/conv2d-interface.fil";
+import "../common/fast-interface.fil";
 
 extern "impl.v" {
 // KERNEL_START=Conv2d_4
