@@ -1,37 +1,29 @@
-import "primitives/reshape.fil";
+import "../common/slow-interface.fil";
 
 extern "impl.v" {
-// KERNEL_START=Conv2d_48
 comp Conv2d<'G: 3>(
     clk: 1,
     I: ['G, 'G+3] 8,
 ) -> (
     O: ['G+12, 'G+13] 8,
 );
-// KERNEL_END=Conv2d_48
 }
 
-comp main<'G: 48>(
-    valid_up: interface['G],
-    I[16]: ['G, 'G+3] 8
+
+comp Conv2dWrapper<'G:3>(
+    I: ['G, 'G+3] 8
 ) -> (
-    O[16]: ['G+57, 'G+58] 8
-) {
-    // During serializing, we expect the inputs to be produced every three
-    // cycles and hold each signal for three cycles.
-    ser := new Serialize[8, 16, 1, 3, 3]<'G>(I{0..16});
+    O: ['G+12, 'G+13] 8
+) with {
+    // We assert the exact value here because otherwise the caller cannot pass data correctly.
+    exists L where L == 12;
+    exists H where H == 3;
+    exists II where II == 3;
+} {
+    C := new Conv2d<'G>(I);
+    O = C.O;
 
-    // Track the outputs of the convolution for deserialization
-    bundle co[16]: for<j> ['G+3*j+12, 'G+3*j+13] 8;
-    // Convolution requires 16 inputs
-    C := new Conv2d;
-    for i in 0..16 {
-        // Each invocation of the Conv2D executes 3 cycles after the
-        // previous one.
-        c := C<'G+3*i>(ser.out{i});
-        co{i} = c.O;
-    }
-
-    deser := new Deserialize[8, 16, 1, 3, 1]<'G+12>(co{0..16});
-    O{0..16} = deser.out{0..16};
+    exists L = 12;
+    exists H = 3;
+    exists II = 3;
 }
