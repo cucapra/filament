@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+error: instance `F' requires 0 inputs but provided 1 arguments
+  ┌─ tests/errors/well-formed/too-many-args.fil:3:5
+  │
+3 │     f := new Foo<'G>(in);
+  │     ^ instance `F' requires 0 inputs but provided 1 arguments
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

@@ -98,11 +98,6 @@ impl MonoDeferred<'_, '_> {
             }
         }
 
-        // Event delays
-        for (old, new) in monosig.event_map.clone().iter() {
-            monosig.event_delay(ul, pass, old, *new);
-        }
-
         let src_info = ul.src_info();
         monosig.interface(ul, src_info);
 
@@ -141,6 +136,12 @@ impl MonoDeferred<'_, '_> {
                     base,
                 );
             }
+        }
+
+        // Handle event delays after monomorphization because delays might mention existential parameters.
+        for (old, &new) in self.monosig.event_map.clone().iter() {
+            self.monosig
+                .event_delay(&self.underlying, self.pass, old, new);
         }
 
         self.monosig.base.take()
