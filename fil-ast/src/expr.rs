@@ -274,7 +274,7 @@ impl From<Id> for Expr {
 }
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
-/// Track the current context within an expression for pretty printinga
+/// Track the current context within an expression for pretty printing
 enum ECtx {
     #[default]
     /// Inside an addition priority expression (+ or -)
