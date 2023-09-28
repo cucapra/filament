@@ -1,0 +1,17 @@
+import "primitives/core.fil";
+
+comp Pow[I]<'G:1>() -> () with {
+    exists O where O > 0;
+} where I >= 0 {
+    if I == 0 {
+        exists O = 1;
+    } else {
+        PB := new Pow[I-1];
+        exists O = PB::O * 2;
+    }
+}
+
+comp main<'G: 1>() -> () {
+    PB := new Pow[4];
+    A := new Add[PB::O];
+}

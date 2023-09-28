@@ -36,7 +36,6 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::PhantomCheck,
         ip::Assume,
         ip::HoistFacts
-        // ip::Simplify,
     }
     if !opts.unsafe_skip_discharge {
         pass_pipeline! {opts, ir; ip::Discharge }
@@ -46,6 +45,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     };
     ir = log_pass! { opts; ip::Monomorphize::transform(&ir), "monomorphize"};
     pass_pipeline! { opts, ir;
+        ip::Simplify,
         ip::AssignCheck,
         ip::BundleElim,
         ip::AssignCheck

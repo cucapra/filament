@@ -40,6 +40,8 @@ impl Assign {
 /// top-level.
 pub struct Discharge {
     sol: smt::Context,
+    /// Which solver are we using
+    sol_base: cmdline::Solver,
     /// Are we in a scoped context?
     scoped: bool,
     /// Defined functions
@@ -98,6 +100,7 @@ impl Construct for Discharge {
     fn from(opts: &cmdline::Opts, _: &mut ir::Context) -> Self {
         let mut out = Self {
             sol: Self::conf_solver(opts),
+            sol_base: opts.solver,
             scoped: false,
             error_count: 0,
             act_lit_count: 0,
@@ -136,14 +139,23 @@ impl Construct for Discharge {
 }
 
 impl Discharge {
-    fn fmt_param(param: ir::ParamIdx, ctx: &ir::Component) -> String {
-        format!("|{}@param{}|", ctx.display(param), param.get())
-        // format!("param{}", param.get())
+    fn fmt_param(&self, param: ir::ParamIdx, ctx: &ir::Component) -> String {
+        match self.sol_base {
+            // CVC5 does not correctly print out quoted SExps
+            cmdline::Solver::CVC5 => format!("param{}", param.get()),
+            cmdline::Solver::Z3 => {
+                format!("|{}@param{}|", ctx.display(param), param.get())
+            }
+        }
     }
 
-    fn fmt_event(event: ir::EventIdx, ctx: &ir::Component) -> String {
-        format!("|{}@event{}|", ctx.display(event), event.get())
-        // format!("event{}", event.get())
+    fn fmt_event(&self, event: ir::EventIdx, ctx: &ir::Component) -> String {
+        match self.sol_base {
+            cmdline::Solver::CVC5 => format!("event{}", event.get()),
+            cmdline::Solver::Z3 => {
+                format!("|{}@event{}|", ctx.display(event), event.get())
+            }
+        }
     }
 
     fn fmt_expr(expr: ir::ExprIdx) -> String {
@@ -395,7 +407,7 @@ impl Visitor for Discharge {
         for (idx, _) in data.comp.params().iter() {
             let sexp = self
                 .sol
-                .declare_fun(Self::fmt_param(idx, comp), vec![], int)
+                .declare_fun(self.fmt_param(idx, comp), vec![], int)
                 .unwrap();
             self.param_map.push(idx, sexp);
         }
@@ -404,7 +416,7 @@ impl Visitor for Discharge {
         for (idx, _) in data.comp.events().iter() {
             let sexp = self
                 .sol
-                .declare_fun(Self::fmt_event(idx, comp), vec![], int)
+                .declare_fun(self.fmt_event(idx, comp), vec![], int)
                 .unwrap();
             self.ev_map.push(idx, sexp);
         }

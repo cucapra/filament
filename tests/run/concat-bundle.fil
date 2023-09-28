@@ -1,0 +1,19 @@
+import "primitives/reshape.fil";
+
+// Tests ConcatBundle by concatenating three 3-bit wires into a single 9-bit wire.
+comp main<'G: 1>(
+  in0: ['G, 'G+1] 3,
+  in1: ['G, 'G+1] 3,
+  in2: ['G, 'G+1] 3
+) -> (
+  out: ['G, 'G+1] 9
+) {
+  bundle in[3]: ['G, 'G+1] 3;
+  in{0} = in0;
+  in{1} = in1;
+  in{2} = in2;
+  
+  concat := new ConcatBundle[3, 3]<'G>(in{0..3});
+
+  out = concat.out;
+}

@@ -29,6 +29,8 @@ where
     fn get_mut(&mut self, idx: Key) -> &mut T;
     /// Delete the value associated with the index.
     fn delete(&mut self, idx: Key);
+    /// Check if the value is valid
+    fn valid(&self, idx: Key) -> bool;
 }
 
 /// We can use indexing syntax for all values in the context for which it is a [`Ctx<K>`].

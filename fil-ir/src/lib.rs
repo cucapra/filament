@@ -11,7 +11,6 @@ mod macros;
 mod printer;
 mod source_info;
 mod structure;
-mod subst;
 mod time;
 mod utils;
 mod validate;
@@ -36,10 +35,9 @@ pub use structure::{
     Access, Direction, Event, Liveness, Param, ParamOwner, Port, PortOwner,
     Range,
 };
-pub use subst::{Bind, Foldable, Subst};
 pub use time::{Time, TimeSub};
 pub use utils::{
-    DenseIndexInfo, Foreign, Idx, IdxLike, IndexStore, Interned, SparseInfoMap,
-    Traversal,
+    Bind, DenseIndexInfo, Foldable, Foreign, Idx, IdxLike, IndexStore,
+    Interned, SparseInfoMap, Subst, Traversal,
 };
 pub use validate::Validate;

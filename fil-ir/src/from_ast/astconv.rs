@@ -67,7 +67,7 @@ impl<'prog> BuildCtx<'prog> {
         let params = comp
             .sig_binding
             .iter()
-            .flat_map(|sb| match sb {
+            .flat_map(|(sb, mb_param)| match sb {
                 ast::SigBind::Let { param, bind } => {
                     let e = bind.clone().resolve(&binding);
                     binding.extend([(param.copy(), e)]);
@@ -75,11 +75,18 @@ impl<'prog> BuildCtx<'prog> {
                 }
                 ast::SigBind::Exists { param, .. } => {
                     // Define the parameter in the component
-                    let p_idx = self
-                        .param(param.clone(), ir::ParamOwner::Instance(idx));
+                    let p_idx = mb_param.unwrap_or_else(|| {
+                        unreachable!(
+                            "existential binding must define a parameter"
+                        )
+                    });
+                    let base = ir::Foreign::new(p_idx, comp.idx);
+                    let p_idx = self.param(
+                        param.clone(),
+                        ir::ParamOwner::Instance { inst: idx, base },
+                    );
                     // Map this parameter to the instance's version of the parameter.
-                    // This is because we want it to resolve to parameter access
-                    // in the current component.
+                    // This is because we want it to resolve the parameter to the one defined in this component.
                     let e = ast::Expr::ParamAccess {
                         inst: name.clone(),
                         param: param.clone(),
@@ -140,15 +147,13 @@ impl<'prog> BuildCtx<'prog> {
         )?;
 
         // Define the output port from the invoke
-        for (idx, p) in sig.raw_outputs.clone().into_iter().enumerate() {
+        for (p, idx) in sig.outputs.clone().into_iter() {
             let resolved = p
+                .take()
                 .resolve_exprs(&param_binding)
                 .resolve_event(&event_binding);
 
-            let base = ir::Foreign::new(
-                self.sig_from_idx(foreign_comp).outputs[idx],
-                foreign_comp,
-            );
+            let base = ir::Foreign::new(idx, foreign_comp);
 
             let owner = ir::PortOwner::Inv {
                 inv,
@@ -528,7 +533,9 @@ impl<'prog> BuildCtx<'prog> {
         Ok(acc)
     }
 
-    fn sig(&mut self, sig: &ast::Signature) -> BuildRes<Vec<ir::Command>> {
+    fn sig(&mut self, idx: ir::CompIdx, sig: &ast::Signature) -> BuildRes<Sig> {
+        let mut conv_sig = Sig::new(idx, sig);
+
         // Constraints defined in the signature of the component
         let mut sig_cons: Vec<ir::Command> = Vec::with_capacity(
             sig.param_constraints.len() + sig.event_constraints.len(),
@@ -539,24 +546,30 @@ impl<'prog> BuildCtx<'prog> {
         }
 
         // Binding from let-defined parameters in the signature to their values
-        for sb in &sig.sig_bindings {
-            match &sb.inner() {
-                ast::SigBind::Let { param, bind } => {
-                    let e = self.expr(bind.clone())?;
-                    self.add_let_param(param.copy(), e);
+        conv_sig.sig_binding = sig
+            .sig_bindings
+            .iter()
+            .map(|sb| {
+                match &sb.inner() {
+                    ast::SigBind::Let { param, bind } => {
+                        let e = self.expr(bind.clone())?;
+                        self.add_let_param(param.copy(), e);
+                        Ok((sb.inner().clone(), None))
+                    }
+                    ast::SigBind::Exists { param, cons } => {
+                        let p_idx =
+                            self.param(param.clone(), ir::ParamOwner::Exists);
+                        // Constraints on existentially quantified parameters
+                        let assumes = cons
+                            .iter()
+                            .map(|pc| self.expr_cons(pc.inner().clone()))
+                            .collect::<BuildRes<Vec<_>>>()?;
+                        self.comp().add_sig_assumes(p_idx, assumes);
+                        Ok((sb.inner().clone(), Some(p_idx)))
+                    }
                 }
-                ast::SigBind::Exists { param, cons } => {
-                    let p_idx =
-                        self.param(param.clone(), ir::ParamOwner::Exists);
-                    // Constraints on existentially quantified parameters
-                    let assumes = cons
-                        .iter()
-                        .map(|pc| self.expr_cons(pc.inner().clone()))
-                        .collect::<BuildRes<Vec<_>>>()?;
-                    self.comp().add_sig_assumes(p_idx, assumes)
-                }
-            }
-        }
+            })
+            .collect::<BuildRes<Vec<_>>>()?;
 
         let mut interface_signals: HashMap<_, _> = sig
             .interface_signals
@@ -571,6 +584,7 @@ impl<'prog> BuildCtx<'prog> {
             let interface = interface_signals.remove(event.event.inner());
             self.declare_event(event.inner(), interface);
         }
+
         // Then define their delays correctly
         for event in &sig.events {
             let delay = self.timesub(event.inner().delay.inner().clone())?;
@@ -579,11 +593,15 @@ impl<'prog> BuildCtx<'prog> {
         }
         for port in sig.inputs() {
             // XXX(rachit): Unnecessary clone.
-            self.port(port.inner().clone(), ir::PortOwner::sig_out())?;
+            let idx =
+                self.port(port.inner().clone(), ir::PortOwner::sig_out())?;
+            conv_sig.inputs.push((port.clone(), idx));
         }
         for port in sig.outputs() {
             // XXX(rachit): Unnecessary clone.
-            self.port(port.inner().clone(), ir::PortOwner::sig_in())?;
+            let idx =
+                self.port(port.inner().clone(), ir::PortOwner::sig_in())?;
+            conv_sig.outputs.push((port.clone(), idx));
         }
         for (name, width) in &sig.unannotated_ports {
             self.comp().unannotated_ports.push((*name, *width));
@@ -604,7 +622,9 @@ impl<'prog> BuildCtx<'prog> {
             sig_cons.extend(self.comp().assume(prop, info));
         }
 
-        Ok(sig_cons)
+        self.comp().cmds.extend(sig_cons);
+
+        Ok(conv_sig)
     }
 
     fn instance(&mut self, inst: ast::Instance) -> BuildRes<Vec<ir::Command>> {
@@ -682,17 +702,23 @@ impl<'prog> BuildCtx<'prog> {
             self.diag(),
         )?;
 
+        if sig.inputs.len() != ports.len() {
+            let msg = format!(
+                "instance `{}' requires {} inputs but provided {} arguments",
+                instance.copy(),
+                sig.inputs.len(),
+                ports.len()
+            );
+            let info = self.diag().add_info(msg.clone(), instance.pos());
+            let err = Error::malformed(msg);
+
+            return self.fail(err, [info]);
+        }
+
         let srcs = ports
             .into_iter()
             .map(|p| p.try_map(|p| self.get_access(p, ir::Direction::Out)))
             .collect::<BuildRes<Vec<_>>>()?;
-
-        assert!(
-            sig.inputs.len() == srcs.len(),
-            "signature defined {} inputs but provided {} arguments",
-            sig.inputs.len(),
-            srcs.len()
-        );
 
         // Constraints on the events from the signature
         let cons: Vec<ir::Command> = sig
@@ -715,9 +741,7 @@ impl<'prog> BuildCtx<'prog> {
 
         let mut connects = Vec::with_capacity(sig.inputs.len());
 
-        for (idx, (p, src)) in
-            sig.raw_inputs.clone().into_iter().zip(srcs).enumerate()
-        {
+        for ((p, idx), src) in sig.inputs.clone().into_iter().zip(srcs) {
             let info = self
                 .comp()
                 .add(ir::Info::connect(p.inner().name().pos(), src.pos()));
@@ -726,10 +750,7 @@ impl<'prog> BuildCtx<'prog> {
                     .resolve_event(&event_binding)
             });
 
-            let base = ir::Foreign::new(
-                self.sig_from_idx(foreign_comp).inputs[idx],
-                foreign_comp,
-            );
+            let base = ir::Foreign::new(idx, foreign_comp);
 
             let owner = ir::PortOwner::Inv {
                 inv,
@@ -1009,9 +1030,8 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
             }
 
             // compile the signature
-            builder.comp().cmds = builder.sig(&sig)?;
+            let irsig = builder.sig(idx, &sig)?;
 
-            let irsig = Sig::new(idx, builder.comp(), &sig);
             Ok((Builder { idx, builder, body }, (sig.name.take(), irsig)))
         })
         .collect::<BuildRes<Vec<_>>>()?

@@ -1,7 +1,7 @@
 use argh::FromArgs;
 use std::{path::PathBuf, str::FromStr};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 /// Solver to use in the pass
 pub enum Solver {
     #[default]

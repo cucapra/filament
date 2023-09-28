@@ -1,5 +1,6 @@
 use super::{
-    Base, BaseComp, IntoBase, IntoUdl, Monomorphize, Underlying, UnderlyingComp,
+    Base, BaseComp, CompKey, IntoBase, IntoUdl, Monomorphize, Underlying,
+    UnderlyingComp,
 };
 use fil_ir::{
     self as ir, AddCtx, Ctx, DenseIndexInfo, DisplayCtx, Foreign, MutCtx,
@@ -14,53 +15,53 @@ type PortKey = (Option<Base<ir::Invoke>>, Underlying<ir::Port>);
 type DenseMap<T> = DenseIndexInfo<T, Base<T>, Underlying<T>>;
 type SparseMap<T> = SparseInfoMap<T, Base<T>, Underlying<T>>;
 
-/// Used for monomorphizing a component's signature when we add it to the queue.
-/// Any functions needed for monomorphizing the signature are located here - the rest are
-/// in MonoDeferred.
+/// Tracks all the information generated while monomorphizing a component as well the component itself.
+/// The maps are used to transform table data like parameters, events, and ports
+/// from the underlying component to the generated component.
 pub struct MonoSig {
     /// The name of the monomorphized component
     pub base: BaseComp,
     /// The underlying component's idx
-    pub underlying_idx: ir::CompIdx,
+    pub underlying_idx: Underlying<ir::Component>,
     /// Mapping from parameters in the underlying component to their constant bindings.
     pub binding: ir::Bind<Underlying<ir::Param>, u64>,
-
-    /// Map from underlying invokes to base invokes
-    pub invoke_map: DenseMap<ir::Invoke>,
-    /// Map from underlying instances to base instances
-    pub instance_map: DenseMap<ir::Instance>,
 
     // Keep track of things that have benen monomorphized already
     /// Events
     pub event_map: DenseMap<ir::Event>,
     /// Params - underlying param -> new Param. Kept in a sparse map because we're going to remove most parameters during monomorphization.
     pub param_map: SparseMap<ir::Param>,
-    /// Bundle params - new port to new param
-    pub bundle_param_map: HashMap<Base<ir::Port>, Base<ir::Param>>,
     /// Ports - (base inv, underlying port) -> base port
     pub port_map: HashMap<PortKey, Base<ir::Port>>,
+    /// Bundle params - new port to new param
+    bundle_param_map: HashMap<Base<ir::Port>, Base<ir::Param>>,
+
+    /// Map from underlying invokes to base invokes
+    invoke_map: DenseMap<ir::Invoke>,
+    /// Map from underlying instances to base instances
+    instance_map: DenseMap<ir::Instance>,
 }
 
 impl MonoSig {
     pub fn new(
-        base: &mut ir::Component,
         underlying: &ir::Component,
-        underlying_idx: ir::CompIdx,
+        idx: Underlying<ir::Component>,
+        is_ext: bool,
         params: Vec<u64>,
     ) -> Self {
-        let base = std::mem::take(base);
         let binding = ir::Bind::new(
             underlying
                 .sig_params()
-                .into_iter()
                 .map(|p| p.ul())
                 .zip(params)
                 .collect_vec(),
         );
+        let mut comp = ir::Component::default();
+        comp.is_ext = is_ext;
 
         Self {
-            base: BaseComp::new(base),
-            underlying_idx,
+            base: BaseComp::new(comp),
+            underlying_idx: idx,
             binding,
             port_map: HashMap::new(),
             bundle_param_map: HashMap::new(),
@@ -72,7 +73,7 @@ impl MonoSig {
     }
 
     /// String representation for the binding for debug purposes
-    fn binding_rep(&self, ul: &UnderlyingComp<'_>) -> String {
+    pub fn binding_rep(&self, ul: &UnderlyingComp<'_>) -> String {
         self.binding
             .iter()
             .map(|(p, e)| format!("{}: {}", ul.display(*p), e))
@@ -90,8 +91,9 @@ impl MonoSig {
             ir::PortOwner::Sig { .. } | ir::PortOwner::Local => owner.clone(),
             ir::PortOwner::Inv { inv, dir, base } => {
                 // inv is only meaningful in the underlying component
+                let inv = inv.ul();
                 let base = self.foreign_port(base, underlying, pass, inv);
-                let base_inv = self.invoke_map.get(inv.ul()).get();
+                let base_inv = self.invoke_map.get(inv).get();
                 ir::PortOwner::Inv {
                     inv: base_inv,
                     dir: dir.clone(),
@@ -101,49 +103,44 @@ impl MonoSig {
         }
     }
 
+    /// Get the component associated with a foreign port in the new context. We
+    /// need to look up the instance that this port is associated with because
+    /// each set of parameters will generate a new component after mono runs.
+    fn foreign_comp(
+        &mut self,
+        underlying: &UnderlyingComp,
+        pass: &mut Monomorphize,
+        inv: Underlying<ir::Invoke>,
+    ) -> (CompKey, Base<ir::Component>) {
+        let inst_ul = underlying.get(inv).inst.ul();
+        let ir::Instance { comp, .. } = underlying.get(inst_ul);
+
+        let comp_k = if pass.old.is_ext(*comp) {
+            CompKey::new(comp.ul(), vec![])
+        } else {
+            self.comp_key(underlying, inst_ul)
+        };
+
+        let Some(&comp) = pass.processed.get(&comp_k) else {
+            unreachable!("component should have been monomorphized")
+        };
+
+        (comp_k, comp)
+    }
+
     fn foreign_port(
         &mut self,
         foreign: &Foreign<ir::Port, ir::Component>, // underlying
         underlying: &UnderlyingComp,
         pass: &mut Monomorphize,
-        inv: &ir::InvIdx, // underlying
+        inv: Underlying<ir::Invoke>,
     ) -> Foreign<ir::Port, ir::Component> {
-        // key is meaningful in underlying
+        let (comp_k, mono_compidx) = self.foreign_comp(underlying, pass, inv);
         let key = foreign.key().ul();
-
-        let inv = inv.ul();
-        let inst = underlying.get(underlying.get(inv).inst.ul());
-        let inst_comp = inst.comp.ul();
-
-        let inst_params = &inst.args;
-        let conc_params = inst_params
-            .iter()
-            .map(|p| {
-                self.expr(underlying, p.ul())
-                    .get()
-                    .as_concrete(self.base.comp())
-                    .unwrap()
-            })
-            .collect_vec();
-
-        let conc_params = if pass.old.get(inst_comp.idx()).is_ext {
-            vec![]
-        } else {
-            conc_params
-        };
-
-        let comp_k = (inst_comp, conc_params).into();
-
-        let mono_compidx = if pass.queue.get(&comp_k).is_none() {
-            pass.processed[&comp_k]
-        } else {
-            pass.queue[&comp_k].0
-        };
-
+        let inst_comp = comp_k.comp;
         // now need to find the mapping from old portidx and the old instance to new port
-        let global_port_map_k = (comp_k, key);
         let new_port =
-            pass.port_map.get(&global_port_map_k).unwrap_or_else(|| {
+            pass.inst_info(&comp_k).get_port(key).unwrap_or_else(|| {
                 unreachable!(
                     "port {:?}.{} is missing from global map",
                     inst_comp.idx(),
@@ -222,6 +219,7 @@ impl MonoSig {
         if let Some(&idx) = self.param_map.find(p_idx) {
             idx
         } else {
+            let p_rep = ul.display(p_idx);
             // This param is a in a use site and should therefore have been found.
             let msg = match ul.get(p_idx).owner {
                 ir::ParamOwner::Loop => "let-bound parameter".to_string(),
@@ -229,18 +227,21 @@ impl MonoSig {
                     "bundle-bound parameter".to_string()
                 }
                 ir::ParamOwner::Sig => "signature-bound parameter".to_string(),
-                ir::ParamOwner::Instance(inst) => format!(
+                ir::ParamOwner::Instance { inst, .. } => format!(
                     "parameter defined by instance `{}'",
                     ul.display(inst.ul())
                 ),
                 ir::ParamOwner::Exists => {
-                    "existentially quantified parameter".to_string()
+                    unreachable!(
+                        "existential parameter `{}' occurred in a use location",
+                        p_rep
+                    )
                 }
             };
             unreachable!(
                 "{} `{}' should have been resolved in the binding but the binding was: [{}]",
                 msg,
-                ul.display(p_idx),
+                p_rep,
                 self.binding_rep(ul),
             )
         }
@@ -347,10 +348,10 @@ impl MonoSig {
         }
     }
 
-    /// Second pass over events. When we visit the signature we could see things like G: |L-G|,
-    /// so we do a first pass in sig to allocate the Idx for it.
-    /// This function does the work of monomorphizing the new event.
-    pub fn event_second(
+    /// Monomorphize the event delays.
+    /// Event delays may mention other events (G: |L-G|) so first we need to
+    /// monomorphize all the events and then monomorphize their delays.
+    pub fn event_delay(
         &mut self,
         underlying: &UnderlyingComp,
         pass: &mut Monomorphize,
@@ -421,8 +422,8 @@ impl MonoSig {
         let conc_params = binding.iter().map(|(_, n)| *n).collect_vec();
 
         let new_event = self.event_map.get(event);
-        let ck = (self.underlying_idx.ul(), conc_params).into();
-        pass.event_map.insert((ck, event), *new_event);
+        let ck: CompKey = (self.underlying_idx, conc_params).into();
+        pass.inst_info_mut(ck).add_event(event, *new_event);
         *new_event
     }
 
@@ -497,7 +498,7 @@ impl MonoSig {
         // Ports
         let mono_ports = ports
             .iter()
-            .map(|p| self.port_def(underlying, pass, p.ul()).get())
+            .map(|p| self.local_port_def(underlying, pass, p.ul()).get())
             .collect_vec();
 
         // Events
@@ -568,22 +569,15 @@ impl MonoSig {
         }
     }
 
-    fn foreign_event(
+    /// Construct the [CompKey] for a instance in the underlying component
+    fn comp_key(
         &mut self,
         underlying: &UnderlyingComp,
-        pass: &mut Monomorphize,
-        foreign: &Foreign<ir::Event, ir::Component>,
-        inv: Underlying<ir::Invoke>, // underlying
-    ) -> Foreign<ir::Event, ir::Component> {
-        let key = foreign.key().ul();
-        // `key` is only meaningful in `owner`
-        // need to map `key` to be the monomorphized index and update `owner` to be
-        // the monomorphized component
+        iidx: Underlying<ir::Instance>,
+    ) -> CompKey {
+        let ir::Instance { comp, args, .. } = underlying.get(iidx);
 
-        let inst = underlying.get(underlying.get(inv).inst.ul());
-        let inst_comp = inst.comp.ul();
-        let inst_params = &inst.args;
-        let conc_params = inst_params
+        let conc_params = args
             .iter()
             .map(|p| {
                 self.expr(underlying, p.ul())
@@ -592,23 +586,20 @@ impl MonoSig {
                     .unwrap()
             })
             .collect_vec();
+        CompKey::new(comp.ul(), conc_params)
+    }
 
-        let conc_params = if pass.old.get(inst_comp.idx()).is_ext {
-            vec![]
-        } else {
-            conc_params
-        };
+    fn foreign_event(
+        &mut self,
+        underlying: &UnderlyingComp,
+        pass: &mut Monomorphize,
+        foreign: &Foreign<ir::Event, ir::Component>,
+        inv: Underlying<ir::Invoke>, // underlying
+    ) -> Foreign<ir::Event, ir::Component> {
+        let (ck, new_owner) = self.foreign_comp(underlying, pass, inv);
 
-        let ck = (inst_comp, conc_params).into();
-
-        let new_owner = if pass.queue.get(&ck).is_none() {
-            pass.processed[&ck]
-        } else {
-            pass.queue[&ck].0
-        };
-
-        let global_event_map_k = (ck, key);
-        let new_event = pass.event_map.get(&global_event_map_k).unwrap();
+        let key = foreign.key().ul();
+        let new_event = pass.inst_info(&ck).get_event(key).unwrap();
         ir::Foreign::new(new_event.get(), new_owner.get())
     }
 
@@ -626,51 +617,45 @@ impl MonoSig {
             params,
             info,
         } = underlying.get(inst);
-        assert!(
-            params.is_empty(),
-            "cannot monomorphize instances with existentially quantified params"
-        );
-        let info = info.ul();
 
-        let is_ext = pass.old.get(*comp).is_ext;
-        let conc_params = args
-            .iter()
-            .map(|p| {
-                self.expr(underlying, p.ul())
-                    .get()
-                    .as_concrete(self.base.comp())
-                    .unwrap()
-            })
-            .collect_vec();
-        let ck = (comp.ul(), conc_params).into();
-        let (comp, new_params) = pass.should_process(ck);
+        // Monomorphize the component
+        let ck = self.comp_key(underlying, inst);
+        let mono_comp = pass.monomorphize(ck.clone());
 
-        let new_inst = if !is_ext {
-            ir::Instance {
-                comp: comp.get(),
-                args: new_params
-                    .into_iter()
-                    .map(|n| self.base.num(n).get())
-                    .collect(),
-                info: self.info(underlying, pass, info).get(),
-                params: Vec::new(),
-            }
-        } else {
-            // this is an extern, so keep the params - need to get them into the new component though
-            let ext_params = args
-                .iter()
+        // Binding for parameters defined by this instance
+        self.binding.extend(params.iter().map(|p| {
+            let p = p.ul();
+            let ir::ParamOwner::Instance { base, .. } = underlying.get(p).owner
+            else {
+                unreachable!("param should be owned by instance")
+            };
+            (
+                p,
+                pass.inst_info(&ck).get_exist_val(base.key().ul()).unwrap(),
+            )
+        }));
+
+        // Parameters for the new component. We only preserve them for external calls.
+        let conc_params: Box<[ir::ExprIdx]> = if pass.old.is_ext(*comp) {
+            args.iter()
                 .map(|p| self.expr(underlying, p.ul()).get())
-                .collect_vec();
-            ir::Instance {
-                comp: comp.get(),
-                args: ext_params.into(),
-                info: self.info(underlying, pass, info).get(),
-                params: Vec::new(),
-            }
+                .collect_vec()
+                .into_boxed_slice()
+        } else {
+            Box::new([])
+        };
+
+        // this is an extern, so keep the params - need to get them into the new component though
+        let new_inst = ir::Instance {
+            comp: mono_comp.get(),
+            args: conc_params,
+            info: self.info(underlying, pass, info.ul()).get(),
+            params: Vec::new(),
         };
 
         let new_idx = self.base.add(new_inst);
         self.instance_map.insert(inst, new_idx);
+
         new_idx
     }
 
@@ -681,6 +666,11 @@ impl MonoSig {
         pass: &mut Monomorphize,
         port: Underlying<ir::Port>,
     ) -> Base<ir::Port> {
+        assert!(
+            underlying.is_ext(),
+            "ext_port called on non-extern component"
+        );
+
         let ir::Port {
             owner,
             width,
@@ -689,26 +679,16 @@ impl MonoSig {
         } = underlying.get(port);
 
         let info = info.ul();
-        let comp = self.underlying_idx.ul();
+        let comp = self.underlying_idx;
 
-        let binding = &self.binding.inner();
-        let cparams = if underlying.is_ext() {
-            vec![]
-        } else {
-            binding
-                .iter()
-                .filter(|(p, _)| underlying.get(*p).is_sig_owned())
-                .map(|(_, n)| *n)
-                .collect_vec()
-        };
-
+        let cparams = vec![];
         let port_map_k = (None, port);
-        let global_port_map_k = ((comp, cparams).into(), port);
+        let comp_k = (comp, cparams).into();
 
         // If the port has already been added to the base component, then we can
         // just return the index
         if let Some(idx) = self.port_map.get(&port_map_k) {
-            pass.port_map.entry(global_port_map_k).or_insert(*idx);
+            pass.inst_info_mut(comp_k).add_port(port, *idx);
             return *idx;
         };
 
@@ -724,8 +704,8 @@ impl MonoSig {
         // local port map
         self.port_map.insert(port_map_k, new_port);
 
-        // pass port map
-        pass.port_map.entry(global_port_map_k).or_insert(new_port);
+        // Add port to the global port map
+        pass.inst_info_mut(comp_k).add_port(port, new_port);
 
         // Find the new port owner
         let mono_owner = self.find_new_portowner(underlying, pass, owner);
@@ -802,8 +782,20 @@ impl MonoSig {
         }
     }
 
+    /// Monomorphize a local port
+    pub fn local_port_def(
+        &mut self,
+        underlying: &UnderlyingComp,
+        pass: &mut Monomorphize,
+        port: Underlying<ir::Port>,
+    ) -> Base<ir::Port> {
+        let base = self.port_def_partial(underlying, pass, port);
+        self.port_data(underlying, pass, port, base);
+        base
+    }
+
     /// Monomorphize the port (owned by self.underlying) and add it to `self.base`, and return the corresponding index
-    pub fn port_def(
+    pub fn port_def_partial(
         &mut self,
         underlying: &UnderlyingComp,
         pass: &mut Monomorphize,
@@ -840,6 +832,25 @@ impl MonoSig {
         // method can be called on local ports defined in iterative scopes.
         self.port_map.insert(port_map_k, new_port);
 
+        new_port
+    }
+
+    /// Monomorphize [ir::Liveness] and width of a port.
+    /// This is seperate from [port_def] because for signature ports, we need to
+    /// do this after the body has been monomorphized. This is because port
+    /// liveness and widths might mention existentially quantified parameters
+    /// which only get their binding after a component has been monomorphized.
+    pub fn port_data(
+        &mut self,
+        underlying: &UnderlyingComp,
+        pass: &mut Monomorphize,
+        port: Underlying<ir::Port>,
+        new_port: Base<ir::Port>,
+    ) {
+        let ir::Port {
+            owner, width, live, ..
+        } = underlying.get(port);
+
         // Find the new port owner
         let mono_owner = self.find_new_portowner(underlying, pass, owner);
 
@@ -868,7 +879,5 @@ impl MonoSig {
         port.live = mono_liveness; // update
         port.width = mono_width.get(); // update
         port.owner = mono_owner; // update
-
-        new_port
     }
 }

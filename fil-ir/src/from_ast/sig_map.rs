@@ -1,10 +1,9 @@
+use super::BuildRes;
 use crate as ir;
 use fil_ast as ast;
 use fil_utils::{self as utils, Error, Id};
 use itertools::Itertools;
 use std::collections::HashMap;
-
-use super::BuildRes;
 
 #[derive(Clone)]
 /// The signature of component.
@@ -13,37 +12,33 @@ use super::BuildRes;
 /// the signature.
 pub struct Sig {
     pub idx: ir::CompIdx,
-    pub events: Vec<ir::EventIdx>,
-    pub inputs: Vec<ir::PortIdx>,
-    pub outputs: Vec<ir::PortIdx>,
+    /// Mapping from source representation of input port to its IR index
+    pub inputs: Vec<(ast::Loc<ast::PortDef>, ir::PortIdx)>,
+    /// Mapping from source representation of output port to its IR index
+    pub outputs: Vec<(ast::Loc<ast::PortDef>, ir::PortIdx)>,
+    /// Mapping from sig bindings to parameter defined by it (if any)
+    pub sig_binding: Vec<(ast::SigBind, Option<ir::ParamIdx>)>,
+    // Existentially bound parameters defined by the component
+    // pub exist_params: Vec<ir::ParamIdx>,
+    /// The AST representation of parameters in the signature. Used to construct binding for the signature.
     pub raw_params: Vec<ast::ParamBind>,
-    pub sig_binding: Vec<ast::SigBind>,
+    /// The AST representation of events in the signature
     pub raw_events: Vec<ast::EventBind>,
-    pub raw_inputs: Vec<ast::Loc<ast::PortDef>>,
+    /// The AST representation of output ports of the signature
     pub raw_outputs: Vec<ast::PortDef>,
+    /// Constraints on input parameters
     pub param_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Expr>>>,
+    /// Constraints on existentially bound parameters
     pub exist_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Expr>>>,
+    /// Constraints on events
     pub event_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Time>>>,
 }
 
 impl Sig {
-    pub fn new(
-        idx: ir::CompIdx,
-        comp: &ir::Component,
-        sig: &ast::Signature,
-    ) -> Self {
+    pub fn new(idx: ir::CompIdx, sig: &ast::Signature) -> Self {
         Self {
             idx,
-            events: comp.events().idx_iter().collect(),
-            inputs: comp.inputs().map(|(idx, _)| idx).collect(),
-            outputs: comp.outputs().map(|(idx, _)| idx).collect(),
             raw_params: sig.params.iter().map(|p| p.clone().take()).collect(),
-            sig_binding: sig
-                .sig_bindings
-                .iter()
-                .map(|p| p.inner().clone())
-                .collect(),
-            raw_inputs: sig.inputs().cloned().collect(),
             raw_outputs: sig.outputs().map(|p| p.clone().take()).collect(),
             raw_events: sig.events.iter().map(|e| e.clone().take()).collect(),
             param_cons: sig.param_constraints.clone(),
@@ -54,8 +49,12 @@ impl Sig {
                     ast::SigBind::Exists { cons, .. } => cons.clone(),
                     ast::SigBind::Let { .. } => vec![],
                 })
-                .collect_vec(),
+                .collect(),
             event_cons: sig.event_constraints.clone(),
+            // Filled in later
+            sig_binding: Vec::default(),
+            inputs: Vec::default(),
+            outputs: Vec::default(),
         }
     }
 
@@ -81,8 +80,8 @@ impl Sig {
                 self.raw_params.len(),
                 arg_len
             );
-            let err = Error::malformed(msg.clone());
-            let err = err.add_note(diag.add_info(msg, comp.pos()));
+            let err = Error::malformed(msg.clone())
+                .add_note(diag.add_info(msg, comp.pos()));
             diag.add_error(err);
             return Err(std::mem::take(diag));
         }
@@ -99,8 +98,8 @@ impl Sig {
                 "`{}' requires at least {min_args} parameters but {arg_len} were provided",
                 comp.inner(),
             );
-            let err = Error::malformed(msg.clone());
-            let err = err.add_note(diag.add_info(msg, comp.pos()));
+            let err = Error::malformed(msg.clone())
+                .add_note(diag.add_info(msg, comp.pos()));
             diag.add_error(err);
             return Err(std::mem::take(diag));
         }
@@ -210,19 +209,12 @@ impl Sig {
 /// Mapping from names of component to [Sig].
 pub struct SigMap {
     map: HashMap<Id, Sig>,
-    // XXX(rachit): This can probably be a DenseInfoMap instead
-    rev_map: HashMap<ir::CompIdx, Id>,
 }
 
 impl SigMap {
     /// Gets the signature if bound
     pub fn get(&self, id: &Id) -> Option<&Sig> {
         self.map.get(id)
-    }
-
-    /// Get the signature from a component index
-    pub fn get_idx(&self, idx: ir::CompIdx) -> Option<&Sig> {
-        self.rev_map.get(&idx).and_then(|id| self.get(id))
     }
 }
 
@@ -231,7 +223,6 @@ impl FromIterator<(Id, Sig)> for SigMap {
         let mut default = Self::default();
 
         for (id, sig) in iter.into_iter() {
-            default.rev_map.insert(sig.idx, id);
             default.map.insert(id, sig);
         }
 
@@ -242,7 +233,6 @@ impl FromIterator<(Id, Sig)> for SigMap {
 impl std::iter::Extend<(Id, Sig)> for SigMap {
     fn extend<I: IntoIterator<Item = (Id, Sig)>>(&mut self, iter: I) {
         let sm: SigMap = iter.into_iter().collect();
-        self.rev_map.extend(sm.rev_map);
         self.map.extend(sm.map);
     }
 }

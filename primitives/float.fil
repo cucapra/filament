@@ -42,6 +42,23 @@ comp _FCompose[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
     out = second.out;
 }
 
+// Negate the sign of a floating point number
+comp FNeg[W, Exponent, ?Mantissa=W-Exponent-1]<'G: 1> (
+    in: ['G, 'G+1] W
+) -> (
+    out: ['G, 'G+1] W
+) where
+    W == Exponent + Mantissa + 1,
+    Exponent > 1,
+    Mantissa > 1
+{
+    in := new _FDecompose[W, Exponent, Mantissa]<'G>(in);
+    negsign := new Not[1]<'G>(in.sign);
+    res := new _FCompose[W, Exponent, Mantissa]<'G>(negsign.out, in.exponent, in.mantissa);
+
+    out = res.out;
+}
+
 /// Adds two floating point numbers
 comp FAdd[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
      left: ['G, 'G+1] WIDTH,
@@ -73,11 +90,11 @@ comp FAdd[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
     __control_2_b := new Neq[EXPONENT]<'G, 'G+1>(right.exponent, _zero_exp.out);
     _control_2 := new And[1]<'G, 'G+1>(__control_2_a.out, __control_2_b.out);
     _zero_width := new Const[WIDTH, 0]<'G, 'G+1>();
-    num_shift := new Mux[WIDTH]<'G, 'G+1>(_control_2.out, _num_shift.out, _zero_width.out);
+    num_shift := new Mux[WIDTH]<'G, 'G+1>(_control_2.out, _num_shift.out, _zero_width.out); // num_shift = (e1 == 0 | e2 == 0) ? 0 : num_shift
 
     //// comb stage 2 ////
 
-    _small_mantissa_cut := new Slice[MANTISSA, MANTISSA-1, 1, MANTISSA-1]<'G, 'G+1>(small_mantissa.out);
+    _small_mantissa_cut := new Slice[MANTISSA, MANTISSA-1, 1, MANTISSA-1]<'G, 'G+1>(small_mantissa.out); // small_mant[22:1]
     _small_mantissa_2 := new Concat[1, MANTISSA-1, MANTISSA]<'G, 'G+1>(_one.out, _small_mantissa_cut.out);
     _small_mantissa_2_shift := new ShiftRight[MANTISSA, WIDTH]<'G, 'G+1>(_small_mantissa_2.out, num_shift.out);
     small_exp_mant := new Mux[MANTISSA]<'G, 'G+1>(__control_2_a.out, _small_mantissa_2_shift.out, small_mantissa.out);
@@ -103,13 +120,13 @@ comp FAdd[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
     // renormalization
     bundle shift_amts[MANTISSA+1]: for<i> ['G, 'G+1] WIDTH;
     _mant_1_const := new Const[WIDTH, MANTISSA+2]<'G, 'G+1>(); // constant value set if all mantissa bits are 0
-    _shift_max_const := new Const[WIDTH, MANTISSA+1]<'G, 'G+1>();
+    _shift_max_const := new Const[WIDTH, 0]<'G, 'G+1>();
     _shift_max_sel := new Select[MANTISSA+1, 0]<'G, 'G+1>(add_mant.out);
     _shift_max_mux := new Mux[WIDTH]<'G, 'G+1>(_shift_max_sel.out, _shift_max_const.out, _mant_1_const.out);
     shift_amts{0} = _shift_max_mux.out;
 
     bundle exp_amts[MANTISSA+1]: for<i> ['G, 'G+1] EXPONENT;
-    _exp_1_const := new NegConst[EXPONENT, MANTISSA]<'G, 'G+1>();
+    _exp_1_const := new NegConst[EXPONENT, 0]<'G, 'G+1>();
     _exp_max_const := new NegConst[EXPONENT, MANTISSA-1]<'G, 'G+1>();
     _exp_max_mux := new Mux[EXPONENT]<'G, 'G+1>(_shift_max_sel.out, _exp_max_const.out, _exp_1_const.out);
     exp_amts{0} = _exp_max_mux.out;
@@ -145,6 +162,21 @@ comp FAdd[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
     final_sign := new Mux[1]<'G, 'G+1>(_fsign_cb_cond.out, left.sign, right.sign);
 
     res := new _FCompose[WIDTH, EXPONENT, MANTISSA]<'G>(final_sign.out, final_exp.out, final_mantissa.out);
+    out = res.out;
+}
+
+comp FSub[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
+     left: ['G, 'G+1] WIDTH,
+     right: ['G, 'G+1] WIDTH,
+) -> (
+     out: ['G, 'G+1] WIDTH
+) where
+    WIDTH == EXPONENT + MANTISSA + 1,
+    EXPONENT > 1,
+    MANTISSA > 1
+{
+    right_neg := new FNeg[WIDTH, EXPONENT, MANTISSA]<'G>(right);
+    res := new FAdd[WIDTH, EXPONENT, MANTISSA]<'G>(left, right_neg.out);
     out = res.out;
 }
 
