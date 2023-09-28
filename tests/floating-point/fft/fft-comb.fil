@@ -1,0 +1,175 @@
+import "primitives/comb.fil";
+import "primitives/float.fil";
+
+/// Toplevel FFT Module
+comp CombFFT[NStages, W, E, ?M=W-E-1]<'G: 1>(
+  in[NPoints*2]: ['G, 'G+1] W,
+) -> (
+  out[NPoints*2]: ['G, 'G+1] W
+) with {
+  let NPoints = pow2(NStages);
+} where
+  NStages >= 0,
+  W == E + M + 1,
+  E > 1,
+  M > 1
+{
+  // generate twiiddle factors
+  bundle twiddle[NPoints*2]: ['G, 'G+1] W;
+  for i in 0..NPoints {
+    cosbits := new Const[W, cos_bits(i, NPoints)]<'G>();
+    sinbits := new Const[W, sin_bits(i+NPoints/2, NPoints)]<'G>(); // equivalent to -sin
+    twiddle{i*2} = cosbits.out;
+    twiddle{i*2+1} = sinbits.out;
+  }
+
+  // bit reverse the input
+  bundle bitrev[NPoints*2]: ['G, 'G+1] W;
+  for j in 0..NPoints {
+    let br = bit_rev(j, NStages);
+    bitrev{j*2..j*2+2} = in{br*2..br*2+2};
+  }
+
+  // run the inner fft
+  fft := new _FFT_Inner[NStages, W, E, M]<'G>(bitrev, twiddle);
+
+  out = fft.out;
+}
+
+/// Inner FFT module that takes twiddle factors as input
+/// Assumes that input is already bit reversed here.
+comp _FFT_Inner[NStages, W, E, ?M=W-E-1]<'G: 1>(
+  in[NPoints*2]: ['G, 'G+1] W,
+  twiddle[NPoints*2]: ['G, 'G+1] W,
+) -> (
+  out[NPoints*2]: ['G, 'G+1] W
+) with {
+  let NPoints = pow2(NStages);
+} where
+  NStages >= 0,
+  W == E + M + 1,
+  E > 1,
+  M > 1
+{
+  if NStages == 0 {
+    // No stages here, this is the identity.
+    out{0..2} = in{0..2};
+  } else {
+    // twiddle factors for the smaller fft
+    bundle inner_twiddle[NPoints]: ['G, 'G+1] W;
+    // hook up every other fft to this fft.
+    for t in 0..pow2(NStages-1) {
+      inner_twiddle{t*2} = twiddle{t*4};
+      inner_twiddle{t*2+2} = twiddle{t*4+1};
+    } 
+    // Run the two smaller FFTs
+    // This does the first `N-1` Stages of the FFT for us.
+    fft1 := new _FFT_Inner[NStages-1, W, E, M]<'G>(in{0..NPoints}, inner_twiddle);
+    fft2 := new _FFT_Inner[NStages-1, W, E, M]<'G>(in{NPoints..NPoints*2}, inner_twiddle);
+
+    // Combine the two FFTs in the last stage
+    for i in 0..pow2(NStages-1) {
+      butterfly := new Butterfly[W, E, M]<'G>(fft1.out{i*2..i*2+2}, fft2.out{i*2..i*2+2}, twiddle{2*i..2*i+2});
+      out{i*2..i*2+2} = butterfly.out0{0..2};
+      out{i*2+NPoints..i*2+NPoints+2} = butterfly.out1{0..2};
+    }
+  }
+}
+
+// Combinational butterfly module.
+comp Butterfly[W, E, ?M=W-E-1]<'G: 1>(
+  in0[2]: ['G, 'G+1] W, // real and imaginary parts of input
+  in1[2]: ['G, 'G+1] W,
+  twiddle[2]: ['G, 'G+1] W // twiddle factor
+) -> (
+  out0[2]: ['G, 'G+1] W,
+  out1[2]: ['G, 'G+1] W
+) where
+    W == E + M + 1,
+    E > 1,
+    M > 1
+{
+  t1 := new ComplexMult[W, E, M]<'G>(in1{0..2}, twiddle{0..2});
+  O0 := new ComplexAdd[W, E, M]<'G>(in0{0..2}, t1.out{0..2});
+  out0{0..2} = O0.out{0..2};
+  
+  // multiply by twiddle
+  O1 := new ComplexSub[W, E, M]<'G>(in0{0..2}, t1.out{0..2});
+  out1{0..2} = O1.out{0..2};
+}
+
+comp ComplexMult[W, E, ?M=W-E-1]<'G: 1>(
+  left[2]: ['G, 'G+1] W, // a + bi
+  right[2]: ['G, 'G+1] W // c + di
+) -> (
+  out[2]: ['G, 'G+1] W
+)  where
+    W == E + M + 1,
+    E > 1,
+    M > 1 
+{
+
+  // fully combinational
+  ac := new FMult[W, E, M]<'G>(left{0}, right{0}); // ac
+  bd := new FMult[W, E, M]<'G>(left{1}, right{1}); // bd
+  re := new FSub[W, E, M]<'G>(ac.out, bd.out); // ac - bd
+
+  ad := new FMult[W, E, M]<'G>(left{0}, right{1}); // ad
+  bc := new FMult[W, E, M]<'G>(left{1}, right{0}); // bc
+  im := new FAdd[W, E, M]<'G>(ad.out, bc.out); // ad + bc
+
+  out{0} = re.out;
+  out{1} = im.out;
+}
+
+comp ComplexAdd[W, E, ?M=W-E-1]<'G: 1>(
+  left[2]: ['G, 'G+1] W, // a + bi
+  right[2]: ['G, 'G+1] W // c + di
+) -> (
+  out[2]: ['G, 'G+1] W
+) where
+    W == E + M + 1,
+    E > 1,
+    M > 1
+{
+
+  // fully combinational
+  re := new FAdd[W, E, M]<'G>(left{0}, right{0}); // a + c
+  im := new FAdd[W, E, M]<'G>(left{1}, right{1}); // b + d
+
+  out{0} = re.out;
+  out{1} = im.out;
+}
+
+// negation of a complex number
+comp ComplexNeg[W, E, ?M=W-E-1]<'G: 1>(
+  in[2]: ['G, 'G+1] W // a + bi
+) -> (
+  out[2]: ['G, 'G+1] W
+) where
+    W == E + M + 1,
+    E > 1,
+    M > 1
+{
+  neg1 := new FNeg[W, E, M]<'G>(in{0}); // -a
+  neg2 := new FNeg[W, E, M]<'G>(in{1}); // -b
+
+  out{0} = neg1.out;
+  out{1} = neg2.out;
+}
+
+// subtraction of complex numbers
+comp ComplexSub[W, E, ?M=W-E-1]<'G: 1>(
+  left[2]: ['G, 'G+1] W,
+  right[2]: ['G, 'G+1] W
+) -> (
+  out[2]: ['G, 'G+1] W
+) where
+    W == E + M + 1,
+    E > 1,
+    M > 1
+{
+  neg := new ComplexNeg[W, E, M]<'G>(right{0..2});
+  add := new ComplexAdd[W, E, M]<'G>(left{0..2}, neg.out{0..2});
+  out{0..2} = add.out{0..2};
+}

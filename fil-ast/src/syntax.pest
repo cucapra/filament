@@ -90,6 +90,7 @@ builtin_fn = {
   | "log2"
   | "sin_bits"
   | "cos_bits"
+  | "bit_rev"
 }
 unknown_fn = { identifier }
 fn = {builtin_fn | unknown_fn}

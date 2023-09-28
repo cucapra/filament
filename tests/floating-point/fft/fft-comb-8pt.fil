@@ -128,16 +128,16 @@ comp Butterfly8<'G: 1>(
   out0[2]: ['G, 'G+1] 32,
   out1[2]: ['G, 'G+1] 32
 ) {
-  t1 := new ComplexMult<'G>(in1{0..2}, twiddle{0..2});
-  O0 := new ComplexAdd<'G>(in0{0..2}, t1.out{0..2});
+  t1 := new ComplexMult8<'G>(in1{0..2}, twiddle{0..2});
+  O0 := new ComplexAdd8<'G>(in0{0..2}, t1.out{0..2});
   out0{0..2} = O0.out{0..2};
   
   // multiply by twiddle
-  O1 := new ComplexSub<'G>(in0{0..2}, t1.out{0..2});
+  O1 := new ComplexSub8<'G>(in0{0..2}, t1.out{0..2});
   out1{0..2} = O1.out{0..2};
 }
 
-comp ComplexMult<'G: 1>(
+comp ComplexMult8<'G: 1>(
   left[2]: ['G, 'G+1] 32, // a + bi
   right[2]: ['G, 'G+1] 32 // c + di
 ) -> (
@@ -160,7 +160,7 @@ comp ComplexMult<'G: 1>(
   out{1} = im.out;
 }
 
-comp ComplexAdd<'G: 1>(
+comp ComplexAdd8<'G: 1>(
   left[2]: ['G, 'G+1] 32, // a + bi
   right[2]: ['G, 'G+1] 32 // c + di
 ) -> (
@@ -179,7 +179,7 @@ comp ComplexAdd<'G: 1>(
 }
 
 // negation of a complex number
-comp ComplexNeg<'G: 1>(
+comp ComplexNeg8<'G: 1>(
   in[2]: ['G, 'G+1] 32 // a + bi
 ) -> (
   out[2]: ['G, 'G+1] 32
@@ -197,13 +197,13 @@ comp ComplexNeg<'G: 1>(
 }
 
 // subtraction of complex numbers
-comp ComplexSub<'G: 1>(
+comp ComplexSub8<'G: 1>(
   left[2]: ['G, 'G+1] 32,
   right[2]: ['G, 'G+1] 32
 ) -> (
   out[2]: ['G, 'G+1] 32
 ) {
-  neg := new ComplexNeg<'G>(right{0..2});
-  add := new ComplexAdd<'G>(left{0..2}, neg.out{0..2});
+  neg := new ComplexNeg8<'G>(right{0..2});
+  add := new ComplexAdd8<'G>(left{0..2}, neg.out{0..2});
   out{0..2} = add.out{0..2};
 }
