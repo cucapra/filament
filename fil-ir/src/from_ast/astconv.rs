@@ -226,13 +226,13 @@ impl<'prog> BuildCtx<'prog> {
                 // The .add call simplifies the expression if possible
                 self.comp().add(ir::Expr::Bin { op, lhs, rhs })
             }
-            ast::Expr::App { func, arg } => {
-                let arg = self.expr(*arg)?;
+            ast::Expr::App { func, args } => {
+                let args = args
+                    .into_iter()
+                    .map(|arg| self.expr(arg))
+                    .collect::<Result<Vec<_>, _>>()?;
                 // The .add call simplifies the expression if possible
-                self.comp().add(ir::Expr::Fn {
-                    op: func,
-                    args: vec![arg],
-                })
+                self.comp().add(ir::Expr::Fn { op: func, args })
             }
         };
         Ok(expr)

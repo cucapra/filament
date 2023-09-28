@@ -429,15 +429,8 @@ impl Component {
             }
             Expr::Fn {op, args} => {
                 let args = args.iter().map(|arg| { let arg = self.get(*arg); self.func(arg.clone()) }).collect_vec();
-                let arg = args.get(0).unwrap().as_concrete(self).unwrap();
-                match op {
-                    ast::UnFn::Pow2 => {
-                        self.add(Expr::Concrete(2u64.pow(arg as u32)))
-                    }
-                    ast::UnFn::Log2 => {
-                        self.add(Expr::Concrete((arg as f64).log2().ceil() as u64))
-                    }
-                }
+                let args = args.into_iter().map(|arg| arg.as_concrete(self).unwrap()).collect_vec();
+                self.add(Expr::Concrete(op.eval(args)))
             }
         }
     }
@@ -505,10 +498,7 @@ impl AddCtx<Expr> for Component {
                 args.iter()
                     .map(|arg| arg.as_concrete(self))
                     .collect::<Option<Vec<_>>>()
-                    .map(|args| match op {
-                        ast::UnFn::Pow2 => 1u64 << args[0],
-                        ast::UnFn::Log2 => args[0].trailing_zeros() as u64,
-                    })
+                    .map(|args| op.eval(args))
                     .map_or(val, Expr::Concrete),
             ),
         }

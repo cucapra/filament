@@ -10,7 +10,7 @@ impl Assume {
     /// Adds the assumptions associated with a proposition of the form `#l = f(#r)` to the component.
     fn add_assumptions(
         ctx: &mut ir::Component,
-        f: ast::UnFn,
+        f: ast::Fn,
         lhs: ExprIdx,
         rhs: ExprIdx,
     ) -> Vec<PropIdx> {
@@ -20,7 +20,7 @@ impl Assume {
         let two = ctx.add(ir::Expr::Concrete(2));
 
         match f {
-            ast::UnFn::Pow2 => vec![
+            ast::Fn::Pow2 => vec![
                 // #l * 2 = pow2(#r + 1)
                 lhs.mul(two, ctx).equal(rhs.add(one, ctx).pow2(ctx), ctx),
                 // #r >= 1 => #l = pow2(#r - 1)*2
@@ -33,7 +33,7 @@ impl Assume {
                 // #r = 0 => #l = 1
                 rhs.equal(zero, ctx).implies(lhs.equal(one, ctx), ctx),
             ],
-            ast::UnFn::Log2 => vec![
+            ast::Fn::Log2 => vec![
                 // #l + 1 = log2(#r * 2)
                 lhs.add(one, ctx).equal(rhs.mul(two, ctx).log2(ctx), ctx),
                 // #l >= 1 => (#l - 1 = log2(#r / 2)) & ((#r / 2) * 2 = #r)
@@ -51,13 +51,14 @@ impl Assume {
                 // #r = 1 => #l = 0
                 rhs.equal(one, ctx).implies(lhs.equal(zero, ctx), ctx),
             ],
+            ast::Fn::SinB | ast::Fn::CosB => vec![], // can't make any assumptions on the output value here
         }
     }
 }
 
 impl Assume {
     /// Checks a proposition for whether it matches the form `#l = f(#r)` for some custom function `f`. Additionally recurses on `&` chains.
-    /// Generates the assumptions associated with each [ast::UnFn] and returns a list of [ir::Prop]s for each.
+    /// Generates the assumptions associated with each [ast::Fn] and returns a list of [ir::Prop]s for each.
     /// TODO: Implement assumption generation for functions taking more than one argument.
     fn prop(p: ir::PropIdx, comp: &mut ir::Component) -> Vec<PropIdx> {
         let p = comp.get(p);
