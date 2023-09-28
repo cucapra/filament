@@ -249,20 +249,22 @@ impl FilamentParser {
         ))
     }
 
-    fn pow2(input: Node) -> ParseResult<ast::UnFn> {
-        Ok(ast::UnFn::Pow2)
+    fn builtin_fn(input: Node) -> ParseResult<ast::Fn> {
+        Ok(match input.as_str() {
+            "pow2" => ast::Fn::Pow2,
+            "log2" => ast::Fn::Log2,
+            "sin_bits" => ast::Fn::SinB,
+            "cos_bits" => ast::Fn::CosB,
+            _ => unreachable!(),
+        })
     }
-    fn log2(input: Node) -> ParseResult<ast::UnFn> {
-        Ok(ast::UnFn::Log2)
-    }
-    fn unknown_fn(input: Node) -> ParseResult<ast::UnFn> {
+    fn unknown_fn(input: Node) -> ParseResult<ast::Fn> {
         Err(input.error("Unknown function"))
     }
-    fn un_fn(input: Node) -> ParseResult<ast::UnFn> {
+    fn r#fn(input: Node) -> ParseResult<ast::Fn> {
         Ok(match_nodes!(
             input.into_children();
-            [pow2(_)] => ast::UnFn::Pow2,
-            [log2(_)] => ast::UnFn::Log2,
+            [builtin_fn(f)] => f,
             [unknown_fn(_)] => unreachable!(),
         ))
     }
@@ -273,7 +275,7 @@ impl FilamentParser {
             [identifier(inst), identifier(param)] => ast::Expr::ParamAccess{ inst, param },
             [param_var(id)] => ast::Expr::abs(id),
             [bitwidth(c)] => c.into(),
-            [un_fn(f), expr(e)] => ast::Expr::func(f, e.take()),
+            [r#fn(f), expr(exprs)..] => ast::Expr::func(f, exprs.into_iter().map(|e| e.take()).collect()),
             [expr(e)] => e.take(),
         ))
     }

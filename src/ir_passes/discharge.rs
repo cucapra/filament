@@ -45,7 +45,7 @@ pub struct Discharge {
     /// Are we in a scoped context?
     scoped: bool,
     /// Defined functions
-    func_map: HashMap<ast::UnFn, smt::SExpr>,
+    func_map: HashMap<ast::Fn, smt::SExpr>,
     // Defined names
     param_map: ir::DenseIndexInfo<ir::Param, smt::SExpr>,
     ev_map: ir::DenseIndexInfo<ir::Event, smt::SExpr>,
@@ -182,18 +182,23 @@ impl Discharge {
 
     /// Defines primitive functions used in the encoding like `pow` and `log`
     fn define_funcs(&mut self) {
-        let int_sort = self.sol.int_sort();
-        let pow2 = self
-            .sol
-            .declare_fun("pow2", vec![int_sort], int_sort)
-            .unwrap();
-        let log = self
-            .sol
-            .declare_fun("log2", vec![int_sort], int_sort)
-            .unwrap();
-        self.func_map = vec![(ast::UnFn::Pow2, pow2), (ast::UnFn::Log2, log)]
-            .into_iter()
-            .collect();
+        let is = self.sol.int_sort();
+
+        macro_rules! sol_fn(
+            ($name:tt($($args:ident),*) -> $out:ident) => {
+                self.func_map.insert(ast::Fn::$name, self
+                    .sol
+                    .declare_fun(stringify!($name).to_lowercase(), vec![$($args),*], $out)
+                    .unwrap());
+            }
+        );
+
+        self.func_map = Default::default();
+
+        sol_fn!(Pow2(is) -> is);
+        sol_fn!(Log2(is) -> is);
+        sol_fn!(SinB(is, is) -> is);
+        sol_fn!(CosB(is, is) -> is);
     }
 
     /// Get bindings for the provided parameters in a model.
