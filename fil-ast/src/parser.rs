@@ -253,6 +253,8 @@ impl FilamentParser {
         Ok(match input.as_str() {
             "pow2" => ast::Fn::Pow2,
             "log2" => ast::Fn::Log2,
+            "sin_bits" => ast::Fn::SinB,
+            "cos_bits" => ast::Fn::CosB,
             _ => unreachable!(),
         })
     }

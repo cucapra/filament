@@ -88,6 +88,8 @@ operator = _{ op_mul | op_div | op_add | op_sub | op_mod }
 builtin_fn = {
   | "pow2"
   | "log2"
+  | "sin_bits"
+  | "cos_bits"
 }
 unknown_fn = { identifier }
 fn = {builtin_fn | unknown_fn}

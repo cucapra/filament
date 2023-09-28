@@ -75,6 +75,8 @@ fn display_expr_helper(
             let fn_str = match op {
                 ast::Fn::Pow2 => "pow2",
                 ast::Fn::Log2 => "log2",
+                ast::Fn::SinB => "sin_bits",
+                ast::Fn::CosB => "cos_bits",
             };
             format!(
                 "{fn_str}({args})",
