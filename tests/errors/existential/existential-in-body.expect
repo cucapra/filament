@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+error: cannot use existentially quantified parameter `N' in the body
+  ┌─ tests/errors/existential/existential-in-body.fil:5:14
+  │
+5 │     bundle a[N]: ['G, 'G+1] 32;
+  │              ^ cannot use existentially quantified parameter `N' in the body
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

@@ -1,0 +1,11 @@
+comp Foo<'G:1>() -> () with {
+    exists N;
+} {
+    // Bundle uses N which will not be bound in time during monomorphization.
+    bundle a[N]: ['G, 'G+1] 32;
+    exists N = 10;
+}
+
+comp main<'G:1>() -> () {
+    F := new Foo;
+}

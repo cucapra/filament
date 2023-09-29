@@ -1,6 +1,6 @@
 use super::sig_map::Sig;
 use super::{BuildRes, ScopeMap, SigMap};
-use crate::{self as ir, Ctx, DenseIndexInfo, PortIdx};
+use crate::{self as ir, Ctx, DenseIndexInfo, ParamOwner, PortIdx};
 use fil_ast as ast;
 use fil_utils::{self as utils, Error, Id};
 use std::rc::Rc;
@@ -231,7 +231,18 @@ impl<'prog> BuildCtx<'prog> {
         pos: utils::GPosIdx,
     ) -> BuildRes<ir::ExprIdx> {
         match self.param_map.get(param) {
-            Some(p) => Ok(*p),
+            Some(&p) => {
+                // Error if this is an existential parameter
+                if let ir::Expr::Param(p) = self.comp[p] {
+                    if matches!(self.comp[p].owner, ParamOwner::Exists) {
+                        let msg =
+                            format!("cannot use existentially quantified parameter `{}' in the body", param);
+                        let info = self.diag.add_info(msg.clone(), pos);
+                        return self.fail(Error::malformed(msg), [info]);
+                    }
+                }
+                Ok(p)
+            }
             None => {
                 let info = self.diag.add_info("unknown parameter", pos);
                 self.fail(
