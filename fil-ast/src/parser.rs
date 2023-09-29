@@ -419,7 +419,7 @@ impl FilamentParser {
                     input.error("Generated Instance name conflicts with original name");
                 }
                 let instance = ast::Instance::new(iname.clone(), component, params).into();
-                let invoke = ast::Invoke::new(name, iname, abstract_vars, Some(ports)).into();
+                let invoke = ast::Invoke::new(name, iname, abstract_vars, ports).into();
                 vec![instance, invoke]
             }
         ))
@@ -486,7 +486,7 @@ impl FilamentParser {
                 identifier(bind),
                 identifier(comp),
                 invoke_args((abstract_vars, ports))
-            ] => ast::Invoke::new(bind, comp, abstract_vars, Some(ports))
+            ] => ast::Invoke::new(bind, comp, abstract_vars, ports)
         ))
     }
     fn gte(input: Node) -> ParseResult<()> {
