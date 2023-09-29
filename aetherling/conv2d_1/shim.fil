@@ -44,11 +44,10 @@ comp Conv2d<'G: 1>(
 comp Conv2dWrapper<'G:1>(
     I[N]: ['G, 'G+1] 8
 ) -> (
-    O[N]: ['G+6, 'G+7] 8
+    O[N]: ['G+L, 'G+L+1] 8
 ) with {
-    // We assert the exact value here because otherwise the caller cannot pass data correctly.
-    exists L where L == 6;
-    exists N where N == 16;
+    exists N where N > 0, N <= 16, 16 % N == 0;
+    exists L where L > 0;
 } {
     C := new Conv2d<'G>(
         I{0}, I{1}, I{2}, I{3}, I{4}, I{5}, I{6}, I{7},
