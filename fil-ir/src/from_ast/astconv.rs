@@ -685,9 +685,6 @@ impl<'prog> BuildCtx<'prog> {
             ports,
             instance,
         } = inv;
-        let Some(ports) = ports else {
-            unreachable!("No ports provided for invocation {name}")
-        };
         let inv = self.get_inv(&name)?;
         let inst = inv.inst(self.comp());
         let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
