@@ -595,7 +595,7 @@ impl Reason {
                     .with_message(format!("length of bundle is {sw}",));
                 let dst = dst_loc
                     .primary()
-                    .with_message(format!("length of bunle is {dw}",));
+                    .with_message(format!("length of bundle is {dw}",));
                 Diagnostic::error()
                     .with_message(format!("required bundle of size `{dw}' but found bundle of size `{sw}'"))
                     .with_labels(vec![src, dst])

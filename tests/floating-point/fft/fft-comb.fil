@@ -9,16 +9,18 @@ comp CombFFT[NStages, W, E, ?M=W-E-1]<'G: 1>(
 ) with {
   let NPoints = pow2(NStages);
 } where
-  NStages >= 0,
+  NStages > 0,
   W == E + M + 1,
   E > 1,
-  M > 1
+  M > 1,
+  NPoints == pow2(NStages)
 {
-  // generate twiiddle factors
+  assume pow2(NStages-1)*2 == pow2(NStages);
+  // generate twiddle factors
   bundle twiddle[NPoints*2]: ['G, 'G+1] W;
-  for i in 0..NPoints {
+  for i in 0..pow2(NStages) {
     cosbits := new Const[W, cos_bits(i, NPoints)]<'G>();
-    sinbits := new Const[W, sin_bits(i+NPoints/2, NPoints)]<'G>(); // equivalent to -sin
+    sinbits := new Const[W, sin_bits(i+pow2(NStages-1), NPoints)]<'G>(); // equivalent to -sin
     twiddle{i*2} = cosbits.out;
     twiddle{i*2+1} = sinbits.out;
   }
@@ -27,6 +29,7 @@ comp CombFFT[NStages, W, E, ?M=W-E-1]<'G: 1>(
   bundle bitrev[NPoints*2]: ['G, 'G+1] W;
   for j in 0..NPoints {
     let br = bit_rev(j, NStages);
+    assume br < NPoints;
     bitrev{j*2..j*2+2} = in{br*2..br*2+2};
   }
 
@@ -49,18 +52,20 @@ comp _FFT_Inner[NStages, W, E, ?M=W-E-1]<'G: 1>(
   NStages >= 0,
   W == E + M + 1,
   E > 1,
-  M > 1
+  M > 1,
+  NPoints == pow2(NStages)
 {
+  assume pow2(NStages-1)*2 == pow2(NStages);
   if NStages == 0 {
     // No stages here, this is the identity.
     out{0..2} = in{0..2};
   } else {
     // twiddle factors for the smaller fft
-    bundle inner_twiddle[NPoints]: ['G, 'G+1] W;
+    bundle inner_twiddle[pow2(NStages)]: ['G, 'G+1] W;
     // hook up every other fft to this fft.
     for t in 0..pow2(NStages-1) {
       inner_twiddle{t*2} = twiddle{t*4};
-      inner_twiddle{t*2+2} = twiddle{t*4+1};
+      inner_twiddle{t*2+1} = twiddle{t*4+1};
     } 
     // Run the two smaller FFTs
     // This does the first `N-1` Stages of the FFT for us.
