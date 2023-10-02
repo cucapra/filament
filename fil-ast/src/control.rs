@@ -145,7 +145,7 @@ pub struct Invoke {
     /// Abstract variables used for this invocation
     pub abstract_vars: Vec<Loc<Time>>,
     /// Assignment for the ports
-    pub ports: Option<Vec<Loc<Port>>>,
+    pub ports: Vec<Loc<Port>>,
 }
 
 impl Invoke {
@@ -153,7 +153,7 @@ impl Invoke {
         name: Loc<Id>,
         instance: Loc<Id>,
         abstract_vars: Vec<Loc<Time>>,
-        ports: Option<Vec<Loc<Port>>>,
+        ports: Vec<Loc<Port>>,
     ) -> Self {
         Self {
             name,

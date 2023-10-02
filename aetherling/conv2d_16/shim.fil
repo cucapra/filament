@@ -1,0 +1,27 @@
+import "../common/fast-interface.fil";
+
+extern "impl.v" {
+comp Conv2d<'G: 1>(
+    clk: 1,
+    I_0: ['G, 'G+1] 8,
+) -> (
+    O_0: ['G+7, 'G+8] 8,
+);
+}
+
+comp Conv2dWrapper<'G:1>(
+    I[N]: ['G, 'G+1] 8
+) -> (
+    O[N]: ['G+L, 'G+L+1] 8
+) with {
+    exists N where N > 0, N <= 16, 16 % N == 0;
+    exists L where L > 0;
+} {
+    C := new Conv2d<'G>(I{0});
+
+    // Forward the outputs
+    O{0} = C.O_0;
+
+    exists L = 7;
+    exists N = 1;
+}

@@ -1,0 +1,27 @@
+import "../common/slow-interface.fil";
+
+extern "impl.v" {
+comp Conv2d<'G: 9>(
+    clk: 1,
+    I: ['G, 'G+6] 8,
+) -> (
+    O: ['G+21, 'G+22] 8,
+);
+}
+
+comp Conv2dWrapper<'G:II>(
+    I: ['G, 'G+H] 8
+) -> (
+    O: ['G+L, 'G+L+1] 8
+) with {
+    exists L where L > 0;
+    exists H where H > 0;
+    exists II where II > 0, II >= H;
+} {
+    C := new Conv2d<'G>(I);
+    O = C.O;
+
+    exists L = 21;
+    exists H = 6;
+    exists II = 9;
+}

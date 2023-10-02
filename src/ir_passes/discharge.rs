@@ -193,6 +193,8 @@ impl Discharge {
             }
         );
 
+        self.func_map = Default::default();
+
         sol_fn!(Pow2(is) -> is);
         sol_fn!(Log2(is) -> is);
         sol_fn!(SinB(is, is) -> is);
