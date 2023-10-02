@@ -7,9 +7,9 @@ error: source port does not provide value for as long as destination requires
  17 │     mx := new Mux[32]<'G>(op, a0.out, m0.out);
     │                                       ^^^^^^ source is available for ['G+2, 'G+3]
     │
-    ┌─ ./primitives/./comb.fil:171:7
+    ┌─ ./primitives/./comb.fil:177:7
     │
-171 │       in1: ['G, 'L] WIDTH,
+177 │       in1: ['G, 'L] WIDTH,
     │       --- requires value for ['G, 'G+1]
 
 Compilation failed with 1 errors.

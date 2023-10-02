@@ -1,3 +1,5 @@
+import "comb.fil";
+
 extern "signed.sv" {
   comp NegConst[WIDTH, VALUE]<'G: 'L-('G), ?'L: 1='G+1>() -> (
      out: ['G, 'L] WIDTH,
