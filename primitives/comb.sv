@@ -31,15 +31,6 @@ module Sub #(
   assign out = left - right;
 endmodule
 
-module Neg #(
-  parameter WIDTH = 32
-) (
-  input wire logic [WIDTH-1:0] in,
-  output wire logic [WIDTH-1:0] out
-);
-  assign out = -in;
-endmodule
-
 module MultComb #(
   parameter IN_WIDTH = 32,
   parameter OUT_WIDTH = 32

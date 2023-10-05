@@ -19,12 +19,6 @@ extern "comb.sv" {
       out: ['G, 'L] OUT_WIDTH
    ) where 'L > 'G, IN_WIDTH <= OUT_WIDTH, IN_WIDTH > 0, OUT_WIDTH > 0;
 
-   comp Neg[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
-      in: ['G, 'L] WIDTH
-   ) -> (
-      out: ['G, 'L] WIDTH
-   ) where 'L > 'G, WIDTH > 0;
-
    comp MultComb[IN_WIDTH, ?OUT_WIDTH=IN_WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
       left: ['G, 'L] IN_WIDTH,
       right: ['G, 'L] IN_WIDTH,

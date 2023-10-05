@@ -1,12 +1,11 @@
 import "comb.fil";
 
 extern "signed.sv" {
-  comp SAdd[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
-     left: ['G, 'L] WIDTH,
-     right: ['G, 'L] WIDTH
-  ) -> (
-     out: ['G, 'L] WIDTH,
-  ) where 'L > 'G;
+   comp Neg[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      in: ['G, 'L] WIDTH
+   ) -> (
+      out: ['G, 'L] WIDTH
+   ) where 'L > 'G, WIDTH > 0;
 }
 
 comp SignedConst[WIDTH, VALUE]<'G: 1>() -> (
