@@ -2,11 +2,14 @@
  * Defines combinational fixed point math operations
  */
 
-extern "fixed.sv" {
-  comp FXPMult[W, ?D=W/2]<'G: 'L-('G), ?'L: 1='G+1>(
-    left: ['G, 'L] W,
-    right: ['G, 'L] W,
+comp FXPMult[W, ?D=W/2]<'G:1>(
+    left: ['G, 'G+1] W,
+    right: ['G, 'G+1] W,
   ) -> (
-    out: ['G, 'L] W
-  ) where 'L > 'G, D < W, W > 0;
+    out: ['G, 'G+1] W
+  ) where D < W, W > 0
+{
+  m := new MultComb[W, W+D]<'G>(left, right);
+  sel := new Slice[W+D, W+D-1, D]<'G>(m.out);
+  out = sel.out;
 }
