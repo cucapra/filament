@@ -11,56 +11,48 @@ comp FFT8<'G: 1>(
   // generated using C at the moment to run the sine operations
   // stored in [real, imag] pairs
   bundle twiddle[16]: ['G, 'G+1] 32;
-  TR0 := new Const[32, 1065353216]<'G>();
+  TR0 := new SignedConst[32, 1065353216]<'G>();
   twiddle{0} = TR0.out;
   twiddle{1} = twiddle{4};
 
-  TR1 := new Const[32, 1060439283]<'G>();
+  TR1 := new SignedConst[32, 1060439283]<'G>();
   twiddle{2} = TR1.out;
   twiddle{3} = twiddle{6};
 
-  TR2 := new Const[32, 613232946]<'G>();
+  TR2 := new SignedConst[32, 613232946]<'G>();
   twiddle{4} = TR2.out;
   twiddle{5} = twiddle{8};
 
-  TR3 := new NegConst[32, 1087044365]<'G>();
+  TR3 := new SignedConst[32, 3207922931]<'G>();
   twiddle{6} = TR3.out;
   twiddle{7} = twiddle{10};
 
-  TR4 := new NegConst[32, 1082130432]<'G>();
+  TR4 := new SignedConst[32, 3212836864]<'G>();
   twiddle{8} = TR4.out;
   twiddle{9} = twiddle{12};
 
-  TR5 := new NegConst[32, 1087044365]<'G>();
+  TR5 := new SignedConst[32, 3207922931]<'G>();
   twiddle{10} = TR5.out;
   twiddle{11} = twiddle{14};
 
-  TR6 := new NegConst[32, 1521235510]<'G>();
+  TR6 := new SignedConst[32, 2773731786]<'G>();
   twiddle{12} = TR6.out;
   twiddle{13} = twiddle{0};
 
-  TR7 := new Const[32, 1060439283]<'G>();
+  TR7 := new SignedConst[32, 1060439283]<'G>();
   twiddle{14} = TR7.out;
   twiddle{15} = twiddle{2};
 
   // Stage 0 input (bit reversal on pairs)
   bundle s0[16]: ['G, 'G+1] 32;
-  s0{0} = in{0}; // 000 -> 000 (0 -> 0)
-  s0{1} = in{1}; 
-  s0{2} = in{8}; // 001 -> 100 (1 -> 4)
-  s0{3} = in{9};
-  s0{4} = in{4}; // 010 -> 010 (2 -> 2)
-  s0{5} = in{5};
-  s0{6} = in{12}; // 011 -> 110 (3 -> 6)
-  s0{7} = in{13};
-  s0{8} = in{2}; // 100 -> 001 (4 -> 1)
-  s0{9} = in{3};
-  s0{10} = in{10}; // 101 -> 101 (5 -> 5)
-  s0{11} = in{11};
-  s0{12} = in{6}; // 110 -> 011 (6 -> 3)
-  s0{13} = in{7};
-  s0{14} = in{14}; // 111 -> 111 (7 -> 7)
-  s0{15} = in{15};
+  s0{0..2} = in{0..2}; // 000 -> 000 (0 -> 0)
+  s0{2..4} = in{8..10}; // 001 -> 100 (1 -> 4)
+  s0{4..6} = in{4..6}; // 010 -> 010 (2 -> 2)
+  s0{6..8} = in{12..14}; // 011 -> 110 (3 -> 6)
+  s0{8..10} = in{2..4}; // 100 -> 001 (4 -> 1)
+  s0{10..12} = in{10..12}; // 101 -> 101 (5 -> 5)
+  s0{12..14} = in{6..8}; // 110 -> 011 (6 -> 3)
+  s0{14..16} = in{14..16}; // 111 -> 111 (7 -> 7)
 
   // now do the butterfly operations
   // STAGE 1 butterfly ops (twiddles are all 1)

@@ -127,7 +127,8 @@ comp FAdd[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
 
     bundle exp_amts[MANTISSA+1]: for<i> ['G, 'G+1] EXPONENT;
     _exp_1_const := new Neg[EXPONENT]<'G, 'G+1>(larger_exp.out);
-    _exp_max_const := new NegConst[EXPONENT, MANTISSA-1]<'G, 'G+1>();
+    _exp_max_const_p := new Const[EXPONENT, MANTISSA-1]<'G, 'G+1>();
+    _exp_max_const := new Neg[EXPONENT]<'G, 'G+1>(_exp_max_const_p.out);
     _exp_max_mux := new Mux[EXPONENT]<'G, 'G+1>(_shift_max_sel.out, _exp_max_const.out, _exp_1_const.out);
     exp_amts{0} = _exp_max_mux.out;
 
@@ -142,7 +143,8 @@ comp FAdd[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
             _exp_mux_a := new Mux[EXPONENT]<'G, 'G+1>(_shift_sel.out, _exp_const_a.out, exp_amts{j-1});
             exp_amts{j} = _exp_mux_a.out;
         } else {
-            _exp_const_b := new NegConst[EXPONENT, MANTISSA-1-j]<'G, 'G+1>();
+            _exp_const_b_p := new Const[EXPONENT, MANTISSA-1-j]<'G, 'G+1>();
+            _exp_const_b := new Neg[EXPONENT]<'G, 'G+1>(_exp_const_b_p.out);
             _exp_mux_b := new Mux[EXPONENT]<'G, 'G+1>(_shift_sel.out, _exp_const_b.out, exp_amts{j-1});
             exp_amts{j} = _exp_mux_b.out;
         }
@@ -242,7 +244,8 @@ comp FMult[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
     underflow := new And[1]<'G, 'G+1>(_ouflow_tmp.out, _exp_7.out);
 
     _zero_width := new Const[WIDTH, 0]<'G, 'G+1>();
-    _neg_1_exp := new NegConst[EXPONENT, 1]<'G, 'G+1>();
+    _1_exp := new Const[EXPONENT, 1]<'G, 'G+1>();
+    _neg_1_exp := new Neg[EXPONENT]<'G, 'G+1>(_1_exp.out);
     _exp_cut := new Slice[EXPONENT+1, EXPONENT-1, 0, EXPONENT]<'G, 'G+1>(exponent.out);
     _res_0_init := new _FCompose[WIDTH, EXPONENT, MANTISSA]<'G>(final_sign.out, _exp_cut.out, product_mantissa.out);
     _res_sign_only := new _FCompose[WIDTH, EXPONENT, MANTISSA]<'G>(final_sign.out, _zero_exp.out, _zero_mant.out);

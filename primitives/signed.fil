@@ -1,12 +1,6 @@
 import "comb.fil";
 
 extern "signed.sv" {
-  comp NegConst[WIDTH, VALUE]<'G: 'L-('G), ?'L: 1='G+1>() -> (
-     out: ['G, 'L] WIDTH,
-  ) where
-   'L > 'G,
-   WIDTH > 0;
-
   comp SAdd[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
      left: ['G, 'L] WIDTH,
      right: ['G, 'L] WIDTH
@@ -21,7 +15,8 @@ comp SignedConst[WIDTH, VALUE]<'G: 1>() -> (
    WIDTH > 0
 {
    if VALUE >= pow2(WIDTH-1) {
-      negc := new NegConst[WIDTH, pow2(WIDTH) - VALUE]<'G>();
+      c := new Const[WIDTH, pow2(WIDTH) - VALUE]<'G>();
+      negc := new Neg[WIDTH]<'G>(c.out);
       out = negc.out;
    } else {
       posc := new Const[WIDTH, VALUE]<'G>();
