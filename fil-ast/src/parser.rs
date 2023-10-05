@@ -255,6 +255,7 @@ impl FilamentParser {
             "log2" => ast::Fn::Log2,
             "sin_bits" => ast::Fn::SinB,
             "cos_bits" => ast::Fn::CosB,
+            "bit_rev" => ast::Fn::BitRev,
             _ => unreachable!(),
         })
     }

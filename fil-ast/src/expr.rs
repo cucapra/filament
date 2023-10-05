@@ -34,6 +34,8 @@ pub enum Fn {
     /// Returns the 32 bit floating point bits of the sine
     SinB,
     CosB,
+    /// Bit reverse the given integer
+    BitRev,
 }
 impl std::fmt::Display for Fn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -42,6 +44,7 @@ impl std::fmt::Display for Fn {
             Fn::Log2 => write!(f, "log2"),
             Fn::SinB => write!(f, "sin_bits"),
             Fn::CosB => write!(f, "cos_bits"),
+            Fn::BitRev => write!(f, "bit_rev"),
         }
     }
 }
@@ -60,6 +63,16 @@ impl Fn {
                 ((2. * std::f64::consts::PI * (num as f64) / (den as f64)).cos()
                     as f32)
                     .to_bits() as u64
+            }
+            (Fn::BitRev, &[n, numbits]) => {
+                let mut n = n;
+                let mut rev = 0;
+                for _ in 0..numbits {
+                    rev <<= 1;
+                    rev |= n & 1;
+                    n >>= 1;
+                }
+                rev
             }
             _ => unreachable!(
                 "Function {} did not expect {} arguments.",
@@ -274,7 +287,7 @@ impl From<Id> for Expr {
 }
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
-/// Track the current context within an expression for pretty printing
+/// Track the current context within an expression for pretty printinga
 enum ECtx {
     #[default]
     /// Inside an addition priority expression (+ or -)

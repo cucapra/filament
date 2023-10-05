@@ -148,12 +148,13 @@ comp FPAdd<'G: 1>(
   renorm_shift := new Mux[4]<'G+3>(am_23_one.out, one.out, rns_2.out);
 
   // Determine renorm exp
-  n_one := new NegConst[8, 1]<'G+3>();
-  n_two := new NegConst[8, 2]<'G+3>();
-  n_three := new NegConst[8, 3]<'G+3>();
+  n_neg := new Neg[8]<'G+3>(larger_exp_s4.out);
+  n_one := new SignedConst[8, 256-1]<'G+3>();
+  n_two := new SignedConst[8, 256-2]<'G+3>();
+  n_three := new SignedConst[8, 256-3]<'G+3>();
   one8 := new Const[8, 1]<'G+3>();
 
-  rne_5 := new Mux[8]<'G+3>(am_19_one.out, n_three.out, zero8_3.out);
+  rne_5 := new Mux[8]<'G+3>(am_19_one.out, n_three.out, n_neg.out);
   rne_4 := new Mux[8]<'G+3>(am_20_one.out, n_two.out, rne_5.out);
   rne_3 := new Mux[8]<'G+3>(am_21_one.out, n_one.out, rne_4.out);
   rne_2 := new Mux[8]<'G+3>(am_22_one.out, zero8_3.out, rne_3.out);
@@ -174,7 +175,7 @@ comp FPAdd<'G: 1>(
 
   // ---------- Stage 5 ----------
   // Compute final exponent
-  final_exp := new SAdd[8]<'G+4>(renorm_exp_s5.out, larger_exp_s5.out);
+  final_exp := new Add[8]<'G+4>(renorm_exp_s5.out, larger_exp_s5.out);
 
   // Compute final mantissa
   shifted_add_mant := new ShiftLeft24<'G+4>(add_mant_s5.out, renorm_shift_s5.out);

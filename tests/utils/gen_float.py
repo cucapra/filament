@@ -3,6 +3,7 @@
 from itertools import groupby
 import struct
 import random
+import math
 import numpy as np
 import json
 import argparse
@@ -88,22 +89,82 @@ def convert_to_int(args):
     print(json.dumps(j, indent=2))
 
 
-def all_equal(iterable):
-    g = groupby(iterable)
-    return next(g, True) and not next(g, False)
+# Checks if all values in a list of arrays are equal
+def all_equal(vals, epsilon):
+    for i in range(len(vals[0])):
+        for j in range(len(vals[0][i])):
+            if not all(
+                (
+                    # Do nothing when we encounter inf or nan because they can't be easily compared
+                    math.isinf(vals[x][i][j])
+                    or math.isnan(vals[x][i][j])
+                    or math.isinf(vals[y][i][j])
+                    or math.isnan(vals[y][i][j])
+                    or abs(vals[x][i][j] - vals[y][i][j]) <= epsilon
+                )
+                for x in range(len(vals))
+                for y in range(x + 1, len(vals))
+            ):
+                return False
+    return True
+
+
+def f32_as_int(x):
+    bytes = struct.pack(">f", x)
+    return int.from_bytes(bytes, byteorder="big")
+
+
+def int_as_f32(x):
+    bytes = x.to_bytes(length=4, byteorder="big")
+    return struct.unpack(">f", bytes)[0]
+
+
+def to_signed_int(n):
+    n = n & 0xFFFFFFFF
+    return n | (-(n & 0x80000000))
 
 
 def check(args):
     err = 0
+
     if args.file is None:
         fd = sys.stdin
     else:
         fd = open(args.file, "r")
 
     j = json.load(fd)
+
+    def unpack(arr):
+        return [
+            [
+                (x >> j * args.width[0]) & ((1 << args.width[0]) - 1)
+                for j in range(args.width[1] - 1, -1, -1)
+            ]
+            for x in arr
+        ]
+
+    j = json_arr_apply(j, unpack)
+
+    if args.dtype == "f32":
+        assert args.width[0] == 32
+
+        def conv(arr):
+            return [[int_as_f32(y) for y in x] for x in arr]
+
+        j = json_arr_apply(j, conv)
+    elif args.dtype == "fxp32":
+        assert args.width[0] == 32
+
+        def conv(arr):
+            return [[to_signed_int(y) / (1 << 16) for y in x] for x in arr]
+
+        j = json_arr_apply(j, conv)
+    elif args.dtype == "bits":
+        pass
+
     for k in j[args.fields[0]].keys():
         vals = [j[f][k] for f in args.fields]
-        if not all_equal(vals):
+        if not all_equal(vals, args.epsilon):
             err += 1
             # Construct dictionary with all values
             out = {f: j[f][k] for f in args.fields}
@@ -120,11 +181,27 @@ def random_data(args):
     Generate random floating point data and print out as JSON
     """
 
+    # Default bound value
+    if math.isnan(args.bound):
+        args.bound = 2 ** (args.width[0] * args.width[1])
+
     # Dictionary mapping each field to a list of values
     fields = {k: [] for k in args.fields}
     for _ in range(args.count):
         for k in args.fields:
-            v = random.randint(0, 2**args.width - 1)
+            v = 0
+            if args.dtype == "f32":
+                assert args.width[0] == 32
+                for _ in range(args.width[1]):
+                    v = (v << 32) + f32_as_int(random.uniform(-args.bound, args.bound))
+            elif args.dtype == "fxp32":
+                for _ in range(args.width[1]):
+                    vt = int(random.uniform(-args.bound, args.bound) * (1 << 16))
+                    if vt < 0:
+                        vt += 1 << 32
+                    v = (v << 32) + vt
+            elif args.dtype == "bits":
+                v = random.randint(0, args.bound - 1)
             fields[k].append(v)
 
     print(json.dumps(fields, indent=2))
@@ -137,11 +214,17 @@ if __name__ == "__main__":
 
     gen_parser = subparsers.add_parser("gen")
     gen_parser.add_argument(
-        "count", type=int, default=1, help="Number of random data to generate"
+        "--count", type=int, default=1, help="Number of random data to generate"
     )
-    gen_parser.add_argument("--width", type=int, default=32)
+    gen_parser.add_argument("--width", nargs=2, type=int, default=[32, 1])
     gen_parser.set_defaults(func=random_data)
     gen_parser.add_argument("--fields", nargs="+", default=["left", "right"])
+    gen_parser.add_argument(
+        "-dt", "--dtype", default="f32", help="Data type to treat inputs as"
+    )
+    gen_parser.add_argument(
+        "--bound", type=float, default=float("nan"), help="Bound for random data"
+    )
 
     to_float_parser = subparsers.add_parser("to_float")
     to_float_parser.add_argument("-f", "--file", help="JSON file to be converted")
@@ -156,6 +239,13 @@ if __name__ == "__main__":
 
     check_parser = subparsers.add_parser("check")
     check_parser.add_argument("-f", "--file", help="JSON file to be checked")
+    check_parser.add_argument(
+        "-dt", "--dtype", default="f32", help="Data type to treat inputs as"
+    )
+    check_parser.add_argument("--width", nargs=2, type=int, default=[32, 1])
+    check_parser.add_argument(
+        "--epsilon", type=float, default=0, help="Tolerance for floating point error"
+    )
     check_parser.add_argument(
         "--fields",
         nargs="+",

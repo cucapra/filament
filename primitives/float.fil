@@ -119,15 +119,16 @@ comp FAdd[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
 
     // renormalization
     bundle shift_amts[MANTISSA+1]: for<i> ['G, 'G+1] WIDTH;
-    _mant_1_const := new Const[WIDTH, MANTISSA+2]<'G, 'G+1>(); // constant value set if all mantissa bits are 0
-    _shift_max_const := new Const[WIDTH, 0]<'G, 'G+1>();
+    _mant_1_const := new Const[WIDTH, 0]<'G, 'G+1>(); // constant value set if all mantissa bits are 0
+    _shift_max_const := new Const[WIDTH, MANTISSA+1]<'G, 'G+1>();
     _shift_max_sel := new Select[MANTISSA+1, 0]<'G, 'G+1>(add_mant.out);
     _shift_max_mux := new Mux[WIDTH]<'G, 'G+1>(_shift_max_sel.out, _shift_max_const.out, _mant_1_const.out);
     shift_amts{0} = _shift_max_mux.out;
 
     bundle exp_amts[MANTISSA+1]: for<i> ['G, 'G+1] EXPONENT;
-    _exp_1_const := new NegConst[EXPONENT, 0]<'G, 'G+1>();
-    _exp_max_const := new NegConst[EXPONENT, MANTISSA-1]<'G, 'G+1>();
+    _exp_1_const := new Neg[EXPONENT]<'G, 'G+1>(larger_exp.out);
+    _exp_max_const_p := new Const[EXPONENT, MANTISSA-1]<'G, 'G+1>();
+    _exp_max_const := new Neg[EXPONENT]<'G, 'G+1>(_exp_max_const_p.out);
     _exp_max_mux := new Mux[EXPONENT]<'G, 'G+1>(_shift_max_sel.out, _exp_max_const.out, _exp_1_const.out);
     exp_amts{0} = _exp_max_mux.out;
 
@@ -142,7 +143,8 @@ comp FAdd[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
             _exp_mux_a := new Mux[EXPONENT]<'G, 'G+1>(_shift_sel.out, _exp_const_a.out, exp_amts{j-1});
             exp_amts{j} = _exp_mux_a.out;
         } else {
-            _exp_const_b := new NegConst[EXPONENT, MANTISSA-1-j]<'G, 'G+1>();
+            _exp_const_b_p := new Const[EXPONENT, MANTISSA-1-j]<'G, 'G+1>();
+            _exp_const_b := new Neg[EXPONENT]<'G, 'G+1>(_exp_const_b_p.out);
             _exp_mux_b := new Mux[EXPONENT]<'G, 'G+1>(_shift_sel.out, _exp_const_b.out, exp_amts{j-1});
             exp_amts{j} = _exp_mux_b.out;
         }
@@ -226,9 +228,6 @@ comp FMult[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
     _product_mantissa_round_extend := new ZeroExtend[1, MANTISSA]<'G, 'G+1>(_product_mantissa_round.out);
     product_mantissa := new Add[MANTISSA]<'G, 'G+1>(_product_mantissa_slice.out, _product_mantissa_round_extend.out);
 
-    _zero_cond_2 := new Eq[MANTISSA]<'G, 'G+1>(product_mantissa.out, _zero_mant.out);
-    zero := new Or[1]<'G, 'G+1>(exception.out, _zero_cond_2.out);
-
     sum_exponent := new Add[EXPONENT, EXPONENT+1]<'G, 'G+1>(left.exponent, right.exponent);
     _exp_m_1_neg_1 := new Const[EXPONENT+1, pow2(EXPONENT-1)-1]<'G, 'G+1>();
     exp_norm := new Sub[EXPONENT+1]<'G, 'G+1>(sum_exponent.out, _exp_m_1_neg_1.out);
@@ -239,13 +238,14 @@ comp FMult[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
     _exp_7 := new Select[EXPONENT+1, EXPONENT-1]<'G, 'G+1>(exponent.out);
     _n_exp_7 := new Not[1]<'G, 'G+1>(_exp_7.out);
     // negated version of zero
-    nzero := new Not[1]<'G, 'G+1>(zero.out);
+    nzero := new Not[1]<'G, 'G+1>(exception.out);
     _ouflow_tmp := new And[1]<'G, 'G+1>(_exp_8.out, nzero.out);
     overflow := new And[1]<'G, 'G+1>(_ouflow_tmp.out, _n_exp_7.out);
     underflow := new And[1]<'G, 'G+1>(_ouflow_tmp.out, _exp_7.out);
 
     _zero_width := new Const[WIDTH, 0]<'G, 'G+1>();
-    _neg_1_exp := new NegConst[EXPONENT, 1]<'G, 'G+1>();
+    _1_exp := new Const[EXPONENT, 1]<'G, 'G+1>();
+    _neg_1_exp := new Neg[EXPONENT]<'G, 'G+1>(_1_exp.out);
     _exp_cut := new Slice[EXPONENT+1, EXPONENT-1, 0, EXPONENT]<'G, 'G+1>(exponent.out);
     _res_0_init := new _FCompose[WIDTH, EXPONENT, MANTISSA]<'G>(final_sign.out, _exp_cut.out, product_mantissa.out);
     _res_sign_only := new _FCompose[WIDTH, EXPONENT, MANTISSA]<'G>(final_sign.out, _zero_exp.out, _zero_mant.out);
@@ -253,8 +253,7 @@ comp FMult[WIDTH, EXPONENT, MANTISSA]<'G: 1> (
 
     _res_0 := new Mux[WIDTH]<'G, 'G+1>(underflow.out, _res_sign_only.out, _res_0_init.out);
     _res_1 := new Mux[WIDTH]<'G, 'G+1>(overflow.out, _res_sign_maxexp.out, _res_0.out);
-    _res_2 := new Mux[WIDTH]<'G, 'G+1>(zero.out, _res_sign_only.out, _res_1.out);
-    res := new Mux[WIDTH]<'G, 'G+1>(exception.out, _zero_width.out, _res_2.out);
+    res := new Mux[WIDTH]<'G, 'G+1>(exception.out, _res_sign_only.out, _res_1.out);
 
     out = res.out;
 }

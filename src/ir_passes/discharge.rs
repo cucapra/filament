@@ -199,6 +199,7 @@ impl Discharge {
         sol_fn!(Log2(is) -> is);
         sol_fn!(SinB(is, is) -> is);
         sol_fn!(CosB(is, is) -> is);
+        sol_fn!(BitRev(is, is) -> is);
     }
 
     /// Get bindings for the provided parameters in a model.

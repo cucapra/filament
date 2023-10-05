@@ -51,7 +51,7 @@ impl Assume {
                 // #r = 1 => #l = 0
                 rhs.equal(one, ctx).implies(lhs.equal(zero, ctx), ctx),
             ],
-            ast::Fn::SinB | ast::Fn::CosB => vec![], // can't make any assumptions on the output value here
+            ast::Fn::SinB | ast::Fn::CosB | ast::Fn::BitRev => vec![], // can't make any assumptions on the output value here
         }
     }
 }
