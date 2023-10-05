@@ -175,7 +175,7 @@ comp FPAdd<'G: 1>(
 
   // ---------- Stage 5 ----------
   // Compute final exponent
-  final_exp := new SAdd[8]<'G+4>(renorm_exp_s5.out, larger_exp_s5.out);
+  final_exp := new Add[8]<'G+4>(renorm_exp_s5.out, larger_exp_s5.out);
 
   // Compute final mantissa
   shifted_add_mant := new ShiftLeft24<'G+4>(add_mant_s5.out, renorm_shift_s5.out);
