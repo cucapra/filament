@@ -7,9 +7,9 @@ error: source port does not provide value for as long as destination requires
  19 │     mx := new Mux[32]<'G+2>(op, r0.out, m0.out);
     │                             ^^ source is available for ['G, 'G+1]
     │
-    ┌─ ./primitives/./comb.fil:175:7
+    ┌─ ./primitives/./comb.fil:169:7
     │
-175 │       sel: ['G, 'L] 1,
+169 │       sel: ['G, 'L] 1,
     │       --- requires value for ['G+2, 'G+3]
 
 error: source port does not provide value for as long as destination requires
