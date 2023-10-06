@@ -1,5 +1,5 @@
 import "primitives/reshape.fil";
-import "primitives/float.fil";
+import "primitives/math/complex.fil";
 
 // Combinational FFT using 32 bit floats and with 8 points.
 comp FFT8<'G: 1>(
@@ -7,6 +7,11 @@ comp FFT8<'G: 1>(
 ) -> (
   out[16]: ['G, 'G+1] 32 // output with [real, imag] pairs
 ) {
+  // Floating point specification
+  let W = 32;
+  let E = 8;
+  let M = 23;
+
   // define the twiddle factors
   // generated using C at the moment to run the sine operations
   // stored in [real, imag] pairs
@@ -60,10 +65,10 @@ comp FFT8<'G: 1>(
   bundle s1[16]: ['G, 'G+1] 32;
 
   // first butterfly
-  B10 := new Butterfly8<'G>(s0{0..2}, s0{2..4}, twiddle{0..2});
-  B11 := new Butterfly8<'G>(s0{4..6}, s0{6..8}, twiddle{0..2});
-  B12 := new Butterfly8<'G>(s0{8..10}, s0{10..12}, twiddle{0..2});
-  B13 := new Butterfly8<'G>(s0{12..14}, s0{14..16}, twiddle{0..2});
+  B10 := new Butterfly[W, E, M]<'G>(s0{0..2}, s0{2..4}, twiddle{0..2});
+  B11 := new Butterfly[W, E, M]<'G>(s0{4..6}, s0{6..8}, twiddle{0..2});
+  B12 := new Butterfly[W, E, M]<'G>(s0{8..10}, s0{10..12}, twiddle{0..2});
+  B13 := new Butterfly[W, E, M]<'G>(s0{12..14}, s0{14..16}, twiddle{0..2});
 
   s1{0..2} = B10.out0{0..2};
   s1{2..4} = B10.out1{0..2};
@@ -77,10 +82,10 @@ comp FFT8<'G: 1>(
   // STAGE 2 butterfly ops (1, w^2)
   bundle s2[16]: ['G, 'G+1] 32;
 
-  B20 := new Butterfly8<'G>(s1{0..2}, s1{4..6}, twiddle{0..2});
-  B21 := new Butterfly8<'G>(s1{2..4}, s1{6..8}, twiddle{4..6});
-  B22 := new Butterfly8<'G>(s1{8..10}, s1{12..14}, twiddle{0..2});
-  B23 := new Butterfly8<'G>(s1{10..12}, s1{14..16}, twiddle{4..6});
+  B20 := new Butterfly[W, E, M]<'G>(s1{0..2}, s1{4..6}, twiddle{0..2});
+  B21 := new Butterfly[W, E, M]<'G>(s1{2..4}, s1{6..8}, twiddle{4..6});
+  B22 := new Butterfly[W, E, M]<'G>(s1{8..10}, s1{12..14}, twiddle{0..2});
+  B23 := new Butterfly[W, E, M]<'G>(s1{10..12}, s1{14..16}, twiddle{4..6});
 
   s2{0..2} = B20.out0{0..2};
   s2{2..4} = B21.out0{0..2};
@@ -94,10 +99,10 @@ comp FFT8<'G: 1>(
   // STAGE 3 butterfly ops (1, w, w^2, w^3)
   bundle s3[16]: ['G, 'G+1] 32;
 
-  B30 := new Butterfly8<'G>(s2{0..2}, s2{8..10}, twiddle{0..2});
-  B31 := new Butterfly8<'G>(s2{2..4}, s2{10..12}, twiddle{2..4});
-  B32 := new Butterfly8<'G>(s2{4..6}, s2{12..14}, twiddle{4..6});
-  B33 := new Butterfly8<'G>(s2{6..8}, s2{14..16}, twiddle{6..8});
+  B30 := new Butterfly[W, E, M]<'G>(s2{0..2}, s2{8..10}, twiddle{0..2});
+  B31 := new Butterfly[W, E, M]<'G>(s2{2..4}, s2{10..12}, twiddle{2..4});
+  B32 := new Butterfly[W, E, M]<'G>(s2{4..6}, s2{12..14}, twiddle{4..6});
+  B33 := new Butterfly[W, E, M]<'G>(s2{6..8}, s2{14..16}, twiddle{6..8});
 
   s3{0..2} = B30.out0{0..2};
   s3{2..4} = B31.out0{0..2};
@@ -109,93 +114,4 @@ comp FFT8<'G: 1>(
   s3{14..16} = B33.out1{0..2};
 
   out{0..16} = s3{0..16};  
-}
-
-// Combinational butterfly using 32 bit floats and with 8 points.
-comp Butterfly8<'G: 1>(
-  in0[2]: ['G, 'G+1] 32, // real and imaginary parts of input
-  in1[2]: ['G, 'G+1] 32,
-  twiddle[2]: ['G, 'G+1] 32 // twiddle factor
-) -> (
-  out0[2]: ['G, 'G+1] 32,
-  out1[2]: ['G, 'G+1] 32
-) {
-  t1 := new ComplexMult8<'G>(in1{0..2}, twiddle{0..2});
-  O0 := new ComplexAdd8<'G>(in0{0..2}, t1.out{0..2});
-  out0{0..2} = O0.out{0..2};
-  
-  // multiply by twiddle
-  O1 := new ComplexSub8<'G>(in0{0..2}, t1.out{0..2});
-  out1{0..2} = O1.out{0..2};
-}
-
-comp ComplexMult8<'G: 1>(
-  left[2]: ['G, 'G+1] 32, // a + bi
-  right[2]: ['G, 'G+1] 32 // c + di
-) -> (
-  out[2]: ['G, 'G+1] 32
-) {
-  let W = 32;
-  let E = 8;
-  let M = 23;
-
-  // fully combinational
-  ac := new FMult[W, E, M]<'G>(left{0}, right{0}); // ac
-  bd := new FMult[W, E, M]<'G>(left{1}, right{1}); // bd
-  re := new FSub[W, E, M]<'G>(ac.out, bd.out); // ac - bd
-
-  ad := new FMult[W, E, M]<'G>(left{0}, right{1}); // ad
-  bc := new FMult[W, E, M]<'G>(left{1}, right{0}); // bc
-  im := new FAdd[W, E, M]<'G>(ad.out, bc.out); // ad + bc
-
-  out{0} = re.out;
-  out{1} = im.out;
-}
-
-comp ComplexAdd8<'G: 1>(
-  left[2]: ['G, 'G+1] 32, // a + bi
-  right[2]: ['G, 'G+1] 32 // c + di
-) -> (
-  out[2]: ['G, 'G+1] 32
-) {
-  let W = 32;
-  let E = 8;
-  let M = 23;
-
-  // fully combinational
-  re := new FAdd[W, E, M]<'G>(left{0}, right{0}); // a + c
-  im := new FAdd[W, E, M]<'G>(left{1}, right{1}); // b + d
-
-  out{0} = re.out;
-  out{1} = im.out;
-}
-
-// negation of a complex number
-comp ComplexNeg8<'G: 1>(
-  in[2]: ['G, 'G+1] 32 // a + bi
-) -> (
-  out[2]: ['G, 'G+1] 32
-) {
-
-  let W = 32;
-  let E = 8;
-  let M = 23;
-
-  neg1 := new FNeg[W, E, M]<'G>(in{0}); // -a
-  neg2 := new FNeg[W, E, M]<'G>(in{1}); // -b
-
-  out{0} = neg1.out;
-  out{1} = neg2.out;
-}
-
-// subtraction of complex numbers
-comp ComplexSub8<'G: 1>(
-  left[2]: ['G, 'G+1] 32,
-  right[2]: ['G, 'G+1] 32
-) -> (
-  out[2]: ['G, 'G+1] 32
-) {
-  neg := new ComplexNeg8<'G>(right{0..2});
-  add := new ComplexAdd8<'G>(left{0..2}, neg.out{0..2});
-  out{0..2} = add.out{0..2};
 }

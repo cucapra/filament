@@ -1,8 +1,8 @@
 /**
  * Defines useful math operations.
  */
-import "./state.fil";
-import "./comb.fil";
+import "primitives/state.fil";
+import "primitives/comb.fil";
 
 /// Implements a parameterized addition-based reduction tree.
 /// * `W` is the width of the input and output.
