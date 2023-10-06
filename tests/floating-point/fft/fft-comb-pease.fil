@@ -14,9 +14,13 @@ comp CombPeaseFFT[NStages, W, E, ?M=W-E-1]<'G: 1>(
   E > 1,
   M > 1
 {
+  assume pow2(NStages-1) == NPoints/2;
+  assume pow2(NStages-2) == NPoints/4;
+
   // generate twiddle factors
-  bundle twiddle[NPoints*2]: ['G, 'G+1] W;
-  for i in 0..NPoints {
+  bundle twiddle[NPoints]: ['G, 'G+1] W;
+  for i in 0..NPoints/2 {
+    // assume i*2 < NPoints;
     cosbits := new SignedConst[W, cos_bits(i, NPoints)]<'G>();
     sinbits := new SignedConst[W, sin_bits(i+pow2(NStages-1), NPoints)]<'G>(); // equivalent to -sin
     twiddle{i*2} = cosbits.out;
@@ -34,18 +38,7 @@ comp CombPeaseFFT[NStages, W, E, ?M=W-E-1]<'G: 1>(
 
   // perform the fft
   for stage in 0..NStages {
-    bundle stage_twiddle[NPoints*2]: ['G, 'G+1] W;
-    // calculate the twiddle factors.
-    // Uses the fact that the twiddle factors can be generated recursively
-    for twiddle_i in 0..pow2(NStages-stage) {
-      for twiddle_j in 0..pow2(stage) {
-        let stage_twiddle_index = twiddle_i+twiddle_j;
-        let twiddle_index = twiddle_j * pow2(NStages-stage);
-        assume stage_twiddle_index < NPoints;
-        assume twiddle_index < NPoints;
-        stage_twiddle{stage_twiddle_index*2..stage_twiddle_index*2+2} = twiddle{twiddle_index*2..twiddle_index*2+2};
-      }
-    }
+    stage_twiddle := new TwiddleStage[NStages, stage, W]<'G>(twiddle{0..NPoints});
 
     let data_offset = NPoints * stage * 2;
 
@@ -54,38 +47,78 @@ comp CombPeaseFFT[NStages, W, E, ?M=W-E-1]<'G: 1>(
 
     // perform the butterflies
     for butterfly_i in 0..pow2(NStages-1) {
+      // needed to speed up the solver
+      assume butterfly_i < NPoints/2;
+      
       butterfly := new Butterfly[W, E, M]<'G>(
-        data{data_offset+butterfly_i*2..data_offset+butterfly_i*2+2},
-        data{data_offset+butterfly_i*2+2..data_offset+butterfly_i*2+4},
-        stage_twiddle{butterfly_i*2..butterfly_i*2+2}
+        data{data_offset+butterfly_i*4..data_offset+butterfly_i*4+2},
+        data{data_offset+butterfly_i*4+2..data_offset+butterfly_i*4+4},
+        stage_twiddle.out{butterfly_i*2..butterfly_i*2+2}
       );
 
-      tmp_data{butterfly_i*2..butterfly_i*2+2} = butterfly.out0{0..2};
-      tmp_data{butterfly_i*2+2..butterfly_i*2+4} = butterfly.out1{0..2};
+      tmp_data{butterfly_i*4..butterfly_i*4+2} = butterfly.out0{0..2};
+      tmp_data{butterfly_i*4+2..butterfly_i*4+4} = butterfly.out1{0..2};
     }
 
     // perform the stride permutation
-    stride_perm := new StridePermutation[NPoints, W]<'G>(tmp_data);
+    stride_perm := new StridePermutation[NStages, W]<'G>(tmp_data{0..NPoints*2});
     // set the next stage's data
     data{data_offset+NPoints*2..data_offset+NPoints*4} = stride_perm.out{0..NPoints*2};
   }
 
-  out = data{NPoints*NStages*2..NPoints*NStages*2+NPoints*2};
+  // sp := new StridePermutation[NStages, W]<'G>(in{0..NPoints*2});
+  // out{0..NPoints*2} = sp.out{0..NPoints*2};
+  // twid := new TwiddleStage[NStages, 0, W]<'G>(twiddle{0..NPoints});
+  // out{0..NPoints} = twid.out{0..NPoints};
+  // out{NPoints..NPoints*2} = twiddle{0..NPoints};
+
+  // out{0..NPoints*2} = data{NPoints*1*2..NPoints*1*2+NPoints*2};
+  out{0..NPoints*2} = data{NPoints*NStages*2..NPoints*NStages*2+NPoints*2};
+}
+
+/// Generates the twiddle factors for a stage of the fft.
+/// Separated out to simplify typechecking.
+comp TwiddleStage[NStages, Stage, W]<'G: 1>(
+  twiddle[NPoints]: ['G, 'G+1] W
+) -> (
+  out[NPoints]: ['G, 'G+1] W
+) with {
+  let NPoints = pow2(NStages);
+} where 
+  NStages > 0,
+  Stage < NStages,
+  Stage >= 0,
+  W > 0
+{
+  // calculate the twiddle factors.
+  // Uses the fact that the twiddle factors can be generated recursively
+  for twiddle_j in 0..pow2(Stage) {
+    let twiddle_index = twiddle_j * pow2(NStages-Stage-1);
+    assume twiddle_index < NPoints/2;
+    for twiddle_i in 0..pow2(NStages-Stage-1) {
+      let stage_twiddle_index = twiddle_index + twiddle_i;
+      assume stage_twiddle_index < NPoints/2;
+      out{stage_twiddle_index*2..stage_twiddle_index*2+2} = twiddle{twiddle_index*2..twiddle_index*2+2};
+    }
+  }
 }
 
 /// Performs an `NPoints` point stride permutation.
-comp StridePermutation[NPoints, W]<'G: 1>(
+comp StridePermutation[NStages, W]<'G: 1>(
   in[NPoints*2]: ['G, 'G+1] W
 ) -> (
   out[NPoints*2]: ['G, 'G+1] W
-) where
-  NPoints > 0,
+) with {
+  let NPoints = pow2(NStages);
+} where
+  NStages > 0,
   W > 0
 {
   // Described on page 33 of https://link.springer.com/chapter/10.1007/978-1-4757-2767-8_2.
+  assume NPoints/2 == pow2(NStages-1);
 
-  for i in 0..NPoints {
-    out{i} = in{i*2};
-    out{i+NPoints} = in{i*2+1};
+  for i in 0..NPoints/2 {
+    out{i*2..i*2+2} = in{i*4..i*4+2};
+    out{i*2+NPoints..i*2+NPoints+2} = in{i*4+2..i*4+4};
   }
 }
