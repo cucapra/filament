@@ -56,6 +56,7 @@ comp CombPeaseFFT[NStages, W, E, ?M=W-E-1]<'G: 1>(
     for butterfly_i in 0..pow2(NStages-1) {
       butterfly := new Butterfly[W, E, M]<'G>(
         data{data_offset+butterfly_i*2..data_offset+butterfly_i*2+2},
+        data{data_offset+butterfly_i*2+2..data_offset+butterfly_i*2+4},
         stage_twiddle{butterfly_i*2..butterfly_i*2+2}
       );
 
@@ -66,24 +67,10 @@ comp CombPeaseFFT[NStages, W, E, ?M=W-E-1]<'G: 1>(
     // perform the stride permutation
     stride_perm := new StridePermutation[NPoints, W]<'G>(tmp_data);
     // set the next stage's data
-    data_offset{data_offset+NPoints*2..data_offset+NPoints*4} = stride_perm.out{0..NPoints*2};
+    data{data_offset+NPoints*2..data_offset+NPoints*4} = stride_perm.out{0..NPoints*2};
   }
 
   out = data{NPoints*NStages*2..NPoints*NStages*2+NPoints*2};
-}
-
-// Creates the twiddle factors for an `NPoints` point FFT given a larger fft.
-comp TwiddleStage[NStages, W]<'G: 1>(
-  twiddle[NPoints]: ['G, 'G+1] W
-) -> (
-  out[NPoints*2]: ['G, 'G+1] W
-) with {
-  let NPoints = pow2(NStages);
-} where
-  NStages > 0,
-  N < NStages
-{
-
 }
 
 /// Performs an `NPoints` point stride permutation.
