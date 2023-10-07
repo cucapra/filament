@@ -1,5 +1,5 @@
 import "fp-mul.fil";
-import "primitives/float.fil";
+import "primitives/math/float.fil";
 
 extern "fp-mult-nopipe.sv" {
   comp FP_Mult_NoPipe<'G: 1>(

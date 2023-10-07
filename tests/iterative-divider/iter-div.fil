@@ -1,5 +1,5 @@
 import "primitives/core.fil";
-import "primitives/math.fil";
+import "primitives/math/math.fil";
 
 comp CombNoShareIterDiv[W]<'G: 1>(
   go: interface['G],

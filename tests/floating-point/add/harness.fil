@@ -1,5 +1,5 @@
 import "fp-add.fil";
-import "primitives/float.fil";
+import "primitives/math/float.fil";
 
 extern "fp-add.sv" {
   comp IEEE_SP_FP_ADDER<'G: 1>(

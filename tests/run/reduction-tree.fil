@@ -1,4 +1,4 @@
-import "primitives/math.fil";
+import "primitives/math/math.fil";
 
 comp main<'G:1>(
      in0: ['G, 'G+1] 32,

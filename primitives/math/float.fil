@@ -1,8 +1,8 @@
 /**
  * Defines combinational floating point math operations
  */
-import "./comb.fil";
-import "./signed.fil";
+import "primitives/comb.fil";
+import "primitives/signed.fil";
 
 /// Extracts the sign bit, exponent bits, and mantissa from a floating point number.
 /// Asserts that WIDTH = EXPONENT+MANTISSA+1
