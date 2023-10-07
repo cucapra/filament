@@ -77,25 +77,3 @@ comp ComplexSub[W, E, ?M=W-E-1]<'G: 1>(
   add := new ComplexAdd[W, E, M]<'G>(left{0..2}, neg.out{0..2});
   out{0..2} = add.out{0..2};
 }
-
-// Combinational butterfly module.
-comp Butterfly[W, E, ?M=W-E-1]<'G: 1>(
-  in0[2]: ['G, 'G+1] W, // real and imaginary parts of input
-  in1[2]: ['G, 'G+1] W,
-  twiddle[2]: ['G, 'G+1] W // twiddle factor
-) -> (
-  out0[2]: ['G, 'G+1] W,
-  out1[2]: ['G, 'G+1] W
-) where
-    W == E + M + 1,
-    E > 1,
-    M > 1
-{
-  t1 := new ComplexMult[W, E, M]<'G>(in1{0..2}, twiddle{0..2});
-  O0 := new ComplexAdd[W, E, M]<'G>(in0{0..2}, t1.out{0..2});
-  out0{0..2} = O0.out{0..2};
-  
-  // multiply by twiddle
-  O1 := new ComplexSub[W, E, M]<'G>(in0{0..2}, t1.out{0..2});
-  out1{0..2} = O1.out{0..2};
-}
