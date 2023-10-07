@@ -37,9 +37,6 @@ comp CombPeaseFFT[NStages]<'G: 1>(
 
     // perform the butterflies
     for butterfly_i in 0..pow2(NStages-1) {
-      // needed to speed up the solver
-      assume butterfly_i < NPoints/2;
-      
       butterfly := new Butterfly[W, E, M]<'G>(
         data{data_offset+butterfly_i*4..data_offset+butterfly_i*4+2},
         data{data_offset+butterfly_i*4+2..data_offset+butterfly_i*4+4},
