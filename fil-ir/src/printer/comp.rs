@@ -246,6 +246,32 @@ impl<'a, 'b> Printer<'a, 'b> {
         {
             print_port(&pos, f)?;
         }
+
+        let p_asserts = self.comp.get_param_asserts();
+        let e_asserts = self.comp.get_event_asserts();
+
+        if !p_asserts.is_empty() || !e_asserts.is_empty() {
+            writeln!(f, ") where ")?;
+            for idx in p_asserts {
+                writeln!(
+                    f,
+                    "{:indent$}{};",
+                    "",
+                    self.comp.display(*idx),
+                    indent = indent + 2
+                )?;
+            }
+            for idx in e_asserts {
+                writeln!(
+                    f,
+                    "{:indent$}{};",
+                    "",
+                    self.comp.display(*idx),
+                    indent = indent + 2
+                )?;
+            }
+        }
+
         writeln!(f, ") {{")
     }
 

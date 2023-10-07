@@ -57,12 +57,32 @@ impl Visitor for TypeCheck {
         "type-check"
     }
 
+    fn start(&mut self, data: &mut VisitorData) -> Action {
+        // Add all the signature assumptions to the body
+        let comp = &mut data.comp;
+        let empty_reason = comp.add(ir::Info::empty());
+        let iter = comp
+            .get_param_asserts()
+            .iter()
+            .chain(comp.get_event_asserts())
+            .cloned()
+            .collect_vec();
+
+        // Note(rachit): what ugly terribleness
+        let facts = iter
+            .into_iter()
+            .flat_map(|p| comp.assume(p, empty_reason))
+            .collect_vec();
+
+        Action::AddBefore(facts)
+    }
+
     fn exists(&mut self, e: &mut ir::Exists, data: &mut VisitorData) -> Action {
         let ctx = &mut data.comp;
         // Ensure that the parameter is an existentially quantified parameter.
         // XXX(rachit): This should really be a check in the validate pass but
         // currently don't run that pass.
-        let Some(assumes) = ctx.get_sig_assumes(e.param) else {
+        let Some(assumes) = ctx.get_exist_assumes(e.param) else {
             return Action::Continue;
         };
         let param = ctx.get(e.param);

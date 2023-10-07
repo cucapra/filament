@@ -44,16 +44,21 @@ pub struct Component {
     /// Invocations defined by the component
     invocations: IndexStore<Invoke>,
 
+    #[ctx(Info: Get, Add)]
+    /// Information tracked by the component
+    info: IndexStore<Info>,
+
     // ============== Component structure ===============
     /// Assumptions for existential parameters.
-    pub sig_assumes: Vec<(ParamIdx, Vec<PropIdx>)>,
+    exist_assumes: Vec<(ParamIdx, Vec<PropIdx>)>,
+    /// Assertions on universal parameters
+    param_asserts: Box<[PropIdx]>,
+    /// Assertions on events
+    event_asserts: Box<[PropIdx]>,
 
     /// Commands in the component
     pub cmds: Vec<Command>,
 
-    #[ctx(Info: Get, Add)]
-    /// Information tracked by the component
-    info: IndexStore<Info>,
     /// Is this an external component
     pub is_ext: bool,
     /// Externally facing interface information, used to preserve interface in compilation.
@@ -117,6 +122,44 @@ impl Component {
         }
     }
 
+    /// Add assertions over parameters
+    pub fn add_param_assert(
+        &mut self,
+        prop: impl IntoIterator<Item = PropIdx>,
+    ) {
+        self.param_asserts = self
+            .param_asserts
+            .iter()
+            .cloned()
+            .chain(prop)
+            .collect_vec()
+            .into_boxed_slice();
+    }
+
+    /// Get the assertions over parameters
+    pub fn get_param_asserts(&self) -> &[PropIdx] {
+        &self.param_asserts
+    }
+
+    /// Add assertions over events
+    pub fn add_event_assert(
+        &mut self,
+        prop: impl IntoIterator<Item = PropIdx>,
+    ) {
+        self.event_asserts = self
+            .event_asserts
+            .iter()
+            .cloned()
+            .chain(prop)
+            .collect_vec()
+            .into_boxed_slice();
+    }
+
+    /// Get the assertions over events
+    pub fn get_event_asserts(&self) -> &[PropIdx] {
+        &self.event_asserts
+    }
+
     /// Panic with an error message and display the current state of the Component. Prefer this over `panic!` when possible.
     pub fn internal_error<S: ToString>(&self, msg: S) -> ! {
         let comp = super::Printer::comp_str(self);
@@ -124,23 +167,23 @@ impl Component {
     }
 
     /// Add assumptions for a parameter
-    pub fn add_sig_assumes(
+    pub fn add_exist_assumes(
         &mut self,
         param: ParamIdx,
         assumes: impl IntoIterator<Item = PropIdx>,
     ) {
-        let existing = self.sig_assumes.iter_mut().find(|(p, _)| *p == param);
+        let existing = self.exist_assumes.iter_mut().find(|(p, _)| *p == param);
         if let Some(existing) = existing {
             existing.1.extend(assumes);
         } else {
-            self.sig_assumes
+            self.exist_assumes
                 .push((param, assumes.into_iter().collect()));
         }
     }
 
     /// Get the assumptions associated with a parameter
-    pub fn get_sig_assumes(&self, param: ParamIdx) -> Option<Vec<PropIdx>> {
-        self.sig_assumes
+    pub fn get_exist_assumes(&self, param: ParamIdx) -> Option<Vec<PropIdx>> {
+        self.exist_assumes
             .iter()
             .find(|(p, _)| *p == param)
             .map(|(_, facts)| facts.clone())

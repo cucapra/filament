@@ -536,11 +536,6 @@ impl<'prog> BuildCtx<'prog> {
     fn sig(&mut self, idx: ir::CompIdx, sig: &ast::Signature) -> BuildRes<Sig> {
         let mut conv_sig = Sig::new(idx, sig);
 
-        // Constraints defined in the signature of the component
-        let mut sig_cons: Vec<ir::Command> = Vec::with_capacity(
-            sig.param_constraints.len() + sig.event_constraints.len(),
-        );
-
         for pb in &sig.params {
             self.param(pb.param.clone(), ir::ParamOwner::Sig);
         }
@@ -564,7 +559,7 @@ impl<'prog> BuildCtx<'prog> {
                             .iter()
                             .map(|pc| self.expr_cons(pc.inner().clone()))
                             .collect::<BuildRes<Vec<_>>>()?;
-                        self.comp().add_sig_assumes(p_idx, assumes);
+                        self.comp().add_exist_assumes(p_idx, assumes);
                         Ok((sb.inner().clone(), Some(p_idx)))
                     }
                 }
@@ -606,72 +601,58 @@ impl<'prog> BuildCtx<'prog> {
         for (name, width) in &sig.unannotated_ports {
             self.comp().unannotated_ports.push((*name, *width));
         }
+
         // Constraints defined by the signature
         for ec in &sig.event_constraints {
-            let info = self.comp().add(ir::Info::assert(
-                ir::info::Reason::misc("Signature assumption", ec.pos()),
-            ));
             let prop = self.event_cons(ec.inner().clone())?;
-            sig_cons.extend(self.comp().assume(prop, info));
+            self.comp().add_event_assert([prop]);
         }
         for pc in &sig.param_constraints {
-            let info = self.comp().add(ir::Info::assert(
-                ir::info::Reason::misc("Signature assumption", pc.pos()),
-            ));
             let prop = self.expr_cons(pc.inner().clone())?;
-            sig_cons.extend(self.comp().assume(prop, info));
+            self.comp().add_param_assert([prop]);
         }
-
-        self.comp().cmds.extend(sig_cons);
 
         Ok(conv_sig)
     }
 
     fn instance(&mut self, inst: ast::Instance) -> BuildRes<Vec<ir::Command>> {
-        let comp_loc = inst.component.pos();
         // Add the facts defined by the instance as assertions in the
         // component.
-        let idx = self.get_inst(&inst.name)?;
-        let (binding, component) = self.inst_to_sig.get(idx).clone();
-        let sig = self.get_sig(&component)?;
-        let asserts = sig
-            .param_cons
-            .clone()
-            .into_iter()
-            .map(|f| {
-                let reason = self.comp().add(
-                    ir::info::Reason::param_cons(comp_loc, f.pos()).into(),
-                );
-                let p = f.take().resolve_expr(&binding);
-                // This is a checked fact because the calling component needs to
-                // honor it.
-                self.expr_cons(p).map(|p| self.comp().assert(p, reason))
-            })
-            .collect::<BuildRes<Vec<_>>>()?
-            .into_iter()
-            .flatten();
+        // let asserts = sig
+        //     .param_cons
+        //     .clone()
+        //     .into_iter()
+        //     .map(|f| {
+        //         let reason = self.comp().add(
+        //             ir::info::Reason::param_cons(comp_loc, f.pos()).into(),
+        //         );
+        //         let p = f.take().resolve_expr(&binding);
+        //         // This is a checked fact because the calling component needs to
+        //         // honor it.
+        //         self.expr_cons(p).map(|p| self.comp().assert(p, reason))
+        //     })
+        //     .collect::<BuildRes<Vec<_>>>()?
+        //     .into_iter()
+        //     .flatten();
 
-        let assumes = sig
-            .exist_cons
-            .clone()
-            .into_iter()
-            .map(|f| {
-                let reason = self.comp().add(
-                    ir::info::Reason::exist_cons(comp_loc, Some(f.pos()))
-                        .into(),
-                );
-                let p = f.take().resolve_expr(&binding);
-                // This is an assumption because the called component guarantees guarantees it.
-                self.expr_cons(p).map(|p| self.comp().assume(p, reason))
-            })
-            .collect::<BuildRes<Vec<_>>>()?
-            .into_iter()
-            .flatten();
+        // let assumes = sig
+        //     .exist_cons
+        //     .clone()
+        //     .into_iter()
+        //     .map(|f| {
+        //         let reason = self.comp().add(
+        //             ir::info::Reason::exist_cons(comp_loc, Some(f.pos()))
+        //                 .into(),
+        //         );
+        //         let p = f.take().resolve_expr(&binding);
+        //         // This is an assumption because the called component guarantees guarantees it.
+        //         self.expr_cons(p).map(|p| self.comp().assume(p, reason))
+        //     })
+        //     .collect::<BuildRes<Vec<_>>>()?
+        //     .into_iter()
+        //     .flatten();
 
-        Ok(iter::once(ir::Command::from(idx))
-            .chain(asserts)
-            .chain(assumes)
-            .collect_vec())
+        Ok(vec![(ir::Command::from(self.get_inst(&inst.name)?))])
     }
 
     /// This function is called during the second pass of the conversion and does the following:
@@ -718,23 +699,23 @@ impl<'prog> BuildCtx<'prog> {
             .collect::<BuildRes<Vec<_>>>()?;
 
         // Constraints on the events from the signature
-        let cons: Vec<ir::Command> = sig
-            .event_cons
-            .clone()
-            .into_iter()
-            .map(|ec| {
-                let reason = self.comp().add(
-                    ir::info::Reason::event_cons(instance.pos(), ec.pos())
-                        .into(),
-                );
-                let ec = ec.take().resolve_event(&event_binding);
-                self.event_cons(ec)
-                    .map(|prop| self.comp().assert(prop, reason))
-            })
-            .collect::<BuildRes<Vec<_>>>()?
-            .into_iter()
-            .flatten()
-            .collect();
+        // let cons: Vec<ir::Command> = sig
+        //     .event_cons
+        //     .clone()
+        //     .into_iter()
+        //     .map(|ec| {
+        //         let reason = self.comp().add(
+        //             ir::info::Reason::event_cons(instance.pos(), ec.pos())
+        //                 .into(),
+        //         );
+        //         let ec = ec.take().resolve_event(&event_binding);
+        //         self.event_cons(ec)
+        //             .map(|prop| self.comp().assert(prop, reason))
+        //     })
+        //     .collect::<BuildRes<Vec<_>>>()?
+        //     .into_iter()
+        //     .flatten()
+        //     .collect();
 
         let mut connects = Vec::with_capacity(sig.inputs.len());
 
@@ -814,7 +795,6 @@ impl<'prog> BuildCtx<'prog> {
 
         Ok(std::iter::once(ir::Command::from(inv))
             .chain(connects)
-            .chain(cons)
             .collect_vec())
     }
 
@@ -957,12 +937,13 @@ impl<'prog> BuildCtx<'prog> {
             .into(),
         );
 
+        let ctx = self.comp();
         for (idx, len) in ports {
-            let idx = idx.expr(self.comp());
-            let start = idx.gte(self.comp().num(0), self.comp());
-            let end = idx.lt(len, self.comp());
-            let in_range = start.and(end, self.comp());
-            cmds.extend(self.comp().assume(in_range, reason))
+            let idx = idx.expr(ctx);
+            let start = idx.gte(ctx.num(0), ctx);
+            let end = idx.lt(len, ctx);
+            let in_range = start.and(end, ctx);
+            cmds.extend(ctx.assume(in_range, reason))
         }
         cmds
     }
