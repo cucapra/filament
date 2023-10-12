@@ -83,7 +83,7 @@ comp StridePermutation[NStages, W]<'G: 1>(
 }
 
 // Combinational butterfly module.
-comp Butterfly[W, E, ?M=W-E-1]<'G: 1>(
+comp CombButterfly[W, E, ?M=W-E-1]<'G: 1>(
   in0[2]: ['G, 'G+1] W, // real and imaginary parts of input
   in1[2]: ['G, 'G+1] W,
   twiddle[2]: ['G, 'G+1] W // twiddle factor

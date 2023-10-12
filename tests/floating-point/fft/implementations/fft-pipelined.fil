@@ -1,0 +1,149 @@
+import "primitives/signed.fil";
+import "helpers.fil";
+import "primitives/state.fil";
+import "primitives/reshape.fil";
+
+/// Implements a combinational PEASE fft dataflow.
+/// Uses `N` butterflies
+comp CombPeaseFFT[NStages, N, W, E, ?M=W-E-1]<'G: L>(
+  go: interface['G],
+  in[NPoints*2]: ['G, 'G+1] W
+) -> (
+  out[NPoints*2]: ['G+L, 'G+L+1] W
+) with {
+  let NPoints = pow2(NStages);
+  exists L where L > 0;
+} where
+  // number of butterflies (N) must divide the total number of butterflies per stage (NPoints/2)
+  NPoints % (2*N) == 0,
+  N > 0,
+  NStages > 0,
+  W == E + M + 1,
+  E > 1,
+  M > 1
+{
+  assume pow2(NStages-1) == NPoints/2;
+  assume pow2(NStages-2) == NPoints/4;
+
+  twiddle := new TwiddleFactor[NPoints]<'G>();
+  bitrev := new BitRev[NStages, W]<'G>(in{0..NPoints*2});
+
+  // Creates a bundle that has NStages blocks of data,
+  // where each block has the right timings.
+  // would be nicer with 2d bundles...
+  bundle data[(NStages+1) * NPoints * 2]: for<i> ['G+i/(NPoints*2) * stage_latency, 'G + i/(NPoints*2) * stage_latency + 1] W;
+
+  data{0..NPoints*2} = bitrev.out{0..NPoints*2};
+
+  // butterfly components
+  B := new Butterflies[N, W, E, M];
+  // number of times we have to reuse the butterflies per stage
+  let reuses = NPoints / (2*N);
+  let stage_latency = B::L * reuses;
+
+  for stage in 0..NStages {
+    // which chunk of data we are populating
+    let stage_chunk = stage * NPoints * 2; 
+    // what time this chunk occurs at
+    let stage_time = stage * stage_latency;
+    for i in 0..reuses {
+      assume i*4*N < NPoints*2;
+      let start = stage_chunk + i*4*N;
+      let end = stage_chunk + (i+1)*4*N;
+      assume start / (NPoints*2) == stage;
+      assume end / (NPoints*2) == stage;
+      b := B<'G + stage_time + i * B::L>(data{start..end}, twiddle.out{i*2*N..(i+1)*2*N});
+
+      // concat into one wire for the register
+      cb := new ConcatBundle[W, 4*N]<'G + stage_time + (i + 1) * B::L>(b.out{0..4*N});
+      // register to hold values till output time
+      // TODO (edmund): This register can be reused per stage
+      reg := new Register[W*4*N]<'G + stage_time + (i + 1) * B::L, 'G + stage_time + stage_latency + 1>(cb.out);
+      // split back into bundle
+      sp := new SplitWire[W, 4*N]<'G + stage_time + stage_latency>(reg.out);
+
+      // Write to the next stage
+      data{start + NPoints*2..end + NPoints*2} = sp.out{0..4*N};
+    }
+  }
+
+  out{0..NPoints*2} = data{NPoints*NStages*2..NPoints*NStages*2+NPoints*2};
+
+  exists L = stage_latency * NStages;
+}
+
+/// Computes N butterflies at once.
+comp Butterflies[N, W, E, ?M=W-E-1]<'G: L>(
+  in[4*N]: ['G, 'G+1] W, // Each butterfly takes a chunk of 4 inputs (2 complex numbers)
+  twiddle[2*N]: ['G, 'G+1] W // twiddle factor for each butterfly
+) -> (
+  out[4*N]: ['G+L, 'G+L+1] W
+) with {
+  exists L where L > 0;
+} where
+    N > 0,
+    W == E + M + 1,
+    E > 1,
+    M > 1
+{
+  if N == 1 {
+    B := new Butterfly[W, E, M];
+    b := B<'G>(in{0..2}, in{2..4}, twiddle{0..2});
+    out{0..2} = b.out0{0..2};
+    out{2..4} = b.out1{0..2};
+    exists L = B::L;
+  } else {
+    BB := new Butterfly[W, E, M];
+    // First butterfly
+    bb := BB<'G>(in{0..2}, in{2..4}, twiddle{0..2});
+    // Recurse
+    BS := new Butterflies[N-1, W, E, M];
+    butterflies := BS<'G>(in{4..4*N}, twiddle{2..2*N});
+
+    assume BB::L == BS::L;
+    exists L = BB::L;
+
+    out{0..2} = bb.out0{0..2};
+    out{2..4} = bb.out1{0..2};
+    out{4..4*N} = butterflies.out{0..4*N-4};
+  }
+}
+
+/// Butterfly module using existential parameters.
+comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
+  in0[2]: ['G, 'G+1] W, // real and imaginary parts of input
+  in1[2]: ['G, 'G+1] W,
+  twiddle[2]: ['G, 'G+1] W // twiddle factor
+) -> (
+  out0[2]: ['G+L, 'G+L+1] W,
+  out1[2]: ['G+L, 'G+L+1] W
+) with {
+  exists L where L > 0;
+} where
+    W == E + M + 1,
+    E > 1,
+    M > 1
+{
+  // switches between the type of butterfly unit
+  let T = 0;
+  if T == 0 {
+    // Fully combinational butterfly module
+    t1 := new ComplexMult[W, E, M]<'G>(in1{0..2}, twiddle{0..2});
+    O0 := new ComplexAdd[W, E, M]<'G>(in0{0..2}, t1.out{0..2});
+    
+    // multiply by twiddle
+    O1 := new ComplexSub[W, E, M]<'G>(in0{0..2}, t1.out{0..2});
+
+    // registers
+    d00 := new Delay[W]<'G>(O0.out{0});
+    d01 := new Delay[W]<'G>(O0.out{1});
+    d10 := new Delay[W]<'G>(O1.out{0});
+    d11 := new Delay[W]<'G>(O1.out{1});
+    out0{0} = d00.out;
+    out0{1} = d01.out;
+    out1{3} = d10.out;
+    out1{4} = d11.out;
+
+    exists L = 1;  
+  }
+}

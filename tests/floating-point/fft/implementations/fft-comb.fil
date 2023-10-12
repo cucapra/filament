@@ -43,7 +43,7 @@ comp _FFT_Inner[NStages, W, E, ?M=W-E-1]<'G: 1>(
 {
   if NStages == 1 {
     // A single butterfly
-    butterfly := new Butterfly[W, E, M]<'G>(in{0..2}, in{2..4}, twiddle{0..2});
+    butterfly := new CombButterfly[W, E, M]<'G>(in{0..2}, in{2..4}, twiddle{0..2});
     out{0..2} = butterfly.out0{0..2};
     out{2..4} = butterfly.out1{0..2};
   } else {
@@ -63,7 +63,7 @@ comp _FFT_Inner[NStages, W, E, ?M=W-E-1]<'G: 1>(
 
     // Combine the two FFTs in the last stage
     for i in 0..pow2(NStages-1) {
-      butterfly := new Butterfly[W, E, M]<'G>(fft1.out{i*2..i*2+2}, fft2.out{i*2..i*2+2}, twiddle{2*i..2*i+2});
+      butterfly := new CombButterfly[W, E, M]<'G>(fft1.out{i*2..i*2+2}, fft2.out{i*2..i*2+2}, twiddle{2*i..2*i+2});
       out{i*2..i*2+2} = butterfly.out0{0..2};
       out{i*2+NPoints..i*2+NPoints+2} = butterfly.out1{0..2};
     }

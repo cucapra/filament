@@ -82,6 +82,7 @@ comp main<'G: 1>(
   spiral: ['G+65, 'G+66] 32*32, // output from spiral
   fil_comb: ['G, 'G+1] 32*32, // output from combinational fft
   fil_pease_comb: ['G, 'G+1] 32*32, // output from combinational pease fft
+  fil_pipelined: ['G, 'G+1] 32*32, // output from pipelined pease fft
 ) 
 {
   // split input into bundle
@@ -98,6 +99,12 @@ comp main<'G: 1>(
 
   fpcw := new ConcatBundle[32, 32]<'G>(fpc.out{0..32});
   fil_pease_comb = fpcw.out;
+
+  // hook up pipelined fft
+  fp := new CombPeaseFFT[4]<'G>(split.out{0..32});
+
+  fpw := new ConcatBundle[32, 32]<'G>(fp.out{0..32});
+  fil_pease_comb = fpw.out;
 
   // hook up spiral dft
   spdft := new dft_top<'G>(

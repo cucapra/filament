@@ -37,7 +37,7 @@ comp CombPeaseFFT[NStages]<'G: 1>(
 
     // perform the butterflies
     for butterfly_i in 0..pow2(NStages-1) {
-      butterfly := new Butterfly[W, E, M]<'G>(
+      butterfly := new CombButterfly[W, E, M]<'G>(
         data{data_offset+butterfly_i*4..data_offset+butterfly_i*4+2},
         data{data_offset+butterfly_i*4+2..data_offset+butterfly_i*4+4},
         stage_twiddle.out{butterfly_i*2..butterfly_i*2+2}
