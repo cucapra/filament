@@ -244,7 +244,7 @@ impl Discharge {
     }
 
     /// Check whether the proposition is valid.
-    /// Returns a set of assignments if the proposition is not valid.
+    /// Panics with a set of assignments if the proposition is not valid.
     fn check_valid(&mut self, fact: ir::Fact, ctx: &ir::Component) {
         let prop = fact.prop;
         #[allow(clippy::map_entry)]
@@ -506,16 +506,24 @@ impl Visitor for Discharge {
             return;
         }
 
-        // Attempt to prove all facts
-        let total_prop = self
-            .sol
-            .and_many(self.to_prove.iter().map(|f| self.prop_map[f.prop]));
-        let total_prop = self.sol.not(total_prop);
-        self.sol.assert(total_prop).unwrap();
+        if !data.opts.discharge_separate {
+            // Attempt to prove all facts
+            let total_prop = self
+                .sol
+                .and_many(self.to_prove.iter().map(|f| self.prop_map[f.prop]));
+            let total_prop = self.sol.not(total_prop);
+            self.sol.assert(total_prop).unwrap();
 
-        // If there is at least one failing prop, roll back to individually checking the props for error reporting
-        if matches!(self.sol.check().unwrap(), smt::Response::Sat) {
-            self.failing_props(&data.comp);
+            // If there is at least one failing prop, roll back to individually checking the props for error reporting
+            if matches!(self.sol.check().unwrap(), smt::Response::Sat) {
+                self.failing_props(&data.comp);
+            }
+        } else {
+            // Check each proposition individually
+            let to_prove = std::mem::take(&mut self.to_prove);
+            for fact in to_prove {
+                self.check_valid(fact, &data.comp);
+            }
         }
 
         // Report all the errors
