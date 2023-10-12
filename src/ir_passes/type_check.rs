@@ -1,6 +1,7 @@
 use crate::ir_visitor::{Action, Visitor, VisitorData};
 use fil_ir::{self as ir, AddCtx, Ctx};
 use fil_utils::GPosIdx;
+use ir::Foldable;
 use itertools::Itertools;
 
 #[derive(Default)]
@@ -75,6 +76,30 @@ impl Visitor for TypeCheck {
             .collect_vec();
 
         Action::AddBefore(facts)
+    }
+
+    fn instance(
+        &mut self,
+        inst: ir::InstIdx,
+        data: &mut VisitorData,
+    ) -> Action {
+        let ctx = &*data.mut_ctx;
+        let inst = data.comp.get(inst);
+        let inst_comp = ctx.get(inst.comp);
+        // Binding for the instance
+        let bind = ir::Bind::new(
+            inst_comp
+                .param_args()
+                .iter()
+                .cloned()
+                .zip(inst.args.iter().cloned()),
+        );
+        let asserts = inst_comp.get_param_asserts().iter().map(|prop| {
+            // prop.fold_with(&mut data.comp, |p| bind.get(&p).cloned())
+            todo!()
+        });
+
+        Action::AddBefore(todo!());
     }
 
     fn exists(&mut self, e: &mut ir::Exists, data: &mut VisitorData) -> Action {

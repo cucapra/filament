@@ -48,17 +48,18 @@ pub struct Component {
     /// Information tracked by the component
     info: IndexStore<Info>,
 
-    // ============== Component structure ===============
+    // ============== Component signature ===============
+    /// The input parameters to the component
+    pub(crate) param_args: Box<[ParamIdx]>,
+    /// The input events to the component
+    pub(crate) event_args: Box<[EventIdx]>,
+
     /// Assumptions for existential parameters.
     exist_assumes: Vec<(ParamIdx, Vec<PropIdx>)>,
     /// Assertions on universal parameters
     param_asserts: Box<[PropIdx]>,
     /// Assertions on events
     event_asserts: Box<[PropIdx]>,
-
-    /// Commands in the component
-    pub cmds: Vec<Command>,
-
     /// Is this an external component
     pub is_ext: bool,
     /// Externally facing interface information, used to preserve interface in compilation.
@@ -66,6 +67,10 @@ pub struct Component {
     pub src_info: Option<InterfaceSrc>,
     /// unannotated ports associated with this component
     pub unannotated_ports: Box<Vec<(ast::Id, u64)>>,
+
+    // ============== Component structure ===============
+    /// Commands in the component
+    pub cmds: Vec<Command>,
 }
 
 impl Component {
@@ -122,6 +127,16 @@ impl Component {
         }
     }
 
+    /// Return the parameters bound in the signature
+    pub fn param_args(&self) -> &[ParamIdx] {
+        &self.param_args
+    }
+
+    /// Return the events bound in the signature
+    pub fn event_args(&self) -> &[EventIdx] {
+        &self.event_args
+    }
+
     /// Add assertions over parameters
     pub fn add_param_assert(
         &mut self,
@@ -166,7 +181,7 @@ impl Component {
         panic!("{comp}\n{}", msg.to_string())
     }
 
-    /// Add assumptions for a parameter
+    /// Add assumptions for an existential parameter
     pub fn add_exist_assumes(
         &mut self,
         param: ParamIdx,

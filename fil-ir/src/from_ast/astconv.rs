@@ -536,9 +536,13 @@ impl<'prog> BuildCtx<'prog> {
     fn sig(&mut self, idx: ir::CompIdx, sig: &ast::Signature) -> BuildRes<Sig> {
         let mut conv_sig = Sig::new(idx, sig);
 
-        for pb in &sig.params {
-            self.param(pb.param.clone(), ir::ParamOwner::Sig);
-        }
+        // Add the parameters for the component
+        self.comp().param_args = sig
+            .params
+            .iter()
+            .map(|pb| self.param(pb.param.clone(), ir::ParamOwner::Sig))
+            .collect_vec()
+            .into_boxed_slice();
 
         // Binding from let-defined parameters in the signature to their values
         conv_sig.sig_binding = sig
@@ -573,12 +577,17 @@ impl<'prog> BuildCtx<'prog> {
             .map(|ast::InterfaceDef { name, event }| (event, name.split()))
             .collect();
 
-        // Declare the events first
-        for event in &sig.events {
-            // can remove here as each interface signal should only be used once
-            let interface = interface_signals.remove(event.event.inner());
-            self.declare_event(event.inner(), interface);
-        }
+        // Declare the events first without defining their delays
+        self.comp().event_args = sig
+            .events
+            .iter()
+            .map(|event| {
+                // can remove here as each interface signal should only be used once
+                let interface = interface_signals.remove(event.event.inner());
+                self.declare_event(event.inner(), interface)
+            })
+            .collect_vec()
+            .into_boxed_slice();
 
         // Then define their delays correctly
         for event in &sig.events {
