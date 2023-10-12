@@ -1,4 +1,4 @@
-import "frisc/src/extras/extras.fil";
+import "./extras/extras.fil";
 import "primitives/core.fil";
 
 comp PC<'G:1> (

@@ -1,4 +1,4 @@
-import "frisc/src/cpu.fil";
+import "../src/cpu.fil";
 
 comp main<'G:1> (
   clk:1,

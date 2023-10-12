@@ -57,7 +57,6 @@ dir=$(dirname {}) && \
 """
 
 # ============ Larger designs in Filament =====================
-
 # Compile directories within the tests/compile directory. All *.fil files in the
 # use the same input and must produce the same output
 [[tests]]
@@ -74,17 +73,17 @@ fud e -s cocotb.data "$dir/data.json" \
 # Aetherling evaluation
 [[tests]]
 name = "aetherling parameteric"
-paths = ["aetherling/**/shim.fil"]
+paths = ["apps/aetherling/**/shim.fil"]
 cmd = """
-fud e -s cocotb.data "aetherling/data.json" --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q |\
+fud e -s cocotb.data "apps/aetherling/data.json" --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q |\
       jq '[ .O_10, .O_11, .O_12, .O_13, .O_14, .O_15 ] | map(.["0"]) | flatten'
 """
-expect_dir = "aetherling/"
+expect_dir = "apps/aetherling/"
 
 # frisc
 [[tests]]
 name = "frisc tests"
-paths = ["frisc/test/*.fil"]
+paths = ["apps/frisc/test/*.fil"]
 cmd = """
 fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q
 """
