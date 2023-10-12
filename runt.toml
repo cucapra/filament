@@ -75,7 +75,7 @@ fud e -s cocotb.data "$dir/data.json" \
 name = "aetherling parameteric"
 paths = ["apps/aetherling/**/shim.fil"]
 cmd = """
-fud e -s cocotb.data "apps/aetherling/data.json" --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q |\
+fud e -s cocotb.data "apps/aetherling/data.json" --to cocotb-out {} -q |\
       jq '[ .O_10, .O_11, .O_12, .O_13, .O_14, .O_15 ] | map(.["0"]) | flatten'
 """
 expect_dir = "apps/aetherling/"
@@ -85,7 +85,7 @@ expect_dir = "apps/aetherling/"
 name = "frisc tests"
 paths = ["apps/frisc/test/*.fil"]
 cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q
+fud e -s cocotb.data {}.data --to cocotb-out {} -q
 """
 
 # ============== Examples in the documentation ============
@@ -101,5 +101,5 @@ name = "run examples"
 paths = ["examples/tut-seq.fil", "examples/tut-pipe.fil"]
 expect_dir = "examples/run/"
 cmd = """
-fud e -s cocotb.data examples/data.json --to cocotb-out {} -s calyx.flags ' -d canonicalize' -q
+fud e -s cocotb.data examples/data.json --to cocotb-out {} -q
 """
