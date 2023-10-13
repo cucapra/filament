@@ -1,0 +1,24 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
+{
+	"name": "Filament Development Environment",
+	// Defaults to building the container locally
+	"build": {
+		"dockerfile": "../Dockerfile"
+	},
+	"runArgs": [ "--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined" ],
+	"workspaceFolder": "/home/filament",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/home/filament,type=bind,consistency=delegated",
+
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"files.watcherExclude": {
+			"**/target/**": true
+		}
+	},
+
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"matklad.rust-analyzer"
+	]
+}
