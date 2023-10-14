@@ -1,7 +1,7 @@
-import "frisc/src/alu.fil";
-import "frisc/src/decode.fil";
-import "frisc/src/regfile.fil";
-import "frisc/src/extras/extras.fil";
+import "./alu.fil";
+import "./decode.fil";
+import "./regfile.fil";
+import "./extras/extras.fil";
 
 comp CPU<'G:1> (
   clk:1,

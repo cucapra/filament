@@ -1,5 +1,5 @@
 import "primitives/core.fil";
-import "frisc/src/extras/extras.fil";
+import "./extras/extras.fil";
 
 comp ALU<'G:1> (
    inA: ['G,'G+1] 32,

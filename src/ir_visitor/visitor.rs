@@ -37,6 +37,8 @@ pub struct VisitorData<'comp> {
     pub comp: ir::Component,
     /// The idx of the current component.
     pub idx: ir::CompIdx,
+    /// The command line options for this pass
+    pub opts: &'comp cmdline::Opts,
     /// mutable context reference, held to prevent another
     /// function from mutating the context as it is currently invalid.
     pub mut_ctx: &'comp mut ir::Context,
@@ -49,12 +51,21 @@ impl<'comp> VisitorData<'comp> {
     }
 }
 
-impl<'comp> From<(ir::CompIdx, &'comp mut ir::Context)> for VisitorData<'comp> {
-    fn from((idx, ctx): (ir::CompIdx, &'comp mut ir::Context)) -> Self {
+impl<'comp> From<(ir::CompIdx, &'comp cmdline::Opts, &'comp mut ir::Context)>
+    for VisitorData<'comp>
+{
+    fn from(
+        (idx, opts, ctx): (
+            ir::CompIdx,
+            &'comp cmdline::Opts,
+            &'comp mut ir::Context,
+        ),
+    ) -> Self {
         let comp = std::mem::take(ctx.get_mut(idx));
         Self {
             comp,
             idx,
+            opts,
             mut_ctx: ctx,
         }
     }
@@ -288,7 +299,7 @@ where
         let mut visitor = Self::from(opts, ctx);
         for idx in ctx.comps.idx_iter() {
             visitor.clear_data();
-            visitor.visit((idx, &mut *ctx).into());
+            visitor.visit((idx, opts, &mut *ctx).into());
         }
         match visitor.after_traversal() {
             Some(n) => Err(n),
