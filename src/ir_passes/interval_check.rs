@@ -181,17 +181,18 @@ impl Visitor for IntervalCheck {
             let imp = assumes.implies(prop, comp);
             cmds.extend(comp.assert(imp, reason));
         }
+        Action::AddBefore(cmds)
+    }
 
-        // For each invoke, check the event bindings are well-formed
-        for idx in comp.invocations().idx_iter() {
-            // Clone here because we need to pass mutable ownership of the component
-            for eb in comp[idx].events.clone() {
-                if let Some(assert) = self.event_binding(eb, comp) {
-                    cmds.push(assert)
-                }
+    fn invoke(&mut self, idx: ir::InvIdx, data: &mut VisitorData) -> Action {
+        let comp = &mut data.comp;
+        let mut cmds = Vec::default();
+        // Clone here because we need to pass mutable ownership of the component
+        for eb in comp[idx].events.clone() {
+            if let Some(assert) = self.event_binding(eb, comp) {
+                cmds.push(assert)
             }
         }
-
         Action::AddBefore(cmds)
     }
 

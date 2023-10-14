@@ -1,5 +1,5 @@
 use super::{idxs::PropIdx, AddCtx, Ctx, ExprIdx, InfoIdx, TimeIdx, TimeSub};
-use crate::construct_binop;
+use crate::{construct_binop, EventIdx, Expr, ParamIdx, Time};
 use std::fmt::{self, Display};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -230,6 +230,63 @@ impl PropIdx {
             Prop::Implies(_, cons) => *cons,
             _ => self,
         }
+    }
+
+    /// Accumulate all the parameters and events that appear in this proposition.
+    pub fn relevant_vars_acc(
+        &self,
+        ctx: &(impl Ctx<Prop> + Ctx<Time> + Ctx<Expr>),
+        param_acc: &mut Vec<ParamIdx>,
+        event_acc: &mut Vec<EventIdx>,
+    ) {
+        let mut time_acc = |time: TimeIdx, params: &mut Vec<ParamIdx>| {
+            let Time { event, offset } = ctx.get(time);
+            event_acc.push(*event);
+            offset.relevant_vars_acc(ctx, params);
+        };
+
+        let mut time_sub_acc = |ts: &TimeSub| match ts {
+            TimeSub::Unit(e) => e.relevant_vars_acc(ctx, param_acc),
+            TimeSub::Sym { l, r } => {
+                time_acc(*l, param_acc);
+                time_acc(*r, param_acc);
+            }
+        };
+
+        match ctx.get(*self) {
+            Prop::True | Prop::False => (),
+            Prop::Cmp(CmpOp { lhs, rhs, .. }) => {
+                lhs.relevant_vars_acc(ctx, param_acc);
+                rhs.relevant_vars_acc(ctx, param_acc);
+            }
+            Prop::TimeCmp(CmpOp { lhs, rhs, .. }) => {
+                time_acc(*lhs, param_acc);
+                time_acc(*rhs, param_acc);
+            }
+            Prop::TimeSubCmp(CmpOp { lhs, rhs, .. }) => {
+                time_sub_acc(lhs);
+                time_sub_acc(rhs);
+            }
+            Prop::Not(p) => {
+                p.relevant_vars_acc(ctx, param_acc, event_acc);
+            }
+            Prop::And(l, r) | Prop::Or(l, r) | Prop::Implies(l, r) => {
+                l.relevant_vars_acc(ctx, param_acc, event_acc);
+                r.relevant_vars_acc(ctx, param_acc, event_acc);
+            }
+        }
+    }
+
+    /// Returns the parameters and events mentioned in the proposition.
+    #[inline]
+    pub fn relevant_vars(
+        &self,
+        ctx: &(impl Ctx<Time> + Ctx<Prop> + Ctx<Expr>),
+    ) -> (Vec<ParamIdx>, Vec<EventIdx>) {
+        let mut params = Vec::new();
+        let mut events = Vec::new();
+        self.relevant_vars_acc(ctx, &mut params, &mut events);
+        (params, events)
     }
 }
 
