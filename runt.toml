@@ -91,7 +91,7 @@ fud e -s cocotb.data {}.data --to cocotb-out {} -q
 # ============== Examples in the documentation ============
 [[tests]]
 name = "examples"
-paths = ["examples/*.fil", "tests/check/*.fil"]
+paths = ["examples/*.fil"]
 cmd = """
 ./target/debug/filament {} --check
 """

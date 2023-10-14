@@ -145,6 +145,14 @@ impl Component {
             .find(|(p, _)| *p == param)
             .map(|(_, facts)| facts.clone())
     }
+
+    /// Get all the assumptions associated with existential parameters
+    pub fn all_sig_assumes(&self) -> Vec<PropIdx> {
+        self.sig_assumes
+            .iter()
+            .flat_map(|(_, facts)| facts.iter().copied())
+            .collect_vec()
+    }
 }
 
 /// Complex queries
