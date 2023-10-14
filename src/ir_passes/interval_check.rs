@@ -39,13 +39,15 @@ impl IntervalCheck {
     /// Check that event delays are greater than zero
     fn delay_wf(
         &mut self,
+        // The path condition
+        pc: ir::PropIdx,
         event: ir::EventIdx,
         comp: &mut ir::Component,
     ) -> Option<ir::Command> {
         let zero = comp.num(0).into();
         let ir::Event { delay, info, .. } = &comp[event];
         let &ir::info::Event { delay_loc, .. } = comp.get(*info).into();
-        let prop = delay.clone().gt(zero, comp);
+        let prop = pc.implies(delay.clone().gt(zero, comp), comp);
         let reason = comp.add(
             ir::info::Reason::misc(
                 "delay must be greater than zero",
@@ -113,16 +115,24 @@ impl IntervalCheck {
 
 impl Visitor for IntervalCheck {
     fn name() -> &'static str {
-        "interval_check"
+        "interval-check"
     }
 
     fn start(&mut self, data: &mut VisitorData) -> Action {
         let comp = &mut data.comp;
+
+        // Assertions about the signature get to use the constraints on existential parameters.
+        let init = comp.add(ir::Prop::True);
+        let assumes = comp
+            .all_sig_assumes()
+            .into_iter()
+            .fold(init, |a, b| a.and(b, comp));
+
         // Ensure that delays are greater than zero
         let mut cmds: Vec<ir::Command> =
             Vec::with_capacity(comp.ports().len() + comp.events().len());
         for idx in comp.events().idx_iter() {
-            cmds.extend(self.delay_wf(idx, comp));
+            cmds.extend(self.delay_wf(assumes, idx, comp));
         }
 
         // For each bundle, add an assertion to ensure that availability of the
@@ -168,7 +178,8 @@ impl Visitor for IntervalCheck {
             );
             let prop = comp
                 .add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(delay.clone(), len)));
-            cmds.extend(comp.assert(prop, reason));
+            let imp = assumes.implies(prop, comp);
+            cmds.extend(comp.assert(imp, reason));
         }
 
         // For each invoke, check the event bindings are well-formed

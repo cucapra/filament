@@ -59,8 +59,8 @@ where
     fn write(
         &self,
         val: Underlying<T>,
-        f: &mut impl std::fmt::Write,
-    ) -> std::fmt::Result {
+        f: &mut impl std::io::Write,
+    ) -> std::io::Result<()> {
         self.0.write(val.idx(), f)
     }
 }
@@ -150,8 +150,8 @@ where
     fn write(
         &self,
         val: Base<T>,
-        f: &mut impl std::fmt::Write,
-    ) -> std::fmt::Result {
+        f: &mut impl std::io::Write,
+    ) -> std::io::Result<()> {
         self.0.write(val.get(), f)
     }
 }
