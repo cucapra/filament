@@ -244,7 +244,7 @@ impl Discharge {
     }
 
     /// Check whether the proposition is valid.
-    /// Panics with a set of assignments if the proposition is not valid.
+    /// Adds an error to the diagnositcs reporter if the proposition cannot be proved.
     fn check_valid(&mut self, fact: ir::Fact, ctx: &ir::Component) {
         let prop = fact.prop;
         #[allow(clippy::map_entry)]
