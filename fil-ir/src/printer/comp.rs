@@ -206,7 +206,26 @@ impl<'a, 'b> Printer<'a, 'b> {
             .map(|(idx, _)| self.port(idx, indent))
             .join(",\n");
 
-        writeln!(f, "{outs}) {{")
+        writeln!(f, "{outs}) with {{")?;
+
+        for param in self.comp.exist_params() {
+            write!(
+                f,
+                "{:indent$}exists {}",
+                "",
+                self.comp.display(param),
+                indent = indent + 2
+            )?;
+            if let Some(assumes) = self.comp.get_sig_assumes(param) {
+                let props =
+                    assumes.iter().map(|p| self.comp.display(*p)).join(", ");
+                writeln!(f, " where {props};")?;
+            } else {
+                writeln!(f, ";")?;
+            };
+        }
+
+        writeln!(f, "}} {{")
     }
 
     fn local_param(
