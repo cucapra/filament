@@ -1,0 +1,7 @@
+comp Foo<'G:10>() -> () {}
+
+comp Bar[W]<'G: W>() -> () where W > 0 {
+    if W > 10 {
+        f := new Foo<'G>();
+    }
+}

@@ -63,7 +63,7 @@ impl Visitor for HoistFacts {
                 self.add_to_pc(prop);
             }
             _ => (),
-        })
+        });
     }
 
     fn fact(&mut self, fact: &mut ir::Fact, data: &mut VisitorData) -> Action {
