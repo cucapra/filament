@@ -22,11 +22,18 @@ comp CombPeaseFFT[NStages, N, W, E, ?M=W-E-1]<'G: L>(
   E > 1,
   M > 1
 {
+  assume pow2(NStages+1) == NPoints*2;
+  assume pow2(NStages+2) == NPoints*4;
   assume pow2(NStages-1) == NPoints/2;
   assume pow2(NStages-2) == NPoints/4;
 
   twiddle := new TwiddleFactor[NPoints]<'G>();
   bitrev := new BitRev[NStages, W]<'G>(in{0..NPoints*2});
+  // butterfly components
+  B := new Butterflies[N, W, E, M];
+  // number of times we have to reuse the butterflies per stage
+  let reuses = NPoints / (2*N);
+  let stage_latency = B::L * reuses;
 
   // Creates a bundle that has NStages blocks of data,
   // where each block has the right timings.
@@ -35,23 +42,19 @@ comp CombPeaseFFT[NStages, N, W, E, ?M=W-E-1]<'G: L>(
 
   data{0..NPoints*2} = bitrev.out{0..NPoints*2};
 
-  // butterfly components
-  B := new Butterflies[N, W, E, M];
-  // number of times we have to reuse the butterflies per stage
-  let reuses = NPoints / (2*N);
-  let stage_latency = B::L * reuses;
-
   for stage in 0..NStages {
     // which chunk of data we are populating
-    let stage_chunk = stage * NPoints * 2; 
+    let stage_chunk = stage * NPoints * 2;
     // what time this chunk occurs at
     let stage_time = stage * stage_latency;
     for i in 0..reuses {
-      assume i*4*N < NPoints*2;
       let start = stage_chunk + i*4*N;
       let end = stage_chunk + (i+1)*4*N;
+
+      assume i*4*N < NPoints*2;
       assume start / (NPoints*2) == stage;
       assume end / (NPoints*2) == stage;
+
       b := B<'G + stage_time + i * B::L>(data{start..end}, twiddle.out{i*2*N..(i+1)*2*N});
 
       // concat into one wire for the register
@@ -63,6 +66,7 @@ comp CombPeaseFFT[NStages, N, W, E, ?M=W-E-1]<'G: L>(
       sp := new SplitWire[W, 4*N]<'G + stage_time + stage_latency>(reg.out);
 
       // Write to the next stage
+      assume (start + NPoints*2) / (NPoints*2) == stage + 1;
       data{start + NPoints*2..end + NPoints*2} = sp.out{0..4*N};
     }
   }
@@ -130,7 +134,7 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
     // Fully combinational butterfly module
     t1 := new ComplexMult[W, E, M]<'G>(in1{0..2}, twiddle{0..2});
     O0 := new ComplexAdd[W, E, M]<'G>(in0{0..2}, t1.out{0..2});
-    
+
     // multiply by twiddle
     O1 := new ComplexSub[W, E, M]<'G>(in0{0..2}, t1.out{0..2});
 
@@ -141,9 +145,9 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
     d11 := new Delay[W]<'G>(O1.out{1});
     out0{0} = d00.out;
     out0{1} = d01.out;
-    out1{3} = d10.out;
-    out1{4} = d11.out;
+    out1{0} = d10.out;
+    out1{1} = d11.out;
 
-    exists L = 1;  
+    exists L = 1;
   }
 }
