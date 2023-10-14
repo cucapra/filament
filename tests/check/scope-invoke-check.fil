@@ -1,0 +1,10 @@
+comp Foo<'G:1>() -> () {}
+
+comp Bar[W, E, ?M=W-E-1]<'G: L>() -> () with {
+  exists L where L > 0;
+} {
+    if 1 == 1 {
+        f := new Foo<'G>();
+        exists L = 1;
+    }
+}

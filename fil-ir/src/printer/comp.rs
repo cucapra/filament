@@ -122,6 +122,12 @@ impl<'a, 'b> Printer<'a, 'b> {
         }
     }
 
+    pub fn command_str(&self, c: &ir::Command) -> String {
+        let mut buf = Vec::new();
+        self.command(c, 0, &mut buf).unwrap();
+        String::from_utf8(buf).unwrap()
+    }
+
     fn commands(
         &self,
         cmds: &[ir::Command],
@@ -185,7 +191,7 @@ impl<'a, 'b> Printer<'a, 'b> {
             })
             .join(",");
 
-        writeln!(f, "[{params}]]<{events}>(")?;
+        writeln!(f, "[{params}]<{events}>(")?;
 
         // Print input ports first. The direction is reversed when they are
         // bound in the body.
