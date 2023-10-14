@@ -1,4 +1,4 @@
-use super::DisplayCtx;
+use super::{DisplayCtx, IOResult};
 use crate::{self as ir, Ctx};
 use fil_ast as ast;
 use itertools::Itertools;
@@ -84,11 +84,7 @@ fn display_expr_helper(
 }
 
 impl DisplayCtx<ir::ExprIdx> for ir::Component {
-    fn write(
-        &self,
-        idx: ir::ExprIdx,
-        f: &mut impl std::fmt::Write,
-    ) -> std::fmt::Result {
+    fn write(&self, idx: ir::ExprIdx, f: &mut impl std::io::Write) -> IOResult {
         let out = display_expr_helper(idx, ECtx::default(), self);
         write!(f, "{}", out)
     }
