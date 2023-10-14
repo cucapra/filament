@@ -148,7 +148,7 @@ impl<'a, 'b> Printer<'a, 'b> {
         };
         if let Some(info) = &self.comp.src_info {
             write!(f, "comp {}", info.name)?;
-            if log::log_enabled!(log::Level::Debug) {
+            if log::log_enabled!(log::Level::Trace) {
                 if let Some(idx) = idx {
                     write!(f, " {idx}")?;
                 }
@@ -290,7 +290,7 @@ impl<'a, 'b> Printer<'a, 'b> {
         match &owner {
             ir::PortOwner::Sig { .. } => Ok(()),
             ir::PortOwner::Inv { dir, .. } => {
-                if log::log_enabled!(log::Level::Debug) {
+                if log::log_enabled!(log::Level::Trace) {
                     write!(
                         f,
                         "{:indent$}{} ({idx}): bundle({dir}) {} {};",
@@ -311,7 +311,7 @@ impl<'a, 'b> Printer<'a, 'b> {
                 }
             }
             ir::PortOwner::Local => {
-                if log::log_enabled!(log::Level::Debug) {
+                if log::log_enabled!(log::Level::Trace) {
                     write!(
                         f,
                         "{:indent$}{} ({idx}) = bundle {} {};",
@@ -398,7 +398,7 @@ impl<'a, 'b> Printer<'a, 'b> {
         self.sig(idx, 0, f)?;
         // If debugging is enabled, show the low-level representation of the
         // component's interned values and other stores.
-        if log::log_enabled!(log::Level::Debug) {
+        if log::log_enabled!(log::Level::Trace) {
             for idx in self.comp.params().idx_iter() {
                 self.local_param(idx, 2, f)?;
             }

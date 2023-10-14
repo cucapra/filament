@@ -40,7 +40,7 @@ impl DisplayCtx<ir::TimeIdx> for ir::Component {
 
 impl DisplayCtx<ir::EventIdx> for ir::Component {
     fn write(&self, idx: ir::EventIdx, f: &mut impl Write) -> std::fmt::Result {
-        if log::log_enabled!(log::Level::Debug) {
+        if log::log_enabled!(log::Level::Trace) {
             return write!(f, "{idx}");
         }
         let ev = self.get(idx);
@@ -54,7 +54,7 @@ impl DisplayCtx<ir::EventIdx> for ir::Component {
 
 impl DisplayCtx<ir::ParamIdx> for ir::Component {
     fn write(&self, idx: ir::ParamIdx, f: &mut impl Write) -> std::fmt::Result {
-        if log::log_enabled!(log::Level::Debug) {
+        if log::log_enabled!(log::Level::Trace) {
             return write!(f, "{idx}");
         }
         let param: &ir::Param = self.get(idx);
@@ -76,7 +76,7 @@ impl DisplayCtx<ir::ParamIdx> for ir::Component {
 
 impl DisplayCtx<ir::InvIdx> for ir::Component {
     fn write(&self, idx: ir::InvIdx, f: &mut impl Write) -> std::fmt::Result {
-        if log::log_enabled!(log::Level::Debug) {
+        if log::log_enabled!(log::Level::Trace) {
             return write!(f, "{idx}");
         }
 
@@ -91,7 +91,7 @@ impl DisplayCtx<ir::InvIdx> for ir::Component {
 
 impl DisplayCtx<ir::InstIdx> for ir::Component {
     fn write(&self, idx: ir::InstIdx, f: &mut impl Write) -> std::fmt::Result {
-        if log::log_enabled!(log::Level::Debug) {
+        if log::log_enabled!(log::Level::Trace) {
             return write!(f, "{idx}");
         }
 
