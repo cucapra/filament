@@ -90,6 +90,10 @@ pub struct Opts {
     #[argh(option, long = "solver", default = "Solver::CVC5")]
     pub solver: Solver,
 
+    /// solve assertions separately rather than all at once
+    #[argh(switch, long = "discharge-separate")]
+    pub discharge_separate: bool,
+
     /// dump interactions with the solver in the given file
     #[argh(option, long = "dump-solver-log")]
     pub solver_replay_file: Option<String>,
