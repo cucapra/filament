@@ -102,6 +102,31 @@ impl ExprIdx {
     }
 }
 
+/// Queries over [ExprIdx]
+impl ExprIdx {
+    pub fn relevant_vars_acc(
+        &self,
+        ctx: &impl Ctx<Expr>,
+        params: &mut Vec<ParamIdx>,
+    ) {
+        match ctx.get(*self) {
+            Expr::Param(p) => {
+                params.push(*p);
+            }
+            Expr::Concrete(_) => (),
+            Expr::Bin { lhs, rhs, .. } => {
+                lhs.relevant_vars_acc(ctx, params);
+                rhs.relevant_vars_acc(ctx, params);
+            }
+            Expr::Fn { args, .. } => {
+                for e in args {
+                    e.relevant_vars_acc(ctx, params);
+                }
+            }
+        }
+    }
+}
+
 // creates the binary operator constructors for all [ast::Op] variants.
 construct_binop!(
     <impl AddCtx<Expr>>(ExprIdx::bin, ExprIdx) => Expr;
