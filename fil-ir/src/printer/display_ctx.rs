@@ -1,21 +1,23 @@
 use crate::{self as ir, Ctx};
-use std::fmt::Write;
+use std::io::Write;
+
+pub type IOResult = std::io::Result<()>;
 
 /// A context capable of displaying a value.
 pub trait DisplayCtx<T> {
     /// Write the value into a buffer
-    fn write(&self, val: T, f: &mut impl Write) -> std::fmt::Result;
+    fn write(&self, val: T, f: &mut impl Write) -> IOResult;
 
     /// Display the value
     fn display(&self, val: T) -> String {
-        let mut s = String::new();
+        let mut s = Vec::new();
         self.write(val, &mut s).unwrap();
-        s
+        std::str::from_utf8(&s).unwrap().to_string()
     }
 }
 
 impl DisplayCtx<ir::CompIdx> for ir::Context {
-    fn write(&self, val: ir::CompIdx, f: &mut impl Write) -> std::fmt::Result {
+    fn write(&self, val: ir::CompIdx, f: &mut impl Write) -> IOResult {
         let comp = self.get(val);
         if let Some(ext_info) = &comp.src_info {
             write!(f, "{}", ext_info.name)
@@ -26,7 +28,7 @@ impl DisplayCtx<ir::CompIdx> for ir::Context {
 }
 
 impl DisplayCtx<ir::TimeIdx> for ir::Component {
-    fn write(&self, val: ir::TimeIdx, f: &mut impl Write) -> std::fmt::Result {
+    fn write(&self, val: ir::TimeIdx, f: &mut impl Write) -> IOResult {
         let &ir::Time { event, offset } = self.get(val);
         if offset.is_const(self, 0) {
             self.write(event, f)
@@ -39,8 +41,8 @@ impl DisplayCtx<ir::TimeIdx> for ir::Component {
 }
 
 impl DisplayCtx<ir::EventIdx> for ir::Component {
-    fn write(&self, idx: ir::EventIdx, f: &mut impl Write) -> std::fmt::Result {
-        if log::log_enabled!(log::Level::Debug) {
+    fn write(&self, idx: ir::EventIdx, f: &mut impl Write) -> IOResult {
+        if log::log_enabled!(log::Level::Trace) {
             return write!(f, "{idx}");
         }
         let ev = self.get(idx);
@@ -53,8 +55,8 @@ impl DisplayCtx<ir::EventIdx> for ir::Component {
 }
 
 impl DisplayCtx<ir::ParamIdx> for ir::Component {
-    fn write(&self, idx: ir::ParamIdx, f: &mut impl Write) -> std::fmt::Result {
-        if log::log_enabled!(log::Level::Debug) {
+    fn write(&self, idx: ir::ParamIdx, f: &mut impl Write) -> IOResult {
+        if log::log_enabled!(log::Level::Trace) {
             return write!(f, "{idx}");
         }
         let param: &ir::Param = self.get(idx);
@@ -75,8 +77,8 @@ impl DisplayCtx<ir::ParamIdx> for ir::Component {
 }
 
 impl DisplayCtx<ir::InvIdx> for ir::Component {
-    fn write(&self, idx: ir::InvIdx, f: &mut impl Write) -> std::fmt::Result {
-        if log::log_enabled!(log::Level::Debug) {
+    fn write(&self, idx: ir::InvIdx, f: &mut impl Write) -> IOResult {
+        if log::log_enabled!(log::Level::Trace) {
             return write!(f, "{idx}");
         }
 
@@ -90,8 +92,8 @@ impl DisplayCtx<ir::InvIdx> for ir::Component {
 }
 
 impl DisplayCtx<ir::InstIdx> for ir::Component {
-    fn write(&self, idx: ir::InstIdx, f: &mut impl Write) -> std::fmt::Result {
-        if log::log_enabled!(log::Level::Debug) {
+    fn write(&self, idx: ir::InstIdx, f: &mut impl Write) -> IOResult {
+        if log::log_enabled!(log::Level::Trace) {
             return write!(f, "{idx}");
         }
 
@@ -105,7 +107,7 @@ impl DisplayCtx<ir::InstIdx> for ir::Component {
 }
 
 impl DisplayCtx<ir::PortIdx> for ir::Component {
-    fn write(&self, idx: ir::PortIdx, f: &mut impl Write) -> std::fmt::Result {
+    fn write(&self, idx: ir::PortIdx, f: &mut impl Write) -> IOResult {
         let port = self.get(idx);
         let name = self
             .get(port.info)
@@ -124,11 +126,7 @@ impl DisplayCtx<ir::PortIdx> for ir::Component {
 }
 
 impl<'a> DisplayCtx<&'a ir::TimeSub> for ir::Component {
-    fn write(
-        &self,
-        ts: &'a ir::TimeSub,
-        f: &mut impl Write,
-    ) -> std::fmt::Result {
+    fn write(&self, ts: &'a ir::TimeSub, f: &mut impl Write) -> IOResult {
         match ts {
             ir::TimeSub::Unit(e) => self.write(*e, f),
             ir::TimeSub::Sym { l, r } => {
@@ -143,11 +141,7 @@ impl<'a> DisplayCtx<&'a ir::TimeSub> for ir::Component {
 }
 
 impl<'a> DisplayCtx<&'a ir::Range> for ir::Component {
-    fn write(
-        &self,
-        val: &'a ir::Range,
-        f: &mut impl Write,
-    ) -> std::fmt::Result {
+    fn write(&self, val: &'a ir::Range, f: &mut impl Write) -> IOResult {
         write!(f, "[")?;
         self.write(val.start, f)?;
         write!(f, ", ")?;
@@ -157,7 +151,7 @@ impl<'a> DisplayCtx<&'a ir::Range> for ir::Component {
 }
 
 impl<'a> DisplayCtx<&'a ir::Liveness> for ir::Component {
-    fn write(&self, l: &ir::Liveness, f: &mut impl Write) -> std::fmt::Result {
+    fn write(&self, l: &ir::Liveness, f: &mut impl Write) -> IOResult {
         let ir::Liveness { idx, len, range } = l;
         write!(
             f,
@@ -170,7 +164,7 @@ impl<'a> DisplayCtx<&'a ir::Liveness> for ir::Component {
 }
 
 impl<'a> DisplayCtx<&'a ir::Access> for ir::Component {
-    fn write(&self, a: &ir::Access, f: &mut impl Write) -> std::fmt::Result {
+    fn write(&self, a: &ir::Access, f: &mut impl Write) -> IOResult {
         let &ir::Access { port, start, end } = a;
         self.write(port, f)?;
         if a.is_port(self) {
@@ -182,7 +176,7 @@ impl<'a> DisplayCtx<&'a ir::Access> for ir::Component {
 }
 
 impl<'a> DisplayCtx<&'a ir::Connect> for ir::Component {
-    fn write(&self, c: &ir::Connect, f: &mut impl Write) -> std::fmt::Result {
+    fn write(&self, c: &ir::Connect, f: &mut impl Write) -> IOResult {
         let ir::Connect { src, dst, .. } = c;
         self.write(src, f)?;
         write!(f, " = ")?;

@@ -8,3 +8,4 @@ mod prop;
 
 pub use comp::Printer;
 pub use display_ctx::DisplayCtx;
+pub(super) use display_ctx::IOResult;

@@ -1,4 +1,4 @@
-use super::DisplayCtx;
+use super::{DisplayCtx, IOResult};
 use crate::{self as ir, Ctx};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -112,11 +112,7 @@ fn display_prop_helper(
 }
 
 impl DisplayCtx<ir::PropIdx> for ir::Component {
-    fn write(
-        &self,
-        val: ir::PropIdx,
-        f: &mut impl std::fmt::Write,
-    ) -> std::fmt::Result {
+    fn write(&self, val: ir::PropIdx, f: &mut impl std::io::Write) -> IOResult {
         let out = display_prop_helper(val, PCtx::Implies, self);
         write!(f, "{out}")
     }
