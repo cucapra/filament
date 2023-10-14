@@ -1,0 +1,12 @@
+/// Butterfly module using existential parameters.
+comp Foo[W]<'G: L>(
+  in: ['G, 'G+1] W, // real and imaginary parts of input
+) -> () with {
+  exists L where L > 0;
+} {
+  if W == 0 {
+    exists L = 1;
+  } else {
+    exists L = 2;
+  }
+}
