@@ -44,8 +44,11 @@ pub struct Discharge {
     sol_base: cmdline::Solver,
     /// Are we in a scoped context?
     scoped: bool,
-    /// Defined functions
+    /// Defined global functions
     func_map: HashMap<ast::Fn, smt::SExpr>,
+    /// Defined functions for `some` parameters on components
+    comp_param_map: HashMap<ir::Foreign<ir::Param, ir::Component>, smt::SExpr>,
+
     // Defined names
     param_map: ir::DenseIndexInfo<ir::Param, smt::SExpr>,
     ev_map: ir::DenseIndexInfo<ir::Event, smt::SExpr>,
@@ -94,10 +97,18 @@ impl Discharge {
             .build()
             .unwrap()
     }
+
+    fn app(&mut self, f: smt::SExpr, args: Vec<smt::SExpr>) -> smt::SExpr {
+        if args.is_empty() {
+            f
+        } else {
+            self.sol.list(iter::once(f).chain(args).collect_vec())
+        }
+    }
 }
 
 impl Construct for Discharge {
-    fn from(opts: &cmdline::Opts, _: &mut ir::Context) -> Self {
+    fn from(opts: &cmdline::Opts, ctx: &mut ir::Context) -> Self {
         let mut out = Self {
             sol: Self::conf_solver(opts),
             sol_base: opts.solver,
@@ -114,9 +125,41 @@ impl Construct for Discharge {
             expr_map: Default::default(),
             checked: Default::default(),
             diagnostics: Default::default(),
+            comp_param_map: Default::default(),
         };
 
         out.define_funcs();
+
+        // For each `some` parameter of a component, define function from the
+        // input parameters of the component to the `some` parameter.
+        for (comp_idx, comp) in ctx.comps.iter() {
+            let num_args = comp.param_args().len();
+            for some_param in comp.exist_params() {
+                let ir::ParamOwner::Exists { opaque } = &comp[some_param].owner
+                else {
+                    unreachable!()
+                };
+                if *opaque {
+                    // If this is an opaque parameter, then we don't define the function
+                    continue;
+                }
+                let func = out
+                    .sol
+                    .declare_fun(
+                        format!(
+                            "comp{}_param{}",
+                            comp_idx.get(),
+                            some_param.get()
+                        ),
+                        (0..num_args).map(|_| out.sol.int_sort()).collect_vec(),
+                        out.sol.int_sort(),
+                    )
+                    .unwrap();
+                let f = ir::Foreign::new(some_param, comp_idx);
+                out.comp_param_map.insert(f, func);
+            }
+        }
+
         out.sol.push().unwrap();
         out
     }
@@ -497,6 +540,27 @@ impl Visitor for Discharge {
             .and_then(|| self.visit_cmds(&mut l.body, data));
         self.scoped = orig;
         out
+    }
+
+    fn instance(&mut self, idx: ir::InstIdx, data: &mut VisitorData) -> Action {
+        let comp = &data.comp;
+        let inst = &comp[idx];
+        let sexp_args =
+            inst.args.iter().map(|e| self.expr_map[*e]).collect_vec();
+        for param in &inst.params {
+            let ir::ParamOwner::Instance { base, .. } = &comp[*param].owner
+            else {
+                unreachable!()
+            };
+            // If the parameter is not opaque, we can assert that it is equal to the value of the function
+            if let Some(f) = self.comp_param_map.get(base) {
+                let param_s = self.param_map[*param];
+                let app = self.app(*f, sexp_args.clone());
+                let assign = self.sol.eq(param_s, app);
+                self.sol.assert(assign).unwrap();
+            }
+        }
+        Action::Continue
     }
 
     fn end(&mut self, data: &mut VisitorData) {

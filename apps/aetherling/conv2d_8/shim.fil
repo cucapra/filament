@@ -18,14 +18,14 @@ comp Conv2dWrapper<'G:1>(
 ) -> (
     O[N]: ['G+L, 'G+L+1] 8
 ) with {
-    exists N where N > 0, N <= 16, 16 % N == 0;
-    exists L where L > 0;
+    some N where N > 0, N <= 16, 16 % N == 0;
+    some L where L > 0;
 } {
     C := new Conv2d<'G>(I{0}, I{1});
 
     // Forward the outputs
     O{0} = C.O_0; O{1} = C.O_1;
 
-    exists L = 6;
-    exists N = 2;
+    L := 6;
+    N := 2;
 }

@@ -1,7 +1,7 @@
 comp Foo[W]<'G:1>() -> () with {
-    exists L where L > W;
+    some L where L > W;
 } {
-    exists L = W + 1;
+    L := W + 1;
 }
 
 comp Bar<'G:1>() -> () {

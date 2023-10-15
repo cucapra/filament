@@ -24,10 +24,10 @@ comp Conv2dAbstract<'G: II>(
     out{0..C::N} = c.O{0..C::N};
 
     // Parameters are the same as the wrapped module
-    exists L = C::L;
-    exists N = C::N;
-    exists H = C::H;
-    exists II = C::II;
+    L := C::L;
+    N := C::N;
+    H := C::H;
+    II := C::II;
 }
 
 /// The module that interfaces with the outside world which always provides all
@@ -76,11 +76,11 @@ comp Wrapper<'G: II>(
         O{0..16} = co{0..16};
     }
 
-    exists H = C::H;
+    H := C::H;
     // The output latency is determined by the Deserializer.
-    exists L = C::L+C::II*(16/C::N-1);
+    L := C::L+C::II*(16/C::N-1);
     // The II is limited by the speed at which the convolution can process the inputs.
-    exists II = C::II*(16/C::N-1)+C::H;
+    II := C::II*(16/C::N-1)+C::H;
 }
 
 // The main component has the same interface for each design
@@ -143,7 +143,7 @@ comp main<'G: II>(
     O_8 = w.O{8}; O_9 = w.O{9}; O_10 = w.O{10}; O_11 = w.O{11};
     O_12 = w.O{12}; O_13 = w.O{13}; O_14 = w.O{14}; O_15 = w.O{15};
 
-    exists L = W::L;
-    exists II = W::II;
-    exists H = W::H;
+    L := W::L;
+    II := W::II;
+    H := W::H;
 }

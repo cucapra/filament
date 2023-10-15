@@ -7,11 +7,11 @@ comp Conv2dAbstract<'G: II>(
     out: ['G+L, 'G+L+1] 8,
 ) with {
     /// The hold time for the input
-    exists H where H > 0;
+    some H where H > 0;
     /// The latency of the module
-    exists L where L > 0;
+    some L where L > 0;
     /// The initiation interval of the module
-    exists II where II > 0, II >= H;
+    some II where II > 0, II >= H;
 } {
     // This is UNBOUND and we're using the fact that Filament has a global namespace to use whatever
     // implementation is available.
@@ -21,9 +21,9 @@ comp Conv2dAbstract<'G: II>(
     c := C<'G>(in);
     out = c.O;
 
-    exists L = C::L;
-    exists II = C::II;
-    exists H = C::H;
+    L := C::L;
+    II := C::II;
+    H := C::H;
 }
 
 /// The module that interfaces with the outside world which always provides all
@@ -34,11 +34,11 @@ comp Wrapper<'G: II>(
 ) -> (
     O[16]: ['G+L, 'G+L+1] 8
 ) with {
-    exists H where H > 0;
+    some H where H > 0;
     /// The latency of the module
-    exists L where L > 0;
+    some L where L > 0;
     /// The initiation interval of the module
-    exists II where II > 0, II >= H;
+    some II where II > 0, II >= H;
 } {
     // The convolution module.
     C := new Conv2dAbstract;
@@ -63,11 +63,11 @@ comp Wrapper<'G: II>(
     de := new Deserialize[8, 16, 1, C::II, 1]<'G+C::L>(co{0..16});
     O{0..16} = de.out{0..16};
 
-    exists H = C::H;
+    H := C::H;
     // The output latency is determined by the Deserializer.
-    exists L = C::L+C::II*15;
+    L := C::L+C::II*15;
     // The II is limited by the speed at which the convolution can process the inputs.
-    exists II = C::II*15+C::H;
+    II := C::II*15+C::H;
 }
 
 // The main component has the same interface for each design
@@ -107,11 +107,11 @@ comp main<'G: II>(
     O_14: ['G+L, 'G+L+1] 8,
     O_15: ['G+L, 'G+L+1] 8,
 ) with {
-    exists H where H > 0;
+    some H where H > 0;
     // The initiation interval of the module
-    exists II where II > 0, II >= H;
+    some II where II > 0, II >= H;
     // The latency of the module
-    exists L where L > 0;
+    some L where L > 0;
 } {
     // Initialize the input bundle
     bundle I[16]: ['G, 'G+W::H] 8;
@@ -129,7 +129,7 @@ comp main<'G: II>(
     O_8 = w.O{8}; O_9 = w.O{9}; O_10 = w.O{10}; O_11 = w.O{11};
     O_12 = w.O{12}; O_13 = w.O{13}; O_14 = w.O{14}; O_15 = w.O{15};
 
-    exists L = W::L;
-    exists II = W::II;
-    exists H = W::H;
+    L := W::L;
+    II := W::II;
+    H := W::H;
 }

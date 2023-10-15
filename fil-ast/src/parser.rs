@@ -175,17 +175,32 @@ impl FilamentParser {
         )
     }
 
+    fn some(_input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+    fn opaque(_input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+
     fn sig_bind(input: Node) -> ParseResult<Loc<ast::SigBind>> {
         let sp = Self::get_span(&input);
         match_nodes!(
             input.clone().into_children();
             [param_var(param), expr(e)] => Ok(Loc::new(ast::SigBind::let_(param, e.take()), sp)),
-            [param_var(param), constraints(cons)] => {
+            [opaque(_), param_var(param), constraints(cons)] => {
                 let (expr, ev) = cons;
                 if !ev.is_empty() {
                     Err(input.error("Cannot specify event constraints in an existential binding"))
                 } else {
-                    Ok(Loc::new(ast::SigBind::exists(param, expr), sp))
+                    Ok(Loc::new(ast::SigBind::exists(param, true, expr), sp))
+                }
+            },
+            [some(_), param_var(param), constraints(cons)] => {
+                let (expr, ev) = cons;
+                if !ev.is_empty() {
+                    Err(input.error("Cannot specify event constraints in an existential binding"))
+                } else {
+                    Ok(Loc::new(ast::SigBind::exists(param, false, expr), sp))
                 }
             }
         )

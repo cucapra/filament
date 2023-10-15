@@ -2,10 +2,10 @@
 1
 ---STDERR---
 error: component's body does not satisfy constraint on existentially-quantified parameter
-  ┌─ tests/errors/existential/multi-assign.fil:2:12
+  ┌─ tests/errors/existential/multi-assign.fil:2:10
   │
-2 │     exists L where L > 10;
-  │            ^ cannot prove constraint on existentially quantified parameter
+2 │     some L where L > 10;
+  │          ^ cannot prove constraint on existentially quantified parameter
 
 Compilation failed with 1 errors.
 Run with --show-models to generate assignments for failing constraints.

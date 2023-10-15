@@ -1,0 +1,28 @@
+comp Foo[A, B]<'G: 1>() -> () with {
+    some E;
+    opaque O;
+} {}
+
+comp Bar[M, N]<'G: 1>() -> () {
+    F0 := new Foo[10, 20];
+    F1 := new Foo[10, 20];
+
+    // E is not opaque
+    assert F0::E == F1::E;
+    // Opaque types are always different
+    assert F0::O == F1::O;
+
+    F2 := new Foo[10, 30];
+    // Different values for input parameters => different some types
+    assert F0::E == F2::E;
+
+    FM := new Foo[10, M];
+    FN := new Foo[10, N];
+    if M == N {
+        // Same values for input parameters => same some types
+        assert FM::E == FN::E;
+    } else {
+        // Different values for input parameters => different some types
+        assert FM::E == FN::E;
+    }
+}

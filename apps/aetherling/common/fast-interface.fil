@@ -7,9 +7,9 @@ comp Conv2dAbstract<'G: 1>(
     out[N]: ['G+L, 'G+L+1] 8,
 ) with {
     /// The number of inputs the module accepts. This is always a factor of 16.
-    exists N where N > 0, N <= 16, 16 % N == 0;
+    some N where N > 0, N <= 16, 16 % N == 0;
     /// The latency of the module
-    exists L where L > 0;
+    some L where L > 0;
 } {
     // This is UNBOUND and we're using the fact that Filament has a global namespace to use whatever
     // implementation is available.
@@ -19,8 +19,8 @@ comp Conv2dAbstract<'G: 1>(
     c := C<'G>(in{0..C::N});
     out{0..C::N} = c.O{0..C::N};
 
-    exists L = C::L;
-    exists N = C::N;
+    L := C::L;
+    N := C::N;
 }
 
 /// The module that interfaces with the outside world which always provides all
@@ -32,9 +32,9 @@ comp Wrapper<'G: II>(
     O[16]: ['G+L, 'G+L+1] 8
 ) with {
     /// The latency of the module
-    exists L where L > 0;
+    some L where L > 0;
     /// The initiation interval of the module
-    exists II where II > 0;
+    some II where II > 0;
 } {
     // The convolution module.
     C := new Conv2dAbstract;
@@ -68,10 +68,10 @@ comp Wrapper<'G: II>(
     }
 
     // The output latency is determined by the Deserializer.
-    exists L = C::L+16/C::N-1;
+    L := C::L+16/C::N-1;
 
     // The II is limited by the speed at which the convolution can process the inputs.
-    exists II = 16/C::N;
+    II := 16/C::N;
 }
 
 // The main component has the same interface for each design
@@ -112,9 +112,9 @@ comp main<'G: II>(
     O_15: ['G+L, 'G+L+1] 8,
 ) with {
     // The initiation interval of the module
-    exists II where II > 0;
+    some II where II > 0;
     // The latency of the module
-    exists L where L > 0;
+    some L where L > 0;
 } {
     // Initialize the input bundle
     bundle I[16]: ['G, 'G+1] 8;
@@ -132,6 +132,6 @@ comp main<'G: II>(
     O_8 = w.O{8}; O_9 = w.O{9}; O_10 = w.O{10}; O_11 = w.O{11};
     O_12 = w.O{12}; O_13 = w.O{13}; O_14 = w.O{14}; O_15 = w.O{15};
 
-    exists L = W::L;
-    exists II = W::II;
+    L := W::L;
+    II := W::II;
 }

@@ -63,7 +63,7 @@ impl OwnedParam {
     pub fn param_owner(id: ast::Id, owner: &ir::ParamOwner) -> Self {
         match owner {
             ir::ParamOwner::Sig
-            | ir::ParamOwner::Exists
+            | ir::ParamOwner::Exists { .. }
             | ir::ParamOwner::Bundle(_)
             | ir::ParamOwner::Loop => Self::Local(id),
             ir::ParamOwner::Instance { inst, .. } => Self::Instance(*inst, id),

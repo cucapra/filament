@@ -256,7 +256,7 @@ impl<'a, 'b> Printer<'a, 'b> {
             ir::ParamOwner::Sig | ir::ParamOwner::Instance { .. } => {}
             ir::ParamOwner::Bundle(_)
             | ir::ParamOwner::Loop
-            | ir::ParamOwner::Exists => {
+            | ir::ParamOwner::Exists { .. } => {
                 writeln!(
                     f,
                     "{:indent$}{idx} = param {param};{comment}",
