@@ -44,12 +44,15 @@ pub struct Component {
     /// Invocations defined by the component
     invocations: IndexStore<Invoke>,
 
-    // ============== Component structure ===============
+    // ============== Component signature ===============
+    /// The input parameters to the component
+    pub(crate) param_args: Box<[ParamIdx]>,
+    /// The input events to the component
+    pub(crate) event_args: Box<[EventIdx]>,
     /// Assumptions for existential parameters.
-    pub sig_assumes: Vec<(ParamIdx, Vec<PropIdx>)>,
-
-    /// Commands in the component
-    pub cmds: Vec<Command>,
+    exist_assumes: Vec<(ParamIdx, Vec<PropIdx>)>,
+    param_asserts: Box<[PropIdx]>,
+    event_asserts: Box<[PropIdx]>,
 
     #[ctx(Info: Get, Add)]
     /// Information tracked by the component
@@ -61,6 +64,10 @@ pub struct Component {
     pub src_info: Option<InterfaceSrc>,
     /// unannotated ports associated with this component
     pub unannotated_ports: Box<Vec<(ast::Id, u64)>>,
+
+    // ============== Component structure ===============
+    /// Commands in the component
+    pub cmds: Vec<Command>,
 }
 
 impl Component {
@@ -124,34 +131,82 @@ impl Component {
     }
 
     /// Add assumptions for a parameter
-    pub fn add_sig_assumes(
+    pub fn add_exist_assumes(
         &mut self,
         param: ParamIdx,
         assumes: impl IntoIterator<Item = PropIdx>,
     ) {
-        let existing = self.sig_assumes.iter_mut().find(|(p, _)| *p == param);
+        let existing = self.exist_assumes.iter_mut().find(|(p, _)| *p == param);
         if let Some(existing) = existing {
             existing.1.extend(assumes);
         } else {
-            self.sig_assumes
+            self.exist_assumes
                 .push((param, assumes.into_iter().collect()));
         }
     }
 
     /// Get the assumptions associated with a parameter
-    pub fn get_sig_assumes(&self, param: ParamIdx) -> Option<Vec<PropIdx>> {
-        self.sig_assumes
+    pub fn get_exist_assumes(&self, param: ParamIdx) -> Option<Vec<PropIdx>> {
+        self.exist_assumes
             .iter()
             .find(|(p, _)| *p == param)
             .map(|(_, facts)| facts.clone())
     }
 
     /// Get all the assumptions associated with existential parameters
-    pub fn all_sig_assumes(&self) -> Vec<PropIdx> {
-        self.sig_assumes
+    pub fn all_exist_assumes(&self) -> Vec<PropIdx> {
+        self.exist_assumes
             .iter()
             .flat_map(|(_, facts)| facts.iter().copied())
             .collect_vec()
+    }
+
+    /// Return the parameters bound in the signature
+    pub fn param_args(&self) -> &[ParamIdx] {
+        &self.param_args
+    }
+
+    /// Return the events bound in the signature
+    pub fn event_args(&self) -> &[EventIdx] {
+        &self.event_args
+    }
+
+    /// Add assertions over parameters
+    pub fn add_param_assert(
+        &mut self,
+        prop: impl IntoIterator<Item = PropIdx>,
+    ) {
+        self.param_asserts = self
+            .param_asserts
+            .iter()
+            .cloned()
+            .chain(prop)
+            .collect_vec()
+            .into_boxed_slice();
+    }
+
+    /// Get the assertions over parameters
+    pub fn get_param_asserts(&self) -> &[PropIdx] {
+        &self.param_asserts
+    }
+
+    /// Add assertions over events
+    pub fn add_event_assert(
+        &mut self,
+        prop: impl IntoIterator<Item = PropIdx>,
+    ) {
+        self.event_asserts = self
+            .event_asserts
+            .iter()
+            .cloned()
+            .chain(prop)
+            .collect_vec()
+            .into_boxed_slice();
+    }
+
+    /// Get the assertions over events
+    pub fn get_event_asserts(&self) -> &[PropIdx] {
+        &self.event_asserts
     }
 }
 

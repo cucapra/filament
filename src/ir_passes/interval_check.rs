@@ -124,7 +124,7 @@ impl Visitor for IntervalCheck {
         // Assertions about the signature get to use the constraints on existential parameters.
         let init = comp.add(ir::Prop::True);
         let assumes = comp
-            .all_sig_assumes()
+            .all_exist_assumes()
             .into_iter()
             .fold(init, |a, b| a.and(b, comp));
 

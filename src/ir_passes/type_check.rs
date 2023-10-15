@@ -62,7 +62,7 @@ impl Visitor for TypeCheck {
         // Ensure that the parameter is an existentially quantified parameter.
         // XXX(rachit): This should really be a check in the validate pass but
         // currently don't run that pass.
-        let Some(assumes) = ctx.get_sig_assumes(e.param) else {
+        let Some(assumes) = ctx.get_exist_assumes(e.param) else {
             return Action::Continue;
         };
         let param = ctx.get(e.param);

@@ -541,9 +541,13 @@ impl<'prog> BuildCtx<'prog> {
             sig.param_constraints.len() + sig.event_constraints.len(),
         );
 
-        for pb in &sig.params {
-            self.param(pb.param.clone(), ir::ParamOwner::Sig);
-        }
+        // Add parameters to the component
+        self.comp().param_args = sig
+            .params
+            .iter()
+            .map(|pb| self.param(pb.param.clone(), ir::ParamOwner::Sig))
+            .collect_vec()
+            .into_boxed_slice();
 
         // Binding from let-defined parameters in the signature to their values
         conv_sig.sig_binding = sig
@@ -564,7 +568,7 @@ impl<'prog> BuildCtx<'prog> {
                             .iter()
                             .map(|pc| self.expr_cons(pc.inner().clone()))
                             .collect::<BuildRes<Vec<_>>>()?;
-                        self.comp().add_sig_assumes(p_idx, assumes);
+                        self.comp().add_exist_assumes(p_idx, assumes);
                         Ok((sb.inner().clone(), Some(p_idx)))
                     }
                 }
@@ -579,11 +583,16 @@ impl<'prog> BuildCtx<'prog> {
             .collect();
 
         // Declare the events first
-        for event in &sig.events {
-            // can remove here as each interface signal should only be used once
-            let interface = interface_signals.remove(event.event.inner());
-            self.declare_event(event.inner(), interface);
-        }
+        self.comp().event_args = sig
+            .events
+            .iter()
+            .map(|event| {
+                // can remove here as each interface signal should only be used once
+                let interface = interface_signals.remove(event.event.inner());
+                self.declare_event(event.inner(), interface)
+            })
+            .collect_vec()
+            .into_boxed_slice();
 
         // Then define their delays correctly
         for event in &sig.events {
@@ -613,6 +622,7 @@ impl<'prog> BuildCtx<'prog> {
             ));
             let prop = self.event_cons(ec.inner().clone())?;
             sig_cons.extend(self.comp().assume(prop, info));
+            self.comp().add_event_assert([prop]);
         }
         for pc in &sig.param_constraints {
             let info = self.comp().add(ir::Info::assert(
@@ -620,6 +630,7 @@ impl<'prog> BuildCtx<'prog> {
             ));
             let prop = self.expr_cons(pc.inner().clone())?;
             sig_cons.extend(self.comp().assume(prop, info));
+            self.comp().add_param_assert([prop]);
         }
 
         self.comp().cmds.extend(sig_cons);
