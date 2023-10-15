@@ -1,4 +1,3 @@
-/// Butterfly module using existential parameters.
 comp Foo[W]<'G: L>(
   in: ['G, 'G+1] W, // real and imaginary parts of input
 ) -> () with {

@@ -47,7 +47,7 @@ pub struct Discharge {
     /// Defined global functions
     func_map: HashMap<ast::Fn, smt::SExpr>,
     /// Defined functions for `some` parameters on components
-    comp_param_map: HashMap<(ir::CompIdx, ir::ParamIdx), smt::SExpr>,
+    comp_param_map: HashMap<ir::Foreign<ir::Param, ir::Component>, smt::SExpr>,
 
     // Defined names
     param_map: ir::DenseIndexInfo<ir::Param, smt::SExpr>,
@@ -147,7 +147,8 @@ impl Construct for Discharge {
                         out.sol.int_sort(),
                     )
                     .unwrap();
-                out.comp_param_map.insert((comp_idx, some_param), func);
+                let f = ir::Foreign::new(some_param, comp_idx);
+                out.comp_param_map.insert(f, func);
             }
         }
 
@@ -531,6 +532,28 @@ impl Visitor for Discharge {
             .and_then(|| self.visit_cmds(&mut l.body, data));
         self.scoped = orig;
         out
+    }
+
+    fn instance(&mut self, idx: ir::InstIdx, data: &mut VisitorData) -> Action {
+        let comp = &data.comp;
+        let inst = &comp[idx];
+        let sexp_args =
+            inst.args.iter().map(|e| self.expr_map[*e]).collect_vec();
+        for param in &inst.params {
+            let ir::ParamOwner::Instance { base, .. } = &comp[*param].owner
+            else {
+                unreachable!()
+            };
+            // If the parameter is not opaque, we can assert that it is equal to the value of the function
+            if let Some(f) = self.comp_param_map.get(base) {
+                let param_s = self.param_map[*param];
+                let mut app = vec![*f];
+                app.extend(sexp_args.clone());
+                let assign = self.sol.eq(param_s, self.sol.list(app));
+                self.sol.assert(assign).unwrap();
+            }
+        }
+        Action::Continue
     }
 
     fn end(&mut self, data: &mut VisitorData) {
