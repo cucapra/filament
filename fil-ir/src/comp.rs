@@ -284,7 +284,7 @@ impl Component {
     pub fn exist_params(&self) -> impl Iterator<Item = ParamIdx> + '_ {
         self.params()
             .iter()
-            .filter(|(_, p)| matches!(p.owner, ParamOwner::Exists))
+            .filter(|(_, p)| matches!(p.owner, ParamOwner::Exists { .. }))
             .map(|(idx, _)| idx)
     }
 

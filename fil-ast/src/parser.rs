@@ -185,7 +185,7 @@ impl FilamentParser {
                 if !ev.is_empty() {
                     Err(input.error("Cannot specify event constraints in an existential binding"))
                 } else {
-                    Ok(Loc::new(ast::SigBind::exists(param, expr), sp))
+                    Ok(Loc::new(ast::SigBind::exists(param, true, expr), sp))
                 }
             }
         )

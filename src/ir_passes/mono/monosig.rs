@@ -231,7 +231,7 @@ impl MonoSig {
                     "parameter defined by instance `{}'",
                     ul.display(inst.ul())
                 ),
-                ir::ParamOwner::Exists => {
+                ir::ParamOwner::Exists { .. } => {
                     unreachable!(
                         "existential parameter `{}' occurred in a use location",
                         p_rep

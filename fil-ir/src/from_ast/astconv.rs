@@ -556,9 +556,15 @@ impl<'prog> BuildCtx<'prog> {
                         self.add_let_param(param.copy(), e);
                         Ok((sb.inner().clone(), None))
                     }
-                    ast::SigBind::Exists { param, cons } => {
-                        let p_idx =
-                            self.param(param.clone(), ir::ParamOwner::Exists);
+                    ast::SigBind::Exists {
+                        param,
+                        opaque,
+                        cons,
+                    } => {
+                        let p_idx = self.param(
+                            param.clone(),
+                            ir::ParamOwner::Exists { instanced: *opaque },
+                        );
                         // Constraints on existentially quantified parameters
                         let assumes = cons
                             .iter()
@@ -854,7 +860,7 @@ impl<'prog> BuildCtx<'prog> {
                 // Ensure that the parameter is an existential parameter
                 if !matches!(
                     self.comp().get(p_idx).owner,
-                    ir::ParamOwner::Exists
+                    ir::ParamOwner::Exists { .. }
                 ) {
                     let diag = self.diag();
                     let param_typ = Error::malformed("parameter in exists binding is not existentially quantified").add_note(
