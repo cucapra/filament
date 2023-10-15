@@ -19,4 +19,5 @@ WORKDIR /home/filament
 ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 RUN cargo build --all
 # Set up fud
-RUN fud register -p fud/filament.py filament
+RUN python3 -m pip install find-libpython && \
+  fud register -p fud/filament.py filament
