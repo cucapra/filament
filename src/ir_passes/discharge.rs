@@ -97,6 +97,14 @@ impl Discharge {
             .build()
             .unwrap()
     }
+
+    fn app(&mut self, f: smt::SExpr, args: Vec<smt::SExpr>) -> smt::SExpr {
+        if args.is_empty() {
+            f
+        } else {
+            self.sol.list(iter::once(f).chain(args).collect_vec())
+        }
+    }
 }
 
 impl Construct for Discharge {
@@ -547,9 +555,8 @@ impl Visitor for Discharge {
             // If the parameter is not opaque, we can assert that it is equal to the value of the function
             if let Some(f) = self.comp_param_map.get(base) {
                 let param_s = self.param_map[*param];
-                let mut app = vec![*f];
-                app.extend(sexp_args.clone());
-                let assign = self.sol.eq(param_s, self.sol.list(app));
+                let app = self.app(*f, sexp_args.clone());
+                let assign = self.sol.eq(param_s, app);
                 self.sol.assert(assign).unwrap();
             }
         }
