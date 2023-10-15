@@ -2,10 +2,10 @@
 1
 ---STDERR---
 error: parameter in exists binding is not existentially quantified
-  ┌─ tests/errors/existential/invalid-assign.fil:2:12
+  ┌─ tests/errors/existential/invalid-assign.fil:2:5
   │
-2 │     exists W = 10;
-  │            ^ parameter is not existentially quantified
+2 │     W := 10;
+  │     ^ parameter is not existentially quantified
 
 Compilation failed with 1 errors.
 Run with --show-models to generate assignments for failing constraints.

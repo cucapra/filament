@@ -8,14 +8,14 @@ comp Mul[W, M]<'G:1>(
 ) -> (
     out: ['G+L, 'G+L+1] W
 ) with {
-    exists L where L > 0;
+    some L where L > 0;
 } where W > 0, M > 0 {
     mult := new MultComb[W]<'G>(left, right);
     sh := new Shift[W, M*M]<'G>(mult.out);
 
     // This is the hidden value of the quantified parameter. This value is not
     // visible to callers but is used to typecheck the body.
-    exists L = M*M;
+    L := M*M;
     out = sh.out;
 }
 
@@ -25,9 +25,9 @@ comp main<'G:1>(
     go: interface['G],
     in0: ['G, 'G+1] 32, in1: ['G+F, 'G+F+1] 32, in2: ['G+F2, 'G+F2+1] 32
 ) -> (out: ['G+L, 'G+L+1] 32) with {
-    exists F; // The time when the second multiplication starts.
-    exists F2; // The time when the third multiplication starts.
-    exists L where L > 0; // The latency of the module.
+    some F; // The time when the second multiplication starts.
+    some F2; // The time when the third multiplication starts.
+    some L where L > 0; // The latency of the module.
 } {
     // Explicitly define the instance because we need to access the parameter.
     M0 := new Mul[32, 2];
@@ -42,8 +42,8 @@ comp main<'G:1>(
 
     // This module defines the (hidden) relationship that the latency is the sum of the
     // the latencies of the two instances.
-    exists L = M0::L + 2*M1::L;
-    exists F = M0::L;
-    exists F2 = M0::L + M1::L;
+    L := M0::L + 2*M1::L;
+    F := M0::L;
+    F2 := M0::L + M1::L;
     out = mul2.out;
 }
