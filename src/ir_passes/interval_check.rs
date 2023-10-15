@@ -60,7 +60,15 @@ impl IntervalCheck {
 
     /// Proposition that ensures that the given parameter is in range
     fn in_range(live: &ir::Liveness, comp: &mut ir::Component) -> ir::PropIdx {
-        let &ir::Liveness { idx, len, .. } = live;
+        let &ir::Liveness {
+            idx: Some(idx),
+            len,
+            ..
+        } = live
+        else {
+            // If there is no index, then we don't need to assert its range.
+            return comp.add(ir::Prop::True);
+        };
         let zero = comp.num(0);
         let idx = idx.expr(comp);
         let lo = idx.gte(zero, comp);
@@ -163,16 +171,19 @@ impl Visitor for IntervalCheck {
             let ev = &comp[st_ev];
             let delay = ev.delay.clone();
             let &ir::info::Event { delay_loc, .. } = comp.get(ev.info).into();
-            let param = comp.get(live.idx);
-            let &ir::info::Param { bind_loc, .. } = comp.get(param.info).into();
-            let zero = comp.num(0);
+            let param_info = live.idx.map(|idx| {
+                let param = comp.get(idx);
+                let &ir::info::Param { bind_loc, .. } =
+                    comp.get(param.info).into();
+                let zero = comp.num(0);
+                (bind_loc, (zero, live.len))
+            });
             let reason = comp.add(
                 ir::info::Reason::bundle_delay(
                     delay_loc,
                     live_loc,
                     len.clone(),
-                    bind_loc,
-                    (zero, live.len),
+                    param_info,
                 )
                 .into(),
             );
@@ -208,11 +219,15 @@ impl Visitor for IntervalCheck {
         let in_range = Self::in_range(&dst_t, comp)
             .and(Self::in_range(&src_t, comp), comp);
 
-        // Substitute the parameter used in source with that in dst
-        let binding = vec![(dst_t.idx, src_t.idx.expr(comp))];
         let dst_range =
-            ir::Subst::new(dst_t.range.clone(), &ir::Bind::new(binding))
-                .apply(comp);
+            if let (Some(dst_idx), Some(src_idx)) = (dst_t.idx, src_t.idx) {
+                let binding = vec![(dst_idx, src_idx.expr(comp))];
+                ir::Subst::new(dst_t.range.clone(), &ir::Bind::new(binding))
+                    .apply(comp)
+            } else {
+                // If either liveness is not indexed, then we can't do the substituion
+                dst_t.range.clone()
+            };
 
         // Assuming that lengths are equal
         let pre_req = src_t.len.equal(dst_t.len, comp).and(in_range, comp);
