@@ -44,8 +44,11 @@ pub struct Discharge {
     sol_base: cmdline::Solver,
     /// Are we in a scoped context?
     scoped: bool,
-    /// Defined functions
+    /// Defined global functions
     func_map: HashMap<ast::Fn, smt::SExpr>,
+    /// Defined functions for `some` parameters on components
+    comp_param_map: HashMap<(ir::CompIdx, ir::ParamIdx), smt::SExpr>,
+
     // Defined names
     param_map: ir::DenseIndexInfo<ir::Param, smt::SExpr>,
     ev_map: ir::DenseIndexInfo<ir::Event, smt::SExpr>,
@@ -97,7 +100,7 @@ impl Discharge {
 }
 
 impl Construct for Discharge {
-    fn from(opts: &cmdline::Opts, _: &mut ir::Context) -> Self {
+    fn from(opts: &cmdline::Opts, ctx: &mut ir::Context) -> Self {
         let mut out = Self {
             sol: Self::conf_solver(opts),
             sol_base: opts.solver,
@@ -114,9 +117,40 @@ impl Construct for Discharge {
             expr_map: Default::default(),
             checked: Default::default(),
             diagnostics: Default::default(),
+            comp_param_map: Default::default(),
         };
 
         out.define_funcs();
+
+        // For each `some` parameter of a component, define function from the
+        // input parameters of the component to the `some` parameter.
+        for (comp_idx, comp) in ctx.comps.iter() {
+            let num_args = comp.param_args().len();
+            for some_param in comp.exist_params() {
+                let ir::ParamOwner::Exists { opaque } = &comp[some_param].owner
+                else {
+                    unreachable!()
+                };
+                if *opaque {
+                    // If this is an opaque parameter, then we don't define the function
+                    continue;
+                }
+                let func = out
+                    .sol
+                    .declare_fun(
+                        format!(
+                            "comp{}_param{}",
+                            comp_idx.get(),
+                            some_param.get()
+                        ),
+                        (0..num_args).map(|_| out.sol.int_sort()).collect_vec(),
+                        out.sol.int_sort(),
+                    )
+                    .unwrap();
+                out.comp_param_map.insert((comp_idx, some_param), func);
+            }
+        }
+
         out.sol.push().unwrap();
         out
     }

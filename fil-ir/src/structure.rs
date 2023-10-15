@@ -283,7 +283,7 @@ pub enum ParamOwner {
     Exists {
         /// If this existential parameter should be treated as an
         /// instance-specific parameter
-        instanced: bool,
+        opaque: bool,
     },
     /// Parameter defined by an instance
     Instance {
@@ -302,7 +302,7 @@ impl fmt::Display for ParamOwner {
             ParamOwner::Sig => {
                 write!(f, "sig")
             }
-            ParamOwner::Exists { instanced } => {
+            ParamOwner::Exists { opaque: instanced } => {
                 write!(f, "{}", if *instanced { "opaque" } else { "some" })
             }
             ParamOwner::Loop => {

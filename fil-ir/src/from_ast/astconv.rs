@@ -563,7 +563,7 @@ impl<'prog> BuildCtx<'prog> {
                     } => {
                         let p_idx = self.param(
                             param.clone(),
-                            ir::ParamOwner::Exists { instanced: *opaque },
+                            ir::ParamOwner::Exists { opaque: *opaque },
                         );
                         // Constraints on existentially quantified parameters
                         let assumes = cons
