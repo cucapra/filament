@@ -1,6 +1,6 @@
 comp Foo[W]<'G:1>() -> () with {
-    exists L where L > W;
+    some L where L > W;
 } {
     // This assignment doesn't satisfy the constriant on the existential
-    exists L = 1;
+    L := 1;
 }

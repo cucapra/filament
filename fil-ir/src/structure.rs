@@ -128,7 +128,7 @@ impl fmt::Display for Direction {
 /// p[N]: for<i> @['G, 'G+i+10]
 /// ```
 pub struct Liveness {
-    pub idx: ParamIdx,
+    pub idx: Option<ParamIdx>,
     pub len: ExprIdx,
     pub range: Range,
 }
@@ -251,19 +251,23 @@ impl Access {
     /// Return the bundle type associated with this access
     pub fn bundle_typ(&self, ctx: &mut Component) -> Liveness {
         let live = ctx.get(self.port).live.clone();
+        let Some(idx) = live.idx else {
+            // If there is no bound parameter, then all accesses have the same type
+            return live;
+        };
         let binding = if self.is_port(ctx) {
-            // If this access produces exactly one port, then remap `#idx` to `start`.
-            [(live.idx, self.start)]
+            // If this access produces exactly one port, then remap `idx` to `start`.
+            [(idx, self.start)]
         } else {
             // Remap `#idx` to `#idx+start
-            [(live.idx, live.idx.expr(ctx).add(self.start, ctx))]
+            [(idx, idx.expr(ctx).add(self.start, ctx))]
         };
 
         let range = Subst::new(live.range, &Bind::new(binding)).apply(ctx);
         // Shrink the bundle type based on the access
         let len = self.end.sub(self.start, ctx);
         Liveness {
-            idx: live.idx,
+            idx: Some(idx),
             len,
             range,
         }
@@ -276,7 +280,11 @@ pub enum ParamOwner {
     /// Defined by the signature (passed in when instantiated)
     Sig,
     /// Owned by an `exists` binding
-    Exists,
+    Exists {
+        /// If this existential parameter should be treated as an
+        /// instance-specific parameter
+        opaque: bool,
+    },
     /// Parameter defined by an instance
     Instance {
         inst: InstIdx,
@@ -294,8 +302,8 @@ impl fmt::Display for ParamOwner {
             ParamOwner::Sig => {
                 write!(f, "sig")
             }
-            ParamOwner::Exists => {
-                write!(f, "exists")
+            ParamOwner::Exists { opaque: instanced } => {
+                write!(f, "{}", if *instanced { "opaque" } else { "some" })
             }
             ParamOwner::Loop => {
                 write!(f, "loop")

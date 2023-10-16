@@ -63,8 +63,11 @@ impl<'a> Validate<'a> {
     fn port(&self, pidx: ir::PortIdx) {
         let ir::Port { owner, live, .. } = self.comp.get(pidx);
         // check (1)
-        let ir::Liveness { idx: par_idx, .. } = live;
-        match self.comp.get(*par_idx).owner {
+        if let ir::Liveness {
+            idx: Some(par_idx), ..
+        } = live
+        {
+            match self.comp.get(*par_idx).owner {
             ir::ParamOwner::Sig => self.comp.internal_error(format!(
                 "{} should be owned by a bundle but is owned by a sig",
                 self.comp.display(*par_idx)
@@ -73,7 +76,7 @@ impl<'a> Validate<'a> {
                 "{} should be owned by a bundle but is owned by a loop",
                 self.comp.display(*par_idx)
             )),
-            ir::ParamOwner::Exists => self.comp.internal_error(format!(
+            ir::ParamOwner::Exists { .. } => self.comp.internal_error(format!(
                 "{} should be owned by a bundle is an existentially quantified param",
                 self.comp.display(*par_idx)
             )),
@@ -88,6 +91,7 @@ impl<'a> Validate<'a> {
                         format!("{par_idx} should be owned by {pidx} but is owned by {port_idx}"))
                 }
             }
+        }
         }
 
         // check (2)
@@ -258,7 +262,7 @@ impl<'a> Validate<'a> {
         let ir::Exists { param: p_idx, .. } = exists;
         let param = self.comp.get(*p_idx);
         // let param = self.param(*p_idx);
-        if !matches!(param.owner, ir::ParamOwner::Exists) {
+        if !matches!(param.owner, ir::ParamOwner::Exists { .. }) {
             self.comp.internal_error(format!(
                 "{} mentioned in existential binding but owned by {}",
                 self.comp.display(*p_idx),

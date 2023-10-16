@@ -231,7 +231,7 @@ impl MonoSig {
                     "parameter defined by instance `{}'",
                     ul.display(inst.ul())
                 ),
-                ir::ParamOwner::Exists => {
+                ir::ParamOwner::Exists { .. } => {
                     unreachable!(
                         "existential parameter `{}' occurred in a use location",
                         p_rep
@@ -712,9 +712,10 @@ impl MonoSig {
 
         let ir::Liveness { idx, len, range } = live;
 
-        let mono_liveness_idx = self
-            .bundle_param(underlying, pass, idx.ul(), new_port)
-            .get();
+        let mono_liveness_idx = idx.map(|idx| {
+            self.bundle_param(underlying, pass, idx.ul(), new_port)
+                .get()
+        });
 
         let mut mono_liveness = ir::Liveness {
             idx: mono_liveness_idx,
@@ -856,16 +857,19 @@ impl MonoSig {
 
         let ir::Liveness { idx, len, range } = live;
 
-        let mono_liveness_idx =
-            self.bundle_param(underlying, pass, idx.ul(), new_port);
+        let mono_liveness_idx = idx
+            .map(|idx| self.bundle_param(underlying, pass, idx.ul(), new_port));
 
         let mut mono_liveness = ir::Liveness {
-            idx: mono_liveness_idx.get(),
+            idx: mono_liveness_idx.map(|idx| idx.get()),
             len: *len,            // placeholder
             range: range.clone(), // placeholder
         };
 
-        self.bundle_param_map.insert(new_port, mono_liveness_idx);
+        if let Some(m_idx) = mono_liveness_idx {
+            self.bundle_param_map.insert(new_port, m_idx);
+        }
+
         let mono_width = self.expr(underlying, width.ul());
         mono_liveness.len = self.expr(underlying, mono_liveness.len.ul()).get();
         mono_liveness.len = self

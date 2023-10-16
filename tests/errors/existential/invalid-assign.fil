@@ -1,3 +1,3 @@
 comp Foo[W]<'G:1>() -> () {
-    exists W = 10;
+    W := 10;
 }

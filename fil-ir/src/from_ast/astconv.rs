@@ -389,14 +389,9 @@ impl<'prog> BuildCtx<'prog> {
                 // The bundle type uses a fake bundle index and has a length of 1.
                 // We don't need to push a new scope because this type is does not
                 // bind any new parameters.
-                let p_name = self.gen_name();
                 let live = self.try_with_scope(|ctx| {
                     Ok(ir::Liveness {
-                        idx: ctx.param(
-                            p_name.into(),
-                            // Updated after the port is constructed
-                            ir::ParamOwner::bundle(ir::PortIdx::UNKNOWN),
-                        ), // This parameter is unused
+                        idx: None, // This parameter is unused
                         len: ctx.comp().num(1),
                         range: ctx.range(liveness.take())?,
                     })
@@ -428,11 +423,11 @@ impl<'prog> BuildCtx<'prog> {
                 // Construct the bundle type in a new scope.
                 let live = self.try_with_scope(|ctx| {
                     Ok(ir::Liveness {
-                        idx: ctx.param(
+                        idx: Some(ctx.param(
                             // Updated after the port is constructed
                             idx,
                             ir::ParamOwner::bundle(PortIdx::UNKNOWN),
-                        ),
+                        )),
                         len: ctx.expr(len.take())?,
                         range: ctx.range(liveness.take())?,
                     })
@@ -451,9 +446,10 @@ impl<'prog> BuildCtx<'prog> {
         let is_sig_port = p.is_sig();
         let idx = self.comp().add(p);
         // Fixup the liveness index parameter's owner
-        let p = self.comp().get(idx).live.idx;
-        let param = self.comp().get_mut(p);
-        param.owner = ir::ParamOwner::bundle(idx);
+        if let Some(p) = self.comp().get(idx).live.idx {
+            let param = self.comp().get_mut(p);
+            param.owner = ir::ParamOwner::bundle(idx);
+        }
 
         // If this is a signature port, try adding it to the component's external interface
         if is_sig_port {
@@ -541,9 +537,13 @@ impl<'prog> BuildCtx<'prog> {
             sig.param_constraints.len() + sig.event_constraints.len(),
         );
 
-        for pb in &sig.params {
-            self.param(pb.param.clone(), ir::ParamOwner::Sig);
-        }
+        // Add parameters to the component
+        self.comp().param_args = sig
+            .params
+            .iter()
+            .map(|pb| self.param(pb.param.clone(), ir::ParamOwner::Sig))
+            .collect_vec()
+            .into_boxed_slice();
 
         // Binding from let-defined parameters in the signature to their values
         conv_sig.sig_binding = sig
@@ -556,15 +556,21 @@ impl<'prog> BuildCtx<'prog> {
                         self.add_let_param(param.copy(), e);
                         Ok((sb.inner().clone(), None))
                     }
-                    ast::SigBind::Exists { param, cons } => {
-                        let p_idx =
-                            self.param(param.clone(), ir::ParamOwner::Exists);
+                    ast::SigBind::Exists {
+                        param,
+                        opaque,
+                        cons,
+                    } => {
+                        let p_idx = self.param(
+                            param.clone(),
+                            ir::ParamOwner::Exists { opaque: *opaque },
+                        );
                         // Constraints on existentially quantified parameters
                         let assumes = cons
                             .iter()
                             .map(|pc| self.expr_cons(pc.inner().clone()))
                             .collect::<BuildRes<Vec<_>>>()?;
-                        self.comp().add_sig_assumes(p_idx, assumes);
+                        self.comp().add_exist_assumes(p_idx, assumes);
                         Ok((sb.inner().clone(), Some(p_idx)))
                     }
                 }
@@ -579,11 +585,16 @@ impl<'prog> BuildCtx<'prog> {
             .collect();
 
         // Declare the events first
-        for event in &sig.events {
-            // can remove here as each interface signal should only be used once
-            let interface = interface_signals.remove(event.event.inner());
-            self.declare_event(event.inner(), interface);
-        }
+        self.comp().event_args = sig
+            .events
+            .iter()
+            .map(|event| {
+                // can remove here as each interface signal should only be used once
+                let interface = interface_signals.remove(event.event.inner());
+                self.declare_event(event.inner(), interface)
+            })
+            .collect_vec()
+            .into_boxed_slice();
 
         // Then define their delays correctly
         for event in &sig.events {
@@ -613,6 +624,7 @@ impl<'prog> BuildCtx<'prog> {
             ));
             let prop = self.event_cons(ec.inner().clone())?;
             sig_cons.extend(self.comp().assume(prop, info));
+            self.comp().add_event_assert([prop]);
         }
         for pc in &sig.param_constraints {
             let info = self.comp().add(ir::Info::assert(
@@ -620,6 +632,7 @@ impl<'prog> BuildCtx<'prog> {
             ));
             let prop = self.expr_cons(pc.inner().clone())?;
             sig_cons.extend(self.comp().assume(prop, info));
+            self.comp().add_param_assert([prop]);
         }
 
         self.comp().cmds.extend(sig_cons);
@@ -847,7 +860,7 @@ impl<'prog> BuildCtx<'prog> {
                 // Ensure that the parameter is an existential parameter
                 if !matches!(
                     self.comp().get(p_idx).owner,
-                    ir::ParamOwner::Exists
+                    ir::ParamOwner::Exists { .. }
                 ) {
                     let diag = self.diag();
                     let param_typ = Error::malformed("parameter in exists binding is not existentially quantified").add_note(
@@ -958,6 +971,10 @@ impl<'prog> BuildCtx<'prog> {
         );
 
         for (idx, len) in ports {
+            let Some(idx) = idx else {
+                // If there is no parameter, we don't need assumptions
+                continue;
+            };
             let idx = idx.expr(self.comp());
             let start = idx.gte(self.comp().num(0), self.comp());
             let end = idx.lt(len, self.comp());

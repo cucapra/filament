@@ -40,9 +40,12 @@ constraints = {
   ("where" ~ (constraint ~ ("," ~ constraint)*))?
 }
 
+some = { "some" }
+opaque = { "opaque" }
+
 sig_bind = {
   "let" ~ param_var ~ "=" ~ expr ~ ";"
-  | "exists" ~ param_var ~ constraints ~ ";"
+  | (some | opaque) ~ param_var ~ constraints ~ ";"
 }
 
 sig_bindings = {
@@ -240,7 +243,7 @@ bundle = {
 
 // ====== Existential binding =======
 exists = {
-  "exists" ~ param_var ~ "=" ~ expr ~ ";"
+  param_var ~ ":=" ~ expr ~ ";"
 }
 
 /// ===== Assumptions ==========

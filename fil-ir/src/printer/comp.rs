@@ -172,24 +172,24 @@ impl<'a, 'b> Printer<'a, 'b> {
 
         let params = self
             .comp
-            .params()
+            .param_args()
             .iter()
-            .filter(|(_, p)| p.is_sig_owned())
-            .map(|(idx, _)| self.comp.display(idx))
+            .map(|idx| self.comp.display(*idx))
             .join(", ");
 
         let events = self
             .comp
-            .events()
+            .event_args()
             .iter()
-            .map(|(idx, ev)| {
+            .map(|idx| {
+                let ev = self.comp.get(*idx);
                 format!(
                     "{}: {}",
-                    self.comp.display(idx),
+                    self.comp.display(*idx),
                     self.comp.display(&ev.delay)
                 )
             })
-            .join(",");
+            .join(", ");
 
         writeln!(f, "[{params}]<{events}>(")?;
 
@@ -211,7 +211,6 @@ impl<'a, 'b> Printer<'a, 'b> {
             .filter(|(_, port)| port.is_sig_out())
             .map(|(idx, _)| self.port(idx, indent))
             .join(",\n");
-
         writeln!(f, "{outs}) with {{")?;
 
         for param in self.comp.exist_params() {
@@ -222,7 +221,7 @@ impl<'a, 'b> Printer<'a, 'b> {
                 self.comp.display(param),
                 indent = indent + 2
             )?;
-            if let Some(assumes) = self.comp.get_sig_assumes(param) {
+            if let Some(assumes) = self.comp.get_exist_assumes(param) {
                 let props =
                     assumes.iter().map(|p| self.comp.display(*p)).join(", ");
                 writeln!(f, " where {props};")?;
@@ -231,7 +230,19 @@ impl<'a, 'b> Printer<'a, 'b> {
             };
         }
 
-        writeln!(f, "}} {{")
+        let p_asserts = self.comp.get_param_asserts();
+        let e_asserts = self.comp.get_event_asserts();
+
+        if !p_asserts.is_empty() || !e_asserts.is_empty() {
+            writeln!(f, "}} where ")?;
+            for idx in p_asserts.iter().chain(e_asserts.iter()) {
+                write!(f, "{:indent$}", "", indent = indent + 2)?;
+                self.comp.write(*idx, f)?;
+                writeln!(f, ",")?;
+            }
+        }
+
+        writeln!(f, "{:indent$}{{", "")
     }
 
     fn local_param(
@@ -245,7 +256,7 @@ impl<'a, 'b> Printer<'a, 'b> {
             ir::ParamOwner::Sig | ir::ParamOwner::Instance { .. } => {}
             ir::ParamOwner::Bundle(_)
             | ir::ParamOwner::Loop
-            | ir::ParamOwner::Exists => {
+            | ir::ParamOwner::Exists { .. } => {
                 writeln!(
                     f,
                     "{:indent$}{idx} = param {param};{comment}",
@@ -306,15 +317,15 @@ impl<'a, 'b> Printer<'a, 'b> {
         let ir::Instance {
             comp, args, params, ..
         } = self.comp.get(idx);
+        write!(f, "{:indent$}", "")?;
+        self.comp.write(idx, f)?;
         let def_params =
             params.iter().map(|p| self.comp.display(*p)).join(", ");
-        write!(
-            f,
-            "{:indent$}{}, {} = instance ",
-            "",
-            self.comp.display(idx),
-            def_params,
-        )?;
+        if !def_params.is_empty() {
+            write!(f, ", {def_params}")?;
+        }
+        write!(f, " = ")?;
+
         if let Some(ctx) = self.ctx {
             write!(f, "{}", ctx.display(*comp))?;
         } else {
@@ -339,15 +350,20 @@ impl<'a, 'b> Printer<'a, 'b> {
             events,
             ..
         } = self.comp.get(idx);
+        write!(f, "{:indent$}", "")?;
+        self.comp.write(idx, f)?;
 
+        let ports = ports.iter().map(|p| self.comp.display(*p)).join(", ");
+        if !ports.is_empty() {
+            write!(f, ", {ports}")?;
+        }
+        write!(f, " = ")?;
+
+        self.comp.write(*inst, f)?;
         write!(
             f,
-            "{:indent$}{inv}, {ports} = invoke {inst}<{events}>;",
-            "",
-            inv = self.comp.display(idx),
-            ports = ports.iter().map(|p| self.comp.display(*p)).join(", "),
-            inst = self.comp.display(*inst),
-            events = events.iter().map(|e| self.comp.display(e.arg)).join(", ")
+            "<{}>;",
+            events.iter().map(|e| self.comp.display(e.arg)).join(", ")
         )?;
 
         Ok(())

@@ -1,13 +1,13 @@
 import "primitives/core.fil";
 
 comp Pow[I]<'G:1>() -> () with {
-    exists O where O > 0;
+    some O where O > 0;
 } where I >= 0 {
     if I == 0 {
-        exists O = 1;
+        O := 1;
     } else {
         PB := new Pow[I-1];
-        exists O = PB::O * 2;
+        O := PB::O * 2;
     }
 }
 

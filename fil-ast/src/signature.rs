@@ -85,6 +85,7 @@ pub enum SigBind {
     /// An existentially quantified type
     Exists {
         param: Loc<Id>,
+        opaque: bool,
         cons: Vec<Loc<OrderConstraint<Expr>>>,
     },
 }
@@ -94,9 +95,14 @@ impl SigBind {
     }
     pub fn exists(
         param: Loc<Id>,
+        opaque: bool,
         cons: Vec<Loc<OrderConstraint<Expr>>>,
     ) -> Self {
-        Self::Exists { param, cons }
+        Self::Exists {
+            param,
+            opaque,
+            cons,
+        }
     }
 }
 
