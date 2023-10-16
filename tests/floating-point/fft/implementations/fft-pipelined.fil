@@ -5,7 +5,7 @@ import "primitives/reshape.fil";
 
 /// Implements a combinational PEASE fft dataflow.
 /// Uses `N` butterflies
-comp CombPeaseFFT[NStages, N, W, E, ?M=W-E-1]<'G: L>(
+comp PeaseFFT[NStages, N]<'G: L>(
   go: interface['G],
   in[NPoints*2]: ['G, 'G+1] W
 ) -> (
@@ -13,14 +13,15 @@ comp CombPeaseFFT[NStages, N, W, E, ?M=W-E-1]<'G: L>(
 ) with {
   let NPoints = pow2(NStages);
   exists L where L > 0;
+  // Floating Point specification
+  let W = 32;
+  let E = 8;
+  let M = 23;
 } where
   // number of butterflies (N) must divide the total number of butterflies per stage (NPoints/2)
   NPoints % (2*N) == 0,
   N > 0,
-  NStages > 0,
-  W == E + M + 1,
-  E > 1,
-  M > 1
+  NStages > 0
 {
   assume pow2(NStages+1) == NPoints*2;
   assume pow2(NStages+2) == NPoints*4;
