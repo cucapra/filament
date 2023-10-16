@@ -25,8 +25,6 @@ comp PeaseFFT[NStages, N]<'G: L>(
 {
   assume pow2(NStages+1) == NPoints*2;
   assume pow2(NStages+2) == NPoints*4;
-  assume pow2(NStages-1) == NPoints/2;
-  assume pow2(NStages-2) == NPoints/4;
 
   twiddle := new TwiddleFactor[NPoints]<'G>();
   bitrev := new BitRev[NStages, W]<'G>(in{0..NPoints*2});
@@ -34,12 +32,13 @@ comp PeaseFFT[NStages, N]<'G: L>(
   B := new Butterflies[N, W, E, M];
   // number of times we have to reuse the butterflies per stage
   let reuses = NPoints / (2*N);
+  assume reuses * 2 * N == NPoints;
   let stage_latency = B::L * reuses;
 
   // Creates a bundle that has NStages blocks of data,
   // where each block has the right timings.
   // would be nicer with 2d bundles...
-  bundle data[(NStages+1) * NPoints * 2]: for<i> ['G+i/(NPoints*2) * stage_latency, 'G + i/(NPoints*2) * stage_latency + 1] W;
+  bundle data[(NStages+1) * NPoints * 2]: for<di> ['G+di/(NPoints*2) * stage_latency + (di % (NPoints*2)) / (4 * N), 'G + di/(NPoints*2) * stage_latency + (di % (NPoints*2)) / (4 * N) + 1] W;
 
   data{0..NPoints*2} = bitrev.out{0..NPoints*2};
 
@@ -53,8 +52,12 @@ comp PeaseFFT[NStages, N]<'G: L>(
       let end = stage_chunk + (i+1)*4*N;
 
       assume i*4*N < NPoints*2;
+      assume (i+1)*4*N <= NPoints*2;
       assume start / (NPoints*2) == stage;
       assume end / (NPoints*2) == stage;
+      assume (start % (NPoints*2)) / (4*N) == i;
+      assume (end % (NPoints*2)) / (4*N) == i+1;
+
 
       b := B<'G + stage_time + i * B::L>(data{start..end}, twiddle.out{i*2*N..(i+1)*2*N});
 
@@ -68,6 +71,7 @@ comp PeaseFFT[NStages, N]<'G: L>(
 
       // Write to the next stage
       assume (start + NPoints*2) / (NPoints*2) == stage + 1;
+      assume (end + NPoints*2) / (NPoints*2) == stage + 1;
       data{start + NPoints*2..end + NPoints*2} = sp.out{0..4*N};
     }
   }
