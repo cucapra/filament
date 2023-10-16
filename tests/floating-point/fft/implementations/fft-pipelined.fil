@@ -24,6 +24,8 @@ comp PeaseFFT[NStages, N]<'G: L>(
   N * 2 <= NPoints,
   NStages > 0
 {
+  // cvc5 stalls on this??
+  assume NPoints % 2 == 0;
   assume pow2(NStages+1) == NPoints*2;
   assume pow2(NStages+2) == NPoints*4;
 
@@ -90,7 +92,8 @@ comp PeaseFFT[NStages, N]<'G: L>(
       
       assume reg_i*4*N < NPoints*2;
       assume start / (NPoints * 2) == r_stage;
-      assume (end - 1) / (NPoints * 2) == r_stage;
+      // assume (end - 1) / (NPoints * 2) == r_stage;
+      assume end / (NPoints * 2) >= r_stage;
 
       // r_stage*B::L*pow2(NStages)/N*2 >= (sdii+r_stage*pow2(NStages)*2+reg_i*4*N)/pow2(NStages)*2*B::L*pow2(NStages)/N*2
       // &
