@@ -75,7 +75,7 @@ The `-s cocotb.randomize 10` flag adds a random delay of up to 10 cycles between
 
 [calyx]: https://calyxir.org
 [iverilog]: https://github.com/steveicarus/iverilog
-[fud-setup]: ./start.html#full-build
+[fud-setup]: ../start.md#full-build
 [fud]: https://docs.calyxir.org/fud/index.html
 [tut-alu]: ./lang/tutorial.html#building-an-arithmetic-logic-unit
 [x-value]: https://stackoverflow.com/questions/69530556/what-exactly-do-x-and-z-values-represent-in-verilog
