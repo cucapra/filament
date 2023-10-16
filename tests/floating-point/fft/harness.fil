@@ -85,7 +85,7 @@ comp main<'G: 1>(
   fil_pease_comb: ['G, 'G+1] 32*32, // output from combinational pease fft
   fil_pipelined: ['G+L, 'G+L+1] 32*32, // output from pipelined pease fft
 ) with {
-  exists L where L > 0;
+  some L where L > 0;
 }
 {
   // split input into bundle
@@ -109,7 +109,7 @@ comp main<'G: 1>(
 
   fpw := new ConcatBundle[32, 32]<'G>(fp.out{0..32});
   fil_pipelined = fpw.out;
-  exists L = FP::L;
+  L := FP::L;
 
   // hook up spiral dft
   spdft := new dft_top<'G>(

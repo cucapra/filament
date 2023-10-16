@@ -12,7 +12,7 @@ comp PeaseFFT[NStages, N]<'G: L>(
   out[NPoints*2]: ['G+L, 'G+L+1] W
 ) with {
   let NPoints = pow2(NStages);
-  exists L where L > 0;
+  some L where L > 0;
   // Floating Point specification
   let W = 32;
   let E = 8;
@@ -74,7 +74,7 @@ comp PeaseFFT[NStages, N]<'G: L>(
 
   out{0..NPoints*2} = data{NPoints*NStages*2..NPoints*NStages*2+NPoints*2};
 
-  exists L = stage_latency * NStages;
+  L := stage_latency * NStages;
 }
 
 /// Computes N butterflies at once.
@@ -84,7 +84,7 @@ comp Butterflies[N, W, E, ?M=W-E-1]<'G: L>(
 ) -> (
   out[4*N]: ['G+L, 'G+L+1] W
 ) with {
-  exists L where L > 0;
+  some L where L > 0;
 } where
     N > 0,
     W == E + M + 1,
@@ -96,7 +96,7 @@ comp Butterflies[N, W, E, ?M=W-E-1]<'G: L>(
     b := B<'G>(in{0..2}, in{2..4}, twiddle{0..2});
     out{0..2} = b.out0{0..2};
     out{2..4} = b.out1{0..2};
-    exists L = B::L;
+    L := B::L;
   } else {
     BB := new Butterfly[W, E, M];
     // First butterfly
@@ -106,7 +106,7 @@ comp Butterflies[N, W, E, ?M=W-E-1]<'G: L>(
     butterflies := BS<'G>(in{4..4*N}, twiddle{2..2*N});
 
     assume BB::L == BS::L;
-    exists L = BB::L;
+    L := BB::L;
 
     out{0..2} = bb.out0{0..2};
     out{2..4} = bb.out1{0..2};
@@ -123,7 +123,7 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
   out0[2]: ['G+L, 'G+L+1] W,
   out1[2]: ['G+L, 'G+L+1] W
 ) with {
-  exists L where L > 0;
+  some L where L > 0;
 } where
     W == E + M + 1,
     E > 1,
@@ -149,6 +149,6 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
     out1{0} = d10.out;
     out1{1} = d11.out;
 
-    exists L = 1;
+    L := 1;
   }
 }
