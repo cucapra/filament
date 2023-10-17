@@ -197,53 +197,60 @@ comp PeaseFFT[NStages, N]<'G: L>(
     RF := new Register[W * 4 * N];
     // final butterfly only needs a register before computation
     for rf_stage in 0..NStages {
-        let sync_in_t = rf_stage * stage_latency; // start stage here
-        let sync_out_t = (rf_stage + 1) * stage_latency; // end stage here
+      let sync_in_t = rf_stage * stage_latency; // start stage here
+      let sync_out_t = (rf_stage + 1) * stage_latency; // end stage here
 
-        let usync_in_t = sync_in_t + (reuses - 1) * B::L; // start butterfly here
-        let usync_out_t = sync_in_t + reuses * B::L; // end butterfly here
-        
-        // simple order assertions
-        assert usync_in_t > sync_in_t;
-        assert usync_out_t > usync_in_t;
-        assert sync_out_t == usync_out_t;
+      let usync_in_t = sync_in_t + (reuses - 1) * B::L; // start butterfly here
+      let usync_out_t = sync_in_t + reuses * B::L; // end butterfly here
+      
+      // simple order assertions
+      assert usync_in_t > sync_in_t;
+      assert usync_out_t > usync_in_t;
+      assert sync_out_t == usync_out_t;
 
-        let start = rf_stage * NPoints * 2 + (reuses - 1) * 4 * N; // start of data chunk
-        let end = rf_stage * NPoints * 2 + reuses * 4 * N; // end of data chunk
-        
-        assume reuses*2*N == NPoints;
-        assume start / (NPoints * 2) == rf_stage;
-        assume end / (NPoints * 2) == rf_stage + 1;
+      let start = rf_stage * NPoints * 2 + (reuses - 1) * 4 * N; // start of data chunk
+      let end = rf_stage * NPoints * 2 + reuses * 4 * N; // end of data chunk
+      
+      assume reuses*2*N == NPoints;
+      assume start / (NPoints * 2) == rf_stage;
+      assume end / (NPoints * 2) == rf_stage + 1;
 
-        let twiddle_start = rf_stage * NPoints + (reuses - 1) * 2 * N; // start of twiddle chunk
-        let twiddle_end = rf_stage * NPoints + reuses * 2 * N; // end of twiddle chunk
+      let twiddle_start = rf_stage * NPoints + (reuses - 1) * 2 * N; // start of twiddle chunk
+      let twiddle_end = rf_stage * NPoints + reuses * 2 * N; // end of twiddle chunk
 
-        // sync in -> unsync in
-        c1 := CB<'G + sync_in_t>(sync_data_in{start..end});
-        r1 := RF<'G + sync_in_t, 'G + usync_in_t + 1>(c1.out);
-        s1 := SW<'G + usync_in_t>(r1.out);
-        // unsync in -> butterfly
-        b := B<'G + usync_in_t>(s1.out{0..4*N}, twiddle_in{twiddle_start..twiddle_end});
+      // sync in -> unsync in
+      c1 := CB<'G + sync_in_t>(sync_data_in{start..end});
+      r1 := RF<'G + sync_in_t, 'G + usync_in_t + 1>(c1.out);
+      s1 := SW<'G + usync_in_t>(r1.out);
+      // unsync in -> butterfly
+      b := B<'G + usync_in_t>(s1.out{0..4*N}, twiddle_in{twiddle_start..twiddle_end});
 
-        // this significantly speeds up the final assertion, but slows down some of the above assertions
-        assume start / (NPoints * 2) >= rf_stage;
-        assume end / (NPoints * 2) <= rf_stage + 1;
+      // this significantly speeds up the final assertion, but slows down some of the above assertions
+      assume start / (NPoints * 2) >= rf_stage;
+      assume end / (NPoints * 2) <= rf_stage + 1;
 
-        // store sync out
-        sync_data_out{start..end} = b.out{0..4*N};
-      }
+      // store sync out
+      sync_data_out{start..end} = b.out{0..4*N};
+    }
   }
 
-  // SP := new StridePermutation[NStages, W];
+  // --------------- STRIDE PERMUTATIONS ----------------
 
-  // // hook up stride permutations
-  // for stage in 0..NStages {
-  //   stride := SP<'G + (stage + 1) * stage_latency>(sync_data_out{stage * NPoints * 2..(stage + 1) * NPoints * 2});
-  //   sync_data_in{(stage + 1) * NPoints * 2..(stage + 2) * NPoints * 2} = stride.out{0..NPoints*2};
-  // }
+  SP := new StridePermutation[NStages, W];
 
-  // // hook up output
-  // out{0..NPoints*2} = sync_data_in{NStages * NPoints * 2..(NStages + 1) * NPoints * 2};
+  // hook up stride permutations
+  for stage in 0..NStages {
+    stride := SP<'G + (stage + 1) * stage_latency>(sync_data_out{stage * NPoints * 2..(stage + 1) * NPoints * 2});
+    assume stage * NPoints * 2 / (NPoints * 2) + 1 == (stage + 1) * NPoints * 2 / (NPoints * 2);
+    assume (stage + 2) * NPoints * 2 / (NPoints * 2) + 1 == (stage + 2) * NPoints * 2 / (NPoints * 2);
+
+    sync_data_in{(stage + 1) * NPoints * 2..(stage + 2) * NPoints * 2} = stride.out{0..NPoints*2};
+  }
+
+  // hook up output
+  assume (NStages * NPoints * 2) / (NPoints * 2) == NStages;
+  assume ((NStages+1) * NPoints * 2 - 1) / (NPoints * 2) == NStages;
+  out{0..NPoints*2} = sync_data_in{NStages * NPoints * 2..(NStages + 1) * NPoints * 2};
 }
 
 /// Computes N butterflies at once.
