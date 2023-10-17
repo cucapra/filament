@@ -76,13 +76,13 @@ extern "spiral-fft.v" {
   );
 }
 
-comp main<'G: 1>(
+comp main<'G: L>(
   go: interface['G],
   in: ['G, 'G+1] 32*32 // 16 complex numbers bundled together
 ) -> (
   spiral: ['G+65, 'G+66] 32*32, // output from spiral
-  fil_comb: ['G, 'G+1] 32*32, // output from combinational fft
-  fil_pease_comb: ['G, 'G+1] 32*32, // output from combinational pease fft
+  // fil_comb: ['G, 'G+1] 32*32, // output from combinational fft
+  // fil_pease_comb: ['G, 'G+1] 32*32, // output from combinational pease fft
   fil_pipelined: ['G+L, 'G+L+1] 32*32, // output from pipelined pease fft
 ) with {
   some L where L > 0;
@@ -91,23 +91,23 @@ comp main<'G: 1>(
   // split input into bundle
   split := new SplitWire[32, 32]<'G>(in);
 
-  // hook up comb fft
-  fc := new CombFFT[4]<'G>(split.out{0..32});
+  // // hook up comb fft
+  // fc := new CombFFT[4]<'G>(split.out{0..32});
 
-  fcw := new ConcatBundle[32, 32]<'G>(fc.out{0..32});
-  fil_comb = fcw.out;
+  // fcw := new ConcatBundle[32, 32]<'G>(fc.out{0..32});
+  // fil_comb = fcw.out;
 
-  // hook up pease fft
-  fpc := new CombPeaseFFT[4]<'G>(split.out{0..32});
+  // // hook up pease fft
+  // fpc := new CombPeaseFFT[4]<'G>(split.out{0..32});
 
-  fpcw := new ConcatBundle[32, 32]<'G>(fpc.out{0..32});
-  fil_pease_comb = fpcw.out;
+  // fpcw := new ConcatBundle[32, 32]<'G>(fpc.out{0..32});
+  // fil_pease_comb = fpcw.out;
 
   // hook up pipelined fft
   FP := new PeaseFFT[4, 2];
   fp := FP<'G>(split.out{0..32});
 
-  fpw := new ConcatBundle[32, 32]<'G>(fp.out{0..32});
+  fpw := new ConcatBundle[32, 32]<'G+FP::L>(fp.out{0..32});
   fil_pipelined = fpw.out;
   L := FP::L;
 
