@@ -1,13 +1,13 @@
 import "primitives/math/complex.fil";
 
-comp TwiddleFactor[NPoints, ?D=0]<'G: D+1>() -> (
-  out[NPoints]: ['G, 'G+D+1] 32
+comp TwiddleFactor[NPoints, ?D=1]<'G: D>() -> (
+  out[NPoints]: ['G, 'G+D] 32
 ) with {
   let W = 32;
 } where
   NPoints > 0,
   NPoints % 2 == 0,
-  D >= 0
+  D > 0
 {
   // generate twiddle factors
   for i in 0..NPoints/2 {
@@ -38,10 +38,10 @@ comp BitRev[NStages, W]<'G: 1>(
 
 /// Generates the twiddle factors for a stage of the fft.
 /// Separated out to simplify typechecking.
-comp TwiddleStage[NStages, Stage, W, ?D=0]<'G: D+1>(
-  twiddle[NPoints]: ['G, 'G+D+1] W
+comp TwiddleStage[NStages, Stage, W, ?D=1]<'G: D>(
+  twiddle[NPoints]: ['G, 'G+D] W
 ) -> (
-  out[NPoints]: ['G, 'G+D+1] W
+  out[NPoints]: ['G, 'G+D] W
 ) with {
   let NPoints = pow2(NStages);
 } where 
@@ -49,7 +49,7 @@ comp TwiddleStage[NStages, Stage, W, ?D=0]<'G: D+1>(
   Stage < NStages,
   Stage >= 0,
   W > 0,
-  D >= 0
+  D > 0
 {
   // calculate the twiddle factors.
   // Uses the fact that the twiddle factors can be generated recursively
