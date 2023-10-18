@@ -191,7 +191,7 @@ class CocotbExecBase(Stage):
                     # We should only run this after the module has been type
                     # checked.
                     "--unsafe-skip-discharge",
-                    config["stages", self.name, "flags"],
+                    config.get(["stages", "filament", "flags"]),
                     "{path}",
                 ]
             )
