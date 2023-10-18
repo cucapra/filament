@@ -337,7 +337,18 @@ impl MonoDeferred<'_, '_> {
                     .get()
                     .into(),
             ),
-            ir::Command::Let(l) => todo!(),
+            ir::Command::Let(ir::Let { param, expr }) => {
+                let p = param.ul();
+                let e = self.monosig.expr(&self.underlying, expr.ul()).get();
+                let Some(v) = e.as_concrete(self.monosig.base.comp()) else {
+                    unreachable!(
+                        "let binding evaluated to: {}",
+                        self.monosig.base.comp().display(e)
+                    )
+                };
+                self.monosig.binding.push(p, v);
+                None
+            }
             ir::Command::Connect(con) => Some(self.connect(con).into()),
             ir::Command::ForLoop(lp) => {
                 self.forloop(lp);

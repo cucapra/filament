@@ -198,7 +198,7 @@ where
         Action::Continue
     }
 
-    fn let_(&mut self, e: &mut ir::Let, data: &mut VisitorData) -> Action {
+    fn let_(&mut self, _: &mut ir::Let, _data: &mut VisitorData) -> Action {
         Action::Continue
     }
 
