@@ -1,4 +1,5 @@
 #![allow(clippy::upper_case_acronyms)]
+#![allow(clippy::type_complexity)]
 
 //! Parser for Filament programs.
 use crate::{self as ast, Loc, TimeSub};
@@ -357,7 +358,6 @@ impl FilamentParser {
         Ok(evs)
     }
 
-    #[allow(clippy::type_complexity)]
     fn ports(
         input: Node,
     ) -> ParseResult<(Ports, Vec<ast::InterfaceDef>, Vec<(ast::Id, u64)>)> {
