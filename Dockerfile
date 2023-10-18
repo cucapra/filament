@@ -11,6 +11,7 @@ RUN wget https://github.com/cvc5/cvc5/releases/download/cvc5-1.0.6/cvc5-Linux --
   chmod +x cvc5 && \
   mv cvc5 /root/.local/bin
 
+# Add filament
 WORKDIR /home
 ADD . filament
 # Build the compiler
