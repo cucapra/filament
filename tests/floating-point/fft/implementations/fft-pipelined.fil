@@ -94,12 +94,12 @@ comp PeaseFFT[NStages, N]<'G: L>(
       let start = r_stage * NPoints * 2; // start of data chunk
       let end = r_stage * NPoints * 2 + 4 * N; // end of data chunk
       
-      assume 2 * N < NPoints;
+      assume 2 * N == NPoints;
       assume start / (NPoints * 2) == r_stage;
       assume end / (NPoints * 2) == r_stage + 1;
 
       let twiddle_start = r_stage * NPoints; // start of twiddle chunk
-      let twiddle_end = r_stage * NPoints + 2 * N; // end of twiddle chunk
+      let twiddle_end = (r_stage + 1) * NPoints; // end of twiddle chunk
     
       // stage 0 doesn't need the first register invocation
       b := B<'G + usync_in_t>(sync_data_in{start..end}, twiddle_in{twiddle_start..twiddle_end});
