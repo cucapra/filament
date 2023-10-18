@@ -261,6 +261,9 @@ impl Compile {
                 ir::Command::Exists(_) => {
                     unreachable!("exists should have been compiled away.")
                 }
+                ir::Command::Let(_) => {
+                    unreachable!("let should have been compiled away.")
+                }
                 ir::Command::Instance(_) // ignore instances and invokes as these are compiled first
                 | ir::Command::Invoke(_)
                 | ir::Command::Fact(_) => (),

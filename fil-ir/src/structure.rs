@@ -279,6 +279,11 @@ impl Access {
 pub enum ParamOwner {
     /// Defined by the signature (passed in when instantiated)
     Sig,
+    /// A `let`-bound variable
+    Let {
+        /// The value of the parameter in its corresponding binding
+        bind: ExprIdx,
+    },
     /// Owned by an `exists` binding
     Exists {
         /// If this existential parameter should be treated as an
@@ -301,6 +306,9 @@ impl fmt::Display for ParamOwner {
         match self {
             ParamOwner::Sig => {
                 write!(f, "sig")
+            }
+            ParamOwner::Let { .. } => {
+                write!(f, "let")
             }
             ParamOwner::Exists { opaque: instanced } => {
                 write!(f, "{}", if *instanced { "opaque" } else { "some" })

@@ -15,6 +15,8 @@ pub enum Command {
     BundleDef(PortIdx),
     /// A wire connection
     Connect(Connect),
+    /// A `let`-bound parameter
+    Let(Let),
     /// A `for` loop
     ForLoop(Loop),
     /// An `if` statement
@@ -72,6 +74,11 @@ impl From<Fact> for Command {
 impl From<Exists> for Command {
     fn from(exists: Exists) -> Self {
         Command::Exists(exists)
+    }
+}
+impl From<Let> for Command {
+    fn from(let_: Let) -> Self {
+        Command::Let(let_)
     }
 }
 
@@ -192,9 +199,19 @@ impl EventBind {
     }
 }
 
+/// Binding for an existentially quantified parameter
 #[derive(Clone, PartialEq, Eq)]
 pub struct Exists {
     /// The existentially quantified parameter
+    pub param: ParamIdx,
+    /// The binding for the parameter
+    pub expr: ExprIdx,
+}
+
+/// A `let`-bound parameter
+#[derive(Clone, PartialEq, Eq)]
+pub struct Let {
+    /// The parameter
     pub param: ParamIdx,
     /// The binding for the parameter
     pub expr: ExprIdx,

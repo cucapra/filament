@@ -66,6 +66,7 @@ impl OwnedParam {
             | ir::ParamOwner::Exists { .. }
             | ir::ParamOwner::Bundle(_)
             | ir::ParamOwner::Loop => Self::Local(id),
+            ir::ParamOwner::Let { .. } => todo!(),
             ir::ParamOwner::Instance { inst, .. } => Self::Instance(*inst, id),
         }
     }

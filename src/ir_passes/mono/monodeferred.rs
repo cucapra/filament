@@ -337,6 +337,7 @@ impl MonoDeferred<'_, '_> {
                     .get()
                     .into(),
             ),
+            ir::Command::Let(l) => todo!(),
             ir::Command::Connect(con) => Some(self.connect(con).into()),
             ir::Command::ForLoop(lp) => {
                 self.forloop(lp);

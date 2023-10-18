@@ -68,6 +68,10 @@ impl<'a> Validate<'a> {
         } = live
         {
             match self.comp.get(*par_idx).owner {
+            ir::ParamOwner::Let { .. } => self.comp.internal_error(format!(
+                "{} should be owned by a bundle but is owned by a let",
+                self.comp.display(*par_idx)
+            )),
             ir::ParamOwner::Sig => self.comp.internal_error(format!(
                 "{} should be owned by a bundle but is owned by a sig",
                 self.comp.display(*par_idx)
@@ -204,9 +208,29 @@ impl<'a> Validate<'a> {
             ir::Command::Connect(con) => self.connect(con),
             ir::Command::ForLoop(lp) => self.forloop(lp),
             ir::Command::If(cond) => self.if_stmt(cond),
+            ir::Command::Let(l) => self.let_(l),
             ir::Command::Fact(_) => (),
             ir::Command::BundleDef(b) => self.bundle_def(*b),
             ir::Command::Exists(e) => self.exists(e),
+        }
+    }
+
+    fn let_(&self, l: &ir::Let) {
+        let ir::Let { param, expr } = l;
+        let owner = &self.comp[*param].owner;
+        let ir::ParamOwner::Let { bind } = owner else {
+            self.comp.internal_error(format!(
+                "{} is a let binding, but its owner is not a let",
+                self.comp.display(*param)
+            ))
+        };
+        if bind != expr {
+            self.comp.internal_error(format!(
+                "let binding for `{}' binds it to {} but the owner defines it to {}",
+                self.comp.display(*param),
+                self.comp.display(*expr),
+                self.comp.display(*bind)
+            ))
         }
     }
 
