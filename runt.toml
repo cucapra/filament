@@ -29,7 +29,7 @@ name = "floating point-random"
 paths = ["tests/floating-point/*/harness.fil"]
 cmd = """
 dir=$(dirname {}) && \
-./tests/utils/rand_check.sh $dir 100
+./tests/utils/rand_check.sh $dir
 """
 
 [[tests]]
@@ -47,7 +47,7 @@ paths = ["tests/iterative-divider/harness.fil"]
 timeout = 3600
 cmd = """
 dir=$(dirname {}) && \
-./tests/utils/rand_check.sh $dir 100
+./tests/utils/rand_check.sh $dir
 """
 
 [[tests]]
