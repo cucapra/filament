@@ -38,7 +38,6 @@ comp PeaseFFT[NStages, N]<'G: L>(
   assume reuses * 2 * N == NPoints;
   let stage_latency = B::L * reuses;
   let latency = stage_latency * NStages;
-  L := latency;
   
   // twiddle factor that stays alive for the whole computation
   twiddle := new TwiddleFactor[NPoints, latency]<'G>();
@@ -250,7 +249,9 @@ comp PeaseFFT[NStages, N]<'G: L>(
   // hook up output
   assume (NStages * NPoints * 2) / (NPoints * 2) == NStages;
   assume ((NStages+1) * NPoints * 2 - 1) / (NPoints * 2) == NStages;
+
   out{0..NPoints*2} = sync_data_in{NStages * NPoints * 2..(NStages + 1) * NPoints * 2};
+  L := latency;
 }
 
 /// Computes N butterflies at once.
@@ -267,26 +268,13 @@ comp Butterflies[N, W, E, ?M=W-E-1]<'G: L>(
     E > 1,
     M > 1
 {
-  if N == 1 {
-    B := new Butterfly[W, E, M];
-    b := B<'G>(in{0..2}, in{2..4}, twiddle{0..2});
-    out{0..2} = b.out0{0..2};
-    out{2..4} = b.out1{0..2};
-    L := B::L;
-  } else {
-    BB := new Butterfly[W, E, M];
-    // First butterfly
-    bb := BB<'G>(in{0..2}, in{2..4}, twiddle{0..2});
-    // Recurse
-    BS := new Butterflies[N-1, W, E, M];
-    butterflies := BS<'G>(in{4..4*N}, twiddle{2..2*N});
+  Bx := new Butterfly[W, E, M];
+  L := Bx::L;
 
-    assume BB::L == BS::L;
-    L := BB::L;
-
-    out{0..2} = bb.out0{0..2};
-    out{2..4} = bb.out1{0..2};
-    out{4..4*N} = butterflies.out{0..4*N-4};
+  for i in 0..N {
+    b := new Butterfly[W, E, M]<'G>(in{i*4..i*4+2}, in{i*4+2..i*4+4}, twiddle{i*2..i*2+2});
+    out{i*4..i*4+2} = b.out0{0..2};
+    out{i*4+2..i*4+4} = b.out1{0..2};
   }
 }
 
@@ -309,10 +297,10 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
   let T = 0;
   if T == 0 {
     // Fully combinational butterfly module
-    t1 := new ComplexMult[W, E, M]<'G>(in1{0..2}, twiddle{0..2});
-    O0 := new ComplexAdd[W, E, M]<'G>(in0{0..2}, t1.out{0..2});
-
     // multiply by twiddle
+    t1 := new ComplexMult[W, E, M]<'G>(in1{0..2}, twiddle{0..2});
+    
+    O0 := new ComplexAdd[W, E, M]<'G>(in0{0..2}, t1.out{0..2});
     O1 := new ComplexSub[W, E, M]<'G>(in0{0..2}, t1.out{0..2});
 
     // registers
