@@ -35,19 +35,19 @@ dir=$(dirname {}) && \
 [[tests]]
 name = "floating point-edge"
 paths = ["tests/floating-point/*/harness.fil"]
+timeout = 3600
 cmd = """
 dir=$(dirname {}) && \
 ./tests/utils/check.sh $dir edge
-timeout = 3600
 """
 
 [[tests]]
 name = "iterative divider-random"
 paths = ["tests/iterative-divider/harness.fil"]
+timeout = 3600
 cmd = """
 dir=$(dirname {}) && \
 ./tests/utils/rand_check.sh $dir 100
-timeout = 3600
 """
 
 [[tests]]
