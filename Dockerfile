@@ -1,9 +1,5 @@
 FROM ghcr.io/cucapra/calyx:0.4.0
 
-# Install apt dependencies
-RUN apt-get update -y && \
-    apt-get install -y z3
-
 # Install CVC5
 WORKDIR /home
 ENV PATH=$PATH:/root/.local/bin
