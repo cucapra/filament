@@ -1,5 +1,9 @@
 FROM ghcr.io/cucapra/calyx:0.4.0
 
+# Install apt packages
+RUN apt-get update -y && \
+  apt-get -y install unzip
+
 # Install CVC5
 WORKDIR /home
 ENV PATH=$PATH:/root/.local/bin
@@ -11,10 +15,9 @@ RUN wget https://github.com/cvc5/cvc5/releases/download/cvc5-1.0.6/cvc5-Linux --
 WORKDIR /home
 RUN git clone --depth 1 --branch z3-4.12.2 https://github.com/Z3Prover/z3.git
 WORKDIR /home/z3
-RUN python3 scripts/mk_make.py --prefix=/root/.local/ && \
-  cd build && \
-  make && \
-  make install
+RUN wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x64-glibc-2.31.zip --output-document z3.zip && \
+  unzip z3.zip
+ENV PATH=$PATH:/home/z3/z3-4.12.2-x64-glibc-2.31/bin/
 
 # Add filament
 WORKDIR /home
