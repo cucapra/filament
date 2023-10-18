@@ -15,10 +15,10 @@ RUN wget https://github.com/cvc5/cvc5/releases/download/cvc5-1.0.6/cvc5-Linux --
 WORKDIR /home
 RUN git clone --depth 1 --branch z3-4.12.2 https://github.com/Z3Prover/z3.git
 WORKDIR /home/z3
-RUN python scripts/mk_make.py --prefix=/root/.local/ && \
+RUN python3 scripts/mk_make.py --prefix=/root/.local/ && \
   cd build && \
   make && \
-  sudo make install
+  make install
 
 # Add filament
 WORKDIR /home
