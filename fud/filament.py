@@ -188,6 +188,10 @@ class CocotbExecBase(Stage):
                     "--library",
                     config["stages", self.name, "library"],
                     "--dump-interface",
+                    # We should only run this after the module has been type
+                    # checked.
+                    "--unsafe-skip-discharge",
+                    config["stages", self.name, "flags"],
                     "{path}",
                 ]
             )
