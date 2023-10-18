@@ -391,7 +391,7 @@ impl<'prog> BuildCtx<'prog> {
                 // bind any new parameters.
                 let live = self.try_with_scope(|ctx| {
                     Ok(ir::Liveness {
-                        idx: None, // This parameter is unused
+                        idx: None,
                         len: ctx.comp().num(1),
                         range: ctx.range(liveness.take())?,
                     })
@@ -423,11 +423,13 @@ impl<'prog> BuildCtx<'prog> {
                 // Construct the bundle type in a new scope.
                 let live = self.try_with_scope(|ctx| {
                     Ok(ir::Liveness {
-                        idx: Some(ctx.param(
-                            // Updated after the port is constructed
-                            idx,
-                            ir::ParamOwner::bundle(PortIdx::UNKNOWN),
-                        )),
+                        idx: idx.map(|idx| {
+                            ctx.param(
+                                idx,
+                                // Updated after the port is constructed
+                                ir::ParamOwner::bundle(PortIdx::UNKNOWN),
+                            )
+                        }),
                         len: ctx.expr(len.take())?,
                         range: ctx.range(liveness.take())?,
                     })

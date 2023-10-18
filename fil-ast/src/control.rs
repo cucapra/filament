@@ -288,7 +288,7 @@ impl If {
 /// ```
 pub struct BundleType {
     /// The name of the parameter for the bundle type
-    pub idx: Loc<Id>,
+    pub idx: Option<Loc<Id>>,
     /// Length of the bundle. The index parameter ranges over [0, len)
     pub len: Loc<Expr>,
     /// Availability interval for the bundle
@@ -299,7 +299,7 @@ pub struct BundleType {
 
 impl BundleType {
     pub fn new(
-        idx: Loc<Id>,
+        idx: Option<Loc<Id>>,
         len: Loc<Expr>,
         liveness: Loc<Range>,
         bitwidth: Loc<Expr>,

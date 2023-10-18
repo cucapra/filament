@@ -707,11 +707,12 @@ impl FilamentParser {
 
     fn bundle_typ(
         input: Node,
-    ) -> ParseResult<(Loc<ast::Id>, Loc<ast::Range>, Loc<ast::Expr>)> {
+    ) -> ParseResult<(Option<Loc<ast::Id>>, Loc<ast::Range>, Loc<ast::Expr>)>
+    {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(param), interval_range(range), expr(width)] => (param, range, width),
-            [interval_range(range), expr(width)] => (Loc::unknown(ast::Id::from("_")), range, width),
+            [param_var(param), interval_range(range), expr(width)] => (Some(param), range, width),
+            [interval_range(range), expr(width)] => (None, range, width),
         ))
     }
 
