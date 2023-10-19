@@ -13,7 +13,7 @@ use std::{fs, iter};
 use term::termcolor::{ColorChoice, StandardStream};
 
 #[derive(Default)]
-pub struct Assign(Vec<(ir::ParamIdx, String)>);
+struct Assign(Vec<(ir::ParamIdx, String)>);
 
 impl Assign {
     fn is_empty(&self) -> bool {
@@ -105,6 +105,34 @@ impl Discharge {
             self.sol.list(iter::once(f).chain(args).collect_vec())
         }
     }
+
+    fn sort(&self) -> smt::SExpr {
+        self.sol.int_sort()
+    }
+    fn plus(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        self.sol.plus(l, r)
+    }
+    fn sub(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        self.sol.sub(l, r)
+    }
+    fn times(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        self.sol.times(l, r)
+    }
+    fn div(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        self.sol.div(l, r)
+    }
+    fn modulo(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        self.sol.modulo(l, r)
+    }
+    fn gt(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        self.sol.gt(l, r)
+    }
+    fn gte(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        self.sol.gte(l, r)
+    }
+    fn eq(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        self.sol.eq(l, r)
+    }
 }
 
 impl Construct for Discharge {
@@ -151,8 +179,8 @@ impl Construct for Discharge {
                             comp_idx.get(),
                             some_param.get()
                         ),
-                        (0..num_args).map(|_| out.sol.int_sort()).collect_vec(),
-                        out.sol.int_sort(),
+                        (0..num_args).map(|_| out.sort()).collect_vec(),
+                        out.sort(),
                     )
                     .unwrap();
                 let f = ir::Foreign::new(some_param, comp_idx);
@@ -225,7 +253,7 @@ impl Discharge {
 
     /// Defines primitive functions used in the encoding like `pow` and `log`
     fn define_funcs(&mut self) {
-        let is = self.sol.int_sort();
+        let is = self.sort();
 
         macro_rules! sol_fn(
             ($name:tt($($args:ident),*) -> $out:ident) => {
@@ -369,11 +397,11 @@ impl Discharge {
                 let l = self.expr_map[*lhs];
                 let r = self.expr_map[*rhs];
                 match op {
-                    ast::Op::Add => sol.plus(l, r),
-                    ast::Op::Sub => sol.sub(l, r),
-                    ast::Op::Mul => sol.times(l, r),
-                    ast::Op::Div => sol.div(l, r),
-                    ast::Op::Mod => sol.modulo(l, r),
+                    ast::Op::Add => self.plus(l, r),
+                    ast::Op::Sub => self.sub(l, r),
+                    ast::Op::Mul => self.times(l, r),
+                    ast::Op::Div => self.div(l, r),
+                    ast::Op::Mod => self.modulo(l, r),
                 }
             }
             ir::Expr::Fn { op, args } => {
@@ -397,9 +425,9 @@ impl Discharge {
         let l = transform(lhs, self);
         let r = transform(rhs, self);
         match op {
-            ir::Cmp::Gt => self.sol.gt(l, r),
-            ir::Cmp::Gte => self.sol.gte(l, r),
-            ir::Cmp::Eq => self.sol.eq(l, r),
+            ir::Cmp::Gt => self.gt(l, r),
+            ir::Cmp::Gte => self.gte(l, r),
+            ir::Cmp::Eq => self.eq(l, r),
         }
     }
 
@@ -420,7 +448,7 @@ impl Discharge {
                     ir::TimeSub::Sym { l, r } => {
                         let l = ctx.time_map[*l];
                         let r = ctx.time_map[*r];
-                        ctx.sol.sub(l, r)
+                        ctx.sub(l, r)
                     }
                 })
             }
@@ -452,7 +480,7 @@ impl Visitor for Discharge {
     fn start(&mut self, data: &mut VisitorData) -> Action {
         let comp = &data.comp;
         // Declare all parameters
-        let int = self.sol.int_sort();
+        let int = self.sort();
         for (idx, _) in data.comp.params().iter() {
             let sexp = self
                 .sol
@@ -482,8 +510,7 @@ impl Visitor for Discharge {
 
         // Declare all time expressions
         for (idx, ir::Time { event, offset }) in data.comp.times().iter() {
-            let assign =
-                self.sol.plus(self.ev_map[*event], self.expr_map[*offset]);
+            let assign = self.plus(self.ev_map[*event], self.expr_map[*offset]);
             let sexp = self
                 .sol
                 .define_const(Self::fmt_time(idx), int, assign)
