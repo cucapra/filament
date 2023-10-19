@@ -82,11 +82,19 @@ impl Discharge {
         let (name, s_opts) = match opts.solver {
             cmdline::Solver::Z3 => {
                 log::debug!("Using z3 solver");
-                ("z3", &["-smt2", "-in"])
+                ("z3", vec!["-smt2", "-in"])
+            }
+            cmdline::Solver::Boolector => {
+                log::debug!("Using boolector solver");
+                ("boolector", vec!["--incremental"])
             }
             cmdline::Solver::CVC5 => {
                 log::debug!("Using cvc5 solver");
-                ("cvc5", &["--incremental", "--force-logic=ALL"])
+                ("cvc5", vec!["--incremental", "--force-logic=ALL"])
+            }
+            cmdline::Solver::Bitwuzla => {
+                log::debug!("Using bitwuzla solver");
+                ("bitwuzla", vec![])
             }
         };
         smt::ContextBuilder::new()
@@ -251,7 +259,7 @@ impl Construct for Discharge {
             }
         }
 
-        out.sol.push().unwrap();
+        out.sol.push_many(1).unwrap();
         out
     }
 
@@ -267,8 +275,8 @@ impl Construct for Discharge {
         self.to_prove.clear();
 
         // Create a new solver context
-        self.sol.pop().unwrap();
-        self.sol.push().unwrap();
+        self.sol.pop_many(1).unwrap();
+        self.sol.push_many(1).unwrap();
     }
 }
 
@@ -276,19 +284,21 @@ impl Discharge {
     fn fmt_param(&self, param: ir::ParamIdx, ctx: &ir::Component) -> String {
         match self.sol_base {
             // CVC5 does not correctly print out quoted SExps
-            cmdline::Solver::CVC5 => format!("param{}", param.get()),
             cmdline::Solver::Z3 => {
                 format!("|{}@param{}|", ctx.display(param), param.get())
+            }
+            _ => {
+                format!("param{}", param.get())
             }
         }
     }
 
     fn fmt_event(&self, event: ir::EventIdx, ctx: &ir::Component) -> String {
         match self.sol_base {
-            cmdline::Solver::CVC5 => format!("event{}", event.get()),
             cmdline::Solver::Z3 => {
                 format!("|{}@event{}|", ctx.display(event), event.get())
             }
+            _ => format!("event{}", event.get()),
         }
     }
 

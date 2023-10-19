@@ -7,6 +7,8 @@ pub enum Solver {
     #[default]
     CVC5,
     Z3,
+    Boolector,
+    Bitwuzla,
 }
 
 impl FromStr for Solver {
@@ -15,8 +17,10 @@ impl FromStr for Solver {
         match s {
             "z3" => Ok(Solver::Z3),
             "cvc5" => Ok(Solver::CVC5),
+            "boolector" => Ok(Solver::Boolector),
+            "bitwuzla" => Ok(Solver::Bitwuzla),
             _ => {
-                Err(format!("unknown solver: {s}. Known solvers are: z3, cvc5"))
+                Err(format!("unknown solver: {s}. Known solvers are: z3, cvc5, boolector, bitwuzla"))
             }
         }
     }
