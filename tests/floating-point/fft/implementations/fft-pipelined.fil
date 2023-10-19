@@ -86,10 +86,10 @@ comp PeaseFFT[NStages, N]<'G: L>(
       let usync_in_t = sync_in_t; // start butterfly here
       let usync_out_t = sync_in_t + B::L; // end butterfly here
       
-      // simple order assertions
-      assert usync_in_t == sync_in_t;
-      assert usync_out_t > usync_in_t;
-      assert sync_out_t == usync_out_t;
+      // simple order assumptions
+      assume usync_in_t == sync_in_t;
+      assume usync_out_t > usync_in_t;
+      assume sync_out_t == usync_out_t;
 
       let start = r_stage * NPoints * 2; // start of data chunk
       let end = r_stage * NPoints * 2 + 4 * N; // end of data chunk
@@ -115,10 +115,10 @@ comp PeaseFFT[NStages, N]<'G: L>(
         let usync_in_t = sync_in_t; // start butterfly here
         let usync_out_t = sync_in_t + B::L; // end butterfly here
         
-        // simple order assertions
-        assert usync_in_t == sync_in_t;
-        assert usync_out_t > usync_in_t;
-        assert sync_out_t > usync_out_t;
+        // simple order assumptions
+        assume usync_in_t == sync_in_t;
+        assume usync_out_t > usync_in_t;
+        assume sync_out_t > usync_out_t;
 
         let start = r0_stage * NPoints * 2; // start of data chunk
         let end = r0_stage * NPoints * 2 + 4 * N; // end of data chunk
@@ -157,10 +157,10 @@ comp PeaseFFT[NStages, N]<'G: L>(
         let usync_in_t = sync_in_t + reg_i * B::L; // start butterfly here
         let usync_out_t = sync_in_t + (reg_i + 1) * B::L; // end butterfly here
         
-        // simple order assertions
-        assert usync_in_t > sync_in_t;
-        assert usync_out_t > usync_in_t;
-        assert sync_out_t > usync_out_t;
+        // simple order assumptions
+        assume usync_in_t > sync_in_t;
+        assume usync_out_t > usync_in_t;
+        assume sync_out_t > usync_out_t;
 
         let start = r_stage * NPoints * 2 + reg_i * 4 * N; // start of data chunk
         let end = r_stage * NPoints * 2 + (reg_i + 1) * 4 * N; // end of data chunk
@@ -202,10 +202,10 @@ comp PeaseFFT[NStages, N]<'G: L>(
       let usync_in_t = sync_in_t + (reuses - 1) * B::L; // start butterfly here
       let usync_out_t = sync_in_t + reuses * B::L; // end butterfly here
       
-      // simple order assertions
-      assert usync_in_t > sync_in_t;
-      assert usync_out_t > usync_in_t;
-      assert sync_out_t == usync_out_t;
+      // simple order assumptions
+      assume usync_in_t > sync_in_t;
+      assume usync_out_t > usync_in_t;
+      assume sync_out_t == usync_out_t;
 
       let start = rf_stage * NPoints * 2 + (reuses - 1) * 4 * N; // start of data chunk
       let end = rf_stage * NPoints * 2 + reuses * 4 * N; // end of data chunk
