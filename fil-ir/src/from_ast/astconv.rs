@@ -389,9 +389,14 @@ impl<'prog> BuildCtx<'prog> {
                 // The bundle type uses a fake bundle index and has a length of 1.
                 // We don't need to push a new scope because this type is does not
                 // bind any new parameters.
+                let p_name = self.gen_name();
                 let live = self.try_with_scope(|ctx| {
                     Ok(ir::Liveness {
-                        idx: None, // This parameter is unused
+                        idx: ctx.param(
+                            p_name.into(),
+                            // Updated after the port is constructed
+                            ir::ParamOwner::bundle(ir::PortIdx::UNKNOWN),
+                        ), // This parameter is unused
                         len: ctx.comp().num(1),
                         range: ctx.range(liveness.take())?,
                     })
@@ -423,11 +428,11 @@ impl<'prog> BuildCtx<'prog> {
                 // Construct the bundle type in a new scope.
                 let live = self.try_with_scope(|ctx| {
                     Ok(ir::Liveness {
-                        idx: Some(ctx.param(
+                        idx: ctx.param(
                             // Updated after the port is constructed
                             idx,
                             ir::ParamOwner::bundle(PortIdx::UNKNOWN),
-                        )),
+                        ),
                         len: ctx.expr(len.take())?,
                         range: ctx.range(liveness.take())?,
                     })
@@ -446,10 +451,9 @@ impl<'prog> BuildCtx<'prog> {
         let is_sig_port = p.is_sig();
         let idx = self.comp().add(p);
         // Fixup the liveness index parameter's owner
-        if let Some(p) = self.comp().get(idx).live.idx {
-            let param = self.comp().get_mut(p);
-            param.owner = ir::ParamOwner::bundle(idx);
-        }
+        let p = self.comp().get(idx).live.idx;
+        let param = self.comp().get_mut(p);
+        param.owner = ir::ParamOwner::bundle(idx);
 
         // If this is a signature port, try adding it to the component's external interface
         if is_sig_port {
@@ -971,10 +975,6 @@ impl<'prog> BuildCtx<'prog> {
         );
 
         for (idx, len) in ports {
-            let Some(idx) = idx else {
-                // If there is no parameter, we don't need assumptions
-                continue;
-            };
             let idx = idx.expr(self.comp());
             let start = idx.gte(self.comp().num(0), self.comp());
             let end = idx.lt(len, self.comp());

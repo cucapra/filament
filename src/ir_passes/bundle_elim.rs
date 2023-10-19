@@ -54,6 +54,7 @@ impl BundleElim {
 
         let start = comp.get(range.start).clone();
         let end = comp.get(range.end).clone();
+
         let len = len.concrete(comp);
 
         // if we need to preserve external interface information, we can't have bundle ports in the signature.
@@ -73,34 +74,28 @@ impl BundleElim {
         // create a single port for each element in the bundle.
         let ports = (0..len)
             .map(|i| {
-                let range = if let Some(idx) = idx {
-                    // binds the index parameter to the current bundle index
-                    let binding: Bind<ir::ParamIdx, _> =
-                        Bind::new([(idx, comp.add(Expr::Concrete(i)))]);
+                // binds the index parameter to the current bundle index
+                let binding: Bind<_, _> =
+                    Bind::new([(idx, comp.add(Expr::Concrete(i)))]);
 
-                    // calculates the offsets based on this binding and generates new start and end times.
-                    let offset = Subst::new(start.offset, &binding).apply(comp);
-                    let start = comp.add(Time {
-                        event: start.event,
-                        offset,
-                    });
+                // calculates the offsets based on this binding and generates new start and end times.
+                let offset = Subst::new(start.offset, &binding).apply(comp);
+                let start = comp.add(Time {
+                    event: start.event,
+                    offset,
+                });
 
-                    let offset = Subst::new(end.offset, &binding).apply(comp);
-                    let end = comp.add(Time {
-                        event: end.event,
-                        offset,
-                    });
-
-                    Range { start, end }
-                } else {
-                    range.clone()
-                };
+                let offset = Subst::new(end.offset, &binding).apply(comp);
+                let end = comp.add(Time {
+                    event: end.event,
+                    offset,
+                });
 
                 // creates a new liveness with the new start and end times and length one
                 let live = Liveness {
-                    idx: None,
+                    idx, // this should technically be some null parameter, as it will refer to a deleted parameter now.
                     len: one,
-                    range,
+                    range: Range { start, end },
                 };
 
                 // creates a new portowner based on the original owner
@@ -138,9 +133,7 @@ impl BundleElim {
         // delete the original port
         comp.delete(pidx);
         // delete the corresponding parameter
-        if let Some(idx) = idx {
-            comp.delete(idx);
-        }
+        comp.delete(idx);
         ports
     }
 
