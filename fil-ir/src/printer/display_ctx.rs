@@ -156,11 +156,7 @@ impl<'a> DisplayCtx<&'a ir::Liveness> for ir::Component {
         write!(
             f,
             "for<{}: {}> {}",
-            if let Some(idx) = idx {
-                self.display(*idx)
-            } else {
-                "_".to_string()
-            },
+            self.display(*idx),
             self.display(*len),
             self.display(range)
         )
