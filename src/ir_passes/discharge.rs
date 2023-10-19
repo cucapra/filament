@@ -40,6 +40,8 @@ impl Assign {
 /// top-level.
 pub struct Discharge {
     sol: smt::Context,
+    /// Are we using a bitvector encoding
+    bv_size: Option<u8>,
     /// Which solver are we using
     sol_base: cmdline::Solver,
     /// Are we in a scoped context?
@@ -106,38 +108,99 @@ impl Discharge {
         }
     }
 
+    /// Return the sort to be used in this encoding.
+    /// When using bv encoding, we return twice the number of bits provided on
+    /// the command line so that we can encode overflow checks.
+    #[inline]
+    fn bv_size(&self) -> Option<u8> {
+        self.bv_size.map(|v| v * 2)
+    }
+
     fn sort(&self) -> smt::SExpr {
-        self.sol.int_sort()
+        if let Some(v) = self.bv_size() {
+            self.sol.bit_vec_sort(self.sol.numeral(v))
+        } else {
+            self.sol.int_sort()
+        }
+    }
+    fn num(&self, n: u64) -> smt::SExpr {
+        if let Some(v) = self.bv_size() {
+            self.sol.binary(v as usize, n)
+        } else {
+            self.sol.numeral(n)
+        }
     }
     fn plus(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
-        self.sol.plus(l, r)
+        if self.bv_size.is_some() {
+            self.sol.bvadd(l, r)
+        } else {
+            self.sol.plus(l, r)
+        }
     }
     fn sub(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
-        self.sol.sub(l, r)
+        if self.bv_size.is_some() {
+            self.sol.bvsub(l, r)
+        } else {
+            self.sol.sub(l, r)
+        }
     }
     fn times(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
-        self.sol.times(l, r)
+        if self.bv_size.is_some() {
+            self.sol.bvmul(l, r)
+        } else {
+            self.sol.times(l, r)
+        }
     }
     fn div(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
-        self.sol.div(l, r)
+        if self.bv_size.is_some() {
+            self.sol.bvudiv(l, r)
+        } else {
+            self.sol.div(l, r)
+        }
     }
     fn modulo(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
-        self.sol.modulo(l, r)
+        if self.bv_size.is_some() {
+            self.sol.bvurem(l, r)
+        } else {
+            self.sol.modulo(l, r)
+        }
     }
     fn gt(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
-        self.sol.gt(l, r)
+        if self.bv_size.is_some() {
+            self.sol.bvugt(l, r)
+        } else {
+            self.sol.gt(l, r)
+        }
     }
     fn gte(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
-        self.sol.gte(l, r)
+        if self.bv_size.is_some() {
+            self.sol.bvuge(l, r)
+        } else {
+            self.sol.gte(l, r)
+        }
     }
     fn eq(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
         self.sol.eq(l, r)
+    }
+    /// Assert that the expression is not overflowing
+    /// e >= 0 && e < 2^bvsize
+    fn overflow_assert(&mut self, e: smt::SExpr) {
+        let Some(v) = self.bv_size else {
+            return;
+        };
+        let max = self.num((1 << v) - 1);
+        let zero = self.num(0);
+        let ge_zero = self.gte(e, zero);
+        let lt_max = self.gt(max, e);
+        let and = self.sol.and(ge_zero, lt_max);
+        self.sol.assert(and).unwrap();
     }
 }
 
 impl Construct for Discharge {
     fn from(opts: &cmdline::Opts, ctx: &mut ir::Context) -> Self {
         let mut out = Self {
+            bv_size: opts.solver_bv,
             sol: Self::conf_solver(opts),
             sol_base: opts.solver,
             scoped: false,
@@ -389,10 +452,9 @@ impl Discharge {
     }
 
     fn expr_to_sexp(&mut self, expr: &ir::Expr) -> smt::SExpr {
-        let sol = &mut self.sol;
         match expr {
             ir::Expr::Param(p) => self.param_map[*p],
-            ir::Expr::Concrete(n) => sol.numeral(*n),
+            ir::Expr::Concrete(n) => self.num(*n),
             ir::Expr::Bin { op, lhs, rhs } => {
                 let l = self.expr_map[*lhs];
                 let r = self.expr_map[*rhs];
@@ -486,6 +548,7 @@ impl Visitor for Discharge {
                 .sol
                 .declare_fun(self.fmt_param(idx, comp), vec![], int)
                 .unwrap();
+            self.overflow_assert(sexp);
             self.param_map.push(idx, sexp);
         }
 
@@ -495,6 +558,7 @@ impl Visitor for Discharge {
                 .sol
                 .declare_fun(self.fmt_event(idx, comp), vec![], int)
                 .unwrap();
+            self.overflow_assert(sexp);
             self.ev_map.push(idx, sexp);
         }
 
@@ -505,6 +569,7 @@ impl Visitor for Discharge {
                 .sol
                 .define_const(Self::fmt_expr(idx), int, assign)
                 .unwrap();
+            self.overflow_assert(sexp);
             self.expr_map.push(idx, sexp);
         }
 
@@ -515,6 +580,7 @@ impl Visitor for Discharge {
                 .sol
                 .define_const(Self::fmt_time(idx), int, assign)
                 .unwrap();
+            self.overflow_assert(sexp);
             self.time_map.push(idx, sexp);
         }
 
