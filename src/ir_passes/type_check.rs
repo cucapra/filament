@@ -1,6 +1,7 @@
 use crate::ir_visitor::{Action, Visitor, VisitorData};
 use fil_ir::{self as ir, AddCtx, Ctx};
 use fil_utils::GPosIdx;
+use ir::DisplayCtx;
 use itertools::Itertools;
 
 #[derive(Default)]
@@ -32,6 +33,14 @@ impl TypeCheck {
                 loc,
             )
             .into(),
+        );
+
+        assert!(
+            live.lens.len() == ranges.len(),
+            "Port `{}' has {} dimensions but accessed with {} indices",
+            comp.display(*port),
+            live.lens.len(),
+            ranges.len()
         );
 
         ranges

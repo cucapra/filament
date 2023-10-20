@@ -1,0 +1,13 @@
+---CODE---
+1
+---STDERR---
+error: required bundle of size `6' but found bundle of size `(W+1)*5'
+  ┌─ tests/errors/bundle/multi-len.fil:5:5
+  │
+5 │     f{0..2}{0..3} = g{0..5}{0..W+1};
+  │     ^^^^^^^^^^^^^   --------------- length of bundle is (W+1)*5
+  │     │                
+  │     length of bundle is 6
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

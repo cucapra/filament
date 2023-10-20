@@ -236,14 +236,11 @@ impl Visitor for IntervalCheck {
             ir::Subst::new(dst_t.range.clone(), &binding).apply(comp);
 
         // Assuming that lengths are equal
-        let pre_req = src_t
-            .lens
-            .iter()
-            .zip(&dst_t.lens)
-            .fold(comp.add(ir::Prop::True), |a, (l1, l2)| {
-                a.and(l1.equal(*l2, comp), comp)
-            })
-            .and(in_range, comp);
+        let one = comp.num(1);
+        let s_len = src_t.lens.iter().fold(one, |acc, l| acc.mul(*l, comp));
+        let d_len = dst_t.lens.iter().fold(one, |acc, l| acc.mul(*l, comp));
+
+        let pre_req = s_len.equal(d_len, comp).and(in_range, comp);
 
         let contains = src_t
             .range

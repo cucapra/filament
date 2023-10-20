@@ -712,8 +712,8 @@ impl FilamentParser {
                 }
                 let mut params = params;
                 // Add extra parameters for missing dimensions
-                (0..s_len - p_len).for_each(|_| {
-                    params.push(Loc::unknown(ast::Id::from("_")));
+                (0..s_len - p_len).for_each(|i| {
+                    params.push(Loc::unknown(ast::Id::from(format!("_{i}"))));
                 });
 
                 Ok(ast::Bundle::new(name, ast::BundleType::new(params, sizes, range, width)))
