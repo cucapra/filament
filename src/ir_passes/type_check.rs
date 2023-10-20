@@ -38,11 +38,12 @@ impl TypeCheck {
             .iter()
             // TODO(rachit): This might panic
             .zip_eq(live.lens)
-            .flat_map(|((start, end), len)| {
+            .enumerate()
+            .flat_map(|(i, ((start, end), len))| {
                 let (start, end, len) = (*start, *end, len);
                 let wf_prop = end.gt(start, comp);
                 let within_bounds = comp.add(
-                    ir::info::Reason::in_bounds_access(bind_loc, loc, len)
+                    ir::info::Reason::in_bounds_access(bind_loc, i, loc, len)
                         .into(),
                 );
                 let start = start.lt(len, comp);
@@ -112,21 +113,21 @@ impl Visitor for TypeCheck {
         let prop = src_w.equal(dst_w, comp);
         cons.extend(comp.assert(prop, reason));
 
-        // Ensure that the sizes are the same
-        for ((src_s, src_e), (dst_s, dst_e)) in
-            src.ranges.iter().zip_eq(&dst.ranges)
-        {
-            let src_size = src_e.sub(*src_s, comp);
-            let dst_size = dst_e.sub(*dst_s, comp);
-            let reason = comp.add(
-                ir::info::Reason::bundle_len_match(
-                    dst_loc, src_loc, dst_size, src_size,
-                )
+        let one = comp.num(1);
+        let s_len = src
+            .ranges
+            .iter()
+            .fold(one, |acc, (s, e)| acc.mul(e.sub(*s, comp), comp));
+        let d_len = dst
+            .ranges
+            .iter()
+            .fold(one, |acc, (s, e)| acc.mul(e.sub(*s, comp), comp));
+        let prop = s_len.equal(d_len, comp);
+        let reason = comp.add(
+            ir::info::Reason::bundle_len_match(dst_loc, src_loc, d_len, s_len)
                 .into(),
-            );
-            let prop = src_size.equal(dst_size, comp);
-            cons.extend(comp.assert(prop, reason));
-        }
+        );
+        cons.extend(comp.assert(prop, reason));
 
         Action::AddBefore(cons)
     }

@@ -143,8 +143,11 @@ interval_range = {
  "[" ~ time ~ "," ~ time ~ "]"
 }
 
+bundle_params = {
+  "<" ~ param_var ~ ("," ~ param_var)* ~ ">"
+}
 bundle_typ = {
-  ("for" ~ "<" ~ param_var ~ ("," ~ param_var)* ~ ">")? ~ interval_range ~ expr
+  ("for" ~ bundle_params)? ~ interval_range ~ expr
 }
 
 // Bundle definition

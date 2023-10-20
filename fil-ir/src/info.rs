@@ -71,6 +71,7 @@ pub struct Connect {
 pub struct Port {
     /// Surface-level name
     pub name: ast::Id,
+    /// The location of the name
     pub bind_loc: GPosIdx,
     pub width_loc: GPosIdx,
     pub live_loc: GPosIdx,
@@ -324,10 +325,12 @@ pub enum Reason {
     InBoundsAccess {
         // Defining location for the port
         def_loc: GPosIdx,
+        /// The dimension's location
+        dim: usize,
         /// Location of the access
         access_loc: GPosIdx,
         /// Length of the bundle
-        bundle_len: ExprIdx,
+        dim_len: ExprIdx,
     },
 
     // ========== Constraints from interval checking ============
@@ -454,13 +457,15 @@ impl Reason {
 
     pub fn in_bounds_access(
         def_loc: GPosIdx,
+        dim: usize,
         access_loc: GPosIdx,
         bundle_len: ExprIdx,
     ) -> Self {
         Self::InBoundsAccess {
             def_loc,
+            dim,
             access_loc,
-            bundle_len,
+            dim_len: bundle_len,
         }
     }
 
@@ -572,13 +577,14 @@ impl Reason {
             }
             Reason::InBoundsAccess {
                 def_loc,
+                dim,
                 access_loc,
-                bundle_len,
+                dim_len: bundle_len,
             } => {
                 let access =
                     access_loc.primary().with_message("out of bounds access");
                 let def = def_loc.secondary().with_message(format!(
-                    "bundle's length is {}",
+                    "dimension {dim} has length {}",
                     ctx.display(*bundle_len)
                 ));
                 Diagnostic::error()

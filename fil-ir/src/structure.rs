@@ -223,9 +223,6 @@ impl Access {
     /// produces one port.
     /// The check is syntactic and therefore conservative.
     pub fn is_port(&self, ctx: &Component) -> bool {
-        if self.ranges.len() != 1 {
-            return false;
-        }
         for (start, end) in &self.ranges {
             let Some(one) = ctx.exprs().find(&Expr::Concrete(1)) else {
                 ctx.internal_error("Constant 1 not found in component")

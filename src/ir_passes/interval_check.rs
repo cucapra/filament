@@ -226,7 +226,8 @@ impl Visitor for IntervalCheck {
             dst_t
                 .idxs
                 .iter()
-                .zip_eq(&src_t.idxs)
+                // We only substitute the indices that appear in both
+                .zip(&src_t.idxs)
                 .map(|(d, s)| (*d, s.expr(comp)))
                 .collect_vec(),
         );

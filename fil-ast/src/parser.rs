@@ -699,7 +699,7 @@ impl FilamentParser {
             [identifier(name), expr(sizes).., bundle_typ((params, range, width))] => {
                 let sizes = sizes.collect_vec();
                 // If no size is specified, treat this is as one dimensional bundle with size 1.
-                let (sizes, s_len) = if sizes.len() == 0 {
+                let (sizes, s_len) = if sizes.is_empty() {
                     (vec![Loc::unknown(ast::Expr::Concrete(1))], 1)
                 } else {
                     let s_len = sizes.len();
@@ -721,13 +721,19 @@ impl FilamentParser {
         )
     }
 
+    fn bundle_params(input: Node) -> ParseResult<Vec<Loc<ast::Id>>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [param_var(params)..] => params.collect(),
+        ))
+    }
+
     fn bundle_typ(
         input: Node,
     ) -> ParseResult<(Vec<Loc<ast::Id>>, Loc<ast::Range>, Loc<ast::Expr>)> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(params).., interval_range(range), expr(width)] => (params.collect(), range, width),
-            [param_var(param), interval_range(range), expr(width)] => (vec![param], range, width),
+            [bundle_params(params), interval_range(range), expr(width)] => (params, range, width),
             [interval_range(range), expr(width)] => (vec![Loc::unknown(ast::Id::from("_"))], range, width),
         ))
     }
