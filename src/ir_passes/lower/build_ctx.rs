@@ -218,9 +218,9 @@ impl<'a> BuildCtx<'a> {
 
         log::debug!("Compiling connect: {}", self.comp.display(con));
 
-        // ignores the guard of the destination (bind check already verifies that it is available for at least as long as src)
-        let (dst, _) = self.compile_port(dst.port);
-        let (src, g) = self.compile_port(src.port);
+        // ignores the guard of the src (bind check already verifies that it is available for at least as long as dest)
+        let (dst, g) = self.compile_port(dst.port);
+        let (src, _) = self.compile_port(src.port);
         let assign = self.builder.build_assignment(dst, src, g);
         self.builder.component.continuous_assignments.push(assign);
     }
