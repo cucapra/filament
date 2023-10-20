@@ -432,18 +432,12 @@ impl MonoSig {
     /// corresponding index
     fn bundle_params(
         &mut self,
-        underlying: &UnderlyingComp,
-        pass: &mut Monomorphize,
+        _underlying: &UnderlyingComp,
+        _pass: &mut Monomorphize,
         params: &[Underlying<ir::Param>],
         port: Base<ir::Port>,
     ) -> Vec<Base<ir::Param>> {
-        let Some(&p) = params.get(0) else {
-            unreachable!("bundle should have at least one param")
-        };
-        let ir::Param { info, .. } = underlying.get(p);
-        let info = info.ul();
-
-        let mono_info = self.info(underlying, pass, info);
+        let info = self.base.add(ir::Info::empty()).get();
         let mono_owner = ir::ParamOwner::Bundle(port.get());
 
         if let Some(new_params) = self.bundle_param_map.get(&port) {
@@ -452,7 +446,7 @@ impl MonoSig {
                 .map(|&new_param_idx| {
                     let new_param = self.base.get_mut(new_param_idx);
                     new_param.owner = mono_owner.clone();
-                    new_param.info = mono_info.get();
+                    new_param.info = info;
                     new_param_idx
                 })
                 .collect_vec();
@@ -463,7 +457,7 @@ impl MonoSig {
             .map(|old_param| {
                 let mono_param = ir::Param {
                     owner: mono_owner.clone(),
-                    info: self.info(underlying, pass, info).get(),
+                    info,
                 };
                 let new_idx = self.base.add(mono_param);
                 self.param_map.push(*old_param, new_idx);

@@ -64,11 +64,7 @@ comp Wrapper<'G: II>(
         O{0..16} = de.out{0..16};
     } else {
         // No need to deserialize if there is only one chunk.
-        for i in 0..Chunks {
-            for j in 0..C::N {
-                O{i*C::N+j} = co{i}{j};
-            }
-        }
+        O{0..16} = co{0..Chunks}{0..C::N};
     }
 
     // The output latency is determined by the Deserializer.

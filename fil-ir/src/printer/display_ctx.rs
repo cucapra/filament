@@ -110,10 +110,13 @@ impl DisplayCtx<ir::InstIdx> for ir::Component {
 impl DisplayCtx<ir::PortIdx> for ir::Component {
     fn write(&self, idx: ir::PortIdx, f: &mut impl Write) -> IOResult {
         let port = self.get(idx);
-        let name = self
-            .get(port.info)
-            .as_port()
-            .map_or(format!("{idx}"), |p| format!("{}", p.name));
+        let name = if log::log_enabled!(log::Level::Trace) {
+            format!("{idx}")
+        } else {
+            self.get(port.info)
+                .as_port()
+                .map_or(format!("{idx}"), |p| format!("{}", p.name))
+        };
         match port.owner {
             ir::PortOwner::Local | ir::PortOwner::Sig { .. } => {
                 write!(f, "{name}")

@@ -31,9 +31,11 @@ pub fn all_indices(ranges: Vec<(usize, usize)>) -> Vec<Vec<usize>> {
 pub fn nd_idx(v: usize, lens: &Vec<usize>) -> Vec<usize> {
     let mut idxs = Vec::with_capacity(lens.len());
     let mut v = v;
-    for l in lens {
+    for l in lens.iter().rev() {
         idxs.push(v % l);
         v /= l;
     }
+    // We've computed idxs in reverse order
+    idxs.reverse();
     idxs
 }
