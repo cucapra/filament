@@ -19,10 +19,10 @@ impl TypeCheck {
         access: &ir::Access,
         loc: GPosIdx,
         comp: &mut ir::Component,
-    ) -> impl Iterator<Item = ir::Command> {
-        let &ir::Access { port, start, end } = access;
+    ) -> Vec<ir::Command> {
+        let &ir::Access { port, ranges } = access;
         let &ir::Port {
-            live: ir::Liveness { len, .. },
+            live: ir::Liveness { lens, .. },
             info,
             ..
         } = comp.get(port);
@@ -37,18 +37,27 @@ impl TypeCheck {
             .into(),
         );
 
-        let wf_prop = end.gt(start, comp);
-        let within_bounds = comp
-            .add(ir::info::Reason::in_bounds_access(bind_loc, loc, len).into());
-        let start = start.lt(len, comp);
-        let end = end.lte(len, comp);
-        let in_range = start.and(end, comp);
-        vec![
-            comp.assert(wf_prop, wf),
-            comp.assert(in_range, within_bounds),
-        ]
-        .into_iter()
-        .flatten()
+        ranges
+            .iter()
+            // TODO(rachit): This might panic
+            .zip_eq(&lens)
+            .flat_map(|((start, end), len)| {
+                let (start, end, len) = (*start, *end, *len);
+                let wf_prop = end.gt(start, comp);
+                let within_bounds = comp.add(
+                    ir::info::Reason::in_bounds_access(bind_loc, loc, len)
+                        .into(),
+                );
+                let start = start.lt(len, comp);
+                let end = end.lte(len, comp);
+                let in_range = start.and(end, comp);
+                vec![
+                    comp.assert(wf_prop, wf),
+                    comp.assert(in_range, within_bounds),
+                ]
+            })
+            .flatten()
+            .collect_vec()
     }
 }
 
@@ -107,16 +116,20 @@ impl Visitor for TypeCheck {
         cons.extend(comp.assert(prop, reason));
 
         // Ensure that the sizes are the same
-        let src_size = src.end.sub(src.start, comp);
-        let dst_size = dst.end.sub(dst.start, comp);
-        let reason = comp.add(
-            ir::info::Reason::bundle_len_match(
-                dst_loc, src_loc, dst_size, src_size,
-            )
-            .into(),
-        );
-        let prop = src_size.equal(dst_size, comp);
-        cons.extend(comp.assert(prop, reason));
+        for ((src_s, src_e), (dst_s, dst_e)) in
+            src.ranges.iter().zip_eq(&dst.ranges)
+        {
+            let src_size = src_e.sub(*src_s, comp);
+            let dst_size = dst_e.sub(*dst_s, comp);
+            let reason = comp.add(
+                ir::info::Reason::bundle_len_match(
+                    dst_loc, src_loc, dst_size, src_size,
+                )
+                .into(),
+            );
+            let prop = src_size.equal(dst_size, comp);
+            cons.extend(comp.assert(prop, reason));
+        }
 
         Action::AddBefore(cons)
     }
