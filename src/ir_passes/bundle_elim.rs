@@ -3,45 +3,111 @@ use crate::{
     ir_visitor::{Action, Construct, Visitor, VisitorData},
 };
 use fil_ir::{
-    self as ir, Access, AddCtx, Bind, Command, Component, Connect, Context,
-    Ctx, DenseIndexInfo, DisplayCtx, Expr, Foreign, Info, InvIdx, Invoke,
-    Liveness, MutCtx, Port, PortIdx, PortOwner, Range, Subst, Time,
+    self as ir, Access, AddCtx, Bind, Command, Component, Connect, Ctx,
+    DenseIndexInfo, DisplayCtx, Expr, Foreign, Info, InvIdx, Invoke, Liveness,
+    MutCtx, Port, PortIdx, PortOwner, Range, Subst, Time,
 };
 use itertools::Itertools;
 use std::collections::HashMap;
 
 // Eliminates bundle ports by breaking them into multiple len-1 ports, and eliminates local ports altogether.
 pub struct BundleElim {
-    context: DenseIndexInfo<Component, HashMap<PortIdx, Vec<PortIdx>>>,
-    local_map: HashMap<(PortIdx, usize), (PortIdx, usize)>,
+    /// Mapping from component to the map from signature bundle port to generated port.
+    context: DenseIndexInfo<
+        Component,
+        HashMap<PortIdx, (/*lens=*/ Vec<u64>, /*gen_ports=*/ Vec<PortIdx>)>,
+    >,
+    /// Mapping from index into a dst port to an index of the src port.
+    local_map: HashMap<
+        (PortIdx, /*idxs=*/ Vec<usize>),
+        (PortIdx, /*idxs=*/ Vec<usize>),
+    >,
 }
 
 impl BundleElim {
     /// Gets corresponding ports from the context given a component and a port access.
     fn get(&self, access: &Access, data: &mut VisitorData) -> Vec<PortIdx> {
-        let Access { port, start, end } = access;
-        let start = start.concrete(&data.comp) as usize;
-        let end = end.concrete(&data.comp) as usize;
+        let Access { port, ranges } = access;
+        let comp = &data.comp;
+        let mut len = 1;
+        let ranges_c = ranges
+            .iter()
+            .map(|(s, e)| {
+                let s = s.concrete(comp) as usize;
+                let e = e.concrete(comp) as usize;
+                len *= e - s;
+                (s, e)
+            })
+            .collect_vec();
 
-        let mut ports = Vec::with_capacity(end - start);
+        let mut ports = Vec::with_capacity(len);
 
-        for idx in start..end {
+        let comp_info = &self.context[data.idx];
+
+        for idx in Self::all_indices(ranges_c) {
             let mut group = (*port, idx);
             // loops until the non-local source of this port is found
-            let (port, idx) = loop {
+            let (port, idxs) = loop {
                 match self.local_map.get(&group) {
                     Some(&g) => group = g,
                     None => break group,
                 }
             };
-            ports.push(self.context[data.idx][&port][idx]);
+            let (lens, sig_ports) = comp_info[&port];
+            ports.push(sig_ports[Self::flat_idx(&lens, idxs)])
         }
 
         ports
     }
 
+    fn flat_idx(indices: &[u64], lens: Vec<usize>) -> usize {
+        indices
+            .into_iter()
+            .zip_eq(lens)
+            .map(|(i, l)| (*i as usize) * l)
+            .sum::<usize>()
+    }
+
+    /// For a array of ranges, return all the indices generated in that range.
+    /// For example, if we have the input: [(0, 2), (0, 3)] then we get:
+    /// [ [0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2] ]
+    fn all_indices(ranges: Vec<(usize, usize)>) -> Vec<Vec<usize>> {
+        let mut indices = vec![vec![]];
+        for (start, end) in ranges {
+            indices = indices
+                .into_iter()
+                .flat_map(|idx| {
+                    (start..end).map(move |i| {
+                        let mut x = idx.clone();
+                        x.push(i);
+                        x
+                    })
+                })
+                .collect();
+        }
+        indices
+    }
+
+    /// Convert a concrete number into an n-dimensional array's index
+    fn nd_idx(v: u64, lens: &Vec<u64>) -> Vec<u64> {
+        let mut idxs = Vec::with_capacity(lens.len());
+        let mut v = v;
+        for l in lens {
+            idxs.push(v % l);
+            v /= l;
+        }
+        idxs
+    }
+
     /// Compiles a port by breaking it into multiple len-1 ports.
-    fn port(&self, pidx: PortIdx, comp: &mut Component) -> Vec<PortIdx> {
+    fn port(
+        &self,
+        pidx: PortIdx,
+        comp: &mut Component,
+    ) -> (
+        /*lens=*/ Vec<u64>,
+        /*generated ports=*/ Vec<PortIdx>,
+    ) {
         let one = comp.add(Expr::Concrete(1));
         let Port {
             owner,
@@ -50,12 +116,14 @@ impl BundleElim {
             info,
         } = comp.get(pidx).clone();
 
-        let Liveness { idx, len, range } = live;
+        let Liveness { idxs, lens, range } = live;
 
         let start = comp.get(range.start).clone();
         let end = comp.get(range.end).clone();
 
-        let len = len.concrete(comp);
+        // The total size of the bundle
+        let lens = lens.iter().map(|l| l.concrete(comp)).collect_vec();
+        let len = lens.into_iter().product::<u64>();
 
         // if we need to preserve external interface information, we can't have bundle ports in the signature.
         if comp.src_info.is_some() && matches!(owner, PortOwner::Sig { .. }) {
@@ -65,7 +133,7 @@ impl BundleElim {
             );
 
             // need to preserve the original portidx here to save the source information.
-            return vec![pidx];
+            return (lens, vec![pidx]);
         }
 
         // creates the info to be cloned later.
@@ -74,9 +142,12 @@ impl BundleElim {
         // create a single port for each element in the bundle.
         let ports = (0..len)
             .map(|i| {
-                // binds the index parameter to the current bundle index
-                let binding: Bind<_, _> =
-                    Bind::new([(idx, comp.add(Expr::Concrete(i)))]);
+                let binding = Bind::new(
+                    Self::nd_idx(i, &lens)
+                        .into_iter()
+                        .zip_eq(&idxs)
+                        .map(|(v, idx)| (*idx, comp.add(Expr::Concrete(v)))),
+                );
 
                 // calculates the offsets based on this binding and generates new start and end times.
                 let offset = Subst::new(start.offset, &binding).apply(comp);
@@ -93,8 +164,8 @@ impl BundleElim {
 
                 // creates a new liveness with the new start and end times and length one
                 let live = Liveness {
-                    idx, // this should technically be some null parameter, as it will refer to a deleted parameter now.
-                    len: one,
+                    idxs: vec![idxs[0]], // this should technically be some null parameter, as it will refer to a deleted parameter now.
+                    lens: vec![one],
                     range: Range { start, end },
                 };
 
@@ -111,7 +182,7 @@ impl BundleElim {
                             base: Foreign::new(
                                 // maps the foreign to the corresponding single port
                                 // this works because all signature ports are compiled first.
-                                self.context[owner][&key][i as usize],
+                                self.context[owner][&key].1[i as usize],
                                 owner,
                             ),
                         }
@@ -133,12 +204,17 @@ impl BundleElim {
         // delete the original port
         comp.delete(pidx);
         // delete the corresponding parameter
-        comp.delete(idx);
-        ports
+        for idx in idxs {
+            comp.delete(idx);
+        }
+        (lens, ports)
     }
 
     /// Compiles the signature of a component and adds the new ports to the context mapping.
-    fn sig(&self, comp: &mut Component) -> HashMap<PortIdx, Vec<PortIdx>> {
+    fn sig(
+        &self,
+        comp: &mut Component,
+    ) -> HashMap<PortIdx, (Vec<u64>, Vec<PortIdx>)> {
         // loop through signature ports and compile them
         comp.ports()
             .idx_iter()
@@ -154,7 +230,8 @@ impl BundleElim {
         &self,
         idx: InvIdx,
         comp: &mut Component,
-    ) -> HashMap<PortIdx, Vec<PortIdx>> {
+    ) -> HashMap<PortIdx, (/*lens=*/ Vec<u64>, /*gen_ports=*/ Vec<PortIdx>)>
+    {
         let Invoke { ports, .. } = comp.get_mut(idx);
         // first take all the old ports and split them up
         let mappings = std::mem::take(ports)
@@ -164,14 +241,14 @@ impl BundleElim {
 
         // add them back to the invoke (need to get mutably again because comp is mutated above)
         comp.get_mut(idx).ports =
-            mappings.iter().flat_map(|(_, v)| v).copied().collect();
+            mappings.iter().flat_map(|(_, (_, v))| v).copied().collect();
 
         mappings.into_iter().collect()
     }
 }
 
 impl Construct for BundleElim {
-    fn from(_opts: &cmdline::Opts, ctx: &mut Context) -> Self {
+    fn from(_opts: &cmdline::Opts, ctx: &mut ir::Context) -> Self {
         let mut visitor = Self {
             context: DenseIndexInfo::default(),
             local_map: HashMap::new(),
@@ -224,7 +301,7 @@ impl Visitor for BundleElim {
         // are defined before connects accessing the local port (I.E. assignments are in proper order).
         Action::Change(
             src.into_iter()
-                .zip(dst)
+                .zip_eq(dst)
                 .map(|(src, dst)| {
                     Command::Connect(Connect {
                         src: Access::port(src, &mut data.comp),
@@ -254,38 +331,50 @@ impl Visitor for BundleElim {
             self.context.get_mut(data.idx).extend(pl);
         }
 
-        // generates the local map for this component
+        // Generates the local map for this component
+        // At this point, we expect all the connects to be at the top-level because monomorphization has eliminated all control flow.
         self.local_map = comp
             .cmds
             .iter()
             .filter_map(|cmd| {
-                let Command::Connect(con) = cmd else {
+                let ir::Command::Connect(con @ ir::Connect { src, dst, .. }) =
+                    cmd
+                else {
                     return None;
                 };
-                let Connect { src, dst, .. } = con;
 
                 // need to check validity here because already deleted ports are still in the connect commands
-                if comp.ports().is_valid(dst.port)
-                    && comp.get(dst.port).is_local()
+                if !(comp.ports().is_valid(dst.port)
+                    && comp.get(dst.port).is_local())
                 {
-                    let dst_start = dst.start.concrete(comp) as usize;
-                    let dst_end = dst.end.concrete(comp) as usize;
-                    let src_start = src.start.concrete(comp) as usize;
-                    let src_end = src.end.concrete(comp) as usize;
-                    assert!(
-                        dst_end - dst_start == src_end - src_start,
-                        "Mismatched access lengths for connect `{}`",
-                        comp.display(con)
-                    );
-
-                    Some(
-                        (dst_start..dst_end)
-                            .zip(src_start..src_end)
-                            .map(|(d, s)| ((dst.port, d), (src.port, s))),
-                    )
-                } else {
-                    None
+                    return None;
                 }
+
+                let src_ranges = src
+                    .ranges
+                    .iter()
+                    .map(|(s, e)| {
+                        let s = s.concrete(comp) as usize;
+                        let e = e.concrete(comp) as usize;
+                        (s, e)
+                    })
+                    .collect_vec();
+                let dst_ranges = dst
+                    .ranges
+                    .iter()
+                    .map(|(s, e)| {
+                        let s = s.concrete(comp) as usize;
+                        let e = e.concrete(comp) as usize;
+                        (s, e)
+                    })
+                    .collect_vec();
+
+                Some(
+                    Self::all_indices(dst_ranges)
+                        .into_iter()
+                        .zip_eq(Self::all_indices(src_ranges))
+                        .map(|(d, s)| ((dst.port, d), (src.port, s))),
+                )
             })
             .flatten()
             .collect();
