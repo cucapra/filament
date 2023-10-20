@@ -124,8 +124,8 @@ impl Visitor for AssignCheck {
             idxs.sort();
             let err = Error::malformed(format!(
                 "bundle `{}' has {} unassigned locations",
+                data.comp.display(port),
                 idxs.len(),
-                data.comp.display(port)
             ));
 
             let p = data.comp.get(port);

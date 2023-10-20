@@ -169,9 +169,20 @@ impl<'a> DisplayCtx<&'a ir::Access> for ir::Component {
     fn write(&self, a: &ir::Access, f: &mut impl Write) -> IOResult {
         let ir::Access { port, ranges } = &a;
         self.write(*port, f)?;
-        ranges.iter().try_for_each(|(start, end)| {
-            write!(f, "{{{}..{}}}", self.display(*start), self.display(*end))
-        })?;
+        if a.is_port(self) {
+            ranges.iter().try_for_each(|(start, end)| {
+                write!(f, "{{{}}}", self.display(*start),)
+            })?;
+        } else {
+            ranges.iter().try_for_each(|(start, end)| {
+                write!(
+                    f,
+                    "{{{}..{}}}",
+                    self.display(*start),
+                    self.display(*end)
+                )
+            })?;
+        }
         Ok(())
     }
 }
