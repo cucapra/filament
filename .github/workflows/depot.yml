@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - master
-    tags:
-      - 'v*'
 
 jobs:
   build:
@@ -25,7 +23,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ghcr.io/cucapra/calyx
+          images: ghcr.io/cucapra/filament
           tags: |
             type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
@@ -33,7 +31,7 @@ jobs:
       - uses: depot/setup-action@v1
       - uses: depot/build-push-action@v1
         with:
-          project: zmf9xmg5nl
+          project: 7grh10615f
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
