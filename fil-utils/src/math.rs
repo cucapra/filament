@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 /// Convert a n-dimensional array's index into a concrete number into an index into a flat array
-pub fn flat_idx(indices: &[usize], lens: Vec<usize>) -> usize {
+pub fn flat_idx(indices: &[usize], lens: &[usize]) -> usize {
     indices
         .iter()
         .zip_eq(lens)

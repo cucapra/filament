@@ -20,14 +20,11 @@ impl TypeCheck {
         loc: GPosIdx,
         comp: &mut ir::Component,
     ) -> Vec<ir::Command> {
-        let &ir::Access { port, ranges } = access;
-        let &ir::Port {
-            live: ir::Liveness { lens, .. },
-            info,
-            ..
-        } = comp.get(port);
+        let &ir::Access { port, ranges } = &access;
+        let ir::Port { live, info, .. } = comp.get(*port);
+        let live = live.clone();
 
-        let &ir::info::Port { bind_loc, .. } = comp.get(info).into();
+        let &ir::info::Port { bind_loc, .. } = comp.get(*info).into();
 
         let wf = comp.add(
             ir::info::Reason::misc(
@@ -40,9 +37,9 @@ impl TypeCheck {
         ranges
             .iter()
             // TODO(rachit): This might panic
-            .zip_eq(&lens)
+            .zip_eq(live.lens)
             .flat_map(|((start, end), len)| {
-                let (start, end, len) = (*start, *end, *len);
+                let (start, end, len) = (*start, *end, len);
                 let wf_prop = end.gt(start, comp);
                 let within_bounds = comp.add(
                     ir::info::Reason::in_bounds_access(bind_loc, loc, len)

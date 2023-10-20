@@ -46,16 +46,16 @@ impl BundleElim {
         let comp_info = &self.context[data.idx];
 
         for idx in utils::all_indices(ranges_c) {
-            let mut group = (*port, idx);
+            let mut group = &(*port, idx);
             // loops until the non-local source of this port is found
             let (port, idxs) = loop {
-                match self.local_map.get(&group) {
-                    Some(&g) => group = g,
+                match self.local_map.get(group) {
+                    Some(g) => group = g,
                     None => break group,
                 }
             };
-            let (lens, sig_ports) = comp_info[&port];
-            ports.push(sig_ports[utils::flat_idx(&lens, idxs)])
+            let (lens, sig_ports) = &comp_info[port];
+            ports.push(sig_ports[utils::flat_idx(idxs, lens)])
         }
 
         ports
@@ -85,7 +85,7 @@ impl BundleElim {
 
         // The total size of the bundle
         let lens = lens.iter().map(|l| l.concrete(comp) as usize).collect_vec();
-        let len = lens.into_iter().product::<usize>();
+        let len = lens.iter().product::<usize>();
 
         // if we need to preserve external interface information, we can't have bundle ports in the signature.
         if comp.src_info.is_some() && matches!(owner, PortOwner::Sig { .. }) {
@@ -143,7 +143,7 @@ impl BundleElim {
                             base: Foreign::new(
                                 // maps the foreign to the corresponding single port
                                 // this works because all signature ports are compiled first.
-                                self.context[owner][&key].1[i as usize],
+                                self.context[owner][&key].1[i],
                                 owner,
                             ),
                         }
@@ -298,8 +298,7 @@ impl Visitor for BundleElim {
             .cmds
             .iter()
             .filter_map(|cmd| {
-                let ir::Command::Connect(con @ ir::Connect { src, dst, .. }) =
-                    cmd
+                let ir::Command::Connect(ir::Connect { src, dst, .. }) = cmd
                 else {
                     return None;
                 };

@@ -451,7 +451,7 @@ impl MonoSig {
                 .iter()
                 .map(|&new_param_idx| {
                     let new_param = self.base.get_mut(new_param_idx);
-                    new_param.owner = mono_owner;
+                    new_param.owner = mono_owner.clone();
                     new_param.info = mono_info.get();
                     new_param_idx
                 })
@@ -462,16 +462,16 @@ impl MonoSig {
             .iter()
             .map(|old_param| {
                 let mono_param = ir::Param {
-                    owner: mono_owner,
+                    owner: mono_owner.clone(),
                     info: self.info(underlying, pass, info).get(),
                 };
                 let new_idx = self.base.add(mono_param);
                 self.param_map.push(*old_param, new_idx);
                 new_idx
             })
-            .collect();
+            .collect_vec();
 
-        self.bundle_param_map.insert(port, mono_params);
+        self.bundle_param_map.insert(port, mono_params.clone());
         mono_params
     }
 

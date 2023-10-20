@@ -60,13 +60,13 @@ impl IntervalCheck {
 
     /// Proposition that ensures that the given parameter is in range
     fn in_range(live: &ir::Liveness, comp: &mut ir::Component) -> ir::PropIdx {
-        let &ir::Liveness { idxs, lens, .. } = live;
+        let &ir::Liveness { idxs, lens, .. } = &live;
         let mut prop = comp.add(ir::Prop::True);
         for (idx, len) in idxs.iter().zip_eq(lens) {
             let zero = comp.num(0);
             let idx = idx.expr(comp);
             let lo = idx.gte(zero, comp);
-            let hi = idx.lt(len, comp);
+            let hi = idx.lt(*len, comp);
             prop = prop.and(lo.and(hi, comp), comp);
         }
         prop
@@ -241,7 +241,8 @@ impl Visitor for IntervalCheck {
             .zip(&dst_t.lens)
             .fold(comp.add(ir::Prop::True), |a, (l1, l2)| {
                 a.and(l1.equal(*l2, comp), comp)
-            });
+            })
+            .and(in_range, comp);
 
         let contains = src_t
             .range

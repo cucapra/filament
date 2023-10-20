@@ -81,7 +81,7 @@ impl Visitor for AssignCheck {
             lens.iter().map(|l| l.concrete(comp) as usize).collect_vec();
 
         for i in utils::all_indices(ranges_c) {
-            let flat_idx = utils::flat_idx(&i, len_c);
+            let flat_idx = utils::flat_idx(&i, &len_c);
             self.ports
                 .entry((*port, flat_idx))
                 .or_default()
