@@ -11,6 +11,9 @@
 		"--security-opt",
 		"seccomp=unconfined"
 	],
+	"containerEnv": {
+		"DISPLAY": "${localEnv:DISPLAY}",
+	},
 	"workspaceFolder": "/home/filament",
 	"workspaceMount": "source=${localWorkspaceFolder},target=/home/filament,type=bind,consistency=delegated",
 	"customizations": {
@@ -22,9 +25,6 @@
 					"editor.formatOnSave": true,
 					"rust-analyzer.check.command": "clippy"
 				}
-			},
-			"containerEnv": {
-				"DISPLAY": "${localEnv:DISPLAY}",
 			},
 			// Add the IDs of extensions you want installed when the container is created.
 			"extensions": [
