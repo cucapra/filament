@@ -26,7 +26,6 @@ jobs:
         with:
           images: ghcr.io/cucapra/filament
           tags: |
-            type=ref,event=push
             type=raw,value=latest,enable={{is_default_branch}}
           flavor: latest=false
       - uses: depot/setup-action@v1
