@@ -144,12 +144,12 @@ interval_range = {
 }
 
 bundle_typ = {
-  ("for" ~ "<" ~ param_var ~ ">")? ~ interval_range ~ expr
+  ("for" ~ "<" ~ param_var ~ ("," ~ param_var)* ~ ">")? ~ interval_range ~ expr
 }
 
 // Bundle definition
 bundle_def = {
-  identifier ~ ("[" ~ expr ~ "]")? ~ ":" ~ bundle_typ
+  identifier ~ ("[" ~ expr ~ "]")* ~ ":" ~ bundle_typ
 }
 
 // Ports
@@ -188,14 +188,14 @@ connect = {
 
 dots = { ".." }
 access = {
-   "{" ~
+   ("{" ~
       ((expr ~ dots ~ expr) | expr) ~
-   "}"
+   "}")
 }
 
 port = {
-  identifier ~ "." ~ identifier ~ access?
-  | identifier ~ access?
+  identifier ~ "." ~ identifier ~ access*
+  | identifier ~ access*
   | bitwidth
 }
 

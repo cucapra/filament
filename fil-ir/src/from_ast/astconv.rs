@@ -428,12 +428,20 @@ impl<'prog> BuildCtx<'prog> {
                 // Construct the bundle type in a new scope.
                 let live = self.try_with_scope(|ctx| {
                     Ok(ir::Liveness {
-                        idxs: vec![ctx.param(
-                            // Updated after the port is constructed
-                            idx,
-                            ir::ParamOwner::bundle(PortIdx::UNKNOWN),
-                        )],
-                        lens: vec![ctx.expr(len.take())?],
+                        idxs: idx
+                            .into_iter()
+                            .map(|idx| {
+                                ctx.param(
+                                    // Updated after the port is constructed
+                                    idx,
+                                    ir::ParamOwner::bundle(PortIdx::UNKNOWN),
+                                )
+                            })
+                            .collect_vec(),
+                        lens: len
+                            .into_iter()
+                            .map(|len| ctx.expr(len.take()))
+                            .collect::<BuildRes<Vec<_>>>()?,
                         range: ctx.range(liveness.take())?,
                     })
                 })?;
@@ -517,11 +525,11 @@ impl<'prog> BuildCtx<'prog> {
                     let owner = OwnedPort::Local(name);
                     self.get_port(&owner)?
                 };
-                let range = self.access(access.take())?;
-                ir::Access {
-                    port,
-                    ranges: vec![range],
-                }
+                let ranges = access
+                    .into_iter()
+                    .map(|a| self.access(a.take()))
+                    .collect::<BuildRes<Vec<_>>>()?;
+                ir::Access { port, ranges }
             }
             ast::Port::InvBundle {
                 invoke,
@@ -531,11 +539,11 @@ impl<'prog> BuildCtx<'prog> {
                 let inv = self.get_inv(&invoke)?;
                 let owner = OwnedPort::Inv(inv, dir, port);
                 let port = self.get_port(&owner)?;
-                let range = self.access(access.take())?;
-                ir::Access {
-                    port,
-                    ranges: vec![range],
-                }
+                let ranges = access
+                    .into_iter()
+                    .map(|a| self.access(a.take()))
+                    .collect::<BuildRes<Vec<_>>>()?;
+                ir::Access { port, ranges }
             }
         };
         Ok(acc)
