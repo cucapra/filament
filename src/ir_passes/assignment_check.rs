@@ -2,8 +2,8 @@ use crate::{
     cmdline,
     ir_visitor::{Action, Construct, Visitor, VisitorData},
 };
-use fil_ir::{Connect, Context, Ctx, DisplayCtx, PortIdx};
-use fil_utils::{Diagnostics, Error, GPosIdx};
+use fil_ir::{self as ir, Connect, Context, Ctx, DisplayCtx, PortIdx};
+use fil_utils::{self as utils, Diagnostics, Error, GPosIdx};
 use itertools::Itertools;
 use linked_hash_map::LinkedHashMap;
 
@@ -44,7 +44,12 @@ impl Visitor for AssignCheck {
                 continue;
             }
 
-            let len = port.live.len.concrete(&data.comp) as usize;
+            let len = port
+                .live
+                .lens
+                .iter()
+                .map(|l| l.concrete(&data.comp) as usize)
+                .product();
 
             for i in 0..len {
                 self.ports.insert((idx, i), Vec::new());
@@ -55,16 +60,32 @@ impl Visitor for AssignCheck {
     }
 
     fn connect(&mut self, con: &mut Connect, data: &mut VisitorData) -> Action {
-        let Connect { dst, info, .. } = con;
+        let Connect {
+            dst: ir::Access { port, ranges },
+            info,
+            ..
+        } = &*con;
+        let comp = &data.comp;
+        let ranges_c = ranges
+            .iter()
+            .map(|(s, e)| {
+                (s.concrete(comp) as usize, e.concrete(comp) as usize)
+            })
+            .collect();
 
-        let start = dst.start.concrete(&data.comp) as usize;
-        let end = dst.end.concrete(&data.comp) as usize;
+        let ir::Port {
+            live: ir::Liveness { lens, .. },
+            ..
+        } = comp.get(*port);
+        let len_c =
+            lens.iter().map(|l| l.concrete(comp) as usize).collect_vec();
 
-        for i in start..end {
+        for i in utils::all_indices(ranges_c) {
+            let flat_idx = utils::flat_idx(&i, len_c);
             self.ports
-                .entry((dst.port, i))
+                .entry((*port, flat_idx))
                 .or_default()
-                .push(data.comp.get(*info).as_connect().map(|c| c.dst_loc));
+                .push(comp.get(*info).as_connect().map(|c| c.dst_loc));
         }
         Action::Continue
     }
