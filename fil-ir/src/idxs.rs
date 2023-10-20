@@ -19,7 +19,7 @@ impl PortIdx {
         C: Ctx<Port> + Ctx<Expr>,
     {
         let port = ctx.get(*self);
-        port.live.len.is_const(ctx, 1)
+        port.live.lens.len() == 1 && port.live.lens[0].is_const(ctx, 1)
     }
 }
 

@@ -1,0 +1,7 @@
+comp Foo<'G: 3>(in: ['G, 'G+1] 32) -> () {
+    bundle f[2][4]: for<i, j> ['G+i, 'G+i+j+1] 32;
+    f{1}{2} = in;
+
+    bundle g[3]: for<i> ['G+1, 'G+i+2] 32;
+    g{0..3} = f{0}{0..3};
+}

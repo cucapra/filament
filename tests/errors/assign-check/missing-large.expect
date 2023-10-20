@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: bundle `99' has a unassigned locations
+error: bundle `a' has 99 unassigned locations
   ┌─ tests/errors/assign-check/missing-large.fil:2:12
   │
 2 │     bundle a[100]: for<k> ['G, 'G+1] 32;
