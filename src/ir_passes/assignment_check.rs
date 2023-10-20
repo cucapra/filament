@@ -82,7 +82,6 @@ impl Visitor for AssignCheck {
 
         for i in utils::all_indices(ranges_c) {
             let flat_idx = utils::flat_idx(&i, &len_c);
-            log::info!("{}[{}]", comp.display(*port), flat_idx);
             self.ports
                 .entry((*port, flat_idx))
                 .or_default()
