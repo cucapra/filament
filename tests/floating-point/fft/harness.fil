@@ -104,7 +104,7 @@ comp main<'G: L>(
   // fil_pease_comb = fpcw.out;
 
   // hook up pipelined fft
-  FP := new PeaseFFT[4, 1];
+  FP := new PeaseFFT[4, 2];
   fp := FP<'G>(split.out{0..32});
 
   fpw := new ConcatBundle[32, 32]<'G+FP::L>(fp.out{0..32});
