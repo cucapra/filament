@@ -226,25 +226,35 @@ impl Access {
         if self.ranges.len() != 1 {
             return false;
         }
-        let (start, end) = self.ranges[0];
-        let Some(one) = ctx.exprs().find(&Expr::Concrete(1)) else {
-            ctx.internal_error("Constant 1 not found in component")
-        };
-        match ctx.get(end) {
-            Expr::Bin {
-                op: Op::Add,
-                lhs,
-                rhs,
-            } => *rhs == one && start == *lhs || *lhs == one && start == *rhs,
-            Expr::Concrete(e) => {
-                if let Some(s) = start.as_concrete(ctx) {
-                    *e == s + 1
-                } else {
-                    false
+        for (start, end) in &self.ranges {
+            let Some(one) = ctx.exprs().find(&Expr::Concrete(1)) else {
+                ctx.internal_error("Constant 1 not found in component")
+            };
+            match ctx.get(*end) {
+                Expr::Bin {
+                    op: Op::Add,
+                    lhs,
+                    rhs,
+                } => {
+                    if !(*rhs == one && start == lhs
+                        || *lhs == one && start == rhs)
+                    {
+                        return false;
+                    }
                 }
+                Expr::Concrete(e) => {
+                    if let Some(s) = start.as_concrete(ctx) {
+                        if *e != s + 1 {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+                _ => return false,
             }
-            _ => false,
         }
+        true
     }
 
     /// Return the bundle type associated with this access
@@ -255,12 +265,18 @@ impl Access {
             "access does not match bundle type dimensions"
         );
 
-        let binding = Bind::new(
-            live.idxs
-                .iter()
-                .zip(&self.ranges)
-                .map(|(idx, (start, _))| (*idx, *start)),
-        );
+        let binding = if self.is_port(ctx) {
+            Bind::new(
+                live.idxs
+                    .iter()
+                    .zip(&self.ranges)
+                    .map(|(idx, (start, _))| (*idx, *start)),
+            )
+        } else {
+            Bind::new(live.idxs.iter().zip(&self.ranges).map(
+                |(idx, (start, _))| (*idx, idx.expr(ctx).add(*start, ctx)),
+            ))
+        };
 
         let range = Subst::new(live.range, &binding).apply(ctx);
         let lens = self
