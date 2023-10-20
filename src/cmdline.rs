@@ -7,6 +7,8 @@ pub enum Solver {
     #[default]
     CVC5,
     Z3,
+    Boolector,
+    Bitwuzla,
 }
 
 impl FromStr for Solver {
@@ -15,8 +17,10 @@ impl FromStr for Solver {
         match s {
             "z3" => Ok(Solver::Z3),
             "cvc5" => Ok(Solver::CVC5),
+            "boolector" => Ok(Solver::Boolector),
+            "bitwuzla" => Ok(Solver::Bitwuzla),
             _ => {
-                Err(format!("unknown solver: {s}. Known solvers are: z3, cvc5"))
+                Err(format!("unknown solver: {s}. Known solvers are: z3, cvc5, boolector, bitwuzla"))
             }
         }
     }
@@ -85,19 +89,6 @@ pub struct Opts {
     #[argh(option, long = "backend", default = "Backend::Verilog")]
     pub backend: Backend,
 
-    // Solver specific configuration
-    /// solver to use (default: cvc5): cvc5, z3
-    #[argh(option, long = "solver", default = "Solver::CVC5")]
-    pub solver: Solver,
-
-    /// solve assertions separately rather than all at once
-    #[argh(switch, long = "discharge-separate")]
-    pub discharge_separate: bool,
-
-    /// dump interactions with the solver in the given file
-    #[argh(option, long = "dump-solver-log")]
-    pub solver_replay_file: Option<String>,
-
     /// disable generation of slow FSMs in the backend
     #[argh(switch, long = "disable-slow-fsms")]
     pub disable_slow_fsms: bool,
@@ -105,4 +96,18 @@ pub struct Opts {
     /// preserves original port names during compilation.
     #[argh(switch, long = "preserve-names")]
     pub preserve_names: bool,
+
+    // Solver specific configuration
+    /// solver to use (default: cvc5): cvc5, z3
+    #[argh(option, long = "solver", default = "Solver::CVC5")]
+    pub solver: Solver,
+    /// solve assertions separately rather than all at once
+    #[argh(switch, long = "discharge-separate")]
+    pub discharge_separate: bool,
+    /// dump interactions with the solver in the given file
+    #[argh(option, long = "dump-solver-log")]
+    pub solver_replay_file: Option<String>,
+    /// use bitvector encoding for proofs
+    #[argh(option, long = "solver-bv")]
+    pub solver_bv: Option<u8>,
 }

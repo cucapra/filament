@@ -13,7 +13,7 @@ use std::{fs, iter};
 use term::termcolor::{ColorChoice, StandardStream};
 
 #[derive(Default)]
-pub struct Assign(Vec<(ir::ParamIdx, String)>);
+struct Assign(Vec<(ir::ParamIdx, String)>);
 
 impl Assign {
     fn is_empty(&self) -> bool {
@@ -40,6 +40,8 @@ impl Assign {
 /// top-level.
 pub struct Discharge {
     sol: smt::Context,
+    /// Are we using a bitvector encoding
+    bv_size: Option<u8>,
     /// Which solver are we using
     sol_base: cmdline::Solver,
     /// Are we in a scoped context?
@@ -80,11 +82,19 @@ impl Discharge {
         let (name, s_opts) = match opts.solver {
             cmdline::Solver::Z3 => {
                 log::debug!("Using z3 solver");
-                ("z3", &["-smt2", "-in"])
+                ("z3", vec!["-smt2", "-in"])
+            }
+            cmdline::Solver::Boolector => {
+                log::debug!("Using boolector solver");
+                ("boolector", vec!["--incremental"])
             }
             cmdline::Solver::CVC5 => {
                 log::debug!("Using cvc5 solver");
-                ("cvc5", &["--incremental", "--force-logic=ALL"])
+                ("cvc5", vec!["--incremental", "--force-logic=ALL"])
+            }
+            cmdline::Solver::Bitwuzla => {
+                log::debug!("Using bitwuzla solver");
+                ("bitwuzla", vec![])
             }
         };
         smt::ContextBuilder::new()
@@ -105,11 +115,100 @@ impl Discharge {
             self.sol.list(iter::once(f).chain(args).collect_vec())
         }
     }
+
+    /// Return the sort to be used in this encoding.
+    /// When using bv encoding, we return twice the number of bits provided on
+    /// the command line so that we can encode overflow checks.
+    #[inline]
+    fn bv_size(&self) -> Option<u8> {
+        self.bv_size.map(|v| v * 2)
+    }
+
+    fn sort(&self) -> smt::SExpr {
+        if let Some(v) = self.bv_size() {
+            self.sol.bit_vec_sort(self.sol.numeral(v))
+        } else {
+            self.sol.int_sort()
+        }
+    }
+    fn num(&self, n: u64) -> smt::SExpr {
+        if let Some(v) = self.bv_size() {
+            self.sol.binary(v as usize, n)
+        } else {
+            self.sol.numeral(n)
+        }
+    }
+    fn plus(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        if self.bv_size.is_some() {
+            self.sol.bvadd(l, r)
+        } else {
+            self.sol.plus(l, r)
+        }
+    }
+    fn sub(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        if self.bv_size.is_some() {
+            self.sol.bvsub(l, r)
+        } else {
+            self.sol.sub(l, r)
+        }
+    }
+    fn times(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        if self.bv_size.is_some() {
+            self.sol.bvmul(l, r)
+        } else {
+            self.sol.times(l, r)
+        }
+    }
+    fn div(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        if self.bv_size.is_some() {
+            self.sol.bvudiv(l, r)
+        } else {
+            self.sol.div(l, r)
+        }
+    }
+    fn modulo(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        if self.bv_size.is_some() {
+            self.sol.bvurem(l, r)
+        } else {
+            self.sol.modulo(l, r)
+        }
+    }
+    fn gt(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        if self.bv_size.is_some() {
+            self.sol.bvugt(l, r)
+        } else {
+            self.sol.gt(l, r)
+        }
+    }
+    fn gte(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        if self.bv_size.is_some() {
+            self.sol.bvuge(l, r)
+        } else {
+            self.sol.gte(l, r)
+        }
+    }
+    fn eq(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
+        self.sol.eq(l, r)
+    }
+    /// Assert that the expression is not overflowing
+    /// e >= 0 && e < 2^bvsize
+    fn overflow_assert(&mut self, e: smt::SExpr) {
+        let Some(v) = self.bv_size else {
+            return;
+        };
+        let max = self.num((1 << v) - 1);
+        let zero = self.num(0);
+        let ge_zero = self.gte(e, zero);
+        let lt_max = self.gt(max, e);
+        let and = self.sol.and(ge_zero, lt_max);
+        self.sol.assert(and).unwrap();
+    }
 }
 
 impl Construct for Discharge {
     fn from(opts: &cmdline::Opts, ctx: &mut ir::Context) -> Self {
         let mut out = Self {
+            bv_size: opts.solver_bv,
             sol: Self::conf_solver(opts),
             sol_base: opts.solver,
             scoped: false,
@@ -151,8 +250,8 @@ impl Construct for Discharge {
                             comp_idx.get(),
                             some_param.get()
                         ),
-                        (0..num_args).map(|_| out.sol.int_sort()).collect_vec(),
-                        out.sol.int_sort(),
+                        (0..num_args).map(|_| out.sort()).collect_vec(),
+                        out.sort(),
                     )
                     .unwrap();
                 let f = ir::Foreign::new(some_param, comp_idx);
@@ -160,7 +259,7 @@ impl Construct for Discharge {
             }
         }
 
-        out.sol.push().unwrap();
+        out.sol.push_many(1).unwrap();
         out
     }
 
@@ -176,8 +275,8 @@ impl Construct for Discharge {
         self.to_prove.clear();
 
         // Create a new solver context
-        self.sol.pop().unwrap();
-        self.sol.push().unwrap();
+        self.sol.pop_many(1).unwrap();
+        self.sol.push_many(1).unwrap();
     }
 }
 
@@ -185,19 +284,21 @@ impl Discharge {
     fn fmt_param(&self, param: ir::ParamIdx, ctx: &ir::Component) -> String {
         match self.sol_base {
             // CVC5 does not correctly print out quoted SExps
-            cmdline::Solver::CVC5 => format!("param{}", param.get()),
             cmdline::Solver::Z3 => {
                 format!("|{}@param{}|", ctx.display(param), param.get())
+            }
+            _ => {
+                format!("param{}", param.get())
             }
         }
     }
 
     fn fmt_event(&self, event: ir::EventIdx, ctx: &ir::Component) -> String {
         match self.sol_base {
-            cmdline::Solver::CVC5 => format!("event{}", event.get()),
             cmdline::Solver::Z3 => {
                 format!("|{}@event{}|", ctx.display(event), event.get())
             }
+            _ => format!("event{}", event.get()),
         }
     }
 
@@ -225,7 +326,7 @@ impl Discharge {
 
     /// Defines primitive functions used in the encoding like `pow` and `log`
     fn define_funcs(&mut self) {
-        let is = self.sol.int_sort();
+        let is = self.sort();
 
         macro_rules! sol_fn(
             ($name:tt($($args:ident),*) -> $out:ident) => {
@@ -361,19 +462,18 @@ impl Discharge {
     }
 
     fn expr_to_sexp(&mut self, expr: &ir::Expr) -> smt::SExpr {
-        let sol = &mut self.sol;
         match expr {
             ir::Expr::Param(p) => self.param_map[*p],
-            ir::Expr::Concrete(n) => sol.numeral(*n),
+            ir::Expr::Concrete(n) => self.num(*n),
             ir::Expr::Bin { op, lhs, rhs } => {
                 let l = self.expr_map[*lhs];
                 let r = self.expr_map[*rhs];
                 match op {
-                    ast::Op::Add => sol.plus(l, r),
-                    ast::Op::Sub => sol.sub(l, r),
-                    ast::Op::Mul => sol.times(l, r),
-                    ast::Op::Div => sol.div(l, r),
-                    ast::Op::Mod => sol.modulo(l, r),
+                    ast::Op::Add => self.plus(l, r),
+                    ast::Op::Sub => self.sub(l, r),
+                    ast::Op::Mul => self.times(l, r),
+                    ast::Op::Div => self.div(l, r),
+                    ast::Op::Mod => self.modulo(l, r),
                 }
             }
             ir::Expr::Fn { op, args } => {
@@ -397,9 +497,9 @@ impl Discharge {
         let l = transform(lhs, self);
         let r = transform(rhs, self);
         match op {
-            ir::Cmp::Gt => self.sol.gt(l, r),
-            ir::Cmp::Gte => self.sol.gte(l, r),
-            ir::Cmp::Eq => self.sol.eq(l, r),
+            ir::Cmp::Gt => self.gt(l, r),
+            ir::Cmp::Gte => self.gte(l, r),
+            ir::Cmp::Eq => self.eq(l, r),
         }
     }
 
@@ -420,7 +520,7 @@ impl Discharge {
                     ir::TimeSub::Sym { l, r } => {
                         let l = ctx.time_map[*l];
                         let r = ctx.time_map[*r];
-                        ctx.sol.sub(l, r)
+                        ctx.sub(l, r)
                     }
                 })
             }
@@ -452,12 +552,13 @@ impl Visitor for Discharge {
     fn start(&mut self, data: &mut VisitorData) -> Action {
         let comp = &data.comp;
         // Declare all parameters
-        let int = self.sol.int_sort();
+        let int = self.sort();
         for (idx, _) in data.comp.params().iter() {
             let sexp = self
                 .sol
                 .declare_fun(self.fmt_param(idx, comp), vec![], int)
                 .unwrap();
+            self.overflow_assert(sexp);
             self.param_map.push(idx, sexp);
         }
 
@@ -467,6 +568,7 @@ impl Visitor for Discharge {
                 .sol
                 .declare_fun(self.fmt_event(idx, comp), vec![], int)
                 .unwrap();
+            self.overflow_assert(sexp);
             self.ev_map.push(idx, sexp);
         }
 
@@ -477,17 +579,18 @@ impl Visitor for Discharge {
                 .sol
                 .define_const(Self::fmt_expr(idx), int, assign)
                 .unwrap();
+            self.overflow_assert(sexp);
             self.expr_map.push(idx, sexp);
         }
 
         // Declare all time expressions
         for (idx, ir::Time { event, offset }) in data.comp.times().iter() {
-            let assign =
-                self.sol.plus(self.ev_map[*event], self.expr_map[*offset]);
+            let assign = self.plus(self.ev_map[*event], self.expr_map[*offset]);
             let sexp = self
                 .sol
                 .define_const(Self::fmt_time(idx), int, assign)
                 .unwrap();
+            self.overflow_assert(sexp);
             self.time_map.push(idx, sexp);
         }
 
