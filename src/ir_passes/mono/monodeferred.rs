@@ -316,6 +316,25 @@ impl MonoDeferred<'_, '_> {
         self.monosig.base.extend_cmds(body);
     }
 
+    fn fact(&mut self, fact: &ir::Fact) -> ir::Fact {
+        let ir::Fact { prop, reason, .. } = fact;
+
+        let prop = prop.ul();
+        let prop = self.prop(prop);
+        let prop = self
+            .monosig
+            .base
+            .resolve_prop(self.monosig.base.get(prop).clone())
+            .get();
+
+        let reason = reason.ul();
+        let reason =
+            self.monosig.info(&self.underlying, self.pass, reason).get();
+
+        // After monomorphization, both assumes and asserts become asserts.
+        ir::Fact::assert(prop, reason)
+    }
+
     /// Compile the given command and return the generated command if any.
     fn command(&mut self, cmd: &ir::Command) -> Option<ir::Command> {
         match cmd {
@@ -365,7 +384,7 @@ impl MonoDeferred<'_, '_> {
             // XXX(rachit): We completely get rid of facts in the program here.
             // If we want to do this long term, this should be done in a
             // separate pass and monomorphization should fail on facts.
-            ir::Command::Fact(_) => None,
+            ir::Command::Fact(fact) => Some(self.fact(fact).into()),
         }
     }
 }
