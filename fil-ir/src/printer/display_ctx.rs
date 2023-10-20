@@ -170,7 +170,7 @@ impl<'a> DisplayCtx<&'a ir::Access> for ir::Component {
         let ir::Access { port, ranges } = &a;
         self.write(*port, f)?;
         if a.is_port(self) {
-            ranges.iter().try_for_each(|(start, end)| {
+            ranges.iter().try_for_each(|(start, _)| {
                 write!(f, "{{{}}}", self.display(*start),)
             })?;
         } else {

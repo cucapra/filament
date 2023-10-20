@@ -1,12 +1,10 @@
-use itertools::Itertools;
-
 /// Convert a n-dimensional array's index into a concrete number into an index into a flat array
 pub fn flat_idx(indices: &[usize], lens: &[usize]) -> usize {
     indices
         .iter()
-        .zip_eq(lens)
-        .map(|(i, l)| i * l)
-        .sum::<usize>()
+        .enumerate()
+        .map(|(i, idx)| idx * lens[i + 1..].iter().product::<usize>())
+        .sum()
 }
 
 /// For a array of ranges, return all the indices generated in that range.
