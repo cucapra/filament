@@ -345,8 +345,9 @@ pub enum Reason {
         bundle_range_loc: GPosIdx,
         bundle_live: TimeSub,
         /// The bundle paramemter's binding location
-        param_info:
-            Option<(/*pos=*/ GPosIdx, /*range=*/ (ExprIdx, ExprIdx))>,
+        param_loc: GPosIdx,
+        /// The start and end of index's range
+        param_range: (ExprIdx, ExprIdx),
     },
     /// Well formed time interval
     WellFormedInterval {
@@ -382,13 +383,15 @@ impl Reason {
         event_delay_loc: GPosIdx,
         bundle_range_loc: GPosIdx,
         bundle_live: TimeSub,
-        param_info: Option<(GPosIdx, (ExprIdx, ExprIdx))>,
+        param_loc: GPosIdx,
+        param_range: (ExprIdx, ExprIdx),
     ) -> Self {
         Self::BundleDelay {
             event_delay_loc,
             bundle_range_loc,
             bundle_live,
-            param_info,
+            param_loc,
+            param_range,
         }
     }
 
@@ -637,7 +640,8 @@ impl Reason {
                 event_delay_loc,
                 bundle_range_loc,
                 bundle_live,
-                param_info,
+                param_loc,
+                param_range,
             } => {
                 let wire = bundle_range_loc.primary().with_message(format!(
                     "available for {} cycles",
@@ -648,15 +652,13 @@ impl Reason {
                 let mut labels = vec![wire, event];
 
                 // If the parameter location is not defined, we do not report its location
-                if let Some((param_loc, param_range)) = param_info {
-                    if let Some(loc) = param_loc.into_option() {
-                        let param = loc.secondary().with_message(format!(
-                            "takes values in [{}, {})",
-                            ctx.display(param_range.0),
-                            ctx.display(param_range.1)
-                        ));
-                        labels.push(param);
-                    }
+                if let Some(loc) = param_loc.into_option() {
+                    let param = loc.secondary().with_message(format!(
+                        "takes values in [{}, {})",
+                        ctx.display(param_range.0),
+                        ctx.display(param_range.1)
+                    ));
+                    labels.push(param);
                 }
 
                 Diagnostic::error()

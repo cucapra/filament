@@ -128,7 +128,7 @@ impl fmt::Display for Direction {
 /// p[N]: for<i> @['G, 'G+i+10]
 /// ```
 pub struct Liveness {
-    pub idx: Option<ParamIdx>,
+    pub idx: ParamIdx,
     pub len: ExprIdx,
     pub range: Range,
 }
@@ -251,23 +251,19 @@ impl Access {
     /// Return the bundle type associated with this access
     pub fn bundle_typ(&self, ctx: &mut Component) -> Liveness {
         let live = ctx.get(self.port).live.clone();
-        let Some(idx) = live.idx else {
-            // If there is no bound parameter, then all accesses have the same type
-            return live;
-        };
         let binding = if self.is_port(ctx) {
-            // If this access produces exactly one port, then remap `idx` to `start`.
-            [(idx, self.start)]
+            // If this access produces exactly one port, then remap `#idx` to `start`.
+            [(live.idx, self.start)]
         } else {
             // Remap `#idx` to `#idx+start
-            [(idx, idx.expr(ctx).add(self.start, ctx))]
+            [(live.idx, live.idx.expr(ctx).add(self.start, ctx))]
         };
 
         let range = Subst::new(live.range, &Bind::new(binding)).apply(ctx);
         // Shrink the bundle type based on the access
         let len = self.end.sub(self.start, ctx);
         Liveness {
-            idx: Some(idx),
+            idx: live.idx,
             len,
             range,
         }
