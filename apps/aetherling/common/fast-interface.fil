@@ -45,26 +45,30 @@ comp Wrapper<'G: II>(
 
     // Track the outputs of the convolution for deserialization.
     // The liveness this because we send N inputs every cycle and receive them back in L cycles.
-    bundle co[16]: for<j> ['G+j/C::N+C::L, 'G+j/C::N+C::L+1] 8;
+    bundle co[Chunks][C::N]: for<i> ['G+i+C::L, 'G+i+C::L+1] 8;
 
     // Send the chunks to the conv and collect the outputs
     for i in 0..Chunks {
         // The start time of the chunk inputs
         let Base = i * C::N;
         // Send C::N inputs to the Convolution
-        c := C<'G+i>(ser.out{Base..Base+C::N});
+        c := C<'G+i>(ser.out{i}{0..C::N});
         // Assign the outputs to the bundle
-        co{Base..Base+C::N} = c.out{0..C::N};
+        co{i}{0..C::N} = c.out{0..C::N};
     }
 
     if Chunks > 1 {
         // The deserializer can start collecting the outputs after the latency of the convolution elapses.
         // It will collect C::N outputs every cycle and produce them at the end.
-        de := new Deserialize[8, Chunks, C::N]<'G+C::L>(co{0..16});
+        de := new Deserialize[8, Chunks, C::N]<'G+C::L>(co{0..Chunks}{0..C::N});
         O{0..16} = de.out{0..16};
     } else {
         // No need to deserialize if there is only one chunk.
-        O{0..16} = co{0..16};
+        for i in 0..Chunks {
+            for j in 0..C::N {
+                O{i*C::N+j} = co{i}{j};
+            }
+        }
     }
 
     // The output latency is determined by the Deserializer.

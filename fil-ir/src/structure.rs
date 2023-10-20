@@ -219,39 +219,43 @@ impl Access {
         }
     }
 
+    fn unit_range(start: ExprIdx, end: ExprIdx, ctx: &Component) -> bool {
+        let Some(one) = ctx.exprs().find(&Expr::Concrete(1)) else {
+            ctx.internal_error("Constant 1 not found in component")
+        };
+        match ctx.get(end) {
+            Expr::Bin {
+                op: Op::Add,
+                lhs,
+                rhs,
+            } => {
+                if !(*rhs == one && start == *lhs
+                    || *lhs == one && start == *rhs)
+                {
+                    return false;
+                }
+            }
+            Expr::Concrete(e) => {
+                if let Some(s) = start.as_concrete(ctx) {
+                    if *e != s + 1 {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            }
+            _ => return false,
+        }
+        true
+    }
+
     /// Check if this is guaranteed a simple port access, i.e., an access that
     /// produces one port.
     /// The check is syntactic and therefore conservative.
     pub fn is_port(&self, ctx: &Component) -> bool {
-        for (start, end) in &self.ranges {
-            let Some(one) = ctx.exprs().find(&Expr::Concrete(1)) else {
-                ctx.internal_error("Constant 1 not found in component")
-            };
-            match ctx.get(*end) {
-                Expr::Bin {
-                    op: Op::Add,
-                    lhs,
-                    rhs,
-                } => {
-                    if !(*rhs == one && start == lhs
-                        || *lhs == one && start == rhs)
-                    {
-                        return false;
-                    }
-                }
-                Expr::Concrete(e) => {
-                    if let Some(s) = start.as_concrete(ctx) {
-                        if *e != s + 1 {
-                            return false;
-                        }
-                    } else {
-                        return false;
-                    }
-                }
-                _ => return false,
-            }
-        }
-        true
+        self.ranges
+            .iter()
+            .all(|(start, end)| Self::unit_range(*start, *end, ctx))
     }
 
     /// Return the bundle type associated with this access
@@ -262,18 +266,15 @@ impl Access {
             "access does not match bundle type dimensions"
         );
 
-        let binding = if self.is_port(ctx) {
-            Bind::new(
-                live.idxs
-                    .iter()
-                    .zip(&self.ranges)
-                    .map(|(idx, (start, _))| (*idx, *start)),
-            )
-        } else {
-            Bind::new(live.idxs.iter().zip(&self.ranges).map(
-                |(idx, (start, _))| (*idx, idx.expr(ctx).add(*start, ctx)),
-            ))
-        };
+        let binding = Bind::new(live.idxs.iter().zip(&self.ranges).map(
+            |(idx, (start, end))| {
+                if Self::unit_range(*start, *end, ctx) {
+                    (*idx, *start)
+                } else {
+                    (*idx, idx.expr(ctx).add(*start, ctx))
+                }
+            },
+        ));
 
         let range = Subst::new(live.range, &binding).apply(ctx);
         let lens = self
