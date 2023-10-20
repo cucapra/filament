@@ -11,13 +11,13 @@ use fil_utils as utils;
 use itertools::Itertools;
 use std::collections::HashMap;
 
+pub type PortInfo =
+    (/*lens=*/ Vec<usize>, /*gen_ports=*/ Vec<PortIdx>);
+
 // Eliminates bundle ports by breaking them into multiple len-1 ports, and eliminates local ports altogether.
 pub struct BundleElim {
     /// Mapping from component to the map from signature bundle port to generated port.
-    context: DenseIndexInfo<
-        Component,
-        HashMap<PortIdx, (/*lens=*/ Vec<usize>, /*gen_ports=*/ Vec<PortIdx>)>,
-    >,
+    context: DenseIndexInfo<Component, HashMap<PortIdx, PortInfo>>,
     /// Mapping from index into a dst port to an index of the src port.
     local_map: HashMap<
         (PortIdx, /*idxs=*/ Vec<usize>),
@@ -62,14 +62,7 @@ impl BundleElim {
     }
 
     /// Compiles a port by breaking it into multiple len-1 ports.
-    fn port(
-        &self,
-        pidx: PortIdx,
-        comp: &mut Component,
-    ) -> (
-        /*lens=*/ Vec<usize>,
-        /*generated ports=*/ Vec<PortIdx>,
-    ) {
+    fn port(&self, pidx: PortIdx, comp: &mut Component) -> PortInfo {
         let one = comp.add(Expr::Concrete(1));
         let Port {
             owner,
@@ -172,10 +165,7 @@ impl BundleElim {
     }
 
     /// Compiles the signature of a component and adds the new ports to the context mapping.
-    fn sig(
-        &self,
-        comp: &mut Component,
-    ) -> HashMap<PortIdx, (Vec<usize>, Vec<PortIdx>)> {
+    fn sig(&self, comp: &mut Component) -> HashMap<PortIdx, PortInfo> {
         // loop through signature ports and compile them
         comp.ports()
             .idx_iter()
@@ -191,8 +181,7 @@ impl BundleElim {
         &self,
         idx: InvIdx,
         comp: &mut Component,
-    ) -> HashMap<PortIdx, (/*lens=*/ Vec<usize>, /*gen_ports=*/ Vec<PortIdx>)>
-    {
+    ) -> HashMap<PortIdx, PortInfo> {
         let Invoke { ports, .. } = comp.get_mut(idx);
         // first take all the old ports and split them up
         let mappings = std::mem::take(ports)
