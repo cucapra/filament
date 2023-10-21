@@ -34,7 +34,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::TypeCheck,
         ip::IntervalCheck,
         ip::PhantomCheck,
-        ip::Assume,
+        ip::Assume
         ip::HoistFacts
     }
     if !opts.unsafe_skip_discharge {

@@ -10,6 +10,9 @@ use super::{Base, IntoBase, Underlying};
 pub struct UnderlyingComp<'a>(&'a ir::Component);
 
 impl<'a> UnderlyingComp<'a> {
+    pub fn comp(&self) -> &'a ir::Component {
+        self.0
+    }
     pub fn new(comp: &'a ir::Component) -> Self {
         Self(comp)
     }
@@ -43,7 +46,7 @@ impl<'a> UnderlyingComp<'a> {
 }
 
 // The underlying component is a context for everything that a component is a context for.
-impl<'a, T> Ctx<T, Underlying<T>> for UnderlyingComp<'a>
+impl<T> Ctx<T, Underlying<T>> for UnderlyingComp<'_>
 where
     ir::Component: Ctx<T>,
 {
@@ -52,7 +55,7 @@ where
     }
 }
 
-impl<'a, T> DisplayCtx<Underlying<T>> for UnderlyingComp<'a>
+impl<T> DisplayCtx<Underlying<T>> for UnderlyingComp<'_>
 where
     ir::Component: DisplayCtx<Idx<T>>,
 {

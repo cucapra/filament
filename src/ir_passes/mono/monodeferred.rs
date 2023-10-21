@@ -210,8 +210,20 @@ impl MonoDeferred<'_, '_> {
                 let l = l.ul();
                 let r = r.ul();
                 let l = self.prop(l);
-                let r = self.prop(r);
-                self.monosig.base.add(ir::Prop::Implies(l.get(), r.get()))
+                // concretize the left expression first because if it is false the right might be invalid
+                // For example, `(X > 0) & (X - 1 >= 0)` would fail due to overflow.
+                match self.monosig.base.get(l) {
+                    fil_ir::Prop::True => self.prop(r),
+                    fil_ir::Prop::False => {
+                        self.monosig.base.add(ir::Prop::True)
+                    }
+                    _ => {
+                        let r = self.prop(r);
+                        self.monosig
+                            .base
+                            .add(ir::Prop::Implies(l.get(), r.get()))
+                    }
+                }
             }
         }
     }
@@ -316,23 +328,43 @@ impl MonoDeferred<'_, '_> {
         self.monosig.base.extend_cmds(body);
     }
 
-    fn fact(&mut self, fact: &ir::Fact) -> ir::Fact {
+    fn fact(&mut self, fact: &ir::Fact) -> Option<ir::Fact> {
         let ir::Fact { prop, reason, .. } = fact;
 
         let prop = prop.ul();
-        let prop = self.prop(prop);
-        let prop = self
-            .monosig
-            .base
-            .resolve_prop(self.monosig.base.get(prop).clone())
-            .get();
+        log::debug!("Fact: {}", self.underlying.display(prop));
+        let (params, events) = prop.idx().relevant_vars(self.underlying.comp());
+        assert!(events.is_empty(), "Facts cannot mention events.");
 
-        let reason = reason.ul();
-        let reason =
-            self.monosig.info(&self.underlying, self.pass, reason).get();
+        if !params
+            .into_iter()
+            .map(|p| p.ul())
+            .all(|idx| self.monosig.binding.get(&idx).is_some())
+        {
+            // Discards the assertion if it references parameters that can't be resolved (bundle parameters, etc)
+            // TODO(edmund): Find a better solution to this - we should resolve bundle assertions when bundles are unrolled.
+            None
+        } else {
+            log::debug!(
+                "Resolving: {} with binding {}",
+                self.underlying.display(prop),
+                self.monosig.binding_rep(&self.underlying)
+            );
+            let prop = self.prop(prop);
+            log::debug!("Resolved: {}", self.monosig.base.display(prop));
+            let prop = self
+                .monosig
+                .base
+                .resolve_prop(self.monosig.base.get(prop).clone())
+                .get();
 
-        // After monomorphization, both assumes and asserts become asserts.
-        ir::Fact::assert(prop, reason)
+            let reason = reason.ul();
+            let reason =
+                self.monosig.info(&self.underlying, self.pass, reason).get();
+
+            // After monomorphization, both assumes and asserts become asserts.
+            Some(ir::Fact::assert(prop, reason))
+        }
     }
 
     /// Compile the given command and return the generated command if any.
@@ -384,7 +416,7 @@ impl MonoDeferred<'_, '_> {
             // XXX(rachit): We completely get rid of facts in the program here.
             // If we want to do this long term, this should be done in a
             // separate pass and monomorphization should fail on facts.
-            ir::Command::Fact(fact) => Some(self.fact(fact).into()),
+            ir::Command::Fact(fact) => self.fact(fact).map(|f| f.into()),
         }
     }
 }
