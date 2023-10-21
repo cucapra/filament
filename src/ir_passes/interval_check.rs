@@ -1,7 +1,6 @@
 use crate::ir_visitor::{Action, Visitor, VisitorData};
 use fil_ir::{self as ir, AddCtx, Ctx};
 use fil_utils::GPosIdx;
-use ir::DisplayCtx;
 use itertools::Itertools;
 
 #[derive(Default)]
@@ -187,8 +186,7 @@ impl Visitor for IntervalCheck {
                 )
                 .into(),
             );
-            let prop = comp
-                .add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(delay.clone(), len)));
+            let prop = delay.clone().gte(len, comp);
             let imp = assumes.implies(prop, comp);
             cmds.extend(comp.assert(imp, reason));
         }
