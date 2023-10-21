@@ -127,19 +127,23 @@ pub struct Instance {
     pub name: Loc<Id>,
     /// Name of the component
     pub component: Loc<Id>,
+    /// Liveness of the instance
+    pub live: Option<Loc<Range>>,
     /// Bindings provided for this instance
-    pub bindings: Vec<Loc<Expr>>,
+    pub params: Vec<Loc<Expr>>,
 }
 impl Instance {
     pub fn new(
         name: Loc<Id>,
         component: Loc<Id>,
-        bindings: Vec<Loc<Expr>>,
+        params: Vec<Loc<Expr>>,
+        live: Option<Loc<Range>>,
     ) -> Self {
         Instance {
             name,
             component,
-            bindings,
+            live,
+            params,
         }
     }
 }

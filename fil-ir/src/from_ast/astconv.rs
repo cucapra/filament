@@ -35,7 +35,8 @@ impl<'prog> BuildCtx<'prog> {
         let ast::Instance {
             name,
             component,
-            bindings,
+            params: bindings,
+            live,
         } = inst;
 
         let comp = self.get_sig(component)?;
@@ -44,6 +45,10 @@ impl<'prog> BuildCtx<'prog> {
             component.clone(),
             self.diag(),
         )?;
+        let live = live
+            .as_ref()
+            .map(|l| self.range(l.inner().clone()))
+            .transpose()?;
         let inst = ir::Instance {
             comp: comp.idx,
             args: binding
@@ -57,6 +62,7 @@ impl<'prog> BuildCtx<'prog> {
                 component.pos(),
                 name.pos(),
             )),
+            live,
         };
 
         let idx = self.comp().add(inst);

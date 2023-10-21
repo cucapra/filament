@@ -424,7 +424,7 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.clone().into_children();
             [identifier(name), identifier(component), conc_params(params)] => vec![
-                ast::Instance::new(name, component, params).into()
+                ast::Instance::new(name, component, params, None).into()
             ],
             [identifier(name), identifier(component), conc_params(params), invoke_args((abstract_vars, ports))] => {
                 // Upper case the first letter of name
@@ -434,7 +434,7 @@ impl FilamentParser {
                 if iname == name {
                     input.error("Generated Instance name conflicts with original name");
                 }
-                let instance = ast::Instance::new(iname.clone(), component, params).into();
+                let instance = ast::Instance::new(iname.clone(), component, params, None).into();
                 let invoke = ast::Invoke::new(name, iname, abstract_vars, ports).into();
                 vec![instance, invoke]
             }

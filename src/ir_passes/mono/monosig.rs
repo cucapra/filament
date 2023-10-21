@@ -624,6 +624,7 @@ impl MonoSig {
             args,
             params,
             info,
+            live,
         } = underlying.get(inst);
 
         // Monomorphize the component
@@ -659,6 +660,7 @@ impl MonoSig {
             args: conc_params,
             info: self.info(underlying, pass, info.ul()).get(),
             params: Vec::new(),
+            live: todo!("monomorphizing instance liveness"),
         };
 
         let new_idx = self.base.add(new_inst);
