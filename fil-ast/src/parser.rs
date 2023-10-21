@@ -420,13 +420,20 @@ impl FilamentParser {
             [expr(vars)..] => vars.collect(),
         ))
     }
+    fn inst_live(input: Node) -> ParseResult<Vec<Loc<ast::Range>>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [interval_range(vars)..] => vars.collect(),
+            [] => vec![]
+        ))
+    }
     fn instance(input: Node) -> ParseResult<Vec<ast::Command>> {
         Ok(match_nodes!(
             input.clone().into_children();
-            [identifier(name), identifier(component), conc_params(params)] => vec![
-                ast::Instance::new(name, component, params, None).into()
+            [identifier(name), identifier(component), conc_params(params), inst_live(lives)] => vec![
+                ast::Instance::new(name, component, params, lives).into()
             ],
-            [identifier(name), identifier(component), conc_params(params), invoke_args((abstract_vars, ports))] => {
+            [identifier(name), identifier(component), conc_params(params), invoke_args((abstract_vars, ports)), inst_live(lives)] => {
                 // Upper case the first letter of name
                 let mut iname = name.as_ref().to_string();
                 iname.make_ascii_uppercase();
@@ -434,10 +441,10 @@ impl FilamentParser {
                 if iname == name {
                     input.error("Generated Instance name conflicts with original name");
                 }
-                let instance = ast::Instance::new(iname.clone(), component, params, None).into();
+                let instance = ast::Instance::new(iname.clone(), component, params, lives).into();
                 let invoke = ast::Invoke::new(name, iname, abstract_vars, ports).into();
                 vec![instance, invoke]
-            }
+            },
         ))
     }
 
