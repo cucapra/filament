@@ -1,6 +1,7 @@
 use crate::ir_visitor::{Action, Visitor, VisitorData};
 use fil_ir::{self as ir, AddCtx, Ctx};
 use fil_utils::GPosIdx;
+use ir::DisplayCtx;
 use itertools::Itertools;
 
 #[derive(Default)]
@@ -109,10 +110,7 @@ impl IntervalCheck {
         );
 
         // Ensure that this event's delay is greater than invoked component's event's delay.
-        let prop = comp.add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(
-            this_delay,
-            inv_delay.clone(),
-        )));
+        let prop = this_delay.gte(inv_delay.clone(), comp);
         comp.assert(prop, reason)
     }
 }
@@ -199,9 +197,32 @@ impl Visitor for IntervalCheck {
 
     fn invoke(&mut self, idx: ir::InvIdx, data: &mut VisitorData) -> Action {
         let comp = &mut data.comp;
+        let lives = comp.get(idx.inst(comp)).lives.clone();
+        let events = &comp[idx].events.clone();
+
         let mut cmds = Vec::default();
+        // If the liveness is defined, then ensure that the active range of the
+        // event is in range.
+        if !lives.is_empty() {
+            for (ir::Range { start, end }, live) in lives.iter().zip_eq(events)
+            {
+                let ir::EventBind {
+                    delay,
+                    arg: use_start,
+                    ..
+                } = live;
+                let start_after = use_start.gte(*start, comp);
+                let use_end = use_start.add(delay, comp);
+                let end_before = use_end.lte(*end, comp);
+                let info = comp.add(ir::Info::empty());
+                let prop = start_after.and(end_before, comp);
+                let cmd = comp.assert(prop, info);
+                cmds.extend(cmd);
+            }
+        }
+
         // Clone here because we need to pass mutable ownership of the component
-        for eb in comp[idx].events.clone() {
+        for eb in events.clone() {
             if let Some(assert) = self.event_binding(eb, comp) {
                 cmds.push(assert)
             }

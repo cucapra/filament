@@ -36,7 +36,7 @@ impl<'prog> BuildCtx<'prog> {
             name,
             component,
             params: bindings,
-            live,
+            lives,
         } = inst;
 
         let comp = self.get_sig(component)?;
@@ -45,10 +45,10 @@ impl<'prog> BuildCtx<'prog> {
             component.clone(),
             self.diag(),
         )?;
-        let live = live
-            .as_ref()
+        let live = lives
+            .iter()
             .map(|l| self.range(l.inner().clone()))
-            .transpose()?;
+            .collect::<BuildRes<Vec<_>>>()?;
         let inst = ir::Instance {
             comp: comp.idx,
             args: binding
@@ -62,7 +62,7 @@ impl<'prog> BuildCtx<'prog> {
                 component.pos(),
                 name.pos(),
             )),
-            live,
+            lives: live,
         };
 
         let idx = self.comp().add(inst);

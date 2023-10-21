@@ -83,7 +83,7 @@ pub struct Instance {
     /// The parameters used in the binding of this instance
     pub args: Box<[ExprIdx]>,
     /// The active range of this instance
-    pub live: Option<Range>,
+    pub lives: Vec<Range>,
     /// The parameters defined by this instance
     pub params: Vec<ParamIdx>,
     /// The information associated with this instance

@@ -315,7 +315,11 @@ impl<'a, 'b> Printer<'a, 'b> {
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         let ir::Instance {
-            comp, args, params, ..
+            comp,
+            args,
+            params,
+            lives,
+            ..
         } = self.comp.get(idx);
         write!(f, "{:indent$}", "")?;
         self.comp.write(idx, f)?;
@@ -334,6 +338,13 @@ impl<'a, 'b> Printer<'a, 'b> {
         let params = args.iter().map(|p| self.comp.display(*p)).join(", ");
         if !params.is_empty() {
             write!(f, "[{}]", params)?;
+        }
+        if !lives.is_empty() {
+            write!(
+                f,
+                " in {}",
+                lives.iter().map(|l| self.comp.display(l)).join(", ")
+            )?;
         }
         write!(f, ";")
     }

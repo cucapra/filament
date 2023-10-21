@@ -360,6 +360,17 @@ pub enum Reason {
         /// The range's start and end
         range: (TimeIdx, TimeIdx),
     },
+    /// The invocation does not require the event to be active longer than the instance's liveness
+    EventLive {
+        /// Location of the liveness information
+        live_loc: GPosIdx,
+        /// Delay information
+        ev_delay: TimeSub,
+        // Information about the binding
+        start: TimeIdx,
+        /// Location of the binding
+        time_expr_loc: GPosIdx,
+    },
     EventTrig {
         /// Delay of event of component being triggered
         ev_delay_loc: GPosIdx,
@@ -451,6 +462,20 @@ impl Reason {
             ev_delay,
             comp_ev,
             delay,
+            time_expr_loc,
+        }
+    }
+
+    pub fn event_live(
+        live_loc: GPosIdx,
+        ev_delay: TimeSub,
+        start: TimeIdx,
+        time_expr_loc: GPosIdx,
+    ) -> Self {
+        Self::EventLive {
+            live_loc,
+            ev_delay,
+            start,
             time_expr_loc,
         }
     }
@@ -709,6 +734,28 @@ impl Reason {
                 Diagnostic::error()
                     .with_message("event provided to invocation triggers more often that invocation's event's delay allows")
                     .with_labels(vec![bind, ev, comp])
+            }
+
+            Reason::EventLive {
+                live_loc,
+                ev_delay,
+                start,
+                time_expr_loc,
+            } => {
+                let bind = time_expr_loc.primary().with_message(format!(
+                    "event use starts at {} and last for {} cycles",
+                    ctx.display(*start),
+                    ctx.display(ev_delay),
+                ));
+                let live = live_loc.secondary().with_message(format!(
+                    "instance borrows this event for {} cycles",
+                    ctx.display(ev_delay)
+                ));
+                Diagnostic::error()
+                    .with_message(
+                        "event used for longer than the instance borrow allows",
+                    )
+                    .with_labels(vec![bind, live])
             }
         }
     }
