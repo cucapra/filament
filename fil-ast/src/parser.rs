@@ -1,4 +1,5 @@
 #![allow(clippy::upper_case_acronyms)]
+#![allow(clippy::type_complexity)]
 
 //! Parser for Filament programs.
 use crate::{self as ast, Loc, TimeSub};
@@ -357,7 +358,6 @@ impl FilamentParser {
         Ok(evs)
     }
 
-    #[allow(clippy::type_complexity)]
     fn ports(
         input: Node,
     ) -> ParseResult<(Ports, Vec<ast::InterfaceDef>, Vec<(ast::Id, u64)>)> {
@@ -463,10 +463,10 @@ impl FilamentParser {
             input.clone().into_children();
             [bitwidth(_)] => Err(input.error("constant ports are not supported. Use the `Const[Width, Val]' primitive instead.")),
             [identifier(name)] => Ok(Loc::new(ast::Port::this(name), sp)),
-            [identifier(name), access(range)] => Ok(Loc::new(ast::Port::bundle(name, range), sp)),
+            [identifier(name), access(range)..] => Ok(Loc::new(ast::Port::bundle(name, range.collect()), sp)),
             [identifier(comp), identifier(name)] => Ok(Loc::new(ast::Port::inv_port(comp, name), sp)),
-            [identifier(invoke), identifier(port), access(access)] => Ok(Loc::new(ast::Port::inv_bundle(invoke, port, access), sp)),
-            [identifier(name), expr(idx)] => Ok(Loc::new(ast::Port::bundle(name, idx.map(|x| x.into())), sp)),
+            [identifier(invoke), identifier(port), access(access)..] => Ok(Loc::new(ast::Port::inv_bundle(invoke, port, access.collect()), sp)),
+            [identifier(name), expr(idx)] => Ok(Loc::new(ast::Port::bundle(name, vec![idx.map(|x| x.into())]), sp)),
         )
     }
 
@@ -694,24 +694,47 @@ impl FilamentParser {
     }
 
     fn bundle_def(input: Node) -> ParseResult<ast::Bundle> {
+        match_nodes!(
+            input.clone().into_children();
+            [identifier(name), expr(sizes).., bundle_typ((params, range, width))] => {
+                let sizes = sizes.collect_vec();
+                // If no size is specified, treat this is as one dimensional bundle with size 1.
+                let (sizes, s_len) = if sizes.is_empty() {
+                    (vec![Loc::unknown(ast::Expr::Concrete(1))], 1)
+                } else {
+                    let s_len = sizes.len();
+                    (sizes, s_len)
+                };
+
+                let p_len = params.len();
+                if p_len > s_len {
+                    return Err(input.error(format!("{s_len} dimensions specified but {p_len} parameters provided")));
+                }
+                let mut params = params;
+                // Add extra parameters for missing dimensions
+                (0..s_len - p_len).for_each(|i| {
+                    params.push(Loc::unknown(ast::Id::from(format!("_{i}"))));
+                });
+
+                Ok(ast::Bundle::new(name, ast::BundleType::new(params, sizes, range, width)))
+            }
+        )
+    }
+
+    fn bundle_params(input: Node) -> ParseResult<Vec<Loc<ast::Id>>> {
         Ok(match_nodes!(
             input.into_children();
-            [identifier(name), expr(size), bundle_typ((param, range, width))] => ast::Bundle::new(name, ast::BundleType::new(param, size, range, width)),
-            // This is bundle with size 1, i.e., a port.
-            [identifier(name), bundle_typ((param, range, width))] => ast::Bundle::new(
-                name,
-                ast::BundleType::new(param, ast::Expr::concrete(1).into(), range, width)
-            ),
+            [param_var(params)..] => params.collect(),
         ))
     }
 
     fn bundle_typ(
         input: Node,
-    ) -> ParseResult<(Loc<ast::Id>, Loc<ast::Range>, Loc<ast::Expr>)> {
+    ) -> ParseResult<(Vec<Loc<ast::Id>>, Loc<ast::Range>, Loc<ast::Expr>)> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(param), interval_range(range), expr(width)] => (param, range, width),
-            [interval_range(range), expr(width)] => (Loc::unknown(ast::Id::from("_")), range, width),
+            [bundle_params(params), interval_range(range), expr(width)] => (params, range, width),
+            [interval_range(range), expr(width)] => (vec![Loc::unknown(ast::Id::from("_"))], range, width),
         ))
     }
 

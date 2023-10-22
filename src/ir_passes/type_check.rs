@@ -1,6 +1,7 @@
 use crate::ir_visitor::{Action, Visitor, VisitorData};
 use fil_ir::{self as ir, AddCtx, Ctx};
 use fil_utils::GPosIdx;
+use ir::DisplayCtx;
 use itertools::Itertools;
 
 #[derive(Default)]
@@ -19,15 +20,12 @@ impl TypeCheck {
         access: &ir::Access,
         loc: GPosIdx,
         comp: &mut ir::Component,
-    ) -> impl Iterator<Item = ir::Command> {
-        let &ir::Access { port, start, end } = access;
-        let &ir::Port {
-            live: ir::Liveness { len, .. },
-            info,
-            ..
-        } = comp.get(port);
+    ) -> Vec<ir::Command> {
+        let &ir::Access { port, ranges } = &access;
+        let ir::Port { live, info, .. } = comp.get(*port);
+        let live = live.clone();
 
-        let &ir::info::Port { bind_loc, .. } = comp.get(info).into();
+        let &ir::info::Port { bind_loc, .. } = comp.get(*info).into();
 
         let wf = comp.add(
             ir::info::Reason::misc(
@@ -37,18 +35,36 @@ impl TypeCheck {
             .into(),
         );
 
-        let wf_prop = end.gt(start, comp);
-        let within_bounds = comp
-            .add(ir::info::Reason::in_bounds_access(bind_loc, loc, len).into());
-        let start = start.lt(len, comp);
-        let end = end.lte(len, comp);
-        let in_range = start.and(end, comp);
-        vec![
-            comp.assert(wf_prop, wf),
-            comp.assert(in_range, within_bounds),
-        ]
-        .into_iter()
-        .flatten()
+        assert!(
+            live.lens.len() == ranges.len(),
+            "Port `{}' has {} dimensions but accessed with {} indices",
+            comp.display(*port),
+            live.lens.len(),
+            ranges.len()
+        );
+
+        ranges
+            .iter()
+            // TODO(rachit): This might panic
+            .zip_eq(live.lens)
+            .enumerate()
+            .flat_map(|(i, ((start, end), len))| {
+                let (start, end, len) = (*start, *end, len);
+                let wf_prop = end.gt(start, comp);
+                let within_bounds = comp.add(
+                    ir::info::Reason::in_bounds_access(bind_loc, i, loc, len)
+                        .into(),
+                );
+                let start = start.lt(len, comp);
+                let end = end.lte(len, comp);
+                let in_range = start.and(end, comp);
+                vec![
+                    comp.assert(wf_prop, wf),
+                    comp.assert(in_range, within_bounds),
+                ]
+            })
+            .flatten()
+            .collect_vec()
     }
 }
 
@@ -106,16 +122,20 @@ impl Visitor for TypeCheck {
         let prop = src_w.equal(dst_w, comp);
         cons.extend(comp.assert(prop, reason));
 
-        // Ensure that the sizes are the same
-        let src_size = src.end.sub(src.start, comp);
-        let dst_size = dst.end.sub(dst.start, comp);
+        let one = comp.num(1);
+        let s_len = src
+            .ranges
+            .iter()
+            .fold(one, |acc, (s, e)| acc.mul(e.sub(*s, comp), comp));
+        let d_len = dst
+            .ranges
+            .iter()
+            .fold(one, |acc, (s, e)| acc.mul(e.sub(*s, comp), comp));
+        let prop = s_len.equal(d_len, comp);
         let reason = comp.add(
-            ir::info::Reason::bundle_len_match(
-                dst_loc, src_loc, dst_size, src_size,
-            )
-            .into(),
+            ir::info::Reason::bundle_len_match(dst_loc, src_loc, d_len, s_len)
+                .into(),
         );
-        let prop = src_size.equal(dst_size, comp);
         cons.extend(comp.assert(prop, reason));
 
         Action::AddBefore(cons)

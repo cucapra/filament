@@ -524,12 +524,21 @@ impl AddCtx<Expr> for Component {
                 let l = lhs.as_concrete(self);
                 let r = rhs.as_concrete(self);
                 let e = match (op, l, r) {
+                    // 0+e == e
                     (ast::Op::Add, Some(0), None) => return *rhs,
+                    // e+0 and e-0 == e
                     (ast::Op::Add, None, Some(0))
                     | (ast::Op::Sub, None, Some(0)) => return *lhs,
+                    // e*0, 0*e, 0/e == 0
                     (ast::Op::Mul, Some(0), None)
                     | (ast::Op::Div, Some(0), None)
                     | (ast::Op::Mul, None, Some(0)) => Expr::Concrete(0),
+                    // e*1 and e/1 == e
+                    (ast::Op::Mul, _, Some(1)) | (ast::Op::Div, _, Some(1)) => {
+                        return *lhs
+                    }
+                    // 1*e == e
+                    (ast::Op::Mul, Some(1), _) => return *rhs,
                     (ast::Op::Add, Some(l), None)
                     | (ast::Op::Mul, Some(l), None) => Expr::Bin {
                         op: *op,
@@ -607,7 +616,7 @@ impl AddCtx<Prop> for Component {
                 // If the proposition is false, then the implication is trivially true
                 if l.is_false(self) {
                     // Warning because its not clear if this is ever expected behavior
-                    log::warn!("A false proposition was created");
+                    log::warn!("left side of implies was false");
                     self.props.intern(Prop::True)
                 } else if r.is_true(self) {
                     self.props.intern(Prop::True)
