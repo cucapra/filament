@@ -1,4 +1,4 @@
-import "apps/xls/mul_lat3/shim.fil";
+import "apps/xls/mul_lat4/shim.fil";
 
 // Abstract Mul that instantiates an arbitrary Mul and uses
 // its latency
