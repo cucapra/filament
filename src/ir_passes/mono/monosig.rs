@@ -34,7 +34,7 @@ pub struct MonoSig {
     /// Ports - (base inv, underlying port) -> base port
     pub port_map: HashMap<PortKey, Base<ir::Port>>,
     /// Bundle params - new port to new param
-    bundle_param_map: HashMap<Base<ir::Port>, Base<ir::Param>>,
+    bundle_param_map: HashMap<Base<ir::Port>, Vec<Base<ir::Param>>>,
 
     /// Map from underlying invokes to base invokes
     invoke_map: DenseMap<ir::Invoke>,
@@ -427,38 +427,46 @@ impl MonoSig {
         *new_event
     }
 
-    /// Takes a underlying-owned param that is known to be bundle-owned and a port index owned by self.base,
+    /// Takes a underlying-owned params that are known to be bundle-owned and a port index owned by self.base,
     /// creates a new param that points to the port index, and adds the param to self.base. Returns the
     /// corresponding index
-    fn bundle_param(
+    fn bundle_params(
         &mut self,
-        underlying: &UnderlyingComp,
-        pass: &mut Monomorphize,
-        param: Underlying<ir::Param>,
+        _underlying: &UnderlyingComp,
+        _pass: &mut Monomorphize,
+        params: &[Underlying<ir::Param>],
         port: Base<ir::Port>,
-    ) -> Base<ir::Param> {
-        let ir::Param { info, .. } = underlying.get(param);
-        let info = info.ul();
-
-        let mono_info = self.info(underlying, pass, info);
+    ) -> Vec<Base<ir::Param>> {
+        let info = self.base.add(ir::Info::empty()).get();
         let mono_owner = ir::ParamOwner::Bundle(port.get());
 
-        if let Some(new_param_idx) = self.bundle_param_map.get(&port) {
-            let new_param = self.base.get_mut(*new_param_idx);
-            new_param.owner = mono_owner;
-            new_param.info = mono_info.get();
-            return *new_param_idx;
+        if let Some(new_params) = self.bundle_param_map.get(&port) {
+            return new_params
+                .iter()
+                .map(|&new_param_idx| {
+                    let new_param = self.base.get_mut(new_param_idx);
+                    new_param.owner = mono_owner.clone();
+                    new_param.info = info;
+                    new_param_idx
+                })
+                .collect_vec();
         };
 
-        let mono_param = ir::Param {
-            owner: mono_owner,
-            info: self.info(underlying, pass, info).get(),
-        };
+        let mono_params = params
+            .iter()
+            .map(|old_param| {
+                let mono_param = ir::Param {
+                    owner: mono_owner.clone(),
+                    info,
+                };
+                let new_idx = self.base.add(mono_param);
+                self.param_map.push(*old_param, new_idx);
+                new_idx
+            })
+            .collect_vec();
 
-        let new_idx = self.base.add(mono_param);
-        self.param_map.push(param, new_idx);
-        self.bundle_param_map.insert(port, new_idx);
-        new_idx
+        self.bundle_param_map.insert(port, mono_params.clone());
+        mono_params
     }
 
     /// Monomorphize the definition of an invoke, add it to the base component,
@@ -710,26 +718,28 @@ impl MonoSig {
         // Find the new port owner
         let mono_owner = self.find_new_portowner(underlying, pass, owner);
 
-        let ir::Liveness { idx, len, range } = live;
+        let ir::Liveness { idxs, lens, range } = live;
 
-        let mono_liveness_idx = idx.map(|idx| {
-            self.bundle_param(underlying, pass, idx.ul(), new_port)
-                .get()
-        });
+        let mono_idxs = self.bundle_params(
+            underlying,
+            pass,
+            &idxs.iter().map(|idx| idx.ul()).collect_vec(),
+            new_port,
+        );
 
         let mut mono_liveness = ir::Liveness {
-            idx: mono_liveness_idx,
-            len: *len,            // placeholder
+            idxs: mono_idxs.into_iter().map(|idx| idx.get()).collect_vec(),
+            lens: vec![],         // placeholder
             range: range.clone(), // placeholder
         };
 
         // if there's parameters, we don't want to replace them for handling externs
         let width = width.ul();
         let mono_width = self.base.add(underlying.get(width).clone());
-        mono_liveness.len = self
-            .base
-            .add(underlying.get(mono_liveness.len.ul()).clone())
-            .get();
+        mono_liveness.lens = lens
+            .iter()
+            .map(|len| self.base.add(underlying.get(len.ul()).clone()).get())
+            .collect_vec();
 
         let ir::Range { start, end } = mono_liveness.range;
         let start = start.ul();
@@ -855,27 +865,32 @@ impl MonoSig {
         // Find the new port owner
         let mono_owner = self.find_new_portowner(underlying, pass, owner);
 
-        let ir::Liveness { idx, len, range } = live;
+        let ir::Liveness { idxs, lens, range } = live;
 
-        let mono_liveness_idx = idx
-            .map(|idx| self.bundle_param(underlying, pass, idx.ul(), new_port));
+        let mono_idxs = self.bundle_params(
+            underlying,
+            pass,
+            &idxs.iter().map(|idx| idx.ul()).collect_vec(),
+            new_port,
+        );
 
         let mut mono_liveness = ir::Liveness {
-            idx: mono_liveness_idx.map(|idx| idx.get()),
-            len: *len,            // placeholder
+            idxs: mono_idxs.iter().map(|idx| idx.get()).collect_vec(),
+            lens: vec![],         // placeholder
             range: range.clone(), // placeholder
         };
 
-        if let Some(m_idx) = mono_liveness_idx {
-            self.bundle_param_map.insert(new_port, m_idx);
-        }
-
+        self.bundle_param_map.insert(new_port, mono_idxs);
         let mono_width = self.expr(underlying, width.ul());
-        mono_liveness.len = self.expr(underlying, mono_liveness.len.ul()).get();
-        mono_liveness.len = self
-            .base
-            .bin(self.base.get(mono_liveness.len.base()).clone())
-            .get();
+        mono_liveness.lens = lens
+            .iter()
+            .map(|len| {
+                let e = self.expr(underlying, len.ul()).get();
+                // Simplify the expression
+                self.base.bin(self.base.get(e.base()).clone()).get()
+            })
+            .collect_vec();
+
         mono_liveness.range =
             self.range(underlying, pass, &mono_liveness.range);
 

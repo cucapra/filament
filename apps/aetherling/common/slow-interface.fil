@@ -53,7 +53,7 @@ comp Wrapper<'G: II>(
     // Send the chunks to the conv and collect the outputs
     for i in 0..16 {
         // Send C::N inputs to the Convolution
-        c := C<'G+C::II*i>(ser.out{i});
+        c := C<'G+C::II*i>(ser.out{i}{0});
         // Assign the outputs to the bundle
         co{i} = c.out;
     }

@@ -1,4 +1,5 @@
 use crate::{self as ir, Ctx};
+use itertools::Itertools;
 use std::io::Write;
 
 pub type IOResult = std::io::Result<()>;
@@ -109,10 +110,13 @@ impl DisplayCtx<ir::InstIdx> for ir::Component {
 impl DisplayCtx<ir::PortIdx> for ir::Component {
     fn write(&self, idx: ir::PortIdx, f: &mut impl Write) -> IOResult {
         let port = self.get(idx);
-        let name = self
-            .get(port.info)
-            .as_port()
-            .map_or(format!("{idx}"), |p| format!("{}", p.name));
+        let name = if log::log_enabled!(log::Level::Trace) {
+            format!("{idx}")
+        } else {
+            self.get(port.info)
+                .as_port()
+                .map_or(format!("{idx}"), |p| format!("{}", p.name))
+        };
         match port.owner {
             ir::PortOwner::Local | ir::PortOwner::Sig { .. } => {
                 write!(f, "{name}")
@@ -152,30 +156,37 @@ impl<'a> DisplayCtx<&'a ir::Range> for ir::Component {
 
 impl<'a> DisplayCtx<&'a ir::Liveness> for ir::Component {
     fn write(&self, l: &ir::Liveness, f: &mut impl Write) -> IOResult {
-        let ir::Liveness { idx, len, range } = l;
-        write!(
-            f,
-            "for<{}: {}> {}",
-            if let Some(idx) = idx {
-                self.display(*idx)
-            } else {
-                "_".to_string()
-            },
-            self.display(*len),
-            self.display(range)
-        )
+        let ir::Liveness { idxs, lens, range } = l;
+        let idxs = idxs
+            .iter()
+            .zip(lens)
+            .map(|(idx, len)| {
+                format!("{}:{}", self.display(*idx), self.display(*len))
+            })
+            .join(", ");
+        write!(f, "for<{idxs}> {}", self.display(range))
     }
 }
 
 impl<'a> DisplayCtx<&'a ir::Access> for ir::Component {
     fn write(&self, a: &ir::Access, f: &mut impl Write) -> IOResult {
-        let &ir::Access { port, start, end } = a;
-        self.write(port, f)?;
+        let ir::Access { port, ranges } = &a;
+        self.write(*port, f)?;
         if a.is_port(self) {
-            write!(f, "[{}]", self.display(start))
+            ranges.iter().try_for_each(|(start, _)| {
+                write!(f, "{{{}}}", self.display(*start),)
+            })?;
         } else {
-            write!(f, "[{}..{})", self.display(start), self.display(end))
+            ranges.iter().try_for_each(|(start, end)| {
+                write!(
+                    f,
+                    "{{{}..{}}}",
+                    self.display(*start),
+                    self.display(*end)
+                )
+            })?;
         }
+        Ok(())
     }
 }
 
