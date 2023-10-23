@@ -63,8 +63,9 @@ impl<'a> Validate<'a> {
     fn port(&self, pidx: ir::PortIdx) {
         let ir::Port { owner, live, .. } = self.comp.get(pidx);
         // check (1)
-        let ir::Liveness { idx: par_idx, .. } = live;
-        match self.comp.get(*par_idx).owner {
+        let ir::Liveness { idxs: par_idxs, .. } = live;
+        for par_idx in par_idxs {
+            match self.comp.get(*par_idx).owner {
             ir::ParamOwner::Sig => self.comp.internal_error(format!(
                 "{} should be owned by a bundle but is owned by a sig",
                 self.comp.display(*par_idx)
@@ -88,6 +89,7 @@ impl<'a> Validate<'a> {
                         format!("{par_idx} should be owned by {pidx} but is owned by {port_idx}"))
                 }
             }
+        }
         }
 
         // check (2)

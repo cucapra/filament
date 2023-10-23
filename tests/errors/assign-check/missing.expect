@@ -1,7 +1,7 @@
 ---CODE---
 1
 ---STDERR---
-error: bundle `3' has a unassigned locations
+error: bundle `a' has 3 unassigned locations
   ┌─ tests/errors/assign-check/missing.fil:2:12
   │
 2 │     bundle a[4]: ['G, 'G+1] 32;

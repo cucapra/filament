@@ -25,6 +25,7 @@ comp main<'G:12>(
 
     ser := new Serialize[32, 3, 2, 3, 6]<'G>(in{0..6});
 
-    o0 = ser.out{0}; o1 = ser.out{1}; o2 = ser.out{2};
-    o3 = ser.out{3}; o4 = ser.out{4}; o5 = ser.out{5};
+    o0 = ser.out{0}{0}; o1 = ser.out{0}{1};
+    o2 = ser.out{1}{0}; o3 = ser.out{1}{1};
+    o4 = ser.out{2}{0}; o5 = ser.out{2}{1};
 }

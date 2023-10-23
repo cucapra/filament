@@ -3,6 +3,7 @@ use super::{
     InstIdx, InvIdx, ParamIdx, PortIdx, Subst, TimeIdx, TimeSub,
 };
 use fil_ast::Op;
+use itertools::Itertools;
 use std::fmt;
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -128,8 +129,8 @@ impl fmt::Display for Direction {
 /// p[N]: for<i> @['G, 'G+i+10]
 /// ```
 pub struct Liveness {
-    pub idx: ParamIdx,
-    pub len: ExprIdx,
+    pub idxs: Vec<ParamIdx>,
+    pub lens: Vec<ExprIdx>,
     pub range: Range,
 }
 
@@ -203,10 +204,8 @@ impl Port {
 /// bundles.
 pub struct Access {
     pub port: PortIdx,
-    /// The start of the access range (inclusive)
-    pub start: ExprIdx,
-    /// The end of the access range (exclusive)
-    pub end: ExprIdx,
+    /// Accesses into the bundle (inclusive, exclusive)
+    pub ranges: Vec<(ExprIdx, ExprIdx)>,
 }
 impl Access {
     /// Construct an access on a simple port (i.e. not a bundle)
@@ -216,55 +215,77 @@ impl Access {
         let one = ctx.add(Expr::Concrete(1));
         Self {
             port,
-            start: zero,
-            end: one,
+            ranges: vec![(zero, one)],
         }
+    }
+
+    fn unit_range(start: ExprIdx, end: ExprIdx, ctx: &Component) -> bool {
+        let Some(one) = ctx.exprs().find(&Expr::Concrete(1)) else {
+            ctx.internal_error("Constant 1 not found in component")
+        };
+        match ctx.get(end) {
+            Expr::Bin {
+                op: Op::Add,
+                lhs,
+                rhs,
+            } => {
+                if !(*rhs == one && start == *lhs
+                    || *lhs == one && start == *rhs)
+                {
+                    return false;
+                }
+            }
+            Expr::Concrete(e) => {
+                if let Some(s) = start.as_concrete(ctx) {
+                    if *e != s + 1 {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            }
+            _ => return false,
+        }
+        true
     }
 
     /// Check if this is guaranteed a simple port access, i.e., an access that
     /// produces one port.
     /// The check is syntactic and therefore conservative.
     pub fn is_port(&self, ctx: &Component) -> bool {
-        let Some(one) = ctx.exprs().find(&Expr::Concrete(1)) else {
-            ctx.internal_error("Constant 1 not found in component")
-        };
-        match ctx.get(self.end) {
-            Expr::Bin {
-                op: Op::Add,
-                lhs,
-                rhs,
-            } => {
-                *rhs == one && self.start == *lhs
-                    || *lhs == one && self.start == *rhs
-            }
-            Expr::Concrete(e) => {
-                if let Some(s) = self.start.as_concrete(ctx) {
-                    *e == s + 1
-                } else {
-                    false
-                }
-            }
-            _ => false,
-        }
+        self.ranges
+            .iter()
+            .all(|(start, end)| Self::unit_range(*start, *end, ctx))
     }
 
     /// Return the bundle type associated with this access
     pub fn bundle_typ(&self, ctx: &mut Component) -> Liveness {
         let live = ctx.get(self.port).live.clone();
-        let binding = if self.is_port(ctx) {
-            // If this access produces exactly one port, then remap `#idx` to `start`.
-            [(live.idx, self.start)]
-        } else {
-            // Remap `#idx` to `#idx+start
-            [(live.idx, live.idx.expr(ctx).add(self.start, ctx))]
-        };
+        assert!(
+            live.idxs.len() == self.ranges.len(),
+            "access does not match bundle type dimensions"
+        );
 
-        let range = Subst::new(live.range, &Bind::new(binding)).apply(ctx);
+        let binding = Bind::new(live.idxs.iter().zip(&self.ranges).map(
+            |(idx, (start, end))| {
+                if Self::unit_range(*start, *end, ctx) {
+                    (*idx, *start)
+                } else {
+                    (*idx, idx.expr(ctx).add(*start, ctx))
+                }
+            },
+        ));
+
+        let range = Subst::new(live.range, &binding).apply(ctx);
+        let lens = self
+            .ranges
+            .iter()
+            .map(|(start, end)| end.sub(*start, ctx))
+            .collect_vec();
         // Shrink the bundle type based on the access
-        let len = self.end.sub(self.start, ctx);
         Liveness {
-            idx: live.idx,
-            len,
+            idxs: live.idxs,
+            lens,
             range,
         }
     }

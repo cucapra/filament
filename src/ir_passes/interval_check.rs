@@ -60,12 +60,16 @@ impl IntervalCheck {
 
     /// Proposition that ensures that the given parameter is in range
     fn in_range(live: &ir::Liveness, comp: &mut ir::Component) -> ir::PropIdx {
-        let &ir::Liveness { idx, len, .. } = live;
-        let zero = comp.num(0);
-        let idx = idx.expr(comp);
-        let lo = idx.gte(zero, comp);
-        let hi = idx.lt(len, comp);
-        lo.and(hi, comp)
+        let &ir::Liveness { idxs, lens, .. } = &live;
+        let mut prop = comp.add(ir::Prop::True);
+        for (idx, len) in idxs.iter().zip_eq(lens) {
+            let zero = comp.num(0);
+            let idx = idx.expr(comp);
+            let lo = idx.gte(zero, comp);
+            let hi = idx.lt(*len, comp);
+            prop = prop.and(lo.and(hi, comp), comp);
+        }
+        prop
     }
 
     /// For each event binding, we add the constraint that the events uses as arguments
@@ -163,16 +167,25 @@ impl Visitor for IntervalCheck {
             let ev = &comp[st_ev];
             let delay = ev.delay.clone();
             let &ir::info::Event { delay_loc, .. } = comp.get(ev.info).into();
-            let param = comp.get(live.idx);
-            let &ir::info::Param { bind_loc, .. } = comp.get(param.info).into();
-            let zero = comp.num(0);
+
+            let param_info = live
+                .idxs
+                .iter()
+                .zip_eq(&live.lens)
+                .map(|(param, len)| {
+                    let param = comp.get(*param);
+                    let &ir::info::Param { bind_loc, .. } =
+                        comp.get(param.info).into();
+                    let zero = comp.num(0);
+                    (bind_loc, zero, *len)
+                })
+                .collect_vec();
             let reason = comp.add(
                 ir::info::Reason::bundle_delay(
                     delay_loc,
                     live_loc,
                     len.clone(),
-                    bind_loc,
-                    (zero, live.len),
+                    param_info,
                 )
                 .into(),
             );
@@ -209,13 +222,26 @@ impl Visitor for IntervalCheck {
             .and(Self::in_range(&src_t, comp), comp);
 
         // Substitute the parameter used in source with that in dst
-        let binding = vec![(dst_t.idx, src_t.idx.expr(comp))];
+        let binding = ir::Bind::new(
+            dst_t
+                .idxs
+                .iter()
+                // We only substitute the indices that appear in both
+                .zip(&src_t.idxs)
+                .map(|(d, s)| (*d, s.expr(comp)))
+                .collect_vec(),
+        );
+
         let dst_range =
-            ir::Subst::new(dst_t.range.clone(), &ir::Bind::new(binding))
-                .apply(comp);
+            ir::Subst::new(dst_t.range.clone(), &binding).apply(comp);
 
         // Assuming that lengths are equal
-        let pre_req = src_t.len.equal(dst_t.len, comp).and(in_range, comp);
+        let one = comp.num(1);
+        let s_len = src_t.lens.iter().fold(one, |acc, l| acc.mul(*l, comp));
+        let d_len = dst_t.lens.iter().fold(one, |acc, l| acc.mul(*l, comp));
+
+        let pre_req = s_len.equal(d_len, comp).and(in_range, comp);
+
         let contains = src_t
             .range
             .start

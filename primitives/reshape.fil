@@ -26,9 +26,8 @@ comp Serialize[W, N, B, ?C=1, ?H=1]<'G: C*(N-1)+H>(
     go: interface['G],
     in[Tot]: ['G, 'G+H] W
 ) -> (
-    // The parenthesis are important because we want to perform integer
-    // division.
-    out[Tot]: for<p> ['G+C*(p/B), 'G+C*(p/B)+H] W
+    /// We generate N bundles each of size B. The availability depends on the bundle.
+    out[N][B]: for<i> ['G+C*i, 'G+C*i+H] W
 ) with {
     let Tot = N*B;
 } where
@@ -40,12 +39,11 @@ comp Serialize[W, N, B, ?C=1, ?H=1]<'G: C*(N-1)+H>(
     for i in 0..N {
         for j in 0..B {
             let CurIdx = B*i+j;
-            assume CurIdx/B == i; // Proof hint. Make type checking faster.
             if i > 0 {
                 d := new Register[W]<'G, 'G+C*i+H>(in{CurIdx});
-                out{CurIdx} = d.out;
+                out{i}{j} = d.out;
             } else {
-                out{CurIdx} = in{CurIdx};
+                out{i}{j} = in{CurIdx};
             }
         }
     }
@@ -76,7 +74,7 @@ comp Serialize[W, N, B, ?C=1, ?H=1]<'G: C*(N-1)+H>(
 // a component that is not fully pipelined.
 comp Deserialize[W, N, B, ?C=1, ?H=1]<'G: End-1>(
     go: interface['G],
-    in[Tot]: for<p> ['G+C*(p/B), 'G+C*(p/B)+H] W
+    in[N][B]: for<i> ['G+C*i, 'G+C*i+H] W
 ) -> (
     out[Tot]: ['G+Start, 'G+Start+H] W
 ) with {
@@ -93,13 +91,12 @@ comp Deserialize[W, N, B, ?C=1, ?H=1]<'G: End-1>(
         // Accepts B inputs this cycle and delay them
         for j in 0..B {
             let CurIdx = B*i+j;
-            assume CurIdx/B == i; // Proof hint. Make type checking faster.
             if i < N-1 {
-                d := new Register[W]<'G+C*i, 'G+End>(in{CurIdx});
+                d := new Register[W]<'G+C*i, 'G+End>(in{i}{j});
                 out{CurIdx} = d.out;
             } else {
                 // The last bundle is forwarded combinationally
-                out{CurIdx} = in{CurIdx};
+                out{CurIdx} = in{i}{j};
             }
         }
     }

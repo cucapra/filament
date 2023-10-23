@@ -71,6 +71,7 @@ pub struct Connect {
 pub struct Port {
     /// Surface-level name
     pub name: ast::Id,
+    /// The location of the name
     pub bind_loc: GPosIdx,
     pub width_loc: GPosIdx,
     pub live_loc: GPosIdx,
@@ -324,10 +325,12 @@ pub enum Reason {
     InBoundsAccess {
         // Defining location for the port
         def_loc: GPosIdx,
+        /// The dimension's location
+        dim: usize,
         /// Location of the access
         access_loc: GPosIdx,
         /// Length of the bundle
-        bundle_len: ExprIdx,
+        dim_len: ExprIdx,
     },
 
     // ========== Constraints from interval checking ============
@@ -344,10 +347,11 @@ pub enum Reason {
         event_delay_loc: GPosIdx,
         bundle_range_loc: GPosIdx,
         bundle_live: TimeSub,
-        /// The bundle paramemter's binding location
-        param_loc: GPosIdx,
-        /// The start and end of index's range
-        param_range: (ExprIdx, ExprIdx),
+        param_info: Vec<(
+            /*bind_loc=*/ GPosIdx,
+            /*start=*/ ExprIdx,
+            /*end=*/ ExprIdx,
+        )>,
     },
     /// Well formed time interval
     WellFormedInterval {
@@ -383,15 +387,17 @@ impl Reason {
         event_delay_loc: GPosIdx,
         bundle_range_loc: GPosIdx,
         bundle_live: TimeSub,
-        param_loc: GPosIdx,
-        param_range: (ExprIdx, ExprIdx),
+        param_info: Vec<(
+            /*bind_loc=*/ GPosIdx,
+            /*start*/ ExprIdx,
+            /*end=*/ ExprIdx,
+        )>,
     ) -> Self {
         Self::BundleDelay {
             event_delay_loc,
             bundle_range_loc,
             bundle_live,
-            param_loc,
-            param_range,
+            param_info,
         }
     }
 
@@ -451,13 +457,15 @@ impl Reason {
 
     pub fn in_bounds_access(
         def_loc: GPosIdx,
+        dim: usize,
         access_loc: GPosIdx,
         bundle_len: ExprIdx,
     ) -> Self {
         Self::InBoundsAccess {
             def_loc,
+            dim,
             access_loc,
-            bundle_len,
+            dim_len: bundle_len,
         }
     }
 
@@ -569,13 +577,14 @@ impl Reason {
             }
             Reason::InBoundsAccess {
                 def_loc,
+                dim,
                 access_loc,
-                bundle_len,
+                dim_len: bundle_len,
             } => {
                 let access =
                     access_loc.primary().with_message("out of bounds access");
                 let def = def_loc.secondary().with_message(format!(
-                    "bundle's length is {}",
+                    "dimension {dim} has length {}",
                     ctx.display(*bundle_len)
                 ));
                 Diagnostic::error()
@@ -640,8 +649,7 @@ impl Reason {
                 event_delay_loc,
                 bundle_range_loc,
                 bundle_live,
-                param_loc,
-                param_range,
+                param_info,
             } => {
                 let wire = bundle_range_loc.primary().with_message(format!(
                     "available for {} cycles",
@@ -652,13 +660,15 @@ impl Reason {
                 let mut labels = vec![wire, event];
 
                 // If the parameter location is not defined, we do not report its location
-                if let Some(loc) = param_loc.into_option() {
-                    let param = loc.secondary().with_message(format!(
-                        "takes values in [{}, {})",
-                        ctx.display(param_range.0),
-                        ctx.display(param_range.1)
-                    ));
-                    labels.push(param);
+                for (param_loc, start, end) in param_info {
+                    if let Some(loc) = param_loc.into_option() {
+                        let param = loc.secondary().with_message(format!(
+                            "takes values in [{}, {})",
+                            ctx.display(*start),
+                            ctx.display(*end)
+                        ));
+                        labels.push(param);
+                    }
                 }
 
                 Diagnostic::error()

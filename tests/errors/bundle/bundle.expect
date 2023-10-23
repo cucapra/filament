@@ -5,7 +5,7 @@ error: out of bounds access of bundle
    ┌─ tests/errors/bundle/bundle.fil:10:5
    │
  9 │     bundle f[N]: for<k> ['G+k, 'G+k+1] W;
-   │            - bundle's length is N
+   │            - dimension 0 has length N
 10 │     f{1} = input;
    │     ^^^^ out of bounds access
 
@@ -29,7 +29,7 @@ error: out of bounds access of bundle
    ┌─ tests/errors/bundle/bundle.fil:15:11
    │
  9 │     bundle f[N]: for<k> ['G+k, 'G+k+1] W;
-   │            - bundle's length is N
+   │            - dimension 0 has length N
    ·
 15 │     out = f{N+1};
    │           ^^^^^^ out of bounds access

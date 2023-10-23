@@ -11,7 +11,7 @@ error: out of bounds access of bundle
   ┌─ tests/errors/bundle/bundle-mismatch.fil:8:26
   │
 6 │     bundle f[P]: for<k> ['T+k, 'T+k+1] 32;
-  │            - bundle's length is P
+  │            - dimension 0 has length P
 7 │ 
 8 │     f0 := new Foo[P]<'T>(f{1..P});
   │                          ^^^^^^^ out of bounds access
