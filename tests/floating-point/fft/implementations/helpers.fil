@@ -1,7 +1,7 @@
 import "primitives/math/complex.fil";
 
 comp TwiddleFactor[NPoints, ?D=1]<'G: D>() -> (
-  out[NPoints]: ['G, 'G+D] 32
+  out[NPoints/2][2]: ['G, 'G+D] 32
 ) with {
   let W = 32;
 } where
@@ -13,15 +13,15 @@ comp TwiddleFactor[NPoints, ?D=1]<'G: D>() -> (
   for i in 0..NPoints/2 {
     cosbits := new SignedConst[W, cos_bits(i, NPoints), D]<'G>();
     sinbits := new SignedConst[W, sin_bits(i+NPoints/2, NPoints), D]<'G>(); // equivalent to -sin
-    out{i*2} = cosbits.out;
-    out{i*2+1} = sinbits.out;
+    out{i}{0} = cosbits.out;
+    out{i}{1} = sinbits.out;
   }
 }
 
 comp BitRev[NStages, W]<'G: 1>(
-  in[NPoints*2]: ['G, 'G+1] W
+  in[NPoints][2]: ['G, 'G+1] W
 ) -> (
-  out[NPoints*2]: ['G, 'G+1] W
+  out[NPoints][2]: ['G, 'G+1] W
 ) with {
   let NPoints = pow2(NStages);
 } where 
@@ -32,16 +32,16 @@ comp BitRev[NStages, W]<'G: 1>(
   for j in 0..NPoints {
     let br = bit_rev(j, NStages);
     assume br < NPoints;
-    out{j*2..j*2+2} = in{br*2..br*2+2};
+    out{j}{0..2} = in{br}{0..2};
   }
 }
 
 /// Generates the twiddle factors for a stage of the fft.
 /// Separated out to simplify typechecking.
 comp TwiddleStage[NStages, Stage, W, ?D=1]<'G: D>(
-  twiddle[NPoints]: ['G, 'G+D] W
+  twiddle[pow2(NStages-1)][2]: ['G, 'G+D] W
 ) -> (
-  out[NPoints]: ['G, 'G+D] W
+  out[pow2(NStages-1)][2]: ['G, 'G+D] W
 ) with {
   let NPoints = pow2(NStages);
 } where 
@@ -51,6 +51,7 @@ comp TwiddleStage[NStages, Stage, W, ?D=1]<'G: D>(
   W > 0,
   D > 0
 {
+  assume NPoints/2 == pow2(NStages-1);
   // calculate the twiddle factors.
   // Uses the fact that the twiddle factors can be generated recursively
   for twiddle_j in 0..pow2(Stage) {
@@ -59,16 +60,16 @@ comp TwiddleStage[NStages, Stage, W, ?D=1]<'G: D>(
     for twiddle_i in 0..pow2(NStages-Stage-1) {
       let stage_twiddle_index = twiddle_index + twiddle_i;
       assume stage_twiddle_index < NPoints/2;
-      out{stage_twiddle_index*2..stage_twiddle_index*2+2} = twiddle{twiddle_index*2..twiddle_index*2+2};
+      out{stage_twiddle_index}{0..2} = twiddle{twiddle_index}{0..2};
     }
   }
 }
 
 /// Performs an `NPoints` point stride permutation.
 comp StridePermutation[NStages, W]<'G: 1>(
-  in[NPoints*2]: ['G, 'G+1] W
+  in[NPoints][2]: ['G, 'G+1] W
 ) -> (
-  out[NPoints*2]: ['G, 'G+1] W
+  out[NPoints][2]: ['G, 'G+1] W
 ) with {
   let NPoints = pow2(NStages);
 } where
@@ -79,8 +80,8 @@ comp StridePermutation[NStages, W]<'G: 1>(
   assume NPoints/2 == pow2(NStages-1);
 
   for i in 0..NPoints/2 {
-    out{i*2..i*2+2} = in{i*4..i*4+2};
-    out{i*2+NPoints..i*2+NPoints+2} = in{i*4+2..i*4+4};
+    out{i}{0..2} = in{i*2}{0..2};
+    out{i+NPoints/2}{0..2} = in{i*2+1}{0..2};
   }
 }
 

@@ -1,6 +1,6 @@
 import "primitives/reshape.fil";
-import "implementations/fft-comb.fil";
-import "implementations/fft-comb-pease.fil";
+// import "implementations/fft-comb.fil";
+// import "implementations/fft-comb-pease.fil";
 import "implementations/fft-pipelined.fil";
 
 extern "spiral-fft.v" {
@@ -91,6 +91,13 @@ comp main<'G: L>(
   // split input into bundle
   split := new SplitWire[32, 32]<'G>(in);
 
+  bundle input_bundle[16][2]: ['G, 'G+1] 32;
+
+  for i in 0..16 {
+    input_bundle{i}{0} = split.out{2*i};
+    input_bundle{i}{1} = split.out{2*i+1};
+  }
+
   // // hook up comb fft
   // fc := new CombFFT[4]<'G>(split.out{0..32});
 
@@ -105,9 +112,16 @@ comp main<'G: L>(
 
   // hook up pipelined fft
   FP := new PeaseFFT[4, 2];
-  fp := FP<'G>(split.out{0..32});
+  fp := FP<'G>(input_bundle{0..16}{0..2});
 
-  fpw := new ConcatBundle[32, 32]<'G+FP::L>(fp.out{0..32});
+  bundle fp_output_bundle[32]: ['G+FP::L, 'G+FP::L+1] 32;
+
+  for i in 0..16 {
+    fp_output_bundle{2*i} = fp.out{i}{0};
+    fp_output_bundle{2*i+1} = fp.out{i}{1};
+  }
+
+  fpw := new ConcatBundle[32, 32]<'G+FP::L>(fp_output_bundle{0..32});
   fil_pipelined = fpw.out;
   L := FP::L;
 
