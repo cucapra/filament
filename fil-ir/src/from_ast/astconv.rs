@@ -45,9 +45,14 @@ impl<'prog> BuildCtx<'prog> {
             component.clone(),
             self.diag(),
         )?;
-        let live = lives
+        let mut live_locs = Vec::with_capacity(lives.len());
+        let lives = lives
             .iter()
-            .map(|l| self.range(l.inner().clone()))
+            .map(|l| {
+                let (l, pos) = l.clone().split();
+                live_locs.push(pos);
+                self.range(l)
+            })
             .collect::<BuildRes<Vec<_>>>()?;
         let inst = ir::Instance {
             comp: comp.idx,
@@ -61,8 +66,9 @@ impl<'prog> BuildCtx<'prog> {
                 name.copy(),
                 component.pos(),
                 name.pos(),
+                live_locs,
             )),
-            lives: live,
+            lives,
         };
 
         let idx = self.comp().add(inst);

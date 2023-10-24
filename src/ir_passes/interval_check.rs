@@ -193,16 +193,24 @@ impl Visitor for IntervalCheck {
         Action::AddBefore(cmds)
     }
 
-    fn invoke(&mut self, idx: ir::InvIdx, data: &mut VisitorData) -> Action {
+    fn invoke(
+        &mut self,
+        inv_idx: ir::InvIdx,
+        data: &mut VisitorData,
+    ) -> Action {
         let comp = &mut data.comp;
-        let lives = comp.get(idx.inst(comp)).lives.clone();
-        let events = &comp[idx].events.clone();
+        let inst_idx = inv_idx.inst(comp);
+        let lives = comp.get(inst_idx).lives.clone();
+        let events = &comp[inv_idx].events.clone();
+        let inv_info = comp.get(comp.get(inv_idx).info).as_invoke().cloned();
 
         let mut cmds = Vec::default();
         // If the liveness is defined, then ensure that the active range of the
         // event is in range.
         if !lives.is_empty() {
-            for (ir::Range { start, end }, live) in lives.iter().zip_eq(events)
+            let info = comp.get(comp.get(inst_idx).info).as_instance().cloned();
+            for (i, (ir::Range { start, end }, live)) in
+                lives.iter().zip_eq(events).enumerate()
             {
                 let ir::EventBind {
                     delay,
@@ -212,7 +220,24 @@ impl Visitor for IntervalCheck {
                 let start_after = use_start.gte(*start, comp);
                 let use_end = use_start.add(delay, comp);
                 let end_before = use_end.lte(*end, comp);
-                let info = comp.add(ir::Info::empty());
+
+                // Location information
+                let info = if let (
+                    Some(ir::info::Instance { event_lives, .. }),
+                    Some(ir::info::Invoke { bind_loc, .. }),
+                ) = (&info, &inv_info)
+                {
+                    let live_loc = event_lives[i];
+                    let borrow = (*start, *end);
+                    let inv_range = (*use_start, use_end);
+                    ir::Info::assert(ir::info::Reason::event_live(
+                        live_loc, borrow, inv_range, *bind_loc,
+                    ))
+                } else {
+                    ir::Info::empty()
+                };
+
+                let info = comp.add(info);
                 let prop = start_after.and(end_before, comp);
                 let cmd = comp.assert(prop, info);
                 cmds.extend(cmd);

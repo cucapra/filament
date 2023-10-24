@@ -49,6 +49,8 @@ pub struct Instance {
     pub name: ast::Id,
     pub comp_loc: GPosIdx,
     pub bind_loc: GPosIdx,
+    // Location of liveness information for each event
+    pub event_lives: Vec<GPosIdx>,
 }
 
 #[derive(Clone, Eq, PartialEq)]
@@ -155,11 +157,13 @@ impl Info {
         name: ast::Id,
         comp_loc: GPosIdx,
         bind_loc: GPosIdx,
+        event_lives: Vec<GPosIdx>,
     ) -> Self {
         Instance {
             name,
             comp_loc,
             bind_loc,
+            event_lives,
         }
         .into()
     }
@@ -364,10 +368,10 @@ pub enum Reason {
     EventLive {
         /// Location of the liveness information
         live_loc: GPosIdx,
-        /// Delay information
-        ev_delay: TimeSub,
-        // Information about the binding
-        start: TimeIdx,
+        /// Borrow range
+        borrow: (TimeIdx, TimeIdx),
+        /// Invocation required range
+        invoke_range: (TimeIdx, TimeIdx),
         /// Location of the binding
         time_expr_loc: GPosIdx,
     },
@@ -468,14 +472,14 @@ impl Reason {
 
     pub fn event_live(
         live_loc: GPosIdx,
-        ev_delay: TimeSub,
-        start: TimeIdx,
+        borrow: (TimeIdx, TimeIdx),
+        invoke_range: (TimeIdx, TimeIdx),
         time_expr_loc: GPosIdx,
     ) -> Self {
         Self::EventLive {
             live_loc,
-            ev_delay,
-            start,
+            borrow,
+            invoke_range,
             time_expr_loc,
         }
     }
@@ -738,18 +742,19 @@ impl Reason {
 
             Reason::EventLive {
                 live_loc,
-                ev_delay,
-                start,
+                borrow: (start, end),
+                invoke_range: (inv_start, inv_end),
                 time_expr_loc,
             } => {
                 let bind = time_expr_loc.primary().with_message(format!(
-                    "event use starts at {} and last for {} cycles",
-                    ctx.display(*start),
-                    ctx.display(ev_delay),
+                    "event use requires availability in [{}, {}]",
+                    ctx.display(*inv_start),
+                    ctx.display(*inv_end),
                 ));
                 let live = live_loc.secondary().with_message(format!(
-                    "instance borrows this event for {} cycles",
-                    ctx.display(ev_delay)
+                    "instance available in [{}, {}]",
+                    ctx.display(*start),
+                    ctx.display(*end)
                 ));
                 Diagnostic::error()
                     .with_message(
