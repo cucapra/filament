@@ -1,0 +1,14 @@
+---CODE---
+1
+---STDERR---
+error: event used for longer than the instance borrow allows
+  ┌─ tests/errors/sharing/share-range.fil:8:13
+  │
+6 │     F := new Foo in ['G+W, 'G+W+3];
+  │                     -------------- instance available in ['G+W, 'G+W+3]
+7 │     // This is not allowed
+8 │     f1 := F<'G>();
+  │             ^^ event use requires availability in ['G, 'G+3]
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

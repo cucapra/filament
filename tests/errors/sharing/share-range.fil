@@ -1,14 +1,10 @@
-import "../../examples/sequential.fil";
+comp Foo<'G:3>() -> () {}
 
-comp Main<'G: 10>(
-  go_G: interface['G],
-   l0: ['G, 'G+1] 32,
-   r0: ['G, 'G+1] 32,
-   l1: ['G+9, 'G+10] 32,
-   r1: ['G+9, 'G+10] 32,
+comp Bar[W]<'G: 3>(
+    go: interface['G],
 ) -> () {
-  M := new Mult[32];
-
-  m0 := M<'G>(l0, r0);
-  m1 := M<'G+9>(l1, r1);
+    F := new Foo in ['G+W, 'G+W+3];
+    // This is not allowed
+    f1 := F<'G>();
+    f0 := F<'G+W>();
 }
