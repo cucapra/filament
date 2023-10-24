@@ -37,7 +37,7 @@ comp PeaseFFT[NStages, N]<'G: L>(
   // number of times we have to reuse the butterflies per stage
   let reuses = NPoints / (2*N);
   assume reuses * 2 * N == NPoints;
-  let stage_latency = B::L * reuses;
+  let stage_latency = B::L * reuses + 1; // + 1 here is for the extra delay cycle necessary to transfer values between stages
   let latency = stage_latency * NStages;
   
   // twiddle factor that stays alive for the whole computation
@@ -55,7 +55,7 @@ comp PeaseFFT[NStages, N]<'G: L>(
   // Separated by the input and output to and from the registers.
   // There are Nstages of these (one for input and one for output for each stage)
   bundle sync_data_in[NStages+1][NPoints][2]: for<sdii, _sdi, __sdi> ['G + sdii*stage_latency, 'G + sdii*stage_latency + 1] W;
-  bundle sync_data_out[NStages][NPoints][2]:  for<sdoi, _sdo, __sdo> ['G + (sdoi+1) * stage_latency, 'G + (sdoi+1) * stage_latency + 1] W;
+  bundle sync_data_out[NStages][NPoints][2]:  for<sdoi, _sdo, __sdo> ['G + (sdoi+1) * stage_latency - 1, 'G + (sdoi+1) * stage_latency] W;
 
   // Unsynchronized data (happens within each stage, input to and ouptut from the butterfly calculations)
   // There are `reuses` blocks within each stage, each separated by `B::L`.
@@ -93,55 +93,10 @@ comp PeaseFFT[NStages, N]<'G: L>(
       sync_data_out{r_stage}{0..2*N}{0..2} = b.out{0..2*N}{0..2};
     }
   } else {
-    // Register for first butterfly chunk use
-    D0 := new Delay[W * 4 * N];
-    // helper bundle concatenator and wire splitter
-    CBB0 := new CombineButterflyBundle[N, W];
-    CB0 := new ConcatBundle[W, N*4];
-    SW0 := new SplitWire[W, N*4];
-    SBB0 := new SplitButterflyBundle[N, W];
-    // first butterfly only needs a register after computation
-    for r0_stage in 0..NStages {
-        let sync_in_t = r0_stage * stage_latency; // start stage here
-        let sync_out_t = (r0_stage + 1) * stage_latency; // end stage here
-
-        let usync_in_t = sync_in_t; // start butterfly here
-        let usync_out_t = sync_in_t + B::L; // end butterfly here
-        
-        // simple order assumptions
-        assume usync_in_t == sync_in_t;
-        assume usync_out_t > usync_in_t;
-        assume sync_out_t > usync_out_t;
-
-        assume 4 * N < 2 * NPoints;
-      
-        // stage 0 doesn't need the first register invocation
-        b := B<'G + usync_in_t>(sync_data_in{r0_stage}{0..2*N}{0..2}, twiddle_in{r0_stage}{0..N}{0..2});
-        // unsync out -> sync out
-        cb2 := CBB0<'G + usync_out_t>(b.out{0..2*N}{0..2});
-        c2 := CB0<'G + usync_out_t>(cb2.out{0..N*4});
-        bundle d2_hold[sync_out_t-usync_out_t+1]: for<d2i> ['G + usync_out_t + d2i, 'G + usync_out_t + d2i + 1] W*4*N;
-        d2_hold{0} = c2.out;
-        for d2 in usync_out_t..sync_out_t {
-          d2 := D0<'G + d2>(d2_hold{d2-usync_out_t});
-          d2_hold{d2-usync_out_t+1} = d2.out;
-        }
-        s2 := SW0<'G + sync_out_t>(d2_hold{sync_out_t-usync_out_t});
-        sb2 := SBB0<'G + sync_out_t>(s2.out{0..N*4});
-        
-        // store sync out
-        sync_data_out{r0_stage}{0..2*N}{0..2} = sb2.out{0..2*N}{0..2};
-    }
-
-    // middle butterflies
-    for reg_i in 1..reuses-1 {
+    // for every reuse of a butterfly
+    for reg_i in 0..reuses {
       // one big register storing all the inputs and outputs of one butterfly chunk
-      D := new Delay[W * 4 * N];
-      // helper bundle concatenator and wire splitter
-      CBB := new CombineButterflyBundle[N, W];
-      CB := new ConcatBundle[W, N*4];
-      SW := new SplitWire[W, N*4];
-      SBB := new SplitButterflyBundle[N, W];
+      R := new PassThroughRegister[W * 4 * N];
 
       for r_stage in 0..NStages {
         let sync_in_t = r_stage * stage_latency; // start stage here
@@ -149,101 +104,47 @@ comp PeaseFFT[NStages, N]<'G: L>(
 
         let usync_in_t = sync_in_t + reg_i * B::L; // start butterfly here
         let usync_out_t = sync_in_t + (reg_i + 1) * B::L; // end butterfly here
-        
-        // simple order assumptions
-        assume usync_in_t > sync_in_t;
-        assume usync_out_t > usync_in_t;
-        assume sync_out_t > usync_out_t;
 
         let start = reg_i*2*N;
         let end = (reg_i+1)*2*N;
-        
-        assume start < NPoints;
-        assume end < NPoints;
 
         // sync in -> unsync in
-        cb1 := CBB<'G + sync_in_t>(sync_data_in{r_stage}{start..end}{0..2});
-        c1 := CB<'G + sync_in_t>(cb1.out{0..N*4});
-        bundle d1_hold[usync_in_t-sync_in_t+1]: for<d1i> ['G + sync_in_t + d1i, 'G + sync_in_t + d1i + 1] W*4*N;
-        d1_hold{0} = c1.out;
-        for d1 in sync_in_t..usync_in_t {
-          d1 := D<'G + d1>(d1_hold{d1-sync_in_t});
-          d1_hold{d1-sync_in_t+1} = d1.out;
-        }
-        s1 := SW<'G + usync_in_t>(d1_hold{usync_in_t-sync_in_t});
-        sb1 := SBB<'G + usync_in_t>(s1.out{0..N*4});
+        c1 := new CombineButterflyBundle[N, W]<'G + sync_in_t>(sync_data_in{r_stage}{start..end}{0..2});
+        r1 := R<'G + sync_in_t, 'G + usync_out_t>(c1.out);
+        s1 := new SplitButterflyBundle[N, W, usync_out_t-usync_in_t]<'G + usync_in_t>(r1.out);
         // unsync in -> butterfly
-        b := B<'G + usync_in_t>(sb1.out{0..2*N}{0..2}, twiddle_in{r_stage}{reg_i*N..(reg_i+1)*N}{0..2});
+        b := B<'G + usync_in_t>(s1.out{0..2*N}{0..2}, twiddle_in{r_stage}{reg_i*N..(reg_i+1)*N}{0..2});
         // unsync out -> sync out
-        cb2 := CBB<'G + usync_out_t>(b.out{0..2*N}{0..2});
-        c2 := CB<'G + usync_out_t>(cb2.out{0..N*4});
-        bundle d2_hold[sync_out_t-usync_out_t+1]: for<d2i> ['G + usync_out_t + d2i, 'G + usync_out_t + d2i + 1] W*4*N;
-        d2_hold{0} = c2.out;
-        for d2 in usync_out_t..sync_out_t {
-          d2 := D<'G + d2>(d2_hold{d2-usync_out_t});
-          d2_hold{d2-usync_out_t+1} = d2.out;
-        }
-        s2 := SW<'G + sync_out_t>(d2_hold{sync_out_t-usync_out_t});
-        sb2 := SBB<'G + sync_out_t>(s2.out{0..N*4});
+        c2 := new CombineButterflyBundle[N, W]<'G + usync_out_t>(b.out{0..2*N}{0..2});
+        r2 := R<'G + usync_out_t, 'G + sync_out_t>(c2.out);
+        s2 := new SplitButterflyBundle[N, W]<'G + sync_out_t-1>(r2.out);
 
         // store sync out
-        sync_data_out{r_stage}{start..end}{0..2} = sb2.out{0..2*N}{0..2};
+        sync_data_out{r_stage}{start..end}{0..2} = s2.out{0..2*N}{0..2};
       } 
-    }
-    
-    DF := new Delay[W * 4 * N];
-    // helper bundle concatenator and wire splitter
-    CBBF := new CombineButterflyBundle[N, W];
-    CBF := new ConcatBundle[W, N*4];
-    SWF := new SplitWire[W, N*4];
-    SBBF := new SplitButterflyBundle[N, W];
-    // final butterfly only needs a register before computation
-    for rf_stage in 0..NStages {
-      let sync_in_t = rf_stage * stage_latency; // start stage here
-      let sync_out_t = (rf_stage + 1) * stage_latency; // end stage here
-
-      let usync_in_t = sync_in_t + (reuses - 1) * B::L; // start butterfly here
-      let usync_out_t = sync_in_t + reuses * B::L; // end butterfly here
-      
-      // simple order assumptions
-      assume usync_in_t > sync_in_t;
-      assume usync_out_t > usync_in_t;
-      assume sync_out_t == usync_out_t;
-
-      let start = (reuses-1)*2*N;
-      let end = reuses*2*N;
-      
-      assume start < NPoints;
-      assume end == NPoints;
-
-      // sync in -> unsync in
-      cb1 := CBBF<'G + sync_in_t>(sync_data_in{rf_stage}{start..end}{0..2});
-      c1 := CBF<'G + sync_in_t>(cb1.out{0..N*4});
-      bundle d1_hold[usync_in_t-sync_in_t+1]: for<d1i> ['G + sync_in_t + d1i, 'G + sync_in_t + d1i + 1] W*4*N;
-      d1_hold{0} = c1.out;
-      for d1 in sync_in_t..usync_in_t {
-        d1 := DF<'G + d1>(d1_hold{d1-sync_in_t});
-        d1_hold{d1-sync_in_t+1} = d1.out;
-      }
-      s1 := SWF<'G + usync_in_t>(d1_hold{usync_in_t-sync_in_t});
-      sb1 := SBBF<'G + usync_in_t>(s1.out{0..N*4});
-      // unsync in -> butterfly
-      b := B<'G + usync_in_t>(sb1.out{0..2*N}{0..2}, twiddle_in{rf_stage}{(reuses-1)*N..reuses*N}{0..2});
-
-      // store sync out
-      sync_data_out{rf_stage}{start..end}{0..2} = b.out{0..2*N}{0..2};
     }
   }
 
   // --------------- STRIDE PERMUTATIONS ----------------
 
   SP := new StridePermutation[NStages, W];
+  
+  // A delay is necessary for between stages so the pass-through register
+  // isn't used twice at the same time
+  D := new Delay[W*NPoints*2];
+
 
   // hook up stride permutations
   for stage in 0..NStages {
-    stride := SP<'G + (stage + 1) * stage_latency>(sync_data_out{stage}{0..NPoints}{0..2});
+    let sync_out_t = (stage + 1) * stage_latency - 1;
+    stride := SP<'G + sync_out_t>(sync_data_out{stage}{0..NPoints}{0..2});
 
-    sync_data_in{stage+1}{0..NPoints}{0..2} = stride.out{0..NPoints}{0..2};
+    // delay between stages
+    c1 := new CombineButterflyBundle[NPoints/2, W]<'G + sync_out_t>(stride.out{0..NPoints}{0..2});
+    d1 := D<'G + sync_out_t>(c1.out);
+    s1 := new SplitButterflyBundle[NPoints/2, W]<'G + sync_out_t + 1>(d1.out);
+
+    sync_data_in{stage+1}{0..NPoints}{0..2} = s1.out{0..NPoints}{0..2};
   }
 
   out{0..NPoints}{0..2} = sync_data_in{NStages}{0..NPoints}{0..2};
@@ -278,27 +179,35 @@ comp Butterflies[N, W, E, ?M=W-E-1]<'G: L>(
 comp CombineButterflyBundle[N, W]<'G: 1>(
   in[N*2][2]: ['G, 'G+1] W
 ) -> (
-  out[N*4]: ['G, 'G+1] W
+  out: ['G, 'G+1] W*4*N
 ) where
-    N > 0
+    N > 0,
+    W > 0
 {
+  bundle outb[N*4]: ['G, 'G+1] W;
   for i in 0..N*2 {
-    out{i*2} = in{i}{0};
-    out{i*2+1} = in{i}{1};
+    outb{i*2} = in{i}{0};
+    outb{i*2+1} = in{i}{1};
   }
+  
+  cb := new ConcatBundle[W, N*4]<'G>(outb{0..N*4});
+  
+  out = cb.out;
 }
 
 /// Splits output of the Butterflies component into a bundle
 comp SplitButterflyBundle[N, W]<'G: 1>(
-  in[4*N]: ['G, 'G+1] W
+  in: ['G, 'G+1] W*4*N
 ) -> (
   out[N*2][2]: ['G, 'G+1] W
 ) where
-    N > 0
+    N > 0,
+    W > 0
 {
+  sw := new SplitWire[W, N*4]<'G>(in);
   for i in 0..N*2 {
-    out{i}{0} = in{i*2};
-    out{i}{1} = in{i*2+1};
+    out{i}{0} = sw.out{i*2};
+    out{i}{1} = sw.out{i*2+1};
   }
 }
 
@@ -340,4 +249,25 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
 
     L := 1;
   }
+  // else if T == 1 {
+  //   // Partially iterative butterfly module
+
+  //   FM1 := new FMult[W, E, M];
+  //   FM2 := new FMult[W, E, M];
+
+  //   FA := new FAdd[W, E, M];
+  //   FS := new FSub[W, E, M];
+    
+  //   // Perform w * in1
+  //   ac := FM<'G>(, right{0}); // ac
+  //   bd := FM2<'G>(left{1}, right{1}); // bd
+  //   re := FS<'G>(ac.out, bd.out); // ac - bd
+
+  //   ad := FM<'G+1>(left{0}, right{1}); // ad
+  //   bc := FM2<'G+1>(left{1}, right{0}); // bc
+  //   im := new FAdd[W, E, M]<'G>(ad.out, bc.out); // ad + bc
+
+  //   out{0} = re.out;
+  //   out{1} = im.out;
+  // }
 }
