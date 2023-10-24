@@ -224,14 +224,19 @@ impl Visitor for IntervalCheck {
                 // Location information
                 let info = if let (
                     Some(ir::info::Instance { event_lives, .. }),
-                    Some(ir::info::Invoke { bind_loc, .. }),
+                    Some(ir::info::Invoke {
+                        event_bind_locs, ..
+                    }),
                 ) = (&info, &inv_info)
                 {
                     let live_loc = event_lives[i];
                     let borrow = (*start, *end);
                     let inv_range = (*use_start, use_end);
                     ir::Info::assert(ir::info::Reason::event_live(
-                        live_loc, borrow, inv_range, *bind_loc,
+                        live_loc,
+                        borrow,
+                        inv_range,
+                        event_bind_locs[i],
                     ))
                 } else {
                     ir::Info::empty()

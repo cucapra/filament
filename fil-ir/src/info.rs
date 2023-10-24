@@ -56,9 +56,14 @@ pub struct Instance {
 #[derive(Clone, Eq, PartialEq)]
 /// For [super::Invoke]
 pub struct Invoke {
+    /// Name of the invocation
     pub name: ast::Id,
-    pub inst_loc: GPosIdx,
+    /// Location of the invocation name
     pub bind_loc: GPosIdx,
+    /// Location of the instance
+    pub inst_loc: GPosIdx,
+    /// Location of event bindings
+    pub event_bind_locs: Vec<GPosIdx>,
 }
 
 #[derive(Clone, Eq, PartialEq)]
@@ -168,11 +173,17 @@ impl Info {
         .into()
     }
 
-    pub fn invoke(name: ast::Id, inst_loc: GPosIdx, bind_loc: GPosIdx) -> Info {
+    pub fn invoke(
+        name: ast::Id,
+        inst_loc: GPosIdx,
+        bind_loc: GPosIdx,
+        event_bind_locs: Vec<GPosIdx>,
+    ) -> Info {
         Invoke {
             name,
             inst_loc,
             bind_loc,
+            event_bind_locs,
         }
         .into()
     }
