@@ -386,6 +386,16 @@ pub enum Reason {
         /// Location of the binding
         time_expr_loc: GPosIdx,
     },
+    EventLiveDelay {
+        /// Location of instance liveness
+        live_loc: GPosIdx,
+        /// Length of the borrow range
+        borrow_len: TimeSub,
+        /// Location of the event
+        event_loc: GPosIdx,
+        /// Delay of the event
+        delay: TimeSub,
+    },
     EventTrig {
         /// Delay of event of component being triggered
         ev_delay_loc: GPosIdx,
@@ -542,6 +552,20 @@ impl Reason {
         range: (TimeIdx, TimeIdx),
     ) -> Self {
         Self::WellFormedInterval { range_loc, range }
+    }
+
+    pub fn event_live_delay(
+        live_loc: GPosIdx,
+        borrow_len: TimeSub,
+        event_loc: GPosIdx,
+        delay: TimeSub,
+    ) -> Self {
+        Self::EventLiveDelay {
+            live_loc,
+            borrow_len,
+            event_loc,
+            delay,
+        }
     }
 }
 
@@ -772,6 +796,24 @@ impl Reason {
                         "event used for longer than the instance borrow allows",
                     )
                     .with_labels(vec![bind, live])
+            }
+            Reason::EventLiveDelay {
+                live_loc,
+                borrow_len,
+                event_loc,
+                delay,
+            } => {
+                let live = live_loc.primary().with_message(format!(
+                    "instance borrowed for {} cycles",
+                    ctx.display(borrow_len)
+                ));
+                let ev = event_loc.secondary().with_message(format!(
+                    "event's delay is {} cycles",
+                    ctx.display(delay)
+                ));
+                Diagnostic::error()
+                    .with_message("event's delay must be greater than the instance's borrow length")
+                    .with_labels(vec![live, ev])
             }
         }
     }

@@ -206,6 +206,7 @@ impl MonoSig {
             | ir::info::Reason::WellFormedInterval { .. }
             | ir::info::Reason::EventTrig { .. }
             | ir::info::Reason::EventLive { .. }
+            | ir::info::Reason::EventLiveDelay { .. }
             | ir::info::Reason::Misc { .. } => reason.clone(),
         }
     }

@@ -258,6 +258,50 @@ impl Visitor for IntervalCheck {
         Action::AddBefore(cmds)
     }
 
+    fn instance(
+        &mut self,
+        inst_idx: ir::InstIdx,
+        data: &mut VisitorData,
+    ) -> Action {
+        let comp = &mut data.comp;
+        let inst = &comp[inst_idx];
+        let info = comp[inst.info].as_instance().cloned();
+        if inst.lives.is_empty() {
+            return Action::Continue;
+        }
+
+        let mut cmds = Vec::with_capacity(inst.lives.len());
+        for (i, ir::Range { start, end }) in
+            inst.lives.clone().into_iter().enumerate()
+        {
+            // The range of this liveness
+            let len = end.sub(start, comp);
+            let inst = &comp[comp[start].event];
+            let delay = inst.delay.clone();
+            let ev_info = comp[inst.info].as_event().cloned();
+            let prop = delay.clone().gte(len.clone(), comp);
+
+            let reason = if let (
+                Some(ir::info::Instance { event_lives, .. }),
+                Some(ir::info::Event { delay_loc, .. }),
+            ) = (&info, ev_info)
+            {
+                ir::Info::assert(ir::info::Reason::event_live_delay(
+                    event_lives[i],
+                    len,
+                    delay_loc,
+                    delay,
+                ))
+            } else {
+                ir::Info::empty()
+            };
+            let info = comp.add(reason);
+            cmds.extend(comp.assert(prop, info));
+        }
+
+        Action::AddBefore(cmds)
+    }
+
     fn connect(
         &mut self,
         con: &mut ir::Connect,
