@@ -153,8 +153,9 @@ comp PeaseFFT[NStages, N]<'G: L>(
 
 /// Computes N butterflies at once.
 comp Butterflies[N, W, E, ?M=W-E-1]<'G: L>(
-  in[N*2][2]: ['G, 'G+1] W, // Each butterfly takes 2 complex numbers
-  twiddle[N][2]: ['G, 'G+1] W // twiddle factor for each butterfly
+  go: interface['G],
+  in[N*2][2]: ['G, 'G+L] W, // Each butterfly takes 2 complex numbers
+  twiddle[N][2]: ['G, 'G+L] W // twiddle factor for each butterfly
 ) -> (
   out[N*2][2]: ['G+L, 'G+L+1] W
 ) with {
@@ -176,35 +177,37 @@ comp Butterflies[N, W, E, ?M=W-E-1]<'G: L>(
 }
 
 /// Combines output of the Butterflies component into a single wire
-comp CombineButterflyBundle[N, W]<'G: 1>(
-  in[N*2][2]: ['G, 'G+1] W
+comp CombineButterflyBundle[N, W, ?L=1]<'G: L>(
+  in[N*2][2]: ['G, 'G+L] W
 ) -> (
-  out: ['G, 'G+1] W*4*N
+  out: ['G, 'G+L] W*4*N
 ) where
     N > 0,
-    W > 0
+    W > 0,
+    L > 0
 {
-  bundle outb[N*4]: ['G, 'G+1] W;
+  bundle outb[N*4]: ['G, 'G+L] W;
   for i in 0..N*2 {
     outb{i*2} = in{i}{0};
     outb{i*2+1} = in{i}{1};
   }
   
-  cb := new ConcatBundle[W, N*4]<'G>(outb{0..N*4});
+  cb := new ConcatBundle[W, N*4, L]<'G>(outb{0..N*4});
   
   out = cb.out;
 }
 
 /// Splits output of the Butterflies component into a bundle
-comp SplitButterflyBundle[N, W]<'G: 1>(
-  in: ['G, 'G+1] W*4*N
+comp SplitButterflyBundle[N, W, ?L=1]<'G: L>(
+  in: ['G, 'G+L] W*4*N
 ) -> (
-  out[N*2][2]: ['G, 'G+1] W
+  out[N*2][2]: ['G, 'G+L] W
 ) where
     N > 0,
-    W > 0
+    W > 0,
+    L > 0
 {
-  sw := new SplitWire[W, N*4]<'G>(in);
+  sw := new SplitWire[W, N*4, L]<'G>(in);
   for i in 0..N*2 {
     out{i}{0} = sw.out{i*2};
     out{i}{1} = sw.out{i*2+1};
@@ -214,9 +217,10 @@ comp SplitButterflyBundle[N, W]<'G: 1>(
 
 /// Butterfly module using existential parameters.
 comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
-  in0[2]: ['G, 'G+1] W, // real and imaginary parts of input
-  in1[2]: ['G, 'G+1] W,
-  twiddle[2]: ['G, 'G+1] W // twiddle factor
+  go: interface['G],
+  in0[2]: ['G, 'G+L] W, // real and imaginary parts of input
+  in1[2]: ['G, 'G+L] W,
+  twiddle[2]: ['G, 'G+L] W // twiddle factor
 ) -> (
   out0[2]: ['G+L, 'G+L+1] W,
   out1[2]: ['G+L, 'G+L+1] W
@@ -225,10 +229,11 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
 } where
     W == E + M + 1,
     E > 1,
-    M > 1
+    M > 1,
+    L > 0
 {
   // switches between the type of butterfly unit
-  let T = 0;
+  let T = 1;
   if T == 0 {
     // Fully combinational butterfly module
     // multiply by twiddle
@@ -248,26 +253,53 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
     out1{1} = d11.out;
 
     L := 1;
+  } else {
+    if T == 1 {
+      // Partially iterative butterfly module
+      // uses two multipliers and two adders
+      // takes 4 cycles
+
+      FM1 := new FMult[W, E, M];
+      FM2 := new FMult[W, E, M];
+
+      FA := new FAdd[W, E, M];
+      FS := new FSub[W, E, M];
+      
+      // Perform w * in1
+      ac := FM1<'G>(in1{0}, twiddle{0}); // ac
+      bd := FM2<'G>(in1{1}, twiddle{1}); // bd
+      re := FS<'G>(ac.out, bd.out); // ac - bd
+      re_d1 := new Delay[W]<'G>(re.out); // delay by one cycle
+      re_d2 := new Delay[W]<'G+1>(re_d1.out); // delay to second cycle
+      re_d3 := new Delay[W]<'G+2>(re_d2.out); // delay to third cycle
+
+      ad := FM1<'G+1>(in1{0}, twiddle{1}); // ad
+      bc := FM2<'G+1>(in1{1}, twiddle{0}); // bc
+      im := FA<'G+1>(ad.out, bc.out); // ad + bc
+      im_d2 := new Delay[W]<'G+1>(im.out); // delay to second cycle
+      im_d3 := new Delay[W]<'G+2>(im_d2.out); // delay to third cycle
+
+      // in0 + (w * in1)
+      out00 := FA<'G+2>(in0{0}, re_d2.out); // re
+      out01 := FA<'G+3>(in0{1}, im_d3.out); // im
+      
+      // in0 - (w * in1)
+      out10 := FS<'G+2>(in0{0}, re_d2.out); // re
+      out11 := FS<'G+3>(in0{1}, im_d3.out); // im
+
+      out00_d3 := new Delay[W]<'G+2>(out00.out); // delay to third cycle
+      out00_d4 := new Delay[W]<'G+3>(out00_d3.out); // delay to fourth cycle
+      out01_d4 := new Delay[W]<'G+3>(out01.out); // delay to fourth cycle
+      out10_d3 := new Delay[W]<'G+2>(out10.out); // delay to third cycle
+      out10_d4 := new Delay[W]<'G+3>(out10_d3.out); // delay to fourth cycle
+      out11_d4 := new Delay[W]<'G+3>(out11.out); // delay to fourth cycle
+
+      out0{0} = out00_d4.out;
+      out0{1} = out01_d4.out;
+      out1{0} = out10_d4.out;
+      out1{1} = out11_d4.out;
+
+      L := 4;
+    }
   }
-  // else if T == 1 {
-  //   // Partially iterative butterfly module
-
-  //   FM1 := new FMult[W, E, M];
-  //   FM2 := new FMult[W, E, M];
-
-  //   FA := new FAdd[W, E, M];
-  //   FS := new FSub[W, E, M];
-    
-  //   // Perform w * in1
-  //   ac := FM<'G>(, right{0}); // ac
-  //   bd := FM2<'G>(left{1}, right{1}); // bd
-  //   re := FS<'G>(ac.out, bd.out); // ac - bd
-
-  //   ad := FM<'G+1>(left{0}, right{1}); // ad
-  //   bc := FM2<'G+1>(left{1}, right{0}); // bc
-  //   im := new FAdd[W, E, M]<'G>(ad.out, bc.out); // ad + bc
-
-  //   out{0} = re.out;
-  //   out{1} = im.out;
-  // }
 }
