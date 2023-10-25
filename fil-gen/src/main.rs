@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::fs;
 
 fn main() {
@@ -9,4 +10,17 @@ fn main() {
     // Deserialize the manifest file
     let manifest_str = fs::read_to_string(opts.manifest).unwrap();
     let manifest: fil_gen::Manifest = toml::from_str(&manifest_str).unwrap();
+
+    for instance in &manifest.modules {
+        // Get the corresponding module in the tool
+        if let Some(m) = tool.modules.get(&instance.name) {
+            let binding = m
+                .parameters
+                .iter()
+                .cloned()
+                .zip(instance.parameters.iter().cloned())
+                .collect_vec();
+            println!("{} {}", tool.name, m.cli(&binding).unwrap());
+        }
+    }
 }
