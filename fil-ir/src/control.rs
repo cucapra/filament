@@ -1,6 +1,6 @@
 use super::{
     Access, CompIdx, Component, Ctx, Event, ExprIdx, Fact, Foreign, InfoIdx,
-    InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx, TimeIdx, TimeSub,
+    InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx, Range, TimeIdx, TimeSub,
 };
 
 #[derive(Clone, PartialEq, Eq)]
@@ -82,10 +82,12 @@ pub struct Instance {
     pub comp: CompIdx,
     /// The parameters used in the binding of this instance
     pub args: Box<[ExprIdx]>,
-    /// The information associated with this instance
-    pub info: InfoIdx,
+    /// The active range of this instance
+    pub lives: Vec<Range>,
     /// The parameters defined by this instance
     pub params: Vec<ParamIdx>,
+    /// The information associated with this instance
+    pub info: InfoIdx,
 }
 
 impl InstIdx {

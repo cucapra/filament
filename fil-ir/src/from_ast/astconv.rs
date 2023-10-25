@@ -35,7 +35,8 @@ impl<'prog> BuildCtx<'prog> {
         let ast::Instance {
             name,
             component,
-            bindings,
+            params: bindings,
+            lives,
         } = inst;
 
         let comp = self.get_sig(component)?;
@@ -44,6 +45,15 @@ impl<'prog> BuildCtx<'prog> {
             component.clone(),
             self.diag(),
         )?;
+        let mut live_locs = Vec::with_capacity(lives.len());
+        let lives = lives
+            .iter()
+            .map(|l| {
+                let (l, pos) = l.clone().split();
+                live_locs.push(pos);
+                self.range(l)
+            })
+            .collect::<BuildRes<Vec<_>>>()?;
         let inst = ir::Instance {
             comp: comp.idx,
             args: binding
@@ -56,7 +66,9 @@ impl<'prog> BuildCtx<'prog> {
                 name.copy(),
                 component.pos(),
                 name.pos(),
+                live_locs,
             )),
+            lives,
         };
 
         let idx = self.comp().add(inst);
@@ -118,16 +130,12 @@ impl<'prog> BuildCtx<'prog> {
             ..
         } = inv;
         let inst = self.get_inst(instance)?;
-        let info = self.comp().add(ir::Info::invoke(
-            name.copy(),
-            instance.pos(),
-            name.pos(),
-        ));
+        let empty = self.comp().add(ir::Info::empty());
         let inv = self.comp().add(ir::Invoke {
             inst,
             ports: vec![],  // Filled in later
             events: vec![], // Filled in later
-            info,
+            info: empty,    // Filled in later
         });
         // foreign component being invoked
         let foreign_comp = inv.comp(self.comp());
@@ -139,9 +147,17 @@ impl<'prog> BuildCtx<'prog> {
         let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
         let sig = self.get_sig(&comp)?;
 
+        let mut event_bind_locs = Vec::with_capacity(abstract_vars.len());
         // Event bindings
         let event_binding = sig.event_binding(
-            abstract_vars.iter().map(|v| v.inner().clone()),
+            abstract_vars
+                .iter()
+                .map(|v| {
+                    let (v, pos) = v.clone().split();
+                    event_bind_locs.push(pos);
+                    v
+                })
+                .collect_vec(),
             instance,
             self.diag(),
         )?;
@@ -163,9 +179,19 @@ impl<'prog> BuildCtx<'prog> {
             def_ports.push(self.port(resolved, owner)?);
         }
 
+        let info = self.comp().add(ir::Info::invoke(
+            name.copy(),
+            instance.pos(),
+            name.pos(),
+            event_bind_locs,
+        ));
+        let inv = self.comp().get_mut(inv);
+        // Update the information
+        inv.info = info;
         // Add the inputs from the invoke. The outputs are added in the second
         // pass over the AST.
-        self.comp().get_mut(inv).ports.extend(def_ports);
+        inv.ports.extend(def_ports);
+
         Ok(())
     }
 
