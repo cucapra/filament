@@ -15,9 +15,17 @@ pub struct GenExec {
         /*tool=*/ String,
         HashMap</*instance=*/ Instance, ToolOutput>,
     >,
+
+    /// Dry-run instead of executing commands
+    dry_run: bool,
 }
 
 impl GenExec {
+    /// Should we dry run instead of executing commands?
+    pub fn dry_run(&mut self, dry_run: bool) {
+        self.dry_run = dry_run;
+    }
+
     /// Check if a tool is registered
     pub fn has_tool(&self, tool: &str) -> bool {
         self.tools.contains_key(tool)
@@ -70,6 +78,11 @@ impl GenExec {
 
         let args = module.cli(&binding).unwrap();
         log::info!("Executing: {} {}", tool.name, args);
+
+        // Return early in dry-run mode
+        if self.dry_run {
+            return;
+        }
 
         let output = Command::new(&tool.name)
             .args(args.split_whitespace())
