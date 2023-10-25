@@ -54,8 +54,8 @@ comp PeaseFFT[NStages, N]<'G: L>(
   // Synchronized data (happens between each stage, inputs and outputs to stride permutation)
   // Separated by the input and output to and from the registers.
   // There are Nstages of these (one for input and one for output for each stage)
-  bundle sync_data_in[NStages+1][NPoints][2]: for<sdii, _sdi, __sdi> ['G + sdii*stage_latency, 'G + sdii*stage_latency + 1] W;
-  bundle sync_data_out[NStages][NPoints][2]:  for<sdoi, _sdo, __sdo> ['G + (sdoi+1) * stage_latency - 1, 'G + (sdoi+1) * stage_latency] W;
+  bundle sync_data_in[NStages+1][NPoints][2]: for<sdii> ['G + sdii*stage_latency, 'G + sdii*stage_latency + 1] W;
+  bundle sync_data_out[NStages][NPoints][2]:  for<sdoi> ['G + (sdoi+1) * stage_latency - 1, 'G + (sdoi+1) * stage_latency] W;
 
   // Unsynchronized data (happens within each stage, input to and ouptut from the butterfly calculations)
   // There are `reuses` blocks within each stage, each separated by `B::L`.
