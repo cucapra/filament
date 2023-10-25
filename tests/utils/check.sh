@@ -21,7 +21,7 @@ dtype=$"$dir/params/dtype"
 # Epsilon file
 eps=$"$dir/params/epsilon"
 
-(fud e -s cocotb.data "$data" --to cocotb-out "$dir/harness.fil" -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models --solver z3' -q | \
+(fud e -s cocotb.data "$data" --to cocotb-out "$dir/harness.fil" -s calyx.flags ' -d canonicalize' -s filament.flags ' --show-models' -q | \
   ./"$script_dir/gen_float.py" check --fields $(cat $outfields) --dt $(cat $dtype) --epsilon $(cat $eps) --width $(cat $width) && \
   echo "No counterexamples found") || \
   (cat "$data"; exit 1)
