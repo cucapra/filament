@@ -1,5 +1,5 @@
 comp Foo[W]<'G: L>(
-  in: ['G, 'G+1] W, // real and imaginary parts of input
+  in: ['G, 'G+L] W,
 ) -> () with {
   some L where L > 0;
 } {
