@@ -1,0 +1,40 @@
+name = "flopoco"
+path = "flopoco"
+
+## === Flopoco's floating-point modules that use its internal format ===
+[modules.FPAdd]
+name = "FPAdd"
+parameters = ["Exp", "Mant", "Sub"]
+name_format = "FPAdd_Exp$Exp_Mant$Mant_Sub$Sub"
+cli_format = "FPAdd frequency=300 target=Virtex5 wE=$Exp wF=$Mant sub=$Sub name=FPAdd_Exp$Exp_Mant$Mant_Sub$Sub"
+# Output parameters defined by the tool's execution
+output_parameters.L = "pipeline_depth"
+
+[modules.FPMult]
+name = "FPMult"
+parameters = ["Exp", "Mant", "Out"]
+name_format = "FPMult_Exp$Exp_Mant$Mant_Out$Out"
+cli_format = "FPMult frequency=300 target=Virtex5 wE=$Exp wF=$Mant out=$Out name=FPMult_Exp$Exp_Mant$Mant_Out$Out"
+output_parameters.L = "pipeline_depth"
+
+[modules.FPExp]
+name = "FPExp"
+parameters = ["Exp", "Mant"]
+name_format = "FPExp_Exp$Exp_Mant$Mant"
+cli_format = "FPExp frequency=300 target=Virtex5 wE=$Exp wF=$Mant name=FPExp_Exp$Exp_Mant$Mant"
+output_parameters.L = "pipeline_depth"
+
+## === Convert between IEEE-754 and Flopoco's internal format ===
+[modules.InputIEEE]
+name = "InputIEEE"
+parameters = ["ExpIn", "MantIn", "ExpOut", "MantOut"]
+name_format = "InputIEEE_ExpIn$ExpIn_MantIn$MantIn_ExpOut$ExpOut_MantOut$MantOut"
+cli_format = "InputIEEE frequency=300 target=Virtex5 wEIn=$ExpIn wFIn=$MantIn wEOut=$ExpOut wFOut=$MantOut name=InputIEEE_ExpIn$ExpIn_MantIn$MantIn_ExpOut$ExpOut_MantOut$MantOut"
+output_parameters.L = "pipeline_depth"
+
+[modules.OutputIEEE]
+name = "OutputIEEE"
+parameters = ["ExpIn", "MantIn", "ExpOut", "MantOut"]
+name_format = "OutputIEEE_ExpIn$ExpIn_MantIn$MantIn_ExpOut$ExpOut_MantOut$MantOut"
+cli_format = "OutputIEEE frequency=300 target=Virtex5 wEIn=$ExpIn wFIn=$MantIn wEOut=$ExpOut wFOut=$MantOut name=OutputIEEE_ExpIn$ExpIn_MantIn$MantIn_ExpOut$ExpOut_MantOut$MantOut"
+output_parameters.L = "pipeline_depth"
