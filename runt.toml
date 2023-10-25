@@ -90,6 +90,15 @@ cmd = """
 fud e -s cocotb.data {}.data --to cocotb-out {} -q
 """
 
+# fft
+[[tests]]
+name = "fft"
+paths = ["apps/fft/test/scripts/*.sh"]
+cmd = """
+dir=$(dirname {}) && \
+{}
+"""
+
 # ============== Examples in the documentation ============
 [[tests]]
 name = "examples"
