@@ -72,7 +72,10 @@ impl Module {
                 return Err(format!("Unknown parameter `${}'", param));
             };
             result.push_str(&val.to_string());
-            result.push(last_char.unwrap());
+            // Push the last character if this was not the end of line.
+            if let Some(c) = last_char {
+                result.push(c);
+            }
         }
         Ok(result)
     }
