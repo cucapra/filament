@@ -17,3 +17,5 @@ serde = "1.0"
 toml = "0.8"
 argh.workspace = true
 itertools.workspace = true
+env_logger.workspace = true
+log.workspace = true

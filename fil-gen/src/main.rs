@@ -13,7 +13,7 @@ fn main() {
 
     for instance in &manifest.modules {
         // Get the corresponding module in the tool
-        if let Some(m) = tool.modules.get(&instance.name) {
+        if let Some(m) = tool.get_module(&instance.name) {
             assert!(
                 m.parameters.len() == instance.parameters.len(),
                 "Module `{}' has {} parameters, but the manifest specifies {} parameters",
