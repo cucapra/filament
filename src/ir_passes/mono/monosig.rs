@@ -657,13 +657,16 @@ impl MonoSig {
         };
 
         // this is an extern, so keep the params - need to get them into the new component though
-        assert!(live.is_empty(), "live should be empty");
+        let lives = live
+            .iter()
+            .map(|l| self.range(underlying, pass, l))
+            .collect_vec();
         let new_inst = ir::Instance {
             comp: mono_comp.get(),
             args: conc_params,
             info: self.info(underlying, pass, info.ul()).get(),
             params: Vec::new(),
-            lives: vec![],
+            lives,
         };
 
         let new_idx = self.base.add(new_inst);
