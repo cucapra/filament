@@ -1,8 +1,9 @@
 use itertools::Itertools;
 
 use crate::{Instance, Tool, ToolOutput};
-use std::collections::HashMap;
+use std::{collections::HashMap, process::Command};
 
+#[derive(Default)]
 /// The main execution management engine for Filament's `gen` framework.
 /// Manages registering new tools and executing the tools to generate particular instances.
 pub struct GenExec {
@@ -34,17 +35,13 @@ impl GenExec {
     }
 
     /// Execute a particular manifest to generate instances
-    pub fn gen_instance(
-        &mut self,
-        tool: &str,
-        instance: Instance,
-    ) -> ToolOutput {
+    pub fn gen_instance(&mut self, tool: &str, instance: &Instance) {
         assert!(self.has_tool(tool), "Unknown tool: `{tool}");
 
         if let Some(output) = self.generated.get(tool) {
-            if let Some(output) = output.get(&instance) {
+            if let Some(_) = output.get(&instance) {
                 log::info!("Using cached output for `{}`", instance);
-                return output.clone();
+                // return output.clone();
             }
         }
 
@@ -71,6 +68,18 @@ impl GenExec {
             .zip(instance.parameters.iter().cloned())
             .collect_vec();
 
-        unimplemented!()
+        let args = module.cli(&binding).unwrap();
+        log::info!("Executing: {} {}", tool.name, args);
+
+        let output = Command::new(&tool.name)
+            .args(args.split_whitespace())
+            .output()
+            .expect("Failed to execute tool");
+
+        println!(
+            "Command exited with status: {}.\n{}",
+            output.status,
+            std::str::from_utf8(&output.stdout).unwrap()
+        );
     }
 }
