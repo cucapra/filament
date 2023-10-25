@@ -11,6 +11,9 @@
 		"--security-opt",
 		"seccomp=unconfined"
 	],
+	"containerEnv": {
+		"DISPLAY": "${localEnv:DISPLAY}",
+	},
 	"workspaceFolder": "/home/filament",
 	"workspaceMount": "source=${localWorkspaceFolder},target=/home/filament,type=bind,consistency=delegated",
 	"customizations": {
