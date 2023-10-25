@@ -1,5 +1,5 @@
 [workspace]
-members = ["fil-derive", "fil-utils", "fil-ast", "fil-ir"]
+members = ["fil-derive", "fil-utils", "fil-ast", "fil-ir", "fil-gen"]
 
 [workspace.package]
 authors = ["The Filament Team"]
