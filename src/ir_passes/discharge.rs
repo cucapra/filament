@@ -431,7 +431,7 @@ impl Discharge {
                         "Cannot prove constraint: {}",
                         ctx.display(fact.prop.consequent(ctx))
                     ),
-                    "No information was given on who generated this error"
+                    "No information was given on who generated this error. Please report this as a bug in the compiler with the program that triggered it."
                         .to_string(),
                 ]);
                 self.diagnostics.push(diag);
