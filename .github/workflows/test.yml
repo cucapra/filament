@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
-          sudo apt-get install -y unzip
+          apt-get install -y unzip
       - name: Install z3
         run: |
           wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x64-glibc-2.31.zip --output-document z3.zip
