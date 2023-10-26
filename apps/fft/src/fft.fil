@@ -25,19 +25,13 @@ comp PeaseFFT[NStages, N]<'G: L>(
   N * 2 <= NPoints,
   NStages > 0
 {
-  // cvc5 stalls trying to prove this...
-  assume NPoints % 2 == 0;
-
   assume pow2(NStages-1) == NPoints/2;
-  assume pow2(NStages+1) == NPoints*2;
-  assume pow2(NStages+2) == NPoints*4;
 
   bitrev := new BitRev[NStages, W]<'G>(in{0..NPoints}{0..2});
   // butterfly components
   B := new Butterflies[N, W, E, M];
   // number of times we have to reuse the butterflies per stage
   let reuses = NPoints / (2*N);
-  assume reuses * 2 * N == NPoints;
   let stage_latency = B::L * reuses + 1; // + 1 here is for the extra delay cycle necessary to transfer values between stages
   let latency = stage_latency * NStages;
   
@@ -76,7 +70,7 @@ comp PeaseFFT[NStages, N]<'G: L>(
   // for every reuse of a butterfly
   for reg_i in 0..reuses {
     // one big register storing all the inputs and outputs of one butterfly chunk
-    R := new PassThroughRegister[W * 4 * N];
+    R := new PassThroughRegister[W * 4 * N] in ['G, 'G+latency], ['G+1, 'G+latency+1];
 
     for r_stage in 0..NStages {
       let sync_in_t = r_stage * stage_latency; // start stage here
@@ -105,8 +99,7 @@ comp PeaseFFT[NStages, N]<'G: L>(
   }
 
   // --------------- STRIDE PERMUTATIONS ----------------
-
-  SP := new StridePermutation[NStages, W];
+  SP := new StridePermutation[NStages, W] in ['G+stage_latency-1, 'G+latency];
   
   // A delay is necessary for between stages so the pass-through register
   // isn't used twice at the same time
