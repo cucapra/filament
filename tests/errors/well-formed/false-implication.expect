@@ -1,0 +1,5 @@
+---CODE---
+101
+---STDERR---
+thread 'main' panicked at 'Attempted to assume false', fil-ir/src/comp.rs:119:13
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
