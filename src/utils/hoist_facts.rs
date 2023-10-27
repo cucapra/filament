@@ -58,17 +58,16 @@ impl HoistFacts {
             }
         }
 
+        // Hoist all assertions in the current scope using the path condition.
         for cmd in cmds {
             match cmd {
-                ir::Command::ForLoop(l) => {
+                ir::Command::ForLoop(ir::Loop {
+                    index,
+                    start,
+                    end,
+                    body,
+                }) => {
                     self.push();
-                    let ir::Loop {
-                        index,
-                        start,
-                        end,
-                        body,
-                        ..
-                    } = l;
                     let idx = index.expr(comp);
                     let start = idx.gte(*start, comp);
                     let end = idx.lt(*end, comp);
@@ -77,6 +76,7 @@ impl HoistFacts {
                     self.pop()
                 }
                 ir::Command::If(i) => {
+                    // Adds commands in if statement with condition predicate.
                     self.push();
                     self.add_to_pc(i.cond);
                     self.cmds(&i.then, comp);
