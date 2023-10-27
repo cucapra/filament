@@ -986,9 +986,16 @@ impl<'prog> BuildCtx<'prog> {
             }
             ast::Command::If(ast::If { cond, then, alt }) => {
                 let cond = self.expr_cons(cond)?;
-                let then = self.commands(then)?;
-                let alt = self.commands(alt)?;
-                vec![ir::If { cond, then, alt }.into()]
+                if cond.is_false(self.comp()) {
+                    // throw away the `then` branch to avoid false assumptions and assertions
+                    self.commands(alt)?
+                } else if cond.is_true(self.comp()) {
+                    self.commands(then)?
+                } else {
+                    let then = self.commands(then)?;
+                    let alt = self.commands(alt)?;
+                    vec![ir::If { cond, then, alt }.into()]
+                }
             }
             ast::Command::Bundle(bun) => {
                 // Add the bundle to the current scope
