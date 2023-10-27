@@ -3,7 +3,9 @@ comp main<'G: 1>() -> () {
   let T = 1;
   if T == 0 {
     assert T == 0;
+    assume T == 0;
   } else {
     assert T == 1;
+    assume T == 1;
   }
 }
