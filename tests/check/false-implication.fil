@@ -1,0 +1,9 @@
+/// Checks that no false implication is generated when local parameters are elided.
+comp main<'G: 1>() -> () {
+  let T = 1;
+  if T == 0 {
+    assert T == 0;
+  } else {
+    assert T == 1;
+  }
+}
