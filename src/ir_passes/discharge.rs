@@ -44,8 +44,6 @@ pub struct Discharge {
     bv_size: Option<u8>,
     /// Which solver are we using
     sol_base: cmdline::Solver,
-    /// Are we in a scoped context?
-    scoped: bool,
     /// Defined global functions
     func_map: HashMap<ast::Fn, smt::SExpr>,
     /// Defined functions for `some` parameters on components
@@ -211,7 +209,6 @@ impl Construct for Discharge {
             bv_size: opts.solver_bv,
             sol: Self::conf_solver(opts),
             sol_base: opts.solver,
-            scoped: false,
             error_count: 0,
             act_lit_count: 0,
             to_prove: vec![],
@@ -550,6 +547,12 @@ impl Visitor for Discharge {
     }
 
     fn start(&mut self, data: &mut VisitorData) -> Action {
+        self.to_prove = crate::utils::HoistFacts::hoist(&mut data.comp);
+
+        for fact in &self.to_prove {
+            log::debug!("Checking {}", data.comp.display(fact.prop));
+        }
+
         let comp = &data.comp;
         // Declare all parameters
         let int = self.sort();
@@ -609,42 +612,6 @@ impl Visitor for Discharge {
         Action::Continue
     }
 
-    fn fact(&mut self, f: &mut ir::Fact, _: &mut VisitorData) -> Action {
-        if self.scoped {
-            panic!("scoped facts not supported. Run `hoist-facts` before this pass");
-        }
-
-        if f.is_assume() {
-            panic!(
-                "assumptions should have been eliminated by `hoist-facts` pass"
-            )
-        }
-
-        // Defer proof obligations till the end of the component pass
-        self.to_prove.push(f.clone());
-        Action::Continue
-    }
-
-    fn do_if(&mut self, i: &mut ir::If, data: &mut VisitorData) -> Action {
-        let orig = self.scoped;
-        self.scoped = true;
-        let out = self
-            .visit_cmds(&mut i.then, data)
-            .and_then(|| self.visit_cmds(&mut i.alt, data));
-        self.scoped = orig;
-        out
-    }
-
-    fn do_loop(&mut self, l: &mut ir::Loop, data: &mut VisitorData) -> Action {
-        let orig = self.scoped;
-        self.scoped = true;
-        let out = self
-            .start_loop(l, data)
-            .and_then(|| self.visit_cmds(&mut l.body, data));
-        self.scoped = orig;
-        out
-    }
-
     fn instance(&mut self, idx: ir::InstIdx, data: &mut VisitorData) -> Action {
         let comp = &data.comp;
         let inst = &comp[idx];
@@ -667,8 +634,6 @@ impl Visitor for Discharge {
     }
 
     fn end(&mut self, data: &mut VisitorData) {
-        assert!(!self.scoped, "unbalanced scopes");
-
         if self.to_prove.is_empty() {
             return;
         }
