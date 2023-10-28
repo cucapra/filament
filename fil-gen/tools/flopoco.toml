@@ -17,12 +17,13 @@ cli_format = "${NAME_FORMAT} ${OUT_FILE} FPAdd wE=${Exp} wF=${Mant} ${conf}"
 # Output parameters defined by the tool's execution
 outputs.L = "pipeline_depth"
 
-[modules.FPMult]
-name = "FPMult"
-parameters = ["Exp", "Mant", "Out"]
-name_format = "FPMult_Exp${Exp}_Mant${Mant}_Out${Out}"
-cli_format = "${NAME_FORMAT} ${OUT_FILE} FPMult wE=${Exp} wF=${Mant} out=${Out} ${conf}"
-outputs.L = "pipeline_depth"
+# Broken because of https://github.com/ghdl/ghdl/issues/2522
+# [modules.FPMult]
+# name = "FPMult"
+# parameters = ["Exp", "Mant", "Out"]
+# name_format = "FPMult_Exp${Exp}_Mant${Mant}_Out${Out}"
+# cli_format = "${NAME_FORMAT} ${OUT_FILE} FPMult wE=${Exp} wF=${Mant} out=${Out} ${conf}"
+# outputs.L = "pipeline_depth"
 
 [modules.FPExp]
 name = "FPExp"
@@ -30,18 +31,18 @@ parameters = ["Exp", "Mant"]
 name_format = "FPExp_Exp${Exp}_Mant${Mant}"
 cli_format = "${NAME_FORMAT} ${OUT_FILE} FPExp wE=${Exp} wF=${Mant} ${conf}"
 outputs.L = "pipeline_depth"
-#
-# ## === Convert between IEEE-754 and Flopoco's internal format ===
-# [modules.InputIEEE]
-# name = "InputIEEE"
-# parameters = ["ExpIn", "MantIn", "ExpOut", "MantOut"]
-# name_format = "InputIEEE_ExpIn$ExpIn_MantIn$MantIn_ExpOut$ExpOut_MantOut$MantOut"
-# cli_format = "$NAME_FORMAT $OUT_FILE InputIEEE wEIn=$ExpIn wFIn=$MantIn wEOut=$ExpOut wFOut=$MantOut $conf"
-# outputs.L = "pipeline_depth"
-#
-# [modules.OutputIEEE]
-# name = "OutputIEEE"
-# parameters = ["ExpIn", "MantIn", "ExpOut", "MantOut"]
-# name_format = "OutputIEEE_ExpIn$ExpIn_MantIn$MantIn_ExpOut$ExpOut_MantOut$MantOut"
-# cli_format = "$NAME_FORMAT $OUT_FILE OutputIEEE wEIn=$ExpIn wFIn=$MantIn wEOut=$ExpOut wFOut=$MantOut"
-# outputs.L = "pipeline_depth"
+
+## === Convert between IEEE-754 and Flopoco's internal format ===
+[modules.InputIEEE]
+name = "InputIEEE"
+parameters = ["ExpIn", "MantIn", "ExpOut", "MantOut"]
+name_format = "InputIEEE_EI${ExpIn}_MI${MantIn}_EO${ExpOut}_MO${MantOut}"
+cli_format = "${NAME_FORMAT} ${OUT_FILE} InputIEEE wEIn=${ExpIn} wFIn=${MantIn} wEOut=${ExpOut} wFOut=${MantOut} ${conf}"
+outputs.L = "pipeline_depth"
+
+[modules.OutputIEEE]
+name = "OutputIEEE"
+parameters = ["ExpIn", "MantIn", "ExpOut", "MantOut"]
+name_format = "OutputIEEE_ExpIn${ExpIn}_MantIn${MantIn}_ExpOut${ExpOut}_MantOut${MantOut}"
+cli_format = "${NAME_FORMAT} ${OUT_FILE} OutputIEEE wEIn=${ExpIn} wFIn=${MantIn} wEOut=${ExpOut} wFOut=${MantOut}"
+outputs.L = "pipeline_depth"
