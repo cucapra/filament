@@ -1,7 +1,7 @@
 //! Defines the schema for a tool configuration file
 use itertools::Itertools;
 use serde::Deserialize;
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, hash::Hash, path::PathBuf};
 
 #[derive(Clone, Debug, Deserialize)]
 /// A tool that can generate external modules for Filament
@@ -9,7 +9,11 @@ pub struct Tool {
     /// The name of the tool
     pub name: String,
     /// Location of the tool binary
-    pub path: PathBuf,
+    pub path: String,
+    /// The tool requires $OUT_FILE to set and generates the verilog module in it
+    pub requires_out_file: Option<bool>,
+    /// Mapping that is globablly available to all modules
+    pub globals: HashMap<String, String>,
     /// Definitions of modules
     modules: HashMap<String, Module>,
 }
@@ -36,13 +40,13 @@ pub struct Module {
 
 impl Module {
     /// Substitutes the parameter values in the format string.
-    /// A parameter of the form $param is replaced with the value of the
+    /// A parameter of the form ${param} is replaced with the value of the
     /// parameter.
     /// If a mentioned parameter does not have a value, the function returns an
     /// error with the name of missing parameter.
     fn subst_params(
         fmt_string: String,
-        params: &[(String, u64)],
+        params: &[(String, String)],
     ) -> Result<String, String> {
         let mut result = String::new();
         let mut chars = fmt_string.chars();
@@ -52,16 +56,19 @@ impl Module {
                 continue;
             }
 
-            // Parse the next word
+            // Next character should be {
+            assert!(
+                chars.by_ref().next() == Some('{'),
+                "Expected `{{' after `$'"
+            );
+
+            // Parse the next word as the parameter name until we see '}'
             let mut param = String::new();
-            let mut last_char = None;
-            for c in chars.by_ref() {
-                if c.is_alphanumeric() {
-                    param.push(c);
-                } else {
-                    last_char = Some(c);
+            while let Some(c) = chars.by_ref().next() {
+                if c == '}' {
                     break;
                 }
+                param.push(c);
             }
 
             // No word after $
@@ -77,24 +84,22 @@ impl Module {
                     None
                 }
             }) else {
-                return Err(format!("Unknown parameter `${}'", param));
+                return Err(format!(
+                    "Unknown parameter `${param}' in `{fmt_string}'",
+                ));
             };
             result.push_str(&val.to_string());
-            // Push the last character if this was not the end of line.
-            if let Some(c) = last_char {
-                result.push(c);
-            }
         }
         Ok(result)
     }
 
     /// The generated name for a tool invocation with specific values of the parameters
-    pub fn name(&self, params: &[(String, u64)]) -> Result<String, String> {
+    pub fn name(&self, params: &[(String, String)]) -> Result<String, String> {
         Self::subst_params(self.name_format.clone(), params)
     }
 
     /// The CLI call for a tool invocation with specific values of the parameters
-    pub fn cli(&self, params: &[(String, u64)]) -> Result<String, String> {
+    pub fn cli(&self, params: &[(String, String)]) -> Result<String, String> {
         Self::subst_params(self.cli_format.clone(), params)
     }
 }
@@ -112,7 +117,7 @@ pub struct Instance {
     /// The name of the module
     pub name: String,
     /// The parameters used in the module
-    pub parameters: Vec<u64>,
+    pub parameters: Vec<String>,
 }
 
 impl std::fmt::Display for Instance {
