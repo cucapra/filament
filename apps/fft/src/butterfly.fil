@@ -1,3 +1,6 @@
+import "primitives/math/complex.fil";
+import "primitives/state.fil";
+
 /// Butterfly module using existential parameters.
 comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
   go: interface['G],
@@ -42,25 +45,30 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
       // uses two multipliers and two adders
       // takes 4 cycles
 
+      let l = 4;
+
       FM1 := new FMult[W, E, M];
       FM2 := new FMult[W, E, M];
 
       FA := new FAdd[W, E, M];
       FS := new FSub[W, E, M];
+
+      D1 := new Delay[W] in ['G, 'G+l];
+      D2 := new Delay[W] in ['G, 'G+l];
+      D3 := new Delay[W] in ['G, 'G+l];
       
       // Perform w * in1
       ac := FM1<'G>(in1{0}, twiddle{0}); // ac
       bd := FM2<'G>(in1{1}, twiddle{1}); // bd
       re := FS<'G>(ac.out, bd.out); // ac - bd
-      re_d1 := new Delay[W]<'G>(re.out); // delay by one cycle
-      re_d2 := new Delay[W]<'G+1>(re_d1.out); // delay to second cycle
-      re_d3 := new Delay[W]<'G+2>(re_d2.out); // delay to third cycle
+      re_d1 := D1<'G>(re.out); // delay by one cycle
+      re_d2 := D1<'G+1>(re_d1.out); // delay to second cycle
 
       ad := FM1<'G+1>(in1{0}, twiddle{1}); // ad
       bc := FM2<'G+1>(in1{1}, twiddle{0}); // bc
       im := FA<'G+1>(ad.out, bc.out); // ad + bc
-      im_d2 := new Delay[W]<'G+1>(im.out); // delay to second cycle
-      im_d3 := new Delay[W]<'G+2>(im_d2.out); // delay to third cycle
+      im_d2 := D2<'G+1>(im.out); // delay to second cycle
+      im_d3 := D2<'G+2>(im_d2.out); // delay to third cycle
 
       // in0 + (w * in1)
       out00 := FA<'G+2>(in0{0}, re_d2.out); // re
@@ -70,11 +78,11 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
       out10 := FS<'G+2>(in0{0}, re_d2.out); // re
       out11 := FS<'G+3>(in0{1}, im_d3.out); // im
 
-      out00_d3 := new Delay[W]<'G+2>(out00.out); // delay to third cycle
-      out00_d4 := new Delay[W]<'G+3>(out00_d3.out); // delay to fourth cycle
-      out01_d4 := new Delay[W]<'G+3>(out01.out); // delay to fourth cycle
-      out10_d3 := new Delay[W]<'G+2>(out10.out); // delay to third cycle
-      out10_d4 := new Delay[W]<'G+3>(out10_d3.out); // delay to fourth cycle
+      out00_d3 := D1<'G+2>(out00.out); // delay to third cycle
+      out00_d4 := D1<'G+3>(out00_d3.out); // delay to fourth cycle
+      out01_d4 := D2<'G+3>(out01.out); // delay to fourth cycle
+      out10_d3 := D3<'G+2>(out10.out); // delay to third cycle
+      out10_d4 := D3<'G+3>(out10_d3.out); // delay to fourth cycle
       out11_d4 := new Delay[W]<'G+3>(out11.out); // delay to fourth cycle
 
       out0{0} = out00_d4.out;
@@ -82,7 +90,7 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
       out1{0} = out10_d4.out;
       out1{1} = out11_d4.out;
 
-      L := 4;
+      L := l;
     }
   }
 }

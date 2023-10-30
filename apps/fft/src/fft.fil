@@ -138,6 +138,8 @@ comp Butterflies[N, W, E, ?M=W-E-1]<'G: L>(
     E > 1,
     M > 1
 {
+  // We use the fact here that a butterfly has the same existential L if it has the same parameters.
+  // Therefore, we instantiate a dummy butterfly here in order to access its L parameter.
   Bx := new Butterfly[W, E, M];
   L := Bx::L;
 
