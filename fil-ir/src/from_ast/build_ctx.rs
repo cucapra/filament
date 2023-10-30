@@ -111,6 +111,9 @@ pub(super) struct BuildCtx<'prog> {
     /// The parameter map returns instead of a [ir::ParamIdx] because let-bound
     /// parameters are immediately rewritten.
     param_map: ScopeMap<ir::ExprIdx, OwnedParam>,
+
+    /// Index for generating unique names
+    name_idx: u32,
 }
 
 impl<'prog> BuildCtx<'prog> {
@@ -119,6 +122,7 @@ impl<'prog> BuildCtx<'prog> {
             comp,
             sigs,
             diag: utils::Diagnostics::default(),
+            name_idx: 0,
             param_map: ScopeMap::new(),
             event_map: ScopeMap::new(),
             port_map: ScopeMap::new(),
@@ -142,6 +146,13 @@ impl<'prog> BuildCtx<'prog> {
     // takes the component from the builder
     pub fn take(self) -> ir::Component {
         self.comp
+    }
+
+    /// Generate a unique, new name for unused parameters
+    pub fn gen_name(&mut self) -> Id {
+        let name = format!("_{}", self.name_idx);
+        self.name_idx += 1;
+        Id::from(name)
     }
 
     /// Push a new scope level

@@ -217,27 +217,25 @@ impl MonoDeferred<'_, '_> {
     }
 
     fn access(&mut self, acc: &ir::Access) -> ir::Access {
-        let ir::Access { port, start, end } = acc;
+        let ir::Access { port, ranges } = acc;
+
+        let mut conc = |e: ir::ExprIdx| -> ir::ExprIdx {
+            let base = self.monosig.expr(&self.underlying, e.ul());
+            self.monosig
+                .base
+                .bin(self.monosig.base.get(base).clone())
+                .get()
+        };
+
+        // generate end expression
+        let ranges = ranges
+            .iter()
+            .map(|(s, e)| (conc(*s), conc(*e)))
+            .collect_vec();
 
         let port = self.monosig.port_use(&self.underlying, port.ul()).get();
 
-        // generate end expression
-        let end = self.monosig.expr(&self.underlying, end.ul());
-
-        // convert to concrete value
-        let end = self.monosig.base.bin(self.monosig.base.get(end).clone());
-
-        // generate start expression
-        let start = self.monosig.expr(&self.underlying, start.ul());
-
-        // convert to concrete value
-        let start = self.monosig.base.bin(self.monosig.base.get(start).clone());
-
-        ir::Access {
-            port,
-            start: start.get(),
-            end: end.get(),
-        }
+        ir::Access { port, ranges }
     }
 
     fn connect(&mut self, con: &ir::Connect) -> ir::Connect {

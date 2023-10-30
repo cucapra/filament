@@ -49,14 +49,21 @@ pub struct Instance {
     pub name: ast::Id,
     pub comp_loc: GPosIdx,
     pub bind_loc: GPosIdx,
+    // Location of liveness information for each event
+    pub event_lives: Vec<GPosIdx>,
 }
 
 #[derive(Clone, Eq, PartialEq)]
 /// For [super::Invoke]
 pub struct Invoke {
+    /// Name of the invocation
     pub name: ast::Id,
-    pub inst_loc: GPosIdx,
+    /// Location of the invocation name
     pub bind_loc: GPosIdx,
+    /// Location of the instance
+    pub inst_loc: GPosIdx,
+    /// Location of event bindings
+    pub event_bind_locs: Vec<GPosIdx>,
 }
 
 #[derive(Clone, Eq, PartialEq)]
@@ -71,6 +78,7 @@ pub struct Connect {
 pub struct Port {
     /// Surface-level name
     pub name: ast::Id,
+    /// The location of the name
     pub bind_loc: GPosIdx,
     pub width_loc: GPosIdx,
     pub live_loc: GPosIdx,
@@ -154,20 +162,28 @@ impl Info {
         name: ast::Id,
         comp_loc: GPosIdx,
         bind_loc: GPosIdx,
+        event_lives: Vec<GPosIdx>,
     ) -> Self {
         Instance {
             name,
             comp_loc,
             bind_loc,
+            event_lives,
         }
         .into()
     }
 
-    pub fn invoke(name: ast::Id, inst_loc: GPosIdx, bind_loc: GPosIdx) -> Info {
+    pub fn invoke(
+        name: ast::Id,
+        inst_loc: GPosIdx,
+        bind_loc: GPosIdx,
+        event_bind_locs: Vec<GPosIdx>,
+    ) -> Info {
         Invoke {
             name,
             inst_loc,
             bind_loc,
+            event_bind_locs,
         }
         .into()
     }
@@ -324,10 +340,12 @@ pub enum Reason {
     InBoundsAccess {
         // Defining location for the port
         def_loc: GPosIdx,
+        /// The dimension's location
+        dim: usize,
         /// Location of the access
         access_loc: GPosIdx,
         /// Length of the bundle
-        bundle_len: ExprIdx,
+        dim_len: ExprIdx,
     },
 
     // ========== Constraints from interval checking ============
@@ -344,9 +362,11 @@ pub enum Reason {
         event_delay_loc: GPosIdx,
         bundle_range_loc: GPosIdx,
         bundle_live: TimeSub,
-        /// The bundle paramemter's binding location
-        param_info:
-            Option<(/*pos=*/ GPosIdx, /*range=*/ (ExprIdx, ExprIdx))>,
+        param_info: Vec<(
+            /*bind_loc=*/ GPosIdx,
+            /*start=*/ ExprIdx,
+            /*end=*/ ExprIdx,
+        )>,
     },
     /// Well formed time interval
     WellFormedInterval {
@@ -354,6 +374,27 @@ pub enum Reason {
         range_loc: GPosIdx,
         /// The range's start and end
         range: (TimeIdx, TimeIdx),
+    },
+    /// The invocation does not require the event to be active longer than the instance's liveness
+    EventLive {
+        /// Location of the liveness information
+        live_loc: GPosIdx,
+        /// Borrow range
+        borrow: (TimeIdx, TimeIdx),
+        /// Invocation required range
+        invoke_range: (TimeIdx, TimeIdx),
+        /// Location of the binding
+        time_expr_loc: GPosIdx,
+    },
+    EventLiveDelay {
+        /// Location of instance liveness
+        live_loc: GPosIdx,
+        /// Length of the borrow range
+        borrow_len: TimeSub,
+        /// Location of the event
+        event_loc: GPosIdx,
+        /// Delay of the event
+        delay: TimeSub,
     },
     EventTrig {
         /// Delay of event of component being triggered
@@ -382,7 +423,11 @@ impl Reason {
         event_delay_loc: GPosIdx,
         bundle_range_loc: GPosIdx,
         bundle_live: TimeSub,
-        param_info: Option<(GPosIdx, (ExprIdx, ExprIdx))>,
+        param_info: Vec<(
+            /*bind_loc=*/ GPosIdx,
+            /*start*/ ExprIdx,
+            /*end=*/ ExprIdx,
+        )>,
     ) -> Self {
         Self::BundleDelay {
             event_delay_loc,
@@ -446,15 +491,31 @@ impl Reason {
         }
     }
 
+    pub fn event_live(
+        live_loc: GPosIdx,
+        borrow: (TimeIdx, TimeIdx),
+        invoke_range: (TimeIdx, TimeIdx),
+        time_expr_loc: GPosIdx,
+    ) -> Self {
+        Self::EventLive {
+            live_loc,
+            borrow,
+            invoke_range,
+            time_expr_loc,
+        }
+    }
+
     pub fn in_bounds_access(
         def_loc: GPosIdx,
+        dim: usize,
         access_loc: GPosIdx,
         bundle_len: ExprIdx,
     ) -> Self {
         Self::InBoundsAccess {
             def_loc,
+            dim,
             access_loc,
-            bundle_len,
+            dim_len: bundle_len,
         }
     }
 
@@ -491,6 +552,20 @@ impl Reason {
         range: (TimeIdx, TimeIdx),
     ) -> Self {
         Self::WellFormedInterval { range_loc, range }
+    }
+
+    pub fn event_live_delay(
+        live_loc: GPosIdx,
+        borrow_len: TimeSub,
+        event_loc: GPosIdx,
+        delay: TimeSub,
+    ) -> Self {
+        Self::EventLiveDelay {
+            live_loc,
+            borrow_len,
+            event_loc,
+            delay,
+        }
     }
 }
 
@@ -566,13 +641,14 @@ impl Reason {
             }
             Reason::InBoundsAccess {
                 def_loc,
+                dim,
                 access_loc,
-                bundle_len,
+                dim_len: bundle_len,
             } => {
                 let access =
                     access_loc.primary().with_message("out of bounds access");
                 let def = def_loc.secondary().with_message(format!(
-                    "bundle's length is {}",
+                    "dimension {dim} has length {}",
                     ctx.display(*bundle_len)
                 ));
                 Diagnostic::error()
@@ -648,12 +724,12 @@ impl Reason {
                 let mut labels = vec![wire, event];
 
                 // If the parameter location is not defined, we do not report its location
-                if let Some((param_loc, param_range)) = param_info {
+                for (param_loc, start, end) in param_info {
                     if let Some(loc) = param_loc.into_option() {
                         let param = loc.secondary().with_message(format!(
                             "takes values in [{}, {})",
-                            ctx.display(param_range.0),
-                            ctx.display(param_range.1)
+                            ctx.display(*start),
+                            ctx.display(*end)
                         ));
                         labels.push(param);
                     }
@@ -697,6 +773,47 @@ impl Reason {
                 Diagnostic::error()
                     .with_message("event provided to invocation triggers more often that invocation's event's delay allows")
                     .with_labels(vec![bind, ev, comp])
+            }
+
+            Reason::EventLive {
+                live_loc,
+                borrow: (start, end),
+                invoke_range: (inv_start, inv_end),
+                time_expr_loc,
+            } => {
+                let bind = time_expr_loc.primary().with_message(format!(
+                    "event use requires availability in [{}, {}]",
+                    ctx.display(*inv_start),
+                    ctx.display(*inv_end),
+                ));
+                let live = live_loc.secondary().with_message(format!(
+                    "instance available in [{}, {}]",
+                    ctx.display(*start),
+                    ctx.display(*end)
+                ));
+                Diagnostic::error()
+                    .with_message(
+                        "event used for longer than the instance borrow allows",
+                    )
+                    .with_labels(vec![bind, live])
+            }
+            Reason::EventLiveDelay {
+                live_loc,
+                borrow_len,
+                event_loc,
+                delay,
+            } => {
+                let live = live_loc.primary().with_message(format!(
+                    "instance borrowed for {} cycles",
+                    ctx.display(borrow_len)
+                ));
+                let ev = event_loc.secondary().with_message(format!(
+                    "event's delay is {} cycles",
+                    ctx.display(delay)
+                ));
+                Diagnostic::error()
+                    .with_message("event's delay must be greater than the instance's borrow length")
+                    .with_labels(vec![live, ev])
             }
         }
     }

@@ -1,0 +1,32 @@
+---CODE---
+1
+---STDERR---
+error: bundle's availability is greater than the delay of the event
+  ┌─ tests/errors/bundle/multi-liveness.fil:2:31
+  │
+1 │ comp Foo<'G: 3>(in: ['G, 'G+1] 32) -> () {
+  │              - event's delay
+2 │     bundle f[2][4]: for<i, j> ['G+i, 'G+i+j+1] 32;
+  │                         -  -  ^^^^^^^^^^^^^^^^ available for (i+j+1)-i cycles
+  │                         │  │   
+  │                         │  takes values in [0, 4)
+  │                         takes values in [0, 2)
+
+error: source port does not provide value for as long as destination requires
+  ┌─ tests/errors/bundle/multi-liveness.fil:3:15
+  │
+3 │     f{1}{2} = in;
+  │     -------   ^^ source is available for ['G, 'G+1]
+  │     │          
+  │     requires value for ['G+1, 'G+4]
+
+error: source port does not provide value for as long as destination requires
+  ┌─ tests/errors/bundle/multi-liveness.fil:6:15
+  │
+6 │     g{0..3} = f{0}{0..3};
+  │     -------   ^^^^^^^^^^ source is available for ['G, 'G+j+1]
+  │     │          
+  │     requires value for ['G+1, 'G+i+2]
+
+Compilation failed with 3 errors.
+Run with --show-models to generate assignments for failing constraints.

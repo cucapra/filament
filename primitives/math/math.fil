@@ -166,16 +166,18 @@ comp TradeoffDiv[W, I]<'G: K>(
     o_r{0} = right;
 
     for i in 0..I {
+        let Cur = K*i;
+        let End = K*(i+1);
+
         // Instantiate the I'th circuit
-        N := new Id_Next[W];
-        Acc := new Delay[W+1];
-        QN := new Delay[W];
-        R := new Delay[W];
+        N := new Id_Next[W] in ['G+Cur, 'G+End];
+        Acc := new Delay[W+1] in ['G+Cur, 'G+End];
+        QN := new Delay[W] in ['G+Cur, 'G+End];
+        R := new Delay[W] in ['G+Cur, 'G+End];
 
         // Bundles to forward data
         // Each bundle starts at time K*i which represents the previous
         // computations that have already occurred.
-        let Cur = K*i;
         bundle acc[K+1]: for<a> ['G+Cur+a, 'G+Cur+a+1] W+1;
         bundle qn [K+1]: for<a> ['G+Cur+a, 'G+Cur+a+1] W;
         bundle r  [K+1]: for<a> ['G+Cur+a, 'G+Cur+a+1] W;

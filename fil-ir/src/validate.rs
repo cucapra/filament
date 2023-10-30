@@ -63,10 +63,8 @@ impl<'a> Validate<'a> {
     fn port(&self, pidx: ir::PortIdx) {
         let ir::Port { owner, live, .. } = self.comp.get(pidx);
         // check (1)
-        if let ir::Liveness {
-            idx: Some(par_idx), ..
-        } = live
-        {
+        let ir::Liveness { idxs: par_idxs, .. } = live;
+        for par_idx in par_idxs {
             match self.comp.get(*par_idx).owner {
             ir::ParamOwner::Let { .. } => self.comp.internal_error(format!(
                 "{} should be owned by a bundle but is owned by a let",

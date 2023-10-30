@@ -42,12 +42,15 @@ pub enum Port {
     /// A port on an invoke
     InvPort { invoke: Loc<Id>, name: Loc<Id> },
     /// A port represented by an index into a bundle
-    Bundle { name: Loc<Id>, access: Loc<Access> },
+    Bundle {
+        name: Loc<Id>,
+        access: Vec<Loc<Access>>,
+    },
     /// A bundle port on an invocation
     InvBundle {
         invoke: Loc<Id>,
         port: Loc<Id>,
-        access: Loc<Access>,
+        access: Vec<Loc<Access>>,
     },
 }
 
@@ -60,14 +63,14 @@ impl Port {
         Port::This(p)
     }
 
-    pub fn bundle(name: Loc<Id>, access: Loc<Access>) -> Self {
+    pub fn bundle(name: Loc<Id>, access: Vec<Loc<Access>>) -> Self {
         Port::Bundle { name, access }
     }
 
     pub fn inv_bundle(
         invoke: Loc<Id>,
         port: Loc<Id>,
-        access: Loc<Access>,
+        access: Vec<Loc<Access>>,
     ) -> Self {
         Port::InvBundle {
             invoke,
@@ -80,7 +83,10 @@ impl Port {
         match self {
             Port::Bundle { name, access } => Port::Bundle {
                 name,
-                access: access.map(|i| i.resolve(bindings)),
+                access: access
+                    .into_iter()
+                    .map(|i| i.map(|i| i.resolve(bindings)))
+                    .collect(),
             },
             Port::InvBundle {
                 invoke,
@@ -89,7 +95,10 @@ impl Port {
             } => Port::InvBundle {
                 invoke,
                 port,
-                access: access.map(|a| a.resolve(bindings)),
+                access: access
+                    .into_iter()
+                    .map(|i| i.map(|a| a.resolve(bindings)))
+                    .collect(),
             },
             _ => self,
         }
@@ -118,19 +127,23 @@ pub struct Instance {
     pub name: Loc<Id>,
     /// Name of the component
     pub component: Loc<Id>,
+    /// Liveness of the instance
+    pub lives: Vec<Loc<Range>>,
     /// Bindings provided for this instance
-    pub bindings: Vec<Loc<Expr>>,
+    pub params: Vec<Loc<Expr>>,
 }
 impl Instance {
     pub fn new(
         name: Loc<Id>,
         component: Loc<Id>,
-        bindings: Vec<Loc<Expr>>,
+        params: Vec<Loc<Expr>>,
+        lives: Vec<Loc<Range>>,
     ) -> Self {
         Instance {
             name,
             component,
-            bindings,
+            lives,
+            params,
         }
     }
 }
@@ -288,9 +301,9 @@ impl If {
 /// ```
 pub struct BundleType {
     /// The name of the parameter for the bundle type
-    pub idx: Loc<Id>,
+    pub idx: Vec<Loc<Id>>,
     /// Length of the bundle. The index parameter ranges over [0, len)
-    pub len: Loc<Expr>,
+    pub len: Vec<Loc<Expr>>,
     /// Availability interval for the bundle
     pub liveness: Loc<Range>,
     /// Bitwidth of the bundle
@@ -299,8 +312,8 @@ pub struct BundleType {
 
 impl BundleType {
     pub fn new(
-        idx: Loc<Id>,
-        len: Loc<Expr>,
+        idx: Vec<Loc<Id>>,
+        len: Vec<Loc<Expr>>,
         liveness: Loc<Range>,
         bitwidth: Loc<Expr>,
     ) -> Self {
@@ -315,7 +328,11 @@ impl BundleType {
     pub fn resolve_exprs(self, binding: &Binding<Expr>) -> Self {
         Self {
             idx: self.idx,
-            len: self.len.map(|e| e.resolve(binding)),
+            len: self
+                .len
+                .into_iter()
+                .map(|e| e.map(|e| e.resolve(binding)))
+                .collect(),
             liveness: self.liveness.map(|e| e.resolve_exprs(binding)),
             bitwidth: self.bitwidth.map(|e| e.resolve(binding)),
         }

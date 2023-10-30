@@ -60,20 +60,16 @@ impl IntervalCheck {
 
     /// Proposition that ensures that the given parameter is in range
     fn in_range(live: &ir::Liveness, comp: &mut ir::Component) -> ir::PropIdx {
-        let &ir::Liveness {
-            idx: Some(idx),
-            len,
-            ..
-        } = live
-        else {
-            // If there is no index, then we don't need to assert its range.
-            return comp.add(ir::Prop::True);
-        };
-        let zero = comp.num(0);
-        let idx = idx.expr(comp);
-        let lo = idx.gte(zero, comp);
-        let hi = idx.lt(len, comp);
-        lo.and(hi, comp)
+        let &ir::Liveness { idxs, lens, .. } = &live;
+        let mut prop = comp.add(ir::Prop::True);
+        for (idx, len) in idxs.iter().zip_eq(lens) {
+            let zero = comp.num(0);
+            let idx = idx.expr(comp);
+            let lo = idx.gte(zero, comp);
+            let hi = idx.lt(*len, comp);
+            prop = prop.and(lo.and(hi, comp), comp);
+        }
+        prop
     }
 
     /// For each event binding, we add the constraint that the events uses as arguments
@@ -113,10 +109,7 @@ impl IntervalCheck {
         );
 
         // Ensure that this event's delay is greater than invoked component's event's delay.
-        let prop = comp.add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(
-            this_delay,
-            inv_delay.clone(),
-        )));
+        let prop = this_delay.gte(inv_delay.clone(), comp);
         comp.assert(prop, reason)
     }
 }
@@ -171,13 +164,19 @@ impl Visitor for IntervalCheck {
             let ev = &comp[st_ev];
             let delay = ev.delay.clone();
             let &ir::info::Event { delay_loc, .. } = comp.get(ev.info).into();
-            let param_info = live.idx.map(|idx| {
-                let param = comp.get(idx);
-                let &ir::info::Param { bind_loc, .. } =
-                    comp.get(param.info).into();
-                let zero = comp.num(0);
-                (bind_loc, (zero, live.len))
-            });
+
+            let param_info = live
+                .idxs
+                .iter()
+                .zip_eq(&live.lens)
+                .map(|(param, len)| {
+                    let param = comp.get(*param);
+                    let &ir::info::Param { bind_loc, .. } =
+                        comp.get(param.info).into();
+                    let zero = comp.num(0);
+                    (bind_loc, zero, *len)
+                })
+                .collect_vec();
             let reason = comp.add(
                 ir::info::Reason::bundle_delay(
                     delay_loc,
@@ -187,23 +186,119 @@ impl Visitor for IntervalCheck {
                 )
                 .into(),
             );
-            let prop = comp
-                .add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(delay.clone(), len)));
+            let prop = delay.clone().gte(len, comp);
             let imp = assumes.implies(prop, comp);
             cmds.extend(comp.assert(imp, reason));
         }
         Action::AddBefore(cmds)
     }
 
-    fn invoke(&mut self, idx: ir::InvIdx, data: &mut VisitorData) -> Action {
+    fn invoke(
+        &mut self,
+        inv_idx: ir::InvIdx,
+        data: &mut VisitorData,
+    ) -> Action {
         let comp = &mut data.comp;
+        let inst_idx = inv_idx.inst(comp);
+        let lives = comp.get(inst_idx).lives.clone();
+        let events = &comp[inv_idx].events.clone();
+        let inv_info = comp.get(comp.get(inv_idx).info).as_invoke().cloned();
+
         let mut cmds = Vec::default();
+        // If the liveness is defined, then ensure that the active range of the
+        // event is in range.
+        if !lives.is_empty() {
+            let info = comp.get(comp.get(inst_idx).info).as_instance().cloned();
+            for (i, (ir::Range { start, end }, live)) in
+                lives.iter().zip_eq(events).enumerate()
+            {
+                let ir::EventBind {
+                    delay,
+                    arg: use_start,
+                    ..
+                } = live;
+                let start_after = use_start.gte(*start, comp);
+                let use_end = use_start.add(delay, comp);
+                let end_before = use_end.lte(*end, comp);
+
+                // Location information
+                let info = if let (
+                    Some(ir::info::Instance { event_lives, .. }),
+                    Some(ir::info::Invoke {
+                        event_bind_locs, ..
+                    }),
+                ) = (&info, &inv_info)
+                {
+                    let live_loc = event_lives[i];
+                    let borrow = (*start, *end);
+                    let inv_range = (*use_start, use_end);
+                    ir::Info::assert(ir::info::Reason::event_live(
+                        live_loc,
+                        borrow,
+                        inv_range,
+                        event_bind_locs[i],
+                    ))
+                } else {
+                    ir::Info::empty()
+                };
+
+                let info = comp.add(info);
+                let prop = start_after.and(end_before, comp);
+                let cmd = comp.assert(prop, info);
+                cmds.extend(cmd);
+            }
+        }
+
         // Clone here because we need to pass mutable ownership of the component
-        for eb in comp[idx].events.clone() {
+        for eb in events.clone() {
             if let Some(assert) = self.event_binding(eb, comp) {
                 cmds.push(assert)
             }
         }
+        Action::AddBefore(cmds)
+    }
+
+    fn instance(
+        &mut self,
+        inst_idx: ir::InstIdx,
+        data: &mut VisitorData,
+    ) -> Action {
+        let comp = &mut data.comp;
+        let inst = &comp[inst_idx];
+        let info = comp[inst.info].as_instance().cloned();
+        if inst.lives.is_empty() {
+            return Action::Continue;
+        }
+
+        let mut cmds = Vec::with_capacity(inst.lives.len());
+        for (i, ir::Range { start, end }) in
+            inst.lives.clone().into_iter().enumerate()
+        {
+            // The range of this liveness
+            let len = end.sub(start, comp);
+            let inst = &comp[comp[start].event];
+            let delay = inst.delay.clone();
+            let ev_info = comp[inst.info].as_event().cloned();
+            let prop = delay.clone().gte(len.clone(), comp);
+
+            let reason = if let (
+                Some(ir::info::Instance { event_lives, .. }),
+                Some(ir::info::Event { delay_loc, .. }),
+            ) = (&info, ev_info)
+            {
+                ir::Info::assert(ir::info::Reason::event_live_delay(
+                    event_lives[i],
+                    len,
+                    delay_loc,
+                    delay,
+                ))
+            } else {
+                ir::Info::empty()
+            };
+            let info = comp.add(reason);
+            cmds.extend(comp.assert(prop, info));
+        }
+
         Action::AddBefore(cmds)
     }
 
@@ -219,18 +314,27 @@ impl Visitor for IntervalCheck {
         let in_range = Self::in_range(&dst_t, comp)
             .and(Self::in_range(&src_t, comp), comp);
 
+        // Substitute the parameter used in source with that in dst
+        let binding = ir::Bind::new(
+            dst_t
+                .idxs
+                .iter()
+                // We only substitute the indices that appear in both
+                .zip(&src_t.idxs)
+                .map(|(d, s)| (*d, s.expr(comp)))
+                .collect_vec(),
+        );
+
         let dst_range =
-            if let (Some(dst_idx), Some(src_idx)) = (dst_t.idx, src_t.idx) {
-                let binding = vec![(dst_idx, src_idx.expr(comp))];
-                ir::Subst::new(dst_t.range.clone(), &ir::Bind::new(binding))
-                    .apply(comp)
-            } else {
-                // If either liveness is not indexed, then we can't do the substituion
-                dst_t.range.clone()
-            };
+            ir::Subst::new(dst_t.range.clone(), &binding).apply(comp);
 
         // Assuming that lengths are equal
-        let pre_req = src_t.len.equal(dst_t.len, comp).and(in_range, comp);
+        let one = comp.num(1);
+        let s_len = src_t.lens.iter().fold(one, |acc, l| acc.mul(*l, comp));
+        let d_len = dst_t.lens.iter().fold(one, |acc, l| acc.mul(*l, comp));
+
+        let pre_req = s_len.equal(d_len, comp).and(in_range, comp);
+
         let contains = src_t
             .range
             .start

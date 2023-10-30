@@ -35,7 +35,8 @@ impl<'prog> BuildCtx<'prog> {
         let ast::Instance {
             name,
             component,
-            bindings,
+            params: bindings,
+            lives,
         } = inst;
 
         let comp = self.get_sig(component)?;
@@ -44,6 +45,15 @@ impl<'prog> BuildCtx<'prog> {
             component.clone(),
             self.diag(),
         )?;
+        let mut live_locs = Vec::with_capacity(lives.len());
+        let lives = lives
+            .iter()
+            .map(|l| {
+                let (l, pos) = l.clone().split();
+                live_locs.push(pos);
+                self.range(l)
+            })
+            .collect::<BuildRes<Vec<_>>>()?;
         let inst = ir::Instance {
             comp: comp.idx,
             args: binding
@@ -56,7 +66,9 @@ impl<'prog> BuildCtx<'prog> {
                 name.copy(),
                 component.pos(),
                 name.pos(),
+                live_locs,
             )),
+            lives,
         };
 
         let idx = self.comp().add(inst);
@@ -118,16 +130,12 @@ impl<'prog> BuildCtx<'prog> {
             ..
         } = inv;
         let inst = self.get_inst(instance)?;
-        let info = self.comp().add(ir::Info::invoke(
-            name.copy(),
-            instance.pos(),
-            name.pos(),
-        ));
+        let empty = self.comp().add(ir::Info::empty());
         let inv = self.comp().add(ir::Invoke {
             inst,
             ports: vec![],  // Filled in later
             events: vec![], // Filled in later
-            info,
+            info: empty,    // Filled in later
         });
         // foreign component being invoked
         let foreign_comp = inv.comp(self.comp());
@@ -139,9 +147,17 @@ impl<'prog> BuildCtx<'prog> {
         let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
         let sig = self.get_sig(&comp)?;
 
+        let mut event_bind_locs = Vec::with_capacity(abstract_vars.len());
         // Event bindings
         let event_binding = sig.event_binding(
-            abstract_vars.iter().map(|v| v.inner().clone()),
+            abstract_vars
+                .iter()
+                .map(|v| {
+                    let (v, pos) = v.clone().split();
+                    event_bind_locs.push(pos);
+                    v
+                })
+                .collect_vec(),
             instance,
             self.diag(),
         )?;
@@ -163,9 +179,19 @@ impl<'prog> BuildCtx<'prog> {
             def_ports.push(self.port(resolved, owner)?);
         }
 
+        let info = self.comp().add(ir::Info::invoke(
+            name.copy(),
+            instance.pos(),
+            name.pos(),
+            event_bind_locs,
+        ));
+        let inv = self.comp().get_mut(inv);
+        // Update the information
+        inv.info = info;
         // Add the inputs from the invoke. The outputs are added in the second
         // pass over the AST.
-        self.comp().get_mut(inv).ports.extend(def_ports);
+        inv.ports.extend(def_ports);
+
         Ok(())
     }
 
@@ -394,10 +420,15 @@ impl<'prog> BuildCtx<'prog> {
                 // The bundle type uses a fake bundle index and has a length of 1.
                 // We don't need to push a new scope because this type is does not
                 // bind any new parameters.
+                let p_name = self.gen_name();
                 let live = self.try_with_scope(|ctx| {
                     Ok(ir::Liveness {
-                        idx: None, // This parameter is unused
-                        len: ctx.comp().num(1),
+                        idxs: vec![ctx.param(
+                            p_name.into(),
+                            // Updated after the port is constructed
+                            ir::ParamOwner::bundle(ir::PortIdx::UNKNOWN),
+                        )], // This parameter is unused
+                        lens: vec![ctx.comp().num(1)],
                         range: ctx.range(liveness.take())?,
                     })
                 })?;
@@ -428,12 +459,20 @@ impl<'prog> BuildCtx<'prog> {
                 // Construct the bundle type in a new scope.
                 let live = self.try_with_scope(|ctx| {
                     Ok(ir::Liveness {
-                        idx: Some(ctx.param(
-                            // Updated after the port is constructed
-                            idx,
-                            ir::ParamOwner::bundle(PortIdx::UNKNOWN),
-                        )),
-                        len: ctx.expr(len.take())?,
+                        idxs: idx
+                            .into_iter()
+                            .map(|idx| {
+                                ctx.param(
+                                    // Updated after the port is constructed
+                                    idx,
+                                    ir::ParamOwner::bundle(PortIdx::UNKNOWN),
+                                )
+                            })
+                            .collect_vec(),
+                        lens: len
+                            .into_iter()
+                            .map(|len| ctx.expr(len.take()))
+                            .collect::<BuildRes<Vec<_>>>()?,
                         range: ctx.range(liveness.take())?,
                     })
                 })?;
@@ -451,7 +490,8 @@ impl<'prog> BuildCtx<'prog> {
         let is_sig_port = p.is_sig();
         let idx = self.comp().add(p);
         // Fixup the liveness index parameter's owner
-        if let Some(p) = self.comp().get(idx).live.idx {
+        let idxs = self.comp().get(idx).live.idxs.clone();
+        for p in idxs {
             let param = self.comp().get_mut(p);
             param.owner = ir::ParamOwner::bundle(idx);
         }
@@ -516,8 +556,11 @@ impl<'prog> BuildCtx<'prog> {
                     let owner = OwnedPort::Local(name);
                     self.get_port(&owner)?
                 };
-                let (start, end) = self.access(access.take())?;
-                ir::Access { port, start, end }
+                let ranges = access
+                    .into_iter()
+                    .map(|a| self.access(a.take()))
+                    .collect::<BuildRes<Vec<_>>>()?;
+                ir::Access { port, ranges }
             }
             ast::Port::InvBundle {
                 invoke,
@@ -527,8 +570,11 @@ impl<'prog> BuildCtx<'prog> {
                 let inv = self.get_inv(&invoke)?;
                 let owner = OwnedPort::Inv(inv, dir, port);
                 let port = self.get_port(&owner)?;
-                let (start, end) = self.access(access.take())?;
-                ir::Access { port, start, end }
+                let ranges = access
+                    .into_iter()
+                    .map(|a| self.access(a.take()))
+                    .collect::<BuildRes<Vec<_>>>()?;
+                ir::Access { port, ranges }
             }
         };
         Ok(acc)
@@ -777,12 +823,14 @@ impl<'prog> BuildCtx<'prog> {
             let pidx = self.port(resolved.take(), owner)?;
             self.comp().get_mut(inv).ports.push(pidx);
 
-            let end = self.comp()[pidx].live.len;
-            let dst = ir::Access {
-                port: pidx,
-                start: self.comp().num(0),
-                end,
-            };
+            let zero = self.comp().num(0);
+            let ranges = self.comp()[pidx]
+                .live
+                .lens
+                .iter()
+                .map(|end| (zero, *end))
+                .collect_vec();
+            let dst = ir::Access { port: pidx, ranges };
 
             connects.push(
                 ir::Connect {
@@ -972,8 +1020,11 @@ impl<'prog> BuildCtx<'prog> {
             .comp()
             .ports()
             .iter()
-            .map(|(_, p)| (p.live.idx, p.live.len))
+            .flat_map(|(_, p)| {
+                p.live.idxs.iter().copied().zip(p.live.lens.iter().copied())
+            })
             .collect_vec();
+
         // Add assumptions for range of bundle-bound indices
         let reason = self.comp().add(
             ir::info::Reason::misc(
@@ -984,10 +1035,6 @@ impl<'prog> BuildCtx<'prog> {
         );
 
         for (idx, len) in ports {
-            let Some(idx) = idx else {
-                // If there is no parameter, we don't need assumptions
-                continue;
-            };
             let idx = idx.expr(self.comp());
             let start = idx.gte(self.comp().num(0), self.comp());
             let end = idx.lt(len, self.comp());

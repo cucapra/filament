@@ -1,3 +1,5 @@
+use crate::DisplayCtx;
+
 use super::{
     AddCtx, Component, Ctx, EventIdx, Expr, ExprIdx, Foldable, ParamIdx,
     TimeIdx,
@@ -32,6 +34,21 @@ impl TimeIdx {
         }
     }
 
+    /// Add a [TimeSub] to a time expression
+    pub fn add(self, ts: &TimeSub, ctx: &mut Component) -> TimeIdx {
+        match ts {
+            TimeSub::Unit(e) => {
+                let Time { event, offset } = ctx.get(self).clone();
+                let offset = offset.add(*e, ctx);
+                ctx.add(Time { event, offset })
+            }
+            TimeSub::Sym { .. } => {
+                todo!("Cannot add `{}' and `{}'. Please report this as a bug with the program that triggered it.", ctx.display(self), ctx.display(ts));
+            }
+        }
+    }
+
+    /// Get the event associated with the time expression
     pub fn event(self, ctx: &impl Ctx<Time>) -> EventIdx {
         let time = ctx.get(self);
         time.event
