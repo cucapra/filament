@@ -381,6 +381,7 @@ impl MonoSig {
                  interface_ports,
                  params,
                  events,
+                 gen_tool,
              }| {
                 let params = if underlying.is_ext() {
                     params
@@ -407,6 +408,8 @@ impl MonoSig {
                             (self.event_map.get(ev.ul()).get(), *id)
                         })
                         .collect(),
+                    // Things do not need to be generated after monomorphize
+                    gen_tool: None,
                 }
             },
         ));

@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::{Instance, Tool, ToolOutput};
-use std::{collections::HashMap, path::PathBuf, process::Command};
+use std::{collections::HashMap, fs, path::PathBuf, process::Command};
 
 /// The main execution management engine for Filament's `gen` framework.
 /// Manages registering new tools and executing the tools to generate particular instances.
@@ -24,6 +24,9 @@ pub struct GenExec {
 
 impl GenExec {
     pub fn new(output_dir: PathBuf, dry_run: bool) -> Self {
+        if !output_dir.exists() {
+            std::fs::create_dir_all(output_dir.clone()).unwrap();
+        }
         GenExec {
             tools: HashMap::default(),
             generated: HashMap::default(),
@@ -40,6 +43,13 @@ impl GenExec {
     /// Check if a tool is registered
     pub fn has_tool(&self, tool: &str) -> bool {
         self.tools.contains_key(tool)
+    }
+
+    /// Register a tool by reading its definition from a file
+    pub fn register_tool_from_file(&mut self, path: PathBuf) {
+        let desc = fs::read_to_string(path).unwrap();
+        let tool: Tool = toml::from_str(&desc).unwrap();
+        self.register_tool(tool)
     }
 
     /// Register a new tool

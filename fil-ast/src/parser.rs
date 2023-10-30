@@ -37,8 +37,8 @@ lazy_static::lazy_static! {
         .op(Op::infix(Rule::op_mul, Assoc::Left) | Op::infix(Rule::op_div, Assoc::Left) | Op::infix(Rule::op_mod, Assoc::Left));
 }
 
-pub enum ExtOrComp {
-    Ext((String, Vec<ast::Signature>)),
+pub enum BodyEl {
+    Ext(ast::Extern),
     Comp(ast::Component),
 }
 
@@ -817,18 +817,18 @@ impl FilamentParser {
         )
     }
 
-    fn external(input: Node) -> ParseResult<(String, Vec<ast::Signature>)> {
+    fn external(input: Node) -> ParseResult<ast::Extern> {
         Ok(match_nodes!(
             input.into_children();
-            [string_lit(path), signature(sigs)..] => (path, sigs.collect()),
+            [string_lit(path), signature(sigs)..] => ast::Extern::new(path, sigs.collect(), false),
         ))
     }
 
-    fn comp_or_ext(input: Node) -> ParseResult<ExtOrComp> {
+    fn comp_or_ext(input: Node) -> ParseResult<BodyEl> {
         Ok(match_nodes!(
             input.into_children();
-            [external(sig)] => ExtOrComp::Ext(sig),
-            [component(comp)] => ExtOrComp::Comp(comp),
+            [external(sig)] => BodyEl::Ext(sig),
+            [component(comp)] => BodyEl::Comp(comp),
         ))
     }
 
@@ -843,16 +843,12 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.into_children();
             [imports(imps), comp_or_ext(mixed).., _EOI] => {
-                let mut namespace = ast::Namespace {
-                    imports: imps,
-                    externs: vec![],
-                    components: vec![],
-                    toplevel: "main".to_string(),
-                };
+                let mut namespace = ast::Namespace::new("main".to_string());
+                namespace.imports = imps;
                 for m in mixed {
                     match m {
-                        ExtOrComp::Ext(sig) => namespace.externs.push(sig),
-                        ExtOrComp::Comp(comp) => namespace.components.push(comp),
+                        BodyEl::Ext(sig) => namespace.externs.push(sig),
+                        BodyEl::Comp(comp) => namespace.components.push(comp),
                     }
                 }
                 namespace

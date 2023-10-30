@@ -1,0 +1,10 @@
+modules = [
+    { name = "FPAdd", parameters = ["10", "20"] },
+    # { name = "FPMul", parameters = [
+    #     "8",
+    #     "4",
+    #     "4",
+    # ] },
+    { name = "OutputIEEE", parameters = ["23", "8", "23", "8"] },
+    { name = "InputIEEE", parameters = ["23", "8", "23", "8"] },
+]

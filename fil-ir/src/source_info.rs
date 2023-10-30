@@ -14,6 +14,8 @@ pub struct InterfaceSrc {
     pub events: SparseInfoMap<Event, ast::Id>,
     /// Mapping from event indices the source port that implements their interface
     pub interface_ports: SparseInfoMap<Event, ast::Id>,
+    /// The external tool that generates this module during compilation
+    pub gen_tool: Option<String>,
 }
 
 impl InterfaceSrc {
@@ -24,6 +26,7 @@ impl InterfaceSrc {
             params: SparseInfoMap::default(),
             interface_ports: SparseInfoMap::default(),
             events: SparseInfoMap::default(),
+            gen_tool: None,
         }
     }
 }

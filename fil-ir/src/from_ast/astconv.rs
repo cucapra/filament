@@ -1025,10 +1025,12 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
         // pull signatures out of externals
         .externs
         .into_iter()
-        .flat_map(|(name, comps)| {
-            comps.into_iter().map(move |comp| (name.clone(), comp))
+        // track (extern location / gen tool, signature, body)
+        .flat_map(|ast::Extern { comps, path, gen }| {
+            comps
+                .into_iter()
+                .map(move |comp| (Some(path.clone()), comp, None))
         })
-        .map(|(name, sig)| (Some(name), sig, None))
         // add signatures of components as well as their command bodies
         .chain(
             ns.components
