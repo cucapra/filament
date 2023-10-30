@@ -1,6 +1,7 @@
 use crate::cmdline;
 use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
 use crate::log_time;
+use crate::utils::HoistFacts;
 use codespan_reporting::diagnostic::Diagnostic;
 use codespan_reporting::{diagnostic as cr, term};
 use easy_smt as smt;
@@ -547,7 +548,7 @@ impl Visitor for Discharge {
     }
 
     fn start(&mut self, data: &mut VisitorData) -> Action {
-        self.to_prove = crate::utils::HoistFacts::hoist(&mut data.comp);
+        self.to_prove = HoistFacts::hoist(&mut data.comp);
 
         for fact in &self.to_prove {
             log::debug!("Checking {}", data.comp.display(fact.prop));
