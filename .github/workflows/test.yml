@@ -18,18 +18,6 @@ jobs:
           repository: cucapra/filament
           ref: ${{ github.sha }}
 
-      - name: Configure fud
-        working-directory: /home
-        run: |
-          # Copy fud configuration
-          mkdir -p $HOME/.config
-          cp -r /root/.config/* $HOME/.config
-          # Register filament relevant stages
-          python3 -m pip install cocotb find_libpython pytest
-          fud register filament -p "${GITHUB_WORKSPACE}/fud/filament.py"
-          fud config stages.filament.exec "${GITHUB_WORKSPACE}/target/debug/filament"
-          fud config stages.filament.library "${GITHUB_WORKSPACE}"
-
       - name: Build Filament
         uses: actions-rs/cargo@v1
         with:
