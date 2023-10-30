@@ -8,6 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/cucapra/filament:latest
     steps:
+      - name: Copy fud configuration
+        run: |
+          mkdir -p $HOME/.config
+          cp -r /root/.config/* $HOME/.config
       - name: Checkout commit that triggered run
         uses: actions/checkout@v3
         with:
