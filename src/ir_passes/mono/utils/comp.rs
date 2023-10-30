@@ -4,15 +4,12 @@ use fil_ir::{
     Interned, MutCtx,
 };
 
-use super::{Base, IntoBase, Underlying};
+use super::{Base, IntoBase, IntoUdl, Underlying};
 
 #[derive(Clone)]
 pub struct UnderlyingComp<'a>(&'a ir::Component);
 
 impl<'a> UnderlyingComp<'a> {
-    pub fn comp(&self) -> &'a ir::Component {
-        self.0
-    }
     pub fn new(comp: &'a ir::Component) -> Self {
         Self(comp)
     }
@@ -42,6 +39,18 @@ impl<'a> UnderlyingComp<'a> {
     }
     pub fn exist_params(&self) -> impl Iterator<Item = ir::ParamIdx> + '_ {
         self.0.exist_params()
+    }
+
+    pub fn relevant_vars(
+        &self,
+        prop: Underlying<ir::Prop>,
+    ) -> (Vec<Underlying<ir::Param>>, Vec<Underlying<ir::Event>>) {
+        let (params, events) = prop.idx().relevant_vars(self.0);
+
+        (
+            params.into_iter().map(|p| p.ul()).collect(),
+            events.into_iter().map(|e| e.ul()).collect(),
+        )
     }
 }
 

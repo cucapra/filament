@@ -331,12 +331,11 @@ impl MonoDeferred<'_, '_> {
 
         let prop = prop.ul();
         log::debug!("Fact: {}", self.underlying.display(prop));
-        let (params, events) = prop.idx().relevant_vars(self.underlying.comp());
+        let (params, events) = self.underlying.relevant_vars(prop);
         assert!(events.is_empty(), "Facts cannot mention events.");
 
         if !params
             .into_iter()
-            .map(|p| p.ul())
             .all(|idx| self.monosig.binding.get(&idx).is_some())
         {
             // Discards the assertion if it references parameters that can't be resolved (bundle parameters, etc)
