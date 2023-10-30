@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 /// The filament gen tool
 #[derive(argh::FromArgs)]
 pub struct Opts {
@@ -15,4 +17,10 @@ pub struct Opts {
         default = "log::LevelFilter::Warn"
     )]
     pub log_level: log::LevelFilter,
+    /// output directory for the generated files
+    #[argh(option, short = 'o')]
+    pub out_dir: PathBuf,
+    /// print out commands to run instead of running them
+    #[argh(switch, short = 'n')]
+    pub dry_run: bool,
 }

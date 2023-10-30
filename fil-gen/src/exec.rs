@@ -3,7 +3,6 @@ use itertools::Itertools;
 use crate::{Instance, Tool, ToolOutput};
 use std::{collections::HashMap, path::PathBuf, process::Command};
 
-#[derive(Default)]
 /// The main execution management engine for Filament's `gen` framework.
 /// Manages registering new tools and executing the tools to generate particular instances.
 pub struct GenExec {
@@ -24,6 +23,15 @@ pub struct GenExec {
 }
 
 impl GenExec {
+    pub fn new(output_dir: PathBuf, dry_run: bool) -> Self {
+        GenExec {
+            tools: HashMap::default(),
+            generated: HashMap::default(),
+            output_dir,
+            dry_run,
+        }
+    }
+
     /// Should we dry run instead of executing commands?
     pub fn dry_run(&mut self, dry_run: bool) {
         self.dry_run = dry_run;
@@ -41,6 +49,7 @@ impl GenExec {
             "Tool already registered: `{}`",
             tool.name
         );
+        tool.validate();
         log::info!("Registering tool: `{}`", tool.name);
         self.tools.insert(tool.name.clone(), tool);
     }

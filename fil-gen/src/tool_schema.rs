@@ -10,7 +10,8 @@ pub struct Tool {
     pub name: String,
     /// Location of the tool binary
     pub path: String,
-    /// The tool requires $OUT_FILE to set and generates the verilog module in it
+    /// The tool can take ${OUT_FILE} parameter and use that generate the module
+    /// in the given file.
     pub requires_out_file: Option<bool>,
     /// Mapping that is globablly available to all modules
     pub globals: HashMap<String, String>,
@@ -22,6 +23,47 @@ impl Tool {
     /// Return a module with the given name
     pub fn get_module(&self, name: &str) -> Option<&Module> {
         self.modules.get(name)
+    }
+
+    /// Validate the definition of the tool
+    pub fn validate(&self) {
+        let path: PathBuf = self.path.as_str().into();
+        assert!(
+            path.exists(),
+            "tool `{}' does not exist at path `{}'",
+            self.name,
+            self.path
+        );
+
+        let mut params = self.globals.clone().into_iter().collect_vec();
+        // The NAME_FORMAT parameter is always available.
+        params.push(("NAME_FORMAT".into(), "".into()));
+        if let Some(true) = self.requires_out_file {
+            params.push(("OUT_FILE".into(), "".into()));
+        }
+
+        for (name, m) in &self.modules {
+            // Fake bindings for parameters to make sure we can parse things
+            let params = m
+                .parameters
+                .iter()
+                .map(|p| (p.clone(), "".to_string()))
+                .chain(params.clone())
+                .collect_vec();
+            if let Err(e) = m.name(&params) {
+                panic!(
+                    "[tool `{}'] Invalid name format for module `{name}': {e}",
+                    self.name
+                );
+            }
+
+            if let Err(e) = m.cli(&params) {
+                panic!(
+                    "[tool `{}'] Invalid CLI command for module `{name}': {e}",
+                    self.name
+                );
+            }
+        }
     }
 }
 

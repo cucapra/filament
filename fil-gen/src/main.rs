@@ -4,7 +4,6 @@ use std::fs;
 fn main() {
     let opts: fil_gen::Opts = argh::from_env();
 
-    let mut gen = GenExec::default();
     env_logger::Builder::from_default_env()
         .format_timestamp(None)
         .format_module_path(false)
@@ -12,6 +11,7 @@ fn main() {
         .filter_level(opts.log_level)
         .target(env_logger::Target::Stderr)
         .init();
+    let mut gen = GenExec::new(opts.out_dir, opts.dry_run);
 
     // Deserialize the tool description
     let desc = fs::read_to_string(opts.tool).unwrap();
