@@ -107,10 +107,15 @@ impl Visitor for BuildDomination {
         Action::Change(vec![])
     }
 
+    fn let_(&mut self, let_: &mut ir::Let, _: &mut VisitorData) -> Action {
+        self.plets.last_mut().unwrap().push(let_.clone().into());
+        // Remove the let
+        Action::Change(vec![])
+    }
+
     fn start_cmds(&mut self, _: &mut Vec<ir::Command>, _: &mut VisitorData) {
         self.start_scope();
     }
-
     fn end_cmds(&mut self, cmds: &mut Vec<ir::Command>, d: &mut VisitorData) {
         let (inst, invs, plets) = self.end_scope(&d.comp);
         // Insert instances and then invocations to the start of the scope.
