@@ -408,14 +408,14 @@ pub enum Reason {
     },
     // =============== Generic Constraints =======================
     /// A simple reason
-    Misc {
-        reason: String,
-        def_loc: GPosIdx,
-    },
+    Misc { reason: String, def_loc: GPosIdx },
 
-    // This reason was generated from another reaason
+    /// This reason was generated from another reaason
     Generated {
-        reason: Box<Reason>,
+        /// Why this reason was generated
+        reason: String,
+        /// The initial reason that was duplicated
+        src: Box<Reason>,
     },
 }
 
@@ -576,9 +576,10 @@ impl Reason {
         }
     }
 
-    pub fn generated(reason: Reason) -> Self {
+    pub fn generated(reason: String, src: Reason) -> Self {
         Self::Generated {
-            reason: Box::new(reason),
+            reason,
+            src: Box::new(src),
         }
     }
 }
@@ -829,7 +830,9 @@ impl Reason {
                     .with_message("event's delay must be greater than the instance's borrow length")
                     .with_labels(vec![live, ev])
             }
-            Reason::Generated { reason } => reason.diag(ctx),
+            Reason::Generated { reason, src } => {
+                src.diag(ctx).with_notes(vec![reason.clone()])
+            }
         }
     }
 }
