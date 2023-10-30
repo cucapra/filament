@@ -6,35 +6,13 @@ jobs:
   compiler:
     name: Test Compiler
     runs-on: ubuntu-latest
-    container: ghcr.io/cucapra/calyx:0.4.0
+    container: ghcr.io/cucapra/filament:latest
     steps:
-      - name: Install dependencies
-        run: |
-          apt-get install -y unzip
-      - name: Install z3
-        run: |
-          wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x64-glibc-2.31.zip --output-document z3.zip
-            unzip z3.zip
-            chmod +x z3-4.12.2-x64-glibc-2.31/bin/z3
-            mv z3-4.12.2-x64-glibc-2.31/bin/z3 /usr/local/bin
-      - name: Checkout commit that triggered run
+      - name: Checkout commit that triggered runa
         uses: actions/checkout@v3
         with:
           repository: cucapra/filament
           ref: ${{ github.sha }}
-
-      - name: Configure fud
-        working-directory: /home
-        run: |
-          # Copy fud configuration
-          mkdir -p $HOME/.config
-          cp -r /root/.config/* $HOME/.config
-          # Register filament relevant stages
-          python3 -m pip install cocotb find_libpython pytest
-          fud register filament -p "${GITHUB_WORKSPACE}/fud/filament.py"
-          fud config stages.filament.exec "${GITHUB_WORKSPACE}/target/debug/filament"
-          fud config stages.filament.library "${GITHUB_WORKSPACE}"
-
       - name: Build Filament
         uses: actions-rs/cargo@v1
         with:
