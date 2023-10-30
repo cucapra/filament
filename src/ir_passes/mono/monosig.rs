@@ -205,6 +205,8 @@ impl MonoSig {
             | ir::info::Reason::BundleDelay { .. }
             | ir::info::Reason::WellFormedInterval { .. }
             | ir::info::Reason::EventTrig { .. }
+            | ir::info::Reason::EventLive { .. }
+            | ir::info::Reason::EventLiveDelay { .. }
             | ir::info::Reason::Misc { .. } => reason.clone(),
         }
     }
@@ -624,6 +626,7 @@ impl MonoSig {
             args,
             params,
             info,
+            lives: live,
         } = underlying.get(inst);
 
         // Monomorphize the component
@@ -654,11 +657,16 @@ impl MonoSig {
         };
 
         // this is an extern, so keep the params - need to get them into the new component though
+        let lives = live
+            .iter()
+            .map(|l| self.range(underlying, pass, l))
+            .collect_vec();
         let new_inst = ir::Instance {
             comp: mono_comp.get(),
             args: conc_params,
             info: self.info(underlying, pass, info.ul()).get(),
             params: Vec::new(),
+            lives,
         };
 
         let new_idx = self.base.add(new_inst);

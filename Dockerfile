@@ -1,8 +1,8 @@
 FROM ghcr.io/cucapra/calyx:0.4.0
 
-# Install apt dependencies
+# Install apt packages
 RUN apt-get update -y && \
-    apt-get install -y z3
+  apt-get -y install unzip
 
 # Install CVC5
 WORKDIR /home
@@ -11,6 +11,15 @@ RUN wget https://github.com/cvc5/cvc5/releases/download/cvc5-1.0.6/cvc5-Linux --
   chmod +x cvc5 && \
   mv cvc5 /root/.local/bin
 
+# Install z3
+WORKDIR /home
+RUN mkdir z3
+WORKDIR /home/z3
+RUN wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x64-glibc-2.31.zip --output-document z3.zip && \
+  unzip z3.zip
+ENV PATH=$PATH:/home/z3/z3-4.12.2-x64-glibc-2.31/bin/
+
+# Add filament
 WORKDIR /home
 ADD . filament
 # Build the compiler
@@ -19,4 +28,5 @@ WORKDIR /home/filament
 ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 RUN cargo build --all
 # Set up fud
-RUN fud register -p fud/filament.py filament
+RUN python3 -m pip install find-libpython && \
+  fud register -p fud/filament.py filament
