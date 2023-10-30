@@ -207,7 +207,13 @@ impl MonoSig {
             | ir::info::Reason::EventTrig { .. }
             | ir::info::Reason::EventLive { .. }
             | ir::info::Reason::EventLiveDelay { .. }
-            | ir::info::Reason::Misc { .. } => reason.clone(),
+            | ir::info::Reason::Misc { .. }
+            | ir::info::Reason::Generated { .. } => {
+                ir::info::Reason::generated(
+                    "Elaborated during monomorphization.".to_string(),
+                    reason.clone(),
+                )
+            }
         }
     }
 
