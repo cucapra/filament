@@ -331,8 +331,7 @@ impl MonoDeferred<'_, '_> {
 
         let prop = prop.ul();
         log::debug!("Fact: {}", self.underlying.display(prop));
-        let (params, events) = self.underlying.relevant_vars(prop);
-        assert!(events.is_empty(), "Facts cannot mention events.");
+        let (params, _) = self.underlying.relevant_vars(prop);
 
         if !params
             .into_iter()
