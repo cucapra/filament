@@ -8,17 +8,18 @@ extern "signed.sv" {
    ) where 'L > 'G, WIDTH > 0;
 }
 
-comp SignedConst[WIDTH, VALUE]<'G: 1>() -> (
-   out: ['G, 'G + 1] WIDTH,
+comp SignedConst[WIDTH, VALUE, ?D=1]<'G: D>() -> (
+   out: ['G, 'G+D] WIDTH,
 ) where
-   WIDTH > 0
+   WIDTH > 0,
+   D > 0
 {
    if VALUE >= pow2(WIDTH-1) {
-      c := new Const[WIDTH, pow2(WIDTH) - VALUE]<'G>();
-      negc := new Neg[WIDTH]<'G>(c.out);
+      c := new Const[WIDTH, pow2(WIDTH) - VALUE]<'G, 'G+D>();
+      negc := new Neg[WIDTH]<'G, 'G+D>(c.out);
       out = negc.out;
    } else {
-      posc := new Const[WIDTH, VALUE]<'G>();
+      posc := new Const[WIDTH, VALUE]<'G, 'G+D>();
       out = posc.out;
    }
 }
