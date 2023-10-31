@@ -1,6 +1,6 @@
 use super::{
     Base, CompKey, InstanceInfo, IntoBase, IntoUdl, MonoDeferred, MonoSig,
-    UnderlyingComp,
+    Underlying, UnderlyingComp,
 };
 use fil_ir::{self as ir, Ctx, IndexStore};
 use ir::AddCtx;
@@ -92,7 +92,9 @@ impl<'ctx> Monomorphize<'ctx> {
     /// Returns a reference to the instance info for a component.
     /// **Panics** if the instance does not exist.
     pub fn inst_info(&self, comp_key: &CompKey) -> &InstanceInfo {
-        self.inst_info.get(comp_key).unwrap()
+        self.inst_info.get(comp_key).unwrap_or_else(|| {
+            unreachable!("instance not monormorphized: {comp_key}")
+        })
     }
 
     /// Returns a mutable reference to the instance info for a component or a
@@ -101,24 +103,65 @@ impl<'ctx> Monomorphize<'ctx> {
         self.inst_info.entry(comp_key).or_default()
     }
 
+    pub fn ext(
+        &mut self,
+        comp: Underlying<ir::Component>,
+        key: CompKey,
+    ) -> Base<ir::Component> {
+        let underlying = self.old.get(comp.idx());
+        let Some(filename) = self.old.get_filename(comp.idx()) else {
+            unreachable!("external component has no filename")
+        };
+
+        // Clone the component
+        let n_comp = underlying.clone();
+
+        // Add information for the component
+        let info = self.inst_info_mut(key.clone());
+        for (port, _) in n_comp.ports().iter() {
+            let old_port = port.ul();
+            let new_port = port.base();
+            info.add_port(old_port, new_port);
+        }
+        for (ev, _) in n_comp.events().iter() {
+            let old_ev = ev.ul();
+            let new_ev = ev.base();
+            info.add_event(old_ev, new_ev);
+        }
+
+        // Add component information to processed map
+        let idx = self.ctx.add(n_comp).base();
+        self.processed.insert(key, idx);
+
+        // Add the component to the filemap
+        self.ext_map.entry(filename).or_default().push(idx.get());
+
+        idx
+    }
+
     /// Monomorphize a component and return its index in the new context.
-    pub fn monomorphize(&mut self, comp_key: CompKey) -> Base<ir::Component> {
-        log::debug!("Monomorphizing `{}'", comp_key.comp.idx());
-        let CompKey { comp, params } = comp_key;
+    pub fn monomorphize(&mut self, ck: CompKey) -> Base<ir::Component> {
+        log::debug!("Monomorphizing `{}'", ck.comp.idx());
+        let CompKey { comp, params } = ck;
         let underlying = self.old.get(comp.idx());
 
-        let key: CompKey = if underlying.is_ext {
+        let n_ck: CompKey = if underlying.is_ext {
             (comp, vec![]).into()
         } else {
             (comp, params.clone()).into()
         };
 
-        // If we've already processed this or queued this for processing, return the component
-        if let Some(&name) = self.processed.get(&key) {
+        // If we've already processed this, return the component
+        if let Some(&name) = self.processed.get(&n_ck) {
             return name;
         }
 
-        // make a MonoSig
+        // Copy the component signature if it is an external and return it.
+        if underlying.is_ext {
+            return self.ext(comp, n_ck);
+        }
+
+        // Otherwise monomorphize the definition of the component
         let monosig = MonoSig::new(underlying, comp, underlying.is_ext, params);
 
         // the component whose signature we want to monomorphize
@@ -131,18 +174,7 @@ impl<'ctx> Monomorphize<'ctx> {
         .comp();
 
         let new_comp = self.ctx.add(mono_comp).base();
-        self.processed.insert(key, new_comp);
-
-        // `Some` if an extern, `None` if not
-        if let Some(filename) = self.old.get_filename(comp.idx()) {
-            if let Some(exts) = self.ext_map.get(&filename) {
-                let mut exts = exts.clone();
-                exts.push(new_comp.get());
-                self.ext_map.insert(filename, exts.to_vec());
-            } else {
-                self.ext_map.insert(filename, vec![new_comp.get()]);
-            }
-        }
+        self.processed.insert(n_ck, new_comp);
 
         // return the `base` index so we can update the instance
         new_comp
