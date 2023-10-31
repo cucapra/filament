@@ -38,13 +38,14 @@ impl MonoDeferred<'_, '_> {
     // XXX(rachit): Why does this function need to do anything to the signature
     // of external components instead of just wholesale copying them?
     pub fn comp(mut self) -> ir::Component {
+        assert!(!self.underlying.is_ext(), "cannot monomorphize external");
+
         // Events can be recursive, so do a pass over them to generate the new idxs now
         // and then fill them in later
         let comp_k: CompKey = self.comp_key();
 
         let monosig = &mut self.monosig;
         let ul = &self.underlying;
-        let is_ext = ul.is_ext();
         let pass = &mut self.pass;
 
         for (idx, event) in ul.events().iter() {
@@ -54,47 +55,16 @@ impl MonoDeferred<'_, '_> {
                 .add_event(idx.ul(), new_idx);
         }
 
-        // Directly add expressions and parameters for external components. For
-        // non-external components, the only parameters that will remain in the
-        // component are the bundle parameters.
-        if is_ext {
-            // We can copy over the underlying expressions because we're not
-            // going to substitute anything.
-            for (_, expr) in ul.exprs().iter() {
-                monosig.base.add(expr.clone());
-            }
-
-            // Add all parameters because we're not going to substitute them
-            for (idx, param) in ul.params().iter() {
-                let ir::Param { owner, info } = param;
-                let info = info.ul();
-                let param = ir::Param {
-                    owner: owner.clone(),
-                    info: monosig.info(ul, pass, info).get(),
-                };
-                let new_idx = monosig.base.add(param);
-                monosig.param_map.push(idx.ul(), new_idx);
-            }
-        }
-
         // Monomorphize port in the signature. Other ports are monomorphized
         // while traversing commands.
-        if is_ext {
-            for (idx, port) in ul.ports().iter() {
-                if port.is_sig() {
-                    monosig.ext_port(ul, pass, idx.ul());
-                }
-            }
-        } else {
-            for (idx, port) in ul.ports().iter() {
-                if port.is_sig() {
-                    // Only monomorphize the definition without the data.
-                    let port = monosig.port_def_partial(ul, pass, idx.ul());
-                    // Add these ports to the global port information for this
-                    // instance because other components need this information
-                    // to resolve foreigns.
-                    pass.inst_info_mut(comp_k.clone()).add_port(idx.ul(), port)
-                }
+        for (idx, port) in ul.ports().iter() {
+            if port.is_sig() {
+                // Only monomorphize the definition without the data.
+                let port = monosig.port_def_partial(ul, pass, idx.ul());
+                // Add these ports to the global port information for this
+                // instance because other components need this information
+                // to resolve foreigns.
+                pass.inst_info_mut(comp_k.clone()).add_port(idx.ul(), port)
             }
         }
 
@@ -110,32 +80,26 @@ impl MonoDeferred<'_, '_> {
             self.monosig.base.extend_cmds(cmd);
         }
 
-        if !is_ext {
-            // Extend the binding with existential parameters and monomorphize signature port data
-            let info = self.pass.inst_info(&comp_k);
-            for param in self.underlying.exist_params() {
-                let param = param.ul();
-                let Some(v) = info.get_exist_val(param) else {
-                    unreachable!(
+        // Extend the binding with existential parameters and monomorphize signature port data
+        let info = self.pass.inst_info(&comp_k);
+        for param in self.underlying.exist_params() {
+            let param = param.ul();
+            let Some(v) = info.get_exist_val(param) else {
+                unreachable!(
                         "No binding for existential parameter `{}'. Is the body missing an `exist` assignment?",
                         self.underlying.display(param)
                     )
-                };
-                self.monosig.binding.push(param, v);
-            }
+            };
+            self.monosig.binding.push(param, v);
+        }
 
-            for (idx, _) in
-                self.underlying.ports().iter().filter(|(_, p)| p.is_sig())
-            {
-                let port_key = (None, idx.ul());
-                let base = self.monosig.port_map[&port_key];
-                self.monosig.port_data(
-                    &self.underlying,
-                    self.pass,
-                    idx.ul(),
-                    base,
-                );
-            }
+        for (idx, _) in
+            self.underlying.ports().iter().filter(|(_, p)| p.is_sig())
+        {
+            let port_key = (None, idx.ul());
+            let base = self.monosig.port_map[&port_key];
+            self.monosig
+                .port_data(&self.underlying, self.pass, idx.ul(), base);
         }
 
         // Handle event delays after monomorphization because delays might mention existential parameters.

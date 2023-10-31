@@ -104,21 +104,31 @@ impl<'ctx> Monomorphize<'ctx> {
     /// Monomorphize a component and return its index in the new context.
     pub fn monomorphize(&mut self, comp_key: CompKey) -> Base<ir::Component> {
         log::debug!("Monomorphizing `{}'", comp_key.comp.idx());
-        let CompKey { comp, params } = comp_key;
+        let comp = comp_key.comp;
         let underlying = self.old.get(comp.idx());
 
-        let key: CompKey = if underlying.is_ext {
-            (comp, vec![]).into()
-        } else {
-            (comp, params.clone()).into()
-        };
-
-        // If we've already processed this or queued this for processing, return the component
-        if let Some(&name) = self.processed.get(&key) {
+        // If we've already processed this, return the component
+        if let Some(&name) = self.processed.get(&comp_key) {
             return name;
         }
 
+        // Copy the component signature if it is an external and return it.
+        if underlying.is_ext {
+            let Some(filename) = self.old.get_filename(comp.idx()) else {
+                unreachable!("external component has no filename")
+            };
+
+            // Clone the component
+            let n_comp = underlying.clone();
+            let idx = self.ctx.add(n_comp);
+
+            // Add the component to the filemap
+            self.ext_map.entry(filename).or_default().push(idx);
+            return idx.base();
+        }
+
         // make a MonoSig
+        let CompKey { comp, params } = comp_key.clone();
         let monosig = MonoSig::new(underlying, comp, underlying.is_ext, params);
 
         // the component whose signature we want to monomorphize
@@ -131,18 +141,7 @@ impl<'ctx> Monomorphize<'ctx> {
         .comp();
 
         let new_comp = self.ctx.add(mono_comp).base();
-        self.processed.insert(key, new_comp);
-
-        // `Some` if an extern, `None` if not
-        if let Some(filename) = self.old.get_filename(comp.idx()) {
-            if let Some(exts) = self.ext_map.get(&filename) {
-                let mut exts = exts.clone();
-                exts.push(new_comp.get());
-                self.ext_map.insert(filename, exts.to_vec());
-            } else {
-                self.ext_map.insert(filename, vec![new_comp.get()]);
-            }
-        }
+        self.processed.insert(comp_key, new_comp);
 
         // return the `base` index so we can update the instance
         new_comp

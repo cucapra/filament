@@ -27,7 +27,7 @@ impl Assign {
             .filter_map(|(k, v)| {
                 // Attempt to parse value as a number
                 match v.parse::<i64>() {
-                    Ok(v) if v == 0 => None,
+                    Ok(0) => None,
                     _ => Some(format!("{} = {v}", ctx.display(*k))),
                 }
             })
