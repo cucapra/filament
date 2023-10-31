@@ -58,7 +58,7 @@ pub struct Component {
     /// Information tracked by the component
     info: IndexStore<Info>,
     /// Is this an external component
-    pub is_ext: bool,
+    is_ext: bool,
     /// Externally facing interface information, used to preserve interface in compilation.
     /// Must be `Some` for toplevel components and externals.
     pub src_info: Option<InterfaceSrc>,
@@ -82,6 +82,24 @@ impl Component {
         comp.add(Prop::False);
         comp.add(Prop::True);
         comp
+    }
+
+    /// Is this an externally defined module
+    pub fn is_ext(&self) -> bool {
+        self.is_ext
+    }
+
+    /// Does this module need to be generated
+    pub fn is_gen(&self) -> bool {
+        self.src_info
+            .as_ref()
+            .map(|si| si.gen_tool.is_some())
+            .unwrap_or(false)
+    }
+
+    /// Return source name of the component if present
+    pub fn source_name(&self) -> Option<ast::Id> {
+        self.src_info.as_ref().map(|si| si.name)
     }
 
     /// Add a number to the context and get handle to it.

@@ -19,14 +19,14 @@ pub struct InterfaceSrc {
 }
 
 impl InterfaceSrc {
-    pub fn new(name: ast::Id) -> Self {
+    pub fn new(name: ast::Id, gen_tool: Option<String>) -> Self {
         Self {
             name,
             ports: SparseInfoMap::default(),
             params: SparseInfoMap::default(),
             interface_ports: SparseInfoMap::default(),
             events: SparseInfoMap::default(),
-            gen_tool: None,
+            gen_tool,
         }
     }
 }

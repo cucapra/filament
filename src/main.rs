@@ -26,6 +26,15 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
             return Err(1);
         }
     };
+    // Initialize the generator
+    let gen_exec = if ns.requires_gen() {
+        let Some(out_dir) = &opts.gen_out_dir else {
+            panic!("program uses generated modules. Please provide directory to store generated modules using --gen-out-dir.");
+        };
+        Some(ns.init_gen(out_dir.clone()))
+    } else {
+        None
+    };
 
     // Transform AST to IR
     let mut ir = log_pass! { opts; ir::transform(ns)?, "astconv" };
@@ -43,7 +52,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     pass_pipeline! { opts, ir;
         BuildDomination
     };
-    ir = log_pass! { opts; ip::Monomorphize::transform(&ir), "monomorphize"};
+    ir = log_pass! { opts; ip::Monomorphize::transform(&ir, gen_exec), "monomorphize"};
     pass_pipeline! { opts, ir;
         ip::Simplify,
         ip::AssignCheck,

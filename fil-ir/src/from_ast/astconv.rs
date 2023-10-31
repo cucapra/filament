@@ -1029,7 +1029,7 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
         .flat_map(|ast::Extern { comps, path, gen }| {
             comps
                 .into_iter()
-                .map(move |comp| (Some(path.clone()), comp, None))
+                .map(move |comp| (Some((gen, path.clone())), comp, None))
         })
         // add signatures of components as well as their command bodies
         .chain(
@@ -1051,18 +1051,22 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
 
     // uses the information above to compile the signatures of components and create their builders.
     let (mut builders, sig_map): (Vec<_>, SigMap) = comps
-        .map(|(idx, (file, sig, body))| {
+        .map(|(idx, (ext_info, sig, body))| {
             let idx = ir::CompIdx::new(idx);
             let mut builder =
                 BuildCtx::new(ir::Component::new(body.is_none()), &sig_map);
 
-            // enable source information saving if this is main or an external.
-            if body.is_none() || Some(idx) == ctx.entrypoint {
+            // enable source information saving if this is main
+            if Some(idx) == ctx.entrypoint {
                 builder.comp().src_info =
-                    Some(InterfaceSrc::new(sig.name.copy()))
+                    Some(InterfaceSrc::new(sig.name.copy(), None))
             }
             // add the file to the externals map if it exists
-            if let Some(file) = file {
+            if let Some((gen, file)) = ext_info {
+                // Add source information if this is an external
+                let gen_tool = if gen { Some(file.clone()) } else { None };
+                builder.comp().src_info =
+                    Some(InterfaceSrc::new(sig.name.copy(), gen_tool));
                 ctx.externals.entry(file).or_default().push(idx);
             }
 

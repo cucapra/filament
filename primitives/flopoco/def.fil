@@ -8,7 +8,7 @@ generate "flopoco.toml" {
         // Flopoco's internal format uses an extra bit.
         let Width = Exp+Mant+2;
         some L where L > 0;
-    }
+    };
 
     comp FPExp[Exp, Mant]<'G:1>(
         X: ['G, 'G+1] Width,
@@ -19,7 +19,7 @@ generate "flopoco.toml" {
         // Flopoco's internal format uses an extra bit.
         let Width = Exp+Mant+2;
         some L where L > 0;
-    }
+    };
 
     comp InputIEEE[ExpIn, MantIn, ExpOut, MantOut]<'G:1>(
         X: ['G, 'G+1] WidthIEEE
@@ -29,7 +29,7 @@ generate "flopoco.toml" {
         let WidthIEEE = ExpIn + MantIn + 1;
         let WidthFPC = ExpOut + MantOut + 2;
         some L where L > 0;
-    }
+    };
 
     comp OutputIEEE[ExpIn, MantIn, ExpOut, MantOut]<'G:1>(
         X: ['G, 'G+1] WidthFPC
@@ -39,5 +39,5 @@ generate "flopoco.toml" {
         let WidthFPC = ExpIn + MantIn + 2;
         let WidthIEEE = ExpOut + MantOut + 1;
         some L where L > 0;
-    }
+    };
 }

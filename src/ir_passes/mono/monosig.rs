@@ -56,8 +56,7 @@ impl MonoSig {
                 .zip(params)
                 .collect_vec(),
         );
-        let mut comp = ir::Component::default();
-        comp.is_ext = is_ext;
+        let comp = ir::Component::new(is_ext);
 
         Self {
             base: BaseComp::new(comp),
@@ -383,6 +382,11 @@ impl MonoSig {
                  events,
                  gen_tool,
              }| {
+                assert!(
+                    gen_tool.is_none(),
+                    "Monomorphizing generated modules is not supported"
+                );
+
                 let params = if underlying.is_ext() {
                     params
                         .iter()

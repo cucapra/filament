@@ -48,8 +48,6 @@ pub struct Namespace {
     pub components: Vec<Component>,
     /// Top-level component id
     pub toplevel: String,
-    /// The Generator executor
-    gen: Option<gen::GenExec>,
 }
 
 impl Namespace {
@@ -59,14 +57,17 @@ impl Namespace {
             externs: Vec::default(),
             components: Vec::default(),
             toplevel,
-            gen: None,
         }
+    }
+
+    /// Returns true if the namespace declares at least one generative module
+    pub fn requires_gen(&self) -> bool {
+        self.externs.iter().any(|Extern { gen, .. }| *gen)
     }
 
     /// Initialize the generator executor using the given generate definitions.
     /// REQUIRES: The tools definitions must be in files with absolute paths.
-    pub fn init_gen(&mut self, out_dir: PathBuf) {
-        assert!(self.gen.is_none(), "tool generator already initialized");
+    pub fn init_gen(&self, out_dir: PathBuf) -> gen::GenExec {
         let mut gen_exec = gen::GenExec::new(out_dir, false);
         for Extern { path, gen, .. } in &self.externs {
             if !gen {
@@ -74,7 +75,7 @@ impl Namespace {
             }
             gen_exec.register_tool_from_file(path.into());
         }
-        self.gen = Some(gen_exec);
+        gen_exec
     }
 
     /// External signatures associated with the namespace

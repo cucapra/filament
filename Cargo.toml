@@ -99,6 +99,7 @@ string-interner.workspace = true
 fil-ast.workspace = true
 fil-ir.workspace = true
 fil-utils.workspace = true
+fil-gen.workspace = true
 
 calyx-ir.workspace = true
 calyx-frontend.workspace = true

@@ -17,7 +17,7 @@ impl<'a> UnderlyingComp<'a> {
         &self.0.cmds
     }
     pub fn is_ext(&self) -> bool {
-        self.0.is_ext
+        self.0.is_ext()
     }
     pub fn events(&self) -> &IndexStore<ir::Event> {
         self.0.events()

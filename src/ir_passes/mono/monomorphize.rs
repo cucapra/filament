@@ -2,6 +2,7 @@ use super::{
     Base, CompKey, InstanceInfo, IntoBase, IntoUdl, MonoDeferred, MonoSig,
     UnderlyingComp,
 };
+use fil_gen as gen;
 use fil_ir::{self as ir, Ctx, IndexStore};
 use ir::AddCtx;
 use std::collections::HashMap;
@@ -55,24 +56,22 @@ use std::collections::HashMap;
 pub struct Monomorphize<'a> {
     /// The new context
     pub ctx: ir::Context,
-
     /// The old context
     pub old: &'a ir::Context,
     // Names of external components
     pub externals: Vec<ir::CompIdx>,
-
     /// Instances that have already been processed. Tracks the name of the generated component
     pub processed: HashMap<CompKey, Base<ir::Component>>,
-
     /// Mapping from old ports to new ports, for resolving Foreigns
     inst_info: HashMap<CompKey, InstanceInfo>,
-
     /// Tracks which components are defined in which files
     pub ext_map: HashMap<String, Vec<ir::CompIdx>>,
+    /// Generator executor
+    gen_exec: Option<gen::GenExec>,
 }
 
 impl<'a> Monomorphize<'a> {
-    fn new(old: &'a ir::Context) -> Self {
+    fn new(old: &'a ir::Context, gen_exec: Option<gen::GenExec>) -> Self {
         Monomorphize {
             ctx: ir::Context {
                 comps: IndexStore::default(),
@@ -84,6 +83,7 @@ impl<'a> Monomorphize<'a> {
             processed: HashMap::new(),
             inst_info: HashMap::new(),
             ext_map: HashMap::new(),
+            gen_exec,
         }
     }
 }
@@ -107,7 +107,7 @@ impl<'ctx> Monomorphize<'ctx> {
         let CompKey { comp, params } = comp_key;
         let underlying = self.old.get(comp.idx());
 
-        let key: CompKey = if underlying.is_ext {
+        let key: CompKey = if underlying.is_ext() {
             (comp, vec![]).into()
         } else {
             (comp, params.clone()).into()
@@ -119,7 +119,8 @@ impl<'ctx> Monomorphize<'ctx> {
         }
 
         // make a MonoSig
-        let monosig = MonoSig::new(underlying, comp, underlying.is_ext, params);
+        let monosig =
+            MonoSig::new(underlying, comp, underlying.is_ext(), params);
 
         // the component whose signature we want to monomorphize
         // Monomorphize the sig
@@ -152,7 +153,10 @@ impl<'ctx> Monomorphize<'ctx> {
 impl Monomorphize<'_> {
     /// Monomorphize the context by tracing starting from the top-level component.
     /// Returns an empty context if there is no top-level component.
-    pub fn transform(ctx: &ir::Context) -> ir::Context {
+    pub fn transform(
+        ctx: &ir::Context,
+        gen: Option<gen::GenExec>,
+    ) -> ir::Context {
         let Some(entrypoint) = ctx.entrypoint else {
             log::warn!("Program has no entrypoint. Result will be empty.");
             return ir::Context {
@@ -163,7 +167,7 @@ impl Monomorphize<'_> {
         };
         let entrypoint = entrypoint.ul();
         // Monomorphize the entrypoint
-        let mut mono = Monomorphize::new(ctx);
+        let mut mono = Monomorphize::new(ctx, gen);
         let ck = CompKey::new(entrypoint, vec![]);
         mono.monomorphize(ck.clone());
 

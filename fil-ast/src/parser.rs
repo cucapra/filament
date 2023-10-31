@@ -824,10 +824,18 @@ impl FilamentParser {
         ))
     }
 
+    fn generate(input: Node) -> ParseResult<ast::Extern> {
+        Ok(match_nodes!(
+            input.into_children();
+            [string_lit(path), signature(sigs)..] => ast::Extern::new(path, sigs.collect(), true),
+        ))
+    }
+
     fn comp_or_ext(input: Node) -> ParseResult<BodyEl> {
         Ok(match_nodes!(
             input.into_children();
             [external(sig)] => BodyEl::Ext(sig),
+            [generate(sig)] => BodyEl::Ext(sig),
             [component(comp)] => BodyEl::Comp(comp),
         ))
     }
