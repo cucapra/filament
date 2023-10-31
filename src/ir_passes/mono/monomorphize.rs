@@ -106,11 +106,17 @@ impl<'ctx> Monomorphize<'ctx> {
     /// Monomorphize a component and return its index in the new context.
     pub fn monomorphize(&mut self, comp_key: CompKey) -> Base<ir::Component> {
         log::debug!("Monomorphizing `{}'", comp_key.comp.idx());
-        let comp = comp_key.comp;
+        let CompKey { comp, params } = comp_key;
         let underlying = self.old.get(comp.idx());
 
+        let key: CompKey = if underlying.is_ext {
+            (comp, vec![]).into()
+        } else {
+            (comp, params.clone()).into()
+        };
+
         // If we've already processed this, return the component
-        if let Some(&name) = self.processed.get(&comp_key) {
+        if let Some(&name) = self.processed.get(&key) {
             return name;
         }
 
@@ -122,10 +128,9 @@ impl<'ctx> Monomorphize<'ctx> {
 
             // Clone the component
             let n_comp = underlying.clone();
-            let ck = CompKey::new(comp, vec![]);
 
             // Add information for the component
-            let info = self.inst_info_mut(ck.clone());
+            let info = self.inst_info_mut(key.clone());
             for (port, _) in n_comp.ports().iter() {
                 let old_port = port.ul();
                 let new_port = port.base();
@@ -139,7 +144,7 @@ impl<'ctx> Monomorphize<'ctx> {
 
             // Add component information to processed map
             let idx = self.ctx.add(n_comp).base();
-            self.processed.insert(ck, idx);
+            self.processed.insert(key, idx);
 
             // Add the component to the filemap
             self.ext_map.entry(filename).or_default().push(idx.get());
@@ -147,7 +152,6 @@ impl<'ctx> Monomorphize<'ctx> {
         }
 
         // make a MonoSig
-        let CompKey { comp, params } = comp_key.clone();
         let monosig = MonoSig::new(underlying, comp, underlying.is_ext, params);
 
         // the component whose signature we want to monomorphize
@@ -160,7 +164,7 @@ impl<'ctx> Monomorphize<'ctx> {
         .comp();
 
         let new_comp = self.ctx.add(mono_comp).base();
-        self.processed.insert(comp_key, new_comp);
+        self.processed.insert(key, new_comp);
 
         // return the `base` index so we can update the instance
         new_comp
