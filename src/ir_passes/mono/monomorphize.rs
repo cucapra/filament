@@ -132,7 +132,7 @@ impl<'ctx> Monomorphize<'ctx> {
         .comp();
 
         let new_comp = self.ctx.add(mono_comp).base();
-        self.processed.insert(key.clone(), new_comp);
+        self.processed.insert(key, new_comp);
 
         // `Some` if an extern, `None` if not
         if let Some(filename) = self.old.get_filename(comp.idx()) {

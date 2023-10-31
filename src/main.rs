@@ -43,8 +43,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::TypeCheck,
         ip::IntervalCheck,
         ip::PhantomCheck,
-        ip::Assume,
-        ip::HoistFacts
+        ip::Assume
     }
     if !opts.unsafe_skip_discharge {
         pass_pipeline! {opts, ir; ip::Discharge }

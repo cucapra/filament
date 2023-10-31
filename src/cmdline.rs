@@ -102,7 +102,7 @@ pub struct Opts {
 
     // Solver specific configuration
     /// solver to use (default: cvc5): cvc5, z3
-    #[argh(option, long = "solver", default = "Solver::CVC5")]
+    #[argh(option, long = "solver", default = "Solver::Z3")]
     pub solver: Solver,
     /// solve assertions separately rather than all at once
     #[argh(switch, long = "discharge-separate")]

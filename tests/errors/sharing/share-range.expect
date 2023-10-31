@@ -1,0 +1,23 @@
+---CODE---
+1
+---STDERR---
+error: event's delay must be greater than the instance's borrow length
+  ┌─ tests/errors/sharing/share-range.fil:6:21
+  │
+3 │ comp Bar[W]<'G: 3>(
+  │                 - event's delay is 3 cycles
+  ·
+6 │     F := new Foo in ['G+W, 'G+W+10];
+  │                     ^^^^^^^^^^^^^^^ instance borrowed for (W+10)-W cycles
+
+error: event used for longer than the instance borrow allows
+  ┌─ tests/errors/sharing/share-range.fil:8:13
+  │
+6 │     F := new Foo in ['G+W, 'G+W+10];
+  │                     --------------- instance available in ['G+W, 'G+W+10]
+7 │     // This is not allowed
+8 │     f1 := F<'G>();
+  │             ^^ event use requires availability in ['G, 'G+3]
+
+Compilation failed with 2 errors.
+Run with --show-models to generate assignments for failing constraints.

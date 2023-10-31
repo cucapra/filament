@@ -13,7 +13,7 @@ RUN wget https://github.com/cvc5/cvc5/releases/download/cvc5-1.0.6/cvc5-Linux --
 
 # Install z3
 WORKDIR /home
-RUN git clone --depth 1 --branch z3-4.12.2 https://github.com/Z3Prover/z3.git
+RUN mkdir z3
 WORKDIR /home/z3
 RUN wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x64-glibc-2.31.zip --output-document z3.zip && \
   unzip z3.zip

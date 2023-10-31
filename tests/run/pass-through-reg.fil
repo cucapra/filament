@@ -1,0 +1,16 @@
+import "primitives/state.fil";
+
+/// Tests a pass through register
+comp main<'G: 3>(
+  go: interface['G],
+  in: ['G, 'G+1] 32
+) -> (
+  out0: ['G, 'G+1] 32,
+  out1: ['G+1, 'G+2] 32,
+  out2: ['G+2, 'G+3] 32
+) {
+  reg := new PassThroughRegister[32]<'G, 'G+3>(in);
+  out0 = reg.out;
+  out1 = reg.out;
+  out2 = reg.out;
+}
