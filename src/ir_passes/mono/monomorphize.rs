@@ -92,7 +92,9 @@ impl<'ctx> Monomorphize<'ctx> {
     /// Returns a reference to the instance info for a component.
     /// **Panics** if the instance does not exist.
     pub fn inst_info(&self, comp_key: &CompKey) -> &InstanceInfo {
-        self.inst_info.get(comp_key).unwrap()
+        self.inst_info.get(comp_key).unwrap_or_else(|| {
+            unreachable!("instance not monormorphized: {comp_key}")
+        })
     }
 
     /// Returns a mutable reference to the instance info for a component or a
@@ -120,11 +122,28 @@ impl<'ctx> Monomorphize<'ctx> {
 
             // Clone the component
             let n_comp = underlying.clone();
-            let idx = self.ctx.add(n_comp);
+            let ck = CompKey::new(comp, vec![]);
+
+            // Add information for the component
+            let info = self.inst_info_mut(ck.clone());
+            for (port, _) in n_comp.ports().iter() {
+                let old_port = port.ul();
+                let new_port = port.base();
+                info.add_port(old_port, new_port);
+            }
+            for (ev, _) in n_comp.events().iter() {
+                let old_ev = ev.ul();
+                let new_ev = ev.base();
+                info.add_event(old_ev, new_ev);
+            }
+
+            // Add component information to processed map
+            let idx = self.ctx.add(n_comp).base();
+            self.processed.insert(ck, idx);
 
             // Add the component to the filemap
-            self.ext_map.entry(filename).or_default().push(idx);
-            return idx.base();
+            self.ext_map.entry(filename).or_default().push(idx.get());
+            return idx;
         }
 
         // make a MonoSig

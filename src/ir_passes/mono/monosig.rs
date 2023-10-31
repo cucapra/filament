@@ -615,7 +615,9 @@ impl MonoSig {
         let (ck, new_owner) = self.foreign_comp(underlying, pass, inv);
 
         let key = foreign.key().ul();
-        let new_event = pass.inst_info(&ck).get_event(key).unwrap();
+        let Some(new_event) = pass.inst_info(&ck).get_event(key) else {
+            unreachable!("missing event `{}' for {ck}", foreign.key())
+        };
         ir::Foreign::new(new_event.get(), new_owner.get())
     }
 
