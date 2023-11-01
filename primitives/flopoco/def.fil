@@ -1,42 +1,48 @@
 generate(flopoco) using "flopoco.toml" {
     comp FPAdd[Exp, Mant]<'G:1>(
+        clk: 1,
+        // TODO(rachitnigam): Support reset with different name
+        // rst: 1,
         X: ['G, 'G+1] Width,
         Y: ['G, 'G+1] Width,
     ) -> (
         R: ['G+L, 'G+L+1] Width,
     ) with {
-        // Flopoco's internal format uses an extra bit.
-        let Width = Exp+Mant+2;
+        // Flopoco's internal format uses two extra bits.
+        let Width = Exp+Mant+3;
         some L where L > 0;
     };
 
     comp FPExp[Exp, Mant]<'G:1>(
+        clk: 1,
         X: ['G, 'G+1] Width,
         Y: ['G, 'G+1] Width,
     ) -> (
         R: ['G+L, 'G+L+1] Width,
     ) with {
-        // Flopoco's internal format uses an extra bit.
-        let Width = Exp+Mant+2;
+        // Flopoco's internal format uses two extra bits.
+        let Width = Exp+Mant+3;
         some L where L > 0;
     };
 
     comp InputIEEE[ExpIn, MantIn, ExpOut, MantOut]<'G:1>(
+        clk: 1,
         X: ['G, 'G+1] WidthIEEE
     ) -> (
         R: ['G+L, 'G+L+1] WidthFPC
     ) with {
         let WidthIEEE = ExpIn + MantIn + 1;
-        let WidthFPC = ExpOut + MantOut + 2;
+        let WidthFPC = ExpOut + MantOut + 3;
         some L where L > 0;
     };
 
     comp OutputIEEE[ExpIn, MantIn, ExpOut, MantOut]<'G:1>(
+        clk: 1,
         X: ['G, 'G+1] WidthFPC
     ) -> (
         R: ['G+L, 'G+L+1] WidthIEEE
     ) with {
-        let WidthFPC = ExpIn + MantIn + 2;
+        let WidthFPC = ExpIn + MantIn + 3;
         let WidthIEEE = ExpOut + MantOut + 1;
         some L where L > 0;
     };
