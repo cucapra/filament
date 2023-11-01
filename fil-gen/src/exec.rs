@@ -1,7 +1,7 @@
-use itertools::Itertools;
-
 use crate::{Instance, Tool, ToolOutput};
+use itertools::Itertools;
 use std::{collections::HashMap, fs, path::PathBuf, process::Command};
+use tempfile as tmp;
 
 /// The main execution management engine for Filament's `gen` framework.
 /// Manages registering new tools and executing the tools to generate particular instances.
@@ -16,21 +16,25 @@ pub struct GenExec {
     >,
 
     /// Directory to store all the generated files
-    output_dir: PathBuf,
+    output_dir: tmp::TempDir,
 
     /// Dry-run instead of executing commands
     dry_run: bool,
 }
 
 impl GenExec {
-    pub fn new(output_dir: PathBuf, dry_run: bool) -> Self {
-        if !output_dir.exists() {
-            std::fs::create_dir_all(output_dir.clone()).unwrap();
-        }
+    /// Creates a new, temporary directory to store generated files.
+    fn create_out_dir() -> tmp::TempDir {
+        let tmp_dir = tmp::tempdir().unwrap();
+        log::info!("generator output directory: {}", tmp_dir.path().display());
+        tmp_dir
+    }
+
+    pub fn new(dry_run: bool) -> Self {
         GenExec {
             tools: HashMap::default(),
             generated: HashMap::default(),
-            output_dir,
+            output_dir: Self::create_out_dir(),
             dry_run,
         }
     }
@@ -68,7 +72,7 @@ impl GenExec {
 
     /// Generate a new file with the given name in the output directory
     pub fn gen_file(&mut self, name: String) -> PathBuf {
-        let path = self.output_dir.join(name);
+        let path = self.output_dir.path().join(name);
         assert!(!path.exists(), "File already exists: `{}`", path.display());
         log::info!("Generating file: `{}`", path.display());
         path

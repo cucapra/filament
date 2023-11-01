@@ -19,3 +19,4 @@ argh.workspace = true
 itertools.workspace = true
 env_logger.workspace = true
 log.workspace = true
+tempfile = "3.8.1"

@@ -68,11 +68,14 @@ pub struct Monomorphize<'a> {
     /// Tracks which components are defined in which files
     pub ext_map: HashMap<String, Vec<ir::CompIdx>>,
     /// Generator executor
-    gen_exec: Option<gen::GenExec>,
+    gen_exec: &'a mut Option<gen::GenExec>,
 }
 
 impl<'a> Monomorphize<'a> {
-    fn new(old: &'a ir::Context, gen_exec: Option<gen::GenExec>) -> Self {
+    fn new(
+        old: &'a ir::Context,
+        gen_exec: &'a mut Option<gen::GenExec>,
+    ) -> Self {
         Monomorphize {
             ctx: ir::Context::default(),
             old,
@@ -272,7 +275,7 @@ impl Monomorphize<'_> {
     /// Returns an empty context if there is no top-level component.
     pub fn transform(
         ctx: &ir::Context,
-        gen: Option<gen::GenExec>,
+        gen: &mut Option<gen::GenExec>,
     ) -> ir::Context {
         let Some(entrypoint) = ctx.entrypoint else {
             log::warn!("Program has no entrypoint. Result will be empty.");

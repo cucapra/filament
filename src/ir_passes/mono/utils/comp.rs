@@ -34,6 +34,9 @@ impl<'a> UnderlyingComp<'a> {
     pub fn exist_params(&self) -> impl Iterator<Item = ir::ParamIdx> + '_ {
         self.0.exist_params()
     }
+    pub fn all_exist_assumes(&self) -> Vec<ir::PropIdx> {
+        self.0.all_exist_assumes()
+    }
     pub fn relevant_vars(
         &self,
         prop: Underlying<ir::Prop>,

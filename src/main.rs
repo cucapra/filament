@@ -27,11 +27,8 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         }
     };
     // Initialize the generator
-    let gen_exec = if ns.requires_gen() {
-        let Some(out_dir) = &opts.gen_out_dir else {
-            panic!("program uses generated modules. Please provide directory to store generated modules using --gen-out-dir.");
-        };
-        Some(ns.init_gen(out_dir.clone()))
+    let mut gen_exec = if ns.requires_gen() {
+        Some(ns.init_gen())
     } else {
         None
     };
@@ -51,7 +48,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     pass_pipeline! { opts, ir;
         BuildDomination
     };
-    ir = log_pass! { opts; ip::Monomorphize::transform(&ir, gen_exec), "monomorphize"};
+    ir = log_pass! { opts; ip::Monomorphize::transform(&ir, &mut gen_exec), "monomorphize"};
     pass_pipeline! { opts, ir;
         ip::Simplify,
         ip::AssignCheck,
@@ -82,6 +79,10 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
             calyx_ir::Printer::write_context(&calyx, false, out).unwrap();
         }
     }
+
+    // Drop the generator executor after the execution finishes to ensure that
+    // Calyx has access to the generated file.
+    drop(gen_exec);
     Ok(())
 }
 
