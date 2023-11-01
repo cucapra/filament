@@ -5,6 +5,7 @@ use super::{
 use fil_gen as gen;
 use fil_ir::{self as ir, Ctx, IndexStore};
 use ir::AddCtx;
+use itertools::Itertools;
 use std::collections::HashMap;
 
 /// The Monomorphize pass.
@@ -73,11 +74,7 @@ pub struct Monomorphize<'a> {
 impl<'a> Monomorphize<'a> {
     fn new(old: &'a ir::Context, gen_exec: Option<gen::GenExec>) -> Self {
         Monomorphize {
-            ctx: ir::Context {
-                comps: IndexStore::default(),
-                entrypoint: None,
-                externals: HashMap::new(),
-            },
+            ctx: ir::Context::default(),
             old,
             externals: vec![],
             processed: HashMap::new(),
@@ -103,6 +100,80 @@ impl<'ctx> Monomorphize<'ctx> {
         self.inst_info.entry(comp_key).or_default()
     }
 
+    /// Generate an component using the `gen` framework
+    pub fn gen(
+        &mut self,
+        comp: Underlying<ir::Component>,
+        params: Vec<u64>,
+        key: CompKey,
+    ) -> Base<ir::Component> {
+        let underlying = self.old.get(comp.idx());
+        let Some(is) = &underlying.src_info else {
+            unreachable!("external component has no src_info")
+        };
+        let Some(tool) = &is.gen_tool else {
+            unreachable!("gen component does not have a tool")
+        };
+        let inst = gen::Instance {
+            name: is.name.as_ref().to_string(),
+            parameters: params.iter().map(|p| p.to_string()).collect(),
+        };
+
+        // Running the tool returns the location of the Verilog file that
+        // contains the definition and mapping for existential parameters.
+        let gen::ToolOutput { file, exist_params } = self
+            .gen_exec
+            .as_mut()
+            .unwrap_or_else(|| unreachable!("no generate executor defined"))
+            .gen_instance(tool, &inst);
+
+        // Add generated existential parameters
+        let monosig = MonoSig::new(underlying, comp, params);
+        let mut mono_comp = MonoDeferred::new(
+            UnderlyingComp::new(self.old.get(comp.idx())),
+            self,
+            monosig,
+        );
+        mono_comp.sig_partial_mono();
+        let exists = exist_params
+            .into_iter()
+            .map(|(name, val)| {
+                let v = u64::from_str_radix(&val, 10).unwrap();
+                let Some(param) = is.param_from_src_name(name.clone()) else {
+                    unreachable!("component does not have parameter `{name}'")
+                };
+                // Add to the binding
+                mono_comp.push_binding(param.ul(), v);
+                (param.ul(), v)
+            })
+            .collect_vec();
+
+        // Monomorphize the siganture of the component using the parameters
+        mono_comp.sig_complete_mono();
+        let comp = mono_comp.take();
+
+        // Add information about the existential parameters to the global map
+        let info = self.inst_info_mut(key.clone());
+        for (p, v) in exists {
+            info.add_exist_val(p, v);
+        }
+
+        // Add component to the context
+        let idx = self.ctx.add(comp).base();
+        self.processed.insert(key, idx);
+
+        // Add the component to the filemap
+        self.ext_map
+            .entry(file.to_string_lossy().to_string())
+            .or_default()
+            .push(idx.get());
+
+        idx
+    }
+
+    /// Monomorphize an external component.
+    /// External components can either be definitions to a specific Verilog file
+    /// or generated from a tool.
     pub fn ext(
         &mut self,
         comp: Underlying<ir::Component>,
@@ -142,7 +213,7 @@ impl<'ctx> Monomorphize<'ctx> {
     /// Monomorphize a component and return its index in the new context.
     pub fn monomorphize(&mut self, ck: CompKey) -> Base<ir::Component> {
         log::debug!("Monomorphizing `{}'", ck.comp.idx());
-        let CompKey { comp, params } = ck;
+        let CompKey { comp, params } = ck.clone();
         let underlying = self.old.get(comp.idx());
 
         let n_ck: CompKey = if underlying.is_ext() {
@@ -156,6 +227,12 @@ impl<'ctx> Monomorphize<'ctx> {
             return name;
         }
 
+        if underlying.is_gen() {
+            // Pass the old ck here because generated modules are only defined
+            // for a particular set of parameters
+            return self.gen(comp, params, ck);
+        }
+
         // Copy the component signature if it is an external and return it.
         if underlying.is_ext() {
             return self.ext(comp, n_ck);
@@ -166,11 +243,11 @@ impl<'ctx> Monomorphize<'ctx> {
 
         // the component whose signature we want to monomorphize
         // Monomorphize the sig
-        let mono_comp = MonoDeferred {
-            underlying: UnderlyingComp::new(self.old.get(comp.idx())),
-            pass: self,
+        let mono_comp = MonoDeferred::new(
+            UnderlyingComp::new(self.old.get(comp.idx())),
+            self,
             monosig,
-        }
+        )
         .comp();
 
         let new_comp = self.ctx.add(mono_comp).base();

@@ -91,10 +91,16 @@ impl Component {
 
     /// Does this module need to be generated
     pub fn is_gen(&self) -> bool {
-        self.src_info
-            .as_ref()
-            .map(|si| si.gen_tool.is_some())
-            .unwrap_or(false)
+        if self.is_ext {
+            let Some(is) = self.src_info.as_ref() else {
+                unreachable!(
+                    "external component does not have source information"
+                )
+            };
+            is.gen_tool.is_some()
+        } else {
+            false
+        }
     }
 
     /// Return source name of the component if present

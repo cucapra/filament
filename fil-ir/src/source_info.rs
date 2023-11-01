@@ -1,3 +1,5 @@
+use crate::ParamIdx;
+
 use super::{utils::SparseInfoMap, Event, Param, Port};
 use fil_ast as ast;
 
@@ -28,5 +30,22 @@ impl InterfaceSrc {
             events: SparseInfoMap::default(),
             gen_tool,
         }
+    }
+
+    /// Return the parameter with the given source-level name
+    pub fn param_from_src_name<S: Into<ast::Id>>(
+        &self,
+        name: S,
+    ) -> Option<ParamIdx> {
+        let name: ast::Id = name.into();
+        self.params.iter().find_map(
+            |(p, n)| {
+                if name == n {
+                    Some(p)
+                } else {
+                    None
+                }
+            },
+        )
     }
 }

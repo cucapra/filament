@@ -8,17 +8,41 @@ use itertools::Itertools;
 /// Defines methods required to monomorphize a component. Most of the updates
 /// happen to the stored [MonoSig] object which keeps all the maps needed while
 /// monomorphizing the component.
-pub struct MonoDeferred<'a, 'pass: 'a> {
+pub struct MonoDeferred<'comp, 'pass: 'comp> {
     /// The underlying component to be monomorphized
-    pub underlying: UnderlyingComp<'a>,
+    pub underlying: UnderlyingComp<'comp>,
     /// Underlying pointer
-    pub pass: &'a mut Monomorphize<'pass>,
+    pub pass: &'comp mut Monomorphize<'pass>,
     /// Struct to keep track of all the mapping information from things owned by
     /// `underlying` to things owned by `base`
     pub monosig: MonoSig,
+
+    /// Have we completed the monomorphization of the signature?
+    sig_mono_complete: bool,
+}
+
+impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
+    pub fn new(
+        underlying: UnderlyingComp<'a>,
+        pass: &'a mut Monomorphize<'pass>,
+        monosig: MonoSig,
+    ) -> Self {
+        Self {
+            underlying,
+            pass,
+            monosig,
+            // Set to false if we call `sig_partial_mono` and true once we call `sig_complete_mono`
+            sig_mono_complete: true,
+        }
+    }
 }
 
 impl MonoDeferred<'_, '_> {
+    /// Get the underlying component
+    pub fn take(self) -> ir::Component {
+        self.monosig.base.take()
+    }
+
     /// The [CompKey] associated with the underlying component being monomorphized.
     fn comp_key(&self) -> CompKey {
         let binding = self.monosig.binding.inner();
@@ -35,13 +59,10 @@ impl MonoDeferred<'_, '_> {
         (self.monosig.underlying_idx, conc_params).into()
     }
 
-    // XXX(rachit): Why does this function need to do anything to the signature
-    // of external components instead of just wholesale copying them?
-    pub fn comp(mut self) -> ir::Component {
-        assert!(!self.underlying.is_ext(), "cannot monomorphize external");
-
-        // Events can be recursive, so do a pass over them to generate the new idxs now
-        // and then fill them in later
+    /// Monomorphize the parts of the signature that do not use any existential parameters.
+    /// We must call [Self::sig_complete_mono] at some point after calling this.
+    /// Otherwise, the IR will be in an invalid state.
+    pub fn sig_partial_mono(&mut self) {
         let comp_k: CompKey = self.comp_key();
 
         let monosig = &mut self.monosig;
@@ -49,6 +70,8 @@ impl MonoDeferred<'_, '_> {
         let pass = &mut self.pass;
 
         for (idx, event) in ul.events().iter() {
+            // Add events without monomorphizing their data. The data is updated after the body is monomorphized
+            // because it can mention existential parameters.
             let new_idx = monosig.base.add(event.clone());
             monosig.event_map.insert(idx.ul(), new_idx);
             pass.inst_info_mut(comp_k.clone())
@@ -60,6 +83,7 @@ impl MonoDeferred<'_, '_> {
         for (idx, port) in ul.ports().iter() {
             if port.is_sig() {
                 // Only monomorphize the definition without the data.
+                // The data is monomorphized after the body so that we have bindings for existential parameters.
                 let port = monosig.port_def_partial(ul, pass, idx.ul());
                 // Add these ports to the global port information for this
                 // instance because other components need this information
@@ -74,24 +98,13 @@ impl MonoDeferred<'_, '_> {
         let unannotated_ports = ul.unannotated_ports().clone();
         monosig.base.set_unannotated_ports(unannotated_ports);
 
-        // Monomorphize the component's body
-        for cmd in self.underlying.cmds().clone() {
-            let cmd = self.command(&cmd);
-            self.monosig.base.extend_cmds(cmd);
-        }
+        // Mark the signature monormophization as incomplete
+        self.sig_mono_complete = false;
+    }
 
-        // Extend the binding with existential parameters and monomorphize signature port data
-        let info = self.pass.inst_info(&comp_k);
-        for param in self.underlying.exist_params() {
-            let param = param.ul();
-            let Some(v) = info.get_exist_val(param) else {
-                unreachable!(
-                        "No binding for existential parameter `{}'. Is the body missing an `exist` assignment?",
-                        self.underlying.display(param)
-                    )
-            };
-            self.monosig.binding.push(param, v);
-        }
+    /// Monomorphize the parts of the signature that use existential parameters.
+    pub fn sig_complete_mono(&mut self) {
+        assert!(!self.sig_mono_complete);
 
         for (idx, _) in
             self.underlying.ports().iter().filter(|(_, p)| p.is_sig())
@@ -108,6 +121,45 @@ impl MonoDeferred<'_, '_> {
                 .event_delay(&self.underlying, self.pass, old, new);
         }
 
+        // Mark the signature monormophization as complete
+        self.sig_mono_complete = true;
+    }
+
+    /// Add to the parameter binding
+    pub fn push_binding(&mut self, p: Underlying<ir::Param>, v: u64) {
+        self.monosig.binding.push(p, v);
+    }
+
+    /// Monomorphize a component definition
+    pub fn comp(mut self) -> ir::Component {
+        assert!(!self.underlying.is_ext(), "cannot monomorphize external");
+
+        // Monomorphize the part of the signature that doesn't use existential parameters
+        self.sig_partial_mono();
+
+        // Monomorphize the component's body
+        for cmd in self.underlying.cmds().clone() {
+            let cmd = self.command(&cmd);
+            self.monosig.base.extend_cmds(cmd);
+        }
+
+        // Extend the binding with existential parameters
+        let info = self.pass.inst_info(&self.comp_key());
+        for param in self.underlying.exist_params() {
+            let param = param.ul();
+            let Some(v) = info.get_exist_val(param) else {
+                unreachable!(
+                        "No binding for existential parameter `{}'. Is the body missing an assignment to the parameter?",
+                        self.underlying.display(param)
+                    )
+            };
+            self.monosig.binding.push(param, v);
+        }
+
+        // Monomorphize the rest of the signature
+        self.sig_complete_mono();
+
+        // Return the component
         self.monosig.base.take()
     }
 

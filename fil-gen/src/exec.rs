@@ -73,19 +73,23 @@ impl GenExec {
     }
 
     /// Execute a particular manifest to generate instances
-    pub fn gen_instance(&mut self, tool: &str, instance: &Instance) {
+    pub fn gen_instance(
+        &mut self,
+        tool: &str,
+        instance: &Instance,
+    ) -> ToolOutput {
         assert!(self.has_tool(tool), "Unknown tool: `{tool}");
 
         if let Some(output) = self.generated.get(tool) {
-            if output.get(instance).is_some() {
+            if let Some(out) = output.get(instance) {
                 log::info!("Using cached output for `{}`", instance);
-                // return output.clone();
+                return out.clone();
             }
         }
 
         let tool = self.tools.get(tool).unwrap().clone();
         let Some(module) = tool.get_module(&instance.name) else {
-            panic!(
+            unreachable!(
                 "Tool `{}' does not define module `{}`",
                 tool.name, instance.name
             );
@@ -125,7 +129,7 @@ impl GenExec {
 
         // Return early in dry-run mode
         if self.dry_run {
-            return;
+            return ToolOutput::default();
         }
 
         let output = Command::new(&tool.path)
@@ -133,11 +137,15 @@ impl GenExec {
             .output()
             .expect("Failed to execute tool");
 
-        println!(
+        log::info!(
             "Command exited with status: {}.\nSTDOUT:\n{}\nSTDERR:{}\n",
             output.status,
             std::str::from_utf8(&output.stdout).unwrap(),
             std::str::from_utf8(&output.stderr).unwrap()
         );
+        ToolOutput {
+            file: out_file,
+            exist_params: HashMap::default(),
+        }
     }
 }
