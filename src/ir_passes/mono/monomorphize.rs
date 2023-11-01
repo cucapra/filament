@@ -138,7 +138,7 @@ impl<'ctx> Monomorphize<'ctx> {
         let exists = exist_params
             .into_iter()
             .map(|(name, val)| {
-                let v = u64::from_str_radix(&val, 10).unwrap();
+                let v: u64 = val.parse().unwrap();
                 let Some(param) = is.param_from_src_name(name.clone()) else {
                     unreachable!("component does not have parameter `{name}'")
                 };

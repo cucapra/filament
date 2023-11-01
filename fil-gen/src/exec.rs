@@ -145,9 +145,31 @@ impl GenExec {
             std::str::from_utf8(&output.stdout).unwrap(),
             std::str::from_utf8(&output.stderr).unwrap()
         );
+
+        // Parse bindings for existential parameters from the output
+        let mut key_map: HashMap<String, String> = HashMap::default();
+        for line in std::str::from_utf8(&output.stdout).unwrap().lines() {
+            let mut parts = line.split('=');
+            if let (Some(name), Some(val)) = (parts.next(), parts.next()) {
+                key_map.insert(name.trim().to_string(), val.trim().to_string());
+            }
+        }
+        log::info!("Parsed key-values: {:?}", key_map);
+        let exist_params = module
+            .outputs
+            .iter()
+            .map(|(param, out_name)| {
+                let val = key_map
+                    .get(out_name)
+                    .unwrap_or_else(|| unreachable!("tool did not produce binding for existential parameter: {out_name}"));
+                (param.clone(), val.clone())
+            })
+            .collect();
+        log::info!("Existential parameters: {:?}", exist_params);
+
         ToolOutput {
             file: out_file,
-            exist_params: HashMap::default(),
+            exist_params,
         }
     }
 }
