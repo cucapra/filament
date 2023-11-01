@@ -216,7 +216,7 @@ impl<'ctx> Monomorphize<'ctx> {
         let CompKey { comp, params } = ck.clone();
         let underlying = self.old.get(comp.idx());
 
-        let n_ck: CompKey = if underlying.is_ext() {
+        let n_ck: CompKey = if underlying.is_ext() && !underlying.is_gen() {
             (comp, vec![]).into()
         } else {
             (comp, params.clone()).into()
@@ -228,9 +228,7 @@ impl<'ctx> Monomorphize<'ctx> {
         }
 
         if underlying.is_gen() {
-            // Pass the old ck here because generated modules are only defined
-            // for a particular set of parameters
-            return self.gen(comp, params, ck);
+            return self.gen(comp, params, n_ck);
         }
 
         // Copy the component signature if it is an external and return it.

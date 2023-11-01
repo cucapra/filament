@@ -316,8 +316,11 @@ impl<'prog> BuildCtx<'prog> {
         let (name, pos) = param.split();
         let info = self.comp().add(ir::Info::param(name, pos));
         let owned = OwnedParam::param_owner(name, &owner);
+        let is_sig_owned = matches!(
+            owner,
+            ir::ParamOwner::Sig | ir::ParamOwner::Exists { .. }
+        );
         let ir_param = ir::Param::new(owner, info);
-        let is_sig_owned = ir_param.is_sig_owned();
         let idx = self.comp().add(ir_param);
         let e_idx = idx.expr(self.comp());
         self.add_param_map(owned, e_idx);

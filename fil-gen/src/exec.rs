@@ -167,9 +167,16 @@ impl GenExec {
             .collect();
         log::info!("Existential parameters: {:?}", exist_params);
 
-        ToolOutput {
+        // Generate the output and cache the result
+        let out = ToolOutput {
             file: out_file,
             exist_params,
-        }
+        };
+        self.generated
+            .entry(tool.name.clone())
+            .or_default()
+            .insert(instance.clone(), out.clone());
+
+        out
     }
 }
