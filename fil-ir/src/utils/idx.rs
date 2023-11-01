@@ -55,7 +55,7 @@ impl<T> Clone for Idx<T> {
 
 impl<T> PartialOrd for Idx<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.idx.partial_cmp(&other.idx)
+        Some(self.cmp(other))
     }
 }
 

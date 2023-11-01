@@ -22,6 +22,16 @@ extern "state.sv" {
       out: ['G+1, 'G+2] WIDTH,
    );
 
+   // A comp that extends `in` till `L`.
+   comp PassThroughRegister[WIDTH]<'G: 'L-('G+0), 'L: 1>(
+      clk: 1,
+      reset: 1,
+      write_en: interface['G],
+      in: ['G, 'G+1] WIDTH,
+   ) -> (
+      out: ['G, 'L] WIDTH,
+   ) where 'L > 'G;
+
    // A comp that allows access to its previous stored value.
    // Backend by a simple register
    comp Prev[WIDTH, SAFE]<'G: 1>(

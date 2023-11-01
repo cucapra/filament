@@ -52,7 +52,7 @@ impl<T> Clone for Base<T> {
 }
 impl<T> PartialOrd for Base<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.idx.partial_cmp(&other.idx)
+        Some(self.cmp(other))
     }
 }
 impl<T> Ord for Base<T> {
