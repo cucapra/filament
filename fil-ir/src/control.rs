@@ -3,7 +3,7 @@ use super::{
     InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx, Range, TimeIdx, TimeSub,
 };
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 /// A flattened and minimized representation of the control flow graph.
 /// Bundle definitions and facts are removed during the process of compilation to the IR.
 pub enum Command {
@@ -105,7 +105,7 @@ impl InstIdx {
     }
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 /// A connection between two ports
 pub struct Connect {
     pub src: Access,
@@ -155,7 +155,7 @@ impl InvIdx {
     }
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 /// A loop over a range of numbers
 pub struct Loop {
     pub index: ParamIdx,
@@ -164,7 +164,7 @@ pub struct Loop {
     pub body: Vec<Command>,
 }
 
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 /// A conditional statement
 pub struct If {
     pub cond: PropIdx,
@@ -202,7 +202,7 @@ impl EventBind {
 }
 
 /// Binding for an existentially quantified parameter
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Exists {
     /// The existentially quantified parameter
     pub param: ParamIdx,
@@ -211,7 +211,7 @@ pub struct Exists {
 }
 
 /// A `let`-bound parameter
-#[derive(Hash, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Let {
     /// The parameter
     pub param: ParamIdx,
