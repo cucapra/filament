@@ -46,7 +46,6 @@ impl MonoSig {
     pub fn new(
         underlying: &ir::Component,
         idx: Underlying<ir::Component>,
-        is_ext: bool,
         params: Vec<u64>,
     ) -> Self {
         let binding = ir::Bind::new(
@@ -56,7 +55,7 @@ impl MonoSig {
                 .zip(params)
                 .collect_vec(),
         );
-        let comp = ir::Component::new(is_ext);
+        let comp = ir::Component::new(false);
 
         Self {
             base: BaseComp::new(comp),

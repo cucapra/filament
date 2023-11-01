@@ -162,8 +162,7 @@ impl<'ctx> Monomorphize<'ctx> {
         }
 
         // Otherwise monomorphize the definition of the component
-        let monosig =
-            MonoSig::new(underlying, comp, underlying.is_ext(), params);
+        let monosig = MonoSig::new(underlying, comp, params);
 
         // the component whose signature we want to monomorphize
         // Monomorphize the sig
