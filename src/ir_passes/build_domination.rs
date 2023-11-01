@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
 use crate::ir_visitor::{Action, Visitor, VisitorData};
 use fil_ir::{self as ir, Ctx};
+use ir::DisplayCtx;
 use itertools::Itertools;
 use topological_sort::TopologicalSort;
 
@@ -29,38 +32,109 @@ impl BuildDomination {
     /// Topologically sort the instances in the current scope.
     /// Dependency between instances is created when one uses a parameter
     /// defined by another.
-    fn sort_insts(
+    fn sort_insts_plets(
         insts: Vec<ir::Command>,
+        plets: Vec<ir::Command>,
         comp: &ir::Component,
     ) -> Vec<ir::Command> {
-        let insts = insts
-            .into_iter()
-            .map(|i| {
-                let ir::Command::Instance(inst) = i else {
-                    unreachable!("expected instance command")
-                };
-                inst
-            })
-            .collect_vec();
-        let mut topo =
-            TopologicalSort::<ir::InstIdx>::from_iter(insts.iter().cloned());
+        let cmds: Vec<_> = insts.into_iter().chain(plets.into_iter()).collect();
 
-        for inst in insts {
-            let ir::Instance { args, .. } = comp.get(inst);
-            for arg in args.iter() {
-                let ir::Expr::Param(p_idx) = comp.get(*arg) else {
-                    continue;
-                };
-                let ir::ParamOwner::Instance { inst: parent, .. } =
-                    comp.get(*p_idx).owner
-                else {
-                    continue;
-                };
-                topo.add_dependency(parent, inst);
+        let mut param_map: HashMap<ir::Idx<ir::Param>, usize> = HashMap::new();
+
+        // First pass to register all paremeter owners.
+        for (id, cmd) in cmds.iter().enumerate() {
+            match cmd {
+                ir::Command::Let(ir::Let { param, .. }) => {
+                    log::debug!("let-bound param {}", comp.display(*param));
+                    param_map.insert(*param, id);
+                }
+                ir::Command::Instance(inst) => {
+                    let ir::Instance { params, .. } = comp.get(*inst);
+                    for param in params {
+                        log::debug!(
+                            "param {} is owned by {}",
+                            comp.display(*param),
+                            comp.display(*inst)
+                        );
+                        param_map.insert(*param, id);
+                    }
+                }
+                _ => unreachable!(
+                    "Expected Only expected param-lets and instances."
+                ),
             }
         }
 
-        topo.map(|i| i.into()).collect_vec()
+        let mut topo = TopologicalSort::<usize>::new();
+        log::debug!("topo sort: {:?}", topo);
+
+        for (id, cmd) in cmds.iter().enumerate() {
+            match cmd {
+                ir::Command::Let(ir::Let { expr, param }) => {
+                    for idx in expr.relevant_vars(comp) {
+                        if matches!(
+                            comp.get(idx).owner,
+                            ir::ParamOwner::Instance { .. },
+                        ) {
+                            log::debug!(
+                                "param {} is used by {}",
+                                comp.display(idx),
+                                comp.display(*param)
+                            );
+                            if let Some(pid) = param_map.get(&idx) {
+                                // Add a dependency from the let to the parameter owner, if it is defined in this scope
+                                topo.add_dependency(*pid, id);
+                            }
+                        }
+                    }
+                }
+                ir::Command::Instance(inst) => {
+                    let ir::Instance { args, .. } = comp.get(*inst);
+                    for arg in args.iter() {
+                        let ir::Expr::Param(p_idx) = comp.get(*arg) else {
+                            continue;
+                        };
+                        match comp.get(*p_idx).owner {
+                            ir::ParamOwner::Let { .. }
+                            | ir::ParamOwner::Instance { .. } => {
+                                log::debug!(
+                                    "param {} is used by {}",
+                                    comp.display(*p_idx),
+                                    comp.display(*inst)
+                                );
+                                if let Some(pid) = param_map.get(p_idx) {
+                                    // Add a dependency from the instance to the parameter owner, if it is defined in this scope
+                                    topo.add_dependency(*pid, id);
+                                }
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+                _ => unreachable!(
+                    "Expected Only expected param-lets and instances."
+                ),
+            }
+        }
+
+        log::debug!("topo sort: {:?}", topo);
+        log::debug!("iter: {:?}", topo.clone().collect::<Vec<_>>());
+
+        let mut cmds = cmds.into_iter().map(|cmd| Some(cmd)).collect_vec();
+
+        let mut res = Vec::new();
+
+        // Add the commands in topological dependency order
+        for i in topo {
+            let Some(cmd) = cmds[i].take() else {
+                unreachable!("Topological sort returned the same index twice.")
+            };
+            res.push(cmd);
+        }
+
+        // Add the remaining commands that were not dependent on anything
+        res.extend(cmds.into_iter().flatten());
+        res
     }
 
     /// End the current scope and return the instances and invocations
@@ -68,7 +142,7 @@ impl BuildDomination {
     fn end_scope(
         &mut self,
         comp: &ir::Component,
-    ) -> (Vec<ir::Command>, Vec<ir::Command>, Vec<ir::Command>) {
+    ) -> (Vec<ir::Command>, Vec<ir::Command>) {
         let Some(insts) = self.insts.pop() else {
             unreachable!("insts stack is empty")
         };
@@ -78,7 +152,7 @@ impl BuildDomination {
         let Some(plets) = self.plets.pop() else {
             unreachable!("plets stack is empty")
         };
-        (Self::sort_insts(insts, comp), invs, plets)
+        (Self::sort_insts_plets(insts, plets, comp), invs)
     }
 
     fn add_inv(&mut self, inv: ir::InvIdx) {
@@ -87,6 +161,10 @@ impl BuildDomination {
 
     fn add_inst(&mut self, inst: ir::InstIdx) {
         self.insts.last_mut().unwrap().push(inst.into());
+    }
+
+    fn add_let(&mut self, let_: ir::Let) {
+        self.plets.last_mut().unwrap().push(let_.into());
     }
 }
 
@@ -108,7 +186,7 @@ impl Visitor for BuildDomination {
     }
 
     fn let_(&mut self, let_: &mut ir::Let, _: &mut VisitorData) -> Action {
-        self.plets.last_mut().unwrap().push(let_.clone().into());
+        self.add_let(let_.clone());
         // Remove the let
         Action::Change(vec![])
     }
@@ -117,11 +195,10 @@ impl Visitor for BuildDomination {
         self.start_scope();
     }
     fn end_cmds(&mut self, cmds: &mut Vec<ir::Command>, d: &mut VisitorData) {
-        let (inst, invs, plets) = self.end_scope(&d.comp);
+        let (inst_plets, invs) = self.end_scope(&d.comp);
         // Insert instances and then invocations to the start of the scope.
-        *cmds = plets
+        *cmds = inst_plets
             .into_iter()
-            .chain(inst)
             .chain(invs)
             .chain(cmds.drain(..))
             .collect();

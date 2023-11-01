@@ -304,6 +304,7 @@ where
         let mut visitor = Self::from(opts, ctx);
         for idx in ctx.comps.idx_iter() {
             visitor.clear_data();
+            log::trace!("{}: Visiting component {}", Self::name(), idx);
             visitor.visit((idx, opts, &mut *ctx).into());
         }
         match visitor.after_traversal() {
