@@ -1,4 +1,4 @@
-generate "flopoco.toml" {
+generate(flopoco) using "flopoco.toml" {
     comp FPAdd[Exp, Mant]<'G:1>(
         X: ['G, 'G+1] Width,
         Y: ['G, 'G+1] Width,

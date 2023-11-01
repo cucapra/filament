@@ -8,10 +8,15 @@ use fil_gen as gen;
 pub struct Extern {
     pub path: String,
     pub comps: Vec<Signature>,
-    pub gen: bool,
+    /// name of the tool that generates this module
+    pub gen: Option<String>,
 }
 impl Extern {
-    pub fn new(path: String, comps: Vec<Signature>, gen: bool) -> Self {
+    pub fn new(
+        path: String,
+        comps: Vec<Signature>,
+        gen: Option<String>,
+    ) -> Self {
         Self { path, comps, gen }
     }
 
@@ -62,7 +67,7 @@ impl Namespace {
 
     /// Returns true if the namespace declares at least one generative module
     pub fn requires_gen(&self) -> bool {
-        self.externs.iter().any(|Extern { gen, .. }| *gen)
+        self.externs.iter().any(|Extern { gen, .. }| gen.is_some())
     }
 
     /// Initialize the generator executor using the given generate definitions.
@@ -70,10 +75,11 @@ impl Namespace {
     pub fn init_gen(&self, out_dir: PathBuf) -> gen::GenExec {
         let mut gen_exec = gen::GenExec::new(out_dir, false);
         for Extern { path, gen, .. } in &self.externs {
-            if !gen {
+            let Some(tool_name) = gen else {
                 continue;
-            }
-            gen_exec.register_tool_from_file(path.into());
+            };
+            let tool = gen_exec.register_tool_from_file(path.into());
+            assert!(&tool.name == tool_name, "Generate definition for tool `{}` does not match the tool name `{}`", tool_name, tool.name);
         }
         gen_exec
     }

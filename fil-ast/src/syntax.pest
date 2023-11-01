@@ -70,7 +70,7 @@ external = {
   "extern" ~ string_lit ~ "{" ~  ("comp" ~ signature ~ ";")*  ~ "}"
 }
 generate = {
-  "generate" ~ string_lit ~ "{" ~  ("comp" ~ signature ~ ";")*  ~ "}"
+  "generate" ~ "(" ~ identifier ~ ")" ~ "using" ~ string_lit ~ "{" ~  ("comp" ~ signature ~ ";")*  ~ "}"
 }
 
 comp_or_ext = {

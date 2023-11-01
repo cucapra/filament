@@ -827,14 +827,16 @@ impl FilamentParser {
     fn external(input: Node) -> ParseResult<ast::Extern> {
         Ok(match_nodes!(
             input.into_children();
-            [string_lit(path), signature(sigs)..] => ast::Extern::new(path, sigs.collect(), false),
+            [string_lit(path), signature(sigs)..] => ast::Extern::new(path, sigs.collect(), None),
         ))
     }
 
     fn generate(input: Node) -> ParseResult<ast::Extern> {
         Ok(match_nodes!(
             input.into_children();
-            [string_lit(path), signature(sigs)..] => ast::Extern::new(path, sigs.collect(), true),
+            [identifier(name), string_lit(path), signature(sigs)..] => {
+                ast::Extern::new(path, sigs.collect(), Some(name.to_string()))
+            }
         ))
     }
 
