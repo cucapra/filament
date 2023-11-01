@@ -1,5 +1,5 @@
 use super::{
-    AddCtx, CompIdx, Component, Ctx, Foreign, Idx, IndexStore, MutCtx,
+    AddCtx, CompIdx, CompType, Component, Ctx, Foreign, Idx, IndexStore, MutCtx,
 };
 use fil_derive::Ctx;
 use std::collections::HashMap;
@@ -24,8 +24,8 @@ impl Context {
     }
 
     /// Add a new component, default to the context
-    pub fn comp(&mut self, is_ext: bool) -> CompIdx {
-        let comp = Component::new(is_ext);
+    pub fn comp(&mut self, typ: CompType) -> CompIdx {
+        let comp = Component::new(typ);
         self.add(comp)
     }
 

@@ -45,6 +45,7 @@ pub struct MonoSig {
 impl MonoSig {
     pub fn new(
         underlying: &ir::Component,
+        typ: ir::CompType,
         idx: Underlying<ir::Component>,
         params: Vec<u64>,
     ) -> Self {
@@ -55,7 +56,7 @@ impl MonoSig {
                 .zip(params)
                 .collect_vec(),
         );
-        let comp = ir::Component::new(false);
+        let comp = ir::Component::new(typ);
 
         Self {
             base: BaseComp::new(comp),
@@ -120,7 +121,7 @@ impl MonoSig {
         };
 
         let Some(&comp) = pass.processed.get(&comp_k) else {
-            unreachable!("component should have been monomorphized")
+            unreachable!("component {comp_k} should have been monomorphized")
         };
 
         (comp_k, comp)
@@ -375,11 +376,7 @@ impl MonoSig {
         new_ev.info = info.get();
     }
 
-    pub fn interface(
-        &mut self,
-        underlying: &UnderlyingComp,
-        interface: &Option<ir::InterfaceSrc>,
-    ) {
+    pub fn interface(&mut self, interface: &Option<ir::InterfaceSrc>) {
         self.base.set_src_info(interface.clone().map(
             |ir::InterfaceSrc {
                  name,

@@ -169,6 +169,7 @@ impl GenExec {
 
         // Generate the output and cache the result
         let out = ToolOutput {
+            name: gen_name,
             file: out_file,
             exist_params,
         };

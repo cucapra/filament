@@ -1057,15 +1057,18 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
         // track (extern location / gen tool name, signature, body)
         .flat_map(|ast::Extern { comps, gen, path }| {
             comps.into_iter().map(move |comp| {
-                (Some((gen.clone(), path.clone())), comp, None)
+                let typ = if gen.is_none() {
+                    ir::CompType::External
+                } else {
+                    ir::CompType::Generated
+                };
+                (typ, Some((gen.clone(), path.clone())), comp, None)
             })
         })
         // add signatures of components as well as their command bodies
-        .chain(
-            ns.components
-                .into_iter()
-                .map(|comp| (None, comp.sig, Some(comp.body))),
-        )
+        .chain(ns.components.into_iter().map(|comp| {
+            (ir::CompType::Source, None, comp.sig, Some(comp.body))
+        }))
         .enumerate();
 
     // used in the beginning so signatures of components can be built without any information
@@ -1080,10 +1083,9 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
 
     // uses the information above to compile the signatures of components and create their builders.
     let (mut builders, sig_map): (Vec<_>, SigMap) = comps
-        .map(|(idx, (ext_info, sig, body))| {
+        .map(|(idx, (typ, ext_info, sig, body))| {
             let idx = ir::CompIdx::new(idx);
-            let mut builder =
-                BuildCtx::new(ir::Component::new(body.is_none()), &sig_map);
+            let mut builder = BuildCtx::new(ir::Component::new(typ), &sig_map);
 
             // enable source information saving if this is main
             if Some(idx) == ctx.entrypoint {
@@ -1093,10 +1095,10 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
             // add the file to the externals map if it exists
             if let Some((gen, path)) = ext_info {
                 // Only real externals get a file location
-                if gen.is_none() {
+                if matches!(typ, ir::CompType::External) {
                     ctx.externals.entry(path).or_default().push(idx);
                 }
-                // Add source information if this is an external
+                // Add source information
                 builder.comp().src_info =
                     Some(InterfaceSrc::new(sig.name.copy(), gen));
             }

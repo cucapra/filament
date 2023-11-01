@@ -121,20 +121,27 @@ impl<'ctx> Monomorphize<'ctx> {
 
         // Running the tool returns the location of the Verilog file that
         // contains the definition and mapping for existential parameters.
-        let gen::ToolOutput { file, exist_params } = self
+        let gen::ToolOutput {
+            name,
+            file,
+            exist_params,
+        } = self
             .gen_exec
             .as_mut()
             .unwrap_or_else(|| unreachable!("no generate executor defined"))
             .gen_instance(tool, &inst);
 
-        // Add generated existential parameters
-        let monosig = MonoSig::new(underlying, comp, params);
+        // Partially convert the signature
+        let monosig =
+            MonoSig::new(underlying, ir::CompType::External, comp, params);
         let mut mono_comp = MonoDeferred::new(
             UnderlyingComp::new(self.old.get(comp.idx())),
             self,
             monosig,
         );
         mono_comp.sig_partial_mono();
+
+        // Add generated existential parameters
         let exists = exist_params
             .into_iter()
             .map(|(name, val)| {
@@ -150,7 +157,10 @@ impl<'ctx> Monomorphize<'ctx> {
 
         // Monomorphize the siganture of the component using the parameters
         mono_comp.sig_complete_mono();
-        let comp = mono_comp.take();
+        let mut comp = mono_comp.take();
+
+        // Update the source name
+        comp.src_info.as_mut().unwrap().name = name.into();
 
         // Add information about the existential parameters to the global map
         let info = self.inst_info_mut(key.clone());
@@ -237,7 +247,8 @@ impl<'ctx> Monomorphize<'ctx> {
         }
 
         // Otherwise monomorphize the definition of the component
-        let monosig = MonoSig::new(underlying, comp, params);
+        let monosig =
+            MonoSig::new(underlying, ir::CompType::Source, comp, params);
 
         // the component whose signature we want to monomorphize
         // Monomorphize the sig

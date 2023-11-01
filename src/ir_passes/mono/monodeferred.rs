@@ -93,7 +93,7 @@ impl MonoDeferred<'_, '_> {
         }
 
         let src_info = ul.src_info();
-        monosig.interface(ul, src_info);
+        monosig.interface(src_info);
 
         let unannotated_ports = ul.unannotated_ports().clone();
         monosig.base.set_unannotated_ports(unannotated_ports);
