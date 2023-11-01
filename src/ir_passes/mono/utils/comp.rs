@@ -1,7 +1,6 @@
 use fil_ast as ast;
 use fil_ir::{
-    self as ir, AddCtx, Ctx, DisplayCtx, Idx, IndexStore, InterfaceSrc,
-    Interned, MutCtx,
+    self as ir, AddCtx, Ctx, DisplayCtx, Idx, IndexStore, InterfaceSrc, MutCtx,
 };
 
 use super::{Base, IntoBase, IntoUdl, Underlying};
@@ -13,6 +12,7 @@ impl<'a> UnderlyingComp<'a> {
     pub fn new(comp: &'a ir::Component) -> Self {
         Self(comp)
     }
+    // XXX(rachitnigam): We should probably define a macro to dispatch these methods.
     pub fn cmds(&self) -> &Vec<ir::Command> {
         &self.0.cmds
     }
@@ -21,12 +21,6 @@ impl<'a> UnderlyingComp<'a> {
     }
     pub fn events(&self) -> &IndexStore<ir::Event> {
         self.0.events()
-    }
-    pub fn exprs(&self) -> &Interned<ir::Expr> {
-        self.0.exprs()
-    }
-    pub fn params(&self) -> &IndexStore<ir::Param> {
-        self.0.params()
     }
     pub fn ports(&self) -> &IndexStore<ir::Port> {
         self.0.ports()
@@ -40,7 +34,6 @@ impl<'a> UnderlyingComp<'a> {
     pub fn exist_params(&self) -> impl Iterator<Item = ir::ParamIdx> + '_ {
         self.0.exist_params()
     }
-
     pub fn relevant_vars(
         &self,
         prop: Underlying<ir::Prop>,

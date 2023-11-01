@@ -49,7 +49,7 @@ impl<T> Clone for Underlying<T> {
 impl<T> Copy for Underlying<T> {}
 impl<T> PartialOrd for Underlying<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.idx.partial_cmp(&other.idx)
+        Some(self.cmp(other))
     }
 }
 impl<T> Ord for Underlying<T> {
