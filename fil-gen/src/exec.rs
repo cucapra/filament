@@ -46,10 +46,12 @@ impl GenExec {
     }
 
     /// Register a tool by reading its definition from a file
-    pub fn register_tool_from_file(&mut self, path: PathBuf) {
+    pub fn register_tool_from_file(&mut self, path: PathBuf) -> &Tool {
         let desc = fs::read_to_string(path).unwrap();
         let tool: Tool = toml::from_str(&desc).unwrap();
-        self.register_tool(tool)
+        let name = tool.name.clone();
+        self.register_tool(tool);
+        self.tools.get(&name).unwrap()
     }
 
     /// Register a new tool

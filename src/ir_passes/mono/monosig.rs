@@ -387,22 +387,8 @@ impl MonoSig {
                  interface_ports,
                  params,
                  events,
-                 gen_tool,
+                 ..
              }| {
-                assert!(
-                    gen_tool.is_none(),
-                    "Monomorphizing generated modules is not supported"
-                );
-
-                let params = if underlying.is_ext() {
-                    params
-                        .iter()
-                        .map(|(p, id)| (self.param_map[p.ul()].get(), *id))
-                        .collect()
-                } else {
-                    params
-                };
-
                 ir::InterfaceSrc {
                     name,
                     ports,
