@@ -45,13 +45,13 @@ impl BuildDomination {
         for (id, cmd) in cmds.iter().enumerate() {
             match cmd {
                 ir::Command::Let(ir::Let { param, .. }) => {
-                    log::debug!("let-bound param {}", comp.display(*param));
+                    log::trace!("let-bound param {}", comp.display(*param));
                     param_map.insert(*param, id);
                 }
                 ir::Command::Instance(inst) => {
                     let ir::Instance { params, .. } = comp.get(*inst);
                     for param in params {
-                        log::debug!(
+                        log::trace!(
                             "param {} is owned by {}",
                             comp.display(*param),
                             comp.display(*inst)
@@ -66,48 +66,32 @@ impl BuildDomination {
         }
 
         let mut topo = TopologicalSort::<usize>::new();
-        log::debug!("topo sort: {:?}", topo);
 
         for (id, cmd) in cmds.iter().enumerate() {
             match cmd {
                 ir::Command::Let(ir::Let { expr, param }) => {
                     for idx in expr.relevant_vars(comp) {
-                        if matches!(
-                            comp.get(idx).owner,
-                            ir::ParamOwner::Instance { .. },
-                        ) {
-                            log::debug!(
-                                "param {} is used by {}",
-                                comp.display(idx),
-                                comp.display(*param)
-                            );
-                            if let Some(pid) = param_map.get(&idx) {
-                                // Add a dependency from the let to the parameter owner, if it is defined in this scope
-                                topo.add_dependency(*pid, id);
-                            }
+                        log::trace!(
+                            "param {} is used by {}",
+                            comp.display(idx),
+                            comp.display(*param)
+                        );
+                        if let Some(pid) = param_map.get(&idx) {
+                            // Add a dependency from the let to the parameter owner, if it is defined in this scope
+                            topo.add_dependency(*pid, id);
                         }
                     }
                 }
                 ir::Command::Instance(inst) => {
-                    let ir::Instance { args, .. } = comp.get(*inst);
-                    for arg in args.iter() {
-                        let ir::Expr::Param(p_idx) = comp.get(*arg) else {
-                            continue;
-                        };
-                        match comp.get(*p_idx).owner {
-                            ir::ParamOwner::Let { .. }
-                            | ir::ParamOwner::Instance { .. } => {
-                                log::debug!(
-                                    "param {} is used by {}",
-                                    comp.display(*p_idx),
-                                    comp.display(*inst)
-                                );
-                                if let Some(pid) = param_map.get(p_idx) {
-                                    // Add a dependency from the instance to the parameter owner, if it is defined in this scope
-                                    topo.add_dependency(*pid, id);
-                                }
-                            }
-                            _ => (),
+                    for idx in (*inst).relevant_vars(comp) {
+                        log::trace!(
+                            "param {} is used by {}",
+                            comp.display(idx),
+                            comp.display(*inst)
+                        );
+                        if let Some(pid) = param_map.get(&idx) {
+                            // Add a dependency from the instance to the parameter owner, if it is defined in this scope
+                            topo.add_dependency(*pid, id);
                         }
                     }
                 }
@@ -117,10 +101,7 @@ impl BuildDomination {
             }
         }
 
-        log::debug!("topo sort: {:?}", topo);
-        log::debug!("iter: {:?}", topo.clone().collect::<Vec<_>>());
-
-        let mut cmds = cmds.into_iter().map(|cmd| Some(cmd)).collect_vec();
+        let mut cmds = cmds.into_iter().map(Some).collect_vec();
 
         let mut res = Vec::new();
 

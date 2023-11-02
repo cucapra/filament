@@ -1,3 +1,5 @@
+use crate::{Expr, Time};
+
 use super::{
     Access, CompIdx, Component, Ctx, Event, ExprIdx, Fact, Foreign, InfoIdx,
     InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx, Range, TimeIdx, TimeSub,
@@ -102,6 +104,22 @@ impl InstIdx {
     pub fn comp(self, ctx: &impl Ctx<Instance>) -> CompIdx {
         let inst = ctx.get(self);
         inst.comp
+    }
+
+    pub fn relevant_vars(
+        self,
+        ctx: &(impl Ctx<Instance> + Ctx<Expr> + Ctx<Time>),
+    ) -> Vec<ParamIdx> {
+        let Instance { args, lives, .. } = ctx.get(self);
+        args.iter()
+            .flat_map(|arg| arg.relevant_vars(ctx).into_iter())
+            .chain(lives.iter().flat_map(|r| {
+                r.start
+                    .relevant_vars(ctx)
+                    .into_iter()
+                    .chain(r.end.relevant_vars(ctx))
+            }))
+            .collect()
     }
 }
 
