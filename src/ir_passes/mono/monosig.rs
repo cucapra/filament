@@ -45,8 +45,8 @@ pub struct MonoSig {
 impl MonoSig {
     pub fn new(
         underlying: &ir::Component,
+        typ: ir::CompType,
         idx: Underlying<ir::Component>,
-        is_ext: bool,
         params: Vec<u64>,
     ) -> Self {
         let binding = ir::Bind::new(
@@ -56,8 +56,7 @@ impl MonoSig {
                 .zip(params)
                 .collect_vec(),
         );
-        let mut comp = ir::Component::default();
-        comp.is_ext = is_ext;
+        let comp = ir::Component::new(typ);
 
         Self {
             base: BaseComp::new(comp),
@@ -122,7 +121,7 @@ impl MonoSig {
         };
 
         let Some(&comp) = pass.processed.get(&comp_k) else {
-            unreachable!("component should have been monomorphized")
+            unreachable!("component {comp_k} should have been monomorphized")
         };
 
         (comp_k, comp)
@@ -377,11 +376,7 @@ impl MonoSig {
         new_ev.info = info.get();
     }
 
-    pub fn interface(
-        &mut self,
-        underlying: &UnderlyingComp,
-        interface: &Option<ir::InterfaceSrc>,
-    ) {
+    pub fn interface(&mut self, interface: &Option<ir::InterfaceSrc>) {
         self.base.set_src_info(interface.clone().map(
             |ir::InterfaceSrc {
                  name,
@@ -389,16 +384,8 @@ impl MonoSig {
                  interface_ports,
                  params,
                  events,
+                 ..
              }| {
-                let params = if underlying.is_ext() {
-                    params
-                        .iter()
-                        .map(|(p, id)| (self.param_map[p.ul()].get(), *id))
-                        .collect()
-                } else {
-                    params
-                };
-
                 ir::InterfaceSrc {
                     name,
                     ports,
@@ -415,6 +402,8 @@ impl MonoSig {
                             (self.event_map.get(ev.ul()).get(), *id)
                         })
                         .collect(),
+                    // Things do not need to be generated after monomorphize
+                    gen_tool: None,
                 }
             },
         ));

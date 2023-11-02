@@ -9,6 +9,17 @@ use fil_ast as ast;
 use fil_derive::Ctx;
 use itertools::Itertools;
 
+#[derive(Default, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum CompType {
+    #[default]
+    /// A source-level component
+    Source,
+    /// An external component
+    External,
+    /// A generated component
+    Generated,
+}
+
 #[derive(Default, Ctx, Clone)]
 /// A IR component. If `is_ext` is true then this is an external component.
 pub struct Component {
@@ -58,7 +69,7 @@ pub struct Component {
     /// Information tracked by the component
     info: IndexStore<Info>,
     /// Is this an external component
-    pub is_ext: bool,
+    typ: CompType,
     /// Externally facing interface information, used to preserve interface in compilation.
     /// Must be `Some` for toplevel components and externals.
     pub src_info: Option<InterfaceSrc>,
@@ -71,9 +82,9 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn new(is_ext: bool) -> Self {
+    pub fn new(typ: CompType) -> Self {
         let mut comp = Self {
-            is_ext,
+            typ,
             ..Default::default()
         };
         // Allocate numbers and props now so we get reasonable indices.
@@ -82,6 +93,21 @@ impl Component {
         comp.add(Prop::False);
         comp.add(Prop::True);
         comp
+    }
+
+    /// Is this an externally defined module
+    pub fn is_ext(&self) -> bool {
+        matches!(self.typ, CompType::External)
+    }
+
+    /// Does this module need to be generated
+    pub fn is_gen(&self) -> bool {
+        matches!(self.typ, CompType::Generated)
+    }
+
+    /// Return source name of the component if present
+    pub fn source_name(&self) -> Option<ast::Id> {
+        self.src_info.as_ref().map(|si| si.name)
     }
 
     /// Add a number to the context and get handle to it.
