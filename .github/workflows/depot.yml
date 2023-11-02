@@ -22,7 +22,7 @@ jobs:
         run: (docker buildx imagetools inspect ghcr.io/cucapra/filament:${{ steps.hash.outputs.hash }} && echo "exists=true" || echo "exists=false") >> "$GITHUB_OUTPUT"
   build:
     needs: hash
-    if: ${{ needs.hash.outputs.exists == 'false' }}
+    if: ${{ needs.exists.outputs.exists == 'false' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
