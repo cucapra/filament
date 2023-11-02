@@ -67,6 +67,9 @@ jobs:
     needs: [hash, build]
     if: always() && !failure() && !cancelled()
     container: ghcr.io/cucapra/filament:${{ needs.hash.outputs.hash }}
+    defaults:
+      run:
+        working-directory: /home/filament
     steps:
       - name: Copy fud configuration
         run: |
