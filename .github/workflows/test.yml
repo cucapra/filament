@@ -24,7 +24,6 @@ jobs:
       - name: Depot push image
         if: failure()
         uses: ./.github/workflows/depot.yml
-        secrets: inherit
   compiler:
     name: Test Compiler
     runs-on: ubuntu-latest

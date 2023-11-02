@@ -5,6 +5,7 @@ on:
     paths:
       - 'Dockerfile'
       - '.github/workflows/depot.yml'
+  workflow_call:
 
 jobs:
   build:
