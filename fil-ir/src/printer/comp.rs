@@ -159,7 +159,7 @@ impl<'a, 'b> Printer<'a, 'b> {
         indent: usize,
         f: &mut F,
     ) -> io::Result<()> {
-        if self.comp.is_ext {
+        if self.comp.is_ext() {
             write!(f, "ext ")?;
         };
         if let Some(info) = &self.comp.src_info {

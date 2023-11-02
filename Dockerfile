@@ -1,5 +1,7 @@
 FROM ghcr.io/cucapra/calyx:0.4.0
 
+LABEL org.opencontainers.image.source https://github.com/cucapra/filament
+
 # Install apt packages
 RUN apt-get update -y && \
   apt-get -y install unzip

@@ -45,8 +45,8 @@ pub struct MonoSig {
 impl MonoSig {
     pub fn new(
         underlying: &ir::Component,
+        typ: ir::CompType,
         idx: Underlying<ir::Component>,
-        is_ext: bool,
         params: Vec<u64>,
     ) -> Self {
         let binding = ir::Bind::new(
@@ -56,8 +56,7 @@ impl MonoSig {
                 .zip(params)
                 .collect_vec(),
         );
-        let mut comp = ir::Component::default();
-        comp.is_ext = is_ext;
+        let comp = ir::Component::new(typ);
 
         Self {
             base: BaseComp::new(comp),
@@ -122,7 +121,7 @@ impl MonoSig {
         };
 
         let Some(&comp) = pass.processed.get(&comp_k) else {
-            unreachable!("component should have been monomorphized")
+            unreachable!("component {comp_k} should have been monomorphized")
         };
 
         (comp_k, comp)
@@ -207,7 +206,13 @@ impl MonoSig {
             | ir::info::Reason::EventTrig { .. }
             | ir::info::Reason::EventLive { .. }
             | ir::info::Reason::EventLiveDelay { .. }
-            | ir::info::Reason::Misc { .. } => reason.clone(),
+            | ir::info::Reason::Misc { .. }
+            | ir::info::Reason::Generated { .. } => {
+                ir::info::Reason::generated(
+                    "Elaborated during monomorphization.".to_string(),
+                    reason.clone(),
+                )
+            }
         }
     }
 
@@ -371,11 +376,7 @@ impl MonoSig {
         new_ev.info = info.get();
     }
 
-    pub fn interface(
-        &mut self,
-        underlying: &UnderlyingComp,
-        interface: &Option<ir::InterfaceSrc>,
-    ) {
+    pub fn interface(&mut self, interface: &Option<ir::InterfaceSrc>) {
         self.base.set_src_info(interface.clone().map(
             |ir::InterfaceSrc {
                  name,
@@ -383,16 +384,8 @@ impl MonoSig {
                  interface_ports,
                  params,
                  events,
+                 ..
              }| {
-                let params = if underlying.is_ext() {
-                    params
-                        .iter()
-                        .map(|(p, id)| (self.param_map[p.ul()].get(), *id))
-                        .collect()
-                } else {
-                    params
-                };
-
                 ir::InterfaceSrc {
                     name,
                     ports,
@@ -409,6 +402,8 @@ impl MonoSig {
                             (self.event_map.get(ev.ul()).get(), *id)
                         })
                         .collect(),
+                    // Things do not need to be generated after monomorphize
+                    gen_tool: None,
                 }
             },
         ));
@@ -609,7 +604,9 @@ impl MonoSig {
         let (ck, new_owner) = self.foreign_comp(underlying, pass, inv);
 
         let key = foreign.key().ul();
-        let new_event = pass.inst_info(&ck).get_event(key).unwrap();
+        let Some(new_event) = pass.inst_info(&ck).get_event(key) else {
+            unreachable!("missing event `{}' for {ck}", foreign.key())
+        };
         ir::Foreign::new(new_event.get(), new_owner.get())
     }
 
@@ -673,111 +670,6 @@ impl MonoSig {
         self.instance_map.insert(inst, new_idx);
 
         new_idx
-    }
-
-    /// For handling an external component's port. In this case, we don't want to replace parameters with concerete expressions.
-    pub fn ext_port(
-        &mut self,
-        underlying: &UnderlyingComp,
-        pass: &mut Monomorphize,
-        port: Underlying<ir::Port>,
-    ) -> Base<ir::Port> {
-        assert!(
-            underlying.is_ext(),
-            "ext_port called on non-extern component"
-        );
-
-        let ir::Port {
-            owner,
-            width,
-            live,
-            info,
-        } = underlying.get(port);
-
-        let info = info.ul();
-        let comp = self.underlying_idx;
-
-        let cparams = vec![];
-        let port_map_k = (None, port);
-        let comp_k = (comp, cparams).into();
-
-        // If the port has already been added to the base component, then we can
-        // just return the index
-        if let Some(idx) = self.port_map.get(&port_map_k) {
-            pass.inst_info_mut(comp_k).add_port(port, *idx);
-            return *idx;
-        };
-
-        let info = self.info(underlying, pass, info);
-        // Add the new port so we can use its index in defining the correct Liveness
-        let new_port = self.base.add(ir::Port {
-            owner: owner.clone(),
-            width: *width,      // placeholder
-            live: live.clone(), // placeholder
-            info: info.get(),
-        });
-
-        // local port map
-        self.port_map.insert(port_map_k, new_port);
-
-        // Add port to the global port map
-        pass.inst_info_mut(comp_k).add_port(port, new_port);
-
-        // Find the new port owner
-        let mono_owner = self.find_new_portowner(underlying, pass, owner);
-
-        let ir::Liveness { idxs, lens, range } = live;
-
-        let mono_idxs = self.bundle_params(
-            underlying,
-            pass,
-            &idxs.iter().map(|idx| idx.ul()).collect_vec(),
-            new_port,
-        );
-
-        let mut mono_liveness = ir::Liveness {
-            idxs: mono_idxs.into_iter().map(|idx| idx.get()).collect_vec(),
-            lens: vec![],         // placeholder
-            range: range.clone(), // placeholder
-        };
-
-        // if there's parameters, we don't want to replace them for handling externs
-        let width = width.ul();
-        let mono_width = self.base.add(underlying.get(width).clone());
-        mono_liveness.lens = lens
-            .iter()
-            .map(|len| self.base.add(underlying.get(len.ul()).clone()).get())
-            .collect_vec();
-
-        let ir::Range { start, end } = mono_liveness.range;
-        let start = start.ul();
-        let end = end.ul();
-
-        let ir::Time { event, offset } = underlying.get(start);
-        let start = ir::Time {
-            event: self.event(pass, event.ul()).get(),
-            offset: self.base.add(underlying.get(offset.ul()).clone()).get(),
-        };
-        let start = self.base.add(start);
-
-        let ir::Time { event, offset } = underlying.get(end);
-        let end = ir::Time {
-            event: self.event(pass, event.ul()).get(),
-            offset: self.base.add(underlying.get(offset.ul()).clone()).get(),
-        };
-        let end = self.base.add(end);
-
-        mono_liveness.range = ir::Range {
-            start: start.get(),
-            end: end.get(),
-        };
-
-        let port = self.base.get_mut(new_port);
-        port.live = mono_liveness;
-        port.width = mono_width.get();
-        port.owner = mono_owner;
-
-        new_port
     }
 
     /// Return base representation of a port that has already been monomorphized

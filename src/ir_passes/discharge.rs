@@ -27,7 +27,7 @@ impl Assign {
             .filter_map(|(k, v)| {
                 // Attempt to parse value as a number
                 match v.parse::<i64>() {
-                    Ok(v) if v == 0 => None,
+                    Ok(0) => None,
                     _ => Some(format!("{} = {v}", ctx.display(*k))),
                 }
             })
@@ -396,6 +396,7 @@ impl Discharge {
             let imp = self.sol.imp(actlit, self.sol.not(sexp));
             self.sol.assert(imp).unwrap();
             // Disable the activation literal
+            log::debug!("Checking {}", ctx.display(prop.consequent(ctx)));
             let res = log_time!(
                 self.sol.check_assuming([actlit]).unwrap(),
                 ctx.display(prop.consequent(ctx));
@@ -649,6 +650,7 @@ impl Visitor for Discharge {
 
             // If there is at least one failing prop, roll back to individually checking the props for error reporting
             if matches!(self.sol.check().unwrap(), smt::Response::Sat) {
+                log::info!("Failed to prove all facts. Checking each fact individually");
                 self.failing_props(&data.comp);
             }
         } else {

@@ -24,3 +24,4 @@ pest.workspace = true
 pest_consume.workspace = true
 
 fil-utils.workspace = true
+fil-gen.workspace = true

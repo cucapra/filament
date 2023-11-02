@@ -316,8 +316,11 @@ impl<'prog> BuildCtx<'prog> {
         let (name, pos) = param.split();
         let info = self.comp().add(ir::Info::param(name, pos));
         let owned = OwnedParam::param_owner(name, &owner);
+        let is_sig_owned = matches!(
+            owner,
+            ir::ParamOwner::Sig | ir::ParamOwner::Exists { .. }
+        );
         let ir_param = ir::Param::new(owner, info);
-        let is_sig_owned = ir_param.is_sig_owned();
         let idx = self.comp().add(ir_param);
         let e_idx = idx.expr(self.comp());
         self.add_param_map(owned, e_idx);
@@ -1051,16 +1054,21 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
         // pull signatures out of externals
         .externs
         .into_iter()
-        .flat_map(|(name, comps)| {
-            comps.into_iter().map(move |comp| (name.clone(), comp))
+        // track (extern location / gen tool name, signature, body)
+        .flat_map(|ast::Extern { comps, gen, path }| {
+            comps.into_iter().map(move |comp| {
+                let typ = if gen.is_none() {
+                    ir::CompType::External
+                } else {
+                    ir::CompType::Generated
+                };
+                (typ, Some((gen.clone(), path.clone())), comp, None)
+            })
         })
-        .map(|(name, sig)| (Some(name), sig, None))
         // add signatures of components as well as their command bodies
-        .chain(
-            ns.components
-                .into_iter()
-                .map(|comp| (None, comp.sig, Some(comp.body))),
-        )
+        .chain(ns.components.into_iter().map(|comp| {
+            (ir::CompType::Source, None, comp.sig, Some(comp.body))
+        }))
         .enumerate();
 
     // used in the beginning so signatures of components can be built without any information
@@ -1075,19 +1083,24 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
 
     // uses the information above to compile the signatures of components and create their builders.
     let (mut builders, sig_map): (Vec<_>, SigMap) = comps
-        .map(|(idx, (file, sig, body))| {
+        .map(|(idx, (typ, ext_info, sig, body))| {
             let idx = ir::CompIdx::new(idx);
-            let mut builder =
-                BuildCtx::new(ir::Component::new(body.is_none()), &sig_map);
+            let mut builder = BuildCtx::new(ir::Component::new(typ), &sig_map);
 
-            // enable source information saving if this is main or an external.
-            if body.is_none() || Some(idx) == ctx.entrypoint {
+            // enable source information saving if this is main
+            if Some(idx) == ctx.entrypoint {
                 builder.comp().src_info =
-                    Some(InterfaceSrc::new(sig.name.copy()))
+                    Some(InterfaceSrc::new(sig.name.copy(), None))
             }
             // add the file to the externals map if it exists
-            if let Some(file) = file {
-                ctx.externals.entry(file).or_default().push(idx);
+            if let Some((gen, path)) = ext_info {
+                // Only real externals get a file location
+                if matches!(typ, ir::CompType::External) {
+                    ctx.externals.entry(path).or_default().push(idx);
+                }
+                // Add source information
+                builder.comp().src_info =
+                    Some(InterfaceSrc::new(sig.name.copy(), gen));
             }
 
             // compile the signature

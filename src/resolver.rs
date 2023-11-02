@@ -118,7 +118,7 @@ impl Resolver {
         ns.externs = ns
             .externs
             .drain(..)
-            .map(|(p, imps)| (Self::absolute(p, &base), imps))
+            .map(|ext| ext.map_path(|p| Self::absolute(p, &base)))
             .collect();
 
         while let Some(path) = imports.pop() {
@@ -129,7 +129,7 @@ impl Resolver {
             ns.externs.extend(
                 imp.externs
                     .into_iter()
-                    .map(|(p, imps)| (Self::absolute(p, &base), imps)),
+                    .map(|ext| ext.map_path(|p| Self::absolute(p, &base))),
             );
             let base = Self::parent(&path);
             imports.extend(
@@ -155,7 +155,7 @@ impl Resolver {
             "Externs: {:#?}",
             ns.externs
                 .iter()
-                .flat_map(|(_, comps)| comps)
+                .flat_map(|ast::Extern { comps, .. }| comps)
                 .map(|c| c.name.as_ref())
                 .collect::<Vec<_>>()
         );

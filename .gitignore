@@ -17,6 +17,7 @@ Cargo.lock
 *.vcd
 out.sv
 a.out
+out.*
 model.smt
 hand-compile
 pipelined

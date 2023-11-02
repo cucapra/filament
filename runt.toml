@@ -29,12 +29,13 @@ name = "floating point-random"
 paths = ["tests/floating-point/*/harness.fil"]
 cmd = """
 dir=$(dirname {}) && \
-./tests/utils/rand_check.sh $dir 100
+./tests/utils/rand_check.sh $dir
 """
 
 [[tests]]
 name = "floating point-edge"
 paths = ["tests/floating-point/*/harness.fil"]
+timeout = 3600
 cmd = """
 dir=$(dirname {}) && \
 ./tests/utils/check.sh $dir edge
@@ -43,9 +44,10 @@ dir=$(dirname {}) && \
 [[tests]]
 name = "iterative divider-random"
 paths = ["tests/iterative-divider/harness.fil"]
+timeout = 3600
 cmd = """
 dir=$(dirname {}) && \
-./tests/utils/rand_check.sh $dir 100
+./tests/utils/rand_check.sh $dir
 """
 
 [[tests]]
@@ -86,6 +88,15 @@ name = "frisc tests"
 paths = ["apps/frisc/test/*.fil"]
 cmd = """
 fud e -s cocotb.data {}.data --to cocotb-out {} -q
+"""
+
+# fft
+[[tests]]
+name = "fft"
+paths = ["apps/fft/test/scripts/*.sh"]
+cmd = """
+dir=$(dirname {}) && \
+{}
 """
 
 # ============== Examples in the documentation ============

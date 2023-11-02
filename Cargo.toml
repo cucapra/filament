@@ -1,5 +1,5 @@
 [workspace]
-members = ["fil-derive", "fil-utils", "fil-ast", "fil-ir"]
+members = ["fil-derive", "fil-utils", "fil-ast", "fil-ir", "fil-gen"]
 
 [workspace.package]
 authors = ["The Filament Team"]
@@ -34,13 +34,14 @@ struct-variant = "1.0"
 fil-utils = { version = "0.1.0", path = "fil-utils" }
 fil-ast = { version = "0.1.0", path = "fil-ast" }
 fil-ir = { version = "0.1.0", path = "fil-ir" }
+fil-derive = { version = "0.1.0", path = "fil-derive" }
+fil-gen = { version = "0.1.0", path = "fil-gen" }
 
 calyx-ir = { version = "0.6.0" }
 calyx-frontend = { version = "0.6.0" }
 calyx-utils = { version = "0.6.0" }
 calyx-opt = { version = "0.6.0" }
 calyx-backend = { version = "0.6.0" }
-fil-derive = { version = "0.1.0", path = "fil-derive" }
 
 [workspace.dependencies.env_logger]
 version = "0.9"
@@ -98,6 +99,7 @@ string-interner.workspace = true
 fil-ast.workspace = true
 fil-ir.workspace = true
 fil-utils.workspace = true
+fil-gen.workspace = true
 
 calyx-ir.workspace = true
 calyx-frontend.workspace = true
