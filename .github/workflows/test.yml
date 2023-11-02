@@ -80,11 +80,6 @@ jobs:
         with:
           repository: cucapra/filament
           ref: ${{ github.sha }}
-      - name: Test
-        run: |
-          echo $PWD
-          ls /
-          ls ..
       - name: Build Filament
         uses: actions-rs/cargo@v1
         with:
