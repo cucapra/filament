@@ -1,14 +1,28 @@
 name: Docker Images via Depot
 
-on:
-  push:
-    paths:
-      - 'Dockerfile'
-      - '.github/workflows/depot.yml'
-  workflow_call:
+on: [push]
 
 jobs:
+  hash:
+    name: Get Docker Hash
+    runs-on: ubuntu-latest
+    outputs:
+      hash: ${{ steps.hash.outputs.hash }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: cucapra/filament
+          ref: ${{ github.sha }}
+      - name: Get hash
+        id: hash
+        run: git log -s -n 1 --pretty=format:"%H" -- Dockerfile | echo "hash=$(cat)" >> "$GITHUB_OUTPUT"
+      - name: Check if image exists
+        id: exists
+        run: (docker buildx imagetools inspect ghcr.io/cucapra/filament:${{ steps.hash.outputs.hash }} && echo "exists=true" || echo "exists=false") >> "$GITHUB_OUTPUT"
   build:
+    needs: hash
+    if: ${{ needs.hash.outputs.exists == 'false' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

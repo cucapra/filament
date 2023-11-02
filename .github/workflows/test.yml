@@ -1,28 +1,12 @@
 name: Test
 
-on: [push]
+on:
+  workflow_run:
+    workflows: [Docker Images via Depot]
+    types:
+      - completed
 
 jobs:
-  hash:
-    name: Get Docker Hash
-    runs-on: ubuntu-latest
-    outputs:
-      hash: ${{ steps.hash.outputs.hash }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          repository: cucapra/filament
-          ref: ${{ github.sha }}
-      - name: Get hash
-        id: hash
-        run: git log -s -n 1 --pretty=format:"%H" -- Dockerfile | echo "hash=$(cat)" >> "$GITHUB_OUTPUT"
-      - name: Check if image exists
-        id: image-check
-        run: docker buildx imagetools inspect ghcr.io/cucapra/filament:${{ steps.hash.outputs.hash }} 
-      - name: Depot push image
-        if: ${{ failure() && steps.image-check.conclusion == 'failure' }}
-        uses: ./.github/workflows/depot.yml
   compiler:
     name: Test Compiler
     runs-on: ubuntu-latest
