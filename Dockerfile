@@ -40,6 +40,7 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.28.0-rc3/cmake-3.
     cd cmake-3.28.0-rc3 && ./bootstrap &&\
     make && make install
 
+WORKDIR /home
 # Install FloPoCo
 RUN git clone https://gitlab.com/flopoco/flopoco &&\
     cd flopoco && git checkout f3d76595c01f84cee57ae67eee1ceb31a6fe93bc &&\
@@ -57,8 +58,6 @@ WORKDIR /home
 ADD . filament
 # Build the compiler
 WORKDIR /home/filament
-# Make rust use sparse registries (https://doc.rust-lang.org/nightly/cargo/reference/registries.html#registry-protocols)
-ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 RUN cargo build --all
 # Set up fud
 RUN python3 -m pip install cocotb find_libpython pytest && \
