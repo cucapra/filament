@@ -85,14 +85,13 @@ pub struct Opts {
     #[argh(switch, long = "unsafe-skip-discharge")]
     pub unsafe_skip_discharge: bool,
 
+    // Backend options
     /// backend to use (default: verilog): calyx, verilog
     #[argh(option, long = "backend", default = "Backend::Verilog")]
     pub backend: Backend,
-
     /// disable generation of slow FSMs in the backend
     #[argh(switch, long = "disable-slow-fsms")]
     pub disable_slow_fsms: bool,
-
     /// preserves original port names during compilation.
     #[argh(switch, long = "preserve-names")]
     pub preserve_names: bool,

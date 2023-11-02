@@ -17,7 +17,7 @@ impl<'a> UnderlyingComp<'a> {
         &self.0.cmds
     }
     pub fn is_ext(&self) -> bool {
-        self.0.is_ext
+        self.0.is_ext()
     }
     pub fn events(&self) -> &IndexStore<ir::Event> {
         self.0.events()
@@ -33,6 +33,9 @@ impl<'a> UnderlyingComp<'a> {
     }
     pub fn exist_params(&self) -> impl Iterator<Item = ir::ParamIdx> + '_ {
         self.0.exist_params()
+    }
+    pub fn all_exist_assumes(&self) -> Vec<ir::PropIdx> {
+        self.0.all_exist_assumes()
     }
     pub fn relevant_vars(
         &self,

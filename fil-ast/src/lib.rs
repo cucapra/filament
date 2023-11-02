@@ -12,7 +12,7 @@ mod signature;
 mod time;
 
 pub use bind_map::Binding;
-pub use component::{Component, Namespace};
+pub use component::{Component, Extern, Namespace};
 pub use constraint::{Constraint, OrderConstraint, OrderOp};
 pub use control::{
     Access, Bundle, BundleType, Command, Connect, Exists, Fact, ForLoop, If,

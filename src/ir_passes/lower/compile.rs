@@ -131,7 +131,7 @@ impl Compile {
         }
 
         // if this component is external, don't add new interface ports, as we must keep the signature the same
-        if !comp.is_ext {
+        if !comp.is_ext() {
             // add remaining interface ports if not found (found ports already removed above)
             for (attr, (name, width, dir)) in interface_ports {
                 ports.push(calyx::PortDef::new(
@@ -155,7 +155,7 @@ impl Compile {
         let comp = ctx.get(idx);
 
         assert!(
-            comp.is_ext,
+            comp.is_ext(),
             "Attempting to compile {idx} non-primitive component as primitive.",
         );
 
@@ -196,7 +196,7 @@ impl Compile {
         let comp = ctx.get(idx);
 
         assert!(
-            !comp.is_ext,
+            !comp.is_ext(),
             "Attempting to compile primitive component as non-primitive."
         );
 

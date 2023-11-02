@@ -34,7 +34,7 @@ impl Visitor for AssignCheck {
 
     fn start(&mut self, data: &mut VisitorData) -> Action {
         // skip externals
-        if data.comp.is_ext {
+        if data.comp.is_ext() {
             return Action::Stop;
         }
 
