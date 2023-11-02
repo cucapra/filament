@@ -37,7 +37,7 @@ impl BuildDomination {
         plets: Vec<ir::Command>,
         comp: &ir::Component,
     ) -> Vec<ir::Command> {
-        let cmds: Vec<_> = insts.into_iter().chain(plets.into_iter()).collect();
+        let cmds: Vec<_> = insts.into_iter().chain(plets).collect();
 
         let mut param_map: HashMap<ir::Idx<ir::Param>, usize> = HashMap::new();
 
