@@ -2,6 +2,23 @@
 
 set -euf -o pipefail
 
+# Check if the flopoco binary is exists
+if ! command -v flopoco &> /dev/null
+then
+    echo "flopoco binary could not be found"
+    exit
+fi
+if ! command -v ghdl &> /dev/null
+then
+    echo "ghdl binary could not be found"
+    exit
+fi
+if ! command -v verilator &> /dev/null
+then
+    echo "verilator binary could not be found"
+    exit
+fi
+
 # The location of the script. The vhdl file is always generated here because of
 # the docker command.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -26,7 +43,7 @@ ARGS="$@"
 >&2 echo "Generating $NAME in $OUT"
 
 # Generate the module
-docker run --rm=true -v `pwd`:/flopoco_workspace flopoco $ARGS name=$NAME 2> >(tee "$OUT.err" >&2)
+flopoco $ARGS name=$NAME 2> >(tee "$OUT.err" >&2)
 
 # Transform the generated VHDL to Verilog
 ghdl synth --out=verilog -fsynopsys -fexplicit \

@@ -51,8 +51,20 @@ impl GenExec {
 
     /// Register a tool by reading its definition from a file
     pub fn register_tool_from_file(&mut self, path: PathBuf) -> &Tool {
-        let desc = fs::read_to_string(path).unwrap();
-        let tool: Tool = toml::from_str(&desc).unwrap();
+        log::info!("Registering tool from file: `{}`", path.display());
+
+        let desc = fs::read_to_string(path.clone()).unwrap();
+        let mut tool: Tool = toml::from_str(&desc).unwrap();
+        // Get the absolute path to the binary if it is relative
+        let tool_path = PathBuf::from(&tool.path);
+        if !tool_path.is_absolute() {
+            tool.path = path
+                .parent()
+                .unwrap()
+                .join(tool_path)
+                .to_string_lossy()
+                .to_string();
+        }
         let name = tool.name.clone();
         self.register_tool(tool);
         self.tools.get(&name).unwrap()
