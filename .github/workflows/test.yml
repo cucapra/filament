@@ -3,10 +3,27 @@ name: Test
 on: [push]
 
 jobs:
+  hash:
+    name: Get Docker Hash
+    runs-on: ubuntu-latest
+    outputs:
+      hash: ${{ steps.hash.outputs.stdout }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: cucapra/filament
+          ref: ${{ github.sha }}
+      - name: Get hash
+        id: hash
+        run: |
+          git log -s -n 1 --pretty=format:"%H" -- Docker
+file
   compiler:
     name: Test Compiler
     runs-on: ubuntu-latest
-    container: ghcr.io/cucapra/filament:latest
+    needs: hash
+    container: ghcr.io/cucapra/filament:${{ needs.hash.outputs.hash }}
     steps:
       - name: Copy fud configuration
         run: |
