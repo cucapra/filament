@@ -135,9 +135,6 @@ comp main<'G: L>(
 } where
   L > 0
 {
-  // needed to typecheck
-  assume pow2(4) == 16;
-
   // split input into bundle
   split := new SplitWire[32, NPoints*2]<'G>(in);
 
