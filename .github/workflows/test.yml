@@ -67,6 +67,7 @@ jobs:
     needs: [hash, build]
     if: always() && !failure() && !cancelled()
     container: ghcr.io/cucapra/filament:${{ needs.hash.outputs.hash }}
+    working-directory: /home/filament
     steps:
       - name: Copy fud configuration
         run: |
@@ -77,7 +78,8 @@ jobs:
         with:
           repository: cucapra/filament
           ref: ${{ github.sha }}
-
+      - name: Test
+        run: echo $PWD
       - name: Build Filament
         uses: actions-rs/cargo@v1
         with:
