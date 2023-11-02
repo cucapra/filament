@@ -22,7 +22,7 @@ RUN wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x6
 ENV PATH=$PATH:/home/z3/z3-4.12.2-x64-glibc-2.31/bin/
 
 # ----------------------------------------
-# Install flow tools
+# Install custom tools
 # ----------------------------------------
 WORKDIR /home
 
