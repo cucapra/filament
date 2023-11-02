@@ -19,7 +19,6 @@ jobs:
         run: git log -s -n 1 --pretty=format:"%H" -- Dockerfile | echo "hash=$(cat)" >> "$GITHUB_OUTPUT"
       - name: Check if image exists
         id: image-check
-        continue-on-error: true
         run: docker buildx imagetools inspect ghcr.io/cucapra/filament:${{ steps.hash.outputs.hash }} 
       - name: Depot push image
         if: ${{ steps.image-check.conclusion == 'failure' }}
