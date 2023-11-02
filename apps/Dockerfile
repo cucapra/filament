@@ -24,3 +24,6 @@ RUN git clone https://gitlab.com/flopoco/flopoco &&\
     mkdir build && cd build &&\
     cmake -GNinja .. && ninja &&\
     ln -s /home/flopoco/build/code/FloPoCoBin/flopoco /usr/bin/flopoco
+
+# Install GHDL
+RUN apt install -y ghdl

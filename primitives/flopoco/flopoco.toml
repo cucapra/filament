@@ -1,11 +1,11 @@
 name = "flopoco"
-path = "/Users/rachitnigam/git/flopoco/flopoco-gen.sh"
+path = "./flopoco-gen.sh"
 # The tool requires $OUT_FILE to be set and generates the Verilog module in it
 requires_out_file = true
 
 # === Key-value pairs that can be spliced anywhere ===
 [globals]
-conf = "frequency=700 target=Virtex5"
+conf = "frequency=800 target=Virtex5"
 
 ## === Flopoco's floating-point modules that use its internal format ===
 [modules.FPAdd]
