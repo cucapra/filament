@@ -17,8 +17,8 @@ jobs:
       - name: Get hash
         id: hash
         run: |
-          git log -s -n 1 --pretty=format:"%H" -- Dockerfile
-          | echo "::set-output name=hash::$(cat)"
+          git log -s -n 1 --pretty=format:"%H" -- Dockerfile 
+          echo "::set-output name=hash::$(cat)"
   compiler:
     name: Test Compiler
     runs-on: ubuntu-latest
