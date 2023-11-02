@@ -21,7 +21,7 @@ jobs:
         run: git log -s -n 1 --pretty=format:"%H" -- Dockerfile | echo "hash=$(cat)" >> "$GITHUB_OUTPUT"
       - name: Check if image exists
         id: exists
-        run: (docker buildx imagetools inspect ghcr.io/cucapra/filament:${{ steps.hash.outputs.hash }} && echo "exists=true" || echo "exists=false") >> "$GITHUB_OUTPUT"
+        run: (docker buildx imagetools inspect ghcr.io/cucapra/filament:${{ steps.hash.outputs.hash }} &> /dev/null && echo "exists=true" || echo "exists=false") >> "$GITHUB_OUTPUT"
   build:
     name: Build and Push Docker Image
     needs: hash
