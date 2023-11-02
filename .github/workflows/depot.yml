@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - docker
+    paths:
+      - 'Dockerfile'
 
 jobs:
   build:
