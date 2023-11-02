@@ -52,10 +52,10 @@ jobs:
             type=raw,value=${{ needs.hash.outputs.hash }},enable=true
             type=raw,value=latest,enable={{is_default_branch}}
           flavor: latest=false
-          context: ./
       - uses: depot/setup-action@v1
       - uses: depot/build-push-action@v1
         with:
+          context: .
           project: 7grh10615f
           platforms: linux/amd64,linux/arm64
           push: true
