@@ -21,7 +21,7 @@ jobs:
         id: image-check
         run: docker buildx imagetools inspect ghcr.io/cucapra/filament:${{ steps.hash.outputs.hash }} 
       - name: Depot push image
-        if: ${{ steps.image-check.conclusion == 'failure' }}
+        if: ${{ failure() && steps.image-check.conclusion == 'failure' }}
         uses: ./.github/workflows/depot.yml
   compiler:
     name: Test Compiler
