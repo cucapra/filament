@@ -1,4 +1,5 @@
 generate(flopoco) using "flopoco.toml" {
+    /// Floating point addition with Flopoco's internal format
     comp FPAdd[Exp, Mant]<'G:1>(
         clk: 1,
         // TODO(rachitnigam): Support reset with different name
@@ -13,6 +14,7 @@ generate(flopoco) using "flopoco.toml" {
         some L where L >= 0;
     };
 
+    /// Floating point exponentiation with Flopoco's internal format
     comp FPExp[Exp, Mant]<'G:1>(
         clk: 1,
         X: ['G, 'G+1] Width,
@@ -25,6 +27,7 @@ generate(flopoco) using "flopoco.toml" {
         some L where L >= 0;
     };
 
+    /// Converts an IEEE floating point number to Flopoco internal format
     comp InputIEEE[ExpIn, MantIn, ExpOut, MantOut]<'G:1>(
         clk: 1,
         X: ['G, 'G+1] WidthIEEE
@@ -36,6 +39,7 @@ generate(flopoco) using "flopoco.toml" {
         some L where L >= 0;
     };
 
+    /// Converts a Flopoco internal format floating point number to IEEE
     comp OutputIEEE[ExpIn, MantIn, ExpOut, MantOut]<'G:1>(
         clk: 1,
         X: ['G, 'G+1] WidthFPC
@@ -44,6 +48,18 @@ generate(flopoco) using "flopoco.toml" {
     ) with {
         let WidthFPC = ExpIn + MantIn + 3;
         let WidthIEEE = ExpOut + MantOut + 1;
+        some L where L >= 0;
+    };
+
+    /// Floating point addition with IEEE format
+    comp IEEEFPAdd[Exp, Mant]<'G:1>(
+        clk: 1,
+        X: ['G, 'G+1] Width,
+        Y: ['G, 'G+1] Width,
+    ) -> (
+        R: ['G+L, 'G+L+1] Width,
+    ) with {
+        let Width = Exp+Mant+1;
         some L where L >= 0;
     };
 }

@@ -46,3 +46,10 @@ parameters = ["ExpIn", "MantIn", "ExpOut", "MantOut"]
 name_format = "OutputIEEE_ExpIn${ExpIn}_MantIn${MantIn}_ExpOut${ExpOut}_MantOut${MantOut}"
 cli_format = "${NAME_FORMAT} ${OUT_FILE} OutputIEEE wEIn=${ExpIn} wFIn=${MantIn} wEOut=${ExpOut} wFOut=${MantOut}"
 outputs.L = "pipeline_depth"
+
+## === Flopoco's IEEE Floating point adder ===
+[modules.IEEEFPAdd]
+parameters = ["Exp", "Mant"]
+name_format = "IEEEFPAdd_Exp${Exp}_Mant${Mant}"
+cli_format = "${NAME_FORMAT} ${OUT_FILE} IEEEFPAdd wE=${Exp} wF=${Mant} ${conf}"
+outputs.L = "pipeline_depth"
