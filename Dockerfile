@@ -31,7 +31,7 @@ RUN apt update && \
     DEBIAN_FRONTEND=noninteractive apt install -y autoconf automake \
     autotools-dev bison f2c flex git gpg g++ libblas-dev libboost-all-dev \
     liblapack-dev liblpsolve55-dev libsollya-dev libtool lp-solve ninja-build \
-    pkg-config sollya wget gnat libgcc-10-dev
+    pkg-config sollya wget
 
 
 # Install latest cmake from source
@@ -48,12 +48,15 @@ RUN git clone --branch flopoco-4.1 https://gitlab.com/flopoco/flopoco &&\
     cmake -GNinja .. && ninja &&\
     ln -s /home/flopoco/build/code/FloPoCoBin/flopoco /usr/bin/flopoco
 
+
 # Install GHDL 3.0.0
 WORKDIR /home
+# Install deps
+RUN apt install -y gnat llvm clang
 RUN git clone --depth 1 --branch v3.0.0 https://github.com/ghdl/ghdl.git &&\
     cd ghdl &&\
     mkdir build && cd build &&\
-    ../configure --prefix=/usr &&\
+    ../configure  --with-llvm-config --prefix=/usr &&\
     make && make install
 
 # ----------------------------------------
