@@ -29,16 +29,18 @@ impl BuildDomination {
         self.plets.push(Vec::new());
     }
 
-    /// Topologically sort the instances in the current scope.
-    /// Dependency between instances is created when one uses a parameter
+    /// Topologically sort the plets and insts in the current scope.
+    /// Dependencies are created between plets and instances when one uses a parameter defined from the other.
     /// defined by another.
     fn sort_insts_plets(
         insts: Vec<ir::Command>,
         plets: Vec<ir::Command>,
         comp: &ir::Component,
     ) -> Vec<ir::Command> {
+        // Combine the instances and plets into a single vector so that we can give them each unique ids
         let cmds: Vec<_> = insts.into_iter().chain(plets).collect();
 
+        // Map from parameter to the id of the command that defines it.
         let mut param_map: HashMap<ir::Idx<ir::Param>, usize> = HashMap::new();
 
         // First pass to register all paremeter owners.
@@ -67,6 +69,7 @@ impl BuildDomination {
 
         let mut topo = TopologicalSort::<usize>::new();
 
+        // Second pass to add dependencies between parameter owners and users.
         for (id, cmd) in cmds.iter().enumerate() {
             match cmd {
                 ir::Command::Let(ir::Let { expr, param }) => {
@@ -101,6 +104,8 @@ impl BuildDomination {
             }
         }
 
+        // Wrap in option here because we need to be able to pull the commands out of the vector
+        // without changing the indices of the remaining commands.
         let mut cmds = cmds.into_iter().map(Some).collect_vec();
 
         let mut res = Vec::new();
