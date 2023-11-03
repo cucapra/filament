@@ -22,6 +22,7 @@ fi
 # The location of the script. The vhdl file is always generated here because of
 # the docker command.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+echo $PWD
 
 # Crash if less than three arguments are provided
 if [ "$#" -lt 3 ]; then
@@ -42,6 +43,8 @@ ARGS="$@"
 
 >&2 echo "Generating $NAME in $OUT"
 
+# Generate in the right location
+cd $(dirname "$OUT")
 # Generate the module
 flopoco $ARGS name=$NAME 2> >(tee "$OUT.err" >&2)
 
@@ -50,7 +53,8 @@ ghdl synth --out=verilog -fsynopsys -fexplicit \
  flopoco.vhdl -e "$NAME" > "$OUT"
 
 # In-place update the generated Verilog to use `\table` instead of `table`
-sed 's/[[:<:]]table[[:>:]]/\\table/g' "$OUT" > "$OUT.tmp"
+# sed 's/[[:<:]]table[[:>:]]/\\table/g' "$OUT" > "$OUT.tmp"
+cat "$OUT" > "$OUT.tmp"
 mv "$OUT.tmp" "$OUT"
 
 # Remove the VHDL file
