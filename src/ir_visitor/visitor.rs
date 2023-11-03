@@ -198,6 +198,10 @@ where
         Action::Continue
     }
 
+    fn let_(&mut self, _: &mut ir::Let, _data: &mut VisitorData) -> Action {
+        Action::Continue
+    }
+
     fn visit_cmd(
         &mut self,
         cmd: &mut ir::Command,
@@ -212,6 +216,7 @@ where
             ir::Command::If(i) => self.do_if(i, data),
             ir::Command::Fact(f) => self.fact(f, data),
             ir::Command::Exists(e) => self.exists(e, data),
+            ir::Command::Let(l) => self.let_(l, data),
         }
     }
 
@@ -299,6 +304,7 @@ where
         let mut visitor = Self::from(opts, ctx);
         for idx in ctx.comps.idx_iter() {
             visitor.clear_data();
+            log::trace!("{}: Visiting component {}", Self::name(), idx);
             visitor.visit((idx, opts, &mut *ctx).into());
         }
         match visitor.after_traversal() {

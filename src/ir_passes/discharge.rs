@@ -588,6 +588,17 @@ impl Visitor for Discharge {
             self.expr_map.push(idx, sexp);
         }
 
+        // Assert bindings for all let-bound parameters
+        for (idx, p) in data.comp.params().iter() {
+            let ir::ParamOwner::Let { bind } = &p.owner else {
+                continue;
+            };
+            let param_s = self.param_map[idx];
+            let bind_s = self.expr_map[*bind];
+            let assign = self.sol.eq(param_s, bind_s);
+            self.sol.assert(assign).unwrap();
+        }
+
         // Declare all time expressions
         for (idx, ir::Time { event, offset }) in data.comp.times().iter() {
             let assign = self.plus(self.ev_map[*event], self.expr_map[*offset]);

@@ -226,7 +226,7 @@ impl<'ctx> Monomorphize<'ctx> {
     /// Monomorphize a component and return its index in the new context.
     pub fn monomorphize(&mut self, ck: CompKey) -> Base<ir::Component> {
         log::debug!("Monomorphizing `{}'", ck.comp.idx());
-        let CompKey { comp, params } = ck.clone();
+        let CompKey { comp, params } = ck;
         let underlying = self.old.get(comp.idx());
 
         let n_ck: CompKey = if underlying.is_ext() && !underlying.is_gen() {
