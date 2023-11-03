@@ -59,6 +59,14 @@ RUN git clone --depth 1 --branch v3.0.0 https://github.com/ghdl/ghdl.git &&\
     LDFLAGS='-ldl' ../configure --with-llvm-config --prefix=/usr &&\
     make && make install
 
+# Install verible
+WORKDIR /home
+RUN wget https://github.com/chipsalliance/verible/releases/download/v0.0-3428-gcfcbb82b/verible-v0.0-3428-gcfcbb82b-Ubuntu-20.04-focal-x86_64.tar.gz --output-document verible.tar.gz && \
+  tar -xvf verible.tar.gz && \
+  mv verible-v0.0-3428-gcfcbb82b verible && \
+  rm verible.tar.gz
+ENV PATH=$PATH:/home/verible/bin
+
 # ----------------------------------------
 # Install filament
 # ----------------------------------------
