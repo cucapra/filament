@@ -53,6 +53,8 @@ RUN git clone --branch flopoco-4.1 https://gitlab.com/flopoco/flopoco &&\
 WORKDIR /home
 # Install deps
 RUN apt install -y gnat llvm clang
+ENV CC=clang
+ENV CXX=clang++
 RUN git clone --depth 1 --branch v3.0.0 https://github.com/ghdl/ghdl.git &&\
     cd ghdl &&\
     mkdir build && cd build &&\
