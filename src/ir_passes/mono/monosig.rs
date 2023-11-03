@@ -229,7 +229,8 @@ impl MonoSig {
             let p_rep = ul.display(p_idx);
             // This param is a in a use site and should therefore have been found.
             let msg = match ul.get(p_idx).owner {
-                ir::ParamOwner::Loop => "let-bound parameter".to_string(),
+                ir::ParamOwner::Loop => "loop-bound parameter".to_string(),
+                ir::ParamOwner::Let { .. } => "let-bound parameter".to_string(),
                 ir::ParamOwner::Bundle(_) => {
                     "bundle-bound parameter".to_string()
                 }

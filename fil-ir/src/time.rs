@@ -53,6 +53,14 @@ impl TimeIdx {
         let time = ctx.get(self);
         time.event
     }
+
+    pub fn relevant_vars(
+        self,
+        ctx: &(impl Ctx<Time> + Ctx<Expr>),
+    ) -> Vec<ParamIdx> {
+        let time = ctx.get(self);
+        time.offset.relevant_vars(ctx)
+    }
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]
