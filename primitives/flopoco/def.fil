@@ -27,6 +27,19 @@ generate(flopoco) using "flopoco.toml" {
         some L where L >= 0;
     };
 
+    /// Floating point multiplication with Flopoco's internal format
+    comp FPMult[Exp, Mant]<'G: 1>(
+        clk: 1,
+        X: ['G, 'G+1] Width,
+        Y: ['G, 'G+1] Width,
+    ) -> (
+        R: ['G+L, 'G+L+1] Width,
+    ) with {
+        // Flopoco's internal format uses two extra bits.
+        let Width = Exp+Mant+3;
+        some L where L >= 0;
+    };
+
     /// Converts an IEEE floating point number to Flopoco internal format
     comp InputIEEE[ExpIn, MantIn, ExpOut, MantOut]<'G:1>(
         X: ['G, 'G+1] WidthIEEE
