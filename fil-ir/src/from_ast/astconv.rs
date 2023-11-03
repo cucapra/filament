@@ -204,8 +204,9 @@ impl<'prog> BuildCtx<'prog> {
             ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
                 // Declare the parameter since it may be used in instance or
                 // invocation definitions.
-                let expr = self.expr(expr.clone())?;
-                self.add_let_param(name.copy(), expr);
+                let bind = self.expr(expr.clone())?;
+                let owner = ir::ParamOwner::Let { bind };
+                self.param(name.clone(), owner);
                 Ok(())
             }
             ast::Command::Exists(_) => {
@@ -213,8 +214,12 @@ impl<'prog> BuildCtx<'prog> {
                  * this in the second pass */
                 Ok(())
             }
-            ast::Command::ForLoop(_)
-            | ast::Command::If(_)
+            ast::Command::ForLoop(_) => {
+                /* The index parameter is bound when we enter an for loop so we
+                 * don't have to do it here. */
+                Ok(())
+            }
+            ast::Command::If(_)
             | ast::Command::Fact(_)
             | ast::Command::Connect(_)
             | ast::Command::Bundle(_) => Ok(()),
@@ -602,7 +607,7 @@ impl<'prog> BuildCtx<'prog> {
                 match &sb.inner() {
                     ast::SigBind::Let { param, bind } => {
                         let e = self.expr(bind.clone())?;
-                        self.add_let_param(param.copy(), e);
+                        self.add_param_rewrite(param.copy(), e);
                         Ok((sb.inner().clone(), None))
                     }
                     ast::SigBind::Exists {
@@ -946,9 +951,17 @@ impl<'prog> BuildCtx<'prog> {
                 let dst = self.get_access(dst.take(), ir::Direction::In)?;
                 vec![ir::Connect { src, dst, info }.into()]
             }
-            ast::Command::ParamLet(_) => {
+            ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
+                let param = self
+                    .get_param(&OwnedParam::Local(name.copy()), name.pos())?;
+                let ir::Expr::Param(param) = *self.comp().get(param) else {
+                    unreachable!(
+                        "let-bound parameter was rewritten to expression"
+                    )
+                };
+                let expr = self.expr(expr)?;
                 // The declare phase already added the rewrite for this binding
-                vec![]
+                vec![ir::Let { param, expr }.into()]
             }
             ast::Command::ForLoop(ast::ForLoop {
                 idx,
