@@ -5,7 +5,7 @@ requires_out_file = true
 
 # === Key-value pairs that can be spliced anywhere ===
 [globals]
-conf = "frequency=800 target=Virtex5"
+conf = "frequency=800 target=Virtex6"
 
 ## === Flopoco's floating-point modules that use its internal format ===
 [modules.FPAdd]

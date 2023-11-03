@@ -21,7 +21,47 @@ RUN wget https://github.com/Z3Prover/z3/releases/download/z3-4.12.2/z3-4.12.2-x6
   unzip z3.zip
 ENV PATH=$PATH:/home/z3/z3-4.12.2-x64-glibc-2.31/bin/
 
-# Add filament
+# ----------------------------------------
+# Install custom tools
+# ----------------------------------------
+WORKDIR /home
+
+# Install required libraries
+RUN apt update && \
+    DEBIAN_FRONTEND=noninteractive apt install -y autoconf automake \
+    autotools-dev bison f2c flex git gpg g++ libblas-dev libboost-all-dev \
+    liblapack-dev liblpsolve55-dev libsollya-dev libtool lp-solve ninja-build \
+    pkg-config sollya wget
+
+
+# Install latest cmake from source
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.28.0-rc3/cmake-3.28.0-rc3.tar.gz && \
+    tar -xvf cmake-3.28.0-rc3.tar.gz && \
+    cd cmake-3.28.0-rc3 && ./bootstrap &&\
+    make && make install
+
+# Install FloPoCo 4.1
+WORKDIR /home
+RUN git clone --branch flopoco-4.1 https://gitlab.com/flopoco/flopoco &&\
+    cd flopoco && git checkout f3d76595c01f84cee57ae67eee1ceb31a6fe93bc &&\
+    mkdir build && cd build &&\
+    cmake -GNinja .. && ninja &&\
+    ln -s /home/flopoco/build/code/FloPoCoBin/flopoco /usr/bin/flopoco
+
+
+# Install GHDL 3.0.0
+WORKDIR /home
+# Install deps
+RUN apt install -y gnat llvm clang
+RUN git clone --depth 1 --branch v3.0.0 https://github.com/ghdl/ghdl.git &&\
+    cd ghdl &&\
+    mkdir build && cd build &&\
+    LDFLAGS='-ldl' ../configure --with-llvm-config --prefix=/usr &&\
+    make && make install
+
+# ----------------------------------------
+# Install filament
+# ----------------------------------------
 WORKDIR /home
 ADD . filament
 # Build the compiler

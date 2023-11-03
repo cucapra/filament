@@ -32,7 +32,7 @@ comp PeaseFFT[NStages, N]<'G: L>(
   B := new Butterflies[N, W, E, M];
   // number of times we have to reuse the butterflies per stage
   let reuses = NPoints / (2*N);
-  let stage_latency = B::L * reuses + 1; // + 1 here is for the extra delay cycle necessary to transfer values between stages
+  let stage_latency = B::II * reuses + B::L + 1; // + 1 here is for the extra delay cycle necessary to transfer values between stages
   let latency = stage_latency * NStages;
   
   // twiddle factor that stays alive for the whole computation
@@ -76,16 +76,17 @@ comp PeaseFFT[NStages, N]<'G: L>(
       let sync_in_t = r_stage * stage_latency; // start stage here
       let sync_out_t = (r_stage + 1) * stage_latency; // end stage here
 
-      let usync_in_t = sync_in_t + reg_i * B::L; // start butterfly here
-      let usync_out_t = sync_in_t + (reg_i + 1) * B::L; // end butterfly here
+      let usync_in_t = sync_in_t + reg_i * B::II; // start butterfly here
+      let usync_in_end_t = usync_in_t + B::II; // end butterfly inputs here
+      let usync_out_t = usync_in_t + B::L; // end butterfly here
 
       let start = reg_i*2*N;
       let end = (reg_i+1)*2*N;
 
       // sync in -> unsync in
       c1 := new CombineButterflyBundle[N, W]<'G + sync_in_t>(sync_data_in{r_stage}{start..end}{0..2});
-      r1 := R<'G + sync_in_t, 'G + usync_out_t>(c1.out);
-      s1 := new SplitButterflyBundle[N, W, usync_out_t-usync_in_t]<'G + usync_in_t>(r1.out);
+      r1 := R<'G + sync_in_t, 'G + usync_in_end_t>(c1.out);
+      s1 := new SplitButterflyBundle[N, W, usync_in_end_t-usync_in_t]<'G + usync_in_t>(r1.out);
       // unsync in -> butterfly
       b := B<'G + usync_in_t>(s1.out{0..2*N}{0..2}, twiddle_in{r_stage}{reg_i*N..(reg_i+1)*N}{0..2});
       // unsync out -> sync out
@@ -124,24 +125,28 @@ comp PeaseFFT[NStages, N]<'G: L>(
 }
 
 /// Computes N butterflies at once.
-comp Butterflies[N, W, E, ?M=W-E-1]<'G: L>(
+comp Butterflies[N, W, E, ?M=W-E-1]<'G: II>(
   go: interface['G],
-  in[N*2][2]: ['G, 'G+L] W, // Each butterfly takes 2 complex numbers
-  twiddle[N][2]: ['G, 'G+L] W // twiddle factor for each butterfly
+  in[N*2][2]: ['G, 'G+II] W, // Each butterfly takes 2 complex numbers
+  twiddle[N][2]: ['G, 'G+II] W // twiddle factor for each butterfly
 ) -> (
   out[N*2][2]: ['G+L, 'G+L+1] W
 ) with {
-  some L where L > 0;
+  some II where II > 0;
+  some L where L >= II;
 } where
     N > 0,
     W == E + M + 1,
     E > 1,
-    M > 1
+    M > 1,
+    L >= II,
+    II > 0
 {
   // We use the fact here that a butterfly has the same existential L if it has the same parameters.
   // Therefore, we instantiate a dummy butterfly here in order to access its L parameter.
   Bx := new Butterfly[W, E, M];
   L := Bx::L;
+  II := Bx::II;
 
   for i in 0..N {
     b := new Butterfly[W, E, M]<'G>(in{2*i}{0..2}, in{2*i+1}{0..2}, twiddle{i}{0..2});

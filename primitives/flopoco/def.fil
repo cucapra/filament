@@ -26,7 +26,6 @@ generate(flopoco) using "flopoco.toml" {
     };
 
     comp InputIEEE[ExpIn, MantIn, ExpOut, MantOut]<'G:1>(
-        clk: 1,
         X: ['G, 'G+1] WidthIEEE
     ) -> (
         R: ['G+L, 'G+L+1] WidthFPC
@@ -37,7 +36,6 @@ generate(flopoco) using "flopoco.toml" {
     };
 
     comp OutputIEEE[ExpIn, MantIn, ExpOut, MantOut]<'G:1>(
-        clk: 1,
         X: ['G, 'G+1] WidthFPC
     ) -> (
         R: ['G+L, 'G+L+1] WidthIEEE
