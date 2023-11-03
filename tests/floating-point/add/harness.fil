@@ -35,10 +35,10 @@ comp main<'G: 1>(
    verilog_pipe: ['G+4, 'G+5] 32,
    verilog_nopipe: ['G, 'G+1] 32,
    filament_lib: ['G, 'G+1] 32,
-  //  flopoco: ['G+L_Flopoco, 'G+L_Flopoco+1] 32,
+   flopoco: ['G+L_Flopoco, 'G+L_Flopoco+1] 32,
    flopoco_IEEE: ['G+L_Flopoco_IEEE, 'G+L_Flopoco_IEEE+1] 32,
 ) with {
-  // some L_Flopoco where L_Flopoco >= 0;
+  some L_Flopoco where L_Flopoco >= 0;
   some L_Flopoco_IEEE where L_Flopoco_IEEE >= 0;
 }
 {
