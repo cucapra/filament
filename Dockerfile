@@ -26,12 +26,12 @@ ENV PATH=$PATH:/home/z3/z3-4.12.2-x64-glibc-2.31/bin/
 # ----------------------------------------
 WORKDIR /home
 
-# Install required librariesg
+# Install required libraries
 RUN apt update && \
     DEBIAN_FRONTEND=noninteractive apt install -y autoconf automake \
     autotools-dev bison f2c flex git gpg g++ libblas-dev libboost-all-dev \
     liblapack-dev liblpsolve55-dev libsollya-dev libtool lp-solve ninja-build \
-    pkg-config sollya wget gnat
+    pkg-config sollya wget gnat libgcc-10-dev
 
 
 # Install latest cmake from source
