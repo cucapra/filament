@@ -2,21 +2,23 @@ import "primitives/math/complex.fil";
 import "primitives/state.fil";
 
 /// Butterfly module using existential parameters.
-comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
+comp Butterfly[W, E, ?M=W-E-1]<'G: II>(
   go: interface['G],
-  in0[2]: ['G, 'G+L] W, // real and imaginary parts of input
-  in1[2]: ['G, 'G+L] W,
-  twiddle[2]: ['G, 'G+L] W // twiddle factor
+  in0[2]: ['G, 'G+II] W, // real and imaginary parts of input
+  in1[2]: ['G, 'G+II] W,
+  twiddle[2]: ['G, 'G+II] W // twiddle factor
 ) -> (
   out0[2]: ['G+L, 'G+L+1] W,
   out1[2]: ['G+L, 'G+L+1] W
 ) with {
-  some L where L > 0;
+  some II where II > 0;
+  some L where L >= II;
 } where
     W == E + M + 1,
     E > 1,
     M > 1,
-    L > 0
+    L >= II,
+    II > 0
 {
   // switches between the type of butterfly unit
   let T = 1;
@@ -39,6 +41,7 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
     out1{1} = d11.out;
 
     L := 1;
+    II := 1;
   } else {
     if T == 1 {
       // Partially iterative butterfly module
@@ -91,6 +94,7 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: L>(
       out1{1} = out11_d4.out;
 
       L := l;
+      II := l;
     }
   }
 }
