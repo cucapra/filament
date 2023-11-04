@@ -24,6 +24,8 @@ impl IntervalCheck {
     /// the range is strictly greater than the start.
     fn range_wf(
         &mut self,
+        // The path condition
+        pc: ir::PropIdx,
         range: &ir::Range,
         loc: GPosIdx,
         comp: &mut ir::Component,
@@ -33,6 +35,7 @@ impl IntervalCheck {
         let reason = comp.add(
             ir::info::Reason::well_formed_interval(loc, (start, end)).into(),
         );
+        let prop = pc.implies(prop, comp);
         comp.assert(prop, reason)
     }
 
@@ -156,7 +159,7 @@ impl Visitor for IntervalCheck {
             let &ir::info::Port { live_loc, .. } = comp.get(info).into();
             let range = live.range;
             // Require that the range is well-formed
-            cmds.extend(self.range_wf(&range, live_loc, comp));
+            cmds.extend(self.range_wf(assumes, &range, live_loc, comp));
 
             // We only constraint the event mentioned in the start of the range.
             let st_ev = comp[range.start].event;

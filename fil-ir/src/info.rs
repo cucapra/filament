@@ -105,6 +105,15 @@ impl Default for Info {
 }
 
 impl Info {
+    /// Returns the name for this information (if it exists).
+    pub fn name(&self) -> Option<&str> {
+        if let Some(assert) = self.as_assert() {
+            Some(assert.0.name())
+        } else {
+            None
+        }
+    }
+
     pub fn empty() -> Self {
         Self::Empty(Empty)
     }
@@ -591,6 +600,26 @@ impl From<Reason> for Info {
 }
 
 impl Reason {
+    /// Return the string name of this reason. This is simply the name of the variant.
+    pub fn name(&self) -> &str {
+        match self {
+            Reason::ParamConstraint { .. } => "ParamConstraint",
+            Reason::EventConstraint { .. } => "EventConstraint",
+            Reason::ExistsConstraint { .. } => "ExistsConstraint",
+            Reason::BundleLenMatch { .. } => "BundleLenMatch",
+            Reason::BundleWidthMatch { .. } => "BundleWidthMatch",
+            Reason::InBoundsAccess { .. } => "InBoundsAccess",
+            Reason::Liveness { .. } => "Liveness",
+            Reason::BundleDelay { .. } => "BundleDelay",
+            Reason::WellFormedInterval { .. } => "WellFormedInterval",
+            Reason::EventLive { .. } => "EventLive",
+            Reason::EventLiveDelay { .. } => "EventLiveDelay",
+            Reason::EventTrig { .. } => "EventTrig",
+            Reason::Misc { .. } => "Misc",
+            Reason::Generated { .. } => "Generated",
+        }
+    }
+
     /// Convert this reason into a diagnostic message
     pub fn diag(&self, ctx: &Component) -> Diagnostic<usize> {
         match self {
