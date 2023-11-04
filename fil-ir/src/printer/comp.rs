@@ -1,7 +1,7 @@
 use super::DisplayCtx;
-use crate::{self as ir, Ctx, Idx};
+use crate::{self as ir, Ctx};
 use itertools::Itertools;
-use std::{fmt::Display, io};
+use std::io;
 
 pub struct Printer<'a, 'ctx: 'a> {
     /// The component being printed. Used to resolve interned values like expressions.
@@ -17,22 +17,6 @@ impl<'a, 'b> Printer<'a, 'b> {
     pub fn with_ctx(mut self, ctx: &'b ir::Context) -> Self {
         self.ctx = Some(ctx);
         self
-    }
-
-    fn interned<T>(
-        store: &ir::Interned<T>,
-        op: &str,
-        indent: usize,
-        f: &mut impl io::Write,
-    ) -> io::Result<()>
-    where
-        T: Eq + std::hash::Hash + Display,
-        Idx<T>: Display,
-    {
-        for (i, v) in store.iter() {
-            writeln!(f, "{:indent$}{i} = {op} {v};", "")?;
-        }
-        Ok(())
     }
 
     fn connect(
@@ -60,6 +44,12 @@ impl<'a, 'b> Printer<'a, 'b> {
             ir::Command::Invoke(inv) => self.invoke(*inv, indent, f),
             ir::Command::Connect(con) => self.connect(con, indent, f),
             ir::Command::BundleDef(p) => self.local_port(*p, indent, f),
+            ir::Command::Let(ir::Let { param, expr }) => {
+                write!(f, "{:indent$}let ", "")?;
+                self.comp.write(*param, f)?;
+                write!(f, " = ")?;
+                self.comp.write(*expr, f)
+            }
             ir::Command::ForLoop(ir::Loop {
                 index,
                 start,
@@ -245,35 +235,6 @@ impl<'a, 'b> Printer<'a, 'b> {
         writeln!(f, "{:indent$}{{", "")
     }
 
-    fn local_param(
-        &self,
-        idx: ir::ParamIdx,
-        indent: usize,
-        f: &mut impl io::Write,
-    ) -> io::Result<()> {
-        let param = self.comp.get(idx);
-        match param.owner {
-            ir::ParamOwner::Sig | ir::ParamOwner::Instance { .. } => {}
-            ir::ParamOwner::Bundle(_)
-            | ir::ParamOwner::Loop
-            | ir::ParamOwner::Exists { .. } => {
-                writeln!(
-                    f,
-                    "{:indent$}{idx} = param {param};{comment}",
-                    "",
-                    param = self.comp.display(idx),
-                    comment = self
-                        .comp
-                        .get(param.info)
-                        .as_param()
-                        .map_or("".to_string(), |p| format!(" // {}", p.name))
-                )?;
-            }
-        }
-
-        Ok(())
-    }
-
     fn local_port(
         &self,
         idx: ir::PortIdx,
@@ -386,17 +347,6 @@ impl<'a, 'b> Printer<'a, 'b> {
         f: &mut impl io::Write,
     ) -> io::Result<()> {
         self.sig(idx, 0, f)?;
-        // If debugging is enabled, show the low-level representation of the
-        // component's interned values and other stores.
-        if log::log_enabled!(log::Level::Trace) {
-            for idx in self.comp.params().idx_iter() {
-                self.local_param(idx, 2, f)?;
-            }
-            Printer::interned(self.comp.exprs(), "expr", 2, f)?;
-            Printer::interned(self.comp.times(), "time", 2, f)?;
-            Printer::interned(self.comp.props(), "prop", 2, f)?;
-            writeln!(f, "control:")?;
-        }
         self.commands(&self.comp.cmds, 2, f)?;
         writeln!(f, "}}")
     }

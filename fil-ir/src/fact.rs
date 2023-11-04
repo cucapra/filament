@@ -290,7 +290,7 @@ impl PropIdx {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq)]
 /// A fact in the program.
 /// If `checked` is true, then this represents an assertion that needs to be
 /// checked. Otherwise, it is an assumption.

@@ -366,7 +366,6 @@ impl MonoDeferred<'_, '_> {
         let ir::Fact { prop, reason, .. } = fact;
 
         let prop = prop.ul();
-        log::debug!("Fact: {}", self.underlying.display(prop));
         let (params, _) = self.underlying.relevant_vars(prop);
 
         if !params
@@ -377,13 +376,7 @@ impl MonoDeferred<'_, '_> {
             // TODO(edmund): Find a better solution to this - we should resolve bundle assertions when bundles are unrolled.
             None
         } else {
-            log::debug!(
-                "Resolving: {} with binding {}",
-                self.underlying.display(prop),
-                self.monosig.binding_rep(&self.underlying)
-            );
             let prop = self.prop(prop);
-            log::debug!("Resolved: {}", self.monosig.base.display(prop));
             let prop = self
                 .monosig
                 .base
@@ -420,6 +413,18 @@ impl MonoDeferred<'_, '_> {
                     .get()
                     .into(),
             ),
+            ir::Command::Let(ir::Let { param, expr }) => {
+                let p = param.ul();
+                let e = self.monosig.expr(&self.underlying, expr.ul()).get();
+                let Some(v) = e.as_concrete(self.monosig.base.comp()) else {
+                    unreachable!(
+                        "let binding evaluated to: {}",
+                        self.monosig.base.comp().display(e)
+                    )
+                };
+                self.monosig.binding.push(p, v);
+                None
+            }
             ir::Command::Connect(con) => Some(self.connect(con).into()),
             ir::Command::ForLoop(lp) => {
                 self.forloop(lp);

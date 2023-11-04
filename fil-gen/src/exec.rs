@@ -136,7 +136,7 @@ impl GenExec {
             tool.requires_out_file.is_some() && tool.requires_out_file.unwrap(),
             "tool does not support $OUT_FILE"
         );
-        let out_file = self.gen_file(format!("{}.v", gen_name.clone()));
+        let out_file = self.gen_file(format!("{}.v", gen_name));
         binding.push((
             "OUT_FILE".to_string(),
             out_file.to_string_lossy().to_string(),
