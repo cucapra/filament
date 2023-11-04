@@ -989,8 +989,8 @@ impl<'prog> BuildCtx<'prog> {
             }
             ast::Command::If(ast::If { cond, then, alt }) => {
                 let cond = self.expr_cons(cond)?;
-                let then = self.commands(then)?;
-                let alt = self.commands(alt)?;
+                let then = self.try_with_scope(|this| this.commands(then))?;
+                let alt = self.try_with_scope(|this| this.commands(alt))?;
                 vec![ir::If { cond, then, alt }.into()]
             }
             ast::Command::Bundle(bun) => {
