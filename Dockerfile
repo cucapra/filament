@@ -1,5 +1,5 @@
 FROM ghcr.io/cucapra/calyx:0.4.0
-
+# --platform=linux/amd64
 LABEL org.opencontainers.image.source https://github.com/cucapra/filament
 
 # Install apt packages
@@ -58,6 +58,22 @@ RUN git clone --depth 1 --branch v3.0.0 https://github.com/ghdl/ghdl.git &&\
     mkdir build && cd build &&\
     LDFLAGS='-ldl' ../configure --with-llvm-config --prefix=/usr &&\
     make && make install
+
+# Install XLS
+# WORKDIR /home
+# RUN apt install apt-transport-https curl gnupg -y
+# RUN curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor >bazel-archive-keyring.gpg
+# RUN mv bazel-archive-keyring.gpg /usr/share/keyrings
+# RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list
+# RUN apt install -y bazel-6.4.0
+
+# Install bazel
+RUN apt install -y g++ unzip zip
+RUN apt-get install default-jdk
+RUN wget https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-installer-linux-x86_64.sh
+RUN chmod +x bazel-6.4.0-installer-linux-x86_64.sh
+RUN ./bazel-6.4.0-installer-linux-x86_64.sh --user
+ENV PATH=$PATH:/root/bin
 
 # ----------------------------------------
 # Install filament
