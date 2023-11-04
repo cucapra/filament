@@ -104,6 +104,12 @@ impl ExprIdx {
 
 /// Queries over [ExprIdx]
 impl ExprIdx {
+    pub fn relevant_vars(&self, ctx: &impl Ctx<Expr>) -> Vec<ParamIdx> {
+        let mut params = Vec::new();
+        self.relevant_vars_acc(ctx, &mut params);
+        params
+    }
+
     pub fn relevant_vars_acc(
         &self,
         ctx: &impl Ctx<Expr>,

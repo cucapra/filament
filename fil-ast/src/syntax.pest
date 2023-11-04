@@ -69,9 +69,12 @@ component = {
 external = {
   "extern" ~ string_lit ~ "{" ~  ("comp" ~ signature ~ ";")*  ~ "}"
 }
+generate = {
+  "generate" ~ "(" ~ identifier ~ ")" ~ "using" ~ string_lit ~ "{" ~  ("comp" ~ signature ~ ";")*  ~ "}"
+}
 
 comp_or_ext = {
-  component | external
+  component | external | generate
 }
 
 // ====== Component signature ======
@@ -177,8 +180,11 @@ ports = {
 conc_params = {
   ("[" ~ expr ~ ("," ~ expr)* ~ "]")?
 }
+inst_live = {
+  ("in" ~ interval_range ~ ("," ~ interval_range)*)?
+}
 instance = {
-  identifier ~ ":=" ~ "new" ~ identifier ~ conc_params ~ invoke_args? ~ ";"
+  identifier ~ ":=" ~ "new" ~ identifier ~ conc_params ~ invoke_args? ~ inst_live ~ ";"
 }
 
 // Connections

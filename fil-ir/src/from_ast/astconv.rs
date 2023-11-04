@@ -35,7 +35,8 @@ impl<'prog> BuildCtx<'prog> {
         let ast::Instance {
             name,
             component,
-            bindings,
+            params: bindings,
+            lives,
         } = inst;
 
         let comp = self.get_sig(component)?;
@@ -44,6 +45,15 @@ impl<'prog> BuildCtx<'prog> {
             component.clone(),
             self.diag(),
         )?;
+        let mut live_locs = Vec::with_capacity(lives.len());
+        let lives = lives
+            .iter()
+            .map(|l| {
+                let (l, pos) = l.clone().split();
+                live_locs.push(pos);
+                self.range(l)
+            })
+            .collect::<BuildRes<Vec<_>>>()?;
         let inst = ir::Instance {
             comp: comp.idx,
             args: binding
@@ -56,7 +66,9 @@ impl<'prog> BuildCtx<'prog> {
                 name.copy(),
                 component.pos(),
                 name.pos(),
+                live_locs,
             )),
+            lives,
         };
 
         let idx = self.comp().add(inst);
@@ -118,16 +130,12 @@ impl<'prog> BuildCtx<'prog> {
             ..
         } = inv;
         let inst = self.get_inst(instance)?;
-        let info = self.comp().add(ir::Info::invoke(
-            name.copy(),
-            instance.pos(),
-            name.pos(),
-        ));
+        let empty = self.comp().add(ir::Info::empty());
         let inv = self.comp().add(ir::Invoke {
             inst,
             ports: vec![],  // Filled in later
             events: vec![], // Filled in later
-            info,
+            info: empty,    // Filled in later
         });
         // foreign component being invoked
         let foreign_comp = inv.comp(self.comp());
@@ -139,9 +147,17 @@ impl<'prog> BuildCtx<'prog> {
         let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
         let sig = self.get_sig(&comp)?;
 
+        let mut event_bind_locs = Vec::with_capacity(abstract_vars.len());
         // Event bindings
         let event_binding = sig.event_binding(
-            abstract_vars.iter().map(|v| v.inner().clone()),
+            abstract_vars
+                .iter()
+                .map(|v| {
+                    let (v, pos) = v.clone().split();
+                    event_bind_locs.push(pos);
+                    v
+                })
+                .collect_vec(),
             instance,
             self.diag(),
         )?;
@@ -163,9 +179,19 @@ impl<'prog> BuildCtx<'prog> {
             def_ports.push(self.port(resolved, owner)?);
         }
 
+        let info = self.comp().add(ir::Info::invoke(
+            name.copy(),
+            instance.pos(),
+            name.pos(),
+            event_bind_locs,
+        ));
+        let inv = self.comp().get_mut(inv);
+        // Update the information
+        inv.info = info;
         // Add the inputs from the invoke. The outputs are added in the second
         // pass over the AST.
-        self.comp().get_mut(inv).ports.extend(def_ports);
+        inv.ports.extend(def_ports);
+
         Ok(())
     }
 
@@ -178,8 +204,9 @@ impl<'prog> BuildCtx<'prog> {
             ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
                 // Declare the parameter since it may be used in instance or
                 // invocation definitions.
-                let expr = self.expr(expr.clone())?;
-                self.add_let_param(name.copy(), expr);
+                let bind = self.expr(expr.clone())?;
+                let owner = ir::ParamOwner::Let { bind };
+                self.param(name.clone(), owner);
                 Ok(())
             }
             ast::Command::Exists(_) => {
@@ -187,8 +214,12 @@ impl<'prog> BuildCtx<'prog> {
                  * this in the second pass */
                 Ok(())
             }
-            ast::Command::ForLoop(_)
-            | ast::Command::If(_)
+            ast::Command::ForLoop(_) => {
+                /* The index parameter is bound when we enter an for loop so we
+                 * don't have to do it here. */
+                Ok(())
+            }
+            ast::Command::If(_)
             | ast::Command::Fact(_)
             | ast::Command::Connect(_)
             | ast::Command::Bundle(_) => Ok(()),
@@ -290,8 +321,11 @@ impl<'prog> BuildCtx<'prog> {
         let (name, pos) = param.split();
         let info = self.comp().add(ir::Info::param(name, pos));
         let owned = OwnedParam::param_owner(name, &owner);
+        let is_sig_owned = matches!(
+            owner,
+            ir::ParamOwner::Sig | ir::ParamOwner::Exists { .. }
+        );
         let ir_param = ir::Param::new(owner, info);
-        let is_sig_owned = ir_param.is_sig_owned();
         let idx = self.comp().add(ir_param);
         let e_idx = idx.expr(self.comp());
         self.add_param_map(owned, e_idx);
@@ -573,7 +607,7 @@ impl<'prog> BuildCtx<'prog> {
                 match &sb.inner() {
                     ast::SigBind::Let { param, bind } => {
                         let e = self.expr(bind.clone())?;
-                        self.add_let_param(param.copy(), e);
+                        self.add_param_rewrite(param.copy(), e);
                         Ok((sb.inner().clone(), None))
                     }
                     ast::SigBind::Exists {
@@ -917,9 +951,17 @@ impl<'prog> BuildCtx<'prog> {
                 let dst = self.get_access(dst.take(), ir::Direction::In)?;
                 vec![ir::Connect { src, dst, info }.into()]
             }
-            ast::Command::ParamLet(_) => {
+            ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
+                let param = self
+                    .get_param(&OwnedParam::Local(name.copy()), name.pos())?;
+                let ir::Expr::Param(param) = *self.comp().get(param) else {
+                    unreachable!(
+                        "let-bound parameter was rewritten to expression"
+                    )
+                };
+                let expr = self.expr(expr)?;
                 // The declare phase already added the rewrite for this binding
-                vec![]
+                vec![ir::Let { param, expr }.into()]
             }
             ast::Command::ForLoop(ast::ForLoop {
                 idx,
@@ -960,8 +1002,8 @@ impl<'prog> BuildCtx<'prog> {
             }
             ast::Command::If(ast::If { cond, then, alt }) => {
                 let cond = self.expr_cons(cond)?;
-                let then = self.commands(then)?;
-                let alt = self.commands(alt)?;
+                let then = self.try_with_scope(|this| this.commands(then))?;
+                let alt = self.try_with_scope(|this| this.commands(alt))?;
                 vec![ir::If { cond, then, alt }.into()]
             }
             ast::Command::Bundle(bun) => {
@@ -1025,16 +1067,21 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
         // pull signatures out of externals
         .externs
         .into_iter()
-        .flat_map(|(name, comps)| {
-            comps.into_iter().map(move |comp| (name.clone(), comp))
+        // track (extern location / gen tool name, signature, body)
+        .flat_map(|ast::Extern { comps, gen, path }| {
+            comps.into_iter().map(move |comp| {
+                let typ = if gen.is_none() {
+                    ir::CompType::External
+                } else {
+                    ir::CompType::Generated
+                };
+                (typ, Some((gen.clone(), path.clone())), comp, None)
+            })
         })
-        .map(|(name, sig)| (Some(name), sig, None))
         // add signatures of components as well as their command bodies
-        .chain(
-            ns.components
-                .into_iter()
-                .map(|comp| (None, comp.sig, Some(comp.body))),
-        )
+        .chain(ns.components.into_iter().map(|comp| {
+            (ir::CompType::Source, None, comp.sig, Some(comp.body))
+        }))
         .enumerate();
 
     // used in the beginning so signatures of components can be built without any information
@@ -1049,19 +1096,24 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
 
     // uses the information above to compile the signatures of components and create their builders.
     let (mut builders, sig_map): (Vec<_>, SigMap) = comps
-        .map(|(idx, (file, sig, body))| {
+        .map(|(idx, (typ, ext_info, sig, body))| {
             let idx = ir::CompIdx::new(idx);
-            let mut builder =
-                BuildCtx::new(ir::Component::new(body.is_none()), &sig_map);
+            let mut builder = BuildCtx::new(ir::Component::new(typ), &sig_map);
 
-            // enable source information saving if this is main or an external.
-            if body.is_none() || Some(idx) == ctx.entrypoint {
+            // enable source information saving if this is main
+            if Some(idx) == ctx.entrypoint {
                 builder.comp().src_info =
-                    Some(InterfaceSrc::new(sig.name.copy()))
+                    Some(InterfaceSrc::new(sig.name.copy(), None))
             }
             // add the file to the externals map if it exists
-            if let Some(file) = file {
-                ctx.externals.entry(file).or_default().push(idx);
+            if let Some((gen, path)) = ext_info {
+                // Only real externals get a file location
+                if matches!(typ, ir::CompType::External) {
+                    ctx.externals.entry(path).or_default().push(idx);
+                }
+                // Add source information
+                builder.comp().src_info =
+                    Some(InterfaceSrc::new(sig.name.copy(), gen));
             }
 
             // compile the signature
