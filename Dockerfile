@@ -58,7 +58,7 @@ RUN git clone --depth 1 --branch v3.0.0 https://github.com/ghdl/ghdl.git &&\
     LDFLAGS='-ldl' ../configure --with-llvm-config --prefix=/usr &&\
     make && make install
 
-# Install bazel
+# Install Bazel 6.4.0
 RUN apt install -y g++ unzip zip
 RUN apt-get install default-jdk
 RUN wget https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-installer-linux-x86_64.sh
@@ -66,13 +66,12 @@ RUN chmod +x bazel-6.4.0-installer-linux-x86_64.sh
 RUN ./bazel-6.4.0-installer-linux-x86_64.sh --user
 ENV PATH=$PATH:/root/bin
 
-# other bazel attempt that isnt working also
-# WORKDIR /home
-# RUN apt install apt-transport-https curl gnupg -y
-# RUN curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor >bazel-archive-keyring.gpg
-# RUN mv bazel-archive-keyring.gpg /usr/share/keyrings
-# RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list
-# RUN apt install -y bazel-6.4.0
+# Install and build XLS (without C++ frontend)
+WORKDIR /home
+RUN git clone https://github.com/google/xls.git
+WORKDIR /home/xls
+RUN apt install -y python3-distutils python3-dev libtinfo5 python-is-python3
+RUN bazel test -c opt -- //xls/... -//xls/contrib/xlscc/...
 
 # ----------------------------------------
 # Install filament
