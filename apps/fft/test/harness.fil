@@ -75,6 +75,7 @@ extern "spiral-fft.v" {
 }
 
 /// FFT that takes in a single wire and outputs a single wire
+/// Wraps the normal bundle-based fft component
 comp BundledFFT[NStages, N]<'G: L>(
   go: interface['G],
   in[NPoints*2]: ['G, 'G+1] 32, // input bundle
