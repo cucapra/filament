@@ -28,7 +28,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     };
     // Initialize the generator
     let mut gen_exec = if ns.requires_gen() {
-        Some(ns.init_gen())
+        Some(ns.init_gen(opts.gen_config.clone()))
     } else {
         None
     };

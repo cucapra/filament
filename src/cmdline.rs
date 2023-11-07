@@ -109,4 +109,8 @@ pub struct Opts {
     /// use bitvector encoding for proofs
     #[argh(option, long = "solver-bv")]
     pub solver_bv: Option<u8>,
+
+    /// gen framework config.toml filepath
+    #[argh(option, long = "gen-config")]
+    pub gen_config: Option<PathBuf>,
 }
