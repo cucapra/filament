@@ -70,13 +70,11 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: 1>(
       ac := new FPMult[E, M]<'G>(in10.R, twiddle0.R); // ac
       bd := new FPMult[E, M]<'G>(in11.R, twiddle1.R); // bd
 
-      // perform the subtraction manually here so we can reuse the first adder
-      bd_neg := new FPNeg[E, M]<'G+FM::L>(bd.R);
-      re := new FPAdd[E, M]<'G+FM::L>(ac.R, bd_neg.R); // ac - bd
+      re := new FPSub[E, M]<'G+FM::L>(ac.R, bd.R); // ac - bd
 
       ad := new FPMult[E, M]<'G>(in10.R, twiddle1.R); // ad
       bc := new FPMult[E, M]<'G>(in11.R, twiddle0.R); // bc
-      im := new FPSub[E, M]<'G+FM::L>(ad.R, bc.R); // ad + bc
+      im := new FPAdd[E, M]<'G+FM::L>(ad.R, bc.R); // ad + bc
 
       // in0 + (w * in1)
       out00 := new FPAdd[E, M]<'G+FM::L+FA::L>(in00.R, re.R); // re
