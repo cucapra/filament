@@ -44,27 +44,21 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: 1>(
   } else {
     if T == 1 {
       // Butterfly unit using flopoco's modules
-      FM1 := new FPMult[E, M];
-      FM2 := new FPMult[E, M];
-      FM3 := new FPMult[E, M];
-      FM4 := new FPMult[E, M];
 
-      FA1 := new FPAdd[E, M];
-      FS1 := new FPSub[E, M];
-      FA2 := new FPAdd[E, M];
-      FS2 := new FPSub[E, M];
-      FA3 := new FPAdd[E, M];
-      FS3 := new FPSub[E, M];
+      // instantiations for latency access
+      FM := new FPMult[E, M];
+      FA := new FPAdd[E, M];
+      FS := new FPSub[E, M];
 
-      assume FA1::L == FS1::L; // we can assume this because we know the internal implementation of FPSub
+      assume FA::L == FS::L; // we can assume this because we know the internal implementation of FPSub
 
       // delay first input
-      in00_delay := new Shift[W, FM1::L+FA1::L]<'G>(in0{0});
-      in01_delay := new Shift[W, FM1::L+FA1::L]<'G>(in0{1});
+      in00_delay := new Shift[W, FM::L+FA::L]<'G>(in0{0});
+      in01_delay := new Shift[W, FM::L+FA::L]<'G>(in0{1});
 
       // convert inputs to flopoco
-      in00 := new InputIEEE[E, M, E, M]<'G+FM1::L+FA1::L>(in00_delay.out);
-      in01 := new InputIEEE[E, M, E, M]<'G+FM1::L+FA1::L>(in01_delay.out);
+      in00 := new InputIEEE[E, M, E, M]<'G+FM::L+FA::L>(in00_delay.out);
+      in01 := new InputIEEE[E, M, E, M]<'G+FM::L+FA::L>(in01_delay.out);
       in10 := new InputIEEE[E, M, E, M]<'G>(in1{0});
       in11 := new InputIEEE[E, M, E, M]<'G>(in1{1});
 
@@ -73,36 +67,36 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: 1>(
       twiddle1 := new InputIEEE[E, M, E, M]<'G>(twiddle{1});
       
       // Perform w * in1
-      ac := FM1<'G>(in10.R, twiddle0.R); // ac
-      bd := FM2<'G>(in11.R, twiddle1.R); // bd
+      ac := new FPMult[E, M]<'G>(in10.R, twiddle0.R); // ac
+      bd := new FPMult[E, M]<'G>(in11.R, twiddle1.R); // bd
 
       // perform the subtraction manually here so we can reuse the first adder
-      bd_neg := new FPNeg[E, M]<'G+FM1::L>(bd.R);
-      re := FA1<'G+FM1::L>(ac.R, bd_neg.R); // ac - bd
+      bd_neg := new FPNeg[E, M]<'G+FM::L>(bd.R);
+      re := new FPAdd[E, M]<'G+FM::L>(ac.R, bd_neg.R); // ac - bd
 
-      ad := FM3<'G>(in10.R, twiddle1.R); // ad
-      bc := FM4<'G>(in11.R, twiddle0.R); // bc
-      im := FS1<'G+FM1::L>(ad.R, bc.R); // ad + bc
+      ad := new FPMult[E, M]<'G>(in10.R, twiddle1.R); // ad
+      bc := new FPMult[E, M]<'G>(in11.R, twiddle0.R); // bc
+      im := new FPSub[E, M]<'G+FM::L>(ad.R, bc.R); // ad + bc
 
       // in0 + (w * in1)
-      out00 := FA2<'G+FM1::L+FA1::L>(in00.R, re.R); // re
-      out01 := FA3<'G+FM1::L+FA1::L>(in01.R, im.R); // im
+      out00 := new FPAdd[E, M]<'G+FM::L+FA::L>(in00.R, re.R); // re
+      out01 := new FPAdd[E, M]<'G+FM::L+FA::L>(in01.R, im.R); // im
       
       // in0 - (w * in1)
-      out10 := FS2<'G+FM1::L+FA1::L>(in00.R, re.R); // re
-      out11 := FS3<'G+FM1::L+FA1::L>(in01.R, im.R); // im
+      out10 := new FPSub[E, M]<'G+FM::L+FA::L>(in00.R, re.R); // re
+      out11 := new FPSub[E, M]<'G+FM::L+FA::L>(in01.R, im.R); // im
 
-      out00_IEEE := new OutputIEEE[E, M, E, M]<'G+FM1::L+FA1::L*2>(out00.R);
-      out01_IEEE := new OutputIEEE[E, M, E, M]<'G+FM1::L+FA1::L*2>(out01.R);
-      out10_IEEE := new OutputIEEE[E, M, E, M]<'G+FM1::L+FA1::L*2>(out10.R);
-      out11_IEEE := new OutputIEEE[E, M, E, M]<'G+FM1::L+FA1::L*2>(out11.R);
+      out00_IEEE := new OutputIEEE[E, M, E, M]<'G+FM::L+FA::L*2>(out00.R);
+      out01_IEEE := new OutputIEEE[E, M, E, M]<'G+FM::L+FA::L*2>(out01.R);
+      out10_IEEE := new OutputIEEE[E, M, E, M]<'G+FM::L+FA::L*2>(out10.R);
+      out11_IEEE := new OutputIEEE[E, M, E, M]<'G+FM::L+FA::L*2>(out11.R);
 
       out0{0} = out00_IEEE.R;
       out0{1} = out01_IEEE.R;
       out1{0} = out10_IEEE.R;
       out1{1} = out11_IEEE.R;
 
-      L := 2*FA1::L+FM1::L;
+      L := 2*FA::L+FM::L;
     }
   }
 }
