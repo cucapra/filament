@@ -29,7 +29,7 @@ comp PeaseFFT[NStages, N]<'G: L>(
 
   bitrev := new BitRev[NStages, W]<'G>(in{0..NPoints}{0..2});
   // butterfly components
-  B := new ButterfliesWrapper[N, W, E, M];
+  B := new ButterfliesWrapper[N];
   // number of times we have to reuse the butterflies per stage
   let reuses = NPoints / (2*N);
   let stage_latency = B::II * reuses + B::L + 1; // + 1 here is for the extra delay cycle necessary to transfer values between stages
@@ -122,4 +122,42 @@ comp PeaseFFT[NStages, N]<'G: L>(
 
   out{0..NPoints}{0..2} = sync_data_in{NStages}{0..NPoints}{0..2};
   L := latency;
+}
+
+/// Combines output of the Butterflies component into a single wire
+comp CombineButterflyBundle[N, W, ?L=1]<'G: L>(
+  in[N*2][2]: ['G, 'G+L] W
+) -> (
+  out: ['G, 'G+L] W*4*N
+) where
+    N > 0,
+    W > 0,
+    L > 0
+{
+  bundle outb[N*4]: ['G, 'G+L] W;
+  for i in 0..N*2 {
+    outb{i*2} = in{i}{0};
+    outb{i*2+1} = in{i}{1};
+  }
+  
+  cb := new ConcatBundle[W, N*4, L]<'G>(outb{0..N*4});
+  
+  out = cb.out;
+}
+
+/// Splits output of the Butterflies component into a bundle
+comp SplitButterflyBundle[N, W, ?L=1]<'G: L>(
+  in: ['G, 'G+L] W*4*N
+) -> (
+  out[N*2][2]: ['G, 'G+L] W
+) where
+    N > 0,
+    W > 0,
+    L > 0
+{
+  sw := new SplitWire[W, N*4, L]<'G>(in);
+  for i in 0..N*2 {
+    out{i}{0} = sw.out{i*2};
+    out{i}{1} = sw.out{i*2+1};
+  }
 }

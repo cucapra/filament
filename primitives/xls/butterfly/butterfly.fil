@@ -1,7 +1,7 @@
 import "primitives/core.fil";
 
 extern "impl.v" {
-    comp Butterfly<'G:1>(
+    comp Butterfly_Exp8_Mant23<'G:1>(
         clk: 1,
         in0_r: ['G, 'G+1] 32,
         in0_i: ['G, 'G+1] 32,
@@ -15,7 +15,7 @@ extern "impl.v" {
 }
 
 comp ButterflyWrapper<'G:II>(
-    go: interface['G] 
+    go: interface['G],
     in0[2]: ['G, 'G+II] 32,
     in1[2]: ['G, 'G+II] 32,
     twd[2]: ['G, 'G+II] 32
@@ -23,16 +23,19 @@ comp ButterflyWrapper<'G:II>(
     out0[2]: ['G+L, 'G+L+1] 32,
     out1[2]: ['G+L, 'G+L+1] 32
 ) with {
-    some II where II >= 1;
-    some L where L > 0;
-} {
-    B := new Butterfly;
-    b := B<'G>(in0{0}, in0{1}, in1{0}, in1{1});
+    some II where II > 0;
+    some L where L >= II;
+} where
+    L >= II,
+    II > 0
+{
+    B := new Butterfly_Exp8_Mant23;
+    b := B<'G>(in0{0}, in0{1}, in1{0}, in1{1}, twd{0}, twd{1});
 
-    out0_r := new Slice[128, 31, 0]<'G>(b.out);
-    out0_i := new Slice[128, 63, 32]<'G>(b.out);
-    out1_r := new Slice[128, 95, 64]<'G>(b.out);
-    out1_i := new Slice[128, 127, 96]<'G>(b.out);
+    out0_r := new Slice[128, 127, 96]<'G+4>(b.out);
+    out0_i := new Slice[128, 95, 64]<'G+4>(b.out);
+    out1_r := new Slice[128, 63, 32]<'G+4>(b.out);
+    out1_i := new Slice[128, 31, 0]<'G+4>(b.out);
 
     out0{0} = out0_r.out;
     out0{1} = out0_i.out;
@@ -44,14 +47,18 @@ comp ButterflyWrapper<'G:II>(
 }
 
 comp ButterfliesWrapper[N]<'G:II>(
+    go: interface['G],
     in[N*2][2]: ['G, 'G+II] 32,
-    twd[N][2]: ['G, 'G+II] 32
+    twiddle[N][2]: ['G, 'G+II] 32
 ) -> (
     out[N*2][2]: ['G+L, 'G+L+1] 32
 ) with {
     some II where II > 0;
     some L where L >= II;
-} {
+} where
+    L >= II,
+    II > 0
+{
     Bx := new ButterflyWrapper;
     L := Bx::L;
     II := Bx::II;
@@ -59,7 +66,7 @@ comp ButterfliesWrapper[N]<'G:II>(
     for i in 0..N {
         b := new ButterflyWrapper<'G>(in{2*i}{0..2}, in{2*i+1}{0..2}, twiddle{i}{0..2});
         out{2*i}{0..2} = b.out0{0..2};
-        out{2*i+1}{0..2} = b.out{0..2};
+        out{2*i+1}{0..2} = b.out1{0..2};
     }
 }
 
