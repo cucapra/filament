@@ -26,6 +26,12 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
             return Err(1);
         }
     };
+    // Initialize the generator
+    let mut gen_exec = if ns.requires_gen() {
+        Some(ns.init_gen())
+    } else {
+        None
+    };
 
     // Transform AST to IR
     let mut ir = log_pass! { opts; ir::transform(ns)?, "astconv" };
@@ -34,8 +40,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::TypeCheck,
         ip::IntervalCheck,
         ip::PhantomCheck,
-        ip::Assume,
-        ip::HoistFacts
+        ip::Assume
     }
     if !opts.unsafe_skip_discharge {
         pass_pipeline! {opts, ir; ip::Discharge }
@@ -43,7 +48,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     pass_pipeline! { opts, ir;
         BuildDomination
     };
-    ir = log_pass! { opts; ip::Monomorphize::transform(&ir), "monomorphize"};
+    ir = log_pass! { opts; ip::Monomorphize::transform(&ir, &mut gen_exec), "monomorphize"};
     pass_pipeline! { opts, ir;
         ip::Simplify,
         ip::AssignCheck,
@@ -74,6 +79,10 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
             calyx_ir::Printer::write_context(&calyx, false, out).unwrap();
         }
     }
+
+    // Drop the generator executor after the execution finishes to ensure that
+    // Calyx has access to the generated file.
+    drop(gen_exec);
     Ok(())
 }
 

@@ -15,10 +15,10 @@ mod time;
 mod utils;
 mod validate;
 
-pub use comp::Component;
+pub use comp::{CompType, Component};
 pub use context::Context;
 pub use control::{
-    Command, Connect, EventBind, Exists, If, Instance, Invoke, Loop,
+    Command, Connect, EventBind, Exists, If, Instance, Invoke, Let, Loop,
 };
 pub use ctx::{AddCtx, Ctx, MutCtx};
 pub use expr::Expr;

@@ -1,6 +1,7 @@
 use super::{Base, Underlying};
 use fil_ir as ir;
 use ir::SparseInfoMap;
+use itertools::Itertools;
 
 #[derive(PartialEq, Eq, Hash, Clone)]
 /// A key defined by a component and all of its parameters.
@@ -16,6 +17,16 @@ impl CompKey {
 impl From<(Underlying<ir::Component>, Vec<u64>)> for CompKey {
     fn from((comp, params): (Underlying<ir::Component>, Vec<u64>)) -> Self {
         Self::new(comp, params)
+    }
+}
+impl std::fmt::Display for CompKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}[{}]",
+            self.comp.idx(),
+            self.params.iter().map(|p| p.to_string()).join(",")
+        )
     }
 }
 

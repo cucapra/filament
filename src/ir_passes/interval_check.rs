@@ -24,6 +24,8 @@ impl IntervalCheck {
     /// the range is strictly greater than the start.
     fn range_wf(
         &mut self,
+        // The path condition
+        pc: ir::PropIdx,
         range: &ir::Range,
         loc: GPosIdx,
         comp: &mut ir::Component,
@@ -33,6 +35,7 @@ impl IntervalCheck {
         let reason = comp.add(
             ir::info::Reason::well_formed_interval(loc, (start, end)).into(),
         );
+        let prop = pc.implies(prop, comp);
         comp.assert(prop, reason)
     }
 
@@ -109,10 +112,7 @@ impl IntervalCheck {
         );
 
         // Ensure that this event's delay is greater than invoked component's event's delay.
-        let prop = comp.add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(
-            this_delay,
-            inv_delay.clone(),
-        )));
+        let prop = this_delay.gte(inv_delay.clone(), comp);
         comp.assert(prop, reason)
     }
 }
@@ -159,7 +159,7 @@ impl Visitor for IntervalCheck {
             let &ir::info::Port { live_loc, .. } = comp.get(info).into();
             let range = live.range;
             // Require that the range is well-formed
-            cmds.extend(self.range_wf(&range, live_loc, comp));
+            cmds.extend(self.range_wf(assumes, &range, live_loc, comp));
 
             // We only constraint the event mentioned in the start of the range.
             let st_ev = comp[range.start].event;
@@ -189,23 +189,119 @@ impl Visitor for IntervalCheck {
                 )
                 .into(),
             );
-            let prop = comp
-                .add(ir::Prop::TimeSubCmp(ir::CmpOp::gte(delay.clone(), len)));
+            let prop = delay.clone().gte(len, comp);
             let imp = assumes.implies(prop, comp);
             cmds.extend(comp.assert(imp, reason));
         }
         Action::AddBefore(cmds)
     }
 
-    fn invoke(&mut self, idx: ir::InvIdx, data: &mut VisitorData) -> Action {
+    fn invoke(
+        &mut self,
+        inv_idx: ir::InvIdx,
+        data: &mut VisitorData,
+    ) -> Action {
         let comp = &mut data.comp;
+        let inst_idx = inv_idx.inst(comp);
+        let lives = comp.get(inst_idx).lives.clone();
+        let events = &comp[inv_idx].events.clone();
+        let inv_info = comp.get(comp.get(inv_idx).info).as_invoke().cloned();
+
         let mut cmds = Vec::default();
+        // If the liveness is defined, then ensure that the active range of the
+        // event is in range.
+        if !lives.is_empty() {
+            let info = comp.get(comp.get(inst_idx).info).as_instance().cloned();
+            for (i, (ir::Range { start, end }, live)) in
+                lives.iter().zip_eq(events).enumerate()
+            {
+                let ir::EventBind {
+                    delay,
+                    arg: use_start,
+                    ..
+                } = live;
+                let start_after = use_start.gte(*start, comp);
+                let use_end = use_start.add(delay, comp);
+                let end_before = use_end.lte(*end, comp);
+
+                // Location information
+                let info = if let (
+                    Some(ir::info::Instance { event_lives, .. }),
+                    Some(ir::info::Invoke {
+                        event_bind_locs, ..
+                    }),
+                ) = (&info, &inv_info)
+                {
+                    let live_loc = event_lives[i];
+                    let borrow = (*start, *end);
+                    let inv_range = (*use_start, use_end);
+                    ir::Info::assert(ir::info::Reason::event_live(
+                        live_loc,
+                        borrow,
+                        inv_range,
+                        event_bind_locs[i],
+                    ))
+                } else {
+                    ir::Info::empty()
+                };
+
+                let info = comp.add(info);
+                let prop = start_after.and(end_before, comp);
+                let cmd = comp.assert(prop, info);
+                cmds.extend(cmd);
+            }
+        }
+
         // Clone here because we need to pass mutable ownership of the component
-        for eb in comp[idx].events.clone() {
+        for eb in events.clone() {
             if let Some(assert) = self.event_binding(eb, comp) {
                 cmds.push(assert)
             }
         }
+        Action::AddBefore(cmds)
+    }
+
+    fn instance(
+        &mut self,
+        inst_idx: ir::InstIdx,
+        data: &mut VisitorData,
+    ) -> Action {
+        let comp = &mut data.comp;
+        let inst = &comp[inst_idx];
+        let info = comp[inst.info].as_instance().cloned();
+        if inst.lives.is_empty() {
+            return Action::Continue;
+        }
+
+        let mut cmds = Vec::with_capacity(inst.lives.len());
+        for (i, ir::Range { start, end }) in
+            inst.lives.clone().into_iter().enumerate()
+        {
+            // The range of this liveness
+            let len = end.sub(start, comp);
+            let inst = &comp[comp[start].event];
+            let delay = inst.delay.clone();
+            let ev_info = comp[inst.info].as_event().cloned();
+            let prop = delay.clone().gte(len.clone(), comp);
+
+            let reason = if let (
+                Some(ir::info::Instance { event_lives, .. }),
+                Some(ir::info::Event { delay_loc, .. }),
+            ) = (&info, ev_info)
+            {
+                ir::Info::assert(ir::info::Reason::event_live_delay(
+                    event_lives[i],
+                    len,
+                    delay_loc,
+                    delay,
+                ))
+            } else {
+                ir::Info::empty()
+            };
+            let info = comp.add(reason);
+            cmds.extend(comp.assert(prop, info));
+        }
+
         Action::AddBefore(cmds)
     }
 

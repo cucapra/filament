@@ -1,6 +1,7 @@
 use crate::cmdline;
 use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
 use crate::log_time;
+use crate::utils::HoistFacts;
 use codespan_reporting::diagnostic::Diagnostic;
 use codespan_reporting::{diagnostic as cr, term};
 use easy_smt as smt;
@@ -26,7 +27,7 @@ impl Assign {
             .filter_map(|(k, v)| {
                 // Attempt to parse value as a number
                 match v.parse::<i64>() {
-                    Ok(v) if v == 0 => None,
+                    Ok(0) => None,
                     _ => Some(format!("{} = {v}", ctx.display(*k))),
                 }
             })
@@ -44,8 +45,6 @@ pub struct Discharge {
     bv_size: Option<u8>,
     /// Which solver are we using
     sol_base: cmdline::Solver,
-    /// Are we in a scoped context?
-    scoped: bool,
     /// Defined global functions
     func_map: HashMap<ast::Fn, smt::SExpr>,
     /// Defined functions for `some` parameters on components
@@ -211,7 +210,6 @@ impl Construct for Discharge {
             bv_size: opts.solver_bv,
             sol: Self::conf_solver(opts),
             sol_base: opts.solver,
-            scoped: false,
             error_count: 0,
             act_lit_count: 0,
             to_prove: vec![],
@@ -398,6 +396,7 @@ impl Discharge {
             let imp = self.sol.imp(actlit, self.sol.not(sexp));
             self.sol.assert(imp).unwrap();
             // Disable the activation literal
+            log::debug!("Checking {}", ctx.display(prop.consequent(ctx)));
             let res = log_time!(
                 self.sol.check_assuming([actlit]).unwrap(),
                 ctx.display(prop.consequent(ctx));
@@ -430,7 +429,7 @@ impl Discharge {
                         "Cannot prove constraint: {}",
                         ctx.display(fact.prop.consequent(ctx))
                     ),
-                    "No information was given on who generated this error"
+                    "No information was given on who generated this error. Please report this as a bug in the compiler with the program that triggered it."
                         .to_string(),
                 ]);
                 self.diagnostics.push(diag);
@@ -550,6 +549,12 @@ impl Visitor for Discharge {
     }
 
     fn start(&mut self, data: &mut VisitorData) -> Action {
+        self.to_prove = HoistFacts::hoist(&mut data.comp);
+
+        for fact in &self.to_prove {
+            log::debug!("Checking {}", data.comp.display(fact.prop));
+        }
+
         let comp = &data.comp;
         // Declare all parameters
         let int = self.sort();
@@ -583,6 +588,17 @@ impl Visitor for Discharge {
             self.expr_map.push(idx, sexp);
         }
 
+        // Assert bindings for all let-bound parameters
+        for (idx, p) in data.comp.params().iter() {
+            let ir::ParamOwner::Let { bind } = &p.owner else {
+                continue;
+            };
+            let param_s = self.param_map[idx];
+            let bind_s = self.expr_map[*bind];
+            let assign = self.sol.eq(param_s, bind_s);
+            self.sol.assert(assign).unwrap();
+        }
+
         // Declare all time expressions
         for (idx, ir::Time { event, offset }) in data.comp.times().iter() {
             let assign = self.plus(self.ev_map[*event], self.expr_map[*offset]);
@@ -609,42 +625,6 @@ impl Visitor for Discharge {
         Action::Continue
     }
 
-    fn fact(&mut self, f: &mut ir::Fact, _: &mut VisitorData) -> Action {
-        if self.scoped {
-            panic!("scoped facts not supported. Run `hoist-facts` before this pass");
-        }
-
-        if f.is_assume() {
-            panic!(
-                "assumptions should have been eliminated by `hoist-facts` pass"
-            )
-        }
-
-        // Defer proof obligations till the end of the component pass
-        self.to_prove.push(f.clone());
-        Action::Continue
-    }
-
-    fn do_if(&mut self, i: &mut ir::If, data: &mut VisitorData) -> Action {
-        let orig = self.scoped;
-        self.scoped = true;
-        let out = self
-            .visit_cmds(&mut i.then, data)
-            .and_then(|| self.visit_cmds(&mut i.alt, data));
-        self.scoped = orig;
-        out
-    }
-
-    fn do_loop(&mut self, l: &mut ir::Loop, data: &mut VisitorData) -> Action {
-        let orig = self.scoped;
-        self.scoped = true;
-        let out = self
-            .start_loop(l, data)
-            .and_then(|| self.visit_cmds(&mut l.body, data));
-        self.scoped = orig;
-        out
-    }
-
     fn instance(&mut self, idx: ir::InstIdx, data: &mut VisitorData) -> Action {
         let comp = &data.comp;
         let inst = &comp[idx];
@@ -667,8 +647,6 @@ impl Visitor for Discharge {
     }
 
     fn end(&mut self, data: &mut VisitorData) {
-        assert!(!self.scoped, "unbalanced scopes");
-
         if self.to_prove.is_empty() {
             return;
         }
@@ -683,6 +661,7 @@ impl Visitor for Discharge {
 
             // If there is at least one failing prop, roll back to individually checking the props for error reporting
             if matches!(self.sol.check().unwrap(), smt::Response::Sat) {
+                log::info!("Failed to prove all facts. Checking each fact individually");
                 self.failing_props(&data.comp);
             }
         } else {

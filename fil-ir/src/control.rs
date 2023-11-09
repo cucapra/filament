@@ -1,6 +1,8 @@
+use crate::{Expr, Time};
+
 use super::{
     Access, CompIdx, Component, Ctx, Event, ExprIdx, Fact, Foreign, InfoIdx,
-    InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx, TimeIdx, TimeSub,
+    InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx, Range, TimeIdx, TimeSub,
 };
 
 #[derive(Clone, PartialEq, Eq)]
@@ -15,6 +17,8 @@ pub enum Command {
     BundleDef(PortIdx),
     /// A wire connection
     Connect(Connect),
+    /// A `let`-bound parameter
+    Let(Let),
     /// A `for` loop
     ForLoop(Loop),
     /// An `if` statement
@@ -74,6 +78,11 @@ impl From<Exists> for Command {
         Command::Exists(exists)
     }
 }
+impl From<Let> for Command {
+    fn from(let_: Let) -> Self {
+        Command::Let(let_)
+    }
+}
 
 #[derive(Clone, PartialEq, Eq)]
 /// An instantiated component
@@ -82,10 +91,12 @@ pub struct Instance {
     pub comp: CompIdx,
     /// The parameters used in the binding of this instance
     pub args: Box<[ExprIdx]>,
-    /// The information associated with this instance
-    pub info: InfoIdx,
+    /// The active range of this instance
+    pub lives: Vec<Range>,
     /// The parameters defined by this instance
     pub params: Vec<ParamIdx>,
+    /// The information associated with this instance
+    pub info: InfoIdx,
 }
 
 impl InstIdx {
@@ -93,6 +104,22 @@ impl InstIdx {
     pub fn comp(self, ctx: &impl Ctx<Instance>) -> CompIdx {
         let inst = ctx.get(self);
         inst.comp
+    }
+
+    pub fn relevant_vars(
+        self,
+        ctx: &(impl Ctx<Instance> + Ctx<Expr> + Ctx<Time>),
+    ) -> Vec<ParamIdx> {
+        let Instance { args, lives, .. } = ctx.get(self);
+        args.iter()
+            .flat_map(|arg| arg.relevant_vars(ctx).into_iter())
+            .chain(lives.iter().flat_map(|r| {
+                r.start
+                    .relevant_vars(ctx)
+                    .into_iter()
+                    .chain(r.end.relevant_vars(ctx))
+            }))
+            .collect()
     }
 }
 
@@ -192,9 +219,19 @@ impl EventBind {
     }
 }
 
+/// Binding for an existentially quantified parameter
 #[derive(Clone, PartialEq, Eq)]
 pub struct Exists {
     /// The existentially quantified parameter
+    pub param: ParamIdx,
+    /// The binding for the parameter
+    pub expr: ExprIdx,
+}
+
+/// A `let`-bound parameter
+#[derive(Clone, PartialEq, Eq)]
+pub struct Let {
+    /// The parameter
     pub param: ParamIdx,
     /// The binding for the parameter
     pub expr: ExprIdx,

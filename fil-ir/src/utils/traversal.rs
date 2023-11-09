@@ -19,7 +19,7 @@ impl From<ir::Context> for Traversal {
         let comps = ctx
             .comps
             .iter()
-            .filter(|(_, comp)| !comp.is_ext)
+            .filter(|(_, comp)| !comp.is_ext())
             .collect_vec();
 
         for (idx, _) in comps.iter() {
@@ -82,7 +82,7 @@ impl Traversal {
             ir::Command::Instance(inst) => {
                 let inst = ctx.comps.get(comp).instances().get(*inst);
                 // If the instance is not an external, add a dependency edge
-                if !ctx.comps.get(inst.comp).is_ext {
+                if !ctx.comps.get(inst.comp).is_ext() {
                     ts.add_dependency(comp, inst.comp);
                 }
             }
@@ -102,6 +102,7 @@ impl Traversal {
             ir::Command::Connect(_)
             | ir::Command::BundleDef(_)
             | ir::Command::Invoke(_)
+            | ir::Command::Let(_)
             | ir::Command::Fact(_)
             | ir::Command::Exists(_) => (),
         }

@@ -1,10 +1,9 @@
 use fil_ast as ast;
 use fil_ir::{
-    self as ir, AddCtx, Ctx, DisplayCtx, Idx, IndexStore, InterfaceSrc,
-    Interned, MutCtx,
+    self as ir, AddCtx, Ctx, DisplayCtx, Idx, IndexStore, InterfaceSrc, MutCtx,
 };
 
-use super::{Base, IntoBase, Underlying};
+use super::{Base, IntoBase, IntoUdl, Underlying};
 
 #[derive(Clone)]
 pub struct UnderlyingComp<'a>(&'a ir::Component);
@@ -13,20 +12,15 @@ impl<'a> UnderlyingComp<'a> {
     pub fn new(comp: &'a ir::Component) -> Self {
         Self(comp)
     }
+    // XXX(rachitnigam): We should probably define a macro to dispatch these methods.
     pub fn cmds(&self) -> &Vec<ir::Command> {
         &self.0.cmds
     }
     pub fn is_ext(&self) -> bool {
-        self.0.is_ext
+        self.0.is_ext()
     }
     pub fn events(&self) -> &IndexStore<ir::Event> {
         self.0.events()
-    }
-    pub fn exprs(&self) -> &Interned<ir::Expr> {
-        self.0.exprs()
-    }
-    pub fn params(&self) -> &IndexStore<ir::Param> {
-        self.0.params()
     }
     pub fn ports(&self) -> &IndexStore<ir::Port> {
         self.0.ports()
@@ -40,10 +34,24 @@ impl<'a> UnderlyingComp<'a> {
     pub fn exist_params(&self) -> impl Iterator<Item = ir::ParamIdx> + '_ {
         self.0.exist_params()
     }
+    pub fn all_exist_assumes(&self) -> Vec<ir::PropIdx> {
+        self.0.all_exist_assumes()
+    }
+    pub fn relevant_vars(
+        &self,
+        prop: Underlying<ir::Prop>,
+    ) -> (Vec<Underlying<ir::Param>>, Vec<Underlying<ir::Event>>) {
+        let (params, events) = prop.idx().relevant_vars(self.0);
+
+        (
+            params.into_iter().map(|p| p.ul()).collect(),
+            events.into_iter().map(|e| e.ul()).collect(),
+        )
+    }
 }
 
 // The underlying component is a context for everything that a component is a context for.
-impl<'a, T> Ctx<T, Underlying<T>> for UnderlyingComp<'a>
+impl<T> Ctx<T, Underlying<T>> for UnderlyingComp<'_>
 where
     ir::Component: Ctx<T>,
 {
@@ -52,7 +60,7 @@ where
     }
 }
 
-impl<'a, T> DisplayCtx<Underlying<T>> for UnderlyingComp<'a>
+impl<T> DisplayCtx<Underlying<T>> for UnderlyingComp<'_>
 where
     ir::Component: DisplayCtx<Idx<T>>,
 {

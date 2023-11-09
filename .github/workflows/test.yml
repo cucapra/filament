@@ -3,36 +3,83 @@ name: Test
 on: [push]
 
 jobs:
+  hash:
+    name: Get Docker Hash
+    runs-on: ubuntu-latest
+    outputs:
+      hash: ${{ steps.hash.outputs.hash }}
+      exists: ${{ steps.exists.outputs.exists }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: cucapra/filament
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Get hash
+        id: hash
+        run: git log -s -n 1 --pretty=format:"%H" -- Dockerfile | echo "hash=$(cat)" >> "$GITHUB_OUTPUT"
+      - name: Check if image exists
+        id: exists
+        run: (docker buildx imagetools inspect ghcr.io/cucapra/filament:${{ steps.hash.outputs.hash }} &> /dev/null && echo "exists=true" || echo "exists=false") >> "$GITHUB_OUTPUT"
+  build:
+    name: Build and Push Docker Image
+    needs: hash
+    if: ${{ needs.hash.outputs.exists == 'false' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: cucapra/filament
+          ref: ${{ needs.hash.outputs.hash }}
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/cucapra/filament
+          tags: |
+            type=raw,value=${{ needs.hash.outputs.hash }},enable=true
+            type=raw,value=latest,enable={{is_default_branch}}
+          flavor: latest=false
+      - uses: depot/setup-action@v1
+      - uses: depot/build-push-action@v1
+        with:
+          context: .
+          project: 7grh10615f
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
   compiler:
     name: Test Compiler
     runs-on: ubuntu-latest
-    container: ghcr.io/cucapra/calyx:0.4.0
+    needs: [hash, build]
+    if: always() && !failure() && !cancelled()
+    container: ghcr.io/cucapra/filament:${{ needs.hash.outputs.hash }}
+    defaults:
+      run:
+        working-directory: /home/filament
     steps:
-      - name: Install cvc5
+      - name: Copy fud configuration
         run: |
-          wget https://github.com/cvc5/cvc5/releases/download/cvc5-1.0.6/cvc5-Linux \
-            --output-document cvc5
-          chmod +x cvc5
-          mv cvc5 /usr/local/bin
-
+          mkdir -p $HOME/.config
+          cp -r /root/.config/* $HOME/.config
       - name: Checkout commit that triggered run
         uses: actions/checkout@v3
         with:
           repository: cucapra/filament
           ref: ${{ github.sha }}
-
-      - name: Configure fud
-        working-directory: /home
-        run: |
-          # Copy fud configuration
-          mkdir -p $HOME/.config
-          cp -r /root/.config/* $HOME/.config
-          # Register filament relevant stages
-          python3 -m pip install cocotb find_libpython pytest
-          fud register filament -p "${GITHUB_WORKSPACE}/fud/filament.py"
-          fud config stages.filament.exec "${GITHUB_WORKSPACE}/target/debug/filament"
-          fud config stages.filament.library "${GITHUB_WORKSPACE}"
-
       - name: Build Filament
         uses: actions-rs/cargo@v1
         with:

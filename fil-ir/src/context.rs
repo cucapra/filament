@@ -1,5 +1,5 @@
 use super::{
-    AddCtx, CompIdx, Component, Ctx, Foreign, Idx, IndexStore, MutCtx,
+    AddCtx, CompIdx, CompType, Component, Ctx, Foreign, Idx, IndexStore, MutCtx,
 };
 use fil_derive::Ctx;
 use std::collections::HashMap;
@@ -20,21 +20,24 @@ impl Context {
 
     /// Is this component external?
     pub fn is_ext(&self, idx: CompIdx) -> bool {
-        self.get(idx).is_ext
+        self.get(idx).is_ext()
     }
 
     /// Add a new component, default to the context
-    pub fn comp(&mut self, is_ext: bool) -> CompIdx {
-        let comp = Component::new(is_ext);
+    pub fn comp(&mut self, typ: CompType) -> CompIdx {
+        let comp = Component::new(typ);
         self.add(comp)
     }
 
+    /// Gets the filename the contains the external definition of a component.
+    /// Returns `None` is the component is not an external
     pub fn get_filename(&self, idx: CompIdx) -> Option<String> {
         self.externals.iter().find_map(|(filename, comps)| {
             comps.contains(&idx).then_some(filename.to_string())
         })
     }
 
+    /// Iterate over the components
     pub fn iter(&self) -> impl Iterator<Item = (CompIdx, &Component)> + '_ {
         self.comps.iter()
     }

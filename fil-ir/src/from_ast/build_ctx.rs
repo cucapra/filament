@@ -65,6 +65,7 @@ impl OwnedParam {
             ir::ParamOwner::Sig
             | ir::ParamOwner::Exists { .. }
             | ir::ParamOwner::Bundle(_)
+            | ir::ParamOwner::Let { .. }
             | ir::ParamOwner::Loop => Self::Local(id),
             ir::ParamOwner::Instance { inst, .. } => Self::Instance(*inst, id),
         }
@@ -218,9 +219,8 @@ impl<'prog> BuildCtx<'prog> {
         self.sigs = sigs;
     }
 
-    /// Add a let-bound parameter's as binding as the thing it should resolve to.
-    /// This has the effect of inlining all let-bound parameters.
-    pub fn add_let_param(&mut self, id: Id, expr: ir::ExprIdx) {
+    /// Add a rewrite from a parameter to its expression.
+    pub fn add_param_rewrite(&mut self, id: Id, expr: ir::ExprIdx) {
         self.param_map.insert(OwnedParam::Local(id), expr);
     }
 

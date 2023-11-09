@@ -85,21 +85,20 @@ pub struct Opts {
     #[argh(switch, long = "unsafe-skip-discharge")]
     pub unsafe_skip_discharge: bool,
 
+    // Backend options
     /// backend to use (default: verilog): calyx, verilog
     #[argh(option, long = "backend", default = "Backend::Verilog")]
     pub backend: Backend,
-
     /// disable generation of slow FSMs in the backend
     #[argh(switch, long = "disable-slow-fsms")]
     pub disable_slow_fsms: bool,
-
     /// preserves original port names during compilation.
     #[argh(switch, long = "preserve-names")]
     pub preserve_names: bool,
 
     // Solver specific configuration
     /// solver to use (default: cvc5): cvc5, z3
-    #[argh(option, long = "solver", default = "Solver::CVC5")]
+    #[argh(option, long = "solver", default = "Solver::Z3")]
     pub solver: Solver,
     /// solve assertions separately rather than all at once
     #[argh(switch, long = "discharge-separate")]
