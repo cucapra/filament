@@ -1,0 +1,68 @@
+import "primitives/core.fil";
+
+extern "impl.v" {
+    comp Butterfly<'G:1>(
+        clk: 1,
+        in0_r: ['G, 'G+1] 32,
+        in0_i: ['G, 'G+1] 32,
+        in1_r: ['G, 'G+1] 32,
+        in1_i: ['G, 'G+1] 32,
+        twd_r: ['G, 'G+1] 32,
+        twd_i: ['G, 'G+1] 32
+    ) -> (
+        out: ['G+4, 'G+5] 128
+    );
+}
+
+comp ButterflyWrapper<'G:II>(
+    go: interface['G] 
+    in0[2]: ['G, 'G+II] 32,
+    in1[2]: ['G, 'G+II] 32,
+    twd[2]: ['G, 'G+II] 32
+) -> (
+    out0[2]: ['G+L, 'G+L+1] 32,
+    out1[2]: ['G+L, 'G+L+1] 32
+) with {
+    some II where II >= 1;
+    some L where L > 0;
+} {
+    B := new Butterfly;
+    b := B<'G>(in0{0}, in0{1}, in1{0}, in1{1});
+
+    out0_r := new Slice[128, 31, 0]<'G>(b.out);
+    out0_i := new Slice[128, 63, 32]<'G>(b.out);
+    out1_r := new Slice[128, 95, 64]<'G>(b.out);
+    out1_i := new Slice[128, 127, 96]<'G>(b.out);
+
+    out0{0} = out0_r.out;
+    out0{1} = out0_i.out;
+    out1{0} = out1_r.out;
+    out1{1} = out1_i.out;
+
+    II := 1;
+    L := 4;
+}
+
+comp ButterfliesWrapper[N]<'G:II>(
+    in[N*2][2]: ['G, 'G+II] 32,
+    twd[N][2]: ['G, 'G+II] 32
+) -> (
+    out[N*2][2]: ['G+L, 'G+L+1] 32
+) with {
+    some II where II > 0;
+    some L where L >= II;
+} {
+    Bx := new ButterflyWrapper;
+    L := Bx::L;
+    II := Bx::II;
+
+    for i in 0..N {
+        b := new ButterflyWrapper<'G>(in{2*i}{0..2}, in{2*i+1}{0..2}, twiddle{i}{0..2});
+        out{2*i}{0..2} = b.out0{0..2};
+        out{2*i+1}{0..2} = b.out{0..2};
+    }
+}
+
+
+
+

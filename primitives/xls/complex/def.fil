@@ -1,0 +1,52 @@
+generate(xls) using "xls.toml" {
+    comp ComplexMult[Exp, Mant]<'G:1>(
+        clk:1,
+        left_r:  ['G, 'G+1] W, 
+        left_i:  ['G, 'G+1] W,
+        right_r: ['G, 'G+1] W,
+        right_i: ['G, 'G+1] W,
+    ) -> (
+        out_r: ['G+L, 'G+L+1] W,
+        out_i: ['G+L, 'G+L+1] W,
+    ) with {
+        let W = Exp+Mant+1;
+        some L where L >= 0;
+    };
+
+    // comp ComplexAdd[Exp, Mant]<'G:1>(
+    //     clk:1,
+    //     left_r:  ['G, 'G+1] W, 
+    //     left_i:  ['G, 'G+1] W,
+    //     right_r: ['G, 'G+1] W,
+    //     right_i: ['G, 'G+1] W,
+    // ) -> (
+    //     out_r: ['G+L, 'G+L+1] W,
+    //     out_i: ['G+L, 'G+L+1] W,
+    // ) with {
+    //     some L where L >= 0;
+    // };
+    
+    // comp ComplexNeg[W, E]<'G:1>(
+    //     clk:1,
+    //     left_r:  ['G, 'G+1] W, 
+    //     left_i:  ['G, 'G+1] W,
+    // ) -> (
+    //     out_r: ['G+L, 'G+L+1] W,
+    //     out_i: ['G+L, 'G+L+1] W,
+    // ) with {
+    //     some L where L >= 0;
+    // };
+
+    // comp ComplexSub[W, E]<'G:1>(
+    //     clk:1,
+    //     left_r:  ['G, 'G+1] W, 
+    //     left_i:  ['G, 'G+1] W,
+    //     right_r: ['G, 'G+1] W,
+    //     right_i: ['G, 'G+1] W,
+    // ) -> (
+    //     out_r: ['G+L, 'G+L+1] W,
+    //     out_i: ['G+L, 'G+L+1] W,
+    // ) with {
+    //     some L where L >= 0;
+    // };
+}
