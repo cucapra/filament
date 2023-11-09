@@ -1,0 +1,15 @@
+name = "xls"
+path = "./xls-gen.sh"
+requires_out_file = true
+
+[globals]
+
+[modules.ComplexMult]
+name = "ComplexMult"
+parameters = ["Exp", "Mant"]
+name_format = "ComplexMult_Exp${Exp}$_Mant${Mant}"
+src_path = "/home/primitives/xls/complex"
+file_name = "complex.x"
+dest_path = "/home/primitives/xls/complex"
+stages = 4
+cli_format = "{$NAME_FORMAT} ${SRC_PATH} ${FILE_NAME} ${DEST_PATH} ${Exp} ${Mant} ${STAGES}
