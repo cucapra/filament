@@ -2,19 +2,22 @@ import "src/fft.fil";
 
 /// FFT that takes in a single wire and outputs a single wire
 /// Wraps the normal bundle-based fft component
-comp BundledFFT[NStages, N]<'G: L>(
+comp BundledFFT[NStages, N, ?Iterative=1]<'G: II>(
   go: interface['G],
   in: ['G, 'G+1] NPoints*2*32, // input bundle
 ) -> (
   out: ['G+L, 'G+L+1] NPoints*2*32 // output wire
 ) with {
   let NPoints = pow2(NStages);
-  some L where L > 0;
+  some II where II > 0;
+  some L where L >= II;
 } where
   NPoints % (2*N) == 0,
   N > 0,
   N * 2 <= NPoints,
-  NStages > 0
+  NStages > 0,
+  II > 0,
+  L >= II
 {
   in_split := new SplitWire[32, NPoints*2]<'G>(in);
 
@@ -26,24 +29,43 @@ comp BundledFFT[NStages, N]<'G: L>(
   }
 
   // hook up pipelined fft
-  FP := new PeaseFFT[NStages, N];
-  fp := FP<'G>(input_bundle{0..NPoints}{0..2});
+  if Iterative == 1 {
+    FP := new IterativePeaseFFT[NStages, N];
+    fp := FP<'G>(input_bundle{0..NPoints}{0..2});
 
-  bundle fp_output_bundle[NPoints*2]: ['G+FP::L, 'G+FP::L+1] 32;
+    bundle fp_output_bundle[NPoints*2]: ['G+FP::L, 'G+FP::L+1] 32;
 
-  for i in 0..NPoints {
-    fp_output_bundle{2*i} = fp.out{i}{0};
-    fp_output_bundle{2*i+1} = fp.out{i}{1};
+    for i in 0..NPoints {
+      fp_output_bundle{2*i} = fp.out{i}{0};
+      fp_output_bundle{2*i+1} = fp.out{i}{1};
+    }
+
+    fpw := new ConcatBundle[32, NPoints*2]<'G+FP::L>(fp_output_bundle{0..NPoints*2});
+    out = fpw.out;
+
+    L := FP::L;
+    II := FP::L;
+  } else {
+    FP := new StreamingPeaseFFT[NStages];
+    fp := FP<'G>(input_bundle{0..NPoints}{0..2});
+
+    bundle fp_output_bundle[NPoints*2]: ['G+FP::L, 'G+FP::L+1] 32;
+
+    for i in 0..NPoints {
+      fp_output_bundle{2*i} = fp.out{i}{0};
+      fp_output_bundle{2*i+1} = fp.out{i}{1};
+    }
+
+    fpw := new ConcatBundle[32, NPoints*2]<'G+FP::L>(fp_output_bundle{0..NPoints*2});
+    out = fpw.out;
+
+    L := FP::L;
+    II := 1;
   }
-
-  fpw := new ConcatBundle[32, NPoints*2]<'G+FP::L>(fp_output_bundle{0..NPoints*2});
-  out = fpw.out;
-
-  L := FP::L;
 }
 
 /// Standalone FFT module with a toplevel main component
-comp main<'G: L>(
+comp main<'G: II>(
   go: interface['G],
   in: ['G, 'G+1] W*NPoints*2
 ) -> (
@@ -52,7 +74,8 @@ comp main<'G: L>(
   let NStages = 4;
   let N = 1;
   let NPoints = pow2(NStages);
-  some L where L > 0;
+  some II where II > 0;
+  some L where L >= II;
   // Floating Point specification
   let W = 32;
   let E = 8;
@@ -61,5 +84,6 @@ comp main<'G: L>(
   FFT := new BundledFFT[NStages, N];
   fft := FFT<'G>(in);
   L := FFT::L;
+  II := FFT::II;
   out = fft.out;
 }
