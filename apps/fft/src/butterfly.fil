@@ -3,9 +3,7 @@ import "primitives/math/float.fil";
 import "primitives/state.fil";
 import "primitives/flopoco/def.fil";
 
-/// Butterfly module using existential parameters.
-comp Butterfly[W, E, ?M=W-E-1]<'G: 1>(
-  go: interface['G],
+comp StreamingButterfly[W, E, ?M=W-E-1]<'G: 1>(
   in0[2]: ['G, 'G+1] W, // real and imaginary parts of input
   in1[2]: ['G, 'G+1] W,
   twiddle[2]: ['G, 'G+1] W // twiddle factor
@@ -95,6 +93,113 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: 1>(
       out1{1} = out11_IEEE.R;
 
       L := 2*FA::L+FM::L;
+    }
+  }
+}
+
+/// Butterfly module using existential parameters.
+comp Butterfly[W, E, ?M=W-E-1]<'G: II>(
+  go: interface['G],
+  in0[2]: ['G, 'G+II] W, // real and imaginary parts of input
+  in1[2]: ['G, 'G+II] W,
+  twiddle[2]: ['G, 'G+II] W // twiddle factor
+) -> (
+  out0[2]: ['G+L, 'G+L+1] W,
+  out1[2]: ['G+L, 'G+L+1] W
+) with {
+  some II where II > 0;
+  some L where L >= II;
+} where
+    W == E + M + 1,
+    E > 1,
+    M > 1,
+    L >= II,
+    II > 0
+{
+  // switches between the type of butterfly unit
+  let T = 1;
+  if T == 0 {
+    // streaming version
+    B := new StreamingButterfly[W, E, M];
+    L := B::L;
+    II := 1;
+
+    b := B<'G>(in0{0..2}, in1{0..2}, twiddle{0..2});
+    out0{0..2} = b.out0{0..2};
+    out1{0..2} = b.out1{0..2};
+  } else {
+    if T == 1 {
+      // Butterfly unit using flopoco's modules
+      FM1 := new FPMult[E, M];
+      FM2 := new FPMult[E, M];
+
+      assert FM1::L == FM2::L;
+
+      FA1 := new FPAdd[E, M];
+      FA2 := new FPAdd[E, M];
+      FS2 := new FPSub[E, M];
+
+      assert FA1::L == FA2::L;
+      assume FA2::L == FS2::L; // we can assume this because we know the internal implementation of FPSub
+
+      // delay first input
+      in00_delay := new Shift[W, FM1::L+FA1::L]<'G>(in0{0});
+      in01_delay := new Shift[W, FM1::L+FA1::L+1]<'G>(in0{1});
+
+      // convert inputs to flopoco
+      InpIEEE1 := new InputIEEE[E, M, E, M];
+      InpIEEE2 := new InputIEEE[E, M, E, M];
+      InpIEEE3 := new InputIEEE[E, M, E, M];
+      in00 := InpIEEE1<'G+FM1::L+FA1::L>(in00_delay.out);
+      in01 := InpIEEE1<'G+FM1::L+FA1::L+1>(in01_delay.out);
+      in10 := InpIEEE2<'G>(in1{0});
+      in11 := InpIEEE3<'G>(in1{1});
+      in10_d := InpIEEE2<'G+1>(in1{0});
+      in11_d := InpIEEE3<'G+1>(in1{1});
+
+      // convert twiddle to flopoco
+      InpIEEE4 := new InputIEEE[E, M, E, M];
+      InpIEEE5 := new InputIEEE[E, M, E, M];
+      twiddle0 := InpIEEE4<'G>(twiddle{0});
+      twiddle1 := InpIEEE5<'G>(twiddle{1});
+      twiddle0_d := InpIEEE4<'G+1>(twiddle{0});
+      twiddle1_d := InpIEEE5<'G+1>(twiddle{1});
+
+      // Perform w * in1
+      ac := FM1<'G>(in10.R, twiddle0.R); // ac
+      bd := FM2<'G>(in11.R, twiddle1.R); // bd
+
+      // perform the subtraction manually here so we can reuse the first adder
+      bd_neg := new FPNeg[E, M]<'G+FM1::L>(bd.R);
+      re := FA1<'G+FM1::L>(ac.R, bd_neg.R); // ac - bd
+
+      ad := FM1<'G+1>(in10_d.R, twiddle1_d.R); // ad
+      bc := FM2<'G+1>(in11_d.R, twiddle0_d.R); // bc
+      im := FA1<'G+FM1::L+1>(ad.R, bc.R); // ad + bc
+
+      // in0 + (w * in1)
+      out00 := FA2<'G+FM1::L+FA1::L>(in00.R, re.R); // re
+      out01 := FA2<'G+FM1::L+FA1::L+1>(in01.R, im.R); // im
+
+      // in0 - (w * in1)
+      out10 := FS2<'G+FM1::L+FA1::L>(in00.R, re.R); // re
+      out11 := FS2<'G+FM1::L+FA1::L+1>(in01.R, im.R); // im
+
+      out00_IEEE := new OutputIEEE[E, M, E, M]<'G+FM1::L+FA1::L*2>(out00.R);
+      out01_IEEE := new OutputIEEE[E, M, E, M]<'G+FM1::L+FA1::L*2+1>(out01.R);
+      out10_IEEE := new OutputIEEE[E, M, E, M]<'G+FM1::L+FA1::L*2>(out10.R);
+      out11_IEEE := new OutputIEEE[E, M, E, M]<'G+FM1::L+FA1::L*2+1>(out11.R);
+
+      out00_delay := new Delay[W]<'G+FM1::L+FA1::L*2>(out00_IEEE.R); // delay by one cycle
+      out10_delay := new Delay[W]<'G+FM1::L+FA1::L*2>(out10_IEEE.R); // delay by one cycle
+
+      out0{0} = out00_delay.out;
+      out0{1} = out01_IEEE.R;
+      out1{0} = out10_delay.out;
+      out1{1} = out11_IEEE.R;
+
+      L := 2*FA1::L+FM1::L+1;
+      II := 2;
     }
   }
 }

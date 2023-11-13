@@ -70,7 +70,6 @@ comp BundledFFT[NStages, N, ?Iterative=1]<'G: II>(
 
 /// Implements an streaming PEASE fft.
 comp StreamingPeaseFFT[NStages]<'G: 1>(
-  go: interface['G],
   in[NPoints][2]: ['G, 'G+1] W
 ) -> (
   out[NPoints][2]: ['G+L, 'G+L+1] W
@@ -90,7 +89,7 @@ comp StreamingPeaseFFT[NStages]<'G: 1>(
 
   bitrev := new BitRev[NStages, W]<'G>(in{0..NPoints}{0..2});
 
-  Bx := new Butterflies[NPoints/2, W, E, M];
+  Bx := new StreamingButterfly[W, E, M];
   let stage_latency = Bx::L;
 
   bundle data[NStages+1][NPoints][2]: for<sdii> ['G + sdii*stage_latency, 'G + sdii*stage_latency + 1] W;
@@ -103,8 +102,13 @@ comp StreamingPeaseFFT[NStages]<'G: 1>(
   for i in 0..NStages {
     twiddle := new TwiddleFactor[NPoints]<'G + stage_latency * i>();
     twiddle_stage := new TwiddleStage[NStages, i, W]<'G + stage_latency * i>(twiddle.out{0..NPoints/2}{0..2});
-    b := new Butterflies[NPoints/2, W, E, M]<'G + stage_latency * i>(data{i}{0..NPoints}{0..2}, twiddle_stage.out{0..NPoints/2}{0..2});
-    sp := new StridePermutation[NStages, W]<'G + stage_latency * (i+1)>(b.out{0..NPoints}{0..2});
+    bundle butterfly_out[NPoints][2]: ['G + stage_latency * (i+1), 'G + stage_latency * (i+1) + 1] W;
+    for j in 0..NPoints/2 {
+      b := new StreamingButterfly[W, E, M]<'G + stage_latency * i>(data{i}{2*j}{0..2}, data{i}{2*j+1}{0..2}, twiddle_stage.out{j}{0..2});
+      butterfly_out{2*j}{0..2} = b.out0{0..2};
+      butterfly_out{2*j+1}{0..2} = b.out1{0..2};
+    }
+    sp := new StridePermutation[NStages, W]<'G + stage_latency * (i+1)>(butterfly_out{0..NPoints}{0..2});
     data{i+1}{0..NPoints}{0..2} = sp.out{0..NPoints}{0..2};
   } 
 
@@ -140,7 +144,7 @@ comp IterativePeaseFFT[NStages, N]<'G: L>(
   B := new Butterflies[N, W, E, M];
   // number of times we have to reuse the butterflies per stage
   let reuses = NPoints / (2*N);
-  let stage_latency = reuses + B::L + 1; // + 1 here is for the extra delay cycle necessary to transfer values between stages
+  let stage_latency = B::II * reuses + B::L + 1; // + 1 here is for the extra delay cycle necessary to transfer values between stages
   let latency = stage_latency * NStages;
   
   // twiddle factor that stays alive for the whole computation
@@ -184,8 +188,8 @@ comp IterativePeaseFFT[NStages, N]<'G: L>(
       let sync_in_t = r_stage * stage_latency; // start stage here
       let sync_out_t = (r_stage + 1) * stage_latency; // end stage here
 
-      let usync_in_t = sync_in_t + reg_i; // start butterfly here
-      let usync_in_end_t = usync_in_t + 1; // end butterfly inputs here
+      let usync_in_t = sync_in_t + reg_i * B::II; // start butterfly here
+      let usync_in_end_t = usync_in_t + B::II; // end butterfly inputs here
       let usync_out_t = usync_in_t + B::L; // end butterfly here
 
       let start = reg_i*2*N;
@@ -204,7 +208,7 @@ comp IterativePeaseFFT[NStages, N]<'G: L>(
 
       // store sync out
       sync_data_out{r_stage}{start..end}{0..2} = s2.out{0..2*N}{0..2};
-    } 
+    }
   }
 
   // --------------- STRIDE PERMUTATIONS ----------------
@@ -233,25 +237,28 @@ comp IterativePeaseFFT[NStages, N]<'G: L>(
 }
 
 /// Computes N butterflies at once.
-comp Butterflies[N, W, E, ?M=W-E-1]<'G: 1>(
+comp Butterflies[N, W, E, ?M=W-E-1]<'G: II>(
   go: interface['G],
-  in[N*2][2]: ['G, 'G+1] W, // Each butterfly takes 2 complex numbers
-  twiddle[N][2]: ['G, 'G+1] W // twiddle factor for each butterfly
+  in[N*2][2]: ['G, 'G+II] W, // Each butterfly takes 2 complex numbers
+  twiddle[N][2]: ['G, 'G+II] W // twiddle factor for each butterfly
 ) -> (
   out[N*2][2]: ['G+L, 'G+L+1] W
 ) with {
-  some L where L > 0;
+  some II where II > 0;
+  some L where L >= II;
 } where
     N > 0,
     W == E + M + 1,
     E > 1,
     M > 1,
-    L > 0
+    L >= II,
+    II > 0
 {
   // We use the fact here that a butterfly has the same existential L if it has the same parameters.
   // Therefore, we instantiate a dummy butterfly here in order to access its L parameter.
   Bx := new Butterfly[W, E, M];
   L := Bx::L;
+  II := Bx::II;
 
   for i in 0..N {
     b := new Butterfly[W, E, M]<'G>(in{2*i}{0..2}, in{2*i+1}{0..2}, twiddle{i}{0..2});
