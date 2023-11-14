@@ -89,7 +89,7 @@ comp StreamingPeaseFFT[NStages]<'G: 1>(
 
   bitrev := new BitRev[NStages, W]<'G>(in{0..NPoints}{0..2});
 
-  Bx := new StreamingButterfly[W, E, M];
+  Bx := new ConstButterfly[0, NPoints, W, E, M];
   let stage_latency = Bx::L;
 
   bundle data[NStages+1][NPoints][2]: for<sdii> ['G + sdii*stage_latency, 'G + sdii*stage_latency + 1] W;
@@ -100,11 +100,19 @@ comp StreamingPeaseFFT[NStages]<'G: 1>(
 
   /// ------------ hook up registers and butterfly components. ------------
   for i in 0..NStages {
-    twiddle := new TwiddleFactor[NPoints]<'G + stage_latency * i>();
-    twiddle_stage := new TwiddleStage[NStages, i, W]<'G + stage_latency * i>(twiddle.out{0..NPoints/2}{0..2});
     bundle butterfly_out[NPoints][2]: ['G + stage_latency * (i+1), 'G + stage_latency * (i+1) + 1] W;
+
+    // For this stage, there will be pow2(i) unique twiddle factors
+    // Each twiddle factor is used NPoints/pow2(i)/2 times
     for j in 0..NPoints/2 {
-      b := new StreamingButterfly[W, E, M]<'G + stage_latency * i>(data{i}{2*j}{0..2}, data{i}{2*j+1}{0..2}, twiddle_stage.out{j}{0..2});
+      let twiddle_idx = (j / pow2(NStages - i - 1)) * pow2(NStages - i - 1);
+      assume twiddle_idx >= 0;
+      assume twiddle_idx*2 < NPoints;
+
+      B := new ConstButterfly[twiddle_idx, NPoints, W, E, M];
+      assume B::L == stage_latency; // We know this because of the internal implementation
+      b := B<'G + stage_latency * i>(data{i}{2*j}{0..2}, data{i}{2*j+1}{0..2});
+
       butterfly_out{2*j}{0..2} = b.out0{0..2};
       butterfly_out{2*j+1}{0..2} = b.out1{0..2};
     }
@@ -150,7 +158,7 @@ comp IterativePeaseFFT[NStages, N]<'G: L>(
   // twiddle factor that stays alive for the whole computation
   twiddle := new TwiddleFactor[NPoints, latency]<'G>();
 
-  // contains all the twiddle stage data as an allways-alive constant matrix
+  // contains all the twiddle stage data as an always-alive constant matrix
   bundle twiddle_in[NStages][NPoints/2][2]: ['G, 'G + latency] W;
 
   for twiddle_i in 0..NStages {
