@@ -1,0 +1,16 @@
+import "primitives/flopoco/def.fil";
+
+comp main<'G:1>(
+    in0: ['G, 'G+1] 34,
+    in1: ['G, 'G+1] 34,
+) -> (
+    out: ['G+L, 'G+L+1] 34
+) with {
+    some L where L >= 0;
+} {
+    Add := new FPAdd[8, 23];
+    a := Add<'G>(in0, in1);
+    out = a.R;
+
+    L := Add::L;
+}

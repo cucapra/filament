@@ -6,7 +6,7 @@ comp main<'G:1>(
     right_r: ['G, 'G+1] 32,
     right_i: ['G, 'G+1] 32
 ) -> (
-    out: ['G+L-1, 'G+L] 64
+    out: ['G+L-1, 'G+L] 64,
 ) with {
     some L where L >= 1; 
 } {
