@@ -36,6 +36,8 @@ XLS_OPT_IR="$PREFIX/xls.opt.ir"
 XLS_V="$PREFIX/xls.sv"
 TMP="$PREFIX/tmp"
 
+>&2 echo "Generating $NAME in $OUT"
+
 
 sed "s/FSIZE/$MANT_WIDTH/g" $DIR/$FILE_NAME > $XLS_REPL
 sed -i "s/ESIZE/$EXP_WIDTH/g" $XLS_REPL
