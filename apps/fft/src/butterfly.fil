@@ -43,7 +43,7 @@ comp ConstButterfly[i, N, W, E, ?M=W-E-1]<'G: 1>(
   complex_mul_out{0} = in00.R;
   complex_mul_out{1} = in01.R;
 
-  if i == 0 {
+  if (i*4) % N == 0 {
     bundle in1_out[2]: ['G, 'G+1] W;
     if i == 0 { // twiddle = 1
       in1_out{0..2} = in1{0..2};
