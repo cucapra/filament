@@ -28,7 +28,16 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     };
     // Initialize the generator
     let mut gen_exec = if ns.requires_gen() {
-        Some(ns.init_gen())
+        if opts.out_dir.is_none()
+            && matches!(opts.backend, cmdline::Backend::Calyx)
+        {
+            log::warn!(concat!(
+                "Generated calyx program will compile because it depends ",
+                "on generated files. Please provide an output directory using ",
+                "`--out-dir <dir>` to store the generated files."
+            ))
+        }
+        Some(ns.init_gen(opts.out_dir.clone()))
     } else {
         None
     };
