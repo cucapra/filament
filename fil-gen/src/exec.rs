@@ -24,7 +24,13 @@ impl OutDir {
     }
 
     fn user(path: PathBuf) -> Self {
-        log::info!("Generator output directory: {}", path.display());
+        // If the path doesn't exist, create it
+        if !path.exists() {
+            log::info!("Creating output directory: {}", path.display());
+            fs::create_dir_all(&path).unwrap();
+        } else {
+            log::info!("Generator output directory: {}", path.display());
+        }
         Self::User(path)
     }
 
