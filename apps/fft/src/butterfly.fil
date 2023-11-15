@@ -21,13 +21,12 @@ comp ConstButterfly[i, N, W, E, ?M=W-E-1]<'G: 1>(
     L > 0
 {
   // instantiations for latency access
-  FM := new FPMult[E, M];
   FA := new FPAdd[E, M];
   FS := new FPSub[E, M];
   
   assume FA::L == FS::L; // we can assume this because we know the internal implementation of FPSub
 
-  let complex_mul_latency = FM::L + FA::L;
+  let complex_mul_latency = FA::L;
 
   // inputs to butterfly after twiddle multiplication
   bundle complex_mul_out[4]: ['G+complex_mul_latency, 'G+complex_mul_latency+1] W+2;
@@ -77,24 +76,14 @@ comp ConstButterfly[i, N, W, E, ?M=W-E-1]<'G: 1>(
     in10 := new InputIEEE[E, M, E, M]<'G>(in1{0});
     in11 := new InputIEEE[E, M, E, M]<'G>(in1{1});
 
-    bundle twiddle[2]: ['G, 'G+1] W;
-    twiddle0_const := new SignedConst[W, cos_bits(i, N)]<'G>();
-    twiddle1_const := new SignedConst[W, sin_bits(i+N/2, N)]<'G>();
-
-    twiddle{0} = twiddle0_const.out;
-    twiddle{1} = twiddle1_const.out;
-
-    twiddle0 := new InputIEEE[E, M, E, M]<'G>(twiddle{0});
-    twiddle1 := new InputIEEE[E, M, E, M]<'G>(twiddle{1});
-
     // Perform w * in1
-    ac := new FPMult[E, M]<'G>(in10.R, twiddle0.R); // ac
-    bd := new FPMult[E, M]<'G>(in11.R, twiddle1.R); // bd
-    re := new FPSub[E, M]<'G+FM::L>(ac.R, bd.R); // ac - bd
+    ac := new FPConstMultSinTable[E, M, i+N/4, N]<'G>(in10.R); // ac
+    bd := new FPConstMultSinTable[E, M, i+N/2, N]<'G>(in11.R); // bd
+    re := new FPSub[E, M]<'G>(ac.R, bd.R); // ac - bd
 
-    ad := new FPMult[E, M]<'G>(in10.R, twiddle1.R); // ad
-    bc := new FPMult[E, M]<'G>(in11.R, twiddle0.R); // bc
-    im := new FPAdd[E, M]<'G+FM::L>(ad.R, bc.R); // ad + bc
+    ad := new FPConstMultSinTable[E, M, i+N/2, N]<'G>(in10.R); // ad
+    bc := new FPConstMultSinTable[E, M, i+N/4, N]<'G>(in11.R); // bc
+    im := new FPAdd[E, M]<'G>(ad.R, bc.R); // ad + bc
 
     complex_mul_out{2} = re.R;
     complex_mul_out{3} = im.R;

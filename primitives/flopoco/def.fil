@@ -62,7 +62,7 @@ generate(flopoco) using "flopoco.toml" {
         MantIn > 0,
         ExpOut > 0,
         MantOut > 0;
-
+    
     /// Converts a Flopoco internal format floating point number to IEEE
     comp OutputIEEE[ExpIn, MantIn, ExpOut, MantOut]<'G:1>(
         X: ['G, 'G+1] WidthFPC
@@ -77,6 +77,21 @@ generate(flopoco) using "flopoco.toml" {
         MantIn > 0,
         ExpOut > 0,
         MantOut > 0;
+
+    /// Performs the floating point operation
+    /// X * sin(Num / Den * 2 * pi)
+    comp FPConstMultSinTable[Exp, Mant, Num, Den]<'G:1>(
+        X: ['G, 'G+1] Width
+    ) -> (
+        R: ['G+L, 'G+L+1] Width
+    ) with {
+        let Width = Exp + Mant + 3;
+        some L where L == 0;
+    } where 
+        Exp > 0,
+        Mant > 0,
+        Num >= 0,
+        Den > 0;
 
     /// Floating point addition with IEEE format
     comp IEEEFPAdd[Exp, Mant]<'G:1>(

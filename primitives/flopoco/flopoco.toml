@@ -17,7 +17,6 @@ cli_format = "${NAME_FORMAT} ${OUT_FILE} FPAdd wE=${Exp} wF=${Mant} ${conf}"
 # Output parameters defined by the tool's execution
 outputs.L = "pipeline_depth"
 
-# Broken because of https://github.com/ghdl/ghdl/issues/2522
 [modules.FPMult]
 name = "FPMult"
 parameters = ["Exp", "Mant"]
@@ -30,6 +29,14 @@ name = "FPExp"
 parameters = ["Exp", "Mant"]
 name_format = "FPExp_Exp${Exp}_Mant${Mant}"
 cli_format = "${NAME_FORMAT} ${OUT_FILE} FPExp wE=${Exp} wF=${Mant} ${conf}"
+outputs.L = "pipeline_depth"
+
+# Made specifically for the FFT Twiddles, should be changed to a dyadic number calculated from the frexp
+[modules.FPConstMultSinTable]
+name = "FPConstMultSinTable"
+parameters = ["Exp", "Mant", "Num", "Den"]
+name_format = "FPConstMultSinTable_Exp${Exp}_Mant${Mant}_Num${Num}_Den${Den}"
+cli_format = "${NAME_FORMAT} ${OUT_FILE} FPConstMult wE=${Exp} wF=${Mant} constant=sin(2*pi*${Num}/${Den}) ${conf}"
 outputs.L = "pipeline_depth"
 
 ## === Convert between IEEE-754 and Flopoco's internal format ===
