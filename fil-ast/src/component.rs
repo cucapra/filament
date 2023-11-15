@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use super::{Command, Id, Signature};
 use fil_gen as gen;
 
@@ -72,8 +74,8 @@ impl Namespace {
     /// REQUIRES: The tools definitions must be in files with absolute paths.
     /// The folder containing the generated files is deleted when the destructor
     /// for GenExec runs.
-    pub fn init_gen(&self) -> gen::GenExec {
-        let mut gen_exec = gen::GenExec::new(false);
+    pub fn init_gen(&self, out_dir: Option<PathBuf>) -> gen::GenExec {
+        let mut gen_exec = gen::GenExec::new(false, out_dir);
         for Extern { path, gen, .. } in &self.externs {
             let Some(tool_name) = gen else {
                 continue;
