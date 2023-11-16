@@ -3,10 +3,81 @@ import "primitives/math/float.fil";
 import "primitives/state.fil";
 import "primitives/flopoco/def.fil";
 
-/// Butterfly component taking a constant twiddle factor (useful for streaming FFTs).
-comp ConstButterfly[i, N, W, E, ?M=W-E-1]<'G: 1>(
-  in0[2]: ['G, 'G+1] W, // real and imaginary parts of input
-  in1[2]: ['G, 'G+1] W
+// Performs the twiddle multiplication
+comp TwiddleMul[i, N, W, E, ?M=W-E-1]<'G: 1>(
+  in[2]: ['G, 'G+1] W
+) -> (
+  out[2]: ['G+L, 'G+L+1] W+2 // output in flopoco format
+) with {
+  some L where L >= 0;
+} where
+    W == E + M + 1,
+    E > 1,
+    M > 1,
+    i >= 0,
+    N > i*2,
+    L >= 0
+{
+  // instantiations for latency access
+  FM := new FPMult[E, M];
+  FA := new FPAdd[E, M];
+  FS := new FPSub[E, M];
+  
+  assume FA::L == FS::L; // we can assume this because we know the internal implementation of FPSub
+  // convert to flopoco format
+  in10 := new InputIEEE[E, M, E, M]<'G>(in{0});
+  in11 := new InputIEEE[E, M, E, M]<'G>(in{1});
+
+  if (i*4) % N == 0 {
+    if i == 0 { // twiddle = 1
+      out{0} = in10.R;
+      out{1} = in11.R;
+    } else {
+      if i * 4 == N { // twiddle = ii
+        // (a + bi) * -i = b - ai
+        // negate a
+        neg0 := new FPNeg[E, M]<'G>(in10.R);
+        out{0} = in11.R;
+        out{1} = neg0.R;
+      } else {
+        // these cases shouldn't happen
+        assert 1 == 0;
+      }
+    }
+    L := 0;
+  } else {
+    // need a multiplier here
+
+    bundle twiddle[2]: ['G, 'G+1] W;
+    twiddle0_const := new SignedConst[W, cos_bits(i, N)]<'G>();
+    twiddle1_const := new SignedConst[W, sin_bits(i+N/2, N)]<'G>();
+
+    twiddle{0} = twiddle0_const.out;
+    twiddle{1} = twiddle1_const.out;
+
+    twiddle0 := new InputIEEE[E, M, E, M]<'G>(twiddle{0});
+    twiddle1 := new InputIEEE[E, M, E, M]<'G>(twiddle{1});
+
+    // Perform w * in1
+    ac := new FPMult[E, M]<'G>(in10.R, twiddle0.R); // ac
+    bd := new FPMult[E, M]<'G>(in11.R, twiddle1.R); // bd
+    re := new FPSub[E, M]<'G+FM::L>(ac.R, bd.R); // ac - bd
+
+    ad := new FPMult[E, M]<'G>(in10.R, twiddle1.R); // ad
+    bc := new FPMult[E, M]<'G>(in11.R, twiddle0.R); // bc
+    im := new FPAdd[E, M]<'G+FM::L>(ad.R, bc.R); // ad + bc
+
+    out{0} = re.R;
+    out{1} = im.R;
+
+    L := FM::L + FA::L;
+  }
+}
+
+/// Complex add sub module
+comp ComplexAddSub[W, E, ?M=W-E-1]<'G: 1>(
+  in0[2]: ['G, 'G+1] W, // real and imaginary parts of input (Flopoco format)
+  in1[2]: ['G, 'G+1] W+2
 ) -> (
   out0[2]: ['G+L, 'G+L+1] W,
   out1[2]: ['G+L, 'G+L+1] W
@@ -16,98 +87,37 @@ comp ConstButterfly[i, N, W, E, ?M=W-E-1]<'G: 1>(
     W == E + M + 1,
     E > 1,
     M > 1,
-    i >= 0,
-    N > i*2,
     L > 0
 {
   // instantiations for latency access
   FA := new FPAdd[E, M];
   FS := new FPSub[E, M];
+
+  in00 := new InputIEEE[E, M, E, M]<'G>(in0{0});
+  in01 := new InputIEEE[E, M, E, M]<'G>(in0{1});
   
   assume FA::L == FS::L; // we can assume this because we know the internal implementation of FPSub
 
-  let complex_mul_latency = FA::L;
-
-  // inputs to butterfly after twiddle multiplication
-  bundle complex_mul_out[4]: ['G+complex_mul_latency, 'G+complex_mul_latency+1] W+2;
-
-  // delay first input
-  in00_delay := new Shift[W, complex_mul_latency]<'G>(in0{0});
-  in01_delay := new Shift[W, complex_mul_latency]<'G>(in0{1});
-
-  // convert inputs to flopoco
-  in00 := new InputIEEE[E, M, E, M]<'G+complex_mul_latency>(in00_delay.out);
-  in01 := new InputIEEE[E, M, E, M]<'G+complex_mul_latency>(in01_delay.out);
-
-  complex_mul_out{0} = in00.R;
-  complex_mul_out{1} = in01.R;
-
-  if (i*4) % N == 0 {
-    bundle in1_out[2]: ['G, 'G+1] W;
-    if i == 0 { // twiddle = 1
-      in1_out{0..2} = in1{0..2};
-    } else {
-      if i * 4 == N { // twiddle = ii
-        // (a + bi) * -i = b - ai
-        // negate a
-        neg0 := new FNeg[W, E, M]<'G>(in1{0});
-        in1_out{0} = in1{1};
-        in1_out{1} = neg0.out;
-      } else {
-        // these cases shouldn't happen
-        assert 1 == 0;
-      }
-    }
-    
-    // Delay values until the multipliers would be done
-    in10_delay := new Shift[W, complex_mul_latency]<'G>(in1_out{0});
-    in11_delay := new Shift[W, complex_mul_latency]<'G>(in1_out{1});
-
-    // convert to flopoco format
-    in10 := new InputIEEE[E, M, E, M]<'G+complex_mul_latency>(in10_delay.out);
-    in11 := new InputIEEE[E, M, E, M]<'G+complex_mul_latency>(in11_delay.out);
-
-    complex_mul_out{2} = in10.R;
-    complex_mul_out{3} = in11.R;
-  } else {
-    // need a multiplier here
-    
-    // convert to flopoco format
-    in10 := new InputIEEE[E, M, E, M]<'G>(in1{0});
-    in11 := new InputIEEE[E, M, E, M]<'G>(in1{1});
-
-    // Perform w * in1
-    ac := new FPConstMultSinTable[E, M, i+N/4, N]<'G>(in10.R); // ac
-    bd := new FPConstMultSinTable[E, M, i+N/2, N]<'G>(in11.R); // bd
-    re := new FPSub[E, M]<'G>(ac.R, bd.R); // ac - bd
-
-    ad := new FPConstMultSinTable[E, M, i+N/2, N]<'G>(in10.R); // ad
-    bc := new FPConstMultSinTable[E, M, i+N/4, N]<'G>(in11.R); // bc
-    im := new FPAdd[E, M]<'G>(ad.R, bc.R); // ad + bc
-
-    complex_mul_out{2} = re.R;
-    complex_mul_out{3} = im.R;
-  }
   // in0 + (w * in1)
-  out00 := new FPAdd[E, M]<'G+complex_mul_latency>(complex_mul_out{0}, complex_mul_out{2}); // re
-  out01 := new FPAdd[E, M]<'G+complex_mul_latency>(complex_mul_out{1}, complex_mul_out{3}); // im
+  out00 := new FPAdd[E, M]<'G>(in00.R, in1{0}); // re
+  out01 := new FPAdd[E, M]<'G>(in01.R, in1{1}); // im
   
   // in0 - (w * in1)
-  out10 := new FPSub[E, M]<'G+complex_mul_latency>(complex_mul_out{0}, complex_mul_out{2}); // re
-  out11 := new FPSub[E, M]<'G+complex_mul_latency>(complex_mul_out{1}, complex_mul_out{3}); // im
+  out10 := new FPSub[E, M]<'G>(in00.R, in1{0}); // re
+  out11 := new FPSub[E, M]<'G>(in01.R, in1{1}); // im
 
   // convert back to IEEE
-  out00_IEEE := new OutputIEEE[E, M, E, M]<'G+complex_mul_latency+FA::L>(out00.R);
-  out01_IEEE := new OutputIEEE[E, M, E, M]<'G+complex_mul_latency+FA::L>(out01.R);
-  out10_IEEE := new OutputIEEE[E, M, E, M]<'G+complex_mul_latency+FA::L>(out10.R);
-  out11_IEEE := new OutputIEEE[E, M, E, M]<'G+complex_mul_latency+FA::L>(out11.R);
+  out00_IEEE := new OutputIEEE[E, M, E, M]<'G+FA::L>(out00.R);
+  out01_IEEE := new OutputIEEE[E, M, E, M]<'G+FA::L>(out01.R);
+  out10_IEEE := new OutputIEEE[E, M, E, M]<'G+FA::L>(out10.R);
+  out11_IEEE := new OutputIEEE[E, M, E, M]<'G+FA::L>(out11.R);
 
   out0{0} = out00_IEEE.R;
   out0{1} = out01_IEEE.R;
   out1{0} = out10_IEEE.R;
   out1{1} = out11_IEEE.R;
 
-  L := FA::L + complex_mul_latency;
+  L := FA::L;
 }
 
 comp StreamingButterfly[W, E, ?M=W-E-1]<'G: 1>(
