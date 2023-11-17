@@ -69,10 +69,10 @@ RUN apt install -y g++ unzip zip default-jdk && \
 
 # Install and build XLS (without C++ frontend)
 WORKDIR /home
-RUN git clone https://github.com/google/xls.git
+RUN git clone --depth 1 https://github.com/google/xls.git
 WORKDIR /home/xls
-RUN apt install -y python3-distutils python3-dev libtinfo5 python-is-python3
-RUN bazel test -c opt -- //xls/... -//xls/contrib/xlscc/...
+RUN apt install -y python3-distutils python3-dev libtinfo5 python-is-python3 && \
+  bazel build -c opt -- //xls/... -//xls/contrib/xlscc/...
 
 # ----------------------------------------
 # Install filament
