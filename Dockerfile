@@ -59,12 +59,12 @@ RUN git clone --depth 1 --branch v3.0.0 https://github.com/ghdl/ghdl.git &&\
     make && make install
 
 # Install Bazel 6.4.0
-RUN apt install -y g++ unzip zip
-RUN apt-get install default-jdk
-RUN wget https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-installer-linux-x86_64.sh
-RUN chmod +x bazel-6.4.0-installer-linux-x86_64.sh
-RUN ./bazel-6.4.0-installer-linux-x86_64.sh --user
-ENV PATH=$PATH:/root/bin
+WORKDIR /home
+RUN apt install -y g++ unzip zip default-jdk && \
+  wget https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-installer-linux-x86_64.sh && \
+  chmod +x bazel-6.4.0-installer-linux-x86_64.sh && \
+  ./bazel-6.4.0-installer-linux-x86_64.sh --prefix=/root/.local && \
+  rm bazel-6.4.0-installer-linux-x86_64.sh
 
 
 # Install and build XLS (without C++ frontend)
