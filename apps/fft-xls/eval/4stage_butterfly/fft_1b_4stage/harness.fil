@@ -1,6 +1,6 @@
 import "primitives/reshape.fil";
-import "../../src/fft.fil";
-import "../utils.fil";
+import "apps/fft-xls/src/fft.fil";
+import "apps/fft-xls/eval/utils.fil";
 
 comp main<'G:L>(
     go: interface['G],
