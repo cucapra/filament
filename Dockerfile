@@ -1,5 +1,4 @@
 FROM ghcr.io/cucapra/calyx:0.4.0
-
 LABEL org.opencontainers.image.source https://github.com/cucapra/filament
 
 # Install apt packages
@@ -58,6 +57,21 @@ RUN git clone --depth 1 --branch v3.0.0 https://github.com/ghdl/ghdl.git &&\
     mkdir build && cd build &&\
     LDFLAGS='-ldl' ../configure --with-llvm-config --prefix=/usr &&\
     make && make install
+
+# Install Bazel 6.4.0
+WORKDIR /home
+RUN apt install -y g++ unzip zip default-jdk && \
+  wget https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-installer-linux-x86_64.sh && \
+  chmod +x bazel-6.4.0-installer-linux-x86_64.sh && \
+  ./bazel-6.4.0-installer-linux-x86_64.sh --prefix=/root/.local && \
+  rm bazel-6.4.0-installer-linux-x86_64.sh
+
+# Install and build XLS (without C++ frontend)
+WORKDIR /home
+RUN git clone --depth 1 https://github.com/google/xls.git
+WORKDIR /home/xls
+RUN apt install -y python3-distutils python3-dev libtinfo5 python-is-python3 && \
+  bazel build -c opt -- //xls/... -//xls/contrib/xlscc/...
 
 # Install verible
 WORKDIR /home

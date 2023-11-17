@@ -1,0 +1,21 @@
+import "primitives/xls/butterfly/def.fil";
+
+comp main<'G:1>(
+    clk:1,
+    in0_r: ['G, 'G+1] 32,
+    in0_i: ['G, 'G+1] 32,
+    in1_r: ['G, 'G+1] 32,
+    in1_i: ['G, 'G+1] 32,
+    twd_r: ['G, 'G+1] 32,
+    twd_i: ['G, 'G+1] 32
+) -> (
+    out: ['G+L-1, 'G+L] 128
+) with {
+    some L where L >= 1;
+} {
+    B := new Butterfly[8,23];
+    b := B<'G>(in0_r, in0_i, in1_r, in1_i, twd_r, twd_i);
+    out = b.out;
+
+    L := B::L;
+}

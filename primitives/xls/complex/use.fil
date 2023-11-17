@@ -1,0 +1,17 @@
+import "primitives/xls/complex/def.fil";
+
+comp main<'G:1>(
+    left_r:  ['G, 'G+1] 32,
+    left_i:  ['G, 'G+1] 32,
+    right_r: ['G, 'G+1] 32,
+    right_i: ['G, 'G+1] 32
+) -> (
+    out: ['G+L-1, 'G+L] 64,
+) with {
+    some L where L >= 1; 
+} {
+    CM := new ComplexMult[8,23];
+    cm := CM<'G>(left_r, left_i, right_r, right_i);
+    out = cm.out;
+    L := CM::L;
+}

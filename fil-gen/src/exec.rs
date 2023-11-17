@@ -1,7 +1,53 @@
 use crate::{Config, Instance, Tool, ToolOutput};
 use itertools::Itertools;
-use std::{collections::HashMap, fs, path::PathBuf, process::Command};
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 use tempfile as tmp;
+
+enum OutDir {
+    /// A temporary directory
+    Tmp(tmp::TempDir),
+    /// A user-specified directory
+    User(PathBuf),
+}
+
+impl OutDir {
+    /// Creates a new, temporary directory to store generated files.
+    fn tmp() -> Self {
+        let tmp_dir = tmp::tempdir().unwrap();
+        log::info!("Generator output directory: {}", tmp_dir.path().display());
+        Self::Tmp(tmp_dir)
+    }
+
+    fn user(path: PathBuf) -> Self {
+        // If the path doesn't exist, create it
+        if !path.exists() {
+            log::info!("Creating output directory: {}", path.display());
+            fs::create_dir_all(&path).unwrap();
+        } else {
+            log::info!("Generator output directory: {}", path.display());
+        }
+        Self::User(path)
+    }
+
+    fn opt(path: Option<PathBuf>) -> Self {
+        match path {
+            Some(p) => Self::user(p),
+            None => Self::tmp(),
+        }
+    }
+
+    fn path(&self) -> &Path {
+        match self {
+            Self::Tmp(tmp_dir) => tmp_dir.path(),
+            Self::User(path) => path,
+        }
+    }
+}
 
 /// The main execution management engine for Filament's `gen` framework.
 /// Manages registering new tools and executing the tools to generate particular instances.
@@ -16,7 +62,7 @@ pub struct GenExec {
     >,
 
     /// Directory to store all the generated files
-    output_dir: tmp::TempDir,
+    output_dir: OutDir,
 
     /// Config.toml file
     config: Option<Config>,
@@ -26,18 +72,15 @@ pub struct GenExec {
 }
 
 impl GenExec {
-    /// Creates a new, temporary directory to store generated files.
-    fn create_out_dir() -> tmp::TempDir {
-        let tmp_dir = tmp::tempdir().unwrap();
-        log::info!("generator output directory: {}", tmp_dir.path().display());
-        tmp_dir
-    }
-
-    pub fn new(dry_run: bool, config: Option<PathBuf>) -> Self {
+    pub fn new(
+        dry_run: bool,
+        out_dir: Option<PathBuf>,
+        config: Option<PathBuf>,
+    ) -> Self {
         GenExec {
             tools: HashMap::default(),
             generated: HashMap::default(),
-            output_dir: Self::create_out_dir(),
+            output_dir: OutDir::opt(out_dir),
             config: config.map(|path| {
                 toml::from_str(&fs::read_to_string(path).unwrap()).unwrap()
             }),

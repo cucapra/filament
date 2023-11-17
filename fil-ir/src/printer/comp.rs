@@ -84,21 +84,18 @@ impl<'a, 'b> Printer<'a, 'b> {
                 Ok(())
             }
             ir::Command::Fact(fact) => {
+                write!(f, "{:indent$}", "", indent = indent)?;
                 if fact.checked {
-                    write!(
-                        f,
-                        "{:indent$}assert {};",
-                        "",
-                        self.comp.display(fact.prop)
-                    )
+                    write!(f, "assert ")?;
                 } else {
-                    write!(
-                        f,
-                        "{:indent$}assume {};",
-                        "",
-                        self.comp.display(fact.prop)
-                    )
+                    write!(f, "assume ")?;
                 }
+                self.comp.write(fact.prop, f)?;
+                write!(f, ";")?;
+                if let Some(reason) = self.comp[fact.reason].name() {
+                    write!(f, " // {}", reason)?;
+                };
+                Ok(())
             }
             ir::Command::Exists(ir::Exists { param, expr }) => {
                 write!(

@@ -85,6 +85,11 @@ pub struct Opts {
     #[argh(switch, long = "unsafe-skip-discharge")]
     pub unsafe_skip_discharge: bool,
 
+    // `gen` options
+    /// the output directory to store files generated from external tools
+    #[argh(option, long = "out-dir")]
+    pub out_dir: Option<PathBuf>,
+
     // Backend options
     /// backend to use (default: verilog): calyx, verilog
     #[argh(option, long = "backend", default = "Backend::Verilog")]
