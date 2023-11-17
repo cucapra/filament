@@ -1,6 +1,6 @@
 import "primitives/signed.fil";
 import "helpers.fil";
-import "primitives/xls/butterfly/butterfly.fil";
+import "primitives/xls/butterfly/def.fil";
 import "primitives/state.fil";
 import "primitives/reshape.fil";
 
@@ -29,10 +29,11 @@ comp PeaseFFT[NStages, N]<'G: L>(
 
   bitrev := new BitRev[NStages, W]<'G>(in{0..NPoints}{0..2});
   // butterfly components
-  B := new ButterfliesWrapper[N];
+  B := new Butterflies[N, E, M];
   // number of times we have to reuse the butterflies per stage
   let reuses = NPoints / (2*N);
-  let stage_latency = B::II * reuses + B::L + 1; // + 1 here is for the extra delay cycle necessary to transfer values between stages
+  // was B::II * reuses but XLS has II = 1
+  let stage_latency = reuses + B::L + 1; // + 1 here is for the extra delay cycle necessary to transfer values between stages
   let latency = stage_latency * NStages;
   
   // twiddle factor that stays alive for the whole computation
@@ -76,8 +77,8 @@ comp PeaseFFT[NStages, N]<'G: L>(
       let sync_in_t = r_stage * stage_latency; // start stage here
       let sync_out_t = (r_stage + 1) * stage_latency; // end stage here
 
-      let usync_in_t = sync_in_t + reg_i * B::II; // start butterfly here
-      let usync_in_end_t = usync_in_t + B::II; // end butterfly inputs here
+      let usync_in_t = sync_in_t + reg_i; // start butterfly here
+      let usync_in_end_t = usync_in_t + 1; // end butterfly inputs here
       let usync_out_t = usync_in_t + B::L; // end butterfly here
 
       let start = reg_i*2*N;

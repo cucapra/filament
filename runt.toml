@@ -99,6 +99,15 @@ dir=$(dirname {}) && \
 {}
 """
 
+# fft-xls
+[[tests]]
+name = "fft-xls"
+paths = ["apps/fft-xls/test/scripts/*.sh"]
+cmd = """
+dir=$(dirname {}) && \
+{}
+"""
+
 # ============== Examples in the documentation ============
 [[tests]]
 name = "examples"
