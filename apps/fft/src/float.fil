@@ -1,0 +1,232 @@
+import "primitives/flopoco/def.fil";
+import "primitives/math/float.fil";
+
+extern "spiral-float.sv" {
+  comp spiral_addfp32<'G: 1>(
+    clk: 1,
+    reset: 1,
+    a: ['G, 'G+1] 32,
+    b: ['G, 'G+1] 32
+  ) -> (
+    out: ['G+11, 'G+12] 32
+  );
+
+  comp spiral_subfp32<'G: 1>(
+    clk: 1,
+    reset: 1,
+    a: ['G, 'G+1] 32,
+    b: ['G, 'G+1] 32
+  ) -> (
+    out: ['G+11, 'G+12] 32
+  );
+
+  comp spiral_multfp32fp32<'G: 1>(
+    clk: 1,
+    reset: 1,
+    a: ['G, 'G+1] 32,
+    b: ['G, 'G+1] 32
+  ) -> (
+    out: ['G+8, 'G+9] 32
+  );
+}
+
+/// Floating point addition with Flopoco's internal format
+comp FFTFPAdd[E, M]<'G:1>(
+  X: ['G, 'G+1] W,
+  Y: ['G, 'G+1] W,
+) -> (
+  R: ['G+L, 'G+L+1] W,
+) with {
+  some W where W > 0;
+  some L where L >= 0;
+} where 
+  E > 0,
+  M > 0
+{
+  let T = 1;
+  if T == 0 {
+    W := E + M + 3;
+    
+    FA := new FPAdd[E, M];
+    fa := FA<'G>(X, Y);
+    R = fa.R;
+
+    L := FA::L;
+  } else {
+    if T == 1 {
+      assume E == 8;
+      assume M == 23;
+      fa := new spiral_addfp32<'G>(X, Y);
+      R = fa.out;
+      L := 11;
+      W := 32;
+    }
+  }
+}
+
+/// Floating point addition with Flopoco's internal format
+comp FFTFPSub[E, M]<'G:1>(
+  X: ['G, 'G+1] W,
+  Y: ['G, 'G+1] W,
+) -> (
+  R: ['G+L, 'G+L+1] W,
+) with {
+  some W where W > 0;
+  some L where L >= 0;
+} where 
+  E > 0,
+  M > 0
+{
+  let T = 1;
+  if T == 0 {
+    W := E + M + 3;
+    
+    FS := new FPSub[E, M];
+    fs := FS<'G>(X, Y);
+    R = fs.R;
+
+    L := FS::L;
+  } else {
+    if T == 1 {
+      assume E == 8;
+      assume M == 23;
+      fs := new spiral_subfp32<'G>(X, Y);
+      R = fs.out;
+      L := 11;
+      W := 32;
+    }
+  }
+}
+
+
+/// Floating point multiplication with Flopoco's internal format
+comp FFTFPMult[E, M]<'G: 1>(
+  X: ['G, 'G+1] W,
+  Y: ['G, 'G+1] W,
+) -> (
+  R: ['G+L, 'G+L+1] W,
+) with {
+  some W where W > 0;
+  some L where L >= 0;
+} where 
+  E > 0,
+  M > 0
+{
+  let T = 1;
+  if T == 0 {
+    W := E + M + 3;
+    
+    FM := new FPMult[E, M];
+    fm := FM<'G>(X, Y);
+    R = fm.R;
+
+    L := FM::L;
+  } else {
+    if T == 1 {
+      assume E == 8;
+      assume M == 23;
+      fm := new spiral_multfp32fp32<'G>(X, Y);
+      R = fm.out;
+      L := 8;
+      W := 32;
+    }
+  }
+}
+
+/// Converts an IEEE floating point number to Flopoco internal format
+comp FFTInputIEEE[E, M]<'G:1>(
+  X: ['G, 'G+1] WidthIEEE
+) -> (
+  R: ['G+L, 'G+L+1] W
+) with {
+  let WidthIEEE = E + M + 1;
+  some W where W > 0;
+  some L where L == 0;
+} where 
+  E > 0,
+  M > 0
+{
+  let T = 1;
+  if T == 0 {
+    W := E + M + 3;
+    
+    IE := new InputIEEE[E, M, E, M];
+    ie := IE<'G>(X);
+    R = ie.R;
+
+    L := IE::L;
+  } else {
+    if T == 1 {
+      assume E == 8;
+      assume M == 23;
+      L := 0;
+      W := 32;
+      R = X;
+}  }
+}
+
+/// Converts a Flopoco internal format floating point number to IEEE
+comp FFTOutputIEEE[E, M]<'G:1>(
+  X: ['G, 'G+1] W
+) -> (
+  R: ['G+L, 'G+L+1] WidthIEEE
+) with {
+  some W where W > 0;
+  let WidthIEEE = E + M + 1;
+  some L where L == 0;
+} where 
+  E > 0,
+  M > 0
+{
+  let T = 1;
+  if T == 0 {
+    W := E + M + 3;
+    
+    IE := new OutputIEEE[E, M, E, M];
+    ie := IE<'G>(X);
+    R = ie.R;
+
+    L := IE::L;
+  } else {
+    if T == 1 {
+      assume E == 8;
+      assume M == 23;
+      L := 0;
+      W := 32;
+      R = X;
+      }
+    }
+}
+
+/// Converts a Flopoco internal format floating point number to IEEE
+comp FFTFPNeg[E, M]<'G:1>(
+  X: ['G, 'G+1] W
+) -> (
+  R: ['G+L, 'G+L+1] W
+) with {
+  some W where W > 0;
+  some L where L == 0;
+} where 
+  E > 0,
+  M > 0
+{
+  let T = 1;
+  if T == 0 {
+    W := E + M + 3;
+    
+    FN := new FPNeg[E, M];
+    fn := FN<'G>(X);
+    R = fn.R;
+
+    L := 0;
+  } else {
+    if T == 1 {
+      assume E == 8;
+      assume M == 23;
+      L := 0;
+      W := 32;
+      fn := new FNeg[32, 8, 23]<'G>(X);
+      R = fn.out;
+    }
+  }
+}
