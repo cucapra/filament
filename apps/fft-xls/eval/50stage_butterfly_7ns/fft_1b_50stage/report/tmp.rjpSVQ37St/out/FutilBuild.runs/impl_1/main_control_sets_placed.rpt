@@ -1,0 +1,153 @@
+Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2020.2 (lin64) Build 3064766 Wed Nov 18 09:12:47 MST 2020
+| Date         : Sat Nov 18 17:22:42 2023
+| Host         : havarti running 64-bit Ubuntu 20.04.6 LTS
+| Command      : report_control_sets -verbose -file main_control_sets_placed.rpt
+| Design       : main
+| Device       : xczu3eg
+------------------------------------------------------------------------------------
+
+Control Set Information
+
+Table of Contents
+-----------------
+1. Summary
+2. Histogram
+3. Flip-Flop Distribution
+4. Detailed Control Set Information
+
+1. Summary
+----------
+
++----------------------------------------------------------+-------+
+|                          Status                          | Count |
++----------------------------------------------------------+-------+
+| Total control sets                                       |    75 |
+|    Minimum number of control sets                        |    75 |
+|    Addition due to synthesis replication                 |     0 |
+|    Addition due to physical synthesis replication        |     0 |
+| Unused register locations in slices containing registers |    75 |
++----------------------------------------------------------+-------+
+* Control sets can be merged at opt_design using control_set_merge or merge_equivalent_drivers
+** Run report_qor_suggestions for automated merging and remapping suggestions
+
+
+2. Histogram
+------------
+
++--------------------+-------+
+|       Fanout       | Count |
++--------------------+-------+
+| Total control sets |    75 |
+| >= 0 to < 4        |     0 |
+| >= 4 to < 6        |     0 |
+| >= 6 to < 8        |     0 |
+| >= 8 to < 10       |    26 |
+| >= 10 to < 12      |     6 |
+| >= 12 to < 14      |     0 |
+| >= 14 to < 16      |     0 |
+| >= 16              |    43 |
++--------------------+-------+
+* Control sets can be remapped at either synth_design or opt_design
+
+
+3. Flip-Flop Distribution
+-------------------------
+
++--------------+-----------------------+------------------------+-----------------+--------------+
+| Clock Enable | Synchronous Set/Reset | Asynchronous Set/Reset | Total Registers | Total Slices |
++--------------+-----------------------+------------------------+-----------------+--------------+
+| No           | No                    | No                     |            4579 |          832 |
+| No           | No                    | Yes                    |               0 |            0 |
+| No           | Yes                   | No                     |            2118 |          727 |
+| Yes          | No                    | No                     |               0 |            0 |
+| Yes          | No                    | Yes                    |               0 |            0 |
+| Yes          | Yes                   | No                     |            1072 |          518 |
++--------------+-----------------------+------------------------+-----------------+--------------+
+
+
+4. Detailed Control Set Information
+-----------------------------------
+
++--------------+-----------------------------------------+-------------------------------------------------------------------+------------------+----------------+--------------+
+| Clock Signal |              Enable Signal              |                          Set/Reset Signal                         | Slice Load Count | Bel Load Count | Bels / Slice |
++--------------+-----------------------------------------+-------------------------------------------------------------------+------------------+----------------+--------------+
+|  clk         | go0/c1/state0/_guard12                  | reset                                                             |                2 |              8 |         4.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p47_result_exponent__30             |                1 |              8 |         8.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p47_result_exponent__40             |                3 |              8 |         2.67 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p47_result_exponent__50             |                2 |              8 |         4.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p47_result_exponent__60             |                3 |              8 |         2.67 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/p28_result_exponent__10                   |                2 |              8 |         4.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/p28_result_exponent__20                   |                1 |              8 |         8.00 |
+|  clk         | inst1/inst0/ev00/c0/state0/_guard12     | reset                                                             |                5 |              8 |         1.60 |
+|  clk         | inst1/inst0/ev00/c1/state0/_guard12     | reset                                                             |                2 |              8 |         4.00 |
+|  clk         | inst1/ev00/c0/state0/_guard12           | reset                                                             |                2 |              8 |         4.00 |
+|  clk         | inst1/ev00/c1/state0/_guard12           | reset                                                             |                2 |              8 |         4.00 |
+|  clk         | go0/c0/state0/_guard12                  | reset                                                             |                3 |              8 |         2.67 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p10_result_exp__80                  |                1 |              8 |         8.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p10_result_exp__50                  |                1 |              8 |         8.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p10_result_exp__120                 |                2 |              8 |         4.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p10_result_exp__110                 |                1 |              8 |         8.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p7_sgt_8009                         |                3 |              9 |         3.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p7_sgt_8008                         |                2 |              9 |         4.50 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p7_sgt_8007                         |                3 |              9 |         3.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p7_sgt_8006                         |                2 |              9 |         4.50 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p44_bit_slice_11049                 |                2 |              9 |         4.50 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p44_bit_slice_11051                 |                2 |              9 |         4.50 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p44_bit_slice_11050                 |                2 |              9 |         4.50 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p44_bit_slice_11048                 |                2 |              9 |         4.50 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p25_bit_slice_9449                  |                2 |              9 |         4.50 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p25_bit_slice_9448                  |                2 |              9 |         4.50 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p43_ne_10242                        |                2 |             10 |         5.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p24_ne_8903                         |                3 |             10 |         3.33 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p24_ne_8902                         |                2 |             10 |         5.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p43_ne_10243                        |                2 |             10 |         5.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p43_ne_10241                        |                2 |             10 |         5.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p43_ne_10240                        |                2 |             10 |         5.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p1_eq_7301                          |                6 |             20 |         3.33 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p1_eq_7305                          |                6 |             20 |         3.33 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p9_is_result_nan__2                 |                5 |             23 |         4.60 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p30_ne_9708                         |                7 |             23 |         3.29 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p9_is_result_nan__3                 |                4 |             23 |         5.75 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p11_ne_8396                         |                7 |             23 |         3.29 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p47_result_fraction__28[22]_i_1_n_0 |                4 |             23 |         5.75 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p47_result_fraction__25[22]_i_1_n_0 |                3 |             23 |         7.67 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p47_result_fraction__22[22]_i_1_n_0 |                4 |             23 |         5.75 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p47_result_fraction__20[22]_i_1_n_0 |                4 |             23 |         5.75 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p11_ne_8393                         |                6 |             23 |         3.83 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p11_ne_8390                         |                5 |             23 |         4.60 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p11_ne_8387                         |                8 |             23 |         2.88 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p47_is_result_nan__9                |                5 |             23 |         4.60 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p47_is_result_nan__8                |                4 |             23 |         5.75 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p47_is_result_nan__7                |                8 |             23 |         2.88 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p47_is_result_nan__10               |                5 |             23 |         4.60 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p28_is_result_nan__6                |                3 |             23 |         7.67 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p28_result_fraction__14[22]_i_1_n_0 |                3 |             23 |         7.67 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p30_ne_9705                         |                7 |             23 |         3.29 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p28_result_fraction__16[22]_i_1_n_0 |                4 |             23 |         5.75 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p30_ne_9711                         |                6 |             23 |         3.83 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p30_ne_9714                         |               10 |             23 |         2.30 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p28_is_result_nan__5                |                3 |             23 |         7.67 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p13_shifted_x__1[26]_i_1_n_0        |                9 |             27 |         3.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p32_shifted_x__2[26]_i_1_n_0        |                8 |             27 |         3.38 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p13_shifted_x[26]_i_1_n_0           |                7 |             27 |         3.86 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p13_shifted_y[26]_i_1_n_0           |                8 |             27 |         3.38 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p32_shifted_x__3[26]_i_1_n_0        |                8 |             27 |         3.38 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p32_shifted_y__2[26]_i_1_n_0        |                9 |             27 |         3.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p13_shifted_y__1[26]_i_1_n_0        |                9 |             27 |         3.00 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p32_shifted_y__3[26]_i_1_n_0        |                6 |             27 |         4.50 |
+|  clk         |                                         | inst1/inst0/inst0/inst1/inst0/p9_is_result_nan__1                 |                7 |             46 |         6.57 |
+|  clk         | inst1/inst0/ev00/c0/state0/out_reg[0]_0 | reset                                                             |               67 |            128 |         1.91 |
+|  clk         | inst1/inst0/ev00/c0/state0/out_reg[1]_2 | reset                                                             |               86 |            128 |         1.49 |
+|  clk         | inst1/inst0/ev00/c0/state0/out_reg[2]_0 | reset                                                             |               77 |            128 |         1.66 |
+|  clk         | inst1/inst0/ev00/c0/state0/out_reg[2]_1 | reset                                                             |              110 |            128 |         1.16 |
+|  clk         | inst1/inst0/ev00/c0/state0/out_reg[2]_2 | reset                                                             |               83 |            128 |         1.54 |
+|  clk         | inst1/inst0/ev00/c0/state0/out_reg[4]_0 | reset                                                             |               99 |            128 |         1.29 |
+|  clk         | inst1/inst0/ev00/c0/state0/out_reg[6]_0 | reset                                                             |               83 |            128 |         1.54 |
+|  clk         | inst1/inst0/ev00/c0/state0/out_reg[6]_1 | reset                                                             |               71 |            128 |         1.80 |
+|  clk         |                                         | reset                                                             |              506 |           1080 |         2.13 |
+|  clk         |                                         |                                                                   |              832 |           5014 |         6.03 |
++--------------+-----------------------------------------+-------------------------------------------------------------------+------------------+----------------+--------------+
+
+

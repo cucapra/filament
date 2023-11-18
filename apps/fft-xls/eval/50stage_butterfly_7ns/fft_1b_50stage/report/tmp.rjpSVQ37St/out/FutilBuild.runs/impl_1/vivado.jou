@@ -1,0 +1,12 @@
+#-----------------------------------------------------------
+# Vivado v2020.2 (64-bit)
+# SW Build 3064766 on Wed Nov 18 09:12:47 MST 2020
+# IP Build 3064653 on Wed Nov 18 14:17:31 MST 2020
+# Start of session at: Sat Nov 18 17:20:45 2023
+# Process ID: 1162039
+# Current directory: /tmp/tmp.rjpSVQ37St/out/FutilBuild.runs/impl_1
+# Command line: vivado -log main.vdi -applog -product Vivado -messageDb vivado.pb -mode batch -source main.tcl -notrace
+# Log file: /tmp/tmp.rjpSVQ37St/out/FutilBuild.runs/impl_1/main.vdi
+# Journal file: /tmp/tmp.rjpSVQ37St/out/FutilBuild.runs/impl_1/vivado.jou
+#-----------------------------------------------------------
+source main.tcl -notrace

@@ -1,0 +1,1877 @@
+#-----------------------------------------------------------
+# Vivado v2020.2 (64-bit)
+# SW Build 3064766 on Wed Nov 18 09:12:47 MST 2020
+# IP Build 3064653 on Wed Nov 18 14:17:31 MST 2020
+# Start of session at: Sat Nov 18 17:17:28 2023
+# Process ID: 1160882
+# Current directory: /tmp/tmp.rjpSVQ37St
+# Command line: vivado -mode batch -source synth.tcl
+# Log file: /tmp/tmp.rjpSVQ37St/vivado.log
+# Journal file: /tmp/tmp.rjpSVQ37St/vivado.jou
+#-----------------------------------------------------------
+source synth.tcl
+# set outdir ./out
+# set partname "xczu3eg-sbva484-1-e"
+# create_project -force -part $partname FutilBuild $outdir
+# add_files [glob ./*.sv]
+# add_files -fileset constrs_1 [glob ./*.xdc]
+# set_property top main [current_fileset]
+# set_property \
+#     -name {STEPS.SYNTH_DESIGN.ARGS.MORE OPTIONS} \
+#     -value {-mode out_of_context -flatten_hierarchy "rebuilt"} \
+#     -objects [get_runs synth_1]
+# launch_runs synth_1
+[Sat Nov 18 17:17:40 2023] Launched synth_1...
+Run output will be captured here: /tmp/tmp.rjpSVQ37St/out/FutilBuild.runs/synth_1/runme.log
+# wait_on_run synth_1
+[Sat Nov 18 17:17:40 2023] Waiting for synth_1 to finish...
+
+*** Running vivado
+    with args -log main.vds -m64 -product Vivado -mode batch -messageDb vivado.pb -notrace -source main.tcl
+
+
+****** Vivado v2020.2 (64-bit)
+  **** SW Build 3064766 on Wed Nov 18 09:12:47 MST 2020
+  **** IP Build 3064653 on Wed Nov 18 14:17:31 MST 2020
+    ** Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
+
+source main.tcl -notrace
+Command: synth_design -top main -part xczu3eg-sbva484-1-e -mode out_of_context -flatten_hierarchy rebuilt
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xczu3eg'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xczu3eg'
+INFO: [Device 21-403] Loading part xczu3eg-sbva484-1-e
+INFO: [Synth 8-7079] Multithreading enabled for synth_design using a maximum of 4 processes.
+INFO: [Synth 8-7078] Launching helper process for spawning children vivado processes
+INFO: [Synth 8-7075] Helper process launched with PID 1161123
+WARNING: [Synth 8-2507] parameter declaration becomes local in SignExtend with formal parameter declaration list [/tmp/tmp.rjpSVQ37St/main.sv:157]
+WARNING: [Synth 8-2507] parameter declaration becomes local in ZeroExtend with formal parameter declaration list [/tmp/tmp.rjpSVQ37St/main.sv:168]
+---------------------------------------------------------------------------------
+Starting RTL Elaboration : Time (s): cpu = 00:00:03 ; elapsed = 00:00:04 . Memory (MB): peak = 2681.605 ; gain = 30.871 ; free physical = 382528 ; free virtual = 468899
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6157] synthesizing module 'main' [/tmp/tmp.rjpSVQ37St/main.sv:22097]
+INFO: [Synth 8-6157] synthesizing module 'counter_chain_2_236' [/tmp/tmp.rjpSVQ37St/main.sv:23715]
+INFO: [Synth 8-6157] synthesizing module 'counter_236' [/tmp/tmp.rjpSVQ37St/main.sv:23624]
+INFO: [Synth 8-6157] synthesizing module 'std_add' [/tmp/tmp.rjpSVQ37St/main.sv:4855]
+	Parameter WIDTH bound to: 8 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'std_add' (1#1) [/tmp/tmp.rjpSVQ37St/main.sv:4855]
+INFO: [Synth 8-6157] synthesizing module 'std_reg' [/tmp/tmp.rjpSVQ37St/main.sv:4865]
+	Parameter WIDTH bound to: 8 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'std_reg' (2#1) [/tmp/tmp.rjpSVQ37St/main.sv:4865]
+INFO: [Synth 8-6157] synthesizing module 'std_reg__parameterized0' [/tmp/tmp.rjpSVQ37St/main.sv:4865]
+	Parameter WIDTH bound to: 1 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'std_reg__parameterized0' (2#1) [/tmp/tmp.rjpSVQ37St/main.sv:4865]
+INFO: [Synth 8-6155] done synthesizing module 'counter_236' (3#1) [/tmp/tmp.rjpSVQ37St/main.sv:23624]
+INFO: [Synth 8-6155] done synthesizing module 'counter_chain_2_236' (4#1) [/tmp/tmp.rjpSVQ37St/main.sv:23715]
+INFO: [Synth 8-6157] synthesizing module 'comp32' [/tmp/tmp.rjpSVQ37St/main.sv:12420]
+INFO: [Synth 8-6157] synthesizing module 'Slice' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 1024 - type: integer 
+	Parameter MSB bound to: 1023 - type: integer 
+	Parameter LSB bound to: 992 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized0' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 1024 - type: integer 
+	Parameter MSB bound to: 991 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 992 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized0' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp31' [/tmp/tmp.rjpSVQ37St/main.sv:12254]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized1' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 992 - type: integer 
+	Parameter MSB bound to: 991 - type: integer 
+	Parameter LSB bound to: 960 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized1' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized2' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 992 - type: integer 
+	Parameter MSB bound to: 959 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 960 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized2' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp30' [/tmp/tmp.rjpSVQ37St/main.sv:10971]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized3' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 960 - type: integer 
+	Parameter MSB bound to: 959 - type: integer 
+	Parameter LSB bound to: 928 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized3' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized4' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 960 - type: integer 
+	Parameter MSB bound to: 927 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 928 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized4' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp29' [/tmp/tmp.rjpSVQ37St/main.sv:10813]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized5' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 928 - type: integer 
+	Parameter MSB bound to: 927 - type: integer 
+	Parameter LSB bound to: 896 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized5' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized6' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 928 - type: integer 
+	Parameter MSB bound to: 895 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 896 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized6' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp28' [/tmp/tmp.rjpSVQ37St/main.sv:10659]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized7' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 896 - type: integer 
+	Parameter MSB bound to: 895 - type: integer 
+	Parameter LSB bound to: 864 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized7' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized8' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 896 - type: integer 
+	Parameter MSB bound to: 863 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 864 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized8' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp27' [/tmp/tmp.rjpSVQ37St/main.sv:10509]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized9' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 864 - type: integer 
+	Parameter MSB bound to: 863 - type: integer 
+	Parameter LSB bound to: 832 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized9' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized10' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 864 - type: integer 
+	Parameter MSB bound to: 831 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 832 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized10' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp26' [/tmp/tmp.rjpSVQ37St/main.sv:10363]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized11' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 832 - type: integer 
+	Parameter MSB bound to: 831 - type: integer 
+	Parameter LSB bound to: 800 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized11' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized12' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 832 - type: integer 
+	Parameter MSB bound to: 799 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 800 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized12' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp25' [/tmp/tmp.rjpSVQ37St/main.sv:10221]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized13' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 800 - type: integer 
+	Parameter MSB bound to: 799 - type: integer 
+	Parameter LSB bound to: 768 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized13' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized14' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 800 - type: integer 
+	Parameter MSB bound to: 767 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 768 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized14' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp24' [/tmp/tmp.rjpSVQ37St/main.sv:10083]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized15' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 768 - type: integer 
+	Parameter MSB bound to: 767 - type: integer 
+	Parameter LSB bound to: 736 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized15' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized16' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 768 - type: integer 
+	Parameter MSB bound to: 735 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 736 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized16' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp23' [/tmp/tmp.rjpSVQ37St/main.sv:9949]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized17' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 736 - type: integer 
+	Parameter MSB bound to: 735 - type: integer 
+	Parameter LSB bound to: 704 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized17' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized18' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 736 - type: integer 
+	Parameter MSB bound to: 703 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 704 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized18' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp22' [/tmp/tmp.rjpSVQ37St/main.sv:9819]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized19' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 704 - type: integer 
+	Parameter MSB bound to: 703 - type: integer 
+	Parameter LSB bound to: 672 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized19' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized20' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 704 - type: integer 
+	Parameter MSB bound to: 671 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 672 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized20' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp21' [/tmp/tmp.rjpSVQ37St/main.sv:9693]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized21' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 672 - type: integer 
+	Parameter MSB bound to: 671 - type: integer 
+	Parameter LSB bound to: 640 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized21' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized22' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 672 - type: integer 
+	Parameter MSB bound to: 639 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 640 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized22' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp20' [/tmp/tmp.rjpSVQ37St/main.sv:6435]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized23' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 640 - type: integer 
+	Parameter MSB bound to: 639 - type: integer 
+	Parameter LSB bound to: 608 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized23' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized24' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 640 - type: integer 
+	Parameter MSB bound to: 607 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 608 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized24' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp19' [/tmp/tmp.rjpSVQ37St/main.sv:6317]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized25' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 608 - type: integer 
+	Parameter MSB bound to: 607 - type: integer 
+	Parameter LSB bound to: 576 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized25' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized26' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 608 - type: integer 
+	Parameter MSB bound to: 575 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 576 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized26' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp18' [/tmp/tmp.rjpSVQ37St/main.sv:6203]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized27' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 576 - type: integer 
+	Parameter MSB bound to: 575 - type: integer 
+	Parameter LSB bound to: 544 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized27' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized28' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 576 - type: integer 
+	Parameter MSB bound to: 543 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 544 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized28' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp17' [/tmp/tmp.rjpSVQ37St/main.sv:6093]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized29' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 544 - type: integer 
+	Parameter MSB bound to: 543 - type: integer 
+	Parameter LSB bound to: 512 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized29' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized30' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 544 - type: integer 
+	Parameter MSB bound to: 511 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 512 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized30' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp16' [/tmp/tmp.rjpSVQ37St/main.sv:5987]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized31' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 512 - type: integer 
+	Parameter MSB bound to: 511 - type: integer 
+	Parameter LSB bound to: 480 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized31' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized32' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 512 - type: integer 
+	Parameter MSB bound to: 479 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 480 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized32' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp15' [/tmp/tmp.rjpSVQ37St/main.sv:5885]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized33' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 480 - type: integer 
+	Parameter MSB bound to: 479 - type: integer 
+	Parameter LSB bound to: 448 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized33' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized34' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 480 - type: integer 
+	Parameter MSB bound to: 447 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 448 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized34' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp14' [/tmp/tmp.rjpSVQ37St/main.sv:5787]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized35' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 448 - type: integer 
+	Parameter MSB bound to: 447 - type: integer 
+	Parameter LSB bound to: 416 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized35' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized36' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 448 - type: integer 
+	Parameter MSB bound to: 415 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 416 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized36' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp13' [/tmp/tmp.rjpSVQ37St/main.sv:5693]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized37' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 416 - type: integer 
+	Parameter MSB bound to: 415 - type: integer 
+	Parameter LSB bound to: 384 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized37' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized38' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 416 - type: integer 
+	Parameter MSB bound to: 383 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 384 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized38' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp12' [/tmp/tmp.rjpSVQ37St/main.sv:5603]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized39' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 384 - type: integer 
+	Parameter MSB bound to: 383 - type: integer 
+	Parameter LSB bound to: 352 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized39' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized40' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 384 - type: integer 
+	Parameter MSB bound to: 351 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 352 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized40' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp11' [/tmp/tmp.rjpSVQ37St/main.sv:5517]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized41' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 352 - type: integer 
+	Parameter MSB bound to: 351 - type: integer 
+	Parameter LSB bound to: 320 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized41' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized42' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 352 - type: integer 
+	Parameter MSB bound to: 319 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 320 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized42' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp10' [/tmp/tmp.rjpSVQ37St/main.sv:5435]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized43' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 320 - type: integer 
+	Parameter MSB bound to: 319 - type: integer 
+	Parameter LSB bound to: 288 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized43' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized44' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 320 - type: integer 
+	Parameter MSB bound to: 287 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 288 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized44' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp9' [/tmp/tmp.rjpSVQ37St/main.sv:5357]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized45' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 288 - type: integer 
+	Parameter MSB bound to: 287 - type: integer 
+	Parameter LSB bound to: 256 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized45' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized46' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 288 - type: integer 
+	Parameter MSB bound to: 255 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 256 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized46' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp8' [/tmp/tmp.rjpSVQ37St/main.sv:5283]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized47' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 256 - type: integer 
+	Parameter MSB bound to: 255 - type: integer 
+	Parameter LSB bound to: 224 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized47' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized48' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 256 - type: integer 
+	Parameter MSB bound to: 223 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 224 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized48' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp7' [/tmp/tmp.rjpSVQ37St/main.sv:5213]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized49' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 224 - type: integer 
+	Parameter MSB bound to: 223 - type: integer 
+	Parameter LSB bound to: 192 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized49' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized50' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 224 - type: integer 
+	Parameter MSB bound to: 191 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 192 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized50' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp6' [/tmp/tmp.rjpSVQ37St/main.sv:5147]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized51' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 192 - type: integer 
+	Parameter MSB bound to: 191 - type: integer 
+	Parameter LSB bound to: 160 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized51' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized52' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 192 - type: integer 
+	Parameter MSB bound to: 159 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 160 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized52' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp5' [/tmp/tmp.rjpSVQ37St/main.sv:5085]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized53' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 160 - type: integer 
+	Parameter MSB bound to: 159 - type: integer 
+	Parameter LSB bound to: 128 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized53' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized54' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 160 - type: integer 
+	Parameter MSB bound to: 127 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 128 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized54' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp4' [/tmp/tmp.rjpSVQ37St/main.sv:5027]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized55' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 128 - type: integer 
+	Parameter MSB bound to: 127 - type: integer 
+	Parameter LSB bound to: 96 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized55' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized56' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 128 - type: integer 
+	Parameter MSB bound to: 95 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 96 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized56' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp3' [/tmp/tmp.rjpSVQ37St/main.sv:4973]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized57' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 96 - type: integer 
+	Parameter MSB bound to: 95 - type: integer 
+	Parameter LSB bound to: 64 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized57' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized58' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 96 - type: integer 
+	Parameter MSB bound to: 63 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 64 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized58' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp2' [/tmp/tmp.rjpSVQ37St/main.sv:4923]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized59' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 64 - type: integer 
+	Parameter MSB bound to: 63 - type: integer 
+	Parameter LSB bound to: 32 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized59' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized60' [/tmp/tmp.rjpSVQ37St/main.sv:205]
+	Parameter IN_WIDTH bound to: 64 - type: integer 
+	Parameter MSB bound to: 31 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized60' (5#1) [/tmp/tmp.rjpSVQ37St/main.sv:205]
+INFO: [Synth 8-6157] synthesizing module 'comp1' [/tmp/tmp.rjpSVQ37St/main.sv:4912]
+INFO: [Common 17-14] Message 'Synth 8-6157' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
+INFO: [Synth 8-6155] done synthesizing module 'comp1' (6#1) [/tmp/tmp.rjpSVQ37St/main.sv:4912]
+INFO: [Synth 8-6155] done synthesizing module 'comp2' (7#1) [/tmp/tmp.rjpSVQ37St/main.sv:4923]
+INFO: [Synth 8-6155] done synthesizing module 'comp3' (8#1) [/tmp/tmp.rjpSVQ37St/main.sv:4973]
+INFO: [Synth 8-6155] done synthesizing module 'comp4' (9#1) [/tmp/tmp.rjpSVQ37St/main.sv:5027]
+INFO: [Synth 8-6155] done synthesizing module 'comp5' (10#1) [/tmp/tmp.rjpSVQ37St/main.sv:5085]
+INFO: [Synth 8-6155] done synthesizing module 'comp6' (11#1) [/tmp/tmp.rjpSVQ37St/main.sv:5147]
+INFO: [Synth 8-6155] done synthesizing module 'comp7' (12#1) [/tmp/tmp.rjpSVQ37St/main.sv:5213]
+INFO: [Synth 8-6155] done synthesizing module 'comp8' (13#1) [/tmp/tmp.rjpSVQ37St/main.sv:5283]
+INFO: [Synth 8-6155] done synthesizing module 'comp9' (14#1) [/tmp/tmp.rjpSVQ37St/main.sv:5357]
+INFO: [Synth 8-6155] done synthesizing module 'comp10' (15#1) [/tmp/tmp.rjpSVQ37St/main.sv:5435]
+INFO: [Synth 8-6155] done synthesizing module 'comp11' (16#1) [/tmp/tmp.rjpSVQ37St/main.sv:5517]
+INFO: [Synth 8-6155] done synthesizing module 'comp12' (17#1) [/tmp/tmp.rjpSVQ37St/main.sv:5603]
+INFO: [Synth 8-6155] done synthesizing module 'comp13' (18#1) [/tmp/tmp.rjpSVQ37St/main.sv:5693]
+INFO: [Synth 8-6155] done synthesizing module 'comp14' (19#1) [/tmp/tmp.rjpSVQ37St/main.sv:5787]
+INFO: [Synth 8-6155] done synthesizing module 'comp15' (20#1) [/tmp/tmp.rjpSVQ37St/main.sv:5885]
+INFO: [Synth 8-6155] done synthesizing module 'comp16' (21#1) [/tmp/tmp.rjpSVQ37St/main.sv:5987]
+INFO: [Synth 8-6155] done synthesizing module 'comp17' (22#1) [/tmp/tmp.rjpSVQ37St/main.sv:6093]
+INFO: [Synth 8-6155] done synthesizing module 'comp18' (23#1) [/tmp/tmp.rjpSVQ37St/main.sv:6203]
+INFO: [Synth 8-6155] done synthesizing module 'comp19' (24#1) [/tmp/tmp.rjpSVQ37St/main.sv:6317]
+INFO: [Synth 8-6155] done synthesizing module 'comp20' (25#1) [/tmp/tmp.rjpSVQ37St/main.sv:6435]
+INFO: [Synth 8-6155] done synthesizing module 'comp21' (26#1) [/tmp/tmp.rjpSVQ37St/main.sv:9693]
+INFO: [Synth 8-6155] done synthesizing module 'comp22' (27#1) [/tmp/tmp.rjpSVQ37St/main.sv:9819]
+INFO: [Synth 8-6155] done synthesizing module 'comp23' (28#1) [/tmp/tmp.rjpSVQ37St/main.sv:9949]
+INFO: [Synth 8-6155] done synthesizing module 'comp24' (29#1) [/tmp/tmp.rjpSVQ37St/main.sv:10083]
+INFO: [Synth 8-6155] done synthesizing module 'comp25' (30#1) [/tmp/tmp.rjpSVQ37St/main.sv:10221]
+INFO: [Synth 8-6155] done synthesizing module 'comp26' (31#1) [/tmp/tmp.rjpSVQ37St/main.sv:10363]
+INFO: [Synth 8-6155] done synthesizing module 'comp27' (32#1) [/tmp/tmp.rjpSVQ37St/main.sv:10509]
+INFO: [Synth 8-6155] done synthesizing module 'comp28' (33#1) [/tmp/tmp.rjpSVQ37St/main.sv:10659]
+INFO: [Synth 8-6155] done synthesizing module 'comp29' (34#1) [/tmp/tmp.rjpSVQ37St/main.sv:10813]
+INFO: [Synth 8-6155] done synthesizing module 'comp30' (35#1) [/tmp/tmp.rjpSVQ37St/main.sv:10971]
+INFO: [Synth 8-6155] done synthesizing module 'comp31' (36#1) [/tmp/tmp.rjpSVQ37St/main.sv:12254]
+INFO: [Synth 8-6155] done synthesizing module 'comp32' (37#1) [/tmp/tmp.rjpSVQ37St/main.sv:12420]
+INFO: [Synth 8-6155] done synthesizing module 'fsm_51' (38#1) [/tmp/tmp.rjpSVQ37St/main.sv:22491]
+INFO: [Common 17-14] Message 'Synth 8-6155' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
+	Parameter IN_WIDTH bound to: 128 - type: integer 
+	Parameter MSB bound to: 95 - type: integer 
+	Parameter LSB bound to: 64 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+	Parameter IN_WIDTH bound to: 128 - type: integer 
+	Parameter MSB bound to: 63 - type: integer 
+	Parameter LSB bound to: 32 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+	Parameter IN_WIDTH bound to: 128 - type: integer 
+	Parameter MSB bound to: 31 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1065353216 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 621621554 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1064076126 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1094455531 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1060439283 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1087044365 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1053028117 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1083407522 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 613232946 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1082130432 - type: integer 
+	Parameter WIDTH bound to: 1024 - type: integer 
+	Parameter WIDTH bound to: 1024 - type: integer 
+	Parameter WIDTH bound to: 128 - type: integer 
+	Parameter WIDTH bound to: 128 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 32 - type: integer 
+	Parameter OUT bound to: 64 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 64 - type: integer 
+	Parameter OUT bound to: 96 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 96 - type: integer 
+	Parameter OUT bound to: 128 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 128 - type: integer 
+	Parameter OUT bound to: 160 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 160 - type: integer 
+	Parameter OUT bound to: 192 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 192 - type: integer 
+	Parameter OUT bound to: 224 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 224 - type: integer 
+	Parameter OUT bound to: 256 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 256 - type: integer 
+	Parameter OUT bound to: 288 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 288 - type: integer 
+	Parameter OUT bound to: 320 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 320 - type: integer 
+	Parameter OUT bound to: 352 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 352 - type: integer 
+	Parameter OUT bound to: 384 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 384 - type: integer 
+	Parameter OUT bound to: 416 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 416 - type: integer 
+	Parameter OUT bound to: 448 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 448 - type: integer 
+	Parameter OUT bound to: 480 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 480 - type: integer 
+	Parameter OUT bound to: 512 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 512 - type: integer 
+	Parameter OUT bound to: 544 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 544 - type: integer 
+	Parameter OUT bound to: 576 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 576 - type: integer 
+	Parameter OUT bound to: 608 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 608 - type: integer 
+	Parameter OUT bound to: 640 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 640 - type: integer 
+	Parameter OUT bound to: 672 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 672 - type: integer 
+	Parameter OUT bound to: 704 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 704 - type: integer 
+	Parameter OUT bound to: 736 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 736 - type: integer 
+	Parameter OUT bound to: 768 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 768 - type: integer 
+	Parameter OUT bound to: 800 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 800 - type: integer 
+	Parameter OUT bound to: 832 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 832 - type: integer 
+	Parameter OUT bound to: 864 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 864 - type: integer 
+	Parameter OUT bound to: 896 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 896 - type: integer 
+	Parameter OUT bound to: 928 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 928 - type: integer 
+	Parameter OUT bound to: 960 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 960 - type: integer 
+	Parameter OUT bound to: 992 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 992 - type: integer 
+	Parameter OUT bound to: 1024 - type: integer 
+---------------------------------------------------------------------------------
+Finished RTL Elaboration : Time (s): cpu = 00:00:07 ; elapsed = 00:00:08 . Memory (MB): peak = 2834.480 ; gain = 183.746 ; free physical = 382911 ; free virtual = 469286
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:09 ; elapsed = 00:00:10 . Memory (MB): peak = 2846.355 ; gain = 195.621 ; free physical = 382939 ; free virtual = 469313
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:09 ; elapsed = 00:00:10 . Memory (MB): peak = 2846.355 ; gain = 195.621 ; free physical = 382939 ; free virtual = 469313
+---------------------------------------------------------------------------------
+Netlist sorting complete. Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 2951.426 ; gain = 19.000 ; free physical = 382682 ; free virtual = 469056
+INFO: [Project 1-570] Preparing netlist for logic optimization
+
+Processing XDC Constraints
+Initializing timing engine
+Parsing XDC File [/tmp/tmp.rjpSVQ37St/device.xdc]
+Finished Parsing XDC File [/tmp/tmp.rjpSVQ37St/device.xdc]
+Completed Processing XDC Constraints
+
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3324.238 ; gain = 0.000 ; free physical = 382500 ; free virtual = 468874
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+Constraint Validation Runtime : Time (s): cpu = 00:00:00.84 ; elapsed = 00:00:00.39 . Memory (MB): peak = 3327.207 ; gain = 2.969 ; free physical = 382495 ; free virtual = 468869
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:32 ; elapsed = 00:00:33 . Memory (MB): peak = 3327.207 ; gain = 676.473 ; free physical = 382891 ; free virtual = 469266
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xczu3eg-sbva484-1-e
+INFO: [Synth 8-6742] Reading net delay rules and data
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:32 ; elapsed = 00:00:33 . Memory (MB): peak = 3327.207 ; gain = 676.473 ; free physical = 382891 ; free virtual = 469265
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying 'set_property' XDC Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:32 ; elapsed = 00:00:33 . Memory (MB): peak = 3327.207 ; gain = 676.473 ; free physical = 382891 ; free virtual = 469265
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:37 ; elapsed = 00:00:38 . Memory (MB): peak = 3327.207 ; gain = 676.473 ; free physical = 382855 ; free virtual = 469233
+---------------------------------------------------------------------------------
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst2/inst3' (comp42) to 'inst1/inst0/inst2/inst10'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst2/inst3' (comp42) to 'inst1/inst0/inst2/inst15'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst2/inst5' (comp44) to 'inst1/inst0/inst2/inst12'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst2/inst5' (comp44) to 'inst1/inst0/inst2/inst13'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst2/inst7' (comp46) to 'inst1/inst0/inst2/inst11'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst2/inst7' (comp46) to 'inst1/inst0/inst2/inst14'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst10' (comp57) to 'inst1/inst0/inst13'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst10' (comp57) to 'inst1/inst0/inst14'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst10' (comp57) to 'inst1/inst0/inst17'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst10' (comp57) to 'inst1/inst0/inst18'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst10' (comp57) to 'inst1/inst0/inst21'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst10' (comp57) to 'inst1/inst0/inst22'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst10' (comp57) to 'inst1/inst0/inst25'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst27' (comp57) to 'inst1/inst0/inst30'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst27' (comp57) to 'inst1/inst0/inst31'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst27' (comp57) to 'inst1/inst0/inst34'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst27' (comp57) to 'inst1/inst0/inst35'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst27' (comp57) to 'inst1/inst0/inst38'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst27' (comp57) to 'inst1/inst0/inst39'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst27' (comp57) to 'inst1/inst0/inst42'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst44' (comp57) to 'inst1/inst0/inst47'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst44' (comp57) to 'inst1/inst0/inst48'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst44' (comp57) to 'inst1/inst0/inst51'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst44' (comp57) to 'inst1/inst0/inst52'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst44' (comp57) to 'inst1/inst0/inst55'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst44' (comp57) to 'inst1/inst0/inst56'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst44' (comp57) to 'inst1/inst0/inst59'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst61' (comp57) to 'inst1/inst0/inst64'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst61' (comp57) to 'inst1/inst0/inst65'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst61' (comp57) to 'inst1/inst0/inst68'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst61' (comp57) to 'inst1/inst0/inst69'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst61' (comp57) to 'inst1/inst0/inst72'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst61' (comp57) to 'inst1/inst0/inst73'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst61' (comp57) to 'inst1/inst0/inst76'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst78' (comp57) to 'inst1/inst0/inst81'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst78' (comp57) to 'inst1/inst0/inst82'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst78' (comp57) to 'inst1/inst0/inst85'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst78' (comp57) to 'inst1/inst0/inst86'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst78' (comp57) to 'inst1/inst0/inst89'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst78' (comp57) to 'inst1/inst0/inst90'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst78' (comp57) to 'inst1/inst0/inst93'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst95' (comp57) to 'inst1/inst0/inst98'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst95' (comp57) to 'inst1/inst0/inst99'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst95' (comp57) to 'inst1/inst0/inst102'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst95' (comp57) to 'inst1/inst0/inst103'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst95' (comp57) to 'inst1/inst0/inst106'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst95' (comp57) to 'inst1/inst0/inst107'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst95' (comp57) to 'inst1/inst0/inst110'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst112' (comp57) to 'inst1/inst0/inst115'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst112' (comp57) to 'inst1/inst0/inst116'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst112' (comp57) to 'inst1/inst0/inst119'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst112' (comp57) to 'inst1/inst0/inst120'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst112' (comp57) to 'inst1/inst0/inst123'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst112' (comp57) to 'inst1/inst0/inst124'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst112' (comp57) to 'inst1/inst0/inst127'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst129' (comp57) to 'inst1/inst0/inst132'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst129' (comp57) to 'inst1/inst0/inst133'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst129' (comp57) to 'inst1/inst0/inst136'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst129' (comp57) to 'inst1/inst0/inst137'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst129' (comp57) to 'inst1/inst0/inst140'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst129' (comp57) to 'inst1/inst0/inst141'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst129' (comp57) to 'inst1/inst0/inst144'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst16'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst20'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst24'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst29'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst33'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst37'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst41'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst46'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst50'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst54'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst58'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst63'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst67'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst71'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst75'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst80'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst84'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst88'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst92'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst97'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst101'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst105'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst109'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst114'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst118'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst122'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst126'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst131'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst135'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst139'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp63) to 'inst1/inst0/inst143'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst145' (comp92) to 'inst1/inst0/inst147'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst145' (comp92) to 'inst1/inst0/inst149'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst145' (comp92) to 'inst1/inst0/inst151'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst146' (comp93) to 'inst1/inst0/inst148'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst146' (comp93) to 'inst1/inst0/inst150'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst146' (comp93) to 'inst1/inst0/inst152'
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input   29 Bit       Adders := 6     
+	   2 Input   28 Bit       Adders := 20    
+	   2 Input   25 Bit       Adders := 6     
+	   2 Input   24 Bit       Adders := 4     
+	   2 Input   10 Bit       Adders := 12    
+	   3 Input   10 Bit       Adders := 6     
+	   2 Input    9 Bit       Adders := 10    
+	   2 Input    8 Bit       Adders := 6     
+	   3 Input    8 Bit       Adders := 16    
+	   2 Input    6 Bit       Adders := 8     
+	   2 Input    3 Bit       Adders := 6     
++---XORs : 
+	   2 Input      1 Bit         XORs := 16    
++---Registers : 
+	             1024 Bit    Registers := 1     
+	              128 Bit    Registers := 9     
+	               48 Bit    Registers := 12    
+	               46 Bit    Registers := 4     
+	               32 Bit    Registers := 10    
+	               29 Bit    Registers := 6     
+	               28 Bit    Registers := 66    
+	               27 Bit    Registers := 24    
+	               25 Bit    Registers := 14    
+	               24 Bit    Registers := 12    
+	               23 Bit    Registers := 106   
+	               10 Bit    Registers := 30    
+	                9 Bit    Registers := 30    
+	                8 Bit    Registers := 154   
+	                6 Bit    Registers := 8     
+	                5 Bit    Registers := 36    
+	                3 Bit    Registers := 12    
+	                1 Bit    Registers := 909   
++---Muxes : 
+	   2 Input 1024 Bit        Muxes := 5     
+	   2 Input  128 Bit        Muxes := 12    
+	   2 Input   46 Bit        Muxes := 4     
+	   2 Input   32 Bit        Muxes := 141   
+	   2 Input   28 Bit        Muxes := 38    
+	   2 Input   27 Bit        Muxes := 6     
+	   2 Input   10 Bit        Muxes := 4     
+	   2 Input    8 Bit        Muxes := 10    
+	   2 Input    1 Bit        Muxes := 12    
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 360 (col length:72)
+BRAMs: 432 (col length: RAMB18 72 RAMB36 36)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+DSP Report: Generating DSP umul48b_24b_x_24b_return, operation Mode is: A*B.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: Generating DSP p2_fraction__24_reg, operation Mode is: (PCIN>>17)+A*B.
+DSP Report: register p2_fraction__24_reg is absorbed into DSP p2_fraction__24_reg.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP p2_fraction__24_reg.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP p2_fraction__24_reg.
+DSP Report: Generating DSP umul48b_24b_x_24b_return, operation Mode is: A*B.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: Generating DSP p2_fraction__16_reg, operation Mode is: (PCIN>>17)+A*B.
+DSP Report: register p2_fraction__16_reg is absorbed into DSP p2_fraction__16_reg.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP p2_fraction__16_reg.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP p2_fraction__16_reg.
+DSP Report: Generating DSP umul48b_24b_x_24b_return, operation Mode is: A*B.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: Generating DSP p2_fraction__1_reg, operation Mode is: (PCIN>>17)+A*B.
+DSP Report: register p2_fraction__1_reg is absorbed into DSP p2_fraction__1_reg.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP p2_fraction__1_reg.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP p2_fraction__1_reg.
+DSP Report: Generating DSP umul48b_24b_x_24b_return, operation Mode is: A*B.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: Generating DSP p2_fraction__8_reg, operation Mode is: (PCIN>>17)+A*B.
+DSP Report: register p2_fraction__8_reg is absorbed into DSP p2_fraction__8_reg.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP p2_fraction__8_reg.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP p2_fraction__8_reg.
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:01:15 ; elapsed = 00:01:18 . Memory (MB): peak = 3327.207 ; gain = 676.473 ; free physical = 382789 ; free virtual = 469203
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+
+DSP: Preliminary Mapping	Report (see note below)
++----------------------+----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|Module Name           | DSP Mapping    | A Size | B Size | C Size | D Size | P Size | AREG | BREG | CREG | DREG | ADREG | MREG | PREG | 
++----------------------+----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|Butterfly_Exp8_Mant23 | A*B            | 25     | 18     | -      | -      | 48     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|Butterfly_Exp8_Mant23 | (PCIN>>17)+A*B | 25     | 8      | -      | -      | 31     | 0    | 0    | -    | -    | -     | 0    | 1    | 
+|Butterfly_Exp8_Mant23 | A*B            | 25     | 18     | -      | -      | 48     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|Butterfly_Exp8_Mant23 | (PCIN>>17)+A*B | 25     | 8      | -      | -      | 31     | 0    | 0    | -    | -    | -     | 0    | 1    | 
+|Butterfly_Exp8_Mant23 | A*B            | 25     | 18     | -      | -      | 48     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|Butterfly_Exp8_Mant23 | (PCIN>>17)+A*B | 25     | 8      | -      | -      | 31     | 0    | 0    | -    | -    | -     | 0    | 1    | 
+|Butterfly_Exp8_Mant23 | A*B            | 25     | 18     | -      | -      | 48     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|Butterfly_Exp8_Mant23 | (PCIN>>17)+A*B | 25     | 8      | -      | -      | 31     | 0    | 0    | -    | -    | -     | 0    | 1    | 
++----------------------+----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+
+Note: The table above is a preliminary report that shows the DSPs inferred at the current stage of the synthesis flow. Some DSP may be reimplemented as non DSP primitives later in the synthesis flow. Multiple instantiated DSPs are reported only once.
+---------------------------------------------------------------------------------
+Finished ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying XDC Timing Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Applying XDC Timing Constraints : Time (s): cpu = 00:01:31 ; elapsed = 00:01:43 . Memory (MB): peak = 3404.207 ; gain = 753.473 ; free physical = 382268 ; free virtual = 468683
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:01:54 ; elapsed = 00:02:07 . Memory (MB): peak = 3500.699 ; gain = 849.965 ; free physical = 382194 ; free virtual = 468623
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:02:03 ; elapsed = 00:02:16 . Memory (MB): peak = 3565.715 ; gain = 914.980 ; free physical = 382195 ; free virtual = 468624
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:02:07 ; elapsed = 00:02:20 . Memory (MB): peak = 3565.715 ; gain = 914.980 ; free physical = 382194 ; free virtual = 468623
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:02:07 ; elapsed = 00:02:20 . Memory (MB): peak = 3565.715 ; gain = 914.980 ; free physical = 382193 ; free virtual = 468623
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:02:09 ; elapsed = 00:02:22 . Memory (MB): peak = 3565.715 ; gain = 914.980 ; free physical = 382192 ; free virtual = 468622
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:02:09 ; elapsed = 00:02:22 . Memory (MB): peak = 3565.715 ; gain = 914.980 ; free physical = 382192 ; free virtual = 468622
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:02:10 ; elapsed = 00:02:23 . Memory (MB): peak = 3565.715 ; gain = 914.980 ; free physical = 382194 ; free virtual = 468623
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:02:11 ; elapsed = 00:02:23 . Memory (MB): peak = 3565.715 ; gain = 914.980 ; free physical = 382194 ; free virtual = 468623
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+
+Static Shift Register Report:
++------------+---------------------------------------------------------------+--------+-------+--------------+--------------------+-------------------+--------+---------+
+|Module Name | RTL Name                                                      | Length | Width | Reset Signal | Pull out first Reg | Pull out last Reg | SRL16E | SRLC32E | 
++------------+---------------------------------------------------------------+--------+-------+--------------+--------------------+-------------------+--------+---------+
+|main        | inst1/inst0/inst0/inst1/inst0/p11_result_sign__8_reg          | 9      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p9_result_fraction__9_reg[22]   | 4      | 23    | NO           | YES                | YES               | 23     | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p11_result_sign__7_reg          | 9      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p9_is_result_nan__3_reg         | 7      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p9_result_fraction__6_reg[22]   | 4      | 23    | NO           | YES                | YES               | 23     | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p17_is_result_nan__6_reg        | 5      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p17_is_operand_inf__1_reg       | 6      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p14_xor_8551_reg                | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p14_xor_8550_reg                | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p16_greater_exp_sign__1_reg     | 5      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p17_not_8571_reg                | 6      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p32_result_sign__14_reg         | 15     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p27_is_result_nan__6_reg        | 10     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p24_ne_8903_reg                 | 8      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p23_encode_8969_reg[4]          | 5      | 5     | NO           | NO                 | YES               | 5      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p22_greater_exp_bexp__1_reg[7]  | 11     | 8     | NO           | NO                 | YES               | 8      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p27_nor_8566_reg                | 16     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p23_rounded_fraction__1_reg[2]  | 3      | 3     | NO           | NO                 | YES               | 3      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p27_result_fraction__15_reg[22] | 4      | 23    | NO           | NO                 | YES               | 23     | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p27_is_operand_inf__1_reg       | 10     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p31_in0_i_sign__2_reg           | 32     | 1     | NO           | NO                 | YES               | 0      | 1       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p29_in0_i_fraction__6_reg[22]   | 30     | 23    | NO           | NO                 | YES               | 0      | 23      | 
+|main        | inst1/inst0/inst0/inst1/inst0/p29_in0_i_bexp__6_reg[7]        | 30     | 8     | NO           | NO                 | YES               | 0      | 8       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p36_is_result_nan__10_reg       | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p46_is_result_nan__10_reg       | 10     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p33_ugt_9795_reg                | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p43_ne_10243_reg                | 8      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p42_encode_10339_reg[4]         | 5      | 5     | NO           | NO                 | YES               | 5      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p41_greater_exp_bexp__3_reg[7]  | 10     | 8     | NO           | NO                 | YES               | 8      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p46_nor_10013_reg               | 14     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p42_rounded_fraction__5_reg[2]  | 3      | 3     | NO           | NO                 | YES               | 3      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p46_result_fraction__27_reg[22] | 4      | 23    | NO           | NO                 | YES               | 23     | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p36_is_operand_inf__3_reg       | 4      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p46_is_operand_inf__3_reg       | 10     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p36_not_10111_reg               | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p9_is_result_nan__2_reg         | 7      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p9_nor_7477_reg                 | 8      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p9_result_fraction__3_reg[22]   | 4      | 23    | NO           | YES                | YES               | 23     | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p9_has_inf_arg__2_reg           | 8      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p11_bd__1_sign_reg              | 9      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p9_is_result_nan__1_reg         | 7      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p9_nor_7479_reg                 | 8      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p9_result_fraction__1_reg[22]   | 4      | 23    | NO           | YES                | YES               | 23     | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p9_has_inf_arg__1_reg           | 8      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p11_result_sign__5_reg          | 9      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p17_is_result_nan__5_reg        | 5      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p17_is_operand_inf_reg          | 6      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p14_xor_8549_reg                | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p14_xor_8548_reg                | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p16_greater_exp_sign_reg        | 5      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p17_not_8570_reg                | 6      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p32_result_sign__13_reg         | 15     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p27_is_result_nan__5_reg        | 10     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p24_ne_8902_reg                 | 8      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p23_encode_8968_reg[4]          | 5      | 5     | NO           | NO                 | YES               | 5      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p22_greater_exp_bexp_reg[7]     | 11     | 8     | NO           | NO                 | YES               | 8      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p27_nor_8564_reg                | 16     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p23_rounded_fraction_reg[2]     | 3      | 3     | NO           | NO                 | YES               | 3      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p27_result_fraction__13_reg[22] | 4      | 23    | NO           | NO                 | YES               | 23     | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p27_is_operand_inf_reg          | 10     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p31_in0_r_sign__2_reg           | 32     | 1     | NO           | NO                 | YES               | 0      | 1       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p29_in0_r_fraction__6_reg[22]   | 30     | 23    | NO           | NO                 | YES               | 0      | 23      | 
+|main        | inst1/inst0/inst0/inst1/inst0/p29_in0_r_bexp__6_reg[7]        | 30     | 8     | NO           | NO                 | YES               | 0      | 8       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p36_is_result_nan__9_reg        | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p46_is_result_nan__9_reg        | 10     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p33_ugt_9790_reg                | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p43_ne_10242_reg                | 8      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p42_encode_10338_reg[4]         | 5      | 5     | NO           | NO                 | YES               | 5      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p41_greater_exp_bexp__2_reg[7]  | 10     | 8     | NO           | NO                 | YES               | 8      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p46_nor_10012_reg               | 14     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p42_rounded_fraction__4_reg[2]  | 3      | 3     | NO           | NO                 | YES               | 3      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p46_result_fraction__24_reg[22] | 4      | 23    | NO           | NO                 | YES               | 23     | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p36_is_operand_inf__2_reg       | 4      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p46_is_operand_inf__2_reg       | 10     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p36_not_10109_reg               | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p36_is_result_nan__8_reg        | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p46_is_result_nan__8_reg        | 10     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p43_ne_10241_reg                | 8      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p42_encode_10337_reg[4]         | 5      | 5     | NO           | NO                 | YES               | 5      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p42_rounded_fraction__3_reg[2]  | 3      | 3     | NO           | NO                 | YES               | 3      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p46_result_fraction__21_reg[22] | 4      | 23    | NO           | NO                 | YES               | 23     | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p36_not_10107_reg               | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p36_is_result_nan__7_reg        | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p46_is_result_nan__7_reg        | 10     | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p43_ne_10240_reg                | 8      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p42_encode_10336_reg[4]         | 5      | 5     | NO           | NO                 | YES               | 5      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p42_rounded_fraction__2_reg[2]  | 3      | 3     | NO           | NO                 | YES               | 3      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p46_result_fraction__19_reg[22] | 4      | 23    | NO           | NO                 | YES               | 23     | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p36_not_10105_reg               | 3      | 1     | NO           | NO                 | YES               | 1      | 0       | 
+|main        | inst1/inst0/inst0/inst1/inst0/p49_tuple_11354_reg[127]        | 13     | 4     | NO           | NO                 | YES               | 4      | 0       | 
++------------+---------------------------------------------------------------+--------+-------+--------------+--------------------+-------------------+--------+---------+
+
+---------------------------------------------------------------------------------
+Finished ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+Report BlackBoxes: 
++-+--------------+----------+
+| |BlackBox name |Instances |
++-+--------------+----------+
++-+--------------+----------+
+
+Report Cell Usage: 
++------+----------------+------+
+|      |Cell            |Count |
++------+----------------+------+
+|1     |CARRY8          |   146|
+|2     |DSP_ALU         |     8|
+|3     |DSP_A_B_DATA    |     8|
+|4     |DSP_C_DATA      |     8|
+|5     |DSP_MULTIPLIER  |     8|
+|6     |DSP_M_DATA      |     8|
+|7     |DSP_OUTPUT      |     8|
+|9     |DSP_PREADD      |     8|
+|10    |DSP_PREADD_DATA |     8|
+|11    |LUT1            |   218|
+|12    |LUT2            |  1088|
+|13    |LUT3            |  2019|
+|14    |LUT4            |  1838|
+|15    |LUT5            |  1478|
+|16    |LUT6            |  2934|
+|17    |MUXF7           |     2|
+|18    |SRL16E          |   371|
+|19    |SRLC32E         |    64|
+|20    |FDRE            |  7679|
+|21    |FDSE            |    90|
++------+----------------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:02:11 ; elapsed = 00:02:23 . Memory (MB): peak = 3565.715 ; gain = 914.980 ; free physical = 382194 ; free virtual = 468623
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 0 critical warnings and 0 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:01:51 ; elapsed = 00:02:04 . Memory (MB): peak = 3565.715 ; gain = 434.129 ; free physical = 382234 ; free virtual = 468663
+Synthesis Optimization Complete : Time (s): cpu = 00:02:11 ; elapsed = 00:02:23 . Memory (MB): peak = 3565.723 ; gain = 914.980 ; free physical = 382234 ; free virtual = 468663
+INFO: [Project 1-571] Translating synthesized netlist
+Netlist sorting complete. Time (s): cpu = 00:00:00.20 ; elapsed = 00:00:00.20 . Memory (MB): peak = 3565.723 ; gain = 0.000 ; free physical = 382314 ; free virtual = 468744
+INFO: [Netlist 29-17] Analyzing 156 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-570] Preparing netlist for logic optimization
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00 . Memory (MB): peak = 3597.730 ; gain = 0.000 ; free physical = 382265 ; free virtual = 468694
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 8 instances were transformed.
+  DSP48E2 => DSP48E2 (DSP_ALU, DSP_A_B_DATA, DSP_C_DATA, DSP_MULTIPLIER, DSP_M_DATA, DSP_OUTPUT, DSP_PREADD, DSP_PREADD_DATA): 8 instances
+
+INFO: [Common 17-83] Releasing license: Synthesis
+316 Infos, 2 Warnings, 0 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:02:25 ; elapsed = 00:02:37 . Memory (MB): peak = 3597.730 ; gain = 1199.234 ; free physical = 382424 ; free virtual = 468853
+INFO: [Common 17-1381] The checkpoint '/tmp/tmp.rjpSVQ37St/out/FutilBuild.runs/synth_1/main.dcp' has been generated.
+INFO: [runtcl-4] Executing : report_utilization -file main_utilization_synth.rpt -pb main_utilization_synth.pb
+INFO: [Common 17-206] Exiting Vivado at Sat Nov 18 17:20:32 2023...
+[Sat Nov 18 17:20:43 2023] synth_1 finished
+wait_on_run: Time (s): cpu = 00:02:43 ; elapsed = 00:03:03 . Memory (MB): peak = 2398.633 ; gain = 0.000 ; free physical = 384386 ; free virtual = 470775
+# launch_runs impl_1 -to_step route_design
+[Sat Nov 18 17:20:43 2023] Launched impl_1...
+Run output will be captured here: /tmp/tmp.rjpSVQ37St/out/FutilBuild.runs/impl_1/runme.log
+# wait_on_run impl_1
+[Sat Nov 18 17:20:43 2023] Waiting for impl_1 to finish...
+
+*** Running vivado
+    with args -log main.vdi -applog -m64 -product Vivado -messageDb vivado.pb -mode batch -source main.tcl -notrace
+
+
+****** Vivado v2020.2 (64-bit)
+  **** SW Build 3064766 on Wed Nov 18 09:12:47 MST 2020
+  **** IP Build 3064653 on Wed Nov 18 14:17:31 MST 2020
+    ** Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
+
+source main.tcl -notrace
+Command: link_design -top main -part xczu3eg-sbva484-1-e -mode out_of_context
+Design is defaulting to srcset: sources_1
+Design is defaulting to constrset: constrs_1
+INFO: [Device 21-403] Loading part xczu3eg-sbva484-1-e
+Netlist sorting complete. Time (s): cpu = 00:00:00.11 ; elapsed = 00:00:00.10 . Memory (MB): peak = 2652.750 ; gain = 0.000 ; free physical = 383258 ; free virtual = 469647
+INFO: [Netlist 29-17] Analyzing 156 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-479] Netlist was created with Vivado 2020.2
+INFO: [Project 1-570] Preparing netlist for logic optimization
+Parsing XDC File [/tmp/tmp.rjpSVQ37St/device.xdc]
+Finished Parsing XDC File [/tmp/tmp.rjpSVQ37St/device.xdc]
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.01 . Memory (MB): peak = 2708.680 ; gain = 0.000 ; free physical = 383149 ; free virtual = 469537
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 8 instances were transformed.
+  DSP48E2 => DSP48E2 (DSP_ALU, DSP_A_B_DATA, DSP_C_DATA, DSP_MULTIPLIER, DSP_M_DATA, DSP_OUTPUT, DSP_PREADD, DSP_PREADD_DATA): 8 instances
+
+7 Infos, 0 Warnings, 0 Critical Warnings and 0 Errors encountered.
+link_design completed successfully
+link_design: Time (s): cpu = 00:00:13 ; elapsed = 00:00:18 . Memory (MB): peak = 2708.680 ; gain = 309.262 ; free physical = 383149 ; free virtual = 469537
+Command: opt_design
+Attempting to get a license for feature 'Implementation' and/or device 'xczu3eg'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xczu3eg'
+Running DRC as a precondition to command opt_design
+
+Starting DRC Task
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Project 1-461] DRC finished with 0 Errors
+INFO: [Project 1-462] Please refer to the DRC report (report_drc) for more information.
+
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:02 . Memory (MB): peak = 2781.617 ; gain = 72.938 ; free physical = 383138 ; free virtual = 469526
+
+Starting Cache Timing Information Task
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+Ending Cache Timing Information Task | Checksum: d0e5d3d6
+
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 2996.867 ; gain = 215.250 ; free physical = 382953 ; free virtual = 469341
+
+Starting Logic Optimization Task
+
+Phase 1 Retarget
+INFO: [Opt 31-138] Pushed 18 inverter(s) to 280 load pin(s).
+INFO: [Opt 31-49] Retargeted 0 cell(s).
+Phase 1 Retarget | Checksum: 179a777f0
+
+Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.64 . Memory (MB): peak = 3168.773 ; gain = 0.000 ; free physical = 382802 ; free virtual = 469190
+INFO: [Opt 31-389] Phase Retarget created 0 cells and removed 28 cells
+
+Phase 2 Constant propagation
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Phase 2 Constant propagation | Checksum: 179a777f0
+
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:00.76 . Memory (MB): peak = 3168.773 ; gain = 0.000 ; free physical = 382802 ; free virtual = 469190
+INFO: [Opt 31-389] Phase Constant propagation created 0 cells and removed 0 cells
+
+Phase 3 Sweep
+Phase 3 Sweep | Checksum: 19d320002
+
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:00.94 . Memory (MB): peak = 3168.773 ; gain = 0.000 ; free physical = 382802 ; free virtual = 469190
+INFO: [Opt 31-389] Phase Sweep created 0 cells and removed 0 cells
+
+Phase 4 BUFG optimization
+INFO: [Opt 31-1077] Phase BUFG optimization inserted 0 global clock buffer(s) for CLOCK_LOW_FANOUT.
+Phase 4 BUFG optimization | Checksum: 19d320002
+
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:01 . Memory (MB): peak = 3168.773 ; gain = 0.000 ; free physical = 382802 ; free virtual = 469190
+INFO: [Opt 31-662] Phase BUFG optimization created 0 cells of which 0 are BUFGs and removed 0 cells.
+
+Phase 5 Shift Register Optimization
+INFO: [Opt 31-1064] SRL Remap converted 0 SRLs to 0 registers and converted 0 registers of register chains to 0 SRLs
+Phase 5 Shift Register Optimization | Checksum: 19d320002
+
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:01 . Memory (MB): peak = 3168.773 ; gain = 0.000 ; free physical = 382802 ; free virtual = 469190
+INFO: [Opt 31-389] Phase Shift Register Optimization created 0 cells and removed 0 cells
+
+Phase 6 Post Processing Netlist
+Phase 6 Post Processing Netlist | Checksum: 19d320002
+
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:01 . Memory (MB): peak = 3168.773 ; gain = 0.000 ; free physical = 382802 ; free virtual = 469190
+INFO: [Opt 31-389] Phase Post Processing Netlist created 0 cells and removed 0 cells
+Opt_design Change Summary
+=========================
+
+
+-------------------------------------------------------------------------------------------------------------------------
+|  Phase                        |  #Cells created  |  #Cells Removed  |  #Constrained objects preventing optimizations  |
+-------------------------------------------------------------------------------------------------------------------------
+|  Retarget                     |               0  |              28  |                                              0  |
+|  Constant propagation         |               0  |               0  |                                              0  |
+|  Sweep                        |               0  |               0  |                                              0  |
+|  BUFG optimization            |               0  |               0  |                                              0  |
+|  Shift Register Optimization  |               0  |               0  |                                              0  |
+|  Post Processing Netlist      |               0  |               0  |                                              0  |
+-------------------------------------------------------------------------------------------------------------------------
+
+
+
+Starting Connectivity Check Task
+
+Time (s): cpu = 00:00:00.03 ; elapsed = 00:00:00.03 . Memory (MB): peak = 3168.773 ; gain = 0.000 ; free physical = 382802 ; free virtual = 469190
+Ending Logic Optimization Task | Checksum: 80dde851
+
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:01 . Memory (MB): peak = 3168.773 ; gain = 0.000 ; free physical = 382802 ; free virtual = 469190
+
+Starting Power Optimization Task
+INFO: [Pwropt 34-132] Skipping clock gating for clocks with a period < 2.00 ns.
+Ending Power Optimization Task | Checksum: 80dde851
+
+Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.02 . Memory (MB): peak = 3168.773 ; gain = 0.000 ; free physical = 382802 ; free virtual = 469190
+
+Starting Final Cleanup Task
+Ending Final Cleanup Task | Checksum: 80dde851
+
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3168.773 ; gain = 0.000 ; free physical = 382802 ; free virtual = 469190
+
+Starting Netlist Obfuscation Task
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3168.773 ; gain = 0.000 ; free physical = 382802 ; free virtual = 469190
+Ending Netlist Obfuscation Task | Checksum: 80dde851
+
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3168.773 ; gain = 0.000 ; free physical = 382802 ; free virtual = 469190
+INFO: [Common 17-83] Releasing license: Implementation
+25 Infos, 0 Warnings, 0 Critical Warnings and 0 Errors encountered.
+opt_design completed successfully
+opt_design: Time (s): cpu = 00:00:10 ; elapsed = 00:00:08 . Memory (MB): peak = 3168.773 ; gain = 460.094 ; free physical = 382802 ; free virtual = 469190
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [Timing 38-480] Writing timing data to binary archive.
+INFO: [Common 17-1381] The checkpoint '/tmp/tmp.rjpSVQ37St/out/FutilBuild.runs/impl_1/main_opt.dcp' has been generated.
+INFO: [runtcl-4] Executing : report_drc -file main_drc_opted.rpt -pb main_drc_opted.pb -rpx main_drc_opted.rpx
+Command: report_drc -file main_drc_opted.rpt -pb main_drc_opted.pb -rpx main_drc_opted.rpx
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/scratch/opt/Xilinx/Vivado/2020.2/data/ip'.
+WARNING: [Timing 38-242] The property HD.CLK_SRC of clock port "clk" is not set. In out-of-context mode, this prevents timing estimation for clock delay/skew
+Resolution: Set the HD.CLK_SRC property of the out-of-context port to the location of the clock buffer instance in the top-level design
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Coretcl 2-168] The results of DRC are in file /tmp/tmp.rjpSVQ37St/out/FutilBuild.runs/impl_1/main_drc_opted.rpt.
+report_drc completed successfully
+report_drc: Time (s): cpu = 00:00:34 ; elapsed = 00:00:41 . Memory (MB): peak = 4443.355 ; gain = 1234.562 ; free physical = 381934 ; free virtual = 468327
+Command: place_design
+Attempting to get a license for feature 'Implementation' and/or device 'xczu3eg'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xczu3eg'
+WARNING: [Vivado_Tcl 4-1400] -ultrathreads option currently only supported on multi-SLR devices. Continuing placement in regular mode.
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors
+INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+Running DRC as a precondition to command place_design
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors
+INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+
+Starting Placer Task
+INFO: [Place 30-611] Multithreading enabled for place_design using a maximum of 8 CPUs
+
+Phase 1 Placer Initialization
+
+Phase 1.1 Placer Initialization Netlist Sorting
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381922 ; free virtual = 468314
+Phase 1.1 Placer Initialization Netlist Sorting | Checksum: 66e392be
+
+Time (s): cpu = 00:00:00.02 ; elapsed = 00:00:00.06 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381922 ; free virtual = 468314
+Netlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381922 ; free virtual = 468314
+
+Phase 1.2 IO Placement/ Clock Placement/ Build Placer Device
+Phase 1.2 IO Placement/ Clock Placement/ Build Placer Device | Checksum: 844f9f3e
+
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:00.74 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381957 ; free virtual = 468350
+
+Phase 1.3 Build Placer Netlist Model
+Phase 1.3 Build Placer Netlist Model | Checksum: 133c55974
+
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:03 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381932 ; free virtual = 468324
+
+Phase 1.4 Constrain Clocks/Macros
+Phase 1.4 Constrain Clocks/Macros | Checksum: 133c55974
+
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:03 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381932 ; free virtual = 468324
+Phase 1 Placer Initialization | Checksum: 133c55974
+
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:03 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381932 ; free virtual = 468324
+
+Phase 2 Global Placement
+
+Phase 2.1 Floorplanning
+
+Phase 2.1.1 Partition Driven Placement
+
+Phase 2.1.1.1 PBP: Partition Driven Placement
+Phase 2.1.1.1 PBP: Partition Driven Placement | Checksum: 1506317e7
+
+Time (s): cpu = 00:00:14 ; elapsed = 00:00:06 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381904 ; free virtual = 468296
+
+Phase 2.1.1.2 PBP: Clock Region Placement
+Phase 2.1.1.2 PBP: Clock Region Placement | Checksum: 1352bdcf0
+
+Time (s): cpu = 00:00:14 ; elapsed = 00:00:06 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381904 ; free virtual = 468296
+
+Phase 2.1.1.3 PBP: Compute Congestion
+Phase 2.1.1.3 PBP: Compute Congestion | Checksum: 1352bdcf0
+
+Time (s): cpu = 00:00:14 ; elapsed = 00:00:06 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381893 ; free virtual = 468285
+
+Phase 2.1.1.4 PBP: UpdateTiming
+Phase 2.1.1.4 PBP: UpdateTiming | Checksum: 17f6d26d6
+
+Time (s): cpu = 00:00:15 ; elapsed = 00:00:06 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381898 ; free virtual = 468290
+
+Phase 2.1.1.5 PBP: Add part constraints
+Phase 2.1.1.5 PBP: Add part constraints | Checksum: 17f6d26d6
+
+Time (s): cpu = 00:00:15 ; elapsed = 00:00:06 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381898 ; free virtual = 468290
+Phase 2.1.1 Partition Driven Placement | Checksum: 17f6d26d6
+
+Time (s): cpu = 00:00:15 ; elapsed = 00:00:06 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381900 ; free virtual = 468293
+Phase 2.1 Floorplanning | Checksum: 1281f4c51
+
+Time (s): cpu = 00:00:15 ; elapsed = 00:00:06 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381900 ; free virtual = 468293
+
+Phase 2.2 Update Timing before SLR Path Opt
+Phase 2.2 Update Timing before SLR Path Opt | Checksum: 1281f4c51
+
+Time (s): cpu = 00:00:15 ; elapsed = 00:00:06 . Memory (MB): peak = 4443.355 ; gain = 0.000 ; free physical = 381900 ; free virtual = 468293
+
+Phase 2.3 Global Placement Core
+
+Phase 2.3.1 Physical Synthesis In Placer
+INFO: [Physopt 32-1035] Found 0 LUTNM shape to break, 76 LUT instances to create LUTNM shape
+INFO: [Physopt 32-1044] Break lutnm for timing: one critical 0, two critical 0, total 0, new lutff created 0
+INFO: [Physopt 32-775] End 1 Pass. Optimized 35 nets or cells. Created 0 new cell, deleted 35 existing cells and moved 0 existing cell
+INFO: [Physopt 32-1030] Pass 1. Identified 2 candidate driver sets for equivalent driver rewiring.
+INFO: [Physopt 32-661] Optimized 1 net.  Re-placed 4 instances.
+INFO: [Physopt 32-775] End 1 Pass. Optimized 1 net or cell. Created 0 new cell, deleted 0 existing cell and moved 4 existing cells
+Netlist sorting complete. Time (s): cpu = 00:00:00.02 ; elapsed = 00:00:00.02 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381892 ; free virtual = 468284
+INFO: [Physopt 32-65] No nets found for high-fanout optimization.
+INFO: [Physopt 32-232] Optimized 0 net. Created 0 new instance.
+INFO: [Physopt 32-775] End 1 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+INFO: [Physopt 32-670] No setup violation found.  DSP Register Optimization was not performed.
+INFO: [Physopt 32-670] No setup violation found.  Shift Register to Pipeline Optimization was not performed.
+INFO: [Physopt 32-670] No setup violation found.  Shift Register Optimization was not performed.
+INFO: [Physopt 32-670] No setup violation found.  BRAM Register Optimization was not performed.
+INFO: [Physopt 32-670] No setup violation found.  URAM Register Optimization was not performed.
+INFO: [Physopt 32-949] No candidate nets found for dynamic/static region interface net replication
+INFO: [Physopt 32-775] End 1 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381894 ; free virtual = 468286
+
+Summary of Physical Synthesis Optimizations
+============================================
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+|  Optimization                                     |  Added Cells  |  Removed Cells  |  Optimized Cells/Nets  |  Dont Touch  |  Iterations  |  Elapsed   |
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+|  LUT Combining                                    |            0  |             35  |                    35  |           0  |           1  |  00:00:00  |
+|  Equivalent Driver Rewiring                       |            0  |              0  |                     1  |           0  |           1  |  00:00:00  |
+|  Very High Fanout                                 |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+|  DSP Register                                     |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+|  Shift Register to Pipeline                       |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+|  Shift Register                                   |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+|  BRAM Register                                    |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+|  URAM Register                                    |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+|  Dynamic/Static Region Interface Net Replication  |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+|  Total                                            |            0  |             35  |                    36  |           0  |           4  |  00:00:00  |
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Phase 2.3.1 Physical Synthesis In Placer | Checksum: 15f1401aa
+
+Time (s): cpu = 00:00:53 ; elapsed = 00:00:17 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381896 ; free virtual = 468289
+Phase 2.3 Global Placement Core | Checksum: 11a397500
+
+Time (s): cpu = 00:00:54 ; elapsed = 00:00:18 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381888 ; free virtual = 468281
+Phase 2 Global Placement | Checksum: 11a397500
+
+Time (s): cpu = 00:00:54 ; elapsed = 00:00:18 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381896 ; free virtual = 468288
+
+Phase 3 Detail Placement
+
+Phase 3.1 Commit Multi Column Macros
+Phase 3.1 Commit Multi Column Macros | Checksum: 1cee9a308
+
+Time (s): cpu = 00:00:55 ; elapsed = 00:00:18 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381900 ; free virtual = 468292
+
+Phase 3.2 Commit Most Macros & LUTRAMs
+Phase 3.2 Commit Most Macros & LUTRAMs | Checksum: 1cbb2916a
+
+Time (s): cpu = 00:00:57 ; elapsed = 00:00:19 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381902 ; free virtual = 468294
+
+Phase 3.3 Small Shape DP
+
+Phase 3.3.1 Small Shape Clustering
+Phase 3.3.1 Small Shape Clustering | Checksum: 2282396a1
+
+Time (s): cpu = 00:00:59 ; elapsed = 00:00:20 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381894 ; free virtual = 468286
+
+Phase 3.3.2 Flow Legalize Slice Clusters
+Phase 3.3.2 Flow Legalize Slice Clusters | Checksum: 2482237fd
+
+Time (s): cpu = 00:00:59 ; elapsed = 00:00:20 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381889 ; free virtual = 468282
+
+Phase 3.3.3 Slice Area Swap
+Phase 3.3.3 Slice Area Swap | Checksum: 1ee17143c
+
+Time (s): cpu = 00:01:00 ; elapsed = 00:00:21 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381882 ; free virtual = 468274
+Phase 3.3 Small Shape DP | Checksum: 1c866f108
+
+Time (s): cpu = 00:01:04 ; elapsed = 00:00:23 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381888 ; free virtual = 468280
+
+Phase 3.4 Re-assign LUT pins
+Phase 3.4 Re-assign LUT pins | Checksum: 299e53b8d
+
+Time (s): cpu = 00:01:05 ; elapsed = 00:00:23 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381889 ; free virtual = 468282
+
+Phase 3.5 Pipeline Register Optimization
+Phase 3.5 Pipeline Register Optimization | Checksum: 1bb78afe3
+
+Time (s): cpu = 00:01:05 ; elapsed = 00:00:24 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381889 ; free virtual = 468282
+Phase 3 Detail Placement | Checksum: 1bb78afe3
+
+Time (s): cpu = 00:01:05 ; elapsed = 00:00:24 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381889 ; free virtual = 468282
+
+Phase 4 Post Placement Optimization and Clean-Up
+
+Phase 4.1 Post Commit Optimization
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+
+Phase 4.1.1 Post Placement Optimization
+Post Placement Optimization Initialization | Checksum: 1b212aa30
+
+Phase 4.1.1.1 BUFG Insertion
+
+Starting Physical Synthesis Task
+
+Phase 1 Physical Synthesis Initialization
+INFO: [Physopt 32-721] Multithreading enabled for phys_opt_design using a maximum of 8 CPUs
+INFO: [Physopt 32-619] Estimated Timing Summary | WNS=1.920 | TNS=0.000 |
+Phase 1 Physical Synthesis Initialization | Checksum: e89fea71
+
+Time (s): cpu = 00:00:00.54 ; elapsed = 00:00:00.13 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381891 ; free virtual = 468283
+INFO: [Place 46-56] BUFG insertion identified 0 candidate nets. Inserted BUFG: 0, Replicated BUFG Driver: 0, Skipped due to Placement/Routing Conflicts: 0, Skipped due to Timing Degradation: 0, Skipped due to Illegal Netlist: 0.
+Ending Physical Synthesis Task | Checksum: 1450b1d4b
+
+Time (s): cpu = 00:00:00.71 ; elapsed = 00:00:00.20 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381891 ; free virtual = 468283
+Phase 4.1.1.1 BUFG Insertion | Checksum: 1b212aa30
+
+Time (s): cpu = 00:01:12 ; elapsed = 00:00:26 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381893 ; free virtual = 468286
+INFO: [Place 30-746] Post Placement Timing Summary WNS=1.920. For the most accurate timing information please run report_timing.
+
+Time (s): cpu = 00:01:12 ; elapsed = 00:00:26 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381893 ; free virtual = 468286
+Phase 4.1 Post Commit Optimization | Checksum: 1c82968e6
+
+Time (s): cpu = 00:01:12 ; elapsed = 00:00:26 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381893 ; free virtual = 468285
+
+Phase 4.2 Post Placement Cleanup
+Phase 4.2 Post Placement Cleanup | Checksum: 1c82968e6
+
+Time (s): cpu = 00:01:13 ; elapsed = 00:00:27 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381889 ; free virtual = 468282
+
+Phase 4.3 Placer Reporting
+
+Phase 4.3.1 Print Estimated Congestion
+INFO: [Place 30-612] Post-Placement Estimated Congestion 
+ ________________________________________________________________________
+|           | Global Congestion | Long Congestion   | Short Congestion  |
+| Direction | Region Size       | Region Size       | Region Size       |
+|___________|___________________|___________________|___________________|
+|      North|                1x1|                1x1|                1x1|
+|___________|___________________|___________________|___________________|
+|      South|                1x1|                1x1|                1x1|
+|___________|___________________|___________________|___________________|
+|       East|                1x1|                1x1|                2x2|
+|___________|___________________|___________________|___________________|
+|       West|                1x1|                1x1|                2x2|
+|___________|___________________|___________________|___________________|
+
+Phase 4.3.1 Print Estimated Congestion | Checksum: 1c82968e6
+
+Time (s): cpu = 00:01:13 ; elapsed = 00:00:27 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381893 ; free virtual = 468285
+Phase 4.3 Placer Reporting | Checksum: 1c82968e6
+
+Time (s): cpu = 00:01:13 ; elapsed = 00:00:27 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381893 ; free virtual = 468285
+
+Phase 4.4 Final Placement Cleanup
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381893 ; free virtual = 468285
+
+Time (s): cpu = 00:01:13 ; elapsed = 00:00:27 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381893 ; free virtual = 468285
+Phase 4 Post Placement Optimization and Clean-Up | Checksum: 1d4c2bbd4
+
+Time (s): cpu = 00:01:13 ; elapsed = 00:00:27 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381893 ; free virtual = 468285
+Ending Placer Task | Checksum: 1414b02f3
+
+Time (s): cpu = 00:01:13 ; elapsed = 00:00:27 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381893 ; free virtual = 468285
+INFO: [Common 17-83] Releasing license: Implementation
+65 Infos, 2 Warnings, 0 Critical Warnings and 0 Errors encountered.
+place_design completed successfully
+place_design: Time (s): cpu = 00:01:20 ; elapsed = 00:00:31 . Memory (MB): peak = 4452.363 ; gain = 9.008 ; free physical = 381930 ; free virtual = 468322
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Writing placer database...
+Writing XDEF routing.
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Write XDEF Complete: Time (s): cpu = 00:00:02 ; elapsed = 00:00:00.61 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381903 ; free virtual = 468314
+INFO: [Common 17-1381] The checkpoint '/tmp/tmp.rjpSVQ37St/out/FutilBuild.runs/impl_1/main_placed.dcp' has been generated.
+INFO: [runtcl-4] Executing : report_io -file main_io_placed.rpt
+report_io: Time (s): cpu = 00:00:00.11 ; elapsed = 00:00:00.29 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381913 ; free virtual = 468310
+INFO: [runtcl-4] Executing : report_utilization -file main_utilization_placed.rpt -pb main_utilization_placed.pb
+INFO: [runtcl-4] Executing : report_control_sets -verbose -file main_control_sets_placed.rpt
+report_control_sets: Time (s): cpu = 00:00:00.09 ; elapsed = 00:00:00.25 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381923 ; free virtual = 468320
+Command: phys_opt_design
+Attempting to get a license for feature 'Implementation' and/or device 'xczu3eg'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xczu3eg'
+INFO: [Vivado_Tcl 4-383] Design worst setup slack (WNS) is greater than or equal to 0.000 ns. Skipping all physical synthesis optimizations.
+INFO: [Vivado_Tcl 4-232] No setup violation found. The netlist was not modified.
+INFO: [Common 17-83] Releasing license: Implementation
+74 Infos, 2 Warnings, 0 Critical Warnings and 0 Errors encountered.
+phys_opt_design completed successfully
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Writing placer database...
+Writing XDEF routing.
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Write XDEF Complete: Time (s): cpu = 00:00:02 ; elapsed = 00:00:00.58 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381861 ; free virtual = 468277
+INFO: [Common 17-1381] The checkpoint '/tmp/tmp.rjpSVQ37St/out/FutilBuild.runs/impl_1/main_physopt.dcp' has been generated.
+Command: route_design
+Attempting to get a license for feature 'Implementation' and/or device 'xczu3eg'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xczu3eg'
+Running DRC as a precondition to command route_design
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors
+INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+
+
+Starting Routing Task
+INFO: [Route 35-254] Multithreading enabled for route_design using a maximum of 8 CPUs
+Checksum: PlaceDB: d9cc2d05 ConstDB: 0 ShapeSum: 677ed5ee RouteDB: 0
+
+Phase 1 Build RT Design
+Nodegraph reading from file.  Time (s): cpu = 00:00:00.46 ; elapsed = 00:00:00.48 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381802 ; free virtual = 468205
+WARNING: [Route 35-197] Clock port "clk" does not have an associated HD.CLK_SRC. Without this constraint, timing analysis may not be accurate and upstream checks cannot be done to ensure correct clock placement.
+WARNING: [Route 35-198] Port "reset" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "reset". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[980]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[980]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[981]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[981]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[596]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[596]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[724]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[724]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[595]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[595]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[146]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[146]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[466]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[466]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[400]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[400]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[401]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[401]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[145]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[145]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[336]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[336]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[722]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[722]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[784]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[784]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[786]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[786]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[787]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[787]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[593]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[593]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[785]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[785]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[998]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[998]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[999]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[999]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[615]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[615]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[551]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[551]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[552]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[552]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[935]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[935]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[487]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[487]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[359]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[359]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[488]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[488]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[297]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[297]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[939]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[939]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[683]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[683]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[682]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[682]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[362]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[362]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[363]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[363]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[491]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[491]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[495]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[495]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[112]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[112]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[559]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[559]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[560]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[560]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[689]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[689]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[368]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[368]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[945]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[945]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[946]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[946]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[304]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[304]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[242]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[242]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[497]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[497]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[50]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[50]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[561]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[561]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[306]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[306]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[1011]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[1011]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[590]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[590]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[974]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[974]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[911]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[911]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[207]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[207]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[469]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[469]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[975]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[975]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[468]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[468]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[591]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[591]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[211]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[211]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[723]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[723]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[851]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[851]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[147]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[147]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[275]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[275]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[209]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[209]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[210]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[210]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[80]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[80]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[208]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[208]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[16]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[16]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[81]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[81]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[592]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[592]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[742]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[742]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[934]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[934]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[361]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[361]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[169]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[169]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[296]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[296]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[168]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[168]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[553]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[553]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[554]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[554]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[235]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[235]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[427]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[427]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[106]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[106]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[234]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[234]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[170]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[170]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[426]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[426]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[298]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[298]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[558]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[558]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[299]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[299]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[555]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[555]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[238]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[238]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[431]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[431]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[366]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[366]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[111]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[111]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[239]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[239]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[493]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[493]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[686]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[686]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[367]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[367]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[687]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[687]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[237]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[237]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[433]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[433]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[113]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[113]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+WARNING: [Route 35-198] Port "in[241]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "in[241]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+INFO: [Common 17-14] Message 'Route 35-198' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
+Phase 1 Build RT Design | Checksum: 10080143e
+
+Time (s): cpu = 00:00:07 ; elapsed = 00:00:03 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381801 ; free virtual = 468204
+Post Restoration Checksum: NetGraph: b64e5f42 NumContArr: 4a31b4fc Constraints: 0 Timing: 0
+
+Phase 2 Router Initialization
+
+Phase 2.1 Fix Topology Constraints
+Phase 2.1 Fix Topology Constraints | Checksum: 10080143e
+
+Time (s): cpu = 00:00:07 ; elapsed = 00:00:03 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381758 ; free virtual = 468161
+
+Phase 2.2 Pre Route Cleanup
+Phase 2.2 Pre Route Cleanup | Checksum: 10080143e
+
+Time (s): cpu = 00:00:07 ; elapsed = 00:00:03 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381758 ; free virtual = 468161
+
+Phase 2.3 Global Clock Net Routing
+Phase 2.3 Global Clock Net Routing | Checksum: 10080143e
+
+Time (s): cpu = 00:00:08 ; elapsed = 00:00:04 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381756 ; free virtual = 468159
+
+Phase 2.4 Update Timing
+Phase 2.4 Update Timing | Checksum: 17317c5bf
+
+Time (s): cpu = 00:00:11 ; elapsed = 00:00:05 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381753 ; free virtual = 468156
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=2.263  | TNS=0.000  | WHS=0.004  | THS=0.000  |
+
+Phase 2 Router Initialization | Checksum: 1455aa237
+
+Time (s): cpu = 00:00:14 ; elapsed = 00:00:06 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381747 ; free virtual = 468150
+
+Router Utilization Summary
+  Global Vertical Routing Utilization    = 0 %
+  Global Horizontal Routing Utilization  = 0 %
+  Routable Net Status*
+  *Does not include unroutable nets such as driverless and loadless.
+  Run report_route_status for detailed report.
+  Number of Failed Nets               = 13740
+    (Failed Nets is the sum of unrouted and partially routed nets)
+  Number of Unrouted Nets             = 10135
+  Number of Partially Routed Nets     = 3605
+  Number of Node Overlaps             = 0
+
+
+Phase 3 Initial Routing
+
+Phase 3.1 Global Routing
+Phase 3.1 Global Routing | Checksum: 1455aa237
+
+Time (s): cpu = 00:00:15 ; elapsed = 00:00:06 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381747 ; free virtual = 468149
+Phase 3 Initial Routing | Checksum: 1ed3634bc
+
+Time (s): cpu = 00:00:20 ; elapsed = 00:00:08 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381723 ; free virtual = 468126
+
+Phase 4 Rip-up And Reroute
+
+Phase 4.1 Global Iteration 0
+ Number of Nodes with overlaps = 2614
+ Number of Nodes with overlaps = 259
+ Number of Nodes with overlaps = 10
+ Number of Nodes with overlaps = 1
+ Number of Nodes with overlaps = 0
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=1.830  | TNS=0.000  | WHS=0.029  | THS=0.000  |
+
+Phase 4.1 Global Iteration 0 | Checksum: 1f783f9f7
+
+Time (s): cpu = 00:00:44 ; elapsed = 00:00:18 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381731 ; free virtual = 468134
+
+Phase 4.2 Additional Iteration for Hold
+Phase 4.2 Additional Iteration for Hold | Checksum: 2172e090c
+
+Time (s): cpu = 00:00:45 ; elapsed = 00:00:18 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381730 ; free virtual = 468133
+Phase 4 Rip-up And Reroute | Checksum: 2172e090c
+
+Time (s): cpu = 00:00:45 ; elapsed = 00:00:18 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381730 ; free virtual = 468133
+
+Phase 5 Delay and Skew Optimization
+
+Phase 5.1 Delay CleanUp
+Phase 5.1 Delay CleanUp | Checksum: 2172e090c
+
+Time (s): cpu = 00:00:45 ; elapsed = 00:00:18 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381729 ; free virtual = 468132
+
+Phase 5.2 Clock Skew Optimization
+Phase 5.2 Clock Skew Optimization | Checksum: 2172e090c
+
+Time (s): cpu = 00:00:45 ; elapsed = 00:00:18 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381729 ; free virtual = 468132
+Phase 5 Delay and Skew Optimization | Checksum: 2172e090c
+
+Time (s): cpu = 00:00:45 ; elapsed = 00:00:18 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381729 ; free virtual = 468132
+
+Phase 6 Post Hold Fix
+
+Phase 6.1 Hold Fix Iter
+
+Phase 6.1.1 Update Timing
+Phase 6.1.1 Update Timing | Checksum: 2585cb546
+
+Time (s): cpu = 00:00:48 ; elapsed = 00:00:19 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381731 ; free virtual = 468133
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=1.830  | TNS=0.000  | WHS=0.029  | THS=0.000  |
+
+Phase 6.1 Hold Fix Iter | Checksum: 2585cb546
+
+Time (s): cpu = 00:00:48 ; elapsed = 00:00:19 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381731 ; free virtual = 468133
+Phase 6 Post Hold Fix | Checksum: 2585cb546
+
+Time (s): cpu = 00:00:48 ; elapsed = 00:00:19 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381731 ; free virtual = 468133
+
+Phase 7 Route finalize
+
+Router Utilization Summary
+  Global Vertical Routing Utilization    = 2.0706 %
+  Global Horizontal Routing Utilization  = 2.14375 %
+  Routable Net Status*
+  *Does not include unroutable nets such as driverless and loadless.
+  Run report_route_status for detailed report.
+  Number of Failed Nets               = 0
+    (Failed Nets is the sum of unrouted and partially routed nets)
+  Number of Unrouted Nets             = 0
+  Number of Partially Routed Nets     = 0
+  Number of Node Overlaps             = 0
+
+Phase 7 Route finalize | Checksum: 2a8255d13
+
+Time (s): cpu = 00:00:48 ; elapsed = 00:00:19 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381730 ; free virtual = 468133
+
+Phase 8 Verifying routed nets
+
+ Verification completed successfully
+Phase 8 Verifying routed nets | Checksum: 2a8255d13
+
+Time (s): cpu = 00:00:48 ; elapsed = 00:00:19 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381729 ; free virtual = 468131
+
+Phase 9 Depositing Routes
+Phase 9 Depositing Routes | Checksum: 2a8255d13
+
+Time (s): cpu = 00:00:49 ; elapsed = 00:00:20 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381727 ; free virtual = 468130
+
+Phase 10 Post Router Timing
+INFO: [Route 35-57] Estimated Timing Summary | WNS=1.830  | TNS=0.000  | WHS=0.029  | THS=0.000  |
+
+INFO: [Route 35-327] The final timing numbers are based on the router estimated timing analysis. For a complete and accurate timing signoff, please run report_timing_summary.
+Phase 10 Post Router Timing | Checksum: 2a8255d13
+
+Time (s): cpu = 00:00:50 ; elapsed = 00:00:20 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381730 ; free virtual = 468133
+INFO: [Route 35-16] Router Completed Successfully
+
+Time (s): cpu = 00:00:50 ; elapsed = 00:00:20 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381786 ; free virtual = 468189
+
+Routing Is Done.
+INFO: [Common 17-83] Releasing license: Implementation
+89 Infos, 103 Warnings, 0 Critical Warnings and 0 Errors encountered.
+route_design completed successfully
+route_design: Time (s): cpu = 00:00:57 ; elapsed = 00:00:24 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381786 ; free virtual = 468189
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Writing placer database...
+Writing XDEF routing.
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Write XDEF Complete: Time (s): cpu = 00:00:02 ; elapsed = 00:00:00.71 . Memory (MB): peak = 4452.363 ; gain = 0.000 ; free physical = 381743 ; free virtual = 468169
+INFO: [Common 17-1381] The checkpoint '/tmp/tmp.rjpSVQ37St/out/FutilBuild.runs/impl_1/main_routed.dcp' has been generated.
+INFO: [runtcl-4] Executing : report_drc -file main_drc_routed.rpt -pb main_drc_routed.pb -rpx main_drc_routed.rpx
+Command: report_drc -file main_drc_routed.rpt -pb main_drc_routed.pb -rpx main_drc_routed.rpx
+INFO: [IP_Flow 19-1839] IP Catalog is up to date.
+WARNING: [Timing 38-242] The property HD.CLK_SRC of clock port "clk" is not set. In out-of-context mode, this prevents timing estimation for clock delay/skew
+Resolution: Set the HD.CLK_SRC property of the out-of-context port to the location of the clock buffer instance in the top-level design
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Coretcl 2-168] The results of DRC are in file /tmp/tmp.rjpSVQ37St/out/FutilBuild.runs/impl_1/main_drc_routed.rpt.
+report_drc completed successfully
+report_drc: Time (s): cpu = 00:00:12 ; elapsed = 00:00:06 . Memory (MB): peak = 4507.414 ; gain = 55.051 ; free physical = 381748 ; free virtual = 468158
+INFO: [runtcl-4] Executing : report_methodology -file main_methodology_drc_routed.rpt -pb main_methodology_drc_routed.pb -rpx main_methodology_drc_routed.rpx
+Command: report_methodology -file main_methodology_drc_routed.rpt -pb main_methodology_drc_routed.pb -rpx main_methodology_drc_routed.rpx
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [DRC 23-133] Running Methodology with 8 threads
+INFO: [Coretcl 2-1520] The results of Report Methodology are in file /tmp/tmp.rjpSVQ37St/out/FutilBuild.runs/impl_1/main_methodology_drc_routed.rpt.
+report_methodology completed successfully
+INFO: [runtcl-4] Executing : report_power -file main_power_routed.rpt -pb main_power_summary_routed.pb -rpx main_power_routed.rpx
+Command: report_power -file main_power_routed.rpt -pb main_power_summary_routed.pb -rpx main_power_routed.rpx
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+Running Vector-less Activity Propagation...
+
+Finished Running Vector-less Activity Propagation
+101 Infos, 104 Warnings, 0 Critical Warnings and 0 Errors encountered.
+report_power completed successfully
+INFO: [runtcl-4] Executing : report_route_status -file main_route_status.rpt -pb main_route_status.pb
+INFO: [runtcl-4] Executing : report_timing_summary -max_paths 10 -file main_timing_summary_routed.rpt -pb main_timing_summary_routed.pb -rpx main_timing_summary_routed.rpx -warn_on_violation 
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -1, Temperature grade: E, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+INFO: [runtcl-4] Executing : report_incremental_reuse -file main_incremental_reuse_routed.rpt
+INFO: [Vivado_Tcl 4-1062] Incremental flow is disabled. No incremental reuse Info to report.
+INFO: [runtcl-4] Executing : report_clock_utilization -file main_clock_utilization_routed.rpt
+INFO: [runtcl-4] Executing : report_bus_skew -warn_on_violation -file main_bus_skew_routed.rpt -pb main_bus_skew_routed.pb -rpx main_bus_skew_routed.rpx
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -1, Temperature grade: E, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+INFO: [Common 17-206] Exiting Vivado at Sat Nov 18 17:23:30 2023...
+[Sat Nov 18 17:23:45 2023] impl_1 finished
+wait_on_run: Time (s): cpu = 00:00:01 ; elapsed = 00:03:02 . Memory (MB): peak = 2398.633 ; gain = 0.000 ; free physical = 384359 ; free virtual = 470774
+INFO: [Common 17-206] Exiting Vivado at Sat Nov 18 17:23:45 2023...
