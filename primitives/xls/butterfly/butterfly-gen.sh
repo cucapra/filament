@@ -48,7 +48,7 @@ cd "$XLS_PATH"
 ./bazel-bin/xls/dslx/ir_convert/ir_converter_main $XLS_REPL > $XLS_IR --emit_fail_as_assert=false
 ./bazel-bin/xls/tools/opt_main --top=__xls__"$FUNC_NAME" $XLS_IR > $XLS_OPT_IR
 
-./bazel-bin/xls/tools/codegen_main $XLS_OPT_IR --top __xls__"$FUNC_NAME" --generator=pipeline --delay_model="unit" --output_verilog_path=/$OUT \
+./bazel-bin/xls/tools/codegen_main $XLS_OPT_IR --top __xls__"$FUNC_NAME" --generator=pipeline --delay_model="unit" --output_verilog_path=$OUT \
     --module_name="$NAME" --pipeline_stages="$STAGES" --use_system_verilog
 
 # verilator --lint-only "$OUT"
