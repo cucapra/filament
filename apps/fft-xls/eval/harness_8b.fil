@@ -1,0 +1,20 @@
+import "primitives/reshape.fil";
+import "apps/fft-xls/src/fft.fil";
+import "apps/fft-xls/eval/utils.fil";
+
+comp main<'G:L>(
+    go: interface['G],
+    in: ['G, 'G+1] NPoints*2*32
+) -> (
+    out: ['G+L, 'G+L+1] NPoints*2*32
+) with {
+    let NStages = 4;
+    let NPoints = pow2(NStages);
+    some L where L > 0;
+} where L > 0 {
+    split := new SplitWire[32, NPoints*2]<'G>(in);
+    FP := new BundledFFT[4,8]<'G>(split.out{0..NPoints*2});
+    L := FP::L;
+    out = FP.out;
+}
+

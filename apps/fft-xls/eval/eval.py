@@ -8,4 +8,4 @@ dir = args[0]
 
 for subdir in os.listdir(dir):
     print('subdir: ' + subdir)
-    subprocess.Popen('./run-eval.sh ' + dir + '/' + subdir + '/harness.fil ' + dir + '/' + subdir, shell=True)
+    subprocess.run('./run-eval.sh ' + dir + '/' + subdir + '/harness.fil ' + dir + '/' + subdir, shell=True)

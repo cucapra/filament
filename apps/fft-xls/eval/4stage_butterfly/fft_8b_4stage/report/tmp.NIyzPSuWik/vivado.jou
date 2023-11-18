@@ -1,0 +1,12 @@
+#-----------------------------------------------------------
+# Vivado v2020.2 (64-bit)
+# SW Build 3064766 on Wed Nov 18 09:12:47 MST 2020
+# IP Build 3064653 on Wed Nov 18 14:17:31 MST 2020
+# Start of session at: Sat Nov 18 14:59:25 2023
+# Process ID: 727516
+# Current directory: /tmp/tmp.NIyzPSuWik
+# Command line: vivado -mode batch -source synth.tcl
+# Log file: /tmp/tmp.NIyzPSuWik/vivado.log
+# Journal file: /tmp/tmp.NIyzPSuWik/vivado.jou
+#-----------------------------------------------------------
+source synth.tcl

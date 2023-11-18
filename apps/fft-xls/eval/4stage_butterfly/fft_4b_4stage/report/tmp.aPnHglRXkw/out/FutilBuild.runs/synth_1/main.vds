@@ -1,0 +1,914 @@
+#-----------------------------------------------------------
+# Vivado v2020.2 (64-bit)
+# SW Build 3064766 on Wed Nov 18 09:12:47 MST 2020
+# IP Build 3064653 on Wed Nov 18 14:17:31 MST 2020
+# Start of session at: Sat Nov 18 15:39:06 2023
+# Process ID: 871019
+# Current directory: /tmp/tmp.aPnHglRXkw/out/FutilBuild.runs/synth_1
+# Command line: vivado -log main.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source main.tcl
+# Log file: /tmp/tmp.aPnHglRXkw/out/FutilBuild.runs/synth_1/main.vds
+# Journal file: /tmp/tmp.aPnHglRXkw/out/FutilBuild.runs/synth_1/vivado.jou
+#-----------------------------------------------------------
+source main.tcl -notrace
+Command: synth_design -top main -part xczu3eg-sbva484-1-e -mode out_of_context -flatten_hierarchy rebuilt
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xczu3eg'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xczu3eg'
+INFO: [Device 21-403] Loading part xczu3eg-sbva484-1-e
+INFO: [Synth 8-7079] Multithreading enabled for synth_design using a maximum of 4 processes.
+INFO: [Synth 8-7078] Launching helper process for spawning children vivado processes
+INFO: [Synth 8-7075] Helper process launched with PID 871118
+WARNING: [Synth 8-2507] parameter declaration becomes local in SignExtend with formal parameter declaration list [/tmp/tmp.aPnHglRXkw/main.sv:1551]
+WARNING: [Synth 8-2507] parameter declaration becomes local in ZeroExtend with formal parameter declaration list [/tmp/tmp.aPnHglRXkw/main.sv:1562]
+---------------------------------------------------------------------------------
+Starting RTL Elaboration : Time (s): cpu = 00:00:03 ; elapsed = 00:00:04 . Memory (MB): peak = 2681.527 ; gain = 30.871 ; free physical = 383136 ; free virtual = 468840
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6157] synthesizing module 'main' [/tmp/tmp.aPnHglRXkw/main.sv:17631]
+INFO: [Synth 8-6157] synthesizing module 'counter_chain_2_28' [/tmp/tmp.aPnHglRXkw/main.sv:18116]
+INFO: [Synth 8-6157] synthesizing module 'counter_28' [/tmp/tmp.aPnHglRXkw/main.sv:18025]
+INFO: [Synth 8-6157] synthesizing module 'std_add' [/tmp/tmp.aPnHglRXkw/main.sv:1819]
+	Parameter WIDTH bound to: 5 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'std_add' (1#1) [/tmp/tmp.aPnHglRXkw/main.sv:1819]
+INFO: [Synth 8-6157] synthesizing module 'std_reg' [/tmp/tmp.aPnHglRXkw/main.sv:1829]
+	Parameter WIDTH bound to: 5 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'std_reg' (2#1) [/tmp/tmp.aPnHglRXkw/main.sv:1829]
+INFO: [Synth 8-6157] synthesizing module 'std_reg__parameterized0' [/tmp/tmp.aPnHglRXkw/main.sv:1829]
+	Parameter WIDTH bound to: 1 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'std_reg__parameterized0' (2#1) [/tmp/tmp.aPnHglRXkw/main.sv:1829]
+INFO: [Synth 8-6155] done synthesizing module 'counter_28' (3#1) [/tmp/tmp.aPnHglRXkw/main.sv:18025]
+INFO: [Synth 8-6155] done synthesizing module 'counter_chain_2_28' (4#1) [/tmp/tmp.aPnHglRXkw/main.sv:18116]
+INFO: [Synth 8-6157] synthesizing module 'comp32' [/tmp/tmp.aPnHglRXkw/main.sv:8618]
+INFO: [Synth 8-6157] synthesizing module 'Slice' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 1024 - type: integer 
+	Parameter MSB bound to: 1023 - type: integer 
+	Parameter LSB bound to: 992 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized0' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 1024 - type: integer 
+	Parameter MSB bound to: 991 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 992 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized0' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp31' [/tmp/tmp.aPnHglRXkw/main.sv:8452]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized1' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 992 - type: integer 
+	Parameter MSB bound to: 991 - type: integer 
+	Parameter LSB bound to: 960 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized1' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized2' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 992 - type: integer 
+	Parameter MSB bound to: 959 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 960 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized2' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp30' [/tmp/tmp.aPnHglRXkw/main.sv:7214]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized3' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 960 - type: integer 
+	Parameter MSB bound to: 959 - type: integer 
+	Parameter LSB bound to: 928 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized3' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized4' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 960 - type: integer 
+	Parameter MSB bound to: 927 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 928 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized4' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp29' [/tmp/tmp.aPnHglRXkw/main.sv:7056]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized5' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 928 - type: integer 
+	Parameter MSB bound to: 927 - type: integer 
+	Parameter LSB bound to: 896 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized5' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized6' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 928 - type: integer 
+	Parameter MSB bound to: 895 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 896 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized6' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp28' [/tmp/tmp.aPnHglRXkw/main.sv:6902]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized7' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 896 - type: integer 
+	Parameter MSB bound to: 895 - type: integer 
+	Parameter LSB bound to: 864 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized7' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized8' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 896 - type: integer 
+	Parameter MSB bound to: 863 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 864 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized8' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp27' [/tmp/tmp.aPnHglRXkw/main.sv:6752]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized9' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 864 - type: integer 
+	Parameter MSB bound to: 863 - type: integer 
+	Parameter LSB bound to: 832 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized9' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized10' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 864 - type: integer 
+	Parameter MSB bound to: 831 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 832 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized10' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp26' [/tmp/tmp.aPnHglRXkw/main.sv:6606]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized11' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 832 - type: integer 
+	Parameter MSB bound to: 831 - type: integer 
+	Parameter LSB bound to: 800 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized11' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized12' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 832 - type: integer 
+	Parameter MSB bound to: 799 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 800 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized12' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp25' [/tmp/tmp.aPnHglRXkw/main.sv:6464]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized13' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 800 - type: integer 
+	Parameter MSB bound to: 799 - type: integer 
+	Parameter LSB bound to: 768 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized13' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized14' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 800 - type: integer 
+	Parameter MSB bound to: 767 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 768 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized14' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp24' [/tmp/tmp.aPnHglRXkw/main.sv:6326]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized15' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 768 - type: integer 
+	Parameter MSB bound to: 767 - type: integer 
+	Parameter LSB bound to: 736 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized15' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized16' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 768 - type: integer 
+	Parameter MSB bound to: 735 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 736 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized16' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp23' [/tmp/tmp.aPnHglRXkw/main.sv:6192]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized17' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 736 - type: integer 
+	Parameter MSB bound to: 735 - type: integer 
+	Parameter LSB bound to: 704 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized17' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized18' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 736 - type: integer 
+	Parameter MSB bound to: 703 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 704 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized18' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp22' [/tmp/tmp.aPnHglRXkw/main.sv:6062]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized19' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 704 - type: integer 
+	Parameter MSB bound to: 703 - type: integer 
+	Parameter LSB bound to: 672 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized19' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized20' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 704 - type: integer 
+	Parameter MSB bound to: 671 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 672 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized20' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp21' [/tmp/tmp.aPnHglRXkw/main.sv:5936]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized21' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 672 - type: integer 
+	Parameter MSB bound to: 671 - type: integer 
+	Parameter LSB bound to: 640 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized21' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized22' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 672 - type: integer 
+	Parameter MSB bound to: 639 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 640 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized22' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp20' [/tmp/tmp.aPnHglRXkw/main.sv:5814]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized23' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 640 - type: integer 
+	Parameter MSB bound to: 639 - type: integer 
+	Parameter LSB bound to: 608 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized23' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized24' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 640 - type: integer 
+	Parameter MSB bound to: 607 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 608 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized24' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp19' [/tmp/tmp.aPnHglRXkw/main.sv:5696]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized25' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 608 - type: integer 
+	Parameter MSB bound to: 607 - type: integer 
+	Parameter LSB bound to: 576 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized25' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized26' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 608 - type: integer 
+	Parameter MSB bound to: 575 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 576 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized26' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp18' [/tmp/tmp.aPnHglRXkw/main.sv:5582]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized27' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 576 - type: integer 
+	Parameter MSB bound to: 575 - type: integer 
+	Parameter LSB bound to: 544 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized27' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized28' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 576 - type: integer 
+	Parameter MSB bound to: 543 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 544 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized28' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp17' [/tmp/tmp.aPnHglRXkw/main.sv:5472]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized29' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 544 - type: integer 
+	Parameter MSB bound to: 543 - type: integer 
+	Parameter LSB bound to: 512 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized29' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized30' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 544 - type: integer 
+	Parameter MSB bound to: 511 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 512 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized30' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp16' [/tmp/tmp.aPnHglRXkw/main.sv:5366]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized31' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 512 - type: integer 
+	Parameter MSB bound to: 511 - type: integer 
+	Parameter LSB bound to: 480 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized31' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized32' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 512 - type: integer 
+	Parameter MSB bound to: 479 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 480 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized32' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp15' [/tmp/tmp.aPnHglRXkw/main.sv:5264]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized33' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 480 - type: integer 
+	Parameter MSB bound to: 479 - type: integer 
+	Parameter LSB bound to: 448 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized33' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized34' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 480 - type: integer 
+	Parameter MSB bound to: 447 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 448 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized34' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp14' [/tmp/tmp.aPnHglRXkw/main.sv:5149]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized35' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 448 - type: integer 
+	Parameter MSB bound to: 447 - type: integer 
+	Parameter LSB bound to: 416 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized35' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized36' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 448 - type: integer 
+	Parameter MSB bound to: 415 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 416 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized36' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp13' [/tmp/tmp.aPnHglRXkw/main.sv:5055]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized37' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 416 - type: integer 
+	Parameter MSB bound to: 415 - type: integer 
+	Parameter LSB bound to: 384 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized37' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized38' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 416 - type: integer 
+	Parameter MSB bound to: 383 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 384 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized38' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp12' [/tmp/tmp.aPnHglRXkw/main.sv:3557]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized39' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 384 - type: integer 
+	Parameter MSB bound to: 383 - type: integer 
+	Parameter LSB bound to: 352 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized39' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized40' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 384 - type: integer 
+	Parameter MSB bound to: 351 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 352 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized40' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp11' [/tmp/tmp.aPnHglRXkw/main.sv:2455]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized41' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 352 - type: integer 
+	Parameter MSB bound to: 351 - type: integer 
+	Parameter LSB bound to: 320 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized41' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized42' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 352 - type: integer 
+	Parameter MSB bound to: 319 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 320 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized42' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp10' [/tmp/tmp.aPnHglRXkw/main.sv:2373]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized43' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 320 - type: integer 
+	Parameter MSB bound to: 319 - type: integer 
+	Parameter LSB bound to: 288 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized43' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized44' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 320 - type: integer 
+	Parameter MSB bound to: 287 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 288 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized44' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp9' [/tmp/tmp.aPnHglRXkw/main.sv:2295]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized45' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 288 - type: integer 
+	Parameter MSB bound to: 287 - type: integer 
+	Parameter LSB bound to: 256 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized45' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized46' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 288 - type: integer 
+	Parameter MSB bound to: 255 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 256 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized46' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp8' [/tmp/tmp.aPnHglRXkw/main.sv:2221]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized47' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 256 - type: integer 
+	Parameter MSB bound to: 255 - type: integer 
+	Parameter LSB bound to: 224 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized47' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized48' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 256 - type: integer 
+	Parameter MSB bound to: 223 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 224 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized48' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp7' [/tmp/tmp.aPnHglRXkw/main.sv:2151]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized49' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 224 - type: integer 
+	Parameter MSB bound to: 223 - type: integer 
+	Parameter LSB bound to: 192 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized49' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized50' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 224 - type: integer 
+	Parameter MSB bound to: 191 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 192 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized50' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp6' [/tmp/tmp.aPnHglRXkw/main.sv:2085]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized51' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 192 - type: integer 
+	Parameter MSB bound to: 191 - type: integer 
+	Parameter LSB bound to: 160 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized51' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized52' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 192 - type: integer 
+	Parameter MSB bound to: 159 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 160 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized52' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp5' [/tmp/tmp.aPnHglRXkw/main.sv:2023]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized53' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 160 - type: integer 
+	Parameter MSB bound to: 159 - type: integer 
+	Parameter LSB bound to: 128 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized53' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized54' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 160 - type: integer 
+	Parameter MSB bound to: 127 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 128 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized54' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp4' [/tmp/tmp.aPnHglRXkw/main.sv:1965]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized55' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 128 - type: integer 
+	Parameter MSB bound to: 127 - type: integer 
+	Parameter LSB bound to: 96 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized55' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized56' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 128 - type: integer 
+	Parameter MSB bound to: 95 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 96 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized56' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp3' [/tmp/tmp.aPnHglRXkw/main.sv:1911]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized57' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 96 - type: integer 
+	Parameter MSB bound to: 95 - type: integer 
+	Parameter LSB bound to: 64 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized57' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized58' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 96 - type: integer 
+	Parameter MSB bound to: 63 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 64 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized58' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp2' [/tmp/tmp.aPnHglRXkw/main.sv:1861]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized59' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 64 - type: integer 
+	Parameter MSB bound to: 63 - type: integer 
+	Parameter LSB bound to: 32 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized59' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'Slice__parameterized60' [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+	Parameter IN_WIDTH bound to: 64 - type: integer 
+	Parameter MSB bound to: 31 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'Slice__parameterized60' (5#1) [/tmp/tmp.aPnHglRXkw/main.sv:1599]
+INFO: [Synth 8-6157] synthesizing module 'comp1' [/tmp/tmp.aPnHglRXkw/main.sv:1850]
+INFO: [Common 17-14] Message 'Synth 8-6157' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
+INFO: [Synth 8-6155] done synthesizing module 'comp1' (6#1) [/tmp/tmp.aPnHglRXkw/main.sv:1850]
+INFO: [Synth 8-6155] done synthesizing module 'comp2' (7#1) [/tmp/tmp.aPnHglRXkw/main.sv:1861]
+INFO: [Synth 8-6155] done synthesizing module 'comp3' (8#1) [/tmp/tmp.aPnHglRXkw/main.sv:1911]
+INFO: [Synth 8-6155] done synthesizing module 'comp4' (9#1) [/tmp/tmp.aPnHglRXkw/main.sv:1965]
+INFO: [Synth 8-6155] done synthesizing module 'comp5' (10#1) [/tmp/tmp.aPnHglRXkw/main.sv:2023]
+INFO: [Synth 8-6155] done synthesizing module 'comp6' (11#1) [/tmp/tmp.aPnHglRXkw/main.sv:2085]
+INFO: [Synth 8-6155] done synthesizing module 'comp7' (12#1) [/tmp/tmp.aPnHglRXkw/main.sv:2151]
+INFO: [Synth 8-6155] done synthesizing module 'comp8' (13#1) [/tmp/tmp.aPnHglRXkw/main.sv:2221]
+INFO: [Synth 8-6155] done synthesizing module 'comp9' (14#1) [/tmp/tmp.aPnHglRXkw/main.sv:2295]
+INFO: [Synth 8-6155] done synthesizing module 'comp10' (15#1) [/tmp/tmp.aPnHglRXkw/main.sv:2373]
+INFO: [Synth 8-6155] done synthesizing module 'comp11' (16#1) [/tmp/tmp.aPnHglRXkw/main.sv:2455]
+INFO: [Synth 8-6155] done synthesizing module 'comp12' (17#1) [/tmp/tmp.aPnHglRXkw/main.sv:3557]
+INFO: [Synth 8-6155] done synthesizing module 'comp13' (18#1) [/tmp/tmp.aPnHglRXkw/main.sv:5055]
+INFO: [Synth 8-6155] done synthesizing module 'comp14' (19#1) [/tmp/tmp.aPnHglRXkw/main.sv:5149]
+INFO: [Synth 8-6155] done synthesizing module 'comp15' (20#1) [/tmp/tmp.aPnHglRXkw/main.sv:5264]
+INFO: [Synth 8-6155] done synthesizing module 'comp16' (21#1) [/tmp/tmp.aPnHglRXkw/main.sv:5366]
+INFO: [Synth 8-6155] done synthesizing module 'comp17' (22#1) [/tmp/tmp.aPnHglRXkw/main.sv:5472]
+INFO: [Synth 8-6155] done synthesizing module 'comp18' (23#1) [/tmp/tmp.aPnHglRXkw/main.sv:5582]
+INFO: [Synth 8-6155] done synthesizing module 'comp19' (24#1) [/tmp/tmp.aPnHglRXkw/main.sv:5696]
+INFO: [Synth 8-6155] done synthesizing module 'comp20' (25#1) [/tmp/tmp.aPnHglRXkw/main.sv:5814]
+INFO: [Synth 8-6155] done synthesizing module 'comp21' (26#1) [/tmp/tmp.aPnHglRXkw/main.sv:5936]
+INFO: [Synth 8-6155] done synthesizing module 'comp22' (27#1) [/tmp/tmp.aPnHglRXkw/main.sv:6062]
+INFO: [Synth 8-6155] done synthesizing module 'comp23' (28#1) [/tmp/tmp.aPnHglRXkw/main.sv:6192]
+INFO: [Synth 8-6155] done synthesizing module 'comp24' (29#1) [/tmp/tmp.aPnHglRXkw/main.sv:6326]
+INFO: [Synth 8-6155] done synthesizing module 'comp25' (30#1) [/tmp/tmp.aPnHglRXkw/main.sv:6464]
+INFO: [Synth 8-6155] done synthesizing module 'comp26' (31#1) [/tmp/tmp.aPnHglRXkw/main.sv:6606]
+INFO: [Synth 8-6155] done synthesizing module 'comp27' (32#1) [/tmp/tmp.aPnHglRXkw/main.sv:6752]
+INFO: [Synth 8-6155] done synthesizing module 'comp28' (33#1) [/tmp/tmp.aPnHglRXkw/main.sv:6902]
+INFO: [Synth 8-6155] done synthesizing module 'comp29' (34#1) [/tmp/tmp.aPnHglRXkw/main.sv:7056]
+INFO: [Synth 8-6155] done synthesizing module 'comp30' (35#1) [/tmp/tmp.aPnHglRXkw/main.sv:7214]
+INFO: [Synth 8-6155] done synthesizing module 'comp31' (36#1) [/tmp/tmp.aPnHglRXkw/main.sv:8452]
+INFO: [Synth 8-6155] done synthesizing module 'comp32' (37#1) [/tmp/tmp.aPnHglRXkw/main.sv:8618]
+INFO: [Synth 8-6155] done synthesizing module 'fsm_5' (38#1) [/tmp/tmp.aPnHglRXkw/main.sv:18169]
+INFO: [Common 17-14] Message 'Synth 8-6155' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
+	Parameter IN_WIDTH bound to: 128 - type: integer 
+	Parameter MSB bound to: 95 - type: integer 
+	Parameter LSB bound to: 64 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+	Parameter IN_WIDTH bound to: 128 - type: integer 
+	Parameter MSB bound to: 63 - type: integer 
+	Parameter LSB bound to: 32 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+	Parameter IN_WIDTH bound to: 128 - type: integer 
+	Parameter MSB bound to: 31 - type: integer 
+	Parameter LSB bound to: 0 - type: integer 
+	Parameter OUT_WIDTH bound to: 32 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1065353216 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 621621554 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1064076126 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1094455531 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1060439283 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1087044365 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1053028117 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1083407522 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 613232946 - type: integer 
+	Parameter WIDTH bound to: 32 - type: integer 
+	Parameter VALUE bound to: 1082130432 - type: integer 
+	Parameter WIDTH bound to: 1024 - type: integer 
+	Parameter WIDTH bound to: 1024 - type: integer 
+	Parameter WIDTH bound to: 512 - type: integer 
+	Parameter WIDTH bound to: 512 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 32 - type: integer 
+	Parameter OUT bound to: 64 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 64 - type: integer 
+	Parameter OUT bound to: 96 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 96 - type: integer 
+	Parameter OUT bound to: 128 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 128 - type: integer 
+	Parameter OUT bound to: 160 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 160 - type: integer 
+	Parameter OUT bound to: 192 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 192 - type: integer 
+	Parameter OUT bound to: 224 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 224 - type: integer 
+	Parameter OUT bound to: 256 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 256 - type: integer 
+	Parameter OUT bound to: 288 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 288 - type: integer 
+	Parameter OUT bound to: 320 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 320 - type: integer 
+	Parameter OUT bound to: 352 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 352 - type: integer 
+	Parameter OUT bound to: 384 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 384 - type: integer 
+	Parameter OUT bound to: 416 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 416 - type: integer 
+	Parameter OUT bound to: 448 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 448 - type: integer 
+	Parameter OUT bound to: 480 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 480 - type: integer 
+	Parameter OUT bound to: 512 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 512 - type: integer 
+	Parameter OUT bound to: 544 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 544 - type: integer 
+	Parameter OUT bound to: 576 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 576 - type: integer 
+	Parameter OUT bound to: 608 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 608 - type: integer 
+	Parameter OUT bound to: 640 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 640 - type: integer 
+	Parameter OUT bound to: 672 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 672 - type: integer 
+	Parameter OUT bound to: 704 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 704 - type: integer 
+	Parameter OUT bound to: 736 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 736 - type: integer 
+	Parameter OUT bound to: 768 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 768 - type: integer 
+	Parameter OUT bound to: 800 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 800 - type: integer 
+	Parameter OUT bound to: 832 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 832 - type: integer 
+	Parameter OUT bound to: 864 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 864 - type: integer 
+	Parameter OUT bound to: 896 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 896 - type: integer 
+	Parameter OUT bound to: 928 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 928 - type: integer 
+	Parameter OUT bound to: 960 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 960 - type: integer 
+	Parameter OUT bound to: 992 - type: integer 
+	Parameter LEFT bound to: 32 - type: integer 
+	Parameter RIGHT bound to: 992 - type: integer 
+	Parameter OUT bound to: 1024 - type: integer 
+---------------------------------------------------------------------------------
+Finished RTL Elaboration : Time (s): cpu = 00:00:06 ; elapsed = 00:00:07 . Memory (MB): peak = 2810.402 ; gain = 159.746 ; free physical = 383515 ; free virtual = 469222
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:08 ; elapsed = 00:00:09 . Memory (MB): peak = 2822.277 ; gain = 171.621 ; free physical = 383530 ; free virtual = 469237
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:08 ; elapsed = 00:00:09 . Memory (MB): peak = 2822.277 ; gain = 171.621 ; free physical = 383530 ; free virtual = 469237
+---------------------------------------------------------------------------------
+Netlist sorting complete. Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 3055.574 ; gain = 30.000 ; free physical = 383166 ; free virtual = 468873
+INFO: [Project 1-570] Preparing netlist for logic optimization
+
+Processing XDC Constraints
+Initializing timing engine
+Parsing XDC File [/tmp/tmp.aPnHglRXkw/device.xdc]
+Finished Parsing XDC File [/tmp/tmp.aPnHglRXkw/device.xdc]
+Completed Processing XDC Constraints
+
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.01 . Memory (MB): peak = 3447.418 ; gain = 0.000 ; free physical = 382942 ; free virtual = 468649
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+Constraint Validation Runtime : Time (s): cpu = 00:00:00.86 ; elapsed = 00:00:00.40 . Memory (MB): peak = 3450.387 ; gain = 2.969 ; free physical = 382940 ; free virtual = 468646
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:35 ; elapsed = 00:00:35 . Memory (MB): peak = 3450.387 ; gain = 799.730 ; free physical = 383467 ; free virtual = 469173
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xczu3eg-sbva484-1-e
+INFO: [Synth 8-6742] Reading net delay rules and data
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:35 ; elapsed = 00:00:35 . Memory (MB): peak = 3450.387 ; gain = 799.730 ; free physical = 383467 ; free virtual = 469173
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying 'set_property' XDC Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:35 ; elapsed = 00:00:35 . Memory (MB): peak = 3450.387 ; gain = 799.730 ; free physical = 383467 ; free virtual = 469173
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:38 ; elapsed = 00:00:39 . Memory (MB): peak = 3450.387 ; gain = 799.730 ; free physical = 383440 ; free virtual = 469151
+---------------------------------------------------------------------------------
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst2/inst3' (comp42) to 'inst1/inst0/inst2/inst10'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst2/inst3' (comp42) to 'inst1/inst0/inst2/inst15'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst2/inst5' (comp44) to 'inst1/inst0/inst2/inst12'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst2/inst5' (comp44) to 'inst1/inst0/inst2/inst13'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst2/inst7' (comp46) to 'inst1/inst0/inst2/inst11'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst2/inst7' (comp46) to 'inst1/inst0/inst2/inst14'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst10' (comp57) to 'inst1/inst0/inst13'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst10' (comp57) to 'inst1/inst0/inst14'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst10' (comp57) to 'inst1/inst0/inst17'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst10' (comp57) to 'inst1/inst0/inst18'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst10' (comp57) to 'inst1/inst0/inst21'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst10' (comp57) to 'inst1/inst0/inst22'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst10' (comp57) to 'inst1/inst0/inst25'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst27' (comp57) to 'inst1/inst0/inst30'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst27' (comp57) to 'inst1/inst0/inst31'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst27' (comp57) to 'inst1/inst0/inst34'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst27' (comp57) to 'inst1/inst0/inst35'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst27' (comp57) to 'inst1/inst0/inst38'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst27' (comp57) to 'inst1/inst0/inst39'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst27' (comp57) to 'inst1/inst0/inst42'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp75) to 'inst1/inst0/inst16'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp75) to 'inst1/inst0/inst20'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp75) to 'inst1/inst0/inst24'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp75) to 'inst1/inst0/inst29'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp75) to 'inst1/inst0/inst33'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp75) to 'inst1/inst0/inst37'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst12' (comp75) to 'inst1/inst0/inst41'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst43' (comp92) to 'inst1/inst0/inst45'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst43' (comp92) to 'inst1/inst0/inst47'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst43' (comp92) to 'inst1/inst0/inst49'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst44' (comp93) to 'inst1/inst0/inst46'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst44' (comp93) to 'inst1/inst0/inst48'
+INFO: [Synth 8-223] decloning instance 'inst1/inst0/inst44' (comp93) to 'inst1/inst0/inst50'
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input   29 Bit       Adders := 24    
+	   2 Input   28 Bit       Adders := 80    
+	   2 Input   25 Bit       Adders := 24    
+	   2 Input   24 Bit       Adders := 16    
+	   2 Input   10 Bit       Adders := 32    
+	   3 Input   10 Bit       Adders := 40    
+	   2 Input    9 Bit       Adders := 40    
+	   3 Input    8 Bit       Adders := 64    
+	   2 Input    6 Bit       Adders := 32    
+	   2 Input    5 Bit       Adders := 6     
++---XORs : 
+	   2 Input      1 Bit         XORs := 64    
++---Registers : 
+	             1024 Bit    Registers := 1     
+	              512 Bit    Registers := 2     
+	              128 Bit    Registers := 4     
+	               32 Bit    Registers := 24    
+	               28 Bit    Registers := 32    
+	               23 Bit    Registers := 8     
+	                8 Bit    Registers := 24    
+	                5 Bit    Registers := 6     
+	                1 Bit    Registers := 180   
++---Muxes : 
+	   2 Input 1024 Bit        Muxes := 5     
+	   2 Input  512 Bit        Muxes := 8     
+	   2 Input   46 Bit        Muxes := 16    
+	   2 Input   32 Bit        Muxes := 147   
+	   2 Input   28 Bit        Muxes := 152   
+	   2 Input   27 Bit        Muxes := 24    
+	   2 Input   24 Bit        Muxes := 16    
+	   2 Input   23 Bit        Muxes := 48    
+	   2 Input   10 Bit        Muxes := 16    
+	   2 Input    8 Bit        Muxes := 40    
+	   2 Input    5 Bit        Muxes := 6     
+	   2 Input    1 Bit        Muxes := 48    
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 360 (col length:72)
+BRAMs: 432 (col length: RAMB18 72 RAMB36 36)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+DSP Report: Generating DSP umul48b_24b_x_24b_return, operation Mode is: A*B.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: Generating DSP umul48b_24b_x_24b_return, operation Mode is: (PCIN>>17)+A*B.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: Generating DSP umul48b_24b_x_24b_return, operation Mode is: A*B.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: Generating DSP umul48b_24b_x_24b_return, operation Mode is: (PCIN>>17)+A*B.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: Generating DSP umul48b_24b_x_24b_return, operation Mode is: A*B.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: Generating DSP umul48b_24b_x_24b_return, operation Mode is: (PCIN>>17)+A*B.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: Generating DSP umul48b_24b_x_24b_return, operation Mode is: A*B.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: Generating DSP umul48b_24b_x_24b_return, operation Mode is: (PCIN>>17)+A*B.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+DSP Report: operator umul48b_24b_x_24b_return is absorbed into DSP umul48b_24b_x_24b_return.
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:09:06 ; elapsed = 00:09:16 . Memory (MB): peak = 3835.410 ; gain = 1184.754 ; free physical = 383457 ; free virtual = 469191
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+
+DSP: Preliminary Mapping	Report (see note below)
++----------------------+----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|Module Name           | DSP Mapping    | A Size | B Size | C Size | D Size | P Size | AREG | BREG | CREG | DREG | ADREG | MREG | PREG | 
++----------------------+----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|Butterfly_Exp8_Mant23 | A*B            | 25     | 18     | -      | -      | 48     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|Butterfly_Exp8_Mant23 | (PCIN>>17)+A*B | 25     | 8      | -      | -      | 31     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|Butterfly_Exp8_Mant23 | A*B            | 25     | 18     | -      | -      | 48     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|Butterfly_Exp8_Mant23 | (PCIN>>17)+A*B | 25     | 8      | -      | -      | 31     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|Butterfly_Exp8_Mant23 | A*B            | 25     | 18     | -      | -      | 48     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|Butterfly_Exp8_Mant23 | (PCIN>>17)+A*B | 25     | 8      | -      | -      | 31     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|Butterfly_Exp8_Mant23 | A*B            | 25     | 18     | -      | -      | 48     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|Butterfly_Exp8_Mant23 | (PCIN>>17)+A*B | 25     | 8      | -      | -      | 31     | 0    | 0    | -    | -    | -     | 0    | 0    | 
++----------------------+----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+
+Note: The table above is a preliminary report that shows the DSPs inferred at the current stage of the synthesis flow. Some DSP may be reimplemented as non DSP primitives later in the synthesis flow. Multiple instantiated DSPs are reported only once.
+---------------------------------------------------------------------------------
+Finished ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying XDC Timing Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Applying XDC Timing Constraints : Time (s): cpu = 00:09:22 ; elapsed = 00:09:43 . Memory (MB): peak = 3871.332 ; gain = 1220.676 ; free physical = 378475 ; free virtual = 464209
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:10:28 ; elapsed = 00:10:49 . Memory (MB): peak = 3887.340 ; gain = 1236.684 ; free physical = 377641 ; free virtual = 463376
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:10:37 ; elapsed = 00:11:27 . Memory (MB): peak = 3887.348 ; gain = 1236.691 ; free physical = 375108 ; free virtual = 460849
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:10:44 ; elapsed = 00:11:34 . Memory (MB): peak = 3887.348 ; gain = 1236.691 ; free physical = 375105 ; free virtual = 460845
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:10:44 ; elapsed = 00:11:35 . Memory (MB): peak = 3887.348 ; gain = 1236.691 ; free physical = 375105 ; free virtual = 460845
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:10:51 ; elapsed = 00:11:41 . Memory (MB): peak = 3887.348 ; gain = 1236.691 ; free physical = 375100 ; free virtual = 460840
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:10:51 ; elapsed = 00:11:41 . Memory (MB): peak = 3887.348 ; gain = 1236.691 ; free physical = 375100 ; free virtual = 460840
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:10:52 ; elapsed = 00:11:42 . Memory (MB): peak = 3887.348 ; gain = 1236.691 ; free physical = 375100 ; free virtual = 460840
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:10:52 ; elapsed = 00:11:43 . Memory (MB): peak = 3887.348 ; gain = 1236.691 ; free physical = 375100 ; free virtual = 460840
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+Report BlackBoxes: 
++-+--------------+----------+
+| |BlackBox name |Instances |
++-+--------------+----------+
++-+--------------+----------+
+
+Report Cell Usage: 
++------+----------------+------+
+|      |Cell            |Count |
++------+----------------+------+
+|1     |CARRY8          |   504|
+|2     |DSP_ALU         |    32|
+|3     |DSP_A_B_DATA    |    32|
+|4     |DSP_C_DATA      |    32|
+|5     |DSP_MULTIPLIER  |    32|
+|6     |DSP_M_DATA      |    32|
+|7     |DSP_OUTPUT      |    32|
+|8     |DSP_PREADD      |    32|
+|9     |DSP_PREADD_DATA |    32|
+|10    |LUT1            |  1511|
+|11    |LUT2            |  1658|
+|12    |LUT3            |  3181|
+|13    |LUT4            |  3205|
+|14    |LUT5            |  5482|
+|15    |LUT6            | 11000|
+|16    |FDRE            |  4198|
+|17    |FDSE            |   144|
++------+----------------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:10:52 ; elapsed = 00:11:43 . Memory (MB): peak = 3887.348 ; gain = 1236.691 ; free physical = 375100 ; free virtual = 460840
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 0 critical warnings and 0 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:10:34 ; elapsed = 00:11:22 . Memory (MB): peak = 3887.348 ; gain = 608.582 ; free physical = 383072 ; free virtual = 468812
+Synthesis Optimization Complete : Time (s): cpu = 00:10:57 ; elapsed = 00:11:45 . Memory (MB): peak = 3887.348 ; gain = 1236.691 ; free physical = 383078 ; free virtual = 468812
+INFO: [Project 1-571] Translating synthesized netlist
+Netlist sorting complete. Time (s): cpu = 00:00:00.29 ; elapsed = 00:00:00.29 . Memory (MB): peak = 3887.348 ; gain = 0.000 ; free physical = 383059 ; free virtual = 468792
+INFO: [Netlist 29-17] Analyzing 536 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-570] Preparing netlist for logic optimization
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3931.449 ; gain = 0.000 ; free physical = 382995 ; free virtual = 468728
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 32 instances were transformed.
+  DSP48E2 => DSP48E2 (DSP_ALU, DSP_A_B_DATA, DSP_C_DATA, DSP_MULTIPLIER, DSP_M_DATA, DSP_OUTPUT, DSP_PREADD, DSP_PREADD_DATA): 32 instances
+
+INFO: [Common 17-83] Releasing license: Synthesis
+250 Infos, 2 Warnings, 0 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:11:10 ; elapsed = 00:12:01 . Memory (MB): peak = 3931.449 ; gain = 1532.031 ; free physical = 383182 ; free virtual = 468915
+INFO: [Common 17-1381] The checkpoint '/tmp/tmp.aPnHglRXkw/out/FutilBuild.runs/synth_1/main.dcp' has been generated.
+write_checkpoint: Time (s): cpu = 00:00:06 ; elapsed = 00:00:05 . Memory (MB): peak = 3963.465 ; gain = 32.016 ; free physical = 383177 ; free virtual = 468916
+INFO: [runtcl-4] Executing : report_utilization -file main_utilization_synth.rpt -pb main_utilization_synth.pb
+INFO: [Common 17-206] Exiting Vivado at Sat Nov 18 15:51:22 2023...
