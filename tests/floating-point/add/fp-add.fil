@@ -2,12 +2,12 @@ import "primitives/core.fil";
 import "primitives/signed.fil";
 import "../fp-support.fil";
 
-comp FPAdd<'G: 1>(
+comp FilFPAdd<'G: 1>(
   go: interface['G],
-   left: ['G, 'G+1] 32,
-   right: ['G, 'G+1] 32
+  left: ['G, 'G+1] 32,
+  right: ['G, 'G+1] 32
 ) -> (
-   out: ['G+4, 'G+5] 32
+  out: ['G+4, 'G+5] 32
 ) {
   // ---------- Stage 1 ----------
   // left[30:23]

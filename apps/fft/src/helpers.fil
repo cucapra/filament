@@ -63,6 +63,7 @@ comp TwiddleStage[NStages, Stage, W, ?D=1]<'G: D>(
   }
 }
 
+
 /// Performs an `NPoints` point stride permutation.
 comp StridePermutation[NStages, W]<'G: 1>(
   in[NPoints][2]: ['G, 'G+1] W

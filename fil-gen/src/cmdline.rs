@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 /// The filament gen tool
 #[derive(argh::FromArgs)]
 pub struct Opts {
@@ -21,4 +23,8 @@ pub struct Opts {
     /// print out commands to run instead of running them
     #[argh(switch, short = 'n')]
     pub dry_run: bool,
+
+    /// gen framework config.toml filepath
+    #[argh(option, long = "gen-config")]
+    pub gen_config: Option<PathBuf>,
 }

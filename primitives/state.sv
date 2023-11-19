@@ -28,14 +28,12 @@ module Delay #(
   input wire logic [WIDTH-1:0] in,
   output logic [WIDTH-1:0] out
 );
-
-  Register #(WIDTH) r (
-    .clk(clk),
-    .reset(reset),
-    .write_en(1'b1),
-    .in(in),
-    .out(out)
-  );
+  always_ff @(posedge clk) begin
+    if (reset)
+      out <= 0;
+    else
+      out <= in;
+  end
 endmodule
 
 // Register that passes its input value through.

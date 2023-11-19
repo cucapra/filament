@@ -1,16 +1,15 @@
 name = "xls"
-path = "./butterfly-gen.sh"
+path = "./xls-gen.sh"
 requires_out_file = true
 
 [globals]
 xls_path = "/home/xls"
 src_path = "butterfly.x"
-file_name = "butterfly.x"
 stages = "3"
 
 [modules.Butterfly]
 name = "Butterfly"
 parameters = ["Exp", "Mant"]
 name_format = "Butterfly_Exp${Exp}_Mant${Mant}"
-cli_format = "${xls_path} ${NAME_FORMAT} ${src_path} ${OUT_FILE} ${Exp} ${Mant} Butterfly ${stages}"
+cli_format = "${xls_path} ${NAME_FORMAT} xls/butterfly.x ${OUT_FILE} ${Exp} ${Mant} Butterfly ${stages}"
 outputs.L = "pipeline_depth"

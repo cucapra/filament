@@ -1,5 +1,6 @@
 import "fp-add.fil";
 import "primitives/math/float.fil";
+import "primitives/flopoco/def.fil";
 
 extern "fp-add.sv" {
   comp IEEE_SP_FP_ADDER<'G: 1>(
@@ -33,12 +34,37 @@ comp main<'G: 1>(
    out: ['G+4, 'G+5] 32,
    verilog_pipe: ['G+4, 'G+5] 32,
    verilog_nopipe: ['G, 'G+1] 32,
-   filament_lib: ['G, 'G+1] 32
-) {
-  fil := new FPAdd<'G>(left, right);
+   filament_lib: ['G, 'G+1] 32,
+   flopoco: ['G+L_Flopoco, 'G+L_Flopoco+1] 32,
+   flopoco_IEEE: ['G+L_Flopoco_IEEE, 'G+L_Flopoco_IEEE+1] 32,
+) with {
+  some L_Flopoco where L_Flopoco >= 0;
+  some L_Flopoco_IEEE where L_Flopoco_IEEE >= 0;
+}
+{
+  fil := new FilFPAdd<'G>(left, right);
   ver := new IEEE_SP_FP_ADDER<'G>(left, right);
   ver_np := new IEEE_SP_FP_ADDER_NOPIPE<'G>(left, right);
   prim := new FAdd[32, 8, 23]<'G>(left, right);
+
+  // Flopoco Addition
+  FPtoFLO1 := new InputIEEE[8, 23, 8, 23];
+  FPtoFLO2 := new InputIEEE[8, 23, 8, 23];
+  FLOAdd := new FPAdd[8, 23];
+  FLOtoFP := new OutputIEEE[8, 23, 8, 23];
+
+  left_flopoco := FPtoFLO1<'G>(left);
+  right_flopoco := FPtoFLO2<'G>(right);
+  flo_add := FLOAdd<'G+FPtoFLO1::L>(left_flopoco.R, right_flopoco.R);
+  out_fp := FLOtoFP<'G+FPtoFLO1::L+FLOAdd::L>(flo_add.R);
+  L_Flopoco := FPtoFLO1::L + FLOAdd::L + FLOtoFP::L;
+  flopoco = out_fp.R;
+
+  // Flopoco IEEE Addition
+  FLOAddIEEE := new IEEEFPAdd[8, 23];
+  flo_add_ieee := FLOAddIEEE<'G>(left, right);
+  flopoco_IEEE = flo_add_ieee.R;
+  L_Flopoco_IEEE := FLOAddIEEE::L;
 
   out = fil.out;
   verilog_pipe = ver.Result;

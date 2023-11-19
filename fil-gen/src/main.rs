@@ -11,7 +11,7 @@ fn main() {
         .filter_level(opts.log_level)
         .target(env_logger::Target::Stderr)
         .init();
-    let mut gen = GenExec::new(opts.dry_run, None);
+    let mut gen = GenExec::new(opts.dry_run, None, opts.gen_config);
 
     // Deserialize the tool description
     let desc = fs::read_to_string(opts.tool).unwrap();

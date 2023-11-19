@@ -39,9 +39,9 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.28.0-rc3/cmake-3.
     cd cmake-3.28.0-rc3 && ./bootstrap &&\
     make && make install
 
-# Install FloPoCo 4.1
+# Install FloPoCo 5.0
 WORKDIR /home
-RUN git clone --branch flopoco-4.1 https://gitlab.com/flopoco/flopoco &&\
+RUN git clone https://gitlab.com/flopoco/flopoco &&\
     cd flopoco && git checkout f3d76595c01f84cee57ae67eee1ceb31a6fe93bc &&\
     mkdir build && cd build &&\
     cmake -GNinja .. && ninja &&\
@@ -66,13 +66,20 @@ RUN apt install -y g++ unzip zip default-jdk && \
   ./bazel-6.4.0-installer-linux-x86_64.sh --prefix=/root/.local && \
   rm bazel-6.4.0-installer-linux-x86_64.sh
 
-
 # Install and build XLS (without C++ frontend)
 WORKDIR /home
 RUN git clone --depth 1 https://github.com/google/xls.git
 WORKDIR /home/xls
 RUN apt install -y python3-distutils python3-dev libtinfo5 python-is-python3 && \
   bazel build -c opt -- //xls/... -//xls/contrib/xlscc/...
+
+# Install verible
+WORKDIR /home
+RUN wget https://github.com/chipsalliance/verible/releases/download/v0.0-3428-gcfcbb82b/verible-v0.0-3428-gcfcbb82b-Ubuntu-20.04-focal-x86_64.tar.gz --output-document verible.tar.gz && \
+  tar -xvf verible.tar.gz && \
+  mv verible-v0.0-3428-gcfcbb82b verible && \
+  rm verible.tar.gz
+ENV PATH=$PATH:/home/verible/bin
 
 # ----------------------------------------
 # Install filament
