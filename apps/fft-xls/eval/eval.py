@@ -7,5 +7,6 @@ args = sys.argv[1:]
 dir = args[0]
 
 for subdir in os.listdir(dir):
-    print('subdir: ' + subdir)
-    subprocess.run('./run-eval.sh ' + dir + '/' + subdir + '/harness.fil ' + dir + '/' + subdir, shell=True)
+    if "fft_" in subdir:
+        print('subdir: ' + subdir)
+        subprocess.run('./run-eval.sh ' + dir + '/' + subdir + '/harness.fil ' + dir + '/' + subdir + ' ' + dir + '/device.xdc', shell=True)
