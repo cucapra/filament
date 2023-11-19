@@ -4,9 +4,54 @@ import "primitives/xls/butterfly/def.fil";
 import "primitives/state.fil";
 import "primitives/reshape.fil";
 
+/// FFT that takes in a single wire and outputs a single wire
+/// Wraps the normal bundle-based fft component
+comp BundledFFT[NStages, N]<'G: II>(
+  go: interface['G],
+  in: ['G, 'G+1] NPoints*2*32, // input bundle
+) -> (
+  out: ['G+L, 'G+L+1] NPoints*2*32 // output wire
+) with {
+  let NPoints = pow2(NStages);
+  some II where II > 0;
+  some L where L >= II;
+} where
+  NPoints % (2*N) == 0,
+  N > 0,
+  N * 2 <= NPoints,
+  NStages > 0,
+  II > 0,
+  L >= II
+{
+  in_split := new SplitWire[32, NPoints*2]<'G>(in);
+
+  bundle input_bundle[NPoints][2]: ['G, 'G+1] 32;
+
+  for i in 0..NPoints {
+    input_bundle{i}{0} = in_split.out{2*i};
+    input_bundle{i}{1} = in_split.out{2*i+1};
+  }
+
+    FP := new IterativePeaseFFT[NStages, N];
+    fp := FP<'G>(input_bundle{0..NPoints}{0..2});
+
+    bundle fp_output_bundle[NPoints*2]: ['G+FP::L, 'G+FP::L+1] 32;
+
+    for i in 0..NPoints {
+      fp_output_bundle{2*i} = fp.out{i}{0};
+      fp_output_bundle{2*i+1} = fp.out{i}{1};
+    }
+
+    fpw := new ConcatBundle[32, NPoints*2]<'G+FP::L>(fp_output_bundle{0..NPoints*2});
+    out = fpw.out;
+
+    L := FP::L;
+    II := FP::L;
+}
+
 /// Implements a combinational PEASE fft dataflow.
 /// Uses `N` butterflies
-comp PeaseFFT[NStages, N]<'G: L>(
+comp IterativePeaseFFT[NStages, N]<'G: L>(
   go: interface['G],
   in[NPoints][2]: ['G, 'G+1] W
 ) -> (
