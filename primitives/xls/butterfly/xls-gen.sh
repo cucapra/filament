@@ -6,28 +6,28 @@ set -euf -o pipefail
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 # path to xls download
-XLS_PATH="$1"
+# XLS_PATH="$1"
 
 # name of generated module
-NAME="$2"
+NAME="$1"
 
 # name of file, located in this folder
-FILE_NAME="$3"
+FILE_NAME="$2"
 
 # output path of generated files
-OUT="$4"
+OUT="$3"
 
 # exponent width
-EXP_WIDTH="$5"
+EXP_WIDTH="$4"
 
 # mantissa width
-MANT_WIDTH="$6"
+MANT_WIDTH="$5"
 
 # name of func to compile
-FUNC_NAME="$7"
+FUNC_NAME="$6"
 
 # number of pipeline stages
-STAGES="$8"
+STAGES="$7"
 
 PREFIX="$( cd "$( dirname "$OUT" )" >/dev/null 2>&1 && pwd )"
 XLS_REPL="$PREFIX/xls.x"
@@ -43,8 +43,8 @@ OUT_V="$PREFIX/$OUT"
 sed "s/FSIZE/$MANT_WIDTH/g" $DIR/$FILE_NAME > $XLS_REPL
 sed -i "s/ESIZE/$EXP_WIDTH/g" $XLS_REPL
 
-set -x
-cd "$XLS_PATH"
+# cd "$XLS_PATH"
+cd /home/xls
 ./bazel-bin/xls/dslx/ir_convert/ir_converter_main $XLS_REPL > $XLS_IR --emit_fail_as_assert=false
 ./bazel-bin/xls/tools/opt_main --top=__xls__"$FUNC_NAME" $XLS_IR > $XLS_OPT_IR
 
