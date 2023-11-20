@@ -1,16 +1,11 @@
 name = "xls"
-path = "./xls-gen.sh"
+path = "xls-gen.sh"
 requires_out_file = true
 
 [globals]
-xls_path = "/home/xls"
-src_path = "complex.x"
-file_name = "complex.x"
-stages = "4"
-
-[modules.ComplexMult]
-name = "ComplexMult"
+[modules.CompelxMultXLS]
+name = "Butterfly"
 parameters = ["Exp", "Mant"]
-name_format = "ComplexMult_Exp${Exp}_Mant${Mant}"
-cli_format = "${xls_path} ${NAME_FORMAT} ${src_path} ${OUT_FILE} ${Exp} ${Mant} ComplexMult ${stages}"
+name_format = "Butterfly_Exp${Exp}_Mant${Mant}"
+cli_format = "${NAME_FORMAT} butterfly.x ${OUT_FILE} ${Exp} ${Mant} Butterfly 10"
 outputs.L = "pipeline_depth"

@@ -1,0 +1,92 @@
+import "primitives/xls/float/def.fil";
+import "primitives/state.fil";
+
+comp Butterfly[Exp, Mant]<'G:II>(
+    go: interface['G],
+    in0[2]: ['G, 'G+II] W,
+    in1[2]: ['G, 'G+II] W,
+    twiddle[2]: ['G, 'G+II] W
+) -> (
+    out0[2]: ['G+L, 'G+L+1] W,
+    out1[2]: ['G+L, 'G+L+1] W
+) with {
+    let W = Exp+Mant+1;
+    some II where II > 0;
+    some L where L >= II;
+} where 
+    Exp > 1,
+    Mant > 1,
+    L >= II,
+    II > 0
+{
+    FM1 := new FPMultXLS[Exp, Mant];
+    FM2 := new FPMultXLS[Exp, Mant];
+
+    assert FM1::L == FM2::L;
+
+    FA1 := new FPAddXLS[Exp, Mant];
+    FA2 := new FPAddXLS[Exp, Mant];
+    FS2 := new FPSubXLS[Exp, Mant];
+
+    assert FA1::L == FA2::L;
+
+    // delay first input
+    in00_delay := new Shift[W, FM1::L+FA1::L]<'G>(in0{0});
+    in01_delay := new Shift[W, FM1::L+FA1::L+1]<'G>(in0{1});
+
+    // delay second input
+    in10_delay := new Shift[W, 1]<'G>(in1{0});
+    in11_delay := new Shift[W, 1]<'G>(in1{1});
+
+    // delay twiddle
+    t0_delay := new Shift[W, 1]<'G>(twiddle{0});
+    t1_delay := new Shift[W, 1]<'G>(twiddle{1});
+
+    // w * in1
+    ac := FM1<'G>(in1{0}, twiddle{0});
+    bd := FM2<'G>(in1{1}, twiddle{1});
+
+    // ac - bd
+    bd_neg := new FPNegXLS[Exp, Mant]<'G+FM1::L>(bd.out);
+    re := FA1<'G+FM1::L>(ac.out, bd_neg.out);
+
+    ad := FM1<'G+1>(in10_delay.out, t1_delay.out);
+    bc := FM2<'G+2>(in11_delay.out, t0_delay.out);
+    im := FA1<'G+FM1::L+1>(ad.out, bc.out);
+
+    // in0 + (w * in1)
+    out00 := FA2<'G+FM1::L+FA1::L>(in0{0}, re.out);
+    out01 := FA2<'G+FM1::L+FA1::L+1>(in0{1}, im.out);
+
+    // in0 - (w * in1)
+    out10 := FS2<'G+FM1::L+FA1::L>(in0{0}, re.out);
+    out11 := FS2<'G+FM1::L+FA1::L+1>(in0{1}, im.out);
+
+    out00_delay := new Delay[W]<'G+FM1::L+FA1::L*2>(out00.out);
+    out10_delay := new Delay[W]<'G+FM1::L+FA1::L*2>(out10.out);
+
+    out0{0} = out00_delay.out;
+    out0{1} = out01.out;
+    out1{0} = out10_delay.out;
+    out1{1} = out11.out;
+}
+
+comp Butterflies[N, Exp, Mant]<'G:1>(
+    go: interface['G],
+    in[N*2][2]: ['G, 'G+1] W,
+    twiddle[N][2]: ['G, 'G+1] W
+) -> (
+    out[N*2][2]: ['G+L, 'G+L+1] W
+) with {
+    let W = Exp+Mant+1;
+    some L where L >= 1;
+} where W > 0 {
+    Bx := new Butterfly[Exp, Mant];
+    L := Bx::L;
+
+    for i in 0..N {
+        b := new Butterfly[Exp, Mant]<'G>(in{2*i}{0..2}, in{2*i+1}{0..2}, twiddle{i}{0..2});
+        out{2*i}{0..2} = b.out0{0..2};
+        out{2*i+1}{0..2} = b.out1{0..2};
+    }
+}

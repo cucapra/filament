@@ -1,0 +1,44 @@
+generate(xls) using "xls.toml" {
+    comp FPMultXLS[Exp, Mant]<'G:1>(
+        clk:1,
+        left:  ['G, 'G+1] W,
+        right: ['G, 'G+1] W,
+    ) -> (
+        out: ['G+L-1, 'G+L] 2*W
+    ) with {
+        let W = Exp+Mant+1;
+        some L where L >= 1;
+    };
+
+    comp FPAddXLS[Exp, Mant]<'G:1>(
+        clk:1,
+        left:  ['G, 'G+1] W,
+        right: ['G, 'G+1] W,
+    ) -> (
+        out: ['G+L-1, 'G+L] 2*W
+    ) with {
+        let W = Exp+Mant+1;
+        some L where L >= 1;
+    };
+
+    comp FPSubXLS[Exp, Mant]<'G:1>(
+        clk:1,
+        left:  ['G, 'G+1] W,
+        right: ['G, 'G+1] W,
+    ) -> (
+        out: ['G+L-1, 'G+L] 2*W
+    ) with {
+        let W = Exp+Mant+1;
+        some L where L >= 1;
+    };
+
+    comp FPNegXLS[Exp, Mant]<'G:1>(
+        clk:1,
+        in: ['G, 'G+1] W
+    ) -> (
+        out: ['G, 'G+1] W
+    ) with {
+        let W = Exp+Mant+1;
+        some L where L >= 1;
+    };
+}
