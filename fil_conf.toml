@@ -1,0 +1,14 @@
+name = "xls"
+path = "./primitives/xls/butterfly/xls-gen.sh"
+requires_out_file = true
+
+[globals]
+src_path = "/home/filament/primitives/xls/butterfly/butterfly.x"
+stages = "20"
+
+[modules.Butterfly]
+name = "Butterfly"
+parameters = ["Exp", "Mant"]
+name_format = "Butterfly_Exp${Exp}_Mant${Mant}"
+cli_format = "${NAME_FORMAT} butterfly.x ${OUT_FILE} ${Exp} ${Mant} Butterfly ${stages}"
+outputs.L = "pipeline_depth"

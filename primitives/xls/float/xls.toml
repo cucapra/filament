@@ -3,8 +3,6 @@ path = "xls-gen.sh"
 requires_out_file = true
 
 [globals]
-mult_stages = "10"
-add_stages = "10"
 
 [modules.FPMultXLS]
 name = "FPMultXLS"
