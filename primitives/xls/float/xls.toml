@@ -10,21 +10,21 @@ add_stages = "10"
 name = "FPMultXLS"
 parameters = ["Exp", "Mant"]
 name_format = "FPMultXLS_Exp${Exp}_Mant${Mant}"
-cli_format = "${NAME_FORMAT} float.x ${OUT_FILE} ${Exp} ${Mant} FPMultXLS {mult_stages}"
+cli_format = "${NAME_FORMAT} float.x ${OUT_FILE} ${Exp} ${Mant} FPMultXLS ${mult_stages}"
 outputs.L = "pipeline_depth"
 
 [modules.FPAddXLS]
 name = "FPAddXLS"
 parameters = ["Exp", "Mant"]
 name_format = "FPAddXLS_Exp${Exp}_Mant${Mant}"
-cli_format = "${NAME_FORMAT} float.x ${OUT_FILE} ${Exp} ${Mant} FPAddXLS {add_stages}"
+cli_format = "${NAME_FORMAT} float.x ${OUT_FILE} ${Exp} ${Mant} FPAddXLS ${add_stages}"
 outputs.L = "pipeline_depth"
 
 [modules.FPSubXLS]
 name = "FPSubXLS"
 parameters = ["Exp", "Mant"]
 name_format = "FPSubXLS_Exp${Exp}_Mant${Mant}"
-cli_format = "${NAME_FORMAT} float.x ${OUT_FILE} ${Exp} ${Mant} FPSubXLS {add_stages}"
+cli_format = "${NAME_FORMAT} float.x ${OUT_FILE} ${Exp} ${Mant} FPSubXLS ${add_stages}"
 outputs.L = "pipeline_depth"
 
 [modules.FPNegXLS]

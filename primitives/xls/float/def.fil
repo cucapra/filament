@@ -1,10 +1,12 @@
+import "primitives/core.fil";
+
 generate(xls) using "xls.toml" {
     comp FPMultXLS[Exp, Mant]<'G:1>(
         clk:1,
         left:  ['G, 'G+1] W,
         right: ['G, 'G+1] W,
     ) -> (
-        out: ['G+L-1, 'G+L] 2*W
+        out: ['G+L+1, 'G+L+2] W
     ) with {
         let W = Exp+Mant+1;
         some L where L >= 1;
@@ -15,7 +17,7 @@ generate(xls) using "xls.toml" {
         left:  ['G, 'G+1] W,
         right: ['G, 'G+1] W,
     ) -> (
-        out: ['G+L-1, 'G+L] 2*W
+        out: ['G+L+1, 'G+L+2] W
     ) with {
         let W = Exp+Mant+1;
         some L where L >= 1;
@@ -26,7 +28,7 @@ generate(xls) using "xls.toml" {
         left:  ['G, 'G+1] W,
         right: ['G, 'G+1] W,
     ) -> (
-        out: ['G+L-1, 'G+L] 2*W
+        out: ['G+L+1, 'G+L+2] W
     ) with {
         let W = Exp+Mant+1;
         some L where L >= 1;
@@ -36,9 +38,79 @@ generate(xls) using "xls.toml" {
         clk:1,
         in: ['G, 'G+1] W
     ) -> (
-        out: ['G, 'G+1] W
+        out: ['G+L+1, 'G+L+2] W
     ) with {
         let W = Exp+Mant+1;
         some L where L >= 1;
     };
+}
+
+comp FPMult[Exp, Mant]<'G:1>(
+    clk:1,
+    left:  ['G, 'G+1] W,
+    right: ['G, 'G+1] W,
+) -> (
+    out: ['G+L, 'G+L+1] W
+) with {
+    let W = Exp+Mant+1;
+    some L where L >= 1;
+} {
+    M := new FPMultXLS[Exp, Mant];
+    L := M::L+1; // XLS weirdness
+
+    m := M<'G>(left, right);
+    out = m.out;
+}
+
+comp FPAdd[Exp, Mant]<'G:1>(
+    clk:1,
+    left:  ['G, 'G+1] W,
+    right: ['G, 'G+1] W,
+) -> (
+    out: ['G+L, 'G+L+1] W
+) with {
+    let W = Exp+Mant+1;
+    some L where L >= 1;
+} {
+    A := new FPAddXLS[Exp, Mant];
+    L := A::L+1; // XLS weirdness
+
+    a := A<'G>(left, right);
+    out = a.out;
+}
+
+comp FPSub[Exp, Mant]<'G:1>(
+    clk:1,
+    left:  ['G, 'G+1] W,
+    right: ['G, 'G+1] W,
+) -> (
+    out: ['G+L, 'G+L+1] W
+) with {
+    let W = Exp+Mant+1;
+    some L where L >= 1;
+} {
+    S := new FPSubXLS[Exp, Mant];
+    L := S::L+1; // XLS weirdness
+
+    s := S<'G>(left, right);
+    out = s.out;
+}
+
+comp FPNeg[Exp, Mant]<'G:1>(
+    clk:1,
+    in: ['G, 'G+1] W
+) -> (
+    out: ['G, 'G+1] W
+) with {
+    let W = Exp+Mant+1;
+} where 
+    Exp > 0,
+    Mant > 0
+{
+    bottom := new Slice[W, Exp+Mant-1, 0]<'G>(in);
+    sign := new Select[W, Exp+Mant]<'G>(in);
+    sign_neg := new Not[1]<'G>(sign.out);
+    res := new Concat[1, Exp+Mant]<'G>(sign_neg.out, bottom.out);
+
+    out = res.out;
 }

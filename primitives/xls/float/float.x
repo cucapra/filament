@@ -25,7 +25,7 @@ pub fn FPSubXLS(
 }
 
 pub fn FPNegXLS(
-    in: APFloat<ESIZE, FSIZE>
+    in_: APFloat<ESIZE, FSIZE>
 ) -> APFloat<ESIZE, FSIZE> {
-    apfloat::neg(left)
+    apfloat::negate(in_)
 }

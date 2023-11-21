@@ -99,10 +99,19 @@ dir=$(dirname {}) && \
 {}
 """
 
-# fft-xls
+# fft-xls-butterfly
 [[tests]]
-name = "fft-xls"
-paths = ["apps/fft-xls/test/scripts/*.sh"]
+name = "fft-xls-butterfly"
+paths = ["apps/fft-xls-butterfly/test/scripts/*.sh"]
+cmd = """
+dir=$(dirname {}) && \
+{}
+"""
+
+# fft-xls-math
+[[tests]]
+name = "fft-xls-math"
+paths = ["apps/fft-xls-math/test/scripts/*.sh"]
 cmd = """
 dir=$(dirname {}) && \
 {}
