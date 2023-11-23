@@ -1,12 +1,14 @@
 import "primitives/reshape.fil";
 import "../src/fft.fil";
 import "spiral-fft.fil";
+import "spiral-fft-2.fil";
 
 comp main<'G: II>(
   go: interface['G],
   in: ['G, 'G+1] NPoints*2*32 // 16 complex numbers bundled together
 ) -> (
   spiral: ['G+65, 'G+66] NPoints*2*32, // output from spiral
+  spiral_2: ['G+117, 'G+118] NPoints*2*32, // output from spiral
   fil_pipelined_1: ['G+FP_1L, 'G+FP_1L+1] NPoints*2*32, // output from pipelined pease fft with 1 butterfly
   fil_pipelined_2: ['G+FP_2L, 'G+FP_2L+1] NPoints*2*32, // output from pipelined pease fft with 2 butterflies
   fil_pipelined_4: ['G+FP_4L, 'G+FP_4L+1] NPoints*2*32, // output from pipelined pease fft with 4 butterflies
@@ -22,7 +24,7 @@ comp main<'G: II>(
   some FP_2L where FP_2L > 0;
   some FP_1L where FP_1L > 0;
 
-  some II where II > 0;
+  some II where II >= 105;
 } where
   II > 0
 {
@@ -55,7 +57,16 @@ comp main<'G: II>(
   // streaming FFT have II 1
   assume FP_Stream::II == 1;
 
-  II := FP_1::II;
+  if FP_1::II > 105 {
+    II := FP_1::II;
+  } else {
+    II := 105;
+  }
+  assume II >= 105;
+  assume II >= FP_1::II;
+
+  spiral2 := new BundledSpiralFFT<'G>(in);
+  spiral_2 = spiral2.out;
 
   // split input into bundle
   split := new SplitWire[32, NPoints*2]<'G>(in);
