@@ -5,7 +5,7 @@ pub type F32 = float32::F32;
 pub type Complex = (F32, F32);
 
 pub fn StridePermutation<NStages:u32, NPoints:u32>(
-    inp: (F32, F32)[NPoints]
+    inp: Complex[NPoints]
 ) -> Complex[NPoints] {
     for (i, out_array) in u32:0 .. NPoints/u32:2 {
         let (re_0, im_0) = inp[i*2];
@@ -87,7 +87,7 @@ pub fn Butterflies<NPoints:u32, TPoints:u32>(
 }
 
 pub fn FFT<NStages:u32, NPoints: u32, TPoints:u32>(
-    inp: Complex[NPoints], // real and imaginary
+    inp: Complex[NPoints], // real and imaginary 
     twiddle_in: Complex[NStages][TPoints], // real and imaginary
 ) -> Complex[NPoints] {    // real and imaginary
     // first, bit reverse input
@@ -115,9 +115,9 @@ pub fn FFT<NStages:u32, NPoints: u32, TPoints:u32>(
         let array_init: Complex[NPoints] = Complex[NPoints]: [(float32::zero(u1:0), float32::zero(u1:0)), ...];
 
         let butterfly_out: Complex[NPoints] = for (i, out_arr) in u32:0 .. NPoints {
-            let (in0_r, in0_i) = inp[u32:2*i];
-            let (in1_r, in1_i) = inp[u32:2*i+1];
-            let (twd_r, twd_i) = twiddle[i];
+            let (in0_r, in0_i) = stage_array_in[r_stage][u32:2*i];
+            let (in1_r, in1_i) = stage_array_in[r_stage][u32:2*i+1];
+            let (twd_r, twd_i) = twiddle_in[r_stage][i];
             let (b0, b1) = Butterfly(in0_r, in0_i, in1_r, in1_i, twd_r, twd_i);
             let out_arr0 = update(out_arr, u32:2*i, b0);
             update(out_arr0, u32:2*i+u32:1, b1)

@@ -50,7 +50,7 @@ cd /home/xls
 ./bazel-bin/xls/tools/opt_main --top=__fft__"$FUNC_NAME" $XLS_IR > $XLS_OPT_IR
 
 ./bazel-bin/xls/tools/codegen_main $XLS_OPT_IR --top __fft__"$FUNC_NAME" --generator=pipeline --delay_model="unit" --output_verilog_path=$OUT \
-    --module_name="$NAME" --pipeline_stages="$STAGES" --use_system_verilog
+    --module_name="$NAME" --pipeline_stages="$STAGES" --use_system_verilog=false
 
 # verilator --lint-only "$OUT"
 

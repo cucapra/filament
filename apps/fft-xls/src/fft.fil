@@ -15,7 +15,7 @@ generate(xls) using "xls.toml" {
 
 comp FFTWrapper<'G:L>(
     clk: 1,
-    inp: ['G, 'G+1] 1024,
+    in: ['G, 'G+1] 1024,
 ) -> (
     out: ['G+L, 'G+L+1] 1024
 ) with {
@@ -37,17 +37,28 @@ comp FFTWrapper<'G:L>(
     // need to flatten twiddle_in to pass into XLS
     bundle twiddle_1d[64]: ['G, 'G+FFT::L] 32;
     twiddle_1d{0..64} = twiddle_in{0..4}{0..8}{0..2};
+    // twiddle_rev := new ReverseBundle[64, 32, FFT::L]<'G>(twiddle_1d{0..64});
 
     twiddle_flat := new ConcatBundle[32, 64, FFT::L]<'G>(twiddle_1d{0..64});
 
-    do_fft := FFT<'G>(inp, twiddle_flat.out);
+    do_fft := FFT<'G>(in, twiddle_flat.out);
     out = do_fft.out;
+}
+
+comp ReverseBundle[N, W, L]<'G:L>(
+    in[N]: ['G, 'G+L] W
+) -> (
+    out[N]: ['G, 'G+L] W
+) where N > 0, W > 0, L > 0 {
+    for i in 0..N {
+        out{i} = in{N-i-1};
+    }
 }
 
 comp main<'G:L>(
     go: interface['G],
     clk: 1,
-    inp: ['G, 'G+1] 1024,
+    in: ['G, 'G+1] 1024,
 ) -> (
     out: ['G+L, 'G+L+1] 1024
 ) with {
@@ -56,6 +67,6 @@ comp main<'G:L>(
     FFTW := new FFTWrapper;
     L := FFTW::L;
 
-    fft := FFTW<'G>(inp);
+    fft := FFTW<'G>(in);
     out = fft.out;
 }

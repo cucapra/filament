@@ -1,7 +1,7 @@
 import "primitives/reshape.fil";
 import "../src/fft.fil";
 
-comp main<'G: II>(
+comp main<'G: XLS_L>(
   go: interface['G],
   in: ['G, 'G+1] NPoints*2*32 // 16 complex numbers bundled together
 ) -> (
