@@ -1,0 +1,15 @@
+name = "xls"
+path = "xls-gen.sh"
+requires_out_file = true
+
+[globals]
+
+[modules.XLSFFT]
+name = "XLSFFT"
+parameters = []
+name_format = "XLSFFT"
+cli_format = "${NAME_FORMAT} fft.x ${OUT_FILE} XLSFFT 4"
+outputs.L = "pipeline_depth"
+
+
+

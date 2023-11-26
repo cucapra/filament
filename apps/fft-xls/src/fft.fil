@@ -1,0 +1,61 @@
+import "apps/fft-xls/src/helpers.fil";
+import "primitives/reshape.fil";
+
+generate(xls) using "xls.toml" {
+    comp XLSFFT<'G:L>(
+        clk: 1,
+        inp: ['G, 'G+1] 1024,
+        twiddle_in: ['G, 'G+L] 2048,
+    ) -> (
+        out: ['G+L, 'G+L+1] 1024
+    ) with {
+        some L where L >= 1;
+    };
+}
+
+comp FFTWrapper<'G:L>(
+    clk: 1,
+    inp: ['G, 'G+1] 1024,
+) -> (
+    out: ['G+L, 'G+L+1] 1024
+) with {
+    some L where L >= 1;
+} {
+
+    FFT := new XLSFFT;
+    L := FFT::L;
+
+    // do the twiddle factor nonsense here, instead of XLS
+    // because no sine or cosine functions
+    twiddle := new TwiddleFactor[16, FFT::L]<'G>();
+    bundle twiddle_in[4][8][2]: ['G, 'G+FFT::L] 32;
+    for twiddle_i in 0..4 {
+        twiddle_stage := new TwiddleStage[4, twiddle_i, 32, FFT::L]<'G>(twiddle.out{0..8}{0..2});
+        twiddle_in{twiddle_i}{0..8}{0..2} = twiddle_stage.out{0..8}{0..2};
+    }
+
+    // need to flatten twiddle_in to pass into XLS
+    bundle twiddle_1d[64]: ['G, 'G+FFT::L] 32;
+    twiddle_1d{0..64} = twiddle_in{0..4}{0..8}{0..2};
+
+    twiddle_flat := new ConcatBundle[32, 64, FFT::L]<'G>(twiddle_1d{0..64});
+
+    do_fft := FFT<'G>(inp, twiddle_flat.out);
+    out = do_fft.out;
+}
+
+comp main<'G:L>(
+    go: interface['G],
+    clk: 1,
+    inp: ['G, 'G+1] 1024,
+) -> (
+    out: ['G+L, 'G+L+1] 1024
+) with {
+    some L where L >= 1;
+} {
+    FFTW := new FFTWrapper;
+    L := FFTW::L;
+
+    fft := FFTW<'G>(inp);
+    out = fft.out;
+}

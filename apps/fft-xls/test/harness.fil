@@ -1,0 +1,25 @@
+import "primitives/reshape.fil";
+import "../src/fft.fil";
+
+comp main<'G: II>(
+  go: interface['G],
+  in: ['G, 'G+1] NPoints*2*32 // 16 complex numbers bundled together
+) -> (
+  xls_fft: ['G+XLS_L, 'G+XLS_L+1] NPoints*2*32
+) with {
+  let NStages = 4;
+  let NPoints = pow2(NStages);
+
+  some XLS_L where XLS_L > 0;
+  some II where II > 0;
+} where
+  II > 0
+{
+
+  FFT := new FFTWrapper;
+  XLS_L := FFT::L;
+  II := 1;
+  
+  xlsfft := FFT<'G>(in);
+  xls_fft = xlsfft.out;
+}
