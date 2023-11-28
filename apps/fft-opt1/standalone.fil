@@ -1,0 +1,25 @@
+import "src/fft.fil";
+
+/// Standalone FFT module with a toplevel main component
+comp main<'G: II>(
+  go: interface['G],
+  in: ['G, 'G+1] W*NPoints*2
+) -> (
+  out: ['G+L, 'G+L+1] W*NPoints*2
+) with {
+  let NStages = 4;
+  let N = 1;
+  let NPoints = pow2(NStages);
+  some II where II > 0;
+  some L where L >= II;
+  // Floating Point specification
+  let W = 32;
+  let E = 8;
+  let M = 23;
+} {
+  FFT := new BundledFFT[NStages, N];
+  fft := FFT<'G>(in);
+  L := FFT::L;
+  II := FFT::II;
+  out = fft.out;
+}
