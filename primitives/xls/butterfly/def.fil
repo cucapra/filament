@@ -15,6 +15,19 @@ generate(xls) using "xls.toml" {
         let W = Exp+Mant+1;
         some L where L >= 1;
     } where W > 0;
+
+    comp ConstButterfly[TwiddleReal, TwiddleImag]<'G: 1>(
+        clk: 1,
+        in0_r: ['G, 'G+1] W,
+        in0_i: ['G, 'G+1] W,
+        in1_r: ['G, 'G+1] W,
+        in1_i: ['G, 'G+1] W
+    ) -> (
+        out: ['G+L+1, 'G+L+2] 4*W
+    ) with {
+        let W = 32;
+        some L where L >= 1;
+    } where W > 0;
 }
 
 comp ButterflySplit[Exp, Mant]<'G:1>(
@@ -51,8 +64,40 @@ comp ButterflySplit[Exp, Mant]<'G:1>(
     L := B::L+1; // telling XLS you want 3 pipeline stages actually gives you 4
 }
 
+comp ConstButterflySplit[I, NPoints]<'G:1>(
+    clk: 1,
+    in0[2]: ['G, 'G+1] W,
+    in1[2]: ['G, 'G+1] W,
+) -> (
+    out0[2]: ['G+L, 'G+L+1] W,
+    out1[2]: ['G+L, 'G+L+1] W
+) with {
+    let W = 32;
+    some L where L >= 1;
+} where
+    NPoints > 0
+{
+    B := new ConstButterfly[cos_bits(I, NPoints), sin_bits(I+NPoints/2, NPoints)];
+    b := B<'G>(
+        in0{0}, in0{1}, 
+        in1{0}, in1{1}
+    );
+
+    out0_r := new Slice[4*W, 4*W-1, 3*W]<'G+B::L+1>(b.out);
+    out0_i := new Slice[4*W, 3*W-1, 2*W]<'G+B::L+1>(b.out);
+    out1_r := new Slice[4*W, 2*W-1, W]<'G+B::L+1>(b.out);
+    out1_i := new Slice[4*W, W-1, 0]<'G+B::L+1>(b.out);
+
+    out0{0} = out0_r.out;
+    out0{1} = out0_i.out;
+    out1{0} = out1_r.out;
+    out1{1} = out1_i.out;
+
+    L := B::L+1; // telling XLS you want 3 pipeline stages actually gives you 4
+}
+
+
 comp Butterflies[N, Exp, Mant]<'G:1>(
-    go: interface['G],
     in[N*2][2]: ['G, 'G+1] W,
     twiddle[N][2]: ['G, 'G+1] W
 ) -> (
@@ -66,6 +111,28 @@ comp Butterflies[N, Exp, Mant]<'G:1>(
 
     for i in 0..N {
         b := new ButterflySplit[Exp, Mant]<'G>(in{2*i}{0..2}, in{2*i+1}{0..2}, twiddle{i}{0..2});
+        out{2*i}{0..2} = b.out0{0..2};
+        out{2*i+1}{0..2} = b.out1{0..2};
+    }
+}
+
+comp ConstButterflies[Stage, NStages]<'G:1>(
+    in[NPoints][2]: ['G, 'G+1] W,
+) -> (
+    out[NPoints][2]: ['G+L, 'G+L+1] W
+) with {
+    let NPoints = pow2(NStages);
+    let W = 32;
+    some L where L >= 1;
+} where W > 0 {
+    Bx := new ConstButterflySplit[0, NPoints];
+    L := Bx::L;
+
+    for i in 0..NPoints/2 {
+        let twiddle_idx = (i / pow2(NStages-Stage-1)) * pow2(NStages-Stage-1);
+        B := new ConstButterflySplit[twiddle_idx, NPoints];
+        b := B<'G>(in{2*i}{0..2}, in{2*i+1}{0..2});
+        assume B::L == Bx::L;
         out{2*i}{0..2} = b.out0{0..2};
         out{2*i+1}{0..2} = b.out1{0..2};
     }

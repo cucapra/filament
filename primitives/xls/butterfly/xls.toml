@@ -13,3 +13,10 @@ parameters = ["Exp", "Mant"]
 name_format = "Butterfly_Exp${Exp}_Mant${Mant}"
 cli_format = "${xls_path} ${NAME_FORMAT} xls/butterfly.x ${OUT_FILE} ${Exp} ${Mant} Butterfly ${stages}"
 outputs.L = "pipeline_depth"
+
+[modules.ConstButterfly]
+name = "ConstButterfly"
+parameters = ["TwiddleReal", "TwiddleImag"]
+name_format = "ConstButterfly_TwiddleReal${TwiddleReal}_TwiddleImag${TwiddleImag}"
+cli_format = "${xls_path} ${NAME_FORMAT} xls/constbutterfly.x ${OUT_FILE} ${TwiddleReal} ${TwiddleImag} ConstButterfly ${stages}"
+outputs.L = "pipeline_depth"

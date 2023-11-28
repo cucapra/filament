@@ -1,0 +1,40 @@
+import "primitives/reshape.fil";
+
+/// FFT that takes in a single wire and outputs a single wire
+comp BundledFFT[NStages, N]<'G: L>(
+  go: interface['G],
+  in[NPoints*2]: ['G, 'G+1] 32, // input bundle
+) -> (
+  out: ['G+L, 'G+L+1] NPoints*2*32 // output wire
+) with {
+  let NPoints = pow2(NStages);
+  some L where L > 0;
+} where
+  NPoints % (2*N) == 0,
+  N > 0,
+  N * 2 <= NPoints,
+  NStages > 0
+{
+  bundle input_bundle[NPoints][2]: ['G, 'G+1] 32;
+
+  for i in 0..NPoints {
+    input_bundle{i}{0} = in{2*i};
+    input_bundle{i}{1} = in{2*i+1};
+  }
+
+  // hook up pipelined fft
+  FP := new PeaseFFT[NStages, N];
+  fp := FP<'G>(input_bundle{0..NPoints}{0..2});
+
+  bundle fp_output_bundle[NPoints*2]: ['G+FP::L, 'G+FP::L+1] 32;
+
+  for i in 0..NPoints {
+    fp_output_bundle{2*i} = fp.out{i}{0};
+    fp_output_bundle{2*i+1} = fp.out{i}{1};
+  }
+
+  fpw := new ConcatBundle[32, NPoints*2]<'G+FP::L>(fp_output_bundle{0..NPoints*2});
+  out = fpw.out;
+
+  L := FP::L;
+}
