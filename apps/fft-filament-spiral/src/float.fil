@@ -37,7 +37,7 @@ comp FFTFPAdd[E, M]<'G:1>(
 ) -> (
   R: ['G+L, 'G+L+1] W,
 ) with {
-  some W where W > 0;
+  some W where W == E + M + 1;
   some L where L >= 0;
 } where 
   E > 0,
@@ -71,7 +71,7 @@ comp FFTFPSub[E, M]<'G:1>(
 ) -> (
   R: ['G+L, 'G+L+1] W,
 ) with {
-  some W where W > 0;
+  some W where W == E + M + 1;
   some L where L >= 0;
 } where 
   E > 0,
@@ -106,7 +106,7 @@ comp FFTFPMult[E, M]<'G: 1>(
 ) -> (
   R: ['G+L, 'G+L+1] W,
 ) with {
-  some W where W > 0;
+  some W where W == E + M + 1;
   some L where L >= 0;
 } where 
   E > 0,
@@ -140,7 +140,7 @@ comp FFTInputIEEE[E, M]<'G:1>(
   R: ['G+L, 'G+L+1] W
 ) with {
   let WidthIEEE = E + M + 1;
-  some W where W > 0;
+  some W where W == E + M + 1;
   some L where L == 0;
 } where 
   E > 0,
@@ -171,7 +171,7 @@ comp FFTOutputIEEE[E, M]<'G:1>(
 ) -> (
   R: ['G+L, 'G+L+1] WidthIEEE
 ) with {
-  some W where W > 0;
+  some W where W == E + M + 1;
   let WidthIEEE = E + M + 1;
   some L where L == 0;
 } where 
@@ -204,7 +204,7 @@ comp FFTFPNeg[E, M]<'G:1>(
 ) -> (
   R: ['G+L, 'G+L+1] W
 ) with {
-  some W where W > 0;
+  some W where W == E + M + 1;
   some L where L == 0;
 } where 
   E > 0,
