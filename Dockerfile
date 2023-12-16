@@ -58,13 +58,18 @@ RUN git clone --depth 1 --branch v3.0.0 https://github.com/ghdl/ghdl.git &&\
     LDFLAGS='-ldl' ../configure --with-llvm-config --prefix=/usr &&\
     make && make install
 
+ARG TARGETOS TARGETARCH
+
 # Install Bazel 6.4.0
 WORKDIR /home
-RUN apt install -y g++ unzip zip default-jdk && \
-  wget https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-installer-linux-x86_64.sh && \
-  chmod +x bazel-6.4.0-installer-linux-x86_64.sh && \
-  ./bazel-6.4.0-installer-linux-x86_64.sh --prefix=/root/.local && \
-  rm bazel-6.4.0-installer-linux-x86_64.sh
+RUN apt install -y g++ unzip zip default-jdk
+
+# Download bazelisk
+RUN wget "https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-${TARGETOS}-${TARGETARCH}" --output-document bazelisk && \
+  chmod +x bazelisk && \
+  mv bazelisk /root/.local/bin/bazel
+
+ARG USE_BAZEL_VERSION=6.4.0
 
 # Install and build XLS (without C++ frontend)
 WORKDIR /home
