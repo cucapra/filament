@@ -69,7 +69,9 @@ RUN wget "https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazel
   chmod +x bazelisk && \
   mv bazelisk /root/.local/bin/bazel
 
-ARG USE_BAZEL_VERSION=6.4.0
+ARG USE_BAZEL_VERSION=7.0.0
+
+RUN bazel version
 
 # Install and build XLS (without C++ frontend)
 WORKDIR /home
