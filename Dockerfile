@@ -48,17 +48,6 @@ RUN git clone --depth 1 --branch flopoco-4.1 https://gitlab.com/flopoco/flopoco 
     cmake -GNinja .. && ninja &&\
     ln -s /home/flopoco/build/code/FloPoCoBin/flopoco /usr/bin/flopoco
 
-ARG TARGETARCH
-
-# Install GCC 11
-RUN apt install -y libgmp3-dev libmpfr-dev libmpc-dev
-WORKDIR /home
-RUN git clone --depth 1 --branch releases/gcc-11.4.0 https://github.com/gcc-mirror/gcc.git &&\
-    cd gcc &&\
-    ./configure --disable-multilib &&\
-    make -j$(nproc) &&\
-    make install
-
 # Install GHDL 3.0.0
 WORKDIR /home
 # Install deps
@@ -68,6 +57,35 @@ RUN git clone --depth 1 --branch v3.0.0 https://github.com/ghdl/ghdl.git &&\
     mkdir build && cd build &&\
     LDFLAGS='-ldl' ../configure --with-llvm-config --prefix=/usr &&\
     make && make install
+
+ARG TARGETARCH
+
+# Install GCC 11
+RUN apt install -y libgmp3-dev libmpfr-dev libmpc-dev
+ENV LD_LIBRARY_PATH=/usr/local/lib64:$LD_LIBRARY_PATH
+WORKDIR /home
+RUN git clone --depth 1 --branch releases/gcc-11.4.0 https://github.com/gcc-mirror/gcc.git &&\
+    cd gcc &&\
+    ./configure --disable-multilib &&\
+    make -j$(nproc) &&\
+    make install
+
+# Install libboost 1.84.0
+WORKDIR /home
+RUN git clone --depth 1 --recursive --branch boost-1.84.0 https://github.com/boostorg/boost.git &&\
+    cd boost &&\
+    ./bootstrap.sh &&\
+    ./b2 install
+# Add boost to include path
+ENV CPLUS_INCLUDE_PATH=/home/boost:$CPLUS_INCLUDE_PATH
+
+# Install SLANG
+WORKDIR /home
+RUN git clone --depth 1 --branch v5.0 https://github.com/MikePopoloski/slang.git &&\
+    cd slang &&\
+    cmake -B build &&\
+    cmake --build build -j8 &&\
+    cmake --install build --strip
 
 # ----------------------------------------
 # Install filament
