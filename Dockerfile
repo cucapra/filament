@@ -42,12 +42,22 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.28.0-rc3/cmake-3.
 
 # Install FloPoCo 4.1
 WORKDIR /home
-RUN git clone --branch flopoco-4.1 https://gitlab.com/flopoco/flopoco &&\
+RUN git clone --depth 1 --branch flopoco-4.1 https://gitlab.com/flopoco/flopoco &&\
     cd flopoco && git checkout f3d76595c01f84cee57ae67eee1ceb31a6fe93bc &&\
     mkdir build && cd build &&\
     cmake -GNinja .. && ninja &&\
     ln -s /home/flopoco/build/code/FloPoCoBin/flopoco /usr/bin/flopoco
 
+ARG TARGETARCH
+
+# Install GCC 11
+RUN apt install -y libgmp3-dev libmpfr-dev libmpc-dev
+WORKDIR /home
+RUN git clone --depth 1 --branch releases/gcc-11.4.0 https://github.com/gcc-mirror/gcc.git &&\
+    cd gcc &&\
+    ./configure --disable-multilib &&\
+    make -j$(nproc) &&\
+    make install
 
 # Install GHDL 3.0.0
 WORKDIR /home
