@@ -60,11 +60,11 @@ RUN git clone --depth 1 --branch v3.0.0 https://github.com/ghdl/ghdl.git &&\
 
 ARG TARGETARCH
 
-# Install GCC 11
+# Install GCC 12
 RUN apt install -y libgmp3-dev libmpfr-dev libmpc-dev
 ENV LD_LIBRARY_PATH=/usr/local/lib64:$LD_LIBRARY_PATH
 WORKDIR /home
-RUN git clone --depth 1 --branch releases/gcc-11.4.0 https://github.com/gcc-mirror/gcc.git &&\
+RUN git clone --depth 1 --branch releases/gcc-12.1.0 https://github.com/gcc-mirror/gcc.git &&\
     cd gcc &&\
     ./configure --disable-multilib &&\
     make -j$(nproc) &&\
