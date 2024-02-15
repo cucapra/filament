@@ -1,0 +1,3 @@
+/home/filament/tools/slang/CMakeFiles/rename.dir
+/home/filament/tools/slang/CMakeFiles/edit_cache.dir
+/home/filament/tools/slang/CMakeFiles/rebuild_cache.dir
