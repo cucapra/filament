@@ -1,0 +1,47 @@
+import "primitives/core.fil";
+import "primitives/math/math.fil";
+import "primitives/reshape.fil";
+
+comp Dot[M]<'G:C>(
+    go: interface['G],
+    left[16]: ['G, 'G+1] 32,
+    right[16]: ['G, 'G+1] 32,
+) -> (
+    out[16]: ['G+C+Lat-1, 'G+C+Lat] 32
+) with {
+    let C = 16 / M;
+    let Lat = 3;
+} where 16 % M == 0, M > 0, M <= 16 {
+    bundle li[C][M]: for<j> ['G+j, 'G+j+1] 32;
+    bundle ri[C][M]: for<j> ['G+j, 'G+j+1] 32;
+    bundle o[C][M]: for<j> ['G+j+Lat, 'G+j+Lat+1] 32;
+
+    assume C > 1;
+
+    // For each multiplier
+    for i in 0..M {
+        // Shift the inputs by the appropriate amount
+        for j in 0..C {
+            ls := new Shift[32, j]<'G>(left{i});
+            rs := new Shift[32, j]<'G>(right{i});
+            li{j}{i} = ls.out;
+            ri{j}{i} = rs.out;
+        }
+    }
+
+    // Instantiate multiplier and reuse them C times
+    for i in 0..M {
+        M := new FastMult[32] in ['G, 'G+C];
+        for j in 0..C {
+            m := M<'G+j>(li{j}{i}, li{j}{i});
+            o{j}{i} = m.out;
+        }
+    }
+
+    deser := new Deserialize[32, C, M]<'G+Lat>(o{0..C}{0..M});
+    out{0..16} = deser.out{0..16};
+}
+
+comp main<'G:1>() -> () {
+    dot := new Dot[4];
+}
