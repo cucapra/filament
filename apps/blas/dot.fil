@@ -1,0 +1,64 @@
+import "primitives/math/math.fil";
+
+comp Dot[W, N, Size]<'G:L>(
+  go: interface['G],
+  x[Size]: ['G, 'G+1] W,
+  y[Size]: ['G, 'G+1] W
+) -> (
+  out[Size]: ['G+L, 'G+L+1] W
+) with {
+  some L where L >= 0;
+} where W > 0, N > 0, Size >= 0 {
+
+  M := new Multipliers[W, N];
+
+  // for arrays of length Size and N reuses, need to reuse each multiplier Size/N times
+  let reuses = Size / N;
+  let latency = M::II * reuses + M::L;
+  L := latency;
+
+  // bundle x_reg[N]: for<k> ['G+k*]
+  // bundle y_reg[N]: for<k>
+
+  for i in 0..reuses {
+    m := M<'G>(x{i*N..(i+1)*N}, y{i*N..(i+1)*N});
+    out{i*N..(i+1)*N} = m.out{0..N};
+  }
+}
+
+// a component that does N multiplies at once
+comp Multipliers[W, N]<'G:II>(
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W
+) -> (
+  out[N]: ['G+L, 'G+L+1] W
+) with {
+  some L where L >= 0;
+  some II where II > 0;
+} where N > 0, W > 0 {
+  Mx := new Mult[W];
+  L := Mx::L;
+  II := Mx::II;
+
+  for i in 0..N {
+    m := new Mult[W]<'G>(x{i}, y{i});
+    out{i} = m.out;
+  }
+}
+
+// a multiplier with II, latency as output params
+comp Mult[W]<'G:II>(
+  left: ['G, 'G+1] W,
+  right: ['G, 'G+1] W
+) -> (
+  out: ['G+L, 'G+L+1] W
+) with {
+  some L where L >= 0;
+  some II where II > 0;
+} where W > 0 {
+  M := new FastMult[W];
+  m := M<'G>(left, right);
+  out = m.out;
+  L := 3;
+  II := 1;
+}

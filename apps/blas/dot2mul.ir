@@ -1,0 +1,576 @@
+comp %comp0[]<>(
+  in: for<%pr0:1> ['G, 'G+1] 16) -> (
+  out: for<%pr1:1> ['G, 'G+1] 16) with {
+{
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  out{0} = in{0};
+}
+ext comp Add[IN_WIDTH, OUT_WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  left: for<_:1> ['G, 'L] IN_WIDTH,
+  right: for<_:1> ['G, 'L] IN_WIDTH) -> (
+  out: for<_:1> ['G, 'L] OUT_WIDTH) with {
+} where 
+  OUT_WIDTH >= IN_WIDTH,
+  IN_WIDTH > 0,
+  OUT_WIDTH > 0,
+  'L > 'G,
+{
+  assert |'L - 'G| > 0; // Misc
+  assert 'L > 'G; // WellFormedInterval
+  assert |'L - 'G| >= |'L - 'G|; // BundleDelay
+  assert 'L > 'G; // WellFormedInterval
+  assert |'L - 'G| >= |'L - 'G|; // BundleDelay
+  assert 'L > 'G; // WellFormedInterval
+  assert |'L - 'G| >= |'L - 'G|; // BundleDelay
+  assume 'L > 'G; // Misc
+  assume OUT_WIDTH >= IN_WIDTH; // Misc
+  assume IN_WIDTH > 0; // Misc
+  assume OUT_WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+ext comp Delay[WIDTH]<'G: 1>(
+  in: for<_:1> ['G, 'G+1] WIDTH) -> (
+  out: for<_:1> ['G+1, 'G+2] WIDTH) with {
+{
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+comp %comp3[]<>(
+  in: for<%pr9:2> ['G, 'G+1] 16) -> (
+  out: for<%pr10:1> ['G+1, 'G+2] 16) with {
+{
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  LEFT = comp0;
+  RIGHT = comp0;
+  ADD = Add[16, 16];
+  D = Delay[16];
+  left, left.out, left.in = LEFT<'G>;
+  right, right.out, right.in = RIGHT<'G>;
+  add, add.out, add.left, add.right = ADD<'G, 'G+1>;
+  d, d.out, d.in = D<'G>;
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  left.in{0} = in{0};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  right.in{0} = in{1};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  add.left{0} = left.out{0};
+  assert true; // Generated
+  add.right{0} = right.out{0};
+  assert true; // Generated
+  assert true; // Generated
+  d.in{0} = add.out{0};
+  assert true; // Generated
+  out{0} = d.out{0};
+}
+comp %comp4[]<>(
+  in: for<%pr9:4> ['G, 'G+1] 16) -> (
+  out: for<%pr10:1> ['G+2, 'G+3] 16) with {
+{
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  LEFT = comp3;
+  RIGHT = comp3;
+  ADD = Add[16, 16];
+  D = Delay[16];
+  left, left.out, left.in = LEFT<'G>;
+  right, right.out, right.in = RIGHT<'G>;
+  add, add.out, add.left, add.right = ADD<'G+1, 'G+2>;
+  d, d.out, d.in = D<'G+1>;
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  left.in{0..2} = in{0..2};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  right.in{0..2} = in{2..4};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  add.left{0} = left.out{0};
+  assert true; // Generated
+  add.right{0} = right.out{0};
+  assert true; // Generated
+  assert true; // Generated
+  d.in{0} = add.out{0};
+  assert true; // Generated
+  out{0} = d.out{0};
+}
+ext comp MultComb[IN_WIDTH, OUT_WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  left: for<_:1> ['G, 'L] IN_WIDTH,
+  right: for<_:1> ['G, 'L] IN_WIDTH) -> (
+  out: for<_:1> ['G, 'L] OUT_WIDTH) with {
+} where 
+  OUT_WIDTH >= IN_WIDTH,
+  IN_WIDTH > 0,
+  OUT_WIDTH > 0,
+  'L > 'G,
+{
+  assert |'L - 'G| > 0; // Misc
+  assert 'L > 'G; // WellFormedInterval
+  assert |'L - 'G| >= |'L - 'G|; // BundleDelay
+  assert 'L > 'G; // WellFormedInterval
+  assert |'L - 'G| >= |'L - 'G|; // BundleDelay
+  assert 'L > 'G; // WellFormedInterval
+  assert |'L - 'G| >= |'L - 'G|; // BundleDelay
+  assume 'L > 'G; // Misc
+  assume OUT_WIDTH >= IN_WIDTH; // Misc
+  assume IN_WIDTH > 0; // Misc
+  assume OUT_WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+comp %comp6[]<>(
+  left: for<%pr11:1> ['G, 'G+1] 16,
+  right: for<%pr12:1> ['G, 'G+1] 16) -> (
+  out: for<%pr13:1> ['G+3, 'G+4] 16) with {
+{
+  L = Delay[16];
+  R = Delay[16];
+  M = MultComb[16, 16];
+  OT = Delay[16];
+  FINAL = Delay[16];
+  l, l.out, l.in = L<'G>;
+  r, r.out, r.in = R<'G>;
+  m, m.out, m.left, m.right = M<'G+1, 'G+2>;
+  ot, ot.out, ot.in = OT<'G+1>;
+  final, final.out, final.in = FINAL<'G+2>;
+  assert true; // Generated
+  assert true; // Generated
+  l.in{0} = left{0};
+  assert true; // Generated
+  r.in{0} = right{0};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  m.left{0} = l.out{0};
+  assert true; // Generated
+  m.right{0} = r.out{0};
+  assert true; // Generated
+  ot.in{0} = m.out{0};
+  assert true; // Generated
+  final.in{0} = ot.out{0};
+  assert true; // Generated
+  out{0} = final.out{0};
+}
+comp %comp7[]<>(
+  left: for<%pr3:1> ['G, 'G+1] 16,
+  right: for<%pr4:1> ['G, 'G+1] 16) -> (
+  out: for<%pr5:1> ['G+3, 'G+4] 16) with {
+{
+  M = comp6;
+  m, m.out, m.left, m.right = M<'G>;
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  m.left{0} = left{0};
+  assert true; // Generated
+  m.right{0} = right{0};
+  assert true; // Generated
+  out{0} = m.out{0};
+}
+comp %comp8[]<>(
+  x: for<%pr6:2> ['G, 'G+1] 16,
+  y: for<%pr7:2> ['G, 'G+1] 16) -> (
+  out: for<%pr8:2> ['G+3, 'G+4] 16) with {
+{
+  Mx = comp7;
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  M = comp7;
+  m, m.out, m.left, m.right = M<'G>;
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  m.left{0} = x{0};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  m.right{0} = y{0};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  out{0} = m.out{0};
+  M = comp7;
+  m, m.out, m.left, m.right = M<'G>;
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  m.left{0} = x{1};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  m.right{0} = y{1};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  out{1} = m.out{0};
+}
+ext comp Register[WIDTH]<'G: |'L - 'G+1|, 'L: 1>(
+  in: for<_:1> ['G, 'G+1] WIDTH) -> (
+  out: for<_:1> ['G+1, 'L] WIDTH) with {
+} where 
+  'L > 'G+1,
+{
+  assert |'L - 'G+1| > 0; // Misc
+  assert |'L - 'G+1| >= 1; // BundleDelay
+  assert 'L > 'G+1; // WellFormedInterval
+  assert |'L - 'G+1| >= |'L - 'G+1|; // BundleDelay
+  assume 'L > 'G+1; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+comp %comp10[]<>(
+  in: for<%pr4:2> ['G, 'G+1] 16) -> (
+  out: for<%pr5:2> ['G+1, 'L] 16) with {
+{
+  assert |'L - 'G+1| > 0; // Generated
+  assert |'L - 'G+1| >= 1; // Generated
+  assert 'L > 'G+1; // Generated
+  assert |'L - 'G+1| >= |'L - 'G+1|; // Generated
+  assert 'L > 'G+1; // Generated
+  R = Register[16];
+  r, r.out, r.in = R<'G, 'L>;
+  assert |'L - 'G+1| >= |'L - 'G+1|; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  r.in{0} = in{0};
+  assert 'L > 'G+1; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  out{0} = r.out{0};
+  R = Register[16];
+  r, r.out, r.in = R<'G, 'L>;
+  assert |'L - 'G+1| >= |'L - 'G+1|; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  r.in{0} = in{1};
+  assert 'L > 'G+1; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  out{1} = r.out{0};
+}
+comp %comp11[]<>(
+  x: for<%pr45:8> ['G, 'G+1] 16,
+  y: for<%pr46:8> ['G, 'G+1] 16) -> (
+  out: for<%pr47:1> ['G+14, 'G+15] 16) with {
+{
+  RA2 = comp4;
+  RA = comp3;
+  M = comp8;
+  ra_final, ra_final.out, ra_final.in = RA2<'G+12>;
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  mult_out = bundle for<%pr2:4, %pr3:2> ['G+%pr2+3, 'G+%pr2+3+1] 16;
+  add_out = bundle for<%pr4:4> ['G+12, 'G+13] 16;
+  ADD_REG = Register[16];
+  ra, ra.out, ra.in = RA<'G+3>;
+  add_reg, add_reg.out, add_reg.in = ADD_REG<'G+4, 'G+13>;
+  m, m.out, m.x, m.y = M<'G>;
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  m.x{0..2} = x{0..2};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  m.y{0..2} = y{0..2};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  mult_out{0..1}{0..2} = m.out{0..2};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  ra.in{0..2} = mult_out{0..1}{0..2};
+  assert true; // Generated
+  add_reg.in{0} = ra.out{0};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  add_out{0} = add_reg.out{0};
+  ADD_REG = Register[16];
+  ra, ra.out, ra.in = RA<'G+4>;
+  add_reg, add_reg.out, add_reg.in = ADD_REG<'G+5, 'G+13>;
+  X_REG = comp10;
+  Y_REG = comp10;
+  x_reg, x_reg.out, x_reg.in = X_REG<'G, 'G+2>;
+  y_reg, y_reg.out, y_reg.in = Y_REG<'G, 'G+2>;
+  m, m.out, m.x, m.y = M<'G+1>;
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  x_reg.in{0..2} = x{2..4};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  y_reg.in{0..2} = y{2..4};
+  assert true; // Generated
+  assert true; // Generated
+  m.x{0..2} = x_reg.out{0..2};
+  assert true; // Generated
+  m.y{0..2} = y_reg.out{0..2};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  mult_out{1..2}{0..2} = m.out{0..2};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  ra.in{0..2} = mult_out{1..2}{0..2};
+  assert true; // Generated
+  add_reg.in{0} = ra.out{0};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  add_out{1} = add_reg.out{0};
+  ADD_REG = Register[16];
+  ra, ra.out, ra.in = RA<'G+5>;
+  add_reg, add_reg.out, add_reg.in = ADD_REG<'G+6, 'G+13>;
+  X_REG = comp10;
+  Y_REG = comp10;
+  x_reg, x_reg.out, x_reg.in = X_REG<'G, 'G+3>;
+  y_reg, y_reg.out, y_reg.in = Y_REG<'G, 'G+3>;
+  m, m.out, m.x, m.y = M<'G+2>;
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  x_reg.in{0..2} = x{4..6};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  y_reg.in{0..2} = y{4..6};
+  assert true; // Generated
+  assert true; // Generated
+  m.x{0..2} = x_reg.out{0..2};
+  assert true; // Generated
+  m.y{0..2} = y_reg.out{0..2};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  mult_out{2..3}{0..2} = m.out{0..2};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  ra.in{0..2} = mult_out{2..3}{0..2};
+  assert true; // Generated
+  add_reg.in{0} = ra.out{0};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  add_out{2} = add_reg.out{0};
+  ADD_REG = Register[16];
+  ra, ra.out, ra.in = RA<'G+6>;
+  add_reg, add_reg.out, add_reg.in = ADD_REG<'G+7, 'G+13>;
+  X_REG = comp10;
+  Y_REG = comp10;
+  x_reg, x_reg.out, x_reg.in = X_REG<'G, 'G+4>;
+  y_reg, y_reg.out, y_reg.in = Y_REG<'G, 'G+4>;
+  m, m.out, m.x, m.y = M<'G+3>;
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  x_reg.in{0..2} = x{6..8};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  y_reg.in{0..2} = y{6..8};
+  assert true; // Generated
+  assert true; // Generated
+  m.x{0..2} = x_reg.out{0..2};
+  assert true; // Generated
+  m.y{0..2} = y_reg.out{0..2};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  mult_out{3..4}{0..2} = m.out{0..2};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  ra.in{0..2} = mult_out{3..4}{0..2};
+  assert true; // Generated
+  add_reg.in{0} = ra.out{0};
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  assert true; // Generated
+  add_out{3} = add_reg.out{0};
+  assert true; // Generated
+  ra_final.in{0..4} = add_out{0..4};
+  assert true; // Generated
+  out{0} = ra_final.out{0};
+}
+ext comp Const[WIDTH, VALUE]<'G: |'L - 'G|, 'L: 1>(
+) -> (
+  out: for<_:1> ['G, 'L] WIDTH) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assert |'L - 'G| > 0; // Misc
+  assert 'L > 'G; // WellFormedInterval
+  assert |'L - 'G| >= |'L - 'G|; // BundleDelay
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+comp main[]<>(
+) -> (
+  out: for<%pr5:1> ['G+14, 'G+15] 16) with {
+{
+  Dx = comp11;
+  C0 = Const[16, 0];
+  c0, c0.out = C0<'G, 'G+14>;
+  d, d.out, d.x, d.y = Dx<'G>;
+  assert true; // Generated
+  in = bundle for<%pr4:8> ['G, 'G+14] 16;
+  assert true; // Generated
+  in{0} = c0.out{0};
+  in{1} = c0.out{0};
+  in{2} = c0.out{0};
+  in{3} = c0.out{0};
+  in{4} = c0.out{0};
+  in{5} = c0.out{0};
+  in{6} = c0.out{0};
+  in{7} = c0.out{0};
+  d.x{0..8} = in{0..8};
+  d.y{0..8} = in{0..8};
+  out{0} = d.out{0};
+}
+finished mono
