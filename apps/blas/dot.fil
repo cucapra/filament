@@ -28,6 +28,57 @@ comp VMul[M]<'G:C>(
     }
 }
 
+/// Dot-product implementation that uses exactly M multipliers
+comp Dot[M]<'G:C>(
+    go: interface['G],
+    left[16]: ['G, 'G+1] 32,
+    right[16]: ['G, 'G+1] 32,
+) -> (
+    out: ['G+TLat+C-1, 'G+TLat+C] 32
+) with {
+    let C = 16 / M;
+    let Lat = 3;
+    let ALat = log2(M); // Latency of the reduction tree
+    let TLat = ALat + Lat;
+} where 16 % M == 0, M > 1, M <= 16 {
+    // Vector multiplier that produces M values at a time
+    vmul := new VMul[M]<'G>(left{0..16}, right{0..16});
+
+    // Required for the reduce adder
+    assume ALat >= 0;
+    adder := new ReduceAdd[32, M] in ['G+Lat, 'G+Lat+C];
+
+    // Bundle to track output from the reduction tree
+    bundle add_out[C]: for<i> ['G+TLat+i, 'G+TLat+i+1] 32;
+
+    for j in 0..C {
+        // Reduce the M values to a single value
+        a := adder<'G+Lat+j>(vmul.out{j}{0..M});
+        add_out{j} = a.out;
+    }
+
+    r := new Prev[32, 1] in ['G+TLat, 'G+TLat+C];
+    ar := new Add[32];
+    for j in 0..C {
+        // Accumulate the results
+        // XXX(rachit): Tragic amount of duplication across branches.
+        if j == 0 {
+            zero := new Const[32, 0]<'G+TLat>();
+            add := ar<'G+TLat>(zero.out, add_out{j});
+            prev := r<'G+TLat>(add.out);
+            if j == C - 1 {
+                out = prev.prev;
+            }
+        } else {
+            add := ar<'G+TLat+j>(prev.prev, add_out{j});
+            prev := r<'G+TLat+j>(add.out);
+            if j == C - 1 {
+                out = prev.prev;
+            }
+        }
+    }
+}
+
 comp main<'G:1>() -> () {
-    vmul := new VMul[4];
+    dot := new Dot[4];
 }
