@@ -79,6 +79,59 @@ comp Dot[M]<'G:C>(
     }
 }
 
-comp main<'G:1>() -> () {
-    dot := new Dot[4];
+// Flat interface for the main module.
+// li and ri are left and right inputs, respectively at index i.
+comp main<'G:4>(
+    go: interface['G],
+    l0: ['G, 'G+1] 32,
+    l1: ['G, 'G+1] 32,
+    l2: ['G, 'G+1] 32,
+    l3: ['G, 'G+1] 32,
+    l4: ['G, 'G+1] 32,
+    l5: ['G, 'G+1] 32,
+    l6: ['G, 'G+1] 32,
+    l7: ['G, 'G+1] 32,
+    l8: ['G, 'G+1] 32,
+    l9: ['G, 'G+1] 32,
+    l10: ['G, 'G+1] 32,
+    l11: ['G, 'G+1] 32,
+    l12: ['G, 'G+1] 32,
+    l13: ['G, 'G+1] 32,
+    l14: ['G, 'G+1] 32,
+    l15: ['G, 'G+1] 32,
+    r0: ['G, 'G+1] 32,
+    r1: ['G, 'G+1] 32,
+    r2: ['G, 'G+1] 32,
+    r3: ['G, 'G+1] 32,
+    r4: ['G, 'G+1] 32,
+    r5: ['G, 'G+1] 32,
+    r6: ['G, 'G+1] 32,
+    r7: ['G, 'G+1] 32,
+    r8: ['G, 'G+1] 32,
+    r9: ['G, 'G+1] 32,
+    r10: ['G, 'G+1] 32,
+    r11: ['G, 'G+1] 32,
+    r12: ['G, 'G+1] 32,
+    r13: ['G, 'G+1] 32,
+    r14: ['G, 'G+1] 32,
+    r15: ['G, 'G+1] 32,
+) -> (
+    out: ['G+8, 'G+9] 32
+) {
+    // Wrap inputs into bundles
+    bundle l[16]: ['G, 'G+1] 32;
+    l{0} = l0; l{1} = l1; l{2} = l2; l{3} = l3;
+    l{4} = l4; l{5} = l5; l{6} = l6; l{7} = l7;
+    l{8} = l8; l{9} = l9; l{10} = l10; l{11} = l11;
+    l{12} = l12; l{13} = l13; l{14} = l14; l{15} = l15;
+
+    bundle r[16]: ['G, 'G+1] 32;
+    r{0} = r0; r{1} = r1; r{2} = r2; r{3} = r3;
+    r{4} = r4; r{5} = r5; r{6} = r6; r{7} = r7;
+    r{8} = r8; r{9} = r9; r{10} = r10; r{11} = r11;
+    r{12} = r12; r{13} = r13; r{14} = r14; r{15} = r15;
+
+    // Perform the dot product
+    dot := new Dot[4]<'G>(l{0..16}, r{0..16});
+    out = dot.out;
 }
