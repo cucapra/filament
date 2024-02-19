@@ -1,53 +1,105 @@
 import "primitives/math/math.fil";
+import "primitives/state.fil";
+import "primitives/reshape.fil";
+import "primitives/core.fil";
 
-comp Dot[W, N, Size]<'G:L>(
+comp main<'G:L>(
   go: interface['G],
-  x[Size]: ['G, 'G+1] W,
-  y[Size]: ['G, 'G+1] W
+  in0: ['G, 'G+L] W * S,
+  in1: ['G, 'G+L] W * S
 ) -> (
-  out[Size]: ['G+L, 'G+L+1] W
+  out: ['G+L, 'G+L+1] W
 ) with {
-  some L where L >= 0;
-} where W > 0, N > 0, Size >= 0 {
+  let N = 8;
+  let S = 8;
+  let W = 16;
+  some L where L > 0;
+} where L > 0 {
 
-  M := new Multipliers[W, N];
+  Dx := new Dot[W, S, N];
 
-  // for arrays of length Size and N reuses, need to reuse each multiplier Size/N times
-  let reuses = Size / N;
-  let latency = M::II * reuses + M::L;
-  L := latency;
+  sw0 := new SplitWire[W, S, Dx::L]<'G>(in0);
+  sw1 := new SplitWire[W, S, Dx::L]<'G>(in1);
+  d := Dx<'G>(sw0.out{0..S}, sw1.out{0..S});
 
-  // bundle x_reg[N]: for<k> ['G+k*]
-  // bundle y_reg[N]: for<k>
+  out = d.out;
 
-  for i in 0..reuses {
-    m := M<'G>(x{i*N..(i+1)*N}, y{i*N..(i+1)*N});
-    out{i*N..(i+1)*N} = m.out{0..N};
-  }
+  L := Dx::L;
 }
 
-// a component that does N multiplies at once
-comp Multipliers[W, N]<'G:II>(
-  x[N]: ['G, 'G+1] W,
-  y[N]: ['G, 'G+1] W
+// W: Width of nums
+// S: Size of vectors
+// N: Number of multipliers
+comp Dot[W, S, N]<'G:L>(
+  go: interface['G],
+  x[S]: ['G, 'G+1] W,
+  y[S]: ['G, 'G+1] W
 ) -> (
-  out[N]: ['G+L, 'G+L+1] W
+  out: ['G+L, 'G+L+1] W
 ) with {
-  some L where L >= 0;
-  some II where II > 0;
-} where N > 0, W > 0 {
-  Mx := new Mult[W];
-  L := Mx::L;
-  II := Mx::II;
+  some L where L > 0;
+} where W > 0, L > 0 {
 
-  for i in 0..N {
-    m := new Mult[W]<'G>(x{i}, y{i});
-    out{i} = m.out;
+  let reuses = S / N;
+
+  M := new Multipliers[W, N];
+  RA := new RAdd[W, N];
+  RA2 := new RAdd[W, reuses];
+
+  // needed for typechecking, although it shouldn't be?
+  assume RA::L == log2(N);
+  assume RA2::L == log2(reuses);
+
+  let latency = reuses*M::II+M::L + reuses*RA::II + RA::L + RA2::L;
+  L := latency;
+
+  bundle mult_out[reuses][N]: for<k> ['G+k*M::II+M::L, 'G+k*M::II+M::L+1] W;
+  bundle add_out[reuses]: for<q> ['G+reuses*M::II+M::L + reuses*RA::II + RA::L, 'G+reuses*M::II+M::L + reuses*RA::II + RA::L + 1] W;
+  // bundle add_out[4]: for<k> ['G + k*M::II + M::L + k*RAdd::L, 'G + k*M::II + M::L + k*RAdd::L] W;
+
+  let final_add_start = reuses*M::II+M::L + reuses*RA::II + RA::L;
+  
+  for j in 0..reuses {
+
+    let mul_start = j*M::II;
+    let mul_end = j*M::II + M::L;
+    let add_reg_start = j*M::II + M::L + RA::L;
+    let add_reg_end = reuses*M::II+M::L + reuses*RA::II + RA::L + 1;
+
+    // first use can use raw inputs
+    if j == 0 {
+      m := M<'G+mul_start>(x{j*N..(j+1)*N}, y{j*N..(j+1)*N});
+      mult_out{j}{0..N} = m.out{0..N};
+    // any other use should use registered inputs
+    } else {
+      x_concat := new ConcatBundle[W, N]<'G>(x{j*N..(j+1)*N});
+      y_concat := new ConcatBundle[W, N]<'G>(y{j*N..(j+1)*N});
+      x_concat_reg := new Register[W*N]<'G, 'G+mul_start+1>(x_concat.out);
+      y_concat_reg := new Register[W*N]<'G, 'G+mul_start+1>(y_concat.out);
+      x_bundle_reg := new SplitWire[W, N]<'G+mul_start>(x_concat_reg.out);
+      y_bundle_reg := new SplitWire[W, N]<'G+mul_start>(y_concat_reg.out);
+      m := M<'G+mul_start>(x_bundle_reg.out{0..N}, y_bundle_reg.out{0..N});
+      mult_out{j}{0..N} = m.out{0..N};
+    }
+
+    ra := RA<'G+mul_end>(mult_out{j}{0..N});
+    // register each adder output from the time it is available until the time
+    // that they are all available, so we can do the final layer of addition all at once
+
+    // NOTE(ethan): this can be made more aggressive by doing the additions
+    // as they are available - this scales much better for larger ratios of
+    // input vector length to multiplier quantity
+    add_reg := new Register[W]<'G + add_reg_start, 'G+add_reg_end>(ra.out);
+    add_out{j} = add_reg.out;
   }
+
+  ra_final := RA2<'G+final_add_start>(add_out{0..reuses});
+  out = ra_final.out;
+
 }
 
 // a multiplier with II, latency as output params
-comp Mult[W]<'G:II>(
+comp Mult[W]<'G:1>(
   left: ['G, 'G+1] W,
   right: ['G, 'G+1] W
 ) -> (
@@ -61,4 +113,60 @@ comp Mult[W]<'G:II>(
   out = m.out;
   L := 3;
   II := 1;
+}
+
+// a component that does N multiplies at once
+comp Multipliers[W, N]<'G:II>(
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W
+) -> (
+  out[N]: ['G+L, 'G+L+1] W
+) with {
+  some L where L >= 0;
+  some II where II > 0;
+} where W > 0 {
+  Mx := new Mult[W];
+  L := Mx::L;
+  II := Mx::II;
+
+  for i in 0..N {
+    m := new Mult[W]<'G>(x{i}, y{i});
+    out{i} = m.out;
+  }
+}
+
+// Addition-based reduction tree with latency, II as output params
+comp RAdd[W, N]<'G:1>(
+    in[N]: for<i> ['G, 'G+1] W
+) -> (
+     out: ['G+K, 'G+K+1] W
+) with {
+  let K = log2(N);
+  some L where L >= 0;
+  some II where II > 0;
+} where W >= 1,
+        N >= 1,
+        K == log2(N),
+        K >= 0
+{
+    L := K;
+    II := 1;
+
+    if N == 1 {
+        out = in{0};
+    } else {
+        // Required to make recursive calls type check.
+        assert K-1 == log2(N/2);
+        // This is a corollary of K != 0
+        assert N >= 2;
+        // This is not true in general for integer division but
+        // because N is a power of 2 it is true.
+        assert N - N/2 == N/2;
+
+        left := new RAdd[W, N/2]<'G>(in{0..N/2});
+        right := new RAdd[W, N/2]<'G>(in{N/2..N});
+        add := new Add[W]<'G+K-1>(left.out, right.out);
+        d := new Delay[W]<'G+K-1>(add.out);
+        out = d.out;
+    }
 }

@@ -73,8 +73,6 @@ comp Dot[W]<'G:L>(
       y_concat_reg := new Register[W*2]<'G, 'G+mul_start+1>(y_concat.out);
       x_bundle_reg := new SplitWire[W, 2]<'G+mul_start>(x_concat_reg.out);
       y_bundle_reg := new SplitWire[W, 2]<'G+mul_start>(y_concat_reg.out);
-      // x_reg := new RegBundle[W,2]<'G, 'G+mul_start+1>(x{j*2..(j+1)*2});
-      // y_reg := new RegBundle[W,2]<'G, 'G+mul_start+1>(y{j*2..(j+1)*2});
       m := M<'G+mul_start>(x_bundle_reg.out{0..2}, y_bundle_reg.out{0..2});
       mult_out{j}{0..2} = m.out{0..2};
     }
