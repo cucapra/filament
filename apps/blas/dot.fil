@@ -20,8 +20,8 @@ comp VMul[M]<'G:C>(
         M := new FastMult[32] in ['G, 'G+C];
         for j in 0..C {
             // Shift the inputs by the appropriate amount
-            ls := new Shift[32, j]<'G>(left{i});
-            rs := new Shift[32, j]<'G>(right{i});
+            ls := new Shift[32, j]<'G>(left{C*i+j});
+            rs := new Shift[32, j]<'G>(right{C*i+j});
             m := M<'G+j>(ls.out, rs.out);
             out{j}{i} = m.out;
         }
@@ -29,12 +29,12 @@ comp VMul[M]<'G:C>(
 }
 
 /// Dot-product implementation that uses exactly M multipliers
-comp Dot[M]<'G:C>(
+comp Dot[M]<'G:C+1>(
     go: interface['G],
     left[16]: ['G, 'G+1] 32,
     right[16]: ['G, 'G+1] 32,
 ) -> (
-    out: ['G+TLat+C-1, 'G+TLat+C] 32
+    out: ['G+TLat+C, 'G+TLat+C+1] 32
 ) with {
     let C = 16 / M;
     let Lat = 3;
@@ -57,7 +57,7 @@ comp Dot[M]<'G:C>(
         add_out{j} = a.out;
     }
 
-    r := new Prev[32, 1] in ['G+TLat, 'G+TLat+C];
+    r := new Prev[32, 1] in ['G+TLat, 'G+TLat+C+1];
     ar := new Add[32];
     for j in 0..C {
         // Accumulate the results
@@ -66,22 +66,20 @@ comp Dot[M]<'G:C>(
             zero := new Const[32, 0]<'G+TLat>();
             add := ar<'G+TLat>(zero.out, add_out{j});
             prev := r<'G+TLat>(add.out);
-            if j == C - 1 {
-                out = prev.prev;
-            }
         } else {
             add := ar<'G+TLat+j>(prev.prev, add_out{j});
             prev := r<'G+TLat+j>(add.out);
-            if j == C - 1 {
-                out = prev.prev;
-            }
         }
     }
+
+    // Reset the prev to 0
+    final := r<'G+TLat+C>(final.prev);
+    out = final.prev;
 }
 
 // Flat interface for the main module.
 // li and ri are left and right inputs, respectively at index i.
-comp main<'G:4>(
+comp main<'G:5>(
     go: interface['G],
     l0: ['G, 'G+1] 32,
     l1: ['G, 'G+1] 32,
@@ -116,7 +114,7 @@ comp main<'G:4>(
     r14: ['G, 'G+1] 32,
     r15: ['G, 'G+1] 32,
 ) -> (
-    out: ['G+8, 'G+9] 32
+    out: ['G+9, 'G+10] 32
 ) {
     // Wrap inputs into bundles
     bundle l[16]: ['G, 'G+1] 32;
