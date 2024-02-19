@@ -38,7 +38,10 @@ comp Dot[W, S, N]<'G:L>(
   out: ['G+L, 'G+L+1] W
 ) with {
   some L where L > 0;
-} where W > 0, L > 0 {
+} where W > 0,
+        L > 0,
+        S % N == 0
+{
 
   let reuses = S / N;
 
@@ -55,16 +58,15 @@ comp Dot[W, S, N]<'G:L>(
 
   bundle mult_out[reuses][N]: for<k> ['G+k*M::II+M::L, 'G+k*M::II+M::L+1] W;
   bundle add_out[reuses]: for<q> ['G+reuses*M::II+M::L + reuses*RA::II + RA::L, 'G+reuses*M::II+M::L + reuses*RA::II + RA::L + 1] W;
-  // bundle add_out[4]: for<k> ['G + k*M::II + M::L + k*RAdd::L, 'G + k*M::II + M::L + k*RAdd::L] W;
 
   let final_add_start = reuses*M::II+M::L + reuses*RA::II + RA::L;
+  let add_reg_end = reuses*M::II+M::L + reuses*RA::II + RA::L + 1;
   
   for j in 0..reuses {
 
     let mul_start = j*M::II;
     let mul_end = j*M::II + M::L;
     let add_reg_start = j*M::II + M::L + RA::L;
-    let add_reg_end = reuses*M::II+M::L + reuses*RA::II + RA::L + 1;
 
     // first use can use raw inputs
     if j == 0 {
