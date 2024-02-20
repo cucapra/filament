@@ -3,7 +3,7 @@ import "primitives/state.fil";
 import "primitives/reshape.fil";
 import "primitives/core.fil";
 
-comp main<'G:L>(
+comp main<'G:II>(
   go: interface['G],
   x_0: ['G, 'G+1] W,
   x_1: ['G, 'G+1] W,
@@ -40,9 +40,10 @@ comp main<'G:L>(
 ) -> (
   out: ['G+L, 'G+L+1] W
 ) with {
-  let N = 4;
+  let N = 8;
   let S = 16;
   let W = 32;
+  let II = S/N;
   some L where L > 0;
 } where L > 0 {
 
@@ -71,7 +72,7 @@ comp main<'G:L>(
 // W: Width of nums
 // S: Size of vectors
 // N: Number of multipliers
-comp Dot[W, S, N]<'G:L>(
+comp Dot[W, S, N]<'G:reuses>(
   go: interface['G],
   x[S]: ['G, 'G+1] W,
   y[S]: ['G, 'G+1] W
@@ -79,35 +80,33 @@ comp Dot[W, S, N]<'G:L>(
   out: ['G+L, 'G+L+1] W
 ) with {
   some L where L > 0;
+  let reuses = S / N;
 } where W > 0,
         L > 0,
         S % N == 0
 {
 
-  let reuses = S / N;
-
   M := new Multipliers[W, N];
   RA := new RAdd[W, N];
-  RA2 := new RAdd[W, reuses];
 
-  // needed for typechecking, although it shouldn't be?
+  // needed for typechecking
   assume RA::L == log2(N);
-  assume RA2::L == log2(reuses);
+  assume M::II <= reuses;
 
-  let latency = reuses*M::II+M::L + reuses*RA::II + RA::L + RA2::L;
+  let latency = reuses*M::II+M::L + RA::L;
   L := latency;
 
   bundle mult_out[reuses][N]: for<k> ['G+k*M::II+M::L, 'G+k*M::II+M::L+1] W;
-  bundle add_out[reuses]: for<q> ['G+reuses*M::II+M::L + reuses*RA::II + RA::L, 'G+reuses*M::II+M::L + reuses*RA::II + RA::L + 1] W;
-
-  let final_add_start = reuses*M::II+M::L + reuses*RA::II + RA::L;
-  let add_reg_end = reuses*M::II+M::L + reuses*RA::II + RA::L + 1;
+  bundle add_out[reuses]: for<q> ['G + q*M::II + M::L + RA::L, 'G + q*M::II + M::L + RA::L + 1] W;
   
+  P := new Prev[W, 1];
+  FA := new Add[W];
+
   for j in 0..reuses {
 
     let mul_start = j*M::II;
     let mul_end = j*M::II + M::L;
-    let add_reg_start = j*M::II + M::L + RA::L;
+    let last_add_start = j*M::II + M::L + RA::L;
 
     // first use can use raw inputs
     if j == 0 {
@@ -117,8 +116,8 @@ comp Dot[W, S, N]<'G:L>(
     } else {
       x_concat := new ConcatBundle[W, N]<'G>(x{j*N..(j+1)*N});
       y_concat := new ConcatBundle[W, N]<'G>(y{j*N..(j+1)*N});
-      x_concat_reg := new Register[W*N]<'G, 'G+mul_start+1>(x_concat.out);
-      y_concat_reg := new Register[W*N]<'G, 'G+mul_start+1>(y_concat.out);
+      x_concat_reg := new Shift[W*N, mul_start]<'G>(x_concat.out);
+      y_concat_reg := new Shift[W*N, mul_start]<'G>(y_concat.out);
       x_bundle_reg := new SplitWire[W, N]<'G+mul_start>(x_concat_reg.out);
       y_bundle_reg := new SplitWire[W, N]<'G+mul_start>(y_concat_reg.out);
       m := M<'G+mul_start>(x_bundle_reg.out{0..N}, y_bundle_reg.out{0..N});
@@ -126,18 +125,21 @@ comp Dot[W, S, N]<'G:L>(
     }
 
     ra := RA<'G+mul_end>(mult_out{j}{0..N});
-    // register each adder output from the time it is available until the time
-    // that they are all available, so we can do the final layer of addition all at once
+    add_out{j} = ra.out;
 
-    // NOTE(ethan): this can be made more aggressive by doing the additions
-    // as they are available - this scales much better for larger ratios of
-    // input vector length to multiplier quantity
-    add_reg := new Register[W]<'G + add_reg_start, 'G+add_reg_end>(ra.out);
-    add_out{j} = add_reg.out;
+    // do the additions as they come in
+    if j == 0 {
+      zero := new Const[W, 0]<'G+last_add_start>();
+      add := FA<'G+last_add_start>(zero.out, add_out{j});
+      prev := P<'G+last_add_start>(add.out);
+    } else {
+      add := FA<'G+last_add_start>(prev.prev, add_out{j});
+      prev := P<'G+last_add_start>(add.out);
+    }
   }
 
-  ra_final := RA2<'G+final_add_start>(add_out{0..reuses});
-  out = ra_final.out;
+  final := P<'G+latency>(final.prev);
+  out = final.prev;
 
 }
 
