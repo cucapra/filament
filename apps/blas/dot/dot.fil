@@ -49,8 +49,8 @@ comp main<'G:II>(
 
   Dx := new Dot[W, S, N];
 
-  bundle x[S]: for<k> ['G, 'G+1] W;
-  bundle y[S]: for<k> ['G, 'G+1] W;
+  bundle x[S]: ['G, 'G+1] W;
+  bundle y[S]: ['G, 'G+1] W;
 
   x{0} = x_0; x{1} = x_1; x{2} = x_2; x{3} = x_3; 
   x{4} = x_4; x{5} = x_5; x{6} = x_6; x{7} = x_7;
@@ -91,7 +91,6 @@ comp Dot[W, S, N]<'G:reuses>(
 
   // needed for typechecking
   assume RA::L == log2(N);
-  assume M::II <= reuses;
 
   let latency = reuses*M::II+M::L + RA::L;
   L := latency;
@@ -161,7 +160,7 @@ comp Mult[W]<'G:1>(
 }
 
 // a component that does N multiplies at once
-comp Multipliers[W, N]<'G:II>(
+comp Multipliers[W, N]<'G:1>(
   x[N]: ['G, 'G+1] W,
   y[N]: ['G, 'G+1] W
 ) -> (
