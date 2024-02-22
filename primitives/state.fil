@@ -1,3 +1,5 @@
+import "primitives/reshape.fil";
+
 extern "state.sv" {
    /// ANCHOR: register
    // A register that can extend the lifetime of a signal to any required length.
@@ -56,11 +58,11 @@ extern "state.sv" {
 /* ANCHOR: shift */
 // A component that delays `in` by N cycles.
 // Uses the Delay component under the hood.
-comp Shift[W, N]<'G: 1>(
+comp Shift[W, N, ?S = 1]<'G: 1>(
    in: ['G, 'G+1] W
 ) -> (
    out: ['G+N, 'G+N+1] W
-) {
+) where W > 0 {
    bundle f[N+1]: for<k> ['G+k, 'G+k+1] W;
 
    f{0} = in;
@@ -68,6 +70,18 @@ comp Shift[W, N]<'G: 1>(
       d := new Delay[W]<'G+i>(f{i});
       f{i+1} = d.out;
    }
+
    out = f{N};
 }
 /* ANCHOR_END: shift */
+
+comp ShiftBundle[W, N, S]<'G:1>(
+   in[S]: ['G, 'G+1] W
+) -> (
+   out[S]: ['G+N, 'G+N+1] W
+) where W > 0 {
+   in_concat := new ConcatBundle[W, S]<'G>(in{0..S});
+   s := new Shift[W*S, N]<'G>(in_concat.out);
+   out_split := new SplitWire[W, S]<'G+N>(s.out);
+   out = out_split.out;
+}
