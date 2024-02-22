@@ -1,6 +1,6 @@
 # Hardware Design for the Curious Developer
 
-Filament is a low-level hardware description language. This means that it does not have a lot of primitive constructs and essentially requires us to build up our hardware from scratch. However, Filament's type system helps us build small reusable components and guarantees that composing them generated efficient and correct hardware.
+Filament is a low-level hardware description language. This means that it does not have a lot of primitive constructs and essentially requires us to build up our hardware from scratch. However, Filament's type system helps us build small reusable components and guarantees that composing them generates efficient and correct hardware.
 
 > This tutorial does not assume familiarity with hardware design concepts.
 
@@ -55,9 +55,9 @@ comp main<G: 3>(...) -> (...) {
 }
 ```
 
-We define two circuits `A` and `M` which represent an 32-bit adder and a multiplier respectively. The `Add[32]` syntax represents us passing the value 32 for the width parameter of the pre-defined components.
+We define two circuits `A` and `M` which represent a 32-bit adder and a multiplier respectively. The `Add[32]` syntax represents us passing the value 32 for the width parameter of the pre-defined components.
 
-Next, we need to perform the two computation. In Filament, we have to specify the time when a particular computation occurs using an *invocation*:
+Next, we need to perform the two computations. In Filament, we have to specify the time when a particular computation occurs using an *invocation*:
 ```filament
     A := new Add[32];
     M := new Mult[32];
@@ -103,16 +103,16 @@ In order to fix this, we need to execute the multiplexer when the signal from th
 
 ## Saving Values for the Future
 
-Registers are the primitive stateful building block for hardware designs and can extend the availability of signals. The signature of a register is complicated by interesting:
+Registers are the primitive stateful building block for hardware designs and can extend the availability of signals. The signature of a register is complicated but interesting:
 ```filament
 {{#include ../../../primitives/state.fil:register}}
 ```
 
-Notice the availability for the `out` signal: it is available in the interval [G, L) where `L` is provided to the component during its invocation.
+Notice the availability of the `out` signal: it is available in the interval [G, L) where `L` is provided to the component during its invocation.
 This means that a register can hold onto a value for as long as needed!
 The additional `where` clause ensures that `out`'s interval is well-formed; it would be troublesome if we could say that `out` is available between [G+10, G+5).
 
-Let try to fix our program by making changes:
+Let's try to fix our program by making changes:
 ```filament
 {{#include ../../../examples/tut-wrong-2.fil}}
 ```
@@ -136,7 +136,7 @@ The fix is easy: we change the signature of the ALU to reflect this cruel realit
 {{#include ../../../examples/tut-seq.fil}}
 ```
 
-And running the compiler again generates no longer generates any errors:
+And running the compiler again no longer generates any errors:
 ```
 cargo run -- alu.fil
 ```
