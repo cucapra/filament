@@ -50,14 +50,6 @@ impl<'prog> BuildCtx<'prog> {
             let (_, pos) = l.clone().split();
             live_locs.push(pos);
         });
-        // let lives = lives
-        //     .iter()
-        //     .map(|l| {
-        //         let (l, pos) = l.clone().split();
-        //         live_locs.push(pos);
-        //         self.range(l)
-        //     })
-        // .collect::<BuildRes<Vec<_>>>()?;
         let inst = ir::Instance {
             comp: comp.idx,
             args: binding
@@ -120,10 +112,13 @@ impl<'prog> BuildCtx<'prog> {
         // Track the component binding for this instance
 
         // fill in lives here after we've added the instance name
-        let lives = lives.iter().map(|l| {
-            let (l, _) = l.clone().split();
-            self.range(l)
-        }).collect::<BuildRes<Vec<_>>>()?;
+        let lives = lives
+            .iter()
+            .map(|l| {
+                let (l, _) = l.clone().split();
+                self.range(l)
+            })
+            .collect::<BuildRes<Vec<_>>>()?;
 
         let inst = self.comp().get_mut(idx);
         inst.lives.extend(lives);
