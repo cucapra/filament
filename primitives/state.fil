@@ -56,7 +56,7 @@ extern "state.sv" {
 }
 
 /* ANCHOR: shift */
-// A component that delays `in` by N cycles.
+// A component that delays `in` by D cycles.
 // Uses the Delay component under the hood.
 comp Shift[W, D, ?N=1]<'G: 1>(
    in[N]: ['G, 'G+1] W
