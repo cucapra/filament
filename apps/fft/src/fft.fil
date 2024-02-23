@@ -4,191 +4,68 @@ import "butterfly.fil";
 import "primitives/state.fil";
 import "primitives/reshape.fil";
 
-/// Implements a combinational PEASE fft dataflow.
-/// Uses `N` butterflies
-comp PeaseFFT[NStages, N]<'G: L>(
+
+/// FFT that takes in a single wire and outputs a single wire
+/// Wraps the normal bundle-based fft component
+comp BundledFFT[NStages, N, ?Iterative=1]<'G: II>(
   go: interface['G],
-  in[NPoints][2]: ['G, 'G+1] W
+  in: ['G, 'G+1] NPoints*2*32, // input bundle
 ) -> (
-  out[NPoints][2]: ['G+L, 'G+L+1] W
+  out: ['G+L, 'G+L+1] NPoints*2*32 // output wire
 ) with {
   let NPoints = pow2(NStages);
-  some L where L > 0;
-  // Floating Point specification
-  let W = 32;
-  let E = 8;
-  let M = 23;
-} where
-  // number of butterflies (N) must divide the total number of butterflies per stage (NPoints/2)
-  NPoints % (2*N) == 0,
-  N > 0,
-  N * 2 <= NPoints,
-  NStages > 0
-{
-  assume pow2(NStages-1) == NPoints/2;
-
-  bitrev := new BitRev[NStages, W]<'G>(in{0..NPoints}{0..2});
-  // butterfly components
-  B := new Butterflies[N, W, E, M];
-  // number of times we have to reuse the butterflies per stage
-  let reuses = NPoints / (2*N);
-  let stage_latency = B::II * reuses + B::L + 1; // + 1 here is for the extra delay cycle necessary to transfer values between stages
-  let latency = stage_latency * NStages;
-  
-  // twiddle factor that stays alive for the whole computation
-  twiddle := new TwiddleFactor[NPoints, latency]<'G>();
-
-  // contains all the twiddle stage data as an allways-alive constant matrix
-  bundle twiddle_in[NStages][NPoints/2][2]: ['G, 'G + latency] W;
-
-  for twiddle_i in 0..NStages {
-    twiddle_stage := new TwiddleStage[NStages, twiddle_i, W, latency]<'G>(twiddle.out{0..NPoints/2}{0..2});
-    twiddle_in{twiddle_i}{0..NPoints/2}{0..2} = twiddle_stage.out{0..NPoints/2}{0..2};
-  }
-
-  // Synchronized data (happens between each stage, inputs and outputs to stride permutation)
-  // Separated by the input and output to and from the registers.
-  // There are Nstages of these (one for input and one for output for each stage)
-  bundle sync_data_in[NStages+1][NPoints][2]: for<sdii> ['G + sdii*stage_latency, 'G + sdii*stage_latency + 1] W;
-  bundle sync_data_out[NStages][NPoints][2]:  for<sdoi> ['G + (sdoi+1) * stage_latency - 1, 'G + (sdoi+1) * stage_latency] W;
-
-  // Unsynchronized data (happens within each stage, input to and ouptut from the butterfly calculations)
-  // There are `reuses` blocks within each stage, each separated by `B::L`.
-  // `i % (NPoints*2)` is the progress within the stage, and there are `4*N` inputs per butterfly chunk
-  // Each butterfly takes B::L cycles to complete
-  // no bundles for this as they can be stored temprorarily in registers
-
-
-  // Dataflow for one register looks like this:
-  // Synchronized in -> hold till butterfly -> unsync in -> butterfly -> unsync out -> hold till sync -> sync out -> stride permutation -> sync in
-
-  // hook up inputs
-  sync_data_in{0}{0..NPoints}{0..2} = bitrev.out{0..NPoints}{0..2};
-  
-
-  /// ------------ hook up registers and butterfly components. ------------
-  // for every reuse of a butterfly
-  for reg_i in 0..reuses {
-    // one big register storing all the inputs and outputs of one butterfly chunk
-    R := new PassThroughRegister[W * 4 * N] in ['G, 'G+latency], ['G+1, 'G+latency+1];
-
-    for r_stage in 0..NStages {
-      let sync_in_t = r_stage * stage_latency; // start stage here
-      let sync_out_t = (r_stage + 1) * stage_latency; // end stage here
-
-      let usync_in_t = sync_in_t + reg_i * B::II; // start butterfly here
-      let usync_in_end_t = usync_in_t + B::II; // end butterfly inputs here
-      let usync_out_t = usync_in_t + B::L; // end butterfly here
-
-      let start = reg_i*2*N;
-      let end = (reg_i+1)*2*N;
-
-      // sync in -> unsync in
-      c1 := new CombineButterflyBundle[N, W]<'G + sync_in_t>(sync_data_in{r_stage}{start..end}{0..2});
-      r1 := R<'G + sync_in_t, 'G + usync_in_end_t>(c1.out);
-      s1 := new SplitButterflyBundle[N, W, usync_in_end_t-usync_in_t]<'G + usync_in_t>(r1.out);
-      // unsync in -> butterfly
-      b := B<'G + usync_in_t>(s1.out{0..2*N}{0..2}, twiddle_in{r_stage}{reg_i*N..(reg_i+1)*N}{0..2});
-      // unsync out -> sync out
-      c2 := new CombineButterflyBundle[N, W]<'G + usync_out_t>(b.out{0..2*N}{0..2});
-      r2 := R<'G + usync_out_t, 'G + sync_out_t>(c2.out);
-      s2 := new SplitButterflyBundle[N, W]<'G + sync_out_t-1>(r2.out);
-
-      // store sync out
-      sync_data_out{r_stage}{start..end}{0..2} = s2.out{0..2*N}{0..2};
-    } 
-  }
-
-  // --------------- STRIDE PERMUTATIONS ----------------
-  SP := new StridePermutation[NStages, W] in ['G+stage_latency-1, 'G+latency];
-  
-  // A delay is necessary for between stages so the pass-through register
-  // isn't used twice at the same time
-  D := new Delay[W*NPoints*2];
-
-
-  // hook up stride permutations
-  for stage in 0..NStages {
-    let sync_out_t = (stage + 1) * stage_latency - 1;
-    stride := SP<'G + sync_out_t>(sync_data_out{stage}{0..NPoints}{0..2});
-
-    // delay between stages
-    c1 := new CombineButterflyBundle[NPoints/2, W]<'G + sync_out_t>(stride.out{0..NPoints}{0..2});
-    d1 := D<'G + sync_out_t>(c1.out);
-    s1 := new SplitButterflyBundle[NPoints/2, W]<'G + sync_out_t + 1>(d1.out);
-
-    sync_data_in{stage+1}{0..NPoints}{0..2} = s1.out{0..NPoints}{0..2};
-  }
-
-  out{0..NPoints}{0..2} = sync_data_in{NStages}{0..NPoints}{0..2};
-  L := latency;
-}
-
-/// Computes N butterflies at once.
-comp Butterflies[N, W, E, ?M=W-E-1]<'G: II>(
-  go: interface['G],
-  in[N*2][2]: ['G, 'G+II] W, // Each butterfly takes 2 complex numbers
-  twiddle[N][2]: ['G, 'G+II] W // twiddle factor for each butterfly
-) -> (
-  out[N*2][2]: ['G+L, 'G+L+1] W
-) with {
   some II where II > 0;
   some L where L >= II;
 } where
-    N > 0,
-    W == E + M + 1,
-    E > 1,
-    M > 1,
-    L >= II,
-    II > 0
+  NPoints % (2*N) == 0,
+  N > 0,
+  N * 2 <= NPoints,
+  NStages > 0,
+  II > 0,
+  L >= II
 {
-  // We use the fact here that a butterfly has the same existential L if it has the same parameters.
-  // Therefore, we instantiate a dummy butterfly here in order to access its L parameter.
-  Bx := new Butterfly[W, E, M];
-  L := Bx::L;
-  II := Bx::II;
+  in_split := new SplitWire[32, NPoints*2]<'G>(in);
 
-  for i in 0..N {
-    b := new Butterfly[W, E, M]<'G>(in{2*i}{0..2}, in{2*i+1}{0..2}, twiddle{i}{0..2});
-    out{2*i}{0..2} = b.out0{0..2};
-    out{2*i+1}{0..2} = b.out1{0..2};
+  bundle input_bundle[NPoints][2]: ['G, 'G+1] 32;
+
+  for i in 0..NPoints {
+    input_bundle{i}{0} = in_split.out{2*i};
+    input_bundle{i}{1} = in_split.out{2*i+1};
   }
-}
 
-/// Combines output of the Butterflies component into a single wire
-comp CombineButterflyBundle[N, W, ?L=1]<'G: L>(
-  in[N*2][2]: ['G, 'G+L] W
-) -> (
-  out: ['G, 'G+L] W*4*N
-) where
-    N > 0,
-    W > 0,
-    L > 0
-{
-  bundle outb[N*4]: ['G, 'G+L] W;
-  for i in 0..N*2 {
-    outb{i*2} = in{i}{0};
-    outb{i*2+1} = in{i}{1};
-  }
-  
-  cb := new ConcatBundle[W, N*4, L]<'G>(outb{0..N*4});
-  
-  out = cb.out;
-}
+  // hook up pipelined fft
+  if Iterative == 1 {
+    FP := new IterativePeaseFFT[NStages, N];
+    fp := FP<'G>(input_bundle{0..NPoints}{0..2});
 
-/// Splits output of the Butterflies component into a bundle
-comp SplitButterflyBundle[N, W, ?L=1]<'G: L>(
-  in: ['G, 'G+L] W*4*N
-) -> (
-  out[N*2][2]: ['G, 'G+L] W
-) where
-    N > 0,
-    W > 0,
-    L > 0
-{
-  sw := new SplitWire[W, N*4, L]<'G>(in);
-  for i in 0..N*2 {
-    out{i}{0} = sw.out{i*2};
-    out{i}{1} = sw.out{i*2+1};
+    bundle fp_output_bundle[NPoints*2]: ['G+FP::L, 'G+FP::L+1] 32;
+
+    for i in 0..NPoints {
+      fp_output_bundle{2*i} = fp.out{i}{0};
+      fp_output_bundle{2*i+1} = fp.out{i}{1};
+    }
+
+    fpw := new ConcatBundle[32, NPoints*2]<'G+FP::L>(fp_output_bundle{0..NPoints*2});
+    out = fpw.out;
+
+    L := FP::L;
+    II := FP::L;
+  } else {
+    assume NStages > 2;
+    FP := new StreamingPeaseFFT[NStages];
+    fp := FP<'G>(input_bundle{0..NPoints}{0..2});
+
+    bundle fp_output_bundle[NPoints*2]: ['G+FP::L, 'G+FP::L+1] 32;
+
+    for i in 0..NPoints {
+      fp_output_bundle{2*i} = fp.out{i}{0};
+      fp_output_bundle{2*i+1} = fp.out{i}{1};
+    }
+
+    fpw := new ConcatBundle[32, NPoints*2]<'G+FP::L>(fp_output_bundle{0..NPoints*2});
+    out = fpw.out;
+
+    L := FP::L;
+    II := 1;
   }
 }

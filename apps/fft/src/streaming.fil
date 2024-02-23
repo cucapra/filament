@@ -1,0 +1,146 @@
+import "primitives/signed.fil";
+import "helpers.fil";
+import "butterfly.fil";
+import "primitives/state.fil";
+import "primitives/reshape.fil";
+import "primitives/flopoco/def.fil";
+
+/// Implements an streaming PEASE fft.
+comp StreamingPeaseFFT[NStages]<'G: 1>(
+  in[NPoints][2]: ['G, 'G+1] W
+) -> (
+  out[NPoints][2]: ['G+L, 'G+L+1] W
+) with {
+  let NPoints = pow2(NStages);
+
+  some L where L > 0;
+  // Floating Point specification
+  let W = 32;
+  let E = 8;
+  let M = 23;
+} where
+  NPoints % 2 == 0,
+  NStages > 2
+{
+  assume pow2(NStages-1) == NPoints/2;
+
+  bitrev := new BitRev[NStages, W]<'G>(in{0..NPoints}{0..2});
+
+  CASx := new ComplexAddSub[W, E, M];
+  TMx := new TwiddleMul[0, NPoints, W, E, M];
+  assume TMx::L == 0; // we know this because of the internal implementation
+  TMx1 := new TwiddleMul[1, NPoints, W, E, M];
+  let stage_latency = TMx1::L + CASx::L;
+  let multiplyless_latency = TMx::L + CASx::L;
+
+  bundle data[NStages-1][NPoints][2]: for<sdii> ['G + sdii*stage_latency + 2 * multiplyless_latency, 'G + sdii*stage_latency + 1 + 2 * multiplyless_latency] W;
+
+  // stage 1-2 input data
+  bundle data_12[2][NPoints][2]: for<sd12ii> ['G + sd12ii*multiplyless_latency, 'G + sd12ii*multiplyless_latency + 1] W;
+  data_12{0}{0..NPoints}{0..2} = bitrev.out{0..NPoints}{0..2};
+
+  /// ------------ hook up registers and butterfly components. ------------
+
+  // first stage
+  bundle s1_butterfly_out[NPoints][2]: ['G + multiplyless_latency, 'G + multiplyless_latency + 1] W;
+  for s1_j in 0..NPoints/2 {
+    // stage 1, no twiddle multiplier necessary as all twiddles are 1
+    TM := new TwiddleMul[0, NPoints, W, E, M];
+    tm := TM<'G>(data_12{0}{2*s1_j+1}{0..2});
+    assume TM::L == 0; // we know this because of the internal implementation
+    CAS := new ComplexAddSub[W, E, M];
+    cas := CAS<'G>(data_12{0}{2*s1_j}{0..2}, tm.out{0..2});
+    assume TM::W == CAS::W;
+
+    s1_butterfly_out{2*s1_j}{0..2} = cas.out0{0..2};
+    s1_butterfly_out{2*s1_j+1}{0..2} = cas.out1{0..2};
+  }
+  s1_sp := new StridePermutation[NStages, W]<'G + multiplyless_latency>(s1_butterfly_out{0..NPoints}{0..2});
+  data_12{1}{0..NPoints}{0..2} = s1_sp.out{0..NPoints}{0..2};
+  // second stage
+  bundle s2_butterfly_out[NPoints][2]: ['G + multiplyless_latency * 2, 'G + multiplyless_latency * 2 + 1] W;
+  for s2_j in 0..NPoints/2 {
+    // stage 2, first half of twiddles are 1, second half are -1
+    let twiddle_idx = (s2_j / (NPoints/4)) * (NPoints/4);
+    TM := new TwiddleMul[twiddle_idx, NPoints, W, E, M];
+    tm := TM<'G+multiplyless_latency>(data_12{1}{2*s2_j+1}{0..2});
+    assume TM::L == 0; // we know this because of the internal implementation
+    CAS := new ComplexAddSub[W, E, M];
+    cas := CAS<'G+multiplyless_latency>(data_12{1}{2*s2_j}{0..2}, tm.out{0..2});
+    assume TM::W == CAS::W;
+
+    s2_butterfly_out{2*s2_j}{0..2} = cas.out0{0..2};
+    s2_butterfly_out{2*s2_j+1}{0..2} = cas.out1{0..2};
+  }
+  s2_sp := new StridePermutation[NStages, W]<'G + multiplyless_latency * 2>(s2_butterfly_out{0..NPoints}{0..2});
+  data{0}{0..NPoints}{0..2} = s2_sp.out{0..NPoints}{0..2};
+
+  for i in 2..NStages {
+    let stage_start = (i-2) * stage_latency + 2 * multiplyless_latency;
+    bundle butterfly_out[NPoints][2]: ['G + stage_start + stage_latency, 'G + stage_start + stage_latency + 1] W;
+
+    // For this stage, there will be pow2(i) unique twiddle factors
+    // Each twiddle factor is used NPoints/pow2(i)/2 times
+    for j in 0..NPoints/2 {
+      let twiddle_idx = (j / pow2(NStages - i - 1)) * pow2(NStages - i - 1);
+      assume twiddle_idx >= 0;
+      assume twiddle_idx*2 < NPoints;
+
+      // shift first input
+      s01 := new Shift[W, TMx1::L]<'G + stage_start>(data{i-2}{2*j}{0});
+      s02 := new Shift[W, TMx1::L]<'G + stage_start>(data{i-2}{2*j}{1});
+
+      bundle in0[2]: ['G + stage_start + TMx1::L, 'G + stage_start + TMx1::L + 1] W;
+      bundle in1[2]: ['G + stage_start + TMx1::L, 'G + stage_start + TMx1::L + 1] TMx::W;
+      in0{0} = s01.out{0};
+      in0{1} = s02.out{0};
+
+      if (twiddle_idx * 4) % NPoints == 0 {
+        TM := new TwiddleMul[twiddle_idx, NPoints, W, E, M];
+        assume TM::L == 0; // we know this because of the internal implementation
+        // need to shift the inputs here before doing twiddle mult
+        s1 := new Shift[W, TMx1::L]<'G + stage_start>(data{i-2}{2*j+1}{0});
+        s2 := new Shift[W, TMx1::L]<'G + stage_start>(data{i-2}{2*j+1}{1});
+
+        bundle inp[2]: ['G + stage_start + TMx1::L, 'G + stage_start + TMx1::L + 1] W;
+        inp{0} = s1.out{0};
+        inp{1} = s2.out{0};
+
+        tm := TM<'G + stage_start + TMx1::L>(inp{0..2});
+
+        in1{0} = tm.out{0};
+        in1{1} = tm.out{1};
+        
+        CAS := new ComplexAddSub[W, E, M];
+        cas := CAS<'G + stage_start + TMx1::L>(in0{0..2}, in1{0..2});
+
+        assume TM::W == CAS::W;
+        assume TM::W == TMx::W;
+
+        butterfly_out{2*j}{0..2} = cas.out0{0..2};
+        butterfly_out{2*j+1}{0..2} = cas.out1{0..2};
+      } else {
+        TM := new TwiddleMul[twiddle_idx, NPoints, W, E, M];
+        assume TM::L == TMx1::L;// We know this because of the internal implementation
+        assume TM::W == TMx::W;
+
+        tm := TM<'G + stage_start>(data{i-2}{2*j+1}{0..2});
+        in1{0} = tm.out{0};
+        in1{1} = tm.out{1};
+
+        CAS := new ComplexAddSub[W, E, M];
+        cas := CAS<'G + stage_start + TMx1::L>(in0{0..2}, in1{0..2});
+        
+        assume TM::W == CAS::W;
+
+        butterfly_out{2*j}{0..2} = cas.out0{0..2};
+        butterfly_out{2*j+1}{0..2} = cas.out1{0..2};
+      }
+    }
+    sp := new StridePermutation[NStages, W]<'G + stage_start + stage_latency>(butterfly_out{0..NPoints}{0..2});
+    data{i-1}{0..NPoints}{0..2} = sp.out{0..NPoints}{0..2};
+  } 
+
+  out{0..NPoints}{0..2} = data{NStages-2}{0..NPoints}{0..2};
+  L := stage_latency * (NStages-2) + 2 * multiplyless_latency;
+}
