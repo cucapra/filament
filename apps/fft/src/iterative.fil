@@ -4,6 +4,7 @@ import "butterfly.fil";
 import "primitives/state.fil";
 import "primitives/reshape.fil";
 import "primitives/flopoco/def.fil";
+import "float.fil";
 
 /// Implements an iterative PEASE fft.
 /// Uses `N` butterflies

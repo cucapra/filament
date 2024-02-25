@@ -4,6 +4,9 @@ import "butterfly.fil";
 import "primitives/state.fil";
 import "primitives/reshape.fil";
 import "primitives/flopoco/def.fil";
+import "primitives/math/complex.fil";
+import "primitives/math/float.fil";
+import "float.fil";
 
 /// Implements an streaming PEASE fft.
 comp StreamingPeaseFFT[NStages]<'G: 1>(
@@ -143,4 +146,140 @@ comp StreamingPeaseFFT[NStages]<'G: 1>(
 
   out{0..NPoints}{0..2} = data{NStages-2}{0..NPoints}{0..2};
   L := stage_latency * (NStages-2) + 2 * multiplyless_latency;
+}
+
+// Performs the twiddle multiplication
+comp TwiddleMul[i, N, Width, E, ?M=W-E-1]<'G: 1>(
+  in[2]: ['G, 'G+1] Width
+) -> (
+  out[2]: ['G+L, 'G+L+1] W // output in flopoco format
+) with {
+  some W where W > 0;
+  some L where L >= 0;
+} where
+    Width == E + M + 1,
+    E > 1,
+    M > 1,
+    i >= 0,
+    N > i*2,
+    L >= 0
+{
+  // instantiations for latency access
+  FM := new FFTFPMult[E, M];
+  FA := new FFTFPAdd[E, M];
+  FS := new FFTFPSub[E, M];
+  FN := new FFTFPNeg[E, M];
+  II := new FFTInputIEEE[E, M];
+
+  assume FM::W == FA::W;
+  assume FM::W == FS::W;
+  assume FM::W == FN::W;
+  assume FM::W == II::W;
+
+  W := FM::W;
+  
+  assume FA::L == FS::L; // we can assume this because we know the internal implementation of FPSub
+  // convert to flopoco format
+  in10 := new FFTInputIEEE[E, M]<'G>(in{0});
+  in11 := new FFTInputIEEE[E, M]<'G>(in{1});
+
+  if (i*4) % N == 0 {
+    if i == 0 { // twiddle = 1
+      out{0} = in10.R;
+      out{1} = in11.R;
+    } else {
+      if i * 4 == N { // twiddle = ii
+        // (a + bi) * -i = b - ai
+        // negate a
+        neg0 := new FFTFPNeg[E, M]<'G>(in10.R);
+        out{0} = in11.R;
+        out{1} = neg0.R;
+      } else {
+        // these cases shouldn't happen
+        assert 1 == 0;
+      }
+    }
+    L := 0;
+  } else {
+    // need a multiplier here
+
+    bundle twiddle[2]: ['G, 'G+1] Width;
+    twiddle0_const := new SignedConst[Width, cos_bits(i, N)]<'G>();
+    twiddle1_const := new SignedConst[Width, sin_bits(i+N/2, N)]<'G>();
+
+    twiddle{0} = twiddle0_const.out;
+    twiddle{1} = twiddle1_const.out;
+
+    twiddle0 := new FFTInputIEEE[E, M]<'G>(twiddle{0});
+    twiddle1 := new FFTInputIEEE[E, M]<'G>(twiddle{1});
+
+    // Perform w * in1
+    ac := new FFTFPMult[E, M]<'G>(in10.R, twiddle0.R); // ac
+    bd := new FFTFPMult[E, M]<'G>(in11.R, twiddle1.R); // bd
+    re := new FFTFPSub[E, M]<'G+FM::L>(ac.R, bd.R); // ac - bd
+
+    ad := new FFTFPMult[E, M]<'G>(in10.R, twiddle1.R); // ad
+    bc := new FFTFPMult[E, M]<'G>(in11.R, twiddle0.R); // bc
+    im := new FFTFPAdd[E, M]<'G+FM::L>(ad.R, bc.R); // ad + bc
+
+    out{0} = re.R;
+    out{1} = im.R;
+
+    L := FM::L + FA::L;
+  }
+}
+
+/// Complex add sub module
+comp ComplexAddSub[Width, E, ?M=W-E-1]<'G: 1>(
+  in0[2]: ['G, 'G+1] Width, // real and imaginary parts of input (Flopoco format)
+  in1[2]: ['G, 'G+1] W
+) -> (
+  out0[2]: ['G+L, 'G+L+1] Width,
+  out1[2]: ['G+L, 'G+L+1] Width
+) with {
+  some W where W > 0;
+  some L where L > 0;
+} where
+    Width == E + M + 1,
+    E > 1,
+    M > 1,
+    L > 0
+{
+  // instantiations for latency access
+  FA := new FFTFPAdd[E, M];
+  FS := new FFTFPSub[E, M];
+  OI := new FFTOutputIEEE[E, M];
+  II := new FFTInputIEEE[E, M];
+
+  assume FA::W == FS::W;
+  assume FA::W == OI::W;
+  assume FA::W == II::W;
+
+  W := FA::W;
+
+  in00 := new FFTInputIEEE[E, M]<'G>(in0{0});
+  in01 := new FFTInputIEEE[E, M]<'G>(in0{1});
+  
+  assume FA::L == FS::L; // we can assume this because we know the internal implementation of FPSub
+
+  // in0 + (w * in1)
+  out00 := new FFTFPAdd[E, M]<'G>(in00.R, in1{0}); // re
+  out01 := new FFTFPAdd[E, M]<'G>(in01.R, in1{1}); // im
+  
+  // in0 - (w * in1)
+  out10 := new FFTFPSub[E, M]<'G>(in00.R, in1{0}); // re
+  out11 := new FFTFPSub[E, M]<'G>(in01.R, in1{1}); // im
+
+  // convert back to IEEE
+  out00_IEEE := new FFTOutputIEEE[E, M]<'G+FA::L>(out00.R);
+  out01_IEEE := new FFTOutputIEEE[E, M]<'G+FA::L>(out01.R);
+  out10_IEEE := new FFTOutputIEEE[E, M]<'G+FA::L>(out10.R);
+  out11_IEEE := new FFTOutputIEEE[E, M]<'G+FA::L>(out11.R);
+
+  out0{0} = out00_IEEE.R;
+  out0{1} = out01_IEEE.R;
+  out1{0} = out10_IEEE.R;
+  out1{1} = out11_IEEE.R;
+
+  L := FA::L;
 }
