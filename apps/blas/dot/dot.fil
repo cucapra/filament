@@ -43,8 +43,8 @@ comp main<'G:II>(
   let N = 8;
   let S = 16;
   let W = 32;
-  let II = S/N;
   some L where L > 0;
+  some II where II > 0;
 } where L > 0 {
 
   Dx := new Dot[W, S, N];
@@ -67,12 +67,13 @@ comp main<'G:II>(
   out = d.out;
 
   L := Dx::L;
+  II := Dx::II;
 }
 
 // W: Width of nums
 // S: Size of vectors
 // N: Number of multipliers
-comp Dot[W, S, N]<'G:reuses>(
+comp Dot[W, S, N]<'G:II>(
   go: interface['G],
   x[S]: ['G, 'G+1] W,
   y[S]: ['G, 'G+1] W
@@ -80,13 +81,15 @@ comp Dot[W, S, N]<'G:reuses>(
   out: ['G+L, 'G+L+1] W
 ) with {
   some L where L > 0;
-  let reuses = S / N;
+  some II where II > 0;
 } where W > 0,
         L > 0,
-        S % N == 0
+        S > 0
 {
 
-  M := new Multipliers[W, N];
+  let reuses = S / N;
+
+  M := new Multipliers[W, N] in ['G, 'G + reuses*M::II];
   RA := new RAdd[W, N];
 
   // needed for typechecking
@@ -94,6 +97,9 @@ comp Dot[W, S, N]<'G:reuses>(
 
   let latency = reuses*M::II+M::L + RA::L;
   L := latency;
+
+  let ii = reuses*M::II;
+  II := ii;
 
   bundle mult_out[reuses][N]: for<k> ['G+k*M::II+M::L, 'G+k*M::II+M::L+1] W;
   bundle add_out[reuses]: for<q> ['G + q*M::II + M::L + RA::L, 'G + q*M::II + M::L + RA::L + 1] W;
@@ -113,13 +119,9 @@ comp Dot[W, S, N]<'G:reuses>(
       mult_out{j}{0..N} = m.out{0..N};
     // any other use should use registered inputs
     } else {
-      x_concat := new ConcatBundle[W, N]<'G>(x{j*N..(j+1)*N});
-      y_concat := new ConcatBundle[W, N]<'G>(y{j*N..(j+1)*N});
-      x_concat_reg := new Shift[W*N, mul_start]<'G>(x_concat.out);
-      y_concat_reg := new Shift[W*N, mul_start]<'G>(y_concat.out);
-      x_bundle_reg := new SplitWire[W, N]<'G+mul_start>(x_concat_reg.out);
-      y_bundle_reg := new SplitWire[W, N]<'G+mul_start>(y_concat_reg.out);
-      m := M<'G+mul_start>(x_bundle_reg.out{0..N}, y_bundle_reg.out{0..N});
+      x_reg := new Shift[W, mul_start, N]<'G>(x{j*N..(j+1)*N});
+      y_reg := new Shift[W, mul_start, N]<'G>(y{j*N..(j+1)*N});
+      m := M<'G+mul_start>(x_reg.out{0..N}, y_reg.out{0..N});
       mult_out{j}{0..N} = m.out{0..N};
     }
 
@@ -149,7 +151,7 @@ comp Mult[W]<'G:1>(
 ) -> (
   out: ['G+L, 'G+L+1] W
 ) with {
-  some L where L >= 0;
+  some L where L > 0;
   some II where II > 0;
 } where W > 0 {
   M := new FastMult[W];
