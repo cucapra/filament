@@ -90,7 +90,7 @@ comp Dot[W, S, N]<'G:II>(
   let reuses = S / N;
 
   M := new Multipliers[W, N] in ['G, 'G + reuses*M::II];
-  RA := new RAdd[W, N];
+  RA := new RAdd[W, N] in ['G + M::L, 'G + reuses*M::II + M::L];
 
   // needed for typechecking
   assume RA::L == log2(N);
