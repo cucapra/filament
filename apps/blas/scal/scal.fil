@@ -1,0 +1,19 @@
+import "primitives/math/math.fil";
+import "primitives/state.fil";
+import "apps/blas/util.fil";
+
+comp Scal[W, S, N]<'G:II>(
+  go: interface['G],
+  x[S]: ['G, 'G+1] W,
+  a: ['G, 'G+1] W
+) -> (
+  out: ['G+L, 'G+L+1] W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0,
+        L > 0,
+        S > 0
+{
+
+}

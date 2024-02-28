@@ -1,0 +1,38 @@
+import "primitives/math/math.fil";
+
+// a multiplier with II, latency as output params
+comp Mult[W]<'G:1>(
+  left: ['G, 'G+1] W,
+  right: ['G, 'G+1] W
+) -> (
+  out: ['G+L, 'G+L+1] W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0 {
+  M := new FastMult[W];
+  m := M<'G>(left, right);
+  out = m.out;
+  L := 3;
+  II := 1;
+}
+
+// a component that does N multiplies at once
+comp Multipliers[W, N]<'G:1>(
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W
+) -> (
+  out[N]: ['G+L, 'G+L+1] W
+) with {
+  some L where L >= 0;
+  some II where II > 0;
+} where W > 0 {
+  Mx := new Mult[W];
+  L := Mx::L;
+  II := Mx::II;
+
+  for i in 0..N {
+    m := new Mult[W]<'G>(x{i}, y{i});
+    out{i} = m.out;
+  }
+}
