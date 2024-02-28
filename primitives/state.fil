@@ -73,6 +73,6 @@ comp Shift[W, D, ?N=1]<'G: 1>(
       f{i+1} = d.out;
    }
    out_split := new SplitWire[W, N]<'G+D>(f{D});
-   out = out_split.out;
+   out{0..N} = out_split.out{0..N};
 }
 /* ANCHOR_END: shift */
