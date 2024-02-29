@@ -2,81 +2,15 @@ import "primitives/math/math.fil";
 import "primitives/state.fil";
 import "primitives/reshape.fil";
 import "primitives/core.fil";
-
-comp main<'G:II>(
-  go: interface['G],
-  x_0: ['G, 'G+1] W,
-  x_1: ['G, 'G+1] W,
-  x_2: ['G, 'G+1] W,
-  x_3: ['G, 'G+1] W,
-  x_4: ['G, 'G+1] W,
-  x_5: ['G, 'G+1] W,
-  x_6: ['G, 'G+1] W,
-  x_7: ['G, 'G+1] W,
-  x_8: ['G, 'G+1] W,
-  x_9: ['G, 'G+1] W,
-  x_10: ['G, 'G+1] W,
-  x_11: ['G, 'G+1] W,
-  x_12: ['G, 'G+1] W,
-  x_13: ['G, 'G+1] W,
-  x_14: ['G, 'G+1] W,
-  x_15: ['G, 'G+1] W,
-  y_0: ['G, 'G+1] W,
-  y_1: ['G, 'G+1] W,
-  y_2: ['G, 'G+1] W,
-  y_3: ['G, 'G+1] W,
-  y_4: ['G, 'G+1] W,
-  y_5: ['G, 'G+1] W,
-  y_6: ['G, 'G+1] W,
-  y_7: ['G, 'G+1] W,
-  y_8: ['G, 'G+1] W,
-  y_9: ['G, 'G+1] W,
-  y_10: ['G, 'G+1] W,
-  y_11: ['G, 'G+1] W,
-  y_12: ['G, 'G+1] W,
-  y_13: ['G, 'G+1] W,
-  y_14: ['G, 'G+1] W,
-  y_15: ['G, 'G+1] W,
-) -> (
-  out: ['G+L, 'G+L+1] W
-) with {
-  let N = 8;
-  let S = 16;
-  let W = 32;
-  some L where L > 0;
-  some II where II > 0;
-} where L > 0 {
-
-  Dx := new Dot[W, S, N];
-
-  bundle x[S]: ['G, 'G+1] W;
-  bundle y[S]: ['G, 'G+1] W;
-
-  x{0} = x_0; x{1} = x_1; x{2} = x_2; x{3} = x_3; 
-  x{4} = x_4; x{5} = x_5; x{6} = x_6; x{7} = x_7;
-  x{8} = x_8; x{9} = x_9; x{10} = x_10; x{11} = x_11;
-  x{12} = x_12; x{13} = x_13; x{14} = x_14; x{15} = x_15;
-
-  y{0} = y_0; y{1} = y_1; y{2} = y_2; y{3} = y_3; 
-  y{4} = y_4; y{5} = y_5; y{6} = y_6; y{7} = y_7;
-  y{8} = y_8; y{9} = y_9; y{10} = y_10; y{11} = y_11;
-  y{12} = y_12; y{13} = y_13; y{14} = y_14; y{15} = y_15;
-
-  d := Dx<'G>(x{0..S}, y{0..S});
-
-  out = d.out;
-
-  L := Dx::L;
-  II := Dx::II;
-}
+import "apps/blas/util.fil";
 
 // W: Width of nums
-// S: Size of vectors
-// N: Number of multipliers
-comp Dot[W, S, N]<'G:II>(
+// N: Length of vectors
+// M: Number of multipliers
+comp Dot[W, N, M]<'G:II>(
   go: interface['G],
-  x[S]: ['G, 'G+1] W,
-  y[S]: ['G, 'G+1] W
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W
 ) -> (
   out: ['G+L, 'G+L+1] W
 ) with {
@@ -84,48 +18,49 @@ comp Dot[W, S, N]<'G:II>(
   some II where II > 0;
 } where W > 0,
         L > 0,
-        S > 0
+        N > 0,
+        M > 0
 {
 
-  let reuses = S / N;
+  let reuses = N / M;
 
-  M := new Multipliers[W, N] in ['G, 'G + reuses*M::II];
-  RA := new RAdd[W, N] in ['G + M::L, 'G + reuses*M::II + M::L];
+  Mults := new Multipliers[W, M] in ['G, 'G + reuses*Mults::II];
+  RA := new RAdd[W, M] in ['G + Mults::L, 'G + reuses*Mults::II + Mults::L];
 
   // needed for typechecking
-  assume RA::L == log2(N);
+  assume RA::L == log2(M);
 
-  let latency = reuses*M::II+M::L + RA::L;
+  let latency = reuses*Mults::II+Mults::L + RA::L;
   L := latency;
 
-  let ii = reuses*M::II;
+  let ii = reuses*Mults::II;
   II := ii;
 
-  bundle mult_out[reuses][N]: for<k> ['G+k*M::II+M::L, 'G+k*M::II+M::L+1] W;
-  bundle add_out[reuses]: for<q> ['G + q*M::II + M::L + RA::L, 'G + q*M::II + M::L + RA::L + 1] W;
+  bundle mult_out[reuses][M]: for<k> ['G+k*Mults::II+Mults::L, 'G+k*Mults::II+Mults::L+1] W;
+  bundle add_out[reuses]: for<q> ['G + q*Mults::II + Mults::L + RA::L, 'G + q*Mults::II + Mults::L + RA::L + 1] W;
   
   P := new Prev[W, 1];
   FA := new Add[W];
 
   for j in 0..reuses {
 
-    let mul_start = j*M::II;
-    let mul_end = j*M::II + M::L;
-    let last_add_start = j*M::II + M::L + RA::L;
+    let mul_start = j*Mults::II;
+    let mul_end = j*Mults::II + Mults::L;
+    let last_add_start = j*Mults::II + Mults::L + RA::L;
 
     // first use can use raw inputs
     if j == 0 {
-      m := M<'G+mul_start>(x{j*N..(j+1)*N}, y{j*N..(j+1)*N});
-      mult_out{j}{0..N} = m.out{0..N};
+      m := Mults<'G+mul_start>(x{j*M..(j+1)*M}, y{j*M..(j+1)*M});
+      mult_out{j}{0..M} = m.out{0..M};
     // any other use should use registered inputs
     } else {
-      x_reg := new Shift[W, mul_start, N]<'G>(x{j*N..(j+1)*N});
-      y_reg := new Shift[W, mul_start, N]<'G>(y{j*N..(j+1)*N});
-      m := M<'G+mul_start>(x_reg.out{0..N}, y_reg.out{0..N});
-      mult_out{j}{0..N} = m.out{0..N};
+      x_reg := new Shift[W, mul_start, M]<'G>(x{j*M..(j+1)*M});
+      y_reg := new Shift[W, mul_start, M]<'G>(y{j*M..(j+1)*M});
+      m := Mults<'G+mul_start>(x_reg.out{0..M}, y_reg.out{0..M});
+      mult_out{j}{0..M} = m.out{0..M};
     }
 
-    ra := RA<'G+mul_end>(mult_out{j}{0..N});
+    ra := RA<'G+mul_end>(mult_out{j}{0..M});
     add_out{j} = ra.out;
 
     // do the additions as they come in
@@ -141,44 +76,6 @@ comp Dot[W, S, N]<'G:II>(
 
   final := P<'G+latency>(final.prev);
   out = final.prev;
-
-}
-
-// a multiplier with II, latency as output params
-comp Mult[W]<'G:1>(
-  left: ['G, 'G+1] W,
-  right: ['G, 'G+1] W
-) -> (
-  out: ['G+L, 'G+L+1] W
-) with {
-  some L where L > 0;
-  some II where II > 0;
-} where W > 0 {
-  M := new FastMult[W];
-  m := M<'G>(left, right);
-  out = m.out;
-  L := 3;
-  II := 1;
-}
-
-// a component that does N multiplies at once
-comp Multipliers[W, N]<'G:1>(
-  x[N]: ['G, 'G+1] W,
-  y[N]: ['G, 'G+1] W
-) -> (
-  out[N]: ['G+L, 'G+L+1] W
-) with {
-  some L where L >= 0;
-  some II where II > 0;
-} where W > 0 {
-  Mx := new Mult[W];
-  L := Mx::L;
-  II := Mx::II;
-
-  for i in 0..N {
-    m := new Mult[W]<'G>(x{i}, y{i});
-    out{i} = m.out;
-  }
 }
 
 // Addition-based reduction tree with latency, II as output params
