@@ -1,4 +1,4 @@
-ver = "0.4.0"
+ver = "0.4.1"
 
 
 [[tests]]
@@ -97,6 +97,14 @@ paths = ["apps/fft/test/scripts/*.sh"]
 cmd = """
 dir=$(dirname {}) && \
 {}
+"""
+
+# blas
+[[tests]]
+name = "blas"
+paths = ["apps/blas/*/test.fil"]
+cmd = """
+fud e -s cocotb.data {}.data --to cocotb-out {} -q
 """
 
 # ============== Examples in the documentation ============
