@@ -37,24 +37,24 @@ comp main<'G:II>(
   y_14: ['G+L, 'G+L+1] W,
   y_15: ['G+L, 'G+L+1] W,
 ) with {
-  let N = 8;
-  let S = 16;
+  let M = 8;
+  let N = 16;
   let W = 32;
   some L where L > 0;
   some II where II > 0;
 } {
-  Sx := new Scal[W, S, N];
+  Sx := new Scal[W, N, M];
 
-  bundle x[S]: ['G, 'G+1] W;
+  bundle x[N]: ['G, 'G+1] W;
   x{0} = x_0; x{1} = x_1; x{2} = x_2; x{3} = x_3; 
   x{4} = x_4; x{5} = x_5; x{6} = x_6; x{7} = x_7;
   x{8} = x_8; x{9} = x_9; x{10} = x_10; x{11} = x_11;
   x{12} = x_12; x{13} = x_13; x{14} = x_14; x{15} = x_15;
 
-  bundle y[S]: ['G+Sx::L, 'G+Sx::L + 1] W;
+  bundle y[N]: ['G+Sx::L, 'G+Sx::L + 1] W;
 
-  s := Sx<'G>(x{0..S}, a);
-  y{0..S} = s.out{0..S};
+  s := Sx<'G>(x{0..N}, a);
+  y{0..N} = s.out{0..N};
   y_0 = y{0};
   y_1 = y{1};
   y_2 = y{2};

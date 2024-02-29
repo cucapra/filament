@@ -37,17 +37,17 @@ comp main<'G:II>(
 ) -> (
   out: ['G+L, 'G+L+1] W
 ) with {
-  let N = 8;
-  let S = 16;
+  let M = 8;
+  let N = 16;
   let W = 32;
   some L where L > 0;
   some II where II > 0;
 } where L > 0 {
 
-  Dx := new Dot[W, S, N];
+  Dx := new Dot[W, N, M];
 
-  bundle x[S]: ['G, 'G+1] W;
-  bundle y[S]: ['G, 'G+1] W;
+  bundle x[N]: ['G, 'G+1] W;
+  bundle y[N]: ['G, 'G+1] W;
 
   x{0} = x_0; x{1} = x_1; x{2} = x_2; x{3} = x_3; 
   x{4} = x_4; x{5} = x_5; x{6} = x_6; x{7} = x_7;
@@ -59,7 +59,7 @@ comp main<'G:II>(
   y{8} = y_8; y{9} = y_9; y{10} = y_10; y{11} = y_11;
   y{12} = y_12; y{13} = y_13; y{14} = y_14; y{15} = y_15;
 
-  d := Dx<'G>(x{0..S}, y{0..S});
+  d := Dx<'G>(x{0..N}, y{0..N});
 
   out = d.out;
 
