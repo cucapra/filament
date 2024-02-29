@@ -113,14 +113,18 @@ comp Scal[W, S, N]<'G:II>(
 
     a_reg := new Shift[W, mul_start]<'G>(a);
 
+    // use inputs
     if j == 0 {
+      // fill bundle with `a`
       for i in 0..N {
         a_bundle{j}{i} = a;
       }
       m := M<'G+mul_start>(x{j*N..(j+1)*N}, a_bundle{j}{0..N});
       mult_out{j}{0..N} = m.out{0..N};
     }
+    // register inputs and use
     else {
+      // fill bundle with `a`
       for i in 0..N {
         a_bundle{j}{i} = a_reg.out;
       }
