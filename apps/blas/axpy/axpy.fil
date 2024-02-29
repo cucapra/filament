@@ -1,0 +1,41 @@
+import "apps/blas/scal/scal.fil";
+import "apps/blas/util.fil";
+
+// Performs a*x + y, where x,y are vectors and a is a scalar
+// W: Width of nums
+// N: Length of vectors
+// M: Number of multipliers
+// A: Number of adders
+comp Axpy[W, N, M, A]<'G:II>(
+  go:   interface['G],
+  a:    ['G, 'G+1] W,
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W,
+) -> (
+  out[N]: ['G+L, 'G+L+1] W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0,
+        L > 0,
+        N > 0,
+        M > 0,
+        A > 0
+{
+  // Perform a*x
+  Sc := new Scal[W, N, M];
+  s := Sc<'G>(x{0..N}, a);
+
+  // register y
+  y_reg := new Shift[W, Sc::L, N]<'G>(y{0..N});
+
+  // Do add
+  Add := new VecAdd[W, N, A];
+  a := Add<'G+Sc::L>(s.out{0..N}, y_reg.out{0..N});
+
+  let latency = Sc::L + Add::L;
+  L := latency;
+  II := Sc::II;
+
+  out{0..N} = a.out{0..N};
+}
