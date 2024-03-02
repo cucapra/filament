@@ -23,19 +23,51 @@ comp Axpy[W, N, M, A]<'G:II>(
         A > 0
 {
   // Perform a*x
-  Sc := new Scal[W, N, M];
-  s := Sc<'G>(x{0..N}, a);
+  
+  let uses = N / M;
 
-  // register y
-  y_reg := new Shift[W, Sc::L, N]<'G>(y{0..N});
+  Mults := new Multipliers[W, M] in ['G, 'G + uses*Mults::II];
+  // use as many adders as there are multipliers
+  Adds := new Adders[W, M];
 
-  // Do add
-  Add := new VecAdd[W, N, A];
-  a := Add<'G+Sc::L>(s.out{0..N}, y_reg.out{0..N});
-
-  let latency = Sc::L + Add::L;
+  let latency = uses*Mults::II + Mults::L;
   L := latency;
-  II := Sc::II;
 
-  out{0..N} = a.out{0..N};
+  let ii = uses*Mults::II;
+  II := ii;
+
+  bundle mult_out[uses][M]: for<k> ['G+k*Mults::II+Mults::L, 'G+k*Mults::II+Mults::L+1] W;
+  bundle a_bundle[uses][M]: for<k> ['G+k*Mults::II, 'G+k*Mults::II+1] W;
+
+  for j in 0..uses {
+    let mul_start = j*Mults::II;
+    let mul_end = j*Mults::II + Mults::L;
+
+    a_reg := new Shift[W, mul_start]<'G>(a);
+    y_reg := new Shift[W, mul_end, M]<'G>(y{j*M..(j+1)*M});
+
+    // use inputs
+    if j == 0 {
+      // fill bundle with `a`
+      for i in 0..M {
+        a_bundle{j}{i} = a;
+      }
+      m := Mults<'G+mul_start>(x{j*M..(j+1)*M}, a_bundle{j}{0..M});
+      mult_out{j}{0..M} = m.out{0..M};
+    }
+    // register inputs and use
+    else {
+      // fill bundle with `a`
+      for i in 0..M {
+        a_bundle{j}{i} = a_reg.out;
+      }
+      x_reg := new Shift[W, mul_start, M]<'G>(x{j*M..(j+1)*M});
+      m := Mults<'G+mul_start>(x_reg.out{0..M}, a_bundle{j}{0..M});
+      mult_out{j}{0..M} = m.out{0..M};
+    }
+
+    a := Adds<'G+mul_end>(mult_out{j}{0..M}, y_reg.out{0..M});
+    add_reg := new Shift[W, latency - mul_end, M]<'G+mul_end>(a.out{0..M});
+    out{j*M..(j+1)*M} = add_reg.out{0..M};
+  }
 }
