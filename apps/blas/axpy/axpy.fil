@@ -1,5 +1,7 @@
 import "apps/blas/scal/scal.fil";
 import "apps/blas/util.fil";
+import "primitives/reshape.fil";
+import "primitives/core.fil";
 
 // Performs a*x + y, where x,y are vectors and a is a scalar
 // W: Width of nums
@@ -20,21 +22,25 @@ comp Axpy[W, N, M, A]<'G:II>(
         L > 0,
         N > 0,
         M > 0,
-        A > 0
+        A > 0,
+        N % M == 0,
+        M % A == 0
 {
-  // Perform a*x
   
   let uses = N / M;
+  let add_uses = M / A;
 
   Mults := new Multipliers[W, M] in ['G, 'G + uses*Mults::II];
-  // use as many adders as there are multipliers
-  Adds := new Adders[W, M];
+  Adds := new Adders[W, A];
 
-  let latency = uses*Mults::II + Mults::L;
+  let latency = uses*Mults::II + Mults::L + add_uses + uses*add_uses - 1;
   L := latency;
 
   let ii = uses*Mults::II;
   II := ii;
+
+  let add_latency = add_uses;
+  let add_ii = 1;
 
   bundle mult_out[uses][M]: for<k> ['G+k*Mults::II+Mults::L, 'G+k*Mults::II+Mults::L+1] W;
   bundle a_bundle[uses][M]: for<k> ['G+k*Mults::II, 'G+k*Mults::II+1] W;
@@ -44,7 +50,6 @@ comp Axpy[W, N, M, A]<'G:II>(
     let mul_end = j*Mults::II + Mults::L;
 
     a_reg := new Shift[W, mul_start]<'G>(a);
-    y_reg := new Shift[W, mul_end, M]<'G>(y{j*M..(j+1)*M});
 
     // use inputs
     if j == 0 {
@@ -66,8 +71,20 @@ comp Axpy[W, N, M, A]<'G:II>(
       mult_out{j}{0..M} = m.out{0..M};
     }
 
-    a := Adds<'G+mul_end>(mult_out{j}{0..M}, y_reg.out{0..M});
-    add_reg := new Shift[W, latency - mul_end, M]<'G+mul_end>(a.out{0..M});
-    out{j*M..(j+1)*M} = add_reg.out{0..M};
+    // chunk multiply outputs based on how many adders we have
+    for k in 0..add_uses {
+
+      bundle add_in[A]: ['G+mul_end + k*add_ii + j*add_uses, 'G+mul_end + k*add_ii + j*add_uses + 1] W;
+
+      y_reg := new Shift[W, mul_end + k*add_ii + j*add_uses, A]<'G>(y{(M*j)+(k*A)..(M*j)+(k+1)*A});
+
+      mult_out_reg := new Shift[W, k*add_ii + j*add_uses, A]<'G+mul_end>(mult_out{j}{(k*A)..(k+1)*A});
+      add_in{0..A} = mult_out_reg.out{0..A};
+
+      a := Adds<'G+mul_end+k*add_ii+j*add_uses>(add_in{0..A}, y_reg.out{0..A});
+      add_reg := new Shift[W, latency - mul_end - k*add_ii - j*add_uses, A]<'G+mul_end+k*add_ii+j*add_uses>(a.out{0..A});
+
+      out{(M*j)+(k*A)..(M*j)+(k+1)*A} = add_reg.out{0..A};
+    }
   }
 }
