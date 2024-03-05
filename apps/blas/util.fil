@@ -25,7 +25,7 @@ comp Multipliers[W, N]<'G:1>(
 ) -> (
   out[N]: ['G+L, 'G+L+1] W
 ) with {
-  some L where L >= 0;
+  some L where L > 0;
   some II where II > 0;
 } where W > 0 {
   Mx := new Mult[W];

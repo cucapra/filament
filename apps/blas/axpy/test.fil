@@ -56,7 +56,7 @@ comp main<'G:II>(
   let M = 8;
   let N = 16;
   let W = 32;
-  let A = 1;
+  let A = 8;
   some L where L > 0;
   some II where II > 0;
 } {

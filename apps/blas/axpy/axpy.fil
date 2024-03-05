@@ -27,25 +27,24 @@ comp Axpy[W, N, M, A]<'G:II>(
         M % A == 0
 {
   
-  let uses = N / M;
+  let mult_uses = N / M;
   let add_uses = M / A;
-
-  Mults := new Multipliers[W, M] in ['G, 'G + uses*Mults::II];
-  Adds := new Adders[W, A];
-
-  let latency = uses*Mults::II + Mults::L + add_uses + uses*add_uses - 1;
-  L := latency;
-
-  let ii = uses*Mults::II;
-  II := ii;
 
   let add_latency = add_uses;
   let add_ii = 1;
 
-  bundle mult_out[uses][M]: for<k> ['G+k*Mults::II+Mults::L, 'G+k*Mults::II+Mults::L+1] W;
-  bundle a_bundle[uses][M]: for<k> ['G+k*Mults::II, 'G+k*Mults::II+1] W;
+  Mults := new Multipliers[W, M] in ['G, 'G + mult_uses*Mults::II];
+  Adds := new Adders[W, A] in ['G + Mults::L, 'G + mult_uses*Mults::II + Mults::L + add_uses*add_ii + mult_uses*(add_uses-1)];
 
-  for j in 0..uses {
+  let latency = (mult_uses-1)*Mults::II + Mults::L + add_uses-1 + (mult_uses-1)*(add_uses-1);
+  L := latency;
+
+  II := (mult_uses*Mults::II+Mults::L+add_uses*add_ii+mult_uses*(add_uses-1))-Mults::L; // compiler told me this
+
+  bundle mult_out[mult_uses][M]: for<k> ['G+k*Mults::II+Mults::L, 'G+k*Mults::II+Mults::L+1] W;
+  bundle a_bundle[mult_uses][M]: for<k> ['G+k*Mults::II, 'G+k*Mults::II+1] W;
+
+  for j in 0..mult_uses {
     let mul_start = j*Mults::II;
     let mul_end = j*Mults::II + Mults::L;
 
@@ -73,16 +72,17 @@ comp Axpy[W, N, M, A]<'G:II>(
 
     // chunk multiply outputs based on how many adders we have
     for k in 0..add_uses {
+      let offset = j*(add_uses-1);
 
-      bundle add_in[A]: ['G+mul_end + k*add_ii + j*add_uses, 'G+mul_end + k*add_ii + j*add_uses + 1] W;
+      bundle add_in[A]: ['G+mul_end + k*add_ii + offset, 'G+mul_end + k*add_ii + offset + 1] W;
 
-      y_reg := new Shift[W, mul_end + k*add_ii + j*add_uses, A]<'G>(y{(M*j)+(k*A)..(M*j)+(k+1)*A});
+      y_reg := new Shift[W, mul_end + k*add_ii + offset, A]<'G>(y{(M*j)+(k*A)..(M*j)+(k+1)*A});
 
-      mult_out_reg := new Shift[W, k*add_ii + j*add_uses, A]<'G+mul_end>(mult_out{j}{(k*A)..(k+1)*A});
+      mult_out_reg := new Shift[W, k*add_ii + offset, A]<'G+mul_end>(mult_out{j}{(k*A)..(k+1)*A});
       add_in{0..A} = mult_out_reg.out{0..A};
 
-      a := Adds<'G+mul_end+k*add_ii+j*add_uses>(add_in{0..A}, y_reg.out{0..A});
-      add_reg := new Shift[W, latency - mul_end - k*add_ii - j*add_uses, A]<'G+mul_end+k*add_ii+j*add_uses>(a.out{0..A});
+      a := Adds<'G+mul_end+k*add_ii+offset>(add_in{0..A}, y_reg.out{0..A});
+      add_reg := new Shift[W, latency - mul_end - k*add_ii - offset, A]<'G+mul_end+k*add_ii+offset>(a.out{0..A});
 
       out{(M*j)+(k*A)..(M*j)+(k+1)*A} = add_reg.out{0..A};
     }
