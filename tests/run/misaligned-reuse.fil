@@ -9,7 +9,7 @@ comp DoubleShift[W, N]<'G: 2>(
 ) -> (
     out0: ['G+N, 'G+N+1] W,
     out1: ['G+N+1, 'G+N+2] W
-) {
+) where W > 0 {
     D := new Shift[W, N];
     d0 := D<'G>(in0);
     d1 := D<'G+1>(in1);
