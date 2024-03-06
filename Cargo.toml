@@ -37,11 +37,11 @@ fil-ir = { version = "0.1.0", path = "fil-ir" }
 fil-derive = { version = "0.1.0", path = "fil-derive" }
 fil-gen = { version = "0.1.0", path = "fil-gen" }
 
-calyx-ir = { version = "0.6.0" }
-calyx-frontend = { version = "0.6.0" }
-calyx-utils = { version = "0.6.0" }
-calyx-opt = { version = "0.6.0" }
-calyx-backend = { version = "0.6.0" }
+calyx-ir = { version = "0.7.1" }
+calyx-frontend = { version = "0.7.1" }
+calyx-utils = { version = "0.7.1" }
+calyx-opt = { version = "0.7.1" }
+calyx-backend = { version = "0.7.1" }
 
 [workspace.dependencies.env_logger]
 version = "0.9"
