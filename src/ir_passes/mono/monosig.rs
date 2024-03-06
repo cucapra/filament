@@ -185,12 +185,10 @@ impl MonoSig {
     ) -> ir::info::Reason {
         match reason {
             ir::info::Reason::Liveness {
-                dst_loc,
                 src_loc,
                 dst_liveness,
                 src_liveness,
             } => ir::info::Reason::Liveness {
-                dst_loc: *dst_loc,
                 src_loc: *src_loc,
                 dst_liveness: self.range(underlying, pass, dst_liveness),
                 src_liveness: self.range(underlying, pass, src_liveness),
