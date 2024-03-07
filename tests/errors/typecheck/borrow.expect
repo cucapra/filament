@@ -1,0 +1,13 @@
+---CODE---
+1
+---STDERR---
+error: event's delay must be greater than the instance's borrow length
+  ┌─ tests/errors/typecheck/borrow.fil:8:19
+  │
+7 │ comp main<'G:10>() -> () {
+  │              -- event's delay is 10 cycles
+8 │   F := new Foo in ['G, 'G + F::A];
+  │                   ^^^^^^^^^^^^^^^ instance borrowed for F::A cycles
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.
