@@ -1,4 +1,5 @@
-FROM ghcr.io/cucapra/calyx:0.4.0
+FROM ghcr.io/cucapra/calyx:latest
+
 LABEL org.opencontainers.image.source https://github.com/cucapra/filament
 
 # Install apt packages
@@ -41,12 +42,11 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.28.0-rc3/cmake-3.
 
 # Install FloPoCo 5.0
 WORKDIR /home
-RUN git clone https://gitlab.com/flopoco/flopoco &&\
+RUN git clone --depth 1 --branch flopoco-4.1 https://gitlab.com/flopoco/flopoco &&\
     cd flopoco && git checkout f3d76595c01f84cee57ae67eee1ceb31a6fe93bc &&\
     mkdir build && cd build &&\
     cmake -GNinja .. && ninja &&\
     ln -s /home/flopoco/build/code/FloPoCoBin/flopoco /usr/bin/flopoco
-
 
 # Install GHDL 3.0.0
 WORKDIR /home
@@ -80,6 +80,35 @@ RUN wget https://github.com/chipsalliance/verible/releases/download/v0.0-3428-gc
   mv verible-v0.0-3428-gcfcbb82b verible && \
   rm verible.tar.gz
 ENV PATH=$PATH:/home/verible/bin
+
+ARG TARGETARCH
+
+# Install GCC 12
+RUN apt install -y libgmp3-dev libmpfr-dev libmpc-dev
+ENV LD_LIBRARY_PATH=/usr/local/lib64:$LD_LIBRARY_PATH
+WORKDIR /home
+RUN git clone --depth 1 --branch releases/gcc-12.1.0 https://github.com/gcc-mirror/gcc.git &&\
+    cd gcc &&\
+    ./configure --disable-multilib &&\
+    make -j$(nproc) &&\
+    make install
+
+# Install libboost 1.84.0
+WORKDIR /home
+RUN git clone --depth 1 --recursive --branch boost-1.84.0 https://github.com/boostorg/boost.git &&\
+    cd boost &&\
+    ./bootstrap.sh &&\
+    ./b2 install
+# Add boost to include path
+ENV CPLUS_INCLUDE_PATH=/home/boost:$CPLUS_INCLUDE_PATH
+
+# Install SLANG
+WORKDIR /home
+RUN git clone --depth 1 --branch v5.0 https://github.com/MikePopoloski/slang.git &&\
+    cd slang &&\
+    cmake -B build &&\
+    cmake --build build -j8 &&\
+    cmake --install build --strip
 
 # ----------------------------------------
 # Install filament

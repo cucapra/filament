@@ -344,15 +344,10 @@ impl Visitor for IntervalCheck {
             .lte(dst_range.start, comp)
             .and(src_t.range.end.gte(dst_range.end, comp), comp);
 
-        let &ir::info::Connect { dst_loc, src_loc } = comp.get(*info).into();
+        let &ir::info::Connect { src_loc, .. } = comp.get(*info).into();
         let reason = comp.add(
-            ir::info::Reason::liveness(
-                dst_loc,
-                src_loc,
-                dst_t.range,
-                src_t.range,
-            )
-            .into(),
+            ir::info::Reason::liveness(src_loc, dst_t.range, src_t.range)
+                .into(),
         );
 
         let prop = pre_req.implies(contains, comp);

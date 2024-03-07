@@ -16,17 +16,19 @@ error: source port does not provide value for as long as destination requires
   ┌─ tests/errors/bundle/multi-liveness.fil:3:15
   │
 3 │     f{1}{2} = in;
-  │     -------   ^^ source is available for ['G, 'G+1]
-  │     │          
-  │     requires value for ['G+1, 'G+4]
+  │               ^^
+  │               │
+  │               source is available for ['G, 'G+1]
+  │               required for ['G+1, 'G+4]
 
 error: source port does not provide value for as long as destination requires
   ┌─ tests/errors/bundle/multi-liveness.fil:6:15
   │
 6 │     g{0..3} = f{0}{0..3};
-  │     -------   ^^^^^^^^^^ source is available for ['G, 'G+j+1]
-  │     │          
-  │     requires value for ['G+1, 'G+i+2]
+  │               ^^^^^^^^^^
+  │               │
+  │               source is available for ['G, 'G+j+1]
+  │               required for ['G+1, 'G+i+2]
 
 Compilation failed with 3 errors.
 Run with --show-models to generate assignments for failing constraints.

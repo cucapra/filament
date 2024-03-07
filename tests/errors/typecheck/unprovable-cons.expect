@@ -17,9 +17,9 @@ error: bundle's availability is greater than the delay of the event
   │          ^^^^^^^^^^ available for 1 cycles
 
 error: invocation violates event constraint
-   ┌─ ./primitives/./state.fil:11:12
+   ┌─ ./primitives/./state.fil:13:12
    │
-11 │    ) where 'L > 'G+1;
+13 │    ) where 'L > 'G+1;
    │            ^^^^^^^^^ constraint was violated
    │
    ┌─ tests/errors/typecheck/unprovable-cons.fil:14:9
@@ -31,9 +31,10 @@ error: source port does not provide value for as long as destination requires
    ┌─ tests/errors/typecheck/unprovable-cons.fil:15:9
    │
 15 │   out = l0.out;
-   │   ----  ^^^^^^ source is available for ['G+1, 'L+1]
-   │   │      
-   │   requires value for ['L+2, 'L+3]
+   │         ^^^^^^
+   │         │
+   │         source is available for ['G+1, 'L+1]
+   │         required for ['L+2, 'L+3]
 
 Compilation failed with 4 errors.
 Run with --show-models to generate assignments for failing constraints.

@@ -2,23 +2,22 @@
 1
 ---STDERR---
 error: source port does not provide value for as long as destination requires
-    ┌─ examples/tut-wrong-2.fil:19:29
-    │
- 19 │     mx := new Mux[32]<'G+2>(op, r0.out, m0.out);
-    │                             ^^ source is available for ['G, 'G+1]
-    │
-    ┌─ ./primitives/./comb.fil:169:7
-    │
-169 │       sel: ['G, 'L] 1,
-    │       --- requires value for ['G+2, 'G+3]
+   ┌─ examples/tut-wrong-2.fil:19:29
+   │
+19 │     mx := new Mux[32]<'G+2>(op, r0.out, m0.out);
+   │                             ^^
+   │                             │
+   │                             source is available for ['G, 'G+1]
+   │                             required for ['G+2, 'G+3]
 
 error: source port does not provide value for as long as destination requires
    ┌─ examples/tut-wrong-2.fil:20:11
    │
 20 │     out = mx.out;
-   │     ----  ^^^^^^ source is available for ['G+2, 'G+3]
-   │     │      
-   │     requires value for ['G, 'G+1]
+   │           ^^^^^^
+   │           │
+   │           source is available for ['G+2, 'G+3]
+   │           required for ['G, 'G+1]
 
 Compilation failed with 2 errors.
 Run with --show-models to generate assignments for failing constraints.

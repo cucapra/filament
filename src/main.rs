@@ -101,6 +101,7 @@ fn gen_verilog(mut ctx: calyx_ir::Context) -> Result<(), calyx_utils::Error> {
         synthesis_mode: false,
         enable_verification: false,
         flat_assign: true,
+        emit_primitive_extmodules: false,
     };
     ctx.bc = backend_conf;
     pm.execute_plan(
