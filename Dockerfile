@@ -60,7 +60,7 @@ RUN git clone --depth 1 --branch v3.0.0 https://github.com/ghdl/ghdl.git &&\
     make && make install
 
 # Update runt to 0.4.1
-cargo install runt --version 0.4.1
+RUN cargo install runt --version 0.4.1
 
 # ----------------------------------------
 # Install filament
