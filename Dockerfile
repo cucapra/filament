@@ -82,3 +82,4 @@ RUN python3 -m pip install cocotb find_libpython pytest && \
   fud register -p fud/filament.py filament && \
   fud config stages.filament.exec target/debug/filament && \
   fud config stages.filament.library .
+  
