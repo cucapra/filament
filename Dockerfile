@@ -67,6 +67,9 @@ RUN wget https://github.com/chipsalliance/verible/releases/download/v0.0-3428-gc
   rm verible.tar.gz
 ENV PATH=$PATH:/home/verible/bin
 
+# Update runt to 0.4.1
+cargon install runt --version 0.4.1
+
 # ----------------------------------------
 # Install filament
 # ----------------------------------------
