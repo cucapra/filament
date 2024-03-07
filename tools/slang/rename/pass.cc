@@ -54,32 +54,34 @@ public:
 int main(int argc, char **argv)
 {
   auto tree = SyntaxTree::fromFileInMemory(R"(
-`default_nettype none
-`unconnected_drive pull0
-`timescale 1ns/1ps
-`define FOO
-
 module m;
-    module n;
-    endmodule
-    reg tmp;
-    n n();
-    if (1) begin end
+  module n;
+  endmodule
+  reg tmp;
+  n n ();
+  if (1) begin
+  end
 endmodule
 
-module top;
-    import bar::*;
-    FooBar fooBar();
-    defparam a = 1;
-    bind A: Ainst Abind Abind_inst();
+module top (
+    input clk
+);
+  m fooBar ();
 
-    initial a::b = 1;
+  reg [3:0] a;
+
+  always @(posedge clk) begin
+    case (a)
+      1: begin
+        a <= 1;
+      end
+      2: begin
+        a <= 2;
+      end
+    endcase
+  end
 endmodule
 
-class C; endclass
-
-`nounconnected_drive
-`resetall
 )",
                                            SyntaxTree::getDefaultSourceManager());
 
@@ -90,12 +92,27 @@ class C; endclass
   public:
     void handle(const ModuleDeclarationSyntax &syntax)
     {
+      printf("Header: %s\n", syntax.toString().c_str());
+      for (auto &item : syntax.members)
+      {
+        printf("Member: %s\n", item->toString().c_str());
+        visit(*item);
+      }
       if (syntax.header->name.valueText() == "m")
       {
         auto newMod = clone(syntax, alloc);
         newMod->header->name = makeId("FooBar", SingleSpace);
         replace(syntax, *newMod);
       }
+    }
+
+    void handle(const MemberSyntax &syntax)
+    {
+      printf("Node: %s\n", syntax.toString().c_str());
+      printf("Kind: %s\n", syntax.kind);
+      // auto newMod = clone(syntax, alloc);
+      // newMod->name = makeId("Egg", SingleSpace);
+      // replace(syntax, *newMod);
     }
   };
 
