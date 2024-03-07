@@ -1,0 +1,25 @@
+extern "impl.v" {
+    comp Mul<'G:1>(
+        clk: 1,
+        a: ['G, 'G+1] 32,
+        b: ['G, 'G+1] 32
+    ) -> (
+        out: ['G+11, 'G+12] 32
+    );
+}
+
+// Wrapper around Mul to give it an existential latency parameter
+comp MulWrapper<'G:1>(
+    clk: 1,
+    a: ['G, 'G+1] 32,
+    b: ['G, 'G+1] 32
+) -> (
+    out: ['G+L, 'G+L+1] 32
+) with {
+    some L where L > 0;
+} {
+    m := new Mul<'G>(a, b);
+    out = m.out;
+
+    L := 11;
+}

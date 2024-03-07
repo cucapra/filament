@@ -21,7 +21,7 @@ comp ComputeOp<'G: 1>(
   out = op.out;
 }
 
-comp FPMult<'G: 1>(
+comp FilFPMult<'G: 1>(
   go: interface['G],
    a: ['G, 'G+1] 32,
    b: ['G, 'G+1] 32,

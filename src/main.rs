@@ -37,7 +37,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
                 "`--out-dir <dir>` to store the generated files."
             ))
         }
-        Some(ns.init_gen(opts.out_dir.clone()))
+        Some(ns.init_gen(opts.out_dir.clone(), opts.gen_config.clone()))
     } else {
         None
     };

@@ -1,0 +1,14 @@
+generate(xls) using "xls.toml" {
+    comp ComplexMult[Exp, Mant]<'G:1>(
+        clk:1,
+        left_r:  ['G, 'G+1] W, 
+        left_i:  ['G, 'G+1] W,
+        right_r: ['G, 'G+1] W,
+        right_i: ['G, 'G+1] W,
+    ) -> (
+        out: ['G+L-1, 'G+L] 2*W,
+    ) with {
+        let W = Exp+Mant+1;
+        some L where L >= 1;
+    };
+}

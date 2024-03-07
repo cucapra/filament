@@ -93,7 +93,7 @@ fud e -s cocotb.data {}.data --to cocotb-out {} -q
 # fft
 [[tests]]
 name = "fft"
-paths = ["apps/fft/test/scripts/*.sh"]
+paths = ["apps/fft*/test/scripts/*.sh"]
 cmd = """
 dir=$(dirname {}) && \
 {}

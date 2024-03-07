@@ -1,0 +1,51 @@
+import "apps/xls/mul_lat4/shim.fil";
+
+// Abstract Mul that instantiates an arbitrary Mul and uses
+// its latency
+comp MulAbstract<'G:1>(
+    a: ['G, 'G+1] 32,
+    b: ['G, 'G+1] 32
+) -> (
+    out: ['G+L, 'G+L+1] 32
+) with {
+    some L where L > 0;
+} {
+    M := new MulWrapper;
+    m := M<'G>(a, b);
+    out = m.out;
+
+    L := M::L;
+}
+
+// Wrapper to interface with other outside modules
+comp Wrapper<'G:1>(
+    go: interface['G],
+    a: ['G, 'G+1] 32,
+    b: ['G, 'G+1] 32,
+) -> (
+    out: ['G+L, 'G+L+1] 32
+) with {
+    some L where L > 0;
+} {
+    // instantiate and use abstract Mul
+    M := new MulAbstract;
+    m := M<'G>(a, b);
+    out = m.out;
+
+    L := M::L;
+}
+
+comp main<'G:1>(
+    go: interface['G],
+    a: ['G, 'G+1] 32,
+    b: ['G, 'G+1] 32,
+) -> (
+    out: ['G+L, 'G+L+1] 32
+) with {
+    some L where L > 0;
+} {
+    M := new MulAbstract;
+    m := M<'G>(a, b);
+    out = m.out;
+    L := M::L;
+}

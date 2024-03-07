@@ -1,0 +1,134 @@
+import "primitives/reshape.fil";
+import "../src/fft.fil";
+import "spiral-fft.fil";
+
+comp main<'G: II>(
+  go: interface['G],
+  in: ['G, 'G+1] NPoints*2*32 // 16 complex numbers bundled together
+) -> (
+  spiral: ['G+65, 'G+66] NPoints*2*32, // output from spiral
+  fil_pipelined_1: ['G+FP_1L, 'G+FP_1L+1] NPoints*2*32, // output from pipelined pease fft with 1 butterfly
+  fil_pipelined_2: ['G+FP_2L, 'G+FP_2L+1] NPoints*2*32, // output from pipelined pease fft with 2 butterflies
+  fil_pipelined_4: ['G+FP_4L, 'G+FP_4L+1] NPoints*2*32, // output from pipelined pease fft with 4 butterflies
+  fil_pipelined_8: ['G+FP_8L, 'G+FP_8L+1] NPoints*2*32, // output from pipelined pease fft with 8 butterflies
+  fil_pipelined_stream: ['G+FP_StreamL, 'G+FP_StreamL+1] NPoints*2*32 // output from streaming fft
+) with {
+  let NStages = 4;
+  let NPoints = pow2(NStages);
+
+  some FP_StreamL where FP_StreamL > 0;
+  some FP_8L where FP_8L > 0;
+  some FP_4L where FP_4L > 0;
+  some FP_2L where FP_2L > 0;
+  some FP_1L where FP_1L > 0;
+
+  some II where II > 0;
+} where
+  II > 0
+{
+  FP_1 := new BundledFFT[4, 1, 1];
+  fp_1 := FP_1<'G>(in);
+  FP_1L := FP_1::L;
+  fil_pipelined_1 = fp_1.out;
+  FP_2 := new BundledFFT[4, 2, 1];
+  fp_2 := FP_2<'G>(in);
+  FP_2L := FP_2::L;
+  fil_pipelined_2 = fp_2.out;
+  FP_4 := new BundledFFT[4, 4, 1];
+  fp_4 := FP_4<'G>(in);
+  FP_4L := FP_4::L;
+  fil_pipelined_4 = fp_4.out;
+  FP_8 := new BundledFFT[4, 8, 1];
+  fp_8 := FP_8<'G>(in);
+  FP_8L := FP_8::L;
+  fil_pipelined_8 = fp_8.out;
+
+  FP_Stream := new BundledFFT[4, 1, 0];
+  fp_stream := FP_Stream<'G>(in);
+  FP_StreamL := FP_Stream::L;
+  fil_pipelined_stream = fp_stream.out;
+
+  // the more butterflies, the faster
+  assume FP_1::II >= FP_2::II;
+  assume FP_2::II >= FP_4::II;
+  assume FP_4::II >= FP_8::II; 
+  // streaming FFT have II 1
+  assume FP_Stream::II == 1;
+
+  II := FP_1::II;
+
+  // split input into bundle
+  split := new SplitWire[32, NPoints*2]<'G>(in);
+  // hook up spiral dft
+  spdft := new dft_top<'G>(
+    split.out{0},
+    split.out{1},
+    split.out{2},
+    split.out{3},
+    split.out{4},
+    split.out{5},
+    split.out{6},
+    split.out{7},
+    split.out{8},
+    split.out{9},
+    split.out{10},
+    split.out{11},
+    split.out{12},
+    split.out{13},
+    split.out{14},
+    split.out{15},
+    split.out{16},
+    split.out{17},
+    split.out{18},
+    split.out{19},
+    split.out{20},
+    split.out{21},
+    split.out{22},
+    split.out{23},
+    split.out{24},
+    split.out{25},
+    split.out{26},
+    split.out{27},
+    split.out{28},
+    split.out{29},
+    split.out{30},
+    split.out{31}
+  );
+
+  bundle spiral_bundle[32]: ['G+65, 'G+66] 32;
+  spiral_bundle{0} = spdft.Y0;
+  spiral_bundle{1} = spdft.Y1;
+  spiral_bundle{2} = spdft.Y2;
+  spiral_bundle{3} = spdft.Y3;
+  spiral_bundle{4} = spdft.Y4;
+  spiral_bundle{5} = spdft.Y5;
+  spiral_bundle{6} = spdft.Y6;
+  spiral_bundle{7} = spdft.Y7;
+  spiral_bundle{8} = spdft.Y8;
+  spiral_bundle{9} = spdft.Y9;
+  spiral_bundle{10} = spdft.Y10;
+  spiral_bundle{11} = spdft.Y11;
+  spiral_bundle{12} = spdft.Y12;
+  spiral_bundle{13} = spdft.Y13;
+  spiral_bundle{14} = spdft.Y14;
+  spiral_bundle{15} = spdft.Y15;
+  spiral_bundle{16} = spdft.Y16;
+  spiral_bundle{17} = spdft.Y17;
+  spiral_bundle{18} = spdft.Y18;
+  spiral_bundle{19} = spdft.Y19;
+  spiral_bundle{20} = spdft.Y20;
+  spiral_bundle{21} = spdft.Y21;
+  spiral_bundle{22} = spdft.Y22;
+  spiral_bundle{23} = spdft.Y23;
+  spiral_bundle{24} = spdft.Y24;
+  spiral_bundle{25} = spdft.Y25;
+  spiral_bundle{26} = spdft.Y26;
+  spiral_bundle{27} = spdft.Y27;
+  spiral_bundle{28} = spdft.Y28;
+  spiral_bundle{29} = spdft.Y29;
+  spiral_bundle{30} = spdft.Y30;
+  spiral_bundle{31} = spdft.Y31;
+
+  spiral_wire := new ConcatBundle[32, 32]<'G+65>(spiral_bundle{0..32});
+  spiral = spiral_wire.out;
+}

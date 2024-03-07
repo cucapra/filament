@@ -157,3 +157,39 @@ comp SplitWire[W, N, ?L=1]<'G: L>(
       out{1..N} = spl.out{0..N-1};
    }
 }
+
+extern "reshape.sv" {
+  // Unsafely takes a port of availability ['G, 'G+1] and ['G+1, 'L] and merges them into ['G, 'L]
+  comp UnsafeMerge[W]<'G: 'L-('G), 'L: 1>(
+    go: interface['G],
+    in0: ['G, 'G+1] W,
+    in1: ['G+1, 'L] W
+  ) -> (
+    out: ['G, 'L] W,
+  ) where
+    W > 0,
+    'L > 'G+1;
+}
+
+comp UnsafeMergeBundle[W, N]<'G: N>(
+  go: interface['G],
+  in[N]: for<i> ['G+i, 'G+i+1] W,
+) -> (
+  out: ['G, 'G+N] W
+) where
+  W > 0,
+  N >= 0
+{
+  if N == 1 {
+    out = in{0};
+  } else {
+    if N == 2 {
+      um := new UnsafeMerge[W]<'G, 'G+2>(in{0}, in{1});
+      out = um.out;
+    } else {
+      umb := new UnsafeMergeBundle[W, N-1]<'G+1>(in{1..N});
+      um := new UnsafeMerge[W]<'G, 'G+N>(in{0}, umb.out);
+      out = um.out;
+    }
+  }
+}

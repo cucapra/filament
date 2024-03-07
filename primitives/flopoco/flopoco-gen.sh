@@ -50,9 +50,12 @@ flopoco $ARGS name=$NAME outputFile=$FLOPOCO 2> >(tee "$OUT.err" >&2)
 ghdl synth --out=verilog -fsynopsys -fexplicit \
  $FLOPOCO -e "$NAME" > "$OUT"
 
+# Obfuscate helper modules to avoid name conflicts
+$DIR/../../tools/verible/obfuscate.py "$OUT" "$NAME" > "$OUT.tmp"
+mv "$OUT.tmp" "$OUT"
+
 # In-place update the generated Verilog to use `\table` instead of `table`
-# sed 's/[[:<:]]table[[:>:]]/\\table/g' "$OUT" > "$OUT.tmp"
-cat "$OUT" > "$OUT.tmp"
+sed 's/\btable\b/\\table/g' "$OUT" > "$OUT.tmp"
 mv "$OUT.tmp" "$OUT"
 
 # Check that generated Verilog is valid

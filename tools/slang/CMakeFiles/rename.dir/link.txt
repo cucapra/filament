@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/rename.dir/rename/pass.cc.o -o rename  /usr/local/lib/libsvlang.a /usr/local/lib/libfmt.a -lpthread /usr/local/lib/libmimalloc.a /usr/lib/x86_64-linux-gnu/libpthread.so /usr/lib/x86_64-linux-gnu/librt.so 
