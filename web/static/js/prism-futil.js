@@ -1,4 +1,4 @@
-Prism.languages.futil = {
+Prism.languages.filament = {
     'diff-addition': {
         pattern: /^\+.*$/m
     },
@@ -6,15 +6,13 @@ Prism.languages.futil = {
         pattern: /^-.*$/m
     },
     'comment': Prism.languages.clike.comment,
+    'regex': {
+        pattern: /'[a-zA-Z]+/,
+        greedy: true
+    },
     'string': {
         pattern: /(["])(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/,
         greedy: true
-    },
-    'variable': {
-        // Matches @[G, G+1] <var>: <type>
-        pattern: /(@\[.*?\])\s+\w+(?=\s*:)/,
-        lookbehind: true,
-        greedy: true,
     },
     'class-name': {
         pattern: /(\b(?:comp|new)\s+)\w+/i,
@@ -22,10 +20,6 @@ Prism.languages.futil = {
     },
     'namespace': {
         pattern: /\b(?:extern|comp)\b/,
-        lookbehind: true,
-    },
-    'function': {
-        pattern: /\b(?:cells|wires|control)\b/,
         lookbehind: true,
     },
     'keyword': {
