@@ -1,17 +1,17 @@
 <!DOCTYPE HTML>
-<html lang="en" class="sidebar-visible no-js light">
+<html lang="en" class="light" dir="ltr">
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>Filament</title>
-        <meta name="robots" content="noindex" />
+        <meta name="robots" content="noindex">
 
 
         <!-- Custom HTML head -->
         
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#ffffff">
 
         <link rel="icon" href="favicon.svg">
         <link rel="shortcut icon" href="favicon.png">
@@ -34,7 +34,7 @@
         <!-- MathJax -->
         <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     </head>
-    <body>
+    <body class="sidebar-visible no-js">
     <div id="body-container">
         <!-- Provide site root to javascript -->
         <script>
@@ -64,31 +64,38 @@
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             var html = document.querySelector('html');
-            html.classList.remove('no-js')
             html.classList.remove('light')
             html.classList.add(theme);
-            html.classList.add('js');
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
         </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var html = document.querySelector('html');
+            var body = document.querySelector('body');
             var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
             }
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="start.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li class="chapter-item expanded affix "><li class="part-title">The Filament Language</li><li class="chapter-item expanded "><a href="lang/tutorial.html"><strong aria-hidden="true">2.</strong> Your First Filament Program</a></li><li class="chapter-item expanded "><a href="lang/run.html"><strong aria-hidden="true">3.</strong> Running Filament Designs</a></li><li class="chapter-item expanded "><a href="lang/pipelining.html"><strong aria-hidden="true">4.</strong> Pipelining with Filament</a></li><li class="chapter-item expanded "><a href="lang/external.html"><strong aria-hidden="true">5.</strong> Using Verilog Modules in Filament</a></li><li class="chapter-item expanded affix "><li class="part-title">Metaprogramming with Filament</li><li class="chapter-item expanded "><a href="meta/overview.html"><strong aria-hidden="true">6.</strong> Metaprogramming Overview</a></li><li class="chapter-item expanded "><a href="meta/loops-and-bundles.html"><strong aria-hidden="true">7.</strong> Loops and Bundles</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -119,9 +126,9 @@
                                 <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
-                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
-                        </button>
+                        </label>
                         <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
                             <i class="fa fa-paint-brush"></i>
                         </button>
@@ -172,17 +179,19 @@
                         <h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
 <p>Filament is a programming language for Fearless Hardware Design. It aims to enable software programmers without much hardware background to start designing performant hardware. At its heart, Filament uses a type system to encode properties important for designing efficient hardware. This guide helps you install the various tools to make Filament work.</p>
 <h2 id="minimal-build"><a class="header" href="#minimal-build">Minimal Build</a></h2>
-<p>A basic build, which does not support our automatic simulation harness, can be installed pretty easily:</p>
-<p>First, clone <a href="https://github.com/cucapra/filament">this repository</a>:</p>
-<pre><code>git clone https://github.com/cucapra/filament.git -b stable
-</code></pre>
+<p>A basic build, which does not support our automatic simulation harness, can be installed pretty easily: First, clone <a href="https://github.com/cucapra/filament">this repository</a>: <code>git clone https://github.com/cucapra/filament.git</code></p>
 <p>Next, we can install the dependencies for the Filament compiler:</p>
 <ul>
 <li><a href="https://www.rust-lang.org/tools/install">Install Rust</a> which will configure the <code>cargo</code> tool.</li>
+<li>Install one of the two SMT solvers
+<ul>
 <li>Install <a href="https://github.com/Z3Prover/z3">z3</a>:
 <ul>
 <li>On Mac OS: <code>brew install z3</code>.</li>
 <li>On Ubuntu: <code>apt install z3</code></li>
+</ul>
+</li>
+<li>Install <a href="https://github.com/cvc5/cvc5">cvc5</a>.</li>
 </ul>
 </li>
 <li>Build the compiler by running: <code>cargo build</code> in the root of the folder.</li>
@@ -197,7 +206,7 @@
 <p>Calyx tools are provided using a docker image:</p>
 <pre><code>docker run -it ghcr.io/cucapra/calyx:0.4.0
 </code></pre>
-<p>If you're using the container, skip to <a href="start.html#Configuring-Filament-Tools">configuring Filament tools</a>.</p>
+<p>If you're using the container, skip to [configuring Filament tools][#configuring-filament-tools].</p>
 <h3 id="installing-from-source"><a class="header" href="#installing-from-source">Installing from Source</a></h3>
 <p>First, we need to configure the Calyx compiler which acts as the backend for Filament.</p>
 <ul>
@@ -237,7 +246,7 @@
 <ul>
 <li>Install <a href="https://www.cocotb.org/">cocotb</a>: <code>python3 -m pip install cocotb</code>.
 <ul>
-<li>Cocotb install can often fail. Check it was installed correctly by running <code>python3 -c &quot;import cocotb; print(cocotb.__version__)&quot;</code>. If this command fails, see <a href="start.html#debugging-cocotb-installation">Debugging Cocotb Installation</a>.</li>
+<li>Cocotb install can often fail. Check it was installed correctly by running <code>python3 -c "import cocotb; print(cocotb.__version__)"</code>. If this command fails, see <a href="start.html#debugging-cocotb-installation">Debugging Cocotb Installation</a>.</li>
 </ul>
 </li>
 <li>Register Filament's fud stages by running the command in the filament repository: <code>fud register -p fud/filament.py filament</code>
@@ -260,15 +269,15 @@
 <p>Cocotb requires the python shared library <code>libpython.so</code>/<code>libpython.dylib</code> (Mac OS) to work correctly. A common reason for a cocotb installation not working is when this library is missing.</p>
 <p>To check if cocotb is able to find the shared library install <code>find_libpython</code>: <code>python3 -m pip install find_libpython</code>.</p>
 <p>Next, run the following:</p>
-<pre><code>python3 -c &quot;import find_libpython; print(find_libpython.find())&quot;
+<pre><code>python3 -c "import find_libpython; print(find_libpython.find())"
 </code></pre>
 <p>If the above command does not print out anything, that means that the python library was not found and the python installation needs to be rebuilt.</p>
 <p>If you use <a href="https://github.com/pyenv/pyenv"><code>pyenv</code></a>, the following command will install a python version with the shared library:</p>
-<pre><code>env PYTHON_CONFIGURE_OPTS=&quot;--enable-shared&quot; pyenv install 3.10
+<pre><code>env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install 3.10
 </code></pre>
 <p>Rerun the command to check that <code>libpython</code> was found after installing a new python version.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="hardware-design-for-the-curious-developer"><a class="header" href="#hardware-design-for-the-curious-developer">Hardware Design for the Curious Developer</a></h1>
-<p>Filament is a low-level hardware description language. This means that it does not have a lot of primitive constructs and essentially requires us to build up our hardware from scratch. However, Filament's type system helps us build small reusable components and guarantees that composing them generated efficient and correct hardware.</p>
+<p>Filament is a low-level hardware description language. This means that it does not have a lot of primitive constructs and essentially requires us to build up our hardware from scratch. However, Filament's type system helps us build small reusable components and guarantees that composing them generates efficient and correct hardware.</p>
 <blockquote>
 <p>This tutorial does not assume familiarity with hardware design concepts.</p>
 </blockquote>
@@ -295,29 +304,29 @@
     O---&gt;Mx;
 </pre>
 <p>We start by defining a Filament component which wraps all the hardware required to implement some computation:</p>
-<pre><code class="language-filament">comp main&lt;G: 3&gt;(
-    @interface[G] go: 1,
-    @[G, G+1] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -&gt; (@[G, G+1] out: 32)
+<pre><code class="language-filament">comp main&lt;'G: 3&gt;(
+    go: interface['G],
+     op: ['G, 'G+1] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -&gt; ( out: ['G, 'G+1] 32)
 </code></pre>
-<p>The <code>&lt;G: 1&gt;</code> syntax defined the event <code>G</code> which can be thought of as the &quot;start time&quot; of the component.
+<p>The <code>&lt;G: 1&gt;</code> syntax defined the event <code>G</code> which can be thought of as the "start time" of the component.
 We define a module that takes the inputs <code>op</code>, <code>left</code>, and <code>right</code> and produces the output <code>out</code>.
 Since we're working with hardware, we need to specify the <em>bitwidth</em> of each input and output.
 Unlike other hardware description languages, Filament <em>also</em> requires us to specify exactly when we'll use the input signals and provide the outputs. The syntax <code>@[G, G+1]</code> states that the signal must be available in the half-open interval [G, G+1).</p>
 <p>Next, we need to perform the computations. Since we're working with hardware designs, we don't get access to primitive operations like <code>*</code> and <code>+</code>; we must build circuits to perform these computations!</p>
 <p>Thankfully, the Filament standard library defines these operations for us, so we can simply import those definitions and instantiate an adder and a multiplier:</p>
-<pre><code class="language-filament">import &quot;primitives/core.fil&quot;;       // Defines Add
-import &quot;./sequential.fil&quot;; // Defines Mult
+<pre><code class="language-filament">import "primitives/core.fil";       // Defines Add
+import "./sequential.fil"; // Defines Mult
 
 comp main&lt;G: 3&gt;(...) -&gt; (...) {
     A := new Add[32];
     M := new Mult[32];
 }
 </code></pre>
-<p>We define two circuits <code>A</code> and <code>M</code> which represent an 32-bit adder and a multiplier respectively. The <code>Add[32]</code> syntax represents us passing the value 32 for the width parameter of the pre-defined components.</p>
-<p>Next, we need to perform the two computation. In Filament, we have to specify the time when a particular computation occurs using an <em>invocation</em>:</p>
+<p>We define two circuits <code>A</code> and <code>M</code> which represent a 32-bit adder and a multiplier respectively. The <code>Add[32]</code> syntax represents us passing the value 32 for the width parameter of the pre-defined components.</p>
+<p>Next, we need to perform the two computations. In Filament, we have to specify the time when a particular computation occurs using an <em>invocation</em>:</p>
 <pre><code class="language-filament">    A := new Add[32];
     M := new Mult[32];
     a0 := A&lt;G&gt;(left, right);
@@ -330,23 +339,23 @@ out = mx.out
 <p>We make use of Filament's combined instance creation and invocation syntax to define a new multiplexer and use it when event <code>G</code> occurs. Finally, we forward the output from the multiplexer to the output signal of the component.</p>
 <p>Coming from a software background, it might seem weird that we're performing both the computations first and selecting the output after the fact. However, a hardware circuit is <em>always active</em><sup class="footnote-reference"><a href="#clock-gating">1</a></sup>–the multiplier and adder are always propagating signals and performing some computation even if the inputs are nonsensical. Furthermore, constructs like <code>if</code>-<code>else</code> are not compositional.<sup class="footnote-reference"><a href="#control-comp">2</a></sup></p>
 <p>The final program looks like this:</p>
-<pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;./sequential.fil&quot;;
+<pre><code class="language-filament">import "primitives/core.fil";
+import "./sequential.fil";
 
 /// ANCHOR: signature
-comp main&lt;G: 3&gt;(
-    @interface[G] go: 1,
-    @[G, G+1] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -&gt; (@[G, G+1] out: 32)
+comp main&lt;'G: 3&gt;(
+    go: interface['G],
+     op: ['G, 'G+1] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -&gt; ( out: ['G, 'G+1] 32)
 // ANCHOR_END: signature
 {
     A := new Add[32];
     M := new Mult[32];
-    a0 := A&lt;G&gt;(left, right);
-    m0 := M&lt;G&gt;(left, right);
-    mx := new Mux[32]&lt;G&gt;(op, a0.out, m0.out);
+    a0 := A&lt;'G&gt;(left, right);
+    m0 := M&lt;'G&gt;(left, right);
+    mx := new Mux[32]&lt;'G&gt;(op, a0.out, m0.out);
     out = mx.out;
 }
 </code></pre>
@@ -357,16 +366,14 @@ Save the file as <code>alu.fil</code> and run the following command from the Fil
 <pre><code>cargo run -- alu.fil
 </code></pre>
 <p>Filament tells us that the program is incorrect:</p>
-<pre><code class="language-filament">error: source port must be available longer than the destination port requires
-    ┌─ examples/tut-wrong-1.fil:17:38
-    │
- 17 │     mx := new Mux[32]&lt;G&gt;(op, a0.out, m0.out);
-    │                                      ^^^^^^ source is available for @[G+2, G+3]
-    │
-    ┌─ ./primitives/./comb.fil:170:13
-    │
-170 │     @[G, L] in1: #WIDTH,
-    │             --- destination's requirement @[G, G+1]
+<pre><code class="language-filament">error: source port does not provide value for as long as destination requires
+   ┌─ examples/tut-wrong-1.fil:17:39
+   │
+17 │     mx := new Mux[32]&lt;'G&gt;(op, a0.out, m0.out);
+   │                                       ^^^^^^
+   │                                       │
+   │                                       source is available for ['G+2, 'G+3]
+   │                                       required for ['G, 'G+1]
 
 Compilation failed with 1 errors.
 Run with --show-models to generate assignments for failing constraints.
@@ -377,40 +384,40 @@ This is because multipliers are fundamentally different from adders–they requi
 This <em>temporal constraint</em>–that multiplier may take several cycles while adders may not–is checked by Filament to ensure that our resulting hardware only reads meaningful values.</p>
 <p>In order to fix this, we need to execute the multiplexer when the signal from the multiplier is available. However, in that case, we won't have access to the signal from the adder which only provides its output in the interval [G, G+1). We need to somehow make the signal from the adder last longer as well.</p>
 <h2 id="saving-values-for-the-future"><a class="header" href="#saving-values-for-the-future">Saving Values for the Future</a></h2>
-<p>Registers are the primitive stateful building block for hardware designs and can extend the availability of signals. The signature of a register is complicated by interesting:</p>
-<pre><code class="language-filament">  // A register that can extend the lifetime of a signal to any required length.
-  comp Register[#WIDTH]&lt;G: L-(G+1), L: 1&gt;(
-    clk: 1,
-    reset: 1,
-    @interface[G] write_en: 1,
-    @[G, G+1] in: #WIDTH,
-  ) -&gt; (
-    @[G+1, L] out: #WIDTH,
-  ) where L &gt; G+1;
+<p>Registers are the primitive stateful building block for hardware designs and can extend the availability of signals. The signature of a register is complicated but interesting:</p>
+<pre><code class="language-filament">   // A register that can extend the lifetime of a signal to any required length.
+   comp Register[WIDTH]&lt;'G: 'L-('G+1), 'L: 1&gt;(
+      clk: 1,
+      reset: 1,
+      write_en: interface['G],
+      in: ['G, 'G+1] WIDTH,
+   ) -&gt; (
+      out: ['G+1, 'L] WIDTH,
+   ) where 'L &gt; 'G+1;
 </code></pre>
-<p>Notice the availability for the <code>out</code> signal: it is available in the interval [G, L) where <code>L</code> is provided to the component during its invocation.
+<p>Notice the availability of the <code>out</code> signal: it is available in the interval [G, L) where <code>L</code> is provided to the component during its invocation.
 This means that a register can hold onto a value for as long as needed!
 The additional <code>where</code> clause ensures that <code>out</code>'s interval is well-formed; it would be troublesome if we could say that <code>out</code> is available between [G+10, G+5).</p>
-<p>Let try to fix our program by making changes:</p>
-<pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;./sequential.fil&quot;;
+<p>Let's try to fix our program by making changes:</p>
+<pre><code class="language-filament">import "primitives/core.fil";
+import "./sequential.fil";
 
-comp main&lt;G: 3&gt;(
-    @interface[G] go: 1,
-    @[G, G+1] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
+comp main&lt;'G: 3&gt;(
+    go: interface['G],
+     op: ['G, 'G+1] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
 ) -&gt; (
-    @[G, G+1] out: 32,
+     out: ['G, 'G+1] 32,
 ) {
     A := new Add[32];
     M := new Mult[32];
-    m0 := M&lt;G&gt;(left, right);
-    a0 := A&lt;G&gt;(left, right);
+    m0 := M&lt;'G&gt;(left, right);
+    a0 := A&lt;'G&gt;(left, right);
     // Use register to hold the adder's value
-    r0 := new Register[32]&lt;G, G+3&gt;(a0.out);
+    r0 := new Register[32]&lt;'G, 'G+3&gt;(a0.out);
     // Use the multiplexer when the mult's output is ready
-    mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
+    mx := new Mux[32]&lt;'G+2&gt;(op, r0.out, m0.out);
     out = mx.out;
 }
 </code></pre>
@@ -421,24 +428,23 @@ comp main&lt;G: 3&gt;(
 <li>Use the value from the register instead of the adder for multiplexing.</li>
 </ul>
 <p>Sadly, Filament is still angry at us:</p>
-<pre><code>error: source port must be available longer than the destination port requires
-    ┌─ examples/tut-wrong-2.fil:19:28
-    │
- 19 │     mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
-    │                            ^^ source is available for @[G, G+1]
-    │
-    ┌─ ./primitives/./comb.fil:168:13
-    │
-168 │     @[G, L] sel: 1,
-    │             --- destination's requirement @[G+2, G+3]
+<pre><code>error: source port does not provide value for as long as destination requires
+   ┌─ examples/tut-wrong-2.fil:19:29
+   │
+19 │     mx := new Mux[32]&lt;'G+2&gt;(op, r0.out, m0.out);
+   │                             ^^
+   │                             │
+   │                             source is available for ['G, 'G+1]
+   │                             required for ['G+2, 'G+3]
 
-error: source port must be available longer than the destination port requires
+error: source port does not provide value for as long as destination requires
    ┌─ examples/tut-wrong-2.fil:20:11
    │
 20 │     out = mx.out;
-   │     ----  ^^^^^^ source is available for @[G+2, G+3]
-   │     │      
-   │     destination's requirement @[G, G+1]
+   │           ^^^^^^
+   │           │
+   │           source is available for ['G+2, 'G+3]
+   │           required for ['G, 'G+1]
 
 Compilation failed with 2 errors.
 Run with --show-models to generate assignments for failing constraints.
@@ -446,34 +452,34 @@ Run with --show-models to generate assignments for failing constraints.
 <p>The problem is that we accept the <code>op</code> input and produce the output <code>out</code> in the interval [G, G+1). However, we know that it is not possible to produce the output as soon as we get the input because the multiplier takes two cycles to produce its output!</p>
 <h2 id="a-correct-implementation"><a class="header" href="#a-correct-implementation">A Correct Implementation</a></h2>
 <p>The fix is easy: we change the signature of the ALU to reflect this cruel reality</p>
-<pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;./sequential.fil&quot;;
+<pre><code class="language-filament">import "primitives/core.fil";
+import "./sequential.fil";
 
 /// ANCHOR: sig
-comp main&lt;G: 3&gt;(
+comp main&lt;'G: 3&gt;(
 /// ANCHOR_END: sig
-    @interface[G] go: 1,
-    @[G, G+3] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -&gt; (@[G+2, G+3] out: 32)
+    go: interface['G],
+     op: ['G, 'G+3] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -&gt; ( out: ['G+2, 'G+3] 32)
 {
     A := new Add[32];
     M := new Mult[32];
-    m0 := M&lt;G&gt;(left, right);
-    a0 := A&lt;G&gt;(left, right);
+    m0 := M&lt;'G&gt;(left, right);
+    a0 := A&lt;'G&gt;(left, right);
     // Use register to hold the adder's value
-    r0 := new Register[32]&lt;G, G+3&gt;(a0.out);
+    r0 := new Register[32]&lt;'G, 'G+3&gt;(a0.out);
     // Use the multiplexer when the mult's output is ready
-    mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
+    mx := new Mux[32]&lt;'G+2&gt;(op, r0.out, m0.out);
     out = mx.out;
 }
 </code></pre>
-<p>And running the compiler again generates no longer generates any errors:</p>
+<p>And running the compiler again no longer generates any errors:</p>
 <pre><code>cargo run -- alu.fil
 </code></pre>
 <div class="footnote-definition" id="clock-gating"><sup class="footnote-definition-label">1</sup>
-<p>This is not quite true since we can build circuits where the clock signal to a particular sub-circuit is disabled (or &quot;gated&quot;) based on a particular signal. However, this kind of clock-gating is generally not recommended for fine-grained usage.</p>
+<p>This is not quite true since we can build circuits where the clock signal to a particular sub-circuit is disabled (or "gated") based on a particular signal. However, this kind of clock-gating is generally not recommended for fine-grained usage.</p>
 </div>
 <div class="footnote-definition" id="control-comp"><sup class="footnote-definition-label">2</sup>
 <p>While control operators like <code>if</code> and <code>for</code> are supported in languages like Verilog, they don't quite work the same in all contexts. <code>for</code> loops are compile-time constructs whereas <code>if</code> can only be used for combinational circuits like adders but not multipliers.</p>
@@ -485,32 +491,32 @@ We use <a href="https://docs.calyxir.org/fud/index.html">fud</a> to make the pro
 <h2 id="data-format"><a class="header" href="#data-format">Data Format</a></h2>
 <p>The test runner's data format is a JSON file that contains the names of each port mentioned in a Filament program's <code>main</code> component.
 For example, for the <a href="lang/./lang/tutorial.html#building-an-arithmetic-logic-unit">tutorial ALU</a> with the signature:</p>
-<pre><code class="language-filament">comp main&lt;G: 3&gt;(
-    @interface[G] go: 1,
-    @[G, G+1] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -&gt; (@[G, G+1] out: 32)
+<pre><code class="language-filament">comp main&lt;'G: 3&gt;(
+    go: interface['G],
+     op: ['G, 'G+1] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -&gt; ( out: ['G, 'G+1] 32)
 </code></pre>
 <p>We can have the following data file:</p>
 <pre><code class="language-json">{
-    &quot;op&quot;: [ 0, 1, 0, 1 ],
-    &quot;left&quot;: [ 4, 5, 6, 7 ],
-    &quot;right&quot;: [ 7, 5, 11, 9 ]
+    "op": [ 0, 1, 0, 1 ],
+    "left": [ 4, 5, 6, 7 ],
+    "right": [ 7, 5, 11, 9 ]
 }
 </code></pre>
 <p>The test harness operates with the idea of <em>transactions</em> where each transaction is a set of inputs and outputs corresponding to the indices into the JSON file.
 For example, the first transaction sends the inputs <code>op[0]</code>, <code>left[0]</code>, and <code>right[0]</code> to the Verilog design and capture outputs for <code>out[0]</code>, corresponding to the output ports of the ALU.</p>
 <p>This means, that the above data file will run the design with four inputs and capture four outputs. Adding another transaction is easy: just add another set of inputs to the JSON file.</p>
 <h2 id="running-designs"><a class="header" href="#running-designs">Running Designs</a></h2>
-<p>Running the design is straightforward, assuming you've <a href="lang/./start.html#full-build">configured <code>fud</code></a> already:</p>
+<p>Running the design is straightforward, assuming you've <a href="lang/../start.html#full-build">configured <code>fud</code></a> already:</p>
 <pre><code class="language-sh">fud e --to cocotb-out examples/tut-seq.fil \
       -s cocotb.data examples/data.json \
       -s calyx.flags ' -d canonicalize'
 </code></pre>
 <p>This instructs <code>fud</code> to compile the design to Verilog, setup the test harness, and run the simulation.
 The output captures the values on the <code>out</code> port of the ALU for each transaction in the data file and tells us how many cycles it took to run the design:</p>
-<pre><code>{&quot;out&quot;: {&quot;0&quot;: [28], &quot;1&quot;: [10], &quot;2&quot;: [66], &quot;3&quot;: [16]}, &quot;cycles&quot;: 12}
+<pre><code>{"out": {"0": [28], "1": [10], "2": [66], "3": [16]}, "cycles": 12}
 </code></pre>
 <p>In general, the command to run designs is:</p>
 <pre><code class="language-sh">fud e --to cocotb-out &lt;filament-file&gt; \
@@ -542,7 +548,7 @@ Our <code>fud</code>-based harness provides a way to randomize the timing of tra
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="pipelining-with-filament"><a class="header" href="#pipelining-with-filament">Pipelining with Filament</a></h1>
 <p>While we've designed <a href="lang/./tutorial.html">a correct ALU</a>, it is quite slow: it processes one input completely before moving on to the next.
-Such a hardware design is called a &quot;fully sequential&quot;.
+Such a hardware design is called a "fully sequential".
 A standard technique to improve throughput of the design is <a href="https://cs.stanford.edu/people/eroberts/courses/soco/projects/risc/pipelining/index.html">pipelining</a>, which allows a hardware module to process multiple inputs at the same time.</p>
 <p>Filament is designed so that check that a pipeline can support the throughput specified in its interface.
 We'll take our <a href="lang/./tutorial.html#a-correct-implementation">sequential ALU</a> design and use Filament's type system to guide us to a correctly pipelined design.
@@ -552,40 +558,40 @@ Before that, however, let's run the design and see how it performs:</p>
       -s calyx.flags ' -d canonicalize'
 </code></pre>
 <p>Which generates the following output:</p>
-<pre><code>{&quot;out&quot;: {&quot;0&quot;: [28], &quot;1&quot;: [10], &quot;2&quot;: [66], &quot;3&quot;: [16]}, &quot;cycles&quot;: 12}
+<pre><code>{"out": {"0": [28], "1": [10], "2": [66], "3": [16]}, "cycles": 12}
 </code></pre>
 <p>Note that this sequential design takes 12 cycles to process 4 inputs.</p>
 <p>We'll start with pipelining our program:</p>
-<pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;./sequential.fil&quot;;
+<pre><code class="language-filament">import "primitives/core.fil";
+import "./sequential.fil";
 
 /// ANCHOR: sig
-comp main&lt;G: 3&gt;(
+comp main&lt;'G: 3&gt;(
 /// ANCHOR_END: sig
-    @interface[G] go: 1,
-    @[G, G+3] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -&gt; (@[G+2, G+3] out: 32)
+    go: interface['G],
+     op: ['G, 'G+3] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -&gt; ( out: ['G+2, 'G+3] 32)
 {
     A := new Add[32];
     M := new Mult[32];
-    m0 := M&lt;G&gt;(left, right);
-    a0 := A&lt;G&gt;(left, right);
+    m0 := M&lt;'G&gt;(left, right);
+    a0 := A&lt;'G&gt;(left, right);
     // Use register to hold the adder's value
-    r0 := new Register[32]&lt;G, G+3&gt;(a0.out);
+    r0 := new Register[32]&lt;'G, 'G+3&gt;(a0.out);
     // Use the multiplexer when the mult's output is ready
-    mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
+    mx := new Mux[32]&lt;'G+2&gt;(op, r0.out, m0.out);
     out = mx.out;
 }
 </code></pre>
 <h2 id="delays-and-throughput"><a class="header" href="#delays-and-throughput">Delays and Throughput</a></h2>
 <p>Filament uses an event's <em>delay</em> to determine when the module is can accept new inputs.</p>
-<pre><code class="language-filament">comp main&lt;G: 3&gt;(
+<pre><code class="language-filament">comp main&lt;'G: 3&gt;(
 </code></pre>
 <p>Note that the delay for the event <code>G</code> is <code>3</code> which indicates to Filament that the ALU process new inputs every three cycles.
 We can tell Filament that we instead want a module that can process new inputs every cycle by changing the delay to <code>1</code>:</p>
-<pre><code class="language-filament">comp main&lt;G: 1&gt;(
+<pre><code class="language-filament">comp main&lt;'G: 1&gt;(
 </code></pre>
 <p>And run the compiler:</p>
 <pre><code>cargo run -- alu.fil
@@ -595,14 +601,14 @@ However, being the nice type checker it is, it will tell us <em>exactly why</em>
 <p>Let's work through each error and see how we can fix it.</p>
 <h3 id="availability-intervals-of-ports"><a class="header" href="#availability-intervals-of-ports">Availability Intervals of Ports</a></h3>
 <p>The first error message points out that one of the inputs is required for three cycles, but the module may re-execute every cycle:</p>
-<pre><code>error: delay must be longer than the length of the signal
-  ┌─ examples/tut-pipe-wrong-1.fil:8:5
+<pre><code>error: bundle's availability is greater than the delay of the event
+  ┌─ examples/tut-pipe-wrong-1.fil:8:10
   │
-5 │ comp main&lt;G: 1&gt;(
-  │           - interface allows event to trigger every 1 cycle(s)
+5 │ comp main&lt;'G: 1&gt;(
+  │               - event's delay
   ·
-8 │     @[G, G+3] op: 1,
-  │     ^^^^^^^^^ signal lasts for 3 cycle(s)
+8 │      op: ['G, 'G+3] 1,
+  │          ^^^^^^^^^^ available for 3 cycles
 
 error: event provided to invocation triggers more often that invocation's event's delay allows
 </code></pre>
@@ -617,83 +623,83 @@ The fix is easy: looking at our original design, we see that <code>op</code> is 
 <pre><code>error: event provided to invocation triggers more often that invocation's event's delay allows
    ┌─ examples/tut-pipe-wrong-1.fil:15:13
    │
- 5 │ comp main&lt;G: 1&gt;(
-   │              - this event triggers every 1 cycles
+ 5 │ comp main&lt;'G: 1&gt;(
+   │               - this event triggers every 1 cycles
    ·
-15 │     m0 := M&lt;G&gt;(left, right);
-   │             ^ event provided to invoke triggers too often
+15 │     m0 := M&lt;'G&gt;(left, right);
+   │             ^^ event provided to invoke triggers too often
    │
    ┌─ examples/./sequential.fil:3:18
    │
- 3 │ comp Mult[#W]&lt;G: 2&gt;(
+ 3 │ comp Mult[W]&lt;'G: 2&gt;(
    │                  - invocation's event is allowed to trigger every 2 cycles
 </code></pre>
 <p>Yet again, our request is physically impossible to satisfy: our multiplier circuit is fundamentally incapable of executing every cycle.
 Thankfully for us, the <code>primitives/math.fil</code> file provides a component called <code>FastMult</code> which does have delay 1:</p>
 <pre><code class="language-filament">/// Implementation of a multiplier with initiation interval 1 and latency 3.
 /// Written in a way to allow Vivado to infer a DSP.
-comp FastMult[#W]&lt;G: 1&gt;(
-  @[G, G+1] left: #W,
-  @[G, G+1] right: #W,
+comp FastMult[W]&lt;'G: 1&gt;(
+   left: ['G, 'G+1] W,
+   right: ['G, 'G+1] W,
 ) -&gt; (
-  @[G+3, G+4] out: #W,
-) where #W &gt; 0
+   out: ['G+3, 'G+4] W,
+) where W &gt; 0
 </code></pre>
 <p>We can change out program to use this component instead:</p>
-<pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;./sequential.fil&quot;;
+<pre><code class="language-filament">import "primitives/core.fil";
+import "./sequential.fil";
 
-comp main&lt;G: 1&gt;(
-    @interface[G] go: 1,
-    @[G+2, G+3] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -&gt; (@[G+2, G+3] out: 32)
+comp main&lt;'G: 1&gt;(
+    go: interface['G],
+     op: ['G+2, 'G+3] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -&gt; ( out: ['G+2, 'G+3] 32)
 {
     A := new Add[32];
     M := new FastMult[32];
-    m0 := M&lt;G&gt;(left, right);
-    a0 := A&lt;G&gt;(left, right);
+    m0 := M&lt;'G&gt;(left, right);
+    a0 := A&lt;'G&gt;(left, right);
     // Use register to hold the adder's value
-    r0 := new Register[32]&lt;G, G+3&gt;(a0.out);
+    r0 := new Register[32]&lt;'G, 'G+3&gt;(a0.out);
     // Use the multiplexer when the mult's output is ready
-    mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
+    mx := new Mux[32]&lt;'G+2&gt;(op, r0.out, m0.out);
     out = mx.out;
 }
 </code></pre>
 <p>However, in making this change, we've created a new problem for ourselves:</p>
-<pre><code>error: source port must be available longer than the destination port requires
-    ┌─ examples/tut-pipe-wrong-2.fil:18:40
-    │
- 18 │     mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
-    │                                        ^^^^^^ source is available for @[G+3, G+4]
-    │
-    ┌─ ./primitives/./comb.fil:170:13
-    │
-170 │     @[G, L] in1: #WIDTH,
-    │             --- destination's requirement @[G+2, G+3]
+<pre><code>error: source port does not provide value for as long as destination requires
+   ┌─ examples/tut-pipe-wrong-2.fil:18:41
+   │
+18 │     mx := new Mux[32]&lt;'G+2&gt;(op, r0.out, m0.out);
+   │                                         ^^^^^^
+   │                                         │
+   │                                         source is available for ['G+3, 'G+4]
+   │                                         required for ['G+2, 'G+3]
+
+Compilation failed with 2 errors.
 </code></pre>
 <p>Filament tells us that <code>FastMult</code>'s <code>out</code> port is available in the interval [G+3, G+4) instead of [G+2, G+3) for <code>Mult</code>, i.e., the latency of <code>FastMult</code> is different from the latency of <code>Mult</code>.</p>
 <p>Filament catching this bug is important-it would be very easy to miss such a mistake in a Verilog program.
 Fixing it is quite mechanical:</p>
-<pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;./sequential.fil&quot;;
+<pre><code class="language-filament">import "primitives/core.fil";
+import "./sequential.fil";
 
-comp main&lt;G: 1&gt;(
-    @interface[G] go: 1,
-    @[G+3, G+4] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -&gt; (@[G+3, G+4] out: 32)
+comp main&lt;'G: 1&gt;(
+    go: interface['G],
+     op: ['G+3, 'G+4] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -&gt; ( out: ['G+3, 'G+4] 32)
 {
     A := new Add[32];
     M := new FastMult[32];
-    m0 := M&lt;G&gt;(left, right);
-    a0 := A&lt;G&gt;(left, right);
+    m0 := M&lt;'G&gt;(left, right);
+    a0 := A&lt;'G&gt;(left, right);
     // Use register to hold the adder's value
-    r0 := new Register[32]&lt;G, G+4&gt;(a0.out);
+    r0 := new Register[32]&lt;'G, 'G+4&gt;(a0.out);
     // Use the multiplexer when the mult's output is ready
-    mx := new Mux[32]&lt;G+3&gt;(op, r0.out, m0.out);
+    mx := new Mux[32]&lt;'G+3&gt;(op, r0.out, m0.out);
     out = mx.out;
 }
 </code></pre>
@@ -702,16 +708,16 @@ comp main&lt;G: 1&gt;(
 <pre><code>error: event provided to invocation triggers more often that invocation's event's delay allows
    ┌─ examples/tut-pipe-wrong-3.fil:16:28
    │
- 4 │ comp main&lt;G: 1&gt;(
-   │              - this event triggers every 1 cycles
+ 4 │ comp main&lt;'G: 1&gt;(
+   │               - this event triggers every 1 cycles
    ·
-16 │     r0 := new Register[32]&lt;G, G+4&gt;(a0.out);
-   │                            ^ event provided to invoke triggers too often
+16 │     r0 := new Register[32]&lt;'G, 'G+4&gt;(a0.out);
+   │                            ^^ event provided to invoke triggers too often
    │
-   ┌─ ./primitives/./state.fil:4:28
+   ┌─ ./primitives/./state.fil:6:29
    │
- 4 │   comp Register[#WIDTH]&lt;G: L-(G+1), L: 1&gt;(
-   │                            ------- invocation's event is allowed to trigger every 3 cycles
+ 6 │    comp Register[WIDTH]&lt;'G: 'L-('G+1), 'L: 1&gt;(
+   │                             --------- invocation's event is allowed to trigger every 3 cycles
 
 Compilation failed with 1 errors.
 </code></pre>
@@ -720,25 +726,25 @@ However, unlike the multiplier, this is a consequence of our decision: we make t
 The last line of the error message points to the problem: the delay of a register <em>depends on how we use it</em>; this means that if we make it hold onto a value for exactly one cycle, its delay is reduced to one.</p>
 <p>However, the problem is that we need the computation from the adder to be available three cycles from when it starts.
 To get both the pipelining and correctness we want, we need to instantiate a <em>chain of registers</em> that feed values forward.</p>
-<p>The intuition behind this is that because we want our ALU to process inputs every cycle, we need to &quot;save&quot; the computation in every cycle and push it forward.</p>
+<p>The intuition behind this is that because we want our ALU to process inputs every cycle, we need to "save" the computation in every cycle and push it forward.</p>
 <p>The final program will look like this:</p>
-<pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;./sequential.fil&quot;;
+<pre><code class="language-filament">import "primitives/core.fil";
+import "./sequential.fil";
 
-comp main&lt;G: 1&gt;(
-    @interface[G] go: 1,
-    @[G+3, G+4] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -&gt; (@[G+3, G+4] out: 32) {
+comp main&lt;'G: 1&gt;(
+    go: interface['G],
+     op: ['G+3, 'G+4] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -&gt; ( out: ['G+3, 'G+4] 32) {
     A := new Add[32];
     M := new FastMult[32];
-    m0 := M&lt;G&gt;(left, right);
-    a0 := A&lt;G&gt;(left, right);
-    r0 := new Register[32]&lt;G, G+2&gt;(a0.out);
-    r1 := new Register[32]&lt;G+1, G+3&gt;(r0.out);
-    r2 := new Register[32]&lt;G+2, G+4&gt;(r1.out);
-    mx := new Mux[32]&lt;G+3&gt;(op, r2.out, m0.out);
+    m0 := M&lt;'G&gt;(left, right);
+    a0 := A&lt;'G&gt;(left, right);
+    r0 := new Register[32]&lt;'G, 'G+2&gt;(a0.out);
+    r1 := new Register[32]&lt;'G+1, 'G+3&gt;(r0.out);
+    r2 := new Register[32]&lt;'G+2, 'G+4&gt;(r1.out);
+    mx := new Mux[32]&lt;'G+3&gt;(op, r2.out, m0.out);
     out = mx.out;
 }
 </code></pre>
@@ -749,7 +755,7 @@ comp main&lt;G: 1&gt;(
       -s calyx.flags ' -d canonicalize'
 </code></pre>
 <p>We get the following output which shows that the design took only 7 cycles to process 4 inputs:</p>
-<pre><code>{&quot;out&quot;: {&quot;0&quot;: [28], &quot;1&quot;: [10], &quot;2&quot;: [66], &quot;3&quot;: [16]}, &quot;cycles&quot;: 7}
+<pre><code>{"out": {"0": [28], "1": [10], "2": [66], "3": [16]}, "cycles": 7}
 </code></pre>
 <p>If you're still not convinced, try adding <a href="lang/./run.html#data-format">another transaction</a> to the data file in <code>examples/data.json</code> and see how the cycle count for the original sequential and pipelined designs change.</p>
 <h2 id="something-remarkable"><a class="header" href="#something-remarkable">Something Remarkable</a></h2>
@@ -776,7 +782,7 @@ module Mult(input [31:0] a, input [31:0] b, output [31:0] c);
 endmodule
 </code></pre>
 <p>We can use the <code>extern</code> block to specify the location of the file and provide Filament signatures for each module:</p>
-<pre><code class="language-filament">extern &quot;modules.sv&quot; {
+<pre><code class="language-filament">extern "modules.sv" {
 comp Add&lt;G: 1&gt;(
     @[G, G+1] a: 32, @[G, G+1] b: 32
 ) -&gt; (@[G, G+1] c: 32);
@@ -790,10 +796,10 @@ comp Mult&lt;G: 1&gt;(
 <p><strong>Note.</strong> The location of the Verilog file is determined relative to the location of the Filament file containing the <code>extern</code> block.</p>
 <p>Once the definitions are specified, the Filament compiler will automatically link the Verilog modules into the final design.</p>
 <h2 id="defining-the-right-interface"><a class="header" href="#defining-the-right-interface">Defining the Right Interface</a></h2>
-<p>The trick with using external modules in Filament requires us to define the &quot;right&quot; interface.
+<p>The trick with using external modules in Filament requires us to define the "right" interface.
 For example, one way of defining a combinational component is something that produces its output in the same cycle as its inputs.
 The following Filament signature captures this property</p>
-<pre><code class="language-filament">extern &quot;comb.sv&quot; {
+<pre><code class="language-filament">extern "comb.sv" {
 comp Add&lt;G: 1&gt;(
     @[G, G+1] left: 32, @[G, G+1] right: 32
 ) -&gt; (@[G, G+1] sum: 32);
@@ -914,21 +920,24 @@ Intuitively, each index in the bundle represents the input to a register in the 
 <h2 id="implementation"><a class="header" href="#implementation">Implementation</a></h2>
 <p>Using these two operations, we can implement a shift register.
 The following implementation is parameteric both over the width of the register and the number of registers in the chain:</p>
-<pre><code class="language-filament">// A component that delays `in` by N cycles.
+<pre><code class="language-filament">// A component that delays `in` by D cycles.
 // Uses the Delay component under the hood.
-comp Shift[#W, #N]&lt;G: 1&gt;(
-    @[G, G+1] in: #W
+comp Shift[W, D, ?N=1]&lt;'G: 1&gt;(
+   in[N]: ['G, 'G+1] W
 ) -&gt; (
-    @[G+#N, G+#N+1] out: #W
-) {
-    bundle f[#N+1]: for&lt;#k&gt; @[G+#k, G+#k+1] #W;
+   out[N]: ['G+D, 'G+D+1] W
+) where W &gt; 0 {
+   in_concat := new ConcatBundle[W, N]&lt;'G&gt;(in{0..N});
 
-    f{0} = in;
-    for #i in 0..#N {
-        d := new Delay[#W]&lt;G+#i&gt;(f{#i});
-        f{#i+1} = d.out;
-    }
-    out = f{#N};
+   bundle f[D+1]: for&lt;k&gt; ['G+k, 'G+k+1] W*N;
+
+   f{0} = in_concat.out;
+   for i in 0..D {
+      d := new Delay[W*N]&lt;'G+i&gt;(f{i});
+      f{i+1} = d.out;
+   }
+   out_split := new SplitWire[W, N]&lt;'G+D&gt;(f{D});
+   out{0..N} = out_split.out{0..N};
 }
 </code></pre>
 

@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" class="sidebar-visible no-js light">
+<html lang="en" class="light" dir="ltr">
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
@@ -10,7 +10,7 @@
         
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#ffffff">
 
         <link rel="icon" href="../favicon.svg">
         <link rel="shortcut icon" href="../favicon.png">
@@ -33,7 +33,7 @@
         <!-- MathJax -->
         <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     </head>
-    <body>
+    <body class="sidebar-visible no-js">
     <div id="body-container">
         <!-- Provide site root to javascript -->
         <script>
@@ -63,31 +63,38 @@
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             var html = document.querySelector('html');
-            html.classList.remove('no-js')
             html.classList.remove('light')
             html.classList.add(theme);
-            html.classList.add('js');
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
         </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var html = document.querySelector('html');
+            var body = document.querySelector('body');
             var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
             }
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="../start.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li class="chapter-item expanded affix "><li class="part-title">The Filament Language</li><li class="chapter-item expanded "><a href="../lang/tutorial.html"><strong aria-hidden="true">2.</strong> Your First Filament Program</a></li><li class="chapter-item expanded "><a href="../lang/run.html"><strong aria-hidden="true">3.</strong> Running Filament Designs</a></li><li class="chapter-item expanded "><a href="../lang/pipelining.html" class="active"><strong aria-hidden="true">4.</strong> Pipelining with Filament</a></li><li class="chapter-item expanded "><a href="../lang/external.html"><strong aria-hidden="true">5.</strong> Using Verilog Modules in Filament</a></li><li class="chapter-item expanded affix "><li class="part-title">Metaprogramming with Filament</li><li class="chapter-item expanded "><a href="../meta/overview.html"><strong aria-hidden="true">6.</strong> Metaprogramming Overview</a></li><li class="chapter-item expanded "><a href="../meta/loops-and-bundles.html"><strong aria-hidden="true">7.</strong> Loops and Bundles</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -118,9 +125,9 @@
                                 <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
-                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
-                        </button>
+                        </label>
                         <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
                             <i class="fa fa-paint-brush"></i>
                         </button>
@@ -170,7 +177,7 @@
                     <main>
                         <h1 id="pipelining-with-filament"><a class="header" href="#pipelining-with-filament">Pipelining with Filament</a></h1>
 <p>While we've designed <a href="./tutorial.html">a correct ALU</a>, it is quite slow: it processes one input completely before moving on to the next.
-Such a hardware design is called a &quot;fully sequential&quot;.
+Such a hardware design is called a "fully sequential".
 A standard technique to improve throughput of the design is <a href="https://cs.stanford.edu/people/eroberts/courses/soco/projects/risc/pipelining/index.html">pipelining</a>, which allows a hardware module to process multiple inputs at the same time.</p>
 <p>Filament is designed so that check that a pipeline can support the throughput specified in its interface.
 We'll take our <a href="./tutorial.html#a-correct-implementation">sequential ALU</a> design and use Filament's type system to guide us to a correctly pipelined design.
@@ -180,40 +187,40 @@ Before that, however, let's run the design and see how it performs:</p>
       -s calyx.flags ' -d canonicalize'
 </code></pre>
 <p>Which generates the following output:</p>
-<pre><code>{&quot;out&quot;: {&quot;0&quot;: [28], &quot;1&quot;: [10], &quot;2&quot;: [66], &quot;3&quot;: [16]}, &quot;cycles&quot;: 12}
+<pre><code>{"out": {"0": [28], "1": [10], "2": [66], "3": [16]}, "cycles": 12}
 </code></pre>
 <p>Note that this sequential design takes 12 cycles to process 4 inputs.</p>
 <p>We'll start with pipelining our program:</p>
-<pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;./sequential.fil&quot;;
+<pre><code class="language-filament">import "primitives/core.fil";
+import "./sequential.fil";
 
 /// ANCHOR: sig
-comp main&lt;G: 3&gt;(
+comp main&lt;'G: 3&gt;(
 /// ANCHOR_END: sig
-    @interface[G] go: 1,
-    @[G, G+3] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -&gt; (@[G+2, G+3] out: 32)
+    go: interface['G],
+     op: ['G, 'G+3] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -&gt; ( out: ['G+2, 'G+3] 32)
 {
     A := new Add[32];
     M := new Mult[32];
-    m0 := M&lt;G&gt;(left, right);
-    a0 := A&lt;G&gt;(left, right);
+    m0 := M&lt;'G&gt;(left, right);
+    a0 := A&lt;'G&gt;(left, right);
     // Use register to hold the adder's value
-    r0 := new Register[32]&lt;G, G+3&gt;(a0.out);
+    r0 := new Register[32]&lt;'G, 'G+3&gt;(a0.out);
     // Use the multiplexer when the mult's output is ready
-    mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
+    mx := new Mux[32]&lt;'G+2&gt;(op, r0.out, m0.out);
     out = mx.out;
 }
 </code></pre>
 <h2 id="delays-and-throughput"><a class="header" href="#delays-and-throughput">Delays and Throughput</a></h2>
 <p>Filament uses an event's <em>delay</em> to determine when the module is can accept new inputs.</p>
-<pre><code class="language-filament">comp main&lt;G: 3&gt;(
+<pre><code class="language-filament">comp main&lt;'G: 3&gt;(
 </code></pre>
 <p>Note that the delay for the event <code>G</code> is <code>3</code> which indicates to Filament that the ALU process new inputs every three cycles.
 We can tell Filament that we instead want a module that can process new inputs every cycle by changing the delay to <code>1</code>:</p>
-<pre><code class="language-filament">comp main&lt;G: 1&gt;(
+<pre><code class="language-filament">comp main&lt;'G: 1&gt;(
 </code></pre>
 <p>And run the compiler:</p>
 <pre><code>cargo run -- alu.fil
@@ -223,14 +230,14 @@ However, being the nice type checker it is, it will tell us <em>exactly why</em>
 <p>Let's work through each error and see how we can fix it.</p>
 <h3 id="availability-intervals-of-ports"><a class="header" href="#availability-intervals-of-ports">Availability Intervals of Ports</a></h3>
 <p>The first error message points out that one of the inputs is required for three cycles, but the module may re-execute every cycle:</p>
-<pre><code>error: delay must be longer than the length of the signal
-  ┌─ examples/tut-pipe-wrong-1.fil:8:5
+<pre><code>error: bundle's availability is greater than the delay of the event
+  ┌─ examples/tut-pipe-wrong-1.fil:8:10
   │
-5 │ comp main&lt;G: 1&gt;(
-  │           - interface allows event to trigger every 1 cycle(s)
+5 │ comp main&lt;'G: 1&gt;(
+  │               - event's delay
   ·
-8 │     @[G, G+3] op: 1,
-  │     ^^^^^^^^^ signal lasts for 3 cycle(s)
+8 │      op: ['G, 'G+3] 1,
+  │          ^^^^^^^^^^ available for 3 cycles
 
 error: event provided to invocation triggers more often that invocation's event's delay allows
 </code></pre>
@@ -245,83 +252,83 @@ The fix is easy: looking at our original design, we see that <code>op</code> is 
 <pre><code>error: event provided to invocation triggers more often that invocation's event's delay allows
    ┌─ examples/tut-pipe-wrong-1.fil:15:13
    │
- 5 │ comp main&lt;G: 1&gt;(
-   │              - this event triggers every 1 cycles
+ 5 │ comp main&lt;'G: 1&gt;(
+   │               - this event triggers every 1 cycles
    ·
-15 │     m0 := M&lt;G&gt;(left, right);
-   │             ^ event provided to invoke triggers too often
+15 │     m0 := M&lt;'G&gt;(left, right);
+   │             ^^ event provided to invoke triggers too often
    │
    ┌─ examples/./sequential.fil:3:18
    │
- 3 │ comp Mult[#W]&lt;G: 2&gt;(
+ 3 │ comp Mult[W]&lt;'G: 2&gt;(
    │                  - invocation's event is allowed to trigger every 2 cycles
 </code></pre>
 <p>Yet again, our request is physically impossible to satisfy: our multiplier circuit is fundamentally incapable of executing every cycle.
 Thankfully for us, the <code>primitives/math.fil</code> file provides a component called <code>FastMult</code> which does have delay 1:</p>
 <pre><code class="language-filament">/// Implementation of a multiplier with initiation interval 1 and latency 3.
 /// Written in a way to allow Vivado to infer a DSP.
-comp FastMult[#W]&lt;G: 1&gt;(
-  @[G, G+1] left: #W,
-  @[G, G+1] right: #W,
+comp FastMult[W]&lt;'G: 1&gt;(
+   left: ['G, 'G+1] W,
+   right: ['G, 'G+1] W,
 ) -&gt; (
-  @[G+3, G+4] out: #W,
-) where #W &gt; 0
+   out: ['G+3, 'G+4] W,
+) where W &gt; 0
 </code></pre>
 <p>We can change out program to use this component instead:</p>
-<pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;./sequential.fil&quot;;
+<pre><code class="language-filament">import "primitives/core.fil";
+import "./sequential.fil";
 
-comp main&lt;G: 1&gt;(
-    @interface[G] go: 1,
-    @[G+2, G+3] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -&gt; (@[G+2, G+3] out: 32)
+comp main&lt;'G: 1&gt;(
+    go: interface['G],
+     op: ['G+2, 'G+3] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -&gt; ( out: ['G+2, 'G+3] 32)
 {
     A := new Add[32];
     M := new FastMult[32];
-    m0 := M&lt;G&gt;(left, right);
-    a0 := A&lt;G&gt;(left, right);
+    m0 := M&lt;'G&gt;(left, right);
+    a0 := A&lt;'G&gt;(left, right);
     // Use register to hold the adder's value
-    r0 := new Register[32]&lt;G, G+3&gt;(a0.out);
+    r0 := new Register[32]&lt;'G, 'G+3&gt;(a0.out);
     // Use the multiplexer when the mult's output is ready
-    mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
+    mx := new Mux[32]&lt;'G+2&gt;(op, r0.out, m0.out);
     out = mx.out;
 }
 </code></pre>
 <p>However, in making this change, we've created a new problem for ourselves:</p>
-<pre><code>error: source port must be available longer than the destination port requires
-    ┌─ examples/tut-pipe-wrong-2.fil:18:40
-    │
- 18 │     mx := new Mux[32]&lt;G+2&gt;(op, r0.out, m0.out);
-    │                                        ^^^^^^ source is available for @[G+3, G+4]
-    │
-    ┌─ ./primitives/./comb.fil:170:13
-    │
-170 │     @[G, L] in1: #WIDTH,
-    │             --- destination's requirement @[G+2, G+3]
+<pre><code>error: source port does not provide value for as long as destination requires
+   ┌─ examples/tut-pipe-wrong-2.fil:18:41
+   │
+18 │     mx := new Mux[32]&lt;'G+2&gt;(op, r0.out, m0.out);
+   │                                         ^^^^^^
+   │                                         │
+   │                                         source is available for ['G+3, 'G+4]
+   │                                         required for ['G+2, 'G+3]
+
+Compilation failed with 2 errors.
 </code></pre>
 <p>Filament tells us that <code>FastMult</code>'s <code>out</code> port is available in the interval [G+3, G+4) instead of [G+2, G+3) for <code>Mult</code>, i.e., the latency of <code>FastMult</code> is different from the latency of <code>Mult</code>.</p>
 <p>Filament catching this bug is important-it would be very easy to miss such a mistake in a Verilog program.
 Fixing it is quite mechanical:</p>
-<pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;./sequential.fil&quot;;
+<pre><code class="language-filament">import "primitives/core.fil";
+import "./sequential.fil";
 
-comp main&lt;G: 1&gt;(
-    @interface[G] go: 1,
-    @[G+3, G+4] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -&gt; (@[G+3, G+4] out: 32)
+comp main&lt;'G: 1&gt;(
+    go: interface['G],
+     op: ['G+3, 'G+4] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -&gt; ( out: ['G+3, 'G+4] 32)
 {
     A := new Add[32];
     M := new FastMult[32];
-    m0 := M&lt;G&gt;(left, right);
-    a0 := A&lt;G&gt;(left, right);
+    m0 := M&lt;'G&gt;(left, right);
+    a0 := A&lt;'G&gt;(left, right);
     // Use register to hold the adder's value
-    r0 := new Register[32]&lt;G, G+4&gt;(a0.out);
+    r0 := new Register[32]&lt;'G, 'G+4&gt;(a0.out);
     // Use the multiplexer when the mult's output is ready
-    mx := new Mux[32]&lt;G+3&gt;(op, r0.out, m0.out);
+    mx := new Mux[32]&lt;'G+3&gt;(op, r0.out, m0.out);
     out = mx.out;
 }
 </code></pre>
@@ -330,16 +337,16 @@ comp main&lt;G: 1&gt;(
 <pre><code>error: event provided to invocation triggers more often that invocation's event's delay allows
    ┌─ examples/tut-pipe-wrong-3.fil:16:28
    │
- 4 │ comp main&lt;G: 1&gt;(
-   │              - this event triggers every 1 cycles
+ 4 │ comp main&lt;'G: 1&gt;(
+   │               - this event triggers every 1 cycles
    ·
-16 │     r0 := new Register[32]&lt;G, G+4&gt;(a0.out);
-   │                            ^ event provided to invoke triggers too often
+16 │     r0 := new Register[32]&lt;'G, 'G+4&gt;(a0.out);
+   │                            ^^ event provided to invoke triggers too often
    │
-   ┌─ ./primitives/./state.fil:4:28
+   ┌─ ./primitives/./state.fil:6:29
    │
- 4 │   comp Register[#WIDTH]&lt;G: L-(G+1), L: 1&gt;(
-   │                            ------- invocation's event is allowed to trigger every 3 cycles
+ 6 │    comp Register[WIDTH]&lt;'G: 'L-('G+1), 'L: 1&gt;(
+   │                             --------- invocation's event is allowed to trigger every 3 cycles
 
 Compilation failed with 1 errors.
 </code></pre>
@@ -348,25 +355,25 @@ However, unlike the multiplier, this is a consequence of our decision: we make t
 The last line of the error message points to the problem: the delay of a register <em>depends on how we use it</em>; this means that if we make it hold onto a value for exactly one cycle, its delay is reduced to one.</p>
 <p>However, the problem is that we need the computation from the adder to be available three cycles from when it starts.
 To get both the pipelining and correctness we want, we need to instantiate a <em>chain of registers</em> that feed values forward.</p>
-<p>The intuition behind this is that because we want our ALU to process inputs every cycle, we need to &quot;save&quot; the computation in every cycle and push it forward.</p>
+<p>The intuition behind this is that because we want our ALU to process inputs every cycle, we need to "save" the computation in every cycle and push it forward.</p>
 <p>The final program will look like this:</p>
-<pre><code class="language-filament">import &quot;primitives/core.fil&quot;;
-import &quot;./sequential.fil&quot;;
+<pre><code class="language-filament">import "primitives/core.fil";
+import "./sequential.fil";
 
-comp main&lt;G: 1&gt;(
-    @interface[G] go: 1,
-    @[G+3, G+4] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -&gt; (@[G+3, G+4] out: 32) {
+comp main&lt;'G: 1&gt;(
+    go: interface['G],
+     op: ['G+3, 'G+4] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -&gt; ( out: ['G+3, 'G+4] 32) {
     A := new Add[32];
     M := new FastMult[32];
-    m0 := M&lt;G&gt;(left, right);
-    a0 := A&lt;G&gt;(left, right);
-    r0 := new Register[32]&lt;G, G+2&gt;(a0.out);
-    r1 := new Register[32]&lt;G+1, G+3&gt;(r0.out);
-    r2 := new Register[32]&lt;G+2, G+4&gt;(r1.out);
-    mx := new Mux[32]&lt;G+3&gt;(op, r2.out, m0.out);
+    m0 := M&lt;'G&gt;(left, right);
+    a0 := A&lt;'G&gt;(left, right);
+    r0 := new Register[32]&lt;'G, 'G+2&gt;(a0.out);
+    r1 := new Register[32]&lt;'G+1, 'G+3&gt;(r0.out);
+    r2 := new Register[32]&lt;'G+2, 'G+4&gt;(r1.out);
+    mx := new Mux[32]&lt;'G+3&gt;(op, r2.out, m0.out);
     out = mx.out;
 }
 </code></pre>
@@ -377,7 +384,7 @@ comp main&lt;G: 1&gt;(
       -s calyx.flags ' -d canonicalize'
 </code></pre>
 <p>We get the following output which shows that the design took only 7 cycles to process 4 inputs:</p>
-<pre><code>{&quot;out&quot;: {&quot;0&quot;: [28], &quot;1&quot;: [10], &quot;2&quot;: [66], &quot;3&quot;: [16]}, &quot;cycles&quot;: 7}
+<pre><code>{"out": {"0": [28], "1": [10], "2": [66], "3": [16]}, "cycles": 7}
 </code></pre>
 <p>If you're still not convinced, try adding <a href="./run.html#data-format">another transaction</a> to the data file in <code>examples/data.json</code> and see how the cycle count for the original sequential and pipelined designs change.</p>
 <h2 id="something-remarkable"><a class="header" href="#something-remarkable">Something Remarkable</a></h2>
@@ -394,7 +401,7 @@ Fast and correct, you can have both!</p>
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next" href="../lang/external.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../lang/external.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -408,7 +415,7 @@ Fast and correct, you can have both!</p>
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next" href="../lang/external.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../lang/external.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

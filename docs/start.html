@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" class="sidebar-visible no-js light">
+<html lang="en" class="light" dir="ltr">
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
@@ -10,7 +10,7 @@
         
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#ffffff">
 
         <link rel="icon" href="favicon.svg">
         <link rel="shortcut icon" href="favicon.png">
@@ -33,7 +33,7 @@
         <!-- MathJax -->
         <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     </head>
-    <body>
+    <body class="sidebar-visible no-js">
     <div id="body-container">
         <!-- Provide site root to javascript -->
         <script>
@@ -63,31 +63,38 @@
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             var html = document.querySelector('html');
-            html.classList.remove('no-js')
             html.classList.remove('light')
             html.classList.add(theme);
-            html.classList.add('js');
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
         </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var html = document.querySelector('html');
+            var body = document.querySelector('body');
             var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
             }
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="start.html" class="active"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li class="chapter-item expanded affix "><li class="part-title">The Filament Language</li><li class="chapter-item expanded "><a href="lang/tutorial.html"><strong aria-hidden="true">2.</strong> Your First Filament Program</a></li><li class="chapter-item expanded "><a href="lang/run.html"><strong aria-hidden="true">3.</strong> Running Filament Designs</a></li><li class="chapter-item expanded "><a href="lang/pipelining.html"><strong aria-hidden="true">4.</strong> Pipelining with Filament</a></li><li class="chapter-item expanded "><a href="lang/external.html"><strong aria-hidden="true">5.</strong> Using Verilog Modules in Filament</a></li><li class="chapter-item expanded affix "><li class="part-title">Metaprogramming with Filament</li><li class="chapter-item expanded "><a href="meta/overview.html"><strong aria-hidden="true">6.</strong> Metaprogramming Overview</a></li><li class="chapter-item expanded "><a href="meta/loops-and-bundles.html"><strong aria-hidden="true">7.</strong> Loops and Bundles</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -118,9 +125,9 @@
                                 <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
-                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
-                        </button>
+                        </label>
                         <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
                             <i class="fa fa-paint-brush"></i>
                         </button>
@@ -171,17 +178,19 @@
                         <h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
 <p>Filament is a programming language for Fearless Hardware Design. It aims to enable software programmers without much hardware background to start designing performant hardware. At its heart, Filament uses a type system to encode properties important for designing efficient hardware. This guide helps you install the various tools to make Filament work.</p>
 <h2 id="minimal-build"><a class="header" href="#minimal-build">Minimal Build</a></h2>
-<p>A basic build, which does not support our automatic simulation harness, can be installed pretty easily:</p>
-<p>First, clone <a href="https://github.com/cucapra/filament">this repository</a>:</p>
-<pre><code>git clone https://github.com/cucapra/filament.git -b stable
-</code></pre>
+<p>A basic build, which does not support our automatic simulation harness, can be installed pretty easily: First, clone <a href="https://github.com/cucapra/filament">this repository</a>: <code>git clone https://github.com/cucapra/filament.git</code></p>
 <p>Next, we can install the dependencies for the Filament compiler:</p>
 <ul>
 <li><a href="https://www.rust-lang.org/tools/install">Install Rust</a> which will configure the <code>cargo</code> tool.</li>
+<li>Install one of the two SMT solvers
+<ul>
 <li>Install <a href="https://github.com/Z3Prover/z3">z3</a>:
 <ul>
 <li>On Mac OS: <code>brew install z3</code>.</li>
 <li>On Ubuntu: <code>apt install z3</code></li>
+</ul>
+</li>
+<li>Install <a href="https://github.com/cvc5/cvc5">cvc5</a>.</li>
 </ul>
 </li>
 <li>Build the compiler by running: <code>cargo build</code> in the root of the folder.</li>
@@ -196,7 +205,7 @@
 <p>Calyx tools are provided using a docker image:</p>
 <pre><code>docker run -it ghcr.io/cucapra/calyx:0.4.0
 </code></pre>
-<p>If you're using the container, skip to <a href="#Configuring-Filament-Tools">configuring Filament tools</a>.</p>
+<p>If you're using the container, skip to [configuring Filament tools][#configuring-filament-tools].</p>
 <h3 id="installing-from-source"><a class="header" href="#installing-from-source">Installing from Source</a></h3>
 <p>First, we need to configure the Calyx compiler which acts as the backend for Filament.</p>
 <ul>
@@ -236,7 +245,7 @@
 <ul>
 <li>Install <a href="https://www.cocotb.org/">cocotb</a>: <code>python3 -m pip install cocotb</code>.
 <ul>
-<li>Cocotb install can often fail. Check it was installed correctly by running <code>python3 -c &quot;import cocotb; print(cocotb.__version__)&quot;</code>. If this command fails, see <a href="#debugging-cocotb-installation">Debugging Cocotb Installation</a>.</li>
+<li>Cocotb install can often fail. Check it was installed correctly by running <code>python3 -c "import cocotb; print(cocotb.__version__)"</code>. If this command fails, see <a href="#debugging-cocotb-installation">Debugging Cocotb Installation</a>.</li>
 </ul>
 </li>
 <li>Register Filament's fud stages by running the command in the filament repository: <code>fud register -p fud/filament.py filament</code>
@@ -259,11 +268,11 @@
 <p>Cocotb requires the python shared library <code>libpython.so</code>/<code>libpython.dylib</code> (Mac OS) to work correctly. A common reason for a cocotb installation not working is when this library is missing.</p>
 <p>To check if cocotb is able to find the shared library install <code>find_libpython</code>: <code>python3 -m pip install find_libpython</code>.</p>
 <p>Next, run the following:</p>
-<pre><code>python3 -c &quot;import find_libpython; print(find_libpython.find())&quot;
+<pre><code>python3 -c "import find_libpython; print(find_libpython.find())"
 </code></pre>
 <p>If the above command does not print out anything, that means that the python library was not found and the python installation needs to be rebuilt.</p>
 <p>If you use <a href="https://github.com/pyenv/pyenv"><code>pyenv</code></a>, the following command will install a python version with the shared library:</p>
-<pre><code>env PYTHON_CONFIGURE_OPTS=&quot;--enable-shared&quot; pyenv install 3.10
+<pre><code>env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install 3.10
 </code></pre>
 <p>Rerun the command to check that <code>libpython</code> was found after installing a new python version.</p>
 
@@ -272,7 +281,7 @@
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
 
-                            <a rel="next" href="lang/tutorial.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="lang/tutorial.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -283,7 +292,7 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
 
-                    <a rel="next" href="lang/tutorial.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="lang/tutorial.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

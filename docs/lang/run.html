@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" class="sidebar-visible no-js light">
+<html lang="en" class="light" dir="ltr">
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
@@ -10,7 +10,7 @@
         
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#ffffff">
 
         <link rel="icon" href="../favicon.svg">
         <link rel="shortcut icon" href="../favicon.png">
@@ -33,7 +33,7 @@
         <!-- MathJax -->
         <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     </head>
-    <body>
+    <body class="sidebar-visible no-js">
     <div id="body-container">
         <!-- Provide site root to javascript -->
         <script>
@@ -63,31 +63,38 @@
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             var html = document.querySelector('html');
-            html.classList.remove('no-js')
             html.classList.remove('light')
             html.classList.add(theme);
-            html.classList.add('js');
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
         </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var html = document.querySelector('html');
+            var body = document.querySelector('body');
             var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
             }
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded "><a href="../start.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li class="chapter-item expanded affix "><li class="part-title">The Filament Language</li><li class="chapter-item expanded "><a href="../lang/tutorial.html"><strong aria-hidden="true">2.</strong> Your First Filament Program</a></li><li class="chapter-item expanded "><a href="../lang/run.html" class="active"><strong aria-hidden="true">3.</strong> Running Filament Designs</a></li><li class="chapter-item expanded "><a href="../lang/pipelining.html"><strong aria-hidden="true">4.</strong> Pipelining with Filament</a></li><li class="chapter-item expanded "><a href="../lang/external.html"><strong aria-hidden="true">5.</strong> Using Verilog Modules in Filament</a></li><li class="chapter-item expanded affix "><li class="part-title">Metaprogramming with Filament</li><li class="chapter-item expanded "><a href="../meta/overview.html"><strong aria-hidden="true">6.</strong> Metaprogramming Overview</a></li><li class="chapter-item expanded "><a href="../meta/loops-and-bundles.html"><strong aria-hidden="true">7.</strong> Loops and Bundles</a></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -118,9 +125,9 @@
                                 <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
-                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
-                        </button>
+                        </label>
                         <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
                             <i class="fa fa-paint-brush"></i>
                         </button>
@@ -175,32 +182,32 @@ We use <a href="https://docs.calyxir.org/fud/index.html">fud</a> to make the pro
 <h2 id="data-format"><a class="header" href="#data-format">Data Format</a></h2>
 <p>The test runner's data format is a JSON file that contains the names of each port mentioned in a Filament program's <code>main</code> component.
 For example, for the <a href="./lang/tutorial.html#building-an-arithmetic-logic-unit">tutorial ALU</a> with the signature:</p>
-<pre><code class="language-filament">comp main&lt;G: 3&gt;(
-    @interface[G] go: 1,
-    @[G, G+1] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -&gt; (@[G, G+1] out: 32)
+<pre><code class="language-filament">comp main&lt;'G: 3&gt;(
+    go: interface['G],
+     op: ['G, 'G+1] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -&gt; ( out: ['G, 'G+1] 32)
 </code></pre>
 <p>We can have the following data file:</p>
 <pre><code class="language-json">{
-    &quot;op&quot;: [ 0, 1, 0, 1 ],
-    &quot;left&quot;: [ 4, 5, 6, 7 ],
-    &quot;right&quot;: [ 7, 5, 11, 9 ]
+    "op": [ 0, 1, 0, 1 ],
+    "left": [ 4, 5, 6, 7 ],
+    "right": [ 7, 5, 11, 9 ]
 }
 </code></pre>
 <p>The test harness operates with the idea of <em>transactions</em> where each transaction is a set of inputs and outputs corresponding to the indices into the JSON file.
 For example, the first transaction sends the inputs <code>op[0]</code>, <code>left[0]</code>, and <code>right[0]</code> to the Verilog design and capture outputs for <code>out[0]</code>, corresponding to the output ports of the ALU.</p>
 <p>This means, that the above data file will run the design with four inputs and capture four outputs. Adding another transaction is easy: just add another set of inputs to the JSON file.</p>
 <h2 id="running-designs"><a class="header" href="#running-designs">Running Designs</a></h2>
-<p>Running the design is straightforward, assuming you've <a href="./start.html#full-build">configured <code>fud</code></a> already:</p>
+<p>Running the design is straightforward, assuming you've <a href="../start.html#full-build">configured <code>fud</code></a> already:</p>
 <pre><code class="language-sh">fud e --to cocotb-out examples/tut-seq.fil \
       -s cocotb.data examples/data.json \
       -s calyx.flags ' -d canonicalize'
 </code></pre>
 <p>This instructs <code>fud</code> to compile the design to Verilog, setup the test harness, and run the simulation.
 The output captures the values on the <code>out</code> port of the ALU for each transaction in the data file and tells us how many cycles it took to run the design:</p>
-<pre><code>{&quot;out&quot;: {&quot;0&quot;: [28], &quot;1&quot;: [10], &quot;2&quot;: [66], &quot;3&quot;: [16]}, &quot;cycles&quot;: 12}
+<pre><code>{"out": {"0": [28], "1": [10], "2": [66], "3": [16]}, "cycles": 12}
 </code></pre>
 <p>In general, the command to run designs is:</p>
 <pre><code class="language-sh">fud e --to cocotb-out &lt;filament-file&gt; \
@@ -239,7 +246,7 @@ Our <code>fud</code>-based harness provides a way to randomize the timing of tra
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next" href="../lang/pipelining.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../lang/pipelining.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -253,7 +260,7 @@ Our <code>fud</code>-based harness provides a way to randomize the timing of tra
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next" href="../lang/pipelining.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../lang/pipelining.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
