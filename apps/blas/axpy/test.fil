@@ -1,0 +1,88 @@
+import "apps/blas/axpy/axpy.fil";
+
+comp main<'G:II>(
+  go: interface['G],
+  a:  ['G, 'G+1] W,
+  x_0: ['G, 'G+1] W,
+  x_1: ['G, 'G+1] W,
+  x_2: ['G, 'G+1] W,
+  x_3: ['G, 'G+1] W,
+  x_4: ['G, 'G+1] W,
+  x_5: ['G, 'G+1] W,
+  x_6: ['G, 'G+1] W,
+  x_7: ['G, 'G+1] W,
+  x_8: ['G, 'G+1] W,
+  x_9: ['G, 'G+1] W,
+  x_10: ['G, 'G+1] W,
+  x_11: ['G, 'G+1] W,
+  x_12: ['G, 'G+1] W,
+  x_13: ['G, 'G+1] W,
+  x_14: ['G, 'G+1] W,
+  x_15: ['G, 'G+1] W,
+  y_0: ['G, 'G+1] W,
+  y_1: ['G, 'G+1] W,
+  y_2: ['G, 'G+1] W,
+  y_3: ['G, 'G+1] W,
+  y_4: ['G, 'G+1] W,
+  y_5: ['G, 'G+1] W,
+  y_6: ['G, 'G+1] W,
+  y_7: ['G, 'G+1] W,
+  y_8: ['G, 'G+1] W,
+  y_9: ['G, 'G+1] W,
+  y_10: ['G, 'G+1] W,
+  y_11: ['G, 'G+1] W,
+  y_12: ['G, 'G+1] W,
+  y_13: ['G, 'G+1] W,
+  y_14: ['G, 'G+1] W,
+  y_15: ['G, 'G+1] W,
+) -> (
+  out_0: ['G+L, 'G+L+1] W,
+  out_1: ['G+L, 'G+L+1] W,
+  out_2: ['G+L, 'G+L+1] W,
+  out_3: ['G+L, 'G+L+1] W,
+  out_4: ['G+L, 'G+L+1] W,
+  out_5: ['G+L, 'G+L+1] W,
+  out_6: ['G+L, 'G+L+1] W,
+  out_7: ['G+L, 'G+L+1] W,
+  out_8: ['G+L, 'G+L+1] W,
+  out_9: ['G+L, 'G+L+1] W,
+  out_10: ['G+L, 'G+L+1] W,
+  out_11: ['G+L, 'G+L+1] W,
+  out_12: ['G+L, 'G+L+1] W,
+  out_13: ['G+L, 'G+L+1] W,
+  out_14: ['G+L, 'G+L+1] W,
+  out_15: ['G+L, 'G+L+1] W,
+) with {
+  let M = 8;
+  let N = 16;
+  let W = 32;
+  let A = 8;
+  some L where L > 0;
+  some II where II > 0;
+} {
+
+  A := new Axpy[W, N, M, A];
+
+  bundle x[N]: ['G, 'G+1] W;
+  bundle y[N]: ['G, 'G+1] W;
+
+  x{0} = x_0; x{1} = x_1; x{2} = x_2; x{3} = x_3; 
+  x{4} = x_4; x{5} = x_5; x{6} = x_6; x{7} = x_7;
+  x{8} = x_8; x{9} = x_9; x{10} = x_10; x{11} = x_11;
+  x{12} = x_12; x{13} = x_13; x{14} = x_14; x{15} = x_15;
+
+  y{0} = y_0; y{1} = y_1; y{2} = y_2; y{3} = y_3; 
+  y{4} = y_4; y{5} = y_5; y{6} = y_6; y{7} = y_7;
+  y{8} = y_8; y{9} = y_9; y{10} = y_10; y{11} = y_11;
+  y{12} = y_12; y{13} = y_13; y{14} = y_14; y{15} = y_15;
+
+  L := A::L;
+  II := A::II;
+
+  a := A<'G>(a, x{0..N}, y{0..N});
+
+  out_0 = a.out{0}; out_1 = a.out{1}; out_2 = a.out{2}; out_3 = a.out{3};
+  out_4 = a.out{4}; out_5 = a.out{5}; out_6 = a.out{6}; out_7 = a.out{7};
+  out_8 = a.out{8}; out_9 = a.out{9}; out_10 = a.out{10}; out_11 = a.out{11};
+  out_12 = a.out{12}; out_13 = a.out{13}; out_14 = a.out{14}; out_15 = a.out{15};
+}

@@ -3,7 +3,7 @@ name: Docs website
 on:
   push:
     branches:
-      - stable
+      - main
 
 jobs:
   playground:

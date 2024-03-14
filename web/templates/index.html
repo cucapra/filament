@@ -59,11 +59,11 @@
                     Events are used to define the <i>availability intervals</i> of the module's inputs and outputs.
                 </p>
             </div>
-            <div class="code language-futil">
-<pre><code>comp Add&lt;G&gt;(
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32
-) -> (@[G, G+1] out: 32) {...}</pre></code>
+            <div class="code language-filament">
+<pre><code>comp Add&lt;'G&gt;(
+  left: ['G, 'G+1] 32,
+  right: ['G, 'G+1] 32
+) -> (out: ['G, 'G+1] 32) {...}</pre></code>
             </div>
         </div>
 
@@ -78,13 +78,13 @@
                   about structural hazards and imbalanced pipeline paths.
                 </p>
             </div>
-            <div class="code language-futil">
-<pre data-line="5-6"><code>comp main&lt;G&gt;(
-  @[G, G+1] x: 32, @[G, G+1] y: 32
+            <div class="code language-filament">
+<pre data-line="5-6"><code>comp main&lt;'G&gt;(
+  x: ['G, 'G+1] 32, y: ['G, 'G+1] 32
 ) -> () {
   A := new Add[32]; // 32-bit adder
-  a0 := A&lt;G&gt;(x, x); // 1st use
-  b0 := A&lt;G+2&gt;(a0.out, y); // 2nd use
+  a0 := A&lt;'G&gt;(x, x); // 1st use
+  b0 := A&lt;'G+2&gt;(a0.out, y); // 2nd use
 }</pre></code>
             </div>
         </div>
@@ -98,12 +98,12 @@
                   This means that your components support the II they promise!
                 </p>
             </div>
-            <div class="code language-futil">
+            <div class="code language-filament">
 <pre data-line="1"><code>// Processes new inputs every cycle
-comp Add&lt;G:1&gt;(
-  @[G, G+1] left: 32,
-  @[G, G+1] right: 32
-) -> (@[G, G+1] out: 32) {...}</pre></code>
+comp Add&lt;'G:1&gt;(
+  left: ['G, 'G+1] 32,
+  right: ['G, 'G+1] 32
+) -> (out: ['G, 'G+1] 32) {...}</pre></code>
             </div>
         </div>
 
@@ -116,19 +116,19 @@ comp Add&lt;G:1&gt;(
                   Filament's guarantees extend to <em>generative programs</em> that generate hardware based on parameters. <code>for</code> loops and <code>if</code> statements can be used to generate hardware and Filament's type system ensures that <em>all valid parameters</em> generate correctly pipelined hardware. This is a really strong property because once your program type checks, you know that <em>all</em> possible instantiations of the program will work!
                 </p>
             </div>
-            <div class="code language-futil">
+            <div class="code language-filament">
 <pre><code>/* A parameteric shift register */
-comp Shift[W, N]&lt;G:1&gt;(
-  @[G, G+1] in: W
+comp Shift[W, N]&lt;'G:1&gt;(
+  in: ['G, 'G+1] W
 ) -> (
   // delay the signal by N cycles
-  @[G+N, G+N+1] out: W
+  out: ['G+N, 'G+N+1] W
 ) {
   // Tracks the wires b/w registers
-  bundle f[N+1]: for&lt;k&gt; @[G+k, G+k+1] W;
+  bundle f[N+1]: for&lt;k&gt; ['G+k, 'G+k+1] W;
   f{0} = in;
   for i in 0..N {
-      d := new Delay[W]<G+i>(f{i});
+      d := new Delay[W]&lt;'G+i&gt;(f{i});
       f{i+1} = d.out;
   }
   out = f{N};
@@ -144,6 +144,8 @@ Using its type system, Filament has enabled us to build reusable, efficient libr
 <ul>
 <li><a href="https://github.com/cucapra/filament/tree/main/apps/frisc"><code>frisc</code>: A RISC-V processor in Filament</a></li>
 <li><a href="https://github.com/cucapra/filament/blob/main/primitives/reshape.fil">Reshape: A library for reshaping data streams</a></li>
+<li><a href="https://github.com/cucapra/filament/tree/main/apps/blas">BLAS: Parameterized linear algebra kernels</a></li>
+<li><a href="https://github.com/cucapra/filament/tree/main/apps/fft">FFT: Parameterized streaming and iterative FFT kernels</a></li>
 </ul>
 
 If you're building something with Filament, please let us know!
