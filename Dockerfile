@@ -1,4 +1,4 @@
-FROM ghcr.io/cucapra/calyx:0.7.1
+FROM ghcr.io/cucapra/calyx:0.6.1
 
 LABEL org.opencontainers.image.source https://github.com/cucapra/filament
 
