@@ -1,5 +1,5 @@
 import "../../cmn/bundled.fil";
-import "primitives/math/float.fil";
+import "primitives/flopoco/def.fil";
 /*
 Here, we specify the concrete implementations of all the abstract floating point modules used in the FFT
 */
@@ -17,17 +17,12 @@ comp AbstractFPAdd[E, M]<'G:1>(
   E > 0,
   M > 0
 {
-  assume E == 8;
-  assume M == 23;
+  FA := new FPAdd[E, M];
+  fa := FA<'G>(X, Y);
+  R = fa.R;
 
-  let shift = 2;
-  a_shift := new Shift[32, shift]<'G>(X);
-  b_shift := new Shift[32, shift]<'G>(Y);
-  mult := new FAdd[32, 8, 23]<'G+shift>(a_shift.out, b_shift.out);
-  mult_shift := new Shift[32, shift]<'G+shift>(mult.out);
-  R = mult_shift.out;
-  L := shift * 2;
-  W := 32;
+  L := FA::L;
+  W := E + M + 3;
 }
 
 /// Floating point addition with Flopoco's internal format
@@ -43,17 +38,12 @@ comp AbstractFPSub[E, M]<'G:1>(
   E > 0,
   M > 0
 {
-  assume E == 8;
-  assume M == 23;
+  FS := new FPSub[E, M];
+  fs := FS<'G>(X, Y);
+  R = fs.R;
 
-  let shift = 2;
-  a_shift := new Shift[32, shift]<'G>(X);
-  b_shift := new Shift[32, shift]<'G>(Y);
-  mult := new FSub[32, 8, 23]<'G+shift>(a_shift.out, b_shift.out);
-  mult_shift := new Shift[32, shift]<'G+shift>(mult.out);
-  R = mult_shift.out;
-  L := shift * 2;
-  W := 32;
+  L := FS::L;
+  W := E + M + 3;
 }
 
 
@@ -70,18 +60,12 @@ comp AbstractFPMult[E, M]<'G: 1>(
   E > 0,
   M > 0
 {
-  assume E == 8;
-  assume M == 23;
+  FM := new FPMult[E, M];
+  fm := FM<'G>(X, Y);
+  R = fm.R;
 
-  let shift = 2;
-  a_shift := new Shift[32, shift]<'G>(X);
-  b_shift := new Shift[32, shift]<'G>(Y);
-  mult := new FMult[32, 8, 23]<'G+shift>(a_shift.out, b_shift.out);
-  mult_shift := new Shift[32, shift]<'G+shift>(mult.out);
-  R = mult_shift.out;
-
-  L := shift * 2;
-  W := 32;
+  L := FM::L;
+  W := E + M + 3;
 }
 
 /// Converts an IEEE floating point number to Internal format
@@ -98,11 +82,12 @@ comp AbstractFPfromIEEE[E, M]<'G:1>(
   E > 0,
   M > 0
 {
-  assume E == 8;
-  assume M == 23;
-  L := 0;
-  W := 32;
-  R = X;
+  IE := new InputIEEE[E, M, E, M];
+  ie := IE<'G>(X);
+  R = ie.R;
+
+  L := IE::L;
+  W := E + M + 3;
 }
 
 /// Converts a Internal format floating point number to IEEE
@@ -119,11 +104,12 @@ comp AbstractFPtoIEEE[E, M]<'G:1>(
   E > 0,
   M > 0
 {
-  assume E == 8;
-  assume M == 23;
-  L := 0;
-  W := 32;
-  R = X;
+  IE := new OutputIEEE[E, M, E, M];
+  ie := IE<'G>(X);
+  R = ie.R;
+
+  L := IE::L;
+  W := E + M + 3;
 }
 
 /// Floating point negation
@@ -138,10 +124,10 @@ comp AbstractFPNeg[E, M]<'G:1>(
   E > 0,
   M > 0
 {
-  assume E == 8;
-  assume M == 23;
+  FN := new FPNeg[E, M];
+  fn := FN<'G>(X);
+  R = fn.R;
+
   L := 0;
-  W := 32;
-  fn := new FNeg[32, 8, 23]<'G>(X);
-  R = fn.out;
+  W := E + M + 3;
 }

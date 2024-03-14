@@ -168,6 +168,15 @@ comp Butterfly[W, E, ?M=W-E-1]<'G: II>(
   assert FA1::L == FA2::L;
   assume FA2::L == FS2::L; // we can assume this because we know the internal implementation of FPSub
 
+  // Assume the widths of all the abstract modules are the same
+  assume FM1::W == FA1::W;
+  assume FM1::W == FS2::W;
+  assume FM1::W == InpIEEE1::W;
+  OupIEEE := new AbstractFPtoIEEE[E, M];
+  FPNeg := new AbstractFPNeg[E, M];
+  assume FM1::W == OupIEEE::W;
+  assume FM1::W == FPNeg::W;
+
   // delay first input
   in00_delay := new Shift[W, FM1::L+FA1::L]<'G>(in0{0});
   in01_delay := new Shift[W, FM1::L+FA1::L+1]<'G>(in0{1});

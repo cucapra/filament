@@ -17,13 +17,12 @@ cli_format = "${NAME_FORMAT} ${OUT_FILE} FPAdd wE=${Exp} wF=${Mant} ${conf}"
 # Output parameters defined by the tool's execution
 outputs.L = "pipeline_depth"
 
-# Broken because of https://github.com/ghdl/ghdl/issues/2522
-# [modules.FPMult]
-# name = "FPMult"
-# parameters = ["Exp", "Mant", "Out"]
-# name_format = "FPMult_Exp${Exp}_Mant${Mant}_Out${Out}"
-# cli_format = "${NAME_FORMAT} ${OUT_FILE} FPMult wE=${Exp} wF=${Mant} out=${Out} ${conf}"
-# outputs.L = "pipeline_depth"
+[modules.FPMult]
+name = "FPMult"
+parameters = ["Exp", "Mant"]
+name_format = "FPMult_Exp${Exp}_Mant${Mant}"
+cli_format = "${NAME_FORMAT} ${OUT_FILE} FPMult wE=${Exp} wF=${Mant} ${conf}"
+outputs.L = "pipeline_depth"
 
 [modules.FPExp]
 name = "FPExp"
