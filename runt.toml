@@ -1,4 +1,4 @@
-ver = "0.4.0"
+ver = "0.4.1"
 
 
 [[tests]]
@@ -92,12 +92,21 @@ fud e -s cocotb.data {}.data --to cocotb-out {} -q
 
 # fft
 [[tests]]
-name = "fft"
-paths = ["apps/fft/test/scripts/*.sh"]
+name = "fft-random"
+paths = ["apps/fft/versions/*/fft.fil"]
 cmd = """
 dir=$(dirname {}) && \
-{}
+apps/fft/test/scripts/random.sh $dir
 """
+
+[[tests]]
+name = "fft-edge"
+paths = ["apps/fft/versions/*/fft.fil"]
+cmd = """
+dir=$(dirname {}) && \
+apps/fft/test/scripts/edge.sh $dir
+"""
+
 
 # ============== Examples in the documentation ============
 [[tests]]

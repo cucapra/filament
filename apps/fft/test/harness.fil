@@ -1,6 +1,7 @@
 import "primitives/reshape.fil";
-import "../src/fft.fil";
 import "spiral-fft.fil";
+// A directory including this must be specified using --library
+import "fft.fil";
 
 comp main<'G: II>(
   go: interface['G],
