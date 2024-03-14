@@ -48,6 +48,19 @@ RUN git clone --branch flopoco-4.1 https://gitlab.com/flopoco/flopoco &&\
     cmake -GNinja .. && ninja &&\
     ln -s /home/flopoco/build/code/FloPoCoBin/flopoco /usr/bin/flopoco
 
+# Install deps for yosys
+RUN apt install -y build-essential clang bison flex \
+	libreadline-dev gawk tcl-dev libffi-dev git \
+	graphviz xdot pkg-config python3 libboost-system-dev \
+	libboost-python-dev libboost-filesystem-dev zlib1g-dev
+
+# Install yosys
+WORKDIR /home
+RUN git clone --branch yosys-0.36 https://github.com/YosysHQ/yosys.git &&\
+    cd yosys &&\
+    make config-gcc &&\
+    make ENABLE_PYOSYS=1 &&\
+    make install ENABLE_PYOSYS=1
 
 # Install GHDL 3.0.0
 WORKDIR /home
