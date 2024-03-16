@@ -84,7 +84,10 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-
+      - name: Check versions
+        run: |
+          rustc --version
+          cargo --version
       - name: Original test suite
         run:
           runt -d -o fail -j 1 --max-futures 10
