@@ -40,6 +40,23 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.28.0-rc3/cmake-3.
     cd cmake-3.28.0-rc3 && ./bootstrap &&\
     make && make install
 
+# Install an older version of ScaLP that still has the `then` keyword
+# This is required by the `flopoco` library
+WORKDIR /home
+RUN git clone https://digidev.digi.e-technik.uni-kassel.de/git/scalp.git &&\
+    cd scalp && git checkout 8f1bdf61ed4d893e7b1370edb62187a19e921960 &&\
+    mkdir build && cd build &&\
+    cmake .. && make &&\
+    cmake --install . --prefix /usr/local
+
+# Install FloPoCo 4.1
+WORKDIR /home
+RUN git clone --branch flopoco-4.1 https://gitlab.com/flopoco/flopoco &&\
+    cd flopoco && git checkout f3d76595c01f84cee57ae67eee1ceb31a6fe93bc &&\
+    mkdir build && cd build &&\
+    cmake -GNinja .. && ninja &&\
+    ln -s /home/flopoco/build/code/FloPoCoBin/flopoco /usr/bin/flopoco
+
 # Install GHDL 3.0.0
 WORKDIR /home
 # Install deps
@@ -49,6 +66,14 @@ RUN git clone --depth 1 --branch v3.0.0 https://github.com/ghdl/ghdl.git &&\
     mkdir build && cd build &&\
     LDFLAGS='-ldl' ../configure --with-llvm-config --prefix=/usr &&\
     make && make install
+
+# Install verible
+WORKDIR /home
+RUN wget https://github.com/chipsalliance/verible/releases/download/v0.0-3428-gcfcbb82b/verible-v0.0-3428-gcfcbb82b-Ubuntu-20.04-focal-x86_64.tar.gz --output-document verible.tar.gz && \
+  tar -xvf verible.tar.gz && \
+  mv verible-v0.0-3428-gcfcbb82b verible && \
+  rm verible.tar.gz
+ENV PATH=$PATH:/home/verible/bin
 
 # Set rust to 1.76 and runt to 0.4.1
 RUN rustup toolchain install 1.76.0 &&\

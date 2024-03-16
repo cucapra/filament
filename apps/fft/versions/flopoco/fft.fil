@@ -1,0 +1,133 @@
+import "../../cmn/bundled.fil";
+import "primitives/flopoco/def.fil";
+/*
+Here, we specify the concrete implementations of all the abstract floating point modules used in the FFT
+*/
+
+/// Floating point addition with Flopoco's internal format
+comp AbstractFPAdd[E, M]<'G:1>(
+  X: ['G, 'G+1] W,
+  Y: ['G, 'G+1] W,
+) -> (
+  R: ['G+L, 'G+L+1] W,
+) with {
+  some W where W > 0;
+  some L where L >= 0;
+} where 
+  E > 0,
+  M > 0
+{
+  FA := new FPAdd[E, M];
+  fa := FA<'G>(X, Y);
+  R = fa.R;
+
+  L := FA::L;
+  W := E + M + 3;
+}
+
+/// Floating point addition with Flopoco's internal format
+comp AbstractFPSub[E, M]<'G:1>(
+  X: ['G, 'G+1] W,
+  Y: ['G, 'G+1] W,
+) -> (
+  R: ['G+L, 'G+L+1] W,
+) with {
+  some W where W > 0;
+  some L where L >= 0;
+} where 
+  E > 0,
+  M > 0
+{
+  FS := new FPSub[E, M];
+  fs := FS<'G>(X, Y);
+  R = fs.R;
+
+  L := FS::L;
+  W := E + M + 3;
+}
+
+
+/// Floating point multiplication with Flopoco's internal format
+comp AbstractFPMult[E, M]<'G: 1>(
+  X: ['G, 'G+1] W,
+  Y: ['G, 'G+1] W,
+) -> (
+  R: ['G+L, 'G+L+1] W,
+) with {
+  some W where W > 0;
+  some L where L >= 0;
+} where 
+  E > 0,
+  M > 0
+{
+  FM := new FPMult[E, M];
+  fm := FM<'G>(X, Y);
+  R = fm.R;
+
+  L := FM::L;
+  W := E + M + 3;
+}
+
+/// Converts an IEEE floating point number to Internal format
+/// This does nothing as the internal format is the same as IEEE
+comp AbstractFPfromIEEE[E, M]<'G:1>(
+  X: ['G, 'G+1] WidthIEEE
+) -> (
+  R: ['G+L, 'G+L+1] W
+) with {
+  let WidthIEEE = E + M + 1;
+  some W where W > 0;
+  some L where L == 0;
+} where 
+  E > 0,
+  M > 0
+{
+  IE := new InputIEEE[E, M, E, M];
+  ie := IE<'G>(X);
+  R = ie.R;
+
+  L := IE::L;
+  W := E + M + 3;
+}
+
+/// Converts a Internal format floating point number to IEEE
+/// This does nothing as the internal format is the same as IEEE
+comp AbstractFPtoIEEE[E, M]<'G:1>(
+  X: ['G, 'G+1] W
+) -> (
+  R: ['G+L, 'G+L+1] WidthIEEE
+) with {
+  some W where W > 0;
+  let WidthIEEE = E + M + 1;
+  some L where L == 0;
+} where 
+  E > 0,
+  M > 0
+{
+  IE := new OutputIEEE[E, M, E, M];
+  ie := IE<'G>(X);
+  R = ie.R;
+
+  L := IE::L;
+  W := E + M + 3;
+}
+
+/// Floating point negation
+comp AbstractFPNeg[E, M]<'G:1>(
+  X: ['G, 'G+1] W
+) -> (
+  R: ['G+L, 'G+L+1] W
+) with {
+  some W where W > 0;
+  some L where L == 0;
+} where 
+  E > 0,
+  M > 0
+{
+  FN := new FPNeg[E, M];
+  fn := FN<'G>(X);
+  R = fn.R;
+
+  L := 0;
+  W := E + M + 3;
+}
