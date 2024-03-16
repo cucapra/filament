@@ -1,5 +1,6 @@
 [workspace]
-members = ["fil-derive", "fil-utils", "fil-ast", "fil-ir", "fil-gen"]
+members = ["crates/*"]
+resolver = "2"
 
 [workspace.package]
 authors = ["The Filament Team"]
@@ -31,11 +32,11 @@ lazy_static = "1.4"
 easy-smt = { version = "0.2.1" }
 struct-variant = "1.0"
 
-fil-utils = { version = "0.1.0", path = "fil-utils" }
-fil-ast = { version = "0.1.0", path = "fil-ast" }
-fil-ir = { version = "0.1.0", path = "fil-ir" }
-fil-derive = { version = "0.1.0", path = "fil-derive" }
-fil-gen = { version = "0.1.0", path = "fil-gen" }
+fil-utils = { version = "0.1.0", path = "crates/utils" }
+fil-ast = { version = "0.1.0", path = "crates/ast" }
+fil-ir = { version = "0.1.0", path = "crates/ir" }
+fil-derive = { version = "0.1.0", path = "crates/derive" }
+fil-gen = { version = "0.1.0", path = "crates/gen" }
 
 calyx-ir = { version = "0.7.1" }
 calyx-frontend = { version = "0.7.1" }
@@ -59,50 +60,3 @@ features = ["backends", "std", "inline-more"]
 [workspace.dependencies.bitvec]
 version = "1.0.1"
 features = ["alloc"]
-
-
-# ================= Package configuration ====================
-[package]
-name = "filament"
-version.workspace = true
-edition.workspace = true
-description.workspace = true
-authors.workspace = true
-license-file.workspace = true
-keywords.workspace = true
-repository.workspace = true
-homepage.workspace = true
-categories.workspace = true
-readme.workspace = true
-rust-version.workspace = true
-
-[dependencies]
-argh.workspace = true
-log.workspace = true
-pest.workspace = true
-pest_consume.workspace = true
-pest_derive.workspace = true
-linked_hash_set.workspace = true
-itertools.workspace = true
-linked-hash-map.workspace = true
-derivative.workspace = true
-smallvec.workspace = true
-topological-sort.workspace = true
-atty.workspace = true
-lazy_static.workspace = true
-easy-smt.workspace = true
-struct-variant.workspace = true
-env_logger.workspace = true
-codespan-reporting.workspace = true
-bitvec.workspace = true
-string-interner.workspace = true
-fil-ast.workspace = true
-fil-ir.workspace = true
-fil-utils.workspace = true
-fil-gen.workspace = true
-
-calyx-ir.workspace = true
-calyx-frontend.workspace = true
-calyx-utils.workspace = true
-calyx-opt.workspace = true
-calyx-backend.workspace = true
