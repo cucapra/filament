@@ -94,6 +94,7 @@ fud e -s cocotb.data {}.data --to cocotb-out {} -q
 [[tests]]
 name = "fft-random"
 paths = ["apps/fft/versions/*/fft.fil"]
+expect_dir = "apps/fft/test/"
 cmd = """
 dir=$(dirname {}) && \
 apps/fft/test/scripts/random.sh $dir
@@ -102,6 +103,7 @@ apps/fft/test/scripts/random.sh $dir
 [[tests]]
 name = "fft-edge"
 paths = ["apps/fft/versions/*/fft.fil"]
+expect_dir = "apps/fft/test/"
 cmd = """
 dir=$(dirname {}) && \
 apps/fft/test/scripts/edge.sh $dir
