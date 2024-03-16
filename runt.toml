@@ -108,6 +108,14 @@ apps/fft/test/scripts/edge.sh $dir
 """
 
 
+# blas
+[[tests]]
+name = "blas"
+paths = ["apps/blas/*/test.fil"]
+cmd = """
+fud e -s cocotb.data {}.data --to cocotb-out {} -q
+"""
+
 # ============== Examples in the documentation ============
 [[tests]]
 name = "examples"
