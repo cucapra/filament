@@ -75,6 +75,9 @@ RUN wget https://github.com/chipsalliance/verible/releases/download/v0.0-3428-gc
   rm verible.tar.gz
 ENV PATH=$PATH:/home/verible/bin
 
+# Install hypermapper
+RUN pip install hypermapper
+
 # Set rust to 1.76 and runt to 0.4.1
 RUN rustup toolchain install 1.76.0 &&\
     rustup default 1.76.0 &&\
