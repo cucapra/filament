@@ -87,7 +87,7 @@ WORKDIR /home
 RUN git clone --depth 1 https://github.com/google/xls.git
 WORKDIR /home/xls
 RUN apt install -y python3-distutils python3-dev libtinfo5 python-is-python3 && \
-  bazel build -c opt -- //xls/... -//xls/contrib/xlscc/...
+  bazel build --verbose_failures -c opt -- //xls/... -//xls/contrib/xlscc/... 
 
 # Install verible
 WORKDIR /home
