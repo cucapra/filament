@@ -46,14 +46,10 @@ impl<'prog> BuildCtx<'prog> {
             self.diag(),
         )?;
         let mut live_locs = Vec::with_capacity(lives.len());
-        let lives = lives
-            .iter()
-            .map(|l| {
-                let (l, pos) = l.clone().split();
-                live_locs.push(pos);
-                self.range(l)
-            })
-            .collect::<BuildRes<Vec<_>>>()?;
+        lives.iter().for_each(|l| {
+            let (_, pos) = l.clone().split();
+            live_locs.push(pos);
+        });
         let inst = ir::Instance {
             comp: comp.idx,
             args: binding
@@ -68,7 +64,7 @@ impl<'prog> BuildCtx<'prog> {
                 name.pos(),
                 live_locs,
             )),
-            lives,
+            lives: Vec::default(), // fill this in later so we can reference the instance
         };
 
         let idx = self.comp().add(inst);
@@ -114,6 +110,19 @@ impl<'prog> BuildCtx<'prog> {
 
         self.add_inst(name.copy(), idx);
         // Track the component binding for this instance
+
+        // fill in lives here after we've added the instance name
+        let lives = lives
+            .iter()
+            .map(|l| {
+                let (l, _) = l.clone().split();
+                self.range(l)
+            })
+            .collect::<BuildRes<Vec<_>>>()?;
+
+        let inst = self.comp().get_mut(idx);
+        inst.lives.extend(lives);
+
         self.inst_to_sig
             .push(idx, (Rc::new(binding), component.clone()));
         Ok(())

@@ -361,7 +361,6 @@ pub enum Reason {
     /// Assertion requiring that the source is available for at least as long as
     /// the destination requires
     Liveness {
-        dst_loc: GPosIdx,
         src_loc: GPosIdx,
         dst_liveness: Range,
         src_liveness: Range,
@@ -455,13 +454,11 @@ impl Reason {
     }
 
     pub fn liveness(
-        dst_loc: GPosIdx,
         src_loc: GPosIdx,
         dst_liveness: Range,
         src_liveness: Range,
     ) -> Self {
         Self::Liveness {
-            dst_loc,
             src_loc,
             dst_liveness,
             src_liveness,
@@ -736,7 +733,6 @@ impl Reason {
                     .with_labels(vec![src, dst])
             }
             Reason::Liveness {
-                dst_loc,
                 src_loc,
                 dst_liveness,
                 src_liveness,
@@ -745,8 +741,8 @@ impl Reason {
                     "source is available for {}",
                     ctx.display(src_liveness)
                 ));
-                let dl = dst_loc.secondary().with_message(format!(
-                    "requires value for {}",
+                let dl = src_loc.secondary().with_message(format!(
+                    "required for {}",
                     ctx.display(dst_liveness)
                 ));
                 Diagnostic::error()

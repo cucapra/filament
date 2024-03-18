@@ -1,0 +1,139 @@
+/// Floating point addition with Flopoco's internal format
+comp FFTFPAdd[E, M]<'G:1>(
+  X: ['G, 'G+1] W,
+  Y: ['G, 'G+1] W,
+) -> (
+  R: ['G+L, 'G+L+1] W,
+) with {
+  some W where W == E + M + 1;
+  some L where L >= 0;
+} where 
+  E > 0,
+  M > 0
+{
+  assume E == 8;
+  assume M == 23;
+
+  let shift = 2;
+  a_shift := new Shift[32, shift]<'G>(X);
+  b_shift := new Shift[32, shift]<'G>(Y);
+  mult := new FAdd[32, 8, 23]<'G+shift>(a_shift.out, b_shift.out);
+  mult_shift := new Shift[32, shift]<'G+shift>(mult.out);
+  R = mult_shift.out;
+  L := shift * 2;
+  W := 32;
+}
+
+/// Floating point addition with Flopoco's internal format
+comp FFTFPSub[E, M]<'G:1>(
+  X: ['G, 'G+1] W,
+  Y: ['G, 'G+1] W,
+) -> (
+  R: ['G+L, 'G+L+1] W,
+) with {
+  some W where W == E + M + 1;
+  some L where L >= 0;
+} where 
+  E > 0,
+  M > 0
+{
+  assume E == 8;
+  assume M == 23;
+
+  let shift = 2;
+  a_shift := new Shift[32, shift]<'G>(X);
+  b_shift := new Shift[32, shift]<'G>(Y);
+  mult := new FSub[32, 8, 23]<'G+shift>(a_shift.out, b_shift.out);
+  mult_shift := new Shift[32, shift]<'G+shift>(mult.out);
+  R = mult_shift.out;
+  L := shift * 2;
+  W := 32;
+}
+
+
+/// Floating point multiplication with Flopoco's internal format
+comp FFTFPMult[E, M]<'G: 1>(
+  X: ['G, 'G+1] W,
+  Y: ['G, 'G+1] W,
+) -> (
+  R: ['G+L, 'G+L+1] W,
+) with {
+  some W where W == E + M + 1;
+  some L where L >= 0;
+} where 
+  E > 0,
+  M > 0
+{
+  assume E == 8;
+  assume M == 23;
+
+  let shift = 2;
+  a_shift := new Shift[32, shift]<'G>(X);
+  b_shift := new Shift[32, shift]<'G>(Y);
+  mult := new FMult[32, 8, 23]<'G+shift>(a_shift.out, b_shift.out);
+  mult_shift := new Shift[32, shift]<'G+shift>(mult.out);
+  R = mult_shift.out;
+
+  L := shift * 2;
+  W := 32;
+}
+
+/// Converts an IEEE floating point number to Flopoco internal format
+comp FFTInputIEEE[E, M]<'G:1>(
+  X: ['G, 'G+1] WidthIEEE
+) -> (
+  R: ['G+L, 'G+L+1] W
+) with {
+  let WidthIEEE = E + M + 1;
+  some W where W == E + M + 1;
+  some L where L == 0;
+} where 
+  E > 0,
+  M > 0
+{
+  assume E == 8;
+  assume M == 23;
+  L := 0;
+  W := 32;
+  R = X;
+}
+
+/// Converts a Flopoco internal format floating point number to IEEE
+comp FFTOutputIEEE[E, M]<'G:1>(
+  X: ['G, 'G+1] W
+) -> (
+  R: ['G+L, 'G+L+1] WidthIEEE
+) with {
+  some W where W == E + M + 1;
+  let WidthIEEE = E + M + 1;
+  some L where L == 0;
+} where 
+  E > 0,
+  M > 0
+{
+  assume E == 8;
+  assume M == 23;
+  L := 0;
+  W := 32;
+  R = X;
+}
+
+/// Converts a Flopoco internal format floating point number to IEEE
+comp FFTFPNeg[E, M]<'G:1>(
+  X: ['G, 'G+1] W
+) -> (
+  R: ['G+L, 'G+L+1] W
+) with {
+  some W where W == E + M + 1;
+  some L where L == 0;
+} where 
+  E > 0,
+  M > 0
+{
+  assume E == 8;
+  assume M == 23;
+  L := 0;
+  W := 32;
+  fn := new FNeg[32, 8, 23]<'G>(X);
+  R = fn.out;
+}

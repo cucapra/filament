@@ -10,7 +10,7 @@ use std::{
 /// Completely parse all dependecies of a Filament program
 pub struct Resolver {
     // Location of the library
-    lib: PathBuf,
+    lib: Vec<PathBuf>,
     // Location of the base file
     input: PathBuf,
     // Files that have already been imported
@@ -19,8 +19,12 @@ pub struct Resolver {
 
 impl From<&cmdline::Opts> for Resolver {
     fn from(opts: &cmdline::Opts) -> Self {
+        let mut lib = opts.library.clone();
+        // Do this to resolve the issue mentioned in `cmdline.rs`
+        // where default values don't work with argh
+        lib.push(PathBuf::from("."));
         Self {
-            lib: opts.library.clone(),
+            lib,
             input: opts.input.clone(),
             already_imported: HashSet::new(),
         }
@@ -36,34 +40,44 @@ impl Resolver {
     ) -> FilamentResult<PathBuf> {
         // Resolve against the library path
         let mut lib_base = self.lib.clone();
-        lib_base.push(imp);
 
-        // Resove against base
-        let mut cur_base = dir.to_path_buf();
-        cur_base.push(imp);
-        if cur_base.exists() && lib_base.exists() {
-            let canon_base = fs::canonicalize(cur_base.clone()).unwrap();
-            let canon_lib_base = fs::canonicalize(lib_base.clone()).unwrap();
-            if canon_base != canon_lib_base {
+        // Append current directory to the library path
+        lib_base.push(dir.to_path_buf());
+
+        let (lib_resolved, lib_not_resolved): (Vec<_>, Vec<_>) = lib_base
+            .into_iter()
+            .map(|p| p.join(imp))
+            .partition(|p| p.exists());
+
+        if lib_resolved.len() > 1 {
+            // Canonicalize the paths to make sure the paths are the same
+            let lib_canon = lib_resolved
+                .iter()
+                .map(|p| fs::canonicalize(p).unwrap())
+                .collect::<HashSet<_>>();
+
+            if lib_canon.len() > 1 {
+                // There are multiple canonical paths
                 Err(Error::misc(format!(
-                "Refusing to resolve ambiguous import: {}. Conflicting candidates found:\n{}\n{}",
-                imp,
-                fs::canonicalize(lib_base).unwrap().display(),
-                fs::canonicalize(cur_base).unwrap().display(),
-            )))
+                    "Refusing to resolve ambiguous import: {}. Conflicting candidates found:\n{}",
+                    imp,
+                    lib_canon.iter().map(|p| p.display().to_string()).collect::<Vec<_>>().join("\n"),
+                )))
             } else {
-                Ok(cur_base)
+                // There is only one canonical path
+                Ok(lib_resolved[0].clone())
             }
-        } else if cur_base.exists() {
-            Ok(cur_base)
-        } else if lib_base.exists() {
-            Ok(lib_base)
+        } else if !lib_resolved.is_empty() {
+            Ok(lib_resolved[0].clone())
         } else {
             Err(Error::misc(format!(
-                "Could not resolve import path: {}. Neither {} nor {} exist.",
+                "Could not resolve import path: {}. Searched in the following locations:\n{}",
                 imp,
-                lib_base.display(),
-                cur_base.display()
+                lib_not_resolved
+                    .iter()
+                    .map(|p| p.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n"),
             )))
         }
     }

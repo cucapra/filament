@@ -62,8 +62,14 @@ pub struct Opts {
     pub show_models: bool,
 
     /// path to search for imports
-    #[argh(option, long = "library", short = 'l', default = "\".\".into()")]
-    pub library: PathBuf,
+    #[argh(
+        option,
+        long = "library",
+        short = 'l',
+        // default = "vec![\"./\".into()]"
+        // This is currently not supported by argh 0.1.12, but it has been fixed in the master branch...
+    )]
+    pub library: Vec<PathBuf>,
 
     /// only check the program without compilation.
     #[argh(switch, short = 'c', long = "check")]

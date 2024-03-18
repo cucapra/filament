@@ -4,9 +4,9 @@ import "butterfly.fil";
 import "primitives/state.fil";
 import "primitives/reshape.fil";
 
-/// Implements a combinational PEASE fft dataflow.
+/// Implements an iterative PEASE fft.
 /// Uses `N` butterflies
-comp PeaseFFT[NStages, N]<'G: L>(
+comp IterativePeaseFFT[NStages, N]<'G: L>(
   go: interface['G],
   in[NPoints][2]: ['G, 'G+1] W
 ) -> (
@@ -38,7 +38,7 @@ comp PeaseFFT[NStages, N]<'G: L>(
   // twiddle factor that stays alive for the whole computation
   twiddle := new TwiddleFactor[NPoints, latency]<'G>();
 
-  // contains all the twiddle stage data as an allways-alive constant matrix
+  // contains all the twiddle stage data as an always-alive constant matrix
   bundle twiddle_in[NStages][NPoints/2][2]: ['G, 'G + latency] W;
 
   for twiddle_i in 0..NStages {
@@ -96,7 +96,7 @@ comp PeaseFFT[NStages, N]<'G: L>(
 
       // store sync out
       sync_data_out{r_stage}{start..end}{0..2} = s2.out{0..2*N}{0..2};
-    } 
+    }
   }
 
   // --------------- STRIDE PERMUTATIONS ----------------

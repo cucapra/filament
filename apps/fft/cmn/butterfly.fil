@@ -1,0 +1,238 @@
+import "primitives/state.fil";
+
+// Performs the twiddle multiplication
+comp TwiddleMul[i, N, Width, E, ?M=W-E-1]<'G: 1>(
+  in[2]: ['G, 'G+1] Width
+) -> (
+  out[2]: ['G+L, 'G+L+1] W // output in abstract internal format format
+) with {
+  some W where W > 0;
+  some L where L >= 0;
+} where
+    Width == E + M + 1,
+    E > 1,
+    M > 1,
+    i >= 0,
+    N > i*2,
+    L >= 0
+{
+  // instantiations for latency access
+  FM := new AbstractFPMult[E, M];
+  FA := new AbstractFPAdd[E, M];
+  FS := new AbstractFPSub[E, M];
+  FN := new AbstractFPNeg[E, M];
+  II := new AbstractFPfromIEEE[E, M];
+
+  assume FM::W == FA::W;
+  assume FM::W == FS::W;
+  assume FM::W == FN::W;
+  assume FM::W == II::W;
+
+  W := FM::W;
+  
+  assume FA::L == FS::L; // we can assume this because we know the internal implementation of FPSub
+  // convert to abstract internal format format
+  in10 := new AbstractFPfromIEEE[E, M]<'G>(in{0});
+  in11 := new AbstractFPfromIEEE[E, M]<'G>(in{1});
+
+  if (i*4) % N == 0 {
+    if i == 0 { // twiddle = 1
+      out{0} = in10.R;
+      out{1} = in11.R;
+    } else {
+      if i * 4 == N { // twiddle = ii
+        // (a + bi) * -i = b - ai
+        // negate a
+        neg0 := new AbstractFPNeg[E, M]<'G>(in10.R);
+        out{0} = in11.R;
+        out{1} = neg0.R;
+      } else {
+        // these cases shouldn't happen
+        assert 1 == 0;
+      }
+    }
+    L := 0;
+  } else {
+    // need a multiplier here
+
+    bundle twiddle[2]: ['G, 'G+1] Width;
+    twiddle0_const := new SignedConst[Width, cos_bits(i, N)]<'G>();
+    twiddle1_const := new SignedConst[Width, sin_bits(i+N/2, N)]<'G>();
+
+    twiddle{0} = twiddle0_const.out;
+    twiddle{1} = twiddle1_const.out;
+
+    twiddle0 := new AbstractFPfromIEEE[E, M]<'G>(twiddle{0});
+    twiddle1 := new AbstractFPfromIEEE[E, M]<'G>(twiddle{1});
+
+    // Perform w * in1
+    ac := new AbstractFPMult[E, M]<'G>(in10.R, twiddle0.R); // ac
+    bd := new AbstractFPMult[E, M]<'G>(in11.R, twiddle1.R); // bd
+    re := new AbstractFPSub[E, M]<'G+FM::L>(ac.R, bd.R); // ac - bd
+
+    ad := new AbstractFPMult[E, M]<'G>(in10.R, twiddle1.R); // ad
+    bc := new AbstractFPMult[E, M]<'G>(in11.R, twiddle0.R); // bc
+    im := new AbstractFPAdd[E, M]<'G+FM::L>(ad.R, bc.R); // ad + bc
+
+    out{0} = re.R;
+    out{1} = im.R;
+
+    L := FM::L + FA::L;
+  }
+}
+
+/// Complex add sub module
+comp ComplexAddSub[Width, E, ?M=W-E-1]<'G: 1>(
+  in0[2]: ['G, 'G+1] Width, // real and imaginary parts of input (abstract internal format format)
+  in1[2]: ['G, 'G+1] W
+) -> (
+  out0[2]: ['G+L, 'G+L+1] Width,
+  out1[2]: ['G+L, 'G+L+1] Width
+) with {
+  some W where W > 0;
+  some L where L > 0;
+} where
+    Width == E + M + 1,
+    E > 1,
+    M > 1,
+    L > 0
+{
+  // instantiations for latency access
+  FA := new AbstractFPAdd[E, M];
+  FS := new AbstractFPSub[E, M];
+  OI := new AbstractFPtoIEEE[E, M];
+  II := new AbstractFPfromIEEE[E, M];
+
+  assume FA::W == FS::W;
+  assume FA::W == OI::W;
+  assume FA::W == II::W;
+
+  W := FA::W;
+
+  in00 := new AbstractFPfromIEEE[E, M]<'G>(in0{0});
+  in01 := new AbstractFPfromIEEE[E, M]<'G>(in0{1});
+  
+  assume FA::L == FS::L; // we can assume this because we know the internal implementation of FPSub
+
+  // in0 + (w * in1)
+  out00 := new AbstractFPAdd[E, M]<'G>(in00.R, in1{0}); // re
+  out01 := new AbstractFPAdd[E, M]<'G>(in01.R, in1{1}); // im
+  
+  // in0 - (w * in1)
+  out10 := new AbstractFPSub[E, M]<'G>(in00.R, in1{0}); // re
+  out11 := new AbstractFPSub[E, M]<'G>(in01.R, in1{1}); // im
+
+  // convert back to IEEE
+  out00_IEEE := new AbstractFPtoIEEE[E, M]<'G+FA::L>(out00.R);
+  out01_IEEE := new AbstractFPtoIEEE[E, M]<'G+FA::L>(out01.R);
+  out10_IEEE := new AbstractFPtoIEEE[E, M]<'G+FA::L>(out10.R);
+  out11_IEEE := new AbstractFPtoIEEE[E, M]<'G+FA::L>(out11.R);
+
+  out0{0} = out00_IEEE.R;
+  out0{1} = out01_IEEE.R;
+  out1{0} = out10_IEEE.R;
+  out1{1} = out11_IEEE.R;
+
+  L := FA::L;
+}
+
+/// Butterfly module using existential parameters.
+comp Butterfly[W, E, ?M=W-E-1]<'G: II>(
+  go: interface['G],
+  in0[2]: ['G, 'G+II] W, // real and imaginary parts of input
+  in1[2]: ['G, 'G+II] W,
+  twiddle[2]: ['G, 'G+II] W // twiddle factor
+) -> (
+  out0[2]: ['G+L, 'G+L+1] W,
+  out1[2]: ['G+L, 'G+L+1] W
+) with {
+  some II where II > 0;
+  some L where L >= II;
+} where
+    W == E + M + 1,
+    E > 1,
+    M > 1,
+    L >= II,
+    II > 0
+{
+  // Butterfly unit using abstract modules
+  FM1 := new AbstractFPMult[E, M];
+  FM2 := new AbstractFPMult[E, M];
+
+  assert FM1::L == FM2::L;
+
+  FA1 := new AbstractFPAdd[E, M];
+  FA2 := new AbstractFPAdd[E, M];
+  FS2 := new AbstractFPSub[E, M];
+
+  assert FA1::L == FA2::L;
+  assume FA2::L == FS2::L; // we can assume this because we know the internal implementation of FPSub
+
+  // Assume the widths of all the abstract modules are the same
+  assume FM1::W == FA1::W;
+  assume FM1::W == FS2::W;
+  assume FM1::W == InpIEEE1::W;
+  OupIEEE := new AbstractFPtoIEEE[E, M];
+  FPNeg := new AbstractFPNeg[E, M];
+  assume FM1::W == OupIEEE::W;
+  assume FM1::W == FPNeg::W;
+
+  // delay first input
+  in00_delay := new Shift[W, FM1::L+FA1::L]<'G>(in0{0});
+  in01_delay := new Shift[W, FM1::L+FA1::L+1]<'G>(in0{1});
+
+  // convert inputs to abstract internal format
+  InpIEEE1 := new AbstractFPfromIEEE[E, M];
+  InpIEEE2 := new AbstractFPfromIEEE[E, M];
+  InpIEEE3 := new AbstractFPfromIEEE[E, M];
+  in00 := InpIEEE1<'G+FM1::L+FA1::L>(in00_delay.out);
+  in01 := InpIEEE1<'G+FM1::L+FA1::L+1>(in01_delay.out);
+  in10 := InpIEEE2<'G>(in1{0});
+  in11 := InpIEEE3<'G>(in1{1});
+  in10_d := InpIEEE2<'G+1>(in1{0});
+  in11_d := InpIEEE3<'G+1>(in1{1});
+
+  // convert twiddle to abstract internal format
+  InpIEEE4 := new AbstractFPfromIEEE[E, M];
+  InpIEEE5 := new AbstractFPfromIEEE[E, M];
+  twiddle0 := InpIEEE4<'G>(twiddle{0});
+  twiddle1 := InpIEEE5<'G>(twiddle{1});
+  twiddle0_d := InpIEEE4<'G+1>(twiddle{0});
+  twiddle1_d := InpIEEE5<'G+1>(twiddle{1});
+
+  // Perform w * in1
+  ac := FM1<'G>(in10.R, twiddle0.R); // ac
+  bd := FM2<'G>(in11.R, twiddle1.R); // bd
+
+  // perform the subtraction manually here so we can reuse the first adder
+  bd_neg := new AbstractFPNeg[E, M]<'G+FM1::L>(bd.R);
+  re := FA1<'G+FM1::L>(ac.R, bd_neg.R); // ac - bd
+
+  ad := FM1<'G+1>(in10_d.R, twiddle1_d.R); // ad
+  bc := FM2<'G+1>(in11_d.R, twiddle0_d.R); // bc
+  im := FA1<'G+FM1::L+1>(ad.R, bc.R); // ad + bc
+
+  // in0 + (w * in1)
+  out00 := FA2<'G+FM1::L+FA1::L>(in00.R, re.R); // re
+  out01 := FA2<'G+FM1::L+FA1::L+1>(in01.R, im.R); // im
+
+  // in0 - (w * in1)
+  out10 := FS2<'G+FM1::L+FA1::L>(in00.R, re.R); // re
+  out11 := FS2<'G+FM1::L+FA1::L+1>(in01.R, im.R); // im
+
+  out00_IEEE := new AbstractFPtoIEEE[E, M]<'G+FM1::L+FA1::L*2>(out00.R);
+  out01_IEEE := new AbstractFPtoIEEE[E, M]<'G+FM1::L+FA1::L*2+1>(out01.R);
+  out10_IEEE := new AbstractFPtoIEEE[E, M]<'G+FM1::L+FA1::L*2>(out10.R);
+  out11_IEEE := new AbstractFPtoIEEE[E, M]<'G+FM1::L+FA1::L*2+1>(out11.R);
+
+  out00_delay := new Delay[W]<'G+FM1::L+FA1::L*2>(out00_IEEE.R); // delay by one cycle
+  out10_delay := new Delay[W]<'G+FM1::L+FA1::L*2>(out10_IEEE.R); // delay by one cycle
+
+  out0{0} = out00_delay.out;
+  out0{1} = out01_IEEE.R;
+  out1{0} = out10_delay.out;
+  out1{1} = out11_IEEE.R;
+
+  L := 2*FA1::L+FM1::L+1;
+  II := 2;
+}
