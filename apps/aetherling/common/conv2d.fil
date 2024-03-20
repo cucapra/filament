@@ -1,0 +1,53 @@
+import "primitives/core.fil";
+
+extern "mul.sv" {
+    comp BlackBoxMulUInt8<'G: 1>(
+        clk: 1,
+        I0: ['G, 'G+1] 8,
+        I1: ['G, 'G+1] 8,
+    ) -> (
+        O: ['G+3, 'G+4] 16,
+    );
+}
+
+// Performs a 2d convolution on a 3x3 window of elements with the filter:
+// 1 2 1
+// 2 4 2
+// 1 2 1
+comp Conv<'G: 1>(
+    in[9]: ['G, 'G+1] 8,
+) -> (
+    out: ['G+3,'G+4] 8,
+) {
+    one := new Const[8, 1]<'G>();
+    two := new Const[8, 2]<'G>();
+    four := new Const[8, 4]<'G>();
+
+    // Multiply by the filter
+    m1 := new BlackBoxMulUInt8<'G>(in{0}, one.out);
+    m2 := new BlackBoxMulUInt8<'G>(in{1}, two.out);
+    m3 := new BlackBoxMulUInt8<'G>(in{2}, one.out);
+    m4 := new BlackBoxMulUInt8<'G>(in{3}, two.out);
+    m5 := new BlackBoxMulUInt8<'G>(in{4}, four.out);
+    m6 := new BlackBoxMulUInt8<'G>(in{5}, two.out);
+    m7 := new BlackBoxMulUInt8<'G>(in{6}, one.out);
+    m8 := new BlackBoxMulUInt8<'G>(in{7}, two.out);
+    m9 := new BlackBoxMulUInt8<'G>(in{8}, one.out);
+
+    // Add the results
+    a1 := new Add[16]<'G+3>(m9.O, m8.O);
+    a2 := new Add[16]<'G+3>(m7.O, m6.O);
+    a3 := new Add[16]<'G+3>(m5.O, m4.O);
+    a4 := new Add[16]<'G+3>(m3.O, m2.O);
+    a5 := new Add[16]<'G+3>(a1.out, a2.out);
+    a6 := new Add[16]<'G+3>(a3.out, a4.out);
+    a7 := new Add[16]<'G+3>(a5.out, a6.out);
+    a8 := new Add[16]<'G+3>(a7.out, m1.O);
+
+    // Divide by 16
+    four_16 := new Const[16, 4]<'G+3>();
+    d := new ShiftRight[16]<'G+3>(a8.out, four_16.out);
+    slice := new Slice[16, 7, 0, 8]<'G+3>(d.out);
+
+    out = slice.out;
+}

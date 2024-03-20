@@ -1,0 +1,43 @@
+import "primitives/state.fil";
+
+// A 3x3 stencil over a 4x4 matrix. N specifies the number of new inputs
+// provided every cycles. This also determines the number of "views" on the
+// matrix provided by the component.
+comp Stencil[W]<'G:1>(
+    in[S]: ['G, 'G+1] W
+) -> (
+    out[S][3][3]: ['G, 'G+1] W
+) with {
+    // Number of stencils we're generating
+    let S = 2;
+} {
+    bundle regs_outs[16]: ['G, 'G+1] W;
+    bundle regs_ins[16]: ['G, 'G+1] W;
+
+    // Set up the registers
+    for i in 0..16 {
+        p := new ContPrev[W, 1]<'G>(regs_ins{i});
+        regs_outs{i} = p.prev;
+    }
+
+    // Set up the inputs to the register
+    // The i'th register gets its value from i+2 register.
+    for i in 0..16 {
+        if i+S < 16 {
+            regs_ins{i} = regs_outs{i+S};
+        } else {
+            regs_ins{i} = in{i-(16-S)};
+        }
+    }
+
+    // Compute both the output stencils
+    for k in 0..S {
+        for i in 0..3 {
+            for j in 0..3 {
+                // The i+1 is to skip the first row of the matrix. This probably isn't the right things
+                // for generalized k's
+                out{k}{i}{j} = regs_outs{(i+1)*4+j+k};
+            }
+        }
+    }
+}
