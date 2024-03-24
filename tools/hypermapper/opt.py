@@ -6,6 +6,8 @@ from os import path
 import logging as log
 from tempfile import TemporaryDirectory
 import os
+from utils import dl_to_ld
+from multiprocessing import Pool
 
 
 # Interface
@@ -126,19 +128,42 @@ create_clock -period {clock_period:.2f} -name clk [get_ports clk]
     return resources
 
 
-def compile_and_synth(filamentfile: str, params: dict[str, dict[str, str]]):
+def compile_and_synth(
+    filamentfile: str, clock_period: int, params: dict[str, dict[str, str]]
+):
     tmpdir = TemporaryDirectory()
     latency = compile(tmpdir, filamentfile, params)
-    resources = synth(path.join(tmpdir.name, "fft.sv"))
+    resources = synth(path.join(tmpdir.name, "fft.sv"), clock_period)
     return {**latency, **resources}
+
+
+def compile_flopoco_fft(target_frequency: int, clock_period: int):
+    print(
+        f"Synthesizing with target frequency {target_frequency} and clock period {clock_period}"
+    )
+    return compile_and_synth(
+        path.join(path.dirname(__file__), "flopocofft.fil"),
+        clock_period,
+        {"flopoco": {"conf": f"frequency={target_frequency} target=Virtex6"}},
+    )
+
+
+def compile_and_synth_parallel(args):
+    args = list(zip(args["target_freq"], args["clock_period"]))
+    with Pool() as p:
+        ret = p.starmap(compile_flopoco_fft, args)
+    ret = dl_to_ld(ret)
+    return ret
 
 
 if __name__ == "__main__":
     root = os.path.dirname(__file__)
     tmpdir = TemporaryDirectory()
     print(
-        compile_and_synth(
-            path.join(root, "flopocofft.fil"),
-            {"flopoco": {"conf": "frequency=800 target=Virtex6"}},
+        compile_and_synth_parallel(
+            {
+                "target_freq": [100, 200, 300, 400, 500],
+                "clock_period": [20, 15, 10, 8, 7],
+            }
         )
     )

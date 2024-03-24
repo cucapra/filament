@@ -1,5 +1,5 @@
 {
-  "design": "apps/fft/versions/flopoco/fft.fil",
+  "design": "tools/hypermapper/flopocofft.fil",
   "optimization_iterations": 30,
   "evaluations_per_optimization_iteration": 10,
   "input_parameters": {
