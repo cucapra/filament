@@ -34,7 +34,7 @@ def gen_interface(tmpdir: TemporaryDirectory, filamentfile: str, gen_config: str
     with open(out) as f:
         ret = json.load(f)
     ret = ret["interfaces"][0]
-    return (ret["states"], ret["delay"])
+    return {"latency": ret["states"], "ii": ret["delay"]}
 
 
 # Generates verilog
@@ -52,6 +52,8 @@ def compile(
         conf_file.write(f"[globals.{k}]\n")
         for subkey, value in v.items():
             conf_file.write(f'{subkey} = "{value}"\n')
+
+    conf_file.flush()
 
     latency = gen_interface(tmpdir, filamentfile, conf_file.name)
 
@@ -124,13 +126,19 @@ create_clock -period {clock_period:.2f} -name clk [get_ports clk]
     return resources
 
 
+def compile_and_synth(filamentfile: str, params: dict[str, dict[str, str]]):
+    tmpdir = TemporaryDirectory()
+    latency = compile(tmpdir, filamentfile, params)
+    resources = synth(path.join(tmpdir.name, "fft.sv"))
+    return {**latency, **resources}
+
+
 if __name__ == "__main__":
     root = os.path.dirname(__file__)
     tmpdir = TemporaryDirectory()
     print(
-        compile(
-            tmpdir,
+        compile_and_synth(
             path.join(root, "flopocofft.fil"),
-            {"flopoco": {"conf": "target=Virtex6 frequency=800"}},
+            {"flopoco": {"conf": "frequency=800 target=Virtex6"}},
         )
     )
