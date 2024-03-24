@@ -9,10 +9,11 @@ comp Conv2dWrapper<'G:1>(
 ) with {
     some N where N > 0, N <= 16, 16 % N == 0;
     some L where L > 0;
+    let S = 8;
 } {
-    pc := new ParConv[2]<'G>(I{0..2});
-    O{0..2} = pc.O{0..2};
+    pc := new ParConv[S]<'G>(I{0..S});
+    O{0..S} = pc.O{0..S};
 
     L := 6;
-    N := 2;
+    N := S;
 }

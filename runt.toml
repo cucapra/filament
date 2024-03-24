@@ -74,8 +74,17 @@ fud e -s cocotb.data "$dir/data.json" \
 
 # Aetherling evaluation
 [[tests]]
-name = "aetherling parameteric"
+name = "conv2d aetherling"
 paths = ["apps/aetherling/**/shim.fil"]
+cmd = """
+fud e -s cocotb.data "apps/aetherling/data.json" --to cocotb-out {} -q |\
+      jq '[ .O_10, .O_11, .O_12, .O_13, .O_14, .O_15 ] | map(.["0"]) | flatten'
+"""
+expect_dir = "apps/aetherling/"
+
+[[tests]]
+name = "conv2d filament"
+paths = ["apps/aetherling/**/filament.fil"]
 cmd = """
 fud e -s cocotb.data "apps/aetherling/data.json" --to cocotb-out {} -q |\
       jq '[ .O_10, .O_11, .O_12, .O_13, .O_14, .O_15 ] | map(.["0"]) | flatten'

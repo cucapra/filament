@@ -1,13 +1,15 @@
 import "primitives/core.fil";
+import "blackbox_mul.fil";
 
-extern "mul.sv" {
-    comp BlackBoxMulUInt8<'G: 1>(
-        clk: 1,
-        I0: ['G, 'G+1] 8,
-        I1: ['G, 'G+1] 8,
-    ) -> (
-        O: ['G+3, 'G+4] 16,
-    );
+comp MultSliced<'G:1>(
+    left: ['G, 'G+1] 8,
+    right: ['G, 'G+1] 8,
+) -> (
+    O: ['G+3, 'G+4] 8
+) {
+    mul := new BlackBoxMulUInt8<'G>(left, right);
+    slice := new Slice[16, 7, 0, 8]<'G+3>(mul.O);
+    O = slice.out;
 }
 
 // Performs a 2d convolution on a 3x3 window of elements with the filter:
@@ -17,37 +19,64 @@ extern "mul.sv" {
 comp Conv<'G: 1>(
     in[9]: ['G, 'G+1] 8,
 ) -> (
-    out: ['G+3,'G+4] 8,
+    out: ['G+6,'G+7] 8,
 ) {
     one := new Const[8, 1]<'G>();
     two := new Const[8, 2]<'G>();
     four := new Const[8, 4]<'G>();
 
     // Multiply by the filter
-    m1 := new BlackBoxMulUInt8<'G>(in{0}, one.out);
-    m2 := new BlackBoxMulUInt8<'G>(in{1}, two.out);
-    m3 := new BlackBoxMulUInt8<'G>(in{2}, one.out);
-    m4 := new BlackBoxMulUInt8<'G>(in{3}, two.out);
-    m5 := new BlackBoxMulUInt8<'G>(in{4}, four.out);
-    m6 := new BlackBoxMulUInt8<'G>(in{5}, two.out);
-    m7 := new BlackBoxMulUInt8<'G>(in{6}, one.out);
-    m8 := new BlackBoxMulUInt8<'G>(in{7}, two.out);
-    m9 := new BlackBoxMulUInt8<'G>(in{8}, one.out);
+    m1 := new MultSliced<'G>(in{0}, one.out);
+    m2 := new MultSliced<'G>(in{1}, two.out);
+    m3 := new MultSliced<'G>(in{2}, one.out);
+    m4 := new MultSliced<'G>(in{3}, two.out);
+    m5 := new MultSliced<'G>(in{4}, four.out);
+    m6 := new MultSliced<'G>(in{5}, two.out);
+    m7 := new MultSliced<'G>(in{6}, one.out);
+    m8 := new MultSliced<'G>(in{7}, two.out);
+    m9 := new MultSliced<'G>(in{8}, one.out);
 
     // Add the results
-    a1 := new Add[16]<'G+3>(m9.O, m8.O);
-    a2 := new Add[16]<'G+3>(m7.O, m6.O);
-    a3 := new Add[16]<'G+3>(m5.O, m4.O);
-    a4 := new Add[16]<'G+3>(m3.O, m2.O);
-    a5 := new Add[16]<'G+3>(a1.out, a2.out);
-    a6 := new Add[16]<'G+3>(a3.out, a4.out);
-    a7 := new Add[16]<'G+3>(a5.out, a6.out);
-    a8 := new Add[16]<'G+3>(a7.out, m1.O);
+    a1 := new Add[8]<'G+3>(m9.O, m8.O);
+    a2 := new Add[8]<'G+3>(m7.O, m6.O);
+    a3 := new Add[8]<'G+3>(m5.O, m4.O);
+    a4 := new Add[8]<'G+3>(m3.O, m2.O);
+
+    d1 := new Delay[8]<'G+3>(a1.out);
+    d2 := new Delay[8]<'G+3>(a2.out);
+    d3 := new Delay[8]<'G+3>(a3.out);
+    d4 := new Delay[8]<'G+3>(a4.out);
+
+    a5 := new Add[8]<'G+4>(d1.out, d2.out);
+    a6 := new Add[8]<'G+4>(d3.out, d4.out);
+    d5 := new Delay[8]<'G+4>(a5.out);
+    d6 := new Delay[8]<'G+4>(a6.out);
+
+    a7 := new Add[8]<'G+5>(d5.out, d6.out);
+
+    md0 := new Delay[8]<'G+3>(m1.O);
+    md1 := new Delay[8]<'G+4>(md0.out);
+    a8 := new Add[8]<'G+5>(a7.out, md1.out);
+    d8 := new Delay[8]<'G+5>(a8.out);
 
     // Divide by 16
-    four_16 := new Const[16, 4]<'G+3>();
-    d := new ShiftRight[16]<'G+3>(a8.out, four_16.out);
-    slice := new Slice[16, 7, 0, 8]<'G+3>(d.out);
+    four_16 := new Const[8, 4]<'G+6>();
+    d := new ShiftRight[8]<'G+6>(d8.out, four_16.out);
 
-    out = slice.out;
+    out = d.out;
+}
+
+/// Performs N parallel convolutions given N new inputs every clock cycle.
+comp ParConv[N]<'G:1>(
+    I[N]: ['G, 'G+1] 8
+) -> (
+    O[N]: ['G+L, 'G+L+1] 8
+) with {
+    let L = 6;
+} {
+    s := new Stencil[8, N]<'G>(I{0..N});
+    for i in 0..N {
+        conv := new Conv<'G>(s.out{i}{0..3}{0..3});
+        O{i} = conv.out;
+    }
 }

@@ -1,0 +1,9 @@
+extern "mul.sv" {
+    comp BlackBoxMulUInt8<'G: 1>(
+        clk: 1,
+        I0: ['G, 'G+1] 8,
+        I1: ['G, 'G+1] 8,
+    ) -> (
+        O: ['G+3, 'G+4] 16,
+    );
+}
