@@ -1,0 +1,21 @@
+{
+  "design": "apps/fft/versions/flopoco/fft.fil",
+  "optimization_iterations": 30,
+  "evaluations_per_optimization_iteration": 10,
+  "input_parameters": {
+    "target_frequency": {
+      "type": "integer",
+      "values": [
+        50,
+        1000
+      ]
+    },
+    "clock_period": {
+      "type": "integer",
+      "values": [
+        1,
+        100
+      ]
+    }
+  }
+}

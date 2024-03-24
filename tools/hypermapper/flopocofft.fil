@@ -1,0 +1,22 @@
+import "apps/fft/versions/flopoco/fft.fil";
+
+comp main<'G: II>(
+  go: interface['G],
+  in: ['G, 'G+1] NPoints*2*32 // 16 complex numbers bundled together
+) -> (
+  out: ['G+L, 'G+L+1] NPoints*2*32, // output from pipelined pease fft with 1 butterfly
+) with {
+  let NStages = 4;
+  let NPoints = pow2(NStages);
+  some II where II > 0;
+  some L where L >= II;
+} where
+  II > 0
+{
+  FP_Stream := new BundledFFT[4, 1, 0];
+  fp_stream := FP_Stream<'G>(in);
+  out = fp_stream.out;
+
+  L := FP_Stream::L;
+  II := FP_Stream::II;
+}
