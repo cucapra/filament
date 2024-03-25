@@ -118,13 +118,13 @@ create_clock -period {clock_period:.2f} -name clk [get_ports clk]
     with open(path.join(tmpdir.name, "resources.json")) as f:
         resources = json.load(f)
 
-    print(resources)
     tmpdir.cleanup()
     # Loop through resources and set -1 values to infinity
     # This is to make failing designs bad
     for k, v in resources.items():
         if v == -1:
             resources[k] = float("inf")
+    print(resources)
     return resources
 
 
@@ -149,21 +149,35 @@ def compile_flopoco_fft(target_frequency: int, clock_period: int):
 
 
 def compile_and_synth_parallel(args):
-    args = list(zip(args["target_freq"], args["clock_period"]))
-    with Pool() as p:
+    args = list(zip(args["target_frequency"], args["clock_period"]))
+    with Pool(10) as p:
         ret = p.starmap(compile_flopoco_fft, args)
     ret = dl_to_ld(ret)
+    print(ret)
     return ret
 
 
 if __name__ == "__main__":
     root = os.path.dirname(__file__)
     tmpdir = TemporaryDirectory()
-    print(
-        compile_and_synth_parallel(
-            {
-                "target_freq": [100, 200, 300, 400, 500],
-                "clock_period": [20, 15, 10, 8, 7],
-            }
-        )
+
+    scenario = {
+        "application_name": "flopocofft",
+        "optimization_objectives": ["latency", "period", "lut", "registers"],
+        "resume_optimization": True,
+        "resume_optimization_data": "flopocofft_output_samples.csv",
+        "optimization_iterations": 10,
+        "evaluations_per_optimization_iteration": 10,
+        "input_parameters": {
+            "target_frequency": {"parameter_type": "integer", "values": [50, 1000]},
+            "clock_period": {"parameter_type": "integer", "values": [1, 100]},
+        },
+    }
+    with open(path.join(tmpdir.name, "scenario.json"), "w") as f:
+        json.dump(scenario, f)
+
+    optimizer.optimize(
+        path.join(tmpdir.name, "scenario.json"), compile_and_synth_parallel
     )
+
+    tmpdir.cleanup()

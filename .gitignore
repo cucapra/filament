@@ -30,3 +30,7 @@ evaluation/iterative-divider/data.json
 
 # Prevents editing vscode extensions further
 /.vscode/settings.json
+
+# Ignore hypermapper output files
+*_output_samples.csv
+hypermapper_logfile.log
