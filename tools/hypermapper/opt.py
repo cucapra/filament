@@ -1,5 +1,8 @@
 import json
+import shutil
+from argparse import ArgumentParser
 from hypermapper import optimizer
+import hypermapper
 import math
 import subprocess
 from os import path
@@ -73,6 +76,7 @@ def compile(
             filamentfile,
             "-o",
             path.join(tmpdir.name, "fft.sv"),
+            "--quiet",
         ]
     )
 
@@ -111,6 +115,7 @@ create_clock -period {clock_period:.2f} -name clk [get_ports clk]
             verilog_file,
             "-o",
             path.join(tmpdir.name, "resources.json"),
+            "--quiet",
         ]
     )
 
@@ -119,11 +124,11 @@ create_clock -period {clock_period:.2f} -name clk [get_ports clk]
         resources = json.load(f)
 
     tmpdir.cleanup()
-    # Loop through resources and set -1 values to infinity
+    # Loop through resources and set -1 values to a very large number
     # This is to make failing designs bad
-    for k, v in resources.items():
-        if v == -1 or resources["meet_timing"] == 0:
-            resources[k] = float("inf")
+    # for k, v in resources.items():
+    #     if v == -1 or resources["meet_timing"] == 0:
+    #         resources[k] = 1e12
     print(resources)
     return resources
 
@@ -161,6 +166,11 @@ if __name__ == "__main__":
     root = os.path.dirname(__file__)
     tmpdir = TemporaryDirectory()
 
+    parser = ArgumentParser()
+    parser.add_argument("--graphs-only", action="store_true")
+
+    args = parser.parse_args()
+
     scenario = {
         "application_name": "flopocofft",
         "optimization_objectives": ["latency", "period", "lut", "registers"],
@@ -168,7 +178,12 @@ if __name__ == "__main__":
         "evaluations_per_optimization_iteration": 10,
         "input_parameters": {
             "target_frequency": {"parameter_type": "integer", "values": [50, 950]},
-            "clock_period": {"parameter_type": "integer", "values": [1, 100]},
+            "clock_period": {"parameter_type": "integer", "values": [1, 20]},
+        },
+        "feasible_output": {
+            "name": "meet_timing",
+            "true_value": 1,
+            "false_value": 0,
         },
     }
     if os.path.exists("flopocofft_output_samples.csv"):
@@ -181,8 +196,47 @@ if __name__ == "__main__":
     with open(path.join(tmpdir.name, "scenario.json"), "w") as f:
         json.dump(scenario, f)
 
-    optimizer.optimize(
-        path.join(tmpdir.name, "scenario.json"), compile_and_synth_parallel
+    if not args.graphs_only:
+        optimizer.optimize(
+            path.join(tmpdir.name, "scenario.json"), compile_and_synth_parallel
+        )
+
+    # Generate the graphs
+    # Make results directory
+    resdir = path.join(root, "results")
+    os.makedirs(resdir, exist_ok=True)
+
+    # Copy csv file to results directory
+    shutil.copyfile(
+        "flopocofft_output_samples.csv",
+        path.join(resdir, "flopocofft_output_samples.csv"),
+    )
+
+    # Also copy to tmpdir for plotting
+    shutil.copyfile(
+        "flopocofft_output_samples.csv",
+        path.join(tmpdir.name, "flopocofft_output_samples.csv"),
+    )
+
+    hypermapper.plot_optimization_results.plot_regret(
+        path.join(tmpdir.name, "scenario.json"), [tmpdir.name], out_dir=resdir
+    )
+
+    hypermapper.compute_pareto.compute(
+        path.join(tmpdir.name, "scenario.json"),
+        path.join(resdir, "flopocofft_output_samples.csv"),
+        path.join(resdir, "pareto.csv"),
+    )
+
+    hypermapper.plot_pareto.plot(
+        path.join(tmpdir.name, "scenario.json"),
+        [
+            (
+                path.join(resdir, "pareto.csv"),
+                path.join(resdir, "flopocofft_output_samples.csv"),
+            )
+        ],
+        path.join(resdir, "pareto.pdf"),
     )
 
     tmpdir.cleanup()
