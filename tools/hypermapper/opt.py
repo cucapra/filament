@@ -122,7 +122,7 @@ create_clock -period {clock_period:.2f} -name clk [get_ports clk]
     # Loop through resources and set -1 values to infinity
     # This is to make failing designs bad
     for k, v in resources.items():
-        if v == -1:
+        if v == -1 or resources["meet_timing"] == 0:
             resources[k] = float("inf")
     print(resources)
     return resources
@@ -164,15 +164,20 @@ if __name__ == "__main__":
     scenario = {
         "application_name": "flopocofft",
         "optimization_objectives": ["latency", "period", "lut", "registers"],
-        "resume_optimization": True,
-        "resume_optimization_data": "flopocofft_output_samples.csv",
         "optimization_iterations": 10,
         "evaluations_per_optimization_iteration": 10,
         "input_parameters": {
-            "target_frequency": {"parameter_type": "integer", "values": [50, 1000]},
+            "target_frequency": {"parameter_type": "integer", "values": [50, 950]},
             "clock_period": {"parameter_type": "integer", "values": [1, 100]},
         },
     }
+    if os.path.exists("flopocofft_output_samples.csv"):
+        scenario = {
+            **scenario,
+            "resume_optimization": True,
+            "resume_optimization_data": "flopocofft_output_samples.csv",
+        }
+
     with open(path.join(tmpdir.name, "scenario.json"), "w") as f:
         json.dump(scenario, f)
 
