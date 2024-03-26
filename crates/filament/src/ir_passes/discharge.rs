@@ -26,12 +26,6 @@ impl Default for SExprWrapper {
     }
 }
 
-impl From<easy_smt::SExpr> for SExprWrapper {
-    fn from(value: easy_smt::SExpr) -> Self {
-        Self::SExpr(value)
-    }
-}
-
 impl SExprWrapper {
     fn get(&self) -> easy_smt::SExpr {
         match self {
