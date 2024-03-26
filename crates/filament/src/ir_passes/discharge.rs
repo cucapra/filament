@@ -666,15 +666,11 @@ impl Visitor for Discharge {
         for (idx, prop) in data.comp.props().iter() {
             // Define assertion equating the proposition to its assignment
             let assign = self.prop_to_sexp(prop);
-            let sexp_res =
-                self.sol.define_const(Discharge::fmt_prop(idx), bs, assign);
-            match sexp_res {
-                Ok(_) => {
-                    self.prop_map
-                        .insert(idx, SExprWrapper::SExpr(sexp_res.unwrap()));
-                }
-                Err(_) => (),
-            };
+            if let Ok(sexp) =
+                self.sol.define_const(Discharge::fmt_prop(idx), bs, assign)
+            {
+                self.prop_map.insert(idx, SExprWrapper::SExpr(sexp));
+            }
         }
         // Pass does not need to traverse the control program.
         Action::Continue

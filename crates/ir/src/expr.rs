@@ -126,13 +126,10 @@ impl ExprIdx {
         ctx: &(impl Ctx<Expr> + Ctx<Prop>),
         props: &mut Vec<PropIdx>,
     ) {
-        match ctx.get(*self) {
-            Expr::If { cond, .. } => {
-                props.push(*cond);
-                let inner_props = cond.relevant_props(ctx);
-                props.extend(inner_props);
-            }
-            _ => (),
+        if let Expr::If { cond, .. } = ctx.get(*self) {
+            props.push(*cond);
+            let inner_props = cond.relevant_props(ctx);
+            props.extend(inner_props);
         }
     }
 
