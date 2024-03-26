@@ -13,6 +13,36 @@ use std::collections::HashMap;
 use std::{fs, iter};
 use term::termcolor::{ColorChoice, StandardStream};
 
+// We need this so we can implement Default for SExprs, allowing us to push to the prop_map out of order, when handling if-exprs
+#[derive(Clone, Copy)]
+enum SExprWrapper {
+    SExpr(easy_smt::SExpr),
+    SExprEmpty,
+}
+
+impl Default for SExprWrapper {
+    fn default() -> Self {
+        Self::SExprEmpty
+    }
+}
+
+impl From<easy_smt::SExpr> for SExprWrapper {
+    fn from(value: easy_smt::SExpr) -> Self {
+        Self::SExpr(value)
+    }
+}
+
+impl SExprWrapper {
+    fn get(&self) -> easy_smt::SExpr {
+        match self {
+            SExprWrapper::SExpr(s) => *s,
+            SExprWrapper::SExprEmpty => {
+                panic!("don't call this on empty SExprWrapper")
+            }
+        }
+    }
+}
+
 #[derive(Default)]
 struct Assign(Vec<(ir::ParamIdx, String)>);
 
@@ -57,7 +87,7 @@ pub struct Discharge {
     expr_map: ir::DenseIndexInfo<ir::Expr, smt::SExpr>,
     time_map: ir::DenseIndexInfo<ir::Time, smt::SExpr>,
     // Propositions
-    prop_map: ir::DenseIndexInfo<ir::Prop, smt::SExpr>,
+    prop_map: ir::DenseIndexInfo<ir::Prop, SExprWrapper>,
     // Propositions that have already been checked
     checked: HashMap<ir::PropIdx, Option<Assign>>,
 
@@ -393,7 +423,7 @@ impl Discharge {
         if !self.checked.contains_key(&prop) {
             let actlit = self.new_act_lit();
             let sexp = self.prop_map[prop];
-            let imp = self.sol.imp(actlit, self.sol.not(sexp));
+            let imp = self.sol.imp(actlit, self.sol.not(sexp.get()));
             self.sol.assert(imp).unwrap();
             // Disable the activation literal
             log::debug!("Checking {}", ctx.display(prop.consequent(ctx)));
@@ -485,7 +515,7 @@ impl Discharge {
                 let then = self.expr_map[*then];
                 let alt = self.expr_map[*alt];
                 let cond = self.prop_map[*cond];
-                self.sol.list(vec![then, alt, cond])
+                self.sol.ite(cond.get(), then, alt)
             }
         }
     }
@@ -529,20 +559,20 @@ impl Discharge {
                     }
                 })
             }
-            ir::Prop::Not(p) => sol.not(self.prop_map[*p]),
+            ir::Prop::Not(p) => sol.not(self.prop_map[*p].get()),
             ir::Prop::And(l, r) => {
-                let l = self.prop_map[*l];
-                let r = self.prop_map[*r];
+                let l = self.prop_map[*l].get();
+                let r = self.prop_map[*r].get();
                 sol.and(l, r)
             }
             ir::Prop::Or(l, r) => {
-                let l = self.prop_map[*l];
-                let r = self.prop_map[*r];
+                let l = self.prop_map[*l].get();
+                let r = self.prop_map[*r].get();
                 sol.or(l, r)
             }
             ir::Prop::Implies(l, r) => {
-                let l = self.prop_map[*l];
-                let r = self.prop_map[*r];
+                let l = self.prop_map[*l].get();
+                let r = self.prop_map[*r].get();
                 sol.imp(l, r)
             }
         }
@@ -583,8 +613,24 @@ impl Visitor for Discharge {
             self.ev_map.push(idx, sexp);
         }
 
+        let bs = self.sol.bool_sort();
         // Declare all expressions
         for (idx, expr) in data.comp.exprs().iter() {
+            // do props inside of exprs ahead of time
+            let relevant_props = idx
+                .relevant_props(&data.comp)
+                .into_iter()
+                .map(|i| (i, data.comp.get(i)));
+
+            for (pidx, prop) in relevant_props {
+                let assign = self.prop_to_sexp(prop);
+                let sexp = self
+                    .sol
+                    .define_const(Discharge::fmt_prop(pidx), bs, assign)
+                    .unwrap();
+                self.prop_map.insert(pidx, SExprWrapper::SExpr(sexp));
+            }
+
             let assign = self.expr_to_sexp(expr);
             let sexp = self
                 .sol
@@ -617,15 +663,18 @@ impl Visitor for Discharge {
         }
 
         // Declare all propositions
-        let bs = self.sol.bool_sort();
         for (idx, prop) in data.comp.props().iter() {
             // Define assertion equating the proposition to its assignment
             let assign = self.prop_to_sexp(prop);
-            let sexp = self
-                .sol
-                .define_const(Discharge::fmt_prop(idx), bs, assign)
-                .unwrap();
-            self.prop_map.push(idx, sexp);
+            let sexp_res =
+                self.sol.define_const(Discharge::fmt_prop(idx), bs, assign);
+            match sexp_res {
+                Ok(_) => {
+                    self.prop_map
+                        .insert(idx, SExprWrapper::SExpr(sexp_res.unwrap()));
+                }
+                Err(_) => (),
+            };
         }
         // Pass does not need to traverse the control program.
         Action::Continue
@@ -659,9 +708,9 @@ impl Visitor for Discharge {
 
         if !data.opts.discharge_separate {
             // Attempt to prove all facts
-            let total_prop = self
-                .sol
-                .and_many(self.to_prove.iter().map(|f| self.prop_map[f.prop]));
+            let total_prop = self.sol.and_many(
+                self.to_prove.iter().map(|f| self.prop_map[f.prop].get()),
+            );
             let total_prop = self.sol.not(total_prop);
             self.sol.assert(total_prop).unwrap();
 

@@ -112,6 +112,30 @@ impl ExprIdx {
 
 /// Queries over [ExprIdx]
 impl ExprIdx {
+    pub fn relevant_props(
+        &self,
+        ctx: &(impl Ctx<Expr> + Ctx<Prop>),
+    ) -> Vec<PropIdx> {
+        let mut props = Vec::new();
+        self.relevant_props_acc(ctx, &mut props);
+        props
+    }
+
+    pub fn relevant_props_acc(
+        &self,
+        ctx: &(impl Ctx<Expr> + Ctx<Prop>),
+        props: &mut Vec<PropIdx>,
+    ) {
+        match ctx.get(*self) {
+            Expr::If { cond, .. } => {
+                props.push(*cond);
+                let inner_props = cond.relevant_props(ctx);
+                props.extend(inner_props);
+            }
+            _ => (),
+        }
+    }
+
     pub fn relevant_vars(
         &self,
         ctx: &(impl Ctx<Expr> + Ctx<Prop>),
