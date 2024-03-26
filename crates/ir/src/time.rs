@@ -1,4 +1,4 @@
-use crate::DisplayCtx;
+use crate::{DisplayCtx, Prop};
 
 use super::{
     AddCtx, Component, Ctx, EventIdx, Expr, ExprIdx, Foldable, ParamIdx,
@@ -56,7 +56,7 @@ impl TimeIdx {
 
     pub fn relevant_vars(
         self,
-        ctx: &(impl Ctx<Time> + Ctx<Expr>),
+        ctx: &(impl Ctx<Time> + Ctx<Expr> + Ctx<Prop>),
     ) -> Vec<ParamIdx> {
         let time = ctx.get(self);
         time.offset.relevant_vars(ctx)

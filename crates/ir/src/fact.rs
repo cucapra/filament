@@ -232,6 +232,29 @@ impl PropIdx {
         }
     }
 
+    // relevant vars of an if guard -- can't include times
+    pub fn relevant_vars_if_acc(
+        &self,
+        ctx: &(impl Ctx<Prop> + Ctx<Expr>),
+        param_acc: &mut Vec<ParamIdx>,
+    ) {
+        match ctx.get(*self) {
+            Prop::True | Prop::False => (),
+            Prop::Cmp(CmpOp { lhs, rhs, .. }) => {
+                lhs.relevant_vars_acc(ctx, param_acc);
+                rhs.relevant_vars_acc(ctx, param_acc);
+            }
+            Prop::TimeCmp(_) | Prop::TimeSubCmp(_) => {
+                panic!("if-expr guards cannot contain times");
+            }
+            Prop::Not(p) => p.relevant_vars_if_acc(ctx, param_acc),
+            Prop::And(l, r) | Prop::Or(l, r) | Prop::Implies(l, r) => {
+                l.relevant_vars_if_acc(ctx, param_acc);
+                r.relevant_vars_if_acc(ctx, param_acc)
+            }
+        }
+    }
+
     /// Accumulate all the parameters and events that appear in this proposition.
     pub fn relevant_vars_acc(
         &self,
@@ -287,6 +310,15 @@ impl PropIdx {
         let mut events = Vec::new();
         self.relevant_vars_acc(ctx, &mut params, &mut events);
         (params, events)
+    }
+
+    pub fn relevant_vars_if(
+        &self,
+        ctx: &(impl Ctx<Prop> + Ctx<Expr>),
+    ) -> Vec<ParamIdx> {
+        let mut params = Vec::new();
+        self.relevant_vars_if_acc(ctx, &mut params);
+        params
     }
 }
 

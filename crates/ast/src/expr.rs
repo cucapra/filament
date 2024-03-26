@@ -1,3 +1,6 @@
+use crate::OrderConstraint;
+use crate::OrderOp;
+
 use super::{Binding, Id, Loc};
 use fil_utils::Error;
 use itertools::Itertools;
@@ -101,6 +104,11 @@ pub enum Expr {
         left: Box<Expr>,
         right: Box<Expr>,
     },
+    If {
+        cond: OrderConstraint<Box<Expr>>,
+        then: Box<Expr>,
+        alt: Box<Expr>,
+    },
 }
 
 impl Default for Expr {
@@ -162,6 +170,19 @@ impl Expr {
         }
     }
 
+    pub fn if_expr(cond: OrderConstraint<Expr>, then: Expr, alt: Expr) -> Self {
+        let cond = OrderConstraint {
+            left: Box::new(cond.left),
+            right: Box::new(cond.right),
+            op: cond.op,
+        };
+        Expr::If {
+            cond,
+            then: Box::new(then),
+            alt: Box::new(alt),
+        }
+    }
+
     /// Resolve this expression using the given binding for abstract variables.
     pub fn resolve(self, bind: &Binding<Expr>) -> Self {
         match self {
@@ -181,6 +202,16 @@ impl Expr {
                     Op::Div => l / r,
                     Op::Mod => l % r,
                 }
+            }
+            Expr::If { cond, then, alt } => {
+                // let OrderConstraint {left, right, op} = cond;
+                // let l = Box::new(left.resolve(bind));
+                // let r = Box::new(right.resolve(bind));
+                // let cond = OrderConstraint{left: l, right: r, op};
+                let cond = cond.resolve_expr(bind);
+                let then = Box::new(then.resolve(bind));
+                let alt = Box::new(alt.resolve(bind));
+                Expr::If { cond, then, alt }
             }
         }
     }
@@ -326,6 +357,21 @@ impl ECtx {
                 } else {
                     format!("{}{}{}", left, op, right)
                 }
+            }
+            Expr::If { cond, then, alt } => {
+                let cond_l = self.print(&cond.left);
+                let cond_r = self.print(&cond.right);
+                let op = match &cond.op {
+                    OrderOp::Gt => ">",
+                    OrderOp::Gte => ">=",
+                    OrderOp::Eq => "=",
+                };
+                let then = self.print(then);
+                let alt = self.print(alt);
+                format!(
+                    "if {} {} {} {{{}}} else {{{}}}",
+                    cond_l, op, cond_r, then, alt
+                )
             }
         }
     }

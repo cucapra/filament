@@ -481,6 +481,12 @@ impl Discharge {
                     iter::once(self.func_map[op]).chain(args).collect_vec(),
                 )
             }
+            ir::Expr::If { cond, then, alt } => {
+                let then = self.expr_map[*then];
+                let alt = self.expr_map[*alt];
+                let cond = self.prop_map[*cond];
+                self.sol.list(vec![then, alt, cond])
+            }
         }
     }
 
