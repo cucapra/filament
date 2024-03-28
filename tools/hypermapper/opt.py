@@ -1,4 +1,5 @@
 import json
+import pandas
 import shutil
 from argparse import ArgumentParser
 from hypermapper import optimizer
@@ -11,6 +12,7 @@ from tempfile import TemporaryDirectory
 import os
 from utils import dl_to_ld
 from multiprocessing import Pool
+import matplotlib.pyplot as plt
 
 
 # Interface
@@ -146,11 +148,14 @@ def compile_flopoco_fft(target_frequency: int, clock_period: int):
     print(
         f"Synthesizing with target frequency {target_frequency} and clock period {clock_period}"
     )
-    return compile_and_synth(
+    synth_results = compile_and_synth(
         path.join(path.dirname(__file__), "flopocofft.fil"),
         clock_period,
         {"flopoco": {"conf": f"frequency={target_frequency} target=Virtex6"}},
     )
+    # We care about the time interval between operations
+    synth_results["time_ii"] = synth_results["ii"] * synth_results["period"]
+    return synth_results
 
 
 def compile_and_synth_parallel(args):
@@ -173,7 +178,7 @@ if __name__ == "__main__":
 
     scenario = {
         "application_name": "flopocofft",
-        "optimization_objectives": ["latency", "period", "lut", "registers"],
+        "optimization_objectives": ["time_ii", "lut", "registers"],
         "optimization_iterations": 10,
         "evaluations_per_optimization_iteration": 10,
         "input_parameters": {
@@ -238,5 +243,23 @@ if __name__ == "__main__":
         ],
         path.join(resdir, "pareto.pdf"),
     )
+
+    df = pandas.read_csv(path.join(resdir, "pareto.csv"))
+
+    print(df)
+
+    df["frequency"] = 1000 / df["period"]
+
+    for objective in scenario["optimization_objectives"]:
+        # Plot a scatter plot of all the points
+        fig = plt.figure()
+        ax = fig.add_subplot()
+
+        ax.scatter(df["frequency"], df[objective])
+
+        ax.set_xlabel("Frequency")
+        ax.set_ylabel(objective)
+
+        plt.savefig(path.join(resdir, f"{objective}_scatter.pdf"))
 
     tmpdir.cleanup()

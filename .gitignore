@@ -32,6 +32,6 @@ evaluation/iterative-divider/data.json
 /.vscode/settings.json
 
 # Ignore hypermapper output files
-*_output_samples.csv
+*_output_samples.csv*
 hypermapper_logfile.log
 log.txt
