@@ -1,5 +1,9 @@
 use super::{DisplayCtx, IOResult};
-use crate::{self as ir, Ctx};
+use crate::{
+    self as ir,
+    printer::prop::{display_prop_helper, PCtx},
+    Ctx,
+};
 use fil_ast as ast;
 use itertools::Itertools;
 
@@ -79,6 +83,23 @@ fn display_expr_helper(
                     .map(|a| display_expr_helper(*a, ECtx::default(), comp))
                     .join(", ")
             )
+        }
+        ir::Expr::If { cond, then, alt } => {
+            let pctx = match comp.get(*cond) {
+                ir::Prop::True | ir::Prop::False => PCtx::default(),
+                ir::Prop::Cmp(_)
+                | ir::Prop::TimeCmp(_)
+                | ir::Prop::TimeSubCmp(_) => PCtx::Cmp,
+                ir::Prop::Not(_) => PCtx::Not,
+                ir::Prop::And(_, _) => PCtx::And,
+                ir::Prop::Or(_, _) => PCtx::Or,
+                ir::Prop::Implies(_, _) => PCtx::Implies,
+            };
+
+            let cond = display_prop_helper(*cond, pctx, comp);
+            let then = display_expr_helper(*then, ctx, comp);
+            let alt = display_expr_helper(*alt, ctx, comp);
+            format!("if {cond} then {then} else {alt}")
         }
     }
 }

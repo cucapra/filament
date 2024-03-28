@@ -1,7 +1,7 @@
 use super::{Binding, Expr, Time, TimeSub};
 
 /// Ordering operator for constraints
-#[derive(Hash, Eq, PartialEq, Clone)]
+#[derive(Hash, Eq, PartialEq, Clone, Debug)]
 pub enum OrderOp {
     Gt,
     Gte,
@@ -19,7 +19,7 @@ impl std::fmt::Display for OrderOp {
 }
 
 // An ordering constraint
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct OrderConstraint<T> {
     pub left: T,
     pub right: T,
@@ -93,6 +93,26 @@ impl OrderConstraint<Expr> {
     }
 }
 
+impl OrderConstraint<Box<Expr>> {
+    pub fn resolve_expr(self, binding: &Binding<Expr>) -> Self {
+        OrderConstraint {
+            left: Box::new(self.left.resolve(binding)),
+            right: Box::new(self.right.resolve(binding)),
+            ..self
+        }
+    }
+
+    pub fn exprs(&self) -> Vec<&Expr> {
+        vec![&self.left, &self.right]
+    }
+}
+
+// impl std::fmt::Debug for OrderConstraint<Box<Expr>> {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         f.debug_struct("OrderConstraint").field("left", &self.left).field("right", &self.right).field("op", &self.op).finish()
+//     }
+// }
+
 impl OrderConstraint<Time> {
     pub fn resolve_event(self, bindings: &Binding<Time>) -> Self {
         OrderConstraint {
@@ -120,7 +140,7 @@ impl OrderConstraint<TimeSub> {
         }
     }
 
-    fn resolve_expr(self, bindings: &Binding<Expr>) -> Self {
+    pub fn resolve_expr(self, bindings: &Binding<Expr>) -> Self {
         OrderConstraint {
             left: self.left.resolve_expr(bindings),
             right: self.right.resolve_expr(bindings),

@@ -61,7 +61,9 @@ impl NameGenerator {
                 value: self.param_name(*p, comp).into(),
             },
             ir::Expr::Concrete(val) => calyx::Width::Const { value: *val },
-            ir::Expr::Bin { .. } | ir::Expr::Fn { .. } => comp
+            ir::Expr::Bin { .. }
+            | ir::Expr::Fn { .. }
+            | ir::Expr::If { .. } => comp
                 .internal_error("Port width must be a parameter or constant."),
         }
     }

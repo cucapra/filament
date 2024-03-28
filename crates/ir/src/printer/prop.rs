@@ -1,9 +1,10 @@
 use super::{DisplayCtx, IOResult};
 use crate::{self as ir, Ctx};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 /// Context to track proposition bindings
 pub enum PCtx {
+    #[default]
     Not,
     Cmp,
     And,
@@ -62,7 +63,7 @@ where
     }
 }
 
-fn display_prop_helper(
+pub fn display_prop_helper(
     prop: ir::PropIdx,
     ctx: PCtx,
     comp: &ir::Component,

@@ -1,4 +1,4 @@
-use crate::{Expr, Time};
+use crate::{Expr, Prop, Time};
 
 use super::{
     Access, CompIdx, Component, Ctx, Event, ExprIdx, Fact, Foreign, InfoIdx,
@@ -108,7 +108,7 @@ impl InstIdx {
 
     pub fn relevant_vars(
         self,
-        ctx: &(impl Ctx<Instance> + Ctx<Expr> + Ctx<Time>),
+        ctx: &(impl Ctx<Instance> + Ctx<Expr> + Ctx<Time> + Ctx<Prop>),
     ) -> Vec<ParamIdx> {
         let Instance { args, lives, .. } = ctx.get(self);
         args.iter()
