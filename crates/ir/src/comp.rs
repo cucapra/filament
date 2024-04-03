@@ -338,6 +338,11 @@ impl Component {
                     self.expr_params_acc(*arg, acc);
                 }
             }
+            Expr::If { cond, then, alt } => {
+                self.prop_params_acc(*cond, acc);
+                self.expr_params_acc(*then, acc);
+                self.expr_params_acc(*alt, acc);
+            }
         }
     }
 
@@ -494,10 +499,35 @@ impl Component {
         }
     }
 
-    /// Evaluates a function, assuming that all parms have been substituted for
+    pub fn if_expr(&mut self, expr: Expr) -> ExprIdx {
+        match expr {
+            Expr::Concrete(_) => self.add(expr),
+            Expr::Bin {..} => self.bin(expr),
+            Expr::Param(_) => {
+                self.internal_error(
+                    "When evaluating a function expression, there should not be any parameters in it".to_string()
+                )
+            },
+            Expr::Fn {..} => self.func(expr),
+            Expr::If {cond, then, alt} => {
+                let cond = self.get(cond);
+                let cond = self.resolve_prop(cond.to_owned());
+                match self.get(cond) {
+                    Prop::True => self.bin(self.get(then).clone()),
+                    Prop::False => self.bin(self.get(alt).clone()),
+                    _ => {
+                        self.internal_error(
+                            "Prop should have resolved to true or false".to_string()
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /// Evaluates a function, assuming that all params have been substituted for
     /// concrete expressions in monomorphization
     pub fn func(&mut self, expr: Expr) -> ExprIdx {
-        //let expr = self.get(eidx);
         match expr {
             Expr::Concrete(_) => self.add(expr),
             Expr::Bin {..} => self.bin(expr),
@@ -511,6 +541,9 @@ impl Component {
                 let args = args.into_iter().map(|arg| arg.as_concrete(self).unwrap()).collect_vec();
                 self.add(Expr::Concrete(op.eval(args)))
             }
+            Expr::If { .. } => {
+                self.if_expr(expr)
+            },
         }
     }
 
@@ -538,6 +571,7 @@ impl Component {
                 )
             }
             Expr::Fn { .. } => self.func(expr),
+            Expr::If { .. } => self.if_expr(expr),
         }
     }
 }
@@ -589,6 +623,16 @@ impl AddCtx<Expr> for Component {
                     .map(|args| op.eval(args))
                     .map_or(val, Expr::Concrete),
             ),
+            Expr::If { cond, then, alt } => {
+                let c = self.props.get(*cond);
+                let e = match c {
+                    Prop::True => self.exprs.get(*then),
+                    Prop::False => self.exprs.get(*alt),
+                    _ => &val,
+                };
+
+                self.exprs.intern(e.clone())
+            }
         }
     }
 }

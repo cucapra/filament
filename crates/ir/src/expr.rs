@@ -1,5 +1,5 @@
 use super::{AddCtx, Component, Ctx, ExprIdx, ParamIdx};
-use crate::construct_binop;
+use crate::{construct_binop, Prop, PropIdx};
 use fil_ast as ast;
 use std::fmt::Display;
 
@@ -16,6 +16,11 @@ pub enum Expr {
         op: ast::Fn,
         args: Vec<ExprIdx>,
     },
+    If {
+        cond: PropIdx,
+        then: ExprIdx,
+        alt: ExprIdx,
+    },
 }
 
 impl Display for Expr {
@@ -31,6 +36,9 @@ impl Display for Expr {
                     .collect::<Vec<_>>()
                     .join(", ");
                 write!(f, "{}({})", op, args)
+            }
+            Expr::If { cond, then, alt } => {
+                write!(f, "if {} then {} else {}", cond, then, alt)
             }
         }
     }
@@ -104,7 +112,31 @@ impl ExprIdx {
 
 /// Queries over [ExprIdx]
 impl ExprIdx {
-    pub fn relevant_vars(&self, ctx: &impl Ctx<Expr>) -> Vec<ParamIdx> {
+    pub fn relevant_props(
+        &self,
+        ctx: &(impl Ctx<Expr> + Ctx<Prop>),
+    ) -> Vec<PropIdx> {
+        let mut props = Vec::new();
+        self.relevant_props_acc(ctx, &mut props);
+        props
+    }
+
+    pub fn relevant_props_acc(
+        &self,
+        ctx: &(impl Ctx<Expr> + Ctx<Prop>),
+        props: &mut Vec<PropIdx>,
+    ) {
+        if let Expr::If { cond, .. } = ctx.get(*self) {
+            props.push(*cond);
+            let inner_props = cond.relevant_props(ctx);
+            props.extend(inner_props);
+        }
+    }
+
+    pub fn relevant_vars(
+        &self,
+        ctx: &(impl Ctx<Expr> + Ctx<Prop>),
+    ) -> Vec<ParamIdx> {
         let mut params = Vec::new();
         self.relevant_vars_acc(ctx, &mut params);
         params
@@ -112,7 +144,7 @@ impl ExprIdx {
 
     pub fn relevant_vars_acc(
         &self,
-        ctx: &impl Ctx<Expr>,
+        ctx: &(impl Ctx<Expr> + Ctx<Prop>),
         params: &mut Vec<ParamIdx>,
     ) {
         match ctx.get(*self) {
@@ -128,6 +160,11 @@ impl ExprIdx {
                 for e in args {
                     e.relevant_vars_acc(ctx, params);
                 }
+            }
+            Expr::If { cond, then, alt } => {
+                cond.relevant_vars_if_acc(ctx, params);
+                then.relevant_vars_acc(ctx, params);
+                alt.relevant_vars_acc(ctx, params);
             }
         }
     }

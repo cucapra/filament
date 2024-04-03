@@ -117,7 +117,7 @@ impl MonoSig {
         let comp_k = if pass.old.is_ext(*comp) {
             CompKey::new(comp.ul(), vec![])
         } else {
-            self.comp_key(underlying, inst_ul)
+            self.comp_key(underlying, inst_ul, pass)
         };
 
         let Some(&comp) = pass.processed.get(&comp_k) else {
@@ -253,6 +253,84 @@ impl MonoSig {
         }
     }
 
+    pub fn prop(
+        &mut self,
+        underlying: &UnderlyingComp,
+        prop: Underlying<ir::Prop>,
+        pass: &mut Monomorphize,
+    ) -> Base<ir::Prop> {
+        let prop = underlying.get(prop);
+        match prop {
+            ir::Prop::True | ir::Prop::False => self.base.add(prop.clone()),
+            ir::Prop::Cmp(cmp) => {
+                let ir::CmpOp { op, lhs, rhs } = cmp;
+                let lhs = self.expr(underlying, lhs.ul(), pass).get();
+                let rhs = self.expr(underlying, rhs.ul(), pass).get();
+                self.base.add(ir::Prop::Cmp(ir::CmpOp {
+                    op: op.clone(),
+                    lhs,
+                    rhs,
+                }))
+            }
+            ir::Prop::TimeCmp(tcmp) => {
+                let ir::CmpOp { op, lhs, rhs } = tcmp;
+                let lhs = lhs.ul();
+                let rhs = rhs.ul();
+                let lhs = self.time(underlying, pass, lhs);
+                let rhs = self.time(underlying, pass, rhs);
+                self.base.add(ir::Prop::TimeCmp(ir::CmpOp {
+                    op: op.clone(),
+                    lhs: lhs.get(),
+                    rhs: rhs.get(),
+                }))
+            }
+            ir::Prop::TimeSubCmp(tscmp) => {
+                let ir::CmpOp { op, lhs, rhs } = tscmp;
+                let lhs = self.timesub(underlying, pass, lhs);
+                let rhs = self.timesub(underlying, pass, rhs);
+                self.base.add(ir::Prop::TimeSubCmp(ir::CmpOp {
+                    op: op.clone(),
+                    lhs,
+                    rhs,
+                }))
+            }
+            ir::Prop::Not(p) => {
+                let p = p.ul();
+                let new_p = self.prop(underlying, p, pass);
+                self.base.add(ir::Prop::Not(new_p.get()))
+            }
+            ir::Prop::And(l, r) => {
+                let l = l.ul();
+                let r = r.ul();
+                let l = self.prop(underlying, l, pass);
+                let r = self.prop(underlying, r, pass);
+                self.base.add(ir::Prop::And(l.get(), r.get()))
+            }
+            ir::Prop::Or(l, r) => {
+                let l = l.ul();
+                let r = r.ul();
+                let l = self.prop(underlying, l, pass);
+                let r = self.prop(underlying, r, pass);
+                self.base.add(ir::Prop::Or(l.get(), r.get()))
+            }
+            ir::Prop::Implies(l, r) => {
+                let l = l.ul();
+                let r = r.ul();
+                let l = self.prop(underlying, l, pass);
+                // concretize the left expression first because if it is false the right might be invalid
+                // For example, `(X > 0) & (X - 1 >= 0)` would fail due to overflow.
+                match self.base.get(l) {
+                    fil_ir::Prop::True => self.prop(underlying, r, pass),
+                    fil_ir::Prop::False => self.base.add(ir::Prop::True),
+                    _ => {
+                        let r = self.prop(underlying, r, pass);
+                        self.base.add(ir::Prop::Implies(l.get(), r.get()))
+                    }
+                }
+            }
+        }
+    }
+
     /// Translates an ExprIdx defined by `underlying` to correponding one in `base`.
     /// If the expression is a parameter bound in the bindings, then we return the bound value.
     /// Otherwise, we rewrite the expression and return the new index.
@@ -263,6 +341,7 @@ impl MonoSig {
         &mut self,
         underlying: &UnderlyingComp,
         expr: Underlying<ir::Expr>,
+        pass: &mut Monomorphize,
     ) -> Base<ir::Expr> {
         let e = underlying.get(expr);
 
@@ -281,18 +360,25 @@ impl MonoSig {
             }
             ir::Expr::Concrete(n) => self.base.num(n),
             ir::Expr::Bin { op, lhs, rhs } => {
-                let lhs = self.expr(underlying, lhs.ul()).get();
-                let rhs = self.expr(underlying, rhs.ul()).get();
+                let lhs = self.expr(underlying, lhs.ul(), pass).get();
+                let rhs = self.expr(underlying, rhs.ul(), pass).get();
                 let binop = ir::Expr::Bin { op, lhs, rhs };
                 self.base.add(binop)
             }
             ir::Expr::Fn { op, args } => {
                 let args = args
                     .iter()
-                    .map(|idx| self.expr(underlying, idx.ul()).get())
+                    .map(|idx| self.expr(underlying, idx.ul(), pass).get())
                     .collect_vec();
                 let func = ir::Expr::Fn { op, args };
                 self.base.func(func)
+            }
+            ir::Expr::If { cond, then, alt } => {
+                let cond = self.prop(underlying, cond.ul(), pass).get();
+                let then = self.expr(underlying, then.ul(), pass).get();
+                let alt = self.expr(underlying, alt.ul(), pass).get();
+
+                self.base.add(ir::Expr::If { cond, then, alt })
             }
         };
         new_idx
@@ -326,7 +412,7 @@ impl MonoSig {
 
         let mono_time = ir::Time {
             event: self.event(pass, event.ul()).get(),
-            offset: self.expr(underlying, offset.ul()).get(),
+            offset: self.expr(underlying, offset.ul(), pass).get(),
         };
 
         self.base.add(mono_time)
@@ -341,7 +427,7 @@ impl MonoSig {
     ) -> ir::TimeSub {
         match delay {
             ir::TimeSub::Unit(expr) => {
-                ir::TimeSub::Unit(self.expr(underlying, expr.ul()).get())
+                ir::TimeSub::Unit(self.expr(underlying, expr.ul(), pass).get())
             }
             ir::TimeSub::Sym { l, r } => {
                 let l = l.ul();
@@ -560,7 +646,7 @@ impl MonoSig {
     ) -> ir::TimeSub {
         match timesub {
             ir::TimeSub::Unit(expr) => {
-                ir::TimeSub::Unit(self.expr(underlying, expr.ul()).get())
+                ir::TimeSub::Unit(self.expr(underlying, expr.ul(), pass).get())
             }
             ir::TimeSub::Sym { l, r } => {
                 let l = l.ul();
@@ -578,13 +664,14 @@ impl MonoSig {
         &mut self,
         underlying: &UnderlyingComp,
         iidx: Underlying<ir::Instance>,
+        pass: &mut Monomorphize,
     ) -> CompKey {
         let ir::Instance { comp, args, .. } = underlying.get(iidx);
 
         let conc_params = args
             .iter()
             .map(|p| {
-                self.expr(underlying, p.ul())
+                self.expr(underlying, p.ul(), pass)
                     .get()
                     .as_concrete(self.base.comp())
                     .unwrap()
@@ -626,7 +713,7 @@ impl MonoSig {
         } = underlying.get(inst);
 
         // Monomorphize the component
-        let ck = self.comp_key(underlying, inst);
+        let ck = self.comp_key(underlying, inst, pass);
         let mono_comp = pass.monomorphize(ck.clone());
 
         // Binding for parameters defined by this instance
@@ -645,7 +732,7 @@ impl MonoSig {
         // Parameters for the new component. We only preserve them for external calls.
         let conc_params: Box<[ir::ExprIdx]> = if pass.old.is_ext(*comp) {
             args.iter()
-                .map(|p| self.expr(underlying, p.ul()).get())
+                .map(|p| self.expr(underlying, p.ul(), pass).get())
                 .collect_vec()
                 .into_boxed_slice()
         } else {
@@ -780,11 +867,11 @@ impl MonoSig {
         };
 
         self.bundle_param_map.insert(new_port, mono_idxs);
-        let mono_width = self.expr(underlying, width.ul());
+        let mono_width = self.expr(underlying, width.ul(), pass);
         mono_liveness.lens = lens
             .iter()
             .map(|len| {
-                let e = self.expr(underlying, len.ul()).get();
+                let e = self.expr(underlying, len.ul(), pass).get();
                 // Simplify the expression
                 self.base.bin(self.base.get(e.base()).clone()).get()
             })

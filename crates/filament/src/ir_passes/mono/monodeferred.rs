@@ -1,5 +1,5 @@
 use super::{
-    Base, CompKey, IntoUdl, MonoSig, Monomorphize, Underlying, UnderlyingComp,
+    CompKey, IntoUdl, MonoSig, Monomorphize, Underlying, UnderlyingComp,
 };
 use fil_ir::{self as ir, AddCtx, Ctx};
 use ir::DisplayCtx;
@@ -111,7 +111,7 @@ impl MonoDeferred<'_, '_> {
         // components but externally generated components might violate their
         // requirements.
         for prop in self.underlying.all_exist_assumes() {
-            let out = self.prop(prop.ul());
+            let out = self.monosig.prop(&self.underlying, prop.ul(), self.pass);
             let Some(v) = out.get().as_concrete(self.monosig.base.comp())
             else {
                 unreachable!(
@@ -183,92 +183,11 @@ impl MonoDeferred<'_, '_> {
         self.monosig.base.take()
     }
 
-    fn prop(&mut self, pidx: Underlying<ir::Prop>) -> Base<ir::Prop> {
-        let prop = self.underlying.get(pidx);
-        match self.underlying.get(pidx) {
-            ir::Prop::True | ir::Prop::False => {
-                self.monosig.base.add(prop.clone())
-            }
-            ir::Prop::Cmp(cmp) => {
-                let ir::CmpOp { op, lhs, rhs } = cmp;
-                let lhs = self.monosig.expr(&self.underlying, lhs.ul()).get();
-                let rhs = self.monosig.expr(&self.underlying, rhs.ul()).get();
-                self.monosig.base.add(ir::Prop::Cmp(ir::CmpOp {
-                    op: op.clone(),
-                    lhs,
-                    rhs,
-                }))
-            }
-            ir::Prop::TimeCmp(tcmp) => {
-                let ir::CmpOp { op, lhs, rhs } = tcmp;
-                let lhs = lhs.ul();
-                let rhs = rhs.ul();
-                let lhs = self.monosig.time(&self.underlying, self.pass, lhs);
-                let rhs = self.monosig.time(&self.underlying, self.pass, rhs);
-                self.monosig.base.add(ir::Prop::TimeCmp(ir::CmpOp {
-                    op: op.clone(),
-                    lhs: lhs.get(),
-                    rhs: rhs.get(),
-                }))
-            }
-            ir::Prop::TimeSubCmp(tscmp) => {
-                let ir::CmpOp { op, lhs, rhs } = tscmp;
-                let lhs =
-                    self.monosig.timesub(&self.underlying, self.pass, lhs);
-                let rhs =
-                    self.monosig.timesub(&self.underlying, self.pass, rhs);
-                self.monosig.base.add(ir::Prop::TimeSubCmp(ir::CmpOp {
-                    op: op.clone(),
-                    lhs,
-                    rhs,
-                }))
-            }
-            ir::Prop::Not(p) => {
-                let p = p.ul();
-                let new_p = self.prop(p);
-                self.monosig.base.add(ir::Prop::Not(new_p.get()))
-            }
-            ir::Prop::And(l, r) => {
-                let l = l.ul();
-                let r = r.ul();
-                let l = self.prop(l);
-                let r = self.prop(r);
-                self.monosig.base.add(ir::Prop::And(l.get(), r.get()))
-            }
-            ir::Prop::Or(l, r) => {
-                let l = l.ul();
-                let r = r.ul();
-                let l = self.prop(l);
-                let r = self.prop(r);
-                self.monosig.base.add(ir::Prop::Or(l.get(), r.get()))
-            }
-            ir::Prop::Implies(l, r) => {
-                let l = l.ul();
-                let r = r.ul();
-                let l = self.prop(l);
-                // concretize the left expression first because if it is false the right might be invalid
-                // For example, `(X > 0) & (X - 1 >= 0)` would fail due to overflow.
-                match self.monosig.base.get(l) {
-                    fil_ir::Prop::True => self.prop(r),
-                    fil_ir::Prop::False => {
-                        self.monosig.base.add(ir::Prop::True)
-                    }
-                    _ => {
-                        let r = self.prop(r);
-                        self.monosig
-                            .base
-                            .add(ir::Prop::Implies(l.get(), r.get()))
-                    }
-                }
-            }
-        }
-    }
-
     fn access(&mut self, acc: &ir::Access) -> ir::Access {
         let ir::Access { port, ranges } = acc;
 
         let mut conc = |e: ir::ExprIdx| -> ir::ExprIdx {
-            let base = self.monosig.expr(&self.underlying, e.ul());
+            let base = self.monosig.expr(&self.underlying, e.ul(), self.pass);
             self.monosig
                 .base
                 .bin(self.monosig.base.get(base).clone())
@@ -308,8 +227,14 @@ impl MonoDeferred<'_, '_> {
             body,
         } = lp;
 
-        let mono_start = self.monosig.expr(&self.underlying, start.ul()).get();
-        let mono_end = self.monosig.expr(&self.underlying, end.ul()).get();
+        let mono_start = self
+            .monosig
+            .expr(&self.underlying, start.ul(), self.pass)
+            .get();
+        let mono_end = self
+            .monosig
+            .expr(&self.underlying, end.ul(), self.pass)
+            .get();
 
         let mut i = mono_start.as_concrete(self.monosig.base.comp()).unwrap();
         let bound = mono_end.as_concrete(self.monosig.base.comp()).unwrap();
@@ -334,7 +259,7 @@ impl MonoDeferred<'_, '_> {
         let ir::If { cond, then, alt } = if_stmt;
 
         let cond = cond.ul();
-        let cond = self.prop(cond);
+        let cond = self.monosig.prop(&self.underlying, cond, self.pass);
         let cond = self
             .monosig
             .base
@@ -376,7 +301,7 @@ impl MonoDeferred<'_, '_> {
             // TODO(edmund): Find a better solution to this - we should resolve bundle assertions when bundles are unrolled.
             None
         } else {
-            let prop = self.prop(prop);
+            let prop = self.monosig.prop(&self.underlying, prop, self.pass);
             let prop = self
                 .monosig
                 .base
@@ -415,7 +340,10 @@ impl MonoDeferred<'_, '_> {
             ),
             ir::Command::Let(ir::Let { param, expr }) => {
                 let p = param.ul();
-                let e = self.monosig.expr(&self.underlying, expr.ul()).get();
+                let e = self
+                    .monosig
+                    .expr(&self.underlying, expr.ul(), self.pass)
+                    .get();
                 let Some(v) = e.as_concrete(self.monosig.base.comp()) else {
                     unreachable!(
                         "let binding evaluated to: {}",
@@ -436,7 +364,10 @@ impl MonoDeferred<'_, '_> {
             }
             ir::Command::Exists(ir::Exists { param, expr }) => {
                 let comp_key = self.comp_key();
-                let e = self.monosig.expr(&self.underlying, expr.ul()).get();
+                let e = self
+                    .monosig
+                    .expr(&self.underlying, expr.ul(), self.pass)
+                    .get();
                 let base_comp = self.monosig.base.comp();
                 let Some(v) = e.as_concrete(base_comp) else {
                     unreachable!(

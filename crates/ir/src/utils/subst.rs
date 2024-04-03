@@ -185,6 +185,12 @@ impl Foldable<ParamIdx, ExprIdx> for ExprIdx {
                     .collect();
                 ctx.add(Expr::Fn { op, args })
             }
+            Expr::If { cond, then, alt } => {
+                let cond = cond.fold_with(ctx, subst_fn);
+                let then = then.fold_with(ctx, subst_fn);
+                let alt = alt.fold_with(ctx, subst_fn);
+                ctx.add(Expr::If { cond, then, alt })
+            }
         }
     }
 }
