@@ -8,6 +8,7 @@ import "primitives/signed.fil";
 // N: vector length
 // M: multiplier amount
 // A: adder amount
+// Uses scal to compute the scalar-vector products cy, sy, cx, -sx
 comp Rot[W, N, M, A]<'G:II>(
   go: interface['G],
   c: ['G, 'G+1] W,

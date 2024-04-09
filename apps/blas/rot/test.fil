@@ -1,4 +1,4 @@
-import "apps/blas/rot/rot.fil";
+import "apps/blas/rot/rot-alt.fil";
 
 comp main<'G:II>(
   go: interface['G],
@@ -73,7 +73,7 @@ comp main<'G:II>(
   let M = 8;
   let N = 16;
   let W = 32;
-  let A = 8;
+  let A = 2;
   some L where L > 0;
   some II where II > 0;
 } {

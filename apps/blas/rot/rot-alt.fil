@@ -1,0 +1,131 @@
+import "apps/blas/util.fil";
+import "primitives/signed.fil";
+
+// Applies a rotation to vectors x, y
+// W: element width
+// N: vector length
+// M: multiplier amount
+// A: adder amount
+// Tiles scalar-vector products based on multiplier count,
+// then does additions as multiplies finish
+comp Rot[W, N, M, A]<'G:II>(
+  go: interface['G],
+  c: ['G, 'G+1] W,
+  s: ['G, 'G+1] W,
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W,
+) -> (
+  out_1[N]: ['G+L, 'G+L+1] W,
+  out_2[N]: ['G+L, 'G+L+1] W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0,
+        N > 0,
+        M > 0,
+        A > 0,
+        M % 4 == 0, // need to do at least 4 multiplies at once
+        A % 2 == 0,  // need to do at least 2 adds at once
+        N % (M/4) == 0,
+        (M/4) % (A/2) == 0
+{
+  // partition mults into 4 groups, for 4 mults that need to happen at each time step
+  let m = M/4;
+
+  // same for adds, but only 2 adds to do
+  let a = A/2;
+
+  // reuse for a single scalar-vector computation
+  let mult_reuses = N / m;
+
+  // reuse for each of the adder groups
+  let add_reuses = m / a;
+
+  // dummy so we can get its params
+  M_ := new Multipliers[W, m];
+  let mult_latency = M_::L;
+  let mult_ii = M_::II;
+
+  A_ := new Adders[W, a];
+  let add_ii = A_::II;
+
+  // -s
+  negs := new Neg[W]<'G>(s);
+
+  // instantiate multipliers
+  let last_mult_invoke = mult_reuses*mult_ii;
+  M_cy := new Multipliers[W, m] in ['G, 'G+last_mult_invoke];
+  M_sy := new Multipliers[W, m] in ['G, 'G+last_mult_invoke];
+  M_cx := new Multipliers[W, m] in ['G, 'G+last_mult_invoke];
+  M_nsx := new Multipliers[W, m] in ['G, 'G+last_mult_invoke];
+
+  // instantiate adders
+  let add_end = last_mult_invoke + mult_latency + add_reuses*add_ii + (add_reuses-1)*(mult_reuses-1) + 1;
+  A_1 := new Adders[W, a] in ['G+mult_latency, 'G+add_end];
+  A_2 := new Adders[W, a] in ['G+mult_latency, 'G+add_end];
+
+  // check which stage is limiting the pipeline
+  let ii = if (add_end-mult_latency) < (last_mult_invoke) {(last_mult_invoke)} else {(add_end-mult_latency)};
+
+  bundle cy[mult_reuses][m]: for<k> ['G+k*mult_ii+mult_latency, 'G+k*mult_ii+mult_latency+1] W;
+  bundle sy[mult_reuses][m]: for<k> ['G+k*mult_ii+mult_latency, 'G+k*mult_ii+mult_latency+1] W;
+  bundle cx[mult_reuses][m]: for<k> ['G+k*mult_ii+mult_latency, 'G+k*mult_ii+mult_latency+1] W;
+  bundle nsx[mult_reuses][m]: for<k> ['G+k*mult_ii+mult_latency, 'G+k*mult_ii+mult_latency+1] W;
+
+  // scalar bundles for multiplications
+  bundle c_bundle[m]: ['G, 'G+1] W;
+  bundle s_bundle[m]: ['G, 'G+1] W;
+  bundle negs_bundle[m]: ['G, 'G+1] W;
+
+  // fill them
+  for i in 0..m {
+    c_bundle{i} = c;
+    s_bundle{i} = s;
+    negs_bundle{i} = negs.out;
+  }
+
+  // start multiplications
+  for i in 0..mult_reuses {
+    // some parameters
+    let mult_start = i*mult_ii;
+    let mult_end = i*mult_ii + mult_latency;
+
+    // register inputs
+    x_reg := new Shift[W, i*mult_ii, m]<'G>(x{i*m..(i+1)*m});
+    y_reg := new Shift[W, i*mult_ii, m]<'G>(y{i*m..(i+1)*m});
+    c_reg := new Shift[W, i*mult_ii, m]<'G>(c_bundle{0..m});
+    s_reg := new Shift[W, i*mult_ii, m]<'G>(s_bundle{0..m});
+    negs_reg := new Shift[W, i*mult_ii, m]<'G>(negs_bundle{0..m});
+
+    mult_cy := M_cy<'G+i*mult_ii>(c_reg.out{0..m}, y_reg.out{0..m});
+    mult_sy := M_sy<'G+i*mult_ii>(s_reg.out{0..m}, y_reg.out{0..m});
+    mult_cx := M_cx<'G+i*mult_ii>(c_reg.out{0..m}, x_reg.out{0..m});
+    mult_nsx := M_nsx<'G+i*mult_ii>(negs_reg.out{0..m}, x_reg.out{0..m});
+
+    cy{i}{0..m} = mult_cy.out{0..m};
+    sy{i}{0..m} = mult_sy.out{0..m};
+    cx{i}{0..m} = mult_cx.out{0..m};
+    nsx{i}{0..m} = mult_nsx.out{0..m};
+
+    for j in 0..add_reuses {
+      let offset = i*(add_reuses-1);
+      mult_cy_reg := new Shift[W, j*add_ii + offset, a]<'G+mult_end>(cy{i}{(j*a)..(j+1)*a});
+      mult_sy_reg := new Shift[W, j*add_ii + offset, a]<'G+mult_end>(sy{i}{(j*a)..(j+1)*a});
+      mult_cx_reg := new Shift[W, j*add_ii + offset, a]<'G+mult_end>(cx{i}{(j*a)..(j+1)*a});
+      mult_nsx_reg := new Shift[W, j*add_ii + offset, a]<'G+mult_end>(nsx{i}{(j*a)..(j+1)*a});
+
+      add_1 := A_1<'G + mult_end + j*add_ii + offset>(mult_cx_reg.out{0..a}, mult_sy_reg.out{0..a});
+      add_2 := A_2<'G + mult_end + j*add_ii + offset>(mult_nsx_reg.out{0..a}, mult_cy_reg.out{0..a});
+
+      add_1_reg := new Shift[W, latency - mult_end - j*add_ii - offset, a]<'G + mult_end + j*add_ii + offset>(add_1.out{0..a});
+      add_2_reg := new Shift[W, latency - mult_end - j*add_ii - offset, a]<'G + mult_end + j*add_ii + offset>(add_2.out{0..a});
+
+      out_1{(m*i)+(j*a)..(m*i)+(j+1)*a} = add_1_reg.out{0..a};
+      out_2{(m*i)+(j*a)..(m*i)+(j+1)*a} = add_2_reg.out{0..a};
+    }
+  }
+
+  let latency = (mult_reuses*mult_ii + mult_latency) + (add_reuses-1)*(mult_reuses-1) + (add_reuses-1)*add_ii;
+  L := latency;
+  II := ii;
+}
