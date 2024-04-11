@@ -58,6 +58,14 @@ dir=$(dirname {}) && \
 ./tests/utils/check.sh $dir edge
 """
 
+[[tests]]
+name = "gen-config"
+paths = ["tests/gen/*/*.toml"]
+cmd = """
+dir=$(dirname {}) && \
+./target/debug/filament $dir.fil --gen-config {} --dump-interface
+"""
+
 # ============ Larger designs in Filament =====================
 # Compile directories within the tests/compile directory. All *.fil files in the
 # use the same input and must produce the same output

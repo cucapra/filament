@@ -1,0 +1,2 @@
+[globals.flopoco]
+conf = "frequency=200 target=Virtex6"
