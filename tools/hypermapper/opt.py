@@ -189,8 +189,10 @@ if __name__ == "__main__":
             "name": "meet_timing",
             "true_value": 1,
             "false_value": 0,
+            "enable_feasible_predictor": True,
         },
     }
+
     if os.path.exists("flopocofft_output_samples.csv"):
         scenario = {
             **scenario,
