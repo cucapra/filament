@@ -59,11 +59,11 @@ dir=$(dirname {}) && \
 """
 
 [[tests]]
-name = "gen-config"
+name = "bindings"
 paths = ["tests/gen/*/*.toml"]
 cmd = """
 dir=$(dirname {}) && \
-./target/debug/filament $dir.fil --gen-config {} --dump-interface
+./target/debug/filament $dir.fil --bindings {} --dump-interface
 """
 
 # ============ Larger designs in Filament =====================

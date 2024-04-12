@@ -13,8 +13,8 @@ version.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-serde = "1.0"
-toml = "0.8"
+toml.workspace = true
+serde.workspace = true
 argh.workspace = true
 itertools.workspace = true
 env_logger.workspace = true

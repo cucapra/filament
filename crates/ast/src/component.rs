@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use super::{Command, Id, Signature};
 use fil_gen as gen;
+use gen::GenConfig;
 
 #[derive(Default)]
 /// A external or generate definition in Filament
@@ -77,7 +78,7 @@ impl Namespace {
     pub fn init_gen(
         &self,
         out_dir: Option<PathBuf>,
-        config: Option<PathBuf>,
+        config: GenConfig,
     ) -> gen::GenExec {
         let mut gen_exec = gen::GenExec::new(false, out_dir, config);
         for Extern { path, gen, .. } in &self.externs {

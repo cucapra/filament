@@ -1,9 +1,20 @@
+use std::fs;
+
 use calyx_backend::Backend;
 use calyx_opt::pass_manager::PassManager;
+use fil_gen::GenConfig;
 use fil_ir as ir;
 use filament::ir_passes::BuildDomination;
 use filament::{cmdline, ir_passes as ip, resolver::Resolver};
 use filament::{log_pass, log_time, pass_pipeline};
+use serde::Deserialize;
+
+#[derive(Deserialize, Default)]
+/// Contains the bindings that are provided by the user.
+pub struct ProvidedBindings {
+    /// Gen configuration variables
+    gen: GenConfig,
+}
 
 // Prints out the interface for main component in the input program.
 fn run(opts: &cmdline::Opts) -> Result<(), u64> {
@@ -26,6 +37,14 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
             return Err(1);
         }
     };
+
+    // Load the provided bindings
+    let provided_bindings: ProvidedBindings = opts
+        .bindings
+        .as_ref()
+        .map(|path| toml::from_str(&fs::read_to_string(path).unwrap()).unwrap())
+        .unwrap_or_default();
+
     // Initialize the generator
     let mut gen_exec = if ns.requires_gen() {
         if opts.out_dir.is_none()
@@ -37,7 +56,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
                 "`--out-dir <dir>` to store the generated files."
             ))
         }
-        Some(ns.init_gen(opts.out_dir.clone(), opts.gen_config.clone()))
+        Some(ns.init_gen(opts.out_dir.clone(), provided_bindings.gen))
     } else {
         None
     };
