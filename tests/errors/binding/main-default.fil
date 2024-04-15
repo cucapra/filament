@@ -1,0 +1,4 @@
+// check default parameters in the main component
+comp main[?A=31, ?B=1+W]<'G:1>() -> () {
+
+}

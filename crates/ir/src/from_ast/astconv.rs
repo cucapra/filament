@@ -1173,13 +1173,15 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
                             Ok(e)
                         } else {
                             let diag = builder.diag();
-                            diag.add_error(Error::malformed(
-                                "Values for externally provided parameters must be concrete",
-                            ));
-                            diag.add_info(
-                                "Parameter was not a concrete value",
-                                irsig.raw_params[i].pos()
+                            let err = Error::malformed(
+                                "Default values for parameters in the main component must be concrete",
+                            ).add_note(
+                                diag.add_info(
+                                    "Parameter was not given a concrete value",
+                                    irsig.raw_params[i].pos()
+                                )
                             );
+                            diag.add_error(err);
                             Err(std::mem::take(diag))
                         }
                     })
