@@ -55,7 +55,7 @@ pub struct Namespace {
     /// Top-level component id
     pub toplevel: String,
     /// Top level bindings
-    pub bindings: HashMap<Id, u64>,
+    pub bindings: Vec<u64>,
 }
 
 impl Namespace {
@@ -64,7 +64,7 @@ impl Namespace {
             imports: Vec::default(),
             externs: Vec::default(),
             components: Vec::default(),
-            bindings: HashMap::default(),
+            bindings: Vec::default(),
             toplevel,
         }
     }

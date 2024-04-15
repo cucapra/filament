@@ -17,7 +17,7 @@ pub struct ProvidedBindings {
     /// Gen configuration variables
     gen: GenConfig,
     /// Parameters to give to the top-level component
-    params: HashMap<String, u64>,
+    params: Vec<u64>,
 }
 
 // Prints out the interface for main component in the input program.
@@ -41,11 +41,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     let ns = match Resolver::from(opts).parse_namespace() {
         Ok(mut ns) => {
             ns.toplevel = opts.toplevel.clone();
-            ns.bindings = provided_bindings
-                .params
-                .into_iter()
-                .map(|(k, v)| (ast::Id::from(k), v))
-                .collect();
+            ns.bindings = provided_bindings.params;
             ns
         }
         Err(e) => {

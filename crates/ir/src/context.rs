@@ -8,14 +8,14 @@ use std::collections::HashMap;
 /// Contains information for the entrypoint component.
 pub struct EntryPoint {
     pub comp: CompIdx,
-    pub bindings: SparseInfoMap<Param, ExprIdx>,
+    pub bindings: Vec<u64>,
 }
 
 impl EntryPoint {
     pub fn new(comp: CompIdx) -> Self {
         Self {
             comp,
-            bindings: SparseInfoMap::default(),
+            bindings: Vec::new(),
         }
     }
 }

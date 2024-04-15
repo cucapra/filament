@@ -1147,6 +1147,8 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
             // Now that all the signature has been compiled,
             // if this component is the main component, add the provided
             // bindings to the entrypoint
+            // this needs to be done here because we need to provide
+            // possible default values for the parameters
             if ctx.is_main(idx) {
                 let Some(ep) = &mut ctx.entrypoint else {
                     unreachable!(
@@ -1158,23 +1160,30 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
                     unreachable!("Main component had no name")
                 };
 
-                ep.bindings = ns
-                    .bindings
-                    .iter()
-                    .map(|(p, e)| {
-                        let param = builder
-                            .get_param(
-                                &OwnedParam::Local(*p),
-                                GPosIdx::UNKNOWN,
-                            )?
-                            .as_param(builder.comp())
-                            .unwrap();
-
-                        builder
-                            .expr(ast::Expr::Concrete(*e))
-                            .map(|expr| (param, expr))
+                ep.bindings = irsig
+                    .param_binding(
+                        ns.bindings.iter().copied().map(ast::Expr::Concrete),
+                        toplevel_id.clone(),
+                        builder.diag(),
+                    )?
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, (_, e))| {
+                        if let ast::Expr::Concrete(e) = e {
+                            Ok(e)
+                        } else {
+                            let diag = builder.diag();
+                            diag.add_error(Error::malformed(
+                                "Values for externally provided parameters must be concrete",
+                            ));
+                            diag.add_info(
+                                "Parameter was not a concrete value",
+                                irsig.raw_params[i].pos()
+                            );
+                            Err(std::mem::take(diag))
+                        }
                     })
-                    .collect::<BuildRes<SparseInfoMap<_, _>>>()?;
+                    .collect::<BuildRes<Vec<_>>>()?;
             }
 
             Ok((Builder { idx, builder, body }, (sig.name.take(), irsig)))

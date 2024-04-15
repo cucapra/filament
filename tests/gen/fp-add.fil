@@ -1,6 +1,6 @@
 import "primitives/flopoco/def.fil";
 
-comp main[E, M]<'G:1>(
+comp main[?E=8, ?M=23]<'G:1>(
   go: interface['G],
   X: ['G, 'G+1] E+M+3,
   Y: ['G, 'G+1] E+M+3

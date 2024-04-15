@@ -293,7 +293,7 @@ impl Monomorphize<'_> {
         let entrypoint = entrypoint.ul();
         // Monomorphize the entrypoint
         let mut mono = Monomorphize::new(ctx, gen);
-        let ck = CompKey::new(entrypoint, vec![]);
+        let ck = CompKey::new(entrypoint, bindings.clone());
         mono.monomorphize(ck.clone());
 
         let new_entrypoint = mono.processed.get(&ck).unwrap();
