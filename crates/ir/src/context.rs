@@ -1,21 +1,37 @@
 use super::{
-    AddCtx, CompIdx, CompType, Component, Ctx, Foreign, Idx, IndexStore, MutCtx,
+    AddCtx, CompIdx, CompType, Component, Ctx, ExprIdx, Foreign, Idx,
+    IndexStore, MutCtx, Param, SparseInfoMap,
 };
 use fil_derive::Ctx;
 use std::collections::HashMap;
+
+/// Contains information for the entrypoint component.
+pub struct EntryPoint {
+    pub comp: CompIdx,
+    pub bindings: SparseInfoMap<Param, ExprIdx>,
+}
+
+impl EntryPoint {
+    pub fn new(comp: CompIdx) -> Self {
+        Self {
+            comp,
+            bindings: SparseInfoMap::default(),
+        }
+    }
+}
 
 #[derive(Default, Ctx)]
 pub struct Context {
     #[ctx(Component: Get, Add, Mut)]
     pub comps: IndexStore<Component>,
-    // Contains external components grouped by file name.
+    /// Contains external components grouped by file name.
     pub externals: HashMap<String, Vec<CompIdx>>,
-    pub entrypoint: Option<CompIdx>,
+    pub entrypoint: Option<EntryPoint>,
 }
 
 impl Context {
     pub fn is_main(&self, idx: CompIdx) -> bool {
-        Some(idx) == self.entrypoint
+        Some(idx) == self.entrypoint.as_ref().map(|ep| ep.comp)
     }
 
     /// Is this component external?

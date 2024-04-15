@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 use super::{Command, Id, Signature};
 use fil_gen as gen;
@@ -54,6 +54,8 @@ pub struct Namespace {
     pub components: Vec<Component>,
     /// Top-level component id
     pub toplevel: String,
+    /// Top level bindings
+    pub bindings: HashMap<Id, u64>,
 }
 
 impl Namespace {
@@ -62,6 +64,7 @@ impl Namespace {
             imports: Vec::default(),
             externs: Vec::default(),
             components: Vec::default(),
+            bindings: HashMap::default(),
             toplevel,
         }
     }

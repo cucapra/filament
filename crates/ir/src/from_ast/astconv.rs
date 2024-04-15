@@ -1,8 +1,8 @@
 //! Convert the frontend AST to the IR.
 use super::build_ctx::{OwnedParam, OwnedPort};
 use super::{BuildCtx, Sig, SigMap};
-use crate as ir;
 use crate::utils::Idx;
+use crate::{self as ir, EntryPoint, SparseInfoMap};
 use crate::{
     AddCtx, Cmp, Ctx, DisplayCtx, EventIdx, ExprIdx, InterfaceSrc, MutCtx,
     ParamIdx, PortIdx, PropIdx, TimeIdx,
@@ -1074,9 +1074,14 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
         entrypoint: ns
             .main_idx()
             // index main component after all externals
-            .map(|idx| Idx::new(ns.externals().count() + idx)),
+            .map(|idx| Idx::new(ns.externals().count() + idx))
+            .map(EntryPoint::new),
         ..Default::default()
     };
+
+    // Loc<Id> of the toplevel component
+    let toplevel_id =
+        ns.main_idx().map(|pos| ns.components[pos].sig.name.clone());
 
     // Walk over signatures and compile signatures to build a SigMap
     // Contains a tuple containing three necessary bits of information:
@@ -1121,7 +1126,7 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
             let mut builder = BuildCtx::new(ir::Component::new(typ), &sig_map);
 
             // enable source information saving if this is main
-            if Some(idx) == ctx.entrypoint {
+            if ctx.is_main(idx) {
                 builder.comp().src_info =
                     Some(InterfaceSrc::new(sig.name.copy(), None))
             }
@@ -1138,6 +1143,39 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
 
             // compile the signature
             let irsig = builder.sig(idx, &sig)?;
+
+            // Now that all the signature has been compiled,
+            // if this component is the main component, add the provided
+            // bindings to the entrypoint
+            if ctx.is_main(idx) {
+                let Some(ep) = &mut ctx.entrypoint else {
+                    unreachable!(
+                        "Entrypoint not set despite main component existing"
+                    );
+                };
+
+                let Some(toplevel_id) = &toplevel_id else {
+                    unreachable!("Main component had no name")
+                };
+
+                ep.bindings = ns
+                    .bindings
+                    .iter()
+                    .map(|(p, e)| {
+                        let param = builder
+                            .get_param(
+                                &OwnedParam::Local(*p),
+                                GPosIdx::UNKNOWN,
+                            )?
+                            .as_param(builder.comp())
+                            .unwrap();
+
+                        builder
+                            .expr(ast::Expr::Concrete(*e))
+                            .map(|expr| (param, expr))
+                    })
+                    .collect::<BuildRes<SparseInfoMap<_, _>>>()?;
+            }
 
             Ok((Builder { idx, builder, body }, (sig.name.take(), irsig)))
         })
