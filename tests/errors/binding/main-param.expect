@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+error: `main' requires at least 1 parameters but 0 were provided
+  ┌─ tests/errors/binding/main-param.fil:2:6
+  │
+2 │ comp main[A]<'G:1>() -> () {
+  │      ^^^^ `main' requires at least 1 parameters but 0 were provided
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.
