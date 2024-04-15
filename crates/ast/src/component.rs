@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
 
 use super::{Command, Id, Signature};
 use fil_gen as gen;

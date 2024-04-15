@@ -1,13 +1,11 @@
 use calyx_backend::Backend;
 use calyx_opt::pass_manager::PassManager;
-use fil_ast as ast;
 use fil_gen::GenConfig;
 use fil_ir as ir;
 use filament::ir_passes::BuildDomination;
 use filament::{cmdline, ir_passes as ip, resolver::Resolver};
 use filament::{log_pass, log_time, pass_pipeline};
 use serde::Deserialize;
-use std::collections::HashMap;
 use std::fs;
 
 #[derive(Deserialize, Default)]

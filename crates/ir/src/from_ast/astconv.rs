@@ -2,7 +2,7 @@
 use super::build_ctx::{OwnedParam, OwnedPort};
 use super::{BuildCtx, Sig, SigMap};
 use crate::utils::Idx;
-use crate::{self as ir, EntryPoint, SparseInfoMap};
+use crate::{self as ir, EntryPoint};
 use crate::{
     AddCtx, Cmp, Ctx, DisplayCtx, EventIdx, ExprIdx, InterfaceSrc, MutCtx,
     ParamIdx, PortIdx, PropIdx, TimeIdx,

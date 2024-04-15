@@ -1,6 +1,5 @@
 use super::{
-    AddCtx, CompIdx, CompType, Component, Ctx, ExprIdx, Foreign, Idx,
-    IndexStore, MutCtx, Param, SparseInfoMap,
+    AddCtx, CompIdx, CompType, Component, Ctx, Foreign, Idx, IndexStore, MutCtx,
 };
 use fil_derive::Ctx;
 use std::collections::HashMap;
