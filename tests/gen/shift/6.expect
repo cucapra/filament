@@ -1,0 +1,11 @@
+{
+"interfaces": [
+{"name": "null", "event": "G", "delay": 1, "states": 7, "phantom": true }
+],
+"inputs": [
+{ "event": "G", "name": "in", "width": 32 , "start": 0, "end": 1 }
+],
+"outputs": [
+{ "event": "G", "name": "out", "width": 32 , "start": 6, "end": 7 }
+]
+}
