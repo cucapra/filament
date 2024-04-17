@@ -7,5 +7,8 @@ error: `main' requires at least 2 parameters but 1 were provided
 3 │ comp main[W, D]<'G: 1>(
   │      ^^^^ `main' requires at least 2 parameters but 1 were provided
 
-Compilation failed with 1 errors.
+error: Incorrect parameter bindings provided to top-level component main
+ = Parameter bindings should be provided via the `--bindings` flag in a `.toml` file.
+
+Compilation failed with 2 errors.
 Run with --show-models to generate assignments for failing constraints.

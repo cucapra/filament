@@ -1,1 +1,1 @@
-params = [32, 6]
+params.main = [32, 6]

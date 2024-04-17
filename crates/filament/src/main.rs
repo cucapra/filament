@@ -6,16 +6,17 @@ use filament::ir_passes::BuildDomination;
 use filament::{cmdline, ir_passes as ip, resolver::Resolver};
 use filament::{log_pass, log_time, pass_pipeline};
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::fs;
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Default, Debug)]
 #[serde(default)]
 /// Contains the bindings that are provided by the user.
 pub struct ProvidedBindings {
     /// Gen configuration variables
     gen: GenConfig,
-    /// Parameters to give to the top-level component
-    params: Vec<u64>,
+    /// Parameters to give to the components
+    params: HashMap<String, Vec<u64>>,
 }
 
 // Prints out the interface for main component in the input program.
@@ -39,7 +40,11 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     let ns = match Resolver::from(opts).parse_namespace() {
         Ok(mut ns) => {
             ns.toplevel = opts.toplevel.clone();
-            ns.bindings = provided_bindings.params;
+            ns.bindings = provided_bindings
+                .params
+                .get(opts.toplevel.as_str())
+                .cloned()
+                .unwrap_or_default();
             ns
         }
         Err(e) => {
