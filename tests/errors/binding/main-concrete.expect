@@ -2,9 +2,9 @@
 1
 ---STDERR---
 error: Default values for parameters in the main component must be concrete
-  ┌─ tests/errors/binding/main-default.fil:2:19
+  ┌─ tests/errors/binding/main-concrete.fil:2:19
   │
-2 │ comp main[?A=31, ?B=1+W]<'G:1>() -> () {
+2 │ comp main[?A=31, ?B=1+A]<'G:1>() -> () {
   │                   ^ Parameter was not given a concrete value
 
 Compilation failed with 1 errors.

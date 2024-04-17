@@ -1165,6 +1165,12 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
                         ns.bindings.iter().copied().map(ast::Expr::Concrete),
                         toplevel_id.clone(),
                         builder.diag(),
+                    ).map_err(
+                        |mut e| {
+                            let err = Error::misc(format!("Incorrect parameter bindings provided to top-level component {}", sig.name)).add_note(e.add_message("Parameter bindings should be provided via the `--bindings` flag in a `.toml` file."));
+                            e.add_error(err);
+                            e
+                        }
                     )?
                     .into_iter()
                     .enumerate()
