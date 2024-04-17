@@ -274,6 +274,17 @@ impl<'prog> BuildCtx<'prog> {
                 // The .add call simplifies the expression if possible
                 self.comp().add(ir::Expr::Fn { op: func, args })
             }
+            ast::Expr::If { cond, then, alt } => {
+                let ast::OrderConstraint { left, right, op } = cond;
+                let cond = self.expr_cons(ast::OrderConstraint {
+                    left: *left,
+                    right: *right,
+                    op,
+                })?;
+                let then = self.expr(*then)?;
+                let alt = self.expr(*alt)?;
+                self.comp().add(ir::Expr::If { cond, then, alt })
+            }
         };
         Ok(expr)
     }

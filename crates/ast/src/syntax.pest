@@ -91,6 +91,10 @@ op_add = { "+" }
 op_sub = { "-" }
 operator = _{ op_mul | op_div | op_add | op_sub | op_mod }
 
+if_expr = {
+  "if" ~ expr_cmp ~ "{" ~ expr ~ "}" ~ "else" ~ "{" ~ expr ~ "}"
+}
+
 builtin_fn = {
   | "pow2"
   | "log2"
@@ -102,6 +106,7 @@ unknown_fn = { identifier }
 fn = {builtin_fn | unknown_fn}
 
 expr_base = {
+  | if_expr
   | fn ~ "(" ~ expr ~ ("," ~ expr)* ~ ")"
   | "(" ~ expr ~ ")"
   | bitwidth
