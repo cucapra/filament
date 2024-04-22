@@ -24,8 +24,8 @@ comp Rot[W, N, M, A]<'G:II>(
         N > 0,
         M > 0,
         A > 0,
-        M % 4 == 0, // need to do at least 4 multiplies at once
-        A % 2 == 0,  // need to do at least 2 adds at once
+        M % 4 == 0,   // need to do at least 4 multiplies at once
+        A % 2 == 0,   // need to do at least 2 adds at once
         N % (M/4) == 0,
         (M/4) % (A/2) == 0
 {
@@ -53,7 +53,7 @@ comp Rot[W, N, M, A]<'G:II>(
   negs := new Neg[W]<'G>(s);
 
   // instantiate multipliers
-  let last_mult_invoke = mult_reuses*mult_ii;
+  let last_mult_invoke = (mult_reuses)*mult_ii;
   M_cy := new Multipliers[W, m] in ['G, 'G+last_mult_invoke];
   M_sy := new Multipliers[W, m] in ['G, 'G+last_mult_invoke];
   M_cx := new Multipliers[W, m] in ['G, 'G+last_mult_invoke];
