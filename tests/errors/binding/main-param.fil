@@ -1,0 +1,4 @@
+// Value for main parameter not provided
+comp main[A]<'G:1>() -> () {
+
+}

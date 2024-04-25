@@ -1,9 +1,23 @@
 use calyx_backend::Backend;
 use calyx_opt::pass_manager::PassManager;
+use fil_gen::GenConfig;
 use fil_ir as ir;
 use filament::ir_passes::BuildDomination;
 use filament::{cmdline, ir_passes as ip, resolver::Resolver};
 use filament::{log_pass, log_time, pass_pipeline};
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::fs;
+
+#[derive(Deserialize, Default, Debug)]
+#[serde(default)]
+/// Contains the bindings that are provided by the user.
+pub struct ProvidedBindings {
+    /// Gen configuration variables
+    gen: GenConfig,
+    /// Parameters to give to the components
+    params: HashMap<String, Vec<u64>>,
+}
 
 // Prints out the interface for main component in the input program.
 fn run(opts: &cmdline::Opts) -> Result<(), u64> {
@@ -16,9 +30,21 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         .target(env_logger::Target::Stderr)
         .init();
 
+    // Load the provided bindings
+    let provided_bindings: ProvidedBindings = opts
+        .bindings
+        .as_ref()
+        .map(|path| toml::from_str(&fs::read_to_string(path).unwrap()).unwrap())
+        .unwrap_or_default();
+
     let ns = match Resolver::from(opts).parse_namespace() {
         Ok(mut ns) => {
             ns.toplevel = opts.toplevel.clone();
+            ns.bindings = provided_bindings
+                .params
+                .get(opts.toplevel.as_str())
+                .cloned()
+                .unwrap_or_default();
             ns
         }
         Err(e) => {
@@ -26,6 +52,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
             return Err(1);
         }
     };
+
     // Initialize the generator
     let mut gen_exec = if ns.requires_gen() {
         if opts.out_dir.is_none()
@@ -37,7 +64,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
                 "`--out-dir <dir>` to store the generated files."
             ))
         }
-        Some(ns.init_gen(opts.out_dir.clone()))
+        Some(ns.init_gen(opts.out_dir.clone(), provided_bindings.gen))
     } else {
         None
     };

@@ -217,7 +217,7 @@ impl Compile {
         component.attributes.insert(calyx::BoolAttr::NoInterface, 1);
 
         // If this is the main component, give it a `@top_level` attribute
-        if Some(idx) == ctx.entrypoint {
+        if ctx.is_main(idx) {
             log::debug!("Defining main component {idx}");
             component.attributes.insert(calyx::BoolAttr::TopLevel, 1);
         }

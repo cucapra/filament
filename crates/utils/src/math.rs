@@ -28,7 +28,7 @@ pub fn all_indices(ranges: Vec<(usize, usize)>) -> Vec<Vec<usize>> {
 }
 
 /// Convert a concrete number into an n-dimensional array's index
-pub fn nd_idx(v: usize, lens: &Vec<usize>) -> Vec<usize> {
+pub fn nd_idx(v: usize, lens: &[usize]) -> Vec<usize> {
     let mut idxs = Vec::with_capacity(lens.len());
     let mut v = v;
     for l in lens.iter().rev() {
