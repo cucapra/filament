@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use super::{Command, Id, Signature};
 use fil_gen as gen;
+use gen::GenConfig;
 
 #[derive(Default)]
 /// A external or generate definition in Filament
@@ -53,6 +54,8 @@ pub struct Namespace {
     pub components: Vec<Component>,
     /// Top-level component id
     pub toplevel: String,
+    /// Top level bindings
+    pub bindings: Vec<u64>,
 }
 
 impl Namespace {
@@ -61,6 +64,7 @@ impl Namespace {
             imports: Vec::default(),
             externs: Vec::default(),
             components: Vec::default(),
+            bindings: Vec::default(),
             toplevel,
         }
     }
@@ -77,7 +81,7 @@ impl Namespace {
     pub fn init_gen(
         &self,
         out_dir: Option<PathBuf>,
-        config: Option<PathBuf>,
+        config: GenConfig,
     ) -> gen::GenExec {
         let mut gen_exec = gen::GenExec::new(false, out_dir, config);
         for Extern { path, gen, .. } in &self.externs {

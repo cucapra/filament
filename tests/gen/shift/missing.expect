@@ -1,0 +1,14 @@
+---CODE---
+1
+---STDERR---
+error: `main' requires at least 2 parameters but 1 were provided
+  ┌─ tests/gen/shift.fil:3:6
+  │
+3 │ comp main[W, D]<'G: 1>(
+  │      ^^^^ `main' requires at least 2 parameters but 1 were provided
+
+error: Incorrect parameter bindings provided to top-level component main
+ = Parameter bindings should be provided via the `--bindings` flag in a `.toml` file.
+
+Compilation failed with 2 errors.
+Run with --show-models to generate assignments for failing constraints.

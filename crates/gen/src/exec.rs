@@ -1,4 +1,4 @@
-use crate::{Config, Instance, Tool, ToolOutput};
+use crate::{GenConfig, Instance, Tool, ToolOutput};
 use itertools::Itertools;
 use std::{
     collections::HashMap,
@@ -65,7 +65,7 @@ pub struct GenExec {
     output_dir: OutDir,
 
     /// Config file
-    config: Option<Config>,
+    config: GenConfig,
 
     /// Dry-run instead of executing commands
     dry_run: bool,
@@ -75,16 +75,14 @@ impl GenExec {
     pub fn new(
         dry_run: bool,
         out_dir: Option<PathBuf>,
-        config: Option<PathBuf>,
+        config: GenConfig,
     ) -> Self {
         GenExec {
             tools: HashMap::default(),
             generated: HashMap::default(),
             output_dir: OutDir::opt(out_dir),
             dry_run,
-            config: config.map(|path| {
-                toml::from_str(&fs::read_to_string(path).unwrap()).unwrap()
-            }),
+            config,
         }
     }
 
@@ -105,10 +103,8 @@ impl GenExec {
         let desc = fs::read_to_string(path.clone()).unwrap();
         let mut tool: Tool = toml::from_str(&desc).unwrap();
         // Replace the globals with the ones from the config file if it exists
-        if let Some(config) = &mut self.config {
-            if let Some(globals) = config.globals.remove(&tool.name) {
-                tool.globals = globals;
-            }
+        if let Some(globals) = self.config.remove(&tool.name) {
+            tool.globals = globals;
         }
         // Get the absolute path to the binary if it is relative
         let tool_path = PathBuf::from(&tool.path);

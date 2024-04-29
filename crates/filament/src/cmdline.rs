@@ -96,9 +96,9 @@ pub struct Opts {
     #[argh(option, long = "out-dir")]
     pub out_dir: Option<PathBuf>,
 
-    /// file path to the config file
-    #[argh(option, long = "gen-config")]
-    pub gen_config: Option<PathBuf>,
+    /// provided bindings (gen config and parameter bindings)
+    #[argh(option, long = "bindings")]
+    pub bindings: Option<PathBuf>,
 
     // Backend options
     /// backend to use (default: verilog): calyx, verilog
