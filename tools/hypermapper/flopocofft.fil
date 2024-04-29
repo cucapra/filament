@@ -1,6 +1,6 @@
 import "apps/fft/versions/flopoco/fft.fil";
 
-comp main<'G: II>(
+comp main[Butterflies, Iterative]<'G: II>(
   go: interface['G],
   in: ['G, 'G+1] NPoints*2*32 // 16 complex numbers bundled together
 ) -> (
@@ -11,9 +11,12 @@ comp main<'G: II>(
   some II where II > 0;
   some L where L >= II;
 } where
-  II > 0
+  II > 0,
+  Butterflies > 0,
+  Butterflies <= 8,
+  NPoints % (2*Butterflies) == 0
 {
-  FP_Stream := new BundledFFT[4, 1, 0];
+  FP_Stream := new BundledFFT[4, Butterflies, Iterative];
   fp_stream := FP_Stream<'G>(in);
   out = fp_stream.out;
 

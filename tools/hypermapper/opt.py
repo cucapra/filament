@@ -25,7 +25,7 @@ def gen_interface(tmpdir: TemporaryDirectory, filamentfile: str, gen_config: str
             [
                 "/home/filament/target/debug/filament",
                 filamentfile,
-                "--gen-config",
+                "--bindings",
                 gen_config,
                 "--preserve-names",
                 "--dump-interface",
@@ -46,16 +46,19 @@ def gen_interface(tmpdir: TemporaryDirectory, filamentfile: str, gen_config: str
 
 # Generates verilog
 def compile(
-    tmpdir: TemporaryDirectory, filamentfile: str, params: dict[str, dict[str, str]]
+    tmpdir: TemporaryDirectory, filamentfile: str, main_params: list[int], gen_params: dict[str, dict[str, str]]
 ):
     # Create the globals configuration
     conf_file = open(path.join(tmpdir.name, "conf.toml"), "w")
+
+    # Add main parameters
+    conf_file.write(f"params.main = {main_params}\n")
 
     # Generate a file that looks like
     # [globals.<key>]
     # <subkey> = <value>
     # ...
-    for k, v in params.items():
+    for k, v in gen_params.items():
         conf_file.write(f"[globals.{k}]\n")
         for subkey, value in v.items():
             conf_file.write(f'{subkey} = "{value}"\n')
@@ -70,7 +73,7 @@ def compile(
             "e",
             "-s",
             "filament.flags",
-            f" --gen-config {conf_file.name}",
+            f" --bindings {conf_file.name}",
             "--from",
             "filament",
             "--to",
@@ -136,22 +139,23 @@ create_clock -period {clock_period:.2f} -name clk [get_ports clk]
 
 
 def compile_and_synth(
-    filamentfile: str, clock_period: int, params: dict[str, dict[str, str]]
+    filamentfile: str, clock_period: int, main_params: list[int], gen_params: dict[str, dict[str, str]]
 ):
     tmpdir = TemporaryDirectory()
-    latency = compile(tmpdir, filamentfile, params)
+    latency = compile(tmpdir, filamentfile, main_params, gen_params)
     resources = synth(path.join(tmpdir.name, "fft.sv"), clock_period)
     return {**latency, **resources}
 
 
-def compile_flopoco_fft(target_frequency: int, clock_period: int):
+def compile_flopoco_fft(iterative: int, num_butterflies: int, target_frequency: int, clock_period: int):
     print(
-        f"Synthesizing with target frequency {target_frequency} and clock period {clock_period}"
+        f"Synthesizing {'Iterative' if iterative > 0 else 'Streaming'} with {num_butterflies} butterflies, target frequency {target_frequency} and clock period {clock_period}"
     )
     synth_results = compile_and_synth(
         path.join(path.dirname(__file__), "flopocofft.fil"),
         clock_period,
-        {"flopoco": {"conf": f"frequency={target_frequency} target=Virtex6"}},
+        [num_butterflies, iterative],
+        {"globals.flopoco": {"conf": f"frequency={target_frequency} target=Virtex6"}},
     )
     # We care about the time interval between operations
     synth_results["time_ii"] = synth_results["ii"] * synth_results["period"]
@@ -159,7 +163,8 @@ def compile_flopoco_fft(target_frequency: int, clock_period: int):
 
 
 def compile_and_synth_parallel(args):
-    args = list(zip(args["target_frequency"], args["clock_period"]))
+    args = list(zip(args["iterative"], [2**x for x in args["num_butterflies_log2"]], args["target_frequency"], args["clock_period"]))
+    print(args)
     with Pool(10) as p:
         ret = p.starmap(compile_flopoco_fft, args)
     ret = dl_to_ld(ret)
@@ -182,6 +187,8 @@ if __name__ == "__main__":
         "optimization_iterations": 10,
         "evaluations_per_optimization_iteration": 10,
         "input_parameters": {
+            "iterative": {"parameter_type": "integer", "values": [0, 1]},
+            "num_butterflies_log2": {"parameter_type": "integer", "values": [1, 3]},
             "target_frequency": {"parameter_type": "integer", "values": [50, 950]},
             "clock_period": {"parameter_type": "integer", "values": [1, 20]},
         },

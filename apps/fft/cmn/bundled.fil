@@ -5,6 +5,7 @@ import "primitives/reshape.fil";
 
 /// FFT that takes in a single wire and outputs a single wire
 /// Wraps the normal bundle-based fft component
+/// N is the number of butterflies in the FFT
 comp BundledFFT[NStages, N, ?Iterative=1]<'G: II>(
   go: interface['G],
   in: ['G, 'G+1] NPoints*2*32, // input bundle
