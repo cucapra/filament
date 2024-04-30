@@ -46,7 +46,10 @@ def gen_interface(tmpdir: TemporaryDirectory, filamentfile: str, gen_config: str
 
 # Generates verilog
 def compile(
-    tmpdir: TemporaryDirectory, filamentfile: str, main_params: list[int], gen_params: dict[str, dict[str, str]]
+    tmpdir: TemporaryDirectory,
+    filamentfile: str,
+    main_params: list[int],
+    gen_params: dict[str, dict[str, str]],
 ):
     # Create the globals configuration
     conf_file = open(path.join(tmpdir.name, "conf.toml"), "w")
@@ -139,7 +142,10 @@ create_clock -period {clock_period:.2f} -name clk [get_ports clk]
 
 
 def compile_and_synth(
-    filamentfile: str, clock_period: int, main_params: list[int], gen_params: dict[str, dict[str, str]]
+    filamentfile: str,
+    clock_period: int,
+    main_params: list[int],
+    gen_params: dict[str, dict[str, str]],
 ):
     tmpdir = TemporaryDirectory()
     latency = compile(tmpdir, filamentfile, main_params, gen_params)
@@ -147,7 +153,9 @@ def compile_and_synth(
     return {**latency, **resources}
 
 
-def compile_flopoco_fft(iterative: int, num_butterflies: int, target_frequency: int, clock_period: int):
+def compile_flopoco_fft(
+    iterative: int, num_butterflies: int, target_frequency: int, clock_period: int
+):
     print(
         f"Synthesizing {'Iterative' if iterative > 0 else 'Streaming'} with {num_butterflies} butterflies, target frequency {target_frequency} and clock period {clock_period}"
     )
@@ -163,7 +171,14 @@ def compile_flopoco_fft(iterative: int, num_butterflies: int, target_frequency: 
 
 
 def compile_and_synth_parallel(args):
-    args = list(zip(args["iterative"], [2**x for x in args["num_butterflies_log2"]], args["target_frequency"], args["clock_period"]))
+    args = list(
+        zip(
+            args["iterative"],
+            [2**x for x in args["num_butterflies_log2"]],
+            args["target_frequency"],
+            args["clock_period"],
+        )
+    )
     print(args)
     with Pool(10) as p:
         ret = p.starmap(compile_flopoco_fft, args)
@@ -215,6 +230,18 @@ if __name__ == "__main__":
             path.join(tmpdir.name, "scenario.json"), compile_and_synth_parallel
         )
 
+    # Now we are generating graphs
+    # Handle a bug in hypermapper where "true_value" and "false_value" for feasability must be strings now
+    scenario["feasible_output"]["true_value"] = str(
+        scenario["feasible_output"]["true_value"]
+    )
+    scenario["feasible_output"]["false_value"] = str(
+        scenario["feasible_output"]["false_value"]
+    )
+
+    with open(path.join(tmpdir.name, "scenario.json"), "w") as f:
+        json.dump(scenario, f)
+
     # Generate the graphs
     # Make results directory
     resdir = path.join(root, "results")
@@ -257,7 +284,7 @@ if __name__ == "__main__":
 
     print(df)
 
-    df["frequency"] = 1000 / df["period"]
+    df["frequency"] = 1000 / df["clock_period"]
 
     for objective in scenario["optimization_objectives"]:
         # Plot a scatter plot of all the points
