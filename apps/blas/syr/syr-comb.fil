@@ -1,0 +1,59 @@
+import "apps/blas/util.fil";
+
+// Computes alpha * x * x^T + A in one cycle, where:
+// alpha is a scalar
+// x is a vector of length N
+// A is a symmetric matrix
+// W: width of nums
+// N: length of vector
+comp SyrComb[W, N]<'G:1>(
+  alpha: ['G, 'G+1] W,
+  x[N]: ['G, 'G+1] W,
+  A[N][N]: ['G, 'G+1] W
+) -> (
+  A_out[N][N]: ['G, 'G+1] W
+) with {
+  some L;
+  some II;
+} where W > 0 {
+  II := 1;
+  L := 0;
+
+  bundle alpha_bundle[N]: ['G, 'G+1] W;
+  bundle alpha_x[N]: ['G, 'G+1] W;
+
+  bundle vec_mult[N][N]: ['G, 'G+1] W;
+
+  for i in 0..N {
+    alpha_bundle{i} = alpha;
+  }
+
+  Mults1 := new MultipliersComb[W, N]<'G>(alpha_bundle{0..N}, x{0..N});
+  alpha_x{0..N} = Mults1.out{0..N};
+
+  for i in 0..N {
+    bundle left_bundle[N]: ['G, 'G+1] W;
+    bundle right_bundle[N]: ['G, 'G+1] W;
+
+    // get ax[0], ax[1], ... ax[N-1] for each iter of i
+    for j in 0..N {
+      left_bundle{j} = alpha_x{i};
+    }
+
+    // got x[0], x[1], ..., x[N-1] in one bundle to do the mult
+    for j in 0..N {
+      right_bundle{j} = x{j};
+    }
+
+    // do the vector mult, will give us row i of the resulting matrix
+    Mults2 := new MultipliersComb[W, N]<'G>(left_bundle{0..N}, right_bundle{0..N});
+    vec_mult{i}{0..N} = Mults2.out{0..N};
+  }
+
+  for i in 0..N {
+    Adders1 := new Adders[W, N]<'G>(vec_mult{i}{0..N}, A{i}{0..N});
+    A_out{i}{0..N} = Adders1.out{0..N};
+  }
+
+
+}

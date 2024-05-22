@@ -38,6 +38,19 @@ comp Multipliers[W, N]<'G:1>(
   }
 }
 
+// a component that does N multiplies at once, combinational
+comp MultipliersComb[W, N]<'G:1>(
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W
+) -> (
+  out[N]: ['G, 'G+1] W
+) where W > 0 {
+  for i in 0..N {
+    m := new MultComb[W]<'G>(x{i}, y{i});
+    out{i} = m.out;
+  }
+}
+
 // a component that does N additions at once
 comp Adders[W, N]<'G:1>(
   x[N]: ['G, 'G+1] W,
