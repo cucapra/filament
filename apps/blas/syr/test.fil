@@ -1,5 +1,5 @@
 import "apps/blas/syr/syr-comb.fil";
-import "apps/blas/syr/syr-1-1.fil";
+import "apps/blas/syr/syr-1-1-gen.fil";
 import "primitives/reshape.fil";
 
 // Syr requires A to be stored as a bundle of rows
