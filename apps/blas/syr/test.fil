@@ -1,5 +1,5 @@
 import "apps/blas/syr/syr-comb.fil";
-import "apps/blas/syr/syr-1-1-gen.fil";
+import "apps/blas/syr/syr-gen.fil";
 import "primitives/reshape.fil";
 
 // Syr requires A to be stored as a bundle of rows
@@ -17,8 +17,8 @@ comp main<'G:II>(
   some II;
   let W = 4;
   let N = 2;
-  let MultsN = 1;
-  let AddsN = 1;
+  let MultsN = 2;
+  let AddsN = 2;
 } where N > 0, W > 0 {
   x_vec := new SplitWire[W, N]<'G>(x);
 
@@ -29,7 +29,7 @@ comp main<'G:II>(
     A_mat{i}{0..N} = A_split.out{i*N .. (i+1)*N};
   }
 
-  s := new Syr_1_1[W, N];
+  s := new Syr_Gen[W, N, MultsN];
 
   run_s := s<'G>(alpha, x_vec.out{0..N}, A_mat{0..N}{0..N});
   
