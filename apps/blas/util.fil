@@ -96,9 +96,12 @@ comp Adders[W, N]<'G:1>(
   y[N]: ['G, 'G+1] W
 ) -> (
   out[N]: ['G, 'G+1] W
-) where W > 0,
+) with {
+  some II where II > 0;
+} where W > 0,
         N > 0
 {
+  II := 1;
   for i in 0..N {
     a := new Add[W]<'G>(x{i}, y{i});
     out{i} = a.out;
