@@ -18,6 +18,45 @@ comp Mult[W]<'G:1>(
   II := 1;
 }
 
+// multiplier with latency = 1, mostly for experimenting
+comp AltMult[W]<'G:1>(
+  left: ['G, 'G+1] W,
+  right: ['G, 'G+1] W
+) -> (
+  out: ['G+L, 'G+L+1] W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0 {
+  l := new Delay[W]<'G>(left);
+  r := new Delay[W]<'G>(right);
+  m := new MultComb[W]<'G+1>(l.out, r.out);
+  out = m.out;
+
+  II := 1;
+  L := 1;
+}
+
+// a component that does N multiplies at once
+comp AltMultipliers[W, N]<'G:1>(
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W
+) -> (
+  out[N]: ['G+L, 'G+L+1] W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0 {
+  Mx := new AltMult[W];
+  L := Mx::L;
+  II := Mx::II;
+
+  for i in 0..N {
+    m := new AltMult[W]<'G>(x{i}, y{i});
+    out{i} = m.out;
+  }
+}
+
 // a component that does N multiplies at once
 comp Multipliers[W, N]<'G:1>(
   x[N]: ['G, 'G+1] W,
@@ -34,6 +73,19 @@ comp Multipliers[W, N]<'G:1>(
 
   for i in 0..N {
     m := new Mult[W]<'G>(x{i}, y{i});
+    out{i} = m.out;
+  }
+}
+
+// a component that does N multiplies at once, combinational
+comp MultipliersComb[W, N]<'G:1>(
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W
+) -> (
+  out[N]: ['G, 'G+1] W
+) where W > 0 {
+  for i in 0..N {
+    m := new MultComb[W]<'G>(x{i}, y{i});
     out{i} = m.out;
   }
 }
