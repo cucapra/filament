@@ -3,7 +3,7 @@ import "apps/blas/syr/harness.fil";
 // Syr requires A to be stored as a bundle of rows
 // this test harness assumes A has been flattened into the form of:
 // [A_00, A_01, ..., A_0N, A_10, A_11, ..., A_1N, ..., A_N0, A_N1, ..., A_NN]
-comp main<'G:II>(
+comp main[W, N, MultsN, AddsN]<'G:II>(
   go: interface['G],
   alpha: ['G, 'G+1] W,
   x:     ['G, 'G+1] N*W,
@@ -13,12 +13,12 @@ comp main<'G:II>(
 ) with {
   some L;
   some II;
-  let W = 4;
-  let N = 2;
-  let MultsN = 2;
-  let AddsN = 2;
-} where N > 0, W > 0 {
-  Har := new Harness[4, 2, 2, 2];
+} where N > 0,
+        W > 0,
+        MultsN > 0,
+        N % MultsN == 0,
+        MultsN == AddsN {
+  Har := new Harness[W, N, MultsN, AddsN];
   h := Har<'G>(alpha, x, A);
   A_out = h.A_out;
   L := Har::L;
