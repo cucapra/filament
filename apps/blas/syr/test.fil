@@ -1,6 +1,4 @@
-import "apps/blas/syr/syr-comb.fil";
-import "apps/blas/syr/syr.fil";
-import "primitives/reshape.fil";
+import "apps/blas/syr/harness.fil";
 
 // Syr requires A to be stored as a bundle of rows
 // this test harness assumes A has been flattened into the form of:
@@ -20,30 +18,9 @@ comp main<'G:II>(
   let MultsN = 2;
   let AddsN = 2;
 } where N > 0, W > 0 {
-  x_vec := new SplitWire[W, N]<'G>(x);
-
-  A_split := new SplitWire[W, N*N]<'G>(A);
-  bundle A_mat[N][N]: ['G, 'G+1] W;
-
-  for i in 0..N {
-    A_mat{i}{0..N} = A_split.out{i*N .. (i+1)*N};
-  }
-
-  s := new Syr[W, N, MultsN, AddsN];
-
-  run_s := s<'G>(alpha, x_vec.out{0..N}, A_mat{0..N}{0..N});
-  
-  bundle out_flat[N]: ['G+s::L, 'G+s::L+1] N*W;
-  for i in 0..N {
-    // represents a row flattened together
-    row_concat := new ConcatBundle[W, N]<'G+s::L>(run_s.A_out{i}{0..N});
-    out_flat{i} = row_concat.out;
-  }
-
-  // flatten all the rows together to have the same data format as input matrix
-  out_flatter := new ConcatBundle[W*N, N]<'G+s::L>(out_flat{0..N});
-  A_out = out_flatter.out;
-
-  II := s::II;
-  L := s::L;
+  Har := new Harness[4, 2, 2, 2];
+  h := Har<'G>(alpha, x, A);
+  A_out = h.A_out;
+  L := Har::L;
+  II := Har::II; 
 }
