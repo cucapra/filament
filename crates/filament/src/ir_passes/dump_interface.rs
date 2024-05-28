@@ -9,6 +9,8 @@ impl DumpInterface {
     pub fn print(ctx: &ir::Context) {
         let entrypoint = ctx
             .entrypoint
+            .as_ref()
+            .map(|ep| ep.comp)
             .unwrap_or_else(|| panic!("No entrypoint found."));
         let main = ctx.get(entrypoint);
         let src_info = main

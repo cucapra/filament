@@ -16,7 +16,7 @@ mod utils;
 mod validate;
 
 pub use comp::{CompType, Component};
-pub use context::Context;
+pub use context::{Context, EntryPoint};
 pub use control::{
     Command, Connect, EventBind, Exists, If, Instance, Invoke, Let, Loop,
 };

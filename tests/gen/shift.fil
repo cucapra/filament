@@ -1,0 +1,10 @@
+import "primitives/state.fil";
+/// A simple shift register component that delays a signal by D cycles.
+comp main[W, D]<'G: 1>(
+   in: ['G, 'G+1] W
+) -> (
+   out: ['G+D, 'G+D+1] W
+) where W > 0 {
+   shift := new Shift[W, D]<'G>(in);
+   out = shift.out{0};
+}

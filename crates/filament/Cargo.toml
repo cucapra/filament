@@ -13,6 +13,8 @@ readme.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+toml.workspace = true
+serde.workspace = true
 argh.workspace = true
 log.workspace = true
 pest.workspace = true
