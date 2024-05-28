@@ -4,7 +4,7 @@ use super::{
 };
 use fil_gen as gen;
 use fil_ir::{self as ir, Ctx, IndexStore};
-use ir::AddCtx;
+use ir::{AddCtx, EntryPoint};
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -277,7 +277,7 @@ impl Monomorphize<'_> {
         ctx: &ir::Context,
         gen: &mut Option<gen::GenExec>,
     ) -> ir::Context {
-        let Some(entrypoint) = ctx.entrypoint else {
+        let Some(entrypoint) = &ctx.entrypoint else {
             log::warn!("Program has no entrypoint. Result will be empty.");
             return ir::Context {
                 comps: IndexStore::default(),
@@ -285,14 +285,20 @@ impl Monomorphize<'_> {
                 externals: HashMap::new(),
             };
         };
+        let EntryPoint {
+            comp: entrypoint,
+            bindings,
+        } = entrypoint;
+
         let entrypoint = entrypoint.ul();
         // Monomorphize the entrypoint
         let mut mono = Monomorphize::new(ctx, gen);
-        let ck = CompKey::new(entrypoint, vec![]);
+        let ck = CompKey::new(entrypoint, bindings.clone());
         mono.monomorphize(ck.clone());
 
         let new_entrypoint = mono.processed.get(&ck).unwrap();
-        mono.ctx.entrypoint = Some(new_entrypoint.get());
+        // New component no longer has any bindings
+        mono.ctx.entrypoint = Some(EntryPoint::new(new_entrypoint.get()));
         mono.ctx.externals = mono.ext_map;
         ir::Validate::context(&mono.ctx);
         mono.ctx

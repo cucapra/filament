@@ -16,6 +16,8 @@ version = "0.1.0"
 rust-version = "1.67"
 
 [workspace.dependencies]
+toml = "0.8"
+serde = "1.0"
 argh = "0.1"
 log = "0.4"
 pest = "2.1"
