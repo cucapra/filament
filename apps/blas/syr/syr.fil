@@ -14,7 +14,7 @@ comp Syr[W, N, MultsN, AddsN]<'G:II>(
   x[N]: ['G, 'G+1] W,
   A[N][N]: ['G, 'G+1] W
 ) -> (
-  A[N][N]: ['G+L, 'G+L+1] W
+  A_out[N][N]: ['G+L, 'G+L+1] W
 ) with {
   some L where L > 0;
   some II where II > 0;
@@ -24,109 +24,158 @@ comp Syr[W, N, MultsN, AddsN]<'G:II>(
         N % MultsN == 0,
         AddsN == MultsN
 {
-  II := 1;
-  L := 1;
+  Multsx := new Multipliers[W, MultsN];
 
   let mult_uses = N / MultsN;
+  let add_uses = N / MultsN;
 
-  Mults := new Multipliers[W, MultsN];
-  Adds := new Adders[W, AddsN];
+  if Multsx::L > mult_uses*Multsx::II {
+    Mults := new Multipliers[W, MultsN] in ['G, 'G + Mults::L + (mult_uses*N*Mults::II)];
+    Adds := new Adders[W, MultsN] in ['G + Mults::L + Mults::L, 'G + Mults::L + Mults::L + mult_uses*N];
 
-  bundle alpha_x[mult_uses][MultsN]: for <k> ['G+k*Mults::II+Mults::L, 'G+k*Mults::II+Mults::L+1] W;
-  bundle alpha_bundle[mult_uses][MultsN]: for<k> ['G+k*Mults::II, 'G+k*Mults::II+1] W;
+    bundle alpha_x[mult_uses][MultsN]: for<k> ['G+k+Mults::L, 'G+k+Mults::L+1] W;
 
-  // ================================================================================================
-  //                                    STAGE 1: alpha * x
-  // ================================================================================================
+    // alpha * x stage
+    for i in 0..mult_uses {
+      let mult_start = i;
+      let mult_end = i + Mults::L;
 
-  // do alpha * x using as many multipliers as possible
-  for i in 0..mult_uses {
-    let mult_start = i*Mults::II;
-    let mult_end = i*Mults::II + Mults::L;
+      alpha_reg := new Shift[W, mult_start]<'G>(alpha);
+      bundle alpha_bundle[MultsN]: for<k> ['G+mult_start, 'G+mult_start+1] W;
 
-    alpha_reg := new Shift[W, mult_start]<'G>(alpha);
-
-    if i == 0 {
-      for j in 0..MultsN {
-        alpha_bundle{i}{j} = alpha;
+      if i == 0 {
+        for j in 0..MultsN {
+          alpha_bundle{j} = alpha;
+        }
+        m := Mults<'G+mult_start>(x{i*MultsN..(i+1)*MultsN}, alpha_bundle{0..MultsN});
+        alpha_x{i}{0..MultsN} = m.out{0..MultsN};
+      } else {
+        alpha_reg := new Shift[W, mult_start]<'G>(alpha);
+        for j in 0..MultsN {
+          alpha_bundle{j} = alpha_reg.out;
+        }
+        x_reg := new Shift[W, mult_start, MultsN]<'G>(x{i*MultsN..(i+1)*MultsN});
+        m := Mults<'G+mult_start>(x_reg.out{0..MultsN}, alpha_bundle{0..MultsN});
+        alpha_x{i}{0..MultsN} = m.out{0..MultsN};
       }
-      m := Mults<'G+mult_start>(x{i*MultsN..(i+1)*MultsN}, alpha_bundle{i}{0..MultsN});
-      alpha_x{i}{0..MultsN} = m.out{0..MultsN};
     }
-    else {
-      for j in 0..MultsN {
-        alpha_bundle{i}{j} = alpha_reg.out;
-      }
-      x_reg := new Shift[W, mult_start, MultsN]<'G>(x{i*MultsN..(i+1)*MultsN});
-      m := Mults<'G+mult_start>(x_reg.out{0..MultsN}, alpha_bundle{i}{0..MultsN});
-      alpha_x{i}{0..MultsN} = m.out{0..MultsN};
-    }
-  }
 
-  // end of alpha * x stage
-  let first_stage_end = (mult_uses-1)*Mults::II + Mults::L; 
+    // (alpha*x) * x^T stage
+    bundle vec_mult[N*mult_uses][MultsN]: for<k> ['G+k+Mults::L + Mults::L, 'G+k+Mults::L +Mults::L+1] W;
 
-  // ================================================================================================
-  //                                    STAGE 2: (alpha * x) * x^T
-  // ================================================================================================
-
-  // if we have fewer multipliers than vector length, then we need to break up
-  // the dot products
-  if MultsN < N {
-
-    // ASSUMES L < mult_uses * II ; basically that the limiting factor in pipeline is II, not latency
-    assume Mults::L < mult_uses * Mults::II;
-    // this means we assume that the first group of alpha*x will be done by the time we have access to the 
-    // multipliers again
-    bundle matrix0[mult_uses*N][MultsN]: for<k> ['G + (mult_uses+k)* Mults::II + Mults::L, 'G + (mult_uses+k)* Mults::II + Mults::L + 1] W;
-    bundle matrix1[mult_uses*N][MultsN]: for<k> ['G + (mult_uses+k)* Mults::II + Mults::L, 'G + (mult_uses+k)* Mults::II + Mults::L + 1] W;
-
+    // each iteration corresponds to computing a row in resulting vector
     for i in 0..N {
-      let first_mult_end = mult_uses*Mults::II + Mults::L; // when first stage of mults is done is done
-      let next_mult_start = (mult_uses+j)*Mults::II; // when we want to start (alpha * x)*(x^T){i}
-      let next_mult_end = next_mult_start + Mults::L; // when ^^^ will finish
-      
       for j in 0..mult_uses {
+        let second_mult_start = j+Mults::L;
+        x_reg := new Shift[W, i*mult_uses+j+Mults::L, 1]<'G>(x{i});
 
-        // need a bunch of copies of each index, to do as many multiplications at once
-        bundle x_trans_tmp[MultsN]: ['G, 'G+1] W;
-        
-        // fill temp bundle with copies
+        bundle x_i[MultsN]: ['G+i*mult_uses+j+Mults::L, 'G+i*mult_uses+j+Mults::L+1] W;
         for k in 0..MultsN {
-          x_trans_tmp{k} = x{i};
+          x_i{k} = x_reg.out{0..1};
         }
 
-        // register the relevant indices of (alpha*x) until we need them
-        alphax_reg := new Shift[W, next_mult_start - (i*Mults::II + Mults::L), MultsN]<'G+j*Mults::II + Mults::L>(alpha_x{j}{0..MultsN});
+        alpha_x_reg := new Shift[W, i*mult_uses+j+Mults::L-second_mult_start, MultsN]<'G+second_mult_start>(alpha_x{j}{0..MultsN});
 
-        // now x_trans has MultsN copies of x{i}
-        x_trans := new Shift[W, next_mult_start, MultsN]<'G>(x_trans_tmp{0..MultsN});
-       
-        // do the multiplication; will have {0..MultsN} ready
-        vector_mult := Mults<'G+next_mult_start>(alphax_reg.out{0..MultsN}, x_trans.out{0..MultsN});
-        matrix0{i+j}{0..MultsN} = vector_mult.out{0..MultsN};
-      }  
-    }
-
-    // AddsN == MultsN
-    let add_uses = MultsN / AddsN;
-    // loop through all the pieces we multiplied
-    for i in 0..mult_uses*N {
-      // same as add start because no hardware shared between stages
-      let matrix_mult_end = (mult_uses+i)* Mults::II + Mults::L;
-      for j in 0..add_uses {
-        // get the relevant values from A - do it by column
-        bundle A_bundle[MultsN]: ['G, 'G+1] W;
-        for k in 0..MultsN {
-          A_bundle{k} = A{k}{j};
-        }
-
-        A_reg := new Shift[W, (mult_uses+i)* Mults::II + Mults::L, AddsN]<'G>(A_bundle{0..MultsN});
-        matrix_add := Adds<'G+matrix_mult_end>(A_reg.out{0..AddsN}, matrix0{i}{0..MultsN});
-        matrix1{i}{0..MultsN} = matrix_add.out{0..MultsN};
+        mult := Mults<'G+i*mult_uses+j+Mults::L>(alpha_x_reg.out{0..MultsN}, x_i{0..MultsN});
+        vec_mult{i*mult_uses+j}{0..MultsN} = mult.out{0..MultsN};
       }
-
     }
 
+    bundle matrix_add[N*mult_uses][MultsN]: for<k> ['G+k+Mults::L+Mults::L, 'G+k+Mults::L+Mults::L+1] W;
+
+    // add stage
+    for i in 0..N {
+      for j in 0..add_uses {
+        a_reg := new Shift[W, i*mult_uses+j+Mults::L + Mults::L, MultsN]<'G>(A{i}{j*MultsN..(j+1)*MultsN});
+        add := Adds<'G+i*mult_uses+j+Mults::L + Mults::L>(vec_mult{i*mult_uses+j}{0..MultsN}, a_reg.out{0..MultsN});
+        matrix_add{i*mult_uses+j}{0..MultsN} = add.out{0..MultsN};
+      }
+    }
+
+    // synchronize everything
+    let latency = Mults::L + Mults::L + N*mult_uses-1;
+    for i in 0..N {
+      for j in 0..add_uses {
+        reg := new Shift[W, latency - (i*mult_uses+j+Mults::L + Mults::L), MultsN]<'G+i*mult_uses+j+Mults::L + Mults::L>(matrix_add{i*mult_uses+j}{0..MultsN});
+        A_out{i}{j*MultsN..(j+1)*MultsN} = reg.out{0..MultsN};
+      }
+    }
+
+    L := latency;
+    II := Mults::L + (mult_uses*N*Mults::II);
+  } else {
+    Mults := new Multipliers[W, MultsN] in ['G, 'G + (mult_uses-1)*Mults::II + mult_uses*N*Mults::II+1];
+    Adds := new Adders[W, MultsN] in ['G + mult_uses*Mults::II+Mults::L, 'G + mult_uses*Mults::II+Mults::L + N*mult_uses*Mults::II];
+
+    bundle alpha_x[mult_uses][MultsN]: for<k> ['G+k+Mults::L, 'G+k+Mults::L+1] W;
+
+    // alpha * x stage
+    for i in 0..mult_uses {
+      let mult_start = i;
+      let mult_end = i + Mults::L;
+
+      alpha_reg := new Shift[W, mult_start]<'G>(alpha);
+      bundle alpha_bundle[MultsN]: for<k> ['G+mult_start, 'G+mult_start+1] W;
+
+      if i == 0 {
+        for j in 0..MultsN {
+          alpha_bundle{j} = alpha;
+        }
+        m := Mults<'G+mult_start>(x{i*MultsN..(i+1)*MultsN}, alpha_bundle{i*MultsN..(i+1)*MultsN});
+        alpha_x{i}{0..MultsN} = m.out{0..MultsN};
+      } else {
+        alpha_reg := new Shift[W, mult_start]<'G>(alpha);
+        for j in 0..MultsN {
+          alpha_bundle{j} = alpha_reg.out;
+        }
+        x_reg := new Shift[W, mult_start, MultsN]<'G>(x{i*MultsN..(i+1)*MultsN});
+        m := Mults<'G+mult_start>(x_reg.out{0..MultsN}, alpha_bundle{0..MultsN});
+        alpha_x{i}{0..MultsN} = m.out{0..MultsN};
+      }
+    }
+
+    // (alpha*x) * x^T stage
+    bundle vec_mult[N*mult_uses][MultsN]: for<k> ['G+k+mult_uses*Mults::II+Mults::L, 'G+k+mult_uses*Mults::II+Mults::L+1] W;
+
+    // each iteration corresponds to computing a row in resulting vector
+    for i in 0..N {
+      for j in 0..mult_uses {
+        let second_mult_start = j+mult_uses*Mults::II;
+
+        x_reg := new Shift[W, i*mult_uses+second_mult_start, 1]<'G>(x{i});
+        bundle x_i[MultsN]: ['G+i*mult_uses+second_mult_start, 'G+i*mult_uses+second_mult_start+1] W;
+        for k in 0..MultsN {
+          x_i{k} = x_reg.out{0..1};
+        }
+        
+        alpha_x_reg := new Shift[W, i*mult_uses+j+mult_uses*Mults::II-(j+Mults::L), MultsN]<'G+j+Mults::L>(alpha_x{j}{0..MultsN});
+
+        mult := Mults<'G+i*mult_uses+j+mult_uses*Mults::II>(alpha_x_reg.out{0..MultsN}, x_i{0..MultsN});
+        vec_mult{i*mult_uses+j}{0..MultsN} = mult.out{0..MultsN};
+      }
+    }
+
+    bundle matrix_add[N*mult_uses][MultsN]: for<k> ['G+k+mult_uses*Mults::II+Mults::L, 'G+k+mult_uses*Mults::II+Mults::L+1] W;
+
+    // add stage
+    for i in 0..N {
+      for j in 0..add_uses {
+        a_reg := new Shift[W, i*mult_uses+j+mult_uses*Mults::II+Mults::L, MultsN]<'G>(A{i}{j*MultsN..(j+1)*MultsN});
+        add := Adds<'G+i*mult_uses+j+mult_uses*Mults::II+Mults::L>(vec_mult{i*mult_uses+j}{0..MultsN}, a_reg.out{0..MultsN});
+        matrix_add{i*mult_uses+j}{0..MultsN} = add.out{0..MultsN};
+      }
+    }
+
+    // synchronize everything
+    let latency = mult_uses*Mults::II+Mults::L + N*mult_uses*Mults::II;
+    for i in 0..N {
+      for j in 0..add_uses {
+        reg := new Shift[W, latency - (i*mult_uses+j+mult_uses*Mults::II+Mults::L), MultsN]<'G+i*mult_uses+j+mult_uses*Mults::II+Mults::L>(matrix_add{i*mult_uses+j}{0..MultsN});
+        A_out{i}{j*MultsN..(j+1)*MultsN} = reg.out{0..MultsN};
+      }
+    }
+
+    L := latency;
+    II := (mult_uses-1)*Mults::II + mult_uses*N*Mults::II+1;
   }
 }
