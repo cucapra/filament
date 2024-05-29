@@ -1,0 +1,58 @@
+import "apps/blas/util.fil";
+
+// Combinational gemv kernel that uses M*N multipliers
+comp Gemv_Comb[W, M, N]<'G:II>(
+  go: interface['G],
+  alpha:    ['G, 'G+1] W,
+  beta:     ['G, 'G+1] W,
+  A[M][N]:  ['G, 'G+1] W
+  x[N]:     ['G, 'G+1] W,
+  y[M]:     ['G, 'G+1] W
+) -> (
+  y_out[M]: ['G, 'G+1] W
+) with {
+  some L;
+  some II;
+} where W > 0,
+        N > 0,
+        M > 0,
+        MultsN > 0,
+{
+  II := 1;
+  L := 0;
+
+  bundle alpha_bundle[N]: ['G, 'G+1] W;
+  bundle alpha_A[M][N]:   ['G, 'G+1] W;
+
+  for i in 0..N {
+    alpha_bundle{i} = alpha;
+  }
+
+  // do alpha * A
+  for i in 0..M {
+    Mults1 := new MultipliersComb[W, N]<'G>(alpha_bundle{0..N}, A{i}{0..N})
+    alpha_A{i}{0..N} = Mults1.out{0..N};
+  }
+
+  bundle mv_prod[M][N]: ['G, 'G+1] W;
+
+  // do alpha*A * x
+  for i in 0..M {
+    Mults2 := new MultipliersComb[W, N]<'G>(alpha_A{i}{0..N}, x{0..N})
+    mv_prod{i}{0..N} = Mults2.out;
+  }
+
+  // do adds for dot prods
+
+  // do beta*y
+  bundle beta_bundle[M]: ['G, 'G+1] W;
+  bundle beta_y[M]: ['G, 'G+1] W:
+
+  for i in 0..M {
+    beta_bundle{i} = beta;
+  }
+
+  Mults3 := new MultipliersComb[W, M]<'G>(beta_bundle{0..M}, y{0..M});
+  beta_y{0..M} = Mults3.out{0..M};
+
+}

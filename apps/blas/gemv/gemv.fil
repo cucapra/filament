@@ -1,0 +1,21 @@
+import "apps/blas/util.fil";
+
+comp Gemv[W, M, N, MultsN, AddsN]<'G:II>(
+  go: interface['G],
+  alpha:    ['G, 'G+1] W,
+  beta:     ['G, 'G+1] W,
+  A[M][N]:  ['G, 'G+1] W
+  x[N]:     ['G, 'G+1] W,
+  y[M]:     ['G, 'G+1] W
+) -> (
+  y_out[M]: ['G+L, 'G+L+1] W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0,
+        N > 0,
+        M > 0,
+        MultsN > 0,
+{
+  
+}
