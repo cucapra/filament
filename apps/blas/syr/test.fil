@@ -1,4 +1,3 @@
-import "apps/blas/syr/syr-comb.fil";
 import "apps/blas/syr/syr.fil";
 import "primitives/reshape.fil";
 

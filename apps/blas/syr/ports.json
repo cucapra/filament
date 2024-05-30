@@ -1,0 +1,21 @@
+{
+    "inputs": {
+        "alpha": {
+            "type": "scalar"
+        },
+        "x": {
+            "type": "matrix",
+            "dim": [2,1]
+        },
+        "A": {
+            "type": "matrix",
+            "dim": [2,2]
+        }
+    },
+    "outputs": {
+        "A_out": {
+            "type": "matrix",
+            "dim": [2,2]
+        }
+    }
+}
