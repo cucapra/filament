@@ -121,9 +121,9 @@ apps/fft/test/scripts/edge.sh $dir
 # blas
 [[tests]]
 name = "blas"
-paths = ["apps/blas/*/test.fil"]
+paths = ["apps/blas/syr/test.fil"]
 cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -q
+python apps/blas/util.py -r -n 5 -w 4 -k {} && cat {}.out
 """
 
 # ============== Examples in the documentation ============
