@@ -2,16 +2,16 @@
     "inputs": {
         "x": {
             "type": "matrix",
-            "dim": [2,1]
+            "dim": [4,1]
         },
-        "a": {
-            "type": "scalar"
+        "y": {
+            "type": "matrix",
+            "dim": [4,1]
         }
     },
     "outputs": {
         "out": {
-            "type": "matrix",
-            "dim": [2,1]
+            "type": "scalar"
         }
     }
 }

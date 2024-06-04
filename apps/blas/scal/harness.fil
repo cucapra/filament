@@ -1,0 +1,27 @@
+import "apps/blas/scal/scal.fil";
+import "primitives/reshape.fil";
+
+comp Harness[W, N, MultsN]<'G:II>(
+  go: interface['G],
+  x: ['G, 'G+1] N*W,
+  a: ['G, 'G+1] W
+) -> (
+  out: ['G+L, 'G+L+1] N*W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0,
+        N > 0,
+        MultsN > 0
+{
+  x_vec := new SplitWire[W, N]<'G>(x);
+  
+  s := new Scal[W, N, MultsN];
+  run_s := s<'G>(x_vec.out{0..N}, a);
+
+  out_flat := new ConcatBundle[W, N]<'G+s::L>(run_s.out{0..N});
+  out = out_flat.out;
+
+  II := s::II;
+  L := s::L;
+}

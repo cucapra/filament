@@ -7,28 +7,27 @@ def axpy(inputs):
     alpha, x, y = inputs
     x = np.array(x)
     y = np.array(y)
-    return alpha*x + y
+    return [(alpha*x + y).tolist()]
 
 def dot(inputs):
     x,y = inputs
-    x = np.array(x)
-    y = np.array(y)
-    return np.dot(x,y)
+    x = np.array(x).flatten()
+    y = np.array(y).flatten()
+    r = np.dot(x,y)
+    return [r]
 
 def rot(inputs):
-    (u, v, c, s) = inputs
-    assert len(u) == len(v)
-    x = np.zeros(len(u))
-    y = np.zeros(len(v))
-    for i in range(len(u)):
-        x[i] = c*u[i] + s*v[i]
-        y[i] = (-s)*u[i] + c*v[i]
-    return (x,y)
+    [c,s,x,y] = inputs
+    x = np.array(x)
+    y = np.array(y)
+    out_1 = c*x + s*y
+    out_2 = -s*x + c*y
+    return [out_1.tolist(),out_2.tolist()]
 
 def scal(inputs):
     a, x = inputs
     x = np.array(x)
-    return a*x
+    return [(a*x).tolist()]
 
 def syr(inputs):
     [a, x, A ] = inputs
@@ -36,9 +35,3 @@ def syr(inputs):
     a_x = a*x
     mat = a_x @ x.T
     return [(mat + A).tolist()]
-
-def main():
-    print(axpy(3,[1,2],[3,4]))
-
-if __name__ == "__main__":
-    main()

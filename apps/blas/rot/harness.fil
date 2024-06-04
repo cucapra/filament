@@ -1,0 +1,39 @@
+import "apps/blas/rot/rot-alt.fil";
+import "primitives/reshape.fil";
+
+comp Harness[W, N, MultsN, AddsN]<'G:II>(
+  go: interface['G],
+  c: ['G, 'G+1] W,
+  s: ['G, 'G+1] W,
+  x: ['G, 'G+1] N*W,
+  y: ['G, 'G+1] N*W
+) -> (
+  out_1: ['G+L, 'G+L+1] N*W,
+  out_2: ['G+L, 'G+L+1] N*W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0,
+        N > 0,
+        MultsN > 0,
+        AddsN > 0,
+        MultsN % 4 == 0,   // need to do at least 4 multiplies at once
+        AddsN % 2 == 0,   // need to do at least 2 adds at once
+        N % (MultsN/4) == 0,
+        (MultsN/4) % (AddsN/2) == 0
+{
+  x_vec := new SplitWire[W, N]<'G>(x);
+  y_vec := new SplitWire[W, N]<'G>(y);
+
+  r := new Rot[W, N, MultsN, AddsN];
+  run_r := r<'G>(c,s,x_vec.out{0..N}, y_vec.out{0..N});
+
+  out_1_flat := new ConcatBundle[W, N]<'G+r::L>(run_r.out_1{0..N});
+  out_2_flat := new ConcatBundle[W, N]<'G+r::L>(run_r.out_2{0..N});
+
+  out_1 = out_1_flat.out;
+  out_2 = out_2_flat.out;
+
+  II := r::II;
+  L := r::L;
+}

@@ -14,19 +14,23 @@ Converts a matrix into a flattened representation, then into bits, which is then
 def matrix_to_int_repr(matrix, width):
     flattened = list(chain.from_iterable(matrix))
     bin_str = reduce(lambda acc, i: acc + conv_int_to_bits(i, int(width)), flattened, "")
-    return int(bin_str, 2)
-
+    try: 
+        return int(bin_str, 2)
+    except Exception as e:
+        print(f"exception {e}")
+        print(f"matrix: {matrix}")
+        pass
 """
 Overflow will happen in Filament design if result of a computation cannot fit in given bitwidth, so 
 this function simulates that
 """
 def conv_int_to_bits(i, width):
-    while i > pow(2, width)-1:
-        i = i - pow(2,width)
-    return bin(int(i))[2:].zfill(width)
+    # while i > pow(2, width)-1:
+    #     i = i - pow(2,width)
+    return bin(int(i) % 2**width)[2:].zfill(width)
 
 """
-Converts a json file of matrices and vectors to plain old ints, for passing into designs
+Converts a json file of matrices and vectors to plain old ints, for passing into designs/comparing output
 """
 def convert_json(input_json, width):
     out_json = {}
@@ -41,9 +45,12 @@ def convert_json(input_json, width):
                 raise Exception("Unknown data format")
         else:
             # just a regular number
-            out_json[k] = input_json[k]
+            out_json[k] = reduce(lambda acc, elt: acc + [elt % 2**int(width)], input_json[k], [])
     return out_json
 
+"""
+Separates result by input number to match cocotb output format
+"""
 def convert_expect(expects):
     new_expects = {}
     for key in expects:
@@ -92,8 +99,6 @@ Given an input file, uses f to compute expected output
 """
 def get_golden_output(func, ports, data):
     result_json = {}
-    # data = json.load(data)
-    # ports = json.load(ports)
     input_ports = ports.get("inputs",{})
     output_ports = ports.get("outputs", {})
 
@@ -128,6 +133,7 @@ def process_fud_output(fud_output):
 
 def run_fud(kernel):
     open(kernel+".out", 'w')
+    basename,_ = os.path.splitext(kernel)
     subprocess.run([
         "fud",
         "e",
@@ -139,7 +145,11 @@ def run_fud(kernel):
        kernel+".data",
         "-s",
         "calyx.flags",
-        "' -d canonicalize'"], stdout=open(kernel+".out",'w'), stderr=subprocess.DEVNULL
+        "' -d canonicalize'",
+        "-s",
+        "filament.flags",
+        f" --bindings {basename}.toml"
+        ], stdout=open(kernel+".out",'w'), stderr=subprocess.DEVNULL
     )
     with open(kernel+".out") as f:
         fud_out = json.load(f)
@@ -174,11 +184,9 @@ def main():
     tests_to_check = None
     if args.rand:
         rand_tests = generate_random_tests(json.load(open(ports)), width, numtests)
-        # print(f"rand_tests: {rand_tests}")
         input_data_name = os.path.join(dir, 'test.fil.data')
         converted_tests = convert_json(rand_tests, width)
         tests_to_run = str(converted_tests).replace("\'","\"")
-        # print(f"tests_to_run: {tests_to_run}")
         tests_to_check = rand_tests
         with open(input_data_name, 'w') as f:
             f.write(tests_to_run)
@@ -198,10 +206,8 @@ def main():
     func_dict["scal"] = scal
     func_dict["syr"] = syr
 
-    # print(f"tests_to_check: {tests_to_check}")
     expected = get_golden_output(func_dict[called_func], json.load(open(ports)), tests_to_check)
     expected_conv = str(convert_expect(convert_json(expected, width))).replace("\'","\"")
-    # print(f"expected_conv: {expected_conv}")
     expected_filename = os.path.join(dir, 'test.expect')
     with open(expected_filename, "w") as f:
         f.write(str(expected_conv))
