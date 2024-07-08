@@ -8,32 +8,32 @@ extern "dummy.sv" {
   // The signals `in1` and `in2` might exist for more their specified lifetime
   // in this function's signature but that is okay because inputs only require
   // signals to be active for at least as long as the requirement
-  comp Merge<G: E-(G), L: E-(L), E: 1>(
-    @interface[G] go_G: 1,
-    @interface[L] go_L: 1,
-    @[G, L] in1: 32,
-    @[L, E] in2: 32,
+  comp Merge<'G: 'E-('G), 'L: 'E-('L), 'E: 1>(
+    go_G: interface['G],
+    go_L: interface['L],
+     in1: ['G, 'L] 32,
+     in2: ['L, 'E] 32,
   ) -> (
-    @[G, E] out: 32,
-  ) where L > G, E > L, E > G;
+     out: ['G, 'E] 32,
+  ) where 'L > 'G, 'E > 'L, 'E > 'G;
 }
 
 // The comp produces an output signal that lives for three cycles immediately
 // starting the cycle that `in` is given.
 // We use a merge unit to forward the input signal in the first cycle and
 // Register the output to make it available for the remaining cycles.
-comp main<G: 3>(
-  @interface[G] go_G: 1,
-  @[G, G+1] in: 32
+comp main<'G: 3>(
+  go_G: interface['G],
+   in: ['G, 'G+1] 32
 ) -> (
-  @[G, G+3] out: 32
+   out: ['G, 'G+3] 32
 ) {
   L := new Register[32];
   M := new Merge;
 
   // Intentially make the Register exist longer than needed.
-  l0 := L<G, G+4>(in);
-  m0 := M<G, G+1, G+3>(in, l0.out);
+  l0 := L<'G, 'G+4>(in);
+  m0 := M<'G, 'G+1, 'G+3>(in, l0.out);
 
   out = m0.out;
 }

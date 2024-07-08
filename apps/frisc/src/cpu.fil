@@ -1,0 +1,31 @@
+import "./alu.fil";
+import "./decode.fil";
+import "./regfile.fil";
+import "./extras/extras.fil";
+
+comp CPU<'G:1> (
+  clk:1,
+  //go: interface['G],
+   reset: ['G,'G+1] 1,
+   instr: ['G,'G+1] 32
+) -> (
+   out: ['G,'G+1] 32,
+   aluInA: ['G,'G+1] 32,
+   aluInB: ['G,'G+1] 32,
+) {
+  rd := new Slice[32,11,7,5]<'G>(instr);
+  rs1 := new Slice[32,19,15,5]<'G>(instr);
+  rs2 := new Slice[32,24,20,5]<'G>(instr);
+
+  decoder := new Decode<'G>(instr);
+  rf := new RegFile<'G>(reset, decoder.rf_write, rd.out, alu.out, rs1.out, rs2.out);
+
+  aluInBGuard := new Or[1]<'G>(decoder.isBranch, decoder.isALUReg);
+  aluInB := new Mux[32]<'G>(aluInBGuard.out, rf.rs2, decoder.Iimm);
+
+  alu := new ALU<'G>(rf.rs1, aluInB.out, decoder.funct, decoder.isAdd, decoder.isArith);
+
+  out = alu.out;
+  aluInA = rf.rs1;
+  aluInB = aluInB.out;
+}

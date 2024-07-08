@@ -1,0 +1,16 @@
+---CODE---
+1
+---STDERR---
+error: invocation is within a loop but instance is not
+  ┌─ tests/errors/phantom-check/loop.fil:5:16
+  │
+3 │     F := new Foo;
+  │     - instance is not within the same loop
+4 │     for i in 0..3 {
+5 │         f := F<'G>();
+  │                ^^ invocation uses phantom event
+  │
+  = invocations within loops will be unrolled an imply instance sharing
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

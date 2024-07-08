@@ -1,0 +1,11 @@
+---CODE---
+1
+---STDERR---
+error: undefined instance name: A0
+  ┌─ tests/errors/binding/inst.fil:4:10
+  │
+4 │     a := A0<'G>();
+  │          ^^ instance `A0' is not defined
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

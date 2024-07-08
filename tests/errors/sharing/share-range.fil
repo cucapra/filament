@@ -1,0 +1,10 @@
+comp Foo<'G:3>() -> () {}
+
+comp Bar[W]<'G: 3>(
+    go: interface['G],
+) -> () {
+    F := new Foo in ['G+W, 'G+W+10];
+    // This is not allowed
+    f1 := F<'G>();
+    f0 := F<'G+W>();
+}

@@ -1,0 +1,9 @@
+comp Bar[W]<'G:1>() -> () with {
+    some L where L > 10;
+} {
+    if W == 0 {
+        L := 5;
+    } else {
+        L := 20;
+    }
+}

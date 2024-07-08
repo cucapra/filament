@@ -1,38 +1,64 @@
-[package]
-name = "filament"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+members = ["crates/*"]
+resolver = "2"
 
-[dependencies]
+[workspace.package]
+authors = ["The Filament Team"]
+license-file = "LICENSE"
+keywords = ["hdl", "hardware design"]
+repository = "https://github.com/cucapra/filament"
+readme = "README.md"
+description = "A language for Fearless Hardware Design"
+categories = ["compilers"]
+homepage = "https://filamenthdl.com"
+edition = "2021"
+version = "0.1.0"
+rust-version = "1.67"
+
+[workspace.dependencies]
+toml = "0.8"
+serde = "1.0"
 argh = "0.1"
 log = "0.4"
 pest = "2.1"
 pest_consume = "1.1"
 pest_derive = "2.1"
 linked_hash_set = "0.1"
-rsmt2 = "0.16"
 itertools = "0.10"
 linked-hash-map = "0.5"
 derivative = "2.2"
 smallvec = "1"
 topological-sort = "0.2"
 atty = "0.2"
-lazy_static = "1.4.0"
-easy-smt = "0.1.2"
+lazy_static = "1.4"
+easy-smt = { version = "0.2.1" }
+struct-variant = "1.0"
 
-calyx-ir = { version = "=0.2.0" }
-calyx-frontend = { version = "=0.2.0" }
-calyx-utils = { version = "=0.2.0" }
+fil-utils = { version = "0.1.0", path = "crates/utils" }
+fil-ast = { version = "0.1.0", path = "crates/ast" }
+fil-ir = { version = "0.1.0", path = "crates/ir" }
+fil-derive = { version = "0.1.0", path = "crates/derive" }
+fil-gen = { version = "0.1.0", path = "crates/gen" }
 
-[dependencies.env_logger]
+calyx-ir = { version = "0.7.1" }
+calyx-frontend = { version = "0.7.1" }
+calyx-utils = { version = "0.7.1" }
+calyx-opt = { version = "0.7.1" }
+calyx-backend = { version = "0.7.1" }
+
+[workspace.dependencies.env_logger]
 version = "0.9"
 features = ["termcolor", "atty"]
 default-features = false
 
-[dependencies.codespan-reporting]
+[workspace.dependencies.codespan-reporting]
 version = "0.11"
 features = ["ascii-only"]
 
-[dependencies.string-interner]
+[workspace.dependencies.string-interner]
 version = "0.14"
 features = ["backends", "std", "inline-more"]
+
+[workspace.dependencies.bitvec]
+version = "1.0.1"
+features = ["alloc"]

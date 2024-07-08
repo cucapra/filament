@@ -1,0 +1,42 @@
+import "../common/fast-interface.fil";
+
+extern "impl.v" {
+comp Conv2d<'G: 1>(
+    clk: 1,
+    I_0: ['G, 'G+1] 8,
+    I_1: ['G, 'G+1] 8,
+    I_2: ['G, 'G+1] 8,
+    I_3: ['G, 'G+1] 8,
+    I_4: ['G, 'G+1] 8,
+    I_5: ['G, 'G+1] 8,
+    I_6: ['G, 'G+1] 8,
+    I_7: ['G, 'G+1] 8,
+) -> (
+    O_0: ['G+6, 'G+7] 8,
+    O_1: ['G+6, 'G+7] 8,
+    O_2: ['G+6, 'G+7] 8,
+    O_3: ['G+6, 'G+7] 8,
+    O_4: ['G+6, 'G+7] 8,
+    O_5: ['G+6, 'G+7] 8,
+    O_6: ['G+6, 'G+7] 8,
+    O_7: ['G+6, 'G+7] 8,
+);
+}
+
+comp Conv2dWrapper<'G:1>(
+    I[N]: ['G, 'G+1] 8
+) -> (
+    O[N]: ['G+L, 'G+L+1] 8
+) with {
+    some N where N > 0, N <= 16, 16 % N == 0;
+    some L where L > 0;
+} {
+    C := new Conv2d<'G>(I{0}, I{1}, I{2}, I{3}, I{4}, I{5}, I{6}, I{7});
+
+    // Forward the outputs
+    O{0} = C.O_0; O{1} = C.O_1; O{2} = C.O_2; O{3} = C.O_3;
+    O{4} = C.O_4; O{5} = C.O_5; O{6} = C.O_6; O{7} = C.O_7;
+
+    L := 6;
+    N := 8;
+}

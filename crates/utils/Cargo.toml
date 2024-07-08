@@ -1,0 +1,22 @@
+[package]
+name = "fil-utils"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+authors.workspace = true
+license-file.workspace = true
+keywords.workspace = true
+repository.workspace = true
+homepage.workspace = true
+categories.workspace = true
+readme.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log.workspace = true
+itertools.workspace = true
+derivative.workspace = true
+atty.workspace = true
+codespan-reporting.workspace = true
+string-interner.workspace = true

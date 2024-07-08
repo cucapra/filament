@@ -1,0 +1,207 @@
+/**
+ * Defines useful math operations.
+ */
+import "primitives/state.fil";
+import "primitives/comb.fil";
+
+/// Implements a parameterized addition-based reduction tree.
+/// * `W` is the width of the input and output.
+/// * `N` is the number of inputs.
+/// * `K` is the number of levels in the tree.
+/// The module instantiates registers at every level of the tree resulting in
+/// a latency of `K`.
+comp ReduceAdd[W, N]<'G:1>(
+    in[N]: for<i> ['G, 'G+1] W
+) -> (
+     out: ['G+K, 'G+K+1] W
+) with {
+   let K = log2(N);
+} where W > 1,
+        N >= 1,
+        K == log2(N),
+        K >= 0
+{
+    if N == 1 {
+        out = in{0};
+    } else {
+        // Required to make recursive calls type check.
+        assert K-1 == log2(N/2);
+        // This is a corollary of K != 0
+        assert N >= 2;
+        // This is not true in general for integer division but
+        // because N is a power of 2 it is true.
+        assert N - N/2 == N/2;
+
+        left := new ReduceAdd[W, N/2]<'G>(in{0..N/2});
+        right := new ReduceAdd[W, N/2]<'G>(in{N/2..N});
+        add := new Add[W]<'G+K-1>(left.out, right.out);
+        d := new Delay[W]<'G+K-1>(add.out);
+        out = d.out;
+    }
+}
+
+/// ANCHOR: fastmult
+/// Implementation of a multiplier with initiation interval 1 and latency 3.
+/// Written in a way to allow Vivado to infer a DSP.
+comp FastMult[W]<'G: 1>(
+   left: ['G, 'G+1] W,
+   right: ['G, 'G+1] W,
+) -> (
+   out: ['G+3, 'G+4] W,
+) where W > 0
+/// ANCHOR_END: fastmult
+{
+  // First stage, register the inputs
+  l := new Delay[W]<'G>(left);
+  r := new Delay[W]<'G>(right);
+
+  // Second stage, perform the computation and save it
+  m := new MultComb[W]<'G+1>(l.out, r.out);
+  ot := new Delay[W]<'G+1>(m.out);
+
+  // Third stage, forward the value from temp out to out register
+  final := new Delay[W]<'G+2>(ot.out);
+
+  // Connect the output to the out register
+  out = final.out;
+}
+
+// =========== Implementation of restoring divider =============
+
+/// Initializes the restoring divider.
+/// NOTE(rachit): This should be a private module.
+comp Id_Init[W]<'G: 1>(
+   left: ['G, 'G+1] W,
+) -> (
+   acc: ['G, 'G+1] W+1,
+   quotient: ['G, 'G+1] W,
+) where W > 0 {
+  zero_one := new Const[1, 0]<'G>();
+  c := new Concat[W, 1, W+1]<'G>(left, zero_one.out);
+
+  let Ext = 2*W+1;
+  c_ext := new ZeroExtend[W+1, Ext]<'G>(c.out);
+  acc_slice := new Slice[Ext, 2*W, W, W+1]<'G>(c_ext.out);
+  q_slice := new Slice[Ext, W-1, 0, W]<'G>(c_ext.out);
+
+  acc = acc_slice.out;
+  quotient = q_slice.out;
+}
+
+
+/// Implements one step of the iterative division algorithm over W-bit numbers.
+/// NOTE(rachit): This should be a private module.
+comp Id_Next[W]<'G: 1>(
+   acc: ['G, 'G+1] W+1,
+   right: ['G, 'G+1] W,
+   quotient: ['G, 'G+1] W,
+) -> (
+   acc_next: ['G, 'G+1] W+1,
+   quotient_next: ['G, 'G+1] W,
+) where W > 0 {
+
+  right_ext := new ZeroExtend[W, W+1]<'G>(right);
+  check := new Gte[W+1]<'G>(acc, right_ext.out);
+
+  // True branch
+  sub := new Sub[W+1]<'G>(acc, right_ext.out);
+  sub_slice := new Slice[W+1, W-1, 0, W]<'G>(sub.out);
+  one_1 := new Const[1, 1]<'G>();
+
+  let Ext = 2*W+1;
+
+  true_con_0 := new Concat[W, 1, W+1]<'G>(quotient, one_1.out);
+  true_con := new Concat[W, W+1, Ext]<'G>(sub_slice.out, true_con_0.out);
+
+  // False branch
+  fal_con := new Concat[W+1, W, Ext]<'G>(acc, quotient);
+  one_WW1 := new Const[Ext, 1]<'G>();
+  fal_sh := new ShiftLeft[Ext]<'G>(fal_con.out, one_WW1.out);
+
+  c := new Mux[Ext]<'G>(check.out, true_con.out, fal_sh.out);
+
+  acc_slice := new Slice[Ext, 2*W, W, W+1]<'G>(c.out);
+  q_slice := new Slice[Ext, W-1, 0, W]<'G>(c.out);
+
+  quotient_next = q_slice.out;
+  acc_next = acc_slice.out;
+}
+
+/// A parameterized iterative divider for W-bit numbers that can trade-off area and throughput.
+/// * I: Number of instances of the `Id_Next` module to instantiate.
+/// * K: Number of times each instance is reused.
+/// * W: Bitwidth of the inputs and outputs.
+/// The `I` parameter allows us to trade-off area and throughput. For example:
+/// ```
+/// seq_div = TradeoffDiv[W, 1, W];
+/// pipe_div = TradeoffDiv[W, W, 1];
+/// ```
+/// The `seq_div` instance has a II=W and reuses one instance of `Id_Next` `W` times.
+/// The `pipe_div` instance has a II=1 and reuses `W` instances of `Id_Next` once each.
+comp TradeoffDiv[W, I]<'G: K>(
+  go: interface['G],
+   left: ['G, 'G+1] W,
+   right: ['G, 'G+1] W,
+) -> (
+   out: ['G+W, 'G+W+1] W,
+) with {
+   let K = W / I;
+} where
+  I > 0,
+  W > 0,
+  W == I * K
+{
+    // At a high-level, we use two sets of bundles
+    //  1. Bundles that track the "outer" signals which forward signals between the reused instances.
+    //  2. Bundles that track the "inner" signals which "loop back" the signals into the reused instances.
+
+    // Bundles that track the "outer" signals which connect each reused instance in the circuit.
+    bundle o_acc[I+1]: for<a> ['G+a*K, 'G+a*K+1] W+1;
+    bundle o_qn [I+1]: for<a> ['G+a*K, 'G+a*K+1] W;
+    bundle o_r  [I+1]: for<a> ['G+a*K, 'G+a*K+1] W;
+
+    i := new Id_Init[W]<'G>(left);
+    o_acc{0} = i.acc;
+    o_qn{0} = i.quotient;
+    o_r{0} = right;
+
+    for i in 0..I {
+        let Cur = K*i;
+        let End = K*(i+1);
+
+        // Instantiate the I'th circuit
+        N := new Id_Next[W] in ['G+Cur, 'G+End];
+        Acc := new Delay[W+1] in ['G+Cur, 'G+End];
+        QN := new Delay[W] in ['G+Cur, 'G+End];
+        R := new Delay[W] in ['G+Cur, 'G+End];
+
+        // Bundles to forward data
+        // Each bundle starts at time K*i which represents the previous
+        // computations that have already occurred.
+        bundle acc[K+1]: for<a> ['G+Cur+a, 'G+Cur+a+1] W+1;
+        bundle qn [K+1]: for<a> ['G+Cur+a, 'G+Cur+a+1] W;
+        bundle r  [K+1]: for<a> ['G+Cur+a, 'G+Cur+a+1] W;
+
+        acc{0} = o_acc{i};
+        qn{0} = o_qn{i};
+        r{0} = o_r{i};
+
+        // Loop back the computation into the same circuit for K cycles.
+        for j in 0..K {
+            s := N<'G+Cur+j>(acc{j}, r{j}, qn{j});
+            acc_reg := Acc<'G+Cur+j>(s.acc_next);
+            qn_reg := QN<'G+Cur+j>(s.quotient_next);
+            r_reg := R<'G+Cur+j>(r{j});
+            acc{j+1} = acc_reg.out;
+            qn{j+1} = qn_reg.out;
+            r{j+1} = r_reg.out;
+        }
+
+        // Forward signals from the final reuse to the next circuit.
+        o_acc{i+1} = acc{K};
+        o_qn{i+1} = qn{K};
+        o_r{i+1} = r{K};
+    }
+
+    out = o_qn{I};
+}

@@ -1,0 +1,6 @@
+comp Foo[W]<'G:1>() -> () with {
+    some L where L > W;
+} {
+    // This assignment doesn't satisfy the constriant on the existential
+    L := 1;
+}

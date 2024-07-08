@@ -1,0 +1,22 @@
+[package]
+name = "fil-gen"
+authors.workspace = true
+license-file.workspace = true
+keywords.workspace = true
+repository.workspace = true
+readme.workspace = true
+description.workspace = true
+categories.workspace = true
+homepage.workspace = true
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+toml.workspace = true
+serde.workspace = true
+argh.workspace = true
+itertools.workspace = true
+env_logger.workspace = true
+log.workspace = true
+tempfile = "3.8.1"

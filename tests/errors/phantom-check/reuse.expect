@@ -1,0 +1,17 @@
+---CODE---
+1
+---STDERR---
+error: cannot reuse instance using a phantom event
+  ┌─ tests/errors/phantom-check/reuse.fil:7:5
+  │
+7 │     A := new Add[32];
+  │     ^ instance is invoked 2 times
+8 │     a0 := A<'G>(left, left);
+  │     --      -- event 'G is a phantom event
+  │     │        
+  │     invocation uses phantom event
+  │
+  = phantom events are compiled away and cannot be used for resource sharing
+
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.

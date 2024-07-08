@@ -28,7 +28,7 @@ Running the design is straightforward, assuming you've [configured `fud`][fud-se
 ```sh
 fud e --to cocotb-out examples/tut-seq.fil \
       -s cocotb.data examples/data.json \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 ```
 
 This instructs `fud` to compile the design to Verilog, setup the test harness, and run the simulation.
@@ -41,7 +41,7 @@ In general, the command to run designs is:
 ```sh
 fud e --to cocotb-out <filament-file> \
       -s cocotb.data <data-file> \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 ```
 
 ## Under the Hood
@@ -66,7 +66,7 @@ Our `fud`-based harness provides a way to randomize the timing of transactions b
 fud e --to cocotb-out examples/tut-seq.fil \
       -s cocotb.data examples/data.json \
       -s cocotb.randomize 10 \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 ```
 
 The `-s cocotb.randomize 10` flag adds a random delay of up to 10 cycles between transactions.
@@ -75,7 +75,7 @@ The `-s cocotb.randomize 10` flag adds a random delay of up to 10 cycles between
 
 [calyx]: https://calyxir.org
 [iverilog]: https://github.com/steveicarus/iverilog
-[fud-setup]: ./start.html#full-build
+[fud-setup]: ../start.md#full-build
 [fud]: https://docs.calyxir.org/fud/index.html
 [tut-alu]: ./lang/tutorial.html#building-an-arithmetic-logic-unit
 [x-value]: https://stackoverflow.com/questions/69530556/what-exactly-do-x-and-z-values-represent-in-verilog

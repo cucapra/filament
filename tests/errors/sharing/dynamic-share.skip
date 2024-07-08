@@ -1,0 +1,50 @@
+---CODE---
+1
+---STDERR---
+error: invocations of instance use multiple events in invocations: L and G
+   ┌─ tests/errors/dynamic-share.fil:12:11
+   │
+12 │   m1 := M<L>(c, d);
+   │           ^ invocation uses event L
+13 │   m0 := M<G>(a, b);
+   │           - invocation uses event G
+
+error: instance must be shared with sufficient delay
+   ┌─ ./primitives/./comb.fil:8:49
+   │
+ 8 │   comp Add[#IN_WIDTH, ?#OUT_WIDTH=#IN_WIDTH]<G: L-(G), ?L: 1=G+1>(
+   │                                                 ^^^^^ delay requires 1 cycle between event but reuse may occur after |L - G| cycles
+   │
+   ┌─ tests/errors/dynamic-share.fil:12:3
+   │
+12 │   m1 := M<L>(c, d);
+   │   -- invocation starts at `L'
+13 │   m0 := M<G>(a, b);
+   │   -- invocation starts at `G'
+
+error: instance must be shared with sufficient delay
+   ┌─ ./primitives/./comb.fil:8:49
+   │
+ 8 │   comp Add[#IN_WIDTH, ?#OUT_WIDTH=#IN_WIDTH]<G: L-(G), ?L: 1=G+1>(
+   │                                                 ^^^^^ delay requires 1 cycle between event but reuse may occur after |G - L| cycles
+   │
+   ┌─ tests/errors/dynamic-share.fil:12:3
+   │
+12 │   m1 := M<L>(c, d);
+   │   -- invocation starts at `L'
+13 │   m0 := M<G>(a, b);
+   │   -- invocation starts at `G'
+
+error: Cannot prove constraint 3 >= max(L+1, G+1) - min(L, G)
+   ┌─ tests/errors/dynamic-share.fil:3:25
+   │
+ 3 │ comp Max_mult_add<G: 3, L: 3>(
+   │                         ^^^^ event's delay must be longer than the difference between minimum start time and maximum end time of all invocations
+   ·
+12 │   m1 := M<L>(c, d);
+   │           - event use starts at `L' and ends at `L+1'
+13 │   m0 := M<G>(a, b);
+   │           - event use starts at `G' and ends at `G+1'
+
+Compilation failed with 4 errors.
+Run with --show-models to generate assignments for failing constraints.

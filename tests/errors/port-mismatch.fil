@@ -1,3 +1,0 @@
-comp main<G:1>(@interface[G] go: 1, @[G, G+1] in: 32) -> (@[G, G+1] out: 16) {
-    out = in;
-}

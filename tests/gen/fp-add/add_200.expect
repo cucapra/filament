@@ -1,0 +1,12 @@
+{
+"interfaces": [
+{"name": "go", "event": "G", "delay": 1, "states": 5, "phantom": false }
+],
+"inputs": [
+{ "event": "G", "name": "X", "width": 34 , "start": 0, "end": 1 },
+{ "event": "G", "name": "Y", "width": 34 , "start": 0, "end": 1 }
+],
+"outputs": [
+{ "event": "G", "name": "R", "width": 34 , "start": 4, "end": 5 }
+]
+}

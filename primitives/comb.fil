@@ -1,167 +1,181 @@
 extern "comb.sv" {
-  // ============= Combinational =================
+   // ============= Combinational =================
 
-  comp Const[#WIDTH, #VALUE]<G: L-(G), ?L: 1=G+1>() -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+   comp Const[WIDTH, VALUE]<'G: 'L-('G), ?'L: 1='G+1>() -> (
+      out: ['G, 'L] WIDTH,
+   ) where 'L > 'G, WIDTH > 0;
 
-  comp Add[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH,
-  ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+   comp Add[IN_WIDTH, ?OUT_WIDTH=IN_WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      left: ['G, 'L] IN_WIDTH,
+      right: ['G, 'L] IN_WIDTH,
+   ) -> (
+      out: ['G, 'L] OUT_WIDTH
+   ) where 'L > 'G, IN_WIDTH <= OUT_WIDTH, IN_WIDTH > 0, OUT_WIDTH > 0;
 
-  comp Sub[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH,
-  ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+   comp Sub[IN_WIDTH, ?OUT_WIDTH=IN_WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      left: ['G, 'L] IN_WIDTH,
+      right: ['G, 'L] IN_WIDTH,
+   ) -> (
+      out: ['G, 'L] OUT_WIDTH
+   ) where 'L > 'G, IN_WIDTH <= OUT_WIDTH, IN_WIDTH > 0, OUT_WIDTH > 0;
 
-  comp MultComb[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH,
-  ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+   comp MultComb[IN_WIDTH, ?OUT_WIDTH=IN_WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      left: ['G, 'L] IN_WIDTH,
+      right: ['G, 'L] IN_WIDTH,
+   ) -> (
+      out: ['G, 'L] OUT_WIDTH,
+   ) where 'L > 'G, IN_WIDTH <= OUT_WIDTH, IN_WIDTH > 0, OUT_WIDTH > 0;
 
-  comp And[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH,
-  ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+   comp And[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      left: ['G, 'L] WIDTH,
+      right: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] WIDTH,
+   ) where 'L > 'G, WIDTH > 0;
 
-  comp Or[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH,
-  ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+   comp Or[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      left: ['G, 'L] WIDTH,
+      right: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] WIDTH,
+   ) where 'L > 'G, WIDTH > 0;
 
-  comp Xor[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH,
-  ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+   comp Xor[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      left: ['G, 'L] WIDTH,
+      right: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] WIDTH,
+   ) where 'L > 'G, WIDTH > 0;
 
-  comp Not[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] in: #WIDTH,
-  ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+   comp Not[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      in: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] WIDTH,
+   ) where 'L > 'G, WIDTH > 0;
 
-  comp Eq[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH,
-  ) -> (
-    @[G, L] out: 1,
-  ) where L > G, #WIDTH > 0;
+   comp Eq[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      left: ['G, 'L] WIDTH,
+      right: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] 1,
+   ) where 'L > 'G, WIDTH > 0;
 
-  comp Gt[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH,
-  ) -> (
-    @[G, L] out: 1,
-  ) where L > G, #WIDTH > 0;
+   comp Neq[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      left: ['G, 'L] WIDTH,
+      right: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] 1,
+   ) where 'L > 'G, WIDTH > 0;
 
-  comp Lt[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH,
-  ) -> (
-    @[G, L] out: 1,
-  ) where L > G, #WIDTH > 0;
+   comp Gt[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      left: ['G, 'L] WIDTH,
+      right: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] 1,
+   ) where 'L > 'G, WIDTH > 0;
 
-  comp Lte[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH,
-  ) -> (
-    @[G, L] out: 1,
-  ) where L > G, #WIDTH > 0;
+   comp Lt[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      left: ['G, 'L] WIDTH,
+      right: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] 1,
+   ) where 'L > 'G, WIDTH > 0;
 
-  comp Gte[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH,
-  ) -> (
-    @[G, L] out: 1,
-  ) where L > G, #WIDTH > 0;
+   comp Lte[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      left: ['G, 'L] WIDTH,
+      right: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] 1,
+   ) where 'L > 'G, WIDTH > 0;
 
-  comp ZeroExtend[#IN_WIDTH, #OUT_WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] in: #IN_WIDTH,
-  ) -> (
-    @[G, L] out: #OUT_WIDTH,
-  ) where L > G, #IN_WIDTH > 0, #OUT_WIDTH > 0, #OUT_WIDTH > #IN_WIDTH;
+   comp Gte[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      left: ['G, 'L] WIDTH,
+      right: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] 1,
+   ) where 'L > 'G, WIDTH > 0;
 
-  comp Concat[#LEFT, #RIGHT, #OUT]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #LEFT,
-    @[G, L] right: #RIGHT,
-  ) -> (
-    @[G, L] out: #OUT,
-  ) where L > G, #LEFT > 0, #RIGHT > 0, #OUT == #LEFT + #RIGHT;
+   comp SignExtend[IN_WIDTH, OUT_WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      in: ['G, 'L] IN_WIDTH,
+   ) -> (
+      out: ['G, 'L] OUT_WIDTH,
+   ) where 'L > 'G, IN_WIDTH > 0, OUT_WIDTH > 0, OUT_WIDTH >= IN_WIDTH;
 
-  comp Select[#WIDTH, #POS]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] in: #WIDTH,
-  ) -> (
-    @[G, L] out: 1,
-  ) where L > G, #WIDTH > 0, #POS < #WIDTH;
+   comp ZeroExtend[IN_WIDTH, OUT_WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      in: ['G, 'L] IN_WIDTH,
+   ) -> (
+      out: ['G, 'L] OUT_WIDTH,
+   ) where 'L > 'G, IN_WIDTH > 0, OUT_WIDTH > 0, OUT_WIDTH >= IN_WIDTH;
 
-  comp Slice[#IN_WIDTH, #MSB, #LSB, #OUT_WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] in: #IN_WIDTH,
-  ) -> (
-    @[G, L] out: #OUT_WIDTH,
-  ) where L > G,
-          #IN_WIDTH > 0,
-          #OUT_WIDTH > 0,
-          #MSB < #IN_WIDTH,
-          #LSB < #IN_WIDTH,
-          #MSB >= #LSB;
+   comp Concat[LEFT, RIGHT, ?OUT = LEFT + RIGHT]<'G: 'L-('G), ?'L: 1='G+1>(
+      left: ['G, 'L] LEFT,
+      right: ['G, 'L] RIGHT,
+   ) -> (
+      out: ['G, 'L] OUT,
+   ) where 'L > 'G, LEFT > 0, RIGHT > 0, OUT == LEFT + RIGHT;
 
-  comp ReduceAnd[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] in: #WIDTH,
-  ) -> (
-    @[G, L] out: 1,
-  ) where L > G, #WIDTH > 0;
+   comp Select[WIDTH, POS]<'G: 'L-('G), ?'L: 1='G+1>(
+      in: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] 1,
+   ) where 'L > 'G, WIDTH > 0, POS < WIDTH;
 
-  comp ReduceOr[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] in: #WIDTH,
-  ) -> (
-    @[G, L] out: 1,
-  ) where L > G, #WIDTH > 0;
+   comp Slice[IN_WIDTH, MSB, LSB, ?OUT_WIDTH=MSB - LSB + 1]<'G: 'L-('G), ?'L: 1='G+1>(
+      in: ['G, 'L] IN_WIDTH,
+   ) -> (
+      out: ['G, 'L] OUT_WIDTH,
+   ) where 'L > 'G,
+         IN_WIDTH > 0,
+         OUT_WIDTH > 0,
+         MSB < IN_WIDTH,
+         LSB < IN_WIDTH,
+         MSB >= LSB,
+         OUT_WIDTH == MSB - LSB + 1;
 
-  comp ShiftLeft[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] in: #WIDTH,
-    @[G, L] shift: #WIDTH,
-  ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+   comp ReduceAnd[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      in: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] 1,
+   ) where 'L > 'G, WIDTH > 0;
 
-  comp ShiftRight[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] in: #WIDTH,
-    @[G, L] shift: #WIDTH,
-  ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+   comp ReduceOr[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      in: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] 1,
+   ) where 'L > 'G, WIDTH > 0;
 
-  comp ArithShiftRight[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] in: #WIDTH,
-    @[G, L] shift: #WIDTH,
-  ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+   comp ShiftLeft[WIDTH, ?SHIFT_WIDTH=WIDTH, ?OUT_WIDTH=WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      in: ['G, 'L] WIDTH,
+      shift: ['G, 'L] SHIFT_WIDTH,
+   ) -> (
+      out: ['G, 'L] OUT_WIDTH,
+   ) where 'L > 'G, WIDTH > 0, SHIFT_WIDTH > 0, OUT_WIDTH > 0;
 
-  comp Mux[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] sel: 1,
-    @[G, L] in0: #WIDTH,
-    @[G, L] in1: #WIDTH,
-  ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G, #WIDTH > 0;
+   comp ShiftRight[WIDTH, ?SHIFT_WIDTH=WIDTH, ?OUT_WIDTH=WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      in: ['G, 'L] WIDTH,
+      shift: ['G, 'L] SHIFT_WIDTH,
+   ) -> (
+      out: ['G, 'L] OUT_WIDTH,
+   ) where 'L > 'G, WIDTH > 0, SHIFT_WIDTH > 0, OUT_WIDTH > 0;
 
-  comp Extend[#IN_WIDTH, #OUT_WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G,L] in: #IN_WIDTH
-  ) -> (
-    @[G,L] out: #OUT_WIDTH
-  ) where L > G, #IN_WIDTH > 0, #OUT_WIDTH > 0;
+   comp ArithShiftRight[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      in: ['G, 'L] WIDTH,
+      shift: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] WIDTH,
+   ) where 'L > 'G, WIDTH > 0;
+
+   comp Mux[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      sel: ['G, 'L] 1,
+      in0: ['G, 'L] WIDTH,
+      in1: ['G, 'L] WIDTH,
+   ) -> (
+      out: ['G, 'L] WIDTH,
+   ) where 'L > 'G, WIDTH > 0;
+
+   comp Extend[IN_WIDTH, OUT_WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      in: ['G, 'L] IN_WIDTH
+   ) -> (
+      out: ['G, 'L] OUT_WIDTH
+   ) where 'L > 'G, IN_WIDTH > 0, OUT_WIDTH > 0;
 }

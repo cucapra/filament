@@ -1,7 +1,0 @@
-import "primitives/core.fil";
-
-comp main<G: 1>(
-    @[G, G+1] left: 32,
-) -> () {
-    r := new Register[32]<G, G+2>(left);
-}

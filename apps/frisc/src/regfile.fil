@@ -1,0 +1,21 @@
+import "primitives/core.fil";
+
+// register file - triggers every cycle, but if writing something it won't
+// be available until the next cycle
+// outputs available in same cycle as inputs
+
+extern "regfile.sv" {
+  comp RegFile<'G:1> (
+    clk:1,
+     reset: ['G,'G+1] 1,
+     en: ['G,'G+1] 1,    // write enable
+     rd: ['G,'G+1] 5,    // destination reg
+     data: ['G,'G+1] 32, // data in
+     rin1: ['G,'G+1] 5,  // rs1 addr
+     rin2: ['G,'G+1] 5   // rs2 addr
+  ) -> (
+     rs1: ['G,'G+1] 32,  // rs1 data
+     rs2: ['G,'G+1] 32   // rs2 data
+  );
+}
+

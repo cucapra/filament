@@ -1,12 +1,25 @@
-extern "signed.sv" {
-  comp NegConst[#WIDTH, #VALUE]<G: L-(G), ?L: 1=G+1>() -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G;
+import "comb.fil";
 
-  comp SAdd[#WIDTH]<G: L-(G), ?L: 1=G+1>(
-    @[G, L] left: #WIDTH,
-    @[G, L] right: #WIDTH
-  ) -> (
-    @[G, L] out: #WIDTH,
-  ) where L > G;
+extern "signed.sv" {
+   comp Neg[WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      in: ['G, 'L] WIDTH
+   ) -> (
+      out: ['G, 'L] WIDTH
+   ) where 'L > 'G, WIDTH > 0;
+}
+
+comp SignedConst[WIDTH, VALUE, ?D=1]<'G: D>() -> (
+   out: ['G, 'G+D] WIDTH,
+) where
+   WIDTH > 0,
+   D > 0
+{
+   if VALUE >= pow2(WIDTH-1) {
+      c := new Const[WIDTH, pow2(WIDTH) - VALUE]<'G, 'G+D>();
+      negc := new Neg[WIDTH]<'G, 'G+D>(c.out);
+      out = negc.out;
+   } else {
+      posc := new Const[WIDTH, VALUE]<'G, 'G+D>();
+      out = posc.out;
+   }
 }

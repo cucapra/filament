@@ -1,0 +1,94 @@
+import "primitives/core.fil";
+import "apps/blas/scal/scal.fil";
+import "apps/blas/util.fil";
+import "primitives/signed.fil";
+
+// Applies a rotation to vectors x, y
+// W: element width
+// N: vector length
+// M: multiplier amount
+// A: adder amount
+// Uses scal to compute the scalar-vector products cy, sy, cx, -sx
+comp Rot[W, N, M, A]<'G:II>(
+  go: interface['G],
+  c: ['G, 'G+1] W,
+  s: ['G, 'G+1] W,
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W,
+) -> (
+  out_1[N]: ['G+L, 'G+L+1] W,
+  out_2[N]: ['G+L, 'G+L+1] W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0,
+        L > 0,
+        N > 0,
+        M > 0,
+        A > 0,
+        M % 4 == 0,
+        A % 2 == 0
+{
+
+  scalex := new Scal[W, N, M/4];
+  let scale_latency = scalex::L;
+  let scale_ii = scalex::II;
+
+  zero := new Const[W, 0]<'G>();
+  neg_s := new Neg[W]<'G>(s);
+
+  bundle cy[N]:  ['G+scale_latency, 'G+scale_latency+1] W;
+  bundle sy[N]:  ['G+scale_latency, 'G+scale_latency+1] W;
+  bundle cx[N]:  ['G+scale_latency, 'G+scale_latency+1] W;
+  bundle msx[N]: ['G+scale_latency, 'G+scale_latency+1] W;
+
+  SCY := new Scal[W, N, M/4] in ['G, 'G+scale_ii];
+  scale_cy := SCY<'G>(y{0..N}, c);
+  cy{0..N} = scale_cy.out{0..N};
+
+  SSY := new Scal[W, N, M/4] in ['G, 'G+scale_ii];
+  scale_sy := SSY<'G>(y{0..N}, s);
+  sy{0..N} = scale_sy.out{0..N};
+
+  SCX := new Scal[W, N, M/4] in ['G, 'G+scale_ii];
+  scale_cx := SCX<'G>(x{0..N}, c);
+  cx{0..N} = scale_cx.out{0..N};
+
+  SMSX := new Scal[W, N, M/4] in ['G, 'G+scale_ii];
+  scale_msx := SMSX<'G>(x{0..N}, neg_s.out);
+  msx{0..N} = scale_msx.out{0..N};
+
+  // out_1{i} <- cx{i} + sy{i}
+  // out_2{i} <- msx{i} + cy{i}
+
+  let add_uses = N / (A/2);
+  let add_ii = 1;
+
+  // use half the adders for x, half for y
+  A_x := new Adders[W, A/2] in ['G+scale_latency, 'G+scale_latency+(add_uses-1)*add_ii+1];
+  A_y := new Adders[W, A/2] in ['G+scale_latency, 'G+scale_latency+(add_uses-1)*add_ii+1];
+
+  let latency = scale_latency + (add_uses-1) * add_ii; 
+  for k in 0..add_uses {
+    // save chunked arrays based on when we are ready to add them
+    cx_reg := new Shift[W, k*add_ii, A/2]<'G+scale_latency>(cx{k*(A/2)..(k+1)*(A/2)});
+    sy_reg := new Shift[W, k*add_ii, A/2]<'G+scale_latency>(sy{k*(A/2)..(k+1)*(A/2)});
+    cy_reg := new Shift[W, k*add_ii, A/2]<'G+scale_latency>(cy{k*(A/2)..(k+1)*(A/2)});
+    msx_reg := new Shift[W, k*add_ii, A/2]<'G+scale_latency>(msx{k*(A/2)..(k+1)*(A/2)});
+    
+    ax := A_x<'G + scale_latency + k*add_ii>(cx_reg.out{0..(A/2)}, sy_reg.out{0..(A/2)});
+    ay := A_y<'G + scale_latency + k*add_ii>(msx_reg.out{0..(A/2)}, cy_reg.out{0..(A/2)});
+
+    // save add result
+    ax_reg := new Shift[W, latency - scale_latency - k*add_ii, A/2]<'G + scale_latency + k*add_ii>(ax.out{0..(A/2)});
+    ay_reg := new Shift[W, latency - scale_latency - k*add_ii, A/2]<'G + scale_latency + k*add_ii>(ay.out{0..(A/2)});
+  
+    out_1{k*(A/2)..(k+1)*(A/2)} = ax_reg.out{0..(A/2)};
+    out_2{k*(A/2)..(k+1)*(A/2)} = ay_reg.out{0..(A/2)};
+  }
+
+  L := latency;
+  // this is a thing we can do now?
+  let ii = if (add_uses*add_ii) > (scale_ii) {add_uses*add_ii} else {scale_ii};
+  II := ii;
+}

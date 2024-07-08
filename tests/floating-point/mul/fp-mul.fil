@@ -1,0 +1,105 @@
+import "primitives/core.fil";
+import "../fp-support.fil";
+
+// Computes:
+// out = |in[30:23] ? {1'b1,in[22:0]} : {1'b0,in[22:0]}
+comp ComputeOp<'G: 1>(
+  go: interface['G],
+   in: ['G, 'G+1] 32
+) -> (
+   out: ['G, 'G+1] 24,
+) {
+  exp := new GetExp<'G>(in);
+  mant := new GetMant<'G>(in);
+
+  exp_red := new ReduceOr[8]<'G>(exp.out);
+  zero_1 := new Const[1, 0]<'G>();
+  one_1 := new Const[1, 1]<'G>();
+  ext := new Mux[1]<'G>(exp_red.out, one_1.out, zero_1.out);
+  op := new Concat[1, 23, 24]<'G>(ext.out, mant.out);
+
+  out = op.out;
+}
+
+comp FPMult<'G: 1>(
+  go: interface['G],
+   a: ['G, 'G+1] 32,
+   b: ['G, 'G+1] 32,
+) -> (
+   exception: ['G, 'G+1] 1,
+   overflow: ['G, 'G+1] 1,
+   underflow: ['G, 'G+1] 1,
+   out: ['G, 'G+1] 32,
+) {
+  a31 := new Select[32, 31]<'G>(a);
+  b31 := new Select[32, 31]<'G>(b);
+  sign := new Xor[1]<'G>(a31.out, b31.out);
+
+  exp_a := new GetExp<'G>(a);
+  exp_b := new GetExp<'G>(b);
+  exp_a_and := new ReduceAnd[8]<'G>(exp_a.out);
+  exp_b_and := new ReduceAnd[8]<'G>(exp_b.out);
+  exception := new Or[1]<'G>(exp_a_and.out, exp_b_and.out);
+
+  op_a := new ComputeOp<'G>(a);
+  op_b := new ComputeOp<'G>(b);
+
+  op_a_ext := new ZeroExtend[24, 48]<'G>(op_a.out);
+  op_b_ext := new ZeroExtend[24, 48]<'G>(op_b.out);
+  product := new MultComb[48]<'G>(op_a_ext.out, op_b_ext.out);
+
+  normalized := new Select[48, 47]<'G>(product.out);
+  one_48 := new Const[48, 1]<'G>();
+  prod_shl := new ShiftLeft[48]<'G>(product.out, one_48.out);
+  product_normalized := new Mux[48]<'G>(normalized.out, product.out, prod_shl.out);
+
+  prod22_0 := new Slice[48, 22, 0, 23]<'G>(product_normalized.out);
+  round := new ReduceOr[23]<'G>(prod22_0.out);
+  prod_norm_23 := new Select[48, 23]<'G>(product_normalized.out);
+  round_sum := new And[1]<'G>(round.out, prod_norm_23.out);
+  round_sum_ext := new ZeroExtend[1, 23]<'G>(round_sum.out);
+  prod46_24 := new Slice[48, 46, 24, 23]<'G>(product_normalized.out);
+  product_mantissa := new Add[23]<'G>(prod46_24.out, round_sum_ext.out);
+
+  zero_23 := new Const[23, 0]<'G>();
+
+  exp_a_ext := new ZeroExtend[8, 9]<'G>(exp_a.out);
+  exp_b_ext := new ZeroExtend[8, 9]<'G>(exp_b.out);
+  sum_exponent := new Add[9]<'G>(exp_a_ext.out, exp_b_ext.out);
+  sub_v := new Const[9, 127]<'G>();
+  // exp_norm = sum_exponent - 8'd127
+  exp_norm := new Sub[9]<'G>(sum_exponent.out, sub_v.out);
+  // exponent = exp_norm + normalized
+  normalized_ext := new ZeroExtend[1, 9]<'G>(normalized.out);
+  exponent := new Add[9]<'G>(exp_norm.out, normalized_ext.out);
+
+  not_zero := new Not[1]<'G>(exception.out);
+  exp_8 := new Select[9, 8]<'G>(exponent.out);
+  exp_7 := new Select[9, 7]<'G>(exponent.out);
+  not_exp_7 := new Not[1]<'G>(exp_7.out);
+
+  overflow_1 := new And[1]<'G>(exp_8.out, not_exp_7.out);
+  overflow := new And[1]<'G>(not_zero.out, overflow_1.out);
+
+  underflow_1 := new And[1]<'G>(exp_7.out, exp_8.out);
+  underflow := new And[1]<'G>(not_zero.out, underflow_1.out);
+
+  over_max := new Const[8, 255]<'G>();
+  over_res := new GetResult<'G>(sign.out, over_max.out, zero_23.out);
+
+  zero_31 := new Const[31, 0]<'G>();
+  under_res := new Concat[1, 31, 32]<'G>(sign.out, zero_31.out);
+
+  exp_round := new Slice[9, 7, 0, 8]<'G>(exponent.out);
+  safe_res := new GetResult<'G>(sign.out, exp_round.out, product_mantissa.out);
+
+  zero_32 := new Const[32, 0]<'G>();
+  res_1 := new Mux[32]<'G>(underflow.out, under_res.out, safe_res.out);
+  res_2 := new Mux[32]<'G>(overflow.out, over_res.out, res_1.out);
+  res := new Mux[32]<'G>(exception.out, under_res.out, res_2.out);
+
+  underflow = underflow.out;
+  overflow = overflow.out;
+  exception = exception.out;
+  out = res.out;
+}

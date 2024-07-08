@@ -1,0 +1,40 @@
+---CODE---
+1
+---STDERR---
+error: delay must be greater than zero
+  ┌─ tests/errors/typecheck/unprovable-cons.fil:5:15
+  │
+5 │ comp Main<'G: 'L-('G), 'L: 1>(
+  │               ^^^^^^^ delay must be greater than zero
+
+error: bundle's availability is greater than the delay of the event
+  ┌─ tests/errors/typecheck/unprovable-cons.fil:8:10
+  │
+5 │ comp Main<'G: 'L-('G), 'L: 1>(
+  │               ------- event's delay
+  ·
+8 │    left: ['G, 'G+1] 32,
+  │          ^^^^^^^^^^ available for 1 cycles
+
+error: invocation violates event constraint
+   ┌─ ./primitives/./state.fil:13:12
+   │
+13 │    ) where 'L > 'G+1;
+   │            ^^^^^^^^^ constraint was violated
+   │
+   ┌─ tests/errors/typecheck/unprovable-cons.fil:14:9
+   │
+14 │   l0 := L<'G, 'L+1>(left);
+   │         - invocation occurs here
+
+error: source port does not provide value for as long as destination requires
+   ┌─ tests/errors/typecheck/unprovable-cons.fil:15:9
+   │
+15 │   out = l0.out;
+   │         ^^^^^^
+   │         │
+   │         source is available for ['G+1, 'L+1]
+   │         required for ['L+2, 'L+3]
+
+Compilation failed with 4 errors.
+Run with --show-models to generate assignments for failing constraints.

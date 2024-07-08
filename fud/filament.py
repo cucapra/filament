@@ -98,7 +98,7 @@ class CocotbExecBase(Stage):
         return save(stream, dir)
 
     def _define_steps(self, input, builder, config) -> Source:
-        
+
         def transform_data(data_path, dir):
             """
             Transform data in data_path from having binary/hex encoding into decimal.
@@ -124,7 +124,7 @@ class CocotbExecBase(Stage):
                                 raise errors.InvalidNumericType("\"" + str(val) + "\"" + " in " + data)
                         elif val.startswith('0x'): # hex format
                             binary_data = val[2:]
-                            try: 
+                            try:
                                 conv = int(binary_data,16)
                             except ValueError:
                                 raise errors.InvalidNumericType("\"" + str(val) + "\"" + " in " + data)
@@ -137,7 +137,7 @@ class CocotbExecBase(Stage):
             json_obj = json.dumps(data_dict,indent=4)
             file_new.write(json_obj)
             return Path(file_new.name).resolve()
-        
+
         @builder.step()
         def get_data() -> SourceType.Path:
             """Get data for execution"""
@@ -188,6 +188,10 @@ class CocotbExecBase(Stage):
                     "--library",
                     config["stages", self.name, "library"],
                     "--dump-interface",
+                    # We should only run this after the module has been type
+                    # checked.
+                    "--unsafe-skip-discharge",
+                    config.get(["stages", "filament", "flags"]) or "",
                     "{path}",
                 ]
             )
@@ -303,7 +307,7 @@ class CocotbExecBase(Stage):
 
         # Run the program
         out = run(dir, interface_path, data_path)
-        
+
         if self.out == CocotbOutput.VCD:
             return read_vcd(dir)
         else:
@@ -393,10 +397,10 @@ class FilamentStage(Stage):
     def __init__(self):
         super().__init__(
             src_state="filament",
-            target_state="futil",
+            target_state="icarus-verilog",
             input_type=SourceType.Path,
             output_type=SourceType.Stream,
-            description="Compile a filament program to calyx",
+            description="Compile a filament program to verilog",
         )
 
     @staticmethod
@@ -424,10 +428,10 @@ class FilamentStage(Stage):
         )
 
         @builder.step(description=cmd)
-        def to_calyx(input_path: SourceType.Path) -> SourceType.Stream:
+        def to_verilog(input_path: SourceType.Path) -> SourceType.Stream:
             return shell(cmd.format(path=input_path))
 
-        return to_calyx(input_data)
+        return to_verilog(input_data)
 
 
 __STAGES__ = [FilamentStage, CocotbOut, CocotbVCD, CleanupCocotb]

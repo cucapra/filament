@@ -1,0 +1,16 @@
+import "primitives/core.fil";
+
+// This program should fail type checking because we do not provide evidence
+// that 'L > 'G.
+comp Main<'G: 'L-('G), 'L: 1>(
+  go_G: interface['G],
+  go_L: interface['L],
+   left: ['G, 'G+1] 32,
+   right: ['L, 'L+1] 32
+) -> (
+   out: ['L+2, 'L+3] 32
+) {
+  L := new Register[32];
+  l0 := L<'G, 'L+1>(left);
+  out = l0.out;
+}

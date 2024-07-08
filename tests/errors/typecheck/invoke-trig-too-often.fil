@@ -1,0 +1,10 @@
+extern "dummy.sv" {
+  comp Mult<'G: 5>(
+    go_G: interface['G],
+  ) -> ();
+}
+
+comp Main<'T: 3>(go_T: interface['T]) -> () {
+  M := new Mult;
+  m0 := M<'T+1>();
+}

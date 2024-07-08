@@ -1,0 +1,130 @@
+import "primitives/comb.fil";
+
+generate(flopoco) using "flopoco.toml" {
+    /// Floating point addition with Flopoco's internal format
+    comp FPAdd[Exp, Mant]<'G:1>(
+        clk: 1,
+        // TODO(rachitnigam): Support reset with different name
+        // rst: 1,
+        X: ['G, 'G+1] Width,
+        Y: ['G, 'G+1] Width,
+    ) -> (
+        R: ['G+L, 'G+L+1] Width,
+    ) with {
+        // Flopoco's internal format uses two extra bits.
+        let Width = Exp+Mant+3;
+        some L where L >= 0;
+    } where 
+        Exp > 0,
+        Mant > 0;
+
+    /// Floating point exponentiation with Flopoco's internal format
+    comp FPExp[Exp, Mant]<'G:1>(
+        clk: 1,
+        X: ['G, 'G+1] Width,
+        Y: ['G, 'G+1] Width,
+    ) -> (
+        R: ['G+L, 'G+L+1] Width,
+    ) with {
+        // Flopoco's internal format uses two extra bits.
+        let Width = Exp+Mant+3;
+        some L where L >= 0;
+    } where 
+        Exp > 0,
+        Mant > 0;
+
+    /// Floating point multiplication with Flopoco's internal format
+    comp FPMult[Exp, Mant]<'G: 1>(
+        clk: 1,
+        X: ['G, 'G+1] Width,
+        Y: ['G, 'G+1] Width,
+    ) -> (
+        R: ['G+L, 'G+L+1] Width,
+    ) with {
+        // Flopoco's internal format uses two extra bits.
+        let Width = Exp+Mant+3;
+        some L where L >= 0;
+    } where 
+        Exp > 0,
+        Mant > 0;
+
+    /// Converts an IEEE floating point number to Flopoco internal format
+    comp InputIEEE[ExpIn, MantIn, ExpOut, MantOut]<'G:1>(
+        X: ['G, 'G+1] WidthIEEE
+    ) -> (
+        R: ['G+L, 'G+L+1] WidthFPC
+    ) with {
+        let WidthIEEE = ExpIn + MantIn + 1;
+        let WidthFPC = ExpOut + MantOut + 3;
+        some L where L == 0;
+    } where 
+        ExpIn > 0,
+        MantIn > 0,
+        ExpOut > 0,
+        MantOut > 0;
+    
+    /// Converts a Flopoco internal format floating point number to IEEE
+    comp OutputIEEE[ExpIn, MantIn, ExpOut, MantOut]<'G:1>(
+        X: ['G, 'G+1] WidthFPC
+    ) -> (
+        R: ['G+L, 'G+L+1] WidthIEEE
+    ) with {
+        let WidthFPC = ExpIn + MantIn + 3;
+        let WidthIEEE = ExpOut + MantOut + 1;
+        some L where L == 0;
+    } where 
+        ExpIn > 0,
+        MantIn > 0,
+        ExpOut > 0,
+        MantOut > 0;
+}
+
+/// Floating point negation with Flopoco's internal format
+comp FPNeg[Exp, Mant]<'G: 1>(
+    X: ['G, 'G+1] Width,
+) -> (
+    R: ['G, 'G+1] Width,
+) with {
+    // Flopoco's internal format uses two extra bits.
+    let Width = Exp+Mant+3;
+} where 
+    Exp > 0,
+    Mant > 0
+{
+    // split
+    bottom := new Slice[Width, Exp+Mant-1, 0]<'G>(X);
+    sign := new Select[Width, Exp+Mant]<'G>(X);
+    sign_neg := new Not[1]<'G>(sign.out);
+    top := new Slice[Width, Width-1, Exp+Mant+1]<'G>(X);
+
+    // concat
+    sign_bottom := new Concat[1, Exp+Mant]<'G>(sign_neg.out, bottom.out);
+    res := new Concat[2, Exp+Mant+1]<'G>(top.out, sign_bottom.out);
+    
+    R = res.out;
+}
+
+/// Floating point subtraction with Flopoco's internal format
+comp FPSub[Exp, Mant]<'G: 1>(
+    X: ['G, 'G+1] Width,
+    Y: ['G, 'G+1] Width,
+) -> (
+    R: ['G+L, 'G+L+1] Width,
+) with {
+    // Flopoco's internal format uses two extra bits.
+    let Width = Exp+Mant+3;
+    some L where L >= 0;
+} where 
+    Exp > 0,
+    Mant > 0
+{
+    // negate
+    neg_y := new FPNeg[Exp, Mant]<'G>(Y);
+
+    // add
+    Add := new FPAdd[Exp, Mant];
+    res := Add<'G>(X, neg_y.R);
+
+    R = res.R;
+    L := Add::L;
+}

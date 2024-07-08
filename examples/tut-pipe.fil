@@ -1,19 +1,19 @@
 import "primitives/core.fil";
 import "./sequential.fil";
 
-comp main<G: 1>(
-    @interface[G] go: 1,
-    @[G+3, G+4] op: 1,
-    @[G, G+1] left: 32,
-    @[G, G+1] right: 32,
-) -> (@[G+3, G+4] out: 32) {
+comp main<'G: 1>(
+    go: interface['G],
+     op: ['G+3, 'G+4] 1,
+     left: ['G, 'G+1] 32,
+     right: ['G, 'G+1] 32,
+) -> ( out: ['G+3, 'G+4] 32) {
     A := new Add[32];
     M := new FastMult[32];
-    m0 := M<G>(left, right);
-    a0 := A<G>(left, right);
-    r0 := new Register[32]<G, G+2>(a0.out);
-    r1 := new Register[32]<G+1, G+3>(r0.out);
-    r2 := new Register[32]<G+2, G+4>(r1.out);
-    mx := new Mux[32]<G+3>(op, r2.out, m0.out);
+    m0 := M<'G>(left, right);
+    a0 := A<'G>(left, right);
+    r0 := new Register[32]<'G, 'G+2>(a0.out);
+    r1 := new Register[32]<'G+1, 'G+3>(r0.out);
+    r2 := new Register[32]<'G+2, 'G+4>(r1.out);
+    mx := new Mux[32]<'G+3>(op, r2.out, m0.out);
     out = mx.out;
 }

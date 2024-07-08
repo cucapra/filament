@@ -1,0 +1,60 @@
+// Tests the guards of an fsm.
+
+// Tests all the guards of a counter fsm with DELAY states.
+comp counter_test[DELAY]<'G: DELAY>(
+    go: interface['G],
+    in: ['G, 'G+DELAY] 32,
+) -> (
+    out[DELAY]: for<i> ['G+i, 'G+i+1] 32
+) where DELAY > 0 {
+    for ii in 0..DELAY {
+        out{ii} = in;
+    }
+}
+
+// Tests every guard in a counter chain with DELAY states per counter and NUM counters.
+comp counter_chain_test[DELAY, NUM]<'G: DELAY>(
+    go: interface['G],
+    in[NUM]: for<j> ['G+j*DELAY, 'G+j*DELAY+DELAY] 32
+) -> (
+    out[NUM*DELAY]: for<i> ['G+i, 'G+i+1] 32
+) where DELAY > 0, NUM > 0 {
+    C := new counter_test[DELAY];
+    for ii in 0..NUM {
+        let BASE = ii*DELAY;
+        con := C<'G+BASE>(in{ii});
+        out{BASE..BASE+DELAY} = con.out{0..DELAY};
+    }
+}
+
+comp main<'G: 9>(
+    go: interface['G],
+    in: ['G, 'G+9] 32,
+) -> (
+    out0: ['G, 'G+1] 32,
+    out1: ['G+1, 'G+2] 32,
+    out2: ['G+2, 'G+3] 32,
+    out3: ['G+3, 'G+4] 32,
+    out4: ['G+4, 'G+5] 32,
+    out5: ['G+5, 'G+6] 32,
+    out6: ['G+6, 'G+7] 32,
+    out7: ['G+7, 'G+8] 32,
+    out8: ['G+8, 'G+9] 32
+) {
+    bundle inb[3]: for<i> ['G+i*3, 'G+i*3+3] 32;
+    inb{0} = in;
+    inb{1} = in;
+    inb{2} = in;
+
+    tester := new counter_chain_test[3, 3]<'G>(inb{0..3});
+
+    out0 = tester.out{0};
+    out1 = tester.out{1};
+    out2 = tester.out{2};
+    out3 = tester.out{3};
+    out4 = tester.out{4};
+    out5 = tester.out{5};
+    out6 = tester.out{6};
+    out7 = tester.out{7};
+    out8 = tester.out{8};
+}

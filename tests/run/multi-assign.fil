@@ -1,0 +1,30 @@
+import "primitives/comb.fil";
+
+/// Returns a const
+comp ReturnConst<'G: 1>(
+  in: ['G, 'G+1] 32
+) -> (
+  out: ['G, 'G+1] 32
+) {
+  out = in;
+}
+
+/// Test that checks multiple assignments to different invocations when all ports are active
+comp main<'G: 2>(
+  go: interface['G],
+  in: ['G, 'G+1] 1
+) -> (
+  out1: ['G, 'G+1] 32,
+  out2: ['G+1, 'G+2] 32
+) {
+  RC := new ReturnConst;
+
+  c1 := new Const[32, 0]<'G, 'G+2>();
+  c2 := new Const[32, 1]<'G, 'G+2>();
+
+  rc1 := RC<'G>(c1.out);
+  rc2 := RC<'G+1>(c2.out);
+
+  out1 = rc1.out;
+  out2 = rc2.out;
+}

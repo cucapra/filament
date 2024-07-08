@@ -1,0 +1,14 @@
+import "primitives/core.fil";
+
+comp Max_mult_add<'G: 3, 'L: 3>(
+  go_G: interface['G],
+  go_L: interface['L],
+   a: ['G, 'G+1] 32,
+   b: ['G, 'G+1] 32,
+   c: ['L, 'L+1] 32,
+   d: ['L, 'L+1] 32,
+) -> () {
+  M := new Add[32];
+  m1 := M<'L>(c, d);
+  m0 := M<'G>(a, b);
+}

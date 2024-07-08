@@ -10,7 +10,7 @@ Before that, however, let's run the design and see how it performs:
 ```bash
 fud e --to cocotb-out examples/tut-seq.fil \
       -s cocotb.data examples/data.json \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 ```
 
 Which generates the following output:
@@ -68,7 +68,7 @@ The second error message points out that the ALU component may execute every cyc
 Yet again, our request is physically impossible to satisfy: our multiplier circuit is fundamentally incapable of executing every cycle.
 Thankfully for us, the `primitives/math.fil` file provides a component called `FastMult` which does have delay 1:
 ```filament
-{{#include ../../../primitives/math.fil:fastmult}}
+{{#include ../../../primitives/math/math.fil:fastmult}}
 ```
 
 We can change out program to use this component instead:
@@ -115,7 +115,7 @@ Now to the moment of truth: let's run the design and see how it performs:
 ```bash
 fud e --to cocotb-out examples/tut-pipe.fil \
       -s cocotb.data examples/data.json \
-      -s futil.flags ' -d canonicalize'
+      -s calyx.flags ' -d canonicalize'
 ```
 
 We get the following output which shows that the design took only 7 cycles to process 4 inputs:

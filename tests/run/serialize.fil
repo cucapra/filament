@@ -1,0 +1,31 @@
+import "primitives/reshape.fil";
+
+comp main<'G:12>(
+    go: interface['G],
+     i0: ['G, 'G+6] 32,
+     i1: ['G, 'G+6] 32,
+     i2: ['G, 'G+6] 32,
+     i3: ['G, 'G+6] 32,
+     i4: ['G, 'G+6] 32,
+     i5: ['G, 'G+6] 32,
+) -> (
+    // First bundle
+     o0: ['G+0, 'G+6] 32,
+     o1: ['G+0, 'G+6] 32,
+    // Second bundle
+     o2: ['G+3, 'G+9] 32,
+     o3: ['G+3, 'G+9] 32,
+    // Third bundle
+     o4: ['G+6, 'G+12] 32,
+     o5: ['G+6, 'G+12] 32,
+) {
+    bundle in[6]: for<i> ['G, 'G+6] 32;
+    in{0} = i0; in{1} = i1; in{2} = i2;
+    in{3} = i3; in{4} = i4; in{5} = i5;
+
+    ser := new Serialize[32, 3, 2, 3, 6]<'G>(in{0..6});
+
+    o0 = ser.out{0}{0}; o1 = ser.out{0}{1};
+    o2 = ser.out{1}{0}; o3 = ser.out{1}{1};
+    o4 = ser.out{2}{0}; o5 = ser.out{2}{1};
+}

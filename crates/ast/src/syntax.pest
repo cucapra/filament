@@ -1,0 +1,279 @@
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+
+// C-style comments
+COMMENT = _{ ("//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE) | "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+
+// Identifiers may begin with `_` or an ASCII character.
+identifier = @{ ("_" | ASCII_ALPHA)+ ~ ("_" | ASCII_ALPHA | ASCII_DIGIT)* }
+
+// Positive numbers
+bitwidth = @{ ASCII_DIGIT+ }
+
+char = { !"\"" ~ ANY }
+string_lit = ${ "\"" ~ char* ~ "\"" }
+import = _{
+      "import" ~ string_lit ~ ";"
+}
+imports = { import* }
+
+// ====== toplevel ======
+
+file = {
+  SOI
+    ~ imports
+    ~ comp_or_ext*
+    ~ EOI
+}
+
+gt =  { ">" }
+gte = { ">=" }
+lt =  { "<" }
+lte = { "<=" }
+eq =  { "==" }
+order_op = { gte | gt | lte | lt | eq }
+
+constraint = {
+  expr ~ order_op ~ expr
+  | time ~ order_op ~ time
+}
+constraints = {
+  ("where" ~ (constraint ~ ("," ~ constraint)*))?
+}
+
+some = { "some" }
+opaque = { "opaque" }
+
+sig_bind = {
+  "let" ~ param_var ~ "=" ~ expr ~ ";"
+  | (some | opaque) ~ param_var ~ constraints ~ ";"
+}
+
+sig_bindings = {
+  ("with {" ~ (sig_bind)* ~ "}")?
+}
+
+params = {
+  ("[" ~ param_bind ~ ("," ~ param_bind)* ~ "]")?
+}
+
+param_bind = {
+  "?" ~ param_var ~ "=" ~ expr |
+  param_var
+}
+signature = {
+  identifier ~ params ~ abstract_var? ~ io ~ sig_bindings ~ constraints
+}
+component = {
+  "comp" ~ signature ~ "{" ~ command* ~ "}"
+}
+external = {
+  "extern" ~ string_lit ~ "{" ~  ("comp" ~ signature ~ ";")*  ~ "}"
+}
+generate = {
+  "generate" ~ "(" ~ identifier ~ ")" ~ "using" ~ string_lit ~ "{" ~  ("comp" ~ signature ~ ";")*  ~ "}"
+}
+
+comp_or_ext = {
+  component | external | generate
+}
+
+// ====== Component signature ======
+
+// Expressions
+param_var = ${ identifier }
+interface = {
+  "interface" ~ "[" ~ event ~ "]"
+}
+op_mul = { "*" }
+op_div = { "/" }
+op_mod = { "%" }
+op_add = { "+" }
+op_sub = { "-" }
+operator = _{ op_mul | op_div | op_add | op_sub | op_mod }
+
+if_expr = {
+  "if" ~ expr_cmp ~ "{" ~ expr ~ "}" ~ "else" ~ "{" ~ expr ~ "}"
+}
+
+builtin_fn = {
+  | "pow2"
+  | "log2"
+  | "sin_bits"
+  | "cos_bits"
+  | "bit_rev"
+}
+unknown_fn = { identifier }
+fn = {builtin_fn | unknown_fn}
+
+expr_base = {
+  | if_expr
+  | fn ~ "(" ~ expr ~ ("," ~ expr)* ~ ")"
+  | "(" ~ expr ~ ")"
+  | bitwidth
+  | identifier ~ "::" ~ identifier
+  | param_var
+}
+expr = {
+  expr_base ~ (operator ~ expr_base)*
+}
+
+// Event bindings
+quote = { "'" }
+event = {
+  quote ~ identifier
+  | identifier      // Parse this to provide a better error message
+}
+delay = {
+  expr |
+  time ~ "-" ~ "(" ~ time ~ ")"
+}
+event_with_delay = _{
+  event ~ ":" ~ delay
+}
+event_bind = {
+  "?" ~ event_with_delay ~ "=" ~ time |
+  event_with_delay
+}
+abstract_var = {
+  "<" ~ event_bind ~ ("," ~ event_bind)* ~ ">"
+}
+
+// Time
+time = {
+  event ~ "+" ~ expr
+  | expr ~ "+" ~ event
+  | event
+  | expr
+}
+
+// Intervals
+interval_range = {
+ "[" ~ time ~ "," ~ time ~ "]"
+}
+
+bundle_params = {
+  "<" ~ param_var ~ ("," ~ param_var)* ~ ">"
+}
+bundle_typ = {
+  ("for" ~ bundle_params)? ~ interval_range ~ expr
+}
+
+// Bundle definition
+bundle_def = {
+  identifier ~ ("[" ~ expr ~ "]")* ~ ":" ~ bundle_typ
+}
+
+// Ports
+port_def = {
+  identifier ~ ":" ~ bitwidth
+  // A port that is possibly a bundle port
+  | bundle_def
+  // An interface port
+  | identifier ~ ":" ~ interface
+}
+
+arrow = { "->" }
+
+io = {
+  "(" ~ ports? ~ ")" ~ arrow ~ "(" ~ ports? ~ ")"
+}
+ports = {
+  port_def ~ ("," ~ port_def)* ~ ","?
+}
+
+// ====== Cell instance ======
+conc_params = {
+  ("[" ~ expr ~ ("," ~ expr)* ~ "]")?
+}
+inst_live = {
+  ("in" ~ interval_range ~ ("," ~ interval_range)*)?
+}
+instance = {
+  identifier ~ ":=" ~ "new" ~ identifier ~ conc_params ~ invoke_args? ~ inst_live ~ ";"
+}
+
+// Connections
+
+connect = {
+  port ~ "=" ~ port ~ ";"
+}
+
+// ====== Invocations ==========
+
+dots = { ".." }
+access = {
+   ("{" ~
+      ((expr ~ dots ~ expr) | expr) ~
+   "}")
+}
+
+port = {
+  identifier ~ "." ~ identifier ~ access*
+  | identifier ~ access*
+  | bitwidth
+}
+
+arguments = {
+  "(" ~ ")"
+  | "(" ~ port ~ ("," ~ port)* ~ ")"
+}
+
+time_args = {
+  "<" ~ time ~ ("," ~ time)* ~ ">"
+}
+
+invoke_args = {
+  time_args ~ arguments
+}
+
+invocation = {
+  identifier ~ ":=" ~ identifier ~ invoke_args ~ ";"
+}
+
+// ===== if statements ====
+expr_cmp = {
+  expr ~ order_op ~ expr
+}
+
+if_stmt = {
+  "if" ~ expr_cmp ~ "{" ~ commands ~ "}" ~ ("else" ~ "{" ~ commands ~ "}")?
+}
+
+// ===== let-bound parameters ========
+param_let = {
+  "let" ~ param_var ~ "=" ~ expr ~ ";"
+}
+
+// ====== Loops ==========
+
+for_loop = {
+  "for" ~ param_var ~ "in" ~ expr ~ ".." ~ expr ~ "{" ~ commands ~ "}"
+}
+
+// ====== Wire bundles ==========
+bundle = {
+  "bundle" ~ bundle_def ~ ";"
+}
+
+// ====== Existential binding =======
+exists = {
+  param_var ~ ":=" ~ expr ~ ";"
+}
+
+/// ===== Assumptions ==========
+implication = {
+  (expr_cmp ~ "=>")? ~ expr_cmp
+}
+
+assume_w = { "assume" }
+assert_w = { "assert" }
+fact = {
+  (assume_w | assert_w) ~ implication ~ ";"
+}
+
+// ========== Commands ==========
+command = {
+  bundle | instance | invocation | connect | for_loop | if_stmt | fact | param_let | exists
+}
+
+commands = { command* }

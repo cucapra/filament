@@ -1,0 +1,46 @@
+[package]
+name = "filament"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+authors.workspace = true
+license-file.workspace = true
+keywords.workspace = true
+repository.workspace = true
+homepage.workspace = true
+categories.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+toml.workspace = true
+serde.workspace = true
+argh.workspace = true
+log.workspace = true
+pest.workspace = true
+pest_consume.workspace = true
+pest_derive.workspace = true
+linked_hash_set.workspace = true
+itertools.workspace = true
+linked-hash-map.workspace = true
+derivative.workspace = true
+smallvec.workspace = true
+topological-sort.workspace = true
+atty.workspace = true
+lazy_static.workspace = true
+easy-smt.workspace = true
+struct-variant.workspace = true
+env_logger.workspace = true
+codespan-reporting.workspace = true
+bitvec.workspace = true
+string-interner.workspace = true
+fil-ast.workspace = true
+fil-ir.workspace = true
+fil-utils.workspace = true
+fil-gen.workspace = true
+
+calyx-ir.workspace = true
+calyx-frontend.workspace = true
+calyx-utils.workspace = true
+calyx-opt.workspace = true
+calyx-backend.workspace = true

@@ -1,119 +1,143 @@
-ver = "0.4.0"
+ver = "0.4.1"
+
 
 [[tests]]
-name = "type checker"
-paths = [
-  "tests/check/*.fil",
-  "tests/errors/*.fil",
-]
+name = "check"
+paths = ["tests/check/*.fil", "primitives/*.fil"]
 cmd = """
 ./target/debug/filament {} --check
 """
+expect_dir = "tests/check/"
 
 [[tests]]
-name = "ir-errors"
-paths = [
-  "tests/errors/*.fil",
-  "primitives/*.fil",
-]
-expect_dir = "tests/ir_check/"
+name = "errors"
+paths = ["tests/errors/**/*.fil"]
 cmd = """
-./target/debug/filament {} --ir
+./target/debug/filament {}
 """
 
 [[tests]]
-name = "compile"
-paths = [
-  "tests/compile/*.fil"
-]
+name = "run"
+paths = ["tests/run/*.fil"]
 cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
+fud e -s cocotb.data {}.data --to cocotb-out {} -s filament.flags ' --show-models' -q
 """
 
-# [[tests]]
-# name = "ir gen"
-# paths = [
-#   "tests/compile/*.fil"
-# ]
-# expect_dir = "tests/compile/ir/"
-# cmd = """
-# ./target/debug/filament {} --show-ir > /dev/null
-# """
+# ============= Testing primitive implementations =============
+[[tests]]
+name = "floating point-random"
+paths = ["tests/floating-point/*/harness.fil"]
+cmd = """
+dir=$(dirname {}) && \
+./tests/utils/rand_check.sh $dir
+"""
 
+[[tests]]
+name = "floating point-edge"
+paths = ["tests/floating-point/*/harness.fil"]
+timeout = 3600
+cmd = """
+dir=$(dirname {}) && \
+./tests/utils/check.sh $dir edge
+"""
+
+[[tests]]
+name = "iterative divider-random"
+paths = ["tests/iterative-divider/harness.fil"]
+timeout = 3600
+cmd = """
+dir=$(dirname {}) && \
+./tests/utils/rand_check.sh $dir
+"""
+
+[[tests]]
+name = "iterative divider-edge"
+paths = ["tests/iterative-divider/harness.fil"]
+cmd = """
+dir=$(dirname {}) && \
+./tests/utils/check.sh $dir edge
+"""
+
+[[tests]]
+name = "bindings"
+paths = ["tests/gen/*/*.toml"]
+cmd = """
+dir=$(dirname {}) && \
+./target/debug/filament $dir.fil --bindings {} --dump-interface
+"""
+
+# ============ Larger designs in Filament =====================
+# Compile directories within the tests/compile directory. All *.fil files in the
+# use the same input and must produce the same output
+[[tests]]
+name = "systolic array"
+paths = ["tests/systolic/*.fil"]
+cmd = """
+dir=$(dirname {}) && \
+fud e -s cocotb.data "$dir/data.json" \
+      --to cocotb-out {} \
+      -s filament.flags ' --show-models' -q
+"""
+
+
+# Aetherling evaluation
+[[tests]]
+name = "aetherling parameteric"
+paths = ["apps/aetherling/**/shim.fil"]
+cmd = """
+fud e -s cocotb.data "apps/aetherling/data.json" --to cocotb-out {} -q |\
+      jq '[ .O_10, .O_11, .O_12, .O_13, .O_14, .O_15 ] | map(.["0"]) | flatten'
+"""
+expect_dir = "apps/aetherling/"
+
+# frisc
+[[tests]]
+name = "frisc tests"
+paths = ["apps/frisc/test/*.fil"]
+cmd = """
+fud e -s cocotb.data {}.data --to cocotb-out {} -q
+"""
+
+# fft
+[[tests]]
+name = "fft-random"
+paths = ["apps/fft/versions/*/fft.fil"]
+expect_dir = "apps/fft/test/"
+cmd = """
+dir=$(dirname {}) && \
+apps/fft/test/scripts/random.sh $dir
+"""
+
+[[tests]]
+name = "fft-edge"
+paths = ["apps/fft/versions/*/fft.fil"]
+expect_dir = "apps/fft/test/"
+cmd = """
+dir=$(dirname {}) && \
+apps/fft/test/scripts/edge.sh $dir
+"""
+
+
+# blas
+[[tests]]
+name = "blas"
+paths = ["apps/blas/*/test.fil"]
+cmd = """
+fud e -s cocotb.data {}.data --to cocotb-out {} -q
+"""
+
+# ============== Examples in the documentation ============
 [[tests]]
 name = "examples"
-paths = [
-  "examples/*.fil"
-]
+paths = ["examples/*.fil"]
 cmd = """
 ./target/debug/filament {} --check
 """
 
 [[tests]]
 name = "run examples"
-paths = [
-  "examples/tut-seq.fil",
-  "examples/tut-pipe.fil"
-]
+paths = ["examples/tut-seq.fil", "examples/tut-pipe.fil"]
 expect_dir = "examples/run/"
 cmd = """
-fud e -s cocotb.data examples/data.json --to cocotb-out {} -s futil.flags ' -d canonicalize' -q
-"""
-
-# Compile directories within the tests/compile directory. All *.fil files in the
-# use the same input and must produce the same output
-[[tests]]
-name = "compile multi"
-paths = [
-  "tests/compile/*/*.fil"
-]
-cmd = """
-dir=$(dirname {}) && \
-fud e -s cocotb.data "$dir/data.json" \
-      --to cocotb-out {} \
-      -s filament.flags ' --show-models' \
-      -s futil.flags ' -d canonicalize' -q
-"""
-
-# Evaluation examples
-[[tests]]
-name = "evaluation"
-paths = [
-  "evaluation/**/harness.fil"
-]
-cmd = """
-dir=$(dirname {}) && \
-./evaluation/fuzz/check.sh $dir 100
-"""
-
-# Aetherling evaluation
-[[tests]]
-name = "aetherling evaluation"
-paths = [
-  "aetherling/**/harness.fil"
-]
-cmd = """
-dir=$(dirname {}) && \
-fud e -s cocotb.data "$dir/data.json" --to cocotb-out {} -s futil.flags ' -d canonicalize' -q | jq
-"""
-
-# Reticle Evaluation
-[[tests]]
-name = "reticle evaluation"
-paths = [
-  "reticle/harness.fil"
-]
-cmd = """
-dir=$(dirname {}) && \
-./reticle/check.sh $dir 100
-"""
-
-# frisc
-[[tests]]
-name = "frisc tests"
-paths = [
-  "frisc/test/*.fil"
-]
-cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -s futil.flags ' -d canonicalize' -s filament.flags ' --show-models' -q
+fud e -s cocotb.data examples/data.json --to cocotb-out {} -q
 """

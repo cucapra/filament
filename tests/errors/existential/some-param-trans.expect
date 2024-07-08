@@ -1,0 +1,23 @@
+---CODE---
+1
+---STDERR---
+error: cannot prove source-level fact
+   ┌─ tests/errors/existential/some-param-trans.fil:13:5
+   │
+13 │     assert F0::O == F1::O;
+   │     ^^^^^^^^^^^^^^^^^^^^^^ cannot prove source-level fact
+
+error: cannot prove source-level fact
+   ┌─ tests/errors/existential/some-param-trans.fil:17:5
+   │
+17 │     assert F0::E == F2::E;
+   │     ^^^^^^^^^^^^^^^^^^^^^^ cannot prove source-level fact
+
+error: cannot prove source-level fact
+   ┌─ tests/errors/existential/some-param-trans.fil:26:9
+   │
+26 │         assert FM::E == FN::E;
+   │         ^^^^^^^^^^^^^^^^^^^^^^ cannot prove source-level fact
+
+Compilation failed with 3 errors.
+Run with --show-models to generate assignments for failing constraints.

@@ -1,0 +1,13 @@
+comp Foo[W]<'G: L>(
+  in: ['G, 'G+L] W,
+) -> (
+  out: ['G, 'G+L] W,
+) with {
+  some L where L > 0;
+} {
+  if W == 0 {
+    L := 1;
+  } else {
+    L := 2;
+  }
+}

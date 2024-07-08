@@ -1,0 +1,12 @@
+import "primitives/core.fil";
+
+comp main<'G:1>() -> (out: ['G, 'G+1] 32) {
+    f := new Foo[1]<'G>();
+    out = f.out;
+}
+
+comp Foo[M]<'G:1>() -> (out: ['G, 'G+1] 32) {
+    let i = if M == 1 {1} else {2};
+    c := new Const[32, i]<'G>();
+    out = c.out;
+}

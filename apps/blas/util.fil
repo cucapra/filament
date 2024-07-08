@@ -1,0 +1,152 @@
+import "primitives/math/math.fil";
+import "primitives/core.fil";
+
+// a multiplier with II, latency as output params
+comp Mult[W]<'G:1>(
+  left: ['G, 'G+1] W,
+  right: ['G, 'G+1] W
+) -> (
+  out: ['G+L, 'G+L+1] W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0 {
+  M := new FastMult[W];
+  m := M<'G>(left, right);
+  out = m.out;
+  L := 3;
+  II := 1;
+}
+
+// multiplier with latency = 1, mostly for experimenting
+comp AltMult[W]<'G:1>(
+  left: ['G, 'G+1] W,
+  right: ['G, 'G+1] W
+) -> (
+  out: ['G+L, 'G+L+1] W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0 {
+  l := new Delay[W]<'G>(left);
+  r := new Delay[W]<'G>(right);
+  m := new MultComb[W]<'G+1>(l.out, r.out);
+  out = m.out;
+
+  II := 1;
+  L := 1;
+}
+
+// a component that does N multiplies at once
+comp AltMultipliers[W, N]<'G:1>(
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W
+) -> (
+  out[N]: ['G+L, 'G+L+1] W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0 {
+  Mx := new AltMult[W];
+  L := Mx::L;
+  II := Mx::II;
+
+  for i in 0..N {
+    m := new AltMult[W]<'G>(x{i}, y{i});
+    out{i} = m.out;
+  }
+}
+
+// a component that does N multiplies at once
+comp Multipliers[W, N]<'G:1>(
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W
+) -> (
+  out[N]: ['G+L, 'G+L+1] W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0 {
+  Mx := new Mult[W];
+  L := Mx::L;
+  II := Mx::II;
+
+  for i in 0..N {
+    m := new Mult[W]<'G>(x{i}, y{i});
+    out{i} = m.out;
+  }
+}
+
+// a component that does N multiplies at once, combinational
+comp MultipliersComb[W, N]<'G:1>(
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W
+) -> (
+  out[N]: ['G, 'G+1] W
+) where W > 0 {
+  for i in 0..N {
+    m := new MultComb[W]<'G>(x{i}, y{i});
+    out{i} = m.out;
+  }
+}
+
+// a component that does N additions at once
+comp Adders[W, N]<'G:1>(
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W
+) -> (
+  out[N]: ['G, 'G+1] W
+) with {
+  some II where II > 0;
+} where W > 0,
+        N > 0
+{
+  II := 1;
+  for i in 0..N {
+    a := new Add[W]<'G>(x{i}, y{i});
+    out{i} = a.out;
+  }
+}
+
+// vector addition
+// parameterized over adder use if you care about that for some reason
+comp VecAdd[W, N, A]<'G:1>(
+  go:   interface['G],
+  x[N]: ['G, 'G+1] W,
+  y[N]: ['G, 'G+1] W
+) -> (
+  out[N]: ['G+L, 'G+L+1] W
+) with {
+  some L where L > 0;
+} where W > 0,
+        N > 0,
+        A > 0
+{
+  let uses = N / A;
+  Adds := new Adders[W, A];
+
+
+  let latency = uses;
+  L := latency;
+
+  bundle add_out[uses][A]: for<k> ['G+k, 'G+k+1] W;
+
+  for j in 0..uses {
+    // use inputs
+    if j == 0 {
+      a := Adds<'G+j>(x{j*A..(j+1)*A}, y{j*A..(j+1)*A});
+      add_out{j}{0..A} = a.out{0..A};
+    }
+    // register inputs and use
+    else {
+      x_reg := new Shift[W, j, A]<'G>(x{j*A..(j+1)*A});
+      y_reg := new Shift[W, j, A]<'G>(y{j*A..(j+1)*A});
+      a := Adds<'G+j>(x_reg.out{0..A}, y_reg.out{0..A});
+      add_out{j}{0..A} = a.out{0..A};
+    }
+
+    add_reg := new Shift[W, latency - j, A]<'G+j>(add_out{j}{0..A});
+    out{j*A..(j+1)*A} = add_reg.out{0..A};
+  }
+
+}
