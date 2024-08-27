@@ -1,0 +1,2 @@
+#[invalid_attribute]
+comp main<'G: 1>() -> () {}
