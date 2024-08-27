@@ -10,6 +10,7 @@ use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
 use std::path::Path;
+use std::str::FromStr;
 
 /// Data associated with parsing the file.
 #[derive(Clone)]
@@ -820,14 +821,33 @@ impl FilamentParser {
         ))
     }
 
+    fn attr_bind(input: Node) -> ParseResult<Vec<ast::Attribute>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [identifier(name)] =>
+                vec![ast::Attribute::Bool(ast::BoolAttr::from_str(name.as_ref()).unwrap_or_else(|_| panic!("Found unknown attribute flag \"{name}\"")))]
+            ,
+            [identifier(name), bitwidth(val)] =>
+                vec![ast::Attribute::Num(ast::NumAttr::from_str(name.as_ref()).unwrap_or_else(|_| panic!("Found unknown numeric attribute \"{name}\"")), val)]
+        ))
+    }
+
+    fn attributes(input: Node) -> ParseResult<Vec<ast::Attribute>> {
+        Ok(match_nodes!(
+            input.into_children();
+            [attr_bind(attr)..] => attr.into_iter().flatten().collect()
+        ))
+    }
+
     fn component(input: Node) -> ParseResult<ast::Component> {
         match_nodes!(
             input.into_children();
             [
+                attributes(attributes),
                 signature(sig),
                 command(body)..
             ] => {
-                Ok(ast::Component::new(sig, body.into_iter().flatten().collect()))
+                Ok(ast::Component::new(sig, body.into_iter().flatten().collect(), attributes))
             }
         )
     }
