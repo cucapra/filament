@@ -60,11 +60,22 @@ param_bind = {
   "?" ~ param_var ~ "=" ~ expr |
   param_var
 }
+
 signature = {
   identifier ~ params ~ abstract_var? ~ io ~ sig_bindings ~ constraints
 }
+
+attributes = {
+  ("#[" ~ attr_bind ~ "]")?
+}
+
+attr_bind = {
+  identifier ~ "=" ~ bitwidth
+  | identifier
+}
+
 component = {
-  "comp" ~ signature ~ "{" ~ command* ~ "}"
+  attributes ~ "comp" ~ signature ~ "{" ~ command* ~ "}"
 }
 external = {
   "extern" ~ string_lit ~ "{" ~  ("comp" ~ signature ~ ";")*  ~ "}"

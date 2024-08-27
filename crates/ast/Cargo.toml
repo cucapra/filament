@@ -25,3 +25,5 @@ pest_consume.workspace = true
 
 fil-utils.workspace = true
 fil-gen.workspace = true
+strum = "0.26.3"
+strum_macros = "0.26.3"
