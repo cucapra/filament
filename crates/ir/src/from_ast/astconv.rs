@@ -7,7 +7,7 @@ use crate::{
     AddCtx, Cmp, Ctx, DisplayCtx, EventIdx, ExprIdx, InterfaceSrc, MutCtx,
     ParamIdx, PortIdx, PropIdx, TimeIdx,
 };
-use fil_ast::{self as ast, Op};
+use fil_ast::{self as ast};
 use fil_utils::{Diagnostics, Error, GPosIdx};
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -1191,7 +1191,7 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
             match &comp_ctx.typ {
                 TypeInfo::External(path) => {
                     ctx.externals.entry(path.clone()).or_default().push(idx);
-                    
+
                     builder.comp().src_info = Some(InterfaceSrc::new(comp_ctx.sig.name.copy(), None));
                 }
                 TypeInfo::Generated(name) => {
