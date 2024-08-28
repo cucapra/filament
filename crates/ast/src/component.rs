@@ -1,6 +1,4 @@
-use crate::Attribute;
-
-use super::{Command, Id, Signature};
+use super::{Attributes, Command, Id, Signature};
 use fil_gen as gen;
 use gen::GenConfig;
 use std::path::PathBuf;
@@ -39,15 +37,11 @@ pub struct Component {
     /// Model for this component
     pub body: Vec<Command>,
     /// Attributes for this component
-    pub attrs: Vec<Attribute>,
+    pub attrs: Attributes,
 }
 
 impl Component {
-    pub fn new(
-        sig: Signature,
-        body: Vec<Command>,
-        attrs: Vec<Attribute>,
-    ) -> Self {
+    pub fn new(sig: Signature, body: Vec<Command>, attrs: Attributes) -> Self {
         Self { sig, body, attrs }
     }
 }

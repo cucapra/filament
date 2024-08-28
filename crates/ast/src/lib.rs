@@ -12,7 +12,7 @@ mod port;
 mod signature;
 mod time;
 
-pub use attribute::{Attribute, BoolAttr, NumAttr};
+pub use attribute::{Attr, Attributes, BoolAttr, NumAttr};
 pub use bind_map::Binding;
 pub use component::{Component, Extern, Namespace};
 pub use constraint::{Constraint, OrderConstraint, OrderOp};

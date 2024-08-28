@@ -1,6 +1,7 @@
 use super::{
     AddCtx, CompIdx, CompType, Component, Ctx, Foreign, Idx, IndexStore, MutCtx,
 };
+use fil_ast as ast;
 use fil_derive::Ctx;
 use std::collections::HashMap;
 
@@ -39,8 +40,8 @@ impl Context {
     }
 
     /// Add a new component, default to the context
-    pub fn comp(&mut self, typ: CompType) -> CompIdx {
-        let comp = Component::new(typ);
+    pub fn comp(&mut self, typ: CompType, attrs: ast::Attributes) -> CompIdx {
+        let comp = Component::new(typ, attrs);
         self.add(comp)
     }
 
