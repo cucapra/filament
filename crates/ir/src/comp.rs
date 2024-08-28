@@ -56,6 +56,8 @@ pub struct Component {
     invocations: IndexStore<Invoke>,
 
     // ============== Component signature ===============
+    /// Attributes of the component
+    pub attrs: ast::Attributes,
     /// The input parameters to the component
     pub(crate) param_args: Box<[ParamIdx]>,
     /// The input events to the component
@@ -82,9 +84,10 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn new(typ: CompType) -> Self {
+    pub fn new(typ: CompType, attrs: ast::Attributes) -> Self {
         let mut comp = Self {
             typ,
+            attrs,
             ..Default::default()
         };
         // Allocate numbers and props now so we get reasonable indices.

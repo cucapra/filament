@@ -2,7 +2,7 @@
 #![allow(clippy::type_complexity)]
 
 //! Parser for Filament programs.
-use crate::{self as ast, Loc, TimeSub};
+use crate::{self as ast, Attributes, Loc, TimeSub};
 use fil_utils::{self as utils, FilamentResult};
 use fil_utils::{FileIdx, GPosIdx, GlobalPositionTable};
 use itertools::Itertools;
@@ -821,21 +821,21 @@ impl FilamentParser {
         ))
     }
 
-    fn attr_bind(input: Node) -> ParseResult<Vec<ast::Attribute>> {
+    fn attr_bind(input: Node) -> ParseResult<Vec<ast::Attr>> {
         Ok(match_nodes!(
             input.into_children();
             [identifier(name)] =>
-                vec![ast::Attribute::Bool(ast::BoolAttr::from_str(name.as_ref()).unwrap_or_else(|_| panic!("Found unknown attribute flag \"{name}\"")))]
+                vec![ast::Attr::Bool(ast::BoolAttr::from_str(name.as_ref()).unwrap_or_else(|_| panic!("Found unknown attribute flag \"{name}\"")))]
             ,
             [identifier(name), bitwidth(val)] =>
-                vec![ast::Attribute::Num(ast::NumAttr::from_str(name.as_ref()).unwrap_or_else(|_| panic!("Found unknown numeric attribute \"{name}\"")), val)]
+                vec![ast::Attr::Num(ast::NumAttr::from_str(name.as_ref()).unwrap_or_else(|_| panic!("Found unknown numeric attribute \"{name}\"")), val)]
         ))
     }
 
-    fn attributes(input: Node) -> ParseResult<Vec<ast::Attribute>> {
+    fn attributes(input: Node) -> ParseResult<Attributes> {
         Ok(match_nodes!(
             input.into_children();
-            [attr_bind(attr)..] => attr.into_iter().flatten().collect()
+            [attr_bind(attr)..] => ast::Attributes::new(attr.into_iter().flatten())
         ))
     }
 
