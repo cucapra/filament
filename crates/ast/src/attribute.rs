@@ -56,8 +56,23 @@ impl Attributes {
         self.bool_attrs.contains(flag)
     }
 
+    /// Set a flag
+    pub fn set_flag(&mut self, flag: BoolAttr) {
+        self.bool_attrs.insert(flag);
+    }
+
+    /// Unset a flag
+    pub fn unset_flag(&mut self, flag: BoolAttr) {
+        self.bool_attrs.remove(flag);
+    }
+
     /// Get the value of a numeric attribute
     pub fn get_numeric(&self, attr: NumAttr) -> Option<u64> {
         self.num_attrs[attr]
+    }
+
+    /// Set the value of a numeric attribute
+    pub fn set_numeric(&mut self, attr: NumAttr, value: Option<u64>) {
+        self.num_attrs[attr] = value;
     }
 }
