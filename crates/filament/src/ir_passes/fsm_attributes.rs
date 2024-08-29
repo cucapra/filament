@@ -6,8 +6,6 @@ use fil_ir::TimeSub;
 #[derive(Default)]
 pub struct FSMAttributes;
 
-impl FSMAttributes {}
-
 impl Visitor for FSMAttributes {
     fn name() -> &'static str {
         "fsm-attributes"
