@@ -1,78 +1,74 @@
 use enum_map::{Enum, EnumMap};
-use enumflags2::{bitflags, BitFlags};
 use strum_macros::EnumString;
 
 /// An attribute that accepts a numeric value
 #[derive(Enum, Clone, Copy, PartialEq, EnumString)]
-pub enum NumAttr {
-    /// Tells the compiler to use a slow FSM design with a given II
-    #[strum(serialize = "slow_fsm")]
-    SlowFSM,
-}
+pub enum NumAttr {}
 
 /// An flag attribute
-#[bitflags]
-#[repr(u8)]
-#[derive(Clone, Copy, PartialEq, EnumString)]
+#[derive(Enum, Clone, Copy, PartialEq, EnumString)]
 pub enum BoolAttr {
     /// This is a toplevel component
+    #[strum(serialize = "toplevel")]
     TopLevel,
+    /// Do not mangle the name of this component
+    #[strum(serialize = "no_mangle")]
+    NoMangle,
+    /// Use a counter based FSM design
+    #[strum(serialize = "counter_fsm")]
+    CounterFSM,
 }
 
 /// Represents a single attribute. This is a private enum that is used during
 /// parsing to collect all attributes before creating the [Attributes] struct.
+#[derive(Enum)]
 pub enum Attr {
     Bool(BoolAttr),
-    Num(NumAttr, u64),
+    Num(NumAttr),
+}
+
+impl From<BoolAttr> for Attr {
+    fn from(attr: BoolAttr) -> Self {
+        Attr::Bool(attr)
+    }
+}
+
+impl From<NumAttr> for Attr {
+    fn from(attr: NumAttr) -> Self {
+        Attr::Num(attr)
+    }
 }
 
 /// A set of attributes attached to a component
 #[derive(Default, Clone)]
 pub struct Attributes {
-    bool_attrs: BitFlags<BoolAttr>,
-    num_attrs: EnumMap<NumAttr, Option<u64>>,
+    attrs: EnumMap<Attr, Option<u64>>,
 }
 
 impl Attributes {
-    pub fn new(attrs: impl Iterator<Item = Attr>) -> Self {
-        let mut bool_attrs = BitFlags::empty();
-        let mut num_attrs = EnumMap::default();
-
-        for attr in attrs {
-            match attr {
-                Attr::Bool(b) => bool_attrs |= b,
-                Attr::Num(n, v) => num_attrs[n] = Some(v),
-            }
-        }
-
+    pub fn new(attrs: impl Iterator<Item = (Attr, u64)>) -> Self {
         Self {
-            bool_attrs,
-            num_attrs,
+            attrs: attrs.map(|(attr, v)| (attr, Some(v))).collect(),
         }
     }
 
-    /// Check whether a given flag is set
-    pub fn has_flag(&self, flag: BoolAttr) -> bool {
-        self.bool_attrs.contains(flag)
+    /// Get the value of an attribute.
+    pub fn get(&self, attr: impl Into<Attr>) -> Option<u64> {
+        self.attrs[attr.into()]
     }
 
-    /// Set a flag
-    pub fn set_flag(&mut self, flag: BoolAttr) {
-        self.bool_attrs.insert(flag);
+    /// Set the value of an attribute
+    pub fn set(&mut self, attr: impl Into<Attr>, value: u64) {
+        self.attrs[attr.into()] = Some(value);
     }
 
-    /// Unset a flag
-    pub fn unset_flag(&mut self, flag: BoolAttr) {
-        self.bool_attrs.remove(flag);
+    /// Remove an attribute
+    pub fn remove(&mut self, attr: impl Into<Attr>) {
+        self.attrs[attr.into()] = None;
     }
 
-    /// Get the value of a numeric attribute
-    pub fn get_numeric(&self, attr: NumAttr) -> Option<u64> {
-        self.num_attrs[attr]
-    }
-
-    /// Set the value of a numeric attribute
-    pub fn set_numeric(&mut self, attr: NumAttr, value: Option<u64>) {
-        self.num_attrs[attr] = value;
+    /// Check if the attribute set is empty
+    pub fn is_empty(&self) -> bool {
+        self.attrs.iter().all(|(_, v)| v.is_none())
     }
 }

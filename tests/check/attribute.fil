@@ -1,2 +1,2 @@
-#[slow_fsm=5]
+#[not(toplevel)]
 comp main<'G:10>() -> () {}

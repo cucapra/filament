@@ -69,8 +69,11 @@ attributes = {
   ("#[" ~ attr_bind ~ ("," ~ attr_bind)* ~ "]")?
 }
 
+not = { "not" }
+
 attr_bind = {
-  identifier ~ "=" ~ bitwidth
+  not ~ "(" ~ identifier ~ ")"
+  | identifier ~ "=" ~ bitwidth
   | identifier
 }
 
