@@ -66,7 +66,7 @@ signature = {
 }
 
 attributes = {
-  ("#[" ~ attr_bind ~ "]")?
+  ("#[" ~ attr_bind ~ ("," ~ attr_bind)* ~ "]")?
 }
 
 attr_bind = {

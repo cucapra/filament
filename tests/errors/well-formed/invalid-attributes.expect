@@ -3,9 +3,9 @@
 ---STDERR---
 Error: Failed to parse  --> tests/errors/well-formed/invalid-attributes.fil:1:3
   |
-1 | #[invalid_attribute]
-  |   ^---------------^
+1 | #[invalid_numeric_attribute=10,invalid_boolean_attribute]
+  |   ^--------------------------^
   |
-  = Found unknown attribute flag "invalid_attribute": 
+  = Found unknown numeric attribute "invalid_numeric_attribute": 
 Compilation failed with 1 errors.
 Run with --show-models to generate assignments for failing constraints.
