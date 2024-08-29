@@ -1,2 +1,2 @@
-#[invalid_attribute]
+#[invalid_numeric_attribute=10,invalid_boolean_attribute]
 comp main<'G: 1>() -> () {}
