@@ -24,6 +24,11 @@ impl Visitor for FSMAttributes {
             return;
         }
 
+        // If the component is external or generated, do not add any slow FSM attributes
+        if data.comp.is_ext() || data.comp.is_gen() {
+            return;
+        }
+
         // Get the delay of the component if it is a single event component
         if data.comp.events().len() == 1 {
             let delay = &data.comp.events().iter().next().unwrap().1.delay;
