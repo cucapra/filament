@@ -1,6 +1,11 @@
 ---CODE---
-101
+1
 ---STDERR---
-thread 'main' panicked at crates/ast/src/parser.rs:828:96:
-Found unknown attribute flag "invalid_attribute"
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Error: Failed to parse  --> tests/errors/well-formed/invalid-attributes.fil:1:3
+  |
+1 | #[invalid_attribute]
+  |   ^---------------^
+  |
+  = Found unknown attribute flag "invalid_attribute": 
+Compilation failed with 1 errors.
+Run with --show-models to generate assignments for failing constraints.
