@@ -234,17 +234,14 @@ impl<'a> BuildCtx<'a> {
                 );
             };
             let delay = delay.concrete(self.comp);
-            let typ = match self.comp.attrs.get_numeric(ast::NumAttr::SlowFSM) {
-                None => FsmType::Simple(states),
-                Some(0) => FsmType::Simple(states), // 0 is a special case for simple FSMs
-                Some(n) => {
-                    assert!(
-                        delay % n == 0,
-                        "Slow FSM Period must divide the II of the module"
-                    );
-                    FsmType::CounterChain(states, n)
-                }
-            };
+            let typ =
+                match self.comp.attrs.get(ast::BoolAttr::CounterFSM).unwrap() {
+                    0 => FsmType::Simple(states),
+                    1 => {
+                        FsmType::CounterChain(states, delay)
+                    }
+                    v => unreachable!("Encountered boolean attribute counter_fsm with non-boolean value {}", v),
+                };
             self.implement_fsm(&typ);
 
             // Construct the FSM

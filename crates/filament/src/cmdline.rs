@@ -104,9 +104,9 @@ pub struct Opts {
     /// backend to use (default: verilog): calyx, verilog
     #[argh(option, long = "backend", default = "Backend::Verilog")]
     pub backend: Backend,
-    /// disable generation of slow FSMs in the backend
-    #[argh(switch, long = "disable-slow-fsms")]
-    pub disable_slow_fsms: bool,
+    /// disable generation of counter FSMs in the backend
+    #[argh(switch, long = "no-counter-fsms")]
+    pub no_counter_fsms: bool,
     /// preserves original port names during compilation.
     #[argh(switch, long = "preserve-names")]
     pub preserve_names: bool,

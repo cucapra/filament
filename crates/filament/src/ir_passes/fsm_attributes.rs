@@ -15,12 +15,7 @@ impl Visitor for FSMAttributes {
         let attrs = &data.comp.attrs;
 
         // Check if the component already has FSM attributes
-        if attrs.get_numeric(ast::NumAttr::SlowFSM).is_some() {
-            return;
-        }
-
-        // If slow FSMs are disabled, do not add any slow FSM attributes
-        if data.opts.disable_slow_fsms {
+        if attrs.get(ast::BoolAttr::CounterFSM).is_some() {
             return;
         }
 
@@ -30,7 +25,7 @@ impl Visitor for FSMAttributes {
         }
 
         // Get the delay of the component if it is a single event component
-        if data.comp.events().len() == 1 {
+        if !data.opts.no_counter_fsms && data.comp.events().len() == 1 {
             let delay = &data.comp.events().iter().next().unwrap().1.delay;
             let TimeSub::Unit(delay) = delay else {
                 data.comp.internal_error(
@@ -42,10 +37,11 @@ impl Visitor for FSMAttributes {
             // If the delay is > 1, add a slow FSM attribute
             // TODO(UnsignedByte): Find a better heuristic for slow FSMs
             if delay > 1 {
-                data.comp
-                    .attrs
-                    .set_numeric(ast::NumAttr::SlowFSM, Some(delay));
+                data.comp.attrs.set(ast::BoolAttr::CounterFSM, 1);
+                return;
             }
         }
+
+        data.comp.attrs.set(ast::BoolAttr::CounterFSM, 0);
     }
 }
