@@ -1,3 +1,5 @@
+use crate::BoolAttr;
+
 use super::{Attributes, Command, Id, Signature};
 use fil_gen as gen;
 use gen::GenConfig;
@@ -46,6 +48,7 @@ impl Component {
     }
 }
 
+#[derive(Default)]
 pub struct Namespace {
     /// Imported files
     pub imports: Vec<String>,
@@ -53,23 +56,11 @@ pub struct Namespace {
     pub externs: Vec<Extern>,
     /// Components defined in this file
     pub components: Vec<Component>,
-    /// Top-level component id
-    pub toplevel: String,
     /// Top level bindings
     pub bindings: Vec<u64>,
 }
 
 impl Namespace {
-    pub fn new(toplevel: String) -> Self {
-        Self {
-            imports: Vec::default(),
-            externs: Vec::default(),
-            components: Vec::default(),
-            bindings: Vec::default(),
-            toplevel,
-        }
-    }
-
     /// Returns true if the namespace declares at least one generative module
     pub fn requires_gen(&self) -> bool {
         self.externs.iter().any(|Extern { gen, .. }| gen.is_some())
@@ -105,8 +96,17 @@ impl Namespace {
     /// Get the index to the top-level component.
     /// Currently, this is the distinguished "main" component
     pub fn main_idx(&self) -> Option<usize> {
-        self.components.iter().position(|c| {
-            c.sig.name.inner() == &Id::from(self.toplevel.clone())
-        })
+        self.components
+            .iter()
+            .position(|c| c.attrs.get(BoolAttr::TopLevel) == Some(1))
+    }
+
+    /// Get the toplevel component name
+    pub fn toplevel(&self) -> &str {
+        self.components[self.main_idx().unwrap()]
+            .sig
+            .name
+            .inner()
+            .as_ref()
     }
 }

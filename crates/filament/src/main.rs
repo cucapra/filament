@@ -39,10 +39,9 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
 
     let ns = match Resolver::from(opts).parse_namespace() {
         Ok(mut ns) => {
-            ns.toplevel = opts.toplevel.clone();
             ns.bindings = provided_bindings
                 .params
-                .get(opts.toplevel.as_str())
+                .get(ns.toplevel())
                 .cloned()
                 .unwrap_or_default();
             ns

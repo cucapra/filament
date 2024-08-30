@@ -83,10 +83,6 @@ pub struct Opts {
     #[argh(option, long = "log", default = "log::LevelFilter::Warn")]
     pub log_level: log::LevelFilter,
 
-    /// set toplevel
-    #[argh(option, long = "toplevel", default = "\"main\".into()")]
-    pub toplevel: String,
-
     /// skip the discharge pass (unsafe)
     #[argh(switch, long = "unsafe-skip-discharge")]
     pub unsafe_skip_discharge: bool,
