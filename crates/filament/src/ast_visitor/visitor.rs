@@ -52,6 +52,16 @@ pub trait Visitor
 where
     Self: Sized + Construct,
 {
+    /// The user visible name for the pass
+    fn name() -> &'static str;
+
+    #[must_use]
+    /// Executed after the visitor has visited all the components.
+    /// If the return value is `Some`, the number is treated as an error code.
+    fn after_traversal(self) -> Option<u64> {
+        None
+    }
+
     fn bundle(&mut self, _: &mut ast::Bundle) -> Action {
         Action::Continue
     }
@@ -166,28 +176,84 @@ where
     }
 
     /// Visit a component signature
-    fn signature(&mut self, sig: &mut ast::Signature) {}
-
-    /// Visit the AST
-    fn visit(&mut self, comp: &mut ast::Component) {
-        self.signature(&mut comp.sig);
-        self.visit_cmds(&mut comp.body);
+    fn signature(&mut self, _: &mut ast::Signature) -> Action {
+        Action::Continue
     }
 
-    fn finish(self, ast: ast::Namespace) -> ast::Namespace;
+    fn after_component(&mut self, _: &mut ast::Component) {}
+
+    /// Visit a component
+    fn component(&mut self, comp: &mut ast::Component) {
+        let pre_cmds = match self.signature(&mut comp.sig) {
+            Action::Stop => return,
+            Action::Continue => None,
+            Action::AddBefore(cmds) => Some(cmds),
+            Action::Change(_) => {
+                unreachable!(
+                    "visit_cmds should not attempt to change AST nodes"
+                )
+            }
+        };
+
+        // Traverse the commands
+        let mut cmds = std::mem::take(&mut comp.body);
+        match self.visit_cmds(&mut cmds) {
+            Action::Stop | Action::Continue => (),
+            Action::Change(_) | Action::AddBefore(_) => {
+                unreachable!(
+                    "visit_cmds should not attempt to change AST nodes"
+                )
+            }
+        }
+
+        if let Some(pre_cmds) = pre_cmds {
+            comp.body = pre_cmds;
+        }
+
+        comp.body.extend(cmds);
+
+        self.after_component(comp);
+    }
+
+    /// Visit an extern
+    fn external(&mut self, ext: &mut ast::Extern) {
+        for sig in &mut ext.comps {
+            match self.signature(sig) {
+                Action::Stop => break,
+                Action::Continue => (),
+                Action::AddBefore(_) | Action::Change(_) => {
+                    unreachable!(
+                        "Externs should not attempt to change AST nodes"
+                    )
+                }
+            }
+        }
+    }
+
+    /// Run after the pass is done
+    fn finish(&mut self, _: &mut ast::Namespace) {}
 
     /// Perform the pass
     fn do_pass(
         opts: &cmdline::Opts,
-        mut ast: ast::Namespace,
-    ) -> Result<ast::Namespace, u64> {
-        let mut visitor = Self::from(opts, &mut ast);
+        ast: &mut ast::Namespace,
+    ) -> Result<(), u64> {
+        let mut visitor = Self::from(opts, ast);
         for comp in ast.components.iter_mut() {
-            visitor.visit(comp);
+            visitor.component(comp);
             visitor.clear_data();
         }
 
-        for ext in ast.externs.iter_mut() {}
-        Ok(visitor.finish(ast))
+        for ext in ast.externs.iter_mut() {
+            visitor.external(ext);
+            visitor.clear_data();
+        }
+
+        visitor.finish(ast);
+
+        match visitor.after_traversal() {
+            Some(n) => Err(n),
+            None => Ok(()),
+        }
     }
 }

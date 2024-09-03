@@ -3,8 +3,10 @@ use calyx_opt::pass_manager::PassManager;
 use fil_gen::GenConfig;
 use fil_ir as ir;
 use filament::ir_passes::BuildDomination;
-use filament::{cmdline, ir_passes as ip, resolver::Resolver};
-use filament::{log_pass, log_time, pass_pipeline};
+use filament::{ast_pass_pipeline, ir_pass_pipeline, log_pass, log_time};
+use filament::{
+    ast_passes as ap, cmdline, ir_passes as ip, resolver::Resolver,
+};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
@@ -37,20 +39,21 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         .map(|path| toml::from_str(&fs::read_to_string(path).unwrap()).unwrap())
         .unwrap_or_default();
 
-    let ns = match Resolver::from(opts).parse_namespace() {
-        Ok(mut ns) => {
-            ns.bindings = provided_bindings
-                .params
-                .get(ns.toplevel())
-                .cloned()
-                .unwrap_or_default();
-            ns
-        }
+    let mut ns = match Resolver::from(opts).parse_namespace() {
+        Ok(ns) => ns,
         Err(e) => {
             eprintln!("Error: {e:?}");
             return Err(1);
         }
     };
+
+    ast_pass_pipeline! { opts, ns; ap::TopLevel };
+
+    // Set the parameter bindings for the top-level component
+    if let Some(main) = ns.toplevel() {
+        ns.bindings =
+            provided_bindings.params.get(main).cloned().unwrap_or_default();
+    }
 
     // Initialize the generator
     let mut gen_exec = if ns.requires_gen() {
@@ -70,7 +73,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
 
     // Transform AST to IR
     let mut ir = log_pass! { opts; ir::transform(ns)?, "astconv" };
-    pass_pipeline! {opts, ir;
+    ir_pass_pipeline! {opts, ir;
         ip::BuildDomination,
         ip::TypeCheck,
         ip::IntervalCheck,
@@ -78,13 +81,13 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::Assume
     }
     if !opts.unsafe_skip_discharge {
-        pass_pipeline! {opts, ir; ip::Discharge }
+        ir_pass_pipeline! {opts, ir; ip::Discharge }
     }
-    pass_pipeline! { opts, ir;
+    ir_pass_pipeline! { opts, ir;
         BuildDomination
     };
     ir = log_pass! { opts; ip::Monomorphize::transform(&ir, &mut gen_exec), "monomorphize"};
-    pass_pipeline! { opts, ir;
+    ir_pass_pipeline! { opts, ir;
         ip::FSMAttributes,
         ip::Simplify,
         ip::AssignCheck,

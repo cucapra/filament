@@ -627,6 +627,7 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.into_children();
             [
+                attributes(attributes),
                 identifier(name),
                 params(params),
                 abstract_var(abstract_vars),
@@ -637,6 +638,7 @@ impl FilamentParser {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
                 ast::Signature::new(
                     name,
+                    attributes,
                     params,
                     abstract_vars,
                     unannotated_ports,
@@ -649,6 +651,7 @@ impl FilamentParser {
                  )
             },
             [
+                attributes(attributes),
                 identifier(name),
                 params(params),
                 io(io),
@@ -658,6 +661,7 @@ impl FilamentParser {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
                 ast::Signature::new(
                     name,
+                    attributes,
                     params,
                     vec![],
                     unannotated_ports,
@@ -825,20 +829,20 @@ impl FilamentParser {
         Ok(())
     }
 
-    fn attr_bind(input: Node) -> ParseResult<Vec<(ast::Attr, u64)>> {
+    fn attr_bind(input: Node) -> ParseResult<Vec<(ast::Attr, GPosIdx, u64)>> {
         match_nodes!(
             input.clone().into_children();
             [identifier(name)] =>
             ast::BoolAttr::from_str(name.as_ref()).map(
-                |attr| vec![(ast::Attr::Bool(attr), 1)]).map_err(
+                |attr| vec![(ast::Attr::Bool(attr), name.pos(), 1)]).map_err(
                     |_| input.error(format!("Found unknown attribute flag \"{name}\""))),
             [not(_), identifier(name)] =>
             ast::BoolAttr::from_str(name.as_ref()).map(
-                |attr| vec![(ast::Attr::Bool(attr), 0)]).map_err(
+                |attr| vec![(ast::Attr::Bool(attr), name.pos(), 0)]).map_err(
                     |_| input.error(format!("Found unknown attribute flag \"{name}\""))),
             [identifier(name), bitwidth(val)] =>
             ast::NumAttr::from_str(name.as_ref()).map(
-                |attr| vec![(ast::Attr::Num(attr), val)]).map_err(
+                |attr| vec![(ast::Attr::Num(attr), name.pos(), val)]).map_err(
                     |_| input.error(format!("Found unknown numeric attribute \"{name}\""))),
         )
     }
@@ -854,11 +858,10 @@ impl FilamentParser {
         match_nodes!(
             input.into_children();
             [
-                attributes(attributes),
                 signature(sig),
                 command(body)..
             ] => {
-                Ok(ast::Component::new(sig, body.into_iter().flatten().collect(), attributes))
+                Ok(ast::Component::new(sig, body.into_iter().flatten().collect()))
             }
         )
     }

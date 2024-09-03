@@ -1,4 +1,5 @@
 use enum_map::{Enum, EnumMap};
+use fil_utils::GPosIdx;
 use strum_macros::EnumString;
 
 /// An attribute that accepts a numeric value
@@ -21,7 +22,7 @@ pub enum BoolAttr {
 
 /// Represents a single attribute. This is a private enum that is used during
 /// parsing to collect all attributes before creating the [Attributes] struct.
-#[derive(Enum)]
+#[derive(Enum, Clone, Copy)]
 pub enum Attr {
     Bool(BoolAttr),
     Num(NumAttr),
@@ -42,24 +43,29 @@ impl From<NumAttr> for Attr {
 /// A set of attributes attached to a component
 #[derive(Default, Clone)]
 pub struct Attributes {
-    attrs: EnumMap<Attr, Option<u64>>,
+    attrs: EnumMap<Attr, Option<(u64, GPosIdx)>>,
 }
 
 impl Attributes {
-    pub fn new(attrs: impl Iterator<Item = (Attr, u64)>) -> Self {
+    pub fn new(attrs: impl Iterator<Item = (Attr, GPosIdx, u64)>) -> Self {
         Self {
-            attrs: attrs.map(|(attr, v)| (attr, Some(v))).collect(),
+            attrs: attrs.map(|(attr, l, v)| (attr, Some((v, l)))).collect(),
         }
     }
 
     /// Get the value of an attribute.
     pub fn get(&self, attr: impl Into<Attr>) -> Option<u64> {
-        self.attrs[attr.into()]
+        self.attrs[attr.into()].map(|(v, _)| v)
+    }
+
+    /// Get the location of an attribute.
+    pub fn get_loc(&self, attr: impl Into<Attr>) -> Option<GPosIdx> {
+        self.attrs[attr.into()].map(|(_, l)| l)
     }
 
     /// Set the value of an attribute
     pub fn set(&mut self, attr: impl Into<Attr>, value: u64) {
-        self.attrs[attr.into()] = Some(value);
+        self.attrs[attr.into()] = Some((value, GPosIdx::UNKNOWN));
     }
 
     /// Remove an attribute

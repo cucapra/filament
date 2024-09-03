@@ -4,13 +4,13 @@
 error: delay must be greater than zero
   ┌─ tests/errors/typecheck/unprovable-cons.fil:5:15
   │
-5 │ comp Main<'G: 'L-('G), 'L: 1>(
+5 │ comp main<'G: 'L-('G), 'L: 1>(
   │               ^^^^^^^ delay must be greater than zero
 
 error: bundle's availability is greater than the delay of the event
   ┌─ tests/errors/typecheck/unprovable-cons.fil:8:10
   │
-5 │ comp Main<'G: 'L-('G), 'L: 1>(
+5 │ comp main<'G: 'L-('G), 'L: 1>(
   │               ------- event's delay
   ·
 8 │    left: ['G, 'G+1] 32,

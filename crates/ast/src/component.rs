@@ -1,6 +1,6 @@
 use crate::BoolAttr;
 
-use super::{Attributes, Command, Id, Signature};
+use super::{Command, Id, Signature};
 use fil_gen as gen;
 use gen::GenConfig;
 use std::path::PathBuf;
@@ -38,13 +38,11 @@ pub struct Component {
     pub sig: Signature,
     /// Model for this component
     pub body: Vec<Command>,
-    /// Attributes for this component
-    pub attrs: Attributes,
 }
 
 impl Component {
-    pub fn new(sig: Signature, body: Vec<Command>, attrs: Attributes) -> Self {
-        Self { sig, body, attrs }
+    pub fn new(sig: Signature, body: Vec<Command>) -> Self {
+        Self { sig, body }
     }
 }
 
@@ -98,15 +96,12 @@ impl Namespace {
     pub fn main_idx(&self) -> Option<usize> {
         self.components
             .iter()
-            .position(|c| c.attrs.get(BoolAttr::TopLevel) == Some(1))
+            .position(|c| c.sig.attributes.get(BoolAttr::TopLevel) == Some(1))
     }
 
     /// Get the toplevel component name
-    pub fn toplevel(&self) -> &str {
-        self.components[self.main_idx().unwrap()]
-            .sig
-            .name
-            .inner()
-            .as_ref()
+    pub fn toplevel(&self) -> Option<&str> {
+        self.main_idx()
+            .map(|idx| self.components[idx].sig.name.inner().as_ref())
     }
 }

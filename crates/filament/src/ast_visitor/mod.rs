@@ -1,3 +1,3 @@
 mod visitor;
 
-pub use visitor::Visitor;
+pub use visitor::{Action, Construct, Visitor};

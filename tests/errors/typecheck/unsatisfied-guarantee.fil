@@ -1,6 +1,6 @@
 import "primitives/core.fil";
 
-comp Main<'G: 3>(
+comp main<'G: 3>(
   go_G: interface['G],
    left: ['G, 'G+1] 32,
    right: ['G, 'G+2] 32
