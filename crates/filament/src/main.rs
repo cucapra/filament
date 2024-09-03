@@ -51,8 +51,11 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
 
     // Set the parameter bindings for the top-level component
     if let Some(main) = ns.toplevel() {
-        ns.bindings =
-            provided_bindings.params.get(main).cloned().unwrap_or_default();
+        ns.bindings = provided_bindings
+            .params
+            .get(main)
+            .cloned()
+            .unwrap_or_default();
     }
 
     // Initialize the generator
