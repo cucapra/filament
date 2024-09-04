@@ -86,6 +86,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     };
     ir = log_pass! { opts; ip::Monomorphize::transform(&ir, &mut gen_exec), "monomorphize"};
     pass_pipeline! { opts, ir;
+        ip::FSMAttributes,
         ip::Simplify,
         ip::AssignCheck,
         ip::BundleElim,
@@ -102,10 +103,8 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     if opts.check {
         return Ok(());
     }
-    let calyx = log_time!(
-        ip::Compile::compile(ir, opts.disable_slow_fsms, opts.preserve_names),
-        "compile"
-    );
+    let calyx =
+        log_time!(ip::Compile::compile(ir, opts.preserve_names), "compile");
     match opts.backend {
         cmdline::Backend::Verilog => {
             gen_verilog(calyx).unwrap();

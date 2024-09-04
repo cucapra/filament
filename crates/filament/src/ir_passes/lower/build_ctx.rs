@@ -2,6 +2,7 @@ use super::fsm::{FsmBind, FsmType};
 use super::utils::{cell_to_port_def, NameGenerator};
 use super::Fsm;
 use calyx_ir::{self as calyx, RRC};
+use fil_ast as ast;
 use fil_ir::{self as ir, Ctx, DenseIndexInfo, DisplayCtx};
 use itertools::Itertools;
 use std::{collections::HashMap, rc::Rc};
@@ -34,8 +35,6 @@ pub(super) struct BuildCtx<'a> {
     pub comp: &'a ir::Component,
     ctx: &'a ir::Context,
     lib: &'a calyx::LibrarySignatures,
-    /// Disable generation of slow FSMs
-    disable_slow_fsms: bool,
     /// Helper to generate names
     ng: &'a NameGenerator,
     /// Mapping from events to the FSM that reify them.
@@ -51,14 +50,12 @@ impl<'a> BuildCtx<'a> {
         ctx: &'a ir::Context,
         idx: ir::CompIdx,
         binding: &'a mut Binding,
-        disable_slow_fsms: bool,
         ng: &'a NameGenerator,
         builder: calyx::Builder<'a>,
         lib: &'a calyx::LibrarySignatures,
     ) -> Self {
         BuildCtx {
             ctx,
-            disable_slow_fsms,
             ng,
             comp: ctx.get(idx),
             binding,
@@ -237,7 +234,14 @@ impl<'a> BuildCtx<'a> {
                 );
             };
             let delay = delay.concrete(self.comp);
-            let typ = FsmType::new(states, delay, self.disable_slow_fsms);
+            let typ =
+                match self.comp.attrs.get(ast::BoolAttr::CounterFSM).unwrap() {
+                    0 => FsmType::Simple(states),
+                    1 => {
+                        FsmType::CounterChain(states, delay)
+                    }
+                    v => unreachable!("Encountered boolean attribute counter_fsm with non-boolean value {}", v),
+                };
             self.implement_fsm(&typ);
 
             // Construct the FSM

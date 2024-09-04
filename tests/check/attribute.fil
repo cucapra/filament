@@ -1,0 +1,2 @@
+#[not(toplevel)]
+comp main<'G:10>() -> () {}

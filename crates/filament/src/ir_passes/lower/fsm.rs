@@ -20,19 +20,6 @@ pub enum FsmType {
     CounterChain(u64, u64),
 }
 
-impl FsmType {
-    /// Generates an FsmType based on the default heuristic on the number of states and the delay (II).
-    /// If enable_slow_fsms is false, then only simple fsms are generated.
-    pub fn new(states: u64, delay: u64, disable_slow_fsms: bool) -> Self {
-        // TODO(UnsignedByte): Find a better metric to decide which type of fsm to generate.
-        if !disable_slow_fsms && delay > 1 {
-            FsmType::CounterChain(states, delay)
-        } else {
-            FsmType::Simple(states)
-        }
-    }
-}
-
 #[derive(Default)]
 /// Represents an fsm component.
 pub(super) struct FsmBind {

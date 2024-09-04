@@ -1,8 +1,7 @@
-use std::path::PathBuf;
-
 use super::{Command, Id, Signature};
 use fil_gen as gen;
 use gen::GenConfig;
+use std::path::PathBuf;
 
 #[derive(Default)]
 /// A external or generate definition in Filament
