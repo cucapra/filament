@@ -1085,8 +1085,6 @@ struct ComponentTransform {
     typ: TypeInfo,
     /// Signature of the component
     sig: ast::Signature,
-    /// Attributes of the component
-    attrs: ast::Attributes,
 }
 
 /// Convert an [ast::Component] into a source [ComponentTransform]
@@ -1095,7 +1093,6 @@ impl From<ast::Component> for ComponentTransform {
         Self {
             typ: TypeInfo::Source(comp.body),
             sig: comp.sig,
-            attrs: comp.attrs,
         }
     }
 }
@@ -1111,7 +1108,6 @@ impl From<ast::Extern> for ComponentTransform {
         Self {
             typ,
             sig: ast::Signature::default(),
-            attrs: ast::Attributes::default(),
         }
     }
 }
@@ -1150,11 +1146,7 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
                 } else {
                     TypeInfo::External(path.clone())
                 };
-                ComponentTransform {
-                    typ,
-                    sig: comp,
-                    attrs: Default::default(),
-                }
+                ComponentTransform { typ, sig: comp }
             })
         })
         // add signatures of components as well as their command bodies
@@ -1180,7 +1172,7 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
                     TypeInfo::Source(_) => ir::CompType::Source,
                     TypeInfo::External(_) => ir::CompType::External,
                     TypeInfo::Generated(_) => ir::CompType::Generated,
-                }, comp_ctx.attrs), &sig_map);
+                }, comp_ctx.sig.attributes.clone()), &sig_map);
 
             // enable source information saving if this is main
             if ctx.is_main(idx) {

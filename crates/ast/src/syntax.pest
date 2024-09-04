@@ -62,7 +62,7 @@ param_bind = {
 }
 
 signature = {
-  identifier ~ params ~ abstract_var? ~ io ~ sig_bindings ~ constraints
+  attributes ~ "comp" ~ identifier ~ params ~ abstract_var? ~ io ~ sig_bindings ~ constraints
 }
 
 attributes = {
@@ -78,13 +78,14 @@ attr_bind = {
 }
 
 component = {
-  attributes ~ "comp" ~ signature ~ "{" ~ command* ~ "}"
+  signature ~ "{" ~ command* ~ "}"
 }
+
 external = {
-  "extern" ~ string_lit ~ "{" ~  ("comp" ~ signature ~ ";")*  ~ "}"
+  "extern" ~ string_lit ~ "{" ~  (signature ~ ";")*  ~ "}"
 }
 generate = {
-  "generate" ~ "(" ~ identifier ~ ")" ~ "using" ~ string_lit ~ "{" ~  ("comp" ~ signature ~ ";")*  ~ "}"
+  "generate" ~ "(" ~ identifier ~ ")" ~ "using" ~ string_lit ~ "{" ~  (signature ~ ";")*  ~ "}"
 }
 
 comp_or_ext = {
