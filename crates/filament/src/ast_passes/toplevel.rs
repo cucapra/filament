@@ -79,13 +79,6 @@ impl Visitor for TopLevel {
                     return;
                 }
             }
-
-            // If no toplevel component was found, add an error
-            // let err = Error::malformed("No top-level component found")
-            //     .add_note(self.diag.add_info(
-            //         "consider adding a component named `main` or adding the `toplevel` attribute to a component",
-            //         GPosIdx::UNKNOWN,
-            //     ));
         }
     }
 }
