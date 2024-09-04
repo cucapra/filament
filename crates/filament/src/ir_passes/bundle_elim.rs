@@ -198,7 +198,7 @@ impl BundleElim {
 }
 
 impl Construct for BundleElim {
-    fn from(_opts: &cmdline::Opts, ctx: &mut ir::Context) -> Self {
+    fn from(_: &cmdline::Opts, ctx: &mut ir::Context) -> Self {
         let mut visitor = Self {
             context: DenseIndexInfo::default(),
             local_map: HashMap::new(),
