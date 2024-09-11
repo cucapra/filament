@@ -9,12 +9,12 @@ pub enum NumAttr {}
 /// An flag attribute
 #[derive(Enum, Clone, Copy, PartialEq, EnumString)]
 pub enum BoolAttr {
+    /// This is a toplevel component
+    #[strum(serialize = "toplevel")]
+    TopLevel,
     /// Use a counter based FSM design
     #[strum(serialize = "counter_fsm")]
     CounterFSM,
-    /// Dummy attribute because the [Enum] trait derivation throws errors if there is only one varianat
-    #[strum(disabled)]
-    Dummy,
 }
 
 /// Represents a single attribute. This is a private enum that is used during
