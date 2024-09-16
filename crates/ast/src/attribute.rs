@@ -9,12 +9,12 @@ pub enum NumAttr {}
 /// An flag attribute
 #[derive(Enum, Clone, Copy, PartialEq, EnumString)]
 pub enum BoolAttr {
+    /// This is a toplevel component
+    #[strum(serialize = "toplevel")]
+    TopLevel,
     /// Use a counter based FSM design
     #[strum(serialize = "counter_fsm")]
     CounterFSM,
-    /// Dummy attribute because the [Enum] trait derivation throws errors if there is only one varianat
-    #[strum(disabled)]
-    Dummy,
 }
 
 /// Represents a single attribute. This is a private enum that is used during
@@ -48,6 +48,11 @@ impl Attributes {
         Self {
             attrs: attrs.map(|(attr, l, v)| (attr, Some((v, l)))).collect(),
         }
+    }
+
+    /// Check if an attribute is set
+    pub fn has(&self, attr: impl Into<Attr>) -> bool {
+        self.attrs[attr.into()].is_some()
     }
 
     /// Get the value of an attribute.
