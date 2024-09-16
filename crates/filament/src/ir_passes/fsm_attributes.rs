@@ -1,4 +1,4 @@
-use crate::ir_visitor::{Visitor, VisitorData};
+use crate::ir_visitor::{Action, Visitor, VisitorData};
 use fil_ast as ast;
 use fil_ir::TimeSub;
 
@@ -11,17 +11,17 @@ impl Visitor for FSMAttributes {
         "fsm-attributes"
     }
 
-    fn visit(&mut self, mut data: VisitorData) {
+    fn start(&mut self, data: &mut VisitorData) -> Action {
         let attrs = &data.comp.attrs;
 
         // Check if the component already has FSM attributes
         if attrs.get(ast::BoolAttr::CounterFSM).is_some() {
-            return;
+            return Action::Stop;
         }
 
         // If the component is external or generated, do not add any slow FSM attributes
         if data.comp.is_ext() || data.comp.is_gen() {
-            return;
+            return Action::Stop;
         }
 
         // Get the delay of the component if it is a single event component
@@ -38,10 +38,12 @@ impl Visitor for FSMAttributes {
             // TODO(UnsignedByte): Find a better heuristic for slow FSMs
             if delay > 1 {
                 data.comp.attrs.set(ast::BoolAttr::CounterFSM, 1);
-                return;
+                return Action::Stop;
             }
         }
 
         data.comp.attrs.set(ast::BoolAttr::CounterFSM, 0);
+
+        Action::Stop
     }
 }

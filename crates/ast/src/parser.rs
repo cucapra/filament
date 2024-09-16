@@ -902,8 +902,11 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.into_children();
             [imports(imps), comp_or_ext(mixed).., _EOI] => {
-                let mut namespace = ast::Namespace::new("main".to_string());
-                namespace.imports = imps;
+                let mut namespace = ast::Namespace {
+                    imports: imps,
+                    ..Default::default()
+                };
+
                 for m in mixed {
                     match m {
                         BodyEl::Ext(sig) => namespace.externs.push(sig),
