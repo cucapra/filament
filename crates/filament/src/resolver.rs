@@ -32,7 +32,7 @@ impl From<&cmdline::Opts> for Resolver {
 }
 
 impl Resolver {
-    fn new(lib: Vec<PathBuf>, input: PathBuf) -> Self {
+    pub fn new(lib: Vec<PathBuf>, input: PathBuf) -> Self {
         let mut lib = lib.clone();
         lib.push(From::from("."));
         Self {
