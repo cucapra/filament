@@ -50,6 +50,11 @@ impl Attributes {
         }
     }
 
+    /// Check if an attribute is set
+    pub fn has(&self, attr: impl Into<Attr>) -> bool {
+        self.attrs[attr.into()].is_some()
+    }
+
     /// Get the value of an attribute.
     pub fn get(&self, attr: impl Into<Attr>) -> Option<u64> {
         self.attrs[attr.into()].map(|(v, _)| v)

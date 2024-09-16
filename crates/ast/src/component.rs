@@ -96,7 +96,7 @@ impl Namespace {
     pub fn main_idx(&self) -> Option<usize> {
         self.components
             .iter()
-            .position(|c| c.sig.attributes.get(BoolAttr::TopLevel) == Some(1))
+            .position(|c| c.sig.attributes.has(BoolAttr::TopLevel))
     }
 
     /// Get the toplevel component name
