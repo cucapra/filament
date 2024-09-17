@@ -108,7 +108,7 @@ impl<'a> BuildCtx<'a> {
         let cell = &self.instances[inv.inst];
 
         // loop through the event bindings defined in the instance and connect them to the corresponding fsms.
-        for eb in inv.events.iter() {
+        for eb in inv.events.as_ref().unwrap().iter() {
             // If there is no interface port, no binding necessary
             if let Some(dst) = eb.base.apply(
                 |ev: ir::EventIdx, comp: &ir::Component| {

@@ -329,11 +329,13 @@ impl<'a, 'b> Printer<'a, 'b> {
         write!(f, " = ")?;
 
         self.comp.write(*inst, f)?;
-        write!(
-            f,
-            "<{}>;",
-            events.iter().map(|e| self.comp.display(e.arg)).join(", ")
-        )?;
+        if let Some(events) = events {
+            write!(
+                f,
+                "<{}>;",
+                events.iter().map(|e| self.comp.display(e.arg)).join(", ")
+            )?;
+        }
 
         Ok(())
     }

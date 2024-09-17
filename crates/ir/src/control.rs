@@ -140,7 +140,7 @@ pub struct Invoke {
     /// The instance being invoked
     pub inst: InstIdx,
     /// The event bindings defined by the invocation
-    pub events: Vec<EventBind>,
+    pub events: Option<Vec<EventBind>>,
     // The ports defined by this invocation
     pub ports: Vec<PortIdx>,
     // The information associated with this invocation
@@ -160,7 +160,11 @@ impl InvIdx {
         ctx: &impl Ctx<Invoke>,
     ) -> impl Iterator<Item = (TimeIdx, InfoIdx)> + '_ {
         let inv = ctx.get(self);
-        inv.events.iter().map(|eb| (eb.arg, eb.info))
+        inv.events
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|eb| (eb.arg, eb.info))
     }
 
     /// Get the component being invoked

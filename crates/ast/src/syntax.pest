@@ -238,7 +238,7 @@ time_args = {
 }
 
 invoke_args = {
-  time_args ~ arguments
+  time_args? ~ arguments
 }
 
 invocation = {

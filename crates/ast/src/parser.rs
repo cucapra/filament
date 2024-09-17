@@ -504,10 +504,11 @@ impl FilamentParser {
     #[allow(clippy::type_complexity)]
     fn invoke_args(
         input: Node,
-    ) -> ParseResult<(Vec<Loc<ast::Time>>, Vec<Loc<ast::Port>>)> {
+    ) -> ParseResult<(Option<Vec<Loc<ast::Time>>>, Vec<Loc<ast::Port>>)> {
         Ok(match_nodes!(
             input.into_children();
-            [time_args(time_args), arguments(args)] => (time_args, args),
+            [time_args(time_args), arguments(args)] => (Some(time_args), args),
+            [arguments(args)] => (None, args),
         ))
     }
 

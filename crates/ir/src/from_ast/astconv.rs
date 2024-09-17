@@ -142,9 +142,9 @@ impl<'prog> BuildCtx<'prog> {
         let empty = self.comp().add(ir::Info::empty());
         let inv = self.comp().add(ir::Invoke {
             inst,
-            ports: vec![],  // Filled in later
-            events: vec![], // Filled in later
-            info: empty,    // Filled in later
+            ports: vec![], // Filled in later
+            events: None,  // Filled in later
+            info: empty,   // Filled in later
         });
         // foreign component being invoked
         let foreign_comp = inv.comp(self.comp());
@@ -155,11 +155,13 @@ impl<'prog> BuildCtx<'prog> {
         // The inputs
         let (param_binding, comp) = self.inst_to_sig.get(inst).clone();
         let sig = self.get_sig(&comp)?;
+        let mut event_bind_locs = Vec::new();
 
-        let mut event_bind_locs = Vec::with_capacity(abstract_vars.len());
         // Event bindings
         let event_binding = sig.event_binding(
             abstract_vars
+                .as_ref()
+                .unwrap_or(&vec![])
                 .iter()
                 .map(|v| {
                     let (v, pos) = v.clone().split();
@@ -781,7 +783,11 @@ impl<'prog> BuildCtx<'prog> {
 
         // Event bindings
         let event_binding = sig.event_binding(
-            abstract_vars.iter().map(|v| v.inner().clone()),
+            abstract_vars
+                .as_ref()
+                .unwrap_or(&vec![])
+                .iter()
+                .map(|v| v.inner().clone()),
             &instance,
             self.diag(),
         )?;
@@ -865,41 +871,59 @@ impl<'prog> BuildCtx<'prog> {
             )
         }
 
-        // Events defined by the invoke
-        sig.raw_events
-            .iter()
-            .zip_longest(abstract_vars.iter())
-            .map(|pair| match pair {
-                itertools::EitherOrBoth::Both(evt, t) => {
-                    (evt, t.inner(), t.pos())
-                }
-                itertools::EitherOrBoth::Left(evt) => (
-                    evt,
-                    event_binding.get(evt.event.inner()),
-                    GPosIdx::UNKNOWN,
-                ),
-                itertools::EitherOrBoth::Right(_) => {
-                    unreachable!("More arguments than events.")
-                }
-            })
-            .enumerate()
-            .try_for_each(|(idx, (event, time, pos))| -> BuildRes<()> {
-                let ev_delay_loc = event.delay.pos();
-                let resolved = event
-                    .clone()
-                    .resolve_exprs(&param_binding)
-                    .resolve_event(&event_binding);
+        match abstract_vars {
+            Some(abstract_vars) => {
+                // Events defined by the invoke
+                let mut events = Vec::with_capacity(abstract_vars.len());
+                sig.raw_events
+                    .iter()
+                    .zip_longest(abstract_vars.iter())
+                    .map(|pair| match pair {
+                        itertools::EitherOrBoth::Both(evt, t) => {
+                            (evt, t.inner(), t.pos())
+                        }
+                        itertools::EitherOrBoth::Left(evt) => (
+                            evt,
+                            event_binding.get(evt.event.inner()),
+                            GPosIdx::UNKNOWN,
+                        ),
+                        itertools::EitherOrBoth::Right(_) => {
+                            unreachable!("More arguments than events.")
+                        }
+                    })
+                    .enumerate()
+                    .try_for_each(
+                        |(idx, (event, time, pos))| -> BuildRes<()> {
+                            let ev_delay_loc = event.delay.pos();
+                            let resolved = event
+                                .clone()
+                                .resolve_exprs(&param_binding)
+                                .resolve_event(&event_binding);
 
-                let info =
-                    self.comp().add(ir::Info::event_bind(ev_delay_loc, pos));
-                let arg = self.time(time.clone())?;
-                let event = self.timesub(resolved.delay.take())?;
-                let base = ir::Foreign::new(EventIdx::new(idx), foreign_comp);
-                let eb = ir::EventBind::new(event, arg, info, base);
+                            let info = self
+                                .comp()
+                                .add(ir::Info::event_bind(ev_delay_loc, pos));
+                            let arg = self.time(time.clone())?;
+                            let event = self.timesub(resolved.delay.take())?;
+                            let base = ir::Foreign::new(
+                                EventIdx::new(idx),
+                                foreign_comp,
+                            );
+                            let eb = ir::EventBind::new(event, arg, info, base);
+                            events.push(eb);
+                            Ok(())
+                        },
+                    )?;
+
                 let invoke = self.comp().get_mut(inv);
-                invoke.events.push(eb);
-                Ok(())
-            })?;
+                invoke.events = Some(events);
+            }
+            None => {
+                // No events defined by the invoke
+                let invoke = self.comp().get_mut(inv);
+                invoke.events = None;
+            }
+        }
 
         Ok(std::iter::once(ir::Command::from(inv))
             .chain(connects)

@@ -593,6 +593,8 @@ impl MonoSig {
 
         // Events
         let mono_events = events
+            .as_ref()
+            .unwrap()
             .iter()
             .map(|e| self.eventbind(e, underlying, pass, inv))
             .collect_vec();
@@ -602,7 +604,7 @@ impl MonoSig {
 
         mono_inv.inst = base_inst.get();
         mono_inv.ports = mono_ports;
-        mono_inv.events = mono_events;
+        mono_inv.events = Some(mono_events);
 
         mono_inv_idx
     }

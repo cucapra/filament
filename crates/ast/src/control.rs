@@ -156,7 +156,7 @@ pub struct Invoke {
     /// Name of the component being invoked
     pub instance: Loc<Id>,
     /// Abstract variables used for this invocation
-    pub abstract_vars: Vec<Loc<Time>>,
+    pub abstract_vars: Option<Vec<Loc<Time>>>,
     /// Assignment for the ports
     pub ports: Vec<Loc<Port>>,
 }
@@ -165,7 +165,7 @@ impl Invoke {
     pub fn new(
         name: Loc<Id>,
         instance: Loc<Id>,
-        abstract_vars: Vec<Loc<Time>>,
+        abstract_vars: Option<Vec<Loc<Time>>>,
         ports: Vec<Loc<Port>>,
     ) -> Self {
         Self {
@@ -177,14 +177,15 @@ impl Invoke {
     }
 
     // XXX: This can probably be removed
-    pub fn bindings<I>(&self, abstract_vars: I) -> Binding<Time>
+    pub fn bindings<I>(&self, abstract_vars: I) -> Option<Binding<Time>>
     where
         I: Iterator<Item = Id>,
     {
-        Binding::new(
-            abstract_vars
-                .zip(self.abstract_vars.iter().cloned().map(|t| t.take())),
-        )
+        self.abstract_vars.as_ref().map(|av| {
+            Binding::new(
+                abstract_vars.zip(av.iter().cloned().map(|t| t.take())),
+            )
+        })
     }
 }
 

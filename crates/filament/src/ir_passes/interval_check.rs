@@ -204,7 +204,7 @@ impl Visitor for IntervalCheck {
         let comp = &mut data.comp;
         let inst_idx = inv_idx.inst(comp);
         let lives = comp.get(inst_idx).lives.clone();
-        let events = &comp[inv_idx].events.clone();
+        let events = &comp[inv_idx].events.clone().unwrap();
         let inv_info = comp.get(comp.get(inv_idx).info).as_invoke().cloned();
 
         let mut cmds = Vec::default();
