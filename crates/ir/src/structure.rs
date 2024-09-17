@@ -299,7 +299,7 @@ pub enum ParamOwner {
     /// A `let`-bound variable
     Let {
         /// The value of the parameter in its corresponding binding
-        bind: ExprIdx,
+        bind: Option<ExprIdx>,
     },
     /// Owned by an `exists` binding
     Exists {

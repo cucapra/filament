@@ -213,8 +213,12 @@ impl<'prog> BuildCtx<'prog> {
             ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
                 // Declare the parameter since it may be used in instance or
                 // invocation definitions.
-                let bind = self.expr(expr.clone())?;
-                let owner = ir::ParamOwner::Let { bind };
+                let owner = ir::ParamOwner::Let {
+                    bind: match expr {
+                        Some(expr) => Some(self.expr(expr.clone())?),
+                        None => None,
+                    },
+                };
                 self.param(name.clone(), owner);
                 Ok(())
             }
@@ -979,7 +983,10 @@ impl<'prog> BuildCtx<'prog> {
                         "let-bound parameter was rewritten to expression"
                     )
                 };
-                let expr = self.expr(expr)?;
+                let expr = match expr {
+                    Some(e) => Some(self.expr(e)?),
+                    None => None,
+                };
                 // The declare phase already added the rewrite for this binding
                 vec![ir::Let { param, expr }.into()]
             }

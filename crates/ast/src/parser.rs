@@ -792,7 +792,8 @@ impl FilamentParser {
     fn param_let(input: Node) -> ParseResult<ast::ParamLet> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(name), expr(expr)] => ast::ParamLet { name, expr: expr.take() }
+            [param_var(name), expr(expr)] => ast::ParamLet { name, expr: Some(expr.take()) },
+            [param_var(name)] => ast::ParamLet { name, expr: None }
         ))
     }
 

@@ -226,8 +226,14 @@ impl<'a> Validate<'a> {
             self.comp.internal_error(format!(
                 "let binding for `{}' binds it to {} but the owner defines it to {}",
                 self.comp.display(*param),
-                self.comp.display(*expr),
-                self.comp.display(*bind)
+                match expr {
+                    Some(expr) => self.comp.display(*expr),
+                    None => "?".to_string(),
+                },
+                match bind {
+                    Some(bind) => self.comp.display(*bind),
+                    None => "?".to_string(),
+                }
             ))
         }
     }

@@ -386,7 +386,7 @@ impl Bundle {
 pub struct ParamLet {
     pub name: Loc<Id>,
     /// The expression for the parameter binding
-    pub expr: Expr,
+    pub expr: Option<Expr>,
 }
 
 #[derive(Clone)]

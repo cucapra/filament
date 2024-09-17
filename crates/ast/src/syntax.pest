@@ -257,6 +257,7 @@ if_stmt = {
 // ===== let-bound parameters ========
 param_let = {
   "let" ~ param_var ~ "=" ~ expr ~ ";"
+  | "let" ~ param_var ~ "=" ~ "?" ~ ";"
 }
 
 // ====== Loops ==========
