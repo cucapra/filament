@@ -1,0 +1,37 @@
+#[toplevel, schedule]
+comp sum<'G: 1>(
+  go: interface['G],
+  in0: ['G, 'G+1] 32,
+  in1: ['G, 'G+1] 32,
+  in2: ['G, 'G+1] 32,
+  in3: ['G, 'G+1] 32,
+  in4: ['G, 'G+1] 32,
+  in5: ['G, 'G+1] 32,
+  in6: ['G, 'G+1] 32,
+  in7: ['G, 'G+1] 32,
+  in8: ['G, 'G+1] 32,
+  in9: ['G, 'G+1] 32,
+) -> (
+  out: ['G+10, 'G+11] 32
+) where N > 1
+ {
+  let T0 = ?;
+  sum1 := new Add[32]<'G+T0>(in0, in1);
+  let T1 = ?;
+  sum2 := new Add[32]<'G+T1>(sum1.out, in2);
+  let T2 = ?;
+  sum3 := new Add[32]<'G+T2>(sum2.out, in3);
+  let T3 = ?;
+  sum4 := new Add[32]<'G+T3>(sum3.out, in4);
+  let T4 = ?;
+  sum5 := new Add[32]<'G+T4>(sum4.out, in5);
+  let T5 = ?;
+  sum6 := new Add[32]<'G+T5>(sum5.out, in6);
+  let T6 = ?;
+  sum7 := new Add[32]<'G+T6>(sum6.out, in7);
+  let T7 = ?;
+  sum8 := new Add[32]<'G+T7>(sum7.out, in8);
+  let T8 = ?;
+  sum9 := new Add[32]<'G+T8>(sum8.out, in9);
+  out = sum9.out;
+}
