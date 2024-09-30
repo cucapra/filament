@@ -56,7 +56,7 @@ impl MonoSig {
                 .zip(params)
                 .collect_vec(),
         );
-        let comp = ir::Component::new(typ);
+        let comp = ir::Component::new(typ, underlying.attrs.clone());
 
         Self {
             base: BaseComp::new(comp),

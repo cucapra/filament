@@ -83,10 +83,6 @@ pub struct Opts {
     #[argh(option, long = "log", default = "log::LevelFilter::Warn")]
     pub log_level: log::LevelFilter,
 
-    /// set toplevel
-    #[argh(option, long = "toplevel", default = "\"main\".into()")]
-    pub toplevel: String,
-
     /// skip the discharge pass (unsafe)
     #[argh(switch, long = "unsafe-skip-discharge")]
     pub unsafe_skip_discharge: bool,
@@ -104,9 +100,12 @@ pub struct Opts {
     /// backend to use (default: verilog): calyx, verilog
     #[argh(option, long = "backend", default = "Backend::Verilog")]
     pub backend: Backend,
-    /// disable generation of slow FSMs in the backend
-    #[argh(switch, long = "disable-slow-fsms")]
-    pub disable_slow_fsms: bool,
+    /// disable generation of counter-based FSMs in the backend.
+    /// The default (non-counter) FSM is represented by a single bit Shift Register counting through the number of states.
+    /// However, for components with a large number of states or a large II, it may be more efficient to use a counter-based FSM,
+    /// where one counter loops every II states, at which point it increments the state counter.
+    #[argh(switch, long = "no-counter-fsms")]
+    pub no_counter_fsms: bool,
     /// preserves original port names during compilation.
     #[argh(switch, long = "preserve-names")]
     pub preserve_names: bool,
