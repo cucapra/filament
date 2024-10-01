@@ -5,7 +5,7 @@ use crate::{
 use fil_ir::{
     self as ir, Access, AddCtx, Bind, Command, Component, Connect, Ctx,
     DenseIndexInfo, DisplayCtx, Expr, Foreign, Info, InvIdx, Invoke, Liveness,
-    MutCtx, Port, PortIdx, PortOwner, Range, Subst, Time,
+    MutCtx, Param, Port, PortIdx, PortOwner, Range, SparseInfoMap, Subst, Time,
 };
 use fil_utils as utils;
 use itertools::Itertools;
@@ -17,7 +17,7 @@ pub type PortInfo =
 // Eliminates bundle ports by breaking them into multiple len-1 ports, and eliminates local ports altogether.
 pub struct BundleElim {
     /// Mapping from component to the map from signature bundle port to generated port.
-    context: DenseIndexInfo<Component, HashMap<PortIdx, PortInfo>>,
+    context: DenseIndexInfo<Component, SparseInfoMap<Port, PortInfo>>,
     /// Mapping from index into a dst port to an index of the src port.
     local_map: HashMap<
         (PortIdx, /*idxs=*/ Vec<usize>),
@@ -54,7 +54,7 @@ impl BundleElim {
                     None => break group,
                 }
             };
-            let (lens, sig_ports) = &comp_info[port];
+            let (lens, sig_ports) = &comp_info[*port];
             ports.push(sig_ports[utils::flat_idx(idxs, lens)])
         }
 
@@ -118,7 +118,7 @@ impl BundleElim {
 
                 // creates a new liveness with the new start and end times and length one
                 let live = Liveness {
-                    idxs: vec![idxs[0]], // this should technically be some null parameter, as it will refer to a deleted parameter now.
+                    idxs: vec![],
                     lens: vec![one],
                     range: Range { start, end },
                 };
@@ -136,7 +136,7 @@ impl BundleElim {
                             base: Foreign::new(
                                 // maps the foreign to the corresponding single port
                                 // this works because all signature ports are compiled first.
-                                self.context[owner][&key].1[i],
+                                self.context[owner][key].1[i],
                                 owner,
                             ),
                         }
@@ -165,7 +165,7 @@ impl BundleElim {
     }
 
     /// Compiles the signature of a component and adds the new ports to the context mapping.
-    fn sig(&self, comp: &mut Component) -> HashMap<PortIdx, PortInfo> {
+    fn sig(&self, comp: &mut Component) -> SparseInfoMap<Port, PortInfo> {
         // loop through signature ports and compile them
         comp.ports()
             .idx_iter()
@@ -181,7 +181,7 @@ impl BundleElim {
         &self,
         idx: InvIdx,
         comp: &mut Component,
-    ) -> HashMap<PortIdx, PortInfo> {
+    ) -> SparseInfoMap<Port, PortInfo> {
         let Invoke { ports, .. } = comp.get_mut(idx);
         // first take all the old ports and split them up
         let mappings = std::mem::take(ports)
@@ -230,7 +230,7 @@ impl Visitor for BundleElim {
     ) -> Action {
         let Connect { src, dst, .. } = connect;
 
-        if !self.context.get(data.idx).contains_key(&dst.port) {
+        if !self.context.get(data.idx).contains(dst.port) {
             // we are writing to a local port here.
             return Action::Change(vec![]);
         }
