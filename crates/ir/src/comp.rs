@@ -53,15 +53,15 @@ pub struct Component {
     pub instances: IndexStore<Instance>,
     #[ctx(Invoke: Get, Add, Mut)]
     /// Invocations defined by the component
-    invocations: IndexStore<Invoke>,
+    pub invocations: IndexStore<Invoke>,
 
     // ============== Component signature ===============
     /// Attributes of the component
     pub attrs: ast::Attributes,
     /// The input parameters to the component
-    pub(crate) param_args: Box<[ParamIdx]>,
+    pub param_args: Box<[ParamIdx]>,
     /// The input events to the component
-    pub(crate) event_args: Box<[EventIdx]>,
+    pub event_args: Box<[EventIdx]>,
     /// Assumptions for existential parameters.
     pub exist_assumes: Vec<(ParamIdx, Vec<PropIdx>)>,
     pub param_asserts: Box<[PropIdx]>,
