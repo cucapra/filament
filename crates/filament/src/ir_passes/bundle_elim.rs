@@ -5,7 +5,7 @@ use crate::{
 use fil_ir::{
     self as ir, Access, AddCtx, Bind, Command, Component, Connect, Ctx,
     DenseIndexInfo, DisplayCtx, Expr, Foreign, Info, InvIdx, Invoke, Liveness,
-    MutCtx, Param, Port, PortIdx, PortOwner, Range, SparseInfoMap, Subst, Time,
+    MutCtx, Port, PortIdx, PortOwner, Range, SparseInfoMap, Subst, Time,
 };
 use fil_utils as utils;
 use itertools::Itertools;
