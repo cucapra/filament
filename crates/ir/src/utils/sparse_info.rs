@@ -59,6 +59,11 @@ where
     pub fn iter(&self) -> impl Iterator<Item = (Key, &Info)> + '_ {
         self.map.iter().map(|(idx, val)| (*idx, val))
     }
+
+    /// Extend the map with the values from another map.
+    pub fn extend(&mut self, other: Self) {
+        self.map.extend(other.map);
+    }
 }
 
 impl<Assoc, Info, Key> Default for SparseInfoMap<Assoc, Info, Key>
@@ -95,6 +100,18 @@ impl<T, V, Idx: IdxLike<T>> FromIterator<(Idx, V)>
             store.push(idx, val);
         }
         store
+    }
+}
+
+impl<Assoc, Info, Key> IntoIterator for SparseInfoMap<Assoc, Info, Key>
+where
+    Key: IdxLike<Assoc>,
+{
+    type Item = (Key, Info);
+    type IntoIter = std::collections::hash_map::IntoIter<Key, Info>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.map.into_iter()
     }
 }
 
