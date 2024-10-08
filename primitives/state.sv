@@ -19,6 +19,46 @@ module Register #(
   end
 endmodule
 
+module Register #(
+  parameter WIDTH = 32,
+  parameter DELAY = 0,
+  parameter LIVE = 1,
+) (
+  input wire clk,
+  input wire reset,
+  input wire logic write_en,
+  input wire logic [WIDTH-1:0] in,
+  output logic [WIDTH-1:0] out
+);
+  // the ith index holds the state from ['G+i] to ['G+i+1]
+  logic [0:DELAY-1] fsm;
+  // holds value from ['G+i] to ['G+i+1]
+  logic [WIDTH-1:0] shift_reg [DELAY];
+
+  assign fsm[0] = write_en;
+
+  always_ff @(posedge clk) begin
+    if (reset) begin
+      fsm <= '0;
+      for (int i = 0; i < DELAY; i++)
+        shift_reg[i] <= 0;
+    end else begin
+      fsm[1:DELAY-1] <= fsm[0:DELAY-2];
+
+      shift_reg[0] <= in;
+      for (int i = 1; i < DELAY; i++)
+        shift_reg[i] <= shift_reg[i-1];
+    end
+
+    if (fsm[DELAY-1])
+      out <= shift_reg[DELAY-1];
+    else
+      out <= out;
+  end
+
+endmodule
+
+
 // Same as a register but does not have a write enable signal.
 module Delay #(
     parameter WIDTH = 32
