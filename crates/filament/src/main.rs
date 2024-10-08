@@ -79,7 +79,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     ir_pass_pipeline! {opts, ir;
         ip::BuildDomination,
         ip::TypeCheck,
-        ip::IntervalCheck,
+        // ip::IntervalCheck,
         ip::PhantomCheck,
         ip::Assume
     }
@@ -95,7 +95,8 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::Simplify,
         ip::AssignCheck,
         ip::BundleElim,
-        ip::AssignCheck
+        ip::AssignCheck,
+        ip::Schedule
     }
 
     // Return early if we're asked to dump the interface

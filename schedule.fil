@@ -1,3 +1,32 @@
+import "primitives/core.fil";
+
+comp DelayedAdd[W, D]<'G: 1>(
+  in0: ['G, 'G+1] W,
+  in1: ['G, 'G+1] W,
+) -> (
+  out: ['G+D, 'G+D+1] W
+) where W > 0
+{
+  sum := new Add[W]<'G>(in0, in1);
+
+  delayed := new Shift[W, D]<'G>(sum.out);
+
+  out = delayed.out;
+}
+
+comp DelayedDup[W, D]<'G: 1>(
+  in: ['G, 'G+1] W,
+) -> (
+  out0: ['G+D, 'G+D+1] W,
+  out1: ['G+D, 'G+D+1] W
+) where W > 0
+{
+  delayed := new Shift[W, D]<'G>(in);
+
+  out0 = delayed.out;
+  out1 = delayed.out;
+}
+
 #[toplevel, schedule]
 comp sum<'G: 1>(
   go: interface['G],
@@ -12,26 +41,12 @@ comp sum<'G: 1>(
   in8: ['G, 'G+1] 32,
   in9: ['G, 'G+1] 32,
 ) -> (
-  out: ['G+10, 'G+11] 32
-) where N > 1
+  out0: ['G+10, 'G+11] 32,
+  out1: ['G+10, 'G+11] 32
+)
  {
-  let T0 = ?;
-  sum1 := new Add[32]<'G+T0>(in0, in1);
-  let T1 = ?;
-  sum2 := new Add[32]<'G+T1>(sum1.out, in2);
-  let T2 = ?;
-  sum3 := new Add[32]<'G+T2>(sum2.out, in3);
-  let T3 = ?;
-  sum4 := new Add[32]<'G+T3>(sum3.out, in4);
-  let T4 = ?;
-  sum5 := new Add[32]<'G+T4>(sum4.out, in5);
-  let T5 = ?;
-  sum6 := new Add[32]<'G+T5>(sum5.out, in6);
-  let T6 = ?;
-  sum7 := new Add[32]<'G+T6>(sum6.out, in7);
-  let T7 = ?;
-  sum8 := new Add[32]<'G+T7>(sum7.out, in8);
-  let T8 = ?;
-  sum9 := new Add[32]<'G+T8>(sum8.out, in9);
-  out = sum9.out;
+  sum := new DelayedAdd[32, 1]<'G>(in0, in1);
+  dup := new DelayedDup[32, 1]<'G>(sum.out);
+  out0 = dup.out0;
+  out1 = dup.out1;
 }
