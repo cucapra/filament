@@ -317,11 +317,11 @@ impl Compile {
                 &name_gen,
             );
             bindings.insert(idx, Rc::clone(&comp.signature));
-            calyx_ctx.components.push(comp);
             if ctx.is_main(idx) {
                 log::debug!("Setting entrypoint to {}", idx);
-                calyx_ctx.entrypoint = comp.name.clone();
+                calyx_ctx.entrypoint = comp.name;
             }
+            calyx_ctx.components.push(comp);
         });
 
         // add the fsm components to the calyx context
