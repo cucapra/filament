@@ -91,15 +91,12 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     };
     ir = log_pass! { opts; ip::Monomorphize::transform(&ir, &mut gen_exec), "monomorphize"};
     ir_pass_pipeline! { opts, ir;
-        ip::BuildDomination,
-        ip::IntervalCheck,
         ip::FSMAttributes,
         ip::Simplify,
         ip::AssignCheck,
         ip::BundleElim,
         ip::AssignCheck,
-        ip::Schedule,
-        ip::Discharge
+        ip::Schedule
     }
 
     // Return early if we're asked to dump the interface
