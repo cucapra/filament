@@ -19,7 +19,6 @@ module Register #(
   end
 endmodule
 
-
 // Same as a register but does not have a write enable signal.
 module Delay #(
     parameter WIDTH = 32

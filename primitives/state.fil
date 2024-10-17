@@ -12,16 +12,7 @@ extern "state.sv" {
       out: ['G+1, 'L] WIDTH,
    ) where 'L > 'G+1;
    /// ANCHOR_END: register
-
-   comp DelayRegister[WIDTH, DELAY, LIVE]<'G: LIVE>(
-      clk: 1,
-      reset: 1,
-      write_en: interface['G],
-      in: ['G, 'G+1] WIDTH,
-   ) -> (
-      out: ['G+DELAY, 'G+DELAY+LIVE] WIDTH,
-   ) where LIVE > 0;
-
+   
    // A comp that delays `in` by one cycle. Exactly the same as a register
    // but does not require comp to provide `go` signal. If the comp
    // additionally has no resource sharing, it can elide FSM generation.
