@@ -6,7 +6,6 @@ use fil_ir::{
     self as ir, AddCtx, Ctx, DenseIndexInfo, DisplayCtx, Foreign, MutCtx,
     SparseInfoMap,
 };
-use fil_utils::GPosIdx;
 use itertools::Itertools;
 use std::collections::HashMap;
 

@@ -1,7 +1,7 @@
 use calyx_ir::{self as calyx, RRC};
 use fil_ir::{
-    self as ir, CompIdx, Component, Context, Ctx, DisplayCtx, EventIdx,
-    ExprIdx, Info, InfoIdx, InstIdx, Instance, ParamIdx, PortIdx,
+    self as ir, CompIdx, Component, Context, Ctx, EventIdx, ExprIdx, Info,
+    InfoIdx, InstIdx, Instance, ParamIdx, PortIdx,
 };
 use linked_hash_map::LinkedHashMap;
 

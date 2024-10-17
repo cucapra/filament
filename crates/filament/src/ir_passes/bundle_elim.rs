@@ -3,9 +3,9 @@ use crate::{
     ir_visitor::{Action, Construct, Visitor, VisitorData},
 };
 use fil_ir::{
-    self as ir, Access, AddCtx, Bind, Command, Component, Connect, Ctx,
-    DenseIndexInfo, DisplayCtx, Expr, Foreign, Info, InvIdx, Invoke, Liveness,
-    MutCtx, Port, PortIdx, PortOwner, Range, SparseInfoMap, Subst, Time,
+    self as ir, Access, AddCtx, Bind, Component, Connect, Ctx, DenseIndexInfo,
+    DisplayCtx, Expr, Foreign, InvIdx, Invoke, Liveness, MutCtx, Port, PortIdx,
+    PortOwner, Range, SparseInfoMap, Subst, Time,
 };
 use fil_utils::{self as utils, GPosIdx};
 use itertools::Itertools;

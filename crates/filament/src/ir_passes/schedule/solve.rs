@@ -2,8 +2,7 @@ use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
 use easy_smt::{self as smt, SExpr, SExprData};
 use fil_ast as ast;
 use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, MutCtx, PortOwner};
-use fil_utils::GPosIdx;
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{collections::HashMap, fs};
 
 /// Sets the proper FSM Attributes for every component
 pub struct Solve {
