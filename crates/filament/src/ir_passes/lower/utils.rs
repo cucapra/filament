@@ -1,7 +1,7 @@
 use calyx_ir::{self as calyx, RRC};
 use fil_ir::{
-    self as ir, CompIdx, Component, Context, Ctx, EventIdx, ExprIdx, Info,
-    InfoIdx, InstIdx, Instance, ParamIdx, PortIdx,
+    self as ir, CompIdx, Component, Context, Ctx, DisplayCtx, EventIdx,
+    ExprIdx, Info, InfoIdx, InstIdx, Instance, ParamIdx, PortIdx,
 };
 use linked_hash_map::LinkedHashMap;
 
@@ -70,6 +70,7 @@ impl NameGenerator {
 
     /// Returns the name of an [ir::Param].
     pub fn param_name(&self, idx: ParamIdx, comp: &Component) -> String {
+        println!("Getting param name for {}", comp.display(idx));
         comp.src_info
             .as_ref()
             .map(|src| src.params.get(idx).to_string())

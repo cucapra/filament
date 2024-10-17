@@ -1,23 +1,19 @@
-use crate::{
-    cmdline,
-    ir_visitor::{Action, Construct, Visitor, VisitorData},
-};
+use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
 use easy_smt::{self as smt, SExpr, SExprData};
 use fil_ast as ast;
-use fil_ir::{self as ir, Ctx, PortOwner, SparseInfoMap};
-use std::{collections::HashMap, fs};
+use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, MutCtx, PortOwner};
+use fil_utils::GPosIdx;
+use std::{collections::HashMap, fs, path::PathBuf};
 
 /// Sets the proper FSM Attributes for every component
-pub struct Schedule {
+pub struct Solve {
     /// Solver context
     sol: smt::Context,
-    /// Which solver are we using
-    sol_base: cmdline::Solver,
     /// The expression to minimize
     minimize_expr: smt::SExpr,
 }
 
-impl Schedule {
+impl Solve {
     /// Get the constant names for the start and end of a port
     pub fn get_port_name(&self, pidx: ir::PortIdx) -> (String, String) {
         (
@@ -34,17 +30,16 @@ impl Schedule {
     /// Get the SExprs for the start and end of a port
     pub fn get_port(&self, pidx: ir::PortIdx) -> (smt::SExpr, smt::SExpr) {
         let (start, end) = self.get_port_name(pidx);
-        (self.sol.atom(&start), self.sol.atom(&end))
+        (self.sol.atom(start), self.sol.atom(end))
     }
 
     /// Get the SExpr for the time of an invocation
     pub fn get_inv(&self, inv_idx: ir::InvIdx) -> smt::SExpr {
-        let name = self.get_inv_name(inv_idx);
-        self.sol.atom(&name)
+        self.sol.atom(self.get_inv_name(inv_idx))
     }
 }
 
-impl Construct for Schedule {
+impl Construct for Solve {
     fn from(opts: &crate::cmdline::Opts, _: &mut fil_ir::Context) -> Self {
         // We have to use Z3 as only it supports maximization of an objective function
         let (name, s_opts) = ("z3", vec!["-smt2", "-in"]);
@@ -62,7 +57,6 @@ impl Construct for Schedule {
         sol.push_many(1).unwrap();
 
         Self {
-            sol_base: cmdline::Solver::Z3,
             minimize_expr: sol.numeral(0),
             sol,
         }
@@ -75,9 +69,9 @@ impl Construct for Schedule {
     }
 }
 
-impl Visitor for Schedule {
+impl Visitor for Solve {
     fn name() -> &'static str {
-        "schedule"
+        "schedule-solve"
     }
 
     fn start(&mut self, data: &mut VisitorData) -> Action {
@@ -85,6 +79,13 @@ impl Visitor for Schedule {
         if !data.comp.attrs.has(ast::BoolAttr::Schedule) {
             return Action::Stop;
         }
+
+        // make sure this component only has one event
+        assert_eq!(
+            data.comp.events().idx_iter().count(),
+            1,
+            "Attempting to schedule a component with multiple events"
+        );
 
         // For the inputs and outputs of the component, we need to schedule them as expected.
         for (pidx, port) in data.comp.inputs().chain(data.comp.outputs()) {
@@ -127,12 +128,12 @@ impl Visitor for Schedule {
         let ir::Connect { src, dst, .. } = con;
 
         // Make sure there are no bundles
-        if !matches!(src.ranges.as_slice(),
-            &[(a, b)] if a.concrete(comp) == 0 && b.concrete(comp) == 1)
-            || !matches!(dst.ranges.as_slice(),
-            &[(a, b)] if a.concrete(comp) == 0 && b.concrete(comp) == 1)
+        if !(src.is_port(comp)
+            && dst.is_port(comp)
+            && src.port.is_not_bundle(comp)
+            && dst.port.is_not_bundle(comp))
         {
-            unreachable!("Bundles are not supported in the scheduling pass. Please run bundle-elim first.");
+            unreachable!("Port {} and {} are bundles. Bundles are not supported in the scheduling pass. Please run bundle-elim first.", comp.display(src.port), comp.display(dst.port));
         }
 
         let (src_start, src_end) = self.get_port(src.port);
@@ -315,8 +316,11 @@ impl Visitor for Schedule {
             })
             .collect();
 
+        let event = data.comp.events().idx_iter().next().unwrap();
+
         // Loop through invocations and find what they're bound to
-        for (inv_idx, _) in data.comp.invocations().iter() {
+        // collect here to let us mutate [data.comp] inside the loop
+        for inv_idx in data.comp.invocations().idx_iter() {
             let name = self.get_inv(inv_idx);
             let SExprData::Atom(s) = self.sol.get(name) else {
                 unreachable!(
@@ -329,6 +333,66 @@ impl Visitor for Schedule {
             let time = *bindings.get(s).unwrap();
 
             println!("Invocation {} is scheduled at time {}", inv_idx, time);
+
+            let time = data.comp.add(ir::Expr::Concrete(time));
+
+            let time = data.comp.add(ir::Time {
+                event,
+                offset: time,
+            });
+
+            // Set the time of the invocation
+            let inv = data.comp.get_mut(inv_idx);
+
+            // make sure this invoke only has one event
+            assert_eq!(
+                inv.events.len(),
+                1,
+                "Attempting to schedule an invocation with multiple events"
+            );
+
+            inv.events[0].arg = time;
+        }
+
+        // Loop through ports and set their live ranges
+        for pidx in data.comp.ports().idx_iter() {
+            let (start, end) = self.get_port(pidx);
+
+            let SExprData::Atom(s) = self.sol.get(start) else {
+                unreachable!(
+                    "Expected start of port {} to be an atom, got {}",
+                    pidx,
+                    self.sol.display(start)
+                )
+            };
+
+            let start = *bindings.get(s).unwrap();
+
+            let SExprData::Atom(s) = self.sol.get(end) else {
+                unreachable!(
+                    "Expected end of port {} to be an atom, got {}",
+                    pidx,
+                    self.sol.display(end)
+                )
+            };
+
+            let end = *bindings.get(s).unwrap();
+
+            println!("Port {} is live from {} to {}", pidx, start, end);
+
+            let start = data.comp.add(ir::Expr::Concrete(start));
+            let end = data.comp.add(ir::Expr::Concrete(end));
+
+            let start = data.comp.add(ir::Time {
+                event,
+                offset: start,
+            });
+
+            let end = data.comp.add(ir::Time { event, offset: end });
+
+            let port = data.comp.get_mut(pidx);
+
+            port.live.range = ir::Range { start, end };
         }
     }
 }

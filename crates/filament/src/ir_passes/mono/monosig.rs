@@ -6,6 +6,7 @@ use fil_ir::{
     self as ir, AddCtx, Ctx, DenseIndexInfo, DisplayCtx, Foreign, MutCtx,
     SparseInfoMap,
 };
+use fil_utils::GPosIdx;
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -519,7 +520,6 @@ impl MonoSig {
         params: &[Underlying<ir::Param>],
         port: Base<ir::Port>,
     ) -> Vec<Base<ir::Param>> {
-        let info = self.base.add(ir::Info::empty()).get();
         let mono_owner = ir::ParamOwner::Bundle(port.get());
 
         if let Some(new_params) = self.bundle_param_map.get(&port) {

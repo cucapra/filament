@@ -1,5 +1,5 @@
 use crate::ir_visitor::{Action, Visitor, VisitorData};
-use fil_ir::{self as ir, AddCtx, Ctx};
+use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx};
 use fil_utils::GPosIdx;
 use itertools::Itertools;
 

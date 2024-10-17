@@ -31,8 +31,9 @@ smallvec = "1"
 topological-sort = "0.2"
 atty = "0.2"
 lazy_static = "1.4"
-easy-smt = { git = "https://github.com/UnsignedByte/easy-smt.git" }
+easy-smt = "0.2.3"
 struct-variant = "1.0"
+tempfile = "3.13.0"
 
 fil-utils = { version = "0.1.0", path = "crates/utils" }
 fil-ast = { version = "0.1.0", path = "crates/ast" }
