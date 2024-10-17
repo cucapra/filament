@@ -70,7 +70,6 @@ impl NameGenerator {
 
     /// Returns the name of an [ir::Param].
     pub fn param_name(&self, idx: ParamIdx, comp: &Component) -> String {
-        println!("Getting param name for {}", comp.display(idx));
         comp.src_info
             .as_ref()
             .map(|src| src.params.get(idx).to_string())

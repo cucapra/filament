@@ -264,7 +264,7 @@ impl Visitor for Solve {
         }
 
         let model = self.sol.get_model().unwrap();
-        println!("Model: {}", self.sol.display(model));
+        log::trace!("Model solution: {}", self.sol.display(model));
 
         let SExprData::List(bindings) = self.sol.get(model) else {
             unreachable!(
@@ -332,14 +332,18 @@ impl Visitor for Solve {
 
             let time = *bindings.get(s).unwrap();
 
-            println!("Invocation {} is scheduled at time {}", inv_idx, time);
-
             let time = data.comp.add(ir::Expr::Concrete(time));
 
             let time = data.comp.add(ir::Time {
                 event,
                 offset: time,
             });
+
+            log::debug!(
+                "Invocation {} scheduled at cycle {}",
+                data.comp.display(inv_idx),
+                data.comp.display(time)
+            );
 
             // Set the time of the invocation
             let inv = data.comp.get_mut(inv_idx);
@@ -378,8 +382,6 @@ impl Visitor for Solve {
 
             let end = *bindings.get(s).unwrap();
 
-            println!("Port {} is live from {} to {}", pidx, start, end);
-
             let start = data.comp.add(ir::Expr::Concrete(start));
             let end = data.comp.add(ir::Expr::Concrete(end));
 
@@ -389,6 +391,13 @@ impl Visitor for Solve {
             });
 
             let end = data.comp.add(ir::Time { event, offset: end });
+
+            log::debug!(
+                "Port {} scheduled to be live from [{}, {}]",
+                data.comp.display(pidx),
+                data.comp.display(start),
+                data.comp.display(end)
+            );
 
             let port = data.comp.get_mut(pidx);
 

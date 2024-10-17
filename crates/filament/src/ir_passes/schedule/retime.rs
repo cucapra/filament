@@ -77,9 +77,15 @@ impl Retime {
             rhs: live,
         });
         // Set up ports to the component
+
+        // clk and reset ports are unannotated
+        comp.unannotated_ports =
+            Box::new(vec![("clk".into(), 1), ("reset".into(), 1)]);
+
+        // input port
         let input = ir::Port {
             owner: ir::PortOwner::Sig {
-                dir: ir::Direction::In,
+                dir: ir::Direction::Out,
             },
             width,
             live: ir::Liveness {
@@ -110,9 +116,10 @@ impl Retime {
         comp.get_mut(input).live.idxs.push(input_param);
         src_info.ports.push(input, "in".into());
 
+        // output port
         let output = ir::Port {
             owner: ir::PortOwner::Sig {
-                dir: ir::Direction::Out,
+                dir: ir::Direction::In,
             },
             width,
             live: ir::Liveness {
