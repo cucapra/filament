@@ -79,7 +79,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     ir_pass_pipeline! {opts, ir;
         ip::BuildDomination,
         ip::TypeCheck,
-        // ip::IntervalCheck,
+        ip::IntervalCheck,
         ip::PhantomCheck,
         ip::Assume
     }
