@@ -279,7 +279,7 @@ impl Visitor for Retime {
                     )),
                     base: self.event(data.ctx()),
                 }],
-                ports: vec![],
+                ports: vec![], // will be filled in later
                 info: data.comp.add(ir::Info::invoke(
                     format!("inv_{}", instname).into(),
                     GPosIdx::UNKNOWN,
@@ -311,7 +311,7 @@ impl Visitor for Retime {
             };
             let idx_param = data.comp.add(idx_param);
 
-            let inv_port = ir::Port {
+            let inv_port_in = ir::Port {
                 owner: ir::PortOwner::inv_in(
                     inv,
                     ir::Foreign::new(inst_pidx, self.delay_register),
@@ -339,7 +339,7 @@ impl Visitor for Retime {
                 )),
             };
 
-            let inv_port_in = data.comp.add(inv_port);
+            let inv_port_in = data.comp.add(inv_port_in);
 
             let (inst_pidx, inst_param) = data
                 .ctx()
