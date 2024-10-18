@@ -74,9 +74,9 @@ pub struct Discharge {
     /// Defined functions for `some` parameters on components
     comp_param_map: HashMap<ir::Foreign<ir::Param, ir::Component>, smt::SExpr>,
 
-    // Defined names
-    param_map: ir::DenseIndexInfo<ir::Param, smt::SExpr>,
-    ev_map: ir::DenseIndexInfo<ir::Event, smt::SExpr>,
+    // Defined names. These are sparse in case certain parameters or events have been invalidated.
+    param_map: ir::SparseInfoMap<ir::Param, smt::SExpr>,
+    ev_map: ir::SparseInfoMap<ir::Event, smt::SExpr>,
     // Composite expressions
     expr_map: ir::DenseIndexInfo<ir::Expr, smt::SExpr>,
     time_map: ir::DenseIndexInfo<ir::Time, smt::SExpr>,
