@@ -1,4 +1,4 @@
-use crate::{DisplayCtx, Prop};
+use crate::{DisplayCtx, MutCtx, Param, Prop};
 
 use super::{
     AddCtx, Component, Ctx, EventIdx, Expr, ExprIdx, Foldable, ParamIdx,
@@ -60,6 +60,14 @@ impl TimeIdx {
     ) -> Vec<ParamIdx> {
         let time = ctx.get(self);
         time.offset.relevant_vars(ctx)
+    }
+
+    pub fn valid(
+        &self,
+        ctx: &(impl Ctx<Time> + Ctx<Expr> + Ctx<Prop> + MutCtx<Param>),
+    ) -> bool {
+        let time = ctx.get(*self);
+        time.offset.valid(ctx)
     }
 }
 

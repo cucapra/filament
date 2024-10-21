@@ -1,5 +1,7 @@
-use super::{idxs::PropIdx, AddCtx, Ctx, ExprIdx, InfoIdx, TimeIdx, TimeSub};
-use crate::{construct_binop, EventIdx, Expr, ParamIdx, Time};
+use super::{
+    idxs::PropIdx, AddCtx, Ctx, ExprIdx, InfoIdx, MutCtx, TimeIdx, TimeSub,
+};
+use crate::{construct_binop, Event, EventIdx, Expr, Param, ParamIdx, Time};
 use std::fmt::{self, Display};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -356,6 +358,19 @@ impl PropIdx {
                 props.extend(r_props);
             }
         }
+    }
+
+    pub fn valid(
+        &self,
+        ctx: &(impl Ctx<Prop>
+              + Ctx<Time>
+              + Ctx<Expr>
+              + MutCtx<Param>
+              + MutCtx<Event>),
+    ) -> bool {
+        let (props, events) = self.relevant_vars(ctx);
+        props.iter().all(|p| ctx.valid(*p))
+            && events.iter().all(|e| ctx.valid(*e))
     }
 }
 

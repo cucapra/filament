@@ -484,36 +484,32 @@ impl Discharge {
         }
     }
 
-    fn expr_to_sexp(&mut self, expr: &ir::Expr) -> Option<smt::SExpr> {
+    fn expr_to_sexp(&mut self, expr: &ir::Expr) -> smt::SExpr {
         match expr {
-            ir::Expr::Param(p) => self.param_map.find(*p).cloned(),
-            ir::Expr::Concrete(n) => Some(self.num(*n)),
+            ir::Expr::Param(p) => self.param_map[*p],
+            ir::Expr::Concrete(n) => self.num(*n),
             ir::Expr::Bin { op, lhs, rhs } => {
-                let l = self.expr_map.find(*lhs);
-                let r = self.expr_map.find(*rhs);
-                l.and_then(|&l| {
-                    r.map(|&r| match op {
-                        ast::Op::Add => self.plus(l, r),
-                        ast::Op::Sub => self.sub(l, r),
-                        ast::Op::Mul => self.times(l, r),
-                        ast::Op::Div => self.div(l, r),
-                        ast::Op::Mod => self.modulo(l, r),
-                    })
-                })
+                let l = self.expr_map[*lhs];
+                let r = self.expr_map[*rhs];
+                match op {
+                    ast::Op::Add => self.plus(l, r),
+                    ast::Op::Sub => self.sub(l, r),
+                    ast::Op::Mul => self.times(l, r),
+                    ast::Op::Div => self.div(l, r),
+                    ast::Op::Mod => self.modulo(l, r),
+                }
             }
             ir::Expr::Fn { op, args } => {
                 let args = args.iter().map(|e| self.expr_map[*e]);
-                Some(self.sol.list(
+                self.sol.list(
                     iter::once(self.func_map[op]).chain(args).collect_vec(),
-                ))
+                )
             }
             ir::Expr::If { cond, then, alt } => {
-                let then = self.expr_map.find(*then);
-                let alt = self.expr_map.find(*alt);
+                let then = self.expr_map[*then];
+                let alt = self.expr_map[*alt];
                 let cond = self.prop_map[*cond];
-                then.and_then(|&then| {
-                    alt.map(|&alt| self.sol.ite(cond.get(), then, alt))
-                })
+                self.sol.ite(cond.get(), then, alt)
             }
         }
     }
@@ -613,31 +609,34 @@ impl Visitor for Discharge {
 
         let bs = self.sol.bool_sort();
         // Declare all expressions
-        for (idx, expr) in data.comp.exprs().iter() {
-            // If this expression refers to an invalid parameter, skip it
-            if let Some(assign) = self.expr_to_sexp(expr) {
-                // do props inside of exprs ahead of time
-                let relevant_props = idx
-                    .relevant_props(&data.comp)
-                    .into_iter()
-                    .map(|i| (i, data.comp.get(i)));
+        for (idx, expr) in data
+            .comp
+            .exprs()
+            .iter()
+            .filter(|(idx, _)| idx.valid(&data.comp))
+        {
+            // do props inside of exprs ahead of time
+            let relevant_props = idx
+                .relevant_props(&data.comp)
+                .into_iter()
+                .map(|i| (i, data.comp.get(i)));
 
-                for (pidx, prop) in relevant_props {
-                    let assign = self.prop_to_sexp(prop);
-                    let sexp = self
-                        .sol
-                        .define_const(Discharge::fmt_prop(pidx), bs, assign)
-                        .unwrap();
-                    self.prop_map.insert(pidx, SExprWrapper::SExpr(sexp));
-                }
-
+            for (pidx, prop) in relevant_props {
+                let assign = self.prop_to_sexp(prop);
                 let sexp = self
                     .sol
-                    .define_const(Self::fmt_expr(idx), int, assign)
+                    .define_const(Discharge::fmt_prop(pidx), bs, assign)
                     .unwrap();
-                self.overflow_assert(sexp);
-                self.expr_map.push(idx, sexp);
+                self.prop_map.insert(pidx, SExprWrapper::SExpr(sexp));
             }
+
+            let assign = self.expr_to_sexp(expr);
+            let sexp = self
+                .sol
+                .define_const(Self::fmt_expr(idx), int, assign)
+                .unwrap();
+            self.overflow_assert(sexp);
+            self.expr_map.push(idx, sexp);
         }
 
         // Assert bindings for all let-bound parameters
@@ -652,7 +651,12 @@ impl Visitor for Discharge {
         }
 
         // Declare all time expressions
-        for (idx, ir::Time { event, offset }) in data.comp.times().iter() {
+        for (idx, ir::Time { event, offset }) in data
+            .comp
+            .times()
+            .iter()
+            .filter(|(idx, _)| idx.valid(&data.comp))
+        {
             if self.ev_map.contains(*event) && self.expr_map.contains(*offset) {
                 let assign =
                     self.plus(self.ev_map[*event], self.expr_map[*offset]);
@@ -666,7 +670,12 @@ impl Visitor for Discharge {
         }
 
         // Declare all propositions
-        for (idx, prop) in data.comp.props().iter() {
+        for (idx, prop) in data
+            .comp
+            .props()
+            .iter()
+            .filter(|(idx, _)| idx.valid(&data.comp))
+        {
             // Define assertion equating the proposition to its assignment
             let assign = self.prop_to_sexp(prop);
             if let Ok(sexp) =
