@@ -3,9 +3,9 @@ use crate::{
     ir_visitor::{Action, Construct, Visitor, VisitorData},
 };
 use fil_ir::{
-    self as ir, Access, AddCtx, Bind, Command, Component, Connect, Ctx,
-    DenseIndexInfo, DisplayCtx, Expr, Foreign, Info, InvIdx, Invoke, Liveness,
-    MutCtx, Port, PortIdx, PortOwner, Range, SparseInfoMap, Subst, Time,
+    self as ir, Access, AddCtx, Bind, Component, Connect, Ctx, DenseIndexInfo,
+    DisplayCtx, Expr, Foreign, InvIdx, Invoke, Liveness, MutCtx, Port, PortIdx,
+    PortOwner, Range, SparseInfoMap, Subst, Time,
 };
 use fil_utils as utils;
 use itertools::Itertools;
@@ -147,12 +147,26 @@ impl BundleElim {
                 let info = comp.add(info.clone());
 
                 // adds the new port to the component and return its index
-                comp.add(Port {
+                let pidx = comp.add(Port {
                     live,
                     owner,
                     info, // duplicate the info
                     width,
-                })
+                });
+
+                // Fill in the live idxs with a new dummy index
+                let port = ir::Param {
+                    owner: ir::ParamOwner::bundle(pidx),
+                    info: comp.add(ir::Info::param(
+                        "_".into(),
+                        utils::GPosIdx::UNKNOWN,
+                    )),
+                };
+                let port = comp.add(port);
+
+                comp.get_mut(pidx).live.idxs.push(port);
+
+                pidx
             })
             .collect();
         // delete the original port
@@ -228,7 +242,7 @@ impl Visitor for BundleElim {
         connect: &mut Connect,
         data: &mut VisitorData,
     ) -> Action {
-        let Connect { src, dst, .. } = connect;
+        let Connect { src, dst, info } = connect;
 
         if !self.context.get(data.idx).contains(dst.port) {
             // we are writing to a local port here.
@@ -253,11 +267,12 @@ impl Visitor for BundleElim {
             src.into_iter()
                 .zip_eq(dst)
                 .map(|(src, dst)| {
-                    Command::Connect(Connect {
+                    Connect {
                         src: Access::port(src, &mut data.comp),
                         dst: Access::port(dst, &mut data.comp),
-                        info: data.comp.add(Info::empty()),
-                    })
+                        info: *info,
+                    }
+                    .into()
                 })
                 .collect(),
         )

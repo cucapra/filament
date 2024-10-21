@@ -1,5 +1,5 @@
-use super::{AddCtx, Component, Ctx, ExprIdx, ParamIdx};
-use crate::{construct_binop, Prop, PropIdx};
+use super::{AddCtx, Component, Ctx, ExprIdx, MutCtx, ParamIdx};
+use crate::{construct_binop, Param, Prop, PropIdx};
 use fil_ast as ast;
 use std::fmt::Display;
 
@@ -112,6 +112,13 @@ impl ExprIdx {
 
 /// Queries over [ExprIdx]
 impl ExprIdx {
+    pub fn valid(
+        &self,
+        ctx: &(impl Ctx<Expr> + Ctx<Prop> + MutCtx<Param>),
+    ) -> bool {
+        self.relevant_vars(ctx).iter().all(|p| ctx.valid(*p))
+    }
+
     pub fn relevant_props(
         &self,
         ctx: &(impl Ctx<Expr> + Ctx<Prop>),

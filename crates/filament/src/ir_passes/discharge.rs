@@ -74,12 +74,12 @@ pub struct Discharge {
     /// Defined functions for `some` parameters on components
     comp_param_map: HashMap<ir::Foreign<ir::Param, ir::Component>, smt::SExpr>,
 
-    // Defined names
-    param_map: ir::DenseIndexInfo<ir::Param, smt::SExpr>,
-    ev_map: ir::DenseIndexInfo<ir::Event, smt::SExpr>,
+    // Defined names. These are sparse in case certain parameters or events have been invalidated.
+    param_map: ir::SparseInfoMap<ir::Param, smt::SExpr>,
+    ev_map: ir::SparseInfoMap<ir::Event, smt::SExpr>,
     // Composite expressions
-    expr_map: ir::DenseIndexInfo<ir::Expr, smt::SExpr>,
-    time_map: ir::DenseIndexInfo<ir::Time, smt::SExpr>,
+    expr_map: ir::SparseInfoMap<ir::Expr, smt::SExpr>,
+    time_map: ir::SparseInfoMap<ir::Time, smt::SExpr>,
     // Propositions
     prop_map: ir::DenseIndexInfo<ir::Prop, SExprWrapper>,
     // Propositions that have already been checked
@@ -609,7 +609,12 @@ impl Visitor for Discharge {
 
         let bs = self.sol.bool_sort();
         // Declare all expressions
-        for (idx, expr) in data.comp.exprs().iter() {
+        for (idx, expr) in data
+            .comp
+            .exprs()
+            .iter()
+            .filter(|(idx, _)| idx.valid(&data.comp))
+        {
             // do props inside of exprs ahead of time
             let relevant_props = idx
                 .relevant_props(&data.comp)
@@ -646,18 +651,31 @@ impl Visitor for Discharge {
         }
 
         // Declare all time expressions
-        for (idx, ir::Time { event, offset }) in data.comp.times().iter() {
-            let assign = self.plus(self.ev_map[*event], self.expr_map[*offset]);
-            let sexp = self
-                .sol
-                .define_const(Self::fmt_time(idx), int, assign)
-                .unwrap();
-            self.overflow_assert(sexp);
-            self.time_map.push(idx, sexp);
+        for (idx, ir::Time { event, offset }) in data
+            .comp
+            .times()
+            .iter()
+            .filter(|(idx, _)| idx.valid(&data.comp))
+        {
+            if self.ev_map.contains(*event) && self.expr_map.contains(*offset) {
+                let assign =
+                    self.plus(self.ev_map[*event], self.expr_map[*offset]);
+                let sexp = self
+                    .sol
+                    .define_const(Self::fmt_time(idx), int, assign)
+                    .unwrap();
+                self.overflow_assert(sexp);
+                self.time_map.push(idx, sexp);
+            }
         }
 
         // Declare all propositions
-        for (idx, prop) in data.comp.props().iter() {
+        for (idx, prop) in data
+            .comp
+            .props()
+            .iter()
+            .filter(|(idx, _)| idx.valid(&data.comp))
+        {
             // Define assertion equating the proposition to its assignment
             let assign = self.prop_to_sexp(prop);
             if let Ok(sexp) =
