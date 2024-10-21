@@ -95,7 +95,8 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::Simplify,
         ip::AssignCheck,
         ip::BundleElim,
-        ip::AssignCheck
+        ip::AssignCheck,
+        ip::Schedule
     }
 
     // Return early if we're asked to dump the interface
