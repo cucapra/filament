@@ -97,6 +97,17 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::BundleElim,
         ip::AssignCheck
     }
+    // type check again before lowering
+    ir_pass_pipeline! {opts, ir;
+        ip::BuildDomination,
+        ip::TypeCheck,
+        ip::IntervalCheck,
+        ip::PhantomCheck,
+        ip::Assume
+    }
+    if !opts.unsafe_skip_discharge {
+        ir_pass_pipeline! {opts, ir; ip::Discharge }
+    }
 
     // Return early if we're asked to dump the interface
     if opts.dump_interface {
