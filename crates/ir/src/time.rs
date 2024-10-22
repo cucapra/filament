@@ -54,18 +54,18 @@ impl TimeIdx {
         time.event
     }
 
-    pub fn relevant_vars(
-        self,
-        ctx: &(impl Ctx<Time> + Ctx<Expr> + Ctx<Prop>),
-    ) -> Vec<ParamIdx> {
+    pub fn relevant_vars<C>(self, ctx: &C) -> Vec<ParamIdx>
+    where
+        C: Ctx<Time> + Ctx<Expr> + Ctx<Prop>,
+    {
         let time = ctx.get(self);
         time.offset.relevant_vars(ctx)
     }
 
-    pub fn valid(
-        &self,
-        ctx: &(impl Ctx<Time> + Ctx<Expr> + Ctx<Prop> + MutCtx<Param>),
-    ) -> bool {
+    pub fn valid<C>(&self, ctx: &C) -> bool
+    where
+        C: Ctx<Time> + Ctx<Expr> + Ctx<Prop> + MutCtx<Param>,
+    {
         let time = ctx.get(*self);
         time.offset.valid(ctx)
     }

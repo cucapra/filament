@@ -235,11 +235,13 @@ impl PropIdx {
     }
 
     // relevant vars of an if guard -- can't include times
-    pub fn relevant_vars_if_acc(
+    pub fn relevant_vars_if_acc<C>(
         &self,
-        ctx: &(impl Ctx<Prop> + Ctx<Expr>),
+        ctx: &C,
         param_acc: &mut Vec<ParamIdx>,
-    ) {
+    ) where
+        C: Ctx<Prop> + Ctx<Expr>,
+    {
         match ctx.get(*self) {
             Prop::True | Prop::False => (),
             Prop::Cmp(CmpOp { lhs, rhs, .. }) => {
@@ -258,12 +260,14 @@ impl PropIdx {
     }
 
     /// Accumulate all the parameters and events that appear in this proposition.
-    pub fn relevant_vars_acc(
+    pub fn relevant_vars_acc<C>(
         &self,
-        ctx: &(impl Ctx<Prop> + Ctx<Time> + Ctx<Expr>),
+        ctx: &C,
         param_acc: &mut Vec<ParamIdx>,
         event_acc: &mut Vec<EventIdx>,
-    ) {
+    ) where
+        C: Ctx<Prop> + Ctx<Time> + Ctx<Expr>,
+    {
         let mut time_acc = |time: TimeIdx, params: &mut Vec<ParamIdx>| {
             let Time { event, offset } = ctx.get(time);
             event_acc.push(*event);
@@ -304,39 +308,38 @@ impl PropIdx {
 
     /// Returns the parameters and events mentioned in the proposition.
     #[inline]
-    pub fn relevant_vars(
-        &self,
-        ctx: &(impl Ctx<Time> + Ctx<Prop> + Ctx<Expr>),
-    ) -> (Vec<ParamIdx>, Vec<EventIdx>) {
+    pub fn relevant_vars<C>(&self, ctx: &C) -> (Vec<ParamIdx>, Vec<EventIdx>)
+    where
+        C: Ctx<Time> + Ctx<Prop> + Ctx<Expr>,
+    {
         let mut params = Vec::new();
         let mut events = Vec::new();
         self.relevant_vars_acc(ctx, &mut params, &mut events);
         (params, events)
     }
 
-    pub fn relevant_vars_if(
-        &self,
-        ctx: &(impl Ctx<Prop> + Ctx<Expr>),
-    ) -> Vec<ParamIdx> {
+    pub fn relevant_vars_if<C>(&self, ctx: &C) -> Vec<ParamIdx>
+    where
+        C: Ctx<Prop> + Ctx<Expr>,
+    {
         let mut params = Vec::new();
         self.relevant_vars_if_acc(ctx, &mut params);
         params
     }
 
-    pub fn relevant_props(
-        &self,
-        ctx: &(impl Ctx<Prop> + Ctx<Expr>),
-    ) -> Vec<PropIdx> {
+    pub fn relevant_props<C>(&self, ctx: &C) -> Vec<PropIdx>
+    where
+        C: Ctx<Prop> + Ctx<Expr>,
+    {
         let mut props = Vec::new();
         self.relevant_props_acc(ctx, &mut props);
         props
     }
 
-    pub fn relevant_props_acc(
-        &self,
-        ctx: &(impl Ctx<Prop> + Ctx<Expr>),
-        props: &mut Vec<PropIdx>,
-    ) {
+    pub fn relevant_props_acc<C>(&self, ctx: &C, props: &mut Vec<PropIdx>)
+    where
+        C: Ctx<Prop> + Ctx<Expr>,
+    {
         match ctx.get(*self) {
             Prop::True | Prop::False => (),
             Prop::Cmp(CmpOp { lhs, rhs, .. }) => {
