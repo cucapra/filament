@@ -360,14 +360,10 @@ impl PropIdx {
         }
     }
 
-    pub fn valid(
-        &self,
-        ctx: &(impl Ctx<Prop>
-              + Ctx<Time>
-              + Ctx<Expr>
-              + MutCtx<Param>
-              + MutCtx<Event>),
-    ) -> bool {
+    pub fn valid<C>(&self, ctx: &C) -> bool
+    where
+        C: Ctx<Prop> + Ctx<Time> + Ctx<Expr> + MutCtx<Param> + MutCtx<Event>,
+    {
         let (props, events) = self.relevant_vars(ctx);
         props.iter().all(|p| ctx.valid(*p))
             && events.iter().all(|e| ctx.valid(*e))
