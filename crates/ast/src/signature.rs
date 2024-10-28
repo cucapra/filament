@@ -2,8 +2,7 @@ use super::{
     Binding, Expr, Id, InterfaceDef, Loc, OrderConstraint, PortDef, Time,
     TimeSub,
 };
-use crate::Attributes;
-use fil_utils::GPosIdx;
+use fil_utils::{Attributes, GPosIdx};
 
 #[derive(Clone)]
 /// An event variable bound in the signature

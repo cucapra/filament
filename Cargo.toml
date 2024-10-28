@@ -33,6 +33,8 @@ atty = "0.2"
 lazy_static = "1.4"
 easy-smt = { version = "0.2.1" }
 struct-variant = "1.0"
+strum = "0.26.3"
+strum_macros = "0.26.3"
 
 fil-utils = { version = "0.1.0", path = "crates/utils" }
 fil-ast = { version = "0.1.0", path = "crates/ast" }

@@ -2,9 +2,10 @@
 #![allow(clippy::type_complexity)]
 
 //! Parser for Filament programs.
-use crate::{self as ast, Attributes, Loc, TimeSub};
-use fil_utils::{self as utils, FilamentResult};
-use fil_utils::{FileIdx, GPosIdx, GlobalPositionTable};
+use crate::{self as ast, Loc, TimeSub};
+use fil_utils::{
+    self as utils, FilamentResult, FileIdx, GPosIdx, GlobalPositionTable,
+};
 use itertools::Itertools;
 use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest_consume::{match_nodes, Error, Parser};
@@ -830,28 +831,28 @@ impl FilamentParser {
         Ok(())
     }
 
-    fn attr_bind(input: Node) -> ParseResult<Vec<(ast::Attr, GPosIdx, u64)>> {
+    fn attr_bind(input: Node) -> ParseResult<(utils::Attr, GPosIdx, u64)> {
         match_nodes!(
             input.clone().into_children();
             [identifier(name)] =>
-            ast::BoolAttr::from_str(name.as_ref()).map(
-                |attr| vec![(ast::Attr::Bool(attr), name.pos(), 1)]).map_err(
+            utils::BoolAttr::from_str(name.as_ref()).map(
+                |attr| (utils::Attr::Bool(attr), name.pos(), 1)).map_err(
                     |_| input.error(format!("Found unknown attribute flag \"{name}\""))),
             [not(_), identifier(name)] =>
-            ast::BoolAttr::from_str(name.as_ref()).map(
-                |attr| vec![(ast::Attr::Bool(attr), name.pos(), 0)]).map_err(
+            utils::BoolAttr::from_str(name.as_ref()).map(
+                |attr| (utils::Attr::Bool(attr), name.pos(), 0)).map_err(
                     |_| input.error(format!("Found unknown attribute flag \"{name}\""))),
             [identifier(name), bitwidth(val)] =>
-            ast::NumAttr::from_str(name.as_ref()).map(
-                |attr| vec![(ast::Attr::Num(attr), name.pos(), val)]).map_err(
+            utils::NumAttr::from_str(name.as_ref()).map(
+                |attr| (utils::Attr::Num(attr), name.pos(), val)).map_err(
                     |_| input.error(format!("Found unknown numeric attribute \"{name}\""))),
         )
     }
 
-    fn attributes(input: Node) -> ParseResult<Attributes> {
+    fn attributes(input: Node) -> ParseResult<utils::Attributes> {
         Ok(match_nodes!(
             input.into_children();
-            [attr_bind(attr)..] => ast::Attributes::new(attr.into_iter().flatten())
+            [attr_bind(attr)..] => utils::Attributes::new(attr.into_iter())
         ))
     }
 

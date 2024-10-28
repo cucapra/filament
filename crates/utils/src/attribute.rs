@@ -1,21 +1,4 @@
-use enum_map::{Enum, EnumMap};
-use fil_utils::GPosIdx;
-use strum_macros::EnumString;
-
-/// An attribute that accepts a numeric value
-#[derive(Enum, Clone, Copy, PartialEq, EnumString)]
-pub enum NumAttr {}
-
-/// An flag attribute
-#[derive(Enum, Clone, Copy, PartialEq, EnumString)]
-pub enum BoolAttr {
-    /// This is a toplevel component
-    #[strum(serialize = "toplevel")]
-    TopLevel,
-    /// Use a counter based FSM design
-    #[strum(serialize = "counter_fsm")]
-    CounterFSM,
-}
+use std::collections::HashMap;
 
 /// Represents a single attribute. This is a private enum that is used during
 /// parsing to collect all attributes before creating the [Attributes] struct.

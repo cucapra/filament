@@ -1,6 +1,6 @@
 use crate::ir_visitor::{Action, Visitor, VisitorData};
-use fil_ast as ast;
 use fil_ir::TimeSub;
+use fil_utils::{self as utils, AttrCtx};
 
 /// Sets the proper FSM Attributes for every component
 #[derive(Default)]
@@ -15,7 +15,7 @@ impl Visitor for FSMAttributes {
         let attrs = &data.comp.attrs;
 
         // Check if the component already has FSM attributes
-        if attrs.get(ast::BoolAttr::CounterFSM).is_some() {
+        if attrs.get(utils::BoolAttr::CounterFSM).is_some() {
             return Action::Stop;
         }
 
@@ -37,12 +37,20 @@ impl Visitor for FSMAttributes {
             // If the delay is > 1, add a slow FSM attribute
             // TODO(UnsignedByte): Find a better heuristic for slow FSMs
             if delay > 1 {
-                data.comp.attrs.set(ast::BoolAttr::CounterFSM, 1);
+                data.comp.attrs.set(
+                    utils::BoolAttr::CounterFSM,
+                    true,
+                    utils::GPosIdx::UNKNOWN,
+                );
                 return Action::Stop;
             }
         }
 
-        data.comp.attrs.set(ast::BoolAttr::CounterFSM, 0);
+        data.comp.attrs.set(
+            utils::BoolAttr::CounterFSM,
+            false,
+            utils::GPosIdx::UNKNOWN,
+        );
 
         Action::Stop
     }
