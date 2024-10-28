@@ -2,7 +2,7 @@ use super::{
     Binding, Expr, Id, InterfaceDef, Loc, OrderConstraint, PortDef, Time,
     TimeSub,
 };
-use fil_utils::{Attributes, GPosIdx};
+use fil_utils::{CompAttrs, GPosIdx};
 
 #[derive(Clone)]
 /// An event variable bound in the signature
@@ -112,7 +112,7 @@ pub struct Signature {
     /// Name of the component
     pub name: Loc<Id>,
     /// Attributes associated with this component
-    pub attributes: Attributes,
+    pub attributes: CompAttrs,
     /// Parameters for the Signature
     pub params: Vec<Loc<ParamBind>>,
     /// Parameters bound in the signature binding. These always have a default value.
@@ -138,7 +138,7 @@ impl Signature {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: Loc<Id>,
-        attributes: Attributes,
+        attributes: CompAttrs,
         params: Vec<Loc<ParamBind>>,
         events: Vec<Loc<EventBind>>,
         unannotated_ports: Vec<(Id, u64)>,

@@ -1,12 +1,6 @@
 use strum_macros::EnumString;
 
-/// Represents a single attribute. This is a private enum that is used during
-/// parsing to collect all attributes before creating the [Attributes] struct.
-#[derive(Clone, Copy)]
-pub enum Attr {
-    Bool(BoolAttr),
-    Num(NumAttr),
-}
+use super::Attributes;
 
 /// An attribute that accepts a numeric value
 #[derive(Clone, Copy, PartialEq, EnumString, Eq, Hash)]
@@ -22,3 +16,5 @@ pub enum BoolAttr {
     #[strum(serialize = "counter_fsm")]
     CounterFSM,
 }
+
+pub type CompAttrs = Attributes<BoolAttr, NumAttr>;
