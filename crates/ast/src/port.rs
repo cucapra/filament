@@ -1,5 +1,4 @@
 use super::{Binding, Bundle, Expr, Id, Loc, Range, Time};
-use fil_utils as utils;
 
 /// A port definition in a [super::Signature].
 #[derive(Clone)]

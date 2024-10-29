@@ -1,7 +1,6 @@
 use super::{
     Binding, Expr, Id, Implication, Loc, OrderConstraint, Range, Time,
 };
-use fil_utils as utils;
 use struct_variant::struct_variant;
 
 #[derive(Clone)]
