@@ -3,7 +3,6 @@ use super::{
     InstIdx, InvIdx, ParamIdx, PortIdx, Subst, TimeIdx, TimeSub,
 };
 use fil_ast::Op;
-use fil_utils as utils;
 use itertools::Itertools;
 use std::fmt;
 
