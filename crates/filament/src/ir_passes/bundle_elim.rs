@@ -7,7 +7,7 @@ use fil_ir::{
     DisplayCtx, Expr, Foreign, InvIdx, Invoke, Liveness, MutCtx, Port, PortIdx,
     PortOwner, Range, SparseInfoMap, Subst, Time,
 };
-use fil_utils::{self as utils, GPosIdx};
+use fil_utils as utils;
 use itertools::Itertools;
 use std::collections::HashMap;
 
@@ -157,8 +157,10 @@ impl BundleElim {
                 // Fill in the live idxs with a new dummy index
                 let port = ir::Param {
                     owner: ir::ParamOwner::bundle(pidx),
-                    info: comp
-                        .add(ir::Info::param("_".into(), GPosIdx::UNKNOWN)),
+                    info: comp.add(ir::Info::param(
+                        "_".into(),
+                        utils::GPosIdx::UNKNOWN,
+                    )),
                 };
                 let port = comp.add(port);
 

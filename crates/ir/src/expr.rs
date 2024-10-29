@@ -1,5 +1,5 @@
-use super::{AddCtx, Component, Ctx, ExprIdx, ParamIdx};
-use crate::{construct_binop, Prop, PropIdx};
+use super::{AddCtx, Component, Ctx, ExprIdx, MutCtx, ParamIdx};
+use crate::{construct_binop, Param, Prop, PropIdx};
 use fil_ast as ast;
 use std::fmt::Display;
 
@@ -112,20 +112,26 @@ impl ExprIdx {
 
 /// Queries over [ExprIdx]
 impl ExprIdx {
-    pub fn relevant_props(
-        &self,
-        ctx: &(impl Ctx<Expr> + Ctx<Prop>),
-    ) -> Vec<PropIdx> {
+    pub fn valid<C>(&self, ctx: &C) -> bool
+    where
+        C: Ctx<Expr> + Ctx<Prop> + MutCtx<Param>,
+    {
+        self.relevant_vars(ctx).iter().all(|p| ctx.valid(*p))
+    }
+
+    pub fn relevant_props<C>(&self, ctx: &C) -> Vec<PropIdx>
+    where
+        C: Ctx<Expr> + Ctx<Prop>,
+    {
         let mut props = Vec::new();
         self.relevant_props_acc(ctx, &mut props);
         props
     }
 
-    pub fn relevant_props_acc(
-        &self,
-        ctx: &(impl Ctx<Expr> + Ctx<Prop>),
-        props: &mut Vec<PropIdx>,
-    ) {
+    pub fn relevant_props_acc<C>(&self, ctx: &C, props: &mut Vec<PropIdx>)
+    where
+        C: Ctx<Expr> + Ctx<Prop>,
+    {
         if let Expr::If { cond, .. } = ctx.get(*self) {
             props.push(*cond);
             let inner_props = cond.relevant_props(ctx);
@@ -133,20 +139,19 @@ impl ExprIdx {
         }
     }
 
-    pub fn relevant_vars(
-        &self,
-        ctx: &(impl Ctx<Expr> + Ctx<Prop>),
-    ) -> Vec<ParamIdx> {
+    pub fn relevant_vars<C>(&self, ctx: &C) -> Vec<ParamIdx>
+    where
+        C: Ctx<Expr> + Ctx<Prop>,
+    {
         let mut params = Vec::new();
         self.relevant_vars_acc(ctx, &mut params);
         params
     }
 
-    pub fn relevant_vars_acc(
-        &self,
-        ctx: &(impl Ctx<Expr> + Ctx<Prop>),
-        params: &mut Vec<ParamIdx>,
-    ) {
+    pub fn relevant_vars_acc<C>(&self, ctx: &C, params: &mut Vec<ParamIdx>)
+    where
+        C: Ctx<Expr> + Ctx<Prop>,
+    {
         match ctx.get(*self) {
             Expr::Param(p) => {
                 params.push(*p);
