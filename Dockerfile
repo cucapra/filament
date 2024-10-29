@@ -51,7 +51,7 @@ RUN git clone https://digidev.digi.e-technik.uni-kassel.de/git/scalp.git &&\
 
 # Install FloPoCo 4.1
 WORKDIR /home
-RUN git clone --branch flopoco-4.1 https://gitlab.com/flopoco/flopoco &&\
+RUN git clone https://gitlab.com/flopoco/flopoco &&\
     cd flopoco && git checkout f3d76595c01f84cee57ae67eee1ceb31a6fe93bc &&\
     mkdir build && cd build &&\
     cmake -GNinja .. && ninja &&\
@@ -66,6 +66,28 @@ RUN git clone --depth 1 --branch v3.0.0 https://github.com/ghdl/ghdl.git &&\
     mkdir build && cd build &&\
     LDFLAGS='-ldl' ../configure --with-llvm-config --prefix=/usr &&\
     make && make install
+
+ARG TARGETOS TARGETARCH
+
+# Install Bazel 6.4.0
+WORKDIR /home
+RUN apt install -y g++ unzip zip default-jdk
+
+# Download bazelisk
+RUN wget "https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-${TARGETOS}-${TARGETARCH}" --output-document bazelisk && \
+  chmod +x bazelisk && \
+  mv bazelisk /root/.local/bin/bazel
+
+ARG USE_BAZEL_VERSION=7.0.0
+
+RUN bazel version
+
+# Install and build XLS (without C++ frontend)
+WORKDIR /home
+RUN git clone --depth 1 https://github.com/google/xls.git
+WORKDIR /home/xls
+RUN apt install -y python3-distutils python3-dev libtinfo5 python-is-python3 && \
+  bazel build --verbose_failures -c opt -- //xls/... -//xls/contrib/xlscc/... 
 
 # Install verible
 WORKDIR /home
