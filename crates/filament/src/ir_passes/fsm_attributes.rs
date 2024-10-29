@@ -15,7 +15,7 @@ impl Visitor for FSMAttributes {
         let attrs = &data.comp.attrs;
 
         // Check if the component already has FSM attributes
-        if attrs.get(utils::BoolAttr::CounterFSM).is_some() {
+        if attrs.get(utils::comp_attrs::Bool::CounterFSM).is_some() {
             return Action::Stop;
         }
 
@@ -38,7 +38,7 @@ impl Visitor for FSMAttributes {
             // TODO(UnsignedByte): Find a better heuristic for slow FSMs
             if delay > 1 {
                 data.comp.attrs.set(
-                    utils::BoolAttr::CounterFSM,
+                    utils::comp_attrs::Bool::CounterFSM,
                     true,
                     utils::GPosIdx::UNKNOWN,
                 );
@@ -47,7 +47,7 @@ impl Visitor for FSMAttributes {
         }
 
         data.comp.attrs.set(
-            utils::BoolAttr::CounterFSM,
+            utils::comp_attrs::Bool::CounterFSM,
             false,
             utils::GPosIdx::UNKNOWN,
         );

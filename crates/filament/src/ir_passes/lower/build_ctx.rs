@@ -234,12 +234,15 @@ impl<'a> BuildCtx<'a> {
                 );
             };
             let delay = delay.concrete(self.comp);
-            let typ =
-                match self.comp.attrs.get(utils::BoolAttr::CounterFSM).unwrap()
-                {
-                    false => FsmType::Simple(states),
-                    true => FsmType::CounterChain(states, delay),
-                };
+            let typ = match self
+                .comp
+                .attrs
+                .get(utils::comp_attrs::Bool::CounterFSM)
+                .unwrap()
+            {
+                false => FsmType::Simple(states),
+                true => FsmType::CounterChain(states, delay),
+            };
             self.implement_fsm(&typ);
 
             // Construct the FSM

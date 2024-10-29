@@ -1,6 +1,7 @@
 use super::{
     Binding, Expr, Id, Implication, Loc, OrderConstraint, Range, Time,
 };
+use fil_utils as utils;
 use struct_variant::struct_variant;
 
 #[derive(Clone)]
@@ -365,11 +366,17 @@ pub struct Bundle {
     pub name: Loc<Id>,
     /// Type of the bundle
     pub typ: BundleType,
+    /// Attributes associated with the bundle
+    pub attrs: utils::port_attrs::Attrs,
 }
 
 impl Bundle {
-    pub fn new(name: Loc<Id>, typ: BundleType) -> Self {
-        Self { name, typ }
+    pub fn new(
+        name: Loc<Id>,
+        typ: BundleType,
+        attrs: utils::port_attrs::Attrs,
+    ) -> Self {
+        Self { name, typ, attrs }
     }
 
     /// Resolve expressions in the Bundle

@@ -175,12 +175,12 @@ bundle_typ = {
 
 // Bundle definition
 bundle_def = {
-  identifier ~ ("[" ~ expr ~ "]")* ~ ":" ~ bundle_typ
+  attributes ~ identifier ~ ("[" ~ expr ~ "]")* ~ ":" ~ bundle_typ
 }
 
 // Ports
 port_def = {
-  identifier ~ ":" ~ bitwidth
+  attributes ~ identifier ~ ":" ~ bitwidth
   // A port that is possibly a bundle port
   | bundle_def
   // An interface port
