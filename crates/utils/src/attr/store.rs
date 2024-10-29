@@ -2,7 +2,7 @@ use crate::{attr::AttrCtx, GPosIdx};
 use std::collections::HashMap;
 
 /// A store for attributes
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct AttrStore<Attr, Value>
 where
     Attr: Eq + std::hash::Hash + Copy,

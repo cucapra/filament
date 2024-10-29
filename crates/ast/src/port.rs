@@ -10,8 +10,6 @@ pub enum PortDef {
         liveness: Loc<Range>,
         /// Bitwidth of the port
         bitwidth: Loc<Expr>,
-        /// Attributes of the port
-        attrs: utils::port_attrs::Attrs,
     },
     Bundle(Bundle),
 }
@@ -26,13 +24,11 @@ impl PortDef {
         name: Loc<Id>,
         liveness: Loc<Range>,
         bitwidth: Loc<Expr>,
-        attrs: utils::port_attrs::Attrs,
     ) -> Self {
         Self::Port {
             name,
             liveness,
             bitwidth,
-            attrs,
         }
     }
 
@@ -56,12 +52,10 @@ impl PortDef {
                 name,
                 liveness,
                 bitwidth,
-                attrs,
             } => PortDef::Port {
                 name,
                 liveness: liveness.map(|l| l.resolve_event(bindings)),
                 bitwidth,
-                attrs,
             },
             PortDef::Bundle(b) => {
                 let t = b.typ.resolve_event(bindings);
@@ -81,12 +75,10 @@ impl PortDef {
                 name,
                 liveness,
                 bitwidth,
-                attrs,
             } => PortDef::Port {
                 name,
                 liveness: liveness.map(|l| l.resolve_exprs(bindings)),
                 bitwidth: bitwidth.map(|b| b.resolve(bindings)),
-                attrs,
             },
             PortDef::Bundle(b) => PortDef::Bundle(b.resolve_exprs(bindings)),
         }

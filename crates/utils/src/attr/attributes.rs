@@ -3,7 +3,7 @@ use crate::GPosIdx;
 use std::{hash::Hash, str::FromStr};
 
 /// Stores the attributes of a component
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Attributes<Bool, Num>
 where
     Bool: FromStr + Hash + Eq + Copy,

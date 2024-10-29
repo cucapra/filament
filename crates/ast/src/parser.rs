@@ -719,7 +719,7 @@ impl FilamentParser {
     fn bundle_def(input: Node) -> ParseResult<ast::Bundle> {
         match_nodes!(
             input.clone().into_children();
-            [attributes(attrs), identifier(name), expr(sizes).., bundle_typ((params, range, width))] => {
+            [identifier(name), expr(sizes).., bundle_typ((params, range, width))] => {
                 let sizes = sizes.collect_vec();
                 // If no size is specified, treat this is as one dimensional bundle with size 1.
                 let (sizes, s_len) = if sizes.is_empty() {
@@ -739,7 +739,7 @@ impl FilamentParser {
                     params.push(Loc::unknown(ast::Id::from(format!("_{i}"))));
                 });
 
-                Ok(ast::Bundle::new(name, ast::BundleType::new(params, sizes, range, width), attrs))
+                Ok(ast::Bundle::new(name, ast::BundleType::new(params, sizes, range, width)))
             }
         )
     }

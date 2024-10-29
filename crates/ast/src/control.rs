@@ -366,17 +366,11 @@ pub struct Bundle {
     pub name: Loc<Id>,
     /// Type of the bundle
     pub typ: BundleType,
-    /// Attributes associated with the bundle
-    pub attrs: utils::port_attrs::Attrs,
 }
 
 impl Bundle {
-    pub fn new(
-        name: Loc<Id>,
-        typ: BundleType,
-        attrs: utils::port_attrs::Attrs,
-    ) -> Self {
-        Self { name, typ, attrs }
+    pub fn new(name: Loc<Id>, typ: BundleType) -> Self {
+        Self { name, typ }
     }
 
     /// Resolve expressions in the Bundle

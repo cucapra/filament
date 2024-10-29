@@ -3,6 +3,7 @@ use super::{
     InstIdx, InvIdx, ParamIdx, PortIdx, Subst, TimeIdx, TimeSub,
 };
 use fil_ast::Op;
+use fil_utils as utils;
 use itertools::Itertools;
 use std::fmt;
 
@@ -27,7 +28,7 @@ impl Foldable<ParamIdx, ExprIdx> for Range {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Clone)]
+#[derive(Clone, PartialEq, Eq)]
 /// The context in which a port was defined.
 pub enum PortOwner {
     /// The port is defined in the signature
@@ -134,7 +135,7 @@ pub struct Liveness {
     pub range: Range,
 }
 
-#[derive(PartialEq, Eq, Hash, Clone)]
+#[derive(PartialEq, Eq, Clone)]
 /// A port tracks its definition and liveness.
 /// A port in the IR generalizes both bundles and normal ports.
 pub struct Port {
