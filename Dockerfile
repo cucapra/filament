@@ -33,13 +33,6 @@ RUN apt update && \
     liblapack-dev liblpsolve55-dev libsollya-dev libtool lp-solve ninja-build \
     pkg-config sollya wget
 
-
-# Install latest cmake from source
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.28.0-rc3/cmake-3.28.0-rc3.tar.gz && \
-    tar -xvf cmake-3.28.0-rc3.tar.gz && \
-    cd cmake-3.28.0-rc3 && ./bootstrap &&\
-    make && make install
-
 # Install FloPoCo 4.1
 WORKDIR /home
 RUN git clone https://gitlab.com/flopoco/flopoco &&\
