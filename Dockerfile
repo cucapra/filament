@@ -40,22 +40,13 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.28.0-rc3/cmake-3.
     cd cmake-3.28.0-rc3 && ./bootstrap &&\
     make && make install
 
-# Install an older version of ScaLP that still has the `then` keyword
-# This is required by the `flopoco` library
-WORKDIR /home
-RUN git clone https://digidev.digi.e-technik.uni-kassel.de/git/scalp.git &&\
-    cd scalp && git checkout 8f1bdf61ed4d893e7b1370edb62187a19e921960 &&\
-    mkdir build && cd build &&\
-    cmake .. && make &&\
-    cmake --install . --prefix /usr/local
-
 # Install FloPoCo 4.1
 WORKDIR /home
-RUN git clone --branch flopoco-4.1 https://gitlab.com/flopoco/flopoco &&\
-    cd flopoco && git checkout f3d76595c01f84cee57ae67eee1ceb31a6fe93bc &&\
-    mkdir build && cd build &&\
-    cmake -GNinja .. && ninja &&\
-    ln -s /home/flopoco/build/code/FloPoCoBin/flopoco /usr/bin/flopoco
+RUN git clone https://gitlab.com/flopoco/flopoco &&\
+    cd flopoco && git checkout 418ee8b71fe2c4976cbc0a92924683fa73162128 &&\
+    make sysdeps CONFIG=docker &&\
+    make CONFIG=docker &&\
+    make install CONFIG=docker
 
 # Install GHDL 3.0.0
 WORKDIR /home
