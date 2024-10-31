@@ -95,7 +95,8 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::Simplify,
         ip::AssignCheck,
         ip::BundleElim,
-        ip::AssignCheck
+        ip::AssignCheck,
+        ip::Schedule
     }
     // type check again before lowering
     ir_pass_pipeline! {opts, ir;

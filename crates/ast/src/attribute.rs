@@ -15,6 +15,9 @@ pub enum BoolAttr {
     /// Use a counter based FSM design
     #[strum(serialize = "counter_fsm")]
     CounterFSM,
+    /// Schedule this component
+    #[strum(serialize = "schedule")]
+    Schedule,
 }
 
 /// Represents a single attribute. This is a private enum that is used during
