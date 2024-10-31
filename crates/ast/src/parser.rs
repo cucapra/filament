@@ -324,7 +324,7 @@ impl FilamentParser {
                 Ok(Port::Un((name.take(), n)))
             },
             [bundle_def(bd)] => {
-                Ok(Port::Pd(Loc::new(bd.into(), sp)))
+                Ok(Port::Pd(Loc::new(bd, sp)))
             },
         )
     }

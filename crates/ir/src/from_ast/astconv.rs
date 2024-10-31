@@ -431,86 +431,48 @@ impl<'prog> BuildCtx<'prog> {
         pd: ast::PortDef,
         owner: ir::PortOwner,
     ) -> BuildRes<PortIdx> {
-        let (name, p) = match pd {
-            ast::PortDef::Port {
-                name,
-                liveness,
-                bitwidth,
-            } => {
-                let info = self.comp().add(ir::Info::port(
-                    name.copy(),
-                    name.pos(),
-                    bitwidth.pos(),
-                    liveness.pos(),
-                ));
+        let ast::Bundle {
+            name,
+            typ:
+                ast::BundleType {
+                    idx,
+                    len,
+                    liveness,
+                    bitwidth,
+                },
+        } = pd;
 
-                // The bundle type uses a fake bundle index and has a length of 1.
-                // We don't need to push a new scope because this type is does not
-                // bind any new parameters.
-                let p_name = self.gen_name();
-                let live = self.try_with_scope(|ctx| {
-                    Ok(ir::Liveness {
-                        idxs: vec![ctx.param(
-                            p_name.into(),
+        let info = self.comp().add(ir::Info::port(
+            name.copy(),
+            name.pos(),
+            bitwidth.pos(),
+            liveness.pos(),
+        ));
+        // Construct the bundle type in a new scope.
+        let live = self.try_with_scope(|ctx| {
+            Ok(ir::Liveness {
+                idxs: idx
+                    .into_iter()
+                    .map(|idx| {
+                        ctx.param(
                             // Updated after the port is constructed
-                            ir::ParamOwner::bundle(ir::PortIdx::UNKNOWN),
-                        )], // This parameter is unused
-                        lens: vec![ctx.comp().num(1)],
-                        range: ctx.range(liveness.take())?,
+                            idx,
+                            ir::ParamOwner::bundle(PortIdx::UNKNOWN),
+                        )
                     })
-                })?;
-                let p = ir::Port {
-                    width: self.expr(bitwidth.take())?,
-                    owner,
-                    live,
-                    info,
-                };
-                (name, p)
-            }
-            ast::PortDef::Bundle(ast::Bundle {
-                name,
-                typ:
-                    ast::BundleType {
-                        idx,
-                        len,
-                        liveness,
-                        bitwidth,
-                    },
-            }) => {
-                let info = self.comp().add(ir::Info::port(
-                    name.copy(),
-                    name.pos(),
-                    bitwidth.pos(),
-                    liveness.pos(),
-                ));
-                // Construct the bundle type in a new scope.
-                let live = self.try_with_scope(|ctx| {
-                    Ok(ir::Liveness {
-                        idxs: idx
-                            .into_iter()
-                            .map(|idx| {
-                                ctx.param(
-                                    // Updated after the port is constructed
-                                    idx,
-                                    ir::ParamOwner::bundle(PortIdx::UNKNOWN),
-                                )
-                            })
-                            .collect_vec(),
-                        lens: len
-                            .into_iter()
-                            .map(|len| ctx.expr(len.take()))
-                            .collect::<BuildRes<Vec<_>>>()?,
-                        range: ctx.range(liveness.take())?,
-                    })
-                })?;
-                let p = ir::Port {
-                    width: self.expr(bitwidth.take())?,
-                    owner,
-                    live,
-                    info,
-                };
-                (name, p)
-            }
+                    .collect_vec(),
+                lens: len
+                    .into_iter()
+                    .map(|len| ctx.expr(len.take()))
+                    .collect::<BuildRes<Vec<_>>>()?,
+                range: ctx.range(liveness.take())?,
+            })
+        })?;
+        let p = ir::Port {
+            width: self.expr(bitwidth.take())?,
+            owner,
+            live,
+            info,
         };
 
         // Defines helper variable here due to lifetime issues
@@ -832,7 +794,7 @@ impl<'prog> BuildCtx<'prog> {
         for ((p, idx), src) in sig.inputs.clone().into_iter().zip(srcs) {
             let info = self
                 .comp()
-                .add(ir::Info::connect(p.inner().name().pos(), src.pos()));
+                .add(ir::Info::connect(p.inner().name.pos(), src.pos()));
             let resolved = p.map(|p| {
                 p.resolve_exprs(&param_binding)
                     .resolve_event(&event_binding)
@@ -1035,8 +997,7 @@ impl<'prog> BuildCtx<'prog> {
             }
             ast::Command::Bundle(bun) => {
                 // Add the bundle to the current scope
-                let idx =
-                    self.port(ast::PortDef::Bundle(bun), ir::PortOwner::Local)?;
+                let idx = self.port(bun, ir::PortOwner::Local)?;
                 vec![ir::Command::from(idx)]
             }
         };
