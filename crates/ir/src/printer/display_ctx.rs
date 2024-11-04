@@ -113,9 +113,16 @@ impl DisplayCtx<ir::PortIdx> for ir::Component {
         let name = if log::log_enabled!(log::Level::Trace) {
             format!("{idx}")
         } else {
-            self.get(port.info)
-                .as_port()
-                .map_or(format!("{idx}"), |p| format!("{}", p.name))
+            self.src_info
+                .as_ref()
+                .and_then(|src_info| {
+                    src_info.ports.find(idx).map(|id| id.to_string())
+                })
+                .unwrap_or_else(|| {
+                    self.get(port.info)
+                        .as_port()
+                        .map_or(format!("{idx}"), |p| format!("{}", p.name))
+                })
         };
         match port.owner {
             ir::PortOwner::Local | ir::PortOwner::Sig { .. } => {
