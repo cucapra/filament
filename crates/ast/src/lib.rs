@@ -1,3 +1,4 @@
+mod attribute;
 mod bind_map;
 mod component;
 mod constraint;
@@ -11,6 +12,7 @@ mod port;
 mod signature;
 mod time;
 
+pub use attribute::{Attr, Attributes, BoolAttr, NumAttr};
 pub use bind_map::Binding;
 pub use component::{Component, Extern, Namespace};
 pub use constraint::{Constraint, OrderConstraint, OrderOp};

@@ -234,5 +234,5 @@ pub struct Let {
     /// The parameter
     pub param: ParamIdx,
     /// The binding for the parameter
-    pub expr: ExprIdx,
+    pub expr: Option<ExprIdx>,
 }

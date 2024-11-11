@@ -73,15 +73,17 @@ impl BuildDomination {
         for (id, cmd) in cmds.iter().enumerate() {
             match cmd {
                 ir::Command::Let(ir::Let { expr, param }) => {
-                    for idx in expr.relevant_vars(comp) {
-                        log::trace!(
-                            "param {} is used by {}",
-                            comp.display(idx),
-                            comp.display(*param)
-                        );
-                        if let Some(pid) = param_map.get(&idx) {
-                            // Add a dependency from the let to the parameter owner, if it is defined in this scope
-                            topo.add_dependency(*pid, id);
+                    if let Some(expr) = expr {
+                        for idx in expr.relevant_vars(comp) {
+                            log::trace!(
+                                "param {} is used by {}",
+                                comp.display(idx),
+                                comp.display(*param)
+                            );
+                            if let Some(pid) = param_map.get(&idx) {
+                                // Add a dependency from the let to the parameter owner, if it is defined in this scope
+                                topo.add_dependency(*pid, id);
+                            }
                         }
                     }
                 }

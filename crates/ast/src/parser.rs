@@ -2,7 +2,7 @@
 #![allow(clippy::type_complexity)]
 
 //! Parser for Filament programs.
-use crate::{self as ast, Loc, TimeSub};
+use crate::{self as ast, Attributes, Loc, TimeSub};
 use fil_utils::{self as utils, FilamentResult};
 use fil_utils::{FileIdx, GPosIdx, GlobalPositionTable};
 use itertools::Itertools;
@@ -10,6 +10,7 @@ use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
 use std::path::Path;
+use std::str::FromStr;
 
 /// Data associated with parsing the file.
 #[derive(Clone)]
@@ -323,7 +324,7 @@ impl FilamentParser {
                 Ok(Port::Un((name.take(), n)))
             },
             [bundle_def(bd)] => {
-                Ok(Port::Pd(Loc::new(bd.into(), sp)))
+                Ok(Port::Pd(Loc::new(bd, sp)))
             },
         )
     }
@@ -626,6 +627,7 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.into_children();
             [
+                attributes(attributes),
                 identifier(name),
                 params(params),
                 abstract_var(abstract_vars),
@@ -636,6 +638,7 @@ impl FilamentParser {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
                 ast::Signature::new(
                     name,
+                    attributes,
                     params,
                     abstract_vars,
                     unannotated_ports,
@@ -648,6 +651,7 @@ impl FilamentParser {
                  )
             },
             [
+                attributes(attributes),
                 identifier(name),
                 params(params),
                 io(io),
@@ -657,6 +661,7 @@ impl FilamentParser {
                 let (inputs, outputs, interface_signals, unannotated_ports) = io;
                 ast::Signature::new(
                     name,
+                    attributes,
                     params,
                     vec![],
                     unannotated_ports,
@@ -787,7 +792,8 @@ impl FilamentParser {
     fn param_let(input: Node) -> ParseResult<ast::ParamLet> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(name), expr(expr)] => ast::ParamLet { name, expr: expr.take() }
+            [param_var(name), expr(expr)] => ast::ParamLet { name, expr: Some(expr.take()) },
+            [param_var(name)] => ast::ParamLet { name, expr: None }
         ))
     }
 
@@ -817,6 +823,35 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.into_children();
             [command(cmd)..] => cmd.into_iter().flatten().collect(),
+        ))
+    }
+
+    fn not(input: Node) -> ParseResult<()> {
+        Ok(())
+    }
+
+    fn attr_bind(input: Node) -> ParseResult<Vec<(ast::Attr, GPosIdx, u64)>> {
+        match_nodes!(
+            input.clone().into_children();
+            [identifier(name)] =>
+            ast::BoolAttr::from_str(name.as_ref()).map(
+                |attr| vec![(ast::Attr::Bool(attr), name.pos(), 1)]).map_err(
+                    |_| input.error(format!("Found unknown attribute flag \"{name}\""))),
+            [not(_), identifier(name)] =>
+            ast::BoolAttr::from_str(name.as_ref()).map(
+                |attr| vec![(ast::Attr::Bool(attr), name.pos(), 0)]).map_err(
+                    |_| input.error(format!("Found unknown attribute flag \"{name}\""))),
+            [identifier(name), bitwidth(val)] =>
+            ast::NumAttr::from_str(name.as_ref()).map(
+                |attr| vec![(ast::Attr::Num(attr), name.pos(), val)]).map_err(
+                    |_| input.error(format!("Found unknown numeric attribute \"{name}\""))),
+        )
+    }
+
+    fn attributes(input: Node) -> ParseResult<Attributes> {
+        Ok(match_nodes!(
+            input.into_children();
+            [attr_bind(attr)..] => ast::Attributes::new(attr.into_iter().flatten())
         ))
     }
 
@@ -868,8 +903,11 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.into_children();
             [imports(imps), comp_or_ext(mixed).., _EOI] => {
-                let mut namespace = ast::Namespace::new("main".to_string());
-                namespace.imports = imps;
+                let mut namespace = ast::Namespace {
+                    imports: imps,
+                    ..Default::default()
+                };
+
                 for m in mixed {
                     match m {
                         BodyEl::Ext(sig) => namespace.externs.push(sig),

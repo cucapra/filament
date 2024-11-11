@@ -342,7 +342,14 @@ impl MonoDeferred<'_, '_> {
                 let p = param.ul();
                 let e = self
                     .monosig
-                    .expr(&self.underlying, expr.ul(), self.pass)
+                    .expr(
+                        &self.underlying,
+                        expr.unwrap_or_else(|| {
+                            unreachable!("Let binding was bound to `?`")
+                        })
+                        .ul(),
+                        self.pass,
+                    )
                     .get();
                 let Some(v) = e.as_concrete(self.monosig.base.comp()) else {
                     unreachable!(

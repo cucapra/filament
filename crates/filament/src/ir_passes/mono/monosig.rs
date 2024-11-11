@@ -56,7 +56,7 @@ impl MonoSig {
                 .zip(params)
                 .collect_vec(),
         );
-        let comp = ir::Component::new(typ);
+        let comp = ir::Component::new(typ, underlying.attrs.clone());
 
         Self {
             base: BaseComp::new(comp),
@@ -514,35 +514,32 @@ impl MonoSig {
     /// corresponding index
     fn bundle_params(
         &mut self,
-        _underlying: &UnderlyingComp,
-        _pass: &mut Monomorphize,
+        underlying: &UnderlyingComp,
+        pass: &mut Monomorphize,
         params: &[Underlying<ir::Param>],
         port: Base<ir::Port>,
     ) -> Vec<Base<ir::Param>> {
-        let info = self.base.add(ir::Info::empty()).get();
         let mono_owner = ir::ParamOwner::Bundle(port.get());
 
-        if let Some(new_params) = self.bundle_param_map.get(&port) {
-            return new_params
-                .iter()
-                .map(|&new_param_idx| {
-                    let new_param = self.base.get_mut(new_param_idx);
-                    new_param.owner = mono_owner.clone();
-                    new_param.info = info;
-                    new_param_idx
-                })
-                .collect_vec();
+        if self.bundle_param_map.get(&port).is_some() {
+            unreachable!("port {} already has bundle params", port.get());
         };
 
         let mono_params = params
             .iter()
-            .map(|old_param| {
+            .map(|old_pidx| {
                 let mono_param = ir::Param {
                     owner: mono_owner.clone(),
-                    info,
+                    info: self
+                        .info(
+                            underlying,
+                            pass,
+                            underlying.get(*old_pidx).info.ul(),
+                        )
+                        .get(),
                 };
                 let new_idx = self.base.add(mono_param);
-                self.param_map.push(*old_param, new_idx);
+                self.param_map.push(*old_pidx, new_idx);
                 new_idx
             })
             .collect_vec();
@@ -866,7 +863,6 @@ impl MonoSig {
             range: range.clone(), // placeholder
         };
 
-        self.bundle_param_map.insert(new_port, mono_idxs);
         let mono_width = self.expr(underlying, width.ul(), pass);
         mono_liveness.lens = lens
             .iter()

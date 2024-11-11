@@ -7,7 +7,7 @@ use crate::{
     AddCtx, Cmp, Ctx, DisplayCtx, EventIdx, ExprIdx, InterfaceSrc, MutCtx,
     ParamIdx, PortIdx, PropIdx, TimeIdx,
 };
-use fil_ast as ast;
+use fil_ast::{self as ast};
 use fil_utils::{Diagnostics, Error, GPosIdx};
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -213,8 +213,12 @@ impl<'prog> BuildCtx<'prog> {
             ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
                 // Declare the parameter since it may be used in instance or
                 // invocation definitions.
-                let bind = self.expr(expr.clone())?;
-                let owner = ir::ParamOwner::Let { bind };
+                let owner = ir::ParamOwner::Let {
+                    bind: match expr {
+                        Some(expr) => Some(self.expr(expr.clone())?),
+                        None => None,
+                    },
+                };
                 self.param(name.clone(), owner);
                 Ok(())
             }
@@ -427,86 +431,48 @@ impl<'prog> BuildCtx<'prog> {
         pd: ast::PortDef,
         owner: ir::PortOwner,
     ) -> BuildRes<PortIdx> {
-        let (name, p) = match pd {
-            ast::PortDef::Port {
-                name,
-                liveness,
-                bitwidth,
-            } => {
-                let info = self.comp().add(ir::Info::port(
-                    name.copy(),
-                    name.pos(),
-                    bitwidth.pos(),
-                    liveness.pos(),
-                ));
+        let ast::Bundle {
+            name,
+            typ:
+                ast::BundleType {
+                    idx,
+                    len,
+                    liveness,
+                    bitwidth,
+                },
+        } = pd;
 
-                // The bundle type uses a fake bundle index and has a length of 1.
-                // We don't need to push a new scope because this type is does not
-                // bind any new parameters.
-                let p_name = self.gen_name();
-                let live = self.try_with_scope(|ctx| {
-                    Ok(ir::Liveness {
-                        idxs: vec![ctx.param(
-                            p_name.into(),
+        let info = self.comp().add(ir::Info::port(
+            name.copy(),
+            name.pos(),
+            bitwidth.pos(),
+            liveness.pos(),
+        ));
+        // Construct the bundle type in a new scope.
+        let live = self.try_with_scope(|ctx| {
+            Ok(ir::Liveness {
+                idxs: idx
+                    .into_iter()
+                    .map(|idx| {
+                        ctx.param(
                             // Updated after the port is constructed
-                            ir::ParamOwner::bundle(ir::PortIdx::UNKNOWN),
-                        )], // This parameter is unused
-                        lens: vec![ctx.comp().num(1)],
-                        range: ctx.range(liveness.take())?,
+                            idx,
+                            ir::ParamOwner::bundle(PortIdx::UNKNOWN),
+                        )
                     })
-                })?;
-                let p = ir::Port {
-                    width: self.expr(bitwidth.take())?,
-                    owner,
-                    live,
-                    info,
-                };
-                (name, p)
-            }
-            ast::PortDef::Bundle(ast::Bundle {
-                name,
-                typ:
-                    ast::BundleType {
-                        idx,
-                        len,
-                        liveness,
-                        bitwidth,
-                    },
-            }) => {
-                let info = self.comp().add(ir::Info::port(
-                    name.copy(),
-                    name.pos(),
-                    bitwidth.pos(),
-                    liveness.pos(),
-                ));
-                // Construct the bundle type in a new scope.
-                let live = self.try_with_scope(|ctx| {
-                    Ok(ir::Liveness {
-                        idxs: idx
-                            .into_iter()
-                            .map(|idx| {
-                                ctx.param(
-                                    // Updated after the port is constructed
-                                    idx,
-                                    ir::ParamOwner::bundle(PortIdx::UNKNOWN),
-                                )
-                            })
-                            .collect_vec(),
-                        lens: len
-                            .into_iter()
-                            .map(|len| ctx.expr(len.take()))
-                            .collect::<BuildRes<Vec<_>>>()?,
-                        range: ctx.range(liveness.take())?,
-                    })
-                })?;
-                let p = ir::Port {
-                    width: self.expr(bitwidth.take())?,
-                    owner,
-                    live,
-                    info,
-                };
-                (name, p)
-            }
+                    .collect_vec(),
+                lens: len
+                    .into_iter()
+                    .map(|len| ctx.expr(len.take()))
+                    .collect::<BuildRes<Vec<_>>>()?,
+                range: ctx.range(liveness.take())?,
+            })
+        })?;
+        let p = ir::Port {
+            width: self.expr(bitwidth.take())?,
+            owner,
+            live,
+            info,
         };
 
         // Defines helper variable here due to lifetime issues
@@ -828,7 +794,7 @@ impl<'prog> BuildCtx<'prog> {
         for ((p, idx), src) in sig.inputs.clone().into_iter().zip(srcs) {
             let info = self
                 .comp()
-                .add(ir::Info::connect(p.inner().name().pos(), src.pos()));
+                .add(ir::Info::connect(p.inner().name.pos(), src.pos()));
             let resolved = p.map(|p| {
                 p.resolve_exprs(&param_binding)
                     .resolve_event(&event_binding)
@@ -979,7 +945,10 @@ impl<'prog> BuildCtx<'prog> {
                         "let-bound parameter was rewritten to expression"
                     )
                 };
-                let expr = self.expr(expr)?;
+                let expr = match expr {
+                    Some(e) => Some(self.expr(e)?),
+                    None => None,
+                };
                 // The declare phase already added the rewrite for this binding
                 vec![ir::Let { param, expr }.into()]
             }
@@ -1028,8 +997,7 @@ impl<'prog> BuildCtx<'prog> {
             }
             ast::Command::Bundle(bun) => {
                 // Add the bundle to the current scope
-                let idx =
-                    self.port(ast::PortDef::Bundle(bun), ir::PortOwner::Local)?;
+                let idx = self.port(bun, ir::PortOwner::Local)?;
                 vec![ir::Command::from(idx)]
             }
         };
@@ -1068,6 +1036,50 @@ impl<'prog> BuildCtx<'prog> {
     }
 }
 
+/// Information about generated components
+enum TypeInfo {
+    /// Contains source information
+    Source(Vec<ast::Command>),
+    /// Contains extern verilog module name
+    External(String),
+    /// Contains extern tool name
+    Generated(String),
+}
+
+/// Temporary state used to store information from the component
+/// before the IR version is created.
+struct ComponentTransform {
+    /// Type of the component
+    typ: TypeInfo,
+    /// Signature of the component
+    sig: ast::Signature,
+}
+
+/// Convert an [ast::Component] into a source [ComponentTransform]
+impl From<ast::Component> for ComponentTransform {
+    fn from(comp: ast::Component) -> Self {
+        Self {
+            typ: TypeInfo::Source(comp.body),
+            sig: comp.sig,
+        }
+    }
+}
+
+/// Convert an [ast::Extern] into an external/generated [ComponentTransform]
+impl From<ast::Extern> for ComponentTransform {
+    fn from(ext: ast::Extern) -> Self {
+        let typ = if ext.gen.is_none() {
+            TypeInfo::External(ext.path)
+        } else {
+            TypeInfo::Generated(ext.gen.unwrap())
+        };
+        Self {
+            typ,
+            sig: ast::Signature::default(),
+        }
+    }
+}
+
 fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
     // creates an empty context with the main index.
     let mut ctx = ir::Context {
@@ -1085,9 +1097,11 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
 
     // Walk over signatures and compile signatures to build a SigMap
     // Contains a tuple containing three necessary bits of information:
-    // 1. The (optional) name of the component (if it is an external)
-    // 2. The signature of the component
-    // 3. The (optional) body of the component (if it is not an external)
+    // 1. Component type (external, gen, or source)
+    // 2. The (optional) name of the component (if it is an external)
+    // 3. Attributes of the component
+    // 4. The signature of the component
+    // 5. The (optional) body of the component (if it is not an external)
     let comps = ns
         // pull signatures out of externals
         .externs
@@ -1095,18 +1109,16 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
         // track (extern location / gen tool name, signature, body)
         .flat_map(|ast::Extern { comps, gen, path }| {
             comps.into_iter().map(move |comp| {
-                let typ = if gen.is_none() {
-                    ir::CompType::External
+                let typ = if let Some(name) = &gen {
+                    TypeInfo::Generated(name.clone())
                 } else {
-                    ir::CompType::Generated
+                    TypeInfo::External(path.clone())
                 };
-                (typ, Some((gen.clone(), path.clone())), comp, None)
+                ComponentTransform { typ, sig: comp }
             })
         })
         // add signatures of components as well as their command bodies
-        .chain(ns.components.into_iter().map(|comp| {
-            (ir::CompType::Source, None, comp.sig, Some(comp.body))
-        }))
+        .chain(ns.components.into_iter().map(ComponentTransform::from))
         .enumerate();
 
     // used in the beginning so signatures of components can be built without any information
@@ -1121,28 +1133,36 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
 
     // uses the information above to compile the signatures of components and create their builders.
     let (mut builders, sig_map): (Vec<_>, SigMap) = comps
-        .map(|(idx, (typ, ext_info, sig, body))| {
+        .map(|(idx, comp_ctx)| {
             let idx = ir::CompIdx::new(idx);
-            let mut builder = BuildCtx::new(ir::Component::new(typ), &sig_map);
+            let mut builder = BuildCtx::new(ir::Component::new(
+                match comp_ctx.typ {
+                    TypeInfo::Source(_) => ir::CompType::Source,
+                    TypeInfo::External(_) => ir::CompType::External,
+                    TypeInfo::Generated(_) => ir::CompType::Generated,
+                }, comp_ctx.sig.attributes.clone()), &sig_map);
 
             // enable source information saving if this is main
             if ctx.is_main(idx) {
                 builder.comp().src_info =
-                    Some(InterfaceSrc::new(sig.name.copy(), None))
+                    Some(InterfaceSrc::new(comp_ctx.sig.name.copy(), None))
             }
             // add the file to the externals map if it exists
-            if let Some((gen, path)) = ext_info {
-                // Only real externals get a file location
-                if matches!(typ, ir::CompType::External) {
-                    ctx.externals.entry(path).or_default().push(idx);
+            match &comp_ctx.typ {
+                TypeInfo::External(path) => {
+                    ctx.externals.entry(path.clone()).or_default().push(idx);
+
+                    builder.comp().src_info = Some(InterfaceSrc::new(comp_ctx.sig.name.copy(), None));
                 }
-                // Add source information
-                builder.comp().src_info =
-                    Some(InterfaceSrc::new(sig.name.copy(), gen));
-            }
+                TypeInfo::Generated(name) => {
+                    builder.comp().src_info = Some(InterfaceSrc::new(comp_ctx.sig.name.copy(), Some(name.clone())));
+                }
+                _ => {}
+
+            };
 
             // compile the signature
-            let irsig = builder.sig(idx, &sig)?;
+            let irsig = builder.sig(idx, &comp_ctx.sig)?;
 
             // Now that all the signature has been compiled,
             // if this component is the main component, add the provided
@@ -1167,7 +1187,7 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
                         builder.diag(),
                     ).map_err(
                         |mut e| {
-                            let err = Error::misc(format!("Incorrect parameter bindings provided to top-level component {}", sig.name)).add_note(e.add_message("Parameter bindings should be provided via the `--bindings` flag in a `.toml` file."));
+                            let err = Error::misc(format!("Incorrect parameter bindings provided to top-level component {}", comp_ctx.sig.name)).add_note(e.add_message("Parameter bindings should be provided via the `--bindings` flag in a `.toml` file."));
                             e.add_error(err);
                             e
                         }
@@ -1194,7 +1214,13 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
                     .collect::<BuildRes<Vec<_>>>()?;
             }
 
-            Ok((Builder { idx, builder, body }, (sig.name.take(), irsig)))
+            Ok((Builder {
+                idx,
+                builder,
+                body: match comp_ctx.typ {
+                TypeInfo::Source(body) => Some(body),
+                _ => None,
+            }}, (comp_ctx.sig.name.take(), irsig)))
         })
         .collect::<BuildRes<Vec<_>>>()?
         .into_iter()

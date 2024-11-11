@@ -185,7 +185,6 @@ impl Compile {
 
     /// Compiles an [ir::Component] into a [calyx::Component]
     fn component(
-        disable_slow_fsms: bool,
         ctx: &ir::Context,
         idx: ir::CompIdx,
         bind: &mut Binding,
@@ -223,15 +222,8 @@ impl Compile {
         }
 
         let builder = calyx::Builder::new(&mut component, lib).not_generated();
-        let mut buildctx = BuildCtx::new(
-            ctx,
-            idx,
-            bind,
-            disable_slow_fsms,
-            name_gen,
-            builder,
-            lib,
-        );
+        let mut buildctx =
+            BuildCtx::new(ctx, idx, bind, name_gen, builder, lib);
 
         // Construct all the FSMs
         for (event, states) in max_states(comp) {
@@ -299,11 +291,7 @@ impl Compile {
     }
 
     /// Compiles filament into calyx
-    pub fn compile(
-        ctx: ir::Context,
-        disable_slow_fsms: bool,
-        debug: bool,
-    ) -> calyx::Context {
+    pub fn compile(ctx: ir::Context, debug: bool) -> calyx::Context {
         // Creates a map between the file name and the external components defined in that file
         let externals =
             ctx.externals.iter().map(|(k, v)| (k, v.clone())).collect();
@@ -322,7 +310,6 @@ impl Compile {
         // Compile the components in post-order.
         po.apply_pre_order(|ctx, idx| {
             let comp = Compile::component(
-                disable_slow_fsms,
                 ctx,
                 idx,
                 &mut bindings,
