@@ -1,17 +1,25 @@
-import "../src/cpu.fil";
+import "apps/frisc/src/cpu.fil";
 
 comp main<'G:1> (
   clk:1,
-  //go: interface['G],
-   reset: ['G,'G+1] 1,
-   instr: ['G,'G+1] 32
+  reset:1,
+  instr: ['G, 'G+1]32,
+  pcin: ['G, 'G+1] 32,
 ) -> (
-   out: ['G,'G+1] 32,
-   aluInA: ['G,'G+1] 32,
-   aluInB: ['G,'G+1] 32,
+  pc: ['G, 'G+1] 32,
+  nextpc: ['G, 'G+1] 32,
+  isLoad: ['G, 'G+1] 1,
+  isStore: ['G, 'G+1] 1,
+  out: ['G, 'G+1] 32,
+  memAddr: ['G, 'G+1] 32,
+  memData: ['G, 'G+1] 32,
 ) {
-  cpu := new CPU<'G>(reset, instr);
+  cpu := new CPU<'G>(instr, pcin);
   out = cpu.out;
-  aluInA = cpu.aluInA;
-  aluInB = cpu.aluInB;
+  pc = cpu.pc;
+  nextpc = cpu.nextpc;
+  isLoad = cpu.isLoad;
+  isStore = cpu.isStore;
+  memAddr = cpu.memAddr;
+  memData = cpu.memData;
 }

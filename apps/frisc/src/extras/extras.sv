@@ -56,3 +56,33 @@ module ByteAccess1D #(
     if (write_mask[3]) mem[addr0+3] <= write_data[31:24];
   end
 endmodule
+
+module Mem1D #(
+  parameter SIZE=16,
+  parameter DATA_WIDTH=32,
+  parameter ADDR_WIDTH=4
+) (
+  input logic clk,
+  input logic reset,
+  input logic [ADDR_WIDTH-1:0] read_addr,
+  input logic write_en,
+  input logic [ADDR_WIDTH-1:0] write_addr,
+  input logic [DATA_WIDTH-1:0] write_data,
+  output logic [DATA_WIDTH-1:0] read_data
+);
+  logic [DATA_WIDTH-1:0] mem [SIZE-1:0];
+
+  assign read_data = mem[read_addr];
+
+  integer i;
+  always_ff @(posedge clk) begin
+    if (reset)
+      for (i = 0; i < SIZE; i = i + 1 )
+        mem[i] <= 0;
+    else if (write_en) mem[write_addr] <= write_data;
+    else
+      for (i = 0; i < SIZE; i = i + 1)
+        mem[i] <= mem[i];
+  end
+
+endmodule

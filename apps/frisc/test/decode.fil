@@ -1,29 +1,29 @@
-import "../src/decode.fil";
+import "frisc/src/decode.fil";
 
-comp main<'G:1> (
-   instr: ['G,'G+1] 32
+comp main<G:1> (
+  @[G,G+1] instr:32
 ) -> (
-   isLoad: ['G, 'G+1] 1,
-   isStore: ['G, 'G+1] 1,
-   isALUImm: ['G, 'G+1] 1,
-   isALUReg: ['G, 'G+1] 1,
-   isLUI: ['G, 'G+1] 1,
-   isJAL: ['G, 'G+1] 1,
-   isJALR: ['G, 'G+1] 1,
-   isBranch: ['G, 'G+1] 1,
-   isSys: ['G, 'G+1] 1,
-   isAUIPC: ['G, 'G+1] 1,
-   Uimm: ['G, 'G+1] 32,
-   Iimm: ['G, 'G+1] 32,
-   Simm: ['G, 'G+1] 32,
-   Bimm: ['G, 'G+1] 32,
-   Jimm: ['G, 'G+1] 32,
-   funct: ['G, 'G+1] 8,
-   isAdd: ['G, 'G+1] 1,   // 1 if add, 0 if sub
-   isArith: ['G, 'G+1] 1, // 1 if arith, 0 if log
-   rf_write: ['G, 'G+1] 1
+  @[G, G+1] isLoad:1,
+  @[G, G+1] isStore:1,
+  @[G, G+1] isALUImm:1,
+  @[G, G+1] isALUReg:1,
+  @[G, G+1] isLUI:1,
+  @[G, G+1] isJAL:1,
+  @[G, G+1] isJALR:1,
+  @[G, G+1] isBranch:1,
+  @[G, G+1] isSys:1,
+  @[G, G+1] isAUIPC:1,
+  @[G, G+1] Uimm:32,
+  @[G, G+1] Iimm:32,
+  @[G, G+1] Simm:32,
+  @[G, G+1] Bimm:32,
+  @[G, G+1] Jimm:32,
+  @[G, G+1] funct:8,
+  @[G, G+1] isAdd:1,   // 1 if add, 0 if sub
+  @[G, G+1] isArith:1, // 1 if arith, 0 if log
+  @[G, G+1] rf_write:1
 ) {
-  decoder := new Decode<'G>(instr);
+  decoder := new Decode<G>(instr);
   isLoad = decoder.isLoad;
   isStore = decoder.isStore;
   isALUImm = decoder.isALUImm;

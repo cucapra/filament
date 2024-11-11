@@ -1,14 +1,14 @@
-import "../src/alu.fil";
+import "frisc/src/alu.fil";
 
-comp main<'G:1> (
-   inA: ['G,'G+1] 32,
-   inB: ['G,'G+1] 32,
-   funct: ['G,'G+1] 8,
-   isAdd: ['G,'G+1] 1,
-   isArith: ['G,'G+1] 1
+comp main<G:1> (
+  @[G,G+1] inA:32,
+  @[G,G+1] inB:32,
+  @[G,G+1] funct:8,
+  @[G,G+1] isAdd:1,
+  @[G,G+1] isArith:1
 ) -> (
-   out: ['G,'G+1] 32
+  @[G,G+1] out:32
 ) {
-  alu := new ALU<'G>(inA, inB, funct, isAdd, isArith);
+  alu := new ALU<G>(inA, inB, funct, isAdd, isArith);
   out = alu.out;
 }

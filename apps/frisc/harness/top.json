@@ -1,14 +1,20 @@
 {
   "iram": {
-    "data": [1074823347,1081491,2130067,3178643,4227219],
+    "data": [
+      "sub x1 x1 x1",
+      "addi x2 x1 99",
+      "addi x2 x2 1",
+      "addi x2 x2 1",
+      "addi x2 x2 1",
+      "addi x2 x2 1"
+    ],
     "format": {
-      "numeric_type": "bitnum",
-      "is_signed": false,
-      "width": 32
+      "numeric_type": "risc-v",
+      "isa": "32i"
     }
   },
   "res": {
-    "data": [9999,200,200,200,200],
+    "data": [9999,9999,9999,9999,9999,9999],
     "format": {
       "numeric_type": "bitnum",
       "is_signed": false,

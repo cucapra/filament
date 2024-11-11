@@ -7,15 +7,15 @@ import "primitives/core.fil";
 extern "regfile.sv" {
   comp RegFile<'G:1> (
     clk:1,
-     reset: ['G,'G+1] 1,
-     en: ['G,'G+1] 1,    // write enable
-     rd: ['G,'G+1] 5,    // destination reg
-     data: ['G,'G+1] 32, // data in
-     rin1: ['G,'G+1] 5,  // rs1 addr
-     rin2: ['G,'G+1] 5   // rs2 addr
+    reset:1,
+    en: ['G, 'G+1] 1,    // write enable
+    rd: ['G, 'G+1] 5,    // destination reg
+    data: ['G, 'G+1] 32, // data in
+    rin1: ['G, 'G+1] 5,  // rs1 addr
+    rin2: ['G, 'G+1] 5   // rs2 addr
   ) -> (
-     rs1: ['G,'G+1] 32,  // rs1 data
-     rs2: ['G,'G+1] 32   // rs2 data
+    rs1: ['G, 'G+1] 32,  // rs1 data
+    rs2: ['G, 'G+1] 32   // rs2 data
   );
 }
 
