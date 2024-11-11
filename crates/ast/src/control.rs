@@ -379,6 +379,14 @@ impl Bundle {
             ..self
         }
     }
+
+    /// Resolve events in the Bundle
+    pub fn resolve_event(self, binding: &Binding<Time>) -> Self {
+        Self {
+            typ: self.typ.resolve_event(binding),
+            ..self
+        }
+    }
 }
 
 /// A let-bound parameter
