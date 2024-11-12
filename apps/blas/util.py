@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from random import randint
 import subprocess
+import sys
 from golden import *
 
 """
@@ -92,7 +93,7 @@ def generate_random_tests(port_info, width, num_tests):
                 test_json[k] = test_json[k] + [randint(0,pow(2, width)-1)]
             else:
                 raise Exception(f"Unknown data type {type}")
-    return test_json
+    return test_json   
 
 """
 Given an input file, uses f to compute expected output
@@ -151,6 +152,7 @@ def run_fud(kernel):
         f" --bindings {basename}.toml"
         ], stdout=open(kernel+".out",'w'), stderr=subprocess.DEVNULL
     )
+
     with open(kernel+".out") as f:
         fud_out = json.load(f)
 
@@ -165,6 +167,7 @@ def main():
     parser.add_argument("-k", "--kernel")
     parser.add_argument("-r", "--rand",action="store_true")
     parser.add_argument("-n", "--numtests")
+    parser.add_argument("-c", "--check", action="store_true")
     args = parser.parse_args()
 
     path = os.path.normpath(args.kernel)
@@ -207,12 +210,25 @@ def main():
     func_dict["syr"] = syr
 
     expected = get_golden_output(func_dict[called_func], json.load(open(ports)), tests_to_check)
-    expected_conv = str(convert_expect(convert_json(expected, width))).replace("\'","\"")
+    expected_cmp = convert_expect(convert_json(expected, width))
+    expected_conv = str(expected_cmp).replace("\'","\"")
     expected_filename = os.path.join(dir, 'test.expect')
     with open(expected_filename, "w") as f:
         f.write(str(expected_conv))
 
     run_fud(args.kernel)
+
+    fud_out = os.path.join(dir, 'test.fil.out')
+    fud_out = json.load(open(fud_out))
+
+    # print(f"expected_cmp: {expected_cmp}")
+
+    if (fud_out != expected_cmp):
+        print(f"expected {expected_cmp} but got {fud_out}\n")
+        sys.exit(1)
+    else:
+        sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

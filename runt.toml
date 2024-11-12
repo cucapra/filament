@@ -122,8 +122,9 @@ apps/fft/test/scripts/edge.sh $dir
 [[tests]]
 name = "blas"
 paths = ["apps/blas/*/test.fil"]
+expect_dir = "apps/blas/"
 cmd = """
-python apps/blas/util.py -r -n 5 -w 4 -k {} && cat {}.out
+python apps/blas/util.py -r -n 5 -w 4 -k {}
 """
 
 # ============== Examples in the documentation ============
