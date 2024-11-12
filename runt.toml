@@ -122,8 +122,11 @@ apps/fft/test/scripts/edge.sh $dir
 [[tests]]
 name = "blas"
 paths = ["apps/blas/*/test.fil"]
+expect_dir = "apps/blas/"
 cmd = """
-fud e -s cocotb.data {}.data --to cocotb-out {} -q
+python apps/blas/util.py -r -n 5 -w 4 -k {} && \
+dir=$(dirname {}) && \
+rm $dir/test.expect $dir/test.fil.data $dir/test.fil.out
 """
 
 # ============== Examples in the documentation ============

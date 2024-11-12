@@ -1,0 +1,32 @@
+import "apps/blas/axpy/axpy.fil";
+import "primitives/reshape.fil";
+
+comp Harness[W, N, MultsN, AddsN]<'G:II>(
+  go: interface['G],
+  a: ['G, 'G+1] W,
+  x: ['G, 'G+1] W*N,
+  y: ['G, 'G+1] W*N
+) -> (
+  out: ['G+L, 'G+L+1] W*N
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0,
+        N > 0,
+        MultsN > 0,
+        AddsN > 0,
+        N % MultsN == 0,
+        MultsN % AddsN == 0
+{
+  x_vec := new SplitWire[W, N]<'G>(x);
+  y_vec := new SplitWire[W, N]<'G>(y);
+
+  a := new Axpy[W, N, MultsN, AddsN];
+  run_a := a<'G>(a, x_vec.out{0..N}, y_vec.out{0..N});
+
+  out_flat := new ConcatBundle[W, N]<'G+a::L>(run_a.out{0..N});
+  out = out_flat.out;
+
+  II := a::II;
+  L := a::L;
+}
