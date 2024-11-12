@@ -1,3 +1,4 @@
+mod attr;
 mod errors;
 mod global_sym;
 mod gsym;
@@ -6,6 +7,7 @@ mod math;
 mod position;
 mod reporter;
 
+pub use attr::{comp_attrs, AttrCtx, AttrStore, Attributes};
 pub use errors::{Error, FilamentResult};
 pub use gsym::GSym;
 pub use id::Id;
