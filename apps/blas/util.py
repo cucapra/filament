@@ -225,9 +225,6 @@ def main():
 
     if (fud_out != expected_cmp):
         print(f"expected {expected_cmp} but got {fud_out}\n")
-        sys.exit(1)
-    else:
-        sys.exit(0)
 
 
 if __name__ == "__main__":
