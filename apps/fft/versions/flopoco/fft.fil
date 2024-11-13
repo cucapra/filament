@@ -19,10 +19,20 @@ comp AbstractFPAdd[E, M]<'G:1>(
 {
   FA := new FPAdd[E, M];
   fa := FA<'G>(X, Y);
-  R = fa.R;
 
-  L := FA::L;
+  delay := new Delay[E+M+3]<'G+FA::L>(fa.R);
+
+  R = delay.out;
+
+  L := FA::L + 1;
   W := E + M + 3;
+
+  // FA := new FPAdd[E, M];
+  // fa := FA<'G>(X, Y);
+  // R = fa.R;
+
+  // L := FA::L;
+  // W := E + M + 3;
 }
 
 /// Floating point addition with Flopoco's internal format
@@ -40,10 +50,14 @@ comp AbstractFPSub[E, M]<'G:1>(
 {
   FS := new FPSub[E, M];
   fs := FS<'G>(X, Y);
-  R = fs.R;
 
-  L := FS::L;
+  delay := new Delay[E+M+3]<'G+FS::L>(fs.R);
+  
+  R = delay.out;
+
+  L := FS::L + 1;
   W := E + M + 3;
+
 }
 
 
@@ -62,10 +76,19 @@ comp AbstractFPMult[E, M]<'G: 1>(
 {
   FM := new FPMult[E, M];
   fm := FM<'G>(X, Y);
-  R = fm.R;
+  delay := new Delay[E+M+3]<'G+FM::L>(fm.R);
+  
+  R = delay.out;
 
-  L := FM::L;
+  L := FM::L + 1;
   W := E + M + 3;
+
+  // FM := new FPMult[E, M];
+  // fm := FM<'G>(X, Y);
+  // R = fm.R;
+
+  // L := FM::L;
+  // W := E + M + 3;
 }
 
 /// Converts an IEEE floating point number to Internal format

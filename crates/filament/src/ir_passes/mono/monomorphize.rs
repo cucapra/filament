@@ -3,7 +3,7 @@ use super::{
     Underlying, UnderlyingComp,
 };
 use fil_gen as gen;
-use fil_ir::{self as ir, Ctx, IndexStore};
+use fil_ir::{self as ir, Ctx, DisplayCtx, IndexStore};
 use ir::{AddCtx, EntryPoint};
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -225,7 +225,11 @@ impl<'ctx> Monomorphize<'ctx> {
 
     /// Monomorphize a component and return its index in the new context.
     pub fn monomorphize(&mut self, ck: CompKey) -> Base<ir::Component> {
-        log::debug!("Monomorphizing `{}'", ck.comp.idx());
+        log::debug!(
+            "Monomorphizing `{}'[{}]",
+            self.old.display(ck.comp.idx()),
+            ck.params.iter().join(", ")
+        );
         let CompKey { comp, params } = ck;
         let underlying = self.old.get(comp.idx());
 
