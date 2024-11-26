@@ -1,42 +1,35 @@
 import "frisc.futil";
 import "primitives/memories/comb.futil";
 
-component main () -> (out:32) {
+component main (@clk clk: 1, @reset reset: 1, @go go: 1) -> () {
   cells {
-    @external iram = comb_mem_d1(32,6,32);
-    @external res = comb_mem_d1(32,6,32);
+    @external iram = comb_mem_d1(32,2,32);
+    @external res = comb_mem_d1(32,2,32);
     cpu = CPU();
-    dram = ByteAccess1D(256,32);
 
     pc_reg = std_reg(32);
   }
   wires {
-    static<1> group init {
-      pc_reg.in = 32'd0;
-      pc_reg.write_en = 1'b1;
-    }
-
     static<1> group read_iram {
       iram.addr0 = cpu.pc;
-      iram.read_en = 1'b1;
 
       cpu.instr = iram.read_data;
-      cpu.dataIn = dram.read_data;
+      // cpu.dataIn = dram.read_data;
 
-      dram.addr0 = cpu.memAddr;
-      dram.write_data = cpu.memData;
-      dram.write_mask = cpu.memWriteMask;
+      // dram.addr0 = cpu.memAddr;
+      // dram.write_data = cpu.memData;
+      // dram.write_mask = cpu.memWriteMask;
     }
 
     static<1> group write_res {
-      res.addr0 = pc_reg.out;
-      res.write_data = cpu.out;
-      res.write_en = %0 ? 1'd1;
+      res.addr0 = cpu.memAddr;
+      res.write_data = cpu.memData;
+      res.write_en = cpu.isStore;
     }
 
     static<1> group reg_pc {
       pc_reg.in = cpu.pc;
-      pc_reg.write_en = 1'd1;
+      pc_reg.write_en = %0 ? 1'd1;
     }
 
     cpu.pcin = cpu.nextpc;
@@ -44,7 +37,6 @@ component main () -> (out:32) {
   }
   control {
     static seq {
-      init;
       static repeat 6 {
         static par {
           read_iram;

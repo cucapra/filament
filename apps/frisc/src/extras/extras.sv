@@ -76,13 +76,15 @@ module Mem1D #(
 
   integer i;
   always_ff @(posedge clk) begin
-    if (reset)
+    if (reset) begin
       for (i = 0; i < SIZE; i = i + 1 )
         mem[i] <= 0;
+    end
     else if (write_en) mem[write_addr] <= write_data;
-    else
+    else begin
       for (i = 0; i < SIZE; i = i + 1)
         mem[i] <= mem[i];
+    end
   end
 
 endmodule

@@ -4,6 +4,7 @@ import "apps/frisc/src/regfile.fil";
 import "apps/frisc/src/extras/extras.fil";
 import "apps/frisc/src/pc.fil";
 
+#[toplevel]
 comp CPU<'G:1> (
   clk:1,
   reset:1,
@@ -18,7 +19,8 @@ comp CPU<'G:1> (
   memAddr: ['G,'G+1] 32,     // memory address
   memData: ['G,'G+1] 32,     // data to write to mem
   memWriteMask: ['G,'G+1] 4, // 4 bytes in a word
-  rfDataOut: ['G,'G+1] 32
+  rfDataOut: ['G,'G+1] 32,
+  isStore: ['G, 'G+1] 1
 ) {
 
   /* ============================================================ */
@@ -201,4 +203,5 @@ comp CPU<'G:1> (
   memData = memData_31_0.out;
   memWriteMask = writeMask.out;
   rfDataOut = rfData.out;
+  isStore = decoder.isStore;
 }

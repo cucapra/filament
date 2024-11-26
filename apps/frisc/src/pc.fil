@@ -7,6 +7,6 @@ extern "pc.sv" {
     reset:1,
     nextpc: ['G, 'G+1] 32,
   ) -> (
-    pc: ['G, 'G+1]32,
+    pc: ['G, 'G+1] 32,
   );
 }
