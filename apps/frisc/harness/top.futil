@@ -3,8 +3,8 @@ import "primitives/memories/comb.futil";
 
 component main (@clk clk: 1, @reset reset: 1, @go go: 1) -> () {
   cells {
-    @external iram = comb_mem_d1(32,2,32);
-    @external res = comb_mem_d1(32,2,32);
+    @external iram = comb_mem_d1(32,INSN_SIZE,32);
+    @external res = comb_mem_d1(32,DATA_SIZE,32);
     cpu = CPU();
 
     pc_reg = std_reg(32);

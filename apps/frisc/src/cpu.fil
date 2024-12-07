@@ -200,7 +200,8 @@ comp CPU<'G:1> (
   nextpc = nextPC.out;
   pc = pc.pc;
   memAddr = loadStoreAddr.out;
-  memData = memData_31_0.out;
+  // memData = memData_31_0.out;
+  memData = rf.rs2;
   memWriteMask = writeMask.out;
   rfDataOut = rfData.out;
   isStore = decoder.isStore;

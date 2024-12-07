@@ -1,7 +1,10 @@
+import argparse
 from harness import parse_instrs, init, reg_to_binary, generate_json
-from tests import tests
+import tests
+from tests import *
 import json
 import subprocess
+import os
 
 def run_instr_seq(instrs, mem, rf):
     for instr in instrs:
@@ -104,7 +107,7 @@ def run_instr(instr, mem, rf):
 
 # Formats mem as an array
 def mem_to_array(mem):
-    mem_arr = [99999] * 2
+    mem_arr = [99999] * 64
     for k in sorted(mem.keys()):
         mem_arr[k] = mem[k]
     return mem_arr
@@ -118,13 +121,13 @@ def mem_to_json(instrs, mem):
     output_json = json.dumps(output_dict)
     return output_json
 
-def run_fud():
+def run_fud(insn_size, data_size, dump_vcd):
     subprocess.run([
         "fud",
         "e",
-        "top.futil",
+        f"top_{insn_size}_{data_size}.futil",
         "--to",
-        "dat",
+        "vcd" if dump_vcd else "dat",
         "--through",
         "icarus-verilog",
         "-s",
@@ -133,7 +136,7 @@ def run_fud():
         ], stdout=open("top.out",'w'), stderr=open("top.err", 'w')
     )
 
-def generate_input_json(instrs):
+def generate_input_json(instrs, data_size):
     int_lst = parse_instrs(instrs)
     output_dict= {}
     output_dict["iram"] = {}
@@ -146,7 +149,7 @@ def generate_input_json(instrs):
     output_dict["iram"]["format"]["width"] = 32
 
     output_dict["res"] = {}
-    output_dict["res"]["data"] = 2 * [99999]
+    output_dict["res"]["data"] = data_size * [99999]
     output_dict["res"]["format"] = {}
     output_dict["res"]["format"]["numeric_type"] = "bitnum"
     output_dict["res"]["format"]["is_signed"] = False
@@ -157,9 +160,21 @@ def generate_input_json(instrs):
     with open("top.json", 'w') as f:
         f.write(output_json)
 
+def generate_top(insn_size, data_size):
+    subprocess.run([
+        "cp",
+        "top.futil",
+        f"top_{insn_size}_{data_size}.futil"
+    ])
+    os.system(f"sed -i '' 's/INSN_SIZE/{insn_size}/g;s/DATA_SIZE/{data_size}/g' top_{insn_size}_{data_size}.futil")
+
 def main():
+    parser = argparse.ArgumentParser(description="Parse arguments for generating tests")
+    parser.add_argument("--vcd", action="store_true")
+    args = parser.parse_args()
+
     # test is a string
-    for test in tests:
+    for test in tests.tests1:
         mem = {}
         rf = {}
         for i in range(0, 32):
@@ -168,15 +183,20 @@ def main():
 
         # instrs is a list of strings
         instrs = init(test)
+        insn_size = len(instrs)
+        data_size = 64
         exp_mem = run_instr_seq(instrs, mem, rf)
+        print(f"exp_mem: {exp_mem}")
 
         # the expected memory output
         exp_mem_json = mem_to_json(instrs, exp_mem)
 
-        generate_input_json(instrs)
+        generate_input_json(instrs, data_size)
+
+        generate_top(insn_size, data_size)
 
         # run fud 
-        run_fud()
+        run_fud(insn_size, data_size, args.vcd)
 
         processed_fud_out = {}
         with open("top.out") as f:
@@ -184,9 +204,10 @@ def main():
             processed_fud_out = fud_out["memories"]
             processed_fud_out = str(processed_fud_out).replace("\'", "\"")
 
-        if exp_mem_json != processed_fud_out:
+        if exp_mem_json != processed_fud_out and not args.vcd:
             print(f"expected {exp_mem_json} but got {processed_fud_out}\n")
-
+        elif exp_mem_json == processed_fud_out:
+            print(f"got {exp_mem_json}")
 
 if __name__ == "__main__":
     main()
