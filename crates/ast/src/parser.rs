@@ -2,13 +2,16 @@
 #![allow(clippy::type_complexity)]
 
 //! Parser for Filament programs.
-use crate::{self as ast, Attributes, Loc, TimeSub};
-use fil_utils::{self as utils, FilamentResult};
-use fil_utils::{FileIdx, GPosIdx, GlobalPositionTable};
+use crate::{self as ast, Loc, TimeSub};
+use fil_utils::{
+    self as utils, AttrCtx, FilamentResult, FileIdx, GPosIdx,
+    GlobalPositionTable,
+};
 use itertools::Itertools;
 use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest_consume::{match_nodes, Error, Parser};
 use std::fs;
+use std::hash::Hash;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -830,29 +833,30 @@ impl FilamentParser {
         Ok(())
     }
 
-    fn attr_bind(input: Node) -> ParseResult<Vec<(ast::Attr, GPosIdx, u64)>> {
-        match_nodes!(
-            input.clone().into_children();
-            [identifier(name)] =>
-            ast::BoolAttr::from_str(name.as_ref()).map(
-                |attr| vec![(ast::Attr::Bool(attr), name.pos(), 1)]).map_err(
-                    |_| input.error(format!("Found unknown attribute flag \"{name}\""))),
-            [not(_), identifier(name)] =>
-            ast::BoolAttr::from_str(name.as_ref()).map(
-                |attr| vec![(ast::Attr::Bool(attr), name.pos(), 0)]).map_err(
-                    |_| input.error(format!("Found unknown attribute flag \"{name}\""))),
-            [identifier(name), bitwidth(val)] =>
-            ast::NumAttr::from_str(name.as_ref()).map(
-                |attr| vec![(ast::Attr::Num(attr), name.pos(), val)]).map_err(
-                    |_| input.error(format!("Found unknown numeric attribute \"{name}\""))),
-        )
-    }
+    fn attributes<Bool, Num>(
+        input: Node,
+    ) -> ParseResult<utils::Attributes<Bool, Num>>
+    where
+        Bool: FromStr + Hash + Eq + Copy,
+        Num: FromStr + Hash + Eq + Copy,
+    {
+        let mut attrs = utils::Attributes::default();
+        for attr in input.into_children() {
+            match_nodes!(
+                attr.clone().into_children();
+                [identifier(name)] => Bool::from_str(name.as_ref()).map(
+                    |attr| attrs.set(attr, true, name.pos())).map_err(
+                        |_| attr.error(format!("Found unknown attribute flag \"{name}\""))),
+                [not(_), identifier(name)] => Bool::from_str(name.as_ref()).map(
+                    |attr| attrs.set(attr, false, name.pos())).map_err(
+                        |_| attr.error(format!("Found unknown attribute flag \"{name}\""))),
+                [identifier(name), bitwidth(val)] => Num::from_str(name.as_ref()).map(
+                    |attr| attrs.set(attr, val, name.pos())).map_err(
+                        |_| attr.error(format!("Found unknown numeric attribute \"{name}\""))),
+            )?;
+        }
 
-    fn attributes(input: Node) -> ParseResult<Attributes> {
-        Ok(match_nodes!(
-            input.into_children();
-            [attr_bind(attr)..] => ast::Attributes::new(attr.into_iter().flatten())
-        ))
+        Ok(attrs)
     }
 
     fn component(input: Node) -> ParseResult<ast::Component> {
