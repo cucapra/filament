@@ -1,0 +1,27 @@
+import "apps/blas/dot/dot.fil";
+import "primitives/reshape.fil";
+
+comp Harness[W, N, MultsN]<'G:II>(
+  go: interface['G],
+  x: ['G, 'G+1] W*N,
+  y: ['G, 'G+1] W*N
+) -> (
+  out: ['G+L, 'G+L+1] W
+) with {
+  some L where L > 0;
+  some II where II > 0;
+} where W > 0,
+        N > 0,
+        MultsN > 0
+{
+  x_vec := new SplitWire[W, N]<'G>(x);
+  y_vec := new SplitWire[W, N]<'G>(y);
+
+  d := new Dot[W, N, MultsN];
+  run_d := d<'G>(x_vec.out{0..N}, y_vec.out{0..N});
+
+  out = run_d.out;
+
+  II := d::II;
+  L := d::L;
+}
