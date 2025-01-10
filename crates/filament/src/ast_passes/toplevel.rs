@@ -17,8 +17,7 @@ impl Visitor for TopLevel {
     }
 
     fn signature(&mut self, sig: &mut ast::Signature) -> Action {
-        if sig.attributes.get(utils::comp_attrs::Bool::TopLevel) == Some(&true)
-        {
+        if sig.attributes.get(utils::CompBool::TopLevel) == Some(&true) {
             if self.has_toplevel.is_some() {
                 let err = Error::malformed("Multiple top-level components")
                     .add_note(self.diag.add_info(
@@ -29,7 +28,7 @@ impl Visitor for TopLevel {
                         self.diag.add_info(
                             "second top-level component here",
                             sig.attributes
-                                .get_loc(utils::comp_attrs::Bool::TopLevel)
+                                .get_loc(utils::CompBool::TopLevel)
                                 .unwrap(),
                         ),
                     );
@@ -37,9 +36,7 @@ impl Visitor for TopLevel {
                 self.diag.add_error(err);
             } else {
                 self.has_toplevel = Some(
-                    sig.attributes
-                        .get_loc(utils::comp_attrs::Bool::TopLevel)
-                        .unwrap(),
+                    sig.attributes.get_loc(utils::CompBool::TopLevel).unwrap(),
                 );
             }
         }
@@ -50,16 +47,14 @@ impl Visitor for TopLevel {
 
     fn external(&mut self, ext: &mut ast::Extern) {
         for sig in &mut ext.comps {
-            if sig.attributes.get(utils::comp_attrs::Bool::TopLevel)
-                == Some(&true)
-            {
+            if sig.attributes.get(utils::CompBool::TopLevel) == Some(&true) {
                 let err =
                     Error::malformed("External components cannot be top-level")
                         .add_note(
                             self.diag.add_info(
                                 "toplevel attribute here",
                                 sig.attributes
-                                    .get_loc(utils::comp_attrs::Bool::TopLevel)
+                                    .get_loc(utils::CompBool::TopLevel)
                                     .unwrap(),
                             ),
                         );
@@ -80,7 +75,7 @@ impl Visitor for TopLevel {
                 if comp.sig.name.as_ref() == "main" {
                     // Add the toplevel attribute to the component
                     comp.sig.attributes.set(
-                        utils::comp_attrs::Bool::TopLevel,
+                        utils::CompBool::TopLevel,
                         true,
                         GPosIdx::UNKNOWN,
                     );

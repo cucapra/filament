@@ -7,7 +7,7 @@ mod math;
 mod position;
 mod reporter;
 
-pub use attr::{comp_attrs, AttrCtx, AttrStore, Attributes};
+pub use attr::{AttrCtx, AttrStore, Attributes, CompAttrs, CompBool, CompNum};
 pub use errors::{Error, FilamentResult};
 pub use gsym::GSym;
 pub use id::Id;

@@ -93,9 +93,9 @@ impl Namespace {
     /// Get the index to the top-level component.
     /// Currently, this is the distinguished "main" component
     pub fn main_idx(&self) -> Option<usize> {
-        self.components.iter().position(|c| {
-            c.sig.attributes.has(utils::comp_attrs::Bool::TopLevel)
-        })
+        self.components
+            .iter()
+            .position(|c| c.sig.attributes.has(utils::CompBool::TopLevel))
     }
 
     /// Get the toplevel component name

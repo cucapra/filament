@@ -40,11 +40,7 @@ impl Context {
     }
 
     /// Add a new component, default to the context
-    pub fn comp(
-        &mut self,
-        typ: CompType,
-        attrs: utils::comp_attrs::Attrs,
-    ) -> CompIdx {
+    pub fn comp(&mut self, typ: CompType, attrs: utils::CompAttrs) -> CompIdx {
         let comp = Component::new(typ, attrs);
         self.add(comp)
     }

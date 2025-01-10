@@ -58,7 +58,7 @@ pub struct Component {
 
     // ============== Component signature ===============
     /// Attributes of the component
-    pub attrs: utils::comp_attrs::Attrs,
+    pub attrs: utils::CompAttrs,
     /// The input parameters to the component
     pub(crate) param_args: Box<[ParamIdx]>,
     /// The input events to the component
@@ -85,7 +85,7 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn new(typ: CompType, attrs: utils::comp_attrs::Attrs) -> Self {
+    pub fn new(typ: CompType, attrs: utils::CompAttrs) -> Self {
         let mut comp = Self {
             typ,
             attrs,

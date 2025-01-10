@@ -6,4 +6,6 @@ mod types;
 pub use attributes::Attributes;
 pub use ctx::AttrCtx;
 pub use store::AttrStore;
-pub use types::comp_attrs;
+pub use types::comp_attrs::{
+    Attrs as CompAttrs, Bool as CompBool, Num as CompNum,
+};
