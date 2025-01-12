@@ -3,6 +3,7 @@ mod errors;
 mod global_sym;
 mod gsym;
 mod id;
+mod macros;
 mod math;
 mod position;
 mod reporter;
