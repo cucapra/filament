@@ -20,3 +20,5 @@ derivative.workspace = true
 atty.workspace = true
 codespan-reporting.workspace = true
 string-interner.workspace = true
+strum.workspace = true
+strum_macros.workspace = true

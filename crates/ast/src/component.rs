@@ -1,7 +1,6 @@
-use crate::BoolAttr;
-
 use super::{Command, Id, Signature};
 use fil_gen as gen;
+use fil_utils::{self as utils, AttrCtx};
 use gen::GenConfig;
 use std::path::PathBuf;
 
@@ -96,7 +95,7 @@ impl Namespace {
     pub fn main_idx(&self) -> Option<usize> {
         self.components
             .iter()
-            .position(|c| c.sig.attributes.has(BoolAttr::TopLevel))
+            .position(|c| c.sig.attributes.has(utils::CompBool::TopLevel))
     }
 
     /// Get the toplevel component name

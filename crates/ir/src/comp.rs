@@ -7,6 +7,7 @@ use super::{
 use crate::{utils::Idx, ParamOwner};
 use fil_ast as ast;
 use fil_derive::Ctx;
+use fil_utils as utils;
 use itertools::Itertools;
 
 #[derive(Default, PartialEq, Eq, Hash, Clone, Copy)]
@@ -57,7 +58,7 @@ pub struct Component {
 
     // ============== Component signature ===============
     /// Attributes of the component
-    pub attrs: ast::Attributes,
+    pub attrs: utils::CompAttrs,
     /// The input parameters to the component
     pub(crate) param_args: Box<[ParamIdx]>,
     /// The input events to the component
@@ -84,7 +85,7 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn new(typ: CompType, attrs: ast::Attributes) -> Self {
+    pub fn new(typ: CompType, attrs: utils::CompAttrs) -> Self {
         let mut comp = Self {
             typ,
             attrs,
