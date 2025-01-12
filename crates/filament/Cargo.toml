@@ -11,6 +11,7 @@ homepage.workspace = true
 categories.workspace = true
 readme.workspace = true
 rust-version.workspace = true
+default-run = "filament"
 
 [dependencies]
 toml.workspace = true
