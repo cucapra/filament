@@ -7,4 +7,4 @@ cargo run --bin filament ../src/cpu.fil --library ../../.. --backend calyx --dis
 
 python expected.py
 
-# rm top.err top.out top.json frisc.futil
+rm top.err top.out top.json frisc.futil

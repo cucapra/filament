@@ -5,6 +5,9 @@ sw x1 0(x0)
 
 test1 = """
 addi x1 x0 2
+addi x0 x0 0
+addi x0 x0 0
+addi x0 x0 0
 sw x1 0(x1)
 """
 

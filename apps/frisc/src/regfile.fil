@@ -5,12 +5,12 @@ import "primitives/core.fil";
 // outputs available in same cycle as inputs
 
 extern "regfile.sv" {
-  comp RegFile<'G:1> (
+  comp RegFile<'G:1, 'L:1> (
     clk:1,
     reset:1,
-    en: ['G, 'G+1] 1,    // write enable
-    rd: ['G, 'G+1] 5,    // destination reg
-    data: ['G, 'G+1] 32, // data in
+    en: ['L, 'L+1] 1,    // write enable
+    rd: ['L, 'L+1] 5,    // destination reg
+    data: ['L, 'L+1] 32, // data in
     rin1: ['G, 'G+1] 5,  // rs1 addr
     rin2: ['G, 'G+1] 5   // rs2 addr
   ) -> (
