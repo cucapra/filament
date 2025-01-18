@@ -585,7 +585,6 @@ impl Visitor for Discharge {
             log::debug!("Checking {}", data.comp.display(fact.prop));
         }
 
-        let comp = &data.comp;
         // Declare all parameters
         let int = self.sort();
         for (idx, _) in data.comp.params().iter() {
