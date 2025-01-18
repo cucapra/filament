@@ -34,6 +34,8 @@ lazy_static = "1.4"
 easy-smt = "0.2.3"
 struct-variant = "1.0"
 tempfile = "3.13.0"
+strum = "0.26.3"
+strum_macros = "0.26.3"
 
 fil-utils = { version = "0.1.0", path = "crates/utils" }
 fil-ast = { version = "0.1.0", path = "crates/ast" }

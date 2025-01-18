@@ -459,6 +459,10 @@ impl Discharge {
                 self.diagnostics.push(diag);
                 return;
             };
+            log::debug!(
+                "Cannot prove constraint: {}",
+                ctx.display(fact.prop.consequent(ctx))
+            );
             let mut diag = reason.diag(ctx);
             if self.show_models {
                 diag = reason.diag(ctx).with_notes(vec![format!(

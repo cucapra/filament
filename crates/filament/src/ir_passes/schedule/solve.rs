@@ -1,7 +1,7 @@
 use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
 use easy_smt::{self as smt, SExpr, SExprData};
-use fil_ast as ast;
 use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, MutCtx, PortOwner};
+use fil_utils::{AttrCtx, CompBool};
 use std::{collections::HashMap, fs};
 
 /// Sets the proper FSM Attributes for every component
@@ -75,7 +75,7 @@ impl Visitor for Solve {
 
     fn start(&mut self, data: &mut VisitorData) -> Action {
         // Quit the pass if this attribute does not have the #[schedule] attribute
-        if !data.comp.attrs.has(ast::BoolAttr::Schedule) {
+        if !data.comp.attrs.has(CompBool::Schedule) {
             return Action::Stop;
         }
 

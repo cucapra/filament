@@ -1,7 +1,6 @@
 use crate::ir_visitor::{Action, Visitor, VisitorData};
-use fil_ast as ast;
 use fil_ir::{self as ir, AddCtx, Ctx};
-use fil_utils::GPosIdx;
+use fil_utils::{AttrCtx, CompBool, GPosIdx};
 use itertools::Itertools;
 
 #[derive(Default)]
@@ -127,7 +126,7 @@ impl Visitor for IntervalCheck {
         let comp = &mut data.comp;
 
         // If the component has the schedule attribute, do not run this pass
-        if comp.attrs.has(ast::BoolAttr::Schedule) {
+        if comp.attrs.has(CompBool::Schedule) {
             return Action::Stop;
         }
 

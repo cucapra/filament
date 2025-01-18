@@ -45,11 +45,27 @@ impl Retime {
         src_info.params.push(delay, "DELAY".into());
         src_info.params.push(live, "LIVE".into());
 
+        // Intern the proposition that LIVE >= 1
+        let live_expr = comp.add(ir::Expr::Param(live));
+        let live_prop = ir::Prop::Cmp(ir::CmpOp::gte(
+            live_expr,
+            comp.add(ir::Expr::Concrete(1)),
+        ));
+        let live_prop = comp.add(live_prop);
+        let live_info = comp.add(ir::Info::assert(ir::info::Reason::misc(
+            "Signature assumption",
+            GPosIdx::UNKNOWN,
+        )));
+
+        comp.add_param_assert([live_prop]);
         comp.param_args = Box::new([width, delay, live]);
+
+        let live_assumption = comp.assume(live_prop, live_info);
+        comp.cmds.extend(live_assumption);
 
         let width = comp.add(ir::Expr::Param(width));
         let delay = comp.add(ir::Expr::Param(delay));
-        let live = comp.add(ir::Expr::Param(live));
+        let live = live_expr;
 
         // Set up the event of the component
         let event = comp.add(ir::Info::event(
