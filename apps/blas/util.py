@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 from functools import reduce
 from itertools import chain
