@@ -303,11 +303,11 @@ impl Construct for Discharge {
 }
 
 impl Discharge {
-    fn fmt_param(&self, param: ir::ParamIdx, ctx: &ir::Component) -> String {
+    fn fmt_param(&self, param: ir::ParamIdx) -> String {
         match self.sol_base {
             // CVC5 does not correctly print out quoted SExps
             cmdline::Solver::Z3 => {
-                format!("|{}@param{}|", ctx.display(param), param.get())
+                format!("|param{}|", param.get())
             }
             _ => {
                 format!("param{}", param.get())
@@ -315,10 +315,10 @@ impl Discharge {
         }
     }
 
-    fn fmt_event(&self, event: ir::EventIdx, ctx: &ir::Component) -> String {
+    fn fmt_event(&self, event: ir::EventIdx) -> String {
         match self.sol_base {
             cmdline::Solver::Z3 => {
-                format!("|{}@event{}|", ctx.display(event), event.get())
+                format!("|event{}|", event.get())
             }
             _ => format!("event{}", event.get()),
         }
@@ -591,7 +591,7 @@ impl Visitor for Discharge {
         for (idx, _) in data.comp.params().iter() {
             let sexp = self
                 .sol
-                .declare_fun(self.fmt_param(idx, comp), vec![], int)
+                .declare_fun(self.fmt_param(idx), vec![], int)
                 .unwrap();
             self.overflow_assert(sexp);
             self.param_map.push(idx, sexp);
@@ -601,7 +601,7 @@ impl Visitor for Discharge {
         for (idx, _) in data.comp.events().iter() {
             let sexp = self
                 .sol
-                .declare_fun(self.fmt_event(idx, comp), vec![], int)
+                .declare_fun(self.fmt_event(idx), vec![], int)
                 .unwrap();
             self.overflow_assert(sexp);
             self.ev_map.push(idx, sexp);
