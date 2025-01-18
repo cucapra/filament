@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 from functools import reduce
 from itertools import chain
@@ -135,6 +137,23 @@ def process_fud_output(fud_output):
 def run_fud(kernel):
     open(kernel+".out", 'w')
     basename,_ = os.path.splitext(kernel)
+
+    print(" ".join([
+        "fud",
+        "e",
+        "--to",
+        "cocotb-out",
+        kernel,
+        "-s",
+        "cocotb.data",
+       kernel+".data",
+        "-s",
+        "calyx.flags",
+        "' -d canonicalize'",
+        "-s",
+        "filament.flags",
+        f" --bindings {basename}.toml"
+        ]))
     subprocess.run([
         "fud",
         "e",
