@@ -72,6 +72,15 @@ macro_rules! ir_pass_pipeline {
 }
 
 #[macro_export]
+macro_rules! ir_pass_pipeline2 {
+    ($opts:expr, $ir:ident; $($pass:path),*) => {
+        $(
+            <$pass as $crate::ir_visitor::Visitor>::do_pass($opts, &mut $ir)?;
+        )*
+    };
+}
+
+#[macro_export]
 /// A macro to generate the AST pass pipeline. For each provided pass, it will:
 /// 1. Record the amount of time it took to run the pass.
 /// 2. Print out the state of the AST if the name of the pass was in the

@@ -1,8 +1,8 @@
-use crate::cmdline;
+use crate::{cmdline, ir_visitor::Construct};
 use fil_ast as ast;
 use fil_utils::{Error, FilamentResult};
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -22,7 +22,7 @@ impl From<&cmdline::Opts> for Resolver {
         let mut lib = opts.library.clone();
         // Do this to resolve the issue mentioned in `cmdline.rs`
         // where default values don't work with argh
-        lib.push(PathBuf::from("."));
+        lib.push(From::from("."));
         Self {
             lib,
             input: opts.input.clone(),
@@ -32,6 +32,16 @@ impl From<&cmdline::Opts> for Resolver {
 }
 
 impl Resolver {
+    pub fn new(lib: Vec<PathBuf>, input: PathBuf) -> Self {
+        let mut lib = lib.clone();
+        lib.push(From::from("."));
+        Self {
+            lib,
+            input,
+            already_imported: HashSet::default(),
+        }
+    }
+
     /// Resolve import either using opts.library or relative the parent directory of the input file.
     fn resolve_import(
         &self,

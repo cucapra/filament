@@ -29,50 +29,50 @@ pub struct Component {
     // identifiers in different components are not equal.
     #[ctx(Expr: Get)]
     /// Interned expressions
-    exprs: Interned<Expr>,
+    pub exprs: Interned<Expr>,
     #[ctx(Time: Get, Add)]
     /// Interned times
-    times: Interned<Time>,
+    pub times: Interned<Time>,
     #[ctx(Prop: Get)]
     /// Interned propositions
-    props: Interned<Prop>,
+    pub props: Interned<Prop>,
 
     // =============  Component defined values ============
     #[ctx(Port: Get, Add, Mut)]
     /// Ports and bundles defined by the component.
-    ports: IndexStore<Port>,
+    pub ports: IndexStore<Port>,
     #[ctx(Param: Get, Add, Mut)]
     /// Parameters defined the component
-    params: IndexStore<Param>,
+    pub params: IndexStore<Param>,
     #[ctx(Event: Get, Add, Mut)]
     /// Events defined by the component
-    events: IndexStore<Event>,
+    pub events: IndexStore<Event>,
 
     // Control flow entities
     #[ctx(Instance: Get, Add, Mut)]
     /// Instances defined by the component
-    instances: IndexStore<Instance>,
+    pub instances: IndexStore<Instance>,
     #[ctx(Invoke: Get, Add, Mut)]
     /// Invocations defined by the component
-    invocations: IndexStore<Invoke>,
+    pub invocations: IndexStore<Invoke>,
 
     // ============== Component signature ===============
     /// Attributes of the component
     pub attrs: utils::CompAttrs,
     /// The input parameters to the component
-    pub(crate) param_args: Box<[ParamIdx]>,
+    pub param_args: Box<[ParamIdx]>,
     /// The input events to the component
-    pub(crate) event_args: Box<[EventIdx]>,
+    pub event_args: Box<[EventIdx]>,
     /// Assumptions for existential parameters.
-    exist_assumes: Vec<(ParamIdx, Vec<PropIdx>)>,
-    param_asserts: Box<[PropIdx]>,
-    event_asserts: Box<[PropIdx]>,
+    pub exist_assumes: Vec<(ParamIdx, Vec<PropIdx>)>,
+    pub param_asserts: Box<[PropIdx]>,
+    pub event_asserts: Box<[PropIdx]>,
 
     #[ctx(Info: Get, Add)]
     /// Information tracked by the component
-    info: IndexStore<Info>,
+    pub info: IndexStore<Info>,
     /// Is this an external component
-    typ: CompType,
+    pub typ: CompType,
     /// Externally facing interface information, used to preserve interface in compilation.
     /// Must be `Some` for toplevel components and externals.
     pub src_info: Option<InterfaceSrc>,
