@@ -15,3 +15,14 @@ attr_set! {
     numeric {
     };
 }
+
+attr_set! {
+    port_attrs;
+    flag {
+        priv {
+            /// Combinational delay of this port
+            CombDelay,
+        };
+    };
+    numeric {};
+}
