@@ -1,31 +1,256 @@
-import "./alu.fil";
-import "./decode.fil";
-import "./regfile.fil";
-import "./extras/extras.fil";
+import "apps/frisc/src/alu.fil";
+import "apps/frisc/src/decode.fil";
+import "apps/frisc/src/regfile.fil";
+import "apps/frisc/src/extras/extras.fil";
+import "apps/frisc/src/pc.fil";
 
+#[toplevel]
 comp CPU<'G:1> (
-  clk:1,
-  //go: interface['G],
-   reset: ['G,'G+1] 1,
-   instr: ['G,'G+1] 32
+  go: interface['G],
+  instr: ['G,'G+1] 32,
+  pcin: ['G,'G+1] 32,
+  dataIn: ['G+2,'G+3] 32, // from mem
+  rfDataIn: ['G+3,'G+4] 32, // write data
 ) -> (
-   out: ['G,'G+1] 32,
-   aluInA: ['G,'G+1] 32,
-   aluInB: ['G,'G+1] 32,
+  pc: ['G,'G+1] 32,          // current instr
+  nextpc: ['G,'G+1] 32,      // next instr to fetch
+  out: ['G+1,'G+2] 32,         // output of ALU
+  memAddr: ['G+2,'G+3] 32,     // memory address
+  memData: ['G+2,'G+3] 32,     // data to write to mem
+  memWriteMask: ['G+2,'G+3] 4, // 4 bytes in a word
+  rfDataOut: ['G+2,'G+3] 32, // rd data
+  isStore: ['G+2, 'G+3] 1
 ) {
-  rd := new Slice[32,11,7,5]<'G>(instr);
+
+  /* ============================================================ */
+  /*  DECODER - stage 0
+  /* ============================================================ */  
+
+  rd := new Slice[32,11,7,5]<'G>(instr); 
   rs1 := new Slice[32,19,15,5]<'G>(instr);
   rs2 := new Slice[32,24,20,5]<'G>(instr);
 
   decoder := new Decode<'G>(instr);
-  rf := new RegFile<'G>(reset, decoder.rf_write, rd.out, alu.out, rs1.out, rs2.out);
 
-  aluInBGuard := new Or[1]<'G>(decoder.isBranch, decoder.isALUReg);
-  aluInB := new Mux[32]<'G>(aluInBGuard.out, rf.rs2, decoder.Iimm);
+  /* ============================================================ */
+  /*  REGISTER FILE - stage 0
+  /* ============================================================ */
 
-  alu := new ALU<'G>(rf.rs1, aluInB.out, decoder.funct, decoder.isAdd, decoder.isArith);
+  // Set register file data in - use 1-hot encoding bc why not
+  // {0, 0, 0, isLUI, isALU, isAUIPC, isJ, isLoad}
+
+  // 00000001 -> isLoad, so use memDataIn
+  // 00000010 -> isJ, so use pcPlus4
+  // 00000100 -> isAUIPC, so use pcPlusImm
+  // 00001000 -> isALU, so use alu.out
+  // 00010000 -> isLUI, so use decoder.Uimm
+
+  const0 := new Const[32,0]<'G>();
+  isALU := new Or[1]<'G>(decoder.isALUImm, decoder.isALUReg);
+  isJ := new Or[1]<'G>(decoder.isJALR, decoder.isJAL);
+
+  c0 := new Concat[1,1,2]<'G>(decoder.isLUI, isALU.out);
+  c1 := new Concat[1,1,2]<'G>(decoder.isAUIPC, isJ.out);
+  c2 := new Concat[2,1,3]<'G>(c1.out, decoder.isLoad);
+  c3 := new Concat[2,3,5]<'G>(c0.out, c2.out);
+  dInSel := new ZeroExtend[5,8]<'G>(c3.out);
+
+  rfData := new OneHotMux[32]<'G+2>(dInSel_M.out, loadData.out, pcPlus4_M.out, pcPlusImm_M.out, alu_M.out, 
+    Uimm_M.out, const0_M.out, const0_M.out, const0_M.out);
+
+  dInSel_X := new Register[8]<'G, 'G+2>(dInSel.out);
+  dInSel_M := new Register[8]<'G+1, 'G+3>(dInSel_X.out);
+
+  alu_M := new Register[32]<'G+1, 'G+3>(alu.out);
+
+  pcPlus4_X := new Register[32]<'G, 'G+2>(pcPlus4.out);
+  pcPlus4_M := new Register[32]<'G+1, 'G+3>(pcPlus4_X.out);
+
+  pcPlusImm_X := new Register[32]<'G, 'G+2>(pcPlusImm.out);
+  pcPlusImm_M := new Register[32]<'G+1, 'G+3>(pcPlusImm_X.out);
+
+  Uimm_X := new Register[32]<'G, 'G+2>(decoder.Uimm);
+  Uimm_M := new Register[32]<'G+1, 'G+3>(Uimm_X.out);
+
+  const0_M := new Const[32, 0]<'G+2>();
+
+  rf := new RegFile<'G, 'G+3>(rf_write_W.out, rd_W.out, rfDataIn, rs1.out, rs2.out);
+  rf_write_X := new Register[1]<'G, 'G+2>(decoder.rf_write);
+  rf_write_M := new Register[1]<'G+1, 'G+3>(rf_write_X.out);
+  rf_write_W := new Register[1]<'G+2, 'G+4>(rf_write_M.out);
+
+  rd_X := new Register[5]<'G, 'G+2>(rd.out);
+  rd_M := new Register[5]<'G+1, 'G+3>(rd_X.out);
+  rd_W := new Register[5]<'G+2, 'G+4>(rd_M.out);
+
+  rs1_X := new Register[32]<'G, 'G+2>(rf.rs1);
+  rs1_M := new Register[32]<'G+1, 'G+3>(rs1_X.out);
+  rs2_X := new Register[32]<'G, 'G+2>(rf.rs2);
+  rs2_M := new Register[32]<'G+1, 'G+3>(rs2_X.out);
+
+  isStore_X := new Register[1]<'G, 'G+2>(decoder.isStore);
+  isStore_M := new Register[1]<'G+1, 'G+3>(isStore_X.out);
+
+  Simm_X := new Register[32]<'G, 'G+2>(decoder.Simm);
+  Simm_M := new Register[32]<'G+1, 'G+3>(Simm_X.out);
+
+  Iimm_X := new Register[32]<'G, 'G+2>(decoder.Iimm);
+  Iimm_M := new Register[32]<'G+1, 'G+3>(Iimm_X.out);
+
+  funct_X := new Register[8]<'G, 'G+2>(decoder.funct);
+  isAdd_X := new Register[1]<'G, 'G+2>(decoder.isAdd);
+  isArith_X := new Register[1]<'G, 'G+2>(decoder.isArith);
+  isBranch_X := new Register[1]<'G, 'G+2>(decoder.isBranch);
+  isALUReg_X := new Register[1]<'G, 'G+2>(decoder.isALUReg);
+
+  /* ============================================================ */
+  /*  LOAD/STORE - stage 2
+  /* ============================================================ */
+
+  // LOADS
+  const0_2 := new Const[2,0]<'G+2>();
+  const1_2 := new Const[2,1]<'G+2>();
+
+  instr13_12 := new Slice[32,13,12,2]<'G>(instr);
+  instr13_12_X := new Register[2]<'G, 'G+2>(instr13_12.out);
+  instr13_12_M := new Register[2]<'G+1, 'G+3>(instr13_12_X.out);
+
+  instr14 := new Select[32,14]<'G>(instr);
+  instr14_X := new Register[1]<'G, 'G+2>(instr14.out);
+  instr14_M := new Register[1]<'G+1, 'G+3>(instr14_X.out);
+
+  byteAccess := new Eq[2]<'G+2>(instr13_12_M.out, const0_2.out);
+  hwAccess := new Eq[2]<'G+2>(instr13_12_M.out, const1_2.out);
+
+  hwSign := new Select[16,15]<'G+2>(hw.out);
+  bSign := new Select[8,7]<'G+2>(byte.out);
+
+  accessSign := new Mux[1]<'G+2>(byteAccess.out, bSign.out, hwSign.out);
+  not14 := new Not[1]<'G+2>(instr14_M.out);
+  loadSign := new And[1]<'G+2>(not14.out, accessSign.out);
+
+  loadByteSign := new Extend[1,24]<'G+2>(loadSign.out);
+  loadHWSign := new Extend[1,16]<'G+2>(loadSign.out);
+
+  loadHW := new Concat[16,16,32]<'G+2>(loadHWSign.out, hw.out);
+  loadByte := new Concat[24,8,32]<'G+2>(loadByteSign.out, byte.out);
+
+  hwOrW := new Mux[32]<'G+2>(hwAccess.out, loadHW.out, dataIn);
+  loadData := new Mux[32]<'G+2>(byteAccess.out, loadByte.out, hwOrW.out);
+
+  addr1 := new Select[32,1]<'G+2>(loadStoreAddr.out);
+  dataInUpper := new Slice[32,31,16,16]<'G+2>(dataIn);
+  dataInLower := new Slice[32,15,0,16]<'G+2>(dataIn);
+  hw := new Mux[16]<'G+2>(addr1.out, dataInUpper.out, dataInLower.out);
+
+  addr0 := new Select[32,0]<'G+2>(loadStoreAddr.out);
+  loadHUpper := new Slice[16,15,8,8]<'G+2>(hw.out);
+  loadHLower := new Slice[16,7,0,8]<'G+2>(hw.out);
+  byte := new Mux[8]<'G+2>(addr0.out, loadHUpper.out, loadHLower.out);
+
+  addrAdder := new Add[32];
+  addrImm := new Mux[32]<'G+2>(isStore_M.out, Simm_M.out, Iimm_M.out);
+  loadStoreAddr := addrAdder<'G+2>(rs1_M.out, addrImm.out);
+
+  // STORES
+  rs2_7_0 := new Slice[32,7,0,8]<'G+2>(rs2_M.out);
+  rs2_15_8 := new Slice[32,15,8,8]<'G+2>(rs2_M.out);
+  rs2_23_16 := new Slice[32,23,16,8]<'G+2>(rs2_M.out);
+  rs2_31_24 := new Slice[32,31,24,8]<'G+2>(rs2_M.out);
+
+  memAddr_0 := new Select[32,0]<'G+2>(loadStoreAddr.out);
+  memAddr_1 := new Select[32,1]<'G+2>(loadStoreAddr.out);
+
+  memData_15_8 := new Mux[8]<'G+2>(memAddr_0.out,rs2_7_0.out, rs2_15_8.out);
+  memData_23_16 := new Mux[8]<'G+2>(memAddr_1.out, rs2_7_0.out, rs2_23_16.out);
+
+  _mux0 := new Mux[8]<'G+2>(memAddr_1.out, rs2_15_8.out, rs2_31_24.out);
+  memData_31_24 := new Mux[8]<'G+2>(memAddr_0.out, rs2_7_0.out, _mux0.out);
+
+  memData_31_16 := new Concat[8,8,16]<'G+2>(memData_31_24.out, memData_23_16.out);
+  memData_15_0 := new Concat[8,8,16]<'G+2>(memData_15_8.out, rs2_7_0.out);
+  memData_31_0 := new Concat[16,16,32]<'G+2>(memData_31_16.out, memData_15_0.out);
+
+  // WRITE MASK
+  // 1111                   -> write a whole word
+  // 0011 or 1100           -> write a halfword
+  // 0001, 0010, 0100, 1000 -> write a byte
+
+  maskWord := new Const[4,15]<'G+2>();  // 1111
+  maskHWUp := new Const[4, 12]<'G+2>(); // 1100
+  maskHWLow := new Const[4,3]<'G+2>();  // 0011
+  maskByte0 := new Const[4,1]<'G+2>();  // 0001
+  maskByte1 := new Const[4,2]<'G+2>();  // 0010
+  maskByte2 := new Const[4,4]<'G+2>();  // 0100
+  maskByte3 := new Const[4,8]<'G+2>();  // 1000
+
+  _muxHW_HL := new Mux[4]<'G+2>(memAddr_1.out, maskHWUp.out, maskHWLow.out);
+  _muxHW := new Mux[4]<'G+2>(hwAccess.out, _muxHW_HL.out, maskWord.out);
+
+  _muxB_3_2 := new Mux[4]<'G+2>(memAddr_0.out, maskByte3.out, maskByte2.out);
+  _muxB_1_0 := new Mux[4]<'G+2>(memAddr_0.out, maskByte1.out, maskByte0.out);
+  _muxB_HL := new Mux[4]<'G+2>(memAddr_1.out, _muxB_3_2.out, _muxB_1_0.out);
+
+  writeMask := new Mux[4]<'G+2>(byteAccess.out, _muxB_HL.out, _muxHW.out);
+
+  /* ============================================================ */
+  /*  DATA MEMORY
+  /* ============================================================ */
+
+  //                   sz, dw,  aw     read_addr          write_en         write_addr         write_data
+  // dataMem := new Mem1D[32, 32, 32]<'G>(loadStoreAddr.out, decoder.isStore, loadStoreAddr.out, rf.rs2);
+
+  /* ============================================================ */
+  /*  ALU - stage 1
+  /* ============================================================ */
+
+  aluInBGuard := new Or[1]<'G+1>(isBranch_X.out, isALUReg_X.out);
+  aluInB := new Mux[32]<'G+1>(aluInBGuard.out, rs2_X.out, Iimm_X.out);
+
+  alu := new ALU<'G+1>(rs1_X.out, aluInB.out, funct_X.out, isAdd_X.out, isArith_X.out);
+
+  /* ============================================================ */
+  /*  PROGRAM COUNTER - stage 0
+  /* ============================================================ */
+
+  pc := new PC<'G>(pcin);
+
+  // nextPC = isJAL ? Jimm : isAUIPC ? Uimm : Bimm
+  // for jumps
+  pcAdderImm := new Add[32];
+
+  // not jumps
+  pcAdder := new Add[32];
+
+  // Compute what we add to PC
+  // isJAL ? Jimm : isAUIPC ? Uimm : Bimm
+  t0 := new Mux[32]<'G>(decoder.isAUIPC, decoder.Uimm, decoder.Bimm);
+  t1 := new Mux[32]<'G>(decoder.isJAL, decoder.Jimm, t0.out);
+
+  // No jumps - next instr
+  const1 := new Const[32,1]<'G>();
+
+  // compute nextPC
+  pcPlusImm := pcAdderImm<'G>(pc.pc, t1.out);
+  pcPlus4 := pcAdder<'G>(pc.pc, const1.out);
+
+  // isBranch || isJAL || isAUIPC
+  branchJmp := new Or[1]<'G>(decoder.isBranch, decoder.isJAL);
+  useImm := new Or[1]<'G>(branchJmp.out, decoder.isAUIPC);
+
+  nextPC := new Mux[32]<'G>(useImm.out, pcPlusImm.out, pcPlus4.out);
+
+  /* ============================================================ */
+  /*  OUTPUTS
+  /* ============================================================ */
 
   out = alu.out;
-  aluInA = rf.rs1;
-  aluInB = aluInB.out;
+  nextpc = nextPC.out;
+  pc = pc.pc;
+  memAddr = loadStoreAddr.out;
+  // memData = memData_31_0.out;
+  memData = rs2_M.out;
+  memWriteMask = writeMask.out;
+  rfDataOut = rfData.out;
+  isStore = isStore_M.out;
 }
