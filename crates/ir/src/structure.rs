@@ -3,6 +3,7 @@ use super::{
     InstIdx, InvIdx, ParamIdx, PortIdx, Subst, TimeIdx, TimeSub,
 };
 use fil_ast::Op;
+use fil_utils::PortAttrs;
 use itertools::Itertools;
 use std::fmt;
 
@@ -142,6 +143,7 @@ pub struct Port {
     pub width: ExprIdx,
     pub live: Liveness,
     pub info: InfoIdx,
+    pub attrs: PortAttrs,
 }
 impl Port {
     /// Check if this is an invoke defined port

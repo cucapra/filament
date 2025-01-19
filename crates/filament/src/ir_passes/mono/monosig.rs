@@ -800,6 +800,7 @@ impl MonoSig {
             width,
             live,
             info,
+            attrs,
         } = underlying.get(port);
 
         let inv = match owner {
@@ -820,6 +821,7 @@ impl MonoSig {
             width: *width,      // placeholder
             live: live.clone(), // placeholder
             info: info.get(),
+            attrs: attrs.clone(),
         });
 
         // Overwrite the value in the port map if any. This is okay because this

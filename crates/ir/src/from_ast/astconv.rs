@@ -440,6 +440,7 @@ impl<'prog> BuildCtx<'prog> {
                     liveness,
                     bitwidth,
                 },
+            attrs,
         } = pd;
 
         let info = self.comp().add(ir::Info::port(
@@ -473,6 +474,7 @@ impl<'prog> BuildCtx<'prog> {
             owner,
             live,
             info,
+            attrs,
         };
 
         // Defines helper variable here due to lifetime issues

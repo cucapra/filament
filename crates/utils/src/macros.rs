@@ -83,7 +83,7 @@ macro_rules! attr_enum {
           )*
       };
   ) => {
-      attr_enum! {
+      $crate::attr_enum! {
           enum $name;
           pub {};
           priv {

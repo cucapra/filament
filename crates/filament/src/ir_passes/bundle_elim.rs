@@ -69,6 +69,7 @@ impl BundleElim {
             width,
             live,
             info,
+            attrs,
         } = comp.get(pidx).clone();
 
         let Liveness { idxs, lens, range } = live;
@@ -152,6 +153,7 @@ impl BundleElim {
                     owner,
                     info, // duplicate the info
                     width,
+                    attrs: attrs.clone(),
                 });
 
                 // Fill in the live idxs with a new dummy index
