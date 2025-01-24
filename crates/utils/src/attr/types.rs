@@ -13,3 +13,9 @@ attr_set! {
     numeric {
     };
 }
+
+attr_set! {
+    port_attrs;
+    flag {};
+    numeric {};
+}

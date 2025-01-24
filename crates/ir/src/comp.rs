@@ -4,7 +4,7 @@ use super::{
     InvIdx, Invoke, MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx,
     Time, TimeSub,
 };
-use crate::{utils::Idx, ParamOwner};
+use crate::{utils::Idx, DenseIndexInfo, ParamOwner};
 use fil_ast as ast;
 use fil_derive::Ctx;
 use fil_utils as utils;
@@ -59,6 +59,8 @@ pub struct Component {
     // ============== Component signature ===============
     /// Attributes of the component
     pub attrs: utils::CompAttrs,
+    /// Attributes of ports in the component
+    pub port_attrs: DenseIndexInfo<Port, utils::PortAttrs>,
     /// The input parameters to the component
     pub(crate) param_args: Box<[ParamIdx]>,
     /// The input events to the component
