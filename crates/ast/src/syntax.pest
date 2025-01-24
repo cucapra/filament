@@ -175,7 +175,7 @@ bundle_typ = {
 
 // Bundle definition
 bundle_def = {
-  identifier ~ ("[" ~ expr ~ "]")* ~ ":" ~ bundle_typ
+  attributes ~ identifier ~ ("[" ~ expr ~ "]")* ~ ":" ~ bundle_typ
 }
 
 // Ports

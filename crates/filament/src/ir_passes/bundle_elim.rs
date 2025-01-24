@@ -71,6 +71,8 @@ impl BundleElim {
             info,
         } = comp.get(pidx).clone();
 
+        let attrs = comp.port_attrs.get(pidx).clone();
+
         let Liveness { idxs, lens, range } = live;
 
         let start = comp.get(range.start).clone();
@@ -153,6 +155,9 @@ impl BundleElim {
                     info, // duplicate the info
                     width,
                 });
+
+                // copy over the attributes
+                comp.port_attrs.push(pidx, attrs.clone());
 
                 // Fill in the live idxs with a new dummy index
                 let port = ir::Param {
