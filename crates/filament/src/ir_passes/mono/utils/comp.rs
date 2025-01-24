@@ -1,7 +1,9 @@
 use fil_ast as ast;
 use fil_ir::{
-    self as ir, AddCtx, Ctx, DisplayCtx, Idx, IndexStore, InterfaceSrc, MutCtx,
+    self as ir, AddCtx, Ctx, DenseIndexInfo, DisplayCtx, Idx, IndexStore,
+    InterfaceSrc, MutCtx,
 };
+use fil_utils as utils;
 
 use super::{Base, IntoBase, IntoUdl, Underlying};
 
@@ -24,6 +26,9 @@ impl<'a> UnderlyingComp<'a> {
     }
     pub fn ports(&self) -> &IndexStore<ir::Port> {
         self.0.ports()
+    }
+    pub fn port_attrs(&self) -> &DenseIndexInfo<ir::Port, utils::PortAttrs> {
+        &self.0.port_attrs
     }
     pub fn src_info(&self) -> &Option<InterfaceSrc> {
         &self.0.src_info
@@ -93,6 +98,14 @@ impl BaseComp {
     }
     pub fn set_src_info(&mut self, other: Option<InterfaceSrc>) {
         self.0.src_info = other;
+    }
+
+    pub fn push_port_attrs(
+        &mut self,
+        key: Base<ir::Port>,
+        val: utils::PortAttrs,
+    ) {
+        self.0.port_attrs.push(key.get(), val);
     }
 
     pub fn extend_cmds(
