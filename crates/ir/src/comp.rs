@@ -4,7 +4,7 @@ use super::{
     InvIdx, Invoke, MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx,
     Time, TimeSub,
 };
-use crate::{utils::Idx, DenseIndexInfo, ParamOwner, SparseInfoMap};
+use crate::{utils::Idx, DenseIndexInfo, ParamOwner};
 use fil_ast as ast;
 use fil_derive::Ctx;
 use fil_utils as utils;
