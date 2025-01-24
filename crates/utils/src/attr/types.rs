@@ -10,12 +10,13 @@ attr_set! {
             CounterFSM: "counter_fsm",
         };
     };
-    numeric {
-    };
+    numeric {};
+    float {};
 }
 
 attr_set! {
     port_attrs;
     flag {};
     numeric {};
+    float {};
 }
