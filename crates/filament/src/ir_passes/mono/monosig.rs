@@ -801,6 +801,7 @@ impl MonoSig {
             live,
             info,
         } = underlying.get(port);
+        let attrs = underlying.port_attrs().get(port.idx());
 
         let inv = match owner {
             ir::PortOwner::Sig { .. } | ir::PortOwner::Local => None,
@@ -821,6 +822,8 @@ impl MonoSig {
             live: live.clone(), // placeholder
             info: info.get(),
         });
+
+        self.base.push_port_attrs(new_port, attrs.clone());
 
         // Overwrite the value in the port map if any. This is okay because this
         // method can be called on local ports defined in iterative scopes.
