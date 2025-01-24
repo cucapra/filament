@@ -474,12 +474,13 @@ impl<'prog> BuildCtx<'prog> {
             owner,
             live,
             info,
-            attrs,
         };
 
         // Defines helper variable here due to lifetime issues
         let is_sig_port = p.is_sig();
         let idx = self.comp().add(p);
+        // Add the attributes to port attributes
+        self.comp().port_attrs.push(idx, attrs);
         // Fixup the liveness index parameter's owner
         let idxs = self.comp().get(idx).live.idxs.clone();
         for p in idxs {
