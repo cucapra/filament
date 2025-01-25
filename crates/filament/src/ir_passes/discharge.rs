@@ -9,7 +9,7 @@ use fil_ast as ast;
 use fil_ir::{self as ir, Ctx, DisplayCtx};
 use fil_utils::GlobalPositionTable;
 use itertools::Itertools;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::{fs, iter};
 use term::termcolor::{ColorChoice, StandardStream};
 
@@ -612,6 +612,9 @@ impl Visitor for Discharge {
         }
 
         let bs = self.sol.bool_sort();
+
+        let mut interned_props = HashSet::new();
+
         // Declare all expressions
         for (idx, expr) in data
             .comp
@@ -626,6 +629,9 @@ impl Visitor for Discharge {
                 .map(|i| (i, data.comp.get(i)));
 
             for (pidx, prop) in relevant_props {
+                // Save the proposition in the interned_props set
+                interned_props.insert(pidx);
+
                 let assign = self.prop_to_sexp(prop);
                 let sexp = self
                     .sol
@@ -679,6 +685,8 @@ impl Visitor for Discharge {
             .props()
             .iter()
             .filter(|(idx, _)| idx.valid(&data.comp))
+            // Filter out propositions that are already defined in expressions
+            .filter(|(idx, _)| !interned_props.contains(idx))
         {
             // Define assertion equating the proposition to its assignment
             let assign = self.prop_to_sexp(prop);
