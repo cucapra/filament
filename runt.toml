@@ -2,10 +2,18 @@ ver = "0.4.1"
 
 
 [[tests]]
-name = "check"
+name = "check-z3"
 paths = ["tests/check/*.fil", "primitives/*.fil"]
 cmd = """
-./target/debug/filament {} --check
+./target/debug/filament {} --check --solver z3
+"""
+expect_dir = "tests/check/"
+
+[[tests]]
+name = "check-cvc5"
+paths = ["tests/check/*.fil", "primitives/*.fil"]
+cmd = """
+./target/debug/filament {} --check --solver cvc5
 """
 expect_dir = "tests/check/"
 
