@@ -62,9 +62,10 @@ pub struct Component {
     /// Attributes of ports in the component
     pub port_attrs: DenseIndexInfo<Port, utils::PortAttrs>,
     /// The input parameters to the component
-    pub(crate) param_args: Box<[ParamIdx]>,
+    /// TODO (Edmund): revert this to pub(crate) once we have an IR builder
+    pub param_args: Box<[ParamIdx]>,
     /// The input events to the component
-    pub(crate) event_args: Box<[EventIdx]>,
+    pub event_args: Box<[EventIdx]>,
     /// Assumptions for existential parameters.
     exist_assumes: Vec<(ParamIdx, Vec<PropIdx>)>,
     param_asserts: Box<[PropIdx]>,
