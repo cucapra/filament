@@ -9,8 +9,8 @@ mod position;
 mod reporter;
 
 pub use attr::{
-    AttrCtx, AttrStore, Attributes, CompAttrs, CompBool, CompNum, PortAttrs,
-    PortBool, PortNum,
+    AttrCtx, AttrStore, Attributes, CompAttrs, CompBool, CompFloat, CompNum,
+    PortAttrs, PortBool, PortFloat, PortNum,
 };
 pub use errors::{Error, FilamentResult};
 pub use gsym::GSym;

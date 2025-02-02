@@ -18,12 +18,12 @@ attr_set! {
 
 attr_set! {
     port_attrs;
-    flag {
+    flag {};
+    numeric {};
+    float {
         priv {
             /// Combinational delay of this port
             CombDelay,
         };
     };
-    numeric {};
-    float {};
 }
