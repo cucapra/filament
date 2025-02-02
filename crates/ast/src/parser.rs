@@ -239,6 +239,13 @@ impl FilamentParser {
             .map_err(|_| input.error("Expected valid bitwidth"))
     }
 
+    fn float(input: Node) -> ParseResult<f64> {
+        input
+            .as_str()
+            .parse::<f64>()
+            .map_err(|_| input.error("Expected valid float"))
+    }
+
     // ================ Intervals =====================
     fn time(input: Node) -> ParseResult<Loc<ast::Time>> {
         let sp = Self::get_span(&input);
@@ -833,12 +840,13 @@ impl FilamentParser {
         Ok(())
     }
 
-    fn attributes<Bool, Num>(
+    fn attributes<Bool, Num, Float>(
         input: Node,
-    ) -> ParseResult<utils::Attributes<Bool, Num>>
+    ) -> ParseResult<utils::Attributes<Bool, Num, Float>>
     where
         Bool: FromStr + Hash + Eq + Copy,
         Num: FromStr + Hash + Eq + Copy,
+        Float: FromStr + Hash + Eq + Copy,
     {
         let mut attrs = utils::Attributes::default();
         for attr in input.into_children() {
@@ -853,6 +861,9 @@ impl FilamentParser {
                 [identifier(name), bitwidth(val)] => Num::from_str(name.as_ref()).map(
                     |attr| attrs.set(attr, val, name.pos())).map_err(
                         |_| attr.error(format!("Found unknown numeric attribute \"{name}\""))),
+                [identifier(name), float(val)] => Float::from_str(name.as_ref()).map(
+                    |attr| attrs.set(attr, val, name.pos())).map_err(
+                        |_| attr.error(format!("Found unknown float attribute \"{name}\""))),
             )?;
         }
 

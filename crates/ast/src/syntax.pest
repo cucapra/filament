@@ -9,6 +9,9 @@ identifier = @{ ("_" | ASCII_ALPHA)+ ~ ("_" | ASCII_ALPHA | ASCII_DIGIT)* }
 // Positive numbers
 bitwidth = @{ ASCII_DIGIT+ }
 
+// Float
+float = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
+
 char = { !"\"" ~ ANY }
 string_lit = ${ "\"" ~ char* ~ "\"" }
 import = _{
@@ -74,6 +77,7 @@ not = { "not" }
 attr_bind = {
   not ~ "(" ~ identifier ~ ")"
   | identifier ~ "=" ~ bitwidth
+  | identifier ~ "=" ~ float
   | identifier
 }
 
