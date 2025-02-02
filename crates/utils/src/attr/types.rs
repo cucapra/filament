@@ -12,8 +12,8 @@ attr_set! {
             Schedule: "schedule",
         };
     };
-    numeric {
-    };
+    numeric {};
+    float {};
 }
 
 attr_set! {
@@ -25,4 +25,5 @@ attr_set! {
         };
     };
     numeric {};
+    float {};
 }

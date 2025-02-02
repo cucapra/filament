@@ -124,31 +124,41 @@ attr_set! {
 }
 */
 macro_rules! attr_set {
-  (
-      $module:ident;
-      flag {
-          $(
-              $flag_tokens:tt
-          )*
-      };
-      numeric {
-          $(
-              $num_tokens:tt
-          )*
-      };
-  ) => {
-      pub mod $module {
-          $crate::attr_enum! {
-              enum Bool;
-              $($flag_tokens)*
-          }
+    (
+        $module:ident;
+        flag {
+            $(
+                $flag_tokens:tt
+            )*
+        };
+        numeric {
+            $(
+                $num_tokens:tt
+            )*
+        };
+        float {
+            $(
+                $float_tokens:tt
+            )*
+        };
+    ) => {
+        pub mod $module {
+            $crate::attr_enum! {
+                enum Bool;
+                $($flag_tokens)*
+            }
 
-          $crate::attr_enum! {
-              enum Num;
-              $($num_tokens)*
-          }
+            $crate::attr_enum! {
+                enum Num;
+                $($num_tokens)*
+            }
 
-          pub type Attrs = $crate::Attributes<Bool, Num>;
-      }
-  };
+            $crate::attr_enum! {
+                enum Float;
+                $($float_tokens)*
+            }
+
+            pub type Attrs = $crate::Attributes<Bool, Num, Float>;
+        }
+    };
 }
