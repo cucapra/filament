@@ -12,7 +12,7 @@ extern "state.sv" {
       out: ['G+1, 'L] WIDTH,
    ) where 'L > 'G+1;
    /// ANCHOR_END: register
-
+   
    // A comp that delays `in` by one cycle. Exactly the same as a register
    // but does not require comp to provide `go` signal. If the comp
    // additionally has no resource sharing, it can elide FSM generation.
