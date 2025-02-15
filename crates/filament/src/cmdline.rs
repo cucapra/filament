@@ -109,6 +109,9 @@ pub struct Opts {
     /// preserves original port names during compilation.
     #[argh(switch, long = "preserve-names")]
     pub preserve_names: bool,
+    /// toplevel filament component doesnt have the Calyx toplevel attribute
+    #[argh(switch, long="disable-emit-toplevel")]
+    pub disable_emit_toplevel: bool,
 
     // Solver specific configuration
     /// solver to use (default: cvc5): cvc5, z3

@@ -3,31 +3,31 @@ import "primitives/core.fil";
 // decoder for rv32i instruction set
 
 comp Decode<'G:1> (
-   instr: ['G, 'G+1] 32
+  instr: ['G, 'G+1] 32
 ) -> (
-   isLoad: ['G, 'G+1] 1,
-   isStore: ['G, 'G+1] 1,
-   isALUImm: ['G, 'G+1] 1,
-   isALUReg: ['G, 'G+1] 1,
-   isLUI: ['G, 'G+1] 1,
-   isJAL: ['G, 'G+1] 1,
-   isJALR: ['G, 'G+1] 1,
-   isBranch: ['G, 'G+1] 1,
-   isSys: ['G, 'G+1] 1,
-   isAUIPC: ['G, 'G+1] 1,
-   Uimm: ['G, 'G+1] 32,
-   Iimm: ['G, 'G+1] 32,
-   Simm: ['G, 'G+1] 32,
-   Bimm: ['G, 'G+1] 32,
-   Jimm: ['G, 'G+1] 32,
-   funct: ['G, 'G+1] 8,
-   isAdd: ['G, 'G+1] 1,   // 1 if add, 0 if sub
-   isArith: ['G, 'G+1] 1, // 1 if arith, 0 if log
-   rf_write: ['G, 'G+1] 1
+  isLoad: ['G, 'G+1] 1,
+  isStore: ['G, 'G+1] 1,
+  isALUImm: ['G, 'G+1] 1,
+  isALUReg: ['G, 'G+1] 1,
+  isLUI: ['G, 'G+1] 1,
+  isJAL: ['G, 'G+1] 1,
+  isJALR: ['G, 'G+1] 1,
+  isBranch: ['G, 'G+1] 1,
+  isSys:['G, 'G+1] 1,
+  isAUIPC: ['G, 'G+1] 1,
+  Uimm: ['G, 'G+1] 32,
+  Iimm: ['G, 'G+1] 32,
+  Simm: ['G, 'G+1] 32,
+  Bimm: ['G, 'G+1] 32,
+  Jimm: ['G, 'G+1] 32,
+  funct: ['G, 'G+1]8,
+  isAdd: ['G, 'G+1] 1,   // 1 if add, 0 if sub
+  isArith: ['G, 'G+1] 1, // 1 if arith, 0 if lo'G
+  rf_write: ['G, 'G+1] 1
 ) {
   opcode := new Slice[32,6,2,5]<'G>(instr); // the important bits
 
-  instr30 := new Select[32,30]<'G>(instr); // instr[30] is 1 for sub and arith, 0 for add and logical
+  instr30 := new Select[32,30]<'G>(instr); // instr[30] is 1 for sub and arith, 0 for add and lo'Gical
   instr5 := new Select[32,5]<'G>(instr);
   isSub := new And[1]<'G>(instr30.out, instr5.out);
   notSub := new Not[1]<'G>(isSub.out);
