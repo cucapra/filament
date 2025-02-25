@@ -37,7 +37,7 @@ pub use structure::{
 };
 pub use time::{Time, TimeSub};
 pub use utils::{
-    Bind, DenseIndexInfo, Foldable, Foreign, Idx, IdxLike, IndexStore,
-    Interned, SparseInfoMap, Subst, Traversal,
+    Bind, Dataflow, DenseIndexInfo, Foldable, Foreign, Idx, IdxLike,
+    IndexStore, Interned, SparseInfoMap, Subst, Traversal,
 };
 pub use validate::Validate;

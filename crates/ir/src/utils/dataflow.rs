@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use super::DenseIndexInfo;
-use crate::{self as ir, Ctx};
+use crate as ir;
 
 /// Dataflow graph of a component
 #[derive(Clone)]
