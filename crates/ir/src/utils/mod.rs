@@ -1,3 +1,4 @@
+mod dataflow;
 mod dense_info;
 mod foreign;
 mod idx;
@@ -7,6 +8,7 @@ mod sparse_info;
 mod subst;
 mod traversal;
 
+pub use dataflow::Dataflow;
 pub use dense_info::DenseIndexInfo;
 pub use foreign::Foreign;
 pub use idx::{Idx, IdxLike};

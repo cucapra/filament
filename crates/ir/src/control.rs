@@ -133,7 +133,7 @@ pub struct Connect {
 
 #[derive(Clone, PartialEq, Eq)]
 /// An invocation of a component
-/// Unlike in the AST, invocations are completely desuarged and do not have any
+/// Unlike in the AST, invocations are completely desugared and do not have any
 /// ports.
 /// The ports are represented as connections.
 pub struct Invoke {
