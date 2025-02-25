@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use itertools::Itertools;
 
 use super::DenseIndexInfo;
 use crate::{self as ir, Ctx};
@@ -6,33 +6,47 @@ use crate::{self as ir, Ctx};
 /// Dataflow graph of a component
 #[derive(Clone)]
 pub struct Dataflow {
-    preds: HashMap<ir::Port, Vec<ir::Port>>,
-    succs: HashMap<ir::Port, Vec<ir::Port>>,
+    pub preds: DenseIndexInfo<ir::Port, Vec<ir::PortIdx>>,
+    pub succs: DenseIndexInfo<ir::Port, Vec<ir::PortIdx>>,
 }
 
 impl From<&ir::Component> for Dataflow {
     fn from(comp: &ir::Component) -> Self {
-        let mut preds = DenseIndexInfo::with_default(comp.ports().len());
-        let mut succs = DenseIndexInfo::with_default(comp.ports().len());
+        let mut preds: DenseIndexInfo<ir::Port, Vec<_>> =
+            DenseIndexInfo::with_default(comp.ports().len());
+        let mut succs: DenseIndexInfo<ir::Port, Vec<_>> =
+            DenseIndexInfo::with_default(comp.ports().len());
 
         for cmd in &comp.cmds {
             match cmd {
                 crate::Command::Invoke(idx) => {
-                    let inv = comp.get(*idx);
-                    for port in &inv.ports {
-                        for &pred in &port.pred {
-                            preds.insert(*port, pred);
+                    let inputs = idx.inputs(comp);
+                    let outputs = idx.outputs(comp).collect_vec();
+
+                    for pred in inputs {
+                        for succ in &outputs {
+                            preds.get_mut(*succ).push(pred);
+                            succs.get_mut(pred).push(*succ);
                         }
                     }
                 }
-                crate::Command::Instance(idx) => todo!(),
-                crate::Command::BundleDef(idx) => todo!(),
-                crate::Command::Connect(connect) => todo!(),
-                crate::Command::Let(_) => todo!(),
-                crate::Command::ForLoop(_) => todo!(),
-                crate::Command::If(_) => todo!(),
-                crate::Command::Fact(fact) => todo!(),
-                crate::Command::Exists(exists) => todo!(),
+                crate::Command::Connect(ir::Connect { src, dst, .. }) => {
+                    assert!(src.is_port(comp) && dst.is_port(comp), "Bundles should be resolved before constructing dataflow");
+
+                    preds.get_mut(dst.port).push(src.port);
+                    succs.get_mut(src.port).push(dst.port);
+                }
+                crate::Command::BundleDef(_)
+                | crate::Command::ForLoop(_)
+                | crate::Command::If(_) => {
+                    unreachable!(
+                        "Components should be monomorphic and bundle-free"
+                    )
+                }
+                crate::Command::Instance(_)
+                | crate::Command::Let(_)
+                | crate::Command::Fact(_)
+                | crate::Command::Exists(_) => {}
             }
         }
 

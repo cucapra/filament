@@ -1,8 +1,8 @@
-use crate::{Expr, Prop, Time};
+use crate::{Direction, Expr, PortOwner, Prop, Time};
 
 use super::{
     Access, CompIdx, Component, Ctx, Event, ExprIdx, Fact, Foreign, InfoIdx,
-    InstIdx, InvIdx, ParamIdx, PortIdx, PropIdx, Range, TimeIdx, TimeSub,
+    InstIdx, InvIdx, ParamIdx, Port, PortIdx, PropIdx, Range, TimeIdx, TimeSub,
 };
 
 #[derive(Clone, PartialEq, Eq)]
@@ -170,6 +170,52 @@ impl InvIdx {
     {
         let inst = self.inst(ctx);
         inst.comp(ctx)
+    }
+
+    // Input ports to the iterator
+    pub fn inputs<C>(self, ctx: &C) -> impl Iterator<Item = PortIdx> + '_
+    where
+        C: Ctx<Invoke> + Ctx<Port>,
+    {
+        let inv = ctx.get(self);
+        inv.ports.iter().filter_map(|&port| {
+            let Port {
+                owner: PortOwner::Inv { dir, .. },
+                ..
+            } = ctx.get(port)
+            else {
+                unreachable!("Port is not an invocation port")
+            };
+
+            if *dir == Direction::In {
+                Some(port)
+            } else {
+                None
+            }
+        })
+    }
+
+    // Output ports to the iterator
+    pub fn outputs<C>(self, ctx: &C) -> impl Iterator<Item = PortIdx> + '_
+    where
+        C: Ctx<Invoke> + Ctx<Port>,
+    {
+        let inv = ctx.get(self);
+        inv.ports.iter().filter_map(|&port| {
+            let Port {
+                owner: PortOwner::Inv { dir, .. },
+                ..
+            } = ctx.get(port)
+            else {
+                unreachable!("Port is not an invocation port")
+            };
+
+            if *dir == Direction::Out {
+                Some(port)
+            } else {
+                None
+            }
+        })
     }
 }
 
