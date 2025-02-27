@@ -4,6 +4,7 @@ use super::{
 };
 use fil_gen as gen;
 use fil_ir::{self as ir, Ctx, IndexStore};
+use fil_utils::{self as utils, AttrCtx};
 use ir::{AddCtx, EntryPoint};
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -255,12 +256,18 @@ impl<'ctx> Monomorphize<'ctx> {
 
         // the component whose signature we want to monomorphize
         // Monomorphize the sig
-        let mono_comp = MonoDeferred::new(
+        let mut mono_comp = MonoDeferred::new(
             UnderlyingComp::new(self.old.get(comp.idx())),
             self,
             monosig,
         )
         .comp();
+
+        mono_comp.attrs.set(
+            utils::CompBool::Monomorphic,
+            true,
+            utils::GPosIdx::UNKNOWN,
+        );
 
         let new_comp = self.ctx.add(mono_comp).base();
         self.processed.insert(n_ck, new_comp);
