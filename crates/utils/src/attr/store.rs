@@ -1,5 +1,5 @@
 use crate::{attr::AttrCtx, GPosIdx};
-use std::{collections::HashMap, fmt::Display, hash::Hash};
+use std::{collections::HashMap, hash::Hash};
 
 /// A store for attributes
 #[derive(Clone)]
