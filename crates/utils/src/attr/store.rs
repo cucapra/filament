@@ -51,21 +51,3 @@ where
         }
     }
 }
-
-impl<Attr, Value> Display for AttrStore<Attr, Value>
-where
-    Attr: Eq + Hash + Copy + Display,
-    Value: Display,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.attrs
-                .iter()
-                .map(|(attr, (value, _))| format!("{}={}", attr, value))
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
-    }
-}

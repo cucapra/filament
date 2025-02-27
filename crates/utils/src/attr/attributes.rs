@@ -110,9 +110,30 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "#[")?;
-        write!(f, "{}", &self.num_attrs)?;
-        write!(f, "{}", &self.bool_attrs)?;
-        write!(f, "{}", &self.float_attrs)?;
+        let bool_attrs =
+            self.bool_attrs.iter().map(|(attr, value)| match value {
+                true => format!("{}", attr),
+                false => format!("not({})", attr),
+            });
+        let num_attrs = self
+            .num_attrs
+            .iter()
+            .map(|(attr, value)| format!("{}={}", attr, value));
+        let float_attrs = self
+            .float_attrs
+            .iter()
+            .map(|(attr, value)| format!("{}={}", attr, value));
+
+        write!(
+            f,
+            "{}",
+            bool_attrs
+                .chain(num_attrs)
+                .chain(float_attrs)
+                .collect::<Vec<_>>()
+                .join(", ")
+        )?;
+
         write!(f, "]")
     }
 }

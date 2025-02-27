@@ -10,7 +10,6 @@ use fil_utils::{
 use itertools::Itertools;
 use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest_consume::{match_nodes, Error, Parser};
-use std::fmt::Display;
 use std::fs;
 use std::hash::Hash;
 use std::path::Path;

@@ -133,9 +133,11 @@ impl<'a, 'b> Printer<'a, 'b> {
 
     fn port(&self, idx: ir::PortIdx, indent: usize) -> String {
         let port = self.comp.get(idx);
+        let port_attrs = self.comp.port_attrs.get(idx);
         format!(
-            "{:indent$}{}: {} {}",
+            "{:indent$}{}{}: {} {}",
             "",
+            port_attrs,
             self.comp.display(idx),
             self.comp.display(&port.live),
             self.comp.display(port.width),
@@ -149,6 +151,8 @@ impl<'a, 'b> Printer<'a, 'b> {
         indent: usize,
         f: &mut F,
     ) -> io::Result<()> {
+        writeln!(f, "{}", self.comp.attrs)?;
+
         if self.comp.is_ext() {
             write!(f, "ext ")?;
         };
