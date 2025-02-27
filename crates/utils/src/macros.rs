@@ -106,7 +106,7 @@ macro_rules! attr_enum {
           priv {
               $(
                   $(#[$priv_meta])*
-                  $priv: $priv_str,
+                  $priv,
               )*
           };
       }
