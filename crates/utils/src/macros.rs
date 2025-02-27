@@ -35,7 +35,7 @@ macro_rules! attr_enum {
           )*
       };
   ) => {
-      #[derive(Clone, Copy, PartialEq, strum_macros::EnumString, Eq, Hash)]
+      #[derive(Clone, Copy, PartialEq, strum_macros::EnumString, strum_macros::Display, Eq, Hash)]
       pub enum $name {
           $(
               $(#[$pub_meta])*
@@ -44,7 +44,7 @@ macro_rules! attr_enum {
           )*
           $(
               $(#[$priv_meta])*
-              #[strum(disabled)]
+              #[strum(disabled,to_string = $priv_str)]
               $priv,
           )*
       }
@@ -79,7 +79,7 @@ macro_rules! attr_enum {
       priv {
           $(
               $(#[$priv_meta:meta])*
-              $priv:ident,
+              $priv:ident: $priv_str:literal,
           )*
       };
   ) => {
@@ -89,7 +89,7 @@ macro_rules! attr_enum {
           priv {
               $(
                   $(#[$priv_meta])*
-                  $priv,
+                  $priv: $priv_str,
               )*
           };
       }

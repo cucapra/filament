@@ -1,14 +1,14 @@
 use super::{AttrCtx, AttrStore};
 use crate::GPosIdx;
-use std::{hash::Hash, str::FromStr};
+use std::{fmt::Display, hash::Hash};
 
 /// Stores the attributes of a component
 #[derive(Clone)]
 pub struct Attributes<Bool, Num, Float>
 where
-    Bool: FromStr + Hash + Eq + Copy,
-    Num: FromStr + Hash + Eq + Copy,
-    Float: FromStr + Hash + Eq + Copy,
+    Bool: Hash + Eq + Copy,
+    Num: Hash + Eq + Copy,
+    Float: Hash + Eq + Copy,
 {
     /// Numerical attributes
     num_attrs: AttrStore<Num, u64>,
@@ -20,9 +20,9 @@ where
 
 impl<Bool, Num, Float> AttrCtx<Num, u64> for Attributes<Bool, Num, Float>
 where
-    Bool: FromStr + Hash + Eq + Copy,
-    Num: FromStr + Hash + Eq + Copy,
-    Float: FromStr + Hash + Eq + Copy,
+    Bool: Hash + Eq + Copy,
+    Num: Hash + Eq + Copy,
+    Float: Hash + Eq + Copy,
 {
     fn get(&self, attr: Num) -> Option<&u64> {
         self.num_attrs.get(attr)
@@ -43,9 +43,9 @@ where
 
 impl<Bool, Num, Float> AttrCtx<Bool, bool> for Attributes<Bool, Num, Float>
 where
-    Bool: FromStr + Hash + Eq + Copy,
-    Num: FromStr + Hash + Eq + Copy,
-    Float: FromStr + Hash + Eq + Copy,
+    Bool: Hash + Eq + Copy,
+    Num: Hash + Eq + Copy,
+    Float: Hash + Eq + Copy,
 {
     fn get(&self, attr: Bool) -> Option<&bool> {
         self.bool_attrs.get(attr)
@@ -66,9 +66,9 @@ where
 
 impl<Bool, Num, Float> AttrCtx<Float, f64> for Attributes<Bool, Num, Float>
 where
-    Bool: FromStr + Hash + Eq + Copy,
-    Num: FromStr + Hash + Eq + Copy,
-    Float: FromStr + Hash + Eq + Copy,
+    Bool: Hash + Eq + Copy,
+    Num: Hash + Eq + Copy,
+    Float: Hash + Eq + Copy,
 {
     fn get(&self, attr: Float) -> Option<&f64> {
         self.float_attrs.get(attr)
@@ -89,9 +89,9 @@ where
 
 impl<Bool, Num, Float> Default for Attributes<Bool, Num, Float>
 where
-    Bool: FromStr + Hash + Eq + Copy,
-    Num: FromStr + Hash + Eq + Copy,
-    Float: FromStr + Hash + Eq + Copy,
+    Bool: Hash + Eq + Copy,
+    Num: Hash + Eq + Copy,
+    Float: Hash + Eq + Copy,
 {
     fn default() -> Self {
         Self {
@@ -99,5 +99,20 @@ where
             bool_attrs: AttrStore::default(),
             float_attrs: AttrStore::default(),
         }
+    }
+}
+
+impl<Bool, Num, Float> Display for Attributes<Bool, Num, Float>
+where
+    Bool: Display + Hash + Eq + Copy,
+    Num: Display + Hash + Eq + Copy,
+    Float: Display + Hash + Eq + Copy,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "#[")?;
+        write!(f, "{}", &self.num_attrs)?;
+        write!(f, "{}", &self.bool_attrs)?;
+        write!(f, "{}", &self.float_attrs)?;
+        write!(f, "]")
     }
 }
