@@ -1,8 +1,16 @@
 use crate::ast_visitor::{Action, Construct, Visitor};
+use fil_ast as ast;
 use fil_utils::{self as utils, AttrCtx, GPosIdx};
+use serde::Deserialize;
 use std::{collections::HashMap, fs};
 
-type Model = HashMap<String, HashMap<String, f64>>;
+#[derive(Deserialize, Debug, Default)]
+struct CompModel {
+    ports: HashMap<String, f64>,
+    combinational: bool,
+}
+
+type Model = HashMap<String, CompModel>;
 
 /// Loads the scheduling model into attributes
 pub struct SchedulingModel {
@@ -30,15 +38,22 @@ impl Visitor for SchedulingModel {
     fn name() -> &'static str {
         "scheduling_model"
     }
-
-    fn signature(&mut self, sig: &mut fil_ast::Signature) -> Action {
+    fn signature(&mut self, sig: &mut ast::Signature) -> Action {
         let comp = sig.name.inner().to_string();
 
         if let Some(attr_map) = self.model.get(&comp) {
-            for port in sig.ports.iter_mut() {
+            if attr_map.combinational {
+                sig.attributes.set(
+                    utils::CompBool::Combinational,
+                    true,
+                    GPosIdx::UNKNOWN,
+                );
+            }
+
+            for port in sig.outputs_mut() {
                 let name = port.name.to_string();
 
-                let value = *attr_map.get(&name).unwrap_or_else(|| panic!("Port {} not found in scheduling model for component {}",
+                let value = *attr_map.ports.get(&name).unwrap_or_else(|| panic!("Port {} not found in scheduling model for component {}",
                     name, comp));
 
                 port.attrs.set(

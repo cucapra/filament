@@ -1,13 +1,33 @@
+use super::CombDataflow;
 use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
 use easy_smt::{self as smt, SExpr, SExprData};
 use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, MutCtx, PortOwner};
-use fil_utils::{AttrCtx, CompBool};
+use fil_utils::{AttrCtx, CompNum};
+use itertools::Itertools;
 use std::{collections::HashMap, fs};
+
+/// Minimizing goal
+pub enum SchedulingGoal {
+    Registers,
+    Latency,
+}
+
+impl From<u64> for SchedulingGoal {
+    fn from(value: u64) -> Self {
+        match value {
+            0 => Self::Latency,
+            1 => Self::Registers,
+            _ => unreachable!("Invalid scheduling goal"),
+        }
+    }
+}
 
 /// Sets the proper FSM Attributes for every component
 pub struct Solve {
     /// Solver context
     sol: smt::Context,
+    /// Scheduling goal
+    goal: SchedulingGoal,
     /// The expression to minimize
     minimize_expr: smt::SExpr,
 }
@@ -36,10 +56,37 @@ impl Solve {
     pub fn get_inv(&self, inv_idx: ir::InvIdx) -> smt::SExpr {
         self.sol.atom(self.get_inv_name(inv_idx))
     }
+
+    /// Intern all conditions related to combinational delay
+    pub fn combinational_delays(&mut self, comp: &ir::Component) {
+        // Generate the critical path dataflow graph
+        let dataflow = CombDataflow::from(comp);
+
+        for path in dataflow.critical_paths() {
+            // If the path is length 0 or 1 this is a problem because it means
+            // one single node has a combinational delay over the clock period
+            if path.len() <= 1 {
+                unreachable!();
+            }
+
+            // We only care about start and end of the path
+            let path = path.iter().map(|p| self.get_port(*p).0);
+
+            // It cannot be true that every port in this path is
+            // scheduled (starts) on the same cycle
+            let equalities = path
+                .tuple_windows()
+                .map(|(a, b)| self.sol.eq(a, b))
+                .fold(self.sol.atom("true"), |acc, eq| self.sol.and(acc, eq));
+
+            // Assert that this is not the case
+            self.sol.assert(self.sol.not(equalities)).unwrap();
+        }
+    }
 }
 
 impl Construct for Solve {
-    fn from(opts: &crate::cmdline::Opts, _: &mut fil_ir::Context) -> Self {
+    fn from(opts: &crate::cmdline::Opts, _: &mut ir::Context) -> Self {
         // We have to use Z3 as only it supports maximization of an objective function
         let (name, s_opts) = ("z3", vec!["-smt2", "-in"]);
 
@@ -57,6 +104,7 @@ impl Construct for Solve {
 
         Self {
             minimize_expr: sol.numeral(0),
+            goal: SchedulingGoal::Latency,
             sol,
         }
     }
@@ -75,7 +123,9 @@ impl Visitor for Solve {
 
     fn start(&mut self, data: &mut VisitorData) -> Action {
         // Quit the pass if this attribute does not have the #[schedule] attribute
-        if !data.comp.attrs.has(CompBool::Schedule) {
+        if let Some(&goal) = data.comp.attrs.get(CompNum::Schedule) {
+            self.goal = goal.into()
+        } else {
             return Action::Stop;
         }
 
@@ -245,6 +295,8 @@ impl Visitor for Solve {
     }
 
     fn end(&mut self, data: &mut VisitorData) {
+        self.combinational_delays(&data.comp);
+
         let minimize = self.sol.atom("minimize");
         let expr = self.sol.list(vec![minimize, self.minimize_expr]);
         self.sol.raw_send(expr).unwrap();

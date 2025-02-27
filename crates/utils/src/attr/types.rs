@@ -8,11 +8,18 @@ attr_set! {
             TopLevel: "toplevel",
             /// Use a counter based FSM design
             CounterFSM: "counter_fsm",
-            /// Whether to schedule the component
+        };
+        priv {
+            /// Whether this component is combinational
+            Combinational,
+        };
+    };
+    numeric {
+        pub {
+            /// Scheduling goal for this component
             Schedule: "schedule",
         };
     };
-    numeric {};
     float {};
 }
 
