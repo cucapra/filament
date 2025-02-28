@@ -171,6 +171,7 @@ impl Retime {
         src_info.ports.push(output, "out".into());
 
         comp.src_info = Some(src_info);
+        comp.port_attrs = ir::DenseIndexInfo::with_default(comp.ports().len());
 
         // Add the component to the context
 
@@ -249,6 +250,15 @@ impl Visitor for Retime {
 
         // if dst_end happens after src_end, we need to insert a retiming register
         if dst_end > src_end {
+            log::debug!(
+                "Retiming register needed for {}: [{}, {}] -> {}: [{}, {}]",
+                data.comp.display(srcidx),
+                src_start,
+                src_end,
+                data.comp.display(dstidx),
+                dst_start,
+                dst_end,
+            );
             let width = src.width;
             let delay =
                 data.comp.add(ir::Expr::Concrete(dst_start - src_start));

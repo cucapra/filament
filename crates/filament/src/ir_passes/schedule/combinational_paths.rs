@@ -1,61 +1,77 @@
-use fil_ir::{self as ir, DisplayCtx};
+use fil_ir::{self as ir, Ctx, DisplayCtx};
 use fil_utils::{self as utils, AttrCtx};
 use itertools::Itertools;
 use linked_hash_set::LinkedHashSet;
 use ordered_float::NotNan;
+use std::collections::HashSet;
 
 /// Combinational paths in a component
 #[derive(Clone)]
-pub struct CombDataflow<'comp> {
-    /// The component
-    comp: &'comp ir::Component,
+pub struct CombDataflow {
+    /// Combinational delays of the component
+    delays: ir::DenseIndexInfo<ir::Port, NotNan<f64>>,
     /// Edges in the dataflow graph
-    edges:
-        ir::DenseIndexInfo<ir::Port, ir::SparseInfoMap<ir::Port, NotNan<f64>>>,
+    edges: ir::DenseIndexInfo<ir::Port, HashSet<ir::PortIdx>>,
 }
 
-impl<'comp> From<&'comp ir::Component> for CombDataflow<'comp> {
-    fn from(comp: &'comp ir::Component) -> Self {
-        let mut edges: ir::DenseIndexInfo<ir::Port, ir::SparseInfoMap<_, _>> =
+impl CombDataflow {
+    pub fn new(comp: &ir::Component, ctx: &ir::Context) -> Self {
+        let mut edges: ir::DenseIndexInfo<ir::Port, HashSet<_>> =
+            ir::DenseIndexInfo::with_default(comp.ports().len());
+        let mut delays: ir::DenseIndexInfo<ir::Port, NotNan<f64>> =
             ir::DenseIndexInfo::with_default(comp.ports().len());
 
         for cmd in &comp.cmds {
             match cmd {
                 ir::Command::Invoke(idx) => {
                     let inputs = idx.inputs(comp);
-                    let outputs = idx
-                        .outputs(comp)
-                        .map(|output| {
-                            (
-                                output,
-                                NotNan::new(
-                                    *comp
-                                        .port_attrs
-                                        .get(output)
-                                        .get(utils::PortFloat::CombDelay)
-                                        .unwrap_or_else(
-                                            || panic!("Combinational delay not found for port {}", comp.display(output))
-                                        )
+                    let outputs = idx.outputs(comp).collect_vec();
+
+                    for &output in &outputs {
+                        let ir::Port {
+                            owner: ir::PortOwner::Inv { base, .. },
+                            ..
+                        } = comp.get(output)
+                        else {
+                            unreachable!(
+                                "Port {} was not an invocation port",
+                                comp.display(output)
+                            );
+                        };
+
+                        // add the combinational delay to the output ports
+
+                        let foreign_idx = base.owner();
+
+                        delays.insert(output, NotNan::new(
+                                base.apply(
+                                    |foreign_port, foreign_comp| {
+                                        *foreign_comp
+                                            .port_attrs
+                                            .get(foreign_port)
+                                            .get(utils::PortFloat::CombDelay)
+                                            .unwrap_or_else(
+                                                || panic!("Combinational delay not found for port {} in comp {}", foreign_comp.display(foreign_port), ctx.display(foreign_idx))
+                                            )
+                                        },
+                                        ctx,
+                                    )
                                 )
                                 .expect(
                                     "Combinational delays should not be NaN",
-                                ),
-                            )
-                        })
-                        .collect_vec();
+                                ));
+                    }
 
                     for src in inputs {
-                        for (dst, delay) in &outputs {
-                            edges.get_mut(src).push(*dst, *delay);
+                        for &dst in &outputs {
+                            edges.get_mut(src).insert(dst);
                         }
                     }
                 }
                 ir::Command::Connect(ir::Connect { src, dst, .. }) => {
                     assert!(src.is_port(comp) && dst.is_port(comp), "Bundles should be resolved before constructing dataflow");
 
-                    edges
-                        .get_mut(src.port)
-                        .push(dst.port, NotNan::new(0.0).unwrap());
+                    edges.get_mut(src.port).insert(dst.port);
                 }
                 ir::Command::BundleDef(_)
                 | ir::Command::ForLoop(_)
@@ -71,11 +87,9 @@ impl<'comp> From<&'comp ir::Component> for CombDataflow<'comp> {
             }
         }
 
-        Self { comp, edges }
+        Self { delays, edges }
     }
-}
 
-impl CombDataflow<'_> {
     fn critical_paths_rec(
         &self,
         path: LinkedHashSet<ir::PortIdx>,
@@ -90,8 +104,8 @@ impl CombDataflow<'_> {
             vec![]
         };
 
-        for (succ, &delay) in self.edges.get(current).iter() {
-            let delay: f64 = delay.into();
+        for &succ in self.edges.get(current).iter() {
+            let delay: f64 = (*self.delays.get(succ)).into();
             if path.contains(&succ) {
                 // We already visited this node, skip it
                 continue;
@@ -111,21 +125,16 @@ impl CombDataflow<'_> {
     /// To do so we use DFS to find all paths from every source to every sink
     pub fn critical_paths(&self) -> Vec<Vec<ir::PortIdx>> {
         let mut paths = vec![];
-        for src in 0..self.comp.ports().len() {
-            let src = ir::PortIdx::new(src);
+        for (src, _) in self.edges.iter() {
             let mut path = LinkedHashSet::new();
 
             // Find the combinational delay of this port
-            let comb_delay = self
-                .comp
-                .port_attrs
-                .get(src)
-                .get(utils::PortFloat::CombDelay)
-                .copied()
-                .unwrap_or_default();
+            let comb_delay = *self.delays.get(src);
 
             path.insert(src);
-            paths.extend(self.critical_paths_rec(path, comb_delay).into_iter());
+            paths.extend(
+                self.critical_paths_rec(path, comb_delay.into()).into_iter(),
+            );
         }
 
         paths

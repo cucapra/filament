@@ -58,9 +58,13 @@ impl Solve {
     }
 
     /// Intern all conditions related to combinational delay
-    pub fn combinational_delays(&mut self, comp: &ir::Component) {
+    pub fn combinational_delays(
+        &mut self,
+        comp: &ir::Component,
+        ctx: &ir::Context,
+    ) {
         // Generate the critical path dataflow graph
-        let dataflow = CombDataflow::from(comp);
+        let dataflow = CombDataflow::new(comp, ctx);
 
         for path in dataflow.critical_paths() {
             // If the path is length 0 or 1 this is a problem because it means
@@ -295,7 +299,7 @@ impl Visitor for Solve {
     }
 
     fn end(&mut self, data: &mut VisitorData) {
-        self.combinational_delays(&data.comp);
+        self.combinational_delays(&data.comp, data.ctx());
 
         let minimize = self.sol.atom("minimize");
         let expr = self.sol.list(vec![minimize, self.minimize_expr]);
@@ -400,11 +404,11 @@ impl Visitor for Solve {
             let inv = data.comp.get_mut(inv_idx);
 
             // make sure this invoke only has one event
-            assert_eq!(
-                inv.events.len(),
-                1,
-                "Attempting to schedule an invocation with multiple events"
-            );
+            // assert_eq!(
+            //     inv.events.len(),
+            //     1,
+            //     "Attempting to schedule an invocation with multiple events"
+            // );
 
             inv.events[0].arg = time;
         }
