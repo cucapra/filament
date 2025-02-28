@@ -41,9 +41,9 @@ impl Solve {
         )
     }
 
-    /// Get the constant name for the time of an invocation
-    pub fn get_inv_name(&self, inv_idx: ir::InvIdx) -> String {
-        format!("inv{}", inv_idx.get())
+    /// Get the constant name for the time of an event
+    pub fn get_evt_name(&self, inv: ir::InvIdx, evt: ir::EventIdx) -> String {
+        format!("inv{}ev{}", inv.get(), evt.get())
     }
 
     /// Get the SExprs for the start and end of a port
@@ -52,9 +52,13 @@ impl Solve {
         (self.sol.atom(start), self.sol.atom(end))
     }
 
-    /// Get the SExpr for the time of an invocation
-    pub fn get_inv(&self, inv_idx: ir::InvIdx) -> smt::SExpr {
-        self.sol.atom(self.get_inv_name(inv_idx))
+    /// Get the SExpr for the time of an event
+    pub fn get_inv_evt(
+        &self,
+        inv: ir::InvIdx,
+        evt: ir::EventIdx,
+    ) -> smt::SExpr {
+        self.sol.atom(self.get_evt_name(inv, evt))
     }
 
     /// Intern all conditions related to combinational delay
@@ -226,14 +230,7 @@ impl Visitor for Solve {
     ) -> Action {
         let comp = &data.comp;
 
-        log::trace!("Scheduling invocation {}", inv_idx);
-
-        // The time at which this invocation is scheduled is a variable in the solver
-
-        let sexpr = self
-            .sol
-            .declare_const(format!("inv{}", inv_idx.get()), self.sol.int_sort())
-            .unwrap();
+        log::trace!("Scheduling invocation {}", comp.display(inv_idx));
 
         // Make sure that the invocation is scheduled at a positive time
         self.sol
@@ -241,6 +238,30 @@ impl Visitor for Solve {
             .unwrap();
 
         let inv = comp.get(inv_idx);
+
+        // Get the events of the invocation as variables
+        let events: ir::SparseInfoMap<ir::Event, SExpr> = inv
+            .events
+            .iter()
+            .map(|ir::EventBind { arg, .. }| {
+                let event = comp.get(*arg).event;
+                (
+                    event,
+                    self.sol
+                        .declare_const(
+                            self.get_evt_name(inv_idx, event),
+                            self.sol.int_sort(),
+                        )
+                        .unwrap(),
+                )
+            })
+            .collect();
+
+        // Intern all the constraints for the events
+        let foreign_comp = data.ctx().get(inv.inst.comp(comp));
+        for &constraint in foreign_comp.get_event_asserts() {
+            let prop = foreign_comp.get(constraint);
+        }
 
         for pidx in inv.ports.iter() {
             let port = comp.get(*pidx);

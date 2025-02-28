@@ -40,7 +40,6 @@ impl CombDataflow {
                         };
 
                         // add the combinational delay to the output ports
-
                         let foreign_idx = base.owner();
 
                         delays.insert(output, NotNan::new(
@@ -97,12 +96,12 @@ impl CombDataflow {
     ) -> Vec<Vec<ir::PortIdx>> {
         let current = path.iter().last().copied().unwrap();
 
-        let mut chain = if len >= 1.0 {
-            // This path is critical
-            vec![path.iter().cloned().collect()]
-        } else {
-            vec![]
-        };
+        if len >= 1.0 {
+            // This path is critical here, we can return it immediately
+            return vec![path.iter().cloned().collect()];
+        }
+
+        let mut chain = vec![];
 
         for &succ in self.edges.get(current).iter() {
             let delay: f64 = (*self.delays.get(succ)).into();
