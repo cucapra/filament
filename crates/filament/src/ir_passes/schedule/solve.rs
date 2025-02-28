@@ -1,5 +1,6 @@
 use super::CombDataflow;
 use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
+use core::time;
 use easy_smt::{self as smt, SExpr, SExprData};
 use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, MutCtx, PortOwner};
 use fil_utils::{AttrCtx, CompNum};
@@ -30,6 +31,12 @@ pub struct Solve {
     goal: SchedulingGoal,
     /// The expression to minimize
     minimize_expr: smt::SExpr,
+    // /// Map from ir elements to SExprs
+    // expr_map: ir::SparseInfoMap<ir::Expr, SExpr>,
+    // port_map: ir::SparseInfoMap<ir::PortIdx, SExpr>,
+    // event_map: ir::SparseInfoMap<ir::EventIdx, SExpr>,
+    // time_map: ir::SparseInfoMap<ir::TimeIdx, SExpr>,
+    // prop_map: ir::SparseInfoMap<ir::PropIdx, SExpr>,
 }
 
 impl Solve {
@@ -42,8 +49,12 @@ impl Solve {
     }
 
     /// Get the constant name for the time of an event
-    pub fn get_evt_name(&self, inv: ir::InvIdx, evt: ir::EventIdx) -> String {
-        format!("inv{}ev{}", inv.get(), evt.get())
+    pub fn get_evt_name(
+        &self,
+        inv: ir::InvIdx,
+        evt: ir::Foreign<ir::Event, ir::Component>,
+    ) -> String {
+        format!("inv{}ev{}", inv.get(), evt.key().get())
     }
 
     /// Get the SExprs for the start and end of a port
@@ -56,7 +67,7 @@ impl Solve {
     pub fn get_inv_evt(
         &self,
         inv: ir::InvIdx,
-        evt: ir::EventIdx,
+        evt: ir::Foreign<ir::Event, ir::Component>,
     ) -> smt::SExpr {
         self.sol.atom(self.get_evt_name(inv, evt))
     }
@@ -232,28 +243,27 @@ impl Visitor for Solve {
 
         log::trace!("Scheduling invocation {}", comp.display(inv_idx));
 
-        // Make sure that the invocation is scheduled at a positive time
-        self.sol
-            .assert(self.sol.gte(sexpr, self.sol.numeral(0)))
-            .unwrap();
-
         let inv = comp.get(inv_idx);
 
         // Get the events of the invocation as variables
         let events: ir::SparseInfoMap<ir::Event, SExpr> = inv
             .events
             .iter()
-            .map(|ir::EventBind { arg, .. }| {
-                let event = comp.get(*arg).event;
-                (
-                    event,
-                    self.sol
-                        .declare_const(
-                            self.get_evt_name(inv_idx, event),
-                            self.sol.int_sort(),
-                        )
-                        .unwrap(),
-                )
+            .map(|ir::EventBind { base, .. }| {
+                let sexpr = self
+                    .sol
+                    .declare_const(
+                        self.get_evt_name(inv_idx, *base),
+                        self.sol.int_sort(),
+                    )
+                    .unwrap();
+
+                // Make sure that the event is scheduled at a positive time
+                self.sol
+                    .assert(self.sol.gte(sexpr, self.sol.numeral(0)))
+                    .unwrap();
+
+                (base.key(), sexpr)
             })
             .collect();
 
@@ -265,12 +275,25 @@ impl Visitor for Solve {
 
         for pidx in inv.ports.iter() {
             let port = comp.get(*pidx);
-            let PortOwner::Inv {
-                base: foreign_pidx, ..
-            } = port.owner
+            let ir::Port {
+                owner:
+                    ir::PortOwner::Inv {
+                        base: foreign_pidx, ..
+                    },
+                live:
+                    ir::Liveness {
+                        range: ir::Range { start, end },
+                        ..
+                    },
+                ..
+            } = port
             else {
                 unreachable!("Port {} is not owned by an invocation", pidx)
             };
+
+            // Find the events associated with the start and end of the port
+            let start_expr = *events.get(comp.get(*start).event);
+            let end_expr = *events.get(comp.get(*end).event);
 
             let (start, end) = foreign_pidx.apply(
                 |p, foreign_comp| {
@@ -288,9 +311,9 @@ impl Visitor for Solve {
             );
 
             // Create expressions for the ports relative to the invocation
-            let start_expr = self.sol.plus(sexpr, self.sol.numeral(start));
+            let start_expr = self.sol.plus(start_expr, self.sol.numeral(start));
 
-            let end_expr = self.sol.plus(sexpr, self.sol.numeral(end));
+            let end_expr = self.sol.plus(end_expr, self.sol.numeral(end));
 
             log::trace!(
                 "Port {} is live from {} to {}",
@@ -397,41 +420,47 @@ impl Visitor for Solve {
         // Loop through invocations and find what they're bound to
         // collect here to let us mutate [data.comp] inside the loop
         for inv_idx in data.comp.invocations().idx_iter() {
-            let name = self.get_inv(inv_idx);
-            let SExprData::Atom(s) = self.sol.get(name) else {
-                unreachable!(
-                    "Expected invocation {} to be an atom, got {}",
-                    inv_idx,
-                    self.sol.display(name)
-                )
-            };
+            let new_times = data
+                .comp
+                .get(inv_idx)
+                .events
+                .iter()
+                .map(|ir::EventBind { base, arg, .. }| {
+                    let SExprData::Atom(s) =
+                        self.sol.get(self.get_inv_evt(inv_idx, *base))
+                    else {
+                        unreachable!()
+                    };
 
-            let time = *bindings.get(s).unwrap();
+                    (arg.event(&data.comp), *bindings.get(s).unwrap())
+                })
+                .collect_vec();
 
-            let time = data.comp.add(ir::Expr::Concrete(time));
+            // Needds to be broken up because we need mutable access to data.comp
+            let new_times = new_times
+                .into_iter()
+                .map(|(event, time)| {
+                    let time = data.comp.add(ir::Expr::Concrete(time));
 
-            let time = data.comp.add(ir::Time {
-                event,
-                offset: time,
-            });
+                    let time = data.comp.add(ir::Time {
+                        event,
+                        offset: time,
+                    });
 
-            log::debug!(
-                "Invocation {} scheduled at cycle {}",
-                data.comp.display(inv_idx),
-                data.comp.display(time)
-            );
+                    log::debug!(
+                        "Invocation {} scheduled at cycle {}",
+                        data.comp.display(inv_idx),
+                        data.comp.display(time)
+                    );
+                    time
+                })
+                .collect_vec();
 
-            // Set the time of the invocation
-            let inv = data.comp.get_mut(inv_idx);
-
-            // make sure this invoke only has one event
-            // assert_eq!(
-            //     inv.events.len(),
-            //     1,
-            //     "Attempting to schedule an invocation with multiple events"
-            // );
-
-            inv.events[0].arg = time;
+            for (ir::EventBind { arg, .. }, time) in
+                data.comp.get_mut(inv_idx).events.iter_mut().zip(new_times)
+            {
+                *arg = time
+            }
         }
 
         // Loop through ports and set their live ranges
