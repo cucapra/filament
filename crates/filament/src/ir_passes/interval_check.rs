@@ -1,6 +1,6 @@
 use crate::ir_visitor::{Action, Visitor, VisitorData};
 use fil_ir::{self as ir, AddCtx, Ctx};
-use fil_utils::GPosIdx;
+use fil_utils::{AttrCtx, CompNum, GPosIdx};
 use itertools::Itertools;
 
 #[derive(Default)]
@@ -124,6 +124,11 @@ impl Visitor for IntervalCheck {
 
     fn start(&mut self, data: &mut VisitorData) -> Action {
         let comp = &mut data.comp;
+
+        // If the component has the schedule attribute, do not run this pass
+        if comp.attrs.has(CompNum::Schedule) {
+            return Action::Stop;
+        }
 
         // Assertions about the signature get to use the constraints on existential parameters.
         let init = comp.add(ir::Prop::True);
