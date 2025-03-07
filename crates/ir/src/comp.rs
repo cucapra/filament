@@ -4,7 +4,7 @@ use super::{
     InvIdx, Invoke, MutCtx, Param, ParamIdx, Port, PortIdx, Prop, PropIdx,
     Time, TimeSub,
 };
-use crate::{utils::Idx, DenseIndexInfo, ParamOwner};
+use crate::{DenseIndexInfo, ParamOwner, utils::Idx};
 use fil_ast as ast;
 use fil_derive::Ctx;
 use fil_utils as utils;
@@ -601,7 +601,7 @@ impl AddCtx<Expr> for Component {
                     | (ast::Op::Mul, None, Some(0)) => Expr::Concrete(0),
                     // e*1 and e/1 == e
                     (ast::Op::Mul, _, Some(1)) | (ast::Op::Div, _, Some(1)) => {
-                        return *lhs
+                        return *lhs;
                     }
                     // 1*e == e
                     (ast::Op::Mul, Some(1), _) => return *rhs,

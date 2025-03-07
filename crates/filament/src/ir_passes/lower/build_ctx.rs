@@ -1,6 +1,6 @@
-use super::fsm::{FsmBind, FsmType};
-use super::utils::{cell_to_port_def, NameGenerator};
 use super::Fsm;
+use super::fsm::{FsmBind, FsmType};
+use super::utils::{NameGenerator, cell_to_port_def};
 use calyx_ir::{self as calyx, RRC};
 use fil_ir::{self as ir, Ctx, DenseIndexInfo, DisplayCtx};
 use fil_utils::{self as utils, AttrCtx};

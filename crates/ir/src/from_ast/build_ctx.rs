@@ -263,11 +263,10 @@ impl<'prog> BuildCtx<'prog> {
         // We are going to error out anyways so attempt to find the scope for
         // *any* port with the same name but a different port owner.
         let name = port.name();
-        let other = self
-            .port_map
-            .as_flat_vec()
-            .into_iter()
-            .find_map(|(p, _)| if p.name() == name { Some(p) } else { None });
+        let other =
+            self.port_map.as_flat_vec().into_iter().find_map(|(p, _)| {
+                if p.name() == name { Some(p) } else { None }
+            });
         let mut err = Error::undefined(name, "port");
         err =
             err.add_note(self.diag.add_info(
