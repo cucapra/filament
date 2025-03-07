@@ -80,7 +80,6 @@ ADD . filament
 WORKDIR /home/filament
 # Make rust use sparse registries (https://doc.rust-lang.org/nightly/cargo/reference/registries.html#registry-protocols)
 ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
-RUN cargo build --all
 # Set up fud
 RUN python3 -m pip install cocotb find_libpython pytest && \
   fud register -p fud/filament.py filament && \
