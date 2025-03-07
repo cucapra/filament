@@ -11,7 +11,7 @@ readme = "README.md"
 description = "A language for Fearless Hardware Design"
 categories = ["compilers"]
 homepage = "https://filamenthdl.com"
-edition = "2021"
+edition = "2024"
 version = "0.1.0"
 rust-version = "1.67"
 

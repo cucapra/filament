@@ -30,7 +30,7 @@ pub type BuildRes<T> = Result<T, Diagnostics>;
 ///   signature which substitutes all parameters in the signature.
 /// * For each invocation, compute the fully resolved signature (where events are correctly substituted)
 ///   and define all the parameters.
-impl<'prog> BuildCtx<'prog> {
+impl BuildCtx<'_> {
     fn declare_inst(&mut self, inst: &ast::Instance) -> BuildRes<()> {
         let ast::Instance {
             name,
@@ -247,7 +247,7 @@ impl<'prog> BuildCtx<'prog> {
     }
 }
 
-impl<'prog> BuildCtx<'prog> {
+impl BuildCtx<'_> {
     fn expr(&mut self, expr: ast::Expr) -> BuildRes<ExprIdx> {
         let expr = match expr {
             ast::Expr::Abstract(p) => {

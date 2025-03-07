@@ -88,7 +88,7 @@ impl<'a> Monomorphize<'a> {
     }
 }
 
-impl<'ctx> Monomorphize<'ctx> {
+impl Monomorphize<'_> {
     /// Returns a reference to the instance info for a component.
     /// **Panics** if the instance does not exist.
     pub fn inst_info(&self, comp_key: &CompKey) -> &InstanceInfo {
