@@ -42,8 +42,8 @@ lazy_static::lazy_static! {
 }
 
 pub enum BodyEl {
-    Ext(ast::Extern),
-    Comp(ast::Component),
+    Ext(Box<ast::Extern>),
+    Comp(Box<ast::Component>),
 }
 
 #[derive(Clone)]
