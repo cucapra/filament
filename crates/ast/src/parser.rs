@@ -9,7 +9,7 @@ use fil_utils::{
 };
 use itertools::Itertools;
 use pest::pratt_parser::{Assoc, Op, PrattParser};
-use pest_consume::{match_nodes, Error, Parser};
+use pest_consume::{Error, Parser, match_nodes};
 use std::fs;
 use std::hash::Hash;
 use std::path::Path;
@@ -901,9 +901,9 @@ impl FilamentParser {
     fn comp_or_ext(input: Node) -> ParseResult<BodyEl> {
         Ok(match_nodes!(
             input.into_children();
-            [external(sig)] => BodyEl::Ext(sig),
-            [generate(sig)] => BodyEl::Ext(sig),
-            [component(comp)] => BodyEl::Comp(comp),
+            [external(sig)] => BodyEl::Ext(Box::new(sig)),
+            [generate(sig)] => BodyEl::Ext(Box::new(sig)),
+            [component(comp)] => BodyEl::Comp(Box::new(comp)),
         ))
     }
 
@@ -925,8 +925,8 @@ impl FilamentParser {
 
                 for m in mixed {
                     match m {
-                        BodyEl::Ext(sig) => namespace.externs.push(sig),
-                        BodyEl::Comp(comp) => namespace.components.push(comp),
+                        BodyEl::Ext(sig) => namespace.externs.push(*sig),
+                        BodyEl::Comp(comp) => namespace.components.push(*comp),
                     }
                 }
                 namespace

@@ -113,6 +113,7 @@ impl GlobalPositionTable {
         // SAFETY:
         // - writing to the singleton is OK because we only do it one time
         // - the ONCE guarantees that SINGLETON is init'ed before assume_init_ref
+        #[allow(static_mut_refs)]
         unsafe {
             ONCE.call_once(|| {
                 SINGLETON.write(PositionTable::new());

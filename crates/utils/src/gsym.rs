@@ -1,6 +1,6 @@
 use std::{mem, sync};
 use string_interner::{
-    backend::BucketBackend, symbol::SymbolU32, StringInterner,
+    StringInterner, backend::BucketBackend, symbol::SymbolU32,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -8,18 +8,20 @@ pub struct GSym(SymbolU32);
 
 type Pool = StringInterner<BucketBackend>;
 
-fn singleton() -> &'static mut Pool {
+fn singleton() -> *mut Pool {
     static mut SINGLETON: mem::MaybeUninit<Pool> = mem::MaybeUninit::uninit();
     static ONCE: sync::Once = sync::Once::new();
 
     // SAFETY:
     // - writing to the singleton is OK because we only do it one time
     // - the ONCE guarantees that SINGLETON is init'ed before assume_init_ref
+    #[allow(static_mut_refs)]
     unsafe {
         ONCE.call_once(|| {
             SINGLETON.write(Pool::new());
         });
-        SINGLETON.assume_init_mut()
+
+        SINGLETON.as_mut_ptr() as *mut Pool
     }
 }
 
@@ -37,25 +39,25 @@ impl GSym {
 
 impl From<&str> for GSym {
     fn from(s: &str) -> Self {
-        GSym(singleton().get_or_intern(s))
+        GSym(unsafe { singleton().as_mut().unwrap().get_or_intern(s) })
     }
 }
 
 impl From<String> for GSym {
     fn from(s: String) -> Self {
-        GSym(singleton().get_or_intern(&s))
+        GSym(unsafe { singleton().as_mut().unwrap().get_or_intern(&s) })
     }
 }
 
 impl From<&String> for GSym {
     fn from(s: &String) -> Self {
-        GSym(singleton().get_or_intern(s))
+        GSym(unsafe { singleton().as_mut().unwrap().get_or_intern(s) })
     }
 }
 
 impl From<GSym> for &'static str {
     fn from(sym: GSym) -> Self {
-        singleton().resolve(sym.0).unwrap()
+        unsafe { singleton().as_ref().unwrap().resolve(sym.0).unwrap() }
     }
 }
 

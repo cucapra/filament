@@ -2,7 +2,7 @@
 use std::{mem, sync};
 
 use string_interner::{
-    backend::BucketBackend, symbol::SymbolU32, StringInterner,
+    StringInterner, backend::BucketBackend, symbol::SymbolU32,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -17,6 +17,7 @@ fn singleton() -> &'static mut Pool {
     // SAFETY:
     // - writing to the singleton is OK because we only do it one time
     // - the ONCE guarantees that SINGLETON is init'ed before assume_init_ref
+    #[allow(static_mut_refs)]
     unsafe {
         ONCE.call_once(|| {
             SINGLETON.write(Pool::new());

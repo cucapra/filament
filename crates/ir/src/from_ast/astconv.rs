@@ -1071,10 +1071,10 @@ impl From<ast::Component> for ComponentTransform {
 /// Convert an [ast::Extern] into an external/generated [ComponentTransform]
 impl From<ast::Extern> for ComponentTransform {
     fn from(ext: ast::Extern) -> Self {
-        let typ = if ext.gen.is_none() {
+        let typ = if ext.gen_tool.is_none() {
             TypeInfo::External(ext.path)
         } else {
-            TypeInfo::Generated(ext.gen.unwrap())
+            TypeInfo::Generated(ext.gen_tool.unwrap())
         };
         Self {
             typ,
@@ -1110,16 +1110,22 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
         .externs
         .into_iter()
         // track (extern location / gen tool name, signature, body)
-        .flat_map(|ast::Extern { comps, gen, path }| {
-            comps.into_iter().map(move |comp| {
-                let typ = if let Some(name) = &gen {
-                    TypeInfo::Generated(name.clone())
-                } else {
-                    TypeInfo::External(path.clone())
-                };
-                ComponentTransform { typ, sig: comp }
-            })
-        })
+        .flat_map(
+            |ast::Extern {
+                 comps,
+                 gen_tool,
+                 path,
+             }| {
+                comps.into_iter().map(move |comp| {
+                    let typ = if let Some(name) = &gen_tool {
+                        TypeInfo::Generated(name.clone())
+                    } else {
+                        TypeInfo::External(path.clone())
+                    };
+                    ComponentTransform { typ, sig: comp }
+                })
+            },
+        )
         // add signatures of components as well as their command bodies
         .chain(ns.components.into_iter().map(ComponentTransform::from))
         .enumerate();
