@@ -67,18 +67,21 @@ jobs:
     needs: [hash, build]
     if: always() && !failure() && !cancelled()
     container: ghcr.io/cucapra/filament:${{ needs.hash.outputs.hash }}
-    defaults:
-      run:
-        working-directory: /home/filament
     steps:
       - name: Copy fud configuration
         run: |
           mkdir -p $HOME/.config
           cp -r /root/.config/* $HOME/.config
-      - name: Checkout commit that triggered run
+      - name: Reconfigure fud
         run: |
-          git fetch --depth 1 origin ${{ github.sha }}
-          git checkout ${{ github.sha }}
+          fud config stages.filament.exec $HOME/filament/target/debug/filament
+          fud config stages.filament.library $HOME/filament
+      - name: Checkout commit that triggered run
+        uses: actions/checkout@v3
+        with:
+          repository: cucapra/filament
+          ref: ${{ github.sha }}
+          path: ../home/filament
       - name: Build Filament
         run: |
           cargo build --all
