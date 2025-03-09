@@ -67,22 +67,20 @@ jobs:
     needs: [hash, build]
     if: always() && !failure() && !cancelled()
     container: ghcr.io/cucapra/filament:${{ needs.hash.outputs.hash }}
-    defaults:
-      run:
-        working-directory: /home/filament
     steps:
       - name: Copy fud configuration
         run: |
           mkdir -p $HOME/.config
           cp -r /root/.config/* $HOME/.config
       - name: Checkout commit that triggered run
-        env: 
-          GITHUB_SHA: ${{ github.sha }}
-        run: |
-          git fetch
-          git checkout $GITHUB_SHA
+        uses: actions/checkout@v3
+        with:
+          repository: cucapra/filament
+          ref: ${{ github.sha }}
       - name: Build Filament
-        run: cargo build --all
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
       - name: Check versions
         run: |
           rustc --version
