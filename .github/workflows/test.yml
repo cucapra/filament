@@ -74,7 +74,7 @@ jobs:
           cp -r /root/.config/* $HOME/.config
       - name: Reconfigure fud
         run: |
-          fud register -p fud/filament.py filament
+          fud register -p $GITHUB_WORKSPACE/fud/filament.py filament
           fud config stages.filament.exec $GITHUB_WORKSPACE/target/debug/filament
           fud config stages.filament.library $GITHUB_WORKSPACE
       - name: Checkout commit that triggered run
