@@ -74,8 +74,8 @@ jobs:
           cp -r /root/.config/* $HOME/.config
       - name: Reconfigure fud
         run: |
-          fud config stages.filament.exec $HOME/filament/target/debug/filament
-          fud config stages.filament.library $HOME/filament
+          fud config stages.filament.exec $GITHUB_WORKSPACE/filament/target/debug/filament
+          fud config stages.filament.library $GITHUB_WORKSPACE/filament
       - name: Checkout commit that triggered run
         uses: actions/checkout@v3
         with:
