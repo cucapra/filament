@@ -81,12 +81,9 @@ jobs:
           repository: cucapra/filament
           ref: ${{ github.sha }}
       - name: Build Filament
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
+        run: cargo build --all
       - name: Check versions
         run: |
-          ls -la .
           rustc --version
           cargo --version
       - name: Original test suite
