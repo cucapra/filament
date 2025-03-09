@@ -86,6 +86,7 @@ jobs:
           command: build
       - name: Check versions
         run: |
+          ls -la .
           rustc --version
           cargo --version
       - name: Original test suite
