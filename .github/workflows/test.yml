@@ -78,7 +78,9 @@ jobs:
       - name: Checkout commit that triggered run
         env: 
           GITHUB_SHA: ${{ github.sha }}
-        run: git checkout $GITHUB_SHA
+        run: |
+          git fetch
+          git checkout $GITHUB_SHA
       - name: Build Filament
         run: cargo build --all
       - name: Check versions
