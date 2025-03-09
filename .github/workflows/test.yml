@@ -76,11 +76,9 @@ jobs:
           mkdir -p $HOME/.config
           cp -r /root/.config/* $HOME/.config
       - name: Checkout commit that triggered run
-        uses: actions/checkout@v3
-        with:
-          repository: cucapra/filament
-          ref: ${{ github.sha }}
-          path: ../home/filament
+        run: |
+          git fetch --depth 1 origin ${{ github.sha }}
+          git checkout ${{ github.sha }}
       - name: Build Filament
         run: |
           cargo build --all
