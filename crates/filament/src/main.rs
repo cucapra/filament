@@ -47,7 +47,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         }
     };
 
-    ast_pass_pipeline! { opts, ns; ap::TopLevel };
+    ast_pass_pipeline! { opts, ns; ap::TopLevel, ap::SchedulingModel };
 
     // Set the parameter bindings for the top-level component
     if let Some(main) = ns.toplevel() {
@@ -95,7 +95,8 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::Simplify,
         ip::AssignCheck,
         ip::BundleElim,
-        ip::AssignCheck
+        ip::AssignCheck,
+        ip::Schedule
     }
     // type check again before lowering
     ir_pass_pipeline! {opts, ir;

@@ -1,0 +1,15 @@
+import "primitives/core.fil";
+
+#[schedule=1]
+comp main<'G: 2>(
+  go: interface['G],
+  in0: ['G, 'G+2] 32,
+  in1: ['G, 'G+2] 32,
+) -> (
+  out: ['G, 'G+2] 32
+)
+{
+    sum := new Add[32]<'G, 'G+2>(in0, in1);
+
+    out = sum.out;
+}

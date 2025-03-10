@@ -182,6 +182,14 @@ impl Signature {
     pub fn outputs(&self) -> impl Iterator<Item = &Loc<PortDef>> {
         self.ports[self.outputs_idx..].iter()
     }
+    /// Inputs of this signature
+    pub fn inputs_mut(&mut self) -> impl Iterator<Item = &mut Loc<PortDef>> {
+        self.ports[..self.outputs_idx].iter_mut()
+    }
+    /// Outputs of this signature
+    pub fn outputs_mut(&mut self) -> impl Iterator<Item = &mut Loc<PortDef>> {
+        self.ports[self.outputs_idx..].iter_mut()
+    }
     /// Iterator over all the ports of this signature
     pub fn ports(&self) -> &Vec<Loc<PortDef>> {
         &self.ports

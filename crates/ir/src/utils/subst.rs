@@ -81,6 +81,15 @@ where
     }
 }
 
+impl<K, V> FromIterator<(K, V)> for Bind<K, V>
+where
+    K: Eq,
+{
+    fn from_iter<I: IntoIterator<Item = (K, V)>>(iter: I) -> Self {
+        Self(iter.into_iter().collect())
+    }
+}
+
 /// A substitution for a type `T` that contains type `K` inside it.
 /// Substitutions cannot be applied with a type that implements [Ctx].
 pub struct Subst<'a, T, K, V>

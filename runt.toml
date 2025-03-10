@@ -31,6 +31,13 @@ cmd = """
 fud e -s cocotb.data {}.data --to cocotb-out {} -s filament.flags ' --show-models' -q
 """
 
+[[tests]]
+name = "schedule"
+paths = ["tests/schedule/*.fil"]
+cmd = """
+fud e -s cocotb.data {}.data --to cocotb-out {} -s filament.flags ' --show-models --scheduling-model {}.toml' -q
+"""
+
 # ============= Testing primitive implementations =============
 [[tests]]
 name = "floating point-random"
