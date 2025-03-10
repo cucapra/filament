@@ -129,8 +129,8 @@ impl DisplayCtx<ir::PortIdx> for ir::Component {
     }
 }
 
-impl<'a> DisplayCtx<&'a ir::TimeSub> for ir::Component {
-    fn write(&self, ts: &'a ir::TimeSub, f: &mut impl Write) -> IOResult {
+impl DisplayCtx<&ir::TimeSub> for ir::Component {
+    fn write(&self, ts: &ir::TimeSub, f: &mut impl Write) -> IOResult {
         match ts {
             ir::TimeSub::Unit(e) => self.write(*e, f),
             ir::TimeSub::Sym { l, r } => {
@@ -144,8 +144,8 @@ impl<'a> DisplayCtx<&'a ir::TimeSub> for ir::Component {
     }
 }
 
-impl<'a> DisplayCtx<&'a ir::Range> for ir::Component {
-    fn write(&self, val: &'a ir::Range, f: &mut impl Write) -> IOResult {
+impl DisplayCtx<&ir::Range> for ir::Component {
+    fn write(&self, val: &ir::Range, f: &mut impl Write) -> IOResult {
         write!(f, "[")?;
         self.write(val.start, f)?;
         write!(f, ", ")?;
@@ -154,7 +154,7 @@ impl<'a> DisplayCtx<&'a ir::Range> for ir::Component {
     }
 }
 
-impl<'a> DisplayCtx<&'a ir::Liveness> for ir::Component {
+impl DisplayCtx<&ir::Liveness> for ir::Component {
     fn write(&self, l: &ir::Liveness, f: &mut impl Write) -> IOResult {
         let ir::Liveness { idxs, lens, range } = l;
         let idxs = idxs
@@ -168,7 +168,7 @@ impl<'a> DisplayCtx<&'a ir::Liveness> for ir::Component {
     }
 }
 
-impl<'a> DisplayCtx<&'a ir::Access> for ir::Component {
+impl DisplayCtx<&ir::Access> for ir::Component {
     fn write(&self, a: &ir::Access, f: &mut impl Write) -> IOResult {
         let ir::Access { port, ranges } = &a;
         self.write(*port, f)?;
@@ -190,7 +190,7 @@ impl<'a> DisplayCtx<&'a ir::Access> for ir::Component {
     }
 }
 
-impl<'a> DisplayCtx<&'a ir::Connect> for ir::Component {
+impl DisplayCtx<&ir::Connect> for ir::Component {
     fn write(&self, c: &ir::Connect, f: &mut impl Write) -> IOResult {
         let ir::Connect { src, dst, .. } = c;
         self.write(src, f)?;

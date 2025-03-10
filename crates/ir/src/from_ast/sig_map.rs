@@ -24,8 +24,6 @@ pub struct Sig {
     pub raw_params: Vec<ast::ParamBind>,
     /// The AST representation of events in the signature
     pub raw_events: Vec<ast::EventBind>,
-    /// The AST representation of output ports of the signature
-    pub raw_outputs: Vec<ast::PortDef>,
     /// Constraints on input parameters
     pub param_cons: Vec<ast::Loc<ast::OrderConstraint<ast::Expr>>>,
     /// Constraints on existentially bound parameters
@@ -39,7 +37,6 @@ impl Sig {
         Self {
             idx,
             raw_params: sig.params.iter().map(|p| p.clone().take()).collect(),
-            raw_outputs: sig.outputs().map(|p| p.clone().take()).collect(),
             raw_events: sig.events.iter().map(|e| e.clone().take()).collect(),
             param_cons: sig.param_constraints.clone(),
             exist_cons: sig

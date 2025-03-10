@@ -1,10 +1,10 @@
 use super::utils::NameGenerator;
 use super::{
-    utils::{cell_to_port_def, INTERFACE_PORTS},
     BuildCtx,
+    utils::{INTERFACE_PORTS, cell_to_port_def},
 };
 use calyx_ir::{self as calyx, RRC};
-use calyx_ir::{build_assignments, guard, structure, Guard, Nothing};
+use calyx_ir::{Guard, Nothing, build_assignments, guard, structure};
 use fil_ir as ir;
 use itertools::Itertools;
 use std::{collections::HashMap, iter, ops::Not};

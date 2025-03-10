@@ -521,7 +521,7 @@ impl MonoSig {
     ) -> Vec<Base<ir::Param>> {
         let mono_owner = ir::ParamOwner::Bundle(port.get());
 
-        if self.bundle_param_map.get(&port).is_some() {
+        if self.bundle_param_map.contains_key(&port) {
             unreachable!("port {} already has bundle params", port.get());
         };
 

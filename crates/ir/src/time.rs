@@ -43,7 +43,11 @@ impl TimeIdx {
                 ctx.add(Time { event, offset })
             }
             TimeSub::Sym { .. } => {
-                todo!("Cannot add `{}' and `{}'. Please report this as a bug with the program that triggered it.", ctx.display(self), ctx.display(ts));
+                todo!(
+                    "Cannot add `{}' and `{}'. Please report this as a bug with the program that triggered it.",
+                    ctx.display(self),
+                    ctx.display(ts)
+                );
             }
         }
     }

@@ -130,7 +130,7 @@ where
     }
 }
 
-impl<'a, T, K, V: Clone> Subst<'a, T, K, V>
+impl<T, K, V: Clone> Subst<'_, T, K, V>
 where
     T: Foldable<K, V>,
     K: Eq,

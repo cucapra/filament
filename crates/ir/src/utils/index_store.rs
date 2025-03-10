@@ -1,4 +1,4 @@
-use crate::{utils, utils::Idx, AddCtx, Ctx, MutCtx};
+use crate::{AddCtx, Ctx, MutCtx, utils, utils::Idx};
 use bitvec::vec::BitVec;
 use std::{fmt::Display, marker::PhantomData};
 
@@ -89,7 +89,7 @@ where
 
     /// Iterate over the valid indices in the store.
     /// This can be useful because it allows mutable borrows of the owners of the store.
-    pub fn idx_iter(&self) -> impl Iterator<Item = I> {
+    pub fn idx_iter(&self) -> impl Iterator<Item = I> + use<T, I> {
         self.valid
             .clone()
             .into_iter()
@@ -99,7 +99,7 @@ where
     }
 
     /// Iterate over the valid indices and the values in the store.
-    pub fn iter(&self) -> impl Iterator<Item = (I, &T)> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = (I, &T)> {
         self.store
             .iter()
             .enumerate()

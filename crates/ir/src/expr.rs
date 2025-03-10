@@ -1,5 +1,5 @@
 use super::{AddCtx, Component, Ctx, ExprIdx, MutCtx, ParamIdx};
-use crate::{construct_binop, Param, Prop, PropIdx};
+use crate::{Param, Prop, PropIdx, construct_binop};
 use fil_ast as ast;
 use std::fmt::Display;
 

@@ -1,4 +1,4 @@
-use crate::{attr::AttrCtx, GPosIdx};
+use crate::{GPosIdx, attr::AttrCtx};
 use std::{collections::HashMap, hash::Hash};
 
 /// A store for attributes

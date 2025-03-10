@@ -2,7 +2,7 @@ use super::{
     Base, CompKey, InstanceInfo, IntoBase, IntoUdl, MonoDeferred, MonoSig,
     Underlying, UnderlyingComp,
 };
-use fil_gen as gen;
+use fil_gen as fgen;
 use fil_ir::{self as ir, Ctx, IndexStore};
 use ir::{AddCtx, EntryPoint};
 use itertools::Itertools;
@@ -68,13 +68,13 @@ pub struct Monomorphize<'a> {
     /// Tracks which components are defined in which files
     pub ext_map: HashMap<String, Vec<ir::CompIdx>>,
     /// Generator executor
-    gen_exec: &'a mut Option<gen::GenExec>,
+    gen_exec: &'a mut Option<fgen::GenExec>,
 }
 
 impl<'a> Monomorphize<'a> {
     fn new(
         old: &'a ir::Context,
-        gen_exec: &'a mut Option<gen::GenExec>,
+        gen_exec: &'a mut Option<fgen::GenExec>,
     ) -> Self {
         Monomorphize {
             ctx: ir::Context::default(),
@@ -88,7 +88,7 @@ impl<'a> Monomorphize<'a> {
     }
 }
 
-impl<'ctx> Monomorphize<'ctx> {
+impl Monomorphize<'_> {
     /// Returns a reference to the instance info for a component.
     /// **Panics** if the instance does not exist.
     pub fn inst_info(&self, comp_key: &CompKey) -> &InstanceInfo {
@@ -104,7 +104,7 @@ impl<'ctx> Monomorphize<'ctx> {
     }
 
     /// Generate an component using the `gen` framework
-    pub fn gen(
+    pub fn generated(
         &mut self,
         comp: Underlying<ir::Component>,
         params: Vec<u64>,
@@ -117,14 +117,14 @@ impl<'ctx> Monomorphize<'ctx> {
         let Some(tool) = &is.gen_tool else {
             unreachable!("gen component does not have a tool")
         };
-        let inst = gen::Instance {
+        let inst = fgen::Instance {
             name: is.name.as_ref().to_string(),
             parameters: params.iter().map(|p| p.to_string()).collect(),
         };
 
         // Running the tool returns the location of the Verilog file that
         // contains the definition and mapping for existential parameters.
-        let gen::ToolOutput {
+        let fgen::ToolOutput {
             name,
             file,
             exist_params,
@@ -241,7 +241,7 @@ impl<'ctx> Monomorphize<'ctx> {
         }
 
         if underlying.is_gen() {
-            return self.gen(comp, params, n_ck);
+            return self.generated(comp, params, n_ck);
         }
 
         // Copy the component signature if it is an external and return it.
@@ -275,7 +275,7 @@ impl Monomorphize<'_> {
     /// Returns an empty context if there is no top-level component.
     pub fn transform(
         ctx: &ir::Context,
-        gen: &mut Option<gen::GenExec>,
+        generated: &mut Option<fgen::GenExec>,
     ) -> ir::Context {
         let Some(entrypoint) = &ctx.entrypoint else {
             log::warn!("Program has no entrypoint. Result will be empty.");
@@ -292,7 +292,7 @@ impl Monomorphize<'_> {
 
         let entrypoint = entrypoint.ul();
         // Monomorphize the entrypoint
-        let mut mono = Monomorphize::new(ctx, gen);
+        let mut mono = Monomorphize::new(ctx, generated);
         let ck = CompKey::new(entrypoint, bindings.clone());
         mono.monomorphize(ck.clone());
 

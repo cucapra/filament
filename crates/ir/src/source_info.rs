@@ -1,6 +1,6 @@
 use crate::ParamIdx;
 
-use super::{utils::SparseInfoMap, Event, Param, Port};
+use super::{Event, Param, Port, utils::SparseInfoMap};
 use fil_ast as ast;
 
 #[derive(Clone)]
@@ -40,11 +40,7 @@ impl InterfaceSrc {
         let name: ast::Id = name.into();
         self.params.iter().find_map(
             |(p, n)| {
-                if name == n {
-                    Some(p)
-                } else {
-                    None
-                }
+                if name == n { Some(p) } else { None }
             },
         )
     }

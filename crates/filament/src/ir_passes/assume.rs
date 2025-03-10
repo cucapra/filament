@@ -78,7 +78,8 @@ impl Assume {
                         assert!(
                             args.len() == 1,
                             "Currently Unimplemented: {} requires {} arguments, automatic assumptions only implemented for single argument functions.",
-                            op, args.len()
+                            op,
+                            args.len()
                         );
                         Some((*op, *rhs, args[0]))
                     }
@@ -86,7 +87,8 @@ impl Assume {
                         assert!(
                             args.len() == 1,
                             "Currently Unimplemented: {} requires {} arguments, automatic assumptions only implemented for single argument functions.",
-                            op, args.len()
+                            op,
+                            args.len()
                         );
                         Some((*op, *lhs, args[0]))
                     }

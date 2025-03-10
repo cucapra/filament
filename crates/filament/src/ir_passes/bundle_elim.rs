@@ -186,6 +186,9 @@ impl BundleElim {
     /// Compiles the signature of a component and adds the new ports to the context mapping.
     fn sig(&self, comp: &mut Component) -> SparseInfoMap<Port, PortInfo> {
         // loop through signature ports and compile them
+        // Allowing filter_map_bool_then as it erroneously triggers
+        // due to https://github.com/rust-lang/rust-clippy/issues/11617
+        #[allow(clippy::filter_map_bool_then)]
         comp.ports()
             .idx_iter()
             .filter_map(|idx| {

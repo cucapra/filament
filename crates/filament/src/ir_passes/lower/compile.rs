@@ -1,7 +1,7 @@
 use super::{
     build_ctx::{Binding, BuildCtx},
     max_states,
-    utils::{NameGenerator, INTERFACE_PORTS},
+    utils::{INTERFACE_PORTS, NameGenerator},
 };
 use calyx_frontend as frontend;
 use calyx_ir as calyx;

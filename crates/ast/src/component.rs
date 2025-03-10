@@ -1,7 +1,7 @@
 use super::{Command, Id, Signature};
-use fil_gen as gen;
+use fgen::GenConfig;
+use fil_gen as fgen;
 use fil_utils::{self as utils, AttrCtx};
-use gen::GenConfig;
 use std::path::PathBuf;
 
 #[derive(Default)]
@@ -10,15 +10,19 @@ pub struct Extern {
     pub path: String,
     pub comps: Vec<Signature>,
     /// name of the tool that generates this module
-    pub gen: Option<String>,
+    pub gen_tool: Option<String>,
 }
 impl Extern {
     pub fn new(
         path: String,
         comps: Vec<Signature>,
-        gen: Option<String>,
+        gen_tool: Option<String>,
     ) -> Self {
-        Self { path, comps, gen }
+        Self {
+            path,
+            comps,
+            gen_tool,
+        }
     }
 
     pub fn map_path<F>(mut self, func: F) -> Self
@@ -60,7 +64,9 @@ pub struct Namespace {
 impl Namespace {
     /// Returns true if the namespace declares at least one generative module
     pub fn requires_gen(&self) -> bool {
-        self.externs.iter().any(|Extern { gen, .. }| gen.is_some())
+        self.externs
+            .iter()
+            .any(|Extern { gen_tool, .. }| gen_tool.is_some())
     }
 
     /// Initialize the generator executor using the given generate definitions.
@@ -71,14 +77,19 @@ impl Namespace {
         &self,
         out_dir: Option<PathBuf>,
         config: GenConfig,
-    ) -> gen::GenExec {
-        let mut gen_exec = gen::GenExec::new(false, out_dir, config);
-        for Extern { path, gen, .. } in &self.externs {
-            let Some(tool_name) = gen else {
+    ) -> fgen::GenExec {
+        let mut gen_exec = fgen::GenExec::new(false, out_dir, config);
+        for Extern { path, gen_tool, .. } in &self.externs {
+            let Some(tool_name) = gen_tool else {
                 continue;
             };
             let tool = gen_exec.register_tool_from_file(path.into());
-            assert!(&tool.name == tool_name, "Generate definition for tool `{}` does not match the tool name `{}`", tool_name, tool.name);
+            assert!(
+                &tool.name == tool_name,
+                "Generate definition for tool `{}` does not match the tool name `{}`",
+                tool_name,
+                tool.name
+            );
         }
         gen_exec
     }

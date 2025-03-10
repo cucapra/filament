@@ -66,9 +66,9 @@ RUN wget https://github.com/chipsalliance/verible/releases/download/v0.0-3428-gc
   rm verible.tar.gz
 ENV PATH=$PATH:/home/verible/bin
 
-# Set rust to 1.76 and runt to 0.4.1
-RUN rustup toolchain install 1.76.0 &&\
-    rustup default 1.76.0 &&\
+# Set rust to 1.82 and runt to 0.4.1
+RUN rustup toolchain install 1.85.0 &&\
+    rustup default 1.85.0 &&\
     cargo install runt --version 0.4.1
 
 # ----------------------------------------
@@ -80,7 +80,6 @@ ADD . filament
 WORKDIR /home/filament
 # Make rust use sparse registries (https://doc.rust-lang.org/nightly/cargo/reference/registries.html#registry-protocols)
 ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
-RUN cargo build --all
 # Set up fud
 RUN python3 -m pip install cocotb find_libpython pytest && \
   fud register -p fud/filament.py filament && \
