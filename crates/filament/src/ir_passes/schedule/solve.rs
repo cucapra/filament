@@ -1,7 +1,7 @@
 use super::CombDataflow;
 use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
 use easy_smt::{self as smt, SExpr, SExprData};
-use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, MutCtx, PortOwner, Subst};
+use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, MutCtx};
 use fil_utils::{AttrCtx, CompNum};
 use itertools::Itertools;
 use std::{collections::HashMap, fs};
