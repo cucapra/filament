@@ -1,8 +1,7 @@
 use super::CombDataflow;
 use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
-use core::time;
 use easy_smt::{self as smt, SExpr, SExprData};
-use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, MutCtx, PortOwner};
+use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, MutCtx, PortOwner, Subst};
 use fil_utils::{AttrCtx, CompNum};
 use itertools::Itertools;
 use std::{collections::HashMap, fs};
@@ -100,6 +99,128 @@ impl Solve {
 
             // Assert that this is not the case
             self.sol.assert(self.sol.not(equalities)).unwrap();
+        }
+    }
+
+    pub fn timesub_to_sexp(
+        &self,
+        ctx: &ir::Component,
+        event_bind: &ir::SparseInfoMap<ir::Event, SExpr>,
+        time_sub: &ir::TimeSub,
+    ) -> SExpr {
+        match time_sub {
+            fil_ir::TimeSub::Unit(idx) => {
+                self.expr_to_sexp(ctx, event_bind, *idx)
+            }
+            fil_ir::TimeSub::Sym { l, r } => {
+                let l = self.time_to_sexp(ctx, event_bind, *l);
+                let r = self.time_to_sexp(ctx, event_bind, *r);
+                self.sol.sub(l, r)
+            }
+        }
+    }
+
+    pub fn time_to_sexp(
+        &self,
+        ctx: &ir::Component,
+        event_bind: &ir::SparseInfoMap<ir::Event, SExpr>,
+        time: ir::TimeIdx,
+    ) -> SExpr {
+        let ir::Time { event, offset } = ctx.get(time);
+
+        let offset = self.expr_to_sexp(ctx, event_bind, *offset);
+        let event = *event_bind.get(*event);
+
+        self.sol.plus(event, offset)
+    }
+
+    /// Fold an expression to an SExpr
+    pub fn expr_to_sexp(
+        &self,
+        ctx: &ir::Component,
+        event_bind: &ir::SparseInfoMap<ir::Event, SExpr>,
+        expr: ir::ExprIdx,
+    ) -> SExpr {
+        match ctx.get(expr) {
+            fil_ir::Expr::Concrete(n) => self.sol.numeral(*n),
+            fil_ir::Expr::Bin { op, lhs, rhs } => {
+                let lhs = self.expr_to_sexp(ctx, event_bind, *lhs);
+                let rhs = self.expr_to_sexp(ctx, event_bind, *rhs);
+                match op {
+                    fil_ast::Op::Add => self.sol.plus(lhs, rhs),
+                    fil_ast::Op::Sub => self.sol.sub(lhs, rhs),
+                    fil_ast::Op::Mul => self.sol.times(lhs, rhs),
+                    fil_ast::Op::Div => self.sol.div(lhs, rhs),
+                    fil_ast::Op::Mod => self.sol.modulo(lhs, rhs),
+                }
+            }
+            fil_ir::Expr::If { cond, then, alt } => {
+                let cond = self.prop_to_sexp(ctx, event_bind, *cond);
+                let then = self.expr_to_sexp(ctx, event_bind, *then);
+                let alt = self.expr_to_sexp(ctx, event_bind, *alt);
+                self.sol.ite(cond, then, alt)
+            }
+            fil_ir::Expr::Fn { .. } => unreachable!(
+                "Constraints on scheduled components do not support custom function calls."
+            ),
+            fil_ir::Expr::Param(_) => {
+                unreachable!("Parameters should have been monomorphized")
+            }
+        }
+    }
+
+    /// Fold a proposition on events to an SExpr
+    pub fn prop_to_sexp(
+        &self,
+        ctx: &ir::Component,
+        event_bind: &ir::SparseInfoMap<ir::Event, SExpr>,
+        prop: ir::PropIdx,
+    ) -> SExpr {
+        match ctx.get(prop) {
+            fil_ir::Prop::True => self.sol.atom("true"),
+            fil_ir::Prop::False => self.sol.atom("false"),
+            fil_ir::Prop::Cmp(ir::CmpOp { op, lhs, rhs }) => {
+                let lhs = self.expr_to_sexp(ctx, event_bind, *lhs);
+                let rhs = self.expr_to_sexp(ctx, event_bind, *rhs);
+                match op {
+                    fil_ir::Cmp::Gt => self.sol.gt(lhs, rhs),
+                    fil_ir::Cmp::Gte => self.sol.gte(lhs, rhs),
+                    fil_ir::Cmp::Eq => self.sol.eq(lhs, rhs),
+                }
+            }
+            fil_ir::Prop::TimeCmp(ir::CmpOp { op, lhs, rhs }) => {
+                let lhs = self.time_to_sexp(ctx, event_bind, *lhs);
+                let rhs = self.time_to_sexp(ctx, event_bind, *rhs);
+                match op {
+                    fil_ir::Cmp::Gt => self.sol.gt(lhs, rhs),
+                    fil_ir::Cmp::Gte => self.sol.gte(lhs, rhs),
+                    fil_ir::Cmp::Eq => self.sol.eq(lhs, rhs),
+                }
+            }
+            fil_ir::Prop::TimeSubCmp(ir::CmpOp { op, lhs, rhs }) => {
+                let lhs = self.timesub_to_sexp(ctx, event_bind, lhs);
+                let rhs = self.timesub_to_sexp(ctx, event_bind, rhs);
+                match op {
+                    fil_ir::Cmp::Gt => self.sol.gt(lhs, rhs),
+                    fil_ir::Cmp::Gte => self.sol.gte(lhs, rhs),
+                    fil_ir::Cmp::Eq => self.sol.eq(lhs, rhs),
+                }
+            }
+            fil_ir::Prop::Not(idx) => {
+                self.sol.not(self.prop_to_sexp(ctx, event_bind, *idx))
+            }
+            fil_ir::Prop::And(idx, idx1) => self.sol.and(
+                self.prop_to_sexp(ctx, event_bind, *idx),
+                self.prop_to_sexp(ctx, event_bind, *idx1),
+            ),
+            fil_ir::Prop::Or(idx, idx1) => self.sol.or(
+                self.prop_to_sexp(ctx, event_bind, *idx),
+                self.prop_to_sexp(ctx, event_bind, *idx1),
+            ),
+            fil_ir::Prop::Implies(idx, idx1) => self.sol.imp(
+                self.prop_to_sexp(ctx, event_bind, *idx),
+                self.prop_to_sexp(ctx, event_bind, *idx1),
+            ),
         }
     }
 }
@@ -270,7 +391,9 @@ impl Visitor for Solve {
         // Intern all the constraints for the events
         let foreign_comp = data.ctx().get(inv.inst.comp(comp));
         for &constraint in foreign_comp.get_event_asserts() {
-            let prop = foreign_comp.get(constraint);
+            self.sol
+                .assert(self.prop_to_sexp(foreign_comp, &events, constraint))
+                .unwrap();
         }
 
         for pidx in inv.ports.iter() {
@@ -280,32 +403,26 @@ impl Visitor for Solve {
                     ir::PortOwner::Inv {
                         base: foreign_pidx, ..
                     },
-                live:
-                    ir::Liveness {
-                        range: ir::Range { start, end },
-                        ..
-                    },
                 ..
             } = port
             else {
                 unreachable!("Port {} is not owned by an invocation", pidx)
             };
 
-            // Find the events associated with the start and end of the port
-            let start_expr = *events.get(comp.get(*start).event);
-            let end_expr = *events.get(comp.get(*end).event);
-
-            let (start, end) = foreign_pidx.apply(
+            let (start_expr, end_expr, start, end) = foreign_pidx.apply(
                 |p, foreign_comp| {
                     let ir::Range { start, end } =
                         foreign_comp.get(p).live.range;
+
+                    let start_expr = *events.get(foreign_comp.get(start).event);
+                    let end_expr = *events.get(foreign_comp.get(end).event);
 
                     let start =
                         foreign_comp.get(start).offset.concrete(foreign_comp);
                     let end =
                         foreign_comp.get(end).offset.concrete(foreign_comp);
 
-                    (start, end)
+                    (start_expr, end_expr, start, end)
                 },
                 data.ctx(),
             );
