@@ -1,0 +1,3 @@
+[Add]
+combinational = true
+ports.out = 0.4

@@ -342,10 +342,15 @@ impl Visitor for Solve {
         self.sol.assert(self.sol.lte(src_start, dst_start)).unwrap();
 
         // We can create a register that will extend the lifetime of the source port to the destination port. Given a src port valid from [a, b], and a dest port from [c, d], we need a register that holds from [b-1, d].
-        // The number of FFs necessary to do this is thus d - b - 1
-        let reg_expr = self
-            .sol
-            .sub(self.sol.sub(dst_end, src_end), self.sol.numeral(1));
+        // The number of FFs necessary to do this is thus d - b
+        let reg_expr = self.sol.sub(dst_end, src_end);
+        // reg_expr cannot be negative
+        let reg_expr = self.sol.ite(
+            self.sol.gte(reg_expr, self.sol.numeral(0)),
+            reg_expr,
+            self.sol.numeral(0),
+        );
+
         // multiply by the width of the port
         let reg_expr = self.sol.times(reg_expr, self.sol.numeral(width));
 
