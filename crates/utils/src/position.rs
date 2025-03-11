@@ -52,9 +52,7 @@ where
     /// Add a file to the database, returning the handle that can be used to
     /// refer to it again.
     pub fn add(&self, name: Name, source: Source) -> usize {
-        let file_id = self.files.count();
-        self.files.push(files::SimpleFile::new(name, source));
-        file_id
+        self.files.push(files::SimpleFile::new(name, source))
     }
 
     /// Get the file corresponding to the given id.
