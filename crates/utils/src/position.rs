@@ -1,6 +1,6 @@
 //! Tracking of source positions
-use codespan_reporting::{diagnostic::Label, files::SimpleFiles};
-use std::{mem, sync};
+use codespan_reporting::{diagnostic::Label, files};
+use std::{ops::Range, sync};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 /// Handle to a position in a [PositionTable]
@@ -30,12 +30,82 @@ pub struct PosData {
     pub end: usize,
 }
 
+/// Reimplementation of [files::SimpleFiles] that uses
+/// [boxcar::Vec] to avoid mutable borrows.
+#[derive(Clone, Debug, Default)]
+pub struct BoxcarSimpleFiles<Name, Source> {
+    files: boxcar::Vec<files::SimpleFile<Name, Source>>,
+}
+
+impl<Name, Source> BoxcarSimpleFiles<Name, Source>
+where
+    Name: std::fmt::Display,
+    Source: AsRef<str>,
+{
+    /// Create a new files database.
+    pub fn new() -> BoxcarSimpleFiles<Name, Source> {
+        BoxcarSimpleFiles {
+            files: boxcar::Vec::new(),
+        }
+    }
+
+    /// Add a file to the database, returning the handle that can be used to
+    /// refer to it again.
+    pub fn add(&self, name: Name, source: Source) -> usize {
+        let file_id = self.files.count();
+        self.files.push(files::SimpleFile::new(name, source));
+        file_id
+    }
+
+    /// Get the file corresponding to the given id.
+    pub fn get(
+        &self,
+        file_id: usize,
+    ) -> Result<&files::SimpleFile<Name, Source>, files::Error> {
+        self.files.get(file_id).ok_or(files::Error::FileMissing)
+    }
+}
+
+impl<'a, Name, Source> files::Files<'a> for BoxcarSimpleFiles<Name, Source>
+where
+    Name: 'a + std::fmt::Display + Clone,
+    Source: 'a + AsRef<str>,
+{
+    type FileId = usize;
+    type Name = Name;
+    type Source = &'a str;
+
+    fn name(&self, file_id: usize) -> Result<Name, files::Error> {
+        Ok(self.get(file_id)?.name().clone())
+    }
+
+    fn source(&self, file_id: usize) -> Result<&str, files::Error> {
+        Ok(self.get(file_id)?.source().as_ref())
+    }
+
+    fn line_index(
+        &self,
+        file_id: usize,
+        byte_index: usize,
+    ) -> Result<usize, files::Error> {
+        self.get(file_id)?.line_index((), byte_index)
+    }
+
+    fn line_range(
+        &self,
+        file_id: usize,
+        line_index: usize,
+    ) -> Result<Range<usize>, files::Error> {
+        self.get(file_id)?.line_range((), line_index)
+    }
+}
+
 /// Source position information for a full program
 pub struct PositionTable {
     /// The source files of the program
-    files: SimpleFiles<String, String>,
+    files: BoxcarSimpleFiles<String, String>,
     /// Mapping from indexes to position data
-    indices: Vec<PosData>,
+    indices: boxcar::Vec<PosData>,
 }
 
 impl Default for PositionTable {
@@ -50,9 +120,9 @@ impl PositionTable {
 
     /// Create a new position table where the first file and first position are unknown
     pub fn new() -> Self {
-        let mut table = PositionTable {
-            files: SimpleFiles::new(),
-            indices: Vec::new(),
+        let table = PositionTable {
+            files: BoxcarSimpleFiles::new(),
+            indices: boxcar::Vec::new(),
         };
         table.add_file("unknown".to_string(), "".to_string());
         let pos = table.add_pos(FileIdx(0), 0, 0);
@@ -61,12 +131,12 @@ impl PositionTable {
     }
 
     /// Return handle to the files in the position table
-    pub fn files(&self) -> &SimpleFiles<String, String> {
+    pub fn files(&self) -> &BoxcarSimpleFiles<String, String> {
         &self.files
     }
 
     /// Add a new file to the position table
-    pub fn add_file(&mut self, name: String, source: String) -> FileIdx {
+    pub fn add_file(&self, name: String, source: String) -> FileIdx {
         let idx = self.files.add(name, source);
         FileIdx(idx)
     }
@@ -77,14 +147,9 @@ impl PositionTable {
     }
 
     /// Add a new position to the position table
-    pub fn add_pos(
-        &mut self,
-        file: FileIdx,
-        start: usize,
-        end: usize,
-    ) -> PosIdx {
+    pub fn add_pos(&self, file: FileIdx, start: usize, end: usize) -> PosIdx {
         let pos = PosData { file, start, end };
-        let pos_idx = self.indices.len();
+        let pos_idx = self.indices.count();
         self.indices.push(pos);
         PosIdx(pos_idx as u32)
     }
@@ -104,28 +169,12 @@ impl PositionTable {
 pub struct GlobalPositionTable;
 
 impl GlobalPositionTable {
-    /// Return reference to a global [PositionTable]
-    pub fn as_mut() -> &'static mut PositionTable {
-        static mut SINGLETON: mem::MaybeUninit<PositionTable> =
-            mem::MaybeUninit::uninit();
-        static ONCE: sync::Once = sync::Once::new();
+    /// Return a reference to the global position table
+    pub fn get() -> &'static PositionTable {
+        static SINGLETON: sync::LazyLock<PositionTable> =
+            sync::LazyLock::new(PositionTable::new);
 
-        // SAFETY:
-        // - writing to the singleton is OK because we only do it one time
-        // - the ONCE guarantees that SINGLETON is init'ed before assume_init_ref
-        #[allow(static_mut_refs)]
-        unsafe {
-            ONCE.call_once(|| {
-                SINGLETON.write(PositionTable::new());
-                assert!(PositionTable::UNKNOWN == GPosIdx::UNKNOWN.0)
-            });
-            SINGLETON.assume_init_mut()
-        }
-    }
-
-    /// Return an immutable reference to the global position table
-    pub fn as_ref() -> &'static PositionTable {
-        Self::as_mut()
+        &SINGLETON
     }
 }
 
@@ -154,7 +203,7 @@ impl GPosIdx {
             self != Self::UNKNOWN,
             "unknown position cannot be converted into label"
         );
-        let table = GlobalPositionTable::as_ref();
+        let table = GlobalPositionTable::get();
         let pos = table.get_pos(self.0);
         Label::primary(pos.file.get(), pos.start..pos.end)
     }
@@ -165,7 +214,7 @@ impl GPosIdx {
             self != Self::UNKNOWN,
             "unknown position cannot be converted into label"
         );
-        let table = GlobalPositionTable::as_ref();
+        let table = GlobalPositionTable::get();
         let pos = table.get_pos(self.0);
         Label::secondary(pos.file.get(), pos.start..pos.end)
     }

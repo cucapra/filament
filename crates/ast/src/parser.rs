@@ -73,10 +73,10 @@ impl FilamentParser {
         })?;
         // Add a new file to the position table
         let string_content = std::str::from_utf8(content)?.to_string();
-        let file = GlobalPositionTable::as_mut()
+        let file = GlobalPositionTable::get()
             .add_file(path.to_string_lossy().to_string(), string_content);
         let user_data = UserData { file };
-        let (_, content) = GlobalPositionTable::as_ref().get_file_data(file);
+        let (_, content) = GlobalPositionTable::get().get_file_data(file);
         // Parse the file
         let inputs =
             FilamentParser::parse_with_userdata(Rule::file, content, user_data)
@@ -111,11 +111,8 @@ impl FilamentParser {
     fn get_span(node: &Node) -> GPosIdx {
         let ud = node.user_data();
         let sp = node.as_span();
-        let pos = GlobalPositionTable::as_mut().add_pos(
-            ud.file,
-            sp.start(),
-            sp.end(),
-        );
+        let pos =
+            GlobalPositionTable::get().add_pos(ud.file, sp.start(), sp.end());
         GPosIdx(pos)
     }
 

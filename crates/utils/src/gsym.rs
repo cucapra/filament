@@ -17,7 +17,7 @@ fn get_or_intern(pool: &Pool, s: &str) -> u32 {
     match idx {
         Some(idx) => idx as u32,
         None => {
-            let idx = pool.iter().count();
+            let idx = pool.count();
             pool.push(s.to_owned());
             idx as u32
         }

@@ -753,7 +753,7 @@ impl Visitor for Discharge {
         } else {
             ColorChoice::Never
         });
-        let table = GlobalPositionTable::as_ref();
+        let table = GlobalPositionTable::get();
         for diag in &self.diagnostics {
             term::emit(
                 &mut writer.lock(),
