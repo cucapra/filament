@@ -58,10 +58,6 @@ default-features = false
 version = "0.11"
 features = ["ascii-only"]
 
-[workspace.dependencies.string-interner]
-version = "0.14"
-features = ["backends", "std", "inline-more"]
-
 [workspace.dependencies.bitvec]
 version = "1.0.1"
 features = ["alloc"]

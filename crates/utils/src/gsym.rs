@@ -1,23 +1,13 @@
+use crate::Pool;
 use std::sync;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct GSym(u32);
 
-type Pool = boxcar::Vec<String>;
-
 fn singleton() -> &'static Pool {
-    static SINGLETON: sync::LazyLock<Pool> =
-        sync::LazyLock::new(boxcar::Vec::new);
+    static SINGLETON: sync::LazyLock<Pool> = sync::LazyLock::new(Pool::new);
 
     &SINGLETON
-}
-
-fn get_or_intern(pool: &Pool, s: &str) -> u32 {
-    let idx = pool.iter().position(|(_, x)| x == s);
-    match idx {
-        Some(idx) => idx as u32,
-        None => pool.push(s.to_owned()) as u32,
-    }
 }
 
 impl GSym {
@@ -34,25 +24,25 @@ impl GSym {
 
 impl From<&str> for GSym {
     fn from(s: &str) -> Self {
-        GSym(get_or_intern(singleton(), s))
+        GSym(singleton().get_or_intern(s))
     }
 }
 
 impl From<String> for GSym {
     fn from(s: String) -> Self {
-        GSym(get_or_intern(singleton(), &s))
+        GSym(singleton().get_or_intern(&s))
     }
 }
 
 impl From<&String> for GSym {
     fn from(s: &String) -> Self {
-        GSym(get_or_intern(singleton(), s))
+        GSym(singleton().get_or_intern(s))
     }
 }
 
 impl From<GSym> for &'static str {
     fn from(sym: GSym) -> Self {
-        singleton()[sym.0 as usize].as_str()
+        singleton().get(sym.0)
     }
 }
 
