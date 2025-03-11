@@ -1,27 +1,26 @@
-use std::{mem, sync};
-use string_interner::{
-    StringInterner, backend::BucketBackend, symbol::SymbolU32,
-};
+use std::sync;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct GSym(SymbolU32);
+pub struct GSym(u32);
 
-type Pool = StringInterner<BucketBackend>;
+type Pool = boxcar::Vec<String>;
 
-fn singleton() -> *mut Pool {
-    static mut SINGLETON: mem::MaybeUninit<Pool> = mem::MaybeUninit::uninit();
-    static ONCE: sync::Once = sync::Once::new();
+fn singleton() -> &'static Pool {
+    static SINGLETON: sync::LazyLock<Pool> =
+        sync::LazyLock::new(boxcar::Vec::new);
 
-    // SAFETY:
-    // - writing to the singleton is OK because we only do it one time
-    // - the ONCE guarantees that SINGLETON is init'ed before assume_init_ref
-    #[allow(static_mut_refs)]
-    unsafe {
-        ONCE.call_once(|| {
-            SINGLETON.write(Pool::new());
-        });
+    &SINGLETON
+}
 
-        SINGLETON.as_mut_ptr() as *mut Pool
+fn get_or_intern(pool: &Pool, s: &str) -> u32 {
+    let idx = pool.iter().position(|(_, x)| x == s);
+    match idx {
+        Some(idx) => idx as u32,
+        None => {
+            let idx = pool.iter().count();
+            pool.push(s.to_owned());
+            idx as u32
+        }
     }
 }
 
@@ -39,25 +38,25 @@ impl GSym {
 
 impl From<&str> for GSym {
     fn from(s: &str) -> Self {
-        GSym(unsafe { singleton().as_mut().unwrap().get_or_intern(s) })
+        GSym(get_or_intern(singleton(), s))
     }
 }
 
 impl From<String> for GSym {
     fn from(s: String) -> Self {
-        GSym(unsafe { singleton().as_mut().unwrap().get_or_intern(&s) })
+        GSym(get_or_intern(singleton(), &s))
     }
 }
 
 impl From<&String> for GSym {
     fn from(s: &String) -> Self {
-        GSym(unsafe { singleton().as_mut().unwrap().get_or_intern(s) })
+        GSym(get_or_intern(singleton(), s))
     }
 }
 
 impl From<GSym> for &'static str {
     fn from(sym: GSym) -> Self {
-        unsafe { singleton().as_ref().unwrap().resolve(sym.0).unwrap() }
+        singleton()[sym.0 as usize].as_str()
     }
 }
 

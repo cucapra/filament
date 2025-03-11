@@ -1,6 +1,5 @@
 mod attr;
 mod errors;
-mod global_sym;
 mod gsym;
 mod id;
 mod macros;
