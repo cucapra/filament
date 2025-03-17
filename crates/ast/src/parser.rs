@@ -9,7 +9,7 @@ use fil_utils::{
 };
 use itertools::Itertools;
 use pest::pratt_parser::{Assoc, Op, PrattParser};
-use pest_consume::{match_nodes, Error, Parser};
+use pest_consume::{Error, Parser, match_nodes};
 use std::fs;
 use std::hash::Hash;
 use std::path::Path;
@@ -42,8 +42,8 @@ lazy_static::lazy_static! {
 }
 
 pub enum BodyEl {
-    Ext(ast::Extern),
-    Comp(ast::Component),
+    Ext(Box<ast::Extern>),
+    Comp(Box<ast::Component>),
 }
 
 #[derive(Clone)]
@@ -73,10 +73,10 @@ impl FilamentParser {
         })?;
         // Add a new file to the position table
         let string_content = std::str::from_utf8(content)?.to_string();
-        let file = GlobalPositionTable::as_mut()
+        let file = GlobalPositionTable::get()
             .add_file(path.to_string_lossy().to_string(), string_content);
         let user_data = UserData { file };
-        let (_, content) = GlobalPositionTable::as_ref().get_file_data(file);
+        let (_, content) = GlobalPositionTable::get().get_file_data(file);
         // Parse the file
         let inputs =
             FilamentParser::parse_with_userdata(Rule::file, content, user_data)
@@ -111,11 +111,8 @@ impl FilamentParser {
     fn get_span(node: &Node) -> GPosIdx {
         let ud = node.user_data();
         let sp = node.as_span();
-        let pos = GlobalPositionTable::as_mut().add_pos(
-            ud.file,
-            sp.start(),
-            sp.end(),
-        );
+        let pos =
+            GlobalPositionTable::get().add_pos(ud.file, sp.start(), sp.end());
         GPosIdx(pos)
     }
 
@@ -901,9 +898,9 @@ impl FilamentParser {
     fn comp_or_ext(input: Node) -> ParseResult<BodyEl> {
         Ok(match_nodes!(
             input.into_children();
-            [external(sig)] => BodyEl::Ext(sig),
-            [generate(sig)] => BodyEl::Ext(sig),
-            [component(comp)] => BodyEl::Comp(comp),
+            [external(sig)] => BodyEl::Ext(Box::new(sig)),
+            [generate(sig)] => BodyEl::Ext(Box::new(sig)),
+            [component(comp)] => BodyEl::Comp(Box::new(comp)),
         ))
     }
 
@@ -925,8 +922,8 @@ impl FilamentParser {
 
                 for m in mixed {
                     match m {
-                        BodyEl::Ext(sig) => namespace.externs.push(sig),
-                        BodyEl::Comp(comp) => namespace.components.push(comp),
+                        BodyEl::Ext(sig) => namespace.externs.push(*sig),
+                        BodyEl::Comp(comp) => namespace.components.push(*comp),
                     }
                 }
                 namespace

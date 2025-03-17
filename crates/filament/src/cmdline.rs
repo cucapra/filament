@@ -19,9 +19,9 @@ impl FromStr for Solver {
             "cvc5" => Ok(Solver::CVC5),
             "boolector" => Ok(Solver::Boolector),
             "bitwuzla" => Ok(Solver::Bitwuzla),
-            _ => {
-                Err(format!("unknown solver: {s}. Known solvers are: z3, cvc5, boolector, bitwuzla"))
-            }
+            _ => Err(format!(
+                "unknown solver: {s}. Known solvers are: z3, cvc5, boolector, bitwuzla"
+            )),
         }
     }
 }

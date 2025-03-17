@@ -120,11 +120,7 @@ impl Module {
 
             // Find the parameter value
             let Some(val) = params.iter().find_map(|(p, val)| {
-                if p == &param {
-                    Some(val)
-                } else {
-                    None
-                }
+                if p == &param { Some(val) } else { None }
             }) else {
                 return Err(format!(
                     "Unknown parameter `${param}' in `{fmt_string}'",

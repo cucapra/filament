@@ -388,7 +388,8 @@ impl Discharge {
         let num_vars = sexps.len();
 
         let model = self.sol.get_value(sexps).unwrap();
-        assert!(model.len() == num_vars,
+        assert!(
+            model.len() == num_vars,
             "{num_vars} relevant variables but the model contains assignments for {} variables",
             model.len()
         );
@@ -736,7 +737,9 @@ impl Visitor for Discharge {
 
             // If there is at least one failing prop, roll back to individually checking the props for error reporting
             if matches!(self.sol.check().unwrap(), smt::Response::Sat) {
-                log::info!("Failed to prove all facts. Checking each fact individually");
+                log::info!(
+                    "Failed to prove all facts. Checking each fact individually"
+                );
                 self.failing_props(&data.comp);
             }
         } else {
@@ -754,7 +757,7 @@ impl Visitor for Discharge {
         } else {
             ColorChoice::Never
         });
-        let table = GlobalPositionTable::as_ref();
+        let table = GlobalPositionTable::get();
         for diag in &self.diagnostics {
             term::emit(
                 &mut writer.lock(),
