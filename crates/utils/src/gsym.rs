@@ -1,26 +1,13 @@
-use std::{mem, sync};
-use string_interner::{
-    backend::BucketBackend, symbol::SymbolU32, StringInterner,
-};
+use crate::Pool;
+use std::sync;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct GSym(SymbolU32);
+pub struct GSym(u32);
 
-type Pool = StringInterner<BucketBackend>;
+fn singleton() -> &'static Pool {
+    static SINGLETON: sync::LazyLock<Pool> = sync::LazyLock::new(Pool::new);
 
-fn singleton() -> &'static mut Pool {
-    static mut SINGLETON: mem::MaybeUninit<Pool> = mem::MaybeUninit::uninit();
-    static ONCE: sync::Once = sync::Once::new();
-
-    // SAFETY:
-    // - writing to the singleton is OK because we only do it one time
-    // - the ONCE guarantees that SINGLETON is init'ed before assume_init_ref
-    unsafe {
-        ONCE.call_once(|| {
-            SINGLETON.write(Pool::new());
-        });
-        SINGLETON.assume_init_mut()
-    }
+    &SINGLETON
 }
 
 impl GSym {
@@ -55,7 +42,7 @@ impl From<&String> for GSym {
 
 impl From<GSym> for &'static str {
     fn from(sym: GSym) -> Self {
-        singleton().resolve(sym.0).unwrap()
+        singleton().get(sym.0)
     }
 }
 

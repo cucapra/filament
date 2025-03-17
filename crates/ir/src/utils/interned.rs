@@ -1,4 +1,4 @@
-use crate::{utils, utils::Idx, AddCtx, Ctx};
+use crate::{AddCtx, Ctx, utils, utils::Idx};
 use std::{collections::HashMap, fmt::Display, rc::Rc};
 
 #[derive(Clone)]
@@ -94,7 +94,7 @@ where
 
     /// Iterator over indices of the interned values.
     /// Useful since it does not take ownership of self.
-    pub fn idx_iter(&self) -> impl Iterator<Item = I> {
+    pub fn idx_iter(&self) -> impl Iterator<Item = I> + use<T, I> {
         (0..self.store.len()).map(I::new)
     }
 }

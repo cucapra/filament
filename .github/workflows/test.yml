@@ -67,9 +67,6 @@ jobs:
     needs: [hash, build]
     if: always() && !failure() && !cancelled()
     container: ghcr.io/cucapra/filament:${{ needs.hash.outputs.hash }}
-    defaults:
-      run:
-        working-directory: /home/filament
     steps:
       - name: Copy fud configuration
         run: |
@@ -80,10 +77,14 @@ jobs:
         with:
           repository: cucapra/filament
           ref: ${{ github.sha }}
+      - name: Reconfigure fud
+        run: |
+          fud register -p $GITHUB_WORKSPACE/fud/filament.py filament
+          fud config stages.filament.exec $GITHUB_WORKSPACE/target/debug/filament
+          fud config stages.filament.library $GITHUB_WORKSPACE
       - name: Build Filament
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
+        run: |
+          cargo build --all
       - name: Check versions
         run: |
           rustc --version

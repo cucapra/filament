@@ -110,7 +110,7 @@ impl Diagnostics {
                 .push(error.kind);
         }
 
-        let table = GlobalPositionTable::as_ref();
+        let table = GlobalPositionTable::get();
         for (all_notes, errors) in error_map {
             let mut labels = vec![];
             let mut notes = vec![];

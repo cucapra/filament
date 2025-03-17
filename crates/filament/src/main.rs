@@ -16,7 +16,7 @@ use std::fs;
 /// Contains the bindings that are provided by the user.
 pub struct ProvidedBindings {
     /// Gen configuration variables
-    gen: GenConfig,
+    r#gen: GenConfig,
     /// Parameters to give to the components
     params: HashMap<String, Vec<u64>>,
 }
@@ -69,7 +69,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
                 "`--out-dir <dir>` to store the generated files."
             ))
         }
-        Some(ns.init_gen(opts.out_dir.clone(), provided_bindings.gen))
+        Some(ns.init_gen(opts.out_dir.clone(), provided_bindings.r#gen))
     } else {
         None
     };
@@ -163,7 +163,9 @@ fn main() {
         Err(err) => {
             eprintln!("Compilation failed with {err} errors.");
             if !opts.show_models {
-                eprintln!("Run with --show-models to generate assignments for failing constraints.");
+                eprintln!(
+                    "Run with --show-models to generate assignments for failing constraints."
+                );
             }
             std::process::exit(1)
         }

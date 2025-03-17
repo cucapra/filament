@@ -34,7 +34,6 @@ struct-variant.workspace = true
 env_logger.workspace = true
 codespan-reporting.workspace = true
 bitvec.workspace = true
-string-interner.workspace = true
 fil-ast.workspace = true
 fil-ir.workspace = true
 fil-utils.workspace = true

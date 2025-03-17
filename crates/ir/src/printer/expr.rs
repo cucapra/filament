@@ -1,8 +1,7 @@
 use super::{DisplayCtx, IOResult};
 use crate::{
-    self as ir,
-    printer::prop::{display_prop_helper, PCtx},
-    Ctx,
+    self as ir, Ctx,
+    printer::prop::{PCtx, display_prop_helper},
 };
 use fil_ast as ast;
 use itertools::Itertools;
