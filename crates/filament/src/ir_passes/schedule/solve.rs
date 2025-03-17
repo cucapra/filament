@@ -322,7 +322,11 @@ impl Visitor for Solve {
             && src.port.is_not_bundle(comp)
             && dst.port.is_not_bundle(comp))
         {
-            unreachable!("Port {} and {} are bundles. Bundles are not supported in the scheduling pass. Please run bundle-elim first.", comp.display(src.port), comp.display(dst.port));
+            unreachable!(
+                "Port {} and {} are bundles. Bundles are not supported in the scheduling pass. Please run bundle-elim first.",
+                comp.display(src.port),
+                comp.display(dst.port)
+            );
         }
 
         let (src_start, src_end) = self.get_port(src.port);

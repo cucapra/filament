@@ -223,7 +223,11 @@ impl Visitor for Retime {
             && src.port.is_not_bundle(&data.comp)
             && dst.port.is_not_bundle(&data.comp))
         {
-            unreachable!("Port {} and {} are bundles. Bundles are not supported in the scheduling pass. Please run bundle-elim first.", data.comp.display(src.port), data.comp.display(dst.port));
+            unreachable!(
+                "Port {} and {} are bundles. Bundles are not supported in the scheduling pass. Please run bundle-elim first.",
+                data.comp.display(src.port),
+                data.comp.display(dst.port)
+            );
         }
 
         let srcidx = src.port;
@@ -246,7 +250,12 @@ impl Visitor for Retime {
         let dst_start = data.comp.get(dst_start).offset.concrete(&data.comp);
         let dst_end = data.comp.get(dst_end).offset.concrete(&data.comp);
 
-        assert!(dst_start >= src_start, "Port {} is connected to port {} but the destination port is scheduled before the source port", data.comp.display(srcidx), data.comp.display(dstidx));
+        assert!(
+            dst_start >= src_start,
+            "Port {} is connected to port {} but the destination port is scheduled before the source port",
+            data.comp.display(srcidx),
+            data.comp.display(dstidx)
+        );
 
         // if dst_end happens after src_end, we need to insert a retiming register
         if dst_end > src_end {

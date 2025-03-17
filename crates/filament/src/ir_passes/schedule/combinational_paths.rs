@@ -68,7 +68,10 @@ impl CombDataflow {
                     }
                 }
                 ir::Command::Connect(ir::Connect { src, dst, .. }) => {
-                    assert!(src.is_port(comp) && dst.is_port(comp), "Bundles should be resolved before constructing dataflow");
+                    assert!(
+                        src.is_port(comp) && dst.is_port(comp),
+                        "Bundles should be resolved before constructing dataflow"
+                    );
 
                     edges.get_mut(src.port).insert(dst.port);
                 }
