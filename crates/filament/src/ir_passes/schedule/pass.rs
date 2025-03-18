@@ -1,9 +1,16 @@
 use super::{Retime, Solve};
 use crate::ir_visitor::Visitor;
+use fil_ir as ir;
 
 /// Sets the proper FSM Attributes for every component
 #[derive(Default)]
-pub struct Schedule {}
+pub struct Schedule;
+
+// impl Schedule {
+//     fn comp(&self, idx: &mut ir::Component) -> &mut ir::Component {
+
+//     }
+// }
 
 impl Visitor for Schedule {
     fn name() -> &'static str {

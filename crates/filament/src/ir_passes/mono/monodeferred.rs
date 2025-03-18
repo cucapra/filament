@@ -22,8 +22,8 @@ pub struct MonoDeferred<'comp, 'pass: 'comp> {
     /// Have we completed the monomorphization of the signature?
     sig_mono_complete: bool,
 
-    /// Should this component be scheduled?
-    pub schedule: bool,
+    /// If this component should be scheduled, this stores the scheduling type
+    pub schedule: Option<u64>,
 }
 
 impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
@@ -33,7 +33,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         monosig: MonoSig,
     ) -> Self {
         Self {
-            schedule: underlying.attrs().has(utils::CompNum::Schedule),
+            schedule: underlying.attrs().get(utils::CompNum::Schedule).copied(),
             underlying,
             pass,
             monosig,
@@ -340,7 +340,7 @@ impl MonoDeferred<'_, '_> {
                     self.monosig.binding.push(p, e.base());
                     None
                 } else {
-                    if !self.schedule {
+                    if self.schedule.is_none() {
                         unreachable!(
                             "Encountered `?` let binding in non-scheduled component"
                         );
