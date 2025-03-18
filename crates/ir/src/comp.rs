@@ -413,8 +413,8 @@ impl Component {
         match prop {
             Prop::Cmp(cmp) => {
                 let CmpOp { op, lhs, rhs } = cmp;
-                let lhs = lhs.as_concrete(self).unwrap();
-                let rhs = rhs.as_concrete(self).unwrap();
+                let lhs = lhs.concrete(self);
+                let rhs = rhs.concrete(self);
                 match op {
                     Cmp::Gt => {
                         if lhs > rhs {

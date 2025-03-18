@@ -46,7 +46,8 @@ impl BuildDomination {
         // First pass to register all paremeter owners.
         for (id, cmd) in cmds.iter().enumerate() {
             match cmd {
-                ir::Command::Let(ir::Let { param, .. }) => {
+                ir::Command::Exists(ir::Exists { param, .. })
+                | ir::Command::Let(ir::Let { param, .. }) => {
                     log::trace!("let-bound param {}", comp.display(*param));
                     param_map.insert(*param, id);
                 }
@@ -72,20 +73,26 @@ impl BuildDomination {
         // Second pass to add dependencies between parameter owners and users.
         for (id, cmd) in cmds.iter().enumerate() {
             match cmd {
-                ir::Command::Let(ir::Let { expr, param }) => {
-                    if let Some(expr) = expr {
-                        for idx in expr.relevant_vars(comp) {
-                            log::trace!(
-                                "param {} is used by {}",
-                                comp.display(idx),
-                                comp.display(*param)
-                            );
-                            if let Some(pid) = param_map.get(&idx) {
-                                // Add a dependency from the let to the parameter owner, if it is defined in this scope
-                                topo.add_dependency(*pid, id);
-                            }
+                ir::Command::Let(ir::Let {
+                    expr: Some(expr),
+                    param,
+                })
+                | ir::Command::Exists(ir::Exists { param, expr }) => {
+                    for idx in expr.relevant_vars(comp) {
+                        log::trace!(
+                            "param {} is used by {}",
+                            comp.display(idx),
+                            comp.display(*param)
+                        );
+                        if let Some(pid) = param_map.get(&idx) {
+                            // Add a dependency from the let to the parameter owner, if it is defined in this scope
+                            topo.add_dependency(*pid, id);
                         }
                     }
+                }
+                ir::Command::Let(ir::Let { expr: None, .. }) => {
+                    // If the let does not have an expression, it depends on nothing.
+                    // We can ignore it.
                 }
                 ir::Command::Instance(inst) => {
                     for idx in (*inst).relevant_vars(comp) {
@@ -154,6 +161,11 @@ impl BuildDomination {
     fn add_let(&mut self, let_: ir::Let) {
         self.plets.last_mut().unwrap().push(let_.into());
     }
+
+    fn add_exists(&mut self, exists: ir::Exists) {
+        // We can treat exists as a let binding
+        self.plets.last_mut().unwrap().push(exists.into());
+    }
 }
 
 impl Visitor for BuildDomination {
@@ -176,6 +188,16 @@ impl Visitor for BuildDomination {
     fn let_(&mut self, let_: &mut ir::Let, _: &mut VisitorData) -> Action {
         self.add_let(let_.clone());
         // Remove the let
+        Action::Change(vec![])
+    }
+
+    fn exists(
+        &mut self,
+        exists: &mut ir::Exists,
+        _: &mut VisitorData,
+    ) -> Action {
+        self.add_exists(exists.clone());
+        // Remove the exists
         Action::Change(vec![])
     }
 

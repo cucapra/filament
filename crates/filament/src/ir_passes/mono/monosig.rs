@@ -258,10 +258,15 @@ impl MonoSig {
                 }
             };
             unreachable!(
-                "{} `{}' should have been resolved in the binding but the binding was: [{}]",
+                "{} `{}' should have been resolved in the binding but the binding was: [{}], param_map was: {:?}",
                 msg,
                 p_rep,
                 self.binding_rep(ul),
+                self.param_map
+                    .clone()
+                    .iter()
+                    .map(|(k, v)| (ul.display(k), self.base.display(*v)))
+                    .collect_vec()
             )
         }
     }
@@ -854,6 +859,18 @@ impl MonoSig {
 
         self.base.push_port_attrs(new_port, attrs.clone());
 
+        // Add the bundle parameters associated with this port.
+        // We need to do this here because signature ports can have their
+        // Bundle idxs referred to in assertions before their data has been monomorphized
+        let ir::Liveness { idxs, .. } = live;
+
+        self.bundle_params(
+            underlying,
+            pass,
+            &idxs.iter().map(|idx| idx.ul()).collect_vec(),
+            new_port,
+        );
+
         // Overwrite the value in the port map if any. This is okay because this
         // method can be called on local ports defined in iterative scopes.
         self.port_map.insert(port_map_k, new_port);
@@ -880,17 +897,16 @@ impl MonoSig {
         // Find the new port owner
         let mono_owner = self.find_new_portowner(underlying, pass, owner);
 
-        let ir::Liveness { idxs, lens, range } = live;
-
-        let mono_idxs = self.bundle_params(
-            underlying,
-            pass,
-            &idxs.iter().map(|idx| idx.ul()).collect_vec(),
-            new_port,
-        );
+        let ir::Liveness { lens, range, .. } = live;
 
         let mut mono_liveness = ir::Liveness {
-            idxs: mono_idxs.iter().map(|idx| idx.get()).collect_vec(),
+            idxs: self
+                .bundle_param_map
+                .get(&new_port)
+                .unwrap()
+                .iter()
+                .map(|idx| idx.get())
+                .collect_vec(),
             lens: vec![],         // placeholder
             range: range.clone(), // placeholder
         };

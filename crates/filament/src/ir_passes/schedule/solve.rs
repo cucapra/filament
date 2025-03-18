@@ -2,7 +2,7 @@ use super::CombDataflow;
 use crate::{
     ir_passes::{
         Monomorphize,
-        mono::{BaseComp, MonoSig, Underlying, UnderlyingComp},
+        mono::{Base, BaseComp, IntoBase, MonoSig, Underlying, UnderlyingComp},
     },
     ir_visitor::{Action, Construct, Visitor, VisitorData},
 };
@@ -28,6 +28,8 @@ impl From<u64> for SchedulingGoal {
     }
 }
 
+type SparseMap<T> = ir::SparseInfoMap<T, SExpr, Base<T>>;
+
 /// Sets the proper FSM Attributes for every component
 pub struct Solve<'comp, 'pass: 'comp> {
     /// Solver context
@@ -44,6 +46,15 @@ pub struct Solve<'comp, 'pass: 'comp> {
     /// Struct to keep track of all the mapping information from things owned by
     /// `underlying` to things owned by `base`
     pub monosig: &'comp MonoSig,
+
+    /// Map from [Base<ir::Param>] to [SExpr]
+    param_map: SparseMap<ir::Param>,
+    /// Map from [Base<ir::Prop>] to [SExpr]
+    prop_map: SparseMap<ir::Prop>,
+    /// Map from [Base<ir::Expr>] to [SExpr]
+    expr_map: SparseMap<ir::Expr>,
+    /// Map from [Base<ir::Time>] to [SExpr]
+    time_map: SparseMap<ir::Time>,
 }
 
 impl<'comp, 'pass> Solve<'comp, 'pass>
@@ -57,6 +68,13 @@ where
         goal: u64,
         solver_file: Option<&str>,
     ) -> Self {
+        // We can only schedule components with one single event!
+        if monosig.base.comp().events().len() > 1 {
+            unreachable!(
+                "Components with multiple events cannot be scheduled."
+            );
+        }
+
         // We have to use Z3 as only it supports maximization of an objective function
         let (name, s_opts) = ("z3", vec!["-smt2", "-in"]);
 
@@ -77,6 +95,127 @@ where
             minimize_expr: sol.numeral(0),
             goal: goal.into(),
             sol,
+            param_map: SparseMap::default(),
+            prop_map: SparseMap::default(),
+            expr_map: SparseMap::default(),
+            time_map: SparseMap::default(),
+        }
+    }
+}
+
+impl Solve<'_, '_> {
+    pub fn timesub_to_sexp(&self, time_sub: &ir::TimeSub) -> SExpr {
+        match time_sub {
+            fil_ir::TimeSub::Unit(idx) => self.expr_to_sexp(idx.base()),
+            fil_ir::TimeSub::Sym { l, r } => {
+                let l = self.time_to_sexp(l.base());
+                let r = self.time_to_sexp(r.base());
+                self.sol.sub(l, r)
+            }
+        }
+    }
+
+    /// Convert a time to an SExpr
+    pub fn time_to_sexp(&self, time: Base<ir::Time>) -> SExpr {
+        if let Some(sexpr) = self.time_map.find(time) {
+            return *sexpr;
+        }
+
+        // We can ignore the event because there is only one event in this component
+        let ir::Time { offset, .. } = self.monosig.base.get(time);
+
+        self.expr_to_sexp(offset.base())
+    }
+
+    /// Fold an expression to an SExpr
+    pub fn expr_to_sexp(&self, expr: Base<ir::Expr>) -> SExpr {
+        if let Some(sexpr) = self.expr_map.find(expr) {
+            return *sexpr;
+        }
+
+        match self.monosig.base.get(expr) {
+            fil_ir::Expr::Concrete(n) => self.sol.numeral(*n),
+            fil_ir::Expr::Bin { op, lhs, rhs } => {
+                let lhs = self.expr_to_sexp(lhs.base());
+                let rhs = self.expr_to_sexp(rhs.base());
+                match op {
+                    fil_ast::Op::Add => self.sol.plus(lhs, rhs),
+                    fil_ast::Op::Sub => self.sol.sub(lhs, rhs),
+                    fil_ast::Op::Mul => self.sol.times(lhs, rhs),
+                    fil_ast::Op::Div => self.sol.div(lhs, rhs),
+                    fil_ast::Op::Mod => self.sol.modulo(lhs, rhs),
+                }
+            }
+            fil_ir::Expr::If { cond, then, alt } => {
+                let cond = self.prop_to_sexp(cond.base());
+                let then = self.expr_to_sexp(then.base());
+                let alt = self.expr_to_sexp(alt.base());
+                self.sol.ite(cond, then, alt)
+            }
+            fil_ir::Expr::Param(p) => {
+                if let Some(sexpr) = self.param_map.find(p) {
+                    return *sexpr;
+                }
+                // Look in the monosig binding for the expression bound to the parameter
+                self.monosig.param_map
+            }
+            fil_ir::Expr::Fn { .. } => unreachable!(
+                "Constraints on scheduled components do not support custom function calls."
+            ),
+        }
+    }
+
+    /// Fold a proposition on events to an SExpr
+    pub fn prop_to_sexp(&self, prop: Base<ir::Prop>) -> SExpr {
+        if let Some(sexpr) = self.prop_map.find(prop) {
+            return *sexpr;
+        }
+
+        match self.monosig.base.get(prop) {
+            fil_ir::Prop::True => self.sol.atom("true"),
+            fil_ir::Prop::False => self.sol.atom("false"),
+            fil_ir::Prop::Cmp(ir::CmpOp { op, lhs, rhs }) => {
+                let lhs = self.expr_to_sexp(lhs.base());
+                let rhs = self.expr_to_sexp(rhs.base());
+                match op {
+                    fil_ir::Cmp::Gt => self.sol.gt(lhs, rhs),
+                    fil_ir::Cmp::Gte => self.sol.gte(lhs, rhs),
+                    fil_ir::Cmp::Eq => self.sol.eq(lhs, rhs),
+                }
+            }
+            fil_ir::Prop::TimeCmp(ir::CmpOp { op, lhs, rhs }) => {
+                let lhs = self.time_to_sexp(lhs.base());
+                let rhs = self.time_to_sexp(rhs.base());
+                match op {
+                    fil_ir::Cmp::Gt => self.sol.gt(lhs, rhs),
+                    fil_ir::Cmp::Gte => self.sol.gte(lhs, rhs),
+                    fil_ir::Cmp::Eq => self.sol.eq(lhs, rhs),
+                }
+            }
+            fil_ir::Prop::TimeSubCmp(ir::CmpOp { op, lhs, rhs }) => {
+                let lhs = self.timesub_to_sexp(lhs);
+                let rhs = self.timesub_to_sexp(rhs);
+                match op {
+                    fil_ir::Cmp::Gt => self.sol.gt(lhs, rhs),
+                    fil_ir::Cmp::Gte => self.sol.gte(lhs, rhs),
+                    fil_ir::Cmp::Eq => self.sol.eq(lhs, rhs),
+                }
+            }
+            fil_ir::Prop::Not(idx) => {
+                self.sol.not(self.prop_to_sexp(idx.base()))
+            }
+            fil_ir::Prop::And(idx, idx1) => self.sol.and(
+                self.prop_to_sexp(idx.base()),
+                self.prop_to_sexp(idx1.base()),
+            ),
+            fil_ir::Prop::Or(idx, idx1) => self.sol.or(
+                self.prop_to_sexp(idx.base()),
+                self.prop_to_sexp(idx1.base()),
+            ),
+            fil_ir::Prop::Implies(idx, idx1) => self.sol.imp(
+                self.prop_to_sexp(idx.base()),
+                self.prop_to_sexp(idx1.base()),
+            ),
         }
     }
 }
@@ -144,143 +283,19 @@ impl Solve<'_, '_> {
             self.sol.assert(self.sol.not(equalities)).unwrap();
         }
     }
-
-    pub fn timesub_to_sexp(
-        &self,
-        ctx: &ir::Component,
-        event_bind: &ir::SparseInfoMap<ir::Event, SExpr>,
-        time_sub: &ir::TimeSub,
-    ) -> SExpr {
-        match time_sub {
-            fil_ir::TimeSub::Unit(idx) => {
-                self.expr_to_sexp(ctx, event_bind, *idx)
-            }
-            fil_ir::TimeSub::Sym { l, r } => {
-                let l = self.time_to_sexp(ctx, event_bind, *l);
-                let r = self.time_to_sexp(ctx, event_bind, *r);
-                self.sol.sub(l, r)
-            }
-        }
-    }
-
-    pub fn time_to_sexp(
-        &self,
-        ctx: &ir::Component,
-        event_bind: &ir::SparseInfoMap<ir::Event, SExpr>,
-        time: ir::TimeIdx,
-    ) -> SExpr {
-        let ir::Time { event, offset } = ctx.get(time);
-
-        let offset = self.expr_to_sexp(ctx, event_bind, *offset);
-        let event = *event_bind.get(*event);
-
-        self.sol.plus(event, offset)
-    }
-
-    /// Fold an expression to an SExpr
-    pub fn expr_to_sexp(
-        &self,
-        ctx: &ir::Component,
-        event_bind: &ir::SparseInfoMap<ir::Event, SExpr>,
-        expr: ir::ExprIdx,
-    ) -> SExpr {
-        match ctx.get(expr) {
-            fil_ir::Expr::Concrete(n) => self.sol.numeral(*n),
-            fil_ir::Expr::Bin { op, lhs, rhs } => {
-                let lhs = self.expr_to_sexp(ctx, event_bind, *lhs);
-                let rhs = self.expr_to_sexp(ctx, event_bind, *rhs);
-                match op {
-                    fil_ast::Op::Add => self.sol.plus(lhs, rhs),
-                    fil_ast::Op::Sub => self.sol.sub(lhs, rhs),
-                    fil_ast::Op::Mul => self.sol.times(lhs, rhs),
-                    fil_ast::Op::Div => self.sol.div(lhs, rhs),
-                    fil_ast::Op::Mod => self.sol.modulo(lhs, rhs),
-                }
-            }
-            fil_ir::Expr::If { cond, then, alt } => {
-                let cond = self.prop_to_sexp(ctx, event_bind, *cond);
-                let then = self.expr_to_sexp(ctx, event_bind, *then);
-                let alt = self.expr_to_sexp(ctx, event_bind, *alt);
-                self.sol.ite(cond, then, alt)
-            }
-            fil_ir::Expr::Fn { .. } => unreachable!(
-                "Constraints on scheduled components do not support custom function calls."
-            ),
-            fil_ir::Expr::Param(_) => {
-                unreachable!("Parameters should have been monomorphized")
-            }
-        }
-    }
-
-    /// Fold a proposition on events to an SExpr
-    pub fn prop_to_sexp(
-        &self,
-        ctx: &ir::Component,
-        event_bind: &ir::SparseInfoMap<ir::Event, SExpr>,
-        prop: ir::PropIdx,
-    ) -> SExpr {
-        match ctx.get(prop) {
-            fil_ir::Prop::True => self.sol.atom("true"),
-            fil_ir::Prop::False => self.sol.atom("false"),
-            fil_ir::Prop::Cmp(ir::CmpOp { op, lhs, rhs }) => {
-                let lhs = self.expr_to_sexp(ctx, event_bind, *lhs);
-                let rhs = self.expr_to_sexp(ctx, event_bind, *rhs);
-                match op {
-                    fil_ir::Cmp::Gt => self.sol.gt(lhs, rhs),
-                    fil_ir::Cmp::Gte => self.sol.gte(lhs, rhs),
-                    fil_ir::Cmp::Eq => self.sol.eq(lhs, rhs),
-                }
-            }
-            fil_ir::Prop::TimeCmp(ir::CmpOp { op, lhs, rhs }) => {
-                let lhs = self.time_to_sexp(ctx, event_bind, *lhs);
-                let rhs = self.time_to_sexp(ctx, event_bind, *rhs);
-                match op {
-                    fil_ir::Cmp::Gt => self.sol.gt(lhs, rhs),
-                    fil_ir::Cmp::Gte => self.sol.gte(lhs, rhs),
-                    fil_ir::Cmp::Eq => self.sol.eq(lhs, rhs),
-                }
-            }
-            fil_ir::Prop::TimeSubCmp(ir::CmpOp { op, lhs, rhs }) => {
-                let lhs = self.timesub_to_sexp(ctx, event_bind, lhs);
-                let rhs = self.timesub_to_sexp(ctx, event_bind, rhs);
-                match op {
-                    fil_ir::Cmp::Gt => self.sol.gt(lhs, rhs),
-                    fil_ir::Cmp::Gte => self.sol.gte(lhs, rhs),
-                    fil_ir::Cmp::Eq => self.sol.eq(lhs, rhs),
-                }
-            }
-            fil_ir::Prop::Not(idx) => {
-                self.sol.not(self.prop_to_sexp(ctx, event_bind, *idx))
-            }
-            fil_ir::Prop::And(idx, idx1) => self.sol.and(
-                self.prop_to_sexp(ctx, event_bind, *idx),
-                self.prop_to_sexp(ctx, event_bind, *idx1),
-            ),
-            fil_ir::Prop::Or(idx, idx1) => self.sol.or(
-                self.prop_to_sexp(ctx, event_bind, *idx),
-                self.prop_to_sexp(ctx, event_bind, *idx1),
-            ),
-            fil_ir::Prop::Implies(idx, idx1) => self.sol.imp(
-                self.prop_to_sexp(ctx, event_bind, *idx),
-                self.prop_to_sexp(ctx, event_bind, *idx1),
-            ),
-        }
-    }
 }
 
 impl Solve<'_, '_> {
-    fn comp(&mut self) -> Action {
-        // For the inputs and outputs of the component, we need to schedule them as expected.
-        for (pidx, port) in self
-            .monosig
-            .base
-            .inputs()
-            .chain(self.monosig.base.outputs())
-        {
-            let ir::Range { start, end } = port.live.range;
+    fn comp(&mut self) {
+        let base = &self.monosig.base;
 
-            let start = data.comp.get(start).offset.concrete(&data.comp);
-            let end = data.comp.get(end).offset.concrete(&data.comp);
+        // For the inputs and outputs of the component, we need to schedule them as expected.
+        for (pidx, port) in base.inputs().chain(self.monosig.base.outputs()) {
+            let ir::Range { start, end } = port.live.range;
+            let (start, end) = (start.base(), end.base());
+
+            let start = base.get(start).offset.concrete(base.comp());
+            let end = base.get(end).offset.concrete(base.comp());
 
             let (start_expr, end_expr) = self.get_port_name(pidx);
 

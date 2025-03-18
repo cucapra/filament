@@ -368,6 +368,10 @@ impl Param {
     pub fn is_local(&self) -> bool {
         matches!(self.owner, ParamOwner::Loop)
     }
+
+    pub fn is_existential(&self) -> bool {
+        matches!(self.owner, ParamOwner::Exists { .. })
+    }
 }
 
 impl ParamIdx {

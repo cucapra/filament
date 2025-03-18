@@ -10,6 +10,7 @@ mod lower;
 mod mono;
 mod phantom_check;
 mod prop_simplify;
+// mod schedule;
 mod type_check;
 
 pub use assignment_check::AssignCheck;

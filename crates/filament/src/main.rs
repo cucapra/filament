@@ -81,7 +81,8 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::TypeCheck,
         ip::IntervalCheck,
         ip::PhantomCheck,
-        ip::Assume
+        ip::Assume,
+        ip::BuildDomination
     }
     if !opts.unsafe_skip_discharge {
         ir_pass_pipeline! {opts, ir; ip::Discharge }
@@ -90,6 +91,17 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         BuildDomination
     };
     ir = log_pass! { opts; ip::Monomorphize::transform(&ir, &mut gen_exec), "monomorphize"};
+    // type check after monomorphization
+    ir_pass_pipeline! {opts, ir;
+        ip::BuildDomination,
+        ip::TypeCheck,
+        ip::IntervalCheck,
+        ip::PhantomCheck,
+        ip::Assume
+    }
+    if !opts.unsafe_skip_discharge {
+        ir_pass_pipeline! {opts, ir; ip::Discharge }
+    }
     ir_pass_pipeline! { opts, ir;
         ip::FSMAttributes,
         ip::Simplify,

@@ -81,7 +81,6 @@ impl Retime {
         });
         src_info.events.push(event, "G".into());
         src_info.interface_ports.push(event, "write_en".into());
-
         comp.event_args = Box::new([event]);
 
         // Concrete expressions

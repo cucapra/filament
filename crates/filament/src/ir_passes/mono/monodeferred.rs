@@ -24,12 +24,6 @@ pub struct MonoDeferred<'comp, 'pass: 'comp> {
 
     /// If this component should be scheduled, this stores the scheduling type
     pub schedule: Option<u64>,
-
-    /// Existential parameter map.
-    /// These are not interned until [Self::sig_complete_mono] as scheduling
-    /// may affect the values of existential parameters.
-    exist_params:
-        SparseInfoMap<ir::Param, Base<ir::Expr>, Underlying<ir::Param>>,
 }
 
 impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
@@ -45,7 +39,6 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
             monosig,
             // Set to false if we call `sig_partial_mono` and true once we call `sig_complete_mono`
             sig_mono_complete: true,
-            exist_params: SparseInfoMap::default(),
         }
     }
 }
@@ -105,12 +98,23 @@ impl MonoDeferred<'_, '_> {
 
         // Insert the existential parameters into the monomorphization
         // Also extend the binding with existential parameters
-        for (param, expr) in self.exist_params.iter() {
+        let exist_params = self
+            .monosig
+            .binding
+            .iter()
+            .filter(|(p, _)| self.underlying.get(*p).is_existential())
+            .copied()
+            .collect_vec();
+
+        for (param, expr) in exist_params {
             let comp_key = self.monosig.comp_key.clone();
             let base_comp = self.monosig.base.comp();
-            let v = expr.get().as_concrete(base_comp).unwrap();
+            let v = expr.get().as_concrete(base_comp).unwrap_or_else(
+                || unreachable!("Existential parameter {} was bound to non-constant value {}", self.underlying.display(param), base_comp.display(expr.get())),
+            );
 
             self.pass.inst_info_mut(comp_key).add_exist_val(param, v);
+            // replace the old binding with this new one
             self.monosig.push_binding(param, v);
         }
 
@@ -286,30 +290,20 @@ impl MonoDeferred<'_, '_> {
         let ir::Fact { prop, reason, .. } = fact;
 
         let prop = prop.ul();
-        let (params, _) = self.underlying.relevant_vars(prop);
 
-        if !params
-            .into_iter()
-            .all(|idx| self.monosig.binding.get(&idx).is_some())
-        {
-            // Discards the assertion if it references parameters that can't be resolved (bundle parameters, etc)
-            // TODO(edmund): Find a better solution to this - we should resolve bundle assertions when bundles are unrolled.
-            None
-        } else {
-            let prop = self.monosig.prop(&self.underlying, prop, self.pass);
-            let prop = self
-                .monosig
-                .base
-                .resolve_prop(self.monosig.base.get(prop).clone())
-                .get();
+        let prop = self.monosig.prop(&self.underlying, prop, self.pass);
+        // let prop = self
+        //     .monosig
+        //     .base
+        //     .resolve_prop(self.monosig.base.get(prop).clone())
+        //     .get();
 
-            let reason = reason.ul();
-            let reason =
-                self.monosig.info(&self.underlying, self.pass, reason).get();
+        let reason = reason.ul();
+        let reason =
+            self.monosig.info(&self.underlying, self.pass, reason).get();
 
-            // After monomorphization, both assumes and asserts become asserts.
-            Some(ir::Fact::assert(prop, reason))
-        }
+        // After monomorphization, both assumes and asserts become asserts.
+        Some(ir::Fact::assert(prop.get(), reason))
     }
 
     /// Compile the given command and return the generated command if any.
@@ -380,7 +374,7 @@ impl MonoDeferred<'_, '_> {
                 let e =
                     self.monosig.expr(&self.underlying, expr.ul(), self.pass);
 
-                self.exist_params.push(param.ul(), e);
+                self.monosig.binding.push(param.ul(), e);
                 None
             }
             // XXX(rachit): We completely get rid of facts in the program here.

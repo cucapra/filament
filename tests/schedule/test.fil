@@ -6,7 +6,7 @@ comp main<'G: 1>(
 ) -> (
   out: ['G+10, 'G+11] 32
 ) with {
-    some L;
+    some L where L >= 0;
 }
 {
     let x = ?;
