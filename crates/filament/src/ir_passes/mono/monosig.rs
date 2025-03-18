@@ -694,7 +694,11 @@ impl MonoSig {
                 self.expr(underlying, p.ul(), pass)
                     .get()
                     .as_concrete(self.base.comp())
-                    .unwrap()
+                    .unwrap_or_else(|| {
+                        unreachable!(
+                            "Parameter used in instantiation was not concrete."
+                        )
+                    })
             })
             .collect_vec();
         CompKey::new(comp.ul(), conc_params)
