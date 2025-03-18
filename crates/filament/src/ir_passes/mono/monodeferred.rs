@@ -1,7 +1,9 @@
 use super::{
-    CompKey, IntoUdl, MonoSig, Monomorphize, Underlying, UnderlyingComp,
+    CompKey, IntoBase, IntoUdl, MonoSig, Monomorphize, Underlying,
+    UnderlyingComp,
 };
 use fil_ir::{self as ir, AddCtx, Ctx};
+use fil_utils::{self as utils, AttrCtx};
 use ir::DisplayCtx;
 use itertools::Itertools;
 
@@ -19,6 +21,9 @@ pub struct MonoDeferred<'comp, 'pass: 'comp> {
 
     /// Have we completed the monomorphization of the signature?
     sig_mono_complete: bool,
+
+    /// Should this component be scheduled?
+    pub schedule: bool,
 }
 
 impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
@@ -28,6 +33,7 @@ impl<'a, 'pass: 'a> MonoDeferred<'a, 'pass> {
         monosig: MonoSig,
     ) -> Self {
         Self {
+            schedule: underlying.attrs().has(utils::CompNum::Schedule),
             underlying,
             pass,
             monosig,
@@ -43,27 +49,11 @@ impl MonoDeferred<'_, '_> {
         self.monosig.base.take()
     }
 
-    /// The [CompKey] associated with the underlying component being monomorphized.
-    fn comp_key(&self) -> CompKey {
-        let binding = self.monosig.binding.inner();
-        let conc_params = if self.underlying.is_ext() {
-            vec![]
-        } else {
-            binding
-                .iter()
-                .filter(|(p, _)| self.underlying.get(*p).is_sig_owned())
-                .map(|(_, n)| *n)
-                .collect_vec()
-        };
-
-        (self.monosig.underlying_idx, conc_params).into()
-    }
-
     /// Monomorphize the parts of the signature that do not use any existential parameters.
     /// We must call [Self::sig_complete_mono] at some point after calling this.
     /// Otherwise, the IR will be in an invalid state.
     pub fn sig_partial_mono(&mut self) {
-        let comp_k: CompKey = self.comp_key();
+        let comp_k: CompKey = self.monosig.comp_key.clone();
 
         let monosig = &mut self.monosig;
         let ul = &self.underlying;
@@ -147,7 +137,7 @@ impl MonoDeferred<'_, '_> {
 
     /// Add to the parameter binding
     pub fn push_binding(&mut self, p: Underlying<ir::Param>, v: u64) {
-        self.monosig.binding.push(p, v);
+        self.monosig.push_binding(p, v);
     }
 
     /// Monomorphize a component definition
@@ -164,7 +154,7 @@ impl MonoDeferred<'_, '_> {
         }
 
         // Extend the binding with existential parameters
-        let info = self.pass.inst_info(&self.comp_key());
+        let info = self.pass.inst_info(&self.monosig.comp_key);
         for param in self.underlying.exist_params() {
             let param = param.ul();
             let Some(v) = info.get_exist_val(param) else {
@@ -173,7 +163,7 @@ impl MonoDeferred<'_, '_> {
                     self.underlying.display(param)
                 )
             };
-            self.monosig.binding.push(param, v);
+            self.monosig.push_binding(param, v);
         }
 
         // Monomorphize the rest of the signature
@@ -242,7 +232,7 @@ impl MonoDeferred<'_, '_> {
         while i < bound {
             let index = index.ul();
             let orig_l = self.monosig.binding.len();
-            self.monosig.binding.push(index, i);
+            self.push_binding(index, i);
             for cmd in body.iter() {
                 let cmd = self.command(cmd);
                 self.monosig.base.extend_cmds(cmd);
@@ -340,25 +330,37 @@ impl MonoDeferred<'_, '_> {
             ),
             ir::Command::Let(ir::Let { param, expr }) => {
                 let p = param.ul();
-                let e = self
-                    .monosig
-                    .expr(
+                let expr = expr.map(|e| e.ul());
+
+                if let Some(expr) = expr {
+                    let e = self
+                        .monosig
+                        .expr(&self.underlying, expr, self.pass)
+                        .get();
+                    self.monosig.binding.push(p, e.base());
+                    None
+                } else {
+                    if !self.schedule {
+                        unreachable!(
+                            "Encountered `?` let binding in non-scheduled component"
+                        );
+                    }
+
+                    let new_param = self.monosig.unelaborated_param(
                         &self.underlying,
-                        expr.unwrap_or_else(|| {
-                            unreachable!("Let binding was bound to `?`")
-                        })
-                        .ul(),
                         self.pass,
+                        p,
+                        ir::ParamOwner::Let { bind: None },
+                    );
+
+                    Some(
+                        ir::Let {
+                            param: new_param.get(),
+                            expr: None,
+                        }
+                        .into(),
                     )
-                    .get();
-                let Some(v) = e.as_concrete(self.monosig.base.comp()) else {
-                    unreachable!(
-                        "let binding evaluated to: {}",
-                        self.monosig.base.comp().display(e)
-                    )
-                };
-                self.monosig.binding.push(p, v);
-                None
+                }
             }
             ir::Command::Connect(con) => Some(self.connect(con).into()),
             ir::Command::ForLoop(lp) => {
@@ -370,7 +372,7 @@ impl MonoDeferred<'_, '_> {
                 None
             }
             ir::Command::Exists(ir::Exists { param, expr }) => {
-                let comp_key = self.comp_key();
+                let comp_key = self.monosig.comp_key.clone();
                 let e = self
                     .monosig
                     .expr(&self.underlying, expr.ul(), self.pass)

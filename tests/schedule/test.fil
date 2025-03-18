@@ -1,0 +1,14 @@
+
+#[schedule=1]
+comp main<'G: 1>(
+  go: interface['G],
+  in: ['G, 'G+1] 32,
+) -> (
+  out: ['G+10, 'G+11] 32
+)
+{
+    let x = ?;
+    let xx = 2;
+    let y = x + xx;
+    let z = y + 1;
+}

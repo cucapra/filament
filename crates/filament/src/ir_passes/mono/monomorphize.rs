@@ -135,8 +135,11 @@ impl Monomorphize<'_> {
             .gen_instance(tool, &inst);
 
         // Partially convert the signature
-        let monosig =
-            MonoSig::new(underlying, ir::CompType::External, comp, params);
+        let monosig = MonoSig::new(
+            underlying,
+            ir::CompType::External,
+            CompKey::new(comp, params),
+        );
         let mut mono_comp = MonoDeferred::new(
             UnderlyingComp::new(self.old.get(comp.idx())),
             self,
@@ -250,8 +253,11 @@ impl Monomorphize<'_> {
         }
 
         // Otherwise monomorphize the definition of the component
-        let monosig =
-            MonoSig::new(underlying, ir::CompType::Source, comp, params);
+        let monosig = MonoSig::new(
+            underlying,
+            ir::CompType::Source,
+            CompKey::new(comp, params),
+        );
 
         // the component whose signature we want to monomorphize
         // Monomorphize the sig

@@ -14,6 +14,9 @@ impl<'a> UnderlyingComp<'a> {
     pub fn new(comp: &'a ir::Component) -> Self {
         Self(comp)
     }
+    pub fn attrs(&self) -> &utils::CompAttrs {
+        &self.0.attrs
+    }
     // XXX(rachitnigam): We should probably define a macro to dispatch these methods.
     pub fn cmds(&self) -> &Vec<ir::Command> {
         &self.0.cmds

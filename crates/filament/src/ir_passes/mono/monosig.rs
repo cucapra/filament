@@ -21,10 +21,11 @@ type SparseMap<T> = SparseInfoMap<T, Base<T>, Underlying<T>>;
 pub struct MonoSig {
     /// The name of the monomorphized component
     pub base: BaseComp,
-    /// The underlying component's idx
-    pub underlying_idx: Underlying<ir::Component>,
-    /// Mapping from parameters in the underlying component to their constant bindings.
-    pub binding: ir::Bind<Underlying<ir::Param>, u64>,
+    /// Mapping from parameters in the underlying component to their bindings.
+    pub binding: ir::Bind<Underlying<ir::Param>, Base<ir::Expr>>,
+
+    /// The [CompKey] associated with the underlying component
+    pub comp_key: CompKey,
 
     // Keep track of things that have benen monomorphized already
     /// Events
@@ -46,21 +47,25 @@ impl MonoSig {
     pub fn new(
         underlying: &ir::Component,
         typ: ir::CompType,
-        idx: Underlying<ir::Component>,
-        params: Vec<u64>,
+        comp_key: CompKey,
     ) -> Self {
+        let mut comp = ir::Component::new(typ, underlying.attrs.clone());
+
         let binding = ir::Bind::new(
             underlying
                 .sig_params()
                 .map(|p| p.ul())
-                .zip(params)
+                .zip(
+                    comp_key
+                        .params
+                        .iter()
+                        .map(|v| comp.add(ir::Expr::Concrete(*v)).base()),
+                )
                 .collect_vec(),
         );
-        let comp = ir::Component::new(typ, underlying.attrs.clone());
 
         Self {
             base: BaseComp::new(comp),
-            underlying_idx: idx,
             binding,
             port_map: HashMap::new(),
             bundle_param_map: HashMap::new(),
@@ -68,14 +73,22 @@ impl MonoSig {
             event_map: DenseMap::default(),
             invoke_map: DenseMap::default(),
             instance_map: DenseMap::default(),
+            comp_key,
         }
+    }
+
+    /// Add to the parameter binding
+    pub fn push_binding(&mut self, p: Underlying<ir::Param>, v: u64) {
+        self.binding.push(p, self.base.num(v))
     }
 
     /// String representation for the binding for debug purposes
     pub fn binding_rep(&self, ul: &UnderlyingComp<'_>) -> String {
         self.binding
             .iter()
-            .map(|(p, e)| format!("{}: {}", ul.display(*p), e))
+            .map(|(p, e)| {
+                format!("{}: {}", ul.display(*p), self.base.display(*e))
+            })
             .join(", ")
     }
 
@@ -350,9 +363,8 @@ impl MonoSig {
             ir::Expr::Param(p) => {
                 // If this is a parameter in the underlying component that is bound,
                 // return its binding
-                if let Some(n) = self.binding.get(&p.ul()) {
-                    let new_idx = self.base.num(*n);
-                    return new_idx;
+                if let Some(new_idx) = self.binding.get(&p.ul()) {
+                    return *new_idx;
                 } else {
                     let p = self.param_use(underlying, p.ul()).get();
                     self.base.add(ir::Expr::Param(p))
@@ -500,12 +512,9 @@ impl MonoSig {
         pass: &mut Monomorphize,
         event: Underlying<ir::Event>,
     ) -> Base<ir::Event> {
-        let binding = self.binding.inner();
-        let conc_params = binding.iter().map(|(_, n)| *n).collect_vec();
-
         let new_event = self.event_map.get(event);
-        let ck: CompKey = (self.underlying_idx, conc_params).into();
-        pass.inst_info_mut(ck).add_event(event, *new_event);
+        pass.inst_info_mut(self.comp_key.clone())
+            .add_event(event, *new_event);
         *new_event
     }
 
@@ -528,24 +537,38 @@ impl MonoSig {
         let mono_params = params
             .iter()
             .map(|old_pidx| {
-                let mono_param = ir::Param {
-                    owner: mono_owner.clone(),
-                    info: self
-                        .info(
-                            underlying,
-                            pass,
-                            underlying.get(*old_pidx).info.ul(),
-                        )
-                        .get(),
-                };
-                let new_idx = self.base.add(mono_param);
-                self.param_map.push(*old_pidx, new_idx);
-                new_idx
+                self.unelaborated_param(
+                    underlying,
+                    pass,
+                    *old_pidx,
+                    mono_owner.clone(),
+                )
             })
             .collect_vec();
 
         self.bundle_param_map.insert(port, mono_params.clone());
         mono_params
+    }
+
+    /// Takes a parameter that cannot currently be elaborated
+    /// (let = ? parameters and bundle parameters) and creates a new placeholder parameter
+    /// in the monomorphized component. Returns the corresponding index.
+    pub fn unelaborated_param(
+        &mut self,
+        underlying: &UnderlyingComp,
+        pass: &mut Monomorphize,
+        param: Underlying<ir::Param>,
+        mono_owner: ir::ParamOwner,
+    ) -> Base<ir::Param> {
+        let mono_param = ir::Param {
+            owner: mono_owner.clone(),
+            info: self
+                .info(underlying, pass, underlying.get(param).info.ul())
+                .get(),
+        };
+        let new_idx = self.base.add(mono_param);
+        self.param_map.push(param, new_idx);
+        new_idx
     }
 
     /// Monomorphize the definition of an invoke, add it to the base component,
@@ -722,7 +745,9 @@ impl MonoSig {
             };
             (
                 p,
-                pass.inst_info(&ck).get_exist_val(base.key().ul()).unwrap(),
+                self.base.num(
+                    pass.inst_info(&ck).get_exist_val(base.key().ul()).unwrap(),
+                ),
             )
         }));
 
