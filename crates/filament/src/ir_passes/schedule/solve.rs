@@ -1,5 +1,11 @@
 use super::CombDataflow;
-use crate::ir_visitor::{Action, Construct, Visitor, VisitorData};
+use crate::{
+    ir_passes::{
+        Monomorphize,
+        mono::{BaseComp, MonoSig, Underlying, UnderlyingComp},
+    },
+    ir_visitor::{Action, Construct, Visitor, VisitorData},
+};
 use easy_smt::{self as smt, SExpr, SExprData};
 use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, MutCtx};
 use fil_utils::{AttrCtx, CompNum};
@@ -23,22 +29,59 @@ impl From<u64> for SchedulingGoal {
 }
 
 /// Sets the proper FSM Attributes for every component
-pub struct Solve {
+pub struct Solve<'comp, 'pass: 'comp> {
     /// Solver context
     sol: smt::Context,
     /// Scheduling goal
     goal: SchedulingGoal,
     /// The expression to minimize
     minimize_expr: smt::SExpr,
-    // /// Map from ir elements to SExprs
-    // expr_map: ir::SparseInfoMap<ir::Expr, SExpr>,
-    // port_map: ir::SparseInfoMap<ir::PortIdx, SExpr>,
-    // event_map: ir::SparseInfoMap<ir::EventIdx, SExpr>,
-    // time_map: ir::SparseInfoMap<ir::TimeIdx, SExpr>,
-    // prop_map: ir::SparseInfoMap<ir::PropIdx, SExpr>,
+
+    /// The underlying component to be monomorphized
+    pub underlying_idx: Underlying<ir::Component>,
+    /// Underlying pointer
+    pub pass: &'comp mut Monomorphize<'pass>,
+    /// Struct to keep track of all the mapping information from things owned by
+    /// `underlying` to things owned by `base`
+    pub monosig: &'comp MonoSig,
 }
 
-impl Solve {
+impl<'comp, 'pass> Solve<'comp, 'pass>
+where
+    'pass: 'comp,
+{
+    fn new(
+        underlying_idx: Underlying<ir::Component>,
+        pass: &'comp mut Monomorphize<'pass>,
+        monosig: &'comp MonoSig,
+        goal: u64,
+        solver_file: Option<&str>,
+    ) -> Self {
+        // We have to use Z3 as only it supports maximization of an objective function
+        let (name, s_opts) = ("z3", vec!["-smt2", "-in"]);
+
+        let mut sol = smt::ContextBuilder::new()
+            .replay_file(
+                solver_file.as_ref().map(|s| fs::File::create(s).unwrap()),
+            )
+            .solver(name, s_opts)
+            .build()
+            .unwrap();
+
+        sol.push_many(1).unwrap();
+
+        Self {
+            underlying_idx,
+            pass,
+            monosig,
+            minimize_expr: sol.numeral(0),
+            goal: goal.into(),
+            sol,
+        }
+    }
+}
+
+impl Solve<'_, '_> {
     /// Get the constant names for the start and end of a port
     pub fn get_port_name(&self, pidx: ir::PortIdx) -> (String, String) {
         (
@@ -225,59 +268,15 @@ impl Solve {
     }
 }
 
-impl Construct for Solve {
-    fn from(opts: &crate::cmdline::Opts, _: &mut ir::Context) -> Self {
-        // We have to use Z3 as only it supports maximization of an objective function
-        let (name, s_opts) = ("z3", vec!["-smt2", "-in"]);
-
-        let mut sol = smt::ContextBuilder::new()
-            .replay_file(
-                opts.solver_replay_file
-                    .as_ref()
-                    .map(|s| fs::File::create(s).unwrap()),
-            )
-            .solver(name, s_opts)
-            .build()
-            .unwrap();
-
-        sol.push_many(1).unwrap();
-
-        Self {
-            minimize_expr: sol.numeral(0),
-            goal: SchedulingGoal::Latency,
-            sol,
-        }
-    }
-
-    fn clear_data(&mut self) {
-        // Create a new solver context
-        self.sol.pop_many(1).unwrap();
-        self.sol.push_many(1).unwrap();
-    }
-}
-
-impl Visitor for Solve {
-    fn name() -> &'static str {
-        "schedule-solve"
-    }
-
-    fn start(&mut self, data: &mut VisitorData) -> Action {
-        // Quit the pass if this attribute does not have the #[schedule] attribute
-        if let Some(&goal) = data.comp.attrs.get(CompNum::Schedule) {
-            self.goal = goal.into()
-        } else {
-            return Action::Stop;
-        }
-
-        // make sure this component only has one event
-        assert_eq!(
-            data.comp.events().idx_iter().count(),
-            1,
-            "Attempting to schedule a component with multiple events"
-        );
-
+impl Solve<'_, '_> {
+    fn comp(&mut self) -> Action {
         // For the inputs and outputs of the component, we need to schedule them as expected.
-        for (pidx, port) in data.comp.inputs().chain(data.comp.outputs()) {
+        for (pidx, port) in self
+            .monosig
+            .base
+            .inputs()
+            .chain(self.monosig.base.outputs())
+        {
             let ir::Range { start, end } = port.live.range;
 
             let start = data.comp.get(start).offset.concrete(&data.comp);
@@ -304,8 +303,6 @@ impl Visitor for Solve {
                 .assert(self.sol.eq(self.sol.numeral(end), end_expr))
                 .unwrap();
         }
-
-        Action::Continue
     }
 
     fn connect(

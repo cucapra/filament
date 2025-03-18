@@ -130,6 +130,18 @@ impl BaseComp {
     pub fn resolve_prop(&mut self, prop: ir::Prop) -> Base<ir::Prop> {
         self.0.resolve_prop(prop).base()
     }
+
+    pub fn inputs(
+        &self,
+    ) -> impl Iterator<Item = (Base<ir::Port>, &'_ ir::Port)> {
+        self.0.inputs().map(|(k, v)| (k.base(), v))
+    }
+
+    pub fn outputs(
+        &self,
+    ) -> impl Iterator<Item = (Base<ir::Port>, &'_ ir::Port)> {
+        self.0.outputs().map(|(k, v)| (k.base(), v))
+    }
 }
 
 impl<T> MutCtx<T, Base<T>> for BaseComp
