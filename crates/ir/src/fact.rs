@@ -4,7 +4,7 @@ use super::{
 use crate::{Event, EventIdx, Expr, Param, ParamIdx, Time, construct_binop};
 use std::fmt::{self, Display};
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 /// Comparison operators
 pub enum Cmp {
     Gt,

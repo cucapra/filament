@@ -77,11 +77,12 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     // Transform AST to IR
     let mut ir = log_pass! { opts; ir::transform(ns)?, "astconv" };
     ir_pass_pipeline! {opts, ir;
+        ip::Assumptions,
         ip::BuildDomination,
         ip::TypeCheck,
         ip::IntervalCheck,
         ip::PhantomCheck,
-        ip::Assume,
+        ip::FunAssumptions,
         ip::BuildDomination
     }
     if !opts.unsafe_skip_discharge {
@@ -93,11 +94,12 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     ir = log_pass! { opts; ip::Monomorphize::transform(&ir, &mut gen_exec), "monomorphize"};
     // type check after monomorphization
     ir_pass_pipeline! {opts, ir;
+        ip::Assumptions,
         ip::BuildDomination,
         ip::TypeCheck,
         ip::IntervalCheck,
         ip::PhantomCheck,
-        ip::Assume
+        ip::FunAssumptions
     }
     if !opts.unsafe_skip_discharge {
         ir_pass_pipeline! {opts, ir; ip::Discharge }
@@ -111,11 +113,12 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     }
     // type check again before lowering
     ir_pass_pipeline! {opts, ir;
+        ip::Assumptions,
         ip::BuildDomination,
         ip::TypeCheck,
         ip::IntervalCheck,
         ip::PhantomCheck,
-        ip::Assume
+        ip::FunAssumptions
     }
     if !opts.unsafe_skip_discharge {
         ir_pass_pipeline! {opts, ir; ip::Discharge }
