@@ -29,22 +29,22 @@ impl<'a> Validate<'a> {
     /// Validate the entire component
     fn comp(&self) {
         // Validate ports
-        for (pidx, _) in self.comp.ports().iter() {
+        for pidx in self.comp.ports().idx_iter() {
             self.port(pidx);
         }
 
         // Validate params
-        for (pidx, _) in self.comp.params().iter() {
+        for pidx in self.comp.params().idx_iter() {
             self.param(pidx);
         }
 
         // Validate invokes
-        for (iidx, _) in self.comp.invocations().iter() {
+        for iidx in self.comp.invocations().idx_iter() {
             self.invoke(iidx);
         }
 
         // Validate instances
-        for (iidx, _) in self.comp.instances().iter() {
+        for iidx in self.comp.instances().idx_iter() {
             self.instance(iidx);
         }
 
@@ -57,13 +57,19 @@ impl<'a> Validate<'a> {
     /// A Port is valid if:
     /// (1) All bundle-owned params point to this port
     /// (2) The port's owner is defined in the component and the owner says it owns the port
-    /// NOTE(rachit): A more pedantic check can enforce these in the future:
     /// (3) All time expressions are bound
     /// (4) All parameters mentioned in the range and the width are bound
     fn port(&self, pidx: ir::PortIdx) {
-        let ir::Port { owner, live, .. } = self.comp.get(pidx);
+        let ir::Port {
+            owner, live, width, ..
+        } = self.comp.get(pidx);
         // check (1)
-        let ir::Liveness { idxs: par_idxs, .. } = live;
+        let ir::Liveness {
+            idxs: par_idxs,
+            lens,
+            range,
+        } = live;
+
         for par_idx in par_idxs {
             match self.comp.get(*par_idx).owner {
             ir::ParamOwner::Let { .. } => self.comp.internal_error(format!(
@@ -121,6 +127,15 @@ impl<'a> Validate<'a> {
                 }
             }
         }
+
+        // check (3)
+        self.range(range);
+
+        // check (4)
+        self.expr(*width);
+        for len in lens {
+            self.expr(*len);
+        }
     }
 
     /// An invoke is valid if:
@@ -128,12 +143,11 @@ impl<'a> Validate<'a> {
     /// (2) Ports defined by invoke point to it
     ///     i.  port() checks that the invoke owns the port
     ///         invoke() checks that the ports an invoke defines are owned by it
-    /// (3) Its events are valid
-    /// (4) Its events point to the invoke as their owner
+    /// (3) Its event bindings are valid
     fn invoke(&self, iidx: ir::InvIdx) {
         assert!(self.comp.valid(iidx));
 
-        let ir::Invoke { ports, .. } = &self.comp.get(iidx);
+        let ir::Invoke { ports, events, .. } = &self.comp.get(iidx);
 
         // check (1) and (2)
         for pidx in ports {
@@ -157,20 +171,43 @@ impl<'a> Validate<'a> {
                 }
             }
         }
+        // check (3)
+        for ir::EventBind {
+            arg, delay, base, ..
+        } in events
+        {
+            self.time(*arg);
+            self.timesub(delay);
+            // Validate that the foreign event exists
+            assert!(base.apply(|e, c| c.valid(e), self.ctx));
+        }
     }
 
     /// An instance is valid if:
     /// (1) It is defined in the component
-    /// (2) Its params are defined in the component
-    /// (3) The component it's instantiating is defined in the context
-    /// (4) The number of params passed in matches the amount present
+    /// (2) Its existential params are defined in the component
+    /// (3) Its ranges are valid
+    /// (4) The component it's instantiating is defined in the context
+    /// (5) The number of params passed in matches the amount present
     ///     in the component signature
     fn instance(&self, iidx: ir::InstIdx) {
         // check (1)
         let ir::Instance {
-            comp, args: params, ..
+            comp,
+            args,
+            params,
+            lives,
+            ..
         } = &self.comp[iidx];
-        // check (3) and (4)
+        // check (2)
+        for param in params {
+            self.param(*param);
+        }
+        // check (3)
+        for live in lives {
+            self.range(live);
+        }
+        // check (4) and (5)
         let comp_params = self
             .ctx
             .get(*comp)
@@ -178,7 +215,7 @@ impl<'a> Validate<'a> {
             .iter()
             .filter(|(_, param)| param.is_sig_owned())
             .count();
-        let inst_len = params.len();
+        let inst_len = args.len();
         if comp_params != inst_len {
             self.comp.internal_error(
                 format!("{comp} takes {comp_params} params, but {inst_len} were passed by {iidx}")
@@ -187,6 +224,7 @@ impl<'a> Validate<'a> {
     }
 
     fn bundle_def(&self, b: ir::PortIdx) {
+        self.port(b);
         // The port in a bundle def must have a local owner
         let ir::Port { owner, .. } = &self.comp[b];
         match owner {
@@ -207,10 +245,14 @@ impl<'a> Validate<'a> {
             ir::Command::ForLoop(lp) => self.forloop(lp),
             ir::Command::If(cond) => self.if_stmt(cond),
             ir::Command::Let(l) => self.let_(l),
-            ir::Command::Fact(_) => (),
+            ir::Command::Fact(f) => self.fact(f),
             ir::Command::BundleDef(b) => self.bundle_def(*b),
             ir::Command::Exists(e) => self.exists(e),
         }
+    }
+
+    fn fact(&self, fact: &ir::Fact) {
+        self.prop(fact.prop);
     }
 
     fn let_(&self, l: &ir::Let) {
@@ -251,23 +293,37 @@ impl<'a> Validate<'a> {
 
     /// An access is valid if:
     /// (1) The port being accessed is valid
-    /// (2) Its start and end exprs are defined in the comp
+    /// (2) The start and end exprs of its ranges are defined in the comp
     fn access(&self, access: &ir::Access) {
-        let ir::Access { port, .. } = *access;
-        self.port(port);
-        // self.expr(start);
-        // self.expr(end);
+        let ir::Access { port, ranges } = access;
+        self.port(*port);
+        for (start, end) in ranges {
+            self.expr(*start);
+            self.expr(*end);
+        }
     }
 
     /// A loop is valid if:
-    /// (1) Its index is valid
+    /// (1) Its index is valid and owned by a loop
     /// (2) Its start/end is valid
     /// (3) Everything in its body is valid
     fn forloop(&self, lp: &ir::Loop) {
-        let ir::Loop { body, .. } = lp;
-        // self.param(*index);
-        // self.expr(*start);
-        // self.expr(*end);
+        let ir::Loop {
+            body,
+            start,
+            end,
+            index,
+        } = lp;
+        let param = self.comp.get(*index);
+        if !matches!(param.owner, ir::ParamOwner::Loop) {
+            self.comp.internal_error(format!(
+                "{} mentioned in loop but owned by {}",
+                self.comp.display(*index),
+                param.owner
+            ))
+        }
+        self.expr(*start);
+        self.expr(*end);
         for cmd in body {
             self.command(cmd);
         }
@@ -278,16 +334,20 @@ impl<'a> Validate<'a> {
     /// (2) Everything in its then-branch is valid
     /// (3) Everything in its alt-branch is valid
     fn if_stmt(&self, if_stmt: &ir::If) {
-        let ir::If { then, alt, .. } = if_stmt;
+        let ir::If { cond, then, alt } = if_stmt;
+        // check (1)
+        self.prop(*cond);
+        // check (2)
         for cmd in then {
             self.command(cmd);
         }
+        // check (3)
         for cmd in alt {
             self.command(cmd);
         }
     }
     fn exists(&self, exists: &ir::Exists) {
-        let ir::Exists { param: p_idx, .. } = exists;
+        let ir::Exists { param: p_idx, expr } = exists;
         let param = self.comp.get(*p_idx);
         // let param = self.param(*p_idx);
         if !matches!(param.owner, ir::ParamOwner::Exists { .. }) {
@@ -297,6 +357,36 @@ impl<'a> Validate<'a> {
                 param.owner
             ))
         }
-        // self.expr(*expr);
+        self.expr(*expr);
+    }
+
+    /// A prop is valid iff all of its fields are valid
+    fn prop(&self, pidx: ir::PropIdx) {
+        assert!(pidx.valid(self.comp));
+    }
+
+    /// An expr is valid iff all of its arguments are valid
+    fn expr(&self, eidx: ir::ExprIdx) {
+        assert!(eidx.valid(self.comp));
+    }
+
+    /// A time is valid iff all of its arguments are valid
+    fn time(&self, tidx: ir::TimeIdx) {
+        assert!(tidx.valid(self.comp));
+    }
+
+    fn timesub(&self, ts: &ir::TimeSub) {
+        match ts {
+            crate::TimeSub::Unit(idx) => self.expr(*idx),
+            crate::TimeSub::Sym { l, r } => {
+                self.time(*l);
+                self.time(*r);
+            }
+        }
+    }
+
+    fn range(&self, r: &ir::Range) {
+        self.time(r.start);
+        self.time(r.end);
     }
 }
