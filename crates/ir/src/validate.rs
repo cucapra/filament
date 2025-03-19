@@ -362,17 +362,17 @@ impl<'a> Validate<'a> {
 
     /// A prop is valid iff all of its fields are valid
     fn prop(&self, pidx: ir::PropIdx) {
-        pidx.valid(self.comp);
+        assert!(pidx.valid(self.comp));
     }
 
     /// An expr is valid iff all of its arguments are valid
     fn expr(&self, eidx: ir::ExprIdx) {
-        eidx.valid(self.comp);
+        assert!(eidx.valid(self.comp));
     }
 
     /// A time is valid iff all of its arguments are valid
     fn time(&self, tidx: ir::TimeIdx) {
-        tidx.valid(self.comp);
+        assert!(tidx.valid(self.comp));
     }
 
     fn timesub(&self, ts: &ir::TimeSub) {
