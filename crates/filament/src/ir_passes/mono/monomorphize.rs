@@ -148,10 +148,10 @@ impl Monomorphize<'_> {
         mono_comp.sig_partial_mono();
 
         // Add generated existential parameters
-        for (name, val) in exist_params {
+        for (ep, val) in exist_params {
             let v: u64 = val.parse().unwrap();
-            let Some(param) = is.param_from_src_name(name.clone()) else {
-                unreachable!("component does not have parameter `{name}'")
+            let Some(param) = is.param_from_src_name(ep.clone()) else {
+                unreachable!("component does not have parameter `{ep}'")
             };
             // Add to the binding
             mono_comp.push_binding(param.ul(), v);
@@ -159,7 +159,10 @@ impl Monomorphize<'_> {
 
         // Monomorphize the siganture of the component using the parameters
         mono_comp.sig_complete_mono();
-        let comp = mono_comp.take();
+        let mut comp = mono_comp.take();
+
+        // Update the source name
+        comp.src_info.as_mut().unwrap().name = name.into();
 
         // Add component to the context
         let idx = self.ctx.add(comp).base();
