@@ -26,10 +26,6 @@ impl<'a> Validate<'a> {
         assert!(self.comp.valid(p));
     }
 
-    fn event(&self, e: ir::EventIdx) {
-        assert!(self.comp.valid(e));
-    }
-
     /// Validate the entire component
     fn comp(&self) {
         // Validate ports
@@ -147,7 +143,7 @@ impl<'a> Validate<'a> {
     /// (2) Ports defined by invoke point to it
     ///     i.  port() checks that the invoke owns the port
     ///         invoke() checks that the ports an invoke defines are owned by it
-    /// (3) Its event bindings
+    /// (3) Its event bindings are valid
     fn invoke(&self, iidx: ir::InvIdx) {
         assert!(self.comp.valid(iidx));
 
@@ -228,6 +224,7 @@ impl<'a> Validate<'a> {
     }
 
     fn bundle_def(&self, b: ir::PortIdx) {
+        self.port(b);
         // The port in a bundle def must have a local owner
         let ir::Port { owner, .. } = &self.comp[b];
         match owner {
