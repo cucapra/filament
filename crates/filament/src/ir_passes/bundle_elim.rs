@@ -4,25 +4,30 @@ use crate::{
 };
 use fil_ir::{
     self as ir, Access, AddCtx, Bind, Component, Connect, Ctx, DenseIndexInfo,
-    DisplayCtx, Expr, Foreign, InvIdx, Invoke, Liveness, MutCtx, Port, PortIdx,
-    PortOwner, Range, SparseInfoMap, Subst, Time,
+    DisplayCtx, Expr, Foreign, InvIdx, Invoke, Liveness, MutCtx, Param, Port,
+    PortIdx, PortOwner, Range, SparseInfoMap, Subst, Time,
 };
 use fil_utils as utils;
 use itertools::Itertools;
 use std::collections::HashMap;
 
-pub type PortInfo =
-    (/*lens=*/ Vec<usize>, /*gen_ports=*/ Vec<PortIdx>);
+/// A mapping from a bundle with a list of dimensions to the list of generated ports.
+type PortInfo = (/*lens=*/ Vec<usize>, /*gen_ports=*/ Vec<PortIdx>);
+
+/// A multi-dimensional index into a possibly multi-dimensional bundle port).
+type BundleIdx = (PortIdx, Vec<usize>);
 
 // Eliminates bundle ports by breaking them into multiple len-1 ports, and eliminates local ports altogether.
 pub struct BundleElim {
     /// Mapping from component to the map from signature bundle port to generated port.
     context: DenseIndexInfo<Component, SparseInfoMap<Port, PortInfo>>,
     /// Mapping from index into a dst port to an index of the src port.
-    local_map: HashMap<
-        (PortIdx, /*idxs=*/ Vec<usize>),
-        (PortIdx, /*idxs=*/ Vec<usize>),
-    >,
+    local_map: HashMap<BundleIdx, BundleIdx>,
+    /// Set of bundle-owned parameters.
+    /// Assertions/Assumptions depending on these parameters must be invalidated
+    /// For safety, discharge should be run before this pass to make sure none of these
+    /// propositions fail.
+    bundle_params: SparseInfoMap<Param, ()>,
 }
 
 impl BundleElim {
@@ -62,7 +67,7 @@ impl BundleElim {
     }
 
     /// Compiles a port by breaking it into multiple len-1 ports.
-    fn port(&self, pidx: PortIdx, comp: &mut Component) -> PortInfo {
+    fn port(&mut self, pidx: PortIdx, comp: &mut Component) -> PortInfo {
         let one = comp.add(Expr::Concrete(1));
         let Port {
             owner,
@@ -178,13 +183,14 @@ impl BundleElim {
         comp.delete(pidx);
         // delete the corresponding parameter
         for idx in idxs {
+            self.bundle_params.push(idx, ());
             comp.delete(idx);
         }
         (lens, ports)
     }
 
     /// Compiles the signature of a component and adds the new ports to the context mapping.
-    fn sig(&self, comp: &mut Component) -> SparseInfoMap<Port, PortInfo> {
+    fn sig(&mut self, comp: &mut Component) -> SparseInfoMap<Port, PortInfo> {
         // loop through signature ports and compile them
         // Allowing filter_map_bool_then as it erroneously triggers
         // due to https://github.com/rust-lang/rust-clippy/issues/11617
@@ -200,7 +206,7 @@ impl BundleElim {
     /// Compiles the ports defined by an invocation and adds the new ports to the context mapping.
     /// Mutates the invocation in place, redefining its defined ports.
     fn inv(
-        &self,
+        &mut self,
         idx: InvIdx,
         comp: &mut Component,
     ) -> SparseInfoMap<Port, PortInfo> {
@@ -224,10 +230,12 @@ impl Construct for BundleElim {
         let mut visitor = Self {
             context: DenseIndexInfo::default(),
             local_map: HashMap::new(),
+            bundle_params: SparseInfoMap::default(),
         };
         // compiles signature ports and adds them to the context
         for (idx, c) in ctx.comps.iter_mut() {
-            visitor.context.push(idx, visitor.sig(c));
+            let sigmap = visitor.sig(c);
+            visitor.context.push(idx, sigmap);
         }
 
         visitor
@@ -235,6 +243,7 @@ impl Construct for BundleElim {
 
     fn clear_data(&mut self) {
         self.local_map.clear();
+        self.bundle_params.clear();
     }
 }
 
@@ -293,6 +302,19 @@ impl Visitor for BundleElim {
     ) -> Action {
         // Remove all bundle definitions
         Action::Change(vec![])
+    }
+
+    /// Discard all bundle-based assumptions/assertions
+    fn fact(&mut self, f: &mut fil_ir::Fact, data: &mut VisitorData) -> Action {
+        let pidx = f.prop;
+        let (params, _) = pidx.relevant_vars(&data.comp);
+
+        if params.into_iter().any(|p| self.bundle_params.contains(p)) {
+            // This fact depends on a bundle parameter, so it must be invalidated
+            Action::Change(vec![])
+        } else {
+            Action::Continue
+        }
     }
 
     /// Compiles the body of a component and replaces all ports with their expanded versions.
