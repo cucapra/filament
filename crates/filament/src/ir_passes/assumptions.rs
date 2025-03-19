@@ -182,7 +182,12 @@ impl Visitor for Assumptions {
 
             let prop = ir::Foreign::new(prop, foreign_idx);
 
-            let new_prop = Assumptions::transfer_prop(prop, data, &param_bind);
+            let new_prop = Assumptions::transfer_prop(
+                prop,
+                data,
+                &param_bind,
+                &ir::Bind::new(None),
+            );
 
             let info = data.comp.add(ir::Info::assert(
                 ir::info::Reason::param_cons(comp_loc, loc),
@@ -205,7 +210,12 @@ impl Visitor for Assumptions {
 
             let prop = ir::Foreign::new(prop, foreign_idx);
 
-            let new_prop = Assumptions::transfer_prop(prop, data, &param_bind);
+            let new_prop = Assumptions::transfer_prop(
+                prop,
+                data,
+                &param_bind,
+                &ir::Bind::new(None),
+            );
 
             let info = data.comp.add(ir::Info::assert(
                 ir::info::Reason::exist_cons(comp_loc, Some(loc)),
@@ -222,12 +232,7 @@ impl Visitor for Assumptions {
         inv: fil_ir::InvIdx,
         data: &mut VisitorData,
     ) -> Action {
-        let ir::Invoke {
-            inst,
-            events,
-            ports,
-            info,
-        } = data.comp.get(inv).clone();
+        let ir::Invoke { events, info, .. } = data.comp.get(inv).clone();
 
         let foreign_idx = inv.comp(&data.comp);
 
@@ -247,15 +252,11 @@ impl Visitor for Assumptions {
             data.idx
         );
 
-        let foreign_comp = data.get(foreign_idx);
-        let event_bind = ir::Bind::new(events.into_iter().map(
-            |ir::EventBind {
-                 delay,
-                 arg,
-                 info,
-                 base,
-             }| { (base, arg) },
-        ));
+        let event_bind = ir::Bind::new(
+            events
+                .into_iter()
+                .map(|ir::EventBind { arg, base, .. }| (base, arg)),
+        );
         // We need to do this separately to avoid borrowing data.comp mutably while it is immutably borrowed.
         let event_asserts = data
             .get(foreign_idx)
@@ -279,38 +280,15 @@ impl Visitor for Assumptions {
             let new_prop = Assumptions::transfer_prop(
                 prop,
                 data,
-                &Bind::new(None),
+                &ir::Bind::new(None),
                 &event_bind,
             );
 
             let info = data.comp.add(ir::Info::assert(
-                ir::info::Reason::param_cons(comp_loc, loc),
+                ir::info::Reason::event_cons(inst_loc, loc),
             ));
 
             assumptions.extend(data.comp.assert(new_prop, info))
-        }
-
-        let exist_assumes = data.get(foreign_idx).all_exist_assumes();
-
-        // Existential assumptions in the foreign component become
-        // assumptions in the current component.
-        for (prop, loc) in exist_assumes {
-            log::trace!(
-                "Transferring existential assumption {} from {} to {}",
-                data.get(foreign_idx).display(prop),
-                foreign_idx,
-                data.idx
-            );
-
-            let prop = ir::Foreign::new(prop, foreign_idx);
-
-            let new_prop = Assumptions::transfer_prop(prop, data, &param_bind);
-
-            let info = data.comp.add(ir::Info::assert(
-                ir::info::Reason::exist_cons(comp_loc, Some(loc)),
-            ));
-
-            assumptions.extend(data.comp.assume(new_prop, info))
         }
 
         Action::AddBefore(assumptions)

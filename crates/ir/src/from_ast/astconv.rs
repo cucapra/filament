@@ -719,25 +719,6 @@ impl BuildCtx<'_> {
             .map(|p| p.try_map(|p| self.get_access(p, ir::Direction::Out)))
             .collect::<BuildRes<Vec<_>>>()?;
 
-        // Constraints on the events from the signature
-        let cons: Vec<ir::Command> = sig
-            .event_cons
-            .clone()
-            .into_iter()
-            .map(|ec| {
-                let reason = self.comp().add(
-                    ir::info::Reason::event_cons(instance.pos(), ec.pos())
-                        .into(),
-                );
-                let ec = ec.take().resolve_event(&event_binding);
-                self.event_cons(ec)
-                    .map(|prop| self.comp().assert(prop, reason))
-            })
-            .collect::<BuildRes<Vec<_>>>()?
-            .into_iter()
-            .flatten()
-            .collect();
-
         let mut connects = Vec::with_capacity(sig.inputs.len());
 
         for ((p, idx), src) in sig.inputs.clone().into_iter().zip(srcs) {
@@ -818,7 +799,6 @@ impl BuildCtx<'_> {
 
         Ok(std::iter::once(ir::Command::from(inv))
             .chain(connects)
-            .chain(cons)
             .collect_vec())
     }
 

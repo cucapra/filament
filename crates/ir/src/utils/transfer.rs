@@ -1,7 +1,7 @@
 use super::{Bind, Foreign};
 use crate::{
-    AddCtx, CmpOp, Component, Ctx, Event, Expr, ExprIdx, MutCtx, Param, Prop,
-    PropIdx, Time, TimeIdx, TimeSub,
+    AddCtx, CmpOp, Ctx, Event, Expr, ExprIdx, MutCtx, Param, Prop, PropIdx,
+    Time, TimeIdx, TimeSub,
 };
 
 impl<C> Foreign<Expr, C>
