@@ -62,7 +62,7 @@ impl BundleElim {
     }
 
     /// Compiles a port by breaking it into multiple len-1 ports.
-    fn port(&mut self, pidx: PortIdx, comp: &mut Component) -> PortInfo {
+    fn port(&self, pidx: PortIdx, comp: &mut Component) -> PortInfo {
         let one = comp.add(Expr::Concrete(1));
         let Port {
             owner,
@@ -184,7 +184,7 @@ impl BundleElim {
     }
 
     /// Compiles the signature of a component and adds the new ports to the context mapping.
-    fn sig(&mut self, comp: &mut Component) -> SparseInfoMap<Port, PortInfo> {
+    fn sig(&self, comp: &mut Component) -> SparseInfoMap<Port, PortInfo> {
         // loop through signature ports and compile them
         // Allowing filter_map_bool_then as it erroneously triggers
         // due to https://github.com/rust-lang/rust-clippy/issues/11617
@@ -200,7 +200,7 @@ impl BundleElim {
     /// Compiles the ports defined by an invocation and adds the new ports to the context mapping.
     /// Mutates the invocation in place, redefining its defined ports.
     fn inv(
-        &mut self,
+        &self,
         idx: InvIdx,
         comp: &mut Component,
     ) -> SparseInfoMap<Port, PortInfo> {
