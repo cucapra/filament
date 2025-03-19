@@ -83,6 +83,39 @@ impl Assumptions {
         }
         cmds
     }
+
+    /// Get the parameter binding for an instance
+    fn param_binding(
+        &self,
+        inst: ir::InstIdx,
+        data: &mut VisitorData,
+    ) -> ir::Bind<ir::Foreign<ir::Param, ir::Component>, ir::ExprIdx> {
+        let ir::Instance {
+            comp: idx,
+            args,
+            params,
+            ..
+        } = data.comp.get(inst).clone();
+
+        let comp = data.get(idx);
+        let param_bind = comp
+            .param_args()
+            .iter()
+            .copied()
+            .chain(comp.exist_params())
+            .map(|param| ir::Foreign::new(param, idx))
+            .collect_vec();
+
+        let param_args = args
+            .iter()
+            .copied()
+            .chain(params.into_iter().map(|param| param.expr(&mut data.comp)))
+            .collect_vec();
+
+        ir::Bind::new(
+            param_bind.into_iter().zip(param_args).collect::<Vec<_>>(),
+        )
+    }
 }
 
 impl Visitor for Assumptions {
@@ -122,9 +155,7 @@ impl Visitor for Assumptions {
     ) -> Action {
         let ir::Instance {
             comp: foreign_idx,
-            args,
             info,
-            params,
             ..
         } = data.comp.get(inst).clone();
 
@@ -144,23 +175,7 @@ impl Visitor for Assumptions {
             data.idx
         );
 
-        let foreign_comp = data.get(foreign_idx);
-        let param_bind = foreign_comp
-            .param_args()
-            .iter()
-            .copied()
-            .chain(foreign_comp.exist_params())
-            .map(|param| ir::Foreign::new(param, foreign_idx))
-            .collect_vec();
-
-        // We need to do this separately to avoid borrowing data.comp mutably while it is immutably borrowed.
-        let param_args = args
-            .into_iter()
-            .chain(params.into_iter().map(|param| param.expr(&mut data.comp)))
-            .collect_vec();
-        let param_bind = ir::Bind::new(
-            param_bind.into_iter().zip(param_args).collect::<Vec<_>>(),
-        );
+        let param_bind = self.param_binding(inst, data);
 
         let param_asserts = data
             .get(foreign_idx)
@@ -231,7 +246,9 @@ impl Visitor for Assumptions {
         inv: fil_ir::InvIdx,
         data: &mut VisitorData,
     ) -> Action {
-        let ir::Invoke { events, info, .. } = data.comp.get(inv).clone();
+        let ir::Invoke {
+            inst, events, info, ..
+        } = data.comp.get(inv).clone();
 
         let foreign_idx = inv.comp(&data.comp);
 
@@ -250,6 +267,8 @@ impl Visitor for Assumptions {
             foreign_idx,
             data.idx
         );
+
+        let param_bind = self.param_binding(inst, data);
 
         let event_bind = ir::Bind::new(
             events
@@ -279,7 +298,7 @@ impl Visitor for Assumptions {
             let new_prop = Assumptions::transfer_prop(
                 prop,
                 data,
-                &ir::Bind::new(None),
+                &param_bind,
                 &event_bind,
             );
 
