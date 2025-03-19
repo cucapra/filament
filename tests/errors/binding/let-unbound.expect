@@ -2,6 +2,6 @@
 101
 ---STDERR---
 
-thread 'main' panicked at crates/filament/src/ir_passes/mono/monodeferred.rs:344:25:
+thread 'main' panicked at crates/filament/src/ir_passes/mono/monodeferred.rs:353:25:
 internal error: entered unreachable code: Encountered `?` let binding in non-scheduled component
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
