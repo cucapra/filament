@@ -19,6 +19,10 @@ pub struct BuildDomination {
     invs: Vec<Vec<ir::Command>>,
     /// Let bound parameters in the current stack of scopes.
     plets: Vec<Vec<ir::Command>>,
+    /// Bundle definitions in the current stack of scopes.
+    bdefs: Vec<Vec<ir::Command>>,
+    /// Facts defined in the current stack of scopes.
+    facts: Vec<Vec<ir::Command>>,
 }
 
 impl BuildDomination {
@@ -27,6 +31,8 @@ impl BuildDomination {
         self.insts.push(Vec::new());
         self.invs.push(Vec::new());
         self.plets.push(Vec::new());
+        self.bdefs.push(Vec::new());
+        self.facts.push(Vec::new());
     }
 
     /// Topologically sort the plets and insts in the current scope.
@@ -132,8 +138,8 @@ impl BuildDomination {
         res
     }
 
-    /// End the current scope and return the instances and invocations
-    /// in the scope.
+    /// End the current scope and return the commands to put at the head
+    /// and the tail in the scope.
     fn end_scope(
         &mut self,
         comp: &ir::Component,
@@ -147,7 +153,20 @@ impl BuildDomination {
         let Some(plets) = self.plets.pop() else {
             unreachable!("plets stack is empty")
         };
-        (Self::sort_insts_plets(insts, plets, comp), invs)
+        let Some(bdefs) = self.bdefs.pop() else {
+            unreachable!("bdefs stack is empty")
+        };
+        let Some(facts) = self.facts.pop() else {
+            unreachable!("facts stack is empty")
+        };
+        (
+            Self::sort_insts_plets(insts, plets, comp)
+                .into_iter()
+                .chain(bdefs)
+                .chain(invs)
+                .collect(),
+            facts,
+        )
     }
 
     fn add_inv(&mut self, inv: ir::InvIdx) {
@@ -165,6 +184,14 @@ impl BuildDomination {
     fn add_exists(&mut self, exists: ir::Exists) {
         // We can treat exists as a let binding
         self.plets.last_mut().unwrap().push(exists.into());
+    }
+
+    fn add_bdef(&mut self, bdef: ir::PortIdx) {
+        self.bdefs.last_mut().unwrap().push(bdef.into());
+    }
+
+    fn add_fact(&mut self, fact: ir::Fact) {
+        self.facts.last_mut().unwrap().push(fact.into());
     }
 }
 
@@ -191,6 +218,26 @@ impl Visitor for BuildDomination {
         Action::Change(vec![])
     }
 
+    fn bundle_def(
+        &mut self,
+        bdef: fil_ir::PortIdx,
+        _data: &mut VisitorData,
+    ) -> Action {
+        self.add_bdef(bdef);
+        // Remove the bundle definition
+        Action::Change(vec![])
+    }
+
+    fn fact(
+        &mut self,
+        f: &mut fil_ir::Fact,
+        _data: &mut VisitorData,
+    ) -> Action {
+        self.add_fact(f.clone());
+        // Remove the fact
+        Action::Change(vec![])
+    }
+
     fn exists(
         &mut self,
         exists: &mut ir::Exists,
@@ -205,13 +252,9 @@ impl Visitor for BuildDomination {
         self.start_scope();
     }
     fn end_cmds(&mut self, cmds: &mut Vec<ir::Command>, d: &mut VisitorData) {
-        let (inst_plets, invs) = self.end_scope(&d.comp);
+        let (head, tail) = self.end_scope(&d.comp);
         // Insert instances and then invocations to the start of the scope.
-        *cmds = inst_plets
-            .into_iter()
-            .chain(invs)
-            .chain(cmds.drain(..))
-            .collect();
+        *cmds = head.into_iter().chain(cmds.drain(..)).chain(tail).collect();
     }
 
     fn end(&mut self, _: &mut VisitorData) {
