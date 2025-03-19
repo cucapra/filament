@@ -23,11 +23,6 @@ pub struct BundleElim {
     context: DenseIndexInfo<Component, SparseInfoMap<Port, PortInfo>>,
     /// Mapping from index into a dst port to an index of the src port.
     local_map: HashMap<BundleIdx, BundleIdx>,
-    /// Set of bundle-owned parameters.
-    /// Assertions/Assumptions depending on these parameters must be invalidated
-    /// For safety, discharge should be run before this pass to make sure none of these
-    /// propositions fail.
-    bundle_params: SparseInfoMap<Param, ()>,
 }
 
 impl BundleElim {
@@ -67,7 +62,7 @@ impl BundleElim {
     }
 
     /// Compiles a port by breaking it into multiple len-1 ports.
-    fn port(&mut self, pidx: PortIdx, comp: &mut Component) -> PortInfo {
+    fn port(&self, pidx: PortIdx, comp: &mut Component) -> PortInfo {
         let one = comp.add(Expr::Concrete(1));
         let Port {
             owner,
@@ -183,14 +178,13 @@ impl BundleElim {
         comp.delete(pidx);
         // delete the corresponding parameter
         for idx in idxs {
-            self.bundle_params.push(idx, ());
             comp.delete(idx);
         }
         (lens, ports)
     }
 
     /// Compiles the signature of a component and adds the new ports to the context mapping.
-    fn sig(&mut self, comp: &mut Component) -> SparseInfoMap<Port, PortInfo> {
+    fn sig(&self, comp: &mut Component) -> SparseInfoMap<Port, PortInfo> {
         // loop through signature ports and compile them
         // Allowing filter_map_bool_then as it erroneously triggers
         // due to https://github.com/rust-lang/rust-clippy/issues/11617
@@ -206,7 +200,7 @@ impl BundleElim {
     /// Compiles the ports defined by an invocation and adds the new ports to the context mapping.
     /// Mutates the invocation in place, redefining its defined ports.
     fn inv(
-        &mut self,
+        &self,
         idx: InvIdx,
         comp: &mut Component,
     ) -> SparseInfoMap<Port, PortInfo> {
@@ -230,7 +224,6 @@ impl Construct for BundleElim {
         let mut visitor = Self {
             context: DenseIndexInfo::default(),
             local_map: HashMap::new(),
-            bundle_params: SparseInfoMap::default(),
         };
         // compiles signature ports and adds them to the context
         for (idx, c) in ctx.comps.iter_mut() {
@@ -243,7 +236,6 @@ impl Construct for BundleElim {
 
     fn clear_data(&mut self) {
         self.local_map.clear();
-        self.bundle_params.clear();
     }
 }
 
@@ -306,10 +298,7 @@ impl Visitor for BundleElim {
 
     /// Discard all bundle-based assumptions/assertions
     fn fact(&mut self, f: &mut fil_ir::Fact, data: &mut VisitorData) -> Action {
-        let pidx = f.prop;
-        let (params, _) = pidx.relevant_vars(&data.comp);
-
-        if params.into_iter().any(|p| self.bundle_params.contains(p)) {
+        if !f.prop.valid(&data.comp) {
             // This fact depends on a bundle parameter, so it must be invalidated
             Action::Change(vec![])
         } else {
