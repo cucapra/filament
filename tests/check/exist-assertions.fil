@@ -1,0 +1,5 @@
+comp main<'G: 1>() -> () with {
+    some L where L >= 0;
+} where L >= 0 {
+    L := 1;
+}
