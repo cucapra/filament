@@ -11,7 +11,7 @@ use fil_ast::{self as ast};
 use fil_utils::{Diagnostics, Error, GPosIdx};
 use itertools::Itertools;
 use std::collections::HashMap;
-use std::{iter, rc::Rc};
+use std::rc::Rc;
 
 pub type BuildRes<T> = Result<T, Diagnostics>;
 

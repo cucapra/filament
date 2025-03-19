@@ -1,6 +1,5 @@
 use crate::ir_visitor::{Action, Visitor, VisitorData};
-use fil_ast::{self as ast, Instance};
-use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, Foldable, PropIdx};
+use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, Foldable};
 use fil_utils::GPosIdx;
 use itertools::Itertools;
 

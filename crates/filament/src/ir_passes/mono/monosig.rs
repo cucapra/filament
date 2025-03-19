@@ -266,11 +266,8 @@ impl MonoSig {
                 let ir::CmpOp { op, lhs, rhs } = cmp;
                 let lhs = self.expr(underlying, lhs.ul(), pass).get();
                 let rhs = self.expr(underlying, rhs.ul(), pass).get();
-                self.base.add(ir::Prop::Cmp(ir::CmpOp {
-                    op: op.clone(),
-                    lhs,
-                    rhs,
-                }))
+                self.base
+                    .add(ir::Prop::Cmp(ir::CmpOp { op: *op, lhs, rhs }))
             }
             ir::Prop::TimeCmp(tcmp) => {
                 let ir::CmpOp { op, lhs, rhs } = tcmp;
@@ -279,7 +276,7 @@ impl MonoSig {
                 let lhs = self.time(underlying, pass, lhs);
                 let rhs = self.time(underlying, pass, rhs);
                 self.base.add(ir::Prop::TimeCmp(ir::CmpOp {
-                    op: op.clone(),
+                    op: *op,
                     lhs: lhs.get(),
                     rhs: rhs.get(),
                 }))
@@ -289,7 +286,7 @@ impl MonoSig {
                 let lhs = self.timesub(underlying, pass, lhs);
                 let rhs = self.timesub(underlying, pass, rhs);
                 self.base.add(ir::Prop::TimeSubCmp(ir::CmpOp {
-                    op: op.clone(),
+                    op: *op,
                     lhs,
                     rhs,
                 }))
