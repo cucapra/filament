@@ -3,8 +3,6 @@ use crate::{
     PropIdx, Time, TimeIdx,
 };
 
-use super::Foreign;
-
 /// A binding from K to V.
 pub struct Bind<K: Eq, V>(Vec<(K, V)>);
 
