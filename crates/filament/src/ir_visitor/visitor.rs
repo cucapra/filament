@@ -307,6 +307,9 @@ where
             log::trace!("{}: Visiting component {}", Self::name(), idx);
             visitor.visit((idx, opts, &mut *ctx).into());
         }
+        // for a pass to be valid, we should validate the context after the pass
+        ir::Validate::context(ctx);
+
         match visitor.after_traversal() {
             Some(n) => Err(n),
             None => Ok(()),
