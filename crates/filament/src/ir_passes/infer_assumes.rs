@@ -4,9 +4,9 @@ use fil_ir::{self as ir, AddCtx, Ctx, ExprIdx, PropIdx};
 
 /// Generates default assumptions to the Filament program for assumptions using custom functions
 #[derive(Default)]
-pub struct FunAssumptions;
+pub struct InferAssumes;
 
-impl FunAssumptions {
+impl InferAssumes {
     /// Adds the assumptions associated with a proposition of the form `#l = f(#r)` to the component.
     fn add_assumptions(
         ctx: &mut ir::Component,
@@ -56,7 +56,7 @@ impl FunAssumptions {
     }
 }
 
-impl FunAssumptions {
+impl InferAssumes {
     /// Checks a proposition for whether it matches the form `#l = f(#r)` for some custom function `f`. Additionally recurses on `&` chains.
     /// Generates the assumptions associated with each [ast::Fn] and returns a list of [ir::Prop]s for each.
     /// TODO: Implement assumption generation for functions taking more than one argument.
@@ -113,7 +113,7 @@ impl FunAssumptions {
     }
 }
 
-impl Visitor for FunAssumptions {
+impl Visitor for InferAssumes {
     fn name() -> &'static str {
         "fun-assumptions"
     }
