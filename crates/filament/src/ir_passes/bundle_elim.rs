@@ -11,8 +11,13 @@ use fil_utils as utils;
 use itertools::Itertools;
 use std::collections::HashMap;
 
-/// A mapping from a bundle with a list of dimensions to the list of generated ports.
-type PortInfo = (/*lens=*/ Vec<usize>, /*gen_ports=*/ Vec<PortIdx>);
+/// A mapping from a bundle with a list of dimensions to the list of associated ports.
+struct PortInfo {
+    /// The lengths of the original bundles
+    lens: Vec<usize>,
+    /// Ports associated with this signature port
+    ports: Vec<PortIdx>,
+}
 
 /// A multi-dimensional index into a possibly multi-dimensional bundle port).
 type BundleIdx = (PortIdx, Vec<usize>);
@@ -54,7 +59,10 @@ impl BundleElim {
                     None => break group,
                 }
             };
-            let (lens, sig_ports) = &comp_info[*port];
+            let PortInfo {
+                lens,
+                ports: sig_ports,
+            } = &comp_info[*port];
             ports.push(sig_ports[utils::flat_idx(idxs, lens)])
         }
 
@@ -90,7 +98,10 @@ impl BundleElim {
             );
 
             // need to preserve the original portidx here to save the source information.
-            return (lens, vec![pidx]);
+            return PortInfo {
+                lens,
+                ports: vec![pidx],
+            };
         }
 
         // creates the info to be cloned later.
@@ -138,7 +149,7 @@ impl BundleElim {
                             base: Foreign::new(
                                 // maps the foreign to the corresponding single port
                                 // this works because all signature ports are compiled first.
-                                self.context[owner][key].1[i],
+                                self.context[owner][key].ports[i],
                                 owner,
                             ),
                         }
@@ -180,7 +191,8 @@ impl BundleElim {
         for idx in idxs {
             comp.delete(idx);
         }
-        (lens, ports)
+
+        PortInfo { lens, ports }
     }
 
     /// Compiles the signature of a component and adds the new ports to the context mapping.
@@ -212,8 +224,11 @@ impl BundleElim {
             .collect_vec();
 
         // add them back to the invoke (need to get mutably again because comp is mutated above)
-        comp.get_mut(idx).ports =
-            mappings.iter().flat_map(|(_, (_, v))| v).copied().collect();
+        comp.get_mut(idx).ports = mappings
+            .iter()
+            .flat_map(|(_, PortInfo { ports, .. })| ports)
+            .copied()
+            .collect();
 
         mappings.into_iter().collect()
     }
