@@ -129,16 +129,6 @@ where
     }
 }
 
-impl<T> IntoIterator for IndexStore<T> {
-    type Item = T;
-
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.store.into_iter()
-    }
-}
-
 impl<T> From<IndexStore<T>> for Vec<T> {
     fn from(value: IndexStore<T>) -> Self {
         value.store

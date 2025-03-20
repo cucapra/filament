@@ -7,7 +7,7 @@ use super::{
 use crate::{DenseIndexInfo, ParamOwner, utils::Idx};
 use fil_ast as ast;
 use fil_derive::Ctx;
-use fil_utils as utils;
+use fil_utils::{self as utils, GPosIdx};
 use itertools::Itertools;
 
 #[derive(Default, PartialEq, Eq, Hash, Clone, Copy)]
@@ -62,13 +62,16 @@ pub struct Component {
     /// Attributes of ports in the component
     pub port_attrs: DenseIndexInfo<Port, utils::PortAttrs>,
     /// The input parameters to the component
-    pub(crate) param_args: Box<[ParamIdx]>,
+    /// TODO (Edmund): revert this to pub(crate) once we have an IR builder
+    pub param_args: Box<[ParamIdx]>,
     /// The input events to the component
-    pub(crate) event_args: Box<[EventIdx]>,
+    pub event_args: Box<[EventIdx]>,
     /// Assumptions for existential parameters.
-    exist_assumes: Vec<(ParamIdx, Vec<PropIdx>)>,
-    param_asserts: Box<[PropIdx]>,
-    event_asserts: Box<[PropIdx]>,
+    exist_assumes: Vec<(ParamIdx, Vec<(PropIdx, GPosIdx)>)>,
+    /// Assertions over parameters
+    param_asserts: Box<[(PropIdx, GPosIdx)]>,
+    /// Assertions over events
+    event_asserts: Box<[(PropIdx, GPosIdx)]>,
 
     #[ctx(Info: Get, Add)]
     /// Information tracked by the component
@@ -166,7 +169,7 @@ impl Component {
     pub fn add_exist_assumes(
         &mut self,
         param: ParamIdx,
-        assumes: impl IntoIterator<Item = PropIdx>,
+        assumes: impl IntoIterator<Item = (PropIdx, GPosIdx)>,
     ) {
         let existing = self.exist_assumes.iter_mut().find(|(p, _)| *p == param);
         if let Some(existing) = existing {
@@ -178,7 +181,10 @@ impl Component {
     }
 
     /// Get the assumptions associated with a parameter
-    pub fn get_exist_assumes(&self, param: ParamIdx) -> Option<Vec<PropIdx>> {
+    pub fn get_exist_assumes(
+        &self,
+        param: ParamIdx,
+    ) -> Option<Vec<(PropIdx, GPosIdx)>> {
         self.exist_assumes
             .iter()
             .find(|(p, _)| *p == param)
@@ -186,7 +192,7 @@ impl Component {
     }
 
     /// Get all the assumptions associated with existential parameters
-    pub fn all_exist_assumes(&self) -> Vec<PropIdx> {
+    pub fn all_exist_assumes(&self) -> Vec<(PropIdx, GPosIdx)> {
         self.exist_assumes
             .iter()
             .flat_map(|(_, facts)| facts.iter().copied())
@@ -206,7 +212,7 @@ impl Component {
     /// Add assertions over parameters
     pub fn add_param_assert(
         &mut self,
-        prop: impl IntoIterator<Item = PropIdx>,
+        prop: impl IntoIterator<Item = (PropIdx, GPosIdx)>,
     ) {
         self.param_asserts = self
             .param_asserts
@@ -218,14 +224,14 @@ impl Component {
     }
 
     /// Get the assertions over parameters
-    pub fn get_param_asserts(&self) -> &[PropIdx] {
+    pub fn get_param_asserts(&self) -> &[(PropIdx, GPosIdx)] {
         &self.param_asserts
     }
 
     /// Add assertions over events
     pub fn add_event_assert(
         &mut self,
-        prop: impl IntoIterator<Item = PropIdx>,
+        prop: impl IntoIterator<Item = (PropIdx, GPosIdx)>,
     ) {
         self.event_asserts = self
             .event_asserts
@@ -237,7 +243,7 @@ impl Component {
     }
 
     /// Get the assertions over events
-    pub fn get_event_asserts(&self) -> &[PropIdx] {
+    pub fn get_event_asserts(&self) -> &[(PropIdx, GPosIdx)] {
         &self.event_asserts
     }
 }
@@ -412,8 +418,8 @@ impl Component {
         match prop {
             Prop::Cmp(cmp) => {
                 let CmpOp { op, lhs, rhs } = cmp;
-                let lhs = lhs.as_concrete(self).unwrap();
-                let rhs = rhs.as_concrete(self).unwrap();
+                let lhs = lhs.concrete(self);
+                let rhs = rhs.concrete(self);
                 match op {
                     Cmp::Gt => {
                         if lhs > rhs {

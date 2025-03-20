@@ -217,7 +217,7 @@ impl Compile {
 
         // If this is the main component, give it a `@top_level` attribute
         if ctx.is_main(idx) {
-            log::debug!("Defining main component {idx}");
+            log::debug!("Adding toplevel attribute to {idx}");
             component.attributes.insert(calyx::BoolAttr::TopLevel, 1);
         }
 

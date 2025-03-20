@@ -14,6 +14,9 @@ impl<'a> UnderlyingComp<'a> {
     pub fn new(comp: &'a ir::Component) -> Self {
         Self(comp)
     }
+    pub fn attrs(&self) -> &utils::CompAttrs {
+        &self.0.attrs
+    }
     // XXX(rachitnigam): We should probably define a macro to dispatch these methods.
     pub fn cmds(&self) -> &Vec<ir::Command> {
         &self.0.cmds
@@ -39,7 +42,7 @@ impl<'a> UnderlyingComp<'a> {
     pub fn exist_params(&self) -> impl Iterator<Item = ir::ParamIdx> + '_ {
         self.0.exist_params()
     }
-    pub fn all_exist_assumes(&self) -> Vec<ir::PropIdx> {
+    pub fn all_exist_assumes(&self) -> Vec<(ir::PropIdx, utils::GPosIdx)> {
         self.0.all_exist_assumes()
     }
     pub fn relevant_vars(
@@ -126,6 +129,18 @@ impl BaseComp {
     }
     pub fn resolve_prop(&mut self, prop: ir::Prop) -> Base<ir::Prop> {
         self.0.resolve_prop(prop).base()
+    }
+
+    pub fn inputs(
+        &self,
+    ) -> impl Iterator<Item = (Base<ir::Port>, &'_ ir::Port)> {
+        self.0.inputs().map(|(k, v)| (k.base(), v))
+    }
+
+    pub fn outputs(
+        &self,
+    ) -> impl Iterator<Item = (Base<ir::Port>, &'_ ir::Port)> {
+        self.0.outputs().map(|(k, v)| (k.base(), v))
     }
 }
 

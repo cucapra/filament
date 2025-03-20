@@ -135,8 +135,11 @@ impl Monomorphize<'_> {
             .gen_instance(tool, &inst);
 
         // Partially convert the signature
-        let monosig =
-            MonoSig::new(underlying, ir::CompType::External, comp, params);
+        let monosig = MonoSig::new(
+            underlying,
+            ir::CompType::External,
+            CompKey::new(comp, params),
+        );
         let mut mono_comp = MonoDeferred::new(
             UnderlyingComp::new(self.old.get(comp.idx())),
             self,
@@ -145,18 +148,14 @@ impl Monomorphize<'_> {
         mono_comp.sig_partial_mono();
 
         // Add generated existential parameters
-        let exists = exist_params
-            .into_iter()
-            .map(|(name, val)| {
-                let v: u64 = val.parse().unwrap();
-                let Some(param) = is.param_from_src_name(name.clone()) else {
-                    unreachable!("component does not have parameter `{name}'")
-                };
-                // Add to the binding
-                mono_comp.push_binding(param.ul(), v);
-                (param.ul(), v)
-            })
-            .collect_vec();
+        for (ep, val) in exist_params {
+            let v: u64 = val.parse().unwrap();
+            let Some(param) = is.param_from_src_name(ep.clone()) else {
+                unreachable!("component does not have parameter `{ep}'")
+            };
+            // Add to the binding
+            mono_comp.push_binding(param.ul(), v);
+        }
 
         // Monomorphize the siganture of the component using the parameters
         mono_comp.sig_complete_mono();
@@ -164,12 +163,6 @@ impl Monomorphize<'_> {
 
         // Update the source name
         comp.src_info.as_mut().unwrap().name = name.into();
-
-        // Add information about the existential parameters to the global map
-        let info = self.inst_info_mut(key.clone());
-        for (p, v) in exists {
-            info.add_exist_val(p, v);
-        }
 
         // Add component to the context
         let idx = self.ctx.add(comp).base();
@@ -250,8 +243,11 @@ impl Monomorphize<'_> {
         }
 
         // Otherwise monomorphize the definition of the component
-        let monosig =
-            MonoSig::new(underlying, ir::CompType::Source, comp, params);
+        let monosig = MonoSig::new(
+            underlying,
+            ir::CompType::Source,
+            CompKey::new(comp, params),
+        );
 
         // the component whose signature we want to monomorphize
         // Monomorphize the sig

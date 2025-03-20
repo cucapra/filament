@@ -1,0 +1,48 @@
+
+extern "out.v" {
+   comp Add[IN_WIDTH, ?OUT_WIDTH=IN_WIDTH]<'G: 'L-('G), ?'L: 1='G+1>(
+      left: ['G, 'L] IN_WIDTH,
+      right: ['G, 'L] IN_WIDTH,
+   ) -> (
+      out: ['G, 'L] OUT_WIDTH
+   ) where 'L > 'G, IN_WIDTH <= OUT_WIDTH, IN_WIDTH > 0, OUT_WIDTH > 0;
+   
+   comp Delay[WIDTH]<'G: 1>(
+      clk: 1,
+      reset: 1,
+      in: ['G, 'G+1] WIDTH,
+   ) -> (
+      out: ['G+1, 'G+2] WIDTH,
+   );
+}
+
+
+comp main[?W=3, ?N=1]<'G:1>(
+    in[N]: for<i> ['G, 'G+1] W
+) -> (
+     out: ['G+K, 'G+K+1] W
+) with {
+   let K = log2(N);
+} where W > 1,
+        N >= 1,
+        K == log2(N),
+        K >= 0
+{
+    if N == 1 {
+        out = in{0};
+    } else {
+        // Required to make recursive calls type check.
+        assert K-1 == log2(N/2);
+        // This is a corollary of K != 0
+        assert N >= 2;
+        // This is not true in general for integer division but
+        // because N is a power of 2 it is true.
+        assert N - N/2 == N/2;
+
+        left := new main[W, N/2]<'G>(in{0..N/2});
+        right := new main[W, N/2]<'G>(in{N/2..N});
+        add := new Add[W]<'G+K-1>(left.out, right.out);
+        d := new Delay[W]<'G+K-1>(add.out);
+        out = d.out;
+    }
+}

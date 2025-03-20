@@ -47,7 +47,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         }
     };
 
-    ast_pass_pipeline! { opts, ns; ap::TopLevel };
+    ast_pass_pipeline! { opts, ns; ap::TopLevel, ap::SchedulingModel };
 
     // Set the parameter bindings for the top-level component
     if let Some(main) = ns.toplevel() {
@@ -77,11 +77,13 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     // Transform AST to IR
     let mut ir = log_pass! { opts; ir::transform(ns)?, "astconv" };
     ir_pass_pipeline! {opts, ir;
+        ip::Assumptions,
         ip::BuildDomination,
         ip::TypeCheck,
         ip::IntervalCheck,
         ip::PhantomCheck,
-        ip::Assume
+        ip::InferAssumes,
+        ip::BuildDomination
     }
     if !opts.unsafe_skip_discharge {
         ir_pass_pipeline! {opts, ir; ip::Discharge }
@@ -90,6 +92,18 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         BuildDomination
     };
     ir = log_pass! { opts; ip::Monomorphize::transform(&ir, &mut gen_exec), "monomorphize"};
+    // type check after monomorphization
+    ir_pass_pipeline! {opts, ir;
+        ip::Assumptions,
+        ip::BuildDomination,
+        ip::TypeCheck,
+        ip::IntervalCheck,
+        ip::PhantomCheck,
+        ip::FunAssumptions
+    }
+    if !opts.unsafe_skip_discharge {
+        ir_pass_pipeline! {opts, ir; ip::Discharge }
+    }
     ir_pass_pipeline! { opts, ir;
         ip::FSMAttributes,
         ip::Simplify,
@@ -99,11 +113,12 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
     }
     // type check again before lowering
     ir_pass_pipeline! {opts, ir;
+        ip::Assumptions,
         ip::BuildDomination,
         ip::TypeCheck,
         ip::IntervalCheck,
         ip::PhantomCheck,
-        ip::Assume
+        ip::InferAssumes
     }
     if !opts.unsafe_skip_discharge {
         ir_pass_pipeline! {opts, ir; ip::Discharge }

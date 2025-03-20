@@ -1,0 +1,611 @@
+warning: unused import: `super::Foreign`
+ --> crates/ir/src/utils/subst.rs:6:5
+  |
+6 | use super::Foreign;
+  |     ^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: `fil-ir` (lib) generated 1 warning (run `cargo fix --lib -p fil-ir` to apply 1 suggestion)
+warning: unused import: `Base`
+ --> crates/filament/src/ir_passes/mono/monodeferred.rs:2:5
+  |
+2 |     Base, CompKey, IntoBase, IntoUdl, MonoSig, Monomorphize, Underlying,
+  |     ^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `SparseInfoMap`
+ --> crates/filament/src/ir_passes/mono/monodeferred.rs:5:39
+  |
+5 | use fil_ir::{self as ir, AddCtx, Ctx, SparseInfoMap};
+  |                                       ^^^^^^^^^^^^^
+
+warning: methods `exist_params` and `relevant_vars` are never used
+  --> crates/filament/src/ir_passes/mono/utils/comp.rs:42:12
+   |
+13 | impl<'a> UnderlyingComp<'a> {
+   | --------------------------- methods in this implementation
+...
+42 |     pub fn exist_params(&self) -> impl Iterator<Item = ir::ParamIdx> + '_ {
+   |            ^^^^^^^^^^^^
+...
+48 |     pub fn relevant_vars(
+   |            ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: methods `inputs` and `outputs` are never used
+   --> crates/filament/src/ir_passes/mono/utils/comp.rs:134:12
+    |
+86  | impl BaseComp {
+    | ------------- methods in this implementation
+...
+134 |     pub fn inputs(
+    |            ^^^^^^
+...
+140 |     pub fn outputs(
+    |            ^^^^^^^
+
+warning: `filament` (lib) generated 4 warnings (run `cargo fix --lib -p filament` to apply 2 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.07s
+     Running `target/debug/filament tests/run/comb.fil --dump-solver-log solver.smt --show-models --dump-after monomorphize --dump-after astconv --log info`
+[INFO ] Parsed `tests/run/comb.fil` in 0ms
+[INFO ] Parsed `./primitives/comb.fil` in 10ms
+[INFO ] fsm-attributes: 0ms
+[INFO ] Scheduling model for component main: None
+[INFO ] Scheduling model for component Const: None
+[INFO ] Scheduling model for component Add: None
+[INFO ] Scheduling model for component Sub: None
+[INFO ] Scheduling model for component MultComb: None
+[INFO ] Scheduling model for component And: None
+[INFO ] Scheduling model for component Or: None
+[INFO ] Scheduling model for component Xor: None
+[INFO ] Scheduling model for component Not: None
+[INFO ] Scheduling model for component Eq: None
+[INFO ] Scheduling model for component Neq: None
+[INFO ] Scheduling model for component Gt: None
+[INFO ] Scheduling model for component Lt: None
+[INFO ] Scheduling model for component Lte: None
+[INFO ] Scheduling model for component Gte: None
+[INFO ] Scheduling model for component SignExtend: None
+[INFO ] Scheduling model for component ZeroExtend: None
+[INFO ] Scheduling model for component Concat: None
+[INFO ] Scheduling model for component Select: None
+[INFO ] Scheduling model for component Slice: None
+[INFO ] Scheduling model for component ReduceAnd: None
+[INFO ] Scheduling model for component ReduceOr: None
+[INFO ] Scheduling model for component ShiftLeft: None
+[INFO ] Scheduling model for component ShiftRight: None
+[INFO ] Scheduling model for component ArithShiftRight: None
+[INFO ] Scheduling model for component Mux: None
+[INFO ] Scheduling model for component Extend: None
+[INFO ] scheduling_model: 0ms
+[INFO ] astconv: 3ms
+#[]
+ext comp Const[WIDTH, VALUE]<'G: |'L - 'G|, 'L: 1>(
+) -> (
+  #[]out: for<_:1> ['G, 'L] WIDTH) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Add[IN_WIDTH, OUT_WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]left: for<_:1> ['G, 'L] IN_WIDTH,
+  #[]right: for<_:1> ['G, 'L] IN_WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] OUT_WIDTH) with {
+} where 
+  OUT_WIDTH >= IN_WIDTH,
+  IN_WIDTH > 0,
+  OUT_WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume OUT_WIDTH >= IN_WIDTH; // Misc
+  assume IN_WIDTH > 0; // Misc
+  assume OUT_WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Sub[IN_WIDTH, OUT_WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]left: for<_:1> ['G, 'L] IN_WIDTH,
+  #[]right: for<_:1> ['G, 'L] IN_WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] OUT_WIDTH) with {
+} where 
+  OUT_WIDTH >= IN_WIDTH,
+  IN_WIDTH > 0,
+  OUT_WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume OUT_WIDTH >= IN_WIDTH; // Misc
+  assume IN_WIDTH > 0; // Misc
+  assume OUT_WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp MultComb[IN_WIDTH, OUT_WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]left: for<_:1> ['G, 'L] IN_WIDTH,
+  #[]right: for<_:1> ['G, 'L] IN_WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] OUT_WIDTH) with {
+} where 
+  OUT_WIDTH >= IN_WIDTH,
+  IN_WIDTH > 0,
+  OUT_WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume OUT_WIDTH >= IN_WIDTH; // Misc
+  assume IN_WIDTH > 0; // Misc
+  assume OUT_WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp And[WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]left: for<_:1> ['G, 'L] WIDTH,
+  #[]right: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] WIDTH) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Or[WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]left: for<_:1> ['G, 'L] WIDTH,
+  #[]right: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] WIDTH) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Xor[WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]left: for<_:1> ['G, 'L] WIDTH,
+  #[]right: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] WIDTH) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Not[WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]in: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] WIDTH) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Eq[WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]left: for<_:1> ['G, 'L] WIDTH,
+  #[]right: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] 1) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Neq[WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]left: for<_:1> ['G, 'L] WIDTH,
+  #[]right: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] 1) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Gt[WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]left: for<_:1> ['G, 'L] WIDTH,
+  #[]right: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] 1) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Lt[WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]left: for<_:1> ['G, 'L] WIDTH,
+  #[]right: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] 1) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Lte[WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]left: for<_:1> ['G, 'L] WIDTH,
+  #[]right: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] 1) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Gte[WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]left: for<_:1> ['G, 'L] WIDTH,
+  #[]right: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] 1) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp SignExtend[IN_WIDTH, OUT_WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]in: for<_:1> ['G, 'L] IN_WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] OUT_WIDTH) with {
+} where 
+  IN_WIDTH > 0,
+  OUT_WIDTH > 0,
+  OUT_WIDTH >= IN_WIDTH,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume IN_WIDTH > 0; // Misc
+  assume OUT_WIDTH > 0; // Misc
+  assume OUT_WIDTH >= IN_WIDTH; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp ZeroExtend[IN_WIDTH, OUT_WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]in: for<_:1> ['G, 'L] IN_WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] OUT_WIDTH) with {
+} where 
+  IN_WIDTH > 0,
+  OUT_WIDTH > 0,
+  OUT_WIDTH >= IN_WIDTH,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume IN_WIDTH > 0; // Misc
+  assume OUT_WIDTH > 0; // Misc
+  assume OUT_WIDTH >= IN_WIDTH; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Concat[LEFT, RIGHT, OUT]<'G: |'L - 'G|, 'L: 1>(
+  #[]left: for<_:1> ['G, 'L] LEFT,
+  #[]right: for<_:1> ['G, 'L] RIGHT) -> (
+  #[]out: for<_:1> ['G, 'L] OUT) with {
+} where 
+  LEFT > 0,
+  RIGHT > 0,
+  OUT == LEFT+RIGHT,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume LEFT > 0; // Misc
+  assume RIGHT > 0; // Misc
+  assume OUT == LEFT+RIGHT; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Select[WIDTH, POS]<'G: |'L - 'G|, 'L: 1>(
+  #[]in: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] 1) with {
+} where 
+  WIDTH > 0,
+  WIDTH > POS,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume WIDTH > POS; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Slice[IN_WIDTH, MSB, LSB, OUT_WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]in: for<_:1> ['G, 'L] IN_WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] OUT_WIDTH) with {
+} where 
+  IN_WIDTH > 0,
+  OUT_WIDTH > 0,
+  IN_WIDTH > MSB,
+  IN_WIDTH > LSB,
+  MSB >= LSB,
+  OUT_WIDTH == MSB-LSB+1,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume IN_WIDTH > 0; // Misc
+  assume OUT_WIDTH > 0; // Misc
+  assume IN_WIDTH > MSB; // Misc
+  assume IN_WIDTH > LSB; // Misc
+  assume MSB >= LSB; // Misc
+  assume OUT_WIDTH == MSB-LSB+1; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp ReduceAnd[WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]in: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] 1) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp ReduceOr[WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]in: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] 1) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp ShiftLeft[WIDTH, SHIFT_WIDTH, OUT_WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]in: for<_:1> ['G, 'L] WIDTH,
+  #[]shift: for<_:1> ['G, 'L] SHIFT_WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] OUT_WIDTH) with {
+} where 
+  WIDTH > 0,
+  SHIFT_WIDTH > 0,
+  OUT_WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume SHIFT_WIDTH > 0; // Misc
+  assume OUT_WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp ShiftRight[WIDTH, SHIFT_WIDTH, OUT_WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]in: for<_:1> ['G, 'L] WIDTH,
+  #[]shift: for<_:1> ['G, 'L] SHIFT_WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] OUT_WIDTH) with {
+} where 
+  WIDTH > 0,
+  SHIFT_WIDTH > 0,
+  OUT_WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume SHIFT_WIDTH > 0; // Misc
+  assume OUT_WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp ArithShiftRight[WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]in: for<_:1> ['G, 'L] WIDTH,
+  #[]shift: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] WIDTH) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Mux[WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]sel: for<_:1> ['G, 'L] 1,
+  #[]in0: for<_:1> ['G, 'L] WIDTH,
+  #[]in1: for<_:1> ['G, 'L] WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] WIDTH) with {
+} where 
+  WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[]
+ext comp Extend[IN_WIDTH, OUT_WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]in: for<_:1> ['G, 'L] IN_WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] OUT_WIDTH) with {
+} where 
+  IN_WIDTH > 0,
+  OUT_WIDTH > 0,
+  'L > 'G,
+{
+  assume 'L > 'G; // Misc
+  assume IN_WIDTH > 0; // Misc
+  assume OUT_WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[toplevel]
+comp main[]<'G: 1>(
+  #[]left: for<_:1> ['G, 'G+1] 32,
+  #[]right: for<_:1> ['G, 'G+1] 32) -> (
+  #[]out: for<_:1> ['G, 'G+1] 32) with {
+{
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  M0 = MultComb[32, 32];
+  m0, m0.out, m0.left, m0.right = M0<'G, 'G+1>;
+  m0.left{0} = left{0};
+  m0.right{0} = right{0};
+  out{0} = m0.out{0};
+}
+[INFO ] build-domination: 0ms
+[INFO ] type-check: 0ms
+[INFO ] interval-check: 1ms
+[INFO ] phantom-check: 0ms
+[INFO ] add-assume: 0ms
+[INFO ] build-domination: 0ms
+[INFO ] discharge: 94ms
+[INFO ] build-domination: 0ms
+[INFO ] monomorphize: 0ms
+#[]
+ext comp MultComb[IN_WIDTH, OUT_WIDTH]<'G: |'L - 'G|, 'L: 1>(
+  #[]left: for<_:1> ['G, 'L] IN_WIDTH,
+  #[]right: for<_:1> ['G, 'L] IN_WIDTH) -> (
+  #[]out: for<_:1> ['G, 'L] OUT_WIDTH) with {
+} where 
+  OUT_WIDTH >= IN_WIDTH,
+  IN_WIDTH > 0,
+  OUT_WIDTH > 0,
+  'L > 'G,
+{
+  assert |'L - 'G| > 0; // Misc
+  assert 'L > 'G; // WellFormedInterval
+  assert |'L - 'G| >= |'L - 'G|; // BundleDelay
+  assert 'L > 'G; // WellFormedInterval
+  assert |'L - 'G| >= |'L - 'G|; // BundleDelay
+  assert 'L > 'G; // WellFormedInterval
+  assert |'L - 'G| >= |'L - 'G|; // BundleDelay
+  assume 'L > 'G; // Misc
+  assume OUT_WIDTH >= IN_WIDTH; // Misc
+  assume IN_WIDTH > 0; // Misc
+  assume OUT_WIDTH > 0; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+  assume _ >= 0 & 1 > _; // Misc
+}
+#[toplevel]
+comp main[]<>(
+  #[]left: for<_:1> ['G, 'G+1] 32,
+  #[]right: for<_:1> ['G, 'G+1] 32) -> (
+  #[]out: for<_:1> ['G, 'G+1] 32) with {
+{
+  M0 = MultComb[32, 32];
+  m0, m0.out, m0.left, m0.right = M0<'G, 'G+1>;
+  assert _ >= 0 & 1 > _; // Generated
+  assert _ >= 0 & 1 > _; // Generated
+  assert _ >= 0 & 1 > _; // Generated
+  assert _ >= 0 & 1 > _; // Generated
+  assert _ >= 0 & 1 > _; // Generated
+  assert _ >= 0 & 1 > _; // Generated
+  m0.left{0} = left{0};
+  m0.right{0} = right{0};
+  out{0} = m0.out{0};
+}
+[INFO ] build-domination: 0ms
+[INFO ] type-check: 0ms
+[INFO ] interval-check: 0ms
+[INFO ] phantom-check: 0ms
+[INFO ] add-assume: 0ms
+[INFO ] Failed to prove all facts. Checking each fact individually
+error: bundle index is within range
+ = Elaborated during monomorphization.
+ = Cannot prove constraint: _ >= 0 & 1 > _
+ = Counterexample: _ = (- 1) (unmentioned parameters are 0)
+
+error: bundle index is within range
+ = Elaborated during monomorphization.
+ = Cannot prove constraint: _ >= 0 & 1 > _
+ = Counterexample: _ = (- 1) (unmentioned parameters are 0)
+
+error: bundle index is within range
+ = Elaborated during monomorphization.
+ = Cannot prove constraint: _ >= 0 & 1 > _
+ = Counterexample: _ = (- 1) (unmentioned parameters are 0)
+
+error: bundle index is within range
+ = Elaborated during monomorphization.
+ = Cannot prove constraint: _ >= 0 & 1 > _
+ = Counterexample: _ = (- 1) (unmentioned parameters are 0)
+
+error: bundle index is within range
+ = Elaborated during monomorphization.
+ = Cannot prove constraint: _ >= 0 & 1 > _
+ = Counterexample: _ = (- 1) (unmentioned parameters are 0)
+
+error: bundle index is within range
+ = Elaborated during monomorphization.
+ = Cannot prove constraint: _ >= 0 & 1 > _
+ = Counterexample: _ = (- 1) (unmentioned parameters are 0)
+
+Compilation failed with 6 errors.

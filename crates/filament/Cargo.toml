@@ -38,6 +38,7 @@ fil-ast.workspace = true
 fil-ir.workspace = true
 fil-utils.workspace = true
 fil-gen.workspace = true
+ordered-float.workspace = true
 
 calyx-ir.workspace = true
 calyx-frontend.workspace = true
