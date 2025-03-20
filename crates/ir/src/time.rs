@@ -115,3 +115,20 @@ impl Foldable<ParamIdx, ExprIdx> for TimeSub {
         }
     }
 }
+
+impl Foldable<EventIdx, TimeIdx> for TimeSub {
+    type Context = Component;
+
+    fn fold_with<F>(&self, ctx: &mut Self::Context, subst_fn: &mut F) -> Self
+    where
+        F: FnMut(EventIdx) -> Option<TimeIdx>,
+    {
+        match self {
+            TimeSub::Unit(e) => TimeSub::Unit(e.fold_with(ctx, subst_fn)),
+            TimeSub::Sym { l, r } => TimeSub::Sym {
+                l: l.fold_with(ctx, subst_fn),
+                r: r.fold_with(ctx, subst_fn),
+            },
+        }
+    }
+}

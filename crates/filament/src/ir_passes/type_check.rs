@@ -91,7 +91,7 @@ impl Visitor for TypeCheck {
         Action::AddBefore(
             assumes
                 .iter()
-                .flat_map(|p| data.comp.assert(*p, info))
+                .flat_map(|(p, _)| data.comp.assert(*p, info))
                 .collect_vec(),
         )
     }

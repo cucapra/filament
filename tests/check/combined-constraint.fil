@@ -1,0 +1,11 @@
+// Component with constraint depending on event, parameter, and existential parameter.
+comp Inst[W]<'G: 1> () -> () with {
+    some L where L >= 0;
+} where 'G + L + W >= 'G {
+    L := 1;
+}
+
+comp main<'G: 1>() -> () {
+    // Invoke this instantiation
+    inst := new Inst[1]<'G>();
+}

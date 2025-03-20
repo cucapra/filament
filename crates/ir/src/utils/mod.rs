@@ -5,6 +5,7 @@ mod index_store;
 mod interned;
 mod sparse_info;
 mod subst;
+mod transfer;
 mod traversal;
 
 pub use dense_info::DenseIndexInfo;

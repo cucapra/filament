@@ -110,7 +110,7 @@ impl MonoDeferred<'_, '_> {
         // The type checker ensures this cannot happen for Filament-level
         // components but externally generated components might violate their
         // requirements.
-        for prop in self.underlying.all_exist_assumes() {
+        for (prop, _) in self.underlying.all_exist_assumes() {
             let out = self.monosig.prop(&self.underlying, prop.ul(), self.pass);
             let Some(v) = out.get().as_concrete(self.monosig.base.comp())
             else {

@@ -130,7 +130,7 @@ impl Visitor for IntervalCheck {
         let assumes = comp
             .all_exist_assumes()
             .into_iter()
-            .fold(init, |a, b| a.and(b, comp));
+            .fold(init, |a, (b, _)| a.and(b, comp));
 
         // Ensure that delays are greater than zero
         let mut cmds: Vec<ir::Command> =

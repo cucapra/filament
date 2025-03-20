@@ -4,9 +4,9 @@ use fil_ir::{self as ir, AddCtx, Ctx, ExprIdx, PropIdx};
 
 /// Generates default assumptions to the Filament program for assumptions using custom functions
 #[derive(Default)]
-pub struct Assume;
+pub struct InferAssumes;
 
-impl Assume {
+impl InferAssumes {
     /// Adds the assumptions associated with a proposition of the form `#l = f(#r)` to the component.
     fn add_assumptions(
         ctx: &mut ir::Component,
@@ -56,7 +56,7 @@ impl Assume {
     }
 }
 
-impl Assume {
+impl InferAssumes {
     /// Checks a proposition for whether it matches the form `#l = f(#r)` for some custom function `f`. Additionally recurses on `&` chains.
     /// Generates the assumptions associated with each [ast::Fn] and returns a list of [ir::Prop]s for each.
     /// TODO: Implement assumption generation for functions taking more than one argument.
@@ -103,9 +103,9 @@ impl Assume {
             // Recurse on both the left and right subexpressions if the proposition is of the form `l & r`
             ir::Prop::And(lhs, rhs) => {
                 let (lhs, rhs) = (*lhs, *rhs);
-                Assume::prop(lhs, comp)
+                Self::prop(lhs, comp)
                     .into_iter()
-                    .chain(Assume::prop(rhs, comp))
+                    .chain(Self::prop(rhs, comp))
                     .collect()
             }
             _ => vec![],
@@ -113,15 +113,15 @@ impl Assume {
     }
 }
 
-impl Visitor for Assume {
+impl Visitor for InferAssumes {
     fn name() -> &'static str {
-        "add-assume"
+        "fun-assumptions"
     }
 
     fn fact(&mut self, f: &mut ir::Fact, data: &mut VisitorData) -> Action {
         if f.is_assume() {
             Action::AddBefore(
-                Assume::prop(f.prop, &mut data.comp)
+                Self::prop(f.prop, &mut data.comp)
                     .into_iter()
                     .filter_map(|prop| data.comp.assume(prop, f.reason))
                     .collect(),
