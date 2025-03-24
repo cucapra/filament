@@ -1,18 +1,12 @@
 use super::CombDataflow;
-use crate::{
-    ir_passes::{
-        Monomorphize,
-        mono::{Base, BaseComp, IntoBase, MonoSig, Underlying, UnderlyingComp},
-    },
-    ir_visitor::{Action, Construct, Visitor, VisitorData},
-};
 use easy_smt::{self as smt, SExpr, SExprData};
-use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, MutCtx};
-use fil_utils::{AttrCtx, CompNum};
+use fil_ir::{self as ir, Ctx, DisplayCtx};
+use fil_utils as utils;
 use itertools::Itertools;
 use std::{collections::HashMap, fs};
 
 /// Minimizing goal
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SchedulingGoal {
     Registers,
     Latency,
@@ -28,10 +22,15 @@ impl From<u64> for SchedulingGoal {
     }
 }
 
-type SparseMap<T> = ir::SparseInfoMap<T, SExpr, Base<T>>;
+/// Struct containing information about ports in the component
+struct PortInfo {
+    lens: Vec<u64>,
+    starts: Vec<SExpr>,
+    ends: Vec<SExpr>,
+}
 
 /// Sets the proper FSM Attributes for every component
-pub struct Solve<'comp, 'pass: 'comp> {
+pub struct Solve<'comp> {
     /// Solver context
     sol: smt::Context,
     /// Scheduling goal
@@ -39,37 +38,29 @@ pub struct Solve<'comp, 'pass: 'comp> {
     /// The expression to minimize
     minimize_expr: smt::SExpr,
 
-    /// The underlying component to be monomorphized
-    pub underlying_idx: Underlying<ir::Component>,
-    /// Underlying pointer
-    pub pass: &'comp mut Monomorphize<'pass>,
-    /// Struct to keep track of all the mapping information from things owned by
-    /// `underlying` to things owned by `base`
-    pub monosig: &'comp MonoSig,
+    /// The component to schedule
+    comp: &'comp ir::Component,
 
-    /// Map from [Base<ir::Param>] to [SExpr]
-    param_map: SparseMap<ir::Param>,
-    /// Map from [Base<ir::Prop>] to [SExpr]
-    prop_map: SparseMap<ir::Prop>,
-    /// Map from [Base<ir::Expr>] to [SExpr]
-    expr_map: SparseMap<ir::Expr>,
-    /// Map from [Base<ir::Time>] to [SExpr]
-    time_map: SparseMap<ir::Time>,
+    /// Map from [ir::PropIdx] to [SExpr]
+    prop_map: ir::SparseInfoMap<ir::Prop, SExpr>,
+    /// Map from [ir::ExprIdx] to [SExpr]
+    expr_map: ir::SparseInfoMap<ir::Expr, SExpr>,
+    /// Map from [ir::TimeIdx] to [SExpr]
+    time_map: ir::SparseInfoMap<ir::Time, SExpr>,
+    /// Let = ? parameters
+    param_bind: ir::SparseInfoMap<ir::Param, SExpr>,
+    /// Map from [ir::PortIdx] to [PortInfo] representing important information about each port
+    port_map: ir::SparseInfoMap<ir::Port, PortInfo>,
 }
 
-impl<'comp, 'pass> Solve<'comp, 'pass>
-where
-    'pass: 'comp,
-{
-    fn new(
-        underlying_idx: Underlying<ir::Component>,
-        pass: &'comp mut Monomorphize<'pass>,
-        monosig: &'comp MonoSig,
+impl<'comp> Solve<'comp> {
+    pub fn new(
+        comp: &'comp ir::Component,
         goal: u64,
-        solver_file: Option<&str>,
+        solver_file: Option<&String>,
     ) -> Self {
         // We can only schedule components with one single event!
-        if monosig.base.comp().events().len() > 1 {
+        if comp.events().len() > 1 {
             unreachable!(
                 "Components with multiple events cannot be scheduled."
             );
@@ -88,56 +79,57 @@ where
 
         sol.push_many(1).unwrap();
 
+        let goal = goal.into();
+
         Self {
-            underlying_idx,
-            pass,
-            monosig,
+            comp,
             minimize_expr: sol.numeral(0),
-            goal: goal.into(),
+            goal,
             sol,
-            param_map: SparseMap::default(),
-            prop_map: SparseMap::default(),
-            expr_map: SparseMap::default(),
-            time_map: SparseMap::default(),
+            prop_map: ir::SparseInfoMap::default(),
+            expr_map: ir::SparseInfoMap::default(),
+            time_map: ir::SparseInfoMap::default(),
+            param_bind: ir::SparseInfoMap::default(),
+            port_map: ir::SparseInfoMap::default(),
         }
     }
 }
 
-impl Solve<'_, '_> {
+impl Solve<'_> {
     pub fn timesub_to_sexp(&self, time_sub: &ir::TimeSub) -> SExpr {
         match time_sub {
-            fil_ir::TimeSub::Unit(idx) => self.expr_to_sexp(idx.base()),
+            fil_ir::TimeSub::Unit(idx) => self.expr_to_sexp(*idx),
             fil_ir::TimeSub::Sym { l, r } => {
-                let l = self.time_to_sexp(l.base());
-                let r = self.time_to_sexp(r.base());
+                let l = self.time_to_sexp(*l);
+                let r = self.time_to_sexp(*r);
                 self.sol.sub(l, r)
             }
         }
     }
 
     /// Convert a time to an SExpr
-    pub fn time_to_sexp(&self, time: Base<ir::Time>) -> SExpr {
+    pub fn time_to_sexp(&self, time: ir::TimeIdx) -> SExpr {
         if let Some(sexpr) = self.time_map.find(time) {
             return *sexpr;
         }
 
         // We can ignore the event because there is only one event in this component
-        let ir::Time { offset, .. } = self.monosig.base.get(time);
+        let ir::Time { offset, .. } = self.comp.get(time);
 
-        self.expr_to_sexp(offset.base())
+        self.expr_to_sexp(*offset)
     }
 
     /// Fold an expression to an SExpr
-    pub fn expr_to_sexp(&self, expr: Base<ir::Expr>) -> SExpr {
+    pub fn expr_to_sexp(&self, expr: ir::ExprIdx) -> SExpr {
         if let Some(sexpr) = self.expr_map.find(expr) {
             return *sexpr;
         }
 
-        match self.monosig.base.get(expr) {
+        match self.comp.get(expr) {
             fil_ir::Expr::Concrete(n) => self.sol.numeral(*n),
             fil_ir::Expr::Bin { op, lhs, rhs } => {
-                let lhs = self.expr_to_sexp(lhs.base());
-                let rhs = self.expr_to_sexp(rhs.base());
+                let lhs = self.expr_to_sexp(*lhs);
+                let rhs = self.expr_to_sexp(*rhs);
                 match op {
                     fil_ast::Op::Add => self.sol.plus(lhs, rhs),
                     fil_ast::Op::Sub => self.sol.sub(lhs, rhs),
@@ -147,17 +139,15 @@ impl Solve<'_, '_> {
                 }
             }
             fil_ir::Expr::If { cond, then, alt } => {
-                let cond = self.prop_to_sexp(cond.base());
-                let then = self.expr_to_sexp(then.base());
-                let alt = self.expr_to_sexp(alt.base());
+                let cond = self.prop_to_sexp(*cond);
+                let then = self.expr_to_sexp(*then);
+                let alt = self.expr_to_sexp(*alt);
                 self.sol.ite(cond, then, alt)
             }
             fil_ir::Expr::Param(p) => {
-                if let Some(sexpr) = self.param_map.find(p) {
-                    return *sexpr;
-                }
-                // Look in the monosig binding for the expression bound to the parameter
-                self.monosig.param_map
+                // The only parameters that still exist in expressions should be let = ? bindings
+                // Thus, we should set them to an unknown constant value.
+                self.param_bind[*p]
             }
             fil_ir::Expr::Fn { .. } => unreachable!(
                 "Constraints on scheduled components do not support custom function calls."
@@ -166,17 +156,17 @@ impl Solve<'_, '_> {
     }
 
     /// Fold a proposition on events to an SExpr
-    pub fn prop_to_sexp(&self, prop: Base<ir::Prop>) -> SExpr {
+    pub fn prop_to_sexp(&self, prop: ir::PropIdx) -> SExpr {
         if let Some(sexpr) = self.prop_map.find(prop) {
             return *sexpr;
         }
 
-        match self.monosig.base.get(prop) {
+        match self.comp.get(prop) {
             fil_ir::Prop::True => self.sol.atom("true"),
             fil_ir::Prop::False => self.sol.atom("false"),
             fil_ir::Prop::Cmp(ir::CmpOp { op, lhs, rhs }) => {
-                let lhs = self.expr_to_sexp(lhs.base());
-                let rhs = self.expr_to_sexp(rhs.base());
+                let lhs = self.expr_to_sexp(*lhs);
+                let rhs = self.expr_to_sexp(*rhs);
                 match op {
                     fil_ir::Cmp::Gt => self.sol.gt(lhs, rhs),
                     fil_ir::Cmp::Gte => self.sol.gte(lhs, rhs),
@@ -184,8 +174,8 @@ impl Solve<'_, '_> {
                 }
             }
             fil_ir::Prop::TimeCmp(ir::CmpOp { op, lhs, rhs }) => {
-                let lhs = self.time_to_sexp(lhs.base());
-                let rhs = self.time_to_sexp(rhs.base());
+                let lhs = self.time_to_sexp(*lhs);
+                let rhs = self.time_to_sexp(*rhs);
                 match op {
                     fil_ir::Cmp::Gt => self.sol.gt(lhs, rhs),
                     fil_ir::Cmp::Gte => self.sol.gte(lhs, rhs),
@@ -201,58 +191,21 @@ impl Solve<'_, '_> {
                     fil_ir::Cmp::Eq => self.sol.eq(lhs, rhs),
                 }
             }
-            fil_ir::Prop::Not(idx) => {
-                self.sol.not(self.prop_to_sexp(idx.base()))
-            }
-            fil_ir::Prop::And(idx, idx1) => self.sol.and(
-                self.prop_to_sexp(idx.base()),
-                self.prop_to_sexp(idx1.base()),
-            ),
-            fil_ir::Prop::Or(idx, idx1) => self.sol.or(
-                self.prop_to_sexp(idx.base()),
-                self.prop_to_sexp(idx1.base()),
-            ),
-            fil_ir::Prop::Implies(idx, idx1) => self.sol.imp(
-                self.prop_to_sexp(idx.base()),
-                self.prop_to_sexp(idx1.base()),
-            ),
+            fil_ir::Prop::Not(idx) => self.sol.not(self.prop_to_sexp(*idx)),
+            fil_ir::Prop::And(idx, idx1) => self
+                .sol
+                .and(self.prop_to_sexp(*idx), self.prop_to_sexp(*idx1)),
+            fil_ir::Prop::Or(idx, idx1) => self
+                .sol
+                .or(self.prop_to_sexp(*idx), self.prop_to_sexp(*idx1)),
+            fil_ir::Prop::Implies(idx, idx1) => self
+                .sol
+                .imp(self.prop_to_sexp(*idx), self.prop_to_sexp(*idx1)),
         }
     }
 }
 
-impl Solve<'_, '_> {
-    /// Get the constant names for the start and end of a port
-    pub fn get_port_name(&self, pidx: ir::PortIdx) -> (String, String) {
-        (
-            format!("port{}_s", pidx.get()),
-            format!("port{}_e", pidx.get()),
-        )
-    }
-
-    /// Get the constant name for the time of an event
-    pub fn get_evt_name(
-        &self,
-        inv: ir::InvIdx,
-        evt: ir::Foreign<ir::Event, ir::Component>,
-    ) -> String {
-        format!("inv{}ev{}", inv.get(), evt.key().get())
-    }
-
-    /// Get the SExprs for the start and end of a port
-    pub fn get_port(&self, pidx: ir::PortIdx) -> (smt::SExpr, smt::SExpr) {
-        let (start, end) = self.get_port_name(pidx);
-        (self.sol.atom(start), self.sol.atom(end))
-    }
-
-    /// Get the SExpr for the time of an event
-    pub fn get_inv_evt(
-        &self,
-        inv: ir::InvIdx,
-        evt: ir::Foreign<ir::Event, ir::Component>,
-    ) -> smt::SExpr {
-        self.sol.atom(self.get_evt_name(inv, evt))
-    }
-
+impl Solve<'_> {
     /// Intern all conditions related to combinational delay
     pub fn combinational_delays(
         &mut self,
@@ -270,7 +223,11 @@ impl Solve<'_, '_> {
             }
 
             // We only care about start and end of the path
-            let path = path.iter().map(|p| self.get_port(*p).0);
+            let path = path
+                .iter()
+                .map(|&(p, idx)| self.port(p).starts[idx as usize])
+                .collect_vec()
+                .into_iter();
 
             // It cannot be true that every port in this path is
             // scheduled (starts) on the same cycle
@@ -285,204 +242,97 @@ impl Solve<'_, '_> {
     }
 }
 
-impl Solve<'_, '_> {
-    fn comp(&mut self) {
-        let base = &self.monosig.base;
+impl Solve<'_> {
+    fn param_name(&self, pidx: ir::ParamIdx) -> String {
+        format!("|{}@param{}|", self.comp.display(pidx), pidx.get())
+    }
+    /// Declare a new let = ? parameter
+    fn param(&mut self, pidx: ir::ParamIdx) {
+        assert!(
+            !self.param_bind.contains(pidx),
+            "Parameter already declared"
+        );
 
-        // For the inputs and outputs of the component, we need to schedule them as expected.
-        for (pidx, port) in base.inputs().chain(self.monosig.base.outputs()) {
-            let ir::Range { start, end } = port.live.range;
-            let (start, end) = (start.base(), end.base());
+        let sexpr = self
+            .sol
+            .declare_const(self.param_name(pidx), self.sol.int_sort())
+            .unwrap();
 
-            let start = base.get(start).offset.concrete(base.comp());
-            let end = base.get(end).offset.concrete(base.comp());
-
-            let (start_expr, end_expr) = self.get_port_name(pidx);
-
-            // Declare constants for the start and end of the port
-            let start_expr = self
-                .sol
-                .declare_const(start_expr, self.sol.int_sort())
-                .unwrap();
-            let end_expr = self
-                .sol
-                .declare_const(end_expr, self.sol.int_sort())
-                .unwrap();
-
-            // These ports must occur exactly when they are scheduled
-            self.sol
-                .assert(self.sol.eq(self.sol.numeral(start), start_expr))
-                .unwrap();
-
-            self.sol
-                .assert(self.sol.eq(self.sol.numeral(end), end_expr))
-                .unwrap();
-        }
+        self.param_bind.push(pidx, sexpr);
     }
 
-    fn connect(
-        &mut self,
-        con: &mut ir::Connect,
-        data: &mut VisitorData,
-    ) -> Action {
-        let comp = &data.comp;
-        let ir::Connect { src, dst, .. } = con;
+    fn port(&mut self, pidx: ir::PortIdx) -> &PortInfo {
+        if self.port_map.contains(pidx) {
+            return self.port_map.get(pidx);
+        }
 
-        // Make sure there are no bundles
-        if !(src.is_port(comp)
-            && dst.is_port(comp)
-            && src.port.is_not_bundle(comp)
-            && dst.port.is_not_bundle(comp))
+        let ir::Port {
+            live: ir::Liveness { idxs, lens, range },
+            ..
+        } = self.comp.get(pidx);
+
+        let idxs = idxs.clone();
+        let ir::Range { start, end } = range.clone();
+
+        // Lengths should be concretizable
+        let lens = lens.iter().map(|l| l.concrete(self.comp)).collect_vec();
+
+        let ranges = lens.iter().map(|&l| (0, l)).collect();
+
+        let mut starts = Vec::new();
+        let mut ends = Vec::new();
+        // Loop through all the indices of the port
+        for binds in utils::all_indices(ranges) {
+            // temporarily add the binding to the param_bind map
+            for (pidx, &bind) in idxs.iter().zip(binds.iter()) {
+                self.param_bind.push(*pidx, self.sol.numeral(bind));
+            }
+
+            // Substitute the binding into start and end
+            starts.push(self.time_to_sexp(start));
+            ends.push(self.time_to_sexp(end));
+        }
+
+        // If this is an output port and we are scheduling for latency, add the latency
+        // of each output port to the minimize expression. Multiply by width to account for
+        // multiple bits
+        if self.goal == SchedulingGoal::Latency
+            && self.comp.get(pidx).is_sig_out()
         {
-            unreachable!(
-                "Port {} and {} are bundles. Bundles are not supported in the scheduling pass. Please run bundle-elim first.",
-                comp.display(src.port),
-                comp.display(dst.port)
-            );
+            let width = self.comp.get(pidx).width.concrete(self.comp);
+
+            self.minimize_expr =
+                ends.iter().cloned().fold(self.minimize_expr, |acc, end| {
+                    self.sol
+                        .plus(acc, self.sol.times(end, self.sol.numeral(width)))
+                });
         }
 
-        let (src_start, src_end) = self.get_port(src.port);
-        let (dst_start, dst_end) = self.get_port(dst.port);
+        let info = PortInfo { lens, starts, ends };
+        self.port_map.push(pidx, info);
 
-        let width = comp.get(src.port).width.concrete(comp);
-
-        log::trace!(
-            "Connecting {}: {} to {}: {}",
-            src.port,
-            self.sol.display(src_start),
-            dst.port,
-            self.sol.display(dst_start)
-        );
-
-        // The destination port must happen after the source port
-        self.sol.assert(self.sol.lte(src_start, dst_start)).unwrap();
-
-        // We can create a register that will extend the lifetime of the source port to the destination port. Given a src port valid from [a, b], and a dest port from [c, d], we need a register that holds from [b-1, d].
-        // The number of FFs necessary to do this is thus d - b
-        let reg_expr = self.sol.sub(dst_end, src_end);
-        // reg_expr cannot be negative
-        let reg_expr = self.sol.ite(
-            self.sol.gte(reg_expr, self.sol.numeral(0)),
-            reg_expr,
-            self.sol.numeral(0),
-        );
-
-        // multiply by the width of the port
-        let reg_expr = self.sol.times(reg_expr, self.sol.numeral(width));
-
-        // add this to the minimize expression
-        self.minimize_expr = self.sol.plus(self.minimize_expr, reg_expr);
-
-        Action::Continue
+        self.port_map.get(pidx)
     }
 
-    fn invoke(
-        &mut self,
-        inv_idx: ir::InvIdx,
-        data: &mut VisitorData,
-    ) -> Action {
-        let comp = &data.comp;
-
-        log::trace!("Scheduling invocation {}", comp.display(inv_idx));
-
-        let inv = comp.get(inv_idx);
-
-        // Get the events of the invocation as variables
-        let events: ir::SparseInfoMap<ir::Event, SExpr> = inv
-            .events
-            .iter()
-            .map(|ir::EventBind { base, .. }| {
-                let sexpr = self
-                    .sol
-                    .declare_const(
-                        self.get_evt_name(inv_idx, *base),
-                        self.sol.int_sort(),
-                    )
-                    .unwrap();
-
-                // Make sure that the event is scheduled at a positive time
-                self.sol
-                    .assert(self.sol.gte(sexpr, self.sol.numeral(0)))
-                    .unwrap();
-
-                (base.key(), sexpr)
-            })
-            .collect();
-
-        // Intern all the constraints for the events
-        let foreign_comp = data.ctx().get(inv.inst.comp(comp));
-        for &constraint in foreign_comp.get_event_asserts() {
-            self.sol
-                .assert(self.prop_to_sexp(foreign_comp, &events, constraint))
-                .unwrap();
+    /// Solve the scheduling problem
+    /// Returns a binding of parameters to values
+    pub fn comp(&mut self) -> ir::Bind<ir::ParamIdx, u64> {
+        // First, intern all bindings for let = ? parameters and assertions/assumptions
+        for cmd in &self.comp.cmds {
+            match cmd {
+                ir::Command::Let(l) => self.let_(l),
+                ir::Command::Fact(ir::Fact { prop, .. }) => {
+                    let sexpr = self.prop_to_sexp(*prop);
+                    self.sol.assert(sexpr).unwrap();
+                }
+                fil_ir::Command::Connect(connect) => {
+                    self.connect(connect);
+                }
+                _ => {}
+            }
         }
 
-        for pidx in inv.ports.iter() {
-            let port = comp.get(*pidx);
-            let ir::Port {
-                owner:
-                    ir::PortOwner::Inv {
-                        base: foreign_pidx, ..
-                    },
-                ..
-            } = port
-            else {
-                unreachable!("Port {} is not owned by an invocation", pidx)
-            };
-
-            let (start_expr, end_expr, start, end) = foreign_pidx.apply(
-                |p, foreign_comp| {
-                    let ir::Range { start, end } =
-                        foreign_comp.get(p).live.range;
-
-                    let start_expr = *events.get(foreign_comp.get(start).event);
-                    let end_expr = *events.get(foreign_comp.get(end).event);
-
-                    let start =
-                        foreign_comp.get(start).offset.concrete(foreign_comp);
-                    let end =
-                        foreign_comp.get(end).offset.concrete(foreign_comp);
-
-                    (start_expr, end_expr, start, end)
-                },
-                data.ctx(),
-            );
-
-            // Create expressions for the ports relative to the invocation
-            let start_expr = self.sol.plus(start_expr, self.sol.numeral(start));
-
-            let end_expr = self.sol.plus(end_expr, self.sol.numeral(end));
-
-            log::trace!(
-                "Port {} is live from {} to {}",
-                pidx,
-                self.sol.display(start_expr),
-                self.sol.display(end_expr)
-            );
-
-            // Declare constants for the start and end of the port
-            let (start_var, end_var) = self.get_port_name(*pidx);
-
-            let start_var = self
-                .sol
-                .declare_const(start_var, self.sol.int_sort())
-                .unwrap();
-            let end_var = self
-                .sol
-                .declare_const(end_var, self.sol.int_sort())
-                .unwrap();
-
-            // These ports must occur exactly when they are scheduled
-            self.sol.assert(self.sol.eq(start_expr, start_var)).unwrap();
-            self.sol.assert(self.sol.eq(end_expr, end_var)).unwrap();
-        }
-
-        Action::Continue
-    }
-
-    fn end(&mut self, data: &mut VisitorData) {
-        self.combinational_delays(&data.comp, data.ctx());
-
+        // Solve the scheduling problem
         let minimize = self.sol.atom("minimize");
         let expr = self.sol.list(vec![minimize, self.minimize_expr]);
         self.sol.raw_send(expr).unwrap();
@@ -553,98 +403,101 @@ impl Solve<'_, '_> {
             })
             .collect();
 
-        let event = data.comp.events().idx_iter().next().unwrap();
-
-        // Loop through invocations and find what they're bound to
-        // collect here to let us mutate [data.comp] inside the loop
-        for inv_idx in data.comp.invocations().idx_iter() {
-            let new_times = data
-                .comp
-                .get(inv_idx)
-                .events
-                .iter()
-                .map(|ir::EventBind { base, arg, .. }| {
-                    let SExprData::Atom(s) =
-                        self.sol.get(self.get_inv_evt(inv_idx, *base))
-                    else {
-                        unreachable!()
-                    };
-
-                    (arg.event(&data.comp), *bindings.get(s).unwrap())
-                })
-                .collect_vec();
-
-            // Needds to be broken up because we need mutable access to data.comp
-            let new_times = new_times
-                .into_iter()
-                .map(|(event, time)| {
-                    let time = data.comp.add(ir::Expr::Concrete(time));
-
-                    let time = data.comp.add(ir::Time {
-                        event,
-                        offset: time,
-                    });
-
-                    log::debug!(
-                        "Invocation {} scheduled at cycle {}",
-                        data.comp.display(inv_idx),
-                        data.comp.display(time)
-                    );
-                    time
-                })
-                .collect_vec();
-
-            for (ir::EventBind { arg, .. }, time) in
-                data.comp.get_mut(inv_idx).events.iter_mut().zip(new_times)
-            {
-                *arg = time
+        ir::Bind::new(self.comp.cmds.iter().filter_map(|cmd| match cmd {
+            ir::Command::Let(ir::Let { param, .. }) => {
+                let value = *bindings.get(&self.param_name(*param)).unwrap();
+                Some((*param, value))
             }
-        }
+            _ => None,
+        }))
+    }
 
-        // Loop through ports and set their live ranges
-        for pidx in data.comp.ports().idx_iter() {
-            let (start, end) = self.get_port(pidx);
+    fn let_(&mut self, l: &ir::Let) {
+        let ir::Let { param, expr } = l;
+        // Expr should be none, as monomorphization should have already removed all other let bindings
+        assert!(
+            expr.is_none(),
+            "Found let binding with non-? expression when scheduling."
+        );
+        self.param(*param);
+    }
 
-            let SExprData::Atom(s) = self.sol.get(start) else {
-                unreachable!(
-                    "Expected start of port {} to be an atom, got {}",
-                    pidx,
-                    self.sol.display(start)
+    fn connect(&mut self, con: &ir::Connect) {
+        let ir::Connect {
+            src:
+                ir::Access {
+                    port: src_port,
+                    ranges: src_ranges,
+                },
+            dst:
+                ir::Access {
+                    port: dst_port,
+                    ranges: dst_ranges,
+                },
+            ..
+        } = con;
+
+        let src_ranges = src_ranges
+            .iter()
+            .map(|(s, e)| (s.concrete(self.comp), e.concrete(self.comp)))
+            .collect_vec();
+
+        let dst_ranges = dst_ranges
+            .iter()
+            .map(|(s, e)| (s.concrete(self.comp), e.concrete(self.comp)))
+            .collect_vec();
+
+        let start_info = self.port(*src_port);
+
+        let start_exprs = utils::all_indices(src_ranges)
+            .into_iter()
+            .map(|multi_idx| utils::flat_idx(&multi_idx, &start_info.lens))
+            .map(|idx| {
+                (
+                    start_info.starts[idx as usize],
+                    start_info.ends[idx as usize],
                 )
-            };
+            })
+            .collect_vec();
 
-            let start = *bindings.get(s).unwrap();
+        let end_info = self.port(*dst_port);
+        let end_exprs = utils::all_indices(dst_ranges)
+            .into_iter()
+            .map(|multi_idx| utils::flat_idx(&multi_idx, &end_info.lens))
+            .map(|idx| {
+                (end_info.starts[idx as usize], end_info.ends[idx as usize])
+            })
+            .collect_vec();
 
-            let SExprData::Atom(s) = self.sol.get(end) else {
-                unreachable!(
-                    "Expected end of port {} to be an atom, got {}",
-                    pidx,
-                    self.sol.display(end)
-                )
-            };
+        let width = self.comp.get(*src_port).width.concrete(self.comp);
 
-            let end = *bindings.get(s).unwrap();
+        log::trace!("Connecting {} to {}", src_port, dst_port);
 
-            let start = data.comp.add(ir::Expr::Concrete(start));
-            let end = data.comp.add(ir::Expr::Concrete(end));
+        // For each actual pair of ports:
+        for ((src_start, src_end), (dst_start, dst_end)) in
+            start_exprs.into_iter().zip(end_exprs)
+        {
+            // The destination port must happen after the source port
+            self.sol.assert(self.sol.lte(src_start, dst_start)).unwrap();
 
-            let start = data.comp.add(ir::Time {
-                event,
-                offset: start,
-            });
-
-            let end = data.comp.add(ir::Time { event, offset: end });
-
-            log::debug!(
-                "Port {} scheduled to be live from [{}, {}]",
-                data.comp.display(pidx),
-                data.comp.display(start),
-                data.comp.display(end)
+            // We can create a register that will extend the lifetime of the source port to the destination port. Given a src port valid from [a, b], and a dest port from [c, d], we need a register that holds from [b-1, d].
+            // The number of FFs necessary to do this is thus d - b
+            let reg_expr = self.sol.sub(dst_end, src_end);
+            // reg_expr cannot be negative
+            let reg_expr = self.sol.ite(
+                self.sol.gte(reg_expr, self.sol.numeral(0)),
+                reg_expr,
+                self.sol.numeral(0),
             );
 
-            let port = data.comp.get_mut(pidx);
+            // multiply by the width of the port
+            let reg_expr = self.sol.times(reg_expr, self.sol.numeral(width));
 
-            port.live.range = ir::Range { start, end };
+            // add this to the minimize expression
+            if self.goal == SchedulingGoal::Registers {
+                self.minimize_expr =
+                    self.sol.plus(self.minimize_expr, reg_expr);
+            }
         }
     }
 }

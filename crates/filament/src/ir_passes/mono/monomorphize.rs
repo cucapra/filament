@@ -1,3 +1,5 @@
+use crate::cmdline;
+
 use super::{
     Base, CompKey, InstanceInfo, IntoBase, IntoUdl, MonoDeferred, MonoSig,
     Underlying, UnderlyingComp,
@@ -5,7 +7,6 @@ use super::{
 use fil_gen as fgen;
 use fil_ir::{self as ir, Ctx, IndexStore};
 use ir::{AddCtx, EntryPoint};
-use itertools::Itertools;
 use std::collections::HashMap;
 
 /// The Monomorphize pass.
@@ -59,6 +60,8 @@ pub struct Monomorphize<'a> {
     pub ctx: ir::Context,
     /// The old context
     pub old: &'a ir::Context,
+    /// Commandline options
+    pub opts: &'a cmdline::Opts,
     // Names of external components
     pub externals: Vec<ir::CompIdx>,
     /// Instances that have already been processed. Tracks the name of the generated component
@@ -74,11 +77,13 @@ pub struct Monomorphize<'a> {
 impl<'a> Monomorphize<'a> {
     fn new(
         old: &'a ir::Context,
+        opts: &'a cmdline::Opts,
         gen_exec: &'a mut Option<fgen::GenExec>,
     ) -> Self {
         Monomorphize {
             ctx: ir::Context::default(),
             old,
+            opts,
             externals: vec![],
             processed: HashMap::new(),
             inst_info: HashMap::new(),
@@ -271,6 +276,7 @@ impl Monomorphize<'_> {
     /// Returns an empty context if there is no top-level component.
     pub fn transform(
         ctx: &ir::Context,
+        opts: &cmdline::Opts,
         generated: &mut Option<fgen::GenExec>,
     ) -> ir::Context {
         let Some(entrypoint) = &ctx.entrypoint else {
@@ -288,7 +294,7 @@ impl Monomorphize<'_> {
 
         let entrypoint = entrypoint.ul();
         // Monomorphize the entrypoint
-        let mut mono = Monomorphize::new(ctx, generated);
+        let mut mono = Monomorphize::new(ctx, opts, generated);
         let ck = CompKey::new(entrypoint, bindings.clone());
         mono.monomorphize(ck.clone());
 

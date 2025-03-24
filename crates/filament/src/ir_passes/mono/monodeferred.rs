@@ -1,5 +1,7 @@
+use crate::ir_passes::schedule;
+
 use super::{
-    Base, CompKey, IntoBase, IntoUdl, MonoSig, Monomorphize, Underlying,
+    CompKey, IntoBase, IntoUdl, MonoSig, Monomorphize, Underlying,
     UnderlyingComp,
 };
 use fil_ir::{self as ir, AddCtx, Ctx, SparseInfoMap};
@@ -176,11 +178,43 @@ impl MonoDeferred<'_, '_> {
             self.monosig.base.extend_cmds(cmd);
         }
 
+        // Run scheduling pass if needed
+        if let Some(sched) = self.schedule {
+            let binding = schedule::Solve::new(
+                self.monosig.base.comp(),
+                sched,
+                self.pass.opts.solver_replay_file.as_ref(),
+            )
+            .comp();
+
+            // Take the param_map from monosig
+            // Find all the mappings that are now bound, remove these,
+            // and add them instead to the binding
+
+            let param_map = std::mem::take(&mut self.monosig.param_map);
+            let mut new_param_map = SparseInfoMap::default();
+
+            for (ul, base) in param_map {
+                if let Some(&v) = binding.get(&base.get()) {
+                    self.monosig.push_binding(ul, v);
+                } else {
+                    new_param_map.push(ul, base);
+                }
+            }
+
+            self.monosig.param_map = new_param_map;
+        }
+
         // Monomorphize the rest of the signature
         self.sig_complete_mono();
 
+        let mut comp = self.monosig.base.take();
+
+        // Remove all the let bindings that were added to this component
+        comp.cmds.retain(|cmd| !matches!(cmd, ir::Command::Let(_)));
+
         // Return the component
-        self.monosig.base.take()
+        comp
     }
 
     fn access(&mut self, acc: &ir::Access) -> ir::Access {

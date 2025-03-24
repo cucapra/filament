@@ -10,7 +10,7 @@ use linked_hash_map::LinkedHashMap;
 /// Makes sure each index in a port is only written to at most once
 /// Must occur after monomorphization.
 pub struct AssignCheck {
-    ports: LinkedHashMap<(PortIdx, usize), Vec<Option<GPosIdx>>>,
+    ports: LinkedHashMap<(PortIdx, u64), Vec<Option<GPosIdx>>>,
     diag: Diagnostics,
 }
 
@@ -48,7 +48,7 @@ impl Visitor for AssignCheck {
                 .live
                 .lens
                 .iter()
-                .map(|l| l.concrete(&data.comp) as usize)
+                .map(|l| l.concrete(&data.comp))
                 .product();
 
             for i in 0..len {
@@ -68,17 +68,14 @@ impl Visitor for AssignCheck {
         let comp = &data.comp;
         let ranges_c = ranges
             .iter()
-            .map(|(s, e)| {
-                (s.concrete(comp) as usize, e.concrete(comp) as usize)
-            })
+            .map(|(s, e)| (s.concrete(comp), e.concrete(comp)))
             .collect();
 
         let ir::Port {
             live: ir::Liveness { lens, .. },
             ..
         } = comp.get(*port);
-        let len_c =
-            lens.iter().map(|l| l.concrete(comp) as usize).collect_vec();
+        let len_c = lens.iter().map(|l| l.concrete(comp)).collect_vec();
 
         for i in utils::all_indices(ranges_c) {
             let flat_idx = utils::flat_idx(&i, &len_c);
@@ -93,7 +90,7 @@ impl Visitor for AssignCheck {
     fn end(&mut self, data: &mut VisitorData) {
         let diag = &mut self.diag;
         // Track all the port locations that have no assignment
-        let mut unassigned: LinkedHashMap<PortIdx, Vec<usize>> =
+        let mut unassigned: LinkedHashMap<PortIdx, Vec<u64>> =
             LinkedHashMap::new();
         for ((port, idx), connects) in self.ports.drain() {
             let con_len = connects.len();

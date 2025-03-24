@@ -11,7 +11,7 @@ mod lower;
 mod mono;
 mod phantom_check;
 mod prop_simplify;
-// mod schedule;
+mod schedule;
 mod type_check;
 
 pub use assignment_check::AssignCheck;
@@ -27,4 +27,5 @@ pub use lower::Compile;
 pub use mono::Monomorphize;
 pub use phantom_check::PhantomCheck;
 pub use prop_simplify::Simplify;
+pub use schedule::{Retime, Solve};
 pub use type_check::TypeCheck;

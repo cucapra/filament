@@ -3,5 +3,5 @@ mod retime;
 mod solve;
 
 use combinational_paths::CombDataflow;
-use retime::Retime;
-use solve::Solve;
+pub use retime::Retime;
+pub use solve::Solve;

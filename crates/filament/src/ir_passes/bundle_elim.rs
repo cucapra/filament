@@ -14,13 +14,13 @@ use std::collections::HashMap;
 /// A mapping from a bundle with a list of dimensions to the list of associated ports.
 struct PortInfo {
     /// The lengths of the original bundles
-    lens: Vec<usize>,
+    lens: Vec<u64>,
     /// Ports associated with this signature port
     ports: Vec<PortIdx>,
 }
 
 /// A multi-dimensional index into a possibly multi-dimensional bundle port).
-type BundleIdx = (PortIdx, Vec<usize>);
+type BundleIdx = (PortIdx, Vec<u64>);
 
 // Eliminates bundle ports by breaking them into multiple len-1 ports, and eliminates local ports altogether.
 pub struct BundleElim {
@@ -39,14 +39,14 @@ impl BundleElim {
         let ranges_c = ranges
             .iter()
             .map(|(s, e)| {
-                let s = s.concrete(comp) as usize;
-                let e = e.concrete(comp) as usize;
+                let s = s.concrete(comp);
+                let e = e.concrete(comp);
                 len *= e - s;
                 (s, e)
             })
             .collect_vec();
 
-        let mut ports = Vec::with_capacity(len);
+        let mut ports = Vec::with_capacity(len as usize);
 
         let comp_info = &self.context[data.idx];
 
@@ -63,7 +63,7 @@ impl BundleElim {
                 lens,
                 ports: sig_ports,
             } = &comp_info[*port];
-            ports.push(sig_ports[utils::flat_idx(idxs, lens)])
+            ports.push(sig_ports[utils::flat_idx(idxs, lens) as usize])
         }
 
         ports
@@ -87,8 +87,8 @@ impl BundleElim {
         let end = comp.get(range.end).clone();
 
         // The total size of the bundle
-        let lens = lens.iter().map(|l| l.concrete(comp) as usize).collect_vec();
-        let len = lens.iter().product::<usize>();
+        let lens = lens.iter().map(|l| l.concrete(comp)).collect_vec();
+        let len = lens.iter().product::<u64>();
 
         // if we need to preserve external interface information, we can't have bundle ports in the signature.
         if comp.src_info.is_some() && matches!(owner, PortOwner::Sig { .. }) {
@@ -111,9 +111,10 @@ impl BundleElim {
         let ports = (0..len)
             .map(|i| {
                 let binding = Bind::new(
-                    utils::nd_idx(i, &lens).into_iter().zip_eq(&idxs).map(
-                        |(v, idx)| (*idx, comp.add(Expr::Concrete(v as u64))),
-                    ),
+                    utils::nd_idx(i, &lens)
+                        .into_iter()
+                        .zip_eq(&idxs)
+                        .map(|(v, idx)| (*idx, comp.add(Expr::Concrete(v)))),
                 );
 
                 // calculates the offsets based on this binding and generates new start and end times.
@@ -149,7 +150,7 @@ impl BundleElim {
                             base: Foreign::new(
                                 // maps the foreign to the corresponding single port
                                 // this works because all signature ports are compiled first.
-                                self.context[owner][key].ports[i],
+                                self.context[owner][key].ports[i as usize],
                                 owner,
                             ),
                         }
@@ -352,8 +353,8 @@ impl Visitor for BundleElim {
                     .ranges
                     .iter()
                     .map(|(s, e)| {
-                        let s = s.concrete(comp) as usize;
-                        let e = e.concrete(comp) as usize;
+                        let s = s.concrete(comp);
+                        let e = e.concrete(comp);
                         (s, e)
                     })
                     .collect_vec();
@@ -361,8 +362,8 @@ impl Visitor for BundleElim {
                     .ranges
                     .iter()
                     .map(|(s, e)| {
-                        let s = s.concrete(comp) as usize;
-                        let e = e.concrete(comp) as usize;
+                        let s = s.concrete(comp);
+                        let e = e.concrete(comp);
                         (s, e)
                     })
                     .collect_vec();

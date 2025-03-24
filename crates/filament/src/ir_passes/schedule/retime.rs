@@ -57,7 +57,7 @@ impl Retime {
             GPosIdx::UNKNOWN,
         )));
 
-        comp.add_param_assert([live_prop]);
+        comp.add_param_assert([(live_prop, GPosIdx::UNKNOWN)]);
         comp.param_args = Box::new([width, delay, live]);
 
         let live_assumption = comp.assume(live_prop, live_info);
