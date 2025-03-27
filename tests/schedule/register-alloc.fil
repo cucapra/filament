@@ -37,8 +37,10 @@ comp main<'G: 1>(
   out1: ['G+10, 'G+11] 32
 )
  {
-  sum := new DelayedAdd[32, 1]<'G>(in0, in1);
-  dup := new DelayedDup[32, 1]<'G>(sum.out);
+  let d1 = ?;
+  let d2 = ?;
+  sum := new DelayedAdd[32, 1]<'G+d1>(in0, in1);
+  dup := new DelayedDup[32, 1]<'G+d2>(sum.out);
   out0 = dup.out0;
   out1 = dup.out1;
 }

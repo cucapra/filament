@@ -31,10 +31,13 @@ comp main<'G: 1>(
     sum1_3 := new AddWrapper[32]<'G>(in4, in5);
     sum1_4 := new AddWrapper[32]<'G>(in6, in7);
 
-    sum2_1 := new AddWrapper[32]<'G>(sum1_1.out, sum1_2.out);
-    sum2_2 := new AddWrapper[32]<'G>(sum1_3.out, sum1_4.out);
+    let s1 = ?;
+    let s2 = ?;
+
+    sum2_1 := new AddWrapper[32]<'G+s1>(sum1_1.out, sum1_2.out);
+    sum2_2 := new AddWrapper[32]<'G+s1>(sum1_3.out, sum1_4.out);
     
-    sum3_1 := new AddWrapper[32]<'G>(sum2_1.out, sum2_2.out);
+    sum3_1 := new AddWrapper[32]<'G+s2>(sum2_1.out, sum2_2.out);
 
     out = sum3_1.out;
 }

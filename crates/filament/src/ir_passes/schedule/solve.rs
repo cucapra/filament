@@ -229,6 +229,8 @@ impl Solve<'_> {
                 .collect_vec()
                 .into_iter();
 
+            log::trace!("Critical path: {:?}", path);
+
             // It cannot be true that every port in this path is
             // scheduled (starts) on the same cycle
             let equalities = path
@@ -244,7 +246,7 @@ impl Solve<'_> {
 
 impl Solve<'_> {
     fn param_name(&self, pidx: ir::ParamIdx) -> String {
-        format!("|{}@param{}|", self.comp.display(pidx), pidx.get())
+        format!("param{}", pidx.get())
     }
     /// Declare a new let = ? parameter
     fn param(&mut self, pidx: ir::ParamIdx) {
@@ -322,6 +324,7 @@ impl Solve<'_> {
             match cmd {
                 ir::Command::Let(l) => self.let_(l),
                 ir::Command::Fact(ir::Fact { prop, .. }) => {
+                    log::trace!("Asserting: {}", self.comp.display(*prop));
                     let sexpr = self.prop_to_sexp(*prop);
                     self.sol.assert(sexpr).unwrap();
                 }
@@ -403,6 +406,8 @@ impl Solve<'_> {
             })
             .collect();
 
+        log::trace!("Bindings: {:?}", bindings);
+
         ir::Bind::new(self.comp.cmds.iter().filter_map(|cmd| match cmd {
             ir::Command::Let(ir::Let { param, .. }) => {
                 let value = *bindings.get(&self.param_name(*param)).unwrap();
@@ -480,21 +485,21 @@ impl Solve<'_> {
             // The destination port must happen after the source port
             self.sol.assert(self.sol.lte(src_start, dst_start)).unwrap();
 
-            // We can create a register that will extend the lifetime of the source port to the destination port. Given a src port valid from [a, b], and a dest port from [c, d], we need a register that holds from [b-1, d].
-            // The number of FFs necessary to do this is thus d - b
-            let reg_expr = self.sol.sub(dst_end, src_end);
-            // reg_expr cannot be negative
-            let reg_expr = self.sol.ite(
-                self.sol.gte(reg_expr, self.sol.numeral(0)),
-                reg_expr,
-                self.sol.numeral(0),
-            );
-
-            // multiply by the width of the port
-            let reg_expr = self.sol.times(reg_expr, self.sol.numeral(width));
-
-            // add this to the minimize expression
+            // add the necessary register to the minimize expression
             if self.goal == SchedulingGoal::Registers {
+                // We can create a register that will extend the lifetime of the source port to the destination port. Given a src port valid from [a, b], and a dest port from [c, d], we need a register that holds from [b-1, d].
+                // The number of FFs necessary to do this is thus d - b
+                let reg_expr = self.sol.sub(dst_end, src_end);
+                // reg_expr cannot be negative
+                let reg_expr = self.sol.ite(
+                    self.sol.gte(reg_expr, self.sol.numeral(0)),
+                    reg_expr,
+                    self.sol.numeral(0),
+                );
+
+                // multiply by the width of the port
+                let reg_expr =
+                    self.sol.times(reg_expr, self.sol.numeral(width));
                 self.minimize_expr =
                     self.sol.plus(self.minimize_expr, reg_expr);
             }

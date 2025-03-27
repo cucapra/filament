@@ -141,21 +141,6 @@ impl MonoDeferred<'_, '_> {
             );
         }
 
-        for (idx, _) in
-            self.underlying.ports().iter().filter(|(_, p)| p.is_sig())
-        {
-            let port_key = (None, idx.ul());
-            let base = self.monosig.port_map[&port_key];
-            self.monosig
-                .port_data(&self.underlying, self.pass, idx.ul(), base);
-        }
-
-        // Handle event delays after monomorphization because delays might mention existential parameters.
-        for (old, &new) in self.monosig.event_map.clone().iter() {
-            self.monosig
-                .event_delay(&self.underlying, self.pass, old, new);
-        }
-
         // Mark the signature monormophization as complete
         self.sig_mono_complete = true;
     }
@@ -176,6 +161,22 @@ impl MonoDeferred<'_, '_> {
         for cmd in self.underlying.cmds().clone() {
             let cmd = self.command(&cmd);
             self.monosig.base.extend_cmds(cmd);
+        }
+
+        // Monomorphize the ports in the signature that are not already monomorphized
+        for (idx, _) in
+            self.underlying.ports().iter().filter(|(_, p)| p.is_sig())
+        {
+            let port_key = (None, idx.ul());
+            let base = self.monosig.port_map[&port_key];
+            self.monosig
+                .port_data(&self.underlying, self.pass, idx.ul(), base);
+        }
+
+        // Handle event delays after monomorphization because delays might mention existential parameters.
+        for (old, &new) in self.monosig.event_map.clone().iter() {
+            self.monosig
+                .event_delay(&self.underlying, self.pass, old, new);
         }
 
         // Run scheduling pass if needed
