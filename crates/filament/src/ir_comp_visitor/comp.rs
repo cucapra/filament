@@ -24,6 +24,12 @@ impl<'a> UnderlyingComp<'a> {
     pub fn events(&self) -> &IndexStore<ir::Event> {
         self.0.events()
     }
+    pub fn event_args(&self) -> &[ir::EventIdx] {
+        self.0.event_args()
+    }
+    pub fn param_args(&self) -> &[ir::ParamIdx] {
+        self.0.param_args()
+    }
     pub fn ports(&self) -> &IndexStore<ir::Port> {
         self.0.ports()
     }
@@ -39,9 +45,23 @@ impl<'a> UnderlyingComp<'a> {
     pub fn exist_params(&self) -> impl Iterator<Item = ir::ParamIdx> + '_ {
         self.0.exist_params()
     }
+    pub fn get_exist_assumes(
+        &self,
+        param: Underlying<ir::Param>,
+    ) -> Option<Vec<ir::PropIdx>> {
+        self.0.get_exist_assumes(param.idx())
+    }
     pub fn all_exist_assumes(&self) -> Vec<ir::PropIdx> {
         self.0.all_exist_assumes()
     }
+    pub fn get_event_asserts(&self) -> &[ir::PropIdx] {
+        self.0.get_event_asserts()
+    }
+
+    pub fn get_param_asserts(&self) -> &[ir::PropIdx] {
+        self.0.get_param_asserts()
+    }
+
     pub fn relevant_vars(
         &self,
         prop: Underlying<ir::Prop>,
@@ -126,6 +146,43 @@ impl BaseComp {
     }
     pub fn resolve_prop(&mut self, prop: ir::Prop) -> Base<ir::Prop> {
         self.0.resolve_prop(prop).base()
+    }
+
+    pub fn add_exist_assumes(
+        &mut self,
+        param: Base<ir::Param>,
+        prop: impl IntoIterator<Item = Base<ir::Prop>>,
+    ) {
+        self.0
+            .add_exist_assumes(param.get(), prop.into_iter().map(|p| p.get()));
+    }
+    pub fn add_event_assert(
+        &mut self,
+        prop: impl IntoIterator<Item = Base<ir::Prop>>,
+    ) {
+        self.0.add_event_assert(prop.into_iter().map(|p| p.get()));
+    }
+    pub fn add_param_assert(
+        &mut self,
+        prop: impl IntoIterator<Item = Base<ir::Prop>>,
+    ) {
+        self.0.add_param_assert(prop.into_iter().map(|p| p.get()));
+    }
+
+    pub fn assume(
+        &mut self,
+        prop: Base<ir::Prop>,
+        reason: Base<ir::Info>,
+    ) -> Option<ir::Command> {
+        self.0.assume(prop.get(), reason.get())
+    }
+
+    pub fn assert(
+        &mut self,
+        prop: Base<ir::Prop>,
+        reason: Base<ir::Info>,
+    ) -> Option<ir::Command> {
+        self.0.assert(prop.get(), reason.get())
     }
 }
 

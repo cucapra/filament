@@ -1,3 +1,9 @@
+mod base;
+mod comp;
+mod underlying;
 mod visitor;
 
-pub use visitor::{Action, Construct, Visitor, VisitorData};
+pub(crate) use base::{Base, IntoBase};
+pub(crate) use comp::{BaseComp, UnderlyingComp};
+pub(crate) use underlying::{IntoUdl, Underlying};
+pub use visitor::{CompInfo, Visitor, VisitorData};
