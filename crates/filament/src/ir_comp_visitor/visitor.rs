@@ -1,6 +1,6 @@
 use super::{Base, BaseComp, Underlying, UnderlyingComp};
 use crate::ir_comp_visitor::IntoUdl;
-use fil_ir::{self as ir, AddCtx, Ctx};
+use fil_ir::{self as ir, AddCtx, CompType, Ctx};
 use fil_utils as utils;
 use itertools::Itertools;
 
@@ -35,11 +35,8 @@ pub struct VisitorData<'comp> {
     /// Map of underlying invokes to new invokes
     pub inv_map: SparseMap<ir::Invoke>,
     /// Map of underlying components and their events/ports to new components
-    pub comp_map: &'comp ir::SparseInfoMap<
-        ir::Component,
-        CompInfo,
-        Underlying<ir::Component>,
-    >,
+    comp_map:
+        ir::SparseInfoMap<ir::Component, CompInfo, Underlying<ir::Component>>,
 }
 
 impl<'comp> VisitorData<'comp> {
@@ -47,7 +44,7 @@ impl<'comp> VisitorData<'comp> {
         comp: &'comp ir::Component,
         typ: ir::CompType,
         attrs: utils::CompAttrs,
-        comp_map: &'comp ir::SparseInfoMap<
+        comp_map: ir::SparseInfoMap<
             ir::Component,
             CompInfo,
             Underlying<ir::Component>,
@@ -63,6 +60,10 @@ impl<'comp> VisitorData<'comp> {
             inv_map: SparseMap::default(),
             comp_map,
         }
+    }
+
+    pub fn comp_info(&self, comp: Underlying<ir::Component>) -> &CompInfo {
+        self.comp_map.get(comp)
     }
 }
 
@@ -418,15 +419,16 @@ where
                      }| {
                         let (evt, comp) = base.take();
                         let base_info = data.comp_map.get(comp.ul());
+                        let base = ir::Foreign::new(
+                            base_info.events.get(evt.ul()).get(),
+                            base_info.comp.get(),
+                        );
 
                         ir::EventBind {
                             delay: self.timesub(delay, data),
                             arg: self.time(arg.ul(), data).get(),
                             info: self.info(info.ul(), data).get(),
-                            base: ir::Foreign::new(
-                                base_info.events.get(evt.ul()).get(),
-                                base_info.comp.get(),
-                            ),
+                            base,
                         }
                     },
                 )
@@ -666,10 +668,37 @@ where
         data.base.add_param_assert(param_asserts);
     }
 
-    fn data(comp: &ir::Component) -> VisitorData<'_>;
+    fn data(
+        comp: &ir::Component,
+        comp_map: ir::SparseInfoMap<
+            ir::Component,
+            CompInfo,
+            Underlying<ir::Component>,
+        >,
+    ) -> VisitorData<'_> {
+        let typ = if comp.is_ext() {
+            CompType::External
+        } else if comp.is_gen() {
+            CompType::Generated
+        } else {
+            CompType::Source
+        };
 
-    fn do_pass(&mut self, comp: &ir::Component) -> ir::Component {
-        let mut data = Self::data(comp);
+        let attrs = comp.attrs.clone();
+
+        VisitorData::new(comp, typ, attrs, comp_map)
+    }
+
+    fn do_pass(
+        &mut self,
+        comp: &ir::Component,
+        comp_map: ir::SparseInfoMap<
+            ir::Component,
+            CompInfo,
+            Underlying<ir::Component>,
+        >,
+    ) -> ir::Component {
+        let mut data = Self::data(comp, comp_map);
 
         self.sig(&mut data);
 
