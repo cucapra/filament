@@ -211,6 +211,7 @@ impl Solve<'_> {
 impl Solve<'_> {
     /// Intern all conditions related to combinational delay
     fn combinational_delays(&mut self) {
+        log::debug!("Calculating combinational delays");
         // Generate the critical path dataflow graph
         let dataflow = CombDataflow::new(self.comp);
 
@@ -319,7 +320,6 @@ impl Solve<'_> {
     /// Returns a binding of parameters to values
     pub fn comp(&mut self) {
         // First, intern all bindings for let = ? parameters and assertions/assumptions
-
         let mut cmds = std::mem::take(&mut self.comp.cmds);
         for cmd in &cmds {
             match cmd {
@@ -336,7 +336,10 @@ impl Solve<'_> {
             }
         }
 
+        // Combinational delays requires access to the commands
+        std::mem::swap(&mut self.comp.cmds, &mut cmds);
         self.combinational_delays();
+        std::mem::swap(&mut self.comp.cmds, &mut cmds);
 
         // Solve the scheduling problem
         let minimize = self.sol.atom("minimize");
@@ -433,6 +436,7 @@ impl Solve<'_> {
             expr.is_none(),
             "Found let binding with non-? expression when scheduling."
         );
+
         self.param(*param);
     }
 

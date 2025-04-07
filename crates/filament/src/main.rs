@@ -83,6 +83,7 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         ip::IntervalCheck,
         ip::PhantomCheck,
         ip::InferAssumes,
+        ip::PropogateCombDelays,
         ip::BuildDomination
     }
     if !opts.unsafe_skip_discharge {

@@ -30,17 +30,29 @@ impl CombDataflow {
                     let outputs = idx.outputs(comp).collect_vec();
 
                     for &output in &outputs {
-                        delays.insert(output, NotNan::new(
-                            *comp.port_attrs
+                        let delay = *comp
+                            .port_attrs
                             .get(output)
                             .get(utils::PortFloat::CombDelay)
-                            .unwrap_or_else(
-                                || panic!("Combinational delay not found for port {}", comp.display(output))
-                            ))
-                                .expect(
-                                    "Combinational delays should not be NaN",
-                                ))
-                                ;
+                            .unwrap_or_else(|| {
+                                panic!(
+                                    "Combinational delay not found for port {}",
+                                    comp.display(output)
+                                )
+                            });
+
+                        log::trace!(
+                            "Combinational delay for {}: {}",
+                            comp.display(output),
+                            delay
+                        );
+
+                        delays.insert(
+                            output,
+                            NotNan::new(delay).expect(
+                                "Combinational delays should not be NaN",
+                            ),
+                        );
                     }
 
                     // all outputs are dependent on all inputs
@@ -148,7 +160,9 @@ impl CombDataflow {
 
         let mut chain = vec![];
 
-        for &(succ, succ_idx) in self.edges.get(&current).unwrap().iter() {
+        for &(succ, succ_idx) in
+            self.edges.get(&current).unwrap_or(&HashSet::new()).iter()
+        {
             let delay: f64 = (*self.delays.get(succ)).into();
             if path.contains(&(succ, succ_idx)) {
                 unreachable!("Cycle detected in dataflow graph");
