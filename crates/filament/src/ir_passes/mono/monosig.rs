@@ -891,7 +891,7 @@ impl MonoSig {
             range: range.clone(), // placeholder
         };
 
-        let mono_width = self.expr(underlying, width.ul(), pass);
+        let mono_width = self.expr(underlying, width.ul(), pass).unwrap();
         mono_liveness.lens = lens
             .iter()
             .map(|len| {
@@ -906,7 +906,7 @@ impl MonoSig {
 
         let port = self.base.get_mut(new_port);
         port.live = mono_liveness; // update
-        port.width = mono_width.unwrap().get(); // update
+        port.width = mono_width.get(); // update
         port.owner = mono_owner; // update
     }
 }

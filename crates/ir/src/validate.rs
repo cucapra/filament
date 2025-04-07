@@ -60,6 +60,7 @@ impl<'a> Validate<'a> {
     /// (3) All time expressions are bound
     /// (4) All parameters mentioned in the range and the width are bound
     fn port(&self, pidx: ir::PortIdx) {
+        log::trace!("Validating port {}", self.comp.display(pidx));
         let ir::Port {
             owner, live, width, ..
         } = self.comp.get(pidx);

@@ -96,6 +96,10 @@ impl BaseComp {
         &self.0
     }
 
+    pub fn comp_mut(&mut self) -> &mut ir::Component {
+        &mut self.0
+    }
+
     pub fn set_unannotated_ports(&mut self, other: Vec<(ast::Id, u64)>) {
         self.0.unannotated_ports = Box::new(other);
     }

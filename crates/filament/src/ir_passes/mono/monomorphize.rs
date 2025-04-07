@@ -5,7 +5,7 @@ use super::{
     Underlying, UnderlyingComp,
 };
 use fil_gen as fgen;
-use fil_ir::{self as ir, Ctx, IndexStore};
+use fil_ir::{self as ir, Ctx, DisplayCtx, IndexStore};
 use ir::{AddCtx, EntryPoint};
 use std::collections::HashMap;
 
@@ -162,6 +162,9 @@ impl Monomorphize<'_> {
             mono_comp.push_binding(param.ul(), v);
         }
 
+        // Monomorphize the component's body
+        mono_comp.body();
+
         // Monomorphize the siganture of the component using the parameters
         mono_comp.sig_complete_mono();
         let mut comp = mono_comp.take();
@@ -223,7 +226,7 @@ impl Monomorphize<'_> {
 
     /// Monomorphize a component and return its index in the new context.
     pub fn monomorphize(&mut self, ck: CompKey) -> Base<ir::Component> {
-        log::debug!("Monomorphizing `{}'", ck.comp.idx());
+        log::debug!("Monomorphizing `{}'", self.old.display(ck.comp.idx()));
         let CompKey { comp, params } = ck;
         let underlying = self.old.get(comp.idx());
 
@@ -267,6 +270,7 @@ impl Monomorphize<'_> {
         self.processed.insert(n_ck, new_comp);
 
         // return the `base` index so we can update the instance
+        log::debug!("Finished `{}'", self.old.display(ck.comp.idx()));
         new_comp
     }
 }

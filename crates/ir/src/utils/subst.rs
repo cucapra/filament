@@ -23,6 +23,15 @@ impl<K: Eq + std::fmt::Debug, V: std::fmt::Debug> std::fmt::Debug
     }
 }
 
+impl<K, V> Default for Bind<K, V>
+where
+    K: Eq,
+{
+    fn default() -> Self {
+        Self(Vec::new())
+    }
+}
+
 impl<K, V> Bind<K, V>
 where
     K: Eq,

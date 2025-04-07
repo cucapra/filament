@@ -1,21 +1,39 @@
-use fil_ir::{self as ir, AddCtx, Ctx};
+use fil_ir::{self as ir, AddCtx, Ctx, MutCtx};
+use itertools::Itertools;
 pub struct Concretize<'comp> {
     comp: &'comp mut ir::Component,
     binding: ir::Bind<ir::ParamIdx, u64>,
 
-    expr_map: ir::DenseIndexInfo<ir::Expr, ir::ExprIdx>,
-    prop_map: ir::DenseIndexInfo<ir::Prop, ir::PropIdx>,
-    time_map: ir::DenseIndexInfo<ir::Time, ir::TimeIdx>,
-
-    inst_map: ir::DenseIndexInfo<ir::Instance, ir::InstIdx>,
-    inv_map: ir::DenseIndexInfo<ir::Invoke, ir::InvIdx>,
-    port_map: ir::DenseIndexInfo<ir::Port, ir::PortIdx>,
+    expr_map: ir::SparseInfoMap<ir::Expr, ir::ExprIdx>,
+    prop_map: ir::SparseInfoMap<ir::Prop, ir::PropIdx>,
+    time_map: ir::SparseInfoMap<ir::Time, ir::TimeIdx>,
 }
 
-impl Concretize<'_> {}
+impl<'comp> Concretize<'comp> {
+    pub fn new(comp: &'comp mut ir::Component) -> Self {
+        Self {
+            comp,
+            binding: Default::default(),
+            expr_map: Default::default(),
+            prop_map: Default::default(),
+            time_map: Default::default(),
+        }
+    }
+
+    /// Take the binding map
+    pub fn take(self) -> ir::Bind<ir::ParamIdx, u64> {
+        self.binding
+    }
+}
 
 impl Concretize<'_> {
-    pub fn comp(&mut self) {}
+    pub fn comp(&mut self) {
+        // Monomorphize commands
+        self.comp.cmds = self.commands(self.comp.cmds.clone());
+
+        // Monomorphize the signature
+        self.sig();
+    }
 
     fn param(&mut self, param: ir::ParamIdx) -> ir::ExprIdx {
         if let Some(v) = self.binding.get(&param) {
@@ -129,6 +147,175 @@ impl Concretize<'_> {
                 l: self.time(l),
                 r: self.time(r),
             },
+        }
+    }
+
+    fn event(&mut self, event: ir::EventIdx) {
+        let ir::Event { delay, .. } = self.comp.get(event).clone();
+
+        let delay = self.timesub(delay);
+
+        self.comp.get_mut(event).delay = delay;
+    }
+
+    fn port(&mut self, port: ir::PortIdx) {
+        let ir::Port {
+            width,
+            live: ir::Liveness { lens, range, .. },
+            ..
+        } = self.comp.get(port).clone();
+
+        let width = self.expr(width);
+
+        let lens = lens.into_iter().map(|lens| self.expr(lens)).collect_vec();
+        let range = ir::Range {
+            start: self.time(range.start),
+            end: self.time(range.end),
+        };
+
+        let p = self.comp.get_mut(port);
+
+        p.width = width;
+        p.live.lens = lens;
+        p.live.range = range;
+    }
+
+    fn commands(&mut self, cmds: Vec<ir::Command>) -> Vec<ir::Command> {
+        let mut new_cmds = Vec::new();
+        for cmd in cmds {
+            let cmds = match cmd {
+                ir::Command::Instance(inst) => {
+                    let ir::Instance { args, lives, .. } =
+                        self.comp.get(inst).clone();
+                    let args = args
+                        .into_iter()
+                        .map(|arg| self.expr(arg))
+                        .collect_vec()
+                        .into_boxed_slice();
+                    let lives = lives
+                        .into_iter()
+                        .map(|ir::Range { start, end }| {
+                            let start = self.time(start);
+                            let end = self.time(end);
+                            ir::Range { start, end }
+                        })
+                        .collect_vec();
+
+                    let m = self.comp.get_mut(inst);
+
+                    m.args = args;
+                    m.lives = lives;
+
+                    Some(inst.into())
+                }
+                ir::Command::Invoke(invoke) => {
+                    let ir::Invoke { events, ports, .. } =
+                        self.comp.get(invoke).clone();
+
+                    for port in ports {
+                        self.port(port);
+                    }
+
+                    let events = events
+                        .into_iter()
+                        .map(
+                            |ir::EventBind {
+                                 arg,
+                                 info,
+                                 base,
+                                 delay,
+                             }| {
+                                ir::EventBind {
+                                    arg: self.time(arg),
+                                    delay: self.timesub(delay),
+                                    info,
+                                    base,
+                                }
+                            },
+                        )
+                        .collect_vec();
+
+                    let n = self.comp.get_mut(invoke);
+
+                    n.events = events;
+
+                    Some(invoke.into())
+                }
+                ir::Command::BundleDef(port) => {
+                    self.port(port);
+                    Some(port.into())
+                }
+                ir::Command::Connect(ir::Connect {
+                    mut src,
+                    mut dst,
+                    info,
+                }) => {
+                    src.ranges = src
+                        .ranges
+                        .into_iter()
+                        .map(|(start, end)| {
+                            let start = self.expr(start);
+                            let end = self.expr(end);
+                            (start, end)
+                        })
+                        .collect_vec();
+
+                    dst.ranges = dst
+                        .ranges
+                        .into_iter()
+                        .map(|(start, end)| {
+                            let start = self.expr(start);
+                            let end = self.expr(end);
+                            (start, end)
+                        })
+                        .collect_vec();
+
+                    Some(ir::Connect { src, dst, info }.into())
+                }
+                ir::Command::Let(ir::Let { param, expr }) => {
+                    if let Some(expr) = expr {
+                        let expr = self.expr(expr);
+                        self.binding.push(param, expr.concrete(self.comp));
+                    }
+
+                    None
+                }
+                ir::Command::Exists(ir::Exists { param, expr }) => {
+                    let v = self.expr(expr).concrete(self.comp);
+
+                    self.binding.push(param, v);
+
+                    None
+                }
+                ir::Command::Fact(ir::Fact { prop, reason, .. }) => {
+                    // Make everything an assert after monomorphize
+                    let prop = self.prop(prop);
+                    self.comp.assert(prop, reason)
+                }
+                ir::Command::ForLoop(_) | fil_ir::Command::If(_) => {
+                    unreachable!(
+                        "Forloops and Ifs should have been monomorphized away."
+                    )
+                }
+            };
+
+            new_cmds.extend(cmds);
+        }
+
+        new_cmds
+    }
+
+    fn sig(&mut self) {
+        // Monomorphize events
+        for event in self.comp.events().idx_iter() {
+            self.event(event);
+        }
+
+        // Monomorphize signature ports
+        for port in self.comp.ports().idx_iter() {
+            if self.comp.get(port).is_sig() {
+                self.port(port);
+            }
         }
     }
 }

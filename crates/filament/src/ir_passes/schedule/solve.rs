@@ -1,7 +1,7 @@
 use super::CombDataflow;
 use easy_smt::{self as smt, SExpr, SExprData};
 use fil_ir::{self as ir, Ctx, DisplayCtx};
-use fil_utils as utils;
+use fil_utils::{self as utils, AttrCtx};
 use itertools::Itertools;
 use std::{collections::HashMap, fs};
 
@@ -39,7 +39,7 @@ pub struct Solve<'comp> {
     minimize_expr: smt::SExpr,
 
     /// The component to schedule
-    comp: &'comp ir::Component,
+    comp: &'comp mut ir::Component,
 
     /// Map from [ir::PropIdx] to [SExpr]
     prop_map: ir::SparseInfoMap<ir::Prop, SExpr>,
@@ -55,8 +55,7 @@ pub struct Solve<'comp> {
 
 impl<'comp> Solve<'comp> {
     pub fn new(
-        comp: &'comp ir::Component,
-        goal: u64,
+        comp: &'comp mut ir::Component,
         solver_file: Option<&String>,
     ) -> Self {
         // We can only schedule components with one single event!
@@ -79,7 +78,11 @@ impl<'comp> Solve<'comp> {
 
         sol.push_many(1).unwrap();
 
-        let goal = goal.into();
+        let goal = SchedulingGoal::from(
+            *comp.attrs.get(utils::CompNum::Schedule).unwrap_or_else(|| {
+                unreachable!("Attempted to schedule non-schedulable component.")
+            }),
+        );
 
         Self {
             comp,
@@ -207,13 +210,9 @@ impl Solve<'_> {
 
 impl Solve<'_> {
     /// Intern all conditions related to combinational delay
-    pub fn combinational_delays(
-        &mut self,
-        comp: &ir::Component,
-        ctx: &ir::Context,
-    ) {
+    fn combinational_delays(&mut self) {
         // Generate the critical path dataflow graph
-        let dataflow = CombDataflow::new(comp, ctx);
+        let dataflow = CombDataflow::new(self.comp);
 
         for path in dataflow.critical_paths() {
             // If the path is length 0 or 1 this is a problem because it means
@@ -318,9 +317,11 @@ impl Solve<'_> {
 
     /// Solve the scheduling problem
     /// Returns a binding of parameters to values
-    pub fn comp(&mut self) -> ir::Bind<ir::ParamIdx, u64> {
+    pub fn comp(&mut self) {
         // First, intern all bindings for let = ? parameters and assertions/assumptions
-        for cmd in &self.comp.cmds {
+
+        let mut cmds = std::mem::take(&mut self.comp.cmds);
+        for cmd in &cmds {
             match cmd {
                 ir::Command::Let(l) => self.let_(l),
                 ir::Command::Fact(ir::Fact { prop, .. }) => {
@@ -334,6 +335,8 @@ impl Solve<'_> {
                 _ => {}
             }
         }
+
+        self.combinational_delays();
 
         // Solve the scheduling problem
         let minimize = self.sol.atom("minimize");
@@ -406,15 +409,21 @@ impl Solve<'_> {
             })
             .collect();
 
-        log::trace!("Bindings: {:?}", bindings);
+        log::trace!("Scheduled component with bindings: {:?}", bindings);
 
-        ir::Bind::new(self.comp.cmds.iter().filter_map(|cmd| match cmd {
-            ir::Command::Let(ir::Let { param, .. }) => {
-                let value = *bindings.get(&self.param_name(*param)).unwrap();
-                Some((*param, value))
+        for cmd in cmds.iter_mut() {
+            if let ir::Command::Let(ir::Let { param, .. }) = cmd {
+                let name = self.param_name(*param);
+                if let Some(value) = bindings.get(&name) {
+                    *cmd = ir::Command::Let(ir::Let {
+                        param: *param,
+                        expr: Some(self.comp.num(*value)),
+                    });
+                }
             }
-            _ => None,
-        }))
+        }
+
+        self.comp.cmds = cmds;
     }
 
     fn let_(&mut self, l: &ir::Let) {

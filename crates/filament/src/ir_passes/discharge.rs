@@ -7,7 +7,7 @@ use codespan_reporting::{diagnostic as cr, term};
 use easy_smt as smt;
 use fil_ast as ast;
 use fil_ir::{self as ir, Ctx, DisplayCtx};
-use fil_utils::GlobalPositionTable;
+use fil_utils::{self as utils, AttrCtx, GlobalPositionTable};
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::{fs, iter};
@@ -76,9 +76,6 @@ pub struct Discharge {
 
     // Defined names. These are sparse in case certain parameters or events have been invalidated.
     param_map: ir::SparseInfoMap<ir::Param, smt::SExpr>,
-    // Assumptions associated to let = ? parameters. This is necessary because these
-    // parameters should be quantified using forall, rather than exists.
-    scheduled_params: ir::SparseInfoMap<ir::Param, smt::SExpr>,
     ev_map: ir::SparseInfoMap<ir::Event, smt::SExpr>,
     // Composite expressions
     expr_map: ir::SparseInfoMap<ir::Expr, smt::SExpr>,
@@ -216,23 +213,18 @@ impl Discharge {
     fn eq(&self, l: smt::SExpr, r: smt::SExpr) -> smt::SExpr {
         self.sol.eq(l, r)
     }
-    /// [SExpr] describing that the expression is not overflowing
+    /// Assert that the expression is not overflowing
     /// e >= 0 && e < 2^bvsize
-    fn overflow_expr(&mut self, e: smt::SExpr) -> Option<smt::SExpr> {
-        let v = self.bv_size?;
+    fn overflow_assert(&mut self, e: smt::SExpr) {
+        let Some(v) = self.bv_size else {
+            return;
+        };
         let max = self.num((1 << v) - 1);
         let zero = self.num(0);
         let ge_zero = self.gte(e, zero);
         let lt_max = self.gt(max, e);
         let and = self.sol.and(ge_zero, lt_max);
-        Some(and)
-    }
-
-    /// Assert the overflow expression if it exists
-    fn overflow_assert(&mut self, e: smt::SExpr) {
-        if let Some(s) = self.overflow_expr(e) {
-            self.sol.assert(s).unwrap();
-        }
+        self.sol.assert(and).unwrap();
     }
 }
 
@@ -248,7 +240,6 @@ impl Construct for Discharge {
             show_models: opts.show_models,
             func_map: Default::default(),
             param_map: Default::default(),
-            scheduled_params: Default::default(),
             prop_map: Default::default(),
             time_map: Default::default(),
             ev_map: Default::default(),
@@ -469,10 +460,6 @@ impl Discharge {
                 self.diagnostics.push(diag);
                 return;
             };
-            log::debug!(
-                "Cannot prove constraint: {}",
-                ctx.display(fact.prop.consequent(ctx))
-            );
             let mut diag = reason.diag(ctx);
             if self.show_models {
                 diag = reason.diag(ctx).with_notes(vec![format!(
@@ -593,6 +580,11 @@ impl Visitor for Discharge {
     }
 
     fn start(&mut self, data: &mut VisitorData) -> Action {
+        if data.comp.attrs.has(utils::CompNum::Schedule) {
+            // Scheduled components will be guaranteed accurate by the scheduling pass.
+            return Action::Stop;
+        }
+
         self.to_prove = HoistFacts::hoist(&mut data.comp);
 
         for fact in &self.to_prove {
@@ -602,24 +594,12 @@ impl Visitor for Discharge {
         let comp = &data.comp;
         // Declare all parameters
         let int = self.sort();
-        for (idx, p) in data.comp.params().iter() {
-            let sexp = if let ir::ParamOwner::Let { bind: None } = &p.owner {
-                let sexp = self.sol.atom(self.fmt_param(idx, comp));
-                if let Some(s) = self.overflow_expr(sexp) {
-                    // For let = ? bindings, this should go into the scheduled_params map
-                    self.scheduled_params.push(idx, s);
-                }
-
-                sexp
-            } else {
-                let sexp = self
-                    .sol
-                    .declare_fun(self.fmt_param(idx, comp), vec![], int)
-                    .unwrap();
-                self.overflow_assert(sexp);
-
-                sexp
-            };
+        for (idx, _) in data.comp.params().iter() {
+            let sexp = self
+                .sol
+                .declare_fun(self.fmt_param(idx, comp), vec![], int)
+                .unwrap();
+            self.overflow_assert(sexp);
             self.param_map.push(idx, sexp);
         }
 

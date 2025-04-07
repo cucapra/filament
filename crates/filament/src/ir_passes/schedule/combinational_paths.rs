@@ -18,7 +18,7 @@ pub struct CombDataflow {
 }
 
 impl CombDataflow {
-    pub fn new(comp: &ir::Component, ctx: &ir::Context) -> Self {
+    pub fn new(comp: &ir::Component) -> Self {
         let mut edges: HashMap<BundleIdx, HashSet<BundleIdx>> = HashMap::new();
         let mut delays: ir::DenseIndexInfo<ir::Port, NotNan<f64>> =
             ir::DenseIndexInfo::with_default(comp.ports().len());
@@ -30,37 +30,17 @@ impl CombDataflow {
                     let outputs = idx.outputs(comp).collect_vec();
 
                     for &output in &outputs {
-                        let ir::Port {
-                            owner: ir::PortOwner::Inv { base, .. },
-                            ..
-                        } = comp.get(output)
-                        else {
-                            unreachable!(
-                                "Port {} was not an invocation port",
-                                comp.display(output)
-                            );
-                        };
-
-                        // add the combinational delay to the output ports
-                        let foreign_idx = base.owner();
-
                         delays.insert(output, NotNan::new(
-                                base.apply(
-                                    |foreign_port, foreign_comp| {
-                                        *foreign_comp
-                                            .port_attrs
-                                            .get(foreign_port)
-                                            .get(utils::PortFloat::CombDelay)
-                                            .unwrap_or_else(
-                                                || panic!("Combinational delay not found for port {} in comp {}", foreign_comp.display(foreign_port), ctx.display(foreign_idx))
-                                            )
-                                        },
-                                        ctx,
-                                    )
-                                )
+                            *comp.port_attrs
+                            .get(output)
+                            .get(utils::PortFloat::CombDelay)
+                            .unwrap_or_else(
+                                || panic!("Combinational delay not found for port {}", comp.display(output))
+                            ))
                                 .expect(
                                     "Combinational delays should not be NaN",
-                                ));
+                                ))
+                                ;
                     }
 
                     // all outputs are dependent on all inputs
