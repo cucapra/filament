@@ -73,7 +73,7 @@ impl<'ctx, 'comp> Retime<'ctx, 'comp> {
                     port: dst_port,
                     ranges: dst_ranges,
                 },
-            ..
+            info,
         } = con;
 
         let src_indices = utils::all_indices(
@@ -93,11 +93,9 @@ impl<'ctx, 'comp> Retime<'ctx, 'comp> {
         let mut cmds = Vec::new();
 
         for (src_index, dst_index) in src_indices.into_iter().zip(dst_indices) {
-            cmds.extend(
-                self.invoke_register(
-                    *src_port, *dst_port, src_index, dst_index,
-                ),
-            )
+            cmds.extend(self.invoke_register(
+                *src_port, *dst_port, src_index, dst_index, *info,
+            ))
         }
 
         cmds
@@ -109,6 +107,7 @@ impl<'ctx, 'comp> Retime<'ctx, 'comp> {
         dstidx: ir::PortIdx,
         src_index: Vec<u64>,
         dst_index: Vec<u64>,
+        connect_info: ir::InfoIdx,
     ) -> Vec<ir::Command> {
         let ir::Liveness {
             idxs: src_params,
@@ -195,6 +194,8 @@ impl<'ctx, 'comp> Retime<'ctx, 'comp> {
             let delay =
                 self.comp.add(ir::Expr::Concrete(dst_start - src_start));
 
+            let live = self.comp.add(ir::Expr::Concrete(dst_end - dst_start));
+
             let instname = format!(
                 "retime_{}_{}_{}_{}_",
                 self.comp.display(srcidx),
@@ -205,11 +206,7 @@ impl<'ctx, 'comp> Retime<'ctx, 'comp> {
 
             let inst = ir::Instance {
                 comp: self.delay_register,
-                args: Box::new([
-                    width,                                                  // WIDTH
-                    delay, // DELAY
-                    self.comp.add(ir::Expr::Concrete(dst_end - dst_start)), // LIVE
-                ]),
+                args: Box::new([width, delay, live]),
                 lives: Vec::default(),
                 params: Vec::default(),
                 info: self.comp.add(ir::Info::instance(
@@ -236,7 +233,7 @@ impl<'ctx, 'comp> Retime<'ctx, 'comp> {
                 inst,
                 events: vec![ir::EventBind {
                     arg: invoke_time,
-                    delay: ir::TimeSub::Unit(delay),
+                    delay: ir::TimeSub::Unit(live),
                     info: self.comp.add(ir::Info::event_bind(
                         GPosIdx::UNKNOWN,
                         GPosIdx::UNKNOWN,
@@ -380,10 +377,7 @@ impl<'ctx, 'comp> Retime<'ctx, 'comp> {
                         port: inv_port_in,
                         ranges: zero_one_range.clone(),
                     },
-                    info: self.comp.add(ir::Info::connect(
-                        GPosIdx::UNKNOWN,
-                        GPosIdx::UNKNOWN,
-                    )),
+                    info: connect_info,
                 }
                 .into(),
                 ir::Connect {
@@ -395,10 +389,7 @@ impl<'ctx, 'comp> Retime<'ctx, 'comp> {
                         port: dstidx,
                         ranges: zero_one_range,
                     },
-                    info: self.comp.add(ir::Info::connect(
-                        GPosIdx::UNKNOWN,
-                        GPosIdx::UNKNOWN,
-                    )),
+                    info: connect_info,
                 }
                 .into(),
             ]
@@ -414,10 +405,7 @@ impl<'ctx, 'comp> Retime<'ctx, 'comp> {
                         port: dstidx,
                         ranges: dst_ranges,
                     },
-                    info: self.comp.add(ir::Info::connect(
-                        GPosIdx::UNKNOWN,
-                        GPosIdx::UNKNOWN,
-                    )),
+                    info: connect_info,
                 }
                 .into(),
             ]

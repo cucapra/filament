@@ -12,8 +12,27 @@ pub struct Validate<'a> {
 impl<'a> Validate<'a> {
     /// Check a context
     pub fn context(ctx: &'a ir::Context) {
-        for (_, comp) in ctx.iter() {
-            Self { ctx, comp }.comp()
+        for (idx, comp) in ctx.iter() {
+            Self { ctx, comp }.comp();
+
+            // If this component is an external, make sure it has a
+            // source in the context's extern map
+            if comp.is_ext() {
+                assert!(
+                    ctx.externals.values().flatten().any(|comp| idx == *comp),
+                    "Component {} is external, but not found in the externals map",
+                    ctx.display(idx)
+                );
+            }
+        }
+
+        // Conversely, if a component is in the externals map, it must be external
+        for comp in ctx.externals.values().flatten() {
+            assert!(
+                ctx.get(*comp).is_ext(),
+                "Component {} is in the externals map, but not marked as external",
+                ctx.display(*comp)
+            );
         }
     }
 

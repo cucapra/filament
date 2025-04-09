@@ -427,6 +427,9 @@ impl Solve<'_> {
         }
 
         self.comp.cmds = cmds;
+
+        // This component no longer needs to be scheduled!
+        self.comp.attrs.remove(utils::CompNum::Schedule);
     }
 
     fn let_(&mut self, l: &ir::Let) {
