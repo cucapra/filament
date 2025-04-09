@@ -29,5 +29,5 @@ pub use mono::Monomorphize;
 pub use phantom_check::PhantomCheck;
 pub use port_delays::PropogateCombDelays;
 pub use prop_simplify::Simplify;
-pub use schedule::{Retime, Solve};
+pub use schedule::schedule;
 pub use type_check::TypeCheck;

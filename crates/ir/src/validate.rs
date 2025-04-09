@@ -59,6 +59,7 @@ impl<'a> Validate<'a> {
     /// (2) The port's owner is defined in the component and the owner says it owns the port
     /// (3) All time expressions are bound
     /// (4) All parameters mentioned in the range and the width are bound
+    /// (5) It has a corresponding entry in port attributes of the component
     fn port(&self, pidx: ir::PortIdx) {
         log::trace!("Validating port {}", self.comp.display(pidx));
         let ir::Port {
@@ -137,6 +138,13 @@ impl<'a> Validate<'a> {
         for len in lens {
             self.expr(*len);
         }
+
+        // check (5)
+        assert!(
+            self.comp.port_attrs.contains(pidx),
+            "Port {} was missing attributes",
+            self.comp.display(pidx)
+        );
     }
 
     /// An invoke is valid if:

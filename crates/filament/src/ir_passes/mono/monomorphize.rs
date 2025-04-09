@@ -1,4 +1,4 @@
-use crate::cmdline;
+use crate::{cmdline, ir_passes::schedule::create_delay_register};
 
 use super::{
     Base, CompKey, InstanceInfo, IntoBase, IntoUdl, MonoDeferred, MonoSig,
@@ -72,6 +72,8 @@ pub struct Monomorphize<'a> {
     pub ext_map: HashMap<String, Vec<ir::CompIdx>>,
     /// Generator executor
     gen_exec: &'a mut Option<fgen::GenExec>,
+    /// Scheduling register
+    pub scheduling_reg: ir::CompIdx,
 }
 
 impl<'a> Monomorphize<'a> {
@@ -80,8 +82,11 @@ impl<'a> Monomorphize<'a> {
         opts: &'a cmdline::Opts,
         gen_exec: &'a mut Option<fgen::GenExec>,
     ) -> Self {
+        let mut ctx = ir::Context::default();
+        let scheduling_reg = create_delay_register(&mut ctx);
+
         Monomorphize {
-            ctx: ir::Context::default(),
+            ctx,
             old,
             opts,
             externals: vec![],
@@ -89,6 +94,7 @@ impl<'a> Monomorphize<'a> {
             inst_info: HashMap::new(),
             ext_map: HashMap::new(),
             gen_exec,
+            scheduling_reg,
         }
     }
 }
@@ -305,7 +311,7 @@ impl Monomorphize<'_> {
         let new_entrypoint = mono.processed.get(&ck).unwrap();
         // New component no longer has any bindings
         mono.ctx.entrypoint = Some(EntryPoint::new(new_entrypoint.get()));
-        mono.ctx.externals = mono.ext_map;
+        mono.ctx.externals.extend(mono.ext_map);
         ir::Validate::context(&mono.ctx);
         mono.ctx
     }

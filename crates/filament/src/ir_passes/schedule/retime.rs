@@ -1,305 +1,235 @@
-use fil_ast as ast;
-use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, MutCtx};
-use fil_utils::GPosIdx;
-use std::path::PathBuf;
-
-use crate::ir_visitor::{Action, Construct, Visitor};
+use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, Foldable, MutCtx};
+use fil_utils::{self as utils, GPosIdx};
+use itertools::Itertools;
 
 /// Sets the proper FSM Attributes for every component
-pub struct Retime {
+pub struct Retime<'ctx, 'comp>
+where
+    'comp: 'ctx,
+{
+    ctx: &'ctx ir::Context,
+
+    comp: &'comp mut ir::Component,
+
     /// Retiming register
     delay_register: ir::CompIdx,
+
+    binding: ir::Bind<ir::ParamIdx, ir::ExprIdx>,
 }
 
-impl Retime {
-    pub fn create_delay_register(ctx: &mut ir::Context) -> ir::CompIdx {
-        let mut sv_file = <PathBuf as From<_>>::from(file!());
-        sv_file.pop();
-        sv_file.push("schedule.sv");
-
-        log::debug!(
-            "Adding external scheduling register from {}",
-            sv_file.display()
-        );
-
-        // Next, build the external component
-        let mut comp =
-            ir::Component::new(ir::CompType::External, Default::default());
-
-        let mut src_info =
-            ir::InterfaceSrc::new("__SchedulingDelayRegister".into(), None);
-
-        // Set up parameters to the component
-
-        let width = comp.add(ir::Info::param("WIDTH".into(), GPosIdx::UNKNOWN));
-        let width = comp.add(ir::Param::new(ir::ParamOwner::Sig, width));
-
-        let delay = comp.add(ir::Info::param("DELAY".into(), GPosIdx::UNKNOWN));
-        let delay = comp.add(ir::Param::new(ir::ParamOwner::Sig, delay));
-
-        let live = comp.add(ir::Info::param("LIVE".into(), GPosIdx::UNKNOWN));
-        let live = comp.add(ir::Param::new(ir::ParamOwner::Sig, live));
-
-        // Add the parameters to the component
-        src_info.params.push(width, "WIDTH".into());
-        src_info.params.push(delay, "DELAY".into());
-        src_info.params.push(live, "LIVE".into());
-
-        // Intern the proposition that LIVE >= 1
-        let live_expr = comp.add(ir::Expr::Param(live));
-        let live_prop = ir::Prop::Cmp(ir::CmpOp::gte(
-            live_expr,
-            comp.add(ir::Expr::Concrete(1)),
-        ));
-        let live_prop = comp.add(live_prop);
-        let live_info = comp.add(ir::Info::assert(ir::info::Reason::misc(
-            "Signature assumption",
-            GPosIdx::UNKNOWN,
-        )));
-
-        comp.add_param_assert([(live_prop, GPosIdx::UNKNOWN)]);
-        comp.param_args = Box::new([width, delay, live]);
-
-        let live_assumption = comp.assume(live_prop, live_info);
-        comp.cmds.extend(live_assumption);
-
-        let width = comp.add(ir::Expr::Param(width));
-        let delay = comp.add(ir::Expr::Param(delay));
-        let live = live_expr;
-
-        // Set up the event of the component
-        let event = comp.add(ir::Info::event(
-            "G".into(),
-            GPosIdx::UNKNOWN,
-            GPosIdx::UNKNOWN,
-            Some(("write_en".into(), GPosIdx::UNKNOWN)),
-        ));
-        let event = comp.add(ir::Event {
-            delay: ir::TimeSub::Unit(live),
-            info: event,
-            has_interface: true,
-        });
-        src_info.events.push(event, "G".into());
-        src_info.interface_ports.push(event, "write_en".into());
-        comp.event_args = Box::new([event]);
-
-        // Concrete expressions
-        let zero = comp.add(ir::Expr::Concrete(0));
-        let one = comp.add(ir::Expr::Concrete(1));
-        let delay_1 = comp.add(ir::Expr::Bin {
-            op: ast::Op::Add,
-            lhs: delay,
-            rhs: live,
-        });
-        // Set up ports to the component
-
-        // clk and reset ports are unannotated
-        comp.unannotated_ports =
-            Box::new(vec![("clk".into(), 1), ("reset".into(), 1)]);
-
-        // input port
-        let input = ir::Port {
-            owner: ir::PortOwner::Sig {
-                dir: ir::Direction::Out,
-            },
-            width,
-            live: ir::Liveness {
-                idxs: vec![],
-                lens: vec![comp.add(ir::Expr::Concrete(1))],
-                range: ir::Range {
-                    start: comp.add(ir::Time {
-                        event,
-                        offset: zero,
-                    }),
-                    end: comp.add(ir::Time { event, offset: one }),
-                },
-            },
-            info: comp.add(ir::Info::port(
-                "in".into(),
-                GPosIdx::UNKNOWN,
-                GPosIdx::UNKNOWN,
-                GPosIdx::UNKNOWN,
-            )),
-        };
-        let input = comp.add(input);
-        let input_param = ir::Param {
-            owner: ir::ParamOwner::bundle(input),
-            info: comp.add(ir::Info::param("_".into(), GPosIdx::UNKNOWN)),
-        };
-        let input_param = comp.add(input_param);
-
-        comp.get_mut(input).live.idxs.push(input_param);
-        src_info.ports.push(input, "in".into());
-
-        // output port
-        let output = ir::Port {
-            owner: ir::PortOwner::Sig {
-                dir: ir::Direction::In,
-            },
-            width,
-            live: ir::Liveness {
-                idxs: vec![],
-                lens: vec![comp.add(ir::Expr::Concrete(1))],
-                range: ir::Range {
-                    start: comp.add(ir::Time {
-                        event,
-                        offset: delay,
-                    }),
-                    end: comp.add(ir::Time {
-                        event,
-                        offset: delay_1,
-                    }),
-                },
-            },
-            info: comp.add(ir::Info::port(
-                "out".into(),
-                GPosIdx::UNKNOWN,
-                GPosIdx::UNKNOWN,
-                GPosIdx::UNKNOWN,
-            )),
-        };
-        let output = comp.add(output);
-
-        let output_param = ir::Param {
-            owner: ir::ParamOwner::bundle(output),
-            info: comp.add(ir::Info::param("_".into(), GPosIdx::UNKNOWN)),
-        };
-        let output_param = comp.add(output_param);
-
-        comp.get_mut(output).live.idxs.push(output_param);
-        src_info.ports.push(output, "out".into());
-
-        comp.src_info = Some(src_info);
-        comp.port_attrs = ir::DenseIndexInfo::with_default(comp.ports().len());
-
-        // Add the component to the context
-
-        let compidx = ctx.add(comp);
-
-        // Add the component to the external list
-        let filename = sv_file.to_str().unwrap().to_string();
-        ctx.externals.entry(filename).or_default().push(compidx);
-
-        compidx
+impl<'ctx, 'comp> Retime<'ctx, 'comp> {
+    pub fn new(
+        ctx: &'ctx ir::Context,
+        comp: &'comp mut ir::Component,
+        delay_register: ir::CompIdx,
+    ) -> Self {
+        Self {
+            ctx,
+            comp,
+            delay_register,
+            binding: Default::default(),
+        }
     }
 
-    pub fn event(
-        &self,
-        ctx: &ir::Context,
-    ) -> ir::Foreign<ir::Event, ir::Component> {
+    pub fn comp(&mut self) {
+        let cmds = std::mem::take(&mut self.comp.cmds);
+
+        self.comp.cmds = cmds
+            .into_iter()
+            .flat_map(|cmd| match cmd {
+                ir::Command::Connect(con) => self.connect(&con),
+                ir::Command::Let(l) => {
+                    self.let_(&l);
+                    vec![l.into()]
+                }
+                _ => vec![cmd],
+            })
+            .collect();
+    }
+
+    fn event(&self) -> ir::Foreign<ir::Event, ir::Component> {
         ir::Foreign::new(
-            ctx.get(self.delay_register).event_args[0],
+            self.ctx.get(self.delay_register).event_args[0],
             self.delay_register,
         )
     }
-}
 
-impl Construct for Retime {
-    fn from(_: &crate::cmdline::Opts, ctx: &mut fil_ir::Context) -> Self {
-        let delay_register = Self::create_delay_register(ctx);
+    fn let_(&mut self, l: &ir::Let) {
+        let ir::Let { param, expr } = l;
 
-        Self { delay_register }
+        // add let-bound parameters to the binding for all expressions
+        self.binding.push(*param, expr.unwrap());
     }
 
-    fn clear_data(&mut self) {}
-}
+    fn connect(&mut self, con: &ir::Connect) -> Vec<ir::Command> {
+        let ir::Connect {
+            src:
+                ir::Access {
+                    port: src_port,
+                    ranges: src_ranges,
+                },
+            dst:
+                ir::Access {
+                    port: dst_port,
+                    ranges: dst_ranges,
+                },
+            ..
+        } = con;
 
-impl Visitor for Retime {
-    fn name() -> &'static str {
-        "schedule-retime"
-    }
+        let src_indices = utils::all_indices(
+            src_ranges
+                .iter()
+                .map(|(s, e)| (s.concrete(self.comp), e.concrete(self.comp)))
+                .collect_vec(),
+        );
 
-    fn connect(
-        &mut self,
-        con: &mut fil_ir::Connect,
-        data: &mut crate::ir_visitor::VisitorData,
-    ) -> crate::ir_visitor::Action {
-        let ir::Connect { src, dst, .. } = con;
+        let dst_indices = utils::all_indices(
+            dst_ranges
+                .iter()
+                .map(|(s, e)| (s.concrete(self.comp), e.concrete(self.comp)))
+                .collect_vec(),
+        );
 
-        // Make sure there are no bundles
-        if !(src.is_port(&data.comp)
-            && dst.is_port(&data.comp)
-            && src.port.is_not_bundle(&data.comp)
-            && dst.port.is_not_bundle(&data.comp))
-        {
-            unreachable!(
-                "Port {} and {} are bundles. Bundles are not supported in the scheduling pass. Please run bundle-elim first.",
-                data.comp.display(src.port),
-                data.comp.display(dst.port)
-            );
+        let mut cmds = Vec::new();
+
+        for (src_index, dst_index) in src_indices.into_iter().zip(dst_indices) {
+            cmds.extend(
+                self.invoke_register(
+                    *src_port, *dst_port, src_index, dst_index,
+                ),
+            )
         }
 
-        let srcidx = src.port;
-        let dstidx = dst.port;
+        cmds
+    }
 
-        let src = data.comp.get(src.port);
-        let dst = data.comp.get(dst.port);
+    fn invoke_register(
+        &mut self,
+        srcidx: ir::PortIdx,
+        dstidx: ir::PortIdx,
+        src_index: Vec<u64>,
+        dst_index: Vec<u64>,
+    ) -> Vec<ir::Command> {
+        let ir::Liveness {
+            idxs: src_params,
+            range: src_ranges,
+            ..
+        } = self.comp.get(srcidx).live.clone();
+        let ir::Liveness {
+            idxs: dst_params,
+            range: dst_ranges,
+            ..
+        } = self.comp.get(dstidx).live.clone();
 
         let ir::Range {
             start: src_start,
             end: src_end,
-        } = src.live.range;
+        } = src_ranges;
         let ir::Range {
             start: dst_start,
             end: dst_end,
-        } = dst.live.range;
+        } = dst_ranges;
 
-        let src_start = data.comp.get(src_start).offset.concrete(&data.comp);
-        let src_end = data.comp.get(src_end).offset.concrete(&data.comp);
-        let dst_start = data.comp.get(dst_start).offset.concrete(&data.comp);
-        let dst_end = data.comp.get(dst_end).offset.concrete(&data.comp);
+        let width = self.comp.get(srcidx).width;
+
+        let mut src_bind = ir::Bind::new(
+            src_params
+                .into_iter()
+                .zip(src_index.iter().map(|&v| self.comp.num(v))),
+        );
+        let mut dst_bind = ir::Bind::new(
+            dst_params
+                .into_iter()
+                .zip(dst_index.iter().map(|&v| self.comp.num(v))),
+        );
+
+        // Extend both with the global binding
+        src_bind.extend(self.binding.iter().copied());
+        dst_bind.extend(self.binding.iter().copied());
+
+        // Substitute in the bindings
+        let src_start = src_start
+            .fold_with(self.comp, &mut |param| src_bind.get(&param).copied());
+        let src_end = src_end
+            .fold_with(self.comp, &mut |param| src_bind.get(&param).copied());
+        let dst_start = dst_start
+            .fold_with(self.comp, &mut |param| dst_bind.get(&param).copied());
+        let dst_end = dst_end
+            .fold_with(self.comp, &mut |param| dst_bind.get(&param).copied());
+
+        let src_start = self.comp.get(src_start).offset.concrete(self.comp);
+        let src_end = self.comp.get(src_end).offset.concrete(self.comp);
+        let dst_start = self.comp.get(dst_start).offset.concrete(self.comp);
+        let dst_end = self.comp.get(dst_end).offset.concrete(self.comp);
 
         assert!(
             dst_start >= src_start,
             "Port {} is connected to port {} but the destination port is scheduled before the source port",
-            data.comp.display(srcidx),
-            data.comp.display(dstidx)
+            self.comp.display(srcidx),
+            self.comp.display(dstidx)
         );
+
+        // The range of the new connect
+        // Because we want just one index in the bundle, the ranges should be
+        // `[(a, a+1), (b, b+1), ...]``.
+        let src_ranges = src_index
+            .iter()
+            .map(|&v| (self.comp.num(v), self.comp.num(v + 1)))
+            .collect();
+        let dst_ranges = dst_index
+            .iter()
+            .map(|&v| (self.comp.num(v), self.comp.num(v + 1)))
+            .collect();
 
         // if dst_end happens after src_end, we need to insert a retiming register
         if dst_end > src_end {
             log::debug!(
                 "Retiming register needed for {}: [{}, {}] -> {}: [{}, {}]",
-                data.comp.display(srcidx),
+                self.comp.display(srcidx),
                 src_start,
                 src_end,
-                data.comp.display(dstidx),
+                self.comp.display(dstidx),
                 dst_start,
                 dst_end,
             );
-            let width = src.width;
             let delay =
-                data.comp.add(ir::Expr::Concrete(dst_start - src_start));
+                self.comp.add(ir::Expr::Concrete(dst_start - src_start));
 
-            let instname = format!("retime_{}_{}", srcidx.get(), dstidx.get());
+            let instname = format!(
+                "retime_{}_{}_{}_{}_",
+                self.comp.display(srcidx),
+                src_index.into_iter().join("_"),
+                self.comp.display(dstidx),
+                dst_index.into_iter().join("_"),
+            );
 
             let inst = ir::Instance {
                 comp: self.delay_register,
                 args: Box::new([
                     width,                                                  // WIDTH
                     delay, // DELAY
-                    data.comp.add(ir::Expr::Concrete(dst_end - dst_start)), // LIVE
+                    self.comp.add(ir::Expr::Concrete(dst_end - dst_start)), // LIVE
                 ]),
                 lives: Vec::default(),
                 params: Vec::default(),
-                info: data.comp.add(ir::Info::instance(
+                info: self.comp.add(ir::Info::instance(
                     instname.clone().into(),
                     GPosIdx::UNKNOWN,
                     GPosIdx::UNKNOWN,
                     vec![],
                 )),
             };
-            let inst = data.comp.add(inst);
+            let inst = self.comp.add(inst);
 
-            let event = data.comp.events().idx_iter().next().unwrap();
+            let event = self.comp.events().idx_iter().next().unwrap();
 
             // invoke happens right before src_end
 
             let invoke_time = ir::Time {
                 event,
-                offset: data.comp.add(ir::Expr::Concrete(src_end - 1)),
+                offset: self.comp.add(ir::Expr::Concrete(src_end - 1)),
             };
-            let invoke_time = data.comp.add(invoke_time);
+            let invoke_time = self.comp.add(invoke_time);
 
             // Invoke the instance
             let inv = ir::Invoke {
@@ -307,43 +237,39 @@ impl Visitor for Retime {
                 events: vec![ir::EventBind {
                     arg: invoke_time,
                     delay: ir::TimeSub::Unit(delay),
-                    info: data.comp.add(ir::Info::event_bind(
+                    info: self.comp.add(ir::Info::event_bind(
                         GPosIdx::UNKNOWN,
                         GPosIdx::UNKNOWN,
                     )),
-                    base: self.event(data.ctx()),
+                    base: self.event(),
                 }],
                 ports: vec![], // will be filled in later
-                info: data.comp.add(ir::Info::invoke(
+                info: self.comp.add(ir::Info::invoke(
                     format!("inv_{}", instname).into(),
                     GPosIdx::UNKNOWN,
                     GPosIdx::UNKNOWN,
                     vec![GPosIdx::UNKNOWN],
                 )),
             };
-            let inv = data.comp.add(inv);
+            let inv = self.comp.add(inv);
 
             // create the ports of the invoke
-            let (inst_pidx, inst_param) =
-                data.ctx().get(self.delay_register).inputs().next().unwrap();
+            let (inst_pidx, _) =
+                self.ctx.get(self.delay_register).inputs().next().unwrap();
 
-            let inst_param = inst_param.live.idxs[0];
-
-            let src_end_m_1 = data.comp.add(ir::Expr::Concrete(src_end - 1));
-            let src_end = data.comp.add(ir::Expr::Concrete(src_end));
-            let dst_start = data.comp.add(ir::Expr::Concrete(dst_start));
-            let dst_end = data.comp.add(ir::Expr::Concrete(dst_end));
+            let src_end_m_1 = self.comp.add(ir::Expr::Concrete(src_end - 1));
+            let src_end = self.comp.add(ir::Expr::Concrete(src_end));
+            let dst_start = self.comp.add(ir::Expr::Concrete(dst_start));
+            let dst_end = self.comp.add(ir::Expr::Concrete(dst_end));
 
             let idx_param = ir::Param {
-                owner: ir::ParamOwner::Instance {
-                    inst,
-                    base: ir::Foreign::new(inst_param, self.delay_register),
-                },
-                info: data
+                // Temporary owner until we can create the invoke port
+                owner: ir::ParamOwner::Bundle(ir::Idx::new(0)),
+                info: self
                     .comp
                     .add(ir::Info::param("_".into(), GPosIdx::UNKNOWN)),
             };
-            let idx_param = data.comp.add(idx_param);
+            let idx_param = self.comp.add(idx_param);
 
             let inv_port_in = ir::Port {
                 owner: ir::PortOwner::inv_in(
@@ -353,19 +279,19 @@ impl Visitor for Retime {
                 width,
                 live: ir::Liveness {
                     idxs: vec![idx_param],
-                    lens: vec![data.comp.add(ir::Expr::Concrete(1))],
+                    lens: vec![self.comp.add(ir::Expr::Concrete(1))],
                     range: ir::Range {
-                        start: data.comp.add(ir::Time {
+                        start: self.comp.add(ir::Time {
                             event,
                             offset: src_end_m_1,
                         }),
-                        end: data.comp.add(ir::Time {
+                        end: self.comp.add(ir::Time {
                             event,
                             offset: src_end,
                         }),
                     },
                 },
-                info: data.comp.add(ir::Info::port(
+                info: self.comp.add(ir::Info::port(
                     "in".into(),
                     GPosIdx::UNKNOWN,
                     GPosIdx::UNKNOWN,
@@ -373,27 +299,25 @@ impl Visitor for Retime {
                 )),
             };
 
-            let inv_port_in = data.comp.add(inv_port_in);
+            let inv_port_in = self.comp.add(inv_port_in);
 
-            let (inst_pidx, inst_param) = data
-                .ctx()
-                .get(self.delay_register)
-                .outputs()
-                .next()
-                .unwrap();
+            self.comp
+                .port_attrs
+                .push(inv_port_in, utils::PortAttrs::default());
 
-            let inst_param = inst_param.live.idxs[0];
+            self.comp.get_mut(idx_param).owner =
+                ir::ParamOwner::Bundle(inv_port_in);
+
+            let (inst_pidx, _) =
+                self.ctx.get(self.delay_register).outputs().next().unwrap();
 
             let idx_param = ir::Param {
-                owner: ir::ParamOwner::Instance {
-                    inst,
-                    base: ir::Foreign::new(inst_param, self.delay_register),
-                },
-                info: data
+                owner: ir::ParamOwner::Bundle(ir::Idx::new(0)),
+                info: self
                     .comp
                     .add(ir::Info::param("_".into(), GPosIdx::UNKNOWN)),
             };
-            let idx_param = data.comp.add(idx_param);
+            let idx_param = self.comp.add(idx_param);
 
             let inv_port_out = ir::Port {
                 owner: ir::PortOwner::inv_out(
@@ -403,19 +327,19 @@ impl Visitor for Retime {
                 width,
                 live: ir::Liveness {
                     idxs: vec![idx_param],
-                    lens: vec![data.comp.add(ir::Expr::Concrete(1))],
+                    lens: vec![self.comp.add(ir::Expr::Concrete(1))],
                     range: ir::Range {
-                        start: data.comp.add(ir::Time {
+                        start: self.comp.add(ir::Time {
                             event,
                             offset: dst_start,
                         }),
-                        end: data.comp.add(ir::Time {
+                        end: self.comp.add(ir::Time {
                             event,
                             offset: dst_end,
                         }),
                     },
                 },
-                info: data.comp.add(ir::Info::port(
+                info: self.comp.add(ir::Info::port(
                     "out".into(),
                     GPosIdx::UNKNOWN,
                     GPosIdx::UNKNOWN,
@@ -423,33 +347,40 @@ impl Visitor for Retime {
                 )),
             };
 
-            let inv_port_out = data.comp.add(inv_port_out);
+            let inv_port_out = self.comp.add(inv_port_out);
+
+            self.comp.get_mut(idx_param).owner =
+                ir::ParamOwner::Bundle(inv_port_out);
+
+            self.comp
+                .port_attrs
+                .push(inv_port_out, utils::PortAttrs::default());
 
             // Add the ports to the invoke
 
-            let mut_inv = data.comp.get_mut(inv);
+            let mut_inv = self.comp.get_mut(inv);
             mut_inv.ports = vec![inv_port_in, inv_port_out];
 
             // No bundles, all accesses have range (0, 1)
-            let ranges = vec![(
-                data.comp.add(ir::Expr::Concrete(0)),
-                data.comp.add(ir::Expr::Concrete(1)),
+            let zero_one_range = vec![(
+                self.comp.add(ir::Expr::Concrete(0)),
+                self.comp.add(ir::Expr::Concrete(1)),
             )];
 
             // Add connections to the component
-            Action::Change(vec![
+            vec![
                 inst.into(),
                 inv.into(),
                 ir::Connect {
                     src: ir::Access {
                         port: srcidx,
-                        ranges: ranges.clone(),
+                        ranges: src_ranges,
                     },
                     dst: ir::Access {
                         port: inv_port_in,
-                        ranges: ranges.clone(),
+                        ranges: zero_one_range.clone(),
                     },
-                    info: data.comp.add(ir::Info::connect(
+                    info: self.comp.add(ir::Info::connect(
                         GPosIdx::UNKNOWN,
                         GPosIdx::UNKNOWN,
                     )),
@@ -458,21 +389,38 @@ impl Visitor for Retime {
                 ir::Connect {
                     src: ir::Access {
                         port: inv_port_out,
-                        ranges: ranges.clone(),
+                        ranges: dst_ranges,
                     },
                     dst: ir::Access {
                         port: dstidx,
-                        ranges,
+                        ranges: zero_one_range,
                     },
-                    info: data.comp.add(ir::Info::connect(
+                    info: self.comp.add(ir::Info::connect(
                         GPosIdx::UNKNOWN,
                         GPosIdx::UNKNOWN,
                     )),
                 }
                 .into(),
-            ])
+            ]
         } else {
-            Action::Continue
+            // No register necessary, just create the individual connect
+            vec![
+                ir::Connect {
+                    src: ir::Access {
+                        port: srcidx,
+                        ranges: src_ranges,
+                    },
+                    dst: ir::Access {
+                        port: dstidx,
+                        ranges: dst_ranges,
+                    },
+                    info: self.comp.add(ir::Info::connect(
+                        GPosIdx::UNKNOWN,
+                        GPosIdx::UNKNOWN,
+                    )),
+                }
+                .into(),
+            ]
         }
     }
 }

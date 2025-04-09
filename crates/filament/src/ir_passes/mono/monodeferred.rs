@@ -180,11 +180,12 @@ impl MonoDeferred<'_, '_> {
 
         // Run scheduling pass if needed
         if self.schedule {
-            schedule::Solve::new(
+            schedule::schedule(
+                &self.pass.ctx,
                 self.monosig.base.comp_mut(),
+                self.pass.scheduling_reg,
                 self.pass.opts.solver_replay_file.as_ref(),
-            )
-            .comp();
+            );
         }
 
         // Monomorphize the rest of the signature

@@ -6,7 +6,7 @@ use super::{
 use calyx_frontend as frontend;
 use calyx_ir as calyx;
 use calyx_utils::CalyxResult;
-use fil_ir::{self as ir, Ctx, Traversal};
+use fil_ir::{self as ir, Ctx, DisplayCtx, Traversal};
 use std::{collections::HashSet, convert::identity, path::PathBuf, rc::Rc};
 
 #[derive(Default)]
@@ -191,7 +191,7 @@ impl Compile {
         lib: &calyx::LibrarySignatures,
         name_gen: &NameGenerator,
     ) -> calyx::Component {
-        log::debug!("Compiling component {idx}");
+        log::debug!("Compiling component {}", ctx.display(idx));
         let comp = ctx.get(idx);
 
         assert!(
