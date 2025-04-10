@@ -243,14 +243,20 @@ impl FilamentParser {
             .map_err(|_| input.error("Expected valid float"))
     }
 
+    fn question(input: Node) -> ParseResult<Loc<()>> {
+        let sp = Self::get_span(&input);
+        Ok(Loc::new((), sp))
+    }
+
     // ================ Intervals =====================
     fn time(input: Node) -> ParseResult<Loc<ast::Time>> {
         let sp = Self::get_span(&input);
         match_nodes!(
             input.clone().into_children();
-            [event(ev), expr(sts)] => Ok(Loc::new(ast::Time::new(ev.take(), sts.take()), sp)),
-            [expr(sts), event(ev)] => Ok(Loc::new(ast::Time::new(ev.take(), sts.take()), sp)),
-            [event(ev)] => Ok(Loc::new(ast::Time::new(ev.take(), ast::Expr::default()), sp)),
+            [event(ev), expr(sts)] => Ok(Loc::new(ast::Time::new(ev.take(), Some(sts.take())), sp)),
+            [expr(sts), event(ev)] => Ok(Loc::new(ast::Time::new(ev.take(), Some(sts.take())), sp)),
+            [event(ev)] => Ok(Loc::new(ast::Time::new(ev.take(), Some(ast::Expr::default())), sp)),
+            [event(ev), question(_)] => Ok(Loc::new(ast::Time::new(ev.take(), None), sp)),
             [expr(_)] => {
                 Err(input.error("time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number or sum of parameters"))
             }
@@ -800,14 +806,19 @@ impl FilamentParser {
         Ok(match_nodes!(
             input.into_children();
             [param_var(name), expr(expr)] => ast::ParamLet { name, expr: Some(expr.take()) },
-            [param_var(name)] => ast::ParamLet { name, expr: None }
+            [param_var(name), question(_)] => ast::ParamLet { name, expr: None }
         ))
     }
 
     fn exists(input: Node) -> ParseResult<ast::Exists> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(param), expr(bind)] => ast::Exists { param, bind }
+            [param_var(param), expr(bind)] => {
+                let (bind, pos) = bind.split();
+
+                ast::Exists { param, bind: Loc::new(Some(bind), pos) }
+            },
+            [param_var(param), question(bind)] => ast::Exists {param, bind: Loc::new(None, bind.pos())}
         ))
     }
 

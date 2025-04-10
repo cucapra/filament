@@ -1,0 +1,33 @@
+import "primitives/core.fil";
+
+
+#[schedule=1]
+comp main<'G: 1>(
+  go: interface['G],
+  in0: ['G, 'G+1] 16,
+  in1: ['G, 'G+1] 16,
+  in2: ['G, 'G+1] 16,
+  in3: ['G, 'G+1] 16,
+) -> (
+  out: ['G+L, 'G+L+1] 32
+) with {
+    some L where L > 0;
+}
+{
+    M1 := new MultComb[16]<'G+?>(in0, in1);
+    M2 := new MultComb[16]<'G+?>(in2, in3);
+
+    A1 := new Add[16]<'G+?>(M1.out, M2.out);
+
+    S1C := new Const[16, 3]<'G+?>();
+
+    S1 := new ShiftLeft[16, 16, 32]<'G+?>(A1.out, S1C.out);
+    
+    A2C := new Const[32, 128]<'G+?>();
+
+    A2 := new Add[32]<'G+?>(S1.out, A2C.out);
+
+    out = A2.out;
+
+    L := ?;
+}

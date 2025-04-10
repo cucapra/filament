@@ -367,7 +367,7 @@ impl BuildCtx<'_> {
 
     fn time(&mut self, t: ast::Time) -> BuildRes<TimeIdx> {
         let event = self.get_event(&t.event)?;
-        let offset = self.expr(t.offset)?;
+        let offset = self.expr(t.offset.unwrap())?;
         Ok(self.comp().add(ir::Time { event, offset }))
     }
 
@@ -819,7 +819,7 @@ impl BuildCtx<'_> {
             ast::Command::Invoke(inv) => self.invoke(inv)?,
             ast::Command::Instance(inst) => self.instance(inst)?,
             ast::Command::Exists(ast::Exists { param, bind }) => {
-                let expr = self.expr(bind.inner().clone())?;
+                let expr = self.expr(bind.inner().as_ref().unwrap().clone())?;
                 let owner = OwnedParam::Local(param.copy());
                 let param_expr = self.get_param(&owner, param.pos())?;
                 let Some(p_idx) = param_expr.as_param(self.comp()) else {

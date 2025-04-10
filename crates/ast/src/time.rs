@@ -7,39 +7,55 @@ pub struct Time {
     /// The event for the time expression
     pub event: Id,
     /// The offsets for the time expression
-    pub offset: Expr,
+    /// May be `None` if we have a 'G + ? binding.
+    pub offset: Option<Expr>,
 }
 
 impl Time {
-    pub fn new(event: Id, offset: Expr) -> Self {
+    pub fn new(event: Id, offset: Option<Expr>) -> Self {
         Self { event, offset }
     }
 
     /// Get the offset associated with this time expression
     pub fn offset(&self) -> &Expr {
-        &self.offset
+        self.offset.as_ref().unwrap()
     }
 
     /// Unit time expression that occurs when the event occurs
     pub fn unit(event: Id, state: u64) -> Self {
         Time {
             event,
-            offset: Expr::concrete(state),
+            offset: Some(Expr::concrete(state)),
         }
     }
 
     /// Resolve the events bound in this time expression
     pub fn resolve_event(self, bindings: &Binding<Self>) -> Self {
         let mut n = bindings.get(&self.event).clone();
-        n.offset += self.offset;
+
+        // 'G + ? bindings should never be attempted to be resolved
+        let (Some(so), Some(no)) = (self.offset, n.offset) else {
+            unreachable!(
+                "Time expressions with ? should never be used when resolving"
+            )
+        };
+
+        n.offset = Some(so + no);
+
         n
     }
 
     /// Resolve all expressions bound in this time expression
     pub fn resolve_expr(self, bind: &Binding<Expr>) -> Self {
+        let Some(offset) = self.offset else {
+            unreachable!(
+                "Time expressions with ? should never be used when resolving"
+            )
+        };
+
         Time {
             event: self.event,
-            offset: self.offset.resolve(bind),
+            offset: Some(offset.resolve(bind)),
         }
     }
 
@@ -57,7 +73,15 @@ impl From<Id> for Time {
 
 impl Display for Time {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}+{}", self.event, self.offset)?;
+        write!(
+            f,
+            "{}+{}",
+            self.event,
+            self.offset
+                .as_ref()
+                .map(|o| format!("{}", o))
+                .unwrap_or("?".to_string())
+        )?;
         Ok(())
     }
 }
@@ -67,7 +91,11 @@ impl std::ops::Sub for Time {
 
     fn sub(self, other: Self) -> Self::Output {
         if self.event == other.event {
-            TimeSub::Unit(self.offset - other.offset)
+            let (Some(o1), Some(o2)) = (self.offset, other.offset) else {
+                unreachable!("Time expressions with ? cannot be operated on.")
+            };
+
+            TimeSub::Unit(o1 - o2)
         } else {
             TimeSub::Sym { l: self, r: other }
         }

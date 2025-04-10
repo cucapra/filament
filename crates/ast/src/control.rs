@@ -406,5 +406,5 @@ pub struct Exists {
     /// The existentially quantified parameter
     pub param: Loc<Id>,
     /// The binding expression for the parameter
-    pub bind: Loc<Expr>,
+    pub bind: Loc<Option<Expr>>,
 }

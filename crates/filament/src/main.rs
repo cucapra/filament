@@ -47,7 +47,11 @@ fn run(opts: &cmdline::Opts) -> Result<(), u64> {
         }
     };
 
-    ast_pass_pipeline! { opts, ns; ap::TopLevel, ap::SchedulingModel };
+    ast_pass_pipeline! { opts, ns;
+        ap::TopLevel,
+        ap::SchedulingModel,
+        ap::DesugarUnknowns
+    };
 
     // Set the parameter bindings for the top-level component
     if let Some(main) = ns.toplevel() {

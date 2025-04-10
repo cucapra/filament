@@ -251,7 +251,7 @@ impl MonoSig {
                     ul.display(inst.ul())
                 ),
                 ir::ParamOwner::Exists { .. } => {
-                    unreachable!(
+                    format!(
                         "existential parameter `{}' occurred in a use location",
                         p_rep
                     )
