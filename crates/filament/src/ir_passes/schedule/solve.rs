@@ -150,6 +150,12 @@ impl Solve<'_> {
             fil_ir::Expr::Param(p) => {
                 // The only parameters that still exist in expressions should be let = ? bindings
                 // Thus, we should set them to an unknown constant value.
+                if !self.param_bind.contains(*p) {
+                    self.comp.internal_error(format!(
+                        "Parameter {} was not declared in the component.",
+                        self.comp.display(*p)
+                    ));
+                }
                 self.param_bind[*p]
             }
             fil_ir::Expr::Fn { .. } => unreachable!(
@@ -418,6 +424,12 @@ impl Solve<'_> {
             if let ir::Command::Let(ir::Let { param, .. }) = cmd {
                 let name = self.param_name(*param);
                 if let Some(value) = bindings.get(&name) {
+                    log::debug!(
+                        "Scheduled {} to {}",
+                        self.comp.display(*param),
+                        value
+                    );
+
                     *cmd = ir::Command::Let(ir::Let {
                         param: *param,
                         expr: Some(self.comp.num(*value)),

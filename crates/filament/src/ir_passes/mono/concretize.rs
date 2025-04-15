@@ -1,4 +1,4 @@
-use fil_ir::{self as ir, AddCtx, Ctx, MutCtx};
+use fil_ir::{self as ir, AddCtx, Ctx, DisplayCtx, MutCtx};
 use itertools::Itertools;
 pub struct Concretize<'comp> {
     comp: &'comp mut ir::Component,
@@ -274,14 +274,27 @@ impl Concretize<'_> {
                 }
                 ir::Command::Let(ir::Let { param, expr }) => {
                     if let Some(expr) = expr {
-                        let expr = self.expr(expr);
-                        self.binding.push(param, expr.concrete(self.comp));
+                        let expr = self.expr(expr).concrete(self.comp);
+
+                        log::trace!(
+                            "Let {} bound to {}",
+                            self.comp.display(param),
+                            expr
+                        );
+
+                        self.binding.push(param, expr);
                     }
 
                     None
                 }
                 ir::Command::Exists(ir::Exists { param, expr }) => {
                     let v = self.expr(expr).concrete(self.comp);
+
+                    log::trace!(
+                        "Existential {} bound to {}",
+                        self.comp.display(param),
+                        v
+                    );
 
                     self.binding.push(param, v);
 
