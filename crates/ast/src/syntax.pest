@@ -160,9 +160,15 @@ abstract_var = {
   "<" ~ event_bind ~ ("," ~ event_bind)* ~ ">"
 }
 
+// Scheduling unknown
+unknown = {
+  question
+  | question ~ "(" ~ param_var ~ ("," ~ param_var)* ~ ")"
+}
+
 // Time
 time = {
-  event ~ "+" ~ question
+  event ~ "+" ~ unknown
   | event ~ "+" ~ expr
   | expr ~ "+" ~ event
   | event
@@ -265,7 +271,7 @@ if_stmt = {
 // ===== let-bound parameters ========
 param_let = {
   "let" ~ param_var ~ "=" ~ expr ~ ";"
-  | "let" ~ param_var ~ "=" ~ question ~ ";"
+  | "let" ~ param_var ~ "=" ~ unknown ~ ";"
 }
 
 // ====== Loops ==========
@@ -282,7 +288,7 @@ bundle = {
 // ====== Existential binding =======
 exists = {
   param_var ~ ":=" ~ expr ~ ";"
-  | param_var ~ ":=" ~ question ~ ";"
+  | param_var ~ ":=" ~ unknown ~ ";"
 }
 
 /// ===== Assumptions ==========

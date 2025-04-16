@@ -5,6 +5,33 @@ use fil_ast as ast;
 #[derive(Default)]
 pub struct DesugarUnknowns;
 
+impl DesugarUnknowns {
+    /// Split a time expression into a let
+    fn maybe_unknown(
+        &self,
+        mu: &mut ast::MaybeUnknown,
+        name: ast::Id,
+    ) -> Option<ast::ParamLet> {
+        if mu.is_unknown() {
+            // Create a new let binding for the event variable
+            let inner_name = ast::Loc::unknown(name);
+
+            let mut offset = ast::MaybeUnknown::Known(ast::Expr::Abstract(
+                inner_name.clone(),
+            ));
+
+            std::mem::swap(mu, &mut offset);
+
+            Some(ast::ParamLet {
+                name: inner_name,
+                expr: offset,
+            })
+        } else {
+            None
+        }
+    }
+}
+
 impl Visitor for DesugarUnknowns {
     fn name() -> &'static str {
         "desugar-eventbinds"
@@ -23,28 +50,18 @@ impl Visitor for DesugarUnknowns {
             abstract_vars
                 .iter_mut()
                 .flat_map(|abstract_var| {
-                    if abstract_var.inner().offset.is_none() {
-                        // Create a new let binding for the event variable
-                        let inner_name = ast::Loc::unknown(ast::Id::new(
-                            format!("__{}_schedule{}", inv.name, i),
-                        ));
+                    // Create a new let binding for the event variable
+                    let inner_name =
+                        ast::Id::new(format!("__{}_schedule{}", inv.name, i));
 
-                        i += 1;
+                    i += 1;
 
-                        abstract_var.inner_mut().offset =
-                            Some(ast::Expr::Abstract(inner_name.clone()));
-
-                        Some(
-                            ast::ParamLet {
-                                name: inner_name,
-                                expr: None,
-                            }
-                            .into(),
-                        )
-                    } else {
-                        None
-                    }
+                    self.maybe_unknown(
+                        &mut abstract_var.inner_mut().offset,
+                        inner_name,
+                    )
                 })
+                .map(ast::Command::from)
                 .collect(),
         )
     }
@@ -52,22 +69,34 @@ impl Visitor for DesugarUnknowns {
     fn exists(&mut self, x: &mut ast::Exists) -> Action {
         let ast::Exists { param, bind } = x;
 
-        if bind.inner().is_none() {
-            // Create a new let binding for the event variable
-            let inner_name = ast::Loc::unknown(ast::Id::new(format!(
-                "__{}_schedule",
-                param
-            )));
+        let inner_name = ast::Id::new(format!("__{}_schedule", param));
 
-            *bind.inner_mut() = Some(ast::Expr::Abstract(inner_name.clone()));
+        match self.maybe_unknown(bind, inner_name) {
+            Some(v) => Action::AddBefore(vec![v.into()]),
+            None => Action::Continue,
+        }
+    }
 
-            Action::AddBefore(vec![
-                ast::ParamLet {
-                    name: inner_name,
-                    expr: None,
-                }
-                .into(),
-            ])
+    fn bundle(&mut self, bun: &mut fil_ast::Bundle) -> Action {
+        let ast::Range { start, end } = bun.typ.liveness.inner_mut();
+
+        let start_name =
+            ast::Id::new(format!("__{}_schedule_start", bun.name.inner()));
+
+        let end_name =
+            ast::Id::new(format!("__{}_schedule_end", bun.name.inner()));
+
+        let start_let = self.maybe_unknown(&mut start.offset, start_name);
+        let end_let = self.maybe_unknown(&mut end.offset, end_name);
+
+        if start_let.is_some() || end_let.is_some() {
+            Action::AddBefore(
+                start_let
+                    .into_iter()
+                    .chain(end_let)
+                    .map(ast::Command::from)
+                    .collect(),
+            )
         } else {
             Action::Continue
         }

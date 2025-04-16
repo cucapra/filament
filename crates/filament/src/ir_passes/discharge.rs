@@ -653,7 +653,10 @@ impl Visitor for Discharge {
 
         // Assert bindings for all let-bound parameters
         for (idx, p) in data.comp.params().iter() {
-            let ir::ParamOwner::Let { bind: Some(bind) } = &p.owner else {
+            let ir::ParamOwner::Let {
+                bind: ir::MaybeUnknown::Known(bind),
+            } = &p.owner
+            else {
                 continue;
             };
             let param_s = self.param_map[idx];

@@ -1,6 +1,38 @@
 use super::{Binding, Expr, Id};
+use crate::Loc;
 use std::fmt::Display;
 
+#[derive(Clone, Hash)]
+pub enum MaybeUnknown {
+    /// A concrete value
+    Known(Expr),
+    /// An unknown variable binding used in scheduling.
+    /// Represents the uninterpreted function f(args)
+    Unknown(Vec<Loc<Id>>),
+}
+
+impl MaybeUnknown {
+    pub fn as_known(&self) -> Option<&Expr> {
+        match self {
+            MaybeUnknown::Known(expr) => Some(expr),
+            MaybeUnknown::Unknown(_) => None,
+        }
+    }
+
+    pub fn known(&self) -> &Expr {
+        self.as_known().unwrap_or_else(|| {
+            panic!("Tried to get known value from unknown binding")
+        })
+    }
+
+    pub fn is_known(&self) -> bool {
+        matches!(self, MaybeUnknown::Known(_))
+    }
+
+    pub fn is_unknown(&self) -> bool {
+        matches!(self, MaybeUnknown::Unknown(_))
+    }
+}
 #[derive(Clone, Hash)]
 /// Represents expression of the form `G+1+k`
 pub struct Time {
@@ -8,24 +40,24 @@ pub struct Time {
     pub event: Id,
     /// The offsets for the time expression
     /// May be `None` if we have a 'G + ? binding.
-    pub offset: Option<Expr>,
+    pub offset: MaybeUnknown,
 }
 
 impl Time {
-    pub fn new(event: Id, offset: Option<Expr>) -> Self {
+    pub fn new(event: Id, offset: MaybeUnknown) -> Self {
         Self { event, offset }
     }
 
     /// Get the offset associated with this time expression
     pub fn offset(&self) -> &Expr {
-        self.offset.as_ref().unwrap()
+        self.offset.as_known().unwrap()
     }
 
     /// Unit time expression that occurs when the event occurs
     pub fn unit(event: Id, state: u64) -> Self {
         Time {
             event,
-            offset: Some(Expr::concrete(state)),
+            offset: MaybeUnknown::Known(Expr::concrete(state)),
         }
     }
 
@@ -34,20 +66,22 @@ impl Time {
         let mut n = bindings.get(&self.event).clone();
 
         // 'G + ? bindings should never be attempted to be resolved
-        let (Some(so), Some(no)) = (self.offset, n.offset) else {
+        let (MaybeUnknown::Known(so), MaybeUnknown::Known(no)) =
+            (self.offset, n.offset)
+        else {
             unreachable!(
                 "Time expressions with ? should never be used when resolving"
             )
         };
 
-        n.offset = Some(so + no);
+        n.offset = MaybeUnknown::Known(so + no);
 
         n
     }
 
     /// Resolve all expressions bound in this time expression
     pub fn resolve_expr(self, bind: &Binding<Expr>) -> Self {
-        let Some(offset) = self.offset else {
+        let MaybeUnknown::Known(offset) = self.offset else {
             unreachable!(
                 "Time expressions with ? should never be used when resolving"
             )
@@ -55,7 +89,7 @@ impl Time {
 
         Time {
             event: self.event,
-            offset: Some(offset.resolve(bind)),
+            offset: MaybeUnknown::Known(offset.resolve(bind)),
         }
     }
 
@@ -78,7 +112,7 @@ impl Display for Time {
             "{}+{}",
             self.event,
             self.offset
-                .as_ref()
+                .as_known()
                 .map(|o| format!("{}", o))
                 .unwrap_or("?".to_string())
         )?;
@@ -91,7 +125,9 @@ impl std::ops::Sub for Time {
 
     fn sub(self, other: Self) -> Self::Output {
         if self.event == other.event {
-            let (Some(o1), Some(o2)) = (self.offset, other.offset) else {
+            let (MaybeUnknown::Known(o1), MaybeUnknown::Known(o2)) =
+                (self.offset, other.offset)
+            else {
                 unreachable!("Time expressions with ? cannot be operated on.")
             };
 

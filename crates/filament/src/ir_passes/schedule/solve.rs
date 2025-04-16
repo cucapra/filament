@@ -221,31 +221,20 @@ impl Solve<'_> {
         // Generate the critical path dataflow graph
         let dataflow = CombDataflow::new(self.comp);
 
-        for path in dataflow.critical_paths() {
-            // If the path is length 0 or 1 this is a problem because it means
-            // one single node has a combinational delay over the clock period
-            if path.len() <= 1 {
-                unreachable!();
+        for (src, dst) in dataflow.critical_paths() {
+            if src == dst {
+                self.comp.internal_error(format!(
+                    "Critical path from {}{{{}}} to itself",
+                    self.comp.display(src.0),
+                    src.1
+                ));
             }
 
-            // We only care about start and end of the path
-            let path = path
-                .iter()
-                .map(|&(p, idx)| self.port(p).starts[idx as usize])
-                .collect_vec()
-                .into_iter();
+            let src = self.port(src.0).starts[src.1 as usize];
+            let dst = self.port(dst.0).starts[dst.1 as usize];
 
-            log::trace!("Critical path: {:?}", path);
-
-            // It cannot be true that every port in this path is
-            // scheduled (starts) on the same cycle
-            let equalities = path
-                .tuple_windows()
-                .map(|(a, b)| self.sol.eq(a, b))
-                .fold(self.sol.atom("true"), |acc, eq| self.sol.and(acc, eq));
-
-            // Assert that this is not the case
-            self.sol.assert(self.sol.not(equalities)).unwrap();
+            // The dst must occur after the src
+            self.sol.assert(self.sol.gt(dst, src)).unwrap();
         }
     }
 }
@@ -264,6 +253,11 @@ impl Solve<'_> {
         let sexpr = self
             .sol
             .declare_const(self.param_name(pidx), self.sol.int_sort())
+            .unwrap();
+
+        // Assert that the parameter is non-negative
+        self.sol
+            .assert(self.sol.gte(sexpr, self.sol.numeral(0)))
             .unwrap();
 
         self.param_bind.push(pidx, sexpr);
@@ -332,7 +326,7 @@ impl Solve<'_> {
                 ir::Command::Let(l) => self.let_(l),
                 ir::Command::Fact(ir::Fact { prop, .. }) => {
                     log::trace!("Asserting: {}", self.comp.display(*prop));
-                    let sexpr = self.prop_to_sexp(*prop);
+                    let sexpr: SExpr = self.prop_to_sexp(*prop);
                     self.sol.assert(sexpr).unwrap();
                 }
                 fil_ir::Command::Connect(connect) => {
@@ -347,6 +341,7 @@ impl Solve<'_> {
         self.combinational_delays();
         std::mem::swap(&mut self.comp.cmds, &mut cmds);
 
+        log::debug!("Solving scheduling problem");
         // Solve the scheduling problem
         let minimize = self.sol.atom("minimize");
         let expr = self.sol.list(vec![minimize, self.minimize_expr]);
@@ -362,7 +357,11 @@ impl Solve<'_> {
         let resp = self.sol.check().unwrap();
 
         if resp != smt::Response::Sat {
-            unreachable!("Schedule could not be created.")
+            self.comp.cmds = cmds;
+            self.comp.internal_error(format!(
+                "Schedule could not be created. Got solver response {:?}",
+                resp
+            ));
         }
 
         let model = self.sol.get_model().unwrap();
@@ -377,7 +376,7 @@ impl Solve<'_> {
 
         let bindings: HashMap<String, u64> = bindings
             .iter()
-            .map(|binding| {
+            .filter_map(|binding| {
                 let exprs = match self.sol.get(*binding) {
                     SExprData::List(exprs) => exprs,
                     _ => unreachable!(
@@ -396,8 +395,6 @@ impl Solve<'_> {
                 // The format of the binding should be
                 // (define-fun <name> () Int <value>)
                 assert!(exprs[0] == self.sol.atoms().define_fun);
-                assert!(matches!(self.sol.get(exprs[2]), SExprData::List(&[])));
-                assert!(exprs[3] == self.sol.atoms().int);
 
                 let SExprData::Atom(name) = self.sol.get(exprs[1]) else {
                     unreachable!(
@@ -405,6 +402,18 @@ impl Solve<'_> {
                         self.sol.display(exprs[1])
                     )
                 };
+
+                // If the name is div0 or mod0, this is a function definition which we can ignore
+                if name == "div0" || name == "mod0" {
+                    return None;
+                }
+
+                assert!(
+                    matches!(self.sol.get(exprs[2]), SExprData::List(&[])),
+                    "Expected empty list for parameter binding, got {}",
+                    self.sol.display(*binding)
+                );
+                assert!(exprs[3] == self.sol.atoms().int);
 
                 let SExprData::Atom(value) = self.sol.get(exprs[4]) else {
                     unreachable!(
@@ -414,7 +423,7 @@ impl Solve<'_> {
                 };
                 let value = value.parse::<u64>().unwrap();
 
-                (name.to_string(), value)
+                Some((name.to_string(), value))
             })
             .collect();
 
@@ -432,7 +441,7 @@ impl Solve<'_> {
 
                     *cmd = ir::Command::Let(ir::Let {
                         param: *param,
-                        expr: Some(self.comp.num(*value)),
+                        expr: ir::MaybeUnknown::Known(self.comp.num(*value)),
                     });
                 }
             }
@@ -448,7 +457,7 @@ impl Solve<'_> {
         let ir::Let { param, expr } = l;
         // Expr should be none, as monomorphization should have already removed all other let bindings
         assert!(
-            expr.is_none(),
+            expr.is_unknown(),
             "Found let binding with non-? expression when scheduling."
         );
 

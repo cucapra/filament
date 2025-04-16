@@ -48,10 +48,7 @@ impl<'a, 'b> Printer<'a, 'b> {
                 write!(f, "{:indent$}let ", "")?;
                 self.comp.write(*param, f)?;
                 write!(f, " = ")?;
-                match expr {
-                    Some(expr) => self.comp.write(*expr, f),
-                    None => write!(f, "?"),
-                }
+                write!(f, "{}", expr.display(self.comp))
             }
             ir::Command::ForLoop(ir::Loop {
                 index,

@@ -1,7 +1,6 @@
 use fil_ir::{self as ir, Ctx, DisplayCtx};
 use fil_utils::{self as utils, AttrCtx};
 use itertools::Itertools;
-use linked_hash_set::LinkedHashSet;
 use ordered_float::NotNan;
 use std::collections::{HashMap, HashSet};
 
@@ -55,32 +54,42 @@ impl CombDataflow {
                         );
                     }
 
-                    // all outputs are dependent on all inputs
-                    for src in inputs {
-                        // Number of source bundle ports
-                        let src_num = comp
-                            .get(src)
-                            .live
-                            .lens
-                            .iter()
-                            .map(|&l| l.concrete(comp))
-                            .product();
-
-                        for &dst in &outputs {
-                            let dst_num = comp
-                                .get(dst)
+                    let inputs = inputs.into_iter().map(|src| {
+                        (
+                            src,
+                            comp.get(src)
                                 .live
                                 .lens
                                 .iter()
                                 .map(|&l| l.concrete(comp))
-                                .product();
+                                .product(),
+                        )
+                    });
 
+                    let outputs = outputs
+                        .iter()
+                        .map(|&dst| {
+                            (
+                                dst,
+                                comp.get(dst)
+                                    .live
+                                    .lens
+                                    .iter()
+                                    .map(|&l| l.concrete(comp))
+                                    .product(),
+                            )
+                        })
+                        .collect_vec();
+
+                    // all outputs are dependent on all inputs
+                    for (src, src_num) in inputs {
+                        for (dst, dst_num) in &outputs {
                             for src_idx in 0..src_num {
-                                for dst_idx in 0..dst_num {
+                                for dst_idx in 0..*dst_num {
                                     edges
                                         .entry((src, src_idx))
                                         .or_default()
-                                        .insert((dst, dst_idx));
+                                        .insert((*dst, dst_idx));
                                 }
                             }
                         }
@@ -129,14 +138,11 @@ impl CombDataflow {
                             .insert((dst.port, dst_idx));
                     }
                 }
-                ir::Command::BundleDef(_)
-                | ir::Command::ForLoop(_)
-                | ir::Command::If(_) => {
-                    unreachable!(
-                        "Components should be monomorphic and bundle-free"
-                    )
+                ir::Command::ForLoop(_) | ir::Command::If(_) => {
+                    unreachable!("Components should be control-flow free")
                 }
-                ir::Command::Instance(_)
+                ir::Command::BundleDef(_)
+                | ir::Command::Instance(_)
                 | ir::Command::Let(_)
                 | ir::Command::Fact(_)
                 | ir::Command::Exists(_) => {}
@@ -148,14 +154,12 @@ impl CombDataflow {
 
     fn critical_paths_rec(
         &self,
-        path: LinkedHashSet<BundleIdx>,
+        current: BundleIdx,
         len: f64,
-    ) -> Vec<Vec<BundleIdx>> {
-        let current = path.iter().last().copied().unwrap();
-
+    ) -> Vec<BundleIdx> {
         if len >= 1.0 {
             // This path is critical here, we can return it immediately
-            return vec![path.iter().cloned().collect()];
+            return vec![current];
         }
 
         let mut chain = vec![];
@@ -164,33 +168,91 @@ impl CombDataflow {
             self.edges.get(&current).unwrap_or(&HashSet::new()).iter()
         {
             let delay: f64 = (*self.delays.get(succ)).into();
-            if path.contains(&(succ, succ_idx)) {
-                unreachable!("Cycle detected in dataflow graph");
-            }
 
-            let mut new_path = path.clone();
-            new_path.insert((succ, succ_idx));
-
-            chain.extend(
-                self.critical_paths_rec(new_path, len + delay).into_iter(),
-            )
+            chain.extend(self.critical_paths_rec((succ, succ_idx), len + delay))
         }
 
         chain
     }
+
+    /// Find critical pairs in the DAG.
+    pub fn critical_pairs(&self) -> Vec<(BundleIdx, BundleIdx)> {
+        // First, get an indexing set of all the nodes in the graph
+        let mut nodes = HashSet::new();
+        for (src, dsts) in self.edges.iter() {
+            nodes.insert(*src);
+            for dst in dsts {
+                nodes.insert(*dst);
+            }
+        }
+
+        let nodes = nodes.into_iter().collect_vec();
+
+        log::debug!("Calculating critical pairs for {} nodes", nodes.len());
+
+        // Start by setting all max distances to edge values
+        // Then use floyd-warshall to find the max distance between all pairs of nodes
+        let mut max_distances = Vec::with_capacity(nodes.len());
+        for (i, node) in nodes.iter().enumerate() {
+            max_distances.push(vec![None; nodes.len()]);
+            for (j, other_node) in nodes.iter().enumerate() {
+                // Get the distance between the two nodes
+                let dist: Option<f64> = self
+                    .edges
+                    .get(node)
+                    .and_then(|dsts| dsts.get(other_node))
+                    .map(|_| (*self.delays.get(other_node.0)).into());
+
+                max_distances[i][j] = dist;
+            }
+        }
+
+        // Floyd-Warshall algorithm
+        for k in 0..nodes.len() {
+            for i in 0..nodes.len() {
+                for j in 0..nodes.len() {
+                    if let (Some(d1), Some(d2)) =
+                        (max_distances[i][k], max_distances[k][j])
+                    {
+                        if let Some(d) = max_distances[i][j] {
+                            if d < d1 + d2 {
+                                max_distances[i][j] = Some(d1 + d2);
+                            }
+                        } else {
+                            max_distances[i][j] = Some(d1 + d2);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Now we can find the critical pairs (all pairs that are greater than 1)
+        let mut critical_pairs = vec![];
+        for i in 0..nodes.len() {
+            for j in 0..nodes.len() {
+                if max_distances[i][j].is_some()
+                    && max_distances[i][j].unwrap() > 1.0
+                {
+                    critical_pairs.push((nodes[i], nodes[j]));
+                }
+            }
+        }
+
+        critical_pairs
+    }
+
     /// Find the critical paths (sum of edges > clock period) in a DAG using Djikstra
     /// To do so we use DFS to find all paths from every source to every sink
-    pub fn critical_paths(&self) -> Vec<Vec<BundleIdx>> {
+    pub fn critical_paths(&self) -> Vec<(BundleIdx, BundleIdx)> {
         let mut paths = vec![];
         for (src, _) in self.edges.iter() {
-            let mut path = LinkedHashSet::new();
-
             // Find the combinational delay of this port
             let comb_delay = *self.delays.get(src.0);
 
-            path.insert(*src);
             paths.extend(
-                self.critical_paths_rec(path, comb_delay.into()).into_iter(),
+                self.critical_paths_rec(*src, comb_delay.into())
+                    .into_iter()
+                    .map(|dst| (*src, dst)),
             );
         }
 

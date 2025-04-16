@@ -1,0 +1,26 @@
+import "primitives/comb.fil";
+
+#[schedule=1]
+comp main<'G: 1>(
+    go: interface['G],
+    in: ['G, 'G+1] 32,
+) -> (
+    out: ['G+L, 'G+L+1] 32
+) with {
+    some L where L >= 0;
+} {
+    let num = ?;
+    let den = ?;
+    assert den > 0;
+    bundle iters[11]: for<i> ['G + i * num / den, 'G + i * num / den + 1] 32;
+
+    iters{0} = in;
+    for i in 0..10 {
+        N := new Not[32]<'G + ?>(iters{i});
+        iters{i + 1} = N.out;
+    }
+
+    L := ?;
+
+    out = iters{10};
+}

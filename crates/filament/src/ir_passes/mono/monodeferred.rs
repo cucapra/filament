@@ -366,37 +366,51 @@ impl MonoDeferred<'_, '_> {
             ),
             ir::Command::Let(ir::Let { param, expr }) => {
                 let p = param.ul();
-                let expr = expr.map(|e| e.ul());
 
-                if let Some(expr) = expr {
-                    let e = self
-                        .monosig
-                        .expr(&self.underlying, expr, self.pass)
-                        .unwrap()
-                        .get();
-                    self.monosig.binding.push(p, e.base());
-                    None
-                } else {
-                    if !self.schedule {
-                        unreachable!(
-                            "Encountered `?` let binding in non-scheduled component"
-                        );
+                match expr {
+                    ir::MaybeUnknown::Known(expr) => {
+                        let e = self
+                            .monosig
+                            .expr(&self.underlying, expr.ul(), self.pass)
+                            .unwrap()
+                            .get();
+                        self.monosig.binding.push(p, e.base());
+                        None
                     }
-
-                    let new_param = self.monosig.unelaborated_param(
-                        &self.underlying,
-                        self.pass,
-                        p,
-                        ir::ParamOwner::Let { bind: None },
-                    );
-
-                    Some(
-                        ir::Let {
-                            param: new_param.get(),
-                            expr: None,
+                    ir::MaybeUnknown::Unknown(params) => {
+                        if !self.schedule {
+                            unreachable!(
+                                "Encountered `?` let binding in non-scheduled component"
+                            );
                         }
-                        .into(),
-                    )
+
+                        let bind = ir::MaybeUnknown::Unknown(
+                            params
+                                .iter()
+                                .map(|p| {
+                                    self.monosig
+                                        .param_use(&self.underlying, p.ul())
+                                        .unwrap()
+                                        .get()
+                                })
+                                .collect(),
+                        );
+
+                        let new_param = self.monosig.unelaborated_param(
+                            &self.underlying,
+                            self.pass,
+                            p,
+                            ir::ParamOwner::Let { bind: bind.clone() },
+                        );
+
+                        Some(
+                            ir::Let {
+                                param: new_param.get(),
+                                expr: bind,
+                            }
+                            .into(),
+                        )
+                    }
                 }
             }
             ir::Command::Connect(con) => Some(self.connect(con).into()),

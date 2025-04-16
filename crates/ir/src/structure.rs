@@ -1,3 +1,5 @@
+use crate::MaybeUnknown;
+
 use super::{
     AddCtx, Bind, Component, Ctx, Expr, ExprIdx, Foldable, Foreign, InfoIdx,
     InstIdx, InvIdx, ParamIdx, PortIdx, Subst, TimeIdx, TimeSub,
@@ -299,7 +301,7 @@ pub enum ParamOwner {
     /// A `let`-bound variable
     Let {
         /// The value of the parameter in its corresponding binding
-        bind: Option<ExprIdx>,
+        bind: MaybeUnknown,
     },
     /// Owned by an `exists` binding
     Exists {

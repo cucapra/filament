@@ -273,17 +273,19 @@ impl Concretize<'_> {
                     Some(ir::Connect { src, dst, info }.into())
                 }
                 ir::Command::Let(ir::Let { param, expr }) => {
-                    if let Some(expr) = expr {
-                        let expr = self.expr(expr).concrete(self.comp);
+                    let ir::MaybeUnknown::Known(expr) = expr else {
+                        unreachable!("Let bindings should already be bound")
+                    };
 
-                        log::trace!(
-                            "Let {} bound to {}",
-                            self.comp.display(param),
-                            expr
-                        );
+                    let expr = self.expr(expr).concrete(self.comp);
 
-                        self.binding.push(param, expr);
-                    }
+                    log::trace!(
+                        "Let {} bound to {}",
+                        self.comp.display(param),
+                        expr
+                    );
+
+                    self.binding.push(param, expr);
 
                     None
                 }

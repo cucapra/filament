@@ -58,7 +58,7 @@ impl<'ctx, 'comp> Retime<'ctx, 'comp> {
         let ir::Let { param, expr } = l;
 
         // add let-bound parameters to the binding for all expressions
-        self.binding.push(*param, expr.unwrap());
+        self.binding.push(*param, expr.known());
     }
 
     fn connect(&mut self, con: &ir::Connect) -> Vec<ir::Command> {
@@ -383,11 +383,11 @@ impl<'ctx, 'comp> Retime<'ctx, 'comp> {
                 ir::Connect {
                     src: ir::Access {
                         port: inv_port_out,
-                        ranges: dst_ranges,
+                        ranges: zero_one_range,
                     },
                     dst: ir::Access {
                         port: dstidx,
-                        ranges: zero_one_range,
+                        ranges: dst_ranges,
                     },
                     info: connect_info,
                 }

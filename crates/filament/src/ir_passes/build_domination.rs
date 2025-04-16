@@ -80,7 +80,7 @@ impl BuildDomination {
         for (id, cmd) in cmds.iter().enumerate() {
             match cmd {
                 ir::Command::Let(ir::Let {
-                    expr: Some(expr),
+                    expr: ir::MaybeUnknown::Known(expr),
                     param,
                 })
                 | ir::Command::Exists(ir::Exists { param, expr }) => {
@@ -96,7 +96,10 @@ impl BuildDomination {
                         }
                     }
                 }
-                ir::Command::Let(ir::Let { expr: None, .. }) => {
+                ir::Command::Let(ir::Let {
+                    expr: ir::MaybeUnknown::Unknown(_),
+                    ..
+                }) => {
                     // If the let does not have an expression, it depends on nothing.
                     // We can ignore it.
                 }

@@ -210,14 +210,12 @@ impl BuildCtx<'_> {
         match cmd {
             ast::Command::Instance(inst) => self.declare_inst(inst),
             ast::Command::Invoke(inv) => self.declare_inv(inv),
-            ast::Command::ParamLet(ast::ParamLet { name, expr }) => {
+            ast::Command::ParamLet(ast::ParamLet { name, .. }) => {
                 // Declare the parameter since it may be used in instance or
                 // invocation definitions.
                 let owner = ir::ParamOwner::Let {
-                    bind: match expr {
-                        Some(expr) => Some(self.expr(expr.clone())?),
-                        None => None,
-                    },
+                    // Temporarily set to none.
+                    bind: ir::MaybeUnknown::Unknown(vec![]),
                 };
                 self.param(name.clone(), owner);
                 Ok(())
@@ -367,7 +365,7 @@ impl BuildCtx<'_> {
 
     fn time(&mut self, t: ast::Time) -> BuildRes<TimeIdx> {
         let event = self.get_event(&t.event)?;
-        let offset = self.expr(t.offset.unwrap())?;
+        let offset = self.expr(t.offset.as_known().unwrap().clone())?;
         Ok(self.comp().add(ir::Time { event, offset }))
     }
 
@@ -819,7 +817,8 @@ impl BuildCtx<'_> {
             ast::Command::Invoke(inv) => self.invoke(inv)?,
             ast::Command::Instance(inst) => self.instance(inst)?,
             ast::Command::Exists(ast::Exists { param, bind }) => {
-                let expr = self.expr(bind.inner().as_ref().unwrap().clone())?;
+                let expr =
+                    self.expr(bind.inner().as_known().unwrap().clone())?;
                 let owner = OwnedParam::Local(param.copy());
                 let param_expr = self.get_param(&owner, param.pos())?;
                 let Some(p_idx) = param_expr.as_param(self.comp()) else {
@@ -874,10 +873,30 @@ impl BuildCtx<'_> {
                         "let-bound parameter was rewritten to expression"
                     )
                 };
+
                 let expr = match expr {
-                    Some(e) => Some(self.expr(e)?),
-                    None => None,
+                    ast::MaybeUnknown::Known(e) => {
+                        ir::MaybeUnknown::Known(self.expr(e)?)
+                    }
+                    ast::MaybeUnknown::Unknown(params) => {
+                        ir::MaybeUnknown::Unknown(
+                            params
+                                .into_iter()
+                                .map(|p| {
+                                    self.get_param(
+                                        &OwnedParam::Local(*p),
+                                        p.pos(),
+                                    )
+                                    .map(|p| p.as_param(self.comp()).unwrap())
+                                })
+                                .collect::<BuildRes<Vec<_>>>()?,
+                        )
+                    }
                 };
+
+                // Change the owner to match this binding
+                self.comp().get_mut(param).owner =
+                    ir::ParamOwner::Let { bind: expr.clone() };
                 // The declare phase already added the rewrite for this binding
                 vec![ir::Let { param, expr }.into()]
             }

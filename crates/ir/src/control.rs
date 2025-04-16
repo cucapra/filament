@@ -1,4 +1,4 @@
-use crate::{Direction, Expr, Port, PortOwner, Prop, Time};
+use crate::{Direction, DisplayCtx, Expr, Port, PortOwner, Prop, Time};
 
 use super::{
     Access, CompIdx, Component, Ctx, Event, ExprIdx, Fact, Foreign, InfoIdx,
@@ -274,11 +274,58 @@ pub struct Exists {
     pub expr: ExprIdx,
 }
 
+#[derive(Clone, Hash, PartialEq, Eq)]
+pub enum MaybeUnknown {
+    /// A concrete binding
+    Known(ExprIdx),
+    /// An unknown variable binding used in scheduling.
+    /// Represents the uninterpreted function f(args)
+    Unknown(Vec<ParamIdx>),
+}
+
+impl MaybeUnknown {
+    pub fn as_known(&self) -> Option<ExprIdx> {
+        match self {
+            MaybeUnknown::Known(expr) => Some(*expr),
+            MaybeUnknown::Unknown(_) => None,
+        }
+    }
+
+    pub fn known(&self) -> ExprIdx {
+        self.as_known().unwrap_or_else(|| {
+            panic!("Tried to get known value from unknown binding")
+        })
+    }
+
+    pub fn is_known(&self) -> bool {
+        matches!(self, MaybeUnknown::Known(_))
+    }
+
+    pub fn is_unknown(&self) -> bool {
+        matches!(self, MaybeUnknown::Unknown(_))
+    }
+
+    pub fn display(&self, comp: &Component) -> String {
+        match self {
+            MaybeUnknown::Known(expr) => comp.display(*expr),
+            MaybeUnknown::Unknown(args) => {
+                format!(
+                    "?({})",
+                    args.iter()
+                        .map(|a| comp.display(*a))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        }
+    }
+}
+
 /// A `let`-bound parameter
 #[derive(Clone, PartialEq, Eq)]
 pub struct Let {
     /// The parameter
     pub param: ParamIdx,
     /// The binding for the parameter
-    pub expr: Option<ExprIdx>,
+    pub expr: MaybeUnknown,
 }

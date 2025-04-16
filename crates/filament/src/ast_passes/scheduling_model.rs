@@ -41,12 +41,6 @@ impl Visitor for SchedulingModel {
     fn signature(&mut self, sig: &mut ast::Signature) -> Action {
         let comp = sig.name.inner().to_string();
 
-        log::info!(
-            "Scheduling model for component {}: {:?}",
-            comp,
-            self.model.get(&comp)
-        );
-
         if let Some(attr_map) = self.model.get(&comp) {
             if attr_map.combinational {
                 sig.attributes.set(
