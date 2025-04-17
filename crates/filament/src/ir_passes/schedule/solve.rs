@@ -243,25 +243,6 @@ impl Solve<'_> {
     fn param_name(&self, pidx: ir::ParamIdx) -> String {
         format!("param{}", pidx.get())
     }
-    /// Declare a new let = ? parameter
-    fn param(&mut self, pidx: ir::ParamIdx) {
-        assert!(
-            !self.param_bind.contains(pidx),
-            "Parameter already declared"
-        );
-
-        let sexpr = self
-            .sol
-            .declare_const(self.param_name(pidx), self.sol.int_sort())
-            .unwrap();
-
-        // Assert that the parameter is non-negative
-        self.sol
-            .assert(self.sol.gte(sexpr, self.sol.numeral(0)))
-            .unwrap();
-
-        self.param_bind.push(pidx, sexpr);
-    }
 
     fn port(&mut self, pidx: ir::PortIdx) -> &PortInfo {
         if self.port_map.contains(pidx) {
@@ -454,14 +435,34 @@ impl Solve<'_> {
     }
 
     fn let_(&mut self, l: &ir::Let) {
-        let ir::Let { param, expr } = l;
-        // Expr should be none, as monomorphization should have already removed all other let bindings
+        let ir::Let { param, expr } = l.clone();
+
+        let ir::MaybeUnknown::Unknown(args) = expr else {
+            unreachable!(
+                "Found let binding with non-? expression when scheduling."
+            )
+        };
+
         assert!(
-            expr.is_unknown(),
-            "Found let binding with non-? expression when scheduling."
+            !self.param_bind.contains(param),
+            "Parameter already declared"
         );
 
-        self.param(*param);
+        let sexpr = self
+            .sol
+            .declare_fun(
+                self.param_name(param),
+                args.into_iter().map(|p| *self.param_bind.get(p)).collect(),
+                self.sol.int_sort(),
+            )
+            .unwrap();
+
+        // Assert that the parameter is non-negative
+        self.sol
+            .assert(self.sol.gte(sexpr, self.sol.numeral(0)))
+            .unwrap();
+
+        self.param_bind.push(param, sexpr);
     }
 
     fn connect(&mut self, con: &ir::Connect) {

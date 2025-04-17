@@ -156,20 +156,20 @@ event_bind = {
   "?" ~ event_with_delay ~ "=" ~ time |
   event_with_delay
 }
+
 abstract_var = {
   "<" ~ event_bind ~ ("," ~ event_bind)* ~ ">"
 }
 
-// Scheduling unknown
-unknown = {
-  question
-  | question ~ "(" ~ param_var ~ ("," ~ param_var)* ~ ")"
+maybe_unknown = {
+  question ~ "(" ~ param_var ~ ("," ~ param_var)* ~ ")"
+  | question
+  | expr
 }
 
 // Time
 time = {
-  event ~ "+" ~ unknown
-  | event ~ "+" ~ expr
+  | event ~ "+" ~ maybe_unknown
   | expr ~ "+" ~ event
   | event
   | expr
@@ -270,8 +270,7 @@ if_stmt = {
 
 // ===== let-bound parameters ========
 param_let = {
-  "let" ~ param_var ~ "=" ~ expr ~ ";"
-  | "let" ~ param_var ~ "=" ~ unknown ~ ";"
+  "let" ~ param_var ~ "=" ~ maybe_unknown ~ ";"
 }
 
 // ====== Loops ==========
@@ -287,8 +286,7 @@ bundle = {
 
 // ====== Existential binding =======
 exists = {
-  param_var ~ ":=" ~ expr ~ ";"
-  | param_var ~ ":=" ~ unknown ~ ";"
+  param_var ~ ":=" ~ maybe_unknown ~ ";"
 }
 
 /// ===== Assumptions ==========

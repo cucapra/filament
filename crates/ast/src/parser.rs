@@ -249,12 +249,13 @@ impl FilamentParser {
         Ok(Loc::new((), sp))
     }
 
-    fn unknown(input: Node) -> ParseResult<Loc<MaybeUnknown>> {
+    fn maybe_unknown(input: Node) -> ParseResult<Loc<MaybeUnknown>> {
         let sp = Self::get_span(&input);
         match_nodes!(
             input.clone().into_children();
             [question(_)] => Ok(Loc::new(MaybeUnknown::Unknown(vec![]), sp)),
-            [question(_), param_var(id)..] => Ok(Loc::new(MaybeUnknown::Unknown(id.collect()), sp)),
+            [question(_), param_var(vars)..] => Ok(Loc::new(MaybeUnknown::Unknown(vars.collect()), sp)),
+            [expr(e)] => Ok(Loc::new(MaybeUnknown::Known(e.take()), sp)),
         )
     }
 
@@ -263,10 +264,9 @@ impl FilamentParser {
         let sp = Self::get_span(&input);
         match_nodes!(
             input.clone().into_children();
-            [event(ev), expr(sts)] => Ok(Loc::new(ast::Time::new(ev.take(), MaybeUnknown::Known(sts.take())), sp)),
             [expr(sts), event(ev)] => Ok(Loc::new(ast::Time::new(ev.take(), MaybeUnknown::Known(sts.take())), sp)),
             [event(ev)] => Ok(Loc::new(ast::Time::new(ev.take(), MaybeUnknown::Known(ast::Expr::default())), sp)),
-            [event(ev), unknown(u)] => Ok(Loc::new(ast::Time::new(ev.take(), u.take()), sp)),
+            [event(ev), maybe_unknown(u)] => Ok(Loc::new(ast::Time::new(ev.take(), u.take()), sp)),
             [expr(_)] => {
                 Err(input.error("time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number or sum of parameters"))
             }
@@ -815,20 +815,14 @@ impl FilamentParser {
     fn param_let(input: Node) -> ParseResult<ast::ParamLet> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(name), expr(expr)] => ast::ParamLet { name, expr: MaybeUnknown::Known(expr.take()) },
-            [param_var(name), unknown(u)] => ast::ParamLet { name, expr: u.take() }
+            [param_var(name), maybe_unknown(u)] => ast::ParamLet { name, expr: u.take() },
         ))
     }
 
     fn exists(input: Node) -> ParseResult<ast::Exists> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(param), expr(bind)] => {
-                let (bind, pos) = bind.split();
-
-                ast::Exists { param, bind: Loc::new(MaybeUnknown::Known(bind), pos) }
-            },
-            [param_var(param), unknown(bind)] => ast::Exists {param, bind}
+            [param_var(param), maybe_unknown(bind)] => ast::Exists {param, bind}
         ))
     }
 

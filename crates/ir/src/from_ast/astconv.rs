@@ -340,6 +340,7 @@ impl BuildCtx<'_> {
         param: ast::Loc<ast::Id>,
         owner: ir::ParamOwner,
     ) -> ParamIdx {
+        log::trace!("Added parameter {}", param);
         let (name, pos) = param.split();
         let info = self.comp().add(ir::Info::param(name, pos));
         let owned = OwnedParam::param_owner(name, &owner);
@@ -447,6 +448,7 @@ impl BuildCtx<'_> {
             bitwidth.pos(),
             liveness.pos(),
         ));
+
         // Construct the bundle type in a new scope.
         let live = self.try_with_scope(|ctx| {
             Ok(ir::Liveness {
@@ -467,6 +469,7 @@ impl BuildCtx<'_> {
                 range: ctx.range(liveness.take())?,
             })
         })?;
+
         let p = ir::Port {
             width: self.expr(bitwidth.take())?,
             owner,
@@ -932,6 +935,11 @@ impl BuildCtx<'_> {
                 vec![ir::If { cond, then, alt }.into()]
             }
             ast::Command::Bundle(bun) => {
+                log::trace!(
+                    "Creating bundle {} with idxs {:?}",
+                    bun.name,
+                    bun.typ.idx
+                );
                 // Add the bundle to the current scope
                 let idx = self.port(bun, ir::PortOwner::Local)?;
                 vec![ir::Command::from(idx)]
