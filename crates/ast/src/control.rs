@@ -1,3 +1,5 @@
+use crate::time::MaybeUnknown;
+
 use super::{
     Binding, Expr, Id, Implication, Loc, OrderConstraint, Range, Time,
 };
@@ -397,7 +399,7 @@ impl Bundle {
 pub struct ParamLet {
     pub name: Loc<Id>,
     /// The expression for the parameter binding
-    pub expr: Option<Expr>,
+    pub expr: MaybeUnknown,
 }
 
 #[derive(Clone)]
@@ -406,5 +408,5 @@ pub struct Exists {
     /// The existentially quantified parameter
     pub param: Loc<Id>,
     /// The binding expression for the parameter
-    pub bind: Loc<Expr>,
+    pub bind: Loc<MaybeUnknown>,
 }

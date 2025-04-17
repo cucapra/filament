@@ -1,0 +1,12 @@
+[Add]
+combinational = true
+ports.out = 0.3
+
+[DelayedAdd]
+combinational = false
+ports.out = 0
+
+[DelayedDup]
+combinational = false
+ports.out0 = 0
+ports.out1 = 0

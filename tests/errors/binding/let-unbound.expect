@@ -2,6 +2,6 @@
 101
 ---STDERR---
 
-thread 'main' panicked at crates/filament/src/ir_passes/mono/monodeferred.rs:348:29:
-internal error: entered unreachable code: Let binding was bound to `?`
+thread 'main' panicked at crates/filament/src/ir_passes/mono/monodeferred.rs:382:29:
+internal error: entered unreachable code: Encountered `?` let binding in non-scheduled component
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

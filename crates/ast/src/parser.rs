@@ -2,6 +2,7 @@
 #![allow(clippy::type_complexity)]
 
 //! Parser for Filament programs.
+use crate::time::MaybeUnknown;
 use crate::{self as ast, Loc, TimeSub};
 use fil_utils::{
     self as utils, AttrCtx, FilamentResult, FileIdx, GPosIdx,
@@ -243,14 +244,29 @@ impl FilamentParser {
             .map_err(|_| input.error("Expected valid float"))
     }
 
+    fn question(input: Node) -> ParseResult<Loc<()>> {
+        let sp = Self::get_span(&input);
+        Ok(Loc::new((), sp))
+    }
+
+    fn maybe_unknown(input: Node) -> ParseResult<Loc<MaybeUnknown>> {
+        let sp = Self::get_span(&input);
+        match_nodes!(
+            input.clone().into_children();
+            [question(_)] => Ok(Loc::new(MaybeUnknown::Unknown(vec![]), sp)),
+            [question(_), param_var(vars)..] => Ok(Loc::new(MaybeUnknown::Unknown(vars.collect()), sp)),
+            [expr(e)] => Ok(Loc::new(MaybeUnknown::Known(e.take()), sp)),
+        )
+    }
+
     // ================ Intervals =====================
     fn time(input: Node) -> ParseResult<Loc<ast::Time>> {
         let sp = Self::get_span(&input);
         match_nodes!(
             input.clone().into_children();
-            [event(ev), expr(sts)] => Ok(Loc::new(ast::Time::new(ev.take(), sts.take()), sp)),
-            [expr(sts), event(ev)] => Ok(Loc::new(ast::Time::new(ev.take(), sts.take()), sp)),
-            [event(ev)] => Ok(Loc::new(ast::Time::new(ev.take(), ast::Expr::default()), sp)),
+            [expr(sts), event(ev)] => Ok(Loc::new(ast::Time::new(ev.take(), MaybeUnknown::Known(sts.take())), sp)),
+            [event(ev)] => Ok(Loc::new(ast::Time::new(ev.take(), MaybeUnknown::Known(ast::Expr::default())), sp)),
+            [event(ev), maybe_unknown(u)] => Ok(Loc::new(ast::Time::new(ev.take(), u.take()), sp)),
             [expr(_)] => {
                 Err(input.error("time expressions must have the form `E+n' where `E' is an event and `n' is a concrete number or sum of parameters"))
             }
@@ -799,15 +815,14 @@ impl FilamentParser {
     fn param_let(input: Node) -> ParseResult<ast::ParamLet> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(name), expr(expr)] => ast::ParamLet { name, expr: Some(expr.take()) },
-            [param_var(name)] => ast::ParamLet { name, expr: None }
+            [param_var(name), maybe_unknown(u)] => ast::ParamLet { name, expr: u.take() },
         ))
     }
 
     fn exists(input: Node) -> ParseResult<ast::Exists> {
         Ok(match_nodes!(
             input.into_children();
-            [param_var(param), expr(bind)] => ast::Exists { param, bind }
+            [param_var(param), maybe_unknown(bind)] => ast::Exists {param, bind}
         ))
     }
 

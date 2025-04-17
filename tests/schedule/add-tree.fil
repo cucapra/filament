@@ -1,0 +1,42 @@
+import "primitives/core.fil";
+
+comp AddWrapper[W]<'G: 1>(
+  in0: ['G, 'G+1] W,
+  in1: ['G, 'G+1] W,
+) -> (
+  out: ['G, 'G+1] W
+) where W > 0
+{
+    sum := new Add[W]<'G>(in0, in1);
+    out = sum.out;
+}
+
+#[schedule=1]
+comp main<'G: 1>(
+  in0: ['G, 'G+1] 32,
+  in1: ['G, 'G+1] 32,
+  in2: ['G, 'G+1] 32,
+  in3: ['G, 'G+1] 32,
+  in4: ['G, 'G+1] 32,
+  in5: ['G, 'G+1] 32,
+  in6: ['G, 'G+1] 32,
+  in7: ['G, 'G+1] 32,
+) -> (
+  out: ['G+10, 'G+11] 32
+)
+{
+    sum1_1 := new AddWrapper[32]<'G>(in0, in1);
+    sum1_2 := new AddWrapper[32]<'G>(in2, in3);
+    sum1_3 := new AddWrapper[32]<'G>(in4, in5);
+    sum1_4 := new AddWrapper[32]<'G>(in6, in7);
+
+    let s1 = ?;
+    let s2 = ?;
+
+    sum2_1 := new AddWrapper[32]<'G+s1>(sum1_1.out, sum1_2.out);
+    sum2_2 := new AddWrapper[32]<'G+s1>(sum1_3.out, sum1_4.out);
+    
+    sum3_1 := new AddWrapper[32]<'G+s2>(sum2_1.out, sum2_2.out);
+
+    out = sum3_1.out;
+}

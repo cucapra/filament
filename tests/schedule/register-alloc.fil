@@ -1,0 +1,45 @@
+import "primitives/core.fil";
+
+comp DelayedAdd[W, D]<'G: 1>(
+  in0: ['G, 'G+1] W,
+  in1: ['G, 'G+1] W,
+) -> (
+  out: ['G+D, 'G+D+1] W
+) where W > 0
+{
+  sum := new Add[W]<'G>(in0, in1);
+
+  delayed := new Shift[W, D]<'G>(sum.out);
+
+  out = delayed.out;
+}
+
+comp DelayedDup[W, D]<'G: 1>(
+  in: ['G, 'G+1] W,
+) -> (
+  out0: ['G+D, 'G+D+1] W,
+  out1: ['G+D, 'G+D+1] W
+) where W > 0
+{
+  delayed := new Shift[W, D]<'G>(in);
+
+  out0 = delayed.out;
+  out1 = delayed.out;
+}
+
+#[toplevel, schedule=1]
+comp main<'G: 1>(
+  in0: ['G, 'G+1] 32,
+  in1: ['G, 'G+1] 32,
+) -> (
+  out0: ['G+10, 'G+11] 32,
+  out1: ['G+10, 'G+11] 32
+)
+ {
+  let d1 = ?;
+  let d2 = ?;
+  sum := new DelayedAdd[32, 1]<'G+d1>(in0, in1);
+  dup := new DelayedDup[32, 1]<'G+d2>(sum.out);
+  out0 = dup.out0;
+  out1 = dup.out1;
+}

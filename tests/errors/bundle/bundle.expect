@@ -1,6 +1,15 @@
 ---CODE---
 1
 ---STDERR---
+error: source port does not provide value for as long as destination requires
+   ┌─ tests/errors/bundle/bundle.fil:13:16
+   │
+13 │         f{i} = d.out;
+   │                ^^^^^
+   │                │
+   │                source is available for ['G+i+1, 'G+i+2]
+   │                required for ['G+i, 'G+i+1]
+
 error: out of bounds access of bundle
    ┌─ tests/errors/bundle/bundle.fil:10:5
    │
@@ -17,15 +26,6 @@ error: source port does not provide value for as long as destination requires
    │            │
    │            source is available for ['G, 'G+1]
    │            required for ['G+1, 'G+2]
-
-error: source port does not provide value for as long as destination requires
-   ┌─ tests/errors/bundle/bundle.fil:13:16
-   │
-13 │         f{i} = d.out;
-   │                ^^^^^
-   │                │
-   │                source is available for ['G+i+1, 'G+i+2]
-   │                required for ['G+i, 'G+i+1]
 
 error: out of bounds access of bundle
    ┌─ tests/errors/bundle/bundle.fil:15:11

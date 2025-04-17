@@ -1,0 +1,25 @@
+import "primitives/comb.fil";
+
+#[schedule=1]
+comp main<'G: 1>(
+    in: ['G, 'G+1] 1,
+) -> (
+    out: ['G+L, 'G+L+1] 1
+) with {
+    some L where L >= 0;
+} {
+    let num = ?;
+    let den = ?;
+    assume den > 0;
+    bundle iters[11]: for<i> ['G + i * num / den, 'G + i * num / den + 1] 1;
+
+    iters{0} = in;
+    for i in 0..10 {
+        N := new Not[1]<'G + ?>(iters{i});
+        iters{i + 1} = N.out;
+    }
+
+    L := ?;
+
+    out = iters{10};
+}

@@ -19,6 +19,7 @@ pub use comp::{CompType, Component};
 pub use context::{Context, EntryPoint};
 pub use control::{
     Command, Connect, EventBind, Exists, If, Instance, Invoke, Let, Loop,
+    MaybeUnknown,
 };
 pub use ctx::{AddCtx, Ctx, MutCtx};
 pub use expr::Expr;

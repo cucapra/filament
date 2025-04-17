@@ -110,6 +110,10 @@ pub struct Opts {
     #[argh(switch, long = "preserve-names")]
     pub preserve_names: bool,
 
+    /// scheduling model containing port delays relative to clock frequency
+    #[argh(option, long = "scheduling-model")]
+    pub scheduling_model: Option<String>,
+
     // Solver specific configuration
     /// solver to use (default: cvc5): cvc5, z3
     #[argh(option, long = "solver", default = "Solver::Z3")]

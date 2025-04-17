@@ -7,7 +7,7 @@ import json
 
 from fud import errors
 from fud.stages import Stage, SourceType, Source
-from fud.utils import shell, TmpDir,unwrap_or
+from fud.utils import shell, TmpDir, unwrap_or
 from enum import Enum
 
 
@@ -115,26 +115,32 @@ class CocotbExecBase(Stage):
                 for i in range(len(data_dict[key])):
                     val = data_dict[key][i]
                     # if it is a string, check if it is in binary or hex
-                    if isinstance(val,str):
-                        if val.startswith('0b'): # binary format
+                    if isinstance(val, str):
+                        if val.startswith("0b"):  # binary format
                             binary_data = val[2:]
                             try:
-                                conv = int(binary_data,2)
+                                conv = int(binary_data, 2)
                             except ValueError:
-                                raise errors.InvalidNumericType("\"" + str(val) + "\"" + " in " + data)
-                        elif val.startswith('0x'): # hex format
+                                raise errors.InvalidNumericType(
+                                    '"' + str(val) + '"' + " in " + data
+                                )
+                        elif val.startswith("0x"):  # hex format
                             binary_data = val[2:]
                             try:
-                                conv = int(binary_data,16)
+                                conv = int(binary_data, 16)
                             except ValueError:
-                                raise errors.InvalidNumericType("\"" + str(val) + "\"" + " in " + data)
-                        else: # none of the above -> unsupported
-                            raise errors.InvalidNumericType("\"" + str(val) + "\"" + " in " + data)
-                    else: # already in decimal
+                                raise errors.InvalidNumericType(
+                                    '"' + str(val) + '"' + " in " + data
+                                )
+                        else:  # none of the above -> unsupported
+                            raise errors.InvalidNumericType(
+                                '"' + str(val) + '"' + " in " + data
+                            )
+                    else:  # already in decimal
                         conv = val
                     # update info in json
                     data_dict[key][i] = conv
-            json_obj = json.dumps(data_dict,indent=4)
+            json_obj = json.dumps(data_dict, indent=4)
             file_new.write(json_obj)
             return Path(file_new.name).resolve()
 
@@ -164,18 +170,15 @@ class CocotbExecBase(Stage):
             return TmpDir()
 
         @builder.step()
-        def data_gen(file: SourceType.Path, dir: SourceType.Directory) -> SourceType.Stream:
+        def data_gen(
+            file: SourceType.Path, dir: SourceType.Directory
+        ) -> SourceType.Stream:
             """
             Generate data file in dir with binary/hex converted to decimal
             """
             data_transformed = transform_data(file, dir)
-            cmd = " ".join(
-                [
-                    "cat ",
-                    "{path}"
-                ]
-            )
-            return shell(cmd.format(path = data_transformed))
+            cmd = " ".join(["cat ", "{path}"])
+            return shell(cmd.format(path=data_transformed))
 
         @builder.step()
         def interface_gen(file: SourceType.Path) -> SourceType.Stream:
@@ -303,7 +306,7 @@ class CocotbExecBase(Stage):
 
         # Generate modified data file
         data_stream = data_gen(data, dir)
-        data_path = self.save_file(builder,data_stream,dir,"data_1.json")
+        data_path = self.save_file(builder, data_stream, dir, "data_1.json")
 
         # Run the program
         out = run(dir, interface_path, data_path)

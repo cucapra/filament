@@ -26,4 +26,4 @@ pub use loc::Loc;
 pub use parser::FilamentParser;
 pub use port::{InterfaceDef, PortDef};
 pub use signature::{EventBind, ParamBind, SigBind, Signature};
-pub use time::{Time, TimeSub};
+pub use time::{MaybeUnknown, Time, TimeSub};

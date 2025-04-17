@@ -1,0 +1,82 @@
+import "primitives/math/float.fil";
+
+#[schedule=1]
+comp main<'G: 1> (
+    left: ['G, 'G+1] WIDTH,
+    right: ['G, 'G+1] WIDTH,
+) -> (
+    out: ['G + L, 'G + L+1] WIDTH
+) with {
+    let WIDTH = 32;
+    let EXPONENT = 8;
+    let MANTISSA = 23;
+    some L where L >= 0;
+}
+{
+     //// comb stage 1 ////
+    left := new _FDecompose[WIDTH, EXPONENT, MANTISSA]<'G>(left);
+    right := new _FDecompose[WIDTH, EXPONENT, MANTISSA]<'G>(right);
+
+    _zero_sign := new Const[1, 0]<'G + ?>();
+    _zero_exp := new Const[EXPONENT, 0]<'G + ?>();
+    _zero_mant := new Const[MANTISSA, 0]<'G + ?>();
+
+    final_sign := new Xor[1]<'G + ?>(left.sign, right.sign);
+    // if exponent is 0, hidden bit is 0
+    _exp_a := new ReduceAnd[EXPONENT]<'G + ?>(left.exponent);
+    _exp_b := new ReduceAnd[EXPONENT]<'G + ?>(right.exponent);
+    exception := new Or[1]<'G + ?>(_exp_a.out, _exp_b.out);
+    // assign exception = (&a[30:23]) | (&b[30:23]);
+
+    // sign extend and add hidden bits
+    _op_a_cond := new ReduceOr[EXPONENT]<'G + ?>(left.exponent);
+    _op_b_cond := new ReduceOr[EXPONENT]<'G + ?>(right.exponent);
+    op_a := new Concat[1, MANTISSA, MANTISSA+1]<'G + ?>(_op_a_cond.out, left.mantissa);
+    op_b := new Concat[1, MANTISSA, MANTISSA+1]<'G + ?>(_op_b_cond.out, right.mantissa);
+
+    product := new MultComb[MANTISSA+1, 2*(MANTISSA+1)]<'G + ?>(op_a.out, op_b.out);
+    normalised := new Select[2*(MANTISSA+1), 2*(MANTISSA+1)-1]<'G + ?>(product.out);
+    _one_long := new Const[2*(MANTISSA+1), 1]<'G + ?>();
+    _product_shifted := new ShiftLeft[2*(MANTISSA+1)]<'G + ?>(product.out, _one_long.out);
+    product_normalised := new Mux[2*(MANTISSA+1)]<'G + ?>(normalised.out, product.out, _product_shifted.out);
+
+    _round := new Slice[2*(MANTISSA+1), MANTISSA-1, 0, MANTISSA]<'G + ?>(product_normalised.out);
+    round := new ReduceOr[MANTISSA]<'G + ?>(_round.out);
+
+    _product_mantissa_slice := new Slice[2*(MANTISSA+1), 2*MANTISSA, MANTISSA+1, MANTISSA]<'G + ?>(product_normalised.out);
+    _product_mantissa_sel := new Select[2*(MANTISSA+1), MANTISSA]<'G + ?>(product_normalised.out);
+    _product_mantissa_round := new And[1]<'G + ?>(_product_mantissa_sel.out, round.out);
+    _product_mantissa_round_extend := new ZeroExtend[1, MANTISSA]<'G + ?>(_product_mantissa_round.out);
+    product_mantissa := new Add[MANTISSA]<'G + ?>(_product_mantissa_slice.out, _product_mantissa_round_extend.out);
+
+    sum_exponent := new Add[EXPONENT, EXPONENT+1]<'G + ?>(left.exponent, right.exponent);
+    _exp_m_1_neg_1 := new Const[EXPONENT+1, pow2(EXPONENT-1)-1]<'G + ?>();
+    exp_norm := new Sub[EXPONENT+1]<'G + ?>(sum_exponent.out, _exp_m_1_neg_1.out);
+    _normalised_ext_exp := new ZeroExtend[1, EXPONENT+1]<'G + ?>(normalised.out);
+    exponent := new Add[EXPONENT+1]<'G + ?>(exp_norm.out, _normalised_ext_exp.out);
+
+    _exp_8 := new Select[EXPONENT+1, EXPONENT]<'G + ?>(exponent.out);
+    _exp_7 := new Select[EXPONENT+1, EXPONENT-1]<'G + ?>(exponent.out);
+    _n_exp_7 := new Not[1]<'G + ?>(_exp_7.out);
+    // negated version of zero
+    nzero := new Not[1]<'G + ?>(exception.out);
+    _ouflow_tmp := new And[1]<'G + ?>(_exp_8.out, nzero.out);
+    overflow := new And[1]<'G + ?>(_ouflow_tmp.out, _n_exp_7.out);
+    underflow := new And[1]<'G + ?>(_ouflow_tmp.out, _exp_7.out);
+
+    _zero_width := new Const[WIDTH, 0]<'G + ?>();
+    _1_exp := new Const[EXPONENT, 1]<'G + ?>();
+    _neg_1_exp := new Neg[EXPONENT]<'G + ?>(_1_exp.out);
+    _exp_cut := new Slice[EXPONENT+1, EXPONENT-1, 0, EXPONENT]<'G + ?>(exponent.out);
+    _res_0_init := new _FCompose[WIDTH, EXPONENT, MANTISSA]<'G+?>(final_sign.out, _exp_cut.out, product_mantissa.out);
+    _res_sign_only := new _FCompose[WIDTH, EXPONENT, MANTISSA]<'G+?>(final_sign.out, _zero_exp.out, _zero_mant.out);
+    _res_sign_maxexp := new _FCompose[WIDTH, EXPONENT, MANTISSA]<'G+?>(final_sign.out, _neg_1_exp.out, _zero_mant.out);
+
+    _res_0 := new Mux[WIDTH]<'G + ?>(underflow.out, _res_sign_only.out, _res_0_init.out);
+    _res_1 := new Mux[WIDTH]<'G + ?>(overflow.out, _res_sign_maxexp.out, _res_0.out);
+    res := new Mux[WIDTH]<'G + ?>(exception.out, _res_sign_only.out, _res_1.out);
+
+    out = res.out;
+
+    L := ?;
+}

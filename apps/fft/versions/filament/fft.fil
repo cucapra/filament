@@ -12,7 +12,7 @@ comp AbstractFPAdd[E, M]<'G:1>(
   R: ['G+L, 'G+L+1] W,
 ) with {
   some W where W > 0;
-  some L where L >= 0;
+  some L where L > 0;
 } where 
   E > 0,
   M > 0
@@ -20,13 +20,10 @@ comp AbstractFPAdd[E, M]<'G:1>(
   assume E == 8;
   assume M == 23;
 
-  let shift = 2;
-  a_shift := new Shift[32, shift]<'G>(X);
-  b_shift := new Shift[32, shift]<'G>(Y);
-  mult := new FAdd[32, 8, 23]<'G+shift>(a_shift.out, b_shift.out);
-  mult_shift := new Shift[32, shift]<'G+shift>(mult.out);
-  R = mult_shift.out;
-  L := shift * 2;
+  add := new FAdd[32, 8, 23]<'G>(X, Y);
+  reg := new Delay[32]<'G>(add.out);
+  R = reg.out;
+  L := 1;
   W := 32;
 }
 
@@ -38,7 +35,7 @@ comp AbstractFPSub[E, M]<'G:1>(
   R: ['G+L, 'G+L+1] W,
 ) with {
   some W where W > 0;
-  some L where L >= 0;
+  some L where L > 0;
 } where 
   E > 0,
   M > 0
@@ -46,13 +43,10 @@ comp AbstractFPSub[E, M]<'G:1>(
   assume E == 8;
   assume M == 23;
 
-  let shift = 2;
-  a_shift := new Shift[32, shift]<'G>(X);
-  b_shift := new Shift[32, shift]<'G>(Y);
-  mult := new FSub[32, 8, 23]<'G+shift>(a_shift.out, b_shift.out);
-  mult_shift := new Shift[32, shift]<'G+shift>(mult.out);
-  R = mult_shift.out;
-  L := shift * 2;
+  sub := new FSub[32, 8, 23]<'G>(X, Y);
+  reg := new Delay[32]<'G>(sub.out);
+  R = reg.out;
+  L := 1;
   W := 32;
 }
 
@@ -65,7 +59,7 @@ comp AbstractFPMult[E, M]<'G: 1>(
   R: ['G+L, 'G+L+1] W,
 ) with {
   some W where W > 0;
-  some L where L >= 0;
+  some L where L > 0;
 } where 
   E > 0,
   M > 0
@@ -73,14 +67,10 @@ comp AbstractFPMult[E, M]<'G: 1>(
   assume E == 8;
   assume M == 23;
 
-  let shift = 2;
-  a_shift := new Shift[32, shift]<'G>(X);
-  b_shift := new Shift[32, shift]<'G>(Y);
-  mult := new FMult[32, 8, 23]<'G+shift>(a_shift.out, b_shift.out);
-  mult_shift := new Shift[32, shift]<'G+shift>(mult.out);
-  R = mult_shift.out;
-
-  L := shift * 2;
+  mult := new FMult[32, 8, 23]<'G>(X, Y);
+  reg := new Delay[32]<'G>(mult.out);
+  R = reg.out;
+  L := 1;
   W := 32;
 }
 

@@ -6,7 +6,7 @@ use super::{
 use calyx_frontend as frontend;
 use calyx_ir as calyx;
 use calyx_utils::CalyxResult;
-use fil_ir::{self as ir, Ctx, Traversal};
+use fil_ir::{self as ir, Ctx, DisplayCtx, Traversal};
 use std::{collections::HashSet, convert::identity, path::PathBuf, rc::Rc};
 
 #[derive(Default)]
@@ -191,7 +191,7 @@ impl Compile {
         lib: &calyx::LibrarySignatures,
         name_gen: &NameGenerator,
     ) -> calyx::Component {
-        log::debug!("Compiling component {idx}");
+        log::debug!("Compiling component {}", ctx.display(idx));
         let comp = ctx.get(idx);
 
         assert!(
@@ -217,7 +217,7 @@ impl Compile {
 
         // If this is the main component, give it a `@top_level` attribute
         if ctx.is_main(idx) {
-            log::debug!("Defining main component {idx}");
+            log::debug!("Adding toplevel attribute to {idx}");
             component.attributes.insert(calyx::BoolAttr::TopLevel, 1);
         }
 

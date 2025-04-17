@@ -1,0 +1,524 @@
+import "../../cmn/bundled.fil";
+import "primitives/math/float.fil";
+import "primitives/comb.fil";
+import "primitives/signed.fil";
+
+/*
+Here, we specify the concrete implementations of all the abstract floating point modules used in the FFT
+*/
+
+
+/// Adds two floating point numbers
+#[schedule=1]
+comp ScheduledFPAdd<'G: 1> (
+    left: ['G, 'G+1] WIDTH,
+    right: ['G, 'G+1] WIDTH,
+) -> (
+    out: ['G+L, 'G+L+1] WIDTH
+) with {
+    let WIDTH = 32;
+    let EXPONENT = 8;
+    let MANTISSA = 23;
+
+    some L where L >= 0;
+}
+{
+     //// comb stage 1 ////
+    left := new _FDecompose[WIDTH, EXPONENT, MANTISSA]<'G>(left);
+    right := new _FDecompose[WIDTH, EXPONENT, MANTISSA]<'G>(right);
+
+    _one := new Const[1, 1]<'G+?>();
+
+    _esub_l_r := new Sub[EXPONENT, WIDTH]<'G>(left.exponent, right.exponent);
+    _esub_r_l := new Sub[EXPONENT, WIDTH]<'G>(right.exponent, left.exponent); // negate esub
+    _control_gt := new Gt[EXPONENT]<'G>(left.exponent, right.exponent);
+    _num_shift := new Mux[WIDTH]<'G+?>(_control_gt.out, _esub_l_r.out, _esub_r_l.out);
+    larger_exp := new Mux[EXPONENT]<'G+?>(_control_gt.out, left.exponent, right.exponent);
+    large_mantissa := new Mux[MANTISSA]<'G+?>(_control_gt.out, left.mantissa, right.mantissa);
+    small_mantissa := new Mux[MANTISSA]<'G+?>(_control_gt.out, right.mantissa, left.mantissa);
+
+
+    _zero_exp := new Const[EXPONENT, 0]<'G+?>();
+    __control_2_a := new Neq[EXPONENT]<'G+?>(left.exponent, _zero_exp.out);
+    __control_2_b := new Neq[EXPONENT]<'G+?>(right.exponent, _zero_exp.out);
+    _control_2 := new And[1]<'G+?>(__control_2_a.out, __control_2_b.out);
+    _zero_width := new Const[WIDTH, 0]<'G+?>();
+    num_shift := new Mux[WIDTH]<'G+?>(_control_2.out, _num_shift.out, _zero_width.out); // num_shift = (e1 == 0 | e2 == 0) ? 0 : num_shift
+
+    //// comb stage 2 //// 
+
+    _small_mantissa_cut := new Slice[MANTISSA, MANTISSA-1, 1, MANTISSA-1]<'G+?>(small_mantissa.out); // small_mant[22:1]
+    _small_mantissa_2 := new Concat[1, MANTISSA-1, MANTISSA]<'G+?>(_one.out, _small_mantissa_cut.out);
+    _small_mantissa_2_shift := new ShiftRight[MANTISSA, WIDTH]<'G+?>(_small_mantissa_2.out, num_shift.out);
+    small_exp_mant := new Mux[MANTISSA]<'G+?>(__control_2_a.out, _small_mantissa_2_shift.out, small_mantissa.out);
+
+    _large_mantissa_cut := new Slice[MANTISSA, MANTISSA-1, 1, MANTISSA-1]<'G+?>(large_mantissa.out);
+    _large_mantissa_2 := new Concat[1, MANTISSA-1, MANTISSA]<'G+?>(_one.out, _large_mantissa_cut.out);
+    large_mantissa_2 := new Mux[MANTISSA]<'G+?>(__control_2_b.out, _large_mantissa_2.out, large_mantissa.out);
+
+    //// comb stage 3 ////
+    _control_lt_2 := new Lt[MANTISSA]<'G+?>(small_exp_mant.out, large_mantissa_2.out);
+    s_mantissa_3 := new Mux[MANTISSA]<'G+?>(_control_lt_2.out, small_exp_mant.out, large_mantissa_2.out);
+    l_mantissa_3 := new Mux[MANTISSA]<'G+?>(_control_lt_2.out, large_mantissa_2.out, small_exp_mant.out);
+
+
+    //// comb stage 4 ////
+    _mant_add := new Add[MANTISSA, MANTISSA+1]<'G+?>(s_mantissa_3.out, l_mantissa_3.out);
+    _mant_sub := new Sub[MANTISSA, MANTISSA+1]<'G+?>(l_mantissa_3.out, s_mantissa_3.out);
+    _add_mant_sel := new Eq[1]<'G+?>(left.sign, right.sign);
+    _add_mant := new Mux[MANTISSA+1]<'G+?>(_add_mant_sel.out, _mant_add.out, _mant_sub.out);
+    _l_mantissa_3_ext := new ZeroExtend[MANTISSA, MANTISSA+1]<'G+?>(l_mantissa_3.out);
+    add_mant := new Mux[MANTISSA+1]<'G+?>(_control_2.out, _add_mant.out, _l_mantissa_3_ext.out);
+
+    _mant_1_const := new Const[WIDTH, 0]<'G+?>(); // constant value set if all mantissa bits are 0
+    _shift_max_const := new Const[WIDTH, MANTISSA+1]<'G+?>();
+    _shift_max_sel := new Select[MANTISSA+1, 0]<'G+?>(add_mant.out);
+    _shift_max_mux_1 := new Mux[WIDTH]<'G+?>(_shift_max_sel.out, _shift_max_const.out, _mant_1_const.out);
+    
+    _exp_1_const := new Neg[EXPONENT]<'G+?>(larger_exp.out);
+    _exp_max_const_p := new Const[EXPONENT, MANTISSA-1]<'G+?>();
+    _exp_max_const := new Neg[EXPONENT]<'G+?>(_exp_max_const_p.out);
+    _exp_max_mux_1 := new Mux[EXPONENT]<'G+?>(_shift_max_sel.out, _exp_max_const.out, _exp_1_const.out);
+
+    // iteration 1
+    _shift_const_1 := new Const[WIDTH, MANTISSA]<'G+?>();
+    _shift_sel_1 := new Select[MANTISSA+1, 1]<'G+?>(add_mant.out);
+    _shift_mux_2 := new Mux[WIDTH]<'G+?>(_shift_sel_1.out, _shift_const_1.out, _shift_max_mux_1.out);
+
+    _exp_const_b_p_1 := new Const[EXPONENT, MANTISSA-2]<'G+?>();
+    _exp_const_b_1 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_1.out);
+    _exp_mux_b_2 := new Mux[EXPONENT]<'G+?>(_shift_sel_1.out, _exp_const_b_1.out, _exp_max_mux_1.out);
+    
+    // iteration 2
+    _shift_const_2 := new Const[WIDTH, MANTISSA-1]<'G+?>();
+    _shift_sel_2 := new Select[MANTISSA+1, 2]<'G+?>(add_mant.out);
+    _shift_mux_3 := new Mux[WIDTH]<'G+?>(_shift_sel_2.out, _shift_const_2.out, _shift_mux_2.out);
+
+    _exp_const_b_p_2 := new Const[EXPONENT, MANTISSA-3]<'G+?>();
+    _exp_const_b_2 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_2.out);
+    _exp_mux_b_3 := new Mux[EXPONENT]<'G+?>(_shift_sel_2.out, _exp_const_b_2.out, _exp_mux_b_2.out);
+    
+    // iteration 3
+    _shift_const_3 := new Const[WIDTH, MANTISSA-2]<'G+?>();
+    _shift_sel_3 := new Select[MANTISSA+1, 3]<'G+?>(add_mant.out);
+    _shift_mux_4 := new Mux[WIDTH]<'G+?>(_shift_sel_3.out, _shift_const_3.out, _shift_mux_3.out);
+
+    _exp_const_b_p_3 := new Const[EXPONENT, MANTISSA-4]<'G+?>();
+    _exp_const_b_3 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_3.out);
+    _exp_mux_b_4 := new Mux[EXPONENT]<'G+?>(_shift_sel_3.out, _exp_const_b_3.out, _exp_mux_b_3.out);
+    
+    // iteration 4
+    _shift_const_4 := new Const[WIDTH, MANTISSA-3]<'G+?>();
+    _shift_sel_4 := new Select[MANTISSA+1, 4]<'G+?>(add_mant.out);
+    _shift_mux_5 := new Mux[WIDTH]<'G+?>(_shift_sel_4.out, _shift_const_4.out, _shift_mux_4.out);
+
+    _exp_const_b_p_4 := new Const[EXPONENT, MANTISSA-5]<'G+?>();
+    _exp_const_b_4 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_4.out);
+    _exp_mux_b_5 := new Mux[EXPONENT]<'G+?>(_shift_sel_4.out, _exp_const_b_4.out, _exp_mux_b_4.out);
+    
+    // iteration 5
+    _shift_const_5 := new Const[WIDTH, MANTISSA-4]<'G+?>();
+    _shift_sel_5 := new Select[MANTISSA+1, 5]<'G+?>(add_mant.out);
+    _shift_mux_6 := new Mux[WIDTH]<'G+?>(_shift_sel_5.out, _shift_const_5.out, _shift_mux_5.out);
+
+    _exp_const_b_p_5 := new Const[EXPONENT, MANTISSA-6]<'G+?>();
+    _exp_const_b_5 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_5.out);
+    _exp_mux_b_6 := new Mux[EXPONENT]<'G+?>(_shift_sel_5.out, _exp_const_b_5.out, _exp_mux_b_5.out);
+    
+    // iteration 6
+    _shift_const_6 := new Const[WIDTH, MANTISSA-5]<'G+?>();
+    _shift_sel_6 := new Select[MANTISSA+1, 6]<'G+?>(add_mant.out);
+    _shift_mux_7 := new Mux[WIDTH]<'G+?>(_shift_sel_6.out, _shift_const_6.out, _shift_mux_6.out);
+
+    _exp_const_b_p_6 := new Const[EXPONENT, MANTISSA-7]<'G+?>();
+    _exp_const_b_6 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_6.out);
+    _exp_mux_b_7 := new Mux[EXPONENT]<'G+?>(_shift_sel_6.out, _exp_const_b_6.out, _exp_mux_b_6.out);
+    
+    // iteration 7
+    _shift_const_7 := new Const[WIDTH, MANTISSA-6]<'G+?>();
+    _shift_sel_7 := new Select[MANTISSA+1, 7]<'G+?>(add_mant.out);
+    _shift_mux_8 := new Mux[WIDTH]<'G+?>(_shift_sel_7.out, _shift_const_7.out, _shift_mux_7.out);
+
+    _exp_const_b_p_7 := new Const[EXPONENT, MANTISSA-8]<'G+?>();
+    _exp_const_b_7 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_7.out);
+    _exp_mux_b_8 := new Mux[EXPONENT]<'G+?>(_shift_sel_7.out, _exp_const_b_7.out, _exp_mux_b_7.out);
+    
+    // iteration 8
+    _shift_const_8 := new Const[WIDTH, MANTISSA-7]<'G+?>();
+    _shift_sel_8 := new Select[MANTISSA+1, 8]<'G+?>(add_mant.out);
+    _shift_mux_9 := new Mux[WIDTH]<'G+?>(_shift_sel_8.out, _shift_const_8.out, _shift_mux_8.out);
+
+    _exp_const_b_p_8 := new Const[EXPONENT, MANTISSA-9]<'G+?>();
+    _exp_const_b_8 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_8.out);
+    _exp_mux_b_9 := new Mux[EXPONENT]<'G+?>(_shift_sel_8.out, _exp_const_b_8.out, _exp_mux_b_8.out);
+    
+    // iteration 9
+    _shift_const_9 := new Const[WIDTH, MANTISSA-8]<'G+?>();
+    _shift_sel_9 := new Select[MANTISSA+1, 9]<'G+?>(add_mant.out);
+    _shift_mux_10 := new Mux[WIDTH]<'G+?>(_shift_sel_9.out, _shift_const_9.out, _shift_mux_9.out);
+
+    _exp_const_b_p_9 := new Const[EXPONENT, MANTISSA-10]<'G+?>();
+    _exp_const_b_9 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_9.out);
+    _exp_mux_b_10 := new Mux[EXPONENT]<'G+?>(_shift_sel_9.out, _exp_const_b_9.out, _exp_mux_b_9.out);
+
+    // iteration 10
+    _shift_const_10 := new Const[WIDTH, MANTISSA-9]<'G+?>();
+    _shift_sel_10 := new Select[MANTISSA+1, 10]<'G+?>(add_mant.out);
+    _shift_mux_11 := new Mux[WIDTH]<'G+?>(_shift_sel_10.out, _shift_const_10.out, _shift_mux_10.out);
+
+    _exp_const_b_p_10 := new Const[EXPONENT, MANTISSA-11]<'G+?>();
+    _exp_const_b_10 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_10.out);
+    _exp_mux_b_11 := new Mux[EXPONENT]<'G+?>(_shift_sel_10.out, _exp_const_b_10.out, _exp_mux_b_10.out);
+
+    // iteration 11
+    _shift_const_11 := new Const[WIDTH, MANTISSA-10]<'G+?>();
+    _shift_sel_11 := new Select[MANTISSA+1, 11]<'G+?>(add_mant.out);
+    _shift_mux_12 := new Mux[WIDTH]<'G+?>(_shift_sel_11.out, _shift_const_11.out, _shift_mux_11.out);
+
+    _exp_const_b_p_11 := new Const[EXPONENT, MANTISSA-12]<'G+?>();
+    _exp_const_b_11 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_11.out);
+    _exp_mux_b_12 := new Mux[EXPONENT]<'G+?>(_shift_sel_11.out, _exp_const_b_11.out, _exp_mux_b_11.out);
+
+    // iteration 12
+    _shift_const_12 := new Const[WIDTH, MANTISSA-11]<'G+?>();
+    _shift_sel_12 := new Select[MANTISSA+1, 12]<'G+?>(add_mant.out);
+    _shift_mux_13 := new Mux[WIDTH]<'G+?>(_shift_sel_12.out, _shift_const_12.out, _shift_mux_12.out);
+
+    _exp_const_b_p_12 := new Const[EXPONENT, MANTISSA-13]<'G+?>();
+    _exp_const_b_12 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_12.out);
+    _exp_mux_b_13 := new Mux[EXPONENT]<'G+?>(_shift_sel_12.out, _exp_const_b_12.out, _exp_mux_b_12.out);
+
+    // iteration 13
+    _shift_const_13 := new Const[WIDTH, MANTISSA-12]<'G+?>();
+    _shift_sel_13 := new Select[MANTISSA+1, 13]<'G+?>(add_mant.out);
+    _shift_mux_14 := new Mux[WIDTH]<'G+?>(_shift_sel_13.out, _shift_const_13.out, _shift_mux_13.out);
+
+    _exp_const_b_p_13 := new Const[EXPONENT, MANTISSA-14]<'G+?>();
+    _exp_const_b_13 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_13.out);
+    _exp_mux_b_14 := new Mux[EXPONENT]<'G+?>(_shift_sel_13.out, _exp_const_b_13.out, _exp_mux_b_13.out);
+
+    // iteration 14
+    _shift_const_14 := new Const[WIDTH, MANTISSA-13]<'G+?>();
+    _shift_sel_14 := new Select[MANTISSA+1, 14]<'G+?>(add_mant.out);
+    _shift_mux_15 := new Mux[WIDTH]<'G+?>(_shift_sel_14.out, _shift_const_14.out, _shift_mux_14.out);
+
+    _exp_const_b_p_14 := new Const[EXPONENT, MANTISSA-15]<'G+?>();
+    _exp_const_b_14 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_14.out);
+    _exp_mux_b_15 := new Mux[EXPONENT]<'G+?>(_shift_sel_14.out, _exp_const_b_14.out, _exp_mux_b_14.out);
+
+    // iteration 15
+    _shift_const_15 := new Const[WIDTH, MANTISSA-14]<'G+?>();
+    _shift_sel_15 := new Select[MANTISSA+1, 15]<'G+?>(add_mant.out);
+    _shift_mux_16 := new Mux[WIDTH]<'G+?>(_shift_sel_15.out, _shift_const_15.out, _shift_mux_15.out);
+
+    _exp_const_b_p_15 := new Const[EXPONENT, MANTISSA-16]<'G+?>();
+    _exp_const_b_15 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_15.out);
+    _exp_mux_b_16 := new Mux[EXPONENT]<'G+?>(_shift_sel_15.out, _exp_const_b_15.out, _exp_mux_b_15.out);
+
+    // iteration 16
+    _shift_const_16 := new Const[WIDTH, MANTISSA-15]<'G+?>();
+    _shift_sel_16 := new Select[MANTISSA+1, 16]<'G+?>(add_mant.out);
+    _shift_mux_17 := new Mux[WIDTH]<'G+?>(_shift_sel_16.out, _shift_const_16.out, _shift_mux_16.out);
+
+    _exp_const_b_p_16 := new Const[EXPONENT, MANTISSA-17]<'G+?>();
+    _exp_const_b_16 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_16.out);
+    _exp_mux_b_17 := new Mux[EXPONENT]<'G+?>(_shift_sel_16.out, _exp_const_b_16.out, _exp_mux_b_16.out);
+
+    // iteration 17
+    _shift_const_17 := new Const[WIDTH, MANTISSA-16]<'G+?>();
+    _shift_sel_17 := new Select[MANTISSA+1, 17]<'G+?>(add_mant.out);
+    _shift_mux_18 := new Mux[WIDTH]<'G+?>(_shift_sel_17.out, _shift_const_17.out, _shift_mux_17.out);
+
+    _exp_const_b_p_17 := new Const[EXPONENT, MANTISSA-18]<'G+?>();
+    _exp_const_b_17 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_17.out);
+    _exp_mux_b_18 := new Mux[EXPONENT]<'G+?>(_shift_sel_17.out, _exp_const_b_17.out, _exp_mux_b_17.out);
+
+    // iteration 18
+    _shift_const_18 := new Const[WIDTH, MANTISSA-17]<'G+?>();
+    _shift_sel_18 := new Select[MANTISSA+1, 18]<'G+?>(add_mant.out);
+    _shift_mux_19 := new Mux[WIDTH]<'G+?>(_shift_sel_18.out, _shift_const_18.out, _shift_mux_18.out);
+
+    _exp_const_b_p_18 := new Const[EXPONENT, MANTISSA-19]<'G+?>();
+    _exp_const_b_18 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_18.out);
+    _exp_mux_b_19 := new Mux[EXPONENT]<'G+?>(_shift_sel_18.out, _exp_const_b_18.out, _exp_mux_b_18.out);
+
+    // iteration 19
+    _shift_const_19 := new Const[WIDTH, MANTISSA-18]<'G+?>();
+    _shift_sel_19 := new Select[MANTISSA+1, 19]<'G+?>(add_mant.out);
+    _shift_mux_20 := new Mux[WIDTH]<'G+?>(_shift_sel_19.out, _shift_const_19.out, _shift_mux_19.out);
+
+    _exp_const_b_p_19 := new Const[EXPONENT, MANTISSA-20]<'G+?>();
+    _exp_const_b_19 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_19.out);
+    _exp_mux_b_20 := new Mux[EXPONENT]<'G+?>(_shift_sel_19.out, _exp_const_b_19.out, _exp_mux_b_19.out);
+
+    // iteration 20
+    _shift_const_20 := new Const[WIDTH, MANTISSA-19]<'G+?>();
+    _shift_sel_20 := new Select[MANTISSA+1, 20]<'G+?>(add_mant.out);
+    _shift_mux_21 := new Mux[WIDTH]<'G+?>(_shift_sel_20.out, _shift_const_20.out, _shift_mux_20.out);
+
+    _exp_const_b_p_20 := new Const[EXPONENT, MANTISSA-21]<'G+?>();
+    _exp_const_b_20 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_20.out);
+    _exp_mux_b_21 := new Mux[EXPONENT]<'G+?>(_shift_sel_20.out, _exp_const_b_20.out, _exp_mux_b_20.out);
+
+    // iteration 21
+    _shift_const_21 := new Const[WIDTH, MANTISSA-20]<'G+?>();
+    _shift_sel_21 := new Select[MANTISSA+1, 21]<'G+?>(add_mant.out);
+    _shift_mux_22 := new Mux[WIDTH]<'G+?>(_shift_sel_21.out, _shift_const_21.out, _shift_mux_21.out);
+
+    _exp_const_b_p_21 := new Const[EXPONENT, MANTISSA-22]<'G+?>();
+    _exp_const_b_21 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_21.out);
+    _exp_mux_b_22 := new Mux[EXPONENT]<'G+?>(_shift_sel_21.out, _exp_const_b_21.out, _exp_mux_b_21.out);
+
+    // iteration 22
+    _shift_const_22 := new Const[WIDTH, MANTISSA-21]<'G+?>();
+    _shift_sel_22 := new Select[MANTISSA+1, 22]<'G+?>(add_mant.out);
+    _shift_mux_23 := new Mux[WIDTH]<'G+?>(_shift_sel_22.out, _shift_const_22.out, _shift_mux_22.out);
+
+    _exp_const_b_p_22 := new Const[EXPONENT, MANTISSA-23]<'G+?>();
+    _exp_const_b_22 := new Neg[EXPONENT]<'G+?>(_exp_const_b_p_22.out);
+    _exp_mux_b_23 := new Mux[EXPONENT]<'G+?>(_shift_sel_22.out, _exp_const_b_22.out, _exp_mux_b_22.out);
+
+    // iteration 23
+    _shift_const_23 := new Const[WIDTH, MANTISSA-22]<'G+?>();
+    _shift_sel_23 := new Select[MANTISSA+1, 23]<'G+?>(add_mant.out);
+    _shift_mux_24 := new Mux[WIDTH]<'G+?>(_shift_sel_23.out, _shift_const_23.out, _shift_mux_23.out);
+    
+    _exp_const_a_23 := new Const[EXPONENT, 1]<'G+?>();
+    _exp_mux_a_24 := new Mux[EXPONENT]<'G+?>(_shift_sel_23.out, _exp_const_a_23.out, _exp_mux_b_23.out);
+
+    //// comb stage 5 ////
+    final_exp := new Add[EXPONENT]<'G+?>(larger_exp.out, _exp_mux_a_24.out);
+    _final_mantissa := new ShiftLeft[MANTISSA+1, WIDTH]<'G+?>(add_mant.out, _shift_mux_24.out);
+    final_mantissa := new Slice[MANTISSA+1, MANTISSA, 1, MANTISSA]<'G+?>(_final_mantissa.out);
+
+    l_signless := new Slice[WIDTH, WIDTH-2, 0, WIDTH-1]<'G+?>(left);
+    r_signless := new Slice[WIDTH, WIDTH-2, 0, WIDTH-1]<'G+?>(right);
+
+    _fsign_1_cond := new Gt[WIDTH-1]<'G+?>(l_signless.out, r_signless.out);
+    _fsign_2_cond := new Eq[1]<'G+?>(left.sign, right.sign);
+    _fsign_cb_cond := new Or[1]<'G+?>(_fsign_1_cond.out, _fsign_2_cond.out);
+    final_sign := new Mux[1]<'G+?>(_fsign_cb_cond.out, left.sign, right.sign);
+
+    res := new _FCompose[WIDTH, EXPONENT, MANTISSA]<'G+?>(final_sign.out, final_exp.out, final_mantissa.out);
+    out = res.out;
+    
+    L := ?;
+}
+
+#[schedule=1]
+comp ScheduledFPMult<'G: 1> (
+    left: ['G, 'G+1] WIDTH,
+    right: ['G, 'G+1] WIDTH,
+) -> (
+    out: ['G + L, 'G + L+1] WIDTH
+) with {
+    let WIDTH = 32;
+    let EXPONENT = 8;
+    let MANTISSA = 23;
+    some L where L >= 0;
+}
+{
+     //// comb stage 1 ////
+    left := new _FDecompose[WIDTH, EXPONENT, MANTISSA]<'G>(left);
+    right := new _FDecompose[WIDTH, EXPONENT, MANTISSA]<'G>(right);
+
+    _zero_sign := new Const[1, 0]<'G + ?>();
+    _zero_exp := new Const[EXPONENT, 0]<'G + ?>();
+    _zero_mant := new Const[MANTISSA, 0]<'G + ?>();
+
+    final_sign := new Xor[1]<'G + ?>(left.sign, right.sign);
+    // if exponent is 0, hidden bit is 0
+    _exp_a := new ReduceAnd[EXPONENT]<'G + ?>(left.exponent);
+    _exp_b := new ReduceAnd[EXPONENT]<'G + ?>(right.exponent);
+    exception := new Or[1]<'G + ?>(_exp_a.out, _exp_b.out);
+    // assign exception = (&a[30:23]) | (&b[30:23]);
+
+    // sign extend and add hidden bits
+    _op_a_cond := new ReduceOr[EXPONENT]<'G + ?>(left.exponent);
+    _op_b_cond := new ReduceOr[EXPONENT]<'G + ?>(right.exponent);
+    op_a := new Concat[1, MANTISSA, MANTISSA+1]<'G + ?>(_op_a_cond.out, left.mantissa);
+    op_b := new Concat[1, MANTISSA, MANTISSA+1]<'G + ?>(_op_b_cond.out, right.mantissa);
+
+    product := new MultComb[MANTISSA+1, 2*(MANTISSA+1)]<'G + ?>(op_a.out, op_b.out);
+    normalised := new Select[2*(MANTISSA+1), 2*(MANTISSA+1)-1]<'G + ?>(product.out);
+    _one_long := new Const[2*(MANTISSA+1), 1]<'G + ?>();
+    _product_shifted := new ShiftLeft[2*(MANTISSA+1)]<'G + ?>(product.out, _one_long.out);
+    product_normalised := new Mux[2*(MANTISSA+1)]<'G + ?>(normalised.out, product.out, _product_shifted.out);
+
+    _round := new Slice[2*(MANTISSA+1), MANTISSA-1, 0, MANTISSA]<'G + ?>(product_normalised.out);
+    round := new ReduceOr[MANTISSA]<'G + ?>(_round.out);
+
+    _product_mantissa_slice := new Slice[2*(MANTISSA+1), 2*MANTISSA, MANTISSA+1, MANTISSA]<'G + ?>(product_normalised.out);
+    _product_mantissa_sel := new Select[2*(MANTISSA+1), MANTISSA]<'G + ?>(product_normalised.out);
+    _product_mantissa_round := new And[1]<'G + ?>(_product_mantissa_sel.out, round.out);
+    _product_mantissa_round_extend := new ZeroExtend[1, MANTISSA]<'G + ?>(_product_mantissa_round.out);
+    product_mantissa := new Add[MANTISSA]<'G + ?>(_product_mantissa_slice.out, _product_mantissa_round_extend.out);
+
+    sum_exponent := new Add[EXPONENT, EXPONENT+1]<'G + ?>(left.exponent, right.exponent);
+    _exp_m_1_neg_1 := new Const[EXPONENT+1, pow2(EXPONENT-1)-1]<'G + ?>();
+    exp_norm := new Sub[EXPONENT+1]<'G + ?>(sum_exponent.out, _exp_m_1_neg_1.out);
+    _normalised_ext_exp := new ZeroExtend[1, EXPONENT+1]<'G + ?>(normalised.out);
+    exponent := new Add[EXPONENT+1]<'G + ?>(exp_norm.out, _normalised_ext_exp.out);
+
+    _exp_8 := new Select[EXPONENT+1, EXPONENT]<'G + ?>(exponent.out);
+    _exp_7 := new Select[EXPONENT+1, EXPONENT-1]<'G + ?>(exponent.out);
+    _n_exp_7 := new Not[1]<'G + ?>(_exp_7.out);
+    // negated version of zero
+    nzero := new Not[1]<'G + ?>(exception.out);
+    _ouflow_tmp := new And[1]<'G + ?>(_exp_8.out, nzero.out);
+    overflow := new And[1]<'G + ?>(_ouflow_tmp.out, _n_exp_7.out);
+    underflow := new And[1]<'G + ?>(_ouflow_tmp.out, _exp_7.out);
+
+    _zero_width := new Const[WIDTH, 0]<'G + ?>();
+    _1_exp := new Const[EXPONENT, 1]<'G + ?>();
+    _neg_1_exp := new Neg[EXPONENT]<'G + ?>(_1_exp.out);
+    _exp_cut := new Slice[EXPONENT+1, EXPONENT-1, 0, EXPONENT]<'G + ?>(exponent.out);
+    _res_0_init := new _FCompose[WIDTH, EXPONENT, MANTISSA]<'G+?>(final_sign.out, _exp_cut.out, product_mantissa.out);
+    _res_sign_only := new _FCompose[WIDTH, EXPONENT, MANTISSA]<'G+?>(final_sign.out, _zero_exp.out, _zero_mant.out);
+    _res_sign_maxexp := new _FCompose[WIDTH, EXPONENT, MANTISSA]<'G+?>(final_sign.out, _neg_1_exp.out, _zero_mant.out);
+
+    _res_0 := new Mux[WIDTH]<'G + ?>(underflow.out, _res_sign_only.out, _res_0_init.out);
+    _res_1 := new Mux[WIDTH]<'G + ?>(overflow.out, _res_sign_maxexp.out, _res_0.out);
+    res := new Mux[WIDTH]<'G + ?>(exception.out, _res_sign_only.out, _res_1.out);
+
+    out = res.out;
+
+    L := ?;
+}
+
+/// Floating point addition with IEEE
+comp AbstractFPAdd[E, M]<'G:1>(
+  X: ['G, 'G+1] W,
+  Y: ['G, 'G+1] W,
+) -> (
+  R: ['G+L, 'G+L+1] W,
+) with {
+  some W where W > 0;
+  some L where L > 0;
+} where 
+  E > 0,
+  M > 0
+{
+  assume E == 8;
+  assume M == 23;
+
+  Add := new ScheduledFPAdd;
+  add := Add<'G>(X, Y);
+  reg := new Delay[32]<'G + Add::L>(add.out);
+  R = reg.out;
+  L := Add::L + 1;
+  W := 32;
+}
+
+/// Floating point addition with Flopoco's internal format
+comp AbstractFPSub[E, M]<'G:1>(
+  X: ['G, 'G+1] W,
+  Y: ['G, 'G+1] W,
+) -> (
+  R: ['G+L, 'G+L+1] W,
+) with {
+  some W where W > 0;
+  some L where L > 0;
+} where 
+  E > 0,
+  M > 0
+{
+  assume E == 8;
+  assume M == 23;
+
+  y_neg := new FNeg[32, 8, 23]<'G>(Y);
+  Add := new ScheduledFPAdd;
+  sub := Add<'G>(X, y_neg.out);
+  reg := new Delay[32]<'G + Add::L>(sub.out);
+  R = reg.out;
+  L := Add::L + 1;
+  W := 32;
+}
+
+
+/// Floating point multiplication with Flopoco's internal format
+comp AbstractFPMult[E, M]<'G: 1>(
+  X: ['G, 'G+1] W,
+  Y: ['G, 'G+1] W,
+) -> (
+  R: ['G+L, 'G+L+1] W,
+) with {
+  some W where W > 0;
+  some L where L > 0;
+} where 
+  E > 0,
+  M > 0
+{
+  assume E == 8;
+  assume M == 23;
+
+  Mul := new ScheduledFPMult;
+  mult := Mul<'G>(X, Y);
+  reg := new Delay[32]<'G + Mul::L>(mult.out);
+  R = reg.out;
+
+  L := Mul::L + 1;
+  W := 32;
+}
+
+/// Converts an IEEE floating point number to Internal format
+/// This does nothing as the internal format is the same as IEEE
+comp AbstractFPfromIEEE[E, M]<'G:1>(
+  X: ['G, 'G+1] WidthIEEE
+) -> (
+  R: ['G+L, 'G+L+1] W
+) with {
+  let WidthIEEE = E + M + 1;
+  some W where W > 0;
+  some L where L == 0;
+} where 
+  E > 0,
+  M > 0
+{
+  assume E == 8;
+  assume M == 23;
+  L := 0;
+  W := 32;
+  R = X;
+}
+
+/// Converts a Internal format floating point number to IEEE
+/// This does nothing as the internal format is the same as IEEE
+comp AbstractFPtoIEEE[E, M]<'G:1>(
+  X: ['G, 'G+1] W
+) -> (
+  R: ['G+L, 'G+L+1] WidthIEEE
+) with {
+  some W where W > 0;
+  let WidthIEEE = E + M + 1;
+  some L where L == 0;
+} where 
+  E > 0,
+  M > 0
+{
+  assume E == 8;
+  assume M == 23;
+  L := 0;
+  W := 32;
+  R = X;
+}
+
+/// Floating point negation
+comp AbstractFPNeg[E, M]<'G:1>(
+  X: ['G, 'G+1] W
+) -> (
+  R: ['G+L, 'G+L+1] W
+) with {
+  some W where W > 0;
+  some L where L == 0;
+} where 
+  E > 0,
+  M > 0
+{
+  assume E == 8;
+  assume M == 23;
+  L := 0;
+  W := 32;
+  fn := new FNeg[32, 8, 23]<'G>(X);
+  R = fn.out;
+}

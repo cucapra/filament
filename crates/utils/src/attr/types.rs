@@ -9,8 +9,17 @@ attr_set! {
             /// Use a counter based FSM design
             CounterFSM: "counter_fsm",
         };
+        priv {
+            /// Whether this component is combinational
+            Combinational,
+        };
     };
-    numeric {};
+    numeric {
+        pub {
+            /// Scheduling goal for this component
+            Schedule: "schedule",
+        };
+    };
     float {};
 }
 
@@ -18,5 +27,10 @@ attr_set! {
     port_attrs;
     flag {};
     numeric {};
-    float {};
+    float {
+        priv {
+            /// Combinational delay of this port
+            CombDelay,
+        };
+    };
 }

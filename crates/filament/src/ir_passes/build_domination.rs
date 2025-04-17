@@ -19,6 +19,10 @@ pub struct BuildDomination {
     invs: Vec<Vec<ir::Command>>,
     /// Let bound parameters in the current stack of scopes.
     plets: Vec<Vec<ir::Command>>,
+    /// Bundle definitions in the current stack of scopes.
+    bdefs: Vec<Vec<ir::Command>>,
+    /// Facts defined in the current stack of scopes.
+    facts: Vec<Vec<ir::Command>>,
 }
 
 impl BuildDomination {
@@ -27,6 +31,8 @@ impl BuildDomination {
         self.insts.push(Vec::new());
         self.invs.push(Vec::new());
         self.plets.push(Vec::new());
+        self.bdefs.push(Vec::new());
+        self.facts.push(Vec::new());
     }
 
     /// Topologically sort the plets and insts in the current scope.
@@ -46,7 +52,8 @@ impl BuildDomination {
         // First pass to register all paremeter owners.
         for (id, cmd) in cmds.iter().enumerate() {
             match cmd {
-                ir::Command::Let(ir::Let { param, .. }) => {
+                ir::Command::Exists(ir::Exists { param, .. })
+                | ir::Command::Let(ir::Let { param, .. }) => {
                     log::trace!("let-bound param {}", comp.display(*param));
                     param_map.insert(*param, id);
                 }
@@ -72,20 +79,29 @@ impl BuildDomination {
         // Second pass to add dependencies between parameter owners and users.
         for (id, cmd) in cmds.iter().enumerate() {
             match cmd {
-                ir::Command::Let(ir::Let { expr, param }) => {
-                    if let Some(expr) = expr {
-                        for idx in expr.relevant_vars(comp) {
-                            log::trace!(
-                                "param {} is used by {}",
-                                comp.display(idx),
-                                comp.display(*param)
-                            );
-                            if let Some(pid) = param_map.get(&idx) {
-                                // Add a dependency from the let to the parameter owner, if it is defined in this scope
-                                topo.add_dependency(*pid, id);
-                            }
+                ir::Command::Let(ir::Let {
+                    expr: ir::MaybeUnknown::Known(expr),
+                    param,
+                })
+                | ir::Command::Exists(ir::Exists { param, expr }) => {
+                    for idx in expr.relevant_vars(comp) {
+                        log::trace!(
+                            "param {} is used by {}",
+                            comp.display(idx),
+                            comp.display(*param)
+                        );
+                        if let Some(pid) = param_map.get(&idx) {
+                            // Add a dependency from the let to the parameter owner, if it is defined in this scope
+                            topo.add_dependency(*pid, id);
                         }
                     }
+                }
+                ir::Command::Let(ir::Let {
+                    expr: ir::MaybeUnknown::Unknown(_),
+                    ..
+                }) => {
+                    // If the let does not have an expression, it depends on nothing.
+                    // We can ignore it.
                 }
                 ir::Command::Instance(inst) => {
                     for idx in (*inst).relevant_vars(comp) {
@@ -125,8 +141,8 @@ impl BuildDomination {
         res
     }
 
-    /// End the current scope and return the instances and invocations
-    /// in the scope.
+    /// End the current scope and return the commands to put at the head
+    /// and the tail in the scope.
     fn end_scope(
         &mut self,
         comp: &ir::Component,
@@ -140,7 +156,20 @@ impl BuildDomination {
         let Some(plets) = self.plets.pop() else {
             unreachable!("plets stack is empty")
         };
-        (Self::sort_insts_plets(insts, plets, comp), invs)
+        let Some(bdefs) = self.bdefs.pop() else {
+            unreachable!("bdefs stack is empty")
+        };
+        let Some(facts) = self.facts.pop() else {
+            unreachable!("facts stack is empty")
+        };
+        (
+            Self::sort_insts_plets(insts, plets, comp)
+                .into_iter()
+                .chain(bdefs)
+                .chain(invs)
+                .collect(),
+            facts,
+        )
     }
 
     fn add_inv(&mut self, inv: ir::InvIdx) {
@@ -153,6 +182,19 @@ impl BuildDomination {
 
     fn add_let(&mut self, let_: ir::Let) {
         self.plets.last_mut().unwrap().push(let_.into());
+    }
+
+    fn add_exists(&mut self, exists: ir::Exists) {
+        // We can treat exists as a let binding
+        self.plets.last_mut().unwrap().push(exists.into());
+    }
+
+    fn add_bdef(&mut self, bdef: ir::PortIdx) {
+        self.bdefs.last_mut().unwrap().push(bdef.into());
+    }
+
+    fn add_fact(&mut self, fact: ir::Fact) {
+        self.facts.last_mut().unwrap().push(fact.into());
     }
 }
 
@@ -179,17 +221,43 @@ impl Visitor for BuildDomination {
         Action::Change(vec![])
     }
 
+    fn bundle_def(
+        &mut self,
+        bdef: fil_ir::PortIdx,
+        _data: &mut VisitorData,
+    ) -> Action {
+        self.add_bdef(bdef);
+        // Remove the bundle definition
+        Action::Change(vec![])
+    }
+
+    fn fact(
+        &mut self,
+        f: &mut fil_ir::Fact,
+        _data: &mut VisitorData,
+    ) -> Action {
+        self.add_fact(f.clone());
+        // Remove the fact
+        Action::Change(vec![])
+    }
+
+    fn exists(
+        &mut self,
+        exists: &mut ir::Exists,
+        _: &mut VisitorData,
+    ) -> Action {
+        self.add_exists(exists.clone());
+        // Remove the exists
+        Action::Change(vec![])
+    }
+
     fn start_cmds(&mut self, _: &mut Vec<ir::Command>, _: &mut VisitorData) {
         self.start_scope();
     }
     fn end_cmds(&mut self, cmds: &mut Vec<ir::Command>, d: &mut VisitorData) {
-        let (inst_plets, invs) = self.end_scope(&d.comp);
+        let (head, tail) = self.end_scope(&d.comp);
         // Insert instances and then invocations to the start of the scope.
-        *cmds = inst_plets
-            .into_iter()
-            .chain(invs)
-            .chain(cmds.drain(..))
-            .collect();
+        *cmds = head.into_iter().chain(cmds.drain(..)).chain(tail).collect();
     }
 
     fn end(&mut self, _: &mut VisitorData) {

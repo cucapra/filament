@@ -23,6 +23,15 @@ impl<K: Eq + std::fmt::Debug, V: std::fmt::Debug> std::fmt::Debug
     }
 }
 
+impl<K, V> Default for Bind<K, V>
+where
+    K: Eq,
+{
+    fn default() -> Self {
+        Self(Vec::new())
+    }
+}
+
 impl<K, V> Bind<K, V>
 where
     K: Eq,
@@ -37,7 +46,10 @@ where
 
     /// Get the binding associated with a particular key
     pub fn get(&self, key: &K) -> Option<&V> {
-        self.0.iter().find_map(|(k, v)| (k == key).then_some(v))
+        self.0
+            .iter()
+            .rev()
+            .find_map(|(k, v)| (k == key).then_some(v))
     }
 
     /// Insert a new binding
@@ -78,6 +90,15 @@ where
     pub fn inner(&self) -> Vec<(K, V)> {
         let Bind(v) = self;
         v.to_vec()
+    }
+}
+
+impl<K, V> FromIterator<(K, V)> for Bind<K, V>
+where
+    K: Eq,
+{
+    fn from_iter<I: IntoIterator<Item = (K, V)>>(iter: I) -> Self {
+        Self(iter.into_iter().collect())
     }
 }
 
@@ -201,6 +222,84 @@ impl Foldable<ParamIdx, ExprIdx> for PropIdx {
     fn fold_with<F>(&self, ctx: &mut Self::Context, subst_fn: &mut F) -> Self
     where
         F: FnMut(ParamIdx) -> Option<ExprIdx>,
+    {
+        match ctx.get(*self).clone() {
+            Prop::True | Prop::False => *self,
+            Prop::Cmp(CmpOp { op, lhs, rhs }) => {
+                let lhs = lhs.fold_with(ctx, subst_fn);
+                let rhs = rhs.fold_with(ctx, subst_fn);
+                ctx.add(Prop::Cmp(CmpOp { op, lhs, rhs }))
+            }
+            Prop::TimeCmp(CmpOp { op, lhs, rhs }) => {
+                let lhs = lhs.fold_with(ctx, subst_fn);
+                let rhs = rhs.fold_with(ctx, subst_fn);
+                ctx.add(Prop::TimeCmp(CmpOp { op, lhs, rhs }))
+            }
+            Prop::TimeSubCmp(CmpOp { op, lhs, rhs }) => {
+                let lhs = lhs.fold_with(ctx, subst_fn);
+                let rhs = rhs.fold_with(ctx, subst_fn);
+                ctx.add(Prop::TimeSubCmp(CmpOp { op, lhs, rhs }))
+            }
+            Prop::Not(p) => {
+                let p = p.fold_with(ctx, subst_fn);
+                p.not(ctx)
+            }
+            Prop::And(l, r) => {
+                let l = l.fold_with(ctx, subst_fn);
+                let r = r.fold_with(ctx, subst_fn);
+                l.and(r, ctx)
+            }
+            Prop::Or(l, r) => {
+                let l = l.fold_with(ctx, subst_fn);
+                let r = r.fold_with(ctx, subst_fn);
+                l.or(r, ctx)
+            }
+            Prop::Implies(a, c) => {
+                let a = a.fold_with(ctx, subst_fn);
+                let c = c.fold_with(ctx, subst_fn);
+                a.implies(c, ctx)
+            }
+        }
+    }
+}
+
+impl Foldable<EventIdx, TimeIdx> for ExprIdx {
+    type Context = Component;
+
+    fn fold_with<F>(&self, ctx: &mut Self::Context, subst_fn: &mut F) -> Self
+    where
+        F: FnMut(EventIdx) -> Option<TimeIdx>,
+    {
+        match ctx.get(*self).clone() {
+            Expr::Param(_) | Expr::Concrete(_) => *self,
+            Expr::Bin { op, lhs, rhs } => {
+                let lhs = lhs.fold_with(ctx, subst_fn);
+                let rhs = rhs.fold_with(ctx, subst_fn);
+                ctx.add(Expr::Bin { op, lhs, rhs })
+            }
+            Expr::Fn { op, args } => {
+                let args = args
+                    .iter()
+                    .map(|arg| arg.fold_with(ctx, subst_fn))
+                    .collect();
+                ctx.add(Expr::Fn { op, args })
+            }
+            Expr::If { cond, then, alt } => {
+                let cond = cond.fold_with(ctx, subst_fn);
+                let then = then.fold_with(ctx, subst_fn);
+                let alt = alt.fold_with(ctx, subst_fn);
+                ctx.add(Expr::If { cond, then, alt })
+            }
+        }
+    }
+}
+
+impl Foldable<EventIdx, TimeIdx> for PropIdx {
+    type Context = Component;
+
+    fn fold_with<F>(&self, ctx: &mut Self::Context, subst_fn: &mut F) -> Self
+    where
+        F: FnMut(EventIdx) -> Option<TimeIdx>,
     {
         match ctx.get(*self).clone() {
             Prop::True | Prop::False => *self,

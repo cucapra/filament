@@ -7,7 +7,7 @@ use codespan_reporting::{diagnostic as cr, term};
 use easy_smt as smt;
 use fil_ast as ast;
 use fil_ir::{self as ir, Ctx, DisplayCtx};
-use fil_utils::GlobalPositionTable;
+use fil_utils::{self as utils, AttrCtx, GlobalPositionTable};
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::{fs, iter};
@@ -580,6 +580,11 @@ impl Visitor for Discharge {
     }
 
     fn start(&mut self, data: &mut VisitorData) -> Action {
+        if data.comp.attrs.has(utils::CompNum::Schedule) {
+            // Scheduled components will be guaranteed accurate by the scheduling pass.
+            return Action::Stop;
+        }
+
         self.to_prove = HoistFacts::hoist(&mut data.comp);
 
         for fact in &self.to_prove {
@@ -648,7 +653,10 @@ impl Visitor for Discharge {
 
         // Assert bindings for all let-bound parameters
         for (idx, p) in data.comp.params().iter() {
-            let ir::ParamOwner::Let { bind: Some(bind) } = &p.owner else {
+            let ir::ParamOwner::Let {
+                bind: ir::MaybeUnknown::Known(bind),
+            } = &p.owner
+            else {
                 continue;
             };
             let param_s = self.param_map[idx];

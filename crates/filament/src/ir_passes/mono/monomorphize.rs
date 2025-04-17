@@ -1,11 +1,15 @@
+use crate::{
+    cmdline,
+    ir_passes::schedule::{create_delay_register, create_delay_shift_register},
+};
+
 use super::{
     Base, CompKey, InstanceInfo, IntoBase, IntoUdl, MonoDeferred, MonoSig,
     Underlying, UnderlyingComp,
 };
 use fil_gen as fgen;
-use fil_ir::{self as ir, Ctx, IndexStore};
+use fil_ir::{self as ir, Ctx, DisplayCtx, IndexStore};
 use ir::{AddCtx, EntryPoint};
-use itertools::Itertools;
 use std::collections::HashMap;
 
 /// The Monomorphize pass.
@@ -59,6 +63,8 @@ pub struct Monomorphize<'a> {
     pub ctx: ir::Context,
     /// The old context
     pub old: &'a ir::Context,
+    /// Commandline options
+    pub opts: &'a cmdline::Opts,
     // Names of external components
     pub externals: Vec<ir::CompIdx>,
     /// Instances that have already been processed. Tracks the name of the generated component
@@ -69,21 +75,33 @@ pub struct Monomorphize<'a> {
     pub ext_map: HashMap<String, Vec<ir::CompIdx>>,
     /// Generator executor
     gen_exec: &'a mut Option<fgen::GenExec>,
+    /// Scheduling register
+    pub scheduling_reg: ir::CompIdx,
+    /// Scheduling shift register
+    pub scheduling_shift: ir::CompIdx,
 }
 
 impl<'a> Monomorphize<'a> {
     fn new(
         old: &'a ir::Context,
+        opts: &'a cmdline::Opts,
         gen_exec: &'a mut Option<fgen::GenExec>,
     ) -> Self {
+        let mut ctx = ir::Context::default();
+        let scheduling_reg = create_delay_register(&mut ctx);
+        let scheduling_shift = create_delay_shift_register(&mut ctx);
+
         Monomorphize {
-            ctx: ir::Context::default(),
+            ctx,
             old,
+            opts,
             externals: vec![],
             processed: HashMap::new(),
             inst_info: HashMap::new(),
             ext_map: HashMap::new(),
             gen_exec,
+            scheduling_reg,
+            scheduling_shift,
         }
     }
 }
@@ -135,8 +153,11 @@ impl Monomorphize<'_> {
             .gen_instance(tool, &inst);
 
         // Partially convert the signature
-        let monosig =
-            MonoSig::new(underlying, ir::CompType::External, comp, params);
+        let monosig = MonoSig::new(
+            underlying,
+            ir::CompType::External,
+            CompKey::new(comp, params),
+        );
         let mut mono_comp = MonoDeferred::new(
             UnderlyingComp::new(self.old.get(comp.idx())),
             self,
@@ -145,18 +166,17 @@ impl Monomorphize<'_> {
         mono_comp.sig_partial_mono();
 
         // Add generated existential parameters
-        let exists = exist_params
-            .into_iter()
-            .map(|(name, val)| {
-                let v: u64 = val.parse().unwrap();
-                let Some(param) = is.param_from_src_name(name.clone()) else {
-                    unreachable!("component does not have parameter `{name}'")
-                };
-                // Add to the binding
-                mono_comp.push_binding(param.ul(), v);
-                (param.ul(), v)
-            })
-            .collect_vec();
+        for (ep, val) in exist_params {
+            let v: u64 = val.parse().unwrap();
+            let Some(param) = is.param_from_src_name(ep.clone()) else {
+                unreachable!("component does not have parameter `{ep}'")
+            };
+            // Add to the binding
+            mono_comp.push_binding(param.ul(), v);
+        }
+
+        // Monomorphize the component's body
+        mono_comp.body();
 
         // Monomorphize the siganture of the component using the parameters
         mono_comp.sig_complete_mono();
@@ -164,12 +184,6 @@ impl Monomorphize<'_> {
 
         // Update the source name
         comp.src_info.as_mut().unwrap().name = name.into();
-
-        // Add information about the existential parameters to the global map
-        let info = self.inst_info_mut(key.clone());
-        for (p, v) in exists {
-            info.add_exist_val(p, v);
-        }
 
         // Add component to the context
         let idx = self.ctx.add(comp).base();
@@ -225,7 +239,7 @@ impl Monomorphize<'_> {
 
     /// Monomorphize a component and return its index in the new context.
     pub fn monomorphize(&mut self, ck: CompKey) -> Base<ir::Component> {
-        log::debug!("Monomorphizing `{}'", ck.comp.idx());
+        log::debug!("Monomorphizing `{}'", self.old.display(ck.comp.idx()));
         let CompKey { comp, params } = ck;
         let underlying = self.old.get(comp.idx());
 
@@ -250,8 +264,11 @@ impl Monomorphize<'_> {
         }
 
         // Otherwise monomorphize the definition of the component
-        let monosig =
-            MonoSig::new(underlying, ir::CompType::Source, comp, params);
+        let monosig = MonoSig::new(
+            underlying,
+            ir::CompType::Source,
+            CompKey::new(comp, params),
+        );
 
         // the component whose signature we want to monomorphize
         // Monomorphize the sig
@@ -266,6 +283,7 @@ impl Monomorphize<'_> {
         self.processed.insert(n_ck, new_comp);
 
         // return the `base` index so we can update the instance
+        log::debug!("Finished `{}'", self.old.display(ck.comp.idx()));
         new_comp
     }
 }
@@ -275,6 +293,7 @@ impl Monomorphize<'_> {
     /// Returns an empty context if there is no top-level component.
     pub fn transform(
         ctx: &ir::Context,
+        opts: &cmdline::Opts,
         generated: &mut Option<fgen::GenExec>,
     ) -> ir::Context {
         let Some(entrypoint) = &ctx.entrypoint else {
@@ -292,14 +311,14 @@ impl Monomorphize<'_> {
 
         let entrypoint = entrypoint.ul();
         // Monomorphize the entrypoint
-        let mut mono = Monomorphize::new(ctx, generated);
+        let mut mono = Monomorphize::new(ctx, opts, generated);
         let ck = CompKey::new(entrypoint, bindings.clone());
         mono.monomorphize(ck.clone());
 
         let new_entrypoint = mono.processed.get(&ck).unwrap();
         // New component no longer has any bindings
         mono.ctx.entrypoint = Some(EntryPoint::new(new_entrypoint.get()));
-        mono.ctx.externals = mono.ext_map;
+        mono.ctx.externals.extend(mono.ext_map);
         ir::Validate::context(&mono.ctx);
         mono.ctx
     }

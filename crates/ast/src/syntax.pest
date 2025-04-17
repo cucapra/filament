@@ -19,6 +19,9 @@ import = _{
 }
 imports = { import* }
 
+// Question Mark
+question = { "?" }
+
 // ====== toplevel ======
 
 file = {
@@ -153,13 +156,20 @@ event_bind = {
   "?" ~ event_with_delay ~ "=" ~ time |
   event_with_delay
 }
+
 abstract_var = {
   "<" ~ event_bind ~ ("," ~ event_bind)* ~ ">"
 }
 
+maybe_unknown = {
+  question ~ "(" ~ param_var ~ ("," ~ param_var)* ~ ")"
+  | question
+  | expr
+}
+
 // Time
 time = {
-  event ~ "+" ~ expr
+  | event ~ "+" ~ maybe_unknown
   | expr ~ "+" ~ event
   | event
   | expr
@@ -260,8 +270,7 @@ if_stmt = {
 
 // ===== let-bound parameters ========
 param_let = {
-  "let" ~ param_var ~ "=" ~ expr ~ ";"
-  | "let" ~ param_var ~ "=" ~ "?" ~ ";"
+  "let" ~ param_var ~ "=" ~ maybe_unknown ~ ";"
 }
 
 // ====== Loops ==========
@@ -277,7 +286,7 @@ bundle = {
 
 // ====== Existential binding =======
 exists = {
-  param_var ~ ":=" ~ expr ~ ";"
+  param_var ~ ":=" ~ maybe_unknown ~ ";"
 }
 
 /// ===== Assumptions ==========

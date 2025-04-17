@@ -1,0 +1,15 @@
+[Add]
+combinational = true
+ports.out = 0.4
+
+[MultComb]
+combinational = true
+ports.out = 0.6
+
+[Const]
+combinational = true
+ports.out = 0.0
+
+[ShiftLeft]
+combinational = true
+ports.out = 0.1

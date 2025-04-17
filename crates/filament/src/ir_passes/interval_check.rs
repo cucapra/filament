@@ -1,6 +1,6 @@
 use crate::ir_visitor::{Action, Visitor, VisitorData};
 use fil_ir::{self as ir, AddCtx, Ctx};
-use fil_utils::GPosIdx;
+use fil_utils::{self as utils, AttrCtx, GPosIdx};
 use itertools::Itertools;
 
 #[derive(Default)]
@@ -130,7 +130,7 @@ impl Visitor for IntervalCheck {
         let assumes = comp
             .all_exist_assumes()
             .into_iter()
-            .fold(init, |a, b| a.and(b, comp));
+            .fold(init, |a, (b, _)| a.and(b, comp));
 
         // Ensure that delays are greater than zero
         let mut cmds: Vec<ir::Command> =
@@ -338,11 +338,18 @@ impl Visitor for IntervalCheck {
 
         let pre_req = s_len.equal(d_len, comp).and(in_range, comp);
 
-        let contains = src_t
-            .range
-            .start
-            .lte(dst_range.start, comp)
-            .and(src_t.range.end.gte(dst_range.end, comp), comp);
+        // If the component is to be scheduled, the condition dst_range \in src_range
+        // should be weakened to src_range.start <= dst_range.start.
+        let contains = if comp.attrs.has(utils::CompNum::Schedule) {
+            src_t.range.start.lte(dst_range.start, comp)
+        } else {
+            // dst_range in src_range
+            src_t
+                .range
+                .start
+                .lte(dst_range.start, comp)
+                .and(src_t.range.end.gte(dst_range.end, comp), comp)
+        };
 
         let &ir::info::Connect { src_loc, .. } = comp.get(*info).into();
         let reason = comp.add(
