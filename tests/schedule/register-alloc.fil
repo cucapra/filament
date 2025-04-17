@@ -29,7 +29,6 @@ comp DelayedDup[W, D]<'G: 1>(
 
 #[toplevel, schedule=1]
 comp main<'G: 1>(
-  go: interface['G],
   in0: ['G, 'G+1] 32,
   in1: ['G, 'G+1] 32,
 ) -> (

@@ -302,9 +302,21 @@ impl Solve<'_> {
     pub fn comp(&mut self) {
         // First, intern all bindings for let = ? parameters and assertions/assumptions
         let mut cmds = std::mem::take(&mut self.comp.cmds);
+
+        // First pass to intern all let parameter bindings
+        for cmd in &cmds {
+            if let ir::Command::Let(l) = cmd {
+                self.let_(l)
+            }
+        }
+        // Now finish interning all ports
+        for pidx in self.comp.ports().idx_iter().collect_vec() {
+            self.port(pidx);
+        }
+
+        // Now add constraints to the solver
         for cmd in &cmds {
             match cmd {
-                ir::Command::Let(l) => self.let_(l),
                 ir::Command::Fact(ir::Fact { prop, .. }) => {
                     log::trace!("Asserting: {}", self.comp.display(*prop));
                     let sexpr: SExpr = self.prop_to_sexp(*prop);
@@ -442,6 +454,11 @@ impl Solve<'_> {
                 "Found let binding with non-? expression when scheduling."
             )
         };
+
+        assert!(
+            args.is_empty(),
+            "Arguments to let = ? are currently not supported"
+        );
 
         assert!(
             !self.param_bind.contains(param),

@@ -34,10 +34,11 @@ impl CombDataflow {
                             .get(output)
                             .get(utils::PortFloat::CombDelay)
                             .unwrap_or_else(|| {
-                                panic!(
-                                    "Combinational delay not found for port {}",
+                                log::warn!(
+                                    "Combinational delay not found for port {}. Assuming zero.",
                                     comp.display(output)
-                                )
+                                );
+                                &0.0
                             });
 
                         log::trace!(

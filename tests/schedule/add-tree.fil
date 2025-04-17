@@ -13,7 +13,6 @@ comp AddWrapper[W]<'G: 1>(
 
 #[schedule=1]
 comp main<'G: 1>(
-  go: interface['G],
   in0: ['G, 'G+1] 32,
   in1: ['G, 'G+1] 32,
   in2: ['G, 'G+1] 32,

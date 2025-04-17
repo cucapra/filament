@@ -189,12 +189,33 @@ impl MonoDeferred<'_, '_> {
         // Monomorphize the component's body
         self.body();
 
+        // if this component has an interface, use the scheduling register.
+        // Otherwise, use the shift register.
+        assert!(
+            self.underlying.events().len() == 1,
+            "Component with multiple events cannot be scheduled."
+        );
+
+        let delay_register = if self
+            .underlying
+            .events()
+            .iter()
+            .next()
+            .unwrap()
+            .1
+            .has_interface
+        {
+            self.pass.scheduling_reg
+        } else {
+            self.pass.scheduling_shift
+        };
+
         // Run scheduling pass if needed
         if self.schedule {
             schedule::schedule(
                 &self.pass.ctx,
                 self.monosig.base.comp_mut(),
-                self.pass.scheduling_reg,
+                delay_register,
                 self.pass.opts.solver_replay_file.as_ref(),
             );
         }

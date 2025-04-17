@@ -1,4 +1,7 @@
-use crate::{cmdline, ir_passes::schedule::create_delay_register};
+use crate::{
+    cmdline,
+    ir_passes::schedule::{create_delay_register, create_delay_shift_register},
+};
 
 use super::{
     Base, CompKey, InstanceInfo, IntoBase, IntoUdl, MonoDeferred, MonoSig,
@@ -74,6 +77,8 @@ pub struct Monomorphize<'a> {
     gen_exec: &'a mut Option<fgen::GenExec>,
     /// Scheduling register
     pub scheduling_reg: ir::CompIdx,
+    /// Scheduling shift register
+    pub scheduling_shift: ir::CompIdx,
 }
 
 impl<'a> Monomorphize<'a> {
@@ -84,6 +89,7 @@ impl<'a> Monomorphize<'a> {
     ) -> Self {
         let mut ctx = ir::Context::default();
         let scheduling_reg = create_delay_register(&mut ctx);
+        let scheduling_shift = create_delay_shift_register(&mut ctx);
 
         Monomorphize {
             ctx,
@@ -95,6 +101,7 @@ impl<'a> Monomorphize<'a> {
             ext_map: HashMap::new(),
             gen_exec,
             scheduling_reg,
+            scheduling_shift,
         }
     }
 }

@@ -219,7 +219,6 @@ impl<'prog> BuildCtx<'prog> {
         param: &OwnedParam,
         pos: utils::GPosIdx,
     ) -> BuildRes<ir::ExprIdx> {
-        log::trace!("param map: {:?}", self.param_map.as_flat_vec());
         match self.param_map.get(param) {
             Some(p) => Ok(*p),
             None => {

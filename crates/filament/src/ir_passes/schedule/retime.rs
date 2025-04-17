@@ -198,9 +198,9 @@ impl<'ctx, 'comp> Retime<'ctx, 'comp> {
 
             let instname = format!(
                 "retime_{}_{}_{}_{}_",
-                self.comp.display(srcidx),
+                self.comp.display(srcidx).replace(".", "_"),
                 src_index.into_iter().join("_"),
-                self.comp.display(dstidx),
+                self.comp.display(dstidx).replace(".", "_"),
                 dst_index.into_iter().join("_"),
             );
 

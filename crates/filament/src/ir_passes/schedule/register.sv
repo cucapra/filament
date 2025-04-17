@@ -1,4 +1,38 @@
 
+module __SchedulingDelayShift #(
+  parameter WIDTH = 32,
+  parameter DELAY = 0,
+  parameter LIVE = 1
+) (
+  input wire clk,
+  input wire reset,
+  input wire logic [WIDTH-1:0] in, // ['G, 'G+1]
+  output logic [WIDTH-1:0] out // ['G+DELAY, 'G+DELAY+1]
+);
+
+  // Basic shift register
+  logic [WIDTH-1:0] shift[DELAY-1:0];
+  always @(posedge clk) begin
+    if (reset) begin
+      shift[0] <= 0;
+    end else begin
+      shift[0] <= in;
+    end
+  end
+  for (genvar i = 1; i < DELAY; i++) begin
+    always @(posedge clk) begin
+      if (reset) begin
+        shift[i] <= 0;
+      end else begin
+        shift[i] <= shift[i-1];
+      end
+    end
+  end
+
+  assign out = shift[DELAY-1];
+endmodule
+
+
 module __SchedulingDelayRegister #(
   parameter WIDTH = 32,
   parameter DELAY = 0,

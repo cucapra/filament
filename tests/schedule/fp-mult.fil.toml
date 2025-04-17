@@ -1,0 +1,81 @@
+[_FDecompose]
+combinational = true
+ports.sign = 0.0
+ports.exponent = 0.0
+ports.mantissa = 0.0
+
+[_FCompose]
+combinational = true
+ports.out = 0.0
+
+[Const]
+combinational = true
+ports.out = 0.0
+
+[Sub]
+combinational = true
+ports.out = 0.4
+
+[Add]
+combinational = true
+ports.out = 0.4
+
+[MultComb]
+combinational = true
+ports.out = 0.6
+
+[Gt]
+combinational = true
+ports.out = 0.2
+
+[Lt]
+combinational = true
+ports.out = 0.2
+
+[Eq]
+combinational = true
+ports.out = 0.2
+
+[Neq]
+combinational = true
+ports.out = 0.2
+
+[Mux]
+combinational = true
+ports.out = 0.1
+
+[Or]
+combinational = true
+ports.out = 0.05
+
+[And]
+combinational = true
+ports.out = 0.05
+
+[Neg]
+combinational = true
+ports.out = 0.05
+
+[Slice]
+combinational = true
+ports.out = 0.0
+
+[Concat]
+combinational = true
+ports.out = 0.0
+
+[Select]
+combinational = true
+ports.out = 0.0
+
+[ShiftRight]
+combinational = true
+ports.out = 0.0
+
+[ShiftLeft]
+combinational = true
+ports.out = 0.0
+
+[ZeroExtend]
+combinational = true
+ports.out = 0.0
