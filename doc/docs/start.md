@@ -17,7 +17,7 @@ Next, we can install the dependencies for the Filament compiler:
 
 To check that the compiler works, run the following command:
 ```
-cargo run -- tests/compile/par.fil
+cargo run -- tests/run/add.fil
 ```
 Which should generate the Verilog implementing the original program.
 
