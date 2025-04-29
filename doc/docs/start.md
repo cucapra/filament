@@ -104,9 +104,9 @@ Rerun the command to check that `libpython` was found after installing a new pyt
 
 
 [install-rust]: https://www.rust-lang.org/tools/install
-[fud]: https://docs.calyxir.org/fud/index.html
+[fud]: https://docs.calyxir.org/running-calyx/fud/index.html
 [iverilog-install]: https://iverilog.fandom.com/wiki/Installation_Guide
-[fud-icarus]: https://docs.calyxir.org/fud/index.html#icarus-verilog
+[fud-icarus]: https://docs.calyxir.org/running-calyx/fud/index.html#icarus-verilog
 [cocotb]: https://www.cocotb.org/
 [z3-install]: https://github.com/Z3Prover/z3
 [flit]: https://flit.pypa.io/en/stable/
