@@ -11,7 +11,7 @@ use fil_ast::{self as ast};
 use fil_utils::{Diagnostics, Error, GPosIdx};
 use itertools::Itertools;
 use std::collections::HashMap;
-use std::{iter, rc::Rc};
+use std::rc::Rc;
 
 pub type BuildRes<T> = Result<T, Diagnostics>;
 
@@ -575,11 +575,6 @@ impl BuildCtx<'_> {
     fn sig(&mut self, idx: ir::CompIdx, sig: &ast::Signature) -> BuildRes<Sig> {
         let mut conv_sig = Sig::new(idx, sig);
 
-        // Constraints defined in the signature of the component
-        let mut sig_cons: Vec<ir::Command> = Vec::with_capacity(
-            sig.param_constraints.len() + sig.event_constraints.len(),
-        );
-
         // Add parameters to the component
         self.comp().param_args = sig
             .params
@@ -611,7 +606,10 @@ impl BuildCtx<'_> {
                         // Constraints on existentially quantified parameters
                         let assumes = cons
                             .iter()
-                            .map(|pc| self.expr_cons(pc.inner().clone()))
+                            .map(|pc| {
+                                self.expr_cons(pc.inner().clone())
+                                    .map(|p| (p, pc.pos()))
+                            })
                             .collect::<BuildRes<Vec<_>>>()?;
                         self.comp().add_exist_assumes(p_idx, assumes);
                         Ok((sb.inner().clone(), Some(p_idx)))
@@ -662,72 +660,20 @@ impl BuildCtx<'_> {
         }
         // Constraints defined by the signature
         for ec in &sig.event_constraints {
-            let info = self.comp().add(ir::Info::assert(
-                ir::info::Reason::misc("Signature assumption", ec.pos()),
-            ));
             let prop = self.event_cons(ec.inner().clone())?;
-            sig_cons.extend(self.comp().assume(prop, info));
-            self.comp().add_event_assert([prop]);
+            self.comp().add_event_assert([(prop, ec.pos())]);
         }
         for pc in &sig.param_constraints {
-            let info = self.comp().add(ir::Info::assert(
-                ir::info::Reason::misc("Signature assumption", pc.pos()),
-            ));
             let prop = self.expr_cons(pc.inner().clone())?;
-            sig_cons.extend(self.comp().assume(prop, info));
-            self.comp().add_param_assert([prop]);
+            self.comp().add_param_assert([(prop, pc.pos())]);
         }
-
-        self.comp().cmds.extend(sig_cons);
 
         Ok(conv_sig)
     }
 
     fn instance(&mut self, inst: ast::Instance) -> BuildRes<Vec<ir::Command>> {
-        let comp_loc = inst.component.pos();
-        // Add the facts defined by the instance as assertions in the
-        // component.
         let idx = self.get_inst(&inst.name)?;
-        let (binding, component) = self.inst_to_sig.get(idx).clone();
-        let sig = self.get_sig(&component)?;
-        let asserts = sig
-            .param_cons
-            .clone()
-            .into_iter()
-            .map(|f| {
-                let reason = self.comp().add(
-                    ir::info::Reason::param_cons(comp_loc, f.pos()).into(),
-                );
-                let p = f.take().resolve_expr(&binding);
-                // This is a checked fact because the calling component needs to
-                // honor it.
-                self.expr_cons(p).map(|p| self.comp().assert(p, reason))
-            })
-            .collect::<BuildRes<Vec<_>>>()?
-            .into_iter()
-            .flatten();
-
-        let assumes = sig
-            .exist_cons
-            .clone()
-            .into_iter()
-            .map(|f| {
-                let reason = self.comp().add(
-                    ir::info::Reason::exist_cons(comp_loc, Some(f.pos()))
-                        .into(),
-                );
-                let p = f.take().resolve_expr(&binding);
-                // This is an assumption because the called component guarantees guarantees it.
-                self.expr_cons(p).map(|p| self.comp().assume(p, reason))
-            })
-            .collect::<BuildRes<Vec<_>>>()?
-            .into_iter()
-            .flatten();
-
-        Ok(iter::once(ir::Command::from(idx))
-            .chain(asserts)
-            .chain(assumes)
-            .collect_vec())
+        Ok(vec![ir::Command::from(idx)])
     }
 
     /// This function is called during the second pass of the conversion and does the following:
@@ -772,25 +718,6 @@ impl BuildCtx<'_> {
             .into_iter()
             .map(|p| p.try_map(|p| self.get_access(p, ir::Direction::Out)))
             .collect::<BuildRes<Vec<_>>>()?;
-
-        // Constraints on the events from the signature
-        let cons: Vec<ir::Command> = sig
-            .event_cons
-            .clone()
-            .into_iter()
-            .map(|ec| {
-                let reason = self.comp().add(
-                    ir::info::Reason::event_cons(instance.pos(), ec.pos())
-                        .into(),
-                );
-                let ec = ec.take().resolve_event(&event_binding);
-                self.event_cons(ec)
-                    .map(|prop| self.comp().assert(prop, reason))
-            })
-            .collect::<BuildRes<Vec<_>>>()?
-            .into_iter()
-            .flatten()
-            .collect();
 
         let mut connects = Vec::with_capacity(sig.inputs.len());
 
@@ -872,7 +799,6 @@ impl BuildCtx<'_> {
 
         Ok(std::iter::once(ir::Command::from(inv))
             .chain(connects)
-            .chain(cons)
             .collect_vec())
     }
 
@@ -963,34 +889,22 @@ impl BuildCtx<'_> {
             }) => {
                 let start = self.expr(start)?;
                 let end = self.expr(end)?;
-                // Assumption that the index is within range
-                let reason = self.comp().add(
-                    ir::info::Reason::misc(
-                        "loop index is within range",
-                        idx.pos(),
-                    )
-                    .into(),
-                );
 
                 // Compile the body in a new scope
                 let (index, body) = self.try_with_scope(|this| {
                     let idx = this.param(idx, ir::ParamOwner::Loop);
                     Ok((idx, this.commands(body)?))
                 })?;
-                let l = ir::Loop {
-                    index,
-                    start,
-                    end,
-                    body,
-                }
-                .into();
-                let index = index.expr(self.comp());
-                let idx_start = index.gte(start, self.comp());
-                let idx_end = index.lt(end, self.comp());
-                let in_range = idx_start.and(idx_end, self.comp());
-                iter::once(l)
-                    .chain(self.comp().assume(in_range, reason))
-                    .collect()
+
+                vec![
+                    ir::Loop {
+                        index,
+                        start,
+                        end,
+                        body,
+                    }
+                    .into(),
+                ]
             }
             ast::Command::If(ast::If { cond, then, alt }) => {
                 let cond = self.expr_cons(cond)?;
@@ -1005,37 +919,6 @@ impl BuildCtx<'_> {
             }
         };
         Ok(cmds)
-    }
-
-    /// Adds assumptions about the ports in the component
-    fn port_assumptions(&mut self) -> Vec<ir::Command> {
-        let mut cmds = Vec::with_capacity(self.comp().ports().len() * 2);
-        let ports = self
-            .comp()
-            .ports()
-            .iter()
-            .flat_map(|(_, p)| {
-                p.live.idxs.iter().copied().zip(p.live.lens.iter().copied())
-            })
-            .collect_vec();
-
-        // Add assumptions for range of bundle-bound indices
-        let reason = self.comp().add(
-            ir::info::Reason::misc(
-                "bundle index is within range",
-                GPosIdx::UNKNOWN,
-            )
-            .into(),
-        );
-
-        for (idx, len) in ports {
-            let idx = idx.expr(self.comp());
-            let start = idx.gte(self.comp().num(0), self.comp());
-            let end = idx.lt(len, self.comp());
-            let in_range = start.and(end, self.comp());
-            cmds.extend(self.comp().assume(in_range, reason))
-        }
-        cmds
     }
 }
 
@@ -1252,9 +1135,7 @@ fn try_transform(ns: ast::Namespace) -> BuildRes<ir::Context> {
             Some(cmds) => builder.commands(cmds)?,
             None => vec![],
         };
-        let mut cmds = builder.port_assumptions();
-        cmds.extend(body_cmds);
-        builder.comp().cmds.extend(cmds);
+        builder.comp().cmds.extend(body_cmds);
         log::debug!("Adding component: {}", idx);
         ctx.comps.checked_add(idx, builder.take())
     }
