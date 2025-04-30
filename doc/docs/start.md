@@ -32,7 +32,7 @@ Calyx tools are provided using a docker image:
 docker run -it ghcr.io/cucapra/calyx:0.4.0
 ```
 
-If you're using the container, skip to [configuring Filament tools][#configuring-filament-tools].
+If you're using the container, skip to [configuring Filament tools](#configuring-filament-tools).
 
 ### Installing from Source
 
