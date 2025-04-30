@@ -34,10 +34,11 @@
         <!-- MathJax -->
         <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
-        <!-- Provide site root to javascript -->
+        <!-- Provide site root and default themes to javascript -->
         <script>
-            var path_to_root = "";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc.js"></script>
@@ -47,8 +48,8 @@
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                var theme = localStorage.getItem('mdbook-theme');
-                var sidebar = localStorage.getItem('mdbook-sidebar');
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -62,7 +63,8 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            var theme;
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
@@ -75,8 +77,8 @@
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var sidebar = null;
-            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -112,6 +114,7 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
@@ -176,7 +179,7 @@
 <li>Build the compiler by running: <code>cargo build</code> in the root of the folder.</li>
 </ul>
 <p>To check that the compiler works, run the following command:</p>
-<pre><code>cargo run -- tests/compile/par.fil
+<pre><code>cargo run -- tests/run/add.fil
 </code></pre>
 <p>Which should generate the Verilog implementing the original program.</p>
 <h2 id="full-build"><a class="header" href="#full-build">Full Build</a></h2>
@@ -316,7 +319,7 @@ comp main&lt;G: 3&gt;(...) -&gt; (...) {
 out = mx.out
 </code></pre>
 <p>We make use of Filament's combined instance creation and invocation syntax to define a new multiplexer and use it when event <code>G</code> occurs. Finally, we forward the output from the multiplexer to the output signal of the component.</p>
-<p>Coming from a software background, it might seem weird that we're performing both the computations first and selecting the output after the fact. However, a hardware circuit is <em>always active</em><sup class="footnote-reference"><a href="#clock-gating">1</a></sup>–the multiplier and adder are always propagating signals and performing some computation even if the inputs are nonsensical. Furthermore, constructs like <code>if</code>-<code>else</code> are not compositional.<sup class="footnote-reference"><a href="#control-comp">2</a></sup></p>
+<p>Coming from a software background, it might seem weird that we're performing both the computations first and selecting the output after the fact. However, a hardware circuit is <em>always active</em><sup class="footnote-reference" id="fr-clock-gating-1"><a href="#footnote-clock-gating">1</a></sup>–the multiplier and adder are always propagating signals and performing some computation even if the inputs are nonsensical. Furthermore, constructs like <code>if</code>-<code>else</code> are not compositional.<sup class="footnote-reference" id="fr-control-comp-1"><a href="#footnote-control-comp">2</a></sup></p>
 <p>The final program looks like this:</p>
 <pre><code class="language-filament">import "primitives/core.fil";
 import "./sequential.fil";
@@ -457,13 +460,14 @@ comp main&lt;'G: 3&gt;(
 <p>And running the compiler again no longer generates any errors:</p>
 <pre><code>cargo run -- alu.fil
 </code></pre>
-<div class="footnote-definition" id="clock-gating"><sup class="footnote-definition-label">1</sup>
-<p>This is not quite true since we can build circuits where the clock signal to a particular sub-circuit is disabled (or "gated") based on a particular signal. However, this kind of clock-gating is generally not recommended for fine-grained usage.</p>
-</div>
-<div class="footnote-definition" id="control-comp"><sup class="footnote-definition-label">2</sup>
-<p>While control operators like <code>if</code> and <code>for</code> are supported in languages like Verilog, they don't quite work the same in all contexts. <code>for</code> loops are compile-time constructs whereas <code>if</code> can only be used for combinational circuits like adders but not multipliers.</p>
-</div>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="running-filament-designs"><a class="header" href="#running-filament-designs">Running Filament Designs</a></h1>
+<hr>
+<ol class="footnote-definition"><li id="footnote-clock-gating">
+<p>This is not quite true since we can build circuits where the clock signal to a particular sub-circuit is disabled (or "gated") based on a particular signal. However, this kind of clock-gating is generally not recommended for fine-grained usage. <a href="#fr-clock-gating-1">↩</a></p>
+</li>
+<li id="footnote-control-comp">
+<p>While control operators like <code>if</code> and <code>for</code> are supported in languages like Verilog, they don't quite work the same in all contexts. <code>for</code> loops are compile-time constructs whereas <code>if</code> can only be used for combinational circuits like adders but not multipliers. <a href="#fr-control-comp-1">↩</a></p>
+</li>
+</ol><div style="break-before: page; page-break-before: always;"></div><h1 id="running-filament-designs"><a class="header" href="#running-filament-designs">Running Filament Designs</a></h1>
 <p>Filament designs are compiled to Verilog using the <a href="https://calyxir.org">Calyx</a> backend and simulated using tools like <a href="https://github.com/steveicarus/iverilog">Icarus Verilog</a>.
 However, figuring out the right incantations to get these tools to work together and building testing harnesses can be tedious.
 We use <a href="https://docs.calyxir.org/fud/index.html">fud</a> to make the process of running Filament designs seamless: the user provides a file with the test data and runs a single command to compile, simulate, and generate outputs.</p>
