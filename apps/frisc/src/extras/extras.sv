@@ -27,13 +27,64 @@ module OneHotMux #(
   end
 endmodule
 
-module RightShifter #(
-  parameter WIDTH = 32
+// byte addressable memory
+module ByteAccess1D #(
+  parameter SIZE = 16,
+  parameter ADDR_WIDTH = 32
 ) (
-  input wire logic signed [WIDTH-1:0] in,
-  input wire logic [4:0] shamt,
-  input wire logic isArith, // 0 for logical, 1 for arithmetic
-  output logic [WIDTH-1:0] out
+  input wire logic clk,
+  input wire logic reset,
+  input wire logic [ADDR_WIDTH-1:0] addr0,
+  input wire logic [31:0] write_data,
+  input wire logic [3:0] write_mask,
+  output logic [31:0] read_data
 );
-  assign out = isArith ? in >>> shamt : in >> shamt;
+
+  logic [7:0] mem [SIZE-1:0];
+  
+  // reads
+  assign read_data[7:0] = mem[addr0];
+  assign read_data[15:8] = mem[addr0+1];
+  assign read_data[23:16] = mem[addr0+2];
+  assign read_data[31:24] = mem[addr0+3];
+
+  // writes, byte by byte based on write mask
+  always_ff @(posedge clk) begin
+    if (write_mask[0]) begin mem[addr0] <= write_data[7:0]; end
+    if (write_mask[1]) mem[addr0+1] <= write_data[15:8];
+    if (write_mask[2]) mem[addr0+2] <= write_data[23:16];
+    if (write_mask[3]) mem[addr0+3] <= write_data[31:24];
+  end
+endmodule
+
+module Mem1D #(
+  parameter SIZE=16,
+  parameter DATA_WIDTH=32,
+  parameter ADDR_WIDTH=4
+) (
+  input logic clk,
+  input logic reset,
+  input logic [ADDR_WIDTH-1:0] read_addr,
+  input logic write_en,
+  input logic [ADDR_WIDTH-1:0] write_addr,
+  input logic [DATA_WIDTH-1:0] write_data,
+  output logic [DATA_WIDTH-1:0] read_data
+);
+  logic [DATA_WIDTH-1:0] mem [SIZE-1:0];
+
+  assign read_data = mem[read_addr];
+
+  integer i;
+  always_ff @(posedge clk) begin
+    if (reset) begin
+      for (i = 0; i < SIZE; i = i + 1 )
+        mem[i] <= 0;
+    end
+    else if (write_en) mem[write_addr] <= write_data;
+    else begin
+      for (i = 0; i < SIZE; i = i + 1)
+        mem[i] <= mem[i];
+    end
+  end
+
 endmodule

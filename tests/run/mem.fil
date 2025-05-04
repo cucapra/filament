@@ -1,0 +1,14 @@
+import "primitives/memories.fil";
+
+comp main<G:1>(
+  clk:1,
+  reset:1,
+  @[G,G+1] addr0:32,
+  @[G,G+1] write_data:32,
+  @[G,G+1] write_en:1
+) -> (
+  @[G,G+1] read_data:32
+) {
+  mem0 := new StdMem1D[32,4,32]<G>(addr0, write_data, write_en);
+  read_data = mem0.read_data;
+}

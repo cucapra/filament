@@ -190,6 +190,7 @@ impl Compile {
         bind: &mut Binding,
         lib: &calyx::LibrarySignatures,
         name_gen: &NameGenerator,
+        emit_toplevel: bool,
     ) -> calyx::Component {
         log::debug!("Compiling component {idx}");
         let comp = ctx.get(idx);
@@ -216,7 +217,7 @@ impl Compile {
         component.attributes.insert(calyx::BoolAttr::NoInterface, 1);
 
         // If this is the main component, give it a `@top_level` attribute
-        if ctx.is_main(idx) {
+        if ctx.is_main(idx) && emit_toplevel {
             log::debug!("Defining main component {idx}");
             component.attributes.insert(calyx::BoolAttr::TopLevel, 1);
         }
@@ -291,7 +292,7 @@ impl Compile {
     }
 
     /// Compiles filament into calyx
-    pub fn compile(ctx: ir::Context, debug: bool) -> calyx::Context {
+    pub fn compile(ctx: ir::Context, debug: bool, emit_toplevel: bool) -> calyx::Context {
         // Creates a map between the file name and the external components defined in that file
         let externals =
             ctx.externals.iter().map(|(k, v)| (k, v.clone())).collect();
@@ -315,6 +316,7 @@ impl Compile {
                 &mut bindings,
                 &calyx_ctx.lib,
                 &name_gen,
+                emit_toplevel,
             );
             bindings.insert(idx, Rc::clone(&comp.signature));
             if ctx.is_main(idx) {

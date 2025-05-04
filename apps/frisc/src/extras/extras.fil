@@ -2,27 +2,48 @@ import "primitives/core.fil";
 
 // extra components to make things simpler to write
 extern "extras.sv" {
-  comp OneHotMux[WIDTH]<'G:'L-('G), ?'L:1='G+1>(
-     sel: ['G, 'L] 8,
-     in0: ['G, 'L] WIDTH,
-     in1: ['G, 'L] WIDTH,
-     in2: ['G, 'L] WIDTH,
-     in3: ['G, 'L] WIDTH,
-     in4: ['G, 'L] WIDTH,
-     in5: ['G, 'L] WIDTH,
-     in6: ['G, 'L] WIDTH,
-     in7: ['G, 'L] WIDTH
+  comp OneHotMux[WIDTH]<'G:'L-('G),?'L:1='G+1>(
+    sel: ['G, 'L] 8,
+    in0: ['G, 'L] WIDTH,
+    in1: ['G, 'L] WIDTH,
+    in2: ['G, 'L] WIDTH,
+    in3: ['G, 'L] WIDTH,
+    in4: ['G, 'L] WIDTH,
+    in5: ['G, 'L] WIDTH,
+    in6: ['G, 'L] WIDTH,
+    in7: ['G, 'L] WIDTH
   ) -> (
-     out: ['G, 'L] WIDTH
+    out: ['G, 'L] WIDTH
   ) where 'L > 'G, WIDTH > 0;
+
+  comp ByteAccess1D[SIZE, ADDR_WIDTH]<'G:1>(
+    clk:1,
+    reset:1,
+    addr0: ['G, 'G+1] ADDR_WIDTH,
+    write_data: ['G, 'G+1] 32,
+    write_mask: ['G, 'G+1] 4
+  ) -> (
+    read_data: ['G, 'G+1] 32
+  );
+
+  comp Mem1D[SIZE, DATA_WIDTH, ADDR_WIDTH]<'G:1>(
+    clk: 1,
+    reset: 1,
+    read_addr: ['G, 'G+1] ADDR_WIDTH,
+    write_en: ['G, 'G+1] 1,
+    write_addr: ['G, 'G+1] ADDR_WIDTH,
+    write_data: ['G, 'G+1] DATA_WIDTH
+  ) -> (
+    read_data: ['G, 'G+1] DATA_WIDTH
+  );
 }
 
 comp RightShifter[WIDTH]<'G:1>(
-   in: ['G, 'G+1] WIDTH,
-   shamt: ['G, 'G+1] WIDTH,
-   isArith: ['G, 'G+1] 1
+  in: ['G, 'G+1] WIDTH,
+  shamt: ['G, 'G+1] WIDTH,
+  isArith: ['G, 'G+1] 1
 ) -> (
-   out: ['G, 'G+1] WIDTH
+  out: ['G, 'G+1] WIDTH
 ) where WIDTH > 0 {
   sra := new ArithShiftRight[WIDTH]<'G>(in, shamt);
   srl := new ShiftRight[WIDTH]<'G>(in, shamt);

@@ -1,0 +1,25 @@
+import "apps/frisc/src/cpu.fil";
+
+comp main<'G:1> (
+  clk:1,
+  reset:1,
+  instr: ['G, 'G+1]32,
+  pcin: ['G, 'G+1] 32,
+) -> (
+  pc: ['G, 'G+1] 32,
+  nextpc: ['G, 'G+1] 32,
+  isLoad: ['G, 'G+1] 1,
+  isStore: ['G, 'G+1] 1,
+  out: ['G, 'G+1] 32,
+  memAddr: ['G, 'G+1] 32,
+  memData: ['G, 'G+1] 32,
+) {
+  cpu := new CPU<'G>(instr, pcin);
+  out = cpu.out;
+  pc = cpu.pc;
+  nextpc = cpu.nextpc;
+  isLoad = cpu.isLoad;
+  isStore = cpu.isStore;
+  memAddr = cpu.memAddr;
+  memData = cpu.memData;
+}
