@@ -1,6 +1,38 @@
-// Add module - performs floating-point addition in one cycle
+// Shift_register module - configurable pipeline delay for any data type
+module Shift_register #(
+    parameter WIDTH = 32,
+    parameter STAGES = 1  // Number of pipeline stages (1 = single cycle)
+) (
+    input wire clk,
+    input wire [WIDTH-1:0] data_in,
+    output reg [WIDTH-1:0] data_out
+);
+
+    generate
+        if (STAGES == 1) begin : single_stage
+            // Single stage - register output only
+            always_ff @(posedge clk) begin
+                data_out <= data_in;
+            end
+        end else begin : multi_stage
+            // Multi-stage pipeline
+            logic [WIDTH-1:0] pipeline_regs [STAGES-1:0];
+
+            always_ff @(posedge clk) begin
+                pipeline_regs[0] <= data_in;
+                for (int i = 1; i < STAGES; i++) begin
+                    pipeline_regs[i] <= pipeline_regs[i-1];
+                end
+                data_out <= pipeline_regs[STAGES-1];
+            end
+        end
+    endgenerate
+endmodule
+
+// Add module - performs floating-point addition with configurable pipeline stages
 module Add #(
-    parameter WIDTH = 32
+    parameter WIDTH = 32,
+    parameter PIPELINE_STAGES = 1  // Number of pipeline stages (1 = single cycle)
 ) (
     input wire clk,
     input wire [WIDTH-1:0] a,  // IEEE 754 single precision
@@ -102,15 +134,21 @@ module Add #(
         end
     end
 
-    // Sequential logic - register the output
-    always_ff @(posedge clk) begin
-        sum <= sum_next;
-    end
+    // Pipeline using reusable Shift_register module
+    Shift_register #(
+        .WIDTH(WIDTH),
+        .STAGES(PIPELINE_STAGES)
+    ) pipeline (
+        .clk(clk),
+        .data_in(sum_next),
+        .data_out(sum)
+    );
 endmodule
 
-// Mul module - performs floating-point multiplication in one cycle
+// Mul module - performs floating-point multiplication with configurable pipeline stages
 module Mul #(
-    parameter WIDTH = 32
+    parameter WIDTH = 32,
+    parameter PIPELINE_STAGES = 1  // Number of pipeline stages (1 = single cycle)
 ) (
     input wire clk,
     input wire [WIDTH-1:0] a,       // IEEE 754 single precision
@@ -202,8 +240,13 @@ module Mul #(
         end
     end
 
-    // Sequential logic - register the output
-    always_ff @(posedge clk) begin
-        product <= product_next;
-    end
+    // Pipeline using reusable Shift_register module
+    Shift_register #(
+        .WIDTH(WIDTH),
+        .STAGES(PIPELINE_STAGES)
+    ) pipeline (
+        .clk(clk),
+        .data_in(product_next),
+        .data_out(product)
+    );
 endmodule

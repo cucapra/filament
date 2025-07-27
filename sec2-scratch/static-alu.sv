@@ -1,6 +1,7 @@
 // ALU module - uses floating-point Add and Mul modules with op signal
 module ALU #(
-    parameter WIDTH = 32
+    parameter WIDTH = 32,
+    parameter PIPELINE_STAGES = 1  // Number of pipeline stages for Add/Mul modules
 ) (
     input wire clk,
     input wire reset,
@@ -19,16 +20,16 @@ module ALU #(
         OP_MUL = 1'b1
     } alu_op_t;
 
-    // Instantiate Add module
-    Add #(.WIDTH(WIDTH)) adder (
+    // Instantiate Add module with configurable pipeline stages
+    Add #(.WIDTH(WIDTH), .PIPELINE_STAGES(PIPELINE_STAGES)) adder (
         .clk(clk),
         .a(a),
         .b(b),
         .sum(add_result)
     );
 
-    // Instantiate Mul module
-    Mul #(.WIDTH(WIDTH)) multiplier (
+    // Instantiate Mul module with configurable pipeline stages
+    Mul #(.WIDTH(WIDTH), .PIPELINE_STAGES(PIPELINE_STAGES)) multiplier (
         .clk(clk),
         .a(a),
         .b(b),
