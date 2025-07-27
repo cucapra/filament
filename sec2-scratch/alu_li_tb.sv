@@ -6,6 +6,16 @@ module alu_li_tb;
     parameter CLK_PERIOD = 10;
     parameter NUM_TESTS = 10000;  // 10k tests for reasonable runtime
 
+    // ALU Timing Parameters
+    parameter ALU_LATENCY_CYCLES = 1;  // Number of cycles the ALU takes to compute result
+    parameter STABILITY_CYCLES = 1;    // Additional cycles to wait for result stability
+    // Total wait time = ALU_LATENCY_CYCLES + STABILITY_CYCLES
+    // - For this ALU: Add/Mul modules take 1 cycle to register outputs
+    // - Stability cycle ensures the always_comb output has settled
+    // - For faster ALUs: reduce ALU_LATENCY_CYCLES
+    // - For slower ALUs: increase ALU_LATENCY_CYCLES
+    // - For marginal timing: increase STABILITY_CYCLES
+
     // Clock and reset
     logic clk;
     logic reset;
@@ -108,6 +118,8 @@ module alu_li_tb;
 
         $display("Starting differential ALU testbench...");
         $display("Testing %0d random bit patterns", NUM_TESTS);
+        $display("ALU timing: %0d latency cycles + %0d stability cycles = %0d total cycles",
+                 ALU_LATENCY_CYCLES, STABILITY_CYCLES, ALU_LATENCY_CYCLES + STABILITY_CYCLES);
         $display("Static ALU vs Dynamic ALU_LI comparison\n");
 
         // Run differential tests
@@ -156,14 +168,15 @@ module alu_li_tb;
     // Task to test a single case with both ALUs
     task automatic test_single_case(logic [WIDTH-1:0] a_val, logic [WIDTH-1:0] b_val, logic op_val);
         begin
-            // Test static ALU (combinational, result available next cycle)
+            // Test static ALU (result available after ALU_LATENCY_CYCLES + STABILITY_CYCLES)
             static_a = a_val;
             static_b = b_val;
             static_op = op_val;
 
-            // Wait two cycles for static ALU result to be computed and registered
-            @(posedge clk);
-            @(posedge clk);  // Wait one more cycle to ensure result is stable
+            // Wait for ALU computation and stability
+            // ALU_LATENCY_CYCLES: Time for Add/Mul modules to compute and register outputs
+            // STABILITY_CYCLES: Additional time for signal stability and setup/hold margins
+            repeat(ALU_LATENCY_CYCLES + STABILITY_CYCLES) @(posedge clk);
             expected_result = static_result;
 
             // Test dynamic ALU_LI (latency insensitive with handshaking)
