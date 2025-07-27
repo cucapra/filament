@@ -1,15 +1,18 @@
 // Shift_register module - configurable pipeline delay for any data type
 module Shift_register #(
     parameter WIDTH = 32,
-    parameter STAGES = 1  // Number of pipeline stages (1 = single cycle)
+    parameter STAGES = 1  // Number of pipeline stages (0 = passthrough, 1+ = pipelined)
 ) (
     input wire clk,
     input wire [WIDTH-1:0] data_in,
     output reg [WIDTH-1:0] data_out
 );
-
     generate
-        if (STAGES == 1) begin : single_stage
+        if (STAGES == 0) begin : combinational
+          always_comb begin
+            data_out = data_in;
+          end
+        end else if (STAGES == 1) begin : single_stage
             // Single stage - register output only
             always_ff @(posedge clk) begin
                 data_out <= data_in;
@@ -23,7 +26,9 @@ module Shift_register #(
                 for (int i = 1; i < STAGES; i++) begin
                     pipeline_regs[i] <= pipeline_regs[i-1];
                 end
-                data_out <= pipeline_regs[STAGES-1];
+            end
+            always_comb begin
+                data_out = pipeline_regs[STAGES-1];
             end
         end
     endgenerate
