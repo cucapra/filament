@@ -1,0 +1,75 @@
+import "primitives/core.fil";
+import "primitives/math/math.fil";
+
+comp Impl1<'G:15>(
+    go: interface['G],
+    a[6]: for<i> ['G+2*i, 'G+2*i+1] 32,
+    b[4]: for<j> ['G+3*j, 'G+3*j+1] 32,
+) -> (
+    c[4]: for<k> ['G+15, 'G+16] 32,
+) {
+    // The computation performed: c[i] = (a[i] + a[i+1] + a[i+2]) * b[i]
+
+    // Basic implementation: store the entire streams of a and b and then
+    // perform the computation.
+
+    // The last element of a arrives on cycle 'G + 12
+    bundle buffer_a[6]: for<i> ['G+12, 'G+13] 32;
+    for i in 0..6 {
+        // Hold onto the value till the 13th cycle
+        r := new Register[32]<'G+2*i, 'G+13>(a{i});
+        buffer_a{i} = r.out;
+    }
+
+    // Buffer the elements of b
+    bundle buffer_b[4]: for<j> ['G+12, 'G+13] 32;
+    for j in 0..4 {
+        r := new Register[32]<'G+3*j, 'G+13>(b{j});
+        buffer_b{j} = r.out;
+    }
+
+    // Compute the output
+    for k in 0..4 {
+        A := new Add[32]<'G+12>(buffer_a{k}, buffer_a{k+1});
+        B := new Add[32]<'G+12>(A.out, buffer_a{k+2});
+        C := new FastMult[32]<'G+12>(buffer_a{k}, buffer_b{k});
+        c{k} = C.out;
+    }
+}
+
+
+// main is only allowed to have bare wires (no bundles)
+comp main<'G:15>(
+    go: interface['G],
+    // A input stream
+    a0: ['G, 'G+1] 32,
+    a1: ['G+2, 'G+3] 32,
+    a2: ['G+4, 'G+5] 32,
+    a3: ['G+6, 'G+7] 32,
+    a4: ['G+8, 'G+9] 32,
+    a5: ['G+10, 'G+11] 32,
+    // B input stream
+    b0: ['G, 'G+1] 32,
+    b1: ['G+3, 'G+4] 32,
+    b2: ['G+6, 'G+7] 32,
+    b3: ['G+9, 'G+10] 32,
+) -> (
+    c0: ['G+15, 'G+16] 32,
+    c1: ['G+15, 'G+16] 32,
+    c2: ['G+15, 'G+16] 32,
+    c3: ['G+15, 'G+16] 32,
+) {
+    bundle a_stream[6]: for<i> ['G+2*i, 'G+2*i+1] 32;
+    a_stream{0} = a0; a_stream{1} = a1; a_stream{2} =
+    a2; a_stream{3} = a3; a_stream{4} = a4; a_stream{5} = a5;
+
+    bundle b_stream[4]: for<j> ['G+3*j, 'G+3*j+1] 32;
+    b_stream{0} = b0; b_stream{1} = b1; b_stream{2} = b2; b_stream{3} = b3;
+
+    impl := new Impl1<'G>(a_stream{0..6}, b_stream{0..4});
+
+    c0 = impl.c{0};
+    c1 = impl.c{1};
+    c2 = impl.c{2};
+    c3 = impl.c{3};
+}
