@@ -1,6 +1,7 @@
 // Add_LI module - Latency Insensitive wrapper for Add module
 module Add_LI #(
-    parameter WIDTH = 32
+    parameter WIDTH = 32,
+    parameter PIPELINE_STAGES = 1  // Number of pipeline stages for the Add module
 ) (
     input wire clk,
     input wire reset,
@@ -34,8 +35,11 @@ module Add_LI #(
     logic [WIDTH-1:0] result_reg;
     logic valid_reg;
 
+    // Pipeline stage counter
+    logic [$clog2(PIPELINE_STAGES+1)-1:0] stage_counter;
+
     // Instantiate the Add module
-    Add #(.WIDTH(WIDTH)) add_inst (
+    Add #(.WIDTH(WIDTH), .PIPELINE_STAGES(PIPELINE_STAGES)) add_inst (
         .clk(clk),
         .a(add_a),
         .b(add_b),
@@ -58,8 +62,10 @@ module Add_LI #(
 
             COMPUTE: begin
                 ready_out = 1'b0;  // Not ready while computing
-                // After one cycle, move to VALID state
-                next_state = VALID;
+                // Stay in COMPUTE for PIPELINE_STAGES cycles
+                if (stage_counter >= PIPELINE_STAGES - 1) begin
+                    next_state = VALID;
+                end
             end
 
             VALID: begin
@@ -82,6 +88,34 @@ module Add_LI #(
             current_state <= IDLE;
         end else begin
             current_state <= next_state;
+        end
+    end
+
+    // Stage counter logic
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            stage_counter <= 0;
+        end else begin
+            case (current_state)
+                IDLE: begin
+                    if (valid_in && ready_out) begin
+                        stage_counter <= 0; // Start counting
+                    end
+                end
+                COMPUTE: begin
+                    if (stage_counter < PIPELINE_STAGES - 1) begin
+                        stage_counter <= stage_counter + 1;
+                    end
+                end
+                VALID: begin
+                    if (valid_out && ready_in) begin
+                        stage_counter <= 0; // Reset for next computation
+                    end
+                end
+                default: begin
+                    stage_counter <= 0;
+                end
+            endcase
         end
     end
 
@@ -138,7 +172,8 @@ endmodule
 
 // Mul_LI module - Latency Insensitive wrapper for Mul module
 module Mul_LI #(
-    parameter WIDTH = 32
+    parameter WIDTH = 32,
+    parameter PIPELINE_STAGES = 1  // Number of pipeline stages for the Mul module
 ) (
     input wire clk,
     input wire reset,
@@ -172,8 +207,11 @@ module Mul_LI #(
     logic [WIDTH-1:0] result_reg;
     logic valid_reg;
 
+    // Pipeline stage counter
+    logic [$clog2(PIPELINE_STAGES+1)-1:0] stage_counter;
+
     // Instantiate the Mul module
-    Mul #(.WIDTH(WIDTH)) mul_inst (
+    Mul #(.WIDTH(WIDTH), .PIPELINE_STAGES(PIPELINE_STAGES)) mul_inst (
         .clk(clk),
         .a(mul_a),
         .b(mul_b),
@@ -196,8 +234,10 @@ module Mul_LI #(
 
             COMPUTE: begin
                 ready_out = 1'b0;  // Not ready while computing
-                // After one cycle, move to VALID state
-                next_state = VALID;
+                // Stay in COMPUTE for PIPELINE_STAGES cycles
+                if (stage_counter >= PIPELINE_STAGES - 1) begin
+                    next_state = VALID;
+                end
             end
 
             VALID: begin
@@ -220,6 +260,34 @@ module Mul_LI #(
             current_state <= IDLE;
         end else begin
             current_state <= next_state;
+        end
+    end
+
+    // Stage counter logic
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            stage_counter <= 0;
+        end else begin
+            case (current_state)
+                IDLE: begin
+                    if (valid_in && ready_out) begin
+                        stage_counter <= 0; // Start counting
+                    end
+                end
+                COMPUTE: begin
+                    if (stage_counter < PIPELINE_STAGES - 1) begin
+                        stage_counter <= stage_counter + 1;
+                    end
+                end
+                VALID: begin
+                    if (valid_out && ready_in) begin
+                        stage_counter <= 0; // Reset for next computation
+                    end
+                end
+                default: begin
+                    stage_counter <= 0;
+                end
+            endcase
         end
     end
 
@@ -276,7 +344,9 @@ endmodule
 
 // ALU_LI module - Latency Insensitive ALU using Add_LI and Mul_LI modules
 module ALU_LI #(
-    parameter WIDTH = 32
+    parameter WIDTH = 32,
+    parameter ADD_S = 1,  // Number of pipeline stages for adder
+    parameter MUL_S = 1   // Number of pipeline stages for multiplier
 ) (
     input wire clk,
     input wire reset,
@@ -317,7 +387,7 @@ module ALU_LI #(
     logic op_valid;
 
     // Instantiate Add_LI module
-    Add_LI #(.WIDTH(WIDTH)) add_li_inst (
+    Add_LI #(.WIDTH(WIDTH), .PIPELINE_STAGES(ADD_S)) add_li_inst (
         .clk(clk),
         .reset(reset),
         .a_in(a_in),
@@ -330,7 +400,7 @@ module ALU_LI #(
     );
 
     // Instantiate Mul_LI module
-    Mul_LI #(.WIDTH(WIDTH)) mul_li_inst (
+    Mul_LI #(.WIDTH(WIDTH), .PIPELINE_STAGES(MUL_S)) mul_li_inst (
         .clk(clk),
         .reset(reset),
         .a_in(a_in),

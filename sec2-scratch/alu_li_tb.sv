@@ -4,21 +4,14 @@ module alu_li_tb;
     // Testbench parameters
     parameter WIDTH = 32;
     parameter CLK_PERIOD = 10;
-    parameter NUM_TESTS = 10;  // 10 tests for debugging
-
-    // Pipeline stage parameters for testing different configurations
-    parameter ADD_PIPELINE_STAGES = 1;  // Stages for Add module
-    parameter MUL_PIPELINE_STAGES = 3;  // Stages for Mul module (more complex operation)
+    parameter NUM_TESTS = 10000;  // 10k tests for reasonable runtime
 
     // ALU Timing Parameters
-    // Calculate max latency for timing alignment
-    localparam MAX_LATENCY = (ADD_PIPELINE_STAGES > MUL_PIPELINE_STAGES) ? 
-                             ADD_PIPELINE_STAGES : MUL_PIPELINE_STAGES;
-    parameter ALU_LATENCY_CYCLES = MAX_LATENCY;  // Number of cycles the ALU takes to compute result
-    parameter STABILITY_CYCLES = 1;              // Additional cycles to wait for result stability
+    parameter ALU_LATENCY_CYCLES = 1;  // Number of cycles the ALU takes to compute result
+    parameter STABILITY_CYCLES = 1;    // Additional cycles to wait for result stability
     // Total wait time = ALU_LATENCY_CYCLES + STABILITY_CYCLES
-    // - Static ALU uses balanced outputs via Shift_register delays
-    // - Dynamic ALU_LI uses state machine with variable pipeline stages
+    // - For this ALU: Add/Mul modules take 1 cycle to register outputs
+    // - Stability cycle ensures the always_comb output has settled
     // - For faster ALUs: reduce ALU_LATENCY_CYCLES
     // - For slower ALUs: increase ALU_LATENCY_CYCLES
     // - For marginal timing: increase STABILITY_CYCLES
@@ -51,7 +44,7 @@ module alu_li_tb;
     logic [WIDTH-1:0] expected_result, actual_result;
 
     // Instantiate the Static ALU (from static-alu.sv)
-    ALU #(.WIDTH(WIDTH), .ADD_PIPELINE_STAGES(ADD_PIPELINE_STAGES), .MUL_PIPELINE_STAGES(MUL_PIPELINE_STAGES)) static_alu (
+    ALU #(.WIDTH(WIDTH)) static_alu (
         .clk(clk),
         .reset(reset),
         .op(static_op),
@@ -61,7 +54,7 @@ module alu_li_tb;
     );
 
     // Instantiate the Dynamic ALU_LI (from dynamic-alu.sv)
-    ALU_LI #(.WIDTH(WIDTH), .ADD_PIPELINE_STAGES(ADD_PIPELINE_STAGES), .MUL_PIPELINE_STAGES(MUL_PIPELINE_STAGES)) dynamic_alu (
+    ALU_LI #(.WIDTH(WIDTH), .ADD_S(10), .MUL_S(3)) dynamic_alu (
         .clk(clk),
         .reset(reset),
         .a_in(dynamic_a_in),
@@ -118,10 +111,10 @@ module alu_li_tb;
         mismatch_count = 0;
         seed = $time;  // Use current time as seed for randomization
 
-        // Wait for reset deassertion with longer settling time
-        repeat(10) @(posedge clk);
+        // Wait for reset deassertion
+        repeat(5) @(posedge clk);
         reset = 0;
-        repeat(20) @(posedge clk);  // Give more time for pipeline to settle
+        repeat(3) @(posedge clk);
 
         $display("Starting differential ALU testbench...");
         $display("Testing %0d random bit patterns", NUM_TESTS);
@@ -152,23 +145,6 @@ module alu_li_tb;
         begin
             int progress_interval = NUM_TESTS / 20;  // Show progress every 5%
 
-            // Run tests with specific simple cases first
-            $display("=== Testing specific cases ===");
-            
-            // Test Add: 2.0 + 3.0 = 5.0 with Add-specific timing
-            $display("Test 1: Add 2.0 + 3.0 (with Add timing)");
-            test_single_case_with_timing(32'h40000000, 32'h40400000, 1'b0, ADD_PIPELINE_STAGES + STABILITY_CYCLES);
-            
-            // Test Mul: 2.0 * 3.0 = 6.0 with Mul-specific timing 
-            $display("Test 2: Mul 2.0 * 3.0 (with Mul timing)");
-            test_single_case_with_timing(32'h40000000, 32'h40400000, 1'b1, MUL_PIPELINE_STAGES + STABILITY_CYCLES);
-            
-            // Test Add: 2.0 + 3.0 = 5.0 with Max timing (for balanced static ALU)
-            $display("Test 3: Add 2.0 + 3.0 (with Max timing)");
-            test_single_case(32'h40000000, 32'h40400000, 1'b0);
-            
-            if (0) begin  // Skip random tests for now
-
             for (int i = 0; i < NUM_TESTS; i++) begin
                 // Generate random bit patterns
                 test_a = get_random_bits();
@@ -186,33 +162,25 @@ module alu_li_tb;
                             (i * 100) / NUM_TESTS, i, NUM_TESTS, mismatch_count);
                 end
             end
-            end
         end
     endtask
 
     // Task to test a single case with both ALUs
     task automatic test_single_case(logic [WIDTH-1:0] a_val, logic [WIDTH-1:0] b_val, logic op_val);
         begin
-            $display("Testing A=0x%08h, B=0x%08h, OP=%b", a_val, b_val, op_val);
-            
             // Test static ALU (result available after ALU_LATENCY_CYCLES + STABILITY_CYCLES)
             static_a = a_val;
             static_b = b_val;
             static_op = op_val;
-            
-            $display("  Static ALU: Applied inputs, waiting %0d cycles...", ALU_LATENCY_CYCLES + STABILITY_CYCLES);
 
             // Wait for ALU computation and stability
             // ALU_LATENCY_CYCLES: Time for Add/Mul modules to compute and register outputs
             // STABILITY_CYCLES: Additional time for signal stability and setup/hold margins
             repeat(ALU_LATENCY_CYCLES + STABILITY_CYCLES) @(posedge clk);
             expected_result = static_result;
-            $display("  Static ALU result: 0x%08h", expected_result);
 
             // Test dynamic ALU_LI (latency insensitive with handshaking)
-            $display("  Dynamic ALU: Starting handshake...");
             test_dynamic_alu(a_val, b_val, op_val);
-            $display("  Dynamic ALU result: 0x%08h", actual_result);
 
             // Compare results
             if (expected_result !== actual_result) begin
@@ -224,11 +192,7 @@ module alu_li_tb;
                     $display("  Dynamic ALU result: 0x%08h (%.6f)", actual_result, fp_to_real(actual_result));
                     $display("");
                 end
-            end else begin
-                $display("  ✓ MATCH: Both ALUs produced 0x%08h", expected_result);
             end
-            
-            test_count++;
         end
     endtask
 
