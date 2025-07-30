@@ -1,0 +1,16 @@
+flags := "-bdir _build -info-dir _build -simdir _build"
+
+objects FILE MODULE:
+  bsc -sim {{flags}} -g {{MODULE}} {{FILE}}
+
+build FILE MODULE: (objects FILE MODULE)
+  bsc -sim {{flags}} -e {{MODULE}} -o _sim/{{MODULE}}.sim
+
+run FILE MODULE: (build FILE MODULE)
+  _sim/{{MODULE}}.sim
+
+verilog FILE MODULE:
+  bsc {{flags}} -verilog -g {{MODULE}} {{FILE}}
+
+run-verilog FILE MODULE: (verilog FILE MODULE)
+  bsc {{flags}} -verilog -e {{MODULE}} -o _sim/{{MODULE}}.vsim
