@@ -529,9 +529,9 @@ HTML_TEMPLATE = """
                     tooltipBg.setAttribute('width', bbox.width + 24);
                     tooltipBg.setAttribute('height', bbox.height + 20);
 
-                    // Position tooltip above the region
-                    const tooltipX = Math.max(0, Math.min(width - bbox.width - 24, x + regionWidth / 2 - bbox.width / 2 - 12));
-                    const tooltipY = y - bbox.height - 35;
+                    // Position tooltip closer to the region and within bounds
+                    const tooltipX = Math.max(10, Math.min(width - bbox.width - 34, x + regionWidth / 2 - bbox.width / 2 - 12));
+                    const tooltipY = Math.max(10, y - bbox.height - 15);
 
                     tooltipGroup.setAttribute('transform', `translate(${{tooltipX}}, ${{tooltipY}})`);
                     tooltipGroup.insertBefore(tooltipBg, tooltipText);
@@ -577,9 +577,9 @@ HTML_TEMPLATE = """
 
                 function showTooltip() {{
                     createTooltip();
-                    // Animate region bounce
-                    rect.style.transform = 'scaleY(1.2) translateY(-3px)';
-                    rect.style.filter = 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))';
+                    // Animate region bounce (reduced magnitude)
+                    rect.style.transform = 'scaleY(1.05) translateY(-1px)';
+                    rect.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))';
                 }}
 
                 function hideTooltip() {{
