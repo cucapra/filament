@@ -1,0 +1,308 @@
+{
+  "design_info": {
+    "tool_version": "Vivado v.2023.2 (lin64) Wed Jul 30 16:43:15 2025",
+    "date": "2025-07-30T16:43:15",
+    "name": "main",
+    "device": "xczu3eg-sbva484",
+    "speed_grade": "-1",
+    "state": "Routed"
+  },
+  "timing_summary": {
+    "setup": {
+      "wns": -0.317,
+      "tns": -0.346,
+      "failing_endpoints": 2,
+      "total_endpoints": 129
+    },
+    "hold": {
+      "wns": -1.163,
+      "tns": -36.059,
+      "failing_endpoints": 33,
+      "total_endpoints": 129
+    },
+    "pulse_width": {
+      "wns": 3.225,
+      "tns": 0.0,
+      "failing_endpoints": 0,
+      "total_endpoints": 65
+    }
+  },
+  "clocks": [
+    {
+      "name": "clk",
+      "period": 3.5,
+      "waveform": [
+        0.0
+      ],
+      "frequency_mhz": 7.0
+    }
+  ],
+  "critical_paths": [
+    {
+      "path_id": 1,
+      "status": "VIOLATED",
+      "slack": -0.317,
+      "source": {
+        "name": "a[23]",
+        "type": "input_port",
+        "cell_type": "PORT",
+        "clock": "clk"
+      },
+      "destination": {
+        "name": "alu/adder/pipeline/single_stage.data_out_reg[29]/D",
+        "type": "input_port",
+        "cell_type": "PORT",
+        "clock": "clk"
+      },
+      "path_group": "clk",
+      "path_type": "setup",
+      "timing_requirement": 7.0,
+      "data_path_delay": 8.214,
+      "delay_breakdown": {
+        "logic_delay": 1.948,
+        "logic_delay_percentage": 23.716,
+        "route_delay": 6.266,
+        "route_delay_percentage": 76.285
+      },
+      "logic_levels": {
+        "total": 18,
+        "breakdown": {
+          "CARRY8": 5,
+          "LUT3": 1,
+          "LUT5": 3,
+          "LUT6": 9
+        }
+      },
+      "input_delay": 0.5,
+      "clock_path_skew": 1.405,
+      "clock_uncertainty": 0.035,
+      "data_path": [
+        {
+          "location": "(clock clk rise edge)",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.0,
+          "path_delay_before_routing": 0.0,
+          "path_delay_after_routing": 0.0,
+          "logic_delay": 0.0,
+          "routing_delay": 0.0
+        },
+        {
+          "location": "input delay",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.5,
+          "path_delay_before_routing": 0.0,
+          "path_delay_after_routing": 0.0,
+          "logic_delay": 0.0,
+          "routing_delay": 0.5
+        },
+        {
+          "location": "0.000",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.0,
+          "path_delay_before_routing": 0.0,
+          "path_delay_after_routing": 0.0,
+          "logic_delay": 0.0,
+          "routing_delay": 0.0
+        },
+        {
+          "location": "net (fo=40, unset)",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.5,
+          "path_delay_before_routing": 0.0,
+          "path_delay_after_routing": 0.0,
+          "logic_delay": 0.0,
+          "routing_delay": 0.5
+        },
+        {
+          "location": "0.177",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.0,
+          "path_delay_before_routing": 0.0,
+          "path_delay_after_routing": 0.0,
+          "logic_delay": 0.0,
+          "routing_delay": 0.0
+        },
+        {
+          "location": "net (fo=3, routed)",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.947,
+          "path_delay_before_routing": 0.0,
+          "path_delay_after_routing": 0.0,
+          "logic_delay": 0.0,
+          "routing_delay": 0.947
+        },
+        {
+          "location": "0.174",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.0,
+          "path_delay_before_routing": 0.0,
+          "path_delay_after_routing": 0.0,
+          "logic_delay": 0.0,
+          "routing_delay": 0.0
+        },
+        {
+          "location": "net (fo=1, routed)",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 1.225,
+          "path_delay_before_routing": 0.0,
+          "path_delay_after_routing": 0.0,
+          "logic_delay": 0.0,
+          "routing_delay": 1.225
+        },
+        {
+          "location": "0.114",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.0,
+          "path_delay_before_routing": 0.0,
+          "path_delay_after_routing": 0.0,
+          "logic_delay": 0.0,
+          "routing_delay": 0.0
+        },
+        {
+          "location": "net (fo=39, routed)",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 1.843,
+          "path_delay_before_routing": 0.0,
+          "path_delay_after_routing": 0.0,
+          "logic_delay": 0.0,
+          "routing_delay": 1.843
+        },
+        {
+          "location": "0.098",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.0,
+          "path_delay_before_routing": 0.0,
+          "path_delay_after_routing": 0.0,
+          "logic_delay": 0.0,
+          "routing_delay": 0.0
+        },
+        {
+          "location": "net (fo=1, routed)",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 8.714,
+          "path_delay_before_routing": 0.0,
+          "path_delay_after_routing": 0.0,
+          "logic_delay": 0.0,
+          "routing_delay": 8.714
+        },
+        {
+          "location": "SLICE_X24Y6",
+          "step_type": "cell",
+          "component_type": "FDRE",
+          "incremental_delay": 0.0,
+          "path_delay_before_routing": 0.0,
+          "path_delay_after_routing": 0.0,
+          "logic_delay": 0.0,
+          "routing_delay": 0.0
+        }
+      ],
+      "required_time_calculation": [
+        {
+          "location": "(clock clk rise edge)",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.0,
+          "path_delay": 0.0
+        },
+        {
+          "location": "input delay",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.5,
+          "path_delay": 0.0
+        },
+        {
+          "location": "0.000",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.0,
+          "path_delay": 0.0
+        },
+        {
+          "location": "net (fo=40, unset)",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.5,
+          "path_delay": 0.0
+        },
+        {
+          "location": "0.177",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.0,
+          "path_delay": 0.0
+        },
+        {
+          "location": "net (fo=3, routed)",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.947,
+          "path_delay": 0.0
+        },
+        {
+          "location": "0.174",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.0,
+          "path_delay": 0.0
+        },
+        {
+          "location": "net (fo=1, routed)",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 1.225,
+          "path_delay": 0.0
+        },
+        {
+          "location": "0.114",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.0,
+          "path_delay": 0.0
+        },
+        {
+          "location": "net (fo=39, routed)",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 1.843,
+          "path_delay": 0.0
+        },
+        {
+          "location": "0.098",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 0.0,
+          "path_delay": 0.0
+        },
+        {
+          "location": "net (fo=1, routed)",
+          "step_type": "net",
+          "fan_out": 1,
+          "incremental_delay": 8.714,
+          "path_delay": 0.0
+        },
+        {
+          "location": "SLICE_X24Y6",
+          "step_type": "endpoint",
+          "component_type": "FDRE",
+          "incremental_delay": 0.0,
+          "path_delay": 0.0
+        }
+      ],
+      "arrival_time": -8.714,
+      "required_time": 0.0
+    }
+  ]
+}

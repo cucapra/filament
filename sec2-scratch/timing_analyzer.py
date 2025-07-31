@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
-Vivado Timing Report Parser and Visualizer
-Generates interactive HTML pages with critical path waterfall charts
-and physical layout heatmaps
+Timing analysis tool for parsing and visualizing timing reports.
+
+Parses timing reports from FPGA tools and generates an interactive
+critical path analysis chart showing timing paths as a waterfall
+visualization with resource types and delays.
 """
 
 import re
@@ -21,7 +23,6 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timing Analysis - {design_name}</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         body {{
@@ -181,6 +182,33 @@ HTML_TEMPLATE = """
             font-size: 14px;
             font-weight: 500;
             color: #495057;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            outline: none;
+            text-decoration: none;
+        }}
+        .resource-legend .legend-item:focus {{
+            outline: 2px solid #007bff;
+            outline-offset: 2px;
+        }}
+        .resource-legend .legend-item:hover {{
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }}
+        .resource-legend .legend-item:active {{
+            transform: translateY(1px);
+        }}
+        .resource-legend .legend-item.disabled {{
+            opacity: 0.5;
+            background: #f8f9fa;
+            color: #6c757d;
+        }}
+        .resource-legend .legend-item.disabled .legend-color {{
+            opacity: 0.3;
         }}
         .resource-legend .legend-color {{
             width: 16px;
@@ -245,27 +273,9 @@ HTML_TEMPLATE = """
                 <select id="pathSelect" onchange="updatePath()">
                     <!-- Options will be populated by JavaScript -->
                 </select>
-                <label for="showRouting" style="margin-left: 20px;">
-                    <input type="checkbox" id="showRouting" checked onchange="updatePath()">
-                    Include Routing Delays
-                </label>
             </div>
             <div class="chart-container">
                 <div id="waterfallChart"></div>
-            </div>
-        </div>
-
-        <div class="section">
-            <div class="section-title">Physical Layout View</div>
-            <div class="chart-container">
-                <div id="layoutChart"></div>
-            </div>
-        </div>
-
-        <div class="section">
-            <div class="section-title">Logic Type Analysis</div>
-            <div class="chart-container">
-                <div id="logicChart"></div>
             </div>
         </div>
     </div>
@@ -275,6 +285,7 @@ HTML_TEMPLATE = """
         const timingData = {timing_data_json};
 
         let currentPathIndex = 0;
+        let disabledResourceTypes = new Set(); // Track which resource types are hidden
 
         // Populate path selector
         function populatePathSelector() {{
@@ -296,12 +307,10 @@ HTML_TEMPLATE = """
             }}
 
             const stages = path.stages;
-            const showRouting = document.getElementById('showRouting').checked;
 
-            // Filter stages based on routing toggle
-            const filteredStages = showRouting ? stages : stages.filter(stage =>
-                !stage.element.toLowerCase().includes('net') &&
-                stage.resource_type !== 'ROUTING'
+            // Filter stages based on disabled resource types
+            const filteredStages = stages.filter(stage =>
+                !disabledResourceTypes.has(stage.resource_type || 'OTHER')
             );
 
             // Calculate cumulative positions for horizontal bar regions
@@ -327,8 +336,8 @@ HTML_TEMPLATE = """
             // Create custom SVG-based chart
             createCustomBarChart(chartContainer, regions, path);
 
-            // Create resource type legend
-            createResourceLegend(filteredStages);
+            // Create resource type legend (use original stages to show all types)
+            createResourceLegend(stages);
         }}
 
         // Create custom interactive bar chart
@@ -539,7 +548,7 @@ HTML_TEMPLATE = """
                     // Close button functionality
                     closeBtn.addEventListener('click', (e) => {{
                         e.stopPropagation();
-                        hideTooltip();
+                        forceHideTooltip();
                     }});
 
                     // Animation
@@ -573,6 +582,22 @@ HTML_TEMPLATE = """
                         rect.style.transform = '';
                         rect.style.filter = '';
                     }}
+                }}
+
+                function forceHideTooltip() {{
+                    isClicked = false;
+                    activeTooltips.delete(i);
+                    if (tooltip) {{
+                        tooltip.style.opacity = '0';
+                        setTimeout(() => {{
+                            if (tooltip && tooltip.parentNode) {{
+                                tooltip.parentNode.removeChild(tooltip);
+                            }}
+                            tooltip = null;
+                        }}, 300);
+                    }}
+                    rect.style.transform = '';
+                    rect.style.filter = '';
                 }}
 
                 function toggleClick() {{
@@ -623,15 +648,17 @@ HTML_TEMPLATE = """
             // Get unique resource types from current path
             const usedTypes = [...new Set(stages.map(stage => stage.resource_type || 'OTHER'))];
 
-            // Create legend HTML
-            let legendHtml = '<div class="resource-legend"><h4>Resource Types in Path:</h4><div class="legend-items">';
+            // Create legend HTML with click handlers
+            let legendHtml = '<div class="resource-legend"><h4>Resource Types in Path (Click to Toggle):</h4><div class="legend-items">';
             usedTypes.forEach(type => {{
                 const color = resourceColors[type];
                 const displayName = type.replace('_', ' ').toLowerCase().replace(/\\b\\w/g, l => l.toUpperCase());
-                legendHtml += `<div class="legend-item">
+                const isDisabled = disabledResourceTypes.has(type);
+                const disabledClass = isDisabled ? ' disabled' : '';
+                legendHtml += `<button type="button" class="legend-item${{disabledClass}}" data-resource-type="${{type}}">
                     <div class="legend-color" style="background-color: ${{color}};"></div>
                     <span>${{displayName}}</span>
-                </div>`;
+                </button>`;
             }});
             legendHtml += '</div></div>';
 
@@ -642,419 +669,42 @@ HTML_TEMPLATE = """
                 existingLegend.remove();
             }}
             chartContainer.insertAdjacentHTML('beforeend', legendHtml);
-        }}
 
-        // Create 2D layout visualization for critical path
-        function createLayoutChart() {{
-            if (!timingData.critical_paths || timingData.critical_paths.length === 0) {{
-                document.getElementById('layoutChart').innerHTML = '<p>No critical path data available</p>';
-                return;
-            }}
-
-            // Get current path stages
-            const path = timingData.critical_paths[currentPathIndex];
-            if (!path || !path.stages) {{
-                document.getElementById('layoutChart').innerHTML = '<p>No stages data available for current path</p>';
-                return;
-            }}
-
-            // Extract unique locations and coordinates
-            const locations = [];
-            const routingConnections = [];
-            let prevLocation = null;
-
-            path.stages.forEach((stage, index) => {{
-                if (stage.location && stage.location !== 'routing') {{
-                    const coordMatch = stage.location.match(/SLICE_X(\\d+)Y(\\d+)/);
-                    if (coordMatch) {{
-                        const currentLocation = {{
-                            x: parseInt(coordMatch[1]),
-                            y: parseInt(coordMatch[2]),
-                            element: stage.element,
-                            delay: stage.delay_ns,
-                            cumulative: stage.cumulative_ns || 0,
-                            resource: stage.netlist_resource,
-                            type: stage.resource_type || 'OTHER',
-                            stage_index: index,
-                            hierarchy: stage.hierarchy_parts
-                        }};
-
-                        locations.push(currentLocation);
-
-                        // Track routing connections
-                        if (prevLocation) {{
-                            routingConnections.push({{
-                                from: prevLocation,
-                                to: currentLocation,
-                                delay: stage.delay_ns
-                            }});
-                        }}
-                        prevLocation = currentLocation;
-                    }}
-                }} else if (stage.resource_type === 'ROUTING' && prevLocation) {{
-                    // Add routing delay information
-                    if (routingConnections.length > 0) {{
-                        const lastConnection = routingConnections[routingConnections.length - 1];
-                        lastConnection.routing_delay = stage.delay_ns;
-                        lastConnection.routing_resource = stage.netlist_resource;
-                    }}
-                }}
-            }});
-
-            if (locations.length === 0) {{
-                document.getElementById('layoutChart').innerHTML = '<p>No physical location data available</p>';
-                return;
-            }}
-
-            // Create 2D grid visualization
-            const container = document.getElementById('layoutChart');
-            container.innerHTML = '';
-
-            const margin = {{ top: 50, right: 60, bottom: 60, left: 60 }};
-            const width = 800;
-            const height = 500;
-
-            // Calculate grid bounds with padding
-            const xExtent = d3.extent(locations, d => d.x);
-            const yExtent = d3.extent(locations, d => d.y);
-
-            // Add padding to show grid context
-            const xPadding = Math.max(5, (xExtent[1] - xExtent[0]) * 0.1);
-            const yPadding = Math.max(5, (yExtent[1] - yExtent[0]) * 0.1);
-
-            const xScale = d3.scaleLinear()
-                .domain([xExtent[0] - xPadding, xExtent[1] + xPadding])
-                .range([0, width]);
-
-            const yScale = d3.scaleLinear()
-                .domain([yExtent[0] - yPadding, yExtent[1] + yPadding])
-                .range([height, 0]);
-
-            // Color mapping for resource types with enhanced colors
-            const resourceColors = {{
-                'REGISTER': '#4CAF50',
-                'LUT': '#2196F3',
-                'CARRY': '#FF9800',
-                'DSP': '#9C27B0',
-                'BRAM': '#795548',
-                'IO': '#607D8B',
-                'ROUTING': '#F44336',
-                'OTHER': '#9E9E9E'
-            }};
-
-            // Create SVG
-            const svg = d3.select(container)
-                .append('svg')
-                .attr('width', width + margin.left + margin.right)
-                .attr('height', height + margin.top + margin.bottom);
-
-            const g = svg.append('g')
-                .attr('transform', `translate(${{margin.left}},${{margin.top}})`);
-
-            // Add background grid
-            const xTicks = d3.range(Math.ceil(xExtent[0] - xPadding), Math.floor(xExtent[1] + xPadding) + 1, 5);
-            const yTicks = d3.range(Math.ceil(yExtent[0] - yPadding), Math.floor(yExtent[1] + yPadding) + 1, 5);
-
-            g.selectAll('.grid-line-x')
-                .data(xTicks)
-                .enter().append('line')
-                .attr('class', 'grid-line-x')
-                .attr('x1', d => xScale(d))
-                .attr('x2', d => xScale(d))
-                .attr('y1', 0)
-                .attr('y2', height)
-                .attr('stroke', '#e8e8e8')
-                .attr('stroke-width', 0.5)
-                .attr('opacity', 0.7);
-
-            g.selectAll('.grid-line-y')
-                .data(yTicks)
-                .enter().append('line')
-                .attr('class', 'grid-line-y')
-                .attr('x1', 0)
-                .attr('x2', width)
-                .attr('y1', d => yScale(d))
-                .attr('y2', d => yScale(d))
-                .attr('stroke', '#e8e8e8')
-                .attr('stroke-width', 0.5)
-                .attr('opacity', 0.7);
-
-            // Add clock region indicators (every 50 slices)
-            const clockRegionX = d3.range(0, Math.max(...locations.map(l => l.x)) + 50, 50);
-            const clockRegionY = d3.range(0, Math.max(...locations.map(l => l.y)) + 50, 50);
-
-            g.selectAll('.clock-region-x')
-                .data(clockRegionX)
-                .enter().append('line')
-                .attr('class', 'clock-region-x')
-                .attr('x1', d => xScale(d))
-                .attr('x2', d => xScale(d))
-                .attr('y1', 0)
-                .attr('y2', height)
-                .attr('stroke', '#ffeb3b')
-                .attr('stroke-width', 1)
-                .attr('opacity', 0.3)
-                .attr('stroke-dasharray', '3,3');
-
-            g.selectAll('.clock-region-y')
-                .data(clockRegionY)
-                .enter().append('line')
-                .attr('class', 'clock-region-y')
-                .attr('x1', 0)
-                .attr('x2', width)
-                .attr('y1', d => yScale(d))
-                .attr('y2', d => yScale(d))
-                .attr('stroke', '#ffeb3b')
-                .attr('stroke-width', 1)
-                .attr('opacity', 0.3)
-                .attr('stroke-dasharray', '3,3');
-
-            // Add axes
-            g.append('g')
-                .attr('transform', `translate(0,${{height}})`)
-                .call(d3.axisBottom(xScale).tickValues(xTicks.filter(d => d % 10 === 0)));
-
-            g.append('g')
-                .call(d3.axisLeft(yScale).tickValues(yTicks.filter(d => d % 10 === 0)));
-
-            // Add axis labels
-            g.append('text')
-                .attr('transform', `translate(${{width/2}},${{height + 50}})`)
-                .style('text-anchor', 'middle')
-                .style('font-size', '14px')
-                .style('font-weight', 'bold')
-                .text('FPGA X Coordinate (SLICE_X)');
-
-            g.append('text')
-                .attr('transform', 'rotate(-90)')
-                .attr('y', 0 - margin.left + 15)
-                .attr('x', 0 - (height / 2))
-                .style('text-anchor', 'middle')
-                .style('font-size', '14px')
-                .style('font-weight', 'bold')
-                .text('FPGA Y Coordinate (SLICE_Y)');
-
-            // Add routing path connections with enhanced styling
-            routingConnections.forEach((conn, i) => {{
-                const line = g.append('line')
-                    .attr('x1', xScale(conn.from.x))
-                    .attr('y1', yScale(conn.from.y))
-                    .attr('x2', xScale(conn.to.x))
-                    .attr('y2', yScale(conn.to.y))
-                    .attr('stroke', '#ff6b6b')
-                    .attr('stroke-width', Math.max(2, Math.min(8, conn.delay * 2)))
-                    .attr('opacity', 0.8)
-                    .attr('marker-end', 'url(#arrowhead)');
-
-                // Add routing delay annotation
-                if (conn.routing_delay && conn.routing_delay > 0.1) {{
-                    const midX = (conn.from.x + conn.to.x) / 2;
-                    const midY = (conn.from.y + conn.to.y) / 2;
-
-                    g.append('text')
-                        .attr('x', xScale(midX))
-                        .attr('y', yScale(midY) - 5)
-                        .attr('text-anchor', 'middle')
-                        .style('font-size', '10px')
-                        .style('fill', '#d32f2f')
-                        .style('font-weight', 'bold')
-                        .text(`${{conn.routing_delay.toFixed(2)}}ns`);
-                }}
-            }});
-
-            // Add arrow marker definition
-            svg.append('defs').append('marker')
-                .attr('id', 'arrowhead')
-                .attr('viewBox', '-0 -5 10 10')
-                .attr('refX', 8)
-                .attr('refY', 0)
-                .attr('orient', 'auto')
-                .attr('markerWidth', 8)
-                .attr('markerHeight', 8)
-                .attr('xoverflow', 'visible')
-                .append('svg:path')
-                .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
-                .attr('fill', '#ff6b6b')
-                .style('stroke', 'none');
-
-            // Add resource nodes with enhanced styling
-            g.selectAll('.resource-node')
-                .data(locations)
-                .enter().append('circle')
-                .attr('class', 'resource-node')
-                .attr('cx', d => xScale(d.x))
-                .attr('cy', d => yScale(d.y))
-                .attr('r', d => Math.max(6, Math.min(15, 8 + d.delay * 2)))
-                .attr('fill', d => resourceColors[d.type] || resourceColors['OTHER'])
-                .attr('stroke', '#333')
-                .attr('stroke-width', 2)
-                .style('cursor', 'pointer')
-                .style('filter', 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))')
-                .on('mouseover', function(event, d) {{
-                    // Enhanced tooltip with more information
-                    const tooltip = d3.select('body').append('div')
-                        .attr('class', 'layout-tooltip')
-                        .style('opacity', 0)
-                        .style('position', 'absolute')
-                        .style('background', 'rgba(0,0,0,0.9)')
-                        .style('color', 'white')
-                        .style('padding', '12px')
-                        .style('border-radius', '8px')
-                        .style('font-size', '12px')
-                        .style('pointer-events', 'none')
-                        .style('z-index', '1000')
-                        .style('border', `2px solid ${{resourceColors[d.type] || resourceColors['OTHER']}}`);
-
-                    let tooltipContent = `
-                        <div style="border-bottom: 1px solid #666; padding-bottom: 8px; margin-bottom: 8px;">
-                            <strong style="font-size: 14px;">${{d.element}}</strong>
-                        </div>
-                        <div><strong>Location:</strong> SLICE_X${{d.x}}Y${{d.y}}</div>
-                        <div><strong>Stage:</strong> ${{d.stage_index + 1}} of ${{path.stages.length}}</div>
-                        <div><strong>Delay:</strong> ${{d.delay.toFixed(3)}}ns</div>
-                        <div><strong>Cumulative:</strong> ${{d.cumulative.toFixed(3)}}ns</div>
-                        <div><strong>Type:</strong> ${{d.type}}</div>
-                    `;
-
-                    if (d.resource) {{
-                        tooltipContent += `<div><strong>Resource:</strong> ${{d.resource}}</div>`;
-                    }}
-
-                    if (d.hierarchy && d.hierarchy.top_module) {{
-                        tooltipContent += `<div><strong>Module:</strong> ${{d.hierarchy.top_module}}</div>`;
-                    }}
-
-                    if (d.hierarchy && d.hierarchy.instance_name) {{
-                        tooltipContent += `<div><strong>Instance:</strong> ${{d.hierarchy.instance_name}}</div>`;
-                    }}
-
-                    tooltip.html(tooltipContent)
-                        .style('left', (event.pageX + 15) + 'px')
-                        .style('top', (event.pageY - 10) + 'px')
-                        .transition()
-                        .duration(200)
-                        .style('opacity', 1);
-
-                    // Highlight node and connected paths
-                    d3.select(this)
-                        .transition()
-                        .duration(100)
-                        .attr('r', d => Math.max(8, Math.min(18, 10 + d.delay * 2)))
-                        .attr('stroke-width', 4)
-                        .style('filter', 'drop-shadow(4px 4px 8px rgba(0,0,0,0.5))');
-                }})
-                .on('mouseout', function() {{
-                    // Remove tooltip
-                    d3.selectAll('.layout-tooltip').remove();
-
-                    // Reset node
-                    d3.select(this)
-                        .transition()
-                        .duration(100)
-                        .attr('r', d => Math.max(6, Math.min(15, 8 + d.delay * 2)))
-                        .attr('stroke-width', 2)
-                        .style('filter', 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))');
+            // Add event listeners to legend items
+            const legendItems = chartContainer.querySelectorAll('.legend-item');
+            legendItems.forEach(item => {{
+                item.addEventListener('click', (e) => {{
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const resourceType = item.getAttribute('data-resource-type');
+                    toggleResourceType(resourceType);
+                    return false;
                 }});
 
-            // Add stage numbers on nodes
-            g.selectAll('.stage-label')
-                .data(locations)
-                .enter().append('text')
-                .attr('class', 'stage-label')
-                .attr('x', d => xScale(d.x))
-                .attr('y', d => yScale(d.y) + 4)
-                .attr('text-anchor', 'middle')
-                .style('font-size', '10px')
-                .style('font-weight', 'bold')
-                .style('fill', 'white')
-                .style('pointer-events', 'none')
-                .text(d => d.stage_index + 1);
-
-            // Add title with path information
-            svg.append('text')
-                .attr('x', (width + margin.left + margin.right) / 2)
-                .attr('y', 25)
-                .attr('text-anchor', 'middle')
-                .style('font-size', '16px')
-                .style('font-weight', 'bold')
-                .text(`Physical Layout - Path ${{currentPathIndex + 1}}: ${{path.destination}} (Slack: ${{path.slack_ns}}ns)`);
-
-            // Add legend for clock regions
-            const legend = svg.append('g')
-                .attr('transform', `translate(${{width + margin.left + 10}}, ${{margin.top}})`);
-
-            legend.append('text')
-                .attr('x', 0)
-                .attr('y', 0)
-                .style('font-size', '12px')
-                .style('font-weight', 'bold')
-                .text('Legend:');
-
-            legend.append('line')
-                .attr('x1', 0)
-                .attr('x2', 20)
-                .attr('y1', 20)
-                .attr('y2', 20)
-                .attr('stroke', '#ffeb3b')
-                .attr('stroke-width', 1)
-                .attr('stroke-dasharray', '3,3');
-
-            legend.append('text')
-                .attr('x', 25)
-                .attr('y', 24)
-                .style('font-size', '11px')
-                .text('Clock Regions');
-
-            legend.append('line')
-                .attr('x1', 0)
-                .attr('x2', 20)
-                .attr('y1', 40)
-                .attr('y2', 40)
-                .attr('stroke', '#ff6b6b')
-                .attr('stroke-width', 3)
-                .attr('marker-end', 'url(#arrowhead)');
-
-            legend.append('text')
-                .attr('x', 25)
-                .attr('y', 44)
-                .style('font-size', '11px')
-                .text('Signal Path');
+                // Also prevent default on mousedown to be extra safe
+                item.addEventListener('mousedown', (e) => {{
+                    e.preventDefault();
+                }});
+            }});
         }}
 
-        // Create logic type analysis chart
-        function createLogicChart() {{
-            const logicTypes = {{}};
-            timingData.critical_paths.forEach(path => {{
-                if (path.stages) {{
-                    path.stages.forEach(stage => {{
-                        const element = stage.element;
-                        if (element) {{
-                            logicTypes[element] = (logicTypes[element] || 0) + 1;
-                        }}
-                    }});
-                }}
-            }});
+        // Toggle resource type visibility
+        function toggleResourceType(resourceType) {{
+            // Store current scroll position
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
 
-            const labels = Object.keys(logicTypes);
-            const values = Object.values(logicTypes);
+            if (disabledResourceTypes.has(resourceType)) {{
+                disabledResourceTypes.delete(resourceType);
+            }} else {{
+                disabledResourceTypes.add(resourceType);
+            }}
 
-            const trace = {{
-                labels: labels,
-                values: values,
-                type: 'pie',
-                textinfo: 'label+percent',
-                textposition: 'outside',
-                marker: {{
-                    colors: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
-                }}
-            }};
+            // Update the chart with current path
+            createWaterfallChart(currentPathIndex);
 
-            const layout = {{
-                title: 'Logic Element Distribution',
-                margin: {{ l: 60, r: 60, t: 60, b: 60 }}
-            }};
-
-            Plotly.newPlot('logicChart', [trace], layout, {{responsive: true}});
+            // Restore scroll position
+            window.scrollTo(scrollLeft, scrollTop);
         }}
 
         // Update path display
@@ -1062,15 +712,12 @@ HTML_TEMPLATE = """
             const select = document.getElementById('pathSelect');
             currentPathIndex = parseInt(select.value);
             createWaterfallChart(currentPathIndex);
-            createLayoutChart();  // Update layout view when path changes
         }}
 
         // Initialize all charts
         function initializeCharts() {{
             populatePathSelector();
             createWaterfallChart(0);
-            createLayoutChart();
-            createLogicChart();
         }}
 
         // Initialize when page loads
