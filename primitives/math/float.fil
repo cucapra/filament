@@ -61,7 +61,7 @@ comp FNeg[W, Exponent, ?Mantissa=W-Exponent-1]<'G: 1> (
 }
 
 /// Adds two floating point numbers
-comp FAdd[WIDTH, EXPONENT, MANTISSA, ?STAGES=1]<'G: 1> (
+comp FAdd[WIDTH, EXPONENT, MANTISSA, ?STAGES=0]<'G: 1> (
      left: ['G, 'G+1] WIDTH,
      right: ['G, 'G+1] WIDTH,
 ) -> (
@@ -75,11 +75,11 @@ comp FAdd[WIDTH, EXPONENT, MANTISSA, ?STAGES=1]<'G: 1> (
     * Construct pipe based on the number of stages given.
     * 1 -> S2
     * 2 -> S1 & S2
-    * >3 -> S1 & S2 & S3
+    * >=3 -> S1 & S2 & S3
     */
     let S1 = if STAGES >= 2 { 1 } else { 0 };
     let S2 = if STAGES > 0 { S1 + 1 } else { 0 };
-    let S3 = if STAGES >= 3 { S2 + 1 } else { S2 };
+    let S3 = STAGES;
 
     assert S3 == STAGES;
 
@@ -112,10 +112,11 @@ comp FAdd[WIDTH, EXPONENT, MANTISSA, ?STAGES=1]<'G: 1> (
     lm := new Shift[MANTISSA, S1]<'G>(large_mantissa.out);
     c2a := new Shift[1, S1]<'G>(__control_2_a.out);
     c2b := new Shift[1, S1]<'G>(__control_2_b.out);
+    nums := new Shift[WIDTH, S1]<'G>(num_shift.out);
 
     _small_mantissa_cut := new Slice[MANTISSA, MANTISSA-1, 1, MANTISSA-1]<'G+S1, 'G+S1+1>(sm.out); // small_mant[22:1]
     _small_mantissa_2 := new Concat[1, MANTISSA-1, MANTISSA]<'G+S1, 'G+S1+1>(_one_s1.out, _small_mantissa_cut.out);
-    _small_mantissa_2_shift := new ShiftRight[MANTISSA, WIDTH]<'G+S1, 'G+S1+1>(_small_mantissa_2.out, num_shift.out);
+    _small_mantissa_2_shift := new ShiftRight[MANTISSA, WIDTH]<'G+S1, 'G+S1+1>(_small_mantissa_2.out, nums.out);
     small_exp_mant := new Mux[MANTISSA]<'G+S1, 'G+S1+1>(c2a.out, _small_mantissa_2_shift.out, sm.out);
 
     _large_mantissa_cut := new Slice[MANTISSA, MANTISSA-1, 1, MANTISSA-1]<'G+S1, 'G+S1+1>(lm.out);
@@ -131,9 +132,12 @@ comp FAdd[WIDTH, EXPONENT, MANTISSA, ?STAGES=1]<'G: 1> (
     //// comb stage 4 ////
     sm_3 := new Shift[MANTISSA, S2 - S1]<'G+S1>(s_mantissa_3.out);
     lm_3 := new Shift[MANTISSA, S2 - S1]<'G+S1>(l_mantissa_3.out);
-    left_sign := new Shift[1, S2-S1]<'G+S1>(left.sign);
-    right_sign := new Shift[1, S2-S1]<'G+S1>(right.sign);
-    c2 := new Shift[1, S2-S1]<'G+S1>(_control_2.out);
+    left_s2 := new Shift[WIDTH, S2]<'G>(left);
+    right_s2 := new Shift[WIDTH, S2]<'G>(right);
+    left_sign := new Shift[1, S2]<'G>(left.sign);
+    right_sign := new Shift[1, S2]<'G>(right.sign);
+    c2_shift := new Shift[1, S1]<'G>(_control_2.out);
+    c2 := new Shift[1, S2-S1]<'G+S1>(c2_shift.out);
 
     _mant_add := new Add[MANTISSA, MANTISSA+1]<'G+S2, 'G+S2+1>(sm_3.out, lm_3.out);
     _mant_sub := new Sub[MANTISSA, MANTISSA+1]<'G+S2, 'G+S2+1>(lm_3.out, sm_3.out);
@@ -143,25 +147,28 @@ comp FAdd[WIDTH, EXPONENT, MANTISSA, ?STAGES=1]<'G: 1> (
     add_mant := new Mux[MANTISSA+1]<'G+S2, 'G+S2+1>(c2.out, _add_mant.out, _l_mantissa_3_ext.out);
 
     // renormalization
-    bundle shift_amts[MANTISSA+1]: for<i> ['G+S2, 'G+S2+1] WIDTH;
-    _mant_1_const := new Const[WIDTH, 0]<'G+S2, 'G+S2+1>(); // constant value set if all mantissa bits are 0
-    _shift_max_const := new Const[WIDTH, MANTISSA+1]<'G+S2, 'G+S2+1>();
+    bundle shift_amts[MANTISSA+1]: for<i> ['G+S3, 'G+S3+1] WIDTH;
+    _mant_1_const := new Const[WIDTH, 0]<'G+S3, 'G+S3+1>(); // constant value set if all mantissa bits are 0
+    _shift_max_const := new Const[WIDTH, MANTISSA+1]<'G+S3, 'G+S3+1>();
     _shift_max_sel := new Select[MANTISSA+1, 0]<'G+S2, 'G+S2+1>(add_mant.out);
-    _shift_max_mux := new Mux[WIDTH]<'G+S2, 'G+S2+1>(_shift_max_sel.out, _shift_max_const.out, _mant_1_const.out);
+    _shift_max_sel_s3 := new Shift[1, S3-S2]<'G+S2>(_shift_max_sel.out);
+    _shift_max_mux := new Mux[WIDTH]<'G+S3, 'G+S3+1>(_shift_max_sel_s3.out, _shift_max_const.out, _mant_1_const.out);
     shift_amts{0} = _shift_max_mux.out;
 
     // Stage 3
+    larger_exp_s3 := new Shift[EXPONENT, S3]<'G>(larger_exp.out);
+    add_mant_s3 := new Shift[MANTISSA+1, S3-S2]<'G+S2>(add_mant.out);
 
     bundle exp_amts[MANTISSA+1]: for<i> ['G+S3, 'G+S3+1] EXPONENT;
-    _exp_1_const := new Neg[EXPONENT]<'G+S3, 'G+S3+1>(larger_exp.out);
+    _exp_1_const := new Neg[EXPONENT]<'G+S3, 'G+S3+1>(larger_exp_s3.out);
     _exp_max_const_p := new Const[EXPONENT, MANTISSA-1]<'G+S3, 'G+S3+1>();
     _exp_max_const := new Neg[EXPONENT]<'G+S3, 'G+S3+1>(_exp_max_const_p.out);
-    _exp_max_mux := new Mux[EXPONENT]<'G+S3, 'G+S3+1>(_shift_max_sel.out, _exp_max_const.out, _exp_1_const.out);
+    _exp_max_mux := new Mux[EXPONENT]<'G+S3, 'G+S3+1>(_shift_max_sel_s3.out, _exp_max_const.out, _exp_1_const.out);
     exp_amts{0} = _exp_max_mux.out;
 
     for j in 1..MANTISSA+1 {
         _shift_const := new Const[WIDTH, MANTISSA+1-j]<'G+S3, 'G+S3+1>();
-        _shift_sel := new Select[MANTISSA+1, j]<'G+S3, 'G+S3+1>(add_mant.out);
+        _shift_sel := new Select[MANTISSA+1, j]<'G+S3, 'G+S3+1>(add_mant_s3.out);
         _shift_mux := new Mux[WIDTH]<'G+S3, 'G+S3+1>(_shift_sel.out, _shift_const.out, shift_amts{j-1});
         shift_amts{j} = _shift_mux.out;
 
@@ -178,23 +185,28 @@ comp FAdd[WIDTH, EXPONENT, MANTISSA, ?STAGES=1]<'G: 1> (
     }
 
     //// comb stage 5 ////
-    final_exp := new Add[EXPONENT]<'G+S3, 'G+S3+1>(larger_exp.out, exp_amts{MANTISSA});
-    _final_mantissa := new ShiftLeft[MANTISSA+1, WIDTH]<'G+S3, 'G+S3+1>(add_mant.out, shift_amts{MANTISSA});
+    final_exp := new Add[EXPONENT]<'G+S3, 'G+S3+1>(larger_exp_s3.out, exp_amts{MANTISSA});
+    _final_mantissa := new ShiftLeft[MANTISSA+1, WIDTH]<'G+S3, 'G+S3+1>(add_mant_s3.out, shift_amts{MANTISSA});
     final_mantissa := new Slice[MANTISSA+1, MANTISSA, 1, MANTISSA]<'G+S3, 'G+S3+1>(_final_mantissa.out);
 
-    l_signless := new Slice[WIDTH, WIDTH-2, 0, WIDTH-1]<'G+S3, 'G+S3+1>(left);
-    r_signless := new Slice[WIDTH, WIDTH-2, 0, WIDTH-1]<'G+S3, 'G+S3+1>(right);
+    left_s3 := new Shift[WIDTH, S3]<'G>(left);
+    right_s3 := new Shift[WIDTH, S3]<'G>(right);
+    left_s3_decomp := new _FDecompose[WIDTH, EXPONENT, MANTISSA]<'G+S3>(left_s3.out);
+    right_s3_decomp := new _FDecompose[WIDTH, EXPONENT, MANTISSA]<'G+S3>(right_s3.out);
+
+    l_signless := new Slice[WIDTH, WIDTH-2, 0, WIDTH-1]<'G+S3, 'G+S3+1>(left_s3.out);
+    r_signless := new Slice[WIDTH, WIDTH-2, 0, WIDTH-1]<'G+S3, 'G+S3+1>(right_s3.out);
 
     _fsign_1_cond := new Gt[WIDTH-1]<'G+S3, 'G+S3+1>(l_signless.out, r_signless.out);
-    _fsign_2_cond := new Eq[1]<'G+S3, 'G+S3+1>(left.sign, right.sign);
+    _fsign_2_cond := new Eq[1]<'G+S3, 'G+S3+1>(left_s3_decomp.sign, right_s3_decomp.sign);
     _fsign_cb_cond := new Or[1]<'G+S3, 'G+S3+1>(_fsign_1_cond.out, _fsign_2_cond.out);
-    final_sign := new Mux[1]<'G+S3, 'G+S3+1>(_fsign_cb_cond.out, left.sign, right.sign);
+    final_sign := new Mux[1]<'G+S3, 'G+S3+1>(_fsign_cb_cond.out, left_s3_decomp.sign, right_s3_decomp.sign);
 
     res := new _FCompose[WIDTH, EXPONENT, MANTISSA]<'G+S3>(final_sign.out, final_exp.out, final_mantissa.out);
     out = res.out;
 }
 
-comp FSub[WIDTH, EXPONENT, MANTISSA, ?STAGES=1]<'G: 1> (
+comp FSub[WIDTH, EXPONENT, MANTISSA, ?STAGES=0]<'G: 1> (
      left: ['G, 'G+1] WIDTH,
      right: ['G, 'G+1] WIDTH,
 ) -> (
