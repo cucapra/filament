@@ -1,0 +1,12 @@
+import "primitives/math/float.fil";
+
+comp main<'G:1>(
+  op: ['G, 'G+1] 32,
+  a: ['G, 'G+1] 32,
+  b: ['G, 'G+1] 32
+) -> (
+  out: ['G+2, 'G+3] 32
+) {
+  fpadd := new FAdd[32, 8, 23, 2]<'G>(a, b);
+  out = fpadd.out;
+}

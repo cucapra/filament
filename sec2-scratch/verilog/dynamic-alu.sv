@@ -35,7 +35,6 @@ module Add_LI #(
     logic [WIDTH-1:0] result_reg;
     logic valid_reg;
 
-    // Pipeline stage counter
     logic [$clog2(PIPELINE_STAGES+1)-1:0] stage_counter;
 
     // Instantiate the Add module
@@ -46,41 +45,18 @@ module Add_LI #(
         .sum(add_result)
     );
 
-    // State machine for ready-valid protocol
-    always_comb begin
-        // Default values
-        next_state = current_state;
-        ready_out = 1'b0;
-
-        case (current_state)
-            IDLE: begin
-                ready_out = 1'b1;  // Ready to accept new inputs
-                if (valid_in && ready_out) begin
-                    next_state = COMPUTE;
-                end
-            end
-
-            COMPUTE: begin
-                ready_out = 1'b0;  // Not ready while computing
-                // Stay in COMPUTE for PIPELINE_STAGES cycles
-                if (stage_counter >= PIPELINE_STAGES - 1) begin
-                    next_state = VALID;
-                end
-            end
-
-            VALID: begin
-                ready_out = 1'b0;  // Not ready while output is pending
-                if (valid_out && ready_in) begin
-                    // Handshake completed, can accept new input
-                    next_state = IDLE;
-                end
-            end
-
-            default: begin
-                next_state = IDLE;
-            end
-        endcase
-    end
+    // Reusable ready-valid state machine and stage counter
+    RV_ReadyValid #(.PIPELINE_STAGES(PIPELINE_STAGES)) rv_rv (
+        .clk(clk),
+        .reset(reset),
+        .valid_in(valid_in),
+        .valid_out(valid_out),
+        .ready_in(ready_in),
+        .ready_out(ready_out),
+        .stage_counter(stage_counter),
+        .current_state(current_state),
+        .next_state(next_state)
+    );
 
     // Sequential logic for state updates
     always_ff @(posedge clk) begin
@@ -88,34 +64,6 @@ module Add_LI #(
             current_state <= IDLE;
         end else begin
             current_state <= next_state;
-        end
-    end
-
-    // Stage counter logic
-    always_ff @(posedge clk) begin
-        if (reset) begin
-            stage_counter <= 0;
-        end else begin
-            case (current_state)
-                IDLE: begin
-                    if (valid_in && ready_out) begin
-                        stage_counter <= 0; // Start counting
-                    end
-                end
-                COMPUTE: begin
-                    if (stage_counter < PIPELINE_STAGES - 1) begin
-                        stage_counter <= stage_counter + 1;
-                    end
-                end
-                VALID: begin
-                    if (valid_out && ready_in) begin
-                        stage_counter <= 0; // Reset for next computation
-                    end
-                end
-                default: begin
-                    stage_counter <= 0;
-                end
-            endcase
         end
     end
 
@@ -207,7 +155,6 @@ module Mul_LI #(
     logic [WIDTH-1:0] result_reg;
     logic valid_reg;
 
-    // Pipeline stage counter
     logic [$clog2(PIPELINE_STAGES+1)-1:0] stage_counter;
 
     // Instantiate the Mul module
@@ -218,41 +165,18 @@ module Mul_LI #(
         .product(mul_result)
     );
 
-    // State machine for ready-valid protocol
-    always_comb begin
-        // Default values
-        next_state = current_state;
-        ready_out = 1'b0;
-
-        case (current_state)
-            IDLE: begin
-                ready_out = 1'b1;  // Ready to accept new inputs
-                if (valid_in && ready_out) begin
-                    next_state = COMPUTE;
-                end
-            end
-
-            COMPUTE: begin
-                ready_out = 1'b0;  // Not ready while computing
-                // Stay in COMPUTE for PIPELINE_STAGES cycles
-                if (stage_counter >= PIPELINE_STAGES - 1) begin
-                    next_state = VALID;
-                end
-            end
-
-            VALID: begin
-                ready_out = 1'b0;  // Not ready while output is pending
-                if (valid_out && ready_in) begin
-                    // Handshake completed, can accept new input
-                    next_state = IDLE;
-                end
-            end
-
-            default: begin
-                next_state = IDLE;
-            end
-        endcase
-    end
+    // Reusable ready-valid state machine and stage counter
+    RV_ReadyValid #(.PIPELINE_STAGES(PIPELINE_STAGES)) rv_rv (
+        .clk(clk),
+        .reset(reset),
+        .valid_in(valid_in),
+        .valid_out(valid_out),
+        .ready_in(ready_in),
+        .ready_out(ready_out),
+        .stage_counter(stage_counter),
+        .current_state(current_state),
+        .next_state(next_state)
+    );
 
     // Sequential logic for state updates
     always_ff @(posedge clk) begin
@@ -260,34 +184,6 @@ module Mul_LI #(
             current_state <= IDLE;
         end else begin
             current_state <= next_state;
-        end
-    end
-
-    // Stage counter logic
-    always_ff @(posedge clk) begin
-        if (reset) begin
-            stage_counter <= 0;
-        end else begin
-            case (current_state)
-                IDLE: begin
-                    if (valid_in && ready_out) begin
-                        stage_counter <= 0; // Start counting
-                    end
-                end
-                COMPUTE: begin
-                    if (stage_counter < PIPELINE_STAGES - 1) begin
-                        stage_counter <= stage_counter + 1;
-                    end
-                end
-                VALID: begin
-                    if (valid_out && ready_in) begin
-                        stage_counter <= 0; // Reset for next computation
-                    end
-                end
-                default: begin
-                    stage_counter <= 0;
-                end
-            endcase
         end
     end
 

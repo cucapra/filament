@@ -16,23 +16,20 @@ module mkCompute#(
 )(Compute#(width));
   List#(Array#(Reg#(Bit#(width)))) regs <- replicateM(stages, mkCReg(2, 0));
   List#(Array#(Reg#(Bool))) valid <- replicateM(stages, mkCReg(2, False));
-  FIFOF#(Bit#(width)) fifo_in <- mkSizedFIFOF(2);
-  FIFOF#(Bit#(width)) fifo_out <- mkSizedFIFOF(2);
+  FIFOF#(Bit#(width)) fifo_in <- mkSizedFIFOF(stages);
+  FIFOF#(Bit#(width)) fifo_out <- mkSizedFIFOF(stages);
 
-  (* fire_when_enabled *)
   rule push_first if (fifo_in.notEmpty);
     let v = fifo_in.first; fifo_in.deq;
     regs[0][0] <= v;
     valid[0][0] <= True;
   endrule
 
-  (* fire_when_enabled *)
   rule push_nothing if (!fifo_in.notEmpty);
     regs[0][0] <= ?;
     valid[0][0] <= False;
   endrule
 
-  (* fire_when_enabled *)
   rule shift if (fifo_out.notFull);
     for (Integer i = 0; i < stages - 1; i = i + 1) begin
       regs[i+1][0] <= regs[i][0];
@@ -40,7 +37,6 @@ module mkCompute#(
     end
   endrule
 
-  (* fire_when_enabled *)
   rule write_out if (fifo_out.notFull && valid[stages-1][1]);
     fifo_out.enq(regs[stages - 1][1]);
   endrule
@@ -79,20 +75,22 @@ module mkALU#(numeric width)(ALU#(width));
     return l * r;
   endfunction
 
+  Integer add_stages = 2;  // Number of stages for adder
+  Integer mul_stages = 3;  // Number of stages for multiplier
+  Integer max_stages = max(add_stages, mul_stages);
+
   // Track the next computation to pull from.
-  FIFOF#(Bool) next_op <- mkSizedFIFOF(2);
-  Compute#(width) adder <- mkCompute(width, 2, "add", add);
-  Compute#(width) mult <- mkCompute(width, 3, "mul", mul);
+  FIFOF#(Bool) next_op <- mkSizedFIFOF(5);
+  Compute#(width) adder <- mkCompute(width, add_stages, "add", add);
+  Compute#(width) mult <- mkCompute(width, mul_stages, "mul", mul);
   FIFO#(Bit#(width)) fifo_out <- mkFIFO;
 
-  (* fire_when_enabled *)
   rule pull_adder (next_op.notEmpty && next_op.first);
     let out <- adder.get();
     next_op.deq();
     fifo_out.enq(out);
   endrule
 
-  (* fire_when_enabled *)
   rule pull_mult (next_op.notEmpty && !next_op.first);
     let out <- mult.get();
     next_op.deq();
@@ -135,11 +133,11 @@ module top(Empty);
     randOp.cntrl.init();
   endrule
 
-  (* fire_when_enabled *)
   rule feed (idx < 10);
     Bit#(32) l <- randL.next;
     Bit#(32) r <- randR.next;
     Bool op <- randOp.next;
+
     alu.put(op, l, r);
     if (op)
       expected.enq(l + r);
@@ -147,9 +145,7 @@ module top(Empty);
       expected.enq(l * r);
     idx <= idx + 1;
     $display("%0d: %0s, %0d, %0d", cycles, op ? "add" : "mul", l, r);
-  endrule
-
-  (* fire_when_enabled *)
+  endrule  (* fire_when_enabled *)
   rule check;
     let out <- alu.get();
     let gold = expected.first; expected.deq();
