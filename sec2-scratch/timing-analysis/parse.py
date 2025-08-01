@@ -190,15 +190,16 @@ class TimingParser:
         ```
         """
         data = {}
-
-        header = self.contents[idx].strip()
+        print(f"Parsing entry: {idx} - {idx+3}")
+        print("".join(self.contents[idx : idx + 3]))
+        print("xxxxxxxxxxxxxxxxx")
 
         # Split the header using spaces, remove the empty elements.
         # Expect there are exactly 3 parts: location, resource, and delay type.
         # If not, raise an error.
+        header = self.contents[idx].strip()
         parts = list(filter(None, header.split(" ")))
-        if len(parts) != 3:
-            raise ValueError(f"Invalid entry format: {header}")
+        assert len(parts) == 3, f"Invalid header start: {header}"
 
         loc, resource_kind, delay_type = parts
         data["loc"] = self.parse_loc(loc)
@@ -226,13 +227,12 @@ class TimingParser:
         # The first part contains the fanout information, which is in the
         # format "net (fo=40, routed)".
         fanout_info = net_info[0].strip()
-        fanout_match = re.match(r"(\w+)\s*\(fo=(\d+)\s*,\s*(\w+)", fanout_info)
+        fanout_match = re.match(r"(\w+)\s*\(fo=(\d+)", fanout_info)
         assert fanout_match, f"Invalid fanout format: {fanout_info}"
         assert (
             fanout_match.group(1) == "net"
         ), f"Expected 'net' but got {fanout_match.group(1)}"
         data["fan_out"] = int(fanout_match.group(2))
-        data["net_status"] = fanout_match.group(3)
 
         # The second part contains the delay and net information.
         remaining_info = net_info[1].strip()
@@ -249,8 +249,7 @@ class TimingParser:
         """
         Parses the critical path from start to the end index.
         """
-        # XXX: Skip the first four lines because they are clock delay
-        idx = start + 4
+        idx = start
         out = []
         while idx + 3 < end:
             entry = self.parse_critical_path_entry(idx)
@@ -268,22 +267,88 @@ class TimingParser:
             [all(c == "-" for c in chunk) for chunk in splits]
         )
 
+    def header_line(self, idx: int, title: str) -> bool:
+        """
+        A header line has a separator line after it and the separator line
+        does not start with a space.
+        """
+        if idx + 1 >= len(self.contents):
+            return False
+
+        line = self.contents[idx].strip()
+        next_line = self.contents[idx + 1]
+        out = (
+            line == title
+            and not next_line.startswith(" ")
+            and self.separator_line(next_line.strip())
+        )
+        return out
+
+    def find_table(self, title: str) -> (int, int):
+        """
+        Find a timing report table with the give title.
+        The end is detected when we find three consecutive empty lines.
+        """
+
+        def three_empty_lines(start: int) -> bool:
+            """Check if there are three consecutive empty lines starting from
+            index."""
+            return (
+                start + 2 < len(self.contents)
+                and self.contents[start].strip() == ""
+                and self.contents[start + 1].strip() == ""
+                and self.contents[start + 2].strip() == ""
+            )
+
+        start = None
+        end = None
+
+        # Find the start of the table by looking for the title.
+        # The title is expected to be a header line.
+        for i, line in enumerate(self.contents):
+            if self.header_line(i, title):
+                start = i
+                break
+        else:
+            raise ValueError(f"Table '{title}' not found in the report.")
+
+        # Find the end of the table by looking for three consecutive empty lines.
+        for i in range(start + 1, len(self.contents)):
+            if three_empty_lines(i):
+                end = i
+                break
+
+        if end is None:
+            # If we didn't find three empty lines, assume the end is the end of
+            # the file.
+            end = len(self.contents)
+
+        return start, end
+
     def parse_critical_path(self, start: int, end: int) -> dict:
         """
         Parses a critical path from the report.
         """
         data = {}
+        clock_start = None
         path_start = None
         path_end = None
         est_end = None
         compute_end = None
+        print(f"CP Entry: {start} - {end}")
 
         # Walk over the lines and every time we find a separator line, we
         # assume that the previous path has ended.
         for i in range(start, end):
             line = self.contents[i].strip()
+            # print(line)
+            # print(self.separator_line(line))
+            # print("xxxxxxxxxxxxxxxxx")
             if self.separator_line(line):
-                if path_start is None:
+                if clock_start is None:
+                    clock_start = i + 1
+                    continue
+                elif path_start is None:
                     path_start = i + 1
                     continue
                 elif path_end is None:
@@ -296,16 +361,19 @@ class TimingParser:
                     compute_end = i
                     continue
                 else:
-                    assert False, "Unexpected separator line found!"
+                    # path = "".join(self.contents[start:end])
+                    path = ""
+                    assert (
+                        False
+                    ), f"\n{path}\nUnexpected separator line found at line {i}!"
 
         assert path_start is not None, "No path start found!"
         assert path_end is not None, "No path end found!"
         assert est_end is not None, "No estimated end found!"
         assert compute_end is not None, "No computed end found!"
 
-        data["header"] = self.parse_critical_path_header(start, path_start)
-        path = self.parse_path(path_start, path_end)
-        data["critical_path"] = path
+        data["header"] = self.parse_critical_path_header(start, clock_start)
+        data["critical_path"] = self.parse_path(path_start, path_end)
         return data
 
     def parse(self) -> dict:
@@ -314,24 +382,29 @@ class TimingParser:
         data.
         """
 
+        # Find the line with "Max Delay Paths" and start parsing from there.
+        (t_start, t_end) = self.find_table("Max Delay Paths")
+        print(f"Table bounds: {t_start} - {t_end}")
+
         # Find all indices that have work "Slack" in them
-        slack_indices = [i for i, line in enumerate(self.contents) if "Slack" in line]
+        slack_indices = [
+            t_start + i
+            for i, line in enumerate(self.contents[t_start:t_end])
+            if "Slack" in line
+        ]
 
         # For each line, find the end by using the next "Slack" and walking
         # backward till the first non-empty line is found.
         paths = []
         for i in range(len(slack_indices)):
             start = slack_indices[i]
-            end = (
-                slack_indices[i + 1]
-                if i + 1 < len(slack_indices)
-                else len(self.contents)
-            )
+            end = slack_indices[i + 1] if i + 1 < len(slack_indices) else t_end
 
             # Find the first non-empty line before the end
             while end > start and not self.contents[end - 1].strip():
                 end -= 1
 
+            # print(self.contents[start:end])
             # Parse the path from start to end
             paths.append(self.parse_critical_path(start, end))
 
