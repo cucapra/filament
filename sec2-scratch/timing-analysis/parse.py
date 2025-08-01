@@ -71,15 +71,6 @@ class TimingParser:
         # We store the contents of the file as an array of lines
         self.contents = contents
         self.data = {}
-        self.header_keys = [
-            "Slack",
-            "Source",
-            "Destination",
-            "Requirement",
-            "Data Path Delay",
-            "Logic Levels",
-            "Input Delay",
-        ]
 
     def parse_logic_levels(self, req: str) -> str:
         """
@@ -116,11 +107,11 @@ class TimingParser:
             req,
         )
         assert match, f"Invalid data path delay format: {req}"
-        data["total"] = match.group(1)
-        data["logic"] = match.group(2)
-        data["logic_percent"] = match.group(3)
-        data["route"] = match.group(4)
-        data["route_percent"] = match.group(5)
+        data["total"] = float(match.group(1))
+        data["logic"] = float(match.group(2))
+        data["logic_percent"] = float(match.group(3))
+        data["route"] = float(match.group(4))
+        data["route_percent"] = float(match.group(5))
         return data
 
     def parse_slack(self, req: str) -> dict:
@@ -134,7 +125,7 @@ class TimingParser:
         match = re.match(r"Slack\s*\((\w+)\)\s*:\s*([\d.-]+)ns", req)
         assert match, f"Invalid slack format: {req}"
         data["status"] = match.group(1)
-        data["slack"] = match.group(2)
+        data["slack"] = float(match.group(2))
         return data
 
     def parse_critical_path_header(self, start: int, end: int):
@@ -156,14 +147,13 @@ class TimingParser:
             elif key in [
                 "Source",
                 "Destination",
-                "Input Delay",
             ]:
                 data[key.lower().replace(" ", "_")] = value
-            if key == "Requirement":
+            if key in ["Requirement", "Input Delay"]:
                 # Requirement is in the format "7.000ns  (clk rise@7.000ns - clk rise@0.000ns)"
                 match = re.match(r"([\d.]+)ns", value)
                 assert match, f"Invalid requirement format: {value}"
-                data["requirement_time"] = match.group(1)
+                data[key.lower().replace(" ", "_")] = float(match.group(1))
             elif key == "Data Path Delay":
                 data["data_path_delay"] = self.parse_header_data_path_delay(value)
             elif key == "Logic Levels":
@@ -221,7 +211,7 @@ class TimingParser:
         delay_parts = list(filter(None, delay_info.split(" ")))
         if len(delay_parts) != 4:
             raise ValueError(f"Invalid delay info format: {delay_info}")
-        data["logic_delay"] = delay_parts[0]
+        data["logic_delay"] = float(delay_parts[0])
         data["edge"] = delay_parts[2]
         data["resource_name"] = delay_parts[3]
 
@@ -249,7 +239,7 @@ class TimingParser:
         net_parts = list(filter(None, remaining_info.split(" ")))
 
         assert len(net_parts) == 3, f"Invalid net parts format: {net_parts}"
-        data["net_delay"] = net_parts[0]
+        data["net_delay"] = float(net_parts[0])
         data["net_name"] = net_parts[2]
 
         # Return the parsed data
