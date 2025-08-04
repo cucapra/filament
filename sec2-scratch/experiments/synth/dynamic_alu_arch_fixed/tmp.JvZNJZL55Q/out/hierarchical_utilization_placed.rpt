@@ -1,0 +1,39 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2023.2 (lin64) Build 4029153 Fri Oct 13 20:13:54 MDT 2023
+| Date         : Mon Aug  4 13:23:37 2025
+| Host         : havarti.cs.cornell.edu running 64-bit Ubuntu 22.04.5 LTS
+| Command      : report_utilization -hierarchical -file ./out/hierarchical_utilization_placed.rpt
+| Design       : main
+| Device       : xczu3eg-sbva484-1-e
+| Speed File   : -1
+| Design State : Routed
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++-------------------------------+---------------------+------------+------------+---------+------+------+--------+--------+------+------------+
+|            Instance           |        Module       | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | URAM | DSP Blocks |
++-------------------------------+---------------------+------------+------------+---------+------+------+--------+--------+------+------------+
+| main                          |               (top) |        671 |        671 |       0 |    0 | 1250 |      0 |      0 |    0 |          2 |
+|   (main)                      |               (top) |          0 |          0 |       0 |    0 |   76 |      0 |      0 |    0 |          0 |
+|   alu_inst                    |         Dynamic_ALU |        671 |        671 |       0 |    0 | 1174 |      0 |      0 |    0 |          2 |
+|     adder                     | FP_Adder_LI_Wrapper |        434 |        434 |       0 |    0 |  577 |      0 |      0 |    0 |          0 |
+|       (adder)                 | FP_Adder_LI_Wrapper |         77 |         77 |       0 |    0 |  331 |      0 |      0 |    0 |          0 |
+|       core_adder              |    FP_Adder_Wrapper |        357 |        357 |       0 |    0 |  246 |      0 |      0 |    0 |          0 |
+|         gen_2stage.adder      |     FP_Adder_2Stage |        357 |        357 |       0 |    0 |  246 |      0 |      0 |    0 |          0 |
+|     multiplier                |  FP_Mult_LI_Wrapper |        237 |        237 |       0 |    0 |  597 |      0 |      0 |    0 |          2 |
+|       (multiplier)            |  FP_Mult_LI_Wrapper |        144 |        144 |       0 |    0 |  465 |      0 |      0 |    0 |          0 |
+|       core_multiplier         |     FP_Mult_Wrapper |         93 |         93 |       0 |    0 |  132 |      0 |      0 |    0 |          2 |
+|         gen_3stage.multiplier |      FP_Mult_3Stage |         93 |         93 |       0 |    0 |  132 |      0 |      0 |    0 |          2 |
++-------------------------------+---------------------+------------+------------+---------+------+------+--------+--------+------+------------+
+* Note: The sum of lower-level cells may be larger than their parent cells total, due to cross-hierarchy LUT combining
+
+

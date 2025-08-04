@@ -71,7 +71,7 @@ always @(posedge clk) begin
         // Input side: enqueue when valid input and we're ready
         if (valid_in && ready_out) begin
             input_fifo[fifo_tail] <= {a, b};
-            fifo_tail <= (fifo_tail + 1'b1) % ADDR_WIDTH'(FIFO_SIZE);
+            fifo_tail <= (fifo_tail + 1'b1 == FIFO_SIZE) ? 0 : fifo_tail + 1'b1;
             fifo_count <= fifo_count + 1'b1;
         end
         
@@ -92,7 +92,7 @@ always @(posedge clk) begin
             // Feed new data to adder if FIFO has data
             if (fifo_count > 0) begin
                 {core_a, core_b} <= input_fifo[fifo_head];
-                fifo_head <= (fifo_head + 1'b1) % ADDR_WIDTH'(FIFO_SIZE);
+                fifo_head <= (fifo_head + 1'b1 == FIFO_SIZE) ? 0 : fifo_head + 1'b1;
                 fifo_count <= fifo_count - 1'b1;
                 valid_shift[0] <= 1'b1;
             end else begin

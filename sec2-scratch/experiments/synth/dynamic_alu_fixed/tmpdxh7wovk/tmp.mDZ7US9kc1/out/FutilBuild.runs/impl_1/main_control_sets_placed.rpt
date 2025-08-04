@@ -1,0 +1,99 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2023.2 (lin64) Build 4029153 Fri Oct 13 20:13:54 MDT 2023
+| Date         : Mon Aug  4 13:10:22 2025
+| Host         : havarti.cs.cornell.edu running 64-bit Ubuntu 22.04.5 LTS
+| Command      : report_control_sets -verbose -file main_control_sets_placed.rpt
+| Design       : main
+| Device       : xczu3eg
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Control Set Information
+
+Table of Contents
+-----------------
+1. Summary
+2. Histogram
+3. Flip-Flop Distribution
+4. Detailed Control Set Information
+
+1. Summary
+----------
+
++----------------------------------------------------------+-------+
+|                          Status                          | Count |
++----------------------------------------------------------+-------+
+| Total control sets                                       |    21 |
+|    Minimum number of control sets                        |    21 |
+|    Addition due to synthesis replication                 |     0 |
+|    Addition due to physical synthesis replication        |     0 |
+| Unused register locations in slices containing registers |    14 |
++----------------------------------------------------------+-------+
+* Control sets can be merged at opt_design using control_set_merge or merge_equivalent_drivers
+** Run report_qor_suggestions for automated merging and remapping suggestions
+
+
+2. Histogram
+------------
+
++--------------------+-------+
+|       Fanout       | Count |
++--------------------+-------+
+| Total control sets |    21 |
+| >= 0 to < 4        |     6 |
+| >= 4 to < 6        |     1 |
+| >= 6 to < 8        |     0 |
+| >= 8 to < 10       |     0 |
+| >= 10 to < 12      |     0 |
+| >= 12 to < 14      |     0 |
+| >= 14 to < 16      |     0 |
+| >= 16              |    14 |
++--------------------+-------+
+* Control sets can be remapped at either synth_design or opt_design
+
+
+3. Flip-Flop Distribution
+-------------------------
+
++--------------+-----------------------+------------------------+-----------------+--------------+
+| Clock Enable | Synchronous Set/Reset | Asynchronous Set/Reset | Total Registers | Total Slices |
++--------------+-----------------------+------------------------+-----------------+--------------+
+| No           | No                    | No                     |               0 |            0 |
+| No           | No                    | Yes                    |               0 |            0 |
+| No           | Yes                   | No                     |             380 |           80 |
+| Yes          | No                    | No                     |               0 |            0 |
+| Yes          | No                    | Yes                    |               0 |            0 |
+| Yes          | Yes                   | No                     |             794 |          121 |
++--------------+-----------------------+------------------------+-----------------+--------------+
+
+
+4. Detailed Control Set Information
+-----------------------------------
+
++--------------+--------------------------------------------------+---------------------------------------------------------------+------------------+----------------+--------------+
+| Clock Signal |                   Enable Signal                  |                        Set/Reset Signal                       | Slice Load Count | Bel Load Count | Bels / Slice |
++--------------+--------------------------------------------------+---------------------------------------------------------------+------------------+----------------+--------------+
+|  clk         | alu_inst/adder/fifo_tail0                        | reset                                                         |                1 |              2 |         2.00 |
+|  clk         | alu_inst/adder/fifo_count[2]_i_1_n_0             | reset                                                         |                2 |              3 |         1.50 |
+|  clk         | alu_inst/multiplier/fifo_count[2]_i_1__0_n_0     | reset                                                         |                1 |              3 |         3.00 |
+|  clk         | alu_inst/adder/pipeline_advance                  | reset                                                         |                2 |              3 |         1.50 |
+|  clk         | alu_inst/multiplier/output_valid_reg0            | reset                                                         |                2 |              3 |         1.50 |
+|  clk         | alu_inst/multiplier/fifo_tail0                   | reset                                                         |                1 |              3 |         3.00 |
+|  clk         | alu_inst/adder/E[0]                              | reset                                                         |                1 |              4 |         4.00 |
+|  clk         |                                                  | alu_inst/adder/core_adder/gen_2stage.adder/result[22]_i_1_n_0 |                9 |             23 |         2.56 |
+|  clk         | alu_inst/multiplier/input_fifo[3][63]_i_1__0_n_0 | reset                                                         |               22 |             64 |         2.91 |
+|  clk         | alu_inst/adder/input_fifo[2][63]_i_1_n_0         | reset                                                         |               35 |             64 |         1.83 |
+|  clk         | alu_inst/multiplier/input_fifo[0][63]_i_1__0_n_0 | reset                                                         |               22 |             64 |         2.91 |
+|  clk         | alu_inst/multiplier/input_fifo[1][63]_i_1__0_n_0 | reset                                                         |               22 |             64 |         2.91 |
+|  clk         | alu_inst/multiplier/input_fifo[2][63]_i_1__0_n_0 | reset                                                         |               22 |             64 |         2.91 |
+|  clk         | alu_inst/multiplier/input_fifo[4][63]_i_1_n_0    | reset                                                         |               31 |             64 |         2.06 |
+|  clk         | alu_inst/multiplier/input_fifo[5][63]_i_1_n_0    | reset                                                         |               30 |             64 |         2.13 |
+|  clk         | alu_inst/adder/input_fifo[3][63]_i_1_n_0         | reset                                                         |               33 |             64 |         1.94 |
+|  clk         | alu_inst/adder/input_fifo[1][63]_i_1_n_0         | reset                                                         |               33 |             64 |         1.94 |
+|  clk         | alu_inst/adder/input_fifo[0][63]_i_1_n_0         | reset                                                         |               36 |             64 |         1.78 |
+|  clk         | alu_inst/adder/fifo_head[1]_i_1__0_n_0           | reset                                                         |               38 |             66 |         1.74 |
+|  clk         | alu_inst/multiplier/fifo_head                    | reset                                                         |               32 |             67 |         2.09 |
+|  clk         |                                                  | reset                                                         |               72 |            357 |         4.96 |
++--------------+--------------------------------------------------+---------------------------------------------------------------+------------------+----------------+--------------+
+
+

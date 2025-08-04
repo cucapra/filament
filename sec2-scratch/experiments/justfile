@@ -3,6 +3,7 @@
 # Default simulator
 sim := "iverilog"
 simflags := "-g2012"
+verilator_flags := "-Wall -Wno-DECLFILENAME -Wno-WIDTHTRUNC -Wno-WIDTHEXPAND"
 
 # Source files
 adder_sources := "add/fp_adder_1stage.sv add/fp_adder_2stage.sv add/fp_adder_3stage.sv add/fp_adder_4stage.sv"
@@ -15,7 +16,7 @@ default:
     @just --list
 
 # Run all tests (recommended for verification)
-test: test-variants test-static test-dynamic-fixed
+test: test-variants test-static test-dynamic
     @echo "=== All Tests Completed Successfully ==="
 
 # Test pipeline variants for mathematical consistency
@@ -32,15 +33,8 @@ test-static:
     {{sim}} {{simflags}} -o test_static tests/test_static_alu.sv static_alu.sv {{all_sources}}
     ./test_static
 
-# Test original dynamic ALU implementation
-test-dynamic:
-    #!/usr/bin/env bash
-    echo "=== Testing Dynamic ALU ==="
-    {{sim}} {{simflags}} -o test_dynamic tests/test_dynamic_alu.sv dynamic_alu.sv {{all_sources}}
-    ./test_dynamic
-
 # Test fixed dynamic ALU implementation (recommended)
-test-dynamic-fixed:
+test-dynamic:
     #!/usr/bin/env bash
     echo "=== Testing Fixed Dynamic ALU ==="
     {{sim}} {{simflags}} -o test_dynamic_fixed tests/test_dynamic_alu_fixed.sv dynamic_alu.sv {{all_sources}}
@@ -89,9 +83,9 @@ lint:
     #!/usr/bin/env bash
     echo "=== Linting All Modules ==="
     echo "Linting static ALU with all dependencies..."
-    verilator --lint-only --top-module Static_ALU static_alu.sv {{all_sources}} || true
+    verilator {{verilator_flags}} --lint-only --top-module Static_ALU static_alu.sv {{all_sources}} || true
     echo "Linting dynamic ALU with all dependencies..."
-    verilator --lint-only --top-module Dynamic_ALU dynamic_alu.sv {{all_sources}} || true
+    verilator {{verilator_flags}} --lint-only --top-module Dynamic_ALU dynamic_alu.sv {{all_sources}} || true
 
 # Quick syntax check using iverilog
 syntax-check:
@@ -106,8 +100,8 @@ syntax-check:
 clean:
     #!/usr/bin/env bash
     echo "=== Cleaning Generated Files ==="
-    rm -f test_variants test_static test_dynamic test_dynamic_fixed
-    rm -f debug_test debug_bp
+    rm -f test_*
+    rm -f debug_*
     rm -f *.vcd *.dmp *.out
     rm -f a.out
     echo "Clean completed"
@@ -153,15 +147,6 @@ build-all:
     {{sim}} {{simflags}} -o test_dynamic_fixed tests/test_dynamic_alu_fixed.sv dynamic_alu.sv {{all_sources}}
     echo "All executables built successfully"
 
-# Debug-specific targets for common debugging tasks
-debug-static testbench="tests/test_static_alu.sv":
-    @echo "=== Debugging Static ALU ==="
-    @just run {{testbench}} "static_alu.sv {{all_sources}}" _debug/debug_static
-
-debug-dynamic testbench="tests/test_dynamic_alu_fixed.sv":
-    @echo "=== Debugging Dynamic ALU ==="
-    @just run {{testbench}} "dynamic_alu.sv {{all_sources}}" _debug/debug_dynamic
-
 # Generate VCD for waveform analysis (requires testbench modification)
 vcd testbench sources="":
     #!/usr/bin/env bash
@@ -181,3 +166,11 @@ vcd testbench sources="":
         echo "  \$dumpfile(\"waves.vcd\");"
         echo "  \$dumpvars(0, module_name);"
     fi
+
+# Generate dynamic ALU main module with dependencies
+make-dynamic-main ADD MUL:
+    ./generate_dynamic_main.sh {{ADD}} {{MUL}}
+
+# Generate static ALU main module with dependencies
+make-static-main ADD MUL:
+    ./generate_static_main.sh {{ADD}} {{MUL}}

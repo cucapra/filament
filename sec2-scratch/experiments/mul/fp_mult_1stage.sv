@@ -29,7 +29,7 @@ always @(posedge clk) begin
     end
 end
 
-function [34:0] compute_mult;  // {result[31:0], exception, overflow, underflow}
+function automatic [34:0] compute_mult;  // {result[31:0], exception, overflow, underflow}
     input [31:0] num_a, num_b;
     
     reg sign, round, normalised, zero;

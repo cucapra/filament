@@ -1,0 +1,1348 @@
+[fud] DEBUG: synth-verilog.mktmp()
+[fud] DEBUG: synth-verilog.local_move_files(synth/dynamic_alu_complete.sv, /var/folders/xb/f8fxzngx0dv0dy6fw0m2bqzh0000gn/T/tmpjllbtoq9)
+[fud] DEBUG: synth-verilog.import_libs()
+[fud] DEBUG: synth-verilog.establish_connection()
+[fud] DEBUG: starting thread (client mode): 0x3c75750
+[fud] DEBUG: Local version/idstring: SSH-2.0-paramiko_3.0.0
+[fud] DEBUG: Remote version/idstring: SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.13
+[fud] INFO: Connected (version 2.0, client OpenSSH_8.9p1)
+[fud] DEBUG: === Key exchange possibilities ===
+[fud] DEBUG: kex algos: curve25519-sha256, curve25519-sha256@libssh.org, ecdh-sha2-nistp256, ecdh-sha2-nistp384, ecdh-sha2-nistp521, sntrup761x25519-sha512@openssh.com, diffie-hellman-group-exchange-sha256, diffie-hellman-group16-sha512, diffie-hellman-group18-sha512, diffie-hellman-group14-sha256, kex-strict-s-v00@openssh.com
+[fud] DEBUG: server key: rsa-sha2-512, rsa-sha2-256, ecdsa-sha2-nistp256, ssh-ed25519
+[fud] DEBUG: client encrypt: chacha20-poly1305@openssh.com, aes128-ctr, aes192-ctr, aes256-ctr, aes128-gcm@openssh.com, aes256-gcm@openssh.com
+[fud] DEBUG: server encrypt: chacha20-poly1305@openssh.com, aes128-ctr, aes192-ctr, aes256-ctr, aes128-gcm@openssh.com, aes256-gcm@openssh.com
+[fud] DEBUG: client mac: umac-64-etm@openssh.com, umac-128-etm@openssh.com, hmac-sha2-256-etm@openssh.com, hmac-sha2-512-etm@openssh.com, hmac-sha1-etm@openssh.com, umac-64@openssh.com, umac-128@openssh.com, hmac-sha2-256, hmac-sha2-512, hmac-sha1
+[fud] DEBUG: server mac: umac-64-etm@openssh.com, umac-128-etm@openssh.com, hmac-sha2-256-etm@openssh.com, hmac-sha2-512-etm@openssh.com, hmac-sha1-etm@openssh.com, umac-64@openssh.com, umac-128@openssh.com, hmac-sha2-256, hmac-sha2-512, hmac-sha1
+[fud] DEBUG: client compress: none, zlib@openssh.com
+[fud] DEBUG: server compress: none, zlib@openssh.com
+[fud] DEBUG: client lang: <none>
+[fud] DEBUG: server lang: <none>
+[fud] DEBUG: kex follows: False
+[fud] DEBUG: === Key exchange agreements ===
+[fud] DEBUG: Kex: curve25519-sha256@libssh.org
+[fud] DEBUG: HostKey: ssh-ed25519
+[fud] DEBUG: Cipher: aes128-ctr
+[fud] DEBUG: MAC: hmac-sha2-256
+[fud] DEBUG: Compression: none
+[fud] DEBUG: === End of kex handshake ===
+[fud] DEBUG: kex engine KexCurve25519 specified hash_algo <built-in function openssl_sha256>
+[fud] DEBUG: Switch to new keys ...
+[fud] DEBUG: Got EXT_INFO: {'server-sig-algs': b'ssh-ed25519,sk-ssh-ed25519@openssh.com,ssh-rsa,rsa-sha2-256,rsa-sha2-512,ssh-dss,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,sk-ecdsa-sha2-nistp256@openssh.com,webauthn-sk-ecdsa-sha2-nistp256@openssh.com', 'publickey-hostbound@openssh.com': b'0'}
+[fud] DEBUG: Trying discovered key b'9301c3aeec8f2f03a709247523003b7f' in /Users/rachitnigam/.ssh/id_ed25519
+[fud] DEBUG: userauth is OK
+[fud] INFO: Authentication (publickey) successful!
+[fud] DEBUG: synth-verilog.mktmp(<paramiko.client.SSHClient object at 0x103c4a680>)
+[fud] DEBUG: [chan 0] Max packet in: 32768 bytes
+[fud] DEBUG: Received global request "hostkeys-00@openssh.com"
+[fud] DEBUG: Rejecting "hostkeys-00@openssh.com" global request from server.
+[fud] DEBUG: Debug msg: b'/home/rn359/.ssh/authorized_keys:3: key options: agent-forwarding port-forwarding pty user-rc x11-forwarding'
+[fud] DEBUG: [chan 0] Max packet out: 32768 bytes
+[fud] DEBUG: Secsh channel 0 opened.
+[fud] DEBUG: [chan 0] Sesch channel 0 request ok
+[fud] DEBUG: [chan 0] EOF sent (0)
+[fud] DEBUG: [chan 0] EOF received (0)
+[fud] DEBUG: synth-verilog.send_file(<paramiko.client.SSHClient object at 0x103c4a680>, /tmp/tmp.U8F6XvEukS, synth/dynamic_alu_complete.sv, main.sv)
+[fud] DEBUG: [chan 1] Max packet in: 32768 bytes
+[fud] DEBUG: [chan 1] Max packet out: 32768 bytes
+[fud] DEBUG: Secsh channel 1 opened.
+[fud] DEBUG: [chan 1] Sesch channel 1 request ok
+[fud] DEBUG: [chan 1] EOF sent (1)
+[fud] DEBUG: synth-verilog.send_file(<paramiko.client.SSHClient object at 0x103c4a680>, /tmp/tmp.U8F6XvEukS, synth/synth.tcl, synth.tcl)
+[fud] DEBUG: [chan 2] Max packet in: 32768 bytes
+[fud] DEBUG: [chan 1] EOF received (1)
+[fud] DEBUG: [chan 2] Max packet out: 32768 bytes
+[fud] DEBUG: Secsh channel 2 opened.
+[fud] DEBUG: [chan 2] Sesch channel 2 request ok
+[fud] DEBUG: [chan 2] EOF sent (2)
+[fud] DEBUG: synth-verilog.send_file(<paramiko.client.SSHClient object at 0x103c4a680>, /tmp/tmp.U8F6XvEukS, synth/device.xdc, device.xdc)
+[fud] DEBUG: [chan 3] Max packet in: 32768 bytes
+[fud] DEBUG: [chan 2] EOF received (2)
+[fud] DEBUG: [chan 3] Max packet out: 32768 bytes
+[fud] DEBUG: Secsh channel 3 opened.
+[fud] DEBUG: [chan 3] Sesch channel 3 request ok
+[fud] DEBUG: [chan 3] EOF sent (3)
+[fud] DEBUG: synth-verilog.run_remote(<paramiko.client.SSHClient object at 0x103c4a680>, /tmp/tmp.U8F6XvEukS)
+[fud] DEBUG: [chan 4] Max packet in: 32768 bytes
+[fud] DEBUG: [chan 3] EOF received (3)
+[fud] DEBUG: [chan 4] Max packet out: 32768 bytes
+[fud] DEBUG: Secsh channel 4 opened.
+[fud] DEBUG: [chan 4] Sesch channel 4 request ok
+[fud] DEBUG: 
+[fud] DEBUG: ****** Vivado v2023.2 (64-bit)
+[fud] DEBUG: **** SW Build 4029153 on Fri Oct 13 20:13:54 MDT 2023
+[fud] DEBUG: **** IP Build 4028589 on Sat Oct 14 00:45:43 MDT 2023
+[fud] DEBUG: **** SharedData Build 4025554 on Tue Oct 10 17:18:54 MDT 2023
+[fud] DEBUG: ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+[fud] DEBUG: ** Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+[fud] DEBUG: 
+[fud] DEBUG: source synth.tcl
+[fud] DEBUG: # set outdir ./out
+[fud] DEBUG: # set partname "xczu3eg-sbva484-1-e"
+[fud] DEBUG: # create_project -force -part $partname FutilBuild $outdir
+[fud] DEBUG: create_project: Time (s): cpu = 00:00:06 ; elapsed = 00:00:06 . Memory (MB): peak = 1352.406 ; gain = 0.023 ; free physical = 105342 ; free virtual = 477639
+[fud] DEBUG: # add_files [glob ./*.sv]
+[fud] DEBUG: # add_files -fileset constrs_1 [glob ./device.xdc]
+[fud] DEBUG: # set_property top main [current_fileset]
+[fud] DEBUG: # set_property \
+[fud] DEBUG: #     -name {STEPS.SYNTH_DESIGN.ARGS.MORE OPTIONS} \
+[fud] DEBUG: #     -value {-mode out_of_context -flatten_hierarchy "rebuilt"} \
+[fud] DEBUG: #     -objects [get_runs synth_1]
+[fud] DEBUG: # launch_runs synth_1
+[fud] DEBUG: WARNING: [Vivado 12-7122] Auto Incremental Compile:: No reference checkpoint was found in run synth_1. Auto-incremental flow will not be run, the standard flow will be run instead.
+[fud] DEBUG: [Mon Aug  4 12:30:32 2025] Launched synth_1...
+[fud] DEBUG: Run output will be captured here: /tmp/tmp.U8F6XvEukS/out/FutilBuild.runs/synth_1/runme.log
+[fud] DEBUG: # wait_on_run synth_1
+[fud] DEBUG: [Mon Aug  4 12:30:32 2025] Waiting for synth_1 to finish...
+[fud] DEBUG: 
+[fud] DEBUG: *** Running vivado
+[fud] DEBUG: with args -log main.vds -m64 -product Vivado -mode batch -messageDb vivado.pb -notrace -source main.tcl
+[fud] DEBUG: 
+[fud] DEBUG: 
+[fud] DEBUG: ****** Vivado v2023.2 (64-bit)
+[fud] DEBUG: **** SW Build 4029153 on Fri Oct 13 20:13:54 MDT 2023
+[fud] DEBUG: **** IP Build 4028589 on Sat Oct 14 00:45:43 MDT 2023
+[fud] DEBUG: **** SharedData Build 4025554 on Tue Oct 10 17:18:54 MDT 2023
+[fud] DEBUG: ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+[fud] DEBUG: ** Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+[fud] DEBUG: 
+[fud] DEBUG: source main.tcl -notrace
+[fud] DEBUG: create_project: Time (s): cpu = 00:00:06 ; elapsed = 00:00:06 . Memory (MB): peak = 1346.578 ; gain = 37.805 ; free physical = 104938 ; free virtual = 477235
+[fud] DEBUG: Command: synth_design -top main -part xczu3eg-sbva484-1-e -mode out_of_context -flatten_hierarchy rebuilt
+[fud] DEBUG: Starting synth_design
+[fud] DEBUG: Attempting to get a license for feature 'Synthesis' and/or device 'xczu3eg'
+[fud] DEBUG: INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xczu3eg'
+[fud] DEBUG: INFO: [Device 21-403] Loading part xczu3eg-sbva484-1-e
+[fud] DEBUG: INFO: [Synth 8-7079] Multithreading enabled for synth_design using a maximum of 4 processes.
+[fud] DEBUG: INFO: [Synth 8-7078] Launching helper process for spawning children vivado processes
+[fud] DEBUG: INFO: [Synth 8-7075] Helper process launched with PID 4141659
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Starting RTL Elaboration : Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 2520.152 ; gain = 289.777 ; free physical = 103493 ; free virtual = 475790
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: INFO: [Synth 8-6157] synthesizing module 'main' [/tmp/tmp.U8F6XvEukS/main.sv:4]
+[fud] DEBUG: INFO: [Synth 8-6157] synthesizing module 'Dynamic_ALU' [/tmp/tmp.U8F6XvEukS/main.sv:47]
+[fud] DEBUG: Parameter ADDER_STAGES bound to: 2 - type: integer
+[fud] DEBUG: Parameter MULT_STAGES bound to: 3 - type: integer
+[fud] DEBUG: INFO: [Synth 8-6157] synthesizing module 'FP_Adder_LI_Wrapper' [/tmp/tmp.U8F6XvEukS/main.sv:153]
+[fud] DEBUG: Parameter STAGES bound to: 2 - type: integer
+[fud] DEBUG: INFO: [Synth 8-6157] synthesizing module 'FP_Adder_Wrapper' [/tmp/tmp.U8F6XvEukS/main.sv:263]
+[fud] DEBUG: Parameter STAGES bound to: 2 - type: integer
+[fud] DEBUG: INFO: [Synth 8-6157] synthesizing module 'FP_Adder_2Stage' [/tmp/tmp.U8F6XvEukS/main.sv:425]
+[fud] DEBUG: WARNING: [Synth 8-324] index -1 out of range [/tmp/tmp.U8F6XvEukS/main.sv:516]
+[fud] DEBUG: INFO: [Synth 8-6155] done synthesizing module 'FP_Adder_2Stage' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:425]
+[fud] DEBUG: INFO: [Synth 8-6155] done synthesizing module 'FP_Adder_Wrapper' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:263]
+[fud] DEBUG: INFO: [Synth 8-6155] done synthesizing module 'FP_Adder_LI_Wrapper' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:153]
+[fud] DEBUG: INFO: [Synth 8-6157] synthesizing module 'FP_Mult_LI_Wrapper' [/tmp/tmp.U8F6XvEukS/main.sv:589]
+[fud] DEBUG: Parameter STAGES bound to: 3 - type: integer
+[fud] DEBUG: INFO: [Synth 8-6157] synthesizing module 'FP_Mult_Wrapper' [/tmp/tmp.U8F6XvEukS/main.sv:719]
+[fud] DEBUG: Parameter STAGES bound to: 3 - type: integer
+[fud] DEBUG: INFO: [Synth 8-6157] synthesizing module 'FP_Mult_3Stage' [/tmp/tmp.U8F6XvEukS/main.sv:890]
+[fud] DEBUG: INFO: [Synth 8-6155] done synthesizing module 'FP_Mult_3Stage' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:890]
+[fud] DEBUG: INFO: [Synth 8-6155] done synthesizing module 'FP_Mult_Wrapper' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:719]
+[fud] DEBUG: INFO: [Synth 8-6155] done synthesizing module 'FP_Mult_LI_Wrapper' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:589]
+[fud] DEBUG: INFO: [Synth 8-6155] done synthesizing module 'Dynamic_ALU' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:47]
+[fud] DEBUG: INFO: [Synth 8-6155] done synthesizing module 'main' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:4]
+[fud] DEBUG: WARNING: [Synth 8-6014] Unused sequential element shift_amt_s1_reg was removed.  [/tmp/tmp.U8F6XvEukS/main.sv:451]
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished RTL Elaboration : Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 2599.121 ; gain = 368.746 ; free physical = 103371 ; free virtual = 475669
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Handling Custom Attributes
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Handling Custom Attributes : Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 2599.121 ; gain = 368.746 ; free physical = 103371 ; free virtual = 475669
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 2599.121 ; gain = 368.746 ; free physical = 103370 ; free virtual = 475668
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Netlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.02 . Memory (MB): peak = 2599.121 ; gain = 0.000 ; free physical = 103366 ; free virtual = 475664
+[fud] DEBUG: INFO: [Project 1-570] Preparing netlist for logic optimization
+[fud] DEBUG: 
+[fud] DEBUG: Processing XDC Constraints
+[fud] DEBUG: Initializing timing engine
+[fud] DEBUG: Parsing XDC File [/tmp/tmp.U8F6XvEukS/device.xdc]
+[fud] DEBUG: CRITICAL WARNING: [Designutils 20-1307] Command 'puts' is not supported in the xdc constraint file. [/tmp/tmp.U8F6XvEukS/device.xdc:11]
+[fud] DEBUG: CRITICAL WARNING: [Designutils 20-1307] Command 'foreach' is not supported in the xdc constraint file. [/tmp/tmp.U8F6XvEukS/device.xdc:12]
+[fud] DEBUG: CRITICAL WARNING: [Designutils 20-1307] Command 'puts' is not supported in the xdc constraint file. [/tmp/tmp.U8F6XvEukS/device.xdc:23]
+[fud] DEBUG: CRITICAL WARNING: [Designutils 20-1307] Command 'foreach' is not supported in the xdc constraint file. [/tmp/tmp.U8F6XvEukS/device.xdc:24]
+[fud] DEBUG: Finished Parsing XDC File [/tmp/tmp.U8F6XvEukS/device.xdc]
+[fud] DEBUG: Completed Processing XDC Constraints
+[fud] DEBUG: 
+[fud] DEBUG: Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2736.902 ; gain = 0.000 ; free physical = 103357 ; free virtual = 475654
+[fud] DEBUG: INFO: [Project 1-111] Unisim Transformation Summary:
+[fud] DEBUG: No Unisim elements were transformed.
+[fud] DEBUG: 
+[fud] DEBUG: Constraint Validation Runtime : Time (s): cpu = 00:00:00.09 ; elapsed = 00:00:00.04 . Memory (MB): peak = 2736.938 ; gain = 0.000 ; free physical = 103382 ; free virtual = 475680
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Constraint Validation : Time (s): cpu = 00:00:14 ; elapsed = 00:00:14 . Memory (MB): peak = 2736.938 ; gain = 506.562 ; free physical = 103341 ; free virtual = 475638
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Loading Part and Timing Information
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Loading part: xczu3eg-sbva484-1-e
+[fud] DEBUG: INFO: [Synth 8-6742] Reading net delay rules and data
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Loading Part and Timing Information : Time (s): cpu = 00:00:14 ; elapsed = 00:00:14 . Memory (MB): peak = 2736.938 ; gain = 506.562 ; free physical = 103384 ; free virtual = 475681
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Applying 'set_property' XDC Constraints
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:14 ; elapsed = 00:00:14 . Memory (MB): peak = 2736.938 ; gain = 506.562 ; free physical = 103361 ; free virtual = 475658
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:14 ; elapsed = 00:00:15 . Memory (MB): peak = 2736.938 ; gain = 506.562 ; free physical = 103339 ; free virtual = 475638
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start RTL Component Statistics
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Detailed RTL Component Info :
+[fud] DEBUG: +---Adders :
+[fud] DEBUG: 3 Input   24 Bit       Adders := 1
+[fud] DEBUG: 2 Input   23 Bit       Adders := 1
+[fud] DEBUG: 2 Input    9 Bit       Adders := 2
+[fud] DEBUG: 3 Input    8 Bit       Adders := 2
+[fud] DEBUG: 2 Input    8 Bit       Adders := 2
+[fud] DEBUG: 2 Input    4 Bit       Adders := 3
+[fud] DEBUG: 2 Input    3 Bit       Adders := 3
+[fud] DEBUG: 2 Input    2 Bit       Adders := 2
+[fud] DEBUG: +---XORs :
+[fud] DEBUG: 2 Input      1 Bit         XORs := 1
+[fud] DEBUG: +---Registers :
+[fud] DEBUG: 64 Bit    Registers := 10
+[fud] DEBUG: 48 Bit    Registers := 2
+[fud] DEBUG: 32 Bit    Registers := 6
+[fud] DEBUG: 24 Bit    Registers := 1
+[fud] DEBUG: 23 Bit    Registers := 6
+[fud] DEBUG: 18 Bit    Registers := 1
+[fud] DEBUG: 9 Bit    Registers := 3
+[fud] DEBUG: 8 Bit    Registers := 7
+[fud] DEBUG: 4 Bit    Registers := 2
+[fud] DEBUG: 3 Bit    Registers := 4
+[fud] DEBUG: 2 Bit    Registers := 2
+[fud] DEBUG: 1 Bit    Registers := 18
+[fud] DEBUG: +---Muxes :
+[fud] DEBUG: 4 Input   64 Bit        Muxes := 1
+[fud] DEBUG: 2 Input   48 Bit        Muxes := 1
+[fud] DEBUG: 5 Input   32 Bit        Muxes := 1
+[fud] DEBUG: 2 Input   32 Bit        Muxes := 5
+[fud] DEBUG: 2 Input   24 Bit        Muxes := 5
+[fud] DEBUG: 2 Input   23 Bit        Muxes := 6
+[fud] DEBUG: 2 Input    8 Bit        Muxes := 5
+[fud] DEBUG: 23 Input    5 Bit        Muxes := 1
+[fud] DEBUG: 2 Input    4 Bit        Muxes := 2
+[fud] DEBUG: 2 Input    3 Bit        Muxes := 2
+[fud] DEBUG: 5 Input    1 Bit        Muxes := 1
+[fud] DEBUG: 2 Input    1 Bit        Muxes := 18
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished RTL Component Statistics
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Part Resource Summary
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Part Resources:
+[fud] DEBUG: DSPs: 360 (col length:72)
+[fud] DEBUG: BRAMs: 432 (col length: RAMB18 72 RAMB36 36)
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Part Resource Summary
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Cross Boundary and Area Optimization
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: WARNING: [Synth 8-7080] Parallel synthesis criteria is not met
+[fud] DEBUG: DSP Report: Generating DSP core_multiplier/gen_3stage.multiplier/product_s20, operation Mode is: A2*B2.
+[fud] DEBUG: DSP Report: register core_multiplier/gen_3stage.multiplier/product_s20 is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s20.
+[fud] DEBUG: DSP Report: register core_multiplier/gen_3stage.multiplier/product_s20 is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s20.
+[fud] DEBUG: DSP Report: operator core_multiplier/gen_3stage.multiplier/product_s20 is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s20.
+[fud] DEBUG: DSP Report: operator core_multiplier/gen_3stage.multiplier/product_s20 is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s20.
+[fud] DEBUG: DSP Report: Generating DSP core_multiplier/gen_3stage.multiplier/product_s2_reg, operation Mode is: (PCIN>>17)+A2*B2.
+[fud] DEBUG: DSP Report: register core_multiplier/gen_3stage.multiplier/product_s2_reg is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s2_reg.
+[fud] DEBUG: DSP Report: register core_multiplier/gen_3stage.multiplier/product_s2_reg is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s2_reg.
+[fud] DEBUG: DSP Report: register core_multiplier/gen_3stage.multiplier/product_s2_reg is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s2_reg.
+[fud] DEBUG: DSP Report: operator core_multiplier/gen_3stage.multiplier/product_s20 is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s2_reg.
+[fud] DEBUG: DSP Report: operator core_multiplier/gen_3stage.multiplier/product_s20 is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s2_reg.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[47]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[46]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[45]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[44]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[43]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[42]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[41]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[40]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[39]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[38]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[37]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[36]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[35]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[34]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[33]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[32]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[31]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[30]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[29]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[28]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[27]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[26]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[25]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[24]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[23]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[22]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[21]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[20]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[19]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[18]) is unused and will be removed from module main.
+[fud] DEBUG: WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[17]) is unused and will be removed from module main.
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:20 ; elapsed = 00:00:20 . Memory (MB): peak = 2736.938 ; gain = 506.562 ; free physical = 103346 ; free virtual = 475645
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Sort Area is  core_multiplier/gen_3stage.multiplier/product_s20_0 : 0 0 : 3489 4975 : Used 1 time 0
+[fud] DEBUG: Sort Area is  core_multiplier/gen_3stage.multiplier/product_s20_0 : 0 1 : 1486 4975 : Used 1 time 0
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start ROM, RAM, DSP, Shift Register and Retiming Reporting
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: 
+[fud] DEBUG: DSP: Preliminary Mapping Report (see note below. The ' indicates corresponding REG is set)
+[fud] DEBUG: +-------------------+------------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+[fud] DEBUG: |Module Name        | DSP Mapping      | A Size | B Size | C Size | D Size | P Size | AREG | BREG | CREG | DREG | ADREG | MREG | PREG |
+[fud] DEBUG: +-------------------+------------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+[fud] DEBUG: |FP_Mult_LI_Wrapper | A2*B2            | 25     | 18     | -      | -      | 48     | 1    | 1    | -    | -    | -     | 0    | 0    |
+[fud] DEBUG: |FP_Mult_LI_Wrapper | (PCIN>>17)+A2*B2 | 25     | 8      | -      | -      | 48     | 1    | 1    | -    | -    | -     | 0    | 1    |
+[fud] DEBUG: +-------------------+------------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+[fud] DEBUG: 
+[fud] DEBUG: Note: The table above is a preliminary report that shows the DSPs inferred at the current stage of the synthesis flow. Some DSP may be reimplemented as non DSP primitives later in the synthesis flow. Multiple instantiated DSPs are reported only once.
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished ROM, RAM, DSP, Shift Register and Retiming Reporting
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Applying XDC Timing Constraints
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Applying XDC Timing Constraints : Time (s): cpu = 00:00:27 ; elapsed = 00:00:27 . Memory (MB): peak = 3188.926 ; gain = 958.551 ; free physical = 102922 ; free virtual = 475221
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Timing Optimization
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Timing Optimization : Time (s): cpu = 00:00:28 ; elapsed = 00:00:29 . Memory (MB): peak = 3211.941 ; gain = 981.566 ; free physical = 102867 ; free virtual = 475166
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Technology Mapping
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Technology Mapping : Time (s): cpu = 00:00:29 ; elapsed = 00:00:29 . Memory (MB): peak = 3211.941 ; gain = 981.566 ; free physical = 102862 ; free virtual = 475161
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start IO Insertion
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Flattening Before IO Insertion
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Flattening Before IO Insertion
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Final Netlist Cleanup
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Final Netlist Cleanup
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished IO Insertion : Time (s): cpu = 00:00:32 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.879 ; gain = 988.504 ; free physical = 102883 ; free virtual = 475182
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Renaming Generated Instances
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Renaming Generated Instances : Time (s): cpu = 00:00:32 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.879 ; gain = 988.504 ; free physical = 102873 ; free virtual = 475172
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Rebuilding User Hierarchy
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:32 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.879 ; gain = 988.504 ; free physical = 102905 ; free virtual = 475204
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Renaming Generated Ports
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Renaming Generated Ports : Time (s): cpu = 00:00:32 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.879 ; gain = 988.504 ; free physical = 102899 ; free virtual = 475198
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Handling Custom Attributes
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Handling Custom Attributes : Time (s): cpu = 00:00:33 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.879 ; gain = 988.504 ; free physical = 102864 ; free virtual = 475163
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Renaming Generated Nets
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Renaming Generated Nets : Time (s): cpu = 00:00:33 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.879 ; gain = 988.504 ; free physical = 102862 ; free virtual = 475161
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Start Writing Synthesis Report
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: 
+[fud] DEBUG: DSP Final Report (the ' indicates corresponding REG is set)
+[fud] DEBUG: +-------------------+------------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+[fud] DEBUG: |Module Name        | DSP Mapping      | A Size | B Size | C Size | D Size | P Size | AREG | BREG | CREG | DREG | ADREG | MREG | PREG |
+[fud] DEBUG: +-------------------+------------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+[fud] DEBUG: |FP_Mult_LI_Wrapper | A'*B'            | 24     | 17     | -      | -      | 48     | 1    | 1    | -    | -    | -     | 0    | 0    |
+[fud] DEBUG: |FP_Mult_LI_Wrapper | (PCIN>>17+A*B')' | 0      | 7      | -      | -      | 48     | 0    | 1    | -    | -    | -     | 0    | 1    |
+[fud] DEBUG: +-------------------+------------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+[fud] DEBUG: 
+[fud] DEBUG: 
+[fud] DEBUG: Report BlackBoxes:
+[fud] DEBUG: +-+--------------+----------+
+[fud] DEBUG: | |BlackBox name |Instances |
+[fud] DEBUG: +-+--------------+----------+
+[fud] DEBUG: +-+--------------+----------+
+[fud] DEBUG: 
+[fud] DEBUG: Report Cell Usage:
+[fud] DEBUG: +------+----------------+------+
+[fud] DEBUG: |      |Cell            |Count |
+[fud] DEBUG: +------+----------------+------+
+[fud] DEBUG: |1     |CARRY8          |    13|
+[fud] DEBUG: |2     |DSP_ALU         |     2|
+[fud] DEBUG: |3     |DSP_A_B_DATA    |     2|
+[fud] DEBUG: |4     |DSP_C_DATA      |     2|
+[fud] DEBUG: |5     |DSP_MULTIPLIER  |     2|
+[fud] DEBUG: |6     |DSP_M_DATA      |     2|
+[fud] DEBUG: |7     |DSP_OUTPUT      |     2|
+[fud] DEBUG: |9     |DSP_PREADD      |     2|
+[fud] DEBUG: |10    |DSP_PREADD_DATA |     2|
+[fud] DEBUG: |11    |LUT1            |     7|
+[fud] DEBUG: |12    |LUT2            |    83|
+[fud] DEBUG: |13    |LUT3            |   196|
+[fud] DEBUG: |14    |LUT4            |   105|
+[fud] DEBUG: |15    |LUT5            |   181|
+[fud] DEBUG: |16    |LUT6            |   296|
+[fud] DEBUG: |17    |FDRE            |  1174|
+[fud] DEBUG: +------+----------------+------+
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Finished Writing Synthesis Report : Time (s): cpu = 00:00:33 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.879 ; gain = 988.504 ; free physical = 102862 ; free virtual = 475161
+[fud] DEBUG: ---------------------------------------------------------------------------------
+[fud] DEBUG: Synthesis finished with 0 errors, 0 critical warnings and 32 warnings.
+[fud] DEBUG: Synthesis Optimization Runtime : Time (s): cpu = 00:00:27 ; elapsed = 00:00:28 . Memory (MB): peak = 3218.879 ; gain = 850.688 ; free physical = 102872 ; free virtual = 475170
+[fud] DEBUG: Synthesis Optimization Complete : Time (s): cpu = 00:00:33 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.887 ; gain = 988.504 ; free physical = 102868 ; free virtual = 475167
+[fud] DEBUG: INFO: [Project 1-571] Translating synthesized netlist
+[fud] DEBUG: Netlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.01 . Memory (MB): peak = 3229.848 ; gain = 0.000 ; free physical = 103134 ; free virtual = 475433
+[fud] DEBUG: INFO: [Netlist 29-17] Analyzing 15 Unisim elements for replacement
+[fud] DEBUG: INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+[fud] DEBUG: INFO: [Project 1-570] Preparing netlist for logic optimization
+[fud] DEBUG: INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+[fud] DEBUG: Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3271.770 ; gain = 0.000 ; free physical = 103165 ; free virtual = 475464
+[fud] DEBUG: INFO: [Project 1-111] Unisim Transformation Summary:
+[fud] DEBUG: A total of 2 instances were transformed.
+[fud] DEBUG: DSP48E2 => DSP48E2 (DSP_ALU, DSP_A_B_DATA, DSP_C_DATA, DSP_MULTIPLIER, DSP_M_DATA, DSP_OUTPUT, DSP_PREADD, DSP_PREADD_DATA): 2 instances
+[fud] DEBUG: 
+[fud] DEBUG: Synth Design complete | Checksum: 16087efe
+[fud] DEBUG: INFO: [Common 17-83] Releasing license: Synthesis
+[fud] DEBUG: 31 Infos, 34 Warnings, 4 Critical Warnings and 0 Errors encountered.
+[fud] DEBUG: synth_design completed successfully
+[fud] DEBUG: synth_design: Time (s): cpu = 00:00:40 ; elapsed = 00:00:38 . Memory (MB): peak = 3271.805 ; gain = 1925.227 ; free physical = 103152 ; free virtual = 475451
+[fud] DEBUG: INFO: [Common 17-2834] synth_design peak Physical Memory [PSS] (MB): overall = 2810.960; main = 2484.777; forked = 385.616
+[fud] DEBUG: INFO: [Common 17-2834] synth_design peak Virtual Memory [VSS] (MB): overall = 4193.535; main = 3271.773; forked = 981.590
+[fud] DEBUG: INFO: [runtcl-6] Synthesis results are not added to the cache due to CRITICAL_WARNING
+[fud] DEBUG: Write ShapeDB Complete: Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00 . Memory (MB): peak = 3295.781 ; gain = 0.000 ; free physical = 103153 ; free virtual = 475452
+[fud] DEBUG: INFO: [Common 17-1381] The checkpoint '/tmp/tmp.U8F6XvEukS/out/FutilBuild.runs/synth_1/main.dcp' has been generated.
+[fud] DEBUG: INFO: [runtcl-4] Executing : report_utilization -file main_utilization_synth.rpt -pb main_utilization_synth.pb
+[fud] DEBUG: INFO: [Common 17-206] Exiting Vivado at Mon Aug  4 12:31:23 2025...
+[fud] DEBUG: [Mon Aug  4 12:31:33 2025] synth_1 finished
+[fud] DEBUG: wait_on_runs: Time (s): cpu = 00:00:53 ; elapsed = 00:01:01 . Memory (MB): peak = 1352.414 ; gain = 0.000 ; free physical = 105346 ; free virtual = 477643
+[fud] DEBUG: # launch_runs impl_1 -to_step route_design
+[fud] DEBUG: [Mon Aug  4 12:31:33 2025] Launched impl_1...
+[fud] DEBUG: Run output will be captured here: /tmp/tmp.U8F6XvEukS/out/FutilBuild.runs/impl_1/runme.log
+[fud] DEBUG: # wait_on_run impl_1
+[fud] DEBUG: [Mon Aug  4 12:31:33 2025] Waiting for impl_1 to finish...
+[fud] DEBUG: 
+[fud] DEBUG: *** Running vivado
+[fud] DEBUG: with args -log main.vdi -applog -m64 -product Vivado -messageDb vivado.pb -mode batch -source main.tcl -notrace
+[fud] DEBUG: 
+[fud] DEBUG: 
+[fud] DEBUG: ****** Vivado v2023.2 (64-bit)
+[fud] DEBUG: **** SW Build 4029153 on Fri Oct 13 20:13:54 MDT 2023
+[fud] DEBUG: **** IP Build 4028589 on Sat Oct 14 00:45:43 MDT 2023
+[fud] DEBUG: **** SharedData Build 4025554 on Tue Oct 10 17:18:54 MDT 2023
+[fud] DEBUG: ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+[fud] DEBUG: ** Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+[fud] DEBUG: 
+[fud] DEBUG: source main.tcl -notrace
+[fud] DEBUG: create_project: Time (s): cpu = 00:00:06 ; elapsed = 00:00:06 . Memory (MB): peak = 1346.578 ; gain = 37.805 ; free physical = 104903 ; free virtual = 477201
+[fud] DEBUG: Command: link_design -top main -part xczu3eg-sbva484-1-e -mode out_of_context
+[fud] DEBUG: Design is defaulting to srcset: sources_1
+[fud] DEBUG: Design is defaulting to constrset: constrs_1
+[fud] DEBUG: INFO: [Device 21-403] Loading part xczu3eg-sbva484-1-e
+[fud] DEBUG: Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.01 . Memory (MB): peak = 2240.977 ; gain = 0.000 ; free physical = 103730 ; free virtual = 476027
+[fud] DEBUG: INFO: [Netlist 29-17] Analyzing 15 Unisim elements for replacement
+[fud] DEBUG: INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+[fud] DEBUG: INFO: [Project 1-479] Netlist was created with Vivado 2023.2
+[fud] DEBUG: INFO: [Project 1-570] Preparing netlist for logic optimization
+[fud] DEBUG: Parsing XDC File [/tmp/tmp.U8F6XvEukS/device.xdc]
+[fud] DEBUG: INFO: [Vivado 12-4761] HD.CLK_SRC property is set on port clk. The net connecting to the port drives either clock PIN or hierarchical black box. Use the create_clock constraint to create a clock on this port prior to setting HD.CLK_SRC.  [/tmp/tmp.U8F6XvEukS/device.xdc:5]
+[fud] DEBUG: CRITICAL WARNING: [Designutils 20-1307] Command 'puts' is not supported in the xdc constraint file. [/tmp/tmp.U8F6XvEukS/device.xdc:11]
+[fud] DEBUG: CRITICAL WARNING: [Designutils 20-1307] Command 'foreach' is not supported in the xdc constraint file. [/tmp/tmp.U8F6XvEukS/device.xdc:12]
+[fud] DEBUG: CRITICAL WARNING: [Designutils 20-1307] Command 'puts' is not supported in the xdc constraint file. [/tmp/tmp.U8F6XvEukS/device.xdc:23]
+[fud] DEBUG: CRITICAL WARNING: [Designutils 20-1307] Command 'foreach' is not supported in the xdc constraint file. [/tmp/tmp.U8F6XvEukS/device.xdc:24]
+[fud] DEBUG: Finished Parsing XDC File [/tmp/tmp.U8F6XvEukS/device.xdc]
+[fud] DEBUG: INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+[fud] DEBUG: Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2297.004 ; gain = 0.000 ; free physical = 103624 ; free virtual = 475921
+[fud] DEBUG: INFO: [Project 1-111] Unisim Transformation Summary:
+[fud] DEBUG: A total of 2 instances were transformed.
+[fud] DEBUG: DSP48E2 => DSP48E2 (DSP_ALU, DSP_A_B_DATA, DSP_C_DATA, DSP_MULTIPLIER, DSP_M_DATA, DSP_OUTPUT, DSP_PREADD, DSP_PREADD_DATA): 2 instances
+[fud] DEBUG: 
+[fud] DEBUG: 8 Infos, 0 Warnings, 4 Critical Warnings and 0 Errors encountered.
+[fud] DEBUG: link_design completed successfully
+[fud] DEBUG: link_design: Time (s): cpu = 00:00:09 ; elapsed = 00:00:09 . Memory (MB): peak = 2297.039 ; gain = 950.461 ; free physical = 103644 ; free virtual = 475942
+[fud] DEBUG: Command: opt_design
+[fud] DEBUG: Attempting to get a license for feature 'Implementation' and/or device 'xczu3eg'
+[fud] DEBUG: INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xczu3eg'
+[fud] DEBUG: Running DRC as a precondition to command opt_design
+[fud] DEBUG: 
+[fud] DEBUG: Starting DRC Task
+[fud] DEBUG: INFO: [DRC 23-27] Running DRC with 8 threads
+[fud] DEBUG: INFO: [Project 1-461] DRC finished with 0 Errors
+[fud] DEBUG: INFO: [Project 1-462] Please refer to the DRC report (report_drc) for more information.
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:02 ; elapsed = 00:00:00.93 . Memory (MB): peak = 2387.785 ; gain = 90.746 ; free physical = 103567 ; free virtual = 475864
+[fud] DEBUG: 
+[fud] DEBUG: Starting Cache Timing Information Task
+[fud] DEBUG: INFO: [Timing 38-35] Done setting XDC timing constraints.
+[fud] DEBUG: Ending Cache Timing Information Task | Checksum: 3688f283
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:02 ; elapsed = 00:00:01 . Memory (MB): peak = 2681.801 ; gain = 294.016 ; free physical = 103389 ; free virtual = 475687
+[fud] DEBUG: 
+[fud] DEBUG: Starting Logic Optimization Task
+[fud] DEBUG: 
+[fud] DEBUG: Phase 1 Initialization
+[fud] DEBUG: 
+[fud] DEBUG: Phase 1.1 Core Generation And Design Setup
+[fud] DEBUG: Phase 1.1 Core Generation And Design Setup | Checksum: 3688f283
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2988.488 ; gain = 0.000 ; free physical = 103042 ; free virtual = 475339
+[fud] DEBUG: 
+[fud] DEBUG: Phase 1.2 Setup Constraints And Sort Netlist
+[fud] DEBUG: Phase 1.2 Setup Constraints And Sort Netlist | Checksum: 3688f283
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2988.488 ; gain = 0.000 ; free physical = 103063 ; free virtual = 475361
+[fud] DEBUG: Phase 1 Initialization | Checksum: 3688f283
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2988.488 ; gain = 0.000 ; free physical = 103071 ; free virtual = 475368
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2 Timer Update And Timing Data Collection
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.1 Timer Update
+[fud] DEBUG: Phase 2.1 Timer Update | Checksum: 3688f283
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.18 ; elapsed = 00:00:00.04 . Memory (MB): peak = 2988.488 ; gain = 0.000 ; free physical = 103041 ; free virtual = 475338
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.2 Timing Data Collection
+[fud] DEBUG: Phase 2.2 Timing Data Collection | Checksum: 3688f283
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.19 ; elapsed = 00:00:00.05 . Memory (MB): peak = 2988.488 ; gain = 0.000 ; free physical = 103081 ; free virtual = 475378
+[fud] DEBUG: Phase 2 Timer Update And Timing Data Collection | Checksum: 3688f283
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.19 ; elapsed = 00:00:00.05 . Memory (MB): peak = 2988.488 ; gain = 0.000 ; free physical = 103080 ; free virtual = 475377
+[fud] DEBUG: 
+[fud] DEBUG: Phase 3 Retarget
+[fud] DEBUG: INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+[fud] DEBUG: INFO: [Opt 31-49] Retargeted 0 cell(s).
+[fud] DEBUG: Phase 3 Retarget | Checksum: a4d84aaf
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.21 ; elapsed = 00:00:00.08 . Memory (MB): peak = 2988.488 ; gain = 0.000 ; free physical = 103069 ; free virtual = 475367
+[fud] DEBUG: Retarget | Checksum: a4d84aaf
+[fud] DEBUG: INFO: [Opt 31-389] Phase Retarget created 0 cells and removed 1 cells
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4 Constant propagation
+[fud] DEBUG: INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+[fud] DEBUG: Phase 4 Constant propagation | Checksum: a4d84aaf
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.22 ; elapsed = 00:00:00.09 . Memory (MB): peak = 2988.488 ; gain = 0.000 ; free physical = 103064 ; free virtual = 475362
+[fud] DEBUG: Constant propagation | Checksum: a4d84aaf
+[fud] DEBUG: INFO: [Opt 31-389] Phase Constant propagation created 0 cells and removed 0 cells
+[fud] DEBUG: 
+[fud] DEBUG: Phase 5 Sweep
+[fud] DEBUG: Phase 5 Sweep | Checksum: 13a469795
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.24 ; elapsed = 00:00:00.11 . Memory (MB): peak = 2988.488 ; gain = 0.000 ; free physical = 103040 ; free virtual = 475338
+[fud] DEBUG: Sweep | Checksum: 13a469795
+[fud] DEBUG: INFO: [Opt 31-389] Phase Sweep created 0 cells and removed 0 cells
+[fud] DEBUG: 
+[fud] DEBUG: Phase 6 BUFG optimization
+[fud] DEBUG: INFO: [Opt 31-1077] Phase BUFG optimization inserted 0 global clock buffer(s) for CLOCK_LOW_FANOUT.
+[fud] DEBUG: Phase 6 BUFG optimization | Checksum: 13a469795
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.24 ; elapsed = 00:00:00.12 . Memory (MB): peak = 3020.504 ; gain = 32.016 ; free physical = 103040 ; free virtual = 475338
+[fud] DEBUG: BUFG optimization | Checksum: 13a469795
+[fud] DEBUG: INFO: [Opt 31-662] Phase BUFG optimization created 0 cells of which 0 are BUFGs and removed 0 cells.
+[fud] DEBUG: 
+[fud] DEBUG: Phase 7 Shift Register Optimization
+[fud] DEBUG: INFO: [Opt 31-1064] SRL Remap converted 0 SRLs to 0 registers and converted 0 registers of register chains to 0 SRLs
+[fud] DEBUG: Phase 7 Shift Register Optimization | Checksum: 13a469795
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.24 ; elapsed = 00:00:00.12 . Memory (MB): peak = 3020.504 ; gain = 32.016 ; free physical = 103040 ; free virtual = 475338
+[fud] DEBUG: Shift Register Optimization | Checksum: 13a469795
+[fud] DEBUG: INFO: [Opt 31-389] Phase Shift Register Optimization created 0 cells and removed 0 cells
+[fud] DEBUG: 
+[fud] DEBUG: Phase 8 Post Processing Netlist
+[fud] DEBUG: Phase 8 Post Processing Netlist | Checksum: 13a469795
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.25 ; elapsed = 00:00:00.12 . Memory (MB): peak = 3020.504 ; gain = 32.016 ; free physical = 103079 ; free virtual = 475377
+[fud] DEBUG: Post Processing Netlist | Checksum: 13a469795
+[fud] DEBUG: INFO: [Opt 31-389] Phase Post Processing Netlist created 0 cells and removed 0 cells
+[fud] DEBUG: 
+[fud] DEBUG: Phase 9 Finalization
+[fud] DEBUG: 
+[fud] DEBUG: Phase 9.1 Finalizing Design Cores and Updating Shapes
+[fud] DEBUG: Phase 9.1 Finalizing Design Cores and Updating Shapes | Checksum: 171d8c205
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.26 ; elapsed = 00:00:00.14 . Memory (MB): peak = 3020.504 ; gain = 32.016 ; free physical = 103050 ; free virtual = 475348
+[fud] DEBUG: 
+[fud] DEBUG: Phase 9.2 Verifying Netlist Connectivity
+[fud] DEBUG: 
+[fud] DEBUG: Starting Connectivity Check Task
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3020.504 ; gain = 0.000 ; free physical = 103045 ; free virtual = 475343
+[fud] DEBUG: Phase 9.2 Verifying Netlist Connectivity | Checksum: 171d8c205
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.26 ; elapsed = 00:00:00.14 . Memory (MB): peak = 3020.504 ; gain = 32.016 ; free physical = 103045 ; free virtual = 475342
+[fud] DEBUG: Phase 9 Finalization | Checksum: 171d8c205
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.26 ; elapsed = 00:00:00.14 . Memory (MB): peak = 3020.504 ; gain = 32.016 ; free physical = 103044 ; free virtual = 475341
+[fud] DEBUG: Opt_design Change Summary
+[fud] DEBUG: =========================
+[fud] DEBUG: 
+[fud] DEBUG: 
+[fud] DEBUG: -------------------------------------------------------------------------------------------------------------------------
+[fud] DEBUG: |  Phase                        |  #Cells created  |  #Cells Removed  |  #Constrained objects preventing optimizations  |
+[fud] DEBUG: -------------------------------------------------------------------------------------------------------------------------
+[fud] DEBUG: |  Retarget                     |               0  |               1  |                                              0  |
+[fud] DEBUG: |  Constant propagation         |               0  |               0  |                                              0  |
+[fud] DEBUG: |  Sweep                        |               0  |               0  |                                              0  |
+[fud] DEBUG: |  BUFG optimization            |               0  |               0  |                                              0  |
+[fud] DEBUG: |  Shift Register Optimization  |               0  |               0  |                                              0  |
+[fud] DEBUG: |  Post Processing Netlist      |               0  |               0  |                                              0  |
+[fud] DEBUG: -------------------------------------------------------------------------------------------------------------------------
+[fud] DEBUG: 
+[fud] DEBUG: 
+[fud] DEBUG: Ending Logic Optimization Task | Checksum: 171d8c205
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.26 ; elapsed = 00:00:00.14 . Memory (MB): peak = 3020.504 ; gain = 32.016 ; free physical = 103042 ; free virtual = 475339
+[fud] DEBUG: INFO: [Constraints 18-11670] Building netlist checker database with flags, 0x8
+[fud] DEBUG: Done building netlist checker database: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3020.504 ; gain = 0.000 ; free physical = 103040 ; free virtual = 475337
+[fud] DEBUG: 
+[fud] DEBUG: Starting Power Optimization Task
+[fud] DEBUG: INFO: [Pwropt 34-132] Skipping clock gating for clocks with a period < 2.00 ns.
+[fud] DEBUG: Ending Power Optimization Task | Checksum: 171d8c205
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00 . Memory (MB): peak = 3020.504 ; gain = 0.000 ; free physical = 103039 ; free virtual = 475337
+[fud] DEBUG: 
+[fud] DEBUG: Starting Final Cleanup Task
+[fud] DEBUG: Ending Final Cleanup Task | Checksum: 171d8c205
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3020.504 ; gain = 0.000 ; free physical = 103039 ; free virtual = 475337
+[fud] DEBUG: 
+[fud] DEBUG: Starting Netlist Obfuscation Task
+[fud] DEBUG: Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3020.504 ; gain = 0.000 ; free physical = 103039 ; free virtual = 475337
+[fud] DEBUG: Ending Netlist Obfuscation Task | Checksum: 171d8c205
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3020.504 ; gain = 0.000 ; free physical = 103039 ; free virtual = 475337
+[fud] DEBUG: INFO: [Common 17-83] Releasing license: Implementation
+[fud] DEBUG: 27 Infos, 0 Warnings, 4 Critical Warnings and 0 Errors encountered.
+[fud] DEBUG: opt_design completed successfully
+[fud] DEBUG: INFO: [runtcl-4] Executing : report_drc -file main_drc_opted.rpt -pb main_drc_opted.pb -rpx main_drc_opted.rpx
+[fud] DEBUG: Command: report_drc -file main_drc_opted.rpt -pb main_drc_opted.pb -rpx main_drc_opted.rpx
+[fud] DEBUG: INFO: [IP_Flow 19-234] Refreshing IP repositories
+[fud] DEBUG: INFO: [IP_Flow 19-1704] No user IP repositories specified
+[fud] DEBUG: INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/scratch/opt/Xilinx2024/Vivado/2023.2/data/ip'.
+[fud] DEBUG: INFO: [DRC 23-27] Running DRC with 8 threads
+[fud] DEBUG: INFO: [Vivado_Tcl 2-168] The results of DRC are in file /tmp/tmp.U8F6XvEukS/out/FutilBuild.runs/impl_1/main_drc_opted.rpt.
+[fud] DEBUG: report_drc completed successfully
+[fud] DEBUG: INFO: [Timing 38-35] Done setting XDC timing constraints.
+[fud] DEBUG: INFO: [Timing 38-480] Writing timing data to binary archive.
+[fud] DEBUG: Write ShapeDB Complete: Time (s): cpu = 00:00:00.02 ; elapsed = 00:00:00.01 . Memory (MB): peak = 3096.082 ; gain = 0.000 ; free physical = 102923 ; free virtual = 475221
+[fud] DEBUG: INFO: [Common 17-1381] The checkpoint '/tmp/tmp.U8F6XvEukS/out/FutilBuild.runs/impl_1/main_opt.dcp' has been generated.
+[fud] DEBUG: Command: place_design
+[fud] DEBUG: Attempting to get a license for feature 'Implementation' and/or device 'xczu3eg'
+[fud] DEBUG: INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xczu3eg'
+[fud] DEBUG: INFO: [Common 17-83] Releasing license: Implementation
+[fud] DEBUG: INFO: [DRC 23-27] Running DRC with 8 threads
+[fud] DEBUG: INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors
+[fud] DEBUG: INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+[fud] DEBUG: Running DRC as a precondition to command place_design
+[fud] DEBUG: INFO: [DRC 23-27] Running DRC with 8 threads
+[fud] DEBUG: INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors
+[fud] DEBUG: INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+[fud] DEBUG: INFO: [Place 30-611] Multithreading enabled for place_design using a maximum of 8 CPUs
+[fud] DEBUG: 
+[fud] DEBUG: Starting Placer Task
+[fud] DEBUG: 
+[fud] DEBUG: Phase 1 Placer Initialization
+[fud] DEBUG: 
+[fud] DEBUG: Phase 1.1 Placer Initialization Netlist Sorting
+[fud] DEBUG: Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.01 . Memory (MB): peak = 3144.012 ; gain = 0.000 ; free physical = 102793 ; free virtual = 475091
+[fud] DEBUG: Phase 1.1 Placer Initialization Netlist Sorting | Checksum: 82236365
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.03 . Memory (MB): peak = 3144.012 ; gain = 0.000 ; free physical = 102793 ; free virtual = 475091
+[fud] DEBUG: Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3144.012 ; gain = 0.000 ; free physical = 102793 ; free virtual = 475091
+[fud] DEBUG: 
+[fud] DEBUG: Phase 1.2 IO Placement/ Clock Placement/ Build Placer Device
+[fud] DEBUG: Phase 1.2 IO Placement/ Clock Placement/ Build Placer Device | Checksum: 6fc13005
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:18 ; elapsed = 00:00:18 . Memory (MB): peak = 4164.863 ; gain = 1020.852 ; free physical = 99218 ; free virtual = 471517
+[fud] DEBUG: 
+[fud] DEBUG: Phase 1.3 Build Placer Netlist Model
+[fud] DEBUG: Phase 1.3 Build Placer Netlist Model | Checksum: 1363e54ff
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:19 ; elapsed = 00:00:19 . Memory (MB): peak = 4203.906 ; gain = 1059.895 ; free physical = 99085 ; free virtual = 471384
+[fud] DEBUG: 
+[fud] DEBUG: Phase 1.4 Constrain Clocks/Macros
+[fud] DEBUG: Phase 1.4 Constrain Clocks/Macros | Checksum: 1363e54ff
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:19 ; elapsed = 00:00:19 . Memory (MB): peak = 4203.906 ; gain = 1059.895 ; free physical = 99081 ; free virtual = 471380
+[fud] DEBUG: Phase 1 Placer Initialization | Checksum: 1363e54ff
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:19 ; elapsed = 00:00:19 . Memory (MB): peak = 4203.906 ; gain = 1059.895 ; free physical = 99065 ; free virtual = 471364
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2 Global Placement
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.1 Floorplanning
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.1.1 Partition Driven Placement
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.1.1.1 PBP: Partition Driven Placement
+[fud] DEBUG: Phase 2.1.1.1 PBP: Partition Driven Placement | Checksum: 11b0963ec
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:20 ; elapsed = 00:00:19 . Memory (MB): peak = 4203.906 ; gain = 1059.895 ; free physical = 99069 ; free virtual = 471368
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.1.1.2 PBP: Clock Region Placement
+[fud] DEBUG: INFO: [Place 30-3162] Check ILP status : ILP-based clock placer completed successfully.
+[fud] DEBUG: Phase 2.1.1.2 PBP: Clock Region Placement | Checksum: 11b0963ec
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:20 ; elapsed = 00:00:19 . Memory (MB): peak = 4203.906 ; gain = 1059.895 ; free physical = 99022 ; free virtual = 471320
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.1.1.3 PBP: Compute Congestion
+[fud] DEBUG: Phase 2.1.1.3 PBP: Compute Congestion | Checksum: 11b0963ec
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:30 ; elapsed = 00:00:22 . Memory (MB): peak = 4431.891 ; gain = 1287.879 ; free physical = 98680 ; free virtual = 470979
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.1.1.4 PBP: UpdateTiming
+[fud] DEBUG: Phase 2.1.1.4 PBP: UpdateTiming | Checksum: 159f046fb
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:30 ; elapsed = 00:00:22 . Memory (MB): peak = 4463.906 ; gain = 1319.895 ; free physical = 98693 ; free virtual = 470992
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.1.1.5 PBP: Add part constraints
+[fud] DEBUG: Phase 2.1.1.5 PBP: Add part constraints | Checksum: 159f046fb
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:30 ; elapsed = 00:00:22 . Memory (MB): peak = 4463.906 ; gain = 1319.895 ; free physical = 98690 ; free virtual = 470989
+[fud] DEBUG: Phase 2.1.1 Partition Driven Placement | Checksum: 159f046fb
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:30 ; elapsed = 00:00:22 . Memory (MB): peak = 4463.906 ; gain = 1319.895 ; free physical = 98686 ; free virtual = 470985
+[fud] DEBUG: Phase 2.1 Floorplanning | Checksum: 157006c65
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:30 ; elapsed = 00:00:22 . Memory (MB): peak = 4463.906 ; gain = 1319.895 ; free physical = 98682 ; free virtual = 470981
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.2 Update Timing before SLR Path Opt
+[fud] DEBUG: Phase 2.2 Update Timing before SLR Path Opt | Checksum: 157006c65
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:30 ; elapsed = 00:00:22 . Memory (MB): peak = 4463.906 ; gain = 1319.895 ; free physical = 98679 ; free virtual = 470978
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.3 Post-Processing in Floorplanning
+[fud] DEBUG: Phase 2.3 Post-Processing in Floorplanning | Checksum: 157006c65
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:30 ; elapsed = 00:00:22 . Memory (MB): peak = 4463.906 ; gain = 1319.895 ; free physical = 98672 ; free virtual = 470970
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.4 Global Placement Core
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.4.1 UpdateTiming Before Physical Synthesis
+[fud] DEBUG: Phase 2.4.1 UpdateTiming Before Physical Synthesis | Checksum: 196667016
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:47 ; elapsed = 00:00:26 . Memory (MB): peak = 4486.910 ; gain = 1342.898 ; free physical = 98585 ; free virtual = 470884
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.4.2 Physical Synthesis In Placer
+[fud] DEBUG: INFO: [Physopt 32-1035] Found 0 LUTNM shape to break, 19 LUT instances to create LUTNM shape
+[fud] DEBUG: INFO: [Physopt 32-1044] Break lutnm for timing: one critical 0, two critical 0, total 0, new lutff created 0
+[fud] DEBUG: INFO: [Physopt 32-1138] End 1 Pass. Optimized 9 nets or LUTs. Breaked 0 LUT, combined 9 existing LUTs and moved 0 existing LUT
+[fud] DEBUG: INFO: [Physopt 32-69] No nets found for rewiring optimization.
+[fud] DEBUG: INFO: [Physopt 32-661] Optimized 0 net.  Re-placed 0 instance.
+[fud] DEBUG: INFO: [Physopt 32-775] End 1 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+[fud] DEBUG: INFO: [Physopt 32-65] No nets found for high-fanout optimization.
+[fud] DEBUG: INFO: [Physopt 32-232] Optimized 0 net. Created 0 new instance.
+[fud] DEBUG: INFO: [Physopt 32-775] End 1 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+[fud] DEBUG: INFO: [Physopt 32-670] No setup violation found.  DSP Register Optimization was not performed.
+[fud] DEBUG: INFO: [Physopt 32-670] No setup violation found.  Shift Register to Pipeline Optimization was not performed.
+[fud] DEBUG: INFO: [Physopt 32-670] No setup violation found.  Shift Register Optimization was not performed.
+[fud] DEBUG: INFO: [Physopt 32-670] No setup violation found.  BRAM Register Optimization was not performed.
+[fud] DEBUG: INFO: [Physopt 32-670] No setup violation found.  URAM Register Optimization was not performed.
+[fud] DEBUG: INFO: [Physopt 32-949] No candidate nets found for dynamic/static region interface net replication
+[fud] DEBUG: INFO: [Physopt 32-775] End 1 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+[fud] DEBUG: Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4486.910 ; gain = 0.000 ; free physical = 98468 ; free virtual = 470767
+[fud] DEBUG: 
+[fud] DEBUG: Summary of Physical Synthesis Optimizations
+[fud] DEBUG: ============================================
+[fud] DEBUG: 
+[fud] DEBUG: 
+[fud] DEBUG: -----------------------------------------------------------------------------------------------------------------------------------------------------------
+[fud] DEBUG: |  Optimization                                     |  Added Cells  |  Removed Cells  |  Optimized Cells/Nets  |  Dont Touch  |  Iterations  |  Elapsed   |
+[fud] DEBUG: -----------------------------------------------------------------------------------------------------------------------------------------------------------
+[fud] DEBUG: |  LUT Combining                                    |            0  |              9  |                     9  |           0  |           1  |  00:00:00  |
+[fud] DEBUG: |  Retime                                           |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+[fud] DEBUG: |  Equivalent Driver Rewiring                       |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+[fud] DEBUG: |  Very High Fanout                                 |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+[fud] DEBUG: |  DSP Register                                     |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+[fud] DEBUG: |  Shift Register to Pipeline                       |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+[fud] DEBUG: |  Shift Register                                   |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+[fud] DEBUG: |  BRAM Register                                    |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+[fud] DEBUG: |  URAM Register                                    |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+[fud] DEBUG: |  Dynamic/Static Region Interface Net Replication  |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+[fud] DEBUG: |  Total                                            |            0  |              9  |                     9  |           0  |           5  |  00:00:00  |
+[fud] DEBUG: -----------------------------------------------------------------------------------------------------------------------------------------------------------
+[fud] DEBUG: 
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.4.2 Physical Synthesis In Placer | Checksum: 143b17028
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:47 ; elapsed = 00:00:27 . Memory (MB): peak = 4486.910 ; gain = 1342.898 ; free physical = 98445 ; free virtual = 470743
+[fud] DEBUG: Phase 2.4 Global Placement Core | Checksum: 1b725bf84
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:58 ; elapsed = 00:00:30 . Memory (MB): peak = 4486.910 ; gain = 1342.898 ; free physical = 98867 ; free virtual = 471167
+[fud] DEBUG: Phase 2 Global Placement | Checksum: 1b725bf84
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:58 ; elapsed = 00:00:30 . Memory (MB): peak = 4486.910 ; gain = 1342.898 ; free physical = 98861 ; free virtual = 471160
+[fud] DEBUG: 
+[fud] DEBUG: Phase 3 Detail Placement
+[fud] DEBUG: 
+[fud] DEBUG: Phase 3.1 Commit Multi Column Macros
+[fud] DEBUG: Phase 3.1 Commit Multi Column Macros | Checksum: 15ca3ff08
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:08 ; elapsed = 00:00:32 . Memory (MB): peak = 4486.910 ; gain = 1342.898 ; free physical = 101951 ; free virtual = 474251
+[fud] DEBUG: 
+[fud] DEBUG: Phase 3.2 Commit Most Macros & LUTRAMs
+[fud] DEBUG: Phase 3.2 Commit Most Macros & LUTRAMs | Checksum: 1127b63df
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:08 ; elapsed = 00:00:32 . Memory (MB): peak = 4486.910 ; gain = 1342.898 ; free physical = 101890 ; free virtual = 474190
+[fud] DEBUG: 
+[fud] DEBUG: Phase 3.3 Small Shape DP
+[fud] DEBUG: 
+[fud] DEBUG: Phase 3.3.1 Small Shape Clustering
+[fud] DEBUG: Phase 3.3.1 Small Shape Clustering | Checksum: 1e9e2ab5b
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:18 ; elapsed = 00:00:35 . Memory (MB): peak = 4490.910 ; gain = 1346.898 ; free physical = 101539 ; free virtual = 473839
+[fud] DEBUG: 
+[fud] DEBUG: Phase 3.3.2 Slice Area Swap
+[fud] DEBUG: 
+[fud] DEBUG: Phase 3.3.2.1 Slice Area Swap Initial
+[fud] DEBUG: Phase 3.3.2.1 Slice Area Swap Initial | Checksum: 105984139
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:19 ; elapsed = 00:00:35 . Memory (MB): peak = 4490.910 ; gain = 1346.898 ; free physical = 101509 ; free virtual = 473809
+[fud] DEBUG: Phase 3.3.2 Slice Area Swap | Checksum: 105984139
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:19 ; elapsed = 00:00:35 . Memory (MB): peak = 4490.910 ; gain = 1346.898 ; free physical = 101508 ; free virtual = 473809
+[fud] DEBUG: Phase 3.3 Small Shape DP | Checksum: 1bac29d44
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:19 ; elapsed = 00:00:35 . Memory (MB): peak = 4490.910 ; gain = 1346.898 ; free physical = 101530 ; free virtual = 473831
+[fud] DEBUG: 
+[fud] DEBUG: Phase 3.4 Re-assign LUT pins
+[fud] DEBUG: Phase 3.4 Re-assign LUT pins | Checksum: 1d6ec574b
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:19 ; elapsed = 00:00:36 . Memory (MB): peak = 4490.910 ; gain = 1346.898 ; free physical = 101507 ; free virtual = 473808
+[fud] DEBUG: 
+[fud] DEBUG: Phase 3.5 Pipeline Register Optimization
+[fud] DEBUG: Phase 3.5 Pipeline Register Optimization | Checksum: 1885c6488
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:19 ; elapsed = 00:00:36 . Memory (MB): peak = 4490.910 ; gain = 1346.898 ; free physical = 101487 ; free virtual = 473787
+[fud] DEBUG: Phase 3 Detail Placement | Checksum: 1885c6488
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:19 ; elapsed = 00:00:36 . Memory (MB): peak = 4490.910 ; gain = 1346.898 ; free physical = 101484 ; free virtual = 473785
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4 Post Placement Optimization and Clean-Up
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4.1 Post Commit Optimization
+[fud] DEBUG: INFO: [Timing 38-35] Done setting XDC timing constraints.
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4.1.1 Post Placement Optimization
+[fud] DEBUG: Post Placement Optimization Initialization | Checksum: 17db7c40d
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4.1.1.1 BUFG Insertion
+[fud] DEBUG: 
+[fud] DEBUG: Starting Physical Synthesis Task
+[fud] DEBUG: 
+[fud] DEBUG: Phase 1 Physical Synthesis Initialization
+[fud] DEBUG: INFO: [Physopt 32-721] Multithreading enabled for phys_opt_design using a maximum of 8 CPUs
+[fud] DEBUG: INFO: [Physopt 32-619] Estimated Timing Summary | WNS=4.133 | TNS=0.000 |
+[fud] DEBUG: Phase 1 Physical Synthesis Initialization | Checksum: 232cf3f60
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.13 ; elapsed = 00:00:00.03 . Memory (MB): peak = 4490.910 ; gain = 0.000 ; free physical = 101237 ; free virtual = 473537
+[fud] DEBUG: INFO: [Place 46-56] BUFG insertion identified 0 candidate nets. Inserted BUFG: 0, Replicated BUFG Driver: 0, Skipped due to Placement/Routing Conflicts: 0, Skipped due to Timing Degradation: 0, Skipped due to netlist editing failed: 0.
+[fud] DEBUG: Ending Physical Synthesis Task | Checksum: 232cf3f60
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.14 ; elapsed = 00:00:00.05 . Memory (MB): peak = 4490.910 ; gain = 0.000 ; free physical = 101225 ; free virtual = 473525
+[fud] DEBUG: Phase 4.1.1.1 BUFG Insertion | Checksum: 17db7c40d
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:31 ; elapsed = 00:00:39 . Memory (MB): peak = 4490.910 ; gain = 1346.898 ; free physical = 101257 ; free virtual = 473558
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4.1.1.2 Post Placement Timing Optimization
+[fud] DEBUG: INFO: [Place 30-746] Post Placement Timing Summary WNS=4.133. For the most accurate timing information please run report_timing.
+[fud] DEBUG: Phase 4.1.1.2 Post Placement Timing Optimization | Checksum: 1c5d49a53
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:31 ; elapsed = 00:00:39 . Memory (MB): peak = 4490.910 ; gain = 1346.898 ; free physical = 101228 ; free virtual = 473528
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:31 ; elapsed = 00:00:39 . Memory (MB): peak = 4490.910 ; gain = 1346.898 ; free physical = 101226 ; free virtual = 473527
+[fud] DEBUG: Phase 4.1 Post Commit Optimization | Checksum: 1c5d49a53
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:31 ; elapsed = 00:00:39 . Memory (MB): peak = 4490.910 ; gain = 1346.898 ; free physical = 101223 ; free virtual = 473523
+[fud] DEBUG: Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4502.891 ; gain = 0.000 ; free physical = 100970 ; free virtual = 473270
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4.2 Post Placement Cleanup
+[fud] DEBUG: Phase 4.2 Post Placement Cleanup | Checksum: 28f382225
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:42 ; elapsed = 00:00:43 . Memory (MB): peak = 4502.891 ; gain = 1358.879 ; free physical = 101006 ; free virtual = 473306
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4.3 Placer Reporting
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4.3.1 Print Estimated Congestion
+[fud] DEBUG: INFO: [Place 30-612] Post-Placement Estimated Congestion
+[fud] DEBUG: ________________________________________________________________________
+[fud] DEBUG: |           | Global Congestion | Long Congestion   | Short Congestion  |
+[fud] DEBUG: | Direction | Region Size       | Region Size       | Region Size       |
+[fud] DEBUG: |___________|___________________|___________________|___________________|
+[fud] DEBUG: |      North|                1x1|                1x1|                1x1|
+[fud] DEBUG: |___________|___________________|___________________|___________________|
+[fud] DEBUG: |      South|                1x1|                1x1|                1x1|
+[fud] DEBUG: |___________|___________________|___________________|___________________|
+[fud] DEBUG: |       East|                1x1|                1x1|                1x1|
+[fud] DEBUG: |___________|___________________|___________________|___________________|
+[fud] DEBUG: |       West|                1x1|                1x1|                1x1|
+[fud] DEBUG: |___________|___________________|___________________|___________________|
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4.3.1 Print Estimated Congestion | Checksum: 28f382225
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:42 ; elapsed = 00:00:43 . Memory (MB): peak = 4502.891 ; gain = 1358.879 ; free physical = 100988 ; free virtual = 473289
+[fud] DEBUG: Phase 4.3 Placer Reporting | Checksum: 28f382225
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:42 ; elapsed = 00:00:43 . Memory (MB): peak = 4502.891 ; gain = 1358.879 ; free physical = 100974 ; free virtual = 473275
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4.4 Final Placement Cleanup
+[fud] DEBUG: Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4502.891 ; gain = 0.000 ; free physical = 100971 ; free virtual = 473272
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:42 ; elapsed = 00:00:43 . Memory (MB): peak = 4502.891 ; gain = 1358.879 ; free physical = 100971 ; free virtual = 473271
+[fud] DEBUG: Phase 4 Post Placement Optimization and Clean-Up | Checksum: 270a46101
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:42 ; elapsed = 00:00:43 . Memory (MB): peak = 4502.891 ; gain = 1358.879 ; free physical = 100969 ; free virtual = 473270
+[fud] DEBUG: Ending Placer Task | Checksum: 1ede9a76e
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:01:42 ; elapsed = 00:00:43 . Memory (MB): peak = 4502.891 ; gain = 1358.879 ; free physical = 100969 ; free virtual = 473270
+[fud] DEBUG: 68 Infos, 0 Warnings, 4 Critical Warnings and 0 Errors encountered.
+[fud] DEBUG: place_design completed successfully
+[fud] DEBUG: place_design: Time (s): cpu = 00:01:45 ; elapsed = 00:00:44 . Memory (MB): peak = 4502.891 ; gain = 1406.809 ; free physical = 101006 ; free virtual = 473306
+[fud] DEBUG: INFO: [runtcl-4] Executing : report_io -file main_io_placed.rpt
+[fud] DEBUG: report_io: Time (s): cpu = 00:00:00.13 ; elapsed = 00:00:00.25 . Memory (MB): peak = 4502.891 ; gain = 0.000 ; free physical = 101005 ; free virtual = 473306
+[fud] DEBUG: INFO: [runtcl-4] Executing : report_utilization -file main_utilization_placed.rpt -pb main_utilization_placed.pb
+[fud] DEBUG: INFO: [runtcl-4] Executing : report_control_sets -verbose -file main_control_sets_placed.rpt
+[fud] DEBUG: report_control_sets: Time (s): cpu = 00:00:00.05 ; elapsed = 00:00:00.16 . Memory (MB): peak = 4502.891 ; gain = 0.000 ; free physical = 100983 ; free virtual = 473284
+[fud] DEBUG: INFO: [Timing 38-480] Writing timing data to binary archive.
+[fud] DEBUG: Write ShapeDB Complete: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.01 . Memory (MB): peak = 4502.891 ; gain = 0.000 ; free physical = 100951 ; free virtual = 473252
+[fud] DEBUG: Wrote PlaceDB: Time (s): cpu = 00:00:00.27 ; elapsed = 00:00:00.07 . Memory (MB): peak = 4502.891 ; gain = 0.000 ; free physical = 100994 ; free virtual = 473296
+[fud] DEBUG: Wrote PulsedLatchDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4502.891 ; gain = 0.000 ; free physical = 100993 ; free virtual = 473295
+[fud] DEBUG: Writing XDEF routing.
+[fud] DEBUG: Writing XDEF routing logical nets.
+[fud] DEBUG: Writing XDEF routing special nets.
+[fud] DEBUG: Wrote RouteStorage: Time (s): cpu = 00:00:00.04 ; elapsed = 00:00:00.07 . Memory (MB): peak = 4502.891 ; gain = 0.000 ; free physical = 100946 ; free virtual = 473248
+[fud] DEBUG: Wrote Netlist Cache: Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00 . Memory (MB): peak = 4502.891 ; gain = 0.000 ; free physical = 100946 ; free virtual = 473248
+[fud] DEBUG: Wrote Device Cache: Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.01 . Memory (MB): peak = 4502.891 ; gain = 0.000 ; free physical = 100966 ; free virtual = 473271
+[fud] DEBUG: Write Physdb Complete: Time (s): cpu = 00:00:00.34 ; elapsed = 00:00:00.16 . Memory (MB): peak = 4502.891 ; gain = 0.000 ; free physical = 100952 ; free virtual = 473257
+[fud] DEBUG: INFO: [Common 17-1381] The checkpoint '/tmp/tmp.U8F6XvEukS/out/FutilBuild.runs/impl_1/main_placed.dcp' has been generated.
+[fud] DEBUG: Command: phys_opt_design
+[fud] DEBUG: Attempting to get a license for feature 'Implementation' and/or device 'xczu3eg'
+[fud] DEBUG: INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xczu3eg'
+[fud] DEBUG: 
+[fud] DEBUG: Starting Initial Update Timing Task
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:00.83 ; elapsed = 00:00:00.25 . Memory (MB): peak = 4534.906 ; gain = 0.000 ; free physical = 100982 ; free virtual = 473284
+[fud] DEBUG: INFO: [Vivado_Tcl 4-383] Design worst setup slack (WNS) is greater than or equal to 0.000 ns. Skipping all physical synthesis optimizations.
+[fud] DEBUG: INFO: [Vivado_Tcl 4-232] No setup violation found. The netlist was not modified.
+[fud] DEBUG: INFO: [Common 17-83] Releasing license: Implementation
+[fud] DEBUG: 77 Infos, 0 Warnings, 4 Critical Warnings and 0 Errors encountered.
+[fud] DEBUG: phys_opt_design completed successfully
+[fud] DEBUG: INFO: [Timing 38-480] Writing timing data to binary archive.
+[fud] DEBUG: Write ShapeDB Complete: Time (s): cpu = 00:00:00.03 ; elapsed = 00:00:00 . Memory (MB): peak = 4566.922 ; gain = 0.000 ; free physical = 100943 ; free virtual = 473245
+[fud] DEBUG: Wrote PlaceDB: Time (s): cpu = 00:00:00.27 ; elapsed = 00:00:00.07 . Memory (MB): peak = 4566.922 ; gain = 0.000 ; free physical = 100945 ; free virtual = 473248
+[fud] DEBUG: Wrote PulsedLatchDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4566.922 ; gain = 0.000 ; free physical = 100945 ; free virtual = 473248
+[fud] DEBUG: Writing XDEF routing.
+[fud] DEBUG: Writing XDEF routing logical nets.
+[fud] DEBUG: Writing XDEF routing special nets.
+[fud] DEBUG: Wrote RouteStorage: Time (s): cpu = 00:00:00.04 ; elapsed = 00:00:00.05 . Memory (MB): peak = 4566.922 ; gain = 0.000 ; free physical = 100941 ; free virtual = 473245
+[fud] DEBUG: Wrote Netlist Cache: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4566.922 ; gain = 0.000 ; free physical = 100941 ; free virtual = 473245
+[fud] DEBUG: Wrote Device Cache: Time (s): cpu = 00:00:00.02 ; elapsed = 00:00:00.02 . Memory (MB): peak = 4566.922 ; gain = 0.000 ; free physical = 100957 ; free virtual = 473264
+[fud] DEBUG: Write Physdb Complete: Time (s): cpu = 00:00:00.33 ; elapsed = 00:00:00.14 . Memory (MB): peak = 4566.922 ; gain = 0.000 ; free physical = 100944 ; free virtual = 473250
+[fud] DEBUG: INFO: [Common 17-1381] The checkpoint '/tmp/tmp.U8F6XvEukS/out/FutilBuild.runs/impl_1/main_physopt.dcp' has been generated.
+[fud] DEBUG: Command: route_design
+[fud] DEBUG: Attempting to get a license for feature 'Implementation' and/or device 'xczu3eg'
+[fud] DEBUG: INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xczu3eg'
+[fud] DEBUG: Running DRC as a precondition to command route_design
+[fud] DEBUG: INFO: [DRC 23-27] Running DRC with 8 threads
+[fud] DEBUG: INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors
+[fud] DEBUG: INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+[fud] DEBUG: 
+[fud] DEBUG: 
+[fud] DEBUG: Starting Routing Task
+[fud] DEBUG: INFO: [Route 35-254] Multithreading enabled for route_design using a maximum of 8 CPUs
+[fud] DEBUG: 
+[fud] DEBUG: Phase 1 Build RT Design
+[fud] DEBUG: Checksum: PlaceDB: 7e292076 ConstDB: 0 ShapeSum: a65cff26 RouteDB: c96387d2
+[fud] DEBUG: Nodegraph reading from file.  Time (s): cpu = 00:00:00.43 ; elapsed = 00:00:00.43 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100932 ; free virtual = 473236
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[9]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[9]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "reset" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "reset". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[20]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[20]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[17]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[17]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[16]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[16]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[22]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[22]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[21]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[21]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[19]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[19]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[21]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[21]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[13]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[13]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[0]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[0]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[10]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[10]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[7]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[7]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[3]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[3]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[0]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[0]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[15]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[15]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[3]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[3]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[12]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[12]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[11]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[11]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[18]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[18]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[18]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[18]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[20]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[20]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[16]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[16]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[12]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[12]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[7]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[7]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[8]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[8]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[6]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[6]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[1]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[1]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[22]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[22]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[13]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[13]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[10]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[10]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[19]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[19]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[5]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[5]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[17]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[17]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[14]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[14]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[11]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[11]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[4]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[4]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[2]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[2]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[9]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[9]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[8]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[8]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[4]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[4]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[1]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[1]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[24]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[24]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[14]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[14]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[30]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[30]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[5]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[5]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[2]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[2]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[23]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[23]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[25]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[25]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[6]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[6]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[15]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[15]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "ready_in" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "ready_in". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[30]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[30]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[24]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[24]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[31]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[31]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operation[1]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operation[1]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operation[0]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operation[0]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[27]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[27]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[29]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[29]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[28]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[28]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[23]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[23]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[28]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[28]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[31]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[31]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[27]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[27]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[25]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[25]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_b[26]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_b[26]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "valid_in" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "valid_in". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[29]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[29]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: WARNING: [Route 35-198] Port "operand_a[26]" does not have an associated HD.PARTPIN_LOCS, which will prevent the partial routing of the signal "operand_a[26]". Without this partial route, timing analysis to/from this port will not be accurate, and no routing information for this port can be exported.
+[fud] DEBUG: Post Restoration Checksum: NetGraph: 245a0691 | NumContArr: 4f2df152 | Constraints: c2a8fa9d | Timing: c2a8fa9d
+[fud] DEBUG: Phase 1 Build RT Design | Checksum: 1f8d9ed1d
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:03 ; elapsed = 00:00:02 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100944 ; free virtual = 473248
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2 Router Initialization
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.1 Fix Topology Constraints
+[fud] DEBUG: Phase 2.1 Fix Topology Constraints | Checksum: 1f8d9ed1d
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:03 ; elapsed = 00:00:02 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100928 ; free virtual = 473231
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.2 Pre Route Cleanup
+[fud] DEBUG: Phase 2.2 Pre Route Cleanup | Checksum: 1f8d9ed1d
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:03 ; elapsed = 00:00:02 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100919 ; free virtual = 473223
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.3 Global Clock Net Routing
+[fud] DEBUG: Phase 2.3 Global Clock Net Routing | Checksum: 1f8d9ed1d
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:04 ; elapsed = 00:00:03 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100937 ; free virtual = 473241
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2.4 Update Timing
+[fud] DEBUG: Phase 2.4 Update Timing | Checksum: 16c5acea4
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:05 ; elapsed = 00:00:03 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100917 ; free virtual = 473221
+[fud] DEBUG: INFO: [Route 35-416] Intermediate Timing Summary | WNS=4.133  | TNS=0.000  | WHS=-0.782 | THS=-1755.216|
+[fud] DEBUG: 
+[fud] DEBUG: 
+[fud] DEBUG: Router Utilization Summary
+[fud] DEBUG: Global Vertical Routing Utilization    = 0 %
+[fud] DEBUG: Global Horizontal Routing Utilization  = 0 %
+[fud] DEBUG: Routable Net Status*
+[fud] DEBUG: *Does not include unroutable nets such as driverless and loadless.
+[fud] DEBUG: Run report_route_status for detailed report.
+[fud] DEBUG: Number of Failed Nets               = 1787
+[fud] DEBUG: (Failed Nets is the sum of unrouted and partially routed nets)
+[fud] DEBUG: Number of Unrouted Nets             = 1532
+[fud] DEBUG: Number of Partially Routed Nets     = 255
+[fud] DEBUG: Number of Node Overlaps             = 0
+[fud] DEBUG: 
+[fud] DEBUG: Phase 2 Router Initialization | Checksum: 200014651
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:06 ; elapsed = 00:00:03 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100919 ; free virtual = 473222
+[fud] DEBUG: 
+[fud] DEBUG: Phase 3 Initial Routing
+[fud] DEBUG: 
+[fud] DEBUG: Phase 3.1 Global Routing
+[fud] DEBUG: Phase 3.1 Global Routing | Checksum: 200014651
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:06 ; elapsed = 00:00:03 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100917 ; free virtual = 473220
+[fud] DEBUG: 
+[fud] DEBUG: Phase 3.2 Initial Net Routing
+[fud] DEBUG: Phase 3.2 Initial Net Routing | Checksum: 1a29ba8bc
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:16 ; elapsed = 00:00:05 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 101185 ; free virtual = 473489
+[fud] DEBUG: Phase 3 Initial Routing | Checksum: 1be815157
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:16 ; elapsed = 00:00:05 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 101221 ; free virtual = 473525
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4 Rip-up And Reroute
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4.1 Global Iteration 0
+[fud] DEBUG: Number of Nodes with overlaps = 375
+[fud] DEBUG: Number of Nodes with overlaps = 21
+[fud] DEBUG: Number of Nodes with overlaps = 3
+[fud] DEBUG: Number of Nodes with overlaps = 3
+[fud] DEBUG: Number of Nodes with overlaps = 2
+[fud] DEBUG: Number of Nodes with overlaps = 0
+[fud] DEBUG: INFO: [Route 35-416] Intermediate Timing Summary | WNS=2.150  | TNS=0.000  | WHS=-1.384 | THS=-2404.612|
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4.1 Global Iteration 0 | Checksum: 2f1056875
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:23 ; elapsed = 00:00:10 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100944 ; free virtual = 473246
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4.2 Global Iteration 1
+[fud] DEBUG: Number of Nodes with overlaps = 8
+[fud] DEBUG: Number of Nodes with overlaps = 0
+[fud] DEBUG: INFO: [Route 35-416] Intermediate Timing Summary | WNS=1.879  | TNS=0.000  | WHS=N/A    | THS=N/A    |
+[fud] DEBUG: 
+[fud] DEBUG: Phase 4.2 Global Iteration 1 | Checksum: 20dcfd551
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:24 ; elapsed = 00:00:11 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100861 ; free virtual = 473163
+[fud] DEBUG: Phase 4 Rip-up And Reroute | Checksum: 20dcfd551
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:24 ; elapsed = 00:00:11 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100860 ; free virtual = 473163
+[fud] DEBUG: 
+[fud] DEBUG: Phase 5 Delay and Skew Optimization
+[fud] DEBUG: 
+[fud] DEBUG: Phase 5.1 Delay CleanUp
+[fud] DEBUG: Phase 5.1 Delay CleanUp | Checksum: 20dcfd551
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:24 ; elapsed = 00:00:11 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100901 ; free virtual = 473204
+[fud] DEBUG: 
+[fud] DEBUG: Phase 5.2 Clock Skew Optimization
+[fud] DEBUG: Phase 5.2 Clock Skew Optimization | Checksum: 20dcfd551
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:24 ; elapsed = 00:00:11 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100894 ; free virtual = 473196
+[fud] DEBUG: Phase 5 Delay and Skew Optimization | Checksum: 20dcfd551
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:24 ; elapsed = 00:00:11 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100886 ; free virtual = 473189
+[fud] DEBUG: 
+[fud] DEBUG: Phase 6 Post Hold Fix
+[fud] DEBUG: 
+[fud] DEBUG: Phase 6.1 Hold Fix Iter
+[fud] DEBUG: 
+[fud] DEBUG: Phase 6.1.1 Update Timing
+[fud] DEBUG: Phase 6.1.1 Update Timing | Checksum: 27389849f
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:25 ; elapsed = 00:00:11 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 100836 ; free virtual = 473138
+[fud] DEBUG: INFO: [Route 35-416] Intermediate Timing Summary | WNS=1.879  | TNS=0.000  | WHS=-1.384 | THS=-2403.016|
+[fud] DEBUG: 
+[fud] DEBUG: Phase 6.1 Hold Fix Iter | Checksum: 286722c97
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:35 ; elapsed = 00:00:20 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 102857 ; free virtual = 475160
+[fud] DEBUG: 
+[fud] DEBUG: Phase 6.2 Non Free Resource Hold Fix Iter
+[fud] DEBUG: Phase 6.2 Non Free Resource Hold Fix Iter | Checksum: 2aff97507
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:35 ; elapsed = 00:00:20 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 102828 ; free virtual = 475130
+[fud] DEBUG: Phase 6 Post Hold Fix | Checksum: 2aff97507
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:35 ; elapsed = 00:00:20 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 102819 ; free virtual = 475122
+[fud] DEBUG: 
+[fud] DEBUG: Phase 7 Route finalize
+[fud] DEBUG: 
+[fud] DEBUG: Router Utilization Summary
+[fud] DEBUG: Global Vertical Routing Utilization    = 0.230367 %
+[fud] DEBUG: Global Horizontal Routing Utilization  = 0.383997 %
+[fud] DEBUG: Routable Net Status*
+[fud] DEBUG: *Does not include unroutable nets such as driverless and loadless.
+[fud] DEBUG: Run report_route_status for detailed report.
+[fud] DEBUG: Number of Failed Nets               = 0
+[fud] DEBUG: (Failed Nets is the sum of unrouted and partially routed nets)
+[fud] DEBUG: Number of Unrouted Nets             = 0
+[fud] DEBUG: Number of Partially Routed Nets     = 0
+[fud] DEBUG: Number of Node Overlaps             = 0
+[fud] DEBUG: 
+[fud] DEBUG: Phase 7 Route finalize | Checksum: 2aff97507
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:35 ; elapsed = 00:00:21 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 102851 ; free virtual = 475154
+[fud] DEBUG: 
+[fud] DEBUG: Phase 8 Verifying routed nets
+[fud] DEBUG: 
+[fud] DEBUG: Verification completed successfully
+[fud] DEBUG: Phase 8 Verifying routed nets | Checksum: 2aff97507
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:35 ; elapsed = 00:00:21 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 102821 ; free virtual = 475123
+[fud] DEBUG: 
+[fud] DEBUG: Phase 9 Depositing Routes
+[fud] DEBUG: Phase 9 Depositing Routes | Checksum: 2aff97507
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:35 ; elapsed = 00:00:21 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 102815 ; free virtual = 475117
+[fud] DEBUG: 
+[fud] DEBUG: Phase 10 Resolve XTalk
+[fud] DEBUG: Phase 10 Resolve XTalk | Checksum: 2aff97507
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:35 ; elapsed = 00:00:21 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 102842 ; free virtual = 475145
+[fud] DEBUG: 
+[fud] DEBUG: Phase 11 Post Router Timing
+[fud] DEBUG: 
+[fud] DEBUG: Phase 11.1 Update Timing
+[fud] DEBUG: Phase 11.1 Update Timing | Checksum: 2bd3c5ed9
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:36 ; elapsed = 00:00:21 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 102843 ; free virtual = 475145
+[fud] DEBUG: INFO: [Route 35-57] Estimated Timing Summary | WNS=1.879  | TNS=0.000  | WHS=-1.384 | THS=-2402.874|
+[fud] DEBUG: 
+[fud] DEBUG: WARNING: [Route 35-328] Router estimated timing not met.
+[fud] DEBUG: Resolution: For a complete and accurate timing signoff, report_timing_summary must be run after route_design. Alternatively, route_design can be run with the -timing_summary option to enable a complete timing signoff at the end of route_design.
+[fud] DEBUG: Phase 11 Post Router Timing | Checksum: 2bd3c5ed9
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:36 ; elapsed = 00:00:21 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 102829 ; free virtual = 475131
+[fud] DEBUG: Time taken to check if laguna hold fix is required (in secs): 0
+[fud] DEBUG: Skip PhysOpt in Router because non-negative WNS value: 1.8932e-09 .
+[fud] DEBUG: INFO: [Route 35-16] Router Completed Successfully
+[fud] DEBUG: 
+[fud] DEBUG: Phase 12 Post-Route Event Processing
+[fud] DEBUG: Phase 12 Post-Route Event Processing | Checksum: 1696acbbb
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:37 ; elapsed = 00:00:21 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 102846 ; free virtual = 475149
+[fud] DEBUG: Ending Routing Task | Checksum: 1696acbbb
+[fud] DEBUG: 
+[fud] DEBUG: Time (s): cpu = 00:00:37 ; elapsed = 00:00:21 . Memory (MB): peak = 4598.938 ; gain = 0.000 ; free physical = 102803 ; free virtual = 475106
+[fud] DEBUG: 
+[fud] DEBUG: Routing Is Done.
+[fud] DEBUG: INFO: [Common 17-83] Releasing license: Implementation
+[fud] DEBUG: 91 Infos, 70 Warnings, 4 Critical Warnings and 0 Errors encountered.
+[fud] DEBUG: route_design completed successfully
+[fud] DEBUG: route_design: Time (s): cpu = 00:00:39 ; elapsed = 00:00:22 . Memory (MB): peak = 4598.938 ; gain = 32.016 ; free physical = 102830 ; free virtual = 475133
+[fud] DEBUG: INFO: [runtcl-4] Executing : report_drc -file main_drc_routed.rpt -pb main_drc_routed.pb -rpx main_drc_routed.rpx
+[fud] DEBUG: Command: report_drc -file main_drc_routed.rpt -pb main_drc_routed.pb -rpx main_drc_routed.rpx
+[fud] DEBUG: INFO: [IP_Flow 19-1839] IP Catalog is up to date.
+[fud] DEBUG: INFO: [DRC 23-27] Running DRC with 8 threads
+[fud] DEBUG: INFO: [Vivado_Tcl 2-168] The results of DRC are in file /tmp/tmp.U8F6XvEukS/out/FutilBuild.runs/impl_1/main_drc_routed.rpt.
+[fud] DEBUG: report_drc completed successfully
+[fud] DEBUG: INFO: [runtcl-4] Executing : report_methodology -file main_methodology_drc_routed.rpt -pb main_methodology_drc_routed.pb -rpx main_methodology_drc_routed.rpx
+[fud] DEBUG: Command: report_methodology -file main_methodology_drc_routed.rpt -pb main_methodology_drc_routed.pb -rpx main_methodology_drc_routed.rpx
+[fud] DEBUG: INFO: [Timing 38-35] Done setting XDC timing constraints.
+[fud] DEBUG: INFO: [DRC 23-133] Running Methodology with 8 threads
+[fud] DEBUG: INFO: [Vivado_Tcl 2-1520] The results of Report Methodology are in file /tmp/tmp.U8F6XvEukS/out/FutilBuild.runs/impl_1/main_methodology_drc_routed.rpt.
+[fud] DEBUG: report_methodology completed successfully
+[fud] DEBUG: INFO: [runtcl-4] Executing : report_power -file main_power_routed.rpt -pb main_power_summary_routed.pb -rpx main_power_routed.rpx
+[fud] DEBUG: Command: report_power -file main_power_routed.rpt -pb main_power_summary_routed.pb -rpx main_power_routed.rpx
+[fud] DEBUG: INFO: [Timing 38-35] Done setting XDC timing constraints.
+[fud] DEBUG: Running Vector-less Activity Propagation...
+[fud] DEBUG: 
+[fud] DEBUG: Finished Running Vector-less Activity Propagation
+[fud] DEBUG: 101 Infos, 70 Warnings, 4 Critical Warnings and 0 Errors encountered.
+[fud] DEBUG: report_power completed successfully
+[fud] DEBUG: INFO: [runtcl-4] Executing : report_route_status -file main_route_status.rpt -pb main_route_status.pb
+[fud] DEBUG: INFO: [runtcl-4] Executing : report_timing_summary -max_paths 10 -report_unconstrained -file main_timing_summary_routed.rpt -pb main_timing_summary_routed.pb -rpx main_timing_summary_routed.rpx -warn_on_violation
+[fud] DEBUG: INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -1, Temperature grade: E, Delay Type: min_max.
+[fud] DEBUG: INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+[fud] DEBUG: CRITICAL WARNING: [Timing 38-282] The design failed to meet the timing requirements. Please see the timing summary report for details on the timing violations.
+[fud] DEBUG: INFO: [runtcl-4] Executing : report_incremental_reuse -file main_incremental_reuse_routed.rpt
+[fud] DEBUG: INFO: [Vivado_Tcl 4-1062] Incremental flow is disabled. No incremental reuse Info to report.
+[fud] DEBUG: INFO: [runtcl-4] Executing : report_clock_utilization -file main_clock_utilization_routed.rpt
+[fud] DEBUG: INFO: [runtcl-4] Executing : report_bus_skew -warn_on_violation -file main_bus_skew_routed.rpt -pb main_bus_skew_routed.pb -rpx main_bus_skew_routed.rpx
+[fud] DEBUG: INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -1, Temperature grade: E, Delay Type: min_max.
+[fud] DEBUG: INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+[fud] DEBUG: INFO: [Timing 38-480] Writing timing data to binary archive.
+[fud] DEBUG: Write ShapeDB Complete: Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.01 . Memory (MB): peak = 4671.219 ; gain = 0.000 ; free physical = 102771 ; free virtual = 475075
+[fud] DEBUG: Wrote PlaceDB: Time (s): cpu = 00:00:00.25 ; elapsed = 00:00:00.07 . Memory (MB): peak = 4671.219 ; gain = 0.000 ; free physical = 102783 ; free virtual = 475087
+[fud] DEBUG: Wrote PulsedLatchDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4671.219 ; gain = 0.000 ; free physical = 102782 ; free virtual = 475086
+[fud] DEBUG: Writing XDEF routing.
+[fud] DEBUG: Writing XDEF routing logical nets.
+[fud] DEBUG: Writing XDEF routing special nets.
+[fud] DEBUG: Wrote RouteStorage: Time (s): cpu = 00:00:00.07 ; elapsed = 00:00:00.07 . Memory (MB): peak = 4671.219 ; gain = 0.000 ; free physical = 102784 ; free virtual = 475089
+[fud] DEBUG: Wrote Netlist Cache: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4671.219 ; gain = 0.000 ; free physical = 102778 ; free virtual = 475083
+[fud] DEBUG: Wrote Device Cache: Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.02 . Memory (MB): peak = 4671.219 ; gain = 0.000 ; free physical = 102764 ; free virtual = 475072
+[fud] DEBUG: Write Physdb Complete: Time (s): cpu = 00:00:00.34 ; elapsed = 00:00:00.16 . Memory (MB): peak = 4671.219 ; gain = 0.000 ; free physical = 102807 ; free virtual = 475115
+[fud] DEBUG: INFO: [Common 17-1381] The checkpoint '/tmp/tmp.U8F6XvEukS/out/FutilBuild.runs/impl_1/main_routed.dcp' has been generated.
+[fud] DEBUG: INFO: [Common 17-206] Exiting Vivado at Mon Aug  4 12:33:14 2025...
+[fud] DEBUG: [Mon Aug  4 12:33:30 2025] impl_1 finished
+[fud] DEBUG: wait_on_runs: Time (s): cpu = 00:00:01 ; elapsed = 00:01:56 . Memory (MB): peak = 1352.414 ; gain = 0.000 ; free physical = 106828 ; free virtual = 479133
+[fud] DEBUG: # open_run impl_1
+[fud] DEBUG: INFO: [Device 21-403] Loading part xczu3eg-sbva484-1-e
+[fud] DEBUG: Netlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00 . Memory (MB): peak = 2233.430 ; gain = 0.000 ; free physical = 105512 ; free virtual = 477817
+[fud] DEBUG: INFO: [Netlist 29-17] Analyzing 15 Unisim elements for replacement
+[fud] DEBUG: INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+[fud] DEBUG: INFO: [Project 1-479] Netlist was created with Vivado 2023.2
+[fud] DEBUG: INFO: [Project 1-570] Preparing netlist for logic optimization
+[fud] DEBUG: Read ShapeDB Complete: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.01 . Memory (MB): peak = 2233.430 ; gain = 0.000 ; free physical = 105238 ; free virtual = 477543
+[fud] DEBUG: INFO: [Timing 38-478] Restoring timing data from binary archive.
+[fud] DEBUG: INFO: [Timing 38-479] Binary timing data restore complete.
+[fud] DEBUG: INFO: [Project 1-856] Restoring constraints from binary archive.
+[fud] DEBUG: INFO: [Project 1-853] Binary constraint restore complete.
+[fud] DEBUG: INFO: [Designutils 20-5722] Start Reading Physical Databases.
+[fud] DEBUG: Reading placement.
+[fud] DEBUG: Read Netlist Cache: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2624.258 ; gain = 0.000 ; free physical = 104255 ; free virtual = 476560
+[fud] DEBUG: Reading placer database...
+[fud] DEBUG: Read Device Cache: Time (s): cpu = 00:00:00.03 ; elapsed = 00:00:00.03 . Memory (MB): peak = 2624.258 ; gain = 0.000 ; free physical = 104257 ; free virtual = 476562
+[fud] DEBUG: Read PlaceDB: Time (s): cpu = 00:00:00.05 ; elapsed = 00:00:00.05 . Memory (MB): peak = 2624.258 ; gain = 0.000 ; free physical = 104216 ; free virtual = 476521
+[fud] DEBUG: Read PulsedLatchDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2624.258 ; gain = 0.000 ; free physical = 104216 ; free virtual = 476521
+[fud] DEBUG: Reading routing.
+[fud] DEBUG: Read RouteStorage: Time (s): cpu = 00:00:00.04 ; elapsed = 00:00:00.05 . Memory (MB): peak = 2640.102 ; gain = 15.844 ; free physical = 104252 ; free virtual = 476557
+[fud] DEBUG: Read Physdb Files: Time (s): cpu = 00:00:00.12 ; elapsed = 00:00:00.14 . Memory (MB): peak = 2640.102 ; gain = 15.844 ; free physical = 104239 ; free virtual = 476544
+[fud] DEBUG: Restored from archive | CPU: 0.180000 secs | Memory: 3.084122 MB |
+[fud] DEBUG: Finished XDEF File Restore: Time (s): cpu = 00:00:00.16 ; elapsed = 00:00:00.18 . Memory (MB): peak = 2640.102 ; gain = 15.844 ; free physical = 104236 ; free virtual = 476541
+[fud] DEBUG: Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3027.203 ; gain = 0.000 ; free physical = 103089 ; free virtual = 475394
+[fud] DEBUG: INFO: [Project 1-111] Unisim Transformation Summary:
+[fud] DEBUG: A total of 2 instances were transformed.
+[fud] DEBUG: DSP48E2 => DSP48E2 (DSP_ALU, DSP_A_B_DATA, DSP_C_DATA, DSP_MULTIPLIER, DSP_M_DATA, DSP_OUTPUT, DSP_PREADD, DSP_PREADD_DATA): 2 instances
+[fud] DEBUG: 
+[fud] DEBUG: open_run: Time (s): cpu = 00:00:15 ; elapsed = 00:00:16 . Memory (MB): peak = 3027.238 ; gain = 1674.824 ; free physical = 103072 ; free virtual = 475377
+[fud] DEBUG: # report_utilization -hierarchical -file $outdir/hierarchical_utilization_placed.rpt
+[fud] DEBUG: # report_timing -file $outdir/main_timing_report.rpt
+[fud] DEBUG: INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -1, Temperature grade: E, Delay Type: max.
+[fud] DEBUG: INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+[fud] DEBUG: INFO: [Timing 38-78] ReportTimingParams: -max_paths 1 -nworst 1 -delay_type max -sort_by slack.
+[fud] DEBUG: # close_design
+[fud] DEBUG: INFO: [Common 17-206] Exiting Vivado at Mon Aug  4 12:33:47 2025...
+[fud] DEBUG: [chan 4] EOF received (4)
+[fud] WARNING: /home/rn359/.zshenv:.:10: no such file or directory: /home/rn359/.cargo/env
+[fud] DEBUG: [chan 4] EOF sent (4)
+[fud] DEBUG: synth-verilog.copy_back(<paramiko.client.SSHClient object at 0x103c4a680>, /tmp/tmp.U8F6XvEukS, /var/folders/xb/f8fxzngx0dv0dy6fw0m2bqzh0000gn/T/tmpjllbtoq9)
+[fud] DEBUG: [chan 5] Max packet in: 32768 bytes
+[fud] DEBUG: [chan 5] Max packet out: 32768 bytes
+[fud] DEBUG: Secsh channel 5 opened.
+[fud] DEBUG: [chan 5] Sesch channel 5 request ok
+[fud] DEBUG: [chan 5] EOF received (5)
+[fud] DEBUG: [chan 5] EOF sent (5)
+[fud] DEBUG: synth-verilog.finalize_ssh(<paramiko.client.SSHClient object at 0x103c4a680>, /tmp/tmp.U8F6XvEukS)
+[fud] DEBUG: [chan 6] Max packet in: 32768 bytes
+[fud] DEBUG: [chan 6] Max packet out: 32768 bytes
+[fud] DEBUG: Secsh channel 6 opened.
+[fud] DEBUG: [chan 6] Sesch channel 6 request ok
+[fud] DEBUG: [chan 6] EOF sent (6)

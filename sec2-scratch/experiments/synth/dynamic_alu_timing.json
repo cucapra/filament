@@ -1,0 +1,802 @@
+[
+  {
+    "header": {
+      "status": "MET",
+      "slack": 1.893,
+      "source": "alu_inst/multiplier/output_valid_reg_reg/C",
+      "destination": "alu_inst/multiplier/input_fifo_reg[4][10]/CE",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 4.734,
+        "logic": 0.509,
+        "logic_percent": 10.751,
+        "route": 4.225,
+        "route_percent": 89.249
+      },
+      "logic_levels": {
+        "levels": 3,
+        "LUT3": 1,
+        "LUT5": 1,
+        "LUT6": 1
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_HFF_SLICEM_C_Q)",
+        "logic_delay": 0.096,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/output_valid_reg_reg/Q",
+        "fan_out": 8,
+        "net_delay": 0.153,
+        "net_name": "alu_inst/multiplier/mult_valid_out"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT3",
+        "delay_type": "(Prop_A5LUT_SLICEM_I0_O)",
+        "logic_delay": 0.2,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_3/O",
+        "fan_out": 1,
+        "net_delay": 0.656,
+        "net_name": "alu_inst/multiplier/ready_out_INST_0_i_3_n_0"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.064,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_2/O",
+        "fan_out": 9,
+        "net_delay": 1.286,
+        "net_name": "alu_inst/multiplier/reset_0"
+      },
+      {
+        "loc": {
+          "x": 23,
+          "y": 63
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_A6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.149,
+        "edge": "r",
+        "resource_name": "alu_inst/multiplier/input_fifo[4][63]_i_1/O",
+        "fan_out": 64,
+        "net_delay": 2.131,
+        "net_name": "alu_inst/multiplier/input_fifo[4][63]_i_1_n_0"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 1.893,
+      "source": "alu_inst/multiplier/output_valid_reg_reg/C",
+      "destination": "alu_inst/multiplier/input_fifo_reg[4][13]/CE",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 4.734,
+        "logic": 0.509,
+        "logic_percent": 10.751,
+        "route": 4.225,
+        "route_percent": 89.249
+      },
+      "logic_levels": {
+        "levels": 3,
+        "LUT3": 1,
+        "LUT5": 1,
+        "LUT6": 1
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_HFF_SLICEM_C_Q)",
+        "logic_delay": 0.096,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/output_valid_reg_reg/Q",
+        "fan_out": 8,
+        "net_delay": 0.153,
+        "net_name": "alu_inst/multiplier/mult_valid_out"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT3",
+        "delay_type": "(Prop_A5LUT_SLICEM_I0_O)",
+        "logic_delay": 0.2,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_3/O",
+        "fan_out": 1,
+        "net_delay": 0.656,
+        "net_name": "alu_inst/multiplier/ready_out_INST_0_i_3_n_0"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.064,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_2/O",
+        "fan_out": 9,
+        "net_delay": 1.286,
+        "net_name": "alu_inst/multiplier/reset_0"
+      },
+      {
+        "loc": {
+          "x": 23,
+          "y": 63
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_A6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.149,
+        "edge": "r",
+        "resource_name": "alu_inst/multiplier/input_fifo[4][63]_i_1/O",
+        "fan_out": 64,
+        "net_delay": 2.131,
+        "net_name": "alu_inst/multiplier/input_fifo[4][63]_i_1_n_0"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 1.944,
+      "source": "alu_inst/multiplier/output_valid_reg_reg/C",
+      "destination": "alu_inst/multiplier/input_fifo_reg[4][12]/CE",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 4.678,
+        "logic": 0.509,
+        "logic_percent": 10.88,
+        "route": 4.169,
+        "route_percent": 89.12
+      },
+      "logic_levels": {
+        "levels": 3,
+        "LUT3": 1,
+        "LUT5": 1,
+        "LUT6": 1
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_HFF_SLICEM_C_Q)",
+        "logic_delay": 0.096,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/output_valid_reg_reg/Q",
+        "fan_out": 8,
+        "net_delay": 0.153,
+        "net_name": "alu_inst/multiplier/mult_valid_out"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT3",
+        "delay_type": "(Prop_A5LUT_SLICEM_I0_O)",
+        "logic_delay": 0.2,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_3/O",
+        "fan_out": 1,
+        "net_delay": 0.656,
+        "net_name": "alu_inst/multiplier/ready_out_INST_0_i_3_n_0"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.064,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_2/O",
+        "fan_out": 9,
+        "net_delay": 1.286,
+        "net_name": "alu_inst/multiplier/reset_0"
+      },
+      {
+        "loc": {
+          "x": 23,
+          "y": 63
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_A6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.149,
+        "edge": "r",
+        "resource_name": "alu_inst/multiplier/input_fifo[4][63]_i_1/O",
+        "fan_out": 64,
+        "net_delay": 2.075,
+        "net_name": "alu_inst/multiplier/input_fifo[4][63]_i_1_n_0"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 1.944,
+      "source": "alu_inst/multiplier/output_valid_reg_reg/C",
+      "destination": "alu_inst/multiplier/input_fifo_reg[4][41]/CE",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 4.678,
+        "logic": 0.509,
+        "logic_percent": 10.88,
+        "route": 4.169,
+        "route_percent": 89.12
+      },
+      "logic_levels": {
+        "levels": 3,
+        "LUT3": 1,
+        "LUT5": 1,
+        "LUT6": 1
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_HFF_SLICEM_C_Q)",
+        "logic_delay": 0.096,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/output_valid_reg_reg/Q",
+        "fan_out": 8,
+        "net_delay": 0.153,
+        "net_name": "alu_inst/multiplier/mult_valid_out"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT3",
+        "delay_type": "(Prop_A5LUT_SLICEM_I0_O)",
+        "logic_delay": 0.2,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_3/O",
+        "fan_out": 1,
+        "net_delay": 0.656,
+        "net_name": "alu_inst/multiplier/ready_out_INST_0_i_3_n_0"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.064,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_2/O",
+        "fan_out": 9,
+        "net_delay": 1.286,
+        "net_name": "alu_inst/multiplier/reset_0"
+      },
+      {
+        "loc": {
+          "x": 23,
+          "y": 63
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_A6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.149,
+        "edge": "r",
+        "resource_name": "alu_inst/multiplier/input_fifo[4][63]_i_1/O",
+        "fan_out": 64,
+        "net_delay": 2.075,
+        "net_name": "alu_inst/multiplier/input_fifo[4][63]_i_1_n_0"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 1.948,
+      "source": "alu_inst/multiplier/output_valid_reg_reg/C",
+      "destination": "alu_inst/multiplier/input_fifo_reg[4][36]/CE",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 4.744,
+        "logic": 0.509,
+        "logic_percent": 10.728,
+        "route": 4.235,
+        "route_percent": 89.272
+      },
+      "logic_levels": {
+        "levels": 3,
+        "LUT3": 1,
+        "LUT5": 1,
+        "LUT6": 1
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_HFF_SLICEM_C_Q)",
+        "logic_delay": 0.096,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/output_valid_reg_reg/Q",
+        "fan_out": 8,
+        "net_delay": 0.153,
+        "net_name": "alu_inst/multiplier/mult_valid_out"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT3",
+        "delay_type": "(Prop_A5LUT_SLICEM_I0_O)",
+        "logic_delay": 0.2,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_3/O",
+        "fan_out": 1,
+        "net_delay": 0.656,
+        "net_name": "alu_inst/multiplier/ready_out_INST_0_i_3_n_0"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.064,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_2/O",
+        "fan_out": 9,
+        "net_delay": 1.286,
+        "net_name": "alu_inst/multiplier/reset_0"
+      },
+      {
+        "loc": {
+          "x": 23,
+          "y": 63
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_A6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.149,
+        "edge": "r",
+        "resource_name": "alu_inst/multiplier/input_fifo[4][63]_i_1/O",
+        "fan_out": 64,
+        "net_delay": 2.141,
+        "net_name": "alu_inst/multiplier/input_fifo[4][63]_i_1_n_0"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 1.948,
+      "source": "alu_inst/multiplier/output_valid_reg_reg/C",
+      "destination": "alu_inst/multiplier/input_fifo_reg[4][53]/CE",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 4.744,
+        "logic": 0.509,
+        "logic_percent": 10.728,
+        "route": 4.235,
+        "route_percent": 89.272
+      },
+      "logic_levels": {
+        "levels": 3,
+        "LUT3": 1,
+        "LUT5": 1,
+        "LUT6": 1
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_HFF_SLICEM_C_Q)",
+        "logic_delay": 0.096,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/output_valid_reg_reg/Q",
+        "fan_out": 8,
+        "net_delay": 0.153,
+        "net_name": "alu_inst/multiplier/mult_valid_out"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT3",
+        "delay_type": "(Prop_A5LUT_SLICEM_I0_O)",
+        "logic_delay": 0.2,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_3/O",
+        "fan_out": 1,
+        "net_delay": 0.656,
+        "net_name": "alu_inst/multiplier/ready_out_INST_0_i_3_n_0"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.064,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_2/O",
+        "fan_out": 9,
+        "net_delay": 1.286,
+        "net_name": "alu_inst/multiplier/reset_0"
+      },
+      {
+        "loc": {
+          "x": 23,
+          "y": 63
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_A6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.149,
+        "edge": "r",
+        "resource_name": "alu_inst/multiplier/input_fifo[4][63]_i_1/O",
+        "fan_out": 64,
+        "net_delay": 2.141,
+        "net_name": "alu_inst/multiplier/input_fifo[4][63]_i_1_n_0"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 1.973,
+      "source": "alu_inst/multiplier/output_valid_reg_reg/C",
+      "destination": "alu_inst/multiplier/input_fifo_reg[2][13]/CE",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 4.655,
+        "logic": 0.475,
+        "logic_percent": 10.203,
+        "route": 4.18,
+        "route_percent": 89.797
+      },
+      "logic_levels": {
+        "levels": 3,
+        "LUT3": 1,
+        "LUT5": 1,
+        "LUT6": 1
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_HFF_SLICEM_C_Q)",
+        "logic_delay": 0.096,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/output_valid_reg_reg/Q",
+        "fan_out": 8,
+        "net_delay": 0.153,
+        "net_name": "alu_inst/multiplier/mult_valid_out"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT3",
+        "delay_type": "(Prop_A5LUT_SLICEM_I0_O)",
+        "logic_delay": 0.2,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_3/O",
+        "fan_out": 1,
+        "net_delay": 0.656,
+        "net_name": "alu_inst/multiplier/ready_out_INST_0_i_3_n_0"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.064,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_2/O",
+        "fan_out": 9,
+        "net_delay": 1.298,
+        "net_name": "alu_inst/multiplier/reset_0"
+      },
+      {
+        "loc": {
+          "x": 23,
+          "y": 63
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_B6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.115,
+        "edge": "r",
+        "resource_name": "alu_inst/multiplier/input_fifo[2][63]_i_1__0/O",
+        "fan_out": 64,
+        "net_delay": 2.074,
+        "net_name": "alu_inst/multiplier/input_fifo[2][63]_i_1__0_n_0"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 1.973,
+      "source": "alu_inst/multiplier/output_valid_reg_reg/C",
+      "destination": "alu_inst/multiplier/input_fifo_reg[2][44]/CE",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 4.655,
+        "logic": 0.475,
+        "logic_percent": 10.203,
+        "route": 4.18,
+        "route_percent": 89.797
+      },
+      "logic_levels": {
+        "levels": 3,
+        "LUT3": 1,
+        "LUT5": 1,
+        "LUT6": 1
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_HFF_SLICEM_C_Q)",
+        "logic_delay": 0.096,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/output_valid_reg_reg/Q",
+        "fan_out": 8,
+        "net_delay": 0.153,
+        "net_name": "alu_inst/multiplier/mult_valid_out"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT3",
+        "delay_type": "(Prop_A5LUT_SLICEM_I0_O)",
+        "logic_delay": 0.2,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_3/O",
+        "fan_out": 1,
+        "net_delay": 0.656,
+        "net_name": "alu_inst/multiplier/ready_out_INST_0_i_3_n_0"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.064,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_2/O",
+        "fan_out": 9,
+        "net_delay": 1.298,
+        "net_name": "alu_inst/multiplier/reset_0"
+      },
+      {
+        "loc": {
+          "x": 23,
+          "y": 63
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_B6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.115,
+        "edge": "r",
+        "resource_name": "alu_inst/multiplier/input_fifo[2][63]_i_1__0/O",
+        "fan_out": 64,
+        "net_delay": 2.074,
+        "net_name": "alu_inst/multiplier/input_fifo[2][63]_i_1__0_n_0"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 1.973,
+      "source": "alu_inst/multiplier/output_valid_reg_reg/C",
+      "destination": "alu_inst/multiplier/input_fifo_reg[2][46]/CE",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 4.655,
+        "logic": 0.475,
+        "logic_percent": 10.203,
+        "route": 4.18,
+        "route_percent": 89.797
+      },
+      "logic_levels": {
+        "levels": 3,
+        "LUT3": 1,
+        "LUT5": 1,
+        "LUT6": 1
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_HFF_SLICEM_C_Q)",
+        "logic_delay": 0.096,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/output_valid_reg_reg/Q",
+        "fan_out": 8,
+        "net_delay": 0.153,
+        "net_name": "alu_inst/multiplier/mult_valid_out"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT3",
+        "delay_type": "(Prop_A5LUT_SLICEM_I0_O)",
+        "logic_delay": 0.2,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_3/O",
+        "fan_out": 1,
+        "net_delay": 0.656,
+        "net_name": "alu_inst/multiplier/ready_out_INST_0_i_3_n_0"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.064,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_2/O",
+        "fan_out": 9,
+        "net_delay": 1.298,
+        "net_name": "alu_inst/multiplier/reset_0"
+      },
+      {
+        "loc": {
+          "x": 23,
+          "y": 63
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_B6LUT_SLICEL_I1_O)",
+        "logic_delay": 0.115,
+        "edge": "r",
+        "resource_name": "alu_inst/multiplier/input_fifo[2][63]_i_1__0/O",
+        "fan_out": 64,
+        "net_delay": 2.074,
+        "net_name": "alu_inst/multiplier/input_fifo[2][63]_i_1__0_n_0"
+      }
+    ]
+  },
+  {
+    "header": {
+      "status": "MET",
+      "slack": 2.02,
+      "source": "alu_inst/multiplier/output_valid_reg_reg/C",
+      "destination": "alu_inst/multiplier/input_fifo_reg[3][13]/CE",
+      "requirement": 7.0,
+      "data_path_delay": {
+        "total": 4.608,
+        "logic": 0.502,
+        "logic_percent": 10.894,
+        "route": 4.106,
+        "route_percent": 89.106
+      },
+      "logic_levels": {
+        "levels": 3,
+        "LUT3": 1,
+        "LUT5": 1,
+        "LUT6": 1
+      }
+    },
+    "critical_path": [
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "FDRE",
+        "delay_type": "(Prop_HFF_SLICEM_C_Q)",
+        "logic_delay": 0.096,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/output_valid_reg_reg/Q",
+        "fan_out": 8,
+        "net_delay": 0.153,
+        "net_name": "alu_inst/multiplier/mult_valid_out"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT3",
+        "delay_type": "(Prop_A5LUT_SLICEM_I0_O)",
+        "logic_delay": 0.2,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_3/O",
+        "fan_out": 1,
+        "net_delay": 0.656,
+        "net_name": "alu_inst/multiplier/ready_out_INST_0_i_3_n_0"
+      },
+      {
+        "loc": {
+          "x": 24,
+          "y": 66
+        },
+        "kind": "LUT6",
+        "delay_type": "(Prop_G6LUT_SLICEM_I0_O)",
+        "logic_delay": 0.064,
+        "edge": "f",
+        "resource_name": "alu_inst/multiplier/ready_out_INST_0_i_2/O",
+        "fan_out": 9,
+        "net_delay": 1.298,
+        "net_name": "alu_inst/multiplier/reset_0"
+      },
+      {
+        "loc": {
+          "x": 23,
+          "y": 63
+        },
+        "kind": "LUT5",
+        "delay_type": "(Prop_B5LUT_SLICEL_I1_O)",
+        "logic_delay": 0.142,
+        "edge": "r",
+        "resource_name": "alu_inst/multiplier/input_fifo[3][63]_i_1__0/O",
+        "fan_out": 64,
+        "net_delay": 1.999,
+        "net_name": "alu_inst/multiplier/input_fifo[3][63]_i_1__0_n_0"
+      }
+    ]
+  }
+]

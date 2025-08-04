@@ -1,0 +1,354 @@
+
+*** Running vivado
+    with args -log main.vds -m64 -product Vivado -mode batch -messageDb vivado.pb -notrace -source main.tcl
+
+
+****** Vivado v2023.2 (64-bit)
+  **** SW Build 4029153 on Fri Oct 13 20:13:54 MDT 2023
+  **** IP Build 4028589 on Sat Oct 14 00:45:43 MDT 2023
+  **** SharedData Build 4025554 on Tue Oct 10 17:18:54 MDT 2023
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+
+source main.tcl -notrace
+create_project: Time (s): cpu = 00:00:06 ; elapsed = 00:00:06 . Memory (MB): peak = 1346.578 ; gain = 37.805 ; free physical = 104938 ; free virtual = 477235
+Command: synth_design -top main -part xczu3eg-sbva484-1-e -mode out_of_context -flatten_hierarchy rebuilt
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xczu3eg'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xczu3eg'
+INFO: [Device 21-403] Loading part xczu3eg-sbva484-1-e
+INFO: [Synth 8-7079] Multithreading enabled for synth_design using a maximum of 4 processes.
+INFO: [Synth 8-7078] Launching helper process for spawning children vivado processes
+INFO: [Synth 8-7075] Helper process launched with PID 4141659
+---------------------------------------------------------------------------------
+Starting RTL Elaboration : Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 2520.152 ; gain = 289.777 ; free physical = 103493 ; free virtual = 475790
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6157] synthesizing module 'main' [/tmp/tmp.U8F6XvEukS/main.sv:4]
+INFO: [Synth 8-6157] synthesizing module 'Dynamic_ALU' [/tmp/tmp.U8F6XvEukS/main.sv:47]
+	Parameter ADDER_STAGES bound to: 2 - type: integer 
+	Parameter MULT_STAGES bound to: 3 - type: integer 
+INFO: [Synth 8-6157] synthesizing module 'FP_Adder_LI_Wrapper' [/tmp/tmp.U8F6XvEukS/main.sv:153]
+	Parameter STAGES bound to: 2 - type: integer 
+INFO: [Synth 8-6157] synthesizing module 'FP_Adder_Wrapper' [/tmp/tmp.U8F6XvEukS/main.sv:263]
+	Parameter STAGES bound to: 2 - type: integer 
+INFO: [Synth 8-6157] synthesizing module 'FP_Adder_2Stage' [/tmp/tmp.U8F6XvEukS/main.sv:425]
+WARNING: [Synth 8-324] index -1 out of range [/tmp/tmp.U8F6XvEukS/main.sv:516]
+INFO: [Synth 8-6155] done synthesizing module 'FP_Adder_2Stage' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:425]
+INFO: [Synth 8-6155] done synthesizing module 'FP_Adder_Wrapper' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:263]
+INFO: [Synth 8-6155] done synthesizing module 'FP_Adder_LI_Wrapper' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:153]
+INFO: [Synth 8-6157] synthesizing module 'FP_Mult_LI_Wrapper' [/tmp/tmp.U8F6XvEukS/main.sv:589]
+	Parameter STAGES bound to: 3 - type: integer 
+INFO: [Synth 8-6157] synthesizing module 'FP_Mult_Wrapper' [/tmp/tmp.U8F6XvEukS/main.sv:719]
+	Parameter STAGES bound to: 3 - type: integer 
+INFO: [Synth 8-6157] synthesizing module 'FP_Mult_3Stage' [/tmp/tmp.U8F6XvEukS/main.sv:890]
+INFO: [Synth 8-6155] done synthesizing module 'FP_Mult_3Stage' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:890]
+INFO: [Synth 8-6155] done synthesizing module 'FP_Mult_Wrapper' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:719]
+INFO: [Synth 8-6155] done synthesizing module 'FP_Mult_LI_Wrapper' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:589]
+INFO: [Synth 8-6155] done synthesizing module 'Dynamic_ALU' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:47]
+INFO: [Synth 8-6155] done synthesizing module 'main' (0#1) [/tmp/tmp.U8F6XvEukS/main.sv:4]
+WARNING: [Synth 8-6014] Unused sequential element shift_amt_s1_reg was removed.  [/tmp/tmp.U8F6XvEukS/main.sv:451]
+---------------------------------------------------------------------------------
+Finished RTL Elaboration : Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 2599.121 ; gain = 368.746 ; free physical = 103371 ; free virtual = 475669
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 2599.121 ; gain = 368.746 ; free physical = 103371 ; free virtual = 475669
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 2599.121 ; gain = 368.746 ; free physical = 103370 ; free virtual = 475668
+---------------------------------------------------------------------------------
+Netlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.02 . Memory (MB): peak = 2599.121 ; gain = 0.000 ; free physical = 103366 ; free virtual = 475664
+INFO: [Project 1-570] Preparing netlist for logic optimization
+
+Processing XDC Constraints
+Initializing timing engine
+Parsing XDC File [/tmp/tmp.U8F6XvEukS/device.xdc]
+CRITICAL WARNING: [Designutils 20-1307] Command 'puts' is not supported in the xdc constraint file. [/tmp/tmp.U8F6XvEukS/device.xdc:11]
+CRITICAL WARNING: [Designutils 20-1307] Command 'foreach' is not supported in the xdc constraint file. [/tmp/tmp.U8F6XvEukS/device.xdc:12]
+CRITICAL WARNING: [Designutils 20-1307] Command 'puts' is not supported in the xdc constraint file. [/tmp/tmp.U8F6XvEukS/device.xdc:23]
+CRITICAL WARNING: [Designutils 20-1307] Command 'foreach' is not supported in the xdc constraint file. [/tmp/tmp.U8F6XvEukS/device.xdc:24]
+Finished Parsing XDC File [/tmp/tmp.U8F6XvEukS/device.xdc]
+Completed Processing XDC Constraints
+
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2736.902 ; gain = 0.000 ; free physical = 103357 ; free virtual = 475654
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+Constraint Validation Runtime : Time (s): cpu = 00:00:00.09 ; elapsed = 00:00:00.04 . Memory (MB): peak = 2736.938 ; gain = 0.000 ; free physical = 103382 ; free virtual = 475680
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:14 ; elapsed = 00:00:14 . Memory (MB): peak = 2736.938 ; gain = 506.562 ; free physical = 103341 ; free virtual = 475638
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xczu3eg-sbva484-1-e
+INFO: [Synth 8-6742] Reading net delay rules and data
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:14 ; elapsed = 00:00:14 . Memory (MB): peak = 2736.938 ; gain = 506.562 ; free physical = 103384 ; free virtual = 475681
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying 'set_property' XDC Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:14 ; elapsed = 00:00:14 . Memory (MB): peak = 2736.938 ; gain = 506.562 ; free physical = 103361 ; free virtual = 475658
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:14 ; elapsed = 00:00:15 . Memory (MB): peak = 2736.938 ; gain = 506.562 ; free physical = 103339 ; free virtual = 475638
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
++---Adders : 
+	   3 Input   24 Bit       Adders := 1     
+	   2 Input   23 Bit       Adders := 1     
+	   2 Input    9 Bit       Adders := 2     
+	   3 Input    8 Bit       Adders := 2     
+	   2 Input    8 Bit       Adders := 2     
+	   2 Input    4 Bit       Adders := 3     
+	   2 Input    3 Bit       Adders := 3     
+	   2 Input    2 Bit       Adders := 2     
++---XORs : 
+	   2 Input      1 Bit         XORs := 1     
++---Registers : 
+	               64 Bit    Registers := 10    
+	               48 Bit    Registers := 2     
+	               32 Bit    Registers := 6     
+	               24 Bit    Registers := 1     
+	               23 Bit    Registers := 6     
+	               18 Bit    Registers := 1     
+	                9 Bit    Registers := 3     
+	                8 Bit    Registers := 7     
+	                4 Bit    Registers := 2     
+	                3 Bit    Registers := 4     
+	                2 Bit    Registers := 2     
+	                1 Bit    Registers := 18    
++---Muxes : 
+	   4 Input   64 Bit        Muxes := 1     
+	   2 Input   48 Bit        Muxes := 1     
+	   5 Input   32 Bit        Muxes := 1     
+	   2 Input   32 Bit        Muxes := 5     
+	   2 Input   24 Bit        Muxes := 5     
+	   2 Input   23 Bit        Muxes := 6     
+	   2 Input    8 Bit        Muxes := 5     
+	  23 Input    5 Bit        Muxes := 1     
+	   2 Input    4 Bit        Muxes := 2     
+	   2 Input    3 Bit        Muxes := 2     
+	   5 Input    1 Bit        Muxes := 1     
+	   2 Input    1 Bit        Muxes := 18    
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 360 (col length:72)
+BRAMs: 432 (col length: RAMB18 72 RAMB36 36)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+WARNING: [Synth 8-7080] Parallel synthesis criteria is not met
+DSP Report: Generating DSP core_multiplier/gen_3stage.multiplier/product_s20, operation Mode is: A2*B2.
+DSP Report: register core_multiplier/gen_3stage.multiplier/product_s20 is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s20.
+DSP Report: register core_multiplier/gen_3stage.multiplier/product_s20 is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s20.
+DSP Report: operator core_multiplier/gen_3stage.multiplier/product_s20 is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s20.
+DSP Report: operator core_multiplier/gen_3stage.multiplier/product_s20 is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s20.
+DSP Report: Generating DSP core_multiplier/gen_3stage.multiplier/product_s2_reg, operation Mode is: (PCIN>>17)+A2*B2.
+DSP Report: register core_multiplier/gen_3stage.multiplier/product_s2_reg is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s2_reg.
+DSP Report: register core_multiplier/gen_3stage.multiplier/product_s2_reg is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s2_reg.
+DSP Report: register core_multiplier/gen_3stage.multiplier/product_s2_reg is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s2_reg.
+DSP Report: operator core_multiplier/gen_3stage.multiplier/product_s20 is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s2_reg.
+DSP Report: operator core_multiplier/gen_3stage.multiplier/product_s20 is absorbed into DSP core_multiplier/gen_3stage.multiplier/product_s2_reg.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[47]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[46]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[45]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[44]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[43]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[42]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[41]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[40]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[39]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[38]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[37]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[36]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[35]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[34]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[33]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[32]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[31]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[30]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[29]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[28]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[27]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[26]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[25]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[24]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[23]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[22]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[21]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[20]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[19]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[18]) is unused and will be removed from module main.
+WARNING: [Synth 8-3332] Sequential element (alu_inst/multiplier/core_multiplier/gen_3stage.multiplier/product_s2_reg[17]) is unused and will be removed from module main.
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:20 ; elapsed = 00:00:20 . Memory (MB): peak = 2736.938 ; gain = 506.562 ; free physical = 103346 ; free virtual = 475645
+---------------------------------------------------------------------------------
+ Sort Area is  core_multiplier/gen_3stage.multiplier/product_s20_0 : 0 0 : 3489 4975 : Used 1 time 0
+ Sort Area is  core_multiplier/gen_3stage.multiplier/product_s20_0 : 0 1 : 1486 4975 : Used 1 time 0
+---------------------------------------------------------------------------------
+Start ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+
+DSP: Preliminary Mapping Report (see note below. The ' indicates corresponding REG is set)
++-------------------+------------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|Module Name        | DSP Mapping      | A Size | B Size | C Size | D Size | P Size | AREG | BREG | CREG | DREG | ADREG | MREG | PREG | 
++-------------------+------------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|FP_Mult_LI_Wrapper | A2*B2            | 25     | 18     | -      | -      | 48     | 1    | 1    | -    | -    | -     | 0    | 0    | 
+|FP_Mult_LI_Wrapper | (PCIN>>17)+A2*B2 | 25     | 8      | -      | -      | 48     | 1    | 1    | -    | -    | -     | 0    | 1    | 
++-------------------+------------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+
+Note: The table above is a preliminary report that shows the DSPs inferred at the current stage of the synthesis flow. Some DSP may be reimplemented as non DSP primitives later in the synthesis flow. Multiple instantiated DSPs are reported only once.
+---------------------------------------------------------------------------------
+Finished ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying XDC Timing Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Applying XDC Timing Constraints : Time (s): cpu = 00:00:27 ; elapsed = 00:00:27 . Memory (MB): peak = 3188.926 ; gain = 958.551 ; free physical = 102922 ; free virtual = 475221
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:00:28 ; elapsed = 00:00:29 . Memory (MB): peak = 3211.941 ; gain = 981.566 ; free physical = 102867 ; free virtual = 475166
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:00:29 ; elapsed = 00:00:29 . Memory (MB): peak = 3211.941 ; gain = 981.566 ; free physical = 102862 ; free virtual = 475161
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:00:32 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.879 ; gain = 988.504 ; free physical = 102883 ; free virtual = 475182
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:32 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.879 ; gain = 988.504 ; free physical = 102873 ; free virtual = 475172
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:32 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.879 ; gain = 988.504 ; free physical = 102905 ; free virtual = 475204
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:32 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.879 ; gain = 988.504 ; free physical = 102899 ; free virtual = 475198
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:33 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.879 ; gain = 988.504 ; free physical = 102864 ; free virtual = 475163
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:33 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.879 ; gain = 988.504 ; free physical = 102862 ; free virtual = 475161
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+DSP Final Report (the ' indicates corresponding REG is set)
++-------------------+------------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|Module Name        | DSP Mapping      | A Size | B Size | C Size | D Size | P Size | AREG | BREG | CREG | DREG | ADREG | MREG | PREG | 
++-------------------+------------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|FP_Mult_LI_Wrapper | A'*B'            | 24     | 17     | -      | -      | 48     | 1    | 1    | -    | -    | -     | 0    | 0    | 
+|FP_Mult_LI_Wrapper | (PCIN>>17+A*B')' | 0      | 7      | -      | -      | 48     | 0    | 1    | -    | -    | -     | 0    | 1    | 
++-------------------+------------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+
+
+Report BlackBoxes: 
++-+--------------+----------+
+| |BlackBox name |Instances |
++-+--------------+----------+
++-+--------------+----------+
+
+Report Cell Usage: 
++------+----------------+------+
+|      |Cell            |Count |
++------+----------------+------+
+|1     |CARRY8          |    13|
+|2     |DSP_ALU         |     2|
+|3     |DSP_A_B_DATA    |     2|
+|4     |DSP_C_DATA      |     2|
+|5     |DSP_MULTIPLIER  |     2|
+|6     |DSP_M_DATA      |     2|
+|7     |DSP_OUTPUT      |     2|
+|9     |DSP_PREADD      |     2|
+|10    |DSP_PREADD_DATA |     2|
+|11    |LUT1            |     7|
+|12    |LUT2            |    83|
+|13    |LUT3            |   196|
+|14    |LUT4            |   105|
+|15    |LUT5            |   181|
+|16    |LUT6            |   296|
+|17    |FDRE            |  1174|
++------+----------------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:33 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.879 ; gain = 988.504 ; free physical = 102862 ; free virtual = 475161
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 0 critical warnings and 32 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:27 ; elapsed = 00:00:28 . Memory (MB): peak = 3218.879 ; gain = 850.688 ; free physical = 102872 ; free virtual = 475170
+Synthesis Optimization Complete : Time (s): cpu = 00:00:33 ; elapsed = 00:00:33 . Memory (MB): peak = 3218.887 ; gain = 988.504 ; free physical = 102868 ; free virtual = 475167
+INFO: [Project 1-571] Translating synthesized netlist
+Netlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.01 . Memory (MB): peak = 3229.848 ; gain = 0.000 ; free physical = 103134 ; free virtual = 475433
+INFO: [Netlist 29-17] Analyzing 15 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-570] Preparing netlist for logic optimization
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3271.770 ; gain = 0.000 ; free physical = 103165 ; free virtual = 475464
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 2 instances were transformed.
+  DSP48E2 => DSP48E2 (DSP_ALU, DSP_A_B_DATA, DSP_C_DATA, DSP_MULTIPLIER, DSP_M_DATA, DSP_OUTPUT, DSP_PREADD, DSP_PREADD_DATA): 2 instances
+
+Synth Design complete | Checksum: 16087efe
+INFO: [Common 17-83] Releasing license: Synthesis
+31 Infos, 34 Warnings, 4 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:00:40 ; elapsed = 00:00:38 . Memory (MB): peak = 3271.805 ; gain = 1925.227 ; free physical = 103152 ; free virtual = 475451
+INFO: [Common 17-2834] synth_design peak Physical Memory [PSS] (MB): overall = 2810.960; main = 2484.777; forked = 385.616
+INFO: [Common 17-2834] synth_design peak Virtual Memory [VSS] (MB): overall = 4193.535; main = 3271.773; forked = 981.590
+INFO: [runtcl-6] Synthesis results are not added to the cache due to CRITICAL_WARNING
+Write ShapeDB Complete: Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00 . Memory (MB): peak = 3295.781 ; gain = 0.000 ; free physical = 103153 ; free virtual = 475452
+INFO: [Common 17-1381] The checkpoint '/tmp/tmp.U8F6XvEukS/out/FutilBuild.runs/synth_1/main.dcp' has been generated.
+INFO: [runtcl-4] Executing : report_utilization -file main_utilization_synth.rpt -pb main_utilization_synth.pb
+INFO: [Common 17-206] Exiting Vivado at Mon Aug  4 12:31:23 2025...

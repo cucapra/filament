@@ -31,12 +31,8 @@ wire [31:0] sub_operand_b;
 wire [31:0] mult_result;
 wire mult_exception, mult_overflow, mult_underflow;
 
-// Pipeline registers for operation and result selection
+// Pipeline registers for operation selection
 reg [1:0] operation_pipe [0:MAX_STAGES];
-reg [31:0] result_pipe [0:MAX_STAGES-1];
-reg exception_pipe [0:MAX_STAGES-1];
-reg overflow_pipe [0:MAX_STAGES-1];
-reg underflow_pipe [0:MAX_STAGES-1];
 
 // Valid signal pipeline - tracks when results are available
 reg [MAX_STAGES:0] valid_pipe;
@@ -74,12 +70,6 @@ always @(posedge clk) begin
         for (i = 0; i <= MAX_STAGES; i++) begin
             operation_pipe[i] <= 2'b00;
         end
-        for (i = 0; i < MAX_STAGES; i++) begin
-            result_pipe[i] <= 32'h0;
-            exception_pipe[i] <= 1'b0;
-            overflow_pipe[i] <= 1'b0;
-            underflow_pipe[i] <= 1'b0;
-        end
         valid_pipe <= {(MAX_STAGES+1){1'b0}};
         
         result <= 32'h0;
@@ -109,12 +99,19 @@ always @(posedge clk) begin
                 underflow <= 1'b0;
                 valid <= valid_pipe[ADDER_STAGES];
             end
-            default: begin  // Multiplication and default case
+            OP_MUL: begin
                 result <= mult_result;
                 exception <= mult_exception;
                 overflow <= mult_overflow;
                 underflow <= mult_underflow;
                 valid <= valid_pipe[MULT_STAGES];
+            end
+            default: begin  // Invalid operation
+                result <= 32'h0;
+                exception <= 1'b1;
+                overflow <= 1'b0;
+                underflow <= 1'b0;
+                valid <= 1'b0;
             end
         endcase
     end

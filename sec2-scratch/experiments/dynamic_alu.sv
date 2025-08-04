@@ -41,9 +41,6 @@ wire [31:0] mult_result;
 wire mult_exception, mult_overflow, mult_underflow;
 wire mult_valid_out;
 
-// Output arbitration
-reg [1:0] output_select;
-
 // Ready signals to functional units
 wire add_ready_in, mult_ready_in;
 
@@ -87,15 +84,11 @@ FP_Mult_LI_Wrapper #(.STAGES(MULT_STAGES)) multiplier (
     .ready_in(mult_ready_in)
 );
 
-// Output arbitration - simple priority scheme
-// Adder has priority when both are ready
-assign output_select = add_valid_out ? 2'b00 : 2'b10;
-
-// Ready signal routing - only the selected unit gets the ready
+// Ready signal routing - only the valid output unit gets the ready
 assign add_ready_in = add_valid_out ? ready_in : 1'b0;
-assign mult_ready_in = (!add_valid_out && mult_valid_out) ? ready_in : 1'b0;
+assign mult_ready_in = mult_valid_out && !add_valid_out ? ready_in : 1'b0;
 
-// Output assignment
+// Output assignment - adder has priority when both are valid
 assign valid_out = add_valid_out || mult_valid_out;
 assign result = add_valid_out ? add_result : mult_result;
 assign exception = add_valid_out ? 1'b0 : mult_exception;

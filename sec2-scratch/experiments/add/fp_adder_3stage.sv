@@ -68,7 +68,7 @@ always @(posedge clk) begin
     end
 end
 
-function [31:0] normalize_result;
+function automatic [31:0] normalize_result;
     input [23:0] add_mant;
     input [7:0] larger_exp;
     input s1, s2;

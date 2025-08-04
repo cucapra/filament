@@ -63,7 +63,7 @@ always @(posedge clk) begin
     end
 end
 
-function [34:0] form_final_result;  // {result[31:0], exception, overflow, underflow}
+function automatic [34:0] form_final_result;  // {result[31:0], exception, overflow, underflow}
     input sign, exc;
     input [47:0] product_norm;
     input [8:0] exponent;

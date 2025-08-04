@@ -1,0 +1,190 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2023.2 (lin64) Build 4029153 Fri Oct 13 20:13:54 MDT 2023
+| Date         : Mon Aug  4 13:22:52 2025
+| Host         : havarti.cs.cornell.edu running 64-bit Ubuntu 22.04.5 LTS
+| Command      : report_control_sets -verbose -file main_control_sets_placed.rpt
+| Design       : main
+| Device       : xczu3eg
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Control Set Information
+
+Table of Contents
+-----------------
+1. Summary
+2. Histogram
+3. Flip-Flop Distribution
+4. Detailed Control Set Information
+
+1. Summary
+----------
+
++----------------------------------------------------------+-------+
+|                          Status                          | Count |
++----------------------------------------------------------+-------+
+| Total control sets                                       |   112 |
+|    Minimum number of control sets                        |    14 |
+|    Addition due to synthesis replication                 |     0 |
+|    Addition due to physical synthesis replication        |    98 |
+| Unused register locations in slices containing registers |   142 |
++----------------------------------------------------------+-------+
+* Control sets can be merged at opt_design using control_set_merge or merge_equivalent_drivers
+** Run report_qor_suggestions for automated merging and remapping suggestions
+
+
+2. Histogram
+------------
+
++--------------------+-------+
+|       Fanout       | Count |
++--------------------+-------+
+| Total control sets |   112 |
+| >= 0 to < 4        |    28 |
+| >= 4 to < 6        |     2 |
+| >= 6 to < 8        |    22 |
+| >= 8 to < 10       |    21 |
+| >= 10 to < 12      |    11 |
+| >= 12 to < 14      |     6 |
+| >= 14 to < 16      |     1 |
+| >= 16              |    21 |
++--------------------+-------+
+* Control sets can be remapped at either synth_design or opt_design
+
+
+3. Flip-Flop Distribution
+-------------------------
+
++--------------+-----------------------+------------------------+-----------------+--------------+
+| Clock Enable | Synchronous Set/Reset | Asynchronous Set/Reset | Total Registers | Total Slices |
++--------------+-----------------------+------------------------+-----------------+--------------+
+| No           | No                    | No                     |               8 |            7 |
+| No           | No                    | Yes                    |               0 |            0 |
+| No           | Yes                   | No                     |             448 |          108 |
+| Yes          | No                    | No                     |               0 |            0 |
+| Yes          | No                    | Yes                    |               0 |            0 |
+| Yes          | Yes                   | No                     |             794 |          155 |
++--------------+-----------------------+------------------------+-----------------+--------------+
+
+
+4. Detailed Control Set Information
+-----------------------------------
+
++--------------+--------------------------------------------------+---------------------------------------------------------------+------------------+----------------+--------------+
+| Clock Signal |                   Enable Signal                  |                        Set/Reset Signal                       | Slice Load Count | Bel Load Count | Bels / Slice |
++--------------+--------------------------------------------------+---------------------------------------------------------------+------------------+----------------+--------------+
+|  clk         | alu_inst/multiplier/fifo_head                    | reset_reg                                                     |                1 |              1 |         1.00 |
+|  clk         | alu_inst/multiplier/input_fifo[1][63]_i_1__0_n_0 | reset_reg                                                     |                1 |              1 |         1.00 |
+|  clk         | alu_inst/multiplier/input_fifo[5][63]_i_1_n_0    | reset_reg                                                     |                1 |              1 |         1.00 |
+|  clk         | alu_inst/multiplier/input_fifo[0][63]_i_1__0_n_0 | reset_reg_repN_5                                              |                2 |              2 |         1.00 |
+|  clk         | alu_inst/multiplier/input_fifo[0][63]_i_1__0_n_0 | reset_reg                                                     |                2 |              2 |         1.00 |
+|  clk         | alu_inst/multiplier/input_fifo[3][63]_i_1__0_n_0 | reset_reg_repN_5                                              |                2 |              2 |         1.00 |
+|  clk         | alu_inst/adder/fifo_tail0                        | reset_reg_repN                                                |                1 |              2 |         2.00 |
+|  clk         | alu_inst/multiplier/input_fifo[5][63]_i_1_n_0    | reset_reg_repN_5                                              |                3 |              3 |         1.00 |
+|  clk         | alu_inst/adder/input_fifo[1][63]_i_1_n_0         | reset_reg                                                     |                2 |              3 |         1.50 |
+|  clk         | alu_inst/adder/input_fifo[1][63]_i_1_n_0         | reset_reg_repN_3                                              |                2 |              3 |         1.50 |
+|  clk         | alu_inst/adder/input_fifo[2][63]_i_1_n_0         | reset_reg                                                     |                2 |              3 |         1.50 |
+|  clk         | alu_inst/adder/input_fifo[2][63]_i_1_n_0         | reset_reg_repN_3                                              |                2 |              3 |         1.50 |
+|  clk         | alu_inst/adder/input_fifo[3][63]_i_1_n_0         | reset_reg                                                     |                2 |              3 |         1.50 |
+|  clk         | alu_inst/adder/input_fifo[3][63]_i_1_n_0         | reset_reg_repN_3                                              |                2 |              3 |         1.50 |
+|  clk         | alu_inst/adder/fifo_count[2]_i_1_n_0             | reset_reg_repN                                                |                2 |              3 |         1.50 |
+|  clk         | alu_inst/adder/pipeline_advance                  | reset_reg_repN                                                |                1 |              3 |         3.00 |
+|  clk         | alu_inst/multiplier/output_valid_reg0            | reset_reg_repN                                                |                1 |              3 |         3.00 |
+|  clk         | alu_inst/multiplier/fifo_count[2]_i_1__0_n_0     | reset_reg_repN                                                |                1 |              3 |         3.00 |
+|  clk         | alu_inst/multiplier/input_fifo[4][63]_i_1_n_0    | reset_reg_repN_5                                              |                3 |              3 |         1.00 |
+|  clk         | alu_inst/multiplier/input_fifo[2][63]_i_1__0_n_0 | reset_reg                                                     |                3 |              3 |         1.00 |
+|  clk         | alu_inst/multiplier/input_fifo[2][63]_i_1__0_n_0 | reset_reg_repN_5                                              |                3 |              3 |         1.00 |
+|  clk         | alu_inst/multiplier/input_fifo[1][63]_i_1__0_n_0 | reset_reg_repN_5                                              |                3 |              3 |         1.00 |
+|  clk         | alu_inst/multiplier/fifo_tail0                   | reset_reg_repN                                                |                1 |              3 |         3.00 |
+|  clk         | alu_inst/multiplier/fifo_head                    | reset_reg_repN_5                                              |                3 |              3 |         1.00 |
+|  clk         | alu_inst/adder/input_fifo[0][63]_i_1_n_0         | reset_reg                                                     |                2 |              3 |         1.50 |
+|  clk         | alu_inst/adder/fifo_head[1]_i_1__0_n_0           | reset_reg_repN_3                                              |                2 |              3 |         1.50 |
+|  clk         | alu_inst/adder/fifo_head[1]_i_1__0_n_0           | reset_reg                                                     |                2 |              3 |         1.50 |
+|  clk         | alu_inst/adder/input_fifo[0][63]_i_1_n_0         | reset_reg_repN_3                                              |                2 |              3 |         1.50 |
+|  clk         | alu_inst/adder/E[0]                              | reset_reg_repN                                                |                1 |              4 |         4.00 |
+|  clk         | alu_inst/adder/fifo_head[1]_i_1__0_n_0           | reset_reg_repN                                                |                4 |              5 |         1.25 |
+|  clk         | alu_inst/multiplier/input_fifo[5][63]_i_1_n_0    | reset_reg_repN                                                |                3 |              6 |         2.00 |
+|  clk         | alu_inst/adder/fifo_head[1]_i_1__0_n_0           | reset_reg_repN_1                                              |                3 |              6 |         2.00 |
+|  clk         | alu_inst/multiplier/input_fifo[4][63]_i_1_n_0    | reset_reg_repN                                                |                3 |              6 |         2.00 |
+|  clk         | alu_inst/multiplier/input_fifo[2][63]_i_1__0_n_0 | reset_reg_repN                                                |                3 |              6 |         2.00 |
+|  clk         | alu_inst/multiplier/input_fifo[1][63]_i_1__0_n_0 | reset_reg_repN                                                |                3 |              6 |         2.00 |
+|  clk         | alu_inst/adder/input_fifo[3][63]_i_1_n_0         | reset_reg_repN                                                |                5 |              7 |         1.40 |
+|  clk         | alu_inst/adder/input_fifo[3][63]_i_1_n_0         | reset_reg_repN_1                                              |                3 |              7 |         2.33 |
+|  clk         | alu_inst/multiplier/input_fifo[2][63]_i_1__0_n_0 | reset_reg_repN_3                                              |                5 |              7 |         1.40 |
+|  clk         | alu_inst/multiplier/input_fifo[3][63]_i_1__0_n_0 | reset_reg_repN                                                |                4 |              7 |         1.75 |
+|  clk         | alu_inst/adder/input_fifo[2][63]_i_1_n_0         | reset_reg_repN                                                |                5 |              7 |         1.40 |
+|  clk         | alu_inst/multiplier/input_fifo[4][63]_i_1_n_0    | reset_reg_repN_3                                              |                3 |              7 |         2.33 |
+|  clk         | alu_inst/multiplier/input_fifo[5][63]_i_1_n_0    | reset_reg_repN_4                                              |                3 |              7 |         2.33 |
+|  clk         | alu_inst/adder/input_fifo[0][63]_i_1_n_0         | reset_reg_repN                                                |                6 |              7 |         1.17 |
+|  clk         | alu_inst/adder/input_fifo[2][63]_i_1_n_0         | reset_reg_repN_1                                              |                4 |              7 |         1.75 |
+|  clk         | alu_inst/adder/input_fifo[0][63]_i_1_n_0         | reset_reg_repN_1                                              |                5 |              7 |         1.40 |
+|  clk         | alu_inst/multiplier/fifo_head                    | reset_reg_repN                                                |                3 |              7 |         2.33 |
+|  clk         | alu_inst/multiplier/input_fifo[0][63]_i_1__0_n_0 | reset_reg_repN_4                                              |                3 |              7 |         2.33 |
+|  clk         | alu_inst/adder/input_fifo[1][63]_i_1_n_0         | reset_reg_repN                                                |                5 |              7 |         1.40 |
+|  clk         | alu_inst/adder/input_fifo[1][63]_i_1_n_0         | reset_reg_repN_4                                              |                4 |              7 |         1.75 |
+|  clk         | alu_inst/multiplier/fifo_head                    | reset_reg_repN_4                                              |                3 |              7 |         2.33 |
+|  clk         | alu_inst/multiplier/input_fifo[0][63]_i_1__0_n_0 | reset_reg_repN                                                |                4 |              7 |         1.75 |
+|  clk         | alu_inst/adder/input_fifo[1][63]_i_1_n_0         | reset_reg_repN_1                                              |                4 |              7 |         1.75 |
+|  clk         | alu_inst/multiplier/input_fifo[3][63]_i_1__0_n_0 | reset_reg_repN_3                                              |                5 |              8 |         1.60 |
+|  clk         |                                                  |                                                               |                7 |              8 |         1.14 |
+|  clk         | alu_inst/multiplier/input_fifo[4][63]_i_1_n_0    | reset_reg_repN_4                                              |                3 |              8 |         2.67 |
+|  clk         | alu_inst/multiplier/fifo_head                    | reset_reg_repN_3                                              |                3 |              8 |         2.67 |
+|  clk         | alu_inst/adder/input_fifo[0][63]_i_1_n_0         | reset_reg_repN_4                                              |                5 |              8 |         1.60 |
+|  clk         | alu_inst/multiplier/input_fifo[0][63]_i_1__0_n_0 | reset_reg_repN_3                                              |                5 |              8 |         1.60 |
+|  clk         | alu_inst/multiplier/input_fifo[2][63]_i_1__0_n_0 | reset_reg_repN_4                                              |                4 |              8 |         2.00 |
+|  clk         | alu_inst/multiplier/input_fifo[1][63]_i_1__0_n_0 | reset_reg_repN_4                                              |                4 |              8 |         2.00 |
+|  clk         | alu_inst/multiplier/input_fifo[1][63]_i_1__0_n_0 | reset_reg_repN_3                                              |                5 |              8 |         1.60 |
+|  clk         | alu_inst/adder/input_fifo[3][63]_i_1_n_0         | reset_reg_repN_5                                              |                5 |              8 |         1.60 |
+|  clk         | alu_inst/adder/input_fifo[2][63]_i_1_n_0         | reset_reg_repN_5                                              |                4 |              8 |         2.00 |
+|  clk         | alu_inst/multiplier/input_fifo[5][63]_i_1_n_0    | reset_reg_repN_3                                              |                3 |              8 |         2.67 |
+|  clk         | alu_inst/adder/input_fifo[2][63]_i_1_n_0         | reset_reg_repN_4                                              |                6 |              8 |         1.33 |
+|  clk         | alu_inst/adder/input_fifo[3][63]_i_1_n_0         | reset_reg_repN_4                                              |                6 |              8 |         1.33 |
+|  clk         | alu_inst/adder/input_fifo[0][63]_i_1_n_0         | reset_reg_repN_5                                              |                6 |              8 |         1.33 |
+|  clk         | alu_inst/adder/input_fifo[1][63]_i_1_n_0         | reset_reg_repN_5                                              |                4 |              8 |         2.00 |
+|  clk         | alu_inst/multiplier/input_fifo[0][63]_i_1__0_n_0 | reset_reg_repN_1                                              |                6 |              9 |         1.50 |
+|  clk         | alu_inst/multiplier/input_fifo[4][63]_i_1_n_0    | reset_reg_repN_1                                              |                4 |              9 |         2.25 |
+|  clk         | alu_inst/adder/fifo_head[1]_i_1__0_n_0           | reset_reg_repN_4                                              |                6 |              9 |         1.50 |
+|  clk         | alu_inst/multiplier/input_fifo[3][63]_i_1__0_n_0 | reset_reg_repN_4                                              |                5 |              9 |         1.80 |
+|  clk         | alu_inst/multiplier/input_fifo[3][63]_i_1__0_n_0 | reset_reg_repN_1                                              |                5 |              9 |         1.80 |
+|  clk         | alu_inst/multiplier/input_fifo[1][63]_i_1__0_n_0 | reset_reg_repN_1                                              |                6 |             10 |         1.67 |
+|  clk         | alu_inst/multiplier/input_fifo[2][63]_i_1__0_n_0 | reset_reg_repN_1                                              |                6 |             10 |         1.67 |
+|  clk         | alu_inst/multiplier/fifo_head                    | reset_reg_repN_1                                              |                4 |             10 |         2.50 |
+|  clk         | alu_inst/adder/fifo_head[1]_i_1__0_n_0           | reset_reg_repN_2                                              |                7 |             10 |         1.43 |
+|  clk         | alu_inst/multiplier/input_fifo[5][63]_i_1_n_0    | reset_reg_repN_1                                              |                3 |             10 |         3.33 |
+|  clk         | alu_inst/adder/input_fifo[0][63]_i_1_n_0         | reset_reg_repN_2                                              |                8 |             11 |         1.38 |
+|  clk         | alu_inst/multiplier/input_fifo[1][63]_i_1__0_n_0 | reset_reg_repN_2                                              |                8 |             11 |         1.38 |
+|  clk         | alu_inst/adder/input_fifo[2][63]_i_1_n_0         | reset_reg_repN_2                                              |                8 |             11 |         1.38 |
+|  clk         | alu_inst/multiplier/input_fifo[2][63]_i_1__0_n_0 | reset_reg_repN_2                                              |                6 |             11 |         1.83 |
+|  clk         | alu_inst/adder/fifo_head[1]_i_1__0_n_0           | reset_reg_repN_5                                              |                8 |             11 |         1.38 |
+|  clk         | alu_inst/adder/input_fifo[3][63]_i_1_n_0         | reset_reg_repN_2                                              |                8 |             11 |         1.38 |
+|  clk         | alu_inst/multiplier/fifo_head                    | reset_reg_repN_2                                              |                8 |             12 |         1.50 |
+|  clk         | alu_inst/adder/input_fifo[1][63]_i_1_n_0         | reset_reg_repN_2                                              |                8 |             12 |         1.50 |
+|  clk         | alu_inst/multiplier/input_fifo[3][63]_i_1__0_n_0 | reset_reg_repN_2                                              |                7 |             12 |         1.71 |
+|  clk         | alu_inst/multiplier/input_fifo[5][63]_i_1_n_0    | reset_reg_repN_2                                              |                6 |             12 |         2.00 |
+|  clk         | alu_inst/multiplier/input_fifo[4][63]_i_1_n_0    | reset_reg_repN_2                                              |                7 |             13 |         1.86 |
+|  clk         | alu_inst/multiplier/input_fifo[0][63]_i_1__0_n_0 | reset_reg_repN_2                                              |                9 |             13 |         1.44 |
+|  clk         |                                                  | reset_reg_repN_6                                              |                7 |             15 |         2.14 |
+|  clk         | alu_inst/multiplier/input_fifo[2][63]_i_1__0_n_0 | reset_reg_repN_6                                              |                8 |             16 |         2.00 |
+|  clk         |                                                  | reset_reg_repN                                                |                7 |             16 |         2.29 |
+|  clk         | alu_inst/multiplier/input_fifo[0][63]_i_1__0_n_0 | reset_reg_repN_6                                              |                9 |             16 |         1.78 |
+|  clk         | alu_inst/adder/input_fifo[1][63]_i_1_n_0         | reset_reg_repN_6                                              |                7 |             17 |         2.43 |
+|  clk         | alu_inst/adder/input_fifo[0][63]_i_1_n_0         | reset_reg_repN_6                                              |                8 |             17 |         2.12 |
+|  clk         | alu_inst/multiplier/input_fifo[5][63]_i_1_n_0    | reset_reg_repN_6                                              |               10 |             17 |         1.70 |
+|  clk         | alu_inst/adder/input_fifo[2][63]_i_1_n_0         | reset_reg_repN_6                                              |                8 |             17 |         2.12 |
+|  clk         | alu_inst/multiplier/input_fifo[1][63]_i_1__0_n_0 | reset_reg_repN_6                                              |               10 |             17 |         1.70 |
+|  clk         | alu_inst/adder/input_fifo[3][63]_i_1_n_0         | reset_reg_repN_6                                              |                9 |             17 |         1.89 |
+|  clk         | alu_inst/multiplier/input_fifo[3][63]_i_1__0_n_0 | reset_reg_repN_6                                              |               10 |             17 |         1.70 |
+|  clk         | alu_inst/multiplier/input_fifo[4][63]_i_1_n_0    | reset_reg_repN_6                                              |               11 |             18 |         1.64 |
+|  clk         | alu_inst/multiplier/fifo_head                    | reset_reg_repN_6                                              |               11 |             19 |         1.73 |
+|  clk         | alu_inst/adder/fifo_head[1]_i_1__0_n_0           | reset_reg_repN_6                                              |                9 |             19 |         2.11 |
+|  clk         |                                                  | alu_inst/adder/core_adder/gen_2stage.adder/result[22]_i_1_n_0 |               11 |             23 |         2.09 |
+|  clk         |                                                  | reset_reg_repN_3                                              |                4 |             29 |         7.25 |
+|  clk         |                                                  | reset_reg_repN_1                                              |                8 |             30 |         3.75 |
+|  clk         |                                                  | reset_reg_repN_4                                              |               11 |             36 |         3.27 |
+|  clk         |                                                  | reset_reg                                                     |               14 |             38 |         2.71 |
+|  clk         |                                                  | reset                                                         |               34 |             68 |         2.00 |
+|  clk         |                                                  | reset_reg_repN_2                                              |               16 |             82 |         5.12 |
+|  clk         |                                                  | reset_reg_repN_5                                              |               33 |            111 |         3.36 |
++--------------+--------------------------------------------------+---------------------------------------------------------------+------------------+----------------+--------------+
+
+

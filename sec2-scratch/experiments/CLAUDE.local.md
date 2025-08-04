@@ -1,0 +1,1 @@
+- Always run verilator with the options: `-Wall -Wno-WIDTHTRUNC -Wno-WIDTHEXPAND`

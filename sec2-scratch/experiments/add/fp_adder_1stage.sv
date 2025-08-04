@@ -23,7 +23,7 @@ always @(posedge clk) begin
 end
 
 // Combinational function to compute floating point addition
-function [31:0] compute_sum;
+function automatic [31:0] compute_sum;
     input [31:0] num1, num2;
     reg [7:0] e1, e2, larger_exp, final_exp;
     reg [22:0] m1, m2, small_mantissa, large_mantissa, final_mantissa;

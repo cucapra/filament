@@ -1,0 +1,75 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+--------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version      : Vivado v.2023.2 (lin64) Build 4029153 Fri Oct 13 20:13:54 MDT 2023
+| Date              : Mon Aug  4 13:11:11 2025
+| Host              : havarti.cs.cornell.edu running 64-bit Ubuntu 22.04.5 LTS
+| Command           : report_timing -file ./out/main_timing_report.rpt
+| Design            : main
+| Device            : xczu3eg-sbva484
+| Speed File        : -1  PRODUCTION 1.30 05-15-2022
+| Design State      : Routed
+| Temperature Grade : E
+--------------------------------------------------------------------------------------------------------------------------------------------------
+
+Timing Report
+
+Slack (MET) :             2.305ns  (required time - arrival time)
+  Source:                 alu_inst/adder/output_valid_reg_reg/C
+                            (rising edge-triggered cell FDRE clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Destination:            ready_out
+                            (output port clocked by clk  {rise@0.000ns fall@3.500ns period=7.000ns})
+  Path Group:             clk
+  Path Type:              Max at Slow Process Corner
+  Requirement:            7.000ns  (clk rise@7.000ns - clk rise@0.000ns)
+  Data Path Delay:        0.833ns  (logic 0.398ns (47.779%)  route 0.435ns (52.221%))
+  Logic Levels:           3  (LUT3=1 LUT6=2)
+  Output Delay:           1.000ns
+  Clock Path Skew:        -2.827ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.000ns = ( 7.000 - 7.000 ) 
+    Source Clock Delay      (SCD):    2.827ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+  Clock Net Delay (Source):      1.429ns (routing 0.185ns, distribution 1.244ns)
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk rise edge)        0.000     0.000 r  
+                                                      0.000     0.000 r  clk (IN)
+                         net (fo=0)                   1.370     1.370    clk_BUFG
+    BUFGCE_X0Y25         BUFGCE (Prop_BUFCE_BUFGCE_I_O)
+                                                      0.028     1.398 r  clk_BUFGCE_inst/O
+    X1Y1 (CLOCK_ROOT)    net (fo=1186, routed)        1.429     2.827    alu_inst/adder/clk
+    SLICE_X24Y67         FDRE                                         r  alu_inst/adder/output_valid_reg_reg/C
+  -------------------------------------------------------------------    -------------------
+    SLICE_X24Y67         FDRE (Prop_BFF_SLICEM_C_Q)
+                                                      0.095     2.922 f  alu_inst/adder/output_valid_reg_reg/Q
+                         net (fo=50, routed)          0.129     3.051    alu_inst/multiplier/add_valid_out
+    SLICE_X24Y66         LUT3 (Prop_A5LUT_SLICEM_I1_O)
+                                                      0.139     3.190 f  alu_inst/multiplier/ready_out_INST_0_i_3/O
+                         net (fo=1, routed)           0.197     3.387    alu_inst/multiplier/ready_out_INST_0_i_3_n_0
+    SLICE_X24Y66         LUT6 (Prop_G6LUT_SLICEM_I0_O)
+                                                      0.064     3.451 f  alu_inst/multiplier/ready_out_INST_0_i_2/O
+                         net (fo=9, routed)           0.109     3.560    alu_inst/adder/ready_out_0
+    SLICE_X24Y67         LUT6 (Prop_G6LUT_SLICEM_I5_O)
+                                                      0.100     3.660 r  alu_inst/adder/ready_out_INST_0/O
+                         net (fo=0)                   0.000     3.660    ready_out
+                                                                      r  ready_out (OUT)
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk rise edge)        7.000     7.000 r  
+                         clock pessimism              0.000     7.000    
+                         clock uncertainty           -0.035     6.965    
+                         output delay                -1.000     5.965    
+  -------------------------------------------------------------------
+                         required time                          5.965    
+                         arrival time                          -3.660    
+  -------------------------------------------------------------------
+                         slack                                  2.305    
+
+
+
+

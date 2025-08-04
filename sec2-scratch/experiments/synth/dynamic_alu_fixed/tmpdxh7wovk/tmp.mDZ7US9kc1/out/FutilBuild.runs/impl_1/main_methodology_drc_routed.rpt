@@ -1,0 +1,828 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
+--------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2023.2 (lin64) Build 4029153 Fri Oct 13 20:13:54 MDT 2023
+| Date         : Mon Aug  4 13:10:36 2025
+| Host         : havarti.cs.cornell.edu running 64-bit Ubuntu 22.04.5 LTS
+| Command      : report_methodology -file main_methodology_drc_routed.rpt -pb main_methodology_drc_routed.pb -rpx main_methodology_drc_routed.rpx
+| Design       : main
+| Device       : xczu3eg-sbva484-1-e
+| Speed File   : -1
+| Design State : Partially Routed
+--------------------------------------------------------------------------------------------------------------------------------------------------
+
+Report Methodology
+
+Table of Contents
+-----------------
+1. REPORT SUMMARY
+2. REPORT DETAILS
+
+1. REPORT SUMMARY
+-----------------
+            Netlist: netlist
+          Floorplan: design_1
+      Design limits: <entire design considered>
+             Max violations: <unlimited>
+             Violations found: 116
++-----------+----------+------------------------------------------+------------+
+| Rule      | Severity | Description                              | Violations |
++-----------+----------+------------------------------------------+------------+
+| TIMING-15 | Warning  | Large hold violation                     | 10         |
+| XDCH-2    | Warning  | Same min and max delay values on IO port | 106        |
++-----------+----------+------------------------------------------+------------+
+
+2. REPORT DETAILS
+-----------------
+TIMING-15#1 Warning
+Large hold violation  
+There is a large clock skew of 1.312 ns between ready_in (clocked by clk) and alu_inst/adder/fifo_count_reg[1]/D (clocked by clk) that results in large hold timing violation(s) of -1.259 ns. Fixing large hold violations during routing might impact setup slack and result in more difficult timing closure
+Related violations: <none>
+
+TIMING-15#2 Warning
+Large hold violation  
+There is a large clock skew of 1.312 ns between ready_in (clocked by clk) and alu_inst/adder/fifo_count_reg[2]/D (clocked by clk) that results in large hold timing violation(s) of -1.279 ns. Fixing large hold violations during routing might impact setup slack and result in more difficult timing closure
+Related violations: <none>
+
+TIMING-15#3 Warning
+Large hold violation  
+There is a large clock skew of 1.317 ns between ready_in (clocked by clk) and alu_inst/multiplier/fifo_count_reg[1]/D (clocked by clk) that results in large hold timing violation(s) of -1.255 ns. Fixing large hold violations during routing might impact setup slack and result in more difficult timing closure
+Related violations: <none>
+
+TIMING-15#4 Warning
+Large hold violation  
+There is a large clock skew of 1.317 ns between ready_in (clocked by clk) and alu_inst/multiplier/fifo_count_reg[2]/D (clocked by clk) that results in large hold timing violation(s) of -1.252 ns. Fixing large hold violations during routing might impact setup slack and result in more difficult timing closure
+Related violations: <none>
+
+TIMING-15#5 Warning
+Large hold violation  
+There is a large clock skew of 1.317 ns between valid_in (clocked by clk) and alu_inst/multiplier/fifo_count_reg[0]/CE (clocked by clk) that results in large hold timing violation(s) of -1.013 ns. Fixing large hold violations during routing might impact setup slack and result in more difficult timing closure
+Related violations: <none>
+
+TIMING-15#6 Warning
+Large hold violation  
+There is a large clock skew of 1.317 ns between valid_in (clocked by clk) and alu_inst/multiplier/fifo_count_reg[1]/CE (clocked by clk) that results in large hold timing violation(s) of -1.013 ns. Fixing large hold violations during routing might impact setup slack and result in more difficult timing closure
+Related violations: <none>
+
+TIMING-15#7 Warning
+Large hold violation  
+There is a large clock skew of 1.317 ns between valid_in (clocked by clk) and alu_inst/multiplier/fifo_count_reg[2]/CE (clocked by clk) that results in large hold timing violation(s) of -1.013 ns. Fixing large hold violations during routing might impact setup slack and result in more difficult timing closure
+Related violations: <none>
+
+TIMING-15#8 Warning
+Large hold violation  
+There is a large clock skew of 1.326 ns between operation[0] (clocked by clk) and alu_inst/adder/input_fifo_reg[2][31]/D (clocked by clk) that results in large hold timing violation(s) of -1.331 ns. Fixing large hold violations during routing might impact setup slack and result in more difficult timing closure
+Related violations: <none>
+
+TIMING-15#9 Warning
+Large hold violation  
+There is a large clock skew of 1.326 ns between operation[0] (clocked by clk) and alu_inst/adder/input_fifo_reg[3][31]/D (clocked by clk) that results in large hold timing violation(s) of -1.327 ns. Fixing large hold violations during routing might impact setup slack and result in more difficult timing closure
+Related violations: <none>
+
+TIMING-15#10 Warning
+Large hold violation  
+There is a large clock skew of 1.327 ns between ready_in (clocked by clk) and alu_inst/adder/output_valid_reg_reg/D (clocked by clk) that results in large hold timing violation(s) of -1.265 ns. Fixing large hold violations during routing might impact setup slack and result in more difficult timing closure
+Related violations: <none>
+
+XDCH-2#1 Warning
+Same min and max delay values on IO port  
+The same input delay of 1.500 ns has been defined on port 'operation[0]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 1.500 [get_ports {{operation[*]} valid_in ready_in}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 28)
+Related violations: <none>
+
+XDCH-2#2 Warning
+Same min and max delay values on IO port  
+The same input delay of 1.500 ns has been defined on port 'operation[1]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 1.500 [get_ports {{operation[*]} valid_in ready_in}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 28)
+Related violations: <none>
+
+XDCH-2#3 Warning
+Same min and max delay values on IO port  
+The same input delay of 1.500 ns has been defined on port 'ready_in' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 1.500 [get_ports {{operation[*]} valid_in ready_in}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 28)
+Related violations: <none>
+
+XDCH-2#4 Warning
+Same min and max delay values on IO port  
+The same input delay of 1.500 ns has been defined on port 'valid_in' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 1.500 [get_ports {{operation[*]} valid_in ready_in}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 28)
+Related violations: <none>
+
+XDCH-2#5 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[0]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#6 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[10]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#7 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[11]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#8 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[12]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#9 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[13]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#10 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[14]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#11 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[15]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#12 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[16]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#13 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[17]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#14 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[18]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#15 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[19]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#16 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[1]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#17 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[20]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#18 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[21]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#19 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[22]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#20 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[23]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#21 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[24]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#22 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[25]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#23 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[26]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#24 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[27]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#25 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[28]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#26 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[29]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#27 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[2]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#28 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[30]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#29 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[31]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#30 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[3]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#31 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[4]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#32 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[5]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#33 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[6]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#34 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[7]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#35 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[8]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#36 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_a[9]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#37 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[0]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#38 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[10]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#39 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[11]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#40 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[12]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#41 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[13]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#42 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[14]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#43 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[15]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#44 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[16]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#45 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[17]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#46 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[18]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#47 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[19]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#48 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[1]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#49 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[20]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#50 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[21]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#51 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[22]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#52 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[23]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#53 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[24]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#54 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[25]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#55 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[26]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#56 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[27]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#57 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[28]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#58 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[29]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#59 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[2]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#60 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[30]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#61 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[31]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#62 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[3]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#63 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[4]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#64 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[5]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#65 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[6]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#66 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[7]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#67 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[8]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#68 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.000 ns has been defined on port 'operand_b[9]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.000 [get_ports {{operand_a[*]} {operand_b[*]}}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 25)
+Related violations: <none>
+
+XDCH-2#69 Warning
+Same min and max delay values on IO port  
+The same input delay of 2.500 ns has been defined on port 'reset' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_input_delay -clock clk 2.500 [get_ports reset]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 31)
+Related violations: <none>
+
+XDCH-2#70 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'exception' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#71 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'overflow' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#72 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'ready_out' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#73 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[0]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#74 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[10]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#75 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[11]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#76 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[12]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#77 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[13]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#78 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[14]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#79 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[15]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#80 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[16]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#81 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[17]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#82 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[18]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#83 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[19]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#84 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[1]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#85 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[20]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#86 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[21]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#87 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[22]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#88 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[23]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#89 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[24]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#90 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[25]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#91 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[26]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#92 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[27]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#93 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[28]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#94 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[29]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#95 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[2]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#96 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[30]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#97 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[31]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#98 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[3]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#99 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[4]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#100 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[5]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#101 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[6]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#102 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[7]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#103 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[8]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#104 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'result[9]' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#105 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'underflow' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+XDCH-2#106 Warning
+Same min and max delay values on IO port  
+The same output delay of 1.000 ns has been defined on port 'valid_out' relative to clock clk for both max and min. Make sure this reflects the design intent.
+set_output_delay -clock clk 1.000 [get_ports -filter {DIRECTION == OUT}]
+/tmp/tmp.mDZ7US9kc1/device_minimal_fix.xdc (Line: 34)
+Related violations: <none>
+
+
