@@ -1,40 +1,24 @@
-# Cost of Latency-Insensitive Interfaces
+# Synthesis Experiment
 
-**Goal**: Conduct an experiment on the costs of latency-insensitive experiments using an ALU with floating point adder and multiplier.
+Your job is to experiment various configurations of the static and dynamic ALU implementations to study to effects:
+1. RQ1: How does changing the pipelining of the adder and multiplier modules change the resource usage and critical paths of the designs?
+2. RQ2: How does using a ready-valid interface change the resource usage and maximum frequency of the resulting designs?
 
-## Requirements
-- You are given Verilog implementations of an adder and multiplier in the verilog/ directory. The implementation are assumed to be correct but do not do any pipelining.
-- You may use `verilator` to lint the various verilog files and `iverilog` to simulate the test benches.
-- Only the test benches may use unsynthesizable constructs.
 
-## Implementing Variants
+## Study
+- Synthesizing designs is expensive. You will only get to synthesize 6 designs: 3 static configuration and 3 dynamic.
+- Testing the designs using `verilator`, `synthrep`, and `../timing-analysis/parse.py` is cheap and you may choose to use it however you like.
 
-- Implement four variants of the adder and multiplier with 1, 2, 3, and 4 pipeline stages. Reason about the best locations to pipeline by thinking about FPGA designs and what parts are likely to be bottle necks.
-- Build a test bench that differentially tests the results produced by the different implementations of adders and multipliers and make sure they agree with each other.
+## Prerequisites
+- Read the `TESTING.md`, `synthrep.md`, and `synthesis.md` files to understand how the tools work with each other.
+- Create a LOG.md to write down your thoughts as you run and debug experiments.
+- Create a REPORT.md to track your user-facing report.
 
-## Implementing Static ALU
+## Steps
 
-- Next, we will implement a latency-sensitive ALU which can interface with the adder and multiplier variants.
-- The first step is to build parameterized wrappers for the adder and the multiplier so that when the user sets the `STAGES` parameter, the implementation picks the appropriately pipelined adder and multiplier.
-- Implement the ALU against these parameterized wrappers. The ALU should be paramterized by the number of stages in the adder and the multiplier. These arguments are passed to the underlying wrappers.
-- Once the implementation is done, differentially test different combinations of parameters for the ALU and make sure they agree.
-
-## Implement LI ALU
-
-- Next, implement a latency-insensitve ALU which interfaces with the adder and multiplier variants using ready-valid signals.
-- Again, the first step is to build wrappers that pick the correct variant based on the `STAGES` parameter and generate the correct ready and valid signals.
-- Then, implement an ALU that is parameterized over the number of adder and multiplier stages and communicates using the ready-valid interface.
-- Finally, differentially test the different variants of the dynamic ALUs against each other.
-
-# Output
-
-Generate the following directory format:
-
-```
-- static
-  - main.sv   # implements the static ALU
-  - tests/
-- dynamic     # implements the LI ALU
-  - main.sv
-  - tests/
-```
+- First, analyze what the critical paths of the static and dynamic ALUs look like. Read the add and muliply implementations and pick a combination of variants that are most likely to produce designs with high maximum frequency.
+  - Use the same configuration to create top-level designs (as described in `synthesis.md`) and synthesize them. Using the same configuration will allow you to perform the comparisons needed for RQ2.
+  - Perform the analysis described in `synthsis.md` and write down the observation in LOG.md
+- Formulate a plan for the other four configurations you would like to study.
+  - Write down your analysis for what the results from synthesizing the first two designs was and why the next designs would make sense.
+  - Highlight how each of th designs would enable us to study RQ1 and RQ2 better.

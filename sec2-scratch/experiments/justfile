@@ -25,7 +25,7 @@ test-variants:
     {{sim}} {{simflags}} -o test_variants tests/test_fp_variants.sv {{adder_sources}} {{mult_sources}}
     ./test_variants
 
-# Test static ALU with different configurations  
+# Test static ALU with different configurations
 test-static:
     #!/usr/bin/env bash
     echo "=== Testing Static ALU ==="
@@ -63,23 +63,23 @@ run testbench sources="" output="":
         echo "  just run simple_test.sv \"\" simple"
         exit 1
     fi
-    
+
     # Set default values
     output_name="{{output}}"
     if [ -z "$output_name" ]; then
         output_name=$(basename "{{testbench}}" .sv)
     fi
-    
+
     source_files="{{sources}}"
     if [ -z "$source_files" ]; then
         source_files="{{all_sources}}"
     fi
-    
+
     echo "=== Compiling and Running $output_name ==="
     echo "Testbench: {{testbench}}"
     echo "Sources: $source_files"
     echo "Output: $output_name"
-    
+
     {{sim}} {{simflags}} -o "$output_name" "{{testbench}}" $source_files
     echo "=== Executing $output_name ==="
     ./"$output_name"

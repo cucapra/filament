@@ -7,7 +7,9 @@
       "Bash(make:*)",
       "Bash(ls:*)",
       "Bash(just:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(find:*)",
+      "Bash(jq:*)"
     ],
     "deny": []
   }
