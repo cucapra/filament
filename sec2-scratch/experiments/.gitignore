@@ -1,0 +1,14 @@
+# Debug directory for temporary experiments
+_debug/
+
+# Generated test executables
+test_*
+debug_*
+*.out
+
+# Waveform files
+*.vcd
+*.dmp
+
+# Temporary files
+*.tmp

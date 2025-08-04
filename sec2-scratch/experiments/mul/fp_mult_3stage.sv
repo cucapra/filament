@@ -75,7 +75,7 @@ function [34:0] form_final_result;  // {result[31:0], exception, overflow, under
     
     begin
         round = |product_norm[22:0];
-        product_mantissa = product_norm[46:24] + (product_norm[23] & round);
+        product_mantissa = product_norm[46:24] + {22'b0, (product_norm[23] & round)};
         
         ovf = (exponent[8] & !exc & !exponent[7]);
         unf = (exponent[8] & !exc & exponent[7]);

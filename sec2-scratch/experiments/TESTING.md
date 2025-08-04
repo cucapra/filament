@@ -2,6 +2,16 @@
 
 This document explains how to use Just (the `just` command) to execute test suites and individual testbenches for the floating point ALU experiment. This guide is designed for both human developers and Claude Code agents.
 
+## Directory Structure
+
+The project is organized as follows:
+- `add/` - Adder pipeline variants and wrappers
+- `mul/` - Multiplier pipeline variants and wrappers  
+- `tests/` - All test files and testbenches
+- `static_alu.sv` - Static (latency-sensitive) ALU implementation
+- `dynamic_alu.sv` - Dynamic (latency-insensitive) ALU implementation
+- `_debug/` - Ignored directory for debugging experiments and temporary files
+
 ## Quick Start
 
 ```bash
@@ -43,7 +53,7 @@ just test-variants
 - Mathematical correctness of pipeline distribution across stages
 - No pipeline timing bugs or data path errors
 
-**Test file**: `test_fp_variants.sv`
+**Test file**: `tests/test_fp_variants.sv`
 
 **Expected output**:
 ```
@@ -73,7 +83,7 @@ just test-static
 - Addition, subtraction, and multiplication operations work correctly
 - Fixed pipeline latency behavior (results available after maximum pipeline depth)
 
-**Test file**: `static/tests/test_static_alu.sv`
+**Test file**: `tests/test_static_alu.sv`
 
 **Expected output**:
 ```
@@ -100,7 +110,7 @@ just test-dynamic-fixed
 - All configurations produce identical results for 100 test vectors
 - Variable latency behavior (operations complete when ready, not on fixed schedule)
 
-**Test file**: `dynamic/tests/test_dynamic_alu_fixed.sv`
+**Test file**: `tests/test_dynamic_alu_fixed.sv`
 
 **Expected output**:
 ```
@@ -157,20 +167,26 @@ When creating custom testbenches for this experiment:
 1. **Include required modules**:
    ```systemverilog
    // Your testbench will have access to:
-   // - FP_Adder_*Stage modules (1,2,3,4 stages)
-   // - FP_Mult_*Stage modules (1,2,3,4 stages) 
-   // - FP_Adder_Wrapper, FP_Mult_Wrapper (parameterized)
-   // - FP_Adder_LI_Wrapper, FP_Mult_LI_Wrapper (latency-insensitive)
-   // - Static_ALU (latency-sensitive ALU)
-   // - Dynamic_ALU (latency-insensitive ALU)
+   // - FP_Adder_*Stage modules (1,2,3,4 stages) in add/
+   // - FP_Mult_*Stage modules (1,2,3,4 stages) in mul/
+   // - FP_Adder_Wrapper, FP_Mult_Wrapper (parameterized) in add/ and mul/
+   // - FP_Adder_LI_Wrapper, FP_Mult_LI_Wrapper (latency-insensitive) in add/ and mul/
+   // - Static_ALU (latency-sensitive ALU) in static_alu.sv
+   // - Dynamic_ALU (latency-insensitive ALU) in dynamic_alu.sv
    ```
 
-2. **Use proper timescale**:
+2. **Use the _debug/ directory** for temporary debugging experiments:
+   ```bash
+   # The _debug/ directory is ignored by git and perfect for temporary files
+   just run my_debug_test.sv "" _debug/my_debug
+   ```
+
+3. **Use proper timescale**:
    ```systemverilog
    `timescale 1ns / 1ps
    ```
 
-3. **For debugging ready-valid interfaces**:
+4. **For debugging ready-valid interfaces**:
    ```systemverilog
    // Monitor key signals
    $display("Cycle %d: ready_out=%b, valid_out=%b, result=%h", 
@@ -205,15 +221,17 @@ Pre-builds all test executables without running them.
 
 ### Debug Helpers
 ```bash
-# Debug static ALU with default or custom testbench
+# Debug static ALU with default or custom testbench (outputs to _debug/)
 just debug-static [testbench]
 
-# Debug dynamic ALU with default or custom testbench  
+# Debug dynamic ALU with default or custom testbench (outputs to _debug/)
 just debug-dynamic [testbench]
 
 # Generate VCD files for waveform analysis
 just vcd testbench.sv [sources]
 ```
+
+**Note**: Debug outputs are automatically placed in the `_debug/` directory which is ignored by git.
 
 ## Troubleshooting
 
@@ -262,7 +280,7 @@ When using this testing framework with Claude Code agents:
 
 1. **Always run full test suite first**: `just test`
 2. **Use specific test recipes** for focused verification
-3. **Create custom debug testbenches** using the `just run` recipe
+3. **Create custom debug testbenches** using the `just run` recipe or debug helpers
 4. **Check both functional correctness AND timing behavior** for LI interfaces
 5. **Verify backpressure handling** explicitly in any custom LI implementations
 6. **Use `just help` for detailed usage information**

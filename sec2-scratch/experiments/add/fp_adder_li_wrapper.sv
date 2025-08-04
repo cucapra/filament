@@ -19,10 +19,11 @@ module FP_Adder_LI_Wrapper #(
 
 // Internal FIFO to buffer inputs and track pipeline
 localparam FIFO_SIZE = (STAGES < 2) ? 4 : (2*STAGES);
+localparam ADDR_WIDTH = (FIFO_SIZE <= 4) ? 2 : 3;  // 2 bits for size ≤4, 3 bits for size ≤8
 reg [63:0] input_fifo [0:FIFO_SIZE-1];   // Store {a, b}
 reg [STAGES:0] valid_shift;              // Track valid data through pipeline
-reg [3:0] fifo_head, fifo_tail;
-reg [3:0] fifo_count;
+reg [ADDR_WIDTH-1:0] fifo_head, fifo_tail;
+reg [ADDR_WIDTH:0] fifo_count;           // One extra bit to count up to FIFO_SIZE
 
 // Core adder signals
 reg [31:0] core_a, core_b;
@@ -70,8 +71,8 @@ always @(posedge clk) begin
         // Input side: enqueue when valid input and we're ready
         if (valid_in && ready_out) begin
             input_fifo[fifo_tail] <= {a, b};
-            fifo_tail <= (fifo_tail + 1) % FIFO_SIZE;
-            fifo_count <= fifo_count + 1;
+            fifo_tail <= (fifo_tail + 1'b1) % ADDR_WIDTH'(FIFO_SIZE);
+            fifo_count <= fifo_count + 1'b1;
         end
         
         // Output valid management - latch valid until transaction completes
@@ -91,8 +92,8 @@ always @(posedge clk) begin
             // Feed new data to adder if FIFO has data
             if (fifo_count > 0) begin
                 {core_a, core_b} <= input_fifo[fifo_head];
-                fifo_head <= (fifo_head + 1) % FIFO_SIZE;
-                fifo_count <= fifo_count - 1;
+                fifo_head <= (fifo_head + 1'b1) % ADDR_WIDTH'(FIFO_SIZE);
+                fifo_count <= fifo_count - 1'b1;
                 valid_shift[0] <= 1'b1;
             end else begin
                 valid_shift[0] <= 1'b0;

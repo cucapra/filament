@@ -5,9 +5,10 @@ sim := "iverilog"
 simflags := "-g2012"
 
 # Source files
-pipeline_sources := "fp_adder_1stage.sv fp_adder_2stage.sv fp_adder_3stage.sv fp_adder_4stage.sv fp_mult_1stage.sv fp_mult_2stage.sv fp_mult_3stage.sv fp_mult_4stage.sv"
-wrapper_sources := "fp_adder_wrapper.sv fp_mult_wrapper.sv fp_adder_li_wrapper.sv fp_mult_li_wrapper.sv"
-all_sources := pipeline_sources + " " + wrapper_sources
+adder_sources := "add/fp_adder_1stage.sv add/fp_adder_2stage.sv add/fp_adder_3stage.sv add/fp_adder_4stage.sv"
+mult_sources := "mul/fp_mult_1stage.sv mul/fp_mult_2stage.sv mul/fp_mult_3stage.sv mul/fp_mult_4stage.sv"
+wrapper_sources := "add/fp_adder_wrapper.sv mul/fp_mult_wrapper.sv add/fp_adder_li_wrapper.sv mul/fp_mult_li_wrapper.sv"
+all_sources := adder_sources + " " + mult_sources + " " + wrapper_sources
 
 # Show available recipes
 default:
@@ -21,28 +22,28 @@ test: test-variants test-static test-dynamic-fixed
 test-variants:
     #!/usr/bin/env bash
     echo "=== Testing Pipeline Variants ==="
-    {{sim}} {{simflags}} -o test_variants test_fp_variants.sv {{pipeline_sources}}
+    {{sim}} {{simflags}} -o test_variants tests/test_fp_variants.sv {{adder_sources}} {{mult_sources}}
     ./test_variants
 
 # Test static ALU with different configurations  
 test-static:
     #!/usr/bin/env bash
     echo "=== Testing Static ALU ==="
-    {{sim}} {{simflags}} -o test_static static/tests/test_static_alu.sv static/main.sv {{all_sources}}
+    {{sim}} {{simflags}} -o test_static tests/test_static_alu.sv static_alu.sv {{all_sources}}
     ./test_static
 
 # Test original dynamic ALU implementation
 test-dynamic:
     #!/usr/bin/env bash
     echo "=== Testing Dynamic ALU ==="
-    {{sim}} {{simflags}} -o test_dynamic dynamic/tests/test_dynamic_alu.sv dynamic/main.sv {{all_sources}}
+    {{sim}} {{simflags}} -o test_dynamic tests/test_dynamic_alu.sv dynamic_alu.sv {{all_sources}}
     ./test_dynamic
 
 # Test fixed dynamic ALU implementation (recommended)
 test-dynamic-fixed:
     #!/usr/bin/env bash
     echo "=== Testing Fixed Dynamic ALU ==="
-    {{sim}} {{simflags}} -o test_dynamic_fixed dynamic/tests/test_dynamic_alu_fixed.sv dynamic/main.sv {{all_sources}}
+    {{sim}} {{simflags}} -o test_dynamic_fixed tests/test_dynamic_alu_fixed.sv dynamic_alu.sv {{all_sources}}
     ./test_dynamic_fixed
 
 # Run custom testbench with optional parameters
@@ -87,19 +88,19 @@ run testbench sources="" output="":
 lint:
     #!/usr/bin/env bash
     echo "=== Linting All Modules ==="
-    for file in {{all_sources}} static/main.sv dynamic/main.sv; do
-        echo "Linting $file..."
-        verilator --lint-only "$file" || true
-    done
+    echo "Linting static ALU with all dependencies..."
+    verilator --lint-only --top-module Static_ALU static_alu.sv {{all_sources}} || true
+    echo "Linting dynamic ALU with all dependencies..."
+    verilator --lint-only --top-module Dynamic_ALU dynamic_alu.sv {{all_sources}} || true
 
 # Quick syntax check using iverilog
 syntax-check:
     #!/usr/bin/env bash
     echo "=== Syntax Check ==="
-    for file in {{all_sources}} static/main.sv dynamic/main.sv; do
-        echo "Checking $file..."
-        {{sim}} -t null "$file" || true
-    done
+    echo "Checking static ALU syntax..."
+    {{sim}} -t null -o /dev/null static_alu.sv {{all_sources}} || true
+    echo "Checking dynamic ALU syntax..."
+    {{sim}} -t null -o /dev/null dynamic_alu.sv {{all_sources}} || true
 
 # Clean generated files
 clean:
@@ -147,19 +148,19 @@ help:
 build-all:
     #!/usr/bin/env bash
     echo "=== Building All Test Executables ==="
-    {{sim}} {{simflags}} -o test_variants test_fp_variants.sv {{pipeline_sources}}
-    {{sim}} {{simflags}} -o test_static static/tests/test_static_alu.sv static/main.sv {{all_sources}}
-    {{sim}} {{simflags}} -o test_dynamic_fixed dynamic/tests/test_dynamic_alu_fixed.sv dynamic/main.sv {{all_sources}}
+    {{sim}} {{simflags}} -o test_variants tests/test_fp_variants.sv {{adder_sources}} {{mult_sources}}
+    {{sim}} {{simflags}} -o test_static tests/test_static_alu.sv static_alu.sv {{all_sources}}
+    {{sim}} {{simflags}} -o test_dynamic_fixed tests/test_dynamic_alu_fixed.sv dynamic_alu.sv {{all_sources}}
     echo "All executables built successfully"
 
 # Debug-specific targets for common debugging tasks
-debug-static testbench="static/tests/test_static_alu.sv":
+debug-static testbench="tests/test_static_alu.sv":
     @echo "=== Debugging Static ALU ==="
-    @just run {{testbench}} "static/main.sv {{all_sources}}" debug_static
+    @just run {{testbench}} "static_alu.sv {{all_sources}}" _debug/debug_static
 
-debug-dynamic testbench="dynamic/tests/test_dynamic_alu_fixed.sv":
+debug-dynamic testbench="tests/test_dynamic_alu_fixed.sv":
     @echo "=== Debugging Dynamic ALU ==="
-    @just run {{testbench}} "dynamic/main.sv {{all_sources}}" debug_dynamic
+    @just run {{testbench}} "dynamic_alu.sv {{all_sources}}" _debug/debug_dynamic
 
 # Generate VCD for waveform analysis (requires testbench modification)
 vcd testbench sources="":
