@@ -78,8 +78,12 @@ run testbench sources="" output="":
     echo "=== Executing $output_name ==="
     ./"$output_name"
 
+# Lint a specific Verilog file
+lint FILE:
+  verilator --lint-only {{verilator_flags}} {{FILE}}
+
 # Lint all modules using Verilator
-lint:
+lint-all:
     #!/usr/bin/env bash
     echo "=== Linting All Modules ==="
     echo "Linting static ALU with all dependencies..."
